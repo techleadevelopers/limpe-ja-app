@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",             // <<< MUDADO de "NodeNext"
+    "moduleResolution": "node",       // <<< MUDADO de "nodenext"
+    "esModuleInterop": true,          // Mantenha, ajuda na interoperabilidade com módulos CommonJS
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "outDir": "lib",
+    "sourceMap": true,
+    "strict": true,
+    "target": "es2017",             // Pode manter ou usar algo como "es2020"
+    "skipLibCheck": true            // <<< ADICIONADO: Pode ajudar a ignorar problemas de tipo em node_modules
+  },
+  "compileOnSave": true,
+  "include": [
+    "src"
+  ]
+}

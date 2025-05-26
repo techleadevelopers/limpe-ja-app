@@ -573,9 +573,9 @@ Distribuído sob a Licença MIT. Veja `LICENSE.txt` para mais informações.
 
 ## 📞 Contato
 
-Seu Nome/Nome da Equipe - [@seuTwitter (opcional)](https://twitter.com/seuTwitter) - seuemail@example.com
+Paulo Silas de Campos Filho/ @techleadevelopers -  techleadevelopers@gmail.com
 
-Link do Projeto: [https://github.com/seu_usuario/limpeja-app](https://github.com/seu_usuario/limpeja-app) (Substitua)
+Link do Projeto: [https://github.com/techleadevelopers/limpe-ja-app]
 
 ---
 
