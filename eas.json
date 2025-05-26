@@ -1,0 +1,45 @@
+{
+  "cli": {
+    "version": ">= 7.6.0",
+    "appVersionSource": "remote" // <<<--- ALTERADO DE "expo" PARA "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "image": "latest"
+      },
+      "ios": { // Pode remover esta seção ios se não for usar
+        "image": "latest"
+      }
+    },
+    "apk_direct_test": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "image": "latest"
+      }
+    },
+    "production": {
+      "distribution": "store",
+      "android": {
+        "image": "latest"
+      },
+      "ios": { // Pode remover esta seção ios se não for usar
+        "image": "latest"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "android": {
+        "track": "internal"
+      },
+      "ios": { // Pode remover esta seção ios se não for usar
+        // "appleId": "seu_id_apple@exemplo.com",
+        // ...
+      }
+    }
+  }
+}

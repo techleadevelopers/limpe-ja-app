@@ -1,22 +1,29 @@
 {
   "expo": {
-    "name": "relax-app",
-    "slug": "relax-app",
+    "name": "LimpeJá",
+    "slug": "limpeja",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "relaxapp",
+    "scheme": "limpeja",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.suaempresa.limpeja"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#FFFFFF"
       },
-      "edgeToEdgeEnabled": true
+      "package": "com.suaempresa.limpeja",
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -28,15 +35,30 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
+          "image": "./assets/images/splash.png",
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#FFFFFF"
+        }
+      ],
+      "expo-secure-store",
+      "expo-location",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "O LimpeJá precisa de acesso às suas fotos para que você possa adicionar uma ao seu perfil.",
+          "cameraPermission": "O LimpeJá precisa de acesso à sua câmera para que você possa tirar uma foto para o seu perfil."
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "extra": {},
+      "router": {},
+      "eas": {
+        "projectId": "23560a63-c202-4e41-96d5-dcbd2a60c077"
+      }
     }
   }
 }
