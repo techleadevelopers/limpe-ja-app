@@ -1,13 +1,3 @@
-Entendi! Você quer que, com base na estrutura do frontend que já mapeamos, eu detalhe no README.md como o frontend (o aplicativo LimpeJá que estamos construindo) vai se conectar e interagir com o backend que também discutimos (seja ele Firebase, Node.js, etc.).
-
-Perfeito! Adicionar essa seção ao README.md é muito importante para dar uma visão completa da arquitetura.
-
-Vou pegar o README.md que elaboramos e adicionar uma nova seção chamada 🔗 Conexão Frontend-Backend logo após a seção 🔩 Arquitetura Backend (Sugestão). Esta nova seção explicará os principais mecanismos de comunicação.
-
-Aqui está o README.md completo e atualizado com a nova seção:
-
-Markdown
-
 # LimpeJá ✨🧹
 
 [![Versão](https://img.shields.io/badge/version-1.0.0-blue.svg)](package.json)
