@@ -1,8 +1,8 @@
-// LimpeJaApp/functions/src/chat/triggers.ts
 // import * as functions from "firebase-functions"; // REMOVIDO - TS6133
 import { region } from "firebase-functions/v1"; // 'region' é usado
 import admin, { db } from "../config/firebaseAdmin"; // 'admin' é necessário para FieldValue
-import { UserProfile, NotificationPayload, NotificationType } from "../types"; // Removido StoredNotification - TS6133. Adicionado NotificationPayload e Type.
+import { UserProfile } from "../types/user.types"; // CORREÇÃO: UserProfile agora vem de user.types
+import { NotificationPayload, NotificationType } from "../types/notification.types"; // NotificationPayload e NotificationType vêm de notification.types
 import { sendPushNotification, getUserFcmTokens } from "../services/notification.service"; // Mantido
 
 const REGION = "southamerica-east1";
@@ -55,27 +55,29 @@ export const onNewChatMessage = region(REGION)
       const recipientFcmTokens = await getUserFcmTokens(recipientId);
 
       if (recipientFcmTokens.length > 0) {
-        const notificationPayload: NotificationPayload = { // Usando o tipo importado
+        const notificationPayload: NotificationPayload = {
           title: `Nova mensagem de ${senderName}`,
           body: text.length > 100 ? text.substring(0, 97) + "..." : text,
           data: {
             chatId: chatId,
             senderId: senderId,
-            screen: "ChatScreen", 
+            screen: "ChatScreen",
+            // CORREÇÃO: Adicionada a propriedade 'notificationType' que estava faltando
+            notificationType: "NEW_CHAT_MESSAGE", 
             recipientName: senderName,
-            recipientId: senderId,
+            recipientId: recipientId, // Certifique-se que este recipientId é o id do destinatário da notificação, não do remetente
           },
         };
 
         await sendPushNotification(
-            recipientFcmTokens, 
-            notificationPayload,
-            {
-                saveToFirestore: true,
-                userIdToSave: recipientId,
-                typeToSave: "NEW_CHAT_MESSAGE" as NotificationType, // Cast para o tipo
-                navigateTo: `/(client)/messages/${chatId}` 
-            }
+          recipientFcmTokens,
+          notificationPayload,
+          {
+            saveToFirestore: true,
+            userIdToSave: recipientId,
+            typeToSave: "NEW_CHAT_MESSAGE", // Não precisa de cast aqui, já é NotificationType
+            navigateTo: `/(client)/messages/${chatId}`
+          }
         );
         console.log(`[ChatTrigger] Notificação de nova mensagem enviada para ${recipientId} (Chat: ${chatId}).`);
       } else {

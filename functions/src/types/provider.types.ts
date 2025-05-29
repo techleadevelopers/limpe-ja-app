@@ -1,27 +1,29 @@
 // LimpeJaApp/functions/src/types/provider.types.ts
-import { UserProfile } from "./user.types"; // Adicionado UserRole
+import { UserProfile } from "./user.types";
+import admin from "firebase-admin";
 
-// Estes tipos podem ser movidos para um arquivo service.types.ts ou booking.types.ts se fizer mais sentido
 export interface OfferedService {
-  id: string;
+  id: string; // <<< CHANGED from id?: string;
   name: string;
   description?: string;
   priceType: "hourly" | "fixed" | "quote";
-  priceValue?: number; // Em centavos
+  price?: number; // Em centavos
   currency: string; // Ex: "BRL"
   estimatedDurationMinutes?: number;
+  providerId?: string; // ID do provedor que oferece este serviço
+  isActive?: boolean; // <<< ADDED: To align with queries like getServicesByProvider
+  createdAt?: admin.firestore.Timestamp;
+  updatedAt?: admin.firestore.Timestamp;
 }
 
-export interface WeeklyAvailabilitySlot {
-  id: string;
+export interface TimeInterval {
   startTime: string; // HH:MM
   endTime: string;   // HH:MM
 }
 
 export interface DailyAvailability {
-  dayIndex: number; // 0 (Dom) - 6 (Sab)
-  isAvailable: boolean;
-  slots: WeeklyAvailabilitySlot[];
+  dayOfWeek: number; // 0 (Dom) - 6 (Sab)
+  intervals: TimeInterval[];
 }
 
 export interface BlockedDate {
@@ -34,7 +36,7 @@ export interface BankAccountDetails {
     agency?: string;
     accountNumber?: string;
     accountType?: "checking" | "savings"; // Conta Corrente ou Poupança
-    holderName?: string;    // Nome do titular da conta
+    holderName?: string;     // Nome do titular da conta
     holderDocument?: string; // CPF/CNPJ do titular
     pixKey?: string;         // Chave PIX principal para recebimento
     pixKeyType?: "cpf" | "cnpj" | "email" | "phone" | "random";
@@ -43,23 +45,26 @@ export interface BankAccountDetails {
 export interface ProviderProfile extends UserProfile {
   bio?: string;
   yearsOfExperience?: number;
-  servicesOffered: OfferedService[];
-  serviceAreas: string[];
+  servicesOffered: OfferedService[]; // Array of OfferedService objects
+  serviceAreas: string[]; // e.g., ["São Paulo - Centro", "Campinas - Cambuí"]
   averageRating?: number;
   totalReviews?: number;
   isVerified?: boolean;
   documents?: Array<{ type: string; url: string; status: 'pending' | 'approved' | 'rejected' }>;
   
-  bankAccount?: BankAccountDetails;     // <<<--- ADICIONADO/DEFINIDO AQUI
-  pendingBalance?: number;            // Saldo pendente para repasse (em centavos) <<<--- ADICIONADO AQUI
-  totalEarnedHistorical?: number;     // Total já ganho (em centavos) - opcional
+  bankAccount?: BankAccountDetails;
+  pendingBalance?: number; // Saldo pendente para repasse (em centavos)
+  totalEarnedHistorical?: number; // Total já ganho (em centavos) - opcional
   
   weeklyAvailability?: DailyAvailability[];
   blockedDates?: BlockedDate[];
   notesOnVerification?: string; 
-  isDisabledByAdmin?: boolean;  
+  isDisabledByAdmin?: boolean;    
   
-  // Se UserProfile já tem createdAt/updatedAt com FieldValue, não precisa repetir
-  // createdAt: admin.firestore.Timestamp | admin.firestore.FieldValue; // Herda de UserProfile
-  // updatedAt: admin.firestore.Timestamp | admin.firestore.FieldValue; // Herda de UserProfile
+  location?: {
+    latitude: number;
+    longitude: number;
+  };
+  // Alternatively, use Firebase's GeoPoint:
+  // location?: admin.firestore.GeoPoint;
 }

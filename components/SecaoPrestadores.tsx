@@ -1,12 +1,10 @@
-// LimpeJaApp/components/SecaoPrestadores.tsx
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router'; // Importar useRouter
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, StyleProp, TextStyle } from 'react-native'; // Adicionado StyleProp e TextStyle
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import PrestadorCard from './PrestadorCard'; // Importa o PrestadorCard refatorado
 
-// Se você exportou 'Prestador' de explore/index.tsx ou de um types.ts, importe-o.
-// Exemplo: import { Prestador } from '../app/(client)/explore/index';
-// Para manter este exemplo autocontido, vou redefinir, mas o ideal é um tipo compartilhado.
+// O TIPO PRESTADOR É EXPORTADO AQUI!
 export type Prestador = {
   id: string;
   nome: string;
@@ -17,113 +15,163 @@ export type Prestador = {
   imagemUrl: string;
   numeroAvaliacoes?: number;
   isVerificado?: boolean;
-  descricaoCurta?: string;
+  descricaoCurta?: string; // Pode ser usado futuramente
+  // Adicione isFavorito se for implementar a funcionalidade de favoritar
+  // isFavorito?: boolean;
 };
+
+// Dados Mockados para Prestadores (mantidos conforme o original)
+const PRESTADORES_EXEMPLO: Prestador[] = [
+  {
+    id: 'provider1',
+    nome: 'Ana Oliveira',
+    especialidade: 'Limpeza Residencial',
+    avaliacao: 4.8,
+    precoHora: 'R$ 60/h',
+    distancia: '1.2 km',
+    imagemUrl: 'https://randomuser.me/api/portraits/women/43.jpg',
+    numeroAvaliacoes: 125,
+    isVerificado: true,
+    descricaoCurta: 'Profissional experiente e dedicada, limpeza detalhada.'
+  },
+  {
+    id: 'provider2',
+    nome: 'Carlos Silva',
+    especialidade: 'Limpeza Comercial',
+    avaliacao: 4.9,
+    precoHora: 'R$ 75/h',
+    distancia: '2.5 km',
+    imagemUrl: 'https://randomuser.me/api/portraits/men/32.jpg',
+    numeroAvaliacoes: 88,
+    isVerificado: false,
+    descricaoCurta: 'Alta qualidade para empresas, foco em resultados.'
+  },
+  {
+    id: 'provider3',
+    nome: 'Mariana Costa',
+    especialidade: 'Limpeza Pós-obra',
+    avaliacao: 4.7,
+    precoHora: 'R$ 90/h',
+    distancia: '800 m',
+    imagemUrl: 'https://randomuser.me/api/portraits/women/55.jpg',
+    numeroAvaliacoes: 55,
+    isVerificado: true,
+    descricaoCurta: 'Especialista em deixar tudo impecável após sua reforma.'
+  },
+  {
+    id: 'provider4',
+    nome: 'Rafael Lima',
+    especialidade: 'Limpeza de Vidros e Fachadas',
+    avaliacao: 4.6,
+    precoHora: 'R$ 70/h',
+    distancia: '3.1 km',
+    imagemUrl: 'https://randomuser.me/api/portraits/men/47.jpg',
+    numeroAvaliacoes: 30,
+    isVerificado: true,
+    descricaoCurta: 'Vidros limpos e brilhantes, com segurança e profissionalismo.'
+  },
+];
 
 interface SecaoPrestadoresProps {
   titulo: string;
-  data: Prestador[];
-  onVerTudoPress?: () => void; // Prop para o botão "Ver tudo"
+  data?: Prestador[]; // Tornar opcional para usar os mockados padrão
+  onVerTudoPress?: () => void;
+  titleColor?: string; // ADICIONADO: Propriedade opcional para a cor do título
 }
 
-const SecaoPrestadores: React.FC<SecaoPrestadoresProps> = ({ titulo, data, onVerTudoPress }) => {
-  const router = useRouter(); // Usar o hook para navegação
+const SecaoPrestadores: React.FC<SecaoPrestadoresProps> = ({
+  titulo,
+  data = PRESTADORES_EXEMPLO, // Usar os dados mockados padrão se não forem passados
+  onVerTudoPress,
+  titleColor, // ADICIONADO: Recebe a cor do título como propriedade
+}) => {
+  const router = useRouter();
 
   const handlePrestadorPress = (prestadorId: string) => {
-    console.log(`[SecaoPrestadores] Navegando para o perfil do prestador ID: ${prestadorId}`);
-    // Navega para a tela de detalhes do prestador.
-    // O nome do arquivo dinâmico deve ser [providerId].tsx ou similar na pasta explore.
-    router.push(`/(client)/explore/${prestadorId}`);
+    // Implemente a navegação para a tela de detalhes do prestador
+    Alert.alert('Detalhes do Prestador', `Navegando para o prestador ${prestadorId}`);
+    router.push(`/(client)/explore/${prestadorId}` as any);
   };
 
-  // Componente interno para renderizar cada card de prestador
-  const RenderPrestadorCard = ({ item }: { item: Prestador }) => (
-    <TouchableOpacity 
-      style={styles.prestadorCardItem} 
-      onPress={() => { // Adiciona o onPress aqui
-        console.log(`[SecaoPrestadores] Card do prestador clicado: ${item.nome}, ID: ${item.id}`);
-        handlePrestadorPress(item.id); // Chama a função de navegação com o ID do item
-      }}
-    >
-      <Image source={{ uri: item.imagemUrl }} style={styles.prestadorImagemItem} />
-      <View style={styles.prestadorInfoContainerItem}>
-        <View style={styles.prestadorHeaderItem}>
-          <Text style={styles.prestadorNomeItem} numberOfLines={1}>{item.nome}</Text>
-          <View style={styles.ratingContainerItem}>
-            <Ionicons name="star" size={14} color="#FFC107" style={styles.iconItem} />
-            <Text style={styles.prestadorAvaliacaoItem}>{item.avaliacao.toFixed(1)}</Text>
-            {item.numeroAvaliacoes !== undefined && (
-              <Text style={styles.avaliacaoCountItem}>({item.numeroAvaliacoes})</Text>
-            )}
-          </View>
-        </View>
-        <Text style={styles.prestadorEspecialidadeItem} numberOfLines={1}>{item.especialidade}</Text>
-        <Text style={styles.prestadorPrecoItem}>{item.precoHora}</Text>
-        {item.descricaoCurta && (
-          <Text style={styles.descricaoCurtaItem} numberOfLines={2}>{item.descricaoCurta}</Text>
-        )}
-        {item.distancia && (
-          <View style={styles.distanceContainerItem}>
-            <Ionicons name="location-sharp" size={13} color="#555" style={styles.iconItem} />
-            <Text style={styles.prestadorDistanciaItem}>{item.distancia}</Text>
-          </View>
-        )}
-        {item.isVerificado && (
-          <View style={styles.verifiedBadgeItem}>
-            <MaterialCommunityIcons name="shield-check-outline" size={14} color="#4CAF50" style={styles.iconItem} />
-            <Text style={styles.verifiedTextItem}>Verificado</Text>
-          </View>
-        )}
-      </View>
-    </TouchableOpacity>
-  );
+  // ADICIONADO: Cria um array de estilos para o título.
+  // Ele começa com o estilo base de styles.sectionTitle.
+  // Se titleColor for fornecido, um objeto de estilo com essa cor é adicionado,
+  // o que sobrescreverá a cor definida em styles.sectionTitle.
+  const tituloStyle: StyleProp<TextStyle> = [
+    styles.sectionTitle, // Estilo base (incluindo a cor padrão '#000000')
+    titleColor ? { color: titleColor } : {} // Aplica a cor da prop se existir
+  ];
 
   return (
-    <View style={styles.secaoContainer}>
-      <View style={styles.secaoHeader}>
-        <Text style={styles.secaoTitulo}>{titulo}</Text>
+    <View style={styles.container}>
+      <View style={styles.header}>
+        {/* ADICIONADO: Usa o array de estilos 'tituloStyle' */}
+        <Text style={tituloStyle}>{titulo}</Text>
         {onVerTudoPress && (
-          <TouchableOpacity onPress={onVerTudoPress}>
-            <Text style={styles.verTudoTexto}>Ver tudo {'>'}</Text>
+          <TouchableOpacity onPress={onVerTudoPress} style={styles.viewAllButton}>
+            <Text style={styles.viewAllText}>Ver Todos</Text>
+            {/* Ícone com cor ajustada e observação sobre o tamanho */}
+            <Ionicons name="arrow-forward-outline" size={10} color="#007BFF" />
           </TouchableOpacity>
         )}
       </View>
-      <View>
-        {data.map((prestador) => (
-          // Cada card renderizado é um RenderPrestadorCardInterno
-          // A key é importante para o React otimizar a renderização da lista
-          <View key={prestador.id} style={styles.cardWrapper}>
-            <RenderPrestadorCard item={prestador} />
-          </View>
-        ))}
-      </View>
+
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cardsScrollContainer}>
+        {data.length > 0 ? (
+          data.map((item) => (
+            <PrestadorCard key={item.id} item={item} onPress={handlePrestadorPress} />
+          ))
+        ) : (
+          <Text style={styles.emptyText}>Nenhum prestador disponível no momento.</Text>
+        )}
+      </ScrollView>
     </View>
   );
 };
 
-// Seus estilos (mantidos da sua versão, com pequenos ajustes nos comentários ou nomes se necessário)
+// O StyleSheet.create permanece EXATAMENTE como você forneceu.
+// A cor em styles.sectionTitle.color ('#000000') servirá como fallback
+// se a prop titleColor não for passada para o componente.
 const styles = StyleSheet.create({
-  secaoContainer: { marginTop: 30, paddingHorizontal: 20 },
-  secaoHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 },
-  secaoTitulo: { fontSize: 20, fontWeight: 'bold', color: '#1C3A5F' }, // Ajustado fontWeight para string
-  verTudoTexto: { fontSize: 15, color: '#007AFF', fontWeight: '600' },
-  cardWrapper: { marginBottom: 15 },
-  prestadorCardItem: { backgroundColor: '#FFFFFF', borderRadius: 15, padding: 15, shadowColor: '#003D7A', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 6, elevation: 3, flexDirection: 'row', alignItems: 'flex-start' },
-  prestadorImagemItem: { width: 70, height: 70, borderRadius: 35, marginRight: 15 },
-  prestadorInfoContainerItem: { flex: 1 },
-  prestadorHeaderItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  prestadorNomeItem: { fontSize: 17, fontWeight: 'bold', color: '#333', flexShrink: 1, marginRight: 5 },
-  ratingContainerItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF5E1', paddingHorizontal: 6, paddingVertical: 3, borderRadius: 8 },
-  iconItem: { marginRight: 3 },
-  prestadorAvaliacaoItem: { fontSize: 13, color: '#FFA000', marginLeft: 3, fontWeight: 'bold' },
-  avaliacaoCountItem: { fontSize: 11, color: '#777', marginLeft: 3 },
-  prestadorEspecialidadeItem: { fontSize: 14, color: '#555', marginBottom: 4 },
-  prestadorPrecoItem: { fontSize: 15, color: '#007AFF', fontWeight: '600', marginBottom: 6 }, // fontWeight '600'
-  descricaoCurtaItem: { fontSize: 13, color: '#888', marginBottom: 6 },
-  distanceContainerItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  prestadorDistanciaItem: { fontSize: 13, color: '#777' },
-  verifiedBadgeItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#E0F7FA', borderRadius: 8, paddingVertical: 4, paddingHorizontal: 6, alignSelf: 'flex-start', marginTop: 6 },
-  verifiedTextItem: { fontSize: 11, color: '#2E7D32', fontWeight: 'bold' },
+  container: {
+    marginTop: 20,
+    marginBottom: 40,
+    backgroundColor: '#F4F7FC', // Fundo azul claro para a seção (do seu código original)
+  },
+  header: {
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#202633', // Preto para legibilidade em fundo claro (do seu código original, servirá como fallback)
+  },
+  viewAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 5,
+  },
+  viewAllText: {
+    fontSize: 14,
+    color: '#007BFF', // Azul primário do app (do seu código original)
+    fontWeight: '600',
+    marginRight: 4,
+  },
+  cardsScrollContainer: {
+    paddingHorizontal: 20,
+    paddingRight: 5,
+  },
+  emptyText: {
+    textAlign: 'center',
+    fontSize: 16,
+    color: '#757575', // Cinza mais escuro para melhor contraste em fundo claro (do seu código original)
+    marginTop: 20,
+    paddingHorizontal: 15,
+  },
 });
 
 export default SecaoPrestadores;

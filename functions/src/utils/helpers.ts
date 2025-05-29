@@ -1,7 +1,7 @@
 // LimpeJaApp/functions/src/utils/helpers.ts
-import { HttpsError } from "firebase-functions/v1/https"; // Importa HttpsError ESPECIFICAMENTE da v1
+import { HttpsError, CallableContext } from "firebase-functions/v1/https"; // Importa HttpsError E CallableContext
 import { DecodedIdToken } from "firebase-admin/auth";   // Tipo para o token decodificado do Firebase Admin SDK
-import { UserRole } from "../types";                     // Seu tipo UserRole
+import { UserRole } from "../types";                   // Seu tipo UserRole
 import * as admin from "firebase-admin"; // Necessário para admin.firestore.Timestamp na função formatDate
 
 /**
@@ -12,6 +12,22 @@ import * as admin from "firebase-admin"; // Necessário para admin.firestore.Tim
 interface V1CallableAuthContext {
   uid: string;
   token: DecodedIdToken; // O token já decodificado com os custom claims
+}
+
+/**
+ * Valida se o usuário está autenticado em uma Callable Function.
+ * Lança um HttpsError se a verificação falhar.
+ * @param context O objeto CallableContext completo da função.
+ */
+export function assertAuthenticated(context: CallableContext): void {
+  if (!context.auth || !context.auth.uid) {
+    console.error("[assertAuthenticated] Requisição não autenticada. UID ausente.");
+    throw new HttpsError(
+      "unauthenticated",
+      "A requisição deve ser autenticada. Faça login novamente."
+    );
+  }
+  // console.log(`[assertAuthenticated] Usuário UID: ${context.auth.uid} autenticado com sucesso.`);
 }
 
 /**
@@ -87,9 +103,7 @@ export const formatDate = (
     try {
         return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric'});
     } catch (finalError) {
-        return "Data inválida";
+      return "Data inválida";
     }
   }
 };
-
-// Você pode adicionar suas outras funções helpers aqui (isValidEmail, etc.)

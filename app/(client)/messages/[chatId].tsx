@@ -2,11 +2,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, TextInput, FlatList, StyleSheet,
-  KeyboardAvoidingView, Platform, ActivityIndicator, TouchableOpacity, Alert
+  KeyboardAvoidingView, Platform, ActivityIndicator, TouchableOpacity, Alert, Animated, Image
 } from 'react-native';
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../hooks/useAuth'; // Ajuste o caminho se necessário
+import { LinearGradient } from 'expo-linear-gradient'; // Importar para gradientes nas bolhas
 
 // Definição do tipo de mensagem (mova para types/ se usar em mais lugares)
 interface Message {
@@ -14,6 +15,7 @@ interface Message {
   text: string;
   timestamp: string; // ISO string
   senderId: string; // ID do remetente ('currentUser' ou ID do outro usuário)
+  read?: boolean; // Adicionado para status de leitura
   // Adicione mais campos se necessário, como avatarUrl, messageType (text, image), etc.
 }
 
@@ -27,9 +29,11 @@ const mockChatService = {
     }
     // Simula mensagens existentes para um chat não-novo
     return [
-      { id: '3', text: 'Perfeito! Estarei aguardando.', senderId: 'otherUser', timestamp: new Date(Date.now() - 3600000 * 2).toISOString() },
-      { id: '2', text: 'Sim, confirmo o agendamento para amanhã às 10h.', senderId: currentUserId, timestamp: new Date(Date.now() - 3600000 * 1).toISOString() },
-      { id: '1', text: 'Olá! Gostaria de confirmar nosso agendamento.', senderId: 'otherUser', timestamp: new Date(Date.now() - 3600000 * 0.5).toISOString() },
+      { id: '3', text: 'Perfeito! Estarei aguardando.', senderId: 'otherUser', timestamp: new Date(Date.now() - 3600000 * 2).toISOString(), read: true },
+      { id: '2', text: 'Sim, confirmo o agendamento para amanhã às 10h.', senderId: currentUserId, timestamp: new Date(Date.now() - 3600000 * 1).toISOString(), read: true },
+      { id: '1', text: 'Olá! Gostaria de confirmar nosso agendamento.', senderId: 'otherUser', timestamp: new Date(Date.now() - 3600000 * 0.5).toISOString(), read: false },
+      { id: '4', text: 'Estou a caminho!', senderId: currentUserId, timestamp: new Date(Date.now() - 3600000 * 0.2).toISOString(), read: false },
+      { id: '5', text: 'Chego em 10 minutos.', senderId: currentUserId, timestamp: new Date().toISOString(), read: false },
     ].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()); // Ordena por data
   },
   sendMessage: async (chatId: string, message: { text: string; senderId: string }): Promise<Message> => {
@@ -39,6 +43,7 @@ const mockChatService = {
       id: String(Date.now()),
       ...message,
       timestamp: new Date().toISOString(),
+      read: false, // Nova mensagem não lida
     };
   }
 };
@@ -54,25 +59,73 @@ export default function ChatScreen() {
     chatId: string; // Sempre será uma string (ex: 'new_provider123' ou 'existingChatId')
     recipientName?: string;
     recipientId?: string; // ID do outro participante do chat
+    recipientAvatarUrl?: string; // Adicionado para avatar
+    bookingId?: string; // ID do agendamento, se o chat for contextualizado
   }>();
   
-  const { chatId: routeChatId, recipientName, recipientId: paramRecipientId } = params;
+  const { chatId: routeChatId, recipientName, recipientId: paramRecipientId, recipientAvatarUrl, bookingId } = params;
 
   const flatListRef = useRef<FlatList>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [isTyping, setIsTyping] = useState(false); // Simula "digitando..."
+  const [showLongPressOptions, setShowLongPressOptions] = useState<Message | null>(null); // Estado para opções de long press
 
   const currentUserId = user?.id || 'currentUser'; // Fallback se user.id não estiver disponível
 
   // Determina se é um novo chat e qual é o ID do parceiro de conversa
   const isNewChat = routeChatId.startsWith('new_');
-  // Se for novo, o ID do parceiro pode vir de paramRecipientId ou extraído do routeChatId
   const partnerId = isNewChat ? (paramRecipientId || routeChatId.substring(4)) : paramRecipientId; 
-  // O effectiveChatId seria o routeChatId se for um chat existente,
-  // ou um ID a ser gerado/usado para um novo chat. Para este exemplo, vamos usar o routeChatId.
-  const effectiveChatId = routeChatId;
+  const effectiveChatId = routeChatId; // Em um app real, para new_chat, o ID seria gerado no backend
+
+  // Animações
+  const headerAnim = useRef(new Animated.Value(0)).current;
+  const inputBorderAnim = useRef(new Animated.Value(0)).current;
+  const sendButtonScaleAnim = useRef(new Animated.Value(1)).current;
+
+  // Animação de entrada do cabeçalho
+  useEffect(() => {
+    Animated.timing(headerAnim, {
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: true,
+    }).start();
+  }, [headerAnim]);
+
+  // Animação da borda do input
+  const animateInputBorder = (animationValue: Animated.Value, isFocused: boolean) => {
+    Animated.timing(animationValue, {
+      toValue: isFocused ? 1 : 0,
+      duration: 200,
+      useNativeDriver: false, // Border color não suporta native driver
+    }).start();
+  };
+
+  const getInputBorderColor = (animationValue: Animated.Value) => {
+    return animationValue.interpolate({
+      inputRange: [0, 1],
+      outputRange: ['#CED4DA', '#007AFF'], // Cinza para normal, azul para focado
+    });
+  };
+
+  // Animação do botão de envio
+  const onPressInSendButton = () => {
+    Animated.spring(sendButtonScaleAnim, {
+      toValue: 0.9,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const onPressOutSendButton = () => {
+    Animated.spring(sendButtonScaleAnim, {
+      toValue: 1,
+      friction: 3,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
 
   useEffect(() => {
     if (!user) {
@@ -92,7 +145,7 @@ export default function ChatScreen() {
         Alert.alert("Erro", "Não foi possível carregar as mensagens.");
       })
       .finally(() => setIsLoading(false));
-  }, [effectiveChatId, currentUserId, user, router]); // Adicionado user e router
+  }, [effectiveChatId, currentUserId, user, router, isNewChat, partnerId, recipientName]);
 
   const handleSendMessage = async () => {
     if (inputText.trim().length === 0 || isSending) return;
@@ -112,6 +165,7 @@ export default function ChatScreen() {
       text: inputText,
       senderId: currentUserId,
       timestamp: new Date().toISOString(),
+      read: false,
     };
 
     setMessages(prevMessages => [optimisticMessage, ...prevMessages]);
@@ -125,6 +179,9 @@ export default function ChatScreen() {
       await mockChatService.sendMessage(effectiveChatId, { text: optimisticMessage.text, senderId: currentUserId });
       // Aqui você poderia atualizar a mensagem otimista com o ID real do backend, se necessário
       console.log("[ChatScreen] Mensagem enviada (simulado).");
+      // Simula que a outra pessoa está digitando por um tempo
+      setIsTyping(true);
+      setTimeout(() => setIsTyping(false), 3000);
     } catch (error) {
       console.error("[ChatScreen] Falha ao enviar mensagem:", error);
       Alert.alert("Erro", "Não foi possível enviar sua mensagem.");
@@ -135,13 +192,37 @@ export default function ChatScreen() {
     }
   };
 
+  const handleLongPressMessage = (message: Message) => {
+    setShowLongPressOptions(message);
+    Alert.alert(
+      "Opções da Mensagem",
+      `Mensagem: "${message.text}"`,
+      [
+        { text: "Copiar", onPress: () => Alert.alert("Copiado!", message.text) },
+        { text: "Responder", onPress: () => Alert.alert("Responder", `Você está respondendo a: "${message.text}"`) },
+        { text: "Excluir", onPress: () => Alert.alert("Excluir", "Mensagem excluída (simulado)") },
+        { text: "Cancelar", style: "cancel" }
+      ]
+    );
+  };
+
   const renderMessageItem = useCallback(({ item, index }: { item: Message, index: number }) => {
     const isMyMessage = item.senderId === currentUserId;
     const showDateSeparator = index === messages.length - 1 || 
       new Date(item.timestamp).toDateString() !== new Date(messages[index + 1].timestamp).toDateString();
+    
+    // Animação para cada bolha de mensagem ao aparecer (simulado para novas mensagens)
+    const messageAnim = new Animated.Value(0);
+    useEffect(() => {
+        Animated.timing(messageAnim, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+        }).start();
+    }, [item.id, messageAnim]); // Dispara a animação para cada item novo
 
     return (
-      <>
+      <Animated.View style={{ opacity: messageAnim, transform: [{ translateY: messageAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }}>
         {showDateSeparator && (
           <View style={styles.dateSeparatorContainer}>
             <Text style={styles.dateSeparatorText}>
@@ -149,25 +230,68 @@ export default function ChatScreen() {
             </Text>
           </View>
         )}
-        <View style={[styles.messageRow, isMyMessage ? styles.myMessageRow : styles.theirMessageRow]}>
-          {/* {!isMyMessage && <Image source={{ uri: 'https://via.placeholder.com/30' }} style={styles.avatar} />} */}
-          <View style={[styles.messageBubble, isMyMessage ? styles.myMessageBubble : styles.theirMessageBubble]}>
-            <Text style={isMyMessage ? styles.myMessageText : styles.theirMessageText}>{item.text}</Text>
-            <Text style={[styles.timestamp, isMyMessage ? styles.myTimestamp : styles.theirTimestamp]}>
-              {new Date(item.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-            </Text>
-          </View>
-          {/* {isMyMessage && <Image source={{ uri: 'https://via.placeholder.com/30' }} style={styles.avatar} />} */}
-        </View>
-      </>
+        <TouchableOpacity
+          onLongPress={() => handleLongPressMessage(item)}
+          delayLongPress={300}
+          activeOpacity={0.7}
+          style={[styles.messageRow, isMyMessage ? styles.myMessageRow : styles.theirMessageRow]}
+        >
+          {/* Avatar do outro usuário */}
+          {!isMyMessage && (
+            <Image 
+              source={{ uri: recipientAvatarUrl || 'https://via.placeholder.com/40/007AFF/FFFFFF?text=P' }} 
+              style={styles.avatar} 
+            />
+          )}
+          
+          {isMyMessage ? (
+            <LinearGradient
+              colors={['#007AFF', '#005DCC']} // Gradiente para minhas mensagens
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+              style={[styles.messageBubble, styles.myMessageBubble]}
+            >
+              <Text style={styles.myMessageText}>{item.text}</Text>
+              <View style={styles.timestampAndStatus}>
+                <Text style={styles.myTimestamp}>
+                  {new Date(item.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+                {item.read ? (
+                  <Ionicons name="checkmark-done" size={14} color="rgba(255,255,255,0.8)" style={{ marginLeft: 4 }} />
+                ) : (
+                  <Ionicons name="checkmark" size={14} color="rgba(255,255,255,0.6)" style={{ marginLeft: 4 }} />
+                )}
+              </View>
+            </LinearGradient>
+          ) : (
+            <View style={[styles.messageBubble, styles.theirMessageBubble]}>
+              <Text style={styles.theirMessageText}>{item.text}</Text>
+              <Text style={styles.theirTimestamp}>
+                {new Date(item.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </Animated.View>
     );
-  }, [currentUserId, messages]); // Adicionado messages como dependência
+  }, [currentUserId, messages, recipientAvatarUrl, handleLongPressMessage]);
 
   if (isLoading) {
     return (
       <View style={styles.centeredLoader}>
-        <Stack.Screen options={{ title: recipientName || 'Carregando Chat...' }} />
-        <ActivityIndicator size="large" color="#007AFF" />
+        <Stack.Screen options={{ headerShown: false }} />
+        {/* Custom Header para o estado de loading */}
+        <Animated.View style={[styles.customHeader, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.headerBackButton}>
+                <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+            <View style={styles.headerRecipientInfo}>
+                <Image source={{ uri: recipientAvatarUrl || 'https://via.placeholder.com/40/007AFF/FFFFFF?text=P' }} style={styles.headerAvatar} />
+                <Text style={styles.headerRecipientName}>Carregando Chat...</Text>
+            </View>
+            <View style={styles.headerActionIconPlaceholder} />
+        </Animated.View>
+        <ActivityIndicator size="large" color="#007AFF" style={{ marginTop: 50 }} />
       </View>
     );
   }
@@ -178,10 +302,41 @@ export default function ChatScreen() {
       style={styles.container}
       keyboardVerticalOffset={Platform.select({ ios: 90, android: 60 })} // Ajuste conforme o header
     >
-      <Stack.Screen options={{ title: recipientName || (isNewChat ? `Chat com ${partnerId}` : 'Chat') }} />
+      <Stack.Screen options={{ headerShown: false }} />
+      
+      {/* Custom Header */}
+      <Animated.View style={[styles.customHeader, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.headerBackButton}>
+              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          <View style={styles.headerRecipientInfo}>
+              <Image source={{ uri: recipientAvatarUrl || 'https://via.placeholder.com/40/007AFF/FFFFFF?text=P' }} style={styles.headerAvatar} />
+              <View>
+                <Text style={styles.headerRecipientName}>{recipientName || (isNewChat ? `Novo Chat` : 'Chat')}</Text>
+                {isTyping && <Text style={styles.typingIndicator}>digitando...</Text>}
+              </View>
+          </View>
+          <TouchableOpacity style={styles.headerActionIcon} onPress={() => Alert.alert("Opções", "Ver perfil, Ligar, etc.")}>
+              <Ionicons name="ellipsis-vertical" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+      </Animated.View>
+
+      {/* Booking Context Card (se aplicável) */}
+      {bookingId && (
+        <TouchableOpacity style={styles.bookingContextCard} onPress={() => Alert.alert("Agendamento", `Detalhes do Agendamento ${bookingId}`)}>
+          <Ionicons name="calendar-outline" size={20} color="#1C3A5F" />
+          <View style={styles.bookingContextText}>
+            <Text style={styles.bookingContextTitle}>Agendamento #AB1234 - Limpeza Padrão</Text>
+            <Text style={styles.bookingContextSubtitle}>Amanhã, 10:00h - Status: Confirmado</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#1C3A5F" />
+        </TouchableOpacity>
+      )}
+
       <Text style={styles.policyReminder}>
         Para sua segurança, mantenha as negociações e o compartilhamento de informações dentro da plataforma LimpeJá.
       </Text>
+      
       {messages.length === 0 ? (
           <View style={styles.emptyChatContainer}>
               <Ionicons name="chatbubbles-outline" size={60} color="#ccc" />
@@ -200,18 +355,35 @@ export default function ChatScreen() {
           keyboardShouldPersistTaps="handled"
         />
       )}
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          value={inputText}
-          onChangeText={setInputText}
-          placeholder="Digite sua mensagem..."
-          placeholderTextColor="#8e8e92"
-          multiline
-          editable={!isSending}
-        />
-        <TouchableOpacity style={[styles.sendButton, isSending && styles.sendButtonDisabled]} onPress={handleSendMessage} disabled={isSending}>
-          {isSending ? <ActivityIndicator size="small" color="#007AFF" /> : <Ionicons name="send" size={24} color="#007AFF" />}
+      <View style={styles.inputAreaContainer}>
+        {/* Adicionar botões de mídia/voz aqui */}
+        <TouchableOpacity style={styles.mediaButton} onPress={() => Alert.alert("Anexar", "Funcionalidade de anexo de mídia")}>
+            <Ionicons name="add-circle-outline" size={28} color="#007AFF" />
+        </TouchableOpacity>
+        <Animated.View style={[styles.inputContainerWrapper, { borderColor: getInputBorderColor(inputBorderAnim) }]}>
+            <TextInput
+                style={styles.input}
+                value={inputText}
+                onChangeText={setInputText}
+                onFocus={() => animateInputBorder(inputBorderAnim, true)}
+                onBlur={() => animateInputBorder(inputBorderAnim, false)}
+                placeholder="Digite sua mensagem..."
+                placeholderTextColor="#8e8e92"
+                multiline
+                editable={!isSending}
+            />
+            <TouchableOpacity 
+                style={[styles.sendButton, isSending && styles.sendButtonDisabled, { transform: [{ scale: sendButtonScaleAnim }] }]} 
+                onPress={handleSendMessage}
+                onPressIn={onPressInSendButton}
+                onPressOut={onPressOutSendButton}
+                disabled={isSending}
+            >
+                {isSending ? <ActivityIndicator size="small" color="#007AFF" /> : <Ionicons name="send" size={24} color="#FFFFFF" />}
+            </TouchableOpacity>
+        </Animated.View>
+        <TouchableOpacity style={styles.mediaButton} onPress={() => Alert.alert("Voz", "Funcionalidade de mensagem de voz")}>
+            <Ionicons name="mic-outline" size={28} color="#007AFF" />
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -228,6 +400,88 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  customHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#007AFF', // Cor primária do app
+    paddingHorizontal: 15,
+    paddingVertical: Platform.OS === 'ios' ? 50 : 20, // Ajuste para status bar iOS
+    paddingTop: Platform.OS === 'ios' ? 50 : 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  headerBackButton: {
+    marginRight: 15,
+  },
+  headerRecipientInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.5)',
+  },
+  headerRecipientName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  headerOnlineStatus: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.7)',
+    marginLeft: 5,
+  },
+  headerActionIcon: {
+    marginLeft: 15,
+  },
+  headerActionIconPlaceholder: { // Para alinhar o título no centro durante o loading
+    width: 24, // Largura do ícone
+    marginLeft: 15,
+  },
+  typingIndicator: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
+  },
+  bookingContextCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E6F2FF', // Azul claro
+    padding: 12,
+    marginHorizontal: 10,
+    marginVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#B3D9FF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  bookingContextText: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  bookingContextTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#1C3A5F',
+  },
+  bookingContextSubtitle: {
+    fontSize: 12,
+    color: '#495057',
+    marginTop: 2,
   },
   policyReminder: {
     paddingHorizontal: 15,
@@ -259,10 +513,10 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     alignSelf: 'flex-start', // Alinha o container da linha à esquerda
   },
-  avatar: { // Estilo para avatar (opcional)
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+  avatar: { // Estilo para avatar
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     marginHorizontal: 8,
     alignSelf: 'flex-end', // Alinha o avatar na base do balão
   },
@@ -271,15 +525,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 18,
     minWidth: 60, // Largura mínima para balões pequenos
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   myMessageBubble: {
-    backgroundColor: '#007AFF', // Azul para minhas mensagens
     borderBottomRightRadius: 4, // Efeito de "cauda"
   },
   theirMessageBubble: {
     backgroundColor: '#FFFFFF', // Branco ou cinza claro para mensagens deles
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
     borderBottomLeftRadius: 4, // Efeito de "cauda"
   },
   myMessageText: {
@@ -290,16 +546,20 @@ const styles = StyleSheet.create({
     color: 'black',
     fontSize: 15,
   },
-  timestamp: {
-    fontSize: 10,
+  timestampAndStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
     marginTop: 4,
-    alignSelf: 'flex-end',
   },
   myTimestamp: {
     color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 10,
   },
   theirTimestamp: {
     color: '#8E8E92',
+    fontSize: 10,
+    alignSelf: 'flex-end',
   },
   dateSeparatorContainer: {
     alignItems: 'center',
@@ -315,37 +575,59 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     overflow: 'hidden',
   },
-  inputContainer: {
+  inputAreaContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 12,
+    alignItems: 'flex-end',
+    paddingHorizontal: 10,
     paddingVertical: 8,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: '#C7C7CC',
-    backgroundColor: '#F9F9F9', // Fundo da área de input
-    alignItems: 'flex-end', // Para alinhar o botão com o input multiline
+    backgroundColor: '#F9F9F9',
+  },
+  inputContainerWrapper: { // Novo container para aplicar a borda animada
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderRadius: 25, // Mais arredondado para chat
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   input: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#C7C7CC',
-    borderRadius: 20,
-    paddingHorizontal: 15,
+    fontSize: 16,
+    color: '#212529',
     paddingTop: Platform.OS === 'ios' ? 10 : 8, // Ajustes de padding para multiline
     paddingBottom: Platform.OS === 'ios' ? 10 : 8,
-    fontSize: 16,
-    marginRight: 10,
+    paddingHorizontal: 5, // Ajuste para não ter padding duplo
     maxHeight: 100, // Limite para input multiline
   },
   sendButton: {
-    padding: 8, // Área de toque maior
+    padding: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    height: 40, // Alinhar com a altura mínima do input
-    marginBottom: Platform.OS === 'ios' ? 0 : 2, // Ajuste fino para alinhar com input no Android
+    height: 40,
+    width: 40, // Botão circular
+    borderRadius: 20,
+    backgroundColor: '#007AFF', // Cor do botão de envio
+    marginLeft: 5,
   },
   sendButtonDisabled: {
-    opacity: 0.5,
+    opacity: 0.6,
+    backgroundColor: '#A0CFFF',
+  },
+  mediaButton: {
+    padding: 5,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Platform.OS === 'ios' ? 5 : 2,
+    marginHorizontal: 5,
   },
   emptyChatContainer: {
       flex: 1,

@@ -1,21 +1,19 @@
 // LimpeJaApp/app/(client)/bookings/[bookingId].tsx
-import React, { useEffect, useState } from 'react';
-import { 
-    View, 
-    Text, 
-    StyleSheet, 
-    ActivityIndicator, 
-    Button, // Vamos usar TouchableOpacity para botões customizados
+import React, { useEffect, useState, useRef } from 'react';
+import {
+    View,
+    Text,
+    StyleSheet,
+    ActivityIndicator,
     Alert,
     ScrollView,
     Image,
-    TouchableOpacity, // Para botões customizados
-    Platform
+    TouchableOpacity,
+    Platform,
+    Animated, // Importar Animated para animações
 } from 'react-native';
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'; // Para ícones
-// import { getBookingDetails, cancelBooking } from '../../../services/clientService'; // A ser criada
-// import { Booking, User } from '../../../src/types'; // Importe seus tipos reais
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { formatDate } from '../../../utils/helpers'; // Supondo que você tenha essa função
 
 // Definição de tipo para o placeholder (use seu tipo Booking real)
@@ -24,7 +22,7 @@ interface MockBooking {
   serviceName: string;
   providerName: string;
   providerId: string;
-  providerImageUrl?: string; // Adicionado para imagem do prestador
+  providerImageUrl?: string;
   date: string; // ISO String
   time?: string; // HH:MM (pode ser extraído de 'date' ou ser um campo separado)
   status: 'Confirmado' | 'Pendente' | 'Concluído' | 'Cancelado'; // Exemplo de status
@@ -34,52 +32,135 @@ interface MockBooking {
   reviewed?: boolean; // Para controlar se o botão de avaliar aparece
 }
 
+// Função mockada para simular a busca de detalhes do agendamento
+const fetchBookingDetailsFromAPI = async (bookingId: string): Promise<MockBooking | null> => {
+    console.log("[BookingDetailsScreen] Buscando detalhes para o agendamento:", bookingId);
+    await new Promise(resolve => setTimeout(resolve, 1200)); // Simula delay de rede
+
+    // Dados mockados para diferentes IDs de agendamento ou cenários
+    const mockBookings: MockBooking[] = [
+        {
+            id: 'book1',
+            serviceName: 'Limpeza Residencial Completa',
+            providerName: 'Ana Oliveira',
+            providerId: 'provider1',
+            providerImageUrl: 'https://via.placeholder.com/100/ADD8E6/000000?text=Ana+O',
+            date: '2025-07-15T14:00:00Z',
+            status: 'Confirmado',
+            address: 'Rua das Palmeiras, 450, Apt 101, Bairro Sol Nascente, Campinas-SP',
+            notes: 'Foco especial nos vidros da varanda e limpeza do forno. Tenho um gato persa muito tranquilo.',
+            price: 'R$ 180,00',
+            reviewed: false,
+        },
+        {
+            id: 'book2',
+            serviceName: 'Limpeza Comercial',
+            providerName: 'Carlos Silva',
+            providerId: 'provider2',
+            providerImageUrl: 'https://via.placeholder.com/100/E0F7FA/000000?text=Carlos+S',
+            date: '2025-07-01T09:00:00Z',
+            status: 'Concluído',
+            address: 'Av. Paulista, 1000, Conj. 505, Bela Vista, São Paulo-SP',
+            notes: 'Limpeza de escritório pós-evento.',
+            price: 'R$ 250,00',
+            reviewed: false, // Pode ser true para testar o botão de avaliação
+        },
+        {
+            id: 'book3',
+            serviceName: 'Limpeza Pós-Obra',
+            providerName: 'Mariana Costa',
+            providerId: 'provider3',
+            providerImageUrl: 'https://via.placeholder.com/100/B3E5FC/000000?text=Mariana+C',
+            date: '2025-06-20T10:00:00Z',
+            status: 'Cancelado',
+            address: 'Rua das Flores, 123, Centro, Rio de Janeiro-RJ',
+            notes: 'Obra atrasou, precisei cancelar.',
+            price: 'R$ 300,00',
+            reviewed: false,
+        },
+        {
+            id: 'book4',
+            serviceName: 'Limpeza de Vidros',
+            providerName: 'Ana Oliveira',
+            providerId: 'provider1',
+            providerImageUrl: 'https://via.placeholder.com/100/ADD8E6/000000?text=Ana+O',
+            date: '2025-07-25T13:00:00Z',
+            status: 'Pendente',
+            address: 'Av. Brasil, 500, Apt 202, Bairro Novo, Belo Horizonte-MG',
+            notes: 'Janelas do apartamento e varanda.',
+            price: 'R$ 100,00',
+            reviewed: false,
+        },
+    ];
+
+    const foundBooking = mockBookings.find(b => b.id === bookingId);
+    return foundBooking || null;
+};
+
 
 export default function BookingDetailsScreen() {
   const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
   const router = useRouter();
   
-  const [booking, setBooking] = useState<MockBooking | null>(null); // Usando MockBooking
+  const [booking, setBooking] = useState<MockBooking | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Animações para os elementos da tela
+  const providerSectionAnim = useRef(new Animated.Value(0)).current;
+  const detailsCardAnim = useRef(new Animated.Value(0)).current;
+  const actionsCardAnim = useRef(new Animated.Value(0)).current;
+
+  // Animações para os botões de ação
+  const cancelButtonScaleAnim = useRef(new Animated.Value(1)).current;
+  const contactButtonScaleAnim = useRef(new Animated.Value(1)).current;
+  const reviewButtonScaleAnim = useRef(new Animated.Value(1)).current;
+  const profileButtonScaleAnim = useRef(new Animated.Value(1)).current;
+
   useEffect(() => {
     if (bookingId) {
-      console.log("[BookingDetailsScreen] Carregando detalhes para o agendamento:", bookingId);
       setIsLoading(true);
       setError(null);
-      // TODO: Chamar clientService para buscar detalhes do agendamento
-      // const fetchDetails = async () => { ... };
-      // fetchDetails();
-
-      // Simulação com mais detalhes
-      setTimeout(() => {
-        // Encontre ou defina o mock com base no bookingId se tiver vários mocks
-        const mockData: MockBooking = {
-          id: bookingId,
-          serviceName: 'Limpeza Residencial Completa',
-          providerName: 'Ana Oliveira',
-          providerId: 'provider1', // ID real do prestador
-          providerImageUrl: 'https://via.placeholder.com/100/ADD8E6/000000?text=Ana+O',
-          date: '2025-07-15T14:00:00Z', // Data e Hora Agendada
-          status: 'Confirmado',
-          address: 'Rua das Palmeiras, 450, Apt 101, Bairro Sol Nascente, Campinas-SP',
-          notes: 'Foco especial nos vidros da varanda e limpeza do forno. Tenho um gato persa muito tranquilo.',
-          price: 'R$ 180,00',
-          reviewed: false,
-        };
-        if (bookingId === "outroIdDeTeste") { // Exemplo se você quiser testar diferentes status
-            // mockData.status = "Concluído";
-            // mockData.reviewed = true;
-        }
-        setBooking(mockData);
-        setIsLoading(false);
-      }, 1200);
+      fetchBookingDetailsFromAPI(bookingId)
+        .then(data => {
+          setBooking(data);
+          if (!data) setError(`Agendamento com ID "${bookingId}" não encontrado.`);
+        })
+        .catch(err => {
+          console.error("[BookingDetailsScreen] Erro ao buscar detalhes do agendamento:", err);
+          setError(err.message || "Não foi possível carregar os detalhes do agendamento.");
+        })
+        .finally(() => {
+          setIsLoading(false);
+          // Inicia as animações de entrada dos elementos
+          Animated.stagger(200, [
+            Animated.timing(providerSectionAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+            Animated.timing(detailsCardAnim, { toValue: 1, duration: 700, delay: 100, useNativeDriver: true }),
+            Animated.timing(actionsCardAnim, { toValue: 1, duration: 700, delay: 200, useNativeDriver: true }),
+          ]).start();
+        });
     } else {
         setError("ID do agendamento não fornecido.");
         setIsLoading(false);
     }
-  }, [bookingId]);
+  }, [bookingId, providerSectionAnim, detailsCardAnim, actionsCardAnim]);
+
+  // Função para animar o botão ao pressionar
+  const onPressInButton = (animValue: Animated.Value) => {
+    Animated.spring(animValue, {
+      toValue: 0.96,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const onPressOutButton = (animValue: Animated.Value) => {
+    Animated.spring(animValue, {
+      toValue: 1,
+      friction: 3,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
 
   const handleCancelBooking = async () => {
     if (!booking) return;
@@ -92,17 +173,8 @@ export default function BookingDetailsScreen() {
           text: "Sim, Cancelar",
           onPress: async () => {
             console.log("[BookingDetailsScreen] Cancelando agendamento:", bookingId);
-            setIsLoading(true); // Para feedback visual
+            setIsLoading(true);
             // TODO: Chamar clientService.cancelBooking(bookingId)
-            // try {
-            //   await cancelBooking(bookingId);
-            //   Alert.alert("Sucesso", "Agendamento cancelado.");
-            //   router.back(); 
-            // } catch (error: any) {
-            //   Alert.alert("Erro", error.message || "Não foi possível cancelar.");
-            // } finally {
-            //    setIsLoading(false);
-            // }
             setTimeout(() => { // Simulação
                 Alert.alert("Sucesso (Simulado)", "Agendamento cancelado.");
                 router.back();
@@ -118,15 +190,15 @@ export default function BookingDetailsScreen() {
   const getStatusStyle = (status: MockBooking['status']) => {
     switch (status) {
       case 'Confirmado':
-        return { color: '#4CAF50', icon: 'checkmark-circle-outline' as const };
+        return { color: '#4CAF50', icon: 'checkmark-circle-outline' as const, badgeBg: '#E8F5E9' };
       case 'Pendente':
-        return { color: '#FFC107', icon: 'time-outline' as const };
+        return { color: '#FFC107', icon: 'time-outline' as const, badgeBg: '#FFF3E0' };
       case 'Concluído':
-        return { color: '#007AFF', icon: 'flag-outline' as const };
+        return { color: '#007AFF', icon: 'flag-outline' as const, badgeBg: '#E3F2FD' };
       case 'Cancelado':
-        return { color: '#F44336', icon: 'close-circle-outline' as const };
+        return { color: '#F44336', icon: 'close-circle-outline' as const, badgeBg: '#FFEBEE' };
       default:
-        return { color: '#888', icon: 'help-circle-outline' as const };
+        return { color: '#888', icon: 'help-circle-outline' as const, badgeBg: '#ECEFF1' };
     }
   };
 
@@ -160,7 +232,8 @@ export default function BookingDetailsScreen() {
     <ScrollView style={styles.scrollViewContainer}>
       <Stack.Screen options={{ title: `Detalhes do Serviço` }} />
       
-      <View style={styles.card}>
+      {/* Seção do Prestador (Topo) com Animação */}
+      <Animated.View style={[styles.card, styles.providerSectionCard, { opacity: providerSectionAnim, transform: [{ translateY: providerSectionAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
         <View style={styles.providerSection}>
           {booking.providerImageUrl && 
             <Image source={{ uri: booking.providerImageUrl }} style={styles.providerImage} />
@@ -169,22 +242,21 @@ export default function BookingDetailsScreen() {
             <Text style={styles.serviceNameText}>{booking.serviceName}</Text>
             <Text style={styles.providerNameText}>com {booking.providerName}</Text>
           </View>
+          <View style={[styles.statusBadge, { backgroundColor: statusInfo.badgeBg }]}>
+            <Ionicons name={statusInfo.icon} size={16} color={statusInfo.color} />
+            <Text style={[styles.statusText, { color: statusInfo.color }]}>{booking.status}</Text>
+          </View>
         </View>
-      </View>
+      </Animated.View>
 
-      <View style={styles.card}>
+      {/* Detalhes do Agendamento com Animação */}
+      <Animated.View style={[styles.card, { opacity: detailsCardAnim, transform: [{ scale: detailsCardAnim.interpolate({ inputRange: [0, 1], outputRange: [0.98, 1] }) }] }]}>
         <Text style={styles.sectionTitle}>Detalhes do Agendamento</Text>
         
         <View style={styles.detailRow}>
           <Ionicons name="calendar-outline" size={20} color="#555" style={styles.icon} />
           <Text style={styles.detailLabel}>Data e Hora:</Text>
           <Text style={styles.detailValue}>{formatDate(booking.date, { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}</Text>
-        </View>
-
-        <View style={styles.detailRow}>
-          <Ionicons name={statusInfo.icon} size={20} color={statusInfo.color} style={styles.icon} />
-          <Text style={styles.detailLabel}>Status:</Text>
-          <Text style={[styles.detailValue, { color: statusInfo.color, fontWeight: 'bold' }]}>{booking.status}</Text>
         </View>
 
         <View style={styles.detailRow}>
@@ -206,32 +278,56 @@ export default function BookingDetailsScreen() {
                 <Text style={styles.detailValue}>{booking.notes}</Text>
             </View>
         )}
-      </View>
+      </Animated.View>
       
-      <View style={styles.actionsCard}>
+      {/* Cartão de Ações com Animação */}
+      <Animated.View style={[styles.actionsCard, { opacity: actionsCardAnim, transform: [{ scale: actionsCardAnim.interpolate({ inputRange: [0, 1], outputRange: [0.98, 1] }) }] }]}>
         <Text style={styles.sectionTitle}>Ações</Text>
+        
         {booking.status === 'Confirmado' && (
-            <TouchableOpacity style={[styles.actionButton, styles.cancelButton]} onPress={handleCancelBooking}>
+            <TouchableOpacity
+                style={[styles.actionButton, styles.cancelButton, { transform: [{ scale: cancelButtonScaleAnim }] }]}
+                onPress={handleCancelBooking}
+                onPressIn={() => onPressInButton(cancelButtonScaleAnim)}
+                onPressOut={() => onPressOutButton(cancelButtonScaleAnim)}
+            >
                 <Ionicons name="close-circle-outline" size={20} color="#fff" />
                 <Text style={styles.actionButtonText}>Cancelar Agendamento</Text>
             </TouchableOpacity>
         )}
-        <TouchableOpacity style={styles.actionButton} onPress={() => router.push(`/(client)/messages/${booking.providerId}?bookingId=${bookingId}&recipientName=${booking.providerName}`)}>
+        
+        <TouchableOpacity
+            style={[styles.actionButton, { transform: [{ scale: contactButtonScaleAnim }] }]}
+            onPress={() => router.push(`/(client)/messages/${booking.providerId}?bookingId=${bookingId}&recipientName=${booking.providerName}`)}
+            onPressIn={() => onPressInButton(contactButtonScaleAnim)}
+            onPressOut={() => onPressOutButton(contactButtonScaleAnim)}
+        >
             <Ionicons name="chatbubble-ellipses-outline" size={20} color="#fff" />
             <Text style={styles.actionButtonText}>Contatar {booking.providerName.split(' ')[0]}</Text>
         </TouchableOpacity>
 
         {booking.status === 'Concluído' && !booking.reviewed && (
-          <TouchableOpacity style={[styles.actionButton, styles.reviewButton]} onPress={() => router.push(`/(common)/feedback/${bookingId}?type=service&serviceName=${encodeURIComponent(booking.serviceName)}&providerName=${encodeURIComponent(booking.providerName)}`)}>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.reviewButton, { transform: [{ scale: reviewButtonScaleAnim }] }]}
+            onPress={() => router.push(`/(common)/feedback/${bookingId}?type=service&serviceName=${encodeURIComponent(booking.serviceName)}&providerName=${encodeURIComponent(booking.providerName)}`)}
+            onPressIn={() => onPressInButton(reviewButtonScaleAnim)}
+            onPressOut={() => onPressOutButton(reviewButtonScaleAnim)}
+          >
             <Ionicons name="star-outline" size={20} color="#fff" />
             <Text style={styles.actionButtonText}>Avaliar Serviço</Text>
           </TouchableOpacity>
         )}
-        <TouchableOpacity style={styles.actionButtonOutline} onPress={() => router.push(`/(client)/explore/${booking.providerId}`)}>
+        
+        <TouchableOpacity
+            style={[styles.actionButtonOutline, { transform: [{ scale: profileButtonScaleAnim }] }]}
+            onPress={() => router.push(`/(client)/explore/${booking.providerId}`)}
+            onPressIn={() => onPressInButton(profileButtonScaleAnim)}
+            onPressOut={() => onPressOutButton(profileButtonScaleAnim)}
+        >
             <Ionicons name="person-circle-outline" size={20} color="#007AFF" />
             <Text style={[styles.actionButtonText, styles.actionButtonOutlineText]}>Ver Perfil de {booking.providerName.split(' ')[0]}</Text>
         </TouchableOpacity>
-      </View>
+      </Animated.View>
     </ScrollView>
   );
 }
@@ -265,30 +361,37 @@ const styles = StyleSheet.create({
     padding: 18,
     marginHorizontal: 15,
     marginTop: 15,
+    // Sombras aprimoradas para um efeito mais "flutuante"
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        shadowColor: 'rgba(0,0,0,0.1)',
+        shadowOffset: { width: 0, height: 5 }, // Sombra mais pronunciada
+        shadowOpacity: 0.2, // Opacidade da sombra
+        shadowRadius: 10, // Suavidade da sombra
       },
       android: {
-        elevation: 3,
+        elevation: 6, // Elevação maior para Android
       },
     }),
   },
-  providerSection: {
+  providerSectionCard: { // Estilo específico para o card do provedor no topo
+    paddingVertical: 20, // Mais padding vertical
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10, // Espaço antes dos detalhes do agendamento, se for no mesmo card
+    justifyContent: 'space-between', // Espaça os itens
+  },
+  providerSection: { // Conteúdo interno do card do provedor
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1, // Ocupa o espaço disponível
   },
   providerImage: {
     width: 60,
     height: 60,
     borderRadius: 30,
     marginRight: 15,
-    borderWidth: 1,
-    borderColor: '#eee'
+    borderWidth: 2, // Borda mais grossa
+    borderColor: '#007AFF', // Cor da borda
   },
   providerInfo: {
     flex: 1,
@@ -302,6 +405,19 @@ const styles = StyleSheet.create({
   providerNameText: {
     fontSize: 16,
     color: '#555',
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 15,
+    marginLeft: 10,
+  },
+  statusText: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    marginLeft: 5,
   },
   sectionTitle: {
     fontSize: 18,
@@ -336,7 +452,7 @@ const styles = StyleSheet.create({
   detailValueAddress: { // Estilo específico para endereço se precisar de mais espaço
     fontSize: 15,
     color: '#333',
-    flex: 1, 
+    flex: 1,
     lineHeight: 22,
   },
   priceText: {
@@ -352,16 +468,16 @@ const styles = StyleSheet.create({
     marginTop: 15,
     marginBottom: 30, // Espaço no final da ScrollView
      ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 2 },
-      android: { elevation: 2 },
+      ios: { shadowColor: 'rgba(0,0,0,0.1)', shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.2, shadowRadius: 10 },
+      android: { elevation: 6 },
     }),
   },
   actionButton: {
     flexDirection: 'row',
     backgroundColor: '#007AFF',
-    paddingVertical: 12,
+    paddingVertical: 14, // Aumenta o padding
     paddingHorizontal: 15,
-    borderRadius: 8,
+    borderRadius: 10, // Mais arredondado
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
@@ -381,13 +497,13 @@ const styles = StyleSheet.create({
   actionButtonOutline: {
     flexDirection: 'row',
     backgroundColor: 'transparent',
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 15,
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
-    borderWidth: 1,
+    borderWidth: 2, // Borda mais grossa
     borderColor: '#007AFF',
   },
   actionButtonOutlineText: {

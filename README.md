@@ -66,262 +66,317 @@ Construído com tecnologia de ponta, o aplicativo oferece uma experiência de us
 
 ---
 
-## 🛠️ Tecnologias Utilizadas (Frontend)
+## 🛠️ Stack Utilizada 
 
-* **React Native**: Para desenvolvimento mobile multiplataforma (Android & iOS).
-* **Expo (SDK 53)**: Para um fluxo de desenvolvimento gerenciado, builds e atualizações.
-* **Expo Router (v5)**: Para navegação baseada em arquivos, robusta e tipada.
-* **TypeScript**: Para um código mais seguro, manutenível e escalável.
-* **EAS (Expo Application Services)**:
-    * `EAS Build`: Para compilação de APKs/AABs e IPAs na nuvem.
-    * `EAS Submit`: Para envio para as lojas (futuramente).
-    * `EAS Update`: Para atualizações over-the-air (futuramente).
-* **Context API (React)**: Para gerenciamento de estado global (Autenticação, Configurações do App).
-* **Axios**: Para chamadas HTTP à API backend.
-* **Componentes Nativos da Comunidade**: Como `@react-native-community/datetimepicker`.
-* **Ícones**: `@expo/vector-icons`.
+## 🛠️ Stack Utilizada
+
+### 📱 **Frontend (App Mobile)**
+
+| Tecnologia | Descrição |
+|------------|-----------|
+| ⚛️ **React Native** | Desenvolvimento mobile nativo multiplataforma (Android & iOS). |
+| 🚀 **Expo (SDK 53)** | Facilita builds, OTA updates e acesso a APIs nativas sem eject. |
+| 🗂 **Expo Router v5** | Navegação baseada em arquivos com tipagem forte e rotas dinâmicas. |
+| 🧠 **TypeScript** | Tipagem estática para código seguro, escalável e de fácil manutenção. |
+| 🎯 **React Context API** | Gerenciamento global de estado (Auth, App settings). |
+| 🧩 **Hooks customizados** | `useAuth`, `useProviderRegistration`, entre outros para abstração de lógica. |
+| 🌐 **Axios** | Abstração das chamadas HTTP (mockado em dev). |
+| 🎨 **UI Moderna** | Gradientes (`expo-linear-gradient`), blur (`expo-blur`), animações (`reanimated`). |
+| 🧱 **Componentes Nativos** | `datetimepicker`, `async-storage`, `image-picker`, `clipboard`. |
+| 🔤 **Ícones** | `@expo/vector-icons` com suporte a múltiplas bibliotecas (Ionicons, Material, etc.). |
+
+---
+
+### ☁️ **Backend (Firebase Serverless)**
+
+| Tecnologia | Descrição |
+|------------|-----------|
+| 🔥 **Firebase Cloud Functions** | Lógica de backend com funções HTTP, Callable e Triggers. |
+| 🗃 **Cloud Firestore** | Banco de dados NoSQL para agendamentos, perfis, mensagens, etc. |
+| 🔐 **Firebase Auth + Custom Claims** | Autenticação com controle de acesso por roles (`client`, `provider`, `admin`). |
+| 🖼 **Firebase Storage** | Armazenamento de fotos e documentos. |
+| 📬 **FCM (Firebase Messaging)** | Notificações push em tempo real. |
+| ✅ **Zod** | Validação rigorosa de dados de entrada. |
+| 🛡 **firebase-admin SDK** | Operações administrativas seguras no backend. |
+| 🧩 **Services** | `firestore.service.ts`, `paymentGateway.service.ts`, `notification.service.ts` para lógica compartilhada. |
+| 🧪 **Testes & Manutenção** | `reset-project.js`, mocks e middlewares (`assertAuthenticated`, `assertRole`). |
 
 ---
 
-## 🔩 Arquitetura Backend (Sugestão)
+> 📌 **Arquitetura Modularizada:**  
+> Funções organizadas por domínio (`auth/`, `bookings/`, `payments/`, `reviews/`, `notifications/`, etc.) para escalabilidade e manutenção.
 
-Para suportar as funcionalidades do LimpeJá, incluindo cadastro de clientes e prestadores, agendamentos, pagamentos e a estratégia de ganhos, um backend robusto é essencial. Uma abordagem prática e escalável, especialmente para acelerar o desenvolvimento inicial, seria utilizar uma plataforma Backend-as-a-Service (BaaS) como o **Firebase (Google)**. Alternativamente, stacks customizadas como Node.js (com NestJS ou Express) + PostgreSQL também são excelentes escolhas para maior controle e flexibilidade a longo prazo.
+> 🎯 **Integração fluida:**  
+> Frontend e Backend comunicam-se via funções **Callable**, **HTTP REST** e **Triggers** de Firestore/Auth.
 
-### Tecnologias Sugeridas (Exemplo com Firebase):
-
-* **Firebase Authentication**: Para cadastro e login de usuários (email/senha, login social), gerenciamento de sessão e segurança. Suporta diferenciação de perfis (cliente/prestador) via custom claims ou papéis no Firestore.
-* **Cloud Firestore (NoSQL Database)**: Banco de dados flexível e escalável para armazenar informações de usuários, detalhes de serviços, agendamentos, avaliações, conversas de chat, etc. Permite consultas em tempo real.
-* **Cloud Functions for Firebase**: Para executar lógica de backend serverless. Ideal para processar pagamentos, calcular comissões, enviar notificações, validar dados e outras lógicas de negócio.
-* **Firebase Storage**: Para armazenamento de arquivos como fotos de perfil e documentos.
-* **Firebase Cloud Messaging (FCM)**: Para enviar notificações push.
-* **Gateway de Pagamento (Ex: Stripe, Mercado Pago, Pagar.me):** Integrado através de Cloud Functions.
-
-### Módulos Principais do Backend:
-
-1.  **Autenticação e Gerenciamento de Usuários** (Perfis Cliente/Prestador, roles, verificação).
-2.  **Gerenciamento de Serviços e Disponibilidade** (para Prestadores).
-3.  **Busca e Descoberta** (filtros, geolocalização opcional).
-4.  **Sistema de Agendamento** (ciclo de vida do agendamento, status).
-5.  **Processamento de Pagamentos e Repasses** (cálculo de comissão).
-6.  **Sistema de Avaliações e Comentários**.
-7.  **Notificações** (Push e in-app).
-8.  **Chat** (mensagens em tempo real).
-9.  **Painel Administrativo** (para a equipe LimpeJá).
+> 🔒 **Segurança de ponta-a-ponta:**  
+> Autenticação, claims, validações e middleware garantem acesso seguro e controlado.
 
 ---
+
 
 ## 🔗 Conexão Frontend-Backend
 
-A comunicação entre o aplicativo frontend LimpeJá (React Native/Expo) e o backend (ex: Firebase ou uma API customizada) é fundamental. Ela ocorre principalmente através de chamadas HTTP (para APIs REST/GraphQL) e, para funcionalidades em tempo real, pode usar WebSockets ou serviços como o Firestore Realtime Updates.
+🔗 Conexão Frontend-Backend
+O frontend do LimpeJá, construído com React Native + Expo Router v5, se comunica diretamente com o backend baseado em Firebase Cloud Functions, utilizando uma arquitetura serverless escalável, segura e modularizada por domínio de negócio.
 
-### Cliente API (Axios)
+🔄 Comunicação entre Camadas
+O frontend realiza chamadas:
 
-* No frontend, teremos uma instância configurada do **Axios** (ou podemos usar a API `Workspace` nativa) localizada em `src/services/api.ts`.
-* Este cliente API será configurado com a URL base do nosso backend.
-* **Tokens de Autenticação (JWT):** Após o login bem-sucedido, o `AuthContext` armazena o token JWT (JSON Web Token). A instância do Axios é configurada para incluir automaticamente este token no cabeçalho (`Authorization: Bearer <token>`) de todas as requisições subsequentes para rotas protegidas do backend.
+A funções HTTP (ex: GET /checkAuthStatus, POST /create-pix-charge)
 
-### Camada de Serviços
+A funções Callable (invocadas diretamente pelo SDK Firebase)
 
-* A pasta `src/services/` (com arquivos como `authService.ts`, `clientService.ts`, `providerService.ts`) encapsula toda a lógica de comunicação com o backend.
-* Cada função dentro desses arquivos de serviço será responsável por uma operação específica (ex: `loginUser()`, `getProviderDetails(id)`, `createBooking(data)`).
-* Essas funções usarão a instância configurada do Axios para fazer as chamadas HTTP (GET, POST, PUT, DELETE) para os endpoints correspondentes da API backend.
-* Elas tratarão as respostas da API (dados de sucesso ou erros) e retornarão os dados de forma estruturada (geralmente Promises) para as telas ou hooks que as chamarem.
+A autenticação é gerenciada pelo Firebase Authentication, tanto no cliente (firebase/auth) quanto no servidor (firebase-admin).
 
-### Fluxo de Dados Típico (Exemplo: Cliente buscando detalhes de um Prestador)
+As operações são protegidas por validação de Custom Claims, middleware e validação de dados com Zod.
 
-1.  **Ação do Usuário:** O cliente clica em um card de prestador na tela `app/(client)/explore/index.tsx`.
-2.  **Navegação:** O Expo Router navega para `app/(client)/explore/[providerId].tsx`, passando o `providerId`.
-3.  **Componente de Tela (`ProviderDetailsScreen`):**
-    * No `useEffect`, ao receber o `providerId`, a tela chama uma função do `clientService.ts`, por exemplo: `getProviderDetails(providerId)`.
-4.  **Função de Serviço (`clientService.getProviderDetails`):**
-    * Esta função monta a requisição GET para o endpoint da API do backend (ex: `/providers/${providerId}`).
-    * Usa a instância do Axios para enviar a requisição (o token JWT já estará no header se a rota for protegida).
-5.  **Backend:**
-    * A API backend recebe a requisição, busca os dados do prestador no banco de dados (ex: Firestore).
-    * Retorna os dados do prestador como uma resposta JSON.
-6.  **Função de Serviço (continuação):**
-    * Recebe a resposta da API.
-    * Pode fazer algum tratamento/transformação nos dados, se necessário.
-    * Retorna os dados (ou uma Promise que resolve com os dados) para o `ProviderDetailsScreen`.
-7.  **Componente de Tela (continuação):**
-    * Recebe os dados do serviço.
-    * Atualiza seu estado local (ex: `setProvider(dadosRecebidos)`).
-    * A UI é re-renderizada para exibir os detalhes do prestador.
-    * Tratamento de erros em cada etapa é crucial (ex: mostrar mensagem se a API falhar).
+📦 Módulos do Backend Invocados no Frontend
+Módulo	Frontend (arquivo)	Backend (função)	Tipo
+Autenticação	login.tsx, register-options.tsx	authApi, processNewUser	HTTP, Trigger
+Cadastro Cliente	client-register.tsx	processNewUser	Trigger
+Cadastro Profissional	provider-register/*.tsx	submitProviderRegistration	Callable
+Perfil e Endereço	profile/edit.tsx	updateUserProfile, addUserAddress	Callable
+Agendamentos	schedule-service.tsx, bookings/*.tsx	bookingsApi, updateBookingStatus, requestBookingReschedule	HTTP, Callable
+Pagamentos PIX	schedule-service.tsx, earnings.tsx	createPixCharge, requestProviderPayout, getMyPaymentHistory	HTTP, Callable
+Notificações	notifications.tsx	getNotificationsHistory, markNotificationsAsRead	Callable
+Chat	messages/[chatId].tsx	onNewChatMessage	Trigger
+Avaliações	feedback/[targetId].tsx	submitReview	Callable
 
-### Autenticação e Tokens
+🧩 Como os Componentes se Relacionam
+O Contexto de Autenticação (AuthContext.tsx) realiza login, logout e atualização de dados via funções callable e API REST.
 
-* **Login/Cadastro (`authService.ts`):** Envia credenciais para a API de autenticação do backend.
-* **Resposta do Backend:** Retorna dados do usuário e tokens (access token, refresh token).
-* **`AuthContext.tsx`:**
-    * Chama `signIn(userData, tokenData)`.
-    * Armazena os tokens de forma segura (usando `SecureStore` no mobile e `AsyncStorage` na web, como implementamos).
-    * Atualiza o estado `user` e `isAuthenticated`.
-    * Configura a instância global do Axios para usar o novo `accessToken` nos headers.
-* **Requisições Autenticadas:** Todas as chamadas subsequentes feitas pela camada de `services/` para rotas protegidas da API incluirão automaticamente o token.
-* **Refresh Token (Lógica Avançada):** O backend pode invalidar o `accessToken` após um tempo. O frontend (na configuração do Axios, usando interceptors) pode detectar um erro 401 (Não Autorizado), usar o `refreshToken` para obter um novo `accessToken` do backend, e então tentar a requisição original novamente.
+O Cadastro de Prestadores utiliza useProviderRegistration, agregando dados das etapas e enviando para submitProviderRegistration (Callable).
 
-### Comunicação em Tempo Real (Exemplo com Firebase)
+As telas de agendamento (cliente) e de serviços/agenda (prestador) invocam endpoints REST e Callable para criação, atualização e cancelamento de bookings.
 
-* **Chat:** Se estiver usando Firestore para o chat, as telas de chat podem "escutar" (subscribe) as alterações em tempo real em uma coleção do Firestore. Novas mensagens aparecem instantaneamente.
-* **Status de Agendamentos:** Similarmente, o status de um agendamento pode ser atualizado em tempo real para o cliente e para o prestador.
+O sistema de notificações mostra histórico no frontend e marca como lidas via função callable.
 
-Esta arquitetura de comunicação visa manter as responsabilidades separadas: componentes de UI lidam com a apresentação e interação do usuário, a camada de serviços gerencia a lógica de API, e o backend cuida das regras de negócio e persistência de dados.
+O fluxo financeiro (prestador) chama funções que geram cobranças PIX, solicitam saques e mostram histórico de transações.
 
----
+🔐 Segurança e Validações
+Todas as funções Callable e HTTP no backend utilizam assertAuthenticated e assertRole (em helpers.ts) para garantir acesso seguro.
 
-## 📁 Estrutura do Projeto (Frontend)
+Dados são validados com Zod em ambos os lados: entrada no frontend e entrada nas Cloud Functions.
+
+Tokens FCM são armazenados e utilizados para notificações push em tempo real.
+
+📚 Exemplos de Fluxos
+Cadastro e Login:
+register-options.tsx → client-register.tsx ou provider-register/*.tsx
+
+Firebase Auth cria o usuário → dispara processNewUser
+
+Após login, frontend chama checkAuthStatus para verificar o role (client, provider, admin)
+
+Agendamento e Pagamento:
+schedule-service.tsx cria agendamento via POST / (bookingsApi)
+
+Geração de cobrança PIX via POST /create-pix-charge
+
+Pagamento confirmado via webhook → status atualizado no Firestore
+
+Notificação enviada para cliente e prestador
+
+## 📁 Estrutura do Projeto inteiro
 LimpeJaApp/ (Raiz do seu projeto)
-├── app/  
-│   ├── (auth)/
-│   │   ├── provider-register/
-│   │   │   ├── _layout.tsx
-│   │   │   ├── index.tsx
-│   │   │   ├── personal-details.tsx
-│   │   │   └── service-details.tsx
-│   │   ├── _layout.tsx
-│   │   ├── client-register.tsx
-│   │   ├── login.tsx
-│   │   └── register-options.tsx
-│   │
-│   ├── (client)/
-│   │   ├── _layout.tsx
-│   │   ├── bookings/
-│   │   │   ├── _layout.tsx  // Assumindo que possa ter um layout para o stack de bookings
-│   │   │   ├── [bookingId].tsx
-│   │   │   ├── index.tsx
-│   │   │   └── schedule-service.tsx
-│   │   ├── explore/
-│   │   │   ├── _layout.tsx  // Assumindo que possa ter um layout para o stack de explore
-│   │   │   ├── [providerId].tsx
-│   │   │   ├── index.tsx
-│   │   │   ├── resultados-busca.tsx
-│   │   │   ├── search-results.tsx        // (Você tem resultados-busca e search-results, verifique se são diferentes ou se um pode ser removido)
-│   │   │   ├── servicos-por-categoria.tsx
-│   │   │   ├── todas-categorias.tsx
-│   │   │   └── todos-prestadores-proximos.tsx
-│   │   ├── messages/
-│   │   │   ├── _layout.tsx  // Assumindo que possa ter um layout para o stack de messages
-│   │   │   ├── [chatId].tsx
-│   │   │   └── index.tsx
-│   │   ├── ofertas/
-│   │   │   ├── _layout.tsx  // Assumindo que possa ter um layout para o stack de ofertas
-│   │   │   └── [ofertaId].tsx
-│   │   └── profile/
-│   │       ├── _layout.tsx  // Assumindo que possa ter um layout para o stack de profile
-│   │       ├── edit.tsx
-│   │       └── index.tsx
-│   │
-│   ├── (common)/
-│   │   ├── _layout.tsx
-│   │   ├── feedback/
-│   │   │   └── [targetId].tsx
-│   │   ├── help.tsx
-│   │   └── settings.tsx 
-│   │   └── notifications.tsx // Adicionando com base na nossa discussão
-│   │
-│   ├── (provider)/
-│   │   ├── _layout.tsx
-│   │   ├── dashboard.tsx
-│   │   ├── earnings.tsx
-│   │   ├── messages/
-│   │   │   ├── _layout.tsx // Assumindo que possa ter um layout para o stack de messages do provider
-│   │   │   ├── [chatId].tsx
-│   │   │   └── index.tsx
-│   │   ├── profile/
-│   │   │   ├── _layout.tsx // Assumindo que possa ter um layout para o stack de profile do provider
-│   │   │   ├── edit-services.tsx
-│   │   │   └── index.tsx
-│   │   ├── schedule/
-│   │   │   ├── _layout.tsx // Assumindo que possa ter um layout para o stack de schedule do provider
-│   │   │   ├── index.tsx
-│   │   │   └── manage-availability.tsx
-│   │   └── services/
-│   │       ├── _layout.tsx // Assumindo que possa ter um layout para o stack de services do provider
-│   │       ├── [serviceId].tsx
-│   │       └── index.tsx
-│   │
-│   ├── (tabs)/             // Esta pasta apareceu na sua imagem mais recente.
-│   │   └──                 // O conteúdo dela não está visível.
-│   │
-│   ├── _layout.tsx         // Layout raiz da aplicação (AuthProvider, AppProvider, InitialLayout)
-│   ├── index.tsx           // Ponto de entrada da rota '/' (Tela inicial ou de redirecionamento)
-│   └── +not-found.tsx      // Tela para rotas não encontradas
-│
-├── assets/
-│   ├── fonts/
-│   │   └── (seus arquivos de fonte)
-│   └── images/
-│       ├── icon.png
-│       ├── adaptive-icon.png
-│       ├── splash.png
-│       ├── favicon.png
-│       └── default-avatar.png (que discutimos)
-│
-├── components/
-│   ├── layout/
-│   │   └── CustomHeader.tsx
-│   ├── specific/
-│   │   └── ServiceBookingCard.tsx
-│   ├── ui/
-│   │   ├── Button.tsx
-│   │   ├── Card.tsx
-│   │   ├── IconSymbol.ios.tsx
-│   │   ├── IconSymbol.tsx
-│   │   ├── Input.tsx
-│   │   ├── TabBarBackground.ios.tsx
-│   │   └── TabBarBackground.tsx
-│   ├── BannerOferta.tsx
-│   ├── HeaderSuperior.tsx
-│   ├── NavBar.tsx
-│   ├── SaudacaoContainer.tsx
-│   ├── SecaoContainer.tsx
-│   └── SecaoPrestadores.tsx
-│
-├── contexts/
-│   ├── AuthContext.tsx
-│   └── AppContext.tsx
-│
-├── hooks/
-│   ├── useAuth.ts
-│   └── useFormValidation.ts // (Exemplo que demos, pode ter outros)
-│
-├── services/
-│   ├── api.ts
-│   ├── authService.ts
-│   ├── clientService.ts
-│   ├── providerService.ts
-│   └── paymentService.ts
-│
-├── types/
-│   ├── index.ts
-│   ├── user.ts
-│   ├── navigation.ts
-│   ├── service.ts
-│   ├── booking.ts
-│   └── (outros arquivos de tipo que você criar, ex: offer.ts, notification.ts)
-│
-├── utils/
-│   ├── helpers.ts
-│   ├── storage.ts
-│   └── permissions.ts
-│
-├── .expo/                // Gerado pelo Expo
-├── .vscode/              // Configurações do VSCode
-├── node_modules/         // Dependências
-├── scripts/              // Seus scripts customizados (ex: reset-project.js)
-├── .gitignore
-├── app.json
-├── eas.json
-├── babel.config.js
-├── eslint.config.js (ou .eslintrc.js)
-├── package-lock.json
-├── package.json
-├── README.md
-└── tsconfig.json
+app/
+├── (auth)/
+│   ├── provider-register/
+│   │   ├── index.tsx
+│   │   ├── layout.tsx
+│   │   ├── personal-details.tsx
+│   │   └── service-details.tsx
+│   ├── client-register.tsx
+│   ├── forgot-password.tsx
+│   ├── layout.tsx
+│   ├── login.tsx
+│   └── register-options.tsx
+├── (client)/
+│   ├── bookings/
+│   │   ├── [bookingId].tsx
+│   │   ├── index.tsx
+│   │   ├── schedule-service.tsx
+│   │   └── success.tsx
+│   ├── explore/
+│   │   ├── [providerId].tsx
+│   │   ├── index.tsx
+│   │   ├── resultados-busca.tsx
+│   │   ├── search-results.tsx
+│   │   ├── servicos-por-categoria.tsx
+│   │   ├── todas-categorias.tsx
+│   │   └── todos-prestadores-proximos.tsx
+│   ├── messages/
+│   │   ├── [chatId].tsx
+│   │   └── index.tsx
+│   ├── ofertas/
+│   │   └── [ofertaId].tsx
+│   └── profile/
+│       ├── edit.tsx
+│       ├── index.tsx
+│       └── layout.tsx
+├── (common)/
+│   ├── feedback/
+│   │   └── [targetId].tsx
+│   ├── help.tsx
+│   ├── layout.tsx
+│   ├── notifications.tsx
+│   ├── privacidade.tsx
+│   ├── settings.tsx
+│   └── termos.tsx
+├── (provider)/
+│   ├── messages/
+│   │   ├── [chatId].tsx
+│   │   └── index.tsx
+│   ├── profile/
+│   │   ├── edit-services.tsx
+│   │   └── index.tsx
+│   ├── schedule/
+│   │   ├── index.tsx
+│   │   └── manage-availability.tsx
+│   └── services/
+│       ├── [serviceId].tsx
+│       └── index.tsx
+├── dashboard.tsx
+├── earnings.tsx
+├── layout.tsx
+├── _layout.tsx
+├── +not-found.tsx
+├── index.tsx
+└── welcome.tsx
+assets/
+├── fonts/
+└── images/
+components/
+├── home/
+│   ├── BottomNavBar.tsx
+│   ├── CategoriaCard.tsx
+│   ├── CategoryGrid.tsx
+│   ├── SearchBar.tsx
+│   ├── ServiceCard.tsx
+│   ├── ServiceList.tsx
+│   └── TopBar.tsx
+├── layout/
+│   └── CustomHeader.tsx
+├── schedule/
+│   ├── AddressSection.tsx
+│   ├── CalendarHeader.tsx
+│   ├── PaymentMethodSelection.tsx
+│   └── TimeSlotButton.tsx
+├── specific/
+│   └── ServiceBookingCard.tsx
+├── ui/
+│   ├── Button.tsx
+│   ├── Card.tsx
+│   ├── IconSymbol.ios.tsx
+│   ├── IconSymbol.tsx
+│   ├── Input.tsx
+│   ├── TabBarBackground.ios.tsx
+│   └── TabBarBackground.tsx
+├── BannerOferta.tsx
+├── CategoriaCard.tsx
+├── Collapsible.tsx
+├── ExternalLink.tsx
+├── HapticTab.tsx
+├── HeaderSuperior.tsx
+├── HelloWave.tsx
+├── ListaPrestadores.tsx
+├── NavBar.tsx
+├── ParallaxScrollView.tsx
+├── PrestadorCard.tsx
+├── SaudacaoContainer.tsx
+├── SecaoContainer.tsx
+├── SecaoPrestadores.tsx
+├── ThemedText.tsx
+└── ThemedView.tsx
+config/
+├── appConfig.ts
+constants/
+├── Colors.ts
+├── routes.ts
+├── strings.ts
+└── theme.ts
+contexts/
+├── AppContext.tsx
+├── AuthContext.tsx
+└── ProviderRegistrationContext.tsx
+documentation/
+├── backend.md
+└── frontend.md
+functions/
+├── node_modules/
+├── src/
+│   ├── admin/
+│   │   ├── callable.ts
+│   │   ├── auth/
+│   │   │   ├── http.ts
+│   │   │   └── triggers.ts
+│   ├── bookings/
+│   │   ├── callable.ts
+│   │   ├── http.ts
+│   │   └── triggers.ts
+│   ├── chat/
+│   │   └── triggers.ts
+│   ├── config/
+│   │   ├── environment.ts
+│   │   └── firebaseAdmin.ts
+│   ├── lib/
+│   ├── notifications/
+│   │   ├── callable.ts
+│   │   ├── triggers.ts
+│   │   └── utils.ts
+│   ├── payments/
+│   │   ├── callable.ts
+│   │   ├── http.ts
+│   │   └── triggers.ts
+│   ├── providers/
+│   │   ├── callable.ts
+│   │   └── triggers.ts
+│   ├── reviews/
+│   │   ├── callable.ts
+│   │   └── triggers.ts
+│   └── services/
+│       ├── firestore.service.ts
+│       ├── notification.service.ts
+│       └── paymentGateway.service.ts
+types/
+├── booking.types.ts
+├── chat.types.ts
+├── index.ts
+├── notification.types.ts
+├── payment.types.ts
+├── provider.types.ts
+├── review.types.ts
+├── service.types.ts
+└── user.types.ts
+users/
+├── callable.ts
+└── triggers.ts
+utils/
+├── helpers.ts
+├── notifications.ts
+├── validators.ts
+└── index.ts
+hooks/
+├── useAuth.ts
+├── useColorScheme.ts
+├── useColorScheme.web.ts
+├── useFormValidation.ts
+└── useThemeColor.ts
+services/
+├── api.ts
+├── authService.ts
+└── clientService.ts
+scripts/
+└── reset-project.js
+.eslintrc.js
+.gitignore
+package.json
+package-lock.json
+tsconfig.json
+tsconfig.dev.json
 
 
-## 🔩 Arquitetura Backend (Sugestão)
 
 Para suportar as funcionalidades do LimpeJá, incluindo cadastro de clientes e prestadores, agendamentos, pagamentos e a estratégia de ganhos, um backend robusto é essencial. Uma abordagem prática e escalável, especialmente para acelerar o desenvolvimento inicial, seria utilizar uma plataforma Backend-as-a-Service (BaaS) como o **Firebase (Google)**. Alternativamente, stacks customizadas como Node.js (com NestJS/Express) + PostgreSQL também são excelentes escolhas para maior controle.
 
@@ -377,80 +432,189 @@ Independentemente da tecnologia escolhida, os seguintes módulos seriam necessá
     * Ferramentas para gerenciar usuários, resolver disputas, visualizar métricas, etc.
 
 
-## 📁 Estrutura do Projeto (Backend)
-├── functions/                # <<<--- PASTA DO SEU BACKEND (Cloud Functions)
-│   ├── src/                  # Código fonte TypeScript das suas functions
-│   │   ├── index.ts          # Ponto de entrada principal, exporta todas as functions
-│   │   │
-│   │   ├── auth/             # Lógica relacionada à autenticação customizada
-│   │   │   ├── triggers.ts     # Ex: onCreateUser para definir roles, custom claims
-│   │   │   └── http.ts         # Ex: Endpoints HTTP customizados para auth, se necessário
-│   │   │
-│   │   ├── users/            # Functions para gerenciamento de perfis de usuário
-│   │   │   ├── triggers.ts     # Ex: onUpdateProfile para sanitizar dados
-│   │   │   └── callable.ts     # Ex: Functions chamáveis para atualizar dados protegidos
-│   │   │
-│   │   ├── providers/        # Functions específicas para a lógica de prestadores
-│   │   │   ├── triggers.ts     # Ex: onProviderCreate, onServiceUpdate
-│   │   │   └── callable.ts     # Ex: aprovarCadastroPrestador, atualizarServicosOferecidos
-│   │   │
-│   │   ├── bookings/         # Lógica de backend para agendamentos
-│   │   │   ├── triggers.ts     # Ex: onBookingCreate para enviar notificações, onBookingUpdate
-│   │   │   ├── http.ts         # Ex: Endpoints para criar, listar, cancelar agendamentos
-│   │   │   └── callable.ts     # Ex: confirmarAgendamento, marcarComoConcluido
-│   │   │
-│   │   ├── payments/         # Lógica para processamento de pagamentos e comissões
-│   │   │   ├── http.ts         # Ex: criarIntencaoDePagamento (Stripe, MercadoPago)
-│   │   │   ├── triggers.ts     # Ex: onPaymentSuccess para calcular comissão, liberar fundos
-│   │   │   └── callable.ts     # Ex: solicitarRepasse (para prestadores)
-│   │   │
-│   │   ├── reviews/          # Lógica para avaliações
-│   │   │   ├── triggers.ts     # Ex: onReviewCreate para recalcular média do prestador
-│   │   │   └── callable.ts     # Ex: submeterAvaliacao
-│   │   │
-│   │   ├── notifications/    # Lógica para envio de notificações push (FCM)
-│   │   │   ├── triggers.ts     # Ex: enviarNotificacaoNovoAgendamento, enviarLembrete
-│   │   │   └── utils.ts        # Helpers para construir e enviar payloads de notificação
-│   │   │
-│   │   ├── chat/             # (Opcional) Lógica de backend para chat se não for só Firestore client-side
-│   │   │   ├── triggers.ts     # Ex: onNewMessage para notificar
-│   │   │
-│   │   ├── admin/            # (Opcional) Functions para tarefas administrativas
-│   │   │   └── callable.ts     # Ex: banirUsuario, gerarRelatorio
-│   │   │
-│   │   ├── services/         # Serviços de lógica de negócios compartilhados entre as functions
-│   │   │   ├── firestore.service.ts // Helpers para interagir com o Firestore
-│   │   │   ├── paymentGateway.service.ts // Abstração para o gateway de pagamento
-│   │   │   └── notification.service.ts // Para envio de notificações
-│   │   │
-│   │   ├── types/            # Definições de tipo e interfaces TypeScript para o backend
-│   │   │   ├── index.ts
-│   │   │   ├── user.types.ts
-│   │   │   ├── booking.types.ts
-│   │   │   └── service.types.ts
-│   │   │   // Idealmente, alguns desses tipos poderiam ser compartilhados com o frontend
-│   │   │   // se você usar um monorepo ou um pacote compartilhado.
-│   │   │
-│   │   ├── utils/            # Funções utilitárias para o backend
-│   │   │   ├── validators.ts
-│   │   │   └── helpers.ts
-│   │   │
-│   │   └── config/           # Configurações do Firebase (inicialização do admin SDK), chaves de API
-│   │       ├── firebaseAdmin.ts  // Inicializa o firebase-admin
-│   │       └── environment.ts    // Para carregar variáveis de ambiente (chaves de API de terceiros)
-│   │
-│   ├── lib/                  # (OU dist/) Pasta com o código JavaScript transpilado (gerada pelo build do TypeScript) - DEVE SER IGNORADA PELO GIT
-│   ├── node_modules/         # Dependências das Cloud Functions
-│   ├── package.json          # Dependências e scripts para as Cloud Functions
-│   ├── package-lock.json
-│   ├── tsconfig.json         # Configuração do TypeScript para as functions
-│   └── .eslintrc.js          # (Opcional) Configuração do ESLint para as functions
-│
-├── .firebaserc             # Arquivo de configuração do projeto Firebase (qual projeto usar)
-├── firebase.json           # Configurações de deploy do Firebase (functions, firestore rules, storage rules, hosting)
-├── firestore.rules         # Regras de segurança para o Cloud Firestore
-├── storage.rules           # Regras de segurança para o Firebase Storage
-│
+## 📁 Estrutura de pastas (Fronend)
+app/
+├── (auth)/
+│   ├── provider-register/
+│   │   ├── index.tsx
+│   │   ├── layout.tsx
+│   │   ├── personal-details.tsx
+│   │   └── service-details.tsx
+│   ├── client-register.tsx
+│   ├── forgot-password.tsx
+│   ├── layout.tsx
+│   ├── login.tsx
+│   └── register-options.tsx
+├── (client)/
+│   ├── bookings/
+│   │   ├── [bookingId].tsx
+│   │   ├── index.tsx
+│   │   ├── schedule-service.tsx
+│   │   └── success.tsx
+│   ├── explore/
+│   │   ├── [providerId].tsx
+│   │   ├── index.tsx
+│   │   ├── resultados-busca.tsx
+│   │   ├── search-results.tsx
+│   │   ├── servicos-por-categoria.tsx
+│   │   ├── todas-categorias.tsx
+│   │   └── todos-prestadores-proximos.tsx
+│   ├── messages/
+│   │   ├── [chatId].tsx
+│   │   └── index.tsx
+│   ├── ofertas/
+│   │   └── [ofertaId].tsx
+│   └── profile/
+│       ├── edit.tsx
+│       ├── index.tsx
+│       └── layout.tsx
+├── (common)/
+│   ├── feedback/
+│   │   └── [targetId].tsx
+│   ├── help.tsx
+│   ├── layout.tsx
+│   ├── notifications.tsx
+│   ├── privacidade.tsx
+│   ├── settings.tsx
+│   └── termos.tsx
+├── (provider)/
+│   ├── messages/
+│   │   ├── [chatId].tsx
+│   │   └── index.tsx
+│   ├── profile/
+│   │   ├── edit-services.tsx
+│   │   └── index.tsx
+│   ├── schedule/
+│   │   ├── index.tsx
+│   │   └── manage-availability.tsx
+│   └── services/
+│       ├── [serviceId].tsx
+│       └── index.tsx
+├── dashboard.tsx
+├── earnings.tsx
+├── layout.tsx
+├── _layout.tsx
+├── +not-found.tsx
+├── index.tsx
+└── welcome.tsx
+assets/
+├── fonts/
+└── images/
+components/
+├── home/
+│   ├── BottomNavBar.tsx
+│   ├── CategoriaCard.tsx
+│   ├── CategoryGrid.tsx
+│   ├── SearchBar.tsx
+│   ├── ServiceCard.tsx
+│   ├── ServiceList.tsx
+│   └── TopBar.tsx
+├── layout/
+│   └── CustomHeader.tsx
+├── schedule/
+│   ├── AddressSection.tsx
+│   ├── CalendarHeader.tsx
+│   ├── PaymentMethodSelection.tsx
+│   └── TimeSlotButton.tsx
+├── specific/
+│   └── ServiceBookingCard.tsx
+├── ui/
+│   ├── Button.tsx
+│   ├── Card.tsx
+│   ├── IconSymbol.ios.tsx
+│   ├── IconSymbol.tsx
+│   ├── Input.tsx
+│   ├── TabBarBackground.ios.tsx
+│   └── TabBarBackground.tsx
+├── BannerOferta.tsx
+├── CategoriaCard.tsx
+├── Collapsible.tsx
+├── ExternalLink.tsx
+├── HapticTab.tsx
+├── HeaderSuperior.tsx
+├── HelloWave.tsx
+├── ListaPrestadores.tsx
+├── NavBar.tsx
+├── ParallaxScrollView.tsx
+├── PrestadorCard.tsx
+├── SaudacaoContainer.tsx
+├── SecaoContainer.tsx
+├── SecaoPrestadores.tsx
+├── ThemedText.tsx
+└── ThemedView.tsx
+config/
+├── appConfig.ts
+constants/
+├── Colors.ts
+├── routes.ts
+├── strings.ts
+└── theme.ts
+contexts/
+├── AppContext.tsx
+├── AuthContext.tsx
+└── ProviderRegistrationContext.tsx
+hooks/
+├── useAuth.ts
+├── useColorScheme.ts
+├── useColorScheme.web.ts
+├── useFormValidation.ts
+└── useThemeColor.ts
+
+## 📁 Estrutura de pastas (Backend)
+functions/
+├── node_modules/
+├── src/
+│   ├── admin/
+│   │   ├── callable.ts
+│   │   ├── auth/
+│   │   │   ├── http.ts
+│   │   │   └── triggers.ts
+│   ├── bookings/
+│   │   ├── callable.ts
+│   │   ├── http.ts
+│   │   └── triggers.ts
+│   ├── chat/
+│   │   └── triggers.ts
+│   ├── config/
+│   │   ├── environment.ts
+│   │   └── firebaseAdmin.ts
+│   ├── lib/
+│   ├── notifications/
+│   │   ├── callable.ts
+│   │   ├── triggers.ts
+│   │   └── utils.ts
+│   ├── payments/
+│   │   ├── callable.ts
+│   │   ├── http.ts
+│   │   └── triggers.ts
+│   ├── providers/
+│   │   ├── callable.ts
+│   │   └── triggers.ts
+│   ├── reviews/
+│   │   ├── callable.ts
+│   │   └── triggers.ts
+│   └── services/
+│       ├── firestore.service.ts
+│       ├── notification.service.ts
+│       └── paymentGateway.service.ts
+types/
+├── booking.types.ts
+├── chat.types.ts
+├── index.ts
+├── notification.types.ts
+├── payment.types.ts
+├── provider.types.ts
+├── review.types.ts
+├── service.types.ts
+└── user.types.ts
+users/
+├── callable.ts
+└── triggers.ts
+utils/
+├── helpers.ts
+├── notifications.ts
+├── validators.ts
+└── index.ts
 
 essa Estrutura de Backend com Firebase Functions:
 
@@ -655,5 +819,3 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
-
-

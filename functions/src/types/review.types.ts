@@ -3,7 +3,7 @@ import * as admin from "firebase-admin";
 import { UserRole } from "./user.types"; // Importe UserRole se for usar
 
 export interface Review {
-  id?: string;
+  id: string; // <<< CHANGED from id?: string;
   bookingId: string;
   serviceId?: string;
   reviewerId: string;
@@ -15,6 +15,6 @@ export interface Review {
   rating: number;
   comment?: string;
   createdAt: admin.firestore.Timestamp | admin.firestore.FieldValue;
-  updatedAt?: admin.firestore.Timestamp | admin.firestore.FieldValue; // <<<--- ADICIONADO AQUI (opcional)
+  updatedAt?: admin.firestore.Timestamp | admin.firestore.FieldValue;
   isAnonymous?: boolean;
 }

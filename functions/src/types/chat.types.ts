@@ -2,7 +2,7 @@
 import * as admin from "firebase-admin"; // Para FirebaseFirestore.Timestamp
 
 export interface ChatMessage {
-  id?: string; // ID do documento da mensagem no Firestore
+  id?: string; // ID do documento da mensagem no Firestore (can remain optional here if ID is only set when retrieved)
   chatId: string; // ID da conversa/sala de chat a que pertence
   senderId: string;
   senderName?: string; // Denormalizado para exibição
@@ -17,7 +17,7 @@ export interface ChatMessage {
 
 // Opcional: Interface para o documento principal do Chat (sala de chat)
 export interface ChatRoom {
-    id?: string; // chatId
+    id: string; // <<< CHANGED from id?: string;
     participants: string[]; // Array com UIDs dos participantes
     participantInfo: {
         [userId: string]: {

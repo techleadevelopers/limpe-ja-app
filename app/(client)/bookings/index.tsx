@@ -1,5 +1,5 @@
 // LimpeJaApp/app/(client)/bookings/index.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,9 +8,10 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Platform,
-  Image // Para possível imagem do prestador no card
+  Image,
+  Animated, // Importar Animated para animações
 } from 'react-native';
-import { Link, Stack, useRouter } from 'expo-router'; // Adicionado useRouter se precisar de navegação programática
+import { Link, Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { formatDate } from '../../../utils/helpers'; // Ajuste o caminho se necessário
 
@@ -20,25 +21,94 @@ interface MockBooking {
   id: string;
   serviceName: string;
   providerName: string;
-  providerId: string; // Adicionado para navegação para perfil do provedor
-  providerImageUrl?: string; // Adicionado para exibir imagem
+  providerId: string;
+  providerImageUrl?: string;
   date: string; // ISO String
   status: 'Confirmado' | 'Pendente' | 'Concluído' | 'Cancelado';
   // Adicione outros campos que possam ser úteis, como 'price'
   // price?: string;
 }
 
+// Componente para um item da lista de agendamentos com animação de entrada
+const AnimatedBookingItem: React.FC<{ item: MockBooking; index: number }> = ({ item, index }) => {
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const slideAnim = useRef(new Animated.Value(50)).current; // Começa 50px abaixo
+
+    useEffect(() => {
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 400,
+                delay: index * 80, // Atraso escalonado para cada item
+                useNativeDriver: true,
+            }),
+            Animated.timing(slideAnim, {
+                toValue: 0,
+                duration: 400,
+                delay: index * 80,
+                useNativeDriver: true,
+            }),
+        ]).start();
+    }, [fadeAnim, slideAnim, index]);
+
+    const getStatusStyle = (status: MockBooking['status']) => {
+        switch (status) {
+            case 'Confirmado': return { text: '#388E3C', background: '#E8F5E9', icon: 'checkmark-circle-outline' as const, iconColor: '#4CAF50' };
+            case 'Pendente': return { text: '#FFA000', background: '#FFF3E0', icon: 'time-outline' as const, iconColor: '#FF9800' };
+            case 'Concluído': return { text: '#007AFF', background: '#E3F2FD', icon: 'flag-outline' as const, iconColor: '#007AFF' };
+            case 'Cancelado': return { text: '#D32F2F', background: '#FFEBEE', icon: 'close-circle-outline' as const, iconColor: '#F44336' };
+            default: return { text: '#546E7A', background: '#ECEFF1', icon: 'help-circle-outline' as const, iconColor: '#757575' };
+        }
+    };
+
+    const statusInfo = getStatusStyle(item.status);
+
+    return (
+        <Animated.View style={[styles.itemCard, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+            <Link href={`/(client)/bookings/${item.id}` as any} asChild> {/* Adicionado 'as any' para compatibilidade de tipo de rota, se necessário */}
+                <TouchableOpacity style={styles.itemCardContent}>
+                    {item.providerImageUrl ? (
+                        <Image source={{ uri: item.providerImageUrl }} style={styles.itemProviderImage} />
+                    ) : (
+                        <View style={styles.itemIconContainer}>
+                            <Ionicons name={statusInfo.icon} size={28} color={statusInfo.iconColor} />
+                        </View>
+                    )}
+                    <View style={styles.itemDetails}>
+                        <Text style={styles.itemServiceName} numberOfLines={1}>{item.serviceName}</Text>
+                        <Text style={styles.itemProviderName}>Com: {item.providerName}</Text>
+                        <Text style={styles.itemDate}>
+                            <Ionicons name="calendar-outline" size={14} color="#6C757D" />{' '}
+                            {formatDate(item.date, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </Text>
+                    </View>
+                    <View style={[styles.statusBadge, { backgroundColor: statusInfo.background }]}>
+                        <Text style={[styles.statusText, { color: statusInfo.text }]}>{item.status}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward-outline" size={22} color="#B0BEC5" style={styles.itemChevron} />
+                </TouchableOpacity>
+            </Link>
+        </Animated.View>
+    );
+};
+
+
 export default function MyBookingsScreen() {
-  const router = useRouter(); // Para navegação programática se necessário
+  const router = useRouter();
   const [bookings, setBookings] = useState<MockBooking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<'upcoming' | 'past' | 'cancelled'>('upcoming');
 
+  // << CORREÇÃO: Declaração de 'filters' movida para ANTES de 'filterButtonAnims' >>
   const filters: Array<{ label: string; value: typeof activeFilter; icon: keyof typeof Ionicons.glyphMap }> = [
     { label: 'Próximos', value: 'upcoming', icon: 'calendar-outline' },
     { label: 'Anteriores', value: 'past', icon: 'checkmark-done-outline' },
     { label: 'Cancelados', value: 'cancelled', icon: 'close-circle-outline' },
   ];
+
+  // Animações para os botões de filtro
+  const filterButtonAnims = useRef(filters.map(() => new Animated.Value(1))).current;
+
 
   useEffect(() => {
     console.log("[MyBookingsScreen] Carregando agendamentos com filtro:", activeFilter);
@@ -67,71 +137,54 @@ export default function MyBookingsScreen() {
     }, 1000);
   }, [activeFilter]);
 
-  const getStatusStyle = (status: MockBooking['status']) => {
-    switch (status) {
-      case 'Confirmado': return { text: '#388E3C', background: '#E8F5E9', icon: 'checkmark-circle-outline' as const, iconColor: '#4CAF50' };
-      case 'Pendente': return { text: '#FFA000', background: '#FFF3E0', icon: 'time-outline' as const, iconColor: '#FF9800' };
-      case 'Concluído': return { text: '#007AFF', background: '#E3F2FD', icon: 'flag-outline' as const, iconColor: '#007AFF' };
-      case 'Cancelado': return { text: '#D32F2F', background: '#FFEBEE', icon: 'close-circle-outline' as const, iconColor: '#F44336' };
-      default: return { text: '#546E7A', background: '#ECEFF1', icon: 'help-circle-outline' as const, iconColor: '#757575' };
-    }
-  };
+    // Funções para animação de "pressionar" nos botões de filtro
+    const onPressInFilterButton = (index: number) => {
+        Animated.spring(filterButtonAnims[index], {
+            toValue: 0.9,
+            useNativeDriver: true,
+        }).start();
+    };
 
-  const renderBookingItem = ({ item }: { item: MockBooking }) => {
-    const statusInfo = getStatusStyle(item.status);
-    return (
-      <Link href={`/(client)/bookings/${item.id}`} asChild>
-        <TouchableOpacity style={styles.itemCard}>
-          {item.providerImageUrl ? (
-            <Image source={{ uri: item.providerImageUrl }} style={styles.itemProviderImage} />
-          ) : (
-            <View style={styles.itemIconContainer}>
-              <Ionicons name={statusInfo.icon} size={28} color={statusInfo.iconColor} />
-            </View>
-          )}
-          <View style={styles.itemDetails}>
-            <Text style={styles.itemServiceName} numberOfLines={1}>{item.serviceName}</Text>
-            <Text style={styles.itemProviderName}>Com: {item.providerName}</Text>
-            <Text style={styles.itemDate}>
-              {formatDate(item.date, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-            </Text>
-          </View>
-          <View style={[styles.statusBadge, { backgroundColor: statusInfo.background }]}>
-            <Text style={[styles.statusText, { color: statusInfo.text }]}>{item.status}</Text>
-          </View>
-          <Ionicons name="chevron-forward-outline" size={22} color="#B0BEC5" style={styles.itemChevron} />
-        </TouchableOpacity>
-      </Link>
-    );
-  };
+    const onPressOutFilterButton = (index: number) => {
+        Animated.spring(filterButtonAnims[index], {
+            toValue: 1,
+            friction: 3,
+            tension: 40,
+            useNativeDriver: true,
+        }).start();
+    };
+
 
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ title: 'Meus Agendamentos' }} />
       
       <View style={styles.filterContainer}>
-        {filters.map(filterItem => (
-          <TouchableOpacity
-            key={filterItem.value}
-            style={[
-              styles.filterButton,
-              activeFilter === filterItem.value && styles.filterButtonActive
-            ]}
-            onPress={() => setActiveFilter(filterItem.value)}
-          >
-            <Ionicons 
-              name={filterItem.icon} 
-              size={18} 
-              color={activeFilter === filterItem.value ? '#FFFFFF' : '#495057'} 
-              style={styles.filterIcon}
-            />
-            <Text style={[
-              styles.filterButtonText,
-              activeFilter === filterItem.value && styles.filterButtonTextActive
-            ]}>
-              {filterItem.label}
-            </Text>
-          </TouchableOpacity>
+        {filters.map((filterItem, index) => (
+          <Animated.View key={filterItem.value} style={{ transform: [{ scale: filterButtonAnims[index] }] }}>
+            <TouchableOpacity
+              style={[
+                styles.filterButton,
+                activeFilter === filterItem.value && styles.filterButtonActive
+              ]}
+              onPress={() => setActiveFilter(filterItem.value)}
+              onPressIn={() => onPressInFilterButton(index)}
+              onPressOut={() => onPressOutFilterButton(index)}
+            >
+              <Ionicons 
+                name={filterItem.icon} 
+                size={18} 
+                color={activeFilter === filterItem.value ? '#FFFFFF' : '#495057'} 
+                style={styles.filterIcon}
+              />
+              <Text style={[
+                styles.filterButtonText,
+                activeFilter === filterItem.value && styles.filterButtonTextActive
+              ]}>
+                {filterItem.label}
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
         ))}
       </View>
 
@@ -143,7 +196,7 @@ export default function MyBookingsScreen() {
       ) : bookings.length > 0 ? (
         <FlatList
           data={bookings}
-          renderItem={renderBookingItem}
+          renderItem={({ item, index }) => <AnimatedBookingItem item={item} index={index} />}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContentContainer}
           showsVerticalScrollIndicator={false}
@@ -158,7 +211,7 @@ export default function MyBookingsScreen() {
                "Nenhum serviço cancelado."}
             </Text>
             {activeFilter === 'upcoming' && (
-                <TouchableOpacity style={styles.exploreButton} onPress={() => router.push('/(client)/explore')}>
+                <TouchableOpacity style={styles.exploreButton} onPress={() => router.push('/(client)/explore' as any)}> {/* Adicionado 'as any' para compatibilidade de tipo de rota, se necessário */}
                     <Text style={styles.exploreButtonText}>Explorar Serviços</Text>
                 </TouchableOpacity>
             )}
@@ -220,14 +273,16 @@ const styles = StyleSheet.create({
   itemCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 15,
     marginBottom: 15,
-    flexDirection: 'row',
-    alignItems: 'center',
     ...Platform.select({
         ios: { shadowColor: 'rgba(0,0,0,0.08)', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 1, shadowRadius: 6 },
         android: { elevation: 3 },
     }),
+  },
+  itemCardContent: { // Conteúdo interno do TouchableOpacity
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
   },
   itemProviderImage: { // Estilo para a imagem do prestador
     width: 50,
@@ -235,6 +290,8 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     marginRight: 15,
     backgroundColor: '#E9ECEF', // Cor de fundo enquanto a imagem carrega
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
   },
   itemIconContainer: { // Fallback se não houver imagem
     width: 50,
@@ -244,6 +301,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#E9ECEF',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
   },
   itemDetails: {
     flex: 1,
@@ -308,6 +367,7 @@ const styles = StyleSheet.create({
       paddingVertical: 12,
       paddingHorizontal: 30,
       borderRadius: 25,
+      marginTop: 15,
   },
   exploreButtonText: {
       color: '#FFFFFF',

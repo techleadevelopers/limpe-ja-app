@@ -1,5 +1,5 @@
 // LimpeJaApp/app/(common)/notifications.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
     View, 
     Text, 
@@ -8,12 +8,11 @@ import {
     ActivityIndicator, 
     TouchableOpacity,
     Platform,
-    Alert // Para o botão de marcar todas como lidas
+    Alert, // Para o botão de marcar todas como lidas
+    Animated, // Importar Animated para animações
 } from 'react-native';
 import { Stack, useRouter, Link } from 'expo-router';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'; // Para ícones
-// Supondo que você tenha um helper para formatar datas, vamos criar um simples aqui
-// ou você pode usar uma lib como date-fns para formatação mais avançada.
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 // Helper simples para formatar timestamp de forma relativa ou absoluta
 const formatNotificationTimestamp = (isoTimestamp: string): string => {
@@ -41,7 +40,6 @@ interface NotificationItem {
   timestamp: string; // ISO String
   isRead: boolean;
   navigateTo?: string; // Rota para onde navegar ao clicar
-  // Adicione outros dados que a notificação possa ter, ex: bookingId, chatId, etc.
   relatedId?: string; 
 }
 
@@ -52,6 +50,8 @@ const MOCK_NOTIFICATIONS: NotificationItem[] = [
   { id: '3', type: 'pagamento', title: 'Pagamento Recebido', body: 'Recebemos o pagamento de R$180,00 pelo serviço de Limpeza Completa.', timestamp: new Date(Date.now() - 86400000 * 1).toISOString() /* Ontem */, isRead: true },
   { id: '4', type: 'agendamento', title: 'Lembrete de Agendamento', body: 'Não se esqueça do seu serviço de jardinagem amanhã às 09:00.', timestamp: new Date(Date.now() - 86400000 * 1.5).toISOString(), isRead: true, navigateTo: '/(client)/bookings/bookUpcoming', relatedId: 'bookUpcoming' },
   { id: '5', type: 'geral', title: 'Bem-vindo ao LimpeJá!', body: 'Explore nossos serviços e encontre os melhores profissionais.', timestamp: new Date(Date.now() - 86400000 * 5).toISOString() /* 5 dias atrás */, isRead: true },
+  { id: '6', type: 'agendamento', title: 'Agendamento Cancelado', body: 'Seu agendamento de limpeza com João foi cancelado. Por favor, reagende se desejar.', timestamp: new Date(Date.now() - 86400000 * 0.5).toISOString(), isRead: false, navigateTo: '/(client)/bookings/bookCanceled', relatedId: 'bookCanceled' },
+  { id: '7', type: 'geral', title: 'Atualização do App', body: 'Novas funcionalidades e melhorias de performance disponíveis na última versão.', timestamp: new Date(Date.now() - 86400000 * 0.1).toISOString(), isRead: false },
 ];
 
 // Função para obter ícone com base no tipo de notificação
@@ -65,38 +65,118 @@ const getNotificationIcon = (type: NotificationItem['type']): { name: keyof type
     }
 }
 
+// Componente para cada item da notificação com animações
+const AnimatedNotificationItem: React.FC<{
+    item: NotificationItem;
+    onPress: (item: NotificationItem) => void;
+    delay: number;
+}> = ({ item, onPress, delay }) => {
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const slideAnim = useRef(new Animated.Value(20)).current;
+    const scaleAnim = useRef(new Animated.Value(1)).current; // Para feedback de toque
+
+    useEffect(() => {
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 400,
+                delay: delay,
+                useNativeDriver: true,
+            }),
+            Animated.timing(slideAnim, {
+                toValue: 0,
+                duration: 400,
+                delay: delay,
+                useNativeDriver: true,
+            }),
+        ]).start();
+    }, [fadeAnim, slideAnim, delay]);
+
+    const onPressInItem = () => {
+        Animated.spring(scaleAnim, { toValue: 0.98, useNativeDriver: true }).start();
+    };
+
+    const onPressOutItem = () => {
+        Animated.spring(scaleAnim, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start();
+    };
+
+    const iconInfo = getNotificationIcon(item.type);
+
+    return (
+        <Animated.View 
+            style={[
+                styles.notificationItemWrapper, 
+                { opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] }
+            ]}
+        >
+            <TouchableOpacity
+                style={[styles.notificationItem, !item.isRead && styles.unreadItem]}
+                onPress={() => onPress(item)}
+                onPressIn={onPressInItem}
+                onPressOut={onPressOutItem}
+                activeOpacity={1} // Desativa o activeOpacity padrão
+            >
+                <View style={styles.iconContainer}>
+                    {!item.isRead && <View style={styles.unreadDot} />}
+                    <Ionicons name={iconInfo.name} size={26} color={iconInfo.color} />
+                </View>
+                <View style={styles.contentContainer}>
+                    <Text style={[styles.notificationTitle, !item.isRead && styles.unreadText]}>{item.title}</Text>
+                    <Text style={[styles.notificationBody, !item.isRead && styles.unreadTextLight]} numberOfLines={2}>{item.body}</Text>
+                    <Text style={styles.notificationTimestamp}>{formatNotificationTimestamp(item.timestamp)}</Text>
+                </View>
+                {item.navigateTo && <Ionicons name="chevron-forward-outline" size={22} color="#C7C7CC" style={styles.chevron}/>}
+            </TouchableOpacity>
+        </Animated.View>
+    );
+};
+
 
 export default function NotificationsScreen() {
   const router = useRouter();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Animações
+  const headerAnim = useRef(new Animated.Value(0)).current;
+  const feedbackAnim = useRef(new Animated.Value(0)).current; // Para loading/empty states
+  const markAllButtonScaleAnim = useRef(new Animated.Value(1)).current;
+
   useEffect(() => {
+    // Animação de entrada do cabeçalho
+    Animated.timing(headerAnim, {
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: true,
+    }).start();
+
     console.log("[NotificationsScreen] Carregando notificações...");
     setIsLoading(true);
     // TODO: Substituir pela chamada real ao seu commonService.getNotifications();
     setTimeout(() => {
-      // Ordena por data, mais recente primeiro
       const sortedNotifications = MOCK_NOTIFICATIONS.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       setNotifications(sortedNotifications);
       setIsLoading(false);
+      // Animação para o feedback (carregando/vazio/lista)
+      Animated.timing(feedbackAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
     }, 1000);
-  }, []);
+  }, [headerAnim, feedbackAnim]);
 
   const handleNotificationPress = async (item: NotificationItem) => {
     console.log("[NotificationsScreen] Notificação pressionada:", item.id, "Lida:", item.isRead);
     if (!item.isRead) {
       // TODO: Chamar commonService.markNotificationAsRead(item.id) no backend;
-      // Simulação de marcar como lida no frontend:
       setNotifications(prev => prev.map(n => n.id === item.id ? { ...n, isRead: true } : n));
       console.log("[NotificationsScreen] Notificação marcada como lida (frontend):", item.id);
     }
     if (item.navigateTo) {
-      // Verifica se o tipo da rota é válido antes de navegar para evitar erros com rotas inexistentes
-      // Para um sistema mais robusto, você teria um mapeamento ou validação melhor aqui.
       try {
         console.log("[NotificationsScreen] Navegando para:", item.navigateTo);
-        router.push(item.navigateTo as any); // `as any` para simplificar, idealmente use Href tipado
+        router.push(item.navigateTo as any); 
       } catch (e) {
           console.error(`[NotificationsScreen] Erro ao navegar para ${item.navigateTo}:`, e);
           Alert.alert("Erro de Navegação", "Não foi possível abrir esta notificação.");
@@ -111,60 +191,65 @@ export default function NotificationsScreen() {
       Alert.alert("Sucesso", "Todas as notificações foram marcadas como lidas.");
   };
 
-  const renderItem = ({ item }: { item: NotificationItem }) => {
-    const iconInfo = getNotificationIcon(item.type);
-    return (
-    <TouchableOpacity
-      style={[styles.notificationItem, !item.isRead && styles.unreadItem]}
-      onPress={() => handleNotificationPress(item)}
-      activeOpacity={0.7}
-    >
-        <View style={styles.iconContainer}>
-            {!item.isRead && <View style={styles.unreadDot} />}
-            <Ionicons name={iconInfo.name} size={26} color={iconInfo.color} />
-        </View>
-        <View style={styles.contentContainer}>
-            <Text style={[styles.notificationTitle, !item.isRead && styles.unreadText]}>{item.title}</Text>
-            <Text style={[styles.notificationBody, !item.isRead && styles.unreadTextLight]} numberOfLines={2}>{item.body}</Text>
-            <Text style={styles.notificationTimestamp}>{formatNotificationTimestamp(item.timestamp)}</Text>
-        </View>
-        {item.navigateTo && <Ionicons name="chevron-forward-outline" size={22} color="#C7C7CC" style={styles.chevron}/>}
-    </TouchableOpacity>
-  )};
+  // Animações de feedback para o botão "Marcar todas como lidas"
+  const onPressInMarkAll = () => { Animated.spring(markAllButtonScaleAnim, { toValue: 0.9, useNativeDriver: true }).start(); };
+  const onPressOutMarkAll = () => { Animated.spring(markAllButtonScaleAnim, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start(); };
+
 
   if (isLoading) {
     return (
-        <View style={styles.centeredFeedback}>
-            <Stack.Screen options={{ title: 'Notificações' }} />
-            <ActivityIndicator size="large" color="#007AFF" />
-            <Text style={styles.loadingText}>Carregando notificações...</Text>
+        <View style={styles.container}>
+            <Stack.Screen options={{ headerShown: false }} />
+            {/* Custom Header para o estado de loading */}
+            <Animated.View style={[styles.customHeader, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
+                <Text style={styles.headerTitle}>Notificações</Text>
+                <View style={styles.headerActionIconPlaceholder} /> {/* Placeholder para alinhar */}
+            </Animated.View>
+            <Animated.View style={[styles.centeredFeedback, { opacity: feedbackAnim }]}>
+                <ActivityIndicator size="large" color="#007AFF" />
+                <Text style={styles.loadingText}>Carregando notificações...</Text>
+            </Animated.View>
         </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <Stack.Screen 
-        options={{ 
-            title: 'Notificações',
-            headerRight: () => (
-                notifications.some(n => !n.isRead) && // Mostra o botão apenas se houver não lidas
-                <TouchableOpacity onPress={handleMarkAllAsRead} style={{ marginRight: 15 }}>
-                    <Text style={{ color: '#007AFF', fontSize: 16 }}>Marcar Todas como Lidas</Text>
-                </TouchableOpacity>
-            )
-        }} 
-      />
+      <Stack.Screen options={{ headerShown: false }} />
+      
+      {/* Custom Header */}
+      <Animated.View style={[styles.customHeader, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
+          <Text style={styles.headerTitle}>Notificações</Text>
+          {notifications.some(n => !n.isRead) ? (
+              <TouchableOpacity 
+                  onPress={handleMarkAllAsRead} 
+                  onPressIn={onPressInMarkAll}
+                  onPressOut={onPressOutMarkAll}
+                  style={[styles.markAllReadButton, { transform: [{ scale: markAllButtonScaleAnim }] }]}
+              >
+                  <Text style={styles.markAllReadButtonText}>Marcar Todas como Lidas</Text>
+              </TouchableOpacity>
+          ) : (
+              <View style={styles.headerActionIconPlaceholder} />
+          )}
+      </Animated.View>
+
       {notifications.length === 0 ? (
-        <View style={styles.centeredFeedback}>
+        <Animated.View style={[styles.centeredFeedback, { opacity: feedbackAnim }]}>
             <Ionicons name="notifications-off-outline" size={64} color="#CED4DA" />
             <Text style={styles.emptyText}>Nenhuma notificação por aqui.</Text>
             <Text style={styles.emptySubText}>Você está em dia!</Text>
-        </View>
+        </Animated.View>
       ) : (
         <FlatList
           data={notifications}
-          renderItem={renderItem}
+          renderItem={({ item, index }) => (
+            <AnimatedNotificationItem 
+                item={item} 
+                onPress={handleNotificationPress} 
+                delay={index * 50} // Staggered delay
+            />
+          )}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContentContainer}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -178,6 +263,41 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F0F2F5', // Fundo geral mais suave
+  },
+  customHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#007AFF', // Cor primária do app
+    paddingHorizontal: 15,
+    paddingVertical: Platform.OS === 'ios' ? 50 : 20, // Ajuste para status bar iOS
+    paddingTop: Platform.OS === 'ios' ? 50 : 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    flex: 1, // Para o título ocupar o espaço e centralizar melhor
+    textAlign: 'center',
+  },
+  markAllReadButton: {
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)', // Fundo sutil para o botão
+  },
+  markAllReadButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  headerActionIconPlaceholder: { // Para alinhar o título no centro quando o botão não está visível
+    width: 100, // Largura aproximada do botão
   },
   centeredFeedback: {
     flex: 1,
@@ -193,25 +313,34 @@ const styles = StyleSheet.create({
   listContentContainer: {
     paddingVertical: 8, // Um pouco de espaço no topo e final da lista
   },
+  notificationItemWrapper: { // Wrapper para a animação de cada item
+    marginHorizontal: 10, // Margem para dar um efeito de card
+    marginVertical: 4,
+    borderRadius: 10,
+    overflow: 'hidden', // Garante que a sombra não vaze
+    ...Platform.select({
+        ios: { shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3 },
+        android: { elevation: 2 },
+    }),
+  },
   notificationItem: {
     backgroundColor: '#FFFFFF',
     paddingVertical: 15,
-    paddingHorizontal: 20,
+    paddingHorizontal: 15, // Ajustado para ter mais espaço interno
     flexDirection: 'row',
     alignItems: 'center',
-    // borderBottomWidth: StyleSheet.hairlineWidth, // Removido para usar ItemSeparatorComponent
-    // borderBottomColor: '#E0E0E0',
   },
   unreadItem: {
-    backgroundColor: '#E9F5FF', // Um azul bem claro para não lidas
-    // borderLeftWidth: 4, // Pode ser removido se o dot for suficiente
-    // borderLeftColor: '#007AFF',
+    backgroundColor: '#E6F2FF', // Um azul bem claro para não lidas
   },
   iconContainer: {
     marginRight: 15,
     alignItems: 'center',
     justifyContent: 'center',
     width: 40, // Para alinhar
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F0F2F5', // Fundo para o ícone
     position: 'relative', // Para o unreadDot
   },
   unreadDot: {
@@ -223,6 +352,8 @@ const styles = StyleSheet.create({
       borderRadius: 5,
       backgroundColor: '#007AFF', // Cor do ponto de não lida
       zIndex: 1,
+      borderWidth: 1.5,
+      borderColor: '#FFFFFF',
   },
   contentContainer: {
     flex: 1, // Para ocupar o espaço restante
@@ -253,9 +384,10 @@ const styles = StyleSheet.create({
       marginLeft: 10,
   },
   separator: {
-    height: StyleSheet.hairlineWidth,
+    height: 1, // Linha mais fina
     backgroundColor: '#E0E0E0',
-    marginLeft: 75, // Para alinhar com o conteúdo, após o espaço do ícone
+    marginLeft: 70, // Para alinhar com o conteúdo, após o espaço do ícone
+    marginRight: 10,
   },
   emptyText: {
     fontSize: 19,

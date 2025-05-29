@@ -1,119 +1,271 @@
 // LimpeJaApp/functions/src/services/paymentGateway.service.ts
-// import axios from 'axios'; // REMOVIDO TEMPORARIAMENTE
+import * as functions from "firebase-functions";
+import { db } from "../config/firebaseAdmin";
+import { Booking, PaymentStatus } from "../types/booking.types";
+import { ProviderProfile } from "../types/provider.types";
+import * as admin from "firebase-admin";
+import axios from "axios"; // Importar Axios para chamadas HTTP
+
+// Constantes de configuração
+const COMMISSION_RATE = 0.20; // 20% de comissão para o LimpeJá
+
 import { environment } from "../config/environment";
 const PIX_PROVIDER_API_KEY = environment.pix_provider?.apikey;
 const PIX_PROVIDER_BASE_URL = environment.pix_provider?.base_url;
+const PIX_WEBHOOK_SECRET = environment.pix_provider?.webhook_secret;
+const LIMPEJA_PIX_KEY = "SUA_CHAVE_PIX_DA_EMPRESA_LIMPEJA"; // <--- **SUBSTITUA PELA CHAVE PIX REAL DA SUA EMPRESA**
 
 if (!PIX_PROVIDER_API_KEY && !environment.isEmulated) {
-  console.error("Chave de API do Provedor PIX não configurada nas variáveis de ambiente.");
+  functions.logger.error("Chave de API do Provedor PIX não configurada nas variáveis de ambiente.");
 }
 if (!PIX_PROVIDER_BASE_URL && !environment.isEmulated) {
-  console.error("URL Base do Provedor PIX não configurada nas variáveis de ambiente.");
+  functions.logger.error("URL Base do Provedor PIX não configurada nas variáveis de ambiente.");
+}
+if (!PIX_WEBHOOK_SECRET && !environment.isEmulated) {
+  functions.logger.error("Segredo do Webhook PIX não configurado nas variáveis de ambiente.");
 }
 
-interface PixChargeResponse {
-  qrCode?: string; // Pode ser a string base64 da imagem do QR Code
-  copiaECola?: string;
+
+export interface PixChargeResponse {
+  qrCode?: string; // URL ou base64 do QR Code
+  copiaECola?: string; // String do PIX Copia e Cola
   pixTransactionId?: string; // ID da transação no PSP
-  // Outros campos que o PSP retornar
 }
 
 /**
- * Cria uma cobrança PIX (QR Code e/ou Copia e Cola) junto ao PSP escolhido.
+ * Cria uma cobrança PIX no PSP (Provedor de Serviços de Pagamento).
+ * ESTA É A IMPLEMENTAÇÃO "REAL" GENÉRICA. VOCÊ DEVE AJUSTAR PARA SEU PSP ESPECÍFICO.
  */
 export const createPixCharge = async (
-  amountInCents: number, // Valor em centavos
+  amountInCents: number,
   bookingId: string,
-  clientName?: string, // Opcional, dependendo do PSP
-  clientCpf?: string,  // Opcional, dependendo do PSP
-  description?: string,
+  description: string,
 ): Promise<PixChargeResponse> => {
+  functions.logger.info(`[PaymentGatewayService] Criando cobrança PIX para booking ${bookingId} de ${amountInCents} centavos.`);
+
   if (!PIX_PROVIDER_API_KEY || !PIX_PROVIDER_BASE_URL) {
-    console.error("Configuração do Provedor PIX incompleta para criar cobrança.");
+    functions.logger.error("Configuração do Provedor PIX incompleta para criar cobrança.");
     throw new Error("Sistema de pagamento PIX não configurado corretamente.");
   }
 
+  // Payload a ser enviado para a API do PSP para criar a cobrança.
+  // **AJUSTE ESTE PAYLOAD CONFORME A DOCUMENTAÇÃO DO SEU PSP.**
   const payload = {
-    valor: parseFloat((amountInCents / 100).toFixed(2)), // PSP pode esperar o valor em reais como número
-    identificadorDaCobranca: bookingId,
-    chavePixRecebedora: "SUA_CHAVE_PIX_DA_EMPRESA_LIMPEJA", // Configure sua chave PIX real
-    descricao: description || `Pagamento LimpeJá - Agendamento ${bookingId}`,
-    // Adicione dados do devedor (cliente) se o seu PSP exigir/permitir
-    // devedor: clientCpf && clientName ? { nome: clientName, cpf: clientCpf.replace(/\D/g, '') } : undefined,
-    // Mais campos específicos do seu PSP...
+    valor: parseFloat((amountInCents / 100).toFixed(2)), // Valor em BRL
+    identificador_transacao: bookingId, // ID de referência externa (seu bookingId)
+    mensagem_pagador: description || `Pagamento LimpeJá - Agendamento ${bookingId}`,
+    chave_recebedora: LIMPEJA_PIX_KEY, // Chave PIX da sua empresa
+    // Muitos PSPs exigem uma URL de webhook para notificar o pagamento.
+    // Certifique-se de que esta URL está configurada no seu PSP.
+    url_webhook: `${PIX_PROVIDER_BASE_URL}/webhooks/pix`, // Exemplo de URL de webhook
+    // Outros campos que seu PSP possa exigir (ex: dados do pagador, tempo de expiração)
+    // expiracao_segundos: 3600, // Exemplo: expira em 1 hora
   };
 
-  console.log(`[PaymentGateway] Criando cobrança PIX para booking ${bookingId}, valor ${payload.valor} BRL. Payload:`, payload);
+  functions.logger.log(`[PaymentGateway] Enviando requisição para criar cobrança PIX. Payload:`, payload);
 
   try {
-    // Substitua pela chamada real à API do seu PSP
-    // const response = await axios.post(`${PIX_PROVIDER_BASE_URL}/cobrancas`, payload, {
-    //   headers: { 
-    //       'Authorization': `Bearer ${PIX_PROVIDER_API_KEY}`,
-    //       'Content-Type': 'application/json'
-    //   }
-    // });
+    const response = await axios.post(
+      `${PIX_PROVIDER_BASE_URL}/api/v1/pix/charges`, // <--- **SUBSTITUA PELA URL REAL DA API DE CRIAÇÃO DE COBRANÇA DO SEU PSP**
+      payload,
+      {
+        headers: {
+          'Authorization': `Bearer ${PIX_PROVIDER_API_KEY}`, // <--- **AJUSTE O HEADER DE AUTORIZAÇÃO CONFORME SEU PSP**
+          'Content-Type': 'application/json',
+        },
+      }
+    );
 
-    // ------- INÍCIO DA SIMULAÇÃO (remova ou comente ao integrar com PSP real) --------
-    await new Promise(resolve => setTimeout(resolve, 700));
-    const mockApiResponse = {
-        // Estrutura da resposta simulada do PSP
-        txid: `psp_tx_${Date.now()}`,
-        calendario: { criacao: new Date().toISOString(), expiracao: 3600 },
-        valor: { original: payload.valor.toFixed(2) },
-        chave: "SUA_CHAVE_PIX_DA_EMPRESA_LIMPEJA",
-        solicitacaoPagador: payload.descricao,
-        pixCopiaECola: `00020126580014BR.GOV.BCB.PIX0136${Math.random().toString(36).substring(2, 15)}-xxxx-xxxx-xxxx-xxxxxxxxxxxx520400005303986540${payload.valor.toFixed(2).length.toString().padStart(2,'0')}${payload.valor.toFixed(2)}5802BR5925NOME_DA_SUA_EMPRESA6009SAO_PAULO62290525identificadorDaCobranca${bookingId}6304XXXX`,
-        // linkVisualizacao: "https://psp.com/link_qr_code_visualizacao" // Se o PSP fornecer
-    };
-    console.log("[PaymentGateway] Resposta simulada da API do PSP:", mockApiResponse);
-    // ------- FIM DA SIMULAÇÃO --------
+    const apiResponse = response.data;
+    functions.logger.log("[PaymentGateway] Resposta da API do PSP:", apiResponse);
 
-    // Processar a resposta real do PSP. Exemplo:
-    // if (response.data && response.data.pixCopiaECola) {
-    if (mockApiResponse && mockApiResponse.pixCopiaECola) { // Usando a simulação
-      // console.log(`[PaymentGateway] Cobrança PIX criada com ID no PSP: ${response.data.txid}`);
-      console.log(`[PaymentGateway] Cobrança PIX criada com ID no PSP: ${mockApiResponse.txid}`);
+    // **AJUSTE AQUI CONFORME A ESTRUTURA DA RESPOSTA DO SEU PSP.**
+    // As propriedades 'qrCode', 'copiaECola' e 'transactionId' variam entre PSPs.
+    if (apiResponse && apiResponse.qrCode && apiResponse.copiaECola && apiResponse.transactionId) {
+      functions.logger.log(`[PaymentGateway] Cobrança PIX criada com ID no PSP: ${apiResponse.transactionId}`);
       return {
-        copiaECola: mockApiResponse.pixCopiaECola,
-        pixTransactionId: mockApiResponse.txid,
-        // qrCode: response.data.imagemQrCode, // Se o PSP fornecer a imagem base64
+        qrCode: apiResponse.qrCode, // Pode ser uma URL para a imagem do QR Code ou a string base64
+        copiaECola: apiResponse.copiaECola,
+        pixTransactionId: apiResponse.transactionId,
       };
     } else {
-      console.error("[PaymentGateway] Resposta inesperada do PSP ao criar cobrança PIX:", mockApiResponse);
-      throw new Error("Não foi possível gerar o PIX para pagamento (resposta inesperada).");
+      functions.logger.error("[PaymentGateway] Resposta inesperada do PSP ao criar cobrança PIX:", apiResponse);
+      throw new Error("Não foi possível gerar o PIX para pagamento (resposta inesperada do PSP).");
     }
   } catch (error: any) {
-    console.error("[PaymentGateway] Erro ao criar cobrança PIX:", error.response?.data || error.message || error);
-    throw new Error(error.response?.data?.mensagem || "Falha ao comunicar com o sistema de pagamento PIX.");
+    functions.logger.error("[PaymentGateway] Erro ao criar cobrança PIX:", error.response?.data || error.message || error);
+    throw new Error(error.response?.data?.message || "Falha ao comunicar com o sistema de pagamento PIX.");
   }
 };
 
 /**
- * Função para ser chamada por um webhook do PSP quando um PIX é pago.
+ * Valida a assinatura de um webhook PIX.
+ * ESTA É UMA LÓGICA MOCK. VOCÊ DEVE IMPLEMENTAR A VALIDAÇÃO REAL DO SEU PSP EM PRODUÇÃO.
+ * ISSO É CRÍTICO PARA A SEGURANÇA.
+ */
+export function validatePixWebhookSignature(rawBody: Buffer, signature: string, secret: string): boolean {
+  functions.logger.warn("[PaymentGatewayService] ATENÇÃO: A validação de assinatura do webhook PIX está usando uma lógica MOCK. IMPLEMENTE A VALIDAÇÃO REAL DO SEU PSP EM PRODUÇÃO!");
+  // **EXEMPLO DE LÓGICA REAL (varia MUITO entre PSPs):**
+  // Alguns PSPs usam HMAC-SHA256:
+  // const crypto = require('crypto');
+  // const expectedSignature = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
+  // return expectedSignature === signature;
+
+  // Outros PSPs podem ter SDKs ou funções específicas para validação.
+  // Consulte a documentação do seu PSP para a implementação correta.
+  return true; // <--- **MUDAR ISSO PARA A LÓGICA REAL DO SEU PSP EM PRODUÇÃO**
+}
+
+/**
+ * Processa o payload de um webhook PIX, atualizando o agendamento e o saldo do prestador.
+ * AJUSTE AQUI CONFORME A ESTRUTURA REAL DO PAYLOAD DO WEBHOOK DO SEU PSP.
  */
 export const handlePixWebhook = async (webhookPayload: any): Promise<void> => {
-    console.log("[PaymentGateway] Webhook PIX recebido:", webhookPayload);
-    // TODO: Implementar a lógica completa do webhook conforme a documentação do seu PSP
-    // 1. Validar a autenticidade do webhook (essencial!).
-    // 2. Extrair o identificadorDaCobranca (que seria o bookingId) e o status do pagamento.
-    // 3. Se o PIX foi pago, atualizar o status do booking no Firestore e outras lógicas de negócio.
-    const bookingId = webhookPayload.identificadorDaCobranca; // Exemplo, ajuste ao payload real
-    const statusPagamento = webhookPayload.statusPagamento; // Exemplo
+  functions.logger.info("[PaymentGatewayService] Webhook PIX recebido:", webhookPayload);
 
-    if (bookingId && (statusPagamento === 'CONCLUIDA' || statusPagamento === 'PAGO')) { // Ajuste os status
-        console.log(`[PaymentGateway] PIX para booking ${bookingId} confirmado como PAGO.`);
-        // Ex: await processSuccessfulPaymentForBooking(bookingId); (função a ser criada)
+  // **AJUSTE AQUI CONFORME A ESTRUTURA REAL DO PAYLOAD DO WEBHOOK DO SEU PSP.**
+  // Cada PSP tem uma estrutura diferente para o webhook.
+  // Você precisará mapear os campos do webhook para as variáveis abaixo.
+  const paymentReferenceId = webhookPayload.transactionId || webhookPayload.data?.id || webhookPayload.pix?.[0]?.txid || webhookPayload.identificador_transacao; // Exemplo de mapeamento
+  const paymentStatus = webhookPayload.status || webhookPayload.data?.status || webhookPayload.status_pagamento; // Exemplo de mapeamento
+  // const amountPaidInCents = webhookPayload.amount || webhookPayload.data?.transaction_amount_in_cents || (webhookPayload.pix?.[0]?.valor ? parseFloat(webhookPayload.pix[0].valor) * 100 : 0); // Removido pois não é usado (TS6133)
+  const bookingId = webhookPayload.external_reference || webhookPayload.data?.external_reference || webhookPayload.metadata?.bookingId || webhookPayload.identificador_transacao_externa; // Exemplo de mapeamento
+
+  if (!paymentReferenceId || !paymentStatus || !bookingId) {
+    functions.logger.error("[PaymentGatewayService] Payload do webhook PIX inválido/incompleto.", { webhookPayload });
+    throw new Error("Payload do webhook PIX inválido ou incompleto.");
+  }
+
+  functions.logger.info(`[PaymentGatewayService] Webhook para booking ${bookingId} com status ${paymentStatus} e refId ${paymentReferenceId}`);
+
+  // **AJUSTE AQUI OS NOMES DOS STATUS QUE SEU PSP USA PARA PAGAMENTO APROVADO.**
+  const isPaymentApproved = ["approved", "completed", "paid", "confirmed", "concluida", "pago"].includes(paymentStatus.toLowerCase());
+
+  if (!isPaymentApproved) {
+    functions.logger.info(`[PaymentGatewayService] Pagamento para booking ${bookingId} não foi aprovado. Status: ${paymentStatus}`);
+    // Você pode adicionar lógica para lidar com pagamentos falhos aqui, se necessário (ex: registrar o erro no booking).
+    return;
+  }
+
+  const bookingRef = db.collection("bookings").doc(bookingId);
+  const bookingSnap = await bookingRef.get();
+
+  if (!bookingSnap.exists) {
+    functions.logger.error(`[PaymentGatewayService] Agendamento ${bookingId} não encontrado para o webhook PIX.`);
+    throw new Error(`Agendamento ${bookingId} não encontrado.`);
+  }
+
+  const booking = bookingSnap.data() as Booking;
+
+  if (booking.paymentStatus === "paid") {
+    functions.logger.warn(`[PaymentGatewayService] Agendamento ${bookingId} já está marcado como pago. Ignorando webhook duplicado.`);
+    return;
+  }
+  
+  const commissionValue = Math.round(booking.totalPrice * COMMISSION_RATE);
+  const providerEarnings = booking.totalPrice - commissionValue;
+
+  await db.runTransaction(async (transaction) => {
+    const latestBookingSnap = await transaction.get(bookingRef);
+    if (!latestBookingSnap.exists) {
+        throw new Error(`Agendamento ${bookingId} não encontrado durante a transação.`);
     }
+    const latestBooking = latestBookingSnap.data() as Booking;
+
+    if (latestBooking.paymentStatus === "paid") {
+        functions.logger.warn(`[PaymentGatewayService] Agendamento ${bookingId} já está pago na transação. Retrying webhook. Abortando transação.`);
+        return;
+    }
+
+    transaction.update(bookingRef, {
+      paymentStatus: "paid" as PaymentStatus,
+      status: "scheduled_paid", // Altera o status do agendamento para agendado e pago
+      commissionValue: commissionValue,
+      providerEarnings: providerEarnings,
+      paymentConfirmedAt: admin.firestore.FieldValue.serverTimestamp(),
+      paymentGatewayRefId: paymentReferenceId,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    const providerProfileRef = db.collection("providerProfiles").doc(booking.providerId);
+    const providerProfileSnap = await transaction.get(providerProfileRef);
+
+    if (!providerProfileSnap.exists) {
+      functions.logger.error(`[PaymentGatewayService] Perfil do prestador ${booking.providerId} não encontrado para o agendamento ${bookingId}.`);
+      throw new Error(`Perfil do prestador não encontrado.`);
+    }
+
+    const providerProfile = providerProfileSnap.data() as ProviderProfile;
+
+    transaction.update(providerProfileRef, {
+      pendingBalance: (providerProfile.pendingBalance || 0) + providerEarnings,
+      totalEarnedHistorical: (providerProfile.totalEarnedHistorical || 0) + providerEarnings,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    functions.logger.info(`[PaymentGatewayService] Agendamento ${bookingId} marcado como PAGO. Saldo do prestador ${booking.providerId} atualizado com ${providerEarnings} centavos.`);
+  });
 };
 
-// Função para repasses PIX para prestadores (MUITO MAIS COMPLEXA)
-export const processPixPayout = async (providerPixKey: string, providerName: string, providerCpfCnpj: string, amountInCents: number, description: string, bookingId: string) => {
-  if (!PIX_PROVIDER_API_KEY || !PIX_PROVIDER_BASE_URL) { /* ... */ throw new Error("Configuração PIX incompleta.");}
-  console.log(`[PaymentGateway] Processando repasse PIX de ${amountInCents / 100} para ${providerName} referente ao booking ${bookingId}`);
-  // TODO: Lógica real para iniciar uma transferência PIX para a conta do prestador.
-  // Isso requer que o PSP suporte essa funcionalidade via API, que você tenha os dados da chave PIX do prestador,
-  // e que cumpra todas as regulações e requisitos de segurança para repasses.
-  console.log(`[PaymentGateway] SIMULAÇÃO: Repasse PIX para prestador ${providerName} (Chave: ${providerPixKey}) no valor de ${amountInCents / 100} BRL.`);
-  return { success: true, payoutId: `payout_pix_sim_${Date.now()}` };
+/**
+ * Processa o repasse PIX para um prestador.
+ * ESTA É A IMPLEMENTAÇÃO "REAL" GENÉRICA. VOCÊ DEVE AJUSTAR PARA SEU PSP ESPECÍFICO.
+ */
+export const processPixPayout = async (
+  providerPixKey: string, 
+  providerName: string, 
+  providerCpfCnpj: string, // Pode ser necessário para o PSP
+  amountInCents: number, 
+  description: string, 
+  bookingId: string // ID de referência para o repasse
+): Promise<{ success: boolean; payoutId?: string; message?: string }> => {
+  if (!PIX_PROVIDER_API_KEY || !PIX_PROVIDER_BASE_URL) { 
+    functions.logger.error("Configuração PIX incompleta para payout."); 
+    throw new Error("Configuração PIX incompleta."); 
+  }
+
+  functions.logger.log(`[PaymentGateway] Processando repasse PIX de ${amountInCents / 100} para ${providerName} (chave: ${providerPixKey}) referente ao booking ${bookingId}`);
+
+  // Payload a ser enviado para a API do PSP para iniciar o repasse.
+  // **AJUSTE ESTE PAYLOAD CONFORME A DOCUMENTAÇÃO DO SEU PSP.**
+  const payload = {
+    valor: parseFloat((amountInCents / 100).toFixed(2)), // Valor em BRL
+    chave_pix_destino: providerPixKey,
+    tipo_chave_pix_destino: "random", // <--- **AJUSTE CONFORME O TIPO DE CHAVE PIX DO PRESTADOR OU DO SEU PSP**
+    descricao_repasse: description,
+    id_externo_repasse: `payout_${bookingId}_${Date.now()}`, // ID único para o repasse
+    // Muitos PSPs exigem dados do recebedor (nome, CPF/CNPJ) para repasses.
+    nome_recebedor: providerName,
+    documento_recebedor: providerCpfCnpj,
+    // Outros campos que seu PSP possa exigir (ex: dados bancários completos, tempo de expiração)
+  };
+
+  try {
+    const response = await axios.post(
+      `${PIX_PROVIDER_BASE_URL}/api/v1/pix/payouts`, // <--- **SUBSTITUA PELA URL REAL DA API DE REPASSE DO SEU PSP**
+      payload,
+      {
+        headers: {
+          'Authorization': `Bearer ${PIX_PROVIDER_API_KEY}`, // <--- **AJUSTE O HEADER DE AUTORIZAÇÃO CONFORME SEU PSP**
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    const apiResponse = response.data;
+    functions.logger.log("[PaymentGateway] Resposta da API de Payout do PSP:", apiResponse);
+
+    // **AJUSTE AQUI CONFORME A ESTRUTURA DA RESPOSTA DO SEU PSP.**
+    // As propriedades 'payoutId' e 'status' variam entre PSPs.
+    if (apiResponse && apiResponse.payoutId && apiResponse.status === "processing") { // Ou "accepted", "success"
+      functions.logger.info(`[PaymentGateway] Repasse PIX iniciado com sucesso. ID do Payout: ${apiResponse.payoutId}`);
+      return { success: true, payoutId: apiResponse.payoutId, message: "Repasse iniciado com sucesso." };
+    } else {
+      functions.logger.error("[PaymentGateway] Resposta inesperada do PSP ao processar repasse:", apiResponse);
+      throw new Error("Não foi possível iniciar o repasse PIX (resposta inesperada do PSP).");
+    }
+  } catch (error: any) {
+    functions.logger.error("[PaymentGateway] Erro ao processar repasse PIX:", error.response?.data || error.message || error);
+    throw new Error(error.response?.data?.message || "Falha ao comunicar com o sistema de repasse PIX.");
+  }
 };

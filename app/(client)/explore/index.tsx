@@ -1,152 +1,182 @@
-// LimpeJaApp/app/(client)/explore/index.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   View,
   ScrollView,
-  Text,
-  TouchableOpacity,
-  Platform,
+  // Text, // Removido se não usado diretamente aqui
+  // TouchableOpacity, // Removido se não usado diretamente aqui
+  // Platform, // Removido se não usado diretamente aqui
+  Animated,
 } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter, Stack } from 'expo-router';
 
-// Caminhos para os componentes
+// Caminhos para os componentes (ajuste se sua estrutura for diferente)
 import HeaderSuperior from '../../../components/HeaderSuperior';
-import SaudacaoContainer from '../../../components/SaudacaoContainer';
 import SecaoContainer from '../../../components/SecaoContainer';
 import BannerOferta from '../../../components/BannerOferta';
-import SecaoPrestadores from '../../../components/SecaoPrestadores';
-import NavBar from '../../../components/NavBar'; // <<<--- 1. IMPORTE SEU NAVBAR
+import SecaoPrestadores, { Prestador } from '../../../components/SecaoPrestadores'; // Importa Prestador (com as alterações de fundo já feitas)
+import NavBar from '../../../components/NavBar';
+import CategoriaCard, { Categoria as TipoCategoria } from '../../../components/CategoriaCard'; // Sua importação existente
 
-// Tipos de dados (Categoria, Prestador)
-type Categoria = {
-  id: string;
-  nome: string;
-  icone: keyof typeof MaterialCommunityIcons.glyphMap;
-};
+// CORRIGIDO: Definição de CATEGORIAS_EXEMPLO com a propriedade 'corFundo'
+const COR_AZUL_CLARO_UNIFICADA = '#A0D2EB'; // Ou a cor azul claro que você decidiu
 
-export type Prestador = {
-  id: string;
-  nome: string;
-  especialidade: string;
-  avaliacao: number;
-  precoHora: string;
-  distancia?: string;
-  imagemUrl: string;
-  numeroAvaliacoes?: number;
-  isVerificado?: boolean;
-  descricaoCurta?: string;
-};
-
-// Dados Mockados (CATEGORIAS_EXEMPLO, PRESTADORES_EXEMPLO)
-const CATEGORIAS_EXEMPLO: Categoria[] = [
-  { id: '1', nome: 'Residencial', icone: 'home-outline' },
-  { id: '2', nome: 'Comercial', icone: 'office-building-outline' },
-  { id: '3', nome: 'Pós-obra', icone: 'broom' },
-  { id: '4', nome: 'Vidros', icone: 'window-closed-variant' },
-  { id: '5', nome: 'Jardim', icone: 'flower-tulip-outline' },
+const CATEGORIAS_EXEMPLO: TipoCategoria[] = [
+  { id: '1', nome: 'Residencial', icone: 'home-outline', corFundo: COR_AZUL_CLARO_UNIFICADA },
+  { id: '2', nome: 'Comercial', icone: 'office-building-outline', corFundo: COR_AZUL_CLARO_UNIFICADA },
+  { id: '3', nome: 'Pós-obra', icone: 'broom', corFundo: COR_AZUL_CLARO_UNIFICADA },
+  { id: '4', nome: 'Vidros', icone: 'window-closed-variant', corFundo: COR_AZUL_CLARO_UNIFICADA },
+  { id: '5', nome: 'Jardim', icone: 'flower-tulip-outline', corFundo: COR_AZUL_CLARO_UNIFICADA },
+  { id: '6', nome: 'Passar Roupa', icone: 'iron-outline', corFundo: COR_AZUL_CLARO_UNIFICADA },
 ];
 
+// Seus dados mockados PRESTADORES_EXEMPLO (mantidos como no seu código)
 const PRESTADORES_EXEMPLO: Prestador[] = [
-  { id: 'provider1', nome: 'Ana Oliveira', especialidade: 'Limpeza Residencial', avaliacao: 4.8, precoHora: 'R$ 60,00/hora', distancia: '1.2 km de distância', imagemUrl: 'https://via.placeholder.com/100/ADD8E6/1E3A5F?text=Ana+O.', numeroAvaliacoes: 125, isVerificado: true, descricaoCurta: 'Profissional experiente e dedicada.' },
-  { id: 'provider2', nome: 'Carlos Silva', especialidade: 'Limpeza Comercial', avaliacao: 4.9, precoHora: 'R$ 75,00/hora', distancia: '2.5 km de distância', imagemUrl: 'https://via.placeholder.com/100/E0F7FA/00796B?text=Carlos+S.', numeroAvaliacoes: 88, isVerificado: false, descricaoCurta: 'Atendimento de alta qualidade para empresas.' },
-  { id: 'provider3', nome: 'Mariana Costa', especialidade: 'Limpeza Pós-obra', avaliacao: 4.7, precoHora: 'R$ 90,00/hora', distancia: '800 m de distância', imagemUrl: 'https://via.placeholder.com/100/B3E5FC/01579B?text=Mariana+C.', numeroAvaliacoes: 55, isVerificado: true, descricaoCurta: 'Deixando tudo impecável após a sua obra.' },
+  {
+    id: 'provider1',
+    nome: 'Ana Oliveira',
+    especialidade: 'Limpeza Residencial',
+    avaliacao: 4.8,
+    precoHora: 'R$ 60/h',
+    distancia: '1.2 km',
+    imagemUrl: 'https://randomuser.me/api/portraits/women/43.jpg',
+    numeroAvaliacoes: 125,
+    isVerificado: true,
+    descricaoCurta: 'Profissional experiente e dedicada, limpeza detalhada.'
+  },
+  {
+    id: 'provider2',
+    nome: 'Carlos Silva',
+    especialidade: 'Limpeza Comercial',
+    avaliacao: 4.9,
+    precoHora: 'R$ 75/h',
+    distancia: '2.5 km',
+    imagemUrl: 'https://randomuser.me/api/portraits/men/32.jpg',
+    numeroAvaliacoes: 88,
+    isVerificado: false,
+    descricaoCurta: 'Alta qualidade para empresas, foco em resultados.'
+  },
+  {
+    id: 'provider3',
+    nome: 'Mariana Costa',
+    especialidade: 'Limpeza Pós-obra',
+    avaliacao: 4.7,
+    precoHora: 'R$ 90/h',
+    distancia: '800 m',
+    imagemUrl: 'https://randomuser.me/api/portraits/women/55.jpg',
+    numeroAvaliacoes: 55,
+    isVerificado: true,
+    descricaoCurta: 'Especialista em deixar tudo impecável após sua reforma.'
+  },
+  {
+    id: 'provider4',
+    nome: 'Rafael Lima',
+    especialidade: 'Limpeza de Vidros e Fachadas',
+    avaliacao: 4.6,
+    precoHora: 'R$ 70/h',
+    distancia: '3.1 km',
+    imagemUrl: 'https://randomuser.me/api/portraits/men/47.jpg',
+    numeroAvaliacoes: 30,
+    isVerificado: true,
+    descricaoCurta: 'Vidros limpos e brilhantes, com segurança e profissionalismo.'
+  },
 ];
 
 export default function ExploreClientScreen() {
   const router = useRouter();
-  // const [busca, setBusca] = useState('');
 
-  const handleNavigateToServicosPorCategoria = (categoria: Categoria) => {
+  const headerAnim = useRef(new Animated.Value(0)).current;
+  const saudacaoAnim = useRef(new Animated.Value(0)).current;
+  const categoriasAnim = useRef(new Animated.Value(0)).current;
+  const bannerAnim = useRef(new Animated.Value(0)).current;
+  const prestadoresAnim = useRef(new Animated.Value(0)).current;
+  const navBarAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.stagger(150, [
+      Animated.timing(headerAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.timing(saudacaoAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.timing(categoriasAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.timing(bannerAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.timing(prestadoresAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.timing(navBarAnim, { toValue: 1, duration: 500, delay: 200, useNativeDriver: true }),
+    ]).start();
+  }, [headerAnim, saudacaoAnim, categoriasAnim, bannerAnim, prestadoresAnim, navBarAnim]);
+
+  const handleNavigateToServicosPorCategoria = (categoria: TipoCategoria) => {
     router.push({
       pathname: '/(client)/explore/servicos-por-categoria',
       params: { categoriaId: categoria.id, categoriaNome: categoria.nome },
-    });
+    } as any);
   };
 
-  const renderCategoriaCard = ({ item }: { item: Categoria }) => (
-    <TouchableOpacity style={styles.categoriaCard} onPress={() => handleNavigateToServicosPorCategoria(item)}>
-      <MaterialCommunityIcons name={item.icone} size={32} color="#007AFF" />
-      <Text style={styles.categoriaTexto}>{item.nome}</Text>
-    </TouchableOpacity>
-  );
-
   return (
-    <View style={styles.screen}> {/* Container principal que ocupa toda a tela */}
+    <View style={styles.screen}>
       <Stack.Screen options={{ headerShown: false }} />
-      
+
       <ScrollView
-        style={styles.scrollViewArea} // Estilo para a área do ScrollView
+        style={styles.scrollViewArea}
         contentContainerStyle={styles.scrollContentContainer}
         showsVerticalScrollIndicator={false}
       >
-        {/* Seus componentes de conteúdo */}
-        <HeaderSuperior />
-        <SaudacaoContainer /> 
-        <SecaoContainer
-          titulo="Categorias"
-          onVerTudoPress={() => router.push('/(client)/explore/todas-categorias')}
-          data={CATEGORIAS_EXEMPLO}
-          renderItem={renderCategoriaCard}
-          horizontal
-        />
-        <BannerOferta />
-        <SecaoPrestadores
-          titulo="Próximo de você"
-          onVerTudoPress={() => router.push('/(client)/explore/todos-prestadores-proximos')}
-          data={PRESTADORES_EXEMPLO}
-        />
+        <Animated.View style={{ opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
+          <HeaderSuperior />
+        </Animated.View>
+
+        <Animated.View style={{ opacity: saudacaoAnim, transform: [{ translateY: saudacaoAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
+          {/* Seu componente de saudação ou conteúdo aqui, se houver */}
+        </Animated.View>
+
+        <Animated.View style={{ opacity: categoriasAnim, transform: [{ translateY: categoriasAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
+          <SecaoContainer
+            titulo="Categorias Populares"
+            onVerTudoPress={() => router.push('/(client)/explore/todas-categorias' as any)}
+            data={CATEGORIAS_EXEMPLO} // Agora CATEGORIAS_EXEMPLO está corretamente definido com corFundo
+            renderItem={({ item }: { item: TipoCategoria }) => (
+              <CategoriaCard
+                item={item}
+                onPress={handleNavigateToServicosPorCategoria}
+              />
+            )}
+            horizontal
+          />
+        </Animated.View>
+
+        <Animated.View style={{ opacity: bannerAnim, transform: [{ translateY: bannerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
+          <BannerOferta />
+        </Animated.View>
+
+        <Animated.View style={{ opacity: prestadoresAnim, transform: [{ translateY: prestadoresAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
+          <SecaoPrestadores
+            titulo="Profissionais por Perto"
+            onVerTudoPress={() => router.push('/(client)/explore/todos-prestadores-proximos' as any)}
+            data={PRESTADORES_EXEMPLO}
+          />
+        </Animated.View>
       </ScrollView>
 
-      {/* 2. SEU NAVBAR ADICIONADO AQUI, FORA E ABAIXO DO SCROLLVIEW */}
-      <NavBar /> 
-      {/* O componente NavBar deve ter seus próprios estilos para definir altura,
-          cor de fundo, e como ele se posiciona (geralmente ocupando a largura total
-          e com uma altura fixa na parte inferior). */}
+      <Animated.View style={[styles.navBarContainer, { transform: [{ translateY: navBarAnim.interpolate({ inputRange: [0, 1], outputRange: [100, 0] }) }] }]}>
+        <NavBar />
+      </Animated.View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: {
-    flex: 1, // Faz o container principal ocupar toda a tela
-    backgroundColor: '#F4F7FC',
-    // Se o NavBar não for posicionado de forma absoluta internamente,
-    // e você quiser que ele fique fixo embaixo e o ScrollView ocupe o resto:
-    // flexDirection: 'column', // (já é o padrão)
-    // justifyContent: 'space-between', // Empurraria o NavBar para baixo se ele não tivesse altura definida
+    flex: 1,
+    backgroundColor: '#F4F7FC', // Fundo principal da tela
   },
-  scrollViewArea: { // Área que o ScrollView ocupa
-    flex: 1, // Permite que o ScrollView cresça e ocupe o espaço disponível acima do NavBar
+  scrollViewArea: {
+    flex: 1,
   },
-  scrollContentContainer: { // Conteúdo DENTRO do ScrollView
-    paddingBottom: 80, // 3. AJUSTE ESTE VALOR!
-                       // Deve ser um pouco MAIOR que a altura do seu NavBar.
-                       // Ex: Se NavBar tem 60px de altura, use 70 ou 80 aqui.
-                       // Isso evita que o último item do ScrollView fique escondido atrás do NavBar.
+  scrollContentContainer: {
+    paddingBottom: 90, // Garante espaço para a NavBar não sobrepor o último conteúdo
   },
-  categoriaCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    paddingVertical: 18,
-    paddingHorizontal: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-    width: 105,
-    height: 105,
-    shadowColor: '#003D7A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 5,
-    elevation: 3,
-  },
-  categoriaTexto: {
-    fontSize: 13,
-    color: '#333',
-    marginTop: 10,
-    textAlign: 'center',
-    fontWeight: '600',
+  navBarContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
   },
 });

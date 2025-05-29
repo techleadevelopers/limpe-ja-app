@@ -1,171 +1,146 @@
 // LimpeJaApp/functions/src/admin/callable.ts
-import * as functions from "firebase-functions"; // Necessário para functions.https.HttpsError
-import { region } from "firebase-functions/v1";
-import admin, { db, auth as adminAuth } from "../config/firebaseAdmin";
-// Importe apenas os tipos que são REALMENTE usados neste arquivo ou em TODOs próximos.
-// Se UserProfile e ProviderProfile são usados apenas para casts e os TODOs não os usarão diretamente
-// em novas funções aqui, eles poderiam ser omitidos e o cast feito com 'as any' ou tipos mais específicos.
-// No entanto, para clareza e desenvolvimento futuro dos TODOs, é bom mantê-los se forem relevantes.
-// 'Booking' não parece ser usado neste arquivo específico.
-import { UserProfile, ProviderProfile } from "../types"; 
-import { assertRole } from "../utils/helpers"; 
+import * as functions from "firebase-functions"; // Importa 'functions' para HttpsError e logger
+import { region } from "firebase-functions/v1"; // Importa 'region' e 'https' para funções Callable de Gen 1
+import * as admin from 'firebase-admin'; // Importa 'admin' para admin.firestore.FieldValue
+import { db } from "../config/firebaseAdmin"; // Importa 'db'
+import { assertRole } from "../utils/helpers"; // Assumindo que você tem uma função assertRole
+import { UserRole } from "../types/user.types"; // Importação usada para tipagem.
+import { ProviderProfile } from "../types/provider.types"; // Importação usada para tipagem.
+import { Booking } from "../types/booking.types"; // Importação usada para tipagem.
 
-const REGION = "southamerica-east1";
+const REGION = "southamerica-east1"; // Defina a região para suas funções
 
-interface VerifyProviderData {
-  providerId: string;
-  isVerified: boolean;
-  verificationNotes?: string;
-}
+export const setProviderVerificationStatus = region(REGION).https.onCall( // CONVERTIDO PARA GEN 1
+    async (data: { providerId: string; isVerified: boolean }, context) => { // CONVERTIDO PARA GEN 1
+        // 1. Autenticação e Autorização: Apenas administradores podem chamar esta função.
+        if (!context.auth) { // CONVERTIDO PARA GEN 1
+            throw new functions.https.HttpsError( // CONVERTIDO PARA GEN 1
+                "unauthenticated",
+                "A solicitação deve ser autenticada."
+            );
+        }
+        // [CORREÇÃO] Passar o objeto 'context.auth' diretamente para assertRole
+        // A assinatura de assertRole em helpers.ts já aceita 'CallableContext.auth' (que é V1CallableAuthContext | undefined)
+        assertRole(context.auth, "admin"); // CONVERTIDO PARA GEN 1
 
-export const setProviderVerificationStatus = region(REGION).https.onCall(
-  async (data: VerifyProviderData, context) => {
-    assertRole(context.auth, "admin"); 
+        // 2. Validação dos dados de entrada
+        const { providerId, isVerified } = data;
 
-    const { providerId, isVerified, verificationNotes } = data;
+        if (!providerId || typeof isVerified !== "boolean") {
+            throw new functions.https.HttpsError( // CONVERTIDO PARA GEN 1
+                "invalid-argument",
+                "ID do provedor e status de verificação são obrigatórios."
+            );
+        }
 
-    if (!providerId) {
-      throw new functions.https.HttpsError(
-        "invalid-argument",
-        "O ID do prestador (providerId) é obrigatório."
-      );
+        try {
+            // 3. Atualizar o status de verificação do provedor no Firestore
+            const providerRef = db.collection("providerProfiles").doc(providerId);
+            await providerRef.update({
+                isVerified: isVerified,
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+
+            functions.logger.info(`[Admin Callable] Status de verificação do provedor ${providerId} alterado para ${isVerified}`);
+            return { success: true, message: `Status de verificação do provedor ${providerId} atualizado para ${isVerified}.` };
+        } catch (error: any) {
+            functions.logger.error(`[Admin Callable] Erro ao definir status de verificação para ${providerId}:`, error);
+            throw new functions.https.HttpsError( // CONVERTIDO PARA GEN 1
+                "internal",
+                "Falha ao atualizar o status de verificação do provedor.",
+                error.message || error
+            );
+        }
     }
-
-    const providerProfileRef = db.collection("providerProfiles").doc(providerId);
-    const userProfileRef = db.collection("users").doc(providerId); // Esta variável AGORA SERÁ USADA
-
-    console.log(`[AdminCallable] Admin ${context.auth?.uid} está atualizando status de verificação do prestador ${providerId} para ${isVerified}. Notas: ${verificationNotes || "N/A"}`);
-
-    try {
-      const batch = db.batch();
-      const updateDataProviderProfile: Partial<ProviderProfile> = { // Tipagem para clareza
-        isVerified: isVerified,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      };
-      if (verificationNotes) {
-        // Supondo que ProviderProfile tenha um campo notesOnVerification
-        // Se não, você precisaria adicionar em types/provider.types.ts
-        (updateDataProviderProfile as any).notesOnVerification = verificationNotes; 
-      }
-      batch.update(providerProfileRef, updateDataProviderProfile);
-
-      // Atualizando um campo no UserProfile para espelhar a verificação do provedor
-      // Garanta que UserProfile em types/user.types.ts tenha 'isProviderVerified?: boolean;'
-      const updateUserProfileData: Partial<UserProfile> = {
-          isProviderVerified: isVerified, // <<-- USO DE userProfileRef
-          updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      };
-      batch.update(userProfileRef, updateUserProfileData); // <<-- USO DE userProfileRef
-
-      await batch.commit();
-
-      // TODO: Enviar notificação para o prestador sobre a mudança no status de verificação.
-      // Ex: await sendPushNotification(providerId, { title: "Seu perfil foi atualizado!", body: `Status de verificação: ${isVerified}`});
-
-      console.log(`[AdminCallable] Status de verificação do prestador ${providerId} atualizado com sucesso para ${isVerified}.`);
-      return { success: true, message: `Status de verificação do prestador atualizado para ${isVerified}.` };
-    } catch (error) {
-      console.error(`[AdminCallable] Erro ao atualizar status de verificação do prestador ${providerId}:`, error);
-      throw new functions.https.HttpsError(
-        "internal",
-        "Não foi possível atualizar o status de verificação do prestador.",
-        (error as Error).message
-      );
-    }
-  }
 );
 
 
-interface BanUserData {
-    userIdToManage: string;
-    disable: boolean;
-    reason?: string;
-}
+export const setUserDisabledStatus = region(REGION).https.onCall( // CONVERTIDO PARA GEN 1
+    async (data: { userId: string; isDisabled: boolean }, context) => { // CONVERTIDO PARA GEN 1
+        // 1. Autenticação e Autorização: Apenas administradores podem chamar esta função.
+        if (!context.auth) { // CONVERTIDO PARA GEN 1
+            throw new functions.https.HttpsError( // CONVERTIDO PARA GEN 1
+                "unauthenticated",
+                "A solicitação deve ser autenticada."
+            );
+        }
+        // [CORREÇÃO] Passar o objeto 'context.auth' diretamente para assertRole
+        assertRole(context.auth, "admin"); // CONVERTIDO PARA GEN 1
 
-export const setUserDisabledStatus = region(REGION).https.onCall(
-  async (data: BanUserData, context) => {
-    assertRole(context.auth, "admin");
+        // 2. Validação dos dados de entrada
+        const { userId, isDisabled } = data;
 
-    const { userIdToManage, disable, reason } = data;
+        if (!userId || typeof isDisabled !== "boolean") {
+            throw new functions.https.HttpsError( // CONVERTIDO PARA GEN 1
+                "invalid-argument",
+                "ID do usuário e status de desativação são obrigatórios."
+            );
+        }
 
-    if (!userIdToManage) {
-      throw new functions.https.HttpsError("invalid-argument", "O ID do usuário (userIdToManage) é obrigatório.");
+        try {
+            // 3. Atualizar o status 'disabled' do usuário no Firebase Authentication
+            const userRecord = await admin.auth().updateUser(userId, {
+                disabled: isDisabled,
+            });
+
+            // Opcional: Atualizar um campo no Firestore 'users' para refletir o status,
+            // ou confiar apenas no status do Auth para login
+            await db.collection("users").doc(userId).update({
+                isDisabled: isDisabled,
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+
+            functions.logger.info(`[Admin Callable] Status de desativação do usuário ${userId} alterado para ${isDisabled}`);
+            return { success: true, message: `Status de desativação do usuário ${userId} atualizado para ${isDisabled}.` };
+        } catch (error: any) {
+            functions.logger.error(`[Admin Callable] Erro ao definir status de desativação para ${userId}:`, error);
+            throw new functions.https.HttpsError( // CONVERTIDO PARA GEN 1
+                "internal",
+                "Falha ao atualizar o status de desativação do usuário.",
+                error.message || error
+            );
+        }
     }
-
-    console.log(`[AdminCallable] Admin ${context.auth?.uid} está ${disable ? 'DESABILITANDO' : 'HABILITANDO'} usuário ${userIdToManage}. Razão: ${reason || 'N/A'}`);
-
-    try {
-      await adminAuth.updateUser(userIdToManage, { disabled: disable });
-
-      const userProfileRef = db.collection("users").doc(userIdToManage);
-      // Garanta que UserProfile tenha 'isDisabledByAdmin' e 'disabledReason'
-      const userProfileUpdate: Partial<UserProfile> = {
-        isDisabledByAdmin: disable,
-        disabledReason: disable ? (reason || "Conta desabilitada pelo administrador.") : null,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      };
-      await userProfileRef.update(userProfileUpdate);
-
-      const providerProfileRef = db.collection("providerProfiles").doc(userIdToManage);
-      const providerDoc = await providerProfileRef.get();
-      if (providerDoc.exists) {
-        // Garanta que ProviderProfile tenha 'isDisabledByAdmin' se quiser espelhar
-        await providerProfileRef.update({
-            isDisabledByAdmin: disable, 
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-      }
-
-      // TODO: Enviar notificação para o usuário sobre a mudança de status da conta.
-
-      const action = disable ? "desabilitado" : "reabilitado";
-      console.log(`[AdminCallable] Usuário ${userIdToManage} foi ${action} com sucesso.`);
-      return { success: true, message: `Usuário ${action} com sucesso.` };
-
-    } catch (error: any) {
-      console.error(`[AdminCallable] Erro ao ${disable ? 'desabilitar' : 'habilitar'} usuário ${userIdToManage}:`, error);
-      throw new functions.https.HttpsError(
-        "internal",
-        `Não foi possível ${disable ? 'desabilitar' : 'habilitar'} o usuário.`,
-        error.message
-      );
-    }
-  }
 );
 
 
-interface GetPlatformAnalyticsData {
-    period?: 'daily' | 'weekly' | 'monthly' | 'custom';
-    startDate?: string; // YYYY-MM-DD
-    endDate?: string;   // YYYY-MM-DD
-}
+export const getPlatformAnalytics = region(REGION).https.onCall( // CONVERTIDO PARA GEN 1
+    async (data: any, context) => { // CONVERTIDO PARA GEN 1
+        // 1. Autenticação e Autorização: Apenas administradores podem chamar esta função.
+        if (!context.auth) { // CONVERTIDO PARA GEN 1
+            throw new functions.https.HttpsError( // CONVERTIDO PARA GEN 1
+                "unauthenticated",
+                "A solicitação deve ser autenticada."
+            );
+        }
+        // [CORREÇÃO] Passar o objeto 'context.auth' diretamente para assertRole
+        assertRole(context.auth, "admin"); // CONVERTIDO PARA GEN 1
 
-export const getPlatformAnalytics = region(REGION).https.onCall(
-  async (data: GetPlatformAnalyticsData, context) => {
-    assertRole(context.auth, "admin");
+        try {
+            // Exemplos de métricas para coletar:
+            const totalUsers = (await db.collection("users").count().get()).data().count;
+            const totalProviders = (await db.collection("providerProfiles").count().get()).data().count;
+            const totalBookings = (await db.collection("bookings").count().get()).data().count;
 
-    console.log(`[AdminCallable] Admin ${context.auth?.uid} solicitando analíticas para o período: ${data.period || 'geral'}`);
-
-    // TODO: Implementar lógica real para buscar e agregar dados do Firestore.
-    // Esta é uma função complexa que dependerá de como seus dados são estruturados
-    // e quais métricas você precisa.
-    // Ex: Contar usuários criados em um período, agendamentos concluídos, etc.
-
-    const analyticsData = {
-      period: data.period || 'geral (mock)',
-      newClients: Math.floor(Math.random() * 100),
-      newProviders: Math.floor(Math.random() * 20),
-      completedBookings: Math.floor(Math.random() * 200),
-      // Adicione mais métricas mockadas ou reais
-    };
-
-    console.log("[AdminCallable] Retornando dados analíticos (simulados):", analyticsData);
-    return { success: true, data: analyticsData };
-  }
+            functions.logger.info(`[Admin Callable] Coletando analíticos da plataforma.`);
+            return {
+                success: true,
+                analytics: {
+                    totalUsers,
+                    totalProviders,
+                    totalBookings,
+                },
+            };
+        } catch (error: any) {
+            functions.logger.error("[Admin Callable] Erro ao obter analíticos da plataforma:", error);
+            throw new functions.https.HttpsError( // CONVERTIDO PARA GEN 1
+                "internal",
+                "Falha ao obter dados de analíticos da plataforma.",
+                error.message || error
+            );
+        }
+    }
 );
 
-// TODO: Adicionar mais funções administrativas que você listou anteriormente, como:
-// - manageDispute(data: { bookingId: string, resolutionDetails: string }, context)
-//   (Precisaria importar o tipo 'Booking' se for usá-lo aqui)
-// - sendMessageToAllUsers(data: { title: string, body: string, targetRole?: UserRole }, context)
-// - getProviderApplications(data: { status: 'pending' | 'all' }, context) -> lista de prestadores aguardando verificação
+// TODO: Adicionar outras funções callable de administração conforme necessário,
+// como gerenciar categorias de serviço, banir usuários, etc.

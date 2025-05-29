@@ -17,7 +17,8 @@
   "dependencies": {
     "axios": "^1.9.0",
     "firebase-admin": "^12.7.0",
-    "firebase-functions": "^6.3.2"
+    "firebase-functions": "^6.3.2",
+    "zod": "^3.25.30"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^5.12.0",

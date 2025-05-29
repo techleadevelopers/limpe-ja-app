@@ -4,24 +4,16 @@ module.exports = function (api) {
   return {
     presets: ['babel-preset-expo'],
     plugins: [
-      // Requerido para expo-router
-      'expo-router/babel',
+      // 'expo-router/babel', // << REMOVA ESTA LINHA
       // Para os aliases de caminho como @/* que você configurou no tsconfig.json
       [
         'module-resolver',
         {
-          root: ['./'], // Define a raiz do projeto (onde está o tsconfig.json)
+          root: ['./'], 
           alias: {
-            '@': './', // Mapeia @ para a raiz do projeto
-            // Se suas pastas como 'components', 'contexts', etc., estiverem dentro de 'src/',
-            // você usaria:
-            // root: ['./src'],
-            // alias: {
-            //   '@': './src',
-            // }
-            // Mas com base na nossa estrutura acordada, elas estão na raiz junto com 'app'.
+            '@': './', 
           },
-          extensions: [ // extensões que o resolver deve procurar
+          extensions: [ 
             '.js',
             '.jsx',
             '.ts',
@@ -36,7 +28,7 @@ module.exports = function (api) {
       ],
       // Se você for usar o React Native Reanimated, adicione o plugin dele.
       // Certifique-se de que ele seja o último plugin da lista.
-      // 'react-native-reanimated/plugin',
+      // 'react-native-reanimated/plugin', 
     ],
   };
 };

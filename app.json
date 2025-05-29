@@ -6,24 +6,28 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "limpeja",
-    "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "userInterfaceStyle": "light", // FORÇA O TEMA CLARO GLOBALMENTE
+    // "newArchEnabled": true, // Avalie se realmente precisa e se é compatível
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.suaempresa.limpeja"
+      "bundleIdentifier": "com.suaempresa.limpeja",
+      "userInterfaceStyle": "light" // Garante tema claro no iOS
+      // A configuração de splash específica do iOS pode ser omitida se a global no plugin for suficiente
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#FFFFFF"
+        "backgroundColor": "#FFFFFF" // Fundo do ícone adaptativo
       },
       "package": "com.suaempresa.limpeja",
-      "edgeToEdgeEnabled": true,
+      "userInterfaceStyle": "light", // Garante tema claro no Android
+      // "edgeToEdgeEnabled": true, // Se for usar, trate os insets no seu app
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.ACCESS_FINE_LOCATION"
+        // "android.permission.RECORD_AUDIO" // Remova se não for estritamente necessário
       ]
+      // A configuração de splash específica do Android pode ser omitida
     },
     "web": {
       "bundler": "metro",
@@ -35,9 +39,12 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash.png",
-          "resizeMode": "contain",
-          "backgroundColor": "#FFFFFF"
+          // Configuração da splash screen NATIVA (primeira imagem exibida)
+          "image": "./assets/images/splash.png", // Sua imagem de splash.
+                                                // Se quiser texto aqui, ele precisa estar na imagem.
+          "resizeMode": "contain",              // ou "cover"
+          "backgroundColor": "#E0F2FF",        // Seu azul claro para o fundo da splash
+          "userInterfaceStyle": "light"         // Garante que a splash nativa use o tema claro
         }
       ],
       "expo-secure-store",
@@ -54,8 +61,6 @@
       "typedRoutes": true
     },
     "extra": {
-      "extra": {},
-      "router": {},
       "eas": {
         "projectId": "23560a63-c202-4e41-96d5-dcbd2a60c077"
       }

@@ -1,8 +1,15 @@
-import * as admin from "firebase-admin";
+// LimpeJaApp/functions/src/utils/notifications.ts
+import admin from "../config/firebaseAdmin"; // Importe o admin SDK
+
+export interface PushNotificationData {
+  title: string; // <-- DEVE SER OBRIGATÓRIO
+  body: string;  // <-- DEVE SER OBRIGATÓRIO
+  data?: { [key: string]: string }; // Opcional
+}
 
 export const sendPushNotification = async (
   userId: string,
-  notification: { title: string; body: string }
+  notification: PushNotificationData
 ) => {
   const tokenDoc = await admin.firestore().collection("fcmTokens").doc(userId).get();
   if (!tokenDoc.exists) {
@@ -19,11 +26,17 @@ export const sendPushNotification = async (
   const message = {
     token: token,
     notification: {
-      title: notification.title,
-      body: notification.body,
+      title: notification.title, // Agora TypeScript sabe que é string
+      body: notification.body,   // Agora TypeScript sabe que é string
     },
+    data: notification.data || {},
   };
 
-  await admin.messaging().send(message);
-  console.log(`[Notifications] Notificação enviada para ${userId}`);
+  try {
+    await admin.messaging().send(message);
+    console.log(`[Notifications] Notificação enviada para ${userId}`);
+  } catch (error) {
+    console.error(`[Notifications] Erro ao enviar notificação para ${userId}:`, error);
+    throw error;
+  }
 };

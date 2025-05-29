@@ -1,20 +1,32 @@
-// LimpeJaApp/app/(client)/explore/[providerId].tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ActivityIndicator,
-  // Button, // Usamos TouchableOpacity para botões mais estilizados
-  Image,
+  ImageBackground,
   ScrollView,
   TouchableOpacity,
   Platform,
-  Alert
+  Alert,
+  Animated,
+  Dimensions,
+  Image, // Para fotos de perfil nas avaliações
 } from 'react-native';
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
-import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
-import { formatDate } from '../../../utils/helpers'; // Assumindo que este helper existe e funciona
+import { Ionicons } from '@expo/vector-icons';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+
+// --- Interfaces e Dados Mock ---
+interface Review {
+  id: string;
+  reviewerName: string;
+  reviewerImageUrl?: string;
+  rating: number;
+  comment: string;
+  date: string;
+}
 
 interface ProviderDetails {
   id: string;
@@ -30,229 +42,478 @@ interface ProviderDetails {
   cidade?: string;
   anosExperiencia?: number;
   disponibilidadeObservacao?: string;
+  reviews?: Review[]; // Adicionando avaliações mock
+
+  // Adicionando estes campos para o texto e preços do print, se necessário
+  servicoPrincipal?: string;
+  precoOriginal?: string;
+  precoComDesconto?: string;
 }
 
 const TODOS_OS_PRESTADORES_DETALHES: ProviderDetails[] = [
-  { id: 'provider1', nome: 'Ana Oliveira', especialidade: 'Limpeza Residencial Especializada', avaliacao: 4.8, precoHora: 'R$ 60-80/h', imagemUrl: 'https://via.placeholder.com/150/ADD8E6/1E3A5F?text=Ana+O', numeroAvaliacoes: 125, isVerificado: true, descricaoCompleta: 'Com mais de 5 anos de experiência, ofereço uma limpeza residencial detalhada e personalizada, utilizando produtos de alta qualidade e ecológicos. Meu foco é transformar sua casa em um ambiente impecável, fresco e acolhedor, cuidando de cada canto com atenção e profissionalismo. Sua satisfação é minha prioridade!', servicosOferecidos: [{nome: 'Limpeza Padrão Completa', descricao: 'Pisos, móveis, banheiros, cozinha.'}, {nome: 'Limpeza Pesada Detalhada', preco: 'Sob consulta', descricao: 'Pós-festa, pré-mudança, faxina geral.'}, {nome: 'Organização de Armários', preco: 'R$ 70/h'}], cidade: 'Campinas, SP', anosExperiencia: 5, disponibilidadeObservacao: 'Agenda aberta para próxima semana' },
-  { id: 'provider2', nome: 'Carlos Silva', especialidade: 'Higienização Comercial e Escritórios', avaliacao: 4.9, precoHora: 'R$ 75/h', imagemUrl: 'https://via.placeholder.com/150/E0F7FA/006400?text=Carlos+S', numeroAvaliacoes: 88, isVerificado: false, descricaoCompleta: 'Serviços de limpeza e higienização para ambientes comerciais, escritórios e lojas. Equipe treinada, discrição e eficiência para manter seu local de trabalho sempre apresentável e saudável. Horários flexíveis para não atrapalhar sua rotina.', servicosOferecidos: [{nome: 'Limpeza de Manutenção (Escritório)'}, {nome: 'Higienização Profunda (Comercial)'}], cidade: 'Valinhos, SP', anosExperiencia: 8, disponibilidadeObservacao: 'Disponível para contratos mensais' },
-  { id: 'provider3', nome: 'Mariana Costa', especialidade: 'Expert em Limpeza Pós-Obra', avaliacao: 4.7, precoHora: 'A partir de R$ 90/h', imagemUrl: 'https://via.placeholder.com/150/B3E5FC/01579B?text=Mariana+C', numeroAvaliacoes: 55, isVerificado: true, descricaoCompleta: 'Especializada na remoção de sujeira pesada, respingos de tinta, cimento e outros resíduos de construção e reforma. Deixo seu imóvel novo ou recém-reformado impecável e pronto para uso, com equipamento e produtos específicos para cada tipo de material.', servicosOferecidos: [{nome: 'Limpeza Pós-Reforma (Residencial)'}, {nome: 'Limpeza Pós-Construção (Comercial)'}], cidade: 'Campinas, SP', anosExperiencia: 3 },
+  {
+    id: 'provider1',
+    nome: 'Ana Oliveira',
+    especialidade: 'Limpeza Residencial Detalhada',
+    avaliacao: 5.0, // Para 5 estrelas como no print
+    precoHora: 'R$ 60-80',
+    imagemUrl: 'https://randomuser.me/api/portraits/women/43.jpg',
+    numeroAvaliacoes: 240, // Ajustado para 240 reviews como no print
+    isVerificado: true,
+    descricaoCompleta: 'It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letter', // Texto exato do print
+    servicosOferecidos: [{ nome: 'Limpeza Padrão Completa' }, { nome: 'Limpeza Pesada Detalhada' }, { nome: 'Organização de Armários' }],
+    cidade: 'Campinas, SP',
+    anosExperiencia: 5,
+    reviews: [
+      { id: 'rev1_1', reviewerName: 'Juliana M.', reviewerImageUrl: 'https://picsum.photos/seed/juliana_m/100/100', rating: 5, comment: 'A Ana é fantástica! Minha casa nunca esteve tão limpa. Super recomendo!', date: '20/05/2025' },
+      { id: 'rev1_2', reviewerName: 'Ricardo F.', reviewerImageUrl: 'https://picsum.photos/seed/ricardo_f/100/100', rating: 4.5, comment: 'Ótimo serviço, muito profissional e atenciosa aos detalhes. Contratarei novamente.', date: '15/05/2025' },
+    ],
+    servicoPrincipal: 'Limpeza de Sala de Estar',
+    precoOriginal: '$230',
+    precoComDesconto: '$200',
+  },
+  {
+    id: 'provider2',
+    nome: 'Carlos Silva',
+    especialidade: 'Higienização Comercial',
+    avaliacao: 4.9,
+    precoHora: 'R$ 75',
+    imagemUrl: 'https://picsum.photos/seed/carlos_silva_higieniza/700/500',
+    numeroAvaliacoes: 88,
+    isVerificado: false,
+    descricaoCompleta: 'Serviços de limpeza e higienização para ambientes comerciais, escritórios e lojas. Equipe treinada, discrição e eficiência para manter seu local de trabalho sempre apresentável e saudável. Horários flexíveis.',
+    cidade: 'Valinhos, SP',
+    anosExperiencia: 8,
+    reviews: [
+      { id: 'rev2_1', reviewerName: 'Empresa X', rating: 5, comment: 'Carlos e sua equipe são excelentes. Nosso escritório está sempre impecável.', date: '10/05/2025' },
+    ],
+    servicoPrincipal: 'Limpeza de Escritório',
+    precoOriginal: '$150',
+    precoComDesconto: '$120',
+  },
+  {
+    id: 'provider3',
+    nome: 'Mariana Costa',
+    especialidade: 'Expert em Pós-Obra',
+    avaliacao: 4.7,
+    precoHora: 'R$ 90+',
+    imagemUrl: 'https://picsum.photos/seed/mariana_costa_posobra/700/500',
+    numeroAvaliacoes: 55,
+    isVerificado: true,
+    descricaoCompleta: 'Especializada na remoção de sujeira pesada, respingos de tinta e resíduos de construção. Deixo seu imóvel novo ou recém-reformado impecável e pronto para uso, com equipamento e produtos específicos.',
+    cidade: 'Vinhedo, SP',
+    anosExperiencia: 3,
+    // Sem reviews mock para variar
+    servicoPrincipal: 'Limpeza Pós-Construção',
+    precoOriginal: '$300',
+    precoComDesconto: '$250',
+  },
 ];
 
 const fetchProviderDetailsFromAPI = async (id: string): Promise<ProviderDetails | undefined> => {
-  console.log(`[ProviderDetailsScreen] Buscando detalhes para provider ID: ${id}`);
-  await new Promise(resolve => setTimeout(resolve, 800));
+  await new Promise(resolve => setTimeout(resolve, 600));
   return TODOS_OS_PRESTADORES_DETALHES.find(p => p.id === id);
 };
 
-
+// --- Componente ---
 export default function ProviderDetailsScreen() {
   const params = useLocalSearchParams<{ providerId: string }>();
   const providerId = params.providerId;
   const router = useRouter();
-  
+
   const [provider, setProvider] = useState<ProviderDetails | null | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'Overview' | 'Details'>('Overview');
+
+  const mainContentAnim = useRef(new Animated.Value(0)).current; // For opacity and slide
+  const bookNowButtonAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (providerId && typeof providerId === 'string') {
       setIsLoading(true); setError(null); setProvider(undefined);
+      mainContentAnim.setValue(0); bookNowButtonAnim.setValue(0);
+
       fetchProviderDetailsFromAPI(providerId)
-        .then(data => { setProvider(data || null); if (!data) setError(`Profissional com ID "${providerId}" não encontrado.`); })
-        .catch(err => { console.error("[ProviderDetailsScreen] Erro ao buscar detalhes do profissional:", err); setError(err.message || "Erro ao carregar."); setProvider(null); })
+        .then(data => {
+          setProvider(data || null);
+          if (!data) {
+            setError(`Profissional com ID "${providerId}" não encontrado.`);
+          } else {
+            // Start animations after data is set and component is ready to render actual content
+            Animated.stagger(100, [
+              Animated.timing(mainContentAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
+              Animated.timing(bookNowButtonAnim, { toValue: 1, duration: 400, useNativeDriver: true })
+            ]).start();
+          }
+        })
+        .catch(err => { setError(err.message || "Erro ao carregar."); setProvider(null); })
         .finally(() => setIsLoading(false));
     } else {
-      console.error("[ProviderDetailsScreen] ID do profissional inválido ou não fornecido:", providerId);
-      setError("ID do profissional inválido ou não fornecido."); setIsLoading(false); setProvider(null);
+      setError("ID do profissional inválido."); setIsLoading(false); setProvider(null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [providerId]);
 
+
+  // --- Renderização ---
   if (isLoading) {
     return (
-        <View style={styles.centered}>
-          <Stack.Screen options={{ title: "Carregando Perfil..." }} />
-          <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>Carregando perfil do profissional...</Text>
-        </View>
-      );
+      <View style={styles.centeredFeedback}>
+        <Stack.Screen options={{ title: "Carregando...", headerTransparent: true, headerTintColor: '#333' }} />
+        <ActivityIndicator size="large" color="#007AFF" />
+      </View>
+    );
   }
   if (error || !provider) {
     return (
-        <View style={styles.centered}>
-          <Stack.Screen options={{ title: "Erro no Perfil" }} />
-          <Ionicons name="alert-circle-outline" size={48} color="#D32F2F" />
-          <Text style={styles.errorText}>{error || `Profissional "${providerId || 'desconhecido'}" não encontrado.`}</Text>
-          <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#757575', width: '80%'}]} onPress={() => router.back()}>
-              <Ionicons name="arrow-back-outline" size={20} color="#fff" />
-              <Text style={styles.actionButtonText}>Voltar</Text>
-          </TouchableOpacity>
-        </View>
-      );
+      <View style={styles.centeredFeedback}>
+        <Stack.Screen options={{ title: "Erro", headerTransparent: false, headerStyle: { backgroundColor: '#FFFFFF' }, headerTintColor: '#333' }} />
+        <Ionicons name="warning-outline" size={48} color="#D32F2F" />
+        <Text style={styles.errorText}>{error || `Profissional não encontrado.`}</Text>
+        <TouchableOpacity style={styles.errorBackButton} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={20} color="#fff" />
+          <Text style={styles.errorBackButtonText}>Voltar</Text>
+        </TouchableOpacity>
+      </View>
+    );
   }
 
+  // Função para renderizar estrelas com cor personalizável e "sofisticação"
+  const renderStars = (rating: number, size: number = 14, color: string = '#007AFF') => { // Cor padrão agora é azul
+    const stars = [];
+    const fullStars = Math.floor(rating);
+    const halfStar = rating % 1 >= 0.5;
+    const emptyStars = 5 - fullStars - (halfStar ? 1 : 0);
+
+    for (let i = 0; i < fullStars; i++) stars.push(<Ionicons key={`full_${i}`} name="star" size={size} color={color} />);
+    if (halfStar) stars.push(<Ionicons key="half" name="star-half-sharp" size={size} color={color} />);
+    for (let i = 0; i < emptyStars; i++) stars.push(<Ionicons key={`empty_${i}`} name="star-outline" size={size} color={color} />);
+    return stars;
+  };
+
   return (
-    <View style={styles.outerContainer}>
-      <Stack.Screen 
-        options={{ 
-          title: provider.nome,
-        }} 
-      />
-      <ScrollView style={styles.scrollViewContainer} contentContainerStyle={styles.scrollContentContainer}>
-        
-        <View style={styles.profileHeader}>
-          <Image source={{ uri: provider.imagemUrl }} style={styles.profileImage} />
-          <Text style={styles.providerName}>{provider.nome}</Text>
-          <Text style={styles.providerSpecialty}>{provider.especialidade}</Text>
-          <View style={styles.ratingAndVerifiedContainer}>
-            <View style={styles.ratingContainer}>
-              <Ionicons name="star" size={18} color="#FFC107" />
-              <Text style={styles.providerRating}> {provider.avaliacao.toFixed(1)}</Text>
-              {provider.numeroAvaliacoes !== undefined && (
-                <Text style={styles.reviewsCount}> ({provider.numeroAvaliacoes} avaliações)</Text>
+    <View style={styles.screenContainer}>
+      <Stack.Screen options={{ headerTransparent: true, title: '', headerLeft: () => null, headerRight: () => null }} />
+      <ScrollView contentContainerStyle={styles.scrollContentContainer}>
+        <ImageBackground source={{ uri: provider.imagemUrl }} style={styles.headerImage} resizeMode="cover">
+          <View style={styles.headerImageOverlay}>
+            <View style={styles.topNavContainer}>
+              <TouchableOpacity onPress={() => router.back()} style={styles.iconButtonBackground}>
+                <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.iconButtonBackground}>
+                <Ionicons name="bookmark-outline" size={22} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.imageTextDetailsOverlay}>
+              <View style={styles.nameAndLocationContainer}>
+                <Text style={styles.providerNameOnImage} numberOfLines={2}>{provider.nome}</Text>
+                <View style={styles.locationOnImageContainer}>
+                  <Ionicons name="location-sharp" size={16} color="#E0E0E0" />
+                  <Text style={styles.locationTextOnImage}>{provider.cidade || 'N/A'}</Text>
+                </View>
+              </View>
+              <Text style={styles.priceTextOnImage}>{provider.precoHora.replace('/h', '')}</Text>
+            </View>
+          </View>
+        </ImageBackground>
+
+        <Animated.View style={[
+          styles.contentArea,
+          {
+            opacity: mainContentAnim,
+            transform: [{
+              translateY: mainContentAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] })
+            }]
+          }
+        ]}>
+          <View style={styles.tabBar}>
+            <TouchableOpacity style={[styles.tabItem, activeTab === 'Overview' && styles.activeTabItem]} onPress={() => setActiveTab('Overview')}>
+              <Text style={[styles.tabText, activeTab === 'Overview' && styles.activeTabText]}>Visão Geral</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.tabItem, activeTab === 'Details' && styles.activeTabItem]} onPress={() => setActiveTab('Details')}>
+              <Text style={[styles.tabText, activeTab === 'Details' && styles.activeTabText]}>Detalhes</Text>
+            </TouchableOpacity>
+          </View>
+
+          {activeTab === 'Overview' && (
+            <View style={styles.tabContentContainer}>
+              {/* Seção de Estrelas Robustas e Sofisticadas (Azuis) - Abaixo do Overview/Detalhes */}
+              {/* As estrelas azuis e o texto "240 avaliações" (mantendo o tamanho menor e fonte mais moderna) */}
+              <View style={styles.robustStarContainer}>
+                {renderStars(provider.avaliacao, 20, '#007AFF')} {/* Estrelas maiores e azuis */}
+                <Text style={styles.robustReviewsText}>({provider.numeroAvaliacoes} avaliações)</Text>
+              </View>
+
+              <View style={styles.infoChipsContainer}>
+                {provider.anosExperiencia !== undefined && (
+                  <View style={styles.infoChip}><Ionicons name="hourglass-outline" size={16} color="#555" /><Text style={styles.infoChipText}>{provider.anosExperiencia}+ anos</Text></View>
+                )}
+                {provider.isVerificado && (
+                  <View style={styles.infoChip}><Ionicons name="shield-checkmark-outline" size={16} color="#555" /><Text style={styles.infoChipText}>Verificado</Text></View>
+                )}
+                {/* O chip de avaliação duplicaria, então mantemos apenas as estrelas robustas acima */}
+                {/* <View style={styles.infoChip}><Ionicons name="star-outline" size={16} color="#555" /><Text style={styles.infoChipText}>{provider.avaliacao.toFixed(1)} ({provider.numeroAvaliacoes} {provider.numeroAvaliacoes === 1 ? 'avaliação' : 'avaliações'})</Text></View> */}
+              </View>
+
+              <Text style={styles.sectionTitle}>Sobre {provider.nome.split(' ')[0]}</Text>
+              <Text style={styles.descriptionText}>{provider.descricaoCompleta || "Nenhuma descrição detalhada disponível."}</Text>
+
+              {/* Botões de Ação (Ligar, Chat, Mapa, Compartilhar) - Abaixo da descrição do prestador */}
+              <View style={styles.actionButtonsContainer}>
+                <TouchableOpacity style={styles.actionButton}>
+                  <Ionicons name="call-outline" size={24} color="#666" />
+                  <Text style={styles.actionButtonText}>Ligar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.actionButton}>
+                  <Ionicons name="chatbox-ellipses-outline" size={24} color="#666" />
+                  <Text style={styles.actionButtonText}>Chat</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.actionButton}>
+                  <Ionicons name="map-outline" size={24} color="#666" />
+                  <Text style={styles.actionButtonText}>Mapa</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.actionButton}>
+                  <Ionicons name="share-social-outline" size={24} color="#666" />
+                  <Text style={styles.actionButtonText}>Share</Text>
+                </TouchableOpacity>
+              </View>
+
+
+              <Text style={[styles.sectionTitle, { marginTop: 25 }]}>O que dizem os clientes</Text>
+              {provider.reviews && provider.reviews.length > 0 ? (
+                provider.reviews.map(review => (
+                  <View key={review.id} style={styles.reviewCard}>
+                    <View style={styles.reviewHeader}>
+                      {review.reviewerImageUrl ?
+                        <Image source={{ uri: review.reviewerImageUrl }} style={styles.reviewerImage} /> :
+                        <View style={styles.reviewerImagePlaceholder}><Ionicons name="person-circle-outline" size={24} color="#FFF" /></View>
+                      }
+                      <View style={styles.reviewHeaderText}>
+                        <Text style={styles.reviewerName}>{review.reviewerName}</Text>
+                        <View style={styles.reviewRatingDate}>
+                          {/* Estrelas das reviews agora serão azuis com o mesmo tamanho */}
+                          <View style={styles.starRatingContainer}>{renderStars(review.rating, 14, '#007AFF')}</View>
+                          <Text style={styles.reviewDate}>{review.date}</Text>
+                        </View>
+                      </View>
+                    </View>
+                    <Text style={styles.reviewComment}>{review.comment}</Text>
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.noReviewsText}>Ainda não há avaliações para {provider.nome.split(' ')[0]}.</Text>
+              )}
+              <TouchableOpacity style={styles.addReviewButton}>
+                <Ionicons name="add-circle-outline" size={20} color="#007AFF" />
+                <Text style={styles.addReviewButtonText}>Deixar uma Avaliação</Text>
+              </TouchableOpacity>
+
+            </View>
+          )}
+
+          {activeTab === 'Details' && (
+            <View style={styles.tabContentContainer}>
+              <Text style={styles.sectionTitle}>Serviços Oferecidos</Text>
+              {provider.servicosOferecidos && provider.servicosOferecidos.length > 0 ? (
+                provider.servicosOferecidos.map((serv, index) => (
+                  <View key={index} style={styles.serviceItemCard}>
+                    <Text style={styles.serviceName}>{serv.nome}</Text>
+                    {serv.descricao && <Text style={styles.serviceDescription}>{serv.descricao}</Text>}
+                    {serv.preco && <Text style={styles.servicePriceTag}>{serv.preco}</Text>}
+                  </View>
+                ))
+              ) : (<Text style={styles.noDetailsText}>Nenhum serviço específico detalhado.</Text>)}
+
+              {provider.disponibilidadeObservacao && (
+                <>
+                  <Text style={[styles.sectionTitle, { marginTop: 25 }]}>Observações de Disponibilidade</Text>
+                  <Text style={styles.availabilityText}>{provider.disponibilidadeObservacao}</Text>
+                </>
               )}
             </View>
-            {provider.isVerificado && (
-              <View style={styles.verifiedBadge}>
-                <MaterialCommunityIcons name="shield-check" size={16} color="#4CAF50" />
-                <Text style={styles.verifiedText}>Verificado</Text>
-              </View>
-            )}
-          </View>
-        </View>
-
-        <View style={styles.mainActionsContainer}>
-            <TouchableOpacity 
-            style={[styles.actionButton, styles.primaryActionButton]} 
-            onPress={() => {
-                if (provider) {
-                    router.push({
-                        pathname: `/(client)/bookings/schedule-service`,
-                        params: { 
-                            providerId: provider.id, 
-                            providerName: provider.nome, 
-                            providerImageUrl: provider.imagemUrl || '', 
-                            serviceType: provider.especialidade 
-                        }
-                    });
-                } else {
-                    Alert.alert("Erro", "Não foi possível iniciar o agendamento. Detalhes do provedor ausentes.");
-                }
-            }}>
-                <Ionicons name="calendar-outline" size={22} color="#fff" />
-                <Text style={styles.actionButtonText}>Agendar Serviço</Text>
-            </TouchableOpacity>
-            
-            {/* //vvv--- ESTA É A PARTE CORRIGIDA PARA O CHATID ---vvv */}
-            <TouchableOpacity 
-            style={[styles.actionButton, styles.secondaryActionButton]} 
-            onPress={() => {
-                if (provider) {
-                const tempNewChatId = `new_${provider.id}`;
-                console.log(`[ProviderDetailsScreen] Navegando para iniciar novo chat com chatId temporário: ${tempNewChatId}, recipientId: ${provider.id}`);
-                router.push({
-                    pathname: '/(client)/messages/[chatId]', // USA O TEMPLATE DA ROTA DINÂMICA
-                    params: { 
-                        chatId: tempNewChatId,          // Passa o chatId construído
-                        recipientId: provider.id,       // Passa o ID do destinatário
-                        recipientName: provider.nome    // Passa o nome do destinatário
-                    }
-                });
-                } else {
-                Alert.alert("Erro", "Detalhes do provedor não disponíveis para iniciar mensagem.");
-                }
-            }} 
-            >
-                <Ionicons name="chatbubble-ellipses-outline" size={22} color={styles.secondaryActionButtonText.color} />
-                <Text style={[styles.actionButtonText, styles.secondaryActionButtonText]}>Enviar Mensagem</Text>
-            </TouchableOpacity>
-            {/* //^^^--- FIM DA PARTE CORRIGIDA PARA O CHATID ---^^^ */}
-        </View>
-
-        <View style={styles.detailsSectionCard}>
-          <Text style={styles.sectionTitle}>Sobre {provider.nome.split(' ')[0]}</Text>
-          {/* ... resto do JSX para detalhes, serviços, preço, avaliações ... */}
-          <Text style={styles.description}>{provider.descricaoCompleta || "Nenhuma descrição detalhada fornecida."}</Text>
-          <View style={styles.infoChipsContainer}>
-            {provider.cidade && <View style={styles.infoChip}><Ionicons name="location-outline" size={15} style={styles.chipIcon} /> <Text style={styles.chipText}>Atende em: {provider.cidade}</Text></View>}
-            {provider.anosExperiencia !== undefined && <View style={styles.infoChip}><Ionicons name="briefcase-outline" size={15} style={styles.chipIcon} /> <Text style={styles.chipText}>{provider.anosExperiencia}+ anos de exp.</Text></View>}
-          </View>
-        </View>
-
-        {provider.servicosOferecidos && provider.servicosOferecidos.length > 0 && (
-          <View style={styles.detailsSectionCard}>
-            <Text style={styles.sectionTitle}>Serviços Oferecidos</Text>
-            {provider.servicosOferecidos.map((serv, index) => (
-              <View key={index} style={styles.serviceItemContainer}>
-                  <View>
-                    <Text style={styles.serviceItemName}>- {serv.nome}</Text>
-                    {serv.descricao && <Text style={styles.serviceItemDescription}>{serv.descricao}</Text>}
-                  </View>
-                  {serv.preco && <Text style={styles.serviceItemPrice}>{serv.preco}</Text>}
-              </View>
-            ))}
-          </View>
-        )}
-         
-        <View style={styles.detailsSectionCard}>
-          <Text style={styles.sectionTitle}>Preço Base</Text>
-          <Text style={styles.price}>{provider.precoHora}</Text>
-           {provider.disponibilidadeObservacao && 
-                <Text style={styles.availabilityNote}><Ionicons name="time-outline" size={15} style={styles.chipIcon} /> {provider.disponibilidadeObservacao}</Text>
-            }
-        </View>
-
-        <View style={styles.detailsSectionCard}>
-            <Text style={styles.sectionTitle}>Avaliações de Clientes</Text>
-            <Text style={styles.placeholderText}>Nenhuma avaliação ainda. Seja o primeiro a avaliar!</Text>
-            <TouchableOpacity style={[styles.actionButton, styles.secondaryActionButton, {marginTop: 15, alignSelf:'center'}]}>
-                 <Ionicons name="add-circle-outline" size={20} color={styles.secondaryActionButtonText.color} />
-                 <Text style={[styles.actionButtonText, styles.secondaryActionButtonText]}>Deixar uma Avaliação</Text>
-            </TouchableOpacity>
-        </View>
-
+          )}
+        </Animated.View>
       </ScrollView>
+
+      <Animated.View style={[
+        styles.bookNowButtonWrapper,
+        {
+          opacity: bookNowButtonAnim,
+          transform: [{
+            translateY: bookNowButtonAnim.interpolate({ inputRange: [0, 1], outputRange: [100, 0] })
+          }]
+        }
+      ]}>
+        {/* Botão "Agendar Serviço" - Ajustado para ser fiel ao print */}
+        <TouchableOpacity style={styles.bookServiceButton} onPress={() => router.push({ pathname: `/(client)/bookings/schedule-service`, params: { providerId: provider.id } })}>
+          <Text style={styles.bookServiceButtonText}>Agendar Serviço</Text>
+        </TouchableOpacity>
+      </Animated.View>
     </View>
   );
 }
 
-// Seus estilos completos como definidos anteriormente
+// --- Estilos ---
 const styles = StyleSheet.create({
-  outerContainer: { flex: 1, backgroundColor: '#f0f2f5' },
-  scrollViewContainer: { flex: 1 },
-  scrollContentContainer: { paddingBottom: 30 },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#f0f2f5' },
-  loadingText: { marginTop: 10, fontSize: 16, color: '#555' },
-  errorText: { fontSize: 16, color: '#D32F2F', textAlign: 'center', marginBottom: 20 },
-  profileHeader: { alignItems: 'center', paddingTop: 20, paddingBottom: 25, paddingHorizontal: 20, backgroundColor: '#FFFFFF', borderBottomLeftRadius: 30, borderBottomRightRadius: 30, marginBottom: 10, ...Platform.select({ ios: { shadowColor: 'rgba(0,0,0,0.1)', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 1, shadowRadius: 10 }, android: { elevation: 5 }, }), },
-  profileImage: { width: 130, height: 130, borderRadius: 65, marginBottom: 15, borderWidth: 4, borderColor: '#007AFF' },
-  providerName: { fontSize: 26, fontWeight: 'bold', color: '#1A2533', marginBottom: 5, textAlign: 'center' },
-  providerSpecialty: { fontSize: 17, color: '#586069', marginBottom: 10, textAlign: 'center' },
-  ratingAndVerifiedContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 15, marginBottom: 10},
-  ratingContainer: { flexDirection: 'row', alignItems: 'center' },
-  providerRating: { fontSize: 16, color: '#333', marginLeft: 5, fontWeight: 'bold' },
-  reviewsCount: { fontSize: 14, color: 'gray', marginLeft: 5 },
-  verifiedBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#E8F5E9', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 15 },
-  verifiedText: { marginLeft: 6, color: '#388E3C', fontSize: 13, fontWeight: '600' },
-  mainActionsContainer: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 15, paddingVertical: 15, },
-  actionButton: { flex: 1, flexDirection: 'row', paddingVertical: 14, paddingHorizontal: 15, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginHorizontal: 5, minHeight: 50, },
-  primaryActionButton: { backgroundColor: '#007AFF', ...Platform.select({  ios: { shadowColor: 'rgba(0,122,255,0.4)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 1, shadowRadius: 5 }, android: { elevation: 3 }, }), },
-  secondaryActionButton: { backgroundColor: '#EFEFF4', borderWidth: 1, borderColor: '#D1D1D6', },
-  actionButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '600', marginLeft: 10, textAlign: 'center' },
-  secondaryActionButtonText: { color: '#007AFF', },
-  detailsSectionCard: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 20, marginHorizontal: 15, marginTop: 15, ...Platform.select({ ios: { shadowColor: 'rgba(0,0,0,0.08)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 1, shadowRadius: 5 }, android: { elevation: 2 }, }), },
-  sectionTitle: { fontSize: 20, fontWeight: 'bold', color: '#1A2533', marginBottom: 18, borderBottomWidth: 1, borderBottomColor: '#f0f2f5', paddingBottom: 12 },
-  description: { fontSize: 16, lineHeight: 24, color: '#3A3A3C', marginBottom: 15 },
-  detailItem: { fontSize: 16, color: '#3A3A3C', marginBottom: 12, flexDirection: 'row', alignItems: 'center', lineHeight: 23 },
-  detailIcon: { marginRight: 10, color: '#8A8A8E' },
-  infoChipsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
-  infoChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EFEFF4', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 15 },
-  chipIcon: { color: '#8A8A8E' },
-  chipText: { fontSize: 14, color: '#3A3A3C', marginLeft: 5 },
-  serviceItemContainer: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f0f2f5', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  serviceItemName: { fontSize: 16, color: '#333', fontWeight: '500' },
-  serviceItemDescription: { fontSize: 13, color: 'gray', marginTop: 2},
-  serviceItemPrice: { fontSize: 16, color: '#333', fontWeight: '500'},
-  price: { fontSize: 22, fontWeight: 'bold', color: '#007AFF', marginBottom: 5 },
-  availabilityNote: { fontSize: 14, color: '#586069', fontStyle: 'italic', marginTop: 5, flexDirection: 'row', alignItems: 'center'},
-  placeholderText: { fontSize: 15, color: 'gray', textAlign: 'center', paddingVertical: 20 },
+  screenContainer: { flex: 1, backgroundColor: '#FFFFFF' }, // Fundo geral claro
+  centeredFeedback: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#F8F9FA' },
+  loadingText: { marginTop: 12, fontSize: 16, color: '#555' },
+  errorText: { fontSize: 17, color: '#D32F2F', textAlign: 'center', marginBottom: 25 },
+  errorBackButton: { backgroundColor: '#007AFF', paddingVertical: 12, paddingHorizontal: 30, borderRadius: 25, flexDirection: 'row', alignItems: 'center' },
+  errorBackButtonText: { color: '#fff', fontSize: 16, marginLeft: 8, fontWeight: '600' },
+  scrollContentContainer: { paddingBottom: 110 }, // Aumentado para mais espaço para o botão fixo
+
+  headerImage: { width: '100%', height: SCREEN_WIDTH * 0.85, justifyContent: 'space-between' }, // Ajuste altura
+  headerImageOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.30)', paddingHorizontal: 15, paddingTop: Platform.OS === 'ios' ? 50 : 25, paddingBottom: 15, justifyContent: 'space-between' },
+  topNavContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  iconButtonBackground: { backgroundColor: 'rgba(0,0,0,0.35)', padding: 10, borderRadius: 20 }, // Mais padding
+  imageTextDetailsOverlay: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', paddingVertical: 12, paddingHorizontal: 15, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 12 }, // Mais padding e borda
+  nameAndLocationContainer: { flex: 1, marginRight: 10 },
+  providerNameOnImage: { fontSize: 20, fontWeight: '700', color: '#FFFFFF', marginBottom: 3 }, // Ajuste tamanho
+  locationOnImageContainer: { flexDirection: 'row', alignItems: 'center' },
+  locationTextOnImage: { fontSize: 13, color: '#E0E0E0', marginLeft: 5 }, // Ajuste tamanho
+  priceTextOnImage: { fontSize: 18, fontWeight: '700', color: '#FFFFFF' }, // Ajuste tamanho
+
+  contentArea: {
+    paddingHorizontal: 0,
+    paddingTop: 20,
+    backgroundColor: '#FFFFFF', // Fundo branco para a área de conteúdo
+    borderTopLeftRadius: 24, // Mais arredondado
+    borderTopRightRadius: 24,
+    marginTop: -24, // Sobreposição mais pronunciada
+    minHeight: Dimensions.get('window').height * 0.5, // Garante que a área branca seja visível
+  },
+  tabBar: { flexDirection: 'row', marginBottom: 10, paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' }, // Borda mais sutil
+  tabItem: { paddingBottom: 12, marginRight: 25 }, // Aumento espaçamento
+  activeTabItem: { borderBottomWidth: 3, borderBottomColor: '#111111' }, // Sublinhado mais grosso
+  tabText: { fontSize: 15, color: '#888888', fontWeight: '600' }, // Mais peso
+  activeTabText: { color: '#111111', fontWeight: '700' },
+  tabContentContainer: { paddingHorizontal: 20, paddingTop: 15 },
+
+  // Estilos para as estrelas robustas e sofisticadas (azuis)
+  robustStarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+    paddingVertical: 5,
+    paddingHorizontal: 0, // Removido o padding horizontal para não ter fundo
+    backgroundColor: 'transparent', // Fundo transparente
+    borderRadius: 8,
+    // Removida a sombra para não ter fundo
+    // shadowColor: '#007AFF',
+    // shadowOffset: { width: 0, height: 2 },
+    // shadowOpacity: 0.1,
+    // shadowRadius: 3,
+    // elevation: 2,
+  },
+  robustReviewsText: {
+    fontSize: 14, // Mantendo o tamanho menor
+    fontFamily: 'sans-serif', // Tentativa de fonte mais moderna (pode precisar de importação para fontes customizadas)
+    color: '#333', // Cor do texto de reviews
+    marginLeft: 8,
+    fontWeight: '500', // Fonte mais sofisticada/moderna
+  },
+
+  infoChipsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
+  infoChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0F0F0', paddingVertical: 7, paddingHorizontal: 12, borderRadius: 16 },
+  infoChipText: { fontSize: 12, color: '#333333', marginLeft: 6, fontWeight: '500' },
+
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#111111', marginBottom: 12 },
+  descriptionText: { fontSize: 15, lineHeight: 24, color: '#555555', textAlign: 'left', marginBottom: 25 },
+
+  // Estilos para os botões de ação (Ligar, Chat, Mapa, Compartilhar) - Fiel ao print
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 1,
+    marginBottom: 25, // Espaçamento após os botões
+    borderTopWidth: 1, // Linha divisória como no print
+    borderTopColor: '#EEE',
+    paddingTop: 15,
+  },
+  actionButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F0F0F0', // Fundo cinza claro
+    borderRadius: 12,
+    width: (SCREEN_WIDTH - (20 * 2) - (15 * 3)) / 4, // Calcula a largura para 4 botões com margens
+    height: 70, // Altura fixa
+  },
+  actionButtonText: {
+    fontSize: 12,
+    color: '#666', // Cor do texto dos botões
+    marginTop: 5,
+    fontWeight: '500',
+  },
+
+
+  reviewCard: {
+    backgroundColor: '#F8F9FA', // Fundo levemente diferente
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+  },
+  reviewHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  reviewerImage: { width: 40, height: 40, borderRadius: 20, marginRight: 10 },
+  reviewerImagePlaceholder: { width: 40, height: 40, borderRadius: 20, marginRight: 10, backgroundColor: '#CED4DA', justifyContent: 'center', alignItems: 'center' },
+  reviewHeaderText: { flex: 1 },
+  reviewerName: { fontSize: 15, fontWeight: '600', color: '#343A40' },
+  reviewRatingDate: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 },
+  starRatingContainer: { flexDirection: 'row' },
+  reviewDate: { fontSize: 12, color: '#6C757D' },
+  reviewComment: { fontSize: 14, lineHeight: 20, color: '#495057' },
+  noReviewsText: { fontSize: 14, color: '#6C757D', fontStyle: 'italic', textAlign: 'center', paddingVertical: 15 },
+  addReviewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#E9F5FF', // Fundo azul claro
+    marginTop: 10,
+    marginBottom: 15,
+  },
+  addReviewButtonText: { color: '#007AFF', fontSize: 15, fontWeight: '600', marginLeft: 8 },
+
+  serviceItemCard: { backgroundColor: '#F8F9FA', padding: 15, borderRadius: 10, marginBottom: 10, borderWidth: 1, borderColor: '#E9ECEF' },
+  serviceName: { fontSize: 16, fontWeight: '600', color: '#343A40', marginBottom: 4 },
+  serviceDescription: { fontSize: 14, color: '#6C757D', marginBottom: 6 },
+  servicePriceTag: { fontSize: 14, fontWeight: '700', color: '#007AFF', alignSelf: 'flex-end' },
+  noDetailsText: { fontSize: 14, color: '#6C757D', fontStyle: 'italic', marginVertical: 10 },
+  availabilityText: { fontSize: 14, lineHeight: 21, color: '#495057' },
+
+  bookNowButtonWrapper: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E9ECEF', // Sombra sutil com borda
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 5,
+  },
+  // Botão "Agendar Serviço" fiel ao print
+  bookServiceButton: {
+    backgroundColor: '#007AFF', // Cor azul do print
+    paddingVertical: 15,
+    borderRadius: 12, // Arredondamento do print
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bookServiceButtonText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '700',
+  },
 });
