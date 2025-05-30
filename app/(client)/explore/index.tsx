@@ -1,22 +1,22 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { Stack, useRouter } from 'expo-router';
+import React, { useEffect, useRef } from 'react';
 import {
-  StyleSheet,
-  View,
-  ScrollView,
   // Text, // Removido se não usado diretamente aqui
   // TouchableOpacity, // Removido se não usado diretamente aqui
   // Platform, // Removido se não usado diretamente aqui
   Animated,
+  ScrollView,
+  StyleSheet,
+  View,
 } from 'react-native';
-import { useRouter, Stack } from 'expo-router';
 
 // Caminhos para os componentes (ajuste se sua estrutura for diferente)
-import HeaderSuperior from '../../../components/HeaderSuperior';
-import SecaoContainer from '../../../components/SecaoContainer';
-import BannerOferta from '../../../components/BannerOferta';
-import SecaoPrestadores, { Prestador } from '../../../components/SecaoPrestadores'; // Importa Prestador (com as alterações de fundo já feitas)
-import NavBar from '../../../components/NavBar';
-import CategoriaCard, { Categoria as TipoCategoria } from '../../../components/CategoriaCard'; // Sua importação existente
+import BannerOferta from '../ofertas/components/BannerOferta';
+import HeaderSuperior from '../../../components/layout/HeaderSuperior';
+import NavBar from '../../../components/layout/NavBar';
+import CategoriaCard, { Categoria as TipoCategoria } from './components/CategoriaCard'; // Sua importação existente
+import SecaoContainer from './components/SecaoContainer';
+import SecaoPrestadores, { Prestador } from './components/SecaoPrestadores'; // Importa Prestador (com as alterações de fundo já feitas)
 
 // CORRIGIDO: Definição de CATEGORIAS_EXEMPLO com a propriedade 'corFundo'
 const COR_AZUL_CLARO_UNIFICADA = '#A0D2EB'; // Ou a cor azul claro que você decidiu

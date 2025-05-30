@@ -24,7 +24,7 @@ import { BlurView } from 'expo-blur';
 import CalendarHeader from '../../../components/schedule/CalendarHeader';
 import AddressSection from '../../../components/schedule/AddressSection';
 import TimeSlotButton from '../../../components/schedule/TimeSlotButton';
-import PaymentMethodSelection from '../../../components/schedule/PaymentMethodSelection';
+import PaymentMethodSelection from './components/PaymentMethodSelection';
 
 
 // --- Interfaces (Adapted from your provided schedule-service.tsx) ---

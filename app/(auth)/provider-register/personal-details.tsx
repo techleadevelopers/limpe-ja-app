@@ -3,7 +3,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
-  TextInput,
   StyleSheet,
   Alert,
   TouchableOpacity,
@@ -11,28 +10,26 @@ import {
   Platform,
   KeyboardAvoidingView,
   ActivityIndicator,
-  Animated, // Importar Animated para animações
+  Animated,
 } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { useProviderRegistration } from '../../../contexts/ProviderRegistrationContext'; // Importe o contexto
+import { useProviderRegistration } from '../../../contexts/ProviderRegistrationContext';
 
-// Componente para exibir mensagens de erro inline
-const ErrorMessage: React.FC<{ message: string | null }> = ({ message }) => {
-  if (!message) return null;
-  return <Text style={styles.errorMessage}>{message}</Text>;
-};
+// Importando os novos componentes
+import { InputWithIcon } from './components/InputWithIcon';
+import { StandardInput } from './components/StandardInput';
+import { DatePickerInput } from './components/DatePickerInput';
+import { SectionHeader } from './components/SectionHeader';
 
 // Simulação da API ViaCEP
-// Em um ambiente real, você faria uma requisição HTTP para um serviço como ViaCEP.
+// Mover esta mock para app/(auth)/api/addressService.ts conforme a documentação
 const mockViaCepApi = {
   getEndereco: async (cep: string) => {
-    // Remove caracteres não numéricos
     const cleanedCep = cep.replace(/\D/g, '');
     await new Promise(resolve => setTimeout(resolve, 800)); // Simula latência da rede
 
-    if (cleanedCep === '01001000') { // CEP de exemplo para sucesso
+    if (cleanedCep === '01001000') {
       return {
         cep: '01001-000',
         logradouro: 'Praça da Sé',
@@ -42,9 +39,9 @@ const mockViaCepApi = {
         uf: 'SP',
         erro: false,
       };
-    } else if (cleanedCep === '99999999') { // CEP de exemplo para erro
+    } else if (cleanedCep === '99999999') {
       return { erro: true };
-    } else if (cleanedCep === '60000000') { // Outro CEP de exemplo
+    } else if (cleanedCep === '60000000') {
       return {
         cep: '60000-000',
         logradouro: 'Avenida Beira Mar',
@@ -55,21 +52,17 @@ const mockViaCepApi = {
         erro: false,
       };
     }
-    // Caso o CEP não seja nenhum dos mocks, simula não encontrado
     return { erro: true };
   },
 };
 
 export default function PersonalDetailsScreen() {
   const router = useRouter();
-  // Utiliza o contexto de registro do provedor para gerenciar os dados
   const { personalDetails, setPersonalDetails } = useProviderRegistration();
 
-  // Estados locais para os campos do formulário
   const [nomeCompleto, setNomeCompleto] = useState('');
   const [cpf, setCpf] = useState('');
   const [dataNascimento, setDataNascimento] = useState<Date | undefined>(undefined);
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [telefone, setTelefone] = useState('');
   const [cep, setCep] = useState('');
   const [logradouro, setLogradouro] = useState('');
@@ -79,7 +72,6 @@ export default function PersonalDetailsScreen() {
   const [cidade, setCidade] = useState('');
   const [estado, setEstado] = useState('');
 
-  // Estados para mensagens de erro inline
   const [nomeCompletoError, setNomeCompletoError] = useState<string | null>(null);
   const [cpfError, setCpfError] = useState<string | null>(null);
   const [dataNascimentoError, setDataNascimentoError] = useState<string | null>(null);
@@ -94,12 +86,12 @@ export default function PersonalDetailsScreen() {
   const [isLoadingCep, setIsLoadingCep] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Animações para os elementos da tela
-  const headerAnim = useRef(new Animated.Value(0)).current;
-  const inputSectionAnim = useRef(new Animated.Value(0)).current;
+  // Animation for the header section
+  const headerAnimatedOpacity = useRef(new Animated.Value(0)).current;
+  const headerAnimatedTranslateY = useRef(new Animated.Value(20)).current;
 
   useEffect(() => {
-    // Preenche os campos com os dados do contexto se existirem
+    // Fill fields from context
     if (personalDetails) {
       setNomeCompleto(personalDetails.nomeCompleto);
       setCpf(personalDetails.cpf);
@@ -114,52 +106,45 @@ export default function PersonalDetailsScreen() {
       setEstado(personalDetails.endereco.estado);
     }
 
-    // Inicia as animações de entrada
-    Animated.stagger(200, [
-      Animated.timing(headerAnim, {
+    // Start header animations
+    Animated.parallel([
+      Animated.timing(headerAnimatedOpacity, {
         toValue: 1,
         duration: 600,
         useNativeDriver: true,
       }),
-      Animated.timing(inputSectionAnim, {
-        toValue: 1,
-        duration: 800,
-        delay: 200, // Atraso para aparecer depois do cabeçalho
+      Animated.timing(headerAnimatedTranslateY, {
+        toValue: 0,
+        duration: 600,
         useNativeDriver: true,
       }),
     ]).start();
-  }, [personalDetails, headerAnim, inputSectionAnim]);
+  }, [personalDetails]);
 
-  // Função para formatar CPF e validar
+  // Function to format CPF and validate
   const handleCpfChange = (text: string) => {
-    const cleanedText = text.replace(/\D/g, ''); // Remove não-dígitos
+    const cleanedText = text.replace(/\D/g, '');
     let formattedCpf = cleanedText;
-    if (cleanedText.length > 3) {
-      formattedCpf = `${cleanedText.substring(0, 3)}.${cleanedText.substring(3)}`;
-    }
-    if (cleanedText.length > 6) {
-      formattedCpf = `${formattedCpf.substring(0, 7)}.${cleanedText.substring(6)}`;
-    }
-    if (cleanedText.length > 9) {
-      formattedCpf = `${formattedCpf.substring(0, 11)}-${cleanedText.substring(9)}`;
-    }
-    setCpf(formattedCpf.substring(0, 14)); // Limita ao tamanho do CPF formatado
-    setCpfError(null); // Limpa erro ao digitar
+    if (cleanedText.length > 3) formattedCpf = `${cleanedText.substring(0, 3)}.${cleanedText.substring(3)}`;
+    if (cleanedText.length > 6) formattedCpf = `${formattedCpf.substring(0, 7)}.${cleanedText.substring(6)}`;
+    if (cleanedText.length > 9) formattedCpf = `${formattedCpf.substring(0, 11)}-${cleanedText.substring(9)}`;
+    setCpf(formattedCpf.substring(0, 14));
+    setCpfError(null);
   };
 
-  // Função para formatar Telefone e validar
+  // Function to format Phone and validate
   const handleTelefoneChange = (text: string) => {
-    const cleanedText = text.replace(/\D/g, ''); // Remove não-dígitos
+    const cleanedText = text.replace(/\D/g, '');
     let formattedPhone = cleanedText;
     if (cleanedText.length > 0) formattedPhone = `(${cleanedText}`;
     if (cleanedText.length > 2) formattedPhone = `(${cleanedText.substring(0, 2)}) ${cleanedText.substring(2)}`;
     if (cleanedText.length > 7) formattedPhone = `${formattedPhone.substring(0, 9)}-${cleanedText.substring(7)}`;
-    if (cleanedText.length > 11) formattedPhone = `${formattedPhone.substring(0, 15)}`; // (XX) XXXXX-XXXX
+    if (cleanedText.length > 11) formattedPhone = `${formattedPhone.substring(0, 15)}`;
     setTelefone(formattedPhone.substring(0, 15));
     setTelefoneError(null);
   };
 
-  // Função para formatar CEP e buscar endereço
+  // Function to format CEP and fetch address
   const handleCepChange = (text: string) => {
     const cleanedText = text.replace(/\D/g, '');
     setCep(cleanedText);
@@ -171,13 +156,12 @@ export default function PersonalDetailsScreen() {
     if (cleanedCep.length === 8) {
       setIsLoadingCep(true);
       try {
-        // @ts-ignore // Ignorando para a simulação, pois a estrutura de 'data' pode variar
         const data = await mockViaCepApi.getEndereco(cleanedCep);
         if (!data.erro) {
-          setLogradouro(data.logradouro || ''); // << CORREÇÃO
-          setBairro(data.bairro || '');       // << CORREÇÃO
-          setCidade(data.localidade || '');   // << CORREÇÃO
-          setEstado(data.uf || '');         // << CORREÇÃO
+          setLogradouro(data.logradouro || '');
+          setBairro(data.bairro || '');
+          setCidade(data.localidade || '');
+          setEstado(data.uf || '');
           setComplemento(data.complemento || '');
           setCepError(null);
         } else {
@@ -195,12 +179,9 @@ export default function PersonalDetailsScreen() {
     }
   };
 
-  const onDateChange = (event: DateTimePickerEvent, selectedDateValue?: Date) => {
-    setShowDatePicker(Platform.OS === 'ios'); 
-    if (event.type === 'set' && selectedDateValue) {
-      setDataNascimento(selectedDateValue);
-      setDataNascimentoError(null);
-    }
+  const onDateChange = (selectedDateValue?: Date) => {
+    setDataNascimento(selectedDateValue);
+    setDataNascimentoError(null);
   };
 
   const validateForm = () => {
@@ -250,13 +231,8 @@ export default function PersonalDetailsScreen() {
   };
 
   const headerAnimatedStyle = {
-    opacity: headerAnim,
-    transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
-  };
-
-  const inputSectionAnimatedStyle = {
-    opacity: inputSectionAnim,
-    transform: [{ scale: inputSectionAnim.interpolate({ inputRange: [0, 1], outputRange: [0.98, 1] }) }],
+    opacity: headerAnimatedOpacity,
+    transform: [{ translateY: headerAnimatedTranslateY }],
   };
 
   return (
@@ -277,151 +253,132 @@ export default function PersonalDetailsScreen() {
           <Text style={styles.subtitle}>Precisamos de algumas informações para criar seu perfil de profissional.</Text>
         </Animated.View>
 
-        <Animated.View style={[styles.inputSection, inputSectionAnimatedStyle]}>
-          <Text style={styles.label}>Nome Completo *</Text>
-          <View style={styles.inputContainer}>
-            <Ionicons name="person-outline" size={18} color="#8A8A8E" style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Conforme seu documento"
-              value={nomeCompleto}
-              onChangeText={setNomeCompleto}
-              onBlur={() => setNomeCompletoError(nomeCompleto.trim() ? null : 'Nome completo é obrigatório.')}
-              textContentType="name"
-              autoComplete="name"
-            />
-          </View>
-          <ErrorMessage message={nomeCompletoError} />
+        <View>
+          <InputWithIcon
+            label="Nome Completo *"
+            iconName="person-outline"
+            placeholder="Conforme seu documento"
+            value={nomeCompleto}
+            onChangeText={setNomeCompleto}
+            onBlur={() => setNomeCompletoError(nomeCompleto.trim() ? null : 'Nome completo é obrigatório.')}
+            textContentType="name"
+            autoComplete="name"
+            errorMessage={nomeCompletoError}
+            animationDelay={0} // Staggered animation delay
+          />
 
-          <Text style={styles.label}>CPF *</Text>
-          <View style={styles.inputContainer}>
-            <Ionicons name="document-text-outline" size={20} color="#8A8A8E" style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="000.000.000-00"
-              value={cpf}
-              onChangeText={handleCpfChange}
-              onBlur={() => setCpfError(cpf.replace(/\D/g, '').match(/^\d{11}$/) ? null : 'CPF inválido.')}
-              keyboardType="numeric"
-              maxLength={14}
-            />
-          </View>
-          <ErrorMessage message={cpfError} />
+          <InputWithIcon
+            label="CPF *"
+            iconName="document-text-outline"
+            placeholder="000.000.000-00"
+            value={cpf}
+            onChangeText={handleCpfChange}
+            onBlur={() => setCpfError(cpf.replace(/\D/g, '').match(/^\d{11}$/) ? null : 'CPF inválido.')}
+            keyboardType="numeric"
+            maxLength={14}
+            errorMessage={cpfError}
+            animationDelay={50} // Staggered animation delay
+          />
 
-          <Text style={styles.label}>Data de Nascimento *</Text>
-          <TouchableOpacity style={styles.datePickerButton} onPress={() => setShowDatePicker(true)}>
-            <Ionicons name="calendar-outline" size={20} color="#007AFF" style={styles.inputIcon} />
-            <Text style={styles.datePickerButtonText}>
-              {dataNascimento ? dataNascimento.toLocaleDateString('pt-BR') : "Toque para selecionar"}
-            </Text>
-            <Ionicons name="chevron-down-outline" size={20} color="#8A8A8E" />
-          </TouchableOpacity>
-          {showDatePicker && (
-            <DateTimePicker
-              value={dataNascimento || new Date(2000, 0, 1)}
-              mode="date"
-              display={Platform.OS === 'ios' ? "spinner" : "default"}
-              onChange={onDateChange}
-              maximumDate={new Date(new Date().setFullYear(new Date().getFullYear() - 18))}
-            />
-          )}
-          <ErrorMessage message={dataNascimentoError} />
+          <DatePickerInput
+            label="Data de Nascimento *"
+            value={dataNascimento}
+            onChange={onDateChange}
+            maximumDate={new Date(new Date().setFullYear(new Date().getFullYear() - 18))}
+            errorMessage={dataNascimentoError}
+            animationDelay={100} // Staggered animation delay
+          />
 
-          <Text style={styles.label}>Telefone para Contato *</Text>
-          <View style={styles.inputContainer}>
-            <Ionicons name="call-outline" size={20} color="#8A8A8E" style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="(XX) XXXXX-XXXX"
-              value={telefone}
-              onChangeText={handleTelefoneChange}
-              onBlur={() => setTelefoneError(telefone.replace(/\D/g, '').match(/^\d{10,11}$/) ? null : 'Telefone inválido.')}
-              keyboardType="phone-pad"
-              textContentType="telephoneNumber"
-              maxLength={15}
-            />
-          </View>
-          <ErrorMessage message={telefoneError} />
+          <InputWithIcon
+            label="Telefone para Contato *"
+            iconName="call-outline"
+            placeholder="(XX) XXXXX-XXXX"
+            value={telefone}
+            onChangeText={handleTelefoneChange}
+            onBlur={() => setTelefoneError(telefone.replace(/\D/g, '').match(/^\d{10,11}$/) ? null : 'Telefone inválido.')}
+            keyboardType="phone-pad"
+            textContentType="telephoneNumber"
+            maxLength={15}
+            errorMessage={telefoneError}
+            animationDelay={150} // Staggered animation delay
+          />
 
-          <Text style={styles.sectionHeader}>Endereço</Text>
+          <SectionHeader title="Endereço" animationDelay={200} />
 
-          <Text style={styles.label}>CEP *</Text>
-          <View style={styles.inputContainer}>
-            <Ionicons name="map-outline" size={20} color="#8A8A8E" style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="00000-000"
-              value={cep}
-              onChangeText={handleCepChange}
-              onBlur={fetchAddressFromCep}
-              keyboardType="numeric"
-              maxLength={9}
-            />
-            {isLoadingCep && <ActivityIndicator size="small" color="#007AFF" style={styles.activityIndicator} />}
-          </View>
-          <ErrorMessage message={cepError} />
+          <InputWithIcon
+            label="CEP *"
+            iconName="map-outline"
+            placeholder="00000-000"
+            value={cep}
+            onChangeText={handleCepChange}
+            onBlur={fetchAddressFromCep}
+            keyboardType="numeric"
+            maxLength={9}
+            errorMessage={cepError}
+            animationDelay={250} // Staggered animation delay
+            rightComponent={isLoadingCep ? <ActivityIndicator size="small" color="#007AFF" style={styles.activityIndicator} /> : null}
+          />
 
-          <Text style={styles.label}>Logradouro *</Text>
-          <TextInput // Input para Logradouro
-            style={[styles.input, styles.textInputStyle]} // Aplicando estilo base e específico
+          <StandardInput
+            label="Logradouro *"
             placeholder="Nome da sua rua ou avenida"
             value={logradouro}
             onChangeText={setLogradouro}
             onBlur={() => setLogradouroError(logradouro.trim() ? null : 'Logradouro é obrigatório.')}
             textContentType="streetAddressLine1"
             editable={!isLoadingCep && cep.replace(/\D/g, '').length === 8}
+            errorMessage={logradouroError}
+            animationDelay={300} // Staggered animation delay
           />
-          <ErrorMessage message={logradouroError} />
 
-          <Text style={styles.label}>Número *</Text>
-          <TextInput // Input para Número
-            style={[styles.input, styles.textInputStyle]} // Aplicando estilo base e específico
+          <StandardInput
+            label="Número *"
             placeholder="Ex: 123 A"
             value={numero}
             onChangeText={setNumero}
             onBlur={() => setNumeroError(numero.trim() ? null : 'Número é obrigatório.')}
             keyboardType="default"
             editable={!isLoadingCep && cep.replace(/\D/g, '').length === 8}
+            errorMessage={numeroError}
+            animationDelay={350} // Staggered animation delay
           />
-          <ErrorMessage message={numeroError} />
 
-          <Text style={styles.label}>Complemento (opcional)</Text>
-          <TextInput // Input para Complemento
-            style={[styles.input, styles.textInputStyle]} // Aplicando estilo base e específico
+          <StandardInput
+            label="Complemento (opcional)"
             placeholder="Apto, Bloco, Casa, etc."
             value={complemento}
             onChangeText={setComplemento}
             textContentType="streetAddressLine2"
             editable={!isLoadingCep && cep.replace(/\D/g, '').length === 8}
+            animationDelay={400} // Staggered animation delay
           />
 
-          <Text style={styles.label}>Bairro *</Text>
-          <TextInput // Input para Bairro
-            style={[styles.input, styles.textInputStyle]} // Aplicando estilo base e específico
+          <StandardInput
+            label="Bairro *"
             placeholder="Seu bairro"
             value={bairro}
             onChangeText={setBairro}
             onBlur={() => setBairroError(bairro.trim() ? null : 'Bairro é obrigatório.')}
             textContentType="sublocality"
             editable={!isLoadingCep && cep.replace(/\D/g, '').length === 8}
+            errorMessage={bairroError}
+            animationDelay={450} // Staggered animation delay
           />
-          <ErrorMessage message={bairroError} />
 
-          <Text style={styles.label}>Cidade *</Text>
-          <TextInput // Input para Cidade
-            style={[styles.input, styles.textInputStyle]} // Aplicando estilo base e específico
+          <StandardInput
+            label="Cidade *"
             placeholder="Sua cidade"
             value={cidade}
             onChangeText={setCidade}
             onBlur={() => setCidadeError(cidade.trim() ? null : 'Cidade é obrigatória.')}
             textContentType="addressCity"
             editable={!isLoadingCep && cep.replace(/\D/g, '').length === 8}
+            errorMessage={cidadeError}
+            animationDelay={500} // Staggered animation delay
           />
-          <ErrorMessage message={cidadeError} />
 
-          <Text style={styles.label}>Estado * (UF)</Text>
-          <TextInput // Input para Estado
-            style={[styles.input, styles.textInputStyle]} // Aplicando estilo base e específico
+          <StandardInput
+            label="Estado * (UF)"
             placeholder="Ex: SP"
             value={estado}
             onChangeText={setEstado}
@@ -430,9 +387,10 @@ export default function PersonalDetailsScreen() {
             maxLength={2}
             textContentType="addressState"
             editable={!isLoadingCep && cep.replace(/\D/g, '').length === 8}
+            errorMessage={estadoError}
+            animationDelay={550} // Staggered animation delay
           />
-          <ErrorMessage message={estadoError} />
-        </Animated.View>
+        </View>
 
         <View style={styles.navigationButtons}>
           <TouchableOpacity style={[styles.navButton, styles.backButton]} onPress={() => router.back()} disabled={isSubmitting}>
@@ -464,86 +422,6 @@ const styles = StyleSheet.create({
   headerIcon: { marginBottom: 10 },
   mainTitle: { fontSize: 26, fontWeight: 'bold', color: '#1C3A5F', textAlign: 'center', marginBottom: 8 },
   subtitle: { fontSize: 15, color: '#6C757D', textAlign: 'center', marginBottom: 20, paddingHorizontal: 10 },
-  inputSection: {
-    // Estilos para animação da seção de inputs
-  },
-  sectionHeader: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1C3A5F',
-    marginTop: 25,
-    marginBottom: 15,
-    borderTopWidth: 1,
-    borderTopColor: '#DEE2E6',
-    paddingTop: 20,
-  },
-  label: { fontSize: 15, fontWeight: '600', color: '#495057', marginBottom: 7, marginTop: 12 },
-  inputContainer: { // Estilo para inputs que já têm um ícone dentro (CPF, Telefone, CEP)
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#CED4DA',
-    borderRadius: 10,
-    height: 52,
-    paddingHorizontal: 12,
-    marginBottom: 0, // Removido para que o ErrorMessage controle o espaçamento
-  },
-  textInputStyle: { // Estilo base para TextInputs que não estão em um inputContainer com ícone
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#CED4DA',
-    borderRadius: 10,
-    height: 52,
-    paddingHorizontal: 15, // Padding um pouco maior pois não tem ícone
-    fontSize: 16,
-    color: '#212529',
-    marginBottom: 0, // Removido para que o ErrorMessage controle o espaçamento
-    ...Platform.select({ // Adiciona sombra igual aos inputContainers
-        ios: {
-          shadowColor: 'rgba(0,0,0,0.05)',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 3,
-        },
-        android: {
-          elevation: 2,
-        },
-      }),
-  },
-  inputIcon: { marginRight: 10 },
-  input: { flex: 1, height: '100%', fontSize: 16, color: '#212529' }, // Usado nos TextInputs dentro de inputContainer
-  errorMessage: {
-    color: '#D32F2F',
-    fontSize: 12,
-    marginTop: 4, // Pequeno espaço acima da mensagem de erro
-    marginBottom: 10, // Espaço abaixo da mensagem de erro
-    marginLeft: 5,
-  },
-  datePickerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#CED4DA',
-    borderRadius: 10,
-    height: 52,
-    paddingHorizontal: 12,
-    marginBottom: 0, // Removido para que o ErrorMessage controle o espaçamento
-    justifyContent: 'space-between',
-    ...Platform.select({ // Adiciona sombra igual aos inputContainers
-        ios: {
-          shadowColor: 'rgba(0,0,0,0.05)',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 3,
-        },
-        android: {
-          elevation: 2,
-        },
-      }),
-  },
-  datePickerButtonText: { fontSize: 16, color: '#212529', flex:1 }, // flex:1 para ocupar espaço
   activityIndicator: { marginLeft: 10 },
   navigationButtons: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 30, marginBottom: 20 },
   navButton: {
