@@ -20,11 +20,11 @@ import { useAuth } from '../../hooks/useAuth';
 // Importações dos serviços
 import { getMyProviderDashboard } from '../services/providerService';
 import { getBookingsForUser, updateBookingStatus } from '../services/bookingService';
-// import { sendMessage } from '../services/chatService'; // Assumindo que você terá um chatService. Removido se não usado diretamente aqui.
+import { sendMessage } from '../services/chatService'; // Assuming you'll have a chatService
 
 // Importações das tipagens centralizadas
 import { BookingDetails, BookingStatus } from '../types/backend/bookings';
-import { ProviderDashboard, ProviderReview } from '../types/backend/providers'; //
+import { ProviderDashboard, ProviderReview } from '../types/backend/providers'; // Importe ProviderReview aqui também, se ProviderDashboard o usa
 
 // Hook para animação de toque (reutilizável)
 const useAnimatedTouch = () => {
@@ -277,7 +277,7 @@ const quickActionStyles = StyleSheet.create({
   sectionContainer: {
     backgroundColor: WHITE,
     borderRadius: 18,
-    padding: 20,
+    padding: 20, // Manter ou ajustar este padding se o espaço lateral geral da caixa é o que te incomoda
     marginBottom: 20,
     ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 6 },
@@ -291,20 +291,22 @@ const quickActionStyles = StyleSheet.create({
     marginBottom: 15,
     textAlign: 'center',
   },
-  grid: {
+  grid: { // Este é o container dos seus botões
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-around',
-    width: '100%',
+    flexWrap: 'wrap', // Manter wrap para caso haja mais de 3, eles quebrem a linha
+    justifyContent: 'space-around', // ou 'space-between', 'center'
+    width: '100%', // Isso significa 100% do 'sectionContainer' (que tem padding de 20)
   },
   gridItem: {
-    width: '45%', // Ajuste para 2 por linha
+    // ATENÇÃO AQUI: Para 3 itens por linha, você PRECISA de uma largura menor.
+    // 30% x 3 = 90%. Sobram 10% para gaps.
+    width: '30%', // <--- MUDANÇA ESSENCIAL AQUI para 3 itens por linha!
     aspectRatio: 1, // Para manter quadrado
     backgroundColor: BACKGROUND_ALT,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 15, // Espaçamento vertical entre as linhas
     padding: 10,
     borderWidth: 1,
     borderColor: BORDER_SUBTLE,
@@ -314,13 +316,14 @@ const quickActionStyles = StyleSheet.create({
     }),
   },
   gridItemText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: TEXT_DARK,
     marginTop: 8,
     textAlign: 'center',
   },
 });
+
 
 // Componente de Item de Solicitação (RequestItem) - SEM ALTERAÇÕES NESTE TRECHO
 const RequestItem: React.FC<{
@@ -433,7 +436,7 @@ const RequestItem: React.FC<{
   );
 };
 
-// Componente de Item de Serviço Confirmado (ConfirmedServiceItem) - SEM ALTERAÇÕES NESTE TRECHO
+// Componente de Item de Serviço Confirmado (ConfirmedServiceItem)
 const ConfirmedServiceItem: React.FC<{
   item: BookingDetails;
   onPress: (id: string) => void;
@@ -499,20 +502,22 @@ export default function ProviderDashboardScreen() {
 
     try {
       const dashboard = await getMyProviderDashboard();
-      console.log("[DashboardScreen] fetchData: Dados do dashboard recebidos.", dashboard); //
+      console.log("[DashboardScreen] fetchData: Dados do dashboard recebidos.", dashboard);
+      // Log para verificar se 'reviews' está chegando
+      console.log("[DashboardScreen] REVIEWS NA DASHBOARD (AGORA COM 'reviews'):", dashboard.reviews);
+
       setDashboardData(dashboard);
 
-      const pendingBookings = await getBookingsForUser(BookingStatus.PENDING_PROVIDER_CONFIRMATION);
-      console.log("[DashboardScreen] fetchData: Agendamentos pendentes recebidos.", pendingBookings);
+      // Mudar PENDING_PROVIDER_CONFIRMATION para PENDING
       const confirmedBookings = await getBookingsForUser(BookingStatus.CONFIRMED);
       console.log("[DashboardScreen] fetchData: Agendamentos confirmados recebidos.", confirmedBookings);
 
-      setUpcomingServices([...pendingBookings, ...confirmedBookings].sort((a,b) => {
+      setUpcomingServices([...confirmedBookings].sort((a,b) => {
         const dateA = new Date(a.scheduledDate + 'T' + a.scheduledTime);
         const dateB = new Date(b.scheduledDate + 'T' + b.scheduledTime);
-        if (isNaN(dateA.getTime())) console.warn(`[DashboardScreen] Data inválida para agendamento ${a.id}: <span class="math-inline">\{a\.scheduledDate\}T</span>{a.scheduledTime}`);
-        if (isNaN(dateB.getTime())) console.warn(`[DashboardScreen] Data inválida para agendamento ${b.id}: <span class="math-inline">\{b\.scheduledDate\}T</span>{b.scheduledTime}`);
-        
+        if (isNaN(dateA.getTime())) console.warn(`[DashboardScreen] Data inválida para agendamento ${a.id}: ${a.scheduledDate}T${a.scheduledTime}`);
+        if (isNaN(dateB.getTime())) console.warn(`[DashboardScreen] Data inválida para agendamento ${b.id}: ${b.scheduledDate}T${b.scheduledTime}`);
+
         return dateA.getTime() - dateB.getTime();
       }));
 
@@ -617,7 +622,7 @@ export default function ProviderDashboardScreen() {
   };
 
   const handleChatWithClient = (clientId: string, clientName: string) => {
-    console.log(`[DashboardScreen] handleChatWithClient: Iniciando chat com cliente <span class="math-inline">\{clientName\} \(</span>{clientId}).`);
+    console.log(`[DashboardScreen] handleChatWithClient: Iniciando chat com cliente ${clientName} (${clientId}).`);
     router.push({ pathname: '/(provider)/messages/[chatId]', params: { chatId: clientId, recipientName: clientName } } as any);
   };
 
@@ -631,6 +636,7 @@ export default function ProviderDashboardScreen() {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
+        <Stack.Screen options={{ title: "Carregando...", headerTransparent: true, headerTintColor: '#333' }} />
         <ActivityIndicator size="large" color="#007AFF" />
         <Text style={styles.loadingText}>Carregando dashboard...</Text>
       </View>
@@ -640,6 +646,7 @@ export default function ProviderDashboardScreen() {
   if (error) {
     return (
       <View style={styles.errorContainer}>
+        <Stack.Screen options={{ title: "Erro", headerTransparent: false, headerStyle: { backgroundColor: '#FFFFFF' }, headerTintColor: '#333' }} />
         <Ionicons name="alert-circle-outline" size={48} color="red" />
         <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity onPress={fetchData} style={styles.retryButton}>
@@ -678,40 +685,6 @@ export default function ProviderDashboardScreen() {
           onManageAvailability={() => router.push('/(provider)/availability' as any)} // Assumindo uma rota de disponibilidade
         />
 
-        {/* Seção de Novas Solicitações */}
-        {upcomingServices.filter(s => s.status === BookingStatus.PENDING_PROVIDER_CONFIRMATION).length > 0 && (
-          <View style={styles.subsectionWrapper}>
-            <View style={styles.subsectionHeader}>
-              <Text style={styles.subsectionTitle}>
-                  <Ionicons name="alert-circle-outline" size={20} color={WARNING_YELLOW} /> Novas Solicitações ({upcomingServices.filter(s => s.status === BookingStatus.PENDING_PROVIDER_CONFIRMATION).length})
-              </Text>
-            </View>
-            {upcomingServices.filter(s => s.status === BookingStatus.PENDING_PROVIDER_CONFIRMATION).map((item, index) => (
-              <RequestItem
-                key={item.id}
-                item={item}
-                onAccept={handleAcceptRequest}
-                onReject={handleRejectRequest}
-                onDetails={handleServicePress}
-                onChat={handleChatWithClient}
-                entryAnim={new Animated.ValueXY({x:1,y:0})}
-              />
-            ))}
-          </View>
-        )}
-        {/* Estado vazio para Novas Solicitações, se não houver */}
-        {upcomingServices.filter(s => s.status === BookingStatus.PENDING_PROVIDER_CONFIRMATION).length === 0 && (
-            <View style={styles.subsectionWrapper}>
-                <View style={styles.subsectionHeader}>
-                    <Text style={styles.subsectionTitle}>
-                        <Ionicons name="alert-circle-outline" size={20} color={WARNING_YELLOW} /> Novas Solicitações (0)
-                    </Text>
-                </View>
-                {renderEmptyState("Nenhuma nova solicitação no momento.", "notifications-off-outline")}
-            </View>
-        )}
-
-
         {/* Próximos Serviços Confirmados */}
         <View style={styles.subsectionWrapper}>
           <View style={styles.subsectionHeader}>
@@ -738,8 +711,8 @@ export default function ProviderDashboardScreen() {
           )}
         </View>
 
-        {/* Seção de Reviews Recentes (mantida) */}
-        {dashboardData?.recentReviews && dashboardData.recentReviews.length > 0 && (
+        {/* Seção de Reviews Recentes */}
+        {dashboardData?.reviews && dashboardData.reviews.length > 0 ? ( /* Correção: 'reviews' em vez de 'recentReviews' */
             <View style={styles.subsectionWrapper}>
                 <View style={styles.subsectionHeader}>
                     <Text style={styles.subsectionTitle}>
@@ -749,21 +722,26 @@ export default function ProviderDashboardScreen() {
                         <Text style={styles.viewAllText}>Ver Todas</Text>
                     </TouchableOpacity>
                 </View>
-                {dashboardData.recentReviews.slice(0, 2).map((review, index) => (
+                {/* O slice(0, 2) pode ser opcional aqui se o backend já limita a 2 */}
+                {dashboardData.reviews.slice(0, 2).map((review: ProviderReview, index: number) => ( /* Correção de 'any' para ProviderReview e number */
                     <View key={review.id} style={styles.reviewItem}>
                         <Text style={styles.reviewText}>"{review.comment || 'Sem comentário.'}"</Text>
-                        <View style={styles.reviewRating}>
-                            {Array.from({ length: review.rating }).map((_, i) => (
-                                <Ionicons key={i} name="star" size={16} color={WARNING_YELLOW} />
-                            ))}
-                            <Text style={styles.reviewClientName}> - {review.client?.fullName || 'Cliente Desconhecido'}</Text>
+                        {/* INÍCIO DA ALTERAÇÃO PARA ESTRELAS E NOME DO CLIENTE */}
+                        <View style={styles.reviewRatingStarsAndName}> {/* <--- ESTILO ADICIONADO */}
+                            <View style={styles.reviewStarsContainer}> {/* <--- ESTILO ADICIONADO */}
+                                {Array.from({ length: review.rating }).map((_, i) => (
+                                    <Ionicons key={i} name="star" size={16} color={ICON_PRIMARY} />
+                                ))}
+                            </View>
+                            <Text style={styles.reviewClientName}>
+                                {review.client?.fullName || 'Cliente Desconhecido'} {/* Acessa o fullName do client */}
+                            </Text>
                         </View>
+                        {/* FIM DA ALTERAÇÃO PARA ESTRELAS E NOME DO CLIENTE */}
                     </View>
                 ))}
             </View>
-        )}
-        {/* Estado vazio para Avaliações Recentes */}
-        {(!dashboardData?.recentReviews || dashboardData.recentReviews.length === 0) && (
+        ) : ( // Parte do 'else' do ternário
             <View style={styles.subsectionWrapper}>
                 <View style={styles.subsectionHeader}>
                     <Text style={styles.subsectionTitle}>
@@ -773,7 +751,6 @@ export default function ProviderDashboardScreen() {
                 {renderEmptyState("Nenhuma avaliação recente. Conclua mais serviços!", "star-half-outline")}
             </View>
         )}
-
 
       </ScrollView>
     </View>
@@ -1114,15 +1091,26 @@ const styles = StyleSheet.create({
     color: TEXT_MEDIUM,
     marginBottom: 8,
   },
-  reviewRating: {
+  reviewRating: { // <--- ESTILO ORIGINAL - AGORA SERÁ USADO reviewRatingStarsAndName
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    justifyContent: 'flex-end', // Este estava alinhando as estrelas e o nome à direita
+  },
+  // NOVOS ESTILOS: Adicionados para reposicionar as estrelas
+  reviewRatingStarsAndName: { // <--- ESTILO ADICIONADO AQUI
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  reviewStarsContainer: { // <--- ESTILO ADICIONADO AQUI
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   reviewClientName: {
     fontSize: 13,
     color: TEXT_MUTED,
-    marginLeft: 5,
+    // Não precisa de marginLeft aqui se justify-content: 'space-between'
   },
   earningsLinkCard: {
       backgroundColor: WHITE,

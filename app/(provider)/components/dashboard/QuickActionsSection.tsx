@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
   sectionContainer: {
     backgroundColor: 'rgba(255,255,255,0.95)',
     borderRadius: 20,
-    padding: 20,
+    padding: 10,
     marginBottom: 20,
     ...Platform.select({
       ios: {

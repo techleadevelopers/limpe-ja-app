@@ -24,12 +24,26 @@ import { requestWithdrawal } from '../services/paymentService';
 // Importa os tipos da pasta centralizada
 import { ProviderDashboard, ProviderTransaction, EarningsResponseDto } from '../types/backend/providers';
 
-// REMOVIDO: import Colors from '../../constants/Colors'; // <-- REMOVIDO
-
 // IMPORTA OS NOVOS COMPONENTES (Verifique os caminhos)
-import EarningsSummaryCard from './components/earnings/EarningsSummaryCard';
+import EarningsSummaryCard from './components/earnings/EarningsSummaryCard'; // Este componente precisa ser estilizado
 import EarningsChartSection from './components/earnings/EarningsChartSection';
 import RecentTransactionsSection from './components/earnings/RecentTransactionsSection';
+
+// --- DEFINIÇÕES DE CORES (REPETIDAS PARA ESTE ARQUIVO PARA CONSISTÊNCIA) ---
+const WHITE = '#FFFFFF';
+const BACKGROUND_ALT = '#F8F9FD';
+const TEXT_DARK = '#1A2538';
+const TEXT_MEDIUM = '#4A5568';
+const TEXT_MUTED = '#7A8599';
+const ICON_PRIMARY = '#007AFF'; // Azul primário
+const SUCCESS_GREEN = '#28a745'; // Verde de sucesso
+const DANGER_RED = '#dc3545'; // Vermelho de perigo
+const WARNING_YELLOW = '#FFC107'; // Amarelo de aviso
+const BORDER_SUBTLE = 'rgba(0,0,0,0.08)';
+const SHADOW_COLOR_CARD = 'rgba(0, 0, 0, 0.06)';
+const SHADOW_COLOR_SECTION = 'rgba(0, 0, 0, 0.1)';
+const PRIMARY_LIGHT = '#EBF5FF';
+// -------------------------------------------------------------------------
 
 // Interface para dados do gráfico (mantida)
 interface ChartData {
@@ -53,7 +67,7 @@ const useAnimatedTouch = () => {
   return { scaleAnim, onPressIn, onPressOut };
 };
 
-// Componente: CustomHeader (para tela de Ganhos)
+// Componente: CustomHeader (para tela de Ganhos) - Usando as constantes de cor
 const CustomHeader: React.FC<{
   onBackPress: () => void;
   onManageBankDetailsPress: () => void;
@@ -62,11 +76,11 @@ const CustomHeader: React.FC<{
   return (
     <Animated.View style={[styles.customHeader, { opacity: animation, transform: [{ translateY: animation.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
       <TouchableOpacity onPress={onBackPress} style={styles.headerBackButton} accessibilityRole="button" accessibilityLabel="Voltar para a tela anterior">
-        <Ionicons name="arrow-back" size={24} color={'#FFFFFF'} /> {/* Hardcoded WHITE */}
+        <Ionicons name="arrow-back" size={24} color={WHITE} />
       </TouchableOpacity>
-      <Text style={[styles.headerTitle, { color: '#FFFFFF' }]} accessibilityRole="header" accessibilityLabel="Meus Ganhos">Meus Ganhos</Text> {/* Hardcoded WHITE */}
+      <Text style={[styles.headerTitle, { color: WHITE }]} accessibilityRole="header" accessibilityLabel="Meus Ganhos">Meus Ganhos</Text>
       <TouchableOpacity onPress={onManageBankDetailsPress} style={styles.headerActionIcon} accessibilityRole="button" accessibilityLabel="Gerenciar dados bancários">
-        <Ionicons name="card-outline" size={26} color={'#FFFFFF'} /> {/* Hardcoded WHITE */}
+        <Ionicons name="card-outline" size={26} color={WHITE} />
       </TouchableOpacity>
     </Animated.View>
   );
@@ -114,7 +128,7 @@ export default function ProviderEarningsScreen() {
         labels: labels,
         datasets: [{
           data: dataPoints,
-          color: (opacity = 1) => `rgba(0, 122, 255, ${opacity})`, // Hardcoded cor principal do tema light.tint
+          color: (opacity = 1) => `rgba(0, 122, 255, ${opacity})`, // Usando ICON_PRIMARY
           strokeWidth: 2
         }]
       });
@@ -138,7 +152,7 @@ export default function ProviderEarningsScreen() {
       Animated.timing(transactionsSectionAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
     ]).start();
 
-  }, [fetchData]);
+  }, [fetchData, headerAnim, summaryAnim, chartSectionAnim, transactionsSectionAnim]);
 
   const onRefresh = useCallback(() => {
     setIsRefreshing(true);
@@ -187,8 +201,8 @@ export default function ProviderEarningsScreen() {
           animation={headerAnim}
         />
         <View style={styles.centeredFeedback}>
-          <ActivityIndicator size="large" color={'#007AFF'} accessibilityLabel="Carregando dados" /> {/* Hardcoded ICON_PRIMARY */}
-          <Text style={[styles.loadingText, { color: '#7A8599' }]}>Carregando seus dados financeiros...</Text> {/* Hardcoded TEXT_MUTED */}
+          <ActivityIndicator size="large" color={ICON_PRIMARY} accessibilityLabel="Carregando dados" />
+          <Text style={[styles.loadingText, { color: TEXT_MUTED }]}>Carregando seus dados financeiros...</Text>
         </View>
       </View>
     );
@@ -211,12 +225,12 @@ export default function ProviderEarningsScreen() {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={onRefresh}
-            tintColor={'#007AFF'}
+            tintColor={ICON_PRIMARY}
             accessibilityLabel="Puxe para atualizar dados"
           />
         }
       >
-        {/* Cartão de Resumo Financeiro */}
+        {/* Cartão de Resumo Financeiro - NÃO MAIS PASSANDO PROPS DE ESTILO PARA EVITAR O ERRO */}
         <EarningsSummaryCard
           dashboardData={dashboardData}
           animation={summaryAnim}
@@ -242,9 +256,9 @@ export default function ProviderEarningsScreen() {
           accessibilityRole="button"
           accessibilityLabel="Visualizar todos os meus serviços"
         >
-          <Ionicons name="briefcase-outline" size={24} color={'#007AFF'} /> {/* Hardcoded ICON_PRIMARY */}
-          <Text style={[styles.quickLinkText, { color: '#1A2538' }]}>Meus Serviços Oferecidos</Text> {/* Hardcoded TEXT_DARK */}
-          <Ionicons name="chevron-forward-outline" size={20} color={'#7A8599'} /> {/* Hardcoded TEXT_MUTED */}
+          <Ionicons name="briefcase-outline" size={24} color={ICON_PRIMARY} />
+          <Text style={[styles.quickLinkText, { color: TEXT_DARK }]}>Meus Serviços Oferecidos</Text>
+          <Ionicons name="chevron-forward-outline" size={20} color={TEXT_MUTED} />
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -253,9 +267,9 @@ export default function ProviderEarningsScreen() {
           accessibilityRole="button"
           accessibilityLabel="Visualizar todas as minhas avaliações"
         >
-          <Ionicons name="star-outline" size={24} color={'#FFC107'} /> {/* Hardcoded WARNING_YELLOW */}
-          <Text style={[styles.quickLinkText, { color: '#1A2538' }]}>Minhas Avaliações</Text> {/* Hardcoded TEXT_DARK */}
-          <Ionicons name="chevron-forward-outline" size={20} color={'#7A8599'} /> {/* Hardcoded TEXT_MUTED */}
+          <Ionicons name="star-outline" size={24} color={WARNING_YELLOW} />
+          <Text style={[styles.quickLinkText, { color: TEXT_DARK }]}>Minhas Avaliações</Text>
+          <Ionicons name="chevron-forward-outline" size={20} color={TEXT_MUTED} />
         </TouchableOpacity>
 
       </ScrollView>
@@ -266,7 +280,7 @@ export default function ProviderEarningsScreen() {
 const styles = StyleSheet.create({
   outerContainer: {
     flex: 1,
-    backgroundColor: '#F8F9FD', // Hardcoded BACKGROUND_ALT
+    backgroundColor: BACKGROUND_ALT,
   },
   scrollView: {
     flex: 1,
@@ -283,14 +297,14 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 15,
     fontSize: 16,
-    // color: Colors.light.textMuted, // Hardcoded acima
+    color: TEXT_MUTED,
     fontFamily: 'System'
   },
   customHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#007AFF', // Hardcoded PRIMARY
+    backgroundColor: ICON_PRIMARY,
     paddingHorizontal: 15,
     paddingVertical: Platform.OS === 'ios' ? 50 : 20,
     paddingTop: Platform.OS === 'ios' ? 50 : 20,
@@ -307,7 +321,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    // color: Colors.light.background, // Hardcoded acima
+    color: WHITE,
     flex: 1,
     textAlign: 'center',
     fontFamily: 'System'
@@ -323,18 +337,18 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1A2538', // Hardcoded TEXT_DARK
+    color: TEXT_DARK,
     marginBottom: 15,
     marginTop: 10,
     fontFamily: 'System'
   },
   summaryContainer: {
-    backgroundColor: '#FFFFFF', // Hardcoded WHITE
+    backgroundColor: WHITE,
     borderRadius: 12,
     padding: 20,
     marginBottom: 20,
     ...Platform.select({
-      ios: { shadowColor: 'rgba(0,0,0,0.1)', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.15, shadowRadius: 6 }, // Hardcoded SHADOW_COLOR_SECTION
+      ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.15, shadowRadius: 6 },
       android: { elevation: 4 },
     }),
   },
@@ -346,17 +360,17 @@ const styles = StyleSheet.create({
   },
   summaryCard: {
     width: '48%',
-    backgroundColor: '#F8F9FD', // Hardcoded BACKGROUND_ALT
+    backgroundColor: BACKGROUND_ALT,
     borderRadius: 10,
     padding: 15,
     marginBottom: 15,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.08)', // Hardcoded BORDER_SUBTLE
+    borderColor: BORDER_SUBTLE,
   },
   summaryCardTitle: {
     fontSize: 14,
-    color: '#7A8599', // Hardcoded TEXT_MUTED
+    color: TEXT_MUTED,
     marginTop: 8,
     marginBottom: 5,
     textAlign: 'center',
@@ -365,54 +379,54 @@ const styles = StyleSheet.create({
   summaryCardValue: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#1A2538', // Hardcoded TEXT_DARK
+    color: TEXT_DARK,
     textAlign: 'center',
     fontFamily: 'System'
   },
   summaryCardSubtitle: {
     fontSize: 12,
-    color: '#7A8599', // Hardcoded TEXT_MUTED
+    color: TEXT_MUTED,
     marginTop: 2,
     textAlign: 'center',
     fontFamily: 'System'
   },
   withdrawalButton: {
-    backgroundColor: '#28a745', // Hardcoded SUCCESS_GREEN
+    backgroundColor: SUCCESS_GREEN,
     borderRadius: 8,
     paddingVertical: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     ...Platform.select({
-      ios: { shadowColor: 'rgba(0,0,0,0.06)', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 6 }, // Hardcoded SHADOW_COLOR_CARD
+      ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 6 },
       android: { elevation: 6 },
     }),
   },
   withdrawalButtonDisabled: {
-    backgroundColor: '#A5D6A7', // Hardcoded light green
+    backgroundColor: '#A5D6A7', // Cor de desabilitado para o verde
     opacity: 0.6,
     elevation: 0,
     shadowOpacity: 0,
   },
   withdrawalButtonText: {
-    color: '#FFFFFF', // Hardcoded WHITE
+    color: WHITE,
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 10,
     fontFamily: 'System'
   },
   chartSection: {
-    backgroundColor: '#FFFFFF', // Hardcoded WHITE
+    backgroundColor: WHITE,
     borderRadius: 12,
     padding: 20,
     marginBottom: 20,
     ...Platform.select({
-      ios: { shadowColor: 'rgba(0,0,0,0.1)', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.15, shadowRadius: 6 }, // Hardcoded SHADOW_COLOR_SECTION
+      ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.15, shadowRadius: 6 },
       android: { elevation: 4 },
     }),
   },
   chartContainerPlaceholder: {
-    backgroundColor: '#F8F9FD', // Hardcoded BACKGROUND_ALT
+    backgroundColor: BACKGROUND_ALT,
     borderRadius: 10,
     width: '100%',
     height: 200,
@@ -420,12 +434,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.08)', // Hardcoded BORDER_SUBTLE
+    borderColor: BORDER_SUBTLE,
     borderStyle: 'dashed',
   },
   chartPlaceholderText: {
     fontSize: 16,
-    color: '#7A8599', // Hardcoded TEXT_MUTED
+    color: TEXT_MUTED,
     marginTop: 10,
     fontFamily: 'System'
   },
@@ -434,7 +448,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(0,0,0,0.08)', // Hardcoded BORDER_SUBTLE
+    borderColor: BORDER_SUBTLE,
   },
   transactionDetails: {
     flex: 1,
@@ -443,17 +457,17 @@ const styles = StyleSheet.create({
   transactionDescription: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#1A2538', // Hardcoded TEXT_DARK
+    color: TEXT_DARK,
   },
   transactionDate: {
     fontSize: 13,
-    color: '#7A8599', // Hardcoded TEXT_MUTED
+    color: TEXT_MUTED,
     marginTop: 2,
   },
   transactionAmount: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#1A2538', // Hardcoded TEXT_DARK
+    color: TEXT_DARK,
   },
   viewAllButton: {
     flexDirection: 'row',
@@ -462,29 +476,29 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     marginTop: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(0,0,0,0.08)', // Hardcoded BORDER_SUBTLE
+    borderColor: BORDER_SUBTLE,
   },
   viewAllButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#007AFF', // Hardcoded ICON_PRIMARY
+    color: ICON_PRIMARY,
     marginRight: 5,
   },
   emptyStateContainer: {
     alignItems: 'center',
     paddingVertical: 20,
-    backgroundColor: '#F8F9FD', // Hardcoded BACKGROUND_ALT
+    backgroundColor: BACKGROUND_ALT,
     borderRadius: 12,
     marginTop: 10,
   },
   emptyText: {
     textAlign: 'center',
-    color: '#7A8599', // Hardcoded TEXT_MUTED
+    color: TEXT_MUTED,
     fontSize: 15,
     marginTop: 8,
   },
   quickLinkCard: {
-    backgroundColor: '#FFFFFF', // Hardcoded WHITE
+    backgroundColor: WHITE,
     borderRadius: 12,
     paddingVertical: 15,
     paddingHorizontal: 20,
@@ -493,16 +507,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.08)', // Hardcoded BORDER_SUBTLE
+    borderColor: BORDER_SUBTLE,
     ...Platform.select({
-      ios: { shadowColor: 'rgba(0,0,0,0.06)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4 }, // Hardcoded SHADOW_COLOR_CARD
+      ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4 },
       android: { elevation: 3 },
     }),
   },
   quickLinkText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1A2538', // Hardcoded TEXT_DARK
+    color: TEXT_DARK,
     flex: 1,
     marginLeft: 15,
   },

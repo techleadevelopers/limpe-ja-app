@@ -94,8 +94,10 @@ export interface ProviderDisplayInfo {
   // Adicionado para uso em componentes de cartão/lista, como o ProviderCard
   distance?: string; // Distância do provedor até o cliente (calculado no frontend ou retornado pelo backend em buscas de localização)
 
-  // CORREÇÃO: Adicionado o array de reviews
-  reviews?: ProviderReview[]; // Reviews do provedor, opcional se nem sempre for carregado
+  // Reviews do provedor, opcional se nem sempre for carregado.
+  // Será preenchido quando o backend enviar o ProviderDisplayInfo completo,
+  // ou através do DashboardDto.
+  reviews?: ProviderReview[]; // <--- Mantido aqui, embora o DashboardDto tenha o principal
 
   pixKey?: string; // <-- ADICIONADO: Chave PIX do provedor
 }
@@ -204,45 +206,61 @@ export interface UpdateAvailabilityData {
  * Representa uma avaliação de um provedor.
  * Alinhado com a estrutura de reviews em `ProviderWithIncludes` do backend.
  *
- * CORREÇÃO: Atualizado a estrutura de 'client' para incluir 'id' e 'user'
- * conforme o erro de tipagem no componente ReviewCard.
- * ADICIONADO: 'user' dentro de 'client' pode ser null se o cliente não tiver um user.
+ * CORREÇÃO: Ajustado para refletir o que o ReviewsService retorna (que inclui client.fullName e client.user.avatarUrl)
+ * O backend já deve estar "achatando" ou aninhando esses dados.
  */
 export interface ProviderReview {
   id: string;
   rating: number;
   comment?: string | null;
-  // CORREÇÃO: Client com mais detalhes para compatibilidade com ReviewCard
-  // MUDANÇA IMPORTANTE: client pode ser nulo se a relação não for carregada ou for inválida
-  // E user dentro de client também pode ser nulo/indefinido.
-  client: {
-    id: string; // ID do cliente
+  createdAt: string; // ISO string
+  updatedAt: string; // ISO string - Certifique-se que o Review do Prisma tem este campo e está sendo retornado
+  bookingId: string;
+  clientId: string; // ID do cliente
+  providerId: string; // ID do provedor
+
+  // O backend do ReviewsService está retornando 'client' com 'fullName' e 'user.avatarUrl'.
+  // Esta estrutura deve ser consistente.
+  client: { // <--- Ajustado para a estrutura de include do Prisma
+    id: string;
     fullName: string;
-    user?: { // Detalhes do usuário associado ao cliente - TORNADO OPCIONAL
+    user?: { // 'user' pode ser opcional ou null, dependendo de como a relação é definida e se sempre existe.
       id: string;
       avatarUrl?: string | null;
-    };
-  } | null; // <--- TORNADO OPCIONAL: O OBJETO CLIENT PODE SER NULO
-  createdAt: string; // ISO string
-  bookingId: string;
-  providerId: string;
+    } | null; // Adicionado '| null' aqui para robustez
+  };
 }
+
 
 /**
  * @interface ProviderDashboard
  * REPRESENTA OS DADOS DO PAINEL DE CONTROLE DO PROVEDOR.
  * Corresponde ao `DashboardDto` do backend.
  * ATUALIZADO: Alinhado com o `DashboardDto` do backend, incluindo `fullName` e `totalEarnings`.
- * Mantém `recentReviews` e `unreadMessagesCount` se o backend os enviar.
+ *
+ * CORREÇÃO AQUI: `reviews` em vez de `recentReviews` para corresponder ao DTO do backend.
  */
 export interface ProviderDashboard {
   fullName: string; // <-- Adicionado para corresponder ao backend
   upcomingBookings?: any[]; // Tipo 'any' temporário, pois bookings são carregados separadamente no frontend
   totalEarnings: number; // <-- Adicionado para corresponder ao backend
   pendingWithdrawals: number;
-  recentReviews?: ProviderReview[]; // Manter se o backend vai enviar isso via DashboardDto
+  reviews?: ProviderReview[]; // <--- MUDANÇA CHAVE AQUI: 'reviews' é a propriedade que o dashboard.tsx espera
   unreadMessagesCount?: number; // Manter se o backend vai enviar isso via DashboardDto
 }
+
+/**
+ * @enum TransactionType
+ * Define os tipos de transações financeiras.
+ * DEVE SER EXPORTADO PARA USO EM OUTROS LOCAIS.
+ */
+export enum TransactionType {
+  PAYMENT = 'PAYMENT',
+  WITHDRAWAL = 'WITHDRAWAL',
+  COMMISSION = 'COMMISSION',
+  // Adicione outros tipos se existirem no backend
+}
+
 
 /**
  * @interface ProviderTransaction
@@ -251,7 +269,7 @@ export interface ProviderDashboard {
  */
 export interface ProviderTransaction {
   id: string;
-  type: 'PAYMENT' | 'WITHDRAWAL' | 'COMMISSION'; // Alinhado com TransactionType do backend
+  type: TransactionType; // Agora usando o enum TransactionType
   amount: number; // No backend é Decimal, no frontend será number
   status: string; // Status da transação (e.g., "PENDING", "COMPLETED", "FAILED")
   createdAt: string; // ISO string
@@ -266,7 +284,7 @@ export interface ProviderTransaction {
  * DTO para solicitar um saque.
  * Alinhado com o `WithdrawalRequestDto` do backend.
  */
-export interface WithdrawalRequestDto { // <-- CORREÇÃO: Adicionado 'export'
+export interface WithdrawalRequestDto {
   amount: number;
   withdrawalAccountInfo?: string; // Informações da conta para saque (ex: chave PIX)
 }
@@ -276,7 +294,7 @@ export interface WithdrawalRequestDto { // <-- CORREÇÃO: Adicionado 'export'
  * DTO para a resposta de uma solicitação de saque.
  * Alinhado com o `WithdrawalResponseDto` do backend.
  */
-export interface WithdrawalResponseDto { // <-- CORREÇÃO: Adicionado 'export'
+export interface WithdrawalResponseDto {
   success: boolean;
   message: string;
   transactionId?: string; // ID da transação criada no backend
@@ -287,7 +305,7 @@ export interface WithdrawalResponseDto { // <-- CORREÇÃO: Adicionado 'export'
  * DTO para a resposta completa do endpoint de ganhos do provedor.
  * Alinhado com o `EarningsResponseDto` do backend.
  */
-export interface EarningsResponseDto { // <-- CORREÇÃO: Adicionado 'export'
+export interface EarningsResponseDto {
     totalEarnings: number;
     availableForWithdrawal: number;
     pendingWithdrawals: number;
@@ -295,4 +313,7 @@ export interface EarningsResponseDto { // <-- CORREÇÃO: Adicionado 'export'
     earningsBreakdown: { [period: string]: number };
 }
 
-export type Provider = ProviderDisplayInfo;
+export type Provider = ProviderDisplayInfo & {
+  dashboard: ProviderDashboard;
+  earnings: EarningsResponseDto;
+};

@@ -1,7 +1,8 @@
 // LimpeJaApp/src/types/backend/bookings.ts
 
 // Importar interfaces de tipagem relevantes de outros arquivos
-import { ProviderDisplayInfo, ServiceDetailsDto } from './providers'; // Importar ProviderDisplayInfo e ServiceDetailsDto
+// MANTIDO: Você indicou que essas importações não devem ser removidas.
+import { ProviderDisplayInfo, ServiceDetailsDto } from './providers'; 
 
 /**
  * @enum BookingStatus
@@ -14,8 +15,8 @@ export enum BookingStatus {
   COMPLETED = 'COMPLETED',
   CANCELLED = 'CANCELLED',
   RESCHEDULED = 'RESCHEDULED',
-  PENDING_PROVIDER_CONFIRMATION = 'PENDING_PROVIDER_CONFIRMATION',
-  IN_PROGRESS = 'IN_PROGRESS',
+  // PENDING_PROVIDER_CONFIRMATION = 'PENDING_PROVIDER_CONFIRMATION', // REMOVIDO: Conforme sua instrução explícita
+  IN_PROGRESS = 'IN_PROGRESS', // ADICIONADO: Conforme uso e necessidade anterior
   REJECTED = 'REJECTED',
 }
 
@@ -46,30 +47,32 @@ export interface CreateBookingDto {
   scheduledTime: string; // Hora agendada (ex: "HH:mm")
   totalPrice: number;
   notes?: string | null;
-  address: BookingAddress; // Essa linha deve estar presente e sem comentário
+  address: BookingAddress;
 }
 
 /**
  * @interface BookingDetails
  * Representa um agendamento completo retornado pelo backend para exibição no frontend.
  * Esta é a versão "achatada" do BookingWithDetailsRelations do backend.
+ * FOI REVERTIDA PARA A ESTRUTURA ANTERIOR PARA MANTER A COMPATIBILIDADE.
  */
 export interface BookingDetails {
   id: string;
   status: BookingStatus; // Usar o enum definido
   scheduledDate: string; // Data agendada (YYYY-MM-DD)
   scheduledTime: string; // Hora agendada (HH:mm)
-  totalPrice: number;
+  totalPrice: number; // Preço total do agendamento
   notes?: string | null;
   createdAt: string; // ISO 8601 string
   updatedAt: string; // ISO 8601 string
 
-  // Dados do Cliente (achatados do client.user)
+  // Dados do Cliente (achatados do client e client.user)
   clientId: string;
   clientFullName: string;
   clientEmail: string;
+  clientAvatarUrl?: string | null; // Avatar do cliente
 
-  // Dados do Provedor (achatados do provider.user e provider)
+  // Dados do Provedor (achatados do provider e provider.user)
   providerId: string;
   providerFullName: string;
   providerEmail: string;
@@ -82,14 +85,22 @@ export interface BookingDetails {
   servicePrice: number; // Preço do serviço específico do provedor
   serviceDurationMinutes?: number | null; // Duração do serviço específico do provedor
 
-  // Dados do Endereço do Agendamento (se for específico do agendamento ou do cliente)
-  address?: BookingAddress; // Essa linha deve estar presente para receber o endereço do backend
+  // Dados do Endereço do Agendamento
+  address: BookingAddress; // Objeto completo de endereço do agendamento (não opcional se o backend sempre envia)
 
-  // Dados da Avaliação (review), se existir
+  // Dados da Avaliação (review), se existir (mantido no formato achatado para compatibilidade)
   reviewId?: string | null;
   reviewRating?: number | null;
   reviewComment?: string | null;
 }
+
+/**
+ * @interface Booking
+ * SINÔNIMO para BookingDetails para manter compatibilidade,
+ * agora que BookingDetails voltou ao formato achatado.
+ */
+export interface Booking extends BookingDetails {}
+
 
 /**
  * @interface UpdateBookingStatusDto

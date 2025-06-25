@@ -108,7 +108,7 @@ export default function ChooseRegistrationTypeScreen() {
                     },
                 ]}
             >
-                Bem-vindo(a) ao Cleaning !
+                Bem-vindo(a) ao LimpeJá !
             </Animated.Text>
             <Animated.Text
                 style={[

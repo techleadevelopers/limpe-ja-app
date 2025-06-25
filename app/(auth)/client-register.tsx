@@ -400,11 +400,11 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
   },
   welcomeTitle: {
-    fontSize: 24, // Ajustado
-    fontWeight: 'bold',
-    color: '#1D2029', // Cor escura, quase preta
-    textAlign: 'center',
-    marginBottom: 6,
+        fontSize: 28,
+        fontWeight: 'bold',
+        color: '#1C3A5F',
+        textAlign: 'center',
+        marginBottom: 10,
   },
   welcomeSubtitle: {
     fontSize: 15, // Ajustado
@@ -427,23 +427,23 @@ const styles = StyleSheet.create({
     paddingLeft: 5, // Pequeno padding à esquerda para o círculo do ícone
     paddingRight: 15, // Padding à direita para o TextInput e o olho
   },
-  iconCircle: { // Estilo para o círculo do ícone dentro do input
-    width: 50,   // Tamanho do círculo
-    height: 50, // Tamanho do círculo
-    right: 2, // Mantido conforme sua solicitação
-    borderRadius: 40, // Metade da largura/altura para ser um círculo perfeito
+ iconCircle: {
+    width: 50,
+    height: 50,
+    right: 2,
+    borderRadius: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF', // Fundo branco para o círculo
-    borderWidth: 1,
-    borderColor: '#EBF3FF', // Borda azul clara como na imagem
-    shadowColor: 'rgba(50, 50, 50, 0.7)', // Sombra cinza escura para o fundo (ajustei a opacidade para um valor válido e mais visível)
+    backgroundColor: '#FFFFFF',
+    borderWidth: 24.8,
+    borderColor: 'rgba(178, 139, 202, 0.19)',
+    shadowColor: 'rgba(178, 139, 202, 0.81)',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1, // Mantido conforme sua solicitação
-    shadowRadius: 15, // Mantido para um efeito de brilho/sombra espalhado e robusto
-    elevation: 8,        // Mantido para um efeito mais sofisticado no Android
-    marginRight: 10, // Espaço entre o círculo do ícone e o TextInput
-},
+    shadowOpacity: 1,
+    shadowRadius: 15,
+    elevation: 8,
+    marginRight: 10,
+  },
   input: {
     flex: 1, // Faz com que o TextInput ocupe o espaço restante
     fontSize: 15, // Ajustado

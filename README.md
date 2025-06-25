@@ -1,6 +1,6 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/techleadevelopers/limpe-ja-app/main/LimpeJaApp/assets/images/cleaning_app_logo.png" alt="Cleaning-App Logo" width="180" style="border-radius: 20px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);">
-  <h1 style="color: #2c3e50; font-size: 2.8em; margin-top: 15px; margin-bottom: 10px;">Cleaning-App ✨🧹</h1>
+  <img src="https://raw.githubusercontent.com/techleadevelopers/limpe-ja-app/main/LimpeJaApp/assets/images/LimpeJá_app_logo.png" alt="LimpeJá-App Logo" width="180" style="border-radius: 20px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);">
+  <h1 style="color: #2c3e50; font-size: 2.8em; margin-top: 15px; margin-bottom: 10px;">LimpeJá App ✨🧹</h1>
   <p style="color: #7f8c8d; font-size: 1.2em; margin-bottom: 25px;">Seu marketplace de confiança para encontrar e agendar os melhores profissionais de limpeza da sua região!</p>
 
   <p style="margin-bottom: 30px;">
@@ -64,7 +64,7 @@
     <li style="margin-bottom: 8px;"><a href="#-contribuindo" style="color: #3498db; text-decoration: none; font-weight: bold;">🤝 Contribuindo</a></li>
     <li style="margin-bottom: 8px;"><a href="#-licença" style="color: #3498db; text-decoration: none; font-weight: bold;">📜 Licença</a></li>
     <li style="margin-bottom: 8px;"><a href="#-contato" style="color: #3498db; text-decoration: none; font-weight: bold;">📞 Contato</a></li>
-    <li style="margin-bottom: 8px;"><a href="#-cleaning-ganhos-nossa-estratégia-de-monetização" style="color: #3498db; text-decoration: none; font-weight: bold;">💰 Cleaning Ganhos: Nossa Estratégia de Monetização</a></li>
+    <li style="margin-bottom: 8px;"><a href="#-LimpeJá-ganhos-nossa-estratégia-de-monetização" style="color: #3498db; text-decoration: none; font-weight: bold;">💰 LimpeJá Ganhos: Nossa Estratégia de Monetização</a></li>
     <li style="margin-bottom: 8px;"><a href="#️-roadmap-e-próximas-etapas" style="color: #3498db; text-decoration: none; font-weight: bold;">🛣️ Roadmap e Próximas Etapas</a></li>
     <li style="margin-bottom: 8px;"><a href="#-recursos-e-suporte" style="color: #3498db; text-decoration: none; font-weight: bold;">📚 Recursos e Suporte</a></li>
   </ul>
@@ -73,11 +73,11 @@
 <div style="background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); margin-bottom: 40px;">
   <h2 id="-sobre-o-projeto" style="color: #34495e; font-size: 2em; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 20px;">📖 Sobre o Projeto</h2>
   <p style="color: #555; line-height: 1.6;">
-    O Cleaning visa revolucionar a forma como serviços de limpeza são contratados e gerenciados. Para clientes, oferecemos uma plataforma intuitiva para descobrir profissionais qualificados, verificar avaliações, agendar serviços com datas e horários flexíveis, e realizar pagamentos seguros. Para os profissionais de limpeza, o Cleaning é uma ferramenta poderosa para expandir sua clientela, gerenciar sua agenda de forma autônoma, e receber pagamentos de forma garantida e simplificada.
+    O LimpeJá visa revolucionar a forma como serviços de limpeza são contratados e gerenciados. Para clientes, oferecemos uma plataforma intuitiva para descobrir profissionais qualificados, verificar avaliações, agendar serviços com datas e horários flexíveis, e realizar pagamentos seguros. Para os profissionais de limpeza, o LimpeJá é uma ferramenta poderosa para expandir sua clientela, gerenciar sua agenda de forma autônoma, e receber pagamentos de forma garantida e simplificada.
     <span style="font-size: 0.9em; color: #888;">[INDEX_1]</span>
   </p>
   <p style="color: #555; line-height: 1.6;">
-    Construído com tecnologia de ponta, o aplicativo oferece uma experiência de usuário fluida e moderna, tanto para quem busca um ambiente limpo quanto para quem oferece o serviço de limpeza. O setor de limpeza no Brasil se consolidou como uma indústria estratégica e essencial, com a valorização da higiene intensificada após a pandemia de COVID-19, o que representa uma oportunidade estrutural para o Cleaning.
+    Construído com tecnologia de ponta, o aplicativo oferece uma experiência de usuário fluida e moderna, tanto para quem busca um ambiente limpo quanto para quem oferece o serviço de limpeza. O setor de limpeza no Brasil se consolidou como uma indústria estratégica e essencial, com a valorização da higiene intensificada após a pandemia de COVID-19, o que representa uma oportunidade estrutural para o LimpeJá.
     <span style="font-size: 0.9em; color: #888;">[INDEX_2]</span>
   </p>
 </div>
@@ -112,7 +112,7 @@
 <div style="background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); margin-bottom: 40px;">
   <h2 id="️-tecnologias-principais" style="color: #34495e; font-size: 2em; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 20px;">🛠️ Tecnologias Principais</h2>
   <p style="color: #555; line-height: 1.6; margin-bottom: 20px;">
-    O projeto Cleaning é construído sobre uma pilha tecnológica robusta e moderna, garantindo eficiência e escalabilidade em todas as camadas.
+    O projeto LimpeJá é construído sobre uma pilha tecnológica robusta e moderna, garantindo eficiência e escalabilidade em todas as camadas.
   </p>
   <div style="display: flex; flex-wrap: wrap; justify-content: space-around;">
     <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); width: 45%; min-width: 300px; margin: 10px;">
@@ -156,20 +156,20 @@
 <div style="background-color: #f8f9fa; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); margin-bottom: 40px;">
   <h2 id="-arquitetura-do-sistema" style="color: #34495e; font-size: 2em; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 20px;">🔩 Arquitetura do Sistema</h2>
   <p style="color: #555; line-height: 1.6; margin-bottom: 20px;">
-    O projeto Cleaning adota uma arquitetura em camadas clara, dividida principalmente entre o Backend (API) e o Frontend (Aplicativo Móvel), que se comunicam através de APIs RESTful e WebSockets.
+    O projeto LimpeJá adota uma arquitetura em camadas clara, dividida principalmente entre o Backend (API) e o Frontend (Aplicativo Móvel), que se comunicam através de APIs RESTful e WebSockets.
   </p>
 
   <div style="background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); margin-bottom: 20px;">
     <h3 id="visão-geral-e-propósito-do-backend" style="color: #2c3e50; font-size: 1.5em; margin-bottom: 15px;">Visão Geral e Propósito do Backend</h3>
     <p style="color: #555; line-height: 1.6;">
-      O backend do Cleaning é a camada de serviço que gerencia toda a lógica de negócios, persistência de dados e a comunicação com o frontend. Construído com NestJS, o backend é responsável por conectar clientes e provedores, facilitando agendamentos, pagamentos, chat e avaliações. Sua arquitetura modular e escalável garante robustez e alta performance.
+      O backend do LimpeJá é a camada de serviço que gerencia toda a lógica de negócios, persistência de dados e a comunicação com o frontend. Construído com NestJS, o backend é responsável por conectar clientes e provedores, facilitando agendamentos, pagamentos, chat e avaliações. Sua arquitetura modular e escalável garante robustez e alta performance.
       <span style="font-size: 0.9em; color: #888;">[INDEX_1]</span>
     </p>
   </div>
 
   <div style="background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); margin-bottom: 20px;">
     <h3 id="arquitetura-geral-e-fluxo-de-requisição" style="color: #2c3e50; font-size: 1.5em; margin-bottom: 15px;">Arquitetura Geral e Fluxo de Requisição</h3>
-    <p style="color: #555; line-height: 1.6;">O fluxo de uma requisição típica no sistema Cleaning segue o seguinte caminho:</p>
+    <p style="color: #555; line-height: 1.6;">O fluxo de uma requisição típica no sistema LimpeJá segue o seguinte caminho:</p>
     <ol style="color: #555; line-height: 1.6; padding-left: 20px;">
       <li style="margin-bottom: 10px;"><strong>Cliente (Usuário):</strong> Interage com a interface do usuário no Frontend (Aplicativo Móvel). <span style="font-size: 0.9em; color: #888;">[INDEX_1]</span></li>
       <li style="margin-bottom: 10px;"><strong>Frontend (Aplicativo Móvel):</strong> Coleta e valida os dados de entrada do usuário, realiza chamadas a serviços internos, formata a requisição (HTTP ou WebSocket) e a envia para o Backend, incluindo o token JWT no cabeçalho <code>Authorization</code> para requisições protegidas. <span style="font-size: 0.9em; color: #888;">[INDEX_1]</span></li>
@@ -223,7 +223,7 @@
 
   <div style="background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); margin-bottom: 20px;">
     <h3 id="princípios-de-design-e-padrões-de-projeto" style="color: #2c3e50; font-size: 1.5em; margin-bottom: 15px;">Princípios de Design e Padrões de Projeto</h3>
-    <p style="color: #555; line-height: 1.6;">O projeto Cleaning adere a princípios de design e padrões de projeto que promovem a qualidade, manutenibilidade e escalabilidade em todo o stack. <span style="font-size: 0.9em; color: #888;">[INDEX_1]</span></p>
+    <p style="color: #555; line-height: 1.6;">O projeto LimpeJá adere a princípios de design e padrões de projeto que promovem a qualidade, manutenibilidade e escalabilidade em todo o stack. <span style="font-size: 0.9em; color: #888;">[INDEX_1]</span></p>
     <ul style="list-style-type: none; padding: 0; color: #555; line-height: 1.6;">
       <li style="margin-bottom: 8px;"><strong style="color: #3498db;">Arquitetura em Camadas:</strong> Tanto o frontend quanto o backend seguem uma arquitetura em camadas clara (Controladores/Telas, Serviços/Lógica de Negócios, Acesso a Dados), promovendo a separação de preocupações. <span style="font-size: 0.9em; color: #888;">[INDEX_1]</span></li>
       <li style="margin-bottom: 8px;"><strong style="color: #3498db;">Data Transfer Objects (DTOs):</strong> Utilização rigorosa de DTOs para validação de entrada e tipagem de saída em todas as interações API, garantindo a integridade e segurança dos dados. <span style="font-size: 0.9em; color: #888;">[INDEX_1]</span></li>
@@ -243,7 +243,7 @@
 <div style="background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); margin-bottom: 40px;">
   <h2 id="-conexão-frontend-backend-1" style="color: #34495e; font-size: 2em; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 20px;">🔗 Conexão Frontend-Backend</h2>
   <p style="color: #555; line-height: 1.6; margin-bottom: 20px;">
-    A interligação entre o Frontend (React Native/Expo) e o Backend (NestJS) do projeto Cleaning é um pilar fundamental da arquitetura, garantindo comunicação eficiente e segura.
+    A interligação entre o Frontend (React Native/Expo) e o Backend (NestJS) do projeto LimpeJá é um pilar fundamental da arquitetura, garantindo comunicação eficiente e segura.
     <span style="font-size: 0.9em; color: #888;">[INDEX_1]</span>
   </p>
   <ul style="list-style-type: none; padding: 0; color: #555; line-height: 1.6;">
@@ -349,13 +349,13 @@
 <div style="background-color: #f8f9fa; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); margin-bottom: 40px;">
   <h2 id="-estrutura-do-projeto" style="color: #34495e; font-size: 2em; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 20px;">📁 Estrutura do Projeto</h2>
   <p style="color: #555; line-height: 1.6; margin-bottom: 20px;">
-    O projeto Cleaning é um monorepo, contendo as pastas para o frontend (<code>LimpeJaApp/</code>) e para o backend (<code>backend-cleaning/</code>).
+    O projeto LimpeJá é um monorepo, contendo as pastas para o frontend (<code>LimpeJaApp/</code>) e para o backend (<code>backend-LimpeJá/</code>).
   </p>
 
   <div style="background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); margin-bottom: 20px;">
     <h3 id="estrutura-de-pastas-frontend" style="color: #2c3e50; font-size: 1.5em; margin-bottom: 15px;">Estrutura de Pastas (Frontend)</h3>
     <pre style="background-color: #ecf0f1; padding: 15px; border-radius: 5px; overflow-x: auto; color: #34495e;"><code>
-CleaningApp/
+LimpeJáApp/
 ├── app/
 │   ├── (auth)/ # Fluxo de Autenticação
 │   │   ├── api/
@@ -556,7 +556,7 @@ CleaningApp/
     <pre style="background-color: #ecf0f1; padding: 15px; border-radius: 5px; overflow-x: auto; color: #34495e;"><code>
  
  
- backend-cleaning/
+ backend-LimpeJá/
 
 ├── dist/
 
@@ -874,14 +874,14 @@ npm install # ou yarn install
 cd ..</code></pre>
       </li>
       <li style="margin-bottom: 10px;"><strong>Instale as dependências do Backend:</strong>
-        <pre style="background-color: #ecf0f1; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 5px; color: #34495e;"><code>cd backend-cleaning
+        <pre style="background-color: #ecf0f1; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 5px; color: #34495e;"><code>cd backend-LimpeJá
 npm install # ou yarn install
 cd ..</code></pre>
       </li>
       <li style="margin-bottom: 10px;"><strong>Configure o banco de dados (PostgreSQL com Docker):</strong>
         <ul style="list-style-type: disc; padding-left: 20px; margin-top: 5px;">
-          <li style="margin-bottom: 5px;">Crie um arquivo <code>.env</code> na raiz da pasta <code>backend-cleaning</code> com as variáveis de ambiente do banco de dados. Exemplo:
-            <pre style="background-color: #ecf0f1; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 5px; color: #34495e;"><code>DATABASE_URL="postgresql://user:password@localhost:5432/cleaning_db"
+          <li style="margin-bottom: 5px;">Crie um arquivo <code>.env</code> na raiz da pasta <code>backend-LimpeJá</code> com as variáveis de ambiente do banco de dados. Exemplo:
+            <pre style="background-color: #ecf0f1; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 5px; color: #34495e;"><code>DATABASE_URL="postgresql://user:password@localhost:5432/LimpeJá_db"
 JWT_SECRET="your_jwt_secret"
 JWT_EXPIRATION_TIME="1h"</code></pre>
           </li>
@@ -889,7 +889,7 @@ JWT_EXPIRATION_TIME="1h"</code></pre>
             <pre style="background-color: #ecf0f1; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 5px; color: #34495e;"><code>docker-compose up -d postgres # Assumindo que você tem um docker-compose.yml configurado para o postgres</code></pre>
           </li>
           <li style="margin-bottom: 5px;">Execute as migrações do Prisma para criar o esquema do banco de dados:
-            <pre style="background-color: #ecf0f1; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 5px; color: #34495e;"><code>cd backend-cleaning
+            <pre style="background-color: #ecf0f1; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 5px; color: #34495e;"><code>cd backend-LimpeJá
 npx prisma migrate dev --name init
 npx prisma generate
 cd ..</code></pre>
@@ -903,7 +903,7 @@ cd ..</code></pre>
     <h3 id="rodando-localmente" style="color: #2c3e50; font-size: 1.5em; margin-bottom: 15px;">Rodando Localmente</h3>
     <ol style="list-style-type: decimal; padding-left: 20px; color: #555; line-height: 1.6;">
       <li style="margin-bottom: 10px;"><strong>Inicie o Backend:</strong>
-        <pre style="background-color: #ecf0f1; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 5px; color: #34495e;"><code>cd backend-cleaning
+        <pre style="background-color: #ecf0f1; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 5px; color: #34495e;"><code>cd backend-LimpeJá
 npm run start:dev # ou yarn start:dev</code></pre>
         <p style="margin-top: 5px; color: #555;">O backend estará disponível em <code>http://localhost:3000</code> (ou na porta configurada).</p>
       </li>
@@ -968,44 +968,44 @@ npx expo start</code></pre>
 </div>
 
 <div style="background-color: #f8f9fa; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); margin-bottom: 40px;">
-  <h2 id="-cleaning-ganhos-nossa-estratégia-de-monetização" style="color: #34495e; font-size: 2em; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 20px;">💰 Cleaning Ganhos: Nossa Estratégia de Monetização</h2>
+  <h2 id="-LimpeJá-ganhos-nossa-estratégia-de-monetização" style="color: #34495e; font-size: 2em; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 20px;">💰 LimpeJá Ganhos: Nossa Estratégia de Monetização</h2>
   <p style="color: #555; line-height: 1.6; margin-bottom: 20px;">
-    O Cleaning foi concebido para ser uma plataforma que beneficia tanto os clientes em busca de serviços de limpeza de qualidade quanto os profissionais que desejam expandir sua base de clientes e gerenciar seus serviços de forma eficiente. Nossa estratégia de monetização é transparente e se baseia no sucesso mútuo, inspirada em modelos de marketplace consolidados como o Airbnb, mas aplicada ao universo dos serviços de limpeza.
+    O LimpeJá foi concebido para ser uma plataforma que beneficia tanto os clientes em busca de serviços de limpeza de qualidade quanto os profissionais que desejam expandir sua base de clientes e gerenciar seus serviços de forma eficiente. Nossa estratégia de monetização é transparente e se baseia no sucesso mútuo, inspirada em modelos de marketplace consolidados como o Airbnb, mas aplicada ao universo dos serviços de limpeza.
   </p>
-  <h3 style="color: #2c3e50; font-size: 1.5em; margin-bottom: 15px;">Como o Cleaning Gera Receita:</h3>
+  <h3 style="color: #2c3e50; font-size: 1.5em; margin-bottom: 15px;">Como o LimpeJá Gera Receita:</h3>
   <p style="color: #555; line-height: 1.6; margin-bottom: 15px;">
-    A principal fonte de receita do Cleaning virá de uma <strong style="color: #2ecc71;">comissão percentual cobrada sobre o valor de cada serviço de limpeza que é agendado e efetivamente pago através da plataforma.</strong>
+    A principal fonte de receita do LimpeJá virá de uma <strong style="color: #2ecc71;">comissão percentual cobrada sobre o valor de cada serviço de limpeza que é agendado e efetivamente pago através da plataforma.</strong>
   </p>
   <ol style="list-style-type: decimal; padding-left: 20px; color: #555; line-height: 1.6;">
     <li style="margin-bottom: 15px;"><strong>Para o Profissional (Prestador de Serviço):</strong>
       <ul style="list-style-type: disc; padding-left: 20px; margin-top: 5px;">
         <li style="margin-bottom: 5px;">Ao se cadastrar, o profissional define seus preços para os diferentes tipos de serviço que oferece (ex: por hora, por tipo de limpeza, etc.).</li>
-        <li style="margin-bottom: 5px;">Quando um cliente contrata e paga por um serviço através do Cleaning, o valor total é processado pela plataforma.</li>
-        <li style="margin-bottom: 5px;">O Cleaning repassa o valor ao profissional, deduzindo uma taxa de serviço (comissão) previamente acordada e transparente. Esta taxa será nossa principal fonte de receita.</li>
+        <li style="margin-bottom: 5px;">Quando um cliente contrata e paga por um serviço através do LimpeJá, o valor total é processado pela plataforma.</li>
+        <li style="margin-bottom: 5px;">O LimpeJá repassa o valor ao profissional, deduzindo uma taxa de serviço (comissão) previamente acordada e transparente. Esta taxa será nossa principal fonte de receita.</li>
         <li style="margin-bottom: 5px;"><strong style="color: #2ecc71;">Benefícios para o Profissional:</strong> Acesso a uma ampla base de clientes, ferramentas de gerenciamento de agenda, marketing da plataforma, segurança no recebimento e processamento de pagamentos, suporte.</li>
       </ul>
     </li>
     <li style="margin-bottom: 15px;"><strong>Para o Cliente:</strong>
       <ul style="list-style-type: disc; padding-left: 20px; margin-top: 5px;">
-        <li style="margin-bottom: 5px;">O cliente vê o preço total do serviço (que já inclui a porção do profissional e, implicitamente, a margem que permite a comissão do Cleaning).</li>
-        <li style="margin-bottom: 5px;">Em alguns modelos de marketplace, uma pequena taxa de conveniência/serviço pode ser adicionada ao cliente, mas o modelo principal geralmente foca na comissão sobre o valor pago ao prestador. Para o Cleaning, podemos iniciar focando na comissão sobre o prestador para manter a atratividade para o cliente.</li>
+        <li style="margin-bottom: 5px;">O cliente vê o preço total do serviço (que já inclui a porção do profissional e, implicitamente, a margem que permite a comissão do LimpeJá).</li>
+        <li style="margin-bottom: 5px;">Em alguns modelos de marketplace, uma pequena taxa de conveniência/serviço pode ser adicionada ao cliente, mas o modelo principal geralmente foca na comissão sobre o valor pago ao prestador. Para o LimpeJá, podemos iniciar focando na comissão sobre o prestador para manter a atratividade para o cliente.</li>
         <li style="margin-bottom: 5px;"><strong style="color: #3498db;">Benefícios para o Cliente:</strong> Conveniência para encontrar e agendar profissionais qualificados, variedade de escolha, sistema de avaliações para confiança, processo de pagamento simplificado e seguro, e a garantia de uma plataforma intermediando o serviço.</li>
       </ul>
     </li>
   </ol>
   <h3 style="color: #2c3e50; font-size: 1.5em; margin-bottom: 15px;">Transparência e Valor:</h3>
   <p style="color: #555; line-height: 1.6;">
-    É crucial que a taxa de comissão seja clara para os profissionais e que o valor oferecido pela plataforma (marketing, base de clientes, ferramentas, segurança) justifique essa taxa. O sucesso do Cleaning dependerá da criação de um ecossistema onde tanto clientes quanto profissionais vejam vantagens claras em usar a plataforma, resultando em um volume saudável de agendamentos e, consequentemente, receita para o aplicativo.
+    É crucial que a taxa de comissão seja clara para os profissionais e que o valor oferecido pela plataforma (marketing, base de clientes, ferramentas, segurança) justifique essa taxa. O sucesso do LimpeJá dependerá da criação de um ecossistema onde tanto clientes quanto profissionais vejam vantagens claras em usar a plataforma, resultando em um volume saudável de agendamentos e, consequentemente, receita para o aplicativo.
   </p>
   <p style="color: #555; line-height: 1.6;">
-    Este modelo permite que o Cleaning cresça conforme o volume de transações na plataforma aumenta, alinhando nossos ganhos com o sucesso dos profissionais parceiros.
+    Este modelo permite que o LimpeJá cresça conforme o volume de transações na plataforma aumenta, alinhando nossos ganhos com o sucesso dos profissionais parceiros.
   </p>
 </div>
 
 <div style="background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); margin-bottom: 40px;">
   <h2 id="️-roadmap-e-próximas-etapas" style="color: #34495e; font-size: 2em; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 20px;">🛣️ Roadmap e Próximas Etapas</h2>
   <p style="color: #555; line-height: 1.6; margin-bottom: 20px;">
-    O projeto Cleaning está em um estágio avançado de desenvolvimento, com a maioria dos fluxos essenciais implementados. As próximas etapas focam em aprimoramentos, expansão de funcionalidades e otimização:
+    O projeto LimpeJá está em um estágio avançado de desenvolvimento, com a maioria dos fluxos essenciais implementados. As próximas etapas focam em aprimoramentos, expansão de funcionalidades e otimização:
     <span style="font-size: 0.9em; color: #888;">[INDEX_1]</span>
   </p>
   <ol style="list-style-type: decimal; padding-left: 20px; color: #555; line-height: 1.6;">
@@ -1057,7 +1057,7 @@ npx expo start</code></pre>
 <div style="background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); margin-bottom: 40px;">
   <h2 id="-recursos-e-suporte" style="color: #34495e; font-size: 2em; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 20px;">📚 Recursos e Suporte</h2>
   <p style="color: #555; line-height: 1.6; margin-bottom: 20px;">
-    Para informações detalhadas e suporte sobre as tecnologias e o ecossistema do projeto Cleaning, consulte os seguintes recursos oficiais:
+    Para informações detalhadas e suporte sobre as tecnologias e o ecossistema do projeto LimpeJá, consulte os seguintes recursos oficiais:
     <span style="font-size: 0.9em; color: #888;">[INDEX_1]</span>
   </p>
   <ul style="list-style-type: none; padding: 0; color: #555; line-height: 1.6;">

@@ -164,19 +164,21 @@ const styles = StyleSheet.create({
   navBar: {
     flexDirection: 'row',
     minHeight: 15,
-    width: '98%', // Ajusta a largura para 90% da tela para ter um pouco de margem
+    width: '92%', // Ajusta a largura para 90% da tela para ter um pouco de margem
     alignSelf: 'center', // Centraliza a navBar na tela
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: '#B2B2B2',
-    backgroundColor: 'rgba(0, 123, 255, 0.9)', // Azul médio com 80% de opacidade,
+    backgroundColor: 'rgb(0, 123, 255)', // Azul médio com 80% de opacidade,
     alignItems: 'center',
     justifyContent: 'space-around', // Distribui os itens uniformemente com espaço entre eles
     paddingBottom: 1,
     paddingTop: 5,
     paddingHorizontal: 20,
-    bottom: 0,
+    bottom: 10,
     borderTopLeftRadius: 30, // Bordas arredondadas
     borderTopRightRadius: 30,
+    borderBottomLeftRadius: 30, // Bordas arredondadas
+    borderBottomRightRadius: 30,
 
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -197,11 +199,12 @@ const styles = StyleSheet.create({
   centralNavItem: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: 60, // Largura para o item central
-    height: 60, // Altura para o item central
+    width: 50, // Largura para o item central
+    height: 40, // Altura para o item central
     borderRadius: 30, // Metade da largura/altura para torná-lo circular
     backgroundColor: 'transparent', // ALTERADO: Fundo transparente
-    bottom: 25, // Move o botão central mais para cima para o efeito flutuante
+    bottom: 15, // Move o botão central mais para cima para o efeito flutuante
+    
     // REMOVIDO: propriedades de sombra para este item
     // shadowColor: '#000',
     // shadowOffset: { width: 0, height: 4 },
@@ -209,13 +212,14 @@ const styles = StyleSheet.create({
     // shadowRadius: 5,
     // elevation: 6,
   },
-  centralIconImage: {
-    width: 165, // Ajuste o tamanho da imagem para se encaixar no círculo (um pouco maior que 30 para preencher)
-    height: 165,
-    top: 1, // Ajuste para alinhar com o texto
-    left: 6, // Centraliza horizontalmente
-    resizeMode: 'contain', // Garante que a imagem inteira seja visível
-  },
+centralIconImage: {
+  width: 85,
+  height: 85,
+  top: 4,
+  left: 2,
+  resizeMode: 'contain',
+},
+
   navTexto: {
     fontSize: 10,
     color: '#A1C6E7', // Cor padrão para o texto inativo

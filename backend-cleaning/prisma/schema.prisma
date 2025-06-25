@@ -51,18 +51,18 @@ model User {
 
 // Modelo para Cliente
 model Client {
-  id          String    @id @default(uuid())
-  userId      String    @unique
-  user        User      @relation(fields: [userId], references: [id])
-  fullName    String
-  phone       String?
-  address     Address?  @relation("ClientAddress")
-  bookings    Booking[]
+  id        String    @id @default(uuid())
+  userId    String    @unique
+  user      User      @relation(fields: [userId], references: [id])
+  fullName  String
+  phone     String?
+  address   Address?  @relation("ClientAddress")
+  bookings  Booking[]
   reviewsMade Review[]  @relation("ClientReviews") // Avaliações que o cliente fez
 
   // ADICIONADO: Campos para registro de data e hora de criação/atualização do perfil do cliente
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }
 
 // Modelo para Provedor
@@ -112,7 +112,7 @@ model Address {
   client       Client?   @relation("ClientAddress", fields: [clientId], references: [id])
   provider     Provider? @relation("ProviderAddress", fields: [providerId], references: [id])
   // ADICIONADO: Relação para Booking, se um endereço pode ter múltiplos bookings
-  // bookings      Booking[] // Se um endereço pode ser usado por vários bookings. Menos comum para "endereço do serviço".
+  // bookings       Booking[] // Se um endereço pode ser usado por vários bookings. Menos comum para "endereço do serviço".
 
   // ALTERNATIVO para relação 1:1 com Booking (mais comum para endereço específico do serviço)
   booking      Booking?  @relation("BookingAddress") // Se um endereço pertence a apenas um booking
@@ -126,8 +126,8 @@ model Service {
   price            Decimal           @db.Decimal(10, 2) // CAMPO 'PRICE' ADICIONADO AQUI COM TIPO DECIMAL
   icon             String?           // Campo para armazenar o nome do arquivo do ícone da categoria
   providerServices ProviderService[]
-  createdAt        DateTime          @default(now())   // <--- ADICIONADO AQUI
-  updatedAt        DateTime          @updatedAt         // <--- ADICIONADO AQUI
+  createdAt        DateTime          @default(now())    // <--- ADICIONADO AQUI
+  updatedAt        DateTime          @updatedAt          // <--- ADICIONADO AQUI
 }
 
 // Modelo para Serviços Oferecidos por um Provedor Específico
@@ -147,11 +147,11 @@ model ProviderService {
 
 // Enum para o status do agendamento
 enum BookingStatus {
-  PENDING         // Pendente de confirmação do provedor
-  CONFIRMED       // Confirmado pelo provedor
-  COMPLETED       // Serviço concluído
-  CANCELED        // Agendamento cancelado
-  RESCHEDULED     // Agendamento reagendado
+  PENDING           // Pendente de confirmação do provedor
+  CONFIRMED         // Confirmado pelo provedor
+  COMPLETED         // Serviço concluído
+  CANCELED          // Agendamento cancelado
+  RESCHEDULED       // Agendamento reagendado
 }
 
 // Modelo de Agendamento
@@ -226,26 +226,27 @@ model Review {
   rating     Int
   comment    String?
   createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt // <--- LINHA ADICIONADA AQUI!
   client     Client   @relation("ClientReviews", fields: [clientId], references: [id])
   provider   Provider @relation("ProviderReviews", fields: [providerId], references: [id])
 
   // NOVO: Adicionado índice único composto para garantir que um cliente só pode avaliar
   // um provedor para um booking específico uma única vez.
   // Isso não impedirá que um provedor tenha múltiplas avaliações (de diferentes bookings/clientes).
-  @@unique([bookingId, clientId, providerId]) // <--- Esta é a linha integrada
+  @@unique([bookingId, clientId, providerId])
 }
 
 // Modelo de Oferta/Promoção
 model Offer {
-  id                 String    @id @default(uuid())
-  title              String
-  description        String?
-  discountPercentage Float?    // Desconto em percentual
-  fixedDiscountAmount Float?    // Desconto em valor fixo
-  validUntil         DateTime  // Data de expiração da oferta
-  imageUrl           String?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  id                String   @id @default(uuid())
+  title             String
+  description       String?
+  discountPercentage Float?   // Desconto em percentual
+  fixedDiscountAmount Float?   // Desconto em valor fixo
+  validUntil        DateTime // Data de expiração da oferta
+  imageUrl          String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 
 // Enum para o tipo de transação financeira

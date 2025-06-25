@@ -1,4 +1,3 @@
-// LimpeJaApp/app/(client)/bookings/schedule-service.tsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     View,
@@ -14,7 +13,7 @@ import {
     FlatList,
     Animated,
     Easing,
-    TextInput // Adicionado para demonstração de feedback em input
+    TextInput
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -40,15 +39,19 @@ import { CreateBookingDto, BookingAddress, BookingDetails } from '../../types/ba
 // Importar formatDate de utils/helpers
 import { formatDate } from '../../../utils/helpers';
 
-// --- Importar novos componentes de UI ---
+// --- Importar COMPONENTES DE UI ---
 import CalendarHeader from './components/schedule/CalendarHeader';
-import TimeSlotButton from './components/schedule/TimeSlotButton';
 import TimeSlotsSection from './components/schedule/TimeSlotsSection';
+import ProviderBrief from './components/schedule/ProviderBrief';
+import AddressSection from './components/schedule/AddressSection';
 
 // --- Constantes para a UI ---
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const MONTH_NAMES_PT = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const DAY_NAMES_PT = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"];
+// HEADER_HEIGHT_ADJUST será usado para o padding superior do nosso cabeçalho customizado.
+// Inclui a altura da barra de status para iOS.
+const HEADER_HEIGHT_ADJUST = Platform.OS === 'ios' ? 90 : 60;
 
 // Cache para disponibilidade do provedor por data
 const availabilityCache = new Map<string, { available: ProviderAvailability[], occupiedTimes: string[] }>();
@@ -58,10 +61,8 @@ export default function ScheduleServiceScreen() {
     const { user } = useAuth();
     const { providerId: paramProviderId, serviceId: paramServiceId } = useLocalSearchParams<{ providerId?: string; serviceId?: string }>();
 
-    // --- ESTADOS ---
     const [provider, setProvider] = useState<ProviderDisplayInfo | null>(null);
     const [selectedProviderService, setSelectedProviderService] = useState<ProviderServiceOffering | null>(null);
-    const [availableSlots, setAvailableSlots] = useState<ProviderAvailability[]>([]);
     const [selectedDate, setSelectedDate] = useState<Date>(new Date());
     const [selectedTime, setSelectedTime] = useState<string | null>(null);
     const [address, setAddress] = useState<BookingAddress>({
@@ -79,7 +80,6 @@ export default function ScheduleServiceScreen() {
     const [isBooking, setIsBooking] = useState(false);
     const [isFetchingSlots, setIsFetchingSlots] = useState(false);
 
-    // --- ESTADOS DA NOVA UI (para calendário, animações etc.) ---
     const [currentDisplayMonth, setCurrentDisplayMonth] = useState(new Date());
     const shineAnim = useRef(new Animated.Value(-SCREEN_WIDTH * 0.3)).current;
     const [calendarDays, setCalendarDays] = useState<Array<{ day: number, month: 'current' | 'prev' | 'next', dateObj: Date }>>([]);
@@ -88,52 +88,11 @@ export default function ScheduleServiceScreen() {
         Array<{ time: string; isAvailable: boolean }>
     >([]);
 
-    // Animação para feedback ao selecionar data/hora
     const selectionAnim = useRef(new Animated.Value(1)).current;
 
-    // Estado para controlar o skeleton do provedor
-    const [isProviderLoading, setIsProviderLoading] = useState(true);
-    // Estado para controlar o skeleton do endereço
-    const [isAddressLoading, setIsAddressLoading] = useState(true);
-
-    const renderStars = useCallback((rating: number | undefined) => {
-        const stars = [];
-        const actualRating = rating ?? 0;
-        const fullStars = Math.floor(actualRating);
-        const hasHalfStar = (actualRating * 2) % 2 !== 0;
-
-        for (let i = 0; i < 5; i++) {
-            let iconName: keyof typeof Ionicons.glyphMap = 'star-outline';
-            if (i < fullStars) iconName = 'star';
-            else if (hasHalfStar && i === fullStars) iconName = 'star-half-sharp';
-
-            stars.push(
-                <Ionicons
-                    key={i}
-                    name={iconName}
-                    size={16}
-                    color="#4A90E2"
-                    style={styles.ratingStarIcon}
-                />
-            );
-        }
-        return <View style={styles.ratingStarContainer}>{stars}</View>;
-    }, []);
-
-    const renderInfoChip = useCallback((iconName: keyof typeof Ionicons.glyphMap, text: string, isVerified?: boolean) => {
-        return (
-            <View style={[styles.infoChip, isVerified && styles.infoChipVerified]}>
-                <Ionicons name={iconName} size={16} color={isVerified ? '#2A72E7' : '#555'} />
-                <Text style={[styles.infoChipText, isVerified && styles.infoChipTextVerified]}>{text}</Text>
-            </View>
-        );
-    }, []);
-
-    // --- FUNÇÕES DE CALENDÁRIO (MOVidas para cima) ---
     const handlePrevMonth = useCallback(() => {
         setCurrentDisplayMonth(prev => {
             const newDate = new Date(prev.getFullYear(), prev.getMonth() - 1, 1);
-            // Pré-carrega o mês anterior no cache
             prefetchAvailability(provider?.id, newDate);
             return newDate;
         });
@@ -142,7 +101,6 @@ export default function ScheduleServiceScreen() {
     const handleNextMonth = useCallback(() => {
         setCurrentDisplayMonth(prev => {
             const newDate = new Date(prev.getFullYear(), prev.getMonth() + 1, 1);
-            // Pré-carrega o mês seguinte no cache
             prefetchAvailability(provider?.id, newDate);
             return newDate;
         });
@@ -156,7 +114,6 @@ export default function ScheduleServiceScreen() {
             return;
         }
         setSelectedDate(dateObj);
-        // Animação ao selecionar o dia
         Animated.sequence([
             Animated.timing(selectionAnim, { toValue: 1.1, duration: 100, useNativeDriver: true, easing: Easing.out(Easing.ease) }),
             Animated.spring(selectionAnim, { toValue: 1, friction: 5, useNativeDriver: true }),
@@ -167,7 +124,6 @@ export default function ScheduleServiceScreen() {
         const selectedSlot = displaySlotsInfo.find(slot => slot.time === time);
         if (selectedSlot?.isAvailable) {
             setSelectedTime(time);
-            // Animação ao selecionar o horário
             Animated.sequence([
                 Animated.timing(selectionAnim, { toValue: 1.05, duration: 80, useNativeDriver: true, easing: Easing.out(Easing.ease) }),
                 Animated.spring(selectionAnim, { toValue: 1, friction: 4, useNativeDriver: true }),
@@ -230,7 +186,6 @@ export default function ScheduleServiceScreen() {
         }
     }, [user, provider, selectedDate, selectedTime, address, selectedProviderService, notes, router]);
 
-    // Função para pré-carregar a disponibilidade
     const prefetchAvailability = useCallback(async (provId: string | undefined, date: Date) => {
         if (!provId) return;
 
@@ -238,39 +193,31 @@ export default function ScheduleServiceScreen() {
         const cacheKey = `${provId}-${dateString}`;
 
         if (availabilityCache.has(cacheKey)) {
-            return; // Já está no cache
+            return;
         }
 
         try {
-            // console.log(`[Prefetch] Carregando disponibilidade para ${dateString}`);
             const response = await getProviderAvailability(provId, dateString);
             availabilityCache.set(cacheKey, response);
-            // console.log(`[Prefetch] Disponibilidade para ${dateString} armazenada em cache.`);
         } catch (error) {
             console.error(`[Prefetch] Erro ao pré-carregar disponibilidade para ${dateString}:`, error);
         }
     }, []);
 
-    // --- EFEITOS DE CARREGAMENTO INICIAL E SKELETONS ---
     useEffect(() => {
         const loadInitialData = async () => {
             setIsLoading(true);
-            setIsProviderLoading(true); // Ativa skeleton do provedor
-            setIsAddressLoading(true); // Ativa skeleton do endereço
 
             if (!paramProviderId || !paramServiceId || !user?.id) {
                 Alert.alert("Erro de Navegação", "Dados essenciais ausentes. Tente novamente.");
                 router.replace('/explore');
                 setIsLoading(false);
-                setIsProviderLoading(false);
-                setIsAddressLoading(false);
                 return;
             }
 
             try {
                 const fetchedProvider = await getProviderDetails(paramProviderId);
                 setProvider(fetchedProvider);
-                setIsProviderLoading(false); // Desativa skeleton do provedor
 
                 const foundService = fetchedProvider.providerServices?.find(
                     ps => ps.id === paramServiceId && ps.service && ps.service.id && ps.service.name
@@ -300,11 +247,9 @@ export default function ScheduleServiceScreen() {
                         "Seu endereço não está completo. Por favor, preencha para prosseguir."
                     );
                 }
-                setIsAddressLoading(false); // Desativa skeleton do endereço
 
                 setSelectedDate(new Date());
 
-                // Pré-carregar disponibilidade para o mês atual e próximo/anterior
                 const today = new Date();
                 const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
                 const prevMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
@@ -318,14 +263,11 @@ export default function ScheduleServiceScreen() {
                 router.replace('/explore');
             } finally {
                 setIsLoading(false);
-                setIsProviderLoading(false);
-                setIsAddressLoading(false);
             }
         };
         loadInitialData();
     }, [paramProviderId, user?.id, user?.address, paramServiceId, router, prefetchAvailability]);
 
-    // --- EFEITO DE ANIMAÇÃO DO SHINE (EXISTENTE) ---
     const animateShine = useCallback(() => {
         shineAnim.setValue(-SCREEN_WIDTH * 0.3);
         Animated.timing(shineAnim, {
@@ -340,7 +282,6 @@ export default function ScheduleServiceScreen() {
         animateShine();
     }, [animateShine]);
 
-    // --- FUNÇÕES DE CALENDÁRIO (EXISTENTE) ---
     const generateCalendarDays = useCallback((dateInMonth: Date) => {
         const year = dateInMonth.getFullYear();
         const month = dateInMonth.getMonth();
@@ -371,7 +312,6 @@ export default function ScheduleServiceScreen() {
         generateCalendarDays(currentDisplayMonth);
     }, [currentDisplayMonth, generateCalendarDays]);
 
-    // --- EFEITO DE CARREGAMENTO E PROCESSAMENTO DE SLOTS ---
     useEffect(() => {
         const fetchAndProcessSlotsForDate = async () => {
             if (!provider?.id || !selectedDate) {
@@ -386,13 +326,11 @@ export default function ScheduleServiceScreen() {
 
             let backendResponse;
             if (availabilityCache.has(cacheKey)) {
-                backendResponse = availabilityCache.get(cacheKey); // Usa o cache se disponível
-                // console.log(`[Cache Hit] Usando dados do cache para ${dateString}`);
+                backendResponse = availabilityCache.get(cacheKey);
             } else {
                 try {
                     backendResponse = await getProviderAvailability(provider.id, dateString);
-                    availabilityCache.set(cacheKey, backendResponse); // Armazena no cache
-                    // console.log(`[Cache Miss] Dados para ${dateString} buscados e armazenados em cache.`);
+                    availabilityCache.set(cacheKey, backendResponse);
                 } catch (err: any) {
                     console.error("Erro ao carregar horários para data:", err.response?.data || err.message);
                     Alert.alert("Erro", err.response?.data?.message || "Não foi possível carregar os horários disponíveis.");
@@ -406,6 +344,12 @@ export default function ScheduleServiceScreen() {
             const occupiedTimesFromBackend: string[] = backendResponse?.occupiedTimes || [];
             const dayOfWeekSelected = selectedDate.getDay();
 
+            const configuredStartTimesForSelectedDay = new Set(
+                providerConfiguredSlots
+                    .filter(configSlot => configSlot.dayOfWeek === dayOfWeekSelected)
+                    .map(configSlot => configSlot.startTime)
+            );
+
             const allDisplayableTimes: string[] = [];
             const startHour = 8;
             const endHour = 20;
@@ -415,12 +359,6 @@ export default function ScheduleServiceScreen() {
                     allDisplayableTimes.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`);
                 }
             }
-
-            const configuredStartTimesForSelectedDay = new Set(
-                providerConfiguredSlots
-                    .filter(configSlot => configSlot.dayOfWeek === dayOfWeekSelected)
-                    .map(configSlot => configSlot.startTime)
-            );
 
             const finalDisplaySlots: Array<{ time: string; isAvailable: boolean }> = allDisplayableTimes.map(time => {
                 const [hours, minutes] = time.split(':').map(Number);
@@ -443,30 +381,6 @@ export default function ScheduleServiceScreen() {
         fetchAndProcessSlotsForDate();
     }, [selectedDate, provider?.id]);
 
-    // Renderiza Skeletons para o Provedor e Endereço
-    const renderProviderSkeleton = () => (
-        <View style={styles.providerBriefSkeleton}>
-            <View style={styles.providerImageSkeleton} />
-            <View style={styles.providerTextInfoSkeleton}>
-                <View style={styles.skeletonLineLarge} />
-                <View style={styles.skeletonLineSmall} />
-                <View style={styles.skeletonChipsContainer}>
-                    <View style={styles.skeletonChip} />
-                    <View style={styles.skeletonChip} />
-                </View>
-            </View>
-        </View>
-    );
-
-    const renderAddressSkeleton = () => (
-        <View style={styles.gradientAddressSectionSkeleton}>
-            <View style={styles.addressContentSkeleton}>
-                <View style={styles.mapIconSkeleton} />
-                <View style={styles.skeletonLineAddress} />
-            </View>
-        </View>
-    );
-
     if (isLoading) {
         return (
             <View style={styles.centeredFeedback}>
@@ -482,148 +396,42 @@ export default function ScheduleServiceScreen() {
 
     return (
         <View style={styles.screenContainer}>
-            <Stack.Screen options={{ headerShown: false }} />
+            {/* O Stack.Screen será configurado para não mostrar o cabeçalho nativo. */}
+            <Stack.Screen options={{ headerShown: false }} /> {/* <<< CORRIGIDO: Remover todas as opções complexas e apenas ocultar o header */}
 
-            <CalendarHeader
-                currentDisplayMonth={currentDisplayMonth}
-                onPrevMonth={handlePrevMonth}
-                onNextMonth={handleNextMonth}
-                routerBack={() => router.back()}
-                MONTH_NAMES_PT={MONTH_NAMES_PT}
-            />
+            {/* Este View agora age como o cabeçalho CUSTOMIZADO. */}
+            {/* Ele terá o padding superior para acomodar a barra de status e o background branco. */}
+            {/* O CalendarHeader será renderizado DENTRO dele, incluindo o botão de voltar. */}
+            <View style={{ paddingTop: HEADER_HEIGHT_ADJUST, backgroundColor: '#FFFFFF' }}>
+                {/* Você pode adicionar um botão de voltar aqui se o CalendarHeader não tiver um */}
+                {/* <TouchableOpacity onPress={() => router.back()} style={{ position: 'absolute', top: Platform.OS === 'ios' ? 50 : 20, left: 15, zIndex: 10 }}>
+                    <Ionicons name="arrow-back" size={24} color="#000" />
+                </TouchableOpacity> */}
+                <CalendarHeader
+                    currentDisplayMonth={currentDisplayMonth}
+                    onPrevMonth={handlePrevMonth}
+                    onNextMonth={handleNextMonth}
+                    routerBack={() => router.back()} // Mantenha isso para a lógica de voltar do CalendarHeader
+                    MONTH_NAMES_PT={MONTH_NAMES_PT}
+                />
+            </View>
 
             <ScrollView contentContainerStyle={styles.scrollContentContainer}>
-                {/* INÍCIO DO COMPONENTE PROVIDER BRIEF */}
-                {isProviderLoading ? (
-                    renderProviderSkeleton()
-                ) : (
-                    <View style={styles.providerBrief}>
-                        <Image
-                            source={{ uri: provider?.avatarUrl || 'https://via.placeholder.com/50' }}
-                            style={styles.providerImageSmall}
-                        />
-                        <View style={styles.providerTextInfo}>
-                            <View style={styles.providerNameAndRatingRow}>
-                                <Text style={styles.providerNameSmall}>{provider?.fullName}</Text>
-                                {typeof provider?.averageRating === 'number' && provider.averageRating > 0 ? (
-                                    <View style={styles.ratingContainer}>
-                                        {renderStars(provider.averageRating)}
-                                    </View>
-                                ) : (
-                                    <Text style={styles.noRatingText}>Sem avaliação</Text>
-                                )}
-                            </View>
-                            <Text style={styles.providerServiceSmall}>
-                                {selectedProviderService?.service?.name}
-                            </Text>
-                            <View style={styles.infoChipsRow}>
-                                {provider?.verificationStatus === VerificationStatus.APPROVED && (
-                                    renderInfoChip("shield-checkmark-outline", "Verificado", true)
-                                )}
-                                {typeof provider?.yearsOfExperience === 'number' && provider.yearsOfExperience > 0 && (
-                                    renderInfoChip("hourglass-outline", `${provider.yearsOfExperience}+ anos`)
-                                )}
-                            </View>
-                        </View>
-                    </View>
-                )}
-                {/* FIM DO COMPONENTE PROVIDER BRIEF */}
-
-                {/* INÍCIO DO AddressSection */}
-                {isAddressLoading ? (
-                    renderAddressSkeleton()
-                ) : (
-                    <LinearGradient
-                        colors={['#FFFFFF', '#F0F0F0']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                        style={styles.gradientAddressSection}
-                    >
-                        <BlurView intensity={90} tint="light" style={StyleSheet.absoluteFill} />
-                        <View style={styles.addressContent}>
-                            <Image
-                                source={require('../../../assets/images/icons/map.png')}
-                                style={styles.mapIcon}
-                            />
-                            <Text style={styles.addressText} numberOfLines={1} ellipsizeMode="tail">
-                                {`${address.street || ''}, ${address.number || ''}` +
-                                `${address.complement ? ` - ${address.complement}` : ''}` +
-                                `, ${address.neighborhood || ''}, ${address.city || ''}/${address.state || ''}`}
-                            </Text>
-                        </View>
-                        <Animated.View style={[styles.shineEffectContainer, { transform: [{ translateX: shineAnim }] }]}>
-                            <LinearGradient
-                                colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.5)', 'rgba(255,255,255,0)']}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 0 }}
-                                style={styles.shineGradient}
-                            />
-                        </Animated.View>
-                    </LinearGradient>
-                )}
-                {/* FIM DO AddressSection */}
-
-                {/* Seção de preenchimento de endereço se não carregado do perfil */}
-                {!isAddressLoading && !user?.address?.street && (
-                    <View style={styles.addressInputContainer}>
-                        <Text style={styles.addressInputTitle}>Preencha seu Endereço</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Rua"
-                            value={address.street}
-                            onChangeText={(text) => setAddress({ ...address, street: text })}
-                            placeholderTextColor="#888"
-                        />
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Número"
-                            value={address.number}
-                            onChangeText={(text) => setAddress({ ...address, number: text })}
-                            keyboardType="numeric"
-                            placeholderTextColor="#888"
-                        />
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Complemento (Opcional)"
-                            value={address.complement || ''}
-                            onChangeText={(text) => setAddress({ ...address, complement: text })}
-                            placeholderTextColor="#888"
-                        />
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Bairro"
-                            value={address.neighborhood}
-                            onChangeText={(text) => setAddress({ ...address, neighborhood: text })}
-                            placeholderTextColor="#888"
-                        />
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Cidade"
-                            value={address.city}
-                            onChangeText={(text) => setAddress({ ...address, city: text })}
-                            placeholderTextColor="#888"
-                        />
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Estado (Ex: SP)"
-                            value={address.state}
-                            onChangeText={(text) => setAddress({ ...address, state: text })}
-                            maxLength={2}
-                            autoCapitalize="characters"
-                            placeholderTextColor="#888"
-                        />
-                        <TextInput
-                            style={styles.input}
-                            placeholder="CEP"
-                            value={address.cep}
-                            onChangeText={(text) => setAddress({ ...address, cep: text })}
-                            keyboardType="numeric"
-                            maxLength={9} // Ex: 12345-678
-                            placeholderTextColor="#888"
-                        />
-                    </View>
-                )}
-
+                {/* INÍCIO DA INTEGRAÇÃO DOS COMPONENTES ProviderBrief e AddressSection */}
+                <ProviderBrief
+                    provider={provider}
+                    serviceName={selectedProviderService?.service?.name}
+                    isLoading={isLoading}
+                />
+                
+                <AddressSection
+                    address={address}
+                    setAddress={setAddress}
+                    shineAnim={shineAnim}
+                    isLoading={isLoading}
+                    isInputMode={!user?.address?.street || !user?.address?.number || !user?.address?.neighborhood || !user?.address?.city || !user?.address?.state}
+                />
+                {/* FIM DA INTEGRAÇÃO DOS COMPONENTES */}
 
                 <View style={styles.calendarGridContainer}>
                     <View style={styles.dayNamesRow}>
@@ -645,7 +453,7 @@ export default function ScheduleServiceScreen() {
                                         dayInfo.month !== 'current' && styles.dayCellNotInMonth,
                                         isSelected && styles.dayCellSelected,
                                         isToday && !isSelected && styles.dayCellToday,
-                                        { transform: [{ scale: isSelected ? selectionAnim : 1 }] } // Animação de escala
+                                        { transform: [{ scale: isSelected ? selectionAnim : 1 }] }
                                     ]}
                                     onPress={() => dayInfo.month === 'current' && handleDaySelect(dayInfo.dateObj)}
                                     disabled={dayInfo.month !== 'current' || isPast}
@@ -703,149 +511,11 @@ export default function ScheduleServiceScreen() {
 const styles = StyleSheet.create({
     screenContainer: { flex: 1, backgroundColor: '#FFFFFF' },
     centeredFeedback: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8F9FA' },
-    scrollContentContainer: { paddingBottom: 120 },
+    scrollContentContainer: { paddingBottom: 100 },
 
-    providerBrief: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 12,
-        backgroundColor: '#F7F9FC',
-        borderBottomWidth: 1,
-        borderBottomColor: '#E9EDF0',
-        justifyContent: 'space-between',
-    },
-    providerImageSmall: {
-        width: 70,
-        height: 70,
-        borderRadius: 25,
-        marginRight: 12,
-        borderWidth: 1,
-        borderColor: '#DDEEFF',
-        marginLeft: 8,
-        marginTop: 10,
-    },
-    providerNameAndRatingRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 0,
-    },
-    providerTextInfo: {
-        flex: 1,
-        marginRight: 10,
-        justifyContent: 'center',
-    },
-    providerNameSmall: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#333',
-        paddingTop: 22,
-        marginRight: 4,
-    },
-    providerServiceSmall: {
-        fontSize: 14,
-        color: '#555',
-    },
-    ratingContainer: {
-        flexDirection: 'row',
-        marginRight: 5,
-        alignSelf: 'center',
-        paddingTop: 22,
-        backgroundColor: 'transparent',
-        minWidth: 60,
-        minHeight: 25,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginLeft: 5,
-    },
-    noRatingText: {
-        fontSize: 12,
-        color: '#888',
-        fontWeight: 'normal',
-    },
-    ratingStarContainer: {
-        flexDirection: 'row',
-        marginRight: 5,
-    },
-    ratingStarIcon: {
-        marginRight: 1,
-    },
-    infoChipsRow: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
-        marginTop: 5,
-    },
-    infoChip: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#E0E0E0',
-        borderRadius: 16,
-        paddingVertical: 4,
-        paddingHorizontal: 8,
-        marginLeft: -3,
-    },
-    infoChipText: {
-        fontSize: 12,
-        color: '#555',
-        marginLeft: 4,
-        fontWeight: '500',
-    },
-    infoChipVerified: {
-        backgroundColor: '#D1ECF1',
-    },
-    infoChipTextVerified: {
-        color: '#007BFF',
-    },
-    gradientAddressSection: {
-        borderRadius: 12,
-        overflow: 'hidden',
-        marginHorizontal: 15,
-        marginTop: 8,
-        marginBottom: 15,
-        position: 'relative',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
-        elevation: 8,
-    },
-    addressContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 25,
-        paddingVertical: 10,
-        backgroundColor: 'transparent',
-        zIndex: 1,
-    },
-    mapIcon: {
-        width: 18,
-        height: 18,
-        marginRight: 8,
-        marginLeft: 0,
-    },
-    addressText: {
-        fontSize: 14,
-        color: '#333333',
-        fontWeight: '400',
-        flexShrink: 1,
-    },
-    shineEffectContainer: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        height: '100%',
-        width: SCREEN_WIDTH * 0.3,
-        transform: [{ skewX: '-20deg' }],
-        overflow: 'hidden',
-        zIndex: 0,
-    },
-    shineGradient: {
-        height: '100%',
-        width: '100%',
-    },
     calendarGridContainer: {
         paddingHorizontal: 10,
-        marginTop: 15,
+        marginTop: 25,
     },
     dayNamesRow: {
         flexDirection: 'row',
@@ -900,29 +570,7 @@ const styles = StyleSheet.create({
         color: '#2A72E7',
         fontWeight: 'bold',
     },
-    timeSlotsSection: {
-        marginTop: 20,
-        paddingHorizontal: 15,
-    },
-    timeSlotsTitle: {
-        fontSize: 17,
-        fontWeight: '600',
-        color: '#111',
-        marginBottom: 15,
-    },
-    slotsLoader: {
-        marginVertical: 20,
-    },
-    timeSlotsListContainer: {},
-    timeSlotsRow: {
-        justifyContent: 'space-between',
-    },
-    noSlotsText: {
-        textAlign: 'center',
-        color: '#777777',
-        fontSize: 15,
-        fontStyle: 'italic',
-    },
+
     confirmButtonWrapper: {
         position: 'absolute',
         bottom: 0,
@@ -948,27 +596,60 @@ const styles = StyleSheet.create({
         fontSize: 17,
         fontWeight: '600',
     },
-    // --- Novos estilos para Skeletons ---
-    skeletonPulse: {
-        backgroundColor: '#E0E0E0',
-        borderRadius: 4,
+
+    addressInputContainer: {
+        backgroundColor: '#F7F9FC',
+        padding: 15,
+        marginHorizontal: 20,
+        borderRadius: 12,
+        marginTop: 20,
+        marginBottom: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
     },
+    addressInputTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#333',
+        marginBottom: 10,
+    },
+    input: {
+        height: 45,
+        borderColor: '#E0E0E0',
+        borderWidth: 1,
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        marginBottom: 10,
+        fontSize: 15,
+        color: '#333',
+        backgroundColor: '#FFFFFF',
+    },
+
     providerBriefSkeleton: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 12,
-        backgroundColor: '#F7F9FC',
-        borderBottomWidth: 1,
-        borderBottomColor: '#E9EDF0',
+        padding: 15,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
+        marginHorizontal: 20,
+        marginTop: 20,
+        marginBottom: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 4,
         justifyContent: 'space-between',
+        height: 100,
     },
     providerImageSkeleton: {
         width: 70,
         height: 70,
-        borderRadius: 25,
+        borderRadius: 35,
         marginRight: 12,
-        marginLeft: 8,
-        marginTop: 10,
         backgroundColor: '#E0E0E0',
     },
     providerTextInfoSkeleton: {
@@ -1001,61 +682,4 @@ const styles = StyleSheet.create({
         backgroundColor: '#E0E0E0',
         borderRadius: 16,
     },
-    gradientAddressSectionSkeleton: {
-        borderRadius: 12,
-        marginHorizontal: 15,
-        marginTop: 8,
-        marginBottom: 15,
-        height: 50, // Altura fixa para o skeleton
-        backgroundColor: '#E0E0E0',
-    },
-    addressContentSkeleton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 25,
-        paddingVertical: 10,
-        height: '100%',
-    },
-    mapIconSkeleton: {
-        width: 18,
-        height: 18,
-        marginRight: 8,
-        backgroundColor: '#CCCCCC',
-        borderRadius: 9,
-    },
-    skeletonLineAddress: {
-        height: 16,
-        width: '70%',
-        backgroundColor: '#E0E0E0',
-        borderRadius: 4,
-    },
-    addressInputContainer: {
-        backgroundColor: '#F7F9FC',
-        padding: 15,
-        marginHorizontal: 15,
-        borderRadius: 12,
-        marginTop: 10,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
-    },
-    addressInputTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#333',
-        marginBottom: 10,
-    },
-    input: {
-        height: 45,
-        borderColor: '#E0E0E0',
-        borderWidth: 1,
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        marginBottom: 10,
-        fontSize: 15,
-        color: '#333',
-        backgroundColor: '#FFFFFF',
-    }
 });

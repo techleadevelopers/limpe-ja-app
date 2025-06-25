@@ -17,13 +17,15 @@ export interface CreatePixChargeDto {
  */
 export interface PixChargeResponseDto {
   transactionId: string; // ALTERADO: De 'id' para 'transactionId' para espelhar o backend
-  status: 'PENDING' | 'PAID' | 'EXPIRED' | 'CANCELLED';
+  status: 'PENDING' | 'PAID' | 'EXPIRED' | 'CANCELLED'; // Mantido o status que você definiu
   brCode: string; // ALTERADO: De 'pixCode' e 'qrCodeData' para 'brCode' (código copia e cola)
-  qrCodeImage?: string; // ALTERADO: De 'qrCodeImageUrl' para 'qrCodeImage' (URL ou base64 da imagem do QR Code)
-  expiresAt: Date; // ADICIONADO: Data e hora de expiração da cobrança (retornado pelo backend)
+  qrCodeImage: string; // ALTERADO: De 'qrCodeImageUrl' para 'qrCodeImage' (URL ou base64 da imagem do QR Code)
+  expiresAt?: string; // Alterado de Date para string (ISO) para ser consistente com o que geralmente vem da API
   amount: number;
   description: string;
   bookingId?: string; // <<<<< CORREÇÃO: ADICIONADO A PROPRIEDADE AQUI >>>>>
+  brCodeError?: string; // CORREÇÃO: Adicionado para resolver erro de tipagem no frontend
+  expirationDate?: string; // CORREÇÃO: Adicionado para resolver erro de tipagem no frontend (se usado para formatar)
 }
 
 /**

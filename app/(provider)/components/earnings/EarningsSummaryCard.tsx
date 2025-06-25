@@ -7,16 +7,17 @@ import { formatDate } from '../../../../utils/helpers'; // Certifique-se de que 
 // Importa a tipagem do Dashboard para o resumo
 import { ProviderDashboard } from '../../../types/backend/providers';
 
-// DEFINIÇÕES DE CORES LOCAIS (Para resolver o erro de forma direta)
-const WHITE_SUMMARY = '#FFFFFF';
-const PRIMARY_COLOR_SUMMARY = '#007AFF'; // Azul
-const WARNING_COLOR_SUMMARY = '#FFC107'; // Amarelo para pendente
-const SUCCESS_COLOR_SUMMARY = '#28A745'; // Verde para saque
-const MUTED_TEXT_COLOR_SUMMARY = '#6C757D'; // Cinza
-const BORDER_COLOR_SUMMARY = '#E9ECEF'; // Borda sutil
-const BACKGROUND_COLOR_LIGHT_SUMMARY = '#F8F9FA'; // Fundo leve para cartões
-const TEXT_COLOR_DARK_SUMMARY = '#212529'; // Preto quase total
-const TEXT_COLOR_MUTED_SUBTITLE_SUMMARY = '#868E96'; // Cinza mais claro para detalhes
+// DEFINIÇÕES DE CORES LOCAIS - ALINHADAS COM O TEMA DA DASHBOARD
+const WHITE = '#FFFFFF'; // Branco
+const ICON_PRIMARY = '#007AFF'; // Azul Primário (usado para o card principal)
+const WARNING_YELLOW = '#FFC107'; // Amarelo para pendente (usado como WARNING_COLOR_SUMMARY)
+const SUCCESS_GREEN = '#28A745'; // Verde para saque (usado como SUCCESS_COLOR_SUMMARY)
+const TEXT_DARK = '#1A2538'; // Texto escuro
+const TEXT_MUTED = '#7A8599'; // Texto mutado
+const BACKGROUND_ALT = '#F8F9FD'; // Fundo alternativo
+const SHADOW_COLOR_SECTION = 'rgba(0, 0, 0, 0.1)'; // Sombra para seções
+const SHADOW_COLOR_CARD = 'rgba(0, 0, 0, 0.06)'; // Sombra para cartões pequenos
+const BORDER_SUBTLE = 'rgba(0,0,0,0.08)'; // Borda sutil
 
 interface EarningsSummaryCardProps {
     dashboardData: ProviderDashboard | null;
@@ -46,23 +47,26 @@ const EarningsSummaryCard: React.FC<EarningsSummaryCardProps> = ({ dashboardData
         <Animated.View style={[styles.summaryContainer, { opacity: animation, transform: [{ translateY: animation.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
             <Text style={styles.sectionTitle} accessibilityRole="header">Resumo Financeiro</Text>
             <View style={styles.summaryGrid}>
+                {/* Saldo Disponível */}
                 <View style={styles.summaryCard}>
-                    <Ionicons name="wallet-outline" size={30} color={PRIMARY_COLOR_SUMMARY} accessibilityLabel="Ícone de Saldo Total" />
-                    <Text style={styles.summaryCardTitle}>Saldo Disponível</Text>
+                    <Ionicons name="wallet-outline" size={30} color={WHITE} accessibilityLabel="Ícone de Saldo Total" /> {/* Ícone branco */}
+                    <Text style={styles.summaryCardTitle}>Saldo Disponível</Text> {/* Título branco */}
                     <Text style={styles.summaryCardValue} accessibilityLabel={`Seu saldo total é de ${displayedTotalEarnings.toFixed(2).replace('.', ',')} reais`}>
                         R$ {displayedTotalEarnings.toFixed(2).replace('.', ',')}
                     </Text>
                 </View>
+                {/* Saque Pendente */}
                 <View style={styles.summaryCard}>
-                    <Ionicons name="hourglass-outline" size={30} color={WARNING_COLOR_SUMMARY} accessibilityLabel="Ícone de Saque Pendente" />
-                    <Text style={styles.summaryCardTitle}>Saque Pendente</Text>
+                    <Ionicons name="hourglass-outline" size={30} color={WARNING_YELLOW} accessibilityLabel="Ícone de Saque Pendente" />
+                    <Text style={styles.summaryCardTitle}>Saque Pendente</Text> {/* Título branco */}
                     <Text style={styles.summaryCardValue} accessibilityLabel={`Você tem ${displayedPendingWithdrawals.toFixed(2).replace('.', ',')} reais pendentes para saque`}>
                         R$ {displayedPendingWithdrawals.toFixed(2).replace('.', ',')}
                     </Text>
                 </View>
+                {/* Ganhos Mês */}
                 <View style={styles.summaryCard}>
-                    <Ionicons name="cash-outline" size={30} color={SUCCESS_COLOR_SUMMARY} accessibilityLabel="Ícone de Ganhos Mês" />
-                    <Text style={styles.summaryCardTitle}>Ganhos Mês</Text>
+                    <Ionicons name="cash-outline" size={30} color={SUCCESS_GREEN} accessibilityLabel="Ícone de Ganhos Mês" />
+                    <Text style={styles.summaryCardTitle}>Ganhos Mês</Text> {/* Título branco */}
                     <Text style={styles.summaryCardValue} accessibilityLabel={`Seus ganhos este mês são de ${displayedTotalEarnings.toFixed(2).replace('.', ',')} reais`}>
                         R$ {displayedTotalEarnings.toFixed(2).replace('.', ',')}
                     </Text>
@@ -71,6 +75,7 @@ const EarningsSummaryCard: React.FC<EarningsSummaryCardProps> = ({ dashboardData
                     </Text>
                 </View>
             </View>
+            {/* Botão Solicitar Saque - Estilo do botão da Dashboard, mas com cor de sucesso */}
             <TouchableOpacity
                 style={[
                     styles.withdrawalButton,
@@ -84,7 +89,7 @@ const EarningsSummaryCard: React.FC<EarningsSummaryCardProps> = ({ dashboardData
                 accessibilityRole="button"
                 accessibilityLabel={displayedTotalEarnings === 0 || displayedPendingWithdrawals > 0 ? "Botão de solicitar saque desabilitado" : "Solicitar saque do saldo disponível"}
             >
-                <Ionicons name="arrow-up-circle-outline" size={24} color={WHITE_SUMMARY} />
+                <Ionicons name="arrow-up-circle-outline" size={24} color={WHITE} />
                 <Text style={styles.withdrawalButtonText}>Solicitar Saque</Text>
             </TouchableOpacity>
         </Animated.View>
@@ -95,82 +100,85 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: TEXT_COLOR_DARK_SUMMARY, // Usando constante local
+        color: WHITE, // Título principal do card azul deve ser branco
         marginBottom: 15,
         marginTop: 10,
+        textAlign: 'center', // Centralizar o título
         fontFamily: 'System'
     },
     summaryContainer: {
-        backgroundColor: WHITE_SUMMARY, // Usando constante local
-        borderRadius: 12,
+        backgroundColor: ICON_PRIMARY, // Fundo azul primário
+        borderRadius: 18, // Bordas mais arredondadas como na dashboard
         padding: 20,
         marginBottom: 20,
         ...Platform.select({
-            ios: { shadowColor: 'rgba(0,0,0,0.1)', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.15, shadowRadius: 6 },
-            android: { elevation: 4 },
+            ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 10 }, // Sombra maior
+            android: { elevation: 10 },
         }),
     },
     summaryGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        justifyContent: 'space-between',
+        justifyContent: 'space-around', // Usar space-around para espaçamento
         marginBottom: 20,
     },
     summaryCard: {
-        width: '48%',
-        backgroundColor: BACKGROUND_COLOR_LIGHT_SUMMARY, // Usando constante local
-        borderRadius: 10,
-        padding: 15,
+        width: '30%', // Para 3 itens por linha, similar às ações rápidas da dashboard
+        aspectRatio: 1, // Manter proporção quadrada
+        backgroundColor: 'rgba(255,255,255,0.2)', // Fundo semi-transparente branco para os cards internos
+        borderRadius: 12, // Bordas arredondadas
+        padding: 10, // Menor padding para caber
         marginBottom: 15,
         alignItems: 'center',
+        justifyContent: 'center', // Centralizar conteúdo
         borderWidth: 1,
-        borderColor: BORDER_COLOR_SUMMARY, // Usando constante local
+        borderColor: 'rgba(255,255,255,0.3)', // Borda mais sutil no fundo azul
     },
     summaryCardTitle: {
-        fontSize: 14,
-        color: MUTED_TEXT_COLOR_SUMMARY, // Usando constante local
+        fontSize: 12, // Fonte menor para caber
+        color: 'rgba(255,255,255,0.7)', // Texto mais suave
         marginTop: 8,
         marginBottom: 5,
         textAlign: 'center',
         fontFamily: 'System'
     },
     summaryCardValue: {
-        fontSize: 22,
+        fontSize: 18, // Fonte menor
         fontWeight: 'bold',
-        color: TEXT_COLOR_DARK_SUMMARY, // Usando constante local
+        color: WHITE, // Valor principal em branco
         textAlign: 'center',
         fontFamily: 'System'
     },
     summaryCardSubtitle: {
-        fontSize: 12,
-        color: TEXT_COLOR_MUTED_SUBTITLE_SUMMARY, // Usando constante local
+        fontSize: 10, // Fonte ainda menor
+        color: 'rgba(255,255,255,0.5)', // Subtítulo mais suave
         marginTop: 2,
         textAlign: 'center',
         fontFamily: 'System'
     },
     withdrawalButton: {
-        backgroundColor: SUCCESS_COLOR_SUMMARY, // Usando constante local
-        borderRadius: 8,
-        paddingVertical: 14,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
+        backgroundColor: 'rgba(255,255,255,0.2)', // Fundo semi-transparente como o da dashboard
+        borderRadius: 25, // Bordas mais arredondadas
+        paddingVertical: 12,
         ...Platform.select({
-            ios: { shadowColor: 'rgba(0,0,0,0.1)', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 6 },
-            android: { elevation: 6 },
+            ios: { shadowColor: 'rgba(0,0,0,0.1)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4 },
+            android: { elevation: 3 },
         }),
     },
     withdrawalButtonDisabled: {
-        backgroundColor: '#A5D6A7', // Cor específica para disabled
+        backgroundColor: 'rgba(255,255,255,0.1)', // Desabilitado ainda mais transparente
         opacity: 0.6,
         elevation: 0,
         shadowOpacity: 0,
     },
     withdrawalButtonText: {
-        color: WHITE_SUMMARY, // Usando constante local
+        color: WHITE, // Texto do botão em branco
         fontSize: 16,
-        fontWeight: 'bold',
-        marginLeft: 10,
+        fontWeight: '600', // Semibold
+        marginHorizontal: 10, // Espaçamento similar
         fontFamily: 'System'
     },
 });

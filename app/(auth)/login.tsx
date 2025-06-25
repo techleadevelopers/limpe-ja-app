@@ -292,8 +292,8 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 20 : 15,
   },
   logoContainer: {
-    marginBottom: -105,
-    left: 50,
+    marginBottom: -115,
+    left: 30,
     marginTop: 90,
   },
   logo: {

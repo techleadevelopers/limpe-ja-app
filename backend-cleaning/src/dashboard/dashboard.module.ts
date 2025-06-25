@@ -4,12 +4,14 @@ import { DashboardService } from './dashboard.service';
 import { ProvidersModule } from '../providers/providers.module';
 import { BookingsModule } from '../bookings/bookings.module';
 import { EarningsModule } from '../earnings/earnings.module';
+import { ReviewsModule } from '../reviews/reviews.module'; // Importe o ReviewsModule aqui
 
 @Module({
   imports: [
     ProvidersModule,
     BookingsModule,
     EarningsModule,
+    ReviewsModule, // Adicione o ReviewsModule à lista de imports
   ],
   controllers: [DashboardController],
   providers: [DashboardService],

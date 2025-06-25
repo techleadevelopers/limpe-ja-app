@@ -1,4 +1,3 @@
-// app/(provider)/index.tsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
@@ -6,12 +5,13 @@ import {
   StyleSheet,
   TouchableOpacity,
   Animated,
-  FlatList,
+  FlatList, // Manter se necessário para listas que não sejam SCROLLVIEW
   Platform,
   ActivityIndicator,
   ScrollView,
   RefreshControl,
   Alert,
+  Image, // Para avatar do provedor
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -23,9 +23,8 @@ import { getBookingsForUser, updateBookingStatus } from '../services/bookingServ
 import { sendMessage } from '../services/chatService'; // Assuming you'll have a chatService
 
 // Importações das tipagens centralizadas
-// CORREÇÃO: Importar BookingDetails e BookingStatus
 import { BookingDetails, BookingStatus } from '../types/backend/bookings';
-import { ProviderDashboard, ProviderReview } from '../types/backend/providers';
+import { ProviderDashboard, ProviderReview } from '../types/backend/providers'; // Importe ProviderReview aqui também, se ProviderDashboard o usa
 
 // Hook para animação de toque (reutilizável)
 const useAnimatedTouch = () => {
@@ -42,6 +41,7 @@ const useAnimatedTouch = () => {
       toValue: 1,
       useNativeDriver: true,
       friction: 5,
+      tension: 40,
     }).start();
   };
   return { scaleAnim, onPressIn, onPressOut };
@@ -60,10 +60,274 @@ const WARNING_YELLOW = '#FFC107';
 const BORDER_SUBTLE = 'rgba(0,0,0,0.08)';
 const SHADOW_COLOR_CARD = 'rgba(0, 0, 0, 0.06)';
 const SHADOW_COLOR_SECTION = 'rgba(0, 0, 0, 0.1)';
+const PRIMARY_LIGHT = '#EBF5FF'; // Um azul claro para fundos de botões/links
 
-// Componente de Item de Solicitação
+// --- Componentes Reutilizáveis (Move para arquivos separados se o projeto crescer) ---
+
+// Componente: DashboardHeader (para saudação e avatar)
+const DashboardHeader: React.FC<{
+  providerName: string | undefined;
+  avatarUrl: string | undefined | null;
+  onProfilePress: () => void;
+}> = ({ providerName, avatarUrl, onProfilePress }) => (
+  <View style={headerStyles.headerContainer}>
+    <View style={headerStyles.greetingContainer}>
+      <Text style={headerStyles.greetingText}>Olá, <Text style={headerStyles.providerNameText}>{providerName || 'Provedor'}</Text>!</Text>
+      <Text style={headerStyles.currentDateText}>{new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
+    </View>
+    <TouchableOpacity onPress={onProfilePress} style={headerStyles.avatarButton}>
+      {avatarUrl ? (
+        <Image source={{ uri: avatarUrl }} style={headerStyles.avatar} />
+      ) : (
+        <View style={headerStyles.avatarPlaceholder}>
+          <Ionicons name="person" size={24} color={WHITE} />
+        </View>
+      )}
+    </TouchableOpacity>
+  </View>
+);
+
+const headerStyles = StyleSheet.create({
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 20,
+    backgroundColor: WHITE,
+    borderBottomLeftRadius: 25,
+    borderBottomRightRadius: 25,
+    ...Platform.select({
+      ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 6 },
+      android: { elevation: 8 },
+    }),
+    marginBottom: 20,
+  },
+  greetingContainer: {
+    flex: 1,
+  },
+  greetingText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: TEXT_DARK,
+  },
+  providerNameText: {
+    color: ICON_PRIMARY,
+  },
+  currentDateText: {
+    fontSize: 14,
+    color: TEXT_MUTED,
+    marginTop: 4,
+  },
+  avatarButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    overflow: 'hidden',
+    marginLeft: 15,
+  },
+  avatar: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarPlaceholder: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 25,
+    backgroundColor: ICON_PRIMARY,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+});
+
+// Componente: FinancialSummaryCard (resumo de ganhos)
+const FinancialSummaryCard: React.FC<{
+  totalEarnings: number | undefined;
+  pendingWithdrawals: number | undefined;
+  onViewEarnings: () => void;
+}> = ({ totalEarnings, pendingWithdrawals, onViewEarnings }) => {
+  const { scaleAnim, onPressIn, onPressOut } = useAnimatedTouch();
+
+  const formattedTotalEarnings = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalEarnings || 0);
+  const formattedPendingWithdrawals = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(pendingWithdrawals || 0);
+
+  return (
+    <View style={summaryStyles.summaryCard}>
+      <Text style={summaryStyles.cardTitle}>Resumo Financeiro</Text>
+      <View style={summaryStyles.metricsGrid}>
+        <View style={summaryStyles.metricItem}>
+          <Text style={summaryStyles.metricLabel}>Ganhos Totais</Text>
+          <Text style={summaryStyles.metricValuePrimary}>{formattedTotalEarnings}</Text>
+        </View>
+        <View style={summaryStyles.metricItem}>
+          <Text style={summaryStyles.metricLabel}>Saques Pendentes</Text>
+          <Text style={summaryStyles.metricValueWarning}>{formattedPendingWithdrawals}</Text>
+        </View>
+      </View>
+      <TouchableOpacity
+        style={[summaryStyles.viewEarningsButton, { transform: [{ scale: scaleAnim }] }]}
+        onPress={onViewEarnings}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+        accessibilityLabel="Ver todos os meus ganhos"
+      >
+        <Ionicons name="wallet-outline" size={20} color={WHITE} style={summaryStyles.buttonIcon} />
+        <Text style={summaryStyles.viewEarningsButtonText}>Gerenciar Ganhos</Text>
+        <Ionicons name="chevron-forward-outline" size={20} color={WHITE} />
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+const summaryStyles = StyleSheet.create({
+  summaryCard: {
+    backgroundColor: ICON_PRIMARY, // Usar cor primária para destaque
+    borderRadius: 18,
+    padding: 20,
+    marginBottom: 20,
+    ...Platform.select({
+      ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 10 },
+      android: { elevation: 10 },
+    }),
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: WHITE,
+    marginBottom: 15,
+  },
+  metricsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 20,
+  },
+  metricItem: {
+    alignItems: 'center',
+  },
+  metricLabel: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.7)',
+    marginBottom: 5,
+  },
+  metricValuePrimary: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: WHITE,
+  },
+  metricValueWarning: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: WARNING_YELLOW,
+  },
+  viewEarningsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 25,
+    paddingVertical: 12,
+  },
+  viewEarningsButtonText: {
+    color: WHITE,
+    fontSize: 16,
+    fontWeight: '600',
+    marginHorizontal: 10,
+  },
+  buttonIcon: {
+    marginRight: 5,
+  },
+});
+
+// Componente: QuickActionsSection (botões de ação rápida)
+const QuickActionsSection: React.FC<{
+  onViewAllServicesPress: () => void;
+  onViewAllMessagesPress: () => void;
+  onManageAvailability: () => void;
+}> = ({ onViewAllServicesPress, onViewAllMessagesPress, onManageAvailability }) => {
+  const { scaleAnim: s1, onPressIn: p1, onPressOut: o1 } = useAnimatedTouch();
+  const { scaleAnim: s2, onPressIn: p2, onPressOut: o2 } = useAnimatedTouch();
+  const { scaleAnim: s3, onPressIn: p3, onPressOut: o3 } = useAnimatedTouch();
+
+  return (
+    <View style={quickActionStyles.sectionContainer}>
+      <Text style={quickActionStyles.sectionTitle}>Ações Rápidas</Text>
+      <View style={quickActionStyles.grid}>
+        <TouchableOpacity style={[quickActionStyles.gridItem, { transform: [{ scale: s1 }] }]}
+          onPress={onManageAvailability} onPressIn={p1} onPressOut={o1}>
+          <Ionicons name="calendar-outline" size={30} color={ICON_PRIMARY} />
+          <Text style={quickActionStyles.gridItemText}>Minha Agenda</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[quickActionStyles.gridItem, { transform: [{ scale: s2 }] }]}
+          onPress={onViewAllServicesPress} onPressIn={p2} onPressOut={o2}>
+          <Ionicons name="briefcase-outline" size={30} color={ICON_PRIMARY} />
+          <Text style={quickActionStyles.gridItemText}>Meus Serviços</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[quickActionStyles.gridItem, { transform: [{ scale: s3 }] }]}
+          onPress={onViewAllMessagesPress} onPressIn={p3} onPressOut={o3}>
+          <Ionicons name="chatbubbles-outline" size={30} color={ICON_PRIMARY} />
+          <Text style={quickActionStyles.gridItemText}>Mensagens</Text>
+        </TouchableOpacity>
+        {/* Adicione mais ações rápidas conforme necessário, ex: "Meu Perfil", "Ajuda" */}
+      </View>
+    </View>
+  );
+};
+
+const quickActionStyles = StyleSheet.create({
+  sectionContainer: {
+    backgroundColor: WHITE,
+    borderRadius: 18,
+    padding: 20, // Manter ou ajustar este padding se o espaço lateral geral da caixa é o que te incomoda
+    marginBottom: 20,
+    ...Platform.select({
+      ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 6 },
+      android: { elevation: 8 },
+    }),
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: TEXT_DARK,
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  grid: { // Este é o container dos seus botões
+    flexDirection: 'row',
+    flexWrap: 'wrap', // Manter wrap para caso haja mais de 3, eles quebrem a linha
+    justifyContent: 'space-around', // ou 'space-between', 'center'
+    width: '100%', // Isso significa 100% do 'sectionContainer' (que tem padding de 20)
+  },
+  gridItem: {
+    // ATENÇÃO AQUI: Para 3 itens por linha, você PRECISA de uma largura menor.
+    // 30% x 3 = 90%. Sobram 10% para gaps.
+    width: '30%', // <--- MUDANÇA ESSENCIAL AQUI para 3 itens por linha!
+    aspectRatio: 1, // Para manter quadrado
+    backgroundColor: BACKGROUND_ALT,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 15, // Espaçamento vertical entre as linhas
+    padding: 10,
+    borderWidth: 1,
+    borderColor: BORDER_SUBTLE,
+    ...Platform.select({
+      ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 3 },
+      android: { elevation: 2 },
+    }),
+  },
+  gridItemText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: TEXT_DARK,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+});
+
+
+// Componente de Item de Solicitação (RequestItem) - SEM ALTERAÇÕES NESTE TRECHO
 const RequestItem: React.FC<{
-  item: BookingDetails; // CORREÇÃO: Usar BookingDetails
+  item: BookingDetails;
   onAccept?: (id: string) => void;
   onReject?: (id: string) => void;
   onDetails: (id: string) => void;
@@ -75,10 +339,8 @@ const RequestItem: React.FC<{
   const detailsTouchAnimation = useAnimatedTouch();
   const chatTouchAnimation = useAnimatedTouch();
 
-  // CORREÇÃO: Acessar clientFullName e clientId diretamente de item
   const clientId: string | undefined = item.clientId;
   const clientName: string = item.clientFullName || 'Cliente';
-
 
   return (
     <Animated.View style={[
@@ -93,7 +355,6 @@ const RequestItem: React.FC<{
         <View style={styles.clientAvatarPlaceholder}>
           <Ionicons name="person-outline" size={20} color={TEXT_MEDIUM} />
         </View>
-        {/* CORREÇÃO: Acessar serviceName */}
         <Text style={styles.requestServiceName} numberOfLines={1}>{item.serviceName}</Text>
         <TouchableOpacity
           style={styles.acceptButtonCorner}
@@ -111,7 +372,6 @@ const RequestItem: React.FC<{
 
       <Text style={styles.requestClientName}>Solicitado por: {clientName}</Text>
 
-      {/* CORREÇÃO: Acessar totalPrice */}
       {item.totalPrice !== undefined && (
         <Text style={styles.requestPrice}>
             Valor: R$ {item.totalPrice.toFixed(2).replace('.', ',')}
@@ -120,7 +380,6 @@ const RequestItem: React.FC<{
 
       <View style={styles.requestInfoRow}>
         <Ionicons name="calendar-outline" size={16} color={TEXT_MUTED} style={styles.infoIcon} />
-        {/* CORREÇÃO: Usar scheduledDate e scheduledTime */}
         <Text style={styles.requestInfoText}>
           {new Date(item.scheduledDate).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })}
         </Text>
@@ -131,7 +390,6 @@ const RequestItem: React.FC<{
       </View>
       <View style={styles.requestInfoRow}>
         <Ionicons name="location-outline" size={16} color={TEXT_MUTED} style={styles.infoIcon} />
-        {/* CORREÇÃO: Acessar address?.street e address?.number */}
         <Text style={styles.requestInfoText} numberOfLines={1}>{item.address?.street}, {item.address?.number}</Text>
       </View>
 
@@ -178,9 +436,9 @@ const RequestItem: React.FC<{
   );
 };
 
-// Componente de Item de Serviço Confirmado
+// Componente de Item de Serviço Confirmado (ConfirmedServiceItem)
 const ConfirmedServiceItem: React.FC<{
-  item: BookingDetails; // CORREÇÃO: Usar BookingDetails
+  item: BookingDetails;
   onPress: (id: string) => void;
   entryAnim: Animated.ValueXY;
 }> = ({ item, onPress, entryAnim }) => {
@@ -222,91 +480,111 @@ export default function ProviderDashboardScreen() {
   const { user, isLoading: authLoading } = useAuth();
 
   const [dashboardData, setDashboardData] = useState<ProviderDashboard | null>(null);
-  const [upcomingServices, setUpcomingServices] = useState<BookingDetails[]>([]); // CORREÇÃO: Usar BookingDetails
+  const [upcomingServices, setUpcomingServices] = useState<BookingDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Animação para o conteúdo principal do dashboard
   const contentAnim = useRef(new Animated.Value(0)).current;
 
   const fetchData = useCallback(async () => {
+    console.log("[DashboardScreen] fetchData: Iniciando busca de dados.");
     setIsLoading(true);
     setError(null);
     if (!user?.id) {
+        console.warn("[DashboardScreen] fetchData: user.id não disponível. Abortando busca.");
         setError("ID do provedor não disponível para buscar dados.");
         setIsLoading(false);
         setIsRefreshing(false);
         return;
     }
+    console.log(`[DashboardScreen] fetchData: Buscando dashboard para userId: ${user.id}`);
 
     try {
       const dashboard = await getMyProviderDashboard();
+      console.log("[DashboardScreen] fetchData: Dados do dashboard recebidos.", dashboard);
+      // Log para verificar se 'reviews' está chegando
+      console.log("[DashboardScreen] REVIEWS NA DASHBOARD (AGORA COM 'reviews'):", dashboard.reviews);
+
       setDashboardData(dashboard);
 
-      // Buscar agendamentos futuros (GET /bookings/me?status=PENDING_PROVIDER_CONFIRMATION,CONFIRMED)
-      // Ajuste para buscar múltiplos status ou um endpoint específico de "próximos serviços"
-      // CORREÇÃO: Usar BookingStatus.PENDING_PROVIDER_CONFIRMATION e BookingStatus.CONFIRMED
-      const pendingBookings = await getBookingsForUser(BookingStatus.PENDING_PROVIDER_CONFIRMATION);
+      // CORREÇÃO: Mudar PENDING_PROVIDER_CONFIRMATION para PENDING
+      const pendingBookings = await getBookingsForUser(BookingStatus.PENDING);
+      console.log("[DashboardScreen] fetchData: Agendamentos pendentes recebidos.", pendingBookings);
       const confirmedBookings = await getBookingsForUser(BookingStatus.CONFIRMED);
-      setUpcomingServices([...pendingBookings, ...confirmedBookings].sort((a,b) => new Date(a.scheduledDate + 'T' + a.scheduledTime).getTime() - new Date(b.scheduledDate + 'T' + b.scheduledTime).getTime()));
+      console.log("[DashboardScreen] fetchData: Agendamentos confirmados recebidos.", confirmedBookings);
 
+      setUpcomingServices([...pendingBookings, ...confirmedBookings].sort((a,b) => {
+        const dateA = new Date(a.scheduledDate + 'T' + a.scheduledTime);
+        const dateB = new Date(b.scheduledDate + 'T' + b.scheduledTime);
+        if (isNaN(dateA.getTime())) console.warn(`[DashboardScreen] Data inválida para agendamento ${a.id}: ${a.scheduledDate}T${a.scheduledTime}`);
+        if (isNaN(dateB.getTime())) console.warn(`[DashboardScreen] Data inválida para agendamento ${b.id}: ${b.scheduledDate}T${b.scheduledTime}`);
+
+        return dateA.getTime() - dateB.getTime();
+      }));
 
       Animated.timing(contentAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
 
     } catch (err: any) {
-      console.error("Erro ao buscar dados do dashboard do provedor:", err.response?.data || err.message);
+      console.error("[DashboardScreen] Erro ao buscar dados do dashboard do provedor:", err.response?.data || err.message, err);
       setError(err.response?.data?.message || "Não foi possível carregar os dados do dashboard.");
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
+      console.log("[DashboardScreen] fetchData: Finalizado. isLoading:", false, "isRefreshing:", false);
     }
   }, [user, contentAnim]);
 
   useEffect(() => {
+    console.log("[DashboardScreen] useEffect: authLoading:", authLoading, "user.id:", user?.id);
     if (!authLoading && user?.id) {
       fetchData();
     } else if (!authLoading && !user?.id) {
         setIsLoading(false);
         setError("Provedor não autenticado ou perfil não encontrado.");
+        console.warn("[DashboardScreen] useEffect: Usuário não autenticado ou ID não encontrado após authLoading.");
     }
   }, [authLoading, user, fetchData]);
 
   const onRefresh = useCallback(() => {
+    console.log("[DashboardScreen] onRefresh: Iniciando refresh.");
     setIsRefreshing(true);
     fetchData();
   }, [fetchData]);
 
-  // Funções de ação que serão passadas para RequestItem
   const handleServicePress = (id: string) => {
-    router.push(`/(provider)/services/${id}` as any); // Exemplo de rota para detalhes do agendamento
+    console.log(`[DashboardScreen] handleServicePress: Navegando para detalhes do serviço ${id}.`);
+    router.push(`/(provider)/services/${id}` as any);
   };
 
   const handleViewAllServicesPress = () => {
-    router.push('/(provider)/services' as any); // Exemplo de rota para todos os agendamentos
+    console.log("[DashboardScreen] handleViewAllServicesPress: Navegando para todos os serviços.");
+    router.push('/(provider)/services' as any);
   };
 
   const handleViewAllMessagesPress = () => {
-    router.push('/(provider)/messages' as any); // Exemplo de rota para a lista de chats
+    console.log("[DashboardScreen] handleViewAllMessagesPress: Navegando para a lista de mensagens.");
+    router.push('/(provider)/messages' as any);
   };
 
   const handleAcceptRequest = async (bookingId: string) => {
+    console.log(`[DashboardScreen] handleAcceptRequest: Tentando aceitar agendamento ${bookingId}.`);
     Alert.alert(
       "Aceitar Solicitação",
       `Tem certeza que deseja aceitar o agendamento ${bookingId}?`,
       [
-        { text: "Cancelar", style: "cancel" },
+        { text: "Cancelar", style: "cancel", onPress: () => console.log("[DashboardScreen] Aceitar cancelado.") },
         {
           text: "Aceitar",
           onPress: async () => {
             setIsLoading(true);
             try {
-              // CORREÇÃO: Usar BookingStatus.CONFIRMED
               await updateBookingStatus(bookingId, { status: BookingStatus.CONFIRMED });
               Alert.alert("Sucesso", "Agendamento aceito com sucesso!");
-              fetchData(); // Recarrega os dados para atualizar a lista
+              console.log(`[DashboardScreen] Agendamento ${bookingId} aceito com sucesso.`);
+              fetchData();
             } catch (error: any) {
-              console.error("Erro ao aceitar agendamento:", error.response?.data || error.message);
+              console.error("[DashboardScreen] Erro ao aceitar agendamento:", error.response?.data || error.message, error);
               Alert.alert("Erro", error.response?.data?.message || "Não foi possível aceitar o agendamento.");
             } finally {
               setIsLoading(false);
@@ -318,22 +596,23 @@ export default function ProviderDashboardScreen() {
   };
 
   const handleRejectRequest = async (bookingId: string) => {
+    console.log(`[DashboardScreen] handleRejectRequest: Tentando rejeitar agendamento ${bookingId}.`);
     Alert.alert(
       "Rejeitar Solicitação",
       `Tem certeza que deseja rejeitar o agendamento ${bookingId}?`,
       [
-        { text: "Cancelar", style: "cancel" },
+        { text: "Cancelar", style: "cancel", onPress: () => console.log("[DashboardScreen] Rejeitar cancelado.") },
         {
           text: "Rejeitar",
           onPress: async () => {
             setIsLoading(true);
             try {
-              // CORREÇÃO: Usar BookingStatus.REJECTED
               await updateBookingStatus(bookingId, { status: BookingStatus.REJECTED });
               Alert.alert("Sucesso", "Agendamento rejeitado com sucesso!");
-              fetchData(); // Recarrega os dados para atualizar a lista
+              console.log(`[DashboardScreen] Agendamento ${bookingId} rejeitado com sucesso.`);
+              fetchData();
             } catch (error: any) {
-              console.error("Erro ao rejeitar agendamento:", error.response?.data || error.message);
+              console.error("[DashboardScreen] Erro ao rejeitar agendamento:", error.response?.data || error.message, error);
               Alert.alert("Erro", error.response?.data?.message || "Não foi possível rejeitar o agendamento.");
             } finally {
               setIsLoading(false);
@@ -345,6 +624,7 @@ export default function ProviderDashboardScreen() {
   };
 
   const handleChatWithClient = (clientId: string, clientName: string) => {
+    console.log(`[DashboardScreen] handleChatWithClient: Iniciando chat com cliente ${clientName} (${clientId}).`);
     router.push({ pathname: '/(provider)/messages/[chatId]', params: { chatId: clientId, recipientName: clientName } } as any);
   };
 
@@ -355,10 +635,10 @@ export default function ProviderDashboardScreen() {
     </View>
   );
 
-
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
+        <Stack.Screen options={{ title: "Carregando...", headerTransparent: true, headerTintColor: '#333' }} />
         <ActivityIndicator size="large" color="#007AFF" />
         <Text style={styles.loadingText}>Carregando dashboard...</Text>
       </View>
@@ -368,6 +648,7 @@ export default function ProviderDashboardScreen() {
   if (error) {
     return (
       <View style={styles.errorContainer}>
+        <Stack.Screen options={{ title: "Erro", headerTransparent: false, headerStyle: { backgroundColor: '#FFFFFF' }, headerTintColor: '#333' }} />
         <Ionicons name="alert-circle-outline" size={48} color="red" />
         <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity onPress={fetchData} style={styles.retryButton}>
@@ -385,115 +666,127 @@ export default function ProviderDashboardScreen() {
         contentContainerStyle={styles.scrollViewContent}
         refreshControl={ <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#007AFF" /> }
       >
-        <Animated.View style={[styles.sectionContainer, { opacity: contentAnim, transform: [{translateY: contentAnim.interpolate({inputRange: [0,1], outputRange: [20,0]})}] }]}>
-          <View style={styles.sectionHeaderWithIcon}>
-            <MaterialCommunityIcons name="view-dashboard-variant-outline" size={26} color={TEXT_DARK} />
-            <Text style={styles.sectionTitle}>Sua Agenda & Destaques</Text>
-          </View>
+        {/* NOVO: Dashboard Header com nome do provedor e avatar */}
+        <DashboardHeader
+          providerName={dashboardData?.fullName}
+          avatarUrl={user?.avatarUrl} // Assumindo que user.avatarUrl vem do AuthContext
+          onProfilePress={() => router.push('/(provider)/profile' as any)}
+        />
 
-          {/* Seção de Novas Solicitações */}
-          {upcomingServices.filter(s => s.status === BookingStatus.PENDING_PROVIDER_CONFIRMATION).length > 0 && (
-            <View style={styles.subsectionWrapper}>
-              <View style={styles.subsectionHeader}>
-                <Text style={styles.subsectionTitle}>
-                    <Ionicons name="alert-circle-outline" size={20} color={WARNING_YELLOW} /> Novas Solicitações ({upcomingServices.filter(s => s.status === BookingStatus.PENDING_PROVIDER_CONFIRMATION).length})
-                </Text>
-              </View>
-              {upcomingServices.filter(s => s.status === BookingStatus.PENDING_PROVIDER_CONFIRMATION).map((item, index) => (
-                <RequestItem
-                  key={item.id}
-                  item={item}
-                  onAccept={handleAcceptRequest}
-                  onReject={handleRejectRequest}
-                  onDetails={handleServicePress}
-                  onChat={handleChatWithClient}
-                  entryAnim={new Animated.ValueXY({x:1,y:0})} // Simple animation for items already loaded with section
-                />
-              ))}
-            </View>
-          )}
+        {/* NOVO: Financial Summary Card */}
+        <FinancialSummaryCard
+          totalEarnings={dashboardData?.totalEarnings}
+          pendingWithdrawals={dashboardData?.pendingWithdrawals}
+          onViewEarnings={() => router.push('/(provider)/earnings' as any)}
+        />
 
-          {/* Próximos Serviços Confirmados */}
+        {/* NOVO: Quick Actions Section */}
+        <QuickActionsSection
+          onViewAllServicesPress={handleViewAllServicesPress}
+          onViewAllMessagesPress={handleViewAllMessagesPress}
+          onManageAvailability={() => router.push('/(provider)/availability' as any)} // Assumindo uma rota de disponibilidade
+        />
+
+        {/* Seção de Novas Solicitações */}
+        {upcomingServices.filter(s => s.status === BookingStatus.PENDING).length > 0 && ( /* Correção de PENDING_PROVIDER_CONFIRMATION para PENDING */
           <View style={styles.subsectionWrapper}>
             <View style={styles.subsectionHeader}>
               <Text style={styles.subsectionTitle}>
-                <Ionicons name="checkmark-done-circle-outline" size={20} color={ICON_PRIMARY} /> Próximos Serviços
-                </Text>
-              {upcomingServices.filter(s => s.status === BookingStatus.CONFIRMED).length > 2 && (
-                <TouchableOpacity onPress={handleViewAllServicesPress} accessibilityRole="button" accessibilityLabel="Ver todos os próximos serviços">
-                  <Text style={styles.viewAllText}>Ver Todos</Text>
-                </TouchableOpacity>
-              )}
+                  <Ionicons name="alert-circle-outline" size={20} color={WARNING_YELLOW} /> Novas Solicitações ({upcomingServices.filter(s => s.status === BookingStatus.PENDING).length}) /* Correção */
+              </Text>
             </View>
-            {upcomingServices.filter(s => s.status === BookingStatus.CONFIRMED).length > 0 ? (
-              upcomingServices.filter(s => s.status === BookingStatus.CONFIRMED).slice(0, 2).map((item, index) => (
-                <ConfirmedServiceItem
-                  key={item.id}
-                  item={item}
-                  onPress={handleServicePress}
-                  entryAnim={new Animated.ValueXY({x:1,y:0})} // Simple animation for items already loaded with section
-                />
-              ))
-            ) : (
-              renderEmptyState("Nenhum serviço confirmado agendado.", "calendar-clear-outline")
+            {upcomingServices.filter(s => s.status === BookingStatus.PENDING).map((item, index) => ( /* Correção */
+              <RequestItem
+                key={item.id}
+                item={item}
+                onAccept={handleAcceptRequest}
+                onReject={handleRejectRequest}
+                onDetails={handleServicePress}
+                onChat={handleChatWithClient}
+                entryAnim={new Animated.ValueXY({x:1,y:0})}
+              />
+            ))}
+          </View>
+        )}
+        {/* Estado vazio para Novas Solicitações, se não houver */}
+        {upcomingServices.filter(s => s.status === BookingStatus.PENDING).length === 0 && ( /* Correção */
+            <View style={styles.subsectionWrapper}>
+                <View style={styles.subsectionHeader}>
+                    <Text style={styles.subsectionTitle}>
+                        <Ionicons name="alert-circle-outline" size={20} color={WARNING_YELLOW} /> Novas Solicitações (0)
+                    </Text>
+                </View>
+                {renderEmptyState("Nenhuma nova solicitação no momento.", "notifications-off-outline")}
+            </View>
+        )}
+
+
+        {/* Próximos Serviços Confirmados */}
+        <View style={styles.subsectionWrapper}>
+          <View style={styles.subsectionHeader}>
+            <Text style={styles.subsectionTitle}>
+              <Ionicons name="checkmark-done-circle-outline" size={20} color={ICON_PRIMARY} /> Próximos Serviços
+              </Text>
+            {upcomingServices.filter(s => s.status === BookingStatus.CONFIRMED).length > 2 && (
+              <TouchableOpacity onPress={handleViewAllServicesPress} accessibilityRole="button" accessibilityLabel="Ver todos os próximos serviços">
+                <Text style={styles.viewAllText}>Ver Todos</Text>
+              </TouchableOpacity>
             )}
           </View>
+          {upcomingServices.filter(s => s.status === BookingStatus.CONFIRMED).length > 0 ? (
+            upcomingServices.filter(s => s.status === BookingStatus.CONFIRMED).slice(0, 2).map((item, index) => (
+              <ConfirmedServiceItem
+                key={item.id}
+                item={item}
+                onPress={handleServicePress}
+                entryAnim={new Animated.ValueXY({x:1,y:0})}
+              />
+            ))
+          ) : (
+            renderEmptyState("Nenhum serviço confirmado agendado.", "calendar-clear-outline")
+          )}
+        </View>
 
-          {/* Link para Mensagens */}
-          <TouchableOpacity
-            style={styles.messageLinkCard}
-            onPress={handleViewAllMessagesPress}
-            accessibilityRole="button"
-            accessibilityLabel={dashboardData?.unreadMessagesCount && dashboardData.unreadMessagesCount > 0 ? `Ir para mensagens, ${dashboardData.unreadMessagesCount} não lidas` : "Ir para mensagens"}
-          >
-            <Animated.View style={styles.messageLinkContent}>
-              <Ionicons name="chatbubbles-outline" size={28} color={ICON_PRIMARY} />
-              <Text style={styles.messageLinkText}>Mensagens</Text>
-              {dashboardData?.unreadMessagesCount && dashboardData.unreadMessagesCount > 0 && (
-                <View style={styles.unreadBadge}>
-                  <Text style={styles.unreadBadgeText}>{dashboardData.unreadMessagesCount > 9 ? '9+' : dashboardData.unreadMessagesCount}</Text>
+        {/* Seção de Reviews Recentes */}
+        {dashboardData?.reviews && dashboardData.reviews.length > 0 ? ( /* Correção: 'reviews' em vez de 'recentReviews' */
+            <View style={styles.subsectionWrapper}>
+                <View style={styles.subsectionHeader}>
+                    <Text style={styles.subsectionTitle}>
+                        <Ionicons name="star-outline" size={20} color={WARNING_YELLOW} /> Avaliações Recentes
+                    </Text>
+                    <TouchableOpacity onPress={() => router.push('/(provider)/reviews' as any)} accessibilityRole="button" accessibilityLabel="Ver todas as avaliações">
+                        <Text style={styles.viewAllText}>Ver Todas</Text>
+                    </TouchableOpacity>
                 </View>
-              )}
-              <Ionicons name="arrow-forward-outline" size={22} color={TEXT_MUTED} />
-            </Animated.View>
-          </TouchableOpacity>
-
-            {/* Seção de Reviews Recentes (NOVA) */}
-            {dashboardData?.recentReviews && dashboardData.recentReviews.length > 0 && (
-                <View style={styles.subsectionWrapper}>
-                    <View style={styles.subsectionHeader}>
-                        <Text style={styles.subsectionTitle}>
-                            <Ionicons name="star-outline" size={20} color={WARNING_YELLOW} /> Avaliações Recentes
-                        </Text>
-                        <TouchableOpacity onPress={() => router.push('/(provider)/reviews' as any)} accessibilityRole="button" accessibilityLabel="Ver todas as avaliações">
-                            <Text style={styles.viewAllText}>Ver Todas</Text>
-                        </TouchableOpacity>
-                    </View>
-                    {dashboardData.recentReviews.slice(0, 2).map((review, index) => ( // Mostra as 2 últimas
-                        <View key={review.id} style={styles.reviewItem}>
-                            <Text style={styles.reviewText}>"{review.comment || 'Sem comentário.'}"</Text>
-                            <View style={styles.reviewRating}>
+                {/* O slice(0, 2) pode ser opcional aqui se o backend já limita a 2 */}
+                {dashboardData.reviews.slice(0, 2).map((review: ProviderReview, index: number) => ( /* Correção de 'any' para ProviderReview e number */
+                    <View key={review.id} style={styles.reviewItem}>
+                        <Text style={styles.reviewText}>"{review.comment || 'Sem comentário.'}"</Text>
+                        {/* INÍCIO DA ALTERAÇÃO PARA ESTRELAS E NOME DO CLIENTE */}
+                        <View style={styles.reviewRatingStarsAndName}> {/* <--- ESTILO ADICIONADO */}
+                            <View style={styles.reviewStarsContainer}> {/* <--- ESTILO ADICIONADO */}
                                 {Array.from({ length: review.rating }).map((_, i) => (
-                                    <Ionicons key={i} name="star" size={16} color={WARNING_YELLOW} />
+                                    <Ionicons key={i} name="star" size={16} color={ICON_PRIMARY} />
                                 ))}
-                                <Text style={styles.reviewClientName}> - {review.client.fullName}</Text>
                             </View>
+                            <Text style={styles.reviewClientName}>
+                                {review.client?.fullName || 'Cliente Desconhecido'} {/* Acessa o fullName do client */}
+                            </Text>
                         </View>
-                    ))}
+                        {/* FIM DA ALTERAÇÃO PARA ESTRELAS E NOME DO CLIENTE */}
+                    </View>
+                ))}
+            </View>
+        ) : ( // Parte do 'else' do ternário
+            <View style={styles.subsectionWrapper}>
+                <View style={styles.subsectionHeader}>
+                    <Text style={styles.subsectionTitle}>
+                        <Ionicons name="star-outline" size={20} color={WARNING_YELLOW} /> Avaliações Recentes
+                    </Text>
                 </View>
-            )}
-
-        </Animated.View>
-
-        {/* Outras seções do dashboard podem vir aqui (ex: um link para a tela de ganhos) */}
-        <TouchableOpacity
-            style={styles.earningsLinkCard}
-            onPress={() => router.push('/(provider)/earnings' as any)}
-        >
-            <Ionicons name="cash-outline" size={28} color={SUCCESS_GREEN} />
-            <Text style={styles.earningsLinkText}>Ver Meus Ganhos</Text>
-            <Ionicons name="arrow-forward-outline" size={22} color={TEXT_MUTED} />
-        </TouchableOpacity>
+                {renderEmptyState("Nenhuma avaliação recente. Conclua mais serviços!", "star-half-outline")}
+            </View>
+        )}
 
       </ScrollView>
     </View>
@@ -546,6 +839,7 @@ const styles = StyleSheet.create({
   },
   scrollViewContent: {
     padding: 15,
+    paddingTop: 0, // Ajuste para o novo cabeçalho flutuante
     paddingBottom: 40,
   },
   sectionContainer: {
@@ -580,6 +874,13 @@ const styles = StyleSheet.create({
   },
   subsectionWrapper: {
     marginBottom: 25,
+    backgroundColor: WHITE, // Fundo para a subseção para melhor visual
+    borderRadius: 12,
+    padding: 15,
+    ...Platform.select({
+      ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 5 },
+      android: { elevation: 4 },
+    }),
   },
   subsectionHeader: {
     flexDirection: 'row',
@@ -604,6 +905,7 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     backgroundColor: BACKGROUND_ALT,
     borderRadius: 12,
+    marginTop: 10, // Adicionado espaçamento
   },
   emptyText: {
     textAlign: 'center',
@@ -825,15 +1127,26 @@ const styles = StyleSheet.create({
     color: TEXT_MEDIUM,
     marginBottom: 8,
   },
-  reviewRating: {
+  reviewRating: { // <--- ESTILO ORIGINAL - AGORA SERÁ USADO reviewRatingStarsAndName
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    justifyContent: 'flex-end', // Este estava alinhando as estrelas e o nome à direita
+  },
+  // NOVOS ESTILOS: Adicionados para reposicionar as estrelas
+  reviewRatingStarsAndName: { // <--- ESTILO ADICIONADO AQUI
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  reviewStarsContainer: { // <--- ESTILO ADICIONADO AQUI
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   reviewClientName: {
     fontSize: 13,
     color: TEXT_MUTED,
-    marginLeft: 5,
+    // Não precisa de marginLeft aqui se justify-content: 'space-between'
   },
   earningsLinkCard: {
       backgroundColor: WHITE,
