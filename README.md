@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/techleadevelopers/limpe-ja-app/main/LimpeJaApp/assets/images/LimpeJá_app_logo.png" alt="LimpeJá-App Logo" width="180" style="border-radius: 20px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);">
+  <img src="https://raw.githubusercontent.com/techleadevelopers/limpe-ja-app/main/LimpeJaApp/assets/images/logo2.png" alt="LimpeJá-App Logo" width="180" style="border-radius: 20px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);">
   <h1 style="color: #2c3e50; font-size: 2.8em; margin-top: 15px; margin-bottom: 10px;">LimpeJá App ✨🧹</h1>
   <p style="color: #7f8c8d; font-size: 1.2em; margin-bottom: 25px;">Seu marketplace de confiança para encontrar e agendar os melhores profissionais de limpeza da sua região!</p>
 
