@@ -37,7 +37,6 @@ const mockViaCepApi = {
         bairro: 'Sé',
         localidade: 'São Paulo',
         uf: 'SP',
-        erro: false,
       };
     } else if (cleanedCep === '99999999') {
       return { erro: true };
@@ -49,7 +48,6 @@ const mockViaCepApi = {
         bairro: 'Meireles',
         localidade: 'Fortaleza',
         uf: 'CE',
-        erro: false,
       };
     }
     return { erro: true };
@@ -60,17 +58,26 @@ export default function PersonalDetailsScreen() {
   const router = useRouter();
   const { personalDetails, setPersonalDetails } = useProviderRegistration();
 
-  const [nomeCompleto, setNomeCompleto] = useState('');
+  // ADICIONADO: Estados para email e senha
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false); // Para toggle de senha
+
+  const [nomeCompleto, setNomeCompleto] = useState(''); // Mapeia para fullName
   const [cpf, setCpf] = useState('');
-  const [dataNascimento, setDataNascimento] = useState<Date | undefined>(undefined);
-  const [telefone, setTelefone] = useState('');
+  const [dataNascimento, setDataNascimento] = useState<Date | undefined>(undefined); // Mapeia para dateOfBirth
+  const [telefone, setTelefone] = useState(''); // Mapeia para phone
   const [cep, setCep] = useState('');
-  const [logradouro, setLogradouro] = useState('');
+  const [logradouro, setLogradouro] = useState(''); // Mapeia para street
   const [numero, setNumero] = useState('');
   const [complemento, setComplemento] = useState('');
-  const [bairro, setBairro] = useState('');
-  const [cidade, setCidade] = useState('');
-  const [estado, setEstado] = useState('');
+  const [bairro, setBairro] = useState(''); // Mapeia para neighborhood
+  const [cidade, setCidade] = useState(''); // Mapeia para city
+  const [estado, setEstado] = useState(''); // Mapeia para state
+
+  // ADICIONADO: Estados de erro para email e senha
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   const [nomeCompletoError, setNomeCompletoError] = useState<string | null>(null);
   const [cpfError, setCpfError] = useState<string | null>(null);
@@ -93,17 +100,20 @@ export default function PersonalDetailsScreen() {
   useEffect(() => {
     // Fill fields from context
     if (personalDetails) {
-      setNomeCompleto(personalDetails.nomeCompleto);
+      // Mapeamento de personalDetails (do contexto) para estados locais
+      setEmail(personalDetails.email);
+      // Não preenche a senha por segurança
+      setNomeCompleto(personalDetails.fullName); // CORRIGIDO
       setCpf(personalDetails.cpf);
-      setDataNascimento(new Date(personalDetails.dataNascimento));
-      setTelefone(personalDetails.telefone);
-      setCep(personalDetails.endereco.cep);
-      setLogradouro(personalDetails.endereco.logradouro);
-      setNumero(personalDetails.endereco.numero);
-      setComplemento(personalDetails.endereco.complemento);
-      setBairro(personalDetails.endereco.bairro);
-      setCidade(personalDetails.endereco.cidade);
-      setEstado(personalDetails.endereco.estado);
+      setDataNascimento(new Date(personalDetails.dateOfBirth)); // CORRIGIDO
+      setTelefone(personalDetails.phone); // CORRIGIDO
+      setCep(personalDetails.address.cep);
+      setLogradouro(personalDetails.address.street); // CORRIGIDO
+      setNumero(personalDetails.address.number);
+      setComplemento(personalDetails.address.complement || ''); // CORRIGIDO (pode ser opcional)
+      setBairro(personalDetails.address.neighborhood); // CORRIGIDO
+      setCidade(personalDetails.address.city); // CORRIGIDO
+      setEstado(personalDetails.address.state); // CORRIGIDO
     }
 
     // Start header animations
@@ -186,6 +196,10 @@ export default function PersonalDetailsScreen() {
 
   const validateForm = () => {
     let isValid = true;
+    // Validações para email e password
+    if (!email.trim() || !email.trim().match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) { setEmailError('Email inválido.'); isValid = false; } else { setEmailError(null); }
+    if (!password.trim() || password.length < 6) { setPasswordError('Senha deve ter no mínimo 6 caracteres.'); isValid = false; } else { setPasswordError(null); }
+
     if (!nomeCompleto.trim()) { setNomeCompletoError('Nome completo é obrigatório.'); isValid = false; } else { setNomeCompletoError(null); }
     if (!cpf.replace(/\D/g, '').match(/^\d{11}$/)) { setCpfError('CPF inválido.'); isValid = false; } else { setCpfError(null); }
     if (!dataNascimento) { setDataNascimentoError('Data de nascimento é obrigatória.'); isValid = false; } else { setDataNascimentoError(null); }
@@ -207,18 +221,20 @@ export default function PersonalDetailsScreen() {
 
     setIsSubmitting(true);
     const personalData = {
-      nomeCompleto: nomeCompleto.trim(),
+      email: email.trim(), // ADICIONADO
+      passwordHash: password, // ADICIONADO
+      fullName: nomeCompleto.trim(), // CORRIGIDO
       cpf: cpf.replace(/\D/g, ''),
-      dataNascimento: dataNascimento!.toISOString().split('T')[0],
-      telefone: telefone.replace(/\D/g, ''),
-      endereco: {
+      dateOfBirth: dataNascimento!.toISOString().split('T')[0], // CORRIGIDO
+      phone: telefone.replace(/\D/g, ''), // CORRIGIDO
+      address: {
         cep: cep.replace(/\D/g, ''),
-        logradouro: logradouro.trim(),
-        numero: numero.trim(),
-        complemento: complemento.trim(),
-        bairro: bairro.trim(),
-        cidade: cidade.trim(),
-        estado: estado.trim().toUpperCase(),
+        street: logradouro.trim(), // CORRIGIDO
+        number: numero.trim(),
+        complement: complemento.trim(),
+        neighborhood: bairro.trim(), // CORRIGIDO
+        city: cidade.trim(), // CORRIGIDO
+        state: estado.trim().toUpperCase(), // CORRIGIDO
       },
     };
 
@@ -254,6 +270,39 @@ export default function PersonalDetailsScreen() {
         </Animated.View>
 
         <View>
+          {/* Campos de Email e Senha - ADICIONADOS */}
+          <InputWithIcon
+            label="Email *"
+            iconName="mail-outline"
+            placeholder="seu.email@exemplo.com"
+            value={email}
+            onChangeText={setEmail}
+            onBlur={() => setEmailError(email.trim() && email.trim().match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/) ? null : 'Email inválido.')}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            textContentType="emailAddress"
+            autoComplete="email"
+            errorMessage={emailError}
+            animationDelay={0}
+          />
+          <InputWithIcon
+            label="Senha *"
+            iconName="lock-closed-outline"
+            placeholder="Mínimo 6 caracteres"
+            value={password}
+            onChangeText={setPassword}
+            onBlur={() => setPasswordError(password.trim().length >= 6 ? null : 'Senha deve ter no mínimo 6 caracteres.')}
+            secureTextEntry={!showPassword} // Toggle de visibilidade da senha
+            textContentType="newPassword"
+            errorMessage={passwordError}
+            animationDelay={50}
+            rightComponent={
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIconTouchable}>
+                    <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={22} color="#A0AEC0" />
+                </TouchableOpacity>
+            }
+          />
+
           <InputWithIcon
             label="Nome Completo *"
             iconName="person-outline"
@@ -449,4 +498,10 @@ const styles = StyleSheet.create({
   nextButtonDisabled: { backgroundColor: '#A0CFFF', elevation: 0, shadowOpacity: 0 },
   navButtonTextBack: { fontSize: 16, fontWeight: '600', color: '#007AFF', marginLeft: 5 },
   navButtonTextNext: { fontSize: 17, fontWeight: 'bold', color: '#FFFFFF', marginRight: 5 },
+  // Estilo para o ícone de olho no input de senha
+  eyeIconTouchable: {
+    paddingHorizontal: 15,
+    height: '100%',
+    justifyContent: 'center',
+  },
 });

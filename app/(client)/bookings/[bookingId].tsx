@@ -1,5 +1,5 @@
 // LimpeJaApp/app/(client)/bookings/[bookingId].tsx
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
     View,
     Text,
@@ -10,142 +10,156 @@ import {
     Image,
     TouchableOpacity,
     Platform,
-    Animated, // Importar Animated para animações
+    Animated,
+    Linking,
 } from 'react-native';
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { formatDate } from '../../../utils/helpers'; // Supondo que você tenha essa função
+import { formatDate } from '../../../utils/helpers';
 
-// Definição de tipo para o placeholder (use seu tipo Booking real)
-interface MockBooking {
+// --- INTERFACE DE TIPAGEM REAL PARA BOOKING ---
+export interface Booking {
   id: string;
-  serviceName: string;
-  providerName: string;
-  providerId: string;
-  providerImageUrl?: string;
-  date: string; // ISO String
-  time?: string; // HH:MM (pode ser extraído de 'date' ou ser um campo separado)
-  status: 'Confirmado' | 'Pendente' | 'Concluído' | 'Cancelado'; // Exemplo de status
-  address: string;
-  notes?: string;
-  price: string;
-  reviewed?: boolean; // Para controlar se o botão de avaliar aparece
+  status: 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELED';
+  
+  service: {
+    id: string;
+    name: string;
+    description?: string;
+    price: number;
+    durationMinutes?: number;
+  };
+
+  provider: {
+    id: string;
+    fullName: string;
+    avatarUrl?: string | null;
+  };
+
+  scheduledDateTime: string;
+  
+  address: {
+    street: string;
+    number: string;
+    complement?: string | null;
+    neighborhood: string;
+    city: string;
+    state: string;
+    cep: string;
+  };
+
+  notes?: string | null;
+  totalPrice: number;
+  
+  isReviewed: boolean;
+  
+  createdAt: string;
+  updatedAt: string;
 }
 
-// Função mockada para simular a busca de detalhes do agendamento
-const fetchBookingDetailsFromAPI = async (bookingId: string): Promise<MockBooking | null> => {
-    console.log("[BookingDetailsScreen] Buscando detalhes para o agendamento:", bookingId);
-    await new Promise(resolve => setTimeout(resolve, 1200)); // Simula delay de rede
+// --- FUNÇÕES DE SERVIÇO (MOCKADAS PARA EXEMPLO, SUBSTITUA PELAS REAIS) ---
+const getBookingDetails = async (bookingId: string): Promise<Booking> => {
+    console.log("[BookingService] Buscando detalhes para o agendamento:", bookingId);
+    await new Promise(resolve => setTimeout(resolve, 1200));
 
-    // Dados mockados para diferentes IDs de agendamento ou cenários
-    const mockBookings: MockBooking[] = [
+    const mockBookings: Booking[] = [
         {
             id: 'book1',
-            serviceName: 'Limpeza Residencial Completa',
-            providerName: 'Ana Oliveira',
-            providerId: 'provider1',
-            providerImageUrl: 'https://via.placeholder.com/100/ADD8E6/000000?text=Ana+O',
-            date: '2025-07-15T14:00:00Z',
-            status: 'Confirmado',
-            address: 'Rua das Palmeiras, 450, Apt 101, Bairro Sol Nascente, Campinas-SP',
+            service: { id: 'serv1', name: 'Limpeza Residencial Completa', price: 180.00 },
+            provider: { id: 'provider1', fullName: 'Ana Oliveira', avatarUrl: 'https://via.placeholder.com/100/ADD8E6/000000?text=Ana+O' },
+            scheduledDateTime: '2025-07-15T14:00:00Z',
+            status: 'CONFIRMED',
+            address: { street: 'Rua das Palmeiras', number: '450', complement: 'Apt 101', neighborhood: 'Sol Nascente', city: 'Campinas', state: 'SP', cep: '13000-000' },
             notes: 'Foco especial nos vidros da varanda e limpeza do forno. Tenho um gato persa muito tranquilo.',
-            price: 'R$ 180,00',
-            reviewed: false,
+            totalPrice: 180.00,
+            isReviewed: false,
+            createdAt: '2025-07-10T10:00:00Z', updatedAt: '2025-07-10T10:00:00Z'
         },
         {
             id: 'book2',
-            serviceName: 'Limpeza Comercial',
-            providerName: 'Carlos Silva',
-            providerId: 'provider2',
-            providerImageUrl: 'https://via.placeholder.com/100/E0F7FA/000000?text=Carlos+S',
-            date: '2025-07-01T09:00:00Z',
-            status: 'Concluído',
-            address: 'Av. Paulista, 1000, Conj. 505, Bela Vista, São Paulo-SP',
+            service: { id: 'serv2', name: 'Limpeza Comercial', price: 250.00 },
+            provider: { id: 'provider2', fullName: 'Carlos Silva', avatarUrl: 'https://via.placeholder.com/100/E0F7FA/000000?text=Carlos+S' },
+            scheduledDateTime: '2025-07-01T09:00:00Z',
+            status: 'COMPLETED',
+            address: { street: 'Av. Paulista', number: '1000', complement: 'Conj. 505', neighborhood: 'Bela Vista', city: 'São Paulo', state: 'SP', cep: '01310-100' },
             notes: 'Limpeza de escritório pós-evento.',
-            price: 'R$ 250,00',
-            reviewed: false, // Pode ser true para testar o botão de avaliação
+            totalPrice: 250.00,
+            isReviewed: false,
+            createdAt: '2025-06-25T09:00:00Z', updatedAt: '2025-07-01T11:00:00Z'
         },
         {
             id: 'book3',
-            serviceName: 'Limpeza Pós-Obra',
-            providerName: 'Mariana Costa',
-            providerId: 'provider3',
-            providerImageUrl: 'https://via.placeholder.com/100/B3E5FC/000000?text=Mariana+C',
-            date: '2025-06-20T10:00:00Z',
-            status: 'Cancelado',
-            address: 'Rua das Flores, 123, Centro, Rio de Janeiro-RJ',
+            service: { id: 'serv3', name: 'Limpeza Pós-Obra', price: 300.00 },
+            provider: { id: 'provider3', fullName: 'Mariana Costa', avatarUrl: 'https://via.placeholder.com/100/B3E5FC/000000?text=Mariana+C' },
+            scheduledDateTime: '2025-06-20T10:00:00Z',
+            status: 'CANCELED',
+            address: { street: 'Rua das Flores', number: '123', neighborhood: 'Centro', city: 'Rio de Janeiro', state: 'RJ', cep: '20000-000' },
             notes: 'Obra atrasou, precisei cancelar.',
-            price: 'R$ 300,00',
-            reviewed: false,
-        },
-        {
-            id: 'book4',
-            serviceName: 'Limpeza de Vidros',
-            providerName: 'Ana Oliveira',
-            providerId: 'provider1',
-            providerImageUrl: 'https://via.placeholder.com/100/ADD8E6/000000?text=Ana+O',
-            date: '2025-07-25T13:00:00Z',
-            status: 'Pendente',
-            address: 'Av. Brasil, 500, Apt 202, Bairro Novo, Belo Horizonte-MG',
-            notes: 'Janelas do apartamento e varanda.',
-            price: 'R$ 100,00',
-            reviewed: false,
+            totalPrice: 300.00,
+            isReviewed: false,
+            createdAt: '2025-06-15T10:00:00Z', updatedAt: '2025-06-18T10:00:00Z'
         },
     ];
 
     const foundBooking = mockBookings.find(b => b.id === bookingId);
-    return foundBooking || null;
+    if (!foundBooking) {
+        throw new Error(`Agendamento com ID "${bookingId}" não encontrado.`);
+    }
+    return foundBooking;
 };
+
+const cancelBooking = async (bookingId: string): Promise<void> => {
+    console.log("[BookingService] Cancelando agendamento:", bookingId);
+    await new Promise(resolve => setTimeout(resolve, 800));
+};
+// --- FIM DAS FUNÇÕES DE SERVIÇO (MOCKADAS) ---
 
 
 export default function BookingDetailsScreen() {
   const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
   const router = useRouter();
   
-  const [booking, setBooking] = useState<MockBooking | null>(null);
+  const [booking, setBooking] = useState<Booking | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Animações para os elementos da tela
   const providerSectionAnim = useRef(new Animated.Value(0)).current;
   const detailsCardAnim = useRef(new Animated.Value(0)).current;
   const actionsCardAnim = useRef(new Animated.Value(0)).current;
 
-  // Animações para os botões de ação
   const cancelButtonScaleAnim = useRef(new Animated.Value(1)).current;
   const contactButtonScaleAnim = useRef(new Animated.Value(1)).current;
   const reviewButtonScaleAnim = useRef(new Animated.Value(1)).current;
   const profileButtonScaleAnim = useRef(new Animated.Value(1)).current;
 
-  useEffect(() => {
-    if (bookingId) {
-      setIsLoading(true);
-      setError(null);
-      fetchBookingDetailsFromAPI(bookingId)
-        .then(data => {
-          setBooking(data);
-          if (!data) setError(`Agendamento com ID "${bookingId}" não encontrado.`);
-        })
-        .catch(err => {
-          console.error("[BookingDetailsScreen] Erro ao buscar detalhes do agendamento:", err);
-          setError(err.message || "Não foi possível carregar os detalhes do agendamento.");
-        })
-        .finally(() => {
-          setIsLoading(false);
-          // Inicia as animações de entrada dos elementos
-          Animated.stagger(200, [
-            Animated.timing(providerSectionAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-            Animated.timing(detailsCardAnim, { toValue: 1, duration: 700, delay: 100, useNativeDriver: true }),
-            Animated.timing(actionsCardAnim, { toValue: 1, duration: 700, delay: 200, useNativeDriver: true }),
-          ]).start();
-        });
-    } else {
+  const fetchBooking = useCallback(async () => {
+    if (!bookingId) {
         setError("ID do agendamento não fornecido.");
         setIsLoading(false);
+        return;
+    }
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await getBookingDetails(bookingId);
+      setBooking(data);
+      Animated.stagger(200, [
+        Animated.timing(providerSectionAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.timing(detailsCardAnim, { toValue: 1, duration: 700, delay: 100, useNativeDriver: true }),
+        Animated.timing(actionsCardAnim, { toValue: 1, duration: 700, delay: 200, useNativeDriver: true }),
+      ]).start();
+    } catch (err: any) {
+      console.error("[BookingDetailsScreen] Erro ao buscar detalhes do agendamento:", err);
+      setError(err.message || "Não foi possível carregar os detalhes do agendamento.");
+    } finally {
+      setIsLoading(false);
     }
   }, [bookingId, providerSectionAnim, detailsCardAnim, actionsCardAnim]);
 
-  // Função para animar o botão ao pressionar
+  useEffect(() => {
+    fetchBooking();
+  }, [fetchBooking]);
+
   const onPressInButton = (animValue: Animated.Value) => {
     Animated.spring(animValue, {
       toValue: 0.96,
@@ -172,14 +186,18 @@ export default function BookingDetailsScreen() {
         {
           text: "Sim, Cancelar",
           onPress: async () => {
-            console.log("[BookingDetailsScreen] Cancelando agendamento:", bookingId);
+            console.log("[BookingDetailsScreen] Cancelando agendamento:", booking.id);
             setIsLoading(true);
-            // TODO: Chamar clientService.cancelBooking(bookingId)
-            setTimeout(() => { // Simulação
-                Alert.alert("Sucesso (Simulado)", "Agendamento cancelado.");
-                router.back();
+            try {
+                await cancelBooking(booking.id);
+                Alert.alert("Sucesso", "Agendamento cancelado com sucesso!");
+                setBooking(prev => prev ? { ...prev, status: 'CANCELED' } : null);
+            } catch (err: any) {
+                console.error("[BookingDetailsScreen] Erro ao cancelar agendamento:", err);
+                Alert.alert("Erro", err.message || "Não foi possível cancelar o agendamento.");
+            } finally {
                 setIsLoading(false);
-            }, 1000);
+            }
           },
           style: "destructive"
         }
@@ -187,15 +205,52 @@ export default function BookingDetailsScreen() {
     );
   };
 
-  const getStatusStyle = (status: MockBooking['status']) => {
+  const handleContactProvider = () => {
+    if (!booking) return;
+    router.push({
+      pathname: '/(client)/messages',
+      params: {
+        providerId: booking.provider.id,
+        bookingId: booking.id,
+        recipientName: booking.provider.fullName,
+      },
+    });
+  };
+
+  const handleReviewService = () => {
+    if (!booking) return;
+    router.push({
+      // CORREÇÃO: Usar [targetId] no pathname e passar booking.id como targetId
+      pathname: '/(common)/feedback/[targetId]', 
+      params: {
+        targetId: booking.id, // Passa o ID do agendamento como targetId
+        type: 'service',
+        serviceName: booking.service.name,
+        providerName: booking.provider.fullName,
+        providerId: booking.provider.id,
+      },
+    });
+  };
+
+  const handleViewProviderProfile = () => {
+    if (!booking) return;
+    router.push({
+      pathname: '/(client)/explore/[providerId]',
+      params: {
+        providerId: booking.provider.id,
+      },
+    });
+  };
+
+  const getStatusStyle = (status: Booking['status']) => {
     switch (status) {
-      case 'Confirmado':
+      case 'CONFIRMED':
         return { color: '#4CAF50', icon: 'checkmark-circle-outline' as const, badgeBg: '#E8F5E9' };
-      case 'Pendente':
+      case 'PENDING':
         return { color: '#FFC107', icon: 'time-outline' as const, badgeBg: '#FFF3E0' };
-      case 'Concluído':
+      case 'COMPLETED':
         return { color: '#007AFF', icon: 'flag-outline' as const, badgeBg: '#E3F2FD' };
-      case 'Cancelado':
+      case 'CANCELED':
         return { color: '#F44336', icon: 'close-circle-outline' as const, badgeBg: '#FFEBEE' };
       default:
         return { color: '#888', icon: 'help-circle-outline' as const, badgeBg: '#ECEFF1' };
@@ -232,15 +287,14 @@ export default function BookingDetailsScreen() {
     <ScrollView style={styles.scrollViewContainer}>
       <Stack.Screen options={{ title: `Detalhes do Serviço` }} />
       
-      {/* Seção do Prestador (Topo) com Animação */}
       <Animated.View style={[styles.card, styles.providerSectionCard, { opacity: providerSectionAnim, transform: [{ translateY: providerSectionAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
         <View style={styles.providerSection}>
-          {booking.providerImageUrl && 
-            <Image source={{ uri: booking.providerImageUrl }} style={styles.providerImage} />
+          {booking.provider.avatarUrl && 
+            <Image source={{ uri: booking.provider.avatarUrl }} style={styles.providerImage} />
           }
           <View style={styles.providerInfo}>
-            <Text style={styles.serviceNameText}>{booking.serviceName}</Text>
-            <Text style={styles.providerNameText}>com {booking.providerName}</Text>
+            <Text style={styles.serviceNameText}>{booking.service.name}</Text>
+            <Text style={styles.providerNameText}>com {booking.provider.fullName}</Text>
           </View>
           <View style={[styles.statusBadge, { backgroundColor: statusInfo.badgeBg }]}>
             <Ionicons name={statusInfo.icon} size={16} color={statusInfo.color} />
@@ -249,26 +303,30 @@ export default function BookingDetailsScreen() {
         </View>
       </Animated.View>
 
-      {/* Detalhes do Agendamento com Animação */}
       <Animated.View style={[styles.card, { opacity: detailsCardAnim, transform: [{ scale: detailsCardAnim.interpolate({ inputRange: [0, 1], outputRange: [0.98, 1] }) }] }]}>
         <Text style={styles.sectionTitle}>Detalhes do Agendamento</Text>
         
         <View style={styles.detailRow}>
           <Ionicons name="calendar-outline" size={20} color="#555" style={styles.icon} />
           <Text style={styles.detailLabel}>Data e Hora:</Text>
-          <Text style={styles.detailValue}>{formatDate(booking.date, { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}</Text>
+          <Text style={styles.detailValue}>{formatDate(booking.scheduledDateTime, { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}</Text>
         </View>
 
         <View style={styles.detailRow}>
           <Ionicons name="location-outline" size={20} color="#555" style={styles.icon} />
           <Text style={styles.detailLabel}>Endereço:</Text>
-          <Text style={styles.detailValueAddress}>{booking.address}</Text>
+          <Text style={styles.detailValueAddress}>
+            {`${booking.address.street}, ${booking.address.number}`}
+            {booking.address.complement ? `, ${booking.address.complement}` : ''}
+            {`\n${booking.address.neighborhood}, ${booking.address.city}-${booking.address.state}`}
+            {`\nCEP: ${booking.address.cep}`}
+          </Text>
         </View>
 
         <View style={styles.detailRow}>
           <Ionicons name="cash-outline" size={20} color="#555" style={styles.icon} />
           <Text style={styles.detailLabel}>Valor:</Text>
-          <Text style={[styles.detailValue, styles.priceText]}>{booking.price}</Text>
+          <Text style={[styles.detailValue, styles.priceText]}>{`R$ ${booking.totalPrice.toFixed(2).replace('.', ',')}`}</Text>
         </View>
 
         {booking.notes && (
@@ -280,11 +338,10 @@ export default function BookingDetailsScreen() {
         )}
       </Animated.View>
       
-      {/* Cartão de Ações com Animação */}
       <Animated.View style={[styles.actionsCard, { opacity: actionsCardAnim, transform: [{ scale: actionsCardAnim.interpolate({ inputRange: [0, 1], outputRange: [0.98, 1] }) }] }]}>
         <Text style={styles.sectionTitle}>Ações</Text>
         
-        {booking.status === 'Confirmado' && (
+        {(booking.status === 'CONFIRMED' || booking.status === 'PENDING') && (
             <TouchableOpacity
                 style={[styles.actionButton, styles.cancelButton, { transform: [{ scale: cancelButtonScaleAnim }] }]}
                 onPress={handleCancelBooking}
@@ -298,18 +355,18 @@ export default function BookingDetailsScreen() {
         
         <TouchableOpacity
             style={[styles.actionButton, { transform: [{ scale: contactButtonScaleAnim }] }]}
-            onPress={() => router.push(`/(client)/messages/${booking.providerId}?bookingId=${bookingId}&recipientName=${booking.providerName}`)}
+            onPress={handleContactProvider}
             onPressIn={() => onPressInButton(contactButtonScaleAnim)}
             onPressOut={() => onPressOutButton(contactButtonScaleAnim)}
         >
             <Ionicons name="chatbubble-ellipses-outline" size={20} color="#fff" />
-            <Text style={styles.actionButtonText}>Contatar {booking.providerName.split(' ')[0]}</Text>
+            <Text style={styles.actionButtonText}>Contatar {booking.provider.fullName.split(' ')[0]}</Text>
         </TouchableOpacity>
 
-        {booking.status === 'Concluído' && !booking.reviewed && (
+        {booking.status === 'COMPLETED' && !booking.isReviewed && (
           <TouchableOpacity
             style={[styles.actionButton, styles.reviewButton, { transform: [{ scale: reviewButtonScaleAnim }] }]}
-            onPress={() => router.push(`/(common)/feedback/${bookingId}?type=service&serviceName=${encodeURIComponent(booking.serviceName)}&providerName=${encodeURIComponent(booking.providerName)}`)}
+            onPress={handleReviewService}
             onPressIn={() => onPressInButton(reviewButtonScaleAnim)}
             onPressOut={() => onPressOutButton(reviewButtonScaleAnim)}
           >
@@ -320,12 +377,12 @@ export default function BookingDetailsScreen() {
         
         <TouchableOpacity
             style={[styles.actionButtonOutline, { transform: [{ scale: profileButtonScaleAnim }] }]}
-            onPress={() => router.push(`/(client)/explore/${booking.providerId}`)}
+            onPress={handleViewProviderProfile}
             onPressIn={() => onPressInButton(profileButtonScaleAnim)}
             onPressOut={() => onPressOutButton(profileButtonScaleAnim)}
         >
             <Ionicons name="person-circle-outline" size={20} color="#007AFF" />
-            <Text style={[styles.actionButtonText, styles.actionButtonOutlineText]}>Ver Perfil de {booking.providerName.split(' ')[0]}</Text>
+            <Text style={[styles.actionButtonText, styles.actionButtonOutlineText]}>Ver Perfil de {booking.provider.fullName.split(' ')[0]}</Text>
         </TouchableOpacity>
       </Animated.View>
     </ScrollView>
@@ -335,7 +392,7 @@ export default function BookingDetailsScreen() {
 const styles = StyleSheet.create({
   scrollViewContainer: {
     flex: 1,
-    backgroundColor: '#f0f2f5', // Um cinza bem claro para o fundo geral
+    backgroundColor: '#f0f2f5',
   },
   centered: {
     flex: 1,
@@ -361,37 +418,36 @@ const styles = StyleSheet.create({
     padding: 18,
     marginHorizontal: 15,
     marginTop: 15,
-    // Sombras aprimoradas para um efeito mais "flutuante"
     ...Platform.select({
       ios: {
         shadowColor: 'rgba(0,0,0,0.1)',
-        shadowOffset: { width: 0, height: 5 }, // Sombra mais pronunciada
-        shadowOpacity: 0.2, // Opacidade da sombra
-        shadowRadius: 10, // Suavidade da sombra
+        shadowOffset: { width: 0, height: 5 },
+        shadowOpacity: 0.2,
+        shadowRadius: 10,
       },
       android: {
-        elevation: 6, // Elevação maior para Android
+        elevation: 6,
       },
     }),
   },
-  providerSectionCard: { // Estilo específico para o card do provedor no topo
-    paddingVertical: 20, // Mais padding vertical
+  providerSectionCard: {
+    paddingVertical: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between', // Espaça os itens
+    justifyContent: 'space-between',
   },
-  providerSection: { // Conteúdo interno do card do provedor
+  providerSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1, // Ocupa o espaço disponível
+    flex: 1,
   },
   providerImage: {
     width: 60,
     height: 60,
     borderRadius: 30,
     marginRight: 15,
-    borderWidth: 2, // Borda mais grossa
-    borderColor: '#007AFF', // Cor da borda
+    borderWidth: 2,
+    borderColor: '#007AFF',
   },
   providerInfo: {
     flex: 1,
@@ -430,26 +486,26 @@ const styles = StyleSheet.create({
   },
   detailRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start', // Para textos longos quebrarem linha corretamente
+    alignItems: 'flex-start',
     marginBottom: 12,
   },
   icon: {
     marginRight: 10,
-    marginTop: 2, // Pequeno ajuste para alinhar com o texto
+    marginTop: 2,
   },
   detailLabel: {
     fontSize: 15,
     color: '#555',
     fontWeight: '600',
     marginRight: 5,
-    width: 100, // Para alinhar os valores (opcional)
+    width: 100,
   },
   detailValue: {
     fontSize: 15,
     color: '#333',
-    flex: 1, // Para quebrar linha se necessário
+    flex: 1,
   },
-  detailValueAddress: { // Estilo específico para endereço se precisar de mais espaço
+  detailValueAddress: {
     fontSize: 15,
     color: '#333',
     flex: 1,
@@ -460,13 +516,12 @@ const styles = StyleSheet.create({
       color: '#007AFF'
   },
   actionsCard: {
-    // Separado em um card próprio para ações
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 18,
     marginHorizontal: 15,
     marginTop: 15,
-    marginBottom: 30, // Espaço no final da ScrollView
+    marginBottom: 30,
      ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.1)', shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.2, shadowRadius: 10 },
       android: { elevation: 6 },
@@ -475,9 +530,9 @@ const styles = StyleSheet.create({
   actionButton: {
     flexDirection: 'row',
     backgroundColor: '#007AFF',
-    paddingVertical: 14, // Aumenta o padding
+    paddingVertical: 14,
     paddingHorizontal: 15,
-    borderRadius: 10, // Mais arredondado
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
@@ -489,10 +544,10 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   cancelButton: {
-    backgroundColor: '#F44336', // Vermelho para cancelar
+    backgroundColor: '#F44336',
   },
   reviewButton: {
-      backgroundColor: '#FF9500', // Laranja para avaliar
+      backgroundColor: '#FF9500',
   },
   actionButtonOutline: {
     flexDirection: 'row',
@@ -503,7 +558,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
-    borderWidth: 2, // Borda mais grossa
+    borderWidth: 2,
     borderColor: '#007AFF',
   },
   actionButtonOutlineText: {

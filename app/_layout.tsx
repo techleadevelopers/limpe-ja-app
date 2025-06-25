@@ -1,13 +1,13 @@
-// Em app/_layout.tsx
+// LimpeJaApp/app/_layout.tsx
 import React, { useEffect, useState, useCallback } from 'react';
-import { Slot, SplashScreen, useRouter, usePathname } from 'expo-router';
+import { Slot, SplashScreen, useRouter, usePathname, useSegments } from 'expo-router';
 import { AuthProvider } from '../contexts/AuthContext';
 import { useAuth } from '../hooks/useAuth';
 import { AppProvider } from '../contexts/AppContext';
 import { ActivityIndicator, View, StyleSheet, Text } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-console.log("[_layout.tsx] Configuração do Firebase SDK COMENTADA.");
+import { UserRole } from './types/backend/auth'; // AJUSTE O CAMINHO SE NECESSÁRIO!
 
 SplashScreen.preventAutoHideAsync();
 
@@ -16,111 +16,163 @@ const WELCOME_SCREEN_VIEWED_KEY = 'welcomeScreenViewed';
 function InitialLayout() {
   const { isAuthenticated, isLoading: authIsLoading, user } = useAuth();
   const router = useRouter();
+  const segments = useSegments();
   const pathname = usePathname();
 
-  // Estados para controlar o carregamento e o fluxo inicial
-  const [storageLoading, setStorageLoading] = useState(true); // Novo: para o carregamento do AsyncStorage
-  const [hasViewedWelcome, setHasViewedWelcome] = useState(false); // Novo: estado local para welcomeScreenViewed
-  const [initialRouteDecided, setInitialRouteDecided] = useState(false); // Novo: para controlar se a 1ª decisão de rota foi feita
+  const [storageLoading, setStorageLoading] = useState(true);
 
-  // 1. Verifica se a welcome screen já foi vista (apenas uma vez no mount)
-  useEffect(() => {
-    const checkWelcomeStatus = async () => {
-      try {
-        const value = await AsyncStorage.getItem(WELCOME_SCREEN_VIEWED_KEY);
-        setHasViewedWelcome(value === 'true');
-        console.log('[InitialLayout] Status da WelcomeScreen lido do AsyncStorage:', value === 'true');
-      } catch (e) {
-        console.warn("[InitialLayout] Erro ao ler status da welcome screen:", e);
-        setHasViewedWelcome(false); // Assume não vista em caso de erro
-      } finally {
-        setStorageLoading(false); // Finaliza o loading do AsyncStorage
-      }
-    };
-    checkWelcomeStatus();
+  const checkWelcomeStatus = useCallback(async () => {
+    try {
+      const value = await AsyncStorage.getItem(WELCOME_SCREEN_VIEWED_KEY);
+      return value === 'true';
+    } catch (e) {
+      console.warn("[InitialLayout] Error reading welcome screen status:", e);
+      return false;
+    }
   }, []);
 
-  // 2. useEffect principal para decisões de navegação
   useEffect(() => {
-    // Aguarda todos os carregamentos críticos: AsyncStorage e AuthContext
-    if (storageLoading || authIsLoading) {
-      console.log(`[InitialLayout] Aguardando: storageLoading=${storageLoading}, authIsLoading=${authIsLoading}`);
+    const loadAndHideSplash = async () => {
+      await checkWelcomeStatus();
+      setStorageLoading(false);
+      SplashScreen.hideAsync();
+      console.log('[InitialLayout] Native splash hidden.');
+    };
+    loadAndHideSplash();
+  }, [checkWelcomeStatus]);
+
+  useEffect(() => {
+    if (storageLoading || authIsLoading || (isAuthenticated && !user?.role)) {
+      console.log(`[InitialLayout] Still loading or user object incomplete. Waiting: storageLoading=${storageLoading}, authIsLoading=${authIsLoading}, isAuthenticated=${isAuthenticated}, userHasRole=${!!user?.role}`);
       return;
     }
 
-    // Se a rota inicial já foi decidida, não faz mais nada este useEffect
-    // a menos que queiramos observar mudanças de autenticação para redirecionar de qualquer lugar (mais complexo).
-    // Por agora, vamos focar em estabilizar o fluxo inicial.
-    if (initialRouteDecided && pathname !== '/') { // A condição pathname !== '/' é para caso o usuário volte para a raiz
-        console.log('[InitialLayout] Rota inicial já decidida, pathname atual:', pathname);
-        // Se autenticado e em rota de auth/welcome, redireciona
-        if (isAuthenticated) {
-            const isAuthOrWelcomeRoute = pathname.startsWith('/(auth)') || pathname === '/welcome';
-            if(isAuthOrWelcomeRoute){
-                const targetRoute = user?.role === 'client' ? '/(client)/explore' : user?.role === 'provider' ? '/(provider)/dashboard' : '/';
-                console.log(`[InitialLayout] Usuário autenticado em rota ${pathname}, redirecionando para ${targetRoute} (pós decisão inicial)`);
-                router.replace(targetRoute);
+    const inAuthGroup = segments[0] === '(auth)';
+    const isWelcomeRoute = pathname === '/welcome';
+
+    // Verifica se o caminho atual está em um grupo específico
+    const isCurrentPathInClientGroup = segments[0] === '(client)';
+    const isCurrentPathInProviderGroup = segments[0] === '(provider)';
+    const isCurrentPathInCommonGroup = segments[0] === '(common)'; // Rotas comuns como settings, help, notifications
+
+    const decideAndRedirect = async () => {
+        const currentHasViewedWelcome = await checkWelcomeStatus();
+        console.log(`[InitialLayout] Deciding route (Final State): Auth=${isAuthenticated}, Role=${user?.role}, Path=${pathname}, InAuthGroup=${inAuthGroup}, IsWelcome=${isWelcomeRoute}, HasViewedWelcome=${currentHasViewedWelcome}`);
+
+        if (!currentHasViewedWelcome && !isWelcomeRoute) {
+            console.log('[InitialLayout] WelcomeScreen not viewed. Redirecionando para /welcome.');
+            router.replace('/welcome');
+            return;
+        }
+
+        if (!isAuthenticated) {
+            if (!inAuthGroup && !isWelcomeRoute) {
+                console.log('[InitialLayout] Not authenticated and outside auth/welcome group. Redirecionando para /(auth)/login.');
+                router.replace('/(auth)/login');
+            } else {
+                console.log('[InitialLayout] Not authenticated, staying on auth or welcome route.');
             }
+            return;
         }
-        return;
-    }
 
+        // Se está autenticado (isAuthenticated é true)
+        let targetRoute: string;
+        let shouldPerformRedirect = false; // Flag para controlar o redirecionamento final
 
-    SplashScreen.hideAsync();
-    console.log('[InitialLayout] Splash nativa escondida.');
-
-    if (!hasViewedWelcome) {
-      // Se a welcome screen ainda não foi vista (baseado no AsyncStorage lido uma vez), navega para ela.
-      // A WelcomeScreen.tsx será responsável por navegar para o login depois E ATUALIZAR O ASYNCSTORAGE.
-      if (pathname !== '/welcome') {
-        console.log('[InitialLayout] WelcomeScreen não vista. Redirecionando para /welcome.');
-        router.replace('/welcome');
-      }
-    } else {
-      // Welcome screen JÁ foi vista. Procede com a lógica de autenticação.
-      console.log('[InitialLayout] WelcomeScreen JÁ vista. Verificando autenticação.');
-      if (isAuthenticated) {
-        console.log('[InitialLayout] Autenticado. Usuário:', user?.role);
-        const targetRoute = user?.role === 'client' ? '/(client)/explore' : user?.role === 'provider' ? '/(provider)/dashboard' : '/(auth)/login'; // Fallback para login se role for estranho
-        const isAuthOrWelcomeRoute = pathname.startsWith('/(auth)') || pathname === '/welcome' || pathname === '/';
-
-        if (isAuthOrWelcomeRoute || pathname !== targetRoute) { // Evita loop se já estiver no destino
-          console.log(`[InitialLayout] Redirecionando usuário ${user?.role} para ${targetRoute}. Pathname atual: ${pathname}`);
-          router.replace(targetRoute);
-        }
-      } else {
-        // Não autenticado e welcome já vista.
-        const isAuthRoute = pathname.startsWith('/(auth)');
-        if (!isAuthRoute) { // Se não estiver já numa rota de auth (ex: /register)
-          console.log('[InitialLayout] Não autenticado e welcome vista. Redirecionando para /(auth)/login.');
-          router.replace('/(auth)/login');
+        if (user?.role === UserRole.ADMIN) {
+            if (user?.clientDetails) {
+                targetRoute = '/(client)/explore';
+                // Se o ADMIN tem perfil de cliente, ele deve ir para o explore do cliente.
+                // Redireciona se não estiver já no grupo cliente ou em uma rota comum.
+                if (!isCurrentPathInClientGroup && !isCurrentPathInCommonGroup) {
+                    shouldPerformRedirect = true;
+                }
+            } else if (user?.providerDetails) {
+                targetRoute = '/(provider)/dashboard';
+                // Se o ADMIN tem perfil de provedor, ele deve ir para o dashboard do provedor.
+                // Redireciona se não estiver já no grupo provedor ou em uma rota comum.
+                if (!isCurrentPathInProviderGroup && !isCurrentPathInCommonGroup) {
+                    shouldPerformRedirect = true;
+                }
+            } else {
+                // ADMIN sem detalhes específicos de cliente/provedor (pode ser um admin puro ou perfis não linkados).
+                if (isCurrentPathInClientGroup || isCurrentPathInCommonGroup) {
+                    targetRoute = pathname; // Permite que ele permaneça no caminho atual relacionado ao cliente/comum
+                    console.log(`[InitialLayout] Admin (sem perfil específico) permanecendo no caminho relacionado ao cliente/comum: ${pathname}`);
+                    shouldPerformRedirect = false; // Não há necessidade de redirecionamento
+                } else if (isCurrentPathInProviderGroup) {
+                    console.warn('[InitialLayout] Usuário ADMIN sem perfil de provedor associado tentando acessar rota de provedor. Redirecionando para rota de cliente por padrão.');
+                    // CORREÇÃO AQUI: Se é ADMIN sem perfil de provedor, deve ir para a rota de cliente, NÃO de provedor.
+                    targetRoute = '/(client)/explore'; // <--- CORREÇÃO!
+                    shouldPerformRedirect = true; // Força o redirecionamento para o explore do cliente
+                } else {
+                    // Fallback padrão se o caminho não for reconhecido ou for a raiz
+                    console.warn('[InitialLayout] Usuário ADMIN sem perfil de cliente/provedor associado detectado no frontend. Redirecionando para rota de cliente por padrão.');
+                    targetRoute = '/(client)/explore';
+                    shouldPerformRedirect = true;
+                }
+            }
+        } else if (user?.role === UserRole.CLIENT) {
+            targetRoute = '/(client)/explore';
+            // Se o CLIENT já estiver no grupo cliente ou comum, permite que ele permaneça.
+            // Se estiver no grupo provedor, redireciona para o explore do cliente.
+            if (!isCurrentPathInClientGroup && !isCurrentPathInCommonGroup) {
+                shouldPerformRedirect = true;
+            }
+        } else if (user?.role === UserRole.PROVIDER) {
+            targetRoute = '/(provider)/dashboard';
+            // Se o PROVIDER já estiver no grupo provedor ou comum, permite que ele permaneça.
+            // Se estiver no grupo cliente, redireciona para o dashboard do provedor.
+            if (!isCurrentPathInProviderGroup && !isCurrentPathInCommonGroup) {
+                shouldPerformRedirect = true;
+            }
         } else {
-          console.log('[InitialLayout] Não autenticado e welcome vista. Já em rota de autenticação:', pathname);
+            console.warn('[InitialLayout] Usuário autenticado com role desconhecido ou nulo. Redirecionando para login.');
+            targetRoute = '/(auth)/login';
+            shouldPerformRedirect = true;
         }
-      }
-    }
-    setInitialRouteDecided(true); // Marca que a primeira decisão de rota foi tomada nesta sessão.
 
-  // ATENÇÃO: Reduzir as dependências para evitar re-execuções desnecessárias que causam loop.
-  // A lógica aqui é para o roteamento INICIAL. Uma vez decidido, não deveria re-rotear de forma agressiva.
-  // 'pathname' é problemático aqui se outras telas (login, welcome) também usam router.replace(),
-  // pois cada replace muda o pathname e re-triggera este useEffect.
-  // A flag `initialRouteDecided` ajuda a mitigar isso.
-  // Se `user` muda (ex: após login), queremos que ele reavalie para o redirecionamento pós-login.
-  }, [storageLoading, authIsLoading, hasViewedWelcome, isAuthenticated, user, router, initialRouteDecided, pathname]);
+        // Condições adicionais para redirecionamento (ex: vindo do grupo de autenticação/boas-vindas)
+        if (inAuthGroup || isWelcomeRoute) {
+            shouldPerformRedirect = true;
+        }
+
+        // Se o targetRoute for o pathname atual, não redirecionar, a menos que seja forçado
+        if (targetRoute === pathname) {
+            shouldPerformRedirect = false; // Já está na rota correta
+        }
+        
+        // Se o targetRoute for a raiz de um grupo e o pathname for uma sub-rota desse grupo, não redirecionar
+        // Ex: targetRoute = '/(client)/explore', pathname = '/explore/some-id'
+        const targetBase = targetRoute.replace(/\/\(\w+\)/, ''); // Remove o grupo, ex: '/explore'
+        if (targetRoute.startsWith('/(') && pathname.startsWith(targetBase) && pathname !== targetBase) {
+               shouldPerformRedirect = false;
+        }
 
 
-  // Tela de carregamento enquanto o AsyncStorage ou o AuthContext estão carregando.
+        // Ação final de redirecionamento
+        if (shouldPerformRedirect) {
+            console.log(`[InitialLayout] Redirecionando ${user?.role} de ${pathname} para: ${targetRoute}`);
+            router.replace(targetRoute as any);
+        } else {
+            console.log(`[InitialLayout] Usuário ${user?.role} já na rota correta (${pathname}). Permanecendo.`);
+        }
+    };
+
+    decideAndRedirect();
+
+  }, [isAuthenticated, user, storageLoading, authIsLoading, router, segments, pathname, checkWelcomeStatus]);
+
   if (storageLoading || authIsLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>Preparando LimpeJá...</Text>
+        <Text style={styles.loadingText}>carregando ...</Text>
       </View>
     );
   }
 
-  return <Slot />; // Renderiza a rota atual determinada pela lógica acima.
+  return <Slot />;
 }
 
 export default function RootLayout() {

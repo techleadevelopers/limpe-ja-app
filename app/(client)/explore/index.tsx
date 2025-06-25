@@ -1,182 +1,294 @@
 import { Stack, useRouter } from 'expo-router';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
-  // Text, // Removido se não usado diretamente aqui
-  // TouchableOpacity, // Removido se não usado diretamente aqui
-  // Platform, // Removido se não usado diretamente aqui
-  Animated,
-  ScrollView,
-  StyleSheet,
-  View,
+    Animated,
+    ScrollView,
+    StyleSheet,
+    View,
+    ActivityIndicator,
+    Text,
+    Alert,
+    TouchableOpacity,
 } from 'react-native';
 
-// Caminhos para os componentes (ajuste se sua estrutura for diferente)
-import BannerOferta from '../ofertas/components/BannerOferta';
-import HeaderSuperior from '../../../components/layout/HeaderSuperior';
-import NavBar from '../../../components/layout/NavBar';
-import CategoriaCard, { Categoria as TipoCategoria } from './components/CategoriaCard'; // Sua importação existente
-import SecaoContainer from './components/SecaoContainer';
-import SecaoPrestadores, { Prestador } from './components/SecaoPrestadores'; // Importa Prestador (com as alterações de fundo já feitas)
+import {
+    getServiceCategories,
+    getUserProfile,
+    getOffers,
+} from '../../services/clientService';
 
-// CORRIGIDO: Definição de CATEGORIAS_EXEMPLO com a propriedade 'corFundo'
-const COR_AZUL_CLARO_UNIFICADA = '#A0D2EB'; // Ou a cor azul claro que você decidiu
+import {
+    getRecommendedProviders,
+    getNearbyProviders,
+} from '../../services/providerService';
 
-const CATEGORIAS_EXEMPLO: TipoCategoria[] = [
-  { id: '1', nome: 'Residencial', icone: 'home-outline', corFundo: COR_AZUL_CLARO_UNIFICADA },
-  { id: '2', nome: 'Comercial', icone: 'office-building-outline', corFundo: COR_AZUL_CLARO_UNIFICADA },
-  { id: '3', nome: 'Pós-obra', icone: 'broom', corFundo: COR_AZUL_CLARO_UNIFICADA },
-  { id: '4', nome: 'Vidros', icone: 'window-closed-variant', corFundo: COR_AZUL_CLARO_UNIFICADA },
-  { id: '5', nome: 'Jardim', icone: 'flower-tulip-outline', corFundo: COR_AZUL_CLARO_UNIFICADA },
-  { id: '6', nome: 'Passar Roupa', icone: 'iron-outline', corFundo: COR_AZUL_CLARO_UNIFICADA },
-];
+import { Service } from '../../types/backend/services';
+import { ProviderDisplayInfo } from '../../types/backend/providers';
+import { Offer } from '../../types/backend/offers';
+import { UserProfile } from '../../types/backend/users';
+import { BookingAddress } from '../../types/backend/bookings';
 
-// Seus dados mockados PRESTADORES_EXEMPLO (mantidos como no seu código)
-const PRESTADORES_EXEMPLO: Prestador[] = [
-  {
-    id: 'provider1',
-    nome: 'Ana Oliveira',
-    especialidade: 'Limpeza Residencial',
-    avaliacao: 4.8,
-    precoHora: 'R$ 60/h',
-    distancia: '1.2 km',
-    imagemUrl: 'https://randomuser.me/api/portraits/women/43.jpg',
-    numeroAvaliacoes: 125,
-    isVerificado: true,
-    descricaoCurta: 'Profissional experiente e dedicada, limpeza detalhada.'
-  },
-  {
-    id: 'provider2',
-    nome: 'Carlos Silva',
-    especialidade: 'Limpeza Comercial',
-    avaliacao: 4.9,
-    precoHora: 'R$ 75/h',
-    distancia: '2.5 km',
-    imagemUrl: 'https://randomuser.me/api/portraits/men/32.jpg',
-    numeroAvaliacoes: 88,
-    isVerificado: false,
-    descricaoCurta: 'Alta qualidade para empresas, foco em resultados.'
-  },
-  {
-    id: 'provider3',
-    nome: 'Mariana Costa',
-    especialidade: 'Limpeza Pós-obra',
-    avaliacao: 4.7,
-    precoHora: 'R$ 90/h',
-    distancia: '800 m',
-    imagemUrl: 'https://randomuser.me/api/portraits/women/55.jpg',
-    numeroAvaliacoes: 55,
-    isVerificado: true,
-    descricaoCurta: 'Especialista em deixar tudo impecável após sua reforma.'
-  },
-  {
-    id: 'provider4',
-    nome: 'Rafael Lima',
-    especialidade: 'Limpeza de Vidros e Fachadas',
-    avaliacao: 4.6,
-    precoHora: 'R$ 70/h',
-    distancia: '3.1 km',
-    imagemUrl: 'https://randomuser.me/api/portraits/men/47.jpg',
-    numeroAvaliacoes: 30,
-    isVerificado: true,
-    descricaoCurta: 'Vidros limpos e brilhantes, com segurança e profissionalismo.'
-  },
-];
+import { CLIENT_ROUTES } from '../../../constants/routes';
+
+import BannerOferta from '../../(client)/ofertas/components/BannerOferta';
+import HeaderSuperior from './components/home/HeaderSuperior';
+import NavBar from './components/home/NavBar';
+import CategoriaCard from './components/home/CategoriaCard';
+import SecaoContainer from './components/home/SecaoContainer';
+import SecaoPrestadores from './components/home/SecaoPrestadores';
+import SecaoRecomendacoes from './components/home/SecaoRecomendacoes';
+import PrestadorCard from './components/home/PrestadorCard';
+import RecomendacaoCard from './components/home/RecomendacaoCard';
+
+const COR_AZUL_CLARO_UNIFICADA = '#A0D2EB';
 
 export default function ExploreClientScreen() {
-  const router = useRouter();
+    const router = useRouter();
 
-  const headerAnim = useRef(new Animated.Value(0)).current;
-  const saudacaoAnim = useRef(new Animated.Value(0)).current;
-  const categoriasAnim = useRef(new Animated.Value(0)).current;
-  const bannerAnim = useRef(new Animated.Value(0)).current;
-  const prestadoresAnim = useRef(new Animated.Value(0)).current;
-  const navBarAnim = useRef(new Animated.Value(0)).current;
+    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+    const [serviceCategories, setServiceCategories] = useState<Service[]>([]);
+    const [recommendations, setRecommendations] = useState<ProviderDisplayInfo[]>([]);
+    const [providers, setProviders] = useState<ProviderDisplayInfo[]>([]);
+    const [currentOffer, setCurrentOffer] = useState<Offer | null>(null);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    Animated.stagger(150, [
-      Animated.timing(headerAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-      Animated.timing(saudacaoAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-      Animated.timing(categoriasAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-      Animated.timing(bannerAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-      Animated.timing(prestadoresAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-      Animated.timing(navBarAnim, { toValue: 1, duration: 500, delay: 200, useNativeDriver: true }),
-    ]).start();
-  }, [headerAnim, saudacaoAnim, categoriasAnim, bannerAnim, prestadoresAnim, navBarAnim]);
+    const headerAnim = useRef(new Animated.Value(0)).current;
+    const categoriesAnim = useRef(new Animated.Value(0)).current;
+    const bannerAnim = useRef(new Animated.Value(0)).current;
+    const recommendationsAnim = useRef(new Animated.Value(0)).current;
+    const providersAnim = useRef(new Animated.Value(0)).current;
+    const navBarAnim = useRef(new Animated.Value(0)).current;
 
-  const handleNavigateToServicosPorCategoria = (categoria: TipoCategoria) => {
-    router.push({
-      pathname: '/(client)/explore/servicos-por-categoria',
-      params: { categoriaId: categoria.id, categoriaNome: categoria.nome },
-    } as any);
-  };
+    const fetchData = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const fetchedUserProfile = await getUserProfile();
+            setUserProfile(fetchedUserProfile);
 
-  return (
-    <View style={styles.screen}>
-      <Stack.Screen options={{ headerShown: false }} />
+            console.log('--- Debug do HeaderSuperior ---');
+            console.log('fetchedUserProfile:', JSON.stringify(fetchedUserProfile, null, 2));
+            console.log('fetchedUserProfile?.role:', fetchedUserProfile?.role);
 
-      <ScrollView
-        style={styles.scrollViewArea}
-        contentContainerStyle={styles.scrollContentContainer}
-        showsVerticalScrollIndicator={false}
-      >
-        <Animated.View style={{ opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
-          <HeaderSuperior />
-        </Animated.View>
+            let nameToDisplay = 'Usuário';
+            // CORREÇÃO: A tipagem de `addressToDisplay` agora inclui `null` para compatibilidade com `ProviderDisplayInfo.address`
+            let addressToDisplay: BookingAddress | null | undefined = undefined;
 
-        <Animated.View style={{ opacity: saudacaoAnim, transform: [{ translateY: saudacaoAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
-          {/* Seu componente de saudação ou conteúdo aqui, se houver */}
-        </Animated.View>
+            if (fetchedUserProfile) {
+                if (fetchedUserProfile.role === 'CLIENT' && fetchedUserProfile.clientDetails) {
+                    nameToDisplay = fetchedUserProfile.clientDetails.fullName || fetchedUserProfile.fullName || 'Cliente';
+                    addressToDisplay = fetchedUserProfile.clientDetails.address;
+                    console.log('Detectado perfil CLIENT. Nome:', nameToDisplay, 'Endereço:', addressToDisplay);
+                } else if (fetchedUserProfile.role === 'PROVIDER' && fetchedUserProfile.providerDetails) {
+                    nameToDisplay = fetchedUserProfile.providerDetails.fullName || fetchedUserProfile.fullName || 'Provedor';
+                    addressToDisplay = fetchedUserProfile.providerDetails.address;
+                    console.log('Detectado perfil PROVIDER. Nome:', nameToDisplay, 'Endereço:', addressToDisplay);
+                }
+            }
+            console.log('Nome final para HeaderSuperior:', nameToDisplay);
+            console.log('Endereço final para HeaderSuperior:', addressToDisplay);
+            console.log('--- Fim do Debug do HeaderSuperior ---');
 
-        <Animated.View style={{ opacity: categoriasAnim, transform: [{ translateY: categoriasAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
-          <SecaoContainer
-            titulo="Categorias Populares"
-            onVerTudoPress={() => router.push('/(client)/explore/todas-categorias' as any)}
-            data={CATEGORIAS_EXEMPLO} // Agora CATEGORIAS_EXEMPLO está corretamente definido com corFundo
-            renderItem={({ item }: { item: TipoCategoria }) => (
-              <CategoriaCard
-                item={item}
-                onPress={handleNavigateToServicosPorCategoria}
-              />
-            )}
-            horizontal
-          />
-        </Animated.View>
+            const categoriesData = await getServiceCategories();
+            setServiceCategories(categoriesData);
 
-        <Animated.View style={{ opacity: bannerAnim, transform: [{ translateY: bannerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
-          <BannerOferta />
-        </Animated.View>
+            const recommendationsData = await getRecommendedProviders();
+            setRecommendations(recommendationsData);
 
-        <Animated.View style={{ opacity: prestadoresAnim, transform: [{ translateY: prestadoresAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
-          <SecaoPrestadores
-            titulo="Profissionais por Perto"
-            onVerTudoPress={() => router.push('/(client)/explore/todos-prestadores-proximos' as any)}
-            data={PRESTADORES_EXEMPLO}
-          />
-        </Animated.View>
-      </ScrollView>
+            const providersData = await getNearbyProviders();
+            setProviders(providersData);
 
-      <Animated.View style={[styles.navBarContainer, { transform: [{ translateY: navBarAnim.interpolate({ inputRange: [0, 1], outputRange: [100, 0] }) }] }]}>
-        <NavBar />
-      </Animated.View>
-    </View>
-  );
+            const offersData = await getOffers();
+            if (offersData.length > 0) {
+                setCurrentOffer(offersData[0]);
+            }
+
+            Animated.sequence([
+                Animated.timing(headerAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+                Animated.timing(categoriesAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+                Animated.timing(bannerAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+                Animated.timing(recommendationsAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+                Animated.timing(providersAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+                Animated.timing(navBarAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+            ]).start();
+        } catch (err: any) {
+            const errorMessage = err.message || err.response?.data?.message || "Não foi possível carregar os dados.";
+            setError(errorMessage);
+            Alert.alert("Erro", errorMessage);
+            console.error("[ExploreClientScreen] Erro ao carregar dados:", err.response?.data || err.message);
+        } finally {
+            setLoading(false);
+        }
+    }, [headerAnim, categoriesAnim, bannerAnim, recommendationsAnim, providersAnim, navBarAnim]);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
+
+    const handleCategoryPress = useCallback((item: Service) => {
+        router.push({
+            pathname: '/(client)/explore/category-details',
+            params: { id: item.id, name: item.name }
+        } as any);
+    }, [router]);
+
+    const handleProviderPress = useCallback((provider: ProviderDisplayInfo) => {
+        router.push(CLIENT_ROUTES.PROVIDER_DETAILS(provider.id));
+    }, [router]);
+
+    const safeServiceCategories = serviceCategories.filter((c) => c && c.name);
+    const safeRecommendations = Array.isArray(recommendations)
+        ? recommendations.filter((item) => item && typeof item.fullName === 'string')
+        : [];
+    const safeProviders = Array.isArray(providers)
+        ? providers.filter((item) => item && typeof item.fullName === 'string')
+        : [];
+
+    if (loading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={COR_AZUL_CLARO_UNIFICADA} />
+                <Text style={{ marginTop: 10 }}>Carregando dados...</Text>
+            </View>
+        );
+    }
+
+    if (error) {
+        return (
+            <View style={styles.loadingContainer}>
+                <Text style={{ color: 'red', textAlign: 'center' }}>{error}</Text>
+                <TouchableOpacity onPress={fetchData} style={{ marginTop: 20, padding: 10, backgroundColor: COR_AZUL_CLARO_UNIFICADA, borderRadius: 5 }}>
+                    <Text style={{ color: '#fff' }}>Tentar Novamente</Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
+
+    return (
+        <View style={styles.screen}>
+            <Stack.Screen options={{ headerShown: false }} />
+            <ScrollView
+                style={styles.scrollViewArea}
+                contentContainerStyle={styles.scrollContentContainer}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+            >
+                <View style={styles.contentWrapper}>
+                    <Animated.View style={{ opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
+                        <HeaderSuperior
+                            userName={userProfile?.clientDetails?.fullName || userProfile?.providerDetails?.fullName || userProfile?.fullName || 'Usuário'}
+                            userAddress={userProfile?.clientDetails?.address || userProfile?.providerDetails?.address}
+                        />
+                    </Animated.View>
+
+                    <Animated.View style={{ opacity: categoriesAnim, transform: [{ translateY: categoriesAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
+                        <SecaoContainer
+                            titulo="Categorias de Serviço"
+                            onVerTudoPress={() => router.push('/(client)/explore/todas-categorias' as any)}
+                            data={safeServiceCategories}
+                            renderItem={({ item }) => {
+                                if (!item || !item.name) return null;
+                                return (
+                                    <CategoriaCard
+                                        key={item.id}
+                                        item={{ id: item.id, name: item.name, icon: item.icon as any }}
+                                        onPress={() => handleCategoryPress(item)}
+                                    />
+                                );
+                            }}
+                            horizontal={true}
+                        />
+                    </Animated.View>
+
+                    {currentOffer && (
+                        <Animated.View style={{ opacity: bannerAnim, transform: [{ translateY: bannerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
+                            <BannerOferta
+                                id={currentOffer.id}
+                                title={currentOffer.title}
+                                description={currentOffer.description}
+                                imageUrl={currentOffer.imageUrl || null}
+                                discountPercentage={currentOffer.discountPercentage || 0}
+                                onPress={() => router.push({
+                                    pathname: '/(client)/ofertas/[id]',
+                                    params: { id: currentOffer.id }
+                                } as any)}
+                            />
+                        </Animated.View>
+                    )}
+
+                    <Animated.View style={{ opacity: recommendationsAnim, transform: [{ translateY: recommendationsAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
+                        <SecaoRecomendacoes
+                            titulo="Recomendações para Você"
+                            onVerTudoPress={() => router.push('/(client)/explore/todas-recomendacoes' as any)}
+                            data={safeRecommendations}
+                            renderItem={({ item }) => {
+                                if (!item || !item.fullName) return null;
+                                return (
+                                    <RecomendacaoCard
+                                        key={item.id}
+                                        item={item}
+                                    />
+                                );
+                            }}
+                            horizontal={true}
+                            noDataText="Nenhuma recomendação disponível no momento."
+                        />
+                    </Animated.View>
+
+                    <Animated.View style={{ opacity: providersAnim, transform: [{ translateY: providersAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
+                        <SecaoPrestadores
+                            titulo="Profissionais por Perto"
+                            onVerTudoPress={() => router.push('/(client)/explore/todos-prestadores-proximos' as any)}
+                            data={safeProviders}
+                            renderItem={({ item }) => {
+                                if (!item || !item.fullName) return null;
+                                return (
+                                    <PrestadorCard
+                                        key={item.id}
+                                        item={item}
+                                        onPress={() => handleProviderPress(item)}
+                                    />
+                                );
+                            }}
+                            horizontal={true}
+                            noDataText="Nenhum prestador disponível no momento."
+                        />
+                    </Animated.View>
+                </View>
+            </ScrollView>
+
+            <Animated.View style={[styles.navBarContainer, { transform: [{ translateY: navBarAnim.interpolate({ inputRange: [0, 1], outputRange: [100, 0] }) }] }]}>
+                <NavBar />
+            </Animated.View>
+        </View>
+    );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#F4F7FC', // Fundo principal da tela
-  },
-  scrollViewArea: {
-    flex: 1,
-  },
-  scrollContentContainer: {
-    paddingBottom: 90, // Garante espaço para a NavBar não sobrepor o último conteúdo
-  },
-  navBarContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
+    screen: {
+        flex: 1,
+        backgroundColor: '#F4F7FC',
+    },
+    scrollViewArea: {
+        flex: 1,
+    },
+    scrollContentContainer: {
+        paddingBottom: 90,
+        flexGrow: 1,
+    },
+    contentWrapper: {
+        flexGrow: 1,
+    },
+    navBarContainer: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
 });

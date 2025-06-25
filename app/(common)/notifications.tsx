@@ -1,18 +1,28 @@
 // LimpeJaApp/app/(common)/notifications.tsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { 
-    View, 
-    Text, 
-    StyleSheet, 
-    FlatList, 
-    ActivityIndicator, 
+import {
+    View,
+    Text,
+    StyleSheet,
+    FlatList,
+    ActivityIndicator,
     TouchableOpacity,
     Platform,
     Alert, // Para o botão de marcar todas como lidas
     Animated, // Importar Animated para animações
+    RefreshControl, // Adicionado para pull-to-refresh
 } from 'react-native';
 import { Stack, useRouter, Link } from 'expo-router';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'; // Importa ambos explicitamente
+import { useAuth } from '../../hooks/useAuth';
+
+// <--- ADICIONADO: Importar serviços e tipagens reais
+import {
+    getNotifications,
+    markNotificationAsRead,
+    markAllNotificationsAsRead,
+} from '../services/notificationService';
+import { NotificationEntity } from '../types/backend/notifications';
 
 // Helper simples para formatar timestamp de forma relativa ou absoluta
 const formatNotificationTimestamp = (isoTimestamp: string): string => {
@@ -28,52 +38,33 @@ const formatNotificationTimestamp = (isoTimestamp: string): string => {
     if (diffHours < 24) return `Há ${diffHours} h`;
     if (diffDays === 1) return "Ontem";
     if (diffDays < 7) return `Há ${diffDays} dias`;
-    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }); // Ex: 26 Mai
+    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
 };
 
-
-interface NotificationItem {
-  id: string;
-  type: 'agendamento' | 'mensagem' | 'pagamento' | 'geral'; // Para ícone e lógica
-  title: string;
-  body: string;
-  timestamp: string; // ISO String
-  isRead: boolean;
-  navigateTo?: string; // Rota para onde navegar ao clicar
-  relatedId?: string; 
-}
-
-// Mock de dados com mais variedade
-const MOCK_NOTIFICATIONS: NotificationItem[] = [
-  { id: '1', type: 'agendamento', title: 'Agendamento Confirmado!', body: 'Sua limpeza com Ana Oliveira foi confirmada para Terça, 28 de Mai às 10:00.', timestamp: new Date(Date.now() - 300000).toISOString() /* 5 min atrás */, isRead: false, navigateTo: '/(client)/bookings/book1', relatedId: 'book1' },
-  { id: '2', type: 'mensagem', title: 'Nova Mensagem de Carlos Silva', body: 'Carlos: "Chegarei em 10 minutos para o serviço."', timestamp: new Date(Date.now() - 3600000 * 2).toISOString() /* 2h atrás */, isRead: false, navigateTo: '/(client)/messages/chat_carlos_silva', relatedId: 'chat_carlos_silva' },
-  { id: '3', type: 'pagamento', title: 'Pagamento Recebido', body: 'Recebemos o pagamento de R$180,00 pelo serviço de Limpeza Completa.', timestamp: new Date(Date.now() - 86400000 * 1).toISOString() /* Ontem */, isRead: true },
-  { id: '4', type: 'agendamento', title: 'Lembrete de Agendamento', body: 'Não se esqueça do seu serviço de jardinagem amanhã às 09:00.', timestamp: new Date(Date.now() - 86400000 * 1.5).toISOString(), isRead: true, navigateTo: '/(client)/bookings/bookUpcoming', relatedId: 'bookUpcoming' },
-  { id: '5', type: 'geral', title: 'Bem-vindo ao LimpeJá!', body: 'Explore nossos serviços e encontre os melhores profissionais.', timestamp: new Date(Date.now() - 86400000 * 5).toISOString() /* 5 dias atrás */, isRead: true },
-  { id: '6', type: 'agendamento', title: 'Agendamento Cancelado', body: 'Seu agendamento de limpeza com João foi cancelado. Por favor, reagende se desejar.', timestamp: new Date(Date.now() - 86400000 * 0.5).toISOString(), isRead: false, navigateTo: '/(client)/bookings/bookCanceled', relatedId: 'bookCanceled' },
-  { id: '7', type: 'geral', title: 'Atualização do App', body: 'Novas funcionalidades e melhorias de performance disponíveis na última versão.', timestamp: new Date(Date.now() - 86400000 * 0.1).toISOString(), isRead: false },
-];
-
 // Função para obter ícone com base no tipo de notificação
-const getNotificationIcon = (type: NotificationItem['type']): { name: keyof typeof Ionicons.glyphMap, color: string } => {
+// <--- CORREÇÃO: getNotificationIcon retorna o nome do ícone e a biblioteca
+const getNotificationIcon = (type: NotificationEntity['type']): { name: string, color: string, library: 'Ionicons' | 'MaterialCommunityIcons' } => {
     switch (type) {
-        case 'agendamento': return { name: 'calendar-outline', color: '#007AFF' };
-        case 'mensagem': return { name: 'chatbubble-ellipses-outline', color: '#4CAF50' };
-        case 'pagamento': return { name: 'cash-outline', color: '#FF9500' };
-        case 'geral':
-        default: return { name: 'notifications-outline', color: '#546E7A' };
+        case 'AGENDAMENTO': return { name: 'calendar-outline', color: '#007AFF', library: 'Ionicons' };
+        case 'MENSAGEM': return { name: 'chatbubble-ellipses-outline', color: '#4CAF50', library: 'Ionicons' };
+        case 'PAGAMENTO': return { name: 'cash-outline', color: '#FF9500', library: 'Ionicons' };
+        case 'BOOKING_CONFIRMED': return { name: 'check-circle-outline', color: '#2E7D32', library: 'MaterialCommunityIcons' }; // Exemplo
+        case 'NEW_MESSAGE': return { name: 'message-text-outline', color: '#4CAF50', library: 'MaterialCommunityIcons' }; // Exemplo
+        case 'SYSTEM_UPDATE': return { name: 'update', color: '#546E7A', library: 'MaterialCommunityIcons' }; // Exemplo
+        case 'GERAL': // Ou outro tipo genérico do backend
+        default: return { name: 'notifications-outline', color: '#546E7A', library: 'Ionicons' };
     }
 }
 
 // Componente para cada item da notificação com animações
 const AnimatedNotificationItem: React.FC<{
-    item: NotificationItem;
-    onPress: (item: NotificationItem) => void;
+    item: NotificationEntity;
+    onPress: (item: NotificationEntity) => void;
     delay: number;
 }> = ({ item, onPress, delay }) => {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(20)).current;
-    const scaleAnim = useRef(new Animated.Value(1)).current; // Para feedback de toque
+    const scaleAnim = useRef(new Animated.Value(1)).current;
 
     useEffect(() => {
         Animated.parallel([
@@ -101,29 +92,35 @@ const AnimatedNotificationItem: React.FC<{
     };
 
     const iconInfo = getNotificationIcon(item.type);
+    const isRead = !!item.readAt; // Notificação é lida se readAt não for nulo
 
     return (
-        <Animated.View 
+        <Animated.View
             style={[
-                styles.notificationItemWrapper, 
+                styles.notificationItemWrapper,
                 { opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] }
             ]}
         >
             <TouchableOpacity
-                style={[styles.notificationItem, !item.isRead && styles.unreadItem]}
+                style={[styles.notificationItem, !isRead && styles.unreadItem]}
                 onPress={() => onPress(item)}
                 onPressIn={onPressInItem}
                 onPressOut={onPressOutItem}
-                activeOpacity={1} // Desativa o activeOpacity padrão
+                activeOpacity={1}
             >
                 <View style={styles.iconContainer}>
-                    {!item.isRead && <View style={styles.unreadDot} />}
-                    <Ionicons name={iconInfo.name} size={26} color={iconInfo.color} />
+                    {!isRead && <View style={styles.unreadDot} />}
+                    {/* <--- CORREÇÃO: Renderiza o ícone correto com base na biblioteca */}
+                    {iconInfo.library === 'Ionicons' ? (
+                        <Ionicons name={iconInfo.name as keyof typeof Ionicons.glyphMap} size={26} color={iconInfo.color} />
+                    ) : (
+                        <MaterialCommunityIcons name={iconInfo.name as keyof typeof MaterialCommunityIcons.glyphMap} size={26} color={iconInfo.color} />
+                    )}
                 </View>
                 <View style={styles.contentContainer}>
-                    <Text style={[styles.notificationTitle, !item.isRead && styles.unreadText]}>{item.title}</Text>
-                    <Text style={[styles.notificationBody, !item.isRead && styles.unreadTextLight]} numberOfLines={2}>{item.body}</Text>
-                    <Text style={styles.notificationTimestamp}>{formatNotificationTimestamp(item.timestamp)}</Text>
+                    <Text style={[styles.notificationTitle, !isRead && styles.unreadText]}>{item.title}</Text>
+                    <Text style={[styles.notificationBody, !isRead && styles.unreadTextLight]} numberOfLines={2}>{item.body}</Text>
+                    <Text style={styles.notificationTimestamp}>{formatNotificationTimestamp(item.createdAt)}</Text>
                 </View>
                 {item.navigateTo && <Ionicons name="chevron-forward-outline" size={22} color="#C7C7CC" style={styles.chevron}/>}
             </TouchableOpacity>
@@ -134,49 +131,71 @@ const AnimatedNotificationItem: React.FC<{
 
 export default function NotificationsScreen() {
   const router = useRouter();
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const { user } = useAuth();
+  const [notifications, setNotifications] = useState<NotificationEntity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Animações
   const headerAnim = useRef(new Animated.Value(0)).current;
-  const feedbackAnim = useRef(new Animated.Value(0)).current; // Para loading/empty states
+  const feedbackAnim = useRef(new Animated.Value(0)).current;
   const markAllButtonScaleAnim = useRef(new Animated.Value(1)).current;
 
+  const loadNotifications = useCallback(async (refreshing: boolean = false) => {
+    if (!refreshing) setIsLoading(true);
+    if (!user?.id) {
+        console.warn("[NotificationsScreen] User ID ausente, não foi possível carregar notificações.");
+        setIsLoading(false);
+        setIsRefreshing(false);
+        return;
+    }
+    
+    try {
+      const fetchedNotifications: NotificationEntity[] = await getNotifications();
+      const sortedNotifications = fetchedNotifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+      setNotifications(sortedNotifications);
+      if (refreshing) Alert.alert("Sucesso", "Notificações atualizadas!");
+
+    } catch (err: any) {
+      console.error("Erro ao buscar notificações:", err.response?.data || err.message);
+      Alert.alert("Erro", err.response?.data?.message || "Não foi possível carregar suas notificações.");
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+      Animated.timing(feedbackAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [user?.id, feedbackAnim]);
+
   useEffect(() => {
-    // Animação de entrada do cabeçalho
     Animated.timing(headerAnim, {
       toValue: 1,
       duration: 500,
       useNativeDriver: true,
     }).start();
 
-    console.log("[NotificationsScreen] Carregando notificações...");
-    setIsLoading(true);
-    // TODO: Substituir pela chamada real ao seu commonService.getNotifications();
-    setTimeout(() => {
-      const sortedNotifications = MOCK_NOTIFICATIONS.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-      setNotifications(sortedNotifications);
-      setIsLoading(false);
-      // Animação para o feedback (carregando/vazio/lista)
-      Animated.timing(feedbackAnim, {
-        toValue: 1,
-        duration: 500,
-        useNativeDriver: true,
-      }).start();
-    }, 1000);
-  }, [headerAnim, feedbackAnim]);
+    loadNotifications();
+  }, [headerAnim, loadNotifications]);
 
-  const handleNotificationPress = async (item: NotificationItem) => {
-    console.log("[NotificationsScreen] Notificação pressionada:", item.id, "Lida:", item.isRead);
-    if (!item.isRead) {
-      // TODO: Chamar commonService.markNotificationAsRead(item.id) no backend;
-      setNotifications(prev => prev.map(n => n.id === item.id ? { ...n, isRead: true } : n));
-      console.log("[NotificationsScreen] Notificação marcada como lida (frontend):", item.id);
+  const handleNotificationPress = async (item: NotificationEntity) => {
+    console.log("[NotificationsScreen] Notificação pressionada:", item.id, "Lida:", !!item.readAt);
+    if (!item.readAt) {
+      try {
+        await markNotificationAsRead(item.id);
+        setNotifications(prev => prev.map(n => n.id === item.id ? { ...n, readAt: new Date().toISOString() } : n));
+        console.log("[NotificationsScreen] Notificação marcada como lida (backend e frontend):", item.id);
+      } catch (error) {
+        console.error("Erro ao marcar notificação como lida:", error);
+        Alert.alert("Erro", "Não foi possível marcar a notificação como lida.");
+      }
     }
     if (item.navigateTo) {
       try {
         console.log("[NotificationsScreen] Navegando para:", item.navigateTo);
-        router.push(item.navigateTo as any); 
+        router.push(item.navigateTo as any);
       } catch (e) {
           console.error(`[NotificationsScreen] Erro ao navegar para ${item.navigateTo}:`, e);
           Alert.alert("Erro de Navegação", "Não foi possível abrir esta notificação.");
@@ -184,26 +203,34 @@ export default function NotificationsScreen() {
     }
   };
 
-  const handleMarkAllAsRead = () => {
-      // TODO: Chamar API para marcar todas como lidas no backend
-      console.log("[NotificationsScreen] Marcando todas as notificações como lidas (frontend)...");
-      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-      Alert.alert("Sucesso", "Todas as notificações foram marcadas como lidas.");
+  const handleMarkAllAsRead = async () => {
+      try {
+          await markAllNotificationsAsRead();
+          setNotifications(prev => prev.map(n => ({ ...n, readAt: new Date().toISOString() })));
+          Alert.alert("Sucesso", "Todas as notificações foram marcadas como lidas.");
+      } catch (error) {
+          console.error("Erro ao marcar todas como lidas:", error);
+          Alert.alert("Erro", "Não foi possível marcar todas as notificações como lidas.");
+      }
   };
 
-  // Animações de feedback para o botão "Marcar todas como lidas"
   const onPressInMarkAll = () => { Animated.spring(markAllButtonScaleAnim, { toValue: 0.9, useNativeDriver: true }).start(); };
   const onPressOutMarkAll = () => { Animated.spring(markAllButtonScaleAnim, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start(); };
 
+  const onRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    loadNotifications(true);
+  }, [loadNotifications]);
 
-  if (isLoading) {
+  const hasUnreadNotifications = notifications.some(n => !n.readAt);
+
+  if (isLoading && !isRefreshing) {
     return (
         <View style={styles.container}>
             <Stack.Screen options={{ headerShown: false }} />
-            {/* Custom Header para o estado de loading */}
             <Animated.View style={[styles.customHeader, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
                 <Text style={styles.headerTitle}>Notificações</Text>
-                <View style={styles.headerActionIconPlaceholder} /> {/* Placeholder para alinhar */}
+                <View style={styles.headerActionIconPlaceholder} />
             </Animated.View>
             <Animated.View style={[styles.centeredFeedback, { opacity: feedbackAnim }]}>
                 <ActivityIndicator size="large" color="#007AFF" />
@@ -217,12 +244,11 @@ export default function NotificationsScreen() {
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
       
-      {/* Custom Header */}
       <Animated.View style={[styles.customHeader, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
           <Text style={styles.headerTitle}>Notificações</Text>
-          {notifications.some(n => !n.isRead) ? (
-              <TouchableOpacity 
-                  onPress={handleMarkAllAsRead} 
+          {hasUnreadNotifications ? (
+              <TouchableOpacity
+                  onPress={handleMarkAllAsRead}
                   onPressIn={onPressInMarkAll}
                   onPressOut={onPressOutMarkAll}
                   style={[styles.markAllReadButton, { transform: [{ scale: markAllButtonScaleAnim }] }]}
@@ -244,15 +270,24 @@ export default function NotificationsScreen() {
         <FlatList
           data={notifications}
           renderItem={({ item, index }) => (
-            <AnimatedNotificationItem 
-                item={item} 
-                onPress={handleNotificationPress} 
-                delay={index * 50} // Staggered delay
+            <AnimatedNotificationItem
+                item={item}
+                onPress={handleNotificationPress}
+                delay={index * 50}
             />
           )}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContentContainer}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={onRefresh}
+              tintColor="#007AFF"
+              title="Atualizando notificações..."
+              titleColor="#007AFF"
+            />
+          }
         />
       )}
     </View>
@@ -262,15 +297,15 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F0F2F5', // Fundo geral mais suave
+    backgroundColor: '#F0F2F5',
   },
   customHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#007AFF', // Cor primária do app
+    backgroundColor: '#007AFF',
     paddingHorizontal: 15,
-    paddingVertical: Platform.OS === 'ios' ? 50 : 20, // Ajuste para status bar iOS
+    paddingVertical: Platform.OS === 'ios' ? 50 : 20,
     paddingTop: Platform.OS === 'ios' ? 50 : 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -282,22 +317,22 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#FFFFFF',
-    flex: 1, // Para o título ocupar o espaço e centralizar melhor
+    flex: 1,
     textAlign: 'center',
   },
   markAllReadButton: {
     paddingVertical: 5,
     paddingHorizontal: 10,
     borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.2)', // Fundo sutil para o botão
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
   markAllReadButtonText: {
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
   },
-  headerActionIconPlaceholder: { // Para alinhar o título no centro quando o botão não está visível
-    width: 100, // Largura aproximada do botão
+  headerActionIconPlaceholder: {
+    width: 100,
   },
   centeredFeedback: {
     flex: 1,
@@ -311,13 +346,13 @@ const styles = StyleSheet.create({
       color: '#6C757D',
   },
   listContentContainer: {
-    paddingVertical: 8, // Um pouco de espaço no topo e final da lista
+    paddingVertical: 8,
   },
-  notificationItemWrapper: { // Wrapper para a animação de cada item
-    marginHorizontal: 10, // Margem para dar um efeito de card
+  notificationItemWrapper: {
+    marginHorizontal: 10,
     marginVertical: 4,
     borderRadius: 10,
-    overflow: 'hidden', // Garante que a sombra não vaze
+    overflow: 'hidden',
     ...Platform.select({
         ios: { shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3 },
         android: { elevation: 2 },
@@ -326,22 +361,22 @@ const styles = StyleSheet.create({
   notificationItem: {
     backgroundColor: '#FFFFFF',
     paddingVertical: 15,
-    paddingHorizontal: 15, // Ajustado para ter mais espaço interno
+    paddingHorizontal: 15,
     flexDirection: 'row',
     alignItems: 'center',
   },
   unreadItem: {
-    backgroundColor: '#E6F2FF', // Um azul bem claro para não lidas
+    backgroundColor: '#E6F2FF',
   },
   iconContainer: {
     marginRight: 15,
     alignItems: 'center',
     justifyContent: 'center',
-    width: 40, // Para alinhar
+    width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F0F2F5', // Fundo para o ícone
-    position: 'relative', // Para o unreadDot
+    backgroundColor: '#F0F2F5',
+    position: 'relative',
   },
   unreadDot: {
       position: 'absolute',
@@ -350,13 +385,13 @@ const styles = StyleSheet.create({
       width: 10,
       height: 10,
       borderRadius: 5,
-      backgroundColor: '#007AFF', // Cor do ponto de não lida
+      backgroundColor: '#007AFF',
       zIndex: 1,
       borderWidth: 1.5,
       borderColor: '#FFFFFF',
   },
   contentContainer: {
-    flex: 1, // Para ocupar o espaço restante
+    flex: 1,
   },
   notificationTitle: {
     fontSize: 16,
@@ -364,11 +399,10 @@ const styles = StyleSheet.create({
     color: '#1C1E21',
     marginBottom: 3,
   },
-  unreadText: { // Para título e corpo não lidos
+  unreadText: {
     fontWeight: 'bold',
   },
-  unreadTextLight: { // Para corpo não lido (se quiser menos destaque que o título)
-    // color: '#333', // Pode manter a cor padrão do corpo ou ajustar
+  unreadTextLight: {
   },
   notificationBody: {
     fontSize: 14,
@@ -384,9 +418,9 @@ const styles = StyleSheet.create({
       marginLeft: 10,
   },
   separator: {
-    height: 1, // Linha mais fina
+    height: 1,
     backgroundColor: '#E0E0E0',
-    marginLeft: 70, // Para alinhar com o conteúdo, após o espaço do ícone
+    marginLeft: 70,
     marginRight: 10,
   },
   emptyText: {

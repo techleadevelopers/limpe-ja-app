@@ -1,18 +1,24 @@
 // LimpeJaApp/app/(common)/feedback/[targetId].tsx
 import React, { useState } from 'react';
-import { 
-    View, 
-    Text, 
-    StyleSheet, 
-    TextInput, 
-    Alert, 
-    TouchableOpacity, 
-    ScrollView, 
+import {
+    View,
+    Text,
+    StyleSheet,
+    TextInput,
+    Alert, // Importar Alert
+    TouchableOpacity,
+    ScrollView,
     ActivityIndicator,
     Platform
 } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons'; // Para as estrelas e outros ícones
+
+// <--- ADICIONADO: Importar o serviço de review e suas tipagens
+import { submitFeedback } from '../../services/reviewService';
+// Importar SubmitReviewDto (assumindo que você o definiu em types/backend/reviews.ts)
+import { SubmitReviewDto } from '../../types/backend/reviews'; 
+import { useAuth } from '../../../hooks/useAuth'; // Para obter o ID do usuário que está dando feedback
 
 // Componente StarRating Aprimorado
 interface StarRatingProps {
@@ -28,9 +34,9 @@ const StarRating: React.FC<StarRatingProps> = ({
   rating,
   onRate,
   maxStars = 5,
-  starSize = 36, // Tamanho do ícone da estrela
-  activeColor = '#FFC107', // Amarelo/Dourado para estrela ativa
-  inactiveColor = '#CED4DA', // Cinza claro para estrela inativa
+  starSize = 36,
+  activeColor = '#FFC107',
+  inactiveColor = '#CED4DA',
 }) => {
   return (
     <View style={styles.starContainer}>
@@ -54,21 +60,30 @@ export default function FeedbackScreen() {
     type?: 'service' | 'provider_profile' | 'app_feedback';
     serviceName?: string;
     providerName?: string;
+    // Se você passar o providerId para a tela de feedback, adicione aqui também
+    providerId?: string; 
   }>();
   
-  const { targetId, type = 'app_feedback', serviceName, providerName } = params; // Define um tipo padrão se não vier
+  const { targetId, type = 'app_feedback', serviceName, providerName, providerId } = params;
   const router = useRouter();
+  const { user } = useAuth(); // Obtém o usuário logado
 
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmitFeedback = async () => {
+    // CORREÇÃO: Verificar se user.id existe antes de prosseguir
+    if (!user?.id) {
+        Alert.alert("Erro de Autenticação", "Não foi possível identificar o usuário. Por favor, faça login novamente.");
+        return;
+    }
+
     if (type !== 'app_feedback' && rating === 0) {
       Alert.alert("Avaliação Incompleta", "Por favor, selecione de 1 a 5 estrelas.");
       return;
     }
-    if (comment.trim() === '' && (type === 'service' || type === 'provider_profile')) { // Comentário obrigatório para serviço/provedor
+    if (comment.trim() === '' && (type === 'service' || type === 'provider_profile')) {
       Alert.alert("Comentário Vazio", "Por favor, escreva um comentário sobre sua experiência.");
       return;
     }
@@ -77,32 +92,40 @@ export default function FeedbackScreen() {
         return;
     }
 
-
     setIsLoading(true);
-    console.log("[FeedbackScreen] Enviando feedback:", { targetId, type, rating, comment, serviceName, providerName });
-    // TODO: Chamar o serviço real para enviar o feedback:
-    // try {
-    //   await submitFeedback({ targetId, type, rating, comment, serviceName, providerName });
-    //   Alert.alert("Feedback Enviado!", "Obrigado pela sua contribuição.");
-    //   router.back();
-    // } catch (error: any) {
-    //   Alert.alert("Erro ao Enviar", error.message || "Não foi possível enviar seu feedback. Tente novamente.");
-    // } finally {
-    //   setIsLoading(false);
-    // }
+    try {
+        const feedbackData: SubmitReviewDto = {
+            targetId: targetId,
+            type: type,
+            rating: rating,
+            comment: comment.trim(),
+            // CORREÇÃO: ADICIONAR O userId AQUI!
+            userId: user.id, // <--- ESTE É O CAMPO QUE FALTAVA!
+            
+            // Campos adicionais que podem ser úteis para o backend
+            serviceName: serviceName,
+            providerName: providerName,
+            providerId: providerId, // Passar o providerId se estiver disponível
+        };
 
-    // Simulação de sucesso
-    setTimeout(() => {
-      Alert.alert("Feedback Enviado! (Simulado)", "Obrigado pela sua avaliação/comentário.");
-      setIsLoading(false);
-      if (router.canGoBack()) {
-        router.back();
-      } else {
-        // Fallback se não puder voltar (ex: se for a primeira tela do stack)
-        if (type === 'app_feedback') router.replace('/'); // Ou uma tela de "obrigado"
-        else router.replace('/(client)/bookings'); // Ou para a tela de detalhes do agendamento
-      }
-    }, 1500);
+        // <--- CHAMA O SERVIÇO REAL PARA ENVIAR O FEEDBACK
+        await submitFeedback(feedbackData);
+
+        Alert.alert("Feedback Enviado!", "Obrigado pela sua contribuição.");
+        setIsLoading(false); // Garante que o loading para antes de navegar
+        if (router.canGoBack()) {
+            router.back();
+        } else {
+            // Fallback se não puder voltar (ex: se for a primeira tela do stack)
+            if (type === 'app_feedback') router.replace('/(client)/explore'); // Navega para home do cliente
+            else router.replace('/(client)/bookings'); // Ou para a tela de agendamentos se for de serviço/provedor
+        }
+    } catch (error: any) {
+        console.error("[FeedbackScreen] Erro ao enviar feedback:", error.response?.data || error.message);
+        Alert.alert("Erro ao Enviar", error.response?.data?.message || "Não foi possível enviar seu feedback. Tente novamente.");
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   let screenTitle = "Deixe seu Feedback";
@@ -142,13 +165,13 @@ export default function FeedbackScreen() {
           placeholder={commentPlaceholder}
           placeholderTextColor="#ADB5BD"
           multiline
-          numberOfLines={Platform.OS === 'ios' ? 5 : 5} // numberOfLines para altura inicial
-          maxLength={500} // Limite de caracteres
+          numberOfLines={Platform.OS === 'ios' ? 5 : 5}
+          maxLength={500}
         />
       </View>
 
-      <TouchableOpacity 
-        style={[styles.submitButton, isLoading && styles.submitButtonDisabled]} 
+      <TouchableOpacity
+        style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
         onPress={handleSubmitFeedback}
         disabled={isLoading}
       >
@@ -168,7 +191,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8F9FA',
   },
   container: {
-    flexGrow: 1, // Para que o ScrollView ocupe espaço mesmo com pouco conteúdo
+    flexGrow: 1,
     padding: 20,
     paddingBottom: 40,
   },
@@ -195,15 +218,14 @@ const styles = StyleSheet.create({
     color: '#343A40',
     marginBottom: 12,
   },
-  starContainer: { // Estilo do componente StarRating
+  starContainer: {
     flexDirection: 'row',
-    justifyContent: 'center', // Centraliza as estrelas
-    marginBottom: 10, // Espaço abaixo das estrelas
+    justifyContent: 'center',
+    marginBottom: 10,
   },
-  starTouchable: { // Para aumentar a área de toque da estrela
-      padding: 5, // Pequeno padding em volta do ícone
+  starTouchable: {
+      padding: 5,
   },
-  // Os estilos 'star' e 'starSelected' não são mais necessários aqui, pois estão no componente StarRating
   commentInput: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
@@ -213,7 +235,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
     color: '#212529',
-    minHeight: 120, // Altura mínima para o campo de texto
+    minHeight: 120,
     textAlignVertical: 'top',
     marginBottom: 20,
   },

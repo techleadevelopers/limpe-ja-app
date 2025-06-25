@@ -5,7 +5,7 @@ import {
     Text,
     TextInput,
     StyleSheet,
-    Alert,
+    Alert, // Mantido para alertas de permissão ou validação local
     TouchableOpacity,
     ScrollView,
     Platform,
@@ -173,12 +173,20 @@ export default function ServiceDetailsScreen() {
             };
 
             setServiceDetails(currentServiceDetails); // Salva os detalhes de serviço no contexto
-            await submitRegistration(); // Chama a função de submissão final do contexto
+            
+            // Chama a função de submissão final do contexto, que agora fará a chamada real para o backend
+            await submitRegistration(); 
 
-            Alert.alert('Cadastro Concluído!', 'Seu perfil de profissional foi criado com sucesso. Bem-vindo(a) ao LimpeJá!');
-            router.replace('/(auth)/login'); // Limpa a pilha de cadastro e vai para login
+            // REMOVIDO: Alert.alert e router.replace daqui.
+            // O AuthContext (via signUpProvider) já lida com o redirecionamento e o alerta de sucesso.
+            console.log("[ServiceDetails] Submissão final iniciada. AuthContext cuidará do resto.");
+
         } catch (error: any) {
             console.error("[ServiceDetails] Erro ao finalizar cadastro:", error);
+            // O erro será propagado do AuthContext, então o Alert aqui é para erros específicos desta tela
+            // ou para um tratamento de erro mais genérico se o AuthContext não lidar com todos os casos.
+            // Por exemplo, Alert.alert('Falha no Cadastro', error.message || 'Não foi possível finalizar seu cadastro. Tente novamente mais tarde.');
+            // Se o AuthContext já trata os erros, este Alert pode ser removido ou ajustado para casos muito específicos.
             Alert.alert('Falha no Cadastro', error.message || 'Não foi possível finalizar seu cadastro. Tente novamente mais tarde.');
         } finally {
             setIsSubmitting(false);

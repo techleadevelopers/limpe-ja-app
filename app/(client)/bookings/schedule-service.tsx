@@ -1,679 +1,1061 @@
+// LimpeJaApp/app/(client)/bookings/schedule-service.tsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  Platform,
-  Alert,
-  Image,
-  Dimensions,
-  ActivityIndicator,
-  FlatList,
-  Animated,
-  Easing,
+    View,
+    Text,
+    StyleSheet,
+    TouchableOpacity,
+    ScrollView,
+    Platform,
+    Alert,
+    Image,
+    Dimensions,
+    ActivityIndicator,
+    FlatList,
+    Animated,
+    Easing,
+    TextInput // Adicionado para demonstração de feedback em input
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import * as Clipboard from 'expo-clipboard';
+import Clipboard from 'expo-clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 
-// Import new components
-import CalendarHeader from '../../../components/schedule/CalendarHeader';
-import AddressSection from '../../../components/schedule/AddressSection';
-import TimeSlotButton from '../../../components/schedule/TimeSlotButton';
-import PaymentMethodSelection from './components/PaymentMethodSelection';
+// --- IMPORTAÇÕES DE SERVIÇOS E TIPAGENS DO SEU BACKEND REAL ---
+import { getProviderAvailability, getProviderDetails } from '../../services/providerService';
+import { createBooking } from '../../services/bookingService';
+import { useAuth } from '../../../hooks/useAuth';
 
+// Tipagens do seu backend original
+import {
+    ProviderDisplayInfo,
+    ProviderAvailability,
+    ProviderServiceOffering,
+    ServiceDetailsDto,
+    VerificationStatus,
+} from '../../types/backend/providers';
+import { CreateBookingDto, BookingAddress, BookingDetails } from '../../types/backend/bookings';
 
-// --- Interfaces (Adapted from your provided schedule-service.tsx) ---
-interface ProviderDetails {
-  id: string;
-  nome: string;
-  especialidade: string;
-  avaliacao: number;
-  precoServico: number;
-  imagemUrl: string;
-  pixKey?: string;
-}
+// Importar formatDate de utils/helpers
+import { formatDate } from '../../../utils/helpers';
 
-// --- Mock Data (From your provided schedule-service.tsx) ---
-const MOCK_PROVIDERS: ProviderDetails[] = [
-  {
-    id: 'provider1',
-    nome: 'Ana Oliveira',
-    especialidade: 'Limpeza Residencial Detalhada',
-    avaliacao: 4.8,
-    precoServico: 95.50,
-    imagemUrl: 'https://randomuser.me/api/portraits/women/43.jpg',
-    pixKey: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
-  },
-  {
-    id: 'provider2',
-    nome: 'Carlos Silva',
-    especialidade: 'Higienização Comercial',
-    avaliacao: 4.9,
-    precoServico: 120.00,
-    imagemUrl: 'https://randomuser.me/api/portraits/men/32.jpg',
-    pixKey: 'fedcba09-8765-4321-0fed-cba987654321',
-  },
-];
+// --- Importar novos componentes de UI ---
+import CalendarHeader from './components/schedule/CalendarHeader';
+import TimeSlotButton from './components/schedule/TimeSlotButton';
+import TimeSlotsSection from './components/schedule/TimeSlotsSection';
 
-const fetchProviderDetailsFromAPI = async (id: string): Promise<ProviderDetails | undefined> => {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  return MOCK_PROVIDERS.find(p => p.id === id);
-};
-
-const fetchAvailableTimeSlotsAPI = async (providerId: string, date: Date): Promise<string[]> => {
-  console.log(`[ScheduleService] Buscando horários para ${providerId} na data ${date.toISOString().split('T')[0]}`);
-  await new Promise(resolve => setTimeout(resolve, 700));
-  const dayOfWeek = date.getDay();
-
-  if (providerId === 'provider2') {
-    return ["10:00", "11:00", "14:00", "15:00"];
-  }
-  if (dayOfWeek === 0 || dayOfWeek === 6) {
-    return ["10:00", "11:30", "13:00"];
-  }
-  return ["09:00", "09:30", "10:00", "10:30", "11:00", "14:00", "14:30", "15:00", "15:30", "16:00"];
-};
-
+// --- Constantes para a UI ---
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const MONTH_NAMES_PT = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const DAY_NAMES_PT = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"];
 
-const USER_ADDRESS = "Rua Doutor Quirino, N° 58 - Centro - Campinas SP";
+// Cache para disponibilidade do provedor por data
+const availabilityCache = new Map<string, { available: ProviderAvailability[], occupiedTimes: string[] }>();
 
 export default function ScheduleServiceScreen() {
-  const router = useRouter();
-  const params = useLocalSearchParams<{ providerId?: string; serviceName?: string }>();
-  const providerId = params.providerId;
+    const router = useRouter();
+    const { user } = useAuth();
+    const { providerId: paramProviderId, serviceId: paramServiceId } = useLocalSearchParams<{ providerId?: string; serviceId?: string }>();
 
-  const [provider, setProvider] = useState<ProviderDetails | null>(null);
-  const [isLoadingProvider, setIsLoadingProvider] = useState(true);
+    // --- ESTADOS ---
+    const [provider, setProvider] = useState<ProviderDisplayInfo | null>(null);
+    const [selectedProviderService, setSelectedProviderService] = useState<ProviderServiceOffering | null>(null);
+    const [availableSlots, setAvailableSlots] = useState<ProviderAvailability[]>([]);
+    const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+    const [selectedTime, setSelectedTime] = useState<string | null>(null);
+    const [address, setAddress] = useState<BookingAddress>({
+        street: '',
+        number: '',
+        complement: null,
+        neighborhood: '',
+        city: '',
+        state: '',
+        cep: ''
+    });
+    const [notes, setNotes] = useState<string>('');
 
-  const [currentDisplayMonth, setCurrentDisplayMonth] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  
-  const [calendarDays, setCalendarDays] = useState<Array<{day: number, month: 'current' | 'prev' | 'next', dateObj: Date}>>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isBooking, setIsBooking] = useState(false);
+    const [isFetchingSlots, setIsFetchingSlots] = useState(false);
 
-  const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
-  const [selectedTime, setSelectedTime] = useState<string | null>(null);
-  const [isFetchingSlots, setIsFetchingSlots] = useState(false);
-  const [isBooking, setIsBooking] = useState(false);
-  const [showPaymentMethodSelection, setShowPaymentMethodSelection] = useState(false);
+    // --- ESTADOS DA NOVA UI (para calendário, animações etc.) ---
+    const [currentDisplayMonth, setCurrentDisplayMonth] = useState(new Date());
+    const shineAnim = useRef(new Animated.Value(-SCREEN_WIDTH * 0.3)).current;
+    const [calendarDays, setCalendarDays] = useState<Array<{ day: number, month: 'current' | 'prev' | 'next', dateObj: Date }>>([]);
 
-  const shineAnim = useRef(new Animated.Value(-SCREEN_WIDTH * 0.3)).current;
+    const [displaySlotsInfo, setDisplaySlotsInfo] = useState<
+        Array<{ time: string; isAvailable: boolean }>
+    >([]);
 
-  useEffect(() => {
-    if (providerId) {
-      setIsLoadingProvider(true);
-      fetchProviderDetailsFromAPI(providerId)
-        .then(data => {
-          if (data) setProvider(data);
-          else Alert.alert("Erro", "Prestador não encontrado.");
-        })
-        .catch(err => Alert.alert("Erro", "Falha ao carregar dados do prestador."))
-        .finally(() => setIsLoadingProvider(false));
-    } else {
-      Alert.alert("Erro", "ID do prestador não fornecido.");
-      router.back();
-    }
-  }, [providerId, router]);
+    // Animação para feedback ao selecionar data/hora
+    const selectionAnim = useRef(new Animated.Value(1)).current;
 
-  useEffect(() => {
-    const animateShine = () => {
-      shineAnim.setValue(-SCREEN_WIDTH * 0.3);
-      Animated.timing(shineAnim, {
-        toValue: SCREEN_WIDTH + (SCREEN_WIDTH * 0.3),
-        duration: 3000,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      }).start(() => animateShine());
-    };
-    animateShine(); 
-  }, []);
+    // Estado para controlar o skeleton do provedor
+    const [isProviderLoading, setIsProviderLoading] = useState(true);
+    // Estado para controlar o skeleton do endereço
+    const [isAddressLoading, setIsAddressLoading] = useState(true);
 
-  const generateCalendarDays = useCallback((dateInMonth: Date) => {
-    const year = dateInMonth.getFullYear();
-    const month = dateInMonth.getMonth();
-    const firstDayOfMonth = new Date(year, month, 1);
-    const lastDayOfMonth = new Date(year, month + 1, 0);
-    const daysInMonth = lastDayOfMonth.getDate();
-    const startDayOfWeek = firstDayOfMonth.getDay();
+    const renderStars = useCallback((rating: number | undefined) => {
+        const stars = [];
+        const actualRating = rating ?? 0;
+        const fullStars = Math.floor(actualRating);
+        const hasHalfStar = (actualRating * 2) % 2 !== 0;
 
-    const days: Array<{day: number, month: 'current' | 'prev' | 'next', dateObj: Date}> = [];
-    const prevMonthLastDay = new Date(year, month, 0).getDate();
-    
-    for (let i = 0; i < startDayOfWeek; i++) {
-      const day = prevMonthLastDay - startDayOfWeek + 1 + i;
-      days.push({ day, month: 'prev', dateObj: new Date(year, month -1, day) });
-    }
-    for (let i = 1; i <= daysInMonth; i++) {
-      days.push({ day: i, month: 'current', dateObj: new Date(year, month, i) });
-    }
-    const totalCells = days.length > 35 ? 42 : 35;
-    const remainingCells = totalCells - days.length;
-    for (let i = 1; i <= remainingCells; i++) {
-      days.push({ day: i, month: 'next', dateObj: new Date(year, month + 1, i) });
-    }
-    setCalendarDays(days);
-  }, []);
+        for (let i = 0; i < 5; i++) {
+            let iconName: keyof typeof Ionicons.glyphMap = 'star-outline';
+            if (i < fullStars) iconName = 'star';
+            else if (hasHalfStar && i === fullStars) iconName = 'star-half-sharp';
 
-  useEffect(() => {
-    generateCalendarDays(currentDisplayMonth);
-  }, [currentDisplayMonth, generateCalendarDays]);
-  
-  useEffect(() => {
-    if (providerId && selectedDate) {
-      setSelectedTime(null);
-      setAvailableTimeSlots([]);
-      setIsFetchingSlots(true);
-      setShowPaymentMethodSelection(false); 
-      fetchAvailableTimeSlotsAPI(providerId, selectedDate)
-        .then(slots => setAvailableTimeSlots(slots))
-        .catch(err => Alert.alert("Erro", "Não foi possível carregar os horários disponíveis."))
-        .finally(() => setIsFetchingSlots(false));
-    }
-  }, [selectedDate, providerId]);
-
-  const handlePrevMonth = () => {
-    setCurrentDisplayMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
-  };
-
-  const handleNextMonth = () => {
-    setCurrentDisplayMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
-  };
-
-  const handleDaySelect = (dateObj: Date) => {
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    if (dateObj < today) {
-        Alert.alert("Data Inválida", "Não é possível selecionar uma data passada.");
-        return;
-    }
-    setSelectedDate(dateObj);
-  };
-
-  const handleTimeSelect = (time: string) => {
-    setSelectedTime(time);
-    setShowPaymentMethodSelection(true); 
-  };
-
-  const handleSelectPixPayment = () => {
-    setShowPaymentMethodSelection(false);
-  };
-
-  const copyToClipboard = async (text: string) => {
-    if (!text) return;
-    await Clipboard.setStringAsync(text);
-    Alert.alert("Copiado!", "Chave PIX copiada para a área de transferência.");
-  };
-
-  const handleConfirmBooking = () => {
-    if (!selectedDate || !selectedTime || !provider) {
-      Alert.alert("Seleção Incompleta", "Por favor, selecione uma data e um horário.");
-      return;
-    }
-    if (showPaymentMethodSelection) {
-        handleSelectPixPayment();
-        return;
-    }
-
-    setIsBooking(true);
-    // Simula o processamento do agendamento e pagamento
-    setTimeout(() => {
-      // Navega diretamente para a página de sucesso do provider
-      // A rota deve corresponder à estrutura de pastas e nome do arquivo no Expo Router
-      // Ex: se o arquivo é app/(provider)/bookingss/sucess.tsx, a rota é '/(provider)/bookingss/sucess'
-      router.replace({ pathname: '/(client)/bookings/success' }); // CORREÇÃO AQUI: 'bookingss' para 'bookings'
-      setIsBooking(false);
-    }, 1500);
-  };
-
-  if (isLoadingProvider || !provider) {
-    return (
-      <View style={styles.centeredFeedback}>
-        <Stack.Screen options={{ title: "Carregando..." }} />
-        <ActivityIndicator size="large" color="#2A72E7" />
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.screenContainer}>
-      <Stack.Screen options={{ headerShown: false }} />
-
-      {/* Usando o novo componente CalendarHeader */}
-      <CalendarHeader
-        currentDisplayMonth={currentDisplayMonth}
-        onPrevMonth={handlePrevMonth}
-        onNextMonth={handleNextMonth}
-        routerBack={() => router.back()}
-        MONTH_NAMES_PT={MONTH_NAMES_PT}
-      />
-      
-      <ScrollView contentContainerStyle={styles.scrollContentContainer}>
-        <View style={styles.providerBrief}>
-            <Image source={{ uri: provider.imagemUrl }} style={styles.providerImageSmall} />
-            <View style={styles.providerTextInfo}>
-              <Text style={styles.providerNameSmall}>{provider.nome}</Text>
-              <Text style={styles.providerServiceSmall}>{params.serviceName || provider.especialidade}</Text>
-            </View>
-        </View>
-
-        {/* Usando o novo componente AddressSection */}
-        <AddressSection userAddress={USER_ADDRESS} shineAnim={shineAnim} />
-
-        <View style={styles.calendarGridContainer}>
-          <View style={styles.dayNamesRow}>
-            {DAY_NAMES_PT.map(dayName => (
-              <Text key={dayName} style={styles.dayNameText}>{dayName}</Text>
-            ))}
-          </View>
-          <View style={styles.calendarGrid}>
-            {calendarDays.map((dayInfo, index) => {
-              const isSelected = selectedDate.toDateString() === dayInfo.dateObj.toDateString() && dayInfo.month === 'current';
-              const isPast = dayInfo.dateObj < new Date(new Date().setHours(0,0,0,0)) && dayInfo.dateObj.toDateString() !== new Date().toDateString();
-              const isToday = dayInfo.dateObj.toDateString() === new Date().toDateString();
-
-              return (
-                <TouchableOpacity
-                  key={index}
-                  style={[
-                    styles.dayCell,
-                    dayInfo.month !== 'current' && styles.dayCellNotInMonth,
-                    isSelected && styles.dayCellSelected,
-                    isToday && !isSelected && styles.dayCellToday,
-                  ]}
-                  onPress={() => dayInfo.month === 'current' && handleDaySelect(dayInfo.dateObj)}
-                  disabled={dayInfo.month !== 'current' || isPast}
-                >
-                  <Text style={[
-                    styles.dayText,
-                    dayInfo.month !== 'current' && styles.dayTextNotInMonth,
-                    isSelected && styles.dayTextSelected,
-                    isPast && dayInfo.month === 'current' && styles.dayTextPast,
-                    isToday && !isSelected && styles.dayTextToday,
-                  ]}>
-                    {dayInfo.day}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-
-        <View style={styles.timeSlotsSection}>
-          <Text style={styles.timeSlotsTitle}>
-            Horários Disponíveis - {selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}
-          </Text>
-          {isFetchingSlots ? (
-            <ActivityIndicator size="large" color="#2A72E7" style={styles.slotsLoader} />
-          ) : availableTimeSlots.length > 0 ? (
-            <FlatList
-              data={availableTimeSlots}
-              renderItem={({ item: time }) => (
-                
-                <TimeSlotButton
-                  time={time}
-                  isSelected={selectedTime === time}
-                  onPress={handleTimeSelect}
+            stars.push(
+                <Ionicons
+                    key={i}
+                    name={iconName}
+                    size={16}
+                    color="#4A90E2"
+                    style={styles.ratingStarIcon}
                 />
-              )}
-              keyExtractor={(item) => item}
-              numColumns={3}
-              columnWrapperStyle={styles.timeSlotsRow}
-              contentContainerStyle={styles.timeSlotsListContainer}
-            />
-          ) : (
-            <Text style={styles.noSlotsText}>Nenhum horário disponível para esta data.</Text>
-          )}
-        </View>
+            );
+        }
+        return <View style={styles.ratingStarContainer}>{stars}</View>;
+    }, []);
 
-        {/* Usando o novo componente PaymentMethodSelection */}
-        {selectedTime && showPaymentMethodSelection && (
-          <PaymentMethodSelection onSelectPixPayment={handleSelectPixPayment} />
-        )}
-
-        {selectedTime && !showPaymentMethodSelection && provider && provider.precoServico > 0 && provider.pixKey && (
-          <View style={styles.pixPaymentContainer}>
-            <Text style={styles.pixSectionTitle}>Pagamento via PIX</Text>
-            <View style={styles.pixCard}>
-              <View style={styles.pixAmountHighlight}>
-                <Text style={styles.pixAmountLabel}>Valor Total:</Text>
-                <Text style={styles.pixAmountValue}>R$ {provider.precoServico.toFixed(2).replace('.', ',')}</Text>
-              </View>
-
-              <View style={styles.pixContent}>
-                <View style={styles.pixQrContainer}>
-                  <Ionicons name="qr-code-outline" size={100} color="#333" />
-                  <Text style={styles.pixQrCaption}>Escaneie o QR Code</Text>
-                </View>
-                <View style={styles.pixOrSeparator}>
-                    <View style={styles.pixSeparatorLine} />
-                    <Text style={styles.pixOrText}>OU</Text>
-                    <View style={styles.pixSeparatorLine} />
-                </View>
-                <View style={styles.pixCopyKeyContainer}>
-                  <Text style={styles.pixCopyLabel}>Copie a Chave PIX:</Text>
-                  <View style={styles.pixKeyBox}>
-                    <Text style={styles.pixKeyValue} numberOfLines={1} ellipsizeMode="middle">
-                      {provider.pixKey}
-                    </Text>
-                    <TouchableOpacity onPress={() => copyToClipboard(provider.pixKey!)} style={styles.pixCopyButton}>
-                      <Ionicons name="copy-outline" size={22} color="#2A72E7" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-              
-              <Text style={styles.pixInstructionsTitle}>Instruções:</Text>
-              <Text style={styles.pixInstructionItem}>1. Abra o app do seu banco e acesse a área PIX.</Text>
-              <Text style={styles.pixInstructionItem}>2. Escolha pagar com QR Code ou Chave PIX.</Text>
-              <Text style={styles.pixInstructionItem}>3. Escaneie o código ou cole a chave copiada.</Text>
-              <Text style={styles.pixInstructionItem}>4. Confirme os dados e o valor, depois finalize o pagamento.</Text>
-              <Text style={styles.pixInstructionItem}>Seu agendamento será confirmado após a aprovação do pagamento.</Text>
+    const renderInfoChip = useCallback((iconName: keyof typeof Ionicons.glyphMap, text: string, isVerified?: boolean) => {
+        return (
+            <View style={[styles.infoChip, isVerified && styles.infoChipVerified]}>
+                <Ionicons name={iconName} size={16} color={isVerified ? '#2A72E7' : '#555'} />
+                <Text style={[styles.infoChipText, isVerified && styles.infoChipTextVerified]}>{text}</Text>
             </View>
-          </View>
-        )}
+        );
+    }, []);
 
-      </ScrollView>
+    // --- FUNÇÕES DE CALENDÁRIO (MOVidas para cima) ---
+    const handlePrevMonth = useCallback(() => {
+        setCurrentDisplayMonth(prev => {
+            const newDate = new Date(prev.getFullYear(), prev.getMonth() - 1, 1);
+            // Pré-carrega o mês anterior no cache
+            prefetchAvailability(provider?.id, newDate);
+            return newDate;
+        });
+    }, [provider?.id]);
 
-      <View style={styles.confirmButtonWrapper}>
-        <TouchableOpacity
-          style={[
-            styles.confirmButton,
-            (!selectedTime || !provider.precoServico || isBooking) && styles.confirmButtonDisabled
-          ]}
-          onPress={handleConfirmBooking}
-          disabled={!selectedTime || !provider.precoServico || isBooking}
-        >
-          {isBooking ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.confirmButtonText}>
-              {selectedTime && provider.precoServico ? 
-                `Agendar (R$ ${provider.precoServico.toFixed(2).replace('.', ',')})` : 
-                "Selecione Data e Hora"
-              }
-            </Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+    const handleNextMonth = useCallback(() => {
+        setCurrentDisplayMonth(prev => {
+            const newDate = new Date(prev.getFullYear(), prev.getMonth() + 1, 1);
+            // Pré-carrega o mês seguinte no cache
+            prefetchAvailability(provider?.id, newDate);
+            return newDate;
+        });
+    }, [provider?.id]);
+
+    const handleDaySelect = useCallback((dateObj: Date) => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (dateObj < today) {
+            Alert.alert("Data Inválida", "Não é possível selecionar uma data passada.");
+            return;
+        }
+        setSelectedDate(dateObj);
+        // Animação ao selecionar o dia
+        Animated.sequence([
+            Animated.timing(selectionAnim, { toValue: 1.1, duration: 100, useNativeDriver: true, easing: Easing.out(Easing.ease) }),
+            Animated.spring(selectionAnim, { toValue: 1, friction: 5, useNativeDriver: true }),
+        ]).start();
+    }, [selectionAnim]);
+
+    const handleTimeSelect = useCallback((time: string) => {
+        const selectedSlot = displaySlotsInfo.find(slot => slot.time === time);
+        if (selectedSlot?.isAvailable) {
+            setSelectedTime(time);
+            // Animação ao selecionar o horário
+            Animated.sequence([
+                Animated.timing(selectionAnim, { toValue: 1.05, duration: 80, useNativeDriver: true, easing: Easing.out(Easing.ease) }),
+                Animated.spring(selectionAnim, { toValue: 1, friction: 4, useNativeDriver: true }),
+            ]).start();
+        } else {
+            Alert.alert("Horário Indisponível", "Este horário já está agendado ou não disponível. Por favor, selecione outro.");
+        }
+    }, [displaySlotsInfo, selectionAnim]);
+
+    const copyToClipboard = useCallback(async (text: string) => {
+        if (!text) return;
+        await Clipboard.setStringAsync(text);
+        Alert.alert("Copiado!", "Chave PIX copiada para a área de transferência.");
+    }, []);
+
+    const handleConfirmBooking = useCallback(async () => {
+        if (
+            !user?.id ||
+            !provider?.id ||
+            !selectedProviderService?.id ||
+            !selectedDate ||
+            !selectedTime ||
+            !address.street ||
+            !address.number ||
+            !address.neighborhood || !address.city || !address.state ||
+            !selectedProviderService
+        ) {
+            Alert.alert("Erro", "Por favor, preencha todos os campos necessários para o agendamento, incluindo o endereço completo e selecione um horário.");
+            return;
+        }
+
+        setIsBooking(true);
+        try {
+            const bookingData: CreateBookingDto = {
+                providerId: provider.id,
+                providerServiceId: selectedProviderService.id,
+                scheduledDate: selectedDate.toISOString().split('T')[0],
+                scheduledTime: selectedTime,
+                totalPrice: selectedProviderService.price,
+                notes: notes,
+                address: address,
+            };
+
+            const newBooking: BookingDetails = await createBooking(bookingData);
+
+            router.replace({
+                pathname: '/(client)/bookings/success',
+                params: {
+                    bookingId: newBooking.id,
+                    totalPrice: newBooking.totalPrice.toString(),
+                    paymentMethod: 'PIX',
+                }
+            } as any);
+
+        } catch (error: any) {
+            console.error("Erro ao agendar serviço:", error.response?.data || error.message);
+            Alert.alert("Erro", error.response?.data?.message || "Não foi possível agendar o serviço.");
+        } finally {
+            setIsBooking(false);
+        }
+    }, [user, provider, selectedDate, selectedTime, address, selectedProviderService, notes, router]);
+
+    // Função para pré-carregar a disponibilidade
+    const prefetchAvailability = useCallback(async (provId: string | undefined, date: Date) => {
+        if (!provId) return;
+
+        const dateString = date.toISOString().split('T')[0];
+        const cacheKey = `${provId}-${dateString}`;
+
+        if (availabilityCache.has(cacheKey)) {
+            return; // Já está no cache
+        }
+
+        try {
+            // console.log(`[Prefetch] Carregando disponibilidade para ${dateString}`);
+            const response = await getProviderAvailability(provId, dateString);
+            availabilityCache.set(cacheKey, response);
+            // console.log(`[Prefetch] Disponibilidade para ${dateString} armazenada em cache.`);
+        } catch (error) {
+            console.error(`[Prefetch] Erro ao pré-carregar disponibilidade para ${dateString}:`, error);
+        }
+    }, []);
+
+    // --- EFEITOS DE CARREGAMENTO INICIAL E SKELETONS ---
+    useEffect(() => {
+        const loadInitialData = async () => {
+            setIsLoading(true);
+            setIsProviderLoading(true); // Ativa skeleton do provedor
+            setIsAddressLoading(true); // Ativa skeleton do endereço
+
+            if (!paramProviderId || !paramServiceId || !user?.id) {
+                Alert.alert("Erro de Navegação", "Dados essenciais ausentes. Tente novamente.");
+                router.replace('/explore');
+                setIsLoading(false);
+                setIsProviderLoading(false);
+                setIsAddressLoading(false);
+                return;
+            }
+
+            try {
+                const fetchedProvider = await getProviderDetails(paramProviderId);
+                setProvider(fetchedProvider);
+                setIsProviderLoading(false); // Desativa skeleton do provedor
+
+                const foundService = fetchedProvider.providerServices?.find(
+                    ps => ps.id === paramServiceId && ps.service && ps.service.id && ps.service.name
+                );
+
+                if (!foundService) {
+                    Alert.alert("Erro", "O serviço selecionado não está disponível para este provedor.");
+                    router.replace('/explore');
+                    setIsLoading(false);
+                    return;
+                }
+                setSelectedProviderService(foundService);
+
+                if (user.address) {
+                    setAddress({
+                        street: user.address.street || '',
+                        number: user.address.number || '',
+                        complement: user.address.complement || null,
+                        neighborhood: user.address.neighborhood || '',
+                        city: user.address.city || '',
+                        state: user.address.state || '',
+                        cep: user.address.cep || ''
+                    });
+                } else {
+                    Alert.alert(
+                        "Endereço Necessário",
+                        "Seu endereço não está completo. Por favor, preencha para prosseguir."
+                    );
+                }
+                setIsAddressLoading(false); // Desativa skeleton do endereço
+
+                setSelectedDate(new Date());
+
+                // Pré-carregar disponibilidade para o mês atual e próximo/anterior
+                const today = new Date();
+                const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+                const prevMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                await prefetchAvailability(paramProviderId, today);
+                await prefetchAvailability(paramProviderId, nextMonth);
+                await prefetchAvailability(paramProviderId, prevMonth);
+
+            } catch (error: any) {
+                console.error("Erro ao carregar dados iniciais:", error.response?.data || error.message);
+                Alert.alert("Erro", error.response?.data?.message || "Não foi possível carregar os dados para agendamento.");
+                router.replace('/explore');
+            } finally {
+                setIsLoading(false);
+                setIsProviderLoading(false);
+                setIsAddressLoading(false);
+            }
+        };
+        loadInitialData();
+    }, [paramProviderId, user?.id, user?.address, paramServiceId, router, prefetchAvailability]);
+
+    // --- EFEITO DE ANIMAÇÃO DO SHINE (EXISTENTE) ---
+    const animateShine = useCallback(() => {
+        shineAnim.setValue(-SCREEN_WIDTH * 0.3);
+        Animated.timing(shineAnim, {
+            toValue: SCREEN_WIDTH + (SCREEN_WIDTH * 0.3),
+            duration: 3000,
+            easing: Easing.linear,
+            useNativeDriver: true,
+        }).start(() => animateShine());
+    }, [shineAnim]);
+
+    useEffect(() => {
+        animateShine();
+    }, [animateShine]);
+
+    // --- FUNÇÕES DE CALENDÁRIO (EXISTENTE) ---
+    const generateCalendarDays = useCallback((dateInMonth: Date) => {
+        const year = dateInMonth.getFullYear();
+        const month = dateInMonth.getMonth();
+        const firstDayOfMonth = new Date(year, month, 1);
+        const lastDayOfMonth = new Date(year, month + 1, 0);
+        const daysInMonth = lastDayOfMonth.getDate();
+        const startDayOfWeek = firstDayOfMonth.getDay();
+
+        const days: Array<{ day: number, month: 'current' | 'prev' | 'next', dateObj: Date }> = [];
+        const prevMonthLastDay = new Date(year, month, 0).getDate();
+
+        for (let i = 0; i < startDayOfWeek; i++) {
+            const day = prevMonthLastDay - startDayOfWeek + 1 + i;
+            days.push({ day, month: 'prev', dateObj: new Date(year, month - 1, day) });
+        }
+        for (let i = 1; i <= daysInMonth; i++) {
+            days.push({ day: i, month: 'current', dateObj: new Date(year, month, i) });
+        }
+        const totalCells = days.length > 35 ? 42 : 35;
+        const remainingCells = totalCells - days.length;
+        for (let i = 1; i <= remainingCells; i++) {
+            days.push({ day: i, month: 'next', dateObj: new Date(year, month + 1, i) });
+        }
+        setCalendarDays(days);
+    }, []);
+
+    useEffect(() => {
+        generateCalendarDays(currentDisplayMonth);
+    }, [currentDisplayMonth, generateCalendarDays]);
+
+    // --- EFEITO DE CARREGAMENTO E PROCESSAMENTO DE SLOTS ---
+    useEffect(() => {
+        const fetchAndProcessSlotsForDate = async () => {
+            if (!provider?.id || !selectedDate) {
+                setDisplaySlotsInfo([]);
+                setSelectedTime(null);
+                return;
+            }
+
+            setIsFetchingSlots(true);
+            const dateString = selectedDate.toISOString().split('T')[0];
+            const cacheKey = `${provider.id}-${dateString}`;
+
+            let backendResponse;
+            if (availabilityCache.has(cacheKey)) {
+                backendResponse = availabilityCache.get(cacheKey); // Usa o cache se disponível
+                // console.log(`[Cache Hit] Usando dados do cache para ${dateString}`);
+            } else {
+                try {
+                    backendResponse = await getProviderAvailability(provider.id, dateString);
+                    availabilityCache.set(cacheKey, backendResponse); // Armazena no cache
+                    // console.log(`[Cache Miss] Dados para ${dateString} buscados e armazenados em cache.`);
+                } catch (err: any) {
+                    console.error("Erro ao carregar horários para data:", err.response?.data || err.message);
+                    Alert.alert("Erro", err.response?.data?.message || "Não foi possível carregar os horários disponíveis.");
+                    setDisplaySlotsInfo([]);
+                    setIsFetchingSlots(false);
+                    return;
+                }
+            }
+
+            const providerConfiguredSlots: ProviderAvailability[] = backendResponse?.available || [];
+            const occupiedTimesFromBackend: string[] = backendResponse?.occupiedTimes || [];
+            const dayOfWeekSelected = selectedDate.getDay();
+
+            const allDisplayableTimes: string[] = [];
+            const startHour = 8;
+            const endHour = 20;
+
+            for (let h = startHour; h < endHour; h++) {
+                for (let m = 0; m < 60; m += 30) {
+                    allDisplayableTimes.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`);
+                }
+            }
+
+            const configuredStartTimesForSelectedDay = new Set(
+                providerConfiguredSlots
+                    .filter(configSlot => configSlot.dayOfWeek === dayOfWeekSelected)
+                    .map(configSlot => configSlot.startTime)
+            );
+
+            const finalDisplaySlots: Array<{ time: string; isAvailable: boolean }> = allDisplayableTimes.map(time => {
+                const [hours, minutes] = time.split(':').map(Number);
+                const slotDateTime = new Date(selectedDate);
+                slotDateTime.setHours(hours, minutes, 0, 0);
+
+                const isPast = slotDateTime.getTime() < new Date().getTime();
+                const isConfiguredByProvider = configuredStartTimesForSelectedDay.has(time);
+                const isSlotOccupied = occupiedTimesFromBackend.includes(time);
+
+                return {
+                    time: time,
+                    isAvailable: isConfiguredByProvider && !isSlotOccupied && !isPast,
+                };
+            });
+
+            setDisplaySlotsInfo(finalDisplaySlots);
+            setIsFetchingSlots(false);
+        };
+        fetchAndProcessSlotsForDate();
+    }, [selectedDate, provider?.id]);
+
+    // Renderiza Skeletons para o Provedor e Endereço
+    const renderProviderSkeleton = () => (
+        <View style={styles.providerBriefSkeleton}>
+            <View style={styles.providerImageSkeleton} />
+            <View style={styles.providerTextInfoSkeleton}>
+                <View style={styles.skeletonLineLarge} />
+                <View style={styles.skeletonLineSmall} />
+                <View style={styles.skeletonChipsContainer}>
+                    <View style={styles.skeletonChip} />
+                    <View style={styles.skeletonChip} />
+                </View>
+            </View>
+        </View>
+    );
+
+    const renderAddressSkeleton = () => (
+        <View style={styles.gradientAddressSectionSkeleton}>
+            <View style={styles.addressContentSkeleton}>
+                <View style={styles.mapIconSkeleton} />
+                <View style={styles.skeletonLineAddress} />
+            </View>
+        </View>
+    );
+
+    if (isLoading) {
+        return (
+            <View style={styles.centeredFeedback}>
+                <Stack.Screen options={{ title: "Carregando..." }} />
+                <ActivityIndicator size="large" color="#2A72E7" />
+                <Text style={{ marginTop: 10, color: '#555' }}>Carregando dados...</Text>
+            </View>
+        );
+    }
+
+    const isButtonDisabled = !selectedTime || !selectedProviderService || isBooking ||
+        !address.street || !address.number || !address.neighborhood || !address.city || !address.state;
+
+    return (
+        <View style={styles.screenContainer}>
+            <Stack.Screen options={{ headerShown: false }} />
+
+            <CalendarHeader
+                currentDisplayMonth={currentDisplayMonth}
+                onPrevMonth={handlePrevMonth}
+                onNextMonth={handleNextMonth}
+                routerBack={() => router.back()}
+                MONTH_NAMES_PT={MONTH_NAMES_PT}
+            />
+
+            <ScrollView contentContainerStyle={styles.scrollContentContainer}>
+                {/* INÍCIO DO COMPONENTE PROVIDER BRIEF */}
+                {isProviderLoading ? (
+                    renderProviderSkeleton()
+                ) : (
+                    <View style={styles.providerBrief}>
+                        <Image
+                            source={{ uri: provider?.avatarUrl || 'https://via.placeholder.com/50' }}
+                            style={styles.providerImageSmall}
+                        />
+                        <View style={styles.providerTextInfo}>
+                            <View style={styles.providerNameAndRatingRow}>
+                                <Text style={styles.providerNameSmall}>{provider?.fullName}</Text>
+                                {typeof provider?.averageRating === 'number' && provider.averageRating > 0 ? (
+                                    <View style={styles.ratingContainer}>
+                                        {renderStars(provider.averageRating)}
+                                    </View>
+                                ) : (
+                                    <Text style={styles.noRatingText}>Sem avaliação</Text>
+                                )}
+                            </View>
+                            <Text style={styles.providerServiceSmall}>
+                                {selectedProviderService?.service?.name}
+                            </Text>
+                            <View style={styles.infoChipsRow}>
+                                {provider?.verificationStatus === VerificationStatus.APPROVED && (
+                                    renderInfoChip("shield-checkmark-outline", "Verificado", true)
+                                )}
+                                {typeof provider?.yearsOfExperience === 'number' && provider.yearsOfExperience > 0 && (
+                                    renderInfoChip("hourglass-outline", `${provider.yearsOfExperience}+ anos`)
+                                )}
+                            </View>
+                        </View>
+                    </View>
+                )}
+                {/* FIM DO COMPONENTE PROVIDER BRIEF */}
+
+                {/* INÍCIO DO AddressSection */}
+                {isAddressLoading ? (
+                    renderAddressSkeleton()
+                ) : (
+                    <LinearGradient
+                        colors={['#FFFFFF', '#F0F0F0']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={styles.gradientAddressSection}
+                    >
+                        <BlurView intensity={90} tint="light" style={StyleSheet.absoluteFill} />
+                        <View style={styles.addressContent}>
+                            <Image
+                                source={require('../../../assets/images/icons/map.png')}
+                                style={styles.mapIcon}
+                            />
+                            <Text style={styles.addressText} numberOfLines={1} ellipsizeMode="tail">
+                                {`${address.street || ''}, ${address.number || ''}` +
+                                `${address.complement ? ` - ${address.complement}` : ''}` +
+                                `, ${address.neighborhood || ''}, ${address.city || ''}/${address.state || ''}`}
+                            </Text>
+                        </View>
+                        <Animated.View style={[styles.shineEffectContainer, { transform: [{ translateX: shineAnim }] }]}>
+                            <LinearGradient
+                                colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.5)', 'rgba(255,255,255,0)']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                                style={styles.shineGradient}
+                            />
+                        </Animated.View>
+                    </LinearGradient>
+                )}
+                {/* FIM DO AddressSection */}
+
+                {/* Seção de preenchimento de endereço se não carregado do perfil */}
+                {!isAddressLoading && !user?.address?.street && (
+                    <View style={styles.addressInputContainer}>
+                        <Text style={styles.addressInputTitle}>Preencha seu Endereço</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Rua"
+                            value={address.street}
+                            onChangeText={(text) => setAddress({ ...address, street: text })}
+                            placeholderTextColor="#888"
+                        />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Número"
+                            value={address.number}
+                            onChangeText={(text) => setAddress({ ...address, number: text })}
+                            keyboardType="numeric"
+                            placeholderTextColor="#888"
+                        />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Complemento (Opcional)"
+                            value={address.complement || ''}
+                            onChangeText={(text) => setAddress({ ...address, complement: text })}
+                            placeholderTextColor="#888"
+                        />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Bairro"
+                            value={address.neighborhood}
+                            onChangeText={(text) => setAddress({ ...address, neighborhood: text })}
+                            placeholderTextColor="#888"
+                        />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Cidade"
+                            value={address.city}
+                            onChangeText={(text) => setAddress({ ...address, city: text })}
+                            placeholderTextColor="#888"
+                        />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Estado (Ex: SP)"
+                            value={address.state}
+                            onChangeText={(text) => setAddress({ ...address, state: text })}
+                            maxLength={2}
+                            autoCapitalize="characters"
+                            placeholderTextColor="#888"
+                        />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="CEP"
+                            value={address.cep}
+                            onChangeText={(text) => setAddress({ ...address, cep: text })}
+                            keyboardType="numeric"
+                            maxLength={9} // Ex: 12345-678
+                            placeholderTextColor="#888"
+                        />
+                    </View>
+                )}
+
+
+                <View style={styles.calendarGridContainer}>
+                    <View style={styles.dayNamesRow}>
+                        {DAY_NAMES_PT.map(dayName => (
+                            <Text key={dayName} style={styles.dayNameText}>{dayName}</Text>
+                        ))}
+                    </View>
+                    <View style={styles.calendarGrid}>
+                        {calendarDays.map((dayInfo, index) => {
+                            const isSelected = selectedDate.toDateString() === dayInfo.dateObj.toDateString() && dayInfo.month === 'current';
+                            const isPast = dayInfo.dateObj < new Date(new Date().setHours(0, 0, 0, 0)) && dayInfo.dateObj.toDateString() !== new Date().toDateString();
+                            const isToday = dayInfo.dateObj.toDateString() === new Date().toDateString();
+
+                            return (
+                                <TouchableOpacity
+                                    key={index}
+                                    style={[
+                                        styles.dayCell,
+                                        dayInfo.month !== 'current' && styles.dayCellNotInMonth,
+                                        isSelected && styles.dayCellSelected,
+                                        isToday && !isSelected && styles.dayCellToday,
+                                        { transform: [{ scale: isSelected ? selectionAnim : 1 }] } // Animação de escala
+                                    ]}
+                                    onPress={() => dayInfo.month === 'current' && handleDaySelect(dayInfo.dateObj)}
+                                    disabled={dayInfo.month !== 'current' || isPast}
+                                >
+                                    <Text style={[
+                                        styles.dayText,
+                                        dayInfo.month !== 'current' && styles.dayTextNotInMonth,
+                                        isSelected && styles.dayTextSelected,
+                                        isPast && dayInfo.month === 'current' && styles.dayTextPast,
+                                        isToday && !isSelected && styles.dayTextToday,
+                                    ]}>
+                                        {dayInfo.day}
+                                    </Text>
+                                </TouchableOpacity>
+                            );
+                        })}
+                    </View>
+                </View>
+
+                <TimeSlotsSection
+                    title={`Horários Disponíveis - ${selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}`}
+                    displaySlotsInfo={displaySlotsInfo}
+                    isLoading={isFetchingSlots}
+                    selectedTime={selectedTime}
+                    onTimeSelect={handleTimeSelect}
+                />
+
+            </ScrollView>
+
+            <View style={styles.confirmButtonWrapper}>
+                <TouchableOpacity
+                    style={[
+                        styles.confirmButton,
+                        isButtonDisabled && styles.confirmButtonDisabled
+                    ]}
+                    onPress={handleConfirmBooking}
+                    disabled={isButtonDisabled}
+                >
+                    {isBooking ? (
+                        <ActivityIndicator color="#FFFFFF" />
+                    ) : (
+                        <Text style={styles.confirmButtonText}>
+                            {selectedTime && selectedProviderService?.price ?
+                                `Agendar (R$ ${selectedProviderService.price.toFixed(2).replace('.', ',')})` :
+                                "Selecione Data, Hora e Endereço"
+                            }
+                        </Text>
+                    )}
+                </TouchableOpacity>
+            </View>
+        </View>
+    );
 }
 
 const styles = StyleSheet.create({
-  screenContainer: { flex: 1, backgroundColor: '#FFFFFF' },
-  centeredFeedback: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8F9FA' },
-  scrollContentContainer: { paddingBottom: 120 },
+    screenContainer: { flex: 1, backgroundColor: '#FFFFFF' },
+    centeredFeedback: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8F9FA' },
+    scrollContentContainer: { paddingBottom: 120 },
 
-  // Styles for CalendarHeader, AddressSection, TimeSlotButton, PaymentMethodSelection
-  // are now moved to their respective component files.
-  // Only styles specific to schedule-service.tsx remain here.
-
-  providerBrief: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 15,
-    backgroundColor: '#F7F9FC',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E9EDF0'
-  },
-  providerImageSmall: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 12,
-    borderWidth: 1,
-    borderColor: '#DDEEFF'
-  },
-  providerTextInfo: {
-    flex: 1,
-  },
-  providerNameSmall: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  providerServiceSmall: {
-    fontSize: 14,
-    color: '#555',
-  },
-
-  calendarGridContainer: {
-    paddingHorizontal: 10,
-    marginTop: 15,
-  },
-  dayNamesRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 10,
-    paddingHorizontal: (SCREEN_WIDTH - 20 - (7 * 40)) / 14, 
-  },
-  dayNameText: {
-    width: 40, 
-    textAlign: 'center',
-    fontSize: 12,
-    color: '#888888',
-    fontWeight: '500',
-  },
-  calendarGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-start',
-  },
-  dayCell: {
-    width: (SCREEN_WIDTH - 20) / 7 - 6, 
-    height: 40, 
-    justifyContent: 'center',
-    alignItems: 'center',
-    margin: 3,
-    borderRadius: 20, 
-  },
-  dayCellNotInMonth: {},
-  dayCellSelected: {
-    backgroundColor: '#2A72E7',
-  },
+    providerBrief: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 12,
+        backgroundColor: '#F7F9FC',
+        borderBottomWidth: 1,
+        borderBottomColor: '#E9EDF0',
+        justifyContent: 'space-between',
+    },
+    providerImageSmall: {
+        width: 70,
+        height: 70,
+        borderRadius: 25,
+        marginRight: 12,
+        borderWidth: 1,
+        borderColor: '#DDEEFF',
+        marginLeft: 8,
+        marginTop: 10,
+    },
+    providerNameAndRatingRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 0,
+    },
+    providerTextInfo: {
+        flex: 1,
+        marginRight: 10,
+        justifyContent: 'center',
+    },
+    providerNameSmall: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#333',
+        paddingTop: 22,
+        marginRight: 4,
+    },
+    providerServiceSmall: {
+        fontSize: 14,
+        color: '#555',
+    },
+    ratingContainer: {
+        flexDirection: 'row',
+        marginRight: 5,
+        alignSelf: 'center',
+        paddingTop: 22,
+        backgroundColor: 'transparent',
+        minWidth: 60,
+        minHeight: 25,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginLeft: 5,
+    },
+    noRatingText: {
+        fontSize: 12,
+        color: '#888',
+        fontWeight: 'normal',
+    },
+    ratingStarContainer: {
+        flexDirection: 'row',
+        marginRight: 5,
+    },
+    ratingStarIcon: {
+        marginRight: 1,
+    },
+    infoChipsRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        marginTop: 5,
+    },
+    infoChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#E0E0E0',
+        borderRadius: 16,
+        paddingVertical: 4,
+        paddingHorizontal: 8,
+        marginLeft: -3,
+    },
+    infoChipText: {
+        fontSize: 12,
+        color: '#555',
+        marginLeft: 4,
+        fontWeight: '500',
+    },
+    infoChipVerified: {
+        backgroundColor: '#D1ECF1',
+    },
+    infoChipTextVerified: {
+        color: '#007BFF',
+    },
+    gradientAddressSection: {
+        borderRadius: 12,
+        overflow: 'hidden',
+        marginHorizontal: 15,
+        marginTop: 8,
+        marginBottom: 15,
+        position: 'relative',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        elevation: 8,
+    },
+    addressContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 25,
+        paddingVertical: 10,
+        backgroundColor: 'transparent',
+        zIndex: 1,
+    },
+    mapIcon: {
+        width: 18,
+        height: 18,
+        marginRight: 8,
+        marginLeft: 0,
+    },
+    addressText: {
+        fontSize: 14,
+        color: '#333333',
+        fontWeight: '400',
+        flexShrink: 1,
+    },
+    shineEffectContainer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        height: '100%',
+        width: SCREEN_WIDTH * 0.3,
+        transform: [{ skewX: '-20deg' }],
+        overflow: 'hidden',
+        zIndex: 0,
+    },
+    shineGradient: {
+        height: '100%',
+        width: '100%',
+    },
+    calendarGridContainer: {
+        paddingHorizontal: 10,
+        marginTop: 15,
+    },
+    dayNamesRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        marginBottom: 10,
+        paddingHorizontal: (SCREEN_WIDTH - 20 - (7 * 40)) / 14,
+    },
+    dayNameText: {
+        width: 40,
+        textAlign: 'center',
+        fontSize: 12,
+        color: '#888888',
+        fontWeight: '500',
+    },
+    calendarGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'flex-start',
+    },
+    dayCell: {
+        width: (SCREEN_WIDTH - 20) / 7 - 6,
+        height: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+        margin: 3,
+        borderRadius: 20,
+    },
+    dayCellNotInMonth: {},
+    dayCellSelected: {
+        backgroundColor: '#2A72E7',
+    },
     dayCellToday: {
-    borderColor: '#2A72E7',
-    borderWidth: 1,
-  },
-  dayText: {
-    fontSize: 15,
-    color: '#333333',
-  },
-  dayTextNotInMonth: {
-    color: '#CCCCCC',
-  },
-  dayTextSelected: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-  },
-  dayTextPast: {
-      color: '#AAAAAA',
-      textDecorationLine: 'line-through',
-  },
+        borderColor: '#2A72E7',
+        borderWidth: 1,
+    },
+    dayText: {
+        fontSize: 15,
+        color: '#333333',
+    },
+    dayTextNotInMonth: {
+        color: '#CCCCCC',
+    },
+    dayTextSelected: {
+        color: '#FFFFFF',
+        fontWeight: 'bold',
+    },
+    dayTextPast: {
+        color: '#AAAAAA',
+        textDecorationLine: 'line-through',
+    },
     dayTextToday: {
-    color: '#2A72E7',
-    fontWeight: 'bold',
-  },
-
-  timeSlotsSection: {
-    marginTop: 20,
-    paddingHorizontal: 15,
-  },
-  timeSlotsTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#111',
-    marginBottom: 15,
-  },
-  slotsLoader: {
-    marginVertical: 20,
-  },
-  timeSlotsListContainer: {},
-  timeSlotsRow: {
-    justifyContent: 'space-between', 
-  },
-  noSlotsText: {
-    textAlign: 'center',
-    color: '#777777',
-    fontSize: 15,
-    marginVertical: 20,
-    fontStyle: 'italic',
-  },
-  
-  pixPaymentContainer: {
-    marginTop: 25,
-    marginBottom: 10,
-    paddingHorizontal: 15,
-  },
-  pixSectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#111',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  pixCard: {
-    backgroundColor: '#F7F9FC',
-    borderRadius: 12,
-    padding: 15,
-    borderWidth: 1,
-    borderColor: '#E9EDF0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  pixAmountHighlight: {
-    backgroundColor: '#E6F0FF',
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 8,
-    marginBottom: 15,
-    alignItems: 'center',
-  },
-  pixAmountLabel: {
-    fontSize: 14,
-    color: '#2A72E7',
-    fontWeight: '500',
-  },
-  pixAmountValue: {
-    fontSize: 20,
-    color: '#2A72E7',
-    fontWeight: 'bold',
-  },
-  pixContent: {
-    alignItems: 'center',
-  },
-  pixQrContainer: {
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  pixQrCaption: {
-    fontSize: 13,
-    color: '#555',
-    marginTop: 4,
-  },
-  pixOrSeparator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 15,
-    width: '80%',
-  },
-  pixSeparatorLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#DDEEFF',
-  },
-  pixOrText: {
-    marginHorizontal: 10,
-    fontSize: 13,
-    color: '#778899',
-    fontWeight: '500',
-  },
-  pixCopyKeyContainer: {
-    width: '100%',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  pixCopyLabel: {
-    fontSize: 14,
-    color: '#333',
-    marginBottom: 6,
-    fontWeight: '500',
-  },
-  pixKeyBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: '#DDEEFF',
-    width: '90%',
-    minHeight: 48,
-  },
-  pixKeyValue: {
-    flex: 1,
-    fontSize: 14,
-    color: '#333',
-    marginRight: 10,
-  },
-  pixCopyButton: {
-    padding: 6,
-  },
-  pixInstructionsTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#334155',
-    marginTop: 10,
-    marginBottom: 8,
-  },
-  pixInstructionItem: {
-    fontSize: 13,
-    color: '#475569',
-    lineHeight: 20,
-    marginBottom: 4,
-  },
-  pixConfirmationNote: {
-      fontSize: 12,
-      color: '#64748B',
-      textAlign: 'center',
-      marginTop: 15,
-      fontStyle: 'italic',
-  },
-
-  confirmButtonWrapper: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 20,
-    paddingVertical: Platform.OS === 'ios' ? 25 : 15,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-  },
-  confirmButton: {
-    backgroundColor: '#2A72E7', 
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  confirmButtonDisabled: {
-    backgroundColor: '#A0C7F2', 
-  },
-  confirmButtonText: {
-    color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: '600',
-  },
+        color: '#2A72E7',
+        fontWeight: 'bold',
+    },
+    timeSlotsSection: {
+        marginTop: 20,
+        paddingHorizontal: 15,
+    },
+    timeSlotsTitle: {
+        fontSize: 17,
+        fontWeight: '600',
+        color: '#111',
+        marginBottom: 15,
+    },
+    slotsLoader: {
+        marginVertical: 20,
+    },
+    timeSlotsListContainer: {},
+    timeSlotsRow: {
+        justifyContent: 'space-between',
+    },
+    noSlotsText: {
+        textAlign: 'center',
+        color: '#777777',
+        fontSize: 15,
+        fontStyle: 'italic',
+    },
+    confirmButtonWrapper: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        paddingHorizontal: 20,
+        paddingVertical: Platform.OS === 'ios' ? 25 : 15,
+        backgroundColor: '#FFFFFF',
+        borderTopWidth: 1,
+        borderTopColor: '#E0E0E0',
+    },
+    confirmButton: {
+        backgroundColor: '#2A72E7',
+        paddingVertical: 14,
+        borderRadius: 10,
+        alignItems: 'center',
+    },
+    confirmButtonDisabled: {
+        backgroundColor: '#A0C7F2',
+    },
+    confirmButtonText: {
+        color: '#FFFFFF',
+        fontSize: 17,
+        fontWeight: '600',
+    },
+    // --- Novos estilos para Skeletons ---
+    skeletonPulse: {
+        backgroundColor: '#E0E0E0',
+        borderRadius: 4,
+    },
+    providerBriefSkeleton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 12,
+        backgroundColor: '#F7F9FC',
+        borderBottomWidth: 1,
+        borderBottomColor: '#E9EDF0',
+        justifyContent: 'space-between',
+    },
+    providerImageSkeleton: {
+        width: 70,
+        height: 70,
+        borderRadius: 25,
+        marginRight: 12,
+        marginLeft: 8,
+        marginTop: 10,
+        backgroundColor: '#E0E0E0',
+    },
+    providerTextInfoSkeleton: {
+        flex: 1,
+        marginRight: 10,
+        justifyContent: 'center',
+    },
+    skeletonLineLarge: {
+        height: 18,
+        width: '80%',
+        backgroundColor: '#E0E0E0',
+        borderRadius: 4,
+        marginBottom: 8,
+    },
+    skeletonLineSmall: {
+        height: 14,
+        width: '60%',
+        backgroundColor: '#E0E0E0',
+        borderRadius: 4,
+        marginBottom: 5,
+    },
+    skeletonChipsContainer: {
+        flexDirection: 'row',
+        marginTop: 5,
+        gap: 8,
+    },
+    skeletonChip: {
+        height: 24,
+        width: 70,
+        backgroundColor: '#E0E0E0',
+        borderRadius: 16,
+    },
+    gradientAddressSectionSkeleton: {
+        borderRadius: 12,
+        marginHorizontal: 15,
+        marginTop: 8,
+        marginBottom: 15,
+        height: 50, // Altura fixa para o skeleton
+        backgroundColor: '#E0E0E0',
+    },
+    addressContentSkeleton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 25,
+        paddingVertical: 10,
+        height: '100%',
+    },
+    mapIconSkeleton: {
+        width: 18,
+        height: 18,
+        marginRight: 8,
+        backgroundColor: '#CCCCCC',
+        borderRadius: 9,
+    },
+    skeletonLineAddress: {
+        height: 16,
+        width: '70%',
+        backgroundColor: '#E0E0E0',
+        borderRadius: 4,
+    },
+    addressInputContainer: {
+        backgroundColor: '#F7F9FC',
+        padding: 15,
+        marginHorizontal: 15,
+        borderRadius: 12,
+        marginTop: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    addressInputTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#333',
+        marginBottom: 10,
+    },
+    input: {
+        height: 45,
+        borderColor: '#E0E0E0',
+        borderWidth: 1,
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        marginBottom: 10,
+        fontSize: 15,
+        color: '#333',
+        backgroundColor: '#FFFFFF',
+    }
 });

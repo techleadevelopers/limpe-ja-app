@@ -1,5 +1,5 @@
 // LimpeJaApp/app/(common)/help.tsx
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import {
     View,
     Text,
@@ -10,11 +10,16 @@ import {
     TextInput,
     Platform,
     Animated, // Importar Animated para animações
-    Alert, // << CORREÇÃO: Importar Alert
+    Alert,
+    ActivityIndicator, // Importar ActivityIndicator
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
+// Importar o serviço de FAQ
+import { getFaqs } from '../services/faqService'; // Importa a função getFaqs
+
+// Interface FAQItem - MANTIDA AQUI (se o backend não tiver um DTO específico)
 interface FAQItem {
   id: string;
   question: string;
@@ -22,15 +27,7 @@ interface FAQItem {
   keywords?: string[];
 }
 
-const ALL_FAQS: FAQItem[] = [
-  { id: 'faq1', question: "Como faço para agendar um serviço?", answer: "Navegue até a tela 'Explorar', utilize a busca ou os filtros para encontrar o profissional ou serviço desejado. Ao encontrar, clique no perfil do profissional e depois no botão 'Agendar Serviço' para escolher data e horário.", keywords: ['agendar', 'serviço', 'marcar', 'contratar'] },
-  { id: 'faq2', question: "Posso cancelar um agendamento?", answer: "Sim. Vá para 'Meus Agendamentos', selecione o serviço que deseja cancelar e procure pela opção 'Cancelar Agendamento'. Por favor, esteja ciente das políticas de cancelamento, que podem incluir taxas dependendo da antecedência.", keywords: ['cancelar', 'cancelamento', 'desmarcar'] },
-  { id: 'faq3', question: "O pagamento pela plataforma é seguro?", answer: "Com certeza! Utilizamos processadores de pagamento de mercado, com altos padrões de segurança e criptografia para proteger seus dados financeiros. Suas informações de pagamento não são armazenadas diretamente por nós.", keywords: ['pagamento', 'segurança', 'cartão', 'crédito', 'dinheiro'] },
-  { id: 'faq4', question: "Como altero meus dados cadastrais?", answer: "Acesse a aba 'Perfil' e procure pela opção 'Editar Perfil'. Lá você poderá atualizar seu nome, telefone e outras informações pessoais.", keywords: ['perfil', 'dados', 'atualizar', 'mudar', 'cadastro'] },
-  { id: 'faq5', question: "O que faço se tiver um problema com o serviço prestado?", answer: "Primeiramente, tente conversar com o profissional através do chat no app. Se não conseguirem resolver, entre em contato com nosso suporte através dos canais listados nesta tela de Ajuda, informando os detalhes do agendamento.", keywords: ['problema', 'qualidade', 'suporte', 'reclamação'] },
-  { id: 'faq6', question: "Como posso me tornar um profissional LimpeJá?", answer: "Para se tornar um profissional parceiro, acesse a tela de registro e escolha a opção 'Quero Oferecer Serviços'. Preencha suas informações e detalhes dos serviços que você oferece.", keywords: ['profissional', 'parceiro', 'cadastro', 'oferecer', 'serviços'] },
-  { id: 'faq7', question: "Quais são as formas de pagamento aceitas?", answer: "Aceitamos pagamentos via cartão de crédito (principais bandeiras) e PIX. Em breve, mais opções estarão disponíveis para sua comodidade.", keywords: ['pagamento', 'formas', 'cartão', 'crédito', 'PIX'] },
-];
+// REMOVIDO: const ALL_FAQS (será substituído por dados da API)
 
 // Componente para cada item da FAQ com animação de entrada
 const AnimatedFaqItem: React.FC<{
@@ -120,32 +117,50 @@ const AnimatedContactButton: React.FC<{
 export default function HelpScreen() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
+  const [faqs, setFaqs] = useState<FAQItem[]>([]); // Estado para FAQs reais
+  const [isLoadingFaqs, setIsLoadingFaqs] = useState(true); // Estado de carregamento das FAQs
 
   // Animações
   const headerAnim = useRef(new Animated.Value(0)).current;
   const searchAnim = useRef(new Animated.Value(0)).current;
   const sectionCardAnim = useRef(new Animated.Value(0)).current;
 
+  // Função para carregar FAQs da API
+  const loadFaqs = useCallback(async () => {
+    setIsLoadingFaqs(true);
+    try {
+        const fetchedFaqs = await getFaqs(); // CHAMA API REAL
+        setFaqs(fetchedFaqs);
+    } catch (error: any) {
+        console.error("Erro ao buscar FAQs:", error.response?.data || error.message);
+        Alert.alert("Erro", error.response?.data?.message || "Não foi possível carregar as perguntas frequentes.");
+        setFaqs([]); // Garante que a lista esteja vazia em caso de erro
+    } finally {
+        setIsLoadingFaqs(false);
+        // Animações de entrada após o carregamento
+        Animated.stagger(200, [
+            Animated.timing(headerAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
+            Animated.timing(searchAnim, { toValue: 1, duration: 600, delay: 100, useNativeDriver: true }),
+            Animated.timing(sectionCardAnim, { toValue: 1, duration: 700, delay: 200, useNativeDriver: true }),
+        ]).start();
+    }
+  }, [headerAnim, searchAnim, sectionCardAnim]); // Adiciona dependências de animação
+
   useEffect(() => {
-    // Animações de entrada
-    Animated.stagger(200, [
-        Animated.timing(headerAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
-        Animated.timing(searchAnim, { toValue: 1, duration: 600, delay: 100, useNativeDriver: true }),
-        Animated.timing(sectionCardAnim, { toValue: 1, duration: 700, delay: 200, useNativeDriver: true }),
-    ]).start();
-  }, [headerAnim, searchAnim, sectionCardAnim]);
+    loadFaqs(); // Chama loadFaqs ao montar
+  }, [loadFaqs]); // Dependência loadFaqs
 
   const filteredFaqs = useMemo(() => {
     if (!searchTerm.trim()) {
-      return ALL_FAQS;
+      return faqs; // Usar o estado 'faqs'
     }
     const lowerSearchTerm = searchTerm.toLowerCase();
-    return ALL_FAQS.filter(faq =>
+    return faqs.filter(faq => // Usar o estado 'faqs'
       faq.question.toLowerCase().includes(lowerSearchTerm) ||
       faq.answer.toLowerCase().includes(lowerSearchTerm) ||
       (faq.keywords && faq.keywords.some(keyword => keyword.toLowerCase().includes(lowerSearchTerm)))
     );
-  }, [searchTerm]);
+  }, [searchTerm, faqs]); // Adicionar faqs às dependências
 
   const handleContactSupportEmail = () => {
     Linking.openURL('mailto:suporte@limpeja.com?subject=Ajuda%20App%20LimpeJá&body=Olá,%20preciso%20de%20ajuda%20com...');
@@ -194,10 +209,14 @@ export default function HelpScreen() {
                     <Ionicons name="close-circle" size={20} color="#8A8A8E" />
                 </TouchableOpacity>
             )}
-          {/* << CORREÇÃO: Tag Animated.View fechada corretamente >> */}
           </Animated.View>
 
-          {filteredFaqs.length > 0 ? (
+          {isLoadingFaqs ? ( // Mostrar indicador de carregamento
+            <View style={styles.loadingFaqsContainer}>
+              <ActivityIndicator size="small" color="#007AFF" />
+              <Text style={styles.loadingText}>Carregando FAQs...</Text> {/* Usar styles.loadingText */}
+            </View>
+          ) : filteredFaqs.length > 0 ? (
             filteredFaqs.map((faq, index) => (
               <AnimatedFaqItem key={faq.id} faq={faq} delay={index * 50 + 300} />
             ))
@@ -224,22 +243,22 @@ export default function HelpScreen() {
 const styles = StyleSheet.create({
   outerContainer: {
     flex: 1,
-    backgroundColor: '#F0F2F5', // Fundo geral da tela
+    backgroundColor: '#F0F2F5',
   },
   scrollView: {
     flex: 1,
   },
   container: {
     padding: 20,
-    paddingBottom: 40, // Espaço no final
+    paddingBottom: 40,
   },
   customHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#007AFF', // Cor primária do app
+    backgroundColor: '#007AFF',
     paddingHorizontal: 15,
-    paddingVertical: Platform.OS === 'ios' ? 50 : 20, // Ajuste para status bar iOS
+    paddingVertical: Platform.OS === 'ios' ? 50 : 20,
     paddingTop: Platform.OS === 'ios' ? 50 : 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -257,8 +276,8 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
   },
-  headerActionIconPlaceholder: { // Para alinhar o título no centro durante o loading
-    width: 24, // Largura do ícone
+  headerActionIconPlaceholder: {
+    width: 24,
     marginLeft: 15,
   },
   mainHeader: {
@@ -267,7 +286,7 @@ const styles = StyleSheet.create({
     color: '#1C3A5F',
     marginBottom: 25,
     textAlign: 'center',
-    marginTop: 10, // Espaço após o header customizado
+    marginTop: 10,
   },
   sectionCard: {
     backgroundColor: '#FFFFFF',
@@ -289,7 +308,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F8F9FA',
-    borderRadius: 10, // Mais arredondado
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: '#DEE2E6',
     paddingHorizontal: 10,
@@ -304,7 +323,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    height: 48, // Altura padrão para inputs
+    height: 48,
     fontSize: 16,
     color: '#212529',
   },
@@ -346,7 +365,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8F9FA',
     paddingVertical: 15,
     paddingHorizontal: 15,
-    borderRadius: 10, // Mais arredondado
+    borderRadius: 10,
     marginBottom: 12,
     borderWidth: 1,
     borderColor: '#DEE2E6',
@@ -363,5 +382,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     color: '#007AFF',
+  },
+  loadingFaqsContainer: { // NOVO ESTILO: Container para o loading das FAQs
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  loadingText: { // <<--- CORREÇÃO: Adicionada definição para loadingText aqui
+    marginTop: 10,
+    fontSize: 16,
+    color: '#555',
   },
 });

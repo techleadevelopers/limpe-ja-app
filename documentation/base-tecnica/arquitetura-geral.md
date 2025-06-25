@@ -1,4 +1,4 @@
-lano Estratégico para o Sucesso do Aplicativo LimpeJá e Estruturação de Documentação Técnica e de Sucesso
+Plano Estratégico para o Sucesso do Aplicativo LimpeJá e Estruturação de Documentação Técnica e de Sucesso
 I. Sumário Executivo
 O aplicativo LimpeJá, uma plataforma de serviços de limpeza sob demanda, opera em um mercado brasileiro dinâmico e em rápida expansão. A economia digital e a gig economy no Brasil apresentam um crescimento robusto, com o setor de Tecnologia da Informação e Comunicação (TIC) contribuindo com 6,5% do PIB em 2023  e o mercado de e-commerce projetado para atingir US$ 111,4 bilhões até 2027. Mais de 5 milhões de brasileiros dependem de plataformas digitais para sua principal fonte de renda , destacando a vasta base de talentos e a demanda por flexibilidade.   
 

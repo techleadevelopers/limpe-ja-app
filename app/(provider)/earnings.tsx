@@ -1,191 +1,194 @@
 // LimpeJaApp/app/(provider)/earnings.tsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-    View,
-    Text,
-    FlatList,
-    StyleSheet,
-    ActivityIndicator,
-    TouchableOpacity,
-    Platform,
-    Animated, // Importar Animated para animações
-    Alert,
-    ScrollView, // << CORREÇÃO: Importar ScrollView
+  View,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  TouchableOpacity,
+  Animated,
+  ScrollView,
+  RefreshControl,
+  Platform,
+  Alert,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { formatDate } from '../../utils/helpers'; // Para formatar datas
+import { useAuth } from '../../hooks/useAuth';
 
-// Tipos para os dados (mova para types/ se usar em mais lugares)
-interface EarningsSummary {
-  totalBalance: number;
-  pendingWithdrawal: number;
-  lastPayoutAmount: number;
-  lastPayoutDate: string; // YYYY-MM-DD
+// Importações dos serviços
+import { getMyProviderDashboard } from '../services/providerService';
+import { getMyProviderEarnings } from '../services/earningService';
+import { requestWithdrawal } from '../services/paymentService';
+
+// Importa os tipos da pasta centralizada
+import { ProviderDashboard, ProviderTransaction, EarningsResponseDto } from '../types/backend/providers';
+
+// REMOVIDO: import Colors from '../../constants/Colors'; // <-- REMOVIDO
+
+// IMPORTA OS NOVOS COMPONENTES (Verifique os caminhos)
+import EarningsSummaryCard from './components/earnings/EarningsSummaryCard';
+import EarningsChartSection from './components/earnings/EarningsChartSection';
+import RecentTransactionsSection from './components/earnings/RecentTransactionsSection';
+
+// Interface para dados do gráfico (mantida)
+interface ChartData {
+  labels: string[];
+  datasets: {
+    data: number[];
+    color?: (opacity: number) => string;
+    strokeWidth?: number;
+  }[];
 }
 
-interface Transaction {
-  id: string;
-  date: string; // YYYY-MM-DD
-  description: string;
-  amount: number; // Pode ser positivo ou negativo
-  type: 'service' | 'withdrawal' | 'adjustment'; // Para categorizar
-}
-
-// Mock de dados (simulando uma busca)
-const fetchEarningsData = async (): Promise<{ summary: EarningsSummary, transactions: Transaction[] }> => {
-  return new Promise(resolve => {
-    setTimeout(() => {
-      resolve({
-        summary: {
-          totalBalance: 1250.75,
-          pendingWithdrawal: 200.00,
-          lastPayoutAmount: 550.00,
-          lastPayoutDate: '2025-05-15',
-        },
-        transactions: [
-          // << CORREÇÃO: Adicionar 'as const' ou 'as Transaction['type']' para o tipo da transação
-          { id: 't1', date: '2025-06-01', description: 'Pagamento - Limpeza para Cliente A', amount: 150.00, type: 'service' as const },
-          { id: 't2', date: '2025-05-28', description: 'Pagamento - Limpeza para Cliente B', amount: 120.00, type: 'service' as const },
-          { id: 't3', date: '2025-05-25', description: 'Pagamento - Limpeza para Cliente C', amount: 200.00, type: 'service' as const },
-          { id: 't4', date: '2025-05-20', description: 'Pagamento - Limpeza para Cliente D', amount: 80.00, type: 'service' as const },
-          { id: 't5', date: '2025-05-15', description: 'Saque para conta bancária', amount: -550.00, type: 'withdrawal' as const },
-          { id: 't6', date: '2025-05-10', description: 'Pagamento - Limpeza para Cliente E', amount: 180.00, type: 'service' as const },
-          { id: 't7', date: '2025-05-05', description: 'Pagamento - Limpeza para Cliente F', amount: 95.00, type: 'service' as const },
-        ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()), // Ordena por data mais recente
-      });
-    }, 1000); // Simula um atraso de rede
-  });
+// Hook para animação de toque (reutilizável)
+const useAnimatedTouch = () => {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const onPressIn = () => {
+    Animated.spring(scaleAnim, { toValue: 0.95, useNativeDriver: true, friction: 5 }).start();
+  };
+  const onPressOut = () => {
+    Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, friction: 5, tension: 40 }).start();
+  };
+  return { scaleAnim, onPressIn, onPressOut };
 };
 
-// Componente para cada Transação com animações
-const AnimatedTransactionItem: React.FC<{
-    item: Transaction;
-    delay: number;
-}> = ({ item, delay }) => {
-    const fadeAnim = useRef(new Animated.Value(0)).current;
-    const slideAnim = useRef(new Animated.Value(20)).current;
-
-    useEffect(() => {
-        Animated.parallel([
-            Animated.timing(fadeAnim, {
-                toValue: 1,
-                duration: 400,
-                delay: delay,
-                useNativeDriver: true,
-            }),
-            Animated.timing(slideAnim, {
-                toValue: 0,
-                duration: 400,
-                delay: delay,
-                useNativeDriver: true,
-            }),
-        ]).start();
-    }, [fadeAnim, slideAnim, delay]);
-
-    const isPositive = item.amount > 0;
-    const amountColor = isPositive ? styles.positiveAmount : styles.negativeAmount;
-    const amountSign = isPositive ? '+' : '';
-
-    return (
-        <Animated.View
-            style={[
-                styles.transactionItemWrapper,
-                { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
-            ]}
-        >
-            <View style={styles.transactionItem}>
-                <View style={styles.transactionIconContainer}>
-                    {item.type === 'service' && <Ionicons name="briefcase-outline" size={24} color="#007AFF" />}
-                    {item.type === 'withdrawal' && <Ionicons name="wallet-outline" size={24} color="#DC3545" />}
-                    {item.type === 'adjustment' && <Ionicons name="information-circle-outline" size={24} color="#FFC107" />}
-                </View>
-                <View style={styles.transactionDetails}>
-                    <Text style={styles.transactionDescription}>{item.description}</Text>
-                    <Text style={styles.transactionDate}>{formatDate(item.date, { day: '2-digit', month: 'short', year: 'numeric' })}</Text>
-                </View>
-                <Text style={[styles.transactionAmount, amountColor]}>
-                    {amountSign} R$ {item.amount.toFixed(2).replace('.', ',')}
-                </Text>
-            </View>
-        </Animated.View>
-    );
+// Componente: CustomHeader (para tela de Ganhos)
+const CustomHeader: React.FC<{
+  onBackPress: () => void;
+  onManageBankDetailsPress: () => void;
+  animation: Animated.Value;
+}> = ({ onBackPress, onManageBankDetailsPress, animation }) => {
+  return (
+    <Animated.View style={[styles.customHeader, { opacity: animation, transform: [{ translateY: animation.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
+      <TouchableOpacity onPress={onBackPress} style={styles.headerBackButton} accessibilityRole="button" accessibilityLabel="Voltar para a tela anterior">
+        <Ionicons name="arrow-back" size={24} color={'#FFFFFF'} /> {/* Hardcoded WHITE */}
+      </TouchableOpacity>
+      <Text style={[styles.headerTitle, { color: '#FFFFFF' }]} accessibilityRole="header" accessibilityLabel="Meus Ganhos">Meus Ganhos</Text> {/* Hardcoded WHITE */}
+      <TouchableOpacity onPress={onManageBankDetailsPress} style={styles.headerActionIcon} accessibilityRole="button" accessibilityLabel="Gerenciar dados bancários">
+        <Ionicons name="card-outline" size={26} color={'#FFFFFF'} /> {/* Hardcoded WHITE */}
+      </TouchableOpacity>
+    </Animated.View>
+  );
 };
 
 
+// Componente principal da tela de Ganhos
 export default function ProviderEarningsScreen() {
   const router = useRouter();
-  const [earningsSummary, setEarningsSummary] = useState<EarningsSummary | null>(null);
-  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
-  // Animações
+  const [dashboardData, setDashboardData] = useState<ProviderDashboard | null>(null);
+  const [recentTransactions, setRecentTransactions] = useState<ProviderTransaction[]>([]);
+  const [chartData, setChartData] = useState<ChartData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Animações para as seções
   const headerAnim = useRef(new Animated.Value(0)).current;
   const summaryAnim = useRef(new Animated.Value(0)).current;
-  const chartAnim = useRef(new Animated.Value(0)).current;
-  const transactionsHeaderAnim = useRef(new Animated.Value(0)).current;
+  const chartSectionAnim = useRef(new Animated.Value(0)).current;
+  const transactionsSectionAnim = useRef(new Animated.Value(0)).current;
 
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const fetchedDashboardData = await getMyProviderDashboard(); 
+      const fetchedEarnings: EarningsResponseDto = await getMyProviderEarnings(); 
+
+      setDashboardData(fetchedDashboardData); 
+      setRecentTransactions(fetchedEarnings.recentTransactions || []); 
+
+      const monthlyEarningsMap: { [key: string]: number } = fetchedEarnings.earningsBreakdown || {}; 
+      const today = new Date();
+      const labels: string[] = [];
+      const dataPoints: number[] = [];
+
+      for (let i = 0; i < 4; i++) {
+        const date = new Date(today.getFullYear(), today.getMonth() - (3 - i), 1);
+        const monthKey = date.toLocaleString('default', { month: 'short', year: 'numeric' });
+        labels.push(date.toLocaleDateString('pt-BR', { month: 'short' }));
+        dataPoints.push(monthlyEarningsMap[monthKey] || 0);
+      }
+
+      setChartData({
+        labels: labels,
+        datasets: [{
+          data: dataPoints,
+          color: (opacity = 1) => `rgba(0, 122, 255, ${opacity})`, // Hardcoded cor principal do tema light.tint
+          strokeWidth: 2
+        }]
+      });
+
+    } catch (err: any) {
+      console.error("[ProviderEarningsScreen] Erro ao buscar dados de ganhos:", err.response?.data || err.message, err);
+      Alert.alert("Erro", err.response?.data?.message || "Não foi possível carregar seus dados de ganhos. Tente novamente mais tarde.");
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, []);
 
   useEffect(() => {
-    // Animação de entrada do cabeçalho
-    Animated.timing(headerAnim, {
-      toValue: 1,
-      duration: 500,
-      useNativeDriver: true,
-    }).start();
+    fetchData();
 
-    setIsLoading(true);
-    fetchEarningsData()
-      .then(data => {
-        setEarningsSummary(data.summary);
-        setRecentTransactions(data.transactions);
-        setIsLoading(false);
-        // Animações de entrada para o conteúdo
-        Animated.stagger(150, [
-            Animated.timing(summaryAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-            Animated.timing(chartAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-            Animated.timing(transactionsHeaderAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-        ]).start();
-      })
-      .catch(err => {
-        console.error("Erro ao buscar dados de ganhos:", err);
-        Alert.alert("Erro", "Não foi possível carregar seus dados de ganhos.");
-        setIsLoading(false);
-      });
-  }, [headerAnim, summaryAnim, chartAnim, transactionsHeaderAnim]);
+    Animated.stagger(150, [
+      Animated.timing(headerAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
+      Animated.timing(summaryAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.timing(chartSectionAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.timing(transactionsSectionAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+    ]).start();
 
-  const handleWithdrawalRequest = () => {
+  }, [fetchData]);
+
+  const onRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    fetchData();
+  }, [fetchData]);
+
+  const handleWithdrawalRequest = async () => {
+    if (!dashboardData || dashboardData.totalEarnings <= 0 || (dashboardData.pendingWithdrawals ?? 0) > 0) {
+      Alert.alert("Atenção", "Você não possui saldo disponível para saque ou já tem um saque pendente.");
+      return;
+    }
+
     Alert.alert(
       "Solicitar Saque",
-      `Deseja solicitar o saque de R$ ${(earningsSummary?.totalBalance ?? 0).toFixed(2).replace('.', ',')} para sua conta bancária cadastrada?`,
+      `Deseja solicitar o saque de R$ ${(dashboardData.totalEarnings).toFixed(2).replace('.', ',')} para sua conta bancária cadastrada?`,
       [
         { text: "Cancelar", style: "cancel" },
         {
           text: "Confirmar Saque",
-          onPress: () => {
-            // TODO: Chamar API para solicitar saque
-            Alert.alert("Saque Solicitado", "Seu pedido de saque foi enviado com sucesso e será processado em breve!");
-            // Opcional: Atualizar o estado para refletir o saque pendente
+          onPress: async () => {
+            setIsLoading(true);
+            try {
+              await requestWithdrawal({ amount: dashboardData.totalEarnings });
+              Alert.alert("Saque Solicitado", "Seu pedido de saque foi enviado com sucesso e será processado em breve! Você será notificado sobre o status.");
+              fetchData();
+            } catch (error: any) {
+              console.error("Erro ao solicitar saque:", error.response?.data || error.message);
+              Alert.alert("Erro", error.response?.data?.message || "Não foi possível solicitar o saque.");
+            } finally {
+              setIsLoading(false);
+            }
           },
-          style: "default"
-        }
+        },
       ],
       { cancelable: true }
     );
   };
 
-  if (isLoading) {
+  if (isLoading && !isRefreshing) {
     return (
       <View style={styles.outerContainer}>
         <Stack.Screen options={{ headerShown: false }} />
-        {/* Custom Header para o estado de loading */}
-        <Animated.View style={[styles.customHeader, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
-            <Text style={styles.headerTitle}>Meus Ganhos</Text>
-            <View style={styles.headerActionIconPlaceholder} /> {/* Placeholder para alinhar */}
-        </Animated.View>
+        <CustomHeader
+          onBackPress={() => router.back()}
+          onManageBankDetailsPress={() => router.push('/(provider)/profile/bank-details' as any)}
+          animation={headerAnim}
+        />
         <View style={styles.centeredFeedback}>
-          <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>Carregando seus dados financeiros...</Text>
+          <ActivityIndicator size="large" color={'#007AFF'} accessibilityLabel="Carregando dados" /> {/* Hardcoded ICON_PRIMARY */}
+          <Text style={[styles.loadingText, { color: '#7A8599' }]}>Carregando seus dados financeiros...</Text> {/* Hardcoded TEXT_MUTED */}
         </View>
       </View>
     );
@@ -195,91 +198,66 @@ export default function ProviderEarningsScreen() {
     <View style={styles.outerContainer}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Custom Header */}
-      <Animated.View style={[styles.customHeader, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.headerBackButton}>
-              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Meus Ganhos</Text>
-          <TouchableOpacity
-              // << CORREÇÃO: Adicionar 'as any' para a rota >>
-              onPress={() => router.push('/(provider)/profile/bank-details' as any)} // Rota para gerenciar dados bancários
-              style={styles.headerActionIcon}
-          >
-              <Ionicons name="card-outline" size={26} color="#FFFFFF" />
-          </TouchableOpacity>
-      </Animated.View>
+      <CustomHeader
+        onBackPress={() => router.back()}
+        onManageBankDetailsPress={() => router.push('/(provider)/profile/bank-details' as any)}
+        animation={headerAnim}
+      />
 
-      {/* << CORREÇÃO: Usar ScrollView aqui >> */}
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
-        {/* Seção de Resumo de Ganhos */}
-        <Animated.View style={[styles.summaryContainer, { opacity: summaryAnim, transform: [{ translateY: summaryAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
-            <Text style={styles.sectionTitle}>Resumo Financeiro</Text>
-            <View style={styles.summaryGrid}>
-                <View style={styles.summaryCard}>
-                    <Ionicons name="wallet-outline" size={30} color="#007AFF" />
-                    <Text style={styles.summaryCardTitle}>Saldo Total</Text>
-                    <Text style={styles.summaryCardValue}>R$ {(earningsSummary?.totalBalance ?? 0).toFixed(2).replace('.', ',')}</Text>
-                </View>
-                <View style={styles.summaryCard}>
-                    <Ionicons name="hourglass-outline" size={30} color="#FFC107" />
-                    <Text style={styles.summaryCardTitle}>Pendente de Saque</Text>
-                    {/* << CORREÇÃO: Tratar earningsSummary?.pendingWithdrawal potencialmente indefinido >> */}
-                    <Text style={styles.summaryCardValue}>R$ {(earningsSummary?.pendingWithdrawal ?? 0).toFixed(2).replace('.', ',')}</Text>
-                </View>
-                <View style={styles.summaryCard}>
-                    <Ionicons name="cash-outline" size={30} color="#28A745" />
-                    <Text style={styles.summaryCardTitle}>Último Pagamento</Text>
-                    <Text style={styles.summaryCardValue}>R$ {(earningsSummary?.lastPayoutAmount ?? 0).toFixed(2).replace('.', ',')}</Text>
-                    <Text style={styles.summaryCardSubtitle}>{formatDate(earningsSummary?.lastPayoutDate || '', { day: '2-digit', month: 'short' })}</Text>
-                </View>
-            </View>
-            <TouchableOpacity
-                style={[
-                    styles.withdrawalButton,
-                    (earningsSummary?.totalBalance === 0 || (earningsSummary?.pendingWithdrawal ?? 0) > 0) && styles.withdrawalButtonDisabled
-                ]}
-                onPress={handleWithdrawalRequest}
-                disabled={earningsSummary?.totalBalance === 0 || (earningsSummary?.pendingWithdrawal ?? 0) > 0}
-            >
-                <Ionicons name="arrow-up-circle-outline" size={24} color="#FFFFFF" />
-                <Text style={styles.withdrawalButtonText}>Solicitar Saque</Text>
-            </TouchableOpacity>
-        </Animated.View>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollViewContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            tintColor={'#007AFF'}
+            accessibilityLabel="Puxe para atualizar dados"
+          />
+        }
+      >
+        {/* Cartão de Resumo Financeiro */}
+        <EarningsSummaryCard
+          dashboardData={dashboardData}
+          animation={summaryAnim}
+          onWithdrawalRequest={handleWithdrawalRequest}
+        />
 
-        {/* Seção de Gráfico de Ganhos */}
-        <Animated.View style={[styles.chartSection, { opacity: chartAnim, transform: [{ translateY: chartAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
-            <Text style={styles.sectionTitle}>Ganhos ao Longo do Tempo</Text>
-            {/* Placeholder para um gráfico real (ex: de linha) */}
-            <View style={styles.chartPlaceholder}>
-                <MaterialCommunityIcons name="chart-line" size={60} color="#CED4DA" />
-                <Text style={styles.chartPlaceholderText}>Gráfico de Ganhos (em breve)</Text>
-                <Text style={styles.chartPlaceholderSubText}>Visualize seu histórico de ganhos aqui.</Text>
-            </View>
-        </Animated.View>
+        {/* Gráfico de Ganhos ao Longo do Tempo */}
+        <EarningsChartSection
+          chartData={chartData}
+          animation={chartSectionAnim}
+        />
 
         {/* Seção de Transações Recentes */}
-        <Animated.View style={[styles.transactionsSection, { opacity: transactionsHeaderAnim, transform: [{ translateY: transactionsHeaderAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
-            <Text style={styles.sectionTitle}>Transações Recentes</Text>
-            {recentTransactions.length === 0 ? (
-                <View style={styles.emptyTransactions}>
-                    <Ionicons name="cash-outline" size={64} color="#CED4DA" />
-                    <Text style={styles.emptyTransactionsText}>Nenhuma transação recente.</Text>
-                </View>
-            ) : (
-                <FlatList
-                    data={recentTransactions}
-                    keyExtractor={(item) => item.id}
-                    renderItem={({ item, index }) => (
-                        <AnimatedTransactionItem item={item} delay={index * 70} />
-                    )}
-                    scrollEnabled={false} // Para que o ScrollView pai controle o scroll
-                    contentContainerStyle={styles.transactionsListContent}
-                    ItemSeparatorComponent={() => <View style={styles.listSeparator} />}
-                />
-            )}
-        </Animated.View>
-      {/* << CORREÇÃO: Fechar ScrollView aqui >> */}
+        <RecentTransactionsSection
+          transactions={recentTransactions}
+          animation={transactionsSectionAnim}
+        />
+
+        {/* Quick Links para outras seções importantes */}
+        <TouchableOpacity
+          style={styles.quickLinkCard}
+          onPress={() => router.push('/(provider)/services' as any)}
+          accessibilityRole="button"
+          accessibilityLabel="Visualizar todos os meus serviços"
+        >
+          <Ionicons name="briefcase-outline" size={24} color={'#007AFF'} /> {/* Hardcoded ICON_PRIMARY */}
+          <Text style={[styles.quickLinkText, { color: '#1A2538' }]}>Meus Serviços Oferecidos</Text> {/* Hardcoded TEXT_DARK */}
+          <Ionicons name="chevron-forward-outline" size={20} color={'#7A8599'} /> {/* Hardcoded TEXT_MUTED */}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.quickLinkCard}
+          onPress={() => router.push('/(provider)/reviews' as any)}
+          accessibilityRole="button"
+          accessibilityLabel="Visualizar todas as minhas avaliações"
+        >
+          <Ionicons name="star-outline" size={24} color={'#FFC107'} /> {/* Hardcoded WARNING_YELLOW */}
+          <Text style={[styles.quickLinkText, { color: '#1A2538' }]}>Minhas Avaliações</Text> {/* Hardcoded TEXT_DARK */}
+          <Ionicons name="chevron-forward-outline" size={20} color={'#7A8599'} /> {/* Hardcoded TEXT_MUTED */}
+        </TouchableOpacity>
+
       </ScrollView>
     </View>
   );
@@ -288,7 +266,7 @@ export default function ProviderEarningsScreen() {
 const styles = StyleSheet.create({
   outerContainer: {
     flex: 1,
-    backgroundColor: '#F0F2F5',
+    backgroundColor: '#F8F9FD', // Hardcoded BACKGROUND_ALT
   },
   scrollView: {
     flex: 1,
@@ -305,15 +283,16 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 15,
     fontSize: 16,
-    color: '#6C757D',
+    // color: Colors.light.textMuted, // Hardcoded acima
+    fontFamily: 'System'
   },
   customHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#007AFF', // Cor primária do app
+    backgroundColor: '#007AFF', // Hardcoded PRIMARY
     paddingHorizontal: 15,
-    paddingVertical: Platform.OS === 'ios' ? 50 : 20, // Ajuste para status bar iOS
+    paddingVertical: Platform.OS === 'ios' ? 50 : 20,
     paddingTop: Platform.OS === 'ios' ? 50 : 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -322,36 +301,40 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   headerBackButton: {
+    padding: 5,
     marginRight: 15,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    // color: Colors.light.background, // Hardcoded acima
     flex: 1,
     textAlign: 'center',
+    fontFamily: 'System'
   },
   headerActionIcon: {
-    padding: 5, // Aumenta a área de toque
+    padding: 5,
+    marginLeft: 15,
   },
   headerActionIconPlaceholder: {
-    width: 26, // Largura do ícone para manter o alinhamento do título
-    marginLeft:15, // Espaço à direita para alinhar com o botão de voltar
+    width: 36,
+    marginLeft: 15,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1C3A5F',
+    color: '#1A2538', // Hardcoded TEXT_DARK
     marginBottom: 15,
     marginTop: 10,
+    fontFamily: 'System'
   },
   summaryContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFFFFF', // Hardcoded WHITE
     borderRadius: 12,
     padding: 20,
     marginBottom: 20,
     ...Platform.select({
-      ios: { shadowColor: 'rgba(0,0,0,0.1)', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.15, shadowRadius: 6 },
+      ios: { shadowColor: 'rgba(0,0,0,0.1)', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.15, shadowRadius: 6 }, // Hardcoded SHADOW_COLOR_SECTION
       android: { elevation: 4 },
     }),
   },
@@ -362,69 +345,74 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   summaryCard: {
-    width: '48%', // Duas colunas
-    backgroundColor: '#F8F9FA',
+    width: '48%',
+    backgroundColor: '#F8F9FD', // Hardcoded BACKGROUND_ALT
     borderRadius: 10,
     padding: 15,
     marginBottom: 15,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E9ECEF',
+    borderColor: 'rgba(0,0,0,0.08)', // Hardcoded BORDER_SUBTLE
   },
   summaryCardTitle: {
     fontSize: 14,
-    color: '#6C757D',
+    color: '#7A8599', // Hardcoded TEXT_MUTED
     marginTop: 8,
     marginBottom: 5,
     textAlign: 'center',
+    fontFamily: 'System'
   },
   summaryCardValue: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#212529',
+    color: '#1A2538', // Hardcoded TEXT_DARK
     textAlign: 'center',
+    fontFamily: 'System'
   },
   summaryCardSubtitle: {
     fontSize: 12,
-    color: '#868E96',
+    color: '#7A8599', // Hardcoded TEXT_MUTED
     marginTop: 2,
     textAlign: 'center',
+    fontFamily: 'System'
   },
   withdrawalButton: {
-    backgroundColor: '#28A745', // Verde para saque
+    backgroundColor: '#28a745', // Hardcoded SUCCESS_GREEN
     borderRadius: 8,
     paddingVertical: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     ...Platform.select({
-      ios: { shadowColor: 'rgba(0,0,0,0.1)', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 6 },
+      ios: { shadowColor: 'rgba(0,0,0,0.06)', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 6 }, // Hardcoded SHADOW_COLOR_CARD
       android: { elevation: 6 },
     }),
   },
-  withdrawalButtonDisabled: { // Adicionado estilo para botão desabilitado
-    backgroundColor: '#A5D6A7', // Um verde mais claro
+  withdrawalButtonDisabled: {
+    backgroundColor: '#A5D6A7', // Hardcoded light green
+    opacity: 0.6,
     elevation: 0,
     shadowOpacity: 0,
   },
   withdrawalButtonText: {
-    color: '#FFFFFF',
+    color: '#FFFFFF', // Hardcoded WHITE
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 10,
+    fontFamily: 'System'
   },
   chartSection: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFFFFF', // Hardcoded WHITE
     borderRadius: 12,
     padding: 20,
     marginBottom: 20,
     ...Platform.select({
-      ios: { shadowColor: 'rgba(0,0,0,0.1)', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.15, shadowRadius: 6 },
+      ios: { shadowColor: 'rgba(0,0,0,0.1)', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.15, shadowRadius: 6 }, // Hardcoded SHADOW_COLOR_SECTION
       android: { elevation: 4 },
     }),
   },
-  chartPlaceholder: {
-    backgroundColor: '#F8F9FA',
+  chartContainerPlaceholder: {
+    backgroundColor: '#F8F9FD', // Hardcoded BACKGROUND_ALT
     borderRadius: 10,
     width: '100%',
     height: 200,
@@ -432,83 +420,90 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#E9ECEF',
+    borderColor: 'rgba(0,0,0,0.08)', // Hardcoded BORDER_SUBTLE
     borderStyle: 'dashed',
   },
   chartPlaceholderText: {
     fontSize: 16,
-    color: '#868E96',
+    color: '#7A8599', // Hardcoded TEXT_MUTED
     marginTop: 10,
-  },
-  chartPlaceholderSubText: {
-    fontSize: 14,
-    color: '#868E96',
-    marginTop: 5,
-  },
-  transactionsSection: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingHorizontal: 20, // Padding horizontal para a seção
-    paddingVertical: 10, // Padding vertical menor, FlatList terá o seu
-    ...Platform.select({
-      ios: { shadowColor: 'rgba(0,0,0,0.1)', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.15, shadowRadius: 6 },
-      android: { elevation: 4 },
-    }),
-  },
-  transactionsListContent: {
-    paddingBottom: 10, // Pequeno padding no final da lista se houver muitos itens
-  },
-  transactionItemWrapper: {
-    // Removido marginBottom, será tratado pelo ItemSeparatorComponent ou espaçamento direto
-    borderRadius: 8,
-    overflow: 'hidden',
+    fontFamily: 'System'
   },
   transactionItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
-    paddingHorizontal: 10,
-    backgroundColor: '#F8F9FA', // Mantido para contraste se necessário
-    // Removido borderWidth e borderRadius daqui, já que o wrapper pode cuidar disso ou ItemSeparator
-  },
-  transactionIconContainer: {
-    marginRight: 10,
-    width: 30,
-    alignItems: 'center',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(0,0,0,0.08)', // Hardcoded BORDER_SUBTLE
   },
   transactionDetails: {
     flex: 1,
+    marginLeft: 10,
   },
   transactionDescription: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#212529',
+    color: '#1A2538', // Hardcoded TEXT_DARK
   },
   transactionDate: {
-    fontSize: 12,
-    color: '#868E96',
+    fontSize: 13,
+    color: '#7A8599', // Hardcoded TEXT_MUTED
     marginTop: 2,
   },
   transactionAmount: {
     fontSize: 16,
     fontWeight: 'bold',
+    color: '#1A2538', // Hardcoded TEXT_DARK
   },
-  positiveAmount: {
-    color: '#28A745',
-  },
-  negativeAmount: {
-    color: '#DC3545',
-  },
-  listSeparator: {
-    height: 8, // Espaçador entre os itens da FlatList
-  },
-  emptyTransactions: {
+  viewAllButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 30,
-  },
-  emptyTransactionsText: {
-    fontSize: 16,
-    color: '#6C757D',
+    justifyContent: 'center',
+    paddingVertical: 10,
     marginTop: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(0,0,0,0.08)', // Hardcoded BORDER_SUBTLE
+  },
+  viewAllButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#007AFF', // Hardcoded ICON_PRIMARY
+    marginRight: 5,
+  },
+  emptyStateContainer: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    backgroundColor: '#F8F9FD', // Hardcoded BACKGROUND_ALT
+    borderRadius: 12,
+    marginTop: 10,
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#7A8599', // Hardcoded TEXT_MUTED
+    fontSize: 15,
+    marginTop: 8,
+  },
+  quickLinkCard: {
+    backgroundColor: '#FFFFFF', // Hardcoded WHITE
+    borderRadius: 12,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.08)', // Hardcoded BORDER_SUBTLE
+    ...Platform.select({
+      ios: { shadowColor: 'rgba(0,0,0,0.06)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4 }, // Hardcoded SHADOW_COLOR_CARD
+      android: { elevation: 3 },
+    }),
+  },
+  quickLinkText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1A2538', // Hardcoded TEXT_DARK
+    flex: 1,
+    marginLeft: 15,
   },
 });

@@ -1,455 +1,332 @@
-import React from 'react';
+// LimpeJaApp/app/(client)/bookings/success.tsx
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  Image,
-  Platform,
+  Animated,
+  Easing,
+  Alert,
   Dimensions,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
+import * as Calendar from 'expo-calendar';
+import Toast from 'react-native-toast-message';
+import * as Clipboard from 'expo-clipboard';
 
+// Importar componentes refatorados
+import SuccessHeader from './components/success/SuccessHeader';
+import SuccessLoadingError from './components/success/SuccessLoadingError';
+import BookingSummaryCard from './components/success/BookingSummaryCard';
+import ImmediateActionButtons from './components/success/ImmediateActionButtons';
+import MainActionButtons from './components/success/MainActionButtons';
+
+// Importar serviços e tipagens
+import { getBookingDetails } from '../../services/bookingService';
+import { BookingDetails } from '../../types/backend/bookings';
+import { getProviderDetails } from '../../services/providerService';
+import { ProviderDisplayInfo } from '../../types/backend/providers';
+
+// NOVO: Importar serviços e tipagens para PIX
+import { createPixCharge } from '../../services/paymentService';
+import { CreatePixChargeDto, PixChargeResponseDto } from '../../types/backend/payments';
+
+// Constantes de estilo
 const SCREEN_WIDTH = Dimensions.get('window').width;
-
-// --- Cores da imagem de referência (ajustadas para um tom de verde-água/turquesa) ---
-const primaryColor = '#008080'; // Um verde-água mais escuro (usado no header e no meio do gradiente de fundo)
-const secondaryColor = '#00A3A3'; // Um verde-água mais claro (usado no header)
-const lightestTeal = '#F0F8F8'; // Um tom muito claro, quase branco, para o efeito de reflexo no fundo
-
-
-// --- Interface para os parâmetros que esta tela vai receber ---
-interface SuccessParams {
-  providerId?: string;
-  providerName?: string;
-  providerImage?: string;
-  providerRating?: number; // Adicionado para as estrelas
-  serviceName?: string;
-  bookingDate?: string;
-  bookingTime?: string;
-  clientAddress?: string;
-  paymentValue?: string;
-  paymentMethod?: string;
-}
+const headerPrimaryColor = '#4A90E2';
+const headerSecondaryColor = '#A8D8FF';
+const iconColor = '#4A90E2';
+const successColor = '#28a745';
 
 export default function SuccessScreen() {
-  const params = useLocalSearchParams() as SuccessParams;
-
+  const { bookingId, paymentMethod, totalPrice: totalPriceParam } = useLocalSearchParams<{ bookingId?: string; paymentMethod?: string; totalPrice?: string }>();
   const router = useRouter();
 
-  // Dados mockados para desenvolvimento/teste rápido se os params não vierem
-  const mockParams: SuccessParams = {
-    providerId: 'provider1',
-    providerName: 'Ana Oliveira',
-    providerImage: 'https://randomuser.me/api/portraits/women/43.jpg',
-    providerRating: 4.5, // Exemplo de avaliação
-    serviceName: 'Limpeza Residencial Detalhada',
-    bookingDate: '29 de Maio de 2025',
-    bookingTime: '14:30',
-    clientAddress: 'Rua Doutor Quirino, N° 58 - Centro - Campinas SP',
-    paymentValue: '95,50',
-    paymentMethod: 'PIX',
-  };
+  const [booking, setBooking] = useState<BookingDetails | null>(null);
+  const [providerRating, setProviderRating] = useState<number | undefined>(undefined);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [pixChargeDetails, setPixChargeDetails] = useState<PixChargeResponseDto | null>(null);
+  const [pixGenerationError, setPixGenerationError] = useState<string | null>(null);
 
-  // Usar os parâmetros recebidos ou os mockados se não houver
-  const {
-    providerName,
-    providerImage,
-    providerRating, // Adicionado
-    serviceName,
-    bookingDate,
-    bookingTime,
-    clientAddress,
-    paymentValue,
-    paymentMethod,
-  } = (Object.keys(params).length > 0 ? params : mockParams) as SuccessParams;
+  const contentOpacity = useRef(new Animated.Value(0)).current;
+  const contentTranslateY = useRef(new Animated.Value(50)).current;
+  const headerTickOpacity = useRef(new Animated.Value(0)).current;
+  const headerTickScale = useRef(new Animated.Value(0.5)).current;
 
-  // Função para renderizar as estrelas de avaliação
-  const renderStars = (rating: number | undefined) => {
-    if (rating === undefined || rating === null) return null;
-    const stars = [];
-    for (let i = 1; i <= 5; i++) {
-      stars.push(
-        <Ionicons
-          key={i}
-          name={i <= rating ? "star" : (i - rating < 1 && i - rating > 0 ? "star-half" : "star-outline")}
-          size={16}
-          color="#FFD700" // Cor dourada para as estrelas
-          style={{ marginRight: 2 }}
-        />
-      );
+  // REMOVIDO: const [showLottie, setShowLottie] = useState(true);
+
+  const fetchBookingAndProviderDetails = useCallback(async () => {
+    console.log("[SuccessScreen] fetchBookingAndProviderDetails - Iniciando fetch.");
+    console.log("[SuccessScreen] fetchBookingAndProviderDetails - bookingId:", bookingId);
+    console.log("[SuccessScreen] fetchBookingAndProviderDetails - paymentMethod:", paymentMethod);
+    console.log("[SuccessScreen] fetchBookingAndProviderDetails - totalPriceParam:", totalPriceParam);
+
+    if (!bookingId) {
+      setError("ID do agendamento não fornecido.");
+      setIsLoading(false);
+      return;
     }
-    return <View style={styles.starsContainer}>{stars}</View>;
-  };
+    setIsLoading(true);
+    setError(null);
+    setPixGenerationError(null);
+    try {
+      const fetchedBooking = await getBookingDetails(bookingId);
+      setBooking(fetchedBooking);
+      console.log("[SuccessScreen] fetchBookingAndProviderDetails - Booking real carregado:", fetchedBooking);
 
-  const handleGoToBookings = () => {
+      if (fetchedBooking?.providerId) {
+        const providerDetails: ProviderDisplayInfo = await getProviderDetails(fetchedBooking.providerId);
+        setProviderRating(providerDetails.averageRating);
+        console.log("[SuccessScreen] fetchBookingAndProviderDetails - Detalhes do provedor carregados para rating.");
+      }
+
+      if (paymentMethod === 'PIX' && totalPriceParam && !pixChargeDetails) {
+        const amount = parseFloat(totalPriceParam);
+        console.log("[SuccessScreen] fetchBookingAndProviderDetails - Tentando gerar PIX. Amount:", amount);
+
+        if (isNaN(amount)) {
+          setPixGenerationError("Valor total inválido para gerar o PIX.");
+          console.error("[SuccessScreen] fetchBookingAndProviderDetails - Erro: Valor total é NaN.");
+          return;
+        }
+
+        try {
+            const pixChargeData: CreatePixChargeDto = {
+              amount: amount,
+              description: `Agendamento ${fetchedBooking.serviceName || 'Serviço'} com ${fetchedBooking.providerFullName}`,
+              bookingId: fetchedBooking.id,
+              providerId: fetchedBooking.providerId,
+            };
+            console.log("[SuccessScreen] fetchBookingAndProviderDetails - PixChargeData para backend:", pixChargeData);
+
+            const pixResponse: PixChargeResponseDto = await createPixCharge(pixChargeData);
+            setPixChargeDetails(pixResponse);
+            console.log("[SuccessScreen] fetchBookingAndProviderDetails - Resposta PIX recebida:", pixResponse);
+            Toast.show({
+                type: 'success',
+                text1: 'PIX Gerado com Sucesso!',
+                text2: 'Use o código para finalizar o pagamento.',
+                visibilityTime: 4000,
+            });
+        } catch (pixErr: any) {
+            console.error("[SuccessScreen] fetchBookingAndProviderDetails - Erro ao gerar PIX (API):", pixErr.response?.data?.message || pixErr.message, pixErr);
+            setPixGenerationError(pixErr.response?.data?.message || "Não foi possível gerar a cobrança PIX.");
+        }
+      } else {
+        console.log("[SuccessScreen] fetchBookingAndProviderDetails - PIX Generation SKIPPED. paymentMethod:", paymentMethod, "totalPriceParam:", totalPriceParam, "pixChargeDetails exists:", !!pixChargeDetails);
+      }
+
+    } catch (err: any) {
+      console.error("[SuccessScreen] Erro ao buscar detalhes do agendamento (API):", err.response?.data?.message || err.message, err);
+      setError(err.response?.data?.message || "Não foi possível carregar os detalhes do agendamento.");
+      setBooking(null);
+    } finally {
+      setIsLoading(false);
+      console.log("[SuccessScreen] fetchBookingAndProviderDetails - Finalizado.");
+    }
+  }, [bookingId, paymentMethod, totalPriceParam]); // Remover pixChargeDetails do array de dependências
+
+
+  useEffect(() => {
+    // REMOVIDO: if (lottieAnimationRef.current) { lottieAnimationRef.current.play(); }
+
+    // REMOVIDO: const lottieDuration = 2500;
+    const revealDelay = 300; // Mantido, pode ser um delay de animação geral
+    const pixGenerationDelay = 2000;
+
+    // REMOVIDO: console.log("[SuccessScreen] useEffect - showLottie (initial):", showLottie);
+    // REMOVIDO: console.log("[SuccessScreen] Lottie timer set for:", lottieDuration + revealDelay, "ms");
+
+    const timer = setTimeout(() => {
+      // REMOVIDO: setShowLottie(false);
+      // REMOVIDO: console.log("[SuccessScreen] Lottie timer fired. setShowLottie(false).");
+      
+      Animated.parallel([
+        Animated.timing(contentOpacity, {
+          toValue: 1,
+          duration: 800,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(contentTranslateY, {
+          toValue: 0,
+          duration: 800,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.parallel([
+          Animated.timing(headerTickOpacity, {
+            toValue: 1,
+            duration: 500,
+            delay: 300,
+            useNativeDriver: true,
+          }),
+          Animated.spring(headerTickScale, {
+            toValue: 1,
+            friction: 5,
+            tension: 80,
+            useNativeDriver: true,
+          }),
+        ]),
+      ]).start(() => {
+        setTimeout(() => {
+            fetchBookingAndProviderDetails();
+        }, pixGenerationDelay);
+      });
+    }, revealDelay); // ALTERADO: Usando apenas revealDelay
+
+    return () => clearTimeout(timer);
+  }, [fetchBookingAndProviderDetails, contentOpacity, contentTranslateY, headerTickOpacity, headerTickScale /* REMOVIDO: showLottie */]);
+
+  const handleGoToBookings = useCallback(() => {
     router.replace({ pathname: '/(client)/bookings', params: { highlightNew: true } } as any);
-  };
+  }, [router]);
 
-  const handleGoHome = () => {
+  const handleGoHome = useCallback(() => {
     router.replace('/(client)/explore' as any);
-  };
+  }, [router]);
+
+  const handleAddToCalendar = useCallback(async () => {
+    if (!booking) {
+      Alert.alert("Erro", "Informações do agendamento não carregadas para adicionar ao calendário.");
+      return;
+    }
+    if (!booking.address) {
+      Alert.alert("Erro", "Endereço do agendamento não disponível para adicionar ao calendário.");
+      return;
+    }
+
+    const startDate = new Date(booking.scheduledTime);
+    const durationMinutes = booking.serviceDurationMinutes || 60;
+    const endDate = new Date(startDate.getTime() + durationMinutes * 60 * 1000);
+
+    try {
+      const { status } = await Calendar.requestCalendarPermissionsAsync();
+      if (status === 'granted') {
+        const defaultCalendar = await Calendar.getDefaultCalendarAsync();
+        const eventId = await Calendar.createEventAsync(defaultCalendar.id, {
+          title: `${booking.serviceName} com ${booking.providerFullName}`,
+          location: `${booking.address.street}, ${booking.address.number}, ${booking.address.city}`,
+          notes: `Agendamento ID: ${booking.id} - ${booking.notes || 'Nenhuma observação.'}`,
+          startDate: startDate,
+          endDate: endDate,
+          alarms: [{ relativeOffset: -60 }],
+        });
+        Toast.show({
+          type: 'success',
+          text1: 'Sucesso!',
+          text2: 'Agendamento adicionado ao seu calendário.',
+          visibilityTime: 4000,
+        });
+      } else {
+        Alert.alert("Permissão Negada", "Não foi possível adicionar ao calendário sem permissão. Por favor, conceda acesso nas configurações do seu dispositivo.");
+      }
+    } catch (error) {
+      console.error("Erro ao adicionar ao calendário:", error);
+      Toast.show({
+        type: 'error',
+        text1: 'Erro ao adicionar ao calendário',
+        text2: 'Por favor, tente novamente mais tarde.',
+        visibilityTime: 4000,
+      });
+    }
+  }, [booking]);
+
+  const handleContactProvider = useCallback(() => {
+    if (booking?.providerId && booking?.providerFullName) {
+      router.push({ pathname: '/(client)/messages/[chatId]', params: { chatId: booking.providerId, recipientName: booking.providerFullName } } as any);
+    } else {
+      Alert.alert("Erro", "ID ou nome do prestador não disponível para iniciar o chat.");
+    }
+  }, [booking, router]);
+
+  const handleCopyPixQrCode = useCallback(() => {
+    if (pixChargeDetails?.brCode) {
+      Clipboard.setString(pixChargeDetails.brCode);
+      Toast.show({
+        type: 'info',
+        text1: 'Código PIX copiado!',
+        text2: 'Cole no seu aplicativo bancário para finalizar o pagamento.',
+        visibilityTime: 4000,
+      });
+    } else {
+      Toast.show({
+        type: 'error',
+        text1: 'Erro',
+        text2: 'Nenhum código PIX disponível para copiar.',
+        visibilityTime: 4000,
+      });
+    }
+  }, [pixChargeDetails]);
+
+
+  // O componente SuccessLoadingError já lida com isLoading e error.
+  // Se booking for null, ele também exibirá o erro.
+  // NOVO: Incluir pixGenerationError no check de erro
+  // A tela só deve mostrar erro se o booking não carregou (já que não tem mais Lottie para esperar)
+  if (isLoading || error || pixGenerationError || !booking) { // REMOVIDA: && !showLottie
+    return (
+      <SuccessLoadingError
+        isLoading={isLoading}
+        error={error || pixGenerationError}
+        headerPrimaryColor={headerPrimaryColor}
+        onRetryPress={fetchBookingAndProviderDetails}
+      />
+    );
+  }
 
   return (
-    // O LinearGradient agora é o container principal para o fundo
-    <LinearGradient
-      colors={[lightestTeal, primaryColor, lightestTeal]} // Cores para o gradiente de fundo
-      locations={[0.0, 0.5, 1.0]} // Posições das cores: claro no início, escuro no meio, claro no final
-      start={{ x: 0, y: 0 }} // Começa no canto superior esquerdo
-      end={{ x: 1, y: 1 }} // Termina no canto inferior direito (diagonal)
-      style={styles.fullScreenGradient} // Estilo para preencher a tela
-    >
+    <View style={styles.screenContainer}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Header com gradiente */}
-      <LinearGradient
-        colors={[primaryColor, secondaryColor]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.header}
-      >
-        {/* Botão de Voltar */}
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        
-        {/* Título Centralizado */}
-        <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Detalhes do Agendamento</Text>
-        </View>
+      {/* REMOVIDO: Bloco de renderização condicional do Lottie */}
 
-        {/* Botão de Três Pontos */}
-        <TouchableOpacity onPress={() => console.log('Menu de 3 pontos pressionado')} style={styles.headerButton}>
-          <Ionicons name="ellipsis-horizontal" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-      </LinearGradient>
-
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Main Card - Replicando o estilo do "Boarding Pass" */}
-        <View style={styles.mainCardContainer}>
-          {/* Background do card com gradiente e blur (efeito glassmorphism) */}
-          <LinearGradient
-            colors={['rgba(255, 255, 255, 0.9)', 'rgba(240, 255, 255, 0.8)']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFillObject}
+      {/* Renderize o conteúdo principal apenas quando booking for válido */}
+      {booking && ( // <<<< CORREÇÃO: AGORA booking É A ÚNICA CONDIÇÃO DE RENDERIZAÇÃO DO CONTEÚDO PRINCIPAL >>>>
+        <>
+          <SuccessHeader
+            onBackPress={() => router.back()}
+            headerTickOpacity={headerTickOpacity}
+            headerTickScale={headerTickScale}
+            headerPrimaryColor={headerPrimaryColor}
+            headerSecondaryColor={headerSecondaryColor}
+            successColor={successColor}
           />
-          <BlurView intensity={20} tint="light" style={StyleSheet.absoluteFillObject} />
 
-          {/* Conteúdo do Card */}
-          <View style={styles.cardContentNew}>
-            {/* Seção do Prestador (Header do "Boarding Pass") */}
-            <View style={styles.providerHeaderSection}>
-              {providerImage && <Image source={{ uri: providerImage }} style={styles.providerAvatar} />}
-              <View style={styles.providerHeaderText}>
-                <Text style={styles.providerNameText}>{providerName}</Text>
-                <Text style={styles.providerRoleText}>Prestador(a)</Text>
-              </View>
-              {renderStars(providerRating)}
-            </View>
+          <BookingSummaryCard
+            booking={booking}
+            providerRating={providerRating}
+            pixChargeDetails={pixChargeDetails}
+            paymentMethod={paymentMethod}
+            contentOpacity={contentOpacity}
+            contentTranslateY={contentTranslateY}
+            iconColor={iconColor}
+            successColor={successColor}
+            headerPrimaryColor={headerPrimaryColor}
+          />
 
-            {/* Linha divisória com círculos */}
-            <View style={styles.dividerContainer}>
-              <View style={styles.circle} />
-              <View style={styles.dashedLine} />
-              <View style={styles.circle} />
-            </View>
+          <ImmediateActionButtons
+            onAddToCalendar={handleAddToCalendar}
+            onContactProvider={handleContactProvider}
+            headerPrimaryColor={headerPrimaryColor}
+          />
 
-            {/* Seção de Origem/Destino (Serviço e Endereço) */}
-            <View style={styles.locationSection}>
-              <View style={styles.locationItem}>
-                {/* Usando as 3 primeiras letras do serviço como "código" */}
-                <Text style={styles.locationCode}>{serviceName ? serviceName.substring(0, 3).toUpperCase() : 'SRV'}</Text>
-                <Text style={styles.locationLabel}>{serviceName}</Text>
-              </View>
-              <Ionicons name="airplane" size={24} color={primaryColor} style={styles.airplaneIcon} />
-              <View style={styles.locationItem}>
-                {/* Usando "END" como código e o primeiro pedaço do endereço */}
-                <Text style={styles.locationCode}>END</Text>
-                <Text style={styles.locationLabel}>{clientAddress ? clientAddress.split(',')[0] : 'Endereço'}</Text>
-              </View>
-            </View>
-
-            {/* Detalhes da Data e Hora */}
-            <View style={styles.dateTimeContainer}>
-              <View style={styles.dateTimeCard}>
-                <Ionicons name="calendar-outline" size={20} color={primaryColor} />
-                <Text style={styles.dateTimeLabel}>Data</Text>
-                <Text style={styles.dateTimeValue}>{bookingDate}</Text>
-              </View>
-              <View style={styles.dateTimeCard}>
-                <Ionicons name="time-outline" size={20} color={primaryColor} />
-                <Text style={styles.dateTimeLabel}>Hora</Text>
-                <Text style={styles.dateTimeValue}>{bookingTime}</Text>
-              </View>
-            </View>
-
-            {/* Detalhes Adicionais (Serviço, Valor, Pagamento) */}
-            <View style={styles.additionalDetailsContainer}>
-              <View style={styles.additionalDetailItem}>
-                <Text style={styles.additionalDetailLabel}>Serviço</Text>
-                <Text style={styles.additionalDetailValue}>{serviceName}</Text>
-              </View>
-              <View style={styles.additionalDetailItem}>
-                <Text style={styles.additionalDetailLabel}>Valor</Text>
-                <Text style={styles.additionalDetailValue}>R$ {paymentValue}</Text>
-              </View>
-              <View style={styles.additionalDetailItem}>
-                <Text style={styles.additionalDetailLabel}>Pagamento</Text>
-                <Text style={styles.additionalDetailValue}>{paymentMethod}</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Botões de Ação */}
-        <View style={styles.actionButtonsContainerNew}>
-          <TouchableOpacity style={[styles.downloadButton, { backgroundColor: primaryColor }]} onPress={handleGoToBookings}>
-            <Ionicons name="list-outline" size={20} color="#FFFFFF" style={{ marginRight: 10 }} />
-            <Text style={styles.downloadButtonText}>Ver Meus Agendamentos</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={[styles.downloadButton, styles.secondaryDownloadButton]} onPress={handleGoHome}>
-            <Ionicons name="home-outline" size={20} color={primaryColor} style={{ marginRight: 10 }} />
-            <Text style={[styles.downloadButtonText, { color: primaryColor }]}>Voltar para o Início</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </LinearGradient>
+          <MainActionButtons
+            onGoToBookings={handleGoToBookings}
+            onGoHome={handleGoHome}
+            headerPrimaryColor={headerPrimaryColor}
+          />
+        </>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  fullScreenGradient: {
-    flex: 1, // Faz o gradiente preencher toda a tela
-  },
-  header: {
-    paddingTop: Platform.OS === 'android' ? 40 : 60,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    flexDirection: 'row', // Adicionado para layout horizontal
-    justifyContent: 'space-between', // Distribui os itens
-    alignItems: 'center', // Alinha verticalmente
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
-    marginBottom: 0,
-  },
-  headerButton: { // Estilo para os botões de voltar e de três pontos
-    padding: 5, // Aumenta a área de toque
-  },
-  headerTitleContainer: {
-    flex: 1, // Permite que o título ocupe o espaço restante
-    alignItems: 'center', // Centraliza o texto dentro do container
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-    alignItems: 'center',
-    backgroundColor: 'transparent', // Garante que o gradiente de fundo seja visível
-  },
-  mainCardContainer: {
-    width: '100%',
-    borderRadius: 15,
-    overflow: 'hidden',
-    marginTop: 20, // Espaçamento do cabeçalho
-    marginBottom: 30,
-    ...Platform.select({
-      ios: {
-        shadowColor: 'rgba(0,0,0,0.1)',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 5,
-      },
-    }),
-  },
-  cardContentNew: {
-    padding: 20,
-    backgroundColor: 'transparent',
-  },
-  providerHeaderSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  providerAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 15,
-    borderWidth: 2,
-    borderColor: '#E0E0E0',
-  },
-  providerHeaderText: {
+  screenContainer: {
     flex: 1,
+    backgroundColor: '#F0F2F5',
   },
-  providerNameText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  providerRoleText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  starsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 'auto',
-  },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 15,
-  },
-  circle: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#E0E0E0',
-  },
-  dashedLine: {
-    flex: 1,
-    height: 1,
-    borderStyle: 'dashed',
-    borderColor: '#E0E0E0',
-    borderWidth: 1,
-    marginHorizontal: -6,
-  },
-  locationSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-    paddingHorizontal: 10,
-  },
-  locationItem: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  locationCode: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  locationLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 5,
-    textAlign: 'center',
-  },
-  airplaneIcon: {
-    marginHorizontal: 15,
-  },
-  dateTimeContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 20,
-  },
-  dateTimeCard: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: 10,
-    paddingVertical: 15,
-    paddingHorizontal: 10,
-    alignItems: 'center',
-    width: '45%',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  dateTimeLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 5,
-  },
-  dateTimeValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 5,
-    textAlign: 'center',
-  },
-  additionalDetailsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-    marginTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-    paddingTop: 20,
-  },
-  additionalDetailItem: {
-    width: '30%',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  additionalDetailLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 5,
-  },
-  additionalDetailValue: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-  },
-  actionButtonsContainerNew: {
-    width: '100%',
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  downloadButton: {
-    flexDirection: 'row',
-    paddingVertical: 15,
-    paddingHorizontal: 25,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '90%',
-    marginBottom: 15,
-    backgroundColor: primaryColor,
-    ...Platform.select({
-      ios: {
-        shadowColor: 'rgba(0,0,0,0.2)',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 5,
-      },
-      android: {
-        elevation: 6,
-      },
-    }),
-  },
-  downloadButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  secondaryDownloadButton: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: primaryColor,
-    ...Platform.select({
-      ios: {
-        shadowColor: 'rgba(0,0,0,0.1)',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 3,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
-  },
+  // REMOVIDO: lottieOverlay
+  // REMOVIDO: lottieAnimation
 });

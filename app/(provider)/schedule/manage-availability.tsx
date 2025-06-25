@@ -4,23 +4,41 @@ import {
   View,
   Text,
   StyleSheet,
-  Switch,
   Alert,
   TouchableOpacity,
   ScrollView,
   Platform,
   ActivityIndicator,
-  Animated, // Importar Animated para animações
+  Animated,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
+// <--- CORREÇÃO DE CASING: datetimepicker (lowercase p)
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
-// import { getProviderAvailability, updateProviderAvailability } from '../../../services/providerService'; // Ajuste o caminho
+import { useAuth } from '../../../hooks/useAuth';
 
+// <--- IMPORTAÇÕES DE SERVIÇOS E TIPAGENS
+import {
+  getProviderAvailability,
+  updateProviderAvailability,
+  addProviderAvailability,
+  deleteProviderAvailability,
+} from '../../services/providerService';
+import { ProviderAvailability, UpdateAvailabilityData } from '../../types/backend/providers'; //
+
+// <--- IMPORTA OS NOVOS COMPONENTES CRIADOS
+import AnimatedDayCard from './components/manager/AnimatedDayCard';
+import BlockDateSection from './components/manager/BlockDateSection';
+import SaveChangesButton from './components/manager/SaveChangesButton';
+
+// Tipagem das estruturas de dados internas
 interface TimeSlot {
-  id: string; // Para key no map e para identificar o slot
+  id: string; // Para key no map (pode ser temporário para novos slots)
+  backendId?: string; // ID real do slot no backend, se já existir
   startTime: string; // Formato HH:MM
-  endTime:   string;   // Formato HH:MM
+  endTime: string; // Formato HH:MM
+  hasError?: boolean;
+  errorMessage?: string;
 }
 
 interface DailyAvailability {
@@ -40,14 +58,13 @@ const DAYS_OF_WEEK = [
   { name: 'Sábado', index: 6 },
 ];
 
-// Função para formatar Date para HH:MM
+// Funções utilitárias (podem ser movidas para `utils/helpers.ts` ou `schedule-helpers.ts` se houver muitos)
 const formatTime = (date: Date): string => {
   const hours = date.getHours().toString().padStart(2, '0');
   const minutes = date.getMinutes().toString().padStart(2, '0');
   return `${hours}:${minutes}`;
 };
 
-// Função para converter HH:MM para um objeto Date (no dia de hoje, para o picker)
 const parseTime = (timeString: string): Date => {
   const [hours, minutes] = timeString.split(':').map(Number);
   const date = new Date();
@@ -55,153 +72,19 @@ const parseTime = (timeString: string): Date => {
   return date;
 };
 
-// Componente para cada TimeSlot com animações e feedback
-const AnimatedTimeSlot: React.FC<{
-    slot: TimeSlot;
-    onOpenPicker: (slotId: string, mode: 'startTime' | 'endTime') => void;
-    onRemove: (slotId: string) => void;
-    delay: number;
-}> = ({ slot, onOpenPicker, onRemove, delay }) => {
-    const fadeAnim = useRef(new Animated.Value(0)).current;
-    const slideAnim = useRef(new Animated.Value(20)).current;
-    const scaleAnim = useRef(new Animated.Value(1)).current;
-
-    useEffect(() => {
-        Animated.parallel([
-            Animated.timing(fadeAnim, {
-                toValue: 1,
-                duration: 300,
-                delay: delay,
-                useNativeDriver: true,
-            }),
-            Animated.timing(slideAnim, {
-                toValue: 0,
-                duration: 300,
-                delay: delay,
-                useNativeDriver: true,
-            }),
-        ]).start();
-    }, [fadeAnim, slideAnim, delay]);
-
-    const onPressInButton = () => { Animated.spring(scaleAnim, { toValue: 0.95, useNativeDriver: true }).start(); };
-    const onPressOutButton = () => { Animated.spring(scaleAnim, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start(); };
-
-    const handleRemove = () => {
-        Alert.alert(
-            "Remover Horário",
-            `Tem certeza que deseja remover o horário das ${slot.startTime} às ${slot.endTime}?`,
-            [
-                { text: "Cancelar", style: "cancel" },
-                { text: "Remover", style: "destructive", onPress: () => onRemove(slot.id) }
-            ]
-        );
-    };
-
-    return (
-        <Animated.View style={[styles.slotItem, { opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] }]}>
-            <TouchableOpacity 
-                style={styles.timeButton} 
-                onPress={() => onOpenPicker(slot.id, 'startTime')}
-                onPressIn={onPressInButton}
-                onPressOut={onPressOutButton}
-            >
-                <Text style={styles.timeButtonText}>{slot.startTime}</Text>
-            </TouchableOpacity>
-            <Text style={styles.timeSeparator}>até</Text>
-            <TouchableOpacity 
-                style={styles.timeButton} 
-                onPress={() => onOpenPicker(slot.id, 'endTime')}
-                onPressIn={onPressInButton}
-                onPressOut={onPressOutButton}
-            >
-                <Text style={styles.timeButtonText}>{slot.endTime}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleRemove} style={styles.removeSlotButton}>
-                <Ionicons name="trash-bin-outline" size={22} color="#F44336" />
-            </TouchableOpacity>
-        </Animated.View>
-    );
-};
-
-// Componente para cada Dia da Semana com animações e feedback
-const AnimatedDayCard: React.FC<{
-    day: DailyAvailability;
-    dayIdx: number;
-    onToggleAvailability: (dayIndex: number, value: boolean) => void;
-    onAddSlot: (dayIndex: number) => void;
-    onOpenPicker: (dayIdx: number, slotId: string, mode: 'startTime' | 'endTime') => void;
-    onRemoveSlot: (dayIndex: number, slotId: string) => void;
-    delay: number;
-}> = ({ day, dayIdx, onToggleAvailability, onAddSlot, onOpenPicker, onRemoveSlot, delay }) => {
-    const fadeAnim = useRef(new Animated.Value(0)).current;
-    const slideAnim = useRef(new Animated.Value(20)).current;
-
-    useEffect(() => {
-        Animated.parallel([
-            Animated.timing(fadeAnim, {
-                toValue: 1,
-                duration: 500,
-                delay: delay,
-                useNativeDriver: true,
-            }),
-            Animated.timing(slideAnim, {
-                toValue: 0,
-                duration: 500,
-                delay: delay,
-                useNativeDriver: true,
-            }),
-        ]).start();
-    }, [fadeAnim, slideAnim, delay]);
-
-    return (
-        <Animated.View style={[styles.dayCard, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-            <View style={styles.dayHeader}>
-                <Text style={styles.dayName}>{day.dayName}</Text>
-                <Switch
-                    trackColor={{ false: "#CED4DA", true: "#82c7ff" }}
-                    thumbColor={day.isAvailable ? "#007AFF" : "#f4f3f4"}
-                    ios_backgroundColor="#E9ECEF"
-                    onValueChange={(value) => onToggleAvailability(dayIdx, value)}
-                    value={day.isAvailable}
-                />
-            </View>
-
-            {day.isAvailable && (
-                <View style={styles.slotsContainer}>
-                    {day.slots.length === 0 && (
-                        <Text style={styles.noSlotsText}>Nenhum horário definido para este dia.</Text>
-                    )}
-                    {day.slots.map((slot, slotIndex) => (
-                        <AnimatedTimeSlot
-                            key={slot.id}
-                            slot={slot}
-                            onOpenPicker={(slotId, mode) => onOpenPicker(dayIdx, slotId, mode)}
-                            onRemove={(slotId) => onRemoveSlot(dayIdx, slotId)}
-                            delay={slotIndex * 50} // Atraso para os slots dentro do dia
-                        />
-                    ))}
-                    <TouchableOpacity style={styles.addSlotButton} onPress={() => onAddSlot(dayIdx)}>
-                        <Ionicons name="add-circle-outline" size={22} color="#007AFF" />
-                        <Text style={styles.addSlotButtonText}>Adicionar Horário</Text>
-                    </TouchableOpacity>
-                </View>
-            )}
-        </Animated.View>
-    );
-};
-
-
 export default function ManageAvailabilityScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const [weeklyAvailability, setWeeklyAvailability] = useState<DailyAvailability[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   // Estados para o TimePicker
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [currentPickerMode, setCurrentPickerMode] = useState<'startTime' | 'endTime'>('startTime');
   const [editingDayIndex, setEditingDayIndex] = useState<number | null>(null);
-  const [editingSlotId, setEditingSlotId] = useState<string | null>(null); // ID do slot sendo editado ou 'new' para um novo slot
+  const [editingSlotId, setEditingSlotId] = useState<string | null>(null); // ID do slot sendo editado
   const [timePickerDate, setTimePickerDate] = useState(new Date());
 
   // Animações
@@ -209,39 +92,121 @@ export default function ManageAvailabilityScreen() {
   const saveButtonAnim = useRef(new Animated.Value(0)).current;
   const specialSectionAnim = useRef(new Animated.Value(0)).current;
 
+  // NOVO ESTADO: Para slots a serem excluídos na API
+  const [slotsToDelete, setSlotsToDelete] = useState<Set<string>>(new Set()); // Usar Set para IDs únicos
 
-  // Carregar disponibilidade inicial (simulado)
+  // Função de validação de slots
+  const validateSlots = useCallback((slots: TimeSlot[]): TimeSlot[] => {
+    let processedSlots: TimeSlot[] = slots.map(s => ({ ...s, hasError: false, errorMessage: undefined }));
+
+    processedSlots = processedSlots.map(slot => {
+      const start = parseTime(slot.startTime);
+      const end = parseTime(slot.endTime);
+      if (start >= end) {
+        return { ...slot, hasError: true, errorMessage: "Hora de término deve ser posterior à de início." };
+      }
+      return { ...slot, hasError: false, errorMessage: undefined };
+    });
+
+    const finalValidatedSlots: TimeSlot[] = [...processedSlots];
+
+    for (let i = 0; i < finalValidatedSlots.length; i++) {
+      for (let j = i + 1; j < finalValidatedSlots.length; j++) {
+        const slotA = finalValidatedSlots[i];
+        const slotB = finalValidatedSlots[j];
+
+        const startA = parseTime(slotA.startTime);
+        const endA = parseTime(slotA.endTime);
+        const startB = parseTime(slotB.startTime);
+        const endB = parseTime(slotB.endTime);
+
+        if ((startA < endB && endA > startB)) {
+          if (!slotA.hasError || slotA.errorMessage === undefined || slotA.errorMessage === "Horário se sobrepõe a outro slot.") {
+            finalValidatedSlots[i] = { ...slotA, hasError: true, errorMessage: "Horário se sobrepõe a outro slot." };
+          }
+          if (!slotB.hasError || slotB.errorMessage === undefined || slotB.errorMessage === "Horário se sobrepõe a outro slot.") {
+            finalValidatedSlots[j] = { ...slotB, hasError: true, errorMessage: "Horário se sobrepõe a outro slot." };
+          }
+        }
+      }
+    }
+
+    return finalValidatedSlots;
+  }, []);
+
+  // Carregar disponibilidade inicial (integrando com a API real)
   useEffect(() => {
     console.log("[ManageAvailability] Carregando disponibilidade...");
     setIsLoading(true);
-    // TODO: Chamar providerService.getProviderAvailability();
-    setTimeout(() => {
-      const initialAvailability: DailyAvailability[] = DAYS_OF_WEEK.map(day => ({
-        dayName: day.name,
-        dayIndex: day.index,
-        isAvailable: ![0, 6].includes(day.index), // Indisponível nos fins de semana por padrão
-        slots: ![0, 6].includes(day.index)
-          ? [{ id: Math.random().toString(), startTime: '09:00', endTime: '12:00' }, { id: Math.random().toString(), startTime: '14:00', endTime: '18:00' }]
-          : [],
-      }));
-      setWeeklyAvailability(initialAvailability);
-      setIsLoading(false);
-      console.log("[ManageAvailability] Disponibilidade carregada.");
-      
-      // Animações de entrada após o carregamento
-      Animated.stagger(150, [
+
+    const loadInitialAvailability = async () => {
+      if (!user?.id) {
+        console.warn("[ManageAvailability] user.id não disponível, não carregando disponibilidade.");
+        Alert.alert("Erro de Autenticação", "Não foi possível carregar sua disponibilidade. Por favor, faça login novamente.");
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const apiAvailability: ProviderAvailability[] = await getProviderAvailability(user.id);
+
+        const mappedAvailability: DailyAvailability[] = DAYS_OF_WEEK.map(day => {
+          // Filtrar slots válidos da API para o dia atual. ProviderAvailability são slots individuais,
+          // não contêm a propriedade 'slots' como na tipagem interna.
+          const daySlots = apiAvailability.filter(a => a.dayOfWeek === day.index && a.isAvailable && a.startTime && a.endTime) //
+            .map(a => ({
+              id: a.id, // ID do backend como ID local
+              backendId: a.id, // Salva o ID do backend explicitamente
+              startTime: a.startTime,
+              endTime: a.endTime,
+              hasError: false,
+              errorMessage: undefined,
+            } as TimeSlot))
+            .sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+          // Determine se o dia está disponível com base nos slots retornados ou se explicitamente marcado como indisponível no backend.
+          // Aqui, 'isDayExplicitlyUnavailable' verifica se há um registro *específico* do backend que marca o dia como indisponível.
+          const isDayExplicitlyUnavailable = apiAvailability.some(a => a.dayOfWeek === day.index && a.isAvailable === false); //
+          
+          return {
+            dayName: day.name,
+            dayIndex: day.index,
+            isAvailable: daySlots.length > 0 || !isDayExplicitlyUnavailable, // Se tem slots ou não foi explicitamente desabilitado.
+            slots: validateSlots(daySlots),
+          };
+        });
+        setWeeklyAvailability(mappedAvailability);
+        console.log("[ManageAvailability] Disponibilidade carregada da API.");
+
+      } catch (error: any) {
+        console.error("Erro ao carregar disponibilidade do provedor:", error.response?.data || error.message);
+        Alert.alert("Erro", error.response?.data?.message || "Não foi possível carregar a disponibilidade.");
+        // Fallback para dados padrão (vazios) se a API falhar
+        setWeeklyAvailability(DAYS_OF_WEEK.map(day => ({
+          dayName: day.name,
+          dayIndex: day.index,
+          isAvailable: false,
+          slots: [],
+        })));
+      } finally {
+        setIsLoading(false);
+        Animated.stagger(150, [
           Animated.timing(headerAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
           Animated.timing(saveButtonAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
           Animated.timing(specialSectionAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
-      ]).start();
+        ]).start();
+      }
+    };
 
-    }, 1000);
-  }, [headerAnim, saveButtonAnim, specialSectionAnim]);
+    if (user?.id) { // Só carrega se o ID do usuário estiver disponível
+      loadInitialAvailability();
+    }
+  }, [headerAnim, saveButtonAnim, specialSectionAnim, validateSlots, user?.id]);
 
   const handleToggleDayAvailability = (dayIndex: number, value: boolean) => {
     setWeeklyAvailability(prev =>
       prev.map(day =>
-        day.dayIndex === dayIndex ? { ...day, isAvailable: value, slots: value ? day.slots : [] } : day
+        day.dayIndex === dayIndex ? { ...day, isAvailable: value, slots: value ? day.slots.map(s => ({ ...s, hasError: false, errorMessage: undefined })) : [] } : day
       )
     );
   };
@@ -252,13 +217,13 @@ export default function ManageAvailabilityScreen() {
     setCurrentPickerMode(mode);
 
     const day = weeklyAvailability[dayIdx];
-    let initialTime = new Date(); 
+    let initialTime = new Date();
 
     const slot = day.slots.find(s => s.id === slotId);
     if (slot) {
-        initialTime = parseTime(mode === 'startTime' ? slot.startTime : slot.endTime);
+      initialTime = parseTime(mode === 'startTime' ? slot.startTime : slot.endTime);
     }
-    
+
     setTimePickerDate(initialTime);
     setShowTimePicker(true);
     console.log(`[ManageAvailability] Abrindo TimePicker para Dia: ${dayIdx}, Slot: ${slotId}, Modo: ${mode}, Hora Inicial: ${initialTime}`);
@@ -266,7 +231,7 @@ export default function ManageAvailabilityScreen() {
 
   const onTimeChange = (event: DateTimePickerEvent, selectedTimeValue?: Date) => {
     if (Platform.OS === 'android') {
-        setShowTimePicker(false);
+      setShowTimePicker(false);
     }
     if (event.type === 'set' && selectedTimeValue && editingDayIndex !== null && editingSlotId !== null) {
       const formattedTime = formatTime(selectedTimeValue);
@@ -275,71 +240,153 @@ export default function ManageAvailabilityScreen() {
       setWeeklyAvailability(prev =>
         prev.map((day, idx) => {
           if (idx === editingDayIndex) {
-            const newSlots = day.slots.map(slot =>
-                slot.id === editingSlotId
-                  ? { ...slot, [currentPickerMode]: formattedTime }
-                  : slot
-              );
-            // TODO: Adicionar validação (endTime > startTime, não sobrepor horários)
-            return { ...day, slots: newSlots.sort((a,b) => a.startTime.localeCompare(b.startTime)) };
+            let newSlots = day.slots.map(slot =>
+              slot.id === editingSlotId
+                ? { ...slot, [currentPickerMode]: formattedTime }
+                : slot
+            );
+            newSlots = newSlots.sort((a, b) => a.startTime.localeCompare(b.startTime));
+            newSlots = validateSlots(newSlots);
+            return { ...day, slots: newSlots };
           }
           return day;
         })
       );
     }
-    if (Platform.OS === 'ios') { 
-        setShowTimePicker(false); 
+    if (Platform.OS === 'ios') {
+      setShowTimePicker(false);
     }
   };
 
   const addSlot = (dayIndex: number) => {
     setWeeklyAvailability(prev =>
-      prev.map((day, idx) =>
-        idx === dayIndex
-          ? { ...day, isAvailable: true, slots: [...day.slots, { id: Math.random().toString(), startTime: '09:00', endTime: '10:00' }].sort((a,b) => a.startTime.localeCompare(b.startTime)) }
-          : day
-      )
+      prev.map((day, idx) => {
+        if (idx === dayIndex) {
+          const newId = `temp-${Math.random().toString(36).substring(2, 9)}`; // ID temporário para novos slots
+          let newStartTime = '09:00';
+          let newEndTime = '10:00';
+
+          if (day.slots.length > 0) {
+            const lastSlot = day.slots[day.slots.length - 1];
+            const lastEndTime = parseTime(lastSlot.endTime);
+            lastEndTime.setMinutes(lastEndTime.getMinutes() + 15);
+            newStartTime = formatTime(lastEndTime);
+            lastEndTime.setHours(lastEndTime.getHours() + 1);
+            newEndTime = formatTime(lastEndTime);
+          }
+
+          let updatedSlots = [...day.slots, { id: newId, startTime: newStartTime, endTime: newEndTime }];
+          updatedSlots = updatedSlots.sort((a, b) => a.startTime.localeCompare(b.startTime));
+          updatedSlots = validateSlots(updatedSlots);
+          return { ...day, isAvailable: true, slots: updatedSlots };
+        }
+        return day;
+      })
     );
   };
 
   const removeSlot = (dayIndex: number, slotId: string) => {
     setWeeklyAvailability(prev =>
-      prev.map((day, idx) =>
-        idx === dayIndex
-          ? { ...day, slots: day.slots.filter(slot => slot.id !== slotId) }
-          : day
-      )
+      prev.map((day, idx) => {
+        if (idx === dayIndex) {
+          const slotToRemove = day.slots.find(s => s.id === slotId);
+          if (slotToRemove && slotToRemove.backendId) {
+            // Marca o slot para ser deletado na API
+            setSlotsToDelete(prev => new Set(prev).add(slotToRemove.backendId!)); // Adiciona ao Set
+          }
+          let updatedSlots = day.slots.filter(slot => slot.id !== slotId);
+          updatedSlots = validateSlots(updatedSlots);
+          return { ...day, slots: updatedSlots };
+        }
+        return day;
+      })
     );
   };
 
+  const hasValidationErrors = weeklyAvailability.some(day =>
+    day.slots.some(slot => slot.hasError)
+  );
+
   const handleSaveChanges = async () => {
+    if (hasValidationErrors) {
+      Alert.alert('Erro de Validação', 'Por favor, corrija os horários que apresentam erros antes de salvar.');
+      return;
+    }
+    if (!user?.id) {
+      Alert.alert("Erro", "ID do provedor não disponível para salvar.");
+      return;
+    }
+
     setIsSaving(true);
-    console.log("[ManageAvailability] Salvando disponibilidade:", JSON.stringify(weeklyAvailability, null, 2));
-    // TODO: Chamar providerService.updateProviderAvailability(weeklyAvailability);
-    // try {
-    //   await updateProviderAvailability(weeklyAvailability);
-    //   Alert.alert('Sucesso', 'Sua disponibilidade foi salva!');
-    //   router.back();
-    // } catch (error) {
-    //   Alert.alert('Erro', 'Não foi possível salvar a disponibilidade.');
-    // } finally {
-    //   setIsSaving(false);
-    // }
-    setTimeout(() => { // Simulação
-      Alert.alert('Sucesso', 'Disponibilidade salva com sucesso!');
+    setSaveSuccess(false);
+    console.log("[ManageAvailability] Salvando disponibilidade.");
+
+    try {
+      // 1. Processar adições/atualizações
+      const slotsToUpdateOrCreate: UpdateAvailabilityData[] = [];
+      weeklyAvailability.forEach(day => {
+        // Se o dia está disponível e tem slots, ou se um dia indisponível está sendo ativado com slots
+        if (day.isAvailable && day.slots.length > 0) {
+          day.slots.forEach(slot => {
+            slotsToUpdateOrCreate.push({
+              id: slot.backendId, // Inclui o ID para o backend distinguir update/create
+              dayOfWeek: day.dayIndex,
+              startTime: slot.startTime,
+              endTime: slot.endTime,
+              isAvailable: true, // Sempre true para slots individuais
+            });
+          });
+        } else if (!day.isAvailable && day.slots.length === 0) {
+          // Se o dia está marcado como indisponível E não tem slots, enviar um slot que desabilita o dia inteiro
+          slotsToUpdateOrCreate.push({
+            dayOfWeek: day.dayIndex,
+            isAvailable: false,
+            startTime: "00:00", // Valor padrão, pode ser ignorado pelo backend se isAvailable=false
+            endTime: "00:00",
+          });
+        }
+        // Se o dia está disponível mas não tem slots, e não está explicitamente desabilitado, não faz nada aqui
+        // pois a API PATCH /availability deve interpretar a ausência de slots como "sem slots"
+      });
+      
+      // 2. Chamar a API para atualizar/sincronizar todos os slots (PATCH em massa)
+      // A API `updateProviderAvailability` no seu `providerService.ts` aceita `UpdateAvailabilityData[]`.
+      // Esta API deve ser inteligente para criar novos, atualizar existentes e deletar os que não são enviados.
+      // Ou seja, ela "sincroniza" o estado do backend com o que é enviado.
+      console.log(`Sincronizando disponibilidade para provedor ${user.id}:`, slotsToUpdateOrCreate);
+      await updateProviderAvailability(user.id, slotsToUpdateOrCreate); //
+
+      // 3. Chamar a API para deletar slots marcados para exclusão (ids guardados em `slotsToDelete`)
+      await Promise.all(
+        Array.from(slotsToDelete).map(async (slotBackendId) => { // Iterar sobre o Set
+          console.log(`Deletando slot ${slotBackendId} para provedor ${user.id}`);
+          await deleteProviderAvailability(user.id, slotBackendId); //
+        })
+      );
+      
+      setSaveSuccess(true);
+      setSlotsToDelete(new Set()); // Limpa a lista de slots a serem deletados após o sucesso
+      
+      setTimeout(() => {
+        Alert.alert('Sucesso', 'Disponibilidade salva com sucesso!');
+        router.back();
+      }, 500);
+
+    } catch (error: any) {
+      console.error("Erro ao salvar disponibilidade:", error.response?.data || error.message);
+      Alert.alert('Erro', error.response?.data?.message || 'Não foi possível salvar a disponibilidade.');
+    } finally {
       setIsSaving(false);
-      router.back();
-    }, 1500);
+    }
   };
 
   if (isLoading) {
     return (
       <View style={styles.outerContainer}>
         <Stack.Screen options={{ headerShown: false }} />
-        {/* Custom Header para o estado de loading */}
         <Animated.View style={[styles.customHeader, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
-            <Text style={styles.headerTitle}>Gerenciar Disponibilidade</Text>
-            <View style={styles.headerActionIconPlaceholder} /> {/* Placeholder para alinhar */}
+          <Text style={styles.headerTitle}>Gerenciar Disponibilidade</Text>
+          <View style={styles.headerActionIconPlaceholder} />
         </Animated.View>
         <View style={styles.centeredFeedback}>
           <ActivityIndicator size="large" color="#007AFF" />
@@ -352,22 +399,21 @@ export default function ManageAvailabilityScreen() {
   return (
     <View style={styles.outerContainer}>
       <Stack.Screen options={{ headerShown: false }} />
-      
-      {/* Custom Header */}
+
       <Animated.View style={[styles.customHeader, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.headerBackButton}>
-              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Gerenciar Disponibilidade</Text>
-          <View style={styles.headerActionIconPlaceholder} /> {/* Placeholder para alinhar */}
+        <TouchableOpacity onPress={() => router.back()} style={styles.headerBackButton}>
+          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Gerenciar Disponibilidade</Text>
+        <View style={styles.headerActionIconPlaceholder} />
       </Animated.View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.container}>
         <Animated.Text style={[styles.mainHeaderTitle, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
-            Horários de Trabalho Semanais
+          Horários de Trabalho Semanais
         </Animated.Text>
         <Animated.Text style={[styles.mainHeaderSubtitle, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
-            Defina os dias e horários em que você está disponível para realizar serviços.
+          Defina os dias e horários em que você está disponível para realizar serviços.
         </Animated.Text>
 
         {weeklyAvailability.map((day, dayIdx) => (
@@ -379,28 +425,21 @@ export default function ManageAvailabilityScreen() {
             onAddSlot={addSlot}
             onOpenPicker={openTimePicker}
             onRemoveSlot={removeSlot}
-            delay={dayIdx * 100 + 200} // Atraso escalonado para cada dia
+            delay={dayIdx * 100 + 200}
           />
         ))}
-        
-        {/* Placeholder para Bloquear Datas Específicas */}
-        <Animated.View style={[styles.dayCard, styles.specialSectionCard, { opacity: specialSectionAnim, transform: [{ translateY: specialSectionAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
-            <Text style={styles.sectionTitle}>Datas Específicas</Text>
-            <TouchableOpacity style={styles.blockDateButton} onPress={() => Alert.alert("Em Breve", "A funcionalidade de bloquear datas específicas para férias, feriados ou indisponibilidade temporária será adicionada em breve!")}>
-                <Ionicons name="calendar-outline" size={20} color="#455A64" style={{marginRight: 8}} />
-                <Text style={styles.blockDateButtonText}>Bloquear Datas ou Períodos</Text>
-                <Ionicons name="chevron-forward-outline" size={20} color="#8A8A8E" />
-            </TouchableOpacity>
-        </Animated.View>
 
+        {/* Placeholder para Bloquear Datas Específicas - Usando o novo componente */}
+        <BlockDateSection animation={specialSectionAnim} />
 
-        <TouchableOpacity style={[styles.saveButton, isSaving && styles.saveButtonDisabled]} onPress={handleSaveChanges} disabled={isSaving}>
-          {isSaving ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.saveButtonText}>Salvar Alterações</Text>
-          )}
-        </TouchableOpacity>
+        {/* Botão Salvar Alterações - Usando o novo componente */}
+        <SaveChangesButton
+          isSaving={isSaving}
+          saveSuccess={saveSuccess}
+          hasValidationErrors={hasValidationErrors}
+          onPress={handleSaveChanges}
+          animation={saveButtonAnim}
+        />
       </ScrollView>
 
       {showTimePicker && (
@@ -409,30 +448,29 @@ export default function ManageAvailabilityScreen() {
           value={timePickerDate}
           mode="time"
           is24Hour={true}
-          display={Platform.OS === 'ios' ? "spinner" : "default"} 
+          display={Platform.OS === 'ios' ? "spinner" : "default"}
           onChange={onTimeChange}
-          minuteInterval={15} 
+          minuteInterval={15}
         />
       )}
     </View>
   );
 }
 
-// Estilos (longos, mas necessários para a UI)
 const styles = StyleSheet.create({
   outerContainer: { flex: 1, backgroundColor: '#F0F2F5' },
   scrollView: { flex: 1 },
   container: { padding: 15, paddingBottom: 30 },
   centeredFeedback: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { marginTop: 10, fontSize: 16, color: '#555' },
-  
+
   customHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#007AFF', // Cor primária do app
+    backgroundColor: '#007AFF',
     paddingHorizontal: 15,
-    paddingVertical: Platform.OS === 'ios' ? 50 : 20, // Ajuste para status bar iOS
+    paddingVertical: Platform.OS === 'ios' ? 50 : 20,
     paddingTop: Platform.OS === 'ios' ? 50 : 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -450,124 +488,26 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
   },
-  headerActionIconPlaceholder: { // Para alinhar o título no centro
-    width: 24, // Largura do ícone
+  headerActionIconPlaceholder: {
+    width: 24,
     marginLeft: 15,
   },
-  mainHeaderTitle: { 
-    fontSize: 24, 
-    fontWeight: 'bold', 
-    color: '#1C3A5F', 
-    marginBottom: 8, 
+  mainHeaderTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1C3A5F',
+    marginBottom: 8,
     textAlign: 'center',
     marginTop: 10,
   },
-  mainHeaderSubtitle: { 
-    fontSize: 15, 
-    color: '#495057', 
-    textAlign: 'center', 
-    marginBottom: 25, 
-    paddingHorizontal: 10 
-  },
-  
-  dayCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 15,
-    ...Platform.select({
-      ios: { shadowColor: 'rgba(0,0,0,0.1)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6 },
-      android: { elevation: 4 },
-    }),
-  },
-  dayHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  dayName: { fontSize: 18, fontWeight: 'bold', color: '#343A40' },
-  slotsContainer: { marginTop: 10, borderTopWidth: 1, borderTopColor: '#E9ECEF', paddingTop: 15 },
-  slotItem: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    marginBottom: 12, 
-    justifyContent: 'space-between',
-    backgroundColor: '#F8F9FA', // Fundo para o item de slot
-    borderRadius: 8,
-    padding: 8,
-    borderWidth: 1,
-    borderColor: '#DEE2E6',
-  },
-  timeButton: {
-    backgroundColor: '#E9F5FF',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#B3D4FC',
-    minWidth: 75, // Ajustado para ser um pouco menor
-    alignItems: 'center',
-  },
-  timeButtonText: {
+  mainHeaderSubtitle: {
     fontSize: 15,
-    fontWeight: '500',
-    color: '#0056b3',
-  },
-  timeSeparator: { marginHorizontal: 8, fontSize: 15, color: '#6C757D' },
-  removeSlotButton: { padding: 5, marginLeft: 10 },
-  addSlotButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    marginTop: 10,
-    backgroundColor: '#F8F9FA',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#DEE2E6',
-    ...Platform.select({
-        ios: { shadowColor: 'rgba(0,0,0,0.03)', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2 },
-        android: { elevation: 1 },
-    }),
-  },
-  addSlotButtonText: { fontSize: 15, color: '#007AFF', marginLeft: 8, fontWeight: '600' },
-  noSlotsText: { textAlign: 'center', color: '#868E96', fontStyle: 'italic', paddingVertical: 10 },
-
-  specialSectionCard: { marginTop: 20 },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#1C3A5F', marginBottom: 15 },
-  blockDateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 15,
-    backgroundColor: '#F1F3F5',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#CED4DA',
-    ...Platform.select({
-        ios: { shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3 },
-        android: { elevation: 2 },
-    }),
-  },
-  blockDateButtonText: {
-    flex: 1,
-    fontSize: 16,
     color: '#495057',
+    textAlign: 'center',
+    marginBottom: 25,
+    paddingHorizontal: 10
   },
 
-  saveButton: { 
-    backgroundColor: '#28A745', 
-    paddingVertical: 15, 
-    borderRadius: 8, 
-    alignItems: 'center', 
-    marginTop: 20,
-    ...Platform.select({
-        ios: { shadowColor: 'rgba(0,0,0,0.1)', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 6 },
-        android: { elevation: 6 },
-    }),
-  },
-  saveButtonDisabled: { 
-    backgroundColor: '#A5D6A7',
-    ...Platform.select({
-        ios: { shadowOpacity: 0 },
-        android: { elevation: 0 },
-    }),
-  },
-  saveButtonText: { color: '#FFFFFF', fontSize: 17, fontWeight: 'bold' },
+  // Estilos de DayCard, TimeSlot, ErrorMessage, AddSlotButton movidos para os componentes filhos.
+  // Mantendo apenas estilos gerais do layout principal.
 });

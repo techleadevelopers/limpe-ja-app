@@ -1,50 +1,44 @@
 {
   "expo": {
-    "name": "LimpeJá",
-    "slug": "limpeja",
+    "name": "Cleaning",
+    "slug": "cleaning",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "limpeja",
-    "userInterfaceStyle": "light", // FORÇA O TEMA CLARO GLOBALMENTE
-    // "newArchEnabled": true, // Avalie se realmente precisa e se é compatível
+    "scheme": "cleaning",
+    "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.suaempresa.limpeja",
-      "userInterfaceStyle": "light" // Garante tema claro no iOS
-      // A configuração de splash específica do iOS pode ser omitida se a global no plugin for suficiente
+      "bundleIdentifier": "com.techleadevelopers.cleaning",
+      "userInterfaceStyle": "light"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#FFFFFF" // Fundo do ícone adaptativo
+        "backgroundColor": "#FFFFFF"
       },
-      "package": "com.suaempresa.limpeja",
-      "userInterfaceStyle": "light", // Garante tema claro no Android
-      // "edgeToEdgeEnabled": true, // Se for usar, trate os insets no seu app
+      "package": "com.techleadevelopers.cleaning",
+      "userInterfaceStyle": "light",
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION"
-        // "android.permission.RECORD_AUDIO" // Remova se não for estritamente necessário
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.RECORD_AUDIO"
       ]
-      // A configuração de splash específica do Android pode ser omitida
     },
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/icon.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          // Configuração da splash screen NATIVA (primeira imagem exibida)
-          "image": "./assets/images/splash.png", // Sua imagem de splash.
-                                                // Se quiser texto aqui, ele precisa estar na imagem.
-          "resizeMode": "contain",              // ou "cover"
-          "backgroundColor": "#E0F2FF",        // Seu azul claro para o fundo da splash
-          "userInterfaceStyle": "light"         // Garante que a splash nativa use o tema claro
+          "resizeMode": "contain",
+          "backgroundColor": "#FFFFFF",
+          "userInterfaceStyle": "light",
+          "image": "./assets/images/logo.png" // Adicionado novamente para resolver o erro
         }
       ],
       "expo-secure-store",
@@ -52,8 +46,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "O LimpeJá precisa de acesso às suas fotos para que você possa adicionar uma ao seu perfil.",
-          "cameraPermission": "O LimpeJá precisa de acesso à sua câmera para que você possa tirar uma foto para o seu perfil."
+          "photosPermission": "O Cleaning precisa de acesso às suas fotos para que você possa adicionar uma ao seu perfil.",
+          "cameraPermission": "O Cleaning precisa de acesso à sua câmera para que você possa tirar uma foto para o seu perfil."
         }
       ]
     ],
@@ -62,8 +56,10 @@
     },
     "extra": {
       "eas": {
-        "projectId": "23560a63-c202-4e41-96d5-dcbd2a60c077"
-      }
+        "projectId": "377b22bb-053b-4f74-9f8e-c1e727e01ef9"
+      },
+      "EXPO_PUBLIC_SHOW_TEST_LOGINS": "true",
+      "router": {}
     }
   }
 }

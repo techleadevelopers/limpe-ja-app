@@ -37,6 +37,7 @@ export const PROVIDER_ROUTES = {
   PROVIDER_CHAT: (chatId: string) => `/(provider)/messages/${chatId}` as const,
   PROFILE: '/(provider)/profile',
   EDIT_SERVICES: '/(provider)/profile/edit-services',
+  VERIFICATION: '/(provider)/verify-account', // <-- ADICIONADO: Rota para a tela de verificação
   // ...
 };
 

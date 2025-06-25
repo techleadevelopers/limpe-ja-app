@@ -1,0 +1,282 @@
+// prisma/schema.prisma
+// Este arquivo é o ponto de partida para o seu banco de dados.
+// Ele define os modelos de dados e como eles se relacionam.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" // Ou "mysql", "sqlite", etc., dependendo do seu DB
+  url      = env("DATABASE_URL")
+}
+
+// Enum para os diferentes papéis de usuário
+enum UserRole {
+  CLIENT
+  PROVIDER
+  ADMIN
+  SYSTEM // ADICIONADO: Papel para operações internas do sistema (ex: webhooks)
+}
+
+// NOVO: Enum para o status de verificação do provedor
+enum VerificationStatus {
+  PENDING_INITIAL_REVIEW    // Após o registro básico, aguardando dados de verificação
+  PENDING_DOCUMENTS_UPLOAD  // Aguardando fotos do documento e selfie
+  PENDING_BACKGROUND_CHECK  // Dados enviados, aguardando resultado da verificação criminal
+  PENDING_MANUAL_REVIEW     // Se houver necessidade de revisão humana
+  APPROVED                  // Verificação concluída e aprovada
+  REJECTED                  // Verificação concluída e rejeitada
+  BLOCKED                   // Conta bloqueada por questões de segurança graves
+}
+
+// Modelo de Usuário (base para Cliente e Provedor)
+model User {
+  id                String         @id @default(uuid())
+  email             String         @unique
+  passwordHash      String         // Armazenar hash da senha, nunca a senha em texto claro
+  role              UserRole       @default(CLIENT)
+  avatarUrl         String?        // <--- NOVA LINHA ADICIONADA AQUI para o avatar do usuário
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  client            Client?
+  provider          Provider?
+  messagesSent      Message[]      @relation("SentMessages")
+  messagesReceived  Message[]      @relation("ReceivedMessages")
+  notifications     Notification[]
+  chatsAsParticipant1 Chat[]         @relation("ChatParticipant1") // Nova relação para Chat
+  chatsAsParticipant2 Chat[]         @relation("ChatParticipant2") // Nova relação para Chat
+}
+
+// Modelo para Cliente
+model Client {
+  id          String    @id @default(uuid())
+  userId      String    @unique
+  user        User      @relation(fields: [userId], references: [id])
+  fullName    String
+  phone       String?
+  address     Address?  @relation("ClientAddress")
+  bookings    Booking[]
+  reviewsMade Review[]  @relation("ClientReviews") // Avaliações que o cliente fez
+
+  // ADICIONADO: Campos para registro de data e hora de criação/atualização do perfil do cliente
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// Modelo para Provedor
+model Provider {
+  id                    String             @id @default(uuid())
+  userId                String             @unique
+  user                  User               @relation(fields: [userId], references: [id])
+  fullName              String
+  cpf                   String             @unique // CPF para verificação
+  dateOfBirth           DateTime
+  phone                 String?
+  address               Address?           @relation("ProviderAddress")
+  yearsOfExperience     Int?
+  // NOTA: avatarUrl no Provider é redundante se User já tem, mas mantido para consistência do seu schema original.
+  // Se o avatar do provedor for sempre o mesmo do usuário associado, você pode remover esta linha aqui.
+  avatarUrl             String?
+  // verified            Boolean            @default(false) // REMOVIDO: Substituído por verificationStatus
+  bio                   String?            // PROPRIEDADE 'BIO' ADICIONADA AQUI
+  providerServices      ProviderService[]
+  availability          Availability[]
+  bookings              Booking[]
+  reviewsReceived       Review[]           @relation("ProviderReviews") // Avaliações que o provedor recebeu
+  earnings              Transaction[]
+
+  // NOVOS CAMPOS PARA VERIFICAÇÃO
+  verificationStatus    VerificationStatus @default(PENDING_INITIAL_REVIEW)
+  documentPhotoFrontUrl String?
+  documentPhotoBackUrl  String?
+  selfieWithDocumentUrl String?
+  backgroundCheckResult Json?              // Armazenar o resultado detalhado da verificação de antecedentes criminais (JSON)
+  rejectionReason       String?            // Campo para armazenar o motivo da rejeição, se houver
+  pixKey                String?            // <--- NOVA LINHA ADICIONADA AQUI
+}
+
+// Modelo de Endereço (pode ser relacionado a Cliente, Provedor ou AGORA Booking)
+model Address {
+  id           String    @id @default(uuid())
+  cep          String
+  street       String
+  number       String
+  complement   String?
+  neighborhood String
+  city         String
+  state        String
+  clientId     String?   @unique
+  providerId   String?   @unique
+  client       Client?   @relation("ClientAddress", fields: [clientId], references: [id])
+  provider     Provider? @relation("ProviderAddress", fields: [providerId], references: [id])
+  // ADICIONADO: Relação para Booking, se um endereço pode ter múltiplos bookings
+  // bookings      Booking[] // Se um endereço pode ser usado por vários bookings. Menos comum para "endereço do serviço".
+
+  // ALTERNATIVO para relação 1:1 com Booking (mais comum para endereço específico do serviço)
+  booking      Booking?  @relation("BookingAddress") // Se um endereço pertence a apenas um booking
+}
+
+// Modelo para Tipos de Serviço (e.g., "Limpeza Padrão", "Limpeza Pesada")
+model Service {
+  id               String            @id @default(uuid())
+  name             String            @unique
+  description      String?
+  price            Decimal           @db.Decimal(10, 2) // CAMPO 'PRICE' ADICIONADO AQUI COM TIPO DECIMAL
+  icon             String?           // Campo para armazenar o nome do arquivo do ícone da categoria
+  providerServices ProviderService[]
+  createdAt        DateTime          @default(now())   // <--- ADICIONADO AQUI
+  updatedAt        DateTime          @updatedAt         // <--- ADICIONADO AQUI
+}
+
+// Modelo para Serviços Oferecidos por um Provedor Específico
+model ProviderService {
+  id              String    @id @default(uuid())
+  providerId      String
+  serviceId       String
+  price           Decimal   @db.Decimal(10, 2) // ALTERADO DE 'Float' PARA 'Decimal'
+  durationMinutes Int       // Duração estimada em minutos
+  description     String?
+  provider        Provider  @relation(fields: [providerId], references: [id])
+  service         Service   @relation(fields: [serviceId], references: [id])
+  bookings        Booking[] // Campo reverso para Booking
+
+  @@unique([providerId, serviceId]) // Um provedor não pode oferecer o mesmo tipo de serviço duas vezes
+}
+
+// Enum para o status do agendamento
+enum BookingStatus {
+  PENDING         // Pendente de confirmação do provedor
+  CONFIRMED       // Confirmado pelo provedor
+  COMPLETED       // Serviço concluído
+  CANCELED        // Agendamento cancelado
+  RESCHEDULED     // Agendamento reagendado
+}
+
+// Modelo de Agendamento
+model Booking {
+  id                String          @id @default(uuid())
+  clientId          String
+  providerId        String
+  providerServiceId String
+  client            Client          @relation(fields: [clientId], references: [id])
+  provider          Provider        @relation(fields: [providerId], references: [id])
+  providerService   ProviderService @relation(fields: [providerServiceId], references: [id])
+  scheduledDate     DateTime        // Data do agendamento
+  scheduledTime     String          // Horário do agendamento (e.g., "09:00")
+  status            BookingStatus   @default(PENDING)
+  totalPrice        Decimal         @db.Decimal(10, 2) // ALTERADO DE 'Float' PARA 'Decimal'
+  notes             String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  review            Review?         // Relação 1:1 com Review. Um agendamento pode ter uma avaliação.
+  transactions      Transaction[]   // ADICIONADO: Relação reversa para Transaction
+
+  // ADICIONADO: RELAÇÃO DO ENDEREÇO ESPECÍFICO DO AGENDAMENTO
+  addressId         String?         @unique // Unique porque um Booking terá um único Address
+  address           Address?        @relation("BookingAddress", fields: [addressId], references: [id]) // Relação 1:1
+}
+
+// Modelo de Chat (NOVO)
+model Chat {
+  id             String    @id @default(uuid())
+  participant1Id String
+  participant1   User      @relation("ChatParticipant1", fields: [participant1Id], references: [id])
+  participant2Id String
+  participant2   User      @relation("ChatParticipant2", fields: [participant2Id], references: [id])
+  messages       Message[] // Mensagens associadas a este chat
+
+  @@unique([participant1Id, participant2Id]) // Garante que não há chats duplicados para o mesmo par de usuários
+}
+
+// Modelo de Mensagem de Chat
+model Message {
+  id         String   @id @default(uuid())
+  chatId     String   // ID da conversa (pode ser um UUID gerado para cada par cliente-provedor)
+  chat       Chat     @relation(fields: [chatId], references: [id]) // Relação com o modelo Chat
+  senderId   String
+  receiverId String
+  content    String
+  timestamp  DateTime @default(now())
+  isRead     Boolean  @default(false)
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+}
+
+// Modelo de Notificação
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  type      String   // Tipo de notificação (e.g., "BOOKING_CONFIRMED", "NEW_MESSAGE")
+  message   String
+  isRead    Boolean  @default(false)
+  targetUrl String?  // URL para navegação no app ao clicar na notificação
+  createdAt DateTime @default(now())
+}
+
+// Modelo de Avaliação
+model Review {
+  id         String   @id @default(uuid())
+  booking    Booking  @relation(fields: [bookingId], references: [id]) // Relação 1:1 com Booking
+  bookingId  String   @unique // Uma avaliação por agendamento (mantido para garantir 1:1 com Booking)
+  clientId   String
+  providerId String
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now())
+  client     Client   @relation("ClientReviews", fields: [clientId], references: [id])
+  provider   Provider @relation("ProviderReviews", fields: [providerId], references: [id])
+
+  // NOVO: Adicionado índice único composto para garantir que um cliente só pode avaliar
+  // um provedor para um booking específico uma única vez.
+  // Isso não impedirá que um provedor tenha múltiplas avaliações (de diferentes bookings/clientes).
+  @@unique([bookingId, clientId, providerId]) // <--- Esta é a linha integrada
+}
+
+// Modelo de Oferta/Promoção
+model Offer {
+  id                 String    @id @default(uuid())
+  title              String
+  description        String?
+  discountPercentage Float?    // Desconto em percentual
+  fixedDiscountAmount Float?    // Desconto em valor fixo
+  validUntil         DateTime  // Data de expiração da oferta
+  imageUrl           String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}
+
+// Enum para o tipo de transação financeira
+enum TransactionType {
+  PAYMENT    // Pagamento de cliente para plataforma
+  WITHDRAWAL // Saque de provedor da plataforma
+  COMMISSION // Comissão da plataforma
+}
+
+// Modelo de Transação Financeira
+model Transaction {
+  id          String        @id @default(uuid())
+  providerId  String
+  provider    Provider      @relation(fields: [providerId], references: [id])
+  amount      Decimal       @db.Decimal(10, 2)
+  type        TransactionType
+  status      String        // Status da transação (e.g., "PENDING", "COMPLETED", "FAILED")
+  description String?
+  createdAt   DateTime      @default(now())
+  // ADICIONADO: Campos para bookingId e relação com Booking
+  bookingId   String?       // ID do agendamento associado (opcional)
+  booking     Booking?      @relation(fields: [bookingId], references: [id])
+}
+
+// Modelo de Disponibilidade do Provedor
+model Availability {
+  id         String   @id @default(uuid())
+  providerId String
+  provider   Provider @relation(fields: [providerId], references: [id])
+  dayOfWeek  Int      // 0 para Domingo, 1 para Segunda, etc.
+  startTime  String   // Horário de início (e.g., "09:00")
+  endTime    String   // Horário de término (e.g., "17:00")
+  isAvailable Boolean  @default(true) // Se o provedor está disponível neste slot
+}

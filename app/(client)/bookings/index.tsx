@@ -1,5 +1,5 @@
 // LimpeJaApp/app/(client)/bookings/index.tsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,38 +8,36 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Platform,
+  Animated,
+  Alert,
+  RefreshControl,
   Image,
-  Animated, // Importar Animated para animações
 } from 'react-native';
 import { Link, Stack, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { formatDate } from '../../../utils/helpers'; // Ajuste o caminho se necessário
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { formatDate } from '../../../utils/helpers';
+import * as Haptics from 'expo-haptics';
 
-// IMPORTANTE: Substitua MockBooking pelo seu tipo real `Booking` de `types/booking.ts`
-// quando você tiver a definição completa e a integração com a API.
-interface MockBooking {
-  id: string;
-  serviceName: string;
-  providerName: string;
-  providerId: string;
-  providerImageUrl?: string;
-  date: string; // ISO String
-  status: 'Confirmado' | 'Pendente' | 'Concluído' | 'Cancelado';
-  // Adicione outros campos que possam ser úteis, como 'price'
-  // price?: string;
-}
+// CORREÇÃO: Importar BookingDetails e BookingStatus
+import { BookingDetails, BookingStatus } from '../../types/backend/bookings';
+import { getBookingsForUser } from '../../services/bookingService';
+import { useAuth } from '../../../hooks/useAuth';
+
+// DEFINE O TIPO DE FILTRO GLOBALMENTE PARA CONSISTÊNCIA
+type FilterType = 'requests' | 'upcoming' | 'completed' | 'cancelled';
 
 // Componente para um item da lista de agendamentos com animação de entrada
-const AnimatedBookingItem: React.FC<{ item: MockBooking; index: number }> = ({ item, index }) => {
+// CORREÇÃO: Usar BookingDetails
+const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = ({ item, index }) => {
     const fadeAnim = useRef(new Animated.Value(0)).current;
-    const slideAnim = useRef(new Animated.Value(50)).current; // Começa 50px abaixo
+    const slideAnim = useRef(new Animated.Value(50)).current;
 
     useEffect(() => {
         Animated.parallel([
             Animated.timing(fadeAnim, {
                 toValue: 1,
                 duration: 400,
-                delay: index * 80, // Atraso escalonado para cada item
+                delay: index * 80,
                 useNativeDriver: true,
             }),
             Animated.timing(slideAnim, {
@@ -51,36 +49,62 @@ const AnimatedBookingItem: React.FC<{ item: MockBooking; index: number }> = ({ i
         ]).start();
     }, [fadeAnim, slideAnim, index]);
 
-    const getStatusStyle = (status: MockBooking['status']) => {
+    // Mapeia os status do backend para estilos de exibição no frontend
+    // CORREÇÃO: Usar BookingStatus
+    const getStatusStyle = (status: BookingStatus) => {
         switch (status) {
-            case 'Confirmado': return { text: '#388E3C', background: '#E8F5E9', icon: 'checkmark-circle-outline' as const, iconColor: '#4CAF50' };
-            case 'Pendente': return { text: '#FFA000', background: '#FFF3E0', icon: 'time-outline' as const, iconColor: '#FF9800' };
-            case 'Concluído': return { text: '#007AFF', background: '#E3F2FD', icon: 'flag-outline' as const, iconColor: '#007AFF' };
-            case 'Cancelado': return { text: '#D32F2F', background: '#FFEBEE', icon: 'close-circle-outline' as const, iconColor: '#F44336' };
+            case BookingStatus.CONFIRMED: return { text: '#388E3C', background: '#E8F5E9', icon: 'checkmark-circle-outline' as const, iconColor: '#4CAF50' };
+            case BookingStatus.PENDING: return { text: '#FFA000', background: '#FFF3E0', icon: 'time-outline' as const, iconColor: '#FF9800' };
+            case BookingStatus.PENDING_PROVIDER_CONFIRMATION: return { text: '#FF6F00', background: '#FFF3E0', icon: 'hourglass-outline' as const, iconColor: '#FF6F00' };
+            case BookingStatus.IN_PROGRESS: return { text: '#007AFF', background: '#E3F2FD', icon: 'sync-circle-outline' as const, iconColor: '#007AFF' };
+            case BookingStatus.COMPLETED: return { text: '#007AFF', background: '#E3F2FD', icon: 'flag-outline' as const, iconColor: '#007AFF' };
+            case BookingStatus.CANCELLED: return { text: '#D32F2F', background: '#FFEBEE', icon: 'close-circle-outline' as const, iconColor: '#F44336' };
+            case BookingStatus.REJECTED: return { text: '#757575', background: '#F5F5F5', icon: 'alert-circle-outline' as const, iconColor: '#757575' };
+            case BookingStatus.RESCHEDULED: return { text: '#6A1B9A', background: '#EDE7F6', icon: 'sync-outline' as const, iconColor: '#6A1B9A' };
             default: return { text: '#546E7A', background: '#ECEFF1', icon: 'help-circle-outline' as const, iconColor: '#757575' };
         }
     };
 
     const statusInfo = getStatusStyle(item.status);
+    // CORREÇÃO: Usar providerAvatarUrl do BookingDetails
+    const providerAvatarSource = item.providerAvatarUrl ? { uri: item.providerAvatarUrl } : require('../../../assets/images/default-avatar.png');
+
+    // Formata o endereço para exibição
+    const formattedAddress = item.address ?
+        `${item.address.street}, ${item.address.number}` +
+        `${item.address.complement ? ` - ${item.address.complement}` : ''}` +
+        `, ${item.address.neighborhood}, ${item.address.city} - ${item.address.state}`
+        : 'Endereço não disponível';
+
 
     return (
         <Animated.View style={[styles.itemCard, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-            <Link href={`/(client)/bookings/${item.id}` as any} asChild> {/* Adicionado 'as any' para compatibilidade de tipo de rota, se necessário */}
+            <Link href={`/(client)/bookings/${item.id}`} asChild>
                 <TouchableOpacity style={styles.itemCardContent}>
-                    {item.providerImageUrl ? (
-                        <Image source={{ uri: item.providerImageUrl }} style={styles.itemProviderImage} />
+                    {item.providerAvatarUrl ? ( // CORREÇÃO: Usar providerAvatarUrl
+                        <Image source={providerAvatarSource} style={styles.itemProviderImage} />
                     ) : (
                         <View style={styles.itemIconContainer}>
                             <Ionicons name={statusInfo.icon} size={28} color={statusInfo.iconColor} />
                         </View>
                     )}
                     <View style={styles.itemDetails}>
-                        <Text style={styles.itemServiceName} numberOfLines={1}>{item.serviceName}</Text>
-                        <Text style={styles.itemProviderName}>Com: {item.providerName}</Text>
+                        <Text style={styles.itemServiceName} numberOfLines={1}>{item.serviceName}</Text> {/* CORREÇÃO: Usar serviceName */}
+                        <Text style={styles.itemProviderName}>Com: {item.providerFullName}</Text> {/* CORREÇÃO: Usar providerFullName */}
                         <Text style={styles.itemDate}>
                             <Ionicons name="calendar-outline" size={14} color="#6C757D" />{' '}
-                            {formatDate(item.date, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            {formatDate(item.scheduledTime, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </Text>
+                        {item.address && (
+                            <Text style={styles.itemAddressText} numberOfLines={1}>
+                                <Ionicons name="location-outline" size={14} color="#6C757D" /> {formattedAddress}
+                            </Text>
+                        )}
+                        {item.totalPrice !== undefined && ( // CORREÇÃO: Usar totalPrice
+                            <Text style={styles.itemPriceText}>
+                                <MaterialCommunityIcons name="currency-usd" size={14} color="#2E7D32" /> R$ {item.totalPrice.toFixed(2).replace('.', ',')}
+                            </Text>
+                        )}
                     </View>
                     <View style={[styles.statusBadge, { backgroundColor: statusInfo.background }]}>
                         <Text style={[styles.statusText, { color: statusInfo.text }]}>{item.status}</Text>
@@ -95,136 +119,240 @@ const AnimatedBookingItem: React.FC<{ item: MockBooking; index: number }> = ({ i
 
 export default function MyBookingsScreen() {
   const router = useRouter();
-  const [bookings, setBookings] = useState<MockBooking[]>([]);
+  const { user } = useAuth();
+  // CORREÇÃO: Usar BookingDetails
+  const [bookings, setBookings] = useState<BookingDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeFilter, setActiveFilter] = useState<'upcoming' | 'past' | 'cancelled'>('upcoming');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<FilterType>('upcoming');
 
-  // << CORREÇÃO: Declaração de 'filters' movida para ANTES de 'filterButtonAnims' >>
-  const filters: Array<{ label: string; value: typeof activeFilter; icon: keyof typeof Ionicons.glyphMap }> = [
+  const filters: Array<{ label: string; value: FilterType; icon: keyof typeof Ionicons.glyphMap }> = [
+    { label: 'Solicitações', value: 'requests', icon: 'hourglass-outline' },
     { label: 'Próximos', value: 'upcoming', icon: 'calendar-outline' },
-    { label: 'Anteriores', value: 'past', icon: 'checkmark-done-outline' },
+    { label: 'Histórico', value: 'completed', icon: 'checkmark-done-outline' },
     { label: 'Cancelados', value: 'cancelled', icon: 'close-circle-outline' },
   ];
 
-  // Animações para os botões de filtro
   const filterButtonAnims = useRef(filters.map(() => new Animated.Value(1))).current;
+  const contentAnim = useRef(new Animated.Value(0)).current;
 
+  const onPressInFilterButton = useCallback((index: number) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      Animated.spring(filterButtonAnims[index], {
+          toValue: 0.9,
+          useNativeDriver: true,
+      }).start();
+  }, [filterButtonAnims]);
+
+  const onPressOutFilterButton = useCallback((index: number) => {
+      Animated.spring(filterButtonAnims[index], {
+          toValue: 1,
+          friction: 3,
+          tension: 40,
+          useNativeDriver: true,
+      }).start();
+  }, [filterButtonAnims]);
+
+
+  // Função para buscar agendamentos reais do backend
+  const loadBookings = useCallback(async (currentFilter: FilterType, refreshing: boolean = false) => {
+    if (!refreshing) setIsLoading(true);
+    setBookings([]);
+    if (!user?.id) {
+        console.warn("[MyBookingsScreen] User ID ausente, não foi possível carregar agendamentos.");
+        setIsLoading(false);
+        setIsRefreshing(false);
+        return;
+    }
+
+    Animated.timing(contentAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+    }).start(async () => {
+        try {
+            let fetchedBookings: BookingDetails[] = []; // CORREÇÃO: Usar BookingDetails
+            
+            // Mapear os filtros do frontend para os status do backend
+            if (currentFilter === 'requests') {
+                // CORREÇÃO: Usar BookingStatus.PENDING_PROVIDER_CONFIRMATION e BookingStatus.PENDING
+                const pendingProvider = await getBookingsForUser(BookingStatus.PENDING_PROVIDER_CONFIRMATION);
+                const pendingClient = await getBookingsForUser(BookingStatus.PENDING);
+                fetchedBookings = [...pendingProvider, ...pendingClient].filter(b => new Date(b.scheduledTime) >= new Date());
+            } else if (currentFilter === 'upcoming') {
+                // CORREÇÃO: Usar BookingStatus.CONFIRMED e BookingStatus.IN_PROGRESS
+                const confirmed = await getBookingsForUser(BookingStatus.CONFIRMED);
+                const inProgress = await getBookingsForUser(BookingStatus.IN_PROGRESS);
+                fetchedBookings = [...confirmed, ...inProgress].filter(b => new Date(b.scheduledTime) >= new Date());
+            } else if (currentFilter === 'completed') {
+                // CORREÇÃO: Usar BookingStatus.COMPLETED
+                const completed = await getBookingsForUser(BookingStatus.COMPLETED);
+                fetchedBookings = [...completed].filter(b => new Date(b.scheduledTime) < new Date());
+            } else if (currentFilter === 'cancelled') {
+                // CORREÇÃO: Usar BookingStatus.CANCELLED e BookingStatus.REJECTED
+                const cancelled = await getBookingsForUser(BookingStatus.CANCELLED);
+                const rejected = await getBookingsForUser(BookingStatus.REJECTED);
+                fetchedBookings = [...cancelled, ...rejected];
+            }
+            
+            // Note: O filtro de data para 'completed' e 'upcoming' deve ser feito no backend idealmente
+            // ou ser mais robusto aqui, considerando que getBookingsForUser pode retornar todos os bookings de um status.
+            // A lógica atual de filtro de data em 'upcoming' e 'completed' pode não ser perfeita
+            // se o backend não filtrar por data.
+
+            fetchedBookings.sort((a, b) => new Date(a.scheduledTime).getTime() - new Date(b.scheduledTime).getTime());
+
+            setBookings(fetchedBookings);
+            if (refreshing) Alert.alert("Sucesso", "Agendamentos atualizados!");
+
+        } catch (err: any) {
+            console.error("Erro ao buscar agendamentos:", err.response?.data || err.message);
+            Alert.alert("Erro", err.response?.data?.message || "Não foi possível carregar seus agendamentos.");
+        } finally {
+            setIsLoading(false);
+            setIsRefreshing(false);
+            Animated.timing(contentAnim, {
+                toValue: 1,
+                duration: 400,
+                useNativeDriver: true,
+            }).start();
+        }
+    });
+
+
+  }, [activeFilter, user?.id, contentAnim]);
 
   useEffect(() => {
-    console.log("[MyBookingsScreen] Carregando agendamentos com filtro:", activeFilter);
-    setIsLoading(true);
-    setBookings([]);
+    loadBookings(activeFilter);
+  }, [activeFilter, loadBookings]);
 
-    // TODO: Substituir pela chamada real ao seu clientService.getClientBookings({ status: activeFilter });
-    setTimeout(() => {
-      let mockData: MockBooking[] = [];
-      if (activeFilter === 'upcoming') {
-        mockData = [
-          { id: 'book1', serviceName: 'Limpeza Padrão Semanal', providerName: 'Ana Oliveira', providerId: 'provider1', providerImageUrl: 'https://via.placeholder.com/80/ADD8E6/000000?text=Ana+O', date: new Date(Date.now() + 86400000 * 2).toISOString(), status: 'Confirmado' },
-          { id: 'book2', serviceName: 'Limpeza Pesada Quinzenal', providerName: 'Carlos Silva', providerId: 'provider2', providerImageUrl: 'https://via.placeholder.com/80/E0F7FA/000000?text=Carlos+S', date: new Date(Date.now() + 86400000 * 7).toISOString(), status: 'Pendente' },
-        ];
-      } else if (activeFilter === 'past') {
-        mockData = [
-          { id: 'book3', serviceName: 'Limpeza Pós-Obra', providerName: 'Mariana Costa', providerId: 'provider3', providerImageUrl: 'https://via.placeholder.com/80/B3E5FC/000000?text=Mariana+C', date: new Date(Date.now() - 86400000 * 5).toISOString(), status: 'Concluído' },
-        ];
-      } else if (activeFilter === 'cancelled') {
-         mockData = [
-          { id: 'book4', serviceName: 'Faxina Express', providerName: 'Ana Oliveira', providerId: 'provider1', providerImageUrl: 'https://via.placeholder.com/80/FFCDD2/000000?text=Ana+O', date: new Date(Date.now() - 86400000 * 10).toISOString(), status: 'Cancelado' },
-        ];
-      }
-      setBookings(mockData);
-      setIsLoading(false);
-    }, 1000);
-  }, [activeFilter]);
+    const handleRefresh = useCallback(() => {
+        setIsRefreshing(true);
+        loadBookings(activeFilter, true);
+    }, [activeFilter, loadBookings]);
 
-    // Funções para animação de "pressionar" nos botões de filtro
-    const onPressInFilterButton = (index: number) => {
-        Animated.spring(filterButtonAnims[index], {
-            toValue: 0.9,
-            useNativeDriver: true,
-        }).start();
+    const handleFilterChange = (newFilter: FilterType) => {
+        if (newFilter === activeFilter) return;
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        setActiveFilter(newFilter);
     };
 
-    const onPressOutFilterButton = (index: number) => {
-        Animated.spring(filterButtonAnims[index], {
-            toValue: 1,
-            friction: 3,
-            tension: 40,
-            useNativeDriver: true,
-        }).start();
+    // CORREÇÃO: item tipado como BookingDetails
+    const handleServicePress = (item: BookingDetails) => {
+        router.push(`/(client)/bookings/${item.id}` as any);
     };
 
+    const getHeaderTitle = () => {
+        return "Meus Agendamentos";
+    };
 
-  return (
-    <View style={styles.container}>
-      <Stack.Screen options={{ title: 'Meus Agendamentos' }} />
-      
-      <View style={styles.filterContainer}>
-        {filters.map((filterItem, index) => (
-          <Animated.View key={filterItem.value} style={{ transform: [{ scale: filterButtonAnims[index] }] }}>
-            <TouchableOpacity
-              style={[
-                styles.filterButton,
-                activeFilter === filterItem.value && styles.filterButtonActive
-              ]}
-              onPress={() => setActiveFilter(filterItem.value)}
-              onPressIn={() => onPressInFilterButton(index)}
-              onPressOut={() => onPressOutFilterButton(index)}
-            >
-              <Ionicons 
-                name={filterItem.icon} 
-                size={18} 
-                color={activeFilter === filterItem.value ? '#FFFFFF' : '#495057'} 
-                style={styles.filterIcon}
-              />
-              <Text style={[
-                styles.filterButtonText,
-                activeFilter === filterItem.value && styles.filterButtonTextActive
-              ]}>
-                {filterItem.label}
-              </Text>
-            </TouchableOpacity>
-          </Animated.View>
-        ))}
-      </View>
+    const EmptyListFeedback = () => {
+        let title = "Nenhum agendamento encontrado.";
+        let subText = "Ajuste o filtro ou verifique mais tarde.";
+        let ctaButton = null;
 
-      {isLoading ? (
-        <View style={styles.centeredFeedback}>
-            <ActivityIndicator size="large" color="#007AFF" />
-            <Text style={styles.loadingText}>Carregando agendamentos...</Text>
-        </View>
-      ) : bookings.length > 0 ? (
-        <FlatList
-          data={bookings}
-          renderItem={({ item, index }) => <AnimatedBookingItem item={item} index={index} />}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContentContainer}
-          showsVerticalScrollIndicator={false}
-        />
-      ) : (
-        <View style={styles.centeredFeedback}>
-            <Ionicons name="file-tray-stacked-outline" size={64} color="#CED4DA" />
-            <Text style={styles.emptyText}>Nenhum agendamento aqui.</Text>
-            <Text style={styles.emptySubText}>
-              {activeFilter === 'upcoming' ? "Você não tem serviços futuros agendados." : 
-               activeFilter === 'past' ? "Nenhum serviço anterior encontrado." :
-               "Nenhum serviço cancelado."}
-            </Text>
-            {activeFilter === 'upcoming' && (
-                <TouchableOpacity style={styles.exploreButton} onPress={() => router.push('/(client)/explore' as any)}> {/* Adicionado 'as any' para compatibilidade de tipo de rota, se necessário */}
+        if (activeFilter === 'requests') {
+            title = "Nenhuma solicitação de agendamento.";
+            subText = "Parece que você não fez nenhum pedido pendente ainda.";
+            ctaButton = (
+                <TouchableOpacity style={styles.emptyStateButton} onPress={() => router.push('/(client)/explore/todas-categorias' as any)}>
+                    <Ionicons name="search-outline" size={20} color="#FFFFFF" />
+                    <Text style={styles.emptyStateButtonText}>Explorar Categorias</Text>
+                </TouchableOpacity>
+            );
+        } else if (activeFilter === 'upcoming') {
+            title = "Você não tem serviços futuros agendados.";
+            subText = "Explore e agende novos serviços para vê-los aqui!";
+            ctaButton = (
+                <TouchableOpacity style={styles.exploreButton} onPress={() => router.push('/(client)/explore' as any)}>
                     <Text style={styles.exploreButtonText}>Explorar Serviços</Text>
                 </TouchableOpacity>
+            );
+        } else if (activeFilter === 'completed') {
+            title = "Seu histórico de serviços está vazio.";
+            subText = "Comece a agendar e concluir serviços para vê-los aqui!";
+        } else if (activeFilter === 'cancelled') {
+            title = "Nenhum serviço cancelado.";
+            subText = "Serviços cancelados ou recusados aparecerão aqui.";
+        }
+
+        return (
+            <View style={styles.centeredFeedback}>
+                <Ionicons name="clipboard-outline" size={64} color="#CED4DA" />
+                <Text style={styles.emptyText}>{title}</Text>
+                <Text style={styles.emptySubText}>{subText}</Text>
+                {ctaButton}
+            </View>
+        );
+    };
+
+
+    return (
+        <View style={styles.container}>
+            <Stack.Screen options={{ title: 'Meus Agendamentos' }} />
+            
+            <View style={styles.filterContainer}>
+                {filters.map((filterItem, index) => (
+                    <Animated.View key={filterItem.value} style={{ transform: [{ scale: filterButtonAnims[index] }] }}>
+                        <TouchableOpacity
+                            style={[
+                                styles.filterButton,
+                                activeFilter === filterItem.value && styles.filterButtonActive
+                            ]}
+                            onPress={() => handleFilterChange(filterItem.value)}
+                            onPressIn={() => onPressInFilterButton(index)}
+                            onPressOut={() => onPressOutFilterButton(index)}
+                        >
+                            <Ionicons
+                                name={filterItem.icon}
+                                size={18}
+                                color={activeFilter === filterItem.value ? '#FFFFFF' : '#495057'}
+                                style={styles.filterIcon}
+                            />
+                            <Text style={[
+                                styles.filterButtonText,
+                                activeFilter === filterItem.value && styles.filterButtonTextActive
+                            ]}>
+                                {filterItem.label}
+                            </Text>
+                        </TouchableOpacity>
+                    </Animated.View>
+                ))}
+            </View>
+
+            {isLoading && bookings.length === 0 ? (
+                <View style={styles.centeredFeedback}>
+                    <ActivityIndicator size="large" color="#007AFF" />
+                    <Text style={styles.loadingText}>Carregando agendamentos...</Text>
+                </View>
+            ) : bookings.length > 0 ? (
+                <FlatList
+                    data={bookings}
+                    renderItem={({ item, index }) => <AnimatedBookingItem item={item} index={index} />}
+                    keyExtractor={(item) => item.id}
+                    contentContainerStyle={styles.listContentContainer}
+                    showsVerticalScrollIndicator={false}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={isRefreshing}
+                            onRefresh={handleRefresh}
+                            tintColor="#007AFF"
+                            title="Atualizando agendamentos..."
+                            titleColor="#007AFF"
+                        />
+                    }
+                />
+            ) : (
+                <EmptyListFeedback />
             )}
         </View>
-      )}
-    </View>
-  );
+    );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA', // Fundo ainda mais suave
+    backgroundColor: '#F0F2F5',
   },
   filterContainer: {
     flexDirection: 'row',
@@ -239,13 +367,13 @@ const styles = StyleSheet.create({
     }),
   },
   filterButton: {
-    flex: 1, // Para distribuir igualmente
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 10,
     paddingHorizontal: 8,
-    borderRadius: 25, // Mais arredondado
+    borderRadius: 25,
     marginHorizontal: 5,
     backgroundColor: '#F1F3F5',
     borderWidth: 1,
@@ -279,21 +407,21 @@ const styles = StyleSheet.create({
         android: { elevation: 3 },
     }),
   },
-  itemCardContent: { // Conteúdo interno do TouchableOpacity
+  itemCardContent: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 15,
   },
-  itemProviderImage: { // Estilo para a imagem do prestador
+  itemProviderImage: {
     width: 50,
     height: 50,
     borderRadius: 25,
     marginRight: 15,
-    backgroundColor: '#E9ECEF', // Cor de fundo enquanto a imagem carrega
+    backgroundColor: '#E9ECEF',
     borderWidth: 1,
     borderColor: '#E0E0E0',
   },
-  itemIconContainer: { // Fallback se não houver imagem
+  itemIconContainer: {
     width: 50,
     height: 50,
     borderRadius: 25,
@@ -322,12 +450,27 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#6C757D',
   },
+  itemAddressText: {
+    fontSize: 13,
+    color: '#6C757D',
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  itemPriceText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#2E7D32',
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
   statusBadge: {
     paddingVertical: 5,
     paddingHorizontal: 10,
-    borderRadius: 15, // Mais arredondado
+    borderRadius: 15,
     marginLeft: 10,
-    alignSelf: 'center', // Alinha verticalmente com os detalhes
+    alignSelf: 'center',
   },
   statusText: {
     fontSize: 10,
@@ -336,7 +479,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   itemChevron: {
-    marginLeft: 8, // Pequeno espaço antes do chevron
+    marginLeft: 8,
   },
   centeredFeedback: {
     flex: 1,
@@ -345,9 +488,9 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   loadingText: {
-      marginTop: 15,
-      fontSize: 16,
-      color: '#6C757D',
+    fontSize: 16,
+    color: '#6C757D',
+    marginTop: 10,
   },
   emptyText: {
     fontSize: 19,
@@ -361,6 +504,25 @@ const styles = StyleSheet.create({
       color: '#6C757D',
       textAlign: 'center',
       marginBottom: 25,
+  },
+  emptyStateButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+    ...Platform.select({
+      ios: { shadowColor: 'rgba(0,122,255,0.3)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.8, shadowRadius: 4 },
+      android: { elevation: 5 },
+    }),
+  },
+  emptyStateButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
   exploreButton: {
       backgroundColor: '#007AFF',

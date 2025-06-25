@@ -1,75 +1,119 @@
-// app/welcome.tsx
 import React, { useEffect } from 'react';
-import { View, StyleSheet, Image, Dimensions, Platform } from 'react-native';
+import { View, StyleSheet, Image, Dimensions, Platform, Text } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
   Easing,
+  withRepeat,
 } from 'react-native-reanimated';
 import { Stack, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const { width, height } = Dimensions.get('window');
 
-// Assumindo que 'icon.png' é o seu logo e que ele é azul,
-// vamos usar tintColor para deixá-lo branco conforme a imagem.
-const LOGO_IMAGE = require('../assets/images/icon.png');
+const LOGO_IMAGE = require('../assets/images/logo.png');
 const WELCOME_SCREEN_VIEWED_KEY = 'welcomeScreenViewed';
 
-const PRIMARY_BLUE = '#2A72E7'; // Cor azul principal do fundo da imagem
-const WHITE_COLOR = '#FFFFFF'; // Cor branca para o círculo e o logo
+const BACKGROUND_COLOR_1 = '#FFFFFF';
+const BACKGROUND_COLOR_2 = '#F8F8FF';
+const BACKGROUND_COLOR_3 = '#E6F0FF';
+
+// Define logo dimensions for easier calculation and responsiveness
+const LOGO_WIDTH = 250;
+const LOGO_HEIGHT = 250;
+const REFLECTION_GAP = 10; // Espaçamento entre o logo e o reflexo
 
 export default function WelcomeScreen() {
   const router = useRouter();
 
-  // Valores compartilhados para animação do círculo do logo
-  const logoCircleScale = useSharedValue(0.8); // Começa menor
-  const logoCircleOpacity = useSharedValue(0); // Começa invisível
+  const logoScale = useSharedValue(0.8);
+  const logoOpacity = useSharedValue(0);
+  const reflectionOpacityAnim = useSharedValue(0.5); // Opacidade geral para o reflexo
 
   useEffect(() => {
-    // Animação de entrada do círculo do logo
-    logoCircleOpacity.value = withTiming(1, { duration: 800 }); // Aparece gradualmente
-    logoCircleScale.value = withTiming(1, { duration: 800, easing: Easing.out(Easing.back(1.2)) }); // Escala com um pequeno "bounce"
+    // Animação de entrada do logo
+    logoOpacity.value = withTiming(1, { duration: 80 });
+    logoScale.value = withTiming(1, { duration: 80, easing: Easing.out(Easing.back(1.2)) });
 
-    // Define a duração da tela de splash antes de navegar
-    const SPLASH_DURATION = 2500; // 2.5 segundos
+    // Animação de opacidade para o reflexo, tornando-o sutil e robusto
+    reflectionOpacityAnim.value = withRepeat(
+      withTiming(0.2, { duration: 2000, easing: Easing.inOut(Easing.ease) }), // Opacidade máxima mais baixa para sutileza
+      -1, // Repetição infinita
+      true // Inverter a animação de volta
+    );
+
+    // Temporizador para redirecionamento automático
     const timer = setTimeout(async () => {
+      console.log("WelcomeScreen: Redirecionando automaticamente após 6 segundos.");
       try {
-        // Marca que a tela de boas-vindas já foi visualizada
         await AsyncStorage.setItem(WELCOME_SCREEN_VIEWED_KEY, 'true');
+        console.log("WelcomeScreen: WELCOME_SCREEN_VIEWED_KEY set to 'true' via auto-redirect.");
+        router.replace('/(auth)/login');
       } catch (e) {
-        console.warn("WelcomeScreen: Erro ao salvar status no AsyncStorage", e);
+        console.warn("WelcomeScreen: Erro ao salvar status no AsyncStorage durante auto-redirect", e);
+        router.replace('/(auth)/login');
       }
-      // Navega para a tela de login após a duração do splash
-      router.replace('/(auth)/login');
-    }, SPLASH_DURATION);
+    }, 6000);
 
-    // Limpa o timer se o componente for desmontado antes do tempo
     return () => clearTimeout(timer);
-  }, [router]); // 'router' é uma dependência para o useEffect
+  }, []);
 
-  // Estilo animado para o círculo do logo
-  const animatedLogoCircleStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: logoCircleScale.value }],
-    opacity: logoCircleOpacity.value,
+  // Estilo animado para o logo principal
+  const animatedLogoStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: logoScale.value }],
+    opacity: logoOpacity.value,
+  }));
+
+  // NOVO: Estilo animado para o reflexo inferior
+  const animatedReflectionStyle = useAnimatedStyle(() => ({
+    // Aplicar a mesma escala do logo para responsividade
+    transform: [
+      { scaleX: logoScale.value },
+      { scaleY: logoScale.value * -1 }, // Inverter verticalmente para criar o reflexo
+      { perspective: 1000 }, // Necessário para que rotateX tenha um efeito 3D
+      { rotateX: '20deg' }, // Inclinar o reflexo ligeiramente para trás (ajuste conforme necessário)
+    ],
+    opacity: reflectionOpacityAnim.value, // Aplicar a opacidade animada
   }));
 
   return (
     <View style={styles.container}>
-      {/* Configurações da tela de navegação (sem cabeçalho) */}
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Fundo azul sólido que cobre toda a tela */}
-      <View style={styles.solidBackground} />
+      <LinearGradient
+        colors={[BACKGROUND_COLOR_1, BACKGROUND_COLOR_2, BACKGROUND_COLOR_3]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.gradientBackground}
+      />
 
-      {/* Círculo branco animado contendo o logo */}
-      <Animated.View style={[styles.logoCircle, animatedLogoCircleStyle]}>
-        <Image
-          source={LOGO_IMAGE}
-          style={styles.logoImage} // Aplica tintColor para deixar o logo branco
-        />
-      </Animated.View>
+      {/* Grupo para o Logo e seu Reflexo, centralizado na tela como uma unidade */}
+      <View style={styles.logoAndReflectionGroup}>
+        {/* Logo Principal */}
+        <Animated.View style={[styles.logoWrapper, animatedLogoStyle]}>
+          <Image
+            source={LOGO_IMAGE}
+            style={styles.logoImage}
+          />
+        </Animated.View>
+
+        {/* Reflexo Inferior */}
+        <Animated.View style={[styles.reflectionWrapper, animatedReflectionStyle]}>
+          <Image
+            source={LOGO_IMAGE}
+            style={styles.logoImage}
+          />
+          {/* Camada de Gradiente para o desvanecimento do reflexo */}
+          <LinearGradient
+            colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.4)', 'rgba(255,255,255,0.7)']} // Desvanece de transparente para branco mais opaco
+            start={{ x: 0, y: 0 }} // Começa no topo da imagem do reflexo (que é a parte inferior do logo original)
+            end={{ x: 0, y: 1 }} // Termina na parte inferior da imagem do reflexo (que é a parte superior do logo original, invertida)
+            style={styles.reflectionGradientOverlay}
+          />
+        </Animated.View>
+      </View>
     </View>
   );
 }
@@ -79,33 +123,37 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden', // Garante que o conteúdo não vaze
+    overflow: 'hidden', // Garante que nada saia dos limites do contêiner
   },
-  solidBackground: {
-    ...StyleSheet.absoluteFillObject, // Cobre toda a área da tela
-    backgroundColor: PRIMARY_BLUE, // Fundo azul sólido conforme a imagem
+  gradientBackground: {
+    ...StyleSheet.absoluteFillObject, // Preenche todo o espaço do contêiner pai
+    opacity: 1,
   },
-  logoCircle: {
-    width: 150, // Diâmetro do círculo branco
-    height: 150,
-    borderRadius: 75, // Metade da largura/altura para um círculo perfeito
-    backgroundColor: WHITE_COLOR, // Fundo branco para o círculo
+  // Grupo para o logo e seu reflexo, centralizado como uma única unidade
+  logoAndReflectionGroup: {
     alignItems: 'center',
     justifyContent: 'center',
-    // Borda branca ao redor do círculo
-    borderWidth: 2,
-    borderColor: WHITE_COLOR,
-    // Efeito de brilho azul ao redor do círculo
-    shadowColor: PRIMARY_BLUE, // Cor do brilho
-    shadowOffset: { width: 0, height: 0 }, // Sem deslocamento para um brilho uniforme
-    shadowOpacity: 0.5, // Opacidade do brilho (ajuste para intensidade)
-    shadowRadius: 15, // Espalhamento do brilho (ajuste para tamanho)
-    elevation: 15, // Sombra para Android (deve ser similar ao shadowRadius)
+    flexDirection: 'column', // Empilha o logo e o reflexo verticalmente
+  },
+  logoWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: REFLECTION_GAP, // Adiciona um espaçamento abaixo do logo
   },
   logoImage: {
-    width: 80, // Tamanho do logo dentro do círculo
-    height: 80,
-    resizeMode: 'contain', // Garante que o logo se ajuste sem cortar
-    tintColor: WHITE_COLOR, // Muda a cor do logo para branco
+    width: LOGO_WIDTH,
+    height: LOGO_HEIGHT,
+    resizeMode: 'contain',
+  },
+  // Estilos para o contêiner do reflexo
+  reflectionWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: LOGO_WIDTH, // Garante que o reflexo tenha as mesmas dimensões do logo
+    height: LOGO_HEIGHT,
+    overflow: 'hidden', // Crucial para cortar o reflexo em suas bordas
+  },
+  reflectionGradientOverlay: {
+    ...StyleSheet.absoluteFillObject, // Preenche todo o espaço do contêiner do reflexo
   },
 });

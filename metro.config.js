@@ -6,8 +6,11 @@ const projectRoot = __dirname;
 
 const config = getDefaultConfig(projectRoot);
 
+// Adicione 'json' aos assetExts para que Metro reconheça arquivos .json como assets
+// Isso é crucial para carregar arquivos .typeface.json
+config.resolver.assetExts = [...config.resolver.assetExts, 'json'];
+
 // Forçando o Metro a encontrar o tslib na node_modules da raiz
-config.resolver = config.resolver || {}; // Garante que config.resolver exista
 config.resolver.extraNodeModules = {
   ...(config.resolver.extraNodeModules || {}), // Preserva outros extraNodeModules se houver
   tslib: path.resolve(projectRoot, 'node_modules/tslib'),

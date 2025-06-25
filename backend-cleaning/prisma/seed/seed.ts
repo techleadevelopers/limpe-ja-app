@@ -1,0 +1,869 @@
+import {
+  PrismaClient,
+  UserRole,
+  Prisma,
+  VerificationStatus,
+  BookingStatus,
+  TransactionType, // <<<< CORREÇÃO: Importado TransactionType diretamente
+} from '@prisma/client';
+import * as bcrypt from 'bcrypt';
+
+const prisma = new PrismaClient();
+
+async function main() {
+  console.log('Iniciando o processo de seed...');
+
+  // --- Usuário Teste 1 (CLIENT) ---
+  const teste1Email = 'teste1@cleaning.com';
+  const teste1Password = 'teste123';
+  const hashedTeste1Password = await bcrypt.hash(teste1Password, 8); // Usando bcrypt.hash
+
+  const existingTeste1User = await prisma.user.findUnique({
+    where: { email: teste1Email },
+  });
+
+  if (!existingTeste1User) {
+    await prisma.user.create({
+      data: {
+        email: teste1Email,
+        passwordHash: hashedTeste1Password, // Alterado de 'password' para 'passwordHash'
+        role: UserRole.CLIENT, // Usando o enum UserRole
+        avatarUrl: 'https://randomuser.me/api/portraits/women/55.jpg', // Adicionado avatar para o cliente de teste
+        client: {
+          // Criando o perfil de cliente associado
+          create: {
+            fullName: 'Teste 1', // Mapeando 'name' para 'fullName' no Client
+            // Adicione outros campos necessários para o Client se houver
+            phone: '11900000000', // Exemplo de telefone, adicione um valor real se necessário
+            address: {
+              create: {
+                street: 'Rua Teste 123',
+                city: 'São Paulo',
+                state: 'SP',
+                cep: '01000-000', // Mapeando 'zipcode' para 'cep' no Address
+                number: 's/n', // Adicione um número se necessário
+                neighborhood: 'Centro', // Adicione um bairro se necessário
+              },
+            },
+          },
+        },
+      },
+    });
+    console.log(`Usuário Cliente 'Teste 1' (${teste1Email}) criado com sucesso!`);
+  } else {
+    console.log(`Usuário Cliente 'Teste 1' (${teste1Email}) já existe. Ignorando criação.`);
+  }
+
+  // --- Admin com Perfil de Cliente ---
+  const adminClientEmail = 'admin.client@cleaning.com';
+  const adminClientPassword = 'adminclientpass';
+  const hashedAdminClientPassword = await bcrypt.hash(adminClientPassword, 10);
+
+  const existingAdminClient = await prisma.user.findUnique({
+    where: { email: adminClientEmail },
+  });
+
+  if (!existingAdminClient) {
+    await prisma.user.create({
+      data: {
+        email: adminClientEmail,
+        passwordHash: hashedAdminClientPassword,
+        role: UserRole.ADMIN,
+        avatarUrl: 'https://randomuser.me/api/portraits/men/90.jpg', // Avatar para Admin Cliente Teste
+        client: {
+          create: {
+            fullName: 'Admin Cliente Teste',
+            phone: '11911111111',
+            address: {
+              create: {
+                cep: '01000-000',
+                street: 'Rua do Admin Cliente',
+                number: '1',
+                neighborhood: 'Centro',
+                city: 'São Paulo',
+                state: 'SP',
+              },
+            },
+          },
+        },
+      },
+    });
+    console.log(`Usuário Admin/Cliente '${adminClientEmail}' criado com sucesso!`);
+  } else {
+    console.log(`Usuário Admin/Cliente '${adminClientEmail}' já existe. Ignorando criação.`);
+  }
+
+  // --- Admin com Perfil de Provedor ---
+  const adminProviderEmail = 'admin.provider@cleaning.com';
+  const adminProviderPassword = 'adminproviderpass';
+  const hashedAdminProviderPassword = await bcrypt.hash(adminProviderPassword, 10);
+
+  const existingAdminProvider = await prisma.user.findUnique({
+    where: { email: adminProviderEmail },
+  });
+
+  if (!existingAdminProvider) {
+    await prisma.user.create({
+      data: {
+        email: adminProviderEmail,
+        passwordHash: hashedAdminProviderPassword,
+        role: UserRole.ADMIN,
+        avatarUrl: 'https://randomuser.me/api/portraits/men/80.jpg', // Novo avatar para Admin Provedor Teste
+        provider: {
+          create: {
+            fullName: 'Admin Provedor Teste',
+            cpf: '000.000.000-00',
+            dateOfBirth: new Date('1980-01-01'),
+            phone: '11922222222',
+            yearsOfExperience: 5,
+            avatarUrl: 'https://randomuser.me/api/portraits/men/80.jpg', // Mantém no Provider para consistência
+            verificationStatus: VerificationStatus.APPROVED,
+            bio: 'Administrador que também atua como provedor.',
+            pixKey: 'admin.provider@pix.com',
+            address: {
+              create: {
+                cep: '02000-000',
+                street: 'Avenida Admin Provedor',
+                number: '2',
+                neighborhood: 'Vila Admin',
+                city: 'Rio de Janeiro',
+                state: 'RJ',
+              },
+            },
+          },
+        },
+      },
+    });
+    console.log(`Usuário Admin/Provedor '${adminProviderEmail}' criado com sucesso!`);
+  } else {
+    console.log(`Usuário Admin/Provedor '${adminProviderEmail}' já existe. Ignorando criação.`);
+  }
+
+  // --- ADICIONADO: CRIAÇÃO DE SERVIÇOS (CATEGORIAS) COM ÍCONES ---
+  console.log('Criando/Atualizando serviços (categorias)...');
+
+  type ServiceSeedData = {
+    name: string;
+    description: string;
+    price: number;
+    icon: string;
+  };
+
+  const servicesData: ServiceSeedData[] = [
+    { name: 'Residencial', description: 'Limpeza completa de residências.', price: 150.0, icon: 'residencial.png' },
+    { name: 'Comercial', description: 'Limpeza para ambientes comerciais.', price: 200.0, icon: 'comercial.png' },
+    { name: 'Pós-Obra', description: 'Limpeza detalhada após reformas e construções.', price: 300.0, icon: 'obra.png' },
+    { name: 'Vidros', description: 'Limpeza especializada de janelas e superfícies de vidro.', price: 100.0, icon: 'vidro.png' },
+    { name: 'Escritório', description: 'Limpeza e organização de espaços de escritório.', price: 180.0, icon: 'escritorio.png' },
+    { name: 'Estofados', description: 'Limpeza e higienização de estofados.', price: 120.0, icon: 'estofados.png' },
+    { name: 'Passadoria', description: 'Serviço de passar roupas.', price: 80.0, icon: 'passadoria.png' },
+  ];
+
+  for (const service of servicesData) {
+    await prisma.service.upsert({
+      where: { name: service.name },
+      update: {
+        description: service.description,
+        price: new Prisma.Decimal(service.price),
+        icon: service.icon,
+      },
+      create: {
+        name: service.name,
+        description: service.description,
+        price: new Prisma.Decimal(service.price),
+        icon: service.icon,
+      },
+    });
+    console.log(`Serviço '${service.name}' criado/atualizado.`);
+  }
+
+  // --- ADICIONADO: CRIAÇÃO E ATUALIZAÇÃO DE PROVEDORES DE TESTE (PLACEHOLDERS) ---
+  console.log('Criando/Atualizando provedores de teste...');
+
+  type ProviderSeedData = {
+    email: string;
+    password: string;
+    fullName: string;
+    cpf: string;
+    dateOfBirth: Date;
+    phone: string;
+    yearsOfExperience: number;
+    avatarUrl: string;
+    verificationStatus: VerificationStatus;
+    bio: string;
+    address: {
+      cep: string;
+      street: string;
+      number: string;
+      neighborhood: string;
+      city: string;
+      state: string;
+    };
+    services: string[];
+    pixKey: string;
+  };
+
+  const testProvidersData: ProviderSeedData[] = [
+    {
+      email: 'provider1@cleaning.com',
+      password: 'testprovider1pass',
+      fullName: 'Maria da Silva',
+      cpf: '111.111.111-11',
+      dateOfBirth: new Date('1990-05-15'),
+      phone: '11933333333',
+      yearsOfExperience: 3,
+      avatarUrl: 'https://randomuser.me/api/portraits/women/68.jpg', // <--- URL ATUALIZADA
+      verificationStatus: VerificationStatus.APPROVED,
+      bio: 'Especialista em limpeza residencial com foco em detalhes e organização. Amo deixar ambientes brilhantes!',
+      address: {
+        cep: '01311-000',
+        street: 'Av. Paulista',
+        number: '1000',
+        neighborhood: 'Bela Vista',
+        city: 'São Paulo',
+        state: 'SP',
+      },
+      services: ['Residencial', 'Pós-Obra'],
+      pixKey: 'mariadasilva.pix@email.com',
+    },
+    {
+      email: 'provider2@cleaning.com',
+      password: 'testprovider2pass',
+      fullName: 'João de Souza',
+      cpf: '222.222.222-22',
+      dateOfBirth: new Date('1988-11-20'),
+      phone: '11944444444',
+      yearsOfExperience: 7,
+      avatarUrl: 'https://randomuser.me/api/portraits/men/75.jpg', // <--- URL ATUALIZADA
+      verificationStatus: VerificationStatus.APPROVED,
+      bio: 'Limpeza comercial eficiente e confiável. Atendo grandes e pequenos escritórios com excelência.',
+      address: {
+        cep: '04543-010',
+        street: 'R. Joaquim Floriano',
+        number: '500',
+        neighborhood: 'Itaim Bibi',
+        city: 'São Paulo',
+        state: 'SP',
+      },
+      services: ['Comercial', 'Escritório'],
+      pixKey: 'joao.souza@banco.com.br',
+    },
+    {
+      email: 'provider3@cleaning.com',
+      password: 'testprovider3pass',
+      fullName: 'Helena Teste',
+      cpf: '333.333.333-33',
+      dateOfBirth: new Date('1995-03-01'),
+      phone: '11955555555',
+      yearsOfExperience: 2,
+      avatarUrl: 'https://randomuser.me/api/portraits/thumb/women/12.jpg', // <--- URL ATUALIZADA
+      verificationStatus: VerificationStatus.PENDING_INITIAL_REVIEW,
+      bio: 'Profissional organizada e atenciosa, buscando sempre a satisfação do cliente.',
+      address: {
+        cep: '03100-000',
+        street: 'Rua das Cores',
+        number: '50',
+        neighborhood: 'Mooca',
+        city: 'São Paulo',
+        state: 'SP',
+      },
+      services: ['Residencial', 'Passadoria'],
+      pixKey: 'helena.pix@email.com',
+    },
+  ];
+
+  for (const providerData of testProvidersData) {
+    const existingUser = await prisma.user.findUnique({
+      where: { email: providerData.email },
+      include: { provider: true },
+    });
+
+    let currentProviderId: string;
+    let providerExists: boolean = false;
+
+    if (!existingUser) {
+      const hashedPass = await bcrypt.hash(providerData.password, 10);
+      const newUser = await prisma.user.create({
+        data: {
+          email: providerData.email,
+          passwordHash: hashedPass,
+          // Adiciona o avatarUrl ao User também, se o schema.prisma foi atualizado para isso
+          avatarUrl: providerData.avatarUrl, // <--- GARANTIR QUE ISTO É POPULADO NO MODELO USER
+          role: UserRole.PROVIDER,
+          provider: {
+            create: {
+              fullName: providerData.fullName,
+              cpf: providerData.cpf,
+              dateOfBirth: providerData.dateOfBirth,
+              phone: providerData.phone,
+              yearsOfExperience: providerData.yearsOfExperience,
+              avatarUrl: providerData.avatarUrl, // Mantém no Provider para consistência
+              verificationStatus: providerData.verificationStatus,
+              bio: providerData.bio,
+              pixKey: providerData.pixKey,
+              address: {
+                create: providerData.address,
+              },
+            },
+          },
+        },
+        include: { provider: true },
+      });
+      currentProviderId = newUser.provider!.id;
+      console.log(`Usuário Provedor de Teste '${providerData.email}' criado com sucesso!`);
+    } else if (existingUser && existingUser.provider) {
+      currentProviderId = existingUser.provider.id;
+      providerExists = true;
+
+      await prisma.user.update({
+        where: { id: existingUser.id },
+        data: {
+          avatarUrl: providerData.avatarUrl, // Atualiza o avatarUrl no User existente
+        },
+      });
+
+      await prisma.provider.update({
+        where: { id: currentProviderId },
+        data: {
+          fullName: providerData.fullName,
+          cpf: providerData.cpf,
+          dateOfBirth: providerData.dateOfBirth,
+          phone: providerData.phone,
+          yearsOfExperience: providerData.yearsOfExperience,
+          avatarUrl: providerData.avatarUrl,
+          verificationStatus: providerData.verificationStatus,
+          bio: providerData.bio,
+          pixKey: providerData.pixKey,
+          address: {
+            upsert: {
+              create: providerData.address,
+              update: providerData.address,
+            },
+          },
+        },
+      });
+      console.log(`Usuário Provedor de Teste '${providerData.email}' já existe. Perfil de provedor e usuário atualizados.`);
+    } else {
+      // Caso o usuário exista, mas o perfil de provedor não (apenas se a lógica de criação permitir)
+      const newProviderProfile = await prisma.provider.create({
+        data: {
+          userId: existingUser.id,
+          fullName: providerData.fullName,
+          cpf: providerData.cpf,
+          dateOfBirth: providerData.dateOfBirth,
+          phone: providerData.phone,
+          yearsOfExperience: providerData.yearsOfExperience,
+          avatarUrl: providerData.avatarUrl,
+          verificationStatus: providerData.verificationStatus,
+          bio: providerData.bio,
+          pixKey: providerData.pixKey,
+          address: {
+            create: providerData.address,
+          },
+        },
+      });
+      currentProviderId = newProviderProfile.id;
+      console.log(`Usuário '${providerData.email}' existia, perfil de provedor criado.`);
+    }
+
+    if (currentProviderId && providerData.services && providerData.services.length > 0) {
+      for (const serviceName of providerData.services) {
+        const service = await prisma.service.findUnique({ where: { name: serviceName } });
+        if (service) {
+          await prisma.providerService.upsert({
+            where: {
+              providerId_serviceId: {
+                providerId: currentProviderId,
+                serviceId: service.id,
+              },
+            },
+            update: {
+              price: new Prisma.Decimal(100.0),
+              durationMinutes: 60,
+              description: `Serviço ${serviceName} por ${providerData.fullName} (Atualizado).`,
+            },
+            create: {
+              providerId: currentProviderId,
+              serviceId: service.id,
+              price: new Prisma.Decimal(100.0),
+              durationMinutes: 60,
+              description: `Serviço ${serviceName} por ${providerData.fullName}.`,
+            },
+          });
+          console.log(`   - Serviço '${serviceName}' associado/atualizado ao provedor ${providerData.fullName}.`);
+        } else {
+          console.warn(`   - Serviço '${serviceName}' não encontrado para associar/atualizar ao provedor ${providerData.fullName}.`);
+        }
+      }
+    }
+  }
+
+  // --- NOVO: CRIAÇÃO DE CLIENTES DE TESTE ADICIONAIS ---
+  console.log('Criando/Atualizando clientes de teste...');
+  type ClientSeedData = {
+    email: string;
+    password: string;
+    fullName: string;
+    phone: string;
+    address: {
+      cep: string;
+      street: string;
+      number: string;
+      neighborhood: string;
+      city: string;
+      state: string;
+    };
+  };
+
+  const testClientsData: ClientSeedData[] = [
+    {
+      email: 'client1@cleaning.com',
+      password: 'testclient1pass',
+      fullName: 'Ana Cliente',
+      phone: '11955555555',
+      address: { cep: '01001-001', street: 'Rua do Cliente', number: '10', neighborhood: 'Bairro Novo', city: 'São Paulo', state: 'SP' },
+    },
+    {
+      email: 'client2@cleaning.com',
+      password: 'testclient2pass',
+      fullName: 'Carlos Comprador',
+      phone: '21966666666',
+      address: { cep: '20000-000', street: 'Av. Teste', number: '20', neighborhood: 'Centro', city: 'Rio de Janeiro', state: 'RJ' },
+    },
+    {
+      email: 'client3@cleaning.com',
+      password: 'testclient3pass',
+      fullName: 'Laura Avaliadora',
+      phone: '11977777777',
+      address: { cep: '01002-002', street: 'Rua das Flores', number: '100', neighborhood: 'Jardins', city: 'São Paulo', state: 'SP' },
+    }, // Novo cliente para avaliações
+    {
+      email: 'client4@cleaning.com',
+      password: 'testclient4pass',
+      fullName: 'Pedro Satisfeito',
+      phone: '11988888888',
+      address: { cep: '01003-003', street: 'Av. Brasil', number: '50', neighborhood: 'Consolação', city: 'São Paulo', state: 'SP' },
+    }, // Novo cliente para avaliações
+  ];
+
+  for (const clientData of testClientsData) {
+    const existingUser = await prisma.user.findUnique({ where: { email: clientData.email } });
+    if (!existingUser) {
+      const hashedPass = await bcrypt.hash(clientData.password, 10);
+      await prisma.user.create({
+        data: {
+          email: clientData.email,
+          passwordHash: hashedPass,
+          avatarUrl: 'https://randomuser.me/api/portraits/women/50.jpg', // Avatar para clientes de teste
+          role: UserRole.CLIENT,
+          client: {
+            create: {
+              fullName: clientData.fullName,
+              phone: clientData.phone,
+              address: { create: clientData.address },
+            },
+          },
+        },
+      });
+      console.log(`Cliente de Teste '${clientData.email}' criado com sucesso!`);
+    } else {
+      // Se o usuário já existe, atualiza o avatarUrl caso ele seja nulo ou diferente
+      if (!existingUser.avatarUrl || existingUser.avatarUrl !== 'https://randomuser.me/api/portraits/women/50.jpg') {
+        await prisma.user.update({
+          where: { id: existingUser.id },
+          data: { avatarUrl: 'https://randomuser.me/api/portraits/women/50.jpg' },
+        });
+      }
+      console.log(`Cliente de Teste '${clientData.email}' já existe. Ignorando criação.`);
+    }
+  }
+
+  // --- NOVO: CRIAÇÃO DE DISPONIBILIDADE PARA PROVEDORES DE TESTE ---
+  console.log('Criando disponibilidade de horários para provedores de teste...');
+
+  // Obtenha os provedores (necessário para o escopo)
+  const mariaProvider = await prisma.provider.findFirst({ where: { user: { email: 'provider1@cleaning.com' } } });
+  const joaoProvider = await prisma.provider.findFirst({ where: { user: { email: 'provider2@cleaning.com' } } });
+  // Obter Helena também se você a adicionou ao testProvidersData
+  const helenaProvider = await prisma.provider.findFirst({ where: { user: { email: 'provider3@cleaning.com' } } });
+
+  if (mariaProvider && joaoProvider) { // Verificação para mariaProvider e joaoProvider
+    for (let day = 1; day <= 5; day++) {
+      // Segunda (1) a Sexta (5)
+      const daySlots = [
+        { startTime: '09:00', endTime: '09:30' },
+        { startTime: '09:30', endTime: '10:00' },
+        { startTime: '10:00', endTime: '10:30' },
+        { startTime: '10:30', endTime: '11:00' },
+        { startTime: '11:00', endTime: '11:30' },
+        { startTime: '11:30', endTime: '12:00' },
+        { startTime: '13:00', endTime: '13:30' },
+        { startTime: '13:30', endTime: '14:00' },
+      ];
+      for (const slot of daySlots) {
+        const existingAvailability = await prisma.availability.findFirst({
+          where: {
+            providerId: mariaProvider.id,
+            dayOfWeek: day,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+          },
+        });
+
+        if (existingAvailability) {
+          await prisma.availability.update({
+            where: { id: existingAvailability.id },
+            data: { isAvailable: true },
+          });
+        } else {
+          await prisma.availability.create({
+            data: {
+              providerId: mariaProvider.id,
+              dayOfWeek: day,
+              startTime: slot.startTime,
+              endTime: slot.endTime,
+              isAvailable: true,
+            },
+          });
+        }
+      }
+    }
+    console.log(`Disponibilidade genérica para Maria da Silva (Seg-Sex) criada/atualizada.`);
+
+    const joaoSlots = [
+      { dayOfWeek: 2, startTime: '10:00', endTime: '10:30' }, // Terça
+      { dayOfWeek: 2, startTime: '10:30', endTime: '11:00' },
+      { dayOfWeek: 2, startTime: '14:00', endTime: '14:30' },
+      { dayOfWeek: 4, startTime: '10:00', endTime: '10:30' }, // Quinta
+      { dayOfWeek: 4, startTime: '10:30', endTime: '11:00' },
+      { dayOfWeek: 4, startTime: '15:00', endTime: '15:30' },
+      { dayOfWeek: 3, startTime: '09:00', endTime: '09:30' },
+      { dayOfWeek: 3, startTime: '09:30', endTime: '10:00' },
+      { dayOfWeek: 3, startTime: '10:00', endTime: '10:30' },
+      { dayOfWeek: 3, startTime: '13:00', endTime: '13:30' },
+      { dayOfWeek: 3, startTime: '13:30', endTime: '14:00' },
+      { dayOfWeek: 3, startTime: '14:00', endTime: '14:30' },
+    ];
+    for (const slot of joaoSlots) {
+      const existingAvailability = await prisma.availability.findFirst({
+        where: {
+          providerId: joaoProvider.id,
+          dayOfWeek: slot.dayOfWeek,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+        },
+      });
+
+      if (existingAvailability) {
+        await prisma.availability.update({
+          where: { id: existingAvailability.id },
+          data: { isAvailable: true },
+        });
+      } else {
+          await prisma.availability.create({
+            data: {
+              providerId: joaoProvider.id,
+              dayOfWeek: slot.dayOfWeek,
+              startTime: slot.startTime,
+              endTime: slot.endTime,
+              isAvailable: true,
+            },
+          });
+      }
+    }
+    console.log(`Disponibilidade específica para João de Souza (Terça/Quinta/Quarta) criada/atualizada.`);
+  } else {
+    console.warn('Não foi possível criar disponibilidade. Provedores não encontrados.');
+  }
+
+  // Se Helena for adicionada e precisar de disponibilidade
+  if (helenaProvider) {
+    // Para evitar erro de 'providerId_dayOfWeek_startTime_endTime' que não existe no seu schema
+    // Usaremos findFirst/update/create como os outros.
+    for (let day = 1; day <= 5; day += 2) { // Seg, Qua, Sex
+      const helenaDaySlots = [
+        { startTime: '10:00', endTime: '12:00' },
+        { startTime: '14:00', endTime: '16:00' },
+      ];
+      for (const slot of helenaDaySlots) {
+        const existingAvailability = await prisma.availability.findFirst({
+          where: {
+            providerId: helenaProvider.id,
+            dayOfWeek: day,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+          },
+        });
+
+        if (existingAvailability) {
+          await prisma.availability.update({
+            where: { id: existingAvailability.id },
+            data: { isAvailable: true },
+          });
+        } else {
+          await prisma.availability.create({
+            data: {
+              providerId: helenaProvider.id,
+              dayOfWeek: day,
+              startTime: slot.startTime,
+              endTime: slot.endTime,
+              isAvailable: true,
+            },
+          });
+        }
+      }
+    }
+    console.log(`Disponibilidade para Helena Teste (Seg/Qua/Sex) criada/atualizada.`);
+  }
+
+
+  // --- NOVO: CRIAÇÃO DE AGENDAMENTOS E TRANSAÇÕES PARA TESTES DE DASHBOARD/EARNINGS ---
+  console.log('Criando agendamentos e transações de teste...');
+
+  const anaClient = await prisma.client.findFirst({ where: { user: { email: 'client1@cleaning.com' } } });
+  const carlosClient = await prisma.client.findFirst({ where: { user: { email: 'client2@cleaning.com' } } });
+  const lauraClient = await prisma.client.findFirst({ where: { user: { email: 'client3@cleaning.com' } } });
+  const pedroClient = await prisma.client.findFirst({ where: { user: { email: 'client4@cleaning.com' } } });
+
+  const residentialService = await prisma.service.findUnique({ where: { name: 'Residencial' } });
+  const commercialService = await prisma.service.findUnique({ where: { name: 'Comercial' } });
+
+  if (
+    mariaProvider &&
+    joaoProvider &&
+    anaClient &&
+    carlosClient &&
+    lauraClient &&
+    pedroClient &&
+    residentialService &&
+    commercialService
+  ) {
+    // --- AGENDAMENTO CONCLUÍDO (para Maria - gera ganhos) ---
+    const booking1Date = new Date();
+    booking1Date.setDate(booking1Date.getDate() - 7); // 7 dias atrás
+    const completedBookingMaria = await prisma.booking.create({
+      data: {
+        clientId: anaClient.id,
+        providerId: mariaProvider.id,
+        providerServiceId: (
+          await prisma.providerService.findFirst({
+            where: { providerId: mariaProvider.id, serviceId: residentialService.id },
+          })
+        )!.id,
+        scheduledDate: booking1Date,
+        scheduledTime: '10:00',
+        status: BookingStatus.COMPLETED,
+        totalPrice: new Prisma.Decimal(150.0),
+        notes: 'Limpeza geral da casa.',
+      },
+    });
+    console.log(`Agendamento Concluído ${completedBookingMaria.id} (Maria) criado.`);
+
+    await prisma.transaction.create({
+      data: {
+        providerId: mariaProvider.id,
+        amount: new Prisma.Decimal(150.0),
+        type: TransactionType.PAYMENT,
+        status: 'COMPLETED',
+        description: `Pagamento serviço ${completedBookingMaria.id}`,
+        bookingId: completedBookingMaria.id,
+      },
+    });
+    console.log(`Transação de Pagamento para ${completedBookingMaria.id} criada.`);
+
+    // --- NOVO: MÚLTIPLOS AGENDAMENTOS CONCLUÍDOS PARA JOÃO DE SOUZA (para permitir múltiplas avaliações) ---
+    const joaoBookingsData = [
+      {
+        client: lauraClient,
+        service: commercialService,
+        scheduledTime: '09:00',
+        notes: 'Limpeza comercial no escritório para avaliação 1.',
+        price: 200.0,
+      },
+      {
+        client: pedroClient,
+        service: commercialService, // Ou outro serviço
+        scheduledTime: '10:30',
+        notes: 'Limpeza de rotina para avaliação 2.',
+        price: 180.0,
+      },
+      {
+        client: anaClient,
+        service: commercialService,
+        scheduledTime: '14:00',
+        notes: 'Limpeza profunda para avaliação 3.',
+        price: 220.0,
+      },
+    ];
+
+    const completedBookingsJoao = [];
+
+    for (let i = 0; i < joaoBookingsData.length; i++) {
+      const bookingData = joaoBookingsData[i];
+      const bookingDate = new Date();
+      bookingDate.setDate(bookingDate.getDate() - (15 + i * 2)); // Datas diferentes para cada booking
+
+      const providerServiceForJoao = await prisma.providerService.findFirst({
+        where: { providerId: joaoProvider.id, serviceId: bookingData.service.id },
+      });
+
+      if (!providerServiceForJoao) {
+        console.warn(`Serviço ${bookingData.service.name} não encontrado para João de Souza. Pulando booking.`);
+        continue;
+      }
+
+      const completedBookingJoao = await prisma.booking.create({
+        data: {
+          clientId: bookingData.client.id,
+          providerId: joaoProvider.id,
+          providerServiceId: providerServiceForJoao.id,
+          scheduledDate: bookingDate,
+          scheduledTime: bookingData.scheduledTime,
+          status: BookingStatus.COMPLETED,
+          totalPrice: new Prisma.Decimal(bookingData.price),
+          notes: bookingData.notes,
+        },
+      });
+      completedBookingsJoao.push(completedBookingJoao);
+      console.log(`Agendamento Concluído ${completedBookingJoao.id} (João) criado para ${bookingData.client.fullName}.`);
+
+      // Transação para o agendamento concluído de João
+      await prisma.transaction.create({
+        data: {
+          providerId: joaoProvider.id,
+          amount: new Prisma.Decimal(bookingData.price),
+          type: TransactionType.PAYMENT,
+          status: 'COMPLETED',
+          description: `Pagamento serviço ${completedBookingJoao.id}`,
+          bookingId: completedBookingJoao.id,
+        },
+      });
+      console.log(`Transação de Pagamento para ${completedBookingJoao.id} criada.`);
+    }
+
+    // --- AGENDAMENTO PENDENTE (para Maria - aparece no dashboard) ---
+    const booking2Date = new Date();
+    booking2Date.setDate(booking2Date.getDate() + 3); // 3 dias no futuro
+    await prisma.booking.create({
+      data: {
+        clientId: carlosClient.id,
+        providerId: mariaProvider.id,
+        providerServiceId: (
+          await prisma.providerService.findFirst({
+            where: { providerId: mariaProvider.id, serviceId: residentialService.id },
+          })
+        )!.id,
+        scheduledDate: booking2Date,
+        scheduledTime: '14:00',
+        status: BookingStatus.PENDING,
+        totalPrice: new Prisma.Decimal(100.0),
+        notes: 'Limpeza de rotina.',
+      },
+    });
+    console.log(`Agendamento Pendente para Maria criado.`);
+
+    // --- AGENDAMENTO CONFIRMADO (para João - aparece no dashboard) ---
+    const booking3Date = new Date();
+    booking3Date.setDate(booking3Date.getDate() + 5); // 5 dias no futuro
+    await prisma.booking.create({
+      data: {
+        clientId: anaClient.id,
+        providerId: joaoProvider.id,
+        providerServiceId: (
+          await prisma.providerService.findFirst({
+            where: { providerId: joaoProvider.id, serviceId: commercialService.id },
+          })
+        )!.id,
+        scheduledDate: booking3Date,
+        scheduledTime: '09:00',
+        status: BookingStatus.CONFIRMED,
+        totalPrice: new Prisma.Decimal(200.0),
+        notes: 'Limpeza escritório.',
+      },
+    });
+    console.log(`Agendamento Confirmado para João criado.`);
+
+    // --- TRANSAÇÃO DE SAQUE PENDENTE (para João - aparece em pendingWithdrawals) ---
+    await prisma.transaction.create({
+      data: {
+        providerId: joaoProvider.id,
+        amount: new Prisma.Decimal(50.0),
+        type: TransactionType.WITHDRAWAL,
+        status: 'PENDING',
+        description: 'Solicitação de saque de teste.',
+      },
+    });
+    console.log(`Transação de Saque Pendente para João criada.`);
+
+    // --- TRANSAÇÃO DE SAQUE CONCLUÍDA (para Maria - aparece no histórico, não em pendente) ---
+    await prisma.transaction.create({
+      data: {
+        providerId: mariaProvider.id,
+        amount: new Prisma.Decimal(25.0),
+        type: TransactionType.WITHDRAWAL,
+        status: 'COMPLETED',
+        description: 'Saque anterior concluído.',
+      },
+    });
+    console.log(`Transação de Saque Concluída para Maria criada.`);
+
+    // --- NOVO: CRIAÇÃO DE AVALIAÇÕES (REVIEWS) ---
+    console.log('Criando avaliações para João de Souza...');
+
+    const reviewDetails = [
+      {
+        comment: 'Excelente trabalho! João é muito profissional e deixou meu escritório impecável. Recomendo!',
+        rating: 5,
+      },
+      {
+        comment: 'Serviço muito bom, pontual e atencioso. A limpeza foi completa e superou as expectativas.',
+        rating: 4,
+      },
+      {
+        comment: 'João é o melhor! Rápido, eficiente e muito cuidadoso com os detalhes. Contratarei novamente.',
+        rating: 5,
+      },
+    ];
+
+    for (let i = 0; i < completedBookingsJoao.length; i++) {
+      const booking = completedBookingsJoao[i];
+      const detail = reviewDetails[i]; // Pega o detalhe da avaliação correspondente
+
+      await prisma.review.upsert({
+        where: {
+          bookingId: booking.id, // Onde o bookingId é o critério único
+          // Como bookingId já é unique, Prisma infere que basta um campo para findUnique.
+          // Se o @@unique fosse [clientId, providerId, bookingId], o ideal seria
+          // bookingId_clientId_providerId: { bookingId: booking.id, clientId: booking.clientId, providerId: booking.providerId }
+        },
+        update: {
+          rating: detail.rating,
+          comment: detail.comment,
+          clientId: booking.clientId, // Garantir que o clientId e providerId são do booking
+          providerId: booking.providerId,
+        },
+        create: {
+          bookingId: booking.id,
+          clientId: booking.clientId,
+          providerId: booking.providerId,
+          rating: detail.rating,
+          comment: detail.comment,
+        },
+      });
+      console.log(`Avaliação de ${booking.clientId} para João de Souza (booking ${booking.id}) criada/atualizada.`);
+    }
+  } else {
+    console.warn('Não foi possível criar agendamentos/transações/avaliações de teste. Provedores, clientes ou serviços essenciais não encontrados.');
+  }
+
+  console.log('Seed completo!');
+}
+
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

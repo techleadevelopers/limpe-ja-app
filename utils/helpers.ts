@@ -92,7 +92,6 @@ export const isValidPassword = (password: string, minLength: number = 8): boolea
  * capitalizeFirstLetter(""); // ""
  * capitalizeFirstLetter(null); // ""
  */
-// << CORREÇÃO: Removido o 'const' duplicado >>
 export const capitalizeFirstLetter = (str: string | null | undefined): string => {
   if (!str) return '';
   return str.charAt(0).toUpperCase() + str.slice(1);

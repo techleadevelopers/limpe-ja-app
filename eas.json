@@ -1,23 +1,21 @@
 {
   "cli": {
     "version": ">= 7.6.0",
-    "appVersionSource": "remote" // <<<--- ALTERADO DE "expo" PARA "remote"
+    "appVersionSource": "remote"
   },
   "build": {
     "development": {
       "developmentClient": true,
       "distribution": "internal",
       "android": {
-        "image": "latest"
-      },
-      "ios": { // Pode remover esta seção ios se não for usar
-        "image": "latest"
+        "image": "latest",
+        "buildType": "apk" // Opcional: Garante APK também para dev client, se for o caso
       }
     },
     "apk_direct_test": {
       "distribution": "internal",
       "android": {
-        "buildType": "apk",
+        "buildType": "apk", // <<<--- ESTE É O PERFIL QUE VOCÊ VAI USAR PARA SEU APK ASSINADO
         "image": "latest"
       }
     },
@@ -25,9 +23,9 @@
       "distribution": "store",
       "android": {
         "image": "latest"
-      },
-      "ios": { // Pode remover esta seção ios se não for usar
-        "image": "latest"
+        // Por padrão, gera AAB para distribuição "store".
+        // Se realmente quiser APK para "production" (não recomendado para Play Store),
+        // adicione "buildType": "apk" aqui.
       }
     }
   },
@@ -35,11 +33,8 @@
     "production": {
       "android": {
         "track": "internal"
-      },
-      "ios": { // Pode remover esta seção ios se não for usar
-        // "appleId": "seu_id_apple@exemplo.com",
-        // ...
       }
+      // Removi a seção iOS se não for usar.
     }
   }
 }

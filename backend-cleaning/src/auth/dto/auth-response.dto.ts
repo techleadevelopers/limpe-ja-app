@@ -1,0 +1,16 @@
+// src/auth/dto/auth-response.dto.ts
+import { IsString, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+import { ApiProperty } from '@nestjs/swagger';
+import { UserProfileDto } from '../../users/dto/user-profile.dto'; // VERIFIQUE ESTE CAMINHO!
+
+export class AuthResponseDto {
+  @ApiProperty({ description: 'O token JWT de acesso' })
+  @IsString()
+  accessToken: string;
+
+  @ApiProperty({ type: () => UserProfileDto, description: 'O perfil do usuário autenticado' })
+  @ValidateNested()
+  @Type(() => UserProfileDto)
+  user: UserProfileDto;
+}

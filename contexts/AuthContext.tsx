@@ -1,20 +1,61 @@
-// LimpeJaApp/src/contexts/AuthContext.tsx
-import React, { createContext, useState, useEffect, ReactNode } from 'react';
-import * as SecureStore from 'expo-secure-store';
-import { User, AuthTokens } from '../types';
-import { api } from '../services/api'; // Para atualizar o header de autorização
+// LimpeJaApp/contexts/AuthContext.tsx
+import { useRouter } from 'expo-router';
+import { jwtDecode } from 'jwt-decode';
+import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import * as authService from '../app/services/authService';
+import { getUserProfile } from '../app/services/clientService'; // Importa getUserProfile
 
+import {
+  AuthResponseDto,
+  LoginDto,
+  RegisterClientDto,
+  RegisterProviderDto,
+  UserRole
+} from '../app/types/backend/auth';
+import { UserProfile } from '../app/types/backend/users'; // IMPORTAR UserProfile COMPLETO
+import { BookingAddress } from '../app/types/backend/bookings'; // [CITE: 1] Importar BookingAddress para tipagem consistente
+
+/**
+ * @interface User
+ * ATUALIZADO: Representa a estrutura de dados do usuário armazenada no contexto de autenticação.
+ * Agora alinhada com UserProfile de 'users.ts' para incluir todos os dados relevantes.
+ */
+interface User {
+  id: string;
+  email: string;
+  role: UserRole;
+  name?: string;
+  phone?: string;
+  avatarUrl?: string;
+  address?: BookingAddress; // [CITE: 1] CORREÇÃO: Usar BookingAddress diretamente para a propriedade 'address' aqui
+  walletBalance?: number;
+  ordersCount?: number;
+  totalEarningsLastMonth?: number;
+  upcomingBookingsCount?: number;
+  averageRating?: number;
+  reviewCount?: number;
+  // Adicionado para admins que também são clientes/provedores
+  clientDetails?: UserProfile['clientDetails'];
+  providerDetails?: UserProfile['providerDetails'];
+}
+
+/**
+ * @interface AuthContextData
+ * Define a forma do objeto de contexto de autenticação.
+ */
 interface AuthContextData {
   user: User | null;
-  tokens: AuthTokens | null;
+  token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  signIn: (userData: User, tokenData: AuthTokens) => Promise<void>;
+  signIn: (credentials: LoginDto) => Promise<void>;
+  signUpClient: (data: RegisterClientDto) => Promise<void>;
+  signUpProvider: (data: RegisterProviderDto) => Promise<void>;
   signOut: () => Promise<void>;
   updateUser: (updatedUserData: Partial<User>) => void;
 }
 
-export const AuthContext = createContext<AuthContextData>({} as AuthContextData);
+export const AuthContext = createContext<AuthContextData | undefined>(undefined);
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -22,154 +63,205 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [tokens, setTokens] = useState<AuthTokens | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+
+  const fetchAndSetUserProfile = async (userId: string, userEmail: string, userRole: UserRole, authToken: string): Promise<UserProfile | null> => {
+    try {
+      const fullProfile: UserProfile = await getUserProfile(); // Chama a rota /users/me
+
+      let userAddressForContext: BookingAddress | undefined = undefined; // [CITE: 1] Usar BookingAddress para o tipo
+
+      // Mapeia o endereço do perfil de cliente ou provedor para a propriedade 'address' no contexto
+      // [CITE: 1] CORREÇÃO: Acessar .address do clientDetails ou providerDetails, que devem ser do tipo Client/Provider
+      if (fullProfile.role === UserRole.CLIENT && fullProfile.clientDetails?.address) {
+          userAddressForContext = fullProfile.clientDetails.address;
+      } else if (fullProfile.role === UserRole.PROVIDER && fullProfile.providerDetails?.address) {
+          userAddressForContext = fullProfile.providerDetails.address;
+      }
+      // Se o fullProfile.address existir diretamente na raiz do UserProfile (como pode ser o caso no backend),
+      // você também pode incluí-lo:
+      // userAddressForContext = fullProfile.address || userAddressForContext;
+
+
+      setUser({
+        ...fullProfile as User, // Copia todas as outras propriedades do UserProfile
+        address: userAddressForContext // Sobrescreve/define a propriedade 'address' de nível superior
+      });
+      setToken(authToken);
+      console.log('[AuthContext] Perfil completo carregado e estado atualizado.');
+      console.log('[AuthContext] user.address no contexto APÓS ATUALIZAÇÃO:', userAddressForContext); // Depuração
+      return fullProfile;
+    } catch (profileError) {
+      console.error('[AuthContext] Erro ao buscar perfil completo:', profileError);
+      setUser({ id: userId, email: userEmail, role: userRole });
+      setToken(authToken);
+      console.warn('[AuthContext] Não foi possível carregar o perfil completo. Usando dados básicos do JWT.');
+      return null;
+    }
+  };
 
   useEffect(() => {
     async function loadStoragedData() {
-      console.log('[AuthContext] loadStoragedData: Attempting to load stored data...');
+      console.log('[AuthContext] loadStoragedData: Tentando carregar dados armazenados...');
       try {
-        const storedTokens = await SecureStore.getItemAsync('userTokens');
-        const storedUser = await SecureStore.getItemAsync('userData');
+        const storedAuthData = await authService.loadAuthData();
+        const storedToken = storedAuthData.token;
+        const storedRole = storedAuthData.role;
+        const storedId = storedAuthData.id;
 
-        console.log('[AuthContext] loadStoragedData: Raw storedTokens:', storedTokens);
-        console.log('[AuthContext] loadStoragedData: Raw storedUser:', storedUser);
+        if (typeof storedToken === 'string' && storedToken && storedRole && storedId) {
+          try {
+            const decodedToken: any = jwtDecode(storedToken);
 
-        if (storedTokens && storedUser) {
-          const parsedTokens = JSON.parse(storedTokens) as AuthTokens;
-          const parsedUser = JSON.parse(storedUser) as User;
-          
-          // Validação básica dos dados parseados
-          if (parsedTokens && parsedTokens.accessToken && parsedUser && parsedUser.id && parsedUser.role) {
-            console.log('[AuthContext] loadStoragedData: Data parsed successfully. Setting state.');
-            setTokens(parsedTokens);
-            setUser(parsedUser);
-            api.defaults.headers.common['Authorization'] = `Bearer ${parsedTokens.accessToken}`;
-          } else {
-            console.warn('[AuthContext] loadStoragedData: Parsed data is invalid. Clearing storage.');
-            // Se os dados parseados não são válidos, limpa para evitar estado inconsistente
-            await SecureStore.deleteItemAsync('userTokens').catch(e => console.error("[AuthContext] loadStoragedData: Error deleting tokens on parse fail", e));
-            await SecureStore.deleteItemAsync('userData').catch(e => console.error("[AuthContext] loadStoragedData: Error deleting user data on parse fail", e));
+            const currentTime = Date.now() / 1000;
+            if (decodedToken && decodedToken.sub && decodedToken.email && decodedToken.role && decodedToken.exp > currentTime) {
+              console.log('[AuthContext] loadStoragedData: Token decodificado e válido. Buscando perfil completo...');
+              await fetchAndSetUserProfile(storedId, decodedToken.email, decodedToken.role, storedToken);
+            } else {
+              console.warn('[AuthContext] loadStoragedData: Token inválido ou expirado. Limpando armazenamento.');
+              await authService.logout();
+              setUser(null);
+              setToken(null);
+            }
+          } catch (decodeError) {
+            console.error('[AuthContext] loadStoragedData: Erro ao decodificar token JWT:', decodeError);
+            await authService.logout();
+            setUser(null);
+            setToken(null);
           }
         } else {
-          console.log('[AuthContext] loadStoragedData: No stored tokens or user data found.');
+          console.log('[AuthContext] loadStoragedData: Nenhum token encontrado ou dados incompletos no armazenamento.');
         }
       } catch (error) {
-        console.error("[AuthContext] loadStoragedData: Failed to load or parse user data from storage:", error);
-        // Limpar em caso de erro para evitar estado inconsistente
+        console.error("[AuthContext] loadStoragedData: Falha ao carregar token do armazenamento:", error);
         try {
-          console.log('[AuthContext] loadStoragedData: Attempting to delete items due to load/parse error...');
-          await SecureStore.deleteItemAsync('userTokens');
-          await SecureStore.deleteItemAsync('userData');
-          console.log('[AuthContext] loadStoragedData: Items deleted after load/parse error.');
+          await authService.logout();
         } catch (deleteError) {
-          // Este é o ponto CRÍTICO se o erro da sua screenshot estiver acontecendo aqui
-          console.error('[AuthContext] loadStoragedData: CRITICAL - Failed to delete items after load/parse error:', deleteError);
+          console.error('[AuthContext] loadStoragedData: CRÍTICO - Falha ao limpar após erro de carregamento:', deleteError);
         }
+        setUser(null);
+        setToken(null);
       } finally {
         setIsLoading(false);
-        console.log('[AuthContext] loadStoragedData: Finished. isLoading:', isLoading, 'isAuthenticated:', !!user && !!tokens);
+        console.log('[AuthContext] loadStoragedData: Finalizado. isLoading:', false, 'isAuthenticated:', !!user && !!token);
       }
     }
     loadStoragedData();
-  }, []); // Removido user e tokens das dependências para evitar re-execução desnecessária ao logar/deslogar
+  }, []); // [] means it runs only once on mount
 
-  const signIn = async (userData: User, tokenData: AuthTokens) => {
-    console.log('[AuthContext] signIn: Called with user:', userData, 'tokens:', tokenData);
+  const signIn = async (credentials: LoginDto) => {
+    console.log('[AuthContext] signIn: Chamado com credenciais:', credentials.email);
     setIsLoading(true);
     try {
-      await SecureStore.setItemAsync('userTokens', JSON.stringify(tokenData));
-      console.log('[AuthContext] signIn: User tokens stored in SecureStore.');
-      await SecureStore.setItemAsync('userData', JSON.stringify(userData));
-      console.log('[AuthContext] signIn: User data stored in SecureStore.');
-      
-      setUser(userData);
-      setTokens(tokenData);
-      api.defaults.headers.common['Authorization'] = `Bearer ${tokenData.accessToken}`;
-      console.log('[AuthContext] signIn: User state updated. isAuthenticated should now be true.');
-    } catch (error) {
-      console.error("[AuthContext] signIn: Failed to sign in and store data:", error);
-      // Limpar em caso de falha ao salvar para evitar estado inconsistente
+      const response: AuthResponseDto = await authService.login(credentials);
+      const decodedToken: any = jwtDecode(response.accessToken);
+
+      // Await a chamada para garantir que o estado 'user' seja atualizado
+      await fetchAndSetUserProfile(decodedToken.sub, decodedToken.email, decodedToken.role, response.accessToken);
+
+      console.log('[AuthContext] signIn: Usuário logado com sucesso. (Redirecionamento será tratado pelo _layout.tsx)');
+      // REMOVIDO: Toda a lógica de router.replace(...) foi removida daqui.
+      // Ela será tratada no _layout.tsx que observa as mudanças no estado 'user'.
+    } catch (error: any) {
+      console.error("[AuthContext] signIn: Falha ao fazer login:", error.message);
       setUser(null);
-      setTokens(null);
-      delete api.defaults.headers.common['Authorization'];
-      try {
-        console.log('[AuthContext] signIn: Attempting to delete items due to signIn failure...');
-        await SecureStore.deleteItemAsync('userTokens');
-        await SecureStore.deleteItemAsync('userData');
-        console.log('[AuthContext] signIn: Items deleted after signIn failure.');
-      } catch (deleteError) {
-         console.error('[AuthContext] signIn: CRITICAL - Failed to delete items after signIn failure:', deleteError);
-      }
-      // TODO: Lidar com o erro de forma apropriada (ex: mostrar mensagem ao usuário)
-      // throw error; // Opcional: propagar o erro para quem chamou o signIn
+      setToken(null);
+      await authService.logout();
+      throw error;
     } finally {
       setIsLoading(false);
-      console.log('[AuthContext] signIn: Finished. isLoading:', false);
+      console.log('[AuthContext] signIn: Finalizado. isLoading:', false);
+    }
+  };
+
+  const signUpClient = async (data: RegisterClientDto) => {
+    console.log('[AuthContext] signUpClient: Chamado para registrar cliente:', data.email);
+    setIsLoading(true);
+    try {
+      const response: AuthResponseDto = await authService.registerClient(data);
+      const decodedToken: any = jwtDecode(response.accessToken);
+      await fetchAndSetUserProfile(decodedToken.sub, decodedToken.email, decodedToken.role, response.accessToken);
+
+      console.log('[AuthContext] signUpClient: Cliente registrado com sucesso. (Redirecionamento será tratado pelo _layout.tsx)');
+      // REMOVIDO: router.replace('/(client)/explore');
+    } catch (error: any) {
+      console.error("[AuthContext] signUpClient: Falha ao registrar cliente:", error.message);
+      setUser(null);
+      setToken(null);
+      await authService.logout();
+      throw error;
+    } finally {
+      setIsLoading(false);
+      console.log('[AuthContext] signUpClient: Finalizado. isLoading:', false);
+    }
+  };
+
+  const signUpProvider = async (data: RegisterProviderDto) => {
+    console.log('[AuthContext] signUpProvider: Chamado para registrar provedor:', data.email);
+    setIsLoading(true);
+    try {
+      const response: AuthResponseDto = await authService.registerProvider(data);
+      const decodedToken: any = jwtDecode(response.accessToken);
+      await fetchAndSetUserProfile(decodedToken.sub, decodedToken.email, decodedToken.role, response.accessToken);
+
+      console.log('[AuthContext] signUpProvider: Provedor registrado com sucesso. (Redirecionamento será tratado pelo _layout.tsx)');
+      // REMOVIDO: router.replace('/(provider)');
+    } catch (error: any) {
+      console.error("[AuthContext] signUpProvider: Falha ao registrar provedor:", error.message);
+      setUser(null);
+      setToken(null);
+      await authService.logout();
+      throw error;
+    } finally {
+      setIsLoading(false);
+      console.log('[AuthContext] signUpProvider: Finalizado. isLoading:', false);
     }
   };
 
   const signOut = async () => {
-    console.log('[AuthContext] signOut: Called.');
+    console.log('[AuthContext] signOut: Chamado.');
     setIsLoading(true);
     try {
-      console.log('[AuthContext] signOut: Attempting to delete userTokens...');
-      await SecureStore.deleteItemAsync('userTokens');
-      console.log('[AuthContext] signOut: userTokens deleted.');
-      console.log('[AuthContext] signOut: Attempting to delete userData...');
-      await SecureStore.deleteItemAsync('userData');
-      console.log('[AuthContext] signOut: userData deleted.');
-      
+      await authService.logout();
+
       setUser(null);
-      setTokens(null);
-      delete api.defaults.headers.common['Authorization'];
-      console.log('[AuthContext] signOut: User state cleared. isAuthenticated should now be false.');
-    } catch (error) {
-      console.error("[AuthContext] signOut: Failed to sign out and clear data:", error);
-      // Mesmo se a exclusão falhar, tentamos limpar o estado da memória
+      setToken(null);
+      console.log('[AuthContext] signOut: Usuário deslogado. Redirecionando...');
+      router.replace('/(auth)/login');
+    } catch (error: any) {
+      console.error("[AuthContext] signOut: Falha ao deslogar:", error.message);
       setUser(null);
-      setTokens(null);
-      delete api.defaults.headers.common['Authorization'];
-      // TODO: Lidar com o erro de forma apropriada
+      setToken(null);
+      throw error;
     } finally {
       setIsLoading(false);
-      console.log('[AuthContext] signOut: Finished. isLoading:', false);
+      console.log('[AuthContext] signOut: Finalizado. isLoading:', false);
     }
   };
 
-  const updateUser = async (updatedUserData: Partial<User>) => { // Tornada async para o await do SecureStore
-    console.log('[AuthContext] updateUser: Called with data:', updatedUserData);
-    let finalUser: User | null = null;
+  const updateUser = (updatedUserData: Partial<User>) => {
+    console.log('[AuthContext] updateUser: Chamado com dados:', updatedUserData);
     setUser(currentUser => {
       if (currentUser) {
-        const newUser = { ...currentUser, ...updatedUserData };
-        finalUser = newUser; // Captura newUser para usar no SecureStore
-        console.log('[AuthContext] updateUser: New user object for state:', newUser);
+        const newUser: User = { ...currentUser, ...updatedUserData };
         return newUser;
       }
       return null;
     });
-
-    if (finalUser) {
-      try {
-        console.log('[AuthContext] updateUser: Attempting to store updated user data in SecureStore:', finalUser);
-        await SecureStore.setItemAsync('userData', JSON.stringify(finalUser));
-        console.log('[AuthContext] updateUser: Updated user data stored successfully.');
-      } catch (error) {
-        console.error('[AuthContext] updateUser: Failed to store updated user data:', error);
-        // TODO: Considerar como lidar com essa falha. Reverter o estado setUser? Notificar o usuário?
-      }
-    }
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        tokens,
-        isAuthenticated: !!user && !!tokens,
+        token,
+        isAuthenticated: !!user && !!token,
         isLoading,
         signIn,
+        signUpClient,
+        signUpProvider,
         signOut,
         updateUser,
       }}
@@ -177,4 +269,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
+  }
+  return context;
 };
