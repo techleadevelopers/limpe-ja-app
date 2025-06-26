@@ -1,34 +1,37 @@
-# Use uma imagem base Node.js na versão 22 (LTS)
-FROM node:22-slim
+# Stage 1: Build a development image with all dependencies
+FROM node:22-slim AS build
 
-# Defina o diretório de trabalho dentro do contêiner
 WORKDIR /usr/src/app
 
-# Copie os arquivos de configuração de dependências
-# Isso permite que o Docker use o cache de camadas para npm install se package.json não mudar
 COPY package*.json ./
+# Instala todas as dependências (produção e desenvolvimento) para o build
+RUN npm install
 
-# Instale as dependências da aplicação
-# Usamos --production para instalar apenas as dependências de produção, otimizando o tamanho da imagem.
-RUN npm install --production
-
-# Copie o restante do código da aplicação para o contêiner
-# Assumimos que 'dist/' é onde seu código TypeScript compilado está. Se seu build for diferente, ajuste.
+# Copia o código-fonte
 COPY . .
 
-# Comando para compilar o TypeScript (se você tiver um script 'build' no package.json)
-# Isso deve ser feito *após* copiar o código-fonte.
+# Compila a aplicação NestJS (neste stage, 'nest build' estará disponível)
 RUN npm run build
 
-# Gere o cliente Prisma para o ambiente de execução do contêiner
-# É essencial que o cliente Prisma seja gerado DENTRO do contêiner para compatibilidade.
+# Gera o cliente Prisma (também deve ser feito no stage de build para compatibilidade)
 RUN npx prisma generate
 
-# Defina a porta em que sua aplicação Node.js irá escutar.
-# O Cloud Run espera que sua aplicação escute na porta definida pela variável de ambiente PORT (padrão 8080).
+# Stage 2: Create a production-ready slim image
+FROM node:22-slim AS production
+
+WORKDIR /usr/src/app
+
+# Copia apenas as dependências de produção do Stage 1
+COPY --from=build /usr/src/app/node_modules ./node_modules
+# Copia o código compilado da aplicação do Stage 1
+COPY --from=build /usr/src/app/dist ./dist
+# Copia o cliente Prisma gerado do Stage 1
+COPY --from=build /usr/src/app/prisma/client ./prisma/client # Ajuste o caminho se seu cliente Prisma não estiver aqui
+COPY --from=build /usr/src/app/prisma/schema.prisma ./prisma/schema.prisma # Copia o schema também
+
+# Defina a porta que sua aplicação Node.js irá escutar
 ENV PORT 8080
 EXPOSE 8080
 
 # Comando para iniciar a aplicação quando o contêiner for executado
-# Ajuste 'dist/main.js' para o caminho do seu arquivo de entrada compilado (ex: index.js, app.js)
 CMD ["node", "dist/main.js"]
