@@ -10,11 +10,12 @@ RUN npm install
 # Copia o código-fonte
 COPY . .
 
+# *** CORREÇÃO AQUI: Mova 'npx prisma generate' para ANTES de 'npm run build' ***
+# Gera o cliente Prisma para o ambiente de execução do contêiner
+RUN npx prisma generate
+
 # Compila a aplicação NestJS (neste stage, 'nest build' estará disponível)
 RUN npm run build
-
-# Gera o cliente Prisma (também deve ser feito no stage de build para compatibilidade)
-RUN npx prisma generate
 
 # Stage 2: Create a production-ready slim image
 FROM node:22-slim AS production
@@ -26,8 +27,9 @@ COPY --from=build /usr/src/app/node_modules ./node_modules
 # Copia o código compilado da aplicação do Stage 1
 COPY --from=build /usr/src/app/dist ./dist
 # Copia o cliente Prisma gerado do Stage 1
-COPY --from=build /usr/src/app/prisma/client ./prisma/client # Ajuste o caminho se seu cliente Prisma não estiver aqui
-COPY --from=build /usr/src/app/prisma/schema.prisma ./prisma/schema.prisma # Copia o schema também
+# Certifique-se de que o caminho para o cliente gerado está correto (geralmente .prisma/client dentro do node_modules)
+COPY --from=build /usr/src/app/node_modules/.prisma/client ./node_modules/.prisma/client
+COPY --from=build /usr/src/app/prisma/schema.prisma ./prisma/schema.prisma
 
 # Defina a porta que sua aplicação Node.js irá escutar
 ENV PORT 8080
