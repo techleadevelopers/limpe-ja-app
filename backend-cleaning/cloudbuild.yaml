@@ -1,48 +1,66 @@
+# Este arquivo define as etapas de build para o seu backend no Google Cloud Build.
 steps:
-# Step 1: Executa migrações do Prisma no Cloud SQL antes de construir a imagem Docker.
-# Usa a imagem oficial do gcloud CLI para interagir com os serviços GCP.
-- name: 'gcr.io/cloud-builders/gcloud'
+# Passo 1: Executa migrações do Prisma no Cloud SQL.
+# IMPORTANTE: Este passo agora usa uma imagem Node.js para garantir que 'npm' e 'npx' estejam disponíveis.
+- name: 'node:22' # Usando a imagem Node.js completa (baseada em Debian, inclui npm/npx)
   entrypoint: 'bash'
   args:
   - '-c'
-  # O comando '--preview-feature' para 'prisma migrate deploy' geralmente não é necessário para versões estáveis do Prisma.
-  # Remova-o se não estiver usando features em preview.
-  # Os comandos `gcloud sql databases create` e `gcloud sql users create` são idempotentes por causa do `|| true`.
-  # Isso significa que eles tentarão criar, mas não falharão se já existirem.
-  # ATENÇÃO: É vital que o valor da senha 'P@ulo123' seja a senha real do seu usuário 'limpeja_user'.
-  # Para produção, você usaria secrets para a senha.
+  # Entra no diretório do backend para garantir que as dependências sejam instaladas no contexto correto.
   - |
-    echo "Creating or ensuring database 'limpeja_db' exists..."
-    gcloud sql databases create limpeja_db --instance=cleaning-app-db --project=${PROJECT_ID} || true
+    cd backend-cleaning/
 
-    echo "Creating or ensuring user 'limpeja_user' exists..."
-    gcloud sql users create limpeja_user --host=% --instance=cleaning-app-db --password=P@ulo123 --project=${PROJECT_ID} || true
+    echo "Installing npm dependencies for Prisma CLI..."
+    # Instala as dependências (produção e desenvolvimento) APENAS para este passo,
+    # para que o Prisma CLI esteja disponível via 'npx'.
+    npm install
+
+    echo "Configuring DATABASE_URL for Prisma migrations..."
+    # Define a DATABASE_URL como uma variável de ambiente para esta sessão bash.
+    # ATENÇÃO: A senha 'P@ulo123' deve ser a senha REAL e correta do seu usuário 'limpeja_user'.
+    # Para produção, você usaria o Google Secret Manager aqui.
+    export DATABASE_URL="postgresql://limpeja_user:P@ulo123/limpeja_db?host=/cloudsql/semiotic-anvil-461613-c0:southamerica-east1:cleaning-app-db"
 
     echo "Running Prisma migrations..."
-    # Garante que o comando prisma está acessível (pode ser necessário ajustar o caminho para 'node_modules/.bin/prisma')
-    /usr/src/app/node_modules/.bin/prisma migrate deploy --preview-feature
-  # Define as variáveis de ambiente necessárias para o Prisma durante as migrações.
-  # A URL do host para o Cloud SQL é no formato /cloudsql/ para ser acessada pelo ambiente de build.
-  env:
-  - 'DATABASE_URL=postgresql://limpeja_user:P@ulo123/limpeja_db?host=/cloudsql/semiotic-anvil-461613-c0:southamerica-east1:cleaning-app-db'
-  # Garante que este comando seja executado no contexto da pasta do backend, onde o schema.prisma está.
-  dir: 'backend-cleaning'
-  # Este passo requer que a conta de serviço do Cloud Build tenha as permissões adequadas:
-  # - Cloud SQL Client
-  # - Cloud SQL Editor (para criar DB/usuários, se usar os comandos gcloud sql create)
-  # - Cloud Build Service Agent (papel padrão já deve estar lá)
+    # Executa as migrações. 'npx' garantirá que o binário 'prisma' seja encontrado
+    # dentro do 'node_modules/.bin/' da instalação acima.
+    # O '--preview-feature' só é necessário se estiver usando features em preview.
+    npx prisma migrate deploy --preview-feature
 
-# Step 2: Constrói a imagem Docker do seu backend.
-# Este passo só será executado se o passo de migrações for bem-sucedido.
+    echo "Creating or ensuring database 'limpeja_db' exists (idempotent command)..."
+    # Adicionando os comandos gcloud SQL aqui para garantir que o DB/usuário existam antes da migração.
+    # Eles são idempotentes (não falham se já existem).
+    # Este comando requer que a conta de serviço do Cloud Build tenha o papel 'Cloud SQL Editor'.
+    gcloud sql databases create limpeja_db --instance=cleaning-app-db --project=${PROJECT_ID} || true
+
+    echo "Creating or ensuring user 'limpeja_user' exists (idempotent command)..."
+    gcloud sql users create limpeja_user --host=% --instance=cleaning-app-db --password=P@ulo123 --project=${PROJECT_ID} || true
+  # O campo 'dir' para este passo garante que o contexto de build inicial do repositório
+  # seja o que esperamos para os comandos de 'cd'.
+  dir: '.' # Execute o script bash a partir da raiz do repositório
+  # Este passo requer que a conta de serviço do Cloud Build tenha as permissões adequadas:
+  # - Cloud SQL Client (roles/cloudsql.client)
+  # - Cloud SQL Editor (roles/cloudsql.editor) - para criar DB/usuários
+  # - Cloud Build Service Agent (roles/cloudbuild.serviceAgent) - papel padrão já deve estar lá
+
+# Passo 2: Constrói a imagem Docker do seu backend.
+# Este passo só será executado se o passo de migrações (Passo 1) for bem-sucedido.
 - name: 'gcr.io/cloud-builders/docker'
+  # 'build': o comando para construir a imagem Docker.
+  # '-t': define a tag da imagem. '${PROJECT_ID}' é uma variável de substituição do Cloud Build.
+  # '.': o contexto de build do Docker. Como 'dir' está definido, ele usa o diretório do backend.
   args: ['build', '-t', 'gcr.io/${PROJECT_ID}/limpeja-app-backend:latest', '.']
-  # O 'dir' garante que o Dockerfile e os arquivos do backend sejam usados como contexto de build.
+  # O 'dir' garante que o 'Dockerfile' e os arquivos do backend sejam usados como contexto de build
+  # para o comando 'docker build'.
   dir: 'backend-cleaning'
 
 # Declara as imagens que serão geradas por este build.
+# Isso informa ao Cloud Build para onde enviar a imagem após a construção.
 images:
 - 'gcr.io/${PROJECT_ID}/limpeja-app-backend:latest'
 
-# Configura as opções do Cloud Build, como o destino dos logs.
+# Configura opções globais para o build, como o destino dos logs.
 options:
-  logging: CLOUD_LOGGING_ONLY # Isso força os logs a irem para o Cloud Logging.
+  # 'CLOUD_LOGGING_ONLY': Isso força os logs do build a irem diretamente para o Cloud Logging,
+  # resolvendo o erro anterior de configuração de logs.
+  logging: CLOUD_LOGGING_ONLY
