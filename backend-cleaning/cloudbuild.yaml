@@ -1,14 +1,48 @@
 steps:
-- name: 'gcr.io/cloud-builders/docker'
-  # O comando `build` será executado no contexto da pasta 'backend-cleaning'.
-  # O último argumento '.' refere-se ao `Dockerfile` dentro do diretório especificado pelo 'dir'.
-  args: ['build', '-t', 'gcr.io/${PROJECT_ID}/limpeja-app-backend:latest', '.']
-  # Esta linha 'dir' é CRUCIAL. Ela muda o diretório de trabalho antes de executar o 'docker build'.
-  # Garante que o 'Dockerfile' e o 'package.json' do seu backend sejam encontrados.
-  dir: 'backend-cleaning' # <- ESTA LINHA É A CORREÇÃO PRINCIPAL
+# Step 1: Executa migrações do Prisma no Cloud SQL antes de construir a imagem Docker.
+# Usa a imagem oficial do gcloud CLI para interagir com os serviços GCP.
+- name: 'gcr.io/cloud-builders/gcloud'
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  # O comando '--preview-feature' para 'prisma migrate deploy' geralmente não é necessário para versões estáveis do Prisma.
+  # Remova-o se não estiver usando features em preview.
+  # Os comandos `gcloud sql databases create` e `gcloud sql users create` são idempotentes por causa do `|| true`.
+  # Isso significa que eles tentarão criar, mas não falharão se já existirem.
+  # ATENÇÃO: É vital que o valor da senha 'P@ulo123' seja a senha real do seu usuário 'limpeja_user'.
+  # Para produção, você usaria secrets para a senha.
+  - |
+    echo "Creating or ensuring database 'limpeja_db' exists..."
+    gcloud sql databases create limpeja_db --instance=cleaning-app-db --project=${PROJECT_ID} || true
 
+    echo "Creating or ensuring user 'limpeja_user' exists..."
+    gcloud sql users create limpeja_user --host=% --instance=cleaning-app-db --password=P@ulo123 --project=${PROJECT_ID} || true
+
+    echo "Running Prisma migrations..."
+    # Garante que o comando prisma está acessível (pode ser necessário ajustar o caminho para 'node_modules/.bin/prisma')
+    /usr/src/app/node_modules/.bin/prisma migrate deploy --preview-feature
+  # Define as variáveis de ambiente necessárias para o Prisma durante as migrações.
+  # A URL do host para o Cloud SQL é no formato /cloudsql/ para ser acessada pelo ambiente de build.
+  env:
+  - 'DATABASE_URL=postgresql://limpeja_user:P@ulo123/limpeja_db?host=/cloudsql/semiotic-anvil-461613-c0:southamerica-east1:cleaning-app-db'
+  # Garante que este comando seja executado no contexto da pasta do backend, onde o schema.prisma está.
+  dir: 'backend-cleaning'
+  # Este passo requer que a conta de serviço do Cloud Build tenha as permissões adequadas:
+  # - Cloud SQL Client
+  # - Cloud SQL Editor (para criar DB/usuários, se usar os comandos gcloud sql create)
+  # - Cloud Build Service Agent (papel padrão já deve estar lá)
+
+# Step 2: Constrói a imagem Docker do seu backend.
+# Este passo só será executado se o passo de migrações for bem-sucedido.
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', 'gcr.io/${PROJECT_ID}/limpeja-app-backend:latest', '.']
+  # O 'dir' garante que o Dockerfile e os arquivos do backend sejam usados como contexto de build.
+  dir: 'backend-cleaning'
+
+# Declara as imagens que serão geradas por este build.
 images:
 - 'gcr.io/${PROJECT_ID}/limpeja-app-backend:latest'
 
+# Configura as opções do Cloud Build, como o destino dos logs.
 options:
-  logging: CLOUD_LOGGING_ONLY # Isso resolve o erro de logging
+  logging: CLOUD_LOGGING_ONLY # Isso força os logs a irem para o Cloud Logging.
