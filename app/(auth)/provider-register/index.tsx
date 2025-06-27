@@ -15,15 +15,13 @@ import {
   StatusBar,
 } from 'react-native';
 import { Link, useRouter, Stack } from 'expo-router';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'; // Importa MaterialCommunityIcons
-import * as ImagePicker from 'expo-image-picker'; // Importa ImagePicker
-import { useAuth } from '../../../hooks/useAuth'; // Importe o useAuth
-import { useProviderRegistration } from '../../../contexts/ProviderRegistrationContext'; // CORRIGIDO: Caminho para useProviderRegistration
-import { AUTH_ROUTES, PROVIDER_ROUTES } from '../../../constants/routes'; // Importa as rotas para uso
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'; // CORRIGIDO: hífen
+import * as ImagePicker from 'expo-image-picker'; // CORRIGIDO: hífen
+import { useAuth } from '../../../hooks/useAuth';
+import { useProviderRegistration } from '../../../contexts/ProviderRegistrationContext';
+import { AUTH_ROUTES, PROVIDER_ROUTES } from '../../../constants/routes';
 
-// ATENÇÃO: Substitua pelo caminho correto do seu logo em formato "V" ou "FV" azul
-// Assumindo que 'assets' está na raiz do projeto e 'app' é um subdiretório
-const LOGO_IMAGE = require('../../../assets/images/logo2.png'); // Ajustado o caminho relativo
+const LOGO_IMAGE = require('../../../assets/images/logo2.png');
 
 const AnimatedErrorMessage: React.FC<{ message: string | null; centered?: boolean }> = ({ message, centered }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -43,52 +41,45 @@ const AnimatedErrorMessage: React.FC<{ message: string | null; centered?: boolea
   );
 };
 
-// Componente para exibir mensagens de erro inline (do service-details.tsx)
 const ErrorMessage: React.FC<{ message: string | null }> = ({ message }) => {
-    if (!message) return null;
-    return <Text style={styles.errorMessage}>{message}</Text>;
+  if (!message) return null;
+  return <Text style={styles.errorMessage}>{message}</Text>;
 };
 
-// Simulação da API Firebase Storage (substituir pela implementação real)
 const mockFirebaseStorageApi = {
-    uploadImage: async (uri: string) => {
-        console.log("[mockFirebaseStorageApi] Iniciando upload simulado para:", uri);
-        await new Promise(resolve => setTimeout(resolve, 1500)); // Simula o tempo de upload
-        const mockUrl = `https://firebasestorage.googleapis.com/v0/b/limpeja.appspot.com/o/avatars%2Fmock-avatar-${Date.now()}.jpg?alt=media`;
-        console.log("[mockFirebaseStorageApi] Mock Firebase Storage URL gerada:", mockUrl);
-        return mockUrl; // Retorna a URL da imagem mockada
-    },
+  uploadImage: async (uri: string) => {
+    console.log("[mockFirebaseStorageApi] Iniciando upload simulado para:", uri);
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    const mockUrl = `https://firebasestorage.googleapis.com/v0/b/limpeja.appspot.com/o/avatars%2Fmock-avatar-${Date.now()}.jpg?alt=media`;
+    console.log("[mockFirebaseStorageApi] Mock Firebase Storage URL gerada:", mockUrl);
+    return mockUrl;
+  },
 };
 
-
-// Define um tipo mais abrangente para os dados do formulário
-// (Não é o DTO final, apenas o que o formulário coleta)
 interface ProviderRegistrationFormData {
   username: string;
   email: string;
   password: string;
-  cpf: string; // NOVO CAMPO
-  dateOfBirth: string; // NOVO CAMPO (formatoInvariantCulture-MM-DD)
+  cpf: string;
+  dateOfBirth: string; // Vai ser DD/MM/AAAA no estado, mas convertido para AAAA-MM-DD para o backend
   cep: string;
   street: string;
   number: string;
   neighborhood: string;
-  city: string; // NOVO CAMPO
+  city: string;
   state: string;
 }
 
 export default function RegisterProviderScreen() {
-  const [currentStep, setCurrentStep] = useState(1); // 1: Personal Info, 2: Address Info, 3: Service Details
+  const [currentStep, setCurrentStep] = useState(1);
 
-  // Estados da Etapa 1: Informações Pessoais
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [cpf, setCpf] = useState('');
-  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState(''); // Armazenará DD/MM/AAAA
   const [showPassword, setShowPassword] = useState(false);
 
-  // Estados da Etapa 2: Informações de Endereço
   const [cep, setCep] = useState('');
   const [street, setStreet] = useState('');
   const [number, setNumber] = useState('');
@@ -96,18 +87,16 @@ export default function RegisterProviderScreen() {
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
 
-  // Estados da Etapa 3: Detalhes do Serviço (vindos de service-details.tsx)
   const { serviceDetails, setServiceDetails, submitRegistration } = useProviderRegistration();
-  const [experiencia, setExperiencia] = useState(''); // Mapeia para Provider.bio
-  const [servicosOferecidos, setServicosOferecidos] = useState(''); // String para ProviderService
-  const [estruturaPreco, setEstruturaPreco] = useState(''); // Texto livre
-  const [areasAtendimento, setAreasAtendimento] = useState(''); // Texto livre
-  const [anosExperiencia, setAnosExperiencia] = useState(''); // Mapeia para Provider.yearsOfExperience
-  const [pixKey, setPixKey] = useState(''); // Mapeia para Provider.pixKey
+  const [experiencia, setExperiencia] = useState('');
+  const [servicosOferecidos, setServicosOferecidos] = useState('');
+  const [estruturaPreco, setEstruturaPreco] = useState('');
+  const [areasAtendimento, setAreasAtendimento] = useState('');
+  const [anosExperiencia, setAnosExperiencia] = useState('');
+  const [pixKey, setPixKey] = useState('');
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
-  // Erros da Etapa 3
   const [experienciaError, setExperienciaError] = useState<string | null>(null);
   const [servicosOferecidosError, setServicosOferecidosError] = useState<string | null>(null);
   const [estruturaPrecoError, setEstruturaPrecoError] = useState<string | null>(null);
@@ -116,10 +105,9 @@ export default function RegisterProviderScreen() {
   const [pixKeyError, setPixKeyError] = useState<string | null>(null);
   const [avatarError, setAvatarError] = useState<string | null>(null);
 
-
-  const [isLoading, setIsLoading] = useState(false); // Usado para Etapas 1 e 2
-  const [isSubmitting, setIsSubmitting] = useState(false); // Usado para Etapa 3
-  const [generalError, setGeneralError] = useState<string | null>(null); // Erro geral para Etapas 1 e 2
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [generalError, setGeneralError] = useState<string | null>(null);
 
   const router = useRouter();
   const { signUpProvider, setIsRegistrationInProgress } = useAuth();
@@ -127,68 +115,82 @@ export default function RegisterProviderScreen() {
   const mainElementsOpacity = useRef(new Animated.Value(0)).current;
   const mainElementsTranslateY = useRef(new Animated.Value(18)).current;
 
-  // Animações para os elementos da tela (do service-details.tsx) - MOVIDO PARA O ESCOPO PRINCIPAL
   const headerAnim = useRef(new Animated.Value(0)).current;
   const formAnim = useRef(new Animated.Value(0)).current;
   const avatarScaleAnim = useRef(new Animated.Value(1)).current;
 
-  // Estilos animados para o cabeçalho e o formulário (MOVIDO PARA O ESCOPO PRINCIPAL)
   const headerAnimatedStyle = {
-      opacity: headerAnim,
-      transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
+    opacity: headerAnim,
+    transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
   };
 
   const formAnimatedStyle = {
-      opacity: formAnim,
-      transform: [{ scale: formAnim.interpolate({ inputRange: [0, 1], outputRange: [0.98, 1] }) }],
+    opacity: formAnim,
+    transform: [{ scale: formAnim.interpolate({ inputRange: [0, 1], outputRange: [0.98, 1] }) }],
   };
 
-  // Funções para animação do avatar - MOVIDO PARA O ESCOPO PRINCIPAL
   const onPressInAvatar = () => {
-      console.log("[Avatar] Animação de pressionar avatar: In.");
-      Animated.spring(avatarScaleAnim, {
-          toValue: 0.95,
-          useNativeDriver: true,
-      }).start();
+    console.log("[Avatar] Animação de pressionar avatar: In.");
+    Animated.spring(avatarScaleAnim, {
+      toValue: 0.95,
+      useNativeDriver: true,
+    }).start();
   };
 
   const onPressOutAvatar = () => {
-      console.log("[Avatar] Animação de pressionar avatar: Out.");
-      Animated.spring(avatarScaleAnim, {
-          toValue: 1,
-          friction: 3,
-          tension: 40,
-          useNativeDriver: true,
-      }).start();
+    console.log("[Avatar] Animação de pressionar avatar: Out.");
+    Animated.spring(avatarScaleAnim, {
+      toValue: 1,
+      friction: 3,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
   };
 
-  // Função para lidar com a seleção de imagem - MOVIDO PARA O ESCOPO PRINCIPAL
   const handlePickImage = async () => {
     console.log("[ImagePicker] Tentando escolher imagem...");
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (permissionResult.granted === false) {
-        Alert.alert("Permissão Necessária", "Você precisa permitir o acesso à galeria para escolher uma foto.");
-        console.warn("[ImagePicker] Permissão da galeria negada.");
-        return;
+      Alert.alert("Permissão Necessária", "Você precisa permitir o acesso à galeria para escolher uma foto.");
+      console.warn("[ImagePicker] Permissão da galeria negada.");
+      return;
     }
 
     const pickerResult = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.7,
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
     });
 
     if (!pickerResult.canceled && pickerResult.assets && pickerResult.assets.length > 0) {
-        setAvatarUri(pickerResult.assets[0].uri);
-        setAvatarError(null);
-        setAvatarUrl(null); // Limpa URL do servidor para forçar re-upload se necessário
-        console.log("[ImagePicker] Imagem selecionada com URI:", pickerResult.assets[0].uri);
+      setAvatarUri(pickerResult.assets[0].uri);
+      setAvatarError(null);
+      setAvatarUrl(null);
+      console.log("[ImagePicker] Imagem selecionada com URI:", pickerResult.assets[0].uri);
     } else {
-        console.log("[ImagePicker] Seleção de imagem cancelada ou falhou.");
+      console.log("[ImagePicker] Seleção de imagem cancelada ou falhou.");
     }
   };
 
+  // NOVO: Função para formatar a data para DD/MM/AAAA
+  const formatDateForDisplay = (text: string) => {
+    // Remove qualquer coisa que não seja número
+    const cleanedText = text.replace(/\D/g, '');
+    let formattedText = '';
+
+    // Aplica a máscara DD/MM/AAAA
+    if (cleanedText.length > 0) {
+      formattedText += cleanedText.substring(0, 2);
+      if (cleanedText.length > 2) {
+        formattedText += '/' + cleanedText.substring(2, 4);
+      }
+      if (cleanedText.length > 4) {
+        formattedText += '/' + cleanedText.substring(4, 8);
+      }
+    }
+    return formattedText;
+  };
 
   useEffect(() => {
     Animated.parallel([
@@ -197,9 +199,8 @@ export default function RegisterProviderScreen() {
     ]).start();
   }, [mainElementsOpacity, mainElementsTranslateY]);
 
-  // useEffect para carregar serviceDetails (do service-details.tsx)
   useEffect(() => {
-    if (currentStep === 3 && serviceDetails) { // Só carrega se estiver na Etapa 3
+    if (currentStep === 3 && serviceDetails) {
       console.log("[ServiceDetailsScreen] Carregando serviceDetails do contexto:", serviceDetails);
       setExperiencia(serviceDetails.experiencia);
       setServicosOferecidos(serviceDetails.servicosOferecidos);
@@ -210,22 +211,20 @@ export default function RegisterProviderScreen() {
       setAvatarUri(serviceDetails.avatarUri);
       setAvatarUrl(serviceDetails.avatarUrl || null);
     }
-    // Animações para a etapa atual
     Animated.stagger(200, [
       Animated.timing(headerAnim, {
-          toValue: 1,
-          duration: 600,
-          useNativeDriver: true,
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
       }),
       Animated.timing(formAnim, {
-          toValue: 1,
-          duration: 800,
-          delay: 200,
-          useNativeDriver: true,
+        toValue: 1,
+        duration: 800,
+        delay: 200,
+        useNativeDriver: true,
       }),
     ]).start(() => console.log(`[RegisterProviderScreen] Animações para Step ${currentStep} concluídas.`));
   }, [currentStep, serviceDetails, headerAnim, formAnim]);
-
 
   // Funções de validação "puras" (não alteram o estado de erro, apenas retornam boolean)
   const pureValidateStep1 = useCallback(() => {
@@ -248,12 +247,20 @@ export default function RegisterProviderScreen() {
         console.log("[Validation] Step 1 falhou: CPF inválido (deve ter 11 dígitos numéricos).");
         return false;
     }
-    // Validação básica de Data de Nascimento (formatoInvariantCulture-MM-DD)
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    // Validação básica de Data de Nascimento (DD/MM/AAAA)
+    const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/; // Novo regex para DD/MM/AAAA
     if (!dateRegex.test(dateOfBirth.trim())) {
-        console.log("[Validation] Step 1 falhou: Data de Nascimento inválida (esperadoInvariantCulture-MM-DD).");
+        console.log("[Validation] Step 1 falhou: Data de Nascimento inválida (esperado DD/MM/AAAA).");
         return false;
     }
+    // Validação adicional de data real (dia/mês/ano válidos)
+    const [day, month, year] = dateOfBirth.split('/').map(Number);
+    const date = new Date(year, month - 1, day); // month - 1 porque o mês é baseado em 0 no Date
+    if (isNaN(date.getTime()) || date.getFullYear() !== year || date.getMonth() + 1 !== month || date.getDate() !== day) {
+        console.log("[Validation] Step 1 falhou: Data de Nascimento inválida (data inexistente).");
+        return false;
+    }
+
     console.log("[Validation] Step 1 válido.");
     return true;
   }, [username, email, password, cpf, dateOfBirth]);
@@ -268,7 +275,6 @@ export default function RegisterProviderScreen() {
     return true;
   }, [cep, street, number, neighborhood, city, state]);
 
-  // Validação para a Etapa 3 (Service Details) - Copiado de service-details.tsx
   const pureValidateStep3 = useCallback(() => {
     console.log("[Validation] Iniciando validação do formulário de detalhes do serviço (Step 3).");
     let isValid = true;
@@ -285,31 +291,35 @@ export default function RegisterProviderScreen() {
     return isValid;
   }, [experiencia, servicosOferecidos, estruturaPreco, areasAtendimento, anosExperiencia, pixKey, avatarUri]);
 
-
-  // Lógica de avanço de etapa unificada
-  const handleNext = async () => { // Marcado como async para lidar com chamadas de API
+  // FUNÇÃO handleNext CORRIGIDA PARA NAVEGAR ENTRE ETAPAS E CHAMAR API NA HORA CERTA
+  const handleNext = async () => {
     console.log(`[RegisterProvider] handleNext: Tentando avançar do Step ${currentStep}.`);
     setGeneralError(null); // Limpa erros gerais antes de validar
 
     if (currentStep === 1) {
+      // APENAS valida Step 1 e avança para Step 2 (Endereço)
       if (pureValidateStep1()) {
         setCurrentStep(2);
-        console.log("[RegisterProvider] handleNext: Avançando para o Step 2.");
+        console.log("[RegisterProvider] handleNext: Avançando para o Step 2 (Endereço).");
       } else {
         setGeneralError('Por favor, preencha todos os campos pessoais corretamente.');
         console.warn("[RegisterProvider] handleNext: Falha ao avançar: Step 1 inválido.");
       }
     } else if (currentStep === 2) {
+      // Valida Step 2 e, se OK, chama a API de registro inicial e avança para Step 3
       if (pureValidateStep2()) {
-        // Antes de ir para a Etapa 3, faz o registro inicial do usuário com AuthContext
-        setIsLoading(true); // Usando isLoading para a chamada inicial de registro
+        setIsLoading(true); // Ativa o loading para a chamada inicial de registro
         try {
+          // Converte a data de nascimento para o formato AAAA-MM-DD antes de enviar
+          const [day, month, year] = dateOfBirth.split('/').map(Number);
+          const formattedDateOfBirth = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
           const providerData = {
             email: email.trim(),
             password: password.trim(),
             fullName: username.trim(),
             cpf: cpf.trim(),
-            dateOfBirth: dateOfBirth.trim(),
+            dateOfBirth: formattedDateOfBirth, // Usa a data formatada
             address: {
               cep: cep.trim(),
               street: street.trim(),
@@ -317,11 +327,11 @@ export default function RegisterProviderScreen() {
               neighborhood: neighborhood.trim(),
               city: city.trim(),
               state: state.trim(),
-              complement: '',
+              complement: '', // Mantenha, se houver um campo para ele no seu formulário
             },
           };
           console.log("[RegisterProvider] handleNext (Step 2): Chamando signUpProvider do AuthContext.");
-          await signUpProvider(providerData as any);
+          await signUpProvider(providerData as any); // AQUI é onde a API é chamada!
           console.log("[RegisterProvider] handleNext (Step 2): signUpProvider do AuthContext retornou sucesso. Avançando para Step 3.");
           setCurrentStep(3); // Avança para a Etapa 3 (Detalhes do Serviço)
         } catch (error: any) {
@@ -342,17 +352,15 @@ export default function RegisterProviderScreen() {
     }
   };
 
-
-  // Função de submissão dos detalhes do serviço (baseado no handleFinalRegister de service-details.tsx)
   const handleServiceDetailsSubmit = async () => {
     console.log("[ServiceDetailsSubmit] Botão 'Finalizar Cadastro' pressionado na Etapa 3.");
-    if (!pureValidateStep3()) { // Usa a validação específica da Etapa 3
+    if (!pureValidateStep3()) {
       Alert.alert("Campos Inválidos", "Por favor, corrija os erros nos campos de detalhes do serviço antes de finalizar.");
       console.warn("[ServiceDetailsSubmit] Validação do formulário (Step 3) falhou. Abortando submissão.");
       return;
     }
 
-    setIsSubmitting(true); // Usa isSubmitting para esta etapa
+    setIsSubmitting(true);
     console.log("[ServiceDetailsSubmit] isSubmitting definido como true.");
     try {
         let finalAvatarServerUrl: string | null = avatarUrl;
@@ -378,21 +386,20 @@ export default function RegisterProviderScreen() {
         };
         console.log("[ServiceDetailsSubmit] Detalhes do serviço a serem salvos no contexto:", currentServiceDetails);
 
-        setServiceDetails(currentServiceDetails); // Salva no contexto de registro
+        setServiceDetails(currentServiceDetails);
         console.log("[ServiceDetailsSubmit] Detalhes do serviço salvos no contexto ProviderRegistrationContext.");
 
         console.log("[ServiceDetailsSubmit] Chamando submitRegistration do ProviderRegistrationContext.");
-        await submitRegistration(); // Finaliza o registro com os detalhes do serviço
+        await submitRegistration();
         console.log("[ServiceDetailsSubmit] submitRegistration concluído. Preparando redirecionamento para o Dashboard.");
 
-        // Após o sucesso, resetar a flag de registro em andamento e redirecionar
-        setIsRegistrationInProgress(false); // Reseta a flag AGORA que o fluxo está completo
+        setIsRegistrationInProgress(false);
         Alert.alert(
           "Cadastro Finalizado!",
           "Seu perfil de provedor foi criado e está pronto!",
           [{ text: "OK", onPress: () => {
             console.log("[ServiceDetailsSubmit] Alerta 'OK' pressionado. Redirecionando para o Dashboard.");
-            router.replace(PROVIDER_ROUTES.DASHBOARD as any); // Redireciona para o dashboard
+            router.replace(PROVIDER_ROUTES.DASHBOARD as any);
           }}]
         );
 
@@ -405,7 +412,6 @@ export default function RegisterProviderScreen() {
     }
   };
 
-
   const createButtonAnimations = () => {
     const scaleAnim = useRef(new Animated.Value(1)).current;
     const onPressIn = () => Animated.spring(scaleAnim, { toValue: 0.97, useNativeDriver: true, friction: 7 }).start();
@@ -413,15 +419,12 @@ export default function RegisterProviderScreen() {
     return { scaleAnim, onPressIn, onPressOut };
   };
 
-  const signUpButtonAnims = createButtonAnimations(); // Usado para o botão "Finalizar Cadastro" na Etapa 2/3
-  const nextButtonAnims = createButtonAnimations(); // Usado para o botão "Avançar" na Etapa 1
+  const signUpButtonAnims = createButtonAnimations();
+  const nextButtonAnims = createButtonAnimations();
 
-
-  // A validação do botão "Finalizar Cadastro" agora depende da Etapa 3
   const isFinalSignUpButtonEnabled = currentStep === 3 && pureValidateStep3();
   const isNextButtonEnabledStep1 = currentStep === 1 && pureValidateStep1();
   const isNextButtonEnabledStep2 = currentStep === 2 && pureValidateStep2();
-
 
   return (
     <KeyboardAvoidingView
@@ -430,8 +433,6 @@ export default function RegisterProviderScreen() {
     >
       <StatusBar barStyle="dark-content" backgroundColor={styles.scrollView.backgroundColor} />
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContentContainer} keyboardShouldPersistTaps="handled" >
-        {/* Stack.Screen options={{ headerShown: false }} é agora gerenciado no _layout.tsx do grupo */}
-
         <Animated.View style={[styles.contentWrapper, { opacity: mainElementsOpacity, transform: [{translateY: mainElementsTranslateY}] }]}>
           <View style={styles.logoContainer}>
             <Image source={LOGO_IMAGE} style={styles.logo} />
@@ -439,12 +440,8 @@ export default function RegisterProviderScreen() {
 
           <Text style={styles.welcomeSubtitle}>Crie sua conta</Text>
 
-          {/* Renderização condicional das etapas */}
-
-          {/* Step 1: Personal Info */}
           {currentStep === 1 && (
             <View>
-              {/* Campos de Input da Etapa 1 */}
               <View style={styles.inputWrapper}>
                 <View style={styles.iconCircle}>
                   <Ionicons name="person-outline" size={20} color="#007BFF" />
@@ -517,10 +514,10 @@ export default function RegisterProviderScreen() {
                 </View>
                 <TextInput
                   style={styles.input}
-                  placeholder="Data de Nascimento (AAAA-MM-DD)"
+                  placeholder="Data de Nascimento (DD/MM/AAAA)"
                   placeholderTextColor="#A0AEC0"
                   value={dateOfBirth}
-                  onChangeText={(text) => { setDateOfBirth(text); if (generalError) setGeneralError(null);}}
+                  onChangeText={(text) => { setDateOfBirth(formatDateForDisplay(text)); if (generalError) setGeneralError(null);}}
                   keyboardType="numeric"
                   maxLength={10}
                 />
@@ -530,10 +527,8 @@ export default function RegisterProviderScreen() {
             </View>
           )}
 
-          {/* Step 2: Address Info */}
           {currentStep === 2 && (
             <View>
-              {/* Campos de Input da Etapa 2 */}
               <View style={styles.inputWrapper}>
                 <View style={styles.iconCircle}>
                   <Ionicons name="map-outline" size={20} color="#007BFF" />
@@ -593,7 +588,7 @@ export default function RegisterProviderScreen() {
 
               <View style={styles.inputWrapper}>
                 <View style={styles.iconCircle}>
-                  <Ionicons name="location-outline" size={20} color="#007BFF" /> {/* Alterado de 'city-outline' para 'location-outline' */}
+                  <Ionicons name="location-outline" size={20} color="#007BFF" />
                 </View>
                 <TextInput
                   style={styles.input}
@@ -624,14 +619,11 @@ export default function RegisterProviderScreen() {
             </View>
           )}
 
-          {/* Step 3: Service Details (Integrado de service-details.tsx) */}
           {currentStep === 3 && (
-            <Animated.View style={[styles.formSection, formAnimatedStyle]}> {/* 'formAnimatedStyle' está agora no escopo */}
-              {/* Título e subtítulo da Etapa 3 - Modificado */}
-              <Text style={styles.sectionTitle}>Serviços</Text> {/* Título alterado para "Serviços" */}
-              <Text style={styles.sectionSubtitle}>Descreva os serviços que você oferece e sua experiência profissional.</Text> {/* Novo subtítulo */}
+            <Animated.View style={[styles.formSection, formAnimatedStyle]}>
+              <Text style={styles.sectionTitle}>Serviços</Text>
+              <Text style={styles.sectionSubtitle}>Descreva os serviços que você oferece e sua experiência profissional.</Text>
 
-              {/* Foto de Perfil */}
               <Text style={styles.label}>Foto de Perfil *</Text>
               <TouchableOpacity
                   onPress={handlePickImage}
@@ -650,12 +642,11 @@ export default function RegisterProviderScreen() {
               </TouchableOpacity>
               <ErrorMessage message={avatarError} />
 
-              {/* Anos de Experiência */}
               <Text style={styles.label}>Anos de Experiência *</Text>
-              <View style={styles.inputWrapperServiceDetails}> {/* Novo estilo para inputWrapper na Etapa 3 */}
+              <View style={styles.inputWrapperServiceDetails}>
                   <Ionicons name="briefcase-outline" size={20} color="#007BFF" style={styles.inputIcon} />
                   <TextInput
-                      style={styles.inputServiceDetails} /* Novo estilo para input na Etapa 3 */
+                      style={styles.inputServiceDetails}
                       value={anosExperiencia}
                       onChangeText={setAnosExperiencia}
                       onBlur={() => setAnosExperienciaError(isNaN(Number(anosExperiencia)) || Number(anosExperiencia) < 0 || anosExperiencia.trim() === '' ? 'Anos de experiência inválidos.' : null)}
@@ -667,12 +658,11 @@ export default function RegisterProviderScreen() {
               </View>
               <ErrorMessage message={anosExperienciaError} />
 
-              {/* Principais Serviços Oferecidos */}
               <Text style={styles.label}>Principais Serviços Oferecidos *</Text>
-              <View style={styles.inputWrapperServiceDetails}> 
+              <View style={styles.inputWrapperServiceDetails}>
                   <Ionicons name="construct-outline" size={20} color="#007BFF" style={styles.inputIcon} />
                   <TextInput
-                      style={[styles.inputServiceDetails, styles.textAreaInputServiceDetails]} 
+                      style={[styles.inputServiceDetails, styles.textAreaInputServiceDetails]}
                       value={servicosOferecidos}
                       onChangeText={setServicosOferecidos}
                       onBlur={() => setServicosOferecidosError(servicosOferecidos.trim() ? null : 'Liste os serviços que você oferece.')}
@@ -686,12 +676,11 @@ export default function RegisterProviderScreen() {
               </View>
               <ErrorMessage message={servicosOferecidosError} />
 
-              {/* Descrição da Experiência Profissional */}
               <Text style={styles.label}>Descreva sua Experiência Profissional *</Text>
-              <View style={styles.inputWrapperServiceDetails}> 
+              <View style={styles.inputWrapperServiceDetails}>
                   <MaterialCommunityIcons name="text-box-outline" size={20} color="#007BFF" style={styles.inputIcon} />
                   <TextInput
-                      style={[styles.inputServiceDetails, styles.textAreaInputServiceDetails]} 
+                      style={[styles.inputServiceDetails, styles.textAreaInputServiceDetails]}
                       value={experiencia}
                       onChangeText={setExperiencia}
                       onBlur={() => setExperienciaError(experiencia.trim() ? null : 'Sua experiência é obrigatória.')}
@@ -705,12 +694,11 @@ export default function RegisterProviderScreen() {
               </View>
               <ErrorMessage message={experienciaError} />
 
-              {/* Estrutura de Preços */}
               <Text style={styles.label}>Sua Estrutura de Preços *</Text>
-              <View style={styles.inputWrapperServiceDetails}> 
+              <View style={styles.inputWrapperServiceDetails}>
                   <MaterialCommunityIcons name="currency-usd" size={20} color="#007BFF" style={styles.inputIcon} />
                   <TextInput
-                      style={[styles.inputServiceDetails, styles.textAreaInputServiceDetails]} 
+                      style={[styles.inputServiceDetails, styles.textAreaInputServiceDetails]}
                       value={estruturaPreco}
                       onChangeText={setEstruturaPreco}
                       onBlur={() => setEstruturaPrecoError(estruturaPreco.trim() ? null : 'Descreva sua estrutura de preços.')}
@@ -724,12 +712,11 @@ export default function RegisterProviderScreen() {
               </View>
               <ErrorMessage message={estruturaPrecoError} />
 
-              {/* Áreas de Atendimento */}
               <Text style={styles.label}>Principais Áreas/Bairros de Atendimento *</Text>
-              <View style={styles.inputWrapperServiceDetails}> 
+              <View style={styles.inputWrapperServiceDetails}>
                   <Ionicons name="location-outline" size={20} color="#007BFF" style={styles.inputIcon} />
                   <TextInput
-                      style={[styles.inputServiceDetails, styles.textAreaInputServiceDetails]} 
+                      style={[styles.inputServiceDetails, styles.textAreaInputServiceDetails]}
                       value={areasAtendimento}
                       onChangeText={setAreasAtendimento}
                       onBlur={() => setAreasAtendimentoError(areasAtendimento.trim() ? null : 'Informe suas áreas de atendimento.')}
@@ -743,12 +730,11 @@ export default function RegisterProviderScreen() {
               </View>
               <ErrorMessage message={areasAtendimentoError} />
 
-              {/* Chave PIX */}
               <Text style={styles.label}>Chave PIX *</Text>
-              <View style={styles.inputWrapperServiceDetails}> 
+              <View style={styles.inputWrapperServiceDetails}>
                   <Ionicons name="key-outline" size={20} color="#007BFF" style={styles.inputIcon} />
                   <TextInput
-                      style={styles.inputServiceDetails} 
+                      style={styles.inputServiceDetails}
                       value={pixKey}
                       onChangeText={setPixKey}
                       onBlur={() => setPixKeyError(pixKey.trim() ? null : 'A chave PIX é obrigatória.')}
@@ -760,8 +746,7 @@ export default function RegisterProviderScreen() {
             </Animated.View>
           )}
 
-          {/* Botões de Navegação */}
-          {currentStep === 1 && ( // Botão "Avançar" visível apenas na Etapa 1
+          {currentStep === 1 && (
             <Animated.View style={{transform: [{scale: nextButtonAnims.scaleAnim}]}}>
               <TouchableOpacity
                 style={[styles.nextButton, (isLoading || !isNextButtonEnabledStep1) && styles.buttonDisabled]}
@@ -775,11 +760,11 @@ export default function RegisterProviderScreen() {
             </Animated.View>
           )}
 
-          {currentStep === 2 && ( // Botão "Finalizar Cadastro" (agora "Avançar para Detalhes") visível na Etapa 2
+          {currentStep === 2 && (
             <Animated.View style={{transform: [{scale: signUpButtonAnims.scaleAnim}]}}>
               <TouchableOpacity
                 style={[styles.signUpButton, (isLoading || !isNextButtonEnabledStep2) && styles.buttonDisabled]}
-                onPress={handleNext} // Chama handleNext que agora avança para Step 3
+                onPress={handleNext}
                 onPressIn={signUpButtonAnims.onPressIn}
                 onPressOut={signUpButtonAnims.onPressOut}
                 disabled={isLoading || !isNextButtonEnabledStep2}
@@ -787,21 +772,21 @@ export default function RegisterProviderScreen() {
                 {isLoading ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.signUpButtonText}>Avançar para Detalhes</Text> // Texto atualizado
+                  <Text style={styles.signUpButtonText}>Avançar para Detalhes</Text>
                 )}
               </TouchableOpacity>
             </Animated.View>
           )}
 
-          {currentStep === 3 && ( // Botão "Finalizar Cadastro" na Etapa 3
-            <Animated.View style={[styles.navigationButtons]}> {/* Usar styles.navigationButtons para flexbox */}
+          {currentStep === 3 && (
+            <Animated.View style={[styles.navigationButtons]}>
               <TouchableOpacity style={[styles.navButton, styles.backButton]} onPress={() => setCurrentStep(2)} disabled={isSubmitting}>
                   <Ionicons name="arrow-back-outline" size={20} color="#007AFF" />
                   <Text style={styles.navButtonTextBack}>Voltar</Text>
               </TouchableOpacity>
               <TouchableOpacity
                   style={[styles.navButton, styles.nextButton, isSubmitting && styles.nextButtonDisabled]}
-                  onPress={handleServiceDetailsSubmit} // Chama a nova função de submissão
+                  onPress={handleServiceDetailsSubmit}
                   disabled={isSubmitting || !isFinalSignUpButtonEnabled}
               >
                   {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.navButtonTextNext}>Finalizar Cadastro</Text>}
@@ -815,14 +800,13 @@ export default function RegisterProviderScreen() {
   );
 }
 
-// ESTILOS REFEITOS PARA CORRESPONDER À IMAGEM FORNECIDA
 const styles = StyleSheet.create({
   keyboardAvoidingContainer: {
     flex: 1,
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#F7F8FC', // Fundo branco ou muito claro como na imagem
+    backgroundColor: '#F7F8FC',
   },
   scrollContentContainer: {
     flexGrow: 1,
@@ -831,49 +815,49 @@ const styles = StyleSheet.create({
   },
   contentWrapper: {
     paddingHorizontal: 35,
-    paddingTop: Platform.OS === 'ios' ? 20 : 15, // Menos padding no topo
+    paddingTop: Platform.OS === 'ios' ? 20 : 15,
   },
   logoContainer: {
     alignItems: 'center',
     
   },
-  logo: { // Ajuste para o logo V-shape
-    width: 290, // Ajustado para o tamanho da imagem
-    height: 300, // Ajustado para o tamanho da imagem
+  logo: {
+    width: 290,
+    height: 300,
     resizeMode: 'contain',
-    bottom: 20, // Espaço entre o logo e o título
-    right: 15, // Ajustado para centralizar o logo
+    bottom: 20,
+    right: 15,
   },
   welcomeTitle: {
-    fontSize: 24, // Ajustado
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#1D2029', // Cor escura, quase preta
+    color: '#1D2029',
     textAlign: 'center',
     marginBottom: 6,
     
   },
   welcomeSubtitle: {
-    fontSize: 15, // Ajustado
-    color: '#8A94A6', // Cinza médio
+    fontSize: 15,
+    color: '#8A94A6',
     textAlign: 'center',
     marginBottom: 30,
-    bottom: 138, // Ajustado para centralizar o título
+    bottom: 138,
   },
-  inputWrapper: { // Este é o contêiner branco pill-shape com sombra
-    flexDirection: 'row', // Alinha os filhos horizontalmente (círculo do ícone e input)
-    alignItems: 'center', // Centraliza verticalmente os filhos
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 28, // Totalmente arredondado
-    height: 35, // Altura do input (ajustado para 50px)
-    marginBottom: 20, // Espaçamento entre os inputs
-    shadowColor: 'rgba(100, 100, 150, 0.15)', // Sombra mais suave
+    borderRadius: 28,
+    height: 35,
+    marginBottom: 20,
+    shadowColor: 'rgba(100, 100, 150, 0.15)',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 1,
     shadowRadius: 15,
     elevation: 5,
-    paddingLeft: 5, // Pequeno padding à esquerda para o círculo do ícone
-    paddingRight: 15, // Padding à direita para o TextInput e o olho
-    bottom: 100, // Espaço entre o logo e o título
+    paddingLeft: 5,
+    paddingRight: 15,
+    bottom: 100,
   },
   iconCircle: {
     width: 50,
@@ -883,27 +867,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderWidth: 24.8, // Borda muito grossa que pode interferir na percepção da sombra
+    borderWidth: 24.8,
     borderColor: 'rgba(178, 139, 202, 0.19)',
-    // Estilos de sombra para iOS
     shadowColor: 'rgba(178, 139, 202, 0.81)',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 1,
     shadowRadius: 15,
-    // Elevação para Android (pode ser obscurecida pela borda grossa)
-    elevation: 8, // Considere aumentar, mas revise o borderWidth
+    elevation: 8,
     marginRight: 10,
   },
   input: {
-    flex: 1, // Faz com que o TextInput ocupe o espaço restante
-    fontSize: 15, // Ajustado
+    flex: 1,
+    fontSize: 15,
     color: '#2D3748',
     right: 8,
-    height: '70%', // Garante que o input preencha a altura do wrapper
-    paddingVertical: 0, // Remove padding vertical padrão que pode afetar a altura
+    height: '70%',
+    paddingVertical: 0,
   },
   eyeIconTouchable: {
-    paddingHorizontal: 15, // Aumenta área de toque e dá espaço da borda
+    paddingHorizontal: 15,
     height: '100%',
     justifyContent: 'center',
   },
@@ -914,17 +896,16 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     marginTop: -12,
   },
-  // Novo estilo para o botão "Avançar"
   nextButton: {
     backgroundColor: '#40C0F0',
     borderRadius: 28,
     paddingVertical: 10,
-    width: '100%', // Alterado para 100% para alinhamento e consistência
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 10,
-    bottom: 0, // Ajustado para remover o bottom fixo
-    marginBottom: 15, // Espaço entre o botão "Avançar" e o "Sign up" (se fosse visível)
+    bottom: 0,
+    marginBottom: 15,
     shadowColor: '#007BFF',
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.3,
@@ -936,11 +917,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  signUpButton: { // Renomeado de signInButton
+  signUpButton: {
     backgroundColor: '#007BFF',
     borderRadius: 28,
     paddingVertical: 10,
-    width: '100%', // Alterado para 100% para alinhamento e consistência
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 10,
@@ -956,12 +937,11 @@ const styles = StyleSheet.create({
     elevation: 0,
     shadowOpacity: 0,
   },
-  signUpButtonText: { // Renomeado de signInButtonText
+  signUpButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
-  // Novos estilos para as seções de detalhes do serviço (vindo de service-details.tsx)
   sectionTitle: {
     fontSize: 22,
     fontWeight: 'bold',
@@ -977,7 +957,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   formSection: {
-    // Estilos para animação da seção de formulário (mantido para compatibilidade)
+    
   },
   label: {
     fontSize: 15,
@@ -986,113 +966,111 @@ const styles = StyleSheet.create({
     marginBottom: 7,
     marginTop: 12,
   },
-  inputIcon: { // Estilo para ícones dentro do inputWrapper
-      marginRight: 10,
-      color: '#007BFF', // Cor azul para os ícones
+  inputIcon: {
+    marginRight: 10,
+    color: '#007BFF',
   },
-  // Novos estilos para os inputs da Etapa 3 (service-details) para replicar o look da Etapa 2
-  inputWrapperServiceDetails: { // Replicando o estilo do inputWrapper original
+  inputWrapperServiceDetails: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderRadius: 28,
-    height: 50, // Aumentado para melhor toque e visual
+    height: 50,
     marginBottom: 20,
     shadowColor: 'rgba(100, 100, 150, 0.15)',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 1,
     shadowRadius: 15,
     elevation: 5,
-    paddingLeft: 15, // Aumentado para consistência
+    paddingLeft: 15,
     paddingRight: 15,
   },
-  inputServiceDetails: { // Replicando o estilo do input original
+  inputServiceDetails: {
     flex: 1,
     fontSize: 15,
     color: '#2D3748',
     height: '100%',
     paddingVertical: 0,
   },
-  textAreaInputServiceDetails: { // Replicando o estilo do textAreaInput original
-      height: 100, // Ajustado para ter mais espaço vertical
-      paddingTop: 15,
-      minHeight: 100,
+  textAreaInputServiceDetails: {
+    height: 100,
+    paddingTop: 15,
+    minHeight: 100,
   },
-  errorMessage: { // Erro específico do ServiceDetailsScreen (para campos de lá)
-      color: '#D32F2F',
-      fontSize: 12,
-      marginTop: -8,
-      marginBottom: 10,
-      marginLeft: 5,
+  errorMessage: {
+    color: '#D32F2F',
+    fontSize: 12,
+    marginTop: -8,
+    marginBottom: 10,
+    marginLeft: 5,
   },
   avatarPicker: {
-      alignItems: 'center',
-      justifyContent: 'center',
-      width: 120,
-      height: 120,
-      borderRadius: 60,
-      backgroundColor: '#E9ECEF',
-      borderColor: '#CED4DA',
-      borderWidth: 1,
-      alignSelf: 'center',
-      marginBottom: 20,
-      overflow: 'hidden',
-      ...Platform.select({
-          ios: {
-              shadowColor: 'rgba(0,0,0,0.1)',
-              shadowOffset: { width: 0, height: 3 },
-              shadowOpacity: 0.15,
-              shadowRadius: 5,
-          },
-          android: {
-              elevation: 3,
-          },
-      }),
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#E9ECEF',
+    borderColor: '#CED4DA',
+    borderWidth: 1,
+    alignSelf: 'center',
+    marginBottom: 20,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: 'rgba(0,0,0,0.1)',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.15,
+        shadowRadius: 5,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
   avatarImage: {
-      width: '100%',
-      height: '100%',
+    width: '100%',
+    height: '100%',
   },
   avatarPlaceholder: {
-      width: '100%',
-      height: '100%',
-      justifyContent: 'center',
-      alignItems: 'center',
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   avatarPlaceholderText: {
-      fontSize: 13,
-      color: '#6C757D',
-      marginTop: 5,
-      textAlign: 'center',
+    fontSize: 13,
+    color: '#6C757D',
+    marginTop: 5,
+    textAlign: 'center',
   },
-  navigationButtons: { // Usado para os botões "Voltar" e "Finalizar Cadastro" na Etapa 3
+  navigationButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 30,
     marginBottom: 20,
   },
   navButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 14,
-      paddingHorizontal: 22,
-      borderRadius: 10,
-      minWidth: 140,
-      ...Platform.select({
-          ios: {
-              shadowColor: 'rgba(0,0,0,0.1)',
-              shadowOffset: { width: 0, height: 3 },
-              shadowOpacity: 0.2,
-              shadowRadius: 5,
-          },
-          android: {
-              elevation: 4,
-          },
-      }),
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 22,
+    borderRadius: 10,
+    minWidth: 140,
+    ...Platform.select({
+      ios: {
+        shadowColor: 'rgba(0,0,0,0.1)',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.2,
+        shadowRadius: 5,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   backButton: { backgroundColor: '#E9ECEF', borderWidth: 1, borderColor: '#CED4DA' },
-  // nextButton já existe, usado para a Etapa 1 e agora para a Etapa 3 (com texto diferente)
   nextButtonDisabled: { backgroundColor: '#A0CFFF', elevation: 0, shadowOpacity: 0 },
   navButtonTextBack: { fontSize: 16, fontWeight: '600', color: '#007AFF', marginLeft: 5 },
   navButtonTextNext: { fontSize: 17, fontWeight: 'bold', color: '#FFFFFF', marginRight: 5 },

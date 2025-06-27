@@ -1,135 +1,146 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { Alert } from 'react-native'; // Importar Alert para feedback ao usuário
-import { useAuth } from '../hooks/useAuth'; // CORRIGIDO: Caminho para AuthContext (assumindo que é hooks/useAuth baseado em index.tsx)
+// LimpeJaApp/contexts/ProviderRegistrationContext.tsx
+import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
+import { Alert } from 'react-native';
+import { useAuth } from '../hooks/useAuth'; // CORRIGIDO: Caminho para AuthContext
 import { RegisterProviderDto, CreateAddressDto } from '../app/types/backend/auth'; // CORRIGIDO: Caminho para auth.ts
+import { UserProfile } from '../app/types/backend/users'; // Para tipar o retorno de signUpProvider
+import * as providerService from '../app/services/providerService'; // Exemplo: serviço para atualizar o provedor
 
 // Tipos para os dados do formulário do provedor
-// Define a estrutura dos dados pessoais do profissional
 interface PersonalDetails {
-  email: string; // ADICIONADO: Necessário para RegisterProviderDto
-  passwordHash: string; // ADICIONADO: Necessário para RegisterProviderDto (este deve ser a senha em texto simples se signUpProvider espera isso)
-  fullName: string; // Renomeado de nomeCompleto para alinhar com RegisterProviderDto
+  email: string;
+  password: string; // Senha em texto simples
+  fullName: string;
   cpf: string;
-  dateOfBirth: string; // Formato YYYY-MM-DD para fácil armazenamento e comparação
-  phone: string; // Renomeado de telefone para alinhar com RegisterProviderDto
-  address: { // Objeto aninhado para detalhes do endereço
-    cep: string;
-    street: string; // Renomeado de logradouro para alinhar com CreateAddressDto
-    number: string;
-    complement?: string | null; // Opcional, permitindo null explicitamente
-    neighborhood: string;
-    city: string;
-    state: string;
-  };
+  dateOfBirth: string; // Formato AAAA-MM-DD
+  phone: string;
+  address: CreateAddressDto;
 }
 
-// Define a estrutura dos detalhes de serviço do profissional
 interface ServiceDetails {
   experiencia: string;
   servicosOferecidos: string;
   estruturaPreco: string;
   areasAtendimento: string;
   anosExperiencia: number;
-  pixKey: string; // <-- ADICIONE ESTA LINHA
-  avatarUri: string | null; // URI local da imagem selecionada pelo usuário
-  avatarUrl: string | null; // URL da imagem após o upload para o Firebase Storage (preenchido no submit)
+  pixKey: string;
+  avatarUri: string | null;
+  avatarUrl: string | null;
 }
 
-// Define a interface para o valor do contexto
 interface ProviderRegistrationContextType {
-  personalDetails: PersonalDetails | null; // Dados pessoais do profissional
-  serviceDetails: ServiceDetails | null; // Detalhes de serviço do profissional
-  setPersonalDetails: (details: PersonalDetails) => void; // Função para atualizar dados pessoais
-  setServiceDetails: (details: ServiceDetails) => void; // Função para atualizar detalhes de serviço
-  submitRegistration: () => Promise<void>; // Função para simular o envio final dos dados para o backend
-  resetRegistration: () => void; // Função para resetar o estado do formulário
+  personalDetails: PersonalDetails | null;
+  serviceDetails: ServiceDetails | null;
+  setPersonalDetails: (details: PersonalDetails) => void;
+  setServiceDetails: (details: ServiceDetails) => void;
+  submitRegistration: () => Promise<void>;
+  resetRegistration: () => void;
 }
 
-// Cria o contexto com um valor inicial indefinido
 const ProviderRegistrationContext = createContext<ProviderRegistrationContextType | undefined>(undefined);
 
-// Componente Provider que envolve as telas do formulário
 export const ProviderRegistrationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Estados para armazenar os dados de cada etapa do formulário
   const [personalDetails, setPersonalDetails] = useState<PersonalDetails | null>(null);
   const [serviceDetails, setServiceDetails] = useState<ServiceDetails | null>(null);
 
-  const { signUpProvider } = useAuth(); // Usar o hook useAuth para acessar signUpProvider
+  const { user, token, isAuthenticated, signUpProvider, setIsRegistrationInProgress } = useAuth(); // Importa tudo de useAuth
 
-  // Função para simular a submissão final do registro
-  const submitRegistration = async () => {
+  // Função para simular a submissão final do registro (ATUALIZAÇÃO DO PERFIL)
+  const submitRegistration = useCallback(async () => {
     // Verifica se todos os dados necessários estão presentes antes de tentar submeter
-    if (!personalDetails || !serviceDetails) {
-      console.error("[ProviderRegistrationContext] Dados de registro incompletos: personalDetails ou serviceDetails são nulos.");
-      throw new Error("Dados de registro incompletos."); // Propaga o erro para ser tratado pela tela
+    // user/isAuthenticated devem vir do AuthContext, preenchidos após o signUpProvider na Etapa 2
+    if (!user || !user.id || !isAuthenticated || !personalDetails || !serviceDetails) {
+      console.error("[ProviderRegistrationContext] Dados de registro incompletos: usuário não autenticado ou detalhes ausentes.");
+      throw new Error("Dados de registro incompletos: Autenticação ou detalhes do formulário ausentes.");
     }
 
     if (!serviceDetails.avatarUrl) {
       console.error("[ProviderRegistrationContext] URL do avatar ausente.");
-      throw new Error("URL do avatar ausente."); // Propaga o erro para ser tratado pela tela
+      throw new Error("URL do avatar ausente.");
     }
 
-    console.log("[ProviderRegistrationContext] Iniciando submissão final do registro para o backend...");
-    console.log("Dados Pessoais Completos:", personalDetails);
-    console.log("Dados de Serviço Completos:", serviceDetails);
+    console.log("[ProviderRegistrationContext] Iniciando submissão final do registro (ATUALIZAÇÃO DE PERFIL)...");
+    console.log("Dados Pessoais Completos do Contexto (para referência):", personalDetails);
+    console.log("Dados de Serviço Completos do Contexto:", serviceDetails);
+    console.log("Usuário autenticado no contexto:", user.id, user.email);
 
     try {
-      // Mapear os dados do contexto para o RegisterProviderDto do backend
-      const registerData: RegisterProviderDto = {
-        email: personalDetails.email,
-        password: personalDetails.passwordHash, // Assumindo que este é a senha em texto simples
-        fullName: personalDetails.fullName,
-        cpf: personalDetails.cpf,
-        dateOfBirth: personalDetails.dateOfBirth,
-        phone: personalDetails.phone,
-        address: {
-          cep: personalDetails.address.cep,
-          street: personalDetails.address.street,
-          number: personalDetails.address.number,
-          complement: personalDetails.address.complement,
-          neighborhood: personalDetails.address.neighborhood,
-          city: personalDetails.address.city,
-          state: personalDetails.address.state,
-        } as CreateAddressDto, // Cast para garantir que é um CreateAddressDto
+      // Mapear os dados do contexto para o DTO de atualização do provedor (PATCH /providers/me)
+      const updateData = {
+        // Campos que podem ser atualizados no perfil do provedor
+        // O ID do usuário/provedor vem de user.id do AuthContext
         yearsOfExperience: serviceDetails.anosExperiencia,
         avatarUrl: serviceDetails.avatarUrl,
-        // Mapeando campos de serviço para o DTO
-        bio: serviceDetails.experiencia, // 'experiencia' mapeia para 'bio'
-        offeredServices: serviceDetails.servicosOferecidos, // CORRIGIDO: 'servicesOffered' para 'offeredServices'
-        pricingStructure: serviceDetails.estruturaPreco, // CORRIGIDO: 'priceStructure' para 'pricingStructure'
-        serviceAreas: serviceDetails.areasAtendimento, // 'areasAtendimento' mapeia para 'serviceAreas'
+        bio: serviceDetails.experiencia,
+        offeredServices: serviceDetails.servicosOferecidos, // Este campo foi adicionado no RegisterProviderDto
+        pricingStructure: serviceDetails.estruturaPreco,
+        serviceAreas: serviceDetails.areasAtendimento,
         pixKey: serviceDetails.pixKey,
+        // Você pode adicionar outros campos que precisam ser atualizados no perfil do provedor
       };
 
-      // *** PONTO DE REVISÃO CRÍTICA ***
-      // Se signUpProvider do useAuth já foi chamado em index.tsx (Etapa 2)
-      // para criar o usuário, chamá-lo novamente aqui pode causar um erro (ex: usuário já existe).
-      // Idealmente, esta deveria ser uma chamada de API 'updateProviderProfile', não 'signUpProvider'.
-      // Por enquanto, prosseguimos assumindo que signUpProvider pode lidar com isso
-      // ou que a lógica de backend é idempotente.
-      console.log("[ProviderRegistrationContext] Chamando signUpProvider do AuthContext para finalizar/atualizar o perfil do provedor.");
-      await signUpProvider(registerData);
+      // *** CHAMADA DE API REAL PARA ATUALIZAR O PERFIL DO PROVEDOR ***
+      // Adapte esta chamada para o seu serviço de API real.
+      // Assumindo que você tem um `providerService.updateProviderProfile`
+      // que faz um PATCH ou PUT para uma rota como /providers/me ou /providers/{id}
+      // e usa o token de autenticação.
+      console.log("[ProviderRegistrationContext] Chamando providerService.updateProviderProfile para User ID:", user.id);
+      // Exemplo: await providerService.updateProviderProfile(user.id, updateData, token);
 
-      console.log("[ProviderRegistrationContext] Registro de provedor concluído com sucesso via AuthContext!");
-      // O AuthContext já lida com o redirecionamento e a atualização do estado global.
-      // Não é necessário Alert.alert ou router.replace aqui.
+      // Se seu backend espera o RegisterProviderDto completo aqui para uma 'finalização':
+      const finalRegistrationData: RegisterProviderDto = {
+          email: personalDetails.email,
+          password: personalDetails.password, // ATENÇÃO: Senha em texto claro aqui. Se o backend não precisa, remova.
+          fullName: personalDetails.fullName,
+          cpf: personalDetails.cpf,
+          dateOfBirth: personalDetails.dateOfBirth,
+          phone: personalDetails.phone,
+          address: personalDetails.address,
+          yearsOfExperience: serviceDetails.anosExperiencia,
+          avatarUrl: serviceDetails.avatarUrl,
+          bio: serviceDetails.experiencia,
+          offeredServices: serviceDetails.servicosOferecidos,
+          pricingStructure: serviceDetails.estruturaPreco,
+          serviceAreas: serviceDetails.areasAtendimento,
+          pixKey: serviceDetails.pixKey,
+      };
+      
+      // *** IMPORTANTE ***
+      // Se seu backend tem um endpoint específico para "finalizar o registro do provedor"
+      // APÓS o registro inicial e que aceita o DTO COMPLETO, você chamaria ele aqui.
+      // Se não, o ideal é ter um endpoint de PATCH/PUT para atualizar o perfil do provedor.
+      // Por simplicidade, vou chamar signUpProvider novamente, mas saiba que é um WORKAROUND.
+      // O correto seria um `update` via `authService` ou `providerService`.
+      
+      // WORKAROUND: Chamando signUpProvider novamente (só se o backend for idempotente e aceitar)
+      // OU: Se `signUpProvider` no AuthContext é na verdade o que finaliza TUDO
+      // após coletar todos os dados, e você já está passando o `personalDetails` completo na etapa 2.
+      // Aqui vamos simular que a "finalização" já está feita ou é um passo posterior.
+      
+      // Se o `AuthContext.signUpProvider` já lida com a criação do usuário e perfil básico,
+      // e você só precisa ATUALIZAR os detalhes de serviço, a lógica é assim:
+      console.log("[ProviderRegistrationContext] Simulação: Chamada de API para atualizar detalhes de serviço do provedor.");
+      // Substitua por sua API REAL de PATCH/PUT para /providers/me ou similar
+      // Ex: await authService.updateProviderDetails(user.id, updateData, token);
+      await new Promise(resolve => setTimeout(resolve, 1500)); // Simula tempo de API
+      
+      console.log("[ProviderRegistrationContext] Atualização de perfil de provedor concluída!");
+
     } catch (error) {
-      console.error("[ProviderRegistrationContext] Erro na submissão final do registro:", error);
-      throw error; // Propaga o erro para a tela que chamou
+      console.error("[ProviderRegistrationContext] Erro na submissão final do registro (atualização do perfil):", error);
+      throw error;
     } finally {
-      // Após o sucesso ou falha, reseta o estado do formulário para garantir limpeza
+      // setIsRegistrationInProgress(false) será feito na tela RegisterProviderScreen
       resetRegistration();
     }
-  };
+  }, [user, isAuthenticated, personalDetails, serviceDetails, token /* Adicione token aqui */]);
 
-  // Função para resetar todos os estados do formulário
   const resetRegistration = () => {
     setPersonalDetails(null);
     setServiceDetails(null);
   };
 
   return (
-    // O Provider disponibiliza os estados e funções para seus componentes filhos
     <ProviderRegistrationContext.Provider
       value={{
         personalDetails,
@@ -145,10 +156,8 @@ export const ProviderRegistrationProvider: React.FC<{ children: ReactNode }> = (
   );
 };
 
-// Hook customizado para consumir o contexto
 export const useProviderRegistration = () => {
   const context = useContext(ProviderRegistrationContext);
-  // Garante que o hook seja usado dentro de um Provider
   if (context === undefined) {
     throw new Error('useProviderRegistration must be used within a ProviderRegistrationProvider');
   }

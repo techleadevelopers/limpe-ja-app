@@ -1,49 +1,15 @@
 {
-  "cli": {
-    "version": ">= 7.6.0",
-    "appVersionSource": "remote"
-  },
-  "build": {
-    "development": {
-      "developmentClient": true,
-      "distribution": "internal",
-      "android": {
-        "image": "latest",
-        "buildType": "apk"
-      }
-    },
-    "apk_direct_test": {
-      "distribution": "internal",
-      "android": {
-        "buildType": "apk",
-        "image": "latest"
-      }
-    },
-    "production": {
-      "distribution": "store",
-      "android": {
-        "image": "latest"
-      }
-    }
-  },
-  "submit": {
-    "production": {
-      "android": {
-        "track": "internal"
-      }
-    }
-  },
   "expo": {
-    "name": "LimpeJá",
-    "slug": "LimpeJa",
+    "name": "Cleaning",
+    "slug": "cleaning",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "limpeja",
+    "scheme": "cleaning",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.techleadevelopers.limpeja",
+      "bundleIdentifier": "com.techleadevelopers.cleaning",
       "userInterfaceStyle": "light"
     },
     "android": {
@@ -80,8 +46,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "O LimpeJá precisa de acesso às suas fotos para que você possa adicionar uma ao seu perfil.",
-          "cameraPermission": "O LimpeJá precisa de acesso à sua câmera para que você possa tirar uma foto para o seu perfil."
+          "photosPermission": "O Cleaning precisa de acesso às suas fotos para que você possa adicionar uma ao seu perfil.",
+          "cameraPermission": "O Cleaning precisa de acesso à sua câmera para que você possa tirar uma foto para o seu perfil."
         }
       ]
     ],
@@ -93,8 +59,8 @@
         "projectId": "377b22bb-053b-4f74-9f8e-c1e727e01ef9"
       },
       "EXPO_PUBLIC_SHOW_TEST_LOGINS": "true",
-      "backendApiUrl": "https://limpeja-app-backend-35489557635.southamerica-east1.run.app", // Adicione esta linha com a URL que você encontrou
-      "router": {}
+      "router": {},
+      "backendApiUrl": "https://limpeja-app-backend-35489557635.southamerica-east1.run.app"
     }
   }
 }

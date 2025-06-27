@@ -17,8 +17,9 @@ import {
 import { useRouter, Stack } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { useProviderRegistration } from '../../../contexts/ProviderRegistrationContext'; // Manter o caminho original
-import { PROVIDER_ROUTES } from '../../../constants/routes'; // Importar rotas do provedor para redirecionamento final
+import { useProviderRegistration } from '../../../contexts/ProviderRegistrationContext';
+import { PROVIDER_ROUTES } from '../../../constants/routes';
+import { useAuth } from '../../../hooks/useAuth'; // Adição: Importe useAuth aqui
 
 // Componente para exibir mensagens de erro inline
 const ErrorMessage: React.FC<{ message: string | null }> = ({ message }) => {
@@ -26,7 +27,7 @@ const ErrorMessage: React.FC<{ message: string | null }> = ({ message }) => {
     return <Text style={styles.errorMessage}>{message}</Text>;
 };
 
-// NOVO: Componente reutilizável para inputs com ícone
+// Componente reutilizável para inputs com ícone (Com ajuste para onBlur)
 interface InputWithIconProps {
     label: string;
     value: string;
@@ -40,7 +41,8 @@ interface InputWithIconProps {
     numberOfLines?: number;
     maxLength?: number;
     textAlignVertical?: 'auto' | 'top' | 'bottom' | 'center';
-    onBlur?: () => void;
+    // onBlur agora não faz validação de erro, apenas dispara a prop.
+    onBlur?: () => void; // Removida a validação de erro de dentro do onBlur diretamente aqui
     onFocus?: () => void;
     accessibilityLabel: string;
 }
@@ -57,7 +59,7 @@ const InputWithIcon: React.FC<InputWithIconProps> = ({
     multiline = false,
     numberOfLines = 1,
     maxLength,
-    textAlignVertical: propTextAlignVertical = 'center', // Renomeado para evitar confusão e garantir o tipo
+    textAlignVertical: propTextAlignVertical = 'center',
     onBlur,
     onFocus,
     accessibilityLabel,
@@ -71,31 +73,30 @@ const InputWithIcon: React.FC<InputWithIconProps> = ({
 
     const handleBlur = () => {
         setIsFocused(false);
-        onBlur?.();
+        onBlur?.(); // Apenas chama o onBlur passado como prop
     };
 
     const IconComponent = iconLibrary === 'Ionicons' ? Ionicons : MaterialCommunityIcons;
 
-    // Garante que o valor final passado para TextInput seja do tipo literal correto
     const finalTextAlignVertical: 'auto' | 'top' | 'bottom' | 'center' = multiline ? 'top' : propTextAlignVertical;
 
     return (
         <View>
             <Text style={styles.label}>{label}</Text>
             <View style={[
-                styles.inputWrapper,
+                styles.inputWrapper, // Usando o estilo genérico de inputWrapper
                 isFocused && styles.inputWrapperFocused,
                 error && styles.inputWrapperError,
-                multiline && { height: 'auto', minHeight: 50 + (numberOfLines - 1) * 20 } // Ajusta altura para multiline
+                multiline && { height: 'auto', minHeight: 50 + (numberOfLines - 1) * 20 }
             ]}>
                 <View style={styles.iconCircle}>
                     <IconComponent name={iconName as any} size={20} color={isFocused ? '#007BFF' : '#6C757D'} />
                 </View>
                 <TextInput
                     style={[
-                        styles.input,
+                        styles.input, // Usando o estilo genérico de input
                         multiline && styles.textAreaInput,
-                        multiline && { minHeight: 50 + (numberOfLines - 1) * 20, height: 'auto' } // Garante altura mínima para multiline
+                        multiline && { minHeight: 50 + (numberOfLines - 1) * 20, height: 'auto' }
                     ]}
                     value={value}
                     onChangeText={onChangeText}
@@ -106,7 +107,7 @@ const InputWithIcon: React.FC<InputWithIconProps> = ({
                     multiline={multiline}
                     numberOfLines={numberOfLines}
                     maxLength={maxLength}
-                    textAlignVertical={finalTextAlignVertical} // Usar a variável explicitamente tipada
+                    textAlignVertical={finalTextAlignVertical}
                     placeholderTextColor="#A0AEC0"
                     accessibilityLabel={accessibilityLabel}
                 />
@@ -122,54 +123,42 @@ const InputWithIcon: React.FC<InputWithIconProps> = ({
 };
 
 
-// Simulação da API Firebase Storage (substituir pela implementação real)
 const mockFirebaseStorageApi = {
     uploadImage: async (uri: string) => {
         console.log("[mockFirebaseStorageApi] Iniciando upload simulado para:", uri);
-        await new Promise(resolve => setTimeout(resolve, 1500)); // Simula o tempo de upload
+        await new Promise(resolve => setTimeout(resolve, 1500));
         const mockUrl = `https://firebasestorage.googleapis.com/v0/b/limpeja.appspot.com/o/avatars%2Fmock-avatar-${Date.now()}.jpg?alt=media`;
         console.log("[mockFirebaseStorageApi] Mock Firebase Storage URL gerada:", mockUrl);
-        return mockUrl; // Retorna a URL da imagem mockada
+        return mockUrl;
     },
 };
 
-// Dados de sugestão para cidades/regiões (simulação)
 const MOCK_AREA_SUGGESTIONS = [
-    'Campinas, SP',
-    'São Paulo, SP',
-    'Rio de Janeiro, RJ',
-    'Belo Horizonte, MG',
-    'Porto Alegre, RS',
-    'Curitiba, PR',
-    'Barão Geraldo, Campinas, SP',
-    'Sousas, Campinas, SP',
-    'Centro, Campinas, SP',
-    'Sumaré, SP',
-    'Hortolândia, SP',
-    'Valinhos, SP',
-    'Vinhedo, SP',
+    'Campinas, SP', 'São Paulo, SP', 'Rio de Janeiro, RJ', 'Belo Horizonte, MG',
+    'Porto Alegre, RS', 'Curitiba, PR', 'Barão Geraldo, Campinas, SP', 'Sousas, Campinas, SP',
+    'Centro, Campinas, SP', 'Sumaré, SP', 'Hortolândia, SP', 'Valinhos, SP', 'Vinhedo, SP',
 ];
 
 export default function ServiceDetailsScreen() {
     const router = useRouter();
-    // Apenas desestruture o que você realmente usa para evitar erros de TypeScript
     const { serviceDetails, setServiceDetails, submitRegistration, personalDetails: pdFromContext } = useProviderRegistration();
+    const { setIsRegistrationInProgress } = useAuth(); // Obtenha setIsRegistrationInProgress do useAuth
 
-    const [experiencia, setExperiencia] = useState(''); // Mapeia para Provider.bio
-    const [descricaoTrabalho, setDescricaoTrabalho] = useState(''); // NOVO: Descrição do trabalho (ex-servicosOferecidos)
-    const [estruturaPreco, setEstruturaPreco] = useState(''); // Texto livre
-    const [areasAtendimento, setAreasAtendimento] = useState(''); // Texto livre
-    const [anosExperiencia, setAnosExperiencia] = useState(''); // Mapeia para Provider.yearsOfExperience
-    const [pixKey, setPixKey] = useState(''); // Mapeia para Provider.pixKey
+    // Estados locais para os campos do formulário da Etapa 3
+    const [experiencia, setExperiencia] = useState('');
+    const [descricaoTrabalho, setDescricaoTrabalho] = useState('');
+    const [estruturaPreco, setEstruturaPreco] = useState('');
+    const [areasAtendimento, setAreasAtendimento] = useState('');
+    const [anosExperiencia, setAnosExperiencia] = useState('');
+    const [pixKey, setPixKey] = useState('');
     const [avatarUri, setAvatarUri] = useState<string | null>(null);
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
-    // Estado para sugestões de cidades/regiões
     const [areaSuggestions, setAreaSuggestions] = useState<string[]>([]);
     const [showAreaSuggestions, setShowAreaSuggestions] = useState(false);
 
     const [experienciaError, setExperienciaError] = useState<string | null>(null);
-    const [descricaoTrabalhoError, setDescricaoTrabalhoError] = useState<string | null>(null); // NOVO ERRO
+    const [descricaoTrabalhoError, setDescricaoTrabalhoError] = useState<string | null>(null);
     const [estruturaPrecoError, setEstruturaPrecoError] = useState<string | null>(null);
     const [areasAtendimentoError, setAreasAtendimentoError] = useState<string | null>(null);
     const [anosExperienciaError, setAnosExperienciaError] = useState<string | null>(null);
@@ -178,12 +167,10 @@ export default function ServiceDetailsScreen() {
 
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Animações para os elementos da tela
     const headerAnim = useRef(new Animated.Value(0)).current;
     const formAnim = useRef(new Animated.Value(0)).current;
     const avatarScaleAnim = useRef(new Animated.Value(1)).current;
 
-    // Função para criar animações de botão (copiada do login.tsx)
     const createButtonAnimations = () => {
         const scaleAnim = useRef(new Animated.Value(1)).current;
         const onPressIn = () => Animated.spring(scaleAnim, { toValue: 0.97, useNativeDriver: true, friction: 7 }).start();
@@ -191,27 +178,23 @@ export default function ServiceDetailsScreen() {
         return { scaleAnim, onPressIn, onPressOut };
     };
 
-    // Inicializa as animações para o botão Finalizar Cadastro
     const finalizarButtonAnims = createButtonAnimations();
 
 
     useEffect(() => {
         console.log("[ServiceDetailsScreen] Componente montado ou serviceDetails atualizado.");
+        // Carrega os dados do contexto se existirem (para o caso de o usuário voltar ou editar)
         if (serviceDetails) {
             console.log("[ServiceDetailsScreen] Carregando serviceDetails do contexto:", serviceDetails);
-            setExperiencia(serviceDetails.experiencia);
-            setDescricaoTrabalho(serviceDetails.servicosOferecidos || ''); // Carrega a antiga prop para a nova
-            setEstruturaPreco(serviceDetails.estruturaPreco);
-            setAreasAtendimento(serviceDetails.areasAtendimento);
-            setAnosExperiencia(String(serviceDetails.anosExperiencia));
-            setPixKey(serviceDetails.pixKey || ''); // Garante que pixKey seja inicializado
-            setAvatarUri(serviceDetails.avatarUri);
+            setExperiencia(serviceDetails.experiencia || '');
+            setDescricaoTrabalho(serviceDetails.servicosOferecidos || ''); // Usando servicosOferecidos do contexto
+            setEstruturaPreco(serviceDetails.estruturaPreco || '');
+            setAreasAtendimento(serviceDetails.areasAtendimento || '');
+            setAnosExperiencia(String(serviceDetails.anosExperiencia || ''));
+            setPixKey(serviceDetails.pixKey || '');
+            setAvatarUri(serviceDetails.avatarUri || null);
             setAvatarUrl(serviceDetails.avatarUrl || null);
         }
-
-        // REMOVIDOS OS ESTADOS DE DADOS PESSOAIS E ENDEREÇO DAQUI
-        // E A LÓGICA DE PRÉ-PREENCHIMENTO, POIS ESTA TELA NÃO OS COLECIONA.
-        // SE ESTA TELA É A ÚNICA, VOCÊ PRECISARÁ ADICIONAR OS INPUTS.
 
         Animated.stagger(200, [
             Animated.timing(headerAnim, {
@@ -226,7 +209,7 @@ export default function ServiceDetailsScreen() {
                 useNativeDriver: true,
             }),
         ]).start(() => console.log("[ServiceDetailsScreen] Animações iniciais concluídas."));
-    }, [serviceDetails, headerAnim, formAnim]); // Removido pdFromContext das dependências, pois não é usado para definir estados locais aqui.
+    }, [serviceDetails, headerAnim, formAnim]);
 
     const onPressInAvatar = () => {
         console.log("[Avatar] Animação de pressionar avatar: In.");
@@ -265,27 +248,26 @@ export default function ServiceDetailsScreen() {
         if (!pickerResult.canceled && pickerResult.assets && pickerResult.assets.length > 0) {
             setAvatarUri(pickerResult.assets[0].uri);
             setAvatarError(null);
-            setAvatarUrl(null); // Limpa URL do servidor para forçar re-upload se necessário
+            setAvatarUrl(null); // Limpar avatarUrl para forçar novo upload se a URI mudar
             console.log("[ImagePicker] Imagem selecionada com URI:", pickerResult.assets[0].uri);
         } else {
             console.log("[ImagePicker] Seleção de imagem cancelada ou falhou.");
         }
     };
 
-    // Lógica de sugestão de área de atendimento
     const handleAreasAtendimentoChange = useCallback((text: string) => {
         setAreasAtendimento(text);
-        if (text.length > 2) { // Começa a sugerir após 2 caracteres
+        if (text.length > 2) {
             const filteredSuggestions = MOCK_AREA_SUGGESTIONS.filter(area =>
                 area.toLowerCase().includes(text.toLowerCase())
-            ).slice(0, 5); // Limita a 5 sugestões
+            ).slice(0, 5);
             setAreaSuggestions(filteredSuggestions);
             setShowAreaSuggestions(true);
         } else {
             setAreaSuggestions([]);
             setShowAreaSuggestions(false);
         }
-        setAreasAtendimentoError(null); // Limpa erro ao digitar
+        setAreasAtendimentoError(null);
     }, []);
 
     const handleSelectAreaSuggestion = useCallback((suggestion: string) => {
@@ -299,7 +281,6 @@ export default function ServiceDetailsScreen() {
         let isValid = true;
 
         if (!experiencia.trim()) { setExperienciaError('Sua experiência é obrigatória.'); isValid = false; console.log("[Validation] Erro: Experiência vazia."); } else { setExperienciaError(null); }
-        // Validação para a nova descrição do trabalho
         if (!descricaoTrabalho.trim()) { setDescricaoTrabalhoError('Descreva seu trabalho e serviços.'); isValid = false; console.log("[Validation] Erro: Descrição do Trabalho vazia."); } else { setDescricaoTrabalhoError(null); }
         if (!estruturaPreco.trim()) { setEstruturaPrecoError('Descreva sua estrutura de preços.'); isValid = false; console.log("[Validation] Erro: Estrutura de Preços vazia."); } else { setEstruturaPrecoError(null); }
         if (!areasAtendimento.trim()) { setAreasAtendimentoError('Informe suas áreas de atendimento.'); isValid = false; console.log("[Validation] Erro: Áreas de Atendimento vazias."); } else { setAreasAtendimentoError(null); }
@@ -335,7 +316,7 @@ export default function ServiceDetailsScreen() {
 
             const currentServiceDetails = {
                 experiencia: experiencia.trim(),
-                servicosOferecidos: descricaoTrabalho.trim(), // Mapeia a nova prop para a antiga para o contexto
+                servicosOferecidos: descricaoTrabalho.trim(), // Salvando como servicosOferecidos para o contexto
                 estruturaPreco: estruturaPreco.trim(),
                 areasAtendimento: areasAtendimento.trim(),
                 anosExperiencia: Number(anosExperiencia),
@@ -345,16 +326,15 @@ export default function ServiceDetailsScreen() {
             };
             console.log("[FinalRegistration] Detalhes do serviço a serem salvos no contexto:", currentServiceDetails);
 
-            setServiceDetails(currentServiceDetails);
+            setServiceDetails(currentServiceDetails); // Salva os detalhes do serviço no contexto
             console.log("[FinalRegistration] Detalhes do serviço salvos no contexto ProviderRegistrationContext.");
 
             console.log("[FinalRegistration] Chamando submitRegistration do ProviderRegistrationContext.");
-            // O erro "Dados de registro incompletos" ocorre aqui se personalDetails for null no contexto.
-            // Esta tela (service-details.tsx) não está definindo personalDetails.
+            // submitRegistration no contexto deve reunir personalDetails, addressDetails e serviceDetails
             await submitRegistration();
-            console.log("[FinalRegistration] submitRegistration concluído. Esperando redirecionamento do AuthContext.");
+            console.log("[FinalRegistration] submitRegistration concluído. Esperando redirecionamento para o Dashboard.");
 
-            // Redirecionamento após o sucesso
+            // setIsRegistrationInProgress(false) será feito na tela RegisterProviderScreen
             Alert.alert(
               "Cadastro Concluído!",
               "Seu perfil de provedor foi finalizado com sucesso!",
@@ -367,6 +347,9 @@ export default function ServiceDetailsScreen() {
         } catch (error: any) {
             console.error("[FinalRegistration] Erro ao finalizar cadastro:", error);
             Alert.alert('Falha no Cadastro', error.message || 'Não foi possível finalizar seu cadastro. Tente novamente mais tarde.');
+            // Em caso de erro, é prudente limpar a flag para que o usuário possa tentar novamente ou sair do fluxo.
+            setIsRegistrationInProgress(false);
+            // await AsyncStorage.removeItem('limpeja_registrationInProgress');
         } finally {
             setIsSubmitting(false);
             console.log("[FinalRegistration] isSubmitting definido como false. Processo de registro finalizado.");
@@ -493,7 +476,7 @@ export default function ServiceDetailsScreen() {
                             onFocus={() => areasAtendimento.length > 2 && setShowAreaSuggestions(true)}
                             onBlur={() => {
                                 setAreasAtendimentoError(areasAtendimento.trim() ? null : 'Informe suas áreas de atendimento.');
-                                setTimeout(() => setShowAreaSuggestions(false), 200); // Pequeno atraso para permitir clique na sugestão
+                                setTimeout(() => setShowAreaSuggestions(false), 200);
                             }}
                             placeholder="Ex: Campinas, SP; Centro; Sumaré"
                             iconName="location-outline"
@@ -538,8 +521,6 @@ export default function ServiceDetailsScreen() {
                             <TouchableOpacity
                                 style={[styles.finalizarButton, isSubmitting && styles.finalizarButtonDisabled]}
                                 onPress={handleFinalRegister}
-                                onPressIn={finalizarButtonAnims.onPressIn}
-                                onPressOut={finalizarButtonAnims.onPressOut}
                                 disabled={isSubmitting}
                                 accessibilityLabel={isSubmitting ? "Finalizando cadastro, aguarde" : "Finalizar cadastro e salvar informações"}
                             >
@@ -589,7 +570,7 @@ const styles = StyleSheet.create({
         marginBottom: 30, // Espaçamento maior antes dos campos
     },
     formSection: {
-        // Estilos para animação da seção de formulário
+        // Estilos para animação da seção de formulário (mantido para compatibilidade)
     },
     label: {
         fontSize: 15,
@@ -598,6 +579,7 @@ const styles = StyleSheet.create({
         marginBottom: 7,
         marginTop: 12,
     },
+    // Estilos para inputWrapper e input dentro do componente InputWithIcon
     inputWrapper: { // Este é o contêiner branco pill-shape com sombra e ícone
         flexDirection: 'row',
         alignItems: 'center',
@@ -610,19 +592,19 @@ const styles = StyleSheet.create({
         shadowOpacity: 1,
         shadowRadius: 15,
         elevation: 5,
-        paddingLeft: 5, // Padding para o círculo do ícone
+        paddingLeft: 15, // Padding para o círculo do ícone
         paddingRight: 15, // Padding para o TextInput
         borderWidth: 1, // Adiciona borda para feedback visual
         borderColor: 'transparent', // Borda inicial transparente
     },
-    inputWrapperFocused: {
+    inputWrapperFocused: { // Estilo para inputWrapper quando focado
         borderColor: '#007BFF', // Borda azul quando focado
         shadowColor: 'rgba(0, 123, 255, 0.2)', // Sombra azul mais proeminente
         shadowOpacity: 0.8,
         shadowRadius: 10,
         elevation: 8,
     },
-    inputWrapperError: {
+    inputWrapperError: { // Estilo para inputWrapper quando há erro
         borderColor: '#D32F2F', // Borda vermelha quando há erro
         shadowColor: 'rgba(211, 47, 47, 0.2)', // Sombra vermelha
         shadowOpacity: 0.8,
@@ -712,6 +694,29 @@ const styles = StyleSheet.create({
         marginTop: 5,
         textAlign: 'center',
     },
+    // Estilos para sugestões de área de atendimento
+    suggestionsContainer: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 10,
+        marginTop: -15, // Ajusta para sobrepor o input visualmente
+        marginBottom: 20,
+        shadowColor: 'rgba(0,0,0,0.1)',
+        shadowOffset: { width: 0, height: 5 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 3,
+        maxHeight: 150, // Limita a altura da lista de sugestões
+    },
+    suggestionItem: {
+        paddingVertical: 12,
+        paddingHorizontal: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0',
+    },
+    suggestionText: {
+        fontSize: 15,
+        color: '#495057',
+    },
     // NOVO: Container para o botão Finalizar Cadastro, centralizado
     finalizarButtonContainer: {
         alignItems: 'center', // Centraliza o botão horizontalmente
@@ -745,27 +750,9 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
     },
-    // Estilos para sugestões de área de atendimento
-    suggestionsContainer: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 10,
-        marginTop: -15, // Ajusta para sobrepor o input visualmente
-        marginBottom: 20,
-        shadowColor: 'rgba(0,0,0,0.1)',
-        shadowOffset: { width: 0, height: 5 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 3,
-        maxHeight: 150, // Limita a altura da lista de sugestões
-    },
-    suggestionItem: {
-        paddingVertical: 12,
-        paddingHorizontal: 15,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F0F0F0',
-    },
-    suggestionText: {
-        fontSize: 15,
-        color: '#495057',
-    },
+    // Remover inputWrapperServiceDetails e inputServiceDetails se não forem mais necessários
+    // pois InputWithIcon usa inputWrapper e input padrão
+    // Estes estilos estavam duplicados e podem ter causado problemas
+    // inputWrapperServiceDetails: { ... },
+    // inputServiceDetails: { ... },
 });
