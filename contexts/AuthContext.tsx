@@ -48,11 +48,13 @@ interface AuthContextData {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isRegistrationInProgress: boolean; // NOVO: Estado para indicar registro em andamento
   signIn: (credentials: LoginDto) => Promise<void>;
   signUpClient: (data: RegisterClientDto) => Promise<void>;
   signUpProvider: (data: RegisterProviderDto) => Promise<void>;
   signOut: () => Promise<void>;
   updateUser: (updatedUserData: Partial<User>) => void;
+  setIsRegistrationInProgress: React.Dispatch<React.SetStateAction<boolean>>; // NOVO: Adicione o setter ao AuthContextData
 }
 
 export const AuthContext = createContext<AuthContextData | undefined>(undefined);
@@ -65,11 +67,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRegistrationInProgress, setIsRegistrationInProgress] = useState(false); // NOVO: Estado de registro em andamento
   const router = useRouter();
 
   const fetchAndSetUserProfile = async (userId: string, userEmail: string, userRole: UserRole, authToken: string): Promise<UserProfile | null> => {
+    console.log('[AuthContext] fetchAndSetUserProfile: Iniciando busca de perfil para:', userEmail); // NOVO LOG
     try {
       const fullProfile: UserProfile = await getUserProfile(); // Chama a rota /users/me
+      console.log('[AuthContext] fetchAndSetUserProfile: Perfil completo recebido.', fullProfile.id); // NOVO LOG
 
       let userAddressForContext: BookingAddress | undefined = undefined; // [CITE: 1] Usar BookingAddress para o tipo
 
@@ -107,18 +112,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('[AuthContext] loadStoragedData: Tentando carregar dados armazenados...');
       try {
         const storedAuthData = await authService.loadAuthData();
+        console.log('[AuthContext] loadStoragedData: Dados brutos do armazenamento:', storedAuthData); // NOVO LOG
         const storedToken = storedAuthData.token;
         const storedRole = storedAuthData.role;
         const storedId = storedAuthData.id;
 
         if (typeof storedToken === 'string' && storedToken && storedRole && storedId) {
+          console.log('[AuthContext] loadStoragedData: Token e dados básicos encontrados. Tentando decodificar...'); // NOVO LOG
           try {
             const decodedToken: any = jwtDecode(storedToken);
+            console.log('[AuthContext] loadStoragedData: Token decodificado:', decodedToken); // NOVO LOG
 
             const currentTime = Date.now() / 1000;
             if (decodedToken && decodedToken.sub && decodedToken.email && decodedToken.role && decodedToken.exp > currentTime) {
               console.log('[AuthContext] loadStoragedData: Token decodificado e válido. Buscando perfil completo...');
               await fetchAndSetUserProfile(storedId, decodedToken.email, decodedToken.role, storedToken);
+              console.log('[AuthContext] loadStoragedData: Perfil completo carregado com sucesso.'); // NOVO LOG
             } else {
               console.warn('[AuthContext] loadStoragedData: Token inválido ou expirado. Limpando armazenamento.');
               await authService.logout();
@@ -137,6 +146,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       } catch (error) {
         console.error("[AuthContext] loadStoragedData: Falha ao carregar token do armazenamento:", error);
         try {
+          console.log('[AuthContext] loadStoragedData: Tentando limpar armazenamento após erro de carregamento.'); // NOVO LOG
           await authService.logout();
         } catch (deleteError) {
           console.error('[AuthContext] loadStoragedData: CRÍTICO - Falha ao limpar após erro de carregamento:', deleteError);
@@ -156,10 +166,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsLoading(true);
     try {
       const response: AuthResponseDto = await authService.login(credentials);
+      console.log('[AuthContext] signIn: Resposta de login recebida.'); // NOVO LOG
       const decodedToken: any = jwtDecode(response.accessToken);
+      console.log('[AuthContext] signIn: Token decodificado após login.'); // NOVO LOG
 
       // Await a chamada para garantir que o estado 'user' seja atualizado
       await fetchAndSetUserProfile(decodedToken.sub, decodedToken.email, decodedToken.role, response.accessToken);
+      console.log('[AuthContext] signIn: Perfil do usuário definido após login.'); // NOVO LOG
 
       console.log('[AuthContext] signIn: Usuário logado com sucesso. (Redirecionamento será tratado pelo _layout.tsx)');
       // REMOVIDO: Toda a lógica de router.replace(...) foi removida daqui.
@@ -168,6 +181,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error("[AuthContext] signIn: Falha ao fazer login:", error.message);
       setUser(null);
       setToken(null);
+      console.log('[AuthContext] signIn: Limpando armazenamento após falha de login.'); // NOVO LOG
       await authService.logout();
       throw error;
     } finally {
@@ -181,8 +195,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsLoading(true);
     try {
       const response: AuthResponseDto = await authService.registerClient(data);
+      console.log('[AuthContext] signUpClient: Resposta de registro recebida.'); // NOVO LOG
       const decodedToken: any = jwtDecode(response.accessToken);
+      console.log('[AuthContext] signUpClient: Token decodificado após registro.'); // NOVO LOG
       await fetchAndSetUserProfile(decodedToken.sub, decodedToken.email, decodedToken.role, response.accessToken);
+      console.log('[AuthContext] signUpClient: Perfil do usuário definido após registro.'); // NOVO LOG
 
       console.log('[AuthContext] signUpClient: Cliente registrado com sucesso. (Redirecionamento será tratado pelo _layout.tsx)');
       // REMOVIDO: router.replace('/(client)/explore');
@@ -190,6 +207,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error("[AuthContext] signUpClient: Falha ao registrar cliente:", error.message);
       setUser(null);
       setToken(null);
+      console.log('[AuthContext] signUpClient: Limpando armazenamento após falha de registro.'); // NOVO LOG
       await authService.logout();
       throw error;
     } finally {
@@ -201,10 +219,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signUpProvider = async (data: RegisterProviderDto) => {
     console.log('[AuthContext] signUpProvider: Chamado para registrar provedor:', data.email);
     setIsLoading(true);
+    setIsRegistrationInProgress(true); // NOVO: Define o estado para true antes da chamada da API
     try {
       const response: AuthResponseDto = await authService.registerProvider(data);
+      console.log('[AuthContext] signUpProvider: Resposta de registro recebida.'); // NOVO LOG
       const decodedToken: any = jwtDecode(response.accessToken);
+      console.log('[AuthContext] signUpProvider: Token decodificado após registro.'); // NOVO LOG
       await fetchAndSetUserProfile(decodedToken.sub, decodedToken.email, decodedToken.role, response.accessToken);
+      console.log('[AuthContext] signUpProvider: Perfil do usuário definido após registro.'); // NOVO LOG
 
       console.log('[AuthContext] signUpProvider: Provedor registrado com sucesso. (Redirecionamento será tratado pelo _layout.tsx)');
       // REMOVIDO: router.replace('/(provider)');
@@ -212,32 +234,41 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error("[AuthContext] signUpProvider: Falha ao registrar provedor:", error.message);
       setUser(null);
       setToken(null);
+      console.log('[AuthContext] signUpProvider: Limpando armazenamento após falha de registro.'); // NOVO LOG
       await authService.logout();
       throw error;
     } finally {
       setIsLoading(false);
+      // setIsRegistrationInProgress(false); // Esta linha foi movida para o RegisterProviderScreen
       console.log('[AuthContext] signUpProvider: Finalizado. isLoading:', false);
     }
   };
 
   const signOut = async () => {
-    console.log('[AuthContext] signOut: Chamado.');
+    console.log('[AuthContext] signOut: Função iniciada.'); // Log A
     setIsLoading(true);
     try {
-      await authService.logout();
+      console.log('[AuthContext] signOut: Chamando authService.logout()...'); // Log B
+      await authService.logout(); // Chama o serviço para limpar o armazenamento persistente
+      console.log('[AuthContext] signOut: authService.logout() concluído. Limpando estado local...'); // Log C
 
-      setUser(null);
-      setToken(null);
-      console.log('[AuthContext] signOut: Usuário deslogado. Redirecionando...');
-      router.replace('/(auth)/login');
+      setUser(null); // Limpa o estado do usuário no contexto
+      setToken(null); // Limpa o token no contexto
+      console.log('[AuthContext] signOut: Estado local limpo. Valor de user:', null, 'Valor de token:', null); // Log D1 (valores explícitos)
+      console.log('[AuthContext] signOut: isAuthenticated APÓS limpeza:', false); // Log D2 (valor explícito)
+
+      // REMOVIDO: router.replace('/(auth)/login'); // <--- ESTA LINHA DEVE ESTAR REMOVIDA OU COMENTADA
+      console.log('[AuthContext] signOut: Redirecionamento será tratado pelo _layout.tsx.'); // Log E (atualizado)
     } catch (error: any) {
-      console.error("[AuthContext] signOut: Falha ao deslogar:", error.message);
+      console.error("[AuthContext] signOut: Falha ao deslogar:", error.message, error); // Log F
+      // Em caso de falha no logout (ex: erro ao limpar storage), ainda tentamos limpar o estado local
       setUser(null);
       setToken(null);
-      throw error;
+      // Não lançamos o erro aqui, pois o objetivo principal é deslogar o usuário,
+      // mesmo que a limpeza do storage falhe por algum motivo secundário.
     } finally {
       setIsLoading(false);
-      console.log('[AuthContext] signOut: Finalizado. isLoading:', false);
+      console.log('[AuthContext] signOut: Finalizado. isLoading:', false); // Log G
     }
   };
 
@@ -246,8 +277,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(currentUser => {
       if (currentUser) {
         const newUser: User = { ...currentUser, ...updatedUserData };
+        console.log('[AuthContext] updateUser: Usuário atualizado no contexto:', newUser.email); // NOVO LOG
         return newUser;
       }
+      console.warn('[AuthContext] updateUser: Tentativa de atualizar usuário nulo.'); // NOVO LOG
       return null;
     });
   };
@@ -259,11 +292,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         token,
         isAuthenticated: !!user && !!token,
         isLoading,
+        isRegistrationInProgress, // NOVO: Expõe o estado
         signIn,
         signUpClient,
         signUpProvider,
         signOut,
         updateUser,
+        setIsRegistrationInProgress, // NOVO: Expõe o setter
       }}
     >
       {children}

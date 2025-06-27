@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '../../hooks/useAuth'; // Importação do useAuth
 
 // Importações dos serviços
 import { getMyProviderDashboard } from '../services/providerService';
@@ -477,7 +477,7 @@ const ConfirmedServiceItem: React.FC<{
 // Componente principal do Dashboard do Provedor
 export default function ProviderDashboardScreen() {
   const router = useRouter();
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, signOut } = useAuth(); // Destructuring signOut from useAuth
 
   const [dashboardData, setDashboardData] = useState<ProviderDashboard | null>(null);
   const [upcomingServices, setUpcomingServices] = useState<BookingDetails[]>([]);
@@ -626,6 +626,43 @@ export default function ProviderDashboardScreen() {
     router.push({ pathname: '/(provider)/messages/[chatId]', params: { chatId: clientId, recipientName: clientName } } as any);
   };
 
+  // --- FUNÇÃO DE LOGOUT ---
+ const handleLogout = async () => {
+    console.log("[Dashboard] handleLogout: Botão 'Sair da Conta' pressionado. (IGNORANDO ALERTA PARA TESTE)"); // Log 1
+
+    try {
+      // CHAME signOut() DIRETAMENTE AQUI PARA TESTE
+      await signOut();
+      console.log("[Dashboard] signOut() aparentemente concluído. (APÓS TESTE DIRETO)"); // Log 4 (será visto se não houver erro no signOut e antes do redirect)
+    } catch (error) {
+      console.error("[Dashboard] Erro ao fazer logout (APÓS TESTE DIRETO):", error); // Log 5
+      Alert.alert("Erro", "Não foi possível sair da conta. Tente novamente."); // Mantenha este Alert para erros
+    }
+
+    // O BLOCO Alert.alert ORIGINAL FOI COMENTADO PARA ESTE TESTE:
+    // Alert.alert(
+    //   "Sair da Conta",
+    //   "Tem certeza que deseja sair?",
+    //   [
+    //     { text: "Cancelar", style: "cancel", onPress: () => console.log("[Dashboard] Logout cancelado pelo usuário.") }, // Log 2
+    //     {
+    //       text: "Sair",
+    //       onPress: async () => {
+    //         console.log("[Dashboard] Confirmação de logout: 'Sair' pressionado."); // Log 3
+    //         try {
+    //           await signOut(); // Chama a função signOut do AuthContext
+    //           console.log("[Dashboard] signOut() aparentemente concluído."); // Log 4 (será visto se não houver erro no signOut e antes do redirect)
+    //         } catch (error) {
+    //           console.error("[Dashboard] Erro ao fazer logout:", error); // Log 5
+    //           Alert.alert("Erro", "Não foi possível sair da conta. Tente novamente.");
+    //         }
+    //       },
+    //     },
+    //   ]
+    // );
+  };
+  // --- FIM DA FUNÇÃO DE LOGOUT ---
+
   const renderEmptyState = (message: string, iconName: keyof typeof Ionicons.glyphMap = "sad-outline") => (
     <View style={styles.emptyStateContainer}>
       <Ionicons name={iconName} size={48} color={TEXT_MUTED} />
@@ -751,6 +788,13 @@ export default function ProviderDashboardScreen() {
                 {renderEmptyState("Nenhuma avaliação recente. Conclua mais serviços!", "star-half-outline")}
             </View>
         )}
+
+        {/* --- BOTÃO DE LOGOUT ADICIONADO AQUI --- */}
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={24} color={WHITE} />
+          <Text style={styles.logoutButtonText}>Sair da Conta</Text>
+        </TouchableOpacity>
+        {/* --- FIM DO BOTÃO DE LOGOUT --- */}
 
       </ScrollView>
     </View>
@@ -1130,5 +1174,28 @@ const styles = StyleSheet.create({
       fontWeight: '600',
       flex: 1,
       marginLeft: 12,
+  },
+  // --- ESTILOS PARA O BOTÃO DE LOGOUT ---
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: DANGER_RED,
+    borderRadius: 25,
+    paddingVertical: 12,
+    marginTop: 30, // Espaçamento do conteúdo acima
+    marginBottom: 20, // Espaçamento da parte inferior da tela
+    width: '90%', // Ocupa uma boa largura
+    alignSelf: 'center', // Centraliza o botão
+    ...Platform.select({
+      ios: { shadowColor: DANGER_RED, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 6 },
+      android: { elevation: 6 },
+    }),
+  },
+  logoutButtonText: {
+    color: WHITE,
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 10,
   },
 });

@@ -4,7 +4,7 @@ import {
     View,
     Text,
     StyleSheet,
-    Alert,
+    Alert, // Ainda importado caso seja usado em handleWIP, mas não para logout
     ScrollView,
     TouchableOpacity,
     Image,
@@ -83,7 +83,7 @@ const AnimatedMenuItem: React.FC<{
         >
             <TouchableOpacity
                 style={styles.menuItem}
-                onPress={onPress}
+                onPress={onPress} // <--- O onPress é passado aqui
                 onPressIn={onPressInItem}
                 onPressOut={onPressOutItem}
                 activeOpacity={1} // Desativa o activeOpacity padrão
@@ -148,22 +148,18 @@ export default function ClientProfileScreen() {
         );
     }
 
-    const handleLogout = () => {
-        Alert.alert(
-            "Sair da Conta",
-            "Tem certeza que deseja sair da sua conta LimpeJá?",
-            [
-                { text: "Cancelar", style: "cancel" },
-                {
-                    text: "Sair",
-                    onPress: async () => {
-                        await signOut();
-                    },
-                    style: "destructive"
-                }
-            ],
-            { cancelable: true }
-        );
+    const handleLogout = async () => {
+        console.log('[ClientProfileScreen] handleLogout: Botão Sair da Conta clicado! Iniciando logout direto.'); // Log A
+
+        try {
+            await signOut();
+            console.log('[ClientProfileScreen] signOut() concluído com sucesso.'); // Log B
+            // Não é necessário um Alert aqui, pois a navegação geralmente ocorre após o signOut
+        } catch (error) {
+            console.error('[ClientProfileScreen] Erro ao executar signOut():', error); // Log C
+            // Opcional: exibir um alerta de erro genérico se o signOut falhar
+            Alert.alert("Erro ao Sair", "Não foi possível sair da conta. Por favor, tente novamente.");
+        }
     };
 
     // Placeholder para funcionalidades futuras

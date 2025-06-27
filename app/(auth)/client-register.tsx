@@ -24,7 +24,7 @@ import { useAuth } from '../../hooks/useAuth'; // Importar useAuth
 import { RegisterClientDto, CreateAddressDto } from '../types/backend/auth'; // Importar DTOs
 
 // ATENÇÃO: Substitua pelo caminho correto do seu logo em formato "V" ou "FV" azul
-const LOGO_IMAGE = require('../../assets/images/logo.png'); // << CONFIRMADO: Este é o caminho que você deseja
+const LOGO_IMAGE = require('../../assets/images/logo2.png'); // << CONFIRMADO: Este é o caminho que você deseja
 
 const AnimatedErrorMessage: React.FC<{ message: string | null; centered?: boolean }> = ({ message, centered }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -52,10 +52,13 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
+  const [phone, setPhone] = useState(''); // NOVO: Estado para o telefone
+
   const [cep, setCep] = useState('');
   const [street, setStreet] = useState('');
   const [number, setNumber] = useState('');
   const [neighborhood, setNeighborhood] = useState('');
+  const [city, setCity] = useState(''); // NOVO: Estado para a cidade
   const [state, setState] = useState('');
 
   const [isLoading, setIsLoading] = useState(false);
@@ -94,7 +97,15 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
 
   const validateStep2 = () => {
     setGeneralError(null);
-    if (!cep.trim() || !street.trim() || !number.trim() || !neighborhood.trim() || !state.trim()) {
+    if (!phone.trim()) { // Validação do telefone
+        setGeneralError('Por favor, insira seu telefone.');
+        return false;
+    }
+    if (phone.trim().length !== 10 && phone.trim().length !== 11) { // Validação do número de dígitos
+        setGeneralError('O telefone deve ter 10 ou 11 dígitos.');
+        return false;
+    }
+    if (!cep.trim() || !street.trim() || !number.trim() || !neighborhood.trim() || !city.trim() || !state.trim()) { // Adicionado 'city'
       setGeneralError('Por favor, preencha todos os campos de endereço.');
       return false;
     }
@@ -121,13 +132,13 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
         // CORREÇÃO AQUI: Alterado de 'passwordHash' para 'password'
         password: password,
         fullName: username.trim(),
-        phone: '', // (opcional, se coletado),
+        phone: phone.trim(), // Mapeado o novo campo de telefone
         address: {
           cep: cep.trim(),
           street: street.trim(),
           number: number.trim(),
           neighborhood: neighborhood.trim(),
-          city: '', // Cidade não está sendo coletada nesta tela, precisa ser adicionada ou inferida
+          city: city.trim(), // Mapeado o novo campo de cidade
           state: state.trim(),
           complement: '', // Complemento não está sendo coletado, precisa ser adicionado ou opcional
         } as CreateAddressDto, // Cast para garantir conformidade com CreateAddressDto
@@ -162,7 +173,8 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
   const signUpButtonAnims = createButtonAnimations();
   const nextButtonAnims = createButtonAnimations(); // Animações para o botão "Avançar"
 
-  const isSignUpButtonEnabled = currentStep === 2 && cep.trim() && street.trim() && number.trim() && neighborhood.trim() && state.trim();
+  // Atualizado para incluir validação do telefone e cidade
+  const isSignUpButtonEnabled = currentStep === 2 && phone.trim() && (phone.trim().length === 10 || phone.trim().length === 11) && cep.trim() && street.trim() && number.trim() && neighborhood.trim() && city.trim() && state.trim();
 
   return (
     <KeyboardAvoidingView
@@ -263,6 +275,22 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
             {/* Step 2: Address Info */}
             {currentStep === 2 && (
                 <View>
+                    {/* Telefone Input - NOVO */}
+                    <View style={styles.inputWrapper}>
+                        <View style={styles.iconCircle}>
+                            <Ionicons name="call-outline" size={20} color="#007BFF" />
+                        </View>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Telefone (apenas números)"
+                            placeholderTextColor="#A0AEC0"
+                            value={phone}
+                            onChangeText={(text) => { setPhone(text.replace(/[^0-9]/g, '')); if (generalError) setGeneralError(null);}} // Remove não-dígitos
+                            keyboardType="numeric"
+                            maxLength={11} // Permite 10 ou 11 dígitos
+                        />
+                    </View>
+
                     {/* CEP Input */}
                     <View style={styles.inputWrapper}>
                         <View style={styles.iconCircle}>
@@ -324,6 +352,21 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
                         />
                     </View>
 
+                    {/* Cidade Input - NOVO */}
+                    <View style={styles.inputWrapper}>
+                        <View style={styles.iconCircle}>
+                            <Ionicons name="map-outline" size={20} color="#007BFF" />
+                        </View>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Cidade"
+                            placeholderTextColor="#A0AEC0"
+                            value={city}
+                            onChangeText={(text) => { setCity(text); if (generalError) setGeneralError(null);}}
+                            autoCapitalize="words"
+                        />
+                    </View>
+
                     {/* Estado Input */}
                     <View style={styles.inputWrapper}>
                         <View style={styles.iconCircle}>
@@ -339,11 +382,6 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
                             maxLength={2}
                         />
                     </View>
-
-                    {/* NOTA: Cidade e Complemento não são coletados nesta tela, mas são necessários para CreateAddressDto. */}
-                    {/* Você precisará adicionar campos para eles ou garantir que sejam opcionais no DTO do backend. */}
-                    {/* Ex: <TextInput placeholder="Cidade" ... /> */}
-                    {/* Ex: <TextInput placeholder="Complemento" ... /> */}
 
                     <AnimatedErrorMessage message={generalError} centered />
 
@@ -383,7 +421,7 @@ const styles = StyleSheet.create({
   scrollContentContainer: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingBottom: 20,
+    paddingBottom: 120,
   },
   contentWrapper: {
     paddingHorizontal: 35,
@@ -391,11 +429,12 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: -60, // Menos margem
-    marginTop: -90, // Mais espaço no topo para o logo
+
+    top: 10, // Ajuste para centralizar o logo
+    left: -15, // Ajustado para centralizar o logo
   },
   logo: { // Ajuste para o logo V-shape
-    width: 200, // Ajustado para o tamanho da imagem
+    width: 300, // Ajustado para o tamanho da imagem
     height: 300, // Ajustado para o tamanho da imagem
     resizeMode: 'contain',
   },
@@ -404,30 +443,33 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#1C3A5F',
         textAlign: 'center',
-        marginBottom: 10,
+
+
   },
   welcomeSubtitle: {
     fontSize: 15, // Ajustado
     color: '#8A94A6', // Cinza médio
     textAlign: 'center',
     marginBottom: 30,
+    bottom: 110, // Ajustado para centralizar o título
   },
   inputWrapper: { // Este é o contêiner branco pill-shape com sombra
     flexDirection: 'row', // Alinha os filhos horizontalmente (círculo do ícone e input)
     alignItems: 'center', // Centraliza verticalmente os filhos
     backgroundColor: '#FFFFFF',
     borderRadius: 28, // Totalmente arredondado
+    bottom: 70, // Espaçamento inferior para o próximo input
     height: 35, // Altura do input (ajustado para 50px)
     marginBottom: 20, // Espaçamento entre os inputs
     shadowColor: 'rgba(100, 100, 150, 0.15)', // Sombra mais suave
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 1,
     shadowRadius: 15,
-    elevation: 5,
+    elevation: 8, // Aumentado para 8 para maior visibilidade no Android
     paddingLeft: 5, // Pequeno padding à esquerda para o círculo do ícone
     paddingRight: 15, // Padding à direita para o TextInput e o olho
   },
- iconCircle: {
+  iconCircle: {
     width: 50,
     height: 50,
     right: 2,
@@ -435,13 +477,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderWidth: 24.8,
+    borderWidth: 24.8, // Borda muito grossa que pode interferir na percepção da sombra
     borderColor: 'rgba(178, 139, 202, 0.19)',
+    // Estilos de sombra para iOS
     shadowColor: 'rgba(178, 139, 202, 0.81)',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 1,
     shadowRadius: 15,
-    elevation: 8,
+    // Elevação para Android (pode ser obscurecida pela borda grossa)
+    elevation: 8, // Considere aumentar, mas revise o borderWidth
     marginRight: 10,
   },
   input: {
@@ -469,8 +513,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#40C0F0',
     borderRadius: 28,
     paddingVertical: 10,
-    width: '80%',
-    left: 31,
+    width: '100%',
+    left: 0,
+    bottom: 60, // Espaço entre o botão "Avançar" e o próximo input
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 10,
@@ -479,7 +524,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 10, // Aumentado para 10
   },
   nextButtonText: {
     color: '#FFFFFF',
@@ -500,7 +545,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 10, // Aumentado para 10
   },
   buttonDisabled: {
     backgroundColor: '#A0CFFF',

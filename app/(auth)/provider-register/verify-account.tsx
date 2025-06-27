@@ -405,6 +405,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 10,
   },
+    consentText: {
+    fontSize: 14,
+    color: '#6C757D',
+    textAlign: 'center',
+    marginTop: 15,
+    marginBottom: 20,
+    lineHeight: 20,
+  },
   stepDescription: { // Descrição para cada passo
     fontSize: 14, 
     color: '#2D3748', // Cinza escuro

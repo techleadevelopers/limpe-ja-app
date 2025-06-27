@@ -1,13 +1,15 @@
 // LimpeJaApp/app/services/api.ts
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage'; // <--- USANDO ASYNCSTORAGE AGORA
+import Constants from 'expo-constants'; // Importa Constants para acessar variáveis do app.json
 
 // Certifique-se de que EXPO_PUBLIC_API_BASE_URL está definida em seu .env ou app.config.js/ts
 // E que é acessível no ambiente de execução do Expo.
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL; // <--- AGORA USANDO VARIÁVEL DE AMBIENTE
+// Usa Constants.expoConfig?.extra para acessar variáveis públicas do app.json
+const API_BASE_URL = Constants.expoConfig?.extra?.backendApiUrl as string;
 
 if (!API_BASE_URL) {
-  console.error('EXPO_PUBLIC_API_BASE_URL não está definido! Verifique seu arquivo .env ou app.config.js/ts.');
+  console.error('backendApiUrl não está definido em app.json ou Constants.expoConfig.extra! Verifique sua configuração.');
   // Você pode lançar um erro ou definir um fallback padrão para desenvolvimento
   // throw new Error('API_BASE_URL is not defined');
 }
@@ -47,7 +49,6 @@ api.interceptors.response.use(
       // TODO: Implementar lógica de redirecionamento para a tela de login.
       // No Expo Router, isso geralmente é feito reagindo a mudanças no contexto de autenticação no _layout.tsx.
       // Você pode emitir um evento ou usar um estado global se precisar forçar um logout imediato aqui.
-      // Exemplo: navigation.navigate('Login'); // Se você tiver acesso ao objeto de navegação
     }
     return Promise.reject(error);
   }

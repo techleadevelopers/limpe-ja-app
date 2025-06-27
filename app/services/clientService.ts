@@ -26,6 +26,7 @@ import { UpdateClientProfileDto } from '../types/backend/clients';
  */
 export async function getServiceCategories(): Promise<Service[]> {
   try {
+    // A requisição é feita usando a instância 'api', que já tem a baseURL configurada
     const response: AxiosResponse<Service[]> = await api.get<Service[]>('/services');
     return response.data;
   } catch (error: any) {
@@ -49,6 +50,7 @@ export async function getServiceCategories(): Promise<Service[]> {
 export async function searchProviders(query: ProviderSearchQuery): Promise<ProviderDisplayInfo[]> {
   try {
     const params = new URLSearchParams(query as any).toString(); // Converte objeto para query string
+    // A requisição é feita usando a instância 'api', que já tem a baseURL configurada
     const response: AxiosResponse<ProviderDisplayInfo[]> = await api.get<ProviderDisplayInfo[]>(`/providers?${params}`); // Assumindo que /providers é o endpoint de busca geral
     return response.data;
   } catch (error: any) {
@@ -68,6 +70,7 @@ export async function searchProviders(query: ProviderSearchQuery): Promise<Provi
  */
 export async function getUserProfile(): Promise<UserProfile> {
   try {
+    // A requisição é feita usando a instância 'api', que já tem a baseURL configurada
     const response: AxiosResponse<UserProfile> = await api.get<UserProfile>('/users/me');
     return response.data;
   } catch (error: any) {
@@ -87,6 +90,7 @@ export async function getUserProfile(): Promise<UserProfile> {
  */
 export async function getOffers(): Promise<Offer[]> {
   try {
+    // A requisição é feita usando a instância 'api', que já tem a baseURL configurada
     const response: AxiosResponse<Offer[]> = await api.get<Offer[]>('/offers');
     return response.data;
   } catch (error: any) {
@@ -109,6 +113,7 @@ export async function getOffers(): Promise<Offer[]> {
  */
 export async function getProviderDetails(providerId: string): Promise<ProviderDisplayInfo> {
   try {
+    // A requisição é feita usando a instância 'api', que já tem a baseURL configurada
     const response: AxiosResponse<ProviderDisplayInfo> = await api.get<ProviderDisplayInfo>(`/providers/${providerId}`);
     return response.data;
   } catch (error: any) {
@@ -129,6 +134,7 @@ export async function getProviderDetails(providerId: string): Promise<ProviderDi
  */
 export async function updateClientProfile(data: UpdateClientProfileDto): Promise<UserProfile> {
   try {
+    // A requisição é feita usando a instância 'api', que já tem a baseURL configurada
     const response: AxiosResponse<UserProfile> = await api.patch<UserProfile>('/clients/me', data);
     return response.data;
   } catch (error: any) {

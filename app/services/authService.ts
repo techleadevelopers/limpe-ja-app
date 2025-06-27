@@ -14,7 +14,7 @@ import {
 
 const AUTH_TOKEN_KEY = 'auth_token'; // Chave para armazenar o token
 const USER_ROLE_KEY = 'user_role';   // Nova chave para armazenar o papel do usuário
-const USER_ID_KEY = 'user_id';       // Nova chave para armazenar o ID do usuário
+const USER_ID_KEY = 'user_id';      // Nova chave para armazenar o ID do usuário
 
 // Função para adicionar o token JWT aos headers da instância 'api' importada
 export const setAuthToken = (token: string | null) => {
@@ -50,10 +50,11 @@ export const loadAuthData = async (): Promise<{ token: string | null; role: stri
 // --- Funções de Autenticação ---
 export const login = async (credentials: LoginDto): Promise<AuthResponseDto> => {
   try {
+    // A requisição é feita usando a instância 'api', que já tem a baseURL configurada
     const response = await api.post<AuthResponseDto>('/auth/login', credentials);
-    const receivedToken = response.data.accessToken; // CORRIGIDO: de access_token para accessToken
-    const userRole = response.data.user.role;       // NOVO: Obtém o papel do usuário
-    const userId = response.data.user.id;           // NOVO: Obtém o ID do usuário
+    const receivedToken = response.data.accessToken;
+    const userRole = response.data.user.role;
+    const userId = response.data.user.id;
 
     console.log('[authService] login: Resposta completa da API:', response.data);
     console.log('[authService] login: Valor de accessToken recebido:', receivedToken);
@@ -62,8 +63,8 @@ export const login = async (credentials: LoginDto): Promise<AuthResponseDto> => 
 
     if (receivedToken) {
       await AsyncStorage.setItem(AUTH_TOKEN_KEY, receivedToken);
-      await AsyncStorage.setItem(USER_ROLE_KEY, userRole); // NOVO: Armazena o papel
-      await AsyncStorage.setItem(USER_ID_KEY, userId);     // NOVO: Armazena o ID
+      await AsyncStorage.setItem(USER_ROLE_KEY, userRole);
+      await AsyncStorage.setItem(USER_ID_KEY, userId);
       setAuthToken(receivedToken); // Configura o token na 'api' centralizada
       console.log('[authService] login: Token, Papel e ID armazenados com sucesso no AsyncStorage!');
       return response.data;
@@ -82,10 +83,11 @@ export const login = async (credentials: LoginDto): Promise<AuthResponseDto> => 
 
 export const registerClient = async (data: RegisterClientDto): Promise<AuthResponseDto> => {
   try {
+    // A requisição é feita usando a instância 'api', que já tem a baseURL configurada
     const response = await api.post<AuthResponseDto>('/auth/register/client', data);
-    const receivedToken = response.data.accessToken; // CORRIGIDO
-    const userRole = response.data.user.role;       // NOVO
-    const userId = response.data.user.id;           // NOVO
+    const receivedToken = response.data.accessToken;
+    const userRole = response.data.user.role;
+    const userId = response.data.user.id;
 
     console.log('[authService] registerClient: Resposta completa da API:', response.data);
     console.log('[authService] registerClient: Valor de accessToken recebido:', receivedToken);
@@ -94,8 +96,8 @@ export const registerClient = async (data: RegisterClientDto): Promise<AuthRespo
 
     if (receivedToken) {
       await AsyncStorage.setItem(AUTH_TOKEN_KEY, receivedToken);
-      await AsyncStorage.setItem(USER_ROLE_KEY, userRole); // NOVO
-      await AsyncStorage.setItem(USER_ID_KEY, userId);     // NOVO
+      await AsyncStorage.setItem(USER_ROLE_KEY, userRole);
+      await AsyncStorage.setItem(USER_ID_KEY, userId);
       setAuthToken(receivedToken);
       console.log('[authService] registerClient: Token, Papel e ID armazenados com sucesso no AsyncStorage!');
       return response.data;
@@ -114,10 +116,11 @@ export const registerClient = async (data: RegisterClientDto): Promise<AuthRespo
 
 export const registerProvider = async (data: RegisterProviderDto): Promise<AuthResponseDto> => {
   try {
+    // A requisição é feita usando a instância 'api', que já tem a baseURL configurada
     const response = await api.post<AuthResponseDto>('/auth/register/provider', data);
-    const receivedToken = response.data.accessToken; // CORRIGIDO
-    const userRole = response.data.user.role;       // NOVO
-    const userId = response.data.user.id;           // NOVO
+    const receivedToken = response.data.accessToken;
+    const userRole = response.data.user.role;
+    const userId = response.data.user.id;
 
     console.log('[authService] registerProvider: Resposta completa da API:', response.data);
     console.log('[authService] registerProvider: Valor de accessToken recebido:', receivedToken);
@@ -126,14 +129,14 @@ export const registerProvider = async (data: RegisterProviderDto): Promise<AuthR
 
     if (receivedToken) {
       await AsyncStorage.setItem(AUTH_TOKEN_KEY, receivedToken);
-      await AsyncStorage.setItem(USER_ROLE_KEY, userRole); // NOVO
-      await AsyncStorage.setItem(USER_ID_KEY, userId);     // NOVO
+      await AsyncStorage.setItem(USER_ROLE_KEY, userRole);
+      await AsyncStorage.setItem(USER_ID_KEY, userId);
       setAuthToken(receivedToken);
       console.log('[authService] registerProvider: Token, Papel e ID armazenados com sucesso no AsyncStorage!');
       return response.data;
     } else {
       console.error('[authService] registerProvider: accessToken é undefined ou nulo na resposta da API.');
-      throw new Error('Token de acesso não recebido após registro de provedor. Por favor, tente novamente.');
+      throw  new Error('Token de acesso não recebido após registro de provedor. Por favor, tente novamente.');
     }
   } catch (error: any) {
     console.error('[authService] registerProvider: Erro ao registrar provedor na API:', error.response?.data || error.message);
@@ -146,6 +149,7 @@ export const registerProvider = async (data: RegisterProviderDto): Promise<AuthR
 
 export const forgotPassword = async (data: ForgotPasswordDto): Promise<MessageResponseDto> => {
   try {
+    // A requisição é feita usando a instância 'api', que já tem a baseURL configurada
     const response = await api.post<MessageResponseDto>('/auth/forgot-password', data);
     return response.data;
   } catch (error: any) {
@@ -158,9 +162,11 @@ export const forgotPassword = async (data: ForgotPasswordDto): Promise<MessageRe
 
 export const logout = async (): Promise<void> => {
   try {
+    // A requisição de logout (se houver um endpoint no backend) usaria a instância 'api'
+    // Ex: await api.post('/auth/logout');
     await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
-    await AsyncStorage.removeItem(USER_ROLE_KEY); // NOVO: Remove o papel no logout
-    await AsyncStorage.removeItem(USER_ID_KEY);   // NOVO: Remove o ID no logout
+    await AsyncStorage.removeItem(USER_ROLE_KEY);
+    await AsyncStorage.removeItem(USER_ID_KEY);
     setAuthToken(null);
     console.log('[authService] logout: Token, papel e ID removidos do AsyncStorage e header do axios limpo.');
   } catch (error) {

@@ -13,7 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 const { width, height } = Dimensions.get('window');
 
-const LOGO_IMAGE = require('../assets/images/logo.png');
+const LOGO_IMAGE = require('../assets/images/logo2.png');
 const WELCOME_SCREEN_VIEWED_KEY = 'welcomeScreenViewed';
 
 const BACKGROUND_COLOR_1 = '#FFFFFF';

@@ -48,7 +48,7 @@ export interface RegisterClientDto {
 /**
  * @interface RegisterProviderDto
  * Representa os dados necessários para registrar um novo provedor de serviços.
- * Agora inclui um objeto 'address' aninhado.
+ * Agora inclui um objeto 'address' aninhado e os novos campos de detalhes de serviço.
  */
 export interface RegisterProviderDto {
   email: string;
@@ -61,8 +61,15 @@ export interface RegisterProviderDto {
   // Endereço agora é um objeto aninhado
   address: CreateAddressDto;
 
-  yearsOfExperience?: number; // Opcional
-  avatarUrl?: string; // Opcional
+  yearsOfExperience?: number; // Opcional, corresponde a 'anosExperiencia'
+  avatarUrl?: string; // Opcional, corresponde a 'avatarUrl'
+
+  // NOVOS CAMPOS ADICIONADOS PARA DETALHES DO SERVIÇO:
+  bio?: string; // Corresponde a 'experiencia'
+  offeredServices?: string; // Corresponde a 'servicosOferecidos'
+  pricingStructure?: string; // Corresponde a 'estruturaPreco'
+  serviceAreas?: string; // Corresponde a 'areasAtendimento'
+  pixKey?: string; // Corresponde a 'pixKey'
 }
 
 /**

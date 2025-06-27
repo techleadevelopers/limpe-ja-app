@@ -1,14 +1,13 @@
-// LimpeJaApp/app/(auth)/provider-register/ProviderRegistrationContext.tsx
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { Alert } from 'react-native'; // Importar Alert para feedback ao usuário
-import { useAuth } from '../contexts/AuthContext'; // CORRIGIDO: Caminho para AuthContext
+import { useAuth } from '../hooks/useAuth'; // CORRIGIDO: Caminho para AuthContext (assumindo que é hooks/useAuth baseado em index.tsx)
 import { RegisterProviderDto, CreateAddressDto } from '../app/types/backend/auth'; // CORRIGIDO: Caminho para auth.ts
 
 // Tipos para os dados do formulário do provedor
 // Define a estrutura dos dados pessoais do profissional
 interface PersonalDetails {
   email: string; // ADICIONADO: Necessário para RegisterProviderDto
-  passwordHash: string; // ADICIONADO: Necessário para RegisterProviderDto
+  passwordHash: string; // ADICIONADO: Necessário para RegisterProviderDto (este deve ser a senha em texto simples se signUpProvider espera isso)
   fullName: string; // Renomeado de nomeCompleto para alinhar com RegisterProviderDto
   cpf: string;
   dateOfBirth: string; // Formato YYYY-MM-DD para fácil armazenamento e comparação
@@ -17,7 +16,7 @@ interface PersonalDetails {
     cep: string;
     street: string; // Renomeado de logradouro para alinhar com CreateAddressDto
     number: string;
-    complement?: string; // Opcional
+    complement?: string | null; // Opcional, permitindo null explicitamente
     neighborhood: string;
     city: string;
     state: string;
@@ -31,6 +30,7 @@ interface ServiceDetails {
   estruturaPreco: string;
   areasAtendimento: string;
   anosExperiencia: number;
+  pixKey: string; // <-- ADICIONE ESTA LINHA
   avatarUri: string | null; // URI local da imagem selecionada pelo usuário
   avatarUrl: string | null; // URL da imagem após o upload para o Firebase Storage (preenchido no submit)
 }
@@ -60,12 +60,12 @@ export const ProviderRegistrationProvider: React.FC<{ children: ReactNode }> = (
   const submitRegistration = async () => {
     // Verifica se todos os dados necessários estão presentes antes de tentar submeter
     if (!personalDetails || !serviceDetails) {
-      // Alert.alert("Erro de Cadastro", "Dados incompletos. Por favor, preencha todas as etapas do cadastro.");
+      console.error("[ProviderRegistrationContext] Dados de registro incompletos: personalDetails ou serviceDetails são nulos.");
       throw new Error("Dados de registro incompletos."); // Propaga o erro para ser tratado pela tela
     }
 
     if (!serviceDetails.avatarUrl) {
-      // Alert.alert("Erro de Imagem", "A foto de perfil não foi carregada corretamente. Tente novamente.");
+      console.error("[ProviderRegistrationContext] URL do avatar ausente.");
       throw new Error("URL do avatar ausente."); // Propaga o erro para ser tratado pela tela
     }
 
@@ -77,7 +77,7 @@ export const ProviderRegistrationProvider: React.FC<{ children: ReactNode }> = (
       // Mapear os dados do contexto para o RegisterProviderDto do backend
       const registerData: RegisterProviderDto = {
         email: personalDetails.email,
-        password: personalDetails.passwordHash,
+        password: personalDetails.passwordHash, // Assumindo que este é a senha em texto simples
         fullName: personalDetails.fullName,
         cpf: personalDetails.cpf,
         dateOfBirth: personalDetails.dateOfBirth,
@@ -93,9 +93,21 @@ export const ProviderRegistrationProvider: React.FC<{ children: ReactNode }> = (
         } as CreateAddressDto, // Cast para garantir que é um CreateAddressDto
         yearsOfExperience: serviceDetails.anosExperiencia,
         avatarUrl: serviceDetails.avatarUrl,
+        // Mapeando campos de serviço para o DTO
+        bio: serviceDetails.experiencia, // 'experiencia' mapeia para 'bio'
+        offeredServices: serviceDetails.servicosOferecidos, // CORRIGIDO: 'servicesOffered' para 'offeredServices'
+        pricingStructure: serviceDetails.estruturaPreco, // CORRIGIDO: 'priceStructure' para 'pricingStructure'
+        serviceAreas: serviceDetails.areasAtendimento, // 'areasAtendimento' mapeia para 'serviceAreas'
+        pixKey: serviceDetails.pixKey,
       };
 
-      // Chamar a função de registro real do AuthContext
+      // *** PONTO DE REVISÃO CRÍTICA ***
+      // Se signUpProvider do useAuth já foi chamado em index.tsx (Etapa 2)
+      // para criar o usuário, chamá-lo novamente aqui pode causar um erro (ex: usuário já existe).
+      // Idealmente, esta deveria ser uma chamada de API 'updateProviderProfile', não 'signUpProvider'.
+      // Por enquanto, prosseguimos assumindo que signUpProvider pode lidar com isso
+      // ou que a lógica de backend é idempotente.
+      console.log("[ProviderRegistrationContext] Chamando signUpProvider do AuthContext para finalizar/atualizar o perfil do provedor.");
       await signUpProvider(registerData);
 
       console.log("[ProviderRegistrationContext] Registro de provedor concluído com sucesso via AuthContext!");

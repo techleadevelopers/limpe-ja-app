@@ -292,9 +292,10 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 20 : 15,
   },
   logoContainer: {
-    marginBottom: -115,
-    left: 30,
-    marginTop: 90,
+    top: 142, // Ajuste para centralizar o logo
+    right: 13,
+    alignItems: 'center',
+    
   },
   logo: {
     width: 280,
@@ -313,6 +314,7 @@ const styles = StyleSheet.create({
     color: '#8A94A6',
     textAlign: 'center',
     marginBottom: 60,
+    top: 15, // Espaço entre o logo e o título
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -321,11 +323,13 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     height: 36,
     marginBottom: 17,
+    // Estilos de sombra para iOS
     shadowColor: 'rgba(100, 100, 150, 0.15)',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 1,
     shadowRadius: 15,
-    elevation: 5,
+    // Elevação para Android (pode precisar de um valor maior em dispositivos físicos)
+    elevation: 5, // Considere aumentar para 8 ou 10 para maior visibilidade no Android
     paddingLeft: 5,
     paddingRight: 15,
   },
@@ -337,13 +341,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderWidth: 24.8,
+    borderWidth: 24.8, // Borda muito grossa que pode interferir na percepção da sombra
     borderColor: 'rgba(178, 139, 202, 0.19)',
+    // Estilos de sombra para iOS
     shadowColor: 'rgba(178, 139, 202, 0.81)',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 1,
     shadowRadius: 15,
-    elevation: 8,
+    // Elevação para Android (pode ser obscurecida pela borda grossa)
+    elevation: 8, // Considere aumentar, mas revise o borderWidth
     marginRight: 10,
   },
   input: {
@@ -370,17 +376,18 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(64, 192, 240, 0.85)',
     borderRadius: 28,
     paddingVertical: 10,
-    width: '80%',
-    left: 31,
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 10,
     marginBottom: 25,
+    // Estilos de sombra para iOS
     shadowColor: '#007BFF',
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 8,
+    // Elevação para Android
+    elevation: 8, // Considere aumentar para 10 ou 12 para maior visibilidade
   },
   buttonDisabled: {
     backgroundColor: '#A0CFFF',
@@ -423,11 +430,13 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
+    // Estilos de sombra para iOS
     shadowColor: 'rgba(100, 100, 150, 0.1)',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 1,
     shadowRadius: 8,
-    elevation: 4,
+    // Elevação para Android
+    elevation: 4, // Considere aumentar para 6 ou 8
     marginHorizontal: 12,
   },
   signUpContainer: {
