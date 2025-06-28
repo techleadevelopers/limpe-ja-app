@@ -45,11 +45,14 @@ const EarningsSummaryCard: React.FC<EarningsSummaryCardProps> = ({ dashboardData
 
     return (
         <Animated.View style={[styles.summaryContainer, { opacity: animation, transform: [{ translateY: animation.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
+            <Text style={styles.summaryCardSubtitle} accessibilityLabel={`Informação atualizada em ${formatDate(new Date().toISOString(), { day: '2-digit', month: 'short' })}`}>
+                        {formatDate(new Date().toISOString(), { day: '2-digit', month: 'short' })}
+                    </Text>
             <Text style={styles.sectionTitle} accessibilityRole="header">Resumo Financeiro</Text>
             <View style={styles.summaryGrid}>
                 {/* Saldo Disponível */}
                 <View style={styles.summaryCard}>
-                    <Ionicons name="wallet-outline" size={30} color={WHITE} accessibilityLabel="Ícone de Saldo Total" /> {/* Ícone branco */}
+                    <Ionicons name="wallet-outline" size={25} color={WHITE} accessibilityLabel="Ícone de Saldo Total" /> {/* Ícone branco */}
                     <Text style={styles.summaryCardTitle}>Saldo Disponível</Text> {/* Título branco */}
                     <Text style={styles.summaryCardValue} accessibilityLabel={`Seu saldo total é de ${displayedTotalEarnings.toFixed(2).replace('.', ',')} reais`}>
                         R$ {displayedTotalEarnings.toFixed(2).replace('.', ',')}
@@ -57,7 +60,7 @@ const EarningsSummaryCard: React.FC<EarningsSummaryCardProps> = ({ dashboardData
                 </View>
                 {/* Saque Pendente */}
                 <View style={styles.summaryCard}>
-                    <Ionicons name="hourglass-outline" size={30} color={WARNING_YELLOW} accessibilityLabel="Ícone de Saque Pendente" />
+                    <Ionicons name="hourglass-outline" size={25} color={WARNING_YELLOW} accessibilityLabel="Ícone de Saque Pendente" />
                     <Text style={styles.summaryCardTitle}>Saque Pendente</Text> {/* Título branco */}
                     <Text style={styles.summaryCardValue} accessibilityLabel={`Você tem ${displayedPendingWithdrawals.toFixed(2).replace('.', ',')} reais pendentes para saque`}>
                         R$ {displayedPendingWithdrawals.toFixed(2).replace('.', ',')}
@@ -65,15 +68,14 @@ const EarningsSummaryCard: React.FC<EarningsSummaryCardProps> = ({ dashboardData
                 </View>
                 {/* Ganhos Mês */}
                 <View style={styles.summaryCard}>
-                    <Ionicons name="cash-outline" size={30} color={SUCCESS_GREEN} accessibilityLabel="Ícone de Ganhos Mês" />
+                    <Ionicons name="cash-outline" size={25} color={SUCCESS_GREEN} accessibilityLabel="Ícone de Ganhos Mês" />
                     <Text style={styles.summaryCardTitle}>Ganhos Mês</Text> {/* Título branco */}
                     <Text style={styles.summaryCardValue} accessibilityLabel={`Seus ganhos este mês são de ${displayedTotalEarnings.toFixed(2).replace('.', ',')} reais`}>
                         R$ {displayedTotalEarnings.toFixed(2).replace('.', ',')}
                     </Text>
-                    <Text style={styles.summaryCardSubtitle} accessibilityLabel={`Informação atualizada em ${formatDate(new Date().toISOString(), { day: '2-digit', month: 'short' })}`}>
-                        {formatDate(new Date().toISOString(), { day: '2-digit', month: 'short' })}
-                    </Text>
+                    
                 </View>
+                
             </View>
             {/* Botão Solicitar Saque - Estilo do botão da Dashboard, mas com cor de sucesso */}
             <TouchableOpacity
@@ -135,7 +137,7 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(255,255,255,0.3)', // Borda mais sutil no fundo azul
     },
     summaryCardTitle: {
-        fontSize: 12, // Fonte menor para caber
+        fontSize: 10, // Fonte menor para caber
         color: 'rgba(255,255,255,0.7)', // Texto mais suave
         marginTop: 8,
         marginBottom: 5,
@@ -150,7 +152,7 @@ const styles = StyleSheet.create({
         fontFamily: 'System'
     },
     summaryCardSubtitle: {
-        fontSize: 10, // Fonte ainda menor
+        fontSize: 12, // Fonte ainda menor
         color: 'rgba(255,255,255,0.5)', // Subtítulo mais suave
         marginTop: 2,
         textAlign: 'center',

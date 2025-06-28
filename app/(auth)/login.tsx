@@ -56,7 +56,8 @@ export default function LoginScreen() {
   const mainElementsOpacity = useRef(new Animated.Value(0)).current;
   const mainElementsTranslateY = useRef(new Animated.Value(18)).current;
 
-  const showTestLogins = process.env.EXPO_PUBLIC_SHOW_TEST_LOGINS === 'true' || __DEV__;
+  // A linha `const showTestLogins = process.env.EXPO_PUBLIC_SHOW_TEST_LOGINS === 'true' || __DEV__;` 
+  // será mantida, mas a seção que ela controla será removida.
 
   useEffect(() => {
     if (!authIsLoading && isAuthenticated) {
@@ -91,14 +92,8 @@ export default function LoginScreen() {
     }
   };
 
-  // MODIFICAÇÃO: Passe livre (navegação direta) para os botões de teste
-  const navigateToClientDashboard = () => {
-    router.replace('/(client)/explore');
-  };
-
-  const navigateToProviderDashboard = () => {
-    router.replace('/(provider)/dashboard');
-  };
+  // As funções navigateToClientDashboard e navigateToProviderDashboard serão removidas,
+  // pois não há mais botões para chamá-las.
 
   const createButtonAnimations = () => {
     const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -253,21 +248,6 @@ export default function LoginScreen() {
                     </TouchableOpacity>
                 </Link>
             </View>
-
-            {showTestLogins && (
-            <View style={styles.testButtonsContainer}>
-                <Text style={styles.testButtonsHeader}>Preencher Campos de Teste:</Text>
-                {/* MODIFICAÇÃO: Renomeado e alterado para navegação direta */}
-                <TouchableOpacity style={styles.testButton} onPress={navigateToClientDashboard}>
-                    <Text style={styles.testButtonText}>Teste Cliente</Text>
-                </TouchableOpacity>
-                {/* MODIFICAÇÃO: Renomeado e alterado para navegação direta */}
-                <TouchableOpacity style={styles.testButton} onPress={navigateToProviderDashboard}>
-                    <Text style={styles.testButtonText}>Teste Provedor</Text>
-                </TouchableOpacity>
-                {/* MODIFICAÇÃO: Botão "Ir para Teste de Conexão API" REMOVIDO */}
-            </View>
-            )}
         </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -285,20 +265,20 @@ const styles = StyleSheet.create({
   scrollContentContainer: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingBottom: 20,
+    paddingBottom: 10,
   },
   contentWrapper: {
     paddingHorizontal: 35,
     paddingTop: Platform.OS === 'ios' ? 20 : 15,
   },
   logoContainer: {
-    top: 142, // Ajuste para centralizar o logo
-    right: 13,
+    top: 30, // Ajuste para centralizar o logo
+    right: 12,
     alignItems: 'center',
     
   },
   logo: {
-    width: 280,
+    width: 235,
     height: 310,
     resizeMode: 'contain',
   },
@@ -314,7 +294,7 @@ const styles = StyleSheet.create({
     color: '#8A94A6',
     textAlign: 'center',
     marginBottom: 60,
-    top: 15, // Espaço entre o logo e o título
+    bottom: 95, // Espaço entre o logo e o título
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -322,7 +302,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 28,
     height: 36,
-    marginBottom: 17,
+    bottom: 100,
+    marginBottom: 10,
     // Estilos de sombra para iOS
     shadowColor: 'rgba(100, 100, 150, 0.15)',
     shadowOffset: { width: 0, height: 8 },
@@ -335,21 +316,12 @@ const styles = StyleSheet.create({
   },
   iconCircle: {
     width: 50,
-    height: 50,
+    height: 30,
     right: 2,
     borderRadius: 40,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderWidth: 24.8, // Borda muito grossa que pode interferir na percepção da sombra
-    borderColor: 'rgba(178, 139, 202, 0.19)',
-    // Estilos de sombra para iOS
-    shadowColor: 'rgba(178, 139, 202, 0.81)',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 15,
-    // Elevação para Android (pode ser obscurecida pela borda grossa)
-    elevation: 8, // Considere aumentar, mas revise o borderWidth
     marginRight: 10,
   },
   input: {
@@ -375,11 +347,12 @@ const styles = StyleSheet.create({
   signInButton: {
     backgroundColor: 'rgba(64, 192, 240, 0.85)',
     borderRadius: 28,
-    paddingVertical: 10,
+    paddingVertical: 7,
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 10,
+    bottom: 90,
     marginBottom: 25,
     // Estilos de sombra para iOS
     shadowColor: '#007BFF',
@@ -410,17 +383,20 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: '#DCE0E5',
     borderStyle: 'dashed',
+    bottom: 20,
   },
   orText: {
     fontSize: 13,
     color: '#A0AEC0',
     textAlign: 'center',
+    bottom: 20,
     marginHorizontal: 12,
   },
   socialLoginContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     marginBottom: 30,
+    bottom: 10,
     width: '100%',
   },
   socialButton: {
@@ -443,6 +419,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    bottom: 240,
     paddingBottom: 18,
     paddingTop: 15,
   },
@@ -459,6 +436,8 @@ const styles = StyleSheet.create({
   forgotPasswordContainer: {
     alignItems: 'center',
     marginBottom: 20,
+    bottom: 235,
+    
   },
   forgotPasswordLink: {
     fontSize: 13,

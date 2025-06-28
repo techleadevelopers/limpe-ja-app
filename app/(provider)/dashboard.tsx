@@ -107,7 +107,8 @@ const headerStyles = StyleSheet.create({
     flex: 1,
   },
   greetingText: {
-    fontSize: 24,
+    fontSize: 18,
+    marginTop: 20,
     fontWeight: 'bold',
     color: TEXT_DARK,
   },
@@ -1182,7 +1183,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: DANGER_RED,
     borderRadius: 25,
-    paddingVertical: 12,
+    paddingVertical: 8,
     marginTop: 30, // Espaçamento do conteúdo acima
     marginBottom: 20, // Espaçamento da parte inferior da tela
     width: '90%', // Ocupa uma boa largura

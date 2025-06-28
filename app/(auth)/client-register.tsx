@@ -434,7 +434,7 @@ const styles = StyleSheet.create({
     left: -15, // Ajustado para centralizar o logo
   },
   logo: { // Ajuste para o logo V-shape
-    width: 300, // Ajustado para o tamanho da imagem
+    width: 240, // Ajustado para o tamanho da imagem
     height: 300, // Ajustado para o tamanho da imagem
     resizeMode: 'contain',
   },
@@ -443,49 +443,39 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#1C3A5F',
         textAlign: 'center',
-
-
   },
   welcomeSubtitle: {
-    fontSize: 15, // Ajustado
+    fontSize: 14, // Ajustado
     color: '#8A94A6', // Cinza médio
     textAlign: 'center',
     marginBottom: 30,
     bottom: 110, // Ajustado para centralizar o título
   },
-  inputWrapper: { // Este é o contêiner branco pill-shape com sombra
-    flexDirection: 'row', // Alinha os filhos horizontalmente (círculo do ícone e input)
-    alignItems: 'center', // Centraliza verticalmente os filhos
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 28, // Totalmente arredondado
-    bottom: 70, // Espaçamento inferior para o próximo input
-    height: 35, // Altura do input (ajustado para 50px)
-    marginBottom: 20, // Espaçamento entre os inputs
-    shadowColor: 'rgba(100, 100, 150, 0.15)', // Sombra mais suave
+    borderRadius: 28,
+    height: 36,
+    marginBottom: 9,
+    shadowColor: 'rgba(100, 100, 150, 0.15)',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 1,
     shadowRadius: 15,
-    elevation: 8, // Aumentado para 8 para maior visibilidade no Android
-    paddingLeft: 5, // Pequeno padding à esquerda para o círculo do ícone
-    paddingRight: 15, // Padding à direita para o TextInput e o olho
+    elevation: 5,
+    paddingLeft: 5,
+    paddingRight: 15,
+    bottom: 90,
+    right: 5,
   },
   iconCircle: {
     width: 50,
-    height: 50,
-    right: 2,
+    height: 30,
+    right: 3,
     borderRadius: 40,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderWidth: 24.8, // Borda muito grossa que pode interferir na percepção da sombra
-    borderColor: 'rgba(178, 139, 202, 0.19)',
-    // Estilos de sombra para iOS
-    shadowColor: 'rgba(178, 139, 202, 0.81)',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 15,
-    // Elevação para Android (pode ser obscurecida pela borda grossa)
-    elevation: 8, // Considere aumentar, mas revise o borderWidth
     marginRight: 10,
   },
   input: {

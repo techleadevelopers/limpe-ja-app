@@ -306,12 +306,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     backgroundColor: ICON_PRIMARY,
     paddingHorizontal: 15,
-    paddingVertical: Platform.OS === 'ios' ? 50 : 20,
+    paddingVertical: Platform.OS === 'ios' ? 50 : 10,
     paddingTop: Platform.OS === 'ios' ? 50 : 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
+    marginTop: 15,
     elevation: 5,
   },
   headerBackButton: {
@@ -319,7 +320,7 @@ const styles = StyleSheet.create({
     marginRight: 15,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: WHITE,
     flex: 1,

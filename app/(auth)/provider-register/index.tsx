@@ -444,7 +444,7 @@ export default function RegisterProviderScreen() {
             <View>
               <View style={styles.inputWrapper}>
                 <View style={styles.iconCircle}>
-                  <Ionicons name="person-outline" size={20} color="#007BFF" />
+                  <Ionicons name="person-outline" size={20} color="#00BCD4" />
                 </View>
                 <TextInput
                   style={styles.input}
@@ -460,7 +460,7 @@ export default function RegisterProviderScreen() {
 
               <View style={styles.inputWrapper}>
                 <View style={styles.iconCircle}>
-                  <Ionicons name="mail-outline" size={20} color="#007BFF" />
+                  <Ionicons name="mail-outline" size={20} color="#00BCD4" />
                 </View>
                 <TextInput
                   style={styles.input}
@@ -477,7 +477,7 @@ export default function RegisterProviderScreen() {
 
               <View style={styles.inputWrapper}>
                 <View style={styles.iconCircle}>
-                  <Ionicons name="lock-closed-outline" size={20} color="#007BFF" />
+                  <Ionicons name="lock-closed-outline" size={20} color="#00BCD4" />
                 </View>
                 <TextInput
                   style={styles.input}
@@ -495,7 +495,7 @@ export default function RegisterProviderScreen() {
 
               <View style={styles.inputWrapper}>
                 <View style={styles.iconCircle}>
-                  <Ionicons name="card-outline" size={20} color="#007BFF" />
+                  <Ionicons name="card-outline" size={20} color="#00BCD4" />
                 </View>
                 <TextInput
                   style={styles.input}
@@ -510,7 +510,7 @@ export default function RegisterProviderScreen() {
 
               <View style={styles.inputWrapper}>
                 <View style={styles.iconCircle}>
-                  <Ionicons name="calendar-outline" size={20} color="#007BFF" />
+                  <Ionicons name="calendar-outline" size={20} color="#00BCD4" />
                 </View>
                 <TextInput
                   style={styles.input}
@@ -531,7 +531,7 @@ export default function RegisterProviderScreen() {
             <View>
               <View style={styles.inputWrapper}>
                 <View style={styles.iconCircle}>
-                  <Ionicons name="map-outline" size={20} color="#007BFF" />
+                  <Ionicons name="map-outline" size={20} color="#00BCD4" />
                 </View>
                 <TextInput
                   style={styles.input}
@@ -546,7 +546,7 @@ export default function RegisterProviderScreen() {
 
               <View style={styles.inputWrapper}>
                 <View style={styles.iconCircle}>
-                  <Ionicons name="navigate-outline" size={20} color="#007BFF" />
+                  <Ionicons name="navigate-outline" size={20} color="#00BCD4" />
                 </View>
                 <TextInput
                   style={styles.input}
@@ -560,7 +560,7 @@ export default function RegisterProviderScreen() {
 
               <View style={styles.inputWrapper}>
                 <View style={styles.iconCircle}>
-                  <Ionicons name="home-outline" size={20} color="#007BFF" />
+                  <Ionicons name="home-outline" size={20} color="#00BCD4" />
                 </View>
                 <TextInput
                   style={styles.input}
@@ -574,7 +574,7 @@ export default function RegisterProviderScreen() {
 
               <View style={styles.inputWrapper}>
                 <View style={styles.iconCircle}>
-                  <Ionicons name="business-outline" size={20} color="#007BFF" />
+                  <Ionicons name="business-outline" size={20} color="#00BCD4" />
                 </View>
                 <TextInput
                   style={styles.input}
@@ -588,7 +588,7 @@ export default function RegisterProviderScreen() {
 
               <View style={styles.inputWrapper}>
                 <View style={styles.iconCircle}>
-                  <Ionicons name="location-outline" size={20} color="#007BFF" />
+                  <Ionicons name="location-outline" size={20} color="#00BCD4" />
                 </View>
                 <TextInput
                   style={styles.input}
@@ -602,7 +602,7 @@ export default function RegisterProviderScreen() {
 
               <View style={styles.inputWrapper}>
                 <View style={styles.iconCircle}>
-                  <Ionicons name="location-outline" size={20} color="#007BFF" />
+                  <Ionicons name="location-outline" size={20} color="#00BCD4" />
                 </View>
                 <TextInput
                   style={styles.input}
@@ -644,7 +644,7 @@ export default function RegisterProviderScreen() {
 
               <Text style={styles.label}>Anos de Experiência *</Text>
               <View style={styles.inputWrapperServiceDetails}>
-                  <Ionicons name="briefcase-outline" size={20} color="#007BFF" style={styles.inputIcon} />
+                  <Ionicons name="briefcase-outline" size={20} color="#00BCD4" style={styles.inputIcon} />
                   <TextInput
                       style={styles.inputServiceDetails}
                       value={anosExperiencia}
@@ -660,7 +660,7 @@ export default function RegisterProviderScreen() {
 
               <Text style={styles.label}>Principais Serviços Oferecidos *</Text>
               <View style={styles.inputWrapperServiceDetails}>
-                  <Ionicons name="construct-outline" size={20} color="#007BFF" style={styles.inputIcon} />
+                  <Ionicons name="construct-outline" size={20} color="#00BCD4" style={styles.inputIcon} />
                   <TextInput
                       style={[styles.inputServiceDetails, styles.textAreaInputServiceDetails]}
                       value={servicosOferecidos}
@@ -678,7 +678,7 @@ export default function RegisterProviderScreen() {
 
               <Text style={styles.label}>Descreva sua Experiência Profissional *</Text>
               <View style={styles.inputWrapperServiceDetails}>
-                  <MaterialCommunityIcons name="text-box-outline" size={20} color="#007BFF" style={styles.inputIcon} />
+                  <MaterialCommunityIcons name="text-box-outline" size={20} color="#00BCD4" style={styles.inputIcon} />
                   <TextInput
                       style={[styles.inputServiceDetails, styles.textAreaInputServiceDetails]}
                       value={experiencia}
@@ -696,7 +696,7 @@ export default function RegisterProviderScreen() {
 
               <Text style={styles.label}>Sua Estrutura de Preços *</Text>
               <View style={styles.inputWrapperServiceDetails}>
-                  <MaterialCommunityIcons name="currency-usd" size={20} color="#007BFF" style={styles.inputIcon} />
+                  <MaterialCommunityIcons name="currency-usd" size={20} color="#00BCD4" style={styles.inputIcon} />
                   <TextInput
                       style={[styles.inputServiceDetails, styles.textAreaInputServiceDetails]}
                       value={estruturaPreco}
@@ -714,7 +714,7 @@ export default function RegisterProviderScreen() {
 
               <Text style={styles.label}>Principais Áreas/Bairros de Atendimento *</Text>
               <View style={styles.inputWrapperServiceDetails}>
-                  <Ionicons name="location-outline" size={20} color="#007BFF" style={styles.inputIcon} />
+                  <Ionicons name="location-outline" size={20} color="#00BCD4" style={styles.inputIcon} />
                   <TextInput
                       style={[styles.inputServiceDetails, styles.textAreaInputServiceDetails]}
                       value={areasAtendimento}
@@ -732,7 +732,7 @@ export default function RegisterProviderScreen() {
 
               <Text style={styles.label}>Chave PIX *</Text>
               <View style={styles.inputWrapperServiceDetails}>
-                  <Ionicons name="key-outline" size={20} color="#007BFF" style={styles.inputIcon} />
+                  <Ionicons name="key-outline" size={20} color="#00BCD4" style={styles.inputIcon} />
                   <TextInput
                       style={styles.inputServiceDetails}
                       value={pixKey}
@@ -822,10 +822,10 @@ const styles = StyleSheet.create({
     
   },
   logo: {
-    width: 290,
+    width: 230,
     height: 300,
     resizeMode: 'contain',
-    bottom: 20,
+    bottom: 16,
     right: 15,
   },
   welcomeTitle: {
@@ -841,15 +841,15 @@ const styles = StyleSheet.create({
     color: '#8A94A6',
     textAlign: 'center',
     marginBottom: 30,
-    bottom: 138,
+    bottom: 140,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderRadius: 28,
-    height: 35,
-    marginBottom: 20,
+    height: 36,
+    marginBottom: 9,
     shadowColor: 'rgba(100, 100, 150, 0.15)',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 1,
@@ -857,30 +857,24 @@ const styles = StyleSheet.create({
     elevation: 5,
     paddingLeft: 5,
     paddingRight: 15,
-    bottom: 100,
+    bottom: 120,
+    right: 5,
   },
   iconCircle: {
     width: 50,
-    height: 50,
-    right: 2,
+    height: 30,
+    right: 3,
     borderRadius: 40,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderWidth: 24.8,
-    borderColor: 'rgba(178, 139, 202, 0.19)',
-    shadowColor: 'rgba(178, 139, 202, 0.81)',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 15,
-    elevation: 8,
     marginRight: 10,
   },
   input: {
     flex: 1,
     fontSize: 15,
     color: '#2D3748',
-    right: 8,
+    right: 18,
     height: '70%',
     paddingVertical: 0,
   },
@@ -899,14 +893,14 @@ const styles = StyleSheet.create({
   nextButton: {
     backgroundColor: '#40C0F0',
     borderRadius: 28,
-    paddingVertical: 10,
+    paddingVertical: 7,
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 10,
-    bottom: 0,
+    bottom: 110,
     marginBottom: 15,
-    shadowColor: '#007BFF',
+    shadowColor: '#00BCD4',
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -918,15 +912,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   signUpButton: {
-    backgroundColor: '#007BFF',
+    backgroundColor: '#00BCD4',
     borderRadius: 28,
-    paddingVertical: 10,
+    paddingVertical: 8,
+    bottom: 80,
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 10,
     marginBottom: 25,
-    shadowColor: '#007BFF',
+    shadowColor: '#00BCD4',
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -939,7 +934,7 @@ const styles = StyleSheet.create({
   },
   signUpButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
   },
   sectionTitle: {
@@ -960,7 +955,7 @@ const styles = StyleSheet.create({
     
   },
   label: {
-    fontSize: 15,
+    fontSize: 12,
     fontWeight: '600',
     color: '#495057',
     marginBottom: 7,
@@ -968,7 +963,7 @@ const styles = StyleSheet.create({
   },
   inputIcon: {
     marginRight: 10,
-    color: '#007BFF',
+    color: '#00BCD4',
   },
   inputWrapperServiceDetails: {
     flexDirection: 'row',
