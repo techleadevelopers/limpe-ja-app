@@ -20,11 +20,11 @@ export class BookingDetailsDto {
 
   @ApiProperty({ description: 'ID do cliente', example: 'client-uuid' })
   @IsString()
-  clientId: string; // Adicionado para garantir que esteja sempre no DTO
+  clientId: string;
 
   @ApiProperty({ description: 'ID do provedor', example: 'provider-uuid' })
   @IsString()
-  providerId: string; // Adicionado para garantir que esteja sempre no DTO
+  providerId: string;
 
   @ApiProperty({ description: 'Nome completo do cliente', example: 'João da Silva' })
   @IsString()
@@ -59,13 +59,19 @@ export class BookingDetailsDto {
   @IsString()
   providerServiceDescription?: string | null;
 
-  @ApiProperty({ description: 'Data agendada para o serviço (ISO 8601)', example: '2025-06-15T00:00:00.000Z' })
-  @IsDate()
-  scheduledDate: Date;
+  // REMOVIDO: scheduledDate - A data será combinada com a hora em scheduledDateTime
+  // @ApiProperty({ description: 'Data agendada para o serviço (ISO 8601)', example: '2025-06-15T00:00:00.000Z' })
+  // @IsDate()
+  // scheduledDate: Date;
 
-  @ApiProperty({ description: 'Horário agendado para o serviço (HH:mm)', example: '10:00' })
-  @IsString()
-  scheduledTime: string;
+  @ApiProperty({ description: 'Data e hora agendadas para o serviço (ISO 8601)', example: '2025-06-15T10:00:00.000Z' })
+  @IsDate()
+  scheduledDateTime: Date; // NOVO CAMPO: Contém data e hora combinadas
+
+  // REMOVIDO: scheduledTime - A hora será combinada com a data em scheduledDateTime
+  // @ApiProperty({ description: 'Horário agendado para o serviço (HH:mm)', example: '10:00' })
+  // @IsString()
+  // scheduledTime: string;
 
   @ApiProperty({ enum: BookingStatus, description: 'Status atual do agendamento', example: BookingStatus.PENDING })
   @IsEnum(BookingStatus)
@@ -94,8 +100,8 @@ export class BookingDetailsDto {
 
   constructor(booking: BookingWithRelations) {
     this.id = booking.id;
-    this.clientId = booking.clientId; // Popula o clientId
-    this.providerId = booking.providerId; // <<<< LINHA QUE FALTAVA: POPULA O providerId >>>>
+    this.clientId = booking.clientId;
+    this.providerId = booking.providerId;
     this.clientFullName = booking.client.fullName;
     this.clientEmail = booking.client.user.email;
     this.providerFullName = booking.provider.fullName;
@@ -104,8 +110,17 @@ export class BookingDetailsDto {
     this.servicePrice = booking.providerService.price.toNumber();
     this.serviceDurationMinutes = booking.providerService.durationMinutes;
     this.providerServiceDescription = booking.providerService.description;
-    this.scheduledDate = booking.scheduledDate;
-    this.scheduledTime = booking.scheduledTime;
+    
+    // ***** AQUI ESTÁ A MUDANÇA PRINCIPAL: COMBINAR scheduledDate e scheduledTime *****
+    // Pega a parte da data (YYYY-MM-DD) da scheduledDate (que é um Date object do Prisma)
+    const datePart = booking.scheduledDate.toISOString().split('T')[0]; 
+    // Pega a parte da hora (HH:mm) da scheduledTime (que é uma string do Prisma)
+    const timePart = booking.scheduledTime; 
+    
+    // Combina as duas partes em uma única string de data e hora no formato ISO 8601
+    // e cria um novo objeto Date a partir dela.
+    this.scheduledDateTime = new Date(`${datePart}T${timePart}:00`); 
+
     this.status = booking.status;
     this.totalPrice = booking.totalPrice.toNumber();
     this.notes = booking.notes;

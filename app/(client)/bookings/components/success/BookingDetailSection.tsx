@@ -19,18 +19,18 @@ export default function BookingDetailSection({
   return (
     <View style={styles.detailSection}>
       <View style={styles.detailItem}>
-        <Ionicons name="brush-outline" size={20} color={iconColor} />
+        <Ionicons name="brush-outline" size={19} color={iconColor} />
         <Text style={styles.detailLabel}>Serviço Contratado</Text>
         <Text style={styles.detailValue}>{serviceName}</Text>
       </View>
       <View style={styles.detailItem}>
-        <Ionicons name="location-outline" size={20} color={iconColor} />
+        <Ionicons name="location-outline" size={19} color={iconColor} />
         <Text style={styles.detailLabel}>Local do Serviço</Text>
         <Text style={styles.detailValue}>{formattedClientAddress}</Text>
       </View>
       {notes ? (
         <View style={styles.detailItem}>
-          <Ionicons name="document-text-outline" size={20} color={iconColor} />
+          <Ionicons name="document-text-outline" size={18} color={iconColor} />
           <Text style={styles.detailLabel}>Observações</Text>
           <Text style={styles.detailValueNotes}>{notes}</Text>
         </View>
@@ -50,20 +50,20 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   detailLabel: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#666',
-    marginLeft: 12,
+    marginLeft: 16,
     flex: 1,
   },
   detailValue: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 'bold',
     color: '#333',
     flex: 2,
     textAlign: 'right',
   },
   detailValueNotes: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#333',
     flex: 2,
     textAlign: 'right',

@@ -17,12 +17,12 @@ export default function MainActionButtons({
   return (
     <View style={styles.actionButtonsContainerNew}>
       <TouchableOpacity style={[styles.downloadButton, { backgroundColor: headerPrimaryColor }]} onPress={onGoToBookings}>
-        <Ionicons name="list-outline" size={20} color="#FFFFFF" style={{ marginRight: 10 }} />
+        <Ionicons name="list-outline" size={18} color="#FFFFFF" style={{ marginRight: 10 }} />
         <Text style={styles.downloadButtonText}>Ver Meus Agendamentos</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={[styles.downloadButton, styles.secondaryDownloadButton]} onPress={onGoHome}>
-        <Ionicons name="home-outline" size={20} color={headerPrimaryColor} style={{ marginRight: 10 }} />
+        <Ionicons name="home-outline" size={18} color={headerPrimaryColor} style={{ marginRight: 10 }} />
         <Text style={[styles.downloadButtonText, { color: headerPrimaryColor }]}>Voltar para o Início</Text>
       </TouchableOpacity>
     </View>
@@ -37,13 +37,13 @@ const styles = StyleSheet.create({
   },
   downloadButton: {
     flexDirection: 'row',
-    paddingVertical: 16,
+    paddingVertical: 9,
     paddingHorizontal: 25,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     width: '90%',
-    marginBottom: 15,
+    marginBottom: 10,
     // backgroundColor handled by prop
     ...Platform.select({
       ios: {
@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
   },
   downloadButtonText: {
     color: '#FFFFFF',
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '600',
   },
   secondaryDownloadButton: {

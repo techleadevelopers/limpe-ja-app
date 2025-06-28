@@ -36,8 +36,8 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   providerAvatar: {
-    width: 50,
-    height: 50,
+    width: 40,
+    height: 40,
     borderRadius: 30,
     marginRight: 15,
     borderWidth: 3,
@@ -47,12 +47,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   providerNameText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold',
     color: '#333',
   },
   providerRoleText: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#666',
   },
 });

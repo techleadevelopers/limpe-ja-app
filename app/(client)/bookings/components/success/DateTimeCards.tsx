@@ -47,12 +47,12 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
   },
   dateTimeLabel: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#666',
     marginTop: 8,
   },
   dateTimeValue: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#333',
     marginTop: 5,

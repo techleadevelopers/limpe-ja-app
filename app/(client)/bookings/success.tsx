@@ -7,11 +7,13 @@ import {
   Easing,
   Alert,
   Dimensions,
+  // ColorValue, // REMOVIDO: Não mais necessário já que o LinearGradient geral foi removido
 } from 'react-native';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
-import * as Calendar from 'expo-calendar';
+import * as Calendar from 'expo-calendar'; // CORRIGIDO: Era '*s Calendar'
 import Toast from 'react-native-toast-message';
 import * as Clipboard from 'expo-clipboard';
+// import { LinearGradient } from 'expo-linear-gradient'; // REMOVIDO: Não mais necessário
 
 // Importar componentes refatorados
 import SuccessHeader from './components/success/SuccessHeader';
@@ -37,6 +39,13 @@ const headerSecondaryColor = '#A8D8FF';
 const iconColor = '#4A90E2';
 const successColor = '#28a745';
 
+// REMOVIDO: As cores do gradiente foram removidas, pois o LinearGradient geral não é mais usado
+// const gradientColors: ColorValue[] = [
+//     'rgb(173, 216, 230)', 
+//     'rgba(65, 153, 225, 0.29)',  
+//     'rgba(133, 168, 231, 0.66)', 
+// ];
+
 export default function SuccessScreen() {
   const { bookingId, paymentMethod, totalPrice: totalPriceParam } = useLocalSearchParams<{ bookingId?: string; paymentMethod?: string; totalPrice?: string }>();
   const router = useRouter();
@@ -52,8 +61,6 @@ export default function SuccessScreen() {
   const contentTranslateY = useRef(new Animated.Value(50)).current;
   const headerTickOpacity = useRef(new Animated.Value(0)).current;
   const headerTickScale = useRef(new Animated.Value(0.5)).current;
-
-  // REMOVIDO: const [showLottie, setShowLottie] = useState(true);
 
   const fetchBookingAndProviderDetails = useCallback(async () => {
     console.log("[SuccessScreen] fetchBookingAndProviderDetails - Iniciando fetch.");
@@ -73,6 +80,10 @@ export default function SuccessScreen() {
       const fetchedBooking = await getBookingDetails(bookingId);
       setBooking(fetchedBooking);
       console.log("[SuccessScreen] fetchBookingAndProviderDetails - Booking real carregado:", fetchedBooking);
+      // >>> LOG DE DEPURACAO AQUI <<<
+      // Alterado para logar scheduledDateTime
+      console.log("[SuccessScreen - DEBUG] Valor de scheduledDateTime vindo do backend:", fetchedBooking?.scheduledDateTime);
+
 
       if (fetchedBooking?.providerId) {
         const providerDetails: ProviderDisplayInfo = await getProviderDetails(fetchedBooking.providerId);
@@ -124,23 +135,14 @@ export default function SuccessScreen() {
       setIsLoading(false);
       console.log("[SuccessScreen] fetchBookingAndProviderDetails - Finalizado.");
     }
-  }, [bookingId, paymentMethod, totalPriceParam]); // Remover pixChargeDetails do array de dependências
+  }, [bookingId, paymentMethod, totalPriceParam, pixChargeDetails]); 
 
 
   useEffect(() => {
-    // REMOVIDO: if (lottieAnimationRef.current) { lottieAnimationRef.current.play(); }
-
-    // REMOVIDO: const lottieDuration = 2500;
-    const revealDelay = 300; // Mantido, pode ser um delay de animação geral
+    const revealDelay = 300; 
     const pixGenerationDelay = 2000;
 
-    // REMOVIDO: console.log("[SuccessScreen] useEffect - showLottie (initial):", showLottie);
-    // REMOVIDO: console.log("[SuccessScreen] Lottie timer set for:", lottieDuration + revealDelay, "ms");
-
     const timer = setTimeout(() => {
-      // REMOVIDO: setShowLottie(false);
-      // REMOVIDO: console.log("[SuccessScreen] Lottie timer fired. setShowLottie(false).");
-      
       Animated.parallel([
         Animated.timing(contentOpacity, {
           toValue: 1,
@@ -173,10 +175,10 @@ export default function SuccessScreen() {
             fetchBookingAndProviderDetails();
         }, pixGenerationDelay);
       });
-    }, revealDelay); // ALTERADO: Usando apenas revealDelay
+    }, revealDelay);
 
     return () => clearTimeout(timer);
-  }, [fetchBookingAndProviderDetails, contentOpacity, contentTranslateY, headerTickOpacity, headerTickScale /* REMOVIDO: showLottie */]);
+  }, [fetchBookingAndProviderDetails, contentOpacity, contentTranslateY, headerTickOpacity, headerTickScale]);
 
   const handleGoToBookings = useCallback(() => {
     router.replace({ pathname: '/(client)/bookings', params: { highlightNew: true } } as any);
@@ -196,7 +198,8 @@ export default function SuccessScreen() {
       return;
     }
 
-    const startDate = new Date(booking.scheduledTime);
+    // Alterado para usar scheduledDateTime
+    const startDate = new Date(booking.scheduledDateTime);
     const durationMinutes = booking.serviceDurationMinutes || 60;
     const endDate = new Date(startDate.getTime() + durationMinutes * 60 * 1000);
 
@@ -264,7 +267,7 @@ export default function SuccessScreen() {
   // Se booking for null, ele também exibirá o erro.
   // NOVO: Incluir pixGenerationError no check de erro
   // A tela só deve mostrar erro se o booking não carregou (já que não tem mais Lottie para esperar)
-  if (isLoading || error || pixGenerationError || !booking) { // REMOVIDA: && !showLottie
+  if (isLoading || error || pixGenerationError || !booking) { 
     return (
       <SuccessLoadingError
         isLoading={isLoading}
@@ -279,43 +282,45 @@ export default function SuccessScreen() {
     <View style={styles.screenContainer}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* REMOVIDO: Bloco de renderização condicional do Lottie */}
-
-      {/* Renderize o conteúdo principal apenas quando booking for válido */}
       {booking && ( // <<<< CORREÇÃO: AGORA booking É A ÚNICA CONDIÇÃO DE RENDERIZAÇÃO DO CONTEÚDO PRINCIPAL >>>>
         <>
           <SuccessHeader
-            onBackPress={() => router.back()}
-            headerTickOpacity={headerTickOpacity}
-            headerTickScale={headerTickScale}
             headerPrimaryColor={headerPrimaryColor}
             headerSecondaryColor={headerSecondaryColor}
             successColor={successColor}
           />
 
-          <BookingSummaryCard
-            booking={booking}
-            providerRating={providerRating}
-            pixChargeDetails={pixChargeDetails}
-            paymentMethod={paymentMethod}
-            contentOpacity={contentOpacity}
-            contentTranslateY={contentTranslateY}
-            iconColor={iconColor}
-            successColor={successColor}
-            headerPrimaryColor={headerPrimaryColor}
-          />
+          {/* REMOVIDO: LinearGradient que foi adicionado incorretamente */}
+          {/* <LinearGradient
+            colors={gradientColors}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.gradientBackground}
+          > */}
+            <BookingSummaryCard
+              booking={booking}
+              providerRating={providerRating}
+              pixChargeDetails={pixChargeDetails}
+              paymentMethod={paymentMethod}
+              contentOpacity={contentOpacity}
+              contentTranslateY={contentTranslateY}
+              iconColor={iconColor}
+              successColor={successColor}
+              headerPrimaryColor={headerPrimaryColor}
+            />
 
-          <ImmediateActionButtons
-            onAddToCalendar={handleAddToCalendar}
-            onContactProvider={handleContactProvider}
-            headerPrimaryColor={headerPrimaryColor}
-          />
+            <ImmediateActionButtons
+              onAddToCalendar={handleAddToCalendar}
+              onContactProvider={handleContactProvider}
+              headerPrimaryColor={headerPrimaryColor}
+            />
 
-          <MainActionButtons
-            onGoToBookings={handleGoToBookings}
-            onGoHome={handleGoHome}
-            headerPrimaryColor={headerPrimaryColor}
-          />
+            <MainActionButtons
+              onGoToBookings={handleGoToBookings}
+              onGoHome={handleGoHome}
+              headerPrimaryColor={headerPrimaryColor}
+            />
+          {/* </LinearGradient> REMOVIDO: Fechamento do LinearGradient */}
         </>
       )}
     </View>
@@ -327,6 +332,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F0F2F5',
   },
+  // REMOVIDO: gradientBackground que foi adicionado incorretamente
+  // gradientBackground: {
+  //   flex: 1, 
+  //   paddingVertical: 20,
+  // },
   // REMOVIDO: lottieOverlay
   // REMOVIDO: lottieAnimation
 });

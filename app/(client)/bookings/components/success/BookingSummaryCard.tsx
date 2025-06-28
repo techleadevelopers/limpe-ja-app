@@ -14,7 +14,7 @@ import SecurityInfoSection from './SecurityInfoSection';
 import LoyaltyTeaserSection from './LoyaltyTeaserSection';
 
 // Importar tipos
-import { BookingDetails } from '../../../../types/backend/bookings';
+import { BookingDetails } from '../../../../types/backend/bookings'; // Certifique-se que este BookingDetails tem scheduledDateTime
 import { PixChargeResponseDto } from '../../../../types/backend/payments';
 import { formatCurrency, formatDate } from '../../../../../utils/helpers';
 import Toast from 'react-native-toast-message';
@@ -47,7 +47,8 @@ export default function BookingSummaryCard({
     providerFullName,
     providerAvatarUrl,
     serviceName,
-    scheduledTime,
+    // REMOVIDO: scheduledTime, // scheduledTime não vem mais sozinho
+    scheduledDateTime, // ADICIONADO: Usar o novo campo combinado
     address,
     totalPrice,
     id: bookingIdFromBooking,
@@ -55,9 +56,20 @@ export default function BookingSummaryCard({
     // Adicione outras propriedades de 'booking' que você usa diretamente aqui
   } = booking;
 
+  // >>> LOG DE DEPURACAO AQUI <<<
+  // Alterado para logar scheduledDateTime
+  console.log("[BookingSummaryCard - DEBUG] scheduledDateTime recebido como prop:", scheduledDateTime);
+
+
   // --- CORREÇÃO AQUI: DECLARAR AS VARIÁVEIS FORMATADAS ---
-  const formattedBookingDate = formatDate(scheduledTime, { day: 'numeric', month: 'long', year: 'numeric' });
-  const formattedBookingTime = formatDate(scheduledTime, { hour: '2-digit', minute: '2-digit' });
+  // Passar scheduledDateTime para a função formatDate
+  const formattedBookingDate = formatDate(scheduledDateTime, { day: 'numeric', month: 'long', year: 'numeric' });
+  const formattedBookingTime = formatDate(scheduledDateTime, { hour: '2-digit', minute: '2-digit' });
+
+  // >>> LOG DE DEPURACAO AQUI <<<
+  console.log("[BookingSummaryCard - DEBUG] formattedBookingDate após formatDate:", formattedBookingDate);
+  console.log("[BookingSummaryCard - DEBUG] formattedBookingTime após formatDate:", formattedBookingTime);
+
 
   const formattedClientAddress = address ?
     `${address.street}, ${address.number}` +
@@ -140,8 +152,8 @@ export default function BookingSummaryCard({
             />
           )}
 
-          <SecurityInfoSection successColor={successColor} />
-          <LoyaltyTeaserSection headerPrimaryColor={headerPrimaryColor} />
+         
+          
         </View>
       </View>
     </Animated.ScrollView>

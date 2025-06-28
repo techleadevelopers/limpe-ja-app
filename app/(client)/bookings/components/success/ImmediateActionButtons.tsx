@@ -17,12 +17,12 @@ export default function ImmediateActionButtons({
   return (
     <View style={styles.actionButtonsContainerImmediate}>
       <TouchableOpacity style={styles.actionButtonImmediate} onPress={onAddToCalendar}>
-        <Ionicons name="calendar-outline" size={22} color={headerPrimaryColor} />
+        <Ionicons name="calendar-outline" size={20} color={headerPrimaryColor} />
         <Text style={styles.actionButtonImmediateText}>Adicionar ao Calendário</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.actionButtonImmediate} onPress={onContactProvider}>
-        <Ionicons name="chatbubbles-outline" size={22} color={headerPrimaryColor} />
+        <Ionicons name="chatbubbles-outline" size={20} color={headerPrimaryColor} />
         <Text style={styles.actionButtonImmediateText}>Contatar Prestador</Text>
       </TouchableOpacity>
     </View>
@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#E8F5E9',
     borderRadius: 10,
-    paddingVertical: 14,
+    paddingVertical: 4,
     marginHorizontal: 8,
     ...Platform.select({
       ios: {
@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
     }),
   },
   actionButtonImmediateText: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '600',
     color: '#4A90E2', // Using headerPrimaryColor directly
     marginLeft: 10,

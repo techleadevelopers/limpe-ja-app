@@ -1,7 +1,6 @@
 // LimpeJaApp/src/types/backend/bookings.ts
 
 // Importar interfaces de tipagem relevantes de outros arquivos
-// MANTIDO: Você indicou que essas importações não devem ser removidas.
 import { ProviderDisplayInfo, ServiceDetailsDto } from './providers'; 
 
 /**
@@ -15,8 +14,7 @@ export enum BookingStatus {
   COMPLETED = 'COMPLETED',
   CANCELLED = 'CANCELLED',
   RESCHEDULED = 'RESCHEDULED',
-  // PENDING_PROVIDER_CONFIRMATION = 'PENDING_PROVIDER_CONFIRMATION', // REMOVIDO: Conforme sua instrução explícita
-  IN_PROGRESS = 'IN_PROGRESS', // ADICIONADO: Conforme uso e necessidade anterior
+  IN_PROGRESS = 'IN_PROGRESS', 
   REJECTED = 'REJECTED',
 }
 
@@ -55,12 +53,19 @@ export interface CreateBookingDto {
  * Representa um agendamento completo retornado pelo backend para exibição no frontend.
  * Esta é a versão "achatada" do BookingWithDetailsRelations do backend.
  * FOI REVERTIDA PARA A ESTRUTURA ANTERIOR PARA MANTER A COMPATIBILIDADE.
+ *
+ * >>> ALTERADO: scheduledDate e scheduledTime foram removidos e substituídos por scheduledDateTime. <<<
  */
 export interface BookingDetails {
   id: string;
   status: BookingStatus; // Usar o enum definido
-  scheduledDate: string; // Data agendada (YYYY-MM-DD)
-  scheduledTime: string; // Hora agendada (HH:mm)
+  
+  // REMOVIDOS: scheduledDate e scheduledTime separados
+  // scheduledDate: string; 
+  // scheduledTime: string; 
+
+  scheduledDateTime: string; // NOVO: Data e hora agendadas, combinadas em uma string ISO 8601 (ex: "2025-06-15T10:00:00.000Z")
+
   totalPrice: number; // Preço total do agendamento
   notes?: string | null;
   createdAt: string; // ISO 8601 string
