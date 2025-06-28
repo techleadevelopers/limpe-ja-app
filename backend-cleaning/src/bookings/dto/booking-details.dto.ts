@@ -11,6 +11,10 @@ type BookingWithRelations = Booking & {
   provider: Provider & { user: User };
   providerService: ProviderService & { service: Service };
   address?: Address | null;
+  // >>> CORREÇÃO AQUI: scheduledDate pode ser Date ou null vindo do Prisma,
+  // mesmo que o schema defina como Date em alguns casos (se não for explicitamente non-nullable).
+  // A tipagem reflete o que pode vir na prática.
+  scheduledDate: Date | null;
 };
 
 export class BookingDetailsDto {
@@ -59,19 +63,9 @@ export class BookingDetailsDto {
   @IsString()
   providerServiceDescription?: string | null;
 
-  // REMOVIDO: scheduledDate - A data será combinada com a hora em scheduledDateTime
-  // @ApiProperty({ description: 'Data agendada para o serviço (ISO 8601)', example: '2025-06-15T00:00:00.000Z' })
-  // @IsDate()
-  // scheduledDate: Date;
-
   @ApiProperty({ description: 'Data e hora agendadas para o serviço (ISO 8601)', example: '2025-06-15T10:00:00.000Z' })
   @IsDate()
   scheduledDateTime: Date; // NOVO CAMPO: Contém data e hora combinadas
-
-  // REMOVIDO: scheduledTime - A hora será combinada com a data em scheduledDateTime
-  // @ApiProperty({ description: 'Horário agendado para o serviço (HH:mm)', example: '10:00' })
-  // @IsString()
-  // scheduledTime: string;
 
   @ApiProperty({ enum: BookingStatus, description: 'Status atual do agendamento', example: BookingStatus.PENDING })
   @IsEnum(BookingStatus)
@@ -111,15 +105,38 @@ export class BookingDetailsDto {
     this.serviceDurationMinutes = booking.providerService.durationMinutes;
     this.providerServiceDescription = booking.providerService.description;
     
-    // ***** AQUI ESTÁ A MUDANÇA PRINCIPAL: COMBINAR scheduledDate e scheduledTime *****
-    // Pega a parte da data (YYYY-MM-DD) da scheduledDate (que é um Date object do Prisma)
-    const datePart = booking.scheduledDate.toISOString().split('T')[0]; 
-    // Pega a parte da hora (HH:mm) da scheduledTime (que é uma string do Prisma)
-    const timePart = booking.scheduledTime; 
+    // ***** INÍCIO DOS LOGS DEFENSIVOS E COMBINAÇÃO *****
+    console.log("[BookingDetailsDto - DEBUG] booking.scheduledDate:", booking.scheduledDate, " (Tipo:", typeof booking.scheduledDate, ")");
+    console.log("[BookingDetailsDto - DEBUG] booking.scheduledTime:", booking.scheduledTime, " (Tipo:", typeof booking.scheduledTime, ")");
+
+    let datePart: string;
+    // Verifica se scheduledDate é uma instância de Date E se é uma data válida.
+    // Isso cobre casos de null/undefined e Date("Invalid Date")
+    if (booking.scheduledDate instanceof Date && !isNaN(booking.scheduledDate.getTime())) {
+        datePart = booking.scheduledDate.toISOString().split('T')[0];
+    } else {
+        // Loga o valor problemático e usa um fallback seguro.
+        console.error("[BookingDetailsDto - ERROR] booking.scheduledDate inválido, nulo/indefinido ou não é um objeto Date válido. Valor recebido:", booking.scheduledDate);
+        datePart = '1970-01-01'; // Fallback para garantir uma string de data
+    }
+
+    const timePart = booking.scheduledTime || '00:00'; // Garante que timePart não seja undefined ou null
     
-    // Combina as duas partes em uma única string de data e hora no formato ISO 8601
-    // e cria um novo objeto Date a partir dela.
-    this.scheduledDateTime = new Date(`${datePart}T${timePart}:00`); 
+    const combinedDateTimeString = `${datePart}T${timePart}:00`;
+    console.log("[BookingDetailsDto - DEBUG] String combinada para Date:", combinedDateTimeString);
+
+    try {
+        this.scheduledDateTime = new Date(combinedDateTimeString);
+        if (isNaN(this.scheduledDateTime.getTime())) {
+            console.error("[BookingDetailsDto - ERROR] new Date() resultou em data inválida para:", combinedDateTimeString);
+            this.scheduledDateTime = new Date(); // Fallback para data atual se a combinação for inválida
+        }
+        console.log("[BookingDetailsDto - DEBUG] scheduledDateTime FINAL (combinado):", this.scheduledDateTime.toISOString());
+    } catch (e) {
+        console.error("[BookingDetailsDto - ERROR] Erro ao criar Date a partir da string combinada:", combinedDateTimeString, e);
+        this.scheduledDateTime = new Date(); // Fallback em caso de exceção
+    }
+    // ***** FIM DOS LOGS DEFENSIVOS E COMBINAÇÃO *****
 
     this.status = booking.status;
     this.totalPrice = booking.totalPrice.toNumber();
