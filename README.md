@@ -727,729 +727,364 @@ O projeto LimpeJá é um monorepo, contendo pastas para o frontend (`LimpeJaApp/
 
 </p>
 
-<div style="cor de fundo: #ffffff; preenchimento: 20px; raio da borda: 8px; sombra da caixa: 0 2px 8px rgba(0, 0, 0, 0,08); margem inferior: 20px;">
-
-<h3 id="estrutura-de-pastas-frontend" style="color: #2c3e50; font-size: 1,5em; margin-bottom: 15px;">Estrutura de Pastas (Frontend)</h3>
-
-<pre style="cor de fundo: #ecf0f1; preenchimento: 15px; raio da borda: 5px; overflow-x: auto; cor: #34495e;"><código>
-
-LimpeJáApp/
-
-├── aplicativo/
-
-│ ├── (auth)/ # Fluxo de Autenticação
-
+<div style="background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); margin-bottom: 20px;">
+<h3 id="frontend-folder-structure" style="color: #2c3e50; font-size: 1.5em; margin-bottom: 15px;">Frontend Folder Structure</h3>
+<pre style="background-color: #ecf0f1; padding: 15px; border-radius: 5px; overflow-x: auto; color: #34495e;"><code>LimpeJáApp/
+├── app/
+│ ├── (auth)/ # Authentication Flow
 │ │ ├── api/
-
-│ │ ├── componentes/
-
-│ │ ├── provedor-registro/
-
-│ │ │ ├── componentes/
-
-│ │ │ ├── verificação/
-
+│ │ ├── components/
+│ │ ├── provider-registration/
+│ │ │ ├── components/
+│ │ │ ├── verification/
 │ │ │ │ ├── background-check-status.tsx
-
-│ │ │ │ ├── upload-de-documento.tsx
-
-│ │ │ │ ├── reconhecimento facial.tsx
-
-│ │ │ │ ├── índice.tsx
-
+│ │ │ │ ├── document-upload.tsx
+│ │ │ │ ├── facial-recognition.tsx
+│ │ │ │ ├── index.tsx
 │ │ │ │ ├── layout.tsx
-
-│ │ │ │ ├── detalhes-pessoais.tsx
-
-│ │ │ │ ├── detalhes do serviço.tsx
-
-│ │ │ │ └── verificar-conta.tsx
-
-│ │ │ ├── índice.tsx
-
+│ │ │ │ ├── personal-details.tsx
+│ │ │ │ ├── service-details.tsx
+│ │ │ │ └── verify-account.tsx
+│ │ │ ├── index.tsx
 │ │ │ ├── layout.tsx
-
-│ │ │ ├── detalhes-pessoais.tsx
-
-│ │ │ └── detalhes do serviço.tsx
-
-│ │ ├── cliente-registro.tsx
-
-│ │ ├── esqueci-senha.tsx
-
+│ │ │ ├── personal-details.tsx
+│ │ │ └── service-details.tsx
+│ │ ├── client-registration.tsx
+│ │ ├── forgot-password.tsx
 │ │ ├── layout.tsx
-
 │ │ ├── login.tsx
-
-│ │ ├── LEIA-ME.md
-
+│ │ ├── README.md
 │ │ ├── register-options.tsx
-
-│ │ └── teste-conexão.tsx
-
-│ ├── (cliente)/ # Funcionalidades do Cliente
-
-│ │ ├── reservas/ # Agendamentos do Cliente
-
+│ │ └── connection-test.tsx
+│ ├── (client)/ # Client Functionalities
+│ │ ├── bookings/ # Client Appointments
 │ │ │ ├── api/
-
-│ │ │ ├── componentes/
-
-│ │ │ ├── [ID da reserva].tsx
-
-│ │ │ ├── índice.tsx
-
-│ │ │ ├── agendar-serviço.tsx
-
-│ │ │ └── sucesso.tsx
-
-│ │ ├── explorar/ # Explorar Serviços/Profissionais
-
+│ │ │ ├── components/
+│ │ │ ├── [bookingId].tsx
+│ │ │ ├── index.tsx
+│ │ │ ├── schedule-service.tsx
+│ │ │ └── success.tsx
+│ │ ├── explore/ # Explore Services/Professionals
 │ │ │ ├── api/
-
-│ │ │ ├── componentes/
-
-│ │ │ ├── dados/
-
-│ │ │ ├── estilos/
-
-│ │ │ ├── [Id do provedor].tsx
-
-│ │ │ ├── índice.tsx
-
-│ │ │ ├── resultados-busca.tsx
-
-│ │ │ ├── resultados-de-pesquisa.tsx
-
-│ │ │ ├── serviços-por-categoria.tsx
-
-│ │ │ ├── todas-categorias.tsx
-
-│ │ │ └── todos-prestadores-proximos.tsx
-
-│ │ ├── mensagens/ # Mensagens do Cliente
-
+│ │ │ ├── components/
+│ │ │ ├── data/
+│ │ │ ├── styles/
+│ │ │ ├── [providerId].tsx
+│ │ │ ├── index.tsx
+│ │ │ ├── search-results.tsx
+│ │ │ ├── search-results.tsx
+│ │ │ ├── services-by-category.tsx
+│ │ │ ├── all-categories.tsx
+│ │ │ └── all-nearby-providers.tsx
+│ │ ├── messages/ # Client Messages
 │ │ │ ├── api/
-
-│ │ │ ├── componentes/
-
+│ │ │ ├── components/
 │ │ │ ├── [chatId].tsx
-
-│ │ │ └── índice.tsx
-
-│ │ ├── ofertas/ #Ofertas do Cliente
-
+│ │ │ └── index.tsx
+│ │ ├── offers/ # Client Offers
 │ │ │ ├── api/
-
-│ │ │ ├── componentes/
-
-│ │ │ └── [ofertaId].tsx
-
-│ │ └── perfil/ #Perfil do Cliente
-
+│ │ │ ├── components/
+│ │ │ └── [offerId].tsx
+│ │ └── profile/ # Client Profile
 │ │ │ ├── api/
-
-│ │ │ ├── componentes/
-
-│ │ │ ├── editar.tsx
-
-│ │ │ ├── índice.tsx
-
+│ │ │ ├── components/
+│ │ │ ├── edit.tsx
+│ │ │ ├── index.tsx
 │ │ │ ├── layout.tsx
-
 │ │ │ └── layout.tsx
-
-│ ├── (common)/ # Funcionalidades Comuns (cliente e provedor)
-
+│ ├── (common)/ # Common Functionalities (client and provider)
 │ │ ├── api/
-
-│ │ ├── componentes/
-
-│ │ ├── comentários/
-
+│ │ ├── components/
+│ │ ├── reviews/
 │ │ │ └── [targetId].tsx
-
-│ │ ├── ajuda.tsx
-
+│ │ ├── help.tsx
 │ │ ├── layout.tsx
-
-│ │ ├── notificações.tsx
-
-│ │ ├── privacidade.tsx
-
-│ │ ├── LEIA-ME.md
-
-│ │ ├── configurações.tsx
-
-│ │ └── termos.tsx
-
-│ ├── (provedor)/ # Funcionalidades do Provedor
-
+│ │ ├── notifications.tsx
+│ │ ├── privacy.tsx
+│ │ ├── README.md
+│ │ ├── settings.tsx
+│ │ └── terms.tsx
+│ ├── (provider)/ # Provider Functionalities
 │ │ ├── api/
-
-│ │ ├── componentes/
-
-│ │ ├── mensagens/ # Mensagens do Provedor
-
+│ │ ├── components/
+│ │ ├── messages/ # Provider Messages
 │ │ │ ├── api/
-
-│ │ │ ├── componentes/
-
+│ │ │ ├── components/
 │ │ │ ├── [chatId].tsx
-
-│ │ │ └── índice.tsx
-
-│ │ ├── perfil/ # Perfil do Provedor
-
+│ │ │ └── index.tsx
+│ │ ├── profile/ # Provider Profile
 │ │ │ ├── api/
-
-│ │ │ ├── componentes/
-
-│ │ │ ├── editar-serviços.tsx
-
-│ │ │ └── índice.tsx
-
-│ │ ├── agendamento/ # Agenda/Disponibilidade do Provedor
-
+│ │ │ ├── components/
+│ │ │ ├── edit-services.tsx
+│ │ │ └── index.tsx
+│ │ ├── scheduling/ # Provider Schedule/Availability
 │ │ │ ├── api/
-
-│ │ │ └── componentes/
-
-│ │ │ └── índice.tsx
-
-│ │ ├── serviços/ # Serviços/Solicitações do Provedor
-
+│ │ │ └── components/
+│ │ │ └── index.tsx
+│ │ ├── services/ # Provider Services/Requests
 │ │ │ ├── api/
-
-│ │ │ ├── componentes/
-
-│ │ │ ├── [ID do serviço].tsx
-
-│ │ │ └── índice.tsx
-
-│ │ ├── painel.tsx
-
-│ │ ├── ganhos.tsx
-
+│ │ │ ├── components/
+│ │ │ ├── [serviceId].tsx
+│ │ │ └── index.tsx
+│ │ ├── dashboard.tsx
+│ │ ├── earnings.tsx
 │ │ ├── layout.tsx
-
-│ │ ├── LEIA-ME.md
-
-│ │ └── serviços/
-
+│ │ ├── README.md
+│ │ └── services/
 │ │ ├── authService.ts
-
 │ │ └── clientService.ts
-
 │ ├── _layout.tsx
-
-│ ├── +não-encontrado.tsx
-
+│ ├── +not-found.tsx
 │ ├── doc.md
-
 │ ├── index.tsx
-
-│ ├── LEIA-ME.md
-
-│ └── bem-vindo.tsx
-
-├── ativos/ # Recursos estáticos
-
-│ ├── fontes/
-
-│ ├── imagens/
-
+│ ├── README.md
+│ └── welcome.tsx
+├── assets/ # Static resources
+│ ├── fonts/
+│ ├── images/
 │ └── lottie/
-
-├── componentes/ # Componentes de UI realmente reutilizáveis ​​e atômicos (globais)
-
+├── components/ # Truly reusable and atomic UI components (global)
 │ ├── layout/
-
 │ └── ui/
-
-├── configuração/
-
+├── config/
 │ ├── AppConfig.ts
-
 │ ├── firebase.ts
-
 │ └── firebaseClient.ts
-
-├── constantes/
-
-│ ├── Cores.ts
-
-│ ├── rotas.ts
-
+├── constants/
+│ ├── Colors.ts
+│ ├── routes.ts
 │ ├── strings.ts
-
-│ └── tema.ts
-
-├── contextos/
-
+│ └── theme.ts
+├── contexts/
 │ ├── AppContext.tsx
-
 │ ├── AuthContext.tsx
-
 │ └── ProviderRegistrationContext.tsx
-
-├── documentação/
-
-├── ganchos/
-
+├── documentation/
+├── hooks/
 │ ├── useAuth.ts
-
 │ ├── useColorScheme.ts
-
 │ ├── useColorScheme.web.ts
-
 │ ├── useFormValidation.ts
-
 │ └── useThemeColor.ts
-
-├── módulos_de_nó/
-
-├── roteiros/
-
+├── node_modules/
+├── scripts/
 │ └── reset-project.js
-
-├── serviços/
-
+├── services/
 │ ├── api.ts
-
 │ ├── authService.ts
-
 │ ├── bookingService.ts
-
 │ ├── chatService.ts
-
 │ ├── clientService.ts
-
 │ ├── faqService.ts
-
 │ ├── firebaseConfig.ts
-
 │ ├── notificationService.ts
-
 │ ├── offerService.ts
-
-│ ├── pagamentoService.ts
-
+│ ├── paymentService.ts
 │ ├── providerService.ts
-
 │ ├── reviewService.ts
-
 │ ├── searchService.ts
-
 │ ├── uploadService.ts
-
 │ └── verificationService.ts
-
-├── tipos/
-
-│ ├── aut.ts
-
-│ ├── reserva.ts
-
-│ ├── reservas.ts
-
-│ ├── bate-papo.ts
-
-│ ├── clientes.ts
-
+├── types/
+│ ├── auth.ts
+│ ├── booking.ts
+│ ├── bookings.ts
+│ ├── chat.ts
+│ ├── clients.ts
 │ ├── faqs.ts
-
-│ ├── índice.ts
-
-│ ├── navegação.ts
-
-│ ├── notificações.ts
-
-│ ├── ofertas.ts
-
-│ ├── pagamentos.ts
-
-│ ├── provedor.ts
-
-│ ├── provedores.ts
-
-│ ├── avaliações.ts
-
-│ ├── serviço.ts
-
-│ ├── serviços.ts
-
-│ ├── tipos.ts
-
-│ ├── usuário.ts
-
-│ ├── usuários.ts
-
-│ └── verificação.ts
-
-├── utilitários/
-
-│ ├── ajudantes.ts
-
-│ ├── permissões.ts
-
-│ └── armazenamento.ts
-
+│ ├── index.ts
+│ ├── navigation.ts
+│ ├── notifications.ts
+│ ├── offers.ts
+│ ├── payments.ts
+│ ├── provider.ts
+│ ├── providers.ts
+│ ├── reviews.ts
+│ ├── service.ts
+│ ├── services.ts
+│ ├── types.ts
+│ ├── user.ts
+│ ├── users.ts
+│ └── verification.ts
+├── utils/
+│ ├── helpers.ts
+│ ├── permissions.ts
+│ └── storage.ts
 ├── .env
-
 ├── .gitignore
-
 ├── app.json
-
 ├── babel.config.js
-
 ├── eas.json
-
 ├── eslint.config.js
-
 ├── expo-env.d.ts
-
-├── LICENÇA
-
+├── LICENSE
 ├── metro.config.js
-
-├── pacote-lock.json
-
-├── pacote.json
-
-├── LEIA-ME.md
-
-└── tsconfig.json
-
-</code></pre>
-
+├── package-lock.json
+├── package.json
+├── README.md
+└── tsconfig.json</code></pre>
 </div>
-
-<div style="cor de fundo: #ffffff; preenchimento: 20px; raio da borda: 8px; sombra da caixa: 0 2px 8px rgba(0, 0, 0, 0,08); margem inferior: 20px;">
-
-<h3 id="estrutura-de-pastas-backend" style="color: #2c3e50; font-size: 1.5em; margin-bottom: 15px;">Estrutura de Massas (Backend)</h3>
-
-<pre style="cor de fundo: #ecf0f1; preenchimento: 15px; raio da borda: 5px; overflow-x: auto; cor: #34495e;"><código>
-
-backend-LimpeJá/
-
+<div style="background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); margin-bottom: 20px;">
+<h3 id="backend-folder-structure" style="color: #2c3e50; font-size: 1.5em; margin-bottom: 15px;">Backend Folder Structure</h3>
+<pre style="background-color: #ecf0f1; padding: 15px; border-radius: 5px; overflow-x: auto; color: #34495e;"><code>backend-LimpeJá/
 ├── dist/
-
-├── módulos_de_nó/
-
+├── node_modules/
 ├── prisma/
-
-│ ├── migrações/
-
-│ └── esquema.prisma
-
-├── fonte/
-
-│ ├── aut/
-
-│ │ ├── decoradores/
-
+│ ├── migrations/
+│ └── schema.prisma
+├── src/
+│ ├── auth/
+│ │ ├── decorators/
 │ │ ├── dto/
-
-│ │ ├── guardas/
-
-│ │ ├── estratégias/
-
+│ │ ├── guards/
+│ │ ├── strategies/
 │ │ ├── auth.controller.ts
-
 │ │ ├── auth.module.ts
-
 │ │ └── auth.service.ts
-
-│ ├── disponibilidade/
-
+│ ├── availability/
 │ │ ├── dto/
-
-│ │ ├── entidades/
-
-│ │ ├── disponibilidade.controller.ts
-
-│ │ ├── disponibilidade.módulo.ts
-
-│ │ └── disponibilidade.serviço.ts
-
-│ ├── reservas/
-
+│ │ ├── entities/
+│ │ ├── availability.controller.ts
+│ │ ├── availability.module.ts
+│ │ └── availability.service.ts
+│ ├── bookings/
 │ │ ├── dto/
-
-│ │ ├── entidades/
-
-│ │ ├── reservas.controller.ts
-
-│ │ ├── reservas.módulo.ts
-
-│ │ └── reservas.serviço.ts
-
-│ ├── bate-papo/
-
+│ │ ├── entities/
+│ │ ├── bookings.controller.ts
+│ │ ├── bookings.module.ts
+│ │ └── bookings.service.ts
+│ ├── chat/
 │ │ ├── dto/
-
-│ │ ├── entidades/
-
-│ │ ├── portal/
-
+│ │ ├── entities/
+│ │ ├── gateway/
 │ │ ├── chat.controller.ts
-
 │ │ ├── chat.module.ts
-
 │ │ └── chat.service.ts
-
-│ ├── clientes/
-
+│ ├── clients/
 │ │ ├── dto/
-
-│ │ ├── entidades/
-
-│ │ ├── clientes.controller.ts
-
-│ │ ├── clientes.módulo.ts
-
-│ │ └── clientes.serviço.ts
-
-│ ├── comum/
-
-│ │ ├── constantes/
-
-│ │ ├── decoradores/
-
+│ │ ├── entities/
+│ │ ├── clients.controller.ts
+│ │ ├── clients.module.ts
+│ │ └── clients.service.ts
+│ ├── common/
+│ │ ├── constants/
+│ │ ├── decorators/
 │ │ ├── dto/
-
-│ │ ├── entidades/
-
-│ │ ├── filtros/
-
-│ │ ├── interceptadores/
-
-│ │ └── tubos/
-
-│ ├── configuração/
-
+│ │ ├── entities/
+│ │ ├── filters/
+│ │ ├── interceptors/
+│ │ └── pipes/
+│ ├── config/
 │ │ ├── config.module.ts
-
-│ │ ├── configuração.ts
-
-│ │ └── validação-schema.ts
-
-│ ├── notificações/
-
+│ │ ├── config.ts
+│ │ └── validation-schema.ts
+│ ├── notifications/
 │ │ ├── dto/
-
-│ │ ├── entidades/
-
-│ │ ├── notificações.controller.ts
-
-│ │ ├── notificações.módulo.ts
-
-│ │ └── notificações.serviço.ts
-
-│ ├── oferece/
-
+│ │ ├── entities/
+│ │ ├── notifications.controller.ts
+│ │ ├── notifications.module.ts
+│ │ └── notifications.service.ts
+│ ├── offers/
 │ │ ├── dto/
-
-│ │ ├── entidades/
-
+│ │ ├── entities/
 │ │ ├── offers.controller.ts
-
 │ │ ├── offers.module.ts
-
-│ │ └── ofertas.serviço.ts
-
-│ ├── pagamentos/
-
+│ │ └── offers.service.ts
+│ ├── payments/
 │ │ ├── dto/
-
-│ │ ├── entidades/
-
-│ │ ├── pagamentos.controller.ts
-
-│ │ ├── pagamentos.módulo.ts
-
-│ │ └── pagamentos.serviço.ts
-
+│ │ ├── entities/
+│ │ ├── payments.controller.ts
+│ │ ├── payments.module.ts
+│ │ └── payments.service.ts
 │ ├── prisma/
-
 │ │ ├── prisma.module.ts
-
 │ │ └── prisma.service.ts
-
-│ ├── provedores-de-serviços/
-
+│ ├── provider-services/
 │ │ ├── dto/
-
-│ │ ├── entidades/
-
+│ │ ├── entities/
 │ │ ├── provider-services.controller.ts
-
 │ │ ├── provider-services.module.ts
-
 │ │ └── provider-services.service.ts
-
-│ ├── provedores/
-
+│ ├── providers/
 │ │ ├── dto/
-
-│ │ ├── entidades/
-
-│ │ ├── provedores.controlador.ts
-
-│ │ ├── provedores.módulo.ts
-
-│ │ └── provedores.serviço.ts
-
-│ ├── avaliações/
-
+│ │ ├── entities/
+│ │ ├── providers.controller.ts
+│ │ ├── providers.module.ts
+│ │ └── providers.service.ts
+│ ├── reviews/
 │ │ ├── dto/
-
-│ │ ├── entidades/
-
-│ │ ├── avaliações.controller.ts
-
-│ │ ├── avaliações.module.ts
-
-│ │ └── avaliações.serviço.ts
-
-│ ├── pesquisar/
-
+│ │ ├── entities/
+│ │ ├── reviews.controller.ts
+│ │ ├── reviews.module.ts
+│ │ └── reviews.service.ts
+│ ├── search/
 │ │ ├── dto/
-
-│ │ ├── pesquisa.controller.ts
-
-│ │ ├── pesquisar.módulo.ts
-
+│ │ ├── search.controller.ts
+│ │ ├── search.module.ts
 │ │ └── search.service.ts
-
-│ ├── serviços/
-
+│ ├── services/
 │ │ ├── dto/
-
 │ │ ├── update-service.dto.ts
-
-│ │ ├── entidades/
-
-│ │ ├── serviços.controller.ts
-
-│ │ ├── serviços.módulo.ts
-
-│ │ └── serviços.serviço.ts
-
-│ └── verificação/
-
+│ │ ├── entities/
+│ │ ├── services.controller.ts
+│ │ ├── services.module.ts
+│ │ └── services.service.ts
+│ └── verification/
 │ ├── dto/
-
-│ │ ├── enviar-cpf.dto.ts
-
+│ │ ├── send-cpf.dto.ts
 │ │ ├── upload-document.dto.ts
-
 │ │ └── upload-selfie.dto.ts
-
-│ ├── entidades/
-
-│ ├── verificação-de-antecedentes-criminais.service.ts
-
-│ ├── serviço de processamento de documentos.ts
-
-│ ├── verificação.controller.ts
-
-│ ├── verificação.module.ts
-
-│ └── verificação.serviço.ts
-
-├── compartilhado/
-
-│ ├── enumerações/
-
+│ ├── entities/
+│ ├── criminal-background-check.service.ts
+│ ├── document-processing-service.ts
+│ ├── verification.controller.ts
+│ ├── verification.module.ts
+│ └── verification.service.ts
+├── shared/
+│ ├── enums/
 │ ├── interfaces/
-
-│ └── tipos/
-
-├── usuários/
-
+│ └── types/
+├── users/
 │ ├── dto/
-
-│ ├── entidades/
-
-│ ├── usuários.controlador.ts
-
-│ ├── usuários.módulo.ts
-
-│ └── usuários.serviço.ts
-
-├── aplicativo.controlador.spec.ts
-
+│ ├── entities/
+│ ├── users.controller.ts
+│ ├── users.module.ts
+│ └── users.service.ts
+├── app.controller.spec.ts
 ├── app.controller.ts
-
 ├── app.module.ts
-
-├── aplicativo.serviço.ts
-
+├── app.service.ts
 ├── main.ts
-
-└── teste/
-
+└── test/
 ├── .env
-
-├── .env.exemplo
-
+├── .env.example
 ├── .gitignore
-
 ├── .prettierrc
-
 ├── eslint.config.mjs
-
 ├── nest-cli.json
-
-├── pacote-lock.json
-
-├── pacote.json
-
-├── LEIA-ME.md
-
+├── package-lock.json
+├── package.json
+├── README.md
 ├── src.rar
-
 ├── tsconfig.build.json
-
-└── tsconfig.json
-</código > </pre>
-
+└── tsconfig.json</code></pre>
 </div>
 
-</div>
-
-<div style="cor de fundo: #ffffff; preenchimento: 30px; raio da borda: 10px; sombra da caixa: 0 2px 10px rgba(0, 0, 0, 0,05); margem inferior: 40px;">
-
-<h2 id="-começando-getting-started" style="color: #34495e; font-size: 2em; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 20px;">🚀 Começando</h2>
-
-<p style="color: #555; altura da linha: 1,6; margem inferior: 20px;">
-
-Para configurar e rodar o projeto localmente, siga os passos abaixo:
-
+<div style="background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); margin-bottom: 40px;">
+<h2 id="getting-started" style="color: #34495e; font-size: 2em; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 20px;">🚀 Getting Started</h2>
+<p style="color: #555; line-height: 1.6; margin-bottom: 20px;">
+To set up and run the project locally, follow the steps below:
 </p>
-
-<div style="cor de fundo: #f8f9fa; preenchimento: 20px; raio da borda: 8px; sombra da caixa: 0 2px 8px rgba(0, 0, 0, 0,08); margem inferior: 20px;">
-
-<h3 id="pré-requisitos" style="color: #2c3e50; font-size: 1,5em; margin-bottom: 15px;">Pré-requisitos</h3>
-
-<p style="color: #555; line-height: 1.6;">Certifique-se de ter as seguintes ferramentas instaladas:</p>
-
+<div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); margin-bottom: 20px;">
+<h3 id="prerequisites" style="color: #2c3e50; font-size: 1.5em; margin-bottom: 15px;">Prerequisites</h3>
+<p style="color: #555; line-height: 1.6;">Ensure you have the following tools installed:</p>
 <ul style="list-style-type: disc; padding-left: 20px; color: #555; line-height: 1.6;">
-
-<li style="margin-bottom: 5px;"><a href="https://nodejs.org/en/download/" style="color: #3498db; text-decoration: none;">Node.js</a> (versão LTS recomendada)</li>
-
-<li style="margin-bottom: 5px;"><a href="https://www.npmjs.com/get-npm" style="color: #3498db; text-decoration: none;">npm</a> ou <a href="https://yarnpkg.com/getting-started/install" style="color: #3498db; text-decoration: none;">Yarn</a></li>
-
+<li style="margin-bottom: 5px;"><a href="https://nodejs.org/en/download/" style="color: #3498db; text-decoration: none;">Node.js</a> (LTS version recommended)</li>
+<li style="margin-bottom: 5px;"><a href="https://www.npmjs.com/get-npm" style="color: #3498db; text-decoration: none;">npm</a> or <a href="https://yarnpkg.com/getting-started/install" style="color: #3498db; text-decoration: none;">Yarn</a></li>
 <li style="margin-bottom: 5px;"><a href="https://git-scm.com/downloads" style="color: #3498db; text-decoration: none;">Git</a></li>
-
-<li style="margin-bottom: 5px;"><a href="https://docs.docker.com/get-docker/" style="color: #3498db; text-decoration: none;">Docker</a> (para rodar o PostgreSQL localmente)</li>
-
-<li style="margin-bottom: 5px;"><a href="https://docs.expo.dev/workflow/expo-cli/" style="color: #3498db; text-decoration: none;">Expo CLI</a> (instale com `npm install -g expo-cli`)</li>
-
+<li style="margin-bottom: 5px;"><a href="https://docs.docker.com/get-docker/" style="color: #3498db; text-decoration: none;">Docker</a> (to run PostgreSQL locally)</li>
+<li style="margin-bottom: 5px;"><a href="https://docs.expo.dev/workflow/expo-cli/" style="color: #3498db; text-decoration: none;">Expo CLI</a> (install with `npm install -g expo-cli`)</li>
 </ul>
-
 </div>
 
 <div style="cor de fundo: #f8f9fa; preenchimento: 20px; raio da borda: 8px; sombra da caixa: 0 2px 8px rgba(0, 0, 0, 0,08); margem inferior: 20px;">
