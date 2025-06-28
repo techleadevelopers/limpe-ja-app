@@ -1,5 +1,5 @@
 <div align="center">
-<img src="https://drive.google.com/uc?id=1LZRZ9c1znIYdoyOF_gfS8dYa3GgLlGAm" alt="LimpeJá-App Logo" width="180"> 
+<img src="https://drive.google.com/uc?id=1PkFFe5bAEVf-x-nPD3BMO21gptKfFosu" alt="LimpeJá-App Logo" width="280"> 
 
 <h1 style="color: #2c3e50; font-size: 2.8em; margin-top: 15px; margin-bottom: 10px;">Aplicativo LimpeJá ✨🧹</h1>
 
