@@ -115,11 +115,11 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
 
 const styles = StyleSheet.create({
   cardContainer: {
-    width: 250,
+    width: 220,
     borderRadius: 10,
     overflow: 'hidden',
     marginRight: 15,
-    marginBottom: 10,
+    marginBottom: -5,
     backgroundColor: '#FFFFFF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },

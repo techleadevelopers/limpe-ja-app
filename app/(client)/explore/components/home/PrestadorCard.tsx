@@ -130,7 +130,7 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
 
 const styles = StyleSheet.create({
   cardContainer: {
-    width: 280,
+    width: 230,
     backgroundColor: '#FFFFFF',
     borderRadius: 15,
     marginRight: 15,

@@ -385,6 +385,7 @@ async function main() {
     }
   }
 
+
   // --- NOVO: CRIAÇÃO DE CLIENTES DE TESTE ADICIONAIS ---
   console.log('Criando/Atualizando clientes de teste...');
   type ClientSeedData = {
@@ -485,66 +486,138 @@ async function main() {
   const joaoProvider = await prisma.provider.findFirst({ where: { user: { email: 'provider2@cleaning.com' } } });
   const helenaProvider = await prisma.provider.findFirst({ where: { user: { email: 'provider3@cleaning.com' } } });
 
+  // Função auxiliar para gerar slots de 30 minutos
+  function generateTimeSlots(startHour: number, endHour: number): { startTime: string; endTime: string }[] {
+    const slots = [];
+    for (let h = startHour; h < endHour; h++) {
+      for (let m = 0; m < 60; m += 30) {
+        const startTime = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+        let endHourSlot = h;
+        let endMinuteSlot = m + 30;
+        if (endMinuteSlot >= 60) {
+          endMinuteSlot -= 60;
+          endHourSlot += 1;
+        }
+        const endTime = `${endHourSlot.toString().padStart(2, '0')}:${endMinuteSlot.toString().padStart(2, '0')}`;
+        slots.push({ startTime, endTime });
+      }
+    }
+    return slots;
+  }
+
+  const allDaySlots = generateTimeSlots(8, 20); // Slots de 08:00 a 19:30 (terminando às 20:00)
+
   if (mariaProvider && joaoProvider) {
-    for (let day = 1; day <= 5; day++) {
-      const daySlots = [
+    // Disponibilidade genérica para Maria da Silva (Seg-Sex)
+    for (let day = 1; day <= 5; day++) { // Segunda a Sexta
+      const mariaSlots = [
         { startTime: '09:00', endTime: '09:30' }, { startTime: '09:30', endTime: '10:00' },
         { startTime: '10:00', endTime: '10:30' }, { startTime: '10:30', endTime: '11:00' },
         { startTime: '11:00', endTime: '11:30' }, { startTime: '11:30', endTime: '12:00' },
         { startTime: '13:00', endTime: '13:30' }, { startTime: '13:30', endTime: '14:00' },
       ];
-      for (const slot of daySlots) {
+      for (const slot of mariaSlots) {
+        // UPSERT MANUAL para Maria
         const existingAvailability = await prisma.availability.findFirst({
-          where: { providerId: mariaProvider.id, dayOfWeek: day, startTime: slot.startTime, endTime: slot.endTime },
+          where: {
+            providerId: mariaProvider.id,
+            dayOfWeek: day,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+          },
         });
 
         if (existingAvailability) {
-          await prisma.availability.update({ where: { id: existingAvailability.id }, data: { isAvailable: true } });
+          await prisma.availability.update({
+            where: { id: existingAvailability.id },
+            data: { isAvailable: true },
+          });
         } else {
-          await prisma.availability.create({ data: { providerId: mariaProvider.id, dayOfWeek: day, startTime: slot.startTime, endTime: slot.endTime, isAvailable: true } });
+          await prisma.availability.create({
+            data: {
+              providerId: mariaProvider.id,
+              dayOfWeek: day,
+              startTime: slot.startTime,
+              endTime: slot.endTime,
+              isAvailable: true,
+            },
+          });
         }
       }
     }
     console.log(`Disponibilidade genérica para Maria da Silva (Seg-Sex) criada/atualizada.`);
 
-    const joaoSlots = [
-      { dayOfWeek: 2, startTime: '10:00', endTime: '10:30' }, { dayOfWeek: 2, startTime: '10:30', endTime: '11:00' },
-      { dayOfWeek: 2, startTime: '14:00', endTime: '14:30' }, { dayOfWeek: 4, startTime: '10:00', endTime: '10:30' },
-      { dayOfWeek: 4, startTime: '10:30', endTime: '11:00' }, { dayOfWeek: 4, startTime: '15:00', endTime: '15:30' },
-      { dayOfWeek: 3, startTime: '09:00', endTime: '09:30' }, { dayOfWeek: 3, startTime: '09:30', endTime: '10:00' },
-      { dayOfWeek: 3, startTime: '10:00', endTime: '10:30' }, { dayOfWeek: 3, startTime: '13:00', endTime: '13:30' },
-      { dayOfWeek: 3, startTime: '13:30', endTime: '14:00' }, { dayOfWeek: 3, startTime: '14:00', endTime: '14:30' },
-    ];
-    for (const slot of joaoSlots) {
-      const existingAvailability = await prisma.availability.findFirst({
-        where: { providerId: joaoProvider.id, dayOfWeek: slot.dayOfWeek, startTime: slot.startTime, endTime: slot.endTime },
-      });
+    // **MODIFICAÇÃO AQUI: Disponibilidade para João de Souza (Sexta, Sábado, Domingo)**
+    // 0: Domingo, 5: Sexta, 6: Sábado
+    // Estes são os dias da semana que cobrem 28, 29 e 30 de junho de 2025.
+    const joaoAvailableDaysOfWeek = [0, 5, 6]; 
 
-      if (existingAvailability) {
-        await prisma.availability.update({ where: { id: existingAvailability.id }, data: { isAvailable: true } });
-      } else {
-        await prisma.availability.create({ data: { providerId: joaoProvider.id, dayOfWeek: slot.dayOfWeek, startTime: slot.startTime, endTime: slot.endTime, isAvailable: true } });
+    for (const dayOfWeek of joaoAvailableDaysOfWeek) {
+      for (const slot of allDaySlots) {
+        // UPSERT MANUAL para João
+        const existingAvailability = await prisma.availability.findFirst({
+          where: {
+            providerId: joaoProvider.id,
+            dayOfWeek: dayOfWeek,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+          },
+        });
+
+        if (existingAvailability) {
+          await prisma.availability.update({
+            where: { id: existingAvailability.id },
+            data: { isAvailable: true },
+          });
+        } else {
+          await prisma.availability.create({
+            data: {
+              providerId: joaoProvider.id,
+              dayOfWeek: dayOfWeek,
+              startTime: slot.startTime,
+              endTime: slot.endTime,
+              isAvailable: true,
+            },
+          });
+        }
       }
     }
-    console.log(`Disponibilidade específica para João de Souza (Terça/Quinta/Quarta) criada/atualizada.`);
+    console.log(`Disponibilidade completa para João de Souza (Sexta, Sábado, Domingo) criada/atualizada.`);
   } else {
     console.warn('Não foi possível criar disponibilidade. Provedores não encontrados.');
   }
 
   if (helenaProvider) {
-    for (let day = 1; day <= 5; day += 2) {
+    for (let day = 1; day <= 5; day += 2) { // Segunda, Quarta, Sexta
       const helenaDaySlots = [
         { startTime: '10:00', endTime: '12:00' }, { startTime: '14:00', endTime: '16:00' },
       ];
       for (const slot of helenaDaySlots) {
+        // UPSERT MANUAL para Helena
         const existingAvailability = await prisma.availability.findFirst({
-          where: { providerId: helenaProvider.id, dayOfWeek: day, startTime: slot.startTime, endTime: slot.endTime },
+          where: {
+            providerId: helenaProvider.id,
+            dayOfWeek: day,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+          },
         });
 
         if (existingAvailability) {
-          await prisma.availability.update({ where: { id: existingAvailability.id }, data: { isAvailable: true } });
+          await prisma.availability.update({
+            where: { id: existingAvailability.id },
+            data: { isAvailable: true },
+          });
         } else {
-          await prisma.availability.create({ data: { providerId: helenaProvider.id, dayOfWeek: day, startTime: slot.startTime, endTime: slot.endTime, isAvailable: true } });
+          await prisma.availability.create({
+            data: {
+              providerId: helenaProvider.id,
+              dayOfWeek: day,
+              startTime: slot.startTime,
+              endTime: slot.endTime,
+              isAvailable: true,
+            },
+          });
         }
       }
     }

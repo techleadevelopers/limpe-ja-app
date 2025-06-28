@@ -1,8 +1,9 @@
 // ./app/(client)/bookings/components/schedule/ProviderBrief.tsx
 import React, { useCallback } from 'react';
-import { View, Text, Image, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, Image, StyleSheet, ActivityIndicator, ColorValue } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import StarRating from '../../../explore/components/provider/StarRating';
+import { LinearGradient } from 'expo-linear-gradient';
 // Importar VerificationStatus para ter certeza
 import { VerificationStatus } from '../../../../types/backend/providers';
 
@@ -10,12 +11,12 @@ import { VerificationStatus } from '../../../../types/backend/providers';
 interface ProviderDetails {
     id: string;
     fullName: string;
-    email?: string; // Adicionado email pois ProviderDisplayInfo tem
-    phone?: string | null; // Adicionado phone pois ProviderDisplayInfo tem
-    bio?: string | null; // Adicionado bio pois ProviderDisplayInfo tem
-    cpf?: string; // Adicionado cpf pois ProviderDisplayInfo tem
-    dateOfBirth?: string; // Adicionado dateOfBirth pois ProviderDisplayInfo tem
-    address?: { // Adicionado address, pode ser opcional ou null em ProviderDisplayInfo
+    email?: string;
+    phone?: string | null;
+    bio?: string | null;
+    cpf?: string;
+    dateOfBirth?: string;
+    address?: {
         id: string;
         cep: string;
         street: string;
@@ -25,17 +26,16 @@ interface ProviderDetails {
         city: string;
         state: string;
     } | null;
-    createdAt?: string; // Adicionado createdAt
-    updatedAt?: string; // Adicionado updatedAt
-    distance?: string; // Adicionado distance
-    reviews?: any[]; // Tipo 'any' temporário para reviews, ou importe ProviderReview
+    createdAt?: string;
+    updatedAt?: string;
+    distance?: string;
+    reviews?: any[];
     pixKey?: string;
 
-    // As propriedades problemáticas:
-    avatarUrl?: string | null; // <<< Corrigido para ser OPCIONAL e permitir string | null. O "undefined" já está implícito pelo "?"
-    averageRating?: number | null; // <<< Corrigido para ser OPCIONAL e permitir number | null
-    verificationStatus?: VerificationStatus; // <<< Corrigido para ser OPCIONAL
-    yearsOfExperience?: number | null; // <<< Corrigido para ser OPCIONAL e permitir number | null
+    avatarUrl?: string | null;
+    averageRating?: number | null;
+    verificationStatus?: VerificationStatus;
+    yearsOfExperience?: number | null;
     providerServices?: { service: { name: string; }; }[];
 }
 
@@ -61,7 +61,7 @@ export default function ProviderBrief({ provider, serviceName, isLoading }: Prov
                 <Ionicons
                     key={i}
                     name={iconName}
-                    size={16}
+                    size={12}
                     color="#4A90E2"
                     style={styles.ratingStarIcon}
                 />
@@ -73,7 +73,7 @@ export default function ProviderBrief({ provider, serviceName, isLoading }: Prov
     const renderInfoChip = useCallback((iconName: keyof typeof Ionicons.glyphMap, text: string, isVerified?: boolean) => {
         return (
             <View style={[styles.infoChip, isVerified && styles.infoChipVerified]}>
-                <Ionicons name={iconName} size={16} color={isVerified ? '#2A72E7' : '#555'} />
+                <Ionicons name={iconName} size={12} color={isVerified ? 'rgba(6, 78, 212, 0.85)' : '#555'} />
                 <Text style={[styles.infoChipText, isVerified && styles.infoChipTextVerified]}>{text}</Text>
             </View>
         );
@@ -82,6 +82,13 @@ export default function ProviderBrief({ provider, serviceName, isLoading }: Prov
     const specialtyToDisplay = serviceName || (provider?.providerServices && provider.providerServices.length > 0
         ? provider.providerServices[0].service.name
         : 'Serviço não especificado');
+
+    // Cores do gradiente com opacidade - ATUALIZADAS CONFORME SUA SOLICITAÇÃO
+    const gradientColors: ColorValue[] = [
+        'rgb(173, 216, 230)', // Azul claro com baixa opacidade
+        'rgba(65, 153, 225, 0.29)',  // Azul com média opacidade
+        'rgba(133, 168, 231, 0.66)', // Azul claro com alta opacidade
+    ];
 
     if (isLoading || !provider) {
         return (
@@ -100,7 +107,12 @@ export default function ProviderBrief({ provider, serviceName, isLoading }: Prov
     }
 
     return (
-        <View style={styles.providerBriefCard}>
+        <LinearGradient
+            colors={gradientColors}
+            start={{ x: 0, y: 0 }} // Início do gradiente (canto superior esquerdo)
+            end={{ x: 1, y: 1 }}   // Fim do gradiente (canto inferior direito)
+            style={styles.providerBriefCard} // Os estilos do card são aplicados ao gradiente
+        >
             {/* Certifique-se de que `provider.avatarUrl` seja tratado como um URI válido para `Image` */}
             {provider.avatarUrl ? (
                 <Image source={{ uri: provider.avatarUrl }} style={styles.providerImageSmall} />
@@ -133,7 +145,7 @@ export default function ProviderBrief({ provider, serviceName, isLoading }: Prov
                     )}
                 </View>
             </View>
-        </View>
+        </LinearGradient>
     );
 }
 
@@ -141,33 +153,36 @@ const styles = StyleSheet.create({
     providerBriefCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 15,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 12,
-        marginHorizontal: 20,
-        marginTop: 20,
+        padding: 14, // Mais padding para um visual mais "confortável"
+        paddingLeft: 22,
+        // Removido backgroundColor: '#FFFFFF', pois o LinearGradient o substitui
+        borderRadius: 15, // Mais arredondado para um visual moderno
+        marginHorizontal: 30, // Consistência de margem lateral
+        marginTop: 10,
         marginBottom: 10,
+        
+        // Mantemos as sombras aqui, pois o LinearGradient pode aplicá-las
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 4,
+        shadowRadius: 25,
+        elevation: 5,
     },
     providerImageSmall: {
-        width: 70,
-        height: 70,
-        borderRadius: 35,
-        marginRight: 12,
-        borderWidth: 1,
-        borderColor: '#DDEEFF',
+        width: 55, // Um pouco maior para destaque
+        height: 55, // Ajuste para ser proporcional à largura
+        borderRadius: 37.5, // Para ser circular (metade da largura/altura)
+        marginRight: 15, // Mais espaço entre a imagem e o texto
+        borderWidth: 2, // Borda um pouco mais visível
+        borderColor: '#E6F0FF', // Cor da borda para dar profundidade
     },
     providerImagePlaceholder: {
-        width: 70,
-        height: 70,
-        borderRadius: 35,
-        marginRight: 12,
-        borderWidth: 1,
-        borderColor: '#DDEEFF',
+        width: 65,
+        height: 65,
+        borderRadius: 37.5,
+        marginRight: 15,
+        borderWidth: 2,
+        borderColor: '#E6F0FF',
         backgroundColor: '#E0E0E0',
         justifyContent: 'center',
         alignItems: 'center',
@@ -179,57 +194,61 @@ const styles = StyleSheet.create({
     providerNameAndRatingRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 0,
+        marginBottom: 1, // Pequeno espaço entre o nome/avaliação e o serviço
+        marginTop: -1,
     },
     providerNameSmall: {
-        fontSize: 16,
-        fontWeight: 'bold',
+        fontSize: 13, // Um pouco maior para melhor legibilidade
+        fontWeight: '700', // Mais negrito para destaque
         color: '#333',
-        marginRight: 4,
+        marginRight: 40, // Mais espaço antes das estrelas
     },
     providerServiceSmall: {
-        fontSize: 14,
-        color: '#555',
-        marginBottom: 5,
+        fontSize: 13, // Um pouco maior
+        color: '#666',
+        marginBottom: 9, // Mais espaço abaixo do serviço
+        
     },
     ratingContainer: {
         flexDirection: 'row',
+        marginRight: 5,
         alignItems: 'center',
     },
     noRatingText: {
-        fontSize: 12,
+        fontSize: 9, // Tamanho de fonte ajustado
         color: '#888',
         fontWeight: 'normal',
-        marginLeft: 4,
+        
     },
     ratingStarContainer: {
         flexDirection: 'row',
     },
     ratingStarIcon: {
-        marginRight: 1,
+        marginRight: 2, // Espaçamento entre as estrelas
     },
     infoChipsRow: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: 8,
-        marginTop: 5,
+        gap: 5, // Aumentar espaçamento entre chips para respiro
+        marginTop: -3,
+        left: 2,
     },
     infoChip: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#E0E0E0',
-        borderRadius: 16,
-        paddingVertical: 4,
-        paddingHorizontal: 8,
+        backgroundColor: '#F0F4F8', // Fundo mais suave para o chip
+        borderRadius: 20, // Mais arredondado para visual suave
+        paddingVertical: 5, // Mais padding vertical
+        paddingHorizontal: 12, // Mais padding horizontal
     },
     infoChipText: {
-        fontSize: 12,
+        fontSize: 9, // Tamanho de fonte ajustado
         color: '#555',
-        marginLeft: 4,
-        fontWeight: '500',
+        marginLeft: 6, // Mais espaço entre ícone e texto
+        fontWeight: '600', // Um pouco mais negrito
     },
     infoChipVerified: {
-        backgroundColor: '#D1ECF1',
+        backgroundColor: '#D1ECF1', // Cor de fundo mais clara para verificado
     },
     infoChipTextVerified: {
         color: '#007BFF',
@@ -237,24 +256,24 @@ const styles = StyleSheet.create({
     providerBriefSkeleton: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 15,
+        padding: 20, // Consistência com o card real
         backgroundColor: '#FFFFFF',
-        borderRadius: 12,
-        marginHorizontal: 20,
+        borderRadius: 15, // Consistência com o card real
+        marginHorizontal: 15, // Consistência com o card real
         marginTop: 20,
         marginBottom: 10,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 4,
-        height: 100,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.15,
+        shadowRadius: 6,
+        elevation: 6,
+        height: 100, // A altura pode ser ajustada para corresponder ao card
     },
     providerImageSkeleton: {
-        width: 70,
-        height: 70,
-        borderRadius: 35,
-        marginRight: 12,
+        width: 75, // Consistência com o card real
+        height: 75, // Consistência com o card real
+        borderRadius: 37.5, // Consistência com o card real
+        marginRight: 15, // Consistência com o card real
         backgroundColor: '#E0E0E0',
     },
     providerTextInfoSkeleton: {
@@ -263,27 +282,27 @@ const styles = StyleSheet.create({
     },
     skeletonLineLarge: {
         height: 18,
-        width: '80%',
+        width: '85%', // Um pouco mais longo para preencher
         backgroundColor: '#E0E0E0',
-        borderRadius: 4,
-        marginBottom: 8,
+        borderRadius: 6, // Mais arredondado
+        marginBottom: 10, // Mais espaço
     },
     skeletonLineSmall: {
-        height: 14,
-        width: '60%',
+        height: 15, // Um pouco maior
+        width: '65%', // Um pouco mais longo
         backgroundColor: '#E0E0E0',
-        borderRadius: 4,
-        marginBottom: 5,
+        borderRadius: 6, // Mais arredondado
+        marginBottom: 8, // Mais espaço
     },
     skeletonChipsContainer: {
         flexDirection: 'row',
         marginTop: 5,
-        gap: 8,
+        gap: 10, // Consistência com o chip real
     },
     skeletonChip: {
-        height: 24,
-        width: 70,
+        height: 28, // Um pouco maior
+        width: 80, // Mais largo
         backgroundColor: '#E0E0E0',
-        borderRadius: 16,
+        borderRadius: 18, // Mais arredondado
     },
 });

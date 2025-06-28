@@ -2,6 +2,7 @@
 import { StyleSheet, Dimensions, Platform } from 'react-native';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
+const IMAGE_HEIGHT = 280; // Defina uma altura para a imagem para o card. Ajuste conforme necessário.
 
 export const styles = StyleSheet.create({
   screenContainer: { flex: 1, backgroundColor: '#FFFFFF' },
@@ -13,7 +14,28 @@ export const styles = StyleSheet.create({
   scrollContentContainer: { paddingBottom: 110 },
 
   // HeaderSection Styles
-  headerImage: { width: '100%', height: SCREEN_WIDTH * 0.85, justifyContent: 'space-between' },
+  // **** ALTERAÇÃO APLICADA AQUI PARA O ESPAÇAMENTO E BORDAS ARREDONDADAS ****
+  headerImage: {
+    width: SCREEN_WIDTH - 30, // Largura total da tela menos 15 de margem horizontal em cada lado (15*2 = 30)
+    height: IMAGE_HEIGHT,     // Altura da imagem, use a constante definida acima
+    borderRadius: 15,         // Arredonda as bordas
+    overflow: 'hidden',       // Garante que o conteúdo (ImageBackground) respeite o borderRadius
+    marginTop: 15,            // Margem superior para afastar do topo
+    marginHorizontal: 15,     // Margem nas laterais
+    alignSelf: 'center',      // Centraliza a imagem/container na tela
+    justifyContent: 'flex-end', // Mantém o conteúdo (overlay) na parte inferior da imagem
+    
+    // Adicionando uma sombra leve para o efeito de "card flutuante", como na imagem de exemplo
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.30,
+    shadowRadius: 4.65,
+    elevation: 8, // Para Android
+  },
+  // **************************************************************************
   headerImageOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.30)', paddingHorizontal: 15, paddingTop: Platform.OS === 'ios' ? 50 : 25, paddingBottom: 15, justifyContent: 'space-between' },
   topNavContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   iconButtonBackground: { backgroundColor: 'rgba(0,0,0,0.35)', padding: 10, borderRadius: 20 },
@@ -21,17 +43,17 @@ export const styles = StyleSheet.create({
   // Content Area Styles (for main component)
   contentArea: {
     paddingHorizontal: 0,
-    paddingTop: 20,
+    paddingTop: 10,
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    marginTop: -24,
+    marginTop: 24,
     minHeight: Dimensions.get('window').height * 0.5,
   },
 
   // NOVOS ESTILOS para as informações do provedor na área branca
   providerInfoWhiteCard: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 30,
     marginBottom: 20, // Espaço entre as informações e o conteúdo abaixo
   },
   providerNameWhiteCard: {
@@ -69,7 +91,7 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 0,
     backgroundColor: 'transparent',
     borderRadius: 8,
-    left: 207,
+    left: 290,
     bottom: 73, // sobe o container sem colapsar altura
   },
 

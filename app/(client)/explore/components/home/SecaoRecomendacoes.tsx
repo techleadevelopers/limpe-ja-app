@@ -61,7 +61,7 @@ const SecaoRecomendacoes: React.FC<SecaoRecomendacoesProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 20,
+    marginTop: 12,
     marginBottom: 1,
     backgroundColor: '#F4F7FC',
   },
@@ -73,9 +73,9 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#202633',
+       fontSize: 19,
+    fontWeight: '700',
+    color: '#1C3A5F',
   },
   viewAllButton: {
     flexDirection: 'row',

@@ -60,17 +60,20 @@ export default function TimeSlotsSection({ title, displaySlotsInfo, isLoading, s
 
 const styles = StyleSheet.create({
     timeSlotsSection: {
-        marginTop: 20,
+        marginTop: 12,
         paddingHorizontal: 15,
+        alignItems: 'center',
     },
     timeSlotsTitle: {
-        fontSize: 17,
+        fontSize: 15,
         fontWeight: '600',
         color: '#111',
-        marginBottom: 15,
+        marginBottom: 18,
+        margin: 10,
+        
     },
     slotsLoader: {
-        marginVertical: 20,
+        marginVertical: 30,
     },
     timeSlotsListContainer: {
         alignItems: 'flex-start',
@@ -78,12 +81,12 @@ const styles = StyleSheet.create({
     timeSlotsRow: {
         flexWrap: 'wrap',
         justifyContent: 'flex-start',
-        marginHorizontal: -3,
+        marginHorizontal: 3,
     },
     noSlotsText: {
         textAlign: 'center',
         color: '#777777',
-        fontSize: 15,
+        fontSize: 14,
         marginVertical: 20,
         fontStyle: 'italic',
     },
@@ -93,7 +96,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 15,
     },
     preferenceTimeTitle: {
-        fontSize: 17,
+        fontSize: 15,
         fontWeight: '600',
         color: '#111',
         marginBottom: 15,
@@ -102,6 +105,6 @@ const styles = StyleSheet.create({
     preferenceTimeRow: {
         flexWrap: 'wrap',
         justifyContent: 'flex-start',
-        marginHorizontal: -3,
+        marginHorizontal: 3,
     },
 });

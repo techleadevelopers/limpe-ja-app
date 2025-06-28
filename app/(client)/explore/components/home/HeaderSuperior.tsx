@@ -140,7 +140,7 @@ const HeroHeader: React.FC<HeaderSuperiorProps> = ({ userName, userAddress }) =>
           returnKeyType="search"
         />
         <TouchableOpacity style={styles.filtroBotao} onPress={handleFilterPress}>
-          <Ionicons name="options-outline" size={22} color="#FFFFFF" />
+          <Ionicons name="options-outline" size={18} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
     </LinearGradient>
@@ -149,7 +149,7 @@ const HeroHeader: React.FC<HeaderSuperiorProps> = ({ userName, userAddress }) =>
 
 const styles = StyleSheet.create({
   outerContainerGradient: {
-    paddingBottom: 24,
+    paddingBottom: 15,
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
     marginBottom: -10,
@@ -183,8 +183,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     top: 6,
-    paddingHorizontal: 20,
-    paddingTop: 10,
+    paddingHorizontal: 15,
+    marginTop: -15,
   },
   profileIconContainer: {
     padding: 5,
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
     marginLeft: 2,
   },
   greetingHello: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
@@ -229,8 +229,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderRadius: 15,
+    marginTop: -5,
     paddingHorizontal: 15,
-    height: 50,
+    height: 38,
     marginHorizontal: 20,
     ...Platform.select({
       ios: {
@@ -248,11 +249,11 @@ const styles = StyleSheet.create({
   },
   buscaIcone: {
     marginRight: 10,
-    fontSize: 20,
+    fontSize: 18,
   },
   buscaInput: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 14,
     color: '#343A40',
     height: '100%',
   },
@@ -261,8 +262,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 8,
     marginLeft: 10,
-    height: 40,
-    width: 40,
+    height: 33,
+    width: 35,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#007AFF',

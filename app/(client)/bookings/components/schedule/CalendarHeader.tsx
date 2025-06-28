@@ -45,6 +45,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
 const styles = StyleSheet.create({
   container: {
     paddingBottom: 5,
+    marginTop: -30,
     paddingHorizontal: 10,
     flexDirection: 'row',
     alignItems: 'center',
@@ -63,7 +64,7 @@ const styles = StyleSheet.create({
     padding: 5,
   },
   monthText: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#2A72E7',
     marginHorizontal: 12,

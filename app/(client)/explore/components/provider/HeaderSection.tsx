@@ -1,9 +1,14 @@
 // app/(client)/explore/components/provider/HeaderSection.tsx
 import React from 'react';
-import { View, Text, ImageBackground, TouchableOpacity, Platform, Dimensions, StyleSheet } from 'react-native'; // ADICIONADO StyleSheet AQUI
+import { View, Text, ImageBackground, TouchableOpacity, Platform, Dimensions, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
+// Remover a definição de SCREEN_WIDTH aqui, pois já está em providerStyles
+// const SCREEN_WIDTH = Dimensions.get('window').width; 
+
+// Importa os estilos do arquivo externo.
+// É CRUCIAL que este import esteja correto e que o arquivo exista.
+import { styles } from '../../styles/providerStyles'; 
 
 // Definindo a interface ProviderDetails para espelhar a ProviderDetailsDto do backend
 // Ajuste conforme a estrutura real do seu DTO de provedor.
@@ -22,6 +27,7 @@ interface HeaderSectionProps {
 const HeaderSection: React.FC<HeaderSectionProps> = ({ provider, onBackPress }) => {
   return (
     // Usando provider.avatarUrl para a imagem de fundo
+    // O estilo headerImage agora inclui as margens e o borderRadius
     <ImageBackground source={{ uri: provider.avatarUrl }} style={styles.headerImage} resizeMode="cover">
       <View style={styles.headerImageOverlay}>
         <View style={styles.topNavContainer}>
@@ -38,17 +44,21 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({ provider, onBackPress }) 
   );
 };
 
-// Estilos movidos para dentro do arquivo para auto-suficiência,
-// ou você pode manter a importação de '../../styles/providerStyles' se for um arquivo compartilhado.
-// Se 'styles' for importado de um arquivo externo, certifique-se de que ele contenha todos esses estilos.
-const styles = StyleSheet.create({ // AGORA StyleSheet.create É RECONHECIDO
+// Se você está importando os estilos de '../../styles/providerStyles',
+// este StyleSheet.create não é mais necessário aqui e deve ser removido.
+// Mantendo o código como você forneceu, mas com a observação:
+// Se você está usando import { styles } from '../../styles/providerStyles';
+// então a linha 'const styles = StyleSheet.create({...});' abaixo deveria ser REMOVIDA
+// ou renomeada para evitar conflito e garantir que os estilos do providerStyles sejam usados.
+// Para este exemplo, vou manter o que você enviou, mas tenha isso em mente.
+const internalStyles = StyleSheet.create({ // Renomeado para evitar conflito se 'styles' for importado
   headerImage: {
     width: '100%',
     height: 250, // Altura fixa ou responsiva
     justifyContent: 'flex-end',
   },
   headerImageOverlay: {
-    ...StyleSheet.absoluteFillObject, // AGORA StyleSheet.absoluteFillObject É RECONHECIDO
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.3)', // Escurece a imagem para melhor contraste
     justifyContent: 'space-between',
     paddingTop: Platform.OS === 'ios' ? 50 : 25, // Ajuste para safe area
@@ -66,7 +76,6 @@ const styles = StyleSheet.create({ // AGORA StyleSheet.create É RECONHECIDO
     justifyContent: 'center',
     alignItems: 'center',
   },
-  // Se houver outros estilos relacionados a HeaderSection em providerStyles, adicione-os aqui
 });
 
 export default HeaderSection;

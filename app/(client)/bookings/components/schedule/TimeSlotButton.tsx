@@ -49,14 +49,14 @@ const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({
 
 const styles = StyleSheet.create({
   buttonBase: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 6,
     borderRadius: 6,
     backgroundColor: '#F0F0F0',
     alignItems: 'center',
     justifyContent: 'center',
     minWidth: 70,
-    margin: 3,
+    margin: 5,
     flex: 1,
   },
   buttonSelected: {
@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
     opacity: 0.8, // Para tornar mais claro
   },
   textBase: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#333333',
     fontWeight: '500',
   },

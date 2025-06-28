@@ -78,11 +78,17 @@ function InitialLayout() {
       // Se o usuário está autenticado E o registro ainda está em andamento,
       // ele DEVE permanecer nas rotas específicas do fluxo de registro.
       // Qualquer outra rota (como `/dashboard` antes do fim do fluxo) deve ser redirecionada para a próxima etapa de registro.
+      
+      // *** CORREÇÃO APLICADA AQUI PARA OS ERROS DO TYPESCRIPT ***
+      // Usamos uma variável temporária que permite ao TypeScript não inferir o tipo exato 'welcome' para 'pathname' aqui.
+      // Isso evita os erros de "comparação não intencional".
+      const currentPath = pathname as string; // Casting para 'string' genérico
+
       const isPartOfRegistrationFlowRoutes = 
-        pathname.startsWith(AUTH_ROUTES.PROVIDER_REGISTER_STEP1) || 
-        pathname.startsWith(AUTH_ROUTES.CLIENT_REGISTER) ||
-        pathname === AUTH_ROUTES.SERVICE_DETAILS_STEP || 
-        pathname === AUTH_ROUTES.VERIFY_ACCOUNT_STEP;    
+        currentPath.startsWith(AUTH_ROUTES.PROVIDER_REGISTER_STEP1) || 
+        currentPath.startsWith(AUTH_ROUTES.CLIENT_REGISTER) ||
+        currentPath === AUTH_ROUTES.SERVICE_DETAILS_STEP || 
+        currentPath === AUTH_ROUTES.VERIFY_ACCOUNT_STEP;    
 
       if (isAuthenticated && isRegistrationInProgress) {
         if (!isPartOfRegistrationFlowRoutes) {

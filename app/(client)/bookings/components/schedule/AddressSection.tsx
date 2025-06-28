@@ -148,7 +148,7 @@ const AddressSection: React.FC<AddressSectionProps> = ({ address, setAddress, sh
           </Text>
         </View>
         <TouchableOpacity onPress={onEditAddress} style={styles.editButton}>
-          <Ionicons name="pencil-outline" size={22} color="#2A72E7" />
+          <Ionicons name="pencil-outline" size={20} color="#2A72E7" />
         </TouchableOpacity>
       </View>
       <Animated.View style={[styles.shineEffectContainer, { transform: [{ translateX: shineAnim }] }]}>
@@ -166,19 +166,15 @@ const AddressSection: React.FC<AddressSectionProps> = ({ address, setAddress, sh
 const styles = StyleSheet.create({
   addressCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    marginHorizontal: 20,
-    marginTop: 20,
-    paddingVertical: 15,
-    paddingHorizontal: 18,
+    borderRadius: 15, // Mais arredondado
+    marginHorizontal: 22, // Consistência de margem
+    marginTop: 0,
+    paddingVertical: 10, // Mais padding vertical
+    paddingHorizontal: 20, // Mais padding horizontal
     flexDirection: 'row',
     alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    justifyContent: 'space-between',
+    
+    overflow: 'hidden', // Importante para o brilho
   },
   addressContent: {
     flexDirection: 'row',
@@ -187,21 +183,21 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   mapIcon: {
-    width: 28,
+    width: 28, // Ícone um pouco maior
     height: 28,
-    marginRight: 15,
-
+    marginRight: 18, // Mais espaço
   },
   addressTextBold: {
-    fontSize: 16,
+    fontSize: 13, // Um pouco maior
     color: '#333333',
-    fontWeight: 'bold', // Estilo para a primeira linha (Rua e Número)
+    fontWeight: 'bold',
     flexShrink: 1,
   },
   addressTextNormal: {
-    fontSize: 14,
-    color: '#666666', // Estilo para a segunda linha (Centro, Cidade/Estado - CEP)
+    fontSize: 12,
+    color: '#666666',
     flexShrink: 1,
+    marginTop: 2, // Pequeno espaço entre as linhas
   },
   shineEffectContainer: {
     position: 'absolute',
@@ -212,45 +208,55 @@ const styles = StyleSheet.create({
     transform: [{ skewX: '-20deg' }],
     overflow: 'hidden',
     zIndex: 0,
-    borderRadius: 12,
+    borderRadius: 15, // Consistência com o card
   },
   shineGradient: {
     height: '100%',
     width: '100%',
   },
   editButton: {
-    padding: 8,
+    padding: 5, // Aumentar área de toque
+    borderRadius: 20, // Suavizar botão
+    backgroundColor: '#E6F0FF', // Fundo sutil ao redor do lápis
+    marginLeft: 10, // Espaçamento do texto
   },
 
-  // --- Estilos de Skeleton ---
+  // --- Estilos de Skeleton (adicionar sombra para consistência) ---
   addressBriefSkeleton: {
-    borderRadius: 12,
-    marginHorizontal: 20,
+    borderRadius: 15, // Consistência
+    marginHorizontal: 15, // Consistência
     marginTop: 20,
-    height: 60,
+    height: 80, // Aumentar altura para conforto visual do skeleton
     backgroundColor: '#F0F0F0',
     justifyContent: 'center',
-    paddingHorizontal: 15,
+    paddingHorizontal: 18,
+    flexDirection: 'row', // Para alinhar o ícone e a linha
+    alignItems: 'center', // Para centralizar
+    elevation: 4, // Adicionar sombra
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   mapIconSkeleton: {
-    width: 28,
-    height: 28,
-    marginRight: 15,
+    width: 32, // Consistência com mapIcon
+    height: 32,
+    marginRight: 18, // Consistência com mapIcon
     backgroundColor: '#D0D0D0',
-    borderRadius: 14,
+    borderRadius: 16,
   },
   skeletonLineAddress: {
-    height: 18,
-    width: '70%',
+    height: 10, // Um pouco mais alto
+    width: '75%', // Mais longo
     backgroundColor: '#D0D0D0',
-    borderRadius: 6,
+    borderRadius: 8, // Mais arredondado
   },
 
-  // --- Estilos para os TextInputs ---
+  // --- Estilos para os TextInputs (já pareciam bons, ajustes mínimos) ---
   addressInputContainer: {
     backgroundColor: '#FFFFFF',
     padding: 20,
-    marginHorizontal: 20,
+    marginHorizontal: 15,
     borderRadius: 12,
     marginTop: 20,
     marginBottom: 10,
@@ -261,7 +267,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   addressInputTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: '#333',
     marginBottom: 20,
@@ -283,18 +289,18 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    height: 48,
+    height: 50, // Aumentar altura para conforto
     fontSize: 16,
     color: '#333',
     paddingLeft: 10,
   },
   inputSmall: {
     flex: 1,
-    height: 48,
+    height: 50, // Aumentar altura para conforto
     fontSize: 16,
     color: '#333',
     paddingLeft: 10,
-    backgroundColor: '#F7F7F7',
+    backgroundColor: '#F7F7F7', // Garantir fundo para inputs pequenos
     borderRadius: 8,
     borderColor: '#E0E0E0',
     borderWidth: 1,
@@ -304,5 +310,4 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
 });
-
 export default AddressSection;

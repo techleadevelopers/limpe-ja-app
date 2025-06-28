@@ -18,7 +18,7 @@ import {
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Clipboard from 'expo-clipboard';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from 'expo-linear-gradient'; // Já importado
 import { BlurView } from 'expo-blur';
 
 // --- IMPORTAÇÕES DE SERVIÇOS E TIPAGENS DO SEU BACKEND REAL ---
@@ -394,30 +394,30 @@ export default function ScheduleServiceScreen() {
     const isButtonDisabled = !selectedTime || !selectedProviderService || isBooking ||
         !address.street || !address.number || !address.neighborhood || !address.city || !address.state;
 
+    // Cores do gradiente com opacidade
+    const gradientColors = [
+        'rgba(173, 216, 230, 0.1)', // Azul claro com baixa opacidade
+        'rgba(65, 153, 225, 0.29)',  // Azul com média opacidade
+        'rgba(133, 168, 231, 0.66)', // Azul claro com baixa opacidade
+    ];
+
     return (
         <View style={styles.screenContainer}>
             {/* O Stack.Screen será configurado para não mostrar o cabeçalho nativo. */}
-            <Stack.Screen options={{ headerShown: false }} /> {/* <<< CORRIGIDO: Remover todas as opções complexas e apenas ocultar o header */}
+            <Stack.Screen options={{ headerShown: false }} />
 
             {/* Este View agora age como o cabeçalho CUSTOMIZADO. */}
-            {/* Ele terá o padding superior para acomodar a barra de status e o background branco. */}
-            {/* O CalendarHeader será renderizado DENTRO dele, incluindo o botão de voltar. */}
             <View style={{ paddingTop: HEADER_HEIGHT_ADJUST, backgroundColor: '#FFFFFF' }}>
-                {/* Você pode adicionar um botão de voltar aqui se o CalendarHeader não tiver um */}
-                {/* <TouchableOpacity onPress={() => router.back()} style={{ position: 'absolute', top: Platform.OS === 'ios' ? 50 : 20, left: 15, zIndex: 10 }}>
-                    <Ionicons name="arrow-back" size={24} color="#000" />
-                </TouchableOpacity> */}
                 <CalendarHeader
                     currentDisplayMonth={currentDisplayMonth}
                     onPrevMonth={handlePrevMonth}
                     onNextMonth={handleNextMonth}
-                    routerBack={() => router.back()} // Mantenha isso para a lógica de voltar do CalendarHeader
+                    routerBack={() => router.back()}
                     MONTH_NAMES_PT={MONTH_NAMES_PT}
                 />
             </View>
 
             <ScrollView contentContainerStyle={styles.scrollContentContainer}>
-                {/* INÍCIO DA INTEGRAÇÃO DOS COMPONENTES ProviderBrief e AddressSection */}
                 <ProviderBrief
                     provider={provider}
                     serviceName={selectedProviderService?.service?.name}
@@ -431,28 +431,34 @@ export default function ScheduleServiceScreen() {
                     isLoading={isLoading}
                     isInputMode={!user?.address?.street || !user?.address?.number || !user?.address?.neighborhood || !user?.address?.city || !user?.address?.state}
                 />
-                {/* FIM DA INTEGRAÇÃO DOS COMPONENTES */}
 
-                <View style={styles.calendarGridContainer}>
+                {/* AQUI ESTÁ O CALENDÁRIO QUE SERÁ ESTILIZADO COM O GRADIENTE */}
+                <LinearGradient
+                    colors={gradientColors}
+                    start={{ x: 0, y: 0 }} // Início do gradiente (canto superior esquerdo)
+                    end={{ x: 1, y: 1 }}   // Fim do gradiente (canto inferior direito)
+                    style={styles.calendarGridContainer} // Os estilos do container são aplicados ao gradiente
+                >
                     <View style={styles.dayNamesRow}>
                         {DAY_NAMES_PT.map(dayName => (
-                            <Text key={dayName} style={styles.dayNameText}>{dayName}</Text>
+                            <Text key={dayName} style={styles.dayNameText}>{dayName.slice(0, 3)}</Text>
                         ))}
                     </View>
                     <View style={styles.calendarGrid}>
                         {calendarDays.map((dayInfo, index) => {
                             const isSelected = selectedDate.toDateString() === dayInfo.dateObj.toDateString() && dayInfo.month === 'current';
                             const isPast = dayInfo.dateObj < new Date(new Date().setHours(0, 0, 0, 0)) && dayInfo.dateObj.toDateString() !== new Date().toDateString();
-                            const isToday = dayInfo.dateObj.toDateString() === new Date().toDateString();
+                            // Determina se o dia é um fim de semana (Domingo = 0, Sábado = 6)
+                            const isWeekend = dayInfo.dateObj.getDay() === 0 || dayInfo.dateObj.getDay() === 6;
 
                             return (
                                 <TouchableOpacity
                                     key={index}
                                     style={[
                                         styles.dayCell,
-                                        dayInfo.month !== 'current' && styles.dayCellNotInMonth,
-                                        isSelected && styles.dayCellSelected,
-                                        isToday && !isSelected && styles.dayCellToday,
+                                        isSelected && styles.dayCellSelected, // Aplica o estilo de seleção apenas quando selecionado
+                                        // A imagem não mostra borda para o dia atual não selecionado.
+                                        // isToday && !isSelected && styles.dayCellToday, // Removido para corresponder à imagem
                                         { transform: [{ scale: isSelected ? selectionAnim : 1 }] }
                                     ]}
                                     onPress={() => dayInfo.month === 'current' && handleDaySelect(dayInfo.dateObj)}
@@ -460,10 +466,11 @@ export default function ScheduleServiceScreen() {
                                 >
                                     <Text style={[
                                         styles.dayText,
-                                        dayInfo.month !== 'current' && styles.dayTextNotInMonth,
-                                        isSelected && styles.dayTextSelected,
-                                        isPast && dayInfo.month === 'current' && styles.dayTextPast,
-                                        isToday && !isSelected && styles.dayTextToday,
+                                        dayInfo.month !== 'current' && styles.dayTextNotInMonth, // Cor para dias de outros meses
+                                        isSelected && styles.dayTextSelected, // Cor para o dia selecionado
+                                        isPast && dayInfo.month === 'current' && styles.dayTextPast, // Cor para dias passados do mês atual
+                                        // Cor para dias do mês atual não selecionados e não passados
+                                        !isSelected && !isPast && dayInfo.month === 'current' && (isWeekend ? styles.dayTextCurrentWeekend : styles.dayTextCurrentWeekday),
                                     ]}>
                                         {dayInfo.day}
                                     </Text>
@@ -471,7 +478,7 @@ export default function ScheduleServiceScreen() {
                             );
                         })}
                     </View>
-                </View>
+                </LinearGradient>
 
                 <TimeSlotsSection
                     title={`Horários Disponíveis - ${selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}`}
@@ -508,67 +515,97 @@ export default function ScheduleServiceScreen() {
     );
 }
 
+const FIXED_DAY_CELL_SIZE = 38; // Tamanho de 40x40 pixels para cada célula
+
 const styles = StyleSheet.create({
-    screenContainer: { flex: 1, backgroundColor: '#FFFFFF' },
+    screenContainer: { flex: 1, backgroundColor: '#F8F9FA' }, // Um branco levemente mais suave
     centeredFeedback: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8F9FA' },
-    scrollContentContainer: { paddingBottom: 100 },
+    scrollContentContainer: { paddingBottom: 120 }, // Aumentar um pouco o padding para o botão inferior
+
+    // Estilos para o container do cabeçalho customizado (onde o CalendarHeader está)
+    customHeaderWrapper: {
+        paddingTop: HEADER_HEIGHT_ADJUST,
+        backgroundColor: '#FFFFFF',
+        // Sombra sutil para o cabeçalho
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+        elevation: 3,
+        borderBottomLeftRadius: 10, // Bordas arredondadas no cabeçalho
+        borderBottomRightRadius: 10,
+        overflow: 'hidden', // Para garantir que a sombra e borda arredondada funcionem
+        marginBottom: 5, // Espaço entre o header e o conteúdo abaixo
+    },
 
     calendarGridContainer: {
-        paddingHorizontal: 10,
+        // Removido 'backgroundColor: '#FFFFFF'' daqui, pois o LinearGradient o substitui
+        borderRadius: 12,
+        marginHorizontal: 25, // Margens laterais para o card do calendário
+        paddingVertical: 25,
+        paddingHorizontal: 15, // Padding interno
         marginTop: 25,
+        shadowColor: 'rgba(37, 39, 41, 0.66)',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.58,
+        shadowRadius: 3,
+        elevation: 2,
+
+        // Propriedades da borda
+
     },
     dayNamesRow: {
         flexDirection: 'row',
-        justifyContent: 'space-around',
+        justifyContent: 'space-around', // Distribui os nomes dos dias uniformemente
         marginBottom: 10,
-        paddingHorizontal: (SCREEN_WIDTH - 20 - (7 * 40)) / 14,
     },
     dayNameText: {
-        width: 40,
+        width: FIXED_DAY_CELL_SIZE, // Largura fixa para cada nome de dia
         textAlign: 'center',
-        fontSize: 12,
-        color: '#888888',
+        fontSize: 9,
+        color: 'rgba(23, 23, 24, 0.66)', // Cor mais clara para os nomes dos dias, como na imagem
         fontWeight: '500',
     },
     calendarGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        justifyContent: 'flex-start',
+        justifyContent: 'space-between', // Distribui as células dos dias uniformemente em cada linha
     },
     dayCell: {
-        width: (SCREEN_WIDTH - 20) / 7 - 6,
-        height: 40,
+        width: FIXED_DAY_CELL_SIZE,
+        height: FIXED_DAY_CELL_SIZE,
         justifyContent: 'center',
         alignItems: 'center',
-        margin: 3,
-        borderRadius: 20,
+        marginVertical: 2, // Espaçamento vertical entre as linhas de dias
+        // A borda arredondada (circular) e o background são aplicados APENAS em dayCellSelected
     },
-    dayCellNotInMonth: {},
     dayCellSelected: {
-        backgroundColor: '#2A72E7',
+        backgroundColor: '#2A72E7', // Fundo azul para o dia selecionado
+        borderRadius: FIXED_DAY_CELL_SIZE / 2, // Torna a célula circular apenas quando selecionada
     },
-    dayCellToday: {
-        borderColor: '#2A72E7',
-        borderWidth: 1,
-    },
+    // Removido styles.dayCellToday, pois a imagem não mostra distinção para o dia atual não selecionado.
+
     dayText: {
-        fontSize: 15,
-        color: '#333333',
+        // Estilo base, será sobrescrito pelos estilos mais específicos abaixo
+        fontSize: 13,
+        fontWeight: '400',
+    },
+    dayTextCurrentWeekday: {
+        color: '#333333', // Cor para dias de semana do mês atual, não selecionados
+    },
+    dayTextCurrentWeekend: {
+        color: '#2A72E7', // Cor azul claro para fins de semana do mês atual, não selecionados, como na imagem
     },
     dayTextNotInMonth: {
-        color: '#CCCCCC',
+        color: 'rgba(0,0,0,0.2)', // Cor muito clara para dias de meses adjacentes, quase transparente como na imagem
     },
     dayTextSelected: {
-        color: '#FFFFFF',
+        color: '#FFFFFF', // Texto branco para o dia selecionado
         fontWeight: 'bold',
     },
     dayTextPast: {
-        color: '#AAAAAA',
+        color: '#AAAAAA', // Cor para dias passados
         textDecorationLine: 'line-through',
-    },
-    dayTextToday: {
-        color: '#2A72E7',
-        fontWeight: 'bold',
     },
 
     confirmButtonWrapper: {
@@ -581,11 +618,16 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFFFFF',
         borderTopWidth: 1,
         borderTopColor: '#E0E0E0',
+        shadowColor: '#000', // Sombra para o botão flutuante
+        shadowOffset: { width: 0, height: -3 },
+        shadowOpacity: 0.1,
+        shadowRadius: 5,
+        elevation: 8,
     },
     confirmButton: {
         backgroundColor: '#2A72E7',
-        paddingVertical: 14,
-        borderRadius: 10,
+        paddingVertical: 10, // Aumentar padding para botão mais "gordo"
+        borderRadius: 12, // Mais arredondado
         alignItems: 'center',
     },
     confirmButtonDisabled: {
@@ -593,40 +635,73 @@ const styles = StyleSheet.create({
     },
     confirmButtonText: {
         color: '#FFFFFF',
-        fontSize: 17,
-        fontWeight: '600',
+        fontSize: 16, // Aumentar fonte
+        fontWeight: '700', // Mais negrito
     },
 
+    // ... (Mantém addressInputContainer e input styles como estão, parecem bons para input)
     addressInputContainer: {
-        backgroundColor: '#F7F9FC',
-        padding: 15,
-        marginHorizontal: 20,
+        backgroundColor: '#FFFFFF',
+        padding: 0,
+        marginHorizontal: 15, // Consistência de margem
         borderRadius: 12,
         marginTop: 20,
         marginBottom: 10,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
+        shadowOpacity: 0.1,
+        shadowRadius: 6,
+        elevation: 3,
     },
     addressInputTitle: {
-        fontSize: 16,
-        fontWeight: '600',
+        fontSize: 15, // Aumenta um pouco
+        fontWeight: '500',
         color: '#333',
         marginBottom: 10,
+        textAlign: 'center',
     },
     input: {
-        height: 45,
+        flex: 1,
+        height: 50, // Aumenta a altura para conforto
+        fontSize: 16,
+        color: '#333',
+        paddingLeft: 10,
+        backgroundColor: '#F7F7F7', // Fundo levemente cinza para inputs
+        borderRadius: 8,
         borderColor: '#E0E0E0',
         borderWidth: 1,
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        marginBottom: 10,
-        fontSize: 15,
-        color: '#333',
-        backgroundColor: '#FFFFFF',
+        paddingHorizontal: 15,
     },
+    inputGroup: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#F7F7F7',
+        borderRadius: 8,
+        paddingHorizontal: 15,
+        marginBottom: 15,
+        borderColor: '#E0E0E0',
+        borderWidth: 1,
+    },
+    inputIcon: {
+        marginRight: 10,
+    },
+    inputRow: {
+        flexDirection: 'row',
+        marginBottom: 15,
+    },
+    inputSmall: { // Garante que este também tenha um fundo
+        flex: 1,
+        height: 50, // Aumenta altura aqui também
+        fontSize: 16,
+        color: '#333',
+        paddingLeft: 10,
+        backgroundColor: '#F7F7F7',
+        borderRadius: 8,
+        borderColor: '#E0E0E0',
+        borderWidth: 1,
+        paddingHorizontal: 15,
+    },
+
 
     providerBriefSkeleton: {
         flexDirection: 'row',
@@ -634,7 +709,7 @@ const styles = StyleSheet.create({
         padding: 15,
         backgroundColor: '#FFFFFF',
         borderRadius: 12,
-        marginHorizontal: 20,
+        marginHorizontal: 15, // Consistência de margem
         marginTop: 20,
         marginBottom: 10,
         shadowColor: '#000',
@@ -642,7 +717,6 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 4,
-        justifyContent: 'space-between',
         height: 100,
     },
     providerImageSkeleton: {
@@ -654,7 +728,6 @@ const styles = StyleSheet.create({
     },
     providerTextInfoSkeleton: {
         flex: 1,
-        marginRight: 10,
         justifyContent: 'center',
     },
     skeletonLineLarge: {

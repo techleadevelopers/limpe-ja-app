@@ -134,10 +134,11 @@ const CategoriaCard: React.FC<CategoriaCardProps> = ({ item, onPress }) => {
 
 const styles = StyleSheet.create({
   cardContainerWrapper: {
-    width: 80,
-    height: 80,
-    marginRight: 10,
-    marginBottom: 10,
+    width: 70,
+    height: 70,
+    marginRight: 5,
+    marginBottom: 6,
+    
   },
   shadowLayerPrimary: {
     ...StyleSheet.absoluteFillObject,
