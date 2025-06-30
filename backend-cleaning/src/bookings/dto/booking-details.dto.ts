@@ -1,7 +1,7 @@
 // src/bookings/dto/booking-details.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Booking, BookingStatus, Client, Provider, ProviderService, Service, User, Prisma, Address } from '@prisma/client';
-import { IsString, IsNumber, IsDate, IsEnum, IsOptional, IsEmail } from 'class-validator';
+import { IsString, IsNumber, IsDate, IsEnum, IsOptional, IsEmail } from 'class-validator'; // Mantenha IsDate para outros campos Date
 import { CreateAddressDto } from '../../common/dto/create-address.dto';
 
 // Define um tipo auxiliar para a estrutura completa do Booking com suas relações
@@ -64,8 +64,8 @@ export class BookingDetailsDto {
   providerServiceDescription?: string | null;
 
   @ApiProperty({ description: 'Data e hora agendadas para o serviço (ISO 8601)', example: '2025-06-15T10:00:00.000Z' })
-  @IsDate()
-  scheduledDateTime: Date; // NOVO CAMPO: Contém data e hora combinadas
+  @IsString() // ALTERADO: De @IsDate() para @IsString()
+  scheduledDateTime: string; // ALTERADO: De Date para string
 
   @ApiProperty({ enum: BookingStatus, description: 'Status atual do agendamento', example: BookingStatus.PENDING })
   @IsEnum(BookingStatus)
@@ -81,11 +81,11 @@ export class BookingDetailsDto {
   notes?: string | null;
 
   @ApiProperty({ description: 'Data de criação do agendamento', example: '2025-06-10T10:00:00.000Z' })
-  @IsDate()
+  @IsDate() // Mantido como @IsDate()
   createdAt: Date;
 
   @ApiProperty({ description: 'Data da última atualização do agendamento', example: '2025-06-10T10:00:00.000Z' })
-  @IsDate()
+  @IsDate() // Mantido como @IsDate()
   updatedAt: Date;
 
   @ApiPropertyOptional({ type: () => CreateAddressDto, description: 'Endereço onde o serviço será realizado' })
@@ -122,25 +122,18 @@ export class BookingDetailsDto {
 
     const timePart = booking.scheduledTime || '00:00'; // Garante que timePart não seja undefined ou null
     
-    const combinedDateTimeString = `${datePart}T${timePart}:00`;
-    console.log("[BookingDetailsDto - DEBUG] String combinada para Date:", combinedDateTimeString);
+    const combinedDateTimeString = `${datePart}T${timePart}:00Z`; // Adicionei 'Z' para indicar que é UTC, se for o caso
+    console.log("[BookingDetailsDto - DEBUG] String combinada para scheduledDateTime FINAL (como string):", combinedDateTimeString); // Mudei o log
 
-    try {
-        this.scheduledDateTime = new Date(combinedDateTimeString);
-        if (isNaN(this.scheduledDateTime.getTime())) {
-            console.error("[BookingDetailsDto - ERROR] new Date() resultou em data inválida para:", combinedDateTimeString);
-            this.scheduledDateTime = new Date(); // Fallback para data atual se a combinação for inválida
-        }
-        console.log("[BookingDetailsDto - DEBUG] scheduledDateTime FINAL (combinado):", this.scheduledDateTime.toISOString());
-    } catch (e) {
-        console.error("[BookingDetailsDto - ERROR] Erro ao criar Date a partir da string combinada:", combinedDateTimeString, e);
-        this.scheduledDateTime = new Date(); // Fallback em caso de exceção
-    }
+    // ATRIBUIÇÃO DIRETA DA STRING ISO PARA scheduledDateTime
+    this.scheduledDateTime = combinedDateTimeString; // ALTERADO: Atribui a string diretamente
+
     // ***** FIM DOS LOGS DEFENSIVOS E COMBINAÇÃO *****
 
     this.status = booking.status;
     this.totalPrice = booking.totalPrice.toNumber();
     this.notes = booking.notes;
+    // createdAt e updatedAt já são Date em BookingWithRelations e serão serializados automaticamente
     this.createdAt = booking.createdAt;
     this.updatedAt = booking.updatedAt;
     if (booking.address) {

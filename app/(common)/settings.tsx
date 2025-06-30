@@ -306,6 +306,7 @@ const styles = StyleSheet.create({
     outerContainer: {
         flex: 1,
         backgroundColor: '#F0F2F5',
+        paddingVertical: 20,
     },
     scrollView: {
         flex: 1,
@@ -331,7 +332,7 @@ const styles = StyleSheet.create({
         marginRight: 15,
     },
     headerTitle: {
-        fontSize: 20,
+        fontSize: 18,
         fontWeight: 'bold',
         color: '#FFFFFF',
         flex: 1,
@@ -342,7 +343,7 @@ const styles = StyleSheet.create({
         marginLeft: 15,
     },
     mainSectionHeader: {
-        fontSize: 26,
+        fontSize: 20,
         fontWeight: 'bold',
         color: '#1C3A5F',
         paddingHorizontal: 20,

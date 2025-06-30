@@ -42,7 +42,7 @@ export default function SuccessHeader({
 
 const styles = StyleSheet.create({
     headerContainer: {
-        paddingTop: Platform.OS === 'android' ? 30 : 30, // Ajuste para status bar
+        paddingTop: Platform.OS === 'android' ? 40 : 10, // Ajuste para status bar
         paddingBottom: 10,
         paddingHorizontal: 20,
         flexDirection: 'row', // Para centralizar o logo
@@ -59,5 +59,7 @@ const styles = StyleSheet.create({
     logoImage: {
         width: 150, // Ajuste o tamanho conforme necessário para o seu logo
         height: 50, // Ajuste a altura conforme necessário
+        top: 0,
+        right: 5,
     },
 });

@@ -309,11 +309,7 @@ export default function SuccessScreen() {
               headerPrimaryColor={headerPrimaryColor}
             />
 
-            <ImmediateActionButtons
-              onAddToCalendar={handleAddToCalendar}
-              onContactProvider={handleContactProvider}
-              headerPrimaryColor={headerPrimaryColor}
-            />
+          
 
             <MainActionButtons
               onGoToBookings={handleGoToBookings}

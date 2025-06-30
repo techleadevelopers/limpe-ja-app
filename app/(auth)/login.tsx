@@ -1,4 +1,3 @@
-// LimpeJaApp/app/(auth)/login.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
@@ -12,7 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
-  Animated,
+  Animated, // Import Animated do React Native para AnimatedErrorMessage e animações existentes
   StatusBar,
   Dimensions,
   Button
@@ -21,6 +20,17 @@ import { Link, useRouter, Stack } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
 import { Ionicons } from '@expo/vector-icons';
 import { UserRole } from '../types/backend/auth';
+
+// Importações do Reanimated para as novas animações
+import AnimatedReanimated, { // Renomeado para evitar conflito com Animated do React Native
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  Easing,
+  withRepeat,
+  interpolate,
+  Extrapolate,
+} from 'react-native-reanimated';
 
 // CORREÇÃO: Revertido para caminho absoluto, conforme feedback de que funciona sem erros
 const LOGO_IMAGE = require('../../assets/images/logo2.png');
@@ -56,18 +66,42 @@ export default function LoginScreen() {
   const mainElementsOpacity = useRef(new Animated.Value(0)).current;
   const mainElementsTranslateY = useRef(new Animated.Value(18)).current;
 
+  // Novos valores compartilhados para as animações da logo (Reanimated)
+  const logoRotateY = useSharedValue(0); // Para rotação sutil do logo
+  const logoPulseScale = useSharedValue(1); // Para pulso de escala do logo
+
   // A linha `const showTestLogins = process.env.EXPO_PUBLIC_SHOW_TEST_LOGINS === 'true' || __DEV__;` 
   // será mantida, mas a seção que ela controla será removida.
 
   useEffect(() => {
+    // Função para iniciar as animações de loop da logo
+    const startLogoLoopAnimations = () => {
+      // Animação de rotação sutil do logo
+      logoRotateY.value = withRepeat(
+        withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+        -1,
+        true
+      );
+
+      // Animação de pulso de escala do logo
+      logoPulseScale.value = withRepeat(
+        withTiming(1.02, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+        -1,
+        true
+      );
+    };
+
     if (!authIsLoading && isAuthenticated) {
       const targetRoute = user?.role === 'CLIENT' ? '/(client)/explore' : user?.role === 'PROVIDER' ? '/(provider)/dashboard' : '/';
       router.replace(targetRoute as any);
     } else if (!isAuthenticated) {
-        Animated.parallel([
-            Animated.timing(mainElementsOpacity, { toValue: 1, duration: 700, delay: 200, useNativeDriver: true }),
-            Animated.timing(mainElementsTranslateY, { toValue: 0, duration: 700, delay: 200, useNativeDriver: true })
-        ]).start();
+      Animated.parallel([
+        Animated.timing(mainElementsOpacity, { toValue: 1, duration: 700, delay: 200, useNativeDriver: true }),
+        Animated.timing(mainElementsTranslateY, { toValue: 0, duration: 700, delay: 200, useNativeDriver: true })
+      ]).start(() => {
+        // Inicia as animações de loop da logo após a animação de entrada dos elementos principais
+        startLogoLoopAnimations();
+      });
     }
   }, [isAuthenticated, authIsLoading, user, router, mainElementsOpacity, mainElementsTranslateY]);
 
@@ -107,6 +141,24 @@ export default function LoginScreen() {
   const facebookButtonAnims = createButtonAnimations();
   const twitterButtonAnims = createButtonAnimations();
 
+  // Estilo animado para a logo principal (Reanimated)
+  const animatedLogoStyle = useAnimatedStyle(() => {
+    const rotation = interpolate(
+      logoRotateY.value,
+      [0, 0.5, 1],
+      [-5, 0, 5],
+      Extrapolate.CLAMP
+    );
+
+    return {
+      transform: [
+        { scale: logoPulseScale.value }, // Pulso de escala
+        { rotateY: `${rotation}deg` }, // Rotação em Y
+      ],
+    };
+  });
+
+
   if (authIsLoading || (!authIsLoading && isAuthenticated)) {
     return (
       <View style={styles.fullScreenLoadingContainer}>
@@ -130,124 +182,124 @@ export default function LoginScreen() {
         <Stack.Screen options={{ headerShown: false }} />
 
         <Animated.View style={[styles.contentWrapper, { opacity: mainElementsOpacity, transform: [{translateY: mainElementsTranslateY}] }]}>
-            <View style={styles.logoContainer}>
-              <Image source={LOGO_IMAGE} style={styles.logo} />
+          <View style={styles.logoContainer}>
+            {/* Aplicando o AnimatedReanimated.Image com o estilo animado */}
+            <AnimatedReanimated.Image source={LOGO_IMAGE} style={[styles.logo, animatedLogoStyle]} />
+          </View>
+
+          <Text style={styles.welcomeSubtitle}>Faça login em sua conta</Text>
+
+          {/* Username Input */}
+          <View style={styles.inputWrapper}>
+            <View style={styles.iconCircle}>
+              <Ionicons name="person-outline" size={18} color="#00BCD4" />
             </View>
+            <TextInput
+              style={styles.input}
+              placeholder="Nome de usuário"
+              placeholderTextColor="#A0AEC0"
+              value={username}
+              onChangeText={(text) => { setUsername(text); if (generalError) setGeneralError(null);}}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              textContentType="username"
+              autoComplete="username"
+            />
+          </View>
 
-            
-            <Text style={styles.welcomeSubtitle}>Faça login em sua conta</Text>
-
-            {/* Username Input */}
-            <View style={styles.inputWrapper}>
-              <View style={styles.iconCircle}>
-                <Ionicons name="person-outline" size={18} color="#00BCD4" />
-              </View>
-              <TextInput
-                style={styles.input}
-                placeholder="Nome de usuário"
-                placeholderTextColor="#A0AEC0"
-                value={username}
-                onChangeText={(text) => { setUsername(text); if (generalError) setGeneralError(null);}}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                textContentType="username"
-                autoComplete="username"
-              />
+          {/* Password Input */}
+          <View style={styles.inputWrapper}>
+            <View style={styles.iconCircle}>
+              <Ionicons name="lock-closed-outline" size={18} color="#00BCD4" />
             </View>
+            <TextInput
+              style={styles.input}
+              placeholder="Senha"
+              placeholderTextColor="#A0AEC0"
+              value={password}
+              onChangeText={(text) => { setPassword(text); if (generalError) setGeneralError(null);}}
+              secureTextEntry={!showPassword}
+              textContentType="password"
+            />
+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIconTouchable}>
+              <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={22} color="#A0AEC0" />
+            </TouchableOpacity>
+          </View>
 
-            {/* Password Input */}
-            <View style={styles.inputWrapper}>
-              <View style={styles.iconCircle}>
-                    <Ionicons name="lock-closed-outline" size={18} color="#00BCD4" />
-              </View>
-              <TextInput
-                style={styles.input}
-                placeholder="Senha"
-                placeholderTextColor="#A0AEC0"
-                value={password}
-                onChangeText={(text) => { setPassword(text); if (generalError) setGeneralError(null);}}
-                secureTextEntry={!showPassword}
-                textContentType="password"
-              />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIconTouchable}>
-                <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={22} color="#A0AEC0" />
+          <AnimatedErrorMessage message={generalError} centered />
+
+          <Animated.View style={{transform: [{scale: signInButtonAnims.scaleAnim}]}}>
+            <TouchableOpacity
+              style={[styles.signInButton, isLoading && styles.buttonDisabled]}
+              onPress={handleLogin}
+              onPressIn={signInButtonAnims.onPressIn}
+              onPressOut={signInButtonAnims.onPressOut}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.signInButtonText}>Entrar</Text>
+              )}
+            </TouchableOpacity>
+          </Animated.View>
+
+          <View style={styles.orSeparatorContainer}>
+            <View style={styles.dashedLine} />
+            <Text style={styles.orText}>Ou faça login com</Text>
+            <View style={styles.dashedLine} />
+          </View>
+
+          <View style={styles.socialLoginContainer}>
+            <Animated.View style={{transform: [{scale: googleButtonAnims.scaleAnim}]}}>
+              <TouchableOpacity
+                style={styles.socialButton}
+                onPress={() => Alert.alert("Login Social", "Login com Google (não implementado).")}
+                onPressIn={googleButtonAnims.onPressIn}
+                onPressOut={googleButtonAnims.onPressOut}
+              >
+                <Ionicons name="logo-google" size={22} color="#DB4437" />
               </TouchableOpacity>
-            </View>
-
-            <AnimatedErrorMessage message={generalError} centered />
-
-            <Animated.View style={{transform: [{scale: signInButtonAnims.scaleAnim}]}}>
-                <TouchableOpacity
-                style={[styles.signInButton, isLoading && styles.buttonDisabled]}
-                onPress={handleLogin}
-                onPressIn={signInButtonAnims.onPressIn}
-                onPressOut={signInButtonAnims.onPressOut}
-                disabled={isLoading}
-                >
-                {isLoading ? (
-                    <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                    <Text style={styles.signInButtonText}>Entrar</Text>
-                )}
-                </TouchableOpacity>
             </Animated.View>
+            <Animated.View style={{transform: [{scale: facebookButtonAnims.scaleAnim}]}}>
+              <TouchableOpacity
+                style={styles.socialButton}
+                onPress={() => Alert.alert("Login Social", "Login com Facebook (não implementado).")}
+                onPressIn={facebookButtonAnims.onPressIn}
+                onPressOut={facebookButtonAnims.onPressOut}
+              >
+                <Ionicons name="logo-facebook" size={22} color="#4267B2" />
+              </TouchableOpacity>
+            </Animated.View>
+            <Animated.View style={{transform: [{scale: twitterButtonAnims.scaleAnim}]}}>
+              <TouchableOpacity
+                style={styles.socialButton}
+                onPress={() => Alert.alert("Login Social", "Login com Twitter (não implementado).")}
+                onPressIn={twitterButtonAnims.onPressIn}
+                onPressOut={twitterButtonAnims.onPressOut}
+              >
+                <Ionicons name="logo-twitter" size={22} color="#1DA1F2" />
+              </TouchableOpacity>
+            </Animated.View>
+          </View>
 
-            <View style={styles.orSeparatorContainer}>
-              <View style={styles.dashedLine} />
-              <Text style={styles.orText}>Ou faça login com</Text>
-              <View style={styles.dashedLine} />
-            </View>
+          <View style={styles.signUpContainer}>
+            <Text style={styles.signUpText}>Não tem uma conta? </Text>
+            <Link href="/(auth)/register-options" asChild>
+              <TouchableOpacity>
+                <Text style={styles.signUpLink}>Cadastre-se aqui</Text>
+              </TouchableOpacity>
+            </Link>
+          </View>
 
-            <View style={styles.socialLoginContainer}>
-                <Animated.View style={{transform: [{scale: googleButtonAnims.scaleAnim}]}}>
-                    <TouchableOpacity
-                        style={styles.socialButton}
-                        onPress={() => Alert.alert("Login Social", "Login com Google (não implementado).")}
-                        onPressIn={googleButtonAnims.onPressIn}
-                        onPressOut={googleButtonAnims.onPressOut}
-                    >
-                        <Ionicons name="logo-google" size={22} color="#DB4437" />
-                    </TouchableOpacity>
-                </Animated.View>
-                <Animated.View style={{transform: [{scale: facebookButtonAnims.scaleAnim}]}}>
-                    <TouchableOpacity
-                        style={styles.socialButton}
-                        onPress={() => Alert.alert("Login Social", "Login com Facebook (não implementado).")}
-                        onPressIn={facebookButtonAnims.onPressIn}
-                        onPressOut={facebookButtonAnims.onPressOut}
-                    >
-                        <Ionicons name="logo-facebook" size={22} color="#4267B2" />
-                    </TouchableOpacity>
-                </Animated.View>
-                <Animated.View style={{transform: [{scale: twitterButtonAnims.scaleAnim}]}}>
-                    <TouchableOpacity
-                        style={styles.socialButton}
-                        onPress={() => Alert.alert("Login Social", "Login com Twitter (não implementado).")}
-                        onPressIn={twitterButtonAnims.onPressIn}
-                        onPressOut={twitterButtonAnims.onPressOut}
-                    >
-                        <Ionicons name="logo-twitter" size={22} color="#1DA1F2" />
-                    </TouchableOpacity>
-                </Animated.View>
-            </View>
-
-            <View style={styles.signUpContainer}>
-                <Text style={styles.signUpText}>Não tem uma conta? </Text>
-                <Link href="/(auth)/register-options" asChild>
-                    <TouchableOpacity>
-                        <Text style={styles.signUpLink}>Cadastre-se aqui</Text>
-                    </TouchableOpacity>
-                </Link>
-            </View>
-
-            {/* Link "Esqueceu a Senha?" - Nova Melhoria */}
-            <View style={styles.forgotPasswordContainer}>
-                <Link href="/(auth)/forgot-password" asChild>
-                    <TouchableOpacity>
-                        <Text style={styles.forgotPasswordLink}>Esqueceu a senha?</Text>
-                    </TouchableOpacity>
-                </Link>
-            </View>
+          {/* Link "Esqueceu a Senha?" - Nova Melhoria */}
+          <View style={styles.forgotPasswordContainer}>
+            <Link href="/(auth)/forgot-password" asChild>
+              <TouchableOpacity>
+                <Text style={styles.forgotPasswordLink}>Esqueceu a senha?</Text>
+              </TouchableOpacity>
+            </Link>
+          </View>
         </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -272,10 +324,9 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 20 : 15,
   },
   logoContainer: {
-    top: 30, // Ajuste para centralizar o logo
-    right: 12,
+    top: 73, // Ajuste para centralizar o logo
+    right: 10,
     alignItems: 'center',
-    
   },
   logo: {
     width: 235,
@@ -293,16 +344,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#8A94A6',
     textAlign: 'center',
-    marginBottom: 60,
-    bottom: 95, // Espaço entre o logo e o título
+    marginBottom: 50,
+    bottom: 55, // Espaço entre o logo e o título
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderRadius: 28,
-    height: 36,
-    bottom: 100,
+    height: 33,
+    bottom: 55,
     marginBottom: 10,
     // Estilos de sombra para iOS
     shadowColor: 'rgba(100, 100, 150, 0.15)',
@@ -352,7 +403,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 10,
-    bottom: 90,
+    bottom: 55,
     marginBottom: 25,
     // Estilos de sombra para iOS
     shadowColor: '#007BFF',
@@ -383,20 +434,20 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: '#DCE0E5',
     borderStyle: 'dashed',
-    bottom: 20,
+    top: 40,
   },
   orText: {
     fontSize: 13,
     color: '#A0AEC0',
     textAlign: 'center',
-    bottom: 20,
+    top: 40,
     marginHorizontal: 12,
   },
   socialLoginContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     marginBottom: 30,
-    bottom: 10,
+    top: 50,
     width: '100%',
   },
   socialButton: {
@@ -419,7 +470,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    bottom: 240,
+    bottom: 200,
     paddingBottom: 18,
     paddingTop: 15,
   },
@@ -436,8 +487,7 @@ const styles = StyleSheet.create({
   forgotPasswordContainer: {
     alignItems: 'center',
     marginBottom: 20,
-    bottom: 235,
-    
+    bottom: 195,
   },
   forgotPasswordLink: {
     fontSize: 13,

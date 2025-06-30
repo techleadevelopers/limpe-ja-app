@@ -31,19 +31,22 @@ export default function MainActionButtons({
 
 const styles = StyleSheet.create({
   actionButtonsContainerNew: {
-    width: '100%',
+    width: '98%',
     alignItems: 'center',
-    marginTop: 0,
+    paddingVertical: 15,
+    bottom: 13,
+    marginBottom: 0,
   },
   downloadButton: {
     flexDirection: 'row',
-    paddingVertical: 9,
+    paddingVertical: 6,
     paddingHorizontal: 25,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     width: '90%',
-    marginBottom: 10,
+    marginBottom: 20,
+    marginTop :-1,
     // backgroundColor handled by prop
     ...Platform.select({
       ios: {
@@ -59,19 +62,20 @@ const styles = StyleSheet.create({
   },
   downloadButtonText: {
     color: '#FFFFFF',
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '600',
   },
   secondaryDownloadButton: {
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
+    bottom: 12,
+    
     // borderColor handled by prop
     ...Platform.select({
       ios: {
-        shadowColor: 'rgba(0,0,0,0.1)',
-        shadowOffset: { width: 0, height: 2 },
+        
+        shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.1,
-        shadowRadius: 3,
+        shadowRadius: 0,
       },
       android: {
         elevation: 2,

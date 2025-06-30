@@ -3,9 +3,6 @@ import React from 'react';
 import { View, Text, ImageBackground, TouchableOpacity, Platform, Dimensions, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-// Remover a definição de SCREEN_WIDTH aqui, pois já está em providerStyles
-// const SCREEN_WIDTH = Dimensions.get('window').width; 
-
 // Importa os estilos do arquivo externo.
 // É CRUCIAL que este import esteja correto e que o arquivo exista.
 import { styles } from '../../styles/providerStyles'; 
@@ -26,32 +23,32 @@ interface HeaderSectionProps {
 
 const HeaderSection: React.FC<HeaderSectionProps> = ({ provider, onBackPress }) => {
   return (
-    // Usando provider.avatarUrl para a imagem de fundo
-    // O estilo headerImage agora inclui as margens e o borderRadius
-    <ImageBackground source={{ uri: provider.avatarUrl }} style={styles.headerImage} resizeMode="cover">
-      <View style={styles.headerImageOverlay}>
-        <View style={styles.topNavContainer}>
-          <TouchableOpacity onPress={onBackPress} style={styles.iconButtonBackground}>
-            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButtonBackground}>
-            <Ionicons name="bookmark-outline" size={22} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
-        {/* REMOVIDO: imageTextDetailsOverlay */}
+    <View style={internalStyles.container}> {/* Adicionado um container para posicionar os botões acima */}
+      <View style={internalStyles.topNavContainer}> {/* Movido para fora do ImageBackground */}
+        <TouchableOpacity onPress={onBackPress} style={styles.iconButtonBackground}>
+          <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.iconButtonBackground}>
+          <Ionicons name="bookmark-outline" size={20} color="#FFFFFF" />
+        </TouchableOpacity>
       </View>
-    </ImageBackground>
+
+      {/* Usando provider.avatarUrl para a imagem de fundo */}
+      {/* O estilo headerImage agora inclui as margens e o borderRadius */}
+      <ImageBackground source={{ uri: provider.avatarUrl }} style={styles.headerImage} resizeMode="cover">
+        <View style={styles.headerImageOverlay}>
+          {/* REMOVIDO: imageTextDetailsOverlay */}
+        </View>
+      </ImageBackground>
+    </View>
   );
 };
 
-// Se você está importando os estilos de '../../styles/providerStyles',
-// este StyleSheet.create não é mais necessário aqui e deve ser removido.
-// Mantendo o código como você forneceu, mas com a observação:
-// Se você está usando import { styles } from '../../styles/providerStyles';
-// então a linha 'const styles = StyleSheet.create({...});' abaixo deveria ser REMOVIDA
-// ou renomeada para evitar conflito e garantir que os estilos do providerStyles sejam usados.
-// Para este exemplo, vou manter o que você enviou, mas tenha isso em mente.
-const internalStyles = StyleSheet.create({ // Renomeado para evitar conflito se 'styles' for importado
+const internalStyles = StyleSheet.create({
+  container: {
+    width: '100%',
+    marginTop: 25,
+  },
   headerImage: {
     width: '100%',
     height: 250, // Altura fixa ou responsiva
@@ -61,12 +58,15 @@ const internalStyles = StyleSheet.create({ // Renomeado para evitar conflito se 
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.3)', // Escurece a imagem para melhor contraste
     justifyContent: 'space-between',
-    paddingTop: Platform.OS === 'ios' ? 50 : 25, // Ajuste para safe area
   },
-  topNavContainer: {
+  topNavContainer: { // Estilos para posicionar os botões flutuantes
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 15,
+    paddingHorizontal: 30,
+    position: 'absolute', // Posiciona os botões de forma absoluta
+    top: Platform.OS === 'ios' ? 6 : -10, // Ajuste para safe area
+    width: '100%', // Garante que o container ocupe a largura total para justify-content
+    zIndex: 1, // Garante que os botões fiquem acima da imagem
   },
   iconButtonBackground: {
     backgroundColor: 'rgba(0,0,0,0.4)',

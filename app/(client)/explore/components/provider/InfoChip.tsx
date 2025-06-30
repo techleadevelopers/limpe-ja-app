@@ -12,7 +12,7 @@ interface InfoChipProps {
 const InfoChip: React.FC<InfoChipProps> = ({ iconName, text }) => {
   return (
     <View style={styles.infoChip}>
-      <Ionicons name={iconName} size={16} color="#555" />
+      <Ionicons name={iconName} size={15} color="#555" />
       <Text style={styles.infoChipText}>{text}</Text>
     </View>
   );

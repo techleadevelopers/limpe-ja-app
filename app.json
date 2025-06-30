@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Cleaning",
+    "name": "LimpeJá",
     "slug": "cleaning",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -30,6 +30,9 @@
       "output": "static",
       "favicon": "./assets/images/icon.png"
     },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "plugins": [
       "expo-router",
       [

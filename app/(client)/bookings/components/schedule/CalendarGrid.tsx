@@ -72,11 +72,7 @@ const styles = StyleSheet.create({
         paddingVertical: 15,
         paddingHorizontal: 15,
         marginHorizontal: 15,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 5,
-        elevation: 5,
+    
     },
     dayNamesRow: {
         flexDirection: 'row',

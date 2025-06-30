@@ -151,7 +151,7 @@ export default function BookingSummaryCard({
               handleCopyPixQrCode={handleCopyPixQrCode}
             />
           )}
-
+          
          
           
         </View>

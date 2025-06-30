@@ -84,19 +84,19 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
   return (
     <View style={styles.actionButtonsContainer}>
       <TouchableOpacity style={styles.actionButton} onPress={handleCall}>
-        <Ionicons name="call-outline" size={24} color="#666" />
+        <Ionicons name="call-outline" size={22} color="#666" />
         <Text style={styles.actionButtonText}>Ligar</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.actionButton} onPress={handleChat}>
-        <Ionicons name="chatbox-ellipses-outline" size={24} color="#666" />
+        <Ionicons name="chatbox-ellipses-outline" size={22} color="#666" />
         <Text style={styles.actionButtonText}>Chat</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.actionButton} onPress={handleMap}>
-        <Ionicons name="map-outline" size={24} color="#666" />
+        <Ionicons name="map-outline" size={22} color="#666" />
         <Text style={styles.actionButtonText}>Mapa</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
-        <Ionicons name="share-social-outline" size={24} color="#666" />
+        <Ionicons name="share-social-outline" size={22} color="#666" />
         <Text style={styles.actionButtonText}>Share</Text>
       </TouchableOpacity>
     </View>

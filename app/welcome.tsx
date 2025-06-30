@@ -6,6 +6,8 @@ import Animated, {
   withTiming,
   Easing,
   withRepeat,
+  interpolate,
+  Extrapolate,
 } from 'react-native-reanimated';
 import { Stack, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -20,26 +22,77 @@ const BACKGROUND_COLOR_1 = '#FFFFFF';
 const BACKGROUND_COLOR_2 = '#F8F8FF';
 const BACKGROUND_COLOR_3 = '#E6F0FF';
 
-// Define logo dimensions for easier calculation and responsiveness
+// Define as dimensões do logo para facilitar o cálculo e a responsividade
 const LOGO_WIDTH = 250;
 const LOGO_HEIGHT = 250;
-const REFLECTION_GAP = 10; // Espaçamento entre o logo e o reflexo
+const REFLECTION_GAP = 0; // Espaçamento entre o logo e o reflexo
+const BOTTOM_MARGIN_FOR_REFLECTION = 0; // Nova margem inferior para o grupo logo+reflexo
 
 export default function WelcomeScreen() {
   const router = useRouter();
 
+  // Valores compartilhados existentes
   const logoScale = useSharedValue(0.8);
   const logoOpacity = useSharedValue(0);
-  const reflectionOpacityAnim = useSharedValue(0.5); // Opacidade geral para o reflexo
+  const reflectionOpacityAnim = useSharedValue(0.5);
+
+  // Novos valores compartilhados para as animações adicionais
+  const logoRotateY = useSharedValue(0); // Para rotação sutil do logo
+  const logoPulseScale = useSharedValue(1); // Para pulso de escala do logo
+  const reflectionTranslateY = useSharedValue(0); // Para flutuação vertical do reflexo
+  const reflectionSkewX = useSharedValue(0); // Para efeito de ondulação/distorção do reflexo
+  const reflectionHueRotate = useSharedValue(0); // Para mudança sutil de cor do reflexo
 
   useEffect(() => {
-    // Animação de entrada do logo
-    logoOpacity.value = withTiming(1, { duration: 80 });
-    logoScale.value = withTiming(1, { duration: 80, easing: Easing.out(Easing.back(1.2)) });
+    // Função para iniciar as animações de loop
+    // Movida para antes de ser chamada para evitar o erro de inicialização
+    const startLoopAnimations = () => {
+      // Animação de rotação sutil do logo
+      logoRotateY.value = withRepeat(
+        withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+        -1,
+        true
+      );
 
-    // Animação de opacidade para o reflexo, tornando-o sutil e robusto
+      // Animação de pulso de escala do logo
+      logoPulseScale.value = withRepeat(
+        withTiming(1.02, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+        -1,
+        true
+      );
+
+      // Animação de flutuação vertical do reflexo
+      reflectionTranslateY.value = withRepeat(
+        withTiming(10, { duration: 2500, easing: Easing.inOut(Easing.ease) }), // Move 10px para cima e para baixo
+        -1,
+        true
+      );
+
+      // Animação de distorção (skew) do reflexo para efeito de ondulação
+      reflectionSkewX.value = withRepeat(
+        withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.ease) }), // Distorce ligeiramente
+        -1,
+        true
+      );
+
+      // Animação de rotação de matiz (hue) para o reflexo
+      reflectionHueRotate.value = withRepeat(
+        withTiming(360, { duration: 5000, easing: Easing.linear }), // Gira o matiz em 360 graus
+        -1,
+        false // Não inverte, continua girando
+      );
+    };
+
+    // Animação de entrada do logo (existente)
+    logoOpacity.value = withTiming(1, { duration: 80 });
+    logoScale.value = withTiming(1, { duration: 80, easing: Easing.out(Easing.back(1.2)) }, () => {
+      // Inicia as animações de loop após a animação de entrada
+      startLoopAnimations();
+    });
+
+    // Animação de opacidade para o reflexo, tornando-o sutil e robusto (existente)
     reflectionOpacityAnim.value = withRepeat(
-      withTiming(0.2, { duration: 2000, easing: Easing.inOut(Easing.ease) }), // Opacidade máxima mais baixa para sutileza
+      withTiming(0.2, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
       -1, // Repetição infinita
       true // Inverter a animação de volta
     );
@@ -61,22 +114,48 @@ export default function WelcomeScreen() {
   }, []);
 
   // Estilo animado para o logo principal
-  const animatedLogoStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: logoScale.value }],
-    opacity: logoOpacity.value,
-  }));
+  const animatedLogoStyle = useAnimatedStyle(() => {
+    // Interpolar o valor para a rotação em Y
+    const rotation = interpolate(
+      logoRotateY.value,
+      [0, 0.5, 1], // Intervalos da animação (0 a 1)
+      [-5, 0, 5], // Graus de rotação (-5deg a +5deg)
+      Extrapolate.CLAMP // Previne que os valores extrapolem
+    );
 
-  // NOVO: Estilo animado para o reflexo inferior
-  const animatedReflectionStyle = useAnimatedStyle(() => ({
-    // Aplicar a mesma escala do logo para responsividade
-    transform: [
-      { scaleX: logoScale.value },
-      { scaleY: logoScale.value * -1 }, // Inverter verticalmente para criar o reflexo
-      { perspective: 1000 }, // Necessário para que rotateX tenha um efeito 3D
-      { rotateX: '20deg' }, // Inclinar o reflexo ligeiramente para trás (ajuste conforme necessário)
-    ],
-    opacity: reflectionOpacityAnim.value, // Aplicar a opacidade animada
-  }));
+    return {
+      transform: [
+        { scale: logoScale.value * logoPulseScale.value }, // Combina escala de entrada e pulso
+        { rotateY: `${rotation}deg` }, // Rotação em Y
+      ],
+      opacity: logoOpacity.value,
+    };
+  });
+
+  // Estilo animado para o reflexo inferior
+  const animatedReflectionStyle = useAnimatedStyle(() => {
+    // Interpolar o valor para o skew em X
+    const skew = interpolate(
+      reflectionSkewX.value,
+      [0, 0.5, 1],
+      [-2, 0, 2], // Skew de -2deg a +2deg
+      Extrapolate.CLAMP
+    );
+
+    return {
+      // Aplicar a mesma escala do logo para responsividade
+      transform: [
+        { scaleX: logoScale.value * logoPulseScale.value }, // Escala combinada
+        { scaleY: logoScale.value * logoPulseScale.value * -1 }, // Inverter verticalmente para criar o reflexo
+        { perspective: 1000 },
+        { rotateX: '20deg' }, // Inclinar o reflexo ligeiramente para trás
+        { translateY: reflectionTranslateY.value }, // Flutuação vertical
+        { skewX: `${skew}deg` }, // Efeito de ondulação
+      ],
+      opacity: reflectionOpacityAnim.value, // Aplicar a opacidade animada
+      filter: Platform.OS === 'web' ? `hue-rotate(${reflectionHueRotate.value}deg)` : undefined, // Rotação de matiz para web (não disponível diretamente no RN para Image)
+    };
+  });
 
   return (
     <View style={styles.container}>
@@ -90,6 +169,7 @@ export default function WelcomeScreen() {
       />
 
       {/* Grupo para o Logo e seu Reflexo, centralizado na tela como uma unidade */}
+      {/* Ajustado o posicionamento para ficar no centro exato da tela */}
       <View style={styles.logoAndReflectionGroup}>
         {/* Logo Principal */}
         <Animated.View style={[styles.logoWrapper, animatedLogoStyle]}>
@@ -122,23 +202,28 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden', // Garante que nada saia dos limites do contêiner
+    justifyContent: 'center', // Centraliza o conteúdo (logoAndReflectionGroup) vertical e horizontalmente
+    overflow: 'hidden',
   },
   gradientBackground: {
-    ...StyleSheet.absoluteFillObject, // Preenche todo o espaço do contêiner pai
+    ...StyleSheet.absoluteFillObject,
     opacity: 1,
   },
   // Grupo para o logo e seu reflexo, centralizado como uma única unidade
   logoAndReflectionGroup: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center', // Centraliza os itens filhos (logo e reflexo) horizontalmente dentro do grupo
     flexDirection: 'column', // Empilha o logo e o reflexo verticalmente
+    // Ajuste fino para a margem inferior do grupo, empurrando-o ligeiramente para cima se necessário
+    // Se o logo já está no centro do container por causa do 'justifyContent: center' no container,
+    // este marginBotom irá empurrar o grupo inteiro para cima para dar a impressão de
+    // que o reflexo tem 'margem inferior pouca'.
+    marginBottom: BOTTOM_MARGIN_FOR_REFLECTION,
   },
   logoWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: REFLECTION_GAP, // Adiciona um espaçamento abaixo do logo
+    bottom: -100, // Mantém o posicionamento existente
+    marginBottom: REFLECTION_GAP, // Espaçamento entre o logo e o reflexo
   },
   logoImage: {
     width: LOGO_WIDTH,
@@ -149,11 +234,12 @@ const styles = StyleSheet.create({
   reflectionWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: LOGO_WIDTH, // Garante que o reflexo tenha as mesmas dimensões do logo
+    bottom: 124, // Mantém o posicionamento existente
+    width: LOGO_WIDTH,
     height: LOGO_HEIGHT,
-    overflow: 'hidden', // Crucial para cortar o reflexo em suas bordas
+    overflow: 'hidden',
   },
   reflectionGradientOverlay: {
-    ...StyleSheet.absoluteFillObject, // Preenche todo o espaço do contêiner do reflexo
+    ...StyleSheet.absoluteFillObject,
   },
 });

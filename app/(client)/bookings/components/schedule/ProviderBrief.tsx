@@ -84,11 +84,12 @@ export default function ProviderBrief({ provider, serviceName, isLoading }: Prov
         : 'Serviço não especificado');
 
     // Cores do gradiente com opacidade - ATUALIZADAS CONFORME SUA SOLICITAÇÃO
-    const gradientColors: ColorValue[] = [
+    // SOLUÇÃO DO ERRO: Usando 'as const' para garantir que o tipo do array seja uma tupla readonly
+    const gradientColors = [ // Não precisa mais do 'ColorValue[]' explícito aqui
         'rgb(173, 216, 230)', // Azul claro com baixa opacidade
-        'rgba(65, 153, 225, 0.29)',  // Azul com média opacidade
+        'rgba(65, 153, 225, 0.29)',   // Azul com média opacidade
         'rgba(133, 168, 231, 0.66)', // Azul claro com alta opacidade
-    ];
+    ] as const; // <--- ADICIONE ISSO AQUI!
 
     if (isLoading || !provider) {
         return (
@@ -158,15 +159,11 @@ const styles = StyleSheet.create({
         // Removido backgroundColor: '#FFFFFF', pois o LinearGradient o substitui
         borderRadius: 15, // Mais arredondado para um visual moderno
         marginHorizontal: 30, // Consistência de margem lateral
-        marginTop: 10,
+        marginTop: 30,
         marginBottom: 10,
-        
+
         // Mantemos as sombras aqui, pois o LinearGradient pode aplicá-las
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 25,
-        elevation: 5,
+    
     },
     providerImageSmall: {
         width: 55, // Um pouco maior para destaque
@@ -207,7 +204,7 @@ const styles = StyleSheet.create({
         fontSize: 13, // Um pouco maior
         color: '#666',
         marginBottom: 9, // Mais espaço abaixo do serviço
-        
+
     },
     ratingContainer: {
         flexDirection: 'row',
@@ -218,7 +215,7 @@ const styles = StyleSheet.create({
         fontSize: 9, // Tamanho de fonte ajustado
         color: '#888',
         fontWeight: 'normal',
-        
+
     },
     ratingStarContainer: {
         flexDirection: 'row',

@@ -60,9 +60,9 @@ const styles = StyleSheet.create({
     }),
   },
   actionButtonImmediateText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: '#4A90E2', // Using headerPrimaryColor directly
-    marginLeft: 10,
+    marginLeft: 5,
   },
 });

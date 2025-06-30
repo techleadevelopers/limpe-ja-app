@@ -178,11 +178,11 @@ export default function ClientProfileScreen() {
             <Animated.View style={[styles.customHeader, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
                 {/* Seta de Voltar à Esquerda */}
                 <TouchableOpacity style={styles.headerIconLeft} onPress={handleGoBack}>
-                    <Ionicons name="arrow-back-outline" size={24} color="#FFFFFF" />
+                    <Ionicons name="arrow-back-outline" size={22} color="#FFFFFF" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Meu Perfil</Text>
                 <TouchableOpacity style={styles.headerIconRight} onPress={() => router.push('/(common)/settings' as any)}>
-                    <Ionicons name="settings-outline" size={24} color="#FFFFFF" />
+                    <Ionicons name="settings-outline" size={22} color="#FFFFFF" />
                 </TouchableOpacity>
             </Animated.View>
 
@@ -238,6 +238,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#F8F9FA',
+        paddingVertical: 20,
     },
     scrollView: {
         flex: 1,
@@ -284,7 +285,7 @@ const styles = StyleSheet.create({
         position: 'relative', // Para posicionar os ícones com 'absolute'
     },
     headerTitle: {
-        fontSize: 20,
+        fontSize: 18,
         fontWeight: 'bold',
         color: '#FFFFFF',
         // flex: 1, // Removido flex:1 para permitir centralização com itens absolutos

@@ -545,11 +545,7 @@ const styles = StyleSheet.create({
         paddingVertical: 25,
         paddingHorizontal: 15, // Padding interno
         marginTop: 25,
-        shadowColor: 'rgba(37, 39, 41, 0.66)',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.58,
-        shadowRadius: 3,
-        elevation: 2,
+
 
         // Propriedades da borda
 
@@ -613,8 +609,9 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         right: 0,
-        paddingHorizontal: 20,
-        paddingVertical: Platform.OS === 'ios' ? 25 : 15,
+        borderRadius: 40,
+        paddingHorizontal: 25,
+        paddingVertical: Platform.OS === 'ios' ? 25 : 42,
         backgroundColor: '#FFFFFF',
         borderTopWidth: 1,
         borderTopColor: '#E0E0E0',
@@ -626,8 +623,11 @@ const styles = StyleSheet.create({
     },
     confirmButton: {
         backgroundColor: '#2A72E7',
-        paddingVertical: 10, // Aumentar padding para botão mais "gordo"
+        paddingVertical: 7, // Aumentar padding para botão mais "gordo"
+        width: '90%',
         borderRadius: 12, // Mais arredondado
+        bottom: 25,
+        left: 12,
         alignItems: 'center',
     },
     confirmButtonDisabled: {
@@ -635,7 +635,7 @@ const styles = StyleSheet.create({
     },
     confirmButtonText: {
         color: '#FFFFFF',
-        fontSize: 16, // Aumentar fonte
+        fontSize: 15, // Aumentar fonte
         fontWeight: '700', // Mais negrito
     },
 

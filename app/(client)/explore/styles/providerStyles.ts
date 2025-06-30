@@ -16,12 +16,13 @@ export const styles = StyleSheet.create({
   // HeaderSection Styles
   // **** ALTERAÇÃO APLICADA AQUI PARA O ESPAÇAMENTO E BORDAS ARREDONDADAS ****
   headerImage: {
-    width: SCREEN_WIDTH - 30, // Largura total da tela menos 15 de margem horizontal em cada lado (15*2 = 30)
+    width: SCREEN_WIDTH - 49, // Largura total da tela menos 15 de margem horizontal em cada lado (15*2 = 30)
     height: IMAGE_HEIGHT,     // Altura da imagem, use a constante definida acima
     borderRadius: 15,         // Arredonda as bordas
     overflow: 'hidden',       // Garante que o conteúdo (ImageBackground) respeite o borderRadius
-    marginTop: 15,            // Margem superior para afastar do topo
-    marginHorizontal: 15,     // Margem nas laterais
+    marginTop: 55,            // Margem superior para afastar do topo
+    marginBottom: 10,
+    marginHorizontal: 25,     // Margem nas laterais
     alignSelf: 'center',      // Centraliza a imagem/container na tela
     justifyContent: 'flex-end', // Mantém o conteúdo (overlay) na parte inferior da imagem
     
@@ -36,7 +37,7 @@ export const styles = StyleSheet.create({
     elevation: 8, // Para Android
   },
   // **************************************************************************
-  headerImageOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.30)', paddingHorizontal: 15, paddingTop: Platform.OS === 'ios' ? 50 : 25, paddingBottom: 15, justifyContent: 'space-between' },
+  headerImageOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.30)', paddingHorizontal: 15, paddingTop: Platform.OS === 'ios' ? 20 : 15, paddingBottom: 15, justifyContent: 'space-between' },
   topNavContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   iconButtonBackground: { backgroundColor: 'rgba(0,0,0,0.35)', padding: 10, borderRadius: 20 },
 
@@ -47,20 +48,21 @@ export const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    marginTop: 24,
+    marginTop: 20,
     minHeight: Dimensions.get('window').height * 0.5,
   },
 
   // NOVOS ESTILOS para as informações do provedor na área branca
   providerInfoWhiteCard: {
     paddingHorizontal: 30,
-    marginBottom: 20, // Espaço entre as informações e o conteúdo abaixo
+    marginBottom: 0, // Espaço entre as informações e o conteúdo abaixo
   },
   providerNameWhiteCard: {
     fontSize: 20,
     fontWeight: '700',
     color: '#111111',
     marginBottom: 5,
+    marginTop: -15,
   },
   locationContainerWhiteCard: {
     flexDirection: 'row',
@@ -68,7 +70,7 @@ export const styles = StyleSheet.create({
     marginBottom: 10,
   },
   locationTextWhiteCard: {
-    fontSize: 12.5,
+    fontSize: 13.5,
     color: '#666',
     marginLeft: 5,
   },
@@ -76,7 +78,7 @@ export const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: '#333',
-    marginBottom: -45,
+    marginBottom: -20,
   },
 
   // O tabContentContainer será reutilizado para o padding geral do conteúdo
@@ -91,19 +93,19 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 0,
     backgroundColor: 'transparent',
     borderRadius: 8,
-    left: 290,
-    bottom: 73, // sobe o container sem colapsar altura
+    left: 210,
+    bottom: 90, // sobe o container sem colapsar altura
   },
 
   robustReviewsText: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: 'sans-serif',
     color: '#333',
     marginLeft: 8,
     fontWeight: '500',
     position:'relative',
     top: 18,
-    right: 98,
+    right: 85,
   },
 
   starIcon: {
@@ -113,13 +115,25 @@ export const styles = StyleSheet.create({
   starRatingContainer: { flexDirection: 'row' }, // Used in ReviewCard too
 
   // InfoChip Styles
-  infoChipsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
-  infoChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0F0F0', paddingVertical: 7, paddingHorizontal: 12, borderRadius: 16 },
+  infoChipsContainer: { 
+    flexDirection: 'row', 
+    flexWrap: 'wrap', 
+    gap: 8, 
+    marginBottom: 10 },
+
+  infoChip: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#F0F0F0', 
+    paddingVertical: 7, 
+    paddingHorizontal: 12, 
+    borderRadius: 16 },
+
   infoChipText: { fontSize: 12, color: '#333333', marginLeft: 6, fontWeight: '500' },
 
   // OverviewContent & DetailsContent Common Styles
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#111111', marginBottom: 12 },
-  descriptionText: { fontSize: 15, lineHeight: 24, color: '#555555', textAlign: 'left', marginBottom: 25 },
+  sectionTitle: { fontSize: 18, fontWeight: '700', left: 10, color: '#111111', marginBottom: 12, marginTop: 7, },
+  descriptionText: { fontSize: 15, lineHeight: 23, left: 10, color: '#555555', textAlign: 'left', marginBottom: 25 },
   noReviewsText: { fontSize: 14, color: '#6C757D', fontStyle: 'italic', textAlign: 'center', paddingVertical: 15 },
   noDetailsText: { fontSize: 14, color: '#6C757D', fontStyle: 'italic', marginVertical: 10 },
   availabilityText: { fontSize: 14, lineHeight: 21, color: '#495057' },
@@ -128,7 +142,7 @@ export const styles = StyleSheet.create({
   actionButtonsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginTop: 1,
+    marginTop: 10,
     marginBottom: 25,
     borderTopWidth: 1,
     borderTopColor: '#EEE',

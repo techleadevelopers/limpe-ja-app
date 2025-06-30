@@ -23,11 +23,11 @@ async function main() {
     // Se um endereço for 1:1, a melhor forma é criar e conectar.
     const existingAddress = await prisma.address.findFirst({
         where: {
-            cep: addressData.cep,
-            street: addressData.street,
-            number: addressData.number,
-            city: addressData.city,
-            state: addressData.state
+          cep: addressData.cep,
+          street: addressData.street,
+          number: addressData.number,
+          city: addressData.city,
+          state: addressData.state
         }
     });
 
@@ -275,22 +275,22 @@ async function main() {
       pixKey: 'joao.souza@banco.com.br',
     },
     {
-      email: 'provider3@cleaning.com',
-      password: 'testprovider3pass',
-      fullName: 'Helena Teste',
-      cpf: '333.333.333-33',
-      dateOfBirth: new Date('1995-03-01'),
-      phone: '11955555555',
-      yearsOfExperience: 2,
-      avatarUrl: 'https://randomuser.me/api/portraits/thumb/women/12.jpg',
-      verificationStatus: VerificationStatus.PENDING_INITIAL_REVIEW,
-      bio: 'Profissional organizada e atenciosa, buscando sempre a satisfação do cliente.',
-      address: {
-        cep: '03100-000', street: 'Rua das Cores', number: '50', neighborhood: 'Mooca', city: 'São Paulo', state: 'SP',
-      },
-      services: ['Residencial', 'Passadoria'],
-      pixKey: 'helena.pix@email.com',
-    },
+  email: 'provider3@cleaning.com',
+  password: 'testprovider3pass',
+  fullName: 'Helena Teste',
+  cpf: '333.333.333-33',
+  dateOfBirth: new Date('1995-03-01'),
+  phone: '11955555555',
+  yearsOfExperience: 2, // <--- Adicionado: anos de experiência
+  avatarUrl: 'https://randomuser.me/api/portraits/thumb/women/12.jpg',
+  verificationStatus: VerificationStatus.PENDING_INITIAL_REVIEW,
+  bio: 'Profissional organizada e atenciosa, buscando sempre a satisfação do cliente.',
+  address: {
+    cep: '03100-000', street: 'Rua das Cores', number: '50', neighborhood: 'Mooca', city: 'São Paulo', state: 'SP',
+  },
+  services: ['Residencial', 'Passadoria'],
+  pixKey: 'helena.pix@email.com',
+}
   ];
 
   for (const providerData of testProvidersData) {
@@ -547,42 +547,61 @@ async function main() {
     }
     console.log(`Disponibilidade genérica para Maria da Silva (Seg-Sex) criada/atualizada.`);
 
-    // **MODIFICAÇÃO AQUI: Disponibilidade para João de Souza (Sexta, Sábado, Domingo)**
-    // 0: Domingo, 5: Sexta, 6: Sábado
-    // Estes são os dias da semana que cobrem 28, 29 e 30 de junho de 2025.
-    const joaoAvailableDaysOfWeek = [0, 5, 6]; 
+    // --- MODIFICAÇÃO: Disponibilidade para João de Souza para 30/06, 01/07 e 02/07 (Seg, Ter, Qua) ---
+    // Usando Date para obter o dia da semana correto para as datas futuras
+    const today = new Date();
+    // 30 de junho de 2025 (Segunda-feira)
+    const june30 = new Date(today.getFullYear(), 5, 30); // Mês 5 é Junho (0-indexado)
+    // 1 de julho de 2025 (Terça-feira)
+    const july01 = new Date(today.getFullYear(), 6, 1); // Mês 6 é Julho (0-indexado)
+    // 2 de julho de 2025 (Quarta-feira)
+    const july02 = new Date(today.getFullYear(), 6, 2); // Mês 6 é Julho (0-indexado)
 
-    for (const dayOfWeek of joaoAvailableDaysOfWeek) {
+
+    // Array de objetos contendo a data e o dia da semana (0=Dom, 1=Seg...)
+    const joaoSpecificDates = [
+        { date: june30, dayOfWeek: june30.getDay() }, // Deve ser 1 (Segunda)
+        { date: july01, dayOfWeek: july01.getDay() }, // Deve ser 2 (Terça)
+        { date: july02, dayOfWeek: july02.getDay() }, // Deve ser 3 (Quarta)
+    ];
+
+    for (const specificDate of joaoSpecificDates) {
       for (const slot of allDaySlots) {
-        // UPSERT MANUAL para João
-        const existingAvailability = await prisma.availability.findFirst({
+        // UPSERT MANUAL para João para as datas específicas
+        const existingSpecificAvailability = await prisma.availability.findFirst({
           where: {
             providerId: joaoProvider.id,
-            dayOfWeek: dayOfWeek,
+            dayOfWeek: specificDate.dayOfWeek,
             startTime: slot.startTime,
             endTime: slot.endTime,
+            // Adicionar filtro por data específica se o seu modelo Availability permite
+            // Se o modelo Availability é apenas para disponibilidade semanal recorrente,
+            // então não é necessário filtrar por data, apenas por dayOfWeek
           },
         });
 
-        if (existingAvailability) {
+        if (existingSpecificAvailability) {
           await prisma.availability.update({
-            where: { id: existingAvailability.id },
+            where: { id: existingSpecificAvailability.id },
             data: { isAvailable: true },
           });
         } else {
           await prisma.availability.create({
             data: {
               providerId: joaoProvider.id,
-              dayOfWeek: dayOfWeek,
+              dayOfWeek: specificDate.dayOfWeek,
               startTime: slot.startTime,
               endTime: slot.endTime,
               isAvailable: true,
+              // Se você tiver um campo de data específica na sua tabela Availability, adicione aqui:
+              // specificDate: specificDate.date,
             },
           });
         }
       }
+      console.log(`Disponibilidade completa para João de Souza no dia ${specificDate.date.toLocaleDateString('pt-BR')} (Dia da Semana: ${specificDate.dayOfWeek}) criada/atualizada.`);
     }
-    console.log(`Disponibilidade completa para João de Souza (Sexta, Sábado, Domingo) criada/atualizada.`);
+
   } else {
     console.warn('Não foi possível criar disponibilidade. Provedores não encontrados.');
   }
