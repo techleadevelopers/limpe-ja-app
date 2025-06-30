@@ -1,19 +1,16 @@
 // src/bookings/dto/booking-details.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Booking, BookingStatus, Client, Provider, ProviderService, Service, User, Prisma, Address } from '@prisma/client';
-import { IsString, IsNumber, IsDate, IsEnum, IsOptional, IsEmail } from 'class-validator'; // Mantenha IsDate para outros campos Date
+import { IsString, IsNumber, IsDate, IsEnum, IsOptional, IsEmail, IsUrl } from 'class-validator'; // Adicionado IsUrl aqui
 import { CreateAddressDto } from '../../common/dto/create-address.dto';
 
 // Define um tipo auxiliar para a estrutura completa do Booking com suas relações
 // que será recebida do Prisma para construir o DTO.
 type BookingWithRelations = Booking & {
   client: Client & { user: User };
-  provider: Provider & { user: User };
+  provider: Provider & { user: User | null }; // Adicionado 'user | null' caso o user do provider possa ser nulo
   providerService: ProviderService & { service: Service };
   address?: Address | null;
-  // >>> CORREÇÃO AQUI: scheduledDate pode ser Date ou null vindo do Prisma,
-  // mesmo que o schema defina como Date em alguns casos (se não for explicitamente non-nullable).
-  // A tipagem reflete o que pode vir na prática.
   scheduledDate: Date | null;
 };
 
@@ -38,6 +35,11 @@ export class BookingDetailsDto {
   @IsEmail()
   clientEmail: string;
 
+  @ApiPropertyOptional({ description: 'URL do avatar do cliente', example: 'http://example.com/client_avatar.jpg' })
+  @IsOptional()
+  @IsUrl()
+  clientAvatarUrl?: string | null; // Adicionado clientAvatarUrl ao DTO de saída
+
   @ApiProperty({ description: 'Nome completo do provedor', example: 'Maria de Souza' })
   @IsString()
   providerFullName: string;
@@ -45,6 +47,11 @@ export class BookingDetailsDto {
   @ApiProperty({ description: 'Email do provedor', example: 'maria.souza@example.com' })
   @IsEmail()
   providerEmail: string;
+
+  @ApiPropertyOptional({ description: 'URL do avatar do provedor', example: 'http://example.com/provider_avatar.jpg' })
+  @IsOptional()
+  @IsUrl()
+  providerAvatarUrl?: string | null; // <<< ADICIONADO AQUI: providerAvatarUrl
 
   @ApiProperty({ description: 'Nome do serviço agendado', example: 'Limpeza Padrão' })
   @IsString()
@@ -64,8 +71,8 @@ export class BookingDetailsDto {
   providerServiceDescription?: string | null;
 
   @ApiProperty({ description: 'Data e hora agendadas para o serviço (ISO 8601)', example: '2025-06-15T10:00:00.000Z' })
-  @IsString() // ALTERADO: De @IsDate() para @IsString()
-  scheduledDateTime: string; // ALTERADO: De Date para string
+  @IsString()
+  scheduledDateTime: string;
 
   @ApiProperty({ enum: BookingStatus, description: 'Status atual do agendamento', example: BookingStatus.PENDING })
   @IsEnum(BookingStatus)
@@ -81,11 +88,11 @@ export class BookingDetailsDto {
   notes?: string | null;
 
   @ApiProperty({ description: 'Data de criação do agendamento', example: '2025-06-10T10:00:00.000Z' })
-  @IsDate() // Mantido como @IsDate()
+  @IsDate()
   createdAt: Date;
 
   @ApiProperty({ description: 'Data da última atualização do agendamento', example: '2025-06-10T10:00:00.000Z' })
-  @IsDate() // Mantido como @IsDate()
+  @IsDate()
   updatedAt: Date;
 
   @ApiPropertyOptional({ type: () => CreateAddressDto, description: 'Endereço onde o serviço será realizado' })
@@ -96,10 +103,17 @@ export class BookingDetailsDto {
     this.id = booking.id;
     this.clientId = booking.clientId;
     this.providerId = booking.providerId;
+
+    // Mapeamento de dados do cliente (incluindo avatar)
     this.clientFullName = booking.client.fullName;
     this.clientEmail = booking.client.user.email;
+    this.clientAvatarUrl = booking.client.user?.avatarUrl || null; // Mapeamento para clientAvatarUrl
+
+    // Mapeamento de dados do provedor (incluindo avatar)
     this.providerFullName = booking.provider.fullName;
-    this.providerEmail = booking.provider.user.email;
+    this.providerEmail = booking.provider.user?.email || ''; // user pode ser null, então fallback para string vazia
+    this.providerAvatarUrl = booking.provider.user?.avatarUrl || null; // <<< Mapeamento para providerAvatarUrl
+
     this.serviceName = booking.providerService.service.name;
     this.servicePrice = booking.providerService.price.toNumber();
     this.serviceDurationMinutes = booking.providerService.durationMinutes;
@@ -110,30 +124,23 @@ export class BookingDetailsDto {
     console.log("[BookingDetailsDto - DEBUG] booking.scheduledTime:", booking.scheduledTime, " (Tipo:", typeof booking.scheduledTime, ")");
 
     let datePart: string;
-    // Verifica se scheduledDate é uma instância de Date E se é uma data válida.
-    // Isso cobre casos de null/undefined e Date("Invalid Date")
     if (booking.scheduledDate instanceof Date && !isNaN(booking.scheduledDate.getTime())) {
         datePart = booking.scheduledDate.toISOString().split('T')[0];
     } else {
-        // Loga o valor problemático e usa um fallback seguro.
         console.error("[BookingDetailsDto - ERROR] booking.scheduledDate inválido, nulo/indefinido ou não é um objeto Date válido. Valor recebido:", booking.scheduledDate);
-        datePart = '1970-01-01'; // Fallback para garantir uma string de data
+        datePart = '1970-01-01'; // Fallback
     }
 
-    const timePart = booking.scheduledTime || '00:00'; // Garante que timePart não seja undefined ou null
-    
-    const combinedDateTimeString = `${datePart}T${timePart}:00Z`; // Adicionei 'Z' para indicar que é UTC, se for o caso
-    console.log("[BookingDetailsDto - DEBUG] String combinada para scheduledDateTime FINAL (como string):", combinedDateTimeString); // Mudei o log
+    const timePart = booking.scheduledTime || '00:00';
+    const combinedDateTimeString = `${datePart}T${timePart}:00Z`;
+    console.log("[BookingDetailsDto - DEBUG] String combinada para scheduledDateTime FINAL (como string):", combinedDateTimeString);
 
-    // ATRIBUIÇÃO DIRETA DA STRING ISO PARA scheduledDateTime
-    this.scheduledDateTime = combinedDateTimeString; // ALTERADO: Atribui a string diretamente
-
+    this.scheduledDateTime = combinedDateTimeString;
     // ***** FIM DOS LOGS DEFENSIVOS E COMBINAÇÃO *****
 
     this.status = booking.status;
     this.totalPrice = booking.totalPrice.toNumber();
     this.notes = booking.notes;
-    // createdAt e updatedAt já são Date em BookingWithRelations e serão serializados automaticamente
     this.createdAt = booking.createdAt;
     this.updatedAt = booking.updatedAt;
     if (booking.address) {
