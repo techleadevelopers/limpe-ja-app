@@ -1,12 +1,7 @@
 # Stage 1: Build a development image with all dependencies
-# Usando a imagem Node.js 22 COMPLETA.
 FROM node:22 AS build 
 
 WORKDIR /usr/src/app
-
-# Remova COMPLETAMENTE todas as linhas 'RUN apt-get install libssl...' aqui.
-# E REMOVA COMPLETAMENTE a linha 'ENV PRISMA_QUERY_ENGINE_LIBRARY' aqui.
-# A imagem node:22 já tem libssl3, e o schema.prisma instruirá o Prisma a usar o motor 3.0.x.
 
 COPY package*.json ./
 RUN npm install
@@ -23,14 +18,24 @@ FROM node:22 AS production
 
 WORKDIR /usr/src/app
 
-# Remova COMPLETAMENTE todas as linhas 'RUN apt-get install libssl...' aqui.
-# E REMOVA COMPLETAMENTE a linha 'ENV PRISMA_QUERY_ENGINE_LIBRARY' aqui.
-
 COPY --from=build /usr/src/app/node_modules ./node_modules
 COPY --from=build /usr/src/app/dist ./dist
 COPY --from=build /usr/src/app/node_modules/.prisma/client ./node_modules/.prisma/client
 COPY --from=build /usr/src/app/prisma/schema.prisma ./prisma/schema.prisma
 
-ENV PORT 8080
-EXPOSE 8080
+# === INÍCIO DA MODIFICAÇÃO CRÍTICA: VARIÁVEIS DE AMBIENTE HARDCODED (INSEGURO PARA PROD!) ===
+# As variáveis abaixo podem ser definidas diretamente como ENV
+ENV DATABASE_URL="postgresql://limpeja_user:Testesimple123@/limpeja_db?host=/cloudsql/semiotic-anvil-461613-c0:southamerica-east1:cleaning-app-db"
+ENV JWT_SECRET="aebd6ebe83b77673c90c3752c53c3bf20591b26803727859d3a728a0cd57abc2"
+ENV JWT_EXPIRATION_TIME="'1h'"
+ENV GCS_PROJECT_ID="semiotic-anvil-461613-c0"
+ENV GCS_BUCKET_NAME="upload-semiotic-anvil-448955"
+
+# Para a chave GCS, usamos ARG e then ENV para lidar com a complexidade da string
+ARG GCS_KEY_FILE_CONTENT_BASE64_ARG # <-- DECLARAÇÃO DO ARGUMENTO DE BUILD
+ENV GCS_KEY_FILE_CONTENT=$GCS_KEY_FILE_CONTENT_BASE64_ARG 
+# === FIM DA MODIFICAÇÃO CRÍTICA ===
+
+ENV PORT 8080 
+EXPOSE 8080 
 CMD ["node", "dist/main.js"]
