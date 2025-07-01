@@ -1,57 +1,68 @@
 // src/prisma/prisma.service.ts
 import { INestApplication, Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import { ConfigService } from '@nestjs/config'; // Importe ConfigService
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
-  constructor() {
-    // A configuração 'log' é fundamental para a inferência de tipos do '$on'
+  // ConfigService é uma propriedade de parâmetro do construtor,
+  // que é OK para TypeScript.
+  constructor(private configService: ConfigService) {
+    // A chamada super() DEVE ser a primeira instrução
+    // A lógica de construção da URL DEVE acontecer ANTES do super(),
+    // ou dentro do objeto passado para super(), ou usando uma função auxiliar.
+
+    // Obtenha as variáveis de ambiente necessárias ANTES de chamar super()
+    const dbUsername = configService.get<string>('DB_USERNAME');
+    const dbPassword = configService.get<string>('DB_PASSWORD'); // Vem do Secret Manager
+    const dbDatabase = configService.get<string>('DB_DATABASE');
+    const dbCloudSqlInstance = configService.get<string>('DB_CLOUD_SQL_INSTANCE');
+
+    // Validação básica para garantir que as variáveis estão presentes
+    if (!dbUsername || !dbPassword || !dbDatabase || !dbCloudSqlInstance) {
+      console.error('ERRO: Variáveis de ambiente do banco de dados incompletas. Verifique DB_USERNAME, DB_PASSWORD, DB_DATABASE, DB_CLOUD_SQL_INSTANCE.');
+      throw new Error('Configurações de banco de dados ausentes.');
+    }
+
+    // Construa a DATABASE_URL completa para o Prisma
+    const databaseUrl = `postgresql://${dbUsername}:${dbPassword}@/${dbDatabase}?host=/cloudsql/${dbCloudSqlInstance}`;
+    
+    // Chame o construtor da classe pai (PrismaClient) COM A URL construída
+    // Esta é a PRIMEIRA instrução que executa o constructor de PrismaClient.
     super({
-      log: ['warn', 'error'], // Tente com 'warn' e 'error' juntos.
-      // Você pode tentar também: log: ['query', 'info', 'warn', 'error'],
+      datasources: {
+        db: {
+          url: databaseUrl,
+        },
+      },
+      log: ['warn', 'error'], // Manter logs para depuração
     });
+
+    // TODO: Se você precisar usar 'this' para outras inicializações
+    // elas devem vir AQUI, DEPOIS da chamada super().
   }
 
   async onModuleInit() {
     await this.$connect();
+    console.log('PrismaService conectado ao banco de dados.'); // Log de sucesso
   }
 
   async onModuleDestroy() {
     await this.$disconnect();
+    console.log('PrismaService desconectado do banco de dados.'); // Log de desconexão
   }
 
-  // Método para habilitar os hooks de desligamento.
-  // Se o erro 'beforeExit' persistir, vamos tentar uma alternativa.
   async enableShutdownHooks(app: INestApplication) {
-    // Primeira tentativa: Usar o hook 'beforeExit' do Prisma
-    // Se o erro TS2345 ainda estiver aqui, o problema é na inferência de tipos do PrismaClient.
-    // this.$on('beforeExit', async () => { // Linha que está dando erro
-    //   await app.close();
-    // });
-
-    // Segunda tentativa (Alternativa): Usar um hook de processo do Node.js
-    // Esta é uma forma mais genérica de lidar com o desligamento da aplicação.
-    // É importante notar que 'beforeExit' do Node.js é diferente do 'beforeExit' do Prisma.
-    // O do Node.js é chamado quando o event loop está vazio, o que pode não ser ideal para
-    // garantir que todas as operações assíncronas do NestJS sejam finalizadas.
-    // Para desligamentos mais robustos, 'SIGINT' (Ctrl+C) ou 'SIGTERM' são melhores.
-
-    // Usaremos 'SIGINT' (para Ctrl+C) e 'SIGTERM' (para comandos de encerramento de processos)
-    // para garantir um desligamento gracioso.
     process.on('SIGINT', async () => {
+      console.log('Recebido SIGINT. Fechando aplicação NestJS...');
       await app.close();
-      process.exit(0); // Garante que o processo Node.js saia
+      process.exit(0);
     });
 
     process.on('SIGTERM', async () => {
+      console.log('Recebido SIGTERM. Fechando aplicação NestJS...');
       await app.close();
-      process.exit(0); // Garante que o processo Node.js saia
+      process.exit(0);
     });
-
-    // Se você realmente precisa do 'beforeExit' do Prisma, e o erro persiste,
-    // podemos tentar um 'type assertion' (mas isso é um último recurso, pois ignora o erro de tipo).
-    // (this as any).$on('beforeExit', async () => {
-    //   await app.close();
-    // });
   }
 }
