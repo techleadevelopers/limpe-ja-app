@@ -27,11 +27,10 @@ COPY --from=build /usr/src/app/dist ./dist
 COPY --from=build /usr/src/app/node_modules/.prisma/client ./node_modules/.prisma/client
 COPY --from=build /usr/src/app/prisma/schema.prisma ./prisma/schema.prisma
 
-# === IMPORTANTE: DATABASE_URL COMPLETA E HARDCODED AQUI (NÃO RECOMENDADO PARA PRODUÇÃO!) ===
-# Esta URL é para conexão via IP, não via Cloud SQL Proxy.
-# Se seu banco de dados Cloud SQL requer conexão via IP público e você configurou o firewall.
-# Se for para Cloud Run, você DEVERIA usar o Cloud SQL Proxy via socket.
-ENV DATABASE_URL="postgresql://limpeja_user:Testesimple123@34.39.152.54:5432/limpeja_db?pgbouncer=true"
+# === DATABASE_URL COMPLETA E HARDCODED AQUI (NÃO RECOMENDADO PARA PRODUÇÃO!) ===
+# Esta URL é para conexão via Cloud SQL Proxy (Unix socket).
+# A senha 'Testesimple123' está hardcoded aqui.
+ENV DATABASE_URL="postgresql://limpeja_user:Testesimple123@/limpeja_db?host=/cloudsql/semiotic-anvil-461613-c0:southamerica-east1:limpeja-db-prod-v2"
 
 ENV GCS_PROJECT_ID="semiotic-anvil-461613-c0"
 ENV GCS_BUCKET_NAME="upload-semiotic-anvil-448955"
