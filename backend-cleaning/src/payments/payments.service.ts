@@ -6,14 +6,27 @@ import { RequestWithdrawalDto } from './dto/request-withdrawal.dto';
 import { TransactionType, BookingStatus, UserRole } from '@prisma/client';
 import { TransactionEntity } from './entities/transaction.entity';
 import { MessageResponseDto } from '../common/dto/message-response.dto';
+import { ConfigService } from '@nestjs/config'; // Importe ConfigService
+import axios from 'axios'; // Importe axios para fazer requisições HTTP
 
 @Injectable()
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
+  private pagseguroApiToken: string;
+  private pagseguroApiBaseUrl: string;
 
   constructor(
     private prisma: PrismaService,
-  ) {}
+    private configService: ConfigService, // Injete ConfigService aqui
+  ) {
+    this.pagseguroApiToken = this.configService.get<string>('PAGSEGURO_API_TOKEN');
+    this.pagseguroApiBaseUrl = this.configService.get<string>('PAGSEGURO_API_BASE_URL', 'https://api.pagseguro.com'); // Default para produção
+
+    if (!this.pagseguroApiToken) {
+      this.logger.error('PAGSEGURO_API_TOKEN não configurado. As integrações com PagSeguro não funcionarão.');
+      throw new Error('PAGSEGURO_API_TOKEN ausente.');
+    }
+  }
 
   /**
    * Cria uma nova cobrança PIX e registra a transação.
@@ -46,29 +59,43 @@ export class PaymentsService {
     this.logger.log(`[PaymentsService] createPixCharge - Provedor "${providerId}" encontrado.`);
 
     try {
-      // --- INÍCIO DA INTEGRAÇÃO REAL COM GATEWAY DE PAGAMENTO PIX ---
-      // TODO: Substituir esta simulação por uma integração real com um gateway de pagamento (ex: Stripe, PagSeguro, Cielo, etc.).
-      // Esta lógica deve chamar a API do gateway para gerar o QR Code/BR Code e obter os detalhes da cobrança.
-      // Exemplo conceitual de chamada a um gateway:
-      /*
-      const pixGatewayResponse = await this.pixGatewayService.createCharge({
-        value: amount,
+      // --- INÍCIO DA INTEGRAÇÃO REAL COM GATEWAY DE PAGAMENTO PIX (PagSeguro) ---
+      const pixGatewayResponse = await axios.post(`${this.pagseguroApiBaseUrl}/charges`, {
+        reference_id: bookingId || `booking_${Date.now()}`, // ID de referência para sua aplicação
         description: description,
-        // Outros parâmetros específicos do gateway, como ID do pedido, dados do pagador, etc.
+        amount: {
+          value: Math.round(amount * 100), // Valor em centavos
+          currency: 'BRL',
+        },
+        payment_method: {
+          type: 'PIX',
+        },
+        // Dados do cliente (exemplo, ajuste conforme seu DTO e dados disponíveis)
+        customer: {
+          email: clientId, // Usando clientId como email temporariamente, ajuste para o email real do cliente
+          // name: 'Nome do Cliente', // Adicione nome do cliente se disponível
+          // tax_id: 'CPF do Cliente', // Adicione CPF se disponível
+        },
+        notification_urls: [`${this.configService.get<string>('APP_BASE_URL')}/webhook/pagseguro`], // URL para webhooks
+        // Outros campos conforme a documentação da API de Pedidos do PagSeguro
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.pagseguroApiToken}`,
+        },
       });
 
-      const brCode = pixGatewayResponse.brCode;
-      const qrCodeImage = pixGatewayResponse.qrCodeUrl;
-      const expiresAt = new Date(pixGatewayResponse.expirationTime); // Converta para Date
-      const gatewayTransactionId = pixGatewayResponse.transactionId; // ID da transação no gateway
-      */
+      // Extrair dados da resposta do PagSeguro
+      const brCode = pixGatewayResponse.data.qr_codes?.[0]?.text; // BR Code (linha digitável)
+      const qrCodeImage = pixGatewayResponse.data.qr_codes?.[0]?.links?.[0]?.href; // URL da imagem do QR Code
+      const expiresAt = pixGatewayResponse.data.qr_codes?.[0]?.expiration_date ? new Date(pixGatewayResponse.data.qr_codes[0].expiration_date) : new Date(Date.now() + 3600 * 1000); // Exemplo de expiração
+      const gatewayTransactionId = pixGatewayResponse.data.id; // ID da transação no PagSeguro
 
-      // SIMULAÇÃO (REMOVER APÓS INTEGRAR COM GATEWAY REAL)
-      const simulatedTransactionId = `txn_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-      const simulatedBrCode = `00020101021226580014BR.GOV.BCB.PIX0136${simulatedTransactionId}5204000053039865802BR5913CLIENTE TESTE6008BRASILIA62070503***6304${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-      const simulatedQrCodeImage = `https://api.example.com/pix/qrcode/${simulatedTransactionId}.png`;
-      const simulatedExpiresAt = new Date(Date.now() + 3600 * 1000); // Expira em 1 hora
-      // FIM DA SIMULAÇÃO
+      if (!brCode || !qrCodeImage || !gatewayTransactionId) {
+        this.logger.error(`[PaymentsService] createPixCharge - Resposta inválida do PagSeguro: ${JSON.stringify(pixGatewayResponse.data)}`);
+        throw new InternalServerErrorException('Falha ao gerar dados de PIX. Resposta incompleta do gateway.');
+      }
+      // --- FIM DA INTEGRAÇÃO REAL COM GATEWAY DE PAGAMENTO PIX ---
 
       const transaction = await this.prisma.transaction.create({
         data: {
@@ -78,8 +105,8 @@ export class PaymentsService {
           status: 'PENDING', // O status inicial deve refletir a espera pela confirmação do pagamento
           description: description,
           ...(bookingId && { bookingId: bookingId }),
-          // Se o gateway retornar um ID de transação, armazene-o aqui:
-          // gatewayTransactionId: gatewayTransactionId,
+          gatewayTransactionId: gatewayTransactionId, // Armazena o ID da transação do gateway
+          qrCodeUrl: qrCodeImage, // Armazena a URL da imagem do QR Code
         },
       });
       this.logger.log(`[PaymentsService] createPixCharge - Transação criada com ID: ${transaction.id}`);
@@ -106,9 +133,9 @@ export class PaymentsService {
       return {
         transactionId: transaction.id,
         status: 'PENDING',
-        brCode: simulatedBrCode, // Use brCode do gateway
-        qrCodeImage: simulatedQrCodeImage, // Use qrCodeImage do gateway
-        expiresAt: simulatedExpiresAt, // Use expiresAt do gateway
+        brCode: brCode, // Use brCode do gateway
+        qrCodeImage: qrCodeImage, // Use qrCodeImage do gateway
+        expiresAt: expiresAt, // Use expiresAt do gateway
         amount: amount,
         description: description,
         bookingId: bookingId,

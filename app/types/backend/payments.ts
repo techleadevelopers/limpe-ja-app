@@ -14,13 +14,14 @@ export interface CreatePixChargeDto {
 /**
  * @interface PixChargeResponseDto
  * Resposta do backend após a criação de uma cobrança PIX.
+ * ALINHADO COM O BACKEND: qrCodeImage e expiresAt são requeridos e do tipo string.
  */
 export interface PixChargeResponseDto {
   transactionId: string; // ALTERADO: De 'id' para 'transactionId' para espelhar o backend
   status: 'PENDING' | 'PAID' | 'EXPIRED' | 'CANCELLED'; // Mantido o status que você definiu
   brCode: string; // ALTERADO: De 'pixCode' e 'qrCodeData' para 'brCode' (código copia e cola)
-  qrCodeImage: string; // ALTERADO: De 'qrCodeImageUrl' para 'qrCodeImage' (URL ou base64 da imagem do QR Code)
-  expiresAt?: string; // Alterado de Date para string (ISO) para ser consistente com o que geralmente vem da API
+  qrCodeImage: string; // CORREÇÃO: Agora requerido, pois o backend sempre retorna a URL
+  expiresAt: string; // CORREÇÃO: Agora requerido e do tipo string (ISO 8601), como é comum em APIs
   amount: number;
   description: string;
   bookingId?: string; // <<<<< CORREÇÃO: ADICIONADO A PROPRIEDADE AQUI >>>>>
@@ -31,11 +32,16 @@ export interface PixChargeResponseDto {
 /**
  * @interface RequestWithdrawalDto
  * DTO para solicitar um saque (para provedores).
+ * ALINHADO COM O BACKEND: Inclui todos os campos esperados pelo backend.
  */
 export interface RequestWithdrawalDto {
   amount: number;
-  bankAccountId?: string; // Opcional, se o provedor tiver várias contas
-  // Adicione outros campos como senha de transação, etc.
+  bankName: string; // Nome do banco
+  agencyNumber: string; // Número da agência
+  accountNumber: string; // Número da conta
+  accountType: string; // Tipo da conta (Corrente, Poupança)
+  notes?: string; // Observações adicionais
+  // bankAccountId?: string; // Removido, pois o backend não espera este campo diretamente para o saque
 }
 
 /**

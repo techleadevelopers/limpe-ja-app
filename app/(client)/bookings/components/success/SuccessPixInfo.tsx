@@ -5,8 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { PixChargeResponseDto } from '../../../../types/backend/payments';
 
-// Importa a imagem local do QR Code. O caminho é relativo ao local deste arquivo.
-const localPixQrCodeImage = require('../../../../../assets/images/pix.png');
+// A imagem local do QR Code agora é um fallback, não a fonte principal.
+// const localPixQrCodeImage = require('../../../../../assets/images/pix.png');
 
 
 interface SuccessPixInfoProps {
@@ -23,8 +23,10 @@ export default function SuccessPixInfo({ pixChargeDetails, handleCopyPixQrCode }
     return null;
   }
 
-  // A fonte da imagem do QR Code agora é SEMPRE a imagem local
-  const qrCodeSource = localPixQrCodeImage;
+  // >>>>> CORREÇÃO AQUI: Usa a URL do QR Code do backend, ou um placeholder se não houver <<<<<
+  const qrCodeSource = pixChargeDetails.qrCodeImage
+    ? { uri: pixChargeDetails.qrCodeImage } // Usa a URL dinâmica
+    : require('../../../../../assets/images/pix.png'); // Fallback para imagem local
 
   return (
     <View style={[
@@ -37,7 +39,7 @@ export default function SuccessPixInfo({ pixChargeDetails, handleCopyPixQrCode }
       {/* SEU CÓDIGO EXISTENTE - NADA ALTERADO AQUI */}
       <View style={styles.qrCodeContainer}>
         <Image
-          source={qrCodeSource}
+          source={qrCodeSource} // Agora usa a fonte dinâmica
           style={styles.qrCodeImage}
         />
       </View>

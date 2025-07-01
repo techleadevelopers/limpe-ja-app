@@ -14,7 +14,7 @@ generator client {
 
 datasource db {
   provider = "postgresql" // Ou "mysql", "sqlite", etc., dependendo do seu DB
-  url      = env("DATABASE_URL")
+  url       = env("DATABASE_URL")
   // ADICIONADO: Habilitar extensão PostGIS para funcionalidades geoespaciais
   extensions = [postgis]
 }
@@ -59,14 +59,14 @@ model User {
 
 // Modelo para Cliente
 model Client {
-  id            String   @id @default(uuid())
-  userId        String   @unique
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String    @id @default(uuid())
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   fullName      String
   phone         String?
-  address       Address? @relation("ClientAddress")
+  address       Address?  @relation("ClientAddress")
   bookings      Booking[]
-  reviewsMade   Review[] @relation("ClientReviews") // Avaliações que o cliente fez
+  reviewsMade   Review[]  @relation("ClientReviews") // Avaliações que o cliente fez
 
   // ADICIONADO: Campos para registro de data e hora de criação/atualização do perfil do cliente
   createdAt DateTime @default(now())
@@ -75,25 +75,25 @@ model Client {
 
 // Modelo para Provedor
 model Provider {
-  id                 String             @id @default(uuid())
-  userId             String             @unique
-  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  fullName           String
-  cpf                String?            @unique // CPF para verificação
-  dateOfBirth        DateTime
-  phone              String?
-  address            Address?           @relation("ProviderAddress")
-  yearsOfExperience  Int?
+  id                  String             @id @default(uuid())
+  userId              String             @unique
+  user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName            String
+  cpf                 String?            @unique // CPF para verificação
+  dateOfBirth         DateTime
+  phone               String?
+  address             Address?           @relation("ProviderAddress")
+  yearsOfExperience   Int?
   // NOTA: avatarUrl no Provider é redundante se User já tem, mas mantido para consistência do seu schema original.
   // Se o avatar do provedor for sempre o mesmo do usuário associado, você pode remover esta linha aqui.
-  avatarUrl          String?
+  avatarUrl           String?
   // verified          Boolean            @default(false) // REMOVIDO: Substituído por verificationStatus
-  bio                String?            // PROPRIEDADE 'BIO' ADICIONADA AQUI
-  providerServices   ProviderService[]
-  availability       Availability[]
-  bookings           Booking[]
-  reviewsReceived    Review[]           @relation("ProviderReviews") // Avaliações que o provedor recebeu
-  earnings           Transaction[]
+  bio                 String?            // PROPRIEDADE 'BIO' ADICIONADA AQUI
+  providerServices    ProviderService[]
+  availability        Availability[]
+  bookings            Booking[]
+  reviewsReceived     Review[]           @relation("ProviderReviews") // Avaliações que o provedor recebeu
+  earnings            Transaction[]
 
   // NOVOS CAMPOS PARA VERIFICAÇÃO
   verificationStatus  VerificationStatus @default(PENDING_INITIAL_REVIEW)
@@ -109,23 +109,23 @@ model Provider {
 
 // Modelo de Endereço (pode ser relacionado a Cliente, Provedor ou AGORA Booking)
 model Address {
-  id           String    @id @default(uuid())
-  cep          String
-  street       String
-  number       String
-  complement   String?
+  id          String                   @id @default(uuid())
+  cep         String
+  street      String
+  number      String
+  complement  String?
   neighborhood String
-  city         String
-  state        String
-  clientId     String?   @unique
-  providerId   String?   @unique
-  client       Client?   @relation("ClientAddress", fields: [clientId], references: [id])
-  provider     Provider? @relation("ProviderAddress", fields: [providerId], references: [id])
+  city        String
+  state       String
+  clientId    String?                  @unique
+  providerId  String?                  @unique
+  client      Client?                  @relation("ClientAddress", fields: [clientId], references: [id])
+  provider    Provider?                @relation("ProviderAddress", fields: [providerId], references: [id])
   // ADICIONADO: Relação para Booking, se um endereço pode ter múltiplos bookings
-  // bookings         Booking[] // Se um endereço pode ser usado por vários bookings. Menos comum para "endereço do serviço".
+  // bookings          Booking[] // Se um endereço pode ser usado por vários bookings. Menos comum para "endereço do serviço".
 
   // ALTERNATIVO para relação 1:1 com Booking (mais comum para endereço específico do serviço)
-  booking      Booking?  @relation("BookingAddress") // Se um endereço pertence a apenas um booking
+  booking     Booking?                 @relation("BookingAddress") // Se um endereço pertence a apenas um booking
 
   // --- ADIÇÃO PARA GEOESPACIAL (APENAS SE FOR USAR POSTGIS) ---
   // Se você for integrar busca geoespacial, adicione este campo:
@@ -137,29 +137,29 @@ model Address {
 
 // Modelo para Tipos de Serviço (e.g., "Limpeza Padrão", "Limpeza Pesada")
 model Service {
-  id                 String            @id @default(uuid())
-  name               String            @unique
-  description        String?
-  price              Decimal           @db.Decimal(10, 2) // CAMPO 'PRICE' ADICIONADO AQUI COM TIPO DECIMAL
-  icon               String?           // Campo para armazenar o nome do arquivo do ícone da categoria
-  providerServices   ProviderService[]
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
+  id                String            @id @default(uuid())
+  name              String            @unique
+  description       String?
+  price             Decimal           @db.Decimal(10, 2) // CAMPO 'PRICE' ADICIONADO AQUI COM TIPO DECIMAL
+  icon              String?           // Campo para armazenar o nome do arquivo do ícone da categoria
+  providerServices  ProviderService[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 }
 
 // Modelo para Serviços Oferecidos por um Provedor Específico
 model ProviderService {
-  id                String    @id @default(uuid())
-  providerId        String
-  serviceId         String
-  price             Decimal   @db.Decimal(10, 2) // ALTERADO DE 'Float' PARA 'Decimal'
-  durationMinutes   Int?      // Duração estimada em minutos
-  description       String?   // Descrição específica do provedor para este serviço
-  provider          Provider  @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  service           Service   @relation(fields: [serviceId], references: [id])
-  bookings          Booking[] // Campo reverso para Booking
-  createdAt         DateTime  @default(now()) // ADICIONADO
-  updatedAt         DateTime  @updatedAt // ADICIONADO
+  id              String      @id @default(uuid())
+  providerId      String
+  serviceId       String
+  price           Decimal     @db.Decimal(10, 2) // ALTERADO DE 'Float' PARA 'Decimal'
+  durationMinutes Int?        // Duração estimada em minutos
+  description     String?     // Descrição específica do provedor para este serviço
+  provider        Provider    @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  service         Service     @relation(fields: [serviceId], references: [id])
+  bookings        Booking[] // Campo reverso para Booking
+  createdAt       DateTime    @default(now()) // ADICIONADO
+  updatedAt       DateTime    @updatedAt // ADICIONADO
 
   @@unique([providerId, serviceId]) // Um provedor não pode oferecer o mesmo tipo de serviço duas vezes
 }
@@ -222,6 +222,8 @@ model Message {
   content    String
   timestamp  DateTime @default(now())
   isRead     Boolean  @default(false)
+  targetUrl  String?  // URL para navegação no app ao clicar na notificação
+  createdAt  DateTime @default(now())
   sender     User     @relation("SentMessages", fields: [senderId], references: [id])
   receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
 }
@@ -245,7 +247,7 @@ model Review {
   bookingId  String   @unique // Uma avaliação por agendamento (mantido para garantir 1:1 com Booking)
   clientId   String
   providerId String
-  rating     Int // Nota de 1 a 5
+  rating     Int      // Nota de 1 a 5
   comment    String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt // <--- LINHA ADICIONADA AQUI!
@@ -265,7 +267,7 @@ model Offer {
   description         String?
   discountPercentage  Float?    // Desconto em percentual
   fixedDiscountAmount Float?    // Desconto em valor fixo
-  validUntil          DateTime // Data de expiração da oferta
+  validUntil          DateTime  // Data de expiração da oferta
   imageUrl            String?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
@@ -280,17 +282,20 @@ enum TransactionType {
 
 // Modelo de Transação Financeira
 model Transaction {
-  id          String        @id @default(uuid())
-  providerId  String
-  provider    Provider      @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  amount      Decimal       @db.Decimal(10, 2)
-  type        TransactionType
-  status      String        // Status da transação (e.g., "PENDING", "COMPLETED", "FAILED")
-  description String?
-  createdAt   DateTime      @default(now())
+  id                 String          @id @default(uuid())
+  providerId         String
+  provider           Provider        @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  amount             Decimal         @db.Decimal(10, 2)
+  type               TransactionType
+  status             String          // Status da transação (e.g., "PENDING", "COMPLETED", "FAILED")
+  description        String?
+  createdAt          DateTime        @default(now())
   // ADICIONADO: Campos para bookingId e relação com Booking
-  bookingId   String?       // <--- MODIFICADO: REMOVIDO @unique para permitir múltiplas transações por booking
-  booking     Booking?      @relation(fields: [bookingId], references: [id])
+  bookingId          String?         // <--- MODIFICADO: REMOVIDO @unique para permitir múltiplas transações por booking
+  booking            Booking?        @relation(fields: [bookingId], references: [id])
+  // NOVOS CAMPOS PARA INTEGRAÇÃO COM GATEWAY DE PAGAMENTO
+  gatewayTransactionId String?       @unique // ID da transação no gateway de pagamento (ex: PagSeguro)
+  qrCodeUrl          String?       // URL do QR Code gerado pelo gateway
 }
 
 // Modelo de Disponibilidade do Provedor
@@ -301,5 +306,5 @@ model Availability {
   dayOfWeek   Int      // 0 para Domingo, 1 para Segunda, etc.
   startTime   String   // Horário de início (e.g., "09:00")
   endTime     String   // Horário de término (e.g., "17:00")
-  isAvailable Boolean @default(true) // Se o provedor está disponível neste slot
+  isAvailable Boolean  @default(true) // Se o provedor está disponível neste slot
 }
