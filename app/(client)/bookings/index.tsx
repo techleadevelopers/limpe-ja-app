@@ -58,7 +58,7 @@ const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = (
             case BookingStatus.PENDING_PROVIDER_CONFIRMATION: return { text: '#FF6F00', background: '#FFF3E0', icon: 'hourglass-outline' as const, iconColor: '#FF6F00' };
             case BookingStatus.IN_PROGRESS: return { text: '#007AFF', background: '#E3F2FD', icon: 'sync-circle-outline' as const, iconColor: '#007AFF' };
             case BookingStatus.COMPLETED: return { text: '#007AFF', background: '#E3F2FD', icon: 'flag-outline' as const, iconColor: '#007AFF' };
-            case BookingStatus.CANCELLED: return { text: '#D32F2F', background: '#FFEBEE', icon: 'close-circle-outline' as const, iconColor: '#F44336' };
+            case BookingStatus.CANCELED: return { text: '#D32F2F', background: '#FFEBEE', icon: 'close-circle-outline' as const, iconColor: '#F44336' }; // Corrigido para CANCELED
             case BookingStatus.REJECTED: return { text: '#757575', background: '#F5F5F5', icon: 'alert-circle-outline' as const, iconColor: '#757575' };
             case BookingStatus.RESCHEDULED: return { text: '#6A1B9A', background: '#EDE7F6', icon: 'sync-outline' as const, iconColor: '#6A1B9A' };
             default: return { text: '#546E7A', background: '#ECEFF1', icon: 'help-circle-outline' as const, iconColor: '#757575' };
@@ -93,7 +93,7 @@ const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = (
                         <Text style={styles.itemProviderName}>Com: {item.providerFullName}</Text> {/* CORREÇÃO: Usar providerFullName */}
                         <Text style={styles.itemDate}>
                             <Ionicons name="calendar-outline" size={14} color="#6C757D" />{' '}
-                            {formatDate(item.scheduledTime, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            {formatDate(item.scheduledDateTime, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </Text>
                         {item.address && (
                             <Text style={styles.itemAddressText} numberOfLines={1}>
@@ -178,19 +178,19 @@ export default function MyBookingsScreen() {
                 // CORREÇÃO: Usar BookingStatus.PENDING_PROVIDER_CONFIRMATION e BookingStatus.PENDING
                 const pendingProvider = await getBookingsForUser(BookingStatus.PENDING_PROVIDER_CONFIRMATION);
                 const pendingClient = await getBookingsForUser(BookingStatus.PENDING);
-                fetchedBookings = [...pendingProvider, ...pendingClient].filter(b => new Date(b.scheduledTime) >= new Date());
+                fetchedBookings = [...pendingProvider, ...pendingClient].filter(b => new Date(b.scheduledDateTime) >= new Date());
             } else if (currentFilter === 'upcoming') {
                 // CORREÇÃO: Usar BookingStatus.CONFIRMED e BookingStatus.IN_PROGRESS
                 const confirmed = await getBookingsForUser(BookingStatus.CONFIRMED);
                 const inProgress = await getBookingsForUser(BookingStatus.IN_PROGRESS);
-                fetchedBookings = [...confirmed, ...inProgress].filter(b => new Date(b.scheduledTime) >= new Date());
+                fetchedBookings = [...confirmed, ...inProgress].filter(b => new Date(b.scheduledDateTime) >= new Date());
             } else if (currentFilter === 'completed') {
                 // CORREÇÃO: Usar BookingStatus.COMPLETED
                 const completed = await getBookingsForUser(BookingStatus.COMPLETED);
-                fetchedBookings = [...completed].filter(b => new Date(b.scheduledTime) < new Date());
+                fetchedBookings = [...completed].filter(b => new Date(b.scheduledDateTime) < new Date());
             } else if (currentFilter === 'cancelled') {
-                // CORREÇÃO: Usar BookingStatus.CANCELLED e BookingStatus.REJECTED
-                const cancelled = await getBookingsForUser(BookingStatus.CANCELLED);
+                // CORREÇÃO: Usar BookingStatus.CANCELED e BookingStatus.REJECTED
+                const cancelled = await getBookingsForUser(BookingStatus.CANCELED);
                 const rejected = await getBookingsForUser(BookingStatus.REJECTED);
                 fetchedBookings = [...cancelled, ...rejected];
             }
@@ -200,7 +200,7 @@ export default function MyBookingsScreen() {
             // A lógica atual de filtro de data em 'upcoming' e 'completed' pode não ser perfeita
             // se o backend não filtrar por data.
 
-            fetchedBookings.sort((a, b) => new Date(a.scheduledTime).getTime() - new Date(b.scheduledTime).getTime());
+            fetchedBookings.sort((a, b) => new Date(a.scheduledDateTime).getTime() - new Date(b.scheduledDateTime).getTime());
 
             setBookings(fetchedBookings);
             if (refreshing) Alert.alert("Sucesso", "Agendamentos atualizados!");

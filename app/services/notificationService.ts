@@ -1,6 +1,6 @@
 // LimpeJaApp/app/services/notificationService.ts
 import api from './api'; // Importa a instância centralizada do Axios
-import axios, { AxiosResponse } from 'axios'; // Importar axios para isAxiosError
+import axios, { AxiosResponse, AxiosError } from 'axios'; // Importar axios para isAxiosError
 
 // Importa as tipagens de notificações
 import { NotificationEntity, MarkAsReadDto } from '../types/backend/notifications';
@@ -35,6 +35,7 @@ export const getNotifications = async (): Promise<NotificationEntity[]> => {
 export const markNotificationAsRead = async (notificationId: string): Promise<NotificationEntity> => {
   try {
     // Assumimos que o backend espera um PATCH vazio ou um { readAt: new Date().toISOString() }
+    // A estrutura exata do corpo da requisição depende da implementação do seu backend.
     const response: AxiosResponse<NotificationEntity> = await api.patch(`/notifications/${notificationId}/mark-as-read`, { readAt: new Date().toISOString() });
     return response.data;
   } catch (error: any) {
@@ -54,7 +55,7 @@ export const markNotificationAsRead = async (notificationId: string): Promise<No
  */
 export const markAllNotificationsAsRead = async (): Promise<MessageResponseDto | { count: number }> => {
   try {
-    // O backend pode retornar uma mensagem ou um { count: número_de_atualizadas }
+    // O backend pode retornar uma mensagem de sucesso ou um objeto com a contagem de notificações atualizadas.
     const response: AxiosResponse<MessageResponseDto | { count: number }> = await api.patch('/notifications/me/mark-as-read');
     return response.data;
   } catch (error: any) {

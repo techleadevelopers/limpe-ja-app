@@ -1,6 +1,6 @@
 // LimpeJaApp/app/services/faqService.ts
 import api from './api'; // Importa a instância centralizada do Axios
-import axios, { AxiosResponse } from 'axios'; // Importar axios para isAxiosError
+import axios, { AxiosResponse, AxiosError } from 'axios'; // Importar axios para isAxiosError
 
 // Importa a tipagem da FAQItem
 import { FAQItem } from '../types/backend/faqs'; //
@@ -13,13 +13,13 @@ import { FAQItem } from '../types/backend/faqs'; //
  */
 export const getFaqs = async (): Promise<FAQItem[]> => {
   try {
-    const response: AxiosResponse<FAQItem[]> = await api.get('/faqs'); //
-    return response.data; //
+    const response: AxiosResponse<FAQItem[]> = await api.get('/faqs'); // Endpoint para buscar FAQs
+    return response.data;
   } catch (error: any) {
-    console.error('Erro ao buscar FAQs:', error.response?.data || error.message); //
-    if (axios.isAxiosError(error) && error.response) { //
-      throw new Error(error.response.data.message || 'Não foi possível carregar as FAQs.'); //
+    console.error('Erro ao buscar FAQs:', error.response?.data || error.message);
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(error.response.data.message || 'Não foi possível carregar as FAQs.');
     }
-    throw new Error('Erro de rede ou servidor ao buscar FAQs.'); //
+    throw new Error('Erro de rede ou servidor ao buscar FAQs.');
   }
 };

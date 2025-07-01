@@ -28,6 +28,7 @@ import { ProviderDashboard, ProviderTransaction, EarningsResponseDto } from '../
 import EarningsSummaryCard from './components/earnings/EarningsSummaryCard'; // Este componente precisa ser estilizado
 import EarningsChartSection from './components/earnings/EarningsChartSection';
 import RecentTransactionsSection from './components/earnings/RecentTransactionsSection';
+import MainEarningsChartSection from './components/earnings/MainEarningsChartSection'; // Importado MainEarningsChartSection
 
 // --- DEFINIÇÕES DE CORES (REPETIDAS PARA ESTE ARQUIVO PARA CONSISTÊNCIA) ---
 const WHITE = '#FFFFFF';
@@ -92,6 +93,7 @@ export default function ProviderEarningsScreen() {
   const router = useRouter();
 
   const [dashboardData, setDashboardData] = useState<ProviderDashboard | null>(null);
+  const [earningsData, setEarningsData] = useState<EarningsResponseDto | null>(null); // Adicionado para armazenar EarningsResponseDto
   const [recentTransactions, setRecentTransactions] = useState<ProviderTransaction[]>([]);
   const [chartData, setChartData] = useState<ChartData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -100,6 +102,7 @@ export default function ProviderEarningsScreen() {
   // Animações para as seções
   const headerAnim = useRef(new Animated.Value(0)).current;
   const summaryAnim = useRef(new Animated.Value(0)).current;
+  const mainChartAnim = useRef(new Animated.Value(0)).current; // Animação para MainEarningsChartSection
   const chartSectionAnim = useRef(new Animated.Value(0)).current;
   const transactionsSectionAnim = useRef(new Animated.Value(0)).current;
 
@@ -110,6 +113,7 @@ export default function ProviderEarningsScreen() {
       const fetchedEarnings: EarningsResponseDto = await getMyProviderEarnings(); 
 
       setDashboardData(fetchedDashboardData); 
+      setEarningsData(fetchedEarnings); // Armazena o objeto completo de ganhos
       setRecentTransactions(fetchedEarnings.recentTransactions || []); 
 
       const monthlyEarningsMap: { [key: string]: number } = fetchedEarnings.earningsBreakdown || {}; 
@@ -117,9 +121,10 @@ export default function ProviderEarningsScreen() {
       const labels: string[] = [];
       const dataPoints: number[] = [];
 
-      for (let i = 0; i < 4; i++) {
-        const date = new Date(today.getFullYear(), today.getMonth() - (3 - i), 1);
-        const monthKey = date.toLocaleString('default', { month: 'short', year: 'numeric' });
+      // Ajuste para pegar os últimos 4 meses (ou o que for relevante para o gráfico)
+      for (let i = 3; i >= 0; i--) { // Começa de 3 para pegar o mês atual e os 3 anteriores
+        const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+        const monthKey = date.toLocaleString('pt-BR', { month: 'short', year: 'numeric' }); // Formato "Jan. 2023"
         labels.push(date.toLocaleDateString('pt-BR', { month: 'short' }));
         dataPoints.push(monthlyEarningsMap[monthKey] || 0);
       }
@@ -148,11 +153,12 @@ export default function ProviderEarningsScreen() {
     Animated.stagger(150, [
       Animated.timing(headerAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
       Animated.timing(summaryAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.timing(mainChartAnim, { toValue: 1, duration: 600, useNativeDriver: true }), // Adicionado
       Animated.timing(chartSectionAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
       Animated.timing(transactionsSectionAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
     ]).start();
 
-  }, [fetchData, headerAnim, summaryAnim, chartSectionAnim, transactionsSectionAnim]);
+  }, [fetchData, headerAnim, summaryAnim, mainChartAnim, chartSectionAnim, transactionsSectionAnim]); // Adicionado mainChartAnim
 
   const onRefresh = useCallback(() => {
     setIsRefreshing(true);
@@ -160,14 +166,17 @@ export default function ProviderEarningsScreen() {
   }, [fetchData]);
 
   const handleWithdrawalRequest = async () => {
-    if (!dashboardData || dashboardData.totalEarnings <= 0 || (dashboardData.pendingWithdrawals ?? 0) > 0) {
+    // Usar availableForWithdrawal do earningsData, se disponível, senão do dashboardData
+    const amountToWithdraw = earningsData?.availableForWithdrawal ?? dashboardData?.totalEarnings;
+
+    if (!amountToWithdraw || amountToWithdraw <= 0 || (earningsData?.pendingWithdrawals ?? 0) > 0) {
       Alert.alert("Atenção", "Você não possui saldo disponível para saque ou já tem um saque pendente.");
       return;
     }
 
     Alert.alert(
       "Solicitar Saque",
-      `Deseja solicitar o saque de R$ ${(dashboardData.totalEarnings).toFixed(2).replace('.', ',')} para sua conta bancária cadastrada?`,
+      `Deseja solicitar o saque de R$ ${amountToWithdraw.toFixed(2).replace('.', ',')} para sua conta bancária cadastrada?`,
       [
         { text: "Cancelar", style: "cancel" },
         {
@@ -175,7 +184,7 @@ export default function ProviderEarningsScreen() {
           onPress: async () => {
             setIsLoading(true);
             try {
-              await requestWithdrawal({ amount: dashboardData.totalEarnings });
+              await requestWithdrawal({ amount: amountToWithdraw });
               Alert.alert("Saque Solicitado", "Seu pedido de saque foi enviado com sucesso e será processado em breve! Você será notificado sobre o status.");
               fetchData();
             } catch (error: any) {
@@ -230,12 +239,27 @@ export default function ProviderEarningsScreen() {
           />
         }
       >
-        {/* Cartão de Resumo Financeiro - NÃO MAIS PASSANDO PROPS DE ESTILO PARA EVITAR O ERRO */}
+        {/* Cartão de Resumo Financeiro */}
         <EarningsSummaryCard
           dashboardData={dashboardData}
           animation={summaryAnim}
           onWithdrawalRequest={handleWithdrawalRequest}
         />
+
+        {/* Gráfico Principal de Ganhos (Circular) */}
+        {earningsData && (
+          <MainEarningsChartSection
+            contentAnim={mainChartAnim}
+            totalGrossSales={earningsData.totalEarnings}
+            earningsSummary={{
+              today: earningsData.dailyEarnings || 0,
+              weekly: earningsData.weeklyEarnings || 0,
+              monthly: earningsData.monthlyEarnings || 0,
+            }}
+            isLoading={isLoading}
+            onChartDetailPress={() => console.log('Detalhe do gráfico pressionado')} // Implementar navegação/modal
+          />
+        )}
 
         {/* Gráfico de Ganhos ao Longo do Tempo */}
         <EarningsChartSection

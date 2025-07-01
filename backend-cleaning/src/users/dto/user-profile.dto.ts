@@ -1,24 +1,37 @@
 // src/users/dto/user-profile.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { User, UserRole } from '@prisma/client'; // Removido Client, Provider, Address, Prisma, ProviderService, Service, Review pois não são usados diretamente aqui
+import { User, UserRole, Prisma } from '@prisma/client';
 import { IsString, IsEnum, IsDate, ValidateNested, IsOptional, IsNumber, IsInt } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ClientDetailsDto } from '../../clients/dto/client-details.dto';
 import { ProviderDetailsDto } from '../../providers/dto/provider-details.dto';
 
 // === IMPORTANDO OS TIPOS DE SERVIÇO DEFINITIVOS ===
-// Certifique-se de que estes caminhos e nomes de tipo estão corretos nos seus serviços
-import { ProviderWithIncludes } from '../../providers/providers.service'; // <<-- IMPORTADO
-import { ClientWithIncludes } from '../../clients/clients.service'; // <<-- VOCÊ PRECISARÁ VERIFICAR O NOME EXATO E CAMINHO DO SEU TIPO NO CLIENTS.SERVICE.TS
+// Importa o tipo mapeado para o frontend, que é o que ProviderDetailsDto espera
+import { ProviderWithCalculatedRating } from '../../providers/providers.service';
+
+// <<-- DEFINIÇÃO DE ClientWithIncludes -->>
+// IDEALMENTE: Esta definição deveria ser movida para um arquivo em 'src/clients/' (ex: clients/clients.service.ts)
+// e então importada aqui. Mantido aqui para compatibilidade com o código fornecido.
+import { Address, Booking, Review } from '@prisma/client';
+
+export type ClientWithIncludes = {
+  id: string;
+  userId: string;
+  fullName: string;
+  phone: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  user: User;
+  address: Address | null;
+  bookings: Booking[];
+  reviewsMade: Review[];
+  _count?: { bookings: number };
+};
 
 // =========================================================================
 // CORREÇÃO: Usando os tipos de serviço já definidos
 // =========================================================================
-
-// Agora usamos os tipos mais completos diretamente
-// type UserProfileProviderWithRelations = ProviderWithIncludes; // Não é mais necessário, usaremos ProviderWithIncludes diretamente
-// type UserProfileClientWithRelations = ClientWithIncludes; // Não é mais necessário, usaremos ClientWithIncludes diretamente
-
 
 export class UserProfileDto {
   @ApiProperty({ description: 'ID único do usuário', example: 'uuid-do-usuario' })
@@ -32,7 +45,7 @@ export class UserProfileDto {
   @ApiPropertyOptional({ description: 'URL do avatar do usuário', example: 'http://example.com/user_avatar.jpg' })
   @IsOptional()
   @IsString() // Ou IsUrl se você validar o formato da URL
-  avatarUrl?: string | null; // <--- Adicionado para UserProfileDto
+  avatarUrl?: string | null;
 
   @ApiProperty({ enum: UserRole, description: 'Papel do usuário na aplicação', example: UserRole.CLIENT })
   @IsEnum(UserRole)
@@ -71,15 +84,17 @@ export class UserProfileDto {
   providerDetails?: ProviderDetailsDto;
 
   constructor(
-    user: User & { // O objeto user precisa ter o avatarUrl agora
-      avatarUrl?: string | null; // Adicionado ao User no schema.prisma, então ele deve estar aqui também
-      client?: ClientWithIncludes; // <<-- USANDO O TIPO COMPLETO DO CLIENTS.SERVICE
-      provider?: ProviderWithIncludes; // <<-- USANDO O TIPO COMPLETO DO PROVIDERS.SERVICE
+    user: User & {
+      avatarUrl?: string | null;
+      // O construtor de ClientDetailsDto deve aceitar ClientWithIncludes
+      client?: ClientWithIncludes;
+      // O construtor de ProviderDetailsDto agora aceita ProviderWithCalculatedRating
+      provider?: ProviderWithCalculatedRating;
     }
   ) {
     this.id = user.id;
     this.email = user.email;
-    this.avatarUrl = user.avatarUrl; // <--- Mapeando avatarUrl
+    this.avatarUrl = user.avatarUrl;
     this.role = user.role;
     this.createdAt = user.createdAt;
     this.updatedAt = user.updatedAt;
@@ -91,7 +106,7 @@ export class UserProfileDto {
     } else if (user.role === UserRole.PROVIDER && user.provider) {
       this.fullName = user.provider.fullName;
       this.phone = user.provider.phone;
-      this.providerDetails = new ProviderDetailsDto(user.provider); // <--- Agora user.provider é ProviderWithIncludes
+      this.providerDetails = new ProviderDetailsDto(user.provider);
     }
   }
 }

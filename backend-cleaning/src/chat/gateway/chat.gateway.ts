@@ -5,27 +5,13 @@ import {
   SubscribeMessage,
   MessageBody,
   ConnectedSocket,
-} from '@nestjs/websockets'; // CORREÇÃO: Pacote agora instalado
-import { Server, Socket } from 'socket.io'; // CORREÇÃO: Pacote agora instalado
-import { ChatService } from '../chat.service'; // CORREÇÃO: Caminho atualizado (subir um nível)
-import { SendMessageDto } from '../dto/send-message.dto'; // CORREÇÃO: Caminho atualizado (subir um nível)
-import { UseGuards, Logger } from '@nestjs/common';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard'; // Caminho já estava correto
-import { WsAuthGuard } from '../../auth/guards/ws-auth.guard'; // Caminho já estava correto
-import { Message } from '../entities/message.entity'; // CORREÇÃO: Caminho atualizado (subir um nível)
-
-// Exemplo de um guard WsAuthGuard simples (você precisará implementá-lo)
-// import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
-// @Injectable()
-// export class WsAuthGuard implements CanActivate {
-//   canActivate(context: ExecutionContext): boolean | Promise<boolean> | Observable<boolean> {
-//     const client = context.switchToWs().getClient<Socket>();
-//     // Aqui você implementaria a lógica de validação do token JWT do WebSocket
-//     // Ex: const authToken = client.handshake.headers.authorization;
-//     // Validar authToken e anexar user ao client.data
-//     return true; // ou false se não autenticado
-//   }
-// }
+} from '@nestjs/websockets';
+import { Server, Socket } from 'socket.io';
+import { ChatService } from '../chat.service';
+import { SendMessageDto } from '../dto/send-message.dto';
+import { UseGuards, Logger, ForbiddenException, NotFoundException, BadRequestException } from '@nestjs/common'; // Importado ForbiddenException, NotFoundException, BadRequestException
+import { WsAuthGuard } from '../../auth/guards/ws-auth.guard';
+import { Message } from '../entities/message.entity';
 
 @WebSocketGateway({
   cors: {
@@ -42,8 +28,7 @@ export class ChatGateway {
   // Opcional: Lidar com a conexão de um cliente
   handleConnection(client: Socket, ...args: any[]) {
     this.logger.log(`Cliente conectado (WebSocket): ${client.id}`);
-    // Você pode associar o userId do cliente ao socket aqui após autenticação
-    // client.data.userId = 'some-user-id';
+    // O WsAuthGuard já anexa o userId e role ao client.data
   }
 
   // Opcional: Lidar com a desconexão de um cliente
@@ -51,18 +36,21 @@ export class ChatGateway {
     this.logger.log(`Cliente desconectado (WebSocket): ${client.id}`);
   }
 
-  // Exemplo de um evento de chat
   @UseGuards(WsAuthGuard) // Use um guard específico para WebSocket para autenticação
   @SubscribeMessage('sendMessage')
   async handleSendMessage(
     @MessageBody() payload: SendMessageDto,
     @ConnectedSocket() client: Socket,
   ): Promise<void> {
-    // Em um cenário real, o senderId viria do usuário autenticado no socket
-    // client.data.userId deve ser definido pelo WsAuthGuard
-    const senderId = client.data.userId || 'mock-sender-id'; // Substitua por lógica real
+    const senderId = client.data.userId; // Obtém o userId do socket, definido pelo WsAuthGuard
 
-    this.logger.log(`Mensagem recebida de ${senderId} para chat ${payload.chatId}: ${payload.content}`);
+    if (!senderId) {
+      this.logger.error(`[WebSocket] sendMessage: senderId não encontrado no socket para client ${client.id}`);
+      client.emit('errorMessage', { event: 'sendMessage', message: 'Erro de autenticação: ID do remetente não disponível.' });
+      return;
+    }
+
+    this.logger.log(`[WebSocket] Mensagem recebida de ${senderId} para chat ${payload.chatId}: ${payload.content}`);
 
     try {
       const message = await this.chatService.createMessage(
@@ -74,22 +62,54 @@ export class ChatGateway {
 
       // Emite a mensagem para todos os clientes na sala do chat (ou para os envolvidos)
       this.server.to(payload.chatId).emit('newMessage', message);
-      this.logger.log(`Mensagem enviada para a sala ${payload.chatId}`);
+      this.logger.log(`[WebSocket] Mensagem enviada para a sala ${payload.chatId}`);
     } catch (error) {
-      this.logger.error(`Erro ao enviar mensagem: ${error.message}`);
-      client.emit('errorMessage', 'Não foi possível enviar a mensagem.');
+      this.logger.error(`[WebSocket] Erro ao enviar mensagem para ${payload.chatId}: ${error.message}`);
+      if (error instanceof ForbiddenException) {
+        client.emit('errorMessage', { event: 'sendMessage', message: error.message });
+      } else if (error instanceof NotFoundException) {
+        client.emit('errorMessage', { event: 'sendMessage', message: 'Conversa não encontrada.' });
+      } else if (error instanceof BadRequestException) {
+        client.emit('errorMessage', { event: 'sendMessage', message: error.message });
+      } else {
+        client.emit('errorMessage', { event: 'sendMessage', message: 'Não foi possível enviar a mensagem devido a um erro interno.' });
+      }
     }
   }
 
-  // Exemplo de como um cliente pode "entrar" em uma sala de chat
   @UseGuards(WsAuthGuard)
   @SubscribeMessage('joinChat')
-  handleJoinChat(
+  async handleJoinChat( // Adicionado 'async' para poder usar await
     @MessageBody() chatId: string,
     @ConnectedSocket() client: Socket,
-  ): void {
-    client.join(chatId);
-    this.logger.log(`Cliente ${client.id} entrou na sala de chat: ${chatId}`);
-    client.emit('joinedChat', `Você entrou na sala ${chatId}`);
+  ): Promise<void> {
+    const userId = client.data.userId; // Obtém o userId do socket
+
+    if (!userId) {
+      this.logger.error(`[WebSocket] joinChat: userId não encontrado no socket para client ${client.id}`);
+      client.emit('errorMessage', { event: 'joinChat', message: 'Erro de autenticação: ID do usuário não disponível.' });
+      return;
+    }
+
+    try {
+      // O ChatService.getMessagesByChatId já contém a lógica de permissão.
+      // Chamamos para validar o acesso antes de permitir a entrada na sala.
+      // Poderíamos ter um método mais leve como chatService.checkChatAccess(chatId, userId)
+      // mas por enquanto, getMessagesByChatId serve para validar o acesso.
+      await this.chatService.getMessagesByChatId(chatId, 0, 1); // Busca 1 mensagem para validar acesso
+
+      client.join(chatId);
+      this.logger.log(`[WebSocket] Cliente ${client.id} (User: ${userId}) entrou na sala de chat: ${chatId}`);
+      client.emit('joinedChat', `Você entrou na sala ${chatId}`);
+    } catch (error) {
+      this.logger.error(`[WebSocket] Erro ao tentar entrar na sala ${chatId} para user ${userId}: ${error.message}`);
+      if (error instanceof ForbiddenException) {
+        client.emit('errorMessage', { event: 'joinChat', message: error.message });
+      } else if (error instanceof NotFoundException) {
+        client.emit('errorMessage', { event: 'joinChat', message: 'Conversa não encontrada.' });
+      } else {
+        client.emit('errorMessage', { event: 'joinChat', message: 'Não foi possível entrar na sala de chat devido a um erro interno.' });
+      }
+    }
   }
 }

@@ -44,6 +44,37 @@ const AnimatedErrorMessage: React.FC<{ message: string | null; centered?: boolea
   );
 };
 
+// Simulação da API ViaCEP (Adicionado para auto-preenchimento de CEP)
+const mockViaCepApi = {
+  getEndereco: async (cep: string) => {
+    const cleanedCep = cep.replace(/\D/g, '');
+    await new Promise(resolve => setTimeout(resolve, 800)); // Simula latência da rede
+
+    if (cleanedCep === '01001000') {
+      return {
+        cep: '01001-000',
+        logradouro: 'Praça da Sé',
+        complemento: 'lado ímpar',
+        bairro: 'Sé',
+        localidade: 'São Paulo',
+        uf: 'SP',
+      };
+    } else if (cleanedCep === '99999999') {
+      return { erro: true };
+    } else if (cleanedCep === '60000000') {
+      return {
+        cep: '60000-000',
+        logradouro: 'Avenida Beira Mar',
+        complemento: '',
+        bairro: 'Meireles',
+        localidade: 'Fortaleza',
+        uf: 'CE',
+      };
+    }
+    return { erro: true };
+  },
+};
+
 export default function ClientRegisterScreen() { // Renomeado de RegisterOptionsScreen
   const [currentStep, setCurrentStep] = useState(1); // 1: Personal Info, 2: Address Info
 
@@ -60,8 +91,10 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
   const [neighborhood, setNeighborhood] = useState('');
   const [city, setCity] = useState(''); // NOVO: Estado para a cidade
   const [state, setState] = useState('');
+  const [complement, setComplement] = useState(''); // Adicionado para o complemento
 
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingCep, setIsLoadingCep] = useState(false); // Novo estado para loading do CEP
   const [generalError, setGeneralError] = useState<string | null>(null);
 
   const router = useRouter();
@@ -101,7 +134,9 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
         setGeneralError('Por favor, insira seu telefone.');
         return false;
     }
-    if (phone.trim().length !== 10 && phone.trim().length !== 11) { // Validação do número de dígitos
+    // Simplificado para apenas verificar se tem entre 10 e 11 dígitos (sem formatação)
+    const cleanedPhone = phone.replace(/\D/g, '');
+    if (cleanedPhone.length < 10 || cleanedPhone.length > 11) { 
         setGeneralError('O telefone deve ter 10 ou 11 dígitos.');
         return false;
     }
@@ -120,6 +155,46 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
     }
   };
 
+  // Função para formatar telefone
+  const formatPhoneNumber = (text: string) => {
+    const cleanedText = text.replace(/\D/g, '');
+    let formattedPhone = cleanedText;
+    if (cleanedText.length > 0) formattedPhone = `(${cleanedText}`;
+    if (cleanedText.length > 2) formattedPhone = `(${cleanedText.substring(0, 2)}) ${cleanedText.substring(2)}`;
+    if (cleanedText.length > 7) formattedPhone = `${formattedPhone.substring(0, 9)}-${cleanedText.substring(7)}`;
+    if (cleanedText.length > 11) formattedPhone = formattedPhone.substring(0, 15); // Limita o tamanho
+    return formattedPhone;
+  };
+
+  // Função para buscar endereço por CEP (adicionada)
+  const fetchAddressFromCep = async () => {
+    const cleanedCep = cep.replace(/\D/g, '');
+    if (cleanedCep.length === 8) {
+      setIsLoadingCep(true);
+      setGeneralError(null); // Limpa erros anteriores
+      try {
+        const data = await mockViaCepApi.getEndereco(cleanedCep);
+        if (!data.erro) {
+          setStreet(data.logradouro || '');
+          setNeighborhood(data.bairro || '');
+          setCity(data.localidade || '');
+          setState(data.uf || '');
+          setComplement(data.complemento || '');
+        } else {
+          setGeneralError("CEP não encontrado ou inválido.");
+          setStreet(''); setNumber(''); setNeighborhood(''); setCity(''); setState(''); setComplement('');
+        }
+      } catch (error) {
+        setGeneralError("Erro ao buscar CEP. Tente novamente.");
+        setStreet(''); setNumber(''); setNeighborhood(''); setCity(''); setState(''); setComplement('');
+      } finally {
+        setIsLoadingCep(false);
+      }
+    } else if (cleanedCep.length > 0 && cleanedCep.length < 8) {
+      setGeneralError("CEP incompleto.");
+    }
+  };
+
   const handleSignUp = async () => {
     if (!validateStep1() || !validateStep2()) { // Valida todas as etapas antes do registro final
         return;
@@ -129,10 +204,9 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
       // Mapear os dados do formulário para o RegisterClientDto
       const registerData: RegisterClientDto = {
         email: email.trim().toLowerCase(),
-        // CORREÇÃO AQUI: Alterado de 'passwordHash' para 'password'
         password: password,
         fullName: username.trim(),
-        phone: phone.trim(), // Mapeado o novo campo de telefone
+        phone: phone.replace(/\D/g, ''), // Remove não-dígitos antes de enviar
         address: {
           cep: cep.trim(),
           street: street.trim(),
@@ -140,7 +214,7 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
           neighborhood: neighborhood.trim(),
           city: city.trim(), // Mapeado o novo campo de cidade
           state: state.trim(),
-          complement: '', // Complemento não está sendo coletado, precisa ser adicionado ou opcional
+          complement: complement.trim(), // Usar o campo de complemento
         } as CreateAddressDto, // Cast para garantir conformidade com CreateAddressDto
       };
 
@@ -174,7 +248,7 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
   const nextButtonAnims = createButtonAnimations(); // Animações para o botão "Avançar"
 
   // Atualizado para incluir validação do telefone e cidade
-  const isSignUpButtonEnabled = currentStep === 2 && phone.trim() && (phone.trim().length === 10 || phone.trim().length === 11) && cep.trim() && street.trim() && number.trim() && neighborhood.trim() && city.trim() && state.trim();
+  const isSignUpButtonEnabled = currentStep === 2 && phone.trim().replace(/\D/g, '').length >= 10 && cep.trim() && street.trim() && number.trim() && neighborhood.trim() && city.trim() && state.trim();
 
   return (
     <KeyboardAvoidingView
@@ -285,9 +359,9 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
                             placeholder="Telefone (apenas números)"
                             placeholderTextColor="#A0AEC0"
                             value={phone}
-                            onChangeText={(text) => { setPhone(text.replace(/[^0-9]/g, '')); if (generalError) setGeneralError(null);}} // Remove não-dígitos
+                            onChangeText={(text) => { setPhone(formatPhoneNumber(text)); if (generalError) setGeneralError(null);}} // Remove não-dígitos
                             keyboardType="numeric"
-                            maxLength={11} // Permite 10 ou 11 dígitos
+                            maxLength={15} // Permite 10 ou 11 dígitos
                         />
                     </View>
 
@@ -301,10 +375,12 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
                             placeholder="CEP"
                             placeholderTextColor="#A0AEC0"
                             value={cep}
-                            onChangeText={(text) => { setCep(text); if (generalError) setGeneralError(null);}}
+                            onChangeText={(text) => { setCep(text.replace(/\D/g, '')); if (generalError) setGeneralError(null);}}
+                            onBlur={fetchAddressFromCep} // Adicionado onBlur para buscar CEP
                             keyboardType="numeric"
                             maxLength={8}
                         />
+                        {isLoadingCep && <ActivityIndicator size="small" color="#007BFF" style={styles.cepLoadingIndicator} />}
                     </View>
 
                     {/* Rua Input */}
@@ -319,6 +395,7 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
                             value={street}
                             onChangeText={(text) => { setStreet(text); if (generalError) setGeneralError(null);}}
                             autoCapitalize="words"
+                            editable={!isLoadingCep} // Desabilita enquanto busca CEP
                         />
                     </View>
 
@@ -337,6 +414,21 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
                         />
                     </View>
 
+                    {/* Complemento Input (Adicionado) */}
+                    <View style={styles.inputWrapper}>
+                        <View style={styles.iconCircle}>
+                            <Ionicons name="information-circle-outline" size={20} color="#007BFF" />
+                        </View>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Complemento (opcional)"
+                            placeholderTextColor="#A0AEC0"
+                            value={complement}
+                            onChangeText={(text) => { setComplement(text); if (generalError) setGeneralError(null);}}
+                            autoCapitalize="words"
+                        />
+                    </View>
+
                     {/* Bairro Input */}
                     <View style={styles.inputWrapper}>
                         <View style={styles.iconCircle}>
@@ -349,6 +441,7 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
                             value={neighborhood}
                             onChangeText={(text) => { setNeighborhood(text); if (generalError) setGeneralError(null);}}
                             autoCapitalize="words"
+                            editable={!isLoadingCep} // Desabilita enquanto busca CEP
                         />
                     </View>
 
@@ -364,6 +457,7 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
                             value={city}
                             onChangeText={(text) => { setCity(text); if (generalError) setGeneralError(null);}}
                             autoCapitalize="words"
+                            editable={!isLoadingCep} // Desabilita enquanto busca CEP
                         />
                     </View>
 
@@ -380,6 +474,7 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
                             onChangeText={(text) => { setState(text); if (generalError) setGeneralError(null);}}
                             autoCapitalize="characters"
                             maxLength={2}
+                            editable={!isLoadingCep} // Desabilita enquanto busca CEP
                         />
                     </View>
 
@@ -547,4 +642,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  cepLoadingIndicator: { // Estilo para o indicador de loading do CEP
+    marginLeft: 10,
+  }
 });

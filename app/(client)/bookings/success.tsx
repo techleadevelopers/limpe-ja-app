@@ -7,13 +7,16 @@ import {
   Easing,
   Alert,
   Dimensions,
-  // ColorValue, // REMOVIDO: Não mais necessário já que o LinearGradient geral foi removido
+  Platform,
+  ColorValue, // Mantém ColorValue importado para o gradiente
+  ScrollView, // Importado ScrollView para o conteúdo principal
 } from 'react-native';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
-import * as Calendar from 'expo-calendar'; // CORRIGIDO: Era '*s Calendar'
+import *as Calendar from 'expo-calendar';
 import Toast from 'react-native-toast-message';
-import * as Clipboard from 'expo-clipboard';
-// import { LinearGradient } from 'expo-linear-gradient'; // REMOVIDO: Não mais necessário
+import *as Clipboard from 'expo-clipboard';
+import { LinearGradient } from 'expo-linear-gradient'; // Importado LinearGradient
+import { BlurView } from 'expo-blur'; // Importado BlurView
 
 // Importar componentes refatorados
 import SuccessHeader from './components/success/SuccessHeader';
@@ -34,17 +37,25 @@ import { CreatePixChargeDto, PixChargeResponseDto } from '../../types/backend/pa
 
 // Constantes de estilo
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const headerPrimaryColor = '#4A90E2';
-const headerSecondaryColor = '#A8D8FF';
-const iconColor = '#4A90E2';
-const successColor = '#28a745';
+const headerPrimaryColor = '#4A90E2'; // Azul Principal
+const headerSecondaryColor = '#A8D8FF'; // Azul Secundário
+const iconColor = '#4A90E2'; // Azul para Ícones
+const successColor = '#28a745'; // Verde de Sucesso
 
-// REMOVIDO: As cores do gradiente foram removidas, pois o LinearGradient geral não é mais usado
-// const gradientColors: ColorValue[] = [
-//     'rgb(173, 216, 230)', 
-//     'rgba(65, 153, 225, 0.29)',  
-//     'rgba(133, 168, 231, 0.66)', 
-// ];
+// >>>>> CORREÇÃO AQUI: Definindo explicitamente o tipo da tupla readonly <<<<<
+const backgroundGradientColors: readonly [ColorValue, ColorValue, ColorValue, ColorValue] = [
+  '#E0F7FA', // Um azul muito claro, quase branco (fundo superior)
+  '#B3E0FF', // Um azul claro médio
+  '#ADD8E6', // Outro azul claro para transição
+  '#CDE8F7', // Azul mais pálido para a parte inferior
+]; // Removido 'as const' aqui porque a declaração explícita já faz o trabalho
+
+const abstractBlobColors: readonly [ColorValue, ColorValue, ColorValue] = [
+  'rgba(173, 216, 230, 0.4)', // Azul claro semi-transparente
+  'rgba(65, 153, 225, 0.15)', // Azul mais escuro semi-transparente
+  'rgba(133, 168, 231, 0.05)', // Azul mais suave, quase invisível
+]; // Removido 'as const' aqui
+
 
 export default function SuccessScreen() {
   const { bookingId, paymentMethod, totalPrice: totalPriceParam } = useLocalSearchParams<{ bookingId?: string; paymentMethod?: string; totalPrice?: string }>();
@@ -57,10 +68,48 @@ export default function SuccessScreen() {
   const [pixChargeDetails, setPixChargeDetails] = useState<PixChargeResponseDto | null>(null);
   const [pixGenerationError, setPixGenerationError] = useState<string | null>(null);
 
+  // Animação para o conteúdo principal aparecer suavemente
   const contentOpacity = useRef(new Animated.Value(0)).current;
   const contentTranslateY = useRef(new Animated.Value(50)).current;
+
+  // Animações para o "tick" no cabeçalho
   const headerTickOpacity = useRef(new Animated.Value(0)).current;
   const headerTickScale = useRef(new Animated.Value(0.5)).current;
+
+  // Animação para a "bolha" de fundo
+  const blobTranslateY = useRef(new Animated.Value(0)).current;
+  const blobScale = useRef(new Animated.Value(1)).current;
+  const blobRotate = useRef(new Animated.Value(0)).current;
+
+  const animateBlob = useCallback(() => {
+    Animated.loop(
+      Animated.parallel([
+        Animated.timing(blobTranslateY, {
+          toValue: -20,
+          duration: 4000,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(blobScale, {
+          toValue: 1.1,
+          duration: 4000,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(blobRotate, {
+          toValue: 1, // Representa 360 graus, interpolado de 0 a 1
+          duration: 10000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, [blobTranslateY, blobScale, blobRotate]);
+
+  useEffect(() => {
+    animateBlob();
+  }, [animateBlob]);
+
 
   const fetchBookingAndProviderDetails = useCallback(async () => {
     console.log("[SuccessScreen] fetchBookingAndProviderDetails - Iniciando fetch.");
@@ -80,8 +129,6 @@ export default function SuccessScreen() {
       const fetchedBooking = await getBookingDetails(bookingId);
       setBooking(fetchedBooking);
       console.log("[SuccessScreen] fetchBookingAndProviderDetails - Booking real carregado:", fetchedBooking);
-      // >>> LOG DE DEPURACAO AQUI <<<
-      // Alterado para logar scheduledDateTime
       console.log("[SuccessScreen - DEBUG] Valor de scheduledDateTime vindo do backend:", fetchedBooking?.scheduledDateTime);
 
 
@@ -267,7 +314,7 @@ export default function SuccessScreen() {
   // Se booking for null, ele também exibirá o erro.
   // NOVO: Incluir pixGenerationError no check de erro
   // A tela só deve mostrar erro se o booking não carregou (já que não tem mais Lottie para esperar)
-  if (isLoading || error || pixGenerationError || !booking) { 
+  if (isLoading || error || pixGenerationError || !booking) {
     return (
       <SuccessLoadingError
         isLoading={isLoading}
@@ -278,25 +325,59 @@ export default function SuccessScreen() {
     );
   }
 
+  // Define um valor para o ZIndex da bolha
+  const blobZIndex = -1;
+
   return (
-    <View style={styles.screenContainer}>
+    <LinearGradient // <<< Gradiente de fundo geral para a tela
+      colors={backgroundGradientColors}
+      start={{ x: 0.1, y: 0.1 }}
+      end={{ x: 0.9, y: 0.9 }}
+      style={styles.screenGradientBackground} // Novo estilo para o gradiente de tela
+    >
       <Stack.Screen options={{ headerShown: false }} />
 
-      {booking && ( // <<<< CORREÇÃO: AGORA booking É A ÚNICA CONDIÇÃO DE RENDERIZAÇÃO DO CONTEÚDO PRINCIPAL >>>>
-        <>
-          <SuccessHeader
-            headerPrimaryColor={headerPrimaryColor}
-            headerSecondaryColor={headerSecondaryColor}
-            successColor={successColor}
-          />
+      {/* --- Elemento de fundo abstrato animado (Bolha) --- */}
+      <Animated.View
+        style={[
+          styles.animatedBlob,
+          {
+            transform: [
+              { translateY: blobTranslateY },
+              { scale: blobScale },
+              { rotate: blobRotate.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) },
+            ],
+            zIndex: blobZIndex, // Garante que a bolha fique no fundo
+          },
+        ]}
+      >
+        <LinearGradient
+          colors={abstractBlobColors}
+          start={{ x: 0.2, y: 0.2 }}
+          end={{ x: 0.8, y: 0.8 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+        <BlurView intensity={30} tint="light" style={StyleSheet.absoluteFillObject} />
+      </Animated.View>
+      {/* --- FIM do Elemento de fundo abstrato animado (Bolha) --- */}
 
-          {/* REMOVIDO: LinearGradient que foi adicionado incorretamente */}
-          {/* <LinearGradient
-            colors={gradientColors}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.gradientBackground}
-          > */}
+
+      {booking && (
+        <ScrollView // << ENVOLVE O CONTEÚDO PRINCIPAL COM SCROLLVIEW
+          contentContainerStyle={styles.scrollContentContainer} // Estilo para o conteúdo do ScrollView
+        >
+          <Animated.View // Conteúdo principal animado
+            style={[
+              styles.mainContentAnimatedWrapper, // NOVO ESTILO: Envolve o conteúdo principal
+              { opacity: contentOpacity, transform: [{ translateY: contentTranslateY }] },
+            ]}
+          >
+            <SuccessHeader
+              headerPrimaryColor={headerPrimaryColor}
+              headerSecondaryColor={headerSecondaryColor}
+              successColor={successColor}
+            />
+
             <BookingSummaryCard
               booking={booking}
               providerRating={providerRating}
@@ -309,30 +390,58 @@ export default function SuccessScreen() {
               headerPrimaryColor={headerPrimaryColor}
             />
 
-          
-
             <MainActionButtons
               onGoToBookings={handleGoToBookings}
               onGoHome={handleGoHome}
               headerPrimaryColor={headerPrimaryColor}
             />
-          {/* </LinearGradient> REMOVIDO: Fechamento do LinearGradient */}
-        </>
+          </Animated.View>
+        </ScrollView>
       )}
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   screenContainer: {
     flex: 1,
-    backgroundColor: '#F0F2F5',
+    backgroundColor: '#F0F2F5', // Este será sobreposto pelo gradiente
   },
-  // REMOVIDO: gradientBackground que foi adicionado incorretamente
-  // gradientBackground: {
-  //   flex: 1, 
-  //   paddingVertical: 20,
-  // },
-  // REMOVIDO: lottieOverlay
-  // REMOVIDO: lottieAnimation
+  screenGradientBackground: {
+    flex: 1,
+    paddingTop: 50, // Adicionado padding no topo
+  },
+  scrollContentContainer: { // Estilo para o contentContainerStyle do ScrollView
+    flexGrow: 1, // Permite que o ScrollView cresça e centralize conteúdo se houver espaço
+    justifyContent: 'center', // Centraliza o conteúdo verticalmente
+    alignItems: 'center', // Centraliza o conteúdo horizontalmente
+    paddingBottom: 20, // Garante espaço na parte inferior ao rolar
+  },
+  mainContentAnimatedWrapper: { // NOVO ESTILO: Wrapper para o conteúdo principal animado
+    width: '100%', // Ocupa a largura total do ScrollView
+    alignItems: 'center', // Centraliza os cards e botões dentro dele
+    backgroundColor: 'transparent', // Garante que o fundo do gradiente seja visível
+  },
+  animatedBlob: {
+    position: 'absolute',
+    width: SCREEN_WIDTH * 0.7, // Reduzido um pouco o tamanho
+    height: SCREEN_WIDTH * 0.7,
+    borderRadius: (SCREEN_WIDTH * 0.7) / 2, // Para ser circular
+    alignSelf: 'center', // Centraliza horizontalmente
+    top: SCREEN_WIDTH * 0.1, // Movido um pouco para baixo
+    opacity: 0.4, // Reduzida a opacidade
+    overflow: 'hidden',
+    // Sombras para a bolha
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
+  },
 });

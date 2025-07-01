@@ -3,7 +3,18 @@ import api from './api';
 import axios, { AxiosResponse } from 'axios';
 
 // Importar DTOs e tipos de chat
-import { Message, ChatDetails, SendMessageDto, GetMessagesQuery } from '../types/backend/chat'; // CORREÇÃO: Importar GetMessagesQuery
+import { Message, ChatDetails, SendMessageDto, GetMessagesQuery } from '../types/backend/chat';
+
+// Interface para um item de conversa (para o frontend)
+export interface ConversationItem {
+  id: string; // Este é o seu chatId
+  otherUserId: string;
+  otherUserName: string;
+  otherUserAvatarUrl?: string;
+  lastMessage: string;
+  lastMessageTimestamp: string;
+  unreadCount: number;
+}
 
 /**
  * @function findOrCreateChat
@@ -34,9 +45,9 @@ export const findOrCreateChat = async (providerId: string, clientId: string): Pr
  * @param query Parâmetros de query para paginação (offset, limit).
  * @returns Promessa com um array de mensagens.
  */
-export const getChatMessages = async (chatId: string, query?: GetMessagesQuery): Promise<Message[]> => { // CORREÇÃO: Aceitar GetMessagesQuery
+export const getChatMessages = async (chatId: string, query?: GetMessagesQuery): Promise<Message[]> => {
   try {
-    const response: AxiosResponse<Message[]> = await api.get<Message[]>(`/chat/${chatId}/messages`, { params: query }); // CORREÇÃO: Passar query diretamente
+    const response: AxiosResponse<Message[]> = await api.get<Message[]>(`/chat/${chatId}/messages`, { params: query });
     return response.data;
   } catch (error: any) {
     console.error(`Erro ao buscar mensagens do chat ${chatId}:`, error.response?.data || error.message);
@@ -54,20 +65,13 @@ export const getChatMessages = async (chatId: string, query?: GetMessagesQuery):
  * @param messageData DTO com os dados da mensagem a ser enviada.
  * @returns Promessa com a mensagem enviada.
  */
-export const sendMessage = async (messageData: SendMessageDto): Promise<Message> => { // CORREÇÃO: Aceitar SendMessageDto
+export const sendMessage = async (messageData: SendMessageDto): Promise<Message> => {
   try {
-    // O backend espera { receiverId, content, senderId, chatId } no corpo da requisição
-    // Se o chatId já está na URL, ele não precisa estar no corpo.
-    // Se o senderId é inferido pelo JWT, não precisa estar no corpo.
-    // Adapte o `data` conforme o seu backend espera.
-    // Para este exemplo, assumimos que o backend espera receiverId e content no corpo,
-    // e chatId e senderId podem ser inferidos ou passados de outra forma.
-    // Se o seu backend espera o SendMessageDto completo no corpo, use messageData diretamente.
-    const { chatId, ...dataToSend } = messageData; // Se chatId vai na URL, remova-o do corpo
-    const response: AxiosResponse<Message> = await api.post<Message>(`/chat/${chatId}/messages`, dataToSend); // CORREÇÃO: Usar messageData.chatId e dataToSend
+    const { chatId, ...dataToSend } = messageData;
+    const response: AxiosResponse<Message> = await api.post<Message>(`/chat/${chatId}/messages`, dataToSend);
     return response.data;
   } catch (error: any) {
-    console.error(`Erro ao enviar mensagem para o chat ${messageData.chatId}:`, error.response?.data || error.message); // CORREÇÃO: Acessar chatId de messageData
+    console.error(`Erro ao enviar mensagem para o chat ${messageData.chatId}:`, error.response?.data || error.message);
     if (axios.isAxiosError(error) && error.response) {
       throw new Error(error.response.data.message || 'Erro ao enviar mensagem.');
     }
@@ -75,6 +79,60 @@ export const sendMessage = async (messageData: SendMessageDto): Promise<Message>
   }
 };
 
-// Em um ambiente de chat real, você também precisaria de funções para:
-// - getChatList(): Promise<ChatSummary[]> para a tela de lista de conversas
-// - createChat(): Promise<Chat> para iniciar uma nova conversa (se não for via findOrCreateChat)
+/**
+ * @function getChatListForUser
+ * Simula a busca da lista de conversas para um usuário (cliente ou provedor).
+ * Em um cenário real, este endpoint seria implementado no backend.
+ * @param userId ID do usuário logado.
+ * @returns Promessa com um array de ConversationItem.
+ */
+export const getChatListForUser = async (userId: string): Promise<ConversationItem[]> => {
+  console.log(`[chatService] Simulação: Buscando lista de chats para o usuário ${userId}`);
+  // TODO: Substituir por uma chamada real ao backend: await api.get(`/chat/list/${userId}`);
+  await new Promise(resolve => setTimeout(resolve, 500)); // Simula delay de rede
+
+  // Dados mockados para demonstração
+  const mockConversations: ConversationItem[] = [
+    {
+      id: 'chat_mock_1',
+      otherUserId: 'prov_abc_1', // Se o userId for cliente, este é o provedor. Se for provedor, este é o cliente.
+      otherUserName: 'Dr. Limpeza (Provedor)',
+      otherUserAvatarUrl: 'https://randomuser.me/api/portraits/men/32.jpg',
+      lastMessage: 'Sua limpeza foi agendada para amanhã!',
+      lastMessageTimestamp: new Date(Date.now() - 300000).toISOString(),
+      unreadCount: 1,
+    },
+    {
+      id: 'chat_mock_2',
+      otherUserId: 'client_xyz_2',
+      otherUserName: 'Dona Maria (Cliente)',
+      otherUserAvatarUrl: 'https://randomuser.me/api/portraits/women/44.jpg',
+      lastMessage: 'Obrigado pelo ótimo serviço!',
+      lastMessageTimestamp: new Date(Date.now() - 3600000 * 2).toISOString(),
+      unreadCount: 0,
+    },
+    {
+      id: 'chat_mock_3',
+      otherUserId: 'prov_def_3',
+      otherUserName: 'Clean Express (Provedor)',
+      otherUserAvatarUrl: 'https://randomuser.me/api/portraits/men/50.jpg',
+      lastMessage: 'Por favor, confirme o endereço.',
+      lastMessageTimestamp: new Date(Date.now() - 86400000 * 1).toISOString(),
+      unreadCount: 2,
+    },
+    {
+      id: 'chat_mock_4',
+      otherUserId: 'client_pqr_4',
+      otherUserName: 'Sr. João (Cliente)',
+      otherUserAvatarUrl: 'https://randomuser.me/api/portraits/men/60.jpg',
+      lastMessage: 'Até a próxima!',
+      lastMessageTimestamp: new Date(Date.now() - 86400000 * 5).toISOString(),
+      unreadCount: 0,
+    },
+  ];
+
+  // Ordena por timestamp, mais recente primeiro
+  const sortedConversations = mockConversations.sort((a, b) => new Date(b.lastMessageTimestamp).getTime() - new Date(a.lastMessageTimestamp).getTime());
+
+  return sortedConversations;
+};

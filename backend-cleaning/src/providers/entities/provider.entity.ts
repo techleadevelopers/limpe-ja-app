@@ -1,36 +1,33 @@
 import { Provider as PrismaProvider, User, Address, ProviderService, Review, VerificationStatus, Prisma } from '@prisma/client';
 
-// Esta entidade pode ser usada para tipagem interna ou para mapear o retorno do Prisma
-// Se você estiver usando o Prisma Client diretamente, muitas vezes pode usar os tipos gerados por ele.
-// No entanto, para consistência ou para adicionar métodos, uma classe de entidade pode ser útil.
 export class ProviderEntity implements PrismaProvider {
   id: string;
   userId: string;
   fullName: string;
-  cpf: string;
-  dateOfBirth: Date;
+  cpf: string | null; // Pode ser nulo
+  dateOfBirth: Date | null; // Pode ser nulo
   phone: string | null;
-  addressId: string | null; // Este campo é gerado automaticamente pelo Prisma para a relação Address
+  addressId: string | null;
   yearsOfExperience: number | null;
   avatarUrl: string | null;
-  // REMOVIDO: verified: boolean; // Substituído por verificationStatus
 
-  bio: string | null; // <-- ADICIONADO: Mantido conforme sua solicitação
+  bio: string | null;
 
-  // NOVOS CAMPOS DE VERIFICAÇÃO
   verificationStatus: VerificationStatus;
   documentPhotoFrontUrl: string | null;
   documentPhotoBackUrl: string | null;
   selfieWithDocumentUrl: string | null;
-  backgroundCheckResult: Prisma.JsonValue | null; // Usar Prisma.JsonValue para o tipo Json
+  backgroundCheckResult: Prisma.JsonValue | null;
   rejectionReason: string | null;
-  pixKey: string | null; // <--- ADICIONADO: Esta linha resolve o erro TS2420
+  pixKey: string | null;
 
-  // Relações (opcional, dependendo de como você quer tipar)
+  createdAt: Date; // <-- ADICIONADO
+  updatedAt: Date; // <-- ADICIONADO
+
   user?: User;
   address?: Address | null;
   providerServices?: ProviderService[];
-  reviewsReceived?: Review[]; // Adicionado reviewsReceived para completar as relações
+  reviewsReceived?: Review[];
 
   constructor(partial: Partial<ProviderEntity>) {
     Object.assign(this, partial);

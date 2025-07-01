@@ -24,6 +24,8 @@
     "prisma:studio": "prisma studio"
   },
   "dependencies": {
+    "@google-cloud/storage": "^7.16.0",
+    "@google-cloud/vision": "^5.2.0",
     "@nestjs/common": "^11.1.2",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.1.2",
@@ -57,6 +59,7 @@
     "@types/jest": "^29.5.14",
     "@types/joi": "^17.2.2",
     "@types/jwt-decode": "^2.2.1",
+    "@types/long": "^4.0.2",  
     "@types/node": "^22.15.29",
     "@types/passport-jwt": "^4.0.1",
     "@types/passport-local": "^1.0.38",

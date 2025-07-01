@@ -10,6 +10,7 @@ import {
   Req,
   NotFoundException,
   ForbiddenException,
+  BadRequestException, // Importado para lidar com exceções específicas
 } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { SendMessageDto } from './dto/send-message.dto';
@@ -23,11 +24,11 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 import { Request } from 'express';
-import { Message } from './entities/message.entity';
-import { ChatDetailsDto } from './dto/chat-details.dto'; // Importar o novo DTO
-import { RolesGuard } from '../auth/guards/roles.guard'; // Assumindo que você tem um RolesGuard
-import { Roles } from '../auth/decorators/roles.decorator'; // Assumindo que você tem um Roles decorator
-import { UserRole } from '@prisma/client'; // Importar UserRole do Prisma
+import { Message } from './entities/message.entity'; // Certifique-se que Message é uma entidade válida ou DTO
+import { ChatDetailsDto } from './dto/chat-details.dto';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '@prisma/client';
 
 @ApiTags('chat')
 @Controller('chat')
@@ -47,33 +48,32 @@ export class ChatController {
   })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso negado. Apenas o cliente ou o provedor podem iniciar um chat entre si.' })
-  // UseGuards(RolesGuard) // Pode ser necessário um RolesGuard aqui se você quiser restringir quem pode chamar isso
-  // @Roles(UserRole.CLIENT, UserRole.PROVIDER) // Exemplo: Apenas clientes ou provedores podem iniciar chats
+  @UseGuards(RolesGuard) // Adicionado RolesGuard para validação de papel
+  @Roles(UserRole.CLIENT, UserRole.PROVIDER, UserRole.ADMIN) // Permite Cliente, Provedor e Admin
   async findOrCreateChat(
     @Req() req: Request,
     @Param('providerId') providerId: string,
     @Param('clientId') clientId: string,
   ): Promise<ChatDetailsDto> {
-    const currentUserId = req.user['userId']; // ID do usuário autenticado
-    const currentUserRole = req.user['role']; // Papel do usuário autenticado
+    const currentUserId = req.user['userId'];
+    const currentUserRole = req.user['role'];
 
-    // Verificação de segurança: Apenas o cliente ou o provedor envolvido pode iniciar/encontrar este chat
-    // Ou um ADMIN, dependendo da sua regra de negócio
-    if (currentUserId !== clientId && currentUserId !== providerId && currentUserRole !== UserRole.ADMIN) {
-        throw new ForbiddenException('Você não tem permissão para acessar este chat.');
-    }
-
-    // Se o usuário autenticado for um cliente, ele deve ser o clientId na requisição
-    // Se o usuário autenticado for um provedor, ele deve ser o providerId na requisição
-    // Essa validação garante que um usuário não pode criar chats arbitrários para outros.
-    if (currentUserRole === UserRole.CLIENT && currentUserId !== clientId) {
+    // Validação de segurança: O usuário autenticado deve ser um dos participantes ou um ADMIN.
+    if (currentUserRole === UserRole.ADMIN) {
+      // Admin pode acessar qualquer chat
+    } else if (currentUserRole === UserRole.CLIENT) {
+      if (currentUserId !== clientId) {
         throw new ForbiddenException('Como cliente, você só pode iniciar chats para si mesmo.');
-    }
-    if (currentUserRole === UserRole.PROVIDER && currentUserId !== providerId) {
+      }
+    } else if (currentUserRole === UserRole.PROVIDER) {
+      if (currentUserId !== providerId) {
         throw new ForbiddenException('Como provedor, você só pode iniciar chats para si mesmo.');
+      }
+    } else {
+      throw new ForbiddenException('Você não tem permissão para acessar este chat.');
     }
 
-
+    // O ChatService já contém a lógica de permissão baseada no status do agendamento.
     return this.chatService.findOrCreateChat(clientId, providerId);
   }
 
@@ -86,20 +86,29 @@ export class ChatController {
     type: Message,
   })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  @ApiResponse({ status: 403, description: 'Acesso proibido. Não há agendamento confirmado ou o agendamento foi concluído/cancelado.' })
   @ApiResponse({ status: 404, description: 'Conversa não encontrada.' })
+  @ApiResponse({ status: 400, description: 'Remetente ou destinatário inválido.' })
   async sendMessage(
     @Req() req: Request,
     @Param('chatId') chatId: string,
     @Body() sendMessageDto: SendMessageDto,
   ): Promise<Message> {
-    const senderId = req.user['userId']; // Assumindo que o userId está no payload do JWT
-    // Aqui você pode adicionar lógica para verificar se o senderId tem permissão para enviar para este chatId
-    return this.chatService.createMessage(
-      chatId,
-      senderId,
-      sendMessageDto.receiverId,
-      sendMessageDto.content,
-    );
+    const senderId = req.user['userId'];
+
+    try {
+      return await this.chatService.createMessage(
+        chatId,
+        senderId,
+        sendMessageDto.receiverId,
+        sendMessageDto.content,
+      );
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof ForbiddenException || error instanceof BadRequestException) {
+        throw error; // Re-lança as exceções do serviço diretamente
+      }
+      throw new ForbiddenException('Não foi possível enviar a mensagem. Verifique as permissões.'); // Erro genérico
+    }
   }
 
   @Get(':chatId/messages')
@@ -110,6 +119,7 @@ export class ChatController {
     type: [Message],
   })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  @ApiResponse({ status: 403, description: 'Acesso proibido. Não há agendamento confirmado ou o agendamento foi concluído/cancelado.' })
   @ApiResponse({ status: 404, description: 'Conversa não encontrada.' })
   async getMessages(
     @Req() req: Request,
@@ -118,16 +128,17 @@ export class ChatController {
   ): Promise<Message[]> {
     const userId = req.user['userId']; // Para verificação de permissão
 
-    // Em um cenário real, você verificaria se o userId é participante do chatId
-    // Para isso, o ChatService precisaria de um método para verificar a participação no chat
-    // Ex: const isParticipant = await this.chatService.isUserParticipantOfChat(chatId, userId);
-    // if (!isParticipant) {
-    //   throw new ForbiddenException('Você não tem acesso a esta conversa.');
-    // }
-
     const offset = parseInt(getMessagesDto.offset, 10) || 0;
     const limit = parseInt(getMessagesDto.limit, 10) || 50;
 
-    return this.chatService.getMessagesByChatId(chatId, offset, limit);
+    try {
+      // O ChatService já contém a lógica de permissão
+      return await this.chatService.getMessagesByChatId(chatId, offset, limit);
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof ForbiddenException) {
+        throw error; // Re-lança as exceções do serviço diretamente
+      }
+      throw new ForbiddenException('Você não tem acesso a esta conversa ou ela não existe.'); // Erro genérico
+    }
   }
 }

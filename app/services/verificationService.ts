@@ -1,5 +1,6 @@
 // app/services/verificationService.ts
-import api from './api'; // Importa sua instância configurada do Axios ou fetch
+import api from './api';
+import axios from 'axios';
 import {
   SubmitCpfRequest,
   DocumentPhotoType,
@@ -8,7 +9,7 @@ import {
 } from '../types/backend/verification';
 
 class VerificationService {
-  private readonly BASE_URL = '/verification'; // Base URL para os endpoints de verificação
+  private readonly BASE_URL = '/verification';
 
   /**
    * Envia o CPF para verificação de antecedentes.
@@ -16,9 +17,17 @@ class VerificationService {
    * @returns Uma promessa que resolve com a resposta da API.
    */
   async submitCpf(cpf: string): Promise<VerificationResponse> {
-    const data: SubmitCpfRequest = { cpf };
-    const response = await api.post<VerificationResponse>(`${this.BASE_URL}/cpf`, data);
-    return response.data;
+    try {
+      const data: SubmitCpfRequest = { cpf };
+      const response = await api.post<VerificationResponse>(`${this.BASE_URL}/cpf`, data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Erro ao enviar CPF para verificação:', error.response?.data || error.message);
+      if (axios.isAxiosError(error) && error.response) {
+        throw new Error(error.response.data.message || 'Erro ao enviar CPF para verificação.');
+      }
+      throw new Error('Erro de rede ou servidor ao enviar CPF.');
+    }
   }
 
   /**
@@ -28,16 +37,24 @@ class VerificationService {
    * @returns Uma promessa que resolve com a resposta da API.
    */
   async uploadDocumentPhoto(file: File, type: DocumentPhotoType): Promise<VerificationResponse> {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('type', type); // Envia o tipo como parte do FormData
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('type', type);
 
-    const response = await api.post<VerificationResponse>(`${this.BASE_URL}/documents/identity`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data', // Importante para upload de arquivos
-      },
-    });
-    return response.data;
+      const response = await api.post<VerificationResponse>(`${this.BASE_URL}/documents/identity`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Erro ao fazer upload da foto do documento:', error.response?.data || error.message);
+      if (axios.isAxiosError(error) && error.response) {
+        throw new Error(error.response.data.message || 'Erro ao fazer upload da foto do documento.');
+      }
+      throw new Error('Erro de rede ou servidor ao fazer upload da foto do documento.');
+    }
   }
 
   /**
@@ -46,15 +63,23 @@ class VerificationService {
    * @returns Uma promessa que resolve com a resposta da API.
    */
   async uploadSelfie(file: File): Promise<VerificationResponse> {
-    const formData = new FormData();
-    formData.append('file', file);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
 
-    const response = await api.post<VerificationResponse>(`${this.BASE_URL}/documents/selfie`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
+      const response = await api.post<VerificationResponse>(`${this.BASE_URL}/documents/selfie`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Erro ao fazer upload da selfie:', error.response?.data || error.message);
+      if (axios.isAxiosError(error) && error.response) {
+        throw new Error(error.response.data.message || 'Erro ao fazer upload da selfie.');
+      }
+      throw new Error('Erro de rede ou servidor ao fazer upload da selfie.');
+    }
   }
 
   /**
@@ -63,10 +88,16 @@ class VerificationService {
    * Assumindo que o backend tem um endpoint para buscar o perfil do provedor.
    */
   async getProviderVerificationInfo(providerId: string): Promise<ProviderVerificationInfo> {
-    // Este endpoint pode estar no seu providerService ou em um endpoint /verification/status/me
-    // Para este exemplo, assumimos que existe um endpoint no serviço de provedores
-    const response = await api.get<ProviderVerificationInfo>(`/providers/${providerId}/verification-status`);
-    return response.data;
+    try {
+      const response = await api.get<ProviderVerificationInfo>(`/providers/${providerId}/verification-status`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Erro ao buscar informações de verificação do provedor ${providerId}:`, error.response?.data || error.message);
+      if (axios.isAxiosError(error) && error.response) {
+        throw new Error(error.response.data.message || `Erro ao buscar informações de verificação do provedor ${providerId}.`);
+      }
+      throw new Error('Erro de rede ou servidor ao buscar informações de verificação.');
+    }
   }
 }
 

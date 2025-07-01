@@ -7,73 +7,27 @@ import {
     StyleSheet,
     ActivityIndicator,
     TouchableOpacity,
-    Animated, // Importar Animated para animações
+    Animated,
     Platform,
-    Image, // << Adicionado Image que estava faltando para o Avatar
-    Alert, // << CORREÇÃO: Importar Alert
+    Image,
+    Alert,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'; // Para ícones
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+
+import { useAuth } from '../../../hooks/useAuth'; // Para obter o ID do usuário
+import { getChatListForUser } from '../../services/chatService'; // Reutiliza a função de listar conversas
 
 // Interface para um item de conversa
 interface ConversationItem {
-  id: string;
+  id: string; // Este é o seu chatId
+  otherUserId: string;
   otherUserName: string;
+  otherUserAvatarUrl?: string;
   lastMessage: string;
-  timestamp: string; // Adicionado timestamp para ordenação e exibição
+  lastMessageTimestamp: string;
   unreadCount: number;
-  otherUserId: string; // ID do cliente
-  otherUserAvatarUrl?: string; // URL do avatar do cliente
 }
-
-// Mock de dados de conversas (simulando clientes conversando com o provedor)
-const MOCK_CONVERSATIONS: ConversationItem[] = [
-  {
-    id: 'chatProv1',
-    otherUserName: 'Ana Oliveira',
-    lastMessage: 'Podemos confirmar para sexta?',
-    timestamp: new Date(Date.now() - 300000).toISOString(), // 5 min atrás
-    unreadCount: 2,
-    otherUserId: 'clientAbc123',
-    otherUserAvatarUrl: 'https://randomuser.me/api/portraits/women/68.jpg'
-  },
-  {
-    id: 'chatProv2',
-    otherUserName: 'Carlos Silva',
-    lastMessage: 'Obrigado pelo serviço! Ficou ótimo.',
-    timestamp: new Date(Date.now() - 3600000 * 2).toISOString(), // 2h atrás
-    unreadCount: 0,
-    otherUserId: 'clientDef456',
-    otherUserAvatarUrl: 'https://randomuser.me/api/portraits/men/45.jpg'
-  },
-  {
-    id: 'chatProv3',
-    otherUserName: 'Mariana Souza',
-    lastMessage: 'Preciso agendar uma nova limpeza para o mês que vem.',
-    timestamp: new Date(Date.now() - 86400000 * 1).toISOString(), // Ontem
-    unreadCount: 1,
-    otherUserId: 'clientGhi789',
-    otherUserAvatarUrl: 'https://randomuser.me/api/portraits/women/72.jpg'
-  },
-  {
-    id: 'chatProv4',
-    otherUserName: 'João Pereira',
-    lastMessage: 'Tudo certo para amanhã, 14h.',
-    timestamp: new Date(Date.now() - 86400000 * 3).toISOString(), // 3 dias atrás
-    unreadCount: 0,
-    otherUserId: 'clientJkl012',
-    otherUserAvatarUrl: 'https://randomuser.me/api/portraits/men/88.jpg'
-  },
-  {
-    id: 'chatProv5',
-    otherUserName: 'Fernanda Lima',
-    lastMessage: 'Qual a disponibilidade para o próximo sábado?',
-    timestamp: new Date(Date.now() - 86400000 * 7).toISOString(), // 7 dias atrás
-    unreadCount: 0,
-    otherUserId: 'clientMno345',
-    otherUserAvatarUrl: 'https://randomuser.me/api/portraits/women/1.jpg'
-  },
-];
 
 // Helper simples para formatar timestamp de forma relativa ou absoluta
 const formatTimestamp = (isoTimestamp: string): string => {
@@ -151,7 +105,7 @@ const AnimatedConversationItem: React.FC<{
                 <View style={styles.content}>
                     <View style={styles.headerRow}>
                         <Text style={[styles.itemTitle, item.unreadCount > 0 && styles.unreadTitle]} numberOfLines={1}>{item.otherUserName}</Text>
-                        <Text style={styles.timestamp}>{formatTimestamp(item.timestamp)}</Text>
+                        <Text style={styles.timestamp}>{formatTimestamp(item.lastMessageTimestamp)}</Text>
                     </View>
                     <Text
                         style={[styles.lastMessage, item.unreadCount > 0 && styles.unreadLastMessage]}
@@ -173,6 +127,7 @@ const AnimatedConversationItem: React.FC<{
 
 export default function ProviderConversationsListScreen() {
   const router = useRouter();
+  const { user, isAuthenticated } = useAuth(); // Obtém o usuário logado
   const [conversations, setConversations] = useState<ConversationItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -188,40 +143,61 @@ export default function ProviderConversationsListScreen() {
       useNativeDriver: true,
     }).start();
 
-    console.log("[ProviderConversationsListScreen] Carregando conversas...");
-    setIsLoading(true);
-    // TODO: Substituir pela chamada real ao seu chatService.getProviderConversations();
-    setTimeout(() => {
-      // Ordena por timestamp, mais recente primeiro
-      const sortedConversations = MOCK_CONVERSATIONS.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-      setConversations(sortedConversations);
-      setIsLoading(false);
-      // Animação para o feedback (carregando/vazio/lista)
-      Animated.timing(feedbackAnim, {
-        toValue: 1,
-        duration: 500,
-        useNativeDriver: true,
-      }).start();
-    }, 1000);
-  }, [headerAnim, feedbackAnim]);
+    const loadConversations = async () => {
+      if (!isAuthenticated || !user?.id) {
+        console.log("[ProviderConversationsListScreen] Usuário não autenticado, não carregando conversas.");
+        setIsLoading(false);
+        return;
+      }
+
+      console.log("[ProviderConversationsListScreen] Carregando conversas para o provedor:", user.id);
+      setIsLoading(true);
+      try {
+        // A chamada real ao backend para obter a lista de conversas
+        const fetchedConversations = await getChatListForUser(user.id);
+        setConversations(fetchedConversations);
+      } catch (error) {
+        console.error("[ProviderConversationsListScreen] Erro ao carregar conversas:", error);
+        // Tratar erro, talvez mostrar uma mensagem para o usuário
+      } finally {
+        setIsLoading(false);
+        // Animação para o feedback (carregando/vazio)
+        Animated.timing(feedbackAnim, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }).start();
+      }
+    };
+
+    loadConversations();
+  }, [headerAnim, feedbackAnim, isAuthenticated, user?.id]);
 
   const handleConversationPress = (item: ConversationItem) => {
     // Navega para a tela de chat, passando o ID da conversa e o nome do cliente
-    router.push(`/(provider)/messages/${item.id}?recipientName=${encodeURIComponent(item.otherUserName)}` as any); // Adicionado as any para o tipo de rota
-    // Opcional: Marcar conversa como lida ao entrar nela
-    setConversations(prev => prev.map(conv =>
-        conv.id === item.id ? { ...conv, unreadCount: 0 } : conv
-    ));
+    // A tela de chat (chatId.tsx) será responsável por verificar o status do agendamento e bloquear o input.
+    // Assumimos que o item.id (chatId) pode ser usado para buscar o bookingId associado no backend,
+    // ou que o bookingId pode ser passado se a conversa for iniciada de um contexto de agendamento.
+    // Para este exemplo, não estamos passando o bookingId explicitamente da lista de conversas,
+    // o que significa que o chat screen terá que inferir ou buscar o bookingId.
+    router.push({
+        pathname: '/(provider)/messages/[chatId]',
+        params: {
+            chatId: item.id,
+            recipientName: item.otherUserName,
+            recipientId: item.otherUserId, // ID do cliente
+            recipientAvatarUrl: item.otherUserAvatarUrl // Avatar do cliente
+        }
+    });
   };
 
   if (isLoading) {
     return (
         <View style={styles.container}>
             <Stack.Screen options={{ headerShown: false }} />
-            {/* Custom Header para o estado de loading */}
             <Animated.View style={[styles.customHeader, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
                 <Text style={styles.headerTitle}>Mensagens</Text>
-                <View style={styles.headerActionIconPlaceholder} /> {/* Placeholder para alinhar */}
+                <View style={styles.headerActionIconPlaceholder} />
             </Animated.View>
             <Animated.View style={[styles.centeredFeedback, { opacity: feedbackAnim }]}>
                 <ActivityIndicator size="large" color="#007AFF" />
@@ -235,10 +211,8 @@ export default function ProviderConversationsListScreen() {
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Custom Header */}
       <Animated.View style={[styles.customHeader, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
           <Text style={styles.headerTitle}>Mensagens</Text>
-          {/* Exemplo de botão de ação no cabeçalho (ex: iniciar nova conversa) */}
           <TouchableOpacity style={styles.headerActionIcon} onPress={() => Alert.alert("Nova Conversa", "Funcionalidade de iniciar nova conversa.")}>
               <Ionicons name="add-circle-outline" size={28} color="#FFFFFF" />
           </TouchableOpacity>
@@ -257,7 +231,7 @@ export default function ProviderConversationsListScreen() {
             <AnimatedConversationItem
                 item={item}
                 onPress={handleConversationPress}
-                delay={index * 50} // Staggered delay
+                delay={index * 50}
             />
           )}
           keyExtractor={(item) => item.id}
@@ -272,7 +246,7 @@ export default function ProviderConversationsListScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F0F2F5', // Fundo geral mais suave
+    backgroundColor: '#F0F2F5',
   },
   customHeader: {
     flexDirection: 'row',

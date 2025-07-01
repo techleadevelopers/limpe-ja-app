@@ -6,7 +6,6 @@ import { RequestWithdrawalDto } from './dto/request-withdrawal.dto';
 import { TransactionType, BookingStatus, UserRole } from '@prisma/client';
 import { TransactionEntity } from './entities/transaction.entity';
 import { MessageResponseDto } from '../common/dto/message-response.dto';
-// REMOVIDO: import { BookingsService } from '../bookings/bookings.service'; // REMOVA ESTA LINHA
 
 @Injectable()
 export class PaymentsService {
@@ -14,7 +13,6 @@ export class PaymentsService {
 
   constructor(
     private prisma: PrismaService,
-    // REMOVIDO: private bookingsService: BookingsService,
   ) {}
 
   /**
@@ -24,19 +22,15 @@ export class PaymentsService {
    * @returns Os detalhes da cobrança PIX gerada.
    */
   async createPixCharge(
-    clientId: string, // Este clientId é o userId do cliente logado, conforme o JWT.
+    clientId: string,
     dto: CreatePixChargeDto,
   ): Promise<PixChargeResponseDto> {
     const { amount, description, bookingId, providerId } = dto;
 
-    // --- LOGS DE DEPURACAO AQUI ---
     this.logger.log(`[PaymentsService] createPixCharge - Início da função.`);
     this.logger.log(`[PaymentsService] createPixCharge - clientId recebido: ${clientId}`);
     this.logger.log(`[PaymentsService] createPixCharge - DTO recebido: amount=${amount}, description=${description}, bookingId=${bookingId}, providerId=${providerId}`);
-    // --- FIM DOS LOGS DE DEPURACAO ---
 
-    // Embora o `bookings.service` já valide que o provedor existe,
-    // esta é uma camada extra de segurança se este serviço for chamado diretamente.
     if (!providerId) {
       this.logger.error('[PaymentsService] createPixCharge - providerId é nulo ou indefinido.');
       throw new BadRequestException('O ID do provedor é necessário para criar uma cobrança PIX.');
@@ -51,31 +45,50 @@ export class PaymentsService {
     }
     this.logger.log(`[PaymentsService] createPixCharge - Provedor "${providerId}" encontrado.`);
 
-
     try {
+      // --- INÍCIO DA INTEGRAÇÃO REAL COM GATEWAY DE PAGAMENTO PIX ---
+      // TODO: Substituir esta simulação por uma integração real com um gateway de pagamento (ex: Stripe, PagSeguro, Cielo, etc.).
+      // Esta lógica deve chamar a API do gateway para gerar o QR Code/BR Code e obter os detalhes da cobrança.
+      // Exemplo conceitual de chamada a um gateway:
+      /*
+      const pixGatewayResponse = await this.pixGatewayService.createCharge({
+        value: amount,
+        description: description,
+        // Outros parâmetros específicos do gateway, como ID do pedido, dados do pagador, etc.
+      });
+
+      const brCode = pixGatewayResponse.brCode;
+      const qrCodeImage = pixGatewayResponse.qrCodeUrl;
+      const expiresAt = new Date(pixGatewayResponse.expirationTime); // Converta para Date
+      const gatewayTransactionId = pixGatewayResponse.transactionId; // ID da transação no gateway
+      */
+
+      // SIMULAÇÃO (REMOVER APÓS INTEGRAR COM GATEWAY REAL)
+      const simulatedTransactionId = `txn_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+      const simulatedBrCode = `00020101021226580014BR.GOV.BCB.PIX0136${simulatedTransactionId}5204000053039865802BR5913CLIENTE TESTE6008BRASILIA62070503***6304${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+      const simulatedQrCodeImage = `https://api.example.com/pix/qrcode/${simulatedTransactionId}.png`;
+      const simulatedExpiresAt = new Date(Date.now() + 3600 * 1000); // Expira em 1 hora
+      // FIM DA SIMULAÇÃO
+
       const transaction = await this.prisma.transaction.create({
         data: {
           providerId: providerId,
           amount: amount,
           type: TransactionType.PAYMENT,
-          status: 'PENDING',
+          status: 'PENDING', // O status inicial deve refletir a espera pela confirmação do pagamento
           description: description,
-          ...(bookingId && { bookingId: bookingId }), // Condicionalmente adiciona bookingId se presente
+          ...(bookingId && { bookingId: bookingId }),
+          // Se o gateway retornar um ID de transação, armazene-o aqui:
+          // gatewayTransactionId: gatewayTransactionId,
         },
       });
       this.logger.log(`[PaymentsService] createPixCharge - Transação criada com ID: ${transaction.id}`);
-
-
-      // Simulação de dados de retorno da API PIX
-      const simulatedBrCode = `00020101021226580014BR.GOV.BCB.PIX0136${transaction.id}5204000053039865802BR5913CLIENTE TESTE6008BRASILIA62070503***6304${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-      const simulatedQrCodeImage = `https://api.example.com/pix/qrcode/${transaction.id}.png`;
-      const simulatedExpiresAt = new Date(Date.now() + 3600 * 1000); // Expira em 1 hora
 
       // Se houver um bookingId associado, atualize o status do agendamento para PENDING
       if (bookingId) {
         this.logger.log(`[PaymentsService] createPixCharge - Tentando buscar e atualizar Booking ID: ${bookingId}`);
         const booking = await this.prisma.booking.findFirst({
-          where: { id: bookingId }, // Buscar o booking APENAS pelo ID
+          where: { id: bookingId },
         });
 
         if (!booking) {
@@ -85,28 +98,27 @@ export class PaymentsService {
         this.logger.log(`[PaymentsService] createPixCharge - Agendamento "${bookingId}" encontrado. Atualizando status para PENDING.`);
         await this.prisma.booking.update({
           where: { id: bookingId },
-          data: { status: BookingStatus.PENDING }, // Altera o status do booking para PENDING
+          data: { status: BookingStatus.PENDING },
         });
         this.logger.log(`[PaymentsService] createPixCharge - Status do agendamento "${bookingId}" atualizado para PENDING.`);
       }
 
-      // Retorna os detalhes da cobrança PIX gerada
       return {
         transactionId: transaction.id,
         status: 'PENDING',
-        brCode: simulatedBrCode,
-        qrCodeImage: simulatedQrCodeImage,
-        expiresAt: simulatedExpiresAt,
+        brCode: simulatedBrCode, // Use brCode do gateway
+        qrCodeImage: simulatedQrCodeImage, // Use qrCodeImage do gateway
+        expiresAt: simulatedExpiresAt, // Use expiresAt do gateway
         amount: amount,
         description: description,
-        bookingId: bookingId, // Adiciona o bookingId à resposta, se presente.
+        bookingId: bookingId,
       };
     } catch (error) {
       this.logger.error('Erro ao criar cobrança PIX:', error.response?.data || error.message, error.stack);
       if (error instanceof NotFoundException || error instanceof BadRequestException) {
         throw error;
       }
-      throw new InternalServerErrorException('Não foi possível gerar a cobrança PIX.');
+      throw new InternalServerErrorException('Não foi possível gerar a cobrança PIX. Verifique logs para detalhes.');
     }
   }
 
@@ -127,22 +139,58 @@ export class PaymentsService {
     }
 
     try {
-      const transaction = await this.prisma.transaction.create({
-        data: {
-          providerId: providerId,
-          amount: amount,
-          type: TransactionType.WITHDRAWAL,
-          status: 'REQUESTED',
-          description: notes || `Solicitação de saque para ${bankName} Ag: ${agencyNumber} Cc: ${accountNumber}`,
-        },
-      });
+      await this.prisma.$transaction(async (prisma) => {
+        const completedBookings = await prisma.booking.findMany({
+          where: {
+            providerId: providerId,
+            status: BookingStatus.COMPLETED,
+          },
+          select: {
+            totalPrice: true,
+          },
+        });
+        const totalEarnings = completedBookings.reduce((sum, booking) =>
+          sum + booking.totalPrice.toNumber(), 0);
 
-      this.logger.log(`Saque de R$ ${amount} solicitado pelo provedor ${providerId}. Transação ID: ${transaction.id}`);
+        const allWithdrawals = await prisma.transaction.findMany({
+          where: {
+            providerId: providerId,
+            type: TransactionType.WITHDRAWAL,
+          },
+          select: {
+            amount: true,
+          },
+        });
+        const totalWithdrawn = allWithdrawals.reduce((sum, trans) =>
+          sum + trans.amount.toNumber(), 0);
+
+        const availableBalance = totalEarnings - totalWithdrawn;
+
+        if (availableBalance < amount) {
+          throw new BadRequestException('Saldo insuficiente para saque.');
+        }
+
+        if (amount <= 0) {
+          throw new BadRequestException('O valor do saque deve ser maior que zero.');
+        }
+
+        const withdrawalTransaction = await prisma.transaction.create({
+          data: {
+            providerId: providerId,
+            amount: amount,
+            type: TransactionType.WITHDRAWAL,
+            status: 'REQUESTED',
+            description: notes || `Solicitação de saque para ${bankName || 'conta'} Ag: ${agencyNumber || 'N/A'} Cc: ${accountNumber || 'N/A'}`,
+          },
+        });
+
+        this.logger.log(`Saque de R$ ${amount} solicitado pelo provedor ${providerId}. Transação ID: ${withdrawalTransaction.id}`);
+      });
 
       return { message: 'Solicitação de saque recebida com sucesso. Será processada em breve.' };
     } catch (error) {
       this.logger.error('Erro ao solicitar saque:', error.response?.data || error.message, error.stack);
-      if (error instanceof NotFoundException) {
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
         throw error;
       }
       throw new InternalServerErrorException('Não foi possível processar a solicitação de saque.');

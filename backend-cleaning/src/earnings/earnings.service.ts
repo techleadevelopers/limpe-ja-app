@@ -119,62 +119,68 @@ export class EarningsService {
       throw new NotFoundException('Provedor não encontrado.');
     }
 
-    // Calcular o saldo disponível para saque dinamicamente, sem um modelo 'Wallet'
-    const completedBookings = await this.prisma.booking.findMany({
-      where: {
-        providerId: provider.id,
-        status: BookingStatus.COMPLETED,
-      },
-      select: {
-        totalPrice: true,
-      },
-    });
-    const totalEarnings = completedBookings.reduce((sum, booking) =>
-      sum + booking.totalPrice.toNumber(), 0);
-
-    const allWithdrawals = await this.prisma.transaction.findMany({
-      where: {
-        providerId: provider.id,
-        type: TransactionType.WITHDRAWAL,
-      },
-      select: {
-        amount: true,
-      },
-    });
-    const totalWithdrawn = allWithdrawals.reduce((sum, trans) =>
-      sum + trans.amount.toNumber(), 0);
-
-    const availableBalance = totalEarnings - totalWithdrawn;
-
-
-    if (availableBalance < withdrawalDto.amount) {
-      throw new BadRequestException('Saldo insuficiente para saque.');
-    }
-
-    if (withdrawalDto.amount <= 0) {
-      throw new BadRequestException('O valor do saque deve ser maior que zero.');
-    }
-
-    // Criar a transação de saque.
-    // Como não há 'Wallet' ou $transaction global, criamos a transação diretamente.
-    // A consistência do saldo será "eventualmente consistente" através da lógica de cálculo.
-    // Para atomicidade real sem o modelo Wallet, precisaríamos de uma transação mais complexa
-    // ou procedures no DB. Mas para este schema anterior, esta é a abordagem direta.
+    // Utiliza uma transação Prisma para garantir a atomicidade da operação.
+    // Isso é crucial para a robustez financeira.
     try {
-      const withdrawalTransaction = await this.prisma.transaction.create({
-        data: {
-          providerId: provider.id,
-          amount: new Prisma.Decimal(withdrawalDto.amount),
-          type: TransactionType.WITHDRAWAL,
-          description: `Solicitação de saque para ${withdrawalDto.withdrawalAccountInfo || 'conta padrão'}`,
-          status: 'PENDING', // Assumindo status como string. Se for enum, use TransactionStatus.PENDING
-        },
+      const result = await this.prisma.$transaction(async (prisma) => {
+        // Recalcular o saldo disponível para saque dentro da transação para garantir que seja o mais atualizado.
+        const completedBookings = await prisma.booking.findMany({
+          where: {
+            providerId: provider.id,
+            status: BookingStatus.COMPLETED,
+          },
+          select: {
+            totalPrice: true,
+          },
+        });
+        const totalEarnings = completedBookings.reduce((sum, booking) =>
+          sum + booking.totalPrice.toNumber(), 0);
+
+        const allWithdrawals = await prisma.transaction.findMany({
+          where: {
+            providerId: provider.id,
+            type: TransactionType.WITHDRAWAL,
+            // Inclua transações com status 'REQUESTED' ou 'PENDING' na soma de 'totalWithdrawn'
+            // para evitar que o provedor solicite saques de valores que já estão em processo de retirada.
+            // Exemplo: status: { in: ['REQUESTED', 'PENDING', 'COMPLETED'] }
+          },
+          select: {
+            amount: true,
+          },
+        });
+        const totalWithdrawn = allWithdrawals.reduce((sum, trans) =>
+          sum + trans.amount.toNumber(), 0);
+
+        const availableBalance = totalEarnings - totalWithdrawn;
+
+        if (availableBalance < withdrawalDto.amount) {
+          throw new BadRequestException('Saldo insuficiente para saque.');
+        }
+
+        if (withdrawalDto.amount <= 0) {
+          throw new BadRequestException('O valor do saque deve ser maior que zero.');
+        }
+
+        // Criar a transação de saque.
+        const withdrawalTransaction = await prisma.transaction.create({
+          data: {
+            providerId: provider.id,
+            amount: new Prisma.Decimal(withdrawalDto.amount),
+            type: TransactionType.WITHDRAWAL,
+            description: `Solicitação de saque para ${withdrawalDto.withdrawalAccountInfo || 'conta padrão'}`,
+            status: 'PENDING', // Status inicial para saque, aguardando processamento administrativo
+          },
+        });
+
+        return { success: true, message: 'Solicitação de saque enviada com sucesso!', transactionId: withdrawalTransaction.id };
       });
-
-      return { success: true, message: 'Solicitação de saque enviada com sucesso!', transactionId: withdrawalTransaction.id };
-
+      return result;
     } catch (error) {
       console.error('Erro ao criar transação de saque:', error);
+      // Re-lança o erro original se for um BadRequestException
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
       throw new BadRequestException('Não foi possível processar a solicitação de saque.');
     }
   }

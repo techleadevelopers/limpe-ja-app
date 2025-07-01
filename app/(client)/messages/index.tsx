@@ -1,22 +1,25 @@
 // LimpeJaApp/app/(client)/messages/index.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-    View, 
-    Text, 
-    FlatList, 
-    StyleSheet, 
-    ActivityIndicator, 
+import {
+    View,
+    Text,
+    FlatList,
+    StyleSheet,
+    ActivityIndicator,
     TouchableOpacity,
     Image,
     Platform,
     Animated, // Importar Animated para animações
 } from 'react-native';
-import { Stack, useRouter } from 'expo-router'; 
+import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { formatDate } from '../../../utils/helpers'; // Ajuste o caminho
 
+import { useAuth } from '../../../hooks/useAuth'; // Para obter o ID do usuário
+import { getChatListForUser } from '../../services/chatService'; // Nova função para listar conversas
+
 // Sua interface MockConversation (ou importe a real)
-interface MockConversation {
+interface ConversationItem { // Renomeado para ConversationItem para consistência
   id: string; // Este é o seu chatId
   otherUserId: string;
   otherUserName: string;
@@ -28,8 +31,8 @@ interface MockConversation {
 
 // Componente para cada item da conversa com animações
 const AnimatedConversationItem: React.FC<{
-    item: MockConversation;
-    onPress: (item: MockConversation) => void;
+    item: ConversationItem;
+    onPress: (item: ConversationItem) => void;
     delay: number;
 }> = ({ item, onPress, delay }) => {
     const fadeAnim = useRef(new Animated.Value(0)).current; // Opacidade
@@ -71,25 +74,25 @@ const AnimatedConversationItem: React.FC<{
     };
 
     return (
-        <Animated.View 
+        <Animated.View
             style={[
-                styles.conversationCard, 
-                { 
-                    opacity: fadeAnim, 
-                    transform: [{ translateY: slideAnim }, { scale: scaleAnim }] 
+                styles.conversationCard,
+                {
+                    opacity: fadeAnim,
+                    transform: [{ translateY: slideAnim }, { scale: scaleAnim }]
                 }
             ]}
         >
-            <TouchableOpacity 
+            <TouchableOpacity
                 onPress={() => onPress(item)}
                 onPressIn={onPressInCard}
                 onPressOut={onPressOutCard}
                 activeOpacity={1} // Desativa o activeOpacity padrão do TouchableOpacity
                 style={styles.conversationCardInner} // Estilo para o conteúdo interno do TouchableOpacity
             >
-                <Image 
-                    source={item.otherUserAvatarUrl ? { uri: item.otherUserAvatarUrl } : require('../../../assets/images/default-avatar.png')} 
-                    style={styles.avatar} 
+                <Image
+                    source={item.otherUserAvatarUrl ? { uri: item.otherUserAvatarUrl } : require('../../../assets/images/default-avatar.png')}
+                    style={styles.avatar}
                 />
                 <View style={styles.conversationDetails}>
                     <View style={styles.nameTimeRow}>
@@ -116,7 +119,8 @@ const AnimatedConversationItem: React.FC<{
 
 export default function ConversationsListScreen() {
   const router = useRouter();
-  const [conversations, setConversations] = useState<MockConversation[]>([]);
+  const { user, isAuthenticated } = useAuth(); // Obtém o usuário logado
+  const [conversations, setConversations] = useState<ConversationItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Animações para o cabeçalho e estado de feedback
@@ -131,31 +135,47 @@ export default function ConversationsListScreen() {
       useNativeDriver: true,
     }).start();
 
-    console.log("[ConversationsListScreen] Carregando conversas...");
-    setIsLoading(true);
-    setTimeout(() => {
-      setConversations([
-        { id: 'chat1_provider1', otherUserId: 'provider1', otherUserName: 'Ana Oliveira', otherUserAvatarUrl: 'https://via.placeholder.com/80/ADD8E6/000000?text=Ana+O', lastMessage: 'Olá! Confirmado para amanhã às 10h. Ansiosa!', lastMessageTimestamp: new Date(Date.now() - 360000).toISOString() , unreadCount: 1 },
-        { id: 'chat2_provider2', otherUserId: 'provider2', otherUserName: 'Carlos Silva', otherUserAvatarUrl: 'https://via.placeholder.com/80/E0F7FA/000000?text=Carlos+S', lastMessage: 'Tudo certo, muito obrigado pelo excelente serviço!', lastMessageTimestamp: new Date(Date.now() - 86400000 * 1).toISOString(), unreadCount: 0 },
-        { id: 'chat3_provider3', otherUserId: 'provider3', otherUserName: 'Mariana Costa', otherUserAvatarUrl: 'https://via.placeholder.com/80/B3E5FC/000000?text=Mariana+C', lastMessage: 'Você poderia me passar o orçamento para a limpeza pós-obra? Estou aguardando sua resposta para prosseguir.', lastMessageTimestamp: new Date(Date.now() - 86400000 * 2).toISOString(), unreadCount: 3 },
-        { id: 'chat4_provider4', otherUserId: 'provider4', otherUserName: 'João Pereira', otherUserAvatarUrl: 'https://via.placeholder.com/80/FFDDC1/000000?text=João+P', lastMessage: 'Bom dia! Posso atender no sábado, qual o melhor horário para você?', lastMessageTimestamp: new Date(Date.now() - 86400000 * 0.5).toISOString(), unreadCount: 0 },
-      ]);
-      setIsLoading(false);
-      // Animação para o feedback (carregando/vazio)
-      Animated.timing(feedbackAnim, {
-        toValue: 1,
-        duration: 500,
-        useNativeDriver: true,
-      }).start();
-    }, 1200);
-  }, [headerAnim, feedbackAnim]);
+    const loadConversations = async () => {
+      if (!isAuthenticated || !user?.id) {
+        console.log("[ConversationsListScreen] Usuário não autenticado, não carregando conversas.");
+        setIsLoading(false);
+        return;
+      }
 
-  const handleConversationPress = (item: MockConversation) => {
+      console.log("[ConversationsListScreen] Carregando conversas para o usuário:", user.id);
+      setIsLoading(true);
+      try {
+        // A chamada real ao backend para obter a lista de conversas
+        const fetchedConversations = await getChatListForUser(user.id);
+        setConversations(fetchedConversations);
+      } catch (error) {
+        console.error("[ConversationsListScreen] Erro ao carregar conversas:", error);
+        // Tratar erro, talvez mostrar uma mensagem para o usuário
+      } finally {
+        setIsLoading(false);
+        // Animação para o feedback (carregando/vazio)
+        Animated.timing(feedbackAnim, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }).start();
+      }
+    };
+
+    loadConversations();
+  }, [headerAnim, feedbackAnim, isAuthenticated, user?.id]); // Dependências para recarregar se o estado de auth mudar
+
+  const handleConversationPress = (item: ConversationItem) => {
     console.log(`[ConversationsListScreen] Navegando para chat. ChatID: ${item.id}, Recipient: ${item.otherUserName}`);
+    // A tela de chat (chatId.tsx) será responsável por verificar o status do agendamento e bloquear o input.
+    // Assumimos que o item.id (chatId) pode ser usado para buscar o bookingId associado no backend,
+    // ou que o bookingId pode ser passado se a conversa for iniciada de um contexto de agendamento.
+    // Para este exemplo, não estamos passando o bookingId explicitamente da lista de conversas,
+    // o que significa que o chat screen terá que inferir ou buscar o bookingId.
     router.push({
-      pathname: '/(client)/messages/[chatId]', 
-      params: { 
-        chatId: item.id,                       
+      pathname: '/(client)/messages/[chatId]',
+      params: {
+        chatId: item.id,
         recipientName: item.otherUserName,
         recipientId: item.otherUserId,
         recipientAvatarUrl: item.otherUserAvatarUrl // Passa o avatar para a tela de chat
@@ -165,9 +185,8 @@ export default function ConversationsListScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ headerShown: false }} /> {/* Esconde o header padrão */}
-      
-      {/* Custom Header */}
+      <Stack.Screen options={{ headerShown: false }} />
+
       <Animated.View style={[styles.customHeader, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
           <Text style={styles.headerTitle}>Minhas Mensagens</Text>
           <TouchableOpacity style={styles.headerIconRight} onPress={() => router.push('/(common)/settings')}>
@@ -184,9 +203,9 @@ export default function ConversationsListScreen() {
         <FlatList
           data={conversations}
           renderItem={({ item, index }) => (
-            <AnimatedConversationItem 
-              item={item} 
-              onPress={handleConversationPress} 
+            <AnimatedConversationItem
+              item={item}
+              onPress={handleConversationPress}
               delay={index * 50 + 200} // Atraso escalonado para cada item
             />
           )}
@@ -205,9 +224,9 @@ export default function ConversationsListScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#F8F9FA', 
+  container: {
+    flex: 1,
+    backgroundColor: '#F8F9FA',
   },
   customHeader: {
     flexDirection: 'row',
@@ -231,14 +250,14 @@ const styles = StyleSheet.create({
   headerIconRight: {
     padding: 5, // Aumenta a área de toque
   },
-  listContentContainer: { 
-    paddingTop: 10, 
+  listContentContainer: {
+    paddingTop: 10,
     paddingBottom: 20, // Espaçamento extra no final da lista
   },
-  conversationCard: { 
+  conversationCard: {
     marginHorizontal: 15,
     marginVertical: 7,
-    backgroundColor: '#FFFFFF', 
+    backgroundColor: '#FFFFFF',
     borderRadius: 12, // Bordas mais arredondadas
     ...Platform.select({
         ios: {
@@ -253,91 +272,91 @@ const styles = StyleSheet.create({
     }),
   },
   conversationCardInner: { // Para que o TouchableOpacity preencha o card
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    paddingHorizontal: 15, 
-    paddingVertical: 12, 
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 12,
     borderRadius: 12, // Garante que o toque respeite o borderRadius do card
   },
-  avatar: { 
-    width: 55, 
-    height: 55, 
-    borderRadius: 27.5, 
-    marginRight: 15, 
-    backgroundColor: '#E9ECEF', 
+  avatar: {
+    width: 55,
+    height: 55,
+    borderRadius: 27.5,
+    marginRight: 15,
+    backgroundColor: '#E9ECEF',
     borderWidth: 1,
     borderColor: '#F0F2F5',
   },
-  conversationDetails: { 
-    flex: 1, 
+  conversationDetails: {
+    flex: 1,
   },
-  nameTimeRow: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    marginBottom: 4, 
+  nameTimeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
   },
-  userNameText: { 
-    fontSize: 17, 
+  userNameText: {
+    fontSize: 17,
     fontWeight: '700', // Mais negrito
-    color: '#212529', 
+    color: '#212529',
   },
-  timestampText: { 
-    fontSize: 12, 
-    color: '#868E96', 
+  timestampText: {
+    fontSize: 12,
+    color: '#868E96',
   },
-  messageBadgeRow: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
+  messageBadgeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  lastMessageText: { 
-    fontSize: 14, 
-    color: '#6C757D', 
-    flexShrink: 1, 
+  lastMessageText: {
+    fontSize: 14,
+    color: '#6C757D',
+    flexShrink: 1,
     flex: 1, // Ocupa o espaço restante
   },
-  unreadMessageText: { 
-    fontWeight: 'bold', 
-    color: '#212529', 
+  unreadMessageText: {
+    fontWeight: 'bold',
+    color: '#212529',
   },
-  unreadBadge: { 
-    backgroundColor: '#007AFF', 
+  unreadBadge: {
+    backgroundColor: '#007AFF',
     borderRadius: 12, // Mais arredondado
-    minWidth: 24, 
-    height: 24, 
-    paddingHorizontal: 6, 
-    justifyContent: 'center', 
-    alignItems: 'center', 
+    minWidth: 24,
+    height: 24,
+    paddingHorizontal: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginLeft: 10, // Mais espaçamento
   },
-  unreadCountText: { 
-    color: 'white', 
-    fontSize: 12, 
-    fontWeight: 'bold', 
+  unreadCountText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
-  centeredFeedback: { 
-    flex: 1, 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    padding: 20, 
+  centeredFeedback: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
   },
-  loadingText: { 
-    marginTop: 15, 
-    fontSize: 16, 
-    color: '#6C757D', 
+  loadingText: {
+    marginTop: 15,
+    fontSize: 16,
+    color: '#6C757D',
   },
-  emptyText: { 
+  emptyText: {
     fontSize: 20, // Um pouco maior
-    fontWeight: '700', 
-    color: '#343A40', 
-    textAlign: 'center', 
-    marginBottom: 10, 
+    fontWeight: '700',
+    color: '#343A40',
+    textAlign: 'center',
+    marginBottom: 10,
   },
-  emptySubText: { 
-    fontSize: 15, 
-    color: '#6C757D', 
-    textAlign: 'center', 
+  emptySubText: {
+    fontSize: 15,
+    color: '#6C757D',
+    textAlign: 'center',
     paddingHorizontal: 20,
   }
 });

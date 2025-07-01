@@ -48,6 +48,37 @@ export interface ProviderServiceOffering {
 }
 
 /**
+ * @interface ProviderReview
+ * Representa uma avaliação de um provedor.
+ * Alinhado com a estrutura de reviews em `ProviderWithIncludes` do backend.
+ *
+ * CORREÇÃO: Ajustado para refletir o que o ReviewsService retorna (que inclui client.fullName e client.user.avatarUrl)
+ * O backend já deve estar "achatando" ou aninhando esses dados.
+ */
+export interface ProviderReview {
+  id: string;
+  rating: number;
+  comment?: string | null;
+  createdAt: string; // ISO string
+  updatedAt: string; // ISO string - Certifique-se que o Review do Prisma tem este campo e está sendo retornado
+  bookingId: string;
+  clientId: string; // ID do cliente
+  providerId: string; // ID do provedor
+
+  // CORREÇÃO AQUI: A propriedade 'client' pode ser null ou undefined.
+  // Isso reflete que o cliente pode não estar sempre incluído ou pode ser null.
+  client?: { // Tornar 'client' opcional
+    id: string;
+    fullName: string;
+    user?: { // 'user' pode ser opcional ou null
+      id: string;
+      avatarUrl?: string | null;
+    } | null;
+  } | null; // E permitir que o objeto 'client' inteiro seja null
+}
+
+
+/**
  * @interface ProviderDisplayInfo
  * Representa os detalhes completos de um provedor para exibição no frontend.
  * Corresponde ao `ProviderWithCalculatedRating` do backend.
@@ -72,6 +103,8 @@ export interface ProviderDisplayInfo {
   yearsOfExperience?: number | null;
   cpf: string;
   dateOfBirth: string; // ISO string
+  createdAt: string; // Data de criação do provedor (ISO string)
+  updatedAt: string; // Data da última atualização do provedor (ISO string)
 
   // Inclui campos do Address (agora não opcional, pois o DTO backend sempre inclui)
   address: {
@@ -87,9 +120,6 @@ export interface ProviderDisplayInfo {
 
   // Inclui serviços que o provedor oferece
   providerServices: ProviderServiceOffering[];
-
-  createdAt: string; // Data de criação do provedor (ISO string)
-  updatedAt: string; // Data da última atualização do provedor (ISO string)
 
   // Adicionado para uso em componentes de cartão/lista, como o ProviderCard
   distance?: string; // Distância do provedor até o cliente (calculado no frontend ou retornado pelo backend em buscas de localização)
@@ -200,37 +230,6 @@ export interface UpdateAvailabilityData {
 // =========================================================================
 // INTERFACES PARA DASHBOARD E TRANSAÇÕES
 // =========================================================================
-
-/**
- * @interface ProviderReview
- * Representa uma avaliação de um provedor.
- * Alinhado com a estrutura de reviews em `ProviderWithIncludes` do backend.
- *
- * CORREÇÃO: Ajustado para refletir o que o ReviewsService retorna (que inclui client.fullName e client.user.avatarUrl)
- * O backend já deve estar "achatando" ou aninhando esses dados.
- */
-export interface ProviderReview {
-  id: string;
-  rating: number;
-  comment?: string | null;
-  createdAt: string; // ISO string
-  updatedAt: string; // ISO string - Certifique-se que o Review do Prisma tem este campo e está sendo retornado
-  bookingId: string;
-  clientId: string; // ID do cliente
-  providerId: string; // ID do provedor
-
-  // O backend do ReviewsService está retornando 'client' com 'fullName' e 'user.avatarUrl'.
-  // Esta estrutura deve ser consistente.
-  client: { // <--- Ajustado para a estrutura de include do Prisma
-    id: string;
-    fullName: string;
-    user?: { // 'user' pode ser opcional ou null, dependendo de como a relação é definida e se sempre existe.
-      id: string;
-      avatarUrl?: string | null;
-    } | null; // Adicionado '| null' aqui para robustez
-  };
-}
-
 
 /**
  * @interface ProviderDashboard

@@ -11,7 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
-  Animated, // Import Animated do React Native para AnimatedErrorMessage e animações existentes
+  Animated,
   StatusBar,
   Dimensions,
   Button
@@ -20,9 +20,11 @@ import { Link, useRouter, Stack } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
 import { Ionicons } from '@expo/vector-icons';
 import { UserRole } from '../types/backend/auth';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 
 // Importações do Reanimated para as novas animações
-import AnimatedReanimated, { // Renomeado para evitar conflito com Animated do React Native
+import AnimatedReanimated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
@@ -32,8 +34,11 @@ import AnimatedReanimated, { // Renomeado para evitar conflito com Animated do R
   Extrapolate,
 } from 'react-native-reanimated';
 
-// CORREÇÃO: Revertido para caminho absoluto, conforme feedback de que funciona sem erros
 const LOGO_IMAGE = require('../../assets/images/logo2.png');
+
+// Constantes para animações e layout
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const SCREEN_HEIGHT = Dimensions.get('window').height;
 
 const AnimatedErrorMessage: React.FC<{ message: string | null; centered?: boolean }> = ({ message, centered }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -54,7 +59,7 @@ const AnimatedErrorMessage: React.FC<{ message: string | null; centered?: boolea
 };
 
 export default function LoginScreen() {
-  const [username, setUsername] = useState(''); // Este será o email
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -66,24 +71,57 @@ export default function LoginScreen() {
   const mainElementsOpacity = useRef(new Animated.Value(0)).current;
   const mainElementsTranslateY = useRef(new Animated.Value(18)).current;
 
-  // Novos valores compartilhados para as animações da logo (Reanimated)
-  const logoRotateY = useSharedValue(0); // Para rotação sutil do logo
-  const logoPulseScale = useSharedValue(1); // Para pulso de escala do logo
+  // ANIMAÇÕES PARA MÚLTIPLAS MINI BOLHAS
+  const bubble1 = useRef(new Animated.Value(0)).current;
+  const bubble2 = useRef(new Animated.Value(0)).current;
+  const bubble3 = useRef(new Animated.Value(0)).current;
+  const bubble4 = useRef(new Animated.Value(0)).current;
+  const bubble5 = useRef(new Animated.Value(0)).current;
+  const bubble6 = useRef(new Animated.Value(0)).current;
+  const bubble7 = useRef(new Animated.Value(0)).current;
+  const bubble8 = useRef(new Animated.Value(0)).current;
 
-  // A linha `const showTestLogins = process.env.EXPO_PUBLIC_SHOW_TEST_LOGINS === 'true' || __DEV__;` 
-  // será mantida, mas a seção que ela controla será removida.
+  // Valores compartilhados para as animações da logo (Reanimated)
+  const logoRotateY = useSharedValue(0);
+  const logoPulseScale = useSharedValue(1);
 
   useEffect(() => {
+    // ANIMAÇÕES DAS MINI BOLHAS
+    const startBubbleAnimations = () => {
+      const bubbles = [bubble1, bubble2, bubble3, bubble4, bubble5, bubble6, bubble7, bubble8];
+      
+      bubbles.forEach((bubble, index) => {
+        const delay = index * 800;
+        const duration = 3000 + (index * 500);
+        
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(bubble, {
+              toValue: 1,
+              duration: duration,
+              delay: delay,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+            Animated.timing(bubble, {
+              toValue: 0,
+              duration: duration,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+          ])
+        ).start();
+      });
+    };
+
     // Função para iniciar as animações de loop da logo
     const startLogoLoopAnimations = () => {
-      // Animação de rotação sutil do logo
       logoRotateY.value = withRepeat(
         withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
         -1,
         true
       );
 
-      // Animação de pulso de escala do logo
       logoPulseScale.value = withRepeat(
         withTiming(1.02, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
         -1,
@@ -96,14 +134,24 @@ export default function LoginScreen() {
       router.replace(targetRoute as any);
     } else if (!isAuthenticated) {
       Animated.parallel([
-        Animated.timing(mainElementsOpacity, { toValue: 1, duration: 700, delay: 200, useNativeDriver: true }),
-        Animated.timing(mainElementsTranslateY, { toValue: 0, duration: 700, delay: 200, useNativeDriver: true })
+        Animated.timing(mainElementsOpacity, { 
+          toValue: 1, 
+          duration: 700, 
+          delay: 200, 
+          useNativeDriver: true 
+        }),
+        Animated.timing(mainElementsTranslateY, { 
+          toValue: 0, 
+          duration: 700, 
+          delay: 200, 
+          useNativeDriver: true 
+        })
       ]).start(() => {
-        // Inicia as animações de loop da logo após a animação de entrada dos elementos principais
         startLogoLoopAnimations();
+        startBubbleAnimations();
       });
     }
-  }, [isAuthenticated, authIsLoading, user, router, mainElementsOpacity, mainElementsTranslateY]);
+  }, [isAuthenticated, authIsLoading, user, router]);
 
   const validateInputs = () => {
     setGeneralError(null);
@@ -126,14 +174,11 @@ export default function LoginScreen() {
     }
   };
 
-  // As funções navigateToClientDashboard e navigateToProviderDashboard serão removidas,
-  // pois não há mais botões para chamá-las.
-
   const createButtonAnimations = () => {
-    const scaleAnim = useRef(new Animated.Value(1)).current;
-    const onPressIn = () => Animated.spring(scaleAnim, { toValue: 0.97, useNativeDriver: true, friction: 7 }).start();
-    const onPressOut = () => Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, friction: 7 }).start();
-    return { scaleAnim, onPressIn, onPressOut };
+    const scaleAnimButton = useRef(new Animated.Value(1)).current;
+    const onPressIn = () => Animated.spring(scaleAnimButton, { toValue: 0.97, useNativeDriver: true, friction: 7 }).start();
+    const onPressOut = () => Animated.spring(scaleAnimButton, { toValue: 1, useNativeDriver: true, friction: 7 }).start();
+    return { scaleAnim: scaleAnimButton, onPressIn, onPressOut };
   };
 
   const signInButtonAnims = createButtonAnimations();
@@ -152,13 +197,13 @@ export default function LoginScreen() {
 
     return {
       transform: [
-        { scale: logoPulseScale.value }, // Pulso de escala
-        { rotateY: `${rotation}deg` }, // Rotação em Y
+        { scale: logoPulseScale.value },
+        { rotateY: `${rotation}deg` },
       ],
     };
   });
 
-
+  // LOADING ORIGINAL MANTIDO
   if (authIsLoading || (!authIsLoading && isAuthenticated)) {
     return (
       <View style={styles.fullScreenLoadingContainer}>
@@ -174,16 +219,263 @@ export default function LoginScreen() {
       style={styles.keyboardAvoidingContainer}
     >
       <StatusBar barStyle="dark-content" backgroundColor={styles.scrollView.backgroundColor} />
+      
+      {/* Fundo com gradiente */}
+      <LinearGradient
+        colors={['#F0F4F8', '#E2E8F0', '#F7FAFC']}
+        style={StyleSheet.absoluteFillObject}
+      />
+
+      {/* MÚLTIPLAS MINI BOLHAS AZUIS */}
+      <Animated.View style={[
+        styles.miniBubble1,
+        {
+          transform: [
+            { 
+              translateY: bubble1.interpolate({
+                inputRange: [0, 1],
+                outputRange: [SCREEN_HEIGHT + 50, -100]
+              })
+            },
+            { 
+              translateX: bubble1.interpolate({
+                inputRange: [0, 0.5, 1],
+                outputRange: [0, 30, -20]
+              })
+            }
+          ],
+          opacity: bubble1.interpolate({
+            inputRange: [0, 0.1, 0.9, 1],
+            outputRange: [0, 1, 1, 0]
+          })
+        }
+      ]}>
+        <LinearGradient
+          colors={['rgba(66, 165, 245, 0.3)', 'rgba(144, 202, 249, 0.2)']}
+          style={styles.bubbleGradient}
+        />
+      </Animated.View>
+
+      <Animated.View style={[
+        styles.miniBubble2,
+        {
+          transform: [
+            { 
+              translateY: bubble2.interpolate({
+                inputRange: [0, 1],
+                outputRange: [SCREEN_HEIGHT + 50, -100]
+              })
+            },
+            { 
+              translateX: bubble2.interpolate({
+                inputRange: [0, 0.5, 1],
+                outputRange: [0, -25, 35]
+              })
+            }
+          ],
+          opacity: bubble2.interpolate({
+            inputRange: [0, 0.1, 0.9, 1],
+            outputRange: [0, 1, 1, 0]
+          })
+        }
+      ]}>
+        <LinearGradient
+          colors={['rgba(30, 144, 255, 0.25)', 'rgba(100, 149, 237, 0.15)']}
+          style={styles.bubbleGradient}
+        />
+      </Animated.View>
+
+      <Animated.View style={[
+        styles.miniBubble3,
+        {
+          transform: [
+            { 
+              translateY: bubble3.interpolate({
+                inputRange: [0, 1],
+                outputRange: [SCREEN_HEIGHT + 50, -100]
+              })
+            },
+            { 
+              translateX: bubble3.interpolate({
+                inputRange: [0, 0.5, 1],
+                outputRange: [0, 40, -15]
+              })
+            }
+          ],
+          opacity: bubble3.interpolate({
+            inputRange: [0, 0.1, 0.9, 1],
+            outputRange: [0, 1, 1, 0]
+          })
+        }
+      ]}>
+        <LinearGradient
+          colors={['rgba(135, 206, 250, 0.2)', 'rgba(173, 216, 230, 0.15)']}
+          style={styles.bubbleGradient}
+        />
+      </Animated.View>
+
+      <Animated.View style={[
+        styles.miniBubble4,
+        {
+          transform: [
+            { 
+              translateY: bubble4.interpolate({
+                inputRange: [0, 1],
+                outputRange: [SCREEN_HEIGHT + 50, -100]
+              })
+            },
+            { 
+              translateX: bubble4.interpolate({
+                inputRange: [0, 0.5, 1],
+                outputRange: [0, -30, 25]
+              })
+            }
+          ],
+          opacity: bubble4.interpolate({
+            inputRange: [0, 0.1, 0.9, 1],
+            outputRange: [0, 1, 1, 0]
+          })
+        }
+      ]}>
+        <LinearGradient
+          colors={['rgba(70, 130, 180, 0.3)', 'rgba(176, 196, 222, 0.2)']}
+          style={styles.bubbleGradient}
+        />
+      </Animated.View>
+
+      <Animated.View style={[
+        styles.miniBubble5,
+        {
+          transform: [
+            { 
+              translateY: bubble5.interpolate({
+                inputRange: [0, 1],
+                outputRange: [SCREEN_HEIGHT + 50, -100]
+              })
+            },
+            { 
+              translateX: bubble5.interpolate({
+                inputRange: [0, 0.5, 1],
+                outputRange: [0, 20, -40]
+              })
+            }
+          ],
+          opacity: bubble5.interpolate({
+            inputRange: [0, 0.1, 0.9, 1],
+            outputRange: [0, 1, 1, 0]
+          })
+        }
+      ]}>
+        <LinearGradient
+          colors={['rgba(65, 105, 225, 0.25)', 'rgba(123, 104, 238, 0.15)']}
+          style={styles.bubbleGradient}
+        />
+      </Animated.View>
+
+      <Animated.View style={[
+        styles.miniBubble6,
+        {
+          transform: [
+            { 
+              translateY: bubble6.interpolate({
+                inputRange: [0, 1],
+                outputRange: [SCREEN_HEIGHT + 50, -100]
+              })
+            },
+            { 
+              translateX: bubble6.interpolate({
+                inputRange: [0, 0.5, 1],
+                outputRange: [0, -35, 30]
+              })
+            }
+          ],
+          opacity: bubble6.interpolate({
+            inputRange: [0, 0.1, 0.9, 1],
+            outputRange: [0, 1, 1, 0]
+          })
+        }
+      ]}>
+        <LinearGradient
+          colors={['rgba(95, 158, 160, 0.2)', 'rgba(175, 238, 238, 0.15)']}
+          style={styles.bubbleGradient}
+        />
+      </Animated.View>
+
+      <Animated.View style={[
+        styles.miniBubble7,
+        {
+          transform: [
+            { 
+              translateY: bubble7.interpolate({
+                inputRange: [0, 1],
+                outputRange: [SCREEN_HEIGHT + 50, -100]
+              })
+            },
+            { 
+              translateX: bubble7.interpolate({
+                inputRange: [0, 0.5, 1],
+                outputRange: [0, 45, -10]
+              })
+            }
+          ],
+          opacity: bubble7.interpolate({
+            inputRange: [0, 0.1, 0.9, 1],
+            outputRange: [0, 1, 1, 0]
+          })
+        }
+      ]}>
+        <LinearGradient
+          colors={['rgba(72, 61, 139, 0.2)', 'rgba(147, 112, 219, 0.15)']}
+          style={styles.bubbleGradient}
+        />
+      </Animated.View>
+
+      <Animated.View style={[
+        styles.miniBubble8,
+        {
+          transform: [
+            { 
+              translateY: bubble8.interpolate({
+                inputRange: [0, 1],
+                outputRange: [SCREEN_HEIGHT + 50, -100]
+              })
+            },
+            { 
+              translateX: bubble8.interpolate({
+                inputRange: [0, 0.5, 1],
+                outputRange: [0, -20, 50]
+              })
+            }
+          ],
+          opacity: bubble8.interpolate({
+            inputRange: [0, 0.1, 0.9, 1],
+            outputRange: [0, 1, 1, 0]
+          })
+        }
+      ]}>
+        <LinearGradient
+          colors={['rgba(106, 90, 205, 0.25)', 'rgba(221, 160, 221, 0.15)']}
+          style={styles.bubbleGradient}
+        />
+      </Animated.View>
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContentContainer}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
         <Stack.Screen options={{ headerShown: false }} />
 
-        <Animated.View style={[styles.contentWrapper, { opacity: mainElementsOpacity, transform: [{translateY: mainElementsTranslateY}] }]}>
+        <Animated.View style={[
+          styles.contentWrapper, 
+          { 
+            opacity: mainElementsOpacity, 
+            transform: [{ translateY: mainElementsTranslateY }] 
+          }
+        ]}>
+          {/* LOGO COM DIMENSÕES ORIGINAIS RESTAURADAS */}
           <View style={styles.logoContainer}>
-            {/* Aplicando o AnimatedReanimated.Image com o estilo animado */}
             <AnimatedReanimated.Image source={LOGO_IMAGE} style={[styles.logo, animatedLogoStyle]} />
           </View>
 
@@ -292,7 +584,6 @@ export default function LoginScreen() {
             </Link>
           </View>
 
-          {/* Link "Esqueceu a Senha?" - Nova Melhoria */}
           <View style={styles.forgotPasswordContainer}>
             <Link href="/(auth)/forgot-password" asChild>
               <TouchableOpacity>
@@ -323,8 +614,79 @@ const styles = StyleSheet.create({
     paddingHorizontal: 35,
     paddingTop: Platform.OS === 'ios' ? 20 : 15,
   },
+
+  // ESTILOS PARA MINI BOLHAS AZUIS
+  miniBubble1: {
+    position: 'absolute',
+    left: SCREEN_WIDTH * 0.1,
+    width: 15,
+    height: 15,
+    borderRadius: 7.5,
+    overflow: 'hidden',
+  },
+  miniBubble2: {
+    position: 'absolute',
+    right: SCREEN_WIDTH * 0.15,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  miniBubble3: {
+    position: 'absolute',
+    left: SCREEN_WIDTH * 0.25,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    overflow: 'hidden',
+  },
+  miniBubble4: {
+    position: 'absolute',
+    right: SCREEN_WIDTH * 0.3,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    overflow: 'hidden',
+  },
+  miniBubble5: {
+    position: 'absolute',
+    left: SCREEN_WIDTH * 0.05,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    overflow: 'hidden',
+  },
+  miniBubble6: {
+    position: 'absolute',
+    right: SCREEN_WIDTH * 0.05,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  miniBubble7: {
+    position: 'absolute',
+    left: SCREEN_WIDTH * 0.4,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    overflow: 'hidden',
+  },
+  miniBubble8: {
+    position: 'absolute',
+    right: SCREEN_WIDTH * 0.4,
+    width: 13,
+    height: 13,
+    borderRadius: 6.5,
+    overflow: 'hidden',
+  },
+  bubbleGradient: {
+    flex: 1,
+  },
+
+  // LOGO COM DIMENSÕES ORIGINAIS RESTAURADAS
   logoContainer: {
-    top: 73, // Ajuste para centralizar o logo
+    top: 73,
     right: 10,
     alignItems: 'center',
   },
@@ -345,7 +707,7 @@ const styles = StyleSheet.create({
     color: '#8A94A6',
     textAlign: 'center',
     marginBottom: 50,
-    bottom: 55, // Espaço entre o logo e o título
+    bottom: 55,
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -355,13 +717,11 @@ const styles = StyleSheet.create({
     height: 33,
     bottom: 55,
     marginBottom: 10,
-    // Estilos de sombra para iOS
     shadowColor: 'rgba(100, 100, 150, 0.15)',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 1,
     shadowRadius: 15,
-    // Elevação para Android (pode precisar de um valor maior em dispositivos físicos)
-    elevation: 5, // Considere aumentar para 8 ou 10 para maior visibilidade no Android
+    elevation: 5,
     paddingLeft: 5,
     paddingRight: 15,
   },
@@ -405,13 +765,11 @@ const styles = StyleSheet.create({
     marginTop: 10,
     bottom: 55,
     marginBottom: 25,
-    // Estilos de sombra para iOS
     shadowColor: '#007BFF',
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    // Elevação para Android
-    elevation: 8, // Considere aumentar para 10 ou 12 para maior visibilidade
+    elevation: 8,
   },
   buttonDisabled: {
     backgroundColor: '#A0CFFF',
@@ -457,13 +815,11 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    // Estilos de sombra para iOS
     shadowColor: 'rgba(100, 100, 150, 0.1)',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 1,
     shadowRadius: 8,
-    // Elevação para Android
-    elevation: 4, // Considere aumentar para 6 ou 8
+    elevation: 4,
     marginHorizontal: 12,
   },
   signUpContainer: {

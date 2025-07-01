@@ -6,17 +6,20 @@ import { Ionicons } from '@expo/vector-icons';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '../../../hooks/useAuth';
 import { getChatMessages, sendMessage as sendChatMessage } from '../../services/chatService';
-import { Message, GetMessagesQuery, SendMessageDto } from '../../types/backend/chat'; // CORREÇÃO: Usar GetMessagesQuery
+import { getBookingDetails } from '../../services/bookingService'; // Importar o serviço de booking
+import { Message, GetMessagesQuery, SendMessageDto } from '../../types/backend/chat';
+import { BookingStatus } from '../../types/backend/bookings'; // Importar BookingStatus
 import { appConfig } from '../../../config/appConfig';
 
 const SOCKET_URL = appConfig.apiUrl.replace('http', 'ws');
 
 export default function ChatScreen() {
-  const { chatId, recipientName } = useLocalSearchParams<{ chatId?: string, recipientName?: string }>();
+  const { chatId, recipientName, recipientId, recipientAvatarUrl, bookingId } = useLocalSearchParams<{ chatId?: string, recipientName?: string, recipientId?: string, recipientAvatarUrl?: string, bookingId?: string }>();
   const { user, token, isAuthenticated } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [chatBlockedMessage, setChatBlockedMessage] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const flatListRef = useRef<FlatList>(null);
 
@@ -26,26 +29,43 @@ export default function ChatScreen() {
     if (!isAuthenticated || !token || !chatId || !userId) {
       console.log('ChatScreen: Usuário não autenticado ou chat/user ID ausente.');
       setIsLoading(false);
+      setChatBlockedMessage("Você precisa estar logado para acessar este chat.");
       return;
     }
 
-    // 1. Carregar histórico de mensagens
-    const loadMessages = async () => {
+    const loadChatData = async () => {
+      setIsLoading(true);
+      setChatBlockedMessage(null); // Limpa qualquer mensagem de bloqueio anterior
+
       try {
-        setIsLoading(true);
-        // CORREÇÃO: Passar o objeto GetMessagesQuery diretamente
-        const fetchedMessages = await getChatMessages(chatId, { limit: 50, offset: 0 }); 
+        // 1. Carregar histórico de mensagens
+        const fetchedMessages = await getChatMessages(chatId, { limit: 50, offset: 0 });
         setMessages(fetchedMessages.reverse());
-      } catch (error) {
-        console.error('ChatScreen: Erro ao carregar mensagens:', error);
-        Alert.alert('Erro', 'Não foi possível carregar as mensagens do chat.');
+
+        // 2. Verificar status do agendamento se houver um bookingId associado
+        if (bookingId) {
+          const bookingDetails = await getBookingDetails(bookingId);
+          if (bookingDetails.status === BookingStatus.COMPLETED) {
+            setChatBlockedMessage("Este chat foi encerrado, pois o serviço foi concluído.");
+          } else if (bookingDetails.status === BookingStatus.CANCELLED) { // CORRIGIDO AQUI
+            setChatBlockedMessage("Este chat foi encerrado, pois o agendamento foi cancelado.");
+          }
+        }
+      } catch (error: any) {
+        console.error('ChatScreen: Erro ao carregar mensagens ou verificar agendamento:', error);
+        if (error.message.includes("Não é possível acessar esta conversa") || error.message.includes("Não é possível enviar mensagens")) {
+          setChatBlockedMessage(error.message);
+        } else {
+          Alert.alert('Erro', 'Não foi possível carregar as mensagens do chat.');
+          setChatBlockedMessage("Não foi possível carregar as mensagens.");
+        }
       } finally {
         setIsLoading(false);
       }
     };
-    loadMessages();
+    loadChatData();
 
-    // 2. Conectar WebSocket
+    // 3. Conectar WebSocket
     console.log(`ChatScreen: Tentando conectar WebSocket em ${SOCKET_URL}`);
     const socket = io(SOCKET_URL, {
       transports: ['websocket'],
@@ -56,43 +76,45 @@ export default function ChatScreen() {
 
     socket.on('connect', () => {
       console.log('ChatScreen: WebSocket conectado!', socket.id);
-      socket.emit('joinChat', { chatId, userId });
+      socket.emit('joinChat', chatId);
     });
 
-    socket.on('receiveMessage', (newMessage: Message) => {
+    socket.on('newMessage', (newMessage: Message) => {
       console.log('ChatScreen: Nova mensagem recebida:', newMessage);
       setMessages(prevMessages => [...prevMessages, newMessage]);
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
     });
 
-    socket.on('error', (err: any) => {
-      console.error('ChatScreen: Erro no WebSocket:', err);
-      Alert.alert('Erro no Chat', 'Houve um problema com a conexão do chat.');
+    socket.on('errorMessage', (data: { event: string, message: string }) => {
+      console.error(`ChatScreen: Erro no WebSocket para evento ${data.event}:`, data.message);
+      if (data.event === 'joinChat' || data.event === 'sendMessage') {
+        setChatBlockedMessage(data.message);
+      } else {
+        Alert.alert('Erro no Chat', data.message || 'Houve um problema com a conexão do chat.');
+      }
     });
 
     socket.on('disconnect', () => {
       console.log('ChatScreen: WebSocket desconectado.');
+      setChatBlockedMessage("Conexão com o chat perdida.");
     });
 
     return () => {
       console.log('ChatScreen: Desmontando componente, desconectando WebSocket.');
       socket.disconnect();
     };
-  }, [isAuthenticated, token, chatId, userId]);
+  }, [isAuthenticated, token, chatId, userId, bookingId]); // Adicionar bookingId como dependência
 
   const handleSendMessage = useCallback(async () => {
-    if (inputText.trim() === '' || !user?.id || !chatId) return;
-
-    // Assumindo que você tem o receiverId de alguma forma (talvez do chatId ou de um param adicional)
-    // Para este exemplo, vou mockar um receiverId. Em um app real, você o obteria.
-    // Se o chat é entre dois usuários, o receiverId seria o ID do outro usuário no chat.
-    // Você pode precisar passar o receiverId como um param adicional para esta tela.
-    const mockReceiverId = 'someOtherUserId'; // <--- SUBSTITUA PELA LÓGICA REAL PARA OBTER O receiverId
+    if (inputText.trim() === '' || !user?.id || !chatId || !recipientId || chatBlockedMessage) {
+      console.log("Não é possível enviar mensagem: input vazio, IDs ausentes ou chat bloqueado.");
+      return;
+    }
 
     const newMessageData: SendMessageDto = {
-      chatId, // CORREÇÃO: chatId está agora no DTO
+      chatId,
       senderId: user.id,
-      receiverId: mockReceiverId, // <--- Use o receiverId real aqui
+      receiverId: recipientId,
       content: inputText.trim(),
     };
 
@@ -102,25 +124,27 @@ export default function ChatScreen() {
         socketRef.current.emit('sendMessage', newMessageData);
       } else {
         console.warn('ChatScreen: WebSocket não conectado. Enviando mensagem via REST.');
-        // CORREÇÃO: Passar o SendMessageDto completo para a função de serviço
-        await sendChatMessage(newMessageData); 
+        await sendChatMessage(newMessageData);
       }
       setInputText('');
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('ChatScreen: Erro ao enviar mensagem:', error);
-      Alert.alert('Erro', 'Não foi possível enviar a mensagem.');
+      if (error.message.includes("Não é possível enviar mensagens")) {
+        setChatBlockedMessage(error.message);
+      } else {
+        Alert.alert('Erro', error.message || 'Não foi possível enviar a mensagem.');
+      }
     }
-  }, [inputText, user, chatId]);
+  }, [inputText, user, chatId, recipientId, chatBlockedMessage]);
 
   const renderMessage = ({ item }: { item: Message }) => {
     const isMyMessage = item.senderId === userId;
     return (
       <View style={[styles.messageBubble, isMyMessage ? styles.myMessage : styles.theirMessage]}>
-        <Text style={styles.messageContent}>{item.content}</Text>
-        {/* CORREÇÃO: Usar item.createdAt */}
-        <Text style={styles.messageTime}>{new Date(item.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</Text>
+        <Text style={[styles.messageContent, isMyMessage ? { color: '#FFFFFF' } : { color: '#212529' }]}>{item.content}</Text>
+        <Text style={[styles.messageTime, isMyMessage ? { color: 'rgba(255,255,255,0.7)' } : { color: '#6C757D' }]}>{new Date(item.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</Text>
       </View>
     );
   };
@@ -134,6 +158,9 @@ export default function ChatScreen() {
     );
   }
 
+  // Determina se o input de texto deve estar desabilitado
+  const isInputDisabled = !isAuthenticated || !!chatBlockedMessage;
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -141,6 +168,14 @@ export default function ChatScreen() {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
       <Stack.Screen options={{ title: recipientName || 'Chat' }} />
+
+      {chatBlockedMessage && (
+        <View style={styles.chatBlockedContainer}>
+          <Ionicons name="information-circle-outline" size={24} color="#DC3545" />
+          <Text style={styles.chatBlockedText}>{chatBlockedMessage}</Text>
+        </View>
+      )}
+
       <FlatList
         ref={flatListRef}
         data={messages}
@@ -152,14 +187,15 @@ export default function ChatScreen() {
       />
       <View style={styles.inputContainer}>
         <TextInput
-          style={styles.input}
+          style={[styles.input, isInputDisabled && styles.disabledInput]}
           value={inputText}
           onChangeText={setInputText}
-          placeholder="Digite sua mensagem..."
+          placeholder={isInputDisabled ? "Chat indisponível" : "Digite sua mensagem..."}
           placeholderTextColor="#6C757D"
           multiline
+          editable={!isInputDisabled} // Desabilita a edição
         />
-        <TouchableOpacity onPress={handleSendMessage} style={styles.sendButton}>
+        <TouchableOpacity onPress={handleSendMessage} style={[styles.sendButton, isInputDisabled && styles.disabledSendButton]} disabled={isInputDisabled}>
           <Ionicons name="send" size={24} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
@@ -182,6 +218,22 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 16,
     color: '#6C757D',
+  },
+  chatBlockedContainer: {
+    backgroundColor: '#FFE0E6', // Light red background
+    padding: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#FFC0CB',
+  },
+  chatBlockedText: {
+    marginLeft: 8,
+    color: '#DC3545', // Dark red text
+    fontSize: 14,
+    textAlign: 'center',
+    flex: 1,
   },
   messagesList: {
     flex: 1,
@@ -210,11 +262,11 @@ const styles = StyleSheet.create({
   },
   messageContent: {
     fontSize: 15,
-    color: '#FFFFFF',
+    // Colors handled inline based on isMyMessage
   },
   messageTime: {
     fontSize: 10,
-    color: 'rgba(255,255,255,0.7)',
+    // Colors handled inline based on isMyMessage
     alignSelf: 'flex-end',
     marginTop: 5,
   },
@@ -236,6 +288,10 @@ const styles = StyleSheet.create({
     marginRight: 10,
     maxHeight: 120,
   },
+  disabledInput: {
+    backgroundColor: '#E9ECEF',
+    color: '#ADB5BD',
+  },
   sendButton: {
     backgroundColor: '#007AFF',
     borderRadius: 20,
@@ -243,5 +299,8 @@ const styles = StyleSheet.create({
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  disabledSendButton: {
+    backgroundColor: '#ADB5BD',
   },
 });

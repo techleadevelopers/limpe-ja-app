@@ -28,7 +28,7 @@ module.exports = function (api) {
       ],
       // Se você for usar o React Native Reanimated, adicione o plugin dele.
       // Certifique-se de que ele seja o último plugin da lista.
-      // 'react-native-reanimated/plugin', 
+      'react-native-reanimated/plugin', 
     ],
   };
 };

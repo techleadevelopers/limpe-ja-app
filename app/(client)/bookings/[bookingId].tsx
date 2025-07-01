@@ -17,28 +17,32 @@ import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { formatDate } from '../../../utils/helpers';
 
-// --- INTERFACE DE TIPAGEM REAL PARA BOOKING ---
+// --- IMPORTAÇÕES DE SERVIÇOS E TIPAGENS DO SEU BACKEND REAL ---
+// IMPORTANTE: Substitua os mocks pelas importações reais dos seus serviços
+import { getBookingDetails, cancelBooking } from '../../services/bookingService'; // Importa os serviços reais
+import { CLIENT_ROUTES } from '../../../constants/routes'; // Assumindo que você tem rotas definidas
+
+// --- INTERFACE DE TIPAGEM AJUSTADA PARA CORRESPONDER AO BACKEND DTO ---
+// Esta interface agora reflete a estrutura do BookingDetailsDto do backend.
 export interface Booking {
   id: string;
   status: 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELED';
   
-  service: {
-    id: string;
-    name: string;
-    description?: string;
-    price: number;
-    durationMinutes?: number;
-  };
-
-  provider: {
-    id: string;
-    fullName: string;
-    avatarUrl?: string | null;
-  };
-
-  scheduledDateTime: string;
+  // Propriedades de serviço ajustadas para corresponder ao DTO do backend
+  serviceName: string;
+  servicePrice: number;
+  serviceDescription?: string; // Adicionado com base no DTO
+  serviceId: string; // Adicionado para navegação, se necessário
   
-  address: {
+  // Propriedades do provedor ajustadas para corresponder ao DTO do backend
+  providerId: string; // Adicionado para navegação
+  providerFullName: string;
+  providerAvatarUrl?: string | null;
+  providerEmail?: string; // Adicionado com base no DTO
+
+  scheduledDateTime: string; // Deve ser uma string ISO 8601 válida
+  
+  address: { // A estrutura do endereço parece compatível
     street: string;
     number: string;
     complement?: string | null;
@@ -51,98 +55,50 @@ export interface Booking {
   notes?: string | null;
   totalPrice: number;
   
-  isReviewed: boolean;
+  isReviewed: boolean; // Campo para saber se o serviço já foi avaliado (mantido, pode ser gerenciado pelo frontend)
   
-  createdAt: string;
-  updatedAt: string;
+  createdAt: string; // Formato ISO string
+  updatedAt: string; // Formato ISO string
 }
 
-// --- FUNÇÕES DE SERVIÇO (MOCKADAS PARA EXEMPLO, SUBSTITUA PELAS REAIS) ---
-const getBookingDetails = async (bookingId: string): Promise<Booking> => {
-    console.log("[BookingService] Buscando detalhes para o agendamento:", bookingId);
-    await new Promise(resolve => setTimeout(resolve, 1200));
-
-    const mockBookings: Booking[] = [
-        {
-            id: 'book1',
-            service: { id: 'serv1', name: 'Limpeza Residencial Completa', price: 180.00 },
-            provider: { id: 'provider1', fullName: 'Ana Oliveira', avatarUrl: 'https://via.placeholder.com/100/ADD8E6/000000?text=Ana+O' },
-            scheduledDateTime: '2025-07-15T14:00:00Z',
-            status: 'CONFIRMED',
-            address: { street: 'Rua das Palmeiras', number: '450', complement: 'Apt 101', neighborhood: 'Sol Nascente', city: 'Campinas', state: 'SP', cep: '13000-000' },
-            notes: 'Foco especial nos vidros da varanda e limpeza do forno. Tenho um gato persa muito tranquilo.',
-            totalPrice: 180.00,
-            isReviewed: false,
-            createdAt: '2025-07-10T10:00:00Z', updatedAt: '2025-07-10T10:00:00Z'
-        },
-        {
-            id: 'book2',
-            service: { id: 'serv2', name: 'Limpeza Comercial', price: 250.00 },
-            provider: { id: 'provider2', fullName: 'Carlos Silva', avatarUrl: 'https://via.placeholder.com/100/E0F7FA/000000?text=Carlos+S' },
-            scheduledDateTime: '2025-07-01T09:00:00Z',
-            status: 'COMPLETED',
-            address: { street: 'Av. Paulista', number: '1000', complement: 'Conj. 505', neighborhood: 'Bela Vista', city: 'São Paulo', state: 'SP', cep: '01310-100' },
-            notes: 'Limpeza de escritório pós-evento.',
-            totalPrice: 250.00,
-            isReviewed: false,
-            createdAt: '2025-06-25T09:00:00Z', updatedAt: '2025-07-01T11:00:00Z'
-        },
-        {
-            id: 'book3',
-            service: { id: 'serv3', name: 'Limpeza Pós-Obra', price: 300.00 },
-            provider: { id: 'provider3', fullName: 'Mariana Costa', avatarUrl: 'https://via.placeholder.com/100/B3E5FC/000000?text=Mariana+C' },
-            scheduledDateTime: '2025-06-20T10:00:00Z',
-            status: 'CANCELED',
-            address: { street: 'Rua das Flores', number: '123', neighborhood: 'Centro', city: 'Rio de Janeiro', state: 'RJ', cep: '20000-000' },
-            notes: 'Obra atrasou, precisei cancelar.',
-            totalPrice: 300.00,
-            isReviewed: false,
-            createdAt: '2025-06-15T10:00:00Z', updatedAt: '2025-06-18T10:00:00Z'
-        },
-    ];
-
-    const foundBooking = mockBookings.find(b => b.id === bookingId);
-    if (!foundBooking) {
-        throw new Error(`Agendamento com ID "${bookingId}" não encontrado.`);
-    }
-    return foundBooking;
-};
-
-const cancelBooking = async (bookingId: string): Promise<void> => {
-    console.log("[BookingService] Cancelando agendamento:", bookingId);
-    await new Promise(resolve => setTimeout(resolve, 800));
-};
-// --- FIM DAS FUNÇÕES DE SERVIÇO (MOCKADAS) ---
+// --- FIM DAS INTERFACES ---
 
 
 export default function BookingDetailsScreen() {
   const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
   const router = useRouter();
   
+  // Estado para armazenar os detalhes do agendamento
   const [booking, setBooking] = useState<Booking | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true); // Estado de carregamento
+  const [error, setError] = useState<string | null>(null); // Estado para erros
 
+  // Animações para os cards de informação
   const providerSectionAnim = useRef(new Animated.Value(0)).current;
   const detailsCardAnim = useRef(new Animated.Value(0)).current;
   const actionsCardAnim = useRef(new Animated.Value(0)).current;
 
+  // Animações para os botões de ação (efeito de pressionar)
   const cancelButtonScaleAnim = useRef(new Animated.Value(1)).current;
   const contactButtonScaleAnim = useRef(new Animated.Value(1)).current;
   const reviewButtonScaleAnim = useRef(new Animated.Value(1)).current;
   const profileButtonScaleAnim = useRef(new Animated.Value(1)).current;
 
+  // useCallback para a função de buscar detalhes do agendamento
   const fetchBooking = useCallback(async () => {
     if (!bookingId) {
         setError("ID do agendamento não fornecido.");
         setIsLoading(false);
         return;
     }
-    setIsLoading(true);
-    setError(null);
+    setIsLoading(true); // Inicia o carregamento
+    setError(null); // Limpa erros anteriores
     try {
+      // Chama a função real do serviço de booking para obter os detalhes
       const data = await getBookingDetails(bookingId);
-      setBooking(data);
+      setBooking(data); // Atualiza o estado com os dados recebidos
+      
+      // Inicia as animações de entrada após os dados serem carregados
       Animated.stagger(200, [
         Animated.timing(providerSectionAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
         Animated.timing(detailsCardAnim, { toValue: 1, duration: 700, delay: 100, useNativeDriver: true }),
@@ -152,96 +108,108 @@ export default function BookingDetailsScreen() {
       console.error("[BookingDetailsScreen] Erro ao buscar detalhes do agendamento:", err);
       setError(err.message || "Não foi possível carregar os detalhes do agendamento.");
     } finally {
-      setIsLoading(false);
+      setIsLoading(false); // Finaliza o estado de carregamento
     }
   }, [bookingId, providerSectionAnim, detailsCardAnim, actionsCardAnim]);
 
+  // Efeito para chamar fetchBooking quando o componente monta ou bookingId muda
   useEffect(() => {
     fetchBooking();
   }, [fetchBooking]);
 
+  // Funções para o efeito visual de pressionar os botões
   const onPressInButton = (animValue: Animated.Value) => {
     Animated.spring(animValue, {
-      toValue: 0.96,
+      toValue: 0.96, // Efeito de pressionar
       useNativeDriver: true,
     }).start();
   };
 
   const onPressOutButton = (animValue: Animated.Value) => {
     Animated.spring(animValue, {
-      toValue: 1,
+      toValue: 1, // Volta ao estado normal
       friction: 3,
       tension: 40,
       useNativeDriver: true,
     }).start();
   };
 
+  // Handler para o botão de cancelar agendamento
   const handleCancelBooking = async () => {
-    if (!booking) return;
+    if (!booking) return; // Sai se não houver dados de booking
     Alert.alert(
       "Cancelar Agendamento",
       "Tem certeza que deseja cancelar este agendamento? Esta ação pode estar sujeita a taxas dependendo da política de cancelamento.",
       [
-        { text: "Não", style: "cancel" },
+        { text: "Não", style: "cancel" }, // Botão para cancelar a ação
         {
           text: "Sim, Cancelar",
           onPress: async () => {
             console.log("[BookingDetailsScreen] Cancelando agendamento:", booking.id);
-            setIsLoading(true);
+            setIsLoading(true); // Mostra indicador de carregamento
             try {
+                // Chama a função real de cancelamento do serviço
                 await cancelBooking(booking.id);
                 Alert.alert("Sucesso", "Agendamento cancelado com sucesso!");
+                // Atualiza o estado local para refletir o cancelamento
                 setBooking(prev => prev ? { ...prev, status: 'CANCELED' } : null);
             } catch (err: any) {
                 console.error("[BookingDetailsScreen] Erro ao cancelar agendamento:", err);
                 Alert.alert("Erro", err.message || "Não foi possível cancelar o agendamento.");
             } finally {
-                setIsLoading(false);
+                setIsLoading(false); // Esconde indicador de carregamento
             }
           },
-          style: "destructive"
+          style: "destructive" // Botão de cancelamento em vermelho
         }
       ]
     );
   };
 
+  // Handler para o botão de contato com o provedor
   const handleContactProvider = () => {
     if (!booking) return;
+    // Navega para a tela de mensagens, passando os IDs necessários
     router.push({
-      pathname: '/(client)/messages',
+      pathname: '/(client)/messages', // Ajuste o caminho da sua tela de mensagens
       params: {
-        providerId: booking.provider.id,
+        providerId: booking.providerId, // Usa providerId diretamente
         bookingId: booking.id,
-        recipientName: booking.provider.fullName,
+        recipientName: booking.providerFullName, // Usa providerFullName diretamente
       },
     });
   };
 
+  // Handler para o botão de avaliar serviço
   const handleReviewService = () => {
     if (!booking) return;
+    // Navega para a tela de feedback, passando os detalhes necessários
     router.push({
       // CORREÇÃO: Usar [targetId] no pathname e passar booking.id como targetId
       pathname: '/(common)/feedback/[targetId]', 
       params: {
         targetId: booking.id, // Passa o ID do agendamento como targetId
-        type: 'service',
-        serviceName: booking.service.name,
-        providerName: booking.provider.fullName,
-        providerId: booking.provider.id,
+        type: 'service', // Indica o tipo de feedback (serviço)
+        serviceName: booking.serviceName, // Usa serviceName diretamente
+        providerName: booking.providerFullName, // Usa providerFullName diretamente
+        providerId: booking.providerId, // Usa providerId diretamente
       },
     });
   };
 
+  // Handler para ver o perfil do provedor
   const handleViewProviderProfile = () => {
     if (!booking) return;
+    // Navega para a tela de perfil do provedor
     router.push({
-      pathname: '/(client)/explore/[providerId]',
+      pathname: '/(client)/explore/[providerId]', // Ajuste o caminho da sua tela de perfil de provedor
       params: {
-        providerId: booking.provider.id,
+        providerId: booking.providerId, // Usa providerId diretamente
       },
     });
   };
 
+  // Função para obter estilos baseados no status do agendamento
   const getStatusStyle = (status: Booking['status']) => {
     switch (status) {
       case 'CONFIRMED':
@@ -258,6 +226,7 @@ export default function BookingDetailsScreen() {
   };
 
 
+  // Tela de carregamento inicial
   if (isLoading) {
     return (
       <View style={styles.centered}>
@@ -268,6 +237,7 @@ export default function BookingDetailsScreen() {
     );
   }
 
+  // Tela de erro ou agendamento não encontrado
   if (error || !booking) {
     return (
       <View style={styles.centered}>
@@ -281,21 +251,24 @@ export default function BookingDetailsScreen() {
     );
   }
   
+  // Obtém as informações de estilo do status
   const statusInfo = getStatusStyle(booking.status);
 
   return (
     <ScrollView style={styles.scrollViewContainer}>
       <Stack.Screen options={{ title: `Detalhes do Serviço` }} />
       
+      {/* Seção do Provedor e Status */}
       <Animated.View style={[styles.card, styles.providerSectionCard, { opacity: providerSectionAnim, transform: [{ translateY: providerSectionAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
         <View style={styles.providerSection}>
-          {booking.provider.avatarUrl && 
-            <Image source={{ uri: booking.provider.avatarUrl }} style={styles.providerImage} />
+          {booking.providerAvatarUrl && 
+            <Image source={{ uri: booking.providerAvatarUrl }} style={styles.providerImage} />
           }
           <View style={styles.providerInfo}>
-            <Text style={styles.serviceNameText}>{booking.service.name}</Text>
-            <Text style={styles.providerNameText}>com {booking.provider.fullName}</Text>
+            <Text style={styles.serviceNameText}>{booking.serviceName}</Text>
+            <Text style={styles.providerNameText}>com {booking.providerFullName}</Text>
           </View>
+          {/* Badge de Status */}
           <View style={[styles.statusBadge, { backgroundColor: statusInfo.badgeBg }]}>
             <Ionicons name={statusInfo.icon} size={16} color={statusInfo.color} />
             <Text style={[styles.statusText, { color: statusInfo.color }]}>{booking.status}</Text>
@@ -303,6 +276,7 @@ export default function BookingDetailsScreen() {
         </View>
       </Animated.View>
 
+      {/* Detalhes do Agendamento */}
       <Animated.View style={[styles.card, { opacity: detailsCardAnim, transform: [{ scale: detailsCardAnim.interpolate({ inputRange: [0, 1], outputRange: [0.98, 1] }) }] }]}>
         <Text style={styles.sectionTitle}>Detalhes do Agendamento</Text>
         
@@ -338,9 +312,11 @@ export default function BookingDetailsScreen() {
         )}
       </Animated.View>
       
+      {/* Ações do Agendamento */}
       <Animated.View style={[styles.actionsCard, { opacity: actionsCardAnim, transform: [{ scale: actionsCardAnim.interpolate({ inputRange: [0, 1], outputRange: [0.98, 1] }) }] }]}>
         <Text style={styles.sectionTitle}>Ações</Text>
         
+        {/* Botão de Cancelar (visível para PENDING e CONFIRMED) */}
         {(booking.status === 'CONFIRMED' || booking.status === 'PENDING') && (
             <TouchableOpacity
                 style={[styles.actionButton, styles.cancelButton, { transform: [{ scale: cancelButtonScaleAnim }] }]}
@@ -353,6 +329,7 @@ export default function BookingDetailsScreen() {
             </TouchableOpacity>
         )}
         
+        {/* Botão de Contatar Provedor */}
         <TouchableOpacity
             style={[styles.actionButton, { transform: [{ scale: contactButtonScaleAnim }] }]}
             onPress={handleContactProvider}
@@ -360,9 +337,10 @@ export default function BookingDetailsScreen() {
             onPressOut={() => onPressOutButton(contactButtonScaleAnim)}
         >
             <Ionicons name="chatbubble-ellipses-outline" size={20} color="#fff" />
-            <Text style={styles.actionButtonText}>Contatar {booking.provider.fullName.split(' ')[0]}</Text>
+            <Text style={styles.actionButtonText}>Contatar {booking.providerFullName.split(' ')[0]}</Text>
         </TouchableOpacity>
 
+        {/* Botão de Avaliar Serviço (visível apenas se COMPLETED e não avaliado) */}
         {booking.status === 'COMPLETED' && !booking.isReviewed && (
           <TouchableOpacity
             style={[styles.actionButton, styles.reviewButton, { transform: [{ scale: reviewButtonScaleAnim }] }]}
@@ -375,6 +353,7 @@ export default function BookingDetailsScreen() {
           </TouchableOpacity>
         )}
         
+        {/* Botão para Ver Perfil do Provedor */}
         <TouchableOpacity
             style={[styles.actionButtonOutline, { transform: [{ scale: profileButtonScaleAnim }] }]}
             onPress={handleViewProviderProfile}
@@ -382,13 +361,17 @@ export default function BookingDetailsScreen() {
             onPressOut={() => onPressOutButton(profileButtonScaleAnim)}
         >
             <Ionicons name="person-circle-outline" size={20} color="#007AFF" />
-            <Text style={[styles.actionButtonText, styles.actionButtonOutlineText]}>Ver Perfil de {booking.provider.fullName.split(' ')[0]}</Text>
+            <Text style={[styles.actionButtonText, styles.actionButtonOutlineText]}>Ver Perfil de {booking.providerFullName.split(' ')[0]}</Text>
         </TouchableOpacity>
       </Animated.View>
     </ScrollView>
   );
 }
 
+// Estilos fixos para as células do dia do calendário
+const FIXED_DAY_CELL_SIZE = 40;
+
+// Estilos gerais da tela
 const styles = StyleSheet.create({
   scrollViewContainer: {
     flex: 1,

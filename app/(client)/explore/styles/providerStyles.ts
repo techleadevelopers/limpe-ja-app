@@ -2,67 +2,143 @@
 import { StyleSheet, Dimensions, Platform } from 'react-native';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const IMAGE_HEIGHT = 280; // Defina uma altura para a imagem para o card. Ajuste conforme necessário.
+const IMAGE_HEIGHT = 280; // Altura da imagem de perfil do profissional
+
+// --- Nova Paleta de Cores Clean UI ---
+const COLOR_PRIMARY = '#4A90E2'; // Um azul vibrante para ações principais e destaques
+const COLOR_ACCENT = '#A0D2EB'; // Um azul mais claro para detalhes e fundos secundários
+const COLOR_BACKGROUND = '#F8F9FA'; // Fundo geral da tela, um cinza muito claro e suave
+const COLOR_CARD_BACKGROUND = '#FFFFFF'; // Fundo de cards e seções principais, branco puro
+const COLOR_TEXT_DARK = '#212529'; // Texto principal escuro, para títulos e nomes
+const COLOR_TEXT_MEDIUM = '#495057'; // Texto secundário, para descrições e informações
+const COLOR_TEXT_LIGHT = '#6C757D'; // Texto terciário, para detalhes menores e datas
+const COLOR_BORDER_LIGHT = '#E9ECEF'; // Bordas sutis para elementos
+const COLOR_SHADOW = 'rgba(0, 0, 0, 0.1)'; // Sombra suave e discreta
+const COLOR_ERROR = '#D32F2F'; // Cor para mensagens de erro
+const COLOR_SUCCESS = '#28A745'; // Cor para status de sucesso/verificado
+const COLOR_WARNING = '#FFC107'; // Cor para avisos
 
 export const styles = StyleSheet.create({
-  screenContainer: { flex: 1, backgroundColor: '#FFFFFF' },
-  centeredFeedback: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#F8F9FA' },
-  loadingText: { marginTop: 12, fontSize: 16, color: '#555' },
-  errorText: { fontSize: 17, color: '#D32F2F', textAlign: 'center', marginBottom: 25 },
-  errorBackButton: { backgroundColor: '#007AFF', paddingVertical: 12, paddingHorizontal: 30, borderRadius: 25, flexDirection: 'row', alignItems: 'center' },
-  errorBackButtonText: { color: '#fff', fontSize: 16, marginLeft: 8, fontWeight: '600' },
-  scrollContentContainer: { paddingBottom: 110 },
+  screenContainer: {
+    flex: 1,
+    backgroundColor: COLOR_BACKGROUND, // Fundo geral da tela
+  },
+  centeredFeedback: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: COLOR_BACKGROUND,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: COLOR_TEXT_MEDIUM,
+  },
+  errorText: {
+    fontSize: 17,
+    color: COLOR_ERROR,
+    textAlign: 'center',
+    marginBottom: 25,
+  },
+  errorBackButton: {
+    backgroundColor: COLOR_PRIMARY,
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 25,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  errorBackButtonText: {
+    color: COLOR_CARD_BACKGROUND,
+    fontSize: 16,
+    marginLeft: 8,
+    fontWeight: '600',
+  },
+  scrollContentContainer: {
+    paddingBottom: 110, // Espaço para o botão "Agendar Serviço" fixo na parte inferior
+  },
 
-  // HeaderSection Styles
-  // **** ALTERAÇÃO APLICADA AQUI PARA O ESPAÇAMENTO E BORDAS ARREDONDADAS ****
+  // HeaderSection Styles (Componente HeaderSection)
+  // Este estilo é para o container da imagem de perfil do profissional
   headerImage: {
-    width: SCREEN_WIDTH - 49, // Largura total da tela menos 15 de margem horizontal em cada lado (15*2 = 30)
-    height: IMAGE_HEIGHT,     // Altura da imagem, use a constante definida acima
-    borderRadius: 15,         // Arredonda as bordas
-    overflow: 'hidden',       // Garante que o conteúdo (ImageBackground) respeite o borderRadius
-    marginTop: 55,            // Margem superior para afastar do topo
-    marginBottom: 10,
-    marginHorizontal: 25,     // Margem nas laterais
-    alignSelf: 'center',      // Centraliza a imagem/container na tela
-    justifyContent: 'flex-end', // Mantém o conteúdo (overlay) na parte inferior da imagem
-    
-    // Adicionando uma sombra leve para o efeito de "card flutuante", como na imagem de exemplo
-    shadowColor: "#000",
+    width: SCREEN_WIDTH - 40, // Largura total da tela menos 20 de margem em cada lado
+    height: IMAGE_HEIGHT,
+    borderRadius: 20, // Cantos mais arredondados para um visual moderno
+    overflow: 'hidden', // Garante que a imagem respeite o borderRadius
+    marginTop: 50, // Margem superior para afastar do topo da tela (considerando barra de status)
+    marginBottom: 20, // Espaço entre a imagem e o conteúdo abaixo
+    marginHorizontal: 20, // Margem nas laterais
+    alignSelf: 'center', // Centraliza o container da imagem
+    justifyContent: 'flex-end', // Alinha o conteúdo (overlay, se houver) na parte inferior
+    shadowColor: COLOR_SHADOW, // Sombra suave para o efeito de "card flutuante"
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 6, // Sombra um pouco mais pronunciada para dar profundidade
     },
-    shadowOpacity: 0.30,
-    shadowRadius: 4.65,
-    elevation: 8, // Para Android
+    shadowOpacity: 0.15, // Opacidade reduzida para sutileza
+    shadowRadius: 8, // Raio maior para sombra mais espalhada
+    elevation: 10, // Para Android
   },
-  // **************************************************************************
-  headerImageOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.30)', paddingHorizontal: 15, paddingTop: Platform.OS === 'ios' ? 20 : 15, paddingBottom: 15, justifyContent: 'space-between' },
-  topNavContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  iconButtonBackground: { backgroundColor: 'rgba(0,0,0,0.35)', padding: 10, borderRadius: 20 },
+  headerImageOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.25)', // Overlay mais sutil sobre a imagem
+    paddingHorizontal: 15,
+    paddingTop: Platform.OS === 'ios' ? 20 : 15, // Ajuste de padding para iOS
+    paddingBottom: 15,
+    justifyContent: 'space-between',
+  },
+  // Estilos para os botões de navegação (voltar e salvar) no topo do header
+  topNavContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    position: 'absolute', // Posiciona os botões de volta e salvar sobre a imagem
+    top: Platform.OS === 'ios' ? 50 : 30, // Ajuste para ficar no topo da tela, acima da imagem
+    left: 20,
+    right: 20,
+    zIndex: 10, // Garante que fiquem acima da imagem
+  },
+  iconButtonBackground: {
+    backgroundColor: 'rgba(255,255,255,0.3)', // Fundo branco translúcido para os botões
+    padding: 10,
+    borderRadius: 25, // Botões circulares
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 45, // Tamanho fixo para botões circulares
+    height: 45,
+  },
 
-  // Content Area Styles (for main component)
+  // Content Area Styles (para o container principal do conteúdo abaixo da imagem)
   contentArea: {
-    paddingHorizontal: 0,
+    paddingHorizontal: 0, // O padding horizontal será aplicado em sub-containers
     paddingTop: 10,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    marginTop: 20,
-    minHeight: Dimensions.get('window').height * 0.5,
+    backgroundColor: COLOR_CARD_BACKGROUND, // Fundo branco para o conteúdo principal
+    borderTopLeftRadius: 25, // Cantos mais arredondados para a transição com a imagem
+    borderTopRightRadius: 25,
+    marginTop: 0, // Sobrepõe a imagem para criar o efeito de "cartão" que se estende
+    minHeight: Dimensions.get('window').height * 0.5, // Garante que o conteúdo ocupe pelo menos metade da tela
+    paddingBottom: 20, // Padding para o final do conteúdo
   },
 
-  // NOVOS ESTILOS para as informações do provedor na área branca
+  // Estilos para as informações do provedor (nome, localização, preço)
   providerInfoWhiteCard: {
-    paddingHorizontal: 30,
-    marginBottom: 0, // Espaço entre as informações e o conteúdo abaixo
+    paddingHorizontal: 25, // Padding horizontal para o conteúdo principal
+    marginBottom: 10,
+    marginTop: 15, // Espaço do topo do contentArea
+  },
+  providerNameRow: { // Novo estilo para a linha que contém nome e estrelas (alinhados horizontalmente)
+    flexDirection: 'row',
+    justifyContent: 'space-between', // Alinha nome à esquerda e estrelas à direita
+    alignItems: 'center',
+    marginBottom: 5,
   },
   providerNameWhiteCard: {
-    fontSize: 20,
+    fontSize: 24, // Nome maior e mais proeminente
     fontWeight: '700',
-    color: '#111111',
-    marginBottom: 5,
-    marginTop: -15,
+    color: COLOR_TEXT_DARK,
+    flexShrink: 1, // Permite que o texto encolha se as estrelas forem muito largas
+    marginRight: 10, // Espaço entre o nome e as estrelas
   },
   locationContainerWhiteCard: {
     flexDirection: 'row',
@@ -70,173 +146,285 @@ export const styles = StyleSheet.create({
     marginBottom: 10,
   },
   locationTextWhiteCard: {
-    fontSize: 13.5,
-    color: '#666',
+    fontSize: 14,
+    color: COLOR_TEXT_LIGHT,
     marginLeft: 5,
   },
   priceTextWhiteCard: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
-    color: '#333',
-    marginBottom: -20,
+    color: COLOR_PRIMARY, // Preço em destaque com a cor primária
+    marginBottom: 15,
   },
 
   // O tabContentContainer será reutilizado para o padding geral do conteúdo
-  tabContentContainer: { paddingHorizontal: 20, paddingTop: 15 },
+  tabContentContainer: {
+    paddingHorizontal: 25, // Padding horizontal consistente para as seções
+    paddingTop: 15,
+  },
 
-
-  // StarRating Styles
+  // StarRating Styles (ajustado para ser flexível)
   robustStarContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 0,
-    backgroundColor: 'transparent',
-    borderRadius: 8,
-    left: 210,
-    bottom: 90, // sobe o container sem colapsar altura
   },
-
   robustReviewsText: {
-    fontSize: 10,
-    fontFamily: 'sans-serif',
-    color: '#333',
+    fontSize: 12, // Tamanho da fonte ajustado
+    color: COLOR_TEXT_LIGHT,
     marginLeft: 8,
     fontWeight: '500',
-    position:'relative',
-    top: 18,
-    right: 85,
   },
-
   starIcon: {
-    marginRight: 6, // Ajuste este valor para o espaçamento desejado
+    marginRight: 2, // Espaçamento menor entre as estrelas
   },
-
-  starRatingContainer: { flexDirection: 'row' }, // Used in ReviewCard too
+  starRatingContainer: {
+    flexDirection: 'row',
+  },
 
   // InfoChip Styles
-  infoChipsContainer: { 
-    flexDirection: 'row', 
-    flexWrap: 'wrap', 
-    gap: 8, 
-    marginBottom: 10 },
-
-  infoChip: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    backgroundColor: '#F0F0F0', 
-    paddingVertical: 7, 
-    paddingHorizontal: 12, 
-    borderRadius: 16 },
-
-  infoChipText: { fontSize: 12, color: '#333333', marginLeft: 6, fontWeight: '500' },
+  infoChipsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap', // Permite que os chips quebrem a linha
+    gap: 8, // Espaçamento entre os chips (disponível no React Native 0.71+)
+    marginBottom: 20, // Espaçamento abaixo dos chips
+  },
+  infoChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLOR_BACKGROUND, // Fundo do chip mais claro
+    paddingVertical: 8, // Padding vertical um pouco maior
+    paddingHorizontal: 15, // Padding horizontal um pouco maior
+    borderRadius: 20, // Cantos mais arredondados
+    borderWidth: 1, // Borda sutil
+    borderColor: COLOR_BORDER_LIGHT,
+  },
+  infoChipText: {
+    fontSize: 13, // Tamanho da fonte ajustado
+    color: COLOR_TEXT_MEDIUM,
+    marginLeft: 6,
+    fontWeight: '500',
+  },
 
   // OverviewContent & DetailsContent Common Styles
-  sectionTitle: { fontSize: 18, fontWeight: '700', left: 10, color: '#111111', marginBottom: 12, marginTop: 7, },
-  descriptionText: { fontSize: 15, lineHeight: 23, left: 10, color: '#555555', textAlign: 'left', marginBottom: 25 },
-  noReviewsText: { fontSize: 14, color: '#6C757D', fontStyle: 'italic', textAlign: 'center', paddingVertical: 15 },
-  noDetailsText: { fontSize: 14, color: '#6C757D', fontStyle: 'italic', marginVertical: 10 },
-  availabilityText: { fontSize: 14, lineHeight: 21, color: '#495057' },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLOR_TEXT_DARK,
+    marginBottom: 10,
+    marginTop: 15, // Espaçamento superior para títulos de seção
+  },
+  descriptionText: {
+    fontSize: 15,
+    lineHeight: 23, // Altura da linha para melhor legibilidade
+    color: COLOR_TEXT_MEDIUM,
+    textAlign: 'left',
+    marginBottom: 25,
+  },
+  noReviewsText: {
+    fontSize: 14,
+    color: COLOR_TEXT_LIGHT,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    paddingVertical: 15,
+  },
+  noDetailsText: {
+    fontSize: 14,
+    color: COLOR_TEXT_LIGHT,
+    fontStyle: 'italic',
+    marginVertical: 10,
+  },
+  availabilityText: {
+    fontSize: 14,
+    lineHeight: 21,
+    color: COLOR_TEXT_MEDIUM,
+  },
 
-  // ActionButtons Styles
+  // ActionButtons Styles (Ligar, Chat, Mapa, Share)
   actionButtonsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginTop: 10,
-    marginBottom: 25,
-    borderTopWidth: 1,
-    borderTopColor: '#EEE',
-    paddingTop: 15,
+    justifyContent: 'space-around', // Alterado de 'space-between' para 'space-around' conforme o código original do componente
+    marginTop: 20,
+    marginBottom: 30,
+    paddingHorizontal: 10, // Alterado de 25 para 10 para corresponder ao estilo do componente
   },
   actionButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F0F0F0',
-    borderRadius: 12,
-    width: (SCREEN_WIDTH - (20 * 2) - (15 * 3)) / 4,
+    backgroundColor: COLOR_BACKGROUND, // Fundo mais claro
+    borderRadius: 15, // Cantos arredondados
+    width: (SCREEN_WIDTH - (10 * 2) - (15 * 3)) / 4, // Ajustado a largura para 4 botões com 10px de padding horizontal e 15px de gap
     height: 70,
+    borderWidth: 1, // Borda sutil
+    borderColor: COLOR_BORDER_LIGHT,
+    shadowColor: COLOR_SHADOW, // Sombra sutil para os botões
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
   },
   actionButtonText: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 13, // Alterado de 12 para 13
+    color: COLOR_TEXT_MEDIUM,
     marginTop: 5,
-    fontWeight: '500',
+    fontWeight: '600', // Alterado de 500 para 600
+  },
+  // Novos estilos para botões desabilitados
+  disabledActionButton: {
+    backgroundColor: '#E9ECEF', // Cor de fundo para botão desabilitado
+  },
+  disabledActionButtonText: {
+    color: '#ADB5BD', // Cor do texto para botão desabilitado
   },
 
   // ReviewCard Styles
   reviewCard: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 10,
-    padding: 15,
+    backgroundColor: COLOR_CARD_BACKGROUND, // Fundo branco para o card de review
+    borderRadius: 15, // Cantos mais arredondados
+    padding: 20, // Padding interno maior
     marginBottom: 15,
     borderWidth: 1,
-    borderColor: '#E9ECEF',
+    borderColor: COLOR_BORDER_LIGHT,
+    shadowColor: COLOR_SHADOW, // Sombra para o card de review
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  reviewHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  reviewerImage: { width: 40, height: 40, borderRadius: 20, marginRight: 10 },
-  reviewerImagePlaceholder: { width: 40, height: 40, borderRadius: 20, marginRight: 10, backgroundColor: '#CED4DA', justifyContent: 'center', alignItems: 'center' },
-  reviewHeaderText: { flex: 1 },
-  reviewerName: { fontSize: 15, fontWeight: '600', color: '#343A40' },
-  reviewRatingDate: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 },
-  reviewDate: { fontSize: 12, color: '#6C757D' },
-  reviewComment: { fontSize: 14, lineHeight: 20, color: '#495057' },
-  
+  reviewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  reviewerImage: {
+    width: 45, // Tamanho maior para a imagem do reviewer
+    height: 45,
+    borderRadius: 22.5, // Circular
+    marginRight: 12,
+    borderWidth: 1, // Borda sutil para a imagem
+    borderColor: COLOR_BORDER_LIGHT,
+  },
+  reviewerImagePlaceholder: {
+    width: 45,
+    height: 45,
+    borderRadius: 22.5,
+    marginRight: 12,
+    backgroundColor: COLOR_BORDER_LIGHT,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  reviewHeaderText: {
+    flex: 1,
+  },
+  reviewerName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLOR_TEXT_DARK,
+  },
+  reviewRatingDate: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4,
+  },
+  reviewDate: {
+    fontSize: 12,
+    color: COLOR_TEXT_LIGHT,
+  },
+  reviewComment: {
+    fontSize: 14,
+    lineHeight: 22, // Altura da linha para melhor legibilidade
+    color: COLOR_TEXT_MEDIUM,
+  },
+
   addReviewButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: '#E9F5FF',
-    marginTop: 10,
-    marginBottom: 15,
+    paddingVertical: 14, // Padding maior
+    borderRadius: 12, // Mais arredondado
+    backgroundColor: COLOR_ACCENT + '20', // Um tom mais claro do azul para o fundo (com opacidade)
+    marginTop: 20, // Mais espaço acima
+    marginBottom: 20, // Mais espaço abaixo
+    borderWidth: 1,
+    borderColor: COLOR_ACCENT + '50', // Borda sutil (com opacidade)
   },
-  addReviewButtonText: { 
-    color: '#007AFF', 
-    fontSize: 15, 
-    fontWeight: '600', 
-    marginLeft: 8 
+  addReviewButtonText: {
+    color: COLOR_PRIMARY, // Texto na cor primária
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
 
-  // Service Item Card Styles (for DetailsContent)
-  serviceItemCard: { backgroundColor: '#F8F9FA', padding: 15, borderRadius: 10, marginBottom: 10, borderWidth: 1, borderColor: '#E9ECEF' },
-  serviceName: { fontSize: 16, fontWeight: '600', color: '#343A40', marginBottom: 4 },
-  serviceDescription: { fontSize: 14, color: '#6C757D', marginBottom: 6 },
-  servicePriceTag: { fontSize: 14, fontWeight: '700', color: '#007AFF', alignSelf: 'flex-end' },
+  // Service Item Card Styles (para detalhes de serviços específicos)
+  serviceItemCard: {
+    backgroundColor: COLOR_CARD_BACKGROUND,
+    padding: 15,
+    borderRadius: 15,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: COLOR_BORDER_LIGHT,
+    shadowColor: COLOR_SHADOW,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  serviceName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLOR_TEXT_DARK,
+    marginBottom: 4,
+  },
+  serviceDescription: {
+    fontSize: 14,
+    color: COLOR_TEXT_MEDIUM,
+    marginBottom: 6,
+  },
+  servicePriceTag: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLOR_PRIMARY,
+    alignSelf: 'flex-end',
+  },
 
-  // BookServiceButton Styles
+  // BookServiceButton Styles (botão "Agendar Serviço" fixo na parte inferior)
   bookNowButtonWrapper: {
     position: 'absolute',
-    bottom: -20,
+    bottom: 0, // Fixado na parte inferior da tela
     left: 0,
     right: 0,
     paddingHorizontal: 20,
-    paddingTop: 50, // Apenas o padding superior base, o paddingBottom será dinâmico no componente
-    backgroundColor: '#FFFFFF',
+    paddingTop: 15, // Padding superior para o conteúdo
+    paddingBottom: Platform.OS === 'ios' ? 30 : 20, // Ajuste para o safe area do iOS
+    backgroundColor: COLOR_CARD_BACKGROUND,
     borderTopWidth: 1,
-    borderTopColor: '#E9ECEF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 5,
+    borderTopColor: COLOR_BORDER_LIGHT,
+    shadowColor: COLOR_SHADOW,
+    shadowOffset: { width: 0, height: -3 }, // Sombra para cima
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 8,
   },
   bookServiceButtonGradient: {
-    borderRadius: 12,
+    borderRadius: 15, // Mais arredondado
   },
   bookServiceButton: {
-    paddingBottom: 20,
-    paddingTop: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingVertical: 16, // Padding maior para um botão mais "clicável"
+    borderRadius: 15,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'transparent',
+    backgroundColor: COLOR_PRIMARY, // Cor primária para o botão de ação principal
   },
   bookServiceButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
+    color: COLOR_CARD_BACKGROUND, // Texto branco
+    fontSize: 18, // Texto maior
     fontWeight: '700',
   },
   // NOVOS ESTILOS PARA MENSAGEM DE AUSÊNCIA DE SERVIÇOS
@@ -245,15 +433,15 @@ export const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#FFF3CD',
+    backgroundColor: COLOR_WARNING + '20', // Fundo sutil de aviso (com opacidade)
     padding: 15,
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: '#FFECB3',
+    borderTopColor: COLOR_WARNING + '50', // Borda sutil (com opacidade)
     elevation: 5,
   },
   noServicesMessageText: {
-    color: '#856404',
+    color: COLOR_TEXT_DARK, // Texto escuro para melhor contraste
     fontSize: 14,
     textAlign: 'center',
   },

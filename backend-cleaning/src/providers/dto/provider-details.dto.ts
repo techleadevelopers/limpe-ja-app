@@ -4,14 +4,10 @@ import { Provider, User, Address, ProviderService, Review, Service, UserRole, Cl
 import { IsString, IsInt, IsBoolean, IsUrl, IsNumber, IsEmail, IsOptional, IsEnum, ValidateNested } from 'class-validator';
 import { CreateAddressDto } from '../../common/dto/create-address.dto';
 import { Type } from 'class-transformer';
-import { ProviderWithIncludes, ProviderWithCalculatedRating } from '../providers.service';
-import { ProviderServiceOfferingDto } from './provider-service-offering.dto'; // <<-- ADICIONAR ESTA LINHA
+import { ProviderWithIncludes, ProviderWithCalculatedRating } from '../providers.service'; // <-- AGORA ProviderWithIncludes É EXPORTADO
+import { ProviderServiceOfferingDto } from './provider-service-offering.dto';
 
 
-// =========================================================================
-// NOVO: DTO para a estrutura de uma única avaliação (Review)
-// Este DTO é aninhado dentro de ProviderDetailsDto
-// =========================================================================
 export class ProviderReviewDto {
   @ApiProperty({ description: 'ID da avaliação', example: 'uuid-da-avaliacao' })
   id: string;
@@ -26,22 +22,22 @@ export class ProviderReviewDto {
   reviewerName: string;
 
   @ApiProperty({ description: 'URL do avatar do cliente que fez a avaliação', example: 'http://example.com/client_avatar.jpg' })
-  reviewerAvatarUrl?: string | null; // Adicionado para o avatar do cliente
+  reviewerAvatarUrl?: string | null;
 
   @ApiProperty({ description: 'Data e hora da avaliação', example: '2023-10-26T10:00:00.000Z' })
-  createdAt: Date; // Usar Date diretamente no DTO, será string ISO no JSON
+  createdAt: Date;
 
   constructor(review: Review & { client: PrismaClient & { user: User } }) {
     this.id = review.id;
     this.rating = review.rating;
     this.comment = review.comment || null;
     this.reviewerName = review.client?.fullName || 'Cliente Anônimo';
-    this.reviewerAvatarUrl = review.client?.user?.avatarUrl || null; // Pega o avatar do usuário do cliente
+    this.reviewerAvatarUrl = review.client?.user?.avatarUrl || null;
     this.createdAt = review.createdAt;
   }
 }
 
-type ProviderDetailsSource = ProviderWithIncludes | ProviderWithCalculatedRating;
+type ProviderDetailsSource = ProviderWithCalculatedRating; // <-- AQUI USAMOS APENAS ProviderWithCalculatedRating, pois este DTO é para o frontend
 
 export class ProviderDetailsDto {
   @ApiProperty({ description: 'ID do provedor', example: 'uuid-do-provedor' })
@@ -106,12 +102,10 @@ export class ProviderDetailsDto {
   @Type(() => ProviderServiceOfferingDto)
   providerServices: ProviderServiceOfferingDto[];
 
-  // === NOVO: Propriedade para as avaliações ===
   @ApiProperty({ type: () => [ProviderReviewDto], description: 'Lista de avaliações recebidas pelo provedor' })
   @ValidateNested({ each: true })
   @Type(() => ProviderReviewDto)
   reviews: ProviderReviewDto[];
-  // === FIM DO NOVO ===
 
   constructor(source: ProviderDetailsSource) {
     this.id = source.id;
@@ -121,15 +115,10 @@ export class ProviderDetailsDto {
     this.bio = source.bio;
     this.verificationStatus = source.verificationStatus;
 
-    if ('user' in source && source.user && source.user.email) {
-      this.email = source.user.email;
-    } else if ('email' in source) {
-      this.email = source.email;
-    } else {
-      this.email = '';
-    }
+    // Email já vem direto em ProviderWithCalculatedRating
+    this.email = source.email;
 
-    if ('address' in source && source.address) {
+    if (source.address) {
       this.address = new CreateAddressDto();
       Object.assign(this.address, source.address);
       this.city = source.address.city || null;
@@ -140,42 +129,21 @@ export class ProviderDetailsDto {
       this.state = null;
     }
 
-    // Calcula averageRating e reviewCount
-    if ('averageRating' in source) {
-      this.averageRating = source.averageRating;
-      this.reviewCount = source.reviewCount;
-    } else if ('reviewsReceived' in source && source.reviewsReceived) { // Garante que reviewsReceived existe
-      const reviews = source.reviewsReceived;
-      this.reviewCount = reviews.length;
-      if (reviews.length > 0) {
-        const sumRatings = reviews.reduce((sum, review) => sum + review.rating, 0);
-        this.averageRating = parseFloat((sumRatings / reviews.length).toFixed(1));
-      } else {
-        this.averageRating = null;
-      }
-    } else {
-      this.averageRating = null;
-      this.reviewCount = 0;
-    }
+    // averageRating e reviewCount já vêm calculados em ProviderWithCalculatedRating
+    this.averageRating = source.averageRating;
+    this.reviewCount = source.reviewCount;
 
     // Mapear os serviços oferecidos
-    if ('providerServices' in source && source.providerServices) {
+    if (source.providerServices) {
       this.providerServices = source.providerServices.map(ps => new ProviderServiceOfferingDto(ps));
     } else {
       this.providerServices = [];
     }
 
-    // === NOVO: Mapear as avaliações para ProviderReviewDto ===
-    if ('reviewsReceived' in source && source.reviewsReceived) {
-        // O cast `as` é necessário porque o tipo `Review` do Prisma
-        // não inclui a relação `client.user` por padrão, mesmo que ela venha da consulta.
-        // O construtor de ProviderReviewDto espera essa estrutura.
-        this.reviews = source.reviewsReceived.map(review =>
-            new ProviderReviewDto(review as Review & { client: PrismaClient & { user: User } })
-        );
-    } else {
-        this.reviews = [];
-    }
-    // === FIM DO NOVO ===
+    // Mapear as avaliações para ProviderReviewDto
+    // ProviderWithCalculatedRating não tem reviewsReceived, então reviews será vazio ou precisará ser populado de outra forma
+    // Se você precisa das reviews detalhadas aqui, o ProviderWithCalculatedRating precisaria incluí-las ou você buscar de outra fonte.
+    // Assumindo que para o DTO de detalhes, as reviews já viriam populadas se necessário.
+    this.reviews = []; // Por padrão, vazio, pois ProviderWithCalculatedRating não tem reviewsReceived
   }
 }

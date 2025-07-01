@@ -3,7 +3,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOfferDto } from './dto/create-offer.dto';
 import { UpdateOfferDto } from './dto/update-offer.dto';
-import { Offer } from '@prisma/client';
+import { Offer, Prisma } from '@prisma/client'; // Importado Prisma
 
 @Injectable()
 export class OffersService {
@@ -52,6 +52,30 @@ export class OffersService {
     }
     return this.prisma.offer.delete({
       where: { id },
+    });
+  }
+
+  // NOVO MÉTODO: searchOffers para ser usado pelo SearchService
+  async searchOffers(searchTerm?: string, limit?: number, offset?: number): Promise<Offer[]> {
+    const where: Prisma.OfferWhereInput = searchTerm
+      ? {
+          OR: [
+            { title: { contains: searchTerm, mode: Prisma.QueryMode.insensitive } }, // CORREÇÃO AQUI
+            { description: { contains: searchTerm, mode: Prisma.QueryMode.insensitive } }, // CORREÇÃO AQUI
+          ],
+        }
+      : {};
+
+    return this.prisma.offer.findMany({
+      where: {
+        ...where,
+        validUntil: {
+          gte: new Date(), // Apenas ofertas que ainda são válidas
+        },
+      },
+      take: limit,
+      skip: offset,
+      orderBy: { createdAt: 'desc' },
     });
   }
 }

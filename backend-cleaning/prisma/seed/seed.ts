@@ -260,37 +260,37 @@ async function main() {
     {
       email: 'provider2@cleaning.com',
       password: 'testprovider2pass',
-      fullName: 'João de Souza',
+      fullName: 'Carolina Santos', // Alterado de 'João de Souza' para 'Carolina Santos'
       cpf: '222.222.222-22',
       dateOfBirth: new Date('1988-11-20'),
       phone: '11944444444',
       yearsOfExperience: 7,
-      avatarUrl: 'https://randomuser.me/api/portraits/men/75.jpg',
+      avatarUrl: 'https://randomuser.me/api/portraits/women/75.jpg', // Alterado para foto de mulher
       verificationStatus: VerificationStatus.APPROVED,
       bio: 'Limpeza comercial eficiente e confiável. Atendo grandes e pequenos escritórios com excelência.',
       address: {
         cep: '04543-010', street: 'R. Joaquim Floriano', number: '500', neighborhood: 'Itaim Bibi', city: 'São Paulo', state: 'SP',
       },
       services: ['Comercial', 'Escritório'],
-      pixKey: 'joao.souza@banco.com.br',
+      pixKey: 'joao.souza@banco.com.br', // Manter se não for um problema
     },
     {
-  email: 'provider3@cleaning.com',
-  password: 'testprovider3pass',
-  fullName: 'Helena Teste',
-  cpf: '333.333.333-33',
-  dateOfBirth: new Date('1995-03-01'),
-  phone: '11955555555',
-  yearsOfExperience: 2, // <--- Adicionado: anos de experiência
-  avatarUrl: 'https://randomuser.me/api/portraits/thumb/women/12.jpg',
-  verificationStatus: VerificationStatus.PENDING_INITIAL_REVIEW,
-  bio: 'Profissional organizada e atenciosa, buscando sempre a satisfação do cliente.',
-  address: {
-    cep: '03100-000', street: 'Rua das Cores', number: '50', neighborhood: 'Mooca', city: 'São Paulo', state: 'SP',
-  },
-  services: ['Residencial', 'Passadoria'],
-  pixKey: 'helena.pix@email.com',
-}
+      email: 'provider3@cleaning.com',
+      password: 'testprovider3pass',
+      fullName: 'Helena Teste',
+      cpf: '333.333.333-33',
+      dateOfBirth: new Date('1995-03-01'),
+      phone: '11955555555',
+      yearsOfExperience: 2,
+      avatarUrl: 'https://randomuser.me/api/portraits/thumb/women/12.jpg',
+      verificationStatus: VerificationStatus.PENDING_INITIAL_REVIEW,
+      bio: 'Profissional organizada e atenciosa, buscando sempre a satisfação do cliente.',
+      address: {
+        cep: '03100-000', street: 'Rua das Cores', number: '50', neighborhood: 'Mooca', city: 'São Paulo', state: 'SP',
+      },
+      services: ['Residencial', 'Passadoria'],
+      pixKey: 'helena.pix@email.com',
+    }
   ];
 
   for (const providerData of testProvidersData) {
@@ -377,9 +377,9 @@ async function main() {
               description: `Serviço ${serviceName} por ${providerData.fullName}.`,
             },
           });
-          console.log(`   - Serviço '${serviceName}' associado/atualizado ao provedor ${providerData.fullName}.`);
+          console.log(`    - Serviço '${serviceName}' associado/atualizado ao provedor ${providerData.fullName}.`);
         } else {
-          console.warn(`   - Serviço '${serviceName}' não encontrado para associar/atualizar ao provedor ${providerData.fullName}.`);
+          console.warn(`    - Serviço '${serviceName}' não encontrado para associar/atualizar ao provedor ${providerData.fullName}.`);
         }
       }
     }
@@ -483,7 +483,7 @@ async function main() {
 
   // Obtenha os provedores (necessário para o escopo)
   const mariaProvider = await prisma.provider.findFirst({ where: { user: { email: 'provider1@cleaning.com' } } });
-  const joaoProvider = await prisma.provider.findFirst({ where: { user: { email: 'provider2@cleaning.com' } } });
+  const carolinaProvider = await prisma.provider.findFirst({ where: { user: { email: 'provider2@cleaning.com' } } }); // Alterado para carolinaProvider
   const helenaProvider = await prisma.provider.findFirst({ where: { user: { email: 'provider3@cleaning.com' } } });
 
   // Função auxiliar para gerar slots de 30 minutos
@@ -507,7 +507,7 @@ async function main() {
 
   const allDaySlots = generateTimeSlots(8, 20); // Slots de 08:00 a 19:30 (terminando às 20:00)
 
-  if (mariaProvider && joaoProvider) {
+  if (mariaProvider && carolinaProvider) { // Alterado para carolinaProvider
     // Disponibilidade genérica para Maria da Silva (Seg-Sex)
     for (let day = 1; day <= 5; day++) { // Segunda a Sexta
       const mariaSlots = [
@@ -547,7 +547,7 @@ async function main() {
     }
     console.log(`Disponibilidade genérica para Maria da Silva (Seg-Sex) criada/atualizada.`);
 
-    // --- MODIFICAÇÃO: Disponibilidade para João de Souza para 30/06, 01/07 e 02/07 (Seg, Ter, Qua) ---
+    // --- MODIFICAÇÃO: Disponibilidade para Carolina Santos para 30/06, 01/07 e 02/07 (Seg, Ter, Qua) ---
     // Usando Date para obter o dia da semana correto para as datas futuras
     const today = new Date();
     // 30 de junho de 2025 (Segunda-feira)
@@ -559,18 +559,18 @@ async function main() {
 
 
     // Array de objetos contendo a data e o dia da semana (0=Dom, 1=Seg...)
-    const joaoSpecificDates = [
+    const carolinaSpecificDates = [ // Alterado para carolinaSpecificDates
         { date: june30, dayOfWeek: june30.getDay() }, // Deve ser 1 (Segunda)
         { date: july01, dayOfWeek: july01.getDay() }, // Deve ser 2 (Terça)
         { date: july02, dayOfWeek: july02.getDay() }, // Deve ser 3 (Quarta)
     ];
 
-    for (const specificDate of joaoSpecificDates) {
+    for (const specificDate of carolinaSpecificDates) { // Alterado para carolinaSpecificDates
       for (const slot of allDaySlots) {
-        // UPSERT MANUAL para João para as datas específicas
+        // UPSERT MANUAL para Carolina para as datas específicas
         const existingSpecificAvailability = await prisma.availability.findFirst({
           where: {
-            providerId: joaoProvider.id,
+            providerId: carolinaProvider.id, // Alterado para carolinaProvider
             dayOfWeek: specificDate.dayOfWeek,
             startTime: slot.startTime,
             endTime: slot.endTime,
@@ -588,7 +588,7 @@ async function main() {
         } else {
           await prisma.availability.create({
             data: {
-              providerId: joaoProvider.id,
+              providerId: carolinaProvider.id, // Alterado para carolinaProvider
               dayOfWeek: specificDate.dayOfWeek,
               startTime: slot.startTime,
               endTime: slot.endTime,
@@ -599,7 +599,7 @@ async function main() {
           });
         }
       }
-      console.log(`Disponibilidade completa para João de Souza no dia ${specificDate.date.toLocaleDateString('pt-BR')} (Dia da Semana: ${specificDate.dayOfWeek}) criada/atualizada.`);
+      console.log(`Disponibilidade completa para Carolina Santos no dia ${specificDate.date.toLocaleDateString('pt-BR')} (Dia da Semana: ${specificDate.dayOfWeek}) criada/atualizada.`);
     }
 
   } else {
@@ -657,7 +657,7 @@ async function main() {
 
   if (
     mariaProvider &&
-    joaoProvider &&
+    carolinaProvider && // Alterado para carolinaProvider
     anaClient &&
     carlosClient &&
     lauraClient &&
@@ -698,8 +698,8 @@ async function main() {
     });
     console.log(`Transação de Pagamento para ${completedBookingMaria.id} criada.`);
 
-    // --- NOVO: MÚLTIPLOS AGENDAMENTOS CONCLUÍDOS PARA JOÃO DE SOUZA (para permitir múltiplas avaliações) ---
-    const joaoBookingsData = [
+    // --- NOVO: MÚLTIPLOS AGENDAMENTOS CONCLUÍDOS PARA CAROLINA SANTOS (para permitir múltiplas avaliações) ---
+    const carolinaBookingsData = [ // Alterado para carolinaBookingsData
       {
         client: lauraClient,
         service: commercialService,
@@ -723,27 +723,27 @@ async function main() {
       },
     ];
 
-    const completedBookingsJoao = [];
+    const completedBookingsCarolina = []; // Alterado para completedBookingsCarolina
 
-    for (let i = 0; i < joaoBookingsData.length; i++) {
-      const bookingData = joaoBookingsData[i];
+    for (let i = 0; i < carolinaBookingsData.length; i++) { // Alterado para carolinaBookingsData
+      const bookingData = carolinaBookingsData[i]; // Alterado para carolinaBookingsData
       const bookingDate = new Date();
       bookingDate.setDate(bookingDate.getDate() - (15 + i * 2)); // Datas diferentes para cada booking
 
-      const providerServiceForJoao = await prisma.providerService.findFirst({
-        where: { providerId: joaoProvider.id, serviceId: bookingData.service.id },
+      const providerServiceForCarolina = await prisma.providerService.findFirst({ // Alterado para carolinaProvider
+        where: { providerId: carolinaProvider.id, serviceId: bookingData.service.id }, // Alterado para carolinaProvider
       });
 
-      if (!providerServiceForJoao) {
-        console.warn(`Serviço ${bookingData.service.name} não encontrado para João de Souza. Pulando booking.`);
+      if (!providerServiceForCarolina) {
+        console.warn(`Serviço ${bookingData.service.name} não encontrado para Carolina Santos. Pulando booking.`); // Alterado para Carolina Santos
         continue;
       }
 
-      const completedBookingJoao = await prisma.booking.create({
+      const completedBookingCarolina = await prisma.booking.create({ // Alterado para completedBookingCarolina
         data: {
           clientId: bookingData.client.id,
-          providerId: joaoProvider.id,
-          providerServiceId: providerServiceForJoao.id,
+          providerId: carolinaProvider.id, // Alterado para carolinaProvider
+          providerServiceId: providerServiceForCarolina.id,
           scheduledDate: bookingDate,
           scheduledTime: bookingData.scheduledTime,
           status: BookingStatus.COMPLETED,
@@ -751,21 +751,21 @@ async function main() {
           notes: bookingData.notes,
         },
       });
-      completedBookingsJoao.push(completedBookingJoao);
-      console.log(`Agendamento Concluído ${completedBookingJoao.id} (João) criado para ${bookingData.client.fullName}.`);
+      completedBookingsCarolina.push(completedBookingCarolina); // Alterado para completedBookingsCarolina
+      console.log(`Agendamento Concluído ${completedBookingCarolina.id} (Carolina) criado para ${bookingData.client.fullName}.`); // Alterado para Carolina
 
-      // Transação para o agendamento concluído de João
+      // Transação para o agendamento concluído de Carolina
       await prisma.transaction.create({
         data: {
-          providerId: joaoProvider.id,
+          providerId: carolinaProvider.id, // Alterado para carolinaProvider
           amount: new Prisma.Decimal(bookingData.price),
           type: TransactionType.PAYMENT,
           status: 'COMPLETED',
-          description: `Pagamento serviço ${completedBookingJoao.id}`,
-          bookingId: completedBookingJoao.id,
+          description: `Pagamento serviço ${completedBookingCarolina.id}`, // Alterado para completedBookingCarolina
+          bookingId: completedBookingCarolina.id, // Alterado para completedBookingCarolina
         },
       });
-      console.log(`Transação de Pagamento para ${completedBookingJoao.id} criada.`);
+      console.log(`Transação de Pagamento para ${completedBookingCarolina.id} criada.`); // Alterado para completedBookingCarolina
     }
 
     // --- AGENDAMENTO PENDENTE (para Maria - aparece no dashboard) ---
@@ -789,16 +789,16 @@ async function main() {
     });
     console.log(`Agendamento Pendente para Maria criado.`);
 
-    // --- AGENDAMENTO CONFIRMADO (para João - aparece no dashboard) ---
+    // --- AGENDAMENTO CONFIRMADO (para Carolina - aparece no dashboard) ---
     const booking3Date = new Date();
     booking3Date.setDate(booking3Date.getDate() + 5); // 5 dias no futuro
     await prisma.booking.create({
       data: {
         clientId: anaClient.id,
-        providerId: joaoProvider.id,
+        providerId: carolinaProvider.id, // Alterado para carolinaProvider
         providerServiceId: (
           await prisma.providerService.findFirst({
-            where: { providerId: joaoProvider.id, serviceId: commercialService.id },
+            where: { providerId: carolinaProvider.id, serviceId: commercialService.id }, // Alterado para carolinaProvider
           })
         )!.id,
         scheduledDate: booking3Date,
@@ -808,19 +808,19 @@ async function main() {
         notes: 'Limpeza escritório.',
       },
     });
-    console.log(`Agendamento Confirmado para João criado.`);
+    console.log(`Agendamento Confirmado para Carolina criado.`); // Alterado para Carolina
 
-    // --- TRANSAÇÃO DE SAQUE PENDENTE (para João - aparece em pendingWithdrawals) ---
+    // --- TRANSAÇÃO DE SAQUE PENDENTE (para Carolina - aparece em pendingWithdrawals) ---
     await prisma.transaction.create({
       data: {
-        providerId: joaoProvider.id,
+        providerId: carolinaProvider.id, // Alterado para carolinaProvider
         amount: new Prisma.Decimal(50.0),
         type: TransactionType.WITHDRAWAL,
         status: 'PENDING',
         description: 'Solicitação de saque de teste.',
       },
     });
-    console.log(`Transação de Saque Pendente para João criada.`);
+    console.log(`Transação de Saque Pendente para Carolina criada.`); // Alterado para Carolina
 
     // --- TRANSAÇÃO DE SAQUE CONCLUÍDA (para Maria - aparece no histórico, não em pendente) ---
     await prisma.transaction.create({
@@ -835,11 +835,11 @@ async function main() {
     console.log(`Transação de Saque Concluída para Maria criada.`);
 
     // --- NOVO: CRIAÇÃO DE AVALIAÇÕES (REVIEWS) ---
-    console.log('Criando avaliações para João de Souza...');
+    console.log('Criando avaliações para Carolina Santos...'); // Alterado para Carolina Santos
 
     const reviewDetails = [
       {
-        comment: 'Excelente trabalho! João é muito profissional e deixou meu escritório impecável. Recomendo!',
+        comment: 'Excelente trabalho! Carolina é muito profissional e deixou meu escritório impecável. Recomendo!', // Alterado para Carolina
         rating: 5,
       },
       {
@@ -847,26 +847,23 @@ async function main() {
         rating: 4,
       },
       {
-        comment: 'João é o melhor! Rápido, eficiente e muito cuidadoso com os detalhes. Contratarei novamente.',
+        comment: 'Carolina é a melhor! Rápida, eficiente e muito cuidadosa com os detalhes. Contratarei novamente.', // Alterado para Carolina
         rating: 5,
       },
     ];
 
-    for (let i = 0; i < completedBookingsJoao.length; i++) {
-      const booking = completedBookingsJoao[i];
+    for (let i = 0; i < completedBookingsCarolina.length; i++) { // Alterado para completedBookingsCarolina
+      const booking = completedBookingsCarolina[i]; // Alterado para completedBookingsCarolina
       const detail = reviewDetails[i]; // Pega o detalhe da avaliação correspondente
 
       await prisma.review.upsert({
         where: {
-          bookingId: booking.id, // Onde o bookingId é o critério único
-          // Como bookingId já é unique, Prisma infere que basta um campo para findUnique.
-          // Se o @@unique fosse [clientId, providerId, bookingId], o ideal seria
-          // bookingId_clientId_providerId: { bookingId: booking.id, clientId: booking.clientId, providerId: booking.providerId }
+          bookingId: booking.id,
         },
         update: {
           rating: detail.rating,
           comment: detail.comment,
-          clientId: booking.clientId, // Garantir que o clientId e providerId são do booking
+          clientId: booking.clientId,
           providerId: booking.providerId,
         },
         create: {
@@ -877,7 +874,7 @@ async function main() {
           comment: detail.comment,
         },
       });
-      console.log(`Avaliação de ${booking.clientId} para João de Souza (booking ${booking.id}) criada/atualizada.`);
+      console.log(`Avaliação de ${booking.clientId} para Carolina Santos (booking ${booking.id}) criada/atualizada.`); // Alterado para Carolina Santos
     }
   } else {
     console.warn('Não foi possível criar agendamentos/transações/avaliações de teste. Provedores, clientes ou serviços essenciais não encontrados.');

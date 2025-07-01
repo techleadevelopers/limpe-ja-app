@@ -1,7 +1,8 @@
 // LimpeJaApp/app/(client)/bookings/components/success/DateTimeCards.tsx
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ColorValue } from 'react-native'; // Importe ColorValue aqui
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 interface DateTimeCardsProps {
   formattedBookingDate: string;
@@ -14,17 +15,41 @@ export default function DateTimeCards({
   formattedBookingTime,
   iconColor,
 }: DateTimeCardsProps) {
+  // Define as cores do gradiente
+  // Use 'as const' para que o TypeScript infira um tipo de tupla readonly
+  // ou tipar explicitamente para readonly [ColorValue, ColorValue, ColorValue]
+  const gradientColors = [
+    'rgba(173, 216, 230, 0.25)',
+    'rgba(65, 153, 225, 0.29)',
+    'rgba(133, 167, 231, 0.32)',
+  ] as const; // <-- Adicione 'as const' aqui para resolver o problema de tipagem
+
   return (
     <View style={styles.dateTimeContainer}>
+      {/* Primeiro Card: Data */}
       <View style={styles.dateTimeCard}>
-        <Ionicons name="calendar-outline" size={20} color={iconColor} />
-        <Text style={styles.dateTimeLabel}>Data</Text>
-        <Text style={styles.dateTimeValue}>{formattedBookingDate}</Text>
+        <LinearGradient
+          colors={gradientColors}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.gradientBackground}
+        />
+        <Ionicons name="calendar-outline" size={20} color={iconColor} style={styles.contentOverlay} />
+        <Text style={[styles.dateTimeLabel, styles.contentOverlay]}>Data</Text>
+        <Text style={[styles.dateTimeValue, styles.contentOverlay]}>{formattedBookingDate}</Text>
       </View>
+
+      {/* Segundo Card: Hora */}
       <View style={styles.dateTimeCard}>
-        <Ionicons name="time-outline" size={20} color={iconColor} />
-        <Text style={styles.dateTimeLabel}>Hora</Text>
-        <Text style={styles.dateTimeValue}>{formattedBookingTime}</Text>
+        <LinearGradient
+          colors={gradientColors}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.gradientBackground}
+        />
+        <Ionicons name="time-outline" size={20} color={iconColor} style={styles.contentOverlay} />
+        <Text style={[styles.dateTimeLabel, styles.contentOverlay]}>Hora</Text>
+        <Text style={[styles.dateTimeValue, styles.contentOverlay]}>{formattedBookingTime}</Text>
       </View>
     </View>
   );
@@ -39,12 +64,19 @@ const styles = StyleSheet.create({
   dateTimeCard: {
     backgroundColor: '#F5F5F5',
     borderRadius: 12,
-    paddingVertical: 18,
+    paddingVertical: 13,
     paddingHorizontal: 15,
     alignItems: 'center',
-    width: '48%',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+    width: '45%',
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  gradientBackground: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 12,
+  },
+  contentOverlay: {
+    zIndex: 1,
   },
   dateTimeLabel: {
     fontSize: 12,
@@ -52,7 +84,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   dateTimeValue: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 'bold',
     color: '#333',
     marginTop: 5,

@@ -1,3 +1,4 @@
+// app/(client)/explore/index.tsx
 import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
@@ -9,7 +10,10 @@ import {
     Text,
     Alert,
     TouchableOpacity,
+    // TextInput, // Removido para a barra de busca
+    Keyboard, // Adicionado para esconder o teclado
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import {
     getServiceCategories,
@@ -41,6 +45,9 @@ import PrestadorCard from './components/home/PrestadorCard';
 import RecomendacaoCard from './components/home/RecomendacaoCard';
 
 const COR_AZUL_CLARO_UNIFICADA = '#A0D2EB';
+const COR_PRIMARIA_ESCURA = '#2C3E50';
+const COR_CINZA_FUNDO = '#F4F7FC';
+const COR_BORDA_SUAVE = '#E0E0E0';
 
 export default function ExploreClientScreen() {
     const router = useRouter();
@@ -52,8 +59,11 @@ export default function ExploreClientScreen() {
     const [currentOffer, setCurrentOffer] = useState<Offer | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
+    // const [searchText, setSearchText] = useState<string>(''); // Removido: Estado para o texto da busca
 
+    // Animações
     const headerAnim = useRef(new Animated.Value(0)).current;
+    // const searchBarAnim = useRef(new Animated.Value(0)).current; // Removido: Animação para a barra de busca
     const categoriesAnim = useRef(new Animated.Value(0)).current;
     const bannerAnim = useRef(new Animated.Value(0)).current;
     const recommendationsAnim = useRef(new Animated.Value(0)).current;
@@ -67,32 +77,23 @@ export default function ExploreClientScreen() {
             const fetchedUserProfile = await getUserProfile();
             setUserProfile(fetchedUserProfile);
 
-            console.log('--- Debug do HeaderSuperior ---');
-            console.log('fetchedUserProfile:', JSON.stringify(fetchedUserProfile, null, 2));
-            console.log('fetchedUserProfile?.role:', fetchedUserProfile?.role);
-
             let nameToDisplay = 'Usuário';
-            // CORREÇÃO: A tipagem de `addressToDisplay` agora inclui `null` para compatibilidade com `ProviderDisplayInfo.address`
             let addressToDisplay: BookingAddress | null | undefined = undefined;
 
             if (fetchedUserProfile) {
                 if (fetchedUserProfile.role === 'CLIENT' && fetchedUserProfile.clientDetails) {
                     nameToDisplay = fetchedUserProfile.clientDetails.fullName || fetchedUserProfile.fullName || 'Cliente';
                     addressToDisplay = fetchedUserProfile.clientDetails.address;
-                    console.log('Detectado perfil CLIENT. Nome:', nameToDisplay, 'Endereço:', addressToDisplay);
                 } else if (fetchedUserProfile.role === 'PROVIDER' && fetchedUserProfile.providerDetails) {
                     nameToDisplay = fetchedUserProfile.providerDetails.fullName || fetchedUserProfile.fullName || 'Provedor';
                     addressToDisplay = fetchedUserProfile.providerDetails.address;
-                    console.log('Detectado perfil PROVIDER. Nome:', nameToDisplay, 'Endereço:', addressToDisplay);
                 }
             }
-            console.log('Nome final para HeaderSuperior:', nameToDisplay);
-            console.log('Endereço final para HeaderSuperior:', addressToDisplay);
-            console.log('--- Fim do Debug do HeaderSuperior ---');
 
             const categoriesData = await getServiceCategories();
             setServiceCategories(categoriesData);
 
+            // Chamadas para obter dados de provedores
             const recommendationsData = await getRecommendedProviders();
             setRecommendations(recommendationsData);
 
@@ -104,13 +105,21 @@ export default function ExploreClientScreen() {
                 setCurrentOffer(offersData[0]);
             }
 
+            // Sequência de animações com um pequeno atraso e tipo spring para fluidez
             Animated.sequence([
-                Animated.timing(headerAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-                Animated.timing(categoriesAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-                Animated.timing(bannerAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-                Animated.timing(recommendationsAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-                Animated.timing(providersAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-                Animated.timing(navBarAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+                Animated.spring(headerAnim, { toValue: 1, damping: 10, stiffness: 100, useNativeDriver: true }),
+                Animated.delay(50),
+                // Animated.spring(searchBarAnim, { toValue: 1, damping: 10, stiffness: 100, useNativeDriver: true }), // Removido
+                // Animated.delay(50), // Removido
+                Animated.spring(categoriesAnim, { toValue: 1, damping: 10, stiffness: 100, useNativeDriver: true }),
+                Animated.delay(50),
+                Animated.spring(bannerAnim, { toValue: 1, damping: 10, stiffness: 100, useNativeDriver: true }),
+                Animated.delay(50),
+                Animated.spring(recommendationsAnim, { toValue: 1, damping: 10, stiffness: 100, useNativeDriver: true }),
+                Animated.delay(50),
+                Animated.spring(providersAnim, { toValue: 1, damping: 10, stiffness: 100, useNativeDriver: true }),
+                Animated.delay(50),
+                Animated.spring(navBarAnim, { toValue: 1, damping: 10, stiffness: 100, useNativeDriver: true }),
             ]).start();
         } catch (err: any) {
             const errorMessage = err.message || err.response?.data?.message || "Não foi possível carregar os dados.";
@@ -120,7 +129,7 @@ export default function ExploreClientScreen() {
         } finally {
             setLoading(false);
         }
-    }, [headerAnim, categoriesAnim, bannerAnim, recommendationsAnim, providersAnim, navBarAnim]);
+    }, [headerAnim, categoriesAnim, bannerAnim, recommendationsAnim, providersAnim, navBarAnim]); // searchBarAnim removido
 
     useEffect(() => {
         fetchData();
@@ -136,6 +145,15 @@ export default function ExploreClientScreen() {
     const handleProviderPress = useCallback((provider: ProviderDisplayInfo) => {
         router.push(CLIENT_ROUTES.PROVIDER_DETAILS(provider.id));
     }, [router]);
+
+    // const handleSearch = () => { // Removido
+    // Keyboard.dismiss();
+    // Alert.alert("Busca", `Buscando por: "${searchText}"`);
+    // };
+
+    // const handleFilter = () => { // Removido
+    // Alert.alert("Filtro", "Abrir opções de filtro.");
+    // };
 
     const safeServiceCategories = serviceCategories.filter((c) => c && c.name);
     const safeRecommendations = Array.isArray(recommendations)
@@ -175,13 +193,36 @@ export default function ExploreClientScreen() {
                 keyboardShouldPersistTaps="handled"
             >
                 <View style={styles.contentWrapper}>
-                    <Animated.View style={{ opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
+                    {/* Header Superior Animado */}
+                    <Animated.View style={{ opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-50, 0] }) }] }}>
                         <HeaderSuperior
                             userName={userProfile?.clientDetails?.fullName || userProfile?.providerDetails?.fullName || userProfile?.fullName || 'Usuário'}
                             userAddress={userProfile?.clientDetails?.address || userProfile?.providerDetails?.address}
                         />
                     </Animated.View>
 
+                    {/* Barra de Busca Animada e Estilizada - REMOVIDA */}
+                    {/*
+                    <Animated.View style={[styles.searchBarContainer, { opacity: searchBarAnim, transform: [{ translateY: searchBarAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
+                        <View style={styles.searchBar}>
+                            <Ionicons name="search" size={20} color="#888" style={styles.searchIcon} />
+                            <TextInput
+                                style={styles.searchInput}
+                                placeholder="Busque por serviço ou profissional..."
+                                placeholderTextColor="#888"
+                                value={searchText}
+                                onChangeText={setSearchText}
+                                returnKeyType="search"
+                                onSubmitEditing={handleSearch}
+                            />
+                            <TouchableOpacity onPress={handleFilter} style={styles.filterButton}>
+                                <Ionicons name="options-outline" size={24} color={COR_PRIMARIA_ESCURA} />
+                            </TouchableOpacity>
+                        </View>
+                    </Animated.View>
+                    */}
+
+                    {/* Categorias de Serviço Animadas */}
                     <Animated.View style={{ opacity: categoriesAnim, transform: [{ translateY: categoriesAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
                         <SecaoContainer
                             titulo="Categorias de Serviço"
@@ -201,6 +242,7 @@ export default function ExploreClientScreen() {
                         />
                     </Animated.View>
 
+                    {/* Banner de Oferta Animado */}
                     {currentOffer && (
                         <Animated.View style={{ opacity: bannerAnim, transform: [{ translateY: bannerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
                             <BannerOferta
@@ -217,6 +259,7 @@ export default function ExploreClientScreen() {
                         </Animated.View>
                     )}
 
+                    {/* Recomendações para Você Animadas */}
                     <Animated.View style={{ opacity: recommendationsAnim, transform: [{ translateY: recommendationsAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
                         <SecaoRecomendacoes
                             titulo="Recomendações para Você"
@@ -236,6 +279,7 @@ export default function ExploreClientScreen() {
                         />
                     </Animated.View>
 
+                    {/* Profissionais por Perto Animados */}
                     <Animated.View style={{ opacity: providersAnim, transform: [{ translateY: providersAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
                         <SecaoPrestadores
                             titulo="Profissionais por Perto"
@@ -258,6 +302,7 @@ export default function ExploreClientScreen() {
                 </View>
             </ScrollView>
 
+            {/* NavBar Animada */}
             <Animated.View style={[styles.navBarContainer, { transform: [{ translateY: navBarAnim.interpolate({ inputRange: [0, 1], outputRange: [100, 0] }) }] }]}>
                 <NavBar />
             </Animated.View>
@@ -268,7 +313,7 @@ export default function ExploreClientScreen() {
 const styles = StyleSheet.create({
     screen: {
         flex: 1,
-        backgroundColor: '#F4F7FC',
+        backgroundColor: COR_CINZA_FUNDO,
     },
     scrollViewArea: {
         flex: 1,
@@ -279,16 +324,61 @@ const styles = StyleSheet.create({
     },
     contentWrapper: {
         flexGrow: 1,
+        paddingHorizontal: 16,
     },
     navBarContainer: {
         position: 'absolute',
         bottom: 0,
         left: 0,
         right: 0,
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 0,
+            height: -5,
+        },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 10,
     },
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: COR_CINZA_FUNDO,
     },
+    // Removidos estilos relacionados à searchBarContainer, searchBar, searchIcon, searchInput, filterButton
+    // searchBarContainer: {
+    //     paddingVertical: 10,
+    //     marginTop: 10,
+    // },
+    // searchBar: {
+    //     flexDirection: 'row',
+    //     alignItems: 'center',
+    //     backgroundColor: '#fff',
+    //     borderRadius: 12,
+    //     paddingHorizontal: 15,
+    //     paddingVertical: 10,
+    //     shadowColor: "#000",
+    //     shadowOffset: {
+    //         width: 0,
+    //         height: 3,
+    //     },
+    //     shadowOpacity: 0.08,
+    //     shadowRadius: 6,
+    //     elevation: 5,
+    //     borderWidth: 1,
+    //     borderColor: COR_BORDA_SUAVE,
+    // },
+    // searchIcon: {
+    //     marginRight: 10,
+    // },
+    // searchInput: {
+    //     flex: 1,
+    //     fontSize: 16,
+    //     color: COR_PRIMARIA_ESCURA,
+    // },
+    // filterButton: {
+    //     marginLeft: 10,
+    //     padding: 5,
+    // },
 });

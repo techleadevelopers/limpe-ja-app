@@ -481,6 +481,7 @@ export default function ProviderDashboardScreen() {
   const { user, isLoading: authLoading, signOut } = useAuth(); // Destructuring signOut from useAuth
 
   const [dashboardData, setDashboardData] = useState<ProviderDashboard | null>(null);
+  const [pendingRequests, setPendingRequests] = useState<BookingDetails[]>([]); // Novo estado para solicitações pendentes
   const [upcomingServices, setUpcomingServices] = useState<BookingDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -509,18 +510,25 @@ export default function ProviderDashboardScreen() {
 
       setDashboardData(dashboard);
 
-      // Mudar PENDING_PROVIDER_CONFIRMATION para PENDING
+      // Fetch all relevant booking statuses for the dashboard
+      const pendingProviderBookings = await getBookingsForUser(BookingStatus.PENDING_PROVIDER_CONFIRMATION);
+      const pendingClientBookings = await getBookingsForUser(BookingStatus.PENDING);
       const confirmedBookings = await getBookingsForUser(BookingStatus.CONFIRMED);
-      console.log("[DashboardScreen] fetchData: Agendamentos confirmados recebidos.", confirmedBookings);
+      const inProgressBookings = await getBookingsForUser(BookingStatus.IN_PROGRESS);
 
-      setUpcomingServices([...confirmedBookings].sort((a,b) => {
-        const dateA = new Date(a.scheduledDate + 'T' + a.scheduledTime);
-        const dateB = new Date(b.scheduledDate + 'T' + b.scheduledTime);
-        if (isNaN(dateA.getTime())) console.warn(`[DashboardScreen] Data inválida para agendamento ${a.id}: ${a.scheduledDate}T${a.scheduledTime}`);
-        if (isNaN(dateB.getTime())) console.warn(`[DashboardScreen] Data inválida para agendamento ${b.id}: ${b.scheduledDate}T${b.scheduledTime}`);
+      // Combine and filter pending requests
+      const allPendingRequests = [...pendingProviderBookings, ...pendingClientBookings]
+        .filter(b => new Date(b.scheduledDate + 'T' + b.scheduledTime) >= new Date()) // Only future requests
+        .sort((a,b) => new Date(a.scheduledDate + 'T' + a.scheduledTime).getTime() - new Date(b.scheduledDate + 'T' + b.scheduledTime).getTime());
+      setPendingRequests(allPendingRequests);
+      console.log("[DashboardScreen] fetchData: Solicitações pendentes recebidas.", allPendingRequests);
 
-        return dateA.getTime() - dateB.getTime();
-      }));
+      // Combine and sort upcoming confirmed/in-progress services
+      const allUpcomingServices = [...confirmedBookings, ...inProgressBookings]
+        .filter(b => new Date(b.scheduledDate + 'T' + b.scheduledTime) >= new Date()) // Only future services
+        .sort((a,b) => new Date(a.scheduledDate + 'T' + a.scheduledTime).getTime() - new Date(b.scheduledDate + 'T' + b.scheduledTime).getTime());
+      setUpcomingServices(allUpcomingServices);
+      console.log("[DashboardScreen] fetchData: Agendamentos confirmados/em progresso recebidos.", allUpcomingServices);
 
       Animated.timing(contentAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
 
@@ -629,38 +637,26 @@ export default function ProviderDashboardScreen() {
 
   // --- FUNÇÃO DE LOGOUT ---
  const handleLogout = async () => {
-    console.log("[Dashboard] handleLogout: Botão 'Sair da Conta' pressionado. (IGNORANDO ALERTA PARA TESTE)"); // Log 1
-
-    try {
-      // CHAME signOut() DIRETAMENTE AQUI PARA TESTE
-      await signOut();
-      console.log("[Dashboard] signOut() aparentemente concluído. (APÓS TESTE DIRETO)"); // Log 4 (será visto se não houver erro no signOut e antes do redirect)
-    } catch (error) {
-      console.error("[Dashboard] Erro ao fazer logout (APÓS TESTE DIRETO):", error); // Log 5
-      Alert.alert("Erro", "Não foi possível sair da conta. Tente novamente."); // Mantenha este Alert para erros
-    }
-
-    // O BLOCO Alert.alert ORIGINAL FOI COMENTADO PARA ESTE TESTE:
-    // Alert.alert(
-    //   "Sair da Conta",
-    //   "Tem certeza que deseja sair?",
-    //   [
-    //     { text: "Cancelar", style: "cancel", onPress: () => console.log("[Dashboard] Logout cancelado pelo usuário.") }, // Log 2
-    //     {
-    //       text: "Sair",
-    //       onPress: async () => {
-    //         console.log("[Dashboard] Confirmação de logout: 'Sair' pressionado."); // Log 3
-    //         try {
-    //           await signOut(); // Chama a função signOut do AuthContext
-    //           console.log("[Dashboard] signOut() aparentemente concluído."); // Log 4 (será visto se não houver erro no signOut e antes do redirect)
-    //         } catch (error) {
-    //           console.error("[Dashboard] Erro ao fazer logout:", error); // Log 5
-    //           Alert.alert("Erro", "Não foi possível sair da conta. Tente novamente.");
-    //         }
-    //       },
-    //     },
-    //   ]
-    // );
+    Alert.alert(
+      "Sair da Conta",
+      "Tem certeza que deseja sair?",
+      [
+        { text: "Cancelar", style: "cancel", onPress: () => console.log("[Dashboard] Logout cancelado pelo usuário.") },
+        {
+          text: "Sair",
+          onPress: async () => {
+            console.log("[Dashboard] Confirmação de logout: 'Sair' pressionado.");
+            try {
+              await signOut(); // Chama a função signOut do AuthContext
+              console.log("[Dashboard] signOut() aparentemente concluído.");
+            } catch (error) {
+              console.error("[Dashboard] Erro ao fazer logout:", error);
+              Alert.alert("Erro", "Não foi possível sair da conta. Tente novamente.");
+            }
+          },
+        },
+      ]
+    );
   };
   // --- FIM DA FUNÇÃO DE LOGOUT ---
 
@@ -720,8 +716,37 @@ export default function ProviderDashboardScreen() {
         <QuickActionsSection
           onViewAllServicesPress={handleViewAllServicesPress}
           onViewAllMessagesPress={handleViewAllMessagesPress}
-          onManageAvailability={() => router.push('/(provider)/availability' as any)} // Assumindo uma rota de disponibilidade
+          onManageAvailability={() => router.push('/(provider)/schedule/manage-availability' as any)} // Assumindo uma rota de disponibilidade
         />
+
+        {/* Solicitações Pendentes */}
+        <View style={styles.subsectionWrapper}>
+          <View style={styles.subsectionHeader}>
+            <Text style={styles.subsectionTitle}>
+              <Ionicons name="hourglass-outline" size={20} color={WARNING_YELLOW} /> Novas Solicitações
+            </Text>
+            {pendingRequests.length > 2 && (
+              <TouchableOpacity onPress={() => router.push('/(provider)/schedule' as any)} accessibilityRole="button" accessibilityLabel="Ver todas as solicitações">
+                <Text style={styles.viewAllText}>Ver Todas</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          {pendingRequests.length > 0 ? (
+            pendingRequests.slice(0, 2).map((item, index) => (
+              <RequestItem
+                key={item.id}
+                item={item}
+                onAccept={handleAcceptRequest}
+                onReject={handleRejectRequest}
+                onDetails={() => router.push(`/(provider)/bookings/${item.id}` as any)} // Rota para detalhes do agendamento
+                onChat={handleChatWithClient}
+                entryAnim={new Animated.ValueXY({x:1,y:0})} // Animação
+              />
+            ))
+          ) : (
+            renderEmptyState("Nenhuma nova solicitação de agendamento.", "checkmark-done-circle-outline")
+          )}
+        </View>
 
         {/* Próximos Serviços Confirmados */}
         <View style={styles.subsectionWrapper}>
@@ -729,18 +754,18 @@ export default function ProviderDashboardScreen() {
             <Text style={styles.subsectionTitle}>
               <Ionicons name="checkmark-done-circle-outline" size={20} color={ICON_PRIMARY} /> Próximos Serviços
               </Text>
-            {upcomingServices.filter(s => s.status === BookingStatus.CONFIRMED).length > 2 && (
-              <TouchableOpacity onPress={handleViewAllServicesPress} accessibilityRole="button" accessibilityLabel="Ver todos os próximos serviços">
+            {upcomingServices.length > 2 && (
+              <TouchableOpacity onPress={() => router.push('/(provider)/schedule' as any)} accessibilityRole="button" accessibilityLabel="Ver todos os próximos serviços">
                 <Text style={styles.viewAllText}>Ver Todos</Text>
               </TouchableOpacity>
             )}
           </View>
-          {upcomingServices.filter(s => s.status === BookingStatus.CONFIRMED).length > 0 ? (
-            upcomingServices.filter(s => s.status === BookingStatus.CONFIRMED).slice(0, 2).map((item, index) => (
+          {upcomingServices.length > 0 ? (
+            upcomingServices.slice(0, 2).map((item, index) => (
               <ConfirmedServiceItem
                 key={item.id}
                 item={item}
-                onPress={handleServicePress}
+                onPress={() => router.push(`/(provider)/bookings/${item.id}` as any)} // Rota para detalhes do agendamento
                 entryAnim={new Animated.ValueXY({x:1,y:0})}
               />
             ))

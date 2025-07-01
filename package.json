@@ -16,6 +16,7 @@
     "@react-native-async-storage/async-storage": "2.1.2",
     "@react-native-community/datetimepicker": "8.4.1",
     "@react-navigation/native": "^7.1.6",
+    "@shopify/react-native-skia": "^2.0.7",
     "axios": "^1.9.0",
     "clsx": "^2.1.1",
     "expo": "53.0.13",
@@ -23,6 +24,7 @@
     "expo-calendar": "~14.1.4",
     "expo-clipboard": "~7.1.4",
     "expo-constants": "~17.1.6",
+    "expo-dev-client": "~5.2.2",
     "expo-font": "~13.3.1",
     "expo-gl": "~15.1.6",
     "expo-haptics": "~14.1.4",
@@ -49,14 +51,14 @@
     "react-native-gesture-handler": "~2.24.0",
     "react-native-linear-gradient": "^2.8.3",
     "react-native-reanimated": "~3.17.4",
+    "react-native-reanimated-carousel": "^4.0.2",
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "^4.11.1",
     "react-native-svg": "15.11.2",
     "react-native-toast-message": "^2.3.0",
     "react-native-web": "^0.20.0",
     "react-native-webview": "13.13.5",
-    "socket.io-client": "^4.8.1",
-    "expo-dev-client": "~5.2.2"
+    "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

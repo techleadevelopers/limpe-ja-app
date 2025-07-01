@@ -101,11 +101,12 @@ export default function PersonalDetailsScreen() {
     // Fill fields from context
     if (personalDetails) {
       // Mapeamento de personalDetails (do contexto) para estados locais
-      setEmail(personalDetails.email);
+      setEmail(personalDetails.email || ''); // Usar || '' para garantir string
       // Não preenche a senha por segurança
       setNomeCompleto(personalDetails.fullName); // CORRIGIDO
       setCpf(personalDetails.cpf);
-      setDataNascimento(new Date(personalDetails.dateOfBirth)); // CORRIGIDO
+      // CORRIGIDO: Verificar se personalDetails.dateOfBirth existe antes de criar Date
+      setDataNascimento(personalDetails.dateOfBirth ? new Date(personalDetails.dateOfBirth) : undefined);
       setTelefone(personalDetails.phone); // CORRIGIDO
       setCep(personalDetails.address.cep);
       setLogradouro(personalDetails.address.street); // CORRIGIDO
@@ -222,7 +223,7 @@ export default function PersonalDetailsScreen() {
     setIsSubmitting(true);
     const personalData = {
       email: email.trim(), // ADICIONADO
-      passwordHash: password, // ADICIONADO
+      password: password, // ADICIONADO (corrigido para 'password' em vez de 'passwordHash')
       fullName: nomeCompleto.trim(), // CORRIGIDO
       cpf: cpf.replace(/\D/g, ''),
       dateOfBirth: dataNascimento!.toISOString().split('T')[0], // CORRIGIDO

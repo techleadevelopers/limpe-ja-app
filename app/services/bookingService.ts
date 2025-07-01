@@ -54,7 +54,6 @@ export async function getBookingsForUser(status?: BookingStatus): Promise<Bookin
  * @param bookingId O ID do agendamento.
  * @returns Promessa com o objeto BookingDetails.
  */
-// ESTA FUNÇÃO JÁ ESTÁ CORRETA E PRONTA PARA USO!
 export async function getBookingDetails(bookingId: string): Promise<BookingDetails> {
     try {
         const response: AxiosResponse<BookingDetails> = await api.get<BookingDetails>(`/bookings/${bookingId}`);
@@ -108,3 +107,38 @@ export async function cancelBooking(bookingId: string): Promise<BookingDetails> 
         throw new Error(`Erro de rede ou servidor ao cancelar agendamento ${bookingId}.`);
     }
 }
+
+/**
+ * @function checkActiveChatBooking
+ * Verifica se existe um agendamento ATIVO (CONFIRMED ou IN_PROGRESS) entre um cliente e um provedor.
+ * Usado para controlar o acesso ao chat (botão de iniciar chat).
+ * @param clientId O ID do cliente.
+ * @param providerId O ID do provedor.
+ * @returns Promessa que resolve para um objeto contendo `canChat: boolean` e, opcionalmente, `bookingId: string`.
+ * @remarks Este método assume que o backend terá um endpoint correspondente, por exemplo:
+ *          GET /bookings/check-active-chat/:clientId/:providerId
+ *          que retorna { canChat: boolean, bookingId?: string }.
+ */
+export const checkActiveChatBooking = async (clientId: string, providerId: string): Promise<{ canChat: boolean; bookingId?: string }> => {
+    try {
+        const response: AxiosResponse<{ canChat: boolean; bookingId?: string }> = await api.get(`/bookings/check-active-chat/${clientId}/${providerId}`);
+        return response.data;
+    } catch (error: any) {
+        console.error(`Erro ao verificar agendamento ativo para chat entre cliente ${clientId} e provedor ${providerId}:`, error.response?.data || error.message);
+        // Em caso de erro, por segurança, retornamos que o chat não pode ser iniciado.
+        return { canChat: false };
+    }
+};
+
+// Mantido para compatibilidade, mas `checkActiveChatBooking` é mais específico para o contexto do chat.
+// Se `checkConfirmedBookingBetweenUsers` for usado em outros lugares, mantenha-o.
+// Caso contrário, considere removê-lo e usar apenas `checkActiveChatBooking`.
+export const checkConfirmedBookingBetweenUsers = async (clientId: string, providerId: string): Promise<boolean> => {
+    try {
+        const response: AxiosResponse<{ hasConfirmedBooking: boolean }> = await api.get(`/bookings/check-confirmed/${clientId}/${providerId}`);
+        return response.data.hasConfirmedBooking;
+    } catch (error: any) {
+        console.error(`Erro ao verificar agendamento confirmado entre cliente ${clientId} e provedor ${providerId}:`, error.response?.data || error.message);
+        return false;
+    }
+};

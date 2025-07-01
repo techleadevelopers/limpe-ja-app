@@ -14,6 +14,10 @@ export default function ProviderInfoSection({
   providerFullName,
   providerRating,
 }: ProviderInfoSectionProps) {
+  const starSize = 15; // Tamanho menor para as estrelas
+  // MUDANÇA AQUI: Cor azul claro (light blue) com um tom diferente para evitar ciano
+  const starColor = '#87CEEB'; // Um tom de azul claro mais puro (SkyBlue)
+
   return (
     <View style={styles.providerHeaderSection}>
       <Image
@@ -24,7 +28,8 @@ export default function ProviderInfoSection({
         <Text style={styles.providerNameText}>{providerFullName}</Text>
         <Text style={styles.providerRoleText}>Prestador(a) de Serviço</Text>
       </View>
-      {renderStars(providerRating)}
+      {/* Passa o tamanho e a cor para a função renderStars */}
+      {renderStars(providerRating, starSize, starColor, starColor)}
     </View>
   );
 }

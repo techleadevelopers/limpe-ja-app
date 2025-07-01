@@ -1,9 +1,9 @@
 // src/users/users.service.ts
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 // Importe todos os modelos necessários
-import { User, UserRole, Client, Provider, Prisma, Address, ProviderService, Service, Review, Booking } from '@prisma/client';
+import { User, UserRole, Client, Provider, Prisma, Address, ProviderService, Service, Review, Booking, VerificationStatus } from '@prisma/client';
 // Não precisa importar UserProfileDto aqui se ele não for usado para instanciar (apenas para tipagem)
 // import { UserProfileDto } from './dto/user-profile.dto';
 
@@ -16,7 +16,7 @@ export type UserWithAllRelations = User & {
     address: Address | null;
     bookings: Booking[]; // <--- ESSENCIAL: ADICIONADO bookings
     reviewsMade: Review[]; // <--- ESSENCIAL: ADICIONADO reviewsMade
-    _count?: { bookings: number };
+    _count?: { bookings: number }; // <--- CORREÇÃO AQUI: de 'true' para 'number'
     createdAt: Date;
     updatedAt: Date;
   }) | null;
@@ -28,6 +28,14 @@ export type UserWithAllRelations = User & {
     reviewsReceived: (Review & { client: Client & { user: User } })[];
     createdAt: Date;
     updatedAt: Date;
+    // Campos diretos do Provider que são importantes para o tipo
+    verificationStatus: VerificationStatus;
+    documentPhotoFrontUrl: string | null;
+    documentPhotoBackUrl: string | null;
+    selfieWithDocumentUrl: string | null;
+    backgroundCheckResult: Prisma.JsonValue | null;
+    rejectionReason: string | null;
+    pixKey: string | null;
   }) | null;
 };
 
@@ -74,7 +82,7 @@ export class UsersService {
     return user as UserWithAllRelations | null;
   }
 
-  async findByEmail(email: string): Promise<UserWithAllRelations | null> { // MUDADO: Retornar UserWithAllRelations
+  async findByEmail(email: string): Promise<UserWithAllRelations | null> {
     const user = await this.prisma.user.findUnique({
       where: { email },
       // MUDADO: Incluir todas as relações necessárias para o UserProfileDto
@@ -126,6 +134,7 @@ export class UsersService {
         email: updateUserDto.email,
         // Adicione outros campos do User aqui se UpdateUserDto os contiver
         // avatarUrl: updateUserDto.avatarUrl, // Se o DTO permitir atualizar o avatarUrl do user
+        // passwordHash: updateUserDto.password ? await bcrypt.hash(updateUserDto.password, 10) : undefined,
       },
       include: { // Incluir TODAS as relações necessárias para o UserProfileDto
         client: {
@@ -173,7 +182,7 @@ export class UsersService {
         throw new NotFoundException(`Usuário com ID "${id}" não encontrado.`);
       }
       if (error.code === 'P2003') {
-        throw new NotFoundException(`Não foi possível deletar o usuário com ID "${id}" devido a dados relacionados. Verifique as configurações de onDelete no seu schema.`);
+        throw new BadRequestException(`Não foi possível deletar o usuário com ID "${id}" devido a dados relacionados. Verifique as configurações de onDelete no seu schema.`);
       }
       throw error;
     }

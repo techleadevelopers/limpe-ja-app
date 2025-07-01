@@ -1,13 +1,13 @@
 // LimpeJaApp/app/services/clientService.ts
 import api from './api'; // Importa a instância centralizada do Axios
-import axios, { AxiosResponse } from 'axios'; // Importa axios e AxiosResponse
+import axios, { AxiosResponse, AxiosError } from 'axios'; // Importa axios e AxiosResponse para tratamento de erros
 
 // =========================================================================
 // IMPORTAÇÕES DE INTERFACES DE TIPAGEM CENTRALIZADAS
 // =========================================================================
 import { Service } from '../types/backend/services';
 import {
-  ProviderDisplayInfo, // CORREÇÃO: Usar ProviderDisplayInfo para tipar provedores
+  ProviderDisplayInfo, // Usado para tipar provedores em listas
   ProviderSearchQuery, // Importado para tipar a query de busca
 } from '../types/backend/providers';
 import { Offer } from '../types/backend/offers';
@@ -42,14 +42,15 @@ export async function getServiceCategories(): Promise<Service[]> {
  * @function searchProviders
  * Realiza uma busca geral por provedores.
  * Corresponde a GET /providers (com query params).
- * NOTA: Esta função foi movida para providerService.ts, mas se você tiver um endpoint /search
+ * NOTA: Esta função pode ter sido movida para providerService.ts, mas se você tiver um endpoint /search
  * que retorna provedores, esta função pode ser usada aqui.
  * @param query Objeto com os parâmetros de busca.
  * @returns Promessa com um array de objetos ProviderDisplayInfo.
  */
 export async function searchProviders(query: ProviderSearchQuery): Promise<ProviderDisplayInfo[]> {
   try {
-    const params = new URLSearchParams(query as any).toString(); // Converte objeto para query string
+    // Converte o objeto de query para uma string de query parameters
+    const params = new URLSearchParams(query as any).toString(); 
     // A requisição é feita usando a instância 'api', que já tem a baseURL configurada
     const response: AxiosResponse<ProviderDisplayInfo[]> = await api.get<ProviderDisplayInfo[]>(`/providers?${params}`); // Assumindo que /providers é o endpoint de busca geral
     return response.data;

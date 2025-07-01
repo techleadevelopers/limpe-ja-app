@@ -3,7 +3,7 @@
 // A mensagem de erro "Você quis dizer 'importar api de "./api"' em vez disso?" indica que 'api'
 // pode ser o default export, ou que está faltando chaves. Vamos tentar com chaves primeiro,
 // pois é mais comum para instâncias de axios nomeadas.
-import  api  from './api'; // Se o seu 'api.ts' exporta 'export const api = axios.create(...);'
+import api from './api'; // Se o seu 'api.ts' exporta 'export const api = axios.create(...);'
 // OU:
 // import api from './api'; // Se o seu 'api.ts' exporta 'export default axios.create(...);'
 
@@ -28,7 +28,7 @@ export async function getMyProviderEarnings(): Promise<EarningsResponseDto> {
     // É importante lançar o erro para que o componente que chamou possa tratá-lo
     // loga o erro para depuração
     console.error("[earningsService] Erro ao buscar ganhos:", error.response?.data || error.message);
-    throw error.response?.data || error;
+    throw error.response?.data || error; // Lança o erro para ser tratado pelo chamador
   }
 }
 
@@ -46,6 +46,6 @@ export async function requestWithdrawal(withdrawalDto: WithdrawalRequestDto): Pr
     // É importante lançar o erro para que o componente que chamou possa tratá-lo
     // loga o erro para depuração
     console.error("[earningsService] Erro ao solicitar saque:", error.response?.data || error.message);
-    throw error.response?.data || error;
+    throw error.response?.data || error; // Lança o erro para ser tratado pelo chamador
   }
 }

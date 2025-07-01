@@ -9,13 +9,13 @@ import { ConfigService } from '@nestjs/config';
 import { LocalStrategy } from './strategies/local.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { UsersModule } from '../users/users.module';
-import { WsAuthGuard } from './guards/ws-auth.guard'; // Importe o WsAuthGuard
+import { ProvidersModule } from '../providers/providers.module'; // <-- ADICIONE ESTA LINHA
+import { WsAuthGuard } from './guards/ws-auth.guard';
 
 @Module({
   imports: [
     PrismaModule,
     PassportModule,
-    // Configuração do JWT
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
@@ -23,19 +23,20 @@ import { WsAuthGuard } from './guards/ws-auth.guard'; // Importe o WsAuthGuard
         signOptions: { expiresIn: configService.get<string>('JWT_EXPIRATION_TIME') },
       }),
     }),
-    UsersModule, // Necessário para AuthService criar e validar usuários
+    UsersModule,
+    ProvidersModule, // <-- E esta linha no array de imports
   ],
   controllers: [AuthController],
   providers: [
     AuthService,
     LocalStrategy,
     JwtStrategy,
-    WsAuthGuard, // <--- Adicione WsAuthGuard como um provider
+    WsAuthGuard,
   ],
   exports: [
     AuthService,
-    JwtModule, // <--- Exporte JwtModule para que JwtService esteja disponível
-    WsAuthGuard, // <--- Exporte WsAuthGuard para que outros módulos possam usá-lo
+    JwtModule,
+    WsAuthGuard,
   ],
 })
 export class AuthModule {}

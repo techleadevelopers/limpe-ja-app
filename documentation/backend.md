@@ -1,8 +1,9 @@
 Documentação Técnica do Backend
-1. Introdução
+
+Introdução
 Este documento detalha a arquitetura e as funcionalidades do backend de uma aplicação de marketplace de serviços, construída com NestJS, utilizando Prisma ORM para interação com um banco de dados PostgreSQL. O objetivo principal é conectar clientes a provedores de serviços, facilitando agendamentos, pagamentos, comunicação e um robusto sistema de verificação e avaliação. A aplicação segue os princípios de uma arquitetura modular, com cada funcionalidade encapsulada em seu próprio módulo NestJS, promovendo a manutenibilidade, escalabilidade e clareza do código.
 
-2. Visão Geral da Arquitetura
+Visão Geral da Arquitetura
 O backend é construído sobre o framework NestJS, que adota uma arquitetura inspirada em Angular, utilizando módulos, controllers, services, providers e DTOs (Data Transfer Objects). A aplicação inicia-se através do main.ts, que configura o NestJS, habilita CORS, aplica um ValidationPipe global para validação de dados, e um HttpExceptionFilter para tratamento padronizado de erros.
 
 Módulos (*.module.ts): Agrupam funcionalidades relacionadas. Cada módulo pode exportar serviços que podem ser injetados em outros módulos. O AppModule é o módulo raiz que importa todos os outros módulos principais da aplicação, agindo como o orquestrador central da aplicação.
@@ -15,7 +16,7 @@ Filtros (*.filter.ts): Capturam e processam exceções HTTP globalmente, padroni
 Prisma ORM: Gerencia a conexão e as operações com o banco de dados PostgreSQL, mapeando os modelos de dados definidos no schema.prisma para tabelas de banco de dados e fornecendo uma API Type-Safe para consultas e mutações.
 A estrutura de pastas reflete a modularidade, com cada domínio de negócio (ex: auth, users, providers, bookings) residindo em sua própria pasta, contendo seus respectivos controladores, serviços, DTOs e entidades. Esta organização facilita a navegação, a manutenção e a escalabilidade do projeto.
 
-3. Esquema do Banco de Dados (Prisma)
+Esquema do Banco de Dados (Prisma)
 O schema.prisma é o coração do modelo de dados, definindo todas as entidades, seus campos, tipos, relações e enums, e é a fonte única de verdade para a estrutura do banco de dados.
 
 Enums
@@ -67,6 +68,7 @@ Address:
 Propósito: Armazena informações de endereço.
 Campos Chave: id (UUID).
 Campos: cep, street, number, complement?, neighborhood, city, state.
+Novidade: location (Unsupported("geometry(Point, 4326)")?) para suportar dados geoespaciais e busca por proximidade.
 Relações: client? (1:1 com Client), provider? (1:1 com Provider), booking? (1:1, via BookingAddress com Booking).
 Service:
 Propósito: Define os tipos de serviços que podem ser oferecidos (e.g., "Limpeza Padrão", "Eletricista").
@@ -117,14 +119,15 @@ Transaction:
 Propósito: Registra todas as transações financeiras.
 Campos Chave: id (UUID).
 Campos: providerId (FK), amount (Decimal), type (TransactionType), status (String), description?, createdAt.
-Novidade: bookingId? (único, FK para Booking) e booking (1:1 com Booking) para associar transações a agendamentos.
+Novidade: bookingId? (FK para Booking) e booking (1:1 com Booking) para associar transações a agendamentos. O @unique para bookingId foi removido para permitir múltiplas transações por agendamento.
 Relações: provider (M:1 com Provider), booking? (1:1 com Booking).
 Availability:
 Propósito: Define a disponibilidade dos provedores.
 Campos Chave: id (UUID).
 Campos: providerId (FK), dayOfWeek (Int, 0=Dom, 6=Sáb), startTime (String, HH:mm), endTime (String, HH:mm), isAvailable (Boolean, padrão true).
 Relações: provider (M:1 com Provider).
-4. Módulos e Funcionalidades Principais
+
+Módulos e Funcionalidades Principais
 4.1. Configuração Global (src/main.ts, src/app.module.ts, src/prisma/, src/common/filters/, src/config/)
 Esta seção descreve a infraestrutura global da aplicação, que é fundamental para o funcionamento de todos os outros módulos.
 
@@ -147,7 +150,10 @@ Padronização: Intercepta exceções e formata a resposta JSON para o cliente, 
 config/ (config.module.ts, configuration.ts, validation-schema.ts): Gerenciamento de variáveis de ambiente.
 ConfigModule: Importa NestConfigModule.forRoot para configurar o carregamento das variáveis de ambiente.
 configuration.ts: Define uma função que carrega variáveis de ambiente do process.env e as organiza em um objeto tipado, permitindo acesso fácil e seguro às configurações da aplicação.
-validation-schema.ts: Utiliza a biblioteca Joi para definir um esquema de validação rigoroso para as variáveis de ambiente. Isso impede que a aplicação inicie com configurações inválidas ou ausentes, aumentando a robustez.
+validation-schema.ts: Utiliza a biblioteca Joi para definir um esquema de validação rigoroso para as variáveis de ambiente essenciais (ex: NODE_ENV, PORT, DATABASE_URL, JWT_SECRET, JWT_EXPIRATION_TIME). Isso garante que todas as variáveis críticas estejam presentes e tenham o formato correto antes que a aplicação inicie.
+Atualização: Variáveis de ambiente do GCS (GCS_PROJECT_ID, GCS_KEY_FILE, GCS_BUCKET_NAME) foram adicionadas ao validation-schema.ts e configuration.ts, e o config.module.ts está configurado para carregá-las.
+Benefício: Garante que o ambiente de execução esteja configurado corretamente antes da inicialização da aplicação, prevenindo erros de tempo de execução relacionados a variáveis ausentes ou mal formatadas, e promove a segurança ao centralizar o acesso a segredos.
+
 4.2. Autenticação e Autorização (auth/)
 Este módulo é responsável por gerenciar o acesso dos usuários ao sistema, incluindo registro, login e controle de permissões.
 
@@ -204,6 +210,7 @@ LoginDto: Define a estrutura para as credenciais de login.
 RegisterClientDto / RegisterProviderDto: Definem a estrutura para os dados de registro, incluindo campos específicos para cada papel e um CreateAddressDto aninhado.
 ForgotPasswordDto: Define a estrutura para a solicitação de redefinição de senha.
 AuthResponseDto: Encapsula o accessToken gerado e o UserProfileDto do usuário autenticado.
+
 4.3. Gerenciamento de Usuários (Clientes e Provedores) (users/, clients/, providers/)
 Este conjunto de módulos gerencia a criação, recuperação e atualização dos perfis de usuário, que são divididos em User (base), Client e Provider.
 
@@ -227,6 +234,8 @@ updateByUserId(userId: string, data: UpdateProviderProfileDto): Atualiza o perfi
 remove(id: string): Deleta um Provider.
 search(searchDto: ProviderSearchDto): Implementa a lógica de busca complexa. Constrói uma cláusula WHERE dinâmica com OR para fullName, email, service.name e bio. Inclui providerServices e reviewsReceived para calcular averageRating e reviewCount. Filtra e ordena os resultados com base em minRating, sortBy (Rating, Experience). Retorna ProviderWithCalculatedRating[].
 findTopRatedOrExperiencedProviders() / findAllProviders(): Métodos para buscar provedores com base em critérios específicos (ex: top avaliados, mais experientes, todos com filtros).
+Atualização: A lógica de search e findAllProviders foi implementada para incluir a estrutura para busca geoespacial (latitude, longitude, radius) com Prisma.$queryRaw e funções ST_DWithin/ST_DistanceSphere.
+
 Módulos:
 UsersModule: Importa PrismaModule. Exporta UsersService para que AuthService e outros módulos possam utilizá-lo.
 ClientsModule: Importa UsersModule (para UsersService) e PrismaModule. Exporta ClientsService.
@@ -266,6 +275,7 @@ Entidades:
 AddressEntity: Representação tipada do modelo Address.
 ClientEntity: Representação tipada do modelo Client.
 ProviderEntity: Representação tipada do modelo Provider.
+
 4.4. Gerenciamento de Tipos de Serviço (services/)
 Este módulo lida com a definição e manutenção dos tipos de serviços genéricos que podem ser oferecidos na plataforma (ex: "Limpeza Padrão", "Instalação Elétrica").
 
@@ -292,6 +302,7 @@ UpdateServiceDto: Estende PartialType(CreateServiceDto), tornando todas as propr
 ServiceDetailsDto: DTO de saída para detalhes de Service, incluindo id, name, description?, icon?, createdAt, updatedAt, e price. O construtor é flexível para aceitar tanto um Service do Prisma quanto um ProviderService (quando aninhado em ProviderDetailsDto).
 Entidades:
 ServiceEntity: Representação tipada do modelo Service, incluindo o campo price como Prisma.Decimal.
+
 4.5. Serviços Oferecidos por Provedores (provider-services/)
 Este módulo gerencia a relação específica entre um provedor e um tipo de serviço, permitindo que cada provedor defina seus próprios preços e descrições para os serviços que oferece.
 
@@ -320,6 +331,7 @@ CreateProviderServiceDto: Define a estrutura para adicionar um serviço oferecid
 UpdateProviderServiceDto: Define os campos opcionais para atualizar um ProviderService, como price?, durationMinutes?, description?.
 Entidades:
 ProviderServiceEntity: Representação tipada do modelo ProviderService, incluindo o campo price como Prisma.Decimal.
+
 4.6. Agendamentos (bookings/)
 Este módulo gerencia todo o ciclo de vida dos agendamentos de serviços, desde a criação até a atualização de status.
 
@@ -368,6 +380,7 @@ BookingDetailsDto: DTO de saída abrangente para um agendamento, transformando o
 BookingAndPixResponseDto: Combina BookingDetailsDto e PixChargeResponseDto para a resposta da operação schedule-and-pay.
 Entidades:
 BookingEntity: Representação tipada do modelo Booking, incluindo o campo totalPrice como Prisma.Decimal e o addressId.
+
 4.7. Pagamentos (payments/)
 Este módulo gerencia as operações financeiras, como a criação de cobranças e o processamento de saques, além de lidar com webhooks de gateways de pagamento.
 
@@ -406,6 +419,7 @@ RequestWithdrawalDto: Define os dados para uma solicitação de saque, incluindo
 MessageResponseDto: Um DTO genérico para respostas simples de sucesso.
 Entidades:
 TransactionEntity: Representação tipada do modelo Transaction, incluindo amount como Prisma.Decimal e bookingId.
+
 4.8. Ganhos do Provedor (earnings/)
 Este módulo fornece aos provedores uma visão detalhada de seus ganhos e a funcionalidade para solicitar saques.
 
@@ -436,6 +450,7 @@ TransactionDto: DTO auxiliar para representar transações no EarningsResponseDt
 EarningsResponseDto: DTO de saída para o dashboard de ganhos, incluindo totalEarnings, availableForWithdrawal, pendingWithdrawals, recentTransactions, e earningsBreakdown.
 WithdrawalRequestDto: DTO de entrada para uma solicitação de saque, incluindo amount e withdrawalAccountInfo?.
 WithdrawalResponseDto: DTO de saída para a resposta de uma solicitação de saque.
+
 4.9. Avaliações (reviews/)
 Este módulo permite que clientes avaliem os serviços prestados pelos provedores e gerencia a recuperação dessas avaliações.
 
@@ -466,6 +481,7 @@ GetReviewsDto: Define os parâmetros de consulta para filtrar avaliações, incl
 ReviewDto: DTO de saída para uma avaliação, incluindo id, bookingId, clientId, providerId, rating, comment?, createdAt, updatedAt, e client (com fullName e avatarUrl).
 Entidades:
 ReviewEntity: Representação tipada do modelo Review, incluindo updatedAt e a restrição @@unique([bookingId, clientId, providerId]).
+
 4.10. Verificação de Provedores (verification/)
 Este módulo implementa um processo de verificação multifacetado para provedores, garantindo a legitimidade e segurança da plataforma.
 
@@ -474,7 +490,7 @@ Serviços:
 CriminalBackgroundCheckService:
 checkCpf(cpf: string): Simulação. Este serviço simula a verificação de antecedentes criminais de um CPF. Em um ambiente de produção, seria integrado a uma API de terceiros (ex: ClearSale, Serasa). A simulação inclui um delay e uma lógica para CPFs de teste que sempre falham.
 DocumentProcessingService:
-uploadImage(file: File, path: string): Simulação. Simula o upload de um arquivo de imagem para um armazenamento externo, retornando uma URL mockada.
+uploadImage(file: File, path: string): Lógica real implementada para upload para o Google Cloud Storage (GCS).
 processDocumentOcr(file: File): Simulação. Simula o processamento OCR de um documento para extrair texto.
 compareFaces(selfieFile: File, documentImageUrl: string): Simulação. Simula a comparação facial entre uma selfie e uma imagem de documento.
 performLivenessCheck(selfieFile: File): Simulação. Simula a verificação de prova de vida (liveness check) em uma selfie.
@@ -510,6 +526,7 @@ UploadSelfieDto: Atualmente não possui campos adicionais, apenas o arquivo.
 Enums:
 VerificationStatus: Enum para os diferentes estados do processo de verificação.
 DocumentPhotoType: Enum para o tipo de foto do documento (FRONT ou BACK).
+
 4.11. Notificações (notifications/)
 Este módulo gerencia o sistema de notificações da aplicação, permitindo a criação, recuperação e gerenciamento do status de leitura das notificações para os usuários.
 
@@ -534,6 +551,7 @@ MarkAsReadDto: Define uma lista opcional de notificationIds para marcar como lid
 NotificationEntity: Representação tipada do modelo Notification.
 Entidades:
 NotificationEntity: Representação tipada do modelo Notification.
+
 4.12. Chat (Mensagens) (chat/)
 Este módulo facilita a comunicação em tempo real entre usuários (clientes e provedores) através de mensagens de chat, utilizando tanto HTTP quanto WebSockets.
 
@@ -575,6 +593,7 @@ SendMessageDto: Define os dados para enviar uma mensagem, incluindo chatId, rece
 GetMessagesDto: Define os parâmetros de consulta para paginar mensagens, incluindo offset? e limit?.
 Entidades:
 Message (from message.entity.ts): Representação tipada do modelo Message.
+
 4.13. Busca (search/)
 Este módulo oferece uma funcionalidade de busca unificada para diferentes tipos de entidades na plataforma, como provedores e serviços.
 
@@ -594,6 +613,7 @@ DTOs:
 SearchQueryDto: Define os parâmetros de entrada para a busca, incluindo query? (termo de busca geral), type? (tipo de entidade a buscar: providers, services, offers, all), location?, date?, limit?, offset?, latitude?, longitude?, radius?, e sortBy? (SortByOption).
 SearchResultDto: DTO de saída que agrega os resultados da busca, contendo providers: ProviderDetailsDto[] e services: ServiceDetailsDto[].
 SortByOption: Enum para as opções de ordenação (Rating, Distance, Experience, CreatedAt, UpdatedAt, FullName).
+
 4.14. Dashboard do Provedor (dashboard/)
 Este módulo fornece uma visão consolidada e resumida de informações importantes para o provedor logado, como agendamentos futuros, ganhos e avaliações recentes.
 
@@ -614,6 +634,7 @@ DashboardController:
 GET /providers/me/dashboard: Protegido por AuthGuard('jwt'). Permite que o provedor logado acesse seu dashboard. O userId é extraído do token JWT.
 DTOs:
 DashboardDto: DTO de saída para o dashboard do provedor, incluindo fullName, upcomingBookings?, totalEarnings, pendingWithdrawals, e reviews?.
+
 4.15. Ofertas/Promoções (offers/)
 Este módulo gerencia a criação, recuperação, atualização e exclusão de ofertas e promoções disponíveis na plataforma.
 
@@ -635,10 +656,11 @@ GET /offers/:id: Rota pública. Retorna os detalhes de uma oferta específica po
 PATCH /offers/:id: Protegido por JwtAuthGuard e RolesGuard (ADMIN role). Permite que administradores atualizem ofertas.
 DELETE /offers/:id: Protegido por JwtAuthGuard e RolesGuard (ADMIN role). Permite que administradores excluam ofertas.
 DTOs:
-CreateOfferDto: Define a estrutura para a criação de uma oferta, incluindo title, description?, discountPercentage?, fixedDiscountAmount?, validUntil (como string ISO 8601), e imageUrl?.
+CreateOfferDto: Define a estrutura para a criação de uma oferta, incluindo title, description?, discountPercentage? (Float), fixedDiscountAmount? (Float), validUntil (como string ISO 8601), e imageUrl?.
 UpdateOfferDto: Estende PartialType(CreateOfferDto), tornando todas as propriedades opcionais para atualizações parciais.
 Entidades:
 Offer (from offer.entity.ts): Representação tipada do modelo Offer.
+
 4.16. Disponibilidade do Provedor (availability/)
 Este módulo permite que os provedores gerenciem seus horários de disponibilidade e que os clientes visualizem esses horários, levando em consideração os agendamentos já confirmados.
 
@@ -674,6 +696,7 @@ UpdateAvailabilityDto: Define os dados para criar, atualizar ou deletar um slot 
 GetAvailabilityDto: Define os parâmetros de consulta para buscar a disponibilidade, incluindo dayOfWeek? e date?. O campo date é crucial para a lógica de horários ocupados.
 Entidades:
 AvailabilityEntity: Representação tipada do modelo Availability.
+
 5. Aspectos Transversais
 5.1. Tratamento de Erros (common/filters/http-exception.filter.ts)
 HttpExceptionFilter: Implementa a interface ExceptionFilter do NestJS e é registrado globalmente em main.ts.
@@ -685,6 +708,7 @@ path: A URL da requisição que causou o erro.
 message: Uma string que pode ser a mensagem da exceção ou uma concatenação de mensagens de validação (se o erro for um BadRequestException de ValidationPipe).
 errors: Um array de strings, especialmente útil para erros de validação, onde cada item representa uma falha de validação específica.
 Benefício: Garante uma experiência consistente para o cliente em caso de erros, facilitando o tratamento de erros no frontend e melhorando a clareza da API.
+
 5.2. Validação de Dados (main.ts, common/pipes/validation.pipe.ts)
 ValidationPipe (global): Configurado em main.ts com app.useGlobalPipes(new ValidationPipe(...)).
 Integração: Trabalha em conjunto com as bibliotecas class-validator e class-transformer.
@@ -697,6 +721,7 @@ transform: true: Converte automaticamente os tipos de dados da requisição para
 transformOptions: { enableImplicitConversion: true }: Habilita a conversão implícita de tipos, como strings numéricas para números.
 CustomValidationPipe (exemplo): Embora o ValidationPipe padrão do NestJS seja robusto, um CustomValidationPipe (como o fornecido no anexo validation.pipe.ts) pode ser usado para personalizar ainda mais a formatação dos erros de validação, agregando-os de uma forma específica.
 Benefício: Garante a integridade dos dados de entrada da API, reduzindo a quantidade de código boilerplate para validação em cada rota e fornecendo mensagens de erro claras para o cliente.
+
 5.3. Configuração de Ambiente (config/validation-schema.ts, config/configuration.ts, config/config.module.ts)
 ConfigService: Módulo do NestJS (@nestjs/config) para carregar e gerenciar variáveis de ambiente de forma segura e estruturada.
 validation-schema.ts: Utiliza a biblioteca Joi para definir um esquema de validação rigoroso para as variáveis de ambiente essenciais (ex: NODE_ENV, PORT, DATABASE_URL, JWT_SECRET, JWT_EXPIRATION_TIME). Isso garante que todas as variáveis críticas estejam presentes e tenham o formato correto antes que a aplicação inicie.
@@ -707,11 +732,13 @@ load: [configuration]: Carrega as configurações definidas em configuration.ts.
 validationSchema: Aplica o esquema de validação Joi para as variáveis de ambiente.
 envFilePath: '.env': Especifica o caminho para o arquivo .env onde as variáveis de ambiente estão definidas.
 Benefício: Garante que o ambiente de execução esteja configurado corretamente antes da inicialização da aplicação, prevenindo erros de tempo de execução relacionados a variáveis ausentes ou mal formatadas, e promove a segurança ao centralizar o acesso a segredos.
+
 5.4. Logging
 Logger do NestJS: Uma classe utilitária (@nestjs/common) utilizada em vários serviços e controladores (BookingsService, AvailabilityService, ChatGateway, PaymentsService, ProvidersService, DashboardService, ReviewsService, WsAuthGuard).
 Funcionalidade: Permite registrar mensagens de diferentes níveis (log, error, warn, debug, verbose) para monitorar o comportamento da aplicação em tempo de execução.
 Implementação: Instanciado com o nome da classe (private readonly logger = new Logger(ClassName.name);) para facilitar a identificação da origem dos logs.
 Benefício: Ajuda na monitorização da aplicação em produção, na depuração de problemas durante o desenvolvimento e na auditoria de eventos importantes.
+
 6. Considerações de Desenvolvimento e Implantação
 Prisma binaryTargets: A configuração binaryTargets = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x"] no schema.prisma é uma otimização crucial para ambientes de implantação baseados em Docker ou Linux. Ela garante que o motor de consulta binário do Prisma Client seja compatível com diferentes distribuições Linux e versões do OpenSSL, evitando erros comuns de "library not found" em contêineres.
 Prisma.Decimal para Valores Monetários: O uso do tipo Decimal do Prisma (@db.Decimal(10, 2)) para campos como price, totalPrice, e amount é uma prática recomendada para lidar com valores monetários. Ao contrário dos tipos de ponto flutuante (Float), Decimal garante precisão exata em cálculos financeiros, evitando erros de arredondamento. No código, isso requer a conversão explícita usando new Prisma.Decimal(value) ao gravar e value.toNumber() ao ler para interagir com tipos number do TypeScript.
@@ -723,25 +750,142 @@ Facilita a Validação: DTOs são o local ideal para aplicar class-validator e c
 Otimiza a Performance: DTOs de saída podem ser otimizados para incluir apenas os campos necessários para o cliente da API, reduzindo o tamanho da carga útil.
 Rica Documentação API: A integração com Swagger via @ApiProperty e @ApiPropertyOptional em DTOs e entidades resulta em uma documentação de API interativa e completa.
 Modularidade e Injeção de Dependência: O NestJS promove fortemente a modularidade e a injeção de dependência. Cada módulo encapsula uma funcionalidade específica e exporta seus serviços, que podem ser injetados em outros módulos. Isso cria um grafo de dependências claro, facilitando a testabilidade (mocking de dependências), a manutenção (alterações em um módulo têm impacto limitado) e a escalabilidade (novas funcionalidades podem ser adicionadas como novos módulos). O uso de forwardRef (como em BookingsModule para PaymentsModule) é uma técnica para resolver dependências circulares entre módulos.
-7. Próximos Passos e Oportunidades de Melhoria (TODOs)
-Com base nos comentários TODO encontrados nos arquivos, aqui estão algumas oportunidades de melhoria e funcionalidades a serem implementadas:
+
+7. Próximos Passos e Oportunidades de Melhoria (TODOs):
+
+Com base nos comentários TODO encontrados nos arquivos e nas discussões, aqui estão as oportunidades de melhoria e funcionalidades a serem implementadas:
 
 Integração Real com APIs Externas:
-Verificação de Antecedentes: Substituir a simulação em CriminalBackgroundCheckService.checkCpf por uma chamada real a um serviço de background check de terceiros (ex: ClearSale, Serasa, Serpro). Isso exigirá gerenciamento de chaves de API e tratamento de respostas complexas.
-Processamento de Documentos: Integrar DocumentProcessingService com serviços reais de armazenamento de objetos (AWS S3, Google Cloud Storage) para uploadImage, e com APIs de OCR, comparação facial e prova de vida (ex: KRYPTUS, FaceTec, CAF). Isso envolverá considerações de latência e custo.
+
+Verificação de Provedores: Substituir as simulações existentes em CriminalBackgroundCheckService.checkCpf e DocumentProcessingService (processDocumentOcr, compareFaces, performLivenessCheck) por integrações reais com serviços de terceiros (ex: ClearSale, Serasa, Google Cloud Vision API para OCR, e soluções especializadas como KRYPTUS, FaceTec, CAF para comparação facial robusta e prova de vida). Isso exigirá gerenciamento de chaves de API e tratamento de respostas complexas.
+
 Gateway de Pagamento PIX: Integrar PaymentsService com um gateway de pagamento PIX real (ex: Stripe, PagSeguro, Cielo, Banco Central do Brasil para Open Banking/PIX Direto). Isso implicará em lidar com fluxos de pagamento assíncronos, conciliação e tratamento de falhas.
-Gerenciamento de Usuários - Refinamento de Tipagem:
+
+Refinamento de Tipagem de Usuários:
+
 UserProfileDto: Ajustar a tipagem do UserProfileDto e do retorno dos métodos findOne e update em UsersService para garantir compatibilidade total com os dados do Prisma, eliminando o uso de any casts e garantindo a segurança de tipo em toda a camada de apresentação.
-Busca - Expansão de Funcionalidades:
+
+Expansão da Busca:
+
 Ofertas na Busca: Considerar a implementação de busca por ofertas (OffersModule) no SearchService, expandindo o escopo da busca abrangente. Isso exigirá a definição de critérios de busca específicos para ofertas e sua integração na lógica de performSearch.
-Ganhos - Robustez Financeira:
+
+Robustez Financeira:
+
 Atomicidade de Saques: Implementar uma solução mais robusta para a atomicidade das transações de saque. Isso pode envolver o uso de transações de banco de dados explícitas (prisma.$transaction) para garantir que o saldo seja deduzido e a transação de saque registrada de forma atômica. Para maior complexidade e escala, um modelo de "Carteira" (Wallet) explícito no banco de dados com mecanismos de bloqueio otimista ou pessimista pode ser considerado.
+
 Chat - Permissões e Escalabilidade:
+
 Lógica de Permissões: Refinar a lógica de permissões no ChatController e ChatService para verificar se o usuário autenticado é um participante válido de um chat antes de permitir acesso ou envio de mensagens. Isso pode envolver a criação de um ChatParticipantGuard ou lógica de serviço mais granular.
-Histórico de Mensagens: Otimizar a recuperação de histórico de mensagens para grandes volumes, talvez com indexação de texto completo ou estratégias de paginação mais avançadas.
-Otimização de Query Prisma:
-include Statements: Revisar as inclusões (include) nas queries do Prisma em todos os serviços. O objetivo é garantir que apenas os dados estritamente necessários para cada operação sejam carregados, evitando N+1 problemas e eager loading excessivo, o que pode otimizar significativamente o desempenho da base de dados e reduzir o uso de memória no backend.
-Documentação Swagger - Continuidade:
-Refinamento Contínuo: Continuar refinando os DTOs e entidades com @ApiProperty e @ApiPropertyOptional para garantir que a documentação gerada pelo Swagger seja precisa, completa e reflita as últimas mudanças na API, especialmente para campos de relação e tipos complexos.
-Internacionalização (i18n):
-Suporte a Múltiplos Idiomas: Embora a aplicação use mensagens em português, para uma expansão global, a implementação de um sistema de internacionalização (i18n) é fundamental. Isso envolveria a externalização de todas as strings de UI e mensagens de erro para arquivos de tradução.
+
+Otimização do Histórico de Mensagens: Otimizar a recuperação de histórico de mensagens para grandes volumes, talvez com indexação de texto completo ou estratégias de paginação mais avançadas.
+
+Otimização de Queries Prisma:
+
+include statements: Realizar uma auditoria completa de todos os include statements nos serviços para carregar apenas os dados estritamente necessários para cada operação, evitando N+1 problemas e eager loading excessivo, o que pode otimizar significativamente o desempenho da base de dados e reduzir o uso de memória no backend.
+
+Refinamento Contínuo da Documentação Swagger:
+
+Continuar refinando os DTOs e entidades com @ApiProperty e @ApiPropertyOptional para garantir que a documentação gerada pelo Swagger seja precisa, completa e reflita as últimas mudanças na API, especialmente para campos de relação e tipos complexos.
+
+Implementação de Internacionalização (i18n):
+
+Para uma expansão global, a implementação de um sistema de internacionalização (i18n) é fundamental. Isso envolveria a externalização de todas as strings de UI e mensagens de erro para arquivos de tradução.
+
+Análise do Relatório e Próximos Passos por Integração
+1. Backend (NestJS)
+
+A maior parte dos próximos passos críticos e das integrações com APIs externas está concentrada no backend.
+
+Integração Real com APIs Externas para Verificação de Provedores:
+
+Objetivo: Substituir as simulações existentes por integrações reais para OCR, comparação facial, prova de vida e verificação de antecedentes.
+APIs Envolvidas: Google Cloud Vision API (para OCR e detecção facial), e serviços de terceiros (como ClearSale, Serasa, FaceTec, CAF, AWS Rekognition para comparação facial robusta e prova de vida).
+Arquivos Principais:
+src/verification/document-processing.service.ts: Este arquivo será o ponto central para a integração com a Google Cloud Vision API (para processDocumentOcr e compareFaces - detecção de faces). Também será o local para integrar serviços de terceiros para performLivenessCheck e para a lógica de compareFaces se a Google Cloud Vision API não for suficiente para a comparação de similaridade robusta.
+src/verification/criminal-background-check.service.ts: Este arquivo será integrado com serviços de terceiros (ex: ClearSale, Serasa Experian) para a verificação de CPF e antecedentes (checkCpf).
+src/verification/verification.controller.ts: Embora não exija grandes mudanças lógicas, é importante garantir que o tratamento de erros (try-catch) seja robusto para lidar com as exceções que as APIs reais podem lançar.
+Integração Real com Gateway de Pagamento PIX:
+
+Objetivo: Conectar o sistema a um gateway de pagamento PIX real para processar transações.
+APIs Envolvidas: Gateways de pagamento (ex: Stripe, PagSeguro, Cielo, ou APIs diretas do Banco Central do Brasil para Open Banking/PIX).
+Arquivos Principais:
+src/payments/payments.service.ts: Será o local para implementar a lógica de createPixCharge e handlePixWebhook com a API do gateway escolhido.
+Refinamento de Tipagem de Usuários:
+
+Objetivo: Garantir a compatibilidade total e segurança de tipo para os dados de usuário.
+Arquivos Principais:
+src/users/users.service.ts: Para ajustar o retorno dos métodos findOne e update.
+DTOs relacionados ao perfil do usuário (ex: src/users/dto/user-profile.dto.ts - se existir ou for criado).
+Expansão da Busca (Ofertas):
+
+Objetivo: Incluir ofertas nos resultados da busca abrangente.
+Arquivos Principais:
+src/search/search.service.ts: Para integrar a lógica de busca por ofertas no método performSearch.
+src/offers/offers.module.ts: (Contexto) O módulo de ofertas já existe, mas a integração da busca será no SearchService.
+Robustez Financeira (Atomicidade de Saques):
+
+Objetivo: Assegurar a integridade das transações de saque.
+Arquivos Principais:
+src/payments/payments.service.ts: Provavelmente, pois é onde as operações financeiras são gerenciadas.
+Pode envolver a criação de um novo modelo/serviço src/wallet/wallet.service.ts se uma carteira explícita for implementada.
+Chat - Permissões e Escalabilidade:
+
+Objetivo: Refinar o controle de acesso e otimizar o histórico de mensagens.
+Arquivos Principais:
+src/chat/chat.controller.ts: Para implementar a lógica de permissões.
+src/chat/chat.service.ts: Para a lógica de permissões e otimização da recuperação de mensagens.
+Otimização de Queries Prisma:
+
+Objetivo: Melhorar o desempenho do banco de dados revisando as cláusulas include.
+Arquivos Principais: Esta é uma tarefa de otimização que afetará todos os serviços que utilizam o Prisma para consultas ao banco de dados, como src/providers/providers.service.ts, src/bookings/bookings.service.ts, src/chat/chat.service.ts, etc.
+Refinamento Contínuo da Documentação Swagger:
+
+Objetivo: Manter a documentação da API precisa e atualizada.
+Arquivos Principais: Afeta todos os DTOs e controladores no backend que utilizam anotações @ApiProperty e @ApiQuery.
+Implementação de Internacionalização (i18n):
+
+Objetivo: Preparar o aplicativo para múltiplos idiomas.
+Arquivos Principais: Esta é uma tarefa transversal que afetará praticamente todos os arquivos que contêm strings visíveis ao usuário ou mensagens de erro, tanto no backend quanto no frontend.
+2. Frontend (React Native / Expo)
+
+Integração com as APIs Reais de Verificação e Pagamento:
+
+Objetivo: Consumir os endpoints do backend que agora estarão integrados com as APIs reais.
+Arquivos Principais:
+services/verificationService.ts: Para chamar os endpoints de verificação do backend.
+services/paymentService.ts: Para chamar os endpoints de pagamento do backend.
+Chat - Acesso Condicional na UI:
+
+Objetivo: Controlar a visibilidade e funcionalidade do chat com base no status do agendamento.
+Arquivos Principais:
+app/(client)/messages/index.tsx
+app/(client)/messages/[chatId].tsx
+app/(provider)/messages/index.tsx
+app/(provider)/messages/[chatId].tsx
+app/(client)/explore/[providerId].tsx (para exibir/ocultar o botão de chat no perfil do provedor)
+LimpeJaApp/services/bookingService.ts: Pode ser necessário um novo método ou modificação para verificar o status de agendamentos entre um cliente e um provedor específico, que será usado pela lógica da UI.
+Implementação de Internacionalização (i18n):
+
+Objetivo: Suportar múltiplos idiomas na interface do usuário.
+Arquivos Principais: Afetará todos os componentes de UI que exibem texto.
+Testes de Integração de Ponta a Ponta:
+
+Objetivo: Garantir que todos os fluxos funcionem corretamente após as novas integrações.
+Arquivos Principais: Esta é uma atividade de teste, não um arquivo de código específico, mas os testes serão escritos utilizando os fluxos de usuário do aplicativo.
+Refinamento da Experiência do Usuário e Otimização de Performance:
+
+Objetivo: Melhorar a usabilidade e o desempenho geral do aplicativo.
+Arquivos Principais: Esta é uma tarefa contínua que pode impactar qualquer componente ou serviço do frontend que precise de otimização ou ajustes de UI/UX.
+Resumo dos Próximos Passos e Arquivos Chave para Integração de APIs:
+
+Funcionalidade	Integração Necessária	Arquivos Principais
+Verificação - OCR (Real)	Google Cloud Vision API	src/verification/document-processing.service.ts
+Verificação - Facial (Real)	Google Cloud Vision API / Serviço de Terceiros (ex: FaceTec)	src/verification/document-processing.service.ts
+Verificação - Prova de Vida	Serviço de Terceiros (Específico, ex: FaceTec, CAF)	src/verification/document-processing.service.ts
+Verificação - CPF/Antecedentes	Serviço de Terceiros (Específico, ex: ClearSale, Serasa)	src/verification/criminal-background-check.service.ts
+Gateway Pagamento PIX	API de Gateway Real (ex: Stripe, PagSeguro)	src/payments/payments.service.ts
+Busca Geoespacial (Real)	PostGIS (PostgreSQL) + Prisma.$queryRaw	src/providers/providers.service.ts, prisma/schema.prisma
+Integração Frontend Verificação	Consumir APIs de Backend	services/verificationService.ts (frontend)
+Integração Frontend Pagamento	Consumir APIs de Backend	services/paymentService.ts (frontend)
+Controle de Chat na UI	Lógica de UI baseada no status de agendamento	app/(client)/messages/index.tsx, app/(client)/messages/[chatId].tsx, app/(provider)/messages/index.tsx, app/(provider)/messages/[chatId].tsx, app/(client)/explore/[providerId].tsx, LimpeJaApp/services/bookingService.ts
+Este roteiro fornece uma visão clara dos próximos passos e dos arquivos que serão o foco principal para a integração das APIs e a finalização das funcionalidades. O fato de as permissões IAM básicas no Google Cloud já estarem configuradas com roles/editor simplifica o início da implementação das integrações com os serviços GCP.

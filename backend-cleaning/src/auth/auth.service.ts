@@ -4,39 +4,33 @@ import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { RegisterClientDto } from './dto/register-client.dto';
 import { RegisterProviderDto } from './dto/register-provider.dto';
-// Importar o novo enum VerificationStatus
 import { UserRole, User, Prisma, Client, Provider, Address, ProviderService, Service, Review, VerificationStatus, Booking } from '@prisma/client';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { UserProfileDto } from '../users/dto/user-profile.dto';
 
+// Importar ProvidersService e seus tipos relevantes
+import { ProvidersService, ProviderWithIncludes, ProviderWithCalculatedRating } from '../providers/providers.service';
+// Importar ClientWithIncludes (assumindo que está em user-profile.dto.ts ou em um arquivo de tipos de cliente)
+import { ClientWithIncludes } from '../users/dto/user-profile.dto'; // Ou o caminho correto onde ClientWithIncludes está definido
+
 // =========================================================================
-// Tipo Auxiliar: UserWithAllRelations - CORRIGIDO E ATUALIZADO
+// Tipo Auxiliar: UserWithAllRelations
+// Este tipo deve refletir EXATAMENTE o que o prisma.user.findUnique retorna com os includes.
+// Ou seja, o 'provider' aqui será do tipo ProviderWithIncludes, não ProviderWithCalculatedRating.
 // =========================================================================
 export type UserWithAllRelations = User & {
   client?: (Client & {
-    user: User; // O user completo do cliente
+    user: User;
     address: Address | null;
-    bookings: Booking[]; // <--- ESSENCIAL: ADICIONADO bookings
-    reviewsMade: Review[]; // <--- ESSENCIAL: ADICIONADO reviewsMade
+    bookings: Booking[];
+    reviewsMade: Review[];
     _count?: { bookings: number };
     createdAt: Date;
     updatedAt: Date;
   }) | null;
-  provider?: (Provider & {
-    user: User; // O user completo do provedor
-    address: Address | null;
-    providerServices: (ProviderService & { service: Service })[];
-    // reviewReceived agora precisa ter o client completo para o DTO
-    reviewsReceived: (Review & { client: Client & { user: User } })[];
-    createdAt: Date;
-    updatedAt: Date;
-    verificationStatus: VerificationStatus; // Inclua verificationStatus
-    documentPhotoFrontUrl: string | null;
-    documentPhotoBackUrl: string | null;
-    selfieWithDocumentUrl: string | null;
-    backgroundCheckResult: Prisma.JsonValue | null;
-    rejectionReason: string | null;
-  }) | null;
+  // O provedor aqui é do tipo ProviderWithIncludes, que é o que o Prisma retorna.
+  // Ele será mapeado para ProviderWithCalculatedRating antes de ser passado para o DTO.
+  provider?: ProviderWithIncludes | null;
 };
 
 @Injectable()
@@ -44,6 +38,7 @@ export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private providersService: ProvidersService, // <-- ADICIONADO: Injetar ProvidersService
   ) {}
 
   async validateUser(email: string, pass: string): Promise<User | null> {
@@ -59,15 +54,16 @@ export class AuthService {
   }
 
   async login(user: User): Promise<AuthResponseDto> {
+    // Incluir TODAS as relações necessárias para o UserWithAllRelations
     const fullUser = await this.prisma.user.findUnique({
       where: { id: user.id },
-      include: { // Incluir TODAS as relações necessárias para o UserProfileDto
+      include: {
         client: {
           include: {
             user: true,
             address: true,
-            bookings: true,    // <-- ADICIONADO: Incluir bookings para o Client
-            reviewsMade: true, // <-- ADICIONADO: Incluir reviewsMade para o Client
+            bookings: true,
+            reviewsMade: true,
             _count: {
               select: { bookings: true }
             }
@@ -89,17 +85,10 @@ export class AuthService {
                 }
               }
             },
-            // REMOVIDO: Linhas que causavam erro porque são campos diretos, não relações:
-            // verificationStatus: true,
-            // documentPhotoFrontUrl: true,
-            // documentPhotoBackUrl: true,
-            // selfieWithDocumentUrl: true,
-            // backgroundCheckResult: true,
-            // rejectionReason: true,
           },
         },
       },
-    }) as UserWithAllRelations;
+    }) as UserWithAllRelations; // <-- O cast é para UserWithAllRelations, que agora tem ProviderWithIncludes
 
     if (!fullUser) {
       throw new UnauthorizedException('Usuário não encontrado após validação.');
@@ -108,7 +97,25 @@ export class AuthService {
     const payload = { email: fullUser.email, sub: fullUser.id, role: fullUser.role };
     const accessToken = this.jwtService.sign(payload);
 
-    const userProfile = new UserProfileDto(fullUser);
+    // =====================================================================
+    // CORREÇÃO CRÍTICA: Mapear o provedor para ProviderWithCalculatedRating
+    // =====================================================================
+    let mappedProvider: ProviderWithCalculatedRating | undefined;
+    if (fullUser.provider) {
+      // Usa o método do ProvidersService para converter o objeto ProviderWithIncludes
+      // para ProviderWithCalculatedRating, que é o que UserProfileDto espera.
+      mappedProvider = this.providersService.mapProviderToCalculatedRating(fullUser.provider);
+    }
+
+    // Cria um objeto que corresponde à estrutura esperada pelo construtor de UserProfileDto
+    const userProfileDataForDto = {
+      ...fullUser, // Copia as propriedades diretas do User (id, email, role, etc.)
+      client: fullUser.client, // O cliente já está no formato ClientWithIncludes
+      provider: mappedProvider, // Usa o provedor JÁ MAPEADO
+    };
+
+    // Assumindo que UserProfileDto.ts está configurado para aceitar esta estrutura
+    const userProfile = new UserProfileDto(userProfileDataForDto);
 
     return {
       accessToken,
@@ -151,6 +158,7 @@ export class AuthService {
             },
           },
         },
+        // Incluir as relações necessárias para que o login() possa construir o UserProfileDto
         include: {
           client: {
             include: {
@@ -227,6 +235,7 @@ export class AuthService {
             },
           },
         },
+        // Incluir as relações necessárias para que o login() possa construir o UserProfileDto
         include: {
           provider: {
             include: {
@@ -244,13 +253,6 @@ export class AuthService {
                   }
                 }
               },
-              // REMOVIDO: Linhas que causavam erro porque são campos diretos, não relações:
-              // verificationStatus: true,
-              // documentPhotoFrontUrl: true,
-              // documentPhotoBackUrl: true,
-              // selfieWithDocumentUrl: true,
-              // backgroundCheckResult: true,
-              // rejectionReason: true,
             }
           }
         }
@@ -269,5 +271,6 @@ export class AuthService {
       return;
     }
     console.log(`Simulação: Email de redefinição de senha enviado para ${email}`);
+    // TODO: Implementar envio de email real com link de redefinição de senha
   }
 }
