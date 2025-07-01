@@ -1,153 +1,189 @@
 // src/bookings/dto/booking-details.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Booking, BookingStatus, Client, Provider, ProviderService, Service, User, Prisma, Address } from '@prisma/client';
-import { IsString, IsNumber, IsDate, IsEnum, IsOptional, IsEmail, IsUrl } from 'class-validator'; // Adicionado IsUrl aqui
-import { CreateAddressDto } from '../../common/dto/create-address.dto';
-
-// Define um tipo auxiliar para a estrutura completa do Booking com suas relações
-// que será recebida do Prisma para construir o DTO.
-type BookingWithRelations = Booking & {
-  client: Client & { user: User };
-  provider: Provider & { user: User | null }; // Adicionado 'user | null' caso o user do provider possa ser nulo
-  providerService: ProviderService & { service: Service };
-  address?: Address | null;
-  scheduledDate: Date | null;
-};
+import { IsString, IsNumber, IsOptional, IsUUID, IsEnum, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+import { BookingStatus, Prisma } from '@prisma/client';
+// import { CreateAddressDto } from '../../common/dto/create-address.dto'; // REMOVA OU COMENTE ESTA LINHA
+import { AddressDetailsDto } from '../../common/dto/address-details.dto'; // <<-- IMPORTANTE: Importe AddressDetailsDto AQUI
 
 export class BookingDetailsDto {
-  @ApiProperty({ description: 'ID do agendamento', example: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' })
+  @ApiProperty({ description: 'ID do agendamento', example: 'uuid-do-agendamento' })
   @IsString()
   id: string;
 
-  @ApiProperty({ description: 'ID do cliente', example: 'client-uuid' })
+  @ApiProperty({ description: 'ID do cliente', example: 'uuid-do-cliente' })
   @IsString()
+  @IsUUID()
   clientId: string;
 
-  @ApiProperty({ description: 'ID do provedor', example: 'provider-uuid' })
+  @ApiProperty({ description: 'ID do provedor', example: 'uuid-do-provedor' })
   @IsString()
+  @IsUUID()
   providerId: string;
 
-  @ApiProperty({ description: 'Nome completo do cliente', example: 'João da Silva' })
+  @ApiProperty({ description: 'ID do serviço oferecido pelo provedor', example: 'uuid-do-provider-service' })
   @IsString()
-  clientFullName: string;
+  @IsUUID()
+  providerServiceId: string;
 
-  @ApiProperty({ description: 'Email do cliente', example: 'joao.silva@example.com' })
-  @IsEmail()
-  clientEmail: string;
-
-  @ApiPropertyOptional({ description: 'URL do avatar do cliente', example: 'http://example.com/client_avatar.jpg' })
-  @IsOptional()
-  @IsUrl()
-  clientAvatarUrl?: string | null; // Adicionado clientAvatarUrl ao DTO de saída
-
-  @ApiProperty({ description: 'Nome completo do provedor', example: 'Maria de Souza' })
+  @ApiProperty({ description: 'Data agendada', example: '2025-07-01T09:00:00.000Z' })
   @IsString()
-  providerFullName: string;
+  scheduledDate: string;
 
-  @ApiProperty({ description: 'Email do provedor', example: 'maria.souza@example.com' })
-  @IsEmail()
-  providerEmail: string;
-
-  @ApiPropertyOptional({ description: 'URL do avatar do provedor', example: 'http://example.com/provider_avatar.jpg' })
-  @IsOptional()
-  @IsUrl()
-  providerAvatarUrl?: string | null; // <<< ADICIONADO AQUI: providerAvatarUrl
-
-  @ApiProperty({ description: 'Nome do serviço agendado', example: 'Limpeza Padrão' })
+  @ApiProperty({ description: 'Hora agendada (HH:mm)', example: '09:00' })
   @IsString()
-  serviceName: string;
-
-  @ApiProperty({ description: 'Preço do serviço agendado', example: 150.00 })
-  @IsNumber()
-  servicePrice: number;
-
-  @ApiProperty({ description: 'Duração estimada do serviço em minutos', example: 180 })
-  @IsNumber()
-  serviceDurationMinutes: number;
-
-  @ApiPropertyOptional({ description: 'Descrição específica do serviço oferecido pelo provedor', example: 'Limpeza completa de 3h.' })
-  @IsOptional()
-  @IsString()
-  providerServiceDescription?: string | null;
-
-  @ApiProperty({ description: 'Data e hora agendadas para o serviço (ISO 8601)', example: '2025-06-15T10:00:00.000Z' })
-  @IsString()
-  scheduledDateTime: string;
+  scheduledTime: string;
 
   @ApiProperty({ enum: BookingStatus, description: 'Status atual do agendamento', example: BookingStatus.PENDING })
+  @IsString()
   @IsEnum(BookingStatus)
   status: BookingStatus;
 
-  @ApiProperty({ description: 'Preço total do agendamento', example: 150.00 })
+  @ApiProperty({ description: 'Preço total do serviço', example: 120.50 })
   @IsNumber()
   totalPrice: number;
 
-  @ApiPropertyOptional({ description: 'Observações adicionais para o agendamento', example: 'Focar na limpeza da cozinha.' })
+  @ApiPropertyOptional({ description: 'Notas adicionais sobre o agendamento', example: 'Limpeza pesada na cozinha.' })
   @IsOptional()
   @IsString()
   notes?: string | null;
 
-  @ApiProperty({ description: 'Data de criação do agendamento', example: '2025-06-10T10:00:00.000Z' })
-  @IsDate()
-  createdAt: Date;
+  @ApiProperty({ description: 'Data de criação do agendamento', example: '2025-07-01T08:00:00.000Z' })
+  @IsString()
+  createdAt: string;
 
-  @ApiProperty({ description: 'Data da última atualização do agendamento', example: '2025-06-10T10:00:00.000Z' })
-  @IsDate()
-  updatedAt: Date;
+  @ApiProperty({ description: 'Data da última atualização do agendamento', example: '2025-07-01T08:30:00.000Z' })
+  @IsString()
+  updatedAt: string;
 
-  @ApiPropertyOptional({ type: () => CreateAddressDto, description: 'Endereço onde o serviço será realizado' })
+  @ApiPropertyOptional({ description: 'ID do endereço do agendamento', example: 'uuid-do-endereco' })
   @IsOptional()
-  address?: CreateAddressDto | null;
+  @IsUUID()
+  addressId?: string | null;
 
-  constructor(booking: BookingWithRelations) {
-    this.id = booking.id;
-    this.clientId = booking.clientId;
-    this.providerId = booking.providerId;
+  // CORREÇÃO: A propriedade `address` do DTO de saída deve ser tipada com `AddressDetailsDto`
+  @ApiPropertyOptional({ type: AddressDetailsDto, description: 'Detalhes do endereço do agendamento' })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => AddressDetailsDto) // <-- AGORA REFERENCIA AddressDetailsDto
+  address?: AddressDetailsDto | null; // <-- TIPO CORRIGIDO AQUI
 
-    // Mapeamento de dados do cliente (incluindo avatar)
-    this.clientFullName = booking.client.fullName;
-    this.clientEmail = booking.client.user.email;
-    this.clientAvatarUrl = booking.client.user?.avatarUrl || null; // Mapeamento para clientAvatarUrl
+  // Campos achatados do cliente/provedor/serviço para facilitar o consumo no frontend
+  @ApiPropertyOptional({ description: 'Nome completo do cliente', example: 'Nome do Cliente' })
+  @IsOptional()
+  @IsString()
+  clientFullName?: string;
 
-    // Mapeamento de dados do provedor (incluindo avatar)
-    this.providerFullName = booking.provider.fullName;
-    this.providerEmail = booking.provider.user?.email || ''; // user pode ser null, então fallback para string vazia
-    this.providerAvatarUrl = booking.provider.user?.avatarUrl || null; // <<< Mapeamento para providerAvatarUrl
+  @ApiPropertyOptional({ description: 'E-mail do cliente', example: 'cliente@email.com' })
+  @IsOptional()
+  @IsString()
+  clientEmail?: string;
 
-    this.serviceName = booking.providerService.service.name;
-    this.servicePrice = booking.providerService.price.toNumber();
-    this.serviceDurationMinutes = booking.providerService.durationMinutes;
-    this.providerServiceDescription = booking.providerService.description;
+  @ApiPropertyOptional({ description: 'URL do avatar do cliente', example: 'http://avatar.com/cliente.jpg' })
+  @IsOptional()
+  @IsString()
+  clientAvatarUrl?: string | null;
+
+  @ApiPropertyOptional({ description: 'Nome completo do provedor', example: 'Nome do Provedor' })
+  @IsOptional()
+  @IsString()
+  providerFullName?: string;
+
+  @ApiPropertyOptional({ description: 'E-mail do provedor', example: 'provedor@email.com' })
+  @IsOptional()
+  @IsString()
+  providerEmail?: string;
+
+  @ApiPropertyOptional({ description: 'URL do avatar do provedor', example: 'http://avatar.com/provedor.jpg' })
+  @IsOptional()
+  @IsString()
+  providerAvatarUrl?: string | null;
+
+  @ApiPropertyOptional({ description: 'Nome do serviço', example: 'Limpeza Residencial' })
+  @IsOptional()
+  @IsString()
+  serviceName?: string;
+
+  @ApiPropertyOptional({ description: 'Preço do serviço', example: 100.00 })
+  @IsOptional()
+  @IsNumber()
+  servicePrice?: number;
+
+  @ApiPropertyOptional({ description: 'Duração do serviço em minutos', example: 120 })
+  @IsOptional()
+  @IsNumber()
+  serviceDurationMinutes?: number;
+
+  @ApiPropertyOptional({ description: 'Descrição do serviço pelo provedor', example: 'Limpeza com produtos ecológicos.' })
+  @IsOptional()
+  @IsString()
+  providerServiceDescription?: string | null;
+
+  @ApiPropertyOptional({ description: 'Data e hora agendadas combinadas (ISO 8601)', example: '2025-07-01T09:00:00Z' })
+  @IsOptional()
+  @IsString()
+  scheduledDateTime?: string;
+
+  constructor(data: {
+    id: string;
+    clientId: string;
+    providerId: string;
+    providerServiceId: string;
+    scheduledDate: Date | string;
+    scheduledTime: string;
+    status: BookingStatus;
+    totalPrice: Prisma.Decimal | number;
+    notes?: string | null;
+    createdAt: Date | string;
+    updatedAt: Date | string;
+    addressId?: string | null;
+    // O construtor espera um objeto que tenha o 'id' e as outras propriedades do Address do Prisma
+    address?: {
+      id: string; cep: string; street: string; number: string;
+      complement: string | null; neighborhood: string; city: string; state: string;
+    } | null; // <-- Tipo no construtor para o que vem do Prisma
+
+    client?: { user?: { avatarUrl?: string | null; }; fullName: string; email?: string; };
+    provider?: { user?: { avatarUrl?: string | null; }; fullName: string; email?: string; };
+    providerService?: { service: { name: string; price: Prisma.Decimal; }; durationMinutes: number; description?: string | null; };
+  }) {
+    this.id = data.id;
+    this.clientId = data.clientId;
+    this.providerId = data.providerId;
+    this.providerServiceId = data.providerServiceId;
+    this.scheduledDate = data.scheduledDate instanceof Date ? data.scheduledDate.toISOString().split('T')[0] : (data.scheduledDate as string).split('T')[0];
+    this.scheduledTime = data.scheduledTime;
+    this.status = data.status;
+
+    this.totalPrice = typeof data.totalPrice === 'object' && 'toNumber' in data.totalPrice
+      ? data.totalPrice.toNumber()
+      : data.totalPrice;
+
+    this.notes = data.notes === undefined ? null : data.notes;
     
-    // ***** INÍCIO DOS LOGS DEFENSIVOS E COMBINAÇÃO *****
-    console.log("[BookingDetailsDto - DEBUG] booking.scheduledDate:", booking.scheduledDate, " (Tipo:", typeof booking.scheduledDate, ")");
-    console.log("[BookingDetailsDto - DEBUG] booking.scheduledTime:", booking.scheduledTime, " (Tipo:", typeof booking.scheduledTime, ")");
+    this.createdAt = data.createdAt instanceof Date ? data.createdAt.toISOString() : data.createdAt;
+    this.updatedAt = data.updatedAt instanceof Date ? data.updatedAt.toISOString() : data.updatedAt;
 
-    let datePart: string;
-    if (booking.scheduledDate instanceof Date && !isNaN(booking.scheduledDate.getTime())) {
-        datePart = booking.scheduledDate.toISOString().split('T')[0];
-    } else {
-        console.error("[BookingDetailsDto - ERROR] booking.scheduledDate inválido, nulo/indefinido ou não é um objeto Date válido. Valor recebido:", booking.scheduledDate);
-        datePart = '1970-01-01'; // Fallback
+    this.addressId = data.addressId === undefined ? null : data.addressId;
+    // CORREÇÃO FINAL: Mapeia o objeto 'address' do Prisma para uma nova instância de AddressDetailsDto
+    this.address = data.address ? new AddressDetailsDto(data.address) : null; 
+
+    if (data.client) {
+      this.clientFullName = data.client.fullName;
+      this.clientEmail = data.client.email;
+      this.clientAvatarUrl = data.client.user?.avatarUrl;
     }
-
-    const timePart = booking.scheduledTime || '00:00';
-    const combinedDateTimeString = `${datePart}T${timePart}:00Z`;
-    console.log("[BookingDetailsDto - DEBUG] String combinada para scheduledDateTime FINAL (como string):", combinedDateTimeString);
-
-    this.scheduledDateTime = combinedDateTimeString;
-    // ***** FIM DOS LOGS DEFENSIVOS E COMBINAÇÃO *****
-
-    this.status = booking.status;
-    this.totalPrice = booking.totalPrice.toNumber();
-    this.notes = booking.notes;
-    this.createdAt = booking.createdAt;
-    this.updatedAt = booking.updatedAt;
-    if (booking.address) {
-      this.address = new CreateAddressDto();
-      Object.assign(this.address, booking.address);
-    } else {
-      this.address = null;
+    if (data.provider) {
+      this.providerFullName = data.provider.fullName;
+      this.providerEmail = data.provider.email;
+      this.providerAvatarUrl = data.provider.user?.avatarUrl;
     }
+    if (data.providerService) {
+      this.serviceName = data.providerService.service.name;
+      this.servicePrice = data.providerService.service.price.toNumber();
+      this.serviceDurationMinutes = data.providerService.durationMinutes;
+      this.providerServiceDescription = data.providerService.description;
+    }
+    this.scheduledDateTime = `${this.scheduledDate}T${this.scheduledTime}:00Z`;
   }
 }

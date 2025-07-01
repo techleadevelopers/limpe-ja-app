@@ -1,7 +1,7 @@
 // LimpeJaApp/app/services/authService.ts
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import api from './api'; // <--- IMPORTA A INSTÂNCIA CENTRALIZADA DO AXIOS
+import api from './api';
 
 import {
   LoginDto,
@@ -10,13 +10,15 @@ import {
   ForgotPasswordDto,
   AuthResponseDto,
   MessageResponseDto,
-} from '../types/backend/auth'; // Verifique se estas tipagens estão corretas
+} from '../types/backend/auth';
 
-const AUTH_TOKEN_KEY = 'auth_token'; // Chave para armazenar o token
-const USER_ROLE_KEY = 'user_role';   // Nova chave para armazenar o papel do usuário
-const USER_ID_KEY = 'user_id';      // Nova chave para armazenar o ID do usuário
+const AUTH_TOKEN_KEY = 'auth_token';
+const USER_ROLE_KEY = 'user_role';
+const USER_ID_KEY = 'user_id';
+// Para o frontend, você também pode querer salvar CLIENT_ID_KEY ou PROVIDER_ID_KEY aqui
+// const CLIENT_ID_KEY = 'client_id';
+// const PROVIDER_ID_KEY = 'provider_id';
 
-// Função para adicionar o token JWT aos headers da instância 'api' importada
 export const setAuthToken = (token: string | null) => {
   if (token) {
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
@@ -25,7 +27,6 @@ export const setAuthToken = (token: string | null) => {
   }
 };
 
-// Função para carregar o token, role e ID do AsyncStorage e configurá-los
 export const loadAuthData = async (): Promise<{ token: string | null; role: string | null; id: string | null }> => {
   try {
     const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
@@ -33,7 +34,7 @@ export const loadAuthData = async (): Promise<{ token: string | null; role: stri
     const id = await AsyncStorage.getItem(USER_ID_KEY);
 
     if (token) {
-      setAuthToken(token); // Configura o token na instância 'api' centralizada
+      setAuthToken(token);
       console.log('[authService] loadAuthData: Token carregado e configurado no axios.');
     } else {
       console.log('[authService] loadAuthData: Nenhum token encontrado no AsyncStorage.');
@@ -47,14 +48,15 @@ export const loadAuthData = async (): Promise<{ token: string | null; role: stri
   }
 };
 
-// --- Funções de Autenticação ---
 export const login = async (credentials: LoginDto): Promise<AuthResponseDto> => {
   try {
-    // A requisição é feita usando a instância 'api', que já tem a baseURL configurada
     const response = await api.post<AuthResponseDto>('/auth/login', credentials);
     const receivedToken = response.data.accessToken;
     const userRole = response.data.user.role;
     const userId = response.data.user.id;
+    // Opcional: Se o backend retorna clientId/providerId na raiz de response.data.user, salve-os aqui
+    // const clientId = (response.data.user as any).clientId;
+    // const providerId = (response.data.user as any).providerId;
 
     console.log('[authService] login: Resposta completa da API:', response.data);
     console.log('[authService] login: Valor de accessToken recebido:', receivedToken);
@@ -65,7 +67,9 @@ export const login = async (credentials: LoginDto): Promise<AuthResponseDto> => 
       await AsyncStorage.setItem(AUTH_TOKEN_KEY, receivedToken);
       await AsyncStorage.setItem(USER_ROLE_KEY, userRole);
       await AsyncStorage.setItem(USER_ID_KEY, userId);
-      setAuthToken(receivedToken); // Configura o token na 'api' centralizada
+      // if (clientId) await AsyncStorage.setItem(CLIENT_ID_KEY, clientId);
+      // if (providerId) await AsyncStorage.setItem(PROVIDER_ID_KEY, providerId);
+      setAuthToken(receivedToken);
       console.log('[authService] login: Token, Papel e ID armazenados com sucesso no AsyncStorage!');
       return response.data;
     } else {
@@ -83,11 +87,11 @@ export const login = async (credentials: LoginDto): Promise<AuthResponseDto> => 
 
 export const registerClient = async (data: RegisterClientDto): Promise<AuthResponseDto> => {
   try {
-    // A requisição é feita usando a instância 'api', que já tem a baseURL configurada
     const response = await api.post<AuthResponseDto>('/auth/register/client', data);
     const receivedToken = response.data.accessToken;
     const userRole = response.data.user.role;
     const userId = response.data.user.id;
+    // const clientId = response.data.user.clientDetails?.id; // Capture o clientId aqui
 
     console.log('[authService] registerClient: Resposta completa da API:', response.data);
     console.log('[authService] registerClient: Valor de accessToken recebido:', receivedToken);
@@ -98,6 +102,7 @@ export const registerClient = async (data: RegisterClientDto): Promise<AuthRespo
       await AsyncStorage.setItem(AUTH_TOKEN_KEY, receivedToken);
       await AsyncStorage.setItem(USER_ROLE_KEY, userRole);
       await AsyncStorage.setItem(USER_ID_KEY, userId);
+      // if (clientId) await AsyncStorage.setItem(CLIENT_ID_KEY, clientId); // Salve o clientId
       setAuthToken(receivedToken);
       console.log('[authService] registerClient: Token, Papel e ID armazenados com sucesso no AsyncStorage!');
       return response.data;
@@ -116,11 +121,11 @@ export const registerClient = async (data: RegisterClientDto): Promise<AuthRespo
 
 export const registerProvider = async (data: RegisterProviderDto): Promise<AuthResponseDto> => {
   try {
-    // A requisição é feita usando a instância 'api', que já tem a baseURL configurada
     const response = await api.post<AuthResponseDto>('/auth/register/provider', data);
     const receivedToken = response.data.accessToken;
     const userRole = response.data.user.role;
     const userId = response.data.user.id;
+    // const providerId = response.data.user.providerDetails?.id; // Capture o providerId aqui
 
     console.log('[authService] registerProvider: Resposta completa da API:', response.data);
     console.log('[authService] registerProvider: Valor de accessToken recebido:', receivedToken);
@@ -131,12 +136,13 @@ export const registerProvider = async (data: RegisterProviderDto): Promise<AuthR
       await AsyncStorage.setItem(AUTH_TOKEN_KEY, receivedToken);
       await AsyncStorage.setItem(USER_ROLE_KEY, userRole);
       await AsyncStorage.setItem(USER_ID_KEY, userId);
+      // if (providerId) await AsyncStorage.setItem(PROVIDER_ID_KEY, providerId); // Salve o providerId
       setAuthToken(receivedToken);
       console.log('[authService] registerProvider: Token, Papel e ID armazenados com sucesso no AsyncStorage!');
       return response.data;
     } else {
       console.error('[authService] registerProvider: accessToken é undefined ou nulo na resposta da API.');
-      throw  new Error('Token de acesso não recebido após registro de provedor. Por favor, tente novamente.');
+      throw new Error('Token de acesso não recebido após registro de provedor. Por favor, tente novamente.');
     }
   } catch (error: any) {
     console.error('[authService] registerProvider: Erro ao registrar provedor na API:', error.response?.data || error.message);
@@ -149,7 +155,6 @@ export const registerProvider = async (data: RegisterProviderDto): Promise<AuthR
 
 export const forgotPassword = async (data: ForgotPasswordDto): Promise<MessageResponseDto> => {
   try {
-    // A requisição é feita usando a instância 'api', que já tem a baseURL configurada
     const response = await api.post<MessageResponseDto>('/auth/forgot-password', data);
     return response.data;
   } catch (error: any) {
@@ -162,8 +167,6 @@ export const forgotPassword = async (data: ForgotPasswordDto): Promise<MessageRe
 
 export const logout = async (): Promise<void> => {
   try {
-    // A requisição de logout (se houver um endpoint no backend) usaria a instância 'api'
-    // Ex: await api.post('/auth/logout');
     await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
     await AsyncStorage.removeItem(USER_ROLE_KEY);
     await AsyncStorage.removeItem(USER_ID_KEY);

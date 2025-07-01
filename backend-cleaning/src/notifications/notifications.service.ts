@@ -43,7 +43,7 @@ export class NotificationsService {
     return this.prisma.notification.findMany({
       where: {
         userId,
-        ...(includeRead ? {} : { isRead: false }), // Filtra por não lidas se includeRead for false
+        ...(includeRead ? {} : { isRead: false }),
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -100,7 +100,7 @@ export class NotificationsService {
     }
 
     if (notification.isRead) {
-      return notification; // Já está lida, não faz nada
+      return notification;
     }
 
     return this.prisma.notification.update({

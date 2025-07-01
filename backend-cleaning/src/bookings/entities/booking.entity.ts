@@ -1,5 +1,13 @@
 // src/bookings/entities/booking.entity.ts
-import { Booking as PrismaBooking, Client, Provider, ProviderService, Review, Prisma } from '@prisma/client';
+import {
+  Booking as PrismaBooking,
+  Client,
+  Provider,
+  ProviderService,
+  Review,
+  Prisma, // <-- Importe Prisma para o tipo Decimal
+  BookingStatus // <-- Importe o enum BookingStatus COMPLETO
+} from '@prisma/client';
 
 // Esta classe serve como uma representação da entidade Booking
 // conforme definida no Prisma, incluindo as relações.
@@ -11,14 +19,20 @@ export class BookingEntity implements PrismaBooking {
   providerServiceId: string;
   scheduledDate: Date;
   scheduledTime: string;
-  status: 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELED' | 'RESCHEDULED';
+  // CORREÇÃO AQUI: status deve ser do tipo BookingStatus COMPLETO do Prisma
+  status: BookingStatus; // <-- AGORA É BookingStatus, não um subconjunto
   totalPrice: Prisma.Decimal; // Tipo Prisma.Decimal para refletir o schema
   notes: string | null;
   createdAt: Date;
   updatedAt: Date;
 
-  // ADICIONADO: Propriedade addressId
+  // CORREÇÃO AQUI: Propriedade addressId deve ser string | null
   addressId: string | null; // O tipo é string | null, conforme definido no schema.prisma (String?)
+  // ADICIONADO: Relação address também pode ser null
+  address?: {
+    id: string; cep: string; street: string; number: string;
+    complement: string | null; neighborhood: string; city: string; state: string;
+  } | null;
 
   // Relações opcionais para tipagem mais completa ao carregar com `include`
   client?: Client;
@@ -29,5 +43,31 @@ export class BookingEntity implements PrismaBooking {
   // Construtor para facilitar a criação de instâncias (opcional, mas útil)
   constructor(partial: Partial<BookingEntity>) {
     Object.assign(this, partial);
+
+    // CORREÇÃO: Assegurar que totalPrice seja Prisma.Decimal
+    if (partial.totalPrice !== undefined && partial.totalPrice !== null) {
+      this.totalPrice = new Prisma.Decimal(partial.totalPrice);
+    } else {
+      this.totalPrice = new Prisma.Decimal(0); // Valor padrão
+    }
+
+    // CORREÇÃO: Garanta que as datas sejam objetos Date
+    if (partial.createdAt && typeof partial.createdAt === 'string') {
+      this.createdAt = new Date(partial.createdAt);
+    }
+    if (partial.updatedAt && typeof partial.updatedAt === 'string') {
+      this.updatedAt = new Date(partial.updatedAt);
+    }
+    if (partial.scheduledDate && typeof partial.scheduledDate === 'string') {
+      this.scheduledDate = new Date(partial.scheduledDate);
+    }
+
+    // O status é atribuído diretamente, o TS agora deve aceitar o enum completo
+    // Se partial.status for undefined, o tipo inferido será BookingStatus | undefined
+    this.status = partial.status as BookingStatus; // Força o cast, assumindo que partial.status é válido ou será tratado.
+
+    // Garanta que addressId e address sejam null se não forem fornecidos ou se o tipo do prisma for null
+    this.addressId = partial.addressId === undefined ? null : partial.addressId;
+    this.address = partial.address === undefined ? null : partial.address;
   }
 }

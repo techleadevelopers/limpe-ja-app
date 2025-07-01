@@ -166,11 +166,14 @@ model ProviderService {
 
 // Enum para o status do agendamento
 enum BookingStatus {
-  PENDING             // Pendente de confirmação do provedor
-  CONFIRMED           // Confirmado pelo provedor
-  COMPLETED           // Serviço concluído
-  CANCELED            // Agendamento cancelado
-  RESCHEDULED         // Agendamento reagendado
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELED
+  RESCHEDULED
+  IN_PROGRESS // <-- CONFIRME ESTE AQUI
+  PENDING_PROVIDER_CONFIRMATION // Confirme este também se usar
+  REJECTED // Confirme este também se usar
 }
 
 // Modelo de Agendamento

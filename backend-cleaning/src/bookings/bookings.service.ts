@@ -1,17 +1,18 @@
 // src/bookings/bookings.service.ts
-import { Injectable, NotFoundException, ConflictException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common'; // Adicionado Logger
+import { Injectable, NotFoundException, ConflictException, BadRequestException, ForbiddenException, Logger, forwardRef, Inject } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
-import { Booking, BookingStatus, UserRole, Prisma } from '@prisma/client'; // BookingStatus já importado
+import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
+import { Booking, BookingStatus, UserRole, Prisma } from '@prisma/client';
 import { ClientsService } from '../clients/clients.service';
 import { ProvidersService } from '../providers/providers.service';
 import { ProviderServicesService } from '../provider-services/provider-services.service';
-import { BookingEntity } from './entities/booking.entity';
-import { PaymentsService } from '../payments/payments.service';
 import { PixChargeResponseDto } from '../payments/dto/create-pix-charge.dto';
+import { BookingAndPixResponseDto } from './dto/booking-and-pix-response.dto';
+import { PaymentsService } from '../payments/payments.service';
+import { BookingDetailsDto } from './dto/booking-details.dto'; // <-- IMPORTADO AQUI
 
-// Define um tipo para Booking com as relações exatas que o BookingDetailsDto espera
-type BookingWithDetailsRelations = Prisma.BookingGetPayload<{
+export type BookingWithDetailsRelations = Prisma.BookingGetPayload<{
   include: {
     client: { include: { user: true } };
     provider: { include: { user: true } };
@@ -23,13 +24,14 @@ type BookingWithDetailsRelations = Prisma.BookingGetPayload<{
 
 @Injectable()
 export class BookingsService {
-  private readonly logger = new Logger(BookingsService.name); // Instanciar Logger
+  private readonly logger = new Logger(BookingsService.name);
 
   constructor(
     private prisma: PrismaService,
     private clientsService: ClientsService,
     private providersService: ProvidersService,
     private providerServicesService: ProviderServicesService,
+    @Inject(forwardRef(() => PaymentsService))
     private paymentsService: PaymentsService,
   ) {}
 
@@ -39,7 +41,6 @@ export class BookingsService {
     this.logger.log(`[BookingsService] create - DTO recebido: providerId=${createBookingDto.providerId}, providerServiceId=${createBookingDto.providerServiceId}, scheduledDate=${createBookingDto.scheduledDate}, scheduledTime=${createBookingDto.scheduledTime}, totalPrice=${createBookingDto.totalPrice}`);
     this.logger.log(`[BookingsService] create - Endereço DTO: ${JSON.stringify(createBookingDto.address)}`);
 
-
     const client = await this.clientsService.findClientByUserId(clientUserId);
     if (!client) {
       this.logger.error(`[BookingsService] create - Cliente não encontrado para userId: ${clientUserId}`);
@@ -47,14 +48,12 @@ export class BookingsService {
     }
     this.logger.log(`[BookingsService] create - Cliente encontrado: ${client.id}`);
 
-
-    const provider = await this.providersService.findOne(createBookingDto.providerId); // findOne espera providerId
+    const provider = await this.providersService.findOne(createBookingDto.providerId);
     if (!provider) {
       this.logger.error(`[BookingsService] create - Provedor com ID "${createBookingDto.providerId}" não encontrado.`);
       throw new NotFoundException(`Provedor com ID "${createBookingDto.providerId}" não encontrado.`);
     }
     this.logger.log(`[BookingsService] create - Provedor encontrado: ${provider.id}`);
-
 
     const providerService = await this.providerServicesService.findOne(createBookingDto.providerServiceId, createBookingDto.providerId);
     if (!providerService) {
@@ -62,7 +61,6 @@ export class BookingsService {
       throw new NotFoundException(`Serviço do provedor com ID "${createBookingDto.providerServiceId}" não encontrado para o provedor "${createBookingDto.providerId}".`);
     }
     this.logger.log(`[BookingsService] create - Serviço do provedor encontrado: ${providerService.id}`);
-
 
     try {
       this.logger.log(`[BookingsService] create - Criando novo endereço no DB.`);
@@ -79,7 +77,6 @@ export class BookingsService {
       });
       this.logger.log(`[BookingsService] create - Novo endereço criado com ID: ${newAddress.id}`);
 
-
       const createdBooking = await this.prisma.booking.create({
         data: {
           clientId: client.id,
@@ -90,8 +87,8 @@ export class BookingsService {
           totalPrice: new Prisma.Decimal(createBookingDto.totalPrice),
           notes: createBookingDto.notes,
           status: BookingStatus.PENDING,
-          addressId: newAddress.id, // Conecta o endereço usando addressId
-        } as any, // Mantenha o type assertion se necessário
+          addressId: newAddress.id,
+        },
         include: {
           client: { include: { user: true } },
           provider: { include: { user: true } },
@@ -103,7 +100,7 @@ export class BookingsService {
       this.logger.log(`[BookingsService] create - Agendamento criado com sucesso no DB. ID: ${createdBooking.id}. ProviderId no booking retornado pelo Prisma: ${createdBooking.providerId}`);
       return createdBooking;
 
-    } catch (error: any) { // Capture como 'any' para acessar 'response?.data' ou 'message'
+    } catch (error: any) {
       this.logger.error('Erro detalhado ao criar agendamento no DB:', error.response?.data || error.message, error.stack);
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
@@ -119,36 +116,35 @@ export class BookingsService {
 
   async createBookingAndPixCharge(
     clientUserId: string,
-    createBookingDto: CreateBookingDto, // Contém o providerId original
-  ): Promise<{ booking: BookingWithDetailsRelations, pixCharge: PixChargeResponseDto }> {
+    createBookingDto: CreateBookingDto,
+  ): Promise<BookingAndPixResponseDto> {
     this.logger.log(`[BookingsService] createBookingAndPixCharge - Início da operação combinada.`);
     this.logger.log(`[BookingsService] createBookingAndPixCharge - clientUserId: ${clientUserId}`);
     this.logger.log(`[BookingsService] createBookingAndPixCharge - DTO de criação original recebido: ${JSON.stringify(createBookingDto)}`);
 
-    const booking = await this.create(clientUserId, createBookingDto);
-    this.logger.log(`[BookingsService] createBookingAndPixCharge - Agendamento criado com sucesso (ID: ${booking.id}).`);
-    this.logger.log(`[BookingsService] createBookingAndPixCharge - Booking object retornado por 'create': ${JSON.stringify(booking, null, 2)}`); // Este log irá confirmar o valor de booking.providerId
+    const bookingPrisma = await this.create(clientUserId, createBookingDto); // Retorna BookingWithDetailsRelations
+    const bookingDto = new BookingDetailsDto(bookingPrisma); // <-- CORREÇÃO: Mapeia para DTO aqui
+
+    this.logger.log(`[BookingsService] createBookingAndPixCharge - Agendamento criado com sucesso (ID: ${bookingDto.id}).`);
+    this.logger.log(`[BookingsService] createBookingAndPixCharge - Booking object retornado por 'create' (mapeado para DTO): ${JSON.stringify(bookingDto, null, 2)}`);
 
     const pixChargeDto = {
-      amount: booking.totalPrice.toNumber(),
-      description: `Pagamento para o serviço de limpeza agendado (ID: ${booking.id})`,
-      bookingId: booking.id,
-      providerId: booking.providerId, // <<<< CORREÇÃO FINAL APLICADA AQUI: Usando booking.providerId >>>>
+      amount: bookingDto.totalPrice, // Use totalPrice do DTO (que já é number)
+      description: `Pagamento para o serviço de limpeza agendado (ID: ${bookingDto.id})`,
+      bookingId: bookingDto.id,
+      providerId: bookingDto.providerId,
     };
     this.logger.log(`[BookingsService] createBookingAndPixCharge - PIX Charge DTO para PaymentsService (antes da chamada): ${JSON.stringify(pixChargeDto)}`);
-
 
     const pixChargeResponse = await this.paymentsService.createPixCharge(clientUserId, pixChargeDto);
     this.logger.log(`[BookingsService] createBookingAndPixCharge - Resposta PIX Charge recebida: ${JSON.stringify(pixChargeResponse)}`);
 
-    return { booking, pixCharge: pixChargeResponse };
+    return { booking: bookingDto, pixCharge: pixChargeResponse }; // Retorna o DTO mapeado
   }
 
-  // CORREÇÃO AQUI: O parâmetro 'status' que vem do controller (geralmente query params)
-  // pode ser uma string, mas Prisma espera o ENUM.
   async findUserBookings(userId: string, role: UserRole, status?: string): Promise<BookingWithDetailsRelations[]> {
     this.logger.log(`[BookingsService] findUserBookings: Buscando agendamentos para userId: ${userId}, role: ${role}, status: ${status || 'todos'}`);
-    let whereClause: Prisma.BookingWhereInput = {}; // Usar tipo específico do Prisma para 'where'
+    let whereClause: Prisma.BookingWhereInput = {};
 
     if (role === UserRole.CLIENT) {
       const client = await this.prisma.client.findUnique({ where: { userId } });
@@ -165,7 +161,6 @@ export class BookingsService {
       }
       whereClause.providerId = provider.id;
     } else if (role === UserRole.ADMIN) {
-      // Admin pode ver todos os agendamentos, sem filtro de userId
       this.logger.log(`[BookingsService] findUserBookings - Usuário é ADMIN. Buscando todos os agendamentos.`);
     } else {
       this.logger.error(`[BookingsService] findUserBookings - Função de usuário inválida: ${role}`);
@@ -173,15 +168,12 @@ export class BookingsService {
     }
 
     if (status) {
-      // Validar e converter a string de status para o enum BookingStatus
       const validBookingStatus = Object.values(BookingStatus).find(s => s === status);
       if (validBookingStatus) {
         whereClause.status = validBookingStatus;
         this.logger.log(`[BookingsService] findUserBookings: Filtrando por status válido: ${validBookingStatus}`);
       } else {
         this.logger.warn(`[BookingsService] findUserBookings: Status inválido recebido: "${status}". Ignorando filtro de status.`);
-        // Dependendo da sua regra de negócio, você pode lançar um erro ou ignorar o status inválido.
-        // throw new BadRequestException(`Status de agendamento inválido: ${status}`);
       }
     }
 
@@ -226,33 +218,69 @@ export class BookingsService {
     }
     this.logger.log(`[BookingsService] updateStatus - Agendamento encontrado, status atual: ${booking.status}`);
 
+    let canUpdate = false;
+    let errorMessage = 'Transição de status não permitida.';
 
-    if (userRole !== UserRole.ADMIN) {
-      if (userRole === UserRole.CLIENT) {
-        if (newStatus !== BookingStatus.CANCELED) {
-          throw new ForbiddenException('Clientes só podem cancelar agendamentos.');
-        }
-        if (booking.status === BookingStatus.COMPLETED || booking.status === BookingStatus.CANCELED) {
-          throw new BadRequestException(`Não é possível cancelar um agendamento com status "${booking.status}".`);
-        }
-      } else if (userRole === UserRole.PROVIDER) {
-        if (
-          (booking.status === BookingStatus.PENDING && newStatus === BookingStatus.CONFIRMED) ||
-          (booking.status === BookingStatus.CONFIRMED && newStatus === BookingStatus.COMPLETED) ||
-          (newStatus === BookingStatus.CANCELED) ||
-          (newStatus === BookingStatus.RESCHEDULED)
-        ) {
-          if ((newStatus === BookingStatus.CANCELED || newStatus === BookingStatus.RESCHEDULED) &&
-              (booking.status === BookingStatus.COMPLETED || booking.status === BookingStatus.CANCELED)
-          ) {
-            throw new BadRequestException(`Não é possível ${newStatus === BookingStatus.CANCELED ? 'cancelar' : 'reagendar'} um agendamento com status "${booking.status}".`);
-          }
+    if (userRole === UserRole.ADMIN) {
+      canUpdate = true;
+      this.logger.log(`[BookingsService] updateStatus - ADMIN bypass de transição para booking ${id}.`);
+    } else if (userRole === UserRole.CLIENT) {
+      if (newStatus === BookingStatus.CANCELED) {
+        if (booking.status === BookingStatus.COMPLETED || booking.status === BookingStatus.CANCELED || booking.status === BookingStatus.REJECTED) {
+          errorMessage = `Não é possível cancelar um agendamento com status "${booking.status}".`;
         } else {
-          throw new BadRequestException(`Transição de status de "${booking.status}" para "${newStatus}" não permitida para provedores.`);
+          canUpdate = true;
         }
+      } else {
+        errorMessage = 'Clientes só podem cancelar agendamentos.';
+      }
+    } else if (userRole === UserRole.PROVIDER) {
+      switch (booking.status) {
+        case BookingStatus.PENDING:
+          if (newStatus === BookingStatus.CONFIRMED || newStatus === BookingStatus.REJECTED) {
+            canUpdate = true;
+          } else {
+            errorMessage = `Provedor só pode CONFIRMAR ou REJEITAR um agendamento PENDENTE.`;
+          }
+          break;
+        case BookingStatus.CONFIRMED:
+          if (newStatus === BookingStatus.IN_PROGRESS || newStatus === BookingStatus.COMPLETED || newStatus === BookingStatus.CANCELED || newStatus === BookingStatus.RESCHEDULED) {
+            canUpdate = true;
+          } else {
+            errorMessage = `Provedor só pode iniciar, completar, cancelar ou reagendar um agendamento CONFIRMADO.`;
+          }
+          break;
+        case BookingStatus.IN_PROGRESS:
+          if (newStatus === BookingStatus.COMPLETED || newStatus === BookingStatus.CANCELED) {
+            canUpdate = true;
+          } else {
+            errorMessage = `Provedor só pode COMPLETAR ou CANCELAR um agendamento EM PROGRESSO.`;
+          }
+          break;
+        case BookingStatus.RESCHEDULED:
+          if (newStatus === BookingStatus.CONFIRMED || newStatus === BookingStatus.CANCELED) {
+            canUpdate = true;
+          } else {
+            errorMessage = `Provedor só pode CONFIRMAR ou CANCELAR um agendamento REAGENDADO.`;
+          }
+          break;
+        case BookingStatus.COMPLETED:
+        case BookingStatus.CANCELED:
+        case BookingStatus.REJECTED:
+          errorMessage = 'Não é possível alterar o status de um agendamento já finalizado, cancelado ou rejeitado.';
+          break;
+        default:
+          errorMessage = 'Status de agendamento inválido ou transição não suportada.';
+          break;
       }
     }
+
+    if (!canUpdate) {
+      this.logger.warn(`[BookingsService] updateStatus: Transição de status não permitida para booking ${id}: de ${booking.status} para ${newStatus} pelo role ${userRole}. Erro: ${errorMessage}`);
+      throw new BadRequestException(errorMessage);
+    }
     this.logger.log(`[BookingsService] updateStatus - Status de agendamento validado. Atualizando no DB.`);
+
 
     return this.prisma.booking.update({
       where: { id },
@@ -267,20 +295,19 @@ export class BookingsService {
     });
   }
 
-  async findUpcomingBookings(providerId: string): Promise<BookingEntity[]> {
+  async findUpcomingBookings(providerId: string): Promise<BookingWithDetailsRelations[]> { // Retorna o tipo Prisma
     this.logger.log(`[BookingsService] findUpcomingBookings: Buscando agendamentos futuros para providerId: ${providerId}`);
     const now = new Date();
-    // Para comparar apenas a data (sem hora), setamos para o início do dia
-    now.setHours(0, 0, 0, 0); 
+    now.setHours(0, 0, 0, 0);
 
     const upcomingPrismaBookings = await this.prisma.booking.findMany({
       where: {
         providerId: providerId,
         status: {
-          in: [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.RESCHEDULED],
+          in: [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.RESCHEDULED, BookingStatus.IN_PROGRESS], // Incluído IN_PROGRESS
         },
         scheduledDate: {
-          gte: now, // Filtra agendamentos a partir de hoje (início do dia)
+          gte: now,
         },
       },
       orderBy: [
@@ -297,23 +324,57 @@ export class BookingsService {
     });
     this.logger.log(`[BookingsService] findUpcomingBookings: Primas encontradas ${upcomingPrismaBookings.length} agendamentos futuros antes da filtragem de hora.`);
 
-    // Filtra em memória para garantir que horários no dia atual que já passaram não sejam incluídos.
     const filteredBookings = upcomingPrismaBookings.filter(booking => {
       const bookingDateTime = new Date(booking.scheduledDate);
       const [hours, minutes] = booking.scheduledTime.split(':').map(Number);
       bookingDateTime.setHours(hours, minutes, 0, 0);
 
-      const currentDateTime = new Date(); // Obtém a data e hora atual para comparação
-      currentDateTime.setSeconds(0, 0); // Ignora segundos e milissegundos para comparação precisa
+      const currentDateTime = new Date();
+      currentDateTime.setSeconds(0, 0);
 
-      // Se a data do agendamento é hoje, então o horário do agendamento deve ser >= ao horário atual
       if (bookingDateTime.toDateString() === currentDateTime.toDateString()) {
         return bookingDateTime >= currentDateTime;
       }
-      // Se a data do agendamento é futura, sempre incluir
       return true;
     });
     this.logger.log(`[BookingsService] findUpcomingBookings: Encontrados ${filteredBookings.length} agendamentos futuros após filtragem final.`);
-    return filteredBookings.map(booking => new BookingEntity(booking));
+    return filteredBookings; // Retorna o tipo Prisma
+  }
+
+  async cancelBooking(bookingId: string, userRole: UserRole): Promise<BookingWithDetailsRelations> { // Adicionado userRole
+    // Implementação atualiza status para CANCELED
+    // Certifique-se de que a lógica de updateStatus lida com o userRole corretamente
+    return this.updateStatus(bookingId, BookingStatus.CANCELED, userRole);
+  }
+
+  async checkConfirmedBookingBetweenUsers(clientId: string, providerId: string): Promise<boolean> {
+    const booking = await this.prisma.booking.findFirst({
+      where: {
+        clientId: clientId,
+        providerId: providerId,
+        status: BookingStatus.CONFIRMED,
+      },
+    });
+    return !!booking;
+  }
+
+  async checkActiveChatBooking(clientId: string, providerId: string): Promise<{ canChat: boolean; bookingId?: string }> {
+    const activeBooking = await this.prisma.booking.findFirst({
+      where: {
+        clientId: clientId,
+        providerId: providerId,
+        status: {
+          in: [BookingStatus.CONFIRMED, BookingStatus.IN_PROGRESS],
+        },
+      },
+      orderBy: {
+        scheduledDate: 'asc',
+      },
+    });
+
+    return {
+      canChat: !!activeBooking,
+      bookingId: activeBooking?.id,
+    };
   }
 }

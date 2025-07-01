@@ -10,18 +10,24 @@ import {
   Param,
   Delete,
   HttpStatus,
+  Post, // <-- ADICIONADO: Importe Post aqui
 } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { MarkAsReadDto } from './dto/mark-as-read.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard'; // <-- ADICIONADO: Importe RolesGuard
+import { Roles } from '../auth/decorators/roles.decorator'; // <-- ADICIONADO: Importe Roles decorator
+import { UserRole } from '@prisma/client'; // <-- ADICIONADO: Importe UserRole
 import {
   ApiBearerAuth,
   ApiOperation,
   ApiResponse,
   ApiTags,
+  ApiBody, // <-- ADICIONADO: Importe ApiBody para documentar o POST
 } from '@nestjs/swagger';
 import { Request } from 'express';
 import { NotificationEntity } from './entities/notification.entity';
+import { CreateNotificationDto } from './dto/create-notification.dto'; // <-- IMPORTANTE: Importe o DTO de criação
 
 @ApiTags('notifications')
 @Controller('notifications')
@@ -29,6 +35,26 @@ import { NotificationEntity } from './entities/notification.entity';
 @ApiBearerAuth()
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
+
+  // NOVO ENDPOINT: Criar Notificação (apenas ADMIN)
+  @Post() // <-- Este é o endpoint que seu script tenta chamar
+  @Roles(UserRole.ADMIN) // <-- Protege esta rota para admins
+  @UseGuards(RolesGuard) // <-- Ativa a guarda de roles
+  @ApiOperation({ summary: 'Criar uma nova notificação (apenas para administradores)' })
+  @ApiBody({ type: CreateNotificationDto, description: 'Dados para criar uma nova notificação' }) // Documenta o corpo
+  @ApiResponse({ status: 201, description: 'Notificação criada com sucesso.', type: NotificationEntity })
+  @ApiResponse({ status: 400, description: 'Dados inválidos.' })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  @ApiResponse({ status: 403, description: 'Acesso proibido (requer função de ADMIN).' })
+  async create(@Body() createNotificationDto: CreateNotificationDto): Promise<NotificationEntity> {
+    const createdNotification = await this.notificationsService.createNotification(
+      createNotificationDto.userId,
+      createNotificationDto.type,
+      createNotificationDto.message,
+      createNotificationDto.targetUrl,
+    );
+    return new NotificationEntity(createdNotification);
+  }
 
   @Get('me')
   @ApiOperation({ summary: 'Obter notificações do usuário logado' })
@@ -40,7 +66,7 @@ export class NotificationsController {
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   async getUserNotifications(
     @Req() req: Request,
-    @Query('includeRead') includeRead: string = 'false', // Query param para incluir lidas
+    @Query('includeRead') includeRead: string = 'false',
   ): Promise<NotificationEntity[]> {
     const userId = req.user['userId'];
     const shouldIncludeRead = includeRead.toLowerCase() === 'true';
@@ -56,7 +82,7 @@ export class NotificationsController {
   @ApiResponse({
     status: 200,
     description: 'Notificações marcadas como lidas com sucesso.',
-    type: Object, // Pode ser um objeto simples { count: number }
+    type: Object,
   })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   async markNotificationsAsRead(

@@ -17,6 +17,9 @@ ADMIN_PASSWORD="adminclientpass" # Senha do admin criado no seed.ts
 # Nome do serviço com timestamp para unicidade
 SERVICE_NAME_DYNAMIC="Limpeza Residencial Script $TIMESTAMP"
 
+# Variável GLOBAL para o ID do ProviderService (serviço OFERECIDO pelo provedor)
+PROVIDER_SERVICE_OFFERING_ID="" # Inicialize como vazio
+
 
 echo "--- Iniciando Testes Automatizados LimpeJá ---"
 
@@ -131,8 +134,7 @@ if [[ -n "$ADMIN_TOKEN" && "$ADMIN_TOKEN" != "null" ]]; then
 else
     echo "   ❌ Erro ao fazer login Admin ou token não capturado."
     echo "   Resposta Completa: $RESPONSE_ADMIN_LOGIN"
-    # Não saia aqui imediatamente, a menos que o token ADMIN seja absolutamente vital para todos os próximos passos.
-    # No caso de criação de serviço, por exemplo, ele é vital.
+    exit 1 # Sai aqui se o login Admin falhar, pois muitos passos dependem dele.
 fi
 
 
@@ -154,12 +156,11 @@ echo "   ✅ Dados do provedor atualizados."
 echo "2.2. Aprovando provedor (via ADMIN, se token disponível)..."
 # É crucial que ADMIN_TOKEN seja preenchido E válido para esta etapa.
 if [[ -n "$ADMIN_TOKEN" && "$ADMIN_TOKEN" != "null" ]]; then
-    # *** CORREÇÃO AQUI: USANDO O ENDPOINT CERTO PARA ADMIN APROVAR/ALTERAR STATUS ***
     RESPONSE_APPROVE=$(curl -s -X PATCH "$baseUrl/verification/$PROVIDER_ID/status" \
          -H "Content-Type: application/json" \
          -H "Authorization: Bearer $ADMIN_TOKEN" \
-         -d '{"status": "APPROVED"}' 2>/dev/null) # O corpo deve ser {"status": "APPROVED"}
-    APPROVAL_STATUS=$(echo "$RESPONSE_APPROVE" | jq -r '.message' | grep -q "atualizado para APPROVED" && echo "APPROVED" || echo "UNKNOWN") # Verifica a mensagem de sucesso
+         -d '{"status": "APPROVED"}' 2>/dev/null)
+    APPROVAL_STATUS=$(echo "$RESPONSE_APPROVE" | jq -r '.message' | grep -q "atualizado para APPROVED" && echo "APPROVED" || echo "UNKNOWN")
     
     if [[ "$APPROVAL_STATUS" == "APPROVED" ]]; then
         echo "   ✅ Provedor aprovado por ADMIN."
@@ -173,20 +174,16 @@ else
 fi
 
 # Verificar status final do provedor
-# A lógica de validação do status agora leva em conta que o ADMIN_TOKEN pode ter aprovado
 FINAL_PROVIDER_STATUS=$(curl -s -X GET "$baseUrl/providers/$PROVIDER_ID" 2>/dev/null | jq -r '.verificationStatus')
 if [[ "$FINAL_PROVIDER_STATUS" == "APPROVED" ]]; then
     echo "   ✅ Status final do provedor é APPROVED."
 else
-    # Se o ADMIN_TOKEN não estava disponível, ou a simulação não aprovou, esperamos PENDING_INITIAL_REVIEW.
-    # Se ainda estiver "PENDING_INITIAL_REVIEW" e não foi aprovado pelo script, ainda é um "sucesso esperado" para o teste.
     if [[ -n "$ADMIN_TOKEN" && "$ADMIN_TOKEN" != "null" ]]; then
         echo "   ❌ Status final do provedor é $FINAL_PROVIDER_STATUS (Esperado: APPROVED)."
     else
         echo "   ✅ Status final do provedor é $FINAL_PROVIDER_STATUS (Conforme esperado sem aprovação ADMIN/completa)."
     fi
     echo "   Resposta Completa de Verificação de Status: $(curl -s -X GET "$baseUrl/providers/$PROVIDER_ID" 2>/dev/null)"
-    # Apenas saia se o status NÃO for APPROVED E o ADMIN_TOKEN estava disponível (ou seja, falhou em aprovar)
     if [[ "$FINAL_PROVIDER_STATUS" != "APPROVED" && -n "$ADMIN_TOKEN" && "$ADMIN_TOKEN" != "null" ]]; then
         exit 1
     fi
@@ -195,9 +192,7 @@ fi
 
 # --- 3. Cadastro de Serviços e Disponibilidade ---
 echo "3.1. Criando serviço '$SERVICE_NAME_DYNAMIC'..."
-# Esta requisição de criação de serviço é protegida por ADMIN_TOKEN.
-# Se ADMIN_TOKEN for inválido/ausente, este passo falhará.
-if [[ -n "$ADMIN_TOKEN" && "$ADMIN_TOKEN" != "null" ]]; then # Verificação mais robusta para token não nulo
+if [[ -n "$ADMIN_TOKEN" && "$ADMIN_TOKEN" != "null" ]]; then
     RESPONSE_SERVICE=$(curl -s -X POST "$baseUrl/services" \
          -H "Content-Type: application/json" \
          -H "Authorization: Bearer $ADMIN_TOKEN" \
@@ -216,34 +211,38 @@ if [[ -n "$ADMIN_TOKEN" && "$ADMIN_TOKEN" != "null" ]]; then # Verificação mai
         exit 1
     fi
 else
-    echo "   ⚠️ Token ADMIN não disponível ou não capturado. Pulando criação de serviço."
+    echo "   ❌ Token ADMIN não disponível ou não capturado. Pulando criação de serviço."
     echo "      Para continuar o fluxo, o serviço 'Limpeza Residencial Script' JÁ DEVE EXISTIR no banco de dados."
-    # Para testes contínuos, se o serviço já existir do seed, você pode buscá-lo.
-    # Por simplicidade, se o ADMIN_TOKEN não está disponível, vamos forçar uma saída.
-    exit 1 # Sai pois o serviço é essencial para o fluxo.
+    exit 1
 fi
 
 
 echo "3.2. Vinculando provedor ao serviço..."
-# Esta etapa requer um SERVICE_ID válido.
-if [[ -z "$SERVICE_ID" ]]; then # Verifica se SERVICE_ID está vazio
-    echo "   ❌ Pulando vinculação de serviço ao provedor: SERVICE_ID é vazio."
-    exit 1 # Sai se não conseguiu criar o serviço
+if [[ -z "$SERVICE_ID" || "$SERVICE_ID" == "null" ]]; then
+    echo "   ❌ Pulando vinculação de serviço ao provedor: SERVICE_ID é vazio ou nulo."
+    exit 1
 fi
 
-curl -s -X POST "$baseUrl/providers/$PROVIDER_ID/services" \
+RESPONSE_PROVIDER_SERVICE_BINDING=$(curl -s -X POST "$baseUrl/providers/$PROVIDER_ID/services" \
      -H "Content-Type: application/json" \
      -H "Authorization: Bearer $PROVIDER_TOKEN" \
-     -d '{"serviceId": "'"$SERVICE_ID"'", "price": 90.00, "durationMinutes": 120}' 2>/dev/null
-echo "   ✅ Serviço vinculado ao provedor."
+     -d '{"serviceId": "'"$SERVICE_ID"'", "price": 90.00, "durationMinutes": 120}' 2>/dev/null)
+
+PROVIDER_SERVICE_OFFERING_ID=$(echo "$RESPONSE_PROVIDER_SERVICE_BINDING" | jq -r '.id')
+
+if [[ -n "$PROVIDER_SERVICE_OFFERING_ID" && "$PROVIDER_SERVICE_OFFERING_ID" != "null" ]]; then
+    echo "   ✅ Serviço vinculado ao provedor. ProviderService ID: $PROVIDER_SERVICE_OFFERING_ID"
+else
+    echo "   ❌ Erro ao vincular serviço ao provedor ou ProviderService ID não capturado."
+    echo "   Resposta Completa: $RESPONSE_PROVIDER_SERVICE_BINDING"
+    exit 1
+fi
 
 echo "3.3. Cadastrando disponibilidade..."
-# Use data no formato 'YYYY-MM-DDTHH:mm:ss.sssZ' para compatibilidade com o backend
-# A data atual + 2 dias para garantir que esteja no futuro para o agendamento
 CURRENT_UNIX_TIMESTAMP=$(date +%s)
 FUTURE_UNIX_TIMESTAMP=$((CURRENT_UNIX_TIMESTAMP + 2 * 24 * 3600))
 FUTURE_DATE_FORMATED=$(date -u -d "@$FUTURE_UNIX_TIMESTAMP" +"%Y-%m-%dT09:00:00.000Z")
-PRISMA_DAY_OF_WEEK=$(date -u -d "@$FUTURE_UNIX_TIMESTAMP" +"%w") # 0=Dom, 6=Sáb
+PRISMA_DAY_OF_WEEK=$(date -u -d "@$FUTURE_UNIX_TIMESTAMP" +"%w")
 
 
 curl -s -X PATCH "$baseUrl/providers/$PROVIDER_ID/availability" \
@@ -256,25 +255,35 @@ echo "   ✅ Disponibilidade cadastrada para $FUTURE_DATE_FORMATED (Dia da seman
 # --- 4. Fluxo do Cliente → Agendar Serviço ---
 echo "4.1. Cliente agendando serviço..."
 # A data do agendamento é a mesma da disponibilidade criada (2 dias no futuro)
+JSON_PAYLOAD_BOOKING=$(jq -n \
+    --arg providerId "$PROVIDER_ID" \
+    --arg providerServiceId "$PROVIDER_SERVICE_OFFERING_ID" \
+    --arg scheduledDate "$FUTURE_DATE_FORMATED" \
+    '{
+        "providerId": $providerId,
+        "providerServiceId": $providerServiceId,
+        "scheduledDate": $scheduledDate,
+        "scheduledTime": "09:00",
+        "totalPrice": 90.00,
+        "notes": "Agendamento por script.",
+        "address": {
+          "cep": "01001000",
+          "street": "Rua Agend Script",
+          "number": "50",
+          "neighborhood": "Bairro Agend",
+          "city": "Sao Paulo",
+          "state": "SP"
+        }
+    }')
+
+echo "DEBUG - Agendamento: JSON gerado para envio:"
+echo "$JSON_PAYLOAD_BOOKING"
+echo "" # Nova linha
+
 RESPONSE_BOOKING=$(curl -s -X POST "$baseUrl/bookings/schedule-and-pay" \
      -H "Content-Type: application/json" \
      -H "Authorization: Bearer $CLIENT_TOKEN" \
-     -d "$(printf '{
-           "providerId": "%s",
-           "providerServiceId": "%s",
-           "scheduledDate": "%s",
-           "scheduledTime": "09:00",
-           "totalPrice": 90.00,
-           "notes": "Agendamento por script.",
-           "address": {
-             "cep": "01001000",
-             "street": "Rua Agend Script",
-             "number": "50",
-             "neighborhood": "Bairro Agend",
-             "city": "Sao Paulo",
-             "state": "SP"
-           }
-         }' "$PROVIDER_ID" "$SERVICE_ID" "$FUTURE_DATE_FORMATED")" 2>/dev/null) # <-- CORREÇÃO APLICADA AQUI
+     -d "$JSON_PAYLOAD_BOOKING" 2>/dev/null)
 
 BOOKING_ID=$(echo "$RESPONSE_BOOKING" | jq -r '.booking.id')
 BOOKING_STATUS=$(echo "$RESPONSE_BOOKING" | jq -r '.booking.status')
@@ -293,12 +302,15 @@ curl -s -X PATCH "$baseUrl/bookings/$BOOKING_ID/status" \
      -d '{"status": "CONFIRMED"}' 2>/dev/null
 echo "   ✅ Agendamento confirmado."
 
-echo "4.3. Simular status IN_PROGRESS..."
-curl -s -X PATCH "$baseUrl/bookings/$BOOKING_ID/status" \
-     -H "Content-Type: application/json" \
-     -H "Authorization: Bearer $PROVIDER_TOKEN" \
-     -d '{"status": "IN_PROGRESS"}' 2>/dev/null
-echo "   ✅ Agendamento em progresso."
+# --- REMOVIDO: 4.3. Simular status IN_PROGRESS... (Conforme solicitado) ---
+# O trecho abaixo foi removido para evitar a transição inválida de status.
+# echo "4.3. Simular status IN_PROGRESS..."
+# curl -s -X PATCH "$baseUrl/bookings/$BOOKING_ID/status" \
+#      -H "Content-Type: application/json" \
+#      -H "Authorization: Bearer $PROVIDER_TOKEN" \
+#      -d '{"status": "IN_PROGRESS"}' 2>/dev/null
+# echo "   ✅ Agendamento em progresso."
+
 
 echo "4.4. Simular status COMPLETED..."
 curl -s -X PATCH "$baseUrl/bookings/$BOOKING_ID/status" \
@@ -325,8 +337,7 @@ TOTAL_EARNINGS=$(echo "$RESPONSE_EARNINGS" | jq -r '.totalEarnings')
 # Se o preço for 90.00, esperamos que totalEarnings seja pelo menos 90.00 (ou um pouco menos pela comissão, se já implementada).
 # Para este teste, vamos apenas verificar se é um número e não nulo.
 if [[ -n "$TOTAL_EARNINGS" && "$TOTAL_EARNINGS" != "null" ]]; then
-    # Convertendo para float e comparando, use 'bc' ou ajuste a validação para números inteiros ou Strings
-    # Exemplo simples: verificar se é maior que 0
+    # Certifique-se de que 'bc' esteja instalado (pacman -S bc no MINGW64)
     if (( $(echo "$TOTAL_EARNINGS > 0" | bc -l) )); then
         echo "   ✅ Ganhos refletem serviço concluído. Total: $TOTAL_EARNINGS"
     else
@@ -342,7 +353,7 @@ echo "6.1. Criando notificação para o cliente..."
 curl -s -X POST "$baseUrl/notifications" \
      -H "Content-Type: application/json" \
      -H "Authorization: Bearer $ADMIN_TOKEN" \
-     -d '{"userId": "'"$CLIENT_USER_ID"'", "type": "TEST_SCRIPT", "message": "Notificação gerada por script."}' 2>/dev/null
+     -d '{"userId": "'"$CLIENT_USER_ID"'", "type": "TEST_SCRIPT", "message": "Notificacao gerada por script."}' 2>/dev/null # <-- MENSAGEM AJUSTADA PARA ACENTOS
 echo "   ✅ Notificação criada."
 
 echo "6.2. Cliente listando notificações..."
@@ -350,7 +361,7 @@ RESPONSE_NOTIFICATIONS=$(curl -s -X GET "$baseUrl/notifications/me" \
      -H "Authorization: Bearer $CLIENT_TOKEN" 2>/dev/null)
 
 # Verifica se a mensagem específica está contida na resposta JSON
-if echo "$RESPONSE_NOTIFICATIONS" | grep -q "Notificação gerada por script."; then
+if echo "$RESPONSE_NOTIFICATIONS" | grep -q "Notificacao gerada por script."; then # <-- BUSCA AJUSTADA PARA ACENTOS
     echo "   ✅ Cliente recebeu a notificação de script."
 else
     echo "   ❌ Cliente não recebeu a notificação de script."
