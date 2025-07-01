@@ -4,34 +4,50 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { ConfigService } from '@nestjs/config';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 async function bootstrap() {
   console.time('AppStartupTotal'); // Inicia contagem total
 
   console.time('NestAppCreation');
   const app = await NestFactory.create(AppModule);
-  console.timeEnd('NestAppCreation'); // Fim da criação da instância Nest
+  console.timeEnd('NestAppCreation');
 
   app.enableCors();
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    forbidNonWhitelisted: true,
-    transform: true,
-    transformOptions: {
-      enableImplicitConversion: true,
-    },
-  }));
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
+    })
+  );
+
   app.useGlobalFilters(new HttpExceptionFilter());
 
-  // Obtém a porta do serviço de configuração
+  // Swagger config
+  const config = new DocumentBuilder()
+    .setTitle('LimpeJá API')
+    .setDescription('Documentação oficial da API LimpeJá')
+    .setVersion('1.0')
+    .addBearerAuth() // habilita token JWT nos endpoints protegidos via doc
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api', app, document);
+
+  // Configura porta pelo service
   const configService = app.get(ConfigService);
   const port = configService.get<number>('PORT') || 3000;
 
-  console.time('AppListening'); // Inicia contagem para a fase de escuta
+  console.time('AppListening');
   await app.listen(port, '0.0.0.0');
-  console.timeEnd('AppListening'); // Fim da fase de escuta
+  console.timeEnd('AppListening');
 
-  console.log(`Application is running on: ${await app.getUrl()}`);
-  console.timeEnd('AppStartupTotal'); // Fim da contagem total
+  console.log(`✅ LimpeJá API running at: ${await app.getUrl()}`);
+  console.timeEnd('AppStartupTotal');
 }
 bootstrap();
