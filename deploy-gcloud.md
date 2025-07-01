@@ -23,3 +23,15 @@ GCS_PROJECT_ID=semiotic-anvil-461613-c0,\
 GCS_BUCKET_NAME=seu-nome-de-bucket-exclusivo" \
   --update-secrets=GCS_KEY_FILE_CONTENT=my-gcs-service-account-key:latest
 
+
+
+
+# 2. Implantar o serviço no Cloud Run
+# Este comando não precisa de '--set-env-vars' para a chave GCS, pois ela está no Dockerfile via ENV.
+gcloud run deploy limpeja-app-backend `
+  --image gcr.io/semiotic-anvil-461613-c0/limpeja-app-backend `
+  --platform managed `
+  --region southamerica-east1 `
+  --allow-unauthenticated `
+  --project=semiotic-anvil-461613-c0 `
+  --service-account=limpeja-run-sa@semiotic-anvil-461613-c0.iam.gserviceaccount.com
