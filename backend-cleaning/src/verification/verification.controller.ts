@@ -13,14 +13,28 @@ import {
   Get,
   ForbiddenException,
   NotFoundException,
-  Patch, // <-- ADICIONADO: Importe Patch
+  Patch, // <-- Importado
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+  ApiConsumes,
+  ApiBody,
+  ApiProperty,       // <-- ADICIONADO: Importado ApiProperty
+  ApiPropertyOptional // <-- ADICIONADO: Importado ApiPropertyOptional
+} from '@nestjs/swagger';
+import {
+  IsString,          // <-- ADICIONADO: Importado IsString
+  IsOptional,        // <-- ADICIONADO: Importado IsOptional
+  IsEnum,            // <-- ADICIONADO: Importado IsEnum (para validação mais forte do enum)
+} from 'class-validator'; // <-- ADICIONADO: Importado do class-validator
 import { Request } from 'express';
 import { SubmitCpfDto } from './dto/submit-cpf.dto';
 import { UploadDocumentDto, DocumentPhotoType } from './dto/upload-document.dto';
@@ -32,22 +46,19 @@ import { VerificationStatus } from '../shared/enums/verification-status.enum';
 import { Multer } from 'multer';
 
 // DTO para atualização do status de verificação
-// Criar este DTO em src/verification/dto/update-verification-status.dto.ts
-// Para manter o arquivo completo e não quebrar, vou defini-lo aqui temporariamente.
-// No seu projeto real, crie um arquivo separado para ele.
-class UpdateVerificationStatusDto {
+// RECOMENDAÇÃO: Crie este DTO em src/verification/dto/update-verification-status.dto.ts
+// e importe-o: import { UpdateVerificationStatusDto } from './dto/update-verification-status.dto';
+export class UpdateVerificationStatusDto { // MANTIDO AQUI PARA SIMPLICIDADE DA RESPOSTA
   @ApiProperty({ enum: VerificationStatus, description: 'Novo status de verificação' })
-  @IsString() // Porque o enum é armazenado como string
+  @IsEnum(VerificationStatus, { message: 'O status de verificação é inválido.' }) // Adicionado @IsEnum
   status: VerificationStatus;
 
   @ApiPropertyOptional({ description: 'Motivo da rejeição (obrigatório se status for REJECTED)' })
   @IsOptional()
-  @IsString()
+  @IsString({ message: 'O motivo da rejeição deve ser uma string.' })
   reason?: string;
 }
-// ^^^^^^^^^^ IMPORTANTE: No seu código, mova esta classe para um novo arquivo DTO, por exemplo:
-// src/verification/dto/update-verification-status.dto.ts
-// E importe-o aqui: import { UpdateVerificationStatusDto } from './dto/update-verification-status.dto';
+// ^^^^^^^^^^ Lembre-se de mover esta classe para seu próprio arquivo DTO!
 
 
 @ApiTags('verification')
@@ -173,11 +184,11 @@ export class VerificationController {
     @Param('providerId') providerId: string,
     @Body() updateDto: UpdateVerificationStatusDto, // Usa o DTO completo
   ) {
-    this.logger.log(`[VerificationController] updateVerificationStatus: Recebido solicitação para ${providerId}, novo status: ${updateDto.status}`);
+    this.logger.log(`[VerificationController] updateVerificationStatus: Recebido solicitação para ${providerId}, novo status: ${updateDto.status}. Motivo: ${updateDto.reason || 'N/A'}`);
     if (updateDto.status === VerificationStatus.REJECTED && !updateDto.reason) {
       throw new BadRequestException('O motivo da rejeição é obrigatório ao rejeitar um provedor.');
     }
-    // O VerificationService já possui a lógica para atualizar o status e lidar com a razão
+    // O VerificationService precisa de um método para atualização manual
     await this.verificationService.updateProviderVerificationStatusManually(providerId, updateDto.status, updateDto.reason);
     return { message: `Status de verificação para provedor ${providerId} atualizado para ${updateDto.status}.` };
   }
@@ -231,6 +242,7 @@ export class VerificationController {
     let providerIdToFetch = paramProviderId;
 
     if (requestingUserRole === UserRole.PROVIDER) {
+      // Usar findByUserId para obter o provedor do usuário logado
       const providerByUser = await this.verificationService['providersService'].findByUserId(requestingUserId);
       if (!providerByUser || providerByUser.id !== paramProviderId) {
         throw new ForbiddenException('Você não tem permissão para ver o status de verificação deste provedor.');
@@ -238,6 +250,7 @@ export class VerificationController {
       providerIdToFetch = providerByUser.id;
     }
 
+    // Usar findOne do VerificationService que já retorna ProviderWithCalculatedRating
     const provider = await this.verificationService['providersService'].findOne(providerIdToFetch);
     if (!provider) {
       throw new NotFoundException('Provedor não encontrado.');

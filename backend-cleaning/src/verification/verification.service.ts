@@ -1,9 +1,9 @@
 // src/verification/verification.service.ts
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CriminalBackgroundCheckService } from './criminal-background-check.service';
+import { CriminalBackgroundCheckService } from './criminal-background-check.service'; // <-- CORRIGIDO AQUI
 import { DocumentProcessingService } from './document-processing.service';
-import { VerificationStatus } from '../shared/enums/verification-status.enum'; // Certifique-se que o enum vem de shared/enums
+import { VerificationStatus } from '../shared/enums/verification-status.enum';
 import { ProvidersService, ProviderWithCalculatedRating } from '../providers/providers.service';
 import { Prisma } from '@prisma/client';
 import { File } from 'multer';
@@ -22,7 +22,7 @@ export class VerificationService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly criminalBackgroundCheckService: CriminalBackgroundService,
+    private readonly criminalBackgroundCheckService: CriminalBackgroundCheckService, // <-- CORRIGIDO AQUI
     private readonly documentProcessingService: DocumentProcessingService,
     private readonly providersService: ProvidersService,
   ) {}
@@ -86,7 +86,7 @@ export class VerificationService {
     });
     this.logger.log(`[VerificationService] uploadDocumentPhoto: URL do documento (${type}) salva para provider ${providerId}.`);
 
-    await this.updateProviderVerificationStatus(providerId); // Chama a atualização automática
+    await this.updateProviderVerificationStatus(providerId);
   }
 
   async uploadSelfieWithDocument(providerId: string, file: File): Promise<void> {
@@ -109,7 +109,7 @@ export class VerificationService {
     });
     this.logger.log(`[VerificationService] uploadSelfieWithDocument: URL da selfie salva para provider ${providerId}.`);
 
-    await this.updateProviderVerificationStatus(providerId); // Chama a atualização automática
+    await this.updateProviderVerificationStatus(providerId);
   }
 
   // NOVO MÉTODO: Para aprovação/rejeição manual por um ADMIN
@@ -153,17 +153,14 @@ export class VerificationService {
     let newStatus: VerificationStatus | undefined = undefined;
 
     if (isCpfCheckedAndOk && isDocumentFrontUploaded && isDocumentBackUploaded && isSelfieUploaded) {
-      // Se tudo foi enviado e o CPF está ok, e o status não é já APROVADO, APROVE.
       if (provider.verificationStatus !== VerificationStatus.APPROVED) {
         newStatus = VerificationStatus.APPROVED;
         this.logger.log(`[VerificationService] updateProviderVerificationStatus: Provedor ${providerId} APROVADO automaticamente.`);
       }
     } else if (!isCpfCheckedAndOk && provider.verificationStatus !== VerificationStatus.REJECTED && provider.verificationStatus !== VerificationStatus.PENDING_MANUAL_REVIEW) {
-        // Se CPF não está ok e não está rejeitado ou em revisão manual, mover para revisão manual
         newStatus = VerificationStatus.PENDING_MANUAL_REVIEW;
         this.logger.log(`[VerificationService] updateProviderVerificationStatus: Provedor ${providerId} tem problemas no CPF, requer revisão manual.`);
     } else if (isCpfCheckedAndOk && (!isDocumentFrontUploaded || !isDocumentBackUploaded || !isSelfieUploaded)) {
-        // Se CPF ok, mas documentos ou selfie faltando
         if (provider.verificationStatus !== VerificationStatus.PENDING_DOCUMENTS_UPLOAD &&
             provider.verificationStatus !== VerificationStatus.PENDING_MANUAL_REVIEW &&
             provider.verificationStatus !== VerificationStatus.REJECTED) {

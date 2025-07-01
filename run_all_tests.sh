@@ -10,9 +10,9 @@ RANDOM_CPF_PART=$(date +%s%N | cut -c1-9)
 PROVIDER_CPF="${RANDOM_CPF_PART}01"
 
 PROVIDER_EMAIL="provedor.script.$TIMESTAMP@example.com"
-# ADMIN_TOKEN: Este agora será obtido dinamicamente. Não precisa mais de um placeholder fixo aqui.
 ADMIN_EMAIL="admin.client@cleaning.com" # Email do admin criado no seed.ts
 ADMIN_PASSWORD="adminclientpass" # Senha do admin criado no seed.ts
+# ADMIN_TOKEN será obtido dinamicamente.
 
 echo "--- Iniciando Testes Automatizados LimpeJá ---"
 
@@ -105,7 +105,7 @@ else
     exit 1
 fi
 
-# --- NOVO: Login do Admin para obter o ADMIN_TOKEN dinamicamente ---
+# --- 1.3. Realizando Login Admin para obter o ADMIN_TOKEN dinamicamente ---
 echo "1.3. Realizando Login Admin..."
 RESPONSE_ADMIN_LOGIN=$(curl -s -X POST "$baseUrl/auth/login" \
      -H "Content-Type: application/json" \
@@ -114,12 +114,10 @@ RESPONSE_ADMIN_LOGIN=$(curl -s -X POST "$baseUrl/auth/login" \
            "password": "'"$ADMIN_PASSWORD"'"
          }' 2>/dev/null)
 
-# --- DEBUG: Imprima a resposta bruta e o resultado do jq para Admin Login ---
 echo "DEBUG - Admin Login: Resposta Bruta:"
 echo "$RESPONSE_ADMIN_LOGIN"
 echo "DEBUG - Admin Login: JQ accessToken:"
 echo "$RESPONSE_ADMIN_LOGIN" | jq -r '.accessToken'
-# --- FIM DEBUG ---
 
 ADMIN_TOKEN=$(echo "$RESPONSE_ADMIN_LOGIN" | jq -r '.accessToken')
 
@@ -129,8 +127,8 @@ if [[ -n "$ADMIN_TOKEN" && "$ADMIN_TOKEN" != "null" ]]; then
 else
     echo "   ❌ Erro ao fazer login Admin ou token não capturado."
     echo "   Resposta Completa: $RESPONSE_ADMIN_LOGIN"
-    # Não saia aqui imediatamente, pois a criação de serviço ainda pode ser pulada se o ADMIN_TOKEN não for vital.
-    # Mas é um ponto de falha importante.
+    # Não saia aqui imediatamente, a menos que o token ADMIN seja absolutamente vital para todos os próximos passos.
+    # No caso de criação de serviço, por exemplo, ele é vital.
 fi
 
 
@@ -150,13 +148,15 @@ echo "   ✅ Dados do provedor atualizados."
 # Em um script real, você faria os curl -F para upload e verificaria as respostas.
 
 echo "2.2. Aprovando provedor (via ADMIN, se token disponível)..."
-# Verifique se o token ADMIN foi obtido com sucesso para tentar aprovar
+# É crucial que ADMIN_TOKEN seja preenchido E válido para esta etapa.
 if [[ -n "$ADMIN_TOKEN" && "$ADMIN_TOKEN" != "null" ]]; then
-    RESPONSE_APPROVE=$(curl -s -X PATCH "$baseUrl/providers/$PROVIDER_ID" \
+    # *** CORREÇÃO AQUI: USANDO O ENDPOINT CERTO PARA ADMIN APROVAR/ALTERAR STATUS ***
+    RESPONSE_APPROVE=$(curl -s -X PATCH "$baseUrl/verification/$PROVIDER_ID/status" \
          -H "Content-Type: application/json" \
          -H "Authorization: Bearer $ADMIN_TOKEN" \
-         -d '{"verificationStatus": "APPROVED"}' 2>/dev/null)
-    APPROVAL_STATUS=$(echo "$RESPONSE_APPROVE" | jq -r '.verificationStatus')
+         -d '{"status": "APPROVED"}' 2>/dev/null) # O corpo deve ser {"status": "APPROVED"}
+    APPROVAL_STATUS=$(echo "$RESPONSE_APPROVE" | jq -r '.message' | grep -q "atualizado para APPROVED" && echo "APPROVED" || echo "UNKNOWN") # Verifica a mensagem de sucesso
+    
     if [[ "$APPROVAL_STATUS" == "APPROVED" ]]; then
         echo "   ✅ Provedor aprovado por ADMIN."
     else
@@ -169,15 +169,23 @@ else
 fi
 
 # Verificar status final do provedor
+# A lógica de validação do status agora leva em conta que o ADMIN_TOKEN pode ter aprovado
 FINAL_PROVIDER_STATUS=$(curl -s -X GET "$baseUrl/providers/$PROVIDER_ID" 2>/dev/null | jq -r '.verificationStatus')
 if [[ "$FINAL_PROVIDER_STATUS" == "APPROVED" ]]; then
     echo "   ✅ Status final do provedor é APPROVED."
-elif [[ "$FINAL_PROVIDER_STATUS" == "PENDING_INITIAL_REVIEW" ]]; then
-    echo "   ✅ Status final do provedor é PENDING_INITIAL_REVIEW (Conforme esperado sem aprovação ADMIN/completa)."
 else
-    echo "   ❌ Status final do provedor é $FINAL_PROVIDER_STATUS (Esperado: APPROVED ou PENDING_INITIAL_REVIEW)."
+    # Se o ADMIN_TOKEN não estava disponível, ou a simulação não aprovou, esperamos PENDING_INITIAL_REVIEW.
+    # Se ainda estiver "PENDING_INITIAL_REVIEW" e não foi aprovado pelo script, ainda é um "sucesso esperado" para o teste.
+    if [[ -n "$ADMIN_TOKEN" && "$ADMIN_TOKEN" != "null" ]]; then
+        echo "   ❌ Status final do provedor é $FINAL_PROVIDER_STATUS (Esperado: APPROVED)."
+    else
+        echo "   ✅ Status final do provedor é $FINAL_PROVIDER_STATUS (Conforme esperado sem aprovação ADMIN/completa)."
+    fi
     echo "   Resposta Completa de Verificação de Status: $(curl -s -X GET "$baseUrl/providers/$PROVIDER_ID" 2>/dev/null)"
-    exit 1
+    # Apenas saia se o status NÃO for APPROVED E o ADMIN_TOKEN estava disponível (ou seja, falhou em aprovar)
+    if [[ "$FINAL_PROVIDER_STATUS" != "APPROVED" && -n "$ADMIN_TOKEN" && "$ADMIN_TOKEN" != "null" ]]; then
+        exit 1
+    fi
 fi
 
 
@@ -205,16 +213,17 @@ if [[ -n "$ADMIN_TOKEN" && "$ADMIN_TOKEN" != "null" ]]; then # Verificação mai
     fi
 else
     echo "   ⚠️ Token ADMIN não disponível ou não capturado. Pulando criação de serviço."
-    echo "      Para continuar o fluxo, o serviço já deve existir no banco de dados."
-    echo "      O script irá tentar usar um SERVICE_ID vazio, o que provavelmente resultará em erro."
-    SERVICE_ID="" # Definir como vazio para falhar explicitamente etapas dependentes
+    echo "      Para continuar o fluxo, o serviço 'Limpeza Residencial Script' JÁ DEVE EXISTIR no banco de dados."
+    # Para testes contínuos, se o serviço já existir do seed, você pode buscá-lo.
+    # Por simplicidade, se o ADMIN_TOKEN não está disponível, vamos forçar uma saída.
+    exit 1 # Sai pois o serviço é essencial para o fluxo.
 fi
 
 
 echo "3.2. Vinculando provedor ao serviço..."
 # Esta etapa requer um SERVICE_ID válido.
 if [[ -z "$SERVICE_ID" ]]; then # Verifica se SERVICE_ID está vazio
-    echo "   ❌ Pulando vinculação de serviço ao provedor: Serviço não foi criado ou SERVICE_ID é vazio."
+    echo "   ❌ Pulando vinculação de serviço ao provedor: SERVICE_ID é vazio."
     exit 1 # Sai se não conseguiu criar o serviço
 fi
 
