@@ -14,6 +14,10 @@ ADMIN_EMAIL="admin.client@cleaning.com" # Email do admin criado no seed.ts
 ADMIN_PASSWORD="adminclientpass" # Senha do admin criado no seed.ts
 # ADMIN_TOKEN será obtido dinamicamente.
 
+# Nome do serviço com timestamp para unicidade
+SERVICE_NAME_DYNAMIC="Limpeza Residencial Script $TIMESTAMP"
+
+
 echo "--- Iniciando Testes Automatizados LimpeJá ---"
 
 # --- 1.1. Autenticação: Registrar Cliente ---
@@ -190,7 +194,7 @@ fi
 
 
 # --- 3. Cadastro de Serviços e Disponibilidade ---
-echo "3.1. Criando serviço 'Limpeza Residencial Script'..."
+echo "3.1. Criando serviço '$SERVICE_NAME_DYNAMIC'..."
 # Esta requisição de criação de serviço é protegida por ADMIN_TOKEN.
 # Se ADMIN_TOKEN for inválido/ausente, este passo falhará.
 if [[ -n "$ADMIN_TOKEN" && "$ADMIN_TOKEN" != "null" ]]; then # Verificação mais robusta para token não nulo
@@ -198,7 +202,7 @@ if [[ -n "$ADMIN_TOKEN" && "$ADMIN_TOKEN" != "null" ]]; then # Verificação mai
          -H "Content-Type: application/json" \
          -H "Authorization: Bearer $ADMIN_TOKEN" \
          -d '{
-               "name": "Limpeza Residencial Script",
+               "name": "'"$SERVICE_NAME_DYNAMIC"'",
                "description": "Serviço via script",
                "price": 90.00,
                "icon": "script-icon"
@@ -255,10 +259,10 @@ echo "4.1. Cliente agendando serviço..."
 RESPONSE_BOOKING=$(curl -s -X POST "$baseUrl/bookings/schedule-and-pay" \
      -H "Content-Type: application/json" \
      -H "Authorization: Bearer $CLIENT_TOKEN" \
-     -d '{
-           "providerId": "'"$PROVIDER_ID"'",
-           "providerServiceId": "'"$SERVICE_ID"'",
-           "scheduledDate": "'"$FUTURE_DATE_FORMATED"'", # Usando a data futura formatada
+     -d "$(printf '{
+           "providerId": "%s",
+           "providerServiceId": "%s",
+           "scheduledDate": "%s",
            "scheduledTime": "09:00",
            "totalPrice": 90.00,
            "notes": "Agendamento por script.",
@@ -270,7 +274,7 @@ RESPONSE_BOOKING=$(curl -s -X POST "$baseUrl/bookings/schedule-and-pay" \
              "city": "Sao Paulo",
              "state": "SP"
            }
-         }' 2>/dev/null)
+         }' "$PROVIDER_ID" "$SERVICE_ID" "$FUTURE_DATE_FORMATED")" 2>/dev/null) # <-- CORREÇÃO APLICADA AQUI
 
 BOOKING_ID=$(echo "$RESPONSE_BOOKING" | jq -r '.booking.id')
 BOOKING_STATUS=$(echo "$RESPONSE_BOOKING" | jq -r '.booking.status')

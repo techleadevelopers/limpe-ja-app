@@ -2,23 +2,31 @@ import { Injectable, NotFoundException, ConflictException } from '@nestjs/common
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProviderServiceDto } from './dto/create-provider-service.dto';
 import { UpdateProviderServiceDto } from './dto/update-provider-service.dto';
-import { ProviderService } from '@prisma/client';
+import { ProviderService, Prisma } from '@prisma/client'; // Importar Prisma para tipagem de price
+import { ProvidersService } from '../providers/providers.service'; // <-- ADICIONADO AQUI
+import { ServicesService } from '../services/services.service'; // <-- ADICIONADO AQUI
 
 @Injectable()
 export class ProviderServicesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly providersService: ProvidersService, // <-- ADICIONADO AQUI
+    private readonly servicesService: ServicesService, // <-- ADICIONADO AQUI
+  ) {}
 
   async create(providerId: string, createProviderServiceDto: CreateProviderServiceDto): Promise<ProviderService> {
     const { serviceId, price, durationMinutes, description } = createProviderServiceDto;
 
     // Verificar se o provedor existe
-    const providerExists = await this.prisma.provider.findUnique({ where: { id: providerId } });
+    // AGORA USA O SERVIÇO INJETADO
+    const providerExists = await this.providersService.findOne(providerId); // Usando findOne do ProvidersService
     if (!providerExists) {
       throw new NotFoundException(`Provedor com ID "${providerId}" não encontrado.`);
     }
 
     // Verificar se o tipo de serviço existe
-    const serviceTypeExists = await this.prisma.service.findUnique({ where: { id: serviceId } });
+    // AGORA USA O SERVIÇO INJETADO
+    const serviceTypeExists = await this.servicesService.findOne(serviceId); // Usando findOne do ServicesService
     if (!serviceTypeExists) {
       throw new NotFoundException(`Tipo de serviço com ID "${serviceId}" não encontrado.`);
     }
@@ -41,7 +49,7 @@ export class ProviderServicesService {
       data: {
         providerId,
         serviceId,
-        price,
+        price: new Prisma.Decimal(price), // <-- CORREÇÃO: Converter price para Prisma.Decimal
         durationMinutes,
         description,
       },
@@ -73,9 +81,17 @@ export class ProviderServicesService {
         throw new NotFoundException(`Serviço oferecido com ID "${id}" não encontrado para o provedor "${providerId}".`);
       }
 
+      // Para updates, precisamos verificar se 'price' existe e converter também
+      const updateData: Prisma.ProviderServiceUpdateInput = {
+        ...updateProviderServiceDto,
+      };
+      if (updateProviderServiceDto.price !== undefined) {
+        updateData.price = new Prisma.Decimal(updateProviderServiceDto.price);
+      }
+
       return await this.prisma.providerService.update({
         where: { id },
-        data: updateProviderServiceDto,
+        data: updateData, // Usar updateData
       });
     } catch (error) {
       if (error.code === 'P2025') {
