@@ -12,3 +12,7 @@ gcloud builds submit --tag gcr.io/semiotic-anvil-461613-c0/limpeja-app-backend .
 
 # 5. Fazer o deploy no Cloud Run
 gcloud run deploy limpeja-app-backend --image gcr.io/semiotic-anvil-461613-c0/limpeja-app-backend --platform managed --region southamerica-east1 --allow-unauthenticated --set-secrets=GCS_KEY=limpeja-gcs-key-for-build:latest --project=semiotic-anvil-461613-c0
+
+
+
+ gcloud run deploy limpeja-app-backend --image gcr.io/semiotic-anvil-461613-c0/limpeja-app-backend --platform managed --region southamerica-east1 --allow-unauthenticated --set-secrets=GCS_KEY=limpeja-gcs-key-for-build:latest,JWT_SECRET=jwt-secret:latest --set-env-vars=JWT_EXPIRATION_TIME='1h' --project=semiotic-anvil-461613-c0
