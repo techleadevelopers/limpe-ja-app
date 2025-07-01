@@ -1,0 +1,14 @@
+{
+  "email": "cliente.rapido@example.com",
+  "password": "Password123!",
+  "fullName": "Cliente Rápido",
+  "phone": "11987654321",
+  "address": {
+    "cep": "01001000",
+    "street": "Rua Teste Rápido",
+    "number": "100",
+    "neighborhood": "Centro",
+    "city": "São Paulo",
+    "state": "SP"
+  }
+}

@@ -1,8 +1,18 @@
 // src/providers/dto/update-provider-profile.dto.ts
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, IsInt, IsUrl, IsDateString, IsBoolean, ValidateNested, IsPhoneNumber } from 'class-validator'; // Removi IsUUID e IsNotEmpty, pois não são estritamente necessários aqui para propriedades opcionais
-import { Type } from 'class-transformer';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsString,
+  IsOptional,
+  IsInt,
+  IsUrl,
+  IsDateString,
+  IsPhoneNumber,
+  ValidateNested // Adicionei ValidateNested aqui, se não estava
+} from 'class-validator';
+import { Type } from 'class-transformer'; // Adicionei Type aqui, se não estava
 import { CreateAddressDto } from '../../common/dto/create-address.dto'; // Reutilize o DTO de endereço
+import { VerificationStatus } from '@prisma/client'; // Importar VerificationStatus para tipagem
+
 
 export class UpdateProviderProfileDto {
   @ApiPropertyOptional({ description: 'Nome completo do provedor' })
@@ -36,15 +46,27 @@ export class UpdateProviderProfileDto {
   @IsInt()
   yearsOfExperience?: number;
 
-  @ApiPropertyOptional({ description: 'Status de verificação do provedor' })
+  // Removi `verified?: boolean;` e adicionei `verificationStatus?: VerificationStatus;`
+  // O seu modelo Provider no Prisma usa 'verificationStatus' com um Enum, não um booleano 'verified'.
+  @ApiPropertyOptional({
+    enum: VerificationStatus,
+    description: 'Status de verificação do provedor',
+    example: VerificationStatus.PENDING_INITIAL_REVIEW
+  })
   @IsOptional()
-  @IsBoolean()
-  verified?: boolean;
+  @IsString() // Validar como string, pois é um enum string no DTO
+  // @IsEnum(VerificationStatus) // Se você quiser uma validação mais rigorosa para o enum
+  verificationStatus?: VerificationStatus;
 
   @ApiPropertyOptional({ description: 'Biografia do provedor', example: 'Profissional dedicada à limpeza...' })
   @IsOptional()
   @IsString()
-  bio?: string; // <-- ADICIONADO AQUI
+  bio?: string;
+
+  @ApiPropertyOptional({ description: 'Chave PIX do provedor', example: 'meu.pix@email.com' })
+  @IsOptional()
+  @IsString()
+  pixKey?: string; // <-- ADICIONADO AQUI
 
   @ApiPropertyOptional({ type: CreateAddressDto, description: 'Informações de endereço do provedor' })
   @IsOptional()

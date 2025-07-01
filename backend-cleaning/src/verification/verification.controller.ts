@@ -10,9 +10,10 @@ import {
   UseInterceptors,
   BadRequestException,
   Logger,
-  Get, // <-- ADICIONADO
-  ForbiddenException, // <-- ADICIONADO
-  NotFoundException, // <-- ADICIONADO
+  Get,
+  ForbiddenException,
+  NotFoundException,
+  Patch, // <-- ADICIONADO: Importe Patch
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -25,10 +26,29 @@ import { SubmitCpfDto } from './dto/submit-cpf.dto';
 import { UploadDocumentDto, DocumentPhotoType } from './dto/upload-document.dto';
 import { UploadSelfieDto } from './dto/upload-selfie.dto';
 import { VerificationService } from './verification.service';
-import { ProviderWithCalculatedRating } from '../providers/providers.service'; // <-- AGORA USAMOS ProviderWithCalculatedRating
-import { VerificationStatus } from '../shared/enums/verification-status.enum'; // <-- ADICIONADO
+import { ProviderWithCalculatedRating } from '../providers/providers.service';
+import { VerificationStatus } from '../shared/enums/verification-status.enum';
 
-import { Multer } from 'multer'; // <-- ADICIONADO: Importar Multer para tipagem correta
+import { Multer } from 'multer';
+
+// DTO para atualização do status de verificação
+// Criar este DTO em src/verification/dto/update-verification-status.dto.ts
+// Para manter o arquivo completo e não quebrar, vou defini-lo aqui temporariamente.
+// No seu projeto real, crie um arquivo separado para ele.
+class UpdateVerificationStatusDto {
+  @ApiProperty({ enum: VerificationStatus, description: 'Novo status de verificação' })
+  @IsString() // Porque o enum é armazenado como string
+  status: VerificationStatus;
+
+  @ApiPropertyOptional({ description: 'Motivo da rejeição (obrigatório se status for REJECTED)' })
+  @IsOptional()
+  @IsString()
+  reason?: string;
+}
+// ^^^^^^^^^^ IMPORTANTE: No seu código, mova esta classe para um novo arquivo DTO, por exemplo:
+// src/verification/dto/update-verification-status.dto.ts
+// E importe-o aqui: import { UpdateVerificationStatusDto } from './dto/update-verification-status.dto';
+
 
 @ApiTags('verification')
 @Controller('verification')
@@ -37,8 +57,6 @@ export class VerificationController {
 
   constructor(
     private readonly verificationService: VerificationService,
-    // ProvidersService não é mais necessário aqui, pois VerificationService já lida com a busca do provedor
-    // private readonly providersService: ProvidersService,
   ) {}
 
   @Post('submit-cpf')
@@ -84,7 +102,7 @@ export class VerificationController {
   async uploadDocument(
     @Req() req: Request,
     @Param('type') type: DocumentPhotoType,
-    @UploadedFile() file: Multer.File, // <-- CORREÇÃO AQUI
+    @UploadedFile() file: Multer.File,
   ) {
     const providerId = req.user['providerId'];
     this.logger.log(`[VerificationController] uploadDocument: Recebido arquivo para providerId: ${providerId}, tipo: ${type}`);
@@ -126,7 +144,7 @@ export class VerificationController {
   @UseInterceptors(FileInterceptor('file'))
   async uploadSelfie(
     @Req() req: Request,
-    @UploadedFile() file: Multer.File, // <-- CORREÇÃO AQUI
+    @UploadedFile() file: Multer.File,
   ) {
     const providerId = req.user['providerId'];
     this.logger.log(`[VerificationController] uploadSelfie: Recebido arquivo para providerId: ${providerId}`);
@@ -139,11 +157,38 @@ export class VerificationController {
     return { message: 'Selfie com documento enviada com sucesso.' };
   }
 
-  @Post('reject/:providerId')
+  // NOVO ENDPOINT: ATUALIZAÇÃO MANUAL DO STATUS DE VERIFICAÇÃO POR ADMIN
+  @Patch(':providerId/status') // Nova rota para alterar o status
+  @Roles(UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Atualizar o status de verificação de um provedor (ADMIN apenas)' })
+  @ApiBody({ type: UpdateVerificationStatusDto }) // Usa o novo DTO
+  @ApiResponse({ status: 200, description: 'Status de verificação atualizado com sucesso.' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos ou motivo da rejeição ausente.' })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  @ApiResponse({ status: 403, description: 'Acesso proibido (requer função de ADMIN).' })
+  @ApiResponse({ status: 404, description: 'Provedor não encontrado.' })
+  async updateVerificationStatus(
+    @Param('providerId') providerId: string,
+    @Body() updateDto: UpdateVerificationStatusDto, // Usa o DTO completo
+  ) {
+    this.logger.log(`[VerificationController] updateVerificationStatus: Recebido solicitação para ${providerId}, novo status: ${updateDto.status}`);
+    if (updateDto.status === VerificationStatus.REJECTED && !updateDto.reason) {
+      throw new BadRequestException('O motivo da rejeição é obrigatório ao rejeitar um provedor.');
+    }
+    // O VerificationService já possui a lógica para atualizar o status e lidar com a razão
+    await this.verificationService.updateProviderVerificationStatusManually(providerId, updateDto.status, updateDto.reason);
+    return { message: `Status de verificação para provedor ${providerId} atualizado para ${updateDto.status}.` };
+  }
+
+
+  @Post('reject/:providerId') // Mantenha este endpoint para rejeição específica, se desejar
   @Roles(UserRole.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Rejeitar um provedor e fornecer um motivo' })
+  @ApiBody({ schema: { properties: { reason: { type: 'string', description: 'Motivo da rejeição' } } }}) // Documenta o corpo
   @ApiResponse({ status: 200, description: 'Provedor rejeitado com sucesso.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
@@ -160,7 +205,7 @@ export class VerificationController {
     return { message: `Provedor ${providerId} rejeitado com sucesso.` };
   }
 
-  @Get('status/:providerId') // <-- CORREÇÃO: Adicionado Get
+  @Get('status/:providerId')
   @Roles(UserRole.ADMIN, UserRole.PROVIDER)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
@@ -186,16 +231,14 @@ export class VerificationController {
     let providerIdToFetch = paramProviderId;
 
     if (requestingUserRole === UserRole.PROVIDER) {
-      // Usar findByUserId para obter o provedor do usuário logado
-      const providerByUser = await this.verificationService['providersService'].findByUserId(requestingUserId); // Acesso direto ao providersService via VerificationService
+      const providerByUser = await this.verificationService['providersService'].findByUserId(requestingUserId);
       if (!providerByUser || providerByUser.id !== paramProviderId) {
         throw new ForbiddenException('Você não tem permissão para ver o status de verificação deste provedor.');
       }
       providerIdToFetch = providerByUser.id;
     }
 
-    // Usar findOne do VerificationService que já retorna ProviderWithCalculatedRating
-    const provider = await this.verificationService['providersService'].findOne(providerIdToFetch); // Acesso direto ao providersService via VerificationService
+    const provider = await this.verificationService['providersService'].findOne(providerIdToFetch);
     if (!provider) {
       throw new NotFoundException('Provedor não encontrado.');
     }

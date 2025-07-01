@@ -3,8 +3,8 @@ import { Injectable, NotFoundException, BadRequestException, Logger } from '@nes
 import { PrismaService } from '../prisma/prisma.service';
 import { CriminalBackgroundCheckService } from './criminal-background-check.service';
 import { DocumentProcessingService } from './document-processing.service';
-import { VerificationStatus } from '../shared/enums/verification-status.enum';
-import { ProvidersService, ProviderWithCalculatedRating } from '../providers/providers.service'; // <-- AGORA USAMOS ProviderWithCalculatedRating
+import { VerificationStatus } from '../shared/enums/verification-status.enum'; // Certifique-se que o enum vem de shared/enums
+import { ProvidersService, ProviderWithCalculatedRating } from '../providers/providers.service';
 import { Prisma } from '@prisma/client';
 import { File } from 'multer';
 
@@ -22,14 +22,13 @@ export class VerificationService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly criminalBackgroundCheckService: CriminalBackgroundCheckService,
+    private readonly criminalBackgroundCheckService: CriminalBackgroundService,
     private readonly documentProcessingService: DocumentProcessingService,
-    private readonly providersService: ProvidersService, // Mantido para uso interno do serviço
+    private readonly providersService: ProvidersService,
   ) {}
 
   async submitCpfForBackgroundCheck(providerId: string, cpf: string): Promise<void> {
     this.logger.log(`[VerificationService] submitCpfForBackgroundCheck: Iniciando para providerId: ${providerId}`);
-    // findOne agora retorna ProviderWithCalculatedRating, que possui os campos de verificação
     const provider = await this.providersService.findOne(providerId);
     if (!provider) {
       this.logger.warn(`[VerificationService] submitCpfForBackgroundCheck: Provedor ${providerId} não encontrado.`);
@@ -87,7 +86,7 @@ export class VerificationService {
     });
     this.logger.log(`[VerificationService] uploadDocumentPhoto: URL do documento (${type}) salva para provider ${providerId}.`);
 
-    await this.updateProviderVerificationStatus(providerId);
+    await this.updateProviderVerificationStatus(providerId); // Chama a atualização automática
   }
 
   async uploadSelfieWithDocument(providerId: string, file: File): Promise<void> {
@@ -110,8 +109,32 @@ export class VerificationService {
     });
     this.logger.log(`[VerificationService] uploadSelfieWithDocument: URL da selfie salva para provider ${providerId}.`);
 
-    await this.updateProviderVerificationStatus(providerId);
+    await this.updateProviderVerificationStatus(providerId); // Chama a atualização automática
   }
+
+  // NOVO MÉTODO: Para aprovação/rejeição manual por um ADMIN
+  async updateProviderVerificationStatusManually(providerId: string, newStatus: VerificationStatus, reason?: string): Promise<void> {
+    this.logger.log(`[VerificationService] updateProviderVerificationStatusManually: Atualizando status para ${providerId} para ${newStatus}. Motivo: ${reason || 'N/A'}`);
+    const provider = await this.providersService.findOne(providerId);
+    if (!provider) {
+      this.logger.warn(`[VerificationService] updateProviderVerificationStatusManually: Provedor ${providerId} não encontrado.`);
+      throw new NotFoundException('Provedor não encontrado.');
+    }
+
+    if (newStatus === VerificationStatus.REJECTED && !reason) {
+      throw new BadRequestException('O motivo da rejeição é obrigatório ao definir o status como REJECTED.');
+    }
+
+    await this.prisma.provider.update({
+      where: { id: providerId },
+      data: {
+        verificationStatus: newStatus,
+        rejectionReason: newStatus === VerificationStatus.REJECTED ? reason : null,
+      },
+    });
+    this.logger.log(`[VerificationService] updateProviderVerificationStatusManually: Status de verificação do provedor ${providerId} atualizado para ${newStatus}.`);
+  }
+
 
   async updateProviderVerificationStatus(providerId: string): Promise<void> {
     this.logger.log(`[VerificationService] updateProviderVerificationStatus: Verificando status para providerId: ${providerId}`);
@@ -122,7 +145,6 @@ export class VerificationService {
       throw new NotFoundException('Provedor não encontrado.');
     }
 
-    // Estas propriedades agora existem no tipo ProviderWithCalculatedRating
     const isCpfCheckedAndOk = provider.backgroundCheckResult && !(provider.backgroundCheckResult as any).hasIssues;
     const isDocumentFrontUploaded = provider.documentPhotoFrontUrl !== null && provider.documentPhotoFrontUrl !== undefined;
     const isDocumentBackUploaded = provider.documentPhotoBackUrl !== null && provider.documentPhotoBackUrl !== undefined;
@@ -131,24 +153,25 @@ export class VerificationService {
     let newStatus: VerificationStatus | undefined = undefined;
 
     if (isCpfCheckedAndOk && isDocumentFrontUploaded && isDocumentBackUploaded && isSelfieUploaded) {
-      if (provider.verificationStatus === VerificationStatus.PENDING_MANUAL_REVIEW) {
+      // Se tudo foi enviado e o CPF está ok, e o status não é já APROVADO, APROVE.
+      if (provider.verificationStatus !== VerificationStatus.APPROVED) {
         newStatus = VerificationStatus.APPROVED;
-        this.logger.log(`[VerificationService] updateProviderVerificationStatus: Provedor ${providerId} APROVADO.`);
-      } else if (provider.verificationStatus === VerificationStatus.PENDING_DOCUMENTS_UPLOAD) {
+        this.logger.log(`[VerificationService] updateProviderVerificationStatus: Provedor ${providerId} APROVADO automaticamente.`);
+      }
+    } else if (!isCpfCheckedAndOk && provider.verificationStatus !== VerificationStatus.REJECTED && provider.verificationStatus !== VerificationStatus.PENDING_MANUAL_REVIEW) {
+        // Se CPF não está ok e não está rejeitado ou em revisão manual, mover para revisão manual
         newStatus = VerificationStatus.PENDING_MANUAL_REVIEW;
-        this.logger.log(`[VerificationService] updateProviderVerificationStatus: Provedor ${providerId} passou para PENDING_MANUAL_REVIEW.`);
-      }
-    } else if (isCpfCheckedAndOk && (isDocumentFrontUploaded || isDocumentBackUploaded || isSelfieUploaded)) {
-      if (provider.verificationStatus !== VerificationStatus.PENDING_MANUAL_REVIEW &&
-          provider.verificationStatus !== VerificationStatus.REJECTED &&
-          provider.verificationStatus !== VerificationStatus.PENDING_BACKGROUND_CHECK) {
-        newStatus = VerificationStatus.PENDING_DOCUMENTS_UPLOAD;
-        this.logger.log(`[VerificationService] updateProviderVerificationStatus: Provedor ${providerId} voltou para PENDING_DOCUMENTS_UPLOAD (faltam dados).`);
-      }
-    } else if (!isCpfCheckedAndOk && provider.verificationStatus !== VerificationStatus.PENDING_MANUAL_REVIEW && provider.verificationStatus !== VerificationStatus.REJECTED) {
-      newStatus = VerificationStatus.PENDING_MANUAL_REVIEW;
-      this.logger.log(`[VerificationService] updateProviderVerificationStatus: Provedor ${providerId} tem problemas no CPF, requer revisão manual.`);
+        this.logger.log(`[VerificationService] updateProviderVerificationStatus: Provedor ${providerId} tem problemas no CPF, requer revisão manual.`);
+    } else if (isCpfCheckedAndOk && (!isDocumentFrontUploaded || !isDocumentBackUploaded || !isSelfieUploaded)) {
+        // Se CPF ok, mas documentos ou selfie faltando
+        if (provider.verificationStatus !== VerificationStatus.PENDING_DOCUMENTS_UPLOAD &&
+            provider.verificationStatus !== VerificationStatus.PENDING_MANUAL_REVIEW &&
+            provider.verificationStatus !== VerificationStatus.REJECTED) {
+            newStatus = VerificationStatus.PENDING_DOCUMENTS_UPLOAD;
+            this.logger.log(`[VerificationService] updateProviderVerificationStatus: Provedor ${providerId} passou para PENDING_DOCUMENTS_UPLOAD (faltam dados).`);
+        }
     }
+
 
     if (newStatus && newStatus !== provider.verificationStatus) {
       await this.prisma.provider.update({
@@ -156,14 +179,6 @@ export class VerificationService {
         data: { verificationStatus: newStatus },
       });
       this.logger.log(`[VerificationService] updateProviderVerificationStatus: Status do provedor ${providerId} atualizado para ${newStatus}.`);
-    } else if (!newStatus && provider.verificationStatus === VerificationStatus.PENDING_DOCUMENTS_UPLOAD) {
-        if (!(isDocumentFrontUploaded && isDocumentBackUploaded && isSelfieUploaded)) {
-            await this.prisma.provider.update({
-                where: { id: providerId },
-                data: { verificationStatus: VerificationStatus.PENDING_MANUAL_REVIEW },
-            });
-            this.logger.log(`[VerificationService] updateProviderVerificationStatus: Provedor ${providerId} em PENDING_DOCUMENTS_UPLOAD, mas dados incompletos, movido para PENDING_MANUAL_REVIEW.`);
-        }
     }
   }
 
