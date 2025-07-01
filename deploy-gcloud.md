@@ -2,7 +2,7 @@
 git add .
 
 # 2. Criar o commit
-git commit -m "feat(gcs): Implementa leitura e decodificacao de chave GCS via Secret Manager com logs aprimorados"
+git commit -m "feat(docker): Implementa config docker"
 
 # 3. Enviar para o GitHub/repositório remoto
 git push
