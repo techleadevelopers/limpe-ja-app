@@ -15,12 +15,6 @@ async function main() {
 
   // --- Funções Auxiliares para Endereço (para evitar repetição e simplificar) ---
   async function upsertAddress(addressData: any) {
-    // Tenta encontrar um endereço existente pelo CEP, rua, número, etc.
-    // Ou cria um novo se não existir.
-    // IMPORTANTE: Se o endereço puder ser compartilhado entre clientes/provedores,
-    // a lógica de 'where' precisa ser mais robusta ou você sempre cria um novo.
-    // Para simplificar, vou usar o CEP e número como um critério de upsert aqui.
-    // Se um endereço for 1:1, a melhor forma é criar e conectar.
     const existingAddress = await prisma.address.findFirst({
         where: {
           cep: addressData.cep,
@@ -42,12 +36,11 @@ async function main() {
   }
 
 
-  // --- Usuário Teste 1 (CLIENT) ---
+  // --- Usuária Teste 1 (CLIENT) ---
   const teste1Email = 'teste1@cleaning.com';
   const teste1Password = 'teste123';
   const hashedTeste1Password = await bcrypt.hash(teste1Password, 8);
 
-  // Cria/Atualiza o endereço primeiro
   const test1Address = await upsertAddress({
     street: 'Rua Teste 123',
     city: 'São Paulo',
@@ -66,14 +59,14 @@ async function main() {
       client: {
         upsert: {
           create: {
-            fullName: 'Teste 1',
+            fullName: 'Ana Cliente Teste',
             phone: '11900000000',
-            address: { connect: { id: test1Address.id } }, // Conecta o endereço já criado/atualizado
+            address: { connect: { id: test1Address.id } },
           },
           update: {
-            fullName: 'Teste 1',
+            fullName: 'Ana Cliente Teste',
             phone: '11900000000',
-            address: { connect: { id: test1Address.id } }, // Conecta o endereço já criado/atualizado
+            address: { connect: { id: test1Address.id } },
           },
         },
       },
@@ -85,24 +78,24 @@ async function main() {
       avatarUrl: 'https://randomuser.me/api/portraits/women/55.jpg',
       client: {
         create: {
-          fullName: 'Teste 1',
+          fullName: 'Ana Cliente Teste',
           phone: '11900000000',
-          address: { connect: { id: test1Address.id } }, // Conecta o endereço já criado
+          address: { connect: { id: test1Address.id } },
         },
       },
     },
     include: { client: true },
   });
-  console.log(`Usuário Cliente 'Teste 1' (${teste1Email}) criado/atualizado.`);
+  console.log(`Usuária Cliente 'Teste 1' (${teste1Email}) criada/atualizada.`);
 
 
-  // --- Admin com Perfil de Cliente ---
+  // --- Admin com Perfil de Cliente (Mulher) ---
   const adminClientEmail = 'admin.client@cleaning.com';
   const adminClientPassword = 'adminclientpass';
   const hashedAdminClientPassword = await bcrypt.hash(adminClientPassword, 10);
 
   const adminClientAddress = await upsertAddress({
-    cep: '01000-000', street: 'Rua do Admin Cliente', number: '1', neighborhood: 'Centro', city: 'São Paulo', state: 'SP',
+    cep: '01000-000', street: 'Rua da Admin Cliente', number: '1', neighborhood: 'Centro', city: 'São Paulo', state: 'SP',
   });
 
   const adminClientUser = await prisma.user.upsert({
@@ -110,34 +103,46 @@ async function main() {
     update: {
       passwordHash: hashedAdminClientPassword,
       role: UserRole.ADMIN,
-      avatarUrl: 'https://randomuser.me/api/portraits/men/90.jpg',
-      client: {
-        upsert: {
-          create: { fullName: 'Admin Cliente Teste', phone: '11911111111', address: { connect: { id: adminClientAddress.id } } },
-          update: { fullName: 'Admin Cliente Teste', phone: '11911111111', address: { connect: { id: adminClientAddress.id } } },
-        },
-      },
+      avatarUrl: 'https://randomuser.me/api/portraits/women/90.jpg', // Avatar feminino
     },
     create: {
       email: adminClientEmail,
       passwordHash: hashedAdminClientPassword,
       role: UserRole.ADMIN,
-      avatarUrl: 'https://randomuser.me/api/portraits/men/90.jpg',
-      client: {
-        create: { fullName: 'Admin Cliente Teste', phone: '11911111111', address: { connect: { id: adminClientAddress.id } } },
-      },
+      avatarUrl: 'https://randomuser.me/api/portraits/women/90.jpg', // Avatar feminino
     },
     include: { client: true },
   });
-  console.log(`Usuário Admin/Cliente '${adminClientEmail}' criado/atualizado.`);
 
-  // --- Admin com Perfil de Provedor ---
+  // Garante que o perfil de cliente é criado/atualizado APÓS o usuário
+  if (!adminClientUser.client) { // Se não tem clientDetails, cria
+    await prisma.client.create({
+      data: {
+        userId: adminClientUser.id,
+        fullName: 'Admin Cliente Teste',
+        phone: '11911111111',
+        address: { connect: { id: adminClientAddress.id } }
+      }
+    });
+  } else { // Se já tem, atualiza
+    await prisma.client.update({
+      where: { id: adminClientUser.client.id },
+      data: {
+        fullName: 'Admin Cliente Teste',
+        phone: '11911111111',
+        address: { connect: { id: adminClientAddress.id } }
+      }
+    });
+  }
+  console.log(`Usuária Admin/Cliente '${adminClientEmail}' criada/atualizada.`);
+
+  // --- Admin com Perfil de Provedor (Mulher) ---
   const adminProviderEmail = 'admin.provider@cleaning.com';
   const adminProviderPassword = 'adminproviderpass';
   const hashedAdminProviderPassword = await bcrypt.hash(adminProviderPassword, 10);
 
   const adminProviderAddress = await upsertAddress({
-    cep: '02000-000', street: 'Avenida Admin Provedor', number: '2', neighborhood: 'Vila Admin', city: 'Rio de Janeiro', state: 'RJ',
+    cep: '02000-000', street: 'Avenida Admin Provedora', number: '2', neighborhood: 'Vila Admin', city: 'Rio de Janeiro', state: 'RJ',
   });
 
   const adminProviderUser = await prisma.user.upsert({
@@ -145,35 +150,50 @@ async function main() {
     update: {
       passwordHash: hashedAdminProviderPassword,
       role: UserRole.ADMIN,
-      avatarUrl: 'https://randomuser.me/api/portraits/men/80.jpg',
-      provider: {
-        upsert: {
-          create: {
-            fullName: 'Admin Provedor Teste', cpf: '000.000.000-00', dateOfBirth: new Date('1980-01-01'), phone: '11922222222', yearsOfExperience: 5, avatarUrl: 'https://randomuser.me/api/portraits/men/80.jpg',
-            verificationStatus: VerificationStatus.APPROVED, bio: 'Administrador que também atua como provedor.', pixKey: 'admin.provider@pix.com',
-            address: { connect: { id: adminProviderAddress.id } }, // Conecta o endereço
-          },
-          update: {
-            fullName: 'Admin Provedor Teste', cpf: '000.000.000-00', dateOfBirth: new Date('1980-01-01'), phone: '11922222222', yearsOfExperience: 5, avatarUrl: 'https://randomuser.me/api/portraits/men/80.jpg',
-            verificationStatus: VerificationStatus.APPROVED, bio: 'Administrador que também atua como provedor.', pixKey: 'admin.provider@pix.com',
-            address: { connect: { id: adminProviderAddress.id } }, // Conecta o endereço
-          },
-        },
-      },
+      avatarUrl: 'https://randomuser.me/api/portraits/women/80.jpg', // Avatar feminino
     },
     create: {
-      email: adminProviderEmail, passwordHash: hashedAdminProviderPassword, role: UserRole.ADMIN, avatarUrl: 'https://randomuser.me/api/portraits/men/80.jpg',
-      provider: {
-        create: {
-          fullName: 'Admin Provedor Teste', cpf: '000.000.000-00', dateOfBirth: new Date('1980-01-01'), phone: '11922222222', yearsOfExperience: 5, avatarUrl: 'https://randomuser.me/api/portraits/men/80.jpg',
-          verificationStatus: VerificationStatus.APPROVED, bio: 'Administrador que também atua como provedor.', pixKey: 'admin.provider@pix.com',
-          address: { connect: { id: adminProviderAddress.id } }, // Conecta o endereço
-        },
-      },
+      email: adminProviderEmail, passwordHash: hashedAdminProviderPassword, role: UserRole.ADMIN, avatarUrl: 'https://randomuser.me/api/portraits/women/80.jpg', // Avatar feminino
     },
     include: { provider: true },
   });
-  console.log(`Usuário Admin/Provedor '${adminProviderEmail}' criado/atualizado.`);
+
+  // Garante que o perfil de provedor é criado/atualizado APÓS o usuário
+  if (!adminProviderUser.provider) { // Se não tem providerDetails, cria
+    await prisma.provider.create({
+      data: {
+        userId: adminProviderUser.id,
+        fullName: 'Admin Provedora Teste',
+        cpf: '000.000.000-00',
+        dateOfBirth: new Date('1980-01-01'),
+        phone: '11922222222',
+        yearsOfExperience: 5,
+        avatarUrl: 'https://randomuser.me/api/portraits/women/80.jpg',
+        verificationStatus: VerificationStatus.APPROVED,
+        bio: 'Administradora que também atua como provedora.',
+        pixKey: 'admin.provider@pix.com',
+        address: { connect: { id: adminProviderAddress.id } },
+      }
+    });
+  } else { // Se já tem, atualiza
+    await prisma.provider.update({
+      where: { id: adminProviderUser.provider.id },
+      data: {
+        fullName: 'Admin Provedora Teste',
+        cpf: '000.000.000-00',
+        dateOfBirth: new Date('1980-01-01'),
+        phone: '11922222222',
+        yearsOfExperience: 5,
+        avatarUrl: 'https://randomuser.me/api/portraits/women/80.jpg',
+        verificationStatus: VerificationStatus.APPROVED,
+        bio: 'Administradora que também atua como provedora.',
+        pixKey: 'admin.provider@pix.com',
+        address: { connect: { id: adminProviderAddress.id } },
+      }
+    });
+  }
+  console.log(`Usuária Admin/Provedora '${adminProviderEmail}' criada/atualizada.`);
+
 
   // --- ADICIONADO: CRIAÇÃO DE SERVIÇOS (CATEGORIAS) COM ÍCONES ---
   console.log('Criando/Atualizando serviços (categorias)...');
@@ -213,8 +233,8 @@ async function main() {
     console.log(`Serviço '${service.name}' criado/atualizado.`);
   }
 
-  // --- ADICIONADO: CRIAÇÃO E ATUALIZAÇÃO DE PROVEDORES DE TESTE (PLACEHOLDERS) ---
-  console.log('Criando/Atualizando provedores de teste...');
+  // --- ADICIONADO: CRIAÇÃO E ATUALIZAÇÃO DE PROVEDORAS DE TESTE (SOMENTE MULHERES) ---
+  console.log('Criando/Atualizando provedoras de teste...');
 
   type ProviderSeedData = {
     email: string;
@@ -247,8 +267,8 @@ async function main() {
       cpf: '111.111.111-11',
       dateOfBirth: new Date('1990-05-15'),
       phone: '11933333333',
-      yearsOfExperience: 3,
       avatarUrl: 'https://randomuser.me/api/portraits/women/68.jpg',
+      yearsOfExperience: 3,
       verificationStatus: VerificationStatus.APPROVED,
       bio: 'Especialista em limpeza residencial com foco em detalhes e organização. Amo deixar ambientes brilhantes!',
       address: {
@@ -260,19 +280,19 @@ async function main() {
     {
       email: 'provider2@cleaning.com',
       password: 'testprovider2pass',
-      fullName: 'Carolina Santos', // Alterado de 'João de Souza' para 'Carolina Santos'
+      fullName: 'Carolina Santos',
       cpf: '222.222.222-22',
       dateOfBirth: new Date('1988-11-20'),
       phone: '11944444444',
       yearsOfExperience: 7,
-      avatarUrl: 'https://randomuser.me/api/portraits/women/75.jpg', // Alterado para foto de mulher
+      avatarUrl: 'https://randomuser.me/api/portraits/women/75.jpg',
       verificationStatus: VerificationStatus.APPROVED,
       bio: 'Limpeza comercial eficiente e confiável. Atendo grandes e pequenos escritórios com excelência.',
       address: {
         cep: '04543-010', street: 'R. Joaquim Floriano', number: '500', neighborhood: 'Itaim Bibi', city: 'São Paulo', state: 'SP',
       },
       services: ['Comercial', 'Escritório'],
-      pixKey: 'joao.souza@banco.com.br', // Manter se não for um problema
+      pixKey: 'carolina.santos@banco.com.br',
     },
     {
       email: 'provider3@cleaning.com',
@@ -282,9 +302,9 @@ async function main() {
       dateOfBirth: new Date('1995-03-01'),
       phone: '11955555555',
       yearsOfExperience: 2,
-      avatarUrl: 'https://randomuser.me/api/portraits/thumb/women/12.jpg',
+      avatarUrl: 'https://randomuser.me/api/portraits/women/12.jpg',
       verificationStatus: VerificationStatus.PENDING_INITIAL_REVIEW,
-      bio: 'Profissional organizada e atenciosa, buscando sempre a satisfação do cliente.',
+      bio: 'Profissional organizada e atenciosa, buscando sempre a satisfação da cliente.',
       address: {
         cep: '03100-000', street: 'Rua das Cores', number: '50', neighborhood: 'Mooca', city: 'São Paulo', state: 'SP',
       },
@@ -311,11 +331,10 @@ async function main() {
       include: { provider: true },
     });
 
-    // Criar/atualizar o endereço do provedor separadamente primeiro
     const providerAddress = await upsertAddress(providerData.address);
 
-    if (user.provider) {
-      // Se o provedor já existe, atualize-o
+    // Garante que o perfil de provedor é criado/atualizado APÓS o usuário
+    if (user.provider) { // Se já tem providerDetails, atualiza
       await prisma.provider.update({
         where: { id: user.provider.id },
         data: {
@@ -325,15 +344,14 @@ async function main() {
           phone: providerData.phone,
           yearsOfExperience: providerData.yearsOfExperience,
           avatarUrl: providerData.avatarUrl,
-          verificationStatus: providerData.verificationStatus,
+          verificationStatus: providerData.verificationStatus, // Correção: usar providerData.verificationStatus
           bio: providerData.bio,
           pixKey: providerData.pixKey,
-          address: { connect: { id: providerAddress.id } }, // Conecta o endereço já criado/atualizado
+          address: { connect: { id: providerAddress.id } },
         },
       });
-      console.log(`Usuário Provedor de Teste '${providerData.email}' já existe. Perfil de provedor e usuário atualizados.`);
-    } else {
-      // Se o usuário existe, mas o perfil de provedor não, crie o perfil de provedor
+      console.log(`Usuária Provedora de Teste '${providerData.email}' já existe. Perfil de provedora e usuária atualizados.`);
+    } else { // Se não tem providerDetails, cria
       const newProviderProfile = await prisma.provider.create({
         data: {
           userId: user.id,
@@ -343,24 +361,25 @@ async function main() {
           phone: providerData.phone,
           yearsOfExperience: providerData.yearsOfExperience,
           avatarUrl: providerData.avatarUrl,
-          verificationStatus: providerData.verificationStatus,
+          verificationStatus: providerData.verificationStatus, // Correção: usar providerData.verificationStatus
           bio: providerData.bio,
           pixKey: providerData.pixKey,
-          address: { connect: { id: providerAddress.id } }, // Conecta o endereço
+          address: { connect: { id: providerAddress.id } },
         },
       });
-      console.log(`Usuário '${providerData.email}' existia, perfil de provedor criado.`);
+      console.log(`Usuária '${providerData.email}' existia, perfil de provedora criado.`);
     }
 
     // Restante da lógica de services for provider...
-    if (user.provider?.id && providerData.services && providerData.services.length > 0) { // Use user.provider?.id aqui
+    if (user.provider?.id && providerData.services && providerData.services.length > 0) {
       for (const serviceName of providerData.services) {
         const service = await prisma.service.findUnique({ where: { name: serviceName } });
+        console.log(`DEBUG (ProviderService creation loop): Provedora ${providerData.fullName}, Service ${serviceName}. Found Service ID: ${service?.id}, Provider ID: ${user.provider.id}`); // Debugging
         if (service) {
           await prisma.providerService.upsert({
             where: {
               providerId_serviceId: {
-                providerId: user.provider.id, // Use user.provider.id aqui
+                providerId: user.provider.id,
                 serviceId: service.id,
               },
             },
@@ -370,23 +389,25 @@ async function main() {
               description: `Serviço ${serviceName} por ${providerData.fullName} (Atualizado).`,
             },
             create: {
-              providerId: user.provider.id, // Use user.provider.id aqui
+              providerId: user.provider.id,
               serviceId: service.id,
               price: new Prisma.Decimal(100.0),
               durationMinutes: 60,
               description: `Serviço ${serviceName} por ${providerData.fullName}.`,
             },
           });
-          console.log(`    - Serviço '${serviceName}' associado/atualizado ao provedor ${providerData.fullName}.`);
+          console.log(`     - Serviço '${serviceName}' associado/atualizado à provedora ${providerData.fullName}.`);
         } else {
-          console.warn(`    - Serviço '${serviceName}' não encontrado para associar/atualizar ao provedor ${providerData.fullName}.`);
+          console.warn(`     - Serviço '${serviceName}' não encontrado para associar/atualizar à provedora ${providerData.fullName}.`);
         }
       }
+    } else if (user.provider?.id) {
+        console.warn(`WARN: Provedora ${providerData.fullName} (ID: ${user.provider.id}) não tem serviços definidos ou ID do provedor não disponível para associar serviços.`);
     }
   }
 
 
-  // --- NOVO: CRIAÇÃO DE CLIENTES DE TESTE ADICIONAIS ---
+  // --- NOVO: CRIAÇÃO DE CLIENTES DE TESTE ADICIONAIS (SOMENTE MULHERES) ---
   console.log('Criando/Atualizando clientes de teste...');
   type ClientSeedData = {
     email: string;
@@ -414,7 +435,7 @@ async function main() {
     {
       email: 'client2@cleaning.com',
       password: 'testclient2pass',
-      fullName: 'Carlos Comprador',
+      fullName: 'Beatriz Compradora', // Nome feminino
       phone: '21966666666',
       address: { cep: '20000-000', street: 'Av. Teste', number: '20', neighborhood: 'Centro', city: 'Rio de Janeiro', state: 'RJ' },
     },
@@ -428,7 +449,7 @@ async function main() {
     {
       email: 'client4@cleaning.com',
       password: 'testclient4pass',
-      fullName: 'Pedro Satisfeito',
+      fullName: 'Fernanda Satisfeita', // Nome feminino
       phone: '11988888888',
       address: { cep: '01003-003', street: 'Av. Brasil', number: '50', neighborhood: 'Consolação', city: 'São Paulo', state: 'SP' },
     },
@@ -440,19 +461,19 @@ async function main() {
       where: { email: clientData.email },
       update: {
         passwordHash: hashedPass,
-        avatarUrl: 'https://randomuser.me/api/portraits/women/50.jpg',
+        avatarUrl: 'https://randomuser.me/api/portraits/women/50.jpg', // Avatar feminino
         role: UserRole.CLIENT,
       },
       create: {
         email: clientData.email,
         passwordHash: hashedPass,
-        avatarUrl: 'https://randomuser.me/api/portraits/women/50.jpg',
+        avatarUrl: 'https://randomuser.me/api/portraits/women/50.jpg', // Avatar feminino
         role: UserRole.CLIENT,
       },
       include: { client: true },
     });
 
-    const clientAddress = await upsertAddress(clientData.address); // Cria/atualiza o endereço do cliente
+    const clientAddress = await upsertAddress(clientData.address);
 
     if (user.client) {
       await prisma.client.update({
@@ -460,30 +481,30 @@ async function main() {
         data: {
           fullName: clientData.fullName,
           phone: clientData.phone,
-          address: { connect: { id: clientAddress.id } }, // Conecta o endereço
+          address: { connect: { id: clientAddress.id } },
         },
       });
-      console.log(`Cliente de Teste '${clientData.email}' já existe. Perfil de cliente e usuário atualizados.`);
+      console.log(`Cliente de Teste '${clientData.email}' já existe. Perfil de cliente e usuária atualizados.`);
     } else {
       await prisma.client.create({
         data: {
           userId: user.id,
           fullName: clientData.fullName,
           phone: clientData.phone,
-          address: { connect: { id: clientAddress.id } }, // Conecta o endereço
+          address: { connect: { id: clientAddress.id } },
         },
       });
-      console.log(`Cliente de Teste '${clientData.email}' criado com sucesso!`);
+      console.log(`Cliente de Teste '${clientData.email}' criada com sucesso!`);
     }
   }
 
 
-  // --- NOVO: CRIAÇÃO DE DISPONIBILIDADE PARA PROVEDORES DE TESTE ---
-  console.log('Criando disponibilidade de horários para provedores de teste...');
+  // --- NOVO: CRIAÇÃO DE DISPONIBILIDADE PARA PROVEDORAS DE TESTE ---
+  console.log('Criando disponibilidade de horários para provedoras de teste...');
 
   // Obtenha os provedores (necessário para o escopo)
   const mariaProvider = await prisma.provider.findFirst({ where: { user: { email: 'provider1@cleaning.com' } } });
-  const carolinaProvider = await prisma.provider.findFirst({ where: { user: { email: 'provider2@cleaning.com' } } }); // Alterado para carolinaProvider
+  const carolinaProvider = await prisma.provider.findFirst({ where: { user: { email: 'provider2@cleaning.com' } } });
   const helenaProvider = await prisma.provider.findFirst({ where: { user: { email: 'provider3@cleaning.com' } } });
 
   // Função auxiliar para gerar slots de 30 minutos
@@ -507,7 +528,7 @@ async function main() {
 
   const allDaySlots = generateTimeSlots(8, 20); // Slots de 08:00 a 19:30 (terminando às 20:00)
 
-  if (mariaProvider && carolinaProvider) { // Alterado para carolinaProvider
+  if (mariaProvider && carolinaProvider && helenaProvider) { // Garante que todos os provedores foram encontrados
     // Disponibilidade genérica para Maria da Silva (Seg-Sex)
     for (let day = 1; day <= 5; day++) { // Segunda a Sexta
       const mariaSlots = [
@@ -547,36 +568,28 @@ async function main() {
     }
     console.log(`Disponibilidade genérica para Maria da Silva (Seg-Sex) criada/atualizada.`);
 
-    // --- MODIFICAÇÃO: Disponibilidade para Carolina Santos para 30/06, 01/07 e 02/07 (Seg, Ter, Qua) ---
-    // Usando Date para obter o dia da semana correto para as datas futuras
-    const today = new Date();
-    // 30 de junho de 2025 (Segunda-feira)
-    const june30 = new Date(today.getFullYear(), 5, 30); // Mês 5 é Junho (0-indexado)
-    // 1 de julho de 2025 (Terça-feira)
-    const july01 = new Date(today.getFullYear(), 6, 1); // Mês 6 é Julho (0-indexado)
-    // 2 de julho de 2025 (Quarta-feira)
-    const july02 = new Date(today.getFullYear(), 6, 2); // Mês 6 é Julho (0-indexado)
+    // --- MODIFICAÇÃO: Disponibilidade para Carolina Santos para 06/07/2025, 07/07/2025 e 08/07/2025 ---
+    // Usando o ano atual para garantir que as datas sejam futuras ou recentes
+    const currentYear = new Date().getFullYear();
+    const july06 = new Date(currentYear, 6, 6); // Mês 6 é Julho (0-indexado), Dia 6
+    const july07 = new Date(currentYear, 6, 7); // Mês 6 é Julho (0-indexado), Dia 7
+    const july08 = new Date(currentYear, 6, 8); // Mês 6 é Julho (0-indexado), Dia 8
 
 
-    // Array de objetos contendo a data e o dia da semana (0=Dom, 1=Seg...)
-    const carolinaSpecificDates = [ // Alterado para carolinaSpecificDates
-        { date: june30, dayOfWeek: june30.getDay() }, // Deve ser 1 (Segunda)
-        { date: july01, dayOfWeek: july01.getDay() }, // Deve ser 2 (Terça)
-        { date: july02, dayOfWeek: july02.getDay() }, // Deve ser 3 (Quarta)
+    const carolinaSpecificDates = [
+        { date: july06, dayOfWeek: july06.getDay() }, // 06/07/2025 é um Domingo (0)
+        { date: july07, dayOfWeek: july07.getDay() }, // 07/07/2025 é uma Segunda-feira (1)
+        { date: july08, dayOfWeek: july08.getDay() }, // 08/07/2025 é uma Terça-feira (2)
     ];
 
-    for (const specificDate of carolinaSpecificDates) { // Alterado para carolinaSpecificDates
+    for (const specificDate of carolinaSpecificDates) {
       for (const slot of allDaySlots) {
-        // UPSERT MANUAL para Carolina para as datas específicas
         const existingSpecificAvailability = await prisma.availability.findFirst({
           where: {
-            providerId: carolinaProvider.id, // Alterado para carolinaProvider
+            providerId: carolinaProvider.id,
             dayOfWeek: specificDate.dayOfWeek,
             startTime: slot.startTime,
             endTime: slot.endTime,
-            // Adicionar filtro por data específica se o seu modelo Availability permite
-            // Se o modelo Availability é apenas para disponibilidade semanal recorrente,
-            // então não é necessário filtrar por data, apenas por dayOfWeek
           },
         });
 
@@ -588,13 +601,11 @@ async function main() {
         } else {
           await prisma.availability.create({
             data: {
-              providerId: carolinaProvider.id, // Alterado para carolinaProvider
+              providerId: carolinaProvider.id,
               dayOfWeek: specificDate.dayOfWeek,
               startTime: slot.startTime,
               endTime: slot.endTime,
               isAvailable: true,
-              // Se você tiver um campo de data específica na sua tabela Availability, adicione aqui:
-              // specificDate: specificDate.date,
             },
           });
         }
@@ -603,7 +614,7 @@ async function main() {
     }
 
   } else {
-    console.warn('Não foi possível criar disponibilidade. Provedores não encontrados.');
+    console.warn('Não foi possível criar disponibilidade. Provedoras não encontradas.');
   }
 
   if (helenaProvider) {
@@ -612,7 +623,6 @@ async function main() {
         { startTime: '10:00', endTime: '12:00' }, { startTime: '14:00', endTime: '16:00' },
       ];
       for (const slot of helenaDaySlots) {
-        // UPSERT MANUAL para Helena
         const existingAvailability = await prisma.availability.findFirst({
           where: {
             providerId: helenaProvider.id,
@@ -648,58 +658,69 @@ async function main() {
   console.log('Criando agendamentos e transações de teste...');
 
   const anaClient = await prisma.client.findFirst({ where: { user: { email: 'client1@cleaning.com' } } });
-  const carlosClient = await prisma.client.findFirst({ where: { user: { email: 'client2@cleaning.com' } } });
+  const beatrizClient = await prisma.client.findFirst({ where: { user: { email: 'client2@cleaning.com' } } });
   const lauraClient = await prisma.client.findFirst({ where: { user: { email: 'client3@cleaning.com' } } });
-  const pedroClient = await prisma.client.findFirst({ where: { user: { email: 'client4@cleaning.com' } } });
+  const fernandaClient = await prisma.client.findFirst({ where: { user: { email: 'client4@cleaning.com' } } });
 
+  console.log('DEBUG: Clientes encontrados - Ana:', anaClient?.id, 'Beatriz:', beatrizClient?.id, 'Laura:', lauraClient?.id, 'Fernanda:', fernandaClient?.id);
+  
   const residentialService = await prisma.service.findUnique({ where: { name: 'Residencial' } });
   const commercialService = await prisma.service.findUnique({ where: { name: 'Comercial' } });
 
+  console.log('DEBUG: Serviços encontrados - Residencial:', residentialService?.id, 'Comercial:', commercialService?.id);
+
+
   if (
     mariaProvider &&
-    carolinaProvider && // Alterado para carolinaProvider
+    carolinaProvider &&
     anaClient &&
-    carlosClient &&
+    beatrizClient &&
     lauraClient &&
-    pedroClient &&
+    fernandaClient &&
     residentialService &&
     commercialService
   ) {
     // --- AGENDAMENTO CONCLUÍDO (para Maria - gera ganhos) ---
-    const booking1Date = new Date();
-    booking1Date.setDate(booking1Date.getDate() - 7); // 7 dias atrás
-    const completedBookingMaria = await prisma.booking.create({
-      data: {
-        clientId: anaClient.id,
-        providerId: mariaProvider.id,
-        providerServiceId: (
-          await prisma.providerService.findFirst({
-            where: { providerId: mariaProvider.id, serviceId: residentialService.id },
-          })
-        )!.id,
-        scheduledDate: booking1Date,
-        scheduledTime: '10:00',
-        status: BookingStatus.COMPLETED,
-        totalPrice: new Prisma.Decimal(150.0),
-        notes: 'Limpeza geral da casa.',
-      },
+    const mariaResidentialService = await prisma.providerService.findFirst({
+        where: { providerId: mariaProvider.id, serviceId: residentialService.id },
     });
-    console.log(`Agendamento Concluído ${completedBookingMaria.id} (Maria) criado.`);
+    console.log('DEBUG: mariaResidentialService:', mariaResidentialService?.id);
 
-    await prisma.transaction.create({
-      data: {
-        providerId: mariaProvider.id,
-        amount: new Prisma.Decimal(150.0),
-        type: TransactionType.PAYMENT,
-        status: 'COMPLETED',
-        description: `Pagamento serviço ${completedBookingMaria.id}`,
-        bookingId: completedBookingMaria.id,
-      },
-    });
-    console.log(`Transação de Pagamento para ${completedBookingMaria.id} criada.`);
+    if (mariaResidentialService) { // Adicionada verificação
+        const booking1Date = new Date();
+        booking1Date.setDate(booking1Date.getDate() - 7);
+        const completedBookingMaria = await prisma.booking.create({
+            data: {
+                clientId: anaClient.id,
+                providerId: mariaProvider.id,
+                providerServiceId: mariaResidentialService.id,
+                scheduledDate: booking1Date.toISOString().split('T')[0],
+                scheduledTime: '10:00',
+                status: BookingStatus.COMPLETED,
+                totalPrice: new Prisma.Decimal(150.0),
+                notes: 'Limpeza geral da casa.',
+            },
+        });
+        console.log(`Agendamento Concluído ${completedBookingMaria.id} (Maria) criado.`);
 
-    // --- NOVO: MÚLTIPLOS AGENDAMENTOS CONCLUÍDOS PARA CAROLINA SANTOS (para permitir múltiplas avaliações) ---
-    const carolinaBookingsData = [ // Alterado para carolinaBookingsData
+        await prisma.transaction.create({
+            data: {
+                providerId: mariaProvider.id,
+                amount: new Prisma.Decimal(150.0),
+                type: TransactionType.PAYMENT,
+                status: 'COMPLETED',
+                description: `Pagamento serviço ${completedBookingMaria.id}`,
+                bookingId: completedBookingMaria.id,
+            },
+        });
+        console.log(`Transação de Pagamento para ${completedBookingMaria.id} criada.`);
+    } else {
+        console.warn('WARN: Maria Residential Service não encontrado, pulando booking de Maria.');
+    }
+
+
+    // --- MÚLTIPLOS AGENDAMENTOS CONCLUÍDOS PARA CAROLINA SANTOS (para permitir múltiplas avaliações) ---
+    const carolinaBookingsData = [
       {
         client: lauraClient,
         service: commercialService,
@@ -708,8 +729,8 @@ async function main() {
         price: 200.0,
       },
       {
-        client: pedroClient,
-        service: commercialService, // Ou outro serviço
+        client: fernandaClient,
+        service: commercialService,
         scheduledTime: '10:30',
         notes: 'Limpeza de rotina para avaliação 2.',
         price: 180.0,
@@ -723,104 +744,119 @@ async function main() {
       },
     ];
 
-    const completedBookingsCarolina = []; // Alterado para completedBookingsCarolina
+    const completedBookingsCarolina = [];
 
-    for (let i = 0; i < carolinaBookingsData.length; i++) { // Alterado para carolinaBookingsData
-      const bookingData = carolinaBookingsData[i]; // Alterado para carolinaBookingsData
+    for (let i = 0; i < carolinaBookingsData.length; i++) {
+      const bookingData = carolinaBookingsData[i];
       const bookingDate = new Date();
-      bookingDate.setDate(bookingDate.getDate() - (15 + i * 2)); // Datas diferentes para cada booking
+      bookingDate.setDate(bookingDate.getDate() - (15 + i * 2)); // Ajusta a data para ser no passado
 
-      const providerServiceForCarolina = await prisma.providerService.findFirst({ // Alterado para carolinaProvider
-        where: { providerId: carolinaProvider.id, serviceId: bookingData.service.id }, // Alterado para carolinaProvider
+      const providerServiceForCarolina = await prisma.providerService.findFirst({
+        where: { providerId: carolinaProvider.id, serviceId: bookingData.service.id },
       });
 
+      console.log(`DEBUG: ProviderService para Carolina e ${bookingData.service.name}:`, providerServiceForCarolina?.id);
+      
       if (!providerServiceForCarolina) {
-        console.warn(`Serviço ${bookingData.service.name} não encontrado para Carolina Santos. Pulando booking.`); // Alterado para Carolina Santos
+        console.warn(`WARN: Serviço ${bookingData.service.name} não encontrado para Carolina Santos. Pulando booking.`);
         continue;
       }
 
-      const completedBookingCarolina = await prisma.booking.create({ // Alterado para completedBookingCarolina
+      const completedBookingCarolina = await prisma.booking.create({
         data: {
           clientId: bookingData.client.id,
-          providerId: carolinaProvider.id, // Alterado para carolinaProvider
+          providerId: carolinaProvider.id,
           providerServiceId: providerServiceForCarolina.id,
-          scheduledDate: bookingDate,
+          scheduledDate: bookingDate.toISOString().split('T')[0],
           scheduledTime: bookingData.scheduledTime,
           status: BookingStatus.COMPLETED,
           totalPrice: new Prisma.Decimal(bookingData.price),
           notes: bookingData.notes,
         },
       });
-      completedBookingsCarolina.push(completedBookingCarolina); // Alterado para completedBookingsCarolina
-      console.log(`Agendamento Concluído ${completedBookingCarolina.id} (Carolina) criado para ${bookingData.client.fullName}.`); // Alterado para Carolina
+      completedBookingsCarolina.push(completedBookingCarolina);
+      console.log(`Agendamento Concluído ${completedBookingCarolina.id} (Carolina) criado para ${bookingData.client.fullName}.`);
 
-      // Transação para o agendamento concluído de Carolina
       await prisma.transaction.create({
         data: {
-          providerId: carolinaProvider.id, // Alterado para carolinaProvider
+          providerId: carolinaProvider.id,
           amount: new Prisma.Decimal(bookingData.price),
           type: TransactionType.PAYMENT,
           status: 'COMPLETED',
-          description: `Pagamento serviço ${completedBookingCarolina.id}`, // Alterado para completedBookingCarolina
-          bookingId: completedBookingCarolina.id, // Alterado para completedBookingCarolina
+          description: `Pagamento serviço ${completedBookingCarolina.id}`,
+          bookingId: completedBookingCarolina.id,
         },
       });
-      console.log(`Transação de Pagamento para ${completedBookingCarolina.id} criada.`); // Alterado para completedBookingCarolina
+      console.log(`Transação de Pagamento para ${completedBookingCarolina.id} criada.`);
     }
 
     // --- AGENDAMENTO PENDENTE (para Maria - aparece no dashboard) ---
     const booking2Date = new Date();
     booking2Date.setDate(booking2Date.getDate() + 3); // 3 dias no futuro
-    await prisma.booking.create({
-      data: {
-        clientId: carlosClient.id,
-        providerId: mariaProvider.id,
-        providerServiceId: (
-          await prisma.providerService.findFirst({
-            where: { providerId: mariaProvider.id, serviceId: residentialService.id },
-          })
-        )!.id,
-        scheduledDate: booking2Date,
-        scheduledTime: '14:00',
-        status: BookingStatus.PENDING,
-        totalPrice: new Prisma.Decimal(100.0),
-        notes: 'Limpeza de rotina.',
-      },
+    
+    const mariaResidentialServiceForPending = await prisma.providerService.findFirst({
+        where: { providerId: mariaProvider.id, serviceId: residentialService.id },
     });
-    console.log(`Agendamento Pendente para Maria criado.`);
+    console.log('DEBUG: mariaResidentialServiceForPending:', mariaResidentialServiceForPending?.id);
+
+    if (mariaResidentialServiceForPending) {
+        await prisma.booking.create({
+            data: {
+                clientId: beatrizClient.id,
+                providerId: mariaProvider.id,
+                providerServiceId: mariaResidentialServiceForPending.id,
+                scheduledDate: booking2Date.toISOString().split('T')[0],
+                scheduledTime: '14:00',
+                status: BookingStatus.PENDING,
+                totalPrice: new Prisma.Decimal(100.0),
+                notes: 'Limpeza de rotina.',
+            },
+        });
+        console.log(`Agendamento Pendente para Maria criado.`);
+    } else {
+        console.warn('WARN: Maria Residential Service não encontrado para booking pendente, pulando.');
+    }
+
 
     // --- AGENDAMENTO CONFIRMADO (para Carolina - aparece no dashboard) ---
     const booking3Date = new Date();
     booking3Date.setDate(booking3Date.getDate() + 5); // 5 dias no futuro
-    await prisma.booking.create({
-      data: {
-        clientId: anaClient.id,
-        providerId: carolinaProvider.id, // Alterado para carolinaProvider
-        providerServiceId: (
-          await prisma.providerService.findFirst({
-            where: { providerId: carolinaProvider.id, serviceId: commercialService.id }, // Alterado para carolinaProvider
-          })
-        )!.id,
-        scheduledDate: booking3Date,
-        scheduledTime: '09:00',
-        status: BookingStatus.CONFIRMED,
-        totalPrice: new Prisma.Decimal(200.0),
-        notes: 'Limpeza escritório.',
-      },
+
+    const carolinaCommercialService = await prisma.providerService.findFirst({
+        where: { providerId: carolinaProvider.id, serviceId: commercialService.id },
     });
-    console.log(`Agendamento Confirmado para Carolina criado.`); // Alterado para Carolina
+    console.log('DEBUG: carolinaCommercialService:', carolinaCommercialService?.id);
+
+    if (carolinaCommercialService) {
+        await prisma.booking.create({
+            data: {
+                clientId: anaClient.id,
+                providerId: carolinaProvider.id,
+                providerServiceId: carolinaCommercialService.id,
+                scheduledDate: booking3Date.toISOString().split('T')[0],
+                scheduledTime: '09:00',
+                status: BookingStatus.CONFIRMED,
+                totalPrice: new Prisma.Decimal(200.0),
+                notes: 'Limpeza escritório.',
+            },
+        });
+        console.log(`Agendamento Confirmado para Carolina criado.`);
+    } else {
+        console.warn('WARN: Carolina Commercial Service não encontrado para booking confirmado, pulando.');
+    }
+
 
     // --- TRANSAÇÃO DE SAQUE PENDENTE (para Carolina - aparece em pendingWithdrawals) ---
     await prisma.transaction.create({
       data: {
-        providerId: carolinaProvider.id, // Alterado para carolinaProvider
+        providerId: carolinaProvider.id,
         amount: new Prisma.Decimal(50.0),
         type: TransactionType.WITHDRAWAL,
         status: 'PENDING',
         description: 'Solicitação de saque de teste.',
       },
     });
-    console.log(`Transação de Saque Pendente para Carolina criada.`); // Alterado para Carolina
+    console.log(`Transação de Saque Pendente para Carolina criada.`);
 
     // --- TRANSAÇÃO DE SAQUE CONCLUÍDA (para Maria - aparece no histórico, não em pendente) ---
     await prisma.transaction.create({
@@ -835,11 +871,11 @@ async function main() {
     console.log(`Transação de Saque Concluída para Maria criada.`);
 
     // --- NOVO: CRIAÇÃO DE AVALIAÇÕES (REVIEWS) ---
-    console.log('Criando avaliações para Carolina Santos...'); // Alterado para Carolina Santos
+    console.log('Criando avaliações para Carolina Santos...');
 
     const reviewDetails = [
       {
-        comment: 'Excelente trabalho! Carolina é muito profissional e deixou meu escritório impecável. Recomendo!', // Alterado para Carolina
+        comment: 'Excelente trabalho! Carolina é muito profissional e deixou meu escritório impecável. Recomendo!',
         rating: 5,
       },
       {
@@ -847,14 +883,24 @@ async function main() {
         rating: 4,
       },
       {
-        comment: 'Carolina é a melhor! Rápida, eficiente e muito cuidadosa com os detalhes. Contratarei novamente.', // Alterado para Carolina
+        comment: 'Carolina é a melhor! Rápida, eficiente e muito cuidadosa com os detalhes. Contratarei novamente.',
         rating: 5,
       },
     ];
 
-    for (let i = 0; i < completedBookingsCarolina.length; i++) { // Alterado para completedBookingsCarolina
-      const booking = completedBookingsCarolina[i]; // Alterado para completedBookingsCarolina
-      const detail = reviewDetails[i]; // Pega o detalhe da avaliação correspondente
+    console.log('DEBUG: completedBookingsCarolina before review loop:', completedBookingsCarolina);
+    console.log('DEBUG: reviewDetails before review loop:', reviewDetails);
+
+    for (let i = 0; i < completedBookingsCarolina.length; i++) {
+      const booking = completedBookingsCarolina[i];
+      const detail = reviewDetails[i];
+
+      if (!booking || !detail) { // Esta é a linha onde o erro estava, agora com mais logs para debug
+        console.warn(`WARN: Skipping review creation due to missing booking or review detail at index ${i}.`);
+        console.warn('DEBUG: Booking at index', i, ':', booking);
+        console.warn('DEBUG: Detail at index', i, ':', detail);
+        continue;
+      }
 
       await prisma.review.upsert({
         where: {
@@ -874,10 +920,11 @@ async function main() {
           comment: detail.comment,
         },
       });
-      console.log(`Avaliação de ${booking.clientId} para Carolina Santos (booking ${booking.id}) criada/atualizada.`); // Alterado para Carolina Santos
+      console.log(`Avaliação de ${booking.clientId} para Carolina Santos (booking ${booking.id}) criada/atualizada.`);
     }
   } else {
-    console.warn('Não foi possível criar agendamentos/transações/avaliações de teste. Provedores, clientes ou serviços essenciais não encontrados.');
+    console.warn('Não foi possível criar agendamentos/transações/avaliações de teste. Provedoras, clientes ou serviços essenciais não encontrados.');
+    console.warn('DEBUG: mariaProvider:', !!mariaProvider, 'carolinaProvider:', !!carolinaProvider, 'anaClient:', !!anaClient, 'beatrizClient:', !!beatrizClient, 'lauraClient:', !!lauraClient, 'fernandaClient:', !!fernandaClient, 'residentialService:', !!residentialService, 'commercialService:', !!commercialService);
   }
 
   console.log('Seed completo!');
