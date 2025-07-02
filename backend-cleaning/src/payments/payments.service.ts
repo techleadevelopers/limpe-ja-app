@@ -390,6 +390,30 @@ export class PaymentsService {
   async handlePixWebhook(webhookData: any): Promise<MessageResponseDto> {
     this.logger.log('Webhook PIX recebido:', JSON.stringify(webhookData));
 
+    // --- RECOMENDAÇÃO DE SEGURANÇA: VALIDAÇÃO DE ASSINATURA DO WEBHOOK ---
+    // O PagSeguro envia um cabeçalho com a assinatura da requisição (ex: 'x-ps-signature').
+    // Você DEVE usar essa assinatura para verificar a autenticidade do webhook.
+    // Isso geralmente envolve:
+    // 1. Obter o valor do cabeçalho da assinatura.
+    // 2. Obter o corpo RAW da requisição do webhook (antes de ser parseado).
+    // 3. Usar um segredo de webhook (configurado no PagSeguro e no seu ambiente) para
+    //    gerar uma assinatura a partir do corpo da requisição.
+    // 4. Comparar a assinatura gerada com a assinatura recebida no cabeçalho.
+    // Se as assinaturas não baterem, a requisição NÃO é válida e deve ser rejeitada.
+    // Exemplo (pseudocódigo):
+    /*
+    const signature = request.headers['x-ps-signature']; // Ou o nome real do cabeçalho
+    const rawBody = request.rawBody; // Você precisará configurar o NestJS para obter o rawBody
+    const webhookSecret = this.configService.get<string>('PAGSEGURO_WEBHOOK_SECRET');
+
+    if (!verifyWebhookSignature(rawBody, signature, webhookSecret)) {
+      this.logger.error('Assinatura de webhook PIX inválida. Requisição rejeitada.');
+      throw new BadRequestException('Assinatura de webhook inválida.');
+    }
+    */
+    // --- FIM DA RECOMENDAÇÃO DE SEGURANÇA ---
+
+
     // A estrutura do webhook do PagSeguro para "orders" (pedidos) pode variar.
     // Você precisará inspecionar o JSON real que o PagSeguro envia para o seu webhook.
     // Geralmente, eles enviam um 'event' ou 'type' e um 'resource' com os dados do pedido.
@@ -470,7 +494,8 @@ export class PaymentsService {
       return { message: `Webhook processado com sucesso para transação ${transaction.id}.` };
     } catch (error) {
       this.logger.error('Erro ao processar webhook PIX:', error.response?.data || error.message, error.stack);
-      throw new InternalServerErrorException('Erro ao processar webhook PIX.');
+      // RECOMENDAÇÃO: Retornar 200 OK mesmo em caso de erro interno para evitar reenvios do webhook
+      return { message: 'Erro interno ao processar webhook PIX, mas o erro foi logado.' };
     }
   }
 }

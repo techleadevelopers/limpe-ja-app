@@ -8,6 +8,9 @@ import {
   ProviderVerificationInfo,
 } from '../types/backend/verification';
 
+// Importe FileSystem do Expo para ler o conteúdo da URI
+import * as FileSystem from 'expo-file-system';
+
 class VerificationService {
   private readonly BASE_URL = '/verification';
 
@@ -32,19 +35,42 @@ class VerificationService {
 
   /**
    * Faz upload da foto do documento de identidade (frente ou verso).
-   * @param file O objeto File da imagem.
+   * @param imageUri A URI local da imagem (do ImagePicker).
    * @param type O tipo da foto (FRONT ou BACK).
    * @returns Uma promessa que resolve com a resposta da API.
    */
-  async uploadDocumentPhoto(file: File, type: DocumentPhotoType): Promise<VerificationResponse> {
+  async uploadDocumentPhoto(imageUri: string, type: DocumentPhotoType): Promise<VerificationResponse> {
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('type', type);
+      // Verifica se a URI existe
+      const fileInfo = await FileSystem.getInfoAsync(imageUri);
+      if (!fileInfo.exists) {
+        throw new Error("Arquivo da imagem não encontrado na URI fornecida.");
+      }
 
-      const response = await api.post<VerificationResponse>(`${this.BASE_URL}/documents/identity`, formData, {
+      // Converte a URI da imagem em um Blob
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.onload = function () {
+          resolve(xhr.response);
+        };
+        xhr.onerror = function (e) {
+          console.error("Erro ao converter URI para Blob:", e);
+          reject(new TypeError('Network request failed'));
+        };
+        xhr.responseType = 'blob';
+        xhr.open('GET', imageUri, true);
+        xhr.send(null);
+      });
+
+      const formData = new FormData();
+      // Anexa o Blob ao FormData. O nome 'file' deve corresponder ao esperado pelo backend (@UploadedFile('file'))
+      // O terceiro argumento é o nome do arquivo, que pode ser inferido ou um nome padrão.
+      formData.append('file', blob, `document-${type}.jpeg`);
+      formData.append('type', type); // O tipo do documento (FRONT/BACK)
+
+      const response = await api.post<VerificationResponse>(`${this.BASE_URL}/upload-document/${type}`, formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          'Content-Type': 'multipart/form-data', // Essencial para FormData
         },
       });
       return response.data;
@@ -59,17 +85,39 @@ class VerificationService {
 
   /**
    * Faz upload da selfie segurando o documento.
-   * @param file O objeto File da imagem da selfie.
+   * @param imageUri A URI local da imagem da selfie.
    * @returns Uma promessa que resolve com a resposta da API.
    */
-  async uploadSelfie(file: File): Promise<VerificationResponse> {
+  async uploadSelfie(imageUri: string): Promise<VerificationResponse> {
     try {
-      const formData = new FormData();
-      formData.append('file', file);
+      // Verifica se a URI existe
+      const fileInfo = await FileSystem.getInfoAsync(imageUri);
+      if (!fileInfo.exists) {
+        throw new Error("Arquivo da selfie não encontrado na URI fornecida.");
+      }
 
-      const response = await api.post<VerificationResponse>(`${this.BASE_URL}/documents/selfie`, formData, {
+      // Converte a URI da imagem em um Blob
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.onload = function () {
+          resolve(xhr.response);
+        };
+        xhr.onerror = function (e) {
+          console.error("Erro ao converter URI para Blob (selfie):", e);
+          reject(new TypeError('Network request failed'));
+        };
+        xhr.responseType = 'blob';
+        xhr.open('GET', imageUri, true);
+        xhr.send(null);
+      });
+
+      const formData = new FormData();
+      // Anexa o Blob ao FormData. O nome 'file' deve corresponder ao esperado pelo backend (@UploadedFile('file'))
+      formData.append('file', blob, `selfie.jpeg`); // Nome padrão para o arquivo da selfie
+
+      const response = await api.post<VerificationResponse>(`${this.BASE_URL}/upload-selfie`, formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          'Content-Type': 'multipart/form-data', // Essencial para FormData
         },
       });
       return response.data;
