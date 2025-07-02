@@ -8,7 +8,7 @@ CLIENT_EMAIL="cliente.script.$TIMESTAMP@example.com"
 
 # CPF VÁLIDO DE TESTE (SUBSTITUA POR UM CPF VÁLIDO REAL GERADO PARA TESTES)
 # Use um gerador de CPF online como https://www.geradordecpf.org/ e COLOQUE APENAS OS DÍGITOS
-CLIENT_CPF_VALIDO="SEU_CPF_VALIDO_REAL_AQUI" # Exemplo: SUBSTITUA POR UM CPF VÁLIDO REAL DE 11 DÍGITOS AQUI!
+CLIENT_CPF_VALIDO="30061150827" # Exemplo: SUBSTITUA POR UM CPF VÁLIDO REAL DE 11 DÍGITOS AQUI!
 
 # Gerar um CPF para o provedor (para unicidade, não validação matemática real)
 # Garante 11 dígitos para o CPF do provedor também

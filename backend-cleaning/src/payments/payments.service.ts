@@ -1,13 +1,11 @@
-// src/payments/payments.service.ts
-import { Injectable, InternalServerErrorException, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { BookingStatus, TransactionType } from '@prisma/client';
+import axios from 'axios';
+import { MessageResponseDto } from '../common/dto/message-response.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePixChargeDto, PixChargeResponseDto } from './dto/create-pix-charge.dto';
 import { RequestWithdrawalDto } from './dto/request-withdrawal.dto';
-import { TransactionType, BookingStatus, UserRole } from '@prisma/client';
-import { TransactionEntity } from './entities/transaction.entity';
-import { MessageResponseDto } from '../common/dto/message-response.dto';
-import { ConfigService } from '@nestjs/config';
-import axios from 'axios';
 
 @Injectable()
 export class PaymentsService {
@@ -21,7 +19,8 @@ export class PaymentsService {
     private configService: ConfigService,
   ) {
     this.pagseguroApiToken = this.configService.get<string>('PAGSEGURO_API_TOKEN');
-    this.pagseguroApiBaseUrl = this.configService.get<string>('PAGSEGURO_API_BASE_URL', 'https://api.pagseguro.com');
+    // ALTERADO: Base URL agora aponta para o endpoint de 'orders'
+    this.pagseguroApiBaseUrl = this.configService.get<string>('PAGSEGURO_API_BASE_URL', 'https://sandbox.api.pagseguro.com');
     this.appBaseUrl = this.configService.get<string>('APP_BASE_URL'); // Obtenha a URL base do seu app para webhooks
 
     if (!this.pagseguroApiToken) {
@@ -35,16 +34,17 @@ export class PaymentsService {
   }
 
   /**
-   * Método interno para criar a transação PIX diretamente com a API do PagSeguro.
+   * Método interno para criar a transação PIX diretamente com a API do PagSeguro (Endpoint de Pedidos com QR Code).
    * @param bookingId ID da reserva/serviço associado.
    * @param serviceCost Custo do serviço.
-   * @param clientEmail E-mail do cliente (necessário para algumas APIs de pagamento).
+   * @param clientEmail E-mail do cliente.
    * @returns Dados da transação, incluindo QR Code.
    */
   async createPixTransaction(bookingId: string, serviceCost: number, clientEmail: string): Promise<any> {
-    this.logger.log(`Iniciando criação de transação PIX para reserva ${bookingId} com custo ${serviceCost}.`);
-    // Endpoint para criar cobranças (charges)
-    const url = `${this.pagseguroApiBaseUrl}/charges`; // Mantendo /charges, pois é mais provável para PIX
+    this.logger.log(`Iniciando criação de transação PIX (via /orders) para reserva ${bookingId} com custo ${serviceCost}.`);
+
+    // ALTERADO: Endpoint agora é /orders conforme a documentação
+    const url = `${this.pagseguroApiBaseUrl}/orders`;
 
     try {
       // Buscar o Booking e, a partir dele, o Cliente e seus dados completos
@@ -52,6 +52,17 @@ export class PaymentsService {
         where: { id: bookingId },
         select: {
           id: true,
+          totalPrice: true, // Adicionado para usar no item do pedido
+          // CORREÇÃO: Acessar 'service' através de 'providerService'
+          providerService: {
+            select: {
+              service: { // Agora sim, 'service' existe dentro de 'providerService'
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
           client: { // Incluir a relação 'client'
             select: {
               id: true,
@@ -61,7 +72,7 @@ export class PaymentsService {
               user: { // Incluir a relação 'user' dentro de 'client'
                 select: {
                   email: true,
-                }
+                },
               },
               address: { // Incluir a relação 'address' dentro de 'client'
                 select: {
@@ -71,75 +82,100 @@ export class PaymentsService {
                   complement: true,
                   neighborhood: true,
                   city: true,
-                  state: true
-                }
-              }
-            }
-          }
-        }
+                  state: true,
+                },
+              },
+            },
+          },
+        },
       });
 
-      if (!bookingWithClientDetails || !bookingWithClientDetails.client || !bookingWithClientDetails.client.user || !bookingWithClientDetails.client.user.email) {
-        this.logger.error(`Dados completos do cliente para bookingId ${bookingId} não encontrados para PIX.`);
-        throw new BadRequestException('Dados completos do cliente para PIX incompletos ou booking não encontrado.');
+      // CORREÇÃO: Ajuste a condição de verificação de nulos para refletir a nova estrutura
+      if (!bookingWithClientDetails || !bookingWithClientDetails.client || !bookingWithClientDetails.client.user || !bookingWithClientDetails.client.user.email || !bookingWithClientDetails.providerService?.service) {
+        this.logger.error(`Dados completos do cliente/serviço para bookingId ${bookingId} não encontrados para PIX.`);
+        throw new BadRequestException('Dados completos do cliente/serviço para PIX incompletos ou booking não encontrado.');
       }
 
       const client = bookingWithClientDetails.client;
-      
-      // Usar o CPF real do cliente. Agora que CPF está no modelo Client.
-      const customerTaxId = client.cpf || '11111111111'; // TODO: Remover fallback '11111111111' em produção
+      // CORREÇÃO: Acessar o nome do serviço corretamente
+      const serviceName = bookingWithClientDetails.providerService.service.name;
 
-      const customerPayload = {
-        name: client.fullName,
-        email: client.user.email,
-        tax_id: customerTaxId, 
-        phones: [{
-          country: '55',
-          area: client.phone?.substring(0, 2) || '11',
-          number: client.phone?.substring(2) || '999999999',
-          type: 'MOBILE'
-        }],
-        address: {
-          street: client.address?.street || 'Rua Teste',
-          number: client.address?.number || '123',
-          complement: client.address?.complement || '',
-          locality: client.address?.neighborhood || 'Bairro Teste',
-          city: client.address?.city || 'Cidade Teste',
-          state: client.address?.state || 'SP',
-          postal_code: client.address?.cep || '00000000',
-          country: 'BRA'
-        }
+      // Use o CPF real do cliente. TODO: Remover fallback '11111111111' em produção.
+      // IMPORTANTE: Para testes no SANDBOX do PagSeguro, use um CPF válido fornecido por ELES!
+      // Ex: '99999999999' ou '12345678909' (verificar na documentação do PagSeguro Sandbox)
+      const customerTaxId = client.cpf || '30061150827'; // Fallback para CPF para evitar erro
+      // Certifique-se de que o telefone tem pelo menos 11 dígitos para a divisão
+      const customerPhoneArea = client.phone ? client.phone.substring(0, 2) : '00'; // Fallback para DDD
+      const customerPhoneNumber = client.phone && client.phone.length >= 11 ? client.phone.substring(2) : '999999999'; // Fallback para número
+
+      // --- MUDANÇA AQUI: COMO O ENDEREÇO É CONSTRUÍDO ---
+      const addressPayload: any = {
+        street: client.address?.street || 'Rua Teste',
+        number: client.address?.number || '123',
+        locality: client.address?.neighborhood || 'Bairro Teste', // 'locality' para bairro no PagSeguro
+        city: client.address?.city || 'Cidade Teste',
+        region_code: client.address?.state || 'SP', // Usar region_code para estado
+        country: 'BRA',
+        postal_code: client.address?.cep || '00000000',
       };
 
-      const pixPayload = {
-        expires_in: 1800, // 30 minutos em segundos
-        // CORREÇÃO: Removido notification_id, pois estava causando 'invalid_parameter'
+      // Condicionalmente adicione o 'complement' APENAS SE TIVER UM VALOR VÁLIDO.
+      // Isso evita enviar "" para o PagSeguro, que causa o erro "must not be blank".
+      if (client.address?.complement && client.address.complement.trim() !== '') {
+        addressPayload.complement = client.address.complement;
+      }
+      // --- FIM DA MUDANÇA ---
+
+      const payload = {
+        reference_id: bookingId, // ID de referência do seu pedido
+        customer: {
+          name: client.fullName,
+          email: client.user.email,
+          tax_id: customerTaxId,
+          phones: [
+            {
+              country: '55',
+              area: customerPhoneArea,
+              number: customerPhoneNumber,
+              type: 'MOBILE',
+            },
+          ],
+        },
+        items: [ // Itens do pedido, o PagSeguro espera um array
+          {
+            name: serviceName, // Nome do serviço
+            quantity: 1,
+            unit_amount: Math.round(serviceCost * 100), // Valor em centavos
+          },
+        ],
+        qr_codes: [ // Objeto para QR Code PIX
+          {
+            amount: {
+              value: Math.round(serviceCost * 100), // Valor em centavos novamente
+            },
+            // expiration_date: "2025-07-05T20:15:59-03:00", // Opcional: Define a expiração. Padrão: 24 horas.
+            // Se não definir, PagSeguro usa 24h. Se definir, cuidado com o formato ISO 8601.
+          },
+        ],
+        shipping: { // Dados de entrega/endereço do cliente (opcional, mas recomendado)
+          address: addressPayload, // Usa o objeto addressPayload que já lida com o 'complement'
+        },
+        notification_urls: [`${this.appBaseUrl}/payments/webhook/pix`], // URL para seu webhook de PIX
       };
 
-      const response = await axios.post(url, {
-        reference_id: bookingId,
-        description: `Pagamento de serviço para reserva ${bookingId}`,
-        amount: {
-          value: Math.round(serviceCost * 100), // Valor em centavos
-          currency: 'BRL',
-        },
-        payment_method: {
-          type: 'PIX',
-          pix: pixPayload,
-        },
-        customer: customerPayload,
-        notification_urls: [`${this.appBaseUrl}/webhook/pagseguro`],
-      }, {
+      this.logger.debug(`Enviando para PagSeguro (/orders): ${JSON.stringify(payload)}`);
+
+      const response = await axios.post(url, payload, {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${this.pagseguroApiToken}`,
         },
       });
 
-      this.logger.log(`Transação PIX criada com sucesso para reserva ${bookingId}.`);
+      this.logger.log(`Pedido PIX criado com sucesso para reserva ${bookingId}.`);
       return response.data;
     } catch (error) {
-      this.logger.error(`Erro ao criar transação PIX para reserva ${bookingId}: ${error.message}`);
+      this.logger.error(`Erro ao criar pedido PIX para reserva ${bookingId}: ${error.message}`);
       if (axios.isAxiosError(error) && error.response) {
         this.logger.error(`Dados do erro da API PagSeguro: ${JSON.stringify(error.response.data)}`);
         const pagseguroErrorMessage = error.response.data?.error_messages?.[0]?.description || error.response.data?.message || 'Erro desconhecido do PagSeguro.';
@@ -181,13 +217,13 @@ export class PaymentsService {
 
     // Buscar o email do cliente para o payload do PagSeguro
     const clientUser = await this.prisma.user.findUnique({
-        where: { id: clientId },
-        select: { email: true }
+      where: { id: clientId },
+      select: { email: true },
     });
 
     if (!clientUser || !clientUser.email) {
-        this.logger.error(`Email do cliente ${clientId} não encontrado para criar cobrança PIX.`);
-        throw new BadRequestException('Email do cliente necessário para criar cobrança PIX.');
+      this.logger.error(`Email do cliente ${clientId} não encontrado para criar cobrança PIX.`);
+      throw new BadRequestException('Email do cliente necessário para criar cobrança PIX.');
     }
 
     try {
@@ -196,17 +232,23 @@ export class PaymentsService {
       const pixResponseFromGateway = await this.createPixTransaction(
         bookingId, // Passa o bookingId para a função interna
         amount,
-        clientUser.email // Passa o email do cliente
+        clientUser.email, // Passa o email do cliente
       );
 
       // Extrair dados da resposta do PagSeguro (ajuste conforme a estrutura real da resposta da API de Pedidos do PagSeguro)
-      const brCode = pixResponseFromGateway.qr_codes?.[0]?.text; // BR Code (linha digitável)
-      const qrCodeImage = pixResponseFromGateway.qr_codes?.[0]?.links?.[0]?.href; // URL da imagem do QR Code
-      const expiresAt = pixResponseFromGateway.qr_codes?.[0]?.expiration_date ? new Date(pixResponseFromGateway.qr_codes[0].expiration_date) : new Date(Date.now() + 3600 * 1000); // Exemplo de expiração
-      const gatewayTransactionId = pixResponseFromGateway.id; // ID da transação no PagSeguro
+      // A documentação indica que a resposta tem um array qr_codes, e dentro dele um array links
+      const pixQrCodeData = pixResponseFromGateway.qr_codes?.[0];
+      const brCode = pixQrCodeData?.text; // BR Code (linha digitável)
+
+      // Encontra a URL da imagem do QR Code
+      const qrCodeImageLink = pixQrCodeData?.links?.find(link => link.media === 'image/png');
+      const qrCodeImage = qrCodeImageLink?.href;
+
+      const expiresAt = pixQrCodeData?.expiration_date ? new Date(pixQrCodeData.expiration_date) : new Date(Date.now() + 24 * 3600 * 1000); // Padrão 24h se não vier na resposta
+      const gatewayTransactionId = pixResponseFromGateway.id; // ID da transação no PagSeguro, que é o ID do pedido
 
       if (!brCode || !qrCodeImage || !gatewayTransactionId) {
-        this.logger.error(`[PaymentsService] createPixCharge - Resposta inválida do PagSeguro: ${JSON.stringify(pixResponseFromGateway)}`);
+        this.logger.error(`[PaymentsService] createPixCharge - Resposta inválida do PagSeguro (dados PIX): ${JSON.stringify(pixResponseFromGateway)}`);
         throw new InternalServerErrorException('Falha ao gerar dados de PIX. Resposta incompleta do gateway.');
       }
       // --- FIM DA INTEGRAÇÃO REAL COM GATEWAY DE PAGAMENTO PIX ---
@@ -247,12 +289,13 @@ export class PaymentsService {
       return {
         transactionId: transaction.id,
         status: 'PENDING',
-        brCode: brCode, // Use brCode do gateway
-        qrCodeImage: qrCodeImage, // Use qrCodeImage do gateway
-        expiresAt: expiresAt.toISOString(), // Converte Date para string ISO para o DTO de resposta
+        brCode: brCode,
+        qrCodeImage: qrCodeImage,
+        expiresAt: expiresAt.toISOString(),
         amount: amount,
         description: description,
         bookingId: bookingId,
+        providerId: providerId, // Esta linha foi adicionada/confirmada para o DTO de resposta
       };
     } catch (error) {
       this.logger.error('Erro ao criar cobrança PIX:', error.response?.data || error.message, error.stack);
@@ -347,66 +390,84 @@ export class PaymentsService {
   async handlePixWebhook(webhookData: any): Promise<MessageResponseDto> {
     this.logger.log('Webhook PIX recebido:', JSON.stringify(webhookData));
 
-    const { transactionId, status, bookingId } = webhookData;
+    // A estrutura do webhook do PagSeguro para "orders" (pedidos) pode variar.
+    // Você precisará inspecionar o JSON real que o PagSeguro envia para o seu webhook.
+    // Geralmente, eles enviam um 'event' ou 'type' e um 'resource' com os dados do pedido.
+    // Para este exemplo, vou assumir uma estrutura comum que incluiria o ID do pedido (bookingId)
+    // e o status. VOCÊ PRECISARÁ ADAPTAR ISSO BASEADO NO QUE O PAGSEGURO ENVIAR.
 
-    if (!transactionId || !status) {
-      this.logger.error('Dados essenciais ausentes no webhook PIX:', webhookData);
-      throw new BadRequestException('Dados essenciais (transactionId, status) ausentes no webhook.');
+    // Exemplo de como pode ser a extração se o PagSeguro enviar algo como:
+    // { "event": "order.paid", "resource": { "id": "ORDER_ID", "status": "PAID", ... } }
+    const gatewayOrderId = webhookData.resource?.id || webhookData.id; // Pegar o ID do pedido do PagSeguro
+    const gatewayStatus = webhookData.resource?.status || webhookData.status; // Pegar o status do pedido
+
+    if (!gatewayOrderId || !gatewayStatus) {
+      this.logger.error('Dados essenciais (gatewayOrderId, gatewayStatus) ausentes no webhook PIX:', webhookData);
+      throw new BadRequestException('Dados essenciais (gatewayOrderId, gatewayStatus) ausentes no webhook.');
     }
 
     try {
-      const transaction = await this.prisma.transaction.findUnique({
-        where: { id: transactionId },
+      // Usar o gatewayTransactionId (que é o ID do pedido do PagSeguro) para encontrar a transação local
+      const transaction = await this.prisma.transaction.findFirst({
+        where: { gatewayTransactionId: gatewayOrderId },
       });
 
       if (!transaction) {
-        this.logger.warn(`Transação com ID "${transactionId}" não encontrada para o webhook.`);
-        return { message: `Transação com ID "${transactionId}" não encontrada.` };
+        this.logger.warn(`Transação com gatewayTransactionId "${gatewayOrderId}" não encontrada para o webhook.`);
+        return { message: `Transação com gatewayTransactionId "${gatewayOrderId}" não encontrada.` };
       }
 
-      if (transaction.status === status) {
-        this.logger.warn(`Webhook para transação ${transaction.id} já processado com status ${status}. Ignorando.`);
-        return { message: `Webhook já processado para transação ${transaction.id}.` };
-      }
-
-      let newBookingStatus: BookingStatus;
+      // Mapear status do PagSeguro para seus status internos
+      let newBookingStatus: BookingStatus | undefined;
       let newTransactionStatus: string;
 
-      if (status === 'COMPLETED' || status === 'PAID') {
-        newBookingStatus = BookingStatus.CONFIRMED;
-        newTransactionStatus = 'COMPLETED';
-        this.logger.log(`Pagamento PIX COMPLETED para transação ${transaction.id}. Confirmando agendamento.`);
-      }
-      else if (status === 'FAILED' || status === 'CANCELED' || status === 'REFUNDED') {
-        newBookingStatus = BookingStatus.CANCELED;
-        newTransactionStatus = status.toUpperCase();
-        this.logger.log(`Pagamento PIX ${status} para transação ${transaction.id}. Cancelando agendamento.`);
-      } else {
-        newTransactionStatus = status.toUpperCase();
-        this.logger.log(`Status intermediário ${status} para transação ${transaction.id}.`);
-        await this.prisma.transaction.update({
-          where: { id: transaction.id },
-          data: { status: newTransactionStatus },
-        });
-        return { message: `Status da transação ${transaction.id} atualizado para ${newTransactionStatus}.` };
+      // Exemplos de status do PagSeguro para "orders"
+      // Você precisará consultar a documentação de Webhooks/Notificações do PagSeguro para a lista exata.
+      switch (gatewayStatus.toLowerCase()) {
+        case 'paid':
+        case 'completed': // Se o PagSeguro usa 'completed' para pedidos pagos
+          newBookingStatus = BookingStatus.CONFIRMED;
+          newTransactionStatus = 'COMPLETED'; // Ou 'PAID' se preferir
+          this.logger.log(`Pagamento PIX CONFIRMADO para pedido ${gatewayOrderId}. Confirmando agendamento ${transaction.bookingId}.`);
+          break;
+        case 'canceled':
+        case 'voided': // Ex: estornado
+          newBookingStatus = BookingStatus.CANCELED;
+          newTransactionStatus = 'CANCELED';
+          this.logger.log(`Pagamento PIX ${gatewayStatus} para pedido ${gatewayOrderId}. Cancelando agendamento ${transaction.bookingId}.`);
+          break;
+        case 'processing':
+        case 'pending':
+          newTransactionStatus = 'PENDING';
+          // Não altera o status do booking, pois já deve estar PENDING
+          this.logger.log(`Status intermediário ${gatewayStatus} para pedido ${gatewayOrderId}.`);
+          break;
+        default:
+          newTransactionStatus = gatewayStatus.toUpperCase();
+          this.logger.warn(`Status do PagSeguro "${gatewayStatus}" não mapeado. Atualizando transação para ${newTransactionStatus}.`);
       }
 
+      // Atualiza o status da transação
       await this.prisma.transaction.update({
         where: { id: transaction.id },
         data: { status: newTransactionStatus },
       });
+      this.logger.log(`Status da transação ${transaction.id} atualizado para ${newTransactionStatus}.`);
 
-      const associatedBookingId = bookingId || transaction.bookingId;
 
-      if (associatedBookingId) {
-        this.logger.log(`Atualizando status do agendamento ${associatedBookingId} para ${newBookingStatus}.`);
+      // Se um novo status de booking foi determinado, atualiza o agendamento
+      if (newBookingStatus && transaction.bookingId) {
+        this.logger.log(`Atualizando status do agendamento ${transaction.bookingId} para ${newBookingStatus}.`);
         await this.prisma.booking.update({
-          where: { id: associatedBookingId },
+          where: { id: transaction.bookingId },
           data: { status: newBookingStatus },
         });
-      } else {
+        this.logger.log(`Status do agendamento ${transaction.bookingId} atualizado para ${newBookingStatus}.`);
+      } else if (newBookingStatus && !transaction.bookingId) {
         this.logger.warn(`Transação ${transaction.id} não possui bookingId associado. Agendamento não atualizado.`);
       }
+
+      return { message: `Webhook processado com sucesso para transação ${transaction.id}.` };
     } catch (error) {
       this.logger.error('Erro ao processar webhook PIX:', error.response?.data || error.message, error.stack);
       throw new InternalServerErrorException('Erro ao processar webhook PIX.');
