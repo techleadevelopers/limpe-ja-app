@@ -5,9 +5,15 @@ baseUrl="http://localhost:3000"
 # Gerar um timestamp único para o email para evitar conflitos de email já cadastrado
 TIMESTAMP=$(date +%s)
 CLIENT_EMAIL="cliente.script.$TIMESTAMP@example.com"
-# Gerar um CPF com base no timestamp (para unicidade, não validação matemática real)
-RANDOM_CPF_PART=$(date +%s%N | cut -c1-9)
-PROVIDER_CPF="${RANDOM_CPF_PART}01"
+
+# CPF VÁLIDO DE TESTE (SUBSTITUA POR UM CPF VÁLIDO REAL GERADO PARA TESTES)
+# Use um gerador de CPF online como https://www.geradordecpf.org/ e COLOQUE APENAS OS DÍGITOS
+CLIENT_CPF_VALIDO="SEU_CPF_VALIDO_REAL_AQUI" # Exemplo: SUBSTITUA POR UM CPF VÁLIDO REAL DE 11 DÍGITOS AQUI!
+
+# Gerar um CPF para o provedor (para unicidade, não validação matemática real)
+# Garante 11 dígitos para o CPF do provedor também
+RANDOM_CPF_PART=$(date +%s%N | cut -c1-11) # Gera 11 dígitos aleatórios
+PROVIDER_CPF="${RANDOM_CPF_PART}" # Apenas o número, sem '01' no final se já tem 11
 
 PROVIDER_EMAIL="provedor.script.$TIMESTAMP@example.com"
 ADMIN_EMAIL="admin.client@cleaning.com" # Email do admin criado no seed.ts
@@ -25,22 +31,35 @@ echo "--- Iniciando Testes Automatizados LimpeJá ---"
 
 # --- 1.1. Autenticação: Registrar Cliente ---
 echo "1.1. Registrando Cliente..."
+# CORREÇÃO: Usando jq -n para construir o payload JSON do cliente de forma segura
+JSON_PAYLOAD_CLIENT=$(jq -n \
+    --arg email "$CLIENT_EMAIL" \
+    --arg password "Password123!" \
+    --arg fullName "Cliente Script" \
+    --arg phone "11987654321" \
+    --arg cpf "$CLIENT_CPF_VALIDO" \
+    '{
+        "email": $email,
+        "password": $password,
+        "fullName": $fullName,
+        "phone": $phone,
+        "cpf": $cpf, # Adicionado o CPF aqui para o cliente
+        "address": {
+            "cep": "01001000",
+            "street": "Rua Script Cliente",
+            "number": "100",
+            "neighborhood": "Centro",
+            "city": "Sao Paulo",
+            "state": "SP"
+        }
+    }')
+
+echo "DEBUG - Cliente: JSON gerado para envio:"
+echo "$JSON_PAYLOAD_CLIENT"
+
 RESPONSE_CLIENT=$(curl -s -X POST "$baseUrl/auth/register/client" \
-     -H "Content-Type: application/json" \
-     -d '{
-           "email": "'"$CLIENT_EMAIL"'",
-           "password": "Password123!",
-           "fullName": "Cliente Script",
-           "phone": "11987654321",
-           "address": {
-             "cep": "01001000",
-             "street": "Rua Script Cliente",
-             "number": "100",
-             "neighborhood": "Centro",
-             "city": "Sao Paulo",
-             "state": "SP"
-           }
-         }' 2>/dev/null)
+      -H "Content-Type: application/json" \
+      -d "$JSON_PAYLOAD_CLIENT" 2>/dev/null)
 
 echo "DEBUG - Cliente: Resposta Bruta:"
 echo "$RESPONSE_CLIENT"
@@ -69,24 +88,24 @@ fi
 # --- 1.2. Autenticação: Registrar Provedor ---
 echo "1.2. Registrando Provedor..."
 RESPONSE_PROVIDER=$(curl -s -X POST "$baseUrl/auth/register/provider" \
-     -H "Content-Type: application/json" \
-     -d "$(printf '{
-           "email": "%s",
-           "password": "Password123!",
-           "fullName": "Provedor Script",
-           "cpf": "%s",
-           "dateOfBirth": "1990-01-01T00:00:00.000Z",
-           "phone": "11998765432",
-           "yearsOfExperience": 1,
-           "address": {
-             "cep": "02002000",
-             "street": "Avenida Script Provedor",
-             "number": "200",
-             "neighborhood": "Bairro Script",
-             "city": "Sao Paulo",
-             "state": "SP"
-           }
-         }' "$PROVIDER_EMAIL" "$PROVIDER_CPF")" 2>/dev/null)
+      -H "Content-Type: application/json" \
+      -d "$(printf '{
+            "email": "%s",
+            "password": "Password123!",
+            "fullName": "Provedor Script",
+            "cpf": "%s",
+            "dateOfBirth": "1990-01-01T00:00:00.000Z",
+            "phone": "11998765432",
+            "yearsOfExperience": 1,
+            "address": {
+              "cep": "02002000",
+              "street": "Avenida Script Provedor",
+              "number": "200",
+              "neighborhood": "Bairro Script",
+              "city": "Sao Paulo",
+              "state": "SP"
+            }
+          }' "$PROVIDER_EMAIL" "$PROVIDER_CPF")" 2>/dev/null)
 
 echo "DEBUG - Provedor: Resposta Bruta:"
 echo "$RESPONSE_PROVIDER"
@@ -115,11 +134,11 @@ fi
 # --- 1.3. Realizando Login Admin para obter o ADMIN_TOKEN dinamicamente ---
 echo "1.3. Realizando Login Admin..."
 RESPONSE_ADMIN_LOGIN=$(curl -s -X POST "$baseUrl/auth/login" \
-     -H "Content-Type: application/json" \
-     -d '{
-           "email": "'"$ADMIN_EMAIL"'",
-           "password": "'"$ADMIN_PASSWORD"'"
-         }' 2>/dev/null)
+      -H "Content-Type: application/json" \
+      -d '{
+            "email": "'"$ADMIN_EMAIL"'",
+            "password": "'"$ADMIN_PASSWORD"'"
+          }' 2>/dev/null)
 
 echo "DEBUG - Admin Login: Resposta Bruta:"
 echo "$RESPONSE_ADMIN_LOGIN"
@@ -141,12 +160,12 @@ fi
 # --- 2. Cadastro Completo de Provider + Verificação ---
 echo "2.1. Atualizando dados do provedor..."
 curl -s -X PATCH "$baseUrl/providers/me" \
-     -H "Content-Type: application/json" \
-     -H "Authorization: Bearer $PROVIDER_TOKEN" \
-     -d '{
-           "pixKey": "script.pix@teste.com",
-           "bio": "Este é o campo bio atualizado após o registro inicial e aceito no DTO!"
-         }' 2>/dev/null
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer $PROVIDER_TOKEN" \
+      -d '{
+            "pixKey": "script.pix@teste.com",
+            "bio": "Este é o campo bio atualizado após o registro inicial e aceito no DTO!"
+          }' 2>/dev/null
 echo "   ✅ Dados do provedor atualizados."
 
 # Nota: Upload de arquivo com cURL em scripts é mais complexo devido ao path absoluto e ambiente.
@@ -157,9 +176,9 @@ echo "2.2. Aprovando provedor (via ADMIN, se token disponível)..."
 # É crucial que ADMIN_TOKEN seja preenchido E válido para esta etapa.
 if [[ -n "$ADMIN_TOKEN" && "$ADMIN_TOKEN" != "null" ]]; then
     RESPONSE_APPROVE=$(curl -s -X PATCH "$baseUrl/verification/$PROVIDER_ID/status" \
-         -H "Content-Type: application/json" \
-         -H "Authorization: Bearer $ADMIN_TOKEN" \
-         -d '{"status": "APPROVED"}' 2>/dev/null)
+          -H "Content-Type: application/json" \
+          -H "Authorization: Bearer $ADMIN_TOKEN" \
+          -d '{"status": "APPROVED"}' 2>/dev/null)
     APPROVAL_STATUS=$(echo "$RESPONSE_APPROVE" | jq -r '.message' | grep -q "atualizado para APPROVED" && echo "APPROVED" || echo "UNKNOWN")
     
     if [[ "$APPROVAL_STATUS" == "APPROVED" ]]; then
@@ -170,7 +189,7 @@ if [[ -n "$ADMIN_TOKEN" && "$ADMIN_TOKEN" != "null" ]]; then
     fi
 else
     echo "   ⚠️ Token ADMIN não disponível ou não capturado. Pulando aprovação manual por ADMIN."
-    echo "      Para continuar, o provedor precisa ter sido automaticamente APROVADO pela simulação de verificação."
+    echo "   Para continuar, o provedor precisa ter sido automaticamente APROVADO pela simulação de verificação."
 fi
 
 # Verificar status final do provedor
@@ -194,14 +213,14 @@ fi
 echo "3.1. Criando serviço '$SERVICE_NAME_DYNAMIC'..."
 if [[ -n "$ADMIN_TOKEN" && "$ADMIN_TOKEN" != "null" ]]; then
     RESPONSE_SERVICE=$(curl -s -X POST "$baseUrl/services" \
-         -H "Content-Type: application/json" \
-         -H "Authorization: Bearer $ADMIN_TOKEN" \
-         -d '{
-               "name": "'"$SERVICE_NAME_DYNAMIC"'",
-               "description": "Serviço via script",
-               "price": 90.00,
-               "icon": "script-icon"
-             }' 2>/dev/null)
+          -H "Content-Type: application/json" \
+          -H "Authorization: Bearer $ADMIN_TOKEN" \
+          -d '{
+                "name": "'"$SERVICE_NAME_DYNAMIC"'",
+                "description": "Serviço via script",
+                "price": 90.00,
+                "icon": "script-icon"
+              }' 2>/dev/null)
 
     SERVICE_ID=$(echo "$RESPONSE_SERVICE" | jq -r '.id')
     if [[ -n "$SERVICE_ID" && "$SERVICE_ID" != "null" ]]; then
@@ -212,7 +231,7 @@ if [[ -n "$ADMIN_TOKEN" && "$ADMIN_TOKEN" != "null" ]]; then
     fi
 else
     echo "   ❌ Token ADMIN não disponível ou não capturado. Pulando criação de serviço."
-    echo "      Para continuar o fluxo, o serviço 'Limpeza Residencial Script' JÁ DEVE EXISTIR no banco de dados."
+    echo "   Para continuar o fluxo, o serviço 'Limpeza Residencial Script' JÁ DEVE EXISTIR no banco de dados."
     exit 1
 fi
 
@@ -224,9 +243,9 @@ if [[ -z "$SERVICE_ID" || "$SERVICE_ID" == "null" ]]; then
 fi
 
 RESPONSE_PROVIDER_SERVICE_BINDING=$(curl -s -X POST "$baseUrl/providers/$PROVIDER_ID/services" \
-     -H "Content-Type: application/json" \
-     -H "Authorization: Bearer $PROVIDER_TOKEN" \
-     -d '{"serviceId": "'"$SERVICE_ID"'", "price": 90.00, "durationMinutes": 120}' 2>/dev/null)
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer $PROVIDER_TOKEN" \
+      -d '{"serviceId": "'"$SERVICE_ID"'", "price": 90.00, "durationMinutes": 120}' 2>/dev/null)
 
 PROVIDER_SERVICE_OFFERING_ID=$(echo "$RESPONSE_PROVIDER_SERVICE_BINDING" | jq -r '.id')
 
@@ -246,9 +265,9 @@ PRISMA_DAY_OF_WEEK=$(date -u -d "@$FUTURE_UNIX_TIMESTAMP" +"%w")
 
 
 curl -s -X PATCH "$baseUrl/providers/$PROVIDER_ID/availability" \
-     -H "Content-Type: application/json" \
-     -H "Authorization: Bearer $PROVIDER_TOKEN" \
-     -d '[{"dayOfWeek": '"$PRISMA_DAY_OF_WEEK"', "startTime": "09:00", "endTime": "17:00", "isAvailable": true}]' 2>/dev/null
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer $PROVIDER_TOKEN" \
+      -d '[{"dayOfWeek": '"$PRISMA_DAY_OF_WEEK"', "startTime": "09:00", "endTime": "17:00", "isAvailable": true}]' 2>/dev/null
 echo "   ✅ Disponibilidade cadastrada para $FUTURE_DATE_FORMATED (Dia da semana Prisma: $PRISMA_DAY_OF_WEEK)."
 
 
@@ -281,15 +300,33 @@ echo "$JSON_PAYLOAD_BOOKING"
 echo "" # Nova linha
 
 RESPONSE_BOOKING=$(curl -s -X POST "$baseUrl/bookings/schedule-and-pay" \
-     -H "Content-Type: application/json" \
-     -H "Authorization: Bearer $CLIENT_TOKEN" \
-     -d "$JSON_PAYLOAD_BOOKING" 2>/dev/null)
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer $CLIENT_TOKEN" \
+      -d "$JSON_PAYLOAD_BOOKING" 2>/dev/null)
 
 BOOKING_ID=$(echo "$RESPONSE_BOOKING" | jq -r '.booking.id')
 BOOKING_STATUS=$(echo "$RESPONSE_BOOKING" | jq -r '.booking.status')
 
+# --- NOVO: Capturar e verificar dados do PIX ---
+PIX_BR_CODE=$(echo "$RESPONSE_BOOKING" | jq -r '.pixCharge.brCode')
+PIX_QR_CODE_IMAGE=$(echo "$RESPONSE_BOOKING" | jq -r '.pixCharge.qrCodeImage')
+PIX_TRANSACTION_ID=$(echo "$RESPONSE_BOOKING" | jq -r '.pixCharge.transactionId')
+
 if [[ -n "$BOOKING_ID" && "$BOOKING_ID" != "null" && "$BOOKING_STATUS" == "PENDING" ]]; then
     echo "   ✅ Agendamento criado. ID: $BOOKING_ID. Status: $BOOKING_STATUS"
+    
+    if [[ -n "$PIX_BR_CODE" && "$PIX_BR_CODE" != "null" && \
+          -n "$PIX_QR_CODE_IMAGE" && "$PIX_QR_CODE_IMAGE" != "null" && \
+          -n "$PIX_TRANSACTION_ID" && "$PIX_TRANSACTION_ID" != "null" ]]; then
+        echo "   ✅ Dados PIX (brCode, qrCodeImage, transactionId) recebidos com sucesso!"
+        echo "      BR Code: $PIX_BR_CODE"
+        echo "      QR Code Image URL: $PIX_QR_CODE_IMAGE"
+        echo "      PIX Transaction ID: $PIX_TRANSACTION_ID"
+    else
+        echo "   ❌ Erro: Dados PIX (brCode, qrCodeImage, transactionId) não recebidos ou são nulos."
+        echo "      Resposta PIX Completa: $(echo "$RESPONSE_BOOKING" | jq -r '.pixCharge')"
+        exit 1
+    fi
 else
     echo "   ❌ Erro ao criar agendamento ou status incorreto. Resposta: $RESPONSE_BOOKING"
     exit 1
@@ -297,39 +334,39 @@ fi
 
 echo "4.2. Provedor confirmando agendamento..."
 curl -s -X PATCH "$baseUrl/bookings/$BOOKING_ID/status" \
-     -H "Content-Type: application/json" \
-     -H "Authorization: Bearer $PROVIDER_TOKEN" \
-     -d '{"status": "CONFIRMED"}' 2>/dev/null
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer $PROVIDER_TOKEN" \
+      -d '{"status": "CONFIRMED"}' 2>/dev/null
 echo "   ✅ Agendamento confirmado."
 
 # --- REMOVIDO: 4.3. Simular status IN_PROGRESS... (Conforme solicitado) ---
 # O trecho abaixo foi removido para evitar a transição inválida de status.
 # echo "4.3. Simular status IN_PROGRESS..."
 # curl -s -X PATCH "$baseUrl/bookings/$BOOKING_ID/status" \
-#      -H "Content-Type: application/json" \
-#      -H "Authorization: Bearer $PROVIDER_TOKEN" \
-#      -d '{"status": "IN_PROGRESS"}' 2>/dev/null
+#       -H "Content-Type: application/json" \
+#       -H "Authorization: Bearer $PROVIDER_TOKEN" \
+#       -d '{"status": "IN_PROGRESS"}' 2>/dev/null
 # echo "   ✅ Agendamento em progresso."
 
 
 echo "4.4. Simular status COMPLETED..."
 curl -s -X PATCH "$baseUrl/bookings/$BOOKING_ID/status" \
-     -H "Content-Type: application/json" \
-     -H "Authorization: Bearer $PROVIDER_TOKEN" \
-     -d '{"status": "COMPLETED"}' 2>/dev/null
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer $PROVIDER_TOKEN" \
+      -d '{"status": "COMPLETED"}' 2>/dev/null
 echo "   ✅ Agendamento concluído."
 
 # --- 5. Fluxo de Avaliação e Ganhos ---
 echo "5.1. Cliente avaliando o provedor..."
 curl -s -X POST "$baseUrl/reviews" \
-     -H "Content-Type: application/json" \
-     -H "Authorization: Bearer $CLIENT_TOKEN" \
-     -d '{"bookingId": "'"$BOOKING_ID"'", "rating": 5, "comment": "Serviço impecável por script!"}' 2>/dev/null
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer $CLIENT_TOKEN" \
+      -d '{"bookingId": "'"$BOOKING_ID"'", "rating": 5, "comment": "Serviço impecável por script!"}' 2>/dev/null
 echo "   ✅ Avaliação enviada."
 
 echo "5.2. Provedor consultando ganhos..."
 RESPONSE_EARNINGS=$(curl -s -X GET "$baseUrl/providers/me/earnings" \
-     -H "Authorization: Bearer $PROVIDER_TOKEN" 2>/dev/null)
+      -H "Authorization: Bearer $PROVIDER_TOKEN" 2>/dev/null)
 
 TOTAL_EARNINGS=$(echo "$RESPONSE_EARNINGS" | jq -r '.totalEarnings')
 
@@ -351,14 +388,14 @@ fi
 echo "6.1. Criando notificação para o cliente..."
 # Use CLIENT_USER_ID, não CLIENT_ID, pois notificação é para o User base
 curl -s -X POST "$baseUrl/notifications" \
-     -H "Content-Type: application/json" \
-     -H "Authorization: Bearer $ADMIN_TOKEN" \
-     -d '{"userId": "'"$CLIENT_USER_ID"'", "type": "TEST_SCRIPT", "message": "Notificacao gerada por script."}' 2>/dev/null # <-- MENSAGEM AJUSTADA PARA ACENTOS
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer $ADMIN_TOKEN" \
+      -d '{"userId": "'"$CLIENT_USER_ID"'", "type": "TEST_SCRIPT", "message": "Notificacao gerada por script."}' 2>/dev/null # <-- MENSAGEM AJUSTADA PARA ACENTOS
 echo "   ✅ Notificação criada."
 
 echo "6.2. Cliente listando notificações..."
 RESPONSE_NOTIFICATIONS=$(curl -s -X GET "$baseUrl/notifications/me" \
-     -H "Authorization: Bearer $CLIENT_TOKEN" 2>/dev/null)
+      -H "Authorization: Bearer $CLIENT_TOKEN" 2>/dev/null)
 
 # Verifica se a mensagem específica está contida na resposta JSON
 if echo "$RESPONSE_NOTIFICATIONS" | grep -q "Notificacao gerada por script."; then # <-- BUSCA AJUSTADA PARA ACENTOS

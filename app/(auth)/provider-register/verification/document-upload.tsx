@@ -1,30 +1,17 @@
-// app/(provider)/verify-account/document-upload.tsx
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Animated, Image, Alert } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import * as Haptics from 'expo-haptics';
-import { verificationService } from '../../../services/verificationService'; // Seu serviço real
-
-// Paleta de cores (repetida para clareza)
-const Colors = {
-  primary: '#007AFF',
-  primaryLight: '#EBF3FF',
-  primaryGradientStart: '#007AFF',
-  primaryGradientEnd: '#40C0F0',
-  background: '#F8F9FA',
-  cardBackground: '#FFFFFF',
-  textPrimary: '#2D3748',
-  textSecondary: '#6C757D',
-  success: '#28A745',
-  error: '#DC3545',
-  warning: '#FFC107',
-  info: '#17A2B8',
-  lightBlueBorder: '#B3D9FF',
-  successBg: '#E8F5E9',
-  errorBg: '#FFEBEE',
-};
+import * as Haptics from 'expo-haptics'; // Importar Haptics
+import colors from '../../../../constants/Colors'; // Caminho CORRIGIDO
+import { SIZES } from '../../../../constants/theme'; // Caminho CORRIGIDO
+import * as uploadService from '../../../services/uploadService'; // Caminho CORRIGIDO
+import verificationService from '../../../services/verificationService'; // Caminho CORRIGIDO
+import AnimatedErrorMessage from '../../../(provider)/schedule/components/manager/AnimatedErrorMessage'; // Caminho CORRIGIDO conforme fornecido
+import { DocumentPhotoType } from '../../../../backend-cleaning/src/verification/dto/upload-document.dto'; // Importando o tipo DocumentPhotoType
+// Paleta de cores (repetida para clareza, mas já importamos de constants/Colors)
+// Se você quer usar a paleta específica do Colors.light ou Colors.dark, você pode fazer:
+const Colors = colors.light; // Ou colors.dark, dependendo do tema atual
 
 interface DocumentUploadProps {
   onComplete: (data: { documentPhotoFront: string | null; documentPhotoBack: string | null }) => void;
@@ -33,28 +20,42 @@ interface DocumentUploadProps {
   initialDocumentPhotoBack?: string | null;
 }
 
-export default function DocumentUploadScreen({ onComplete, isLoading, initialDocumentPhotoFront, initialDocumentPhotoBack }: DocumentUploadProps) {
+export default function DocumentUploadScreen({
+  onComplete,
+  isLoading,
+  initialDocumentPhotoFront,
+  initialDocumentPhotoBack,
+}: DocumentUploadProps) {
   const [documentPhotoFront, setDocumentPhotoFront] = useState<string | null>(initialDocumentPhotoFront || null);
   const [documentPhotoBack, setDocumentPhotoBack] = useState<string | null>(initialDocumentPhotoBack || null);
-  const [documentError, setDocumentError] = useState<string | null>(null);
-  const [uploadingStage, setUploadingStage] = useState<'none' | 'front_pending' | 'back_pending' | 'complete' | 'failed'>('none');
+  const [frontError, setFrontError] = useState<string | null>(null);
+  const [backError, setBackError] = useState<string | null>(null);
+  const [submissionStatus, setSubmissionStatus] = useState<'none' | 'pending' | 'success' | 'failed'>('none');
 
   const buttonScale = useRef(new Animated.Value(1)).current;
   const contentFade = useRef(new Animated.Value(0)).current;
   const contentSlide = useRef(new Animated.Value(20)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     Animated.parallel([
       Animated.timing(contentFade, { toValue: 1, duration: 600, useNativeDriver: true, delay: 100 }),
       Animated.timing(contentSlide, { toValue: 0, duration: 600, useNativeDriver: true, delay: 100 }),
     ]).start();
-  }, [contentFade, contentSlide]);
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.1, duration: 800, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+      ])
+    ).start();
+  }, [contentFade, contentSlide, pulseAnim]);
 
   const handlePressIn = () => Animated.spring(buttonScale, { toValue: 0.95, useNativeDriver: true }).start();
   const handlePressOut = () => Animated.spring(buttonScale, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start();
 
-  const pickImage = async (setImage: React.Dispatch<React.SetStateAction<string | null>>) => {
-    setDocumentError(null);
+  const pickImage = async (setImage: React.Dispatch<React.SetStateAction<string | null>>, setError: React.Dispatch<React.SetStateAction<string | null>>) => {
+    setError(null);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -67,8 +68,8 @@ export default function DocumentUploadScreen({ onComplete, isLoading, initialDoc
     }
   };
 
-  const takePhoto = async (setImage: React.Dispatch<React.SetStateAction<string | null>>) => {
-    setDocumentError(null);
+  const takePhoto = async (setImage: React.Dispatch<React.SetStateAction<string | null>>, setError: React.Dispatch<React.SetStateAction<string | null>>) => {
+    setError(null);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
     if (permissionResult.granted === false) {
@@ -85,128 +86,132 @@ export default function DocumentUploadScreen({ onComplete, isLoading, initialDoc
     }
   };
 
-  const validateUploads = () => {
+  const validateDocuments = () => {
+    let isValid = true;
     if (!documentPhotoFront) {
-      setDocumentError("Por favor, envie a foto da frente do seu documento.");
-      return false;
+      setFrontError("Por favor, envie a frente do seu documento.");
+      isValid = false;
+    } else {
+      setFrontError(null);
     }
     if (!documentPhotoBack) {
-      setDocumentError("Por favor, envie a foto do verso do seu documento.");
-      return false;
+      setBackError("Por favor, envie o verso do seu documento.");
+      isValid = false;
+    } else {
+      setBackError(null);
     }
-    setDocumentError(null);
-    return true;
+    return isValid;
   };
 
-  const handleSubmitDocuments = async () => {
+const handleSubmitDocuments = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (!validateUploads()) {
-      return;
+    if (!validateDocuments()) {
+        return;
     }
-    setUploadingStage('front_pending');
+    setSubmissionStatus('pending');
     try {
-      // Mock de upload para o serviço de verificação
-      // verificationService.uploadDocumentPhoto(providerId, file, type)
-      await verificationService.uploadDocumentPhoto("mock-provider-id", documentPhotoFront!, 'FRONT');
-      setUploadingStage('back_pending');
-      await verificationService.uploadDocumentPhoto("mock-provider-id", documentPhotoBack!, 'BACK');
-      setUploadingStage('complete');
-      onComplete({ documentPhotoFront, documentPhotoBack });
-    } catch (error: any) {
-      setUploadingStage('failed');
-      setDocumentError(error.message || "Erro ao fazer upload dos documentos. Tente novamente.");
-    }
-  };
+        await verificationService.uploadDocumentPhoto(documentPhotoFront! as unknown as File, DocumentPhotoType.FRONT); 
+        await verificationService.uploadDocumentPhoto(documentPhotoBack! as unknown as File, DocumentPhotoType.BACK); 
 
-  const isNextButtonEnabled = validateUploads() && !isLoading && uploadingStage !== 'complete';
+        setSubmissionStatus('success');
+        onComplete({ documentPhotoFront, documentPhotoBack });
+    } catch (error: any) {
+        setSubmissionStatus('failed');
+        setFrontError(error.message || "Erro ao fazer upload dos documentos. Tente novamente.");
+        setBackError(error.message || "Erro ao fazer upload dos documentos. Tente novamente.");
+    }
+};
+
+  // Correção: Removida a comparação com 'complete' pois submissionStatus não o utiliza.
+  // A condição `isLoading` ou `submissionStatus === 'pending'` já deve ser suficiente para desabilitar o botão durante o envio.
+  const isNextButtonEnabled = validateDocuments() && !isLoading && submissionStatus !== 'pending';
 
   return (
     <Animated.View style={[styles.container, { opacity: contentFade, transform: [{ translateY: contentSlide }] }]}>
       <View style={styles.header}>
-        <Ionicons name="finger-print-outline" size={60} color={Colors.primary} />
-        <Text style={styles.title}>Documentos de Identidade</Text>
+        <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+          <Ionicons name="documents-outline" size={80} color={Colors.primary} />
+        </Animated.View>
+        <Text style={styles.title}>Envio de Documentos</Text>
         <Text style={styles.description}>
-          Envie fotos nítidas da frente e do verso do seu documento de identidade (RG ou CNH).
+          Precisamos de fotos nítidas da frente e do verso do seu documento de identidade (RG ou CNH).
         </Text>
       </View>
 
       <View style={styles.card}>
-        {/* Upload da Frente do Documento */}
-        <Text style={styles.label}>Foto da Frente do Documento</Text>
+        <Text style={styles.label}>Frente do Documento</Text>
         <View style={styles.imageUploadWrapper}>
           {documentPhotoFront ? (
             <Image source={{ uri: documentPhotoFront }} style={styles.uploadedImage} />
           ) : (
-            <MaterialCommunityIcons name="card-account-details-outline" size={80} color={Colors.textSecondary} />
+            <Ionicons name="id-card-outline" size={80} color={Colors.textSecondary} />
           )}
           <View style={styles.imageUploadButtons}>
-            <TouchableOpacity style={styles.uploadButton} onPress={() => takePhoto(setDocumentPhotoFront)} disabled={isLoading || uploadingStage === 'complete'}>
+            <TouchableOpacity style={styles.uploadButton} onPress={() => takePhoto(setDocumentPhotoFront, setFrontError)} disabled={isLoading || submissionStatus === 'success'}>
               <Ionicons name="camera-outline" size={24} color="#fff" />
               <Text style={styles.uploadButtonText}>Tirar Foto</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage(setDocumentPhotoFront)} disabled={isLoading || uploadingStage === 'complete'}>
+            <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage(setDocumentPhotoFront, setFrontError)} disabled={isLoading || submissionStatus === 'success'}>
               <Ionicons name="folder-open-outline" size={24} color="#fff" />
               <Text style={styles.uploadButtonText}>Galeria</Text>
             </TouchableOpacity>
           </View>
         </View>
+        {frontError && <AnimatedErrorMessage message={frontError} isVisible={!!frontError} />}
 
-        {/* Upload do Verso do Documento */}
-        <Text style={styles.label}>Foto do Verso do Documento</Text>
+        <Text style={styles.label}>Verso do Documento</Text>
         <View style={styles.imageUploadWrapper}>
           {documentPhotoBack ? (
             <Image source={{ uri: documentPhotoBack }} style={styles.uploadedImage} />
           ) : (
-            <MaterialCommunityIcons name="card-account-details-outline" size={80} color={Colors.textSecondary} style={{ transform: [{ scaleX: -1 }] }} /> {/* Inverte para simular o verso */}
+            <Ionicons name="id-card-outline" size={80} color={Colors.textSecondary} />
           )}
           <View style={styles.imageUploadButtons}>
-            <TouchableOpacity style={styles.uploadButton} onPress={() => takePhoto(setDocumentPhotoBack)} disabled={isLoading || uploadingStage === 'complete'}>
+            <TouchableOpacity style={styles.uploadButton} onPress={() => takePhoto(setDocumentPhotoBack, setBackError)} disabled={isLoading || submissionStatus === 'success'}>
               <Ionicons name="camera-outline" size={24} color="#fff" />
               <Text style={styles.uploadButtonText}>Tirar Foto</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage(setDocumentPhotoBack)} disabled={isLoading || uploadingStage === 'complete'}>
+            <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage(setDocumentPhotoBack, setBackError)} disabled={isLoading || submissionStatus === 'success'}>
               <Ionicons name="folder-open-outline" size={24} color="#fff" />
               <Text style={styles.uploadButtonText}>Galeria</Text>
             </TouchableOpacity>
           </View>
         </View>
-
-        {documentError && <Text style={styles.errorMessage}>{documentError}</Text>}
+        {backError && <AnimatedErrorMessage message={backError} isVisible={!!backError} />}
 
         <Animated.View style={{ transform: [{ scale: buttonScale }] }}>
           <TouchableOpacity
-            style={[styles.submitButton, (!isNextButtonEnabled || isLoading) && styles.buttonDisabled]}
+            style={[styles.submitButton, (!isNextButtonEnabled) && styles.buttonDisabled]}
             onPress={handleSubmitDocuments}
             onPressIn={handlePressIn}
             onPressOut={handlePressOut}
-            disabled={!isNextButtonEnabled || isLoading}
+            disabled={!isNextButtonEnabled}
           >
-            {isLoading || uploadingStage !== 'none' ? (
+            {isLoading || submissionStatus === 'pending' ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.submitButtonText}>Enviar Documentos</Text>
+              <Text style={styles.submitButtonText}>Próxima Etapa</Text>
             )}
           </TouchableOpacity>
         </Animated.View>
 
-        {uploadingStage !== 'none' && (
+        {submissionStatus !== 'none' && (
           <View style={[styles.statusBadge,
-                        uploadingStage === 'complete' ? styles.statusSuccess :
-                        uploadingStage === 'failed' ? styles.statusFailed : {}]}>
+                        submissionStatus === 'success' ? styles.statusSuccess :
+                        submissionStatus === 'failed' ? styles.statusFailed : {}]}>
             <Ionicons
-              name={uploadingStage === 'complete' ? "checkmark-circle" :
-                    uploadingStage === 'failed' ? "warning" : "information-circle"}
+              name={submissionStatus === 'success' ? "checkmark-circle" :
+                    submissionStatus === 'failed' ? "warning" : "information-circle"}
               size={20}
-              color={uploadingStage === 'complete' ? Colors.success :
-                     uploadingStage === 'failed' ? Colors.error : Colors.info}
+              color={submissionStatus === 'success' ? Colors.secondary : // Corrigido de Colors.success para Colors.secondary
+                     submissionStatus === 'failed' ? Colors.error : Colors.info}
             />
             <Text style={[styles.statusText,
-                          uploadingStage === 'complete' ? { color: Colors.success } :
-                          uploadingStage === 'failed' ? { color: Colors.error } : { color: Colors.info }]}>
-              {uploadingStage === 'front_pending' && "Enviando frente do documento..."}
-              {uploadingStage === 'back_pending' && "Enviando verso do documento..."}
-              {uploadingStage === 'complete' && "Documentos enviados! Prossiga."}
-              {uploadingStage === 'failed' && "Erro no upload dos documentos. Tente novamente."}
+                          submissionStatus === 'success' ? { color: Colors.secondary } : // Corrigido de Colors.success para Colors.secondary
+                          submissionStatus === 'failed' ? { color: Colors.error } : { color: Colors.info }]}>
+              {submissionStatus === 'pending' && "Enviando documentos..."}
+              {submissionStatus === 'success' && "Documentos enviados com sucesso!"}
+              {submissionStatus === 'failed' && "Falha no envio dos documentos. Tente novamente."}
             </Text>
           </View>
         )}
@@ -221,31 +226,31 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
+    padding: SIZES.paddingSmall,
     backgroundColor: Colors.background,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: SIZES.padding,
   },
   title: {
-    fontSize: 26,
+    fontSize: SIZES.h1 - 4,
     fontWeight: 'bold',
-    color: Colors.textPrimary,
-    marginTop: 15,
-    marginBottom: 10,
+    color: Colors.textPrimary, // Mantido como textPrimary, pois foi adicionado em Colors.ts
+    marginTop: SIZES.base * 2,
+    marginBottom: SIZES.base,
     textAlign: 'center',
   },
   description: {
-    fontSize: 16,
-    color: Colors.textSecondary,
+    fontSize: SIZES.body3,
+    color: Colors.textSecondary, // Mantido como textSecondary, pois foi adicionado em Colors.ts
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: SIZES.body3 + 6,
   },
   card: {
-    backgroundColor: Colors.cardBackground,
-    borderRadius: 15,
-    padding: 25,
+    backgroundColor: Colors.cardBackground, // Corrigido para cardBackground
+    borderRadius: SIZES.radius,
+    padding: SIZES.padding,
     width: '100%',
     maxWidth: 400,
     shadowColor: Colors.primary,
@@ -255,54 +260,46 @@ const styles = StyleSheet.create({
     elevation: 8,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: Colors.primaryLight,
+    borderColor: Colors.primaryLight, // Mantido como primaryLight
   },
   label: {
-    fontSize: 16,
+    fontSize: SIZES.body3,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: Colors.textPrimary, // Mantido como textPrimary
     alignSelf: 'flex-start',
-    marginBottom: 8,
-    marginTop: 15, // Espaçamento entre campos
+    marginBottom: SIZES.base,
+    marginTop: SIZES.base * 2,
   },
-  inputWrapper: { // Reutilizado do verify-account para CPF
+  inputWrapper: { // Não usado diretamente, mas mantido se for um estilo global
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.primaryLight,
-    borderRadius: 10,
+    borderRadius: SIZES.radius,
     height: 50,
-    marginBottom: 15,
-    paddingHorizontal: 15,
+    marginBottom: SIZES.base * 2,
+    paddingHorizontal: SIZES.paddingSmall,
     borderWidth: 1,
-    borderColor: Colors.lightBlueBorder,
+    borderColor: Colors.lightBlueBorder, // Mantido como lightBlueBorder
     width: '100%',
   },
   inputIcon: {
-    marginRight: 10,
+    marginRight: SIZES.base,
   },
-  input: {
+  input: { // Não usado diretamente, mas mantido se for um estilo global
     flex: 1,
-    fontSize: 16,
-    color: Colors.textPrimary,
+    fontSize: SIZES.body3,
+    color: Colors.textPrimary, // Mantido como textPrimary
   },
   errorMessage: {
     color: Colors.error,
-    fontSize: 13,
-    marginBottom: 15,
+    fontSize: SIZES.body4,
+    marginBottom: SIZES.base * 2,
     alignSelf: 'flex-start',
   },
-  consentText: { // Reutilizado, mas não para esta tela
-    fontSize: 13,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    marginTop: 10,
-    lineHeight: 18,
-    marginBottom: 20,
-  },
   submitButton: {
-    backgroundColor: Colors.primaryGradientStart,
-    borderRadius: 10,
-    paddingVertical: 15,
+    backgroundColor: Colors.primaryGradientStart, // Mantido como primaryGradientStart
+    borderRadius: SIZES.radius,
+    paddingVertical: SIZES.paddingSmall,
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
@@ -311,15 +308,15 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 15,
     elevation: 10,
-    marginTop: 20,
+    marginTop: SIZES.padding,
   },
   submitButtonText: {
     color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: SIZES.h3,
     fontWeight: 'bold',
   },
   buttonDisabled: {
-    backgroundColor: '#C0DFFF',
+    backgroundColor: '#C0DFFF', // Cor estática para botão desabilitado
     opacity: 0.7,
     elevation: 0,
     shadowOpacity: 0,
@@ -327,49 +324,49 @@ const styles = StyleSheet.create({
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 10,
-    marginTop: 20,
+    paddingVertical: SIZES.base * 1.5,
+    paddingHorizontal: SIZES.paddingSmall,
+    borderRadius: SIZES.radius,
+    marginTop: SIZES.padding,
     width: '100%',
     justifyContent: 'center',
     backgroundColor: Colors.primaryLight,
     borderWidth: 1,
-    borderColor: Colors.lightBlueBorder,
+    borderColor: Colors.lightBlueBorder, // Mantido como lightBlueBorder
   },
   statusSuccess: {
-    backgroundColor: Colors.successBg,
-    borderColor: Colors.success,
+    backgroundColor: Colors.successBg, // Mantido como successBg
+    borderColor: Colors.secondary, // Corrigido de Colors.success para Colors.secondary
   },
   statusFailed: {
-    backgroundColor: Colors.errorBg,
+    backgroundColor: Colors.errorBg, // Mantido como errorBg
     borderColor: Colors.error,
   },
   statusText: {
-    fontSize: 14,
+    fontSize: SIZES.body4,
     fontWeight: '600',
-    marginLeft: 10,
-    color: Colors.textPrimary,
+    marginLeft: SIZES.base,
+    color: Colors.textPrimary, // Mantido como textPrimary
   },
-  imageUploadWrapper: { // Novo estilo para o contêiner de upload de imagem
+  imageUploadWrapper: {
     flexDirection: 'column',
     alignItems: 'center',
-    backgroundColor: Colors.primaryLight, // Fundo levemente azulado
-    borderRadius: 10,
-    paddingVertical: 20,
-    marginBottom: 15, // Espaçamento entre os dois uploads de imagem
+    backgroundColor: Colors.primaryLight,
+    borderRadius: SIZES.radius,
+    paddingVertical: SIZES.paddingSmall,
+    marginBottom: SIZES.base * 2,
     width: '100%',
     borderWidth: 1,
-    borderColor: Colors.lightBlueBorder,
+    borderColor: Colors.lightBlueBorder, // Mantido como lightBlueBorder
   },
   uploadedImage: {
     width: '90%',
     height: 180,
-    borderRadius: 8,
-    resizeMode: 'cover', // Melhor para fotos de documento
-    marginBottom: 15,
+    borderRadius: SIZES.radius / 2,
+    resizeMode: 'cover',
+    marginBottom: SIZES.base * 2,
     borderWidth: 1,
-    borderColor: Colors.textSecondary, // Borda para a imagem
+    borderColor: Colors.textSecondary, // Mantido como textSecondary
   },
   imageUploadButtons: {
     flexDirection: 'row',
@@ -380,10 +377,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.primary,
-    paddingVertical: 10,
-    paddingHorizontal: 15,
+    paddingVertical: SIZES.base * 1.5,
+    paddingHorizontal: SIZES.paddingSmall,
     borderRadius: 20,
-    marginHorizontal: 5,
+    marginHorizontal: SIZES.base / 2,
     flex: 1,
     justifyContent: 'center',
     shadowColor: Colors.primary,
@@ -394,8 +391,8 @@ const styles = StyleSheet.create({
   },
   uploadButtonText: {
     color: '#FFFFFF',
-    fontSize: 14,
-    marginLeft: 8,
+    fontSize: SIZES.body4,
+    marginLeft: SIZES.base,
     fontWeight: '600',
   },
 });

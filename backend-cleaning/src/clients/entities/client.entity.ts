@@ -1,3 +1,4 @@
+// src/clients/entities/client.entity.ts
 import { Client as PrismaClient, User, Address, Booking, Review } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { UserEntity } from '../../users/entities/user.entity'; // Caminho para UserEntity
@@ -16,7 +17,11 @@ export class ClientEntity implements PrismaClient {
   @ApiPropertyOptional({ description: 'Número de telefone do cliente', example: '11987654321' })
   phone: string | null;
 
-  // ADICIONADO: Propriedades createdAt e updatedAt conforme o schema.prisma
+  // Propriedade CPF adicionada para alinhar com o schema.prisma
+  @ApiPropertyOptional({ description: 'CPF do cliente', example: '123.456.789-00' })
+  cpf: string | null; // Adicionado, pode ser null se for opcional no DB
+
+  // Propriedades createdAt e updatedAt conforme o schema.prisma
   @ApiProperty({ description: 'Data de criação do cliente', example: '2023-01-01T10:00:00.000Z' })
   createdAt: Date; 
 
@@ -34,7 +39,7 @@ export class ClientEntity implements PrismaClient {
 
   // As relações `bookings` e `reviewsMade` são coleções e geralmente não são incluídas
   // diretamente na entidade para evitar payloads grandes e dependências circulares em DTOs de retorno.
-  // Se necessário, elas seriam expostas via DTOs específicos para listas ou detalhes.
+  // Elas são incluídas aqui para implementar a interface PrismaClient.
   bookings: Booking[];
   reviewsMade: Review[];
 

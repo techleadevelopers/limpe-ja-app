@@ -1,4 +1,3 @@
-// LimpeJaApp/app/(provider)/earnings.tsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
@@ -16,37 +15,31 @@ import { Stack, useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
 
-// Importações dos serviços
 import { getMyProviderDashboard } from '../services/providerService';
 import { getMyProviderEarnings } from '../services/earningService';
 import { requestWithdrawal } from '../services/paymentService';
 
-// Importa os tipos da pasta centralizada
 import { ProviderDashboard, ProviderTransaction, EarningsResponseDto } from '../types/backend/providers';
 
-// IMPORTA OS NOVOS COMPONENTES (Verifique os caminhos)
-import EarningsSummaryCard from './components/earnings/EarningsSummaryCard'; // Este componente precisa ser estilizado
+import EarningsSummaryCard from './components/earnings/EarningsSummaryCard';
 import EarningsChartSection from './components/earnings/EarningsChartSection';
 import RecentTransactionsSection from './components/earnings/RecentTransactionsSection';
-import MainEarningsChartSection from './components/earnings/MainEarningsChartSection'; // Importado MainEarningsChartSection
+import MainEarningsChartSection from './components/dashboard/MainEarningsChartSection';
 
-// --- DEFINIÇÕES DE CORES (REPETIDAS PARA ESTE ARQUIVO PARA CONSISTÊNCIA) ---
 const WHITE = '#FFFFFF';
 const BACKGROUND_ALT = '#F8F9FD';
 const TEXT_DARK = '#1A2538';
 const TEXT_MEDIUM = '#4A5568';
 const TEXT_MUTED = '#7A8599';
-const ICON_PRIMARY = '#007AFF'; // Azul primário
-const SUCCESS_GREEN = '#28a745'; // Verde de sucesso
-const DANGER_RED = '#dc3545'; // Vermelho de perigo
-const WARNING_YELLOW = '#FFC107'; // Amarelo de aviso
+const ICON_PRIMARY = '#007AFF';
+const SUCCESS_GREEN = '#28a745';
+const DANGER_RED = '#dc3545';
+const WARNING_YELLOW = '#FFC107';
 const BORDER_SUBTLE = 'rgba(0,0,0,0.08)';
 const SHADOW_COLOR_CARD = 'rgba(0, 0, 0, 0.06)';
 const SHADOW_COLOR_SECTION = 'rgba(0, 0, 0, 0.1)';
 const PRIMARY_LIGHT = '#EBF5FF';
-// -------------------------------------------------------------------------
 
-// Interface para dados do gráfico (mantida)
 interface ChartData {
   labels: string[];
   datasets: {
@@ -56,7 +49,6 @@ interface ChartData {
   }[];
 }
 
-// Hook para animação de toque (reutilizável)
 const useAnimatedTouch = () => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const onPressIn = () => {
@@ -68,7 +60,6 @@ const useAnimatedTouch = () => {
   return { scaleAnim, onPressIn, onPressOut };
 };
 
-// Componente: CustomHeader (para tela de Ganhos) - Usando as constantes de cor
 const CustomHeader: React.FC<{
   onBackPress: () => void;
   onManageBankDetailsPress: () => void;
@@ -76,33 +67,30 @@ const CustomHeader: React.FC<{
 }> = ({ onBackPress, onManageBankDetailsPress, animation }) => {
   return (
     <Animated.View style={[styles.customHeader, { opacity: animation, transform: [{ translateY: animation.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
-      <TouchableOpacity onPress={onBackPress} style={styles.headerBackButton} accessibilityRole="button" accessibilityLabel="Voltar para a tela anterior">
+      <TouchableOpacity onPress={onBackPress} style={styles.headerBackButton}>
         <Ionicons name="arrow-back" size={24} color={WHITE} />
       </TouchableOpacity>
-      <Text style={[styles.headerTitle, { color: WHITE }]} accessibilityRole="header" accessibilityLabel="Meus Ganhos">Meus Ganhos</Text>
-      <TouchableOpacity onPress={onManageBankDetailsPress} style={styles.headerActionIcon} accessibilityRole="button" accessibilityLabel="Gerenciar dados bancários">
+      <Text style={[styles.headerTitle, { color: WHITE }]}>Meus Ganhos</Text>
+      <TouchableOpacity onPress={onManageBankDetailsPress} style={styles.headerActionIcon}>
         <Ionicons name="card-outline" size={26} color={WHITE} />
       </TouchableOpacity>
     </Animated.View>
   );
 };
 
-
-// Componente principal da tela de Ganhos
 export default function ProviderEarningsScreen() {
   const router = useRouter();
 
   const [dashboardData, setDashboardData] = useState<ProviderDashboard | null>(null);
-  const [earningsData, setEarningsData] = useState<EarningsResponseDto | null>(null); // Adicionado para armazenar EarningsResponseDto
+  const [earningsData, setEarningsData] = useState<EarningsResponseDto | null>(null);
   const [recentTransactions, setRecentTransactions] = useState<ProviderTransaction[]>([]);
   const [chartData, setChartData] = useState<ChartData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Animações para as seções
   const headerAnim = useRef(new Animated.Value(0)).current;
   const summaryAnim = useRef(new Animated.Value(0)).current;
-  const mainChartAnim = useRef(new Animated.Value(0)).current; // Animação para MainEarningsChartSection
+  const mainChartAnim = useRef(new Animated.Value(0)).current;
   const chartSectionAnim = useRef(new Animated.Value(0)).current;
   const transactionsSectionAnim = useRef(new Animated.Value(0)).current;
 
@@ -113,7 +101,7 @@ export default function ProviderEarningsScreen() {
       const fetchedEarnings: EarningsResponseDto = await getMyProviderEarnings(); 
 
       setDashboardData(fetchedDashboardData); 
-      setEarningsData(fetchedEarnings); // Armazena o objeto completo de ganhos
+      setEarningsData(fetchedEarnings); 
       setRecentTransactions(fetchedEarnings.recentTransactions || []); 
 
       const monthlyEarningsMap: { [key: string]: number } = fetchedEarnings.earningsBreakdown || {}; 
@@ -121,10 +109,9 @@ export default function ProviderEarningsScreen() {
       const labels: string[] = [];
       const dataPoints: number[] = [];
 
-      // Ajuste para pegar os últimos 4 meses (ou o que for relevante para o gráfico)
-      for (let i = 3; i >= 0; i--) { // Começa de 3 para pegar o mês atual e os 3 anteriores
+      for (let i = 3; i >= 0; i--) {
         const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
-        const monthKey = date.toLocaleString('pt-BR', { month: 'short', year: 'numeric' }); // Formato "Jan. 2023"
+        const monthKey = date.toLocaleString('pt-BR', { month: 'short', year: 'numeric' });
         labels.push(date.toLocaleDateString('pt-BR', { month: 'short' }));
         dataPoints.push(monthlyEarningsMap[monthKey] || 0);
       }
@@ -133,7 +120,7 @@ export default function ProviderEarningsScreen() {
         labels: labels,
         datasets: [{
           data: dataPoints,
-          color: (opacity = 1) => `rgba(0, 122, 255, ${opacity})`, // Usando ICON_PRIMARY
+          color: (opacity = 1) => `rgba(0, 122, 255, ${opacity})`,
           strokeWidth: 2
         }]
       });
@@ -153,12 +140,12 @@ export default function ProviderEarningsScreen() {
     Animated.stagger(150, [
       Animated.timing(headerAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
       Animated.timing(summaryAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-      Animated.timing(mainChartAnim, { toValue: 1, duration: 600, useNativeDriver: true }), // Adicionado
+      Animated.timing(mainChartAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
       Animated.timing(chartSectionAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
       Animated.timing(transactionsSectionAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
     ]).start();
 
-  }, [fetchData, headerAnim, summaryAnim, mainChartAnim, chartSectionAnim, transactionsSectionAnim]); // Adicionado mainChartAnim
+  }, [fetchData, headerAnim, summaryAnim, mainChartAnim, chartSectionAnim, transactionsSectionAnim]);
 
   const onRefresh = useCallback(() => {
     setIsRefreshing(true);
@@ -166,7 +153,6 @@ export default function ProviderEarningsScreen() {
   }, [fetchData]);
 
   const handleWithdrawalRequest = async () => {
-    // Usar availableForWithdrawal do earningsData, se disponível, senão do dashboardData
     const amountToWithdraw = earningsData?.availableForWithdrawal ?? dashboardData?.totalEarnings;
 
     if (!amountToWithdraw || amountToWithdraw <= 0 || (earningsData?.pendingWithdrawals ?? 0) > 0) {
@@ -184,7 +170,14 @@ export default function ProviderEarningsScreen() {
           onPress: async () => {
             setIsLoading(true);
             try {
-              await requestWithdrawal({ amount: amountToWithdraw });
+              await requestWithdrawal({
+                amount: amountToWithdraw,
+                bankName: 'Banco do Brasil',
+                agencyNumber: '1234',
+                accountNumber: '56789-0',
+                accountType: 'CONTA_CORRENTE',
+                notes: 'Saque solicitado pelo app'
+              });
               Alert.alert("Saque Solicitado", "Seu pedido de saque foi enviado com sucesso e será processado em breve! Você será notificado sobre o status.");
               fetchData();
             } catch (error: any) {
@@ -210,7 +203,7 @@ export default function ProviderEarningsScreen() {
           animation={headerAnim}
         />
         <View style={styles.centeredFeedback}>
-          <ActivityIndicator size="large" color={ICON_PRIMARY} accessibilityLabel="Carregando dados" />
+          <ActivityIndicator size="large" color={ICON_PRIMARY} />
           <Text style={[styles.loadingText, { color: TEXT_MUTED }]}>Carregando seus dados financeiros...</Text>
         </View>
       </View>
@@ -235,18 +228,15 @@ export default function ProviderEarningsScreen() {
             refreshing={isRefreshing}
             onRefresh={onRefresh}
             tintColor={ICON_PRIMARY}
-            accessibilityLabel="Puxe para atualizar dados"
           />
         }
       >
-        {/* Cartão de Resumo Financeiro */}
         <EarningsSummaryCard
           dashboardData={dashboardData}
           animation={summaryAnim}
           onWithdrawalRequest={handleWithdrawalRequest}
         />
 
-        {/* Gráfico Principal de Ganhos (Circular) */}
         {earningsData && (
           <MainEarningsChartSection
             contentAnim={mainChartAnim}
@@ -257,28 +247,20 @@ export default function ProviderEarningsScreen() {
               monthly: earningsData.monthlyEarnings || 0,
             }}
             isLoading={isLoading}
-            onChartDetailPress={() => console.log('Detalhe do gráfico pressionado')} // Implementar navegação/modal
+            onChartDetailPress={() => console.log('Detalhe do gráfico pressionado')}
           />
         )}
 
-        {/* Gráfico de Ganhos ao Longo do Tempo */}
-        <EarningsChartSection
-          chartData={chartData}
-          animation={chartSectionAnim}
-        />
+        <EarningsChartSection chartData={chartData} animation={chartSectionAnim} />
 
-        {/* Seção de Transações Recentes */}
         <RecentTransactionsSection
           transactions={recentTransactions}
           animation={transactionsSectionAnim}
         />
 
-        {/* Quick Links para outras seções importantes */}
         <TouchableOpacity
           style={styles.quickLinkCard}
           onPress={() => router.push('/(provider)/services' as any)}
-          accessibilityRole="button"
-          accessibilityLabel="Visualizar todos os meus serviços"
         >
           <Ionicons name="briefcase-outline" size={24} color={ICON_PRIMARY} />
           <Text style={[styles.quickLinkText, { color: TEXT_DARK }]}>Meus Serviços Oferecidos</Text>
@@ -288,19 +270,15 @@ export default function ProviderEarningsScreen() {
         <TouchableOpacity
           style={styles.quickLinkCard}
           onPress={() => router.push('/(provider)/reviews' as any)}
-          accessibilityRole="button"
-          accessibilityLabel="Visualizar todas as minhas avaliações"
         >
           <Ionicons name="star-outline" size={24} color={WARNING_YELLOW} />
           <Text style={[styles.quickLinkText, { color: TEXT_DARK }]}>Minhas Avaliações</Text>
           <Ionicons name="chevron-forward-outline" size={20} color={TEXT_MUTED} />
         </TouchableOpacity>
-
       </ScrollView>
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   outerContainer: {
     flex: 1,

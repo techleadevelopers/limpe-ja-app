@@ -3,7 +3,8 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { User, UserRole, Prisma } from '@prisma/client';
 import { IsString, IsEnum, IsDate, ValidateNested, IsOptional, IsNumber, IsInt } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ClientDetailsDto } from '../../clients/dto/client-details.dto';
+// Importe ClientDetailsDto se estiver em um arquivo separado, ou defina-o aqui
+// import { ClientDetailsDto } from '../../clients/dto/client-details.dto';
 import { ProviderDetailsDto } from '../../providers/dto/provider-details.dto';
 
 // === IMPORTANDO OS TIPOS DE SERVIÇO DEFINITIVOS ===
@@ -15,11 +16,13 @@ import { ProviderWithCalculatedRating } from '../../providers/providers.service'
 // e então importada aqui. Mantido aqui para compatibilidade com o código fornecido.
 import { Address, Booking, Review } from '@prisma/client';
 
+// CORREÇÃO: Adicionando 'cpf' a ClientWithIncludes
 export type ClientWithIncludes = {
   id: string;
   userId: string;
   fullName: string;
   phone: string | null;
+  cpf: string | null; // CORREÇÃO: Adicionado CPF aqui
   createdAt: Date;
   updatedAt: Date;
   user: User;
@@ -32,6 +35,40 @@ export type ClientWithIncludes = {
 // =========================================================================
 // CORREÇÃO: Usando os tipos de serviço já definidos
 // =========================================================================
+
+// CORREÇÃO: Atualizando ClientDetailsDto para incluir CPF
+// Assumindo que ClientDetailsDto está definido aqui ou em src/clients/dto/client-details.dto.ts
+// Se estiver em um arquivo separado, certifique-se de que a definição lá seja a mesma.
+export class ClientDetailsDto {
+  @ApiProperty({ description: 'ID do cliente', example: 'uuid-do-cliente' })
+  id: string;
+
+  @ApiProperty({ description: 'ID do usuário associado', example: 'uuid-do-usuario' })
+  userId: string;
+
+  @ApiProperty({ description: 'Nome completo do cliente', example: 'Maria da Silva' })
+  fullName: string;
+
+  @ApiPropertyOptional({ description: 'Número de telefone do cliente', example: '11987654321' })
+  phone: string | null;
+
+  @ApiPropertyOptional({ description: 'CPF do cliente', example: '123.456.789-00' })
+  cpf: string | null; // CORREÇÃO: Adicionado CPF aqui
+
+  @ApiProperty({ description: 'Data de criação do cliente', example: '2023-01-01T10:00:00.000Z' })
+  createdAt: Date; 
+
+  @ApiProperty({ description: 'Data da última atualização do cliente', example: '2023-01-01T10:00:00.000Z' })
+  updatedAt: Date; 
+
+  // Se você tiver outras propriedades ou relações, adicione-as aqui
+  // address?: AddressDto; // Exemplo de relação aninhada
+
+  constructor(partial: Partial<ClientDetailsDto>) { // Use Partial<ClientDetailsDto> ou o tipo do Prisma
+    Object.assign(this, partial);
+  }
+}
+
 
 export class UserProfileDto {
   @ApiProperty({ description: 'ID único do usuário', example: 'uuid-do-usuario' })

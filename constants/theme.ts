@@ -52,6 +52,15 @@ export type AppThemeType = {
     error: string;
     grey: string;
     lightGrey: string;
+    // Propriedades adicionadas que agora estão em Colors.ts para consistência
+    cardBackground: string;
+    textPrimary: string;
+    textSecondary: string;
+    successBg: string;
+    errorBg: string;
+    info: string;
+    primaryGradientStart: string;
+    lightBlueBorder: string;
   };
   // Você pode adicionar SIZES e FONTS aqui também se quiser que façam parte do tema
   sizes: typeof SIZES;
@@ -72,6 +81,15 @@ export const lightTheme: AppThemeType = {
     error: Colors.light.error,
     grey: Colors.light.grey,
     lightGrey: Colors.light.lightGrey,
+    // Propriedades adicionadas
+    cardBackground: Colors.light.cardBackground,
+    textPrimary: Colors.light.textPrimary,
+    textSecondary: Colors.light.textSecondary,
+    successBg: Colors.light.successBg,
+    errorBg: Colors.light.errorBg,
+    info: Colors.light.info,
+    primaryGradientStart: Colors.light.primaryGradientStart,
+    lightBlueBorder: Colors.light.lightBlueBorder,
   },
   sizes: SIZES,
   fonts: FONTS,
@@ -91,6 +109,15 @@ export const darkTheme: AppThemeType = {
     error: Colors.dark.error,
     grey: Colors.dark.grey,
     lightGrey: Colors.dark.lightGrey,
+    // Propriedades adicionadas
+    cardBackground: Colors.dark.cardBackground,
+    textPrimary: Colors.dark.textPrimary,
+    textSecondary: Colors.dark.textSecondary,
+    successBg: Colors.dark.successBg,
+    errorBg: Colors.dark.errorBg,
+    info: Colors.dark.info,
+    primaryGradientStart: Colors.dark.primaryGradientStart,
+    lightBlueBorder: Colors.dark.lightBlueBorder,
   },
   sizes: SIZES,
   fonts: FONTS,

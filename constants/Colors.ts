@@ -27,6 +27,17 @@ export default {
     shadowColorCard: 'rgba(0, 0, 0, 0.06)', // Mapeado para SHADOW_COLOR_CARD
     shadowColorSection: 'rgba(0, 0, 0, 0.1)', // Mapeado para SHADOW_COLOR_SECTION
     primaryLight: '#EBF5FF', // Mapeado para PRIMARY_LIGHT
+    
+    // Adicionadas para resolver os erros de propriedade em document-upload.tsx e facial-recognition.tsx
+    // Com base na sua paleta de cores original fornecida em document-upload.tsx e facial-recognition.tsx
+    cardBackground: '#FFFFFF', 
+    textPrimary: '#2D3748', 
+    textSecondary: '#6C757D', 
+    successBg: '#E8F5E9', 
+    errorBg: '#FFEBEE',
+    info: '#17A2B8',
+    primaryGradientStart: '#007AFF',
+    lightBlueBorder: '#B3D9FF',
     
     // Cores específicas para EarningsSummaryCard e EarningsChartSection se forem diferentes das globais
     // Mapeando para as cores globais mais próximas para consistência
@@ -71,7 +82,17 @@ export default {
     shadowColorCard: 'rgba(255,255,255,0.08)',
     shadowColorSection: 'rgba(255,255,255,0.15)',
     primaryLight: '#0A84FF', // Pode ser o mesmo do primary
-    
+    
+    // Adicionadas para resolver os erros de propriedade no modo escuro
+    cardBackground: '#1E1E1E', // Exemplo de cor para card no dark mode
+    textPrimary: '#FFFFFF', // Cor primária de texto no dark mode
+    textSecondary: '#CCCCCC', // Cor secundária de texto no dark mode
+    successBg: '#1C1C1E', // Exemplo de cor de fundo de sucesso no dark mode
+    errorBg: '#2C1B1B', // Exemplo de cor de fundo de erro no dark mode
+    info: '#4080B0', // Exemplo de cor de informação no dark mode
+    primaryGradientStart: '#0A84FF',
+    lightBlueBorder: '#50A0D0',
+
     // Cores específicas para EarningsSummaryCard e EarningsChartSection no modo escuro
     earningsPrimary: '#0A84FF',
     earningsWarning: '#FF9F0A',

@@ -64,6 +64,7 @@ model Client {
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   fullName      String
   phone         String?
+  cpf           String?   @unique // CORREÇÃO: Adicionado CPF para o cliente
   address       Address?  @relation("ClientAddress")
   bookings      Booking[]
   reviewsMade   Review[]  @relation("ClientReviews") // Avaliações que o cliente fez

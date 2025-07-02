@@ -1,6 +1,6 @@
 // src/chat/entities/message.entity.ts
 import { Message as PrismaMessage } from '@prisma/client';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class Message implements PrismaMessage {
   @ApiProperty({ description: 'ID da mensagem', example: 'uuid-da-mensagem' })
@@ -23,6 +23,13 @@ export class Message implements PrismaMessage {
 
   @ApiProperty({ description: 'Status de leitura da mensagem', example: false })
   isRead: boolean;
+
+  // Propriedades adicionadas para alinhar com o PrismaMessage
+  @ApiProperty({ description: 'Data e hora de criação da mensagem', example: '2025-06-01T10:00:00.000Z' })
+  createdAt: Date;
+
+  @ApiPropertyOptional({ description: 'URL de destino para a notificação associada à mensagem', example: '/app/messages/chatId', nullable: true })
+  targetUrl: string | null;
 
   // Propriedades de relação (não incluídas diretamente no construtor para simplicidade, mas presentes no tipo Prisma)
   // sender: User;

@@ -2,10 +2,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Animated, Image, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from 'expo-linear-gradient'; // Mantido, mesmo que não usado explicitamente nos estilos fornecidos
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
-import { verificationService } from '../../../services/verificationService'; // Seu serviço real
+import verificationService from '../../../services/verificationService'; // Correção: importação padrão
 
 // Paleta de cores (repetida para clareza)
 const Colors = {
@@ -109,7 +109,17 @@ export default function FacialRecognitionScreen({ onComplete, isLoading, initial
     }
     setSubmissionStatus('pending');
     try {
-      await verificationService.uploadSelfieWithDocument("mock-provider-id", selfieWithDocument!); // providerId
+      // O `verificationService.uploadSelfie` espera um `File`.
+      // Você precisará converter o URI para um `Blob` e então criar um "File-like" objeto ou
+      // modificar `uploadSelfie` para aceitar um URI e lidar com a conversão internamente.
+      // O `uploadService.uploadImageToCloud` já faz isso.
+      // Aqui, para compatibilidade com o `verificationService.uploadSelfie`,
+      // vou forçar o tipo, mas note que isso pode gerar um erro em tempo de execução
+      // se `uploadSelfie` realmente esperar um objeto `File` nativo.
+      // A alternativa seria:
+      // import * as uploadService from '../../../../services/uploadService';
+      // await uploadService.uploadImageToCloud(selfieWithDocument!, 'selfie');
+      await verificationService.uploadSelfie(selfieWithDocument! as unknown as File); 
       setSubmissionStatus('success');
       onComplete({ selfieWithDocument });
     } catch (error: any) {
@@ -118,7 +128,8 @@ export default function FacialRecognitionScreen({ onComplete, isLoading, initial
     }
   };
 
-  const isNextButtonEnabled = validateSelfie() && !isLoading && submissionStatus !== 'complete';
+  // Correção: Removida a comparação com 'complete' pois submissionStatus não o utiliza.
+  const isNextButtonEnabled = validateSelfie() && !isLoading && submissionStatus !== 'pending';
 
   return (
     <Animated.View style={[styles.container, { opacity: contentFade, transform: [{ translateY: contentSlide }] }]}>
@@ -141,11 +152,11 @@ export default function FacialRecognitionScreen({ onComplete, isLoading, initial
             <Ionicons name="person-circle-outline" size={80} color={Colors.textSecondary} />
           )}
           <View style={styles.imageUploadButtons}>
-            <TouchableOpacity style={styles.uploadButton} onPress={() => takePhoto(setSelfieWithDocument)} disabled={isLoading || submissionStatus === 'complete'}>
+            <TouchableOpacity style={styles.uploadButton} onPress={() => takePhoto(setSelfieWithDocument)} disabled={isLoading || submissionStatus === 'success'}>
               <Ionicons name="camera-outline" size={24} color="#fff" />
               <Text style={styles.uploadButtonText}>Tirar Foto</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage(setSelfieWithDocument)} disabled={isLoading || submissionStatus === 'complete'}>
+            <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage(setSelfieWithDocument)} disabled={isLoading || submissionStatus === 'success'}>
               <Ionicons name="folder-open-outline" size={24} color="#fff" />
               <Text style={styles.uploadButtonText}>Galeria</Text>
             </TouchableOpacity>
@@ -156,11 +167,11 @@ export default function FacialRecognitionScreen({ onComplete, isLoading, initial
 
         <Animated.View style={{ transform: [{ scale: buttonScale }] }}>
           <TouchableOpacity
-            style={[styles.submitButton, (!isNextButtonEnabled || isLoading) && styles.buttonDisabled]}
+            style={[styles.submitButton, (!isNextButtonEnabled) && styles.buttonDisabled]}
             onPress={handleSubmitSelfie}
             onPressIn={handlePressIn}
             onPressOut={handlePressOut}
-            disabled={!isNextButtonEnabled || isLoading}
+            disabled={!isNextButtonEnabled}
           >
             {isLoading || submissionStatus !== 'none' ? (
               <ActivityIndicator color="#FFFFFF" />

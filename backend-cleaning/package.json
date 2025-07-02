@@ -33,6 +33,7 @@
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.1.2",
     "@nestjs/platform-socket.io": "^11.1.2",
+    "@types/uuid": "^10.0.0",
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
@@ -42,7 +43,8 @@
     "passport-local": "^1.0.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.8.1",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
@@ -59,7 +61,7 @@
     "@types/jest": "^29.5.14",
     "@types/joi": "^17.2.2",
     "@types/jwt-decode": "^2.2.1",
-    "@types/long": "^4.0.2",  
+    "@types/long": "^4.0.2",
     "@types/node": "^22.15.29",
     "@types/passport-jwt": "^4.0.1",
     "@types/passport-local": "^1.0.38",

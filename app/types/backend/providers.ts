@@ -305,11 +305,14 @@ export interface WithdrawalResponseDto {
  * Alinhado com o `EarningsResponseDto` do backend.
  */
 export interface EarningsResponseDto {
-    totalEarnings: number;
-    availableForWithdrawal: number;
-    pendingWithdrawals: number;
-    recentTransactions: ProviderTransaction[];
-    earningsBreakdown: { [period: string]: number };
+    totalEarnings: number; // Total de ganhos
+    availableForWithdrawal: number; // Saldo disponível para saque
+    pendingWithdrawals: number; // Saques pendentes
+    recentTransactions: ProviderTransaction[]; // Transações recentes
+    earningsBreakdown: { [period: string]: number }; // Quebra de ganhos por período
+    dailyEarnings?: number; // Ganhos diários (opcional)
+    weeklyEarnings?: number; // Ganhos semanais (opcional)
+    monthlyEarnings?: number; // Ganhos mensais (opcional)
 }
 
 export type Provider = ProviderDisplayInfo & {

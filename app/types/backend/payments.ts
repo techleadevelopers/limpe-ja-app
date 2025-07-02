@@ -35,13 +35,12 @@ export interface PixChargeResponseDto {
  * ALINHADO COM O BACKEND: Inclui todos os campos esperados pelo backend.
  */
 export interface RequestWithdrawalDto {
-  amount: number;
-  bankName: string; // Nome do banco
-  agencyNumber: string; // Número da agência
-  accountNumber: string; // Número da conta
-  accountType: string; // Tipo da conta (Corrente, Poupança)
-  notes?: string; // Observações adicionais
-  // bankAccountId?: string; // Removido, pois o backend não espera este campo diretamente para o saque
+    amount: number; // ✅ agora aceita qualquer número
+  bankName: string;
+  agencyNumber: string;
+  accountNumber: string;
+  accountType: 'CONTA_CORRENTE' | 'CONTA_POUPANCA';
+  notes?: string;
 }
 
 /**

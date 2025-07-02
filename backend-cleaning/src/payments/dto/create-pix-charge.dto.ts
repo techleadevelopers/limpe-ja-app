@@ -42,15 +42,15 @@ export class PixChargeResponseDto {
   @IsNotEmpty()
   brCode: string;
 
-  @ApiPropertyOptional({ description: 'URL da imagem do QR Code PIX', example: 'https://api.example.com/pix/qrcode/uuid-da-transacao.png' })
-  @IsOptional()
+  @ApiProperty({ description: 'URL da imagem do QR Code PIX', example: 'https://api.example.com/pix/qrcode/uuid-da-transacao.png' })
+  // CORREÇÃO: Removido IsOptional() e o '?' para tornar qrCodeImage requerido
   @IsString() // A URL é uma string
-  qrCodeImage?: string;
+  qrCodeImage: string; // Agora é requerido
 
   @ApiProperty({ description: 'Data e hora de expiração da cobrança', example: '2025-06-01T10:30:00.000Z' })
-  @IsDate() // Valida como Date
-  @Type(() => Date) // Transforma string ISO em objeto Date
-  expiresAt: Date;
+  // CORREÇÃO: Alterado de Date para string e removido IsOptional() e o '?'
+  @IsString() // A data de expiração é uma string ISO 8601
+  expiresAt: string; // Agora é requerido e do tipo string
 
   @ApiProperty({ description: 'Valor da cobrança PIX', example: 150.75 })
   @IsNumber()
@@ -66,4 +66,15 @@ export class PixChargeResponseDto {
   @IsOptional()
   @IsUUID() // Se bookingId é um UUID
   bookingId?: string; // <<<<< CORREÇÃO: ADICIONADO A PROPRIEDADE AQUI >>>>>
+  
+  // Estes campos são extras no frontend DTO, mantidos como opcionais
+  @ApiPropertyOptional({ description: 'Mensagem de erro do BR Code (se houver)', example: 'Código PIX inválido' })
+  @IsOptional()
+  @IsString()
+  brCodeError?: string; 
+
+  @ApiPropertyOptional({ description: 'Data de expiração em formato alternativo (se usado)', example: '2025-06-01T10:30:00.000Z' })
+  @IsOptional()
+  @IsString()
+  expirationDate?: string; 
 }
