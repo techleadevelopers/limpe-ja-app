@@ -13,6 +13,8 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   }
 
   async onModuleInit() {
+    // Adicionando este log para depurar a DATABASE_URL
+    console.log('DATABASE_URL que o Prisma está vendo:', process.env.DATABASE_URL);
     await this.$connect();
   }
 
@@ -26,7 +28,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     // Primeira tentativa: Usar o hook 'beforeExit' do Prisma
     // Se o erro TS2345 ainda estiver aqui, o problema é na inferência de tipos do PrismaClient.
     // this.$on('beforeExit', async () => { // Linha que está dando erro
-    //   await app.close();
+    //   await app.close();
     // });
 
     // Segunda tentativa (Alternativa): Usar um hook de processo do Node.js
@@ -51,7 +53,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     // Se você realmente precisa do 'beforeExit' do Prisma, e o erro persiste,
     // podemos tentar um 'type assertion' (mas isso é um último recurso, pois ignora o erro de tipo).
     // (this as any).$on('beforeExit', async () => {
-    //   await app.close();
+    //   await app.close();
     // });
   }
 }
