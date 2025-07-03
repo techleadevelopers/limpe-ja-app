@@ -3,12 +3,15 @@
 /**
  * @interface CreatePixChargeDto
  * DTO para criar uma cobrança PIX.
+ * REMOVIDO: clientEmail, pois o backend o obtém do token/DB.
  */
 export interface CreatePixChargeDto {
   amount: number;
   description: string;
   bookingId?: string; // Se a cobrança PIX está ligada a um agendamento
-  providerId?: string; // ADICIONADO: ID do provedor para quem o pagamento será direcionado (necessário pelo backend)
+  providerId?: string; // ID do provedor para quem o pagamento será direcionado (necessário pelo backend)
+  // clientEmail: string; // REMOVIDO: Esta propriedade não deve ser enviada do frontend para o backend neste DTO.
+                        // O backend já obtém o email do cliente a partir do token de autenticação.
 }
 
 /**
@@ -27,6 +30,7 @@ export interface PixChargeResponseDto {
   bookingId?: string; // <<<<< CORREÇÃO: ADICIONADO A PROPRIEDADE AQUI >>>>>
   brCodeError?: string; // CORREÇÃO: Adicionado para resolver erro de tipagem no frontend
   expirationDate?: string; // CORREÇÃO: Adicionado para resolver erro de tipagem no frontend (se usado para formatar)
+  providerId: string; // Adicionado aqui, pois é uma informação importante na resposta.
 }
 
 /**

@@ -38,7 +38,7 @@ async function main() {
 
   // --- Usuária Teste 1 (CLIENT) ---
   const teste1Email = 'teste1@cleaning.com';
-  const teste1Password = 'teste123';
+  const teste1Password = 'teste123'; // Senha conhecida para teste
   const hashedTeste1Password = await bcrypt.hash(teste1Password, 8);
 
   const test1Address = await upsertAddress({
@@ -169,7 +169,7 @@ async function main() {
         phone: '11922222222',
         yearsOfExperience: 5,
         avatarUrl: 'https://randomuser.me/api/portraits/women/80.jpg',
-        verificationStatus: VerificationStatus.APPROVED,
+        verificationStatus: VerificationStatus.APPROVED, // Status de verificação inicial
         bio: 'Administradora que também atua como provedora.',
         pixKey: 'admin.provider@pix.com',
         address: { connect: { id: adminProviderAddress.id } },
@@ -185,7 +185,7 @@ async function main() {
         phone: '11922222222',
         yearsOfExperience: 5,
         avatarUrl: 'https://randomuser.me/api/portraits/women/80.jpg',
-        verificationStatus: VerificationStatus.APPROVED,
+        verificationStatus: VerificationStatus.APPROVED, // Status de verificação inicial
         bio: 'Administradora que também atua como provedora.',
         pixKey: 'admin.provider@pix.com',
         address: { connect: { id: adminProviderAddress.id } },
@@ -269,7 +269,7 @@ async function main() {
       phone: '11933333333',
       avatarUrl: 'https://randomuser.me/api/portraits/women/68.jpg',
       yearsOfExperience: 3,
-      verificationStatus: VerificationStatus.APPROVED,
+      verificationStatus: VerificationStatus.APPROVED, // Aprovada para testes
       bio: 'Especialista em limpeza residencial com foco em detalhes e organização. Amo deixar ambientes brilhantes!',
       address: {
         cep: '01311-000', street: 'Av. Paulista', number: '1000', neighborhood: 'Bela Vista', city: 'São Paulo', state: 'SP',
@@ -286,7 +286,7 @@ async function main() {
       phone: '11944444444',
       yearsOfExperience: 7,
       avatarUrl: 'https://randomuser.me/api/portraits/women/75.jpg',
-      verificationStatus: VerificationStatus.APPROVED,
+      verificationStatus: VerificationStatus.APPROVED, // Aprovada para testes
       bio: 'Limpeza comercial eficiente e confiável. Atendo grandes e pequenos escritórios com excelência.',
       address: {
         cep: '04543-010', street: 'R. Joaquim Floriano', number: '500', neighborhood: 'Itaim Bibi', city: 'São Paulo', state: 'SP',
@@ -303,7 +303,7 @@ async function main() {
       phone: '11955555555',
       yearsOfExperience: 2,
       avatarUrl: 'https://randomuser.me/api/portraits/women/12.jpg',
-      verificationStatus: VerificationStatus.PENDING_INITIAL_REVIEW,
+      verificationStatus: VerificationStatus.PENDING_INITIAL_REVIEW, // Pendente de verificação para testes
       bio: 'Profissional organizada e atenciosa, buscando sempre a satisfação da cliente.',
       address: {
         cep: '03100-000', street: 'Rua das Cores', number: '50', neighborhood: 'Mooca', city: 'São Paulo', state: 'SP',
@@ -396,9 +396,9 @@ async function main() {
               description: `Serviço ${serviceName} por ${providerData.fullName}.`,
             },
           });
-          console.log(`     - Serviço '${serviceName}' associado/atualizado à provedora ${providerData.fullName}.`);
+          console.log(`    - Serviço '${serviceName}' associado/atualizado à provedora ${providerData.fullName}.`);
         } else {
-          console.warn(`     - Serviço '${serviceName}' não encontrado para associar/atualizar à provedora ${providerData.fullName}.`);
+          console.warn(`    - Serviço '${serviceName}' não encontrado para associar/atualizar à provedora ${providerData.fullName}.`);
         }
       }
     } else if (user.provider?.id) {
@@ -529,7 +529,7 @@ async function main() {
   const allDaySlots = generateTimeSlots(8, 20); // Slots de 08:00 a 19:30 (terminando às 20:00)
 
   if (mariaProvider && carolinaProvider && helenaProvider) { // Garante que todos os provedores foram encontrados
-    // Disponibilidade genérica para Maria da Silva (Seg-Sex)
+    // Disponibilidade genérica para Maria da Silva (Seg-X)
     for (let day = 1; day <= 5; day++) { // Segunda a Sexta
       const mariaSlots = [
         { startTime: '09:00', endTime: '09:30' }, { startTime: '09:30', endTime: '10:00' },
@@ -694,7 +694,7 @@ async function main() {
                 clientId: anaClient.id,
                 providerId: mariaProvider.id,
                 providerServiceId: mariaResidentialService.id,
-                scheduledDate: booking1Date.toISOString().split('T')[0],
+                scheduledDate: booking1Date, // CORREÇÃO AQUI: Passar o objeto Date diretamente
                 scheduledTime: '10:00',
                 status: BookingStatus.COMPLETED,
                 totalPrice: new Prisma.Decimal(150.0),
@@ -767,7 +767,7 @@ async function main() {
           clientId: bookingData.client.id,
           providerId: carolinaProvider.id,
           providerServiceId: providerServiceForCarolina.id,
-          scheduledDate: bookingDate.toISOString().split('T')[0],
+          scheduledDate: bookingDate, // CORREÇÃO AQUI: Passar o objeto Date diretamente
           scheduledTime: bookingData.scheduledTime,
           status: BookingStatus.COMPLETED,
           totalPrice: new Prisma.Decimal(bookingData.price),
@@ -805,7 +805,7 @@ async function main() {
                 clientId: beatrizClient.id,
                 providerId: mariaProvider.id,
                 providerServiceId: mariaResidentialServiceForPending.id,
-                scheduledDate: booking2Date.toISOString().split('T')[0],
+                scheduledDate: booking2Date, // CORREÇÃO AQUI: Passar o objeto Date diretamente
                 scheduledTime: '14:00',
                 status: BookingStatus.PENDING,
                 totalPrice: new Prisma.Decimal(100.0),
@@ -833,7 +833,7 @@ async function main() {
                 clientId: anaClient.id,
                 providerId: carolinaProvider.id,
                 providerServiceId: carolinaCommercialService.id,
-                scheduledDate: booking3Date.toISOString().split('T')[0],
+                scheduledDate: booking3Date, // CORREÇÃO AQUI: Passar o objeto Date diretamente
                 scheduledTime: '09:00',
                 status: BookingStatus.CONFIRMED,
                 totalPrice: new Prisma.Decimal(200.0),

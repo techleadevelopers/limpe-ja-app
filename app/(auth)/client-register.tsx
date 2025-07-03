@@ -84,6 +84,7 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
   const [showPassword, setShowPassword] = useState(false);
 
   const [phone, setPhone] = useState(''); // NOVO: Estado para o telefone
+  const [cpf, setCpf] = useState(''); // NOVO: Estado para o CPF
 
   const [cep, setCep] = useState('');
   const [street, setStreet] = useState('');
@@ -112,7 +113,7 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
 
   const validateStep1 = () => {
     setGeneralError(null);
-    if (!username.trim() || !email.trim() || !password.trim()) {
+    if (!username.trim() || !email.trim() || !password.trim() || !cpf.trim()) { // Adicionado CPF na validação
       setGeneralError('Por favor, preencha todos os campos de informações pessoais.');
       return false;
     }
@@ -125,16 +126,16 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
         setGeneralError('A senha deve ter no mínimo 6 caracteres.');
         return false;
     }
+    const cleanedCpf = cpf.replace(/\D/g, '');
+    if (cleanedCpf.length !== 11) { // Validação simples de CPF (apenas 11 dígitos)
+        setGeneralError('CPF inválido. Deve conter 11 dígitos.');
+        return false;
+    }
     return true;
   };
 
   const validateStep2 = () => {
     setGeneralError(null);
-    if (!phone.trim()) { // Validação do telefone
-        setGeneralError('Por favor, insira seu telefone.');
-        return false;
-    }
-    // Simplificado para apenas verificar se tem entre 10 e 11 dígitos (sem formatação)
     const cleanedPhone = phone.replace(/\D/g, '');
     if (cleanedPhone.length < 10 || cleanedPhone.length > 11) { 
         setGeneralError('O telefone deve ter 10 ou 11 dígitos.');
@@ -144,7 +145,6 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
       setGeneralError('Por favor, preencha todos os campos de endereço.');
       return false;
     }
-    // Adicionar validações mais específicas para CEP, número, etc., se necessário
     return true;
   };
 
@@ -155,16 +155,54 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
     }
   };
 
-  // Função para formatar telefone
+  // Função para formatar telefone (CORRIGIDA E SIMPLIFICADA)
   const formatPhoneNumber = (text: string) => {
-    const cleanedText = text.replace(/\D/g, '');
-    let formattedPhone = cleanedText;
-    if (cleanedText.length > 0) formattedPhone = `(${cleanedText}`;
-    if (cleanedText.length > 2) formattedPhone = `(${cleanedText.substring(0, 2)}) ${cleanedText.substring(2)}`;
-    if (cleanedText.length > 7) formattedPhone = `${formattedPhone.substring(0, 9)}-${cleanedText.substring(7)}`;
-    if (cleanedText.length > 11) formattedPhone = formattedPhone.substring(0, 15); // Limita o tamanho
+    const cleanedText = text.replace(/\D/g, ''); // Remove todos os não-dígitos
+    let formattedPhone = '';
+
+    // Limita a entrada de dígitos brutos a 11 (máximo para celular no Brasil)
+    const maxDigits = 11;
+    const limitedText = cleanedText.substring(0, maxDigits);
+
+    if (limitedText.length > 0) {
+      formattedPhone = `(${limitedText.substring(0, 2)}`;
+    }
+    if (limitedText.length >= 3) {
+      if (limitedText.length <= 10) { // Número fixo (10 dígitos) ou celular antigo (8 dígitos após DDD)
+        formattedPhone += `) ${limitedText.substring(2, 6)}`;
+        if (limitedText.length >= 7) {
+          formattedPhone += `-${limitedText.substring(6, 10)}`;
+        }
+      } else { // Celular (11 dígitos, o 9º dígito)
+        formattedPhone += `) ${limitedText.substring(2, 7)}`;
+        if (limitedText.length >= 8) {
+          formattedPhone += `-${limitedText.substring(7, 11)}`;
+        }
+      }
+    }
     return formattedPhone;
   };
+
+  // Função para formatar CPF
+  const formatCpf = (text: string) => {
+    const cleanedText = text.replace(/\D/g, ''); // Remove todos os não-dígitos
+    let formattedCpf = '';
+
+    if (cleanedText.length > 0) {
+      formattedCpf = cleanedText.substring(0, 3);
+    }
+    if (cleanedText.length >= 4) {
+      formattedCpf += `.${cleanedText.substring(3, 6)}`;
+    }
+    if (cleanedText.length >= 7) {
+      formattedCpf += `.${cleanedText.substring(6, 9)}`;
+    }
+    if (cleanedText.length >= 10) {
+      formattedCpf += `-${cleanedText.substring(9, 11)}`;
+    }
+    return formattedCpf;
+  };
+
 
   // Função para buscar endereço por CEP (adicionada)
   const fetchAddressFromCep = async () => {
@@ -206,6 +244,7 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
         email: email.trim().toLowerCase(),
         password: password,
         fullName: username.trim(),
+        cpf: cpf.replace(/\D/g, ''), // Adicionado CPF aqui, removendo não-dígitos
         phone: phone.replace(/\D/g, ''), // Remove não-dígitos antes de enviar
         address: {
           cep: cep.trim(),
@@ -218,15 +257,8 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
         } as CreateAddressDto, // Cast para garantir conformidade com CreateAddressDto
       };
 
-      // AÇÃO 1.1: A correção do erro AsyncStorage e os console.logs
-      // devem ser implementados DENTRO da função signUpClient
-      // no arquivo '../../hooks/useAuth.ts' (ou onde signUpClient estiver definido).
-      // O `signUpClient` é quem faz a chamada à API e processa a resposta,
-      // incluindo o armazenamento do token.
       await signUpClient(registerData);
 
-      // O AuthContext (via signUpClient) já lida com o redirecionamento e o alerta de sucesso.
-      // Removido Alert.alert e router.replace daqui.
       console.log("[ClientRegisterScreen] Registro de cliente iniciado. AuthContext cuidará do resto.");
 
     } catch (error: any) {
@@ -248,7 +280,7 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
   const nextButtonAnims = createButtonAnimations(); // Animações para o botão "Avançar"
 
   // Atualizado para incluir validação do telefone e cidade
-  const isSignUpButtonEnabled = currentStep === 2 && phone.trim().replace(/\D/g, '').length >= 10 && cep.trim() && street.trim() && number.trim() && neighborhood.trim() && city.trim() && state.trim();
+  const isSignUpButtonEnabled = currentStep === 2 && phone.trim().replace(/\D/g, '').length >= 10 && phone.trim().replace(/\D/g, '').length <= 11 && cep.trim() && street.trim() && number.trim() && neighborhood.trim() && city.trim() && state.trim();
 
   return (
     <KeyboardAvoidingView
@@ -329,6 +361,22 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
                         </TouchableOpacity>
                     </View>
 
+                    {/* CPF Input - NOVO */}
+                    <View style={styles.inputWrapper}>
+                        <View style={styles.iconCircle}>
+                            <Ionicons name="document-text-outline" size={20} color="#007BFF" />
+                        </View>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="CPF (apenas números)"
+                            placeholderTextColor="#A0AEC0"
+                            value={cpf}
+                            onChangeText={(text) => { setCpf(formatCpf(text)); if (generalError) setGeneralError(null);}}
+                            keyboardType="numeric"
+                            maxLength={14} // 11 dígitos + 3 para formatação (pontos e hífen)
+                        />
+                    </View>
+
                     <AnimatedErrorMessage message={generalError} centered />
 
                     {/* Next Button */}
@@ -359,9 +407,9 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
                             placeholder="Telefone (apenas números)"
                             placeholderTextColor="#A0AEC0"
                             value={phone}
-                            onChangeText={(text) => { setPhone(formatPhoneNumber(text)); if (generalError) setGeneralError(null);}} // Remove não-dígitos
+                            onChangeText={(text) => { setPhone(formatPhoneNumber(text)); if (generalError) setGeneralError(null);}}
                             keyboardType="numeric"
-                            maxLength={15} // Permite 10 ou 11 dígitos
+                            // Removido maxLength aqui para permitir a digitação completa antes da formatação
                         />
                     </View>
 

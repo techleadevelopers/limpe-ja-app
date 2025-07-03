@@ -1,5 +1,5 @@
 // src/auth/auth.controller.ts
-import { Controller, Post, Body, UseGuards, Request, Get, UnauthorizedException } from '@nestjs/common'; // Adicionado UnauthorizedException
+import { Controller, Post, Body, UseGuards, Request, Get, UnauthorizedException, Logger } from '@nestjs/common'; // Adicionado UnauthorizedException, Logger
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterClientDto } from './dto/register-client.dto';
@@ -17,6 +17,8 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name); // Instancie o Logger
+
   constructor(
     private readonly authService: AuthService,
     private readonly prisma: PrismaService, // Injeta PrismaService para buscar o perfil completo
@@ -27,6 +29,7 @@ export class AuthController {
   @ApiResponse({ status: 201, description: 'Cliente registrado com sucesso.', type: AuthResponseDto })
   @ApiResponse({ status: 400, description: 'Dados de registro inválidos.' })
   async registerClient(@Body() registerClientDto: RegisterClientDto): Promise<AuthResponseDto> {
+    this.logger.log(`[AuthController] registerClient: Recebida solicitação de registro para cliente: ${registerClientDto.email}`);
     return this.authService.registerClient(registerClientDto);
   }
 
@@ -35,6 +38,7 @@ export class AuthController {
   @ApiResponse({ status: 201, description: 'Provedor registrado com sucesso.', type: AuthResponseDto })
   @ApiResponse({ status: 400, description: 'Dados de registro inválidos.' })
   async registerProvider(@Body() registerProviderDto: RegisterProviderDto): Promise<AuthResponseDto> {
+    this.logger.log(`[AuthController] registerProvider: Recebida solicitação de registro para provedor: ${registerProviderDto.email}`);
     return this.authService.registerProvider(registerProviderDto);
   }
 
@@ -44,6 +48,7 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Login bem-sucedido.', type: AuthResponseDto })
   @ApiResponse({ status: 401, description: 'Credenciais inválidas.' })
   async login(@Request() req): Promise<AuthResponseDto> {
+    this.logger.log(`[AuthController] login: Recebida solicitação de login para usuário: ${req.user ? req.user.email : 'N/A'}`);
     // O Passport.js já validou o usuário e o anexou ao objeto req.user
     // req.user aqui é do tipo Prisma.User (retornado por validateUser)
     return this.authService.login(req.user);
@@ -54,6 +59,7 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Link de redefinição de senha enviado (se o email existir).', type: MessageResponseDto })
   @ApiResponse({ status: 400, description: 'Email inválido.' })
   async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto): Promise<MessageResponseDto> {
+    this.logger.log(`[AuthController] forgotPassword: Recebida solicitação de redefinição de senha para email: ${forgotPasswordDto.email}`);
     await this.authService.forgotPassword(forgotPasswordDto.email);
     return { message: 'Se um usuário com este email existir, um link de redefinição de senha será enviado.' };
   }

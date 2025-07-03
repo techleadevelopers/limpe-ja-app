@@ -22,13 +22,16 @@ const USER_ID_KEY = 'user_id';
 export const setAuthToken = (token: string | null) => {
   if (token) {
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    console.debug('[authService] setAuthToken: Token definido no cabeçalho do Axios.');
   } else {
     delete api.defaults.headers.common['Authorization'];
+    console.debug('[authService] setAuthToken: Token removido do cabeçalho do Axios.');
   }
 };
 
 export const loadAuthData = async (): Promise<{ token: string | null; role: string | null; id: string | null }> => {
   try {
+    console.debug('[authService] loadAuthData: Tentando carregar dados de autenticação do AsyncStorage.');
     const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
     const role = await AsyncStorage.getItem(USER_ROLE_KEY);
     const id = await AsyncStorage.getItem(USER_ID_KEY);
@@ -40,6 +43,7 @@ export const loadAuthData = async (): Promise<{ token: string | null; role: stri
       console.log('[authService] loadAuthData: Nenhum token encontrado no AsyncStorage.');
       setAuthToken(null);
     }
+    console.debug('[authService] loadAuthData: Dados carregados - Token:', !!token, 'Role:', role, 'ID:', id);
     return { token, role, id };
   } catch (error) {
     console.error('[authService] loadAuthData: Erro ao carregar dados do AsyncStorage:', error);
@@ -50,25 +54,23 @@ export const loadAuthData = async (): Promise<{ token: string | null; role: stri
 
 export const login = async (credentials: LoginDto): Promise<AuthResponseDto> => {
   try {
+    console.debug('[authService] login: Iniciando chamada à API de login. Credenciais:', credentials.email);
     const response = await api.post<AuthResponseDto>('/auth/login', credentials);
+    
+    console.debug('[authService] login: Resposta completa da API:', response.data);
     const receivedToken = response.data.accessToken;
     const userRole = response.data.user.role;
     const userId = response.data.user.id;
-    // Opcional: Se o backend retorna clientId/providerId na raiz de response.data.user, salve-os aqui
-    // const clientId = (response.data.user as any).clientId;
-    // const providerId = (response.data.user as any).providerId;
 
-    console.log('[authService] login: Resposta completa da API:', response.data);
-    console.log('[authService] login: Valor de accessToken recebido:', receivedToken);
+    console.log('[authService] login: Valor de accessToken recebido:', receivedToken ? 'Presente' : 'Ausente');
     console.log('[authService] login: Papel do usuário recebido:', userRole);
     console.log('[authService] login: ID do usuário recebido:', userId);
 
     if (receivedToken) {
+      console.debug('[authService] login: Token recebido, armazenando no AsyncStorage...');
       await AsyncStorage.setItem(AUTH_TOKEN_KEY, receivedToken);
       await AsyncStorage.setItem(USER_ROLE_KEY, userRole);
       await AsyncStorage.setItem(USER_ID_KEY, userId);
-      // if (clientId) await AsyncStorage.setItem(CLIENT_ID_KEY, clientId);
-      // if (providerId) await AsyncStorage.setItem(PROVIDER_ID_KEY, providerId);
       setAuthToken(receivedToken);
       console.log('[authService] login: Token, Papel e ID armazenados com sucesso no AsyncStorage!');
       return response.data;
@@ -79,6 +81,7 @@ export const login = async (credentials: LoginDto): Promise<AuthResponseDto> => 
   } catch (error: any) {
     console.error('[authService] login: Erro ao fazer login na API:', error.response?.data || error.message);
     if (axios.isAxiosError(error) && error.response) {
+      console.debug('[authService] login: Detalhes do erro Axios:', error.response.status, error.response.data);
       throw new Error(error.response.data.message || 'Erro ao fazer login.');
     }
     throw new Error('Erro de rede ou servidor ao fazer login.');
@@ -87,22 +90,23 @@ export const login = async (credentials: LoginDto): Promise<AuthResponseDto> => 
 
 export const registerClient = async (data: RegisterClientDto): Promise<AuthResponseDto> => {
   try {
+    console.debug('[authService] registerClient: Iniciando chamada à API de registro de cliente. Dados:', data.email, data.fullName);
     const response = await api.post<AuthResponseDto>('/auth/register/client', data);
+    
+    console.debug('[authService] registerClient: Resposta completa da API:', response.data);
     const receivedToken = response.data.accessToken;
     const userRole = response.data.user.role;
     const userId = response.data.user.id;
-    // const clientId = response.data.user.clientDetails?.id; // Capture o clientId aqui
 
-    console.log('[authService] registerClient: Resposta completa da API:', response.data);
-    console.log('[authService] registerClient: Valor de accessToken recebido:', receivedToken);
+    console.log('[authService] registerClient: Valor de accessToken recebido:', receivedToken ? 'Presente' : 'Ausente');
     console.log('[authService] registerClient: Papel do usuário recebido:', userRole);
     console.log('[authService] registerClient: ID do usuário recebido:', userId);
 
     if (receivedToken) {
+      console.debug('[authService] registerClient: Token recebido, armazenando no AsyncStorage...');
       await AsyncStorage.setItem(AUTH_TOKEN_KEY, receivedToken);
       await AsyncStorage.setItem(USER_ROLE_KEY, userRole);
       await AsyncStorage.setItem(USER_ID_KEY, userId);
-      // if (clientId) await AsyncStorage.setItem(CLIENT_ID_KEY, clientId); // Salve o clientId
       setAuthToken(receivedToken);
       console.log('[authService] registerClient: Token, Papel e ID armazenados com sucesso no AsyncStorage!');
       return response.data;
@@ -113,6 +117,7 @@ export const registerClient = async (data: RegisterClientDto): Promise<AuthRespo
   } catch (error: any) {
     console.error('[authService] registerClient: Erro ao registrar cliente na API:', error.response?.data || error.message);
     if (axios.isAxiosError(error) && error.response) {
+      console.debug('[authService] registerClient: Detalhes do erro Axios:', error.response.status, error.response.data);
       throw new Error(error.response.data.message || 'Erro ao registrar cliente.');
     }
     throw new Error('Erro de rede ou servidor ao registrar cliente.');
@@ -121,22 +126,23 @@ export const registerClient = async (data: RegisterClientDto): Promise<AuthRespo
 
 export const registerProvider = async (data: RegisterProviderDto): Promise<AuthResponseDto> => {
   try {
+    console.debug('[authService] registerProvider: Iniciando chamada à API de registro de provedor. Dados:', data.email, data.fullName);
     const response = await api.post<AuthResponseDto>('/auth/register/provider', data);
+    
+    console.debug('[authService] registerProvider: Resposta completa da API:', response.data);
     const receivedToken = response.data.accessToken;
     const userRole = response.data.user.role;
     const userId = response.data.user.id;
-    // const providerId = response.data.user.providerDetails?.id; // Capture o providerId aqui
 
-    console.log('[authService] registerProvider: Resposta completa da API:', response.data);
-    console.log('[authService] registerProvider: Valor de accessToken recebido:', receivedToken);
+    console.log('[authService] registerProvider: Valor de accessToken recebido:', receivedToken ? 'Presente' : 'Ausente');
     console.log('[authService] registerProvider: Papel do usuário recebido:', userRole);
     console.log('[authService] registerProvider: ID do usuário recebido:', userId);
 
     if (receivedToken) {
+      console.debug('[authService] registerProvider: Token recebido, armazenando no AsyncStorage...');
       await AsyncStorage.setItem(AUTH_TOKEN_KEY, receivedToken);
       await AsyncStorage.setItem(USER_ROLE_KEY, userRole);
       await AsyncStorage.setItem(USER_ID_KEY, userId);
-      // if (providerId) await AsyncStorage.setItem(PROVIDER_ID_KEY, providerId); // Salve o providerId
       setAuthToken(receivedToken);
       console.log('[authService] registerProvider: Token, Papel e ID armazenados com sucesso no AsyncStorage!');
       return response.data;
@@ -147,6 +153,7 @@ export const registerProvider = async (data: RegisterProviderDto): Promise<AuthR
   } catch (error: any) {
     console.error('[authService] registerProvider: Erro ao registrar provedor na API:', error.response?.data || error.message);
     if (axios.isAxiosError(error) && error.response) {
+      console.debug('[authService] registerProvider: Detalhes do erro Axios:', error.response.status, error.response.data);
       throw new Error(error.response.data.message || 'Erro ao registrar provedor.');
     }
     throw new Error('Erro de rede ou servidor ao registrar provedor.');
@@ -155,10 +162,14 @@ export const registerProvider = async (data: RegisterProviderDto): Promise<AuthR
 
 export const forgotPassword = async (data: ForgotPasswordDto): Promise<MessageResponseDto> => {
   try {
+    console.debug('[authService] forgotPassword: Iniciando chamada à API de recuperação de senha. Email:', data.email);
     const response = await api.post<MessageResponseDto>('/auth/forgot-password', data);
+    console.debug('[authService] forgotPassword: Resposta da API:', response.data);
     return response.data;
   } catch (error: any) {
+    console.error('[authService] forgotPassword: Erro ao solicitar redefinição de senha:', error.response?.data || error.message);
     if (axios.isAxiosError(error) && error.response) {
+      console.debug('[authService] forgotPassword: Detalhes do erro Axios:', error.response.status, error.response.data);
       throw new Error(error.response.data.message || 'Erro ao solicitar redefinição de senha.');
     }
     throw new Error('Erro de rede ou servidor ao solicitar redefinição de senha.');
@@ -167,6 +178,7 @@ export const forgotPassword = async (data: ForgotPasswordDto): Promise<MessageRe
 
 export const logout = async (): Promise<void> => {
   try {
+    console.debug('[authService] logout: Iniciando processo de logout. Removendo itens do AsyncStorage...');
     await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
     await AsyncStorage.removeItem(USER_ROLE_KEY);
     await AsyncStorage.removeItem(USER_ID_KEY);

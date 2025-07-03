@@ -1,20 +1,22 @@
 // LimpeJaApp/app/services/paymentService.ts
 import api from './api'; // Importa a instância centralizada do Axios
-import axios from 'axios'; // Importar axios para isAxiosError
+import axios, { AxiosResponse } from 'axios'; // Importar axios para isAxiosError
 
 // Importar DTOs de pagamento
-import { CreatePixChargeDto, PixChargeResponseDto, RequestWithdrawalDto } from '../types/backend/payments';
+import { CreatePixChargeDto, PixChargeResponseDto, RequestWithdrawalDto } from '../types/backend/payments'; // CORREÇÃO AQUI: Adicionado RequestWithdrawalDto
 import { MessageResponseDto } from '../types/backend/auth';
 
 /**
  * @function createPixCharge
  * Cria uma cobrança PIX.
+ * @param clientUserId O ID do usuário cliente logado (vem do useAuth).
  * @param data DTO com os detalhes da cobrança.
  * @returns Promessa com os dados da cobrança PIX.
  */
-export const createPixCharge = async (data: CreatePixChargeDto): Promise<PixChargeResponseDto> => {
+export const createPixCharge = async (clientUserId: string, data: CreatePixChargeDto): Promise<PixChargeResponseDto> => {
   try {
     // O 'data' já conterá o 'providerId' e outros campos conforme o CreatePixChargeDto atualizado.
+    // O clientUserId será extraído do token JWT no backend, então não precisa ser enviado no body.
     // A resposta será automaticamente mapeada para PixChargeResponseDto atualizado.
     const response = await api.post<PixChargeResponseDto>('/payments/pix-charge', data);
     return response.data;

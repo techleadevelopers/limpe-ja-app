@@ -10,9 +10,10 @@ import { ProviderDisplayInfo, ServiceDetailsDto } from './providers';
  */
 export enum BookingStatus {
   PENDING = 'PENDING',
+  PENDING_PROVIDER_CONFIRMATION = 'PENDING_PROVIDER_CONFIRMATION', // Adicionado/Verificado
   CONFIRMED = 'CONFIRMED',
   COMPLETED = 'COMPLETED',
-  CANCELLED = 'CANCELLED',
+  CANCELLED = 'CANCELLED', // Verificado: com dois 'L's
   RESCHEDULED = 'RESCHEDULED',
   IN_PROGRESS = 'IN_PROGRESS', 
   REJECTED = 'REJECTED',
@@ -52,59 +53,60 @@ export interface CreateBookingDto {
  * @interface BookingDetails
  * Representa um agendamento completo retornado pelo backend para exibição no frontend.
  * Esta é a versão "achatada" do BookingWithDetailsRelations do backend.
- * FOI REVERTIDA PARA A ESTRUTURA ANTERIOR PARA MANTER A COMPATIBILIDADE.
- *
- * >>> ALTERADO: scheduledDate e scheduledTime foram removidos e substituídos por scheduledDateTime. <<<
  */
 export interface BookingDetails {
   id: string;
   status: BookingStatus; // Usar o enum definido
   
-  // REMOVIDOS: scheduledDate e scheduledTime separados
-  // scheduledDate: string; 
-  // scheduledTime: string; 
-
-  scheduledDateTime: string; // NOVO: Data e hora agendadas, combinadas em uma string ISO 8601 (ex: "2025-06-15T10:00:00.000Z")
+  scheduledDateTime: string; // Data e hora agendadas, combinadas em uma string ISO 8601
 
   totalPrice: number; // Preço total do agendamento
   notes?: string | null;
   createdAt: string; // ISO 8601 string
   updatedAt: string; // ISO 8601 string
 
-  // Dados do Cliente (achatados do client e client.user)
+  // Dados do Cliente
   clientId: string;
   clientFullName: string;
   clientEmail: string;
-  clientAvatarUrl?: string | null; // Avatar do cliente
+  clientAvatarUrl?: string | null;
 
-  // Dados do Provedor (achatados do provider e provider.user)
+  // Dados do Provedor
   providerId: string;
   providerFullName: string;
   providerEmail: string;
-  providerAvatarUrl?: string | null; // Adicionado, se o backend o incluir
+  providerAvatarUrl?: string | null;
 
-  // Dados do Serviço do Provedor (achatados do providerService.service e providerService)
+  // Dados do Serviço do Provedor
   providerServiceId: string; // ID do ProviderService
-  serviceName: string; // Nome do serviço (ex: "Limpeza Padrão")
-  serviceDescription?: string | null; // Descrição do serviço
-  servicePrice: number; // Preço do serviço específico do provedor
-  serviceDurationMinutes?: number | null; // Duração do serviço específico do provedor
+  serviceId: string; // **GARANTIDO AQUI:** Este campo é necessário para resolver o erro no [bookingId].tsx
+  serviceName: string;
+  serviceDescription?: string | null;
+  servicePrice: number;
+  serviceDurationMinutes?: number | null;
 
   // Dados do Endereço do Agendamento
-  address: BookingAddress; // Objeto completo de endereço do agendamento (não opcional se o backend sempre envia)
+  address: BookingAddress;
 
-  // Dados da Avaliação (review), se existir (mantido no formato achatado para compatibilidade)
+  // Dados da Avaliação (review), se existir
   reviewId?: string | null;
   reviewRating?: number | null;
   reviewComment?: string | null;
+  // --- ADICIONADO/AJUSTADO: isReviewed para corresponder à expectativa do frontend ---
+  // Se o backend NUNCA retornar 'isReviewed' diretamente,
+  // remova esta linha e derive 'isReviewed' no frontend de '!!reviewId'
+  isReviewed?: boolean; // Opção 1: Backend envia.
 }
 
-/**
- * @interface Booking
- * SINÔNIMO para BookingDetails para manter compatibilidade,
- * agora que BookingDetails voltou ao formato achatado.
- */
-export interface Booking extends BookingDetails {}
+// REMOVER OU COMENTAR esta linha se você não usa 'Booking' como um tipo separado em outros lugares.
+// SE VOCÊ AINDA USA 'Booking' EM ALGUM LUGAR, certifique-se de que ela EXTENDE BookingDetails
+// E ADICIONE isReviewed aqui, se for para ser uma propriedade DO OBJETO DE DADOS,
+// e não uma derivação do frontend.
+export interface Booking extends BookingDetails {
+  // Se isReviewed é uma propriedade que virá do backend, adicione-a aqui.
+  // Caso contrário, remova-a daqui e derive-a no componente (!!booking.reviewId)
+  isReviewed?: boolean;
+}
 
 
 /**
@@ -113,6 +115,6 @@ export interface Booking extends BookingDetails {}
  * Alinhado com o que o bookings.service.ts espera.
  */
 export interface UpdateBookingStatusDto {
-  status: BookingStatus; // Usar o enum BookingStatus
-  reason?: string; // Opcional, para cancelamento ou rejeição
+  status: BookingStatus;
+  reason?: string;
 }

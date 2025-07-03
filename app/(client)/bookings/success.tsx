@@ -8,15 +8,15 @@ import {
   Alert,
   Dimensions,
   Platform,
-  ColorValue, // Mantém ColorValue importado para o gradiente
-  ScrollView, // Importado ScrollView para o conteúdo principal
+  ColorValue,
+  ScrollView,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import *as Calendar from 'expo-calendar';
 import Toast from 'react-native-toast-message';
 import *as Clipboard from 'expo-clipboard';
-import { LinearGradient } from 'expo-linear-gradient'; // Importado LinearGradient
-import { BlurView } from 'expo-blur'; // Importado BlurView
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 
 // Importar componentes refatorados
 import SuccessHeader from './components/success/SuccessHeader';
@@ -34,6 +34,7 @@ import { ProviderDisplayInfo } from '../../types/backend/providers';
 // NOVO: Importar serviços e tipagens para PIX
 import { createPixCharge } from '../../services/paymentService';
 import { CreatePixChargeDto, PixChargeResponseDto } from '../../types/backend/payments';
+import { useAuth } from '../../../hooks/useAuth'; // Importar useAuth para obter userId
 
 // Constantes de estilo
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -42,24 +43,24 @@ const headerSecondaryColor = '#A8D8FF'; // Azul Secundário
 const iconColor = '#4A90E2'; // Azul para Ícones
 const successColor = '#28a745'; // Verde de Sucesso
 
-// >>>>> CORREÇÃO AQUI: Definindo explicitamente o tipo da tupla readonly <<<<<
 const backgroundGradientColors: readonly [ColorValue, ColorValue, ColorValue, ColorValue] = [
-  '#E0F7FA', // Um azul muito claro, quase branco (fundo superior)
-  '#B3E0FF', // Um azul claro médio
-  '#ADD8E6', // Outro azul claro para transição
-  '#CDE8F7', // Azul mais pálido para a parte inferior
-]; // Removido 'as const' aqui porque a declaração explícita já faz o trabalho
+  '#E0F7FA',
+  '#B3E0FF',
+  '#ADD8E6',
+  '#CDE8F7',
+];
 
 const abstractBlobColors: readonly [ColorValue, ColorValue, ColorValue] = [
-  'rgba(173, 216, 230, 0.4)', // Azul claro semi-transparente
-  'rgba(65, 153, 225, 0.15)', // Azul mais escuro semi-transparente
-  'rgba(133, 168, 231, 0.05)', // Azul mais suave, quase invisível
-]; // Removido 'as const' aqui
+  'rgba(173, 216, 230, 0.4)',
+  'rgba(65, 153, 225, 0.15)',
+  'rgba(133, 168, 231, 0.05)',
+];
 
 
 export default function SuccessScreen() {
   const { bookingId, paymentMethod, totalPrice: totalPriceParam } = useLocalSearchParams<{ bookingId?: string; paymentMethod?: string; totalPrice?: string }>();
   const router = useRouter();
+  const { user } = useAuth(); // Obter o usuário logado para pegar o userId
 
   const [booking, setBooking] = useState<BookingDetails | null>(null);
   const [providerRating, setProviderRating] = useState<number | undefined>(undefined);
@@ -97,7 +98,7 @@ export default function SuccessScreen() {
           useNativeDriver: true,
         }),
         Animated.timing(blobRotate, {
-          toValue: 1, // Representa 360 graus, interpolado de 0 a 1
+          toValue: 1,
           duration: 10000,
           easing: Easing.linear,
           useNativeDriver: true,
@@ -122,6 +123,12 @@ export default function SuccessScreen() {
       setIsLoading(false);
       return;
     }
+    if (!user?.id) { // Verificar se o userId está disponível
+      setError("Usuário não autenticado ou ID de usuário ausente.");
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     setPixGenerationError(null);
@@ -157,7 +164,8 @@ export default function SuccessScreen() {
             };
             console.log("[SuccessScreen] fetchBookingAndProviderDetails - PixChargeData para backend:", pixChargeData);
 
-            const pixResponse: PixChargeResponseDto = await createPixCharge(pixChargeData);
+            // CORREÇÃO AQUI: Passar o userId para createPixCharge
+            const pixResponse: PixChargeResponseDto = await createPixCharge(user.id, pixChargeData);
             setPixChargeDetails(pixResponse);
             console.log("[SuccessScreen] fetchBookingAndProviderDetails - Resposta PIX recebida:", pixResponse);
             Toast.show({
@@ -182,11 +190,11 @@ export default function SuccessScreen() {
       setIsLoading(false);
       console.log("[SuccessScreen] fetchBookingAndProviderDetails - Finalizado.");
     }
-  }, [bookingId, paymentMethod, totalPriceParam, pixChargeDetails]); 
+  }, [bookingId, paymentMethod, totalPriceParam, pixChargeDetails, user?.id]);
 
 
   useEffect(() => {
-    const revealDelay = 300; 
+    const revealDelay = 300;
     const pixGenerationDelay = 2000;
 
     const timer = setTimeout(() => {

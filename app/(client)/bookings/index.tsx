@@ -27,7 +27,6 @@ import { useAuth } from '../../../hooks/useAuth';
 type FilterType = 'requests' | 'upcoming' | 'completed' | 'cancelled';
 
 // Componente para um item da lista de agendamentos com animação de entrada
-// CORREÇÃO: Usar BookingDetails
 const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = ({ item, index }) => {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(50)).current;
@@ -50,15 +49,16 @@ const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = (
     }, [fadeAnim, slideAnim, index]);
 
     // Mapeia os status do backend para estilos de exibição no frontend
-    // CORREÇÃO: Usar BookingStatus
     const getStatusStyle = (status: BookingStatus) => {
         switch (status) {
             case BookingStatus.CONFIRMED: return { text: '#388E3C', background: '#E8F5E9', icon: 'checkmark-circle-outline' as const, iconColor: '#4CAF50' };
             case BookingStatus.PENDING: return { text: '#FFA000', background: '#FFF3E0', icon: 'time-outline' as const, iconColor: '#FF9800' };
+            // >>> CORREÇÃO AQUI (lin ha 58 no erro original): Usar o nome correto do enum <<<
             case BookingStatus.PENDING_PROVIDER_CONFIRMATION: return { text: '#FF6F00', background: '#FFF3E0', icon: 'hourglass-outline' as const, iconColor: '#FF6F00' };
             case BookingStatus.IN_PROGRESS: return { text: '#007AFF', background: '#E3F2FD', icon: 'sync-circle-outline' as const, iconColor: '#007AFF' };
             case BookingStatus.COMPLETED: return { text: '#007AFF', background: '#E3F2FD', icon: 'flag-outline' as const, iconColor: '#007AFF' };
-            case BookingStatus.CANCELED: return { text: '#D32F2F', background: '#FFEBEE', icon: 'close-circle-outline' as const, iconColor: '#F44336' }; // Corrigido para CANCELED
+            // >>> CORREÇÃO AQUI (lin ha 61 no erro original): Usar CANCELLED (dois L's) <<<
+            case BookingStatus.CANCELLED: return { text: '#D32F2F', background: '#FFEBEE', icon: 'close-circle-outline' as const, iconColor: '#F44336' }; 
             case BookingStatus.REJECTED: return { text: '#757575', background: '#F5F5F5', icon: 'alert-circle-outline' as const, iconColor: '#757575' };
             case BookingStatus.RESCHEDULED: return { text: '#6A1B9A', background: '#EDE7F6', icon: 'sync-outline' as const, iconColor: '#6A1B9A' };
             default: return { text: '#546E7A', background: '#ECEFF1', icon: 'help-circle-outline' as const, iconColor: '#757575' };
@@ -66,10 +66,8 @@ const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = (
     };
 
     const statusInfo = getStatusStyle(item.status);
-    // CORREÇÃO: Usar providerAvatarUrl do BookingDetails
     const providerAvatarSource = item.providerAvatarUrl ? { uri: item.providerAvatarUrl } : require('../../../assets/images/default-avatar.png');
 
-    // Formata o endereço para exibição
     const formattedAddress = item.address ?
         `${item.address.street}, ${item.address.number}` +
         `${item.address.complement ? ` - ${item.address.complement}` : ''}` +
@@ -81,7 +79,7 @@ const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = (
         <Animated.View style={[styles.itemCard, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
             <Link href={`/(client)/bookings/${item.id}`} asChild>
                 <TouchableOpacity style={styles.itemCardContent}>
-                    {item.providerAvatarUrl ? ( // CORREÇÃO: Usar providerAvatarUrl
+                    {item.providerAvatarUrl ? (
                         <Image source={providerAvatarSource} style={styles.itemProviderImage} />
                     ) : (
                         <View style={styles.itemIconContainer}>
@@ -89,8 +87,8 @@ const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = (
                         </View>
                     )}
                     <View style={styles.itemDetails}>
-                        <Text style={styles.itemServiceName} numberOfLines={1}>{item.serviceName}</Text> {/* CORREÇÃO: Usar serviceName */}
-                        <Text style={styles.itemProviderName}>Com: {item.providerFullName}</Text> {/* CORREÇÃO: Usar providerFullName */}
+                        <Text style={styles.itemServiceName} numberOfLines={1}>{item.serviceName}</Text>
+                        <Text style={styles.itemProviderName}>Com: {item.providerFullName}</Text>
                         <Text style={styles.itemDate}>
                             <Ionicons name="calendar-outline" size={14} color="#6C757D" />{' '}
                             {formatDate(item.scheduledDateTime, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
@@ -100,7 +98,7 @@ const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = (
                                 <Ionicons name="location-outline" size={14} color="#6C757D" /> {formattedAddress}
                             </Text>
                         )}
-                        {item.totalPrice !== undefined && ( // CORREÇÃO: Usar totalPrice
+                        {item.totalPrice !== undefined && (
                             <Text style={styles.itemPriceText}>
                                 <MaterialCommunityIcons name="currency-usd" size={14} color="#2E7D32" /> R$ {item.totalPrice.toFixed(2).replace('.', ',')}
                             </Text>
@@ -120,7 +118,6 @@ const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = (
 export default function MyBookingsScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  // CORREÇÃO: Usar BookingDetails
   const [bookings, setBookings] = useState<BookingDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -171,26 +168,24 @@ export default function MyBookingsScreen() {
         useNativeDriver: true,
     }).start(async () => {
         try {
-            let fetchedBookings: BookingDetails[] = []; // CORREÇÃO: Usar BookingDetails
+            let fetchedBookings: BookingDetails[] = [];
             
             // Mapear os filtros do frontend para os status do backend
             if (currentFilter === 'requests') {
-                // CORREÇÃO: Usar BookingStatus.PENDING_PROVIDER_CONFIRMATION e BookingStatus.PENDING
+                // >>> CORREÇÃO AQUI (linha 179 no erro original) <<<
                 const pendingProvider = await getBookingsForUser(BookingStatus.PENDING_PROVIDER_CONFIRMATION);
                 const pendingClient = await getBookingsForUser(BookingStatus.PENDING);
                 fetchedBookings = [...pendingProvider, ...pendingClient].filter(b => new Date(b.scheduledDateTime) >= new Date());
             } else if (currentFilter === 'upcoming') {
-                // CORREÇÃO: Usar BookingStatus.CONFIRMED e BookingStatus.IN_PROGRESS
                 const confirmed = await getBookingsForUser(BookingStatus.CONFIRMED);
                 const inProgress = await getBookingsForUser(BookingStatus.IN_PROGRESS);
                 fetchedBookings = [...confirmed, ...inProgress].filter(b => new Date(b.scheduledDateTime) >= new Date());
             } else if (currentFilter === 'completed') {
-                // CORREÇÃO: Usar BookingStatus.COMPLETED
                 const completed = await getBookingsForUser(BookingStatus.COMPLETED);
                 fetchedBookings = [...completed].filter(b => new Date(b.scheduledDateTime) < new Date());
             } else if (currentFilter === 'cancelled') {
-                // CORREÇÃO: Usar BookingStatus.CANCELED e BookingStatus.REJECTED
-                const cancelled = await getBookingsForUser(BookingStatus.CANCELED);
+                // >>> CORREÇÃO AQUI (linha 193 no erro original) <<<
+                const cancelled = await getBookingsForUser(BookingStatus.CANCELLED); // CANCELED para CANCELLED
                 const rejected = await getBookingsForUser(BookingStatus.REJECTED);
                 fetchedBookings = [...cancelled, ...rejected];
             }
@@ -237,7 +232,6 @@ export default function MyBookingsScreen() {
         setActiveFilter(newFilter);
     };
 
-    // CORREÇÃO: item tipado como BookingDetails
     const handleServicePress = (item: BookingDetails) => {
         router.push(`/(client)/bookings/${item.id}` as any);
     };
