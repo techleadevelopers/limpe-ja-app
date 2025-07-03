@@ -110,17 +110,20 @@ export default function VerifyAccountScreen() {
         setDocumentPhotoBack(documentData.documentPhotoBack);
 
         if (documentData.documentPhotoFront) {
-          await verificationService.uploadDocumentPhoto(documentData.documentPhotoFront as unknown as File, DocumentPhotoType.FRONT);
+          // Passa a URI da imagem diretamente para o serviço
+          await verificationService.uploadDocumentPhoto(documentData.documentPhotoFront, DocumentPhotoType.FRONT);
         }
         if (documentData.documentPhotoBack) {
-          await verificationService.uploadDocumentPhoto(documentData.documentPhotoBack as unknown as File, DocumentPhotoType.BACK);
+          // Passa a URI da imagem diretamente para o serviço
+          await verificationService.uploadDocumentPhoto(documentData.documentPhotoBack, DocumentPhotoType.BACK);
         }
         setCurrentVerificationStep(3);
       } else if (step === 3) { 
         const selfieData = data as { selfieWithDocument: string | null };
         setSelfieWithDocument(selfieData.selfieWithDocument);
         if (selfieData.selfieWithDocument) {
-          await verificationService.uploadSelfie(selfieData.selfieWithDocument as unknown as File);
+          // Passa a URI da imagem diretamente para o serviço
+          await verificationService.uploadSelfie(selfieData.selfieWithDocument);
         }
         
         setToastMessage({ message: "Informações enviadas para análise!", type: "success" });

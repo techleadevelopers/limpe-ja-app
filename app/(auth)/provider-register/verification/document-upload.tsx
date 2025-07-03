@@ -1,3 +1,4 @@
+// app/(auth)/provider-register/verification/document-upload.tsx
 import { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Animated, Image, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,9 +10,18 @@ import * as uploadService from '../../../services/uploadService'; // Caminho COR
 import verificationService from '../../../services/verificationService'; // Caminho CORRIGIDO
 import AnimatedErrorMessage from '../../../(provider)/schedule/components/manager/AnimatedErrorMessage'; // Caminho CORRIGIDO conforme fornecido
 import { DocumentPhotoType } from '../../../../backend-cleaning/src/verification/dto/upload-document.dto'; // Importando o tipo DocumentPhotoType
+import * as FileSystem from 'expo-file-system';
+
 // Paleta de cores (repetida para clareza, mas já importamos de constants/Colors)
 // Se você quer usar a paleta específica do Colors.light ou Colors.dark, você pode fazer:
 const Colors = colors.light; // Ou colors.dark, dependendo do tema atual
+
+// A função uriToFile não é mais necessária aqui, pois verificationService já lida com a URI.
+// async function uriToFile(uri: string, name: string, type: string): Promise<File> {
+//   const response = await fetch(uri);
+//   const blob = await response.blob();
+//   return new File([blob], name, { type });
+// }
 
 interface DocumentUploadProps {
   onComplete: (data: { documentPhotoFront: string | null; documentPhotoBack: string | null }) => void;
@@ -103,24 +113,29 @@ export default function DocumentUploadScreen({
     return isValid;
   };
 
-const handleSubmitDocuments = async () => {
+  const handleSubmitDocuments = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     if (!validateDocuments()) {
-        return;
+      return;
     }
     setSubmissionStatus('pending');
     try {
-        await verificationService.uploadDocumentPhoto(documentPhotoFront! as unknown as File, DocumentPhotoType.FRONT); 
-        await verificationService.uploadDocumentPhoto(documentPhotoBack! as unknown as File, DocumentPhotoType.BACK); 
-
-        setSubmissionStatus('success');
-        onComplete({ documentPhotoFront, documentPhotoBack });
+      if (documentPhotoFront) {
+        // Passa a URI da imagem diretamente para o serviço
+        await verificationService.uploadDocumentPhoto(documentPhotoFront, DocumentPhotoType.FRONT);
+      }
+      if (documentPhotoBack) {
+        // Passa a URI da imagem diretamente para o serviço
+        await verificationService.uploadDocumentPhoto(documentPhotoBack, DocumentPhotoType.BACK);
+      }
+      setSubmissionStatus('success');
+      onComplete({ documentPhotoFront, documentPhotoBack });
     } catch (error: any) {
-        setSubmissionStatus('failed');
-        setFrontError(error.message || "Erro ao fazer upload dos documentos. Tente novamente.");
-        setBackError(error.message || "Erro ao fazer upload dos documentos. Tente novamente.");
+      setSubmissionStatus('failed');
+      setFrontError(error.message || "Erro ao fazer upload dos documentos. Tente novamente.");
+      setBackError(error.message || "Erro ao fazer upload dos documentos. Tente novamente.");
     }
-};
+  };
 
   // Correção: Removida a comparação com 'complete' pois submissionStatus não o utiliza.
   // A condição `isLoading` ou `submissionStatus === 'pending'` já deve ser suficiente para desabilitar o botão durante o envio.
@@ -197,18 +212,18 @@ const handleSubmitDocuments = async () => {
 
         {submissionStatus !== 'none' && (
           <View style={[styles.statusBadge,
-                        submissionStatus === 'success' ? styles.statusSuccess :
-                        submissionStatus === 'failed' ? styles.statusFailed : {}]}>
+                submissionStatus === 'success' ? styles.statusSuccess :
+                submissionStatus === 'failed' ? styles.statusFailed : {}]}>
             <Ionicons
               name={submissionStatus === 'success' ? "checkmark-circle" :
                     submissionStatus === 'failed' ? "warning" : "information-circle"}
               size={20}
               color={submissionStatus === 'success' ? Colors.secondary : // Corrigido de Colors.success para Colors.secondary
-                     submissionStatus === 'failed' ? Colors.error : Colors.info}
+                    submissionStatus === 'failed' ? Colors.error : Colors.info}
             />
             <Text style={[styles.statusText,
-                          submissionStatus === 'success' ? { color: Colors.secondary } : // Corrigido de Colors.success para Colors.secondary
-                          submissionStatus === 'failed' ? { color: Colors.error } : { color: Colors.info }]}>
+                  submissionStatus === 'success' ? { color: Colors.secondary } : // Corrigido de Colors.success para Colors.secondary
+                  submissionStatus === 'failed' ? { color: Colors.error } : { color: Colors.info }]}>
               {submissionStatus === 'pending' && "Enviando documentos..."}
               {submissionStatus === 'success' && "Documentos enviados com sucesso!"}
               {submissionStatus === 'failed' && "Falha no envio dos documentos. Tente novamente."}

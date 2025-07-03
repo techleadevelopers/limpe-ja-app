@@ -1,11 +1,11 @@
-// app/(provider)/verify-account/background-check-status.tsx
+// app/(auth)/provider-register/background-check-status.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, ActivityIndicator, TouchableOpacity, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient'; // Para gradientes nos botões
-import { useAuth } from '../../../contexts/AuthContext'; // Para atualizar UserProfile
-import { verificationService } from '../../../services/verificationService'; // Seu serviço real
-import ToastMessage from '../../../components/ui/ToastMessage'; // Seu componente ToastMessage
+import { useAuth } from '../../../../hooks/useAuth'; // Para atualizar UserProfile
+import verificationService from '../../../services/verificationService'; // Seu serviço real
+import ToastMessage from '../../../../components/ui/ToastMessage'; // Seu componente ToastMessage
 import * as Haptics from 'expo-haptics'; // Para feedback tátil
 
 // Paleta de cores (repetida para clareza, em um projeto real viria de Colors.ts)
@@ -23,6 +23,8 @@ const Colors = {
   warning: '#FFC107',
   info: '#17A2B8',
   lightBlueBorder: '#B3D9FF',
+  successBg: '#E8F5E9',
+  errorBg: '#FFEBEE',
 };
 
 interface BackgroundCheckStatusProps {
@@ -70,9 +72,8 @@ export default function BackgroundCheckStatusScreen({ onComplete, isLoading, ini
     setSubmissionStatus('pending');
     try {
       // Chamada real ao serviço de backend
-      // await verificationService.submitCpfForBackgroundCheck(providerId, cpf); // Assumindo providerId no escopo
-      // No mock, não precisamos do providerId
-      await verificationService.submitCpfForBackgroundCheck(cpf); // Apenas o CPF para o mock
+      // A função verificationService.submitCpf(cpf) já está correta no verificationService.ts
+      await verificationService.submitCpf(cpf); 
       setSubmissionStatus('success');
       setIsCpfSubmitted(true);
       onComplete({ cpf }); // Informa a tela pai que esta etapa foi concluída

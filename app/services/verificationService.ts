@@ -66,7 +66,9 @@ class VerificationService {
       // Anexa o Blob ao FormData. O nome 'file' deve corresponder ao esperado pelo backend (@UploadedFile('file'))
       // O terceiro argumento é o nome do arquivo, que pode ser inferido ou um nome padrão.
       formData.append('file', blob, `document-${type}.jpeg`);
-      formData.append('type', type); // O tipo do documento (FRONT/BACK)
+      // O tipo do documento (FRONT/BACK) é enviado como parte da URL para o backend, conforme definido no VerificationController.
+      // Não é necessário enviar 'type' separadamente no FormData se já está na URL.
+      // Se o backend espera 'type' no corpo, você pode adicionar: formData.append('type', type);
 
       const response = await api.post<VerificationResponse>(`${this.BASE_URL}/upload-document/${type}`, formData, {
         headers: {
@@ -127,7 +129,7 @@ class VerificationService {
         throw new Error(error.response.data.message || 'Erro ao fazer upload da selfie.');
       }
       throw new Error('Erro de rede ou servidor ao fazer upload da selfie.');
-    }
+      }
   }
 
   /**

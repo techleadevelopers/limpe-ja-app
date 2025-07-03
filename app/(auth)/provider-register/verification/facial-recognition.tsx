@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Animated, Image, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient'; // Mantido, mesmo que não usado explicitamente nos estilos fornecidos
+import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import verificationService from '../../../services/verificationService'; // Correção: importação padrão
@@ -25,6 +25,13 @@ const Colors = {
   successBg: '#E8F5E9',
   errorBg: '#FFEBEE',
 };
+
+// A função uriToFile não é mais necessária aqui, pois verificationService já lida com a URI.
+// async function uriToFile(uri: string, name: string, type: string): Promise<File> {
+//   const response = await fetch(uri);
+//   const blob = await response.blob();
+//   return new File([blob], name, { type });
+// }
 
 interface FacialRecognitionProps {
   onComplete: (data: { selfieWithDocument: string | null }) => void;
@@ -109,17 +116,10 @@ export default function FacialRecognitionScreen({ onComplete, isLoading, initial
     }
     setSubmissionStatus('pending');
     try {
-      // O `verificationService.uploadSelfie` espera um `File`.
-      // Você precisará converter o URI para um `Blob` e então criar um "File-like" objeto ou
-      // modificar `uploadSelfie` para aceitar um URI e lidar com a conversão internamente.
-      // O `uploadService.uploadImageToCloud` já faz isso.
-      // Aqui, para compatibilidade com o `verificationService.uploadSelfie`,
-      // vou forçar o tipo, mas note que isso pode gerar um erro em tempo de execução
-      // se `uploadSelfie` realmente esperar um objeto `File` nativo.
-      // A alternativa seria:
-      // import * as uploadService from '../../../../services/uploadService';
-      // await uploadService.uploadImageToCloud(selfieWithDocument!, 'selfie');
-      await verificationService.uploadSelfie(selfieWithDocument! as unknown as File); 
+      if (selfieWithDocument) {
+        // Passa a URI da imagem diretamente para o serviço
+        await verificationService.uploadSelfie(selfieWithDocument); 
+      }
       setSubmissionStatus('success');
       onComplete({ selfieWithDocument });
     } catch (error: any) {
