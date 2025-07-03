@@ -1,5 +1,7 @@
 // src/users/users.controller.ts
-import { Controller, Get, Body, Patch, Param, UseGuards, Req, NotFoundException, ForbiddenException, Delete, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller, Get, Body, Patch, Param, UseGuards, Req, NotFoundException, ForbiddenException, Delete, HttpCode, HttpStatus
+} from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserProfileDto } from './dto/user-profile.dto';
@@ -9,6 +11,14 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole, User as PrismaUser } from '@prisma/client';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express-serve-static-core';
+
+// Adicione uma interface para o payload do JWT se ainda não tiver uma
+interface JwtPayload {
+  sub: string; // O ID do usuário
+  email: string;
+  role: UserRole;
+  // Outros campos do payload do seu JWT
+}
 
 @ApiTags('users')
 @Controller('users')
@@ -23,14 +33,15 @@ export class UsersController {
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Usuário não encontrado.' })
   async getMyProfile(@Req() req: Request): Promise<UserProfileDto> {
-    const userId = (req.user as PrismaUser).id;
+    // CORREÇÃO: Acesse o ID do usuário via 'sub' do payload do JWT
+    const userId = (req.user as JwtPayload).sub; 
     // O usersService.findOne precisa retornar o user com todas as relações para o UserProfileDto.
     // O tipo de 'user' retornado pelo findOne precisa ser compatível com o construtor de UserProfileDto.
-    const user = await this.usersService.findOne(userId); // <-- usersService.findOne precisa incluir relações
+    const user = await this.usersService.findOne(userId);
     if (!user) {
       throw new NotFoundException(`Usuário com ID "${userId}" não encontrado.`);
     }
-    return new UserProfileDto(user as any); // <-- CORREÇÃO: Cast temporário (precisa alinhar UserProfileDto com o retorno real do Service)
+    return new UserProfileDto(user as any); // Manter o cast temporário se necessário, mas o ideal é alinhar os tipos
   }
 
   @Patch('me')
@@ -41,13 +52,14 @@ export class UsersController {
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Usuário não encontrado.' })
   async updateMyProfile(@Req() req: Request, @Body() updateUserDto: UpdateUserDto): Promise<UserProfileDto> {
-    const userId = (req.user as PrismaUser).id;
+    // CORREÇÃO: Acesse o ID do usuário via 'sub' do payload do JWT
+    const userId = (req.user as JwtPayload).sub;
     // O usersService.update precisa retornar o user com todas as relações para o UserProfileDto.
-    const updatedUser = await this.usersService.update(userId, updateUserDto); // <-- usersService.update precisa incluir relações
+    const updatedUser = await this.usersService.update(userId, updateUserDto);
     if (!updatedUser) {
       throw new NotFoundException(`Usuário com ID "${userId}" não encontrado.`);
     }
-    return new UserProfileDto(updatedUser as any); // <-- CORREÇÃO: Cast temporário (precisa alinhar UserProfileDto com o retorno real do Service)
+    return new UserProfileDto(updatedUser as any);
   }
 
   @Get(':id')
@@ -60,11 +72,12 @@ export class UsersController {
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
   @ApiResponse({ status: 404, description: 'Usuário não encontrado.' })
   async findOne(@Param('id') id: string): Promise<UserProfileDto> {
-    const user = await this.usersService.findOne(id); // <-- usersService.findOne precisa incluir relações
+    // Este `id` vem do @Param, então já é o ID correto
+    const user = await this.usersService.findOne(id);
     if (!user) {
       throw new NotFoundException(`Usuário com ID "${id}" não encontrado.`);
     }
-    return new UserProfileDto(user as any); // <-- CORREÇÃO: Cast temporário (precisa alinhar UserProfileDto com o retorno real do Service)
+    return new UserProfileDto(user as any);
   }
 
   @Delete(':id')
