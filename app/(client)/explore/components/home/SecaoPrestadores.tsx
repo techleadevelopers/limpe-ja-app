@@ -57,8 +57,8 @@ const SecaoPrestadores: React.FC<SecaoPrestadoresProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 20,
-    marginBottom: 40,
+    marginTop: 8,
+    marginBottom: 20,
     backgroundColor: '#F4F7FC',
   },
   header: {

@@ -71,7 +71,8 @@ const SecaoContainer = <T extends { id: string | number }>({ // Garante que os i
 
 const styles = StyleSheet.create({
   secaoContainer: {
-    marginTop: 22,
+    marginTop: 25,
+
   },
   secaoHeader: {
     flexDirection: 'row',
@@ -81,12 +82,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   secaoTitulo: {
-    fontSize: 19,
+    fontSize: 18,
     fontWeight: '700',
     color: '#1C3A5F',
   },
   verTudoTexto: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#007AFF',
     fontWeight: '600',
   },

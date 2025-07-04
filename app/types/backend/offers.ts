@@ -19,4 +19,13 @@ export interface Offer {
   couponCode?: string; // Código do cupom associado
   serviceId?: string; // ID do serviço específico ao qual a oferta se aplica
   providerId?: string; // ID do provedor ao qual a oferta se aplica
+   // NOVAS PROPRIEDADES ADICIONADAS:
+    bankName?: string; // Adicionado
+    bankPaymentText?: string; // Adicionado
+    buttonText?: string; // Adicionado
+    disclaimer?: string; // Adicionado
+    badgeTitle?: string; // Adicionado
+    badgeDates?: string; // Adicionado
+    backgroundColorStart?: string; // Adicionado
+    backgroundColorEnd?: string; // Adicionado
 }

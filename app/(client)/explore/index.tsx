@@ -10,8 +10,9 @@ import {
     Text,
     Alert,
     TouchableOpacity,
-    // TextInput, // Removido para a barra de busca
-    Keyboard, // Adicionado para esconder o teclado
+    FlatList,
+    Dimensions, // Certifique-se de que Dimensions está importado
+    Keyboard,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -34,7 +35,11 @@ import { BookingAddress } from '../../types/backend/bookings';
 
 import { CLIENT_ROUTES } from '../../../constants/routes';
 
-import BannerOferta from '../../(client)/ofertas/components/BannerOferta';
+// Importe o BannerOferta se ainda precisar dele em alguma outra parte do app,
+// mas para o carrossel, estamos usando CarouselBannerItem
+// import BannerOferta from '../../(client)/ofertas/components/BannerOferta';
+// import DefaultBanner from '../../(client)/ofertas/components/DefaultBanner'; // Não será usado com o carrossel fixo
+
 import HeaderSuperior from './components/home/HeaderSuperior';
 import NavBar from './components/home/NavBar';
 import CategoriaCard from './components/home/CategoriaCard';
@@ -43,27 +48,63 @@ import SecaoPrestadores from './components/home/SecaoPrestadores';
 import SecaoRecomendacoes from './components/home/SecaoRecomendacoes';
 import PrestadorCard from './components/home/PrestadorCard';
 import RecomendacaoCard from './components/home/RecomendacaoCard';
+import CarouselBannerItem from './components/home/CarouselBannerItem'; // Importe o novo componente
 
 const COR_AZUL_CLARO_UNIFICADA = '#A0D2EB';
 const COR_PRIMARIA_ESCURA = '#2C3E50';
 const COR_CINZA_FUNDO = '#F4F7FC';
 const COR_BORDA_SUAVE = '#E0E0E0';
 
+const { width: screenWidth } = Dimensions.get('window');
+
+const bannerData = [
+    {
+        id: '1',
+        title: 'Get Special Offer',
+        discount: 'Up to 40%',
+        description: 'All Services Available | T&C Applied',
+        buttonText: 'Claim',
+        badgeText: 'Limited time!',
+        backgroundColorStart: '#f5f5dc', // Bege claro
+        backgroundColorEnd: '#deb887',   // Bege
+    },
+    {
+        id: '2',
+        title: 'Another Great Deal',
+        discount: 'Save Big!',
+        description: 'On Selected Services Only',
+        buttonText: 'View',
+        badgeText: 'Exclusive',
+        backgroundColorStart: '#e0ffff', // Ciano claro
+        backgroundColorEnd: '#afeeee',   // Ciano pálido
+    },
+    {
+        id: '3',
+        title: 'Last Chance!',
+        discount: '75% Off',
+        description: 'For New Customers',
+        buttonText: 'Sign Up',
+        badgeText: 'Hurry!',
+        backgroundColorStart: '#f0f8ff', // Alice Blue
+        backgroundColorEnd: '#e6e6fa',   // Lavanda clara
+    },
+];
+
 export default function ExploreClientScreen() {
     const router = useRouter();
+    const flatListRef = useRef<FlatList>(null);
+    const [currentIndex, setCurrentIndex] = useState(0);
 
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [serviceCategories, setServiceCategories] = useState<Service[]>([]);
     const [recommendations, setRecommendations] = useState<ProviderDisplayInfo[]>([]);
     const [providers, setProviders] = useState<ProviderDisplayInfo[]>([]);
-    const [currentOffer, setCurrentOffer] = useState<Offer | null>(null);
+    const [currentOffer, setCurrentOffer] = useState<Offer | null>(null); // Mantido para compatibilidade, mas não usado pelo carrossel diretamente
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
-    // const [searchText, setSearchText] = useState<string>(''); // Removido: Estado para o texto da busca
 
     // Animações
     const headerAnim = useRef(new Animated.Value(0)).current;
-    // const searchBarAnim = useRef(new Animated.Value(0)).current; // Removido: Animação para a barra de busca
     const categoriesAnim = useRef(new Animated.Value(0)).current;
     const bannerAnim = useRef(new Animated.Value(0)).current;
     const recommendationsAnim = useRef(new Animated.Value(0)).current;
@@ -77,23 +118,11 @@ export default function ExploreClientScreen() {
             const fetchedUserProfile = await getUserProfile();
             setUserProfile(fetchedUserProfile);
 
-            let nameToDisplay = 'Usuário';
-            let addressToDisplay: BookingAddress | null | undefined = undefined;
-
-            if (fetchedUserProfile) {
-                if (fetchedUserProfile.role === 'CLIENT' && fetchedUserProfile.clientDetails) {
-                    nameToDisplay = fetchedUserProfile.clientDetails.fullName || fetchedUserProfile.fullName || 'Cliente';
-                    addressToDisplay = fetchedUserProfile.clientDetails.address;
-                } else if (fetchedUserProfile.role === 'PROVIDER' && fetchedUserProfile.providerDetails) {
-                    nameToDisplay = fetchedUserProfile.providerDetails.fullName || fetchedUserProfile.fullName || 'Provedor';
-                    addressToDisplay = fetchedUserProfile.providerDetails.address;
-                }
-            }
-
+            // Removido: nameToDisplay e addressToDisplay, pois não são mais diretamente usados aqui
+            // ... (restante da lógica de busca de dados)
             const categoriesData = await getServiceCategories();
             setServiceCategories(categoriesData);
 
-            // Chamadas para obter dados de provedores
             const recommendationsData = await getRecommendedProviders();
             setRecommendations(recommendationsData);
 
@@ -102,15 +131,14 @@ export default function ExploreClientScreen() {
 
             const offersData = await getOffers();
             if (offersData.length > 0) {
-                setCurrentOffer(offersData[0]);
+                // Embora o carrossel seja fixo, mantemos a lógica de currentOffer
+                // caso queira usá-la em outro lugar ou adaptar o carrossel no futuro.
+                setCurrentOffer(offersData.length > 0 ? offersData.slice(0, 1)[0] : null);
             }
 
-            // Sequência de animações com um pequeno atraso e tipo spring para fluidez
             Animated.sequence([
                 Animated.spring(headerAnim, { toValue: 1, damping: 10, stiffness: 100, useNativeDriver: true }),
                 Animated.delay(50),
-                // Animated.spring(searchBarAnim, { toValue: 1, damping: 10, stiffness: 100, useNativeDriver: true }), // Removido
-                // Animated.delay(50), // Removido
                 Animated.spring(categoriesAnim, { toValue: 1, damping: 10, stiffness: 100, useNativeDriver: true }),
                 Animated.delay(50),
                 Animated.spring(bannerAnim, { toValue: 1, damping: 10, stiffness: 100, useNativeDriver: true }),
@@ -129,7 +157,7 @@ export default function ExploreClientScreen() {
         } finally {
             setLoading(false);
         }
-    }, [headerAnim, categoriesAnim, bannerAnim, recommendationsAnim, providersAnim, navBarAnim]); // searchBarAnim removido
+    }, [headerAnim, categoriesAnim, bannerAnim, recommendationsAnim, providersAnim, navBarAnim]);
 
     useEffect(() => {
         fetchData();
@@ -146,15 +174,6 @@ export default function ExploreClientScreen() {
         router.push(CLIENT_ROUTES.PROVIDER_DETAILS(provider.id));
     }, [router]);
 
-    // const handleSearch = () => { // Removido
-    // Keyboard.dismiss();
-    // Alert.alert("Busca", `Buscando por: "${searchText}"`);
-    // };
-
-    // const handleFilter = () => { // Removido
-    // Alert.alert("Filtro", "Abrir opções de filtro.");
-    // };
-
     const safeServiceCategories = serviceCategories.filter((c) => c && c.name);
     const safeRecommendations = Array.isArray(recommendations)
         ? recommendations.filter((item) => item && typeof item.fullName === 'string')
@@ -162,6 +181,53 @@ export default function ExploreClientScreen() {
     const safeProviders = Array.isArray(providers)
         ? providers.filter((item) => item && typeof item.fullName === 'string')
         : [];
+
+    const handleBannerPress = useCallback(() => {
+        // Lógica para lidar com o clique no banner (pode navegar para uma tela de ofertas ou uma tela genérica)
+        Alert.alert('Banner Pressionado', 'Você clicou em um banner! (Este é o handler do carrossel)');
+        // Exemplo: router.push('/(client)/ofertas');
+    }, []); // Dependência vazia para garantir que a função seja estável
+
+    // Mantenha a viewabilityConfig fora do render ou memoizada para estabilidade
+    const viewabilityConfig = useRef({
+        itemVisiblePercentThreshold: 50, // 50% do item visível para ser considerado "visível"
+    }).current;
+
+    // CORREÇÃO: Envolva onViewableItemsChanged em useCallback com array de dependências vazio
+    const onViewableItemsChanged = useCallback(({ viewableItems }) => {
+        if (viewableItems.length > 0) {
+            // viewableItems[0] representa o item mais à esquerda visível
+            // Se você quer o item que está mais no centro/totalmente visível, pode ser necessário ajustar a lógica
+            setCurrentIndex(viewableItems[0].index || 0);
+        }
+    }, []); // ARRAY DE DEPENDÊNCIAS VAZIO: Isso garante que a função onViewableItemsChanged não mude entre renders
+
+    const renderBannerItem = useCallback(({ item }: { item: (typeof bannerData)[0] }) => (
+        <CarouselBannerItem
+            title={item.title}
+            discount={item.discount}
+            description={item.description}
+            buttonText={item.buttonText}
+            badgeText={item.badgeText}
+            backgroundColorStart={item.backgroundColorStart}
+            backgroundColorEnd={item.backgroundColorEnd}
+            onPress={handleBannerPress} // Usa o handler memoizado
+        />
+    ), [handleBannerPress]); // Adiciona handleBannerPress como dependência do useCallback para renderBannerItem
+
+    const renderPagination = useCallback(() => (
+        <View style={styles.pagination}>
+            {bannerData.map((_, index) => (
+                <View
+                    key={index}
+                    style={[
+                        styles.paginationDot,
+                        index === currentIndex ? styles.paginationDotActive : styles.paginationDotInactive,
+                    ]}
+                />
+            ))}
+        </View>
+    ), [currentIndex]); // Depende de currentIndex para atualizar a bolinha ativa
 
     if (loading) {
         return (
@@ -202,25 +268,7 @@ export default function ExploreClientScreen() {
                     </Animated.View>
 
                     {/* Barra de Busca Animada e Estilizada - REMOVIDA */}
-                    {/*
-                    <Animated.View style={[styles.searchBarContainer, { opacity: searchBarAnim, transform: [{ translateY: searchBarAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
-                        <View style={styles.searchBar}>
-                            <Ionicons name="search" size={20} color="#888" style={styles.searchIcon} />
-                            <TextInput
-                                style={styles.searchInput}
-                                placeholder="Busque por serviço ou profissional..."
-                                placeholderTextColor="#888"
-                                value={searchText}
-                                onChangeText={setSearchText}
-                                returnKeyType="search"
-                                onSubmitEditing={handleSearch}
-                            />
-                            <TouchableOpacity onPress={handleFilter} style={styles.filterButton}>
-                                <Ionicons name="options-outline" size={24} color={COR_PRIMARIA_ESCURA} />
-                            </TouchableOpacity>
-                        </View>
-                    </Animated.View>
-                    */}
+                    {/* ... */}
 
                     {/* Categorias de Serviço Animadas */}
                     <Animated.View style={{ opacity: categoriesAnim, transform: [{ translateY: categoriesAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
@@ -242,22 +290,24 @@ export default function ExploreClientScreen() {
                         />
                     </Animated.View>
 
-                    {/* Banner de Oferta Animado */}
-                    {currentOffer && (
-                        <Animated.View style={{ opacity: bannerAnim, transform: [{ translateY: bannerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
-                            <BannerOferta
-                                id={currentOffer.id}
-                                title={currentOffer.title}
-                                description={currentOffer.description}
-                                imageUrl={currentOffer.imageUrl || null}
-                                discountPercentage={currentOffer.discountPercentage || 0}
-                                onPress={() => router.push({
-                                    pathname: '/(client)/ofertas/[id]',
-                                    params: { id: currentOffer.id }
-                                } as any)}
-                            />
-                        </Animated.View>
-                    )}
+                    {/* Novo Carrossel de Banners (substitui o antigo BannerOferta) */}
+                    <Animated.View style={[styles.carouselContainer, { opacity: bannerAnim, transform: [{ translateY: bannerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
+                        <FlatList
+                            ref={flatListRef}
+                            data={bannerData}
+                            renderItem={renderBannerItem}
+                            keyExtractor={(item) => item.id}
+                            horizontal
+                            pagingEnabled
+                            showsHorizontalScrollIndicator={false}
+                            onViewableItemsChanged={onViewableItemsChanged} // Usa a função memoizada
+                            viewabilityConfig={viewabilityConfig} // Usa a configuração memoizada
+                            snapToInterval={300 + 20} // Largura do item (300) + margem horizontal total (10*2 = 20)
+                            decelerationRate="fast"
+                        />
+                        {renderPagination()}
+                    </Animated.View>
+                    
 
                     {/* Recomendações para Você Animadas */}
                     <Animated.View style={{ opacity: recommendationsAnim, transform: [{ translateY: recommendationsAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
@@ -346,39 +396,28 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: COR_CINZA_FUNDO,
     },
+    carouselContainer: {
+        marginTop: 20,
+        marginBottom: 20,
+        alignItems: 'center', // Centraliza o FlatList horizontalmente
+    },
+    pagination: {
+        flexDirection: 'row',
+        height: 20,
+        alignItems: 'center',
+        marginTop: 10, // Espaçamento entre o carrossel e os pontos
+    },
+    paginationDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        marginHorizontal: 5,
+    },
+    paginationDotActive: {
+        backgroundColor: COR_AZUL_CLARO_UNIFICADA,
+    },
+    paginationDotInactive: {
+        backgroundColor: '#ddd',
+    },
     // Removidos estilos relacionados à searchBarContainer, searchBar, searchIcon, searchInput, filterButton
-    // searchBarContainer: {
-    //     paddingVertical: 10,
-    //     marginTop: 10,
-    // },
-    // searchBar: {
-    //     flexDirection: 'row',
-    //     alignItems: 'center',
-    //     backgroundColor: '#fff',
-    //     borderRadius: 12,
-    //     paddingHorizontal: 15,
-    //     paddingVertical: 10,
-    //     shadowColor: "#000",
-    //     shadowOffset: {
-    //         width: 0,
-    //         height: 3,
-    //     },
-    //     shadowOpacity: 0.08,
-    //     shadowRadius: 6,
-    //     elevation: 5,
-    //     borderWidth: 1,
-    //     borderColor: COR_BORDA_SUAVE,
-    // },
-    // searchIcon: {
-    //     marginRight: 10,
-    // },
-    // searchInput: {
-    //     flex: 1,
-    //     fontSize: 16,
-    //     color: COR_PRIMARIA_ESCURA,
-    // },
-    // filterButton: {
-    //     marginLeft: 10,
-    //     padding: 5,
-    // },
 });

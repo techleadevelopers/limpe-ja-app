@@ -1,4 +1,3 @@
-// app/(client)/explore/[providerId].tsx
 import React, { useEffect, useState, useRef } from 'react';
 import {
     View,
@@ -9,13 +8,15 @@ import {
     Animated,
     Dimensions,
     Image,
-    Alert // Importado Alert aqui
+    Alert,
+    Platform // Importado Platform aqui para ajustes de safe area
 } from 'react-native';
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context'; // Importado para safe area
 
 // Importações dos componentes necessários
-import HeaderSection from './components/provider/HeaderSection';
+// HeaderSection foi removido pois a UI do header será integrada diretamente aqui
 import StarRating from './components/provider/StarRating';
 import InfoChip from './components/provider/InfoChip';
 import ReviewCard from './components/provider/ReviewCard';
@@ -39,6 +40,7 @@ export default function ProviderDetailsScreen() {
     const providerId = params.providerId;
     const router = useRouter();
     const { user, isAuthenticated } = useAuth();
+    const insets = useSafeAreaInsets(); // Hook para safe area
 
     const [provider, setProvider] = useState<ProviderDisplayInfo | null | undefined>(undefined);
     const [isLoading, setIsLoading] = useState(true);
@@ -112,7 +114,7 @@ export default function ProviderDetailsScreen() {
     if (isLoading) {
         return (
             <View style={styles.centeredFeedback}>
-                <Stack.Screen options={{ title: "Carregando...", headerTransparent: true, headerTintColor: styles.errorText.color }} />
+                <Stack.Screen options={{ title: "Carregando...", headerShown: false }} /> {/* Header oculto para tela de loading */}
                 <ActivityIndicator size="large" color={styles.errorBackButton.backgroundColor} />
             </View>
         );
@@ -121,7 +123,7 @@ export default function ProviderDetailsScreen() {
     if (error || !provider) {
         return (
             <View style={styles.centeredFeedback}>
-                <Stack.Screen options={{ title: "Erro", headerTransparent: false, headerStyle: { backgroundColor: styles.screenContainer.backgroundColor }, headerTintColor: styles.errorText.color }} />
+                <Stack.Screen options={{ title: "Erro", headerShown: false }} /> {/* Header oculto para tela de erro */}
                 <Ionicons name="warning-outline" size={48} color={styles.errorText.color} />
                 <Text style={styles.errorText}>{error || `Profissional não encontrado.`}</Text>
                 <TouchableOpacity style={styles.errorBackButton} onPress={() => router.back()}>
@@ -147,13 +149,42 @@ export default function ProviderDetailsScreen() {
             <Stack.Screen options={{
                 headerTransparent: true,
                 title: '',
-                headerLeft: () => null,
-                headerRight: () => null,
+                // Custom header para replicar o Print 2
+                headerLeft: () => (
+                    <TouchableOpacity
+                        onPress={() => router.back()}
+                        style={[styles.iconButtonBackground, { marginLeft: 20, marginTop: Platform.OS === 'ios' ? insets.top : 20 }]}
+                    >
+                        <Ionicons name="arrow-back" size={24} color="#FFF" />
+                    </TouchableOpacity>
+                ),
+                headerRight: () => (
+                    <TouchableOpacity
+                        onPress={() => Alert.alert("Salvar", "Funcionalidade de salvar/favoritar.")}
+                        style={[styles.iconButtonBackground, { marginRight: 20, marginTop: Platform.OS === 'ios' ? insets.top : 20 }]}
+                    >
+                        <Ionicons name="bookmark-outline" size={24} color="#FFF" />
+                    </TouchableOpacity>
+                ),
             }} />
 
-            <HeaderSection provider={{ ...provider, avatarUrl: provider.avatarUrl || undefined }} onBackPress={() => router.back()} />
-
             <ScrollView contentContainerStyle={styles.scrollContentContainer}>
+                {/* Imagem do provedor no topo do card */}
+                <View style={styles.providerImageContainer}>
+                    <Image
+                        source={{ uri: provider.avatarUrl || 'https://placehold.co/600x400/E0E0E0/6C757D?text=Sem+Foto' }}
+                        style={styles.providerImage}
+                        onError={(e) => console.log('Erro ao carregar imagem:', e.nativeEvent.error)}
+                    />
+                    {/* Botão de coração/favoritar na imagem */}
+                    <TouchableOpacity
+                        style={styles.favoriteButton}
+                        onPress={() => Alert.alert("Favoritar", "Funcionalidade de favoritar.")}
+                    >
+                        <Ionicons name="heart" size={20} color="#FF6347" /> {/* Cor de coração vibrante */}
+                    </TouchableOpacity>
+                </View>
+
                 <Animated.View style={[
                     styles.contentArea,
                     {
@@ -164,20 +195,21 @@ export default function ProviderDetailsScreen() {
                     }
                 ]}>
                     <View style={styles.providerInfoWhiteCard}>
+                        {/* Preço em destaque */}
+                        <Text style={styles.priceTextWhiteCard}>{firstServicePrice}</Text>
+
                         <View style={styles.providerNameRow}>
                             <Text style={styles.providerNameWhiteCard}>{provider.fullName}</Text>
                             <View style={styles.robustStarContainer}>
-                                <StarRating rating={provider.averageRating} size={18} color={styles.priceTextWhiteCard.color} />
+                                <StarRating rating={provider.averageRating} size={15} color={styles.priceTextWhiteCard.color} />
                                 <Text style={styles.robustReviewsText}>({provider.reviewCount} avaliações)</Text>
                             </View>
                         </View>
 
                         <View style={styles.locationContainerWhiteCard}>
-                            <Ionicons name="location-sharp" size={15} color={styles.locationTextWhiteCard.color} />
+                            <Ionicons name="location-sharp" size={12} color={styles.locationTextWhiteCard.color} />
                             <Text style={styles.locationTextWhiteCard}>{provider.address?.city || 'N/A'}</Text>
                         </View>
-
-                        <Text style={styles.priceTextWhiteCard}>{firstServicePrice}</Text>
                     </View>
 
                     <View style={styles.tabContentContainer}>
@@ -197,36 +229,35 @@ export default function ProviderDetailsScreen() {
                         <View style={styles.actionButtonsContainer}>
                             {/* Botão Ligar */}
                             <TouchableOpacity style={styles.actionButton} onPress={() => Alert.alert("Ligar", "Funcionalidade de ligar.")}>
-                                <Ionicons name="call-outline" size={24} color="#007AFF" />
+                                <Ionicons name="call-outline" size={24} color={styles.actionButtonText.color} />
                                 <Text style={styles.actionButtonText}>Ligar</Text>
                             </TouchableOpacity>
 
                             {/* Botão Chat - Condicional */}
                             {canInitiateChat ? (
                                 <TouchableOpacity style={styles.actionButton} onPress={handleChatPress}>
-                                    <Ionicons name="chatbubble-outline" size={24} color="#007AFF" />
+                                    <Ionicons name="chatbubble-outline" size={20} color={styles.actionButtonText.color} />
                                     <Text style={styles.actionButtonText}>Chat</Text>
                                 </TouchableOpacity>
                             ) : (
                                 <View style={[styles.actionButton, styles.disabledActionButton]}>
-                                    <Ionicons name="chatbubble-outline" size={24} color="#ADB5BD" />
+                                    <Ionicons name="chatbubble-outline" size={20} color={styles.disabledActionButtonText.color} />
                                     <Text style={[styles.actionButtonText, styles.disabledActionButtonText]}>Chat</Text>
                                 </View>
                             )}
 
                             {/* Botão Mapa */}
                             <TouchableOpacity style={styles.actionButton} onPress={() => Alert.alert("Mapa", "Funcionalidade de mapa.")}>
-                                <Ionicons name="map-outline" size={24} color="#007AFF" />
+                                <Ionicons name="map-outline" size={20} color={styles.actionButtonText.color} />
                                 <Text style={styles.actionButtonText}>Mapa</Text>
                             </TouchableOpacity>
 
                             {/* Botão Compartilhar */}
                             <TouchableOpacity style={styles.actionButton} onPress={() => Alert.alert("Compartilhar", "Funcionalidade de compartilhar.")}>
-                                <Ionicons name="share-social-outline" size={24} color="#007AFF" />
+                                <Ionicons name="share-social-outline" size={20} color={styles.actionButtonText.color} />
                                 <Text style={styles.actionButtonText}>Compartilhar</Text>
                             </TouchableOpacity>
                         </View>
-
 
                         <Text style={[styles.sectionTitle, { marginTop: 15 }]}>Recomendações</Text>
                         {provider.reviews && provider.reviews.length > 0 ? (
@@ -243,8 +274,8 @@ export default function ProviderDetailsScreen() {
                                         fullName: review.client.fullName,
                                         user: review.client.user ? {
                                             id: review.client.user.id,
-                                            avatarUrl: review.client.user.avatarUrl || null, // Garante que avatarUrl pode ser null
-                                        } : null, // <--- MUDANÇA AQUI: Passa null se review.client.user for falsy
+                                            avatarUrl: review.client.user.avatarUrl || null,
+                                        } : null,
                                     } : null,
                                     bookingId: review.bookingId,
                                     providerId: review.providerId,
@@ -255,7 +286,7 @@ export default function ProviderDetailsScreen() {
                             <Text style={styles.noReviewsText}>Ainda não há avaliações para {provider.fullName.split(' ')[0]}.</Text>
                         )}
                         <TouchableOpacity style={styles.addReviewButton}>
-                            <Ionicons name="add-circle-outline" size={20} color={styles.addReviewButtonText.color} />
+                            <Ionicons name="add-circle-outline" size={18} color={styles.addReviewButtonText.color} />
                             <Text style={styles.addReviewButtonText}>Deixar uma Avaliação</Text>
                         </TouchableOpacity>
                     </View>

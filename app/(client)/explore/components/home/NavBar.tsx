@@ -163,8 +163,8 @@ const NavBar: React.FC<NavBarProps> = ({ unreadMessagesCount }) => {
 const styles = StyleSheet.create({
   navBar: {
     flexDirection: 'row',
-    minHeight: 15,
-    width: '92%', // Ajusta a largura para 90% da tela para ter um pouco de margem
+    minHeight: 10,
+    width: '89%', // Ajusta a largura para 90% da tela para ter um pouco de margem
     alignSelf: 'center', // Centraliza a navBar na tela
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: '#B2B2B2',
@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
     paddingBottom: 1,
     paddingTop: 5,
     paddingHorizontal: 20,
-    bottom: 10,
+    bottom: 25,
     borderTopLeftRadius: 30, // Bordas arredondadas
     borderTopRightRadius: 30,
     borderBottomLeftRadius: 30, // Bordas arredondadas
@@ -199,11 +199,11 @@ const styles = StyleSheet.create({
   centralNavItem: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: 50, // Largura para o item central
-    height: 40, // Altura para o item central
+    width: 20, // Largura para o item central
+    height: 20, // Altura para o item central
     borderRadius: 30, // Metade da largura/altura para torná-lo circular
     backgroundColor: 'transparent', // ALTERADO: Fundo transparente
-    bottom: 15, // Move o botão central mais para cima para o efeito flutuante
+    bottom: 14, // Move o botão central mais para cima para o efeito flutuante
     
     // REMOVIDO: propriedades de sombra para este item
     // shadowColor: '#000',
@@ -213,8 +213,8 @@ const styles = StyleSheet.create({
     // elevation: 6,
   },
 centralIconImage: {
-  width: 85,
-  height: 85,
+  width: 79,
+  height: 79,
   top: 4,
   left: 2,
   resizeMode: 'contain',

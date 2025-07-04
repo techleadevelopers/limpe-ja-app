@@ -1,73 +1,45 @@
-// LimpeJaApp/components/BannerOfertaIndividual.tsx
-// Este é o componente que renderiza UM ÚNICO BANNER
-import React, { useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, Platform, ImageBackground, Dimensions } from 'react-native'; // Added Dimensions import
+// LimpeJaApp/components/DefaultBanner.tsx
+// Este é o componente que renderiza um banner padrão com a mesma UI do BannerOfertaIndividual.
+
+import React, { useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Animated, Platform, ImageBackground, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
-// --- DEFINIÇÃO DA INTERFACE DE PROPS ATUALIZADA ---
-// Mantemos a mesma interface que você tinha para um único banner.
-export interface BannerOfertaIndividualProps {
-    id: string;
-    title: string;
-    description?: string | null;
-    imageUrl?: string | null;
-    discountPercentage: number;
-
-    onPress: (id: string) => void; // Passa o ID da oferta ao clicar
-
-    bankName?: string;
-    bankPaymentText?: string;
-    buttonText?: string;
-    disclaimer?: string;
-    badgeTitle?: string;
-    badgeDates?: string;
-    backgroundColorStart?: string;
-    backgroundColorEnd?: string;
+// --- DEFINIÇÃO DA INTERFACE DE PROPS ---
+// Simplificamos as props para um banner padrão
+export interface DefaultBannerProps {
+    onPress: () => void; // Ação ao clicar no banner
+    // Você pode adicionar props opcionais aqui se quiser alguma customização mínima
+    // Por exemplo: defaultTitle?: string; defaultDescription?: string;
 }
 
-const BannerOfertaIndividual: React.FC<BannerOfertaIndividualProps> = ({ 
-    id,
-    title,
-    description,
-    imageUrl,
-    discountPercentage,
+const DefaultBanner: React.FC<DefaultBannerProps> = ({ 
     onPress,
-    bankName = "LIMPEJÁ",
-    bankPaymentText = "Serviços de Qualidade",
-    buttonText = "Aproveitar Oferta",
-    disclaimer = "*Desconto aplicado no final do serviço. Consulte termos.",
-    badgeTitle = `IMPERDÍVEL`,
-    badgeDates = `ECONOMIZE ${discountPercentage}%`,
-    backgroundColorStart = '#007BFF', // Azul vibrante
-    backgroundColorEnd = '#0052B4',   // Azul mais escuro
 }) => {
-    // Animação para o botão
+    // Animação para o botão (mantida para consistência visual)
     const buttonScaleAnim = useRef(new Animated.Value(1)).current;
     
-    // As animações de entrada do banner (opacityAnim, translateYAnim)
-    // serão movidas para o componente pai (o Carrossel) para controlar a transição
-    // de cada slide, ou removidas se a FlatList já lidar com isso.
-    // Neste caso, vamos assumir que o FlatList faz a rolagem suave.
-
     const onPressInButton = () => Animated.spring(buttonScaleAnim, { toValue: 0.95, useNativeDriver: true, friction: 7 }).start();
     const onPressOutButton = () => Animated.spring(buttonScaleAnim, { toValue: 1, useNativeDriver: true, friction: 7 }).start();
 
-    // Lógica para renderizar o fundo do banner
+    // Valores padrão para o conteúdo do banner
+    const defaultBankName = "LIMPEJÁ";
+    const defaultBankPaymentText = "Qualidade e Confiança";
+    const defaultTitle = "Seu Lar Brilhando!";
+    const defaultDescription = "Agende serviços de limpeza e manutenção com os melhores profissionais.";
+    const defaultButtonText = "Explorar Serviços";
+    const defaultDisclaimer = "*Comece a transformar seu ambiente hoje mesmo!";
+    const defaultBadgeTitle = "BEM-VINDO";
+    const defaultBadgeDates = "Sempre aqui para você!";
+    const defaultBackgroundColorStart = '#28a745'; // Verde para um visual de boas-vindas
+    const defaultBackgroundColorEnd = '#218838';   // Verde mais escuro
+
+    // O renderBackground aqui será sempre um LinearGradient, pois não temos imageUrl
     const renderBackground = () => {
-        if (imageUrl) {
-            return (
-                <ImageBackground source={{ uri: imageUrl }} style={styles.backgroundImage} imageStyle={styles.imageStyle}>
-                    <LinearGradient
-                        colors={['rgba(0,0,0,0.4)', 'rgba(0,0,0,0.6)']}
-                        style={StyleSheet.absoluteFillObject}
-                    />
-                </ImageBackground>
-            );
-        }
         return (
             <LinearGradient
-                colors={[backgroundColorStart, backgroundColorEnd]}
+                colors={[defaultBackgroundColorStart, defaultBackgroundColorEnd]}
                 style={StyleSheet.absoluteFillObject}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
@@ -77,41 +49,39 @@ const BannerOfertaIndividual: React.FC<BannerOfertaIndividualProps> = ({
 
     return (
         <TouchableOpacity 
-            style={styles.bannerOuterContainer} // Este será o estilo do card individual dentro do carrossel
-            onPress={() => onPress(id)} // Passa o ID da oferta
+            style={styles.bannerOuterContainer}
+            onPress={onPress} // Usa a função onPress passada por prop
             activeOpacity={0.9}
         >
             <View style={styles.bannerContainer}>
                 {renderBackground()}
 
-                {/* Lado Esquerdo do Banner: Informações da oferta */}
+                {/* Lado Esquerdo do Banner: Informações padrão */}
                 <View style={styles.leftContent}>
                     <View style={styles.bankLogoContainer}>
-                        <Text style={styles.bankName}>{bankName}</Text>
-                        <Text style={styles.bankPaymentText}>{bankPaymentText}</Text>
+                        <Text style={styles.bankName}>{defaultBankName}</Text>
+                        <Text style={styles.bankPaymentText}>{defaultBankPaymentText}</Text>
                     </View>
-                    <Text style={styles.titleText}>{title}</Text>
+                    <Text style={styles.titleText}>{defaultTitle}</Text>
                     
-                    {description && (
-                        <Text style={styles.descriptionText}>{description}</Text>
-                    )}
+                    <Text style={styles.descriptionText}>{defaultDescription}</Text>
 
                     <Animated.View style={{ transform: [{ scale: buttonScaleAnim }], alignSelf: 'flex-start', marginTop: 10 }}>
                         <TouchableOpacity 
                             style={styles.availButton} 
-                            onPress={() => onPress(id)} 
+                            onPress={onPress} // Usa a função onPress passada por prop
                             onPressIn={onPressInButton}
                             onPressOut={onPressOutButton}
                             activeOpacity={0.7}
                         >
-                            <Text style={styles.availButtonText}>{buttonText}</Text>
-                            <Ionicons name="arrow-forward-sharp" size={16} color="#0052B4" style={{marginLeft: 6}}/>
+                            <Text style={styles.availButtonText}>{defaultButtonText}</Text>
+                            <Ionicons name="arrow-forward-sharp" size={16} color="#218838" style={{marginLeft: 6}}/> {/* Cor do ícone ajustada para combinar com o tema verde */}
                         </TouchableOpacity>
                     </Animated.View>
-                    <Text style={styles.disclaimerText}>{disclaimer}</Text>
+                    <Text style={styles.disclaimerText}>{defaultDisclaimer}</Text>
                 </View>
 
-                {/* Lado Direito do Banner: Badge com informações de desconto */}
+                {/* Lado Direito do Banner: Badge com informações padrão */}
                 <View style={styles.rightContent}>
                     <View style={styles.badgeContainer}>
                         <View style={[styles.confetti, styles.confetti1]} />
@@ -119,9 +89,9 @@ const BannerOfertaIndividual: React.FC<BannerOfertaIndividualProps> = ({
                         <View style={[styles.confetti, styles.confetti3]} />
                         <View style={[styles.confetti, styles.confetti4]} />
                         
-                        <Ionicons name="pricetag-outline" size={36} color="#007BFF" />
-                        <Text style={styles.badgeTitle}>{badgeTitle}</Text>
-                        <Text style={styles.badgeDates}>{badgeDates}</Text>
+                        <Ionicons name="home-outline" size={36} color="#28a745" /> {/* Ícone ajustado para um tema de boas-vindas/casa */}
+                        <Text style={styles.badgeTitle}>{defaultBadgeTitle}</Text>
+                        <Text style={styles.badgeDates}>{defaultBadgeDates}</Text>
                     </View>
                 </View>
             </View>
@@ -129,14 +99,15 @@ const BannerOfertaIndividual: React.FC<BannerOfertaIndividualProps> = ({
     );
 };
 
-// --- ESTILOS DO COMPONENTE (Mantenha a maioria dos estilos aqui) ---
+// --- ESTILOS DO COMPONENTE (Copiados e ajustados do BannerOfertaIndividual) ---
 const styles = StyleSheet.create({
     bannerOuterContainer: {
-        // Estes estilos definirão o tamanho de cada slide no carrossel
-        width: Platform.OS === 'ios' ? Dimensions.get('window').width - 32 : Dimensions.get('window').width - 40, // Largura total - margens
-        marginHorizontal: 8, // Margem entre os slides
+        width: Platform.OS === 'ios' ? Dimensions.get('window').width - 32 : Dimensions.get('window').width - 40,
+        marginHorizontal: 8,
         borderRadius: 16,
         overflow: 'hidden',
+        // Adicionando margem inferior para espaçamento na index.tsx
+        marginBottom: 20, 
         ...Platform.select({
             ios: {
                 shadowColor: '#000',
@@ -227,7 +198,7 @@ const styles = StyleSheet.create({
         }),
     },
     availButtonText: {
-        color: '#0052B4',
+        color: '#218838', // Cor ajustada
         fontSize: 13,
         fontWeight: '700',
     },
@@ -265,7 +236,7 @@ const styles = StyleSheet.create({
         }),
     },
     badgeTitle: {
-        color: '#0052B4',
+        color: '#28a745', // Cor ajustada
         fontSize: 14,
         fontWeight: '800',
         textAlign: 'center',
@@ -273,7 +244,7 @@ const styles = StyleSheet.create({
         lineHeight: 18,
     },
     badgeDates: {
-        color: '#0052B4',
+        color: '#28a745', // Cor ajustada
         fontSize: 11,
         fontWeight: '600',
         textAlign: 'center',
@@ -315,4 +286,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default BannerOfertaIndividual;
+export default DefaultBanner;

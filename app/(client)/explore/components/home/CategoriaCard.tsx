@@ -125,24 +125,25 @@ const CategoriaCard: React.FC<CategoriaCardProps> = ({ item, onPress }) => {
           style={styles.contentOverlay}
         >
           <Image source={imageSource} style={styles.iconImage} />
-          <Text style={styles.categoriaTexto}>{item.name}</Text>
         </LinearGradient>
       </TouchableOpacity>
+      <Text style={styles.categoriaTexto}>{item.name}</Text>
     </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
   cardContainerWrapper: {
-    width: 70,
-    height: 70,
-    marginRight: 5,
-    marginBottom: 6,
+    width: 50,
+    height: 50,
+    marginRight: 18,
+    borderRadius: 55,
+    marginBottom: 18,
     
   },
   shadowLayerPrimary: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: 15,
+    borderRadius: 55,
     shadowColor: PRIMARY_SHADOW_COLOR,
     shadowOffset: { width: 0, height: PRIMARY_SHADOW_OFFSET_HEIGHT },
     shadowOpacity: 1,
@@ -151,7 +152,7 @@ const styles = StyleSheet.create({
   },
   shadowLayerSecondary: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: 15,
+    borderRadius: 55,
     shadowColor: SECONDARY_SHADOW_COLOR,
     shadowOffset: { width: 0, height: SECONDARY_SHADOW_OFFSET_HEIGHT },
     shadowOpacity: 1,
@@ -161,7 +162,7 @@ const styles = StyleSheet.create({
   touchableSurface: {
     width: '100%',
     height: '100%',
-    borderRadius: 15,
+    borderRadius: 55,
     overflow: 'hidden',
     borderWidth: BORDER_WIDTH,
     borderColor: BORDER_COLOR_LIGHT,
@@ -174,8 +175,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
   },
   iconImage: {
-    width: 45,
-    height: 45,
+    width: 35,
+    height: 35,
     resizeMode: 'contain',
     marginBottom: -2,
   },
@@ -184,6 +185,7 @@ const styles = StyleSheet.create({
     color: TEXT_COLOR,
     fontWeight: '600',
     textAlign: 'center',
+    marginTop: 7,
   },
 });
 
