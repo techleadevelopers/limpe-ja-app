@@ -16,7 +16,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context'; // Importado para safe area
 
 // Importações dos componentes necessários
-// HeaderSection foi removido pois a UI do header será integrada diretamente aqui
 import StarRating from './components/provider/StarRating';
 import InfoChip from './components/provider/InfoChip';
 import ReviewCard from './components/provider/ReviewCard';
@@ -36,12 +35,13 @@ import { checkActiveChatBooking } from '../../services/bookingService';
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
 export default function ProviderDetailsScreen() {
-    const params = useLocalSearchParams<{ providerId: string }>();
+    const params = useLocalSearchParams();
     const providerId = params.providerId;
     const router = useRouter();
     const { user, isAuthenticated } = useAuth();
     const insets = useSafeAreaInsets(); // Hook para safe area
 
+    // CORREÇÃO DE TIPAGEM: Permite que 'provider' seja ProviderDisplayInfo, null ou undefined
     const [provider, setProvider] = useState<ProviderDisplayInfo | null | undefined>(undefined);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -50,6 +50,15 @@ export default function ProviderDetailsScreen() {
 
     const mainContentAnim = useRef(new Animated.Value(0)).current;
     const bookNowButtonAnim = useRef(new Animated.Value(0)).current;
+
+    // Dados mockados para a mini sessão de fotos (substitua por dados reais do provedor se disponível)
+    const mockPhotos = [
+        'https://images.unsplash.com/photo-1549227318-c2b64d06a090?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTR8fGxpYnJhcnl8ZW58MHx8MHx8fDA%3D',
+        'https://images.unsplash.com/photo-1583485088000-332f553861ae?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTl8fGxpYnJhcnl8ZW58MHx8MHx8fDA%3D',
+        'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8b2ZmaWNlfGVufDB8fDB8fHww%3D',
+        'https://images.unsplash.com/photo-1628109923889-4e782627e351?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8b2ZmaWNlJTIwY2xlYW5pb Maudie?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTB8fG9mZmljZSUyMGNsZWFuaW5nfGVufDB8fDB8fDA%3D',
+    ];
+
 
     useEffect(() => {
         console.log("[ProviderDetailsScreen] useEffect - providerId recebido:", providerId);
@@ -61,7 +70,7 @@ export default function ProviderDetailsScreen() {
 
             getProviderDetails(providerId)
                 .then(async (data) => {
-                    setProvider(data || null);
+                    setProvider(data || null); // CORREÇÃO: data pode ser null se não encontrado
                     if (!data) {
                         setError(`Profissional com ID "${providerId}" não encontrado.`);
                     } else {
@@ -90,19 +99,20 @@ export default function ProviderDetailsScreen() {
                 })
                 .finally(() => setIsLoading(false));
         } else {
-            setError("ID do profissional inválido."); setIsLoading(false); setProvider(null);
+            setError("ID do profissional inválido."); setIsLoading(false); setProvider(null); // CORREÇÃO: setProvider(null)
         }
     }, [providerId, isAuthenticated, user?.id]);
 
     const handleChatPress = () => {
+        // CORREÇÃO: Adicionada checagem para 'provider' ser não-nulo e não-indefinido
         if (provider && user && activeBookingId) {
             router.push({
                 pathname: '/(client)/messages/[chatId]',
                 params: {
                     chatId: activeBookingId,
-                    recipientName: provider.fullName,
-                    recipientId: provider.id,
-                    recipientAvatarUrl: provider.avatarUrl,
+                    recipientName: provider.fullName, // Acesso seguro
+                    recipientId: provider.id, // Acesso seguro
+                    recipientAvatarUrl: provider.avatarUrl, // Acesso seguro
                     bookingId: activeBookingId
                 }
             });
@@ -120,7 +130,7 @@ export default function ProviderDetailsScreen() {
         );
     }
 
-    if (error || !provider) {
+    if (error || !provider) { // Se houver erro ou provedor for null, exibe a tela de erro
         return (
             <View style={styles.centeredFeedback}>
                 <Stack.Screen options={{ title: "Erro", headerShown: false }} /> {/* Header oculto para tela de erro */}
@@ -134,6 +144,7 @@ export default function ProviderDetailsScreen() {
         );
     }
 
+    // A partir daqui, 'provider' é garantidamente do tipo 'ProviderDisplayInfo'
     const firstServicePrice = provider.providerServices && provider.providerServices.length > 0
         ? `R$ ${provider.providerServices[0].price.toFixed(2)}`
         : 'Preço não disponível';
@@ -149,7 +160,6 @@ export default function ProviderDetailsScreen() {
             <Stack.Screen options={{
                 headerTransparent: true,
                 title: '',
-                // Custom header para replicar o Print 2
                 headerLeft: () => (
                     <TouchableOpacity
                         onPress={() => router.back()}
@@ -181,9 +191,25 @@ export default function ProviderDetailsScreen() {
                         style={styles.favoriteButton}
                         onPress={() => Alert.alert("Favoritar", "Funcionalidade de favoritar.")}
                     >
-                        <Ionicons name="heart" size={20} color="#FF6347" /> {/* Cor de coração vibrante */}
+                        <Ionicons name="heart" size={20} color="#007AFF" /> {/* Cor de coração vibrante */}
                     </TouchableOpacity>
                 </View>
+
+                {/* Mini sessão de fotos adicionada AQUI, AGORA ACIMA DO contentArea */}
+                <View style={styles.photoSectionContainer}>
+                    <View style={styles.photoSectionHeader}>
+                        <Text style={styles.photoSectionTitle}>Fotos</Text>
+                        {/* Rating removido conforme solicitado */}
+                    </View>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoScrollView}>
+                        {mockPhotos.map((photoUri, index) => (
+                            <TouchableOpacity key={index} style={styles.thumbnailContainer} onPress={() => Alert.alert("Visualizar Foto", `Foto ${index + 1}`)}>
+                                <Image source={{ uri: photoUri }} style={styles.thumbnailImage} />
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+                </View>
+                {/* Fim da mini sessão de fotos */}
 
                 <Animated.View style={[
                     styles.contentArea,
@@ -214,54 +240,59 @@ export default function ProviderDetailsScreen() {
 
                     <View style={styles.tabContentContainer}>
                         <View style={styles.infoChipsContainer}>
-                            {provider.yearsOfExperience !== undefined && (
+                            {/* CORREÇÃO: Acesso seguro à propriedade 'yearsOfExperience' */}
+                            {provider.yearsOfExperience !== undefined && provider.yearsOfExperience !== null && (
                                 <InfoChip iconName="hourglass-outline" text={`${provider.yearsOfExperience}+ anos`} />
                             )}
+                            {/* CORREÇÃO: Acesso seguro à propriedade 'verificationStatus' */}
                             {provider.verificationStatus === VerificationStatus.APPROVED && (
                                 <InfoChip iconName="shield-checkmark-outline" text="Verificado" />
                             )}
                         </View>
 
+                        {/* Text "Sobre Carolina" */}
                         <Text style={styles.sectionTitle}>Sobre {provider.fullName.split(' ')[0]}</Text>
+                        {/* CORREÇÃO: Acesso seguro à propriedade 'bio' */}
                         <Text style={styles.descriptionText}>{provider.bio || "Nenhuma descrição detalhada disponível."}</Text>
 
                         {/* Botões de Ação - Adicionando o botão de chat condicionalmente */}
                         <View style={styles.actionButtonsContainer}>
                             {/* Botão Ligar */}
                             <TouchableOpacity style={styles.actionButton} onPress={() => Alert.alert("Ligar", "Funcionalidade de ligar.")}>
-                                <Ionicons name="call-outline" size={24} color={styles.actionButtonText.color} />
+                                <Ionicons name="call-outline" size={18} color={styles.actionButtonText.color} />
                                 <Text style={styles.actionButtonText}>Ligar</Text>
                             </TouchableOpacity>
 
                             {/* Botão Chat - Condicional */}
                             {canInitiateChat ? (
                                 <TouchableOpacity style={styles.actionButton} onPress={handleChatPress}>
-                                    <Ionicons name="chatbubble-outline" size={20} color={styles.actionButtonText.color} />
+                                    <Ionicons name="chatbubble-outline" size={18} color={styles.actionButtonText.color} />
                                     <Text style={styles.actionButtonText}>Chat</Text>
                                 </TouchableOpacity>
                             ) : (
                                 <View style={[styles.actionButton, styles.disabledActionButton]}>
-                                    <Ionicons name="chatbubble-outline" size={20} color={styles.disabledActionButtonText.color} />
+                                    <Ionicons name="chatbubble-outline" size={18} color={styles.disabledActionButtonText.color} />
                                     <Text style={[styles.actionButtonText, styles.disabledActionButtonText]}>Chat</Text>
                                 </View>
                             )}
 
                             {/* Botão Mapa */}
                             <TouchableOpacity style={styles.actionButton} onPress={() => Alert.alert("Mapa", "Funcionalidade de mapa.")}>
-                                <Ionicons name="map-outline" size={20} color={styles.actionButtonText.color} />
+                                <Ionicons name="map-outline" size={18} color={styles.actionButtonText.color} />
                                 <Text style={styles.actionButtonText}>Mapa</Text>
                             </TouchableOpacity>
 
                             {/* Botão Compartilhar */}
                             <TouchableOpacity style={styles.actionButton} onPress={() => Alert.alert("Compartilhar", "Funcionalidade de compartilhar.")}>
-                                <Ionicons name="share-social-outline" size={20} color={styles.actionButtonText.color} />
+                                <Ionicons name="share-social-outline" size={18} color={styles.actionButtonText.color} />
                                 <Text style={styles.actionButtonText}>Compartilhar</Text>
                             </TouchableOpacity>
                         </View>
 
                         <Text style={[styles.sectionTitle, { marginTop: 15 }]}>Recomendações</Text>
+                        {/* CORREÇÃO: Acesso seguro à propriedade 'reviews' */}
                         {provider.reviews && provider.reviews.length > 0 ? (
-                            provider.reviews.map((review: ProviderReview) => {
+                            provider.reviews.map((review: ProviderReview) => { // CORREÇÃO: Adicionada tipagem explícita para 'review'
                                 const transformedReview = {
                                     id: review.id,
                                     rating: review.rating,
@@ -283,6 +314,7 @@ export default function ProviderDetailsScreen() {
                                 return <ReviewCard key={review.id} review={transformedReview} />;
                             })
                         ) : (
+                            // CORREÇÃO: Acesso seguro à propriedade 'fullName'
                             <Text style={styles.noReviewsText}>Ainda não há avaliações para {provider.fullName.split(' ')[0]}.</Text>
                         )}
                         <TouchableOpacity style={styles.addReviewButton}>
@@ -294,6 +326,7 @@ export default function ProviderDetailsScreen() {
             </ScrollView>
 
             <BookServiceButton
+                // CORREÇÃO: Acesso seguro à propriedade 'id'
                 providerId={provider.id}
                 serviceId={firstProviderServiceOfferingId}
                 router={router}

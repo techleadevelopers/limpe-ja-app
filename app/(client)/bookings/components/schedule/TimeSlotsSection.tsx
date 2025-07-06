@@ -86,15 +86,21 @@ export default function TimeSlotsSection({ title, displaySlotsInfo, isLoading, s
 
 const styles = StyleSheet.create({
     timeSlotsSection: {
-        marginTop: 12,
+        marginTop: -16,
         paddingHorizontal: 15, // Mantenha o padding da seção
         alignItems: 'center', // Para centralizar o título e FlatList
+         shadowColor: 'rgb(33, 34, 34)',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 5,
+        elevation: 8,
+       
     },
     timeSlotsTitle: {
         fontSize: 15,
         fontWeight: '600',
         color: '#111',
-        marginBottom: 18,
+        marginBottom: 20,
         margin: 10,
 
     },
@@ -105,6 +111,11 @@ const styles = StyleSheet.create({
         // FlatList já se estende, este alignItems: 'flex-start' garante que os itens não se espalhem muito
         // mas o columnWrapperStyle com 'space-between' lida com a distribuição horizontal.
         alignSelf: 'stretch', // Garante que o container da lista preencha a largura disponível
+         shadowColor: 'rgb(33, 34, 34)',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 5,
+        elevation: 8,
         paddingHorizontal: itemHorizontalMargin, // Adicione padding para as margens laterais dos botões
     },
     timeSlotsRow: {

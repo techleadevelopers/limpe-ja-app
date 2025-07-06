@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   secaoTitulo: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
     color: '#1C3A5F',
   },

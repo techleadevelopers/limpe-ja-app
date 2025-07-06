@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Platform, Image } from 'react
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter, usePathname } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient'; // Importar LinearGradient para o botão central
 
 // Definindo tipos mais específicos para os itens da barra de navegação
 interface NavItemBase {
@@ -35,14 +36,14 @@ type NavItemType = IoniconNavItem | MaterialCommunityIconNavItem | ImageNavItem;
 
 const navItems: NavItemType[] = [
   {
-    name: 'Home',
+    name: 'Home', // Alterado o nome para 'Today' conforme a imagem
     iconSet: 'Ionicons',
-    icon: 'home-outline',
+    icon: 'sunny-outline', // Ícone de sol para 'Today'
     activeIcon: 'home',
-    path: '/(client)/explore',
+    path: '/(client)/today', // Assumindo uma rota para 'Today'
   },
   {
-    name: 'Buscar',
+    name: 'Search',
     iconSet: 'Ionicons',
     icon: 'search-outline',
     activeIcon: 'search',
@@ -51,23 +52,23 @@ const navItems: NavItemType[] = [
   {
     name: '', // Este é o item central que vamos modificar
     iconSet: 'Image', // ATUALIZADO: Indica que este item usa uma imagem
-    imageSource: require('../../../../../assets/images/safe.png'), // NOVO: Caminho da imagem
+    imageSource: require('../../../../../assets/images/safe.png'), // Caminho da imagem, assumindo que 'safe.png' é o ícone de '+'
     isCentral: true,
-    path: '/(client)/bookings/schedule-service',
+    path: '/(client)/bookings/schedule-service', // Rota para agendar serviço
   },
   {
-    name: 'Agenda',
+    name: 'Calendar', // Alterado o nome para 'Calendar'
     iconSet: 'Ionicons',
     icon: 'calendar-outline',
     activeIcon: 'calendar',
-    path: '/(client)/bookings',
+    path: '/(client)/bookings', // Rota para a agenda/bookings
   },
   {
-    name: 'Perfil',
+    name: 'Inbox', // Alterado o nome para 'Inbox'
     iconSet: 'Ionicons',
-    icon: 'person-outline',
-    activeIcon: 'person',
-    path: '/(client)/profile',
+    icon: 'mail-outline', // Ícone de caixa de entrada
+    activeIcon: 'mail',
+    path: '/(client)/inbox', // Assumindo uma rota para a caixa de entrada
   },
 ];
 
@@ -82,163 +83,182 @@ const NavBar: React.FC<NavBarProps> = ({ unreadMessagesCount }) => {
   const insets = useSafeAreaInsets();
 
   const isRouteActive = (itemPath: string) => {
-    // A rota principal '/' também deve ativar 'Home'
-    if (itemPath === '/(client)/explore' && pathname === '/(client)/explore') {
+    // Para 'Today' e '/'
+    if (itemPath === '/(client)/today' && pathname === '/') {
       return true;
     }
-    // Para outras rotas, verifica se o pathname começa com o itemPath, mas não é a rota principal.
     return pathname.startsWith(itemPath);
   };
 
   return (
-    <View style={[styles.navBar, { paddingBottom: insets.bottom }]}>
-      {navItems.map((item) => {
-        const isActive = isRouteActive(item.path);
+    <View style={[styles.navBarWrapper, { paddingBottom: insets.bottom }]}>
+      <View style={styles.navBar}>
+        {navItems.map((item) => {
+          const isActive = isRouteActive(item.path);
 
-        if (item.isCentral) {
-          // Garante que o item é do tipo ImageNavItem para acessar imageSource
-          const imageItem = item as ImageNavItem;
-          return (
-            <TouchableOpacity
-              key={imageItem.path}
-              style={styles.centralNavItem} // Usando estilo separado para o item central
-              onPress={() => router.push(imageItem.path as any)}
-            >
-              {/* Renderiza a imagem personalizada */}
-              <Image
-                source={imageItem.imageSource} // Usa a source definida no navItems
-                style={styles.centralIconImage} // Estilo específico para a imagem central
-              />
-            </TouchableOpacity>
-          );
-        } else {
-          // Aqui, precisamos verificar qual tipo de ícone é para renderizar corretamente
-          if (item.iconSet === 'Ionicons') {
-            const ioniconItem = item as IoniconNavItem; // Type assertion
+          if (item.isCentral) {
+            const imageItem = item as ImageNavItem;
             return (
               <TouchableOpacity
-                key={ioniconItem.path}
-                style={styles.navItem}
-                onPress={() => router.push(ioniconItem.path as any)}
+                key={imageItem.path}
+                style={styles.centralNavItemContainer} // Container para posicionar o botão central
+                onPress={() => router.push(imageItem.path as any)}
               >
-                <View>
-                  <Ionicons name={isActive ? ioniconItem.activeIcon : ioniconItem.icon} size={18} color={isActive ? '#FFFFFF' : '#A1C6E7'} />
-                  {ioniconItem.notificationCount && ioniconItem.notificationCount > 0 && (
-                    <View style={styles.notificationBadge}>
-                      <Text style={styles.notificationText}>{ioniconItem.notificationCount}</Text>
-                    </View>
-                  )}
-                </View>
-                <Text style={[styles.navTexto, isActive && styles.navTextoAtivo]}>{ioniconItem.name}</Text>
+                <LinearGradient // Gradiente para o círculo de fundo do botão central
+                  colors={['#56B8FF', '#0097FF']} // Azul claro para azul médio
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.centralButtonGradient}
+                >
+                  {/* Ícone '+' no centro, sobreposto ao "safe.png" se "safe.png" for o fundo */}
+                  <Ionicons name="add" size={32} color="#FFFFFF" style={styles.centralButtonPlusIcon} />
+                  {/* Se safe.png for o ícone de '+' em si, use:
+                  <Image
+                    source={imageItem.imageSource}
+                    style={styles.centralIconImage} // Estilo para a imagem customizada (o '+')
+                  /> */}
+                </LinearGradient>
               </TouchableOpacity>
             );
-          } else if (item.iconSet === 'MaterialCommunityIcons') {
-            const mcIconItem = item as MaterialCommunityIconNavItem; // Type assertion
-            return (
-              <TouchableOpacity
-                key={mcIconItem.path}
-                style={styles.navItem}
-                onPress={() => router.push(mcIconItem.path as any)}
-              >
-                <View>
-                  {/* Este bloco pode ser redundante se você não tiver outros MaterialCommunityIcons além do central */}
-                  <MaterialCommunityIcons name={mcIconItem.icon} size={18} color={isActive ? '#FFFFFF' : '#A1C6E7'} />
-                  {mcIconItem.notificationCount && mcIconItem.notificationCount > 0 && (
-                    <View style={styles.notificationBadge}>
-                      <Text style={styles.notificationText}>{mcIconItem.notificationCount}</Text>
-                    </View>
-                  )}
-                </View>
-                <Text style={[styles.navTexto, isActive && styles.navTextoAtivo]}>{mcIconItem.name}</Text>
-              </TouchableOpacity>
-            );
+          } else {
+            // Renderiza ícones e textos para itens não centrais
+            const iconColor = isActive ? '#007AFF' : '#64B5F6'; // Azul vibrante para ativo, azul claro para inativo
+            const textColor = isActive ? '#007AFF' : '#64B5F6'; // Texto segue a cor do ícone
+
+            if (item.iconSet === 'Ionicons') {
+              const ioniconItem = item as IoniconNavItem;
+              return (
+                <TouchableOpacity
+                  key={ioniconItem.path}
+                  style={styles.navItem}
+                  onPress={() => router.push(ioniconItem.path as any)}
+                >
+                  <View style={styles.iconContainer}>
+                    <Ionicons name={isActive ? ioniconItem.activeIcon : ioniconItem.icon} size={24} color={iconColor} />
+                    {/* Exibe o badge de notificação para 'Inbox' */}
+                    {ioniconItem.name === 'Inbox' && unreadMessagesCount && unreadMessagesCount > 0 && (
+                      <View style={styles.notificationBadge}>
+                        <Text style={styles.notificationText}>{unreadMessagesCount}</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={[styles.navText, { color: textColor }]}>{ioniconItem.name}</Text>
+                </TouchableOpacity>
+              );
+            } else if (item.iconSet === 'MaterialCommunityIcons') {
+              const mcIconItem = item as MaterialCommunityIconNavItem;
+              return (
+                <TouchableOpacity
+                  key={mcIconItem.path}
+                  style={styles.navItem}
+                  onPress={() => router.push(mcIconItem.path as any)}
+                >
+                  <View style={styles.iconContainer}>
+                    <MaterialCommunityIcons name={mcIconItem.icon} size={24} color={iconColor} />
+                    {mcIconItem.name === 'Inbox' && unreadMessagesCount && unreadMessagesCount > 0 && (
+                      <View style={styles.notificationBadge}>
+                        <Text style={styles.notificationText}>{unreadMessagesCount}</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={[styles.navText, { color: textColor }]}>{mcIconItem.name}</Text>
+                </TouchableOpacity>
+              );
+            }
           }
-        }
-        return null;
-      })}
+          return null;
+        })}
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  navBarWrapper: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'transparent', // O wrapper é transparente para permitir o navBar flutuar
+  },
   navBar: {
     flexDirection: 'row',
-    minHeight: 10,
-    width: '89%', // Ajusta a largura para 90% da tela para ter um pouco de margem
-    alignSelf: 'center', // Centraliza a navBar na tela
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#B2B2B2',
-    backgroundColor: 'rgb(0, 123, 255)', // Azul médio com 80% de opacidade,
+    height: Platform.OS === 'ios' ? 80 : 70, // Altura ajustada
+    backgroundColor: 'rgba(180, 213, 248, 0.9)', // Azul muito claro com opacidade para o fundo
+    marginHorizontal: 20, // Margem nas laterais
+    borderTopLeftRadius: 30, // Bordas arredondadas apenas na parte superior
+    borderTopRightRadius: 30, // Bordas arredondadas apenas na parte superior
+    // Removidas as bordas inferiores
     alignItems: 'center',
-    justifyContent: 'space-around', // Distribui os itens uniformemente com espaço entre eles
-    paddingBottom: 1,
-    paddingTop: 5,
-    paddingHorizontal: 20,
-    bottom: 25,
-    borderTopLeftRadius: 30, // Bordas arredondadas
-    borderTopRightRadius: 30,
-    borderBottomLeftRadius: 30, // Bordas arredondadas
-    borderBottomRightRadius: 30,
+    justifyContent: 'space-around',
+    
+    // Sombras para replicar o efeito flutuante
+    shadowColor: '#007AFF', // Sombra azul
+    shadowOffset: { width: 0, height: 5 }, // Sombra para baixo
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 10, // Sombra para Android
 
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 4,
+    // A curva na imagem é um efeito mais complexo que exigiria SVG ou View sobreposto.
+    // Para um resultado visual próximo, mantemos o borderRadius superior e centralizamos o botão +.
   },
   navItem: {
+    flex: 1, // Distribui igualmente o espaço entre os itens
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 5,
-    paddingHorizontal: 0,
-    position: 'relative',
-    bottom: 5,
-    borderRadius: 10,
-    backgroundColor: 'transparent',
   },
-  centralNavItem: {
+  iconContainer: {
+    position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
-    width: 20, // Largura para o item central
-    height: 20, // Altura para o item central
-    borderRadius: 30, // Metade da largura/altura para torná-lo circular
-    backgroundColor: 'transparent', // ALTERADO: Fundo transparente
-    bottom: 14, // Move o botão central mais para cima para o efeito flutuante
+  },
+  navText: {
+    fontSize: 11, // Tamanho da fonte ajustado
+    fontWeight: '600',
+    marginTop: 4, // Espaçamento entre ícone e texto
+  },
+  // Estilos para o botão central
+  centralNavItemContainer: {
+    position: 'absolute', // Posicionamento absoluto para o item central
+    top: -25, // Puxa o botão para cima para criar a "invasão"
+    width: 60, // Tamanho do círculo externo
+    height: 60,
+    borderRadius: 30, // Metade da largura/altura para ser um círculo
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF', // Fundo branco para a "borda" que aparece na imagem
     
-    // REMOVIDO: propriedades de sombra para este item
-    // shadowColor: '#000',
-    // shadowOffset: { width: 0, height: 4 },
-    // shadowOpacity: 0.3,
-    // shadowRadius: 5,
-    // elevation: 6,
+    // Sombra para o botão central
+    shadowColor: '#007AFF',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 15,
   },
-centralIconImage: {
-  width: 79,
-  height: 79,
-  top: 4,
-  left: 2,
-  resizeMode: 'contain',
-},
+  centralButtonGradient: {
+    width: 50, // Tamanho do círculo interno (gradiente)
+    height: 50,
+    borderRadius: 25, // Metade da largura/altura para ser um círculo
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  centralButtonPlusIcon: {
+    // O ícone '+' já vem com cor branca do Ionicons
+  },
 
-  navTexto: {
-    fontSize: 10,
-    color: '#A1C6E7', // Cor padrão para o texto inativo
-    marginTop: 2, // Pequeno espaçamento entre ícone e texto
-  },
-  navTextoAtivo: {
-    color: '#FFFFFF', // Cor do texto ativo
-    fontWeight: '700',
-  },
+  // Estilos do badge de notificação
   notificationBadge: {
     position: 'absolute',
     top: -5,
-    right: -5,
-    backgroundColor: 'red',
+    right: -10, // Ajuste a posição para o canto superior direito do ícone
+    backgroundColor: '#FF3B30', // Vermelho vibrante para notificações
     borderRadius: 10,
-    width: 20,
+    minWidth: 20, // Garante que o círculo tenha um tamanho mínimo
     height: 20,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 4, // Espaçamento horizontal para números de 2 dígitos
   },
   notificationText: {
     color: 'white',

@@ -85,11 +85,11 @@ export default function ProviderBrief({ provider, serviceName, isLoading }: Prov
 
     // Cores do gradiente com opacidade - ATUALIZADAS CONFORME SUA SOLICITAÇÃO
     // SOLUÇÃO DO ERRO: Usando 'as const' para garantir que o tipo do array seja uma tupla readonly
-    const gradientColors = [ // Não precisa mais do 'ColorValue[]' explícito aqui
-        'rgb(173, 216, 230)', // Azul claro com baixa opacidade
-        'rgba(65, 153, 225, 0.29)',   // Azul com média opacidade
-        'rgba(133, 168, 231, 0.66)', // Azul claro com alta opacidade
-    ] as const; // <--- ADICIONE ISSO AQUI!
+    const gradientColors = [
+        'rgba(173, 216, 230, 0.01)', // Azul claro com baixa opacidade (quase transparente)
+        'rgba(135, 189, 250, 0.42)',  // Azul com média opacidade
+        'rgba(100, 148, 237, 0)',    // Azul com opacidade zero (transparente)
+    ] as const;
 
     if (isLoading || !provider) {
         return (
@@ -159,8 +159,13 @@ const styles = StyleSheet.create({
         // Removido backgroundColor: '#FFFFFF', pois o LinearGradient o substitui
         borderRadius: 15, // Mais arredondado para um visual moderno
         marginHorizontal: 30, // Consistência de margem lateral
-        marginTop: 30,
-        marginBottom: 10,
+        marginTop: 10,
+        marginBottom: 25,
+        shadowColor: 'rgb(9, 96, 196)',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 5,
+        elevation: 8,
 
         // Mantemos as sombras aqui, pois o LinearGradient pode aplicá-las
     

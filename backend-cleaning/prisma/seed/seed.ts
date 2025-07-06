@@ -315,7 +315,7 @@ async function main() {
 
   for (const providerData of testProvidersData) {
     const hashedPass = await bcrypt.hash(providerData.password, 10);
-    const user = await prisma.user.upsert({
+    let user = await prisma.user.upsert({ // Changed to 'let' to allow re-assignment
       where: { email: providerData.email },
       update: {
         passwordHash: hashedPass,
@@ -334,7 +334,29 @@ async function main() {
     const providerAddress = await upsertAddress(providerData.address);
 
     // Garante que o perfil de provedor é criado/atualizado APÓS o usuário
-    if (user.provider) { // Se já tem providerDetails, atualiza
+    if (!user.provider) { // Se não tem providerDetails, cria
+      const newProviderProfile = await prisma.provider.create({
+        data: {
+          userId: user.id,
+          fullName: providerData.fullName,
+          cpf: providerData.cpf,
+          dateOfBirth: new Date('1980-01-01'), // Fixed date for consistency
+          phone: providerData.phone,
+          yearsOfExperience: providerData.yearsOfExperience,
+          avatarUrl: providerData.avatarUrl,
+          verificationStatus: providerData.verificationStatus,
+          bio: providerData.bio,
+          pixKey: providerData.pixKey,
+          address: { connect: { id: providerAddress.id } },
+        }
+      });
+      // IMPORTANT: Re-fetch the user object to include the newly created provider profile
+      user = await prisma.user.findUniqueOrThrow({
+        where: { id: user.id },
+        include: { provider: true },
+      });
+      console.log(`Usuária '${providerData.email}' existia, perfil de provedora criado e usuário recarregado.`);
+    } else { // Se já tem, atualiza
       await prisma.provider.update({
         where: { id: user.provider.id },
         data: {
@@ -344,37 +366,32 @@ async function main() {
           phone: providerData.phone,
           yearsOfExperience: providerData.yearsOfExperience,
           avatarUrl: providerData.avatarUrl,
-          verificationStatus: providerData.verificationStatus, // Correção: usar providerData.verificationStatus
+          verificationStatus: providerData.verificationStatus,
           bio: providerData.bio,
           pixKey: providerData.pixKey,
           address: { connect: { id: providerAddress.id } },
-        },
+        }
+      });
+      // Even if updated, re-fetch to ensure consistency (optional but good practice)
+      user = await prisma.user.findUniqueOrThrow({
+        where: { id: user.id },
+        include: { provider: true },
       });
       console.log(`Usuária Provedora de Teste '${providerData.email}' já existe. Perfil de provedora e usuária atualizados.`);
-    } else { // Se não tem providerDetails, cria
-      const newProviderProfile = await prisma.provider.create({
-        data: {
-          userId: user.id,
-          fullName: providerData.fullName,
-          cpf: providerData.cpf,
-          dateOfBirth: providerData.dateOfBirth,
-          phone: providerData.phone,
-          yearsOfExperience: providerData.yearsOfExperience,
-          avatarUrl: providerData.avatarUrl,
-          verificationStatus: providerData.verificationStatus, // Correção: usar providerData.verificationStatus
-          bio: providerData.bio,
-          pixKey: providerData.pixKey,
-          address: { connect: { id: providerAddress.id } },
-        },
-      });
-      console.log(`Usuária '${providerData.email}' existia, perfil de provedora criado.`);
     }
 
-    // Restante da lógica de services for provider...
+    // Lógica para associar serviços ao provedor
+    // NOVO LOG AQUI para depurar se o provedor está disponível antes de tentar associar serviços
+    console.log(`DEBUG: Attempting to associate services for provider ${providerData.fullName}. Provider ID: ${user.provider?.id}, Services to add: ${providerData.services?.length || 0}`);
+
+
     if (user.provider?.id && providerData.services && providerData.services.length > 0) {
       for (const serviceName of providerData.services) {
         const service = await prisma.service.findUnique({ where: { name: serviceName } });
-        console.log(`DEBUG (ProviderService creation loop): Provedora ${providerData.fullName}, Service ${serviceName}. Found Service ID: ${service?.id}, Provider ID: ${user.provider.id}`); // Debugging
+        
+        // Log para mostrar o resultado da busca pelo serviço
+        console.log(`DEBUG (Service Lookup): Looking for service '${serviceName}'. Found: ${service ? 'Yes (ID: ' + service.id + ', Price: ' + service.price + ')' : 'No'}`);
+
         if (service) {
           await prisma.providerService.upsert({
             where: {
@@ -384,25 +401,27 @@ async function main() {
               },
             },
             update: {
-              price: new Prisma.Decimal(100.0),
+              price: service.price, 
               durationMinutes: 60,
               description: `Serviço ${serviceName} por ${providerData.fullName} (Atualizado).`,
             },
             create: {
               providerId: user.provider.id,
               serviceId: service.id,
-              price: new Prisma.Decimal(100.0),
+              price: service.price, 
               durationMinutes: 60,
               description: `Serviço ${serviceName} por ${providerData.fullName}.`,
             },
           });
-          console.log(`    - Serviço '${serviceName}' associado/atualizado à provedora ${providerData.fullName}.`);
+          console.log(`    - Serviço '${serviceName}' associado/atualizado à provedora ${providerData.fullName} com preço ${service.price}.`);
         } else {
-          console.warn(`    - Serviço '${serviceName}' não encontrado para associar/atualizar à provedora ${providerData.fullName}.`);
+          // Mensagem de aviso mais clara se o serviço não for encontrado
+          console.warn(`    - WARN: Serviço '${serviceName}' não encontrado no banco de dados. Não foi possível associá-lo à provedora ${providerData.fullName}. Verifique a consistência dos nomes dos serviços.`);
         }
       }
-    } else if (user.provider?.id) {
-        console.warn(`WARN: Provedora ${providerData.fullName} (ID: ${user.provider.id}) não tem serviços definidos ou ID do provedor não disponível para associar serviços.`);
+    } else {
+        // Log que abrange casos onde services ou provider.id não estão presentes
+        console.warn(`WARN: Não foi possível associar serviços para a provedora ${providerData.fullName}. Condições de 'user.provider.id' (${!!user.provider?.id}) ou 'providerData.services' (${!!providerData.services && providerData.services.length > 0}) não atendidas.`);
     }
   }
 
@@ -503,6 +522,7 @@ async function main() {
   console.log('Criando disponibilidade de horários para provedoras de teste...');
 
   // Obtenha os provedores (necessário para o escopo)
+  // Recarregar provedores para garantir que os perfis recém-criados estejam incluídos
   const mariaProvider = await prisma.provider.findFirst({ where: { user: { email: 'provider1@cleaning.com' } } });
   const carolinaProvider = await prisma.provider.findFirst({ where: { user: { email: 'provider2@cleaning.com' } } });
   const helenaProvider = await prisma.provider.findFirst({ where: { user: { email: 'provider3@cleaning.com' } } });
@@ -694,7 +714,7 @@ async function main() {
                 clientId: anaClient.id,
                 providerId: mariaProvider.id,
                 providerServiceId: mariaResidentialService.id,
-                scheduledDate: booking1Date, // CORREÇÃO AQUI: Passar o objeto Date diretamente
+                scheduledDate: booking1Date, // Passar o objeto Date diretamente
                 scheduledTime: '10:00',
                 status: BookingStatus.COMPLETED,
                 totalPrice: new Prisma.Decimal(150.0),
@@ -767,7 +787,7 @@ async function main() {
           clientId: bookingData.client.id,
           providerId: carolinaProvider.id,
           providerServiceId: providerServiceForCarolina.id,
-          scheduledDate: bookingDate, // CORREÇÃO AQUI: Passar o objeto Date diretamente
+          scheduledDate: bookingDate, // Passar o objeto Date diretamente
           scheduledTime: bookingData.scheduledTime,
           status: BookingStatus.COMPLETED,
           totalPrice: new Prisma.Decimal(bookingData.price),
@@ -805,7 +825,7 @@ async function main() {
                 clientId: beatrizClient.id,
                 providerId: mariaProvider.id,
                 providerServiceId: mariaResidentialServiceForPending.id,
-                scheduledDate: booking2Date, // CORREÇÃO AQUI: Passar o objeto Date diretamente
+                scheduledDate: booking2Date, // Passar o objeto Date diretamente
                 scheduledTime: '14:00',
                 status: BookingStatus.PENDING,
                 totalPrice: new Prisma.Decimal(100.0),
@@ -833,7 +853,7 @@ async function main() {
                 clientId: anaClient.id,
                 providerId: carolinaProvider.id,
                 providerServiceId: carolinaCommercialService.id,
-                scheduledDate: booking3Date, // CORREÇÃO AQUI: Passar o objeto Date diretamente
+                scheduledDate: booking3Date, // Passar o objeto Date diretamente
                 scheduledTime: '09:00',
                 status: BookingStatus.CONFIRMED,
                 totalPrice: new Prisma.Decimal(200.0),

@@ -1,27 +1,25 @@
 // app/(auth)/provider-register/verification/document-upload.tsx
 import { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Animated, Image, Alert } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Animated, Image, Alert, Platform } from 'react-native'; // Added Platform
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import * as Haptics from 'expo-haptics'; // Importar Haptics
-import colors from '../../../../constants/Colors'; // Caminho CORRIGIDO
-import { SIZES } from '../../../../constants/theme'; // Caminho CORRIGIDO
-import * as uploadService from '../../../services/uploadService'; // Caminho CORRIGIDO
-import verificationService from '../../../services/verificationService'; // Caminho CORRIGIDO
-import AnimatedErrorMessage from '../../../(provider)/schedule/components/manager/AnimatedErrorMessage'; // Caminho CORRIGIDO conforme fornecido
-import { DocumentPhotoType } from '../../../../backend-cleaning/src/verification/dto/upload-document.dto'; // Importando o tipo DocumentPhotoType
-import * as FileSystem from 'expo-file-system';
+import *as Haptics from 'expo-haptics';
+import colors from '../../../../constants/Colors';
+import { SIZES } from '../../../../constants/theme';
+import * as uploadService from '../../../services/uploadService'; // (Note: uploadService imported but not used directly in this file's logic)
+import verificationService from '../../../services/verificationService';
+import AnimatedErrorMessage from '../../../(provider)/schedule/components/manager/AnimatedErrorMessage';
+import { DocumentPhotoType } from '../../../../backend-cleaning/src/verification/dto/upload-document.dto';
+import *as FileSystem from 'expo-file-system'; // (Note: FileSystem imported but not used directly in this file's logic)
 
-// Paleta de cores (repetida para clareza, mas já importamos de constants/Colors)
-// Se você quer usar a paleta específica do Colors.light ou Colors.dark, você pode fazer:
-const Colors = colors.light; // Ou colors.dark, dependendo do tema atual
+// Importações das novas imagens para uso nesta tela
+const FACE_ICON = require('../../../../assets/images/face.png'); // Imagem para o cabeçalho do DocumentUploadScreen e FacialRecognitionScreen
+const PARTE_FRENTE_IMAGE = require('../../../../assets/images/partefrente.png'); // Imagem para o placeholder da frente do documento
+const PARTE_TRAS_IMAGE = require('../../../../assets/images/partetras.png'); // Imagem para o placeholder do verso do documento
+const FACIAL_PLACEHOLDER_IMAGE = require('../../../../assets/images/facial.png'); // Imagem para o placeholder da selfie (assumindo que 'facial.png' é o arquivo correto)
 
-// A função uriToFile não é mais necessária aqui, pois verificationService já lida com a URI.
-// async function uriToFile(uri: string, name: string, type: string): Promise<File> {
-//   const response = await fetch(uri);
-//   const blob = await response.blob();
-//   return new File([blob], name, { type });
-// }
+
+const Colors = colors.light;
 
 interface DocumentUploadProps {
   onComplete: (data: { documentPhotoFront: string | null; documentPhotoBack: string | null }) => void;
@@ -41,6 +39,8 @@ export default function DocumentUploadScreen({
   const [frontError, setFrontError] = useState<string | null>(null);
   const [backError, setBackError] = useState<string | null>(null);
   const [submissionStatus, setSubmissionStatus] = useState<'none' | 'pending' | 'success' | 'failed'>('none');
+  // New state to store validation result for button
+  const [areDocumentsValid, setAreDocumentsValid] = useState(false);
 
   const buttonScale = useRef(new Animated.Value(1)).current;
   const contentFade = useRef(new Animated.Value(0)).current;
@@ -61,12 +61,32 @@ export default function DocumentUploadScreen({
     ).start();
   }, [contentFade, contentSlide, pulseAnim]);
 
+  // Effect to validate documents whenever photos change
+  useEffect(() => {
+    let isValid = true;
+    if (!documentPhotoFront) {
+      setFrontError("Por favor, envie a frente do seu documento.");
+      isValid = false;
+    } else {
+      setFrontError(null);
+    }
+    if (!documentPhotoBack) {
+      setBackError("Por favor, envie o verso do seu documento.");
+      isValid = false;
+    } else {
+      setBackError(null);
+    }
+    setAreDocumentsValid(isValid); // Update the state that controls the button
+  }, [documentPhotoFront, documentPhotoBack]); // Dependencies on photo URIs
+
   const handlePressIn = () => Animated.spring(buttonScale, { toValue: 0.95, useNativeDriver: true }).start();
   const handlePressOut = () => Animated.spring(buttonScale, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start();
 
   const pickImage = async (setImage: React.Dispatch<React.SetStateAction<string | null>>, setError: React.Dispatch<React.SetStateAction<string | null>>) => {
     setError(null);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS === 'ios' || Platform.OS === 'android') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
@@ -80,7 +100,9 @@ export default function DocumentUploadScreen({
 
   const takePhoto = async (setImage: React.Dispatch<React.SetStateAction<string | null>>, setError: React.Dispatch<React.SetStateAction<string | null>>) => {
     setError(null);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS === 'ios' || Platform.OS === 'android') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
     if (permissionResult.granted === false) {
       Alert.alert("Permissão Necessária", "Você precisa permitir o acesso à câmera para tirar fotos.");
@@ -96,36 +118,31 @@ export default function DocumentUploadScreen({
     }
   };
 
-  const validateDocuments = () => {
-    let isValid = true;
-    if (!documentPhotoFront) {
-      setFrontError("Por favor, envie a frente do seu documento.");
-      isValid = false;
-    } else {
-      setFrontError(null);
-    }
-    if (!documentPhotoBack) {
-      setBackError("Por favor, envie o verso do seu documento.");
-      isValid = false;
-    } else {
-      setBackError(null);
-    }
-    return isValid;
-  };
-
   const handleSubmitDocuments = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (!validateDocuments()) {
-      return;
+    if (Platform.OS === 'ios' || Platform.OS === 'android') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+    // Use the state variable for validation
+    if (!areDocumentsValid) {
+      // Re-run validation to ensure errors are displayed immediately on submit attempt
+      // if the user tries to submit without completing all fields
+      let isValidOnSubmit = true;
+      if (!documentPhotoFront) {
+        setFrontError("Por favor, envie a frente do seu documento.");
+        isValidOnSubmit = false;
+      }
+      if (!documentPhotoBack) {
+        setBackError("Por favor, envie o verso do seu documento.");
+        isValidOnSubmit = false;
+      }
+      if (!isValidOnSubmit) return;
     }
     setSubmissionStatus('pending');
     try {
       if (documentPhotoFront) {
-        // Passa a URI da imagem diretamente para o serviço
         await verificationService.uploadDocumentPhoto(documentPhotoFront, DocumentPhotoType.FRONT);
       }
       if (documentPhotoBack) {
-        // Passa a URI da imagem diretamente para o serviço
         await verificationService.uploadDocumentPhoto(documentPhotoBack, DocumentPhotoType.BACK);
       }
       setSubmissionStatus('success');
@@ -137,15 +154,15 @@ export default function DocumentUploadScreen({
     }
   };
 
-  // Correção: Removida a comparação com 'complete' pois submissionStatus não o utiliza.
-  // A condição `isLoading` ou `submissionStatus === 'pending'` já deve ser suficiente para desabilitar o botão durante o envio.
-  const isNextButtonEnabled = validateDocuments() && !isLoading && submissionStatus !== 'pending';
+  // The button's disabled state now uses the `areDocumentsValid` state
+  const isNextButtonEnabled = areDocumentsValid && !isLoading && submissionStatus !== 'pending';
 
   return (
     <Animated.View style={[styles.container, { opacity: contentFade, transform: [{ translateY: contentSlide }] }]}>
       <View style={styles.header}>
         <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-          <Ionicons name="documents-outline" size={80} color={Colors.primary} />
+          {/* Using FACE_ICON for the header icon */}
+          <Image source={FACE_ICON} style={styles.headerIcon} />
         </Animated.View>
         <Text style={styles.title}>Envio de Documentos</Text>
         <Text style={styles.description}>
@@ -159,7 +176,8 @@ export default function DocumentUploadScreen({
           {documentPhotoFront ? (
             <Image source={{ uri: documentPhotoFront }} style={styles.uploadedImage} />
           ) : (
-            <Ionicons name="id-card-outline" size={80} color={Colors.textSecondary} />
+            // Using PARTE_FRENTE_IMAGE for the front document placeholder
+            <Image source={PARTE_FRENTE_IMAGE} style={styles.placeholderImage} />
           )}
           <View style={styles.imageUploadButtons}>
             <TouchableOpacity style={styles.uploadButton} onPress={() => takePhoto(setDocumentPhotoFront, setFrontError)} disabled={isLoading || submissionStatus === 'success'}>
@@ -179,7 +197,8 @@ export default function DocumentUploadScreen({
           {documentPhotoBack ? (
             <Image source={{ uri: documentPhotoBack }} style={styles.uploadedImage} />
           ) : (
-            <Ionicons name="id-card-outline" size={80} color={Colors.textSecondary} />
+            // Using PARTE_TRAS_IMAGE for the back document placeholder
+            <Image source={PARTE_TRAS_IMAGE} style={styles.placeholderImage} />
           )}
           <View style={styles.imageUploadButtons}>
             <TouchableOpacity style={styles.uploadButton} onPress={() => takePhoto(setDocumentPhotoBack, setBackError)} disabled={isLoading || submissionStatus === 'success'}>
@@ -212,17 +231,17 @@ export default function DocumentUploadScreen({
 
         {submissionStatus !== 'none' && (
           <View style={[styles.statusBadge,
-                submissionStatus === 'success' ? styles.statusSuccess :
-                submissionStatus === 'failed' ? styles.statusFailed : {}]}>
+              submissionStatus === 'success' ? styles.statusSuccess :
+              submissionStatus === 'failed' ? styles.statusFailed : {}]}>
             <Ionicons
               name={submissionStatus === 'success' ? "checkmark-circle" :
                     submissionStatus === 'failed' ? "warning" : "information-circle"}
               size={20}
-              color={submissionStatus === 'success' ? Colors.secondary : // Corrigido de Colors.success para Colors.secondary
+              color={submissionStatus === 'success' ? Colors.secondary :
                     submissionStatus === 'failed' ? Colors.error : Colors.info}
             />
             <Text style={[styles.statusText,
-                  submissionStatus === 'success' ? { color: Colors.secondary } : // Corrigido de Colors.success para Colors.secondary
+                  submissionStatus === 'success' ? { color: Colors.secondary } :
                   submissionStatus === 'failed' ? { color: Colors.error } : { color: Colors.info }]}>
               {submissionStatus === 'pending' && "Enviando documentos..."}
               {submissionStatus === 'success' && "Documentos enviados com sucesso!"}
@@ -247,23 +266,30 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     marginBottom: SIZES.padding,
+    marginTop: SIZES.padding * 8,
+  },
+  // Novo estilo para o ícone do cabeçalho
+  headerIcon: {
+    width: 200, // Ajuste o tamanho conforme necessário
+    height: 200, // Ajuste o tamanho conforme necessário
+    resizeMode: 'contain',
   },
   title: {
     fontSize: SIZES.h1 - 4,
     fontWeight: 'bold',
-    color: Colors.textPrimary, // Mantido como textPrimary, pois foi adicionado em Colors.ts
+    color: Colors.textPrimary,
     marginTop: SIZES.base * 2,
     marginBottom: SIZES.base,
     textAlign: 'center',
   },
   description: {
     fontSize: SIZES.body3,
-    color: Colors.textSecondary, // Mantido como textSecondary, pois foi adicionado em Colors.ts
+    color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: SIZES.body3 + 6,
   },
   card: {
-    backgroundColor: Colors.cardBackground, // Corrigido para cardBackground
+    backgroundColor: Colors.cardBackground,
     borderRadius: SIZES.radius,
     padding: SIZES.padding,
     width: '100%',
@@ -275,17 +301,17 @@ const styles = StyleSheet.create({
     elevation: 8,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: Colors.primaryLight, // Mantido como primaryLight
+    borderColor: Colors.primaryLight,
   },
   label: {
     fontSize: SIZES.body3,
     fontWeight: '600',
-    color: Colors.textPrimary, // Mantido como textPrimary
+    color: Colors.textPrimary,
     alignSelf: 'flex-start',
     marginBottom: SIZES.base,
     marginTop: SIZES.base * 2,
   },
-  inputWrapper: { // Não usado diretamente, mas mantido se for um estilo global
+  inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.primaryLight,
@@ -294,16 +320,16 @@ const styles = StyleSheet.create({
     marginBottom: SIZES.base * 2,
     paddingHorizontal: SIZES.paddingSmall,
     borderWidth: 1,
-    borderColor: Colors.lightBlueBorder, // Mantido como lightBlueBorder
+    borderColor: Colors.lightBlueBorder,
     width: '100%',
   },
   inputIcon: {
     marginRight: SIZES.base,
   },
-  input: { // Não usado diretamente, mas mantido se for um estilo global
+  input: {
     flex: 1,
     fontSize: SIZES.body3,
-    color: Colors.textPrimary, // Mantido como textPrimary
+    color: Colors.textPrimary,
   },
   errorMessage: {
     color: Colors.error,
@@ -312,7 +338,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   submitButton: {
-    backgroundColor: Colors.primaryGradientStart, // Mantido como primaryGradientStart
+    backgroundColor: Colors.primaryGradientStart,
     borderRadius: SIZES.radius,
     paddingVertical: SIZES.paddingSmall,
     width: '100%',
@@ -331,7 +357,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   buttonDisabled: {
-    backgroundColor: '#C0DFFF', // Cor estática para botão desabilitado
+    backgroundColor: '#C0DFFF',
     opacity: 0.7,
     elevation: 0,
     shadowOpacity: 0,
@@ -347,21 +373,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: Colors.primaryLight,
     borderWidth: 1,
-    borderColor: Colors.lightBlueBorder, // Mantido como lightBlueBorder
+    borderColor: Colors.lightBlueBorder,
   },
   statusSuccess: {
-    backgroundColor: Colors.successBg, // Mantido como successBg
-    borderColor: Colors.secondary, // Corrigido de Colors.success para Colors.secondary
+    backgroundColor: Colors.successBg,
+    borderColor: Colors.secondary,
   },
   statusFailed: {
-    backgroundColor: Colors.errorBg, // Mantido como errorBg
+    backgroundColor: Colors.errorBg,
     borderColor: Colors.error,
   },
   statusText: {
     fontSize: SIZES.body4,
     fontWeight: '600',
     marginLeft: SIZES.base,
-    color: Colors.textPrimary, // Mantido como textPrimary
+    color: Colors.textPrimary,
   },
   imageUploadWrapper: {
     flexDirection: 'column',
@@ -372,16 +398,24 @@ const styles = StyleSheet.create({
     marginBottom: SIZES.base * 2,
     width: '100%',
     borderWidth: 1,
-    borderColor: Colors.lightBlueBorder, // Mantido como lightBlueBorder
+    borderColor: Colors.lightBlueBorder,
   },
   uploadedImage: {
-    width: '90%',
-    height: 180,
+    width: '70%',
+    height: 160,
     borderRadius: SIZES.radius / 2,
     resizeMode: 'cover',
     marginBottom: SIZES.base * 2,
     borderWidth: 1,
-    borderColor: Colors.textSecondary, // Mantido como textSecondary
+    borderColor: Colors.textSecondary,
+  },
+  // Novo estilo para as imagens de placeholder
+  placeholderImage: {
+    width: '90%', // Ajuste o tamanho conforme necessário
+    height: 130, // Ajuste o tamanho conforme necessário
+    resizeMode: 'contain', // Use 'contain' para não cortar a imagem se ela tiver proporções diferentes
+    marginBottom: SIZES.base * 2,
+    opacity: 0.6, // Opacifica para parecer um placeholder
   },
   imageUploadButtons: {
     flexDirection: 'row',

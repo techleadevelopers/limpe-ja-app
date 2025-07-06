@@ -55,9 +55,8 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
                 <Ionicons
                     key={i}
                     name={iconName}
-                    size={14}
-                    // Estrelas em tom de azul claro (roxo quase azul)
-                    color="#88B0FF" // Tom de azul claro/roxo para estrelas
+                    size={14} // Tamanho da estrela
+                    color="#007AFF" // Azul vibrante para as estrelas
                     style={styles.ratingStarIcon}
                 />
             );
@@ -75,20 +74,30 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
 
     const avatarSource = item.avatarUrl
         ? { uri: item.avatarUrl }
-        : require('../../../../../assets/images/default-avatar.png');
+        : require('../../../../../assets/images/default-avatar.png'); // Imagem padrão
 
-    // --- RESTAURANDO A LÓGICA ORIGINAL DO PREÇO COM .toNumber() ---
+    // --- Lógica do Preço: Média dos serviços do provedor, com tratamento para Prisma.Decimal ---
     const averagePrice = item.providerServices && item.providerServices.length > 0
         ? item.providerServices.reduce((sum, service) => {
-            // Se service.price for um objeto Prisma.Decimal, usa .toNumber()
-            // Caso contrário (se já for number ou undefined/null), trata como 0
             const priceValue = (service.price && typeof (service.price as any).toNumber === 'function')
                 ? (service.price as any).toNumber()
                 : (typeof service.price === 'number' ? service.price : 0);
             return sum + priceValue;
-          }, 0) / item.providerServices.length
+        }, 0) / item.providerServices.length
         : 0;
-    // --- FIM DA RESTAURAÇÃO DA LÓGICA DE PREÇO ---
+
+    // --- Lógica para exibir categorias (Tags) ---
+    const categoriesToDisplay: string[] = [];
+    if (item.providerServices && item.providerServices.length > 0) {
+        if (item.providerServices[0].serviceType) {
+             categoriesToDisplay.push(item.providerServices[0].serviceType);
+        }
+    }
+    if (categoriesToDisplay.length === 0) {
+        if (item.bio?.includes('comercial')) categoriesToDisplay.push('Comercial');
+        if (item.bio?.includes('escritórios')) categoriesToDisplay.push('Escritório');
+    }
+    const displayedCategories = categoriesToDisplay.slice(0, 2); // Limita a 2 categorias
 
     return (
         <Animated.View style={[styles.animatedCardContainer, { transform: [{ scale: scaleAnim }] }]}>
@@ -102,39 +111,55 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
                 {/* Área da Imagem */}
                 <View style={styles.imageWrapper}>
                     <Image source={avatarSource} style={styles.cardImage} />
-                    {/* Botão de coração (Like), em tom de azul claro */}
-                    <TouchableOpacity style={styles.likeButton}>
-                        <Ionicons name="heart" size={18} color="#A0D2EB" /> {/* Azul claro/roxo para o coração */}
-                    </TouchableOpacity>
                 </View>
 
                 {/* Área de Conteúdo */}
                 <View style={styles.infoContainer}>
                     <Text style={styles.providerName} numberOfLines={1}>{item.fullName}</Text>
-                    {/* Bio concisa ou serviço principal (opcional, pode ser removido) */}
-                    {item.bio && <Text style={styles.serviceDescription} numberOfLines={1}>{item.bio}</Text>}
-
-                    {/* Preço */}
-                    <View style={styles.priceAndRatingContainer}>
-                        {averagePrice > 0 ? (
-                            <Text style={styles.priceText}>R$ {averagePrice.toFixed(2).replace('.', ',')}</Text>
-                        ) : (
-                            <Text style={styles.noPriceText}>Consultar</Text>
-                        )}
-                        {/* Botão de Adicionar ou Ver Detalhes (Azul claro/roxo) */}
-                        <TouchableOpacity style={styles.detailsButton}>
-                            <Ionicons name="add" size={20} color="#FFF" />
-                        </TouchableOpacity>
-                    </View>
                     
-                    {/* Avaliação em Estrelas e Contagem de Reviews */}
-                    <View style={styles.ratingRow}>
-                        {renderStars(item.averageRating)}
-                        {item.reviewCount !== undefined && (
-                            <Text style={styles.reviewsCountText}>
-                                ({item.reviewCount === 0 ? 'Sem avaliações' : `${item.reviewCount} avaliações`})
-                            </Text>
+                    <Text style={styles.serviceDescription} numberOfLines={2}>
+                        {item.bio || "Nenhuma descrição disponível."}
+                    </Text>
+
+                    {/* Tags/Chips de Categoria */}
+                    <View style={styles.categoryChipsContainer}>
+                        {displayedCategories.map((category, index) => (
+                            <View key={index} style={styles.categoryChip}>
+                                <Text style={styles.categoryChipText}>{category}</Text> {/* Texto preto aqui */}
+                            </View>
+                        ))}
+                        {displayedCategories.length === 0 && (
+                            <>
+                                <View style={styles.categoryChip}>
+                                    <Text style={styles.categoryChipText}>Comercial</Text> {/* Texto preto aqui */}
+                                </View>
+                                <View style={styles.categoryChip}>
+                                    <Text style={styles.categoryChipText}>Escritório</Text> {/* Texto preto aqui */}
+                                </View>
+                            </>
                         )}
+                    </View>
+
+                    {/* Preço e Avaliação */}
+                    <View style={styles.priceAndRatingSection}>
+                        <View>
+                            <Text style={styles.priceLabel}>A partir de</Text>
+                            {averagePrice > 0 ? (
+                                <Text style={styles.priceValue}>R$ {averagePrice.toFixed(2).replace('.', ',')}</Text>
+                            ) : (
+                                <Text style={styles.priceValue}>R$ N/A</Text>
+                            )}
+                        </View>
+                        
+                        {/* Avaliação em Estrelas e Contagem de Avaliações */}
+                        <View style={styles.ratingSection}>
+                            {renderStars(item.averageRating)}
+                            {item.reviewCount !== undefined && (
+                                <Text style={styles.reviewsCountText}>
+                                    {item.reviewCount === 0 ? 'Sem Avaliações' : `${item.reviewCount} Avaliações`}
+                                </Text>
+                            )}
+                        </View>
                     </View>
                 </View>
             </TouchableOpacity>
@@ -145,37 +170,42 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
 // --- ESTILOS DO COMPONENTE ---
 const styles = StyleSheet.create({
     animatedCardContainer: {
-        marginTop: -5,
-        marginRight: 18, // Espaçamento entre os cards
-        marginBottom: 5, // Margem inferior para espaçamento vertical se não for horizontal
-        borderRadius: 14, // Bordas mais arredondadas
-        overflow: 'visible', // Permite que a sombra seja renderizada corretamente
-        // Estilos de sombra suaves para profundidade
+        // Estilos para o container animado que encapsula o card
+        // REDUZIDO A LARGURA PARA 220
+        width: 240, // **MODIFICADO: Largura total do card, reduzida de 250 para 220**
+        marginRight: 15, // Espaçamento entre os cards horizontais
+        marginBottom: 15, // Espaçamento vertical entre as linhas de cards
+        borderRadius: 12, // Borda arredondada geral do card
+        overflow: 'visible', // Necessário para a sombra ser renderizada
+        backgroundColor: '#FFFFFF', // Fundo do card
         ...Platform.select({
             ios: {
                 shadowColor: '#000',
-                shadowOffset: { width: 0, height: 8 }, // Sombra mais para baixo
-                shadowOpacity: 0.1, // Sombra mais transparente
-                shadowRadius: 10,   // Sombra mais espalhada
+                shadowOffset: { width: 0, height: 4 }, // Sombra mais para baixo
+                shadowOpacity: 0.1, // Sombra sutil
+                shadowRadius: 8, // Espalhamento da sombra
             },
             android: {
-                elevation: 6, // Elevação para Android
+                elevation: 5, // Elevação para Android
             },
         }),
     },
     cardContentWrapper: {
-        width: 180, // Largura fixa para o card, similar à referência
-        backgroundColor: '#FFFFFF',
-        borderRadius: 14, // Borda arredondada consistente
-        overflow: 'hidden', // Importante para o borderRadius da imagem
+        width: '100%', // Ocupa toda a largura do animatedCardContainer
+        borderRadius: 12,
+        overflow: 'hidden', // Importante para que a imagem respeite o borderRadius
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 5 },
+        shadowOpacity: 0.1,
+        shadowRadius: 5,
+        elevation: 8,
     },
     imageWrapper: {
         width: '100%',
-        height: 120, // Altura da imagem
-        backgroundColor: '#E0E0E0', // Cor de fundo para fallback da imagem
+        height: 150, // Altura da imagem, ajustado para a imagem de referência
+        backgroundColor: '#E0E0E0', // Fundo padrão para imagem não carregada
         justifyContent: 'center',
         alignItems: 'center',
-        position: 'relative',
     },
     cardImage: {
         width: '100%',
@@ -195,69 +225,74 @@ const styles = StyleSheet.create({
         zIndex: 1, // Para garantir que fique acima da imagem
     },
     infoContainer: {
-        padding: 12, // Padding interno
-        paddingBottom: 15, // Um pouco mais de padding inferior
+        padding: 12, // Padding interno para o conteúdo textual
     },
     providerName: {
-        fontSize: 16, // Um pouco maior
-        fontWeight: '700', // Mais negrito
-        color: '#2C3E50', // Cor mais escura para destaque
+        fontSize: 18, // Fonte maior para o nome do provedor
+        fontWeight: 'bold',
+        color: '#2D3748', // Cor escura para o texto principal
         marginBottom: 4,
+        marginTop: 0, // Espaço acima do nome
     },
     serviceDescription: {
-        fontSize: 11, // Pequeno para ser sutil
-        color: '#666',
-        marginBottom: 8,
+        fontSize: 12, // Tamanho menor para a descrição/bio
+        color: '#6C757D', // Cinza médio para a descrição
+        marginBottom: 15,
+        marginTop: 0, // Espaço acima da descrição
     },
-    priceAndRatingContainer: {
+    // --- ESTILOS PARA AS TAGS/CHIPS DE CATEGORIA ---
+    categoryChipsContainer: {
         flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between', // Espaçamento entre preço e botão
-        marginBottom: 8,
+        flexWrap: 'wrap',
+        marginBottom: 18, // Espaço abaixo dos chips
     },
-    priceText: {
-        fontSize: 18, // Tamanho proeminente
+    categoryChip: {
+        backgroundColor: '#E6EEF9', // Fundo azul claro para o chip
+        borderRadius: 5, // Bordas levemente arredondadas
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        marginRight: 6, // Espaçamento entre os chips
+        marginBottom: 4,
+    },
+    categoryChipText: {
+        fontSize: 10, // Texto pequeno para o chip
+        fontWeight: '500',
+        color: '#000000', // **MODIFICADO: Cor do texto do chip para preto**
+    },
+    // --- SEÇÃO DE PREÇO E AVALIAÇÃO ---
+    priceAndRatingSection: {
+        flexDirection: 'row',
+        justifyContent: 'space-between', // Alinha preço à esquerda, avaliação à direita
+        alignItems: 'flex-end', // Alinha os itens pela base
+        marginTop: 8, // Espaço acima desta seção
+    },
+    priceLabel: {
+        fontSize: 12,
+        color: '#6C757D',
+        marginBottom: 2, // Pequeno espaço entre label e valor
+    },
+    priceValue: {
+        fontSize: 18, // Tamanho grande para o valor
         fontWeight: 'bold',
-        color: '#007AFF', // Mantido como um azul primário forte para o preço (pode ser ajustado se quiser um azul mais claro para o preço tbm)
+        color: '#2D3748', // Cor escura para o preço
     },
     noPriceText: {
         fontSize: 14,
         color: '#888',
     },
-    detailsButton: {
-        // --- NOVO: Azul claro/roxo para o botão de detalhes/adicionar ---
-        backgroundColor: '#A0D2EB', // Um azul mais claro, como o #A0D2EB
-        borderRadius: 20,
-        width: 36,
-        height: 36,
-        justifyContent: 'center',
-        alignItems: 'center',
-        ...Platform.select({
-            ios: {
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.1,
-                shadowRadius: 3,
-            },
-            android: {
-                elevation: 4,
-            },
-        }),
-    },
-    ratingRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
+    ratingSection: {
+        alignItems: 'flex-end', // Alinha estrelas e texto à direita
     },
     ratingStarContainer: {
         flexDirection: 'row',
-        marginRight: 4,
+        marginBottom: 2, // Espaço entre estrelas e texto de avaliações
     },
     ratingStarIcon: {
-        // Estilos já definidos
+        marginRight: 2, // Espaçamento entre as estrelas
     },
     reviewsCountText: {
-        fontSize: 11,
-        color: '#888',
+        fontSize: 11, // Tamanho pequeno para o texto de avaliações
+        color: '#6C757D', // Cinza médio
     },
 });
 

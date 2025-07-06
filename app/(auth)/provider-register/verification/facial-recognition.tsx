@@ -1,11 +1,15 @@
 // app/(provider)/verify-account/facial-recognition.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Animated, Image, Alert } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Animated, Image, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
-import verificationService from '../../../services/verificationService'; // Correção: importação padrão
+import verificationService from '../../../services/verificationService';
+
+// Importações das novas imagens
+
+const FACIAL_PLACEHOLDER_IMAGE = require('../../../../assets/images/facial.png');
 
 // Paleta de cores (repetida para clareza)
 const Colors = {
@@ -14,7 +18,7 @@ const Colors = {
   primaryGradientStart: '#007AFF',
   primaryGradientEnd: '#40C0F0',
   background: '#F8F9FA',
-  cardBackground: '#FFFFFF',
+  cardBackground: '#FFFFFF', // Mantido para outros componentes que ainda possam usá-lo
   textPrimary: '#2D3748',
   textSecondary: '#6C757D',
   success: '#28A745',
@@ -26,13 +30,6 @@ const Colors = {
   errorBg: '#FFEBEE',
 };
 
-// A função uriToFile não é mais necessária aqui, pois verificationService já lida com a URI.
-// async function uriToFile(uri: string, name: string, type: string): Promise<File> {
-//   const response = await fetch(uri);
-//   const blob = await response.blob();
-//   return new File([blob], name, { type });
-// }
-
 interface FacialRecognitionProps {
   onComplete: (data: { selfieWithDocument: string | null }) => void;
   isLoading: boolean;
@@ -43,11 +40,12 @@ export default function FacialRecognitionScreen({ onComplete, isLoading, initial
   const [selfieWithDocument, setSelfieWithDocument] = useState<string | null>(initialSelfieWithDocument || null);
   const [selfieError, setSelfieError] = useState<string | null>(null);
   const [submissionStatus, setSubmissionStatus] = useState<'none' | 'pending' | 'success' | 'failed'>('none');
+  const [isSelfieValid, setIsSelfieValid] = useState(false);
 
   const buttonScale = useRef(new Animated.Value(1)).current;
   const contentFade = useRef(new Animated.Value(0)).current;
   const contentSlide = useRef(new Animated.Value(20)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current; // Para animação de pulso do ícone
+  const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     Animated.parallel([
@@ -55,24 +53,34 @@ export default function FacialRecognitionScreen({ onComplete, isLoading, initial
       Animated.timing(contentSlide, { toValue: 0, duration: 600, useNativeDriver: true, delay: 100 }),
     ]).start();
 
-    // Animação de pulso contínua para o ícone de upload
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, { toValue: 1.1, duration: 800, useNativeDriver: true }),
         Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
       ])
     ).start();
-
   }, [contentFade, contentSlide, pulseAnim]);
+
+  useEffect(() => {
+    if (!selfieWithDocument) {
+      setSelfieError("Por favor, envie sua selfie segurando o documento.");
+      setIsSelfieValid(false);
+    } else {
+      setSelfieError(null);
+      setIsSelfieValid(true);
+    }
+  }, [selfieWithDocument]);
 
   const handlePressIn = () => Animated.spring(buttonScale, { toValue: 0.95, useNativeDriver: true }).start();
   const handlePressOut = () => Animated.spring(buttonScale, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start();
 
   const pickImage = async (setImage: React.Dispatch<React.SetStateAction<string | null>>) => {
     setSelfieError(null);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS === 'ios' || Platform.OS === 'android') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ImagePicker.MediaType.Images, // Corrigido: MediaTypeOptions para MediaType
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.8,
@@ -84,13 +92,16 @@ export default function FacialRecognitionScreen({ onComplete, isLoading, initial
 
   const takePhoto = async (setImage: React.Dispatch<React.SetStateAction<string | null>>) => {
     setSelfieError(null);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS === 'ios' || Platform.OS === 'android') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
     if (permissionResult.granted === false) {
       Alert.alert("Permissão Necessária", "Você precisa permitir o acesso à câmera para tirar fotos.");
       return;
     }
     let result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaType.Images, // Corrigido: MediaTypeOptions para MediaType
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.8,
@@ -100,25 +111,18 @@ export default function FacialRecognitionScreen({ onComplete, isLoading, initial
     }
   };
 
-  const validateSelfie = () => {
-    if (!selfieWithDocument) {
-      setSelfieError("Por favor, envie sua selfie segurando o documento.");
-      return false;
-    }
-    setSelfieError(null);
-    return true;
-  };
-
   const handleSubmitSelfie = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (!validateSelfie()) {
+    if (Platform.OS === 'ios' || Platform.OS === 'android') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+    if (!isSelfieValid) {
+      setSelfieError("Por favor, envie sua selfie segurando o documento.");
       return;
     }
     setSubmissionStatus('pending');
     try {
       if (selfieWithDocument) {
-        // Passa a URI da imagem diretamente para o serviço
-        await verificationService.uploadSelfie(selfieWithDocument); 
+        await verificationService.uploadSelfie(selfieWithDocument);
       }
       setSubmissionStatus('success');
       onComplete({ selfieWithDocument });
@@ -128,38 +132,35 @@ export default function FacialRecognitionScreen({ onComplete, isLoading, initial
     }
   };
 
-  // Correção: Removida a comparação com 'complete' pois submissionStatus não o utiliza.
-  const isNextButtonEnabled = validateSelfie() && !isLoading && submissionStatus !== 'pending';
+  const isNextButtonEnabled = isSelfieValid && !isLoading && submissionStatus !== 'none';
 
   return (
     <Animated.View style={[styles.container, { opacity: contentFade, transform: [{ translateY: contentSlide }] }]}>
       <View style={styles.header}>
-        <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-          <Ionicons name="scan-circle-outline" size={80} color={Colors.primary} />
-        </Animated.View>
+        {/* Substituído Ionicons pela logo2.png */}
+        
         <Text style={styles.title}>Reconhecimento Facial</Text>
         <Text style={styles.description}>
           Tire uma selfie clara segurando seu documento de identidade ao lado do rosto.
         </Text>
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.label}>Selfie com Documento</Text>
+      {/* Removido o estilo 'card' do View principal */}
+      <View style={styles.contentWrapper}>
+        
         <View style={styles.imageUploadWrapper}>
           {selfieWithDocument ? (
             <Image source={{ uri: selfieWithDocument }} style={styles.uploadedImage} />
           ) : (
-            <Ionicons name="person-circle-outline" size={80} color={Colors.textSecondary} />
+            // Substituído Ionicons pela imagem facial.png
+            <Image source={FACIAL_PLACEHOLDER_IMAGE} style={styles.facialPlaceholderImage} />
           )}
           <View style={styles.imageUploadButtons}>
             <TouchableOpacity style={styles.uploadButton} onPress={() => takePhoto(setSelfieWithDocument)} disabled={isLoading || submissionStatus === 'success'}>
               <Ionicons name="camera-outline" size={24} color="#fff" />
-              <Text style={styles.uploadButtonText}>Tirar Foto</Text>
+              
             </TouchableOpacity>
-            <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage(setSelfieWithDocument)} disabled={isLoading || submissionStatus === 'success'}>
-              <Ionicons name="folder-open-outline" size={24} color="#fff" />
-              <Text style={styles.uploadButtonText}>Galeria</Text>
-            </TouchableOpacity>
+            {/* Botão "Galeria" removido */}
           </View>
         </View>
 
@@ -173,7 +174,7 @@ export default function FacialRecognitionScreen({ onComplete, isLoading, initial
             onPressOut={handlePressOut}
             disabled={!isNextButtonEnabled}
           >
-            {isLoading || submissionStatus !== 'none' ? (
+            {isLoading || submissionStatus === 'pending' ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
               <Text style={styles.submitButtonText}>Finalizar Verificação</Text>
@@ -217,10 +218,17 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 10,
+  },
+  headerLogo: { // Novo estilo para a logo no cabeçalho
+    width: 280, // Ajuste o tamanho conforme necessário
+    height: 200, // Ajuste o tamanho conforme necessário
+    resizeMode: 'contain',
+    marginBottom: 5,
+    bottom: 30,
   },
   title: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: 'bold',
     color: Colors.textPrimary,
     marginTop: 15,
@@ -233,20 +241,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
   },
-  card: {
-    backgroundColor: Colors.cardBackground,
-    borderRadius: 15,
-    padding: 25,
+  // Removido o estilo 'card' e criado 'contentWrapper' para manter o layout sem o card visual
+  contentWrapper: {
     width: '100%',
     maxWidth: 400,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 8,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.primaryLight,
+    // Não tem background, sombra ou borda aqui
   },
   label: {
     fontSize: 16,
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginTop: 15,
   },
-  inputWrapper: {
+  inputWrapper: { // Não usado diretamente, mas mantido se for um estilo global
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.primaryLight,
@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
   inputIcon: {
     marginRight: 10,
   },
-  input: {
+  input: { // Não usado diretamente, mas mantido se for um estilo global
     flex: 1,
     fontSize: 16,
     color: Colors.textPrimary,
@@ -337,27 +337,33 @@ const styles = StyleSheet.create({
   imageUploadWrapper: {
     flexDirection: 'column',
     alignItems: 'center',
-    backgroundColor: Colors.primaryLight,
+   
     borderRadius: 10,
     paddingVertical: 20,
-    marginBottom: 15,
+    marginBottom: 1,
     width: '100%',
-    borderWidth: 1,
-    borderColor: Colors.lightBlueBorder,
+    
   },
   uploadedImage: {
-    width: '90%',
+    width: '100%',
     height: 180,
     borderRadius: 8,
     resizeMode: 'cover',
-    marginBottom: 15,
+    marginBottom: 5,
     borderWidth: 1,
     borderColor: Colors.textSecondary,
   },
+  facialPlaceholderImage: { // Novo estilo para a imagem de placeholder da selfie
+    width: 400, // Ajuste o tamanho conforme necessário
+    height: 400, // Ajuste o tamanho conforme necessário
+    resizeMode: 'contain',
+    marginBottom: 15,
+    marginTop: -40,
+  },
   imageUploadButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '90%',
+    justifyContent: 'center', // Centralizado agora que só tem um botão
+    width: '70%',
   },
   uploadButton: {
     flexDirection: 'row',
@@ -367,7 +373,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     borderRadius: 20,
     marginHorizontal: 5,
-    flex: 1,
+    flex: 1, // Ocupa o espaço disponível
     justifyContent: 'center',
     shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },

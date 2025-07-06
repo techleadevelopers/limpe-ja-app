@@ -17,10 +17,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useProviderRegistration } from '../../../contexts/ProviderRegistrationContext';
 
 // Importando os novos componentes
-import { InputWithIcon } from './components/InputWithIcon';
-import { StandardInput } from './components/StandardInput';
-import { DatePickerInput } from './components/DatePickerInput';
-import { SectionHeader } from './components/SectionHeader';
+import { InputWithIcon } from '../components/InputWithIcon';
+import { StandardInput } from '../components/StandardInput';
+import { DatePickerInput } from '../components/DatePickerInput';
+import { SectionHeader } from '../components/SectionHeader';
 
 // Simulação da API ViaCEP
 // Mover esta mock para app/(auth)/api/addressService.ts conforme a documentação

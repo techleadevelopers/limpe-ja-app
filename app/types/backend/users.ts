@@ -17,6 +17,7 @@ export interface UserProfile {
 
   fullName?: string; // Presente na raiz do fetchedUserProfile nos logs
   phone?: string;     // Presente na raiz do fetchedUserProfile nos logs
+  avatarUrl?: string | null;
 
   // REMOVIDO: address?: BookingAddress; // Removido: A propriedade 'address' não existe diretamente na raiz do UserProfile (conforme logs)
 

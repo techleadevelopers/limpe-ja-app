@@ -1,11 +1,11 @@
 import { StyleSheet, Dimensions, Platform } from 'react-native';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const IMAGE_HEIGHT = 320; // Altura da imagem de perfil do profissional
+const IMAGE_HEIGHT = 380; // Altura da imagem de perfil do profissional
 
 // --- Nova Paleta de Cores (Inspirada no Print 2) ---
 const COLOR_PRIMARY = '#4A90E2'; // Um azul vibrante para ações principais e destaques (mantido)
-const COLOR_ACCENT = '#FF6347'; // Um vermelho/rosa vibrante para o preço e coração (inspirado no Print 2)
+const COLOR_ACCENT = '#ADD8E6'; // Um vermelho/rosa vibrante para o preço e coração (inspirado no Print 2)
 const COLOR_BACKGROUND = '#E0F2F7'; // Fundo geral da tela, um azul muito claro e suave
 const COLOR_CARD_BACKGROUND = '#FFFFFF'; // Fundo de cards e seções principais, branco puro
 const COLOR_TEXT_DARK = '#212529'; // Texto principal escuro, para títulos e nomes
@@ -20,13 +20,13 @@ const COLOR_WARNING = '#FFC107'; // Cor para avisos
 export const styles = StyleSheet.create({
     screenContainer: {
         flex: 1,
-       
+        backgroundColor: COLOR_BACKGROUND, // Certifique-se que o background do container é a cor de fundo desejada
     },
     centeredFeedback: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 2,
+        padding: 20,
         backgroundColor: COLOR_BACKGROUND,
     },
     loadingText: {
@@ -55,28 +55,17 @@ export const styles = StyleSheet.create({
         fontWeight: '600',
     },
     scrollContentContainer: {
-        paddingBottom: 10, // Espaço para o botão "Agendar Serviço" fixo na parte inferior
-        // paddingTop: IMAGE_HEIGHT * 0.7, // Ajuste para que o conteúdo comece abaixo da imagem
+        paddingBottom: 100, // Ajuste para dar espaço ao botão fixo "Agendar Serviço"
     },
 
     // --- Estilos para a Imagem do Provedor e o Card Principal (inspirado no Print 2) ---
     providerImageContainer: {
-        width: SCREEN_WIDTH - 6, // Largura total da tela menos 20 de margem em cada lado
+        width: SCREEN_WIDTH, // Ocupa a largura total para a imagem principal
         height: IMAGE_HEIGHT,
-        borderBottomLeftRadius: 30, // Cantos mais arredondados para um visual moderno
-        overflow: 'hidden', // Garante que a imagem respeite o borderRadius
-        marginTop: Platform.OS === 'ios' ? 2: 1,// Ajuste para ficar abaixo do header customizado
-        marginBottom: 0, // Permite que o contentArea sobreponha a imagem
-        marginHorizontal: 20, // Margem nas laterais
-        alignSelf: 'center', // Centraliza o container da imagem
-        shadowColor: COLOR_SHADOW, // Sombra suave para o efeito de "card flutuante"
-        shadowOffset: {
-            width: 0,
-            height: 6,
-        },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
-        elevation: 10,
+        overflow: 'hidden',
+        marginTop: 0, // Ajuste para ficar no topo
+        marginBottom: 0,
+        alignSelf: 'center',
     },
     providerImage: {
         width: '100%',
@@ -99,14 +88,20 @@ export const styles = StyleSheet.create({
 
     // Content Area Styles (para o container principal do conteúdo abaixo da imagem)
     contentArea: {
-        paddingHorizontal: 10, // O padding horizontal será aplicado em sub-containers
-        paddingTop: 20, //2, // Ajuste para o conteúdo começar abaixo da parte sobreposta da imagem
+        // paddingHorizontal: 10, // O padding horizontal será aplicado em sub-containers
+        paddingTop: 20,
         backgroundColor: COLOR_CARD_BACKGROUND, // Fundo branco para o conteúdo principal
         borderTopLeftRadius: 30, // Cantos mais arredondados para a transição com a imagem
         borderTopRightRadius: 30,
-        marginTop: 0, // Sobrepõe a imagem para criar o efeito de "cartão" que se estende
+        marginTop: -30, // Sobrepõe a imagem para criar o efeito de "cartão" que se estende
         minHeight: Dimensions.get('window').height * 0.5, // Garante que o conteúdo ocupe pelo menos metade da tela
         paddingBottom: 20, // Padding para o final do conteúdo
+        // Adicionando sombra para o contentArea, já que o providerImageContainer foi alterado
+        shadowColor: COLOR_SHADOW,
+        shadowOffset: { width: 0, height: -4 }, // Sombra para cima
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        elevation: 10,
     },
 
     // Estilos para os botões de navegação (voltar e salvar) no topo do header
@@ -152,7 +147,7 @@ export const styles = StyleSheet.create({
     priceTextWhiteCard: {
         fontSize: 22, // Preço maior e mais proeminente
         fontWeight: '700',
-        color: COLOR_ACCENT, // Preço em destaque com a nova cor de destaque (vermelho/rosa)
+        color: "#007AFF", // Preço em destaque com a nova cor de destaque (vermelho/rosa)
         marginBottom: 10,
     },
 
@@ -183,6 +178,7 @@ export const styles = StyleSheet.create({
         flexWrap: 'wrap', // Permite que os chips quebrem a linha
         gap: 8, // Espaçamento entre os chips (disponível no React Native 0.71+)
         marginBottom: 5, // Espaçamento abaixo dos chips
+        paddingHorizontal: 25, // Adicionado para alinhar com outras seções
     },
     infoChip: {
         flexDirection: 'row',
@@ -243,17 +239,18 @@ export const styles = StyleSheet.create({
     actionButtonsContainer: {
         flexDirection: 'row',
         justifyContent: 'space-around',
-        marginTop: 20,
-        marginBottom: 30,
+        marginTop: 10,
+        marginBottom: 10,
         paddingHorizontal: 0, // Removido padding, os botões já têm largura ajustada
     },
     actionButton: {
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: COLOR_CARD_BACKGROUND, // Fundo branco
+        marginLeft: 5, // Margem esquerda para espaçamento entre os botões
         borderRadius: 15, // Cantos arredondados
         width: (SCREEN_WIDTH - 50 - 30) / 4, // Ajustado a largura para 4 botões com 25px de padding na tela e 10px de gap entre eles
-        height: 70,
+        height: 60, // Altura
         borderWidth: 1, // Borda sutil
         borderColor: COLOR_BORDER_LIGHT,
         shadowColor: COLOR_SHADOW, // Sombra sutil para os botões
@@ -266,7 +263,7 @@ export const styles = StyleSheet.create({
         elevation: 3,
     },
     actionButtonText: {
-        fontSize: 13,
+        fontSize: 10,
         color: COLOR_TEXT_MEDIUM,
         marginTop: 5,
         fontWeight: '600',
@@ -445,5 +442,70 @@ export const styles = StyleSheet.create({
         color: COLOR_TEXT_DARK, // Texto escuro para melhor contraste
         fontSize: 14,
         textAlign: 'center',
+    },
+
+    // --- NOVOS ESTILOS PARA MINI SESSÃO DE FOTOS ---
+    photoSectionContainer: {
+        backgroundColor: COLOR_CARD_BACKGROUND,
+        paddingVertical: 35,
+        paddingBottom: 10,
+        marginBottom: 20, // Espaço abaixo da seção de fotos
+    },
+    photoSectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        left: 4, // Espaço à direita para o scroll horizontal
+        paddingHorizontal: 25, // Alinhar com o padding de outras seções
+        marginBottom: 10,
+        bottom: 20, // Ajuste de margem para ficar logo abaixo da imagem principal
+    },
+    photoSectionTitle: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: COLOR_TEXT_DARK,
+    },
+    photoSectionRating: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: COLOR_BACKGROUND, // Fundo claro para a avaliação
+        borderRadius: 15,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+    },
+    photoSectionRatingText: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: COLOR_TEXT_MEDIUM,
+        marginLeft: 5,
+    },
+    photoScrollView: {
+        paddingLeft: 15, // Começar as fotos com o mesmo alinhamento
+    },
+    thumbnailContainer: {
+        width: 70, // Largura da thumbnail
+        height: 70, // Altura da thumbnail
+        left: 15, // Espaço à direita para o scroll horizontal
+        borderRadius: 10, // Bordas arredondadas para as miniaturas
+        overflow: 'hidden',
+        marginRight: 7, // Espaço entre as miniaturas
+        borderWidth: 1,
+        borderColor: COLOR_BORDER_LIGHT,
+        ...Platform.select({
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+            },
+            android: {
+                elevation: 3,
+            },
+        }),
+    },
+    thumbnailImage: {
+        width: '100%',
+        height: '100%',
+        resizeMode: 'cover',
     },
 });

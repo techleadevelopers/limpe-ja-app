@@ -42,7 +42,7 @@ export default function BookingDetailSection({
 const styles = StyleSheet.create({
   detailSection: {
     marginBottom: 25,
-    paddingHorizontal: 5,
+    paddingHorizontal: 10,
   },
   detailItem: {
     flexDirection: 'row',

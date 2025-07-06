@@ -1,85 +1,100 @@
 // app/(auth)/provider-register/background-check-status.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, ActivityIndicator, TouchableOpacity, Animated } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient'; // Para gradientes nos botões
-import { useAuth } from '../../../../hooks/useAuth'; // Para atualizar UserProfile
-import verificationService from '../../../services/verificationService'; // Seu serviço real
-import ToastMessage from '../../../../components/ui/ToastMessage'; // Seu componente ToastMessage
-import * as Haptics from 'expo-haptics'; // Para feedback tátil
+import { View, Text, TextInput, StyleSheet, ActivityIndicator, TouchableOpacity, Animated, Platform } from 'react-native'; // // Added Platform
+import { Ionicons } from '@expo/vector-icons'; //
+import { LinearGradient } from 'expo-linear-gradient'; //
+import { useAuth } from '../../../../hooks/useAuth'; //
+import verificationService from '../../../services/verificationService'; //
+import ToastMessage from '../../../../components/ui/ToastMessage'; //
+import * as Haptics from 'expo-haptics'; //
 
 // Paleta de cores (repetida para clareza, em um projeto real viria de Colors.ts)
 const Colors = {
-  primary: '#007AFF',
-  primaryLight: '#EBF3FF',
-  primaryGradientStart: '#007AFF',
-  primaryGradientEnd: '#40C0F0',
-  background: '#F8F9FA',
-  cardBackground: '#FFFFFF',
-  textPrimary: '#2D3748',
-  textSecondary: '#6C757D',
-  success: '#28A745',
-  error: '#DC3545',
-  warning: '#FFC107',
-  info: '#17A2B8',
-  lightBlueBorder: '#B3D9FF',
-  successBg: '#E8F5E9',
-  errorBg: '#FFEBEE',
+  primary: '#007AFF', //
+  primaryLight: '#EBF3FF', //
+  primaryGradientStart: '#007AFF', //
+  primaryGradientEnd: '#40C0F0', //
+  background: '#F8F9FA', //
+  cardBackground: '#FFFFFF', //
+  textPrimary: '#2D3748', //
+  textSecondary: '#6C757D', //
+  success: '#28A745', //
+  error: '#DC3545', //
+  warning: '#FFC107', //
+  info: '#17A2B8', //
+  lightBlueBorder: '#B3D9FF', //
+  successBg: '#E8F5E9', //
+  errorBg: '#FFEBEE', //
 };
 
 interface BackgroundCheckStatusProps {
-  onComplete: (data: { cpf: string }) => void;
-  isLoading: boolean;
-  initialCpf?: string;
+  onComplete: (data: { cpf: string }) => void; //
+  isLoading: boolean; //
+  initialCpf?: string; //
 }
 
 export default function BackgroundCheckStatusScreen({ onComplete, isLoading, initialCpf }: BackgroundCheckStatusProps) {
-  const [cpf, setCpf] = useState(initialCpf || '');
-  const [cpfError, setCpfError] = useState<string | null>(null);
-  const [isCpfSubmitted, setIsCpfSubmitted] = useState(false); // Para mostrar status após submissão
-  const [submissionStatus, setSubmissionStatus] = useState<'pending' | 'success' | 'failed' | null>(null);
+  const [cpf, setCpf] = useState(initialCpf || ''); //
+  const [cpfError, setCpfError] = useState<string | null>(null); //
+  const [isCpfSubmitted, setIsCpfSubmitted] = useState(false); //
+  const [submissionStatus, setSubmissionStatus] = useState<'pending' | 'success' | 'failed' | null>(null); //
+  const [isCpfValid, setIsCpfValid] = useState(false); // New state to store validation result
 
-  const buttonScale = useRef(new Animated.Value(1)).current; // Animação de botão
-  const contentFade = useRef(new Animated.Value(0)).current;
-  const contentSlide = useRef(new Animated.Value(20)).current;
+  const buttonScale = useRef(new Animated.Value(1)).current; //
+  const contentFade = useRef(new Animated.Value(0)).current; //
+  const contentSlide = useRef(new Animated.Value(20)).current; //
 
-  // Animação de entrada do conteúdo
+  useEffect(() => { //
+    Animated.parallel([ //
+      Animated.timing(contentFade, { toValue: 1, duration: 600, useNativeDriver: true, delay: 100 }), //
+      Animated.timing(contentSlide, { toValue: 0, duration: 600, useNativeDriver: true, delay: 100 }), //
+    ]).start(); //
+  }, [contentFade, contentSlide]); //
+
+  // Effect to validate CPF whenever 'cpf' changes
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(contentFade, { toValue: 1, duration: 600, useNativeDriver: true, delay: 100 }),
-      Animated.timing(contentSlide, { toValue: 0, duration: 600, useNativeDriver: true, delay: 100 }),
-    ]).start();
-  }, [contentFade, contentSlide]);
-
-  const handlePressIn = () => Animated.spring(buttonScale, { toValue: 0.95, useNativeDriver: true }).start();
-  const handlePressOut = () => Animated.spring(buttonScale, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start();
-
-  const validateCpf = () => {
     const cleanedCpf = cpf.replace(/\D/g, '');
-    if (!cleanedCpf || cleanedCpf.length !== 11 || isNaN(Number(cleanedCpf))) {
-      setCpfError("CPF inválido. Deve conter 11 dígitos numéricos.");
-      return false;
+    const isValid = cleanedCpf.length === 11 && !isNaN(Number(cleanedCpf));
+    setIsCpfValid(isValid); // Update the state
+
+    if (!isValid && cleanedCpf.length > 0 && cleanedCpf.length < 11) {
+        setCpfError("CPF inválido. Deve conter 11 dígitos numéricos.");
+    } else if (!isValid && cleanedCpf.length === 0) {
+        setCpfError(null); // Clear error if input is empty
+    } else if (isValid) {
+        setCpfError(null);
     }
-    setCpfError(null);
-    return true;
+  }, [cpf]); // Dependency on cpf ensures validation runs when cpf changes
+
+  const handlePressIn = () => {
+    if (Platform.OS === 'ios' || Platform.OS === 'android') { //
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); //
+    }
+    Animated.spring(buttonScale, { toValue: 0.95, useNativeDriver: true }).start(); //
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(buttonScale, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start(); //
   };
 
   const handleSubmitCpf = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (!validateCpf()) {
-      return;
+    if (Platform.OS === 'ios' || Platform.OS === 'android') { //
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); //
     }
-    setSubmissionStatus('pending');
+    // Check if valid before proceeding
+    if (!isCpfValid) {
+        setCpfError("CPF inválido. Deve conter 11 dígitos numéricos.");
+        return;
+    }
+    setSubmissionStatus('pending'); //
     try {
-      // Chamada real ao serviço de backend
-      // A função verificationService.submitCpf(cpf) já está correta no verificationService.ts
-      await verificationService.submitCpf(cpf); 
-      setSubmissionStatus('success');
-      setIsCpfSubmitted(true);
-      onComplete({ cpf }); // Informa a tela pai que esta etapa foi concluída
+      await verificationService.submitCpf(cpf); //
+      setSubmissionStatus('success'); //
+      setIsCpfSubmitted(true); //
+      onComplete({ cpf }); //
     } catch (error: any) {
-      setSubmissionStatus('failed');
-      setCpfError(error.message || "Erro ao submeter CPF. Tente novamente.");
+      setSubmissionStatus('failed'); //
+      setCpfError(error.message || "Erro ao submeter CPF. Tente novamente."); //
     }
   };
 
@@ -104,7 +119,7 @@ export default function BackgroundCheckStatusScreen({ onComplete, isLoading, ini
             keyboardType="numeric"
             maxLength={11}
             value={cpf}
-            onChangeText={(text) => { setCpf(text); if (cpfError) setCpfError(null); }}
+            onChangeText={(text) => { setCpf(text); /* Error clearing is now in useEffect */ }}
             editable={!isLoading && !isCpfSubmitted}
           />
         </View>
@@ -116,11 +131,11 @@ export default function BackgroundCheckStatusScreen({ onComplete, isLoading, ini
 
         <Animated.View style={{ transform: [{ scale: buttonScale }] }}>
           <TouchableOpacity
-            style={[styles.submitButton, (!validateCpf() || isLoading || isCpfSubmitted) && styles.buttonDisabled]}
+            style={[styles.submitButton, (!isCpfValid || isLoading || isCpfSubmitted) && styles.buttonDisabled]}
             onPress={handleSubmitCpf}
             onPressIn={handlePressIn}
             onPressOut={handlePressOut}
-            disabled={!validateCpf() || isLoading || isCpfSubmitted}
+            disabled={!isCpfValid || isLoading || isCpfSubmitted}
           >
             {isLoading && submissionStatus === 'pending' ? (
               <ActivityIndicator color="#FFFFFF" />
@@ -259,7 +274,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   buttonDisabled: {
-    backgroundColor: '#C0DFFF', // Azul mais claro para desabilitado
+    backgroundColor: '#C0DFFF',
     opacity: 0.7,
     elevation: 0,
     shadowOpacity: 0,

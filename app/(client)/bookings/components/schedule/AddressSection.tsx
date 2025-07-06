@@ -167,13 +167,19 @@ const styles = StyleSheet.create({
   addressCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 15, // Mais arredondado
-    marginHorizontal: 22, // Consistência de margem
-    marginTop: 0,
+    marginHorizontal: 28, // Consistência de margem
+    marginTop: 10,
+    marginBottom: 20, // Mais espaço abaixo
+    shadowColor: '#000',
     paddingVertical: 10, // Mais padding vertical
     paddingHorizontal: 20, // Mais padding horizontal
     flexDirection: 'row',
     alignItems: 'center',
     
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 5,
+        elevation: 8,
     overflow: 'hidden', // Importante para o brilho
   },
   addressContent: {

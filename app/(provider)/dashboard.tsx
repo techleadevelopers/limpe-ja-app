@@ -326,7 +326,7 @@ const quickActionStyles = StyleSheet.create({
 });
 
 
-// Componente de Item de Solicitação (RequestItem) - SEM ALTERAÇÕES NESTE TRECHO
+// Componente de Item de Solicitação (RequestItem)
 const RequestItem: React.FC<{
   item: BookingDetails;
   onAccept?: (id: string) => void;
@@ -342,6 +342,10 @@ const RequestItem: React.FC<{
 
   const clientId: string | undefined = item.clientId;
   const clientName: string = item.clientFullName || 'Cliente';
+
+  // Parse scheduledDateTime to get date and time parts
+  const scheduledDate = new Date(item.scheduledDateTime).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' });
+  const scheduledTime = new Date(item.scheduledDateTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
   return (
     <Animated.View style={[
@@ -382,11 +386,11 @@ const RequestItem: React.FC<{
       <View style={styles.requestInfoRow}>
         <Ionicons name="calendar-outline" size={16} color={TEXT_MUTED} style={styles.infoIcon} />
         <Text style={styles.requestInfoText}>
-          {new Date(item.scheduledDate).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })}
+          {scheduledDate}
         </Text>
         <Ionicons name="time-outline" size={16} color={TEXT_MUTED} style={styles.infoIcon} />
         <Text style={styles.requestInfoText}>
-          {item.scheduledTime}
+          {scheduledTime}
         </Text>
       </View>
       <View style={styles.requestInfoRow}>
@@ -445,6 +449,10 @@ const ConfirmedServiceItem: React.FC<{
 }> = ({ item, onPress, entryAnim }) => {
   const touchAnimation = useAnimatedTouch();
 
+  // Parse scheduledDateTime to get date and time parts
+  const scheduledDate = new Date(item.scheduledDateTime).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+  const scheduledTime = new Date(item.scheduledDateTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
   return (
     <Animated.View style={{ opacity: entryAnim.x, transform: [{ translateY: entryAnim.y }] }}>
       <TouchableOpacity
@@ -465,7 +473,7 @@ const ConfirmedServiceItem: React.FC<{
               {item.clientFullName ? ` com ${item.clientFullName}` : ''}
             </Text>
             <Text style={styles.serviceItemTime}>
-              {new Date(item.scheduledDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}, {item.scheduledTime}
+              {scheduledDate}, {scheduledTime}
             </Text>
           </View>
           <Ionicons name="chevron-forward-outline" size={24} color={TEXT_MUTED} />
@@ -518,15 +526,15 @@ export default function ProviderDashboardScreen() {
 
       // Combine and filter pending requests
       const allPendingRequests = [...pendingProviderBookings, ...pendingClientBookings]
-        .filter(b => new Date(b.scheduledDate + 'T' + b.scheduledTime) >= new Date()) // Only future requests
-        .sort((a,b) => new Date(a.scheduledDate + 'T' + a.scheduledTime).getTime() - new Date(b.scheduledDate + 'T' + b.scheduledTime).getTime());
+        .filter(b => new Date(b.scheduledDateTime) >= new Date()) // Only future requests
+        .sort((a,b) => new Date(a.scheduledDateTime).getTime() - new Date(b.scheduledDateTime).getTime());
       setPendingRequests(allPendingRequests);
       console.log("[DashboardScreen] fetchData: Solicitações pendentes recebidas.", allPendingRequests);
 
       // Combine and sort upcoming confirmed/in-progress services
       const allUpcomingServices = [...confirmedBookings, ...inProgressBookings]
-        .filter(b => new Date(b.scheduledDate + 'T' + b.scheduledTime) >= new Date()) // Only future services
-        .sort((a,b) => new Date(a.scheduledDate + 'T' + a.scheduledTime).getTime() - new Date(b.scheduledDate + 'T' + b.scheduledTime).getTime());
+        .filter(b => new Date(b.scheduledDateTime) >= new Date()) // Only future services
+        .sort((a,b) => new Date(a.scheduledDateTime).getTime() - new Date(b.scheduledDateTime).getTime());
       setUpcomingServices(allUpcomingServices);
       console.log("[DashboardScreen] fetchData: Agendamentos confirmados/em progresso recebidos.", allUpcomingServices);
 
@@ -636,27 +644,17 @@ export default function ProviderDashboardScreen() {
   };
 
   // --- FUNÇÃO DE LOGOUT ---
- const handleLogout = async () => {
-    Alert.alert(
-      "Sair da Conta",
-      "Tem certeza que deseja sair?",
-      [
-        { text: "Cancelar", style: "cancel", onPress: () => console.log("[Dashboard] Logout cancelado pelo usuário.") },
-        {
-          text: "Sair",
-          onPress: async () => {
-            console.log("[Dashboard] Confirmação de logout: 'Sair' pressionado.");
-            try {
-              await signOut(); // Chama a função signOut do AuthContext
-              console.log("[Dashboard] signOut() aparentemente concluído.");
-            } catch (error) {
-              console.error("[Dashboard] Erro ao fazer logout:", error);
-              Alert.alert("Erro", "Não foi possível sair da conta. Tente novamente.");
-            }
-          },
-        },
-      ]
-    );
+  // Removida a confirmação do Alert.alert para um logout de 1 clique
+  const handleLogout = async () => {
+    console.log("[Dashboard] Botão de Logout clicado: Iniciando logout direto.");
+    try {
+      await signOut(); // Chama a função signOut do AuthContext
+      console.log("[Dashboard] signOut() concluído. O _layout.tsx deve redirecionar.");
+    } catch (error) {
+      console.error("[Dashboard] Erro ao fazer logout:", error);
+      // Se houver um erro no signOut (ex: problema de rede), ainda avise o usuário
+      Alert.alert("Erro ao Sair", "Não foi possível sair da conta. Tente novamente ou verifique sua conexão.");
+    }
   };
   // --- FIM DA FUNÇÃO DE LOGOUT ---
 
@@ -756,7 +754,7 @@ export default function ProviderDashboardScreen() {
               </Text>
             {upcomingServices.length > 2 && (
               <TouchableOpacity onPress={() => router.push('/(provider)/schedule' as any)} accessibilityRole="button" accessibilityLabel="Ver todos os próximos serviços">
-                <Text style={styles.viewAllText}>Ver Todos</Text>
+                <Text style={styles.viewAllText}>Ver Todas</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -777,41 +775,41 @@ export default function ProviderDashboardScreen() {
         {/* Seção de Reviews Recentes */}
         {dashboardData?.reviews && dashboardData.reviews.length > 0 ? ( /* Correção: 'reviews' em vez de 'recentReviews' */
             <View style={styles.subsectionWrapper}>
-                <View style={styles.subsectionHeader}>
-                    <Text style={styles.subsectionTitle}>
-                        <Ionicons name="star-outline" size={20} color={WARNING_YELLOW} /> Avaliações Recentes
-                    </Text>
-                    <TouchableOpacity onPress={() => router.push('/(provider)/reviews' as any)} accessibilityRole="button" accessibilityLabel="Ver todas as avaliações">
-                        <Text style={styles.viewAllText}>Ver Todas</Text>
-                    </TouchableOpacity>
-                </View>
-                {/* O slice(0, 2) pode ser opcional aqui se o backend já limita a 2 */}
-                {dashboardData.reviews.slice(0, 2).map((review: ProviderReview, index: number) => ( /* Correção de 'any' para ProviderReview e number */
-                    <View key={review.id} style={styles.reviewItem}>
-                        <Text style={styles.reviewText}>"{review.comment || 'Sem comentário.'}"</Text>
-                        {/* INÍCIO DA ALTERAÇÃO PARA ESTRELAS E NOME DO CLIENTE */}
-                        <View style={styles.reviewRatingStarsAndName}> {/* <--- ESTILO ADICIONADO */}
-                            <View style={styles.reviewStarsContainer}> {/* <--- ESTILO ADICIONADO */}
-                                {Array.from({ length: review.rating }).map((_, i) => (
-                                    <Ionicons key={i} name="star" size={16} color={ICON_PRIMARY} />
-                                ))}
-                            </View>
-                            <Text style={styles.reviewClientName}>
-                                {review.client?.fullName || 'Cliente Desconhecido'} {/* Acessa o fullName do client */}
-                            </Text>
-                        </View>
-                        {/* FIM DA ALTERAÇÃO PARA ESTRELAS E NOME DO CLIENTE */}
-                    </View>
-                ))}
+              <View style={styles.subsectionHeader}>
+                  <Text style={styles.subsectionTitle}>
+                      <Ionicons name="star-outline" size={20} color={WARNING_YELLOW} /> Avaliações Recentes
+                  </Text>
+                  <TouchableOpacity onPress={() => router.push('/(provider)/reviews' as any)} accessibilityRole="button" accessibilityLabel="Ver todas as avaliações">
+                      <Text style={styles.viewAllText}>Ver Todas</Text>
+                  </TouchableOpacity>
+              </View>
+              {/* O slice(0, 2) pode ser opcional aqui se o backend já limita a 2 */}
+              {dashboardData.reviews.slice(0, 2).map((review: ProviderReview, index: number) => ( /* Correção de 'any' para ProviderReview e number */
+                  <View key={review.id} style={styles.reviewItem}>
+                      <Text style={styles.reviewText}>"{review.comment || 'Sem comentário.'}"</Text>
+                      {/* INÍCIO DA ALTERAÇÃO PARA ESTRELAS E NOME DO CLIENTE */}
+                      <View style={styles.reviewRatingStarsAndName}> {/* <--- ESTILO ADICIONADO */}
+                          <View style={styles.reviewStarsContainer}> {/* <--- ESTILO ADICIONADO */}
+                              {Array.from({ length: review.rating }).map((_, i) => (
+                                  <Ionicons key={i} name="star" size={16} color={ICON_PRIMARY} />
+                              ))}
+                          </View>
+                          <Text style={styles.reviewClientName}>
+                              {review.client?.fullName || 'Cliente Desconhecido'} {/* Acessa o fullName do client */}
+                          </Text>
+                      </View>
+                      {/* FIM DA ALTERAÇÃO PARA ESTRELAS E NOME DO CLIENTE */}
+                  </View>
+              ))}
             </View>
         ) : ( // Parte do 'else' do ternário
             <View style={styles.subsectionWrapper}>
-                <View style={styles.subsectionHeader}>
-                    <Text style={styles.subsectionTitle}>
-                        <Ionicons name="star-outline" size={20} color={WARNING_YELLOW} /> Avaliações Recentes
-                    </Text>
-                </View>
-                {renderEmptyState("Nenhuma avaliação recente. Conclua mais serviços!", "star-half-outline")}
+              <View style={styles.subsectionHeader}>
+                  <Text style={styles.subsectionTitle}>
+                      <Ionicons name="star-outline" size={20} color={WARNING_YELLOW} /> Avaliações Recentes
+                  </Text>
+              </View>
+              {renderEmptyState("Nenhuma avaliação recente. Conclua mais serviços!", "star-half-outline")}
             </View>
         )}
 

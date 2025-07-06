@@ -1,0 +1,250 @@
+import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, Image } from 'react-native';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter, usePathname } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+// Definindo tipos mais específicos para os itens da barra de navegação
+interface NavItemBase {
+  name: string;
+  path: string;
+  isCentral?: boolean;
+  notificationCount?: number; // Adicionado para exibir contagens
+}
+
+interface IoniconNavItem extends NavItemBase {
+  iconSet: 'Ionicons';
+  icon: keyof typeof Ionicons.glyphMap;
+  activeIcon: keyof typeof Ionicons.glyphMap;
+}
+
+interface MaterialCommunityIconNavItem extends NavItemBase {
+  iconSet: 'MaterialCommunityIcons';
+  icon: keyof typeof MaterialCommunityIcons.glyphMap;
+  activeIcon?: keyof typeof MaterialCommunityIcons.glyphMap;
+}
+
+// NOVO TIPO: Para itens de navegação que usam uma imagem customizada
+interface ImageNavItem extends NavItemBase {
+  iconSet: 'Image'; // Um identificador para o tipo de ícone de imagem
+  imageSource: any; // O caminho da imagem (require(...))
+}
+
+// ATUALIZADO: NavItemType agora pode ser um de três tipos
+type NavItemType = IoniconNavItem | MaterialCommunityIconNavItem | ImageNavItem;
+
+const navItems: NavItemType[] = [
+  {
+    name: 'Home',
+    iconSet: 'Ionicons',
+    icon: 'home-outline',
+    activeIcon: 'home',
+    path: '/(client)/explore',
+  },
+  {
+    name: 'Buscar',
+    iconSet: 'Ionicons',
+    icon: 'search-outline',
+    activeIcon: 'search',
+    path: '/(client)/search',
+  },
+  {
+    name: '', // Este é o item central que vamos modificar
+    iconSet: 'Image', // ATUALIZADO: Indica que este item usa uma imagem
+    imageSource: require('../../../../../assets/images/safe.png'), // NOVO: Caminho da imagem
+    isCentral: true,
+    path: '/(client)/bookings/schedule-service',
+  },
+  {
+    name: 'Agenda',
+    iconSet: 'Ionicons',
+    icon: 'calendar-outline',
+    activeIcon: 'calendar',
+    path: '/(client)/bookings',
+  },
+  {
+    name: 'Perfil',
+    iconSet: 'Ionicons',
+    icon: 'person-outline',
+    activeIcon: 'person',
+    path: '/(client)/profile',
+  },
+];
+
+// Adicionando props para o NavBar para receber contagens de notificação
+interface NavBarProps {
+  unreadMessagesCount?: number;
+}
+
+const NavBar: React.FC<NavBarProps> = ({ unreadMessagesCount }) => {
+  const router = useRouter();
+  const pathname = usePathname();
+  const insets = useSafeAreaInsets();
+
+  const isRouteActive = (itemPath: string) => {
+    // A rota principal '/' também deve ativar 'Home'
+    if (itemPath === '/(client)/explore' && pathname === '/(client)/explore') {
+      return true;
+    }
+    // Para outras rotas, verifica se o pathname começa com o itemPath, mas não é a rota principal.
+    return pathname.startsWith(itemPath);
+  };
+
+  return (
+    <View style={[styles.navBar, { paddingBottom: insets.bottom }]}>
+      {navItems.map((item) => {
+        const isActive = isRouteActive(item.path);
+
+        if (item.isCentral) {
+          // Garante que o item é do tipo ImageNavItem para acessar imageSource
+          const imageItem = item as ImageNavItem;
+          return (
+            <TouchableOpacity
+              key={imageItem.path}
+              style={styles.centralNavItem} // Usando estilo separado para o item central
+              onPress={() => router.push(imageItem.path as any)}
+            >
+              {/* Renderiza a imagem personalizada */}
+              <Image
+                source={imageItem.imageSource} // Usa a source definida no navItems
+                style={styles.centralIconImage} // Estilo específico para a imagem central
+              />
+            </TouchableOpacity>
+          );
+        } else {
+          // Aqui, precisamos verificar qual tipo de ícone é para renderizar corretamente
+          if (item.iconSet === 'Ionicons') {
+            const ioniconItem = item as IoniconNavItem; // Type assertion
+            return (
+              <TouchableOpacity
+                key={ioniconItem.path}
+                style={styles.navItem}
+                onPress={() => router.push(ioniconItem.path as any)}
+              >
+                <View>
+                  <Ionicons name={isActive ? ioniconItem.activeIcon : ioniconItem.icon} size={18} color={isActive ? '#FFFFFF' : '#A1C6E7'} />
+                  {ioniconItem.notificationCount && ioniconItem.notificationCount > 0 && (
+                    <View style={styles.notificationBadge}>
+                      <Text style={styles.notificationText}>{ioniconItem.notificationCount}</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={[styles.navTexto, isActive && styles.navTextoAtivo]}>{ioniconItem.name}</Text>
+              </TouchableOpacity>
+            );
+          } else if (item.iconSet === 'MaterialCommunityIcons') {
+            const mcIconItem = item as MaterialCommunityIconNavItem; // Type assertion
+            return (
+              <TouchableOpacity
+                key={mcIconItem.path}
+                style={styles.navItem}
+                onPress={() => router.push(mcIconItem.path as any)}
+              >
+                <View>
+                  {/* Este bloco pode ser redundante se você não tiver outros MaterialCommunityIcons além do central */}
+                  <MaterialCommunityIcons name={mcIconItem.icon} size={18} color={isActive ? '#FFFFFF' : '#A1C6E7'} />
+                  {mcIconItem.notificationCount && mcIconItem.notificationCount > 0 && (
+                    <View style={styles.notificationBadge}>
+                      <Text style={styles.notificationText}>{mcIconItem.notificationCount}</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={[styles.navTexto, isActive && styles.navTextoAtivo]}>{mcIconItem.name}</Text>
+              </TouchableOpacity>
+            );
+          }
+        }
+        return null;
+      })}
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  navBar: {
+    flexDirection: 'row',
+    minHeight: 10,
+    width: '89%', // Ajusta a largura para 90% da tela para ter um pouco de margem
+    alignSelf: 'center', // Centraliza a navBar na tela
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#B2B2B2',
+    backgroundColor: 'rgb(0, 123, 255)', // Azul médio com 80% de opacidade,
+    alignItems: 'center',
+    justifyContent: 'space-around', // Distribui os itens uniformemente com espaço entre eles
+    paddingBottom: 1,
+    paddingTop: 5,
+    paddingHorizontal: 20,
+    bottom: 25,
+    borderTopLeftRadius: 30, // Bordas arredondadas
+    borderTopRightRadius: 30,
+    borderBottomLeftRadius: 30, // Bordas arredondadas
+    borderBottomRightRadius: 30,
+
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 4,
+  },
+  navItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 5,
+    paddingHorizontal: 0,
+    position: 'relative',
+    bottom: 5,
+    borderRadius: 10,
+    backgroundColor: 'transparent',
+  },
+  centralNavItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 20, // Largura para o item central
+    height: 20, // Altura para o item central
+    borderRadius: 30, // Metade da largura/altura para torná-lo circular
+    backgroundColor: 'transparent', // ALTERADO: Fundo transparente
+    bottom: 14, // Move o botão central mais para cima para o efeito flutuante
+    
+    // REMOVIDO: propriedades de sombra para este item
+    // shadowColor: '#000',
+    // shadowOffset: { width: 0, height: 4 },
+    // shadowOpacity: 0.3,
+    // shadowRadius: 5,
+    // elevation: 6,
+  },
+centralIconImage: {
+  width: 79,
+  height: 79,
+  top: 4,
+  left: 2,
+  resizeMode: 'contain',
+},
+
+  navTexto: {
+    fontSize: 10,
+    color: '#A1C6E7', // Cor padrão para o texto inativo
+    marginTop: 2, // Pequeno espaçamento entre ícone e texto
+  },
+  navTextoAtivo: {
+    color: '#FFFFFF', // Cor do texto ativo
+    fontWeight: '700',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: 'red',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  notificationText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+});
+
+export default NavBar;

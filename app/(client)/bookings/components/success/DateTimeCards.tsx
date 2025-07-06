@@ -60,6 +60,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     marginBottom: 25,
+    
   },
   dateTimeCard: {
     backgroundColor: '#F5F5F5',
@@ -70,6 +71,11 @@ const styles = StyleSheet.create({
     width: '45%',
     overflow: 'hidden',
     position: 'relative',
+     shadowColor: 'rgb(33, 34, 34)',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 5,
+        elevation: 8,
   },
   gradientBackground: {
     ...StyleSheet.absoluteFillObject,

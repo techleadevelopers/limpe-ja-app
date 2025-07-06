@@ -18,8 +18,9 @@ import { useRouter, Stack } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useProviderRegistration } from '../../../contexts/ProviderRegistrationContext';
-import { PROVIDER_ROUTES } from '../../../constants/routes';
-import { useAuth } from '../../../hooks/useAuth'; // Adição: Importe useAuth aqui
+// Certifique-se de que AUTH_ROUTES está importado corretamente para a rota de verificação
+import { PROVIDER_ROUTES, AUTH_ROUTES } from '../../../constants/routes'; 
+import { useAuth } from '../../../hooks/useAuth';
 
 // Componente para exibir mensagens de erro inline
 const ErrorMessage: React.FC<{ message: string | null }> = ({ message }) => {
@@ -41,8 +42,7 @@ interface InputWithIconProps {
     numberOfLines?: number;
     maxLength?: number;
     textAlignVertical?: 'auto' | 'top' | 'bottom' | 'center';
-    // onBlur agora não faz validação de erro, apenas dispara a prop.
-    onBlur?: () => void; // Removida a validação de erro de dentro do onBlur diretamente aqui
+    onBlur?: () => void;
     onFocus?: () => void;
     accessibilityLabel: string;
 }
@@ -73,7 +73,7 @@ const InputWithIcon: React.FC<InputWithIconProps> = ({
 
     const handleBlur = () => {
         setIsFocused(false);
-        onBlur?.(); // Apenas chama o onBlur passado como prop
+        onBlur?.();
     };
 
     const IconComponent = iconLibrary === 'Ionicons' ? Ionicons : MaterialCommunityIcons;
@@ -84,7 +84,7 @@ const InputWithIcon: React.FC<InputWithIconProps> = ({
         <View>
             <Text style={styles.label}>{label}</Text>
             <View style={[
-                styles.inputWrapper, // Usando o estilo genérico de inputWrapper
+                styles.inputWrapper,
                 isFocused && styles.inputWrapperFocused,
                 error && styles.inputWrapperError,
                 multiline && { height: 'auto', minHeight: 50 + (numberOfLines - 1) * 20 }
@@ -94,7 +94,7 @@ const InputWithIcon: React.FC<InputWithIconProps> = ({
                 </View>
                 <TextInput
                     style={[
-                        styles.input, // Usando o estilo genérico de input
+                        styles.input,
                         multiline && styles.textAreaInput,
                         multiline && { minHeight: 50 + (numberOfLines - 1) * 20, height: 'auto' }
                     ]}
@@ -139,7 +139,8 @@ const MOCK_AREA_SUGGESTIONS = [
     'Centro, Campinas, SP', 'Sumaré, SP', 'Hortolândia, SP', 'Valinhos, SP', 'Vinhedo, SP',
 ];
 
-export default function ServiceDetailsScreen() {
+// ATUALIZADO: Renomeado a função exportada para refletir o contexto de provedor
+export default function ProviderServiceDetailsFormScreen() {
     const router = useRouter();
     const { serviceDetails, setServiceDetails, submitRegistration, personalDetails: pdFromContext } = useProviderRegistration();
     const { setIsRegistrationInProgress } = useAuth(); // Obtenha setIsRegistrationInProgress do useAuth
@@ -182,10 +183,11 @@ export default function ServiceDetailsScreen() {
 
 
     useEffect(() => {
-        console.log("[ServiceDetailsScreen] Componente montado ou serviceDetails atualizado.");
+        // ATUALIZADO: Logs para refletir o novo nome da função
+        console.log("[ProviderServiceDetailsFormScreen] Componente montado ou serviceDetails atualizado."); 
         // Carrega os dados do contexto se existirem (para o caso de o usuário voltar ou editar)
         if (serviceDetails) {
-            console.log("[ServiceDetailsScreen] Carregando serviceDetails do contexto:", serviceDetails);
+            console.log("[ProviderServiceDetailsFormScreen] Carregando serviceDetails do contexto:", serviceDetails); 
             setExperiencia(serviceDetails.experiencia || '');
             setDescricaoTrabalho(serviceDetails.servicosOferecidos || ''); // Usando servicosOferecidos do contexto
             setEstruturaPreco(serviceDetails.estruturaPreco || '');
@@ -208,7 +210,7 @@ export default function ServiceDetailsScreen() {
                 delay: 200,
                 useNativeDriver: true,
             }),
-        ]).start(() => console.log("[ServiceDetailsScreen] Animações iniciais concluídas."));
+        ]).start(() => console.log("[ProviderServiceDetailsFormScreen] Animações iniciais concluídas.")); 
     }, [serviceDetails, headerAnim, formAnim]);
 
     const onPressInAvatar = () => {
@@ -332,24 +334,29 @@ export default function ServiceDetailsScreen() {
             console.log("[FinalRegistration] Chamando submitRegistration do ProviderRegistrationContext.");
             // submitRegistration no contexto deve reunir personalDetails, addressDetails e serviceDetails
             await submitRegistration();
-            console.log("[FinalRegistration] submitRegistration concluído. Esperando redirecionamento para o Dashboard.");
+            console.log("[FinalRegistration] submitRegistration concluído.");
 
-            // setIsRegistrationInProgress(false) será feito na tela RegisterProviderScreen
+            // CORREÇÃO: Definir isRegistrationInProgress como false após a submissão bem-sucedida
+            // Isso é crucial para que o _layout.tsx não redirecione o usuário de volta
+            // para o fluxo de registro após a conclusão.
+            setIsRegistrationInProgress(false); 
+
+            // Exibe um alerta de sucesso. A navegação será tratada pelo _layout.tsx
+            // para a tela de verificação de conta, que é o próximo passo.
             Alert.alert(
               "Cadastro Concluído!",
-              "Seu perfil de provedor foi finalizado com sucesso!",
+              "Seu perfil de provedor foi finalizado com sucesso! Redirecionando para a verificação de conta.",
               [{ text: "OK", onPress: () => {
-                router.replace(PROVIDER_ROUTES.DASHBOARD as any); // Redireciona para o dashboard
-              }}]
+                    // Navega para a tela de verificação de conta
+                    router.replace(AUTH_ROUTES.VERIFY_ACCOUNT_STEP as any);
+                }}]
             );
-
 
         } catch (error: any) {
             console.error("[FinalRegistration] Erro ao finalizar cadastro:", error);
             Alert.alert('Falha no Cadastro', error.message || 'Não foi possível finalizar seu cadastro. Tente novamente mais tarde.');
             // Em caso de erro, é prudente limpar a flag para que o usuário possa tentar novamente ou sair do fluxo.
             setIsRegistrationInProgress(false);
-            // await AsyncStorage.removeItem('limpeja_registrationInProgress');
         } finally {
             setIsSubmitting(false);
             console.log("[FinalRegistration] isSubmitting definido como false. Processo de registro finalizado.");
@@ -375,11 +382,11 @@ export default function ServiceDetailsScreen() {
             <StatusBar barStyle="dark-content" backgroundColor={styles.keyboardAvoidingContainer.backgroundColor} />
             <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContentContainer} keyboardShouldPersistTaps="handled">
                 {/* O Stack.Screen options aqui só é relevante se esta for uma tela própria no navigator */}
-                <Stack.Screen options={{ title: 'Serviços' }} />
+                <Stack.Screen options={{ title: 'Detalhes do Serviço do Provedor' }} />
 
                 <Animated.View style={[styles.contentWrapper, headerAnimatedStyle]}>
                     {/* Título e subtítulo da seção - ATUALIZADOS */}
-                    <Text style={styles.sectionTitle}>Detalhes do Serviço</Text>
+                    <Text style={styles.sectionTitle}>Detalhes do Serviço do Provedor</Text>
                     <Text style={styles.sectionSubtitle}>
                         Descreva os serviços que você oferece, sua experiência e como os clientes podem te encontrar.
                     </Text>
@@ -750,9 +757,4 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
     },
-    // Remover inputWrapperServiceDetails e inputServiceDetails se não forem mais necessários
-    // pois InputWithIcon usa inputWrapper e input padrão
-    // Estes estilos estavam duplicados e podem ter causado problemas
-    // inputWrapperServiceDetails: { ... },
-    // inputServiceDetails: { ... },
 });

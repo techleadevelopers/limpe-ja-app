@@ -673,6 +673,20 @@ export default function ScheduleServiceScreen() {
                     transform: [{ translateY: slideUpAnim }]
                 }
             ]}>
+                {/* NOVO HEADER SUPERIOR */}
+                <LinearGradient
+                    colors={['#4285F4', '#2A72E7']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.topHeaderGradient}
+                >
+                    <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                        <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>Agendar</Text>
+                </LinearGradient>
+                {/* FIM DO NOVO HEADER SUPERIOR */}
+
                 <LinearGradient
                     colors={['rgba(255, 255, 255, 0.95)', 'rgba(255, 255, 255, 0.85)']}
                     style={styles.headerGradient}
@@ -893,31 +907,65 @@ const styles = StyleSheet.create({
 
     // Estilos para o header com gradiente e blur
     headerGradient: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 8,
-        borderBottomLeftRadius: 15,
-        borderBottomRightRadius: 15,
+        borderBottomLeftRadius: 55,
+        borderBottomRightRadius: 55,
         overflow: 'hidden',
         marginBottom: 8,
+        top: 30,
     },
     headerBlur: {
         padding: 0,
     },
 
+    // NOVO: Estilos para o header superior azul gradiente
+    topHeaderGradient: {
+        width: '100%',
+        paddingTop: Platform.OS === 'ios' ? 25 : 23, // Adjust for notch
+        paddingBottom: 15,
+        bottom: 80,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 5,
+        elevation: 8,
+        borderBottomLeftRadius: 50, // No border radius for this header
+        borderBottomRightRadius: 50, // No border radius for this header
+        marginBottom: Platform.OS === 'ios' ? 0 : -80, // Ajuste para evitar sobreposição com a barra de status
+    },
+    backButton: {
+        position: 'absolute',
+        left: 20,
+        paddingTop: Platform.OS === 'ios' ? 50 : 30,
+        paddingBottom: 15,
+        zIndex: 1,
+    },
+    headerTitle: {
+        color: '#FFFFFF',
+        fontSize: 18,
+        fontWeight: 'bold',
+        textAlign: 'center',
+        flex: 1, // Allow title to take up available space
+        paddingTop: Platform.OS === 'ios' ? 50 : 30,
+        paddingBottom: 15,
+    },
+    // FIM DO NOVO HEADER SUPERIOR
+
     // Estilos para o container do calendário
     calendarGridContainer: {
+        
         borderRadius: 16,
-        marginHorizontal: 20,
+        marginHorizontal: 30,
+        marginVertical: 50,
         marginTop: 25,
         overflow: 'hidden',
-        shadowColor: '#2A72E7',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.15,
-        shadowRadius: 16,
-        elevation: 12,
+         shadowColor: 'rgb(33, 34, 34)',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 5,
+        elevation: 8,
     },
     calendarBlur: {
         paddingVertical: 25,
@@ -953,7 +1001,7 @@ const styles = StyleSheet.create({
         height: FIXED_DAY_CELL_SIZE,
         justifyContent: 'center',
         alignItems: 'center',
-        marginVertical: 3,
+        marginVertical: 6,
         borderRadius: FIXED_DAY_CELL_SIZE / 2,
         position: 'relative',
     },
@@ -973,7 +1021,7 @@ const styles = StyleSheet.create({
         borderRadius: FIXED_DAY_CELL_SIZE / 2,
     },
     dayText: {
-        fontSize: 14,
+        fontSize: 13,
         fontWeight: '500',
         zIndex: 1,
     },

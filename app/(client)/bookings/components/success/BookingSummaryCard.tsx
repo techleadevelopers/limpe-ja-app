@@ -133,6 +133,8 @@ export default function BookingSummaryCard({
             iconColor={iconColor}
           />
 
+          
+
           <DateTimeCards
             formattedBookingDate={formattedBookingDate}
             formattedBookingTime={formattedBookingTime}
@@ -162,8 +164,8 @@ export default function BookingSummaryCard({
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingHorizontal: 40,
+    paddingBottom: 30,
     alignItems: 'center',
     backgroundColor: 'transparent',
     flexGrow: 1,

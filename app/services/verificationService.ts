@@ -1,6 +1,7 @@
 // app/services/verificationService.ts
 import api from './api';
 import axios from 'axios';
+import { Platform } from 'react-native'; // Importar Platform para detecção de ambiente
 import {
   SubmitCpfRequest,
   DocumentPhotoType,
@@ -8,7 +9,7 @@ import {
   ProviderVerificationInfo,
 } from '../types/backend/verification';
 
-// Importe FileSystem do Expo para ler o conteúdo da URI
+// Importe FileSystem do Expo para ler o conteúdo da URI (usado apenas em mobile)
 import * as FileSystem from 'expo-file-system';
 
 class VerificationService {
@@ -22,7 +23,8 @@ class VerificationService {
   async submitCpf(cpf: string): Promise<VerificationResponse> {
     try {
       const data: SubmitCpfRequest = { cpf };
-      const response = await api.post<VerificationResponse>(`${this.BASE_URL}/cpf`, data);
+      // CORREÇÃO: Alterado para 'submit-cpf' para corresponder ao controller
+      const response = await api.post<VerificationResponse>(`${this.BASE_URL}/submit-cpf`, data);
       return response.data;
     } catch (error: any) {
       console.error('Erro ao enviar CPF para verificação:', error.response?.data || error.message);
@@ -41,13 +43,16 @@ class VerificationService {
    */
   async uploadDocumentPhoto(imageUri: string, type: DocumentPhotoType): Promise<VerificationResponse> {
     try {
-      // Verifica se a URI existe
-      const fileInfo = await FileSystem.getInfoAsync(imageUri);
-      if (!fileInfo.exists) {
-        throw new Error("Arquivo da imagem não encontrado na URI fornecida.");
+      // Lógica condicional para mobile vs. web
+      if (Platform.OS !== 'web') {
+        // Apenas para mobile: Verifica se a URI existe usando FileSystem
+        const fileInfo = await FileSystem.getInfoAsync(imageUri);
+        if (!fileInfo.exists) {
+          throw new Error("Arquivo da imagem não encontrado na URI fornecida.");
+        }
       }
 
-      // Converte a URI da imagem em um Blob
+      // Converte a URI da imagem em um Blob (funciona para mobile e web com URIs locais)
       const blob = await new Promise<Blob>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.onload = function () {
@@ -92,13 +97,16 @@ class VerificationService {
    */
   async uploadSelfie(imageUri: string): Promise<VerificationResponse> {
     try {
-      // Verifica se a URI existe
-      const fileInfo = await FileSystem.getInfoAsync(imageUri);
-      if (!fileInfo.exists) {
-        throw new Error("Arquivo da selfie não encontrado na URI fornecida.");
+      // Lógica condicional para mobile vs. web
+      if (Platform.OS !== 'web') {
+        // Apenas para mobile: Verifica se a URI existe usando FileSystem
+        const fileInfo = await FileSystem.getInfoAsync(imageUri);
+        if (!fileInfo.exists) {
+          throw new Error("Arquivo da selfie não encontrado na URI fornecida.");
+        }
       }
 
-      // Converte a URI da imagem em um Blob
+      // Converte a URI da imagem em um Blob (funciona para mobile e web com URIs locais)
       const blob = await new Promise<Blob>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.onload = function () {
@@ -129,7 +137,7 @@ class VerificationService {
         throw new Error(error.response.data.message || 'Erro ao fazer upload da selfie.');
       }
       throw new Error('Erro de rede ou servidor ao fazer upload da selfie.');
-      }
+    }
   }
 
   /**
@@ -139,7 +147,8 @@ class VerificationService {
    */
   async getProviderVerificationInfo(providerId: string): Promise<ProviderVerificationInfo> {
     try {
-      const response = await api.get<ProviderVerificationInfo>(`/providers/${providerId}/verification-status`);
+      // CORREÇÃO: Alterado para 'status/:providerId' para corresponder ao controller
+      const response = await api.get<ProviderVerificationInfo>(`${this.BASE_URL}/status/${providerId}`);
       return response.data;
     } catch (error: any) {
       console.error(`Erro ao buscar informações de verificação do provedor ${providerId}:`, error.response?.data || error.message);

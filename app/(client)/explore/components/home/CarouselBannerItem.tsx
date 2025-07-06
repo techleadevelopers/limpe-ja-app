@@ -80,8 +80,8 @@ const styles = StyleSheet.create({
         width: Dimensions.get('window').width - (16 * 2), // Largura total da tela menos o padding horizontal do contentWrapper da index.tsx
         height: 165, // Altura fixa do banner
         borderRadius: 16,
-        paddingLeft: 16,
-        paddingRight: 16, // Mantido para espaçamento interno
+        paddingLeft: 20,
+        paddingRight: 20, // Mantido para espaçamento interno
         paddingTop: 16, // Padding superior para espaçamento
         paddingBottom: 16, // Padding inferior para espaçamento
         overflow: 'hidden',

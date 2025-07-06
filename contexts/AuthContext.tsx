@@ -1,9 +1,9 @@
 // LimpeJaApp/contexts/AuthContext.tsx
 import { useRouter } from 'expo-router';
 import { jwtDecode } from 'jwt-decode';
-import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import React, { createContext, ReactNode, useContext, useEffect, useState, useRef } from 'react'; // Import useRef
 import * as authService from '../app/services/authService';
-import { getUserProfile } from '../app/services/clientService';
+import { getUserProfile } from '../app/services/clientService'; // Ou um serviço mais genérico para buscar UserProfile
 
 import {
   AuthResponseDto,
@@ -60,17 +60,47 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isRegistrationInProgress, setIsRegistrationInProgress] = useState(false);
   const router = useRouter();
 
+  // Variável derivada: `isAuthenticated` sempre reflete o estado atual de `user` e `token`.
+  const isAuthenticated = !!user && !!token;
+
+  // Ref para rastrear se o `loadStoragedData` já foi executado uma vez.
+  // Ajuda a evitar múltiplos carregamentos em dev mode.
+  const hasLoadedStoragedData = useRef(false);
+
+  // Função auxiliar para tratamento de erros em catch blocks
+  const getErrorMessage = (error: unknown): string => {
+    if (error instanceof Error) {
+      return error.message;
+    }
+    if (typeof error === 'string') {
+      return error;
+    }
+    return 'An unknown error occurred.';
+  };
+
   const fetchAndSetUserProfile = async (userId: string, userEmail: string, userRole: UserRole, authToken: string): Promise<UserProfile | null> => {
-    console.log('[AuthContext] fetchAndSetUserProfile: Iniciando busca de perfil para:', userEmail);
+    console.groupCollapsed('[AuthContext | fetchAndSetUserProfile] Initiating profile fetch for:', userEmail);
+    console.log('- User ID (from JWT):', userId);
+    console.log('- User Role (from JWT):', userRole);
+    console.log('- Auth Token present:', !!authToken);
+
     try {
+      // Nota: getUserProfile() geralmente depende de um token no cabeçalho Authorization.
+      // Certifique-se de que `authService.axiosInstance.defaults.headers.common['Authorization']`
+      // está configurado COM o `authToken` ANTES de chamar `getUserProfile()`.
+      // Seu `authService.loadAuthData()` já faz isso, então deve estar ok aqui.
       const fullProfile: UserProfile | null = await getUserProfile();
 
       if (!fullProfile) {
-        console.warn('[AuthContext] fetchAndSetUserProfile: Perfil completo não recebido ou vazio. Retornando null.');
+        console.warn('[AuthContext | fetchAndSetUserProfile] Full profile not received or empty. Returning null.');
+        console.groupEnd();
         return null;
       }
 
-      console.log('[AuthContext] fetchAndSetUserProfile: Perfil completo recebido.', fullProfile.id);
+      console.log('[AuthContext | fetchAndSetUserProfile] Full profile received. User ID:', fullProfile.id);
+      console.log('- Full Profile Role:', fullProfile.role);
+      console.log('- Provider Details:', fullProfile.providerDetails);
+      console.log('- Client Details:', fullProfile.clientDetails);
 
       let userAddressForContext: BookingAddress | undefined = undefined;
 
@@ -79,187 +109,216 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       } else if (fullProfile.role === UserRole.PROVIDER && fullProfile.providerDetails?.address) {
           userAddressForContext = fullProfile.providerDetails.address;
       }
+      console.log('- Derived Address for Context:', userAddressForContext);
 
-      setUser({
-        ...fullProfile as User,
-        address: userAddressForContext
+      // Usar a função de atualização do estado com `prevUser` para garantir o estado mais recente
+      setUser(prevUser => {
+        const newUser: User = {
+          ...prevUser, // Inclui quaisquer outros campos que possam estar no estado anterior, mas não no fullProfile
+          ...fullProfile as User, // Sobrescreve com os dados do fullProfile
+          address: userAddressForContext // Garante que o endereço é setado
+        };
+        console.log('[AuthContext | fetchAndSetUserProfile] User state updated via setUser. New user email:', newUser.email);
+        console.log('[AuthContext | fetchAndSetUserProfile] User role AFTER setUser:', newUser.role);
+        console.log('[AuthContext | fetchAndSetUserProfile] Provider details AFTER setUser:', newUser.providerDetails);
+        return newUser;
       });
-      setToken(authToken);
-      console.log('[AuthContext] Perfil completo carregado e estado atualizado.');
-      console.log('[AuthContext] user.address no contexto APÓS ATUALIZAÇÃO:', userAddressForContext);
+      
+      setToken(authToken); // Define o token. Isso também disparará uma re-renderização.
+      console.log('[AuthContext | fetchAndSetUserProfile] Token state updated via setToken.');
+
+      console.log('[AuthContext | fetchAndSetUserProfile] Profile loaded and state updated successfully.');
+      console.groupEnd();
       return fullProfile;
     } catch (profileError) {
-      console.error('[AuthContext] Erro ao buscar perfil completo:', profileError);
+      console.error('[AuthContext | fetchAndSetUserProfile] ERROR: Failed to fetch full profile:', getErrorMessage(profileError));
+      // Em caso de erro ao buscar o perfil completo, defina o usuário com dados básicos do JWT
       setUser({ id: userId, email: userEmail, role: userRole });
       setToken(authToken);
-      console.warn('[AuthContext] Não foi possível carregar o perfil completo. Usando dados básicos do JWT.');
+      console.warn('[AuthContext | fetchAndSetUserProfile] Could not load full profile. Using basic JWT data. This might cause issues downstream if full profile is required.');
+      console.groupEnd();
       return null;
     }
   };
 
   useEffect(() => {
+    // Adiciona uma guarda para evitar a execução múltipla em StrictMode ou hot reload
+    if (hasLoadedStoragedData.current) {
+      console.log('[AuthContext | useEffect] loadStoragedData already executed. Skipping.');
+      return;
+    }
+    hasLoadedStoragedData.current = true; // Marca como executado
+
     async function loadStoragedData() {
-      console.log('[AuthContext] loadStoragedData: Tentando carregar dados armazenados...');
+      console.groupCollapsed('[AuthContext | loadStoragedData] Attempting to load stored authentication data...');
       try {
-        const storedAuthData = await authService.loadAuthData();
-        console.log('[AuthContext] loadStoragedData: Dados brutos do armazenamento:', storedAuthData);
+        const storedAuthData = await authService.loadAuthData(); // Carrega token e outros dados (se existirem)
+        console.log('[AuthContext | loadStoragedData] Raw stored data:', storedAuthData);
         const storedToken = storedAuthData.token;
         const storedRole = storedAuthData.role;
         const storedId = storedAuthData.id;
 
         if (typeof storedToken === 'string' && storedToken && storedRole && storedId) {
-          console.log('[AuthContext] loadStoragedData: Token e dados básicos encontrados. Tentando decodificar...');
+          console.log('[AuthContext | loadStoragedData] Token and basic data found. Attempting to decode...');
           try {
             const decodedToken: any = jwtDecode(storedToken);
-            console.log('[AuthContext] loadStoragedData: Token decodificado:', decodedToken);
+            console.log('[AuthContext | loadStoragedData] Decoded token payload:', decodedToken);
 
             const currentTime = Date.now() / 1000;
             if (decodedToken && decodedToken.sub && decodedToken.email && decodedToken.role && decodedToken.exp > currentTime) {
-              console.log('[AuthContext] loadStoragedData: Token decodificado e válido. Buscando perfil completo...');
+              console.log('[AuthContext | loadStoragedData] Decoded token is valid and not expired. Fetching full profile...');
               await fetchAndSetUserProfile(storedId, decodedToken.email, decodedToken.role, storedToken);
-              console.log('[AuthContext] loadStoragedData: Perfil completo carregado com sucesso.');
+              console.log('[AuthContext | loadStoragedData] Full profile successfully loaded.');
             } else {
-              console.warn('[AuthContext] loadStoragedData: Token inválido ou expirado. Limpando armazenamento.');
-              await authService.logout();
+              console.warn('[AuthContext | loadStoragedData] Token invalid or expired. Cleaning up storage.');
+              await authService.logout(); // Limpa token do storage
               setUser(null);
               setToken(null);
             }
           } catch (decodeError) {
-            console.error('[AuthContext] loadStoragedData: Erro ao decodificar token JWT:', decodeError);
+            console.error('[AuthContext | loadStoragedData] ERROR: Failed to decode JWT token:', getErrorMessage(decodeError));
             await authService.logout();
             setUser(null);
             setToken(null);
           }
         } else {
-          console.log('[AuthContext] loadStoragedData: Nenhum token encontrado ou dados incompletos no armazenamento.');
+          console.log('[AuthContext | loadStoragedData] No token found or incomplete data in storage. User not authenticated via storage.');
         }
       } catch (error) {
-        console.error("[AuthContext] loadStoragedData: Falha ao carregar token do armazenamento:", error);
+        console.error("[AuthContext | loadStoragedData] ERROR: Failed to load token from storage:", getErrorMessage(error));
         try {
-          console.log('[AuthContext] loadStoragedData: Tentando limpar armazenamento após erro de carregamento.');
+          console.log('[AuthContext | loadStoragedData] Attempting to clean storage after load error.');
           await authService.logout();
         } catch (deleteError) {
-          console.error('[AuthContext] loadStoragedData: CRÍTICO - Falha ao limpar após erro de carregamento:', deleteError);
+          console.error('[AuthContext | loadStoragedData] CRITICAL ERROR: Failed to clean storage after load error:', getErrorMessage(deleteError));
         }
         setUser(null);
         setToken(null);
       } finally {
-        setIsLoading(false);
-        console.log('[AuthContext] loadStoragedData: Finalizado. isLoading:', false, 'isAuthenticated:', !!user && !!token);
+        setIsLoading(false); // Define isLoading como false APÓS todas as tentativas de carregamento
+        // Log do estado final *derivado* para clareza
+        console.log('[AuthContext | loadStoragedData] Finished. isLoading:', false, 'isAuthenticated (derived current):', !!user && !!token);
+        console.groupEnd();
       }
     }
     loadStoragedData();
-  }, []);
+  }, []); // Dependências vazias para rodar apenas uma vez na montagem inicial
 
   const signIn = async (credentials: LoginDto) => {
-    console.log('[AuthContext] signIn: Chamado com credenciais:', credentials.email);
+    console.groupCollapsed('[AuthContext | signIn] Initiating sign-in for:', credentials.email);
     setIsLoading(true);
     try {
       const response: AuthResponseDto = await authService.login(credentials);
-      console.log('[AuthContext] signIn: Resposta de login recebida.');
+      console.log('[AuthContext | signIn] Login response received.');
       const decodedToken: any = jwtDecode(response.accessToken);
       await fetchAndSetUserProfile(decodedToken.sub, decodedToken.email, decodedToken.role, response.accessToken);
-      console.log('[AuthContext] signIn: Perfil do usuário definido após login.');
-
-      console.log('[AuthContext] signIn: Usuário logado com sucesso. (Redirecionamento será tratado pelo _layout.tsx)');
-    } catch (error: any) {
-      console.error("[AuthContext] signIn: Falha ao fazer login:", error.message);
+      console.log('[AuthContext | signIn] User profile set after login. (Redirection will be handled by _layout.tsx)');
+    } catch (error) {
+      console.error("[AuthContext | signIn] ERROR: Failed to sign in:", getErrorMessage(error));
       setUser(null);
       setToken(null);
-      console.log('[AuthContext] signIn: Limpando armazenamento após falha de login.');
+      console.log('[AuthContext | signIn] Cleaning up storage after failed login.');
       await authService.logout();
-      throw error;
+      throw error; // Re-throw to allow component to handle specific login errors
     } finally {
       setIsLoading(false);
-      console.log('[AuthContext] signIn: Finalizado. isLoading:', false);
+      console.log('[AuthContext | signIn] Finished. isLoading:', false);
+      console.groupEnd();
     }
   };
 
   const signUpClient = async (data: RegisterClientDto) => {
-    console.log('[AuthContext] signUpClient: Chamado para registrar cliente:', data.email);
+    console.groupCollapsed('[AuthContext | signUpClient] Initiating client registration for:', data.email);
     setIsLoading(true);
     try {
       const response: AuthResponseDto = await authService.registerClient(data);
-      console.log('[AuthContext] signUpClient: Resposta de registro recebida.');
+      console.log('[AuthContext | signUpClient] Registration response received.');
       const decodedToken: any = jwtDecode(response.accessToken);
       await fetchAndSetUserProfile(decodedToken.sub, decodedToken.email, decodedToken.role, response.accessToken);
-      console.log('[AuthContext] signUpClient: Perfil do usuário definido após registro.');
-
-      console.log('[AuthContext] signUpClient: Cliente registrado com sucesso. (Redirecionamento será tratado pelo _layout.tsx)');
-    } catch (error: any) {
-      console.error("[AuthContext] signUpClient: Falha ao registrar cliente:", error.message);
+      console.log('[AuthContext | signUpClient] User profile set after registration. (Redirection will be handled by _layout.tsx)');
+    } catch (error) {
+      console.error("[AuthContext | signUpClient] ERROR: Failed to register client:", getErrorMessage(error));
       setUser(null);
       setToken(null);
-      console.log('[AuthContext] signUpClient: Limpando armazenamento após falha de registro.');
+      console.log('[AuthContext | signUpClient] Cleaning up storage after failed registration.');
       await authService.logout();
       throw error;
     } finally {
       setIsLoading(false);
-      console.log('[AuthContext] signUpClient: Finalizado. isLoading:', false);
+      console.log('[AuthContext | signUpClient] Finished. isLoading:', false);
+      console.groupEnd();
     }
   };
 
   const signUpProvider = async (data: RegisterProviderDto): Promise<UserProfile | null> => {
-    console.log('[AuthContext] signUpProvider: Chamado para registrar provedor:', data.email);
+    console.groupCollapsed('[AuthContext | signUpProvider] Initiating provider registration for:', data.email);
     setIsLoading(true);
-    setIsRegistrationInProgress(true); // <--- Mantenha isso aqui
+    // isRegistrationInProgress é setado como true aqui, e será setado como false no service-details.tsx
+    // (ou VerifyAccountScreen se você decidir que o "registro" completo inclui a verificação inicial)
+    setIsRegistrationInProgress(true); 
+    console.log('[AuthContext | signUpProvider] isRegistrationInProgress set to TRUE.');
     try {
       const response: AuthResponseDto = await authService.registerProvider(data);
-      console.log('[AuthContext] signUpProvider: Resposta de registro recebida.');
+      console.log('[AuthContext | signUpProvider] Registration response received.');
       const decodedToken: any = jwtDecode(response.accessToken);
       
       const fullProfile = await fetchAndSetUserProfile(decodedToken.sub, decodedToken.email, decodedToken.role, response.accessToken);
-      console.log('[AuthContext] signUpProvider: Perfil do usuário definido após registro.');
+      console.log('[AuthContext | signUpProvider] User profile set after registration.');
       
-      console.log('[AuthContext] signUpProvider: Provedor registrado com sucesso. (Redirecionamento será tratado pelo _layout.tsx)');
+      console.log('[AuthContext | signUpProvider] Provider registered successfully. (Redirection will be handled by _layout.tsx)');
       return fullProfile;
-    } catch (error: any) {
-      console.error("[AuthContext] signUpProvider: Falha ao registrar provedor:", error.message);
+    } catch (error) {
+      console.error("[AuthContext | signUpProvider] ERROR: Failed to register provider:", getErrorMessage(error));
       setUser(null);
       setToken(null);
-      console.log('[AuthContext] signUpProvider: Limpando armazenamento após falha de registro.');
+      console.log('[AuthContext | signUpProvider] Cleaning up storage after failed registration.');
       await authService.logout();
       throw error;
     } finally {
       setIsLoading(false);
-      // REMOVA ESTA LINHA: setIsRegistrationInProgress(false);
-      console.log('[AuthContext] signUpProvider: Finalizado. isLoading:', false);
+      console.log('[AuthContext | signUpProvider] Finished. isLoading:', false);
+      console.groupEnd();
     }
   };
 
   const signOut = async () => {
-    console.log('[AuthContext] signOut: Função iniciada.');
+    console.groupCollapsed('[AuthContext | signOut] Initiating sign-out process.');
     setIsLoading(true);
     try {
-      console.log('[AuthContext] signOut: Chamando authService.logout()...');
+      console.log('[AuthContext | signOut] Calling authService.logout()...');
       await authService.logout();
-      console.log('[AuthContext] signOut: authService.logout() concluído. Limpando estado local...');
+      console.log('[AuthContext | signOut] authService.logout() completed. Cleaning local state...');
 
       setUser(null);
       setToken(null);
-      console.log('[AuthContext] signOut: Estado local limpo. Valor de user:', null, 'Valor de token:', null);
-      console.log('[AuthContext] signOut: isAuthenticated APÓS limpeza:', false);
+      console.log('[AuthContext | signOut] Local state cleared. user:', null, 'token:', null);
+      console.log('[AuthContext | signOut] isAuthenticated AFTER cleanup (derived):', !!user && !!token);
 
-      console.log('[AuthContext] signOut: Redirecionamento será tratado pelo _layout.tsx.');
-    } catch (error: any) {
-      console.error("[AuthContext] signOut: Falha ao deslogar:", error.message, error);
+      console.log('[AuthContext | signOut] Redirection will be handled by _layout.tsx.');
+    } catch (error) {
+      console.error("[AuthContext | signOut] ERROR: Failed to sign out:", getErrorMessage(error), error);
       setUser(null);
-      setToken(null);
+      setToken(null); // Ensure state is reset even on error
     } finally {
       setIsLoading(false);
-      console.log('[AuthContext] signOut: Finalizado. isLoading:', false);
+      console.log('[AuthContext | signOut] Finished. isLoading:', false);
+      console.groupEnd();
     }
   };
 
   const updateUser = (updatedUserData: Partial<User>) => {
-    console.log('[AuthContext] updateUser: Chamado com dados:', updatedUserData);
+    console.groupCollapsed('[AuthContext | updateUser] Called with data:', updatedUserData);
     setUser(currentUser => {
       if (currentUser) {
         const newUser: User = { ...currentUser, ...updatedUserData };
-        console.log('[AuthContext] updateUser: Usuário atualizado no contexto:', newUser.email);
+        console.log('[AuthContext | updateUser] User updated in context. New email:', newUser.email);
+        console.log('[AuthContext | updateUser] Updated User Role:', newUser.role);
+        console.log('[AuthContext | updateUser] Updated Provider Details:', newUser.providerDetails);
+        console.groupEnd();
         return newUser;
       }
-      console.warn('[AuthContext] updateUser: Tentativa de atualizar usuário nulo.');
+      console.warn('[AuthContext | updateUser] Attempted to update a null user. No changes made.');
+      console.groupEnd();
       return null;
     });
   };
@@ -269,7 +328,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       value={{
         user,
         token,
-        isAuthenticated: !!user && !!token,
+        isAuthenticated: isAuthenticated, // Usando a variável derivada aqui
         isLoading,
         isRegistrationInProgress,
         signIn,
