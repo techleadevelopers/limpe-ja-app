@@ -1,5 +1,6 @@
 // LimpeJaApp/app/_layout.tsx
 import React, { useEffect, useState, useCallback } from 'react';
+import 'react-native-reanimated';
 import { Slot, SplashScreen, useRouter, usePathname, useSegments } from 'expo-router';
 import { AuthProvider } from '../contexts/AuthContext';
 import { AppProvider } from '../contexts/AppContext';

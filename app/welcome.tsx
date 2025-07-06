@@ -23,8 +23,8 @@ const BACKGROUND_COLOR_2 = '#F8F8FF';
 const BACKGROUND_COLOR_3 = '#E6F0FF';
 
 // Define as dimensões do logo para facilitar o cálculo e a responsividade
-const LOGO_WIDTH = 250;
-const LOGO_HEIGHT = 250;
+const LOGO_WIDTH = 220;
+const LOGO_HEIGHT = 220;
 const REFLECTION_GAP = 0; // Espaçamento entre o logo e o reflexo
 const BOTTOM_MARGIN_FOR_REFLECTION = 0; // Nova margem inferior para o grupo logo+reflexo
 
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
   logoWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    bottom: -100, // Mantém o posicionamento existente
+    top: 30, // Mantém o posicionamento existente
     marginBottom: REFLECTION_GAP, // Espaçamento entre o logo e o reflexo
   },
   logoImage: {
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
   reflectionWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    bottom: 124, // Mantém o posicionamento existente
+    bottom: 164, // Mantém o posicionamento existente
     width: LOGO_WIDTH,
     height: LOGO_HEIGHT,
     overflow: 'hidden',

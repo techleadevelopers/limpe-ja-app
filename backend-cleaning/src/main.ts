@@ -1,10 +1,10 @@
-  // src/main.ts
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { ConfigService } from '@nestjs/config';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'; // Importações adicionadas
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import * as express from 'express'; // Importar express para usar json/urlencoded
 
 async function bootstrap() {
   console.time('AppStartupTotal'); // Inicia contagem total
@@ -14,6 +14,13 @@ async function bootstrap() {
   console.timeEnd('NestAppCreation'); // Fim da criação da instância Nest
 
   app.enableCors();
+
+  // ADICIONADO: Aumentar o limite de tamanho do payload para JSON e URL-encoded.
+  // Isso é crucial para uploads de arquivos, especialmente se enviados como base64
+  // ou se o seu middleware de upload (ex: Multer) não estiver configurado para isso.
+  app.use(express.json({ limit: '50mb' })); // Aumenta o limite para JSON (ex: 50MB)
+  app.use(express.urlencoded({ limit: '50mb', extended: true })); // Aumenta o limite para URL-encoded (ex: 50MB)
+
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
     forbidNonWhitelisted: true,

@@ -686,12 +686,12 @@ const styles = StyleSheet.create({
 
   // LOGO COM DIMENSÕES ORIGINAIS RESTAURADAS
   logoContainer: {
-    top: 73,
+    top: 90,
     right: 10,
     alignItems: 'center',
   },
   logo: {
-    width: 235,
+    width: 205,
     height: 310,
     resizeMode: 'contain',
   },
@@ -703,11 +703,11 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   welcomeSubtitle: {
-    fontSize: 14,
+    fontSize: 13.5,
     color: '#8A94A6',
     textAlign: 'center',
     marginBottom: 50,
-    bottom: 55,
+    bottom: 42,
   },
   inputWrapper: {
     flexDirection: 'row',

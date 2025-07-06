@@ -560,10 +560,10 @@ const styles = StyleSheet.create({
     },
     contentWrapper: {
         paddingHorizontal: 35,
-        paddingTop: Platform.OS === 'ios' ? 20 : 15,
+        paddingTop: Platform.OS === 'ios' ? 20 : 25,
     },
     sectionTitle: { // Título da seção de detalhes de serviço
-        fontSize: 24, // Aumentado para mais destaque
+        fontSize: 20, // Aumentado para mais destaque
         fontWeight: 'bold',
         color: '#1D2029',
         textAlign: 'center',
@@ -571,7 +571,7 @@ const styles = StyleSheet.create({
         marginTop: 20,
     },
     sectionSubtitle: { // Subtítulo da seção de detalhes de serviço
-        fontSize: 15,
+        fontSize: 12,
         color: '#8A94A6',
         textAlign: 'center',
         marginBottom: 30, // Espaçamento maior antes dos campos
@@ -592,7 +592,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: '#FFFFFF',
         borderRadius: 28, // Totalmente arredondado
-        height: 50, // Altura do input
+        height: 45, // Altura do input
         marginBottom: 20,
         shadowColor: 'rgba(100, 100, 150, 0.15)', // Sombra mais suave
         shadowOffset: { width: 0, height: 8 },
@@ -696,7 +696,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     avatarPlaceholderText: {
-        fontSize: 13,
+        fontSize: 12,
         color: '#6C757D',
         marginTop: 5,
         textAlign: 'center',

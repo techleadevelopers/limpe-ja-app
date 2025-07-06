@@ -587,8 +587,8 @@ const styles = StyleSheet.create({
         left: -15, // Ajustado para centralizar o logo
     },
     logo: { // Ajuste para o logo V-shape
-        width: 240, // Ajustado para o tamanho da imagem
-        height: 300, // Ajustado para o tamanho da imagem
+        width: 200, // Ajustado para o tamanho da imagem
+        height: 260, // Ajustado para o tamanho da imagem
         resizeMode: 'contain',
     },
     welcomeTitle: {
