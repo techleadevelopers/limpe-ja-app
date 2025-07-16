@@ -1,127 +1,102 @@
+// LimpeJaApp/app/(auth)/components/InputWithIcon.tsx
 import React from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  Platform,
-  Animated,
-  TextInputProps,
-} from 'react-native';
+import { View, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-interface InputWithIconProps extends TextInputProps {
-  label: string;
-  iconName: keyof typeof Ionicons.glyphMap;
-  errorMessage?: string | null;
-  containerStyle?: object;
-  rightComponent?: React.ReactNode; // Optional component to render on the right side
-  animationDelay?: number; // Delay for the component's appearance animation
+interface InputWithIconProps {
+    iconName: keyof typeof Ionicons.glyphMap; // Tipo para ícones Ionicons (renomeado de 'icon' para 'iconName' para clareza)
+    placeholder: string;
+    value: string;
+    onChangeText: (text: string) => void;
+    keyboardType?: 'default' | 'numeric' | 'email-address' | 'phone-pad';
+    maxLength?: number;
+    secureTextEntry?: boolean;
+    textAlign?: 'left' | 'center' | 'right';
+    style?: any; // Para estilos adicionais passados do componente pai
+    onPressEye?: () => void; // Para o ícone de olho da senha
+    showEyeIcon?: boolean;
 }
 
 export const InputWithIcon: React.FC<InputWithIconProps> = ({
-  label,
-  iconName,
-  errorMessage,
-  containerStyle,
-  rightComponent,
-  animationDelay = 0,
-  ...rest
+    iconName, // Usar iconName
+    placeholder,
+    value,
+    onChangeText,
+    keyboardType = 'default',
+    maxLength,
+    secureTextEntry = false,
+    textAlign = 'left',
+    style, // Estilos adicionais do pai serão aplicados aqui
+    onPressEye,
+    showEyeIcon,
 }) => {
-  const animatedValue = React.useRef(new Animated.Value(0)).current;
-
-  React.useEffect(() => {
-    Animated.timing(animatedValue, {
-      toValue: 1,
-      duration: 300,
-      delay: animationDelay,
-      useNativeDriver: true,
-    }).start();
-  }, [animatedValue, animationDelay]);
-
-  const wrapperStyle = {
-    opacity: animatedValue.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0, 1],
-    }),
-    transform: [
-      {
-        translateY: animatedValue.interpolate({
-          inputRange: [0, 1],
-          outputRange: [10, 0],
-        }),
-      },
-    ],
-  };
-
-  return (
-    <Animated.View style={[styles.inputContainerWrapper, wrapperStyle, containerStyle]}>
-      <Text style={styles.label}>{label}</Text>
-      <View style={[styles.inputBase, errorMessage && styles.inputErrorBorder]}>
-        <Ionicons name={iconName} size={20} color="#8A8A8E" style={styles.inputIcon} />
-        <TextInput
-          style={[styles.input, !rest.editable && styles.disabledInput]}
-          placeholderTextColor="#6C757D"
-          {...rest}
-        />
-        {rightComponent}
-      </View>
-      {errorMessage ? <Text style={styles.errorMessage}>{errorMessage}</Text> : null}
-    </Animated.View>
-  );
+    return (
+        <View style={[internalStyles.inputWrapper, style]}> {/* Aplica estilos internos e depois os passados via prop */}
+            <View style={internalStyles.iconCircle}>
+                <Ionicons name={iconName} size={18} color="#00BCD4" />
+            </View>
+            <TextInput
+                style={[internalStyles.input, { textAlign }]}
+                placeholder={placeholder}
+                placeholderTextColor="#A0AEC0"
+                value={value}
+                onChangeText={onChangeText}
+                keyboardType={keyboardType}
+                maxLength={maxLength}
+                secureTextEntry={secureTextEntry}
+                autoCapitalize="none"
+            />
+            {showEyeIcon && (
+                <TouchableOpacity onPress={onPressEye} style={internalStyles.eyeIconTouchable}>
+                    <Ionicons name={secureTextEntry ? "eye-off-outline" : "eye-outline"} size={22} color="#A0AEC0" />
+                </TouchableOpacity>
+            )}
+        </View>
+    );
 };
 
-const styles = StyleSheet.create({
-  inputContainerWrapper: {
-    marginBottom: 10,
-  },
-  label: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#495057',
-    marginBottom: 7,
-  },
-  inputBase: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#CED4DA',
-    borderRadius: 10,
-    height: 52,
-    paddingHorizontal: 12,
-    ...Platform.select({
-      ios: {
-        shadowColor: 'rgba(0,0,0,0.05)',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 3,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
-  },
-  inputErrorBorder: {
-    borderColor: '#D32F2F',
-  },
-  inputIcon: {
-    marginRight: 10,
-  },
-  input: {
-    flex: 1,
-    height: '100%',
-    fontSize: 16,
-    color: '#212529',
-  },
-  disabledInput: {
-    backgroundColor: '#F0F0F0',
-    color: '#8A8A8E',
-  },
-  errorMessage: {
-    color: '#D32F2F',
-    fontSize: 12,
-    marginTop: 4,
-    marginLeft: 5,
-  },
+// Estilos específicos para o InputWithIcon, agora definidos internamente
+const internalStyles = StyleSheet.create({
+    inputWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FFFFFF',
+        borderRadius: 28,
+        height: 33,
+        // O 'bottom: 55' é um estilo de posicionamento que pode ser muito específico para o layout do LoginScreen.
+        // Se este componente for reutilizado em outros lugares, considere removê-lo daqui e aplicá-lo no componente pai,
+        // ou passá-lo via 'style' prop. Mantido por enquanto para replicar a UI original.
+        bottom: 55, 
+        marginBottom: 10,
+        shadowColor: 'rgba(100, 100, 150, 0.15)',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 1,
+        shadowRadius: 15,
+        elevation: 5,
+        paddingLeft: 5,
+        paddingRight: 15,
+    },
+    iconCircle: {
+        width: 50,
+        height: 30,
+        right: 2,
+        borderRadius: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#FFFFFF',
+        marginRight: 10,
+    },
+    input: {
+        flex: 1,
+        fontSize: 15,
+        color: '#2D3748',
+        right: 8,
+        height: '70%',
+        paddingVertical: 0,
+    },
+    eyeIconTouchable: {
+        paddingHorizontal: 15,
+        height: '100%',
+        justifyContent: 'center',
+    },
 });

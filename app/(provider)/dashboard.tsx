@@ -26,6 +26,10 @@ import { sendMessage } from '../services/chatService'; // Assuming you'll have a
 import { BookingDetails, BookingStatus } from '../types/backend/bookings';
 import { ProviderDashboard, ProviderReview } from '../types/backend/providers'; // Importe ProviderReview aqui também, se ProviderDashboard o usa
 
+// Importações dos novos componentes
+import SmartInsightsSection from './components/dashboard/SmartInsightsSection';
+import AdvancedReviewsSection from './components/dashboard/AdvancedReviewsSection';
+
 // Hook para animação de toque (reutilizável)
 const useAnimatedTouch = () => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -772,46 +776,18 @@ export default function ProviderDashboardScreen() {
           )}
         </View>
 
-        {/* Seção de Reviews Recentes */}
-        {dashboardData?.reviews && dashboardData.reviews.length > 0 ? ( /* Correção: 'reviews' em vez de 'recentReviews' */
-            <View style={styles.subsectionWrapper}>
-              <View style={styles.subsectionHeader}>
-                  <Text style={styles.subsectionTitle}>
-                      <Ionicons name="star-outline" size={20} color={WARNING_YELLOW} /> Avaliações Recentes
-                  </Text>
-                  <TouchableOpacity onPress={() => router.push('/(provider)/reviews' as any)} accessibilityRole="button" accessibilityLabel="Ver todas as avaliações">
-                      <Text style={styles.viewAllText}>Ver Todas</Text>
-                  </TouchableOpacity>
-              </View>
-              {/* O slice(0, 2) pode ser opcional aqui se o backend já limita a 2 */}
-              {dashboardData.reviews.slice(0, 2).map((review: ProviderReview, index: number) => ( /* Correção de 'any' para ProviderReview e number */
-                  <View key={review.id} style={styles.reviewItem}>
-                      <Text style={styles.reviewText}>"{review.comment || 'Sem comentário.'}"</Text>
-                      {/* INÍCIO DA ALTERAÇÃO PARA ESTRELAS E NOME DO CLIENTE */}
-                      <View style={styles.reviewRatingStarsAndName}> {/* <--- ESTILO ADICIONADO */}
-                          <View style={styles.reviewStarsContainer}> {/* <--- ESTILO ADICIONADO */}
-                              {Array.from({ length: review.rating }).map((_, i) => (
-                                  <Ionicons key={i} name="star" size={16} color={ICON_PRIMARY} />
-                              ))}
-                          </View>
-                          <Text style={styles.reviewClientName}>
-                              {review.client?.fullName || 'Cliente Desconhecido'} {/* Acessa o fullName do client */}
-                          </Text>
-                      </View>
-                      {/* FIM DA ALTERAÇÃO PARA ESTRELAS E NOME DO CLIENTE */}
-                  </View>
-              ))}
-            </View>
-        ) : ( // Parte do 'else' do ternário
-            <View style={styles.subsectionWrapper}>
-              <View style={styles.subsectionHeader}>
-                  <Text style={styles.subsectionTitle}>
-                      <Ionicons name="star-outline" size={20} color={WARNING_YELLOW} /> Avaliações Recentes
-                  </Text>
-              </View>
-              {renderEmptyState("Nenhuma avaliação recente. Conclua mais serviços!", "star-half-outline")}
-            </View>
-        )}
+        {/* Seção de Insights e Sugestões IA */}
+        <SmartInsightsSection
+          dashboardData={dashboardData}
+          onViewInsights={() => router.push('/(provider)/insights' as any)}
+        />
+
+        {/* Seção de Reviews Avançada */}
+        <AdvancedReviewsSection
+          reviews={dashboardData?.reviews}
+          providerId={user?.providerId}
+          onViewAllReviews={() => router.push('/(provider)/reviews' as any)}
+        />
 
         {/* --- BOTÃO DE LOGOUT ADICIONADO AQUI --- */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>

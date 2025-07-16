@@ -40,6 +40,7 @@ export interface RegisterClientDto {
   password: string; // Senha em texto plano que será hasheada pelo backend.
   fullName: string;
   phone?: string; // Telefone: Opcional no frontend, mas você pode torná-lo obrigatório se necessário.
+  cpf: string; // <-- ADICIONADO: Propriedade CPF para o cliente
 
   // Endereço agora é um objeto aninhado
   address: CreateAddressDto;
@@ -62,7 +63,8 @@ export interface RegisterProviderDto {
   address: CreateAddressDto;
 
   yearsOfExperience?: number; // Opcional, corresponde a 'anosExperiencia'
-  avatarUrl?: string; // Opcional, corresponde a 'avatarUrl'
+  avatarUrl?: string | null; // CORREÇÃO: Permitir 'null' explicitamente
+  // avatarUrl?: string; // Opcional, corresponde a 'avatarUrl'
 
   // NOVOS CAMPOS ADICIONADOS PARA DETALHES DO SERVIÇO:
   bio?: string; // Corresponde a 'experiencia'
@@ -116,6 +118,7 @@ export enum UserRole {
   CLIENT = 'CLIENT',
   PROVIDER = 'PROVIDER',
   ADMIN = 'ADMIN',
+  SYSTEM = 'SYSTEM', // Adicionado SYSTEM para consistência com o backend
 }
 
 // NOVO: Enum para o status de verificação do provedor

@@ -1,3 +1,4 @@
+// LimpeJaApp/app/(auth)/provider-register/index.tsx
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
@@ -15,31 +16,19 @@ import {
   StatusBar,
 } from 'react-native';
 import { Link, useRouter, Stack } from 'expo-router';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'; // CORRIGIDO: hífen
-import * as ImagePicker from 'expo-image-picker'; // CORRIGIDO: hífen
-import { useAuth } from '../../../hooks/useAuth';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+// CORREÇÃO: Importar useAuth do caminho correto (contexts/AuthContext)
+import { useAuth } from '../../../contexts/AuthContext';
 import { useProviderRegistration } from '../../../contexts/ProviderRegistrationContext';
 import { AUTH_ROUTES, PROVIDER_ROUTES } from '../../../constants/routes';
+import { RegisterProviderDto } from '../../types/backend/auth'; // Importar RegisterProviderDto
 
 const LOGO_IMAGE = require('../../../assets/images/logo2.png');
 
-const AnimatedErrorMessage: React.FC<{ message: string | null; centered?: boolean }> = ({ message, centered }) => {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: message ? 1 : 0,
-      duration: message ? 300 : 200,
-      useNativeDriver: true,
-    }).start();
-  }, [message, fadeAnim]);
+// CORREÇÃO: Importar AnimatedErrorMessage como exportação nomeada
+import { AnimatedErrorMessage } from '../components/AnimatedErrorMessage';
 
-  if (!message) return null;
-  return (
-    <Animated.Text style={[styles.inlineErrorMessage, { opacity: fadeAnim, textAlign: centered ? 'center' : 'left' }]}>
-      {message}
-    </Animated.Text>
-  );
-};
 
 const ErrorMessage: React.FC<{ message: string | null }> = ({ message }) => {
   if (!message) return null;
@@ -56,30 +45,23 @@ const mockFirebaseStorageApi = {
   },
 };
 
-interface ProviderRegistrationFormData {
-  username: string;
-  email: string;
-  password: string;
-  cpf: string;
-  dateOfBirth: string; // Vai ser DD/MM/AAAA no estado, mas convertido para AAAA-MM-DD para o backend
-  cep: string;
-  street: string;
-  number: string;
-  neighborhood: string;
-  city: string;
-  state: string;
-}
+// A interface ProviderRegistrationFormData foi removida, pois RegisterProviderDto é usado diretamente.
 
 export default function RegisterProviderScreen() {
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(1); // 1: Basic Info, 2: Personal Data, 3: Address Info
 
-  const [username, setUsername] = useState('');
+  // Step 1: Informações Básicas (Email, Nome, Telefone)
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState(''); // será mapeado para fullName
+  const [phone, setPhone] = useState('');
+
+  // Step 2: Dados Pessoais (CPF, Data Nascimento, Senha)
   const [cpf, setCpf] = useState('');
-  const [dateOfBirth, setDateOfBirth] = useState(''); // Armazenará DD/MM/AAAA
+  const [dateOfBirth, setDateOfBirth] = useState(''); // Data no formato DD/MM/AAAA
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
+  // Step 3: Endereço (CEP, Rua, Número, Bairro, Cidade, Estado)
   const [cep, setCep] = useState('');
   const [street, setStreet] = useState('');
   const [number, setNumber] = useState('');
@@ -110,6 +92,7 @@ export default function RegisterProviderScreen() {
   const [generalError, setGeneralError] = useState<string | null>(null);
 
   const router = useRouter();
+  // CORREÇÃO: Destructuring de signUpProvider e setIsRegistrationInProgress
   const { signUpProvider, setIsRegistrationInProgress } = useAuth();
 
   const mainElementsOpacity = useRef(new Animated.Value(0)).current;
@@ -226,54 +209,65 @@ export default function RegisterProviderScreen() {
     ]).start(() => console.log(`[RegisterProviderScreen] Animações para Step ${currentStep} concluídas.`));
   }, [currentStep, serviceDetails, headerAnim, formAnim]);
 
-  // Funções de validação "puras" (não alteram o estado de erro, apenas retornam boolean)
   const pureValidateStep1 = useCallback(() => {
-    console.log("[Validation] Validando Step 1 (Informações Pessoais)...");
-    if (!username.trim() || !email.trim() || !password.trim() || !cpf.trim() || !dateOfBirth.trim()) {
-      console.log("[Validation] Step 1 falhou: campos obrigatórios vazios.");
+    console.log("[Validation] Validando Step 1 (Informações Básicas)...");
+    if (!email.trim() || !username.trim() || !phone.trim()) {
+      console.log("[Validation] Step 1 falhou: campos básicos vazios.");
       return false;
     }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.\S+$/;
     if (!emailRegex.test(email.trim())) {
-      console.log("[Validation] Step 1 falhou: email inválido.");
-      return false;
-    }
-    if (password.length < 6) {
-      console.log("[Validation] Step 1 falhou: senha muito curta (mínimo 6 caracteres).");
-      return false;
-    }
-    // Validação básica de CPF (11 dígitos numéricos)
-    if (cpf.trim().length !== 11 || !/^\d+$/.test(cpf.trim())) {
-        console.log("[Validation] Step 1 falhou: CPF inválido (deve ter 11 dígitos numéricos).");
+        console.log("[Validation] Erro: Email inválido:", email.trim());
         return false;
     }
-    // Validação básica de Data de Nascimento (DD/MM/AAAA)
-    const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/; // Novo regex para DD/MM/AAAA
-    if (!dateRegex.test(dateOfBirth.trim())) {
-        console.log("[Validation] Step 1 falhou: Data de Nascimento inválida (esperado DD/MM/AAAA).");
-        return false;
-    }
-    // Validação adicional de data real (dia/mês/ano válidos)
-    const [day, month, year] = dateOfBirth.split('/').map(Number);
-    const date = new Date(year, month - 1, day); // month - 1 porque o mês é baseado em 0 no Date
-    if (isNaN(date.getTime()) || date.getFullYear() !== year || date.getMonth() + 1 !== month || date.getDate() !== day) {
-        console.log("[Validation] Step 1 falhou: Data de Nascimento inválida (data inexistente).");
+
+    const cleanedPhone = phone.replace(/\D/g, '');
+    if (cleanedPhone.length < 10 || cleanedPhone.length > 11) {
+        console.log("[Validation] Erro: Telefone inválido:", cleanedPhone.length);
         return false;
     }
 
     console.log("[Validation] Step 1 válido.");
     return true;
-  }, [username, email, password, cpf, dateOfBirth]);
+  }, [email, username, phone]);
 
   const pureValidateStep2 = useCallback(() => {
-    console.log("[Validation] Validando Step 2 (Informações de Endereço)...");
-    if (!cep.trim() || !street.trim() || !number.trim() || !neighborhood.trim() || !city.trim() || !state.trim()) {
-      console.log("[Validation] Step 2 falhou: campos de endereço vazios.");
+    console.log("[Validation] Validando Step 2 (Dados Pessoais)...");
+    if (!cpf.trim() || !dateOfBirth.trim() || !password.trim()) {
+      console.log("[Validation] Step 2 falhou: campos pessoais vazios.");
       return false;
     }
+
+    const cleanedCpf = cpf.replace(/\D/g, '');
+    if (cleanedCpf.length !== 11) {
+        console.log("[Validation] Erro: CPF inválido (length !== 11):", cleanedCpf.length);
+        return false;
+    }
+
+    if (password.length < 6) {
+        console.log("[Validation] Erro: Senha muito curta (< 6 caracteres).");
+        return false;
+    }
+
+    // Validação simples de data de nascimento (formato DD/MM/AAAA)
+    const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
+    if (!dateRegex.test(dateOfBirth)) {
+        console.log("[Validation] Erro: Data de nascimento em formato inválido:", dateOfBirth, "(esperado DD/MM/AAAA)");
+        return false;
+    }
+
+    // Verificar se a data é válida
+    const [day, month, year] = dateOfBirth.split('/').map(Number);
+    const dateObj = new Date(year, month - 1, day); // month é 0-indexed
+    if (dateObj.getDate() !== day || dateObj.getMonth() !== month - 1 || dateObj.getFullYear() !== year) {
+        console.log("[Validation] Erro: Data de nascimento inexistente).");
+        return false;
+    }
+
     console.log("[Validation] Step 2 válido.");
     return true;
-  }, [cep, street, number, neighborhood, city, state]);
+  }, [cpf, dateOfBirth, password]);
 
   const pureValidateStep3 = useCallback(() => {
     console.log("[Validation] Iniciando validação do formulário de detalhes do serviço (Step 3).");
@@ -314,12 +308,13 @@ export default function RegisterProviderScreen() {
           const [day, month, year] = dateOfBirth.split('/').map(Number);
           const formattedDateOfBirth = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
-          const providerData = {
+          const providerData: RegisterProviderDto = { // Explicitly type as RegisterProviderDto
             email: email.trim(),
             password: password.trim(),
             fullName: username.trim(),
             cpf: cpf.trim(),
             dateOfBirth: formattedDateOfBirth, // Usa a data formatada
+            phone: phone.replace(/\D/g, ''), // Ensure phone is cleaned and included
             address: {
               cep: cep.trim(),
               street: street.trim(),
@@ -331,7 +326,7 @@ export default function RegisterProviderScreen() {
             },
           };
           console.log("[RegisterProvider] handleNext (Step 2): Chamando signUpProvider do AuthContext.");
-          await signUpProvider(providerData as any); // AQUI é onde a API é chamada!
+          await signUpProvider(providerData); // AQUI é onde a API é chamada!
           console.log("[RegisterProvider] handleNext (Step 2): signUpProvider do AuthContext retornou sucesso. Avançando para Step 3.");
           setCurrentStep(3); // Avança para a Etapa 3 (Detalhes do Serviço)
         } catch (error: any) {
@@ -393,6 +388,7 @@ export default function RegisterProviderScreen() {
         await submitRegistration();
         console.log("[ServiceDetailsSubmit] submitRegistration concluído. Preparando redirecionamento para o Dashboard.");
 
+        // Set the registration in progress flag to false after successful completion
         setIsRegistrationInProgress(false);
         Alert.alert(
           "Cadastro Finalizado!",
@@ -433,12 +429,17 @@ export default function RegisterProviderScreen() {
     >
       <StatusBar barStyle="dark-content" backgroundColor={styles.scrollView.backgroundColor} />
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContentContainer} keyboardShouldPersistTaps="handled" >
+        <Stack.Screen options={{ headerShown: false }} /> {/* Adicionado Stack.Screen aqui */}
         <Animated.View style={[styles.contentWrapper, { opacity: mainElementsOpacity, transform: [{translateY: mainElementsTranslateY}] }]}>
           <View style={styles.logoContainer}>
             <Image source={LOGO_IMAGE} style={styles.logo} />
           </View>
 
-          <Text style={styles.welcomeSubtitle}>Crie sua conta</Text>
+          <Text style={styles.welcomeSubtitle}>
+      {currentStep === 1 ? 'Informações Básicas' :
+       currentStep === 2 ? 'Dados Pessoais' :
+       'Endereço'}
+    </Text>
 
           {currentStep === 1 && (
             <View>
@@ -477,22 +478,25 @@ export default function RegisterProviderScreen() {
 
               <View style={styles.inputWrapper}>
                 <View style={styles.iconCircle}>
-                  <Ionicons name="lock-closed-outline" size={20} color="#00BCD4" />
+                  <Ionicons name="call-outline" size={20} color="#00BCD4" />
                 </View>
                 <TextInput
                   style={styles.input}
-                  placeholder="Senha"
+                  placeholder="Telefone"
                   placeholderTextColor="#A0AEC0"
-                  value={password}
-                  onChangeText={(text) => { setPassword(text); if (generalError) setGeneralError(null);}}
-                  secureTextEntry={!showPassword}
-                  textContentType="password"
+                  value={phone}
+                  onChangeText={(text) => { setPhone(text); if (generalError) setGeneralError(null);}}
+                  keyboardType="phone-pad"
+                  maxLength={15}
                 />
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIconTouchable}>
-                  <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={22} color="#A0AEC0" />
-                </TouchableOpacity>
               </View>
 
+              <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
+            </View>
+          )}
+
+          {currentStep === 2 && (
+            <View>
               <View style={styles.inputWrapper}>
                 <View style={styles.iconCircle}>
                   <Ionicons name="card-outline" size={20} color="#00BCD4" />
@@ -523,11 +527,30 @@ export default function RegisterProviderScreen() {
                 />
               </View>
 
-              <AnimatedErrorMessage message={generalError} centered />
+              <View style={styles.inputWrapper}>
+                <View style={styles.iconCircle}>
+                  <Ionicons name="lock-closed-outline" size={20} color="#00BCD4" />
+                </View>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Senha"
+                  placeholderTextColor="#A0AEC0"
+                  value={password}
+                  onChangeText={(text) => { setPassword(text); if (generalError) setGeneralError(null);}}
+                  secureTextEntry={!showPassword}
+                  textContentType="password"
+                />
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIconTouchable}>
+                  <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={22} color="#A0AEC0" />
+                </TouchableOpacity>
+              </View>
+
+              <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
             </View>
           )}
 
-          {currentStep === 2 && (
+          {/* Este bloco de endereço agora faz parte do Step 3, conforme a estrutura original do seu código */}
+          {currentStep === 3 && (
             <View>
               <View style={styles.inputWrapper}>
                 <View style={styles.iconCircle}>
@@ -615,135 +638,134 @@ export default function RegisterProviderScreen() {
                 />
               </View>
 
-              <AnimatedErrorMessage message={generalError} centered />
+              <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
+
+              {/* Seção de Detalhes do Serviço, também dentro do Step 3 */}
+              <Animated.View style={[styles.formSection, formAnimatedStyle]}>
+                <Text style={styles.sectionTitle}>Serviços</Text>
+                <Text style={styles.sectionSubtitle}>Descreva os serviços que você oferece e sua experiência profissional.</Text>
+
+                <Text style={styles.label}>Foto de Perfil *</Text>
+                <TouchableOpacity
+                    onPress={handlePickImage}
+                    onPressIn={onPressInAvatar}
+                    onPressOut={onPressOutAvatar}
+                    style={[styles.avatarPicker, { transform: [{ scale: avatarScaleAnim }] }]}
+                >
+                    {avatarUri ? (
+                        <Image source={{ uri: avatarUri }} style={styles.avatarImage} resizeMode="cover" />
+                    ) : (
+                        <View style={styles.avatarPlaceholder}>
+                            <Ionicons name="camera-outline" size={40} color="#ADB5BD" />
+                            <Text style={styles.avatarPlaceholderText}>Toque para escolher uma foto</Text>
+                        </View>
+                    )}
+                </TouchableOpacity>
+                <ErrorMessage message={avatarError} />
+
+                <Text style={styles.label}>Anos de Experiência *</Text>
+                <View style={styles.inputWrapperServiceDetails}>
+                    <Ionicons name="briefcase-outline" size={20} color="#00BCD4" style={styles.inputIcon} />
+                    <TextInput
+                        style={styles.inputServiceDetails}
+                        value={anosExperiencia}
+                        onChangeText={setAnosExperiencia}
+                        onBlur={() => setAnosExperienciaError(isNaN(Number(anosExperiencia)) || Number(anosExperiencia) < 0 || anosExperiencia.trim() === '' ? 'Anos de experiência inválidos.' : null)}
+                        placeholder="Ex: 5"
+                        keyboardType="numeric"
+                        maxLength={2}
+                        placeholderTextColor="#A0AEC0"
+                    />
+                </View>
+                <ErrorMessage message={anosExperienciaError} />
+
+                <Text style={styles.label}>Principais Serviços Oferecidos *</Text>
+                <View style={styles.inputWrapperServiceDetails}>
+                    <Ionicons name="construct-outline" size={20} color="#00BCD4" style={styles.inputIcon} />
+                    <TextInput
+                        style={[styles.inputServiceDetails, styles.textAreaInputServiceDetails]}
+                        value={servicosOferecidos}
+                        onChangeText={setServicosOferecidos}
+                        onBlur={() => setServicosOferecidosError(servicosOferecidos.trim() ? null : 'Liste os serviços que você oferece.')}
+                        placeholder="Liste os serviços que você realiza (ex: Limpeza padrão, Limpeza pesada, Passar roupas, Limpeza de vidros, etc.)"
+                        multiline
+                        numberOfLines={3}
+                        maxLength={300}
+                        textAlignVertical="top"
+                        placeholderTextColor="#A0AEC0"
+                    />
+                </View>
+                <ErrorMessage message={servicosOferecidosError} />
+
+                <Text style={styles.label}>Descreva sua Experiência Profissional *</Text>
+                <View style={styles.inputWrapperServiceDetails}>
+                    <MaterialCommunityIcons name="text-box-outline" size={20} color="#00BCD4" style={styles.inputIcon} />
+                    <TextInput
+                        style={[styles.inputServiceDetails, styles.textAreaInputServiceDetails]}
+                        value={experiencia}
+                        onChangeText={setExperiencia}
+                        onBlur={() => setExperienciaError(experiencia.trim() ? null : 'Sua experiência é obrigatória.')}
+                        placeholder="Ex: Tenho 5 anos de experiência com limpeza residencial, sou detalhista e organizada..."
+                        multiline
+                        numberOfLines={4}
+                        maxLength={500}
+                        textAlignVertical="top"
+                        placeholderTextColor="#A0AEC0"
+                    />
+                </View>
+                <ErrorMessage message={experienciaError} />
+
+                <Text style={styles.label}>Sua Estrutura de Preços *</Text>
+                <View style={styles.inputWrapperServiceDetails}>
+                    <MaterialCommunityIcons name="currency-usd" size={20} color="#00BCD4" style={styles.inputIcon} />
+                    <TextInput
+                        style={[styles.inputServiceDetails, styles.textAreaInputServiceDetails]}
+                        value={estruturaPreco}
+                        onChangeText={setEstruturaPreco}
+                        onBlur={() => setEstruturaPrecoError(estruturaPreco.trim() ? null : 'Descreva sua estrutura de preços.')}
+                        placeholder="Descreva como você cobra (ex: R$ XX por hora, preço fixo por tipo de limpeza, pacotes mensais, etc.)"
+                        multiline
+                        numberOfLines={3}
+                        maxLength={300}
+                        textAlignVertical="top"
+                        placeholderTextColor="#A0AEC0"
+                    />
+                </View>
+                <ErrorMessage message={estruturaPrecoError} />
+
+                <Text style={styles.label}>Principais Áreas/Bairros de Atendimento *</Text>
+                <View style={styles.inputWrapperServiceDetails}>
+                    <Ionicons name="location-outline" size={20} color="#00BCD4" style={styles.inputIcon} />
+                    <TextInput
+                        style={[styles.inputServiceDetails, styles.textAreaInputServiceDetails]}
+                        value={areasAtendimento}
+                        onChangeText={setAreasAtendimento}
+                        onBlur={() => setAreasAtendimentoError(areasAtendimento.trim() ? null : 'Informe suas áreas de atendimento.')}
+                        placeholder="Ex: Cambuí, Centro (Campinas); Sumaré (cidade inteira)"
+                        multiline
+                        numberOfLines={3}
+                        maxLength={300}
+                        textAlignVertical="top"
+                        placeholderTextColor="#A0AEC0"
+                    />
+                </View>
+                <ErrorMessage message={areasAtendimentoError} />
+
+                <Text style={styles.label}>Chave PIX *</Text>
+                <View style={styles.inputWrapperServiceDetails}>
+                    <Ionicons name="key-outline" size={20} color="#00BCD4" style={styles.inputIcon} />
+                    <TextInput
+                        style={styles.inputServiceDetails}
+                        value={pixKey}
+                        onChangeText={setPixKey}
+                        onBlur={() => setPixKeyError(pixKey.trim() ? null : 'A chave PIX é obrigatória.')}
+                        placeholder="Sua chave PIX (CPF, Telefone, Email, Aleatória)"
+                        placeholderTextColor="#A0AEC0"
+                    />
+                </View>
+                <ErrorMessage message={pixKeyError} />
+              </Animated.View>
             </View>
-          )}
-
-          {currentStep === 3 && (
-            <Animated.View style={[styles.formSection, formAnimatedStyle]}>
-              <Text style={styles.sectionTitle}>Serviços</Text>
-              <Text style={styles.sectionSubtitle}>Descreva os serviços que você oferece e sua experiência profissional.</Text>
-
-              <Text style={styles.label}>Foto de Perfil *</Text>
-              <TouchableOpacity
-                  onPress={handlePickImage}
-                  onPressIn={onPressInAvatar}
-                  onPressOut={onPressOutAvatar}
-                  style={[styles.avatarPicker, { transform: [{ scale: avatarScaleAnim }] }]}
-              >
-                  {avatarUri ? (
-                      <Image source={{ uri: avatarUri }} style={styles.avatarImage} resizeMode="cover" />
-                  ) : (
-                      <View style={styles.avatarPlaceholder}>
-                          <Ionicons name="camera-outline" size={40} color="#ADB5BD" />
-                          <Text style={styles.avatarPlaceholderText}>Toque para escolher uma foto</Text>
-                      </View>
-                  )}
-              </TouchableOpacity>
-              <ErrorMessage message={avatarError} />
-
-              <Text style={styles.label}>Anos de Experiência *</Text>
-              <View style={styles.inputWrapperServiceDetails}>
-                  <Ionicons name="briefcase-outline" size={20} color="#00BCD4" style={styles.inputIcon} />
-                  <TextInput
-                      style={styles.inputServiceDetails}
-                      value={anosExperiencia}
-                      onChangeText={setAnosExperiencia}
-                      onBlur={() => setAnosExperienciaError(isNaN(Number(anosExperiencia)) || Number(anosExperiencia) < 0 || anosExperiencia.trim() === '' ? 'Anos de experiência inválidos.' : null)}
-                      placeholder="Ex: 5"
-                      keyboardType="numeric"
-                      maxLength={2}
-                      placeholderTextColor="#A0AEC0"
-                  />
-              </View>
-              <ErrorMessage message={anosExperienciaError} />
-
-              <Text style={styles.label}>Principais Serviços Oferecidos *</Text>
-              <View style={styles.inputWrapperServiceDetails}>
-                  <Ionicons name="construct-outline" size={20} color="#00BCD4" style={styles.inputIcon} />
-                  <TextInput
-                      style={[styles.inputServiceDetails, styles.textAreaInputServiceDetails]}
-                      value={servicosOferecidos}
-                      onChangeText={setServicosOferecidos}
-                      onBlur={() => setServicosOferecidosError(servicosOferecidos.trim() ? null : 'Liste os serviços que você oferece.')}
-                      placeholder="Liste os serviços que você realiza (ex: Limpeza padrão, Limpeza pesada, Passar roupas, Limpeza de vidros, etc.)"
-                      multiline
-                      numberOfLines={3}
-                      maxLength={300}
-                      textAlignVertical="top"
-                      placeholderTextColor="#A0AEC0"
-                  />
-              </View>
-              <ErrorMessage message={servicosOferecidosError} />
-
-              <Text style={styles.label}>Descreva sua Experiência Profissional *</Text>
-              <View style={styles.inputWrapperServiceDetails}>
-                  <MaterialCommunityIcons name="text-box-outline" size={20} color="#00BCD4" style={styles.inputIcon} />
-                  <TextInput
-                      style={[styles.inputServiceDetails, styles.textAreaInputServiceDetails]}
-                      value={experiencia}
-                      onChangeText={setExperiencia}
-                      onBlur={() => setExperienciaError(experiencia.trim() ? null : 'Sua experiência é obrigatória.')}
-                      placeholder="Ex: Tenho 5 anos de experiência com limpeza residencial, sou detalhista e organizada..."
-                      multiline
-                      numberOfLines={4}
-                      maxLength={500}
-                      textAlignVertical="top"
-                      placeholderTextColor="#A0AEC0"
-                  />
-              </View>
-              <ErrorMessage message={experienciaError} />
-
-              <Text style={styles.label}>Sua Estrutura de Preços *</Text>
-              <View style={styles.inputWrapperServiceDetails}>
-                  <MaterialCommunityIcons name="currency-usd" size={20} color="#00BCD4" style={styles.inputIcon} />
-                  <TextInput
-                      style={[styles.inputServiceDetails, styles.textAreaInputServiceDetails]}
-                      value={estruturaPreco}
-                      onChangeText={setEstruturaPreco}
-                      onBlur={() => setEstruturaPrecoError(estruturaPreco.trim() ? null : 'Descreva sua estrutura de preços.')}
-                      placeholder="Descreva como você cobra (ex: R$ XX por hora, preço fixo por tipo de limpeza, pacotes mensais, etc.)"
-                      multiline
-                      numberOfLines={3}
-                      maxLength={300}
-                      textAlignVertical="top"
-                      placeholderTextColor="#A0AEC0"
-                  />
-              </View>
-              <ErrorMessage message={estruturaPrecoError} />
-
-              <Text style={styles.label}>Principais Áreas/Bairros de Atendimento *</Text>
-              <View style={styles.inputWrapperServiceDetails}>
-                  <Ionicons name="location-outline" size={20} color="#00BCD4" style={styles.inputIcon} />
-                  <TextInput
-                      style={[styles.inputServiceDetails, styles.textAreaInputServiceDetails]}
-                      value={areasAtendimento}
-                      onChangeText={setAreasAtendimento}
-                      onBlur={() => setAreasAtendimentoError(areasAtendimento.trim() ? null : 'Informe suas áreas de atendimento.')}
-                      placeholder="Ex: Cambuí, Centro (Campinas); Sumaré (cidade inteira)"
-                      multiline
-                      numberOfLines={3}
-                      maxLength={300}
-                      textAlignVertical="top"
-                      placeholderTextColor="#A0AEC0"
-                  />
-              </View>
-              <ErrorMessage message={areasAtendimentoError} />
-
-              <Text style={styles.label}>Chave PIX *</Text>
-              <View style={styles.inputWrapperServiceDetails}>
-                  <Ionicons name="key-outline" size={20} color="#00BCD4" style={styles.inputIcon} />
-                  <TextInput
-                      style={styles.inputServiceDetails}
-                      value={pixKey}
-                      onChangeText={setPixKey}
-                      onBlur={() => setPixKeyError(pixKey.trim() ? null : 'A chave PIX é obrigatória.')}
-                      placeholder="Sua chave PIX (CPF, Telefone, Email, Aleatória)"
-                      placeholderTextColor="#A0AEC0"
-                  />
-              </View>
-              <ErrorMessage message={pixKeyError} />
-            </Animated.View>
           )}
 
           {currentStep === 1 && (
@@ -819,36 +841,36 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     alignItems: 'center',
-    
+
   },
   logo: {
-    width: 180,
-    height: 310,
+    width: 230,
+    height: 300,
     resizeMode: 'contain',
-    top: 6,
+    bottom: 16,
     right: 15,
   },
   welcomeTitle: {
-    fontSize: 21,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#1D2029',
     textAlign: 'center',
-    marginBottom: 0,
-    
+    marginBottom: 6,
+
   },
   welcomeSubtitle: {
     fontSize: 15,
     color: '#8A94A6',
     textAlign: 'center',
     marginBottom: 30,
-    bottom: 130,
+    bottom: 140,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderRadius: 28,
-    height: 32,
+    height: 36,
     marginBottom: 9,
     shadowColor: 'rgba(100, 100, 150, 0.15)',
     shadowOffset: { width: 0, height: 8 },
@@ -857,7 +879,7 @@ const styles = StyleSheet.create({
     elevation: 5,
     paddingLeft: 5,
     paddingRight: 15,
-    bottom: 130,
+    bottom: 120,
     right: 5,
   },
   iconCircle: {
@@ -893,12 +915,12 @@ const styles = StyleSheet.create({
   nextButton: {
     backgroundColor: '#40C0F0',
     borderRadius: 28,
-    paddingVertical: 5,
+    paddingVertical: 7,
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 10,
-    bottom: 120,
+    bottom: 110,
     marginBottom: 15,
     shadowColor: '#00BCD4',
     shadowOffset: { width: 0, height: 5 },
@@ -952,7 +974,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   formSection: {
-    
+
   },
   label: {
     fontSize: 12,

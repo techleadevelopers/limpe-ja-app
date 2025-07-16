@@ -273,4 +273,115 @@ export class AuthService {
     console.log(`Simulação: Email de redefinição de senha enviado para ${email}`);
     // TODO: Implementar envio de email real com link de redefinição de senha
   }
+
+  async requestOtp(phone: string): Promise<void> {
+    // Gerar código OTP de 6 dígitos
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutos
+
+    // Buscar ou criar usuário com este telefone
+    let user = await this.prisma.user.findUnique({ where: { phone } });
+    
+    if (!user) {
+      // Criar novo usuário se não existir
+      user = await this.prisma.user.create({
+        data: {
+          phone,
+          email: `${phone}@sms.limpeja.com`, // Email temporário
+          role: UserRole.CLIENT,
+          otpCode,
+          otpExpiresAt: expiresAt,
+          isPhoneVerified: false,
+        },
+      });
+    } else {
+      // Atualizar OTP para usuário existente
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          otpCode,
+          otpExpiresAt: expiresAt,
+        },
+      });
+    }
+
+    console.log(`Simulação: SMS enviado para ${phone} com código: ${otpCode}`);
+    // TODO: Implementar envio de SMS real
+  }
+
+  async verifyOtp(phone: string, otpCode: string): Promise<AuthResponseDto> {
+    const user = await this.prisma.user.findUnique({
+      where: { phone },
+      include: {
+        client: {
+          include: {
+            user: true,
+            address: true,
+            bookings: true,
+            reviewsMade: true,
+            _count: {
+              select: { bookings: true }
+            }
+          },
+        },
+        provider: {
+          include: {
+            user: true,
+            address: true,
+            providerServices: {
+              include: {
+                service: true
+              }
+            },
+            reviewsReceived: {
+              include: {
+                client: {
+                  include: { user: true }
+                }
+              }
+            },
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Usuário não encontrado.');
+    }
+
+    if (!user.otpCode || !user.otpExpiresAt) {
+      throw new UnauthorizedException('Código OTP não solicitado.');
+    }
+
+    if (user.otpExpiresAt < new Date()) {
+      throw new UnauthorizedException('Código OTP expirado.');
+    }
+
+    if (user.otpCode !== otpCode) {
+      throw new UnauthorizedException('Código OTP inválido.');
+    }
+
+    // Marcar telefone como verificado e limpar OTP
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        isPhoneVerified: true,
+        otpCode: null,
+        otpExpiresAt: null,
+      },
+    });
+
+    // Criar cliente se não existir
+    if (!user.client && user.role === UserRole.CLIENT) {
+      await this.prisma.client.create({
+        data: {
+          userId: user.id,
+          fullName: `Usuário ${phone}`,
+          phone,
+        },
+      });
+    }
+
+    return this.login(user);
+  }
 }

@@ -1,27 +1,38 @@
 // src/auth/auth.controller.ts
-import { Controller, Post, Body, UseGuards, Request, Get, UnauthorizedException, Logger } from '@nestjs/common'; // Adicionado UnauthorizedException, Logger
+import { 
+  Controller, 
+  Post, 
+  Body, 
+  UseGuards, 
+  Request, 
+  Get, 
+  UnauthorizedException, 
+  Logger,
+  HttpCode, // Adicionado HttpCode para definir o status HTTP de sucesso
+  HttpStatus // Adicionado HttpStatus para usar os códigos de status
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterClientDto } from './dto/register-client.dto';
 import { RegisterProviderDto } from './dto/register-provider.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
-import { LocalAuthGuard } from './guards/local-auth.guard';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { MessageResponseDto } from './dto/message-response.dto';
 import { UserProfileDto } from '../users/dto/user-profile.dto';
-import { PrismaService } from '../prisma/prisma.service'; // Importe PrismaService
+import { PrismaService } from '../prisma/prisma.service';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { RequestOtpDto, VerifyOtpDto } from './dto/otp-login.dto'; // Já está importado, ótimo!
+import { LocalAuthGuard } from '../auth/guards/local-auth.guard';
 
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  private readonly logger = new Logger(AuthController.name); // Instancie o Logger
+  private readonly logger = new Logger(AuthController.name);
 
   constructor(
     private readonly authService: AuthService,
-    private readonly prisma: PrismaService, // Injeta PrismaService para buscar o perfil completo
+    private readonly prisma: PrismaService,
   ) {}
 
   @Post('register/client')
@@ -49,8 +60,6 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Credenciais inválidas.' })
   async login(@Request() req): Promise<AuthResponseDto> {
     this.logger.log(`[AuthController] login: Recebida solicitação de login para usuário: ${req.user ? req.user.email : 'N/A'}`);
-    // O Passport.js já validou o usuário e o anexou ao objeto req.user
-    // req.user aqui é do tipo Prisma.User (retornado por validateUser)
     return this.authService.login(req.user);
   }
 
@@ -64,6 +73,25 @@ export class AuthController {
     return { message: 'Se um usuário com este email existir, um link de redefinição de senha será enviado.' };
   }
 
-  // O endpoint GET 'profile' foi removido daqui, pois o endpoint canônico
-  // para obter o perfil do usuário logado é GET 'users/me' no UsersController.
+  @Post('send-otp') // A rota do front-end estava chamando 'send-otp', então o back-end deve ter 'send-otp'
+  @HttpCode(HttpStatus.OK) // Retorna 200 OK em caso de sucesso
+  @ApiOperation({ summary: 'Solicitar código OTP para login por telefone' })
+  @ApiResponse({ status: 200, description: 'Código OTP enviado com sucesso.', type: MessageResponseDto })
+  @ApiResponse({ status: 400, description: 'Dados de requisição inválidos.' })
+  async requestOtp(@Body() requestOtpDto: RequestOtpDto): Promise<MessageResponseDto> {
+    this.logger.log(`[AuthController] requestOtp: Recebida solicitação de OTP para telefone: ${requestOtpDto.phone}`);
+    await this.authService.requestOtp(requestOtpDto.phone);
+    return { message: 'Código OTP enviado para o número informado.' };
+  }
+
+  @Post('verify-otp')
+  @HttpCode(HttpStatus.OK) // Retorna 200 OK em caso de sucesso
+  @ApiOperation({ summary: 'Verificar código OTP e fazer login/registrar' })
+  @ApiResponse({ status: 200, description: 'Login realizado com sucesso.', type: AuthResponseDto })
+  @ApiResponse({ status: 401, description: 'Código OTP inválido ou expirado.' })
+  @ApiResponse({ status: 404, description: 'Usuário não encontrado.' })
+  async verifyOtp(@Body() verifyOtpDto: VerifyOtpDto): Promise<AuthResponseDto> {
+    this.logger.log(`[AuthController] verifyOtp: Recebida solicitação de verificação de OTP para telefone: ${verifyOtpDto.phone}`);
+    return this.authService.verifyOtp(verifyOtpDto.phone, verifyOtpDto.otpCode);
+  }
 }

@@ -307,7 +307,7 @@ export default function ExploreClientScreen() {
                         />
                         {renderPagination()}
                     </Animated.View>
-                    
+
 
                     {/* Recomendações para Você Animadas */}
                     <Animated.View style={{ opacity: recommendationsAnim, transform: [{ translateY: recommendationsAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
@@ -320,7 +320,16 @@ export default function ExploreClientScreen() {
                                 return (
                                     <RecomendacaoCard
                                         key={item.id}
-                                        item={item}
+                                        item={{
+                                          ...item,
+                                          // Garantir que dados do service-details sejam renderizados
+                                          profilePhoto: item.avatarUrl || item.profilePhoto,
+                                          description: item.bio || item.description,
+                                          yearsOfExperience: item.yearsOfExperience,
+                                          basePrice: item.basePrice,
+                                          serviceTypes: item.specialties || [],
+                                          // NÃO incluir pixKey por segurança
+                                        }}
                                     />
                                 );
                             }}

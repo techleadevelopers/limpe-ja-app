@@ -1,5 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Animated, Image, Alert, Platform, ScrollView, KeyboardAvoidingView } from 'react-native'; // Added ScrollView and KeyboardAvoidingView
+// app/(auth)/provider-register/verification/document-upload.tsx
+import { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Animated, Image, Alert, Platform } from 'react-native'; // Added Platform
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import *as Haptics from 'expo-haptics';
@@ -12,7 +13,7 @@ import { DocumentPhotoType } from '../../../../backend-cleaning/src/verification
 import *as FileSystem from 'expo-file-system'; // (Note: FileSystem imported but not used directly in this file's logic)
 
 // Importações das novas imagens para uso nesta tela
-const FACE_ICON = require('../../../../assets/images/logo.png'); // Imagem para o cabeçalho do DocumentUploadScreen e FacialRecognitionScreen
+const FACE_ICON = require('../../../../assets/images/face.png'); // Imagem para o cabeçalho do DocumentUploadScreen e FacialRecognitionScreen
 const PARTE_FRENTE_IMAGE = require('../../../../assets/images/partefrente.png'); // Imagem para o placeholder da frente do documento
 const PARTE_TRAS_IMAGE = require('../../../../assets/images/partetras.png'); // Imagem para o placeholder do verso do documento
 const FACIAL_PLACEHOLDER_IMAGE = require('../../../../assets/images/facial.png'); // Imagem para o placeholder da selfie (assumindo que 'facial.png' é o arquivo correto)
@@ -87,7 +88,7 @@ export default function DocumentUploadScreen({
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaType.Images,
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.8,
@@ -157,151 +158,124 @@ export default function DocumentUploadScreen({
   const isNextButtonEnabled = areDocumentsValid && !isLoading && submissionStatus !== 'pending';
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.keyboardAvoidingContainer} // Main container for keyboard avoidance
-    >
-      <ScrollView
-        style={styles.scrollView} // Takes up available space
-        contentContainerStyle={styles.scrollContentContainer} // Allows content to grow and center
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled" // Good for forms with inputs
-      >
-        <Animated.View style={[styles.animatedContentWrapper, { opacity: contentFade, transform: [{ translateY: contentSlide }] }]}>
-          <View style={styles.header}>
-            <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-              {/* Using FACE_ICON for the header icon */}
-              <Image source={FACE_ICON} style={styles.headerIcon} />
-            </Animated.View>
-            <Text style={styles.title}>Envio de Documentos</Text>
-            <Text style={styles.description}>
-              Precisamos de fotos nítidas da frente e do verso do seu documento de identidade (RG ou CNH).
+    <Animated.View style={[styles.container, { opacity: contentFade, transform: [{ translateY: contentSlide }] }]}>
+      <View style={styles.header}>
+        <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+          {/* Using FACE_ICON for the header icon */}
+          <Image source={FACE_ICON} style={styles.headerIcon} />
+        </Animated.View>
+        <Text style={styles.title}>Envio de Documentos</Text>
+        <Text style={styles.description}>
+          Precisamos de fotos nítidas da frente e do verso do seu documento de identidade (RG ou CNH).
+        </Text>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.label}>Frente do Documento</Text>
+        <View style={styles.imageUploadWrapper}>
+          {documentPhotoFront ? (
+            <Image source={{ uri: documentPhotoFront }} style={styles.uploadedImage} />
+          ) : (
+            // Using PARTE_FRENTE_IMAGE for the front document placeholder
+            <Image source={PARTE_FRENTE_IMAGE} style={styles.placeholderImage} />
+          )}
+          <View style={styles.imageUploadButtons}>
+            <TouchableOpacity style={styles.uploadButton} onPress={() => takePhoto(setDocumentPhotoFront, setFrontError)} disabled={isLoading || submissionStatus === 'success'}>
+              <Ionicons name="camera-outline" size={24} color="#fff" />
+              <Text style={styles.uploadButtonText}>Tirar Foto</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage(setDocumentPhotoFront, setFrontError)} disabled={isLoading || submissionStatus === 'success'}>
+              <Ionicons name="folder-open-outline" size={24} color="#fff" />
+              <Text style={styles.uploadButtonText}>Galeria</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+        {frontError && <AnimatedErrorMessage message={frontError} isVisible={!!frontError} />}
+
+        <Text style={styles.label}>Verso do Documento</Text>
+        <View style={styles.imageUploadWrapper}>
+          {documentPhotoBack ? (
+            <Image source={{ uri: documentPhotoBack }} style={styles.uploadedImage} />
+          ) : (
+            // Using PARTE_TRAS_IMAGE for the back document placeholder
+            <Image source={PARTE_TRAS_IMAGE} style={styles.placeholderImage} />
+          )}
+          <View style={styles.imageUploadButtons}>
+            <TouchableOpacity style={styles.uploadButton} onPress={() => takePhoto(setDocumentPhotoBack, setBackError)} disabled={isLoading || submissionStatus === 'success'}>
+              <Ionicons name="camera-outline" size={24} color="#fff" />
+              <Text style={styles.uploadButtonText}>Tirar Foto</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage(setDocumentPhotoBack, setBackError)} disabled={isLoading || submissionStatus === 'success'}>
+              <Ionicons name="folder-open-outline" size={24} color="#fff" />
+              <Text style={styles.uploadButtonText}>Galeria</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+        {backError && <AnimatedErrorMessage message={backError} isVisible={!!backError} />}
+
+        <Animated.View style={{ transform: [{ scale: buttonScale }] }}>
+          <TouchableOpacity
+            style={[styles.submitButton, (!isNextButtonEnabled) && styles.buttonDisabled]}
+            onPress={handleSubmitDocuments}
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
+            disabled={!isNextButtonEnabled}
+          >
+            {isLoading || submissionStatus === 'pending' ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.submitButtonText}>Próxima Etapa</Text>
+            )}
+          </TouchableOpacity>
+        </Animated.View>
+
+        {submissionStatus !== 'none' && (
+          <View style={[styles.statusBadge,
+              submissionStatus === 'success' ? styles.statusSuccess :
+              submissionStatus === 'failed' ? styles.statusFailed : {}]}>
+            <Ionicons
+              name={submissionStatus === 'success' ? "checkmark-circle" :
+                    submissionStatus === 'failed' ? "warning" : "information-circle"}
+              size={20}
+              color={submissionStatus === 'success' ? Colors.secondary :
+                    submissionStatus === 'failed' ? Colors.error : Colors.info}
+            />
+            <Text style={[styles.statusText,
+                  submissionStatus === 'success' ? { color: Colors.secondary } :
+                  submissionStatus === 'failed' ? { color: Colors.error } : { color: Colors.info }]}>
+              {submissionStatus === 'pending' && "Enviando documentos..."}
+              {submissionStatus === 'success' && "Documentos enviados com sucesso!"}
+              {submissionStatus === 'failed' && "Falha no envio dos documentos. Tente novamente."}
             </Text>
           </View>
-
-          <View style={styles.card}>
-            <Text style={styles.label}>Frente do Documento</Text>
-            <View style={styles.imageUploadWrapper}>
-              {documentPhotoFront ? (
-                <Image source={{ uri: documentPhotoFront }} style={styles.uploadedImage} />
-              ) : (
-                // Using PARTE_FRENTE_IMAGE for the front document placeholder
-                <Image source={PARTE_FRENTE_IMAGE} style={styles.placeholderImage} />
-              )}
-              <View style={styles.imageUploadButtons}>
-                <TouchableOpacity style={styles.uploadButton} onPress={() => takePhoto(setDocumentPhotoFront, setFrontError)} disabled={isLoading || submissionStatus === 'success'}>
-                  <Ionicons name="camera-outline" size={24} color="#fff" />
-                  <Text style={styles.uploadButtonText}>Tirar Foto</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage(setDocumentPhotoFront, setFrontError)} disabled={isLoading || submissionStatus === 'success'}>
-                  <Ionicons name="folder-open-outline" size={24} color="#fff" />
-                  <Text style={styles.uploadButtonText}>Galeria</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-            {frontError && <AnimatedErrorMessage message={frontError} isVisible={!!frontError} />}
-
-            <Text style={styles.label}>Verso do Documento</Text>
-            <View style={styles.imageUploadWrapper}>
-              {documentPhotoBack ? (
-                <Image source={{ uri: documentPhotoBack }} style={styles.uploadedImage} />
-              ) : (
-                // Using PARTE_TRAS_IMAGE for the back document placeholder
-                <Image source={PARTE_TRAS_IMAGE} style={styles.placeholderImage} />
-              )}
-              <View style={styles.imageUploadButtons}>
-                <TouchableOpacity style={styles.uploadButton} onPress={() => takePhoto(setDocumentPhotoBack, setBackError)} disabled={isLoading || submissionStatus === 'success'}>
-                  <Ionicons name="camera-outline" size={24} color="#fff" />
-                  <Text style={styles.uploadButtonText}>Tirar Foto</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage(setDocumentPhotoBack, setBackError)} disabled={isLoading || submissionStatus === 'success'}>
-                  <Ionicons name="folder-open-outline" size={24} color="#fff" />
-                  <Text style={styles.uploadButtonText}>Galeria</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-            {backError && <AnimatedErrorMessage message={backError} isVisible={!!backError} />}
-
-            <Animated.View style={{ transform: [{ scale: buttonScale }] }}>
-              <TouchableOpacity
-                style={[styles.submitButton, (!isNextButtonEnabled) && styles.buttonDisabled]}
-                onPress={handleSubmitDocuments}
-                onPressIn={handlePressIn}
-                onPressOut={handlePressOut}
-                disabled={!isNextButtonEnabled}
-              >
-                {isLoading || submissionStatus === 'pending' ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.submitButtonText}>Próxima Etapa</Text>
-                )}
-              </TouchableOpacity>
-            </Animated.View>
-
-            {submissionStatus !== 'none' && (
-              <View style={[styles.statusBadge,
-                  submissionStatus === 'success' ? styles.statusSuccess :
-                  submissionStatus === 'failed' ? styles.statusFailed : {}]}>
-                <Ionicons
-                  name={submissionStatus === 'success' ? "checkmark-circle" :
-                        submissionStatus === 'failed' ? "warning" : "information-circle"}
-                  size={20}
-                  color={submissionStatus === 'success' ? Colors.secondary :
-                        submissionStatus === 'failed' ? Colors.error : Colors.info}
-                />
-                <Text style={[styles.statusText,
-                      submissionStatus === 'success' ? { color: Colors.secondary } :
-                      submissionStatus === 'failed' ? { color: Colors.error } : { color: Colors.info }]}>
-                  {submissionStatus === 'pending' && "Enviando documentos..."}
-                  {submissionStatus === 'success' && "Documentos enviados com sucesso!"}
-                  {submissionStatus === 'failed' && "Falha no envio dos documentos. Tente novamente."}
-                </Text>
-              </View>
-            )}
-          </View>
-        </Animated.View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        )}
+      </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  // Renamed from 'container' to 'keyboardAvoidingContainer'
-  keyboardAvoidingContainer: {
+  container: {
     flex: 1,
-    backgroundColor: Colors.background, // Moved background color here
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: SIZES.paddingSmall,
+    backgroundColor: Colors.background,
   },
-  scrollView: {
-    flex: 1, // Take full height of KeyboardAvoidingView
-  },
-  scrollContentContainer: {
-    flexGrow: 1, // Allows content to grow and enable scrolling
-    alignItems: 'center', // Keep content horizontally centered
-    padding: SIZES.paddingSmall, // Apply padding here
-    // justifyContent: 'center', // Removed, as it can prevent scrolling if content is small
-  },
-  // New style for the Animated.View that wraps the content
-  animatedContentWrapper: {
-    width: '100%', // Ensure it takes full width of scroll view
-    alignItems: 'center', // Keep content horizontally centered within this wrapper
-    marginBottom: SIZES.padding * 2, // Add some top margin for spacing
-    // The opacity and translateY animations are applied directly in JSX
-  },
-  // ... rest of your styles ...
   header: {
     alignItems: 'center',
-    marginBottom: SIZES.padding ,
-    marginTop: SIZES.padding * 3, // Keep original margin top
+    marginBottom: SIZES.padding,
+    marginTop: SIZES.padding * 8,
   },
   // Novo estilo para o ícone do cabeçalho
   headerIcon: {
-    width: 180, // Ajuste o tamanho conforme necessário
-    height: 140, // Ajuste o tamanho conforme necessário
+    width: 200, // Ajuste o tamanho conforme necessário
+    height: 200, // Ajuste o tamanho conforme necessário
     resizeMode: 'contain',
-    marginBottom: -5,
   },
   title: {
-    fontSize: SIZES.h1 - 10,
+    fontSize: SIZES.h1 - 4,
     fontWeight: 'bold',
     color: Colors.textPrimary,
     marginTop: SIZES.base * 2,
@@ -309,11 +283,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   description: {
-    fontSize: 14,
-    maxWidth: 300,
+    fontSize: SIZES.body3,
     color: Colors.textSecondary,
     textAlign: 'center',
-    lineHeight: SIZES.body3 + 3,
+    lineHeight: SIZES.body3 + 6,
   },
   card: {
     backgroundColor: Colors.cardBackground,
@@ -367,8 +340,7 @@ const styles = StyleSheet.create({
   submitButton: {
     backgroundColor: Colors.primaryGradientStart,
     borderRadius: SIZES.radius,
-    paddingVertical: 10,
-    padding: 10,
+    paddingVertical: SIZES.paddingSmall,
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
@@ -454,7 +426,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.primary,
-    paddingVertical: SIZES.base * 1.0,
+    paddingVertical: SIZES.base * 1.5,
     paddingHorizontal: SIZES.paddingSmall,
     borderRadius: 20,
     marginHorizontal: SIZES.base / 2,

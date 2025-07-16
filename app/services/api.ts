@@ -1,16 +1,16 @@
 // LimpeJaApp/app/services/api.ts
 import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage'; // <--- USANDO ASYNCSTORAGE AGORA
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants'; // Importa Constants para acessar variáveis do app.json
 
 // Certifique-se de que EXPO_PUBLIC_API_BASE_URL está definida em seu .env ou app.config.js/ts
 // E que é acessível no ambiente de execução do Expo.
 // Usa Constants.expoConfig?.extra para acessar variáveis públicas do app.json
 
-// URL do backend na nuvem (original do app.json) - DESCOMENTADA PARA USO EM PRODUÇÃO
-const API_BASE_URL = Constants.expoConfig?.extra?.backendApiUrl as string;
+// URL do backend na nuvem (original do app.json) - DESCOMENTADA PARA USO DA URL DO GCLOUD
+ const API_BASE_URL = Constants.expoConfig?.extra?.backendApiUrl as string;
 
-// URL do backend local para desenvolvimento - COMENTADA PARA USAR A URL DA NUVEM
+// URL do backend local para desenvolvimento - COMENTADA PARA USAR A URL DO GCLOUD
 // const API_BASE_URL = 'http://localhost:3000'; // OU a porta que seu backend local está usando
 
 if (!API_BASE_URL) {
