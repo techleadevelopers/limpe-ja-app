@@ -22,7 +22,8 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.techleadevelopers.limpeja"
     },
     "web": {
       "bundler": "metro",
@@ -46,7 +47,11 @@
     },
     "extra": {
       "backendApiUrl": "https://limpeja-app-backend-665493568088.southamerica-east1.run.app",
-      "environment": "production"
+      "environment": "production",
+      "router": {},
+      "eas": {
+        "projectId": "f4b19077-130d-469b-be83-e94b2f768190"
+      }
     }
   }
 }
