@@ -3,7 +3,7 @@ import axios, { AxiosResponse } from 'axios'; // Importar axios para isAxiosErro
 import api from './api'; // Importa a instância centralizada do Axios
 
 // Importa a tipagem da FAQItem
-import { FAQItem } from '../app/types/backend/faqs'; //
+import { FAQItem } from '../types/backend/faqs'; //
 
 /**
  * @function getFaqs

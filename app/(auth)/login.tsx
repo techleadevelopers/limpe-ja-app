@@ -1,42 +1,38 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { Link, Stack, useRouter } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-    View,
-    Text,
-    TextInput,
-    StyleSheet,
     ActivityIndicator,
     Alert,
-    TouchableOpacity,
-    ScrollView,
+    Animated,
+    Dimensions,
     KeyboardAvoidingView,
     Platform,
-    Image,
-    Animated,
+    ScrollView,
     StatusBar,
-    Dimensions,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
-import { Link, useRouter, Stack } from 'expo-router';
 // REMOVIDO: import auth from '@react-native-firebase/auth'; // Não usaremos mais a API namespaced diretamente
 // NOVO: Importa getAuth e signInWithPhoneNumber da API modular do Firebase Auth
 import { getAuth, signInWithPhoneNumber } from 'firebase/auth'; // API Modular para Web e Nativo
 // Importa a instância do authClient do firebaseClient.ts (se precisar para getAuth(app) em algum caso)
 // import { authClient } from '../config/firebaseClient'; // Não precisaremos mais de authClient aqui diretamente
 
-import { useAuth } from '../../contexts/AuthContext'; 
-import { Ionicons } from '@expo/vector-icons';
-import { UserRole } from '../types/backend/auth'; 
 import { LinearGradient } from 'expo-linear-gradient';
-import api from '../services/api'; 
+import { useAuth } from '../../contexts/AuthContext';
+import { UserRole } from '../../types/backend/auth';
 
 // Importações do Reanimated (mantidas)
 import AnimatedReanimated, {
-    useSharedValue,
-    useAnimatedStyle,
-    withTiming,
     Easing,
-    withRepeat,
-    interpolate,
     Extrapolate,
+    interpolate,
+    useAnimatedStyle,
+    useSharedValue,
+    withRepeat,
+    withTiming,
 } from 'react-native-reanimated';
 
 const LOGO_IMAGE = require('../../assets/images/logo2.png');
@@ -44,8 +40,8 @@ const LOGO_IMAGE = require('../../assets/images/logo2.png');
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
-import { AnimatedErrorMessage } from './components/AnimatedErrorMessage'; 
-import { InputWithIcon } from './components/InputWithIcon'; 
+import { AnimatedErrorMessage } from '../../components/auth/components/AnimatedErrorMessage';
+import { InputWithIcon } from '../../components/auth/components/InputWithIcon';
 
 
 export default function LoginScreen() {

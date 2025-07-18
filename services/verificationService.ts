@@ -2,11 +2,11 @@
 import axios from 'axios';
 import { Platform } from 'react-native'; // Importar Platform para detecção de ambiente
 import {
-  DocumentPhotoType,
-  ProviderVerificationInfo,
-  SubmitCpfRequest,
-  VerificationResponse,
-} from '../app/types/backend/verification';
+    DocumentPhotoType,
+    ProviderVerificationInfo,
+    SubmitCpfRequest,
+    VerificationResponse,
+} from '../types/backend/verification';
 import api from './api';
 
 // Importe FileSystem do Expo para ler o conteúdo da URI (usado apenas em mobile)

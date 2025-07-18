@@ -13,9 +13,9 @@ import SuccessPixInfo from './SuccessPixInfo';
 
 // Importar tipos
 import Toast from 'react-native-toast-message';
+import { BookingDetails } from '../../../../types/backend/bookings'; // Certifique-se que este BookingDetails tem scheduledDateTime
+import { PixChargeResponseDto } from '../../../../types/backend/payments';
 import { formatCurrency, formatDate } from '../../../../utils/helpers';
-import { BookingDetails } from '../../../../app/types/backend/bookings'; // Certifique-se que este BookingDetails tem scheduledDateTime
-import { PixChargeResponseDto } from '../../../../app/types/backend/payments';
 
 interface BookingSummaryCardProps {
   booking: BookingDetails;

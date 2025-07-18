@@ -3,8 +3,8 @@ import axios from 'axios'; // Importar axios para isAxiosError
 import api from './api'; // Importa a instância centralizada do Axios
 
 // Importar DTOs de pagamento
-import { MessageResponseDto } from '../app/types/backend/auth';
-import { CreatePixChargeDto, PixChargeResponseDto, RequestWithdrawalDto } from '../app/types/backend/payments'; // CORREÇÃO AQUI: Adicionado RequestWithdrawalDto
+import { MessageResponseDto } from '../types/backend/auth';
+import { CreatePixChargeDto, PixChargeResponseDto, RequestWithdrawalDto } from '../types/backend/payments'; // CORREÇÃO AQUI: Adicionado RequestWithdrawalDto
 
 /**
  * @function createPixCharge

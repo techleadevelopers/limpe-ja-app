@@ -1,26 +1,25 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    View,
-    Text,
-    StyleSheet,
     ActivityIndicator,
     Alert,
-    ScrollView,
-    Image,
-    TouchableOpacity,
-    Platform,
     Animated,
-    Linking,
+    Image,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
-import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { formatDate } from '../../../utils/helpers';
 
 // --- IMPORTAÇÕES DE SERVIÇOS E TIPAGENS DO SEU BACKEND REAL ---
-import { getBookingDetails, cancelBooking } from '../../services/bookingService'; // Importa os serviços reais
+import { cancelBooking, getBookingDetails } from '../../../services/bookingService'; // Importa os serviços reais
 
 // >>> IMPORTAR BookingDetails e BookingStatus de forma centralizada <<<
-import { BookingDetails, BookingStatus } from '../../types/backend/bookings'; 
+import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 
 // --- ATENÇÃO: A INTERFACE 'Booking' LOCAL FOI REMOVIDA DESTE ARQUIVO ---
 // Era a causa do conflito de tipagem. Agora, BookingDetails é a única fonte de verdade.

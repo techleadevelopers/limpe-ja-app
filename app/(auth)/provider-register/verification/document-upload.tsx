@@ -1,16 +1,14 @@
 // app/(auth)/provider-register/verification/document-upload.tsx
-import { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Animated, Image, Alert, Platform } from 'react-native'; // Added Platform
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
-import *as Haptics from 'expo-haptics';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Animated, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native'; // Added Platform
+import { DocumentPhotoType } from '../../../../backend-cleaning/src/verification/dto/upload-document.dto';
+import AnimatedErrorMessage from '../../../../components/schedule/manager/AnimatedErrorMessage';
 import colors from '../../../../constants/Colors';
 import { SIZES } from '../../../../constants/theme';
-import * as uploadService from '../../../services/uploadService'; // (Note: uploadService imported but not used directly in this file's logic)
-import verificationService from '../../../services/verificationService';
-import AnimatedErrorMessage from '../../../(provider)/schedule/components/manager/AnimatedErrorMessage';
-import { DocumentPhotoType } from '../../../../backend-cleaning/src/verification/dto/upload-document.dto';
-import *as FileSystem from 'expo-file-system'; // (Note: FileSystem imported but not used directly in this file's logic)
+import verificationService from '../../../../services/verificationService';
 
 // Importações das novas imagens para uso nesta tela
 const FACE_ICON = require('../../../../assets/images/face.png'); // Imagem para o cabeçalho do DocumentUploadScreen e FacialRecognitionScreen

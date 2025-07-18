@@ -5,7 +5,7 @@ import { Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from 're
 import { formatDate } from '../../../utils/helpers'; // Certifique-se de que o caminho está correto
 
 // Importa a tipagem do Dashboard para o resumo
-import { ProviderDashboard } from '../../../app/types/backend/providers';
+import { ProviderDashboard } from '../../../types/backend/providers';
 
 // DEFINIÇÕES DE CORES LOCAIS - ALINHADAS COM O TEMA DA DASHBOARD
 const WHITE = '#FFFFFF'; // Branco

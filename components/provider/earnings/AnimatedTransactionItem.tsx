@@ -5,7 +5,7 @@ import { Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from 're
 import { formatDate } from '../../../utils/helpers';
 
 // Importa a tipagem de transação do provedor e TransactionType
-import { ProviderTransaction, TransactionType } from '../../../app/types/backend/providers';
+import { ProviderTransaction, TransactionType } from '../../../types/backend/providers';
 
 // --- DEFINIÇÕES DE CORES (ALINHADAS COM O TEMA GERAL E ADICIONANDO AS FALTANTES) ---
 const WHITE = '#FFFFFF';

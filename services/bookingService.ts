@@ -3,7 +3,7 @@ import axios, { AxiosResponse } from 'axios';
 import api from './api';
 
 // IMPORTAR DTOs E TIPAGENS DO ARQUIVO CENTRALIZADO
-import { BookingDetails, BookingStatus, CreateBookingDto, UpdateBookingStatusDto } from '../app/types/backend/bookings';
+import { BookingDetails, BookingStatus, CreateBookingDto, UpdateBookingStatusDto } from '../types/backend/bookings';
 
 /**
  * @function createBooking

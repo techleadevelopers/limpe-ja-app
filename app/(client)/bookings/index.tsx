@@ -1,27 +1,27 @@
 // LimpeJaApp/app/(client)/bookings/index.tsx
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  StyleSheet,
-  ActivityIndicator,
-  TouchableOpacity,
-  Platform,
-  Animated,
-  Alert,
-  RefreshControl,
-  Image,
-} from 'react-native';
-import { Link, Stack, useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { formatDate } from '../../../utils/helpers';
 import * as Haptics from 'expo-haptics';
+import { Link, Stack, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    Animated,
+    FlatList,
+    Image,
+    Platform,
+    RefreshControl,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+import { formatDate } from '../../../utils/helpers';
 
 // CORREÇÃO: Importar BookingDetails e BookingStatus
-import { BookingDetails, BookingStatus } from '../../types/backend/bookings';
-import { getBookingsForUser } from '../../services/bookingService';
 import { useAuth } from '../../../hooks/useAuth';
+import { getBookingsForUser } from '../../../services/bookingService';
+import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 
 // DEFINE O TIPO DE FILTRO GLOBALMENTE PARA CONSISTÊNCIA
 type FilterType = 'requests' | 'upcoming' | 'completed' | 'cancelled';

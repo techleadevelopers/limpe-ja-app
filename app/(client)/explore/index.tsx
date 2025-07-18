@@ -1,54 +1,47 @@
 // app/(client)/explore/index.tsx
 import { Stack, useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+    ActivityIndicator,
+    Alert,
     Animated,
+    Dimensions,
+    FlatList,
     ScrollView,
     StyleSheet,
-    View,
-    ActivityIndicator,
     Text,
-    Alert,
     TouchableOpacity,
-    FlatList,
-    Dimensions, // Certifique-se de que Dimensions está importado
-    Keyboard,
+    View,
+    ViewToken // Importar ViewToken para tipagem de onViewableItemsChanged
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 
 import {
+    getOffers,
     getServiceCategories,
     getUserProfile,
-    getOffers,
-} from '../../services/clientService';
+} from '../../../services/clientService';
 
 import {
-    getRecommendedProviders,
     getNearbyProviders,
-} from '../../services/providerService';
+    getRecommendedProviders,
+} from '../../../services/providerService';
 
-import { Service } from '../../types/backend/services';
-import { ProviderDisplayInfo } from '../../types/backend/providers';
-import { Offer } from '../../types/backend/offers';
-import { UserProfile } from '../../types/backend/users';
-import { BookingAddress } from '../../types/backend/bookings';
+import { Offer } from '../../../types/backend/offers';
+import { ProviderDisplayInfo } from '../../../types/backend/providers';
+import { Service } from '../../../types/backend/services';
+import { UserProfile } from '../../../types/backend/users';
 
 import { CLIENT_ROUTES } from '../../../constants/routes';
 
-// Importe o BannerOferta se ainda precisar dele em alguma outra parte do app,
-// mas para o carrossel, estamos usando CarouselBannerItem
-// import BannerOferta from '../../(client)/ofertas/components/BannerOferta';
-// import DefaultBanner from '../../(client)/ofertas/components/DefaultBanner'; // Não será usado com o carrossel fixo
-
-import HeaderSuperior from './components/home/HeaderSuperior';
-import NavBar from './components/home/NavBar';
-import CategoriaCard from './components/home/CategoriaCard';
-import SecaoContainer from './components/home/SecaoContainer';
-import SecaoPrestadores from './components/home/SecaoPrestadores';
-import SecaoRecomendacoes from './components/home/SecaoRecomendacoes';
-import PrestadorCard from './components/home/PrestadorCard';
-import RecomendacaoCard from './components/home/RecomendacaoCard';
-import CarouselBannerItem from './components/home/CarouselBannerItem'; // Importe o novo componente
+import CarouselBannerItem from '../../../components/client/explore/home/CarouselBannerItem'; 
+import CategoriaCard from '../../../components/client/explore/home/CategoriaCard';
+import HeaderSuperior from '../../../components/client/explore/home/HeaderSuperior';
+import NavBar from '../../../components/client/explore/home/NavBar';
+import PrestadorCard from '../../../components/client/explore/home/PrestadorCard';
+import RecomendacaoCard from '../../../components/client/explore/home/RecomendacaoCard';
+import SecaoContainer from '../../../components/client/explore/home/SecaoContainer';
+import SecaoPrestadores from '../../../components/client/explore/home/SecaoPrestadores';
+import SecaoRecomendacoes from '../../../components/client/explore/home/SecaoRecomendacoes';
 
 const COR_AZUL_CLARO_UNIFICADA = '#A0D2EB';
 const COR_PRIMARIA_ESCURA = '#2C3E50';
@@ -65,8 +58,8 @@ const bannerData = [
         description: 'All Services Available | T&C Applied',
         buttonText: 'Claim',
         badgeText: 'Limited time!',
-        backgroundColorStart: '#f5f5dc', // Bege claro
-        backgroundColorEnd: '#deb887',   // Bege
+        backgroundColorStart: '#f5f5dc', 
+        backgroundColorEnd: '#deb887',   
     },
     {
         id: '2',
@@ -75,8 +68,8 @@ const bannerData = [
         description: 'On Selected Services Only',
         buttonText: 'View',
         badgeText: 'Exclusive',
-        backgroundColorStart: '#e0ffff', // Ciano claro
-        backgroundColorEnd: '#afeeee',   // Ciano pálido
+        backgroundColorStart: '#e0ffff', 
+        backgroundColorEnd: '#afeeee',   
     },
     {
         id: '3',
@@ -85,8 +78,8 @@ const bannerData = [
         description: 'For New Customers',
         buttonText: 'Sign Up',
         badgeText: 'Hurry!',
-        backgroundColorStart: '#f0f8ff', // Alice Blue
-        backgroundColorEnd: '#e6e6fa',   // Lavanda clara
+        backgroundColorStart: '#f0f8ff', 
+        backgroundColorEnd: '#e6e6fa',   
     },
 ];
 
@@ -99,7 +92,7 @@ export default function ExploreClientScreen() {
     const [serviceCategories, setServiceCategories] = useState<Service[]>([]);
     const [recommendations, setRecommendations] = useState<ProviderDisplayInfo[]>([]);
     const [providers, setProviders] = useState<ProviderDisplayInfo[]>([]);
-    const [currentOffer, setCurrentOffer] = useState<Offer | null>(null); // Mantido para compatibilidade, mas não usado pelo carrossel diretamente
+    const [currentOffer, setCurrentOffer] = useState<Offer | null>(null); 
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -118,8 +111,6 @@ export default function ExploreClientScreen() {
             const fetchedUserProfile = await getUserProfile();
             setUserProfile(fetchedUserProfile);
 
-            // Removido: nameToDisplay e addressToDisplay, pois não são mais diretamente usados aqui
-            // ... (restante da lógica de busca de dados)
             const categoriesData = await getServiceCategories();
             setServiceCategories(categoriesData);
 
@@ -131,8 +122,6 @@ export default function ExploreClientScreen() {
 
             const offersData = await getOffers();
             if (offersData.length > 0) {
-                // Embora o carrossel seja fixo, mantemos a lógica de currentOffer
-                // caso queira usá-la em outro lugar ou adaptar o carrossel no futuro.
                 setCurrentOffer(offersData.length > 0 ? offersData.slice(0, 1)[0] : null);
             }
 
@@ -165,8 +154,8 @@ export default function ExploreClientScreen() {
 
     const handleCategoryPress = useCallback((item: Service) => {
         router.push({
-            pathname: '/(client)/explore/category-details',
-            params: { id: item.id, name: item.name }
+            pathname: CLIENT_ROUTES.SEARCH_RESULTS, 
+            params: { categoryId: item.id, categoryName: item.name }
         } as any);
     }, [router]);
 
@@ -183,24 +172,18 @@ export default function ExploreClientScreen() {
         : [];
 
     const handleBannerPress = useCallback(() => {
-        // Lógica para lidar com o clique no banner (pode navegar para uma tela de ofertas ou uma tela genérica)
         Alert.alert('Banner Pressionado', 'Você clicou em um banner! (Este é o handler do carrossel)');
-        // Exemplo: router.push('/(client)/ofertas');
-    }, []); // Dependência vazia para garantir que a função seja estável
+    }, []); 
 
-    // Mantenha a viewabilityConfig fora do render ou memoizada para estabilidade
-    const viewabilityConfig = useRef({
-        itemVisiblePercentThreshold: 50, // 50% do item visível para ser considerado "visível"
-    }).current;
+    const viewabilityConfig = useRef({ // MANTIDO: Declaração da ref
+        itemVisiblePercentThreshold: 50, 
+    }).current; // CORREÇÃO: Acessar .current aqui para a variável
 
-    // CORREÇÃO: Envolva onViewableItemsChanged em useCallback com array de dependências vazio
-    const onViewableItemsChanged = useCallback(({ viewableItems }) => {
+    const onViewableItemsChanged = useCallback(({ viewableItems }: { viewableItems: ViewToken[] }) => {
         if (viewableItems.length > 0) {
-            // viewableItems[0] representa o item mais à esquerda visível
-            // Se você quer o item que está mais no centro/totalmente visível, pode ser necessário ajustar a lógica
             setCurrentIndex(viewableItems[0].index || 0);
         }
-    }, []); // ARRAY DE DEPENDÊNCIAS VAZIO: Isso garante que a função onViewableItemsChanged não mude entre renders
+    }, []); 
 
     const renderBannerItem = useCallback(({ item }: { item: (typeof bannerData)[0] }) => (
         <CarouselBannerItem
@@ -211,9 +194,9 @@ export default function ExploreClientScreen() {
             badgeText={item.badgeText}
             backgroundColorStart={item.backgroundColorStart}
             backgroundColorEnd={item.backgroundColorEnd}
-            onPress={handleBannerPress} // Usa o handler memoizado
+            onPress={handleBannerPress} 
         />
-    ), [handleBannerPress]); // Adiciona handleBannerPress como dependência do useCallback para renderBannerItem
+    ), [handleBannerPress]); 
 
     const renderPagination = useCallback(() => (
         <View style={styles.pagination}>
@@ -227,7 +210,7 @@ export default function ExploreClientScreen() {
                 />
             ))}
         </View>
-    ), [currentIndex]); // Depende de currentIndex para atualizar a bolinha ativa
+    ), [currentIndex]); 
 
     if (loading) {
         return (
@@ -267,9 +250,6 @@ export default function ExploreClientScreen() {
                         />
                     </Animated.View>
 
-                    {/* Barra de Busca Animada e Estilizada - REMOVIDA */}
-                    {/* ... */}
-
                     {/* Categorias de Serviço Animadas */}
                     <Animated.View style={{ opacity: categoriesAnim, transform: [{ translateY: categoriesAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
                         <SecaoContainer
@@ -290,7 +270,7 @@ export default function ExploreClientScreen() {
                         />
                     </Animated.View>
 
-                    {/* Novo Carrossel de Banners (substitui o antigo BannerOferta) */}
+                    {/* Novo Carrossel de Banners */}
                     <Animated.View style={[styles.carouselContainer, { opacity: bannerAnim, transform: [{ translateY: bannerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
                         <FlatList
                             ref={flatListRef}
@@ -300,9 +280,9 @@ export default function ExploreClientScreen() {
                             horizontal
                             pagingEnabled
                             showsHorizontalScrollIndicator={false}
-                            onViewableItemsChanged={onViewableItemsChanged} // Usa a função memoizada
-                            viewabilityConfig={viewabilityConfig} // Usa a configuração memoizada
-                            snapToInterval={300 + 20} // Largura do item (300) + margem horizontal total (10*2 = 20)
+                            onViewableItemsChanged={onViewableItemsChanged} 
+                            viewabilityConfig={viewabilityConfig} // CORREÇÃO: Acessar .current da ref
+                            snapToInterval={300 + 20} 
                             decelerationRate="fast"
                         />
                         {renderPagination()}
@@ -317,19 +297,13 @@ export default function ExploreClientScreen() {
                             data={safeRecommendations}
                             renderItem={({ item }) => {
                                 if (!item || !item.fullName) return null;
+
+                                // CORREÇÃO: Passar o item original para RecomendacaoCard
+                                // RecomendacaoCard deve ser responsável por mapear/calcular as propriedades que precisa
                                 return (
                                     <RecomendacaoCard
                                         key={item.id}
-                                        item={{
-                                          ...item,
-                                          // Garantir que dados do service-details sejam renderizados
-                                          profilePhoto: item.avatarUrl || item.profilePhoto,
-                                          description: item.bio || item.description,
-                                          yearsOfExperience: item.yearsOfExperience,
-                                          basePrice: item.basePrice,
-                                          serviceTypes: item.specialties || [],
-                                          // NÃO incluir pixKey por segurança
-                                        }}
+                                        item={item} // Passa o item original (ProviderDisplayInfo)
                                     />
                                 );
                             }}
@@ -428,5 +402,4 @@ const styles = StyleSheet.create({
     paginationDotInactive: {
         backgroundColor: '#ddd',
     },
-    // Removidos estilos relacionados à searchBarContainer, searchBar, searchIcon, searchInput, filterButton
 });

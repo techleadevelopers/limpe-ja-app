@@ -3,7 +3,7 @@ import axios, { AxiosResponse } from 'axios';
 import api from './api';
 
 // Importar DTOs e tipos de chat
-import { ChatDetails, GetMessagesQuery, Message, SendMessageDto } from '../app/types/backend/chat';
+import { ChatDetails, GetMessagesQuery, Message, SendMessageDto } from '../types/backend/chat';
 
 // Interface para um item de conversa (para o frontend)
 export interface ConversationItem {

@@ -2,7 +2,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Text, View } from 'react-native';
-import { styles } from '../../../../styles/providerStyles'; // Importa os estilos
+import { styles } from '../../../../app/(client)/explore/styles/providerStyles'; // Importa os estilos
 
 interface InfoChipProps {
   iconName: keyof typeof Ionicons.glyphMap; // Para garantir que é um nome de ícone válido

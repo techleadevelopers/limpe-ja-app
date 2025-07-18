@@ -1,17 +1,17 @@
 // LimpeJaApp/app/_layout.tsx
+import { Slot, SplashScreen, usePathname, useRouter, useSegments } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import 'react-native-reanimated'; 
-import { Slot, SplashScreen, useRouter, usePathname, useSegments } from 'expo-router';
-import { AuthProvider, useAuth } from '../contexts/AuthContext'; 
-import { AppProvider } from '../contexts/AppContext'; 
-import { ActivityIndicator, View, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import 'react-native-reanimated';
+import { AppProvider } from '../contexts/AppContext';
+import { AuthProvider, useAuth } from '../contexts/AuthContext';
 
 // NOVO: Importa o arquivo de configuração do Firebase e a Promise de inicialização
 import { firebaseInitializationPromise } from '../config/firebaseClient'; // <--- IMPORTAÇÃO CRÍTICA AQUI
 
-import { UserRole, VerificationStatus } from './types/backend/auth'; 
-import { AUTH_ROUTES, CLIENT_ROUTES, PROVIDER_ROUTES } from '../constants/routes'; 
-import { ProviderRegistrationProvider, useProviderRegistration } from '../contexts/ProviderRegistrationContext'; 
+import { AUTH_ROUTES, CLIENT_ROUTES, PROVIDER_ROUTES } from '../constants/routes';
+import { ProviderRegistrationProvider, useProviderRegistration } from '../contexts/ProviderRegistrationContext';
+import { UserRole, VerificationStatus } from '../types/backend/auth';
 
 SplashScreen.preventAutoHideAsync();
 

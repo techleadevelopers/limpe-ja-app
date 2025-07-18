@@ -1,11 +1,10 @@
 // app/(provider)/verify-account/facial-recognition.tsx
-import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Animated, Image, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
-import verificationService from '../../../services/verificationService';
+import * as ImagePicker from 'expo-image-picker';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Animated, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import verificationService from '../../../../services/verificationService';
 
 // Importações das novas imagens
 

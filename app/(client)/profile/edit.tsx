@@ -1,32 +1,31 @@
 // LimpeJaApp/app/(client)/profile/edit.tsx
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  Alert as ReactNativeAlert,
-  TouchableOpacity,
-  ScrollView,
-  Image,
-  ActivityIndicator,
-  Platform,
-  Animated,
-  KeyboardAvoidingView,
-} from 'react-native';
-import { Stack, useRouter } from 'expo-router';
-import { useAuth } from '../../../hooks/useAuth';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { Stack, useRouter } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    Animated,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    Alert as ReactNativeAlert,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+import { useAuth } from '../../../hooks/useAuth';
 
 // <--- CORREÇÕES: Importações de serviços e tipagens
-import { updateClientProfile } from '../../../app/services/clientService'; // Apenas a função
-import { UserProfile } from '../../types/backend/users'; // UserProfile vem de users.ts
-import { BookingAddress } from '../../types/backend/bookings'; // BookingAddress vem de bookings.ts (usado para o endereço do usuário)
-import { UpdateClientProfileDto } from '../../types/backend/clients'; // <--- CORREÇÃO: Importa UpdateClientProfileDto do caminho correto
+import { updateClientProfile } from '../../../services/clientService'; // Apenas a função
+import { BookingAddress } from '../../../types/backend/bookings'; // BookingAddress vem de bookings.ts (usado para o endereço do usuário)
+import { UpdateClientProfileDto } from '../../../types/backend/clients'; // <--- CORREÇÃO: Importa UpdateClientProfileDto do caminho correto
 
 // <--- CORREÇÕES: Importar funções utilitárias
-import { formatDate, isValidPhoneNumber, formatPhoneNumber } from '../../../utils/helpers'; // Importar formatDate e outras utils
+import { formatPhoneNumber, isValidPhoneNumber } from '../../../utils/helpers'; // Importar formatDate e outras utils
 
 // Componente para exibir mensagens de erro inline com animação
 const AnimatedErrorMessage: React.FC<{ message: string | null }> = ({ message }) => {

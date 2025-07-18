@@ -15,11 +15,11 @@ import SecurityInfoSection from '../success/SecurityInfoSection';
 import SuccessPixInfo from '../success/SuccessPixInfo';
 
 // Importar tipos
-import { BookingDetails } from '../../../../app/types/backend/bookings';
+import { BookingDetails } from '../../../../types/backend/bookings';
 // NOVO: Importar PixChargeResponseDto
 import Toast from 'react-native-toast-message';
+import { PixChargeResponseDto } from '../../../../types/backend/payments';
 import { formatCurrency, formatDate } from '../../../../utils/helpers';
-import { PixChargeResponseDto } from '../../../../app/types/backend/payments';
 
 interface BookingSummaryCardProps {
   booking: BookingDetails;

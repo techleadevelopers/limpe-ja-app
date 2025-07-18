@@ -1,33 +1,33 @@
 // LimpeJaApp/app/(auth)/provider-register/index.tsx
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  ActivityIndicator,
-  Alert,
-  TouchableOpacity,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  Image,
-  Animated,
-  StatusBar,
-} from 'react-native';
-import { Link, useRouter, Stack } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { Stack, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 // CORREÇÃO: Importar useAuth do caminho correto (contexts/AuthContext)
+import { PROVIDER_ROUTES } from '../../../constants/routes';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useProviderRegistration } from '../../../contexts/ProviderRegistrationContext';
-import { AUTH_ROUTES, PROVIDER_ROUTES } from '../../../constants/routes';
-import { RegisterProviderDto } from '../../types/backend/auth'; // Importar RegisterProviderDto
+import { RegisterProviderDto } from '../../../types/backend/auth'; // Importar RegisterProviderDto
 
 const LOGO_IMAGE = require('../../../assets/images/logo2.png');
 
 // CORREÇÃO: Importar AnimatedErrorMessage como exportação nomeada
-import { AnimatedErrorMessage } from '../components/AnimatedErrorMessage';
+import { AnimatedErrorMessage } from '../../../components/auth/components/AnimatedErrorMessage';
 
 
 const ErrorMessage: React.FC<{ message: string | null }> = ({ message }) => {

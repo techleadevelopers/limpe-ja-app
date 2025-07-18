@@ -6,17 +6,17 @@ import api from './api'; // Importa a instância centralizada do Axios
 // IMPORTAÇÕES DE INTERFACES DE TIPAGEM CENTRALIZADAS
 // =========================================================================
 import {
-  CreateProviderServiceData,
-  ProviderAvailability,
-  ProviderDashboard,
-  ProviderDisplayInfo, // Usado para tipar provedores em listas
-  ProviderSearchQuery,
-  ProviderServiceOffering,
-  ProviderTransaction,
-  UpdateAvailabilityData, // Importado para tipar a query de busca
-  UpdateProviderProfileData,
-  UpdateProviderServiceData
-} from '../app/types/backend/providers';
+    CreateProviderServiceData,
+    ProviderAvailability,
+    ProviderDashboard,
+    ProviderDisplayInfo, // Usado para tipar provedores em listas
+    ProviderSearchQuery,
+    ProviderServiceOffering,
+    ProviderTransaction,
+    UpdateAvailabilityData, // Importado para tipar a query de busca
+    UpdateProviderProfileData,
+    UpdateProviderServiceData
+} from '../types/backend/providers';
 
 // <<<< ATUALIZADO: Interface para o novo tipo de retorno de getProviderAvailability >>>>
 // Esta interface deve corresponder exatamente ao que o backend retorna para este endpoint.

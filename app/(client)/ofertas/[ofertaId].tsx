@@ -1,23 +1,22 @@
 // LimpeJaApp/app/(client)/ofertas/[ofertaId].tsx
-import React, { useEffect, useState, useRef, useCallback } from 'react'; // Adicionado useCallback
-import {
-  View,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-  Image,
-  ScrollView,
-  Animated,
-  TouchableOpacity,
-  Platform,
-  Alert, // Importar Alert
-} from 'react-native';
-import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react'; // Adicionado useCallback
+import {
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
+} from 'react-native';
 
 // <--- ADICIONADO: Importar o serviço de ofertas e sua tipagem
-import { getOfferDetails } from '../../services/offerService'; // Importa a função getOfferDetails
-import { Offer } from '../../types/backend/offers'; // Importa a interface Offer
+import { getOfferDetails } from '../../../services/offerService'; // Importa a função getOfferDetails
+import { Offer } from '../../../types/backend/offers'; // Importa a interface Offer
 import { formatDate } from '../../../utils/helpers'; // Para formatar datas
 
 // REMOVIDO: interface OfferDetails local

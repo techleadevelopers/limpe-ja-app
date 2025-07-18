@@ -1,53 +1,44 @@
 // LimpeJaApp/app/(client)/schedule-service.tsx
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import {
-    View,
-    Text,
-    StyleSheet,
-    TouchableOpacity,
-    ScrollView,
-    Platform,
-    Alert,
-    Image,
-    Dimensions,
-    ActivityIndicator,
-    FlatList,
-    Animated,
-    Easing,
-    TextInput
-} from 'react-native';
-import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import Clipboard from 'expo-clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Dimensions,
+    Easing,
+    Platform,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
+} from 'react-native';
 
 // --- IMPORTAÇÕES DE SERVIÇOS E TIPAGENS DO SEU BACKEND REAL ---
 // IMPORTANTE: Substitua os mocks pelas importações reais dos seus serviços
-import { getProviderAvailability, getProviderDetails } from '../../services/providerService';
-import { createBooking } from '../../services/bookingService';
-import { getUserProfile } from '../../services/clientService'; // Para obter o endereço do cliente
 import { useAuth } from '../../../hooks/useAuth'; // Para obter dados do usuário logado
+import { createBooking } from '../../../services/bookingService';
+import { getProviderAvailability, getProviderDetails } from '../../../services/providerService';
 
 // Tipagens do seu backend original
+import { BookingAddress, BookingDetails, CreateBookingDto } from '../../../types/backend/bookings';
 import {
-    ProviderDisplayInfo,
     ProviderAvailability,
-    ProviderServiceOffering,
-    ServiceDetailsDto,
-    VerificationStatus,
-} from '../../types/backend/providers';
-import { CreateBookingDto, BookingAddress, BookingDetails } from '../../types/backend/bookings';
-import { UserProfile } from '../../types/backend/users'; // Importa UserProfile
+    ProviderDisplayInfo,
+    ProviderServiceOffering
+} from '../../../types/backend/providers';
 
 // Importar formatDate de utils/helpers
-import { formatDate } from '../../../utils/helpers';
 
 // --- Importar COMPONENTES DE UI ---
-import CalendarHeader from './components/schedule/CalendarHeader';
-import TimeSlotsSection from './components/schedule/TimeSlotsSection';
-import ProviderBrief from './components/schedule/ProviderBrief';
-import AddressSection from './components/schedule/AddressSection';
+import AddressSection from '../../../components/client/booking/schedule/AddressSection';
+import CalendarHeader from '../../../components/client/booking/schedule/CalendarHeader';
+import ProviderBrief from '../../../components/client/booking/schedule/ProviderBrief';
+import TimeSlotsSection from '../../../components/client/booking/schedule/TimeSlotsSection';
 
 // --- Constantes para a UI ---
 const SCREEN_WIDTH = Dimensions.get('window').width;

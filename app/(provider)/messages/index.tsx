@@ -1,22 +1,22 @@
 // LimpeJaApp/app/(provider)/messages/index.tsx
-import React, { useState, useEffect, useRef } from 'react';
-import {
-    View,
-    Text,
-    FlatList,
-    StyleSheet,
-    ActivityIndicator,
-    TouchableOpacity,
-    Animated,
-    Platform,
-    Image,
-    Alert,
-} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    Animated,
+    FlatList,
+    Image,
+    Platform,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 import { useAuth } from '../../../hooks/useAuth'; // Para obter o ID do usuário
-import { getChatListForUser } from '../../services/chatService'; // Reutiliza a função de listar conversas
+import { getChatListForUser } from '../../../services/chatService'; // Reutiliza a função de listar conversas
 
 // Interface para um item de conversa
 interface ConversationItem {

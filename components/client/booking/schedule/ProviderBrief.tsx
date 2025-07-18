@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import React, { useCallback } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 // Importar VerificationStatus para ter certeza
-import { VerificationStatus } from '../../../../app/types/backend/providers';
+import { VerificationStatus } from '../../../../types/backend/providers';
 
 // A interface ProviderDetails deve espelhar a ProviderDisplayInfo
 interface ProviderDetails {

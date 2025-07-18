@@ -5,14 +5,14 @@ import api from './api'; // Importa a instância centralizada do Axios
 // =========================================================================
 // IMPORTAÇÕES DE INTERFACES DE TIPAGEM CENTRALIZADAS
 // =========================================================================
-import { UpdateClientProfileDto } from '../app/types/backend/clients';
-import { Offer } from '../app/types/backend/offers';
+import { UpdateClientProfileDto } from '../types/backend/clients';
+import { Offer } from '../types/backend/offers';
 import {
-  ProviderDisplayInfo, // Usado para tipar provedores em listas
-  ProviderSearchQuery, // Importado para tipar a query de busca
-} from '../app/types/backend/providers';
-import { Service } from '../app/types/backend/services';
-import { UserProfile } from '../app/types/backend/users';
+    ProviderDisplayInfo, // Usado para tipar provedores em listas
+    ProviderSearchQuery, // Importado para tipar a query de busca
+} from '../types/backend/providers';
+import { Service } from '../types/backend/services';
+import { UserProfile } from '../types/backend/users';
 
 // =========================================================================
 // FUNÇÕES DE SERVIÇO DO CLIENTE - AJUSTADAS PARA USAR A INSTÂNCIA 'api' CENTRALIZADA

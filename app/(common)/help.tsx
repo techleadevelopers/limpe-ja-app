@@ -1,23 +1,23 @@
 // LimpeJaApp/app/(common)/help.tsx
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import {
-    View,
-    Text,
-    StyleSheet,
-    Linking,
-    ScrollView,
-    TouchableOpacity,
-    TextInput,
-    Platform,
-    Animated, // Importar Animated para animações
-    Alert,
-    ActivityIndicator, // Importar ActivityIndicator
-} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+    ActivityIndicator, // Importar Animated para animações
+    Alert,
+    Animated,
+    Linking,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 // Importar o serviço de FAQ
-import { getFaqs } from '../services/faqService'; // Importa a função getFaqs
+import { getFaqs } from '../../services/faqService'; // Importa a função getFaqs
 
 // Interface FAQItem - MANTIDA AQUI (se o backend não tiver um DTO específico)
 interface FAQItem {

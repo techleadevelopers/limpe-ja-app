@@ -1,19 +1,18 @@
 // LimpeJaApp/app/(auth)/test-connection.tsx
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, Button, ScrollView, StyleSheet, Alert } from 'react-native';
-import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Alert, Button, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 // Importe os DTOs do seu caminho correto
 import {
-  LoginDto,
-  RegisterClientDto,
-  RegisterProviderDto,
-  ForgotPasswordDto,
-  AuthResponseDto,
-  MessageResponseDto,
-} from '../types/backend/auth'; // Ajuste o caminho se necessário
+    AuthResponseDto,
+    ForgotPasswordDto,
+    LoginDto,
+    RegisterClientDto,
+    RegisterProviderDto
+} from '../../types/backend/auth'; // Ajuste o caminho se necessário
 
 // Acessa a variável de ambiente configurada no .env
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;

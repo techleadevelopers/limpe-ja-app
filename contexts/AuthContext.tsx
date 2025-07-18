@@ -1,10 +1,9 @@
 // LimpeJaApp/contexts/AuthContext.tsx
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import authService from '../app/services/authService'; // Mantém a importação como está
+import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { UserProfile } from '../../app/types/backend/users'; // Caminho para UserProfile
-import { UserRole, RegisterClientDto, RegisterProviderDto } from '../app/types/backend/auth'; 
+import authService from '../services/authService'; // Mantém a importação como está
+import { RegisterClientDto, RegisterProviderDto, UserRole } from '../types/backend/auth';
 
 interface AuthContextType {
   user: UserProfile | null;

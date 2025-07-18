@@ -5,7 +5,7 @@ import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 // Importa a interface PixChargeResponseDto do seu arquivo de tipagens centralizado
 // Isso garante que a tipagem seja consistente em todo o aplicativo
-import { PixChargeResponseDto as GlobalPixChargeResponseDto } from '../../../../app/types/backend/payments';
+import { PixChargeResponseDto as GlobalPixChargeResponseDto } from '../../../../types/backend/payments';
 
 // A interface para as props do componente PixPaymentDetails
 interface PixPaymentDetailsProps {

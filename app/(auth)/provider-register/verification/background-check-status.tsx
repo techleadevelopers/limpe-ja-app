@@ -1,12 +1,9 @@
 // app/(auth)/provider-register/background-check-status.tsx
-import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, ActivityIndicator, TouchableOpacity, Animated, Platform } from 'react-native'; // // Added Platform
 import { Ionicons } from '@expo/vector-icons'; //
-import { LinearGradient } from 'expo-linear-gradient'; //
-import { useAuth } from '../../../../hooks/useAuth'; //
-import verificationService from '../../../services/verificationService'; //
-import ToastMessage from '../../../../components/ui/ToastMessage'; //
 import * as Haptics from 'expo-haptics'; //
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Animated, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'; // // Added Platform
+import verificationService from '../../../../services/verificationService'; //
 
 // Paleta de cores (repetida para clareza, em um projeto real viria de Colors.ts)
 const Colors = {

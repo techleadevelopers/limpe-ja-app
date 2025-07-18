@@ -1,8 +1,7 @@
 // LimpeJaApp/contexts/ProviderRegistrationContext.tsx
-import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
-import { Alert } from 'react-native';
+import React, { createContext, ReactNode, useCallback, useContext, useState } from 'react';
 // import { useAuth } from '../hooks/useAuth'; // REMOVIDO: Não desestruturar useAuth aqui
-import { RegisterProviderDto, CreateAddressDto } from '../app/types/backend/auth'; // CORRIGIDO: Caminho para auth.ts
+import { CreateAddressDto, RegisterProviderDto } from '../types/backend/auth'; // CORRIGIDO: Caminho para auth.ts
 // import { UserProfile } from '../app/types/backend/users'; // REMOVIDO: UserProfile não é usado diretamente aqui
 // import * as providerService from '../app/services/providerService'; // Exemplo: serviço para atualizar o provedor
 

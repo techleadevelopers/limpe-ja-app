@@ -11,7 +11,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { BookingAddress } from '../../../../app/types/backend/bookings';
+import { BookingAddress } from '../../../../types/backend/bookings';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 

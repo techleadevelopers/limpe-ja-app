@@ -2,32 +2,31 @@
 // Este arquivo não precisa de alterações diretas para a correção do AsyncStorage,
 // pois a lógica de armazenamento do token está encapsulada no useAuth hook.
 
-import React, { useState, useRef, useEffect } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { Stack, useRouter } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-    View,
-    Text,
-    TextInput,
-    StyleSheet,
     ActivityIndicator,
-    Alert,
-    TouchableOpacity,
-    ScrollView,
+    Animated,
+    Image,
     KeyboardAvoidingView,
     Platform,
-    Image,
-    Animated,
+    ScrollView,
     StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
-import { Link, useRouter, Stack } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext'; // Importar useAuth do AuthContext
-import { RegisterClientDto, CreateAddressDto } from '../types/backend/auth'; // Importar DTOs
+import { CreateAddressDto, RegisterClientDto } from '../../types/backend/auth'; // Importar DTOs
 
 // ATENÇÃO: Substitua pelo caminho correto do seu logo em formato "V" ou "FV" azul
 const LOGO_IMAGE = require('../../assets/images/logo2.png'); // << CONFIRMADO: Este é o caminho que você deseja
 
 // CORREÇÃO: Importar AnimatedErrorMessage como exportação nomeada
-import { AnimatedErrorMessage } from './components/AnimatedErrorMessage';
+import { AnimatedErrorMessage } from '../../components/auth/components/AnimatedErrorMessage';
 
 
 // Simulação da API ViaCEP (Adicionado para auto-preenchimento de CEP)

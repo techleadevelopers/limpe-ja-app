@@ -1,30 +1,29 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-  TouchableOpacity,
-  Animated,
-  ScrollView,
-  RefreshControl,
-  Platform,
-  Alert,
-} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useAuth } from '../../hooks/useAuth';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Platform,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
-import { getMyProviderDashboard } from '../services/providerService';
-import { getMyProviderEarnings } from '../services/earningService';
-import { requestWithdrawal } from '../services/paymentService';
+import { getMyProviderEarnings } from '../../services/earningService';
+import { requestWithdrawal } from '../../services/paymentService';
+import { getMyProviderDashboard } from '../../services/providerService';
 
-import { ProviderDashboard, ProviderTransaction, EarningsResponseDto } from '../types/backend/providers';
+import { EarningsResponseDto, ProviderDashboard, ProviderTransaction } from '../../types/backend/providers';
 
-import EarningsSummaryCard from './components/earnings/EarningsSummaryCard';
-import EarningsChartSection from './components/earnings/EarningsChartSection';
-import RecentTransactionsSection from './components/earnings/RecentTransactionsSection';
-import MainEarningsChartSection from './components/dashboard/MainEarningsChartSection';
+import MainEarningsChartSection from '../../components/provider/dashboard/MainEarningsChartSection';
+import EarningsChartSection from '../../components/provider/earnings/EarningsChartSection';
+import EarningsSummaryCard from '../../components/provider/earnings/EarningsSummaryCard';
+import RecentTransactionsSection from '../../components/provider/earnings/RecentTransactionsSection';
 
 const WHITE = '#FFFFFF';
 const BACKGROUND_ALT = '#F8F9FD';

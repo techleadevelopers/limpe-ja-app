@@ -7,7 +7,7 @@ import { Animated, FlatList, Platform, StyleSheet, Text, TouchableOpacity, View 
 // Importa o componente AnimatedTransactionItem
 import AnimatedTransactionItem from './AnimatedTransactionItem'; // Este arquivo precisa ser ajustado
 // Importa a tipagem de transação do provedor e TransactionType
-import { ProviderTransaction } from '../../../app/types/backend/providers'; // CORRIGIDO: Importa TransactionType
+import { ProviderTransaction } from '../../../types/backend/providers'; // CORRIGIDO: Importa TransactionType
 
 // --- DEFINIÇÕES DE CORES (ALINHADAS COM O TEMA GERAL) ---
 const WHITE = '#FFFFFF';

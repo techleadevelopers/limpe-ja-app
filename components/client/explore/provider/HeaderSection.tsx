@@ -1,11 +1,11 @@
 // app/(client)/explore/components/provider/HeaderSection.tsx
-import React from 'react';
-import { View, Text, ImageBackground, TouchableOpacity, Platform, Dimensions, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import React from 'react';
+import { ImageBackground, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 // Importa os estilos do arquivo externo.
 // É CRUCIAL que este import esteja correto e que o arquivo exista.
-import { styles } from '../../../../styles/providerStyles'; 
+import { styles } from '../../../../app/(client)/explore/styles/providerStyles';
 
 // Definindo a interface ProviderDetails para espelhar a ProviderDetailsDto do backend
 // Ajuste conforme a estrutura real do seu DTO de provedor.

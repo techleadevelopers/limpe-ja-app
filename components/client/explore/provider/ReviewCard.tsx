@@ -1,9 +1,9 @@
 // components/ReviewCard.tsx
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { Image, Text, View, StyleSheet } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 // IMPORTAR A INTERFACE CORRETA DO SEU ARQUIVO DE TIPOS GLOBAIS
-import { ProviderReview } from '../../../../app/types/backend/providers'; // <--- CORREÇÃO: Importação correta da interface
+import { ProviderReview } from '../../../../types/backend/providers'; // <--- CORREÇÃO: Importação correta da interface
 import StarRating from './StarRating'; // Importa o componente StarRating
 
 // NÃO PRECISA MAIS DE ReviewEntity AQUI, APENAS A INTERFACE PARA AS PROPS

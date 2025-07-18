@@ -9,10 +9,10 @@ import api from './api'; // Se o seu 'api.ts' exporta 'export const api = axios.
 
 // CORREÇÃO: As tipagens estão em '../types/backend/providers.ts'
 import {
-  EarningsResponseDto,
-  WithdrawalRequestDto,
-  WithdrawalResponseDto,
-} from '../app/types/backend/providers';
+    EarningsResponseDto,
+    WithdrawalRequestDto,
+    WithdrawalResponseDto,
+} from '../types/backend/providers';
 
 /**
  * Busca todos os dados de ganhos do provedor logado.

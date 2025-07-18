@@ -1,28 +1,28 @@
 // LimpeJaApp/app/(common)/notifications.tsx
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import {
-    View,
-    Text,
-    StyleSheet,
-    FlatList,
-    ActivityIndicator,
-    TouchableOpacity,
-    Platform,
-    Alert, // Para o botão de marcar todas como lidas
-    Animated, // Importar Animated para animações
-    RefreshControl, // Adicionado para pull-to-refresh
-} from 'react-native';
-import { Stack, useRouter, Link } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'; // Importa ambos explicitamente
+import { Stack, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert, // Para o botão de marcar todas como lidas
+    Animated,
+    FlatList,
+    Platform, // Importar Animated para animações
+    RefreshControl,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import { useAuth } from '../../hooks/useAuth';
 
 // <--- ADICIONADO: Importar serviços e tipagens reais
 import {
     getNotifications,
-    markNotificationAsRead,
     markAllNotificationsAsRead,
-} from '../services/notificationService';
-import { NotificationEntity } from '../types/backend/notifications';
+    markNotificationAsRead,
+} from '../../services/notificationService';
+import { NotificationEntity } from '../../types/backend/notifications';
 
 // Helper simples para formatar timestamp de forma relativa ou absoluta
 const formatNotificationTimestamp = (isoTimestamp: string): string => {

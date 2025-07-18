@@ -1,16 +1,16 @@
 // components/OverviewContent.tsx
-import React from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import React from 'react';
+import { Text, TouchableOpacity, View } from 'react-native';
 // IMPORTAÇÃO CORRIGIDA AQUI:
-import { styles } from '../../../../styles/providerStyles'; 
+import { styles } from '../../../../app/(client)/explore/styles/providerStyles';
 // CORREÇÃO: Importa os tipos corretos diretamente
-import { ProviderDisplayInfo, ProviderReview } from '../../../../app/types/backend/providers'; 
+import { ProviderDisplayInfo, ProviderReview } from '../../../../types/backend/providers';
 
-import StarRating from './StarRating';
-import InfoChip from './InfoChip';
 import ActionButtons from './ActionButtons';
+import InfoChip from './InfoChip';
 import ReviewCard from './ReviewCard';
+import StarRating from './StarRating';
 
 interface OverviewContentProps {
   provider: ProviderDisplayInfo; // CORREÇÃO: Tipo para ProviderDisplayInfo
