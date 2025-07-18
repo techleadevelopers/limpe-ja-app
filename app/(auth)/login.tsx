@@ -16,14 +16,19 @@ import {
     Dimensions,
 } from 'react-native';
 import { Link, useRouter, Stack } from 'expo-router';
-import { useAuth } from '../../contexts/AuthContext'; // Assumindo que useAuth está em ../../contexts/AuthContext
-import { Ionicons } from '@expo/vector-icons';
-import { UserRole } from '../types/backend/auth'; // Assumindo este caminho
-import { LinearGradient } from 'expo-linear-gradient';
-// CORREÇÃO: Importação padrão para 'api'
-import api from '../services/api'; // Importa a instância da API
+// REMOVIDO: import auth from '@react-native-firebase/auth'; // Não usaremos mais a API namespaced diretamente
+// NOVO: Importa getAuth e signInWithPhoneNumber da API modular do Firebase Auth
+import { getAuth, signInWithPhoneNumber } from 'firebase/auth'; // API Modular para Web e Nativo
+// Importa a instância do authClient do firebaseClient.ts (se precisar para getAuth(app) em algum caso)
+// import { authClient } from '../config/firebaseClient'; // Não precisaremos mais de authClient aqui diretamente
 
-// Importações do Reanimated para as novas animações
+import { useAuth } from '../../contexts/AuthContext'; 
+import { Ionicons } from '@expo/vector-icons';
+import { UserRole } from '../types/backend/auth'; 
+import { LinearGradient } from 'expo-linear-gradient';
+import api from '../services/api'; 
+
+// Importações do Reanimated (mantidas)
 import AnimatedReanimated, {
     useSharedValue,
     useAnimatedStyle,
@@ -36,51 +41,35 @@ import AnimatedReanimated, {
 
 const LOGO_IMAGE = require('../../assets/images/logo2.png');
 
-// Constantes para animações e layout
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
-// Componente AnimatedErrorMessage (mantido como estava, mas pode ser movido para um arquivo separado)
-// CORREÇÃO: Importação nomeada de AnimatedErrorMessage
-import { AnimatedErrorMessage } from './components/AnimatedErrorMessage';
-
-// Novo componente InputWithIcon (criado para este arquivo, pode ser movido para um arquivo separado)
-// CORREÇÃO: Importação nomeada de InputWithIcon
-import { InputWithIcon } from './components/InputWithIcon';
+import { AnimatedErrorMessage } from './components/AnimatedErrorMessage'; 
+import { InputWithIcon } from './components/InputWithIcon'; 
 
 
 export default function LoginScreen() {
-    // Novos estados para o fluxo OTP (mantidos)
     const [phoneNumber, setPhoneNumber] = useState('');
     const [otpCode, setOtpCode] = useState('');
-    const [otpStep, setOtpStep] = useState<'phone' | 'otp'>('phone'); // Controla o passo no fluxo OTP
-    const [otpLoading, setOtpLoading] = useState(false); // Para as operações de OTP
-    const [otpErrorMessage, setOtpErrorMessage] = useState<string | null>(null); // Para erros específicos do OTP
-    const [timer, setTimer] = useState(0); // Timer para reenviar OTP
+    const [confirmationResult, setConfirmationResult] = useState<any>(null); 
+    const [otpStep, setOtpStep] = useState<'phone' | 'otp'>('phone'); 
+    const [otpLoading, setOtpLoading] = useState(false); 
+    const [otpErrorMessage, setOtpErrorMessage] = useState<string | null>(null); 
+    const [timer, setTimer] = useState(0); 
 
-    const { login, isAuthenticated, isLoading: authIsLoading, user } = useAuth();
+    const { loginWithFirebaseIdToken, isAuthenticated, isLoading: authIsLoading, user } = useAuth(); 
     const router = useRouter();
 
     const mainElementsOpacity = useRef(new Animated.Value(0)).current;
     const mainElementsTranslateY = useRef(new Animated.Value(18)).current;
 
-    // Valores compartilhados para as animações da logo (Reanimated)
     const logoRotateY = useSharedValue(0);
     const logoPulseScale = useSharedValue(1);
 
     useEffect(() => {
         const startLogoLoopAnimations = () => {
-            logoRotateY.value = withRepeat(
-                withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
-                -1,
-                true
-            );
-
-            logoPulseScale.value = withRepeat(
-                withTiming(1.02, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
-                -1,
-                true
-            );
+            logoRotateY.value = withRepeat(withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.ease) }), -1, true);
+            logoPulseScale.value = withRepeat(withTiming(1.02, { duration: 1500, easing: Easing.inOut(Easing.ease) }), -1, true);
         };
 
         if (!authIsLoading && isAuthenticated) {
@@ -88,18 +77,8 @@ export default function LoginScreen() {
             router.replace(targetRoute as any);
         } else if (!isAuthenticated) {
             Animated.parallel([
-                Animated.timing(mainElementsOpacity, {
-                    toValue: 1,
-                    duration: 700,
-                    delay: 200,
-                    useNativeDriver: true
-                }),
-                Animated.timing(mainElementsTranslateY, {
-                    toValue: 0,
-                    duration: 700,
-                    delay: 200,
-                    useNativeDriver: true
-                })
+                Animated.timing(mainElementsOpacity, { toValue: 1, duration: 700, delay: 200, useNativeDriver: true }),
+                Animated.timing(mainElementsTranslateY, { toValue: 0, duration: 700, delay: 200, useNativeDriver: true })
             ]).start(() => {
                 startLogoLoopAnimations();
             });
@@ -107,15 +86,14 @@ export default function LoginScreen() {
     }, [isAuthenticated, authIsLoading, user, router, logoRotateY, logoPulseScale, mainElementsOpacity, mainElementsTranslateY]);
 
     const createButtonAnimations = () => {
-        const scaleAnimButton = useRef(new Animated.Value(1)).current;
-        const onPressIn = () => Animated.spring(scaleAnimButton, { toValue: 0.97, useNativeDriver: true, friction: 7 }).start();
-        const onPressOut = () => Animated.spring(scaleAnimButton, { toValue: 1, useNativeDriver: true, friction: 7 }).start();
-        return { scaleAnim: scaleAnimButton, onPressIn, onPressOut };
+        const scaleAnim = useRef(new Animated.Value(1)).current;
+        const onPressIn = () => Animated.spring(scaleAnim, { toValue: 0.97, useNativeDriver: true, friction: 7 }).start();
+        const onPressOut = () => Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, friction: 7 }).start();
+        return { scaleAnim, onPressIn, onPressOut };
     };
 
     const signInButtonAnims = createButtonAnimations();
 
-    // Estilo animado para a logo principal (Reanimated)
     const animatedLogoStyle = useAnimatedStyle(() => {
         const rotation = interpolate(
             logoRotateY.value,
@@ -123,7 +101,6 @@ export default function LoginScreen() {
             [-5, 0, 5],
             Extrapolate.CLAMP
         );
-
         return {
             transform: [
                 { scale: logoPulseScale.value },
@@ -132,24 +109,11 @@ export default function LoginScreen() {
         };
     });
 
-    // --- FUNÇÕES OTP INICIAM AQUI (mantidas e ajustadas) ---
-
-    const formatPhoneNumber = (value: string) => {
-        const cleaned = value.replace(/\D/g, '');
-
-        if (cleaned.length <= 2) {
-            return `(${cleaned}`;
-        } else if (cleaned.length <= 7) {
-            return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
-        } else if (cleaned.length <= 11) {
-            return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
-        } else {
-            return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 11)}`;
-        }
-    };
-
+    // --- FUNÇÃO handlePhoneSubmit (AGORA USA FIREBASE AUTH ESPECÍFICO PARA PLATAFORMA) ---
     const handlePhoneSubmit = async () => {
         const cleanPhone = phoneNumber.replace(/\D/g, '');
+        const fullPhoneNumber = `+55${cleanPhone}`; 
+
         if (!cleanPhone || cleanPhone.length < 11) {
             setOtpErrorMessage('Por favor, insira um número de telefone válido (DDD + 9 dígitos).');
             return;
@@ -159,41 +123,54 @@ export default function LoginScreen() {
         setOtpErrorMessage(null);
 
         try {
-            // Chamada real para o backend para enviar o SMS
-            // Ajuste o endpoint '/auth/send-otp' conforme a sua API
-            const response = await api.post('/auth/send-otp', { phone: cleanPhone });
+            // CORREÇÃO: Usar getAuth() e signInWithPhoneNumber da API modular
+            const authInstance = getAuth(); // Obtém a instância de autenticação do Firebase
+            const confirmation = await signInWithPhoneNumber(authInstance, fullPhoneNumber); 
+            
+            setConfirmationResult(confirmation); 
+            setOtpStep('otp'); 
+            setTimer(60); 
 
-            if (response.status === 200) { // Ou outro status de sucesso que sua API retorne
-                setOtpStep('otp');
-                setTimer(60); // Inicia o timer para reenviar
+            const interval = setInterval(() => {
+                setTimer(prev => {
+                    if (prev <= 1) {
+                        clearInterval(interval);
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
 
-                // Countdown timer
-                const interval = setInterval(() => {
-                    setTimer(prev => {
-                        if (prev <= 1) {
-                            clearInterval(interval);
-                            return 0;
-                        }
-                        return prev - 1;
-                    });
-                }, 1000);
-
-                Alert.alert('SMS Enviado', `Código de verificação enviado para ${phoneNumber}`);
-            } else {
-                setOtpErrorMessage(response.data.message || 'Erro ao enviar SMS. Tente novamente.');
-            }
+            Alert.alert('Código Enviado', `Um código de verificação foi enviado para ${formatPhoneNumber(phoneNumber)}.`);
 
         } catch (error: any) {
-            console.error('Erro ao enviar SMS:', error);
-            setOtpErrorMessage(error.response?.data?.message || 'Erro ao enviar SMS. Verifique o número e tente novamente.');
+            console.error('Erro ao iniciar Firebase Phone Auth:', error);
+            let firebaseErrorMessage = 'Erro desconhecido. Tente novamente.';
+            if (error.code === 'auth/invalid-phone-number') {
+                firebaseErrorMessage = 'Número de telefone inválido.';
+            } else if (error.code === 'auth/too-many-requests') {
+                firebaseErrorMessage = 'Muitas tentativas. Tente novamente mais tarde.';
+            } else if (error.code === 'auth/app-not-authorized') {
+                firebaseErrorMessage = 'Seu app não está autorizado para usar Firebase Phone Auth. Verifique SHA-1/SHA-256 no console Firebase.';
+            } else if (error.code === 'auth/quota-exceeded') {
+                firebaseErrorMessage = 'Cota de SMS excedida para este telefone. Tente novamente em 24h.';
+            } else if (error.code === 'auth/web-storage-unsupported') { 
+                firebaseErrorMessage = 'Armazenamento web não suportado ou cookies desativados. Ative os cookies do navegador.';
+            }
+            setOtpErrorMessage(firebaseErrorMessage);
         } finally {
             setOtpLoading(false);
         }
     };
 
+    // --- FUNÇÃO handleOtpSubmit (USA FIREBASE AUTH E ENVIA ID TOKEN PARA BACKEND) ---
     const handleOtpSubmit = async () => {
         if (!otpCode || otpCode.length < 6) {
             setOtpErrorMessage('Por favor, insira o código de 6 dígitos.');
+            return;
+        }
+        if (!confirmationResult) {
+            setOtpErrorMessage('Erro de sessão. Por favor, reinicie o processo de envio do código.');
             return;
         }
 
@@ -201,76 +178,91 @@ export default function LoginScreen() {
         setOtpErrorMessage(null);
 
         try {
-            const cleanPhone = phoneNumber.replace(/\D/g, '');
+            // 1. Confirma o código OTP com o Firebase
+            const userCredential = await confirmationResult.confirm(otpCode);
+            const firebaseUser = userCredential.user;
+            const idToken = await firebaseUser.getIdToken(); 
 
-            // Chamada real para o backend para verificar o OTP
-            // Ajuste o endpoint '/auth/verify-otp' conforme a sua API
-            const response = await api.post('/auth/verify-otp', {
-                phone: cleanPhone,
-                otpCode: otpCode,
-            });
+            console.log('[LoginScreen] Firebase OTP verificado com sucesso. Enviando ID Token para o backend.');
 
-            if (response.status === 200 && response.data.access_token) { // Supondo que sua API retorna um access_token
-                // Login bem-sucedido
-                await login({
-                    phone: cleanPhone,
-                    otp: otpCode,
-                });
+            // 2. Envia o ID Token do Firebase para o seu backend para login/registro final
+            await loginWithFirebaseIdToken(idToken);
 
-                // Redirecionamento é tratado no useEffect principal
-            } else {
-                setOtpErrorMessage(response.data.message || 'Código inválido. Tente novamente.');
-            }
+            Alert.alert('Sucesso!', 'Login realizado com sucesso!');
 
         } catch (error: any) {
-            console.error('Erro ao validar OTP:', error);
-            setOtpErrorMessage(error.response?.data?.message || 'Erro ao validar código. Tente novamente.');
+            console.error('Erro ao verificar OTP com Firebase ou backend:', error);
+            let errorMessage = 'Código OTP inválido ou expirado. Tente novamente.';
+            if (error.code === 'auth/invalid-verification-code') {
+                errorMessage = 'O código de verificação é inválido.';
+            } else if (error.code === 'auth/code-expired') {
+                errorMessage = 'O código expirou. Por favor, solicite um novo.';
+            } else if (error.response?.data?.message) { 
+                errorMessage = error.response.data.message;
+            }
+            setOtpErrorMessage(errorMessage);
         } finally {
             setOtpLoading(false);
         }
     };
 
+    // --- FUNÇÃO handleResendOtp (USA FIREBASE AUTH NOVAMENTE) ---
     const handleResendOtp = async () => {
-        if (timer > 0) return; // Impede o reenvio se o timer ainda estiver ativo
+        if (timer > 0) return; 
 
         setOtpLoading(true);
-        setOtpErrorMessage(null); // Limpa mensagens de erro anteriores
+        setOtpErrorMessage(null);
 
         try {
             const cleanPhone = phoneNumber.replace(/\D/g, '');
-            // Chamada real para o backend para reenviar o SMS
-            // Ajuste o endpoint '/auth/resend-otp' conforme a sua API
-            const response = await api.post('/auth/resend-otp', { phone: cleanPhone });
+            const fullPhoneNumber = `+55${cleanPhone}`;
 
-            if (response.status === 200) {
-                setTimer(60); // Reinicia o timer
+            // CORREÇÃO: Usar getAuth() e signInWithPhoneNumber da API modular para reenviar
+            const authInstance = getAuth();
+            const newConfirmation = await signInWithPhoneNumber(authInstance, fullPhoneNumber);
+            
+            setConfirmationResult(newConfirmation); 
+            setTimer(60); 
 
-                const interval = setInterval(() => {
-                    setTimer(prev => {
-                        if (prev <= 1) {
-                            clearInterval(interval);
-                            return 0;
-                        }
-                        return prev - 1;
-                    });
-                }, 1000);
+            const interval = setInterval(() => {
+                setTimer(prev => {
+                    if (prev <= 1) {
+                        clearInterval(interval);
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
 
-                Alert.alert('SMS Reenviado', 'Novo código enviado para seu telefone.');
-            } else {
-                setOtpErrorMessage(response.data.message || 'Erro ao reenviar SMS. Tente novamente.');
-            }
+            Alert.alert('SMS Reenviado', 'Um novo código foi enviado para seu telefone.');
+
         } catch (error: any) {
             console.error('Erro ao reenviar SMS:', error);
-            setOtpErrorMessage(error.response?.data?.message || 'Erro ao reenviar SMS. Tente novamente.');
+            let firebaseErrorMessage = 'Erro ao reenviar código. Tente novamente.';
+            if (error.code === 'auth/too-many-requests') {
+                firebaseErrorMessage = 'Muitas tentativas de reenvio. Espere antes de tentar novamente.';
+            } else if (error.code === 'auth/invalid-phone-number') {
+                firebaseErrorMessage = 'Número de telefone inválido para reenvio.';
+            }
+            setOtpErrorMessage(firebaseErrorMessage);
         } finally {
             setOtpLoading(false);
         }
     };
 
-    // --- FUNÇÕES OTP TERMINAM AQUI ---
+    const formatPhoneNumber = (value: string) => { 
+      const cleaned = value.replace(/\D/g, '');
+      if (cleaned.length <= 2) {
+          return `(${cleaned}`;
+      } else if (cleaned.length <= 7) {
+          return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
+      } else if (cleaned.length <= 11) {
+          return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
+      } else {
+          return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 11)}`;
+      }
+    };
 
-
-    // LOADING ORIGINAL MANTIDO
     if (authIsLoading || (!authIsLoading && isAuthenticated)) {
         return (
             <View style={styles.fullScreenLoadingContainer}>
@@ -287,7 +279,6 @@ export default function LoginScreen() {
         >
             <StatusBar barStyle="dark-content" backgroundColor={styles.scrollView.backgroundColor} />
 
-            {/* Fundo com gradiente */}
             <LinearGradient
                 colors={['#F0F4F8', '#E2E8F0', '#F7FAFC']}
                 style={StyleSheet.absoluteFillObject}
@@ -308,54 +299,54 @@ export default function LoginScreen() {
                         transform: [{ translateY: mainElementsTranslateY }]
                     }
                 ]}>
-                    {/* LOGO COM DIMENSÕES ORIGINAIS RESTAURADAS */}
                     <View style={styles.logoContainer}>
-                        <AnimatedReanimated.Image source={LOGO_IMAGE} style={[styles.logo, animatedLogoStyle]} />
+                        <AnimatedReanimated.Image
+                            source={LOGO_IMAGE}
+                            style={[styles.logo, animatedLogoStyle]}
+                            resizeMode="contain"
+                        />
                     </View>
 
                     <Text style={styles.welcomeSubtitle}>
-                        {/* Subtítulo ajustado para o fluxo OTP */}
                         {otpStep === 'phone' ? 'Entrar com seu telefone' : 'Verificar Código OTP'}
                     </Text>
 
-                    {/* --- Seção de Login com Telefone/OTP (agora a única opção) --- */}
                     <>
                         {otpStep === 'phone' ? (
                             <InputWithIcon
-                                iconName="call-outline" // CORREÇÃO: Usar iconName e nome do Ionicons
+                                iconName="call-outline"
                                 placeholder="(XX) XXXXX-XXXX"
                                 value={phoneNumber}
-                                onChangeText={(text: string) => { // CORREÇÃO: Tipagem do 'text'
+                                onChangeText={(text: string) => {
                                     setPhoneNumber(formatPhoneNumber(text));
                                     if (otpErrorMessage) setOtpErrorMessage(null);
                                 }}
                                 keyboardType="phone-pad"
-                                maxLength={15} // Ex: (99) 99999-9999
+                                maxLength={15}
                             />
                         ) : (
                             <InputWithIcon
-                                iconName="lock-closed-outline" // CORREÇÃO: Usar iconName e nome do Ionicons
+                                iconName="lock-closed-outline"
                                 placeholder="Código de 6 dígitos"
                                 value={otpCode}
-                                onChangeText={(text: string) => { // CORREÇÃO: Tipagem do 'text'
+                                onChangeText={(text: string) => {
                                     setOtpCode(text);
                                     if (otpErrorMessage) setOtpErrorMessage(null);
                                 }}
                                 keyboardType="numeric"
                                 maxLength={6}
                                 textAlign="center"
-                                style={styles.otpInput} // Estilo específico para OTP
+                                style={styles.otpInput}
                             />
                         )}
 
-                        {/* CORREÇÃO: Passar isVisible para AnimatedErrorMessage e 'centered' */}
                         <AnimatedErrorMessage message={otpErrorMessage} isVisible={!!otpErrorMessage} centered={true} />
 
                         <Animated.View style={{ transform: [{ scale: signInButtonAnims.scaleAnim }] }}>
                             <TouchableOpacity
                                 style={[styles.signInButton, otpLoading && styles.buttonDisabled]}
                                 onPress={otpStep === 'phone' ? handlePhoneSubmit : handleOtpSubmit}
-                                onPressIn={signInButtonAnims.onPressIn} // Reutilizando animações de botão
+                                onPressIn={signInButtonAnims.onPressIn}
                                 onPressOut={signInButtonAnims.onPressOut}
                                 disabled={otpLoading}
                             >
@@ -376,7 +367,7 @@ export default function LoginScreen() {
                                     onPress={() => {
                                         setOtpStep('phone');
                                         setOtpErrorMessage(null);
-                                        setTimer(0); // Reseta o timer ao voltar
+                                        setTimer(0);
                                     }}
                                 >
                                     <Text style={styles.backButtonText}>Voltar</Text>
@@ -385,7 +376,7 @@ export default function LoginScreen() {
                                 <TouchableOpacity
                                     style={[styles.resendButton, timer > 0 && styles.resendButtonDisabled]}
                                     onPress={handleResendOtp}
-                                    disabled={timer > 0 || otpLoading} // Desabilita se estiver carregando ou timer ativo
+                                    disabled={timer > 0 || otpLoading}
                                 >
                                     <Text style={[styles.resendButtonText, timer > 0 && styles.resendButtonTextDisabled]}>
                                         {timer > 0 ? `Reenviar em ${timer}s` : 'Reenviar código'}
@@ -395,7 +386,6 @@ export default function LoginScreen() {
                         )}
                     </>
 
-                    {/* Footer e links de cadastro/senha esquecida - Mantidos */}
                     <View style={styles.signUpContainer}>
                         <Text style={styles.signUpText}>Não tem uma conta? </Text>
                         <Link href="/(auth)/register-options" asChild>
@@ -454,7 +444,7 @@ const styles = StyleSheet.create({
         marginBottom: 50,
         bottom: 42,
     },
-    inputWrapper: { // Este estilo é definido dentro de InputWithIcon.tsx
+    inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#FFFFFF',
@@ -470,7 +460,7 @@ const styles = StyleSheet.create({
         paddingLeft: 5,
         paddingRight: 15,
     },
-    iconCircle: { // Este estilo é definido dentro de InputWithIcon.tsx
+    iconCircle: {
         width: 50,
         height: 30,
         right: 2,
@@ -480,7 +470,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFFFFF',
         marginRight: 10,
     },
-    input: { // Este estilo é definido dentro de InputWithIcon.tsx
+    input: {
         flex: 1,
         fontSize: 15,
         color: '#2D3748',
@@ -488,12 +478,12 @@ const styles = StyleSheet.create({
         height: '70%',
         paddingVertical: 0,
     },
-    eyeIconTouchable: { // Este estilo é definido dentro de InputWithIcon.tsx
+    eyeIconTouchable: {
         paddingHorizontal: 15,
         height: '100%',
         justifyContent: 'center',
     },
-    inlineErrorMessage: { // Este estilo é definido dentro de AnimatedErrorMessage.tsx
+    inlineErrorMessage: {
         color: '#E53E3E',
         fontSize: 13,
         textAlign: 'center',
@@ -566,14 +556,14 @@ const styles = StyleSheet.create({
         color: '#4A5568',
     },
     otpInput: {
-        letterSpacing: 8, // Para espaçamento entre os dígitos do OTP
-        fontSize: 18, // Ajuste o tamanho da fonte para o OTP
+        letterSpacing: 8,
+        fontSize: 18,
     },
     otpActions: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         marginTop: 20,
-        bottom: 40, // Ajuste a posição para alinhar com o layout existente
+        bottom: 40,
         paddingHorizontal: 10,
     },
     backButton: {
@@ -591,18 +581,18 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         paddingHorizontal: 15,
         borderRadius: 20,
-        backgroundColor: '#E0F7FA', // Um tom mais claro para o botão de reenviar
+        backgroundColor: '#E0F7FA',
     },
     resendButtonDisabled: {
         opacity: 0.6,
-        backgroundColor: '#CFD8DC', // Cor mais opaca quando desabilitado
+        backgroundColor: '#CFD8DC',
     },
     resendButtonText: {
-        color: '#00BCD4', // Cor primária do app
+        color: '#00BCD4',
         fontSize: 14,
         fontWeight: '600',
     },
     resendButtonTextDisabled: {
-        color: '#78909C', // Cor mais suave quando desabilitado
+        color: '#78909C',
     },
 });

@@ -2,9 +2,9 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import authService from '../app/services/authService';
-import { UserProfile } from '../app/types/backend/users';
-import { UserRole, RegisterClientDto, RegisterProviderDto } from '../app/types/backend/auth'; // Import RegisterClientDto e RegisterProviderDto
+import authService from '../app/services/authService'; // Mantém a importação como está
+import { UserProfile } from '../../app/types/backend/users'; // Caminho para UserProfile
+import { UserRole, RegisterClientDto, RegisterProviderDto } from '../app/types/backend/auth'; 
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -13,14 +13,15 @@ interface AuthContextType {
   role: UserRole | null;
   login: (credentials: { phone: string; otp: string }) => Promise<void>;
   logout: () => Promise<void>;
-  register: (userData: any, userType: 'client' | 'provider') => Promise<void>; // Manter se ainda usado, caso contrário, pode remover
+  register: (userData: any, userType: 'client' | 'provider') => Promise<void>; 
   sendOtp: (phone: string) => Promise<void>;
   refreshUser: () => Promise<void>;
   signUpClient: (data: RegisterClientDto) => Promise<void>;
   signUpProvider: (data: RegisterProviderDto) => Promise<void>;
-  // NOVO: Adicionado estado e setter para o progresso do registro
   isRegistrationInProgress: boolean;
   setIsRegistrationInProgress: (inProgress: boolean) => void;
+  // CORREÇÃO: Adicionado o método loginWithFirebaseIdToken à interface
+  loginWithFirebaseIdToken: (idToken: string) => Promise<void>; 
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,7 +34,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [role, setRole] = useState<UserRole | null>(null);
-  // NOVO: Estado para controlar o progresso do registro
   const [isRegistrationInProgress, setIsRegistrationInProgress] = useState(false);
 
   const isAuthenticated = !!user;
@@ -56,12 +56,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       if (authData.token && authData.role && authData.id && authData.user) {
-        setUser(authData.user);
-        setRole(authData.role as UserRole); // Cast para UserRole
+        // CORREÇÃO: Cast explícito para UserProfile e UserRole (para silenciar o erro de duplicação, mas a causa raiz é o cache)
+        setUser(authData.user as UserProfile); 
+        setRole(authData.role as UserRole); 
         console.log('[AuthContext | loadStoragedData] User authenticated from storage.');
       } else {
         console.log('[AuthContext | loadStoragedData] No token found or incomplete data in storage. User not authenticated via storage.');
-        setUser(null); // Garante que o user é null se os dados estiverem incompletos
+        setUser(null);
         setRole(null);
       }
 
@@ -92,8 +93,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(true);
       const authData = await authService.login(credentials);
 
-      setUser(authData.user);
-      setRole(authData.user.role);
+      // CORREÇÃO: Cast explícito para UserProfile e UserRole
+      setUser(authData.user as UserProfile); 
+      setRole(authData.user.role as UserRole); 
 
       console.log('[AuthContext] Login successful:', authData.user.role);
 
@@ -123,7 +125,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // Função de registro geral (manter se ainda usada, caso contrário, pode remover)
   const register = async (userData: any, userType: 'client' | 'provider') => {
     try {
       setIsLoading(true);
@@ -135,8 +136,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         authData = await authService.registerProvider(userData);
       }
 
-      setUser(authData.user);
-      setRole(authData.user.role);
+      // CORREÇÃO: Cast explícito para UserProfile e UserRole
+      setUser(authData.user as UserProfile); 
+      setRole(authData.user.role as UserRole); 
 
       console.log('[AuthContext] Registration successful:', authData.user.role);
 
@@ -148,13 +150,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // Função signUpClient
   const signUpClient = async (data: RegisterClientDto) => {
     try {
       setIsLoading(true);
       const authData = await authService.registerClient(data);
-      setUser(authData.user);
-      setRole(authData.user.role);
+      // CORREÇÃO: Cast explícito para UserProfile e UserRole
+      setUser(authData.user as UserProfile); 
+      setRole(authData.user.role as UserRole); 
       console.log('[AuthContext] Client registration successful.');
     } catch (error) {
       console.error('[AuthContext] Client registration error:', error);
@@ -164,18 +166,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // Função signUpProvider
   const signUpProvider = async (data: RegisterProviderDto) => {
     try {
       setIsLoading(true);
-      setIsRegistrationInProgress(true); // Define o flag de progresso
+      setIsRegistrationInProgress(true);
       const authData = await authService.registerProvider(data);
-      setUser(authData.user);
-      setRole(authData.user.role);
+      // CORREÇÃO: Cast explícito para UserProfile e UserRole
+      setUser(authData.user as UserProfile); 
+      setRole(authData.user.role as UserRole); 
       console.log('[AuthContext] Provider registration successful.');
     } catch (error) {
       console.error('[AuthContext] Provider registration error:', error);
-      setIsRegistrationInProgress(false); // Reseta o flag em caso de erro
+      setIsRegistrationInProgress(false);
       throw error;
     } finally {
       setIsLoading(false);
@@ -186,6 +188,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const refreshUser = async () => {
     await loadStoredData();
+  };
+
+  // NOVO: Método para login com o ID Token do Firebase
+  const loginWithFirebaseIdToken = async (idToken: string) => {
+    try {
+      console.log('[AuthContext] Iniciando login com Firebase ID Token...');
+      setIsLoading(true);
+      // Chama o novo método do authService para verificar o ID Token com o backend
+      const authData = await authService.verifyFirebaseIdToken({ idToken });
+
+      setUser(authData.user as UserProfile);
+      setRole(authData.user.role as UserRole);
+
+      console.log('[AuthContext] Login com Firebase ID Token bem-sucedido:', authData.user.role);
+
+    } catch (error) {
+      console.error('[AuthContext] Erro no login com Firebase ID Token:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const value: AuthContextType = {
@@ -200,15 +223,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     refreshUser,
     signUpClient,
     signUpProvider,
-    // NOVO: Expor o estado e o setter
     isRegistrationInProgress,
     setIsRegistrationInProgress,
+    loginWithFirebaseIdToken, // Adicionado ao valor do contexto
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-// Exporta o hook useAuth diretamente do contexto
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {

@@ -18,6 +18,11 @@ interface SendOtpResponse {
   phone: string;
 }
 
+// NOVO: Interface para o DTO que o frontend enviará ao backend para verificar o ID Token do Firebase
+interface VerifyFirebaseIdTokenRequest {
+  idToken: string; // O ID Token JWT retornado pelo Firebase Authentication
+}
+
 class AuthService {
   private static instance: AuthService;
   private authToken: string | null = null;
@@ -31,6 +36,7 @@ class AuthService {
     return AuthService.instance;
   }
 
+  // MÉTODO EXISTENTE: sendOtp (Permanece inalterado, para a API customizada)
   async sendOtp(phone: string): Promise<SendOtpResponse> {
     try {
       console.log('[authService] Enviando OTP para:', phone);
@@ -47,6 +53,7 @@ class AuthService {
     }
   }
 
+  // MÉTODO EXISTENTE: verifyOtp (Permanece inalterado, para a API customizada)
   async verifyOtp(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
       console.log('[authService] Verificando OTP para:', credentials.phone);
@@ -71,11 +78,13 @@ class AuthService {
     }
   }
 
+  // MÉTODO EXISTENTE: login (Permanece inalterado, chamando verifyOtp)
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     // O método login agora apenas chama verifyOtp, que já lida com o salvamento do token
     return this.verifyOtp(credentials);
   }
 
+  // MÉTODO EXISTENTE: logout (Permanece inalterado)
   async logout(): Promise<void> {
     try {
       console.log('[authService] Realizando logout');
@@ -93,6 +102,7 @@ class AuthService {
     }
   }
 
+  // MÉTODO EXISTENTE: registerClient (Permanece inalterado)
   async registerClient(userData: any): Promise<AuthResponse> {
     try {
       console.log('[authService] Registrando cliente');
@@ -112,6 +122,7 @@ class AuthService {
     }
   }
 
+  // MÉTODO EXISTENTE: registerProvider (Permanece inalterado)
   async registerProvider(userData: any): Promise<AuthResponse> {
     try {
       console.log('[authService] Registrando prestador');
@@ -131,12 +142,13 @@ class AuthService {
     }
   }
 
+  // MÉTODO EXISTENTE: loadAuthData (Permanece inalterado)
   async loadAuthData(): Promise<{ token: string | null; role: UserRole | null; id: string | null; user: UserProfile | null }> {
     try {
       console.log('[authService] Tentando carregar dados de autenticação do AsyncStorage.');
 
       const token = await AsyncStorage.getItem('token');
-      const role = await AsyncStorage.getItem('role') as UserRole | null; // Cast para UserRole
+      const role = await AsyncStorage.getItem('role') as UserRole | null;
       const id = await AsyncStorage.getItem('id');
       const userStr = await AsyncStorage.getItem('user');
 
@@ -164,6 +176,7 @@ class AuthService {
     }
   }
 
+  // MÉTODO PRIVADO EXISTENTE: saveAuthData (Permanece inalterado)
   private async saveAuthData(authData: AuthResponse): Promise<void> {
     try {
       await AsyncStorage.setItem('token', authData.access_token);
@@ -179,6 +192,7 @@ class AuthService {
     }
   }
 
+  // MÉTODO EXISTENTE: setAuthToken (Permanece inalterado)
   setAuthToken(token: string | null): void {
     this.authToken = token;
     if (token) {
@@ -190,8 +204,30 @@ class AuthService {
     }
   }
 
+  // MÉTODO EXISTENTE: getAuthToken (Permanece inalterado)
   getAuthToken(): string | null {
     return this.authToken;
+  }
+
+  // NOVO MÉTODO: verifyFirebaseIdToken (Para o fluxo de autenticação Firebase Auth)
+  async verifyFirebaseIdToken(data: VerifyFirebaseIdTokenRequest): Promise<AuthResponse> {
+    try {
+      console.log('[authService] Verificando ID Token do Firebase com o backend (NOVA ROTA).');
+      // Esta é a nova rota no seu backend que vai usar o Firebase Admin SDK
+      const response = await api.post('/auth/firebase-login', data); 
+
+      const authData: AuthResponse = response.data;
+
+      // Salva os dados de autenticação no AsyncStorage após a verificação bem-sucedida
+      await this.saveAuthData(authData);
+
+      console.log('[authService] Login com Firebase ID Token bem-sucedido (NOVA ROTA).');
+      return authData;
+
+    } catch (error: any) {
+      console.error('[authService] Erro ao verificar ID Token do Firebase (NOVA ROTA):', error);
+      throw new Error(error.response?.data?.message || 'Falha na autenticação Firebase.');
+    }
   }
 }
 
