@@ -1,3 +1,4 @@
+// LimpeJaApp/app/welcome.tsx
 import React, { useEffect } from 'react';
 import { View, StyleSheet, Image, Dimensions, Platform, Text } from 'react-native';
 import Animated, {
@@ -10,13 +11,15 @@ import Animated, {
   Extrapolate,
 } from 'react-native-reanimated';
 import { Stack, useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+// AsyncStorage não é mais usado para marcar 'viewed' neste cenário e foi removido para evitar problemas.
+// import AsyncStorage from '@react-native-async-storage/async-storage'; 
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width, height } = Dimensions.get('window');
 
 const LOGO_IMAGE = require('../assets/images/logo2.png');
-const WELCOME_SCREEN_VIEWED_KEY = 'welcomeScreenViewed';
+// WELCOME_SCREEN_VIEWED_KEY e sua lógica foram removidos, pois o fluxo agora é fixo (4s e redireciona).
+// const WELCOME_SCREEN_VIEWED_KEY = 'welcomeScreenViewed';
 
 const BACKGROUND_COLOR_1 = '#FFFFFF';
 const BACKGROUND_COLOR_2 = '#F8F8FF';
@@ -41,11 +44,12 @@ export default function WelcomeScreen() {
   const logoPulseScale = useSharedValue(1); // Para pulso de escala do logo
   const reflectionTranslateY = useSharedValue(0); // Para flutuação vertical do reflexo
   const reflectionSkewX = useSharedValue(0); // Para efeito de ondulação/distorção do reflexo
-  const reflectionHueRotate = useSharedValue(0); // Para mudança sutil de cor do reflexo
+
+  // REMOVIDO: reflectionHueRotate, pois é a causa mais provável de crash em nativo
+  // const reflectionHueRotate = useSharedValue(0); 
 
   useEffect(() => {
     // Função para iniciar as animações de loop
-    // Movida para antes de ser chamada para evitar o erro de inicialização
     const startLoopAnimations = () => {
       // Animação de rotação sutil do logo
       logoRotateY.value = withRepeat(
@@ -75,22 +79,22 @@ export default function WelcomeScreen() {
         true
       );
 
-      // Animação de rotação de matiz (hue) para o reflexo
-      reflectionHueRotate.value = withRepeat(
-        withTiming(360, { duration: 5000, easing: Easing.linear }), // Gira o matiz em 360 graus
-        -1,
-        false // Não inverte, continua girando
-      );
+      // REMOVIDO: Animação de rotação de matiz (hue) para o reflexo
+      // reflectionHueRotate.value = withRepeat(
+      //   withTiming(360, { duration: 5000, easing: Easing.linear }), 
+      //   -1,
+      //   false 
+      // );
     };
 
-    // Animação de entrada do logo (existente)
+    // Animação de entrada do logo
     logoOpacity.value = withTiming(1, { duration: 80 });
     logoScale.value = withTiming(1, { duration: 80, easing: Easing.out(Easing.back(1.2)) }, () => {
       // Inicia as animações de loop após a animação de entrada
       startLoopAnimations();
     });
 
-    // Animação de opacidade para o reflexo, tornando-o sutil e robusto (existente)
+    // Animação de opacidade para o reflexo, tornando-o sutil e robusto
     reflectionOpacityAnim.value = withRepeat(
       withTiming(0.2, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
       -1, // Repetição infinita
@@ -99,19 +103,15 @@ export default function WelcomeScreen() {
 
     // Temporizador para redirecionamento automático
     const timer = setTimeout(async () => {
-      console.log("WelcomeScreen: Redirecionando automaticamente após 6 segundos.");
-      try {
-        await AsyncStorage.setItem(WELCOME_SCREEN_VIEWED_KEY, 'true');
-        console.log("WelcomeScreen: WELCOME_SCREEN_VIEWED_KEY set to 'true' via auto-redirect.");
-        router.replace('/(auth)/login');
-      } catch (e) {
-        console.warn("WelcomeScreen: Erro ao salvar status no AsyncStorage durante auto-redirect", e);
-        router.replace('/(auth)/login');
-      }
-    }, 6000);
+      console.log("WelcomeScreen: Redirecionando automaticamente após 4 segundos."); // Log corrigido para 4s
+      // REMOVIDO: Linha do AsyncStorage para WELCOME_SCREEN_VIEWED_KEY (não é mais usada)
+      // await AsyncStorage.setItem(WELCOME_SCREEN_VIEWED_KEY, 'true');
+      // console.log("WelcomeScreen: WELCOME_SCREEN_VIEWED_KEY set to 'true' via auto-redirect.");
+      router.replace('/(auth)/login');
+    }, 4000); // <-- Temporizador ajustado para 4 segundos
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [router, logoOpacity, logoScale, reflectionOpacityAnim, logoRotateY, logoPulseScale, reflectionTranslateY, reflectionSkewX]); // Dependências ajustadas
 
   // Estilo animado para o logo principal
   const animatedLogoStyle = useAnimatedStyle(() => {
@@ -153,7 +153,8 @@ export default function WelcomeScreen() {
         { skewX: `${skew}deg` }, // Efeito de ondulação
       ],
       opacity: reflectionOpacityAnim.value, // Aplicar a opacidade animada
-      filter: Platform.OS === 'web' ? `hue-rotate(${reflectionHueRotate.value}deg)` : undefined, // Rotação de matiz para web (não disponível diretamente no RN para Image)
+      // REMOVIDO: filter com hue-rotate (causa provável de crash em nativo)
+      // filter: Platform.OS === 'web' ? `hue-rotate(${reflectionHueRotate.value}deg)` : undefined, 
     };
   });
 
