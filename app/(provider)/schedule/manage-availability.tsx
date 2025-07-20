@@ -1,35 +1,34 @@
 // LimpeJaApp/app/(provider)/schedule/manage-availability.tsx
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Alert,
-  TouchableOpacity,
-  ScrollView,
-  Platform,
-  ActivityIndicator,
-  Animated,
-} from 'react-native';
 import { Stack, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 // <--- CORREÇÃO DE CASING: datetimepicker (lowercase p)
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useAuth } from '../../../hooks/useAuth';
 
 // <--- IMPORTAÇÕES DE SERVIÇOS E TIPAGENS
 import {
-  getProviderAvailability,
-  updateProviderAvailability,
-  addProviderAvailability,
-  deleteProviderAvailability,
-} from '../../services/providerService';
-import { ProviderAvailability, UpdateAvailabilityData } from '../../types/backend/providers'; //
+    deleteProviderAvailability,
+    getProviderAvailability,
+    updateProviderAvailability
+} from '../../../services/providerService';
+import { ProviderAvailability, UpdateAvailabilityData } from '../../../types/backend/providers'; //
 
 // <--- IMPORTA OS NOVOS COMPONENTES CRIADOS
-import AnimatedDayCard from './components/manager/AnimatedDayCard';
-import BlockDateSection from './components/manager/BlockDateSection';
-import SaveChangesButton from './components/manager/SaveChangesButton';
+import AnimatedDayCard from '../../../components/schedule/manager/AnimatedDayCard';
+import BlockDateSection from '../../../components/schedule/manager/BlockDateSection';
+import SaveChangesButton from '../../../components/schedule/manager/SaveChangesButton';
 
 // Tipagem das estruturas de dados internas
 interface TimeSlot {

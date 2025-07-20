@@ -1,22 +1,22 @@
 // LimpeJaApp/app/(client)/messages/index.tsx
-import React, { useState, useEffect, useRef } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { Stack, useRouter } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-    View,
-    Text,
-    FlatList,
-    StyleSheet,
     ActivityIndicator,
-    TouchableOpacity,
+    Animated,
+    FlatList,
     Image,
     Platform,
-    Animated, // Importar Animated para animações
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { formatDate } from '../../../utils/helpers'; // Ajuste o caminho
 
 import { useAuth } from '../../../hooks/useAuth'; // Para obter o ID do usuário
-import { getChatListForUser } from '../../services/chatService'; // Nova função para listar conversas
+import { getChatListForUser } from '../../../services/chatService'; // Nova função para listar conversas
 
 // Sua interface MockConversation (ou importe a real)
 interface ConversationItem { // Renomeado para ConversationItem para consistência

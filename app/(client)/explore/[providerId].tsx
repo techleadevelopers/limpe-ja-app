@@ -1,36 +1,39 @@
-import React, { useEffect, useState, useRef } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-    View,
-    Text,
     ActivityIndicator,
-    ScrollView,
-    TouchableOpacity,
+    Alert,
     Animated,
     Dimensions,
     Image,
-    Alert,
     Platform // Importado Platform aqui para ajustes de safe area
+    ,
+
+
+    ScrollView,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
-import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context'; // Importado para safe area
 
 // Importações dos componentes necessários
-import StarRating from './components/provider/StarRating';
-import InfoChip from './components/provider/InfoChip';
-import ReviewCard from './components/provider/ReviewCard';
-import BookServiceButton from './components/provider/BookServiceButton';
+import BookServiceButton from '../../../components/client/explore/provider/BookServiceButton';
+import InfoChip from '../../../components/client/explore/provider/InfoChip';
+import ReviewCard from '../../../components/client/explore/provider/ReviewCard';
+import StarRating from '../../../components/client/explore/provider/StarRating';
 
 // Importações de dados e tipos
-import { ProviderDisplayInfo, ProviderReview, VerificationStatus } from '../../types/backend/providers';
+import { ProviderDisplayInfo, ProviderReview, VerificationStatus } from '../../../types/backend/providers';
 
 // Importação dos estilos
 import { styles } from './styles/providerStyles'; // Importa o objeto de estilos completo
 
 // IMPORTAR O SERVIÇO REAL DO BACKEND
-import { getProviderDetails } from '../../services/providerService';
 import { useAuth } from '../../../hooks/useAuth';
-import { checkActiveChatBooking } from '../../services/bookingService';
+import { checkActiveChatBooking } from '../../../services/bookingService';
+import { getProviderDetails } from '../../../services/providerService';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 

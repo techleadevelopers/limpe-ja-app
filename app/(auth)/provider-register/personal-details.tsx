@@ -1,26 +1,26 @@
 // LimpeJaApp/app/(auth)/provider-register/personal-details.tsx
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Alert,
-  TouchableOpacity,
-  ScrollView,
-  Platform,
-  KeyboardAvoidingView,
-  ActivityIndicator,
-  Animated,
-} from 'react-native';
-import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Stack, useRouter } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    Animated,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import { useProviderRegistration } from '../../../contexts/ProviderRegistrationContext';
 
 // Importando os novos componentes
-import { InputWithIcon } from '../components/InputWithIcon';
-import { StandardInput } from '../components/StandardInput';
-import { DatePickerInput } from '../components/DatePickerInput';
-import { SectionHeader } from '../components/SectionHeader';
+import { DatePickerInput } from '../../../components/auth/components/DatePickerInput';
+import { InputWithIcon } from '../../../components/auth/components/InputWithIcon';
+import { SectionHeader } from '../../../components/auth/components/SectionHeader';
+import { StandardInput } from '../../../components/auth/components/StandardInput';
 
 // Simulação da API ViaCEP
 // Mover esta mock para app/(auth)/api/addressService.ts conforme a documentação

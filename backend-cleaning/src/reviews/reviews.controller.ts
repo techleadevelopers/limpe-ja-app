@@ -51,4 +51,26 @@ export class ReviewsController {
     }
     return new ReviewEntity(review);
   }
+
+  @Get('provider/:providerId/breakdown')
+  @ApiOperation({ summary: 'Obter análise detalhada de avaliações do provedor' })
+  @ApiResponse({ status: 200, description: 'Breakdown detalhado das avaliações.' })
+  async getProviderRatingBreakdown(@Param('providerId') providerId: string) {
+    return this.reviewsService.getDetailedRatingBreakdown(providerId);
+  }
+
+  @Get('provider/:providerId/suggestions')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Obter sugestões inteligentes baseadas em IA para o provedor' })
+  @ApiResponse({ status: 200, description: 'Lista de sugestões inteligentes.' })
+  async getSmartSuggestions(@Param('providerId') providerId: string, @Req() req: Request) {
+    // Verificar se o usuário tem permissão para ver as sugestões deste provedor
+    const userProviderId = req.user['providerId'];
+    if (userProviderId !== providerId && req.user['role'] !== 'ADMIN') {
+      throw new ForbiddenException('Acesso negado às sugestões deste provedor.');
+    }
+    
+    return this.reviewsService.generateSmartSuggestions(providerId);
+  }
 }

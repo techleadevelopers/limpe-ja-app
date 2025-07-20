@@ -1,205 +1,145 @@
 // LimpeJaApp/app/_layout.tsx
-import React, { useEffect, useState, useCallback } from 'react';
+import { Slot, SplashScreen, usePathname, useRouter, useSegments } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import 'react-native-reanimated';
-import { Slot, SplashScreen, useRouter, usePathname, useSegments } from 'expo-router';
-import { AuthProvider } from '../contexts/AuthContext';
 import { AppProvider } from '../contexts/AppContext';
-import { ActivityIndicator, View, StyleSheet, Text } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AuthProvider, useAuth } from '../contexts/AuthContext';
 
-import { UserRole } from './types/backend/auth'; 
+// NOVO: Importa o arquivo de configuração do Firebase e a Promise de inicialização
+import { firebaseInitializationPromise } from '../config/firebaseClient'; // <--- IMPORTAÇÃO CRÍTICA AQUI
 
-// Importação das rotas
-import { AUTH_ROUTES, CLIENT_ROUTES, PROVIDER_ROUTES } from '../constants/routes'; 
-
-// Importação do ProviderRegistrationProvider
-import { ProviderRegistrationProvider } from '../contexts/ProviderRegistrationContext'; 
-
-// Importa useAuth
-import { useAuth } from '../hooks/useAuth';
+import { AUTH_ROUTES, CLIENT_ROUTES, PROVIDER_ROUTES } from '../constants/routes';
+import { ProviderRegistrationProvider, useProviderRegistration } from '../contexts/ProviderRegistrationContext';
+import { UserRole, VerificationStatus } from '../types/backend/auth';
 
 SplashScreen.preventAutoHideAsync();
 
-const WELCOME_SCREEN_VIEWED_KEY = 'welcomeScreenViewed';
-
 function InitialLayout() {
-    const { isAuthenticated, isLoading: authIsLoading, user, isRegistrationInProgress } = useAuth();
+    const { isAuthenticated, isLoading: authIsLoading, user, isRegistrationInProgress } = useAuth(); 
+    const { isRegistrationInProgress: providerRegIsLoading } = useProviderRegistration(); 
     const router = useRouter();
     const segments = useSegments();
     const pathname = usePathname();
 
-    const [storageLoading, setStorageLoading] = useState(true);
+    const [appReady, setAppReady] = useState(false); 
+    const [firebaseReady, setFirebaseReady] = useState(false); // NOVO: Estado para a prontidão do Firebase
 
-    const checkWelcomeStatus = useCallback(async () => {
-        try {
-            const value = await AsyncStorage.getItem(WELCOME_SCREEN_VIEWED_KEY);
-            console.log(`[InitialLayout | checkWelcomeStatus] Welcome screen viewed status: ${value}`);
-            return value === 'true';
-        } catch (e) {
-            // --- CORREÇÃO DO ERRO DE TIPO: Tratamento de 'e' como tipo 'unknown' ---
-            let errorMessage = 'An unknown error occurred.';
-            if (e instanceof Error) {
-                errorMessage = e.message;
-            } else if (typeof e === 'string') {
-                errorMessage = e;
+    useEffect(() => {
+        const prepareApp = async () => {
+            console.log('[InitialLayout | prepareApp] Iniciando processo de preparação do aplicativo.');
+            try {
+                // NOVO: Espera pela inicialização do Firebase antes de continuar
+                console.log('[InitialLayout | prepareApp] Aguardando inicialização do Firebase...');
+                await firebaseInitializationPromise; // Espera que a Promise do firebaseClient.ts resolva
+                setFirebaseReady(true); // Marca o Firebase como pronto
+                console.log('[InitialLayout | prepareApp] Firebase inicializado e pronto.');
+
+                // Aqui você pode carregar assets, fontes, etc., se necessário antes de esconder a splash
+            } catch (e) {
+                console.error('[InitialLayout | prepareApp] ERRO FATAL durante a inicialização do Firebase:', e);
+                // Em caso de erro fatal no Firebase, você pode querer exibir uma tela de erro ou sair.
+                // Alert.alert("Erro de Configuração", "O aplicativo não pôde iniciar devido a um erro de configuração do Firebase.");
+                // process.exit(1); 
+            } finally {
+                setAppReady(true); 
+                await SplashScreen.hideAsync(); 
+                console.log('[InitialLayout | prepareApp] Splash screen nativa oculta. Aplicativo pronto para roteamento.');
             }
-            console.error(`[InitialLayout | checkWelcomeStatus] ERROR: Failed to read welcome screen status: ${errorMessage}`);
-            // --- FIM DA CORREÇÃO ---
-            return false;
-        }
-    }, []);
-
-    useEffect(() => {
-        const loadAndHideSplash = async () => {
-            console.log('[InitialLayout | useEffect Init] Initiating splash screen process.');
-            await checkWelcomeStatus(); // Ensures welcome status is loaded before hiding splash
-            setStorageLoading(false);
-            SplashScreen.hideAsync();
-            console.log('[InitialLayout | useEffect Init] Native splash screen hidden. Storage loading complete.');
         };
-        loadAndHideSplash();
-    }, [checkWelcomeStatus]); // Dependency array ensures this runs once or when checkWelcomeStatus changes
+        prepareApp();
+    }, []); 
 
     useEffect(() => {
-        // --- LOG: Current states on useEffect trigger ---
-        console.groupCollapsed(`[InitialLayout | useEffect] Triggered Cycle - Path: ${pathname}`);
-        console.log(`- storageLoading: ${storageLoading}`);
+        console.groupCollapsed(`[InitialLayout | useEffect] Ciclo de Redirecionamento - Caminho: ${pathname}`);
+        console.log(`- appReady: ${appReady}`);
+        console.log(`- firebaseReady: ${firebaseReady}`); // NOVO: Log do estado do Firebase
         console.log(`- authIsLoading: ${authIsLoading}`);
         console.log(`- isAuthenticated: ${isAuthenticated}`);
-        console.log(`- user: ${user?.email ? user.email + ' (Role: ' + user.role + ')' : 'null/undefined'}`);
+        console.log(`- user: ${user?.email ? user.email + ' (Função: ' + user.role + ')' : 'nulo/indefinido'}`);
         console.log(`- isRegistrationInProgress (AuthContext): ${isRegistrationInProgress}`);
-        console.log(`- current pathname: ${pathname}`);
+        console.log(`- Caminho atual: '${pathname}'`);
 
-        // --- Early Exit Condition ---
-        if (storageLoading || authIsLoading || (isAuthenticated && !user?.role)) {
-            console.warn(`[InitialLayout | useEffect] Early Exit: Component state not ready. Details: storageLoading=${storageLoading}, authIsLoading=${authIsLoading}, isAuthenticated=${isAuthenticated}, userHasRole=${!!user?.role}`);
-            console.groupEnd(); // End group for this decision cycle
+        // Condições de saída antecipada: app não pronto, Firebase não pronto, ou autenticando
+        if (!appReady || !firebaseReady || authIsLoading || (isAuthenticated && !user?.role && !user?.clientDetails && !user?.providerDetails)) {
+            console.warn(`[InitialLayout | useEffect] Saída Antecipada: Estado do componente não pronto. appReady=${appReady}, firebaseReady=${firebaseReady}, authIsLoading=${authIsLoading}, isAuthenticated=${isAuthenticated}, userHasProfile=${!!user?.role}`);
+            console.groupEnd(); 
             return;
         }
 
-        console.log('[InitialLayout | useEffect] State ready. Proceeding to decideAndRedirect logic.');
+        console.log('[InitialLayout | useEffect] Estado pronto para decisão de redirecionamento.');
 
-        const inAuthGroup = segments[0] === '(auth)';
+        const inAuthGroup = segments[0] === '(auth)'; 
         const isWelcomeRoute = pathname === '/welcome';
-
+        
         const decideAndRedirect = async () => {
-            const currentHasViewedWelcome = await checkWelcomeStatus();
+            console.log(`[InitialLayout | decideAndRedirect] Estado da Decisão:`);
+            console.log(`  - Autenticado: ${isAuthenticated}`);
+            console.log(`  - Função do Usuário: ${user?.role || 'N/A'}`);
+            console.log(`  - Caminho Atual: '${pathname}'`); 
+            console.log(`  - No Grupo de Autenticação: ${inAuthGroup}`);
+            console.log(`  - É Rota de Boas-Vindas: ${isWelcomeRoute}`);
+            console.log(`  - Registro de Provedor em Andamento: ${isRegistrationInProgress}`);
+            console.log(`  - Status de Verificação do Provedor: ${user?.providerDetails?.verificationStatus || 'N/A'}`);
 
-            // --- LOG: Final State for Redirection Decision ---
-            console.log(`[InitialLayout | decideAndRedirect] Decision State:`);
-            console.log(`  - Authenticated: ${isAuthenticated}`);
-            console.log(`  - User Role: ${user?.role || 'N/A'}`);
-            console.log(`  - Current Path: '${pathname}'`); // Adicionar aspas para ver espaços exatos
-            console.log(`  - In Auth Group: ${inAuthGroup}`);
-            console.log(`  - Is Welcome Route: ${isWelcomeRoute}`);
-            console.log(`  - Has Viewed Welcome: ${currentHasViewedWelcome}`);
-            console.log(`  - Is Registration In Progress (AuthContext): ${isRegistrationInProgress}`);
-            console.log(`  - Provider Verification Status: ${user?.providerDetails?.verificationStatus || 'N/A'}`);
-
-            // --- REDIRECTION PRIORITIES ---
-
-            // 1. Welcome Screen: If not viewed and not currently on it.
-            if (!currentHasViewedWelcome && !isWelcomeRoute) {
-                console.log('[InitialLayout | decideAndRedirect] ACTION: Redirecting to /welcome (Welcome screen not viewed).');
-                router.replace('/welcome');
-                console.groupEnd(); // End group for this decision cycle
-                return; // CRITICAL: Exit immediately after redirect
-            } else if (isWelcomeRoute) {
-                console.log('[InitialLayout | decideAndRedirect] INFO: User is on /welcome route. Permitting stay.');
-                console.groupEnd(); // End group for this decision cycle
-                return; // CRITICAL: Stay on welcome route if already there.
-            }
-
-            // 2. Unauthenticated State: If not authenticated.
             if (!isAuthenticated) {
-                if (!inAuthGroup) { // If not authenticated AND not in a general auth group (like /login, /register-options)
-                    console.log('[InitialLayout | decideAndRedirect] ACTION: User NOT authenticated and outside (auth) group. Redirecting to /(auth)/login.');
-                    router.replace(AUTH_ROUTES.LOGIN as any);
-                    console.groupEnd(); // End group for this decision cycle
-                    return;
+                if (!inAuthGroup && !isWelcomeRoute) {
+                    console.log('[InitialLayout | decideAndRedirect] AÇÃO: Usuário NÃO autenticado e fora do grupo (auth) ou /welcome. Redirecionando para /welcome (Fluxo fixo).');
+                    router.replace('/welcome');
+                    console.groupEnd();
+                    return; 
                 }
-                console.log('[InitialLayout | decideAndRedirect] INFO: User NOT authenticated but is within (auth) group. Permitting stay.');
-                console.groupEnd(); // End group for this decision cycle
+                console.log('[InitialLayout | decideAndRedirect] INFO: Usuário NÃO autenticado e já em /welcome ou no grupo (auth). Permitindo permanência.');
+                console.groupEnd();
                 return;
             }
 
-            // --- From here, the user is AUTHENTICATED ---
-
-            // 3. Provider Registration/Verification Flow: High priority for providers in specific states.
             const currentPath = pathname as string;
-            
-            // --- Normalização de strings para comparação robusta ---
             const normalizePath = (path: string) => {
-                let p = path.trim(); // Remove espaços em branco nas extremidades
-                // Se for a rota raiz de um grupo (e.g., /(auth)), não remova a barra final.
-                // Caso contrário, remova a barra final se existir para evitar inconsistências.
+                let p = path.trim();
                 if (p.endsWith('/') && p.length > 1 && !/\/\(\w+\)\/$/.test(p)) {
                     p = p.slice(0, -1);
                 }
                 return p;
             };
-
             const cleanedCurrentPath = normalizePath(currentPath);
-            const authRegisterStep1 = normalizePath(AUTH_ROUTES.PROVIDER_REGISTER_STEP1);
             const authServiceDetailsStep = normalizePath(AUTH_ROUTES.SERVICE_DETAILS_STEP);
             const authVerifyAccountStep = normalizePath(AUTH_ROUTES.VERIFY_ACCOUNT_STEP);
-
-            // --- LOGS DE DEBURAÇÃO CRÍTICOS PARA ANÁLISE DE STRINGS NORMALIZADAS ---
-            console.log(`[DEBUG PATH COMPARISON] Current Path (raw): '${currentPath}'`);
-            console.log(`[DEBUG PATH COMPARISON] Current Path (normalized): '${cleanedCurrentPath}'`);
-            console.log(`[DEBUG PATH COMPARISON] AUTH_ROUTES.PROVIDER_REGISTER_STEP1 (normalized): '${authRegisterStep1}'`);
-            console.log(`[DEBUG PATH COMPARISON] AUTH_ROUTES.SERVICE_DETAILS_STEP (normalized): '${authServiceDetailsStep}'`);
-            console.log(`[DEBUG PATH COMPARISON] AUTH_ROUTES.VERIFY_ACCOUNT_STEP (normalized): '${authVerifyAccountStep}'`);
-            console.log(`[DEBUG PATH COMPARISON] Current Path === AUTH_ROUTES.VERIFY_ACCOUNT_STEP? ${cleanedCurrentPath === authVerifyAccountStep}`);
             
-            const isProviderPendingVerification = user?.role === UserRole.PROVIDER && 
-                                                    user?.providerDetails?.verificationStatus !== 'APPROVED';
+            const isProviderPendingVerification = user?.role === UserRole.PROVIDER &&
+                                                  user?.providerDetails?.verificationStatus !== VerificationStatus.APPROVED;
 
             console.log(`[InitialLayout | decideAndRedirect] Provider Flow Check:`);
-            console.log(`  - user.role: ${user?.role}`);
-            console.log(`  - isRegistrationInProgress (from AuthContext): ${isRegistrationInProgress}`);
-            console.log(`  - isProviderPendingVerification (calculated): ${isProviderPendingVerification}`);
+            console.log(`  - user.role: ${user?.role}`);
+            console.log(`  - isRegistrationInProgress (AuthContext): ${isRegistrationInProgress}`);
+            console.log(`  - isProviderPendingVerification (calculated): ${isProviderPendingVerification}`);
 
-            // LÓGICA REVISADA PARA PROVEDOR:
             if (user?.role === UserRole.PROVIDER) {
-                if (isRegistrationInProgress) {
-                    // Se o registro inicial ainda está em progresso (ex: acabou de se cadastrar, mas ainda não chegou na verificação)
-                    // Leva para a tela de detalhes de serviço, se não estiver nela.
+                if (isRegistrationInProgress) { 
                     if (cleanedCurrentPath !== authServiceDetailsStep && cleanedCurrentPath !== authVerifyAccountStep) {
-                        console.log(`[InitialLayout | decideAndRedirect] ACTION: Provider (${user.email}) registration in progress, not on service details/verification page ('${pathname}'). Redirecting to: '${authServiceDetailsStep}'.`);
+                        console.log(`[InitialLayout | decideAndRedirect] AÇÃO: Provedor (${user.email}) com registro em andamento, fora da página de detalhes/verificação. Redirecionando para: '${authServiceDetailsStep}'.`);
                         router.replace(authServiceDetailsStep as any);
                         console.groupEnd();
                         return;
-                    } else if (cleanedCurrentPath === authServiceDetailsStep) {
-                        console.log(`[InitialLayout | decideAndRedirect] INFO: Provider (${user.email}) registration in progress, correctly on service details page ('${pathname}'). Permitting to proceed.`);
-                        console.groupEnd();
-                        return;
                     }
-                    // Se isRegistrationInProgress for true e ele estiver na tela de verify-account, ele segue para a próxima condição (isProviderPendingVerification)
-                    // ou para a lógica geral se ambos forem falsos.
+                    console.log(`[InitialLayout | decideAndRedirect] INFO: Provedor (${user.email}) com registro em andamento, corretamente na página de detalhes. Permitindo prosseguir.`);
+                    console.groupEnd();
+                    return;
                 }
 
-                if (isProviderPendingVerification) {
-                    // Provedor precisa verificar ou está em processo.
-                    // Se NÃO está na tela de verificação, redirecione para ela.
+                if (isProviderPendingVerification) { 
                     if (cleanedCurrentPath !== authVerifyAccountStep) {
-                        console.log(`[InitialLayout | decideAndRedirect] ACTION: Provider (${user.email}) pending verification, not on verification page ('${pathname}'). Redirecting to: '${authVerifyAccountStep}'.`);
+                        console.log(`[InitialLayout | decideAndRedirect] AÇÃO: Provedor (${user.email}) pendente de verificação, fora da página de verificação. Redirecionando para: '${authVerifyAccountStep}'.`);
                         router.replace(authVerifyAccountStep as any);
                         console.groupEnd();
                         return;
-                    } else {
-                        // Já está na tela de verificação. Permitir que permaneça.
-                        console.log(`[InitialLayout | decideAndRedirect] INFO: Provider (${user.email}) pending verification, correctly on verification page ('${pathname}'). Permitting to proceed.`);
-                        console.groupEnd();
-                        return;
                     }
+                    console.log(`[InitialLayout | decideAndRedirect] INFO: Provedor (${user.email}) pendente de verificação, corretamente na página de verificação. Permitindo prosseguir.`);
+                    console.groupEnd();
+                    return;
                 }
-                // Se isRegistrationInProgress é false E isProviderPendingVerification é false (status 'APPROVED'),
-                // o fluxo continua para a lógica geral abaixo, que o levará para o dashboard do provedor.
             }
 
-            // --- From here, user is AUTHENTICATED and NOT a provider with pending initial registration or pending verification. ---
-            // (Isso inclui provedores com status 'APPROVED' agora)
             let targetRoute: string | null = null; 
             let shouldPerformRedirect = false;
 
@@ -208,25 +148,12 @@ function InitialLayout() {
             const isCurrentPathInCommonGroup = segments[0] === '(common)';
 
             console.log(`[InitialLayout | decideAndRedirect] General Role-Based Redirection Check:`);
-            console.log(`  - Current segment: ${segments[0]}`);
+            console.log(`  - Current segment: ${segments[0]}`);
 
             if (user?.role === UserRole.ADMIN) {
-                if (user?.clientDetails) {
-                    targetRoute = CLIENT_ROUTES.EXPLORE;
-                    if (!isCurrentPathInClientGroup && !isCurrentPathInCommonGroup) {
-                        shouldPerformRedirect = true;
-                    }
-                } else if (user?.providerDetails) {
-                    targetRoute = PROVIDER_ROUTES.DASHBOARD;
-                    if (!isCurrentPathInProviderGroup && !isCurrentPathInCommonGroup) {
-                        shouldPerformRedirect = true;
-                    }
-                } else {
-                    targetRoute = CLIENT_ROUTES.EXPLORE; 
-                    if (!isCurrentPathInClientGroup && !isCurrentPathInCommonGroup && !isCurrentPathInProviderGroup) { 
-                        shouldPerformRedirect = true;
-                    }
-                    console.warn('[InitialLayout | decideAndRedirect] WARNING: Authenticated ADMIN user without associated client/provider profile. Defaulting to client route or staying if on a common/client/provider route.');
+                targetRoute = CLIENT_ROUTES.EXPLORE; 
+                if (!isCurrentPathInClientGroup && !isCurrentPathInCommonGroup && !isCurrentPathInProviderGroup) {
+                    shouldPerformRedirect = true;
                 }
             } else if (user?.role === UserRole.CLIENT) {
                 targetRoute = CLIENT_ROUTES.EXPLORE;
@@ -234,13 +161,12 @@ function InitialLayout() {
                     shouldPerformRedirect = true;
                 }
             } else if (user?.role === UserRole.PROVIDER) {
-                // Este bloco agora só será alcançado se user.providerDetails.verificationStatus FOR 'APPROVED'
                 targetRoute = PROVIDER_ROUTES.DASHBOARD;
                 if (!isCurrentPathInProviderGroup && !isCurrentPathInCommonGroup) {
                     shouldPerformRedirect = true;
                 }
             } else {
-                console.warn('[InitialLayout | decideAndRedirect] WARNING: Authenticated user with unknown or null role. Redirecting to login.');
+                console.warn('[InitialLayout | decideAndRedirect] AVISO: Usuário autenticado com função desconhecida ou nula. Redirecionando para login.');
                 targetRoute = AUTH_ROUTES.LOGIN;
                 shouldPerformRedirect = true;
             }
@@ -251,43 +177,44 @@ function InitialLayout() {
                 const currentPathBase = cleanedCurrentPath.replace(/\/\(\w+\)/, ''); 
 
                 console.log(`[InitialLayout | decideAndRedirect] Final Redirection Evaluation:`);
-                console.log(`  - Proposed targetRoute (normalized): '${normalizedTargetRoute}'`);
-                console.log(`  - current pathname (normalized): '${cleanedCurrentPath}'`);
-                console.log(`  - targetBase: '${targetBase}'`);
-                console.log(`  - currentPathBase: '${currentPathBase}'`);
-                console.log(`  - inAuthGroup: ${inAuthGroup}`);
-                console.log(`  - shouldPerformRedirect (pre-final check): ${shouldPerformRedirect}`);
+                console.log(`  - Proposed targetRoute (normalized): '${normalizedTargetRoute}'`);
+                console.log(`  - current pathname (normalized): '${cleanedCurrentPath}'`);
+                console.log(`  - targetBase: '${targetBase}'`);
+                console.log(`  - currentPathBase: '${currentPathBase}'`);
+                console.log(`  - inAuthGroup: ${inAuthGroup}`);
+                console.log(`  - shouldPerformRedirect (pre-final check): ${shouldPerformRedirect}`);
 
                 if (cleanedCurrentPath === normalizedTargetRoute || (normalizedTargetRoute.includes('/(') && currentPathBase === targetBase)) {
                     shouldPerformRedirect = false;
-                    console.log(`[InitialLayout | decideAndRedirect] INFO: Already on target route or its equivalent base. No redirect needed.`);
+                    console.log(`[InitialLayout | decideAndRedirect] INFO: Já na rota alvo ou equivalente. Não é necessário redirecionar.`);
                 }
                 
                 if (inAuthGroup && !normalizedTargetRoute.includes('/(') && cleanedCurrentPath !== normalizedTargetRoute) {
                     shouldPerformRedirect = true;
-                    console.log(`[InitialLayout | decideAndRedirect] INFO: Authenticated user in (auth) group, redirecting to non-(auth) target route.`);
+                    console.log(`[InitialLayout | decideAndRedirect] INFO: Usuário autenticado no grupo (auth), redirecionando para rota alvo fora do grupo (auth).`);
                 }
             } else {
                 shouldPerformRedirect = false; 
-                console.log(`[InitialLayout | decideAndRedirect] INFO: No valid target route determined. No redirect needed.`);
+                console.log(`[InitialLayout | decideAndRedirect] INFO: Nenhuma rota alvo válida determinada. No redirect needed.`);
             }
 
             if (shouldPerformRedirect && targetRoute && cleanedCurrentPath !== normalizePath(targetRoute)) {
-                console.log(`[InitialLayout | decideAndRedirect] ACTION: Final redirecting ${user?.role || 'N/A'} from '${cleanedCurrentPath}' to: '${normalizePath(targetRoute)}'`);
+                console.log(`[InitialLayout | decideAndRedirect] AÇÃO: Redirecionamento final ${user?.role || 'N/A'} de '${cleanedCurrentPath}' para: '${normalizePath(targetRoute)}'`);
                 router.replace(normalizePath(targetRoute) as any);
                 console.groupEnd();
                 return; 
             } else {
-                console.log(`[InitialLayout | decideAndRedirect] INFO: User ${user?.role || 'N/A'} is already on the correct route ('${cleanedCurrentPath}') or no redirection action was necessary. Final shouldPerformRedirect: ${shouldPerformRedirect}.`);
+                console.log(`[InitialLayout | decideAndRedirect] INFO: Usuário ${user?.role || 'N/A'} já está na rota correta ('${cleanedCurrentPath}') ou nenhuma ação de redirecionamento foi necessária. Final shouldPerformRedirect: ${shouldPerformRedirect}.`);
                 console.groupEnd();
             }
         };
 
         decideAndRedirect();
 
-    }, [isAuthenticated, user, storageLoading, authIsLoading, router, segments, pathname, checkWelcomeStatus, isRegistrationInProgress]);
+    }, [isAuthenticated, user, authIsLoading, router, segments, pathname, isRegistrationInProgress, appReady, providerRegIsLoading]); 
 
-    if (storageLoading || authIsLoading) {
+    // Renderiza o indicador de carregamento se o app não estiver pronto ou Firebase não estiver pronto
+    if (!appReady || !firebaseReady || authIsLoading) { // NOVO: Adicionado !firebaseReady à condição
         return (
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#007AFF" />

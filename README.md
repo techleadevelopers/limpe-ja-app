@@ -33,6 +33,27 @@
 
 <div style="cor de fundo: #f8f9fa; preenchimento: 30px; raio da borda: 10px; sombra da caixa: 0 2px 10px rgba(0, 0, 0, 0,05); margem inferior: 40px;">
 
+<h2 style="color: #34495e; font-size: 2em; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 20px;">✨ Destaques e Pilares Tecnológicos</h2>
+
+<p style="color: #555; line-height: 1.6; margin-bottom: 20px;">
+O projeto LimpeJá é construído sobre pilares tecnológicos e de arquitetura que garantem sua robustez, escalabilidade e modernidade, alinhando-se às melhores práticas do mercado.
+</p>
+
+<p style="text-align: center; margin-bottom: 20px;">
+<img src="https://img.shields.io/badge/Google%20Cloud-4285F4?style=for-the-badge&logo=google-cloud&logoColor=white" alt="Google Cloud" style="margin: 5px;">
+<img src="https://img.shields.io/badge/Firebase%20Auth-FFCA28?style=for-the-badge&logo=firebase&logoColor=white" alt="Firebase Auth" style="margin: 5px;">
+<img src="https://img.shields.io/badge/OTP-00BCD4?style=for-the-badge" alt="OTP" style="margin: 5px;">
+<img src="https://img.shields.io/badge/Design%20Patterns-F7DF1E?style=for-the-badge" alt="Design Patterns" style="margin: 5px;">
+<img src="https://img.shields.io/badge/SOLID%20Principles-8D6E63?style=for-the-badge" alt="SOLID" style="margin: 5px;">
+<img src="https://img.shields.io/badge/Clean%20Architecture-4CAF50?style=for-the-badge" alt="Clean Architecture" style="margin: 5px;">
+<img src="https://img.shields.io/badge/SaaS%20Enterprise-6200EE?style=for-the-badge" alt="SaaS Enterprise" style="margin: 5px;">
+<img src="https://img.shields.io/badge/AI%20Recommendations-FF7043?style=for-the-badge" alt="AI Recommendations" style="margin: 5px;">
+</p>
+
+</div>
+
+<div style="cor de fundo: #f8f9fa; preenchimento: 30px; raio da borda: 10px; sombra da caixa: 0 2px 10px rgba(0, 0, 0, 0,05); margem inferior: 40px;">
+
 <h2 style="color: #34495e; font-size: 2em; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 20px;">📋 Índice</h2>
 
 <ul style="list-style-type: none; preenchimento: 0;">
@@ -41,7 +62,7 @@
 
 <li style="margin-bottom: 8px;"><a href="#-funcionalidades-principais" style="color: #3498db; text-decoration: none; font-weight: bold;">✨ Funcionalidades Principais</a>
 
-<ul style="list-style-type: disco; preenchimento esquerdo: 20px; margem superior: 5px;">
+<ul style="list-style-type: disc; preenchimento esquerdo: 20px; margem superior: 5px;">
 
 <li style="margin-bottom: 5px;"><a href="#para-clientes" style="color: #2980b9; text-decoration: none;">Para Clientes</a></li>
 
@@ -53,7 +74,7 @@
 
 <li style="margin-bottom: 8px;"><a href="#️-tecnologias-principais" style="color: #3498db; text-decoration: none; font-weight: bold;">🛠️ Tecnologias Principais</a>
 
-<ul style="list-style-type: disco; preenchimento esquerdo: 20px; margem superior: 5px;">
+<ul style="list-style-type: disc; preenchimento esquerdo: 20px; margem superior: 5px;">
 
 <li style="margin-bottom: 5px;"><a href="#frontend" style="color: #2980b9; text-decoration: none;">Front-end</a></li>
 
@@ -65,7 +86,7 @@
 
 <li style="margin-bottom: 8px;"><a href="#-arquitetura-do-sistema" style="color: #3498db; text-decoration: none; font-weight: bold;">🔩 Arquitetura do Sistema</a>
 
-<ul style="list-style-type: disco; preenchimento esquerdo: 20px; margem superior: 5px;">
+<ul style="list-style-type: disc; preenchimento esquerdo: 20px; margem superior: 5px;">
 
 <li style="margin-bottom: 5px;"><a href="#visão-geral-e-propósito-do-backend" style="color: #2980b9; text-decoration: none;">Visão Geral e Propósito do Backend</a></li>
 
@@ -83,7 +104,7 @@
 
 <li style="margin-bottom: 8px;"><a href="#-conexão-frontend-backend-1" style="color: #3498db; text-decoration: none; font-weight: bold;">🔗 Conexão Frontend-Backend</a>
 
-<ul style="list-style-type: disco; preenchimento esquerdo: 20px; margem superior: 5px;">
+<ul style="list-style-type: disc; preenchimento esquerdo: 20px; margem superior: 5px;">
 
 <li style="margin-bottom: 5px;"><a href="#mapeamento-de-rotas-da-api" style="color: #2980b9; text-decoration: none;">Mapeamento de Rotas da API</a></li>
 
@@ -93,11 +114,11 @@
 
 <li style="margin-bottom: 8px;"><a href="#-estrutura-do-projeto" style="color: #3498db; text-decoration: none; font-weight: bold;">📁 Estrutura do Projeto</a>
 
-<ul style="list-style-type: disco; preenchimento esquerdo: 20px; margem superior: 5px;">
+<ul style="list-style-type: disc; preenchimento esquerdo: 20px; margem superior: 5px;">
 
-<li style="margin-bottom: 5px;"><a href="#estrutura-de-pastas-frontend" style="color: #2980b9; text-decoration: none;">Estrutura de Pastas (Frontend)</a></li>
+<li style="margin-bottom: 5px;"><a href="#frontend-folder-structure" style="color: #2980b9; text-decoration: none;">Estrutura de Pastas (Frontend)</a></li>
 
-<li style="margin-bottom: 5px;"><a href="#estrutura-de-pastas-backend" style="color: #2980b9; text-decoration: none;">Estrutura de Massas (Backend)</a></li>
+<li style="margin-bottom: 5px;"><a href="#backend-folder-structure" style="color: #2980b9; text-decoration: none;">Estrutura de Pastas (Backend)</a></li>
 
 </ul>
 
@@ -105,7 +126,7 @@
 
 <li style="margin-bottom: 8px;"><a href="#-começando-getting-started" style="color: #3498db; text-decoration: none; font-weight: bold;">🚀 Começando</a>
 
-<ul style="list-style-type: disco; preenchimento esquerdo: 20px; margem superior: 5px;">
+<ul style="list-style-type: disc; preenchimento esquerdo: 20px; margem superior: 5px;">
 
 <li style="margin-bottom: 5px;"><a href="#pré-requisitos" style="color: #2980b9; text-decoration: none;">Pré-requisitos</a></li>
 
@@ -127,7 +148,7 @@
 
 <li style="margin-bottom: 8px;"><a href="#-limpejá-ganhos-nossa-estratégia-de-monetização" style="color: #3498db; text-decoration: none; font-weight: negrito;">💰 LimpeJá Ganhos: Nossa Estratégia de Monetização</a></li>
 
-<li style="margin-bottom: 8px;"><a href="#️-roadmap-e-próximas-etapas" style="color: #3498db; text-decoration: none; font-weight: bold;">🛣️ Roteiro e Próximas Etapas</a></li>
+<li style="margin-bottom: 8px;"><a href="#-status-e-próximas-etapas" style="color: #3498db; text-decoration: none; font-weight: bold;">✅ Status e Próximas Etapas</a></li>
 
 <li style="margin-bottom: 8px;"><a href="#-recursos-e-suporte" style="color: #3498db; text-decoration: none; font-weight: bold;">📚 Recursos e Suporte</a></li>
 
@@ -169,15 +190,15 @@ Para os profissionais de limpeza, o LimpeJá é uma ferramenta poderosa para exp
 
 <li style="margin-bottom: 10px; color: #555;"><strong style="color: #3498db;">📅 Agendamento Flexível:</strong> Escolha dados e horários que se encaixam na sua rotina e gerencie seus agendamentos.</li>
 
-<li style="margin-bottom: 10px; color: #555;"><strong style="color: #3498db;">💳 Pagamento Seguro:</strong> Transações protegidas dentro da plataforma, incluindo geração de cobranças PIX.</li>
+<li style="margin-bottom: 10px; color: #555;"><strong style="color: #3498db;">💳 Pagamento Seguro (incluindo PIX):</strong> Transações protegidas dentro da plataforma, com suporte a geração de cobranças PIX e processamento de webhooks para atualização de status de pagamento.</li>
 
 <li style="margin-bottom: 10px; color: #555;"><strong style="color: #3498db;">⭐ Avaliações Confiáveis:</strong> Deixe e veja avaliações para ajudar a comunidade e garantir a qualidade do serviço.</li>
 
-<li style="margin-bottom: 10px; color: #555;"><strong style="color: #3498db;">💬 Comunicação Direta:</strong> Chat em tempo real integrado para combinar detalhes com o profissional.</li>
+<li style="margin-bottom: 10px; color: #555;"><strong style="color: #3498db;">💬 Comunicação Direta (Chat em Tempo Real):</strong> Chat em tempo real integrado para combinar detalhes com o profissional, com persistência de conversas e notificações instantâneas.</li>
 
 <li style="margin-bottom: 10px; color: #555;"><strong style="color: #3498db;">🏠 Perfis Detalhados:</strong> Visualize informações completas sobre os profissionais, incluindo serviços oferecidos e status de verificação.</li>
 
-<li style="margin-bottom: 10px; color: #555;"><strong style="color: #3498db;">🔔 Notificações:</strong> Receba alertas sobre o status dos agendamentos, mensagens e promoções.</li>
+<li style="margin-bottom: 10px; color: #555;"><strong style="color: #3498db;">🔔 Notificações em Tempo Real:</strong> Receba alertas instantâneos sobre o status dos agendamentos, mensagens e promoções via notificações push.</li>
 
 <li style="margin-bottom: 10px; color: #555;"><strong style="color: #3498db;">⚙️ Gerenciamento de Perfil:</strong> Atualize suas informações pessoais e de contato.</li>
 
@@ -191,21 +212,21 @@ Para os profissionais de limpeza, o LimpeJá é uma ferramenta poderosa para exp
 
 <ul style="list-style-type: none; preenchimento: 0;">
 
-<li style="margin-bottom: 10px; color: #555;"><strong style="color: #2ecc71;">🚀 Visibilidade Ampliada:</strong> Alcance mais clientes e aumente sua renda através de um perfil profissional detalhado.</li>
+<li style="margin-bottom: 10px; color: #2ecc71;"><strong style="color: #2ecc71;">🚀 Visibilidade Ampliada:</strong> Alcance mais clientes e aumente sua renda através de um perfil profissional detalhado.</li>
 
-<li style="margin-bottom: 10px; color: #555;"><strong style="color: #2ecc71;">🗓️ Gestão de Agenda:</strong> Controle total sobre seus horários e disponibilidade, aceitando ou recusando agendamentos.</li>
+<li style="margin-bottom: 10px; color: #2ecc71;"><strong style="color: #2ecc71;">🗓️ Gestão de Agenda:</strong> Controle total sobre seus horários e disponibilidade, aceitando ou recusando agendamentos.</li>
 
-<li style="margin-bottom: 10px; color: #555;"><strong style="color: #2ecc71;">💰 Pagamentos Garantidos:</strong> Receba de forma segura e pontual pelos seus serviços, com visualizações de ganhos e solicitação de saques.</li>
+<li style="margin-bottom: 10px; color: #2ecc71;"><strong style="color: #2ecc71;">💰 Pagamentos Garantidos e Saques:</strong> Receba de forma segura e pontual pelos seus serviços, com visualizações de ganhos, solicitação de saques e atomicidade garantida nas transações.</li>
 
-<li style="margin-bottom: 10px; color: #555;"><strong style="color: #2ecc71;">📊 Perfil Profissional:</strong> Mostre suas habilidades, experiência, portfólio de serviços e avaliações recebidas.</li>
+<li style="margin-bottom: 10px; color: #2ecc71;"><strong style="color: #2ecc71;">📊 Perfil Profissional Detalhado:</strong> Mostre suas habilidades, experiência, portfólio de serviços e avaliações recebidas.</li>
 
-<li style="margin-bottom: 10px; color: #555;"><strong style="color: #2ecc71;">🔔 Notificações em Tempo Real:</strong> Sobre novos pedidos, mensagens e atualizações de agendamento.</li>
+<li style="margin-bottom: 10px; color: #2ecc71;"><strong style="color: #2ecc71;">🔔 Notificações em Tempo Real:</strong> Sobre novos pedidos, mensagens e atualizações de agendamento via notificações push.</li>
 
-<li style="margin-bottom: 10px; color: #555;"><strong style="color: #2ecc71;">✅ Processo de Verificação:</strong> Passe por um processo de verificação de conta (CPF, documento, selfie) para aumentar a confiança dos clientes.</li>
+<li style="margin-bottom: 10px; color: #2ecc71;"><strong style="color: #2ecc71;">✅ Processo de Verificação Robusto:</strong> Passe por um processo de verificação de conta (CPF, documento com OCR, selfie com comparação facial e prova de vida, verificação de antecedentes em APIs reais) para aumentar a confiança dos clientes.</li>
 
-<li style="margin-bottom: 10px; color: #555;"><strong style="color: #2ecc71;">🛠️ Gerenciamento de Serviços:</strong> Adicione, edite e remova os tipos de serviços que você oferece, definindo preços e durações.</li>
+<li style="margin-bottom: 10px; color: #2ecc71;"><strong style="color: #2ecc71;">🛠️ Gerenciamento de Serviços:</strong> Adicione, edite e remova os tipos de serviços que você oferece, definindo preços e durações.</li>
 
-<li style="margin-bottom: 10px; color: #555;"><strong style="color: #2ecc71;">💬 Chat em Tempo Real:</strong> Comunique-se diretamente com seus clientes para esclarecer dúvidas e combinar detalhes.</li>
+<li style="margin-bottom: 10px; color: #2ecc71;"><strong style="color: #2ecc71;">💬 Chat em Tempo Real:</strong> Comunique-se diretamente com seus clientes para esclarecer dúvidas e combinar detalhes, com persistência de conversas.</li>
 
 </ul>
 
@@ -253,7 +274,7 @@ O projeto LimpeJá é construído sobre uma pilha tecnológica robusta e moderna
 
 <li style="margin-bottom: 8px; color: #555;"><strong style="color: #3498db;">Serviços Expo:</strong> <a href="https://expo.dev/eas" style="color: #3498db; text-decoration: none;">EAS (Expo Application Services)</a> - Para um fluxo de desenvolvimento gerenciado, builds e atualizações. Inclui:
 
-<ul style="list-style-type: disco; preenchimento esquerdo: 20px; margem superior: 5px; cor: #555;">
+<ul style="list-style-type: disc; preenchimento esquerdo: 20px; margem superior: 5px; cor: #555;">
 
 <li style="margin-bottom: 5px;">`EAS Build`: Para compilação de APKs/AABs e IPAs na nuvem.</li>
 
@@ -264,6 +285,10 @@ O projeto LimpeJá é construído sobre uma pilha tecnológica robusta e moderna
 </ul>
 
 </li>
+
+<li style="margin-bottom: 8px; color: #555;"><strong style="color: #3498db;">Autenticação por Telefone (Firebase):</strong> Implementação de login e registro via número de telefone com OTP (One-Time Password) utilizando o Firebase Authentication, garantindo um fluxo de autenticação seguro e eficiente para dispositivos móveis.</li>
+
+<li style="margin-bottom: 8px; color: #555;"><strong style="color: #3498db;">Notificações Push (Firebase Cloud Messaging):</strong> Integração com o Firebase Cloud Messaging para envio e recebimento de notificações push em tempo real, mantendo os usuários informados sobre agendamentos, mensagens de chat e atualizações importantes.</li>
 
 </ul>
 
@@ -292,6 +317,18 @@ O projeto LimpeJá é construído sobre uma pilha tecnológica robusta e moderna
 <li style="margin-bottom: 8px; color: #555;"><strong style="color: #e74c3c;">API de documentação:</strong> <a href="https://swagger.io/specification/" style="color: #e74c3c; text-decoration: none;">Swagger (OpenAPI)</a> - Para documentação automática e interativa da API, facilitando o consumo por desenvolvedores de frontend e a utilização da API.</li>
 
 <li style="margin-bottom: 8px; color: #555;"><strong style="color: #e74c3c;">Variáveis ​​de Ambiente:</strong> `@nestjs/config` com <a href="https://joi.dev/api/" style="color: #e74c3c; text-decoration: none;">Joi</a> - Para gerenciamento seguro e validação rigorosas das configurações de ambiente, garantindo a integridade da aplicação.</li>
+
+<li style="margin-bottom: 8px; color: #555;"><strong style="color: #e74c3c;">Verificação de Provedores (APIs Reais):</strong> Implementação robusta do processo de verificação de provedores, incluindo integração com Google Cloud Vision API para OCR (reconhecimento de documentos), comparação facial, e APIs de terceiros para verificação de antecedentes criminais.</li>
+
+<li style="margin-bottom: 8px; color: #555;"><strong style="color: #e74c3c;">Gateway de Pagamento PIX (Integração Real):</strong> Integração com um gateway de pagamento PIX real (ex: PagSeguro, Stripe, etc.) para processar transações, gerenciar webhooks e garantir a atomicidade das operações financeiras.</li>
+
+<li style="margin-bottom: 8px; color: #555;"><strong style="color: #e74c3c;">Notificações Push (FCM):</strong> Suporte a notificações push via Firebase Cloud Messaging (FCM) para enviar alertas e atualizações em tempo real aos usuários.</li>
+
+<li style="margin-bottom: 8px; color: #555;"><strong style="color: #e74c3c;">Busca Geoespacial Avançada:</strong> Implementação de lógica geoespacial (`PostGIS` com `Prisma.$queryRaw`) para busca de provedores por proximidade, utilizando coordenadas de latitude/longitude.</li>
+
+<li style="margin-bottom: 8px; color: #555;"><strong style="color: #e74c3c;">Consistência Monetária (Prisma Decimal):</strong> Uso do tipo `Decimal` do Prisma para garantir precisão exata em todos os cálculos e armazenamento de valores monetários.</li>
+
+<li style="margin-bottom: 8px; color: #555;"><strong style="color: #e74c3c;">Gerenciamento de Ganhos e Saques:</strong> Funcionalidades completas para provedores visualizarem seus ganhos, solicitarem saques e garantir a atomicidade das transações financeiras.</li>
 
 </ul>
 
@@ -337,7 +374,7 @@ O backend do LimpeJá é uma camada de serviço que gerencia toda a lógica de n
 
 <li style="margin-bottom: 10px;"><strong>Backend (API NestJS):</strong>
 
-<ul style="list-style-type: disco; preenchimento esquerdo: 20px; margem superior: 5px;">
+<ul style="list-style-type: disc; preenchimento esquerdo: 20px; margem superior: 5px;">
 
 <li style="margin-bottom: 5px;"><strong>Guardas:</strong> Interceptam uma requisição para validação de autenticação (JWT) e autorização (papéis do usuário).</li>
 
@@ -373,7 +410,7 @@ O backend do LimpeJá é uma camada de serviço que gerencia toda a lógica de n
 
 <ul style="list-style-type: disc; padding-left: 20px; color: #555; line-height: 1.6;">
 
-<li style="margin-bottom: 5px;">`src/auth`: Gerenciamento de autenticação (registro, login, redefinição de senha).</li>
+<li style="margin-bottom: 5px;">`src/auth`: Gerenciamento de autenticação (registro, login, redefinição de senha, **incluindo autenticação por telefone e verificação de OTP via Firebase Admin SDK**).</li>
 
 <li style="margin-bottom: 5px;">`src/users`: Operações genéricas sobre usuários (perfis, dados básicos).</li>
 
@@ -389,19 +426,19 @@ O backend do LimpeJá é uma camada de serviço que gerencia toda a lógica de n
 
 <li style="margin-bottom: 5px;">`src/bookings`: Criação e gestão de agendamentos.</li>
 
-<li style="margin-bottom: 5px;">`src/payments`: Processamento de pagamentos (PIX simulado) e saques.</li>
+<li style="margin-bottom: 5px;">`src/payments`: Processamento de pagamentos (**PIX real** e saques) e integração com webhooks de gateways de pagamento.</li>
 
-<li style="margin-bottom: 5px;">`src/chat`: Funcionalidades de chat (REST e WebSocket).</li>
+<li style="margin-bottom: 5px;">`src/chat`: Funcionalidades de chat (**REST e WebSocket com persistência de conversas**).</li>
 
-<li style="margin-bottom: 5px;">`src/notifications`: Gerenciamento de notificações para usuários.</li>
+<li style="margin-bottom: 5px;">`src/notifications`: Gerenciamento de notificações para usuários (**suporte a notificações push via FCM**).</li>
 
 <li style="margin-bottom: 5px;">`src/reviews`: Envio e consulta de avaliações.</li>
 
 <li style="margin-bottom: 5px;">`src/offers`: Gerenciamento de ofertas e promoções.</li>
 
-<li style="margin-bottom: 5px;">`src/search`: Motor de busca abrangente.</li>
+<li style="margin-bottom: 5px;">`src/search`: Motor de busca abrangente (**incluindo busca geoespacial de provedores**).</li>
 
-<li style="margin-bottom: 5px;">`src/verification`: Processo de verificação de provedores (CPF, documentos, selfie).</li>
+<li style="margin-bottom: 5px;">`src/verification`: Processo de verificação de provedores (**CPF, documentos com OCR, selfie com comparação facial e prova de vida, verificação de antecedentes em APIs reais**).</li>
 
 <li style="margin-bottom: 5px;">`src/prisma`: Módulo global para o `PrismaService`.</li>
 
@@ -429,23 +466,23 @@ O `prisma/schema.prisma` define o modelo de dados relacional e é a fonte da ver
 
 <li style="margin-bottom: 5px;"><strong>Modelos Principais (Tabelas):</strong>
 
-<ul style="list-style-type: círculo; preenchimento esquerdo: 20px; margem superior: 5px;">
+<ul style="list-style-type: circle; preenchimento esquerdo: 20px; margem superior: 5px;">
 
 <li style="margin-bottom: 5px;">`User`: Entidade base para todos os usuários, com `email`, `passwordHash`, `role` e `avatarUrl`.</li>
 
 <li style="margin-bottom: 5px;">`Cliente`: ​​Detalhes específicos para clientes (`fullName`, `phone`).</li>
 
-<li style="margin-bottom: 5px;">`Provider`: Detalhes específicos para provedores (`fullName`, `cpf`, `dateOfBirth`, `verificationStatus`, `pixKey`).</li>
+<li style="margin-bottom: 5px;">`Provider`: Detalhes específicos para provedores (`fullName`, `cpf`, `dateOfBirth`, `verificationStatus`, `pixKey`). **Inclui campos para armazenamento de URLs de documentos e resultados de verificação.**</li>
 
-<li style="margin-bottom: 5px;">`Endereço`: Informações de endereço, usadas por clientes, provedores e agendamentos.</li>
+<li style="margin-bottom: 5px;">`Endereço`: Informações de endereço, usadas por clientes, provedores e agendamentos. **Suporta dados geoespaciais (`location`) para busca por proximidade.**</li>
 
 <li style="margin-bottom: 5px;">`Serviço`: Tipos de serviços que podem ser oferecidos (`nome`, `preço`, `icon`).</li>
 
 <li style="margin-bottom: 5px;">`ProviderService`: Um serviço específico oferecido por uma operadora, com `price` e `durationMinutes`.</li>
 
-<li style="margin-bottom: 5px;">`Booking`: Representa um agendamento de serviço, incluindo `totalPrice` e um `addressId` específico para o agendamento.</li>
+<li style="margin-bottom: 5px;">`Booking`: Representa um agendamento de serviço, incluindo `totalPrice` e um `addressId` específico para o agendamento. **Status de agendamento expandidos para maior granularidade.**</li>
 
-<li style="margin-bottom: 5px;">`Chat` e `Message`: Para comunicação em tempo real entre usuários.</li>
+<li style="margin-bottom: 5px;">`Chat` e `Message`: Para comunicação em tempo real entre usuários. **Com persistência de mensagens.**</li>
 
 <li style="margin-bottom: 5px;">`Notificação`: Armazena notificações para usuários.</li>
 
@@ -453,7 +490,7 @@ O `prisma/schema.prisma` define o modelo de dados relacional e é a fonte da ver
 
 <li style="margin-bottom: 5px;">`Oferta`: Gerencia ofertas e promoções.</li>
 
-<li style="margin-bottom: 5px;">`Transaction`: Registra todas as transações financeiras, utilizando `Prisma.Decimal` para garantir a rentabilidade monetária.</li>
+<li style="margin-bottom: 5px;">`Transaction`: Registra todas as transações financeiras, utilizando `Prisma.Decimal` para garantir a rentabilidade monetária. **Inclui `bookingId` para rastreamento de transações de agendamento.**</li>
 
 <li style="margin-bottom: 5px;">`Disponibilidade`: Define a disponibilidade de horários dos provedores.</li>
 
@@ -511,7 +548,7 @@ O `prisma/schema.prisma` define o modelo de dados relacional e é a fonte da ver
 
 </div>
 
-<div style="cor de fundo: #ffffff; preenchimento: 30px; raio da borda: 10px; sombra da caixa: 0 2px 10px rgba(0, 0, 0, 0,05); margem inferior: 40px;">
+<div style="cor de fundo: #f8f9fa; preenchimento: 30px; raio da borda: 10px; sombra da caixa: 0 2px 10px rgba(0, 0, 0, 0,05); margem inferior: 40px;">
 
 <h2 id="-conexão-frontend-backend-1" style="color: #34495e; font-size: 2em; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 20px;">🔗 Conexão Frontend-Backend</h2>
 
@@ -582,6 +619,26 @@ A interligação entre o Frontend (React Native/Expo) e o Backend (NestJS) do pr
 <td style="padding: 10px; border: 1px sólido #ddd; color: #555;">`POST /auth/login`</td>
 
 <td style="padding: 10px; border: 1px solid #ddd; color: #555;">`LoginDto` / `AuthResponseDto`</td>
+
+</tr>
+
+<tr estilo="cor de fundo: #f2f2f2;">
+
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">**Solicitar OTP**</td>
+
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`**POST /auth/send-otp**`</td>
+
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`**RequestOtpDto**` / `**MessageResponseDto**`</td>
+
+</tr>
+
+<tr estilo="cor de fundo: #f9f9f9;">
+
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">**Verificar OTP**</td>
+
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`**POST /auth/verify-otp**`</td>
+
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`**VerifyOtpDto**` / `**AuthResponseDto**`</td>
 
 </tr>
 
@@ -730,12 +787,9 @@ O projeto LimpeJá é um monorepo, contendo pastas para o frontend (`LimpeJaApp/
 <div style="background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); margin-bottom: 20px;">
 <h3 id="frontend-folder-structure" style="color: #2c3e50; font-size: 1.5em; margin-bottom: 15px;">Frontend Folder Structure</h3>
 <pre style="background-color: #ecf0f1; padding: 15px; border-radius: 5px; overflow-x: auto; color: #34495e;"><code>LimpeJáApp/
-├── app/
+├── app/ # Contém apenas as rotas e layouts do Expo Router
 │ ├── (auth)/ # Authentication Flow
-│ │ ├── api/
-│ │ ├── components/
 │ │ ├── provider-registration/
-│ │ │ ├── components/
 │ │ │ ├── verification/
 │ │ │ │ ├── background-check-status.tsx
 │ │ │ │ ├── document-upload.tsx
@@ -758,17 +812,11 @@ O projeto LimpeJá é um monorepo, contendo pastas para o frontend (`LimpeJaApp/
 │ │ └── connection-test.tsx
 │ ├── (client)/ # Client Functionalities
 │ │ ├── bookings/ # Client Appointments
-│ │ │ ├── api/
-│ │ │ ├── components/
 │ │ │ ├── [bookingId].tsx
 │ │ │ ├── index.tsx
 │ │ │ ├── schedule-service.tsx
 │ │ │ └── success.tsx
 │ │ ├── explore/ # Explore Services/Professionals
-│ │ │ ├── api/
-│ │ │ ├── components/
-│ │ │ ├── data/
-│ │ │ ├── styles/
 │ │ │ ├── [providerId].tsx
 │ │ │ ├── index.tsx
 │ │ │ ├── search-results.tsx
@@ -777,24 +825,16 @@ O projeto LimpeJá é um monorepo, contendo pastas para o frontend (`LimpeJaApp/
 │ │ │ ├── all-categories.tsx
 │ │ │ └── all-nearby-providers.tsx
 │ │ ├── messages/ # Client Messages
-│ │ │ ├── api/
-│ │ │ ├── components/
 │ │ │ ├── [chatId].tsx
 │ │ │ └── index.tsx
 │ │ ├── offers/ # Client Offers
-│ │ │ ├── api/
-│ │ │ ├── components/
 │ │ │ └── [offerId].tsx
 │ │ └── profile/ # Client Profile
-│ │ │ ├── api/
-│ │ │ ├── components/
 │ │ │ ├── edit.tsx
 │ │ │ ├── index.tsx
 │ │ │ ├── layout.tsx
 │ │ │ └── layout.tsx
 │ ├── (common)/ # Common Functionalities (client and provider)
-│ │ ├── api/
-│ │ ├── components/
 │ │ ├── reviews/
 │ │ │ └── [targetId].tsx
 │ │ ├── help.tsx
@@ -805,71 +845,58 @@ O projeto LimpeJá é um monorepo, contendo pastas para o frontend (`LimpeJaApp/
 │ │ ├── settings.tsx
 │ │ └── terms.tsx
 │ ├── (provider)/ # Provider Functionalities
-│ │ ├── api/
-│ │ ├── components/
 │ │ ├── messages/ # Provider Messages
-│ │ │ ├── api/
-│ │ │ ├── components/
 │ │ │ ├── [chatId].tsx
 │ │ │ └── index.tsx
 │ │ ├── profile/ # Provider Profile
-│ │ │ ├── api/
-│ │ │ ├── components/
 │ │ │ ├── edit-services.tsx
 │ │ │ └── index.tsx
 │ │ ├── scheduling/ # Provider Schedule/Availability
-│ │ │ ├── api/
-│ │ │ └── components/
 │ │ │ └── index.tsx
 │ │ ├── services/ # Provider Services/Requests
-│ │ │ ├── api/
-│ │ │ ├── components/
 │ │ │ ├── [serviceId].tsx
 │ │ │ └── index.tsx
 │ │ ├── dashboard.tsx
 │ │ ├── earnings.tsx
 │ │ ├── layout.tsx
-│ │ ├── README.md
-│ │ └── services/
-│ │ ├── authService.ts
-│ │ └── clientService.ts
+│ │ └── README.md
 │ ├── _layout.tsx
 │ ├── +not-found.tsx
 │ ├── doc.md
 │ ├── index.tsx
 │ ├── README.md
 │ └── welcome.tsx
-├── assets/ # Static resources
+├── assets/ # Static resources (fonts, images, lottie)
 │ ├── fonts/
 │ ├── images/
 │ └── lottie/
-├── components/ # Truly reusable and atomic UI components (global)
+├── components/ # Componentes React UI globais e reutilizáveis (InputWithIcon, AnimatedErrorMessage, etc.)
 │ ├── layout/
 │ └── ui/
-├── config/
+├── config/ # Configurações do aplicativo (AppConfig, Firebase, etc.)
 │ ├── AppConfig.ts
 │ ├── firebase.ts
 │ └── firebaseClient.ts
-├── constants/
+├── constants/ # Constantes globais (Cores, Rotas, Strings, Temas)
 │ ├── Colors.ts
 │ ├── routes.ts
 │ ├── strings.ts
 │ └── theme.ts
-├── contexts/
+├── contexts/ # Contextos React para gerenciamento de estado global
 │ ├── AppContext.tsx
 │ ├── AuthContext.tsx
 │ └── ProviderRegistrationContext.tsx
-├── documentation/
-├── hooks/
+├── documentation/ # Documentação interna
+├── hooks/ # Hooks React personalizados
 │ ├── useAuth.ts
 │ ├── useColorScheme.ts
 │ ├── useColorScheme.web.ts
 │ ├── useFormValidation.ts
 │ └── useThemeColor.ts
 ├── node_modules/
-├── scripts/
+├── scripts/ # Scripts auxiliares para o projeto
 │ └── reset-project.js
-├── services/
+├── services/ # Camada de serviços para comunicação com o backend (Axios, etc.)
 │ ├── api.ts
 │ ├── authService.ts
 │ ├── bookingService.ts
@@ -885,7 +912,7 @@ O projeto LimpeJá é um monorepo, contendo pastas para o frontend (`LimpeJaApp/
 │ ├── searchService.ts
 │ ├── uploadService.ts
 │ └── verificationService.ts
-├── types/
+├── types/ # Definições de tipos TypeScript (interfaces, enums) para frontend e backend
 │ ├── auth.ts
 │ ├── booking.ts
 │ ├── bookings.ts
@@ -906,34 +933,36 @@ O projeto LimpeJá é um monorepo, contendo pastas para o frontend (`LimpeJaApp/
 │ ├── user.ts
 │ ├── users.ts
 │ └── verification.ts
-├── utils/
+├── utils/ # Funções utilitárias e helpers
 │ ├── helpers.ts
 │ ├── permissions.ts
 │ └── storage.ts
-├── .env
-├── .gitignore
+├── .env # Variáveis de ambiente
+├── .gitignore # Arquivos e pastas a serem ignorados pelo Git
 ├── app.json
 ├── babel.config.js
 ├── eas.json
 ├── eslint.config.js
-├── expo-env.d.ts
+├── expo-env.d.ts # Definições de tipo para variáveis de ambiente Expo
 ├── LICENSE
 ├── metro.config.js
 ├── package-lock.json
 ├── package.json
 ├── README.md
+├── src.rar # Arquivo compactado (deve ser ignorado pelo Git)
+├── tsconfig.build.json
 └── tsconfig.json</code></pre>
 </div>
 <div style="background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); margin-bottom: 20px;">
 <h3 id="backend-folder-structure" style="color: #2c3e50; font-size: 1.5em; margin-bottom: 15px;">Backend Folder Structure</h3>
 <pre style="background-color: #ecf0f1; padding: 15px; border-radius: 5px; overflow-x: auto; color: #34495e;"><code>backend-LimpeJá/
-├── dist/
+├── dist/ # Saída compilada
 ├── node_modules/
-├── prisma/
+├── prisma/ # Esquema Prisma e migrações
 │ ├── migrations/
 │ └── schema.prisma
-├── src/
-│ ├── auth/
+├── src/ # Código fonte do NestJS
+│ ├── auth/ # Módulo de Autenticação
 │ │ ├── decorators/
 │ │ ├── dto/
 │ │ ├── guards/
@@ -941,32 +970,32 @@ O projeto LimpeJá é um monorepo, contendo pastas para o frontend (`LimpeJaApp/
 │ │ ├── auth.controller.ts
 │ │ ├── auth.module.ts
 │ │ └── auth.service.ts
-│ ├── availability/
+│ ├── availability/ # Módulo de Disponibilidade
 │ │ ├── dto/
 │ │ ├── entities/
 │ │ ├── availability.controller.ts
 │ │ ├── availability.module.ts
 │ │ └── availability.service.ts
-│ ├── bookings/
+│ ├── bookings/ # Módulo de Agendamentos
 │ │ ├── dto/
 │ │ ├── entities/
 │ │ ├── bookings.controller.ts
 │ │ ├── bookings.module.ts
 │ │ └── bookings.service.ts
-│ ├── chat/
+│ ├── chat/ # Módulo de Chat
 │ │ ├── dto/
 │ │ ├── entities/
 │ │ ├── gateway/
 │ │ ├── chat.controller.ts
 │ │ ├── chat.module.ts
 │ │ └── chat.service.ts
-│ ├── clients/
+│ ├── clients/ # Módulo de Clientes
 │ │ ├── dto/
 │ │ ├── entities/
 │ │ ├── clients.controller.ts
 │ │ ├── clients.module.ts
 │ │ └── clients.service.ts
-│ ├── common/
+│ ├── common/ # Componentes comuns (filtros, pipes, etc.)
 │ │ ├── constants/
 │ │ ├── decorators/
 │ │ ├── dto/
@@ -974,62 +1003,62 @@ O projeto LimpeJá é um monorepo, contendo pastas para o frontend (`LimpeJaApp/
 │ │ ├── filters/
 │ │ ├── interceptors/
 │ │ └── pipes/
-│ ├── config/
+│ ├── config/ # Configurações de ambiente
 │ │ ├── config.module.ts
 │ │ ├── config.ts
 │ │ └── validation-schema.ts
-│ ├── notifications/
+│ ├── notifications/ # Módulo de Notificações
 │ │ ├── dto/
 │ │ ├── entities/
 │ │ ├── notifications.controller.ts
 │ │ ├── notifications.module.ts
 │ │ └── notifications.service.ts
-│ ├── offers/
+│ ├── offers/ # Módulo de Ofertas
 │ │ ├── dto/
 │ │ ├── entities/
 │ │ ├── offers.controller.ts
 │ │ ├── offers.module.ts
 │ │ └── offers.service.ts
-│ ├── payments/
+│ ├── payments/ # Módulo de Pagamentos
 │ │ ├── dto/
 │ │ ├── entities/
 │ │ ├── payments.controller.ts
 │ │ ├── payments.module.ts
 │ │ └── payments.service.ts
-│ ├── prisma/
+│ ├── prisma/ # Módulo Prisma para o NestJS
 │ │ ├── prisma.module.ts
 │ │ └── prisma.service.ts
-│ ├── provider-services/
+│ ├── provider-services/ # Módulo de Serviços do Provedor
 │ │ ├── dto/
 │ │ ├── entities/
 │ │ ├── provider-services.controller.ts
 │ │ ├── provider-services.module.ts
 │ │ └── provider-services.service.ts
-│ ├── providers/
+│ ├── providers/ # Módulo de Provedores
 │ │ ├── dto/
 │ │ ├── entities/
 │ │ ├── providers.controller.ts
 │ │ ├── providers.module.ts
 │ │ └── providers.service.ts
-│ ├── reviews/
+│ ├── reviews/ # Módulo de Avaliações
 │ │ ├── dto/
 │ │ ├── entities/
 │ │ ├── reviews.controller.ts
 │ │ ├── reviews.module.ts
 │ │ └── reviews.service.ts
-│ ├── search/
+│ ├── search/ # Módulo de Busca
 │ │ ├── dto/
 │ │ ├── search.controller.ts
 │ │ ├── search.module.ts
 │ │ └── search.service.ts
-│ ├── services/
+│ ├── services/ # Módulo de Tipos de Serviço (globais)
 │ │ ├── dto/
 │ │ ├── update-service.dto.ts
 │ │ ├── entities/
 │ │ ├── services.controller.ts
 │ │ ├── services.module.ts
 │ │ └── services.service.ts
-│ └── verification/
+│ └── verification/ # Módulo de Verificação
 │ ├── dto/
 │ │ ├── send-cpf.dto.ts
 │ │ ├── upload-document.dto.ts
@@ -1040,22 +1069,22 @@ O projeto LimpeJá é um monorepo, contendo pastas para o frontend (`LimpeJaApp/
 │ ├── verification.controller.ts
 │ ├── verification.module.ts
 │ └── verification.service.ts
-├── shared/
+├── shared/ # Código compartilhado (enums, interfaces, types)
 │ ├── enums/
 │ ├── interfaces/
 │ └── types/
-├── users/
+├── users/ # Módulo de Usuários
 │ ├── dto/
 │ ├── entities/
 │ ├── users.controller.ts
 │ ├── users.module.ts
 │ └── users.service.ts
-├── app.controller.spec.ts
+├── app.controller.spec.ts # Testes para o controlador principal
 ├── app.controller.ts
 ├── app.module.ts
 ├── app.service.ts
-├── main.ts
-└── test/
+├── main.ts # Ponto de entrada da aplicação
+└── test/ # Testes e configurações de teste
 ├── .env
 ├── .env.example
 ├── .gitignore
@@ -1065,11 +1094,10 @@ O projeto LimpeJá é um monorepo, contendo pastas para o frontend (`LimpeJaApp/
 ├── package-lock.json
 ├── package.json
 ├── README.md
-├── src.rar
+├── src.rar # Arquivo compactado (deve ser ignorado pelo Git)
 ├── tsconfig.build.json
 └── tsconfig.json</code></pre>
 </div>
-
 <div style="background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); margin-bottom: 40px;">
 <h2 id="getting-started" style="color: #34495e; font-size: 2em; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 20px;">🚀 Getting Started</h2>
 <p style="color: #555; line-height: 1.6; margin-bottom: 20px;">
@@ -1111,7 +1139,7 @@ cd ..</código></pre>
 
 </li>
 
-<li style="margin-bottom: 10px;"><strong>Instalar como dependências do Backend:</strong>
+<li style="margin-bottom: 10px;"><strong>Instalar as dependências do Backend:</strong>
 
 <pre style="background-color: #ecf0f1; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 5px; color: #34495e;"><code>cd backend-LimpeJá
 
@@ -1123,7 +1151,7 @@ cd ..</código></pre>
 
 <li style="margin-bottom: 10px;"><strong>Configurar o banco de dados (PostgreSQL com Docker):</strong>
 
-<ul style="list-style-type: disco; preenchimento esquerdo: 20px; margem superior: 5px;">
+<ul style="list-style-type: disc; preenchimento esquerdo: 20px; margem superior: 5px;">
 
 <li style="margin-bottom: 5px;">Crie um arquivo `.env` na raiz da pasta `backend-LimpeJá` com as variáveis ​​de ambiente do banco de dados e do JWT. Exemplo:
 
@@ -1309,7 +1337,7 @@ A principal fonte de receita do LimpeJá virá de uma <strong style="color: #2ec
 
 <li style="margin-bottom: 15px;"><strong>Para o Profissional (Prestador de Serviço):</strong>
 
-<ul style="list-style-type: disco; preenchimento esquerdo: 20px; margem superior: 5px;">
+<ul style="list-style-type: disc; preenchimento esquerdo: 20px; margem superior: 5px;">
 
 <li style="margin-bottom: 5px;">Ao se cadastrar, o profissional define seus preços para os diferentes tipos de serviço que oferece (ex: por hora, por tipo de limpeza, etc.).</li>
 
@@ -1325,7 +1353,7 @@ A principal fonte de receita do LimpeJá virá de uma <strong style="color: #2ec
 
 <li style="margin-bottom: 15px;"><strong>Para o Cliente:</strong>
 
-<ul style="list-style-type: disco; preenchimento esquerdo: 20px; margem superior: 5px;">
+<ul style="list-style-type: disc; preenchimento esquerdo: 20px; margem superior: 5px;">
 
 <li style="margin-bottom: 5px;">O cliente vê o preço total do serviço (que já inclui a porção do profissional e, implicitamente, a margem que permite a comissão do LimpeJá).</li>
 
@@ -1357,103 +1385,64 @@ Este modelo permite que o LimpeJá cresça conforme o volume de transações na 
 
 <div style="cor de fundo: #ffffff; preenchimento: 30px; raio da borda: 10px; sombra da caixa: 0 2px 10px rgba(0, 0, 0, 0,05); margem inferior: 40px;">
 
-<h2 id="️-roadmap-e-próximas-etapas" style="color: #34495e; font-size: 2em; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 20px;">🛣️ Roteiro e Próximas Etapas</h2>
+<h2 id="-status-e-próximas-etapas" style="color: #34495e; font-size: 2em; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 20px;">✅ Status e Próximas Etapas</h2>
 
 <p style="color: #555; altura da linha: 1,6; margem inferior: 20px;">
 
-O projeto LimpeJá está em um estágio avançado de desenvolvimento, com a maioria dos fluxos essenciais implementados. As próximas etapas focam em aprimoramentos, expansão de funcionalidades e otimização:
+O projeto LimpeJá atingiu a fase de **completa implementação das funcionalidades principais e integrações com APIs reais**, estando 100% testado e pronto para a fase de deploy e manutenção. O roteiro a seguir foca em aprimoramentos contínuos, otimização e expansão estratégica.
 
 </p>
 
 <ol style="tipo-de-estilo-de-lista: decimal; preenchimento-esquerdo: 20px; cor: #555; altura-da-linha: 1,6;">
 
-<li style="margin-bottom: 15px;"><strong>Funcionalidades de Gestão (Admin):</strong>
+<li style="margin-bottom: 15px;"><strong>Otimização de Performance e Refinamento Contínuo:</strong>
 
-<ul style="list-style-type: disco; preenchimento esquerdo: 20px; margem superior: 5px;">
+<ul style="list-style-type: disc; preenchimento esquerdo: 20px; margem superior: 5px;">
 
-<li style="margin-bottom: 5px;"><strong>Frontend:</strong> Desenvolve interfaces de usuário para POST, PATCH, DELETE em `/services` e `/offers`.</li>
+<li style="margin-bottom: 5px;"><strong>Backend:</strong> Otimizar `include` statements do Prisma para evitar N+1 e carregamento excessivo de dados. Refinar transições de status de agendamento para maior fluidez e consistência. Continuar refinamento da documentação Swagger (`@ApiProperty`).</li>
 
-<li style="margin-bottom: 5px;"><strong>Backend:</strong> Expanda a IU para DELETE `/providers/:id` e DELETE `/users/:id`.</li>
+<li style="margin-bottom: 5px;"><strong>Frontend:</strong> Aprimorar a experiência do usuário e otimização de performance geral. Revisar avisos de depreciação de estilos e uso de `useNativeDriver` em animações para garantir a compatibilidade e o desempenho otimizado em todas as plataformas e builds.</li>
 
 </ul>
 
 </li>
 
-<li style="margin-bottom: 15px;"><strong>Aprimoramentos de Funcionalidades Existentes:</strong>
+<li style="margin-bottom: 15px;"><strong>Expansão de Funcionalidades e Escala:</strong>
 
-<ul style="list-style-type: disco; preenchimento esquerdo: 20px; margem superior: 5px;">
+<ul style="list-style-type: disc; preenchimento esquerdo: 20px; margem superior: 5px;">
 
 <li style="margin-bottom: 5px;"><strong>Backend:</strong>
-
-<ul style="list-style-type: círculo; preenchimento esquerdo: 20px; margem superior: 5px;">
-
-<li style="margin-bottom: 5px;">Cálculo de `walletBalance` para clientes e provedores.</li>
-
-<li style="margin-bottom: 5px;">Implementação de lógica geoespacial para busca avançada de provedores (`sortBy: Distance`, `latitude`, `longitude`, `radius`).</li>
-
-<li style="margin-bottom: 5px;">Refinar transições de status de agendamento.</li>
-
-<li style="margin-bottom: 5px;">Otimização de Query Prisma: Revisar instruções `include` para evitar N+1 e carregamento excessivo.</li>
-
-<li style="margin-bottom: 5px;">Refinamento Contínuo da Documentação Swagger com `@ApiProperty`.</li>
-
+<ul style="list-style-type: circle; preenchimento esquerdo: 20px; margem superior: 5px;">
+<li style="margin-bottom: 5px;">Implementar o cálculo de `walletBalance` para clientes e provedores.</li>
+<li style="margin-bottom: 5px;">Refinar a lógica de permissões no `ChatController` e `ChatService` para maior granularidade.</li>
+<li style="margin-bottom: 5px;">Otimizar a recuperação de histórico de mensagens para grandes volumes.</li>
+<li style="margin-bottom: 5px;">Assegurar a atomicidade completa para todas as transações financeiras (ex: saques).</li>
 </ul>
-
 </li>
 
-<li style="margin-bottom: 5px;"><strong>Front-end:</strong>
-
-<ul style="list-style-type: círculo; preenchimento esquerdo: 20px; margem superior: 5px;">
-
-<li style="margin-bottom: 5px;">Implementar UI para filtros geoespaciais na busca de provedores.</li>
-
-<li style="margin-bottom: 5px;">Desenvolver UI abrangente para extrair e exibir `GET /reviews` e `GET /reviews/:id`.</li>
-
-<li style="margin-bottom: 5px;">Refletir e gerenciar transições de status de agendamentos de forma mais robusta.</li>
-
+<li style="margin-bottom: 5px;"><strong>Frontend:</strong>
+<ul style="list-style-type: circle; preenchimento esquerdo: 20px; margem superior: 5px;">
+<li style="margin-bottom: 5px;">Implementar UI para gestão de `walletBalance` e fluxos de saque/depósito.</li>
+<li style="margin-bottom: 5px;">Desenvolver UI para filtros geoespaciais avançados na busca de provedores.</li>
+<li style="margin-bottom: 5px;">Aprimorar o sistema de mensagens com persistência completa e indicadores de status em tempo real (ex: "digitando...", "visto por último").</li>
 </ul>
-
 </li>
 
 </ul>
 
 </li>
 
-<li style="margin-bottom: 15px;"><strong>Integrações Futuras:</strong>
+<li style="margin-bottom: 15px;"><strong>Manutenção e Suporte:</strong>
 
-<ul style="list-style-type: disco; preenchimento esquerdo: 20px; margem superior: 5px;">
+<ul style="list-style-type: disc; preenchimento esquerdo: 20px; margem superior: 5px;">
 
-<li style="margin-bottom: 5px;"><strong>Backend:</strong>
+<li style="margin-bottom: 5px;"><strong>Documentação:</strong> Manter a documentação técnica e de usuário atualizada e abrangente.</li>
 
-<ul style="list-style-type: círculo; preenchimento esquerdo: 20px; margem superior: 5px;">
+<li style="margin-bottom: 5px;"><strong>Testes:</strong> Implementar e expandir testes de integração e ponta a ponta para garantir a robustez contínua da aplicação.</li>
 
-<li style="margin-bottom: 5px;">Substitua uma simulação PIX por uma integração real com um gateway de pagamento (por exemplo, Stripe, PagSeguro, Mercado Pago).</li>
+<li style="margin-bottom: 5px;"><strong>Internacionalização (i18n):</strong> Adicionar suporte a múltiplos idiomas para uma expansão global futura.</li>
 
-<li style="margin-bottom: 5px;">Integrar com serviços de notificação push (por exemplo, Firebase Cloud Messaging).</li>
-
-<li style="margin-bottom: 5px;">Implementar persistência de conversas de chat e funcionalidades como "digitando...", "visto por último".</li>
-
-<li style="margin-bottom: 5px;">Integração Real com APIs Externas para Verificação de Antecedentes (ex: ClearSale, Serasa) e Processamento de Documentos (OCR, comparação facial, prova de vida).</li>
-
-<li style="margin-bottom: 5px;">Internacionalização (i18n): Suporte a múltiplos idiomas.</li>
-
-</ul>
-
-</li>
-
-<li style="margin-bottom: 5px;"><strong>Front-end:</strong>
-
-<ul style="list-style-type: círculo; preenchimento esquerdo: 20px; margem superior: 5px;">
-
-<li style="margin-bottom: 5px;">Integrar com um gateway de pagamento real.</li>
-
-<li style="margin-bottom: 5px;">Implementar notificações push.</li>
-
-<li style="margin-bottom: 5px;">Aprimorar o sistema de mensagens com persistência e indicadores de status.</li>
-
-</ul>
-
-</li>
+<li style="margin-bottom: 5px;"><strong>Monitoramento:</strong> Configurar e refinar ferramentas de monitoramento de performance e erros em produção (APM, crash reporting).</li>
 
 </ul>
 
@@ -1498,15 +1487,3 @@ Para informações fornecidas e suporte sobre as tecnologias e o ecossistema do 
 </ul>
 
 </div>
-
-Pesquisas relacionadas:
-
-Melhores práticas de arquitetura do React Native Expo
-Implementação de chat Socket.IO React Native NestJS
-Processo de construção da Expo EAS
-Recursos do marketplace do aplicativo LimpeJá
-Melhores práticas de modelagem de dados Prisma ORM
-Melhores práticas de arquitetura de backend do NestJS
-roteiro para desenvolvimento de aplicativos de marketplace
-estratégia de monetização para aplicativo de marketplace de serviços
-Fluxo de autenticação JWT React Native NestJS

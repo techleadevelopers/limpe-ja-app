@@ -42,9 +42,16 @@ enum VerificationStatus {
 model User {
   id                String         @id @default(uuid())
   email             String         @unique
-  passwordHash      String         // Armazenar hash da senha, nunca a senha em texto claro
+  phone             String?        @unique // Número de telefone para login por SMS
+  passwordHash      String?        // Opcional agora, para suportar login apenas por SMS
   role              UserRole       @default(CLIENT)
   avatarUrl         String?        // <--- NOVA LINHA ADICIONADA AQUI para o avatar do usuário
+  
+  // Campos para OTP
+  otpCode           String?        // Código OTP atual
+  otpExpiresAt      DateTime?      // Expiração do OTP
+  isPhoneVerified   Boolean        @default(false) // Se o telefone foi verificado
+  
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
 

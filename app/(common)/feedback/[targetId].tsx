@@ -1,24 +1,24 @@
 // LimpeJaApp/app/(common)/feedback/[targetId].tsx
+import { Ionicons } from '@expo/vector-icons'; // Para as estrelas e outros ícones
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    View,
-    Text,
-    StyleSheet,
-    TextInput,
-    Alert, // Importar Alert
-    TouchableOpacity,
-    ScrollView,
     ActivityIndicator,
-    Platform
+    Alert,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput, // Importar Alert
+    TouchableOpacity,
+    View
 } from 'react-native';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons'; // Para as estrelas e outros ícones
 
 // <--- ADICIONADO: Importar o serviço de review e suas tipagens
-import { submitFeedback } from '../../services/reviewService';
+import { submitFeedback } from '../../../services/reviewService';
 // Importar SubmitReviewDto (assumindo que você o definiu em types/backend/reviews.ts)
-import { SubmitReviewDto } from '../../types/backend/reviews'; 
 import { useAuth } from '../../../hooks/useAuth'; // Para obter o ID do usuário que está dando feedback
+import { SubmitReviewDto } from '../../../types/backend/reviews';
 
 // Componente StarRating Aprimorado
 interface StarRatingProps {

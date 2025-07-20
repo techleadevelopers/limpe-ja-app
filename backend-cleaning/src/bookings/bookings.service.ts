@@ -182,8 +182,24 @@ export class BookingsService {
     return this.prisma.booking.findMany({
       where: whereClause,
       include: {
-        client: { include: { user: true } },
-        provider: { include: { user: true } },
+        client: { 
+          include: { 
+            user: true,
+            address: true 
+          } 
+        },
+        provider: { 
+          include: { 
+            user: true,
+            address: true,
+            // Incluir serviços do provedor para mostrar especialidades
+            providerServices: {
+              include: {
+                service: true
+              }
+            }
+          } 
+        },
         providerService: { include: { service: true } },
         review: true,
         address: true,

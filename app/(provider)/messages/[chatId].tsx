@@ -1,15 +1,15 @@
 // LimpeJaApp/app/(provider)/messages/[chatId].tsx
-import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
-import { useLocalSearchParams, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Stack, useLocalSearchParams } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { io, Socket } from 'socket.io-client';
-import { useAuth } from '../../../hooks/useAuth';
-import { getChatMessages, sendMessage as sendChatMessage } from '../../services/chatService';
-import { getBookingDetails } from '../../services/bookingService'; // Importar o serviço de booking
-import { Message, GetMessagesQuery, SendMessageDto } from '../../types/backend/chat';
-import { BookingStatus } from '../../types/backend/bookings'; // Importar BookingStatus
 import { appConfig } from '../../../config/appConfig';
+import { useAuth } from '../../../hooks/useAuth';
+import { getBookingDetails } from '../../../services/bookingService'; // Importar o serviço de booking
+import { getChatMessages, sendMessage as sendChatMessage } from '../../../services/chatService';
+import { BookingStatus } from '../../../types/backend/bookings'; // Importar BookingStatus
+import { Message, SendMessageDto } from '../../../types/backend/chat';
 
 const SOCKET_URL = appConfig.apiUrl.replace('http', 'ws');
 

@@ -1,21 +1,17 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-  Alert,
-  TouchableOpacity,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  Animated,
-  StatusBar,
-  Image,
-} from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    View
+} from 'react-native';
 
 // Importações para os componentes de passo de verificação
 // import BackgroundCheckStatusScreen from './verification/background-check-status'; // Comentado: Etapa de antecedentes
@@ -23,12 +19,10 @@ import DocumentUploadScreen from './verification/document-upload';
 import FacialRecognitionScreen from './verification/facial-recognition';
 
 // Importações de serviços e tipos
-import verificationService from '../../services/verificationService';
-import { UpdateProviderProfileData, VerificationStatus } from '../../types/backend/providers';
-import { UserRole } from '../../types/backend/auth';
-import { useAuth } from '../../../hooks/useAuth';
 import ToastMessage from '../../../components/ui/ToastMessage';
-import { DocumentPhotoType } from '../../types/backend/verification';
+import { useAuth } from '../../../hooks/useAuth';
+import verificationService from '../../../services/verificationService';
+import { DocumentPhotoType } from '../../../types/backend/verification';
 
 const LOGO_IMAGE = require('../../../assets/images/logo.png');
 // ADDITION: Import the new header image

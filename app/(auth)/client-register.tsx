@@ -2,47 +2,32 @@
 // Este arquivo não precisa de alterações diretas para a correção do AsyncStorage,
 // pois a lógica de armazenamento do token está encapsulada no useAuth hook.
 
-import React, { useState, useRef, useEffect } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { Stack, useRouter } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-    View,
-    Text,
-    TextInput,
-    StyleSheet,
     ActivityIndicator,
-    Alert,
-    TouchableOpacity,
-    ScrollView,
+    Animated,
+    Image,
     KeyboardAvoidingView,
     Platform,
-    Image,
-    Animated,
+    ScrollView,
     StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
-import { Link, useRouter, Stack } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../../hooks/useAuth'; // Importar useAuth
-import { RegisterClientDto, CreateAddressDto } from '../types/backend/auth'; // Importar DTOs
+import { useAuth } from '../../contexts/AuthContext'; // Importar useAuth do AuthContext
+import { CreateAddressDto, RegisterClientDto } from '../../types/backend/auth'; // Importar DTOs
 
 // ATENÇÃO: Substitua pelo caminho correto do seu logo em formato "V" ou "FV" azul
 const LOGO_IMAGE = require('../../assets/images/logo2.png'); // << CONFIRMADO: Este é o caminho que você deseja
 
-const AnimatedErrorMessage: React.FC<{ message: string | null; centered?: boolean }> = ({ message, centered }) => {
-    const fadeAnim = useRef(new Animated.Value(0)).current;
-    useEffect(() => {
-        Animated.timing(fadeAnim, {
-            toValue: message ? 1 : 0,
-            duration: message ? 300 : 200,
-            useNativeDriver: true,
-        }).start();
-    }, [message, fadeAnim]);
+// CORREÇÃO: Importar AnimatedErrorMessage como exportação nomeada
+import { AnimatedErrorMessage } from '../../components/auth/components/AnimatedErrorMessage';
 
-    if (!message) return null;
-    return (
-        <Animated.Text style={[styles.inlineErrorMessage, { opacity: fadeAnim, textAlign: centered ? 'center' : 'left' }]}>
-            {message}
-        </Animated.Text>
-    );
-};
 
 // Simulação da API ViaCEP (Adicionado para auto-preenchimento de CEP)
 const mockViaCepApi = {
@@ -86,23 +71,27 @@ const mockViaCepApi = {
 };
 
 export default function ClientRegisterScreen() { // Renomeado de RegisterOptionsScreen
-    const [currentStep, setCurrentStep] = useState(1); // 1: Personal Info, 2: Address Info
+    const [currentStep, setCurrentStep] = useState(1); // 1: Basic Info, 2: Personal Data, 3: Address Info
 
-    const [username, setUsername] = useState(''); // Será mapeado para fullName
+    // Step 1: Informações Básicas (Email, Nome, Telefone)
     const [email, setEmail] = useState('');
+    const [username, setUsername] = useState(''); // Será mapeado para fullName
+    const [phone, setPhone] = useState('');
+    
+    // Step 2: Dados Pessoais (CPF, Data Nascimento, Senha)
+    const [cpf, setCpf] = useState('');
+    const [dateOfBirth, setDateOfBirth] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
 
-    const [phone, setPhone] = useState(''); // NOVO: Estado para o telefone
-    const [cpf, setCpf] = useState(''); // NOVO: Estado para o CPF
-
+    // Step 3: Endereço (CEP, Rua, Número)
     const [cep, setCep] = useState('');
     const [street, setStreet] = useState('');
     const [number, setNumber] = useState('');
     const [neighborhood, setNeighborhood] = useState('');
-    const [city, setCity] = useState(''); // NOVO: Estado para a cidade
+    const [city, setCity] = useState('');
     const [state, setState] = useState('');
-    const [complement, setComplement] = useState(''); // Adicionado para o complemento
+    const [complement, setComplement] = useState('');
 
     const [isLoading, setIsLoading] = useState(false);
     const [isLoadingCep, setIsLoadingCep] = useState(false); // Novo estado para loading do CEP
@@ -123,8 +112,8 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
 
     const validateStep1 = () => {
         setGeneralError(null);
-        if (!username.trim() || !email.trim() || !password.trim() || !cpf.trim()) { // Adicionado CPF na validação
-            setGeneralError('Por favor, preencha todos os campos de informações pessoais.');
+        if (!email.trim() || !username.trim() || !phone.trim()) {
+            setGeneralError('Por favor, preencha todos os campos básicos.');
             return false;
         }
         const emailRegex = /^[^\s@]+@[^\s@]+\.\S+$/;
@@ -132,13 +121,9 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
             setGeneralError('Formato de e-mail inválido.');
             return false;
         }
-        if (password.length < 6) {
-            setGeneralError('A senha deve ter no mínimo 6 caracteres.');
-            return false;
-        }
-        const cleanedCpf = cpf.replace(/\D/g, '');
-        if (cleanedCpf.length !== 11) { // Validação simples de CPF (apenas 11 dígitos)
-            setGeneralError('CPF inválido. Deve conter 11 dígitos.');
+        const cleanedPhone = phone.replace(/\D/g, '');
+        if (cleanedPhone.length < 10 || cleanedPhone.length > 11) { 
+            setGeneralError('O telefone deve ter 10 ou 11 dígitos.');
             return false;
         }
         return true;
@@ -146,12 +131,25 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
 
     const validateStep2 = () => {
         setGeneralError(null);
-        const cleanedPhone = phone.replace(/\D/g, '');
-        if (cleanedPhone.length < 10 || cleanedPhone.length > 11) { 
-            setGeneralError('O telefone deve ter 10 ou 11 dígitos.');
+        if (!cpf.trim() || !dateOfBirth.trim() || !password.trim()) {
+            setGeneralError('Por favor, preencha todos os campos pessoais.');
             return false;
         }
-        if (!cep.trim() || !street.trim() || !number.trim() || !neighborhood.trim() || !city.trim() || !state.trim()) { // Adicionado 'city'
+        const cleanedCpf = cpf.replace(/\D/g, '');
+        if (cleanedCpf.length !== 11) {
+            setGeneralError('CPF inválido. Deve conter 11 dígitos.');
+            return false;
+        }
+        if (password.length < 6) {
+            setGeneralError('A senha deve ter no mínimo 6 caracteres.');
+            return false;
+        }
+        return true;
+    };
+
+    const validateStep3 = () => {
+        setGeneralError(null);
+        if (!cep.trim() || !street.trim() || !number.trim()) {
             setGeneralError('Por favor, preencha todos os campos de endereço.');
             return false;
         }
@@ -159,9 +157,12 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
     };
 
     const handleNext = () => {
-        if (validateStep1()) {
+        if (currentStep === 1 && validateStep1()) {
             setCurrentStep(2);
-            setGeneralError(null); // Limpa erros anteriores
+            setGeneralError(null);
+        } else if (currentStep === 2 && validateStep2()) {
+            setCurrentStep(3);
+            setGeneralError(null);
         }
     };
 
@@ -213,6 +214,23 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
         return formattedCpf;
     };
 
+    // Função para formatar data de nascimento
+    const formatDateOfBirth = (text: string) => {
+        const cleanedText = text.replace(/\D/g, '');
+        let formattedDate = '';
+
+        if (cleanedText.length > 0) {
+            formattedDate = cleanedText.substring(0, 2);
+        }
+        if (cleanedText.length >= 3) {
+            formattedDate += `/${cleanedText.substring(2, 4)}`;
+        }
+        if (cleanedText.length >= 5) {
+            formattedDate += `/${cleanedText.substring(4, 8)}`;
+        }
+        return formattedDate;
+    };
+
 
     // Função para buscar endereço por CEP (adicionada)
     const fetchAddressFromCep = async () => {
@@ -244,7 +262,7 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
     };
 
     const handleSignUp = async () => {
-        if (!validateStep1() || !validateStep2()) { // Valida todas as etapas antes do registro final
+        if (!validateStep1() || !validateStep2() || !validateStep3()) { // Valida todas as etapas antes do registro final
             return;
         }
         setIsLoading(true);
@@ -254,7 +272,7 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
                 email: email.trim().toLowerCase(),
                 password: password,
                 fullName: username.trim(),
-                cpf: cpf.replace(/\D/g, ''), // Adicionado CPF aqui, removendo não-dígitos
+                cpf: cpf.replace(/\D/g, ''), // CPF agora é uma propriedade válida em RegisterClientDto
                 phone: phone.replace(/\D/g, ''), // Remove não-dígitos antes de enviar
                 address: {
                     cep: cep.trim(),
@@ -289,8 +307,8 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
     const signUpButtonAnims = createButtonAnimations();
     const nextButtonAnims = createButtonAnimations(); // Animações para o botão "Avançar"
 
-    // Atualizado para incluir validação do telefone e cidade
-    const isSignUpButtonEnabled = currentStep === 2 && phone.trim().replace(/\D/g, '').length >= 10 && phone.trim().replace(/\D/g, '').length <= 11 && cep.trim() && street.trim() && number.trim() && neighborhood.trim() && city.trim() && state.trim();
+    // Atualizado para step 3 com validação dos 3 campos principais
+    const isSignUpButtonEnabled = currentStep === 3 && cep.trim() && street.trim() && number.trim();
 
     return (
         <KeyboardAvoidingView
@@ -314,26 +332,9 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
 
                     <Text style={styles.welcomeSubtitle}>Crie sua conta no LimpeJá !</Text>
 
-                    {/* Step 1: Personal Info */}
+                    {/* Step 1: Informações Básicas */}
                     {currentStep === 1 && (
                         <View>
-                            {/* Username Input */}
-                            <View style={styles.inputWrapper}>
-                                <View style={styles.iconCircle}>
-                                    <Ionicons name="person-outline" size={20} color="#007BFF" />
-                                </View>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Nome de Usuário"
-                                    placeholderTextColor="#A0AEC0"
-                                    value={username}
-                                    onChangeText={(text) => { setUsername(text); if (generalError) setGeneralError(null);}}
-                                    autoCapitalize="none"
-                                    textContentType="username"
-                                    autoComplete="username"
-                                />
-                            </View>
-
                             {/* Email Input */}
                             <View style={styles.inputWrapper}>
                                 <View style={styles.iconCircle}>
@@ -349,6 +350,90 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
                                     autoCapitalize="none"
                                     textContentType="emailAddress"
                                     autoComplete="email"
+                                />
+                            </View>
+
+                            {/* Nome Completo Input */}
+                            <View style={styles.inputWrapper}>
+                                <View style={styles.iconCircle}>
+                                    <Ionicons name="person-outline" size={20} color="#007BFF" />
+                                </View>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Nome Completo"
+                                    placeholderTextColor="#A0AEC0"
+                                    value={username}
+                                    onChangeText={(text) => { setUsername(text); if (generalError) setGeneralError(null);}}
+                                    autoCapitalize="words"
+                                    textContentType="name"
+                                    autoComplete="name"
+                                />
+                            </View>
+
+                            {/* Telefone Input */}
+                            <View style={styles.inputWrapper}>
+                                <View style={styles.iconCircle}>
+                                    <Ionicons name="call-outline" size={20} color="#007BFF" />
+                                </View>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Telefone"
+                                    placeholderTextColor="#A0AEC0"
+                                    value={phone}
+                                    onChangeText={(text) => { setPhone(formatPhoneNumber(text)); if (generalError) setGeneralError(null);}}
+                                    keyboardType="numeric"
+                                />
+                            </View>
+
+                            <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
+
+                            {/* Next Button */}
+                            <Animated.View style={{transform: [{scale: nextButtonAnims.scaleAnim}]}}>
+                                <TouchableOpacity
+                                style={[styles.nextButton, isLoading && styles.buttonDisabled]}
+                                onPress={handleNext}
+                                onPressIn={nextButtonAnims.onPressIn}
+                                onPressOut={nextButtonAnims.onPressOut}
+                                disabled={isLoading}
+                                >
+                                    <Text style={styles.nextButtonText}>Avançar</Text>
+                                </TouchableOpacity>
+                            </Animated.View>
+                        </View>
+                    )}
+
+                    {/* Step 2: Dados Pessoais */}
+                    {currentStep === 2 && (
+                        <View>
+                            {/* CPF Input */}
+                            <View style={styles.inputWrapper}>
+                                <View style={styles.iconCircle}>
+                                    <Ionicons name="document-text-outline" size={20} color="#007BFF" />
+                                </View>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="CPF"
+                                    placeholderTextColor="#A0AEC0"
+                                    value={cpf}
+                                    onChangeText={(text) => { setCpf(formatCpf(text)); if (generalError) setGeneralError(null);}}
+                                    keyboardType="numeric"
+                                    maxLength={14}
+                                />
+                            </View>
+
+                            {/* Data de Nascimento Input */}
+                            <View style={styles.inputWrapper}>
+                                <View style={styles.iconCircle}>
+                                    <Ionicons name="calendar-outline" size={20} color="#007BFF" />
+                                </View>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Data de Nascimento (DD/MM/AAAA)"
+                                    placeholderTextColor="#A0AEC0"
+                                    value={dateOfBirth}
+                                    onChangeText={(text) => { setDateOfBirth(formatDateOfBirth(text)); if (generalError) setGeneralError(null);}}
+                                    keyboardType="numeric"
+                                    maxLength={10}
                                 />
                             </View>
 
@@ -371,58 +456,29 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
                                 </TouchableOpacity>
                             </View>
 
-                            {/* CPF Input - NOVO */}
-                            <View style={styles.inputWrapper}>
-                                <View style={styles.iconCircle}>
-                                    <Ionicons name="document-text-outline" size={20} color="#007BFF" />
-                                </View>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="CPF (apenas números)"
-                                    placeholderTextColor="#A0AEC0"
-                                    value={cpf}
-                                    onChangeText={(text) => { setCpf(formatCpf(text)); if (generalError) setGeneralError(null);}}
-                                    keyboardType="numeric"
-                                    maxLength={14} // 11 dígitos + 3 para formatação (pontos e hífen)
-                                />
-                            </View>
+                            <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
 
-                            <AnimatedErrorMessage message={generalError} centered />
-
-                            {/* Next Button */}
-                            <Animated.View style={{transform: [{scale: nextButtonAnims.scaleAnim}]}}>
-                                <TouchableOpacity
-                                style={[styles.nextButton, isLoading && styles.buttonDisabled]}
-                                onPress={handleNext}
-                                onPressIn={nextButtonAnims.onPressIn}
-                                onPressOut={nextButtonAnims.onPressOut}
-                                disabled={isLoading}
-                                >
-                                    <Text style={styles.nextButtonText}>Avançar</Text>
+                            {/* Navigation Buttons */}
+                            <View style={styles.navigationButtons}>
+                                <TouchableOpacity style={[styles.navButton, styles.backButton]} onPress={() => setCurrentStep(1)}>
+                                    <Ionicons name="arrow-back-outline" size={20} color="#007BFF" />
+                                    <Text style={styles.navButtonTextBack}>Voltar</Text>
                                 </TouchableOpacity>
-                            </Animated.View>
+                                <TouchableOpacity
+                                    style={[styles.navButton, styles.nextButton]}
+                                    onPress={handleNext}
+                                    disabled={isLoading}
+                                >
+                                    <Text style={styles.navButtonTextNext}>Avançar</Text>
+                                    <Ionicons name="arrow-forward-outline" size={20} color="#fff" />
+                                </TouchableOpacity>
+                            </View>
                         </View>
                     )}
 
-                    {/* Step 2: Address Info */}
-                    {currentStep === 2 && (
+                    {/* Step 3: Endereço */}
+                    {currentStep === 3 && (
                         <View>
-                            {/* Telefone Input - NOVO */}
-                            <View style={styles.inputWrapper}>
-                                <View style={styles.iconCircle}>
-                                    <Ionicons name="call-outline" size={20} color="#007BFF" />
-                                </View>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Telefone (apenas números)"
-                                    placeholderTextColor="#A0AEC0"
-                                    value={phone}
-                                    onChangeText={(text) => { setPhone(formatPhoneNumber(text)); if (generalError) setGeneralError(null);}}
-                                    keyboardType="numeric"
-                                    // Removido maxLength aqui para permitir a digitação completa antes da formatação
-                                />
-                            </View>
-
                             {/* CEP Input */}
                             <View style={styles.inputWrapper}>
                                 <View style={styles.iconCircle}>
@@ -434,7 +490,7 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
                                     placeholderTextColor="#A0AEC0"
                                     value={cep}
                                     onChangeText={(text) => { setCep(text.replace(/\D/g, '')); if (generalError) setGeneralError(null);}}
-                                    onBlur={fetchAddressFromCep} // Adicionado onBlur para buscar CEP
+                                    onBlur={fetchAddressFromCep}
                                     keyboardType="numeric"
                                     maxLength={8}
                                 />
@@ -453,7 +509,7 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
                                     value={street}
                                     onChangeText={(text) => { setStreet(text); if (generalError) setGeneralError(null);}}
                                     autoCapitalize="words"
-                                    editable={!isLoadingCep} // Desabilita enquanto busca CEP
+                                    editable={!isLoadingCep}
                                 />
                             </View>
 
@@ -472,88 +528,33 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
                                 />
                             </View>
 
-                            {/* Complemento Input (Adicionado) */}
-                            <View style={styles.inputWrapper}>
-                                <View style={styles.iconCircle}>
-                                    <Ionicons name="information-circle-outline" size={20} color="#007BFF" />
-                                </View>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Complemento (opcional)"
-                                    placeholderTextColor="#A0AEC0"
-                                    value={complement}
-                                    onChangeText={(text) => { setComplement(text); if (generalError) setGeneralError(null);}}
-                                    autoCapitalize="words"
-                                />
-                            </View>
+                            <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
 
-                            {/* Bairro Input */}
-                            <View style={styles.inputWrapper}>
-                                <View style={styles.iconCircle}>
-                                    <Ionicons name="business-outline" size={20} color="#007BFF" />
-                                </View>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Bairro"
-                                    placeholderTextColor="#A0AEC0"
-                                    value={neighborhood}
-                                    onChangeText={(text) => { setNeighborhood(text); if (generalError) setGeneralError(null);}}
-                                    autoCapitalize="words"
-                                    editable={!isLoadingCep} // Desabilita enquanto busca CEP
-                                />
-                            </View>
-
-                            {/* Cidade Input - NOVO */}
-                            <View style={styles.inputWrapper}>
-                                <View style={styles.iconCircle}>
-                                    <Ionicons name="map-outline" size={20} color="#007BFF" />
-                                </View>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Cidade"
-                                    placeholderTextColor="#A0AEC0"
-                                    value={city}
-                                    onChangeText={(text) => { setCity(text); if (generalError) setGeneralError(null);}}
-                                    autoCapitalize="words"
-                                    editable={!isLoadingCep} // Desabilita enquanto busca CEP
-                                />
-                            </View>
-
-                            {/* Estado Input */}
-                            <View style={styles.inputWrapper}>
-                                <View style={styles.iconCircle}>
-                                    <Ionicons name="location-outline" size={20} color="#007BFF" />
-                                </View>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Estado"
-                                    placeholderTextColor="#A0AEC0"
-                                    value={state}
-                                    onChangeText={(text) => { setState(text); if (generalError) setGeneralError(null);}}
-                                    autoCapitalize="characters"
-                                    maxLength={2}
-                                    editable={!isLoadingCep} // Desabilita enquanto busca CEP
-                                />
-                            </View>
-
-                            <AnimatedErrorMessage message={generalError} centered />
-
-                            {/* Sign up Button */}
-                            <Animated.View style={{transform: [{scale: signUpButtonAnims.scaleAnim}]}}>
-                                <TouchableOpacity
-                                style={[styles.signUpButton, (!isSignUpButtonEnabled || isLoading) && styles.buttonDisabled]}
-                                onPress={handleSignUp}
-                                onPressIn={signUpButtonAnims.onPressIn}
-                                onPressOut={signUpButtonAnims.onPressOut}
-                                disabled={!isSignUpButtonEnabled || isLoading}
-                                >
-                                {isLoading ? (
-                                    <ActivityIndicator color="#FFFFFF" />
-                                ) : (
-                                    <Text style={styles.signUpButtonText}>Cadastrar</Text>
-                                )}
+                            {/* Navigation Buttons */}
+                            <View style={styles.navigationButtons}>
+                                <TouchableOpacity style={[styles.navButton, styles.backButton]} onPress={() => setCurrentStep(2)}>
+                                    <Ionicons name="arrow-back-outline" size={20} color="#007BFF" />
+                                    <Text style={styles.navButtonTextBack}>Voltar</Text>
                                 </TouchableOpacity>
-                            </Animated.View>
+                                <Animated.View style={{transform: [{scale: signUpButtonAnims.scaleAnim}]}}>
+                                    <TouchableOpacity
+                                    style={[styles.navButton, styles.finalButton, isLoading && styles.buttonDisabled]}
+                                    onPress={handleSignUp}
+                                    onPressIn={signUpButtonAnims.onPressIn}
+                                    onPressOut={signUpButtonAnims.onPressOut}
+                                    disabled={isLoading}
+                                    >
+                                    {isLoading ? (
+                                        <ActivityIndicator color="#FFFFFF" />
+                                    ) : (
+                                        <>
+                                            <Text style={styles.navButtonTextNext}>Cadastrar</Text>
+                                            <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
+                                        </>
+                                    )}
+                                    </TouchableOpacity>
+                                </Animated.View>
+                            </View>
                         </View>
                     )}
                 </Animated.View>
@@ -587,8 +588,8 @@ const styles = StyleSheet.create({
         left: -15, // Ajustado para centralizar o logo
     },
     logo: { // Ajuste para o logo V-shape
-        width: 200, // Ajustado para o tamanho da imagem
-        height: 260, // Ajustado para o tamanho da imagem
+        width: 240, // Ajustado para o tamanho da imagem
+        height: 300, // Ajustado para o tamanho da imagem
         resizeMode: 'contain',
     },
     welcomeTitle: {
@@ -702,5 +703,45 @@ const styles = StyleSheet.create({
     },
     cepLoadingIndicator: { // Estilo para o indicador de loading do CEP
         marginLeft: 10,
-    }
+    },
+    navigationButtons: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 10,
+        bottom: 60,
+    },
+    navButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 28,
+        minWidth: 120,
+        justifyContent: 'center',
+    },
+    backButton: {
+        backgroundColor: '#F7F8FC',
+        borderWidth: 1,
+        borderColor: '#007BFF',
+    },
+    finalButton: {
+        backgroundColor: '#007BFF',
+        shadowColor: '#007BFF',
+        shadowOffset: { width: 0, height: 5 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 10,
+    },
+    navButtonTextBack: {
+        color: '#007BFF',
+        fontSize: 16,
+        fontWeight: '600',
+        marginLeft: 5,
+    },
+    navButtonTextNext: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: '600',
+        marginRight: 5,
+    },
 });

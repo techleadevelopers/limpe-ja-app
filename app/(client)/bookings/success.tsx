@@ -1,40 +1,38 @@
 // LimpeJaApp/app/(client)/bookings/success.tsx
-import React, { useEffect, useRef, useState, useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-  Animated,
-  Easing,
-  Alert,
-  Dimensions,
-  Platform,
-  ColorValue,
-  ScrollView,
-} from 'react-native';
-import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
-import *as Calendar from 'expo-calendar';
-import Toast from 'react-native-toast-message';
-import *as Clipboard from 'expo-clipboard';
-import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import * as Calendar from 'expo-calendar';
+import * as Clipboard from 'expo-clipboard';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+    Alert,
+    Animated,
+    ColorValue,
+    Dimensions,
+    Easing,
+    Platform,
+    ScrollView,
+    StyleSheet
+} from 'react-native';
+import Toast from 'react-native-toast-message';
 
 // Importar componentes refatorados
-import SuccessHeader from './components/success/SuccessHeader';
-import SuccessLoadingError from './components/success/SuccessLoadingError';
-import BookingSummaryCard from './components/success/BookingSummaryCard';
-import ImmediateActionButtons from './components/success/ImmediateActionButtons';
-import MainActionButtons from './components/success/MainActionButtons';
+import BookingSummaryCard from '../../../components/client/booking/success/BookingSummaryCard';
+import MainActionButtons from '../../../components/client/booking/success/MainActionButtons';
+import SuccessHeader from '../../../components/client/booking/success/SuccessHeader';
+import SuccessLoadingError from '../../../components/client/booking/success/SuccessLoadingError';
 
 // Importar serviços e tipagens
-import { getBookingDetails } from '../../services/bookingService';
-import { BookingDetails } from '../../types/backend/bookings';
-import { getProviderDetails } from '../../services/providerService';
-import { ProviderDisplayInfo } from '../../types/backend/providers';
+import { getBookingDetails } from '../../../services/bookingService';
+import { getProviderDetails } from '../../../services/providerService';
+import { BookingDetails } from '../../../types/backend/bookings';
+import { ProviderDisplayInfo } from '../../../types/backend/providers';
 
 // NOVO: Importar serviços e tipagens para PIX
-import { createPixCharge } from '../../services/paymentService';
-import { CreatePixChargeDto, PixChargeResponseDto } from '../../types/backend/payments';
 import { useAuth } from '../../../hooks/useAuth'; // Importar useAuth para obter userId
+import { createPixCharge } from '../../../services/paymentService';
+import { CreatePixChargeDto, PixChargeResponseDto } from '../../../types/backend/payments';
 
 // Constantes de estilo
 const SCREEN_WIDTH = Dimensions.get('window').width;

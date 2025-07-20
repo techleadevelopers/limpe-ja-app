@@ -1,891 +1,594 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { Link, Stack, useRouter } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  ActivityIndicator,
-  Alert,
-  TouchableOpacity,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  Image,
-  Animated,
-  StatusBar,
-  Dimensions,
-  Button
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Dimensions,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
-import { Link, useRouter, Stack } from 'expo-router';
-import { useAuth } from '../../hooks/useAuth';
-import { Ionicons } from '@expo/vector-icons';
-import { UserRole } from '../types/backend/auth';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
+// REMOVIDO: import auth from '@react-native-firebase/auth'; // Não usaremos mais a API namespaced diretamente
+// NOVO: Importa getAuth e signInWithPhoneNumber da API modular do Firebase Auth
+import { getAuth, signInWithPhoneNumber } from 'firebase/auth'; // API Modular para Web e Nativo
+// Importa a instância do authClient do firebaseClient.ts (se precisar para getAuth(app) em algum caso)
+// import { authClient } from '../config/firebaseClient'; // Não precisaremos mais de authClient aqui diretamente
 
-// Importações do Reanimated para as novas animações
+import { LinearGradient } from 'expo-linear-gradient';
+import { useAuth } from '../../contexts/AuthContext';
+import { UserRole } from '../../types/backend/auth';
+
+// Importações do Reanimated (mantidas)
 import AnimatedReanimated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  Easing,
-  withRepeat,
-  interpolate,
-  Extrapolate,
+    Easing,
+    Extrapolate,
+    interpolate,
+    useAnimatedStyle,
+    useSharedValue,
+    withRepeat,
+    withTiming,
 } from 'react-native-reanimated';
 
 const LOGO_IMAGE = require('../../assets/images/logo2.png');
 
-// Constantes para animações e layout
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
-const AnimatedErrorMessage: React.FC<{ message: string | null; centered?: boolean }> = ({ message, centered }) => {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: message ? 1 : 0,
-      duration: message ? 300 : 200,
-      useNativeDriver: true,
-    }).start();
-  }, [message, fadeAnim]);
+import { AnimatedErrorMessage } from '../../components/auth/components/AnimatedErrorMessage';
+import { InputWithIcon } from '../../components/auth/components/InputWithIcon';
 
-  if (!message) return null;
-  return (
-    <Animated.Text style={[styles.inlineErrorMessage, { opacity: fadeAnim, textAlign: centered ? 'center' : 'left' }]}>
-      {message}
-    </Animated.Text>
-  );
-};
 
 export default function LoginScreen() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [generalError, setGeneralError] = useState<string | null>(null);
+    const [phoneNumber, setPhoneNumber] = useState('');
+    const [otpCode, setOtpCode] = useState('');
+    const [confirmationResult, setConfirmationResult] = useState<any>(null); 
+    const [otpStep, setOtpStep] = useState<'phone' | 'otp'>('phone'); 
+    const [otpLoading, setOtpLoading] = useState(false); 
+    const [otpErrorMessage, setOtpErrorMessage] = useState<string | null>(null); 
+    const [timer, setTimer] = useState(0); 
 
-  const { signIn, isAuthenticated, isLoading: authIsLoading, user } = useAuth();
-  const router = useRouter();
+    const { loginWithFirebaseIdToken, isAuthenticated, isLoading: authIsLoading, user } = useAuth(); 
+    const router = useRouter();
 
-  const mainElementsOpacity = useRef(new Animated.Value(0)).current;
-  const mainElementsTranslateY = useRef(new Animated.Value(18)).current;
+    const mainElementsOpacity = useRef(new Animated.Value(0)).current;
+    const mainElementsTranslateY = useRef(new Animated.Value(18)).current;
 
-  // ANIMAÇÕES PARA MÚLTIPLAS MINI BOLHAS
-  const bubble1 = useRef(new Animated.Value(0)).current;
-  const bubble2 = useRef(new Animated.Value(0)).current;
-  const bubble3 = useRef(new Animated.Value(0)).current;
-  const bubble4 = useRef(new Animated.Value(0)).current;
-  const bubble5 = useRef(new Animated.Value(0)).current;
-  const bubble6 = useRef(new Animated.Value(0)).current;
-  const bubble7 = useRef(new Animated.Value(0)).current;
-  const bubble8 = useRef(new Animated.Value(0)).current;
+    const logoRotateY = useSharedValue(0);
+    const logoPulseScale = useSharedValue(1);
 
-  // Valores compartilhados para as animações da logo (Reanimated)
-  const logoRotateY = useSharedValue(0);
-  const logoPulseScale = useSharedValue(1);
+    useEffect(() => {
+        const startLogoLoopAnimations = () => {
+            logoRotateY.value = withRepeat(withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.ease) }), -1, true);
+            logoPulseScale.value = withRepeat(withTiming(1.02, { duration: 1500, easing: Easing.inOut(Easing.ease) }), -1, true);
+        };
 
-  useEffect(() => {
-    // ANIMAÇÕES DAS MINI BOLHAS
-    const startBubbleAnimations = () => {
-      const bubbles = [bubble1, bubble2, bubble3, bubble4, bubble5, bubble6, bubble7, bubble8];
-      
-      bubbles.forEach((bubble, index) => {
-        const delay = index * 800;
-        const duration = 3000 + (index * 500);
-        
-        Animated.loop(
-          Animated.sequence([
-            Animated.timing(bubble, {
-              toValue: 1,
-              duration: duration,
-              delay: delay,
-              easing: Easing.inOut(Easing.ease),
-              useNativeDriver: true,
-            }),
-            Animated.timing(bubble, {
-              toValue: 0,
-              duration: duration,
-              easing: Easing.inOut(Easing.ease),
-              useNativeDriver: true,
-            }),
-          ])
-        ).start();
-      });
+        if (!authIsLoading && isAuthenticated) {
+            const targetRoute = user?.role === UserRole.CLIENT ? '/(client)/explore' : user?.role === UserRole.PROVIDER ? '/(provider)/dashboard' : '/';
+            router.replace(targetRoute as any);
+        } else if (!isAuthenticated) {
+            Animated.parallel([
+                Animated.timing(mainElementsOpacity, { toValue: 1, duration: 700, delay: 200, useNativeDriver: true }),
+                Animated.timing(mainElementsTranslateY, { toValue: 0, duration: 700, delay: 200, useNativeDriver: true })
+            ]).start(() => {
+                startLogoLoopAnimations();
+            });
+        }
+    }, [isAuthenticated, authIsLoading, user, router, logoRotateY, logoPulseScale, mainElementsOpacity, mainElementsTranslateY]);
+
+    const createButtonAnimations = () => {
+        const scaleAnim = useRef(new Animated.Value(1)).current;
+        const onPressIn = () => Animated.spring(scaleAnim, { toValue: 0.97, useNativeDriver: true, friction: 7 }).start();
+        const onPressOut = () => Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, friction: 7 }).start();
+        return { scaleAnim, onPressIn, onPressOut };
     };
 
-    // Função para iniciar as animações de loop da logo
-    const startLogoLoopAnimations = () => {
-      logoRotateY.value = withRepeat(
-        withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
-        -1,
-        true
-      );
+    const signInButtonAnims = createButtonAnimations();
 
-      logoPulseScale.value = withRepeat(
-        withTiming(1.02, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
-        -1,
-        true
-      );
+    const animatedLogoStyle = useAnimatedStyle(() => {
+        const rotation = interpolate(
+            logoRotateY.value,
+            [0, 0.5, 1],
+            [-5, 0, 5],
+            Extrapolate.CLAMP
+        );
+        return {
+            transform: [
+                { scale: logoPulseScale.value },
+                { rotateY: `${rotation}deg` },
+            ],
+        };
+    });
+
+    // --- FUNÇÃO handlePhoneSubmit (AGORA USA FIREBASE AUTH ESPECÍFICO PARA PLATAFORMA) ---
+    const handlePhoneSubmit = async () => {
+        const cleanPhone = phoneNumber.replace(/\D/g, '');
+        const fullPhoneNumber = `+55${cleanPhone}`; 
+
+        if (!cleanPhone || cleanPhone.length < 11) {
+            setOtpErrorMessage('Por favor, insira um número de telefone válido (DDD + 9 dígitos).');
+            return;
+        }
+
+        setOtpLoading(true);
+        setOtpErrorMessage(null);
+
+        try {
+            // CORREÇÃO: Usar getAuth() e signInWithPhoneNumber da API modular
+            const authInstance = getAuth(); // Obtém a instância de autenticação do Firebase
+            const confirmation = await signInWithPhoneNumber(authInstance, fullPhoneNumber); 
+            
+            setConfirmationResult(confirmation); 
+            setOtpStep('otp'); 
+            setTimer(60); 
+
+            const interval = setInterval(() => {
+                setTimer(prev => {
+                    if (prev <= 1) {
+                        clearInterval(interval);
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+
+            Alert.alert('Código Enviado', `Um código de verificação foi enviado para ${formatPhoneNumber(phoneNumber)}.`);
+
+        } catch (error: any) {
+            console.error('Erro ao iniciar Firebase Phone Auth:', error);
+            let firebaseErrorMessage = 'Erro desconhecido. Tente novamente.';
+            if (error.code === 'auth/invalid-phone-number') {
+                firebaseErrorMessage = 'Número de telefone inválido.';
+            } else if (error.code === 'auth/too-many-requests') {
+                firebaseErrorMessage = 'Muitas tentativas. Tente novamente mais tarde.';
+            } else if (error.code === 'auth/app-not-authorized') {
+                firebaseErrorMessage = 'Seu app não está autorizado para usar Firebase Phone Auth. Verifique SHA-1/SHA-256 no console Firebase.';
+            } else if (error.code === 'auth/quota-exceeded') {
+                firebaseErrorMessage = 'Cota de SMS excedida para este telefone. Tente novamente em 24h.';
+            } else if (error.code === 'auth/web-storage-unsupported') { 
+                firebaseErrorMessage = 'Armazenamento web não suportado ou cookies desativados. Ative os cookies do navegador.';
+            }
+            setOtpErrorMessage(firebaseErrorMessage);
+        } finally {
+            setOtpLoading(false);
+        }
     };
 
-    if (!authIsLoading && isAuthenticated) {
-      const targetRoute = user?.role === 'CLIENT' ? '/(client)/explore' : user?.role === 'PROVIDER' ? '/(provider)/dashboard' : '/';
-      router.replace(targetRoute as any);
-    } else if (!isAuthenticated) {
-      Animated.parallel([
-        Animated.timing(mainElementsOpacity, { 
-          toValue: 1, 
-          duration: 700, 
-          delay: 200, 
-          useNativeDriver: true 
-        }),
-        Animated.timing(mainElementsTranslateY, { 
-          toValue: 0, 
-          duration: 700, 
-          delay: 200, 
-          useNativeDriver: true 
-        })
-      ]).start(() => {
-        startLogoLoopAnimations();
-        startBubbleAnimations();
-      });
-    }
-  }, [isAuthenticated, authIsLoading, user, router]);
+    // --- FUNÇÃO handleOtpSubmit (USA FIREBASE AUTH E ENVIA ID TOKEN PARA BACKEND) ---
+    const handleOtpSubmit = async () => {
+        if (!otpCode || otpCode.length < 6) {
+            setOtpErrorMessage('Por favor, insira o código de 6 dígitos.');
+            return;
+        }
+        if (!confirmationResult) {
+            setOtpErrorMessage('Erro de sessão. Por favor, reinicie o processo de envio do código.');
+            return;
+        }
 
-  const validateInputs = () => {
-    setGeneralError(null);
-    if (!username.trim() || !password.trim()) {
-      setGeneralError('Por favor, insira seu nome de usuário e senha.');
-      return false;
-    }
-    return true;
-  };
+        setOtpLoading(true);
+        setOtpErrorMessage(null);
 
-  const handleLogin = async () => {
-    if (!validateInputs()) return;
-    setIsLoading(true);
-    try {
-      await signIn({ email: username.trim().toLowerCase(), password: password });
-    } catch (error: any) {
-      setGeneralError(error.message || 'Falha no login. Por favor, tente novamente.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+        try {
+            // 1. Confirma o código OTP com o Firebase
+            const userCredential = await confirmationResult.confirm(otpCode);
+            const firebaseUser = userCredential.user;
+            const idToken = await firebaseUser.getIdToken(); 
 
-  const createButtonAnimations = () => {
-    const scaleAnimButton = useRef(new Animated.Value(1)).current;
-    const onPressIn = () => Animated.spring(scaleAnimButton, { toValue: 0.97, useNativeDriver: true, friction: 7 }).start();
-    const onPressOut = () => Animated.spring(scaleAnimButton, { toValue: 1, useNativeDriver: true, friction: 7 }).start();
-    return { scaleAnim: scaleAnimButton, onPressIn, onPressOut };
-  };
+            console.log('[LoginScreen] Firebase OTP verificado com sucesso. Enviando ID Token para o backend.');
 
-  const signInButtonAnims = createButtonAnimations();
-  const googleButtonAnims = createButtonAnimations();
-  const facebookButtonAnims = createButtonAnimations();
-  const twitterButtonAnims = createButtonAnimations();
+            // 2. Envia o ID Token do Firebase para o seu backend para login/registro final
+            await loginWithFirebaseIdToken(idToken);
 
-  // Estilo animado para a logo principal (Reanimated)
-  const animatedLogoStyle = useAnimatedStyle(() => {
-    const rotation = interpolate(
-      logoRotateY.value,
-      [0, 0.5, 1],
-      [-5, 0, 5],
-      Extrapolate.CLAMP
-    );
+            Alert.alert('Sucesso!', 'Login realizado com sucesso!');
 
-    return {
-      transform: [
-        { scale: logoPulseScale.value },
-        { rotateY: `${rotation}deg` },
-      ],
+        } catch (error: any) {
+            console.error('Erro ao verificar OTP com Firebase ou backend:', error);
+            let errorMessage = 'Código OTP inválido ou expirado. Tente novamente.';
+            if (error.code === 'auth/invalid-verification-code') {
+                errorMessage = 'O código de verificação é inválido.';
+            } else if (error.code === 'auth/code-expired') {
+                errorMessage = 'O código expirou. Por favor, solicite um novo.';
+            } else if (error.response?.data?.message) { 
+                errorMessage = error.response.data.message;
+            }
+            setOtpErrorMessage(errorMessage);
+        } finally {
+            setOtpLoading(false);
+        }
     };
-  });
 
-  // LOADING ORIGINAL MANTIDO
-  if (authIsLoading || (!authIsLoading && isAuthenticated)) {
+    // --- FUNÇÃO handleResendOtp (USA FIREBASE AUTH NOVAMENTE) ---
+    const handleResendOtp = async () => {
+        if (timer > 0) return; 
+
+        setOtpLoading(true);
+        setOtpErrorMessage(null);
+
+        try {
+            const cleanPhone = phoneNumber.replace(/\D/g, '');
+            const fullPhoneNumber = `+55${cleanPhone}`;
+
+            // CORREÇÃO: Usar getAuth() e signInWithPhoneNumber da API modular para reenviar
+            const authInstance = getAuth();
+            const newConfirmation = await signInWithPhoneNumber(authInstance, fullPhoneNumber);
+            
+            setConfirmationResult(newConfirmation); 
+            setTimer(60); 
+
+            const interval = setInterval(() => {
+                setTimer(prev => {
+                    if (prev <= 1) {
+                        clearInterval(interval);
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+
+            Alert.alert('SMS Reenviado', 'Um novo código foi enviado para seu telefone.');
+
+        } catch (error: any) {
+            console.error('Erro ao reenviar SMS:', error);
+            let firebaseErrorMessage = 'Erro ao reenviar código. Tente novamente.';
+            if (error.code === 'auth/too-many-requests') {
+                firebaseErrorMessage = 'Muitas tentativas de reenvio. Espere antes de tentar novamente.';
+            } else if (error.code === 'auth/invalid-phone-number') {
+                firebaseErrorMessage = 'Número de telefone inválido para reenvio.';
+            }
+            setOtpErrorMessage(firebaseErrorMessage);
+        } finally {
+            setOtpLoading(false);
+        }
+    };
+
+    const formatPhoneNumber = (value: string) => { 
+      const cleaned = value.replace(/\D/g, '');
+      if (cleaned.length <= 2) {
+          return `(${cleaned}`;
+      } else if (cleaned.length <= 7) {
+          return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
+      } else if (cleaned.length <= 11) {
+          return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
+      } else {
+          return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 11)}`;
+      }
+    };
+
+    if (authIsLoading || (!authIsLoading && isAuthenticated)) {
+        return (
+            <View style={styles.fullScreenLoadingContainer}>
+                <ActivityIndicator size="large" color="#007BFF" />
+                <Text style={styles.fullScreenLoadingText}>Carregando sua sessão...</Text>
+            </View>
+        );
+    }
+
     return (
-      <View style={styles.fullScreenLoadingContainer}>
-        <ActivityIndicator size="large" color="#007BFF" />
-        <Text style={styles.fullScreenLoadingText}>Carregando sua sessão...</Text>
-      </View>
-    );
-  }
+        <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={styles.keyboardAvoidingContainer}
+        >
+            <StatusBar barStyle="dark-content" backgroundColor={styles.scrollView.backgroundColor} />
 
-  return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.keyboardAvoidingContainer}
-    >
-      <StatusBar barStyle="dark-content" backgroundColor={styles.scrollView.backgroundColor} />
-      
-      {/* Fundo com gradiente */}
-      <LinearGradient
-        colors={['#F0F4F8', '#E2E8F0', '#F7FAFC']}
-        style={StyleSheet.absoluteFillObject}
-      />
-
-      {/* MÚLTIPLAS MINI BOLHAS AZUIS */}
-      <Animated.View style={[
-        styles.miniBubble1,
-        {
-          transform: [
-            { 
-              translateY: bubble1.interpolate({
-                inputRange: [0, 1],
-                outputRange: [SCREEN_HEIGHT + 50, -100]
-              })
-            },
-            { 
-              translateX: bubble1.interpolate({
-                inputRange: [0, 0.5, 1],
-                outputRange: [0, 30, -20]
-              })
-            }
-          ],
-          opacity: bubble1.interpolate({
-            inputRange: [0, 0.1, 0.9, 1],
-            outputRange: [0, 1, 1, 0]
-          })
-        }
-      ]}>
-        <LinearGradient
-          colors={['rgba(66, 165, 245, 0.3)', 'rgba(144, 202, 249, 0.2)']}
-          style={styles.bubbleGradient}
-        />
-      </Animated.View>
-
-      <Animated.View style={[
-        styles.miniBubble2,
-        {
-          transform: [
-            { 
-              translateY: bubble2.interpolate({
-                inputRange: [0, 1],
-                outputRange: [SCREEN_HEIGHT + 50, -100]
-              })
-            },
-            { 
-              translateX: bubble2.interpolate({
-                inputRange: [0, 0.5, 1],
-                outputRange: [0, -25, 35]
-              })
-            }
-          ],
-          opacity: bubble2.interpolate({
-            inputRange: [0, 0.1, 0.9, 1],
-            outputRange: [0, 1, 1, 0]
-          })
-        }
-      ]}>
-        <LinearGradient
-          colors={['rgba(30, 144, 255, 0.25)', 'rgba(100, 149, 237, 0.15)']}
-          style={styles.bubbleGradient}
-        />
-      </Animated.View>
-
-      <Animated.View style={[
-        styles.miniBubble3,
-        {
-          transform: [
-            { 
-              translateY: bubble3.interpolate({
-                inputRange: [0, 1],
-                outputRange: [SCREEN_HEIGHT + 50, -100]
-              })
-            },
-            { 
-              translateX: bubble3.interpolate({
-                inputRange: [0, 0.5, 1],
-                outputRange: [0, 40, -15]
-              })
-            }
-          ],
-          opacity: bubble3.interpolate({
-            inputRange: [0, 0.1, 0.9, 1],
-            outputRange: [0, 1, 1, 0]
-          })
-        }
-      ]}>
-        <LinearGradient
-          colors={['rgba(135, 206, 250, 0.2)', 'rgba(173, 216, 230, 0.15)']}
-          style={styles.bubbleGradient}
-        />
-      </Animated.View>
-
-      <Animated.View style={[
-        styles.miniBubble4,
-        {
-          transform: [
-            { 
-              translateY: bubble4.interpolate({
-                inputRange: [0, 1],
-                outputRange: [SCREEN_HEIGHT + 50, -100]
-              })
-            },
-            { 
-              translateX: bubble4.interpolate({
-                inputRange: [0, 0.5, 1],
-                outputRange: [0, -30, 25]
-              })
-            }
-          ],
-          opacity: bubble4.interpolate({
-            inputRange: [0, 0.1, 0.9, 1],
-            outputRange: [0, 1, 1, 0]
-          })
-        }
-      ]}>
-        <LinearGradient
-          colors={['rgba(70, 130, 180, 0.3)', 'rgba(176, 196, 222, 0.2)']}
-          style={styles.bubbleGradient}
-        />
-      </Animated.View>
-
-      <Animated.View style={[
-        styles.miniBubble5,
-        {
-          transform: [
-            { 
-              translateY: bubble5.interpolate({
-                inputRange: [0, 1],
-                outputRange: [SCREEN_HEIGHT + 50, -100]
-              })
-            },
-            { 
-              translateX: bubble5.interpolate({
-                inputRange: [0, 0.5, 1],
-                outputRange: [0, 20, -40]
-              })
-            }
-          ],
-          opacity: bubble5.interpolate({
-            inputRange: [0, 0.1, 0.9, 1],
-            outputRange: [0, 1, 1, 0]
-          })
-        }
-      ]}>
-        <LinearGradient
-          colors={['rgba(65, 105, 225, 0.25)', 'rgba(123, 104, 238, 0.15)']}
-          style={styles.bubbleGradient}
-        />
-      </Animated.View>
-
-      <Animated.View style={[
-        styles.miniBubble6,
-        {
-          transform: [
-            { 
-              translateY: bubble6.interpolate({
-                inputRange: [0, 1],
-                outputRange: [SCREEN_HEIGHT + 50, -100]
-              })
-            },
-            { 
-              translateX: bubble6.interpolate({
-                inputRange: [0, 0.5, 1],
-                outputRange: [0, -35, 30]
-              })
-            }
-          ],
-          opacity: bubble6.interpolate({
-            inputRange: [0, 0.1, 0.9, 1],
-            outputRange: [0, 1, 1, 0]
-          })
-        }
-      ]}>
-        <LinearGradient
-          colors={['rgba(95, 158, 160, 0.2)', 'rgba(175, 238, 238, 0.15)']}
-          style={styles.bubbleGradient}
-        />
-      </Animated.View>
-
-      <Animated.View style={[
-        styles.miniBubble7,
-        {
-          transform: [
-            { 
-              translateY: bubble7.interpolate({
-                inputRange: [0, 1],
-                outputRange: [SCREEN_HEIGHT + 50, -100]
-              })
-            },
-            { 
-              translateX: bubble7.interpolate({
-                inputRange: [0, 0.5, 1],
-                outputRange: [0, 45, -10]
-              })
-            }
-          ],
-          opacity: bubble7.interpolate({
-            inputRange: [0, 0.1, 0.9, 1],
-            outputRange: [0, 1, 1, 0]
-          })
-        }
-      ]}>
-        <LinearGradient
-          colors={['rgba(72, 61, 139, 0.2)', 'rgba(147, 112, 219, 0.15)']}
-          style={styles.bubbleGradient}
-        />
-      </Animated.View>
-
-      <Animated.View style={[
-        styles.miniBubble8,
-        {
-          transform: [
-            { 
-              translateY: bubble8.interpolate({
-                inputRange: [0, 1],
-                outputRange: [SCREEN_HEIGHT + 50, -100]
-              })
-            },
-            { 
-              translateX: bubble8.interpolate({
-                inputRange: [0, 0.5, 1],
-                outputRange: [0, -20, 50]
-              })
-            }
-          ],
-          opacity: bubble8.interpolate({
-            inputRange: [0, 0.1, 0.9, 1],
-            outputRange: [0, 1, 1, 0]
-          })
-        }
-      ]}>
-        <LinearGradient
-          colors={['rgba(106, 90, 205, 0.25)', 'rgba(221, 160, 221, 0.15)']}
-          style={styles.bubbleGradient}
-        />
-      </Animated.View>
-
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContentContainer}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        <Stack.Screen options={{ headerShown: false }} />
-
-        <Animated.View style={[
-          styles.contentWrapper, 
-          { 
-            opacity: mainElementsOpacity, 
-            transform: [{ translateY: mainElementsTranslateY }] 
-          }
-        ]}>
-          {/* LOGO COM DIMENSÕES ORIGINAIS RESTAURADAS */}
-          <View style={styles.logoContainer}>
-            <AnimatedReanimated.Image source={LOGO_IMAGE} style={[styles.logo, animatedLogoStyle]} />
-          </View>
-
-          <Text style={styles.welcomeSubtitle}>Faça login em sua conta</Text>
-
-          {/* Username Input */}
-          <View style={styles.inputWrapper}>
-            <View style={styles.iconCircle}>
-              <Ionicons name="person-outline" size={18} color="#00BCD4" />
-            </View>
-            <TextInput
-              style={styles.input}
-              placeholder="Nome de usuário"
-              placeholderTextColor="#A0AEC0"
-              value={username}
-              onChangeText={(text) => { setUsername(text); if (generalError) setGeneralError(null);}}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              textContentType="username"
-              autoComplete="username"
+            <LinearGradient
+                colors={['#F0F4F8', '#E2E8F0', '#F7FAFC']}
+                style={StyleSheet.absoluteFillObject}
             />
-          </View>
 
-          {/* Password Input */}
-          <View style={styles.inputWrapper}>
-            <View style={styles.iconCircle}>
-              <Ionicons name="lock-closed-outline" size={18} color="#00BCD4" />
-            </View>
-            <TextInput
-              style={styles.input}
-              placeholder="Senha"
-              placeholderTextColor="#A0AEC0"
-              value={password}
-              onChangeText={(text) => { setPassword(text); if (generalError) setGeneralError(null);}}
-              secureTextEntry={!showPassword}
-              textContentType="password"
-            />
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIconTouchable}>
-              <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={22} color="#A0AEC0" />
-            </TouchableOpacity>
-          </View>
-
-          <AnimatedErrorMessage message={generalError} centered />
-
-          <Animated.View style={{transform: [{scale: signInButtonAnims.scaleAnim}]}}>
-            <TouchableOpacity
-              style={[styles.signInButton, isLoading && styles.buttonDisabled]}
-              onPress={handleLogin}
-              onPressIn={signInButtonAnims.onPressIn}
-              onPressOut={signInButtonAnims.onPressOut}
-              disabled={isLoading}
+            <ScrollView
+                style={styles.scrollView}
+                contentContainerStyle={styles.scrollContentContainer}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
             >
-              {isLoading ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.signInButtonText}>Entrar</Text>
-              )}
-            </TouchableOpacity>
-          </Animated.View>
+                <Stack.Screen options={{ headerShown: false }} />
 
-          <View style={styles.orSeparatorContainer}>
-            <View style={styles.dashedLine} />
-            <Text style={styles.orText}>Ou faça login com</Text>
-            <View style={styles.dashedLine} />
-          </View>
+                <Animated.View style={[
+                    styles.contentWrapper,
+                    {
+                        opacity: mainElementsOpacity,
+                        transform: [{ translateY: mainElementsTranslateY }]
+                    }
+                ]}>
+                    <View style={styles.logoContainer}>
+                        <AnimatedReanimated.Image
+                            source={LOGO_IMAGE}
+                            style={[styles.logo, animatedLogoStyle]}
+                            resizeMode="contain"
+                        />
+                    </View>
 
-          <View style={styles.socialLoginContainer}>
-            <Animated.View style={{transform: [{scale: googleButtonAnims.scaleAnim}]}}>
-              <TouchableOpacity
-                style={styles.socialButton}
-                onPress={() => Alert.alert("Login Social", "Login com Google (não implementado).")}
-                onPressIn={googleButtonAnims.onPressIn}
-                onPressOut={googleButtonAnims.onPressOut}
-              >
-                <Ionicons name="logo-google" size={22} color="#DB4437" />
-              </TouchableOpacity>
-            </Animated.View>
-            <Animated.View style={{transform: [{scale: facebookButtonAnims.scaleAnim}]}}>
-              <TouchableOpacity
-                style={styles.socialButton}
-                onPress={() => Alert.alert("Login Social", "Login com Facebook (não implementado).")}
-                onPressIn={facebookButtonAnims.onPressIn}
-                onPressOut={facebookButtonAnims.onPressOut}
-              >
-                <Ionicons name="logo-facebook" size={22} color="#4267B2" />
-              </TouchableOpacity>
-            </Animated.View>
-            <Animated.View style={{transform: [{scale: twitterButtonAnims.scaleAnim}]}}>
-              <TouchableOpacity
-                style={styles.socialButton}
-                onPress={() => Alert.alert("Login Social", "Login com Twitter (não implementado).")}
-                onPressIn={twitterButtonAnims.onPressIn}
-                onPressOut={twitterButtonAnims.onPressOut}
-              >
-                <Ionicons name="logo-twitter" size={22} color="#1DA1F2" />
-              </TouchableOpacity>
-            </Animated.View>
-          </View>
+                    <Text style={styles.welcomeSubtitle}>
+                        {otpStep === 'phone' ? 'Entrar com seu telefone' : 'Verificar Código OTP'}
+                    </Text>
 
-          <View style={styles.signUpContainer}>
-            <Text style={styles.signUpText}>Não tem uma conta? </Text>
-            <Link href="/(auth)/register-options" asChild>
-              <TouchableOpacity>
-                <Text style={styles.signUpLink}>Cadastre-se aqui</Text>
-              </TouchableOpacity>
-            </Link>
-          </View>
+                    <>
+                        {otpStep === 'phone' ? (
+                            <InputWithIcon
+                                iconName="call-outline"
+                                placeholder="(XX) XXXXX-XXXX"
+                                value={phoneNumber}
+                                onChangeText={(text: string) => {
+                                    setPhoneNumber(formatPhoneNumber(text));
+                                    if (otpErrorMessage) setOtpErrorMessage(null);
+                                }}
+                                keyboardType="phone-pad"
+                                maxLength={15}
+                            />
+                        ) : (
+                            <InputWithIcon
+                                iconName="lock-closed-outline"
+                                placeholder="Código de 6 dígitos"
+                                value={otpCode}
+                                onChangeText={(text: string) => {
+                                    setOtpCode(text);
+                                    if (otpErrorMessage) setOtpErrorMessage(null);
+                                }}
+                                keyboardType="numeric"
+                                maxLength={6}
+                                textAlign="center"
+                                style={styles.otpInput}
+                            />
+                        )}
 
-          <View style={styles.forgotPasswordContainer}>
-            <Link href="/(auth)/forgot-password" asChild>
-              <TouchableOpacity>
-                <Text style={styles.forgotPasswordLink}>Esqueceu a senha?</Text>
-              </TouchableOpacity>
-            </Link>
-          </View>
-        </Animated.View>
-      </ScrollView>
-    </KeyboardAvoidingView>
-  );
+                        <AnimatedErrorMessage message={otpErrorMessage} isVisible={!!otpErrorMessage} centered={true} />
+
+                        <Animated.View style={{ transform: [{ scale: signInButtonAnims.scaleAnim }] }}>
+                            <TouchableOpacity
+                                style={[styles.signInButton, otpLoading && styles.buttonDisabled]}
+                                onPress={otpStep === 'phone' ? handlePhoneSubmit : handleOtpSubmit}
+                                onPressIn={signInButtonAnims.onPressIn}
+                                onPressOut={signInButtonAnims.onPressOut}
+                                disabled={otpLoading}
+                            >
+                                {otpLoading ? (
+                                    <ActivityIndicator color="#FFFFFF" />
+                                ) : (
+                                    <Text style={styles.signInButtonText}>
+                                        {otpStep === 'phone' ? 'Enviar Código' : 'Verificar Código'}
+                                    </Text>
+                                )}
+                            </TouchableOpacity>
+                        </Animated.View>
+
+                        {otpStep === 'otp' && (
+                            <View style={styles.otpActions}>
+                                <TouchableOpacity
+                                    style={styles.backButton}
+                                    onPress={() => {
+                                        setOtpStep('phone');
+                                        setOtpErrorMessage(null);
+                                        setTimer(0);
+                                    }}
+                                >
+                                    <Text style={styles.backButtonText}>Voltar</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={[styles.resendButton, timer > 0 && styles.resendButtonDisabled]}
+                                    onPress={handleResendOtp}
+                                    disabled={timer > 0 || otpLoading}
+                                >
+                                    <Text style={[styles.resendButtonText, timer > 0 && styles.resendButtonTextDisabled]}>
+                                        {timer > 0 ? `Reenviar em ${timer}s` : 'Reenviar código'}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                    </>
+
+                    <View style={styles.signUpContainer}>
+                        <Text style={styles.signUpText}>Não tem uma conta? </Text>
+                        <Link href="/(auth)/register-options" asChild>
+                            <TouchableOpacity>
+                                <Text style={styles.signUpLink}>Cadastre-se aqui</Text>
+                            </TouchableOpacity>
+                        </Link>
+                    </View>
+
+                    <View style={styles.forgotPasswordContainer}>
+                        <Link href="/(auth)/forgot-password" asChild>
+                            <TouchableOpacity>
+                                <Text style={styles.forgotPasswordLink}>Esqueceu a senha?</Text>
+                            </TouchableOpacity>
+                        </Link>
+                    </View>
+                </Animated.View>
+            </ScrollView>
+        </KeyboardAvoidingView>
+    );
 }
 
 const styles = StyleSheet.create({
-  keyboardAvoidingContainer: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-    backgroundColor: '#F7F8FC',
-  },
-  scrollContentContainer: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingBottom: 10,
-  },
-  contentWrapper: {
-    paddingHorizontal: 35,
-    paddingTop: Platform.OS === 'ios' ? 20 : 15,
-  },
+    keyboardAvoidingContainer: {
+        flex: 1,
+    },
+    scrollView: {
+        flex: 1,
+        backgroundColor: '#F7F8FC',
+    },
+    scrollContentContainer: {
+        flexGrow: 1,
+        justifyContent: 'center',
+        paddingBottom: 10,
+    },
+    contentWrapper: {
+        paddingHorizontal: 49,
+        paddingTop: Platform.OS === 'ios' ? 20 : 15,
+        bottom: 100,
+    },
 
-  // ESTILOS PARA MINI BOLHAS AZUIS
-  miniBubble1: {
-    position: 'absolute',
-    left: SCREEN_WIDTH * 0.1,
-    width: 15,
-    height: 15,
-    borderRadius: 7.5,
-    overflow: 'hidden',
-  },
-  miniBubble2: {
-    position: 'absolute',
-    right: SCREEN_WIDTH * 0.15,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    overflow: 'hidden',
-  },
-  miniBubble3: {
-    position: 'absolute',
-    left: SCREEN_WIDTH * 0.25,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    overflow: 'hidden',
-  },
-  miniBubble4: {
-    position: 'absolute',
-    right: SCREEN_WIDTH * 0.3,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    overflow: 'hidden',
-  },
-  miniBubble5: {
-    position: 'absolute',
-    left: SCREEN_WIDTH * 0.05,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    overflow: 'hidden',
-  },
-  miniBubble6: {
-    position: 'absolute',
-    right: SCREEN_WIDTH * 0.05,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  miniBubble7: {
-    position: 'absolute',
-    left: SCREEN_WIDTH * 0.4,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    overflow: 'hidden',
-  },
-  miniBubble8: {
-    position: 'absolute',
-    right: SCREEN_WIDTH * 0.4,
-    width: 13,
-    height: 13,
-    borderRadius: 6.5,
-    overflow: 'hidden',
-  },
-  bubbleGradient: {
-    flex: 1,
-  },
-
-  // LOGO COM DIMENSÕES ORIGINAIS RESTAURADAS
-  logoContainer: {
-    top: 90,
-    right: 10,
-    alignItems: 'center',
-  },
-  logo: {
-    width: 205,
-    height: 310,
-    resizeMode: 'contain',
-  },
-  welcomeTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#1D2029',
-    textAlign: 'center',
-    marginBottom: 6,
-  },
-  welcomeSubtitle: {
-    fontSize: 13.5,
-    color: '#8A94A6',
-    textAlign: 'center',
-    marginBottom: 50,
-    bottom: 42,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 28,
-    height: 33,
-    bottom: 55,
-    marginBottom: 10,
-    shadowColor: 'rgba(100, 100, 150, 0.15)',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 1,
-    shadowRadius: 15,
-    elevation: 5,
-    paddingLeft: 5,
-    paddingRight: 15,
-  },
-  iconCircle: {
-    width: 50,
-    height: 30,
-    right: 2,
-    borderRadius: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    marginRight: 10,
-  },
-  input: {
-    flex: 1,
-    fontSize: 15,
-    color: '#2D3748',
-    right: 8,
-    height: '70%',
-    paddingVertical: 0,
-  },
-  eyeIconTouchable: {
-    paddingHorizontal: 15,
-    height: '100%',
-    justifyContent: 'center',
-  },
-  inlineErrorMessage: {
-    color: '#E53E3E',
-    fontSize: 13,
-    textAlign: 'center',
-    marginBottom: 15,
-    marginTop: -12,
-  },
-  signInButton: {
-    backgroundColor: 'rgba(64, 192, 240, 0.85)',
-    borderRadius: 28,
-    paddingVertical: 7,
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 10,
-    bottom: 55,
-    marginBottom: 25,
-    shadowColor: '#007BFF',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  buttonDisabled: {
-    backgroundColor: '#A0CFFF',
-    elevation: 0,
-    shadowOpacity: 0,
-  },
-  signInButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  orSeparatorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 25,
-  },
-  dashedLine: {
-    flex: 1,
-    height: 1,
-    borderBottomWidth: 1,
-    borderColor: '#DCE0E5',
-    borderStyle: 'dashed',
-    top: 40,
-  },
-  orText: {
-    fontSize: 13,
-    color: '#A0AEC0',
-    textAlign: 'center',
-    top: 40,
-    marginHorizontal: 12,
-  },
-  socialLoginContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 30,
-    top: 50,
-    width: '100%',
-  },
-  socialButton: {
-    backgroundColor: '#FFFFFF',
-    width: 46,
-    height: 46,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: 'rgba(100, 100, 150, 0.1)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 8,
-    elevation: 4,
-    marginHorizontal: 12,
-  },
-  signUpContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    bottom: 200,
-    paddingBottom: 18,
-    paddingTop: 15,
-  },
-  signUpText: {
-    fontSize: 12,
-    color: '#718096',
-  },
-  signUpLink: {
-    fontSize: 14,
-    color: '#007BFF',
-    fontWeight: '600',
-    marginLeft: 4,
-  },
-  forgotPasswordContainer: {
-    alignItems: 'center',
-    marginBottom: 20,
-    bottom: 195,
-  },
-  forgotPasswordLink: {
-    fontSize: 13,
-    color: '#007BFF',
-    fontWeight: '500',
-  },
-  testButtonsContainer: {
-    marginTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#EAF0F6',
-    paddingTop: 20,
-    alignItems: 'center',
-  },
-  testButtonsHeader: {
-    textAlign: 'center',
-    marginBottom: 10,
-    fontSize: 12,
-    color: '#718096',
-  },
-  testButton: {
-    backgroundColor: '#EDF2F7',
-    paddingVertical: 9,
-    paddingHorizontal: 18,
-    borderRadius: 18,
-    alignItems: 'center',
-    marginBottom: 9,
-    minWidth: 176,
-  },
-  testButtonText: {
-    color: '#4A5568',
-    fontWeight: '500',
-    fontSize: 12,
-  },
-  fullScreenLoadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F7F8FC',
-  },
-  fullScreenLoadingText: {
-    marginTop: 13,
-    fontSize: 14,
-    color: '#4A5568',
-  },
+    logoContainer: {
+        top: 90,
+        right: 10,
+        alignItems: 'center',
+    },
+    logo: {
+        width: 205,
+        height: 310,
+        resizeMode: 'contain',
+    },
+    welcomeSubtitle: {
+        fontSize: 13.5,
+        color: '#8A94A6',
+        textAlign: 'center',
+        marginBottom: 50,
+        bottom: 42,
+    },
+    inputWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FFFFFF',
+        borderRadius: 28,
+        height: 33,
+        bottom: 55,
+        marginBottom: 10,
+        shadowColor: 'rgba(100, 100, 150, 0.15)',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 1,
+        shadowRadius: 15,
+        elevation: 5,
+        paddingLeft: 5,
+        paddingRight: 15,
+    },
+    iconCircle: {
+        width: 50,
+        height: 30,
+        right: 2,
+        borderRadius: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#FFFFFF',
+        marginRight: 10,
+    },
+    input: {
+        flex: 1,
+        fontSize: 15,
+        color: '#2D3748',
+        right: 8,
+        height: '70%',
+        paddingVertical: 0,
+    },
+    eyeIconTouchable: {
+        paddingHorizontal: 15,
+        height: '100%',
+        justifyContent: 'center',
+    },
+    inlineErrorMessage: {
+        color: '#E53E3E',
+        fontSize: 13,
+        textAlign: 'center',
+        marginBottom: 15,
+        marginTop: -12,
+    },
+    signInButton: {
+        backgroundColor: 'rgba(64, 192, 240, 0.85)',
+        borderRadius: 28,
+        paddingVertical: 4,
+        width: '100%',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 10,
+        bottom: 55,
+        marginBottom: 25,
+        shadowColor: '#007BFF',
+        shadowOffset: { width: 0, height: 5 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 8,
+    },
+    buttonDisabled: {
+        backgroundColor: '#A0CFFF',
+        elevation: 0,
+        shadowOpacity: 0,
+    },
+    signInButtonText: {
+        color: '#FFFFFF',
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    signUpContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        bottom: 40,
+        paddingBottom: 18,
+        paddingTop: 15,
+    },
+    signUpText: {
+        fontSize: 12,
+        color: '#718096',
+    },
+    signUpLink: {
+        fontSize: 14,
+        color: '#007BFF',
+        fontWeight: '600',
+        marginLeft: 4,
+    },
+    forgotPasswordContainer: {
+        alignItems: 'center',
+        marginBottom: 20,
+        bottom: 45,
+    },
+    forgotPasswordLink: {
+        fontSize: 13,
+        color: '#007BFF',
+        fontWeight: '500',
+    },
+    fullScreenLoadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#F7F8FC',
+    },
+    fullScreenLoadingText: {
+        marginTop: 13,
+        fontSize: 14,
+        color: '#4A5568',
+    },
+    otpInput: {
+        letterSpacing: 8,
+        fontSize: 18,
+    },
+    otpActions: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 20,
+        bottom: 40,
+        paddingHorizontal: 10,
+    },
+    backButton: {
+        paddingVertical: 10,
+        paddingHorizontal: 15,
+        borderRadius: 20,
+        backgroundColor: '#E2E8F0',
+    },
+    backButtonText: {
+        color: '#4A5568',
+        fontSize: 14,
+        fontWeight: '500',
+    },
+    resendButton: {
+        paddingVertical: 10,
+        paddingHorizontal: 15,
+        borderRadius: 20,
+        backgroundColor: '#E0F7FA',
+    },
+    resendButtonDisabled: {
+        opacity: 0.6,
+        backgroundColor: '#CFD8DC',
+    },
+    resendButtonText: {
+        color: '#00BCD4',
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    resendButtonTextDisabled: {
+        color: '#78909C',
+    },
 });

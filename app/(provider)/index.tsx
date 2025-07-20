@@ -1,30 +1,28 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Animated,
-  FlatList, // Manter se necessário para listas que não sejam SCROLLVIEW
-  Platform,
-  ActivityIndicator,
-  ScrollView,
-  RefreshControl,
-  Alert,
-  Image, // Para avatar do provedor
-} from 'react-native';
-import { Stack, useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Stack, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Image, // Manter se necessário para listas que não sejam SCROLLVIEW
+    Platform,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
+} from 'react-native';
 import { useAuth } from '../../hooks/useAuth';
 
 // Importações dos serviços
-import { getMyProviderDashboard } from '../services/providerService';
-import { getBookingsForUser, updateBookingStatus } from '../services/bookingService';
-import { sendMessage } from '../services/chatService'; // Assuming you'll have a chatService
+import { getBookingsForUser, updateBookingStatus } from '../../services/bookingService';
+import { getMyProviderDashboard } from '../../services/providerService';
 
 // Importações das tipagens centralizadas
-import { BookingDetails, BookingStatus } from '../types/backend/bookings';
-import { ProviderDashboard, ProviderReview } from '../types/backend/providers'; // Importe ProviderReview aqui também, se ProviderDashboard o usa
+import { BookingDetails, BookingStatus } from '../../types/backend/bookings';
+import { ProviderDashboard, ProviderReview } from '../../types/backend/providers'; // Importe ProviderReview aqui também, se ProviderDashboard o usa
 
 // Hook para animação de toque (reutilizável)
 const useAnimatedTouch = () => {

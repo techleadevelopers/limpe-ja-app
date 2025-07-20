@@ -1,29 +1,28 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  StyleSheet,
-  ActivityIndicator,
-  TouchableOpacity,
-  Platform,
-  Animated,
-  Alert,
-  RefreshControl,
-  Image,
-} from 'react-native';
-import { Link, Stack, useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { formatDate } from '../../../utils/helpers';
-import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import ServiceItemSkeleton from './components/skeletons/ServiceItemSkeleton';
-import ToastMessage from '../../../components/ui/ToastMessage';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Stack, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+    Alert,
+    Animated,
+    FlatList,
+    Image,
+    Platform,
+    RefreshControl,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
+} from 'react-native';
+import ServiceItemSkeleton from '../../../components/ServiceItemSkeleton';
+import ToastMessage from '../../../components/ui/ToastMessage';
+import { formatDate } from '../../../utils/helpers';
 
 // --- Importações de SERVIÇOS e TIPAGENS REAIS do BACKEND ---
-import { getBookingsForUser } from '../../services/bookingService';
-import { BookingDetails, BookingStatus } from '../../types/backend/bookings';
+import { getBookingsForUser } from '../../../services/bookingService';
+import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 // -------------------------------------------------------------
 
 // Componente para cada item de serviço com animações - AGORA RECEBE BookingDetails (formato achatado)
