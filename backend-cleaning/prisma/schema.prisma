@@ -46,6 +46,7 @@ model User {
   passwordHash      String?        // Opcional agora, para suportar login apenas por SMS
   role              UserRole       @default(CLIENT)
   avatarUrl         String?        // <--- NOVA LINHA ADICIONADA AQUI para o avatar do usuário
+  firebaseUid       String?        @unique // <--- LINHA ADICIONADA PARA CORRIGIR O ERRO
   
   // Campos para OTP
   otpCode           String?        // Código OTP atual
@@ -109,6 +110,8 @@ model Provider {
   documentPhotoBackUrl  String?
   selfieWithDocumentUrl String?
   backgroundCheckResult Json?              // Armazenar o resultado detalhado da verificação de antecedentes criminais (JSON)
+  ocrResult           Json?              // NOVO: Armazenar resultados de OCR do documento (JSON)
+  livenessResult      Json?              // NOVO: Armazenar resultados de liveness check (JSON)
   rejectionReason     String?            // Campo para armazenar o motivo da rejeição, se houver
   pixKey              String?            // <--- NOVA LINHA ADICIONADA AQUI
   createdAt           DateTime           @default(now())
@@ -315,4 +318,15 @@ model Availability {
   startTime   String   // Horário de início (e.g., "09:00")
   endTime     String   // Horário de término (e.g., "17:00")
   isAvailable Boolean  @default(true) // Se o provedor está disponível neste slot
+}
+
+// NOVO: Modelo para Perguntas Frequentes (FAQs)
+model FAQItem {
+  id        String   @id @default(uuid())
+  question  String   @unique
+  answer    String
+  category  String?  // Ex: "Geral", "Pagamentos", "Serviços"
+  order     Int      @default(0) // Ordem de exibição
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

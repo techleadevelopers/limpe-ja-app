@@ -10,24 +10,24 @@ import {
   Param,
   Delete,
   HttpStatus,
-  Post, // <-- ADICIONADO: Importe Post aqui
+  Post,
 } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { MarkAsReadDto } from './dto/mark-as-read.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard'; // <-- ADICIONADO: Importe RolesGuard
-import { Roles } from '../auth/decorators/roles.decorator'; // <-- ADICIONADO: Importe Roles decorator
-import { UserRole } from '@prisma/client'; // <-- ADICIONADO: Importe UserRole
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '@prisma/client';
 import {
   ApiBearerAuth,
   ApiOperation,
   ApiResponse,
   ApiTags,
-  ApiBody, // <-- ADICIONADO: Importe ApiBody para documentar o POST
+  ApiBody,
 } from '@nestjs/swagger';
 import { Request } from 'express';
 import { NotificationEntity } from './entities/notification.entity';
-import { CreateNotificationDto } from './dto/create-notification.dto'; // <-- IMPORTANTE: Importe o DTO de criação
+import { CreateNotificationDto } from './dto/create-notification.dto';
 
 @ApiTags('notifications')
 @Controller('notifications')
@@ -37,11 +37,11 @@ export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
   // NOVO ENDPOINT: Criar Notificação (apenas ADMIN)
-  @Post() // <-- Este é o endpoint que seu script tenta chamar
-  @Roles(UserRole.ADMIN) // <-- Protege esta rota para admins
-  @UseGuards(RolesGuard) // <-- Ativa a guarda de roles
+  @Post()
+  @Roles(UserRole.ADMIN) // Protege esta rota para admins
+  @UseGuards(RolesGuard) // Ativa a guarda de roles
   @ApiOperation({ summary: 'Criar uma nova notificação (apenas para administradores)' })
-  @ApiBody({ type: CreateNotificationDto, description: 'Dados para criar uma nova notificação' }) // Documenta o corpo
+  @ApiBody({ type: CreateNotificationDto, description: 'Dados para criar uma nova notificação' })
   @ApiResponse({ status: 201, description: 'Notificação criada com sucesso.', type: NotificationEntity })
   @ApiResponse({ status: 400, description: 'Dados inválidos.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })

@@ -10,17 +10,17 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   role: UserRole | null;
-  login: (credentials: { phone: string; otp: string }) => Promise<void>;
+  // login: (credentials: { phone: string; otp: string }) => Promise<void>; // REMOVIDO: Não existe mais no authService
   logout: () => Promise<void>;
-  register: (userData: any, userType: 'client' | 'provider') => Promise<void>; 
-  sendOtp: (phone: string) => Promise<void>;
+  register: (userData: any, userType: 'client' | 'provider') => Promise<void>;
+  // sendOtp: (phone: string) => Promise<void>; // REMOVIDO: Não existe mais no authService
   refreshUser: () => Promise<void>;
   signUpClient: (data: RegisterClientDto) => Promise<void>;
   signUpProvider: (data: RegisterProviderDto) => Promise<void>;
   isRegistrationInProgress: boolean;
   setIsRegistrationInProgress: (inProgress: boolean) => void;
   // CORREÇÃO: Adicionado o método loginWithFirebaseIdToken à interface
-  loginWithFirebaseIdToken: (idToken: string) => Promise<void>; 
+  loginWithFirebaseIdToken: (idToken: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -56,8 +56,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (authData.token && authData.role && authData.id && authData.user) {
         // CORREÇÃO: Cast explícito para UserProfile e UserRole (para silenciar o erro de duplicação, mas a causa raiz é o cache)
-        setUser(authData.user as UserProfile); 
-        setRole(authData.role as UserRole); 
+        setUser(authData.user as UserProfile);
+        setRole(authData.role as UserRole);
         console.log('[AuthContext | loadStoragedData] User authenticated from storage.');
       } else {
         console.log('[AuthContext | loadStoragedData] No token found or incomplete data in storage. User not authenticated via storage.');
@@ -75,6 +75,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // REMOVIDO: O método sendOtp não existe mais no authService
+  /*
   const sendOtp = async (phone: string) => {
     try {
       setIsLoading(true);
@@ -86,15 +88,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(false);
     }
   };
+  */
 
+  // REMOVIDO: O método login não existe mais no authService
+  /*
   const login = async (credentials: { phone: string; otp: string }) => {
     try {
       setIsLoading(true);
       const authData = await authService.login(credentials);
 
       // CORREÇÃO: Cast explícito para UserProfile e UserRole
-      setUser(authData.user as UserProfile); 
-      setRole(authData.user.role as UserRole); 
+      setUser(authData.user as UserProfile);
+      setRole(authData.user.role as UserRole);
 
       console.log('[AuthContext] Login successful:', authData.user.role);
 
@@ -105,6 +110,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(false);
     }
   };
+  */
 
   const logout = async () => {
     try {
@@ -136,8 +142,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       // CORREÇÃO: Cast explícito para UserProfile e UserRole
-      setUser(authData.user as UserProfile); 
-      setRole(authData.user.role as UserRole); 
+      setUser(authData.user as UserProfile);
+      setRole(authData.user.role as UserRole);
 
       console.log('[AuthContext] Registration successful:', authData.user.role);
 
@@ -154,8 +160,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(true);
       const authData = await authService.registerClient(data);
       // CORREÇÃO: Cast explícito para UserProfile e UserRole
-      setUser(authData.user as UserProfile); 
-      setRole(authData.user.role as UserRole); 
+      setUser(authData.user as UserProfile);
+      setRole(authData.user.role as UserRole);
       console.log('[AuthContext] Client registration successful.');
     } catch (error) {
       console.error('[AuthContext] Client registration error:', error);
@@ -171,8 +177,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsRegistrationInProgress(true);
       const authData = await authService.registerProvider(data);
       // CORREÇÃO: Cast explícito para UserProfile e UserRole
-      setUser(authData.user as UserProfile); 
-      setRole(authData.user.role as UserRole); 
+      setUser(authData.user as UserProfile);
+      setRole(authData.user.role as UserRole);
       console.log('[AuthContext] Provider registration successful.');
     } catch (error) {
       console.error('[AuthContext] Provider registration error:', error);
@@ -193,6 +199,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const loginWithFirebaseIdToken = async (idToken: string) => {
     try {
       console.log('[AuthContext] Iniciando login com Firebase ID Token...');
+      // ADICIONADO: Log para capturar o Firebase ID Token para teste
+      console.log("Firebase ID Token para teste:", idToken);
+      // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       setIsLoading(true);
       // Chama o novo método do authService para verificar o ID Token com o backend
       const authData = await authService.verifyFirebaseIdToken({ idToken });
@@ -215,10 +224,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading,
     isAuthenticated,
     role,
-    login,
+    // login, // REMOVIDO do valor do contexto
     logout,
     register,
-    sendOtp,
+    // sendOtp, // REMOVIDO do valor do contexto
     refreshUser,
     signUpClient,
     signUpProvider,

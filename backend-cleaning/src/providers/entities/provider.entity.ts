@@ -21,10 +21,14 @@ export class ProviderEntity implements PrismaProvider {
   rejectionReason: string | null;
   pixKey: string | null;
 
-  createdAt: Date; // <-- ADICIONADO
-  updatedAt: Date; // <-- ADICIONADO
+  // ADICIONADO: ocrResult e livenessResult
+  ocrResult: Prisma.JsonValue | null;
+  livenessResult: Prisma.JsonValue | null;
 
-  user?: User;
+  createdAt: Date;
+  updatedAt: Date;
+
+  user?: User; // Relações (opcionais, dependem de como você as carrega)
   address?: Address | null;
   providerServices?: ProviderService[];
   reviewsReceived?: Review[];

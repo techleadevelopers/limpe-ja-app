@@ -24,6 +24,7 @@ export type ProviderWithIncludes = Prisma.ProviderGetPayload<{
         }
       }
     };
+    // REMOVIDO: ocrResult: true; livenessResult: true; (campos escalares não vão em 'include')
   };
 }>;
 
@@ -65,6 +66,9 @@ export type ProviderWithCalculatedRating = {
   selfieWithDocumentUrl?: string | null;
   backgroundCheckResult?: Prisma.JsonValue | null;
   rejectionReason?: string | null;
+  // ADICIONADO: Novos campos do schema.prisma (estes são propriedades diretas do modelo)
+  ocrResult: Prisma.JsonValue | null;
+  livenessResult: Prisma.JsonValue | null;
 };
 
 @Injectable()
@@ -126,6 +130,9 @@ export class ProvidersService {
       selfieWithDocumentUrl: provider.selfieWithDocumentUrl,
       backgroundCheckResult: provider.backgroundCheckResult,
       rejectionReason: provider.rejectionReason,
+      // ADICIONADO: Novos campos mapeados (estão no ProviderWithIncludes base)
+      ocrResult: provider.ocrResult,
+      livenessResult: provider.livenessResult,
     };
   }
 
@@ -146,12 +153,13 @@ export class ProvidersService {
             }
           }
         },
+        // CORREÇÃO: Removido ocrResult: true e livenessResult: true daqui
       },
     });
 
     this.logger.log(`[ProvidersService] findOne: Resultado para ID ${id}: ${provider ? 'ENCONTRADO' : 'NÃO ENCONTRADO'}`);
     if (provider) {
-      return this.mapProviderToCalculatedRating(provider);
+      return this.mapProviderToCalculatedRating(provider as ProviderWithIncludes); 
     }
     return null;
   }
@@ -173,10 +181,11 @@ export class ProvidersService {
             }
           }
         },
+        // CORREÇÃO: Removido ocrResult: true e livenessResult: true daqui
       },
     });
     if (provider) {
-        return this.mapProviderToCalculatedRating(provider);
+        return this.mapProviderToCalculatedRating(provider as ProviderWithIncludes);
     }
     return null;
   }
@@ -198,6 +207,9 @@ export class ProvidersService {
       avatarUrl: data.avatarUrl,
       yearsOfExperience: data.yearsOfExperience,
       bio: data.bio,
+      // CORREÇÃO: Removido a tentativa de incluir ocrResult e livenessResult no DTO de update
+      // ocrResult: data.ocrResult, // Assumindo que você adicionaria isso no DTO se fosse editável
+      // livenessResult: data.livenessResult, // Assumindo que você adicionaria isso no DTO se fosse editável
     };
 
     if (data.address) {
@@ -234,7 +246,8 @@ export class ProvidersService {
               }
             }
           }
-        }
+        },
+        // CORREÇÃO: Removido ocrResult: true e livenessResult: true daqui
       },
     });
 
@@ -310,7 +323,7 @@ export class ProvidersService {
 
       try {
         const rawProviders: any[] = await this.prisma.$queryRaw(Prisma.sql`
-          SELECT
+            SELECT
               p.id,
               p."userId",
               p."fullName",
@@ -329,6 +342,8 @@ export class ProvidersService {
               p."selfieWithDocumentUrl",
               p."backgroundCheckResult",
               p."rejectionReason",
+              p."ocrResult",     -- ADICIONADO: Novo campo na query RAW
+              p."livenessResult", -- ADICIONADO: Novo campo na query RAW
               u.email,
               u.role,
               a.id AS "addressId",
@@ -368,54 +383,56 @@ export class ProvidersService {
                   )
                   ORDER BY ps.id
               ) FILTER (WHERE ps.id IS NOT NULL) AS "providerServicesAgg"
-          FROM
-              "Provider" p
-          JOIN
-              "User" u ON p."userId" = u.id
-          LEFT JOIN
-              "Address" a ON p.id = a."providerId"
-          LEFT JOIN
-              "ProviderService" ps ON p.id = ps."providerId"
-          LEFT JOIN
-              "Service" s ON ps."serviceId" = s.id
-          LEFT JOIN
-              "Review" r ON p.id = r."providerId"
-          WHERE
-              p."verificationStatus" = ${Prisma.raw(VerificationStatus.APPROVED)} AND
-              a.location IS NOT NULL AND
-              ST_DWithin(a.location, ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326), ${radius * 1000})
-              ${searchTerm ? Prisma.sql`AND (p."fullName" ILIKE ${'%' + searchTerm + '%'} OR u.email ILIKE ${'%' + searchTerm + '%'} OR p.bio ILIKE ${'%' + searchTerm + '%'} OR s.name ILIKE ${'%' + searchTerm + '%'})` : Prisma.empty}
-              ${serviceId ? Prisma.sql`AND ps."serviceId" = ${serviceId}` : Prisma.empty}
-              ${location ? Prisma.sql`AND (a.city ILIKE ${'%' + location + '%'} OR a.state ILIKE ${'%' + location + '%'} OR a.street ILIKE ${'%' + location + '%'} OR a.neighborhood ILIKE ${'%' + location + '%'})` : Prisma.empty}
-          GROUP BY
-              p.id, u.email, u.role, a.id, a.cep, a.street, a.number, a.complement, a.neighborhood, a.city, a.state, a."providerId", a.location
-          ORDER BY
-              distance_km ASC
-          LIMIT ${limit || 10} OFFSET ${offset || 0};
+            FROM
+                "Provider" p
+            JOIN
+                "User" u ON p."userId" = u.id
+            LEFT JOIN
+                "Address" a ON p.id = a."providerId"
+            LEFT JOIN
+                "ProviderService" ps ON p.id = ps."providerId"
+            LEFT JOIN
+                "Service" s ON ps."serviceId" = s.id
+            LEFT JOIN
+                "Review" r ON p.id = r."providerId"
+            WHERE
+                p."verificationStatus" = ${Prisma.raw(VerificationStatus.APPROVED)} AND
+                a.location IS NOT NULL AND
+                ST_DWithin(a.location, ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326), ${radius * 1000})
+                ${searchTerm ? Prisma.sql`AND (p."fullName" ILIKE ${'%' + searchTerm + '%'} OR u.email ILIKE ${'%' + searchTerm + '%'} OR p.bio ILIKE ${'%' + searchTerm + '%'} OR s.name ILIKE ${'%' + searchTerm + '%'})` : Prisma.empty}
+                ${serviceId ? Prisma.sql`AND ps."serviceId" = ${serviceId}` : Prisma.empty}
+                ${location ? Prisma.sql`AND (a.city ILIKE ${'%' + location + '%'} OR a.state ILIKE ${'%' + location + '%'} OR a.street ILIKE ${'%' + location + '%'} OR a.neighborhood ILIKE ${'%' + location + '%'})` : Prisma.empty}
+            GROUP BY
+                p.id, u.email, u.role, a.id, a.cep, a.street, a.number, a.complement, a.neighborhood, a.city, a.state, a."providerId", a.location
+            ORDER BY
+                distance_km ASC
+            LIMIT ${limit || 10} OFFSET ${offset || 0};
         `);
 
-        providersWithDistance = rawProviders.map((rp: any) => {
+providersWithDistance = rawProviders.map((rp: any) => {
             const providerWithIncludes: ProviderWithIncludes = {
                 id: rp.id,
                 userId: rp.userId,
                 fullName: rp.fullName,
                 cpf: rp.cpf,
-                dateOfBirth: rp.dateOfBirth,
+                dateOfBirth: rp.dateOfBirth, // dateOfBirth from raw query will be a Date object
                 phone: rp.phone,
                 yearsOfExperience: rp.yearsOfExperience,
                 avatarUrl: rp.avatarUrl,
                 bio: rp.bio,
                 verificationStatus: rp.verificationStatus,
                 pixKey: rp.pixKey,
-                createdAt: rp.createdAt,
-                updatedAt: rp.updatedAt,
+                createdAt: rp.createdAt, // createdAt from raw query will be a Date object
+                updatedAt: rp.updatedAt, // updatedAt from raw query will be a Date object
                 documentPhotoFrontUrl: rp.documentPhotoFrontUrl,
                 documentPhotoBackUrl: rp.documentPhotoBackUrl,
                 selfieWithDocumentUrl: rp.selfieWithDocumentUrl,
                 backgroundCheckResult: rp.backgroundCheckResult,
                 rejectionReason: rp.rejectionReason,
+                ocrResult: rp.ocrResult,
+                livenessResult: rp.livenessResult,
                 user: { email: rp.email, role: rp.role },
-                address: rp.addressId ? {
+                address: rp.addressId ? ({ // <--- ATENÇÃO AQUI: Abre parênteses para o cast
                     id: rp.addressId,
                     cep: rp.cep,
                     street: rp.street,
@@ -426,8 +443,8 @@ export class ProvidersService {
                     state: rp.state,
                     clientId: null,
                     providerId: rp.providerId,
-                    // NOTE: location is not directly mapped here as it's a special PostGIS type
-                } : null,
+                    location: undefined, // A propriedade 'location' é opcional e não vem da query RAW neste ponto
+                } as Address) : null, // <--- ATENÇÃO AQUI: Fecha parênteses e adiciona 'as Address'
                 providerServices: rp.providerServicesAgg ? rp.providerServicesAgg.map((ps: any) => ({
                     ...ps,
                     price: new Prisma.Decimal(ps.price),
@@ -436,7 +453,7 @@ export class ProvidersService {
                         price: new Prisma.Decimal(ps.service.price),
                     }
                 })) : [],
-                reviewsReceived: [], // Reviews are not aggregated in this raw query for simplicity
+                reviewsReceived: [],
             };
             return this.mapProviderToCalculatedRating(providerWithIncludes, parseFloat(rp.distance_km));
         });
@@ -486,7 +503,8 @@ export class ProvidersService {
               }
             }
           }
-        }
+        },
+        // CORREÇÃO: Removido ocrResult: true e livenessResult: true daqui
       },
     });
 
@@ -544,7 +562,8 @@ export class ProvidersService {
               }
             }
           }
-        }
+        },
+        // CORREÇÃO: Removido ocrResult: true e livenessResult: true daqui
       },
       orderBy: {
         yearsOfExperience: 'desc',

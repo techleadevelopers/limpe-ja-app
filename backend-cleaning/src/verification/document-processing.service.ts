@@ -13,9 +13,8 @@ export class DocumentProcessingService {
   private visionClient: ImageAnnotatorClient;
 
   constructor(private configService: ConfigService) {
-    const projectId = this.configService.get<string>('GCS_PROJECT_ID');
-    // ATENÇÃO AQUI: Mudado para 'GCS_KEY' para corresponder ao --set-secrets do deploy
-    const keyFileContentBase64 = this.configService.get<string>('GCS_KEY'); 
+    const projectId = this.configService.get<string>('googleCloudStorage.projectId');
+    const keyFileContentBase64 = this.configService.get<string>('googleCloudStorage.keyFile'); 
 
     if (!projectId) {
       this.logger.error('GCS_PROJECT_ID não configurado nas variáveis de ambiente.');
@@ -23,26 +22,21 @@ export class DocumentProcessingService {
     }
     if (!keyFileContentBase64) {
       this.logger.error('GCS_KEY (Base64) não configurada nas variáveis de ambiente. Verifique o --set-secrets no deploy.');
-      // Adicionei um log para mostrar o PORT se não estiver setado, para ajudar na depuração do Cloud Run
       const port = process.env.PORT || 'não definido';
       this.logger.warn(`Variável de ambiente PORT: ${port}. O container deve escutar nesta porta.`);
       throw new Error('Configurações de GCS ausentes: GCS_KEY.');
     }
 
-
     let credentialsJson: any;
     try {
-      // LOGS DETALHADOS PARA DEPURAR A CHAVE
       this.logger.log(`Conteúdo GCS_KEY recebido (primeiros 50 caracteres): ${keyFileContentBase64.substring(0, 50)}...`);
       
       const decodedKeyContent = Buffer.from(keyFileContentBase64, 'base64').toString('utf8');
       
       this.logger.log(`Conteúdo decodificado (primeiros 50 caracteres): ${decodedKeyContent.substring(0, 50)}...`);
       
-      // Validação rápida do formato JSON
       if (!decodedKeyContent.trim().startsWith('{') || !decodedKeyContent.trim().endsWith('}')) {
         this.logger.error('Conteúdo decodificado não parece ser JSON válido (não começa ou termina com chaves).');
-        // Para depuração, logar mais do conteúdo decodificado se não for JSON válido
         this.logger.error(`Conteúdo decodificado completo (truncado para 500 chars se não for JSON): ${decodedKeyContent.substring(0, 500)}...`);
         throw new Error('Conteúdo decodificado não é um JSON válido.');
       }
@@ -52,11 +46,9 @@ export class DocumentProcessingService {
 
     } catch (e) {
       this.logger.error(`Erro ao decodificar ou parsear a chave GCS Base64: ${e.message}`);
-      // Logs extras para depuração do erro de parsing
       if (e instanceof SyntaxError) {
         this.logger.error(`SyntaxError: Caractere inesperado encontrado. Verifique o JSON original.`);
         this.logger.error(`Conteúdo da chave Base64 (truncado, para depuração): ${keyFileContentBase64.substring(0, 200)}...`);
-        // Tenta decodificar novamente para logar o que causou o erro de parse
         try {
           const problematicDecodedContent = Buffer.from(keyFileContentBase64, 'base64').toString('utf8');
           this.logger.error(`Conteúdo decodificado ANTES do parse (truncado, para depuração): ${problematicDecodedContent.substring(0, 200)}...`);
@@ -71,7 +63,7 @@ export class DocumentProcessingService {
       projectId: projectId,
       credentials: credentialsJson,
     });
-    this.bucketName = this.configService.get<string>('GCS_BUCKET_NAME');
+    this.bucketName = this.configService.get<string>('googleCloudStorage.bucketName');
 
     if (!this.bucketName) {
       this.logger.error('GCS_BUCKET_NAME não configurado nas variáveis de ambiente.');
@@ -128,16 +120,20 @@ export class DocumentProcessingService {
    * @param file O arquivo do documento.
    * @returns Um objeto com o texto extraído e confiança.
    */
-  async processDocumentOcr(file: File): Promise<any> {
+  async processDocumentOcr(file: File): Promise<{ extractedText: string; confidence: number; rawResult: any }> {
     this.logger.log('Iniciando processamento OCR real do documento com Google Cloud Vision API...');
     try {
-      const [result] = await this.visionClient.textDetection(file.buffer);
-      const detections = result.textAnnotations;
-      const extractedText = detections && detections.length > 0 ? detections[0].description : '';
-      const confidence = 1.0;
+      const [result] = await this.visionClient.documentTextDetection(file.buffer);
+      const fullTextAnnotation = result.fullTextAnnotation;
+      const extractedText = fullTextAnnotation ? fullTextAnnotation.text : '';
+      
+      // A Vision API não fornece uma "confiança" geral para o documento de texto de forma direta.
+      // Poderíamos calcular uma média das confianças das palavras, mas para simplificar,
+      // vamos assumir uma alta confiança se o texto for detectado.
+      const confidence = extractedText ? 0.95 : 0.0;
 
-      this.logger.log(`OCR real concluído. Texto extraído: ${extractedText.substring(0, 100)}...`);
-      return { extractedText, confidence };
+      this.logger.log(`OCR real concluído. Texto extraído: ${extractedText.substring(0, Math.min(extractedText.length, 100))}...`);
+      return { extractedText, confidence, rawResult: result };
     } catch (error) {
       this.logger.error(`Erro ao processar OCR com Google Cloud Vision API: ${error.message}`);
       throw new InternalServerErrorException(`Falha no processamento OCR: ${error.message}`);
@@ -145,52 +141,77 @@ export class DocumentProcessingService {
   }
 
   /**
-   * Integração real com o Google Cloud Vision API (ou similar) para comparação facial.
+   * Simula a comparação facial entre uma selfie e uma foto de documento.
+   * Em um cenário real, isso envolveria uma API de comparação facial (ex: AWS Rekognition, Azure Face API).
+   * O Google Vision API pode detectar faces, mas não compara diretamente a similaridade entre duas faces.
    * @param selfieFile O arquivo da selfie.
    * @param documentImageUrl A URL da imagem do documento.
-   * @returns Um booleano indicando se a comparação foi bem-sucedida.
+   * @returns Um objeto com o resultado da comparação (match, score)
    */
-  async compareFaces(selfieFile: File, documentImageUrl: string): Promise<boolean> {
-    this.logger.log('Iniciando comparação facial real com Google Cloud Vision API...');
+  async compareFaces(selfieFile: File, documentImageUrl: string): Promise<{ match: boolean; score: number; details?: string }> {
+    this.logger.log('Iniciando simulação de comparação facial...');
     try {
+      // Simulação: Apenas verifica se há faces em ambas as imagens usando Vision API
       const [selfieDetection] = await this.visionClient.faceDetection(selfieFile.buffer);
       const selfieFaces = selfieDetection.faceAnnotations;
 
-      if (!selfieFaces || selfieFaces.length === 0) {
-        this.logger.warn('Nenhuma face detectada na selfie para comparação.');
-        return false;
-      }
-
       const [documentDetection] = await this.visionClient.faceDetection(documentImageUrl);
       const documentFaces = documentDetection.faceAnnotations;
-      
-      if (!documentFaces || documentFaces.length === 0) {
-        this.logger.warn('Nenhuma face detectada na imagem do documento para comparação.');
-        return false;
+
+      const selfieHasFace = selfieFaces && selfieFaces.length > 0;
+      const documentHasFace = documentFaces && documentFaces.length > 0;
+
+      // Lógica de simulação: se ambas têm faces, consideramos um "match" com uma pontuação arbitrária.
+      // Em uma integração real, você enviaria as imagens para uma API de comparação que retornaria um score de similaridade.
+      const match = selfieHasFace && documentHasFace;
+      const score = match ? 0.85 : 0.1; // Pontuação arbitrária para simulação
+
+      if (!selfieHasFace) {
+        this.logger.warn('Nenhuma face detectada na selfie para comparação.');
+        return { match: false, score: 0, details: 'Nenhuma face detectada na selfie.' };
       }
-      this.logger.log('Comparação facial real concluída (lógica de similaridade ainda mockada, pois Vision API não oferece comparação direta).');
-      return selfieFaces.length > 0 && documentFaces.length > 0;
+      if (!documentHasFace) {
+        this.logger.warn('Nenhuma face detectada na imagem do documento para comparação.');
+        return { match: false, score: 0, details: 'Nenhuma face detectada no documento.' };
+      }
+
+      this.logger.log(`Simulação de comparação facial concluída. Match: ${match}, Score: ${score}`);
+      return { match, score };
 
     } catch (error) {
-      this.logger.error(`Erro ao comparar faces com Google Cloud Vision API: ${error.message}`);
-      throw new InternalServerErrorException(`Falha na comparação facial: ${error.message}`);
+      this.logger.error(`Erro durante a simulação de comparação facial: ${error.message}`);
+      throw new InternalServerErrorException(`Falha na simulação de comparação facial: ${error.message}`);
     }
   }
 
   /**
-   * Integração real com serviço de prova de vida (liveness check).
+   * Simula a verificação de prova de vida (liveness check).
+   * Em um cenário real, isso envolveria uma API de liveness (ex: Onfido, Sumsub).
    * @param selfieFile O arquivo da selfie (pode ser vídeo para algumas APIs).
-   * @returns Um booleano indicando se a prova de vida foi bem-sucedida.
+   * @returns Um objeto com o resultado da prova de vida (isLive, score).
    */
-  async performLivenessCheck(selfieFile: File): Promise<boolean> {
-    this.logger.log('Iniciando verificação de prova de vida (liveness check) real...');
+  async performLivenessCheck(selfieFile: File): Promise<{ isLive: boolean; score: number; details?: string }> {
+    this.logger.log('Iniciando simulação de verificação de prova de vida (liveness check)...');
     try {
-      this.logger.warn('Serviço de prova de vida (liveness check) ainda não integrado a uma API real. Retornando simulação.');
-      await new Promise((resolve) => setTimeout(resolve, 1800));
-      return true;
+      // Simulação: Apenas verifica se há uma face na imagem.
+      // Em uma API real, isso envolveria análise de movimento (se for vídeo) ou sinais de vida (se for imagem).
+      const [selfieDetection] = await this.visionClient.faceDetection(selfieFile.buffer);
+      const selfieFaces = selfieDetection.faceAnnotations;
+
+      const isLive = selfieFaces && selfieFaces.length > 0; // Simplesmente verifica se há uma face
+      const score = isLive ? 0.90 : 0.05; // Pontuação arbitrária para simulação
+
+      if (!isLive) {
+        this.logger.warn('Nenhuma face detectada para prova de vida ou falha na simulação de liveness.');
+        return { isLive: false, score: 0, details: 'Nenhuma face detectada na imagem ou falha na verificação de liveness.' };
+      }
+
+      this.logger.log(`Simulação de prova de vida concluída. Live: ${isLive}, Score: ${score}`);
+      return { isLive, score };
+
     } catch (error) {
-      this.logger.error(`Erro ao realizar prova de vida: ${error.message}`);
-      throw new InternalServerErrorException(`Falha na verificação de prova de vida: ${error.message}`);
+      this.logger.error(`Erro durante a simulação de prova de vida: ${error.message}`);
+      throw new InternalServerErrorException(`Falha na simulação de prova de vida: ${error.message}`);
     }
   }
 }

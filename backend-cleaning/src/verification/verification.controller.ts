@@ -36,7 +36,7 @@ import {
   IsEnum,            // <-- ADICIONADO: Importado IsEnum (para validação mais forte do enum)
 } from 'class-validator'; // <-- ADICIONADO: Importado do class-validator
 import { Request } from 'express';
-import { SubmitCpfDto } from './dto/submit-cpf.dto';
+import { SubmitCpfDto } from './dto/submit-cpf.dto'; // Mantido, mas o DTO pode ser removido se não for usado em outro lugar
 import { UploadDocumentDto, DocumentPhotoType } from './dto/upload-document.dto';
 import { UploadSelfieDto } from './dto/upload-selfie.dto';
 import { VerificationService } from './verification.service';
@@ -70,6 +70,9 @@ export class VerificationController {
     private readonly verificationService: VerificationService,
   ) {}
 
+  // O endpoint 'submit-cpf' e o método submitCpf foram removidos,
+  // pois a funcionalidade de verificação de antecedentes criminais foi retirada do VerificationService.
+  /*
   @Post('submit-cpf')
   @Roles(UserRole.PROVIDER)
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -85,6 +88,7 @@ export class VerificationController {
     await this.verificationService.submitCpfForBackgroundCheck(providerId, submitCpfDto.cpf);
     return { message: 'CPF submetido com sucesso para verificação de antecedentes.' };
   }
+  */
 
   @Post('upload-document/:type')
   @Roles(UserRole.PROVIDER)
@@ -256,14 +260,16 @@ export class VerificationController {
       throw new NotFoundException('Provedor não encontrado.');
     }
 
-    const isCpfCheckedAndOk = provider.backgroundCheckResult && !(provider.backgroundCheckResult as any).hasIssues;
+    // isCpfCheckedAndOk agora sempre será false, pois a verificação de antecedentes foi removida
+    const isCpfCheckedAndOk = false; // Ou remova esta propriedade se não for mais relevante para o frontend
+
     const isDocumentFrontUploaded = provider.documentPhotoFrontUrl !== null && provider.documentPhotoFrontUrl !== undefined;
     const isDocumentBackUploaded = provider.documentPhotoBackUrl !== null && provider.documentPhotoBackUrl !== undefined;
     const isSelfieUploaded = provider.selfieWithDocumentUrl !== null && provider.selfieWithDocumentUrl !== undefined;
 
     return {
       verificationStatus: provider.verificationStatus,
-      isCpfCheckedAndOk,
+      isCpfCheckedAndOk, // Mantido para compatibilidade, mas o valor é fixo
       isDocumentFrontUploaded,
       isDocumentBackUploaded,
       isSelfieUploaded,

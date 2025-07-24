@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, BadRequestException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
@@ -7,17 +7,13 @@ import { RegisterProviderDto } from './dto/register-provider.dto';
 import { UserRole, User, Prisma, Client, Provider, Address, ProviderService, Service, Review, VerificationStatus, Booking } from '@prisma/client';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { UserProfileDto } from '../users/dto/user-profile.dto';
-
-// Importar ProvidersService e seus tipos relevantes
+import * as admin from 'firebase-admin';
 import { ProvidersService, ProviderWithIncludes, ProviderWithCalculatedRating } from '../providers/providers.service';
-// Importar ClientWithIncludes (assumindo que está em user-profile.dto.ts ou em um arquivo de tipos de cliente)
-import { ClientWithIncludes } from '../users/dto/user-profile.dto'; // Ou o caminho correto onde ClientWithIncludes está definido
+import { ClientWithIncludes } from '../users/dto/user-profile.dto';
+import { EmailService } from '../common/services/email.service';
+import { GeocodingService } from '../common/services/geocoding.service';
 
-// =========================================================================
 // Tipo Auxiliar: UserWithAllRelations
-// Este tipo deve refletir EXATAMENTE o que o prisma.user.findUnique retorna com os includes.
-// Ou seja, o 'provider' aqui será do tipo ProviderWithIncludes, não ProviderWithCalculatedRating.
-// =========================================================================
 export type UserWithAllRelations = User & {
   client?: (Client & {
     user: User;
@@ -28,17 +24,19 @@ export type UserWithAllRelations = User & {
     createdAt: Date;
     updatedAt: Date;
   }) | null;
-  // O provedor aqui é do tipo ProviderWithIncludes, que é o que o Prisma retorna.
-  // Ele será mapeado para ProviderWithCalculatedRating antes de ser passado para o DTO.
-  provider?: ProviderWithIncludes | null;
+  provider?: ProviderWithIncludes | null; // Usar ProviderWithIncludes atualizado
 };
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
-    private providersService: ProvidersService, // <-- ADICIONADO: Injetar ProvidersService
+    private providersService: ProvidersService,
+    private emailService: EmailService,
+    private geocodingService: GeocodingService,
   ) {}
 
   async validateUser(email: string, pass: string): Promise<User | null> {
@@ -54,7 +52,6 @@ export class AuthService {
   }
 
   async login(user: User): Promise<AuthResponseDto> {
-    // Incluir TODAS as relações necessárias para o UserWithAllRelations
     const fullUser = await this.prisma.user.findUnique({
       where: { id: user.id },
       include: {
@@ -85,10 +82,11 @@ export class AuthService {
                 }
               }
             },
+            // CORREÇÃO: Removido ocrResult: true e livenessResult: true daqui
           },
         },
       },
-    }) as UserWithAllRelations; // <-- O cast é para UserWithAllRelations, que agora tem ProviderWithIncludes
+    }) as UserWithAllRelations;
 
     if (!fullUser) {
       throw new UnauthorizedException('Usuário não encontrado após validação.');
@@ -97,24 +95,17 @@ export class AuthService {
     const payload = { email: fullUser.email, sub: fullUser.id, role: fullUser.role };
     const accessToken = this.jwtService.sign(payload);
 
-    // =====================================================================
-    // CORREÇÃO CRÍTICA: Mapear o provedor para ProviderWithCalculatedRating
-    // =====================================================================
     let mappedProvider: ProviderWithCalculatedRating | undefined;
     if (fullUser.provider) {
-      // Usa o método do ProvidersService para converter o objeto ProviderWithIncludes
-      // para ProviderWithCalculatedRating, que é o que UserProfileDto espera.
       mappedProvider = this.providersService.mapProviderToCalculatedRating(fullUser.provider);
     }
 
-    // Cria um objeto que corresponde à estrutura esperada pelo construtor de UserProfileDto
     const userProfileDataForDto = {
-      ...fullUser, // Copia as propriedades diretas do User (id, email, role, etc.)
-      client: fullUser.client, // O cliente já está no formato ClientWithIncludes
-      provider: mappedProvider, // Usa o provedor JÁ MAPEADO
+      ...fullUser,
+      client: fullUser.client,
+      provider: mappedProvider,
     };
 
-    // Assumindo que UserProfileDto.ts está configurado para aceitar esta estrutura
     const userProfile = new UserProfileDto(userProfileDataForDto);
 
     return {
@@ -135,6 +126,10 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     try {
+      const geoCoordinates = await this.geocodingService.geocodeAddress(
+        `${street}, ${number}, ${neighborhood}, ${city}, ${state}, ${cep}`
+      );
+
       const newUser = await this.prisma.user.create({
         data: {
           email,
@@ -158,7 +153,6 @@ export class AuthService {
             },
           },
         },
-        // Incluir as relações necessárias para que o login() possa construir o UserProfileDto
         include: {
           client: {
             include: {
@@ -173,6 +167,17 @@ export class AuthService {
           }
         }
       });
+
+      // Se geoCoordinates existirem, atualize o endereço com a localização
+      if (geoCoordinates && newUser.client?.address?.id) {
+        await this.prisma.address.update({
+          where: { id: newUser.client.address.id },
+          data: {
+            location: `SRID=4326;POINT(${geoCoordinates.longitude} ${geoCoordinates.latitude})`,
+          } as any, // Cast para any porque 'location' é um tipo Unsupported
+        });
+      }
+
       return this.login(newUser);
     } catch (error) {
       console.error('Erro ao registrar cliente:', error);
@@ -206,6 +211,10 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     try {
+      const geoCoordinates = await this.geocodingService.geocodeAddress(
+        `${street}, ${number}, ${neighborhood}, ${city}, ${state}, ${cep}`
+      );
+
       const newUser = await this.prisma.user.create({
         data: {
           email,
@@ -235,7 +244,6 @@ export class AuthService {
             },
           },
         },
-        // Incluir as relações necessárias para que o login() possa construir o UserProfileDto
         include: {
           provider: {
             include: {
@@ -253,10 +261,22 @@ export class AuthService {
                   }
                 }
               },
+              // CORREÇÃO: Removido ocrResult: true e livenessResult: true daqui
             }
           }
         }
       });
+
+      // Se geoCoordinates existirem, atualize o endereço com a localização
+      if (geoCoordinates && newUser.provider?.address?.id) {
+        await this.prisma.address.update({
+          where: { id: newUser.provider.address.id },
+          data: {
+            location: `SRID=4326;POINT(${geoCoordinates.longitude} ${geoCoordinates.latitude})`,
+          } as any, // Cast para any porque 'location' é um tipo Unsupported
+        });
+      }
+
       return this.login(newUser);
     } catch (error) {
       console.error('Erro ao registrar provedor:', error);
@@ -267,121 +287,129 @@ export class AuthService {
   async forgotPassword(email: string): Promise<void> {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
-      console.warn(`Tentativa de redefinição de senha para email não encontrado: ${email}`);
+      this.logger.warn(`Tentativa de redefinição de senha para email não encontrado: ${email}`);
       return;
     }
-    console.log(`Simulação: Email de redefinição de senha enviado para ${email}`);
-    // TODO: Implementar envio de email real com link de redefinição de senha
+
+    const resetToken = this.jwtService.sign({ userId: user.id }, { expiresIn: '1h' });
+    const resetLink = `http://seu-app.com/reset-password?token=${resetToken}`;
+
+    try {
+      await this.emailService.sendEmail(
+        email,
+        'Redefinição de Senha - Limpeja',
+        `
+        Olá,
+
+        Recebemos uma solicitação para redefinir a senha da sua conta Limpeja.
+        Para redefinir sua senha, clique no link abaixo:
+
+        ${resetLink}
+
+        Este link de redefinição de senha expirará em 1 hora.
+
+        Se você não solicitou uma redefinição de senha, por favor, ignore este e-mail.
+
+        Atenciosamente,
+        Equipe Limpeja
+        `,
+        `
+        <p>Olá,</p>
+        <p>Recebemos uma solicitação para redefinir a senha da sua conta Limpeja.</p>
+        <p>Para redefinir sua senha, clique no link abaixo:</p>
+        <p><a href="${resetLink}">Redefinir Senha</a></p>
+        <p>Este link de redefinição de senha expirará em 1 hora.</p>
+        <p>Se você não solicitou uma redefinição de senha, por favor, ignore este e-mail.</p>
+        <p>Atenciosamente,<br>Equipe Limpeja</p>
+        `
+      );
+      this.logger.log(`Email de redefinição de senha enviado para ${email}`);
+    } catch (emailError) {
+      this.logger.error(`Falha ao enviar email de redefinição de senha para ${email}: ${emailError.message}`);
+    }
   }
 
-  async requestOtp(phone: string): Promise<void> {
-    // Gerar código OTP de 6 dígitos
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutos
+  async verifyFirebaseIdToken(idToken: string): Promise<AuthResponseDto> {
+    try {
+      this.logger.log('[AuthService] Verificando Firebase ID Token...');
+      const decodedToken = await admin.auth().verifyIdToken(idToken);
+      const firebaseUid = decodedToken.uid;
+      const firebaseEmail = decodedToken.email;
+      const firebasePhoneNumber = decodedToken.phone_number;
 
-    // Buscar ou criar usuário com este telefone
-    let user = await this.prisma.user.findUnique({ where: { phone } });
-    
-    if (!user) {
-      // Criar novo usuário se não existir
-      user = await this.prisma.user.create({
-        data: {
-          phone,
-          email: `${phone}@sms.limpeja.com`, // Email temporário
-          role: UserRole.CLIENT,
-          otpCode,
-          otpExpiresAt: expiresAt,
-          isPhoneVerified: false,
-        },
+      // CORREÇÃO: Incluir client e provider nas consultas findUnique para garantir tipagem correta
+      let user = await this.prisma.user.findUnique({
+        where: { firebaseUid },
+        include: { client: true, provider: true } // <--- CORREÇÃO AQUI
       });
-    } else {
-      // Atualizar OTP para usuário existente
-      await this.prisma.user.update({
-        where: { id: user.id },
-        data: {
-          otpCode,
-          otpExpiresAt: expiresAt,
-        },
-      });
-    }
 
-    console.log(`Simulação: SMS enviado para ${phone} com código: ${otpCode}`);
-    // TODO: Implementar envio de SMS real
-  }
+      if (!user) {
+        this.logger.log(`[AuthService] Usuário não encontrado para Firebase UID ${firebaseUid}. Tentando encontrar por email/telefone...`);
+        if (firebaseEmail) {
+          user = await this.prisma.user.findUnique({
+            where: { email: firebaseEmail },
+            include: { client: true, provider: true } // <--- CORREÇÃO AQUI
+          });
+        }
+        if (!user && firebasePhoneNumber) {
+          user = await this.prisma.user.findUnique({
+            where: { phone: firebasePhoneNumber },
+            include: { client: true, provider: true } // <--- CORREÇÃO AQUI
+          });
+        }
 
-  async verifyOtp(phone: string, otpCode: string): Promise<AuthResponseDto> {
-    const user = await this.prisma.user.findUnique({
-      where: { phone },
-      include: {
-        client: {
-          include: {
-            user: true,
-            address: true,
-            bookings: true,
-            reviewsMade: true,
-            _count: {
-              select: { bookings: true }
-            }
-          },
-        },
-        provider: {
-          include: {
-            user: true,
-            address: true,
-            providerServices: {
-              include: {
-                service: true
-              }
+        if (user) {
+          this.logger.log(`[AuthService] Usuário existente (${user.id}) encontrado por email/telefone. Atualizando com Firebase UID.`);
+          user = await this.prisma.user.update({
+            where: { id: user.id },
+            data: { firebaseUid: firebaseUid },
+            include: { client: true, provider: true } // <--- CORREÇÃO AQUI
+          });
+        } else {
+          this.logger.log(`[AuthService] Criando novo usuário para Firebase UID ${firebaseUid}.`);
+          const defaultRole = UserRole.CLIENT; 
+
+          user = await this.prisma.user.create({
+            data: {
+              firebaseUid: firebaseUid,
+              email: firebaseEmail || `${firebaseUid}@firebase.limpeja.com`,
+              phone: firebasePhoneNumber,
+              role: defaultRole,
+              isPhoneVerified: !!firebasePhoneNumber,
             },
-            reviewsReceived: {
-              include: {
-                client: {
-                  include: { user: true }
-                }
-              }
-            },
-          },
-        },
-      },
-    });
+            include: { client: true, provider: true } // <--- CORREÇÃO AQUI
+          });
 
-    if (!user) {
-      throw new UnauthorizedException('Usuário não encontrado.');
+          if (user.role === UserRole.CLIENT && !user.client) { // A verificação !user.client é mais segura agora
+            await this.prisma.client.create({
+              data: {
+                userId: user.id,
+                fullName: decodedToken.name || `Usuário ${firebasePhoneNumber || firebaseEmail || firebaseUid}`,
+                phone: firebasePhoneNumber,
+              },
+            });
+            // Após criar o cliente, recarregar o usuário para ter a relação populada
+            user = await this.prisma.user.findUnique({
+              where: { id: user.id },
+              include: { client: true, provider: true }
+            });
+          }
+        }
+      }
+
+      // CORREÇÃO: userToLogin agora pode ser simplesmente 'user', pois 'user' já está carregado com as relações necessárias.
+      const userToLogin = user;
+
+      if (!userToLogin) {
+        throw new UnauthorizedException('Usuário não encontrado após processamento do Firebase Token.');
+      }
+
+      this.logger.log(`[AuthService] Login bem-sucedido para usuário Firebase UID: ${firebaseUid}`);
+      return this.login(userToLogin);
+
+    } catch (error) {
+      this.logger.error(`[AuthService] Erro ao verificar Firebase ID Token: ${error.message}`, error.stack);
+      throw new UnauthorizedException('ID Token inválido ou expirado.');
     }
-
-    if (!user.otpCode || !user.otpExpiresAt) {
-      throw new UnauthorizedException('Código OTP não solicitado.');
-    }
-
-    if (user.otpExpiresAt < new Date()) {
-      throw new UnauthorizedException('Código OTP expirado.');
-    }
-
-    if (user.otpCode !== otpCode) {
-      throw new UnauthorizedException('Código OTP inválido.');
-    }
-
-    // Marcar telefone como verificado e limpar OTP
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        isPhoneVerified: true,
-        otpCode: null,
-        otpExpiresAt: null,
-      },
-    });
-
-    // Criar cliente se não existir
-    if (!user.client && user.role === UserRole.CLIENT) {
-      await this.prisma.client.create({
-        data: {
-          userId: user.id,
-          fullName: `Usuário ${phone}`,
-          phone,
-        },
-      });
-    }
-
-    return this.login(user);
   }
 }

@@ -4,13 +4,14 @@ import { User as PrismaUser, UserRole } from '@prisma/client';
 export class UserEntity implements PrismaUser {
   id: string;
   email: string;
-  phone: string | null; // ADICIONADO
-  passwordHash: string | null; // ADICIONADO: passwordHash pode ser nulo para login por OTP
+  phone: string | null;
+  passwordHash: string | null;
   role: UserRole;
   avatarUrl: string | null;
-  otpCode: string | null; // ADICIONADO
-  otpExpiresAt: Date | null; // ADICIONADO
-  isPhoneVerified: boolean; // ADICIONADO
+  firebaseUid: string | null; // <--- ADICIONADO: Propriedade firebaseUid
+  otpCode: string | null;
+  otpExpiresAt: Date | null;
+  isPhoneVerified: boolean;
   createdAt: Date;
   updatedAt: Date;
 

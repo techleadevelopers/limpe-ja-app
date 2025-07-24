@@ -1,26 +1,17 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { UserRole } from '../types/backend/auth'; // CORREÇÃO: Caminho relativo correto para UserRole
-import { UserProfile } from '../types/backend/users'; // CORREÇÃO: Caminho relativo correto para UserProfile
+import { UserRole } from '../types/backend/auth';
+import { UserProfile } from '../types/backend/users';
 import api from './api';
-
-interface LoginCredentials {
-  phone: string;
-  otp: string;
-}
-
-interface AuthResponse {
-  access_token: string;
-  user: UserProfile; // Alterado para UserProfile
-}
-
-interface SendOtpResponse {
-  message: string;
-  phone: string;
-}
 
 // NOVO: Interface para o DTO que o frontend enviará ao backend para verificar o ID Token do Firebase
 interface VerifyFirebaseIdTokenRequest {
   idToken: string; // O ID Token JWT retornado pelo Firebase Authentication
+}
+
+// Interface AuthResponse atualizada para usar 'accessToken'
+interface AuthResponse {
+  accessToken: string; // Alterado de access_token para accessToken
+  user: UserProfile;
 }
 
 class AuthService {
@@ -36,53 +27,11 @@ class AuthService {
     return AuthService.instance;
   }
 
-  // MÉTODO EXISTENTE: sendOtp (Permanece inalterado, para a API customizada)
-  async sendOtp(phone: string): Promise<SendOtpResponse> {
-    try {
-      console.log('[authService] Enviando OTP para:', phone);
+  // MÉTODO REMOVIDO: sendOtp (Não mais usado para o fluxo principal de autenticação)
 
-      // Rota ajustada para '/auth/request-otp' conforme o backend
-      const response = await api.post('/auth/request-otp', { phone });
+  // MÉTODO REMOVIDO: verifyOtp (Não mais usado para o fluxo principal de autenticação)
 
-      console.log('[authService] OTP enviado com sucesso');
-      return response.data;
-
-    } catch (error: any) {
-      console.error('[authService] Erro ao enviar OTP:', error);
-      throw new Error(error.response?.data?.message || 'Erro ao enviar código SMS');
-    }
-  }
-
-  // MÉTODO EXISTENTE: verifyOtp (Permanece inalterado, para a API customizada)
-  async verifyOtp(credentials: LoginCredentials): Promise<AuthResponse> {
-    try {
-      console.log('[authService] Verificando OTP para:', credentials.phone);
-
-      // Propriedade ajustada para 'otpCode' conforme o backend
-      const response = await api.post('/auth/verify-otp', {
-        phone: credentials.phone,
-        otpCode: credentials.otp
-      });
-
-      const authData: AuthResponse = response.data;
-
-      // Salvar dados no AsyncStorage
-      await this.saveAuthData(authData);
-
-      console.log('[authService] Login realizado com sucesso');
-      return authData;
-
-    } catch (error: any) {
-      console.error('[authService] Erro ao verificar OTP:', error);
-      throw new Error(error.response?.data?.message || 'Código inválido');
-    }
-  }
-
-  // MÉTODO EXISTENTE: login (Permanece inalterado, chamando verifyOtp)
-  async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    // O método login agora apenas chama verifyOtp, que já lida com o salvamento do token
-    return this.verifyOtp(credentials);
-  }
+  // MÉTODO REMOVIDO: login (Não mais usado para o fluxo principal de autenticação)
 
   // MÉTODO EXISTENTE: logout (Permanece inalterado)
   async logout(): Promise<void> {
@@ -179,12 +128,13 @@ class AuthService {
   // MÉTODO PRIVADO EXISTENTE: saveAuthData (Permanece inalterado)
   private async saveAuthData(authData: AuthResponse): Promise<void> {
     try {
-      await AsyncStorage.setItem('token', authData.access_token);
+      // Usar authData.accessToken, não authData.access_token
+      await AsyncStorage.setItem('token', authData.accessToken);
       await AsyncStorage.setItem('role', authData.user.role);
       await AsyncStorage.setItem('id', authData.user.id);
       await AsyncStorage.setItem('user', JSON.stringify(authData.user));
 
-      this.setAuthToken(authData.access_token);
+      this.setAuthToken(authData.accessToken);
 
     } catch (error) {
       console.error('[authService] Erro ao salvar dados de autenticação:', error);
@@ -212,7 +162,7 @@ class AuthService {
   // NOVO MÉTODO: verifyFirebaseIdToken (Para o fluxo de autenticação Firebase Auth)
   async verifyFirebaseIdToken(data: VerifyFirebaseIdTokenRequest): Promise<AuthResponse> {
     try {
-      console.log('[authService] Verificando ID Token do Firebase com o backend (NOVA ROTA).');
+      console.log('[authService] Verificando ID Token do Firebase com o backend.');
       // Esta é a nova rota no seu backend que vai usar o Firebase Admin SDK
       const response = await api.post('/auth/firebase-login', data); 
 
@@ -221,11 +171,11 @@ class AuthService {
       // Salva os dados de autenticação no AsyncStorage após a verificação bem-sucedida
       await this.saveAuthData(authData);
 
-      console.log('[authService] Login com Firebase ID Token bem-sucedido (NOVA ROTA).');
+      console.log('[authService] Login com Firebase ID Token bem-sucedido.');
       return authData;
 
     } catch (error: any) {
-      console.error('[authService] Erro ao verificar ID Token do Firebase (NOVA ROTA):', error);
+      console.error('[authService] Erro ao verificar ID Token do Firebase:', error);
       throw new Error(error.response?.data?.message || 'Falha na autenticação Firebase.');
     }
   }

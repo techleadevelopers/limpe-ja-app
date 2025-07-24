@@ -19,12 +19,23 @@ import { OffersModule } from './offers/offers.module';
 import { PaymentsModule } from './payments/payments.module';
 import { SearchModule } from './search/search.module';
 import { VerificationModule } from './verification/verification.module';
-import { DashboardModule } from './dashboard/dashboard.module'; // Importe o DashboardModule
-import { EarningsModule } from './earnings/earnings.module';     // Importe o EarningsModule
+import { DashboardModule } from './dashboard/dashboard.module';
+import { EarningsModule } from './earnings/earnings.module';
+import { FaqsModule } from './faqs/faqs.module'; // <-- NOVO: Importe o FaqsModule
+import configuration from './config/configuration'; // <-- NOVO: Importe a configuração
+import { validationSchema } from './config/validation-schema'; // <-- NOVO: Importe o schema de validação
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }), // Carrega variáveis de ambiente globalmente
+    ConfigModule.forRoot({
+      isGlobal: true,
+      load: [configuration], // Carrega a configuração customizada
+      validationSchema,      // Aplica o schema de validação
+      validationOptions: {
+        allowUnknown: true, // Permite variáveis de ambiente não definidas no schema
+        abortEarly: true,   // Aborta a validação no primeiro erro
+      },
+    }),
     PrismaModule,
     AuthModule,
     UsersModule,
@@ -40,9 +51,10 @@ import { EarningsModule } from './earnings/earnings.module';     // Importe o Ea
     OffersModule,
     PaymentsModule,
     SearchModule,
-    VerificationModule, // Adicione o VerificationModule aqui
-    DashboardModule,    // Adicione o DashboardModule aqui
-    EarningsModule,     // Adicione o EarningsModule aqui
+    VerificationModule,
+    DashboardModule,
+    EarningsModule,
+    FaqsModule, // <-- NOVO: Adicione o FaqsModule aqui
   ],
   controllers: [AppController],
   providers: [AppService],

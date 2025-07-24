@@ -21,9 +21,13 @@ import { MessageResponseDto } from './dto/message-response.dto';
 import { UserProfileDto } from '../users/dto/user-profile.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { RequestOtpDto, VerifyOtpDto } from './dto/otp-login.dto'; // Já está importado, ótimo!
+// import { RequestOtpDto, VerifyOtpDto } from './dto/otp-login.dto'; // REMOVIDO: DTOs para OTP customizado
 import { LocalAuthGuard } from '../auth/guards/local-auth.guard';
 
+// NOVO: DTO para o Firebase ID Token
+class FirebaseLoginDto {
+  idToken: string;
+}
 
 @ApiTags('auth')
 @Controller('auth')
@@ -55,7 +59,7 @@ export class AuthController {
 
   @UseGuards(LocalAuthGuard)
   @Post('login')
-  @ApiOperation({ summary: 'Login de usuário/provedor' })
+  @ApiOperation({ summary: 'Login de usuário/provedor (Email/Senha)' })
   @ApiResponse({ status: 200, description: 'Login bem-sucedido.', type: AuthResponseDto })
   @ApiResponse({ status: 401, description: 'Credenciais inválidas.' })
   async login(@Request() req): Promise<AuthResponseDto> {
@@ -73,25 +77,17 @@ export class AuthController {
     return { message: 'Se um usuário com este email existir, um link de redefinição de senha será enviado.' };
   }
 
-  @Post('send-otp') // A rota do front-end estava chamando 'send-otp', então o back-end deve ter 'send-otp'
-  @HttpCode(HttpStatus.OK) // Retorna 200 OK em caso de sucesso
-  @ApiOperation({ summary: 'Solicitar código OTP para login por telefone' })
-  @ApiResponse({ status: 200, description: 'Código OTP enviado com sucesso.', type: MessageResponseDto })
-  @ApiResponse({ status: 400, description: 'Dados de requisição inválidos.' })
-  async requestOtp(@Body() requestOtpDto: RequestOtpDto): Promise<MessageResponseDto> {
-    this.logger.log(`[AuthController] requestOtp: Recebida solicitação de OTP para telefone: ${requestOtpDto.phone}`);
-    await this.authService.requestOtp(requestOtpDto.phone);
-    return { message: 'Código OTP enviado para o número informado.' };
-  }
+  // REMOVIDO: @Post('send-otp')
+  // REMOVIDO: @Post('verify-otp')
 
-  @Post('verify-otp')
-  @HttpCode(HttpStatus.OK) // Retorna 200 OK em caso de sucesso
-  @ApiOperation({ summary: 'Verificar código OTP e fazer login/registrar' })
-  @ApiResponse({ status: 200, description: 'Login realizado com sucesso.', type: AuthResponseDto })
-  @ApiResponse({ status: 401, description: 'Código OTP inválido ou expirado.' })
-  @ApiResponse({ status: 404, description: 'Usuário não encontrado.' })
-  async verifyOtp(@Body() verifyOtpDto: VerifyOtpDto): Promise<AuthResponseDto> {
-    this.logger.log(`[AuthController] verifyOtp: Recebida solicitação de verificação de OTP para telefone: ${verifyOtpDto.phone}`);
-    return this.authService.verifyOtp(verifyOtpDto.phone, verifyOtpDto.otpCode);
+  @Post('firebase-login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Login/Registro via Firebase ID Token (Telefone/Google/etc.)' })
+  @ApiResponse({ status: 200, description: 'Login/Registro bem-sucedido via Firebase.', type: AuthResponseDto })
+  @ApiResponse({ status: 401, description: 'ID Token inválido ou expirado.' })
+  @ApiResponse({ status: 400, description: 'Requisição inválida.' })
+  async firebaseLogin(@Body() body: FirebaseLoginDto): Promise<AuthResponseDto> {
+    this.logger.log(`[AuthController] firebaseLogin: Recebida solicitação de login com Firebase ID Token.`);
+    return this.authService.verifyFirebaseIdToken(body.idToken);
   }
 }
