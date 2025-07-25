@@ -14,17 +14,11 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-// REMOVIDO: import auth from '@react-native-firebase/auth'; // Não usaremos mais a API namespaced diretamente
-// NOVO: Importa getAuth e signInWithPhoneNumber da API modular do Firebase Auth
-import { getAuth, signInWithPhoneNumber } from 'firebase/auth'; // API Modular para Web e Nativo
-// Importa a instância do authClient do firebaseClient.ts (se precisar para getAuth(app) em algum caso)
-// import { authClient } from '../config/firebaseClient'; // Não precisaremos mais de authClient aqui diretamente
 
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../contexts/AuthContext';
 import { UserRole } from '../../types/backend/auth';
 
-// Importações do Reanimated (mantidas)
 import AnimatedReanimated, {
     Easing,
     Extrapolate,
@@ -34,6 +28,8 @@ import AnimatedReanimated, {
     withRepeat,
     withTiming,
 } from 'react-native-reanimated';
+
+import AuthService from '../../services/authService'; // Importação correta: AuthService com 'A' maiúsculo
 
 const LOGO_IMAGE = require('../../assets/images/logo2.png');
 
@@ -47,13 +43,14 @@ import { InputWithIcon } from '../../components/auth/components/InputWithIcon';
 export default function LoginScreen() {
     const [phoneNumber, setPhoneNumber] = useState('');
     const [otpCode, setOtpCode] = useState('');
-    const [confirmationResult, setConfirmationResult] = useState<any>(null); 
-    const [otpStep, setOtpStep] = useState<'phone' | 'otp'>('phone'); 
-    const [otpLoading, setOtpLoading] = useState(false); 
-    const [otpErrorMessage, setOtpErrorMessage] = useState<string | null>(null); 
-    const [timer, setTimer] = useState(0); 
+    const [password, setPassword] = useState(''); // NOVO: Estado para a senha
+    // NOVO: Estado para controlar o fluxo de login
+    const [loginFlowStep, setLoginFlowStep] = useState<'phoneInput' | 'otpInput' | 'passwordInput'>('phoneInput');
+    const [otpLoading, setOtpLoading] = useState(false);
+    const [otpErrorMessage, setOtpErrorMessage] = useState<string | null>(null);
+    const [timer, setTimer] = useState(0);
 
-    const { loginWithFirebaseIdToken, isAuthenticated, isLoading: authIsLoading, user } = useAuth(); 
+    const { isAuthenticated, isLoading: authIsLoading, user, login, setAuthData } = useAuth();
     const router = useRouter();
 
     const mainElementsOpacity = useRef(new Animated.Value(0)).current;
@@ -105,13 +102,13 @@ export default function LoginScreen() {
         };
     });
 
-    // --- FUNÇÃO handlePhoneSubmit (AGORA USA FIREBASE AUTH ESPECÍFICO PARA PLATAFORMA) ---
+    // --- FUNÇÃO handlePhoneSubmit (AGORA USA O NOVO BACKEND PARA VERIFICAR E ENVIAR OTP) ---
     const handlePhoneSubmit = async () => {
         const cleanPhone = phoneNumber.replace(/\D/g, '');
-        const fullPhoneNumber = `+55${cleanPhone}`; 
+        const fullPhoneNumber = cleanPhone.startsWith('+') ? cleanPhone : `+55${cleanPhone}`;
 
-        if (!cleanPhone || cleanPhone.length < 11) {
-            setOtpErrorMessage('Por favor, insira um número de telefone válido (DDD + 9 dígitos).');
+        if (!cleanPhone || cleanPhone.length < 10) { // Ajuste o comprimento mínimo conforme seu país
+            setOtpErrorMessage('Por favor, insira um número de telefone válido (com DDD).');
             return;
         }
 
@@ -119,106 +116,142 @@ export default function LoginScreen() {
         setOtpErrorMessage(null);
 
         try {
-            // CORREÇÃO: Usar getAuth() e signInWithPhoneNumber da API modular
-            const authInstance = getAuth(); // Obtém a instância de autenticação do Firebase
-            const confirmation = await signInWithPhoneNumber(authInstance, fullPhoneNumber); 
-            
-            setConfirmationResult(confirmation); 
-            setOtpStep('otp'); 
-            setTimer(60); 
+            // CORREÇÃO: Usando AuthService com 'A' maiúsculo
+            const { exists } = await AuthService.checkPhoneNumberExistence(fullPhoneNumber);
 
-            const interval = setInterval(() => {
-                setTimer(prev => {
-                    if (prev <= 1) {
-                        clearInterval(interval);
-                        return 0;
-                    }
-                    return prev - 1;
-                });
-            }, 1000);
-
-            Alert.alert('Código Enviado', `Um código de verificação foi enviado para ${formatPhoneNumber(phoneNumber)}.`);
+            if (exists) {
+                Alert.alert(
+                    "Usuário Existente",
+                    "Este número já está cadastrado. Deseja entrar com senha ou receber um código SMS?",
+                    [
+                        {
+                            text: "Usar Senha",
+                            onPress: () => {
+                                setLoginFlowStep('passwordInput');
+                                setOtpLoading(false);
+                                setOtpErrorMessage(null);
+                            },
+                        },
+                        {
+                            text: "Receber SMS",
+                            onPress: async () => {
+                                // CORREÇÃO: Usando AuthService com 'A' maiúsculo
+                                await AuthService.requestOtp(fullPhoneNumber);
+                                setLoginFlowStep('otpInput');
+                                setOtpLoading(false);
+                                setOtpErrorMessage(null);
+                                setTimer(60);
+                                Alert.alert('Código Enviado', `Um código de verificação foi enviado para ${formatPhoneNumber(phoneNumber)}.`);
+                            },
+                        },
+                    ]
+                );
+            } else {
+                Alert.alert(
+                    "Novo Usuário",
+                    "Este número não está cadastrado. Deseja registrar-se com ele?",
+                    [
+                        {
+                            text: "Não",
+                            style: "cancel",
+                            onPress: () => {
+                                setOtpLoading(false);
+                                setOtpErrorMessage('Registro cancelado.');
+                            },
+                        },
+                        {
+                            text: "Sim",
+                            onPress: async () => {
+                                // CORREÇÃO: Usando AuthService com 'A' maiúsculo
+                                await AuthService.requestOtp(fullPhoneNumber);
+                                setLoginFlowStep('otpInput');
+                                setOtpLoading(false);
+                                setOtpErrorMessage(null);
+                                setTimer(60);
+                                Alert.alert("Sucesso", `Código SMS enviado para ${formatPhoneNumber(phoneNumber)} para registro.`);
+                            },
+                        },
+                    ]
+                );
+            }
 
         } catch (error: any) {
-            console.error('Erro ao iniciar Firebase Phone Auth:', error);
-            let firebaseErrorMessage = 'Erro desconhecido. Tente novamente.';
-            if (error.code === 'auth/invalid-phone-number') {
-                firebaseErrorMessage = 'Número de telefone inválido.';
-            } else if (error.code === 'auth/too-many-requests') {
-                firebaseErrorMessage = 'Muitas tentativas. Tente novamente mais tarde.';
-            } else if (error.code === 'auth/app-not-authorized') {
-                firebaseErrorMessage = 'Seu app não está autorizado para usar Firebase Phone Auth. Verifique SHA-1/SHA-256 no console Firebase.';
-            } else if (error.code === 'auth/quota-exceeded') {
-                firebaseErrorMessage = 'Cota de SMS excedida para este telefone. Tente novamente em 24h.';
-            } else if (error.code === 'auth/web-storage-unsupported') { 
-                firebaseErrorMessage = 'Armazenamento web não suportado ou cookies desativados. Ative os cookies do navegador.';
-            }
-            setOtpErrorMessage(firebaseErrorMessage);
+            console.error('Erro no fluxo de telefone:', error);
+            setOtpErrorMessage(error.message || 'Ocorreu um erro. Tente novamente.');
         } finally {
             setOtpLoading(false);
         }
     };
 
-    // --- FUNÇÃO handleOtpSubmit (USA FIREBASE AUTH E ENVIA ID TOKEN PARA BACKEND) ---
+    // --- FUNÇÃO handleOtpSubmit (USA O NOVO BACKEND PARA VERIFICAR OTP) ---
     const handleOtpSubmit = async () => {
         if (!otpCode || otpCode.length < 6) {
             setOtpErrorMessage('Por favor, insira o código de 6 dígitos.');
             return;
         }
-        if (!confirmationResult) {
-            setOtpErrorMessage('Erro de sessão. Por favor, reinicie o processo de envio do código.');
-            return;
-        }
-
-        setOtpLoading(true);
-        setOtpErrorMessage(null);
-
-        try {
-            // 1. Confirma o código OTP com o Firebase
-            const userCredential = await confirmationResult.confirm(otpCode);
-            const firebaseUser = userCredential.user;
-            const idToken = await firebaseUser.getIdToken(); 
-
-            console.log('[LoginScreen] Firebase OTP verificado com sucesso. Enviando ID Token para o backend.');
-
-            // 2. Envia o ID Token do Firebase para o seu backend para login/registro final
-            await loginWithFirebaseIdToken(idToken);
-
-            Alert.alert('Sucesso!', 'Login realizado com sucesso!');
-
-        } catch (error: any) {
-            console.error('Erro ao verificar OTP com Firebase ou backend:', error);
-            let errorMessage = 'Código OTP inválido ou expirado. Tente novamente.';
-            if (error.code === 'auth/invalid-verification-code') {
-                errorMessage = 'O código de verificação é inválido.';
-            } else if (error.code === 'auth/code-expired') {
-                errorMessage = 'O código expirou. Por favor, solicite um novo.';
-            } else if (error.response?.data?.message) { 
-                errorMessage = error.response.data.message;
-            }
-            setOtpErrorMessage(errorMessage);
-        } finally {
-            setOtpLoading(false);
-        }
-    };
-
-    // --- FUNÇÃO handleResendOtp (USA FIREBASE AUTH NOVAMENTE) ---
-    const handleResendOtp = async () => {
-        if (timer > 0) return; 
 
         setOtpLoading(true);
         setOtpErrorMessage(null);
 
         try {
             const cleanPhone = phoneNumber.replace(/\D/g, '');
-            const fullPhoneNumber = `+55${cleanPhone}`;
+            const fullPhoneNumber = cleanPhone.startsWith('+') ? cleanPhone : `+55${cleanPhone}`;
 
-            // CORREÇÃO: Usar getAuth() e signInWithPhoneNumber da API modular para reenviar
-            const authInstance = getAuth();
-            const newConfirmation = await signInWithPhoneNumber(authInstance, fullPhoneNumber);
-            
-            setConfirmationResult(newConfirmation); 
-            setTimer(60); 
+            // Chama o método de login do AuthContext, que por sua vez chama o AuthService.verifyOtp
+            await login({ phoneNumber: fullPhoneNumber, otpCode: otpCode, type: 'otp' });
+
+            Alert.alert('Sucesso!', 'Login realizado com sucesso!');
+
+        } catch (error: any) {
+            console.error('Erro ao verificar OTP com backend:', error);
+            setOtpErrorMessage(error.message || 'Código OTP inválido ou expirado. Tente novamente.');
+        } finally {
+            setOtpLoading(false);
+        }
+    };
+
+    // --- NOVA FUNÇÃO handlePasswordSubmit (PARA LOGIN COM SENHA) ---
+    const handlePasswordSubmit = async () => {
+        if (!password) {
+            setOtpErrorMessage('Por favor, insira sua senha.');
+            return;
+        }
+
+        setOtpLoading(true);
+        setOtpErrorMessage(null);
+
+        try {
+            const cleanPhone = phoneNumber.replace(/\D/g, '');
+            const fullPhoneNumber = cleanPhone.startsWith('+') ? cleanPhone : `+55${cleanPhone}`;
+
+            // Chama o método de login do AuthContext, que por sua vez chama o AuthService.loginWithPassword
+            await login({ phoneNumber: fullPhoneNumber, password: password, type: 'password' });
+
+            Alert.alert('Sucesso!', 'Login realizado com sucesso!');
+
+        } catch (error: any) {
+            console.error('Erro ao fazer login com senha:', error);
+            setOtpErrorMessage(error.message || 'Credenciais inválidas. Tente novamente.');
+        } finally {
+            setOtpLoading(false);
+        }
+    };
+
+    // --- FUNÇÃO handleResendOtp (USA O NOVO BACKEND NOVAMENTE) ---
+    const handleResendOtp = async () => {
+        if (timer > 0) return;
+
+        setOtpLoading(true);
+        setOtpErrorMessage(null);
+
+        try {
+            const cleanPhone = phoneNumber.replace(/\D/g, '');
+            const fullPhoneNumber = cleanPhone.startsWith('+') ? cleanPhone : `+55${cleanPhone}`;
+
+            // CORREÇÃO: Usando AuthService com 'A' maiúsculo
+            await AuthService.requestOtp(fullPhoneNumber);
+
+            setTimer(60);
 
             const interval = setInterval(() => {
                 setTimer(prev => {
@@ -234,19 +267,13 @@ export default function LoginScreen() {
 
         } catch (error: any) {
             console.error('Erro ao reenviar SMS:', error);
-            let firebaseErrorMessage = 'Erro ao reenviar código. Tente novamente.';
-            if (error.code === 'auth/too-many-requests') {
-                firebaseErrorMessage = 'Muitas tentativas de reenvio. Espere antes de tentar novamente.';
-            } else if (error.code === 'auth/invalid-phone-number') {
-                firebaseErrorMessage = 'Número de telefone inválido para reenvio.';
-            }
-            setOtpErrorMessage(firebaseErrorMessage);
+            setOtpErrorMessage(error.message || 'Erro ao reenviar código. Tente novamente.');
         } finally {
             setOtpLoading(false);
         }
     };
 
-    const formatPhoneNumber = (value: string) => { 
+    const formatPhoneNumber = (value: string) => {
       const cleaned = value.replace(/\D/g, '');
       if (cleaned.length <= 2) {
           return `(${cleaned}`;
@@ -304,11 +331,13 @@ export default function LoginScreen() {
                     </View>
 
                     <Text style={styles.welcomeSubtitle}>
-                        {otpStep === 'phone' ? 'Entrar com seu telefone' : 'Verificar Código OTP'}
+                        {loginFlowStep === 'phoneInput' ? 'Entrar com seu telefone' :
+                         loginFlowStep === 'otpInput' ? 'Verificar Código OTP' :
+                         'Entrar com Senha'}
                     </Text>
 
                     <>
-                        {otpStep === 'phone' ? (
+                        {loginFlowStep === 'phoneInput' && (
                             <InputWithIcon
                                 iconName="call-outline"
                                 placeholder="(XX) XXXXX-XXXX"
@@ -320,7 +349,9 @@ export default function LoginScreen() {
                                 keyboardType="phone-pad"
                                 maxLength={15}
                             />
-                        ) : (
+                        )}
+
+                        {loginFlowStep === 'otpInput' && (
                             <InputWithIcon
                                 iconName="lock-closed-outline"
                                 placeholder="Código de 6 dígitos"
@@ -336,12 +367,29 @@ export default function LoginScreen() {
                             />
                         )}
 
+                        {loginFlowStep === 'passwordInput' && (
+                            <InputWithIcon
+                                iconName="lock-closed-outline"
+                                placeholder="Sua Senha"
+                                value={password}
+                                onChangeText={(text: string) => {
+                                    setPassword(text);
+                                    if (otpErrorMessage) setOtpErrorMessage(null);
+                                }}
+                                secureTextEntry={true}
+                            />
+                        )}
+
                         <AnimatedErrorMessage message={otpErrorMessage} isVisible={!!otpErrorMessage} centered={true} />
 
                         <Animated.View style={{ transform: [{ scale: signInButtonAnims.scaleAnim }] }}>
                             <TouchableOpacity
                                 style={[styles.signInButton, otpLoading && styles.buttonDisabled]}
-                                onPress={otpStep === 'phone' ? handlePhoneSubmit : handleOtpSubmit}
+                                onPress={
+                                    loginFlowStep === 'phoneInput' ? handlePhoneSubmit :
+                                    loginFlowStep === 'otpInput' ? handleOtpSubmit :
+                                    handlePasswordSubmit
+                                }
                                 onPressIn={signInButtonAnims.onPressIn}
                                 onPressOut={signInButtonAnims.onPressOut}
                                 disabled={otpLoading}
@@ -350,34 +398,40 @@ export default function LoginScreen() {
                                     <ActivityIndicator color="#FFFFFF" />
                                 ) : (
                                     <Text style={styles.signInButtonText}>
-                                        {otpStep === 'phone' ? 'Enviar Código' : 'Verificar Código'}
+                                        {loginFlowStep === 'phoneInput' ? 'Continuar' :
+                                         loginFlowStep === 'otpInput' ? 'Verificar Código' :
+                                         'Entrar'}
                                     </Text>
                                 )}
                             </TouchableOpacity>
                         </Animated.View>
 
-                        {otpStep === 'otp' && (
+                        {(loginFlowStep === 'otpInput' || loginFlowStep === 'passwordInput') && (
                             <View style={styles.otpActions}>
                                 <TouchableOpacity
                                     style={styles.backButton}
                                     onPress={() => {
-                                        setOtpStep('phone');
+                                        setLoginFlowStep('phoneInput');
                                         setOtpErrorMessage(null);
                                         setTimer(0);
+                                        setPassword('');
+                                        setOtpCode('');
                                     }}
                                 >
                                     <Text style={styles.backButtonText}>Voltar</Text>
                                 </TouchableOpacity>
 
-                                <TouchableOpacity
-                                    style={[styles.resendButton, timer > 0 && styles.resendButtonDisabled]}
-                                    onPress={handleResendOtp}
-                                    disabled={timer > 0 || otpLoading}
-                                >
-                                    <Text style={[styles.resendButtonText, timer > 0 && styles.resendButtonTextDisabled]}>
-                                        {timer > 0 ? `Reenviar em ${timer}s` : 'Reenviar código'}
-                                    </Text>
-                                </TouchableOpacity>
+                                {loginFlowStep === 'otpInput' && (
+                                    <TouchableOpacity
+                                        style={[styles.resendButton, timer > 0 && styles.resendButtonDisabled]}
+                                        onPress={handleResendOtp}
+                                        disabled={timer > 0 || otpLoading}
+                                    >
+                                        <Text style={[styles.resendButtonText, timer > 0 && styles.resendButtonTextDisabled]}>
+                                            {timer > 0 ? `Reenviar em ${timer}s` : 'Reenviar código'}
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
                             </View>
                         )}
                     </>

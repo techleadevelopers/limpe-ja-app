@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, ConflictException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, BadRequestException, Logger, InternalServerErrorException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
@@ -7,13 +7,14 @@ import { RegisterProviderDto } from './dto/register-provider.dto';
 import { UserRole, User, Prisma, Client, Provider, Address, ProviderService, Service, Review, VerificationStatus, Booking } from '@prisma/client';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { UserProfileDto } from '../users/dto/user-profile.dto';
-import * as admin from 'firebase-admin';
+// REMOVIDO: import * as admin from 'firebase-admin';
 import { ProvidersService, ProviderWithIncludes, ProviderWithCalculatedRating } from '../providers/providers.service';
 import { ClientWithIncludes } from '../users/dto/user-profile.dto';
 import { EmailService } from '../common/services/email.service';
 import { GeocodingService } from '../common/services/geocoding.service';
+import { SmsService } from '../sms/sms.service'; // NOVO: Importa o SmsService
 
-// Tipo Auxiliar: UserWithAllRelations
+// Tipo Auxiliar: UserWithAllRelations (mantido)
 export type UserWithAllRelations = User & {
   client?: (Client & {
     user: User;
@@ -37,8 +38,10 @@ export class AuthService {
     private providersService: ProvidersService,
     private emailService: EmailService,
     private geocodingService: GeocodingService,
+    private smsService: SmsService, // NOVO: Injeta o SmsService
   ) {}
 
+  // validateUser (email/password) - Mantido
   async validateUser(email: string, pass: string): Promise<User | null> {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
@@ -51,6 +54,7 @@ export class AuthService {
     return user;
   }
 
+  // login (email/password) - Mantido
   async login(user: User): Promise<AuthResponseDto> {
     const fullUser = await this.prisma.user.findUnique({
       where: { id: user.id },
@@ -82,7 +86,6 @@ export class AuthService {
                 }
               }
             },
-            // CORREÇÃO: Removido ocrResult: true e livenessResult: true daqui
           },
         },
       },
@@ -114,40 +117,57 @@ export class AuthService {
     };
   }
 
+  // registerClient (email/password) - Mantido, com validação de telefone/CPF
   async registerClient(registerClientDto: RegisterClientDto): Promise<AuthResponseDto> {
-    const { email, password, fullName, phone, address } = registerClientDto;
-    const { cep, street, number, neighborhood, city, state, complement } = address;
+    const { email, password, fullName, phone, address, cpf } = registerClientDto;
 
     const existingUser = await this.prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       throw new ConflictException('Este email já está cadastrado.');
+    }
+    // Check if phone number already exists
+    if (phone) {
+      const existingPhoneUser = await this.prisma.user.findUnique({ where: { phone } });
+      if (existingPhoneUser) {
+        throw new ConflictException('Este número de telefone já está cadastrado.');
+      }
+    }
+    // Check if CPF already exists
+    if (cpf) {
+      const existingCpfClient = await this.prisma.client.findUnique({ where: { cpf } });
+      if (existingCpfClient) {
+        throw new ConflictException('Este CPF já está cadastrado como cliente.');
+      }
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
     try {
       const geoCoordinates = await this.geocodingService.geocodeAddress(
-        `${street}, ${number}, ${neighborhood}, ${city}, ${state}, ${cep}`
+        `${address.street}, ${address.number}, ${address.neighborhood}, ${address.city}, ${address.state}, ${address.cep}`
       );
 
       const newUser = await this.prisma.user.create({
         data: {
           email,
+          phone: phone || null,
           passwordHash: hashedPassword,
           role: UserRole.CLIENT,
+          isPhoneVerified: !!phone, // Marca como verificado se o telefone foi fornecido no registro
           client: {
             create: {
               fullName,
               phone: phone ?? null,
+              cpf: cpf ?? null,
               address: {
                 create: {
-                  cep,
-                  street,
-                  number,
-                  neighborhood,
-                  city,
-                  state,
-                  complement: complement ?? null,
+                  cep: address.cep,
+                  street: address.street,
+                  number: address.number,
+                  neighborhood: address.neighborhood,
+                  city: address.city,
+                  state: address.state,
+                  complement: address.complement ?? null,
                 },
               },
             },
@@ -168,23 +188,31 @@ export class AuthService {
         }
       });
 
-      // Se geoCoordinates existirem, atualize o endereço com a localização
       if (geoCoordinates && newUser.client?.address?.id) {
         await this.prisma.address.update({
           where: { id: newUser.client.address.id },
           data: {
             location: `SRID=4326;POINT(${geoCoordinates.longitude} ${geoCoordinates.latitude})`,
-          } as any, // Cast para any porque 'location' é um tipo Unsupported
+          } as any,
         });
       }
 
       return this.login(newUser);
     } catch (error) {
-      console.error('Erro ao registrar cliente:', error);
+      this.logger.error('Erro ao registrar cliente:', error);
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        if (error.meta?.target === 'User_phone_key') {
+          throw new ConflictException('Este número de telefone já está cadastrado.');
+        }
+        if (error.meta?.target === 'Client_cpf_key') {
+          throw new ConflictException('Este CPF já está cadastrado como cliente.');
+        }
+      }
       throw new BadRequestException('Não foi possível registrar o cliente. Verifique os dados.');
     }
   }
 
+  // registerProvider (email/password) - Mantido, com validação de telefone/CPF
   async registerProvider(registerProviderDto: RegisterProviderDto): Promise<AuthResponseDto> {
     const {
       email,
@@ -197,7 +225,6 @@ export class AuthService {
       yearsOfExperience,
       avatarUrl,
     } = registerProviderDto;
-    const { cep, street, number, neighborhood, city, state, complement } = address;
 
     const existingUser = await this.prisma.user.findUnique({ where: { email } });
     if (existingUser) {
@@ -205,21 +232,29 @@ export class AuthService {
     }
     const existingProvider = await this.prisma.provider.findUnique({ where: { cpf } });
     if (existingProvider) {
-      throw new ConflictException('Este CPF já está cadastrado.');
+      throw new ConflictException('Este CPF já está cadastrado como provedor.');
+    }
+    if (phone) {
+      const existingPhoneUser = await this.prisma.user.findUnique({ where: { phone } });
+      if (existingPhoneUser) {
+        throw new ConflictException('Este número de telefone já está cadastrado.');
+      }
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
     try {
       const geoCoordinates = await this.geocodingService.geocodeAddress(
-        `${street}, ${number}, ${neighborhood}, ${city}, ${state}, ${cep}`
+        `${address.street}, ${address.number}, ${address.neighborhood}, ${address.city}, ${address.state}, ${address.cep}`
       );
 
       const newUser = await this.prisma.user.create({
         data: {
           email,
+          phone: phone || null,
           passwordHash: hashedPassword,
           role: UserRole.PROVIDER,
+          isPhoneVerified: !!phone, // Marca como verificado se o telefone foi fornecido no registro
           provider: {
             create: {
               fullName,
@@ -232,13 +267,13 @@ export class AuthService {
               bio: null,
               address: {
                 create: {
-                  cep,
-                  street,
-                  number,
-                  neighborhood,
-                  city,
-                  state,
-                  complement: complement ?? null,
+                  cep: address.cep,
+                  street: address.street,
+                  number: address.number,
+                  neighborhood: address.neighborhood,
+                  city: address.city,
+                  state: address.state,
+                  complement: address.complement ?? null,
                 },
               },
             },
@@ -261,29 +296,36 @@ export class AuthService {
                   }
                 }
               },
-              // CORREÇÃO: Removido ocrResult: true e livenessResult: true daqui
             }
           }
         }
       });
 
-      // Se geoCoordinates existirem, atualize o endereço com a localização
       if (geoCoordinates && newUser.provider?.address?.id) {
         await this.prisma.address.update({
           where: { id: newUser.provider.address.id },
           data: {
             location: `SRID=4326;POINT(${geoCoordinates.longitude} ${geoCoordinates.latitude})`,
-          } as any, // Cast para any porque 'location' é um tipo Unsupported
+          } as any,
         });
       }
 
       return this.login(newUser);
     } catch (error) {
-      console.error('Erro ao registrar provedor:', error);
+      this.logger.error('Erro ao registrar provedor:', error);
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        if (error.meta?.target === 'User_phone_key') {
+          throw new ConflictException('Este número de telefone já está cadastrado.');
+        }
+        if (error.meta?.target === 'Provider_cpf_key') {
+          throw new ConflictException('Este CPF já está cadastrado como provedor.');
+        }
+      }
       throw new BadRequestException('Não foi possível registrar o provedor. Verifique os dados e o console do servidor para mais detalhes.');
     }
   }
 
+  // forgotPassword - Mantido
   async forgotPassword(email: string): Promise<void> {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
@@ -319,7 +361,7 @@ export class AuthService {
         <p>Para redefinir sua senha, clique no link abaixo:</p>
         <p><a href="${resetLink}">Redefinir Senha</a></p>
         <p>Este link de redefinição de senha expirará em 1 hora.</p>
-        <p>Se você não solicitou uma redefinição de senha, por favor, ignore este e-mail.</p>
+        <p>Se você não solicitou uma redefinição de senha, por favor, ignore este este e-mail.</p>
         <p>Atenciosamente,<br>Equipe Limpeja</p>
         `
       );
@@ -329,87 +371,92 @@ export class AuthService {
     }
   }
 
-  async verifyFirebaseIdToken(idToken: string): Promise<AuthResponseDto> {
-    try {
-      this.logger.log('[AuthService] Verificando Firebase ID Token...');
-      const decodedToken = await admin.auth().verifyIdToken(idToken);
-      const firebaseUid = decodedToken.uid;
-      const firebaseEmail = decodedToken.email;
-      const firebasePhoneNumber = decodedToken.phone_number;
+  // REMOVIDO: verifyFirebaseIdToken
+  // async verifyFirebaseIdToken(idToken: string): Promise<AuthResponseDto> { ... }
 
-      // CORREÇÃO: Incluir client e provider nas consultas findUnique para garantir tipagem correta
-      let user = await this.prisma.user.findUnique({
-        where: { firebaseUid },
-        include: { client: true, provider: true } // <--- CORREÇÃO AQUI
+  // NOVO: Verifica se o número de telefone existe e se tem senha
+  async checkPhoneNumberExistence(phoneNumber: string): Promise<{ exists: boolean; hasPassword?: boolean }> {
+    const user = await this.prisma.user.findUnique({ where: { phone: phoneNumber } });
+    return { exists: !!user, hasPassword: !!user?.passwordHash };
+  }
+
+  // NOVO: Envia OTP para o número de telefone
+  async sendOtp(phoneNumber: string): Promise<void> {
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString(); // OTP de 6 dígitos
+    const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // Expira em 5 minutos
+
+    let user = await this.prisma.user.findUnique({ where: { phone: phoneNumber } });
+
+    if (user) {
+      // Atualiza usuário existente com novo OTP
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { otpCode, otpExpiresAt },
       });
-
-      if (!user) {
-        this.logger.log(`[AuthService] Usuário não encontrado para Firebase UID ${firebaseUid}. Tentando encontrar por email/telefone...`);
-        if (firebaseEmail) {
-          user = await this.prisma.user.findUnique({
-            where: { email: firebaseEmail },
-            include: { client: true, provider: true } // <--- CORREÇÃO AQUI
-          });
-        }
-        if (!user && firebasePhoneNumber) {
-          user = await this.prisma.user.findUnique({
-            where: { phone: firebasePhoneNumber },
-            include: { client: true, provider: true } // <--- CORREÇÃO AQUI
-          });
-        }
-
-        if (user) {
-          this.logger.log(`[AuthService] Usuário existente (${user.id}) encontrado por email/telefone. Atualizando com Firebase UID.`);
-          user = await this.prisma.user.update({
-            where: { id: user.id },
-            data: { firebaseUid: firebaseUid },
-            include: { client: true, provider: true } // <--- CORREÇÃO AQUI
-          });
-        } else {
-          this.logger.log(`[AuthService] Criando novo usuário para Firebase UID ${firebaseUid}.`);
-          const defaultRole = UserRole.CLIENT; 
-
-          user = await this.prisma.user.create({
-            data: {
-              firebaseUid: firebaseUid,
-              email: firebaseEmail || `${firebaseUid}@firebase.limpeja.com`,
-              phone: firebasePhoneNumber,
-              role: defaultRole,
-              isPhoneVerified: !!firebasePhoneNumber,
-            },
-            include: { client: true, provider: true } // <--- CORREÇÃO AQUI
-          });
-
-          if (user.role === UserRole.CLIENT && !user.client) { // A verificação !user.client é mais segura agora
-            await this.prisma.client.create({
-              data: {
-                userId: user.id,
-                fullName: decodedToken.name || `Usuário ${firebasePhoneNumber || firebaseEmail || firebaseUid}`,
-                phone: firebasePhoneNumber,
-              },
-            });
-            // Após criar o cliente, recarregar o usuário para ter a relação populada
-            user = await this.prisma.user.findUnique({
-              where: { id: user.id },
-              include: { client: true, provider: true }
-            });
-          }
-        }
-      }
-
-      // CORREÇÃO: userToLogin agora pode ser simplesmente 'user', pois 'user' já está carregado com as relações necessárias.
-      const userToLogin = user;
-
-      if (!userToLogin) {
-        throw new UnauthorizedException('Usuário não encontrado após processamento do Firebase Token.');
-      }
-
-      this.logger.log(`[AuthService] Login bem-sucedido para usuário Firebase UID: ${firebaseUid}`);
-      return this.login(userToLogin);
-
-    } catch (error) {
-      this.logger.error(`[AuthService] Erro ao verificar Firebase ID Token: ${error.message}`, error.stack);
-      throw new UnauthorizedException('ID Token inválido ou expirado.');
+    } else {
+      // Cria um usuário temporário se não existir (será totalmente registrado depois)
+      user = await this.prisma.user.create({
+        data: {
+          phone: phoneNumber,
+          role: UserRole.CLIENT, // Papel padrão para novos usuários via telefone
+          otpCode,
+          otpExpiresAt,
+          email: `temp_${Date.now()}@limpeja.com`, // E-mail placeholder
+          passwordHash: null, // Sem senha inicialmente
+          isPhoneVerified: false, // Não verificado até o OTP ser confirmado
+        },
+      });
     }
+
+    const message = `Seu código de verificação LimpeJá é: ${otpCode}. Ele expira em 5 minutos.`;
+    try {
+      await this.smsService.sendSms(phoneNumber, message);
+      this.logger.log(`OTP enviado para ${phoneNumber}`);
+    } catch (error) {
+      this.logger.error(`Falha ao enviar SMS de OTP para ${phoneNumber}: ${error.message}`);
+      throw new InternalServerErrorException('Falha ao enviar o código OTP. Tente novamente.');
+    }
+  }
+
+  // NOVO: Verifica o OTP e realiza o login/registro
+  async verifyOtp(phoneNumber: string, otpCode: string): Promise<AuthResponseDto> {
+    const user = await this.prisma.user.findUnique({ where: { phone: phoneNumber } });
+
+    if (!user) {
+      throw new UnauthorizedException('Número de telefone não registrado.');
+    }
+
+    if (user.otpCode !== otpCode || user.otpExpiresAt < new Date()) {
+      // Invalida o OTP em caso de falha para evitar reuso
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { otpCode: null, otpExpiresAt: null },
+      });
+      throw new UnauthorizedException('Código OTP inválido ou expirado.');
+    }
+
+    // Invalida o OTP após uso bem-sucedido
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { otpCode: null, otpExpiresAt: null, isPhoneVerified: true },
+    });
+
+    return this.login(user);
+  }
+
+  // NOVO: Login com número de telefone e senha
+  async loginWithPhoneNumberAndPassword(phoneNumber: string, password: string): Promise<AuthResponseDto> {
+    const user = await this.prisma.user.findUnique({ where: { phone: phoneNumber } });
+
+    if (!user || !user.passwordHash) {
+      throw new UnauthorizedException('Número de telefone ou senha inválidos.');
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Número de telefone ou senha inválidos.');
+    }
+
+    return this.login(user);
   }
 }

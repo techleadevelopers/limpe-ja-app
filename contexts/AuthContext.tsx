@@ -1,26 +1,25 @@
 // LimpeJaApp/contexts/AuthContext.tsx
 
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
-import { UserProfile } from '../../app/types/backend/users'; // Caminho para UserProfile
-import authService from '../services/authService'; // Mantém a importação como está
-import { RegisterClientDto, RegisterProviderDto, UserRole } from '../types/backend/auth';
+import { UserProfile } from '../../app/types/backend/users';
+import authService from '../services/authService';
+import { RegisterClientDto, RegisterProviderDto, UserRole } from '../types/backend/auth'; // Importa o UserRole corrigido
 
 interface AuthContextType {
   user: UserProfile | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   role: UserRole | null;
-  // login: (credentials: { phone: string; otp: string }) => Promise<void>; // REMOVIDO: Não existe mais no authService
+  login: (credentials: { phoneNumber: string; password?: string; otpCode?: string; type: 'password' | 'otp' }) => Promise<void>;
   logout: () => Promise<void>;
   register: (userData: any, userType: 'client' | 'provider') => Promise<void>;
-  // sendOtp: (phone: string) => Promise<void>; // REMOVIDO: Não existe mais no authService
   refreshUser: () => Promise<void>;
   signUpClient: (data: RegisterClientDto) => Promise<void>;
   signUpProvider: (data: RegisterProviderDto) => Promise<void>;
   isRegistrationInProgress: boolean;
   setIsRegistrationInProgress: (inProgress: boolean) => void;
-  // CORREÇÃO: Adicionado o método loginWithFirebaseIdToken à interface
-  loginWithFirebaseIdToken: (idToken: string) => Promise<void>;
+  // NOVO: Método para definir os dados de autenticação no contexto
+  setAuthData: (authData: { accessToken: string; user: UserProfile }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -55,7 +54,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       if (authData.token && authData.role && authData.id && authData.user) {
-        // CORREÇÃO: Cast explícito para UserProfile e UserRole (para silenciar o erro de duplicação, mas a causa raiz é o cache)
         setUser(authData.user as UserProfile);
         setRole(authData.role as UserRole);
         console.log('[AuthContext | loadStoragedData] User authenticated from storage.');
@@ -75,29 +73,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // REMOVIDO: O método sendOtp não existe mais no authService
-  /*
-  const sendOtp = async (phone: string) => {
+  const login = async (credentials: { phoneNumber: string; password?: string; otpCode?: string; type: 'password' | 'otp' }) => {
     try {
       setIsLoading(true);
-      await authService.sendOtp(phone);
-    } catch (error) {
-      console.error('[AuthContext] Erro ao enviar OTP:', error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  */
+      let authData;
+      if (credentials.type === 'otp' && credentials.otpCode) {
+        authData = await authService.verifyOtp(credentials.phoneNumber, credentials.otpCode);
+      } else if (credentials.type === 'password' && credentials.password) {
+        authData = await authService.loginWithPassword({ phoneNumber: credentials.phoneNumber, password: credentials.password });
+      } else {
+        throw new Error('Tipo de credencial inválido ou incompleto.');
+      }
 
-  // REMOVIDO: O método login não existe mais no authService
-  /*
-  const login = async (credentials: { phone: string; otp: string }) => {
-    try {
-      setIsLoading(true);
-      const authData = await authService.login(credentials);
-
-      // CORREÇÃO: Cast explícito para UserProfile e UserRole
       setUser(authData.user as UserProfile);
       setRole(authData.user.role as UserRole);
 
@@ -110,7 +97,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(false);
     }
   };
-  */
 
   const logout = async () => {
     try {
@@ -141,7 +127,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         authData = await authService.registerProvider(userData);
       }
 
-      // CORREÇÃO: Cast explícito para UserProfile e UserRole
       setUser(authData.user as UserProfile);
       setRole(authData.user.role as UserRole);
 
@@ -159,7 +144,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setIsLoading(true);
       const authData = await authService.registerClient(data);
-      // CORREÇÃO: Cast explícito para UserProfile e UserRole
       setUser(authData.user as UserProfile);
       setRole(authData.user.role as UserRole);
       console.log('[AuthContext] Client registration successful.');
@@ -176,7 +160,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(true);
       setIsRegistrationInProgress(true);
       const authData = await authService.registerProvider(data);
-      // CORREÇÃO: Cast explícito para UserProfile e UserRole
       setUser(authData.user as UserProfile);
       setRole(authData.user.role as UserRole);
       console.log('[AuthContext] Provider registration successful.');
@@ -186,8 +169,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       throw error;
     } finally {
       setIsLoading(false);
-      // O flag isRegistrationInProgress será resetado para false pelo componente que chamou signUpProvider
-      // uma vez que o processo de registro em várias etapas esteja completo.
     }
   };
 
@@ -195,24 +176,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     await loadStoredData();
   };
 
-  // NOVO: Método para login com o ID Token do Firebase
-  const loginWithFirebaseIdToken = async (idToken: string) => {
+  // NOVO: Método para definir os dados de autenticação no contexto
+  const setAuthData = async (authData: { accessToken: string; user: UserProfile }) => {
     try {
-      console.log('[AuthContext] Iniciando login com Firebase ID Token...');
-      // ADICIONADO: Log para capturar o Firebase ID Token para teste
-      console.log("Firebase ID Token para teste:", idToken);
-      // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       setIsLoading(true);
-      // Chama o novo método do authService para verificar o ID Token com o backend
-      const authData = await authService.verifyFirebaseIdToken({ idToken });
-
-      setUser(authData.user as UserProfile);
-      setRole(authData.user.role as UserRole);
-
-      console.log('[AuthContext] Login com Firebase ID Token bem-sucedido:', authData.user.role);
-
+      setUser(authData.user);
+      setRole(authData.user.role);
+      // O authService já salva o token e o user no AsyncStorage e seta o header do Axios
+      console.log('[AuthContext] Dados de autenticação definidos no contexto:', authData.user.role);
     } catch (error) {
-      console.error('[AuthContext] Erro no login com Firebase ID Token:', error);
+      console.error('[AuthContext] Erro ao definir dados de autenticação:', error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -224,16 +197,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading,
     isAuthenticated,
     role,
-    // login, // REMOVIDO do valor do contexto
+    login,
     logout,
     register,
-    // sendOtp, // REMOVIDO do valor do contexto
     refreshUser,
     signUpClient,
     signUpProvider,
     isRegistrationInProgress,
     setIsRegistrationInProgress,
-    loginWithFirebaseIdToken, // Adicionado ao valor do contexto
+    setAuthData, // Adicionado ao valor do contexto
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

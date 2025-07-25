@@ -46,11 +46,11 @@ model User {
   passwordHash      String?        // Opcional agora, para suportar login apenas por SMS
   role              UserRole       @default(CLIENT)
   avatarUrl         String?        // <--- NOVA LINHA ADICIONADA AQUI para o avatar do usuário
-  firebaseUid       String?        @unique // <--- LINHA ADICIONADA PARA CORRIGIR O ERRO
+  firebaseUid       String?        @unique // Mantido, caso seja usado para outros serviços Firebase
   
   // Campos para OTP
   otpCode           String?        // Código OTP atual
-  otpExpiresAt      DateTime?      // Expiração do OTP
+  otpExpiresAt      DateTime?      // Tempo de expiração do OTP
   isPhoneVerified   Boolean        @default(false) // Se o telefone foi verificado
   
   createdAt         DateTime       @default(now())

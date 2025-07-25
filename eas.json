@@ -1,40 +1,47 @@
-{
-  "cli": {
-    "version": ">= 7.6.0",
-    "appVersionSource": "remote"
-  },
-  "build": {
-    "development": {
-      "developmentClient": true,
-      "distribution": "internal",
-      "android": {
-        "image": "latest",
-        "buildType": "apk" // Opcional: Garante APK também para dev client, se for o caso
-      }
-    },
-    "apk_direct_test": {
-      "distribution": "internal",
-      "android": {
-        "buildType": "apk", // <<<--- ESTE É O PERFIL QUE VOCÊ VAI USAR PARA SEU APK ASSINADO
-        "image": "latest"
-      }
-    },
-    "production": {
-      "distribution": "store",
-      "android": {
-        "image": "latest"
-        // Por padrão, gera AAB para distribuição "store".
-        // Se realmente quiser APK para "production" (não recomendado para Play Store),
-        // adicione "buildType": "apk" aqui.
+    {
+      "cli": {
+        "version": ">= 7.6.0",
+        "appVersionSource": "remote"
+      },
+      "build": {
+        "development": {
+          "developmentClient": true,
+          "distribution": "internal",
+          "android": {
+            "image": "latest",
+            "buildType": "apk"
+          }
+        },
+        "apk_direct_test": {
+          "distribution": "internal",
+          "android": {
+            "buildType": "apk",
+            "image": "latest"
+          },
+          "env": {
+            "EXPO_PUBLIC_API_BASE_URL": "https://limpeja-app-backend-665493568088.southamerica-east1.run.app",
+            "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyBt5-IB2CI9fKOeWcGFEM4ZJ57ix-cUHpg",
+            "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "semiotic-anvil-461613-c0.firebaseapp.com",
+            "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "semiotic-anvil-461613-c0",
+            "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "semiotic-anvil-461613-c0.appspot.com",
+            "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "35489557635",
+            "EXPO_PUBLIC_FIREBASE_APP_ID": "1:35489557635:android:fa20487f5dbc67e07fffb6"
+            // Adicione outras variáveis EXPO_PUBLIC_ que você usa no seu app
+          }
+        },
+        "production": {
+          "distribution": "store",
+          "android": {
+            "image": "latest"
+          }
+        }
+      },
+      "submit": {
+        "production": {
+          "android": {
+            "track": "internal"
+          }
+        }
       }
     }
-  },
-  "submit": {
-    "production": {
-      "android": {
-        "track": "internal"
-      }
-      // Removi a seção iOS se não for usar.
-    }
-  }
-}
+    
