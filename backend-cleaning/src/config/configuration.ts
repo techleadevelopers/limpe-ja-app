@@ -12,14 +12,6 @@ export default () => ({
   },
   // Configuração para as APIs de terceiros da Cellereit
   thirdPartyApis: { // Agrupando todas as APIs de terceiros em um objeto para melhor organização
-    // backgroundCheck: { // REMOVIDO: Não será mais utilizado
-    //   apiUrl: process.env.THIRD_PARTY_BACKGROUND_CHECK_API_URL,
-    //   apiKey: process.env.THIRD_PARTY_BACKGROUND_CHECK_API_KEY,
-    // },
-    // contextus: { // REMOVIDO: Não será mais utilizado
-    //   apiUrl: process.env.THIRD_PARTY_CONTEXTUS_API_URL,
-    //   apiKey: process.env.THIRD_PARTY_CONTEXTUS_API_KEY,
-    // },
     facematch: { // Nova configuração para Facematch
       apiUrl: process.env.THIRD_PARTY_FACEMATCH_API_URL,
       apiKey: process.env.THIRD_PARTY_FACEMATCH_API_KEY,
@@ -41,6 +33,8 @@ export default () => ({
     twilioAccountSid: process.env.TWILIO_ACCOUNT_SID,
     twilioAuthToken: process.env.TWILIO_AUTH_TOKEN,
     twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER,
+    // Adicionando a nova variável para o Twilio Verify Service SID
+    twilioVerifyServiceSid: process.env.TWILIO_VERIFY_SERVICE_SID,
   },
   // NOVAS CONFIGURAÇÕES: Geocoding Service
   geocoding: {

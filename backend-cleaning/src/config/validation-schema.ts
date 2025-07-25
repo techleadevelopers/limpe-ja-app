@@ -12,14 +12,6 @@ export const validationSchema = Joi.object({
   GCS_KEY: Joi.string().required().description('Base64 encoded Google Cloud Service Account key file content'),
   GCS_BUCKET_NAME: Joi.string().required().description('Name of the Google Cloud Storage bucket'),
 
-  // Variáveis de ambiente para API de verificação de antecedentes de terceiros (Cellereit Background Check)
-  // REMOVIDO: THIRD_PARTY_BACKGROUND_CHECK_API_URL: Joi.string().uri().required().description('URL da API de terceiros para verificação de antecedentes (Cellereit BG-Check)'),
-  // REMOVIDO: THIRD_PARTY_BACKGROUND_CHECK_API_KEY: Joi.string().required().description('Chave da API de terceiros para verificação de antecedentes (Cellereit BG-Check)'),
-
-  // NOVAS VARIÁVEIS DE AMBIENTE: Cellereit Entidades de Documentos (Contextus)
-  // REMOVIDO: THIRD_PARTY_CONTEXTUS_API_URL: Joi.string().uri().required().description('URL da API de terceiros para leitura e contextualização de documentos (Cellereit Contextus)'),
-  // REMOVIDO: THIRD_PARTY_CONTEXTUS_API_KEY: Joi.string().required().description('Chave da API de terceiros para leitura e contextualização de documentos (Cellereit Contextus)'),
-
   // NOVAS VARIÁVEIS DE AMBIENTE: Cellereit Facematch
   THIRD_PARTY_FACEMATCH_API_URL: Joi.string().uri().required().description('URL da API de terceiros para comparação facial e liveness check (Cellereit Facematch)'),
   THIRD_PARTY_FACEMATCH_API_KEY: Joi.string().required().description('Chave da API de terceiros para comparação facial e liveness check (Cellereit Facematch)'),
@@ -70,6 +62,11 @@ export const validationSchema = Joi.object({
     then: Joi.string().required(),
     otherwise: Joi.optional(),
   }).description('Número de telefone Twilio'),
+  TWILIO_VERIFY_SERVICE_SID: Joi.string().when('SMS_SERVICE_PROVIDER', { // Nova variável para Twilio Verify
+    is: 'TWILIO',
+    then: Joi.string().required(),
+    otherwise: Joi.optional(),
+  }).description('Twilio Verify Service SID'),
 
   // NOVAS VARIÁVEIS DE AMBIENTE: Geocoding Service
   GEOCODING_API_PROVIDER: Joi.string().optional().description('Provedor da API de geocodificação (ex: GOOGLE_MAPS, OPENSTREETMAP)'),

@@ -17,5 +17,8 @@ gcloud run deploy limpeja-app-backend `
   --set-env-vars GCS_PROJECT_ID=semiotic-anvil-461613-c0 `
   --set-env-vars GCS_BUCKET_NAME=upload-semiotic-anvil-448955 `
   --set-env-vars THIRD_PARTY_FACEMATCH_API_URL=https://api.gw.cellereit.com.br/facematch `
-  --set-env-vars THIRD_PARTY_FACEMATCH_API_KEY=eyJhbGciOiJSUzI1NiIsInR5cCIg… `
+  --set-env-vars THIRD_PARTY_FACEMATCH_API_KEY=eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIzS1dxVWt4U2pTSDc5OUxnc3cyX0htRFozZDlkVzZoNmtsVGx2Q2t2dkdzIn0 `
+  --set-env-vars TWILIO_ACCOUNT_SID=ACdc1ef73d506e5a1c19eb726580d317da `
+  --set-env-vars TWILIO_AUTH_TOKEN=cba161521d5c3543d96a214ead9a7345 `
+  --set-env-vars TWILIO_VERIFY_SERVICE_SID=VAf0cd7b20906227ecc9dcee93729b50e5 `
   --update-secrets GCS_KEY=limpeja-gcs-key-for-build:latest
