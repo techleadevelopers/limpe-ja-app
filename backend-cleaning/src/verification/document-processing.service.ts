@@ -29,15 +29,29 @@ export class DocumentProcessingService {
 
     let credentialsJson: any;
     try {
+      // --- NOVOS LOGS AQUI ---
       this.logger.log(`Conteúdo GCS_KEY recebido (primeiros 50 caracteres): ${keyFileContentBase64.substring(0, 50)}...`);
+      this.logger.log(`Comprimento da GCS_KEY recebida (Base64): ${keyFileContentBase64.length}`);
+      // Mostra os últimos 50 caracteres da string Base64 para verificar o final
+      this.logger.log(`Conteúdo GCS_KEY recebido (últimos 50 caracteres): ...${keyFileContentBase64.substring(keyFileContentBase64.length - 50)}`);
+      // --- FIM DOS NOVOS LOGS ---
       
       const decodedKeyContent = Buffer.from(keyFileContentBase64, 'base64').toString('utf8');
       
+      // --- NOVOS LOGS AQUI ---
       this.logger.log(`Conteúdo decodificado (primeiros 50 caracteres): ${decodedKeyContent.substring(0, 50)}...`);
+      this.logger.log(`Comprimento do conteúdo decodificado (JSON): ${decodedKeyContent.length}`);
+      // Mostra os últimos 50 caracteres do conteúdo decodificado para verificar o final
+      this.logger.log(`Conteúdo decodificado (últimos 50 caracteres): ...${decodedKeyContent.substring(decodedKeyContent.length - 50)}`);
+      // --- FIM DOS NOVOS LOGS ---
       
       if (!decodedKeyContent.trim().startsWith('{') || !decodedKeyContent.trim().endsWith('}')) {
         this.logger.error('Conteúdo decodificado não parece ser JSON válido (não começa ou termina com chaves).');
-        this.logger.error(`Conteúdo decodificado completo (truncado para 500 chars se não for JSON): ${decodedKeyContent.substring(0, 500)}...`);
+        // --- LOGS MAIS DETALHADOS AQUI ---
+        this.logger.error(`Conteúdo decodificado completo (primeiros 500 chars): ${decodedKeyContent.substring(0, 500)}...`);
+        // Mostra o final da string decodificada para ver onde ela termina
+        this.logger.error(`Conteúdo decodificado completo (últimos 500 chars): ...${decodedKeyContent.substring(Math.max(0, decodedKeyContent.length - 500))}`);
+        // --- FIM DOS LOGS MAIS DETALHADOS ---
         throw new Error('Conteúdo decodificado não é um JSON válido.');
       }
 
@@ -52,6 +66,8 @@ export class DocumentProcessingService {
         try {
           const problematicDecodedContent = Buffer.from(keyFileContentBase64, 'base64').toString('utf8');
           this.logger.error(`Conteúdo decodificado ANTES do parse (truncado, para depuração): ${problematicDecodedContent.substring(0, 200)}...`);
+          // Adicionado log para o final do conteúdo problemático
+          this.logger.error(`Conteúdo decodificado ANTES do parse (últimos 200 chars, para depuração): ...${problematicDecodedContent.substring(Math.max(0, problematicDecodedContent.length - 200))}`);
         } catch (decodeError) {
           this.logger.error(`Erro ao tentar re-decodificar para log: ${decodeError.message}`);
         }

@@ -1,3 +1,4 @@
+// validation-schema.ts
 import * as Joi from 'joi';
 
 export const validationSchema = Joi.object({
@@ -6,6 +7,9 @@ export const validationSchema = Joi.object({
   DATABASE_URL: Joi.string().required(),
   JWT_SECRET: Joi.string().required(),
   JWT_EXPIRATION_TIME: Joi.string().required(),
+
+  // URL base da sua aplicação (necessária para webhooks, ex: PagSeguro)
+  APP_BASE_URL: Joi.string().uri().required().description('URL base da aplicação para webhooks e redirecionamentos.'),
 
   // Variáveis de ambiente para Google Cloud Storage (GCS)
   GCS_PROJECT_ID: Joi.string().required().description('Google Cloud Project ID'),
@@ -80,4 +84,8 @@ export const validationSchema = Joi.object({
     then: Joi.string().required(),
     otherwise: Joi.optional(),
   }).description('URL do Nominatim para OpenStreetMap'),
+
+  // NOVAS VARIÁVEIS DE AMBIENTE: PagSeguro
+  PAGSEGURO_API_TOKEN: Joi.string().required().description('Token da API do PagSeguro'),
+  PAGSEGURO_API_BASE_URL: Joi.string().uri().required().description('URL base da API do PagSeguro (sandbox ou produção)'),
 });

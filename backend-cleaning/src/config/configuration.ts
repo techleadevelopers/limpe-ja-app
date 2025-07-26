@@ -1,3 +1,4 @@
+// configuration.ts
 export default () => ({
   port: parseInt(process.env.PORT, 10) || 3000,
   databaseUrl: process.env.DATABASE_URL,
@@ -5,6 +6,8 @@ export default () => ({
     secret: process.env.JWT_SECRET,
     expirationTime: process.env.JWT_EXPIRATION_TIME,
   },
+  // Adicionando a URL base da aplicação
+  appBaseUrl: process.env.APP_BASE_URL,
   googleCloudStorage: {
     projectId: process.env.GCS_PROJECT_ID,
     keyFile: process.env.GCS_KEY,
@@ -41,5 +44,10 @@ export default () => ({
     provider: process.env.GEOCODING_API_PROVIDER,
     googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
     openStreetMapNominatimUrl: process.env.OPENSTREETMAP_NOMINATIM_URL,
+  },
+  // NOVAS CONFIGURAÇÕES: PagSeguro
+  pagseguro: {
+    apiToken: process.env.PAGSEGURO_API_TOKEN,
+    apiBaseUrl: process.env.PAGSEGURO_API_BASE_URL,
   },
 });

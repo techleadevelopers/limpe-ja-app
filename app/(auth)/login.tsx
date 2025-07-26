@@ -29,7 +29,7 @@ import AnimatedReanimated, {
     withTiming,
 } from 'react-native-reanimated';
 
-import AuthService from '../../services/authService'; // Importação correta: AuthService com 'A' maiúsculo
+import AuthService from '../../services/authService';
 
 const LOGO_IMAGE = require('../../assets/images/logo2.png');
 
@@ -43,11 +43,11 @@ import { InputWithIcon } from '../../components/auth/components/InputWithIcon';
 export default function LoginScreen() {
     const [phoneNumber, setPhoneNumber] = useState('');
     const [otpCode, setOtpCode] = useState('');
-    const [password, setPassword] = useState(''); // NOVO: Estado para a senha
-    // NOVO: Estado para controlar o fluxo de login
+    const [password, setPassword] = useState('');
+    // Altera o estado inicial do fluxo de login para 'phoneInput' para iniciar a verificação
     const [loginFlowStep, setLoginFlowStep] = useState<'phoneInput' | 'otpInput' | 'passwordInput'>('phoneInput');
-    const [otpLoading, setOtpLoading] = useState(false);
-    const [otpErrorMessage, setOtpErrorMessage] = useState<string | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [timer, setTimer] = useState(0);
 
     const { isAuthenticated, isLoading: authIsLoading, user, login, setAuthData } = useAuth();
@@ -66,9 +66,13 @@ export default function LoginScreen() {
         };
 
         if (!authIsLoading && isAuthenticated) {
+            console.log('[LoginScreen] Usuário autenticado, redirecionando...');
+            // O redirecionamento após o login bem-sucedido para usuários existentes
+            // (onde isNewUser é false ou indefinido) ainda será feito aqui.
             const targetRoute = user?.role === UserRole.CLIENT ? '/(client)/explore' : user?.role === UserRole.PROVIDER ? '/(provider)/dashboard' : '/';
             router.replace(targetRoute as any);
         } else if (!isAuthenticated) {
+            console.log('[LoginScreen] Usuário não autenticado, mostrando tela de login.');
             Animated.parallel([
                 Animated.timing(mainElementsOpacity, { toValue: 1, duration: 700, delay: 200, useNativeDriver: true }),
                 Animated.timing(mainElementsTranslateY, { toValue: 0, duration: 700, delay: 200, useNativeDriver: true })
@@ -102,157 +106,129 @@ export default function LoginScreen() {
         };
     });
 
-    // --- FUNÇÃO handlePhoneSubmit (AGORA USA O NOVO BACKEND PARA VERIFICAR E ENVIAR OTP) ---
+    // MODIFICAÇÃO PRINCIPAL AQUI: handlePhoneSubmit
     const handlePhoneSubmit = async () => {
         const cleanPhone = phoneNumber.replace(/\D/g, '');
-        const fullPhoneNumber = cleanPhone.startsWith('+') ? cleanPhone : `+55${cleanPhone}`;
+        console.log('[LoginScreen] handlePhoneSubmit: Número de telefone limpo (do input):', cleanPhone);
 
-        if (!cleanPhone || cleanPhone.length < 10) { // Ajuste o comprimento mínimo conforme seu país
-            setOtpErrorMessage('Por favor, insira um número de telefone válido (com DDD).');
+        if (cleanPhone.length !== 11) {
+            setErrorMessage('O número de telefone deve ter 11 dígitos (incluindo o DDD).');
             return;
         }
 
-        setOtpLoading(true);
-        setOtpErrorMessage(null);
+        setLoading(true);
+        setErrorMessage(null);
 
         try {
-            // CORREÇÃO: Usando AuthService com 'A' maiúsculo
-            const { exists } = await AuthService.checkPhoneNumberExistence(fullPhoneNumber);
+            console.log('[LoginScreen] handlePhoneSubmit: Verificando existência do telefone...');
+            // Primeiro, verifica se o número de telefone já existe no backend
+            const { exists, hasPassword } = await AuthService.checkPhoneNumberExistence(cleanPhone);
+            console.log(`[LoginScreen] handlePhoneSubmit: Telefone existe: ${exists}, Tem senha: ${hasPassword}`);
 
             if (exists) {
-                Alert.alert(
-                    "Usuário Existente",
-                    "Este número já está cadastrado. Deseja entrar com senha ou receber um código SMS?",
-                    [
-                        {
-                            text: "Usar Senha",
-                            onPress: () => {
-                                setLoginFlowStep('passwordInput');
-                                setOtpLoading(false);
-                                setOtpErrorMessage(null);
-                            },
-                        },
-                        {
-                            text: "Receber SMS",
-                            onPress: async () => {
-                                // CORREÇÃO: Usando AuthService com 'A' maiúsculo
-                                await AuthService.requestOtp(fullPhoneNumber);
-                                setLoginFlowStep('otpInput');
-                                setOtpLoading(false);
-                                setOtpErrorMessage(null);
-                                setTimer(60);
-                                Alert.alert('Código Enviado', `Um código de verificação foi enviado para ${formatPhoneNumber(phoneNumber)}.`);
-                            },
-                        },
-                    ]
-                );
+                if (hasPassword) {
+                    // Se o número existe e tem senha, pede a senha
+                    setLoginFlowStep('passwordInput');
+                    Alert.alert('Usuário Existente', 'Este número já está cadastrado. Por favor, insira sua senha para continuar.');
+                } else {
+                    // Se o número existe mas NÃO tem senha (cadastrado via OTP sem senha inicial),
+                    // envia OTP para login
+                    console.log('[LoginScreen] handlePhoneSubmit: Usuário existente sem senha, solicitando OTP para login.');
+                    await AuthService.requestOtp(cleanPhone);
+                    setLoginFlowStep('otpInput');
+                    setTimer(60);
+                    Alert.alert('Código Enviado', `Um código de verificação foi enviado para ${formatPhoneNumber(phoneNumber)}.`);
+                }
             } else {
-                Alert.alert(
-                    "Novo Usuário",
-                    "Este número não está cadastrado. Deseja registrar-se com ele?",
-                    [
-                        {
-                            text: "Não",
-                            style: "cancel",
-                            onPress: () => {
-                                setOtpLoading(false);
-                                setOtpErrorMessage('Registro cancelado.');
-                            },
-                        },
-                        {
-                            text: "Sim",
-                            onPress: async () => {
-                                // CORREÇÃO: Usando AuthService com 'A' maiúsculo
-                                await AuthService.requestOtp(fullPhoneNumber);
-                                setLoginFlowStep('otpInput');
-                                setOtpLoading(false);
-                                setOtpErrorMessage(null);
-                                setTimer(60);
-                                Alert.alert("Sucesso", `Código SMS enviado para ${formatPhoneNumber(phoneNumber)} para registro.`);
-                            },
-                        },
-                    ]
-                );
+                // Se o número NÃO existe, envia OTP para registro
+                console.log('[LoginScreen] handlePhoneSubmit: Novo usuário, solicitando OTP para registro.');
+                await AuthService.requestOtp(cleanPhone);
+                setLoginFlowStep('otpInput');
+                setTimer(60);
+                Alert.alert('Código Enviado', `Um código de verificação foi enviado para ${formatPhoneNumber(phoneNumber)}. Você será direcionado para o cadastro.`);
+            }
+        } catch (error: any) {
+            console.error('[LoginScreen] handlePhoneSubmit: Erro no fluxo de telefone:', error.message, error);
+            setErrorMessage(error.response?.data?.message || error.message || 'Ocorreu um erro ao verificar o telefone. Tente novamente.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleOtpSubmit = async () => {
+        if (!otpCode || otpCode.length !== 6) {
+            setErrorMessage('Por favor, insira o código de 6 dígitos.');
+            return;
+        }
+
+        setLoading(true);
+        setErrorMessage(null);
+
+        try {
+            const cleanPhone = phoneNumber.replace(/\D/g, '');
+            console.log('[LoginScreen] handleOtpSubmit: Verificando OTP para', cleanPhone, 'com código:', otpCode);
+            
+            // AQUI ESTÁ A MUDANÇA CRÍTICA: Captura a resposta do login, que agora incluirá isNewUser
+            const authResponse = await login({ phoneNumber: cleanPhone, otpCode: otpCode, type: 'otp' });
+            console.log('[LoginScreen] handleOtpSubmit: OTP verificado e login realizado. isNewUser:', authResponse?.isNewUser); // Log da flag
+
+            if (authResponse && authResponse.isNewUser) {
+                // Se for um novo usuário, redireciona para as opções de registro/cadastro completo
+                Alert.alert('Sucesso!', 'Código verificado. Vamos completar seu cadastro!');
+                router.replace('/(auth)/register-options' as any); // Redireciona para RegisterOptions
+            } else {
+                // Se não for um novo usuário (já existente), o redirecionamento
+                // será tratado pelo useEffect de useAuth (para explore/dashboard)
+                Alert.alert('Sucesso!', 'Login realizado com sucesso!');
+                // Não há necessidade de redirecionar explicitamente aqui se o useEffect de useAuth já faz isso.
+                // O _layout.tsx já tem a lógica para redirecionar usuários autenticados para a rota correta baseada no papel.
             }
 
         } catch (error: any) {
-            console.error('Erro no fluxo de telefone:', error);
-            setOtpErrorMessage(error.message || 'Ocorreu um erro. Tente novamente.');
+            console.error('[LoginScreen] handleOtpSubmit: Erro ao verificar OTP:', error.message, error);
+            setErrorMessage(error.message || 'Código OTP inválido ou expirado. Tente novamente.');
         } finally {
-            setOtpLoading(false);
+            setLoading(false);
         }
     };
 
-    // --- FUNÇÃO handleOtpSubmit (USA O NOVO BACKEND PARA VERIFICAR OTP) ---
-    const handleOtpSubmit = async () => {
-        if (!otpCode || otpCode.length < 6) {
-            setOtpErrorMessage('Por favor, insira o código de 6 dígitos.');
-            return;
-        }
-
-        setOtpLoading(true);
-        setOtpErrorMessage(null);
-
-        try {
-            const cleanPhone = phoneNumber.replace(/\D/g, '');
-            const fullPhoneNumber = cleanPhone.startsWith('+') ? cleanPhone : `+55${cleanPhone}`;
-
-            // Chama o método de login do AuthContext, que por sua vez chama o AuthService.verifyOtp
-            await login({ phoneNumber: fullPhoneNumber, otpCode: otpCode, type: 'otp' });
-
-            Alert.alert('Sucesso!', 'Login realizado com sucesso!');
-
-        } catch (error: any) {
-            console.error('Erro ao verificar OTP com backend:', error);
-            setOtpErrorMessage(error.message || 'Código OTP inválido ou expirado. Tente novamente.');
-        } finally {
-            setOtpLoading(false);
-        }
-    };
-
-    // --- NOVA FUNÇÃO handlePasswordSubmit (PARA LOGIN COM SENHA) ---
     const handlePasswordSubmit = async () => {
         if (!password) {
-            setOtpErrorMessage('Por favor, insira sua senha.');
+            setErrorMessage('Por favor, insira sua senha.');
             return;
         }
 
-        setOtpLoading(true);
-        setOtpErrorMessage(null);
+        setLoading(true);
+        setErrorMessage(null);
 
         try {
             const cleanPhone = phoneNumber.replace(/\D/g, '');
-            const fullPhoneNumber = cleanPhone.startsWith('+') ? cleanPhone : `+55${cleanPhone}`;
-
-            // Chama o método de login do AuthContext, que por sua vez chama o AuthService.loginWithPassword
-            await login({ phoneNumber: fullPhoneNumber, password: password, type: 'password' });
+            console.log('[LoginScreen] handlePasswordSubmit: Tentando login com senha para', cleanPhone);
+            // Chama o método login do AuthContext com o tipo 'password'
+            await login({ phoneNumber: cleanPhone, password: password, type: 'password' });
 
             Alert.alert('Sucesso!', 'Login realizado com sucesso!');
-
+            // O redirecionamento para usuários existentes será tratado pelo useEffect de useAuth no _layout.tsx
         } catch (error: any) {
-            console.error('Erro ao fazer login com senha:', error);
-            setOtpErrorMessage(error.message || 'Credenciais inválidas. Tente novamente.');
+            console.error('Erro ao fazer login com senha:', error.message, error);
+            setErrorMessage(error.response?.data?.message || error.message || 'Credenciais inválidas. Tente novamente.');
         } finally {
-            setOtpLoading(false);
+            setLoading(false);
         }
     };
 
-    // --- FUNÇÃO handleResendOtp (USA O NOVO BACKEND NOVAMENTE) ---
     const handleResendOtp = async () => {
         if (timer > 0) return;
 
-        setOtpLoading(true);
-        setOtpErrorMessage(null);
+        setLoading(true);
+        setErrorMessage(null);
 
         try {
             const cleanPhone = phoneNumber.replace(/\D/g, '');
-            const fullPhoneNumber = cleanPhone.startsWith('+') ? cleanPhone : `+55${cleanPhone}`;
-
-            // CORREÇÃO: Usando AuthService com 'A' maiúsculo
-            await AuthService.requestOtp(fullPhoneNumber);
+            console.log('[LoginScreen] handleResendOtp: Reenviando OTP para:', cleanPhone);
+            await AuthService.requestOtp(cleanPhone);
 
             setTimer(60);
-
             const interval = setInterval(() => {
                 setTimer(prev => {
                     if (prev <= 1) {
@@ -264,12 +240,11 @@ export default function LoginScreen() {
             }, 1000);
 
             Alert.alert('SMS Reenviado', 'Um novo código foi enviado para seu telefone.');
-
         } catch (error: any) {
-            console.error('Erro ao reenviar SMS:', error);
-            setOtpErrorMessage(error.message || 'Erro ao reenviar código. Tente novamente.');
+            console.error('Erro ao reenviar SMS:', error.message, error);
+            setErrorMessage(error.response?.data?.message || error.message || 'Erro ao reenviar código. Tente novamente.');
         } finally {
-            setOtpLoading(false);
+            setLoading(false);
         }
     };
 
@@ -344,21 +319,20 @@ export default function LoginScreen() {
                                 value={phoneNumber}
                                 onChangeText={(text: string) => {
                                     setPhoneNumber(formatPhoneNumber(text));
-                                    if (otpErrorMessage) setOtpErrorMessage(null);
+                                    if (errorMessage) setErrorMessage(null);
                                 }}
                                 keyboardType="phone-pad"
                                 maxLength={15}
                             />
                         )}
-
                         {loginFlowStep === 'otpInput' && (
                             <InputWithIcon
-                                iconName="lock-closed-outline"
+                                iconName="mail-outline"
                                 placeholder="Código de 6 dígitos"
                                 value={otpCode}
                                 onChangeText={(text: string) => {
                                     setOtpCode(text);
-                                    if (otpErrorMessage) setOtpErrorMessage(null);
+                                    if (errorMessage) setErrorMessage(null);
                                 }}
                                 keyboardType="numeric"
                                 maxLength={6}
@@ -366,7 +340,6 @@ export default function LoginScreen() {
                                 style={styles.otpInput}
                             />
                         )}
-
                         {loginFlowStep === 'passwordInput' && (
                             <InputWithIcon
                                 iconName="lock-closed-outline"
@@ -374,17 +347,15 @@ export default function LoginScreen() {
                                 value={password}
                                 onChangeText={(text: string) => {
                                     setPassword(text);
-                                    if (otpErrorMessage) setOtpErrorMessage(null);
+                                    if (errorMessage) setErrorMessage(null);
                                 }}
                                 secureTextEntry={true}
                             />
                         )}
-
-                        <AnimatedErrorMessage message={otpErrorMessage} isVisible={!!otpErrorMessage} centered={true} />
-
+                        <AnimatedErrorMessage message={errorMessage} isVisible={!!errorMessage} centered={true} />
                         <Animated.View style={{ transform: [{ scale: signInButtonAnims.scaleAnim }] }}>
                             <TouchableOpacity
-                                style={[styles.signInButton, otpLoading && styles.buttonDisabled]}
+                                style={[styles.signInButton, loading && styles.buttonDisabled]}
                                 onPress={
                                     loginFlowStep === 'phoneInput' ? handlePhoneSubmit :
                                     loginFlowStep === 'otpInput' ? handleOtpSubmit :
@@ -392,9 +363,9 @@ export default function LoginScreen() {
                                 }
                                 onPressIn={signInButtonAnims.onPressIn}
                                 onPressOut={signInButtonAnims.onPressOut}
-                                disabled={otpLoading}
+                                disabled={loading}
                             >
-                                {otpLoading ? (
+                                {loading ? (
                                     <ActivityIndicator color="#FFFFFF" />
                                 ) : (
                                     <Text style={styles.signInButtonText}>
@@ -412,20 +383,20 @@ export default function LoginScreen() {
                                     style={styles.backButton}
                                     onPress={() => {
                                         setLoginFlowStep('phoneInput');
-                                        setOtpErrorMessage(null);
+                                        setErrorMessage(null);
                                         setTimer(0);
                                         setPassword('');
                                         setOtpCode('');
+                                        console.log('[LoginScreen] Voltou para input de telefone.');
                                     }}
                                 >
                                     <Text style={styles.backButtonText}>Voltar</Text>
                                 </TouchableOpacity>
-
                                 {loginFlowStep === 'otpInput' && (
                                     <TouchableOpacity
                                         style={[styles.resendButton, timer > 0 && styles.resendButtonDisabled]}
                                         onPress={handleResendOtp}
-                                        disabled={timer > 0 || otpLoading}
+                                        disabled={timer > 0 || loading}
                                     >
                                         <Text style={[styles.resendButtonText, timer > 0 && styles.resendButtonTextDisabled]}>
                                             {timer > 0 ? `Reenviar em ${timer}s` : 'Reenviar código'}
@@ -444,7 +415,6 @@ export default function LoginScreen() {
                             </TouchableOpacity>
                         </Link>
                     </View>
-
                     <View style={styles.forgotPasswordContainer}>
                         <Link href="/(auth)/forgot-password" asChild>
                             <TouchableOpacity>

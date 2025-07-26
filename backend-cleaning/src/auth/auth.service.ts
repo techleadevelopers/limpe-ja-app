@@ -1,3 +1,4 @@
+// src/auth/auth.service.ts
 import { Injectable, UnauthorizedException, ConflictException, BadRequestException, Logger, InternalServerErrorException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
@@ -7,12 +8,12 @@ import { RegisterProviderDto } from './dto/register-provider.dto';
 import { UserRole, User, Prisma, Client, Provider, Address, ProviderService, Service, Review, VerificationStatus, Booking } from '@prisma/client';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { UserProfileDto } from '../users/dto/user-profile.dto';
-// REMOVIDO: import * as admin from 'firebase-admin';
 import { ProvidersService, ProviderWithIncludes, ProviderWithCalculatedRating } from '../providers/providers.service';
 import { ClientWithIncludes } from '../users/dto/user-profile.dto';
 import { EmailService } from '../common/services/email.service';
 import { GeocodingService } from '../common/services/geocoding.service';
 import { SmsService } from '../sms/sms.service'; // NOVO: Importa o SmsService
+import { ConfigService } from '@nestjs/config'; // Para acessar JWT_EXPIRATION_TIME
 
 // Tipo Auxiliar: UserWithAllRelations (mantido)
 export type UserWithAllRelations = User & {
@@ -28,6 +29,11 @@ export type UserWithAllRelations = User & {
   provider?: ProviderWithIncludes | null; // Usar ProviderWithIncludes atualizado
 };
 
+// NOVO: Interface para o retorno do verifyOtp
+interface VerifyOtpResponse extends AuthResponseDto {
+  isNewUser: boolean;
+}
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -39,6 +45,7 @@ export class AuthService {
     private emailService: EmailService,
     private geocodingService: GeocodingService,
     private smsService: SmsService, // NOVO: Injeta o SmsService
+    private configService: ConfigService, // Injeta ConfigService para JWT_EXPIRATION_TIME
   ) {}
 
   // validateUser (email/password) - Mantido
@@ -96,7 +103,8 @@ export class AuthService {
     }
 
     const payload = { email: fullUser.email, sub: fullUser.id, role: fullUser.role };
-    const accessToken = this.jwtService.sign(payload);
+    const expiresIn = this.configService.get<string>('jwt.expirationTime'); // Acessando do config.ts
+    const accessToken = this.jwtService.sign(payload, { expiresIn });
 
     let mappedProvider: ProviderWithCalculatedRating | undefined;
     if (fullUser.provider) {
@@ -153,7 +161,7 @@ export class AuthService {
           phone: phone || null,
           passwordHash: hashedPassword,
           role: UserRole.CLIENT,
-          isPhoneVerified: !!phone, // Marca como verificado se o telefone foi fornecido no registro
+          isPhoneVerified: !!phone, // Marca como verificado se o telefone foi fornecido no registro (ajustar se quiser forçar verificação por OTP)
           client: {
             create: {
               fullName,
@@ -254,7 +262,7 @@ export class AuthService {
           phone: phone || null,
           passwordHash: hashedPassword,
           role: UserRole.PROVIDER,
-          isPhoneVerified: !!phone, // Marca como verificado se o telefone foi fornecido no registro
+          isPhoneVerified: !!phone, // Marca como verificado se o telefone foi fornecido no registro (ajustar se quiser forçar verificação por OTP)
           provider: {
             create: {
               fullName,
@@ -334,7 +342,9 @@ export class AuthService {
     }
 
     const resetToken = this.jwtService.sign({ userId: user.id }, { expiresIn: '1h' });
-    const resetLink = `http://seu-app.com/reset-password?token=${resetToken}`;
+    // Use a APP_BASE_URL do ConfigService para construir o link
+    const appBaseUrl = this.configService.get<string>('appBaseUrl');
+    const resetLink = `${appBaseUrl}/reset-password?token=${resetToken}`;
 
     try {
       await this.emailService.sendEmail(
@@ -371,81 +381,103 @@ export class AuthService {
     }
   }
 
-  // REMOVIDO: verifyFirebaseIdToken
-  // async verifyFirebaseIdToken(idToken: string): Promise<AuthResponseDto> { ... }
-
   // NOVO: Verifica se o número de telefone existe e se tem senha
   async checkPhoneNumberExistence(phoneNumber: string): Promise<{ exists: boolean; hasPassword?: boolean }> {
     const user = await this.prisma.user.findUnique({ where: { phone: phoneNumber } });
     return { exists: !!user, hasPassword: !!user?.passwordHash };
   }
 
-  // NOVO: Envia OTP para o número de telefone
+  // NOVO: Envia OTP para o número de telefone usando Twilio Verify
   async sendOtp(phoneNumber: string): Promise<void> {
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString(); // OTP de 6 dígitos
-    const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // Expira em 5 minutos
+    this.logger.log(`[AuthService] Recebida solicitação para enviar OTP para: ${phoneNumber}`);
 
-    let user = await this.prisma.user.findUnique({ where: { phone: phoneNumber } });
+    // Formatar o número para E.164 se necessário. Ex: de 19993388983 para +5519993388983
+    const formattedPhoneNumber = this.formatPhoneNumberToE164(phoneNumber);
 
-    if (user) {
-      // Atualiza usuário existente com novo OTP
-      await this.prisma.user.update({
-        where: { id: user.id },
-        data: { otpCode, otpExpiresAt },
-      });
-    } else {
-      // Cria um usuário temporário se não existir (será totalmente registrado depois)
-      user = await this.prisma.user.create({
-        data: {
-          phone: phoneNumber,
-          role: UserRole.CLIENT, // Papel padrão para novos usuários via telefone
-          otpCode,
-          otpExpiresAt,
-          email: `temp_${Date.now()}@limpeja.com`, // E-mail placeholder
-          passwordHash: null, // Sem senha inicialmente
-          isPhoneVerified: false, // Não verificado até o OTP ser confirmado
-        },
-      });
+    // Validação básica do número antes de enviar para o Twilio
+    if (!formattedPhoneNumber || formattedPhoneNumber.length < 10) {
+      throw new BadRequestException('Número de telefone inválido.');
     }
 
-    const message = `Seu código de verificação LimpeJá é: ${otpCode}. Ele expira em 5 minutos.`;
     try {
-      await this.smsService.sendSms(phoneNumber, message);
-      this.logger.log(`OTP enviado para ${phoneNumber}`);
+      // O Twilio Verify Service gera e envia o OTP. Não precisamos armazená-lo localmente.
+      await this.smsService.startVerification(formattedPhoneNumber, 'sms');
+      this.logger.log(`[AuthService] Solicitação de OTP enviada ao Twilio para ${formattedPhoneNumber}.`);
     } catch (error) {
-      this.logger.error(`Falha ao enviar SMS de OTP para ${phoneNumber}: ${error.message}`);
+      this.logger.error(`[AuthService] Falha ao iniciar verificação OTP para ${formattedPhoneNumber}: ${error.message}`, error.stack);
+      // Erros do Twilio podem ser mais específicos, mas para o usuário final, uma mensagem genérica é melhor.
       throw new InternalServerErrorException('Falha ao enviar o código OTP. Tente novamente.');
     }
   }
 
-  // NOVO: Verifica o OTP e realiza o login/registro
+  // NOVO: Verifica o OTP e realiza o login/registro usando Twilio Verify
   async verifyOtp(phoneNumber: string, otpCode: string): Promise<AuthResponseDto> {
-    const user = await this.prisma.user.findUnique({ where: { phone: phoneNumber } });
+    this.logger.log(`[AuthService] Recebida solicitação para verificar OTP para: ${phoneNumber} com código: ${otpCode}`);
+    const formattedPhoneNumber = this.formatPhoneNumberToE164(phoneNumber);
 
-    if (!user) {
-      throw new UnauthorizedException('Número de telefone não registrado.');
+    if (!formattedPhoneNumber || !otpCode || otpCode.length === 0) {
+      throw new BadRequestException('Número de telefone ou código OTP inválido.');
     }
 
-    if (user.otpCode !== otpCode || user.otpExpiresAt < new Date()) {
-      // Invalida o OTP em caso de falha para evitar reuso
-      await this.prisma.user.update({
-        where: { id: user.id },
-        data: { otpCode: null, otpExpiresAt: null },
-      });
-      throw new UnauthorizedException('Código OTP inválido ou expirado.');
+    try {
+      // Verifica o OTP com o Twilio Verify Service
+      const isVerified = await this.smsService.checkVerification(formattedPhoneNumber, otpCode);
+
+      if (!isVerified) {
+        throw new UnauthorizedException('Código OTP inválido ou expirado.');
+      }
+
+      let user = await this.prisma.user.findUnique({ where: { phone: formattedPhoneNumber } });
+      let isNewUser = false; // Flag para indicar se o usuário é novo
+
+      if (!user) {
+        // Se o usuário não existe, crie um novo usuário com o número de telefone.
+        // O `isPhoneVerified` é definido como true aqui, pois o OTP foi validado.
+        user = await this.prisma.user.create({
+          data: {
+            phone: formattedPhoneNumber,
+            role: UserRole.CLIENT, // Papel padrão para novos usuários via telefone
+            isPhoneVerified: true, // Telefone verificado via OTP
+            email: `temp_${Date.now()}@limpeja.com`, // Email placeholder, pode ser atualizado depois
+            passwordHash: null, // Sem senha inicialmente, autenticado por OTP
+          },
+        });
+        this.logger.log(`[AuthService] Novo usuário criado via OTP: ${formattedPhoneNumber}`);
+        isNewUser = true; // Define como novo usuário
+      } else {
+        // Se o usuário existe, apenas atualize o status de verificação do telefone se ainda não estiver verificado
+        if (!user.isPhoneVerified) {
+          await this.prisma.user.update({
+            where: { id: user.id },
+            data: { isPhoneVerified: true },
+          });
+          user.isPhoneVerified = true; // Atualiza o objeto user em memória
+        }
+        this.logger.log(`[AuthService] Usuário existente logado via OTP: ${formattedPhoneNumber}`);
+        isNewUser = false; // Define como usuário existente
+      }
+
+      // Gera a resposta de autenticação (token e perfil do usuário)
+      const authResponse = await this.login(user); // Reutiliza a lógica de login existente
+
+      // Retorna a AuthResponse junto com a flag isNewUser
+      return {
+        ...authResponse,
+        isNewUser: isNewUser,
+      };
+
+    } catch (error) {
+      this.logger.error(`[AuthService] Falha ao verificar OTP para ${formattedPhoneNumber}: ${error.message}`, error.stack);
+      if (error instanceof UnauthorizedException || error instanceof BadRequestException) {
+        throw error; // Re-lança exceções específicas
+      }
+      throw new InternalServerErrorException('Falha na verificação do OTP. Por favor, tente novamente.');
     }
-
-    // Invalida o OTP após uso bem-sucedido
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: { otpCode: null, otpExpiresAt: null, isPhoneVerified: true },
-    });
-
-    return this.login(user);
   }
 
   // NOVO: Login com número de telefone e senha
   async loginWithPhoneNumberAndPassword(phoneNumber: string, password: string): Promise<AuthResponseDto> {
+    this.logger.log(`[AuthService] Tentando login com telefone e senha para: ${phoneNumber}`);
     const user = await this.prisma.user.findUnique({ where: { phone: phoneNumber } });
 
     if (!user || !user.passwordHash) {
@@ -458,5 +490,36 @@ export class AuthService {
     }
 
     return this.login(user);
+  }
+
+  // Função auxiliar para formatar o número de telefone para E.164
+  private formatPhoneNumberToE164(phoneNumber: string): string {
+    // Remove caracteres não numéricos
+    let cleaned = phoneNumber.replace(/\D/g, '');
+
+    // Adiciona o código do país se não estiver presente.
+    // Assumindo Brasil (+55) para números de 11 dígitos (DDD + 9 + 8 dígitos)
+    // ou 10 dígitos (DDD + 8 dígitos)
+    // Esta lógica pode precisar ser mais robusta dependendo dos países suportados
+    if (cleaned.length === 11 && cleaned.startsWith('1')) { // Ex: 11999999999
+      return `+55${cleaned}`;
+    }
+    if (cleaned.length === 10 && cleaned.startsWith('1')) { // Ex: 1188888888
+      return `+55${cleaned}`;
+    }
+    // Se já começar com +, assume que está no formato correto
+    if (cleaned.startsWith('+')) {
+      return cleaned;
+    }
+    // Caso contrário, tenta adicionar o +55 se for um número brasileiro sem o 9 inicial (antigo formato)
+    // ou se for um número com DDD e 9 dígitos (novo padrão)
+    if (cleaned.length >= 10 && cleaned.length <= 11) { // Ex: 11999999999 ou 1133333333
+        // Heurística simples: se não tem + e parece um número local, adiciona +55
+        return `+55${cleaned}`;
+    }
+
+    // Retorna o número limpo se nenhuma regra se aplicar (pode ser um número internacional já formatado ou inválido)
+    // Ou você pode lançar um erro se o formato não for reconhecido como E.164
+    return cleaned;
   }
 }

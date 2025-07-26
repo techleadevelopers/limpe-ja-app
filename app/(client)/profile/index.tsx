@@ -12,19 +12,19 @@ import {
     Animated, // Importar Animated para animações
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { useAuth } from '../../../hooks/useAuth';
+// CORREÇÃO: Importa useAuth diretamente de AuthContext.tsx
+import { useAuth } from '../../../contexts/AuthContext'; 
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'; // Para ícones
 
-// << Definição local para User, idealmente importada ou o tipo de useAuth().user já incluiria avatarUrl >>
-// << Se você tem um tipo User global, certifique-se que ele inclua avatarUrl?: string; >>
-interface UserWithAvatar {
-    id?: string;
-    name?: string;
-    email?: string;
-    phone?: string;
-    role?: 'client' | 'provider' | null;
-    avatarUrl?: string;
-}
+// REMOVIDO: Esta interface local não é mais necessária se UserProfile for usado corretamente.
+// interface UserWithAvatar {
+//     id?: string;
+//     name?: string;
+//     email?: string;
+//     phone?: string;
+//     role?: 'client' | 'provider' | null;
+//     avatarUrl?: string;
+// }
 
 // Componente MenuItem com animações de entrada e feedback de toque
 const AnimatedMenuItem: React.FC<{
@@ -102,7 +102,8 @@ const AnimatedMenuItem: React.FC<{
 };
 
 export default function ClientProfileScreen() {
-    const { user, signOut } = useAuth();
+    // Desestruturação direta de user e logout do useAuth
+    const { user, logout } = useAuth(); // CORREÇÃO: useAuth() agora deve retornar o tipo correto
     const router = useRouter();
 
     // Animações
@@ -136,6 +137,7 @@ export default function ClientProfileScreen() {
         router.replace('/(client)/explore' as any); // Redireciona para a rota /explore
     };
 
+    // CORREÇÃO: Se user for null ou undefined, exibe mensagem de usuário não encontrado
     if (!user) {
         return (
             <View style={styles.centeredMessageContainer}>
@@ -152,12 +154,12 @@ export default function ClientProfileScreen() {
         console.log('[ClientProfileScreen] handleLogout: Botão Sair da Conta clicado! Iniciando logout direto.'); // Log A
 
         try {
-            await signOut();
-            console.log('[ClientProfileScreen] signOut() concluído com sucesso.'); // Log B
-            // Não é necessário um Alert aqui, pois a navegação geralmente ocorre após o signOut
+            await logout(); // Chamada para a função logout do contexto
+            console.log('[ClientProfileScreen] logout() concluído com sucesso.'); // Log B
+            // Não é necessário um Alert aqui, pois a navegação geralmente ocorre após o logout
         } catch (error) {
-            console.error('[ClientProfileScreen] Erro ao executar signOut():', error); // Log C
-            // Opcional: exibir um alerta de erro genérico se o signOut falhar
+            console.error('[ClientProfileScreen] Erro ao executar logout():', error); // Log C
+            // Opcional: exibir um alerta de erro genérico se o logout falhar
             Alert.alert("Erro ao Sair", "Não foi possível sair da conta. Por favor, tente novamente.");
         }
     };
@@ -167,8 +169,13 @@ export default function ClientProfileScreen() {
         Alert.alert("Em Desenvolvimento", `A funcionalidade "${featureName}" será implementada em breve!`);
     };
 
-    // Cast user para UserWithAvatar para acesso seguro ao avatarUrl
-    const typedUser = user as UserWithAvatar;
+    // O tipo de 'user' já é UserProfile | null, então não precisamos de UserWithAvatar local.
+    // Acesso direto às propriedades de user, com tratamento para optional chaining se necessário.
+    const userName = user.fullName || 'Usuário LimpeJá';
+    const userEmail = user.email;
+    const userPhone = user.phone;
+    const userAvatarUrl = user.avatarUrl;
+
 
     return (
         <View style={styles.container}>
@@ -194,8 +201,8 @@ export default function ClientProfileScreen() {
                         onPressOut={onPressOutAvatar}
                         style={[styles.avatarContainer, { transform: [{ scale: avatarScaleAnim }] }]}
                     >
-                        {typedUser.avatarUrl ? (
-                            <Image source={{ uri: typedUser.avatarUrl }} style={styles.avatarImage} />
+                        {userAvatarUrl ? (
+                            <Image source={{ uri: userAvatarUrl }} style={styles.avatarImage} />
                         ) : (
                             <View style={styles.avatarPlaceholder}>
                                 <Ionicons name="person-circle-outline" size={70} color="#ADB5BD" />
@@ -205,9 +212,9 @@ export default function ClientProfileScreen() {
                             <Ionicons name="pencil" size={14} color="#fff" />
                         </View>
                     </TouchableOpacity>
-                    <Text style={styles.userName}>{typedUser.name || 'Usuário LimpeJá'}</Text>
-                    <Text style={styles.userEmail}>{typedUser.email}</Text>
-                    {typedUser.phone && <Text style={styles.userPhone}><Ionicons name="call-outline" size={14} /> {typedUser.phone}</Text>}
+                    <Text style={styles.userName}>{userName}</Text>
+                    <Text style={styles.userEmail}>{userEmail}</Text>
+                    {userPhone && <Text style={styles.userPhone}><Ionicons name="call-outline" size={14} /> {userPhone}</Text>}
                 </Animated.View>
 
                 <View style={styles.menuSection}>

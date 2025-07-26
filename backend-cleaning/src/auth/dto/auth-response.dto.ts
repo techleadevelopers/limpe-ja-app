@@ -13,4 +13,7 @@ export class AuthResponseDto {
   @ValidateNested()
   @Type(() => UserProfileDto)
   user: UserProfileDto;
+
+  @ApiProperty({ description: 'Indica se um novo usuário foi criado durante o processo de autenticação por OTP', example: false, required: false })
+  isNewUser?: boolean; // <--- ADICIONADO AQUI
 }

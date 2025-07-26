@@ -89,13 +89,19 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
     // --- Lógica para exibir categorias (Tags) ---
     const categoriesToDisplay: string[] = [];
     if (item.providerServices && item.providerServices.length > 0) {
-        if (item.providerServices[0].serviceType) {
-             categoriesToDisplay.push(item.providerServices[0].serviceType);
+        // CORREÇÃO: Acessa service.name em vez de serviceType
+        if (item.providerServices[0].service?.name) {
+             categoriesToDisplay.push(item.providerServices[0].service.name);
         }
     }
+    // Fallback para categorias se não houver serviços ou service.name
     if (categoriesToDisplay.length === 0) {
-        if (item.bio?.includes('comercial')) categoriesToDisplay.push('Comercial');
-        if (item.bio?.includes('escritórios')) categoriesToDisplay.push('Escritório');
+        if (item.bio?.toLowerCase().includes('comercial')) categoriesToDisplay.push('Comercial');
+        if (item.bio?.toLowerCase().includes('escritórios')) categoriesToDisplay.push('Escritório');
+        // Adicione mais fallbacks genéricos se necessário
+        if (categoriesToDisplay.length === 0) {
+            categoriesToDisplay.push('Limpeza Geral'); // Categoria padrão se nada for encontrado
+        }
     }
     const displayedCategories = categoriesToDisplay.slice(0, 2); // Limita a 2 categorias
 
@@ -128,16 +134,10 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
                                 <Text style={styles.categoryChipText}>{category}</Text> {/* Texto preto aqui */}
                             </View>
                         ))}
-                        {displayedCategories.length === 0 && (
-                            <>
-                                <View style={styles.categoryChip}>
-                                    <Text style={styles.categoryChipText}>Comercial</Text> {/* Texto preto aqui */}
-                                </View>
-                                <View style={styles.categoryChip}>
-                                    <Text style={styles.categoryChipText}>Escritório</Text> {/* Texto preto aqui */}
-                                </View>
-                            </>
-                        )}
+                        {/* Removido o fallback fixo para "Comercial" e "Escritório" aqui,
+                            pois a lógica acima já os adiciona se o bio contiver as palavras.
+                            Se `displayedCategories` ainda estiver vazio, a última condição
+                            do `categoriesToDisplay` adicionará "Limpeza Geral". */}
                     </View>
 
                     {/* Preço e Avaliação */}
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
         // Estilos para o container animado que encapsula o card
         // REDUZIDO A LARGURA PARA 220
         width: 240, // **MODIFICADO: Largura total do card, reduzida de 250 para 220**
-        marginRight: 15, // Espaçamento entre os cards horizontais
+        marginRight: 15, // Espaçamento entre os chips
         marginBottom: 15, // Espaçamento vertical entre as linhas de cards
         borderRadius: 12, // Borda arredondada geral do card
         overflow: 'visible', // Necessário para a sombra ser renderizada

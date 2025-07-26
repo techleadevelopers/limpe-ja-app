@@ -79,11 +79,6 @@ export class AuthController {
     return { message: 'Se um usuário com este email existir, um link de redefinição de senha será enviado.' };
   }
 
-  // REMOVIDO: firebase-login
-  // @Post('firebase-login')
-  // @HttpCode(HttpStatus.OK)
-  // async firebaseLogin(@Body() body: FirebaseLoginDto): Promise<AuthResponseDto> { ... }
-
   // NOVO: Verifica existência do número de telefone
   @Post('check-phone')
   @HttpCode(HttpStatus.OK)

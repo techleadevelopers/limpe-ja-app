@@ -1,7 +1,6 @@
 // prisma/schema.prisma
 // Este arquivo é o ponto de partida para o seu banco de dados.
 // Ele define os modelos de dados e como eles se relacionam.
-
 generator client {
   provider = "prisma-client-js"
   previewFeatures = ["postgresqlExtensions"]
@@ -48,9 +47,8 @@ model User {
   avatarUrl         String?        // <--- NOVA LINHA ADICIONADA AQUI para o avatar do usuário
   firebaseUid       String?        @unique // Mantido, caso seja usado para outros serviços Firebase
   
-  // Campos para OTP
-  otpCode           String?        // Código OTP atual
-  otpExpiresAt      DateTime?      // Tempo de expiração do OTP
+  // REMOVIDO: otpCode String? // Código OTP atual
+  // REMOVIDO: otpExpiresAt DateTime? // Tempo de expiração do OTP
   isPhoneVerified   Boolean        @default(false) // Se o telefone foi verificado
   
   createdAt         DateTime       @default(now())
@@ -97,7 +95,7 @@ model Provider {
   // Se o avatar do provedor for sempre o mesmo do usuário associado, você pode remover esta linha aqui.
   avatarUrl           String?
   // verified          Boolean            @default(false) // REMOVIDO: Substituído por verificationStatus
-  bio                 String?            // PROPRIEDADE 'BIO' ADICIONADA AQUI
+  bio                 String? // PROPRIEDADE 'BIO' ADICIONADA AQUI
   providerServices    ProviderService[]
   availability        Availability[]
   bookings            Booking[]
@@ -143,7 +141,6 @@ model Address {
   location    Unsupported("geometry(Point, 4326)")? // Exemplo para PostGIS Point (SRID 4326 - WGS 84)
   // Certifique-se de que seu banco de dados tem a extensão PostGIS habilitada
   // e que você está usando o provedor correto no datasource db.
-
 }
 
 // Modelo para Tipos de Serviço (e.g., "Limpeza Padrão", "Limpeza Pesada")
@@ -233,7 +230,7 @@ model Message {
   content    String
   timestamp  DateTime @default(now())
   isRead     Boolean  @default(false)
-  targetUrl  String?  // URL para navegação no app ao clicar na notificação
+  targetUrl  String? // URL para navegação no app ao clicar na notificação
   createdAt  DateTime @default(now())
   sender     User     @relation("SentMessages", fields: [senderId], references: [id])
   receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
@@ -247,7 +244,7 @@ model Notification {
   type      String   // Tipo de notificação (e.g., "BOOKING_CONFIRMED", "NEW_MESSAGE")
   message   String
   isRead    Boolean  @default(false)
-  targetUrl String?  // URL para navegação no app ao clicar na notificação
+  targetUrl String? // URL para navegação no app ao clicar na notificação
   createdAt DateTime @default(now())
 }
 
@@ -306,7 +303,7 @@ model Transaction {
   booking            Booking?        @relation(fields: [bookingId], references: [id])
   // NOVOS CAMPOS PARA INTEGRAÇÃO COM GATEWAY DE PAGAMENTO
   gatewayTransactionId String?       @unique // ID da transação no gateway de pagamento (ex: PagSeguro)
-  qrCodeUrl          String?       // URL do QR Code gerado pelo gateway
+  qrCodeUrl          String?         // URL do QR Code gerado pelo gateway
 }
 
 // Modelo de Disponibilidade do Provedor
@@ -325,7 +322,7 @@ model FAQItem {
   id        String   @id @default(uuid())
   question  String   @unique
   answer    String
-  category  String?  // Ex: "Geral", "Pagamentos", "Serviços"
+  category  String? // Ex: "Geral", "Pagamentos", "Serviços"
   order     Int      @default(0) // Ordem de exibição
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

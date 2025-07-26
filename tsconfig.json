@@ -2,17 +2,27 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
-    "skipLibCheck": true, // Pode ajudar se houver conflitos de tipo em outras libs
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".", // MUITO IMPORTANTE: Define a base para a resolução de módulos
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@app/*": ["./app/*"],
+      "@types/*": ["./types/*"] // ESTE É O ALIAS PARA SUA PASTA 'types' NA RAIZ
     }
   },
   "include": [
     "**/*.ts",
     "**/*.tsx",
     ".expo/types/**/*.ts",
-    "expo-env.d.ts"
+    "expo-env.d.ts",
+    "types/**/*.ts" // Inclui explicitamente seus próprios arquivos de tipo
+  ],
+  "exclude": [
+    "node_modules",
+    "**/node_modules",
+    "build",
+    "dist"
   ]
 }
