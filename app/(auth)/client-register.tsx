@@ -29,46 +29,42 @@ const LOGO_IMAGE = require('../../assets/images/logo2.png'); // << CONFIRMADO: E
 import { AnimatedErrorMessage } from '../../components/auth/components/AnimatedErrorMessage';
 
 
-// Simulação da API ViaCEP (Adicionado para auto-preenchimento de CEP)
-const mockViaCepApi = {
-    getEndereco: async (cep: string) => {
-        const cleanedCep = cep.replace(/\D/g, '');
-        await new Promise(resolve => setTimeout(resolve, 800)); // Simula latência da rede
+// *** INÍCIO DA INTEGRAÇÃO REAL DA API VIACEP ***
+// Removida a mockViaCepApi.
+// Nova função para buscar o endereço na API ViaCEP real
+const fetchAddressFromRealCepApi = async (cep: string) => {
+    const cleanedCep = cep.replace(/\D/g, ''); // Garante que apenas dígitos sejam usados
+    if (cleanedCep.length !== 8) {
+        // Isso será tratado na função chamadora fetchAddressFromCep
+        throw new Error("CEP deve conter 8 dígitos.");
+    }
 
-        if (cleanedCep === '01001000') {
-            return {
-                cep: '01001-000',
-                logradouro: 'Praça da Sé',
-                complemento: 'lado ímpar',
-                bairro: 'Sé',
-                localidade: 'São Paulo',
-                uf: 'SP',
-            };
-        } else if (cleanedCep === '60000000') {
-            return {
-                cep: '60000-000',
-                logradouro: 'Avenida Beira Mar',
-                complemento: '',
-                bairro: 'Meireles',
-                localidade: 'Fortaleza',
-                uf: 'CE',
-            };
-        } else if (cleanedCep === '13015080') { // <--- CORREÇÃO APLICADA AQUI: Adicionado o CEP 13015080
-            return {
-                cep: '13015-080',
-                logradouro: 'Rua General Osório',
-                complemento: 'lado par', // Ou qualquer complemento relevante
-                bairro: 'Centro',
-                localidade: 'Campinas',
-                uf: 'SP',
-            };
+    try {
+        const response = await fetch(`https://viacep.com.br/ws/${cleanedCep}/json/`);
+        const data = await response.json();
+
+        // A ViaCEP retorna { erro: true } se o CEP não for encontrado
+        if (data.erro) {
+            throw new Error("CEP não encontrado ou inválido.");
         }
-        else if (cleanedCep === '99999999') {
-            return { erro: true };
-        }
-        return { erro: true }; // Retorno padrão para CEPs não mapeados
-    },
+
+        // Retorna os dados mapeados para os nomes que você espera
+        return {
+            cep: data.cep,
+            logradouro: data.logradouro,
+            complemento: data.complemento,
+            bairro: data.bairro,
+            localidade: data.localidade, // Mapeia para 'cidade'
+            uf: data.uf,                 // Mapeia para 'estado'
+        };
+    } catch (error) {
+        console.error("Erro na consulta ViaCEP:", error);
+        // Lança um erro mais amigável para o usuário
+        throw new Error("Erro ao buscar CEP. Por favor, verifique o número e tente novamente.");
+    }
 };
+// *** FIM DA INTEGRAÇÃO REAL DA API VIACEP ***
+
 
 export default function ClientRegisterScreen() { // Renomeado de RegisterOptionsScreen
     const [currentStep, setCurrentStep] = useState(1); // 1: Basic Info, 2: Personal Data, 3: Address Info
@@ -149,8 +145,14 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
 
     const validateStep3 = () => {
         setGeneralError(null);
-        if (!cep.trim() || !street.trim() || !number.trim()) {
-            setGeneralError('Por favor, preencha todos os campos de endereço.');
+        // **VALIDAÇÃO ATUALIZADA:** Inclui bairro, cidade e estado
+        if (!cep.trim() || !street.trim() || !number.trim() || !neighborhood.trim() || !city.trim() || !state.trim()) {
+            setGeneralError('Por favor, preencha todos os campos de endereço (CEP, Rua, Número, Bairro, Cidade, Estado).');
+            return false;
+        }
+        // Validação adicional para o formato do estado (UF) - 2 letras
+        if (state.trim().length !== 2 || !/^[A-Z]{2}$/i.test(state.trim())) {
+            setGeneralError('O estado (UF) deve ter 2 letras válidas.');
             return false;
         }
         return true;
@@ -232,37 +234,45 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
     };
 
 
-    // Função para buscar endereço por CEP (adicionada)
+    // Função para buscar endereço por CEP (AGORA USANDO A API REAL)
     const fetchAddressFromCep = async () => {
         const cleanedCep = cep.replace(/\D/g, '');
+        // Garante que a busca só ocorra com 8 dígitos
         if (cleanedCep.length === 8) {
             setIsLoadingCep(true);
             setGeneralError(null); // Limpa erros anteriores
             try {
-                const data = await mockViaCepApi.getEndereco(cleanedCep);
-                if (!data.erro) {
-                    setStreet(data.logradouro || '');
-                    setNeighborhood(data.bairro || '');
-                    setCity(data.localidade || '');
-                    setState(data.uf || '');
-                    setComplement(data.complemento || '');
-                } else {
-                    setGeneralError("CEP não encontrado ou inválido.");
-                    setStreet(''); setNumber(''); setNeighborhood(''); setCity(''); setState(''); setComplement('');
-                }
-            } catch (error: any) { // Adicionado tipo 'any' para o erro
-                setGeneralError(error.message || "Erro ao buscar CEP. Tente novamente."); // Usar error.message
+                // *** CHAMADA PARA A API REAL ***
+                const data = await fetchAddressFromRealCepApi(cleanedCep);
+                
+                // Preenche os estados com os dados retornados pela ViaCEP
+                setStreet(data.logradouro || '');
+                setNeighborhood(data.bairro || '');
+                setCity(data.localidade || '');
+                setState(data.uf || '');
+                setComplement(data.complemento || '');
+
+            } catch (error: any) { // Captura o erro da API real (CEP não encontrado, rede, etc.)
+                setGeneralError(error.message || "Erro ao buscar CEP. Tente novamente.");
+                // Limpa os campos de endereço em caso de erro
                 setStreet(''); setNumber(''); setNeighborhood(''); setCity(''); setState(''); setComplement('');
             } finally {
                 setIsLoadingCep(false);
             }
         } else if (cleanedCep.length > 0 && cleanedCep.length < 8) {
-            setGeneralError("CEP incompleto.");
+            setGeneralError("CEP incompleto. Digite os 8 dígitos.");
+            // Limpa os campos se o CEP for incompleto para evitar dados parciais
+            setStreet(''); setNumber(''); setNeighborhood(''); setCity(''); setState(''); setComplement('');
+        } else {
+            // Se o campo CEP estiver vazio, limpa os campos de endereço e erros relacionados ao CEP
+            setStreet(''); setNumber(''); setNeighborhood(''); setCity(''); setState(''); setComplement('');
+            setGeneralError(null);
         }
     };
 
     const handleSignUp = async () => {
-        if (!validateStep1() || !validateStep2() || !validateStep3()) { // Valida todas as etapas antes do registro final
+        // Valida todas as etapas antes do registro final
+        if (!validateStep1() || !validateStep2() || !validateStep3()) { 
             return;
         }
         setIsLoading(true);
@@ -284,6 +294,8 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
                     complement: complement.trim(), // Usar o campo de complemento
                 } as CreateAddressDto, // Cast para garantir conformidade com CreateAddressDto
             };
+
+            // console.log("Dados de endereço a serem enviados:", registerData.address); // Descomente para depurar
 
             await signUpClient(registerData);
 
@@ -308,7 +320,8 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
     const nextButtonAnims = createButtonAnimations(); // Animações para o botão "Avançar"
 
     // Atualizado para step 3 com validação dos 3 campos principais
-    const isSignUpButtonEnabled = currentStep === 3 && cep.trim() && street.trim() && number.trim();
+    // A validação completa agora está dentro de validateStep3()
+    const isSignUpButtonEnabled = currentStep === 3; // O botão fica habilitado se estiver na etapa 3; a validação ocorre no handleSignUp
 
     return (
         <KeyboardAvoidingView
@@ -338,7 +351,7 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
                             {/* Email Input */}
                             <View style={styles.inputWrapper}>
                                 <View style={styles.iconCircle}>
-                                    <Ionicons name="mail-outline" size={20} color="#007BFF" />
+                                    <Ionicons name="mail-outline" size={20} color="#00BCD4" />
                                 </View>
                                 <TextInput
                                     style={styles.input}
@@ -356,7 +369,7 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
                             {/* Nome Completo Input */}
                             <View style={styles.inputWrapper}>
                                 <View style={styles.iconCircle}>
-                                    <Ionicons name="person-outline" size={20} color="#007BFF" />
+                                    <Ionicons name="person-outline" size={20} color="#00BCD4" />
                                 </View>
                                 <TextInput
                                     style={styles.input}
@@ -373,7 +386,7 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
                             {/* Telefone Input */}
                             <View style={styles.inputWrapper}>
                                 <View style={styles.iconCircle}>
-                                    <Ionicons name="call-outline" size={20} color="#007BFF" />
+                                    <Ionicons name="call-outline" size={20} color="#00BCD4" />
                                 </View>
                                 <TextInput
                                     style={styles.input}
@@ -408,7 +421,7 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
                             {/* CPF Input */}
                             <View style={styles.inputWrapper}>
                                 <View style={styles.iconCircle}>
-                                    <Ionicons name="document-text-outline" size={20} color="#007BFF" />
+                                    <Ionicons name="document-text-outline" size={20} color="#00BCD4" />
                                 </View>
                                 <TextInput
                                     style={styles.input}
@@ -424,7 +437,7 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
                             {/* Data de Nascimento Input */}
                             <View style={styles.inputWrapper}>
                                 <View style={styles.iconCircle}>
-                                    <Ionicons name="calendar-outline" size={20} color="#007BFF" />
+                                    <Ionicons name="calendar-outline" size={20} color="#00BCD4" />
                                 </View>
                                 <TextInput
                                     style={styles.input}
@@ -440,7 +453,7 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
                             {/* Password Input */}
                             <View style={styles.inputWrapper}>
                                 <View style={styles.iconCircle}>
-                                    <Ionicons name="lock-closed-outline" size={20} color="#007BFF" />
+                                    <Ionicons name="lock-closed-outline" size={20} color="#00BCD4" />
                                 </View>
                                 <TextInput
                                     style={styles.input}
@@ -460,10 +473,7 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
 
                             {/* Navigation Buttons */}
                             <View style={styles.navigationButtons}>
-                                <TouchableOpacity style={[styles.navButton, styles.backButton]} onPress={() => setCurrentStep(1)}>
-                                    <Ionicons name="arrow-back-outline" size={20} color="#007BFF" />
-                                    <Text style={styles.navButtonTextBack}>Voltar</Text>
-                                </TouchableOpacity>
+                            
                                 <TouchableOpacity
                                     style={[styles.navButton, styles.nextButton]}
                                     onPress={handleNext}
@@ -482,7 +492,7 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
                             {/* CEP Input */}
                             <View style={styles.inputWrapper}>
                                 <View style={styles.iconCircle}>
-                                    <Ionicons name="map-outline" size={20} color="#007BFF" />
+                                    <Ionicons name="map-outline" size={20} color="#00BCD4" />
                                 </View>
                                 <TextInput
                                     style={styles.input}
@@ -490,17 +500,17 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
                                     placeholderTextColor="#A0AEC0"
                                     value={cep}
                                     onChangeText={(text) => { setCep(text.replace(/\D/g, '')); if (generalError) setGeneralError(null);}}
-                                    onBlur={fetchAddressFromCep}
+                                    onBlur={fetchAddressFromCep} // Dispara a busca ao perder o foco
                                     keyboardType="numeric"
                                     maxLength={8}
                                 />
-                                {isLoadingCep && <ActivityIndicator size="small" color="#007BFF" style={styles.cepLoadingIndicator} />}
+                                {isLoadingCep && <ActivityIndicator size="small" color="#00BCD4" style={styles.cepLoadingIndicator} />}
                             </View>
 
                             {/* Rua Input */}
                             <View style={styles.inputWrapper}>
                                 <View style={styles.iconCircle}>
-                                    <Ionicons name="navigate-outline" size={20} color="#007BFF" />
+                                    <Ionicons name="navigate-outline" size={20} color="#00BCD4" />
                                 </View>
                                 <TextInput
                                     style={styles.input}
@@ -509,14 +519,14 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
                                     value={street}
                                     onChangeText={(text) => { setStreet(text); if (generalError) setGeneralError(null);}}
                                     autoCapitalize="words"
-                                    editable={!isLoadingCep}
+                                    // Campo editável para permitir correções
                                 />
                             </View>
 
                             {/* Número Input */}
                             <View style={styles.inputWrapper}>
                                 <View style={styles.iconCircle}>
-                                    <Ionicons name="home-outline" size={20} color="#007BFF" />
+                                    <Ionicons name="home-outline" size={20} color="#00BCD4" />
                                 </View>
                                 <TextInput
                                     style={styles.input}
@@ -528,12 +538,76 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
                                 />
                             </View>
 
+                            {/* Bairro Input (Adicionado para visualização e edição) */}
+                            <View style={styles.inputWrapper}>
+                                <View style={styles.iconCircle}>
+                                    <Ionicons name="map-marker-outline" size={20} color="#00BCD4" />
+                                </View>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Bairro"
+                                    placeholderTextColor="#A0AEC0"
+                                    value={neighborhood}
+                                    onChangeText={(text) => { setNeighborhood(text); if (generalError) setGeneralError(null);}}
+                                    autoCapitalize="words"
+                                    // Campo editável para permitir correções
+                                />
+                            </View>
+
+                            {/* Cidade Input (Adicionado para visualização e edição) */}
+                            <View style={styles.inputWrapper}>
+                                <View style={styles.iconCircle}>
+                                    <Ionicons name="business-outline" size={20} color="#00BCD4" />
+                                </View>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Cidade"
+                                    placeholderTextColor="#A0AEC0"
+                                    value={city}
+                                    onChangeText={(text) => { setCity(text); if (generalError) setGeneralError(null);}}
+                                    autoCapitalize="words"
+                                    // Campo editável para permitir correções
+                                />
+                            </View>
+
+                            {/* Estado (UF) Input (Adicionado para visualização e edição) */}
+                            <View style={styles.inputWrapper}>
+                                <View style={styles.iconCircle}>
+                                    <Ionicons name="globe-outline" size={20} color="#00BCD4" />
+                                </View>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Estado (UF)"
+                                    placeholderTextColor="#A0AEC0"
+                                    value={state}
+                                    onChangeText={(text) => { setState(text.toUpperCase()); if (generalError) setGeneralError(null);}} // Converte para maiúsculas
+                                    autoCapitalize="characters"
+                                    maxLength={2} // UF tem 2 caracteres
+                                    // Campo editável para permitir correções
+                                />
+                            </View>
+
+                            {/* Complemento Input (Adicionado para visualização e edição) */}
+                            <View style={styles.inputWrapper}>
+                                <View style={styles.iconCircle}>
+                                    <Ionicons name="information-circle-outline" size={20} color="#00BCD4" />
+                                </View>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Complemento (Opcional)"
+                                    placeholderTextColor="#A0AEC0"
+                                    value={complement}
+                                    onChangeText={(text) => { setComplement(text); if (generalError) setGeneralError(null);}}
+                                    autoCapitalize="sentences"
+                                />
+                            </View>
+
                             <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
 
                             {/* Navigation Buttons */}
                             <View style={styles.navigationButtons}>
                                 <TouchableOpacity style={[styles.navButton, styles.backButton]} onPress={() => setCurrentStep(2)}>
-                                    <Ionicons name="arrow-back-outline" size={20} color="#007BFF" />
+                                    <Ionicons name="arrow-back-outline" size={20} color="#00BCD4" />
                                     <Text style={styles.navButtonTextBack}>Voltar</Text>
                                 </TouchableOpacity>
                                 <Animated.View style={{transform: [{scale: signUpButtonAnims.scaleAnim}]}}>
@@ -545,13 +619,13 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
                                     disabled={isLoading}
                                     >
                                     {isLoading ? (
-                                        <ActivityIndicator color="#FFFFFF" />
-                                    ) : (
-                                        <>
-                                            <Text style={styles.navButtonTextNext}>Cadastrar</Text>
-                                            <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
-                                        </>
-                                    )}
+                                            <ActivityIndicator color="#FFFFFF" />
+                                        ) : (
+                                            <>
+                                                <Text style={styles.navButtonTextNext}>Cadastrar</Text>
+                                                <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
+                                            </>
+                                        )}
                                     </TouchableOpacity>
                                 </Animated.View>
                             </View>
@@ -578,7 +652,7 @@ const styles = StyleSheet.create({
         paddingBottom: 120,
     },
     contentWrapper: {
-        paddingHorizontal: 35,
+        paddingHorizontal: 55,
         paddingTop: Platform.OS === 'ios' ? 20 : 15, // Menos padding no topo
     },
     logoContainer: {
@@ -656,15 +730,15 @@ const styles = StyleSheet.create({
     nextButton: {
         backgroundColor: '#40C0F0',
         borderRadius: 28,
-        paddingVertical: 10,
+        paddingVertical: 5,
         width: '100%',
         left: 0,
-        bottom: 60, // Espaço entre o botão "Avançar" e o próximo input
+        bottom: 40, // Espaço entre o botão "Avançar" e o próximo input
         alignItems: 'center',
         justifyContent: 'center',
         marginTop: 10,
         marginBottom: 15, // Espaço entre o botão "Avançar" e o "Sign up" (se fosse visível)
-        shadowColor: '#007BFF',
+        shadowColor: '#00BCD4',
         shadowOffset: { width: 0, height: 5 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
@@ -676,7 +750,7 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     signUpButton: { // Renomeado de signInButton
-        backgroundColor: '#007BFF',
+        backgroundColor: '#00BCD4',
         borderRadius: 28,
         paddingVertical: 10, // Ajustado
         width: '80%', // Ajustado
@@ -685,7 +759,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         marginTop: 10, // Espaço após os inputs/erro, antes era 9
         marginBottom: 25,
-        shadowColor: '#007BFF',
+        shadowColor: '#00BCD4',
         shadowOffset: { width: 0, height: 5 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
@@ -722,18 +796,18 @@ const styles = StyleSheet.create({
     backButton: {
         backgroundColor: '#F7F8FC',
         borderWidth: 1,
-        borderColor: '#007BFF',
+        borderColor: '#00BCD4',
     },
     finalButton: {
-        backgroundColor: '#007BFF',
-        shadowColor: '#007BFF',
+        backgroundColor: 'rgba(64, 192, 240, 0.85)',
+        shadowColor: '#00BCD4',
         shadowOffset: { width: 0, height: 5 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
         elevation: 10,
     },
     navButtonTextBack: {
-        color: '#007BFF',
+        color: '#00BCD4',
         fontSize: 16,
         fontWeight: '600',
         marginLeft: 5,

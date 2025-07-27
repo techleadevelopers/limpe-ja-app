@@ -7,8 +7,7 @@ import { ActivityIndicator, Alert, Animated, Image, Platform, StyleSheet, Text, 
 import verificationService from '../../../../services/verificationService';
 
 // Importações das novas imagens
-
-const FACIAL_PLACEHOLDER_IMAGE = require('../../../../assets/images/facial.png');
+const FACIAL_PLACEHOLDER_IMAGE = require('../../../../assets/images/facial-Photoroom.png');
 
 // Paleta de cores (repetida para clareza)
 const Colors = {
@@ -17,7 +16,7 @@ const Colors = {
   primaryGradientStart: '#007AFF',
   primaryGradientEnd: '#40C0F0',
   background: '#F8F9FA',
-  cardBackground: '#FFFFFF', // Mantido para outros componentes que ainda possam usá-lo
+  cardBackground: '#FFFFFF',
   textPrimary: '#2D3748',
   textSecondary: '#6C757D',
   success: '#28A745',
@@ -79,7 +78,7 @@ export default function FacialRecognitionScreen({ onComplete, isLoading, initial
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaType.Images, // Corrigido: MediaTypeOptions para MediaType
+      mediaTypes: ImagePicker.MediaTypeOptions.Images, // Corrigido para MediaTypeOptions para compatibilidade
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.8,
@@ -100,7 +99,7 @@ export default function FacialRecognitionScreen({ onComplete, isLoading, initial
       return;
     }
     let result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaType.Images, // Corrigido: MediaTypeOptions para MediaType
+      mediaTypes: ImagePicker.MediaTypeOptions.Images, // Corrigido para MediaTypeOptions para compatibilidade
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.8,
@@ -131,16 +130,20 @@ export default function FacialRecognitionScreen({ onComplete, isLoading, initial
     }
   };
 
-  const isNextButtonEnabled = isSelfieValid && !isLoading && submissionStatus !== 'none';
+  // === CORREÇÃO AQUI: Lógica de habilitação do botão ===
+  // O botão deve estar habilitado se a selfie for válida E não houver nenhuma submissão em andamento (pending).
+  // `isLoading` (vindo de props) também deve ser considerado.
+  const isNextButtonEnabled = isSelfieValid && !isLoading && submissionStatus !== 'pending';
+
 
   return (
     <Animated.View style={[styles.container, { opacity: contentFade, transform: [{ translateY: contentSlide }] }]}>
       <View style={styles.header}>
         {/* Substituído Ionicons pela logo2.png */}
         
-        <Text style={styles.title}>Reconhecimento Facial</Text>
+        <Text style={styles.title}>Selfie com Documento</Text> {/* Título atualizado para clareza */}
         <Text style={styles.description}>
-          Tire uma selfie clara segurando seu documento de identidade ao lado do rosto.
+          Tire uma selfie clara segurando seu documento de identidade ao lado do rosto. Esta foto será usada para confirmar sua identidade.
         </Text>
       </View>
 
@@ -157,9 +160,13 @@ export default function FacialRecognitionScreen({ onComplete, isLoading, initial
           <View style={styles.imageUploadButtons}>
             <TouchableOpacity style={styles.uploadButton} onPress={() => takePhoto(setSelfieWithDocument)} disabled={isLoading || submissionStatus === 'success'}>
               <Ionicons name="camera-outline" size={24} color="#fff" />
-              
+              <Text style={styles.uploadButtonText}>Tirar Foto</Text>
             </TouchableOpacity>
-            {/* Botão "Galeria" removido */}
+            {/* Botão "Galeria" removido para forçar tirar foto, ou pode ser readicionado se permitido */}
+            {/* <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage(setSelfieWithDocument)} disabled={isLoading || submissionStatus === 'success'}>
+              <Ionicons name="folder-open-outline" size={24} color="#fff" />
+              <Text style={styles.uploadButtonText}>Galeria</Text>
+            </TouchableOpacity> */}
           </View>
         </View>
 
@@ -171,12 +178,12 @@ export default function FacialRecognitionScreen({ onComplete, isLoading, initial
             onPress={handleSubmitSelfie}
             onPressIn={handlePressIn}
             onPressOut={handlePressOut}
-            disabled={!isNextButtonEnabled}
+            disabled={!isNextButtonEnabled} // Usando a nova lógica de habilitação
           >
             {isLoading || submissionStatus === 'pending' ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.submitButtonText}>Finalizar Verificação</Text>
+              <Text style={styles.submitButtonText}>Enviar Selfie</Text>
             )}
           </TouchableOpacity>
         </Animated.View>
@@ -187,17 +194,17 @@ export default function FacialRecognitionScreen({ onComplete, isLoading, initial
                         submissionStatus === 'failed' ? styles.statusFailed : {}]}>
             <Ionicons
               name={submissionStatus === 'success' ? "checkmark-circle" :
-                    submissionStatus === 'failed' ? "warning" : "information-circle"}
+                      submissionStatus === 'failed' ? "warning" : "information-circle"}
               size={20}
               color={submissionStatus === 'success' ? Colors.success :
-                     submissionStatus === 'failed' ? Colors.error : Colors.info}
+                      submissionStatus === 'failed' ? Colors.error : Colors.info}
             />
             <Text style={[styles.statusText,
                           submissionStatus === 'success' ? { color: Colors.success } :
                           submissionStatus === 'failed' ? { color: Colors.error } : { color: Colors.info }]}>
-              {submissionStatus === 'pending' && "Analisando selfie e documento..."}
-              {submissionStatus === 'success' && "Selfie enviada! Verificação concluída!"}
-              {submissionStatus === 'failed' && "Falha no reconhecimento facial. Tente novamente."}
+              {submissionStatus === 'pending' && "Enviando selfie..."}
+              {submissionStatus === 'success' && "Selfie enviada com sucesso!"}
+              {submissionStatus === 'failed' && "Falha no envio da selfie. Tente novamente."}
             </Text>
           </View>
         )}
@@ -284,7 +291,8 @@ const styles = StyleSheet.create({
   submitButton: {
     backgroundColor: Colors.primaryGradientStart,
     borderRadius: 10,
-    paddingVertical: 15,
+    paddingVertical: 8,
+    paddingHorizontal: 35,
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
@@ -336,7 +344,7 @@ const styles = StyleSheet.create({
   imageUploadWrapper: {
     flexDirection: 'column',
     alignItems: 'center',
-   
+    
     borderRadius: 10,
     paddingVertical: 20,
     marginBottom: 1,
@@ -352,16 +360,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.textSecondary,
   },
-  facialPlaceholderImage: { // Novo estilo para a imagem de placeholder da selfie
-    width: 400, // Ajuste o tamanho conforme necessário
-    height: 400, // Ajuste o tamanho conforme necessário
+  facialPlaceholderImage: {
+    width: 200,
+    height: 300,
     resizeMode: 'contain',
     marginBottom: 15,
     marginTop: -40,
   },
   imageUploadButtons: {
     flexDirection: 'row',
-    justifyContent: 'center', // Centralizado agora que só tem um botão
+    justifyContent: 'center',
     width: '70%',
   },
   uploadButton: {
@@ -372,7 +380,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     borderRadius: 20,
     marginHorizontal: 5,
-    flex: 1, // Ocupa o espaço disponível
+    flex: 1,
     justifyContent: 'center',
     shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },

@@ -1,7 +1,9 @@
 // app/(auth)/provider-register/verification/document-upload.tsx
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import * as ImagePicker from 'expo-image-picker';
+import * as ImagePicker from 'expo-image-picker'; // Mantenha esta importação como está
+// Remova a importação específica de MediaType, pois voltaremos a usar MediaTypeOptions por enquanto.
+// import { MediaType } from 'expo-image-picker'; 
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Animated, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native'; // Added Platform
 import { DocumentPhotoType } from '../../../../backend-cleaning/src/verification/dto/upload-document.dto';
@@ -11,7 +13,6 @@ import { SIZES } from '../../../../constants/theme';
 import verificationService from '../../../../services/verificationService';
 
 // Importações das novas imagens para uso nesta tela
-const FACE_ICON = require('../../../../assets/images/face.png'); // Imagem para o cabeçalho do DocumentUploadScreen e FacialRecognitionScreen
 const PARTE_FRENTE_IMAGE = require('../../../../assets/images/partefrente.png'); // Imagem para o placeholder da frente do documento
 const PARTE_TRAS_IMAGE = require('../../../../assets/images/partetras.png'); // Imagem para o placeholder do verso do documento
 const FACIAL_PLACEHOLDER_IMAGE = require('../../../../assets/images/facial.png'); // Imagem para o placeholder da selfie (assumindo que 'facial.png' é o arquivo correto)
@@ -86,7 +87,9 @@ export default function DocumentUploadScreen({
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      // Revertendo para MediaTypeOptions.Images para resolver o erro de compilação.
+      // Isso pode gerar um aviso de depreciação em tempo de execução, mas resolverá o erro de tipo.
+      mediaTypes: ImagePicker.MediaTypeOptions.Images, // <<<< CORREÇÃO AQUI: Usando MediaTypeOptions
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.8,
@@ -107,6 +110,8 @@ export default function DocumentUploadScreen({
       return;
     }
     let result = await ImagePicker.launchCameraAsync({
+      // Revertendo para MediaTypeOptions.Images para resolver o erro de compilação.
+      mediaTypes: ImagePicker.MediaTypeOptions.Images, // <<<< CORREÇÃO AQUI: Usando MediaTypeOptions
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.8,
@@ -160,7 +165,7 @@ export default function DocumentUploadScreen({
       <View style={styles.header}>
         <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
           {/* Using FACE_ICON for the header icon */}
-          <Image source={FACE_ICON} style={styles.headerIcon} />
+          
         </Animated.View>
         <Text style={styles.title}>Envio de Documentos</Text>
         <Text style={styles.description}>
@@ -233,14 +238,14 @@ export default function DocumentUploadScreen({
               submissionStatus === 'failed' ? styles.statusFailed : {}]}>
             <Ionicons
               name={submissionStatus === 'success' ? "checkmark-circle" :
-                    submissionStatus === 'failed' ? "warning" : "information-circle"}
+                      submissionStatus === 'failed' ? "warning" : "information-circle"}
               size={20}
               color={submissionStatus === 'success' ? Colors.secondary :
-                    submissionStatus === 'failed' ? Colors.error : Colors.info}
+                      submissionStatus === 'failed' ? Colors.error : Colors.info}
             />
             <Text style={[styles.statusText,
-                  submissionStatus === 'success' ? { color: Colors.secondary } :
-                  submissionStatus === 'failed' ? { color: Colors.error } : { color: Colors.info }]}>
+                    submissionStatus === 'success' ? { color: Colors.secondary } :
+                    submissionStatus === 'failed' ? { color: Colors.error } : { color: Colors.info }]}>
               {submissionStatus === 'pending' && "Enviando documentos..."}
               {submissionStatus === 'success' && "Documentos enviados com sucesso!"}
               {submissionStatus === 'failed' && "Falha no envio dos documentos. Tente novamente."}
@@ -263,8 +268,8 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: SIZES.padding,
-    marginTop: SIZES.padding * 8,
+    marginBottom: SIZES.padding ,
+    marginTop: SIZES.padding * 2,
   },
   // Novo estilo para o ícone do cabeçalho
   headerIcon: {
@@ -276,7 +281,7 @@ const styles = StyleSheet.create({
     fontSize: SIZES.h1 - 4,
     fontWeight: 'bold',
     color: Colors.textPrimary,
-    marginTop: SIZES.base * 2,
+    marginTop: SIZES.base * -4,
     marginBottom: SIZES.base,
     textAlign: 'center',
   },
@@ -338,7 +343,8 @@ const styles = StyleSheet.create({
   submitButton: {
     backgroundColor: Colors.primaryGradientStart,
     borderRadius: SIZES.radius,
-    paddingVertical: SIZES.paddingSmall,
+    paddingVertical: 7,
+    paddingHorizontal: 60,
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',

@@ -6,6 +6,10 @@
 gcloud run deploy limpeja-app-backend --image gcr.io/semiotic-anvil-461613-c0/limpeja-app-backend --platform managed --region southamerica-east1 --allow-unauthenticated --set-secrets=GCS_KEY=limpeja-gcs-key-for-build:latest --project=semiotic-anvil-461613-c0
 
 
+# LISTA VARIAVEIS 
+
+gcloud run services describe limpeja-app-backend --platform managed --region southamerica-east1 --format 'value(spec.template.spec.containers[0].env)'
+
 # utilidades
 gcloud run deploy limpeja-app-backend `
   --image=gcr.io/semiotic-anvil-461613-c0/limpeja-app-backend `

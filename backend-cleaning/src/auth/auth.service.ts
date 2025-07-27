@@ -5,7 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { RegisterClientDto } from './dto/register-client.dto';
 import { RegisterProviderDto } from './dto/register-provider.dto';
-import { UserRole, User, Prisma, Client, Provider, Address, ProviderService, Service, Review, VerificationStatus, Booking } from '@prisma/client';
+import { UserRole, User, Prisma, Client, Provider, Address, ProviderService, Service, Review, VerificationStatus, Booking } from '@prisma/client'; // Importante: 'Prisma' deve estar aqui
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { UserProfileDto } from '../users/dto/user-profile.dto';
 import { ProvidersService, ProviderWithIncludes, ProviderWithCalculatedRating } from '../providers/providers.service';
@@ -125,7 +125,7 @@ export class AuthService {
     };
   }
 
-  // registerClient (email/password) - Mantido, com validação de telefone/CPF
+  // registerClient (email/password) - Atualizado para usar raw query para 'location'
   async registerClient(registerClientDto: RegisterClientDto): Promise<AuthResponseDto> {
     const { email, password, fullName, phone, address, cpf } = registerClientDto;
 
@@ -161,7 +161,7 @@ export class AuthService {
           phone: phone || null,
           passwordHash: hashedPassword,
           role: UserRole.CLIENT,
-          isPhoneVerified: !!phone, // Marca como verificado se o telefone foi fornecido no registro (ajustar se quiser forçar verificação por OTP)
+          isPhoneVerified: !!phone,
           client: {
             create: {
               fullName,
@@ -196,14 +196,17 @@ export class AuthService {
         }
       });
 
+      // === INÍCIO DA CORREÇÃO PARA CAMPO 'LOCATION' NO REGISTRO DE CLIENTE ===
       if (geoCoordinates && newUser.client?.address?.id) {
-        await this.prisma.address.update({
-          where: { id: newUser.client.address.id },
-          data: {
-            location: `SRID=4326;POINT(${geoCoordinates.longitude} ${geoCoordinates.latitude})`,
-          } as any,
-        });
+        const wktPoint = `POINT(${geoCoordinates.longitude} ${geoCoordinates.latitude})`; // Formata como string WKT
+        await this.prisma.$executeRaw(Prisma.sql`
+            UPDATE "Address" -- Alterado de 'addresses' para '"Address"'
+            SET location = ST_GeomFromText(${wktPoint}, 4326)
+            WHERE id = ${newUser.client.address.id}
+        `);
+        this.logger.log(`[AuthService] Endereço do cliente ID: ${newUser.client.address.id} atualizado com localização geoespacial.`);
       }
+      // === FIM DA CORREÇÃO PARA CAMPO 'LOCATION' NO REGISTRO DE CLIENTE ===
 
       return this.login(newUser);
     } catch (error) {
@@ -220,7 +223,7 @@ export class AuthService {
     }
   }
 
-  // registerProvider (email/password) - Mantido, com validação de telefone/CPF
+  // registerProvider (email/password) - Atualizado para usar raw query para 'location'
   async registerProvider(registerProviderDto: RegisterProviderDto): Promise<AuthResponseDto> {
     const {
       email,
@@ -262,7 +265,7 @@ export class AuthService {
           phone: phone || null,
           passwordHash: hashedPassword,
           role: UserRole.PROVIDER,
-          isPhoneVerified: !!phone, // Marca como verificado se o telefone foi fornecido no registro (ajustar se quiser forçar verificação por OTP)
+          isPhoneVerified: !!phone,
           provider: {
             create: {
               fullName,
@@ -309,14 +312,19 @@ export class AuthService {
         }
       });
 
+      // === INÍCIO DA CORREÇÃO PARA CAMPO 'LOCATION' NO REGISTRO DE PROVEDOR ===
       if (geoCoordinates && newUser.provider?.address?.id) {
-        await this.prisma.address.update({
-          where: { id: newUser.provider.address.id },
-          data: {
-            location: `SRID=4326;POINT(${geoCoordinates.longitude} ${geoCoordinates.latitude})`,
-          } as any,
-        });
+        const wktPoint = `POINT(${geoCoordinates.longitude} ${geoCoordinates.latitude})`; // Formata como string WKT
+        
+        // Usa $executeRaw para inserir/atualizar o campo de geometria diretamente via SQL
+        await this.prisma.$executeRaw(Prisma.sql`
+            UPDATE "Address" -- Alterado de 'addresses' para '"Address"'
+            SET location = ST_GeomFromText(${wktPoint}, 4326)
+            WHERE id = ${newUser.provider.address.id}
+        `);
+        this.logger.log(`[AuthService] Endereço do provedor ID: ${newUser.provider.address.id} atualizado com localização geoespacial.`);
       }
+      // === FIM DA CORREÇÃO PARA CAMPO 'LOCATION' NO REGISTRO DE PROVEDOR ===
 
       return this.login(newUser);
     } catch (error) {

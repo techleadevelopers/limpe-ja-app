@@ -161,13 +161,14 @@ export default function ServiceDetailsScreen() {
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Detalhes do Serviço</Text>
-            <Text style={styles.headerSubtitle}>
-              Complete seu perfil profissional para começar a receber solicitações
-            </Text>
+       
           </View>
 
           {/* Image Upload */}
           {renderImageUploadSection()}
+               <Text style={styles.headerSubtitle}>
+              Complete seu perfil profissional para começar a receber solicitações
+            </Text>
 
           {/* Form Sections */}
           <View style={styles.formContainer}>
@@ -264,7 +265,7 @@ export default function ServiceDetailsScreen() {
             }}
           >
             <LinearGradient
-              colors={['#A0D2EB', '#2C3E50']}
+              colors={['#A0D2EB', '#307cc9ff']}
               style={styles.continueButtonGradient}
             >
               <Text style={styles.continueButtonText}>Continuar</Text>
@@ -312,6 +313,7 @@ const styles = StyleSheet.create({
     color: '#6C757D',
     textAlign: 'center',
     lineHeight: 22,
+    marginBottom: 19,
   },
   imageUploadContainer: {
     marginBottom: 30,
