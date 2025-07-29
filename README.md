@@ -43,6 +43,15 @@ O projeto LimpeJá é construído sobre pilares tecnológicos e de arquitetura q
 <img src="https://img.shields.io/badge/Google%20Cloud-4285F4?style=for-the-badge&logo=google-cloud&logoColor=white" alt="Google Cloud" style="margin: 5px;">
 <img src="https://img.shields.io/badge/Firebase%20Auth-FFCA28?style=for-the-badge&logo=firebase&logoColor=white" alt="Firebase Auth" style="margin: 5px;">
 <img src="https://img.shields.io/badge/OTP-00BCD4?style=for-the-badge" alt="OTP" style="margin: 5px;">
+<img src="https://img.shields.io/badge/Facial%20Recognition-FF69B4?style=for-the-badge&logo=faceid&logoColor=white" alt="Reconhecimento Facial" style="margin: 5px;">
+<img src="https://img.shields.io/badge/Document%20Upload-9C27B0?style=for-the-badge&logo=file-upload&logoColor=white" alt="Upload de Documentos" style="margin: 5px;">
+<img src="https://img.shields.io/badge/OCR%20Processing-009688?style=for-the-badge&logo=tesseract&logoColor=white" alt="Processamento OCR" style="margin: 5px;">
+<img src="https://img.shields.io/badge/Image%20Comparison-FFD54F?style=for-the-badge&logo=google-photos&logoColor=white" alt="Comparação de Imagens" style="margin: 5px;">
+<img src="https://img.shields.io/badge/Liveness%20Check-F44336?style=for-the-badge&logo=liveness&logoColor=white" alt="Liveness Check" style="margin: 5px;">
+<img src="https://img.shields.io/badge/PostGIS%20Geoespacial-4CAF50?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostGIS Geoespacial" style="margin: 5px;">
+<img src="https://img.shields.io/badge/PagSeguro%20PIX-FDC100?style=for-the-badge&logo=pagseguro&logoColor=black" alt="PagSeguro PIX" style="margin: 5px;">
+<img src="https://img.shields.io/badge/Twilio%20Verify-F22F46?style=for-the-badge&logo=twilio&logoColor=white" alt="Twilio Verify" style="margin: 5px;">
+<img src="https://img.shields.io/badge/Email%20Service-D81B60?style=for-the-badge&logo=gmail&logoColor=white" alt="Serviço de Email" style="margin: 5px;">
 <img src="https://img.shields.io/badge/Design%20Patterns-F7DF1E?style=for-the-badge" alt="Design Patterns" style="margin: 5px;">
 <img src="https://img.shields.io/badge/SOLID%20Principles-8D6E63?style=for-the-badge" alt="SOLID" style="margin: 5px;">
 <img src="https://img.shields.io/badge/Clean%20Architecture-4CAF50?style=for-the-badge" alt="Clean Architecture" style="margin: 5px;">
@@ -326,13 +335,11 @@ O projeto LimpeJá é construído sobre uma pilha tecnológica robusta e moderna
 
 <li style="margin-bottom: 8px; color: #555;"><strong style="color: #e74c3c;">Busca Geoespacial Avançada:</strong> Implementação de lógica geoespacial (`PostGIS` com `Prisma.$queryRaw`) para busca de provedores por proximidade, utilizando coordenadas de latitude/longitude.</li>
 
-<li style="margin-bottom: 8px; color: #555;"><strong style="color: #e74c3c;">Consistência Monetária (Prisma Decimal):</strong> Uso do tipo `Decimal` do Prisma para garantir precisão exata em todos os cálculos e armazenamento de valores monetários.</li>
+<li style="margin-bottom: 8px; color: #555;"><strong style="color: #e74c3c;">Consistência Monetária (Prisma Decimal):</strong> Uso do tipo `Decimal` do Prisma (`@db.Decimal(10, 2)`) para garantir precisão exata em todos os cálculos e armazenamento de valores monetários.</li>
 
 <li style="margin-bottom: 8px; color: #555;"><strong style="color: #e74c3c;">Gerenciamento de Ganhos e Saques:</strong> Funcionalidades completas para provedores visualizarem seus ganhos, solicitarem saques e garantir a atomicidade das transações financeiras.</li>
 
 </ul>
-
-</div>
 
 </div>
 
@@ -498,7 +505,7 @@ O `prisma/schema.prisma` define o modelo de dados relacional e é a fonte da ver
 
 </li>
 
-<li style="margin-bottom: 5px;"><strong>Precisão Monetária:</strong> O uso do tipo `Decimal` do Prisma (`@db.Decimal(10, 2)`) para campos como `price`, `totalPrice` e `amount` garante precisão exata em cálculos financeiros, evitando erros de arredondamento.</li>
+<li style="margin-bottom: 5px;"><strong>Precisão Monetária:</strong> O uso do tipo `Decimal` do Prisma (`@db.Decimal(10, 2)`) para campos como `price`, `totalPrice` e `amount` garante precisão exata em todos os cálculos e armazenamento de valores monetários.</li>
 
 </ul>
 
@@ -543,8 +550,6 @@ O `prisma/schema.prisma` define o modelo de dados relacional e é a fonte da ver
 <li style="margin-bottom: 8px;"><strong style="color: #3498db;">Hooks de Desligamento do Prisma:</strong> Garantem o fechamento gracioso da conexão com o banco de dados em caso de encerramento da aplicação.</li>
 
 </ul>
-
-</div>
 
 </div>
 
@@ -768,7 +773,7 @@ A interligação entre o Frontend (React Native/Expo) e o Backend (NestJS) do pr
 
 </tbody>
 
-</tabela>
+</table>
 
 </div>
 
@@ -1224,8 +1229,6 @@ Isso abrirá o Metro Bundler. Você pode ler o código QR com o aplicativo <a hr
 </li>
 
 </ol>
-
-</div>
 
 </div>
 
