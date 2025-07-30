@@ -1,0 +1,11 @@
+{
+  "providerId": "ID_DO_PROVEDOR_ALVO",
+  "providerServiceId": "ID_DO_SERVICO_DO_PROVEDOR_ESCOLHIDO",
+  "scheduledDate": "2025-08-15",
+  "scheduledTime": "14:00",
+  "notes": "Por favor, focar na cozinha e banheiros.",
+  "addressId": "ID_DO_ENDERECO_DO_CLIENTE_OU_NOVO_ENDERECO_AQUI",
+  "requestedDurationMinutes": 180,
+  "requestedSquareMeters": 90,
+  "requestedRoomCount": 3
+}

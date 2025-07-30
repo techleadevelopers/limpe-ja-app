@@ -1,0 +1,17 @@
+{
+  "email": "provedor.e2e.test@example.com",
+  "password": "ProviderSecurePassword123!",
+  "fullName": "Profissional Teste E2E",
+  "cpf": "000.111.222-33",
+  "dateOfBirth": "1990-01-01",
+  "phoneNumber": "+19994647291",
+  "address": {
+    "street": "Avenida dos Profissionais",
+    "number": "456",
+    "complement": "Sala 202",
+    "neighborhood": "Bairro Profissional",
+    "city": "Cidade Teste",
+    "state": "ST",
+    "zipCode": "98765-432"
+  }
+}

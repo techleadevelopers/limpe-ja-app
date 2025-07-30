@@ -1,0 +1,18 @@
+{
+  "email": "provedor.script.exemplo@example.com",
+  "password": "ProviderSecurePassword123!",
+  "fullName": "Profissional Teste Script",
+  "cpf": "00000000000",
+  "dateOfBirth": "1990-01-01T00:00:00.000Z",
+  "phone": "11998765432",  
+  "yearsOfExperience": 1,
+  "address": {
+    "cep": "02002000",     
+    "street": "Avenida Script Provedor",
+    "number": "200",
+    "complement": "Sala 202",
+    "neighborhood": "Bairro Script",
+    "city": "Sao Paulo",
+    "state": "SP"
+  }
+}

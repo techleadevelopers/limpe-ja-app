@@ -1,0 +1,20 @@
+[
+  {
+    "dayOfWeek": "MONDAY",
+    "startTime": "09:00",
+    "endTime": "18:00",
+    "isAvailable": true
+  },
+  {
+    "dayOfWeek": "TUESDAY",
+    "startTime": "09:00",
+    "endTime": "18:00",
+    "isAvailable": true
+  },
+  {
+    "dayOfWeek": "SATURDAY",
+    "startTime": "09:00",
+    "endTime": "13:00",
+    "isAvailable": false
+  }
+]

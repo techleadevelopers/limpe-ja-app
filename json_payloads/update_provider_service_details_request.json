@@ -1,0 +1,21 @@
+{
+  "bio": "Profissional dedicada à limpeza de ambientes com foco em sustentabilidade.",
+  "yearsOfExperience": 7,
+  "pixKey": "minhachavepix@email.com",
+  "avatarUrl": "https://example.com/new-avatar.jpg",
+  "providerServices": [
+    {
+      "serviceId": "ID_DO_SERVICO_LIMPEZA_RESIDENCIAL",
+      "price": 200.00,
+      "durationMinutes": 240,
+      "description": "Limpeza completa de residências com foco em detalhes.",
+      "pricingType": "FIXED_PRICE"
+    },
+    {
+      "serviceId": "ID_DO_SERVICO_LIMPEZA_COMERCIAL",
+      "pricePerSquareMeter": 8.50,
+      "description": "Limpeza especializada para escritórios e pequenos comércios.",
+      "pricingType": "BY_SIZE"
+    }
+  ]
+}

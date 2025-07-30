@@ -1,0 +1,16 @@
+{
+  "name": "Cliente Teste E2E",
+  "email": "client.e2e.test@example.com",
+  "password": "ClientSecurePassword123!",
+  "phoneNumber": "+19994647291",
+  "document": "123.456.789-00",
+  "address": {
+    "street": "Rua dos Testes",
+    "number": "123",
+    "complement": "Apto 101",
+    "neighborhood": "Bairro de Teste",
+    "city": "Cidade Teste",
+    "state": "ST",
+    "zipCode": "12345-678"
+  }
+}

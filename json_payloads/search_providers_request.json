@@ -1,0 +1,8 @@
+{
+  "query": "limpeza residencial",
+  "latitude": -23.550520,
+  "longitude": -46.633308,
+  "radiusKm": 10,
+  "minRating": 4,
+  "serviceId": "ID_DO_SERVICO_FILTRO_OPCIONAL"
+}

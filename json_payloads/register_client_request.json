@@ -1,0 +1,16 @@
+{
+  "email": "some.client@example.com",
+  "password": "ClientSecurePassword123!",
+  "fullName": "Nome Completo do Cliente",
+  "phone": "11987654321",
+  "cpf": "12345678900",  
+  "address": {
+    "cep": "01001000",
+    "street": "Rua dos Pinheiros",
+    "number": "123",
+    "complement": "Apto 101",
+    "neighborhood": "Pinheiros",
+    "city": "São Paulo",
+    "state": "SP"
+  }
+}
