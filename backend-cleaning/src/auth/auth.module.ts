@@ -12,7 +12,7 @@ import { ProvidersModule } from '../providers/providers.module';
 import { WsAuthGuard } from './guards/ws-auth.guard';
 import { EmailModule } from '../common/modules/email.module';
 import { GeocodingModule } from '../common/modules/geocoding.module';
-import { SmsModule } from '../sms/sms.module'; // NOVO: Importa o SmsModule
+// REMOVIDO: import { SmsModule } from '../sms/sms.module';
 
 @Module({
   imports: [
@@ -30,7 +30,7 @@ import { SmsModule } from '../sms/sms.module'; // NOVO: Importa o SmsModule
     ProvidersModule,
     EmailModule,
     GeocodingModule,
-    SmsModule, // NOVO: Adiciona o SmsModule aos imports
+    // REMOVIDO: SmsModule,
   ],
   controllers: [AuthController],
   providers: [

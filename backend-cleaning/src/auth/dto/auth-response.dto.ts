@@ -14,6 +14,7 @@ export class AuthResponseDto {
   @Type(() => UserProfileDto)
   user: UserProfileDto;
 
-  @ApiProperty({ description: 'Indica se um novo usuário foi criado durante o processo de autenticação por OTP', example: false, required: false })
-  isNewUser?: boolean; // <--- ADICIONADO AQUI
+  // REMOVIDO: isNewUser (era específico do fluxo de OTP)
+  // @ApiProperty({ description: 'Indica se um novo usuário foi criado durante o processo de autenticação por OTP', example: false, required: false })
+  // isNewUser?: boolean;
 }
