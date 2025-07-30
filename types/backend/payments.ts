@@ -8,8 +8,8 @@
 export interface CreatePixChargeDto {
   amount: number;
   description: string;
-  bookingId?: string; // Se a cobrança PIX está ligada a um agendamento
-  providerId?: string; // ID do provedor para quem o pagamento será direcionado (necessário pelo backend)
+  bookingId?: string | null; // Se a cobrança PIX está ligada a um agendamento
+  providerId?: string | null; // ID do provedor para quem o pagamento será direcionado (necessário pelo backend)
   // clientEmail: string; // REMOVIDO: Esta propriedade não deve ser enviada do frontend para o backend neste DTO.
                         // O backend já obtém o email do cliente a partir do token de autenticação.
 }
@@ -27,9 +27,9 @@ export interface PixChargeResponseDto {
   expiresAt: string; // CORREÇÃO: Agora requerido e do tipo string (ISO 8601), como é comum em APIs
   amount: number;
   description: string;
-  bookingId?: string; // <<<<< CORREÇÃO: ADICIONADO A PROPRIEDADE AQUI >>>>>
-  brCodeError?: string; // CORREÇÃO: Adicionado para resolver erro de tipagem no frontend
-  expirationDate?: string; // CORREÇÃO: Adicionado para resolver erro de tipagem no frontend (se usado para formatar)
+  bookingId?: string | null; // <<<<< CORREÇÃO: ADICIONADO A PROPRIEDADE AQUI >>>>>
+  brCodeError?: string | null; // CORREÇÃO: Adicionado para resolver erro de tipagem no frontend
+  expirationDate?: string | null; // CORREÇÃO: Adicionado para resolver erro de tipagem no frontend (se usado para formatar)
   providerId: string; // Adicionado aqui, pois é uma informação importante na resposta.
 }
 
@@ -39,12 +39,12 @@ export interface PixChargeResponseDto {
  * ALINHADO COM O BACKEND: Inclui todos os campos esperados pelo backend.
  */
 export interface RequestWithdrawalDto {
-    amount: number; // ✅ agora aceita qualquer número
+  amount: number; // ✅ agora aceita qualquer número
   bankName: string;
   agencyNumber: string;
   accountNumber: string;
   accountType: 'CONTA_CORRENTE' | 'CONTA_POUPANCA';
-  notes?: string;
+  notes?: string | null;
 }
 
 /**
@@ -61,6 +61,6 @@ export interface TransactionEntity {
   description: string;
   createdAt: string; // ISO string
   updatedAt: string; // ISO string
-  bookingId?: string;
-  relatedUserId?: string; // ID do outro usuário envolvido na transação (cliente ou provedor)
+  bookingId?: string | null;
+  relatedUserId?: string | null; // ID do outro usuário envolvido na transação (cliente ou provedor)
 }

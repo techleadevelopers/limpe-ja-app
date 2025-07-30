@@ -39,7 +39,7 @@ export interface RegisterClientDto {
   email: string;
   password: string; // Senha em texto plano que será hasheada pelo backend.
   fullName: string;
-  phone?: string; // Telefone: Opcional no frontend, mas você pode torná-lo obrigatório se necessário.
+  phone?: string | null; // Telefone: Opcional no frontend, mas você pode torná-lo obrigatório se necessário.
   cpf: string; // <-- ADICIONADO: Propriedade CPF para o cliente
 
   // Endereço agora é um objeto aninhado
@@ -57,21 +57,20 @@ export interface RegisterProviderDto {
   fullName: string;
   cpf: string;
   dateOfBirth: string; // Formato de data recomendado: string ISO (ex: "YYYY-MM-DD" ou "YYYY-MM-DDTHH:mm:ss.sssZ").
-  phone?: string; // Telefone: Opcional no frontend.
+  phone?: string | null; // Telefone: Opcional no frontend.
 
   // Endereço agora é um objeto aninhado
   address: CreateAddressDto;
 
-  yearsOfExperience?: number; // Opcional, corresponde a 'anosExperiencia'
+  yearsOfExperience?: number | null; // Opcional, corresponde a 'anosExperiencia'
   avatarUrl?: string | null; // CORREÇÃO: Permitir 'null' explicitamente
-  // avatarUrl?: string; // Opcional, corresponde a 'avatarUrl'
 
   // NOVOS CAMPOS ADICIONADOS PARA DETALHES DO SERVIÇO:
-  bio?: string; // Corresponde a 'experiencia'
-  offeredServices?: string; // Corresponde a 'servicosOferecidos'
-  pricingStructure?: string; // Corresponde a 'estruturaPreco'
-  serviceAreas?: string; // Corresponde a 'areasAtendimento'
-  pixKey?: string; // Corresponde a 'pixKey'
+  bio?: string | null; // Corresponde a 'experiencia'
+  offeredServices?: string | null; // Corresponde a 'servicosOferecidos'
+  pricingStructure?: string | null; // Corresponde a 'estruturaPreco'
+  serviceAreas?: string | null; // Corresponde a 'areasAtendimento'
+  pixKey?: string | null; // Corresponde a 'pixKey'
 }
 
 /**
@@ -111,8 +110,6 @@ export interface MessageResponseDto {
  * @enum UserRole
  * Define os papéis possíveis para um usuário no sistema.
  * Corresponde ao `enum UserRole` definido no `prisma/schema.prisma` do backend.
- *
- * MUDANÇA: DE 'type' PARA 'enum' para que possa ser usado como valor.
  */
 export enum UserRole {
   CLIENT = 'CLIENT',
@@ -121,8 +118,11 @@ export enum UserRole {
   SYSTEM = 'SYSTEM', // Adicionado SYSTEM para consistência com o backend
 }
 
-// NOVO: Enum para o status de verificação do provedor
-// *** CORREÇÃO: ADICIONADO `export` AQUI ***
+/**
+ * @enum VerificationStatus
+ * Enum para o status de verificação do provedor.
+ * Corresponde ao `enum VerificationStatus` definido no `prisma/schema.prisma` do backend.
+ */
 export enum VerificationStatus {
   PENDING_INITIAL_REVIEW = 'PENDING_INITIAL_REVIEW',
   PENDING_DOCUMENTS_UPLOAD = 'PENDING_DOCUMENTS_UPLOAD',

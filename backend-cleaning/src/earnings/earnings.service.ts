@@ -53,6 +53,9 @@ export class EarningsService {
       where: {
         providerId: provider.id,
         type: TransactionType.WITHDRAWAL,
+        // Inclua transações com status 'REQUESTED' ou 'PENDING' na soma de 'totalWithdrawn'
+        // para evitar que o provedor solicite saques de valores que já estão em processo de retirada.
+        // Exemplo: status: { in: ['REQUESTED', 'PENDING', 'COMPLETED'] }
       },
       select: {
         amount: true,

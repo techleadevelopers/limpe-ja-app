@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateProviderServiceDto } from './dto/create-provider-service.dto';
+import { CreateProviderServiceDto } from './dto/create-provider-service.dto'; // Keep this import
 import { UpdateProviderServiceDto } from './dto/update-provider-service.dto';
 import { ProviderService, Prisma } from '@prisma/client'; // Importar Prisma para tipagem de price
 import { ProvidersService } from '../providers/providers.service'; // <-- ADICIONADO AQUI
@@ -15,7 +15,7 @@ export class ProviderServicesService {
   ) {}
 
   async create(providerId: string, createProviderServiceDto: CreateProviderServiceDto): Promise<ProviderService> {
-    const { serviceId, price, durationMinutes, description } = createProviderServiceDto;
+    const { serviceId, price, durationMinutes, description, pricingType, pricePerSquareMeter, pricePerRoom } = createProviderServiceDto;
 
     // Verificar se o provedor existe
     // AGORA USA O SERVIÇO INJETADO
@@ -51,6 +51,9 @@ export class ProviderServicesService {
         serviceId,
         price: new Prisma.Decimal(price), // <-- CORREÇÃO: Converter price para Prisma.Decimal
         durationMinutes,
+        pricingType,
+        pricePerSquareMeter: pricePerSquareMeter ? new Prisma.Decimal(pricePerSquareMeter) : null,
+        pricePerRoom: pricePerRoom ? new Prisma.Decimal(pricePerRoom) : null,
         description,
       },
     });
@@ -81,12 +84,17 @@ export class ProviderServicesService {
         throw new NotFoundException(`Serviço oferecido com ID "${id}" não encontrado para o provedor "${providerId}".`);
       }
 
-      // Para updates, precisamos verificar se 'price' existe e converter também
       const updateData: Prisma.ProviderServiceUpdateInput = {
         ...updateProviderServiceDto,
       };
       if (updateProviderServiceDto.price !== undefined) {
         updateData.price = new Prisma.Decimal(updateProviderServiceDto.price);
+      }
+      if (updateProviderServiceDto.pricePerSquareMeter !== undefined) {
+        updateData.pricePerSquareMeter = updateProviderServiceDto.pricePerSquareMeter ? new Prisma.Decimal(updateProviderServiceDto.pricePerSquareMeter) : null;
+      }
+      if (updateProviderServiceDto.pricePerRoom !== undefined) {
+        updateData.pricePerRoom = updateProviderServiceDto.pricePerRoom ? new Prisma.Decimal(updateProviderServiceDto.pricePerRoom) : null;
       }
 
       return await this.prisma.providerService.update({

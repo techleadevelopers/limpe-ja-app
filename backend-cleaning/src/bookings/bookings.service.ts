@@ -5,9 +5,10 @@ import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
 import { Booking, BookingStatus, UserRole, Prisma } from '@prisma/client';
 import { ClientsService } from '../clients/clients.service';
-import { ProvidersService } from '../providers/providers.service';
+import { ProvidersService, ProviderWithCalculatedRating } from '../providers/providers.service'; // Import ProviderWithCalculatedRating
 import { ProviderServicesService } from '../provider-services/provider-services.service';
-import { PixChargeResponseDto } from '../payments/dto/create-pix-charge.dto';
+import { NotificationsService } from '../notifications/notifications.service'; // Import NotificationsService
+import { PixChargeResponseDto } from '../payments/dto/create-pix-charge.dto'; // Assuming this DTO is correct
 import { BookingAndPixResponseDto } from './dto/booking-and-pix-response.dto';
 import { PaymentsService } from '../payments/payments.service';
 import { BookingDetailsDto } from './dto/booking-details.dto'; // <-- IMPORTADO AQUI
@@ -31,6 +32,7 @@ export class BookingsService {
     private clientsService: ClientsService,
     private providersService: ProvidersService,
     private providerServicesService: ProviderServicesService,
+    private notificationsService: NotificationsService, // Inject NotificationsService
     @Inject(forwardRef(() => PaymentsService))
     private paymentsService: PaymentsService,
   ) {}
@@ -38,7 +40,7 @@ export class BookingsService {
   async create(clientUserId: string, createBookingDto: CreateBookingDto): Promise<BookingWithDetailsRelations> {
     this.logger.log(`[BookingsService] create - Início da criação do agendamento.`);
     this.logger.log(`[BookingsService] create - clientUserId: ${clientUserId}`);
-    this.logger.log(`[BookingsService] create - DTO recebido: providerId=${createBookingDto.providerId}, providerServiceId=${createBookingDto.providerServiceId}, scheduledDate=${createBookingDto.scheduledDate}, scheduledTime=${createBookingDto.scheduledTime}, totalPrice=${createBookingDto.totalPrice}`);
+    this.logger.log(`[BookingsService] create - DTO recebido: ${JSON.stringify(createBookingDto)}`);
     this.logger.log(`[BookingsService] create - Endereço DTO: ${JSON.stringify(createBookingDto.address)}`);
 
     const client = await this.clientsService.findClientByUserId(clientUserId);
@@ -60,7 +62,38 @@ export class BookingsService {
       this.logger.error(`[BookingsService] create - Serviço do provedor com ID "${createBookingDto.providerServiceId}" não encontrado para o provedor "${createBookingDto.providerId}".`);
       throw new NotFoundException(`Serviço do provedor com ID "${createBookingDto.providerServiceId}" não encontrado para o provedor "${createBookingDto.providerId}".`);
     }
-    this.logger.log(`[BookingsService] create - Serviço do provedor encontrado: ${providerService.id}`);
+
+    // --- Lógica de cálculo de totalPrice baseada no PricingType ---
+    let calculatedTotalPrice: Prisma.Decimal;
+    switch (providerService.pricingType) {
+      case 'FIXED_PRICE':
+        calculatedTotalPrice = providerService.price;
+        break;
+      case 'HOURLY':
+        if (!createBookingDto.requestedDurationMinutes) {
+          throw new BadRequestException('Duração em minutos é obrigatória para serviços por hora.');
+        }
+        calculatedTotalPrice = providerService.price.mul(new Prisma.Decimal(createBookingDto.requestedDurationMinutes).div(new Prisma.Decimal(60))); // Ensure division is with Decimal
+        break;
+      case 'BY_SIZE':
+        if (createBookingDto.requestedSquareMeters && providerService.pricePerSquareMeter) {
+          calculatedTotalPrice = providerService.pricePerSquareMeter.mul(new Prisma.Decimal(createBookingDto.requestedSquareMeters));
+        } else if (createBookingDto.requestedRoomCount && providerService.pricePerRoom) {
+          calculatedTotalPrice = providerService.pricePerRoom.mul(new Prisma.Decimal(createBookingDto.requestedRoomCount));
+        } else {
+          throw new BadRequestException('Metragem ou número de cômodos é obrigatório para serviços por tamanho.');
+        }
+        break;
+      default:
+        // Fallback para o valor do DTO se o tipo de precificação for desconhecido ou CUSTOM_QUOTE
+        calculatedTotalPrice = new Prisma.Decimal(createBookingDto.totalPrice);
+        this.logger.warn(`[BookingsService] create - Tipo de precificação desconhecido ou não implementado: ${providerService.pricingType}. Usando totalPrice do DTO.`);
+        break;
+    }
+    if (calculatedTotalPrice.lessThan(0)) {
+        throw new BadRequestException('O preço calculado não pode ser negativo.');
+    }
+    this.logger.log(`[BookingsService] create - Serviço do provedor encontrado: ${providerService.id}. Preço calculado: ${calculatedTotalPrice.toFixed(2)}`);
 
     try {
       this.logger.log(`[BookingsService] create - Criando novo endereço no DB.`);
@@ -82,9 +115,9 @@ export class BookingsService {
           clientId: client.id,
           providerId: provider.id,
           providerServiceId: providerService.id,
-          scheduledDate: new Date(createBookingDto.scheduledDate),
+          scheduledDate: new Date(createBookingDto.scheduledDate), // Ensure this is a Date object
           scheduledTime: createBookingDto.scheduledTime,
-          totalPrice: new Prisma.Decimal(createBookingDto.totalPrice),
+          totalPrice: calculatedTotalPrice, // Use the calculated total price
           notes: createBookingDto.notes,
           status: BookingStatus.PENDING,
           addressId: newAddress.id,
@@ -139,7 +172,7 @@ export class BookingsService {
     const pixChargeResponse = await this.paymentsService.createPixCharge(clientUserId, pixChargeDto);
     this.logger.log(`[BookingsService] createBookingAndPixCharge - Resposta PIX Charge recebida: ${JSON.stringify(pixChargeResponse)}`);
 
-    return { booking: bookingDto, pixCharge: pixChargeResponse }; // Retorna o DTO mapeado
+    return { booking: bookingDto, pixCharge: pixChargeResponse }; // Retorna o DTO combinado
   }
 
   async findUserBookings(userId: string, role: UserRole, status?: string): Promise<BookingWithDetailsRelations[]> {
@@ -226,7 +259,15 @@ export class BookingsService {
 
   async updateStatus(id: string, newStatus: BookingStatus, userRole: UserRole): Promise<BookingWithDetailsRelations> {
     this.logger.log(`[BookingsService] updateStatus: Tentando atualizar agendamento ${id} para status ${newStatus} por role ${userRole}.`);
-    const booking = await this.prisma.booking.findUnique({ where: { id } });
+    // CORREÇÃO: Incluir 'provider' e 'providerService' para acessar suas propriedades
+    const booking = await this.prisma.booking.findUnique({ 
+      where: { id },
+      include: { 
+        provider: { include: { user: true } }, // Incluir user para acessar fullName
+        providerService: { include: { service: true } }, // Incluir service para acessar name
+        client: { include: { user: true } } // Incluir client e user para acessar userId
+      } 
+    });
 
     if (!booking) {
       this.logger.error(`[BookingsService] updateStatus - Agendamento com ID "${id}" não encontrado.`);
@@ -297,7 +338,35 @@ export class BookingsService {
     }
     this.logger.log(`[BookingsService] updateStatus - Status de agendamento validado. Atualizando no DB.`);
 
+    // --- Lógica de Fidelização (após validação de status) ---
+    if (newStatus === BookingStatus.COMPLETED) {
+      // Increment completedBookingsCount for the client
+      await this.prisma.client.update({
+        where: { id: booking.clientId },
+        data: { completedBookingsCount: { increment: 1 } },
+      });
+      this.logger.log(`[BookingsService] updateStatus: Cliente ${booking.clientId} teve completedBookingsCount incrementado.`);
 
+      // Increment monthlyBookingsCount for the provider
+      await this.prisma.provider.update({
+        where: { id: booking.providerId },
+        data: { monthlyBookingsCount: { increment: 1 } },
+      });
+      this.logger.log(`[BookingsService] updateStatus: Provedor ${booking.providerId} teve monthlyBookingsCount incrementado.`);
+
+      // Send notification to client to request a review
+      // CORREÇÃO: O booking.providerService.name e booking.provider.fullName só estarão disponíveis se incluídos
+      // na consulta inicial do booking.
+      const reviewNotificationMessage = `Seu serviço de ${booking.providerService.service.name} com ${booking.provider.fullName} foi concluído! Deixe uma avaliação para ele.`;
+      const reviewNotificationTargetUrl = `/client/bookings/${booking.id}/review`; // Example URL
+      await this.notificationsService.createNotification(
+        booking.client.userId, // Usar booking.client.userId, que é o ID do User associado ao Client
+        'REVIEW_REQUEST',
+        reviewNotificationMessage,
+        reviewNotificationTargetUrl
+      );
+      this.logger.log(`[BookingsService] updateStatus: Notificação de avaliação enviada para cliente ${booking.client.userId}.`);
+    }
     return this.prisma.booking.update({
       where: { id },
       data: { status: newStatus },
@@ -392,5 +461,37 @@ export class BookingsService {
       canChat: !!activeBooking,
       bookingId: activeBooking?.id,
     };
+  }
+
+  async reportIssue(bookingId: string, userId: string, userRole: UserRole, reason: string): Promise<BookingWithDetailsRelations> {
+    this.logger.log(`[BookingsService] reportIssue: Usuário ${userId} (${userRole}) reportando problema no booking ${bookingId}. Motivo: ${reason}`);
+
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: { client: true, provider: true } // Include client and provider to check ownership
+    });
+
+    if (!booking) {
+      throw new NotFoundException(`Agendamento com ID "${bookingId}" não encontrado.`);
+    }
+
+    // Only the client or provider associated with the booking can report an issue
+    // CORREÇÃO: findClientByUserId e findByUserId retornam ProviderWithCalculatedRating/Client,
+    // que têm o 'id' do Client/Provider, não o userId.
+    // Você precisa comparar o ID do CLIENTE/PROVEDOR do booking com o ID do CLIENTE/PROVEDOR encontrado pelo userId.
+    const client = await this.clientsService.findClientByUserId(userId);
+    const provider = await this.providersService.findByUserId(userId);
+
+    if (userRole === UserRole.CLIENT && booking.clientId !== client?.id) {
+      throw new ForbiddenException('Você não tem permissão para reportar um problema neste agendamento.');
+    }
+    if (userRole === UserRole.PROVIDER && booking.providerId !== provider?.id) {
+      throw new ForbiddenException('Você não tem permissão para reportar um problema neste agendamento.');
+    }
+
+    // Update booking status to PENDING_DISPUTE
+    // Notify an admin (you) about the dispute
+    await this.notificationsService.createNotification('ADMIN_USER_ID', 'BOOKING_DISPUTE', `Disputa aberta para agendamento ${bookingId}. Motivo: ${reason}`, `/admin/disputes/${bookingId}`); // Replace 'ADMIN_USER_ID' with actual admin ID
+    return this.updateStatus(bookingId, BookingStatus.PENDING_DISPUTE, userRole);
   }
 }

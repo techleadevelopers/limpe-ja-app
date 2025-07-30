@@ -1,6 +1,6 @@
 // LimpeJaApp/src/types/backend/clients.ts
 
-import { UserRole } from './auth'; 
+import { UserRole } from './auth';
 import { BookingAddress } from './bookings'; // Importar BookingAddress para tipagem consistente do endereço
 
 /**
@@ -13,8 +13,9 @@ export interface Client {
   id: string;
   userId: string; // Referência ao ID do usuário no sistema de autenticação
   fullName: string;
-  phone?: string;
-  avatarUrl?: string;
+  completedBookingsCount?: number; // NEW: Counter for loyalty program (tornar opcional se o backend não garantir sempre)
+  phone?: string | null; // Permitir null
+  avatarUrl?: string | null; // Permitir null
   walletBalance?: number;
   ordersCount?: number;
   // Adicione outras propriedades específicas do cliente aqui, como:
@@ -25,7 +26,7 @@ export interface Client {
   // CORREÇÃO: Adicionar a propriedade 'address' do tipo BookingAddress para resolver o erro de tipagem.
   // A propriedade address pode ser opcional se o cliente nem sempre tiver um endereço.
   // Se o seu backend sempre retornar um endereço, remova o '?'.
-  address?: BookingAddress; 
+  address?: BookingAddress | null; // CORREÇÃO: Alinhado com schema.prisma (Address?)
 }
 
 /**
@@ -53,14 +54,14 @@ export interface SearchResult {
  * Baseado no UpdateClientProfileDto do backend.
  */
 export interface UpdateClientProfileDto {
-  fullName?: string; 
-  phone?: string; //
+  fullName?: string;
+  phone?: string | null; // Permitir null
   // Adicione outros campos que o cliente pode atualizar aqui (ex: address)
-  
+
   // CORREÇÃO: A sintaxe para definir um objeto aninhado dentro de uma interface
   // estava incorreta. Deve ser definida como uma propriedade que é um objeto.
   // Usamos 'Partial<BookingAddress>' aqui para indicar que todos os campos do endereço
   // são opcionais no contexto da atualização. Se o backend espera 'zipCode' e não 'cep'
   // para este DTO específico, você precisará ajustar ou criar um tipo separado.
-  address?: Partial<BookingAddress>; //
+  address?: Partial<BookingAddress> | null; // CORREÇÃO: Alinhado com schema.prisma (Address?)
 }

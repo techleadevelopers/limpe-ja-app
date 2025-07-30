@@ -38,7 +38,7 @@ export interface SmartSuggestion {
 type ProviderWithRelationsForSuggestions = Prisma.ProviderGetPayload<{
   include: {
     providerServices: { include: { service: true } };
-    reviewsReceived: true; // Inclui as avaliações recebidas
+    reviewsReceived: { orderBy: { createdAt: 'desc' }; take: 50; }; // Include reviewsReceived with order and limit
     bookings: {
       where: { status: 'COMPLETED' };
       orderBy: { createdAt: 'desc' };
@@ -82,6 +82,14 @@ export class ReviewsService {
 
     if (existingReview) {
       throw new ConflictException(`Agendamento com ID "${bookingId}" já possui uma avaliação.`);
+    }
+
+    // Increment fiveStarReviewCount if rating is 5
+    if (rating === 5) {
+      await this.prisma.provider.update({
+        where: { id: booking.providerId },
+        data: { fiveStarReviewCount: { increment: 1 } },
+      });
     }
 
     return this.prisma.review.create({

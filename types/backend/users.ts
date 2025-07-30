@@ -1,9 +1,9 @@
 // LimpeJaApp/src/types/backend/users.ts
 
 import { UserRole, VerificationStatus } from './auth'; // Importar UserRole e VerificationStatus
-import { ProviderDisplayInfo } from './providers'; // Importar ProviderDisplayInfo (conforme o uso em other files)
-import { Client } from './clients'; // Assumindo que Client está definido em clients.ts
-import { BookingAddress } from './bookings'; // Mantido, pois BookingAddress pode ser usado internamente por Client/ProviderDisplayInfo
+import { ProviderDisplayInfo } from './providers'; // Importar ProviderDisplayInfo
+import { Client } from './clients'; // Importar Client
+import { BookingAddress } from './bookings'; // Importar BookingAddress
 
 /**
  * @interface UserProfile
@@ -15,12 +15,21 @@ export interface UserProfile {
   email: string;
   role: UserRole;
 
-  fullName?: string; // Presente na raiz do fetchedUserProfile nos logs
-  phone?: string;     // Presente na raiz do fetchedUserProfile nos logs
-  avatarUrl?: string | null;
+  fullName?: string | null; // Presente na raiz do fetchedUserProfile nos logs, permitir null
+  phone?: string | null;     // Presente na raiz do fetchedUserProfile nos logs, permitir null
+  avatarUrl?: string | null; // Permitir null
 
   createdAt?: string; // Presente na raiz do fetchedUserProfile nos logs
   updatedAt?: string; // Presente na raiz do fetchedUserProfile nos logs
+
+  // CORREÇÃO: Adicionada a propriedade 'address' diretamente ao UserProfile.
+  // Isso é necessário porque `schedule-service.tsx` acessa `user.address` diretamente.
+  // Se o seu backend *não* retornar o endereço diretamente na raiz do UserProfileDto,
+  // mas sim aninhado dentro de `clientDetails` ou `providerDetails`,
+  // você precisará ajustar a lógica em `schedule-service.tsx` para `user.clientDetails?.address`
+  // (ou `user.providerDetails?.address` dependendo do papel do usuário).
+  // Para manter a compatibilidade com o código atual do `schedule-service.tsx`, esta é a solução.
+  address?: BookingAddress | null;
 
   // Propriedades específicas ou calculadas que podem estar na raiz do UserProfileDto
   walletBalance?: number;
@@ -31,40 +40,6 @@ export interface UserProfile {
   reviewCount?: number;
 
   // Detalhes específicos do cliente ou provedor
-  clientDetails?: Client; // Assumindo que 'Client' é a interface para ClientDetailsDto
-  providerDetails?: ProviderDisplayInfo; // Assumindo que 'ProviderDisplayInfo' é a interface para ProviderDetailsDto
+  clientDetails?: Client | null; // Assumindo que 'Client' é a interface para ClientDetailsDto, permitir null
+  providerDetails?: ProviderDisplayInfo | null; // Assumindo que 'ProviderDisplayInfo' é a interface para ProviderDetailsDto, permitir null
 }
-
-// Nota: Se ProviderDisplayInfo e Client não existirem, você precisará criá-los.
-// Exemplo mínimo se não existirem:
-/*
-export interface Client {
-  id: string;
-  userId: string;
-  fullName: string;
-  phone: string | null;
-  cpf: string | null;
-  address?: BookingAddress; // Ou uma interface Address mais genérica
-  createdAt: string;
-  updatedAt: string;
-  // ... outras propriedades do cliente
-}
-
-export interface ProviderDisplayInfo {
-  id: string;
-  userId: string;
-  fullName: string;
-  cpf: string | null;
-  dateOfBirth: string;
-  phone: string | null;
-  yearsOfExperience: number | null;
-  avatarUrl: string | null;
-  bio: string | null;
-  verificationStatus: VerificationStatus; // Usando o enum importado
-  pixKey: string | null;
-  address?: BookingAddress; // Ou uma interface Address mais genérica
-  createdAt: string;
-  updatedAt: string;
-  // ... outras propriedades do provedor
-}
-*/

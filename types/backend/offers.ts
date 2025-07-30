@@ -9,23 +9,23 @@ export interface Offer {
   id: string;
   title: string;
   description: string;
-  imageUrl?: string;
-  terms?: string; // Termos e condições da oferta
-  discountPercentage?: number; // Ex: 30
-  originalPrice?: number; // Preço original para mostrar o desconto
-  discountedPrice?: number; // Preço já com desconto
-  validUntil?: string; // ISO String, data de validade da oferta
+  imageUrl?: string | null;
+  terms?: string | null; // Termos e condições da oferta
+  discountPercentage?: number | null; // Ex: 30
+  originalPrice?: number | null; // Preço original para mostrar o desconto
+  discountedPrice?: number | null; // Preço já com desconto
+  validUntil?: string | null; // ISO String, data de validade da oferta
   // Adicione outros campos que seu backend de ofertas possa ter
-  couponCode?: string; // Código do cupom associado
-  serviceId?: string; // ID do serviço específico ao qual a oferta se aplica
-  providerId?: string; // ID do provedor ao qual a oferta se aplica
-   // NOVAS PROPRIEDADES ADICIONADAS:
-    bankName?: string; // Adicionado
-    bankPaymentText?: string; // Adicionado
-    buttonText?: string; // Adicionado
-    disclaimer?: string; // Adicionado
-    badgeTitle?: string; // Adicionado
-    badgeDates?: string; // Adicionado
-    backgroundColorStart?: string; // Adicionado
-    backgroundColorEnd?: string; // Adicionado
+  couponCode?: string | null; // Código do cupom associado
+  serviceId?: string | null; // ID do serviço específico ao qual a oferta se aplica
+  providerId?: string | null; // ID do provedor ao qual a oferta se aplica
+  // NOVAS PROPRIEDADES ADICIONADAS:
+  bankName?: string | null;
+  bankPaymentText?: string | null;
+  buttonText?: string | null;
+  disclaimer?: string | null;
+  badgeTitle?: string | null;
+  badgeDates?: string | null;
+  backgroundColorStart?: string | null;
+  backgroundColorEnd?: string | null;
 }

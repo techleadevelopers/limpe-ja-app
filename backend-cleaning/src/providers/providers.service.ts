@@ -1,7 +1,7 @@
 // src/providers/providers.service.ts
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma, Provider, User, UserRole, Address, ProviderService, Service, Review, Client, VerificationStatus } from '@prisma/client';
+import { Prisma, Provider, User, UserRole, Address, ProviderService, Service, Review, Client, VerificationStatus, PricingType } from '@prisma/client'; // Import PricingType
 import { UpdateProviderProfileDto } from './dto/update-provider-profile.dto';
 import { ProviderSearchDto } from './dto/provider-search.dto';
 import { SortByOption } from '../search/dto/search-query.dto';
@@ -10,6 +10,9 @@ import { SortByOption } from '../search/dto/search-query.dto';
 // Tipos Auxiliares Refinados
 // =========================================================================
 
+// CORREÇÃO: fiveStarReviewCount e monthlyBookingsCount são campos escalares, não relações.
+// Não devem ser incluídos no 'include' de Prisma.ProviderGetPayload.
+// Eles já fazem parte do tipo 'Provider' base.
 export type ProviderWithIncludes = Prisma.ProviderGetPayload<{
   include: {
     user: { select: { email: true, role: true } };
@@ -24,7 +27,8 @@ export type ProviderWithIncludes = Prisma.ProviderGetPayload<{
         }
       }
     };
-    // REMOVIDO: ocrResult: true; livenessResult: true; (campos escalares não vão em 'include')
+    // fiveStarReviewCount e monthlyBookingsCount são campos escalares e já fazem parte do tipo Provider.
+    // Não precisam ser listados aqui no 'include'.
   };
 }>;
 
@@ -34,11 +38,14 @@ export type ServiceForFrontend = Omit<Service, 'price' | 'createdAt' | 'updatedA
   updatedAt: string;
 };
 
-export type ProviderServiceForFrontend = Omit<ProviderService, 'price' | 'service' | 'createdAt' | 'updatedAt'> & {
+export type ProviderServiceForFrontend = Omit<ProviderService, 'price' | 'service' | 'createdAt' | 'updatedAt' | 'pricingType' | 'pricePerSquareMeter' | 'pricePerRoom'> & {
   price: number;
   service: ServiceForFrontend;
   createdAt: string;
   updatedAt: string;
+  pricingType: PricingType; // NEW: Pricing type
+  pricePerSquareMeter: number | null; // NEW: Price per square meter
+  pricePerRoom: number | null; // NEW: Price per room
 };
 
 export type ProviderWithCalculatedRating = {
@@ -55,6 +62,8 @@ export type ProviderWithCalculatedRating = {
   averageRating: number;
   reviewCount: number;
   yearsOfExperience: number | null;
+  fiveStarReviewCount: number; // NEW: Number of 5-star reviews
+  monthlyBookingsCount: number; // NEW: Number of bookings this month
   cpf: string | null;
   dateOfBirth: string | null;
   createdAt: string;
@@ -66,7 +75,6 @@ export type ProviderWithCalculatedRating = {
   selfieWithDocumentUrl?: string | null;
   backgroundCheckResult?: Prisma.JsonValue | null;
   rejectionReason?: string | null;
-  // ADICIONADO: Novos campos do schema.prisma (estes são propriedades diretas do modelo)
   ocrResult: Prisma.JsonValue | null;
   livenessResult: Prisma.JsonValue | null;
 };
@@ -115,10 +123,15 @@ export class ProvidersService {
         },
         createdAt: ps.createdAt.toISOString(),
         updatedAt: ps.updatedAt.toISOString(),
-      })) as ProviderServiceForFrontend[],
+        pricingType: ps.pricingType, // NEW: Map new field
+        pricePerSquareMeter: ps.pricePerSquareMeter?.toNumber() || null, // NEW: Map new field
+        pricePerRoom: ps.pricePerRoom?.toNumber() || null, // NEW: Map new field
+      })) as ProviderServiceForFrontend[], // Casting is still needed as Prisma.Decimal is not directly number
       averageRating: averageRating,
       reviewCount: provider.reviewsReceived?.length || 0,
       yearsOfExperience: provider.yearsOfExperience || null,
+      fiveStarReviewCount: provider.fiveStarReviewCount || 0,
+      monthlyBookingsCount: provider.monthlyBookingsCount || 0,
       cpf: provider.cpf,
       dateOfBirth: formattedDateOfBirth,
       createdAt: formattedCreatedAt,
@@ -153,7 +166,8 @@ export class ProvidersService {
             }
           }
         },
-        // CORREÇÃO: Removido ocrResult: true e livenessResult: true daqui
+        // fiveStarReviewCount e monthlyBookingsCount são campos escalares e já fazem parte do tipo Provider.
+        // Não precisam ser listados aqui no 'include'.
       },
     });
 
@@ -181,7 +195,8 @@ export class ProvidersService {
             }
           }
         },
-        // CORREÇÃO: Removido ocrResult: true e livenessResult: true daqui
+        // fiveStarReviewCount e monthlyBookingsCount são campos escalares e já fazem parte do tipo Provider.
+        // Não precisam ser listados aqui no 'include'.
       },
     });
     if (provider) {
@@ -207,9 +222,8 @@ export class ProvidersService {
       avatarUrl: data.avatarUrl,
       yearsOfExperience: data.yearsOfExperience,
       bio: data.bio,
-      // CORREÇÃO: Removido a tentativa de incluir ocrResult e livenessResult no DTO de update
-      // ocrResult: data.ocrResult, // Assumindo que você adicionaria isso no DTO se fosse editável
-      // livenessResult: data.livenessResult, // Assumindo que você adicionaria isso no DTO se fosse editável
+      // fiveStarReviewCount e monthlyBookingsCount são atualizados por outros serviços (bookings, reviews)
+      // e não devem ser atualizados diretamente via DTO de perfil.
     };
 
     if (data.address) {
@@ -247,7 +261,8 @@ export class ProvidersService {
             }
           }
         },
-        // CORREÇÃO: Removido ocrResult: true e livenessResult: true daqui
+        // fiveStarReviewCount e monthlyBookingsCount são campos escalares e já fazem parte do tipo Provider.
+        // Não precisam ser listados aqui no 'include'.
       },
     });
 
@@ -293,7 +308,8 @@ export class ProvidersService {
         { fullName: { contains: searchTerm, mode: 'insensitive' } },
         { user: { email: { contains: searchTerm, mode: 'insensitive' } } },
         { bio: { contains: searchTerm, mode: 'insensitive' } },
-        { providerServices: { some: { service: { name: { contains: searchTerm, mode: 'insensitive' } } } } },
+        { providerServices: { some: { service: { name: { contains: searchTerm, mode: 'insensitive' } } } },
+        },
       ];
     }
 
@@ -371,6 +387,9 @@ export class ProvidersService {
                       'createdAt', ps."createdAt",
                       'updatedAt', ps."updatedAt",
                       'description', ps.description,
+                      'pricingType', ps."pricingType", -- NEW: Include in raw query
+                      'pricePerSquareMeter', ps."pricePerSquareMeter", -- NEW: Include in raw query
+                      'pricePerRoom', ps."pricePerRoom", -- NEW: Include in raw query
                       'service', json_build_object(
                           'id', s.id,
                           'name', s.name,
@@ -383,6 +402,8 @@ export class ProvidersService {
                   )
                   ORDER BY ps.id
               ) FILTER (WHERE ps.id IS NOT NULL) AS "providerServicesAgg"
+              , p."fiveStarReviewCount" -- NEW: Include in raw query
+              , p."monthlyBookingsCount" -- NEW: Include in raw query
             FROM
                 "Provider" p
             JOIN
@@ -403,7 +424,7 @@ export class ProvidersService {
                 ${serviceId ? Prisma.sql`AND ps."serviceId" = ${serviceId}` : Prisma.empty}
                 ${location ? Prisma.sql`AND (a.city ILIKE ${'%' + location + '%'} OR a.state ILIKE ${'%' + location + '%'} OR a.street ILIKE ${'%' + location + '%'} OR a.neighborhood ILIKE ${'%' + location + '%'})` : Prisma.empty}
             GROUP BY
-                p.id, u.email, u.role, a.id, a.cep, a.street, a.number, a.complement, a.neighborhood, a.city, a.state, a."providerId", a.location
+                p.id, u.email, u.role, a.id, a.cep, a.street, a.number, a.complement, a.neighborhood, a.city, a.state, a."providerId", a.location, p."fiveStarReviewCount", p."monthlyBookingsCount" -- CORREÇÃO: Incluir campos agregados no GROUP BY
             ORDER BY
                 distance_km ASC
             LIMIT ${limit || 10} OFFSET ${offset || 0};
@@ -425,6 +446,8 @@ providersWithDistance = rawProviders.map((rp: any) => {
                 createdAt: rp.createdAt, // createdAt from raw query will be a Date object
                 updatedAt: rp.updatedAt, // updatedAt from raw query will be a Date object
                 documentPhotoFrontUrl: rp.documentPhotoFrontUrl,
+                fiveStarReviewCount: rp.fiveStarReviewCount, // NEW: Map new field
+                monthlyBookingsCount: rp.monthlyBookingsCount, // NEW: Map new field
                 documentPhotoBackUrl: rp.documentPhotoBackUrl,
                 selfieWithDocumentUrl: rp.selfieWithDocumentUrl,
                 backgroundCheckResult: rp.backgroundCheckResult,
@@ -447,7 +470,11 @@ providersWithDistance = rawProviders.map((rp: any) => {
                 } as Address) : null, // <--- ATENÇÃO AQUI: Fecha parênteses e adiciona 'as Address'
                 providerServices: rp.providerServicesAgg ? rp.providerServicesAgg.map((ps: any) => ({
                     ...ps,
-                    price: new Prisma.Decimal(ps.price),
+                    price: new Prisma.Decimal(ps.price), // Keep as Decimal if ProviderService type expects it
+                    // CORREÇÃO: pricePerSquareMeter e pricePerRoom já vêm como números da raw query
+                    // e devem ser convertidos para Decimal para o tipo ProviderService.
+                    pricePerSquareMeter: ps.pricePerSquareMeter !== null ? new Prisma.Decimal(ps.pricePerSquareMeter) : null,
+                    pricePerRoom: ps.pricePerRoom !== null ? new Prisma.Decimal(ps.pricePerRoom) : null,
                     service: {
                         ...ps.service,
                         price: new Prisma.Decimal(ps.service.price),
@@ -455,6 +482,8 @@ providersWithDistance = rawProviders.map((rp: any) => {
                 })) : [],
                 reviewsReceived: [],
             };
+            // CORREÇÃO: No mapProviderToCalculatedRating, os campos Decimal serão convertidos para number.
+            // Aqui, o rp.distance_km já é um número.
             return this.mapProviderToCalculatedRating(providerWithIncludes, parseFloat(rp.distance_km));
         });
 
@@ -504,7 +533,8 @@ providersWithDistance = rawProviders.map((rp: any) => {
             }
           }
         },
-        // CORREÇÃO: Removido ocrResult: true e livenessResult: true daqui
+        // fiveStarReviewCount e monthlyBookingsCount são campos escalares e já fazem parte do tipo Provider.
+        // Não precisam ser listados aqui no 'include'.
       },
     });
 
@@ -563,7 +593,8 @@ providersWithDistance = rawProviders.map((rp: any) => {
             }
           }
         },
-        // CORREÇÃO: Removido ocrResult: true e livenessResult: true daqui
+        // fiveStarReviewCount e monthlyBookingsCount são campos escalares e já fazem parte do tipo Provider.
+        // Não precisam ser listados aqui no 'include'.
       },
       orderBy: {
         yearsOfExperience: 'desc',

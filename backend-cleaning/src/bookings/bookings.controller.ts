@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, UseGuards, Req, NotFoundException, ForbiddenException, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, UseGuards, Req, NotFoundException, ForbiddenException, Query, BadRequestException } from '@nestjs/common'; // CORREÇÃO: Importar BadRequestException
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
@@ -158,6 +158,30 @@ export class BookingsController {
     }
 
     const updatedBooking = await this.bookingsService.updateStatus(id, BookingStatus.CANCELED, UserRole.CLIENT);
+    return new BookingDetailsDto(updatedBooking);
+  }
+
+  @Post(':id/report-issue')
+  @Roles(UserRole.CLIENT, UserRole.PROVIDER)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Reportar um problema com um agendamento' })
+  @ApiResponse({ status: 200, description: 'Problema reportado com sucesso. Status do agendamento alterado para PENDING_DISPUTE.', type: BookingDetailsDto })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  @ApiResponse({ status: 403, description: 'Acesso proibido.' })
+  @ApiResponse({ status: 404, description: 'Agendamento não encontrado.' })
+  @ApiResponse({ status: 400, description: 'Requisição inválida.' })
+  async reportIssue(
+    @Req() req: Request,
+    @Param('id') id: string,
+    @Body('reason') reason: string,
+  ): Promise<BookingDetailsDto> {
+    if (!reason || reason.trim().length === 0) {
+      throw new BadRequestException('O motivo do problema é obrigatório.');
+    }
+    const userId = req.user['userId'];
+    const userRole = req.user['role'];
+    const updatedBooking = await this.bookingsService.reportIssue(id, userId, userRole, reason);
     return new BookingDetailsDto(updatedBooking);
   }
 }

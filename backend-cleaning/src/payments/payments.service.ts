@@ -423,7 +423,7 @@ export class PaymentsService {
             amount: amount,
             type: TransactionType.WITHDRAWAL,
             status: 'REQUESTED',
-            description: notes || `Solicitação de saque para ${bankName || 'conta'} Ag: ${agencyNumber || 'N/A'} Cc: ${accountNumber || 'N/A'}`,
+            description: notes || `Solicitação de saque para ${bankName || 'conta padrão'} Ag: ${agencyNumber || 'N/A'} Cc: ${accountNumber || 'N/A'}`,
           },
         });
 

@@ -53,6 +53,8 @@ export class DashboardService {
       totalEarnings: earningsSummary.totalEarnings,
       pendingWithdrawals: earningsSummary.pendingWithdrawals,
       reviews: recentReviews,
+      fiveStarReviewCount: provider.fiveStarReviewCount, // Include new field
+      monthlyBookingsCount: provider.monthlyBookingsCount, // Include new field
     };
   }
 }

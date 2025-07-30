@@ -15,11 +15,11 @@ import {
     StyleSheet,
     Text,
     TouchableOpacity,
-    View
+    View,
+    ColorValue // CORREÇÃO: Importar ColorValue
 } from 'react-native';
 
 // --- IMPORTAÇÕES DE SERVIÇOS E TIPAGENS DO SEU BACKEND REAL ---
-// IMPORTANTE: Substitua os mocks pelas importações reais dos seus serviços
 import { useAuth } from '../../../hooks/useAuth'; // Para obter dados do usuário logado
 import { createBooking } from '../../../services/bookingService';
 import { getProviderAvailability, getProviderDetails } from '../../../services/providerService';
@@ -31,6 +31,8 @@ import {
     ProviderDisplayInfo,
     ProviderServiceOffering
 } from '../../../types/backend/providers';
+import { UserProfile } from '../../../types/backend/users';
+import { PricingType } from '../../../types/backend/services'; // Importar PricingType
 
 // Importar formatDate de utils/helpers
 
@@ -53,6 +55,10 @@ const availabilityCache = new Map<string, { available: ProviderAvailability[], o
 export default function ScheduleServiceScreen() {
     const router = useRouter();
     const { user } = useAuth(); // Obtém os dados do usuário logado
+
+    // Adicionado um cast para UserProfile para garantir que o tipo do user esteja correto
+    const typedUser = user as UserProfile | null;
+
     const { providerId: paramProviderId, serviceId: paramServiceId } = useLocalSearchParams<{ providerId?: string; serviceId?: string }>();
 
     const [provider, setProvider] = useState<ProviderDisplayInfo | null>(null);
@@ -308,7 +314,7 @@ export default function ScheduleServiceScreen() {
     const handleConfirmBooking = useCallback(async () => {
         // Validação dos campos necessários
         if (
-            !user?.id || // Verifica se o usuário está logado
+            !typedUser?.id || // Verifica se o usuário está logado
             !provider?.id || // Verifica se os dados do provedor foram carregados
             !selectedProviderService?.id || // Verifica se um serviço do provedor foi selecionado
             !selectedDate || // Verifica se uma data foi selecionada
@@ -328,10 +334,23 @@ export default function ScheduleServiceScreen() {
                 providerServiceId: selectedProviderService.id,
                 scheduledDate: selectedDate.toISOString().split('T')[0], // Formata a data para YYYY-MM-DD
                 scheduledTime: selectedTime,
-                totalPrice: selectedProviderService.price,
+                totalPrice: selectedProviderService.price, // Preço base do serviço
                 notes: notes,
                 address: address,
             };
+
+            // CORREÇÃO: Adicionar campos de precificação dinâmica ao DTO
+            if (selectedProviderService.pricingType === PricingType.HOURLY) {
+                // Assumir uma duração padrão ou pedir ao usuário
+                // Por enquanto, vamos usar um valor placeholder, você deve ter uma UI para isso
+                bookingData.requestedDurationMinutes = 120; // Exemplo: 2 horas
+            } else if (selectedProviderService.pricingType === PricingType.BY_SIZE) {
+                // Assumir valores padrão ou pedir ao usuário
+                // Por enquanto, vamos usar valores placeholder, você deve ter uma UI para isso
+                bookingData.requestedSquareMeters = 50; // Exemplo: 50 m²
+                // bookingData.requestedRoomCount = 3; // Exemplo: 3 cômodos
+            }
+
 
             // Chama o serviço real para criar o agendamento
             const newBooking: BookingDetails = await createBooking(bookingData);
@@ -352,7 +371,7 @@ export default function ScheduleServiceScreen() {
         } finally {
             setIsBooking(false); // Desativa o estado de carregamento
         }
-    }, [user, provider, selectedDate, selectedTime, address, selectedProviderService, notes, router]);
+    }, [typedUser, provider, selectedDate, selectedTime, address, selectedProviderService, notes, router]);
 
     // Função para pré-carregar a disponibilidade de horários para os meses vizinhos
     const prefetchAvailability = useCallback(async (provId: string | undefined, date: Date) => {
@@ -369,6 +388,7 @@ export default function ScheduleServiceScreen() {
         try {
             // Chama o serviço para obter a disponibilidade do provedor
             const response = await getProviderAvailability(provId, dateString);
+            // Certifique-se de que a resposta do backend corresponde ao formato esperado { available: ProviderAvailability[], occupiedTimes: string[] }
             availabilityCache.set(cacheKey, response); // Armazena a resposta no cache
         } catch (error) {
             console.error(`[Prefetch] Erro ao pré-carregar disponibilidade para ${dateString}:`, error);
@@ -381,7 +401,7 @@ export default function ScheduleServiceScreen() {
             setIsLoading(true); // Inicia o estado de carregamento
 
             // Validações iniciais para garantir que os parâmetros necessários estão presentes
-            if (!paramProviderId || !paramServiceId || !user?.id) {
+            if (!paramProviderId || !paramServiceId || !typedUser?.id) { // Usar typedUser aqui
                 Alert.alert("Erro de Navegação", "Dados essenciais ausentes. Tente novamente.");
                 router.replace('/explore'); // Retorna para a tela de exploração se os dados estiverem incompletos
                 setIsLoading(false);
@@ -408,15 +428,15 @@ export default function ScheduleServiceScreen() {
                 setSelectedProviderService(foundService); // Define o serviço selecionado
 
                 // Preenche o endereço do cliente se ele estiver disponível no perfil do usuário
-                if (user.address) {
+                if (typedUser?.address) { // Usar typedUser aqui
                     setAddress({
-                        street: user.address.street || '',
-                        number: user.address.number || '',
-                        complement: user.address.complement || null,
-                        neighborhood: user.address.neighborhood || '',
-                        city: user.address.city || '',
-                        state: user.address.state || '',
-                        cep: user.address.cep || ''
+                        street: typedUser.address.street || '',
+                        number: typedUser.address.number || '',
+                        complement: typedUser.address.complement || null,
+                        neighborhood: typedUser.address.neighborhood || '',
+                        city: typedUser.address.city || '',
+                        state: typedUser.address.state || '',
+                        cep: typedUser.address.cep || ''
                     });
                 } else {
                     // Alerta o usuário se o endereço não estiver completo
@@ -446,7 +466,7 @@ export default function ScheduleServiceScreen() {
             }
         };
         loadInitialData(); // Chama a função de carregamento de dados
-    }, [paramProviderId, user?.id, user?.address, paramServiceId, router, prefetchAvailability]);
+    }, [paramProviderId, typedUser?.id, typedUser?.address, paramServiceId, router, prefetchAvailability]); // Usar typedUser aqui
 
     // Animação para o brilho do calendário (shine)
     const animateShine = useCallback(() => {
@@ -513,7 +533,7 @@ export default function ScheduleServiceScreen() {
             const dateString = selectedDate.toISOString().split('T')[0]; // Pega a data no formato YYYY-MM-DD
             const cacheKey = `${provider.id}-${dateString}`; // Chave para o cache
 
-            let backendResponse;
+            let backendResponse: { available: ProviderAvailability[], occupiedTimes: string[] } | undefined;
             if (availabilityCache.has(cacheKey)) {
                 // Usa dados do cache se disponíveis
                 backendResponse = availabilityCache.get(cacheKey);
@@ -598,13 +618,13 @@ export default function ScheduleServiceScreen() {
         'rgba(135, 206, 250, 0.25)',
         'rgba(100, 149, 237, 0.35)',
         'rgba(65, 153, 225, 0.25)',
-    ];
+    ] as const; // CORREÇÃO: Adicionado 'as const'
 
     const backgroundGradientColors = [
         'rgba(248, 250, 252, 1)',
         'rgba(241, 245, 249, 1)',
         'rgba(248, 250, 252, 0.95)',
-    ];
+    ] as const; // CORREÇÃO: Adicionado 'as const'
 
     return (
         <View style={styles.screenContainer}>
@@ -722,7 +742,7 @@ export default function ScheduleServiceScreen() {
                         setAddress={setAddress}
                         shineAnim={shineAnim} // Passa a animação para o componente de endereço
                         isLoading={isLoading}
-                        isInputMode={!user?.address?.street || !user?.address?.number || !user?.address?.neighborhood || !user?.address?.city || !user?.address?.state} // Indica se o endereço precisa ser preenchido
+                        isInputMode={!typedUser?.address?.street || !typedUser?.address?.number || !typedUser?.address?.neighborhood || !typedUser?.address?.city || !typedUser?.address?.state} // Usar typedUser aqui
                     />
                 </Animated.View>
 

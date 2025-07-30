@@ -4,32 +4,24 @@ import { LinearGradient } from 'expo-linear-gradient';
 import React, { useCallback } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 // Importar VerificationStatus para ter certeza
-import { VerificationStatus } from '../../../../types/backend/providers';
+import { VerificationStatus } from '../../../../types/backend/auth'; // CORREÇÃO: Importar VerificationStatus de auth.ts
+import { BookingAddress } from '../../../../types/backend/bookings'; // CORREÇÃO: Importar BookingAddress
 
 // A interface ProviderDetails deve espelhar a ProviderDisplayInfo
 interface ProviderDetails {
     id: string;
     fullName: string;
-    email?: string;
+    email?: string | null;
     phone?: string | null;
     bio?: string | null;
-    cpf?: string;
-    dateOfBirth?: string;
-    address?: {
-        id: string;
-        cep: string;
-        street: string;
-        number: string;
-        complement?: string | null;
-        neighborhood: string;
-        city: string;
-        state: string;
-    } | null;
+    cpf?: string | null;
+    dateOfBirth?: string | null;
+    address?: BookingAddress | null; // CORREÇÃO: Usar BookingAddress importado
     createdAt?: string;
     updatedAt?: string;
-    distance?: string;
+    distance?: number | null;
     reviews?: any[];
-    pixKey?: string;
+    pixKey?: string | null;
 
     avatarUrl?: string | null;
     averageRating?: number | null;

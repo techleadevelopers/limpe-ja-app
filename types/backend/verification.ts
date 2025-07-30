@@ -1,15 +1,6 @@
 // app/types/backend/verification.ts
 
-// Espelha o enum VerificationStatus do backend
-export enum VerificationStatus {
-  PENDING_INITIAL_REVIEW = 'PENDING_INITIAL_REVIEW',
-  PENDING_DOCUMENTS_UPLOAD = 'PENDING_DOCUMENTS_UPLOAD',
-  PENDING_BACKGROUND_CHECK = 'PENDING_BACKGROUND_CHECK',
-  PENDING_MANUAL_REVIEW = 'PENDING_MANUAL_REVIEW',
-  APPROVED = 'APPROVED',
-  REJECTED = 'REJECTED',
-  BLOCKED = 'BLOCKED',
-}
+import { VerificationStatus } from './auth'; // CORREÇÃO: Importar VerificationStatus de auth.ts
 
 // Para o endpoint POST /verification/cpf
 export interface SubmitCpfRequest {
@@ -40,9 +31,9 @@ export interface ProviderVerificationInfo {
   fullName: string;
   email: string;
   verificationStatus: VerificationStatus;
-  documentPhotoFrontUrl?: string;
-  documentPhotoBackUrl?: string;
-  selfieWithDocumentUrl?: string;
-  rejectionReason?: string;
+  documentPhotoFrontUrl?: string | null; // Permitir null
+  documentPhotoBackUrl?: string | null; // Permitir null
+  selfieWithDocumentUrl?: string | null; // Permitir null
+  rejectionReason?: string | null; // Permitir null
   // ... outros campos relevantes do provedor
 }

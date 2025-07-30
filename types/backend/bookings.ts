@@ -1,7 +1,8 @@
 // LimpeJaApp/src/types/backend/bookings.ts
 
 // Importar interfaces de tipagem relevantes de outros arquivos
-import { ProviderDisplayInfo, ServiceDetailsDto } from './providers'; 
+import { ProviderDisplayInfo } from './providers';
+import { Service } from './services'; // Importar Service para serviceName, etc.
 
 /**
  * @enum BookingStatus
@@ -10,12 +11,13 @@ import { ProviderDisplayInfo, ServiceDetailsDto } from './providers';
  */
 export enum BookingStatus {
   PENDING = 'PENDING',
-  PENDING_PROVIDER_CONFIRMATION = 'PENDING_PROVIDER_CONFIRMATION', // Adicionado/Verificado
+  PENDING_PROVIDER_CONFIRMATION = 'PENDING_PROVIDER_CONFIRMATION',
   CONFIRMED = 'CONFIRMED',
   COMPLETED = 'COMPLETED',
-  CANCELLED = 'CANCELLED', // Verificado: com dois 'L's
+  CANCELED = 'CANCELED', // CORREÇÃO: Alinhado com 'CANCELED' do schema.prisma
+  PENDING_DISPUTE = 'PENDING_DISPUTE',
   RESCHEDULED = 'RESCHEDULED',
-  IN_PROGRESS = 'IN_PROGRESS', 
+  IN_PROGRESS = 'IN_PROGRESS',
   REJECTED = 'REJECTED',
 }
 
@@ -47,6 +49,9 @@ export interface CreateBookingDto {
   totalPrice: number;
   notes?: string | null;
   address: BookingAddress;
+  requestedDurationMinutes?: number; // NEW: for HOURLY services
+  requestedSquareMeters?: number; // NEW: for BY_SIZE services
+  requestedRoomCount?: number; // NEW: for BY_SIZE services
 }
 
 /**
@@ -57,7 +62,7 @@ export interface CreateBookingDto {
 export interface BookingDetails {
   id: string;
   status: BookingStatus; // Usar o enum definido
-  
+
   scheduledDateTime: string; // Data e hora agendadas, combinadas em uma string ISO 8601
 
   totalPrice: number; // Preço total do agendamento
@@ -92,22 +97,8 @@ export interface BookingDetails {
   reviewId?: string | null;
   reviewRating?: number | null;
   reviewComment?: string | null;
-  // --- ADICIONADO/AJUSTADO: isReviewed para corresponder à expectativa do frontend ---
-  // Se o backend NUNCA retornar 'isReviewed' diretamente,
-  // remova esta linha e derive 'isReviewed' no frontend de '!!reviewId'
   isReviewed?: boolean; // Opção 1: Backend envia.
 }
-
-// REMOVER OU COMENTAR esta linha se você não usa 'Booking' como um tipo separado em outros lugares.
-// SE VOCÊ AINDA USA 'Booking' EM ALGUM LUGAR, certifique-se de que ela EXTENDE BookingDetails
-// E ADICIONE isReviewed aqui, se for para ser uma propriedade DO OBJETO DE DADOS,
-// e não uma derivação do frontend.
-export interface Booking extends BookingDetails {
-  // Se isReviewed é uma propriedade que virá do backend, adicione-a aqui.
-  // Caso contrário, remova-a daqui e derive-a no componente (!!booking.reviewId)
-  isReviewed?: boolean;
-}
-
 
 /**
  * @interface UpdateBookingStatusDto

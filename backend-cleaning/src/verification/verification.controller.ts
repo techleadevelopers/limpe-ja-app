@@ -202,8 +202,8 @@ export class VerificationController {
   @Roles(UserRole.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Rejeitar um provedor e fornecer um motivo' })
   @ApiBody({ schema: { properties: { reason: { type: 'string', description: 'Motivo da rejeição' } } }}) // Documenta o corpo
+  @ApiOperation({ summary: 'Rejeitar um provedor e fornecer um motivo' })
   @ApiResponse({ status: 200, description: 'Provedor rejeitado com sucesso.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })

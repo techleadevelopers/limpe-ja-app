@@ -12,10 +12,10 @@ export interface SubmitReviewDto {
   userId: string; // ID do usuário que está enviando o feedback (cliente)
 
   // Se o backend espera esses dados para contexto, inclua
-  serviceName?: string;
-  providerName?: string;
-  providerId?: string; // <--- ADICIONADO: ID do provedor, opcional
-  // bookId?: string; // Se o review está ligado a um agendamento específico
+  serviceName?: string | null; // Permitir null
+  providerName?: string | null; // Permitir null
+  providerId?: string | null; // <--- ADICIONADO: ID do provedor, opcional, permitir null
+  bookingId?: string | null; // Se o review está ligado a um agendamento específico, permitir null
 }
 
 /**
@@ -30,7 +30,7 @@ export interface ReviewEntity {
   targetId: string;
   reviewerId: string; // Quem fez a avaliação
   rating: number;
-  comment: string;
+  comment?: string | null; // Permitir null
   createdAt: string; // ISO string
   type: 'service' | 'provider_profile' | 'app_feedback';
   // Inclua outras propriedades que o backend pode retornar (ex: detalhes do cliente/provedor avaliado)

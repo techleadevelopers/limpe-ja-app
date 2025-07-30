@@ -28,6 +28,10 @@ export class ClientEntity implements PrismaClient {
   @ApiProperty({ description: 'Data da última atualização do cliente', example: '2023-01-01T10:00:00.000Z' })
   updatedAt: Date; 
 
+  // NOVO: completedBookingsCount para programa de fidelidade
+  @ApiProperty({ description: 'Contagem de agendamentos concluídos pelo cliente', example: 10 })
+  completedBookingsCount: number;
+
   // Relações
   // Usamos `type: () => UserEntity` para referenciar a classe da entidade User para o Swagger
   @ApiProperty({ type: () => UserEntity, description: 'Dados do usuário associado ao cliente' })

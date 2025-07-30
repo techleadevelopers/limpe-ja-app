@@ -13,9 +13,9 @@ export interface NotificationEntity {
   title: string;
   body: string; // Conteúdo principal da notificação
   createdAt: string; // ISO String, data de criação da notificação
-  readAt?: string; // ISO String, data em que a notificação foi lida (será nulo se não lida)
-  navigateTo?: string; // Rota interna do app para onde navegar ao clicar na notificação
-  relatedId?: string; // ID de um item relacionado (ex: bookingId, chatId)
+  readAt?: string | null; // ISO String, data em que a notificação foi lida (será nulo se não lida)
+  navigateTo?: string | null; // Rota interna do app para onde navegar ao clicar na notificação
+  relatedId?: string | null; // ID de um item relacionado (ex: bookingId, chatId)
   userId: string; // ID do usuário a quem a notificação pertence
 }
 

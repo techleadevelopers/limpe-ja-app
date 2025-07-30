@@ -16,6 +16,7 @@ import { ReviewEntity } from '../reviews/entities/review.entity';
 export type ClientWithIncludes = Client & {
   user: User; // User completo (com avatarUrl agora, se o schema foi migrado)
   address: Address | null;
+  completedBookingsCount: number; // Add this field
   bookings: Booking[]; // Ou se você incluir mais detalhes em bookings, atualize aqui
   reviewsMade: Review[]; // Ou se você incluir mais detalhes em reviewsMade, atualize aqui
   // Adicione _count se o Prisma retornar, ou remova se for calculado no DTO
@@ -37,6 +38,7 @@ export class ClientsService {
       where: { id },
       include: {
         user: true, // Inclui o user completo
+        _count: { select: { bookings: true } }, // Include count for bookings
         address: true,
         bookings: true,
         reviewsMade: true,
@@ -50,6 +52,7 @@ export class ClientsService {
       where: { userId },
       include: {
         user: true, // Inclui o user completo
+        _count: { select: { bookings: true } }, // Include count for bookings
         address: true,
         bookings: true,
         reviewsMade: true,
@@ -70,6 +73,7 @@ export class ClientsService {
         data: {
           fullName: updateClientProfileDto.fullName,
           phone: updateClientProfileDto.phone,
+          // completedBookingsCount is updated in bookings.service.ts
           // Você pode querer atualizar o endereço aqui também, se o DTO permitir
           // address: updateClientProfileDto.address ? {
           //   upsert: {

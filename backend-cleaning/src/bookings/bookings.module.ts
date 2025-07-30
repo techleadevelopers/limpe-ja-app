@@ -1,23 +1,25 @@
 // src/bookings/bookings.module.ts
-import { Module, forwardRef } from '@nestjs/common'; // Importe forwardRef
-import { BookingsController } from './bookings.controller';
+import { Module } from '@nestjs/common';
 import { BookingsService } from './bookings.service';
-import { PrismaModule } from '../prisma/prisma.module';
-import { ClientsModule } from '../clients/clients.module'; // ADICIONADO
-import { ProvidersModule } from '../providers/providers.module'; // ADICIONADO
-import { ProviderServicesModule } from '../provider-services/provider-services.module'; // ADICIONADO
-import { PaymentsModule } from '../payments/payments.module'; // ADICIONADO
+import { BookingsController } from './bookings.controller';
+import { PrismaModule } from '../prisma/prisma.module'; // Assuming you have this
+import { ClientsModule } from '../clients/clients.module'; // Assuming you have this
+import { ProvidersModule } from '../providers/providers.module'; // Assuming you have this
+import { ProviderServicesModule } from '../provider-services/provider-services.module'; // Assuming you have this
+import { PaymentsModule } from '../payments/payments.module'; // Assuming you have this
+import { NotificationsModule } from '../notifications/notifications.module'; // Make sure this path is correct
 
 @Module({
   imports: [
     PrismaModule,
-    ClientsModule, // Necessário para ClientsService
-    ProvidersModule, // Necessário para ProvidersService
-    ProviderServicesModule, // Necessário para ProviderServicesService
-    forwardRef(() => PaymentsModule), // Necessário para PaymentsService (pode ser circular)
+    ClientsModule,
+    ProvidersModule,
+    ProviderServicesModule,
+    PaymentsModule,
+    NotificationsModule, // Add NotificationsModule here
   ],
   controllers: [BookingsController],
   providers: [BookingsService],
-  exports: [BookingsService], // Exporta para outros módulos (ex: ReviewsModule)
+  exports: [BookingsService], // If other modules need to use BookingsService
 })
 export class BookingsModule {}

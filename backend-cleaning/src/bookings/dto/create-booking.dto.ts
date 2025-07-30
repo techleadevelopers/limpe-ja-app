@@ -1,6 +1,6 @@
 // backend-cleaning/src/bookings/dto/create-booking.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsDateString, IsNumber, Min, IsOptional, IsUUID, Matches, ValidateNested } from 'class-validator'; // ADICIONE ValidateNested
+import { IsString, IsNotEmpty, IsDateString, IsNumber, Min, IsOptional, IsUUID, Matches, ValidateNested, IsInt } from 'class-validator'; // ADICIONE ValidateNested
 import { Type } from 'class-transformer'; // ADICIONE Type
 import { CreateAddressDto } from '../../common/dto/create-address.dto'; // Importe CreateAddressDto
 
@@ -41,4 +41,22 @@ export class CreateBookingDto {
   @ValidateNested() // Valida o objeto aninhado
   @Type(() => CreateAddressDto) // Ajuda o class-transformer a instanciar o objeto correto
   address: CreateAddressDto;
+
+  @ApiPropertyOptional({ description: 'Duração solicitada em minutos (se o serviço for HOURLY)', example: 120 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  requestedDurationMinutes?: number;
+
+  @ApiPropertyOptional({ description: 'Metragem quadrada solicitada (se o serviço for BY_SIZE)', example: 80.5 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  requestedSquareMeters?: number;
+
+  @ApiPropertyOptional({ description: 'Número de cômodos solicitados (se o serviço for BY_SIZE)', example: 3 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  requestedRoomCount?: number;
 }

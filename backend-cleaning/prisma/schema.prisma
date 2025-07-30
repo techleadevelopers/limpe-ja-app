@@ -37,6 +37,14 @@ enum VerificationStatus {
   BLOCKED                   // Conta bloqueada por questões de segurança graves
 }
 
+// NOVO: Enum para o tipo de precificação do serviço
+enum PricingType {
+  FIXED_PRICE
+  HOURLY
+  BY_SIZE
+  CUSTOM_QUOTE // Para orçamentos mais complexos (futuro)
+}
+
 // Modelo de Usuário (base para Cliente e Provedor)
 model User {
   id                String         @id @default(uuid())
@@ -69,6 +77,7 @@ model Client {
   userId    String    @unique
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   fullName  String
+  completedBookingsCount Int @default(0) // NOVO: Contador para programa de fidelidade
   phone     String?
   cpf       String?   @unique // CORREÇÃO: Adicionado CPF para o cliente
   address   Address?  @relation("ClientAddress")
@@ -96,6 +105,8 @@ model Provider {
   avatarUrl           String?
   bio                 String? // PROPRIEDADE 'BIO' ADICIONADA AQUI
   providerServices    ProviderService[]
+  fiveStarReviewCount Int @default(0) // NOVO: Para bônus por avaliações excelentes
+  monthlyBookingsCount Int @default(0) // NOVO: Para bônus por volume de serviços
   availability        Availability[]
   bookings            Booking[]
   reviewsReceived     Review[]           @relation("ProviderReviews") // Avaliações que o provedor recebeu
@@ -162,6 +173,9 @@ model ProviderService {
   durationMinutes Int?      // Duração estimada em minutos
   description     String?   // Descrição específica do provedor para este serviço
   provider        Provider  @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  pricingType     PricingType @default(FIXED_PRICE) // NOVO: Tipo de precificação
+  pricePerSquareMeter Decimal? @db.Decimal(10, 2) // NOVO: Preço por m² (para BY_SIZE)
+  pricePerRoom    Decimal? @db.Decimal(10, 2) // NOVO: Preço por cômodo (para BY_SIZE)
   service         Service   @relation(fields: [serviceId], references: [id])
   bookings        Booking[] // Campo reverso para Booking
   createdAt       DateTime  @default(now()) // ADICIONADO
@@ -176,6 +190,7 @@ enum BookingStatus {
   CONFIRMED
   COMPLETED
   CANCELED
+  PENDING_DISPUTE // NOVO: Status para agendamentos em disputa
   RESCHEDULED
   IN_PROGRESS // <-- CONFIRME ESTE AQUI
   PENDING_PROVIDER_CONFIRMATION // Confirme este também se usar

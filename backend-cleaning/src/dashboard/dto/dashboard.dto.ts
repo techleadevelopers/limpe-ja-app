@@ -17,4 +17,10 @@ export class DashboardDto {
 
   @ApiPropertyOptional({ type: () => [ReviewDto], description: 'Lista das avaliações mais recentes do provedor.' })
   reviews?: ReviewDto[]; // Adicione esta propriedade para as avaliações
+
+  @ApiProperty({ description: 'Número de avaliações 5 estrelas recebidas', example: 42 })
+  fiveStarReviewCount: number;
+
+  @ApiProperty({ description: 'Número de agendamentos concluídos no mês atual', example: 15 })
+  monthlyBookingsCount: number;
 }
