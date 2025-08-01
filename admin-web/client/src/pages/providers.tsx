@@ -8,7 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { Search, Filter, MoreHorizontal, MapPin, Star } from "lucide-react";
 import { motion } from "framer-motion";
 import VerificationModal from "@/components/verification/verification-modal";
-import { mockProviders, type Provider } from "@/data/mockData";
+// Removendo mockProviders e funções utilitárias mockadas
+// import { mockProviders, type Provider } from "@/data/mockData";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { fetchProviders, updateProviderStatus as apiUpdateProviderStatus } from "@/lib/api";
+import { Provider, VerificationStatus } from "@/lib/types"; // Importa Provider e VerificationStatus dos tipos reais
+import { useToast } from "@/hooks/use-toast";
+
 
 function formatRelativeTime(date: Date): string {
   const now = new Date();
@@ -26,15 +32,15 @@ function formatRelativeTime(date: Date): string {
 
 function getStatusBadge(status: string) {
   switch (status) {
-    case "APPROVED":
+    case VerificationStatus.APPROVED:
       return "bg-green-100 text-green-700 border-green-200";
-    case "PENDING_DOCUMENTS_UPLOAD":
+    case VerificationStatus.PENDING_DOCUMENTS_UPLOAD:
       return "bg-yellow-100 text-yellow-700 border-yellow-200";
-    case "PENDING_MANUAL_REVIEW":
+    case VerificationStatus.PENDING_MANUAL_REVIEW:
       return "bg-orange-100 text-orange-700 border-orange-200";
-    case "REJECTED":
+    case VerificationStatus.REJECTED:
       return "bg-red-100 text-red-700 border-red-200";
-    case "BLOCKED":
+    case VerificationStatus.BLOCKED:
       return "bg-gray-100 text-gray-700 border-gray-200";
     default:
       return "bg-blue-100 text-blue-700 border-blue-200";
@@ -45,26 +51,65 @@ export default function Providers() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
-  const [providers, setProviders] = useState(mockProviders);
-  const [isLoading, setIsLoading] = useState(true);
+  // Busca os provedores usando react-query
+  const { data: providers, isLoading, isError, error } = useQuery<Provider[], Error>({
+    queryKey: ['/providers'],
+    queryFn: () => fetchProviders(), // fetchProviders já está configurado em api.ts
+  });
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, []);
+  // Mutação para atualizar o status do provedor
+  const updateProviderStatusMutation = useMutation({
+    mutationFn: ({ id, status, rejectionReason }: { id: string; status: VerificationStatus; rejectionReason?: string }) =>
+      apiUpdateProviderStatus(id, status, rejectionReason),
+    onSuccess: (updatedProvider) => {
+      queryClient.invalidateQueries({ queryKey: ['/providers'] }); // Invalida a cache para refetch
+      queryClient.invalidateQueries({ queryKey: ['/verification-queue'] }); // Também invalida a fila
+      toast({
+        title: "Status do Provedor Atualizado",
+        description: `${updatedProvider.name} agora está ${updatedProvider.verificationStatus}.`,
+      });
+      setIsModalOpen(false); // Fecha o modal após a atualização
+      setSelectedProvider(null);
+    },
+    onError: (err: any) => {
+      toast({
+        title: "Erro ao Atualizar Status",
+        description: err.message || "Ocorreu um erro ao atualizar o status do provedor.",
+        variant: "destructive",
+      });
+    },
+  });
 
-  const filteredProviders = providers.filter((provider: Provider) =>
+  const filteredProviders = providers?.filter((provider: Provider) =>
     provider.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     provider.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  ) || [];
 
   const handleProviderClick = (provider: Provider) => {
     setSelectedProvider(provider);
     setIsModalOpen(true);
   };
+
+  // Função para passar para o VerificationModal para aprovação
+  const handleApproveProvider = (providerId: string) => {
+    updateProviderStatusMutation.mutate({ id: providerId, status: VerificationStatus.APPROVED });
+  };
+
+  // Função para passar para o VerificationModal para rejeição
+  const handleRejectProvider = (providerId: string, reason: string) => {
+    updateProviderStatusMutation.mutate({ id: providerId, status: VerificationStatus.REJECTED, rejectionReason: reason });
+  };
+
+  // Função para passar para o VerificationModal para bloqueio
+  const handleBlockProvider = (providerId: string) => {
+    if (confirm("Tem certeza que deseja bloquear este provedor?")) {
+      updateProviderStatusMutation.mutate({ id: providerId, status: VerificationStatus.BLOCKED });
+    }
+  };
+
 
   return (
     <div className="flex h-screen bg-admin-bg">
@@ -122,6 +167,10 @@ export default function Providers() {
                   </CardContent>
                 </Card>
               ))}
+            </div>
+          ) : isError ? (
+            <div className="text-center py-12 text-red-600">
+              <p>Erro ao carregar provedores: {error?.message}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -185,7 +234,7 @@ export default function Providers() {
                       {provider.latitude && provider.longitude && (
                         <div className="flex items-center text-sm text-gray-500 mb-4">
                           <MapPin className="w-4 h-4 mr-1" />
-                          <span>São Paulo, Brazil</span>
+                          <span>{provider.city || "Localização Desconhecida"}</span>
                         </div>
                       )}
 
@@ -222,6 +271,9 @@ export default function Providers() {
           setIsModalOpen(false);
           setSelectedProvider(null);
         }}
+        onApprove={handleApproveProvider}
+        onReject={handleRejectProvider}
+        onBlock={handleBlockProvider}
       />
     </div>
   );

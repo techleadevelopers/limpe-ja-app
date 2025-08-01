@@ -1,7 +1,8 @@
 import { Users, UserCheck, Calendar, DollarSign, TrendingUp } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { motion } from "framer-motion";
-import type { DashboardMetrics } from "@/data/mockData";
+// Importa DashboardMetrics dos tipos reais
+import type { DashboardMetrics } from "@/lib/types";
 
 interface MetricsCardsProps {
   metrics: DashboardMetrics;

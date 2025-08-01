@@ -1,6 +1,6 @@
-import { randomUUID } from "crypto";
+import { randomUUID } from "crypto"; // randomUUID não é mais necessário se não for usado para gerar IDs
 
-// Types for the mock data
+// Types for the mock data (estes tipos devem ser os mesmos de types.ts)
 export interface User {
   id: string;
   username: string;
@@ -27,8 +27,11 @@ export interface Provider {
   totalEarnings: string;
   latitude: string | null;
   longitude: string | null;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: Date; // Mantido como Date para mocks, mas será string para API real
+  updatedAt: Date; // Mantido como Date para mocks, mas será string para API real
+  city?: string; // Adicionado para alinhar com UI
+  specialties?: string[]; // Adicionado para alinhar com UI
+  jobsCompleted?: number; // Adicionado para alinhar com UI
 }
 
 export interface Activity {
@@ -105,9 +108,9 @@ export const mockProviders: Provider[] = [
     email: "ana.costa@example.com",
     phone: "+55 11 99999-9999",
     verificationStatus: "PENDING_MANUAL_REVIEW",
-    documentPhotoFrontUrl: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=200",
-    documentPhotoBackUrl: "https://images.unsplash.com/photo-1554224154-26032fced8bd?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=200",
-    selfieWithDocumentUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=200",
+    documentPhotoFrontUrl: "https://images.unsplash.com/photo-1614028674026-a65e31bfd27c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=200",
+    documentPhotoBackUrl: "https://images.unsplash.com/photo-1554224154-26032fced8bd?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=200",
+    selfieWithDocumentUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=200",
     ocrResult: {
       documentType: "RG",
       documentNumber: "12.345.678-9",
@@ -127,7 +130,10 @@ export const mockProviders: Provider[] = [
     latitude: "-23.5505",
     longitude: "-46.6333",
     createdAt: new Date("2023-08-15"),
-    updatedAt: new Date("2023-08-20")
+    updatedAt: new Date("2023-08-20"),
+    city: "São Paulo", // Adicionado
+    specialties: ["Limpeza Residencial", "Limpeza Pós-Obra"], // Adicionado
+    jobsCompleted: 120, // Adicionado
   },
   {
     id: "provider2",
@@ -148,7 +154,10 @@ export const mockProviders: Provider[] = [
     latitude: "-23.5629",
     longitude: "-46.6544",
     createdAt: new Date("2023-09-01"),
-    updatedAt: new Date("2023-09-01")
+    updatedAt: new Date("2023-09-01"),
+    city: "Rio de Janeiro", // Adicionado
+    specialties: ["Limpeza de Escritório"], // Adicionado
+    jobsCompleted: 85, // Adicionado
   },
   {
     id: "provider3",
@@ -157,9 +166,9 @@ export const mockProviders: Provider[] = [
     email: "marina.oliveira@example.com",
     phone: "+55 11 77777-7777",
     verificationStatus: "APPROVED",
-    documentPhotoFrontUrl: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=200",
-    documentPhotoBackUrl: "https://images.unsplash.com/photo-1554224154-22dec7ec8818?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=200",
-    selfieWithDocumentUrl: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=200",
+    documentPhotoFrontUrl: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=200",
+    documentPhotoBackUrl: "https://images.unsplash.com/photo-1554224154-22dec7ec8818?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=200",
+    selfieWithDocumentUrl: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=200",
     ocrResult: {
       documentType: "CNH",
       documentNumber: "98765432101",
@@ -179,7 +188,10 @@ export const mockProviders: Provider[] = [
     latitude: "-23.5475",
     longitude: "-46.6361",
     createdAt: new Date("2023-07-10"),
-    updatedAt: new Date("2023-07-15")
+    updatedAt: new Date("2023-07-15"),
+    city: "Belo Horizonte", // Adicionado
+    specialties: ["Limpeza Residencial", "Limpeza de Vidros"], // Adicionado
+    jobsCompleted: 210, // Adicionado
   }
 ];
 
@@ -297,28 +309,7 @@ export const mockBookings: Booking[] = [
   }
 ];
 
-// Utility functions
-export function getPendingProviders(): Provider[] {
-  return mockProviders.filter(p => 
-    p.verificationStatus === "PENDING_DOCUMENTS_UPLOAD" || 
-    p.verificationStatus === "PENDING_MANUAL_REVIEW"
-  );
-}
-
-export function getProvidersByStatus(status: string): Provider[] {
-  return mockProviders.filter(p => p.verificationStatus === status);
-}
-
-export function updateProviderStatus(providerId: string, status: string, rejectionReason?: string): Provider | null {
-  const providerIndex = mockProviders.findIndex(p => p.id === providerId);
-  if (providerIndex === -1) return null;
-  
-  mockProviders[providerIndex] = {
-    ...mockProviders[providerIndex],
-    verificationStatus: status as any,
-    rejectionReason: rejectionReason || null,
-    updatedAt: new Date()
-  };
-  
-  return mockProviders[providerIndex];
-}
+// As funções utilitárias mockadas serão removidas, pois a API real as substituirá.
+// export function getPendingProviders(): Provider[] { ... }
+// export function getProvidersByStatus(status: string): Provider[] { ... }
+// export function updateProviderStatus(providerId: string, status: string, rejectionReason?: string): Provider | null { ... }

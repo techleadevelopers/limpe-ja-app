@@ -3,27 +3,32 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
-import { getPendingProviders, type Provider } from "@/data/mockData";
+// Removendo import de mockData
+// import { getPendingProviders, type Provider } from "@/data/mockData";
+import { useQuery } from "@tanstack/react-query";
+import { fetchVerificationQueue } from "@/lib/api";
+import { Provider, VerificationStatus } from "@/lib/types"; // Importa Provider e VerificationStatus dos tipos reais
+
 
 function formatRelativeTime(date: Date): string {
   const now = new Date();
   const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
   
-  if (diffInMinutes < 1) return "Just now";
-  if (diffInMinutes < 60) return `${diffInMinutes} minutes ago`;
+  if (diffInMinutes < 1) return "Agora mesmo";
+  if (diffInMinutes < 60) return `${diffInMinutes} minutos atrás`;
   
   const diffInHours = Math.floor(diffInMinutes / 60);
-  if (diffInHours < 24) return `${diffInHours} hours ago`;
+  if (diffInHours < 24) return `${diffInHours} horas atrás`;
   
   const diffInDays = Math.floor(diffInHours / 24);
-  return `${diffInDays} days ago`;
+  return `${diffInDays} dias atrás`;
 }
 
 function getStatusBadge(status: string) {
   switch (status) {
-    case "PENDING_DOCUMENTS_UPLOAD":
+    case VerificationStatus.PENDING_DOCUMENTS_UPLOAD:
       return "bg-yellow-100 text-yellow-700";
-    case "PENDING_MANUAL_REVIEW":
+    case VerificationStatus.PENDING_MANUAL_REVIEW:
       return "bg-orange-100 text-orange-700";
     default:
       return "bg-blue-100 text-blue-700";
@@ -32,20 +37,22 @@ function getStatusBadge(status: string) {
 
 function getStatusText(status: string) {
   switch (status) {
-    case "PENDING_DOCUMENTS_UPLOAD":
-      return "Documents uploaded";
-    case "PENDING_MANUAL_REVIEW":
-      return "Manual review required";
+    case VerificationStatus.PENDING_DOCUMENTS_UPLOAD:
+      return "Documentos enviados";
+    case VerificationStatus.PENDING_MANUAL_REVIEW:
+      return "Revisão manual necessária";
     default:
-      return "Pending";
+      return "Pendente";
   }
 }
 
 export default function VerificationQueueWidget() {
-  const queue = getPendingProviders();
-  const isLoading = false;
+  const { data: queue, isLoading, isError } = useQuery<Provider[], Error>({
+    queryKey: ['/verification-queue'],
+    queryFn: () => fetchVerificationQueue(),
+  });
 
-  const displayQueue = queue.slice(0, 3); // Show only first 3 items
+  const displayQueue = queue?.slice(0, 3) || []; // Show only first 3 items
 
   return (
     <motion.div
@@ -56,9 +63,9 @@ export default function VerificationQueueWidget() {
       <Card className="shadow-floating hover:shadow-floating-lg transition-all duration-300 border-0">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-semibold text-gray-900">Verification Queue</CardTitle>
+            <CardTitle className="text-lg font-semibold text-gray-900">Fila de Verificação</CardTitle>
             <Badge className="bg-red-100 text-red-600 text-xs px-2 py-1 rounded-full border-0">
-              {(queue as Provider[]).length} Pending
+              {(queue as Provider[])?.length || 0} Pendente
             </Badge>
           </div>
         </CardHeader>
@@ -80,6 +87,10 @@ export default function VerificationQueueWidget() {
                   </div>
                 </div>
               ))}
+            </div>
+          ) : isError ? (
+            <div className="text-center text-red-600">
+              <p>Erro ao carregar a fila.</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -103,10 +114,10 @@ export default function VerificationQueueWidget() {
                     </div>
                     <div className="text-right">
                       <Badge className={`text-xs px-2 py-1 rounded-full border-0 ${getStatusBadge(provider.verificationStatus || "")}`}>
-                        {provider.verificationStatus === "PENDING_DOCUMENTS_UPLOAD" ? "Pending" : "Review"}
+                        {provider.verificationStatus === VerificationStatus.PENDING_DOCUMENTS_UPLOAD ? "Pendente" : "Revisar"}
                       </Badge>
                       <p className="text-xs text-gray-500 mt-1">
-                        {formatRelativeTime(new Date(provider.createdAt || Date.now()))}
+                        {formatRelativeTime(new Date(provider.createdAt))}
                       </p>
                     </div>
                   </div>
@@ -117,7 +128,7 @@ export default function VerificationQueueWidget() {
 
           <Link href="/verification-queue">
             <Button className="w-full mt-4 py-2 text-sm font-medium text-medium-blue border border-medium-blue rounded-xl hover:bg-medium-blue hover:text-white transition-all duration-300 bg-transparent">
-              View All Pending ({(queue as Provider[]).length})
+              Ver Todos Pendentes ({(queue as Provider[])?.length || 0})
             </Button>
           </Link>
         </CardContent>

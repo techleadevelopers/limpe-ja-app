@@ -1,3 +1,5 @@
+// admin-web/src/components/verification/rejection-modal.tsx
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,7 +32,7 @@ export default function RejectionModal({ isOpen, onClose, onConfirm }: Rejection
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-lg font-semibold text-gray-900">Rejection Reason</DialogTitle>
+          <DialogTitle className="text-lg font-semibold text-gray-900">Motivo da Rejeição</DialogTitle>
         </DialogHeader>
         
         <motion.div
@@ -39,7 +41,7 @@ export default function RejectionModal({ isOpen, onClose, onConfirm }: Rejection
           transition={{ duration: 0.3 }}
         >
           <Textarea
-            placeholder="Please provide a detailed reason for rejection..."
+            placeholder="Por favor, forneça um motivo detalhado para a rejeição..."
             value={rejectionReason}
             onChange={(e) => setRejectionReason(e.target.value)}
             className="h-32 resize-none border-gray-200 focus:ring-2 focus:ring-red-500 focus:border-transparent"
@@ -47,7 +49,7 @@ export default function RejectionModal({ isOpen, onClose, onConfirm }: Rejection
           
           <div className="flex justify-end space-x-3 mt-4">
             <Button variant="outline" onClick={handleClose} className="text-gray-600 border-gray-200 hover:bg-gray-50">
-              Cancel
+              Cancelar
             </Button>
             <Button 
               onClick={handleConfirm}
@@ -55,7 +57,7 @@ export default function RejectionModal({ isOpen, onClose, onConfirm }: Rejection
               variant="destructive"
               className="bg-red-600 hover:bg-red-700"
             >
-              Confirm Rejection
+              Confirmar Rejeição
             </Button>
           </div>
         </motion.div>

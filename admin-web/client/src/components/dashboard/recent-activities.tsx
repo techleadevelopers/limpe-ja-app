@@ -3,31 +3,36 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { UserPlus, Calendar, AlertTriangle, DollarSign } from "lucide-react";
 import { motion } from "framer-motion";
-import { mockActivities, type Activity } from "@/data/mockData";
+// Removendo mockActivities
+// import { mockActivities, type Activity } from "@/data/mockData";
+import { useQuery } from "@tanstack/react-query";
+import { fetchRecentActivities } from "@/lib/api";
+import { Activity, ActivityType } from "@/lib/types"; // Importa Activity e ActivityType dos tipos reais
+
 
 function formatRelativeTime(date: Date): string {
   const now = new Date();
   const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
   
-  if (diffInMinutes < 1) return "Just now";
-  if (diffInMinutes < 60) return `${diffInMinutes} minutes ago`;
+  if (diffInMinutes < 1) return "Agora mesmo";
+  if (diffInMinutes < 60) return `${diffInMinutes} minutos atrás`;
   
   const diffInHours = Math.floor(diffInMinutes / 60);
-  if (diffInHours < 24) return `${diffInHours} hours ago`;
+  if (diffInHours < 24) return `${diffInHours} horas atrás`;
   
   const diffInDays = Math.floor(diffInHours / 24);
-  return `${diffInDays} days ago`;
+  return `${diffInDays} dias atrás`;
 }
 
 function getActivityIcon(type: string) {
   switch (type) {
-    case "PROVIDER_REGISTRATION":
+    case ActivityType.PROVIDER_REGISTRATION:
       return UserPlus;
-    case "BOOKING_COMPLETED":
+    case ActivityType.BOOKING_COMPLETED:
       return Calendar;
-    case "DOCUMENT_VERIFICATION":
+    case ActivityType.PROVIDER_STATUS_CHANGE: // Exemplo de um novo tipo de atividade
       return AlertTriangle;
-    case "PAYMENT_PROCESSED":
+    case ActivityType.PAYMENT_PROCESSED:
       return DollarSign;
     default:
       return UserPlus;
@@ -50,13 +55,13 @@ function getActivityColor(status: string) {
 
 function getIconBgColor(type: string) {
   switch (type) {
-    case "PROVIDER_REGISTRATION":
+    case ActivityType.PROVIDER_REGISTRATION:
       return "bg-green-100 text-green-600";
-    case "BOOKING_COMPLETED":
+    case ActivityType.BOOKING_COMPLETED:
       return "bg-blue-100 text-blue-600";
-    case "DOCUMENT_VERIFICATION":
+    case ActivityType.PROVIDER_STATUS_CHANGE:
       return "bg-yellow-100 text-yellow-600";
-    case "PAYMENT_PROCESSED":
+    case ActivityType.PAYMENT_PROCESSED:
       return "bg-purple-100 text-purple-600";
     default:
       return "bg-gray-100 text-gray-600";
@@ -64,8 +69,10 @@ function getIconBgColor(type: string) {
 }
 
 export default function RecentActivities() {
-  const activities = mockActivities;
-  const isLoading = false;
+  const { data: activities, isLoading, isError, error } = useQuery<Activity[], Error>({
+    queryKey: ['/activities'],
+    queryFn: () => fetchRecentActivities(5), // Busca as 5 atividades mais recentes
+  });
 
   return (
     <motion.div
@@ -77,9 +84,9 @@ export default function RecentActivities() {
       <Card className="shadow-floating hover:shadow-floating-lg transition-all duration-300 border-0">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-semibold text-gray-900">Recent Activities</CardTitle>
+            <CardTitle className="text-lg font-semibold text-gray-900">Atividades Recentes</CardTitle>
             <Button variant="link" className="text-medium-blue hover:text-blue-700 text-sm font-medium p-0">
-              View All
+              Ver Todas
             </Button>
           </div>
         </CardHeader>
@@ -97,7 +104,11 @@ export default function RecentActivities() {
                 </div>
               ))}
             </div>
-          ) : (
+          ) : isError ? (
+            <div className="text-center text-red-600">
+              <p>Erro ao carregar atividades: {error?.message}</p>
+            </div>
+          ) : (activities && activities.length > 0) ? (
             <div className="space-y-4">
               {activities.map((activity: Activity) => {
                 const Icon = getActivityIcon(activity.type);
@@ -117,7 +128,7 @@ export default function RecentActivities() {
                     </div>
                     <div className="ml-4 flex-1">
                       <p className="text-sm font-medium text-gray-900">{activity.description}</p>
-                      <p className="text-xs text-gray-500">{formatRelativeTime(new Date(activity.createdAt || Date.now()))}</p>
+                      <p className="text-xs text-gray-500">{formatRelativeTime(new Date(activity.createdAt))}</p>
                     </div>
                     {activity.status && (
                       <Badge className={`text-xs px-2 py-1 rounded-full border-0 ${statusColor}`}>
@@ -127,6 +138,10 @@ export default function RecentActivities() {
                   </motion.div>
                 );
               })}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <p>Nenhuma atividade recente.</p>
             </div>
           )}
         </CardContent>

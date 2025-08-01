@@ -1,5 +1,6 @@
 Documentação de Arquitetura e Funcionalidades do Aplicativo Móvel LimpeJá
-1. Introdução e Visão Geral
+
+Introdução e Visão Geral
 O LimpeJá é um aplicativo móvel inovador que atua como uma plataforma de marketplace, conectando clientes que buscam serviços de limpeza e organização residencial com profissionais de limpeza qualificados e verificados. A aplicação visa simplificar o processo de agendamento, comunicação e pagamento, garantindo uma experiência segura e eficiente para ambas as partes.
 
 Proposta de Valor:
@@ -10,7 +11,7 @@ Para Profissionais: Oportunidade de gerenciar sua agenda, oferecer seus serviço
 
 Público-alvo: Indivíduos e famílias que necessitam de serviços de limpeza, e profissionais autônomos ou microempreendedores que oferecem esses serviços.
 
-2. Estrutura da Aplicação e Tecnologias
+Estrutura da Aplicação e Tecnologias
 O LimpeJá é construído com uma arquitetura moderna e escalável, utilizando tecnologias amplamente adotadas no ecossistema mobile e web.
 
 2.1. Frontend (Mobile Application)
@@ -217,7 +218,7 @@ Um HttpExceptionFilter global captura HttpException e formata as respostas de er
 2.2.8. Configuração
 O ConfigModule do NestJS é utilizado para gerenciar as variáveis de ambiente. O configuration.ts define a estrutura das configurações, e o validation-schema.ts usa Joi para validar as variáveis de ambiente no início da aplicação.
 
-3. Funcionalidades Principais e Fluxos de Usuário
+Funcionalidades Principais e Fluxos de Usuário
 O aplicativo LimpeJá oferece um conjunto rico de funcionalidades, divididas entre clientes e profissionais, além de recursos gerais.
 
 3.1. Autenticação e Gerenciamento de Usuários
@@ -286,7 +287,7 @@ Ajuda e Suporte (help.tsx): Seção de Perguntas Frequentes (FAQ) com funcionali
 
 Informações Legais (termos.tsx, privacidade.tsx): Acesso aos Termos de Serviço e Política de Privacidade do LimpeJá.
 
-4. Design e Experiência do Usuário (UI/UX)
+Design e Experiência do Usuário (UI/UX)
 O design do LimpeJá foca em uma experiência de usuário intuitiva, moderna e agradável, com forte uso de elementos visuais e animações.
 
 4.1. Sistema de Design
@@ -312,7 +313,7 @@ Efeitos Visuais: Utilização de LinearGradient e BlurView para criar efeitos de
 4.3. Responsividade
 O design da interface utiliza Dimensions e Platform.OS para adaptar layouts e estilos a diferentes tamanhos de tela e sistemas operacionais (iOS/Android), garantindo uma experiência otimizada em diversos dispositivos.
 
-5. Fluxo de Dados e Gerenciamento de Estado
+Fluxo de Dados e Gerenciamento de Estado
 O gerenciamento de dados e estado no LimpeJá segue um padrão claro e modular.
 
 Camada de Serviços (Service Layer): Arquivos dedicados (ex: authService.ts, providerService.ts, bookingService.ts, paymentService.ts, reviewService.ts, notificationService.ts, chatService.ts, faqService.ts, earningService.ts, complianceService.ts, analyticsService.ts, aiSuggestionsService.ts, clientService.ts, uploadService.ts, securityService.ts) que encapsulam toda a lógica de comunicação com o backend. Cada serviço é responsável por um domínio específico.
@@ -329,7 +330,7 @@ Comunicação em Tempo Real: O módulo de chat utiliza Socket.IO para estabelece
 
 Contratos de Dados (Interfaces e Enums): O diretório types/backend contém todas as interfaces e enums que definem os contratos de dados entre o frontend e o backend, espelhando fielmente o schema.prisma e as entidades do backend. INTEGRADO: Atualização de interfaces para refletir PricingType, pricePerSquareMeter, pricePerRoom e campos de fidelidade.
 
-6. Navegação
+Navegação
 A navegação no LimpeJá é gerenciada pelo Expo Router, que utiliza um sistema de roteamento baseado em arquivos.
 
 Estrutura de Rotas: As rotas são organizadas em diretórios e arquivos, refletindo a estrutura da aplicação (ex: (auth), (client), (provider), (common)).
@@ -346,10 +347,10 @@ Rotas Dinâmicas: A aplicação faz uso extensivo de rotas dinâmicas (ex: [prov
 
 Redirecionamento Condicional: O _layout.tsx principal gerencia o redirecionamento de usuários com base no estado de autenticação, função (UserRole) e status de registro/verificação (VerificationStatus), garantindo que o usuário seja sempre direcionado para a tela apropriada.
 
-7. Internacionalização (i18n)
+Internacionalização (i18n)
 Atualmente, o aplicativo utiliza um placeholder básico (strings.ts) para strings comuns. O helpers.ts contém funções como formatDate e formatCurrency que utilizam o locale pt-BR, indicando um foco inicial no mercado brasileiro. A estrutura permite uma futura expansão para suportar múltiplos idiomas através de uma biblioteca de i18n dedicada.
 
-8. Tratamento de Erros
+Tratamento de Erros
 O LimpeJá implementa uma estratégia robusta de tratamento de erros:
 
 Centralizado no Axios: O interceptador de resposta do Axios (api.ts) captura e trata erros HTTP (ex: 401 Unauthorized), garantindo uma experiência consistente.
@@ -372,7 +373,7 @@ AnimatedErrorMessage: Para exibir mensagens de erro inline em formulários, com 
 
 Estados de Carregamento/Erro: Indicadores de isLoading e mensagens de error são usados em todas as telas para informar o usuário sobre o status das operações.
 
-9. Considerações de Segurança
+Considerações de Segurança
 As seguintes práticas de segurança são observadas e implementadas no LimpeJá:
 
 Autenticação JWT: Padrão da indústria para sessões seguras.
@@ -396,3 +397,58 @@ Validações de Input: Funções em helpers.ts como isValidEmail, isValidPasswor
 Geocodificação de Endereços: Implementada no backend para converter endereços textuais em coordenadas geográficas, armazenando-as no banco de dados para buscas geoespaciais.
 
 Envio de SMS/E-mail: Serviços dedicados no backend para envio de e-mails (redefinição de senha) e SMS (OTP), substituindo simulações e preparando para integrações reais com provedores.
+
+2.3. Painel de Administração Web (admin-web)
+O painel de administração é uma aplicação web separada, construída com React, que consome os mesmos endpoints do backend NestJS. Ele é a ferramenta central para gerenciar e monitorar a plataforma, oferecendo funcionalidades avançadas para o administrador.
+
+2.3.1. Tecnologias Principais do Painel Web
+Framework: React.
+Routing: React Router ou Wouter para navegação.
+Gerenciamento de Estado: React Query (TanStack Query) para gerenciamento de estado do servidor, otimizando o cache e sincronização de dados.
+UI/Estilo: Tailwind CSS para estilização e um sistema de design consistente (ex: shadcn/ui) para componentes acessíveis.
+Animações: Framer Motion para animações fluidas e efeitos visuais.
+
+2.3.2. Fluxo e Funcionalidades do Painel Web
+O painel de administração é acessível apenas para usuários com o papel ADMIN. Ele se comunica com o backend utilizando as rotas protegidas pelo RolesGuard.
+
+Módulos Principais:
+
+Dashboard Avançado:
+
+Métricas em Tempo Real: Exibição de dados chave como total de usuários, provedores aprovados e agendamentos.
+
+Análise Financeira: Gráficos e resumos de receita total de comissões e volume de transações.
+
+Mapeamento Geoespacial: Um mapa dinâmico para visualizar a distribuição de provedores na plataforma, utilizando os dados PostGIS do banco de dados.
+
+Gerenciamento de Provedores e Verificação:
+
+Fila de Verificação: Uma seção dedicada para revisar perfis de provedores com status PENDING_DOCUMENTS_UPLOAD ou PENDING_MANUAL_REVIEW.
+
+Revisão de Perfil: O administrador pode visualizar os documentos enviados (documentPhotoFrontUrl, documentPhotoBackUrl), a selfie (selfieWithDocumentUrl) e os resultados do processamento automático (ocrResult, livenessResult).
+
+Controle de Ações: Botões de APROVAR, REJEITAR ou BLOQUEAR o perfil, com a opção de fornecer um motivo de rejeição (rejectionReason) que será armazenado.
+
+Visualização de Dados: Acesso às estatísticas do provedor, como fiveStarReviewCount e monthlyBookingsCount.
+
+Gestão de Conteúdo (CMS):
+
+Ofertas: Uma interface completa de CRUD (criar, ler, atualizar, deletar) para gerenciar promoções. Inclui campos para discountPercentage, fixedDiscountAmount, validUntil e imageUrl.
+
+FAQs: Um editor para criar e atualizar a seção de Perguntas Frequentes.
+
+Gerenciamento Financeiro:
+
+Monitoramento de Transações: Lista completa de transações com filtros por tipo (PAYMENT, WITHDRAWAL, COMMISSION).
+
+Auditoria de Comissão: Visibilidade do fluxo de 15% de comissão sobre cada serviço.
+
+Gestão de Saques: Interface para processar manualmente as solicitações de saque dos provedores.
+
+Suporte e Resolução de Disputas:
+
+Fila de Disputas: Uma seção para gerenciar agendamentos com o status PENDING_DISPUTE.
+
+Visualização de Problemas: Interface para ler o motivo do problema e tomar ações para resolvê-lo.
+
+O painel de administração é um projeto vital para a escalabilidade e manutenção da plataforma, e a sua criação como uma aplicação web separada é a abordagem mais adequada para a sua complexidade e uso.

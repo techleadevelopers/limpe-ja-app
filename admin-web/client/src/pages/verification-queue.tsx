@@ -7,7 +7,13 @@ import { Badge } from "@/components/ui/badge";
 import { Clock, FileText, Eye, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import VerificationModal from "@/components/verification/verification-modal";
-import { getPendingProviders, updateProviderStatus, type Provider } from "@/data/mockData";
+// Removendo mockData
+// import { getPendingProviders, updateProviderStatus, type Provider } from "@/data/mockData";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { fetchVerificationQueue, updateProviderStatus as apiUpdateProviderStatus } from "@/lib/api";
+import { Provider, VerificationStatus } from "@/lib/types"; // Importa Provider e VerificationStatus dos tipos reais
+import { useToast } from "@/hooks/use-toast";
+
 
 function formatRelativeTime(date: Date): string {
   const now = new Date();
@@ -25,29 +31,29 @@ function formatRelativeTime(date: Date): string {
 
 function getStatusInfo(status: string) {
   switch (status) {
-    case "PENDING_DOCUMENTS_UPLOAD":
+    case VerificationStatus.PENDING_DOCUMENTS_UPLOAD:
       return {
         badge: "bg-yellow-100 text-yellow-700 border-yellow-200",
         icon: FileText,
         iconBg: "bg-yellow-100 text-yellow-600",
-        text: "Documents uploaded",
-        priority: "Medium",
+        text: "Documentos enviados",
+        priority: "Média",
       };
-    case "PENDING_MANUAL_REVIEW":
+    case VerificationStatus.PENDING_MANUAL_REVIEW:
       return {
         badge: "bg-orange-100 text-orange-700 border-orange-200",
         icon: Eye,
         iconBg: "bg-orange-100 text-orange-600",
-        text: "Manual review required",
-        priority: "High",
+        text: "Revisão manual necessária",
+        priority: "Alta",
       };
     default:
       return {
         badge: "bg-blue-100 text-blue-700 border-blue-200",
         icon: AlertCircle,
         iconBg: "bg-blue-100 text-blue-600",
-        text: "Pending verification",
-        priority: "Low",
+        text: "Verificação pendente",
+        priority: "Baixa",
       };
   }
 }
@@ -55,26 +61,60 @@ function getStatusInfo(status: string) {
 export default function VerificationQueue() {
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
-  const [queue, setQueue] = useState<Provider[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // Busca a fila de verificação usando react-query
+  const { data: queue, isLoading, isError, error } = useQuery<Provider[], Error>({
+    queryKey: ['/verification-queue'],
+    queryFn: () => fetchVerificationQueue(),
+  });
 
-  useEffect(() => {
-    const pendingProviders = getPendingProviders();
-    setQueue(pendingProviders);
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, []);
+  // Mutação para atualizar o status do provedor
+  const updateProviderStatusMutation = useMutation({
+    mutationFn: ({ id, status, rejectionReason }: { id: string; status: VerificationStatus; rejectionReason?: string }) =>
+      apiUpdateProviderStatus(id, status, rejectionReason),
+    onSuccess: (updatedProvider) => {
+      queryClient.invalidateQueries({ queryKey: ['/verification-queue'] }); // Invalida a cache para refetch
+      queryClient.invalidateQueries({ queryKey: ['/providers'] }); // Também invalida a lista geral de provedores
+      toast({
+        title: "Status do Provedor Atualizado",
+        description: `${updatedProvider.name} agora está ${updatedProvider.verificationStatus}.`,
+      });
+      setIsModalOpen(false); // Fecha o modal após a atualização
+      setSelectedProvider(null);
+    },
+    onError: (err: any) => {
+      toast({
+        title: "Erro ao Atualizar Status",
+        description: err.message || "Ocorreu um erro ao atualizar o status do provedor.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleProviderClick = (provider: Provider) => {
     setSelectedProvider(provider);
     setIsModalOpen(true);
   };
 
-  const pendingDocuments = queue.filter((p: Provider) => p.verificationStatus === "PENDING_DOCUMENTS_UPLOAD");
-  const pendingReview = queue.filter((p: Provider) => p.verificationStatus === "PENDING_MANUAL_REVIEW");
+  // Funções para passar para o VerificationModal
+  const handleApproveProvider = (providerId: string) => {
+    updateProviderStatusMutation.mutate({ id: providerId, status: VerificationStatus.APPROVED });
+  };
+
+  const handleRejectProvider = (providerId: string, reason: string) => {
+    updateProviderStatusMutation.mutate({ id: providerId, status: VerificationStatus.REJECTED, rejectionReason: reason });
+  };
+
+  const handleBlockProvider = (providerId: string) => {
+    if (confirm("Tem certeza que deseja bloquear este provedor?")) {
+      updateProviderStatusMutation.mutate({ id: providerId, status: VerificationStatus.BLOCKED });
+    }
+  };
+
+  const pendingDocuments = queue?.filter((p: Provider) => p.verificationStatus === VerificationStatus.PENDING_DOCUMENTS_UPLOAD) || [];
+  const pendingReview = queue?.filter((p: Provider) => p.verificationStatus === VerificationStatus.PENDING_MANUAL_REVIEW) || [];
 
   return (
     <div className="flex h-screen bg-admin-bg">
@@ -82,8 +122,8 @@ export default function VerificationQueue() {
       
       <div className="flex-1 ml-72 overflow-hidden">
         <Header 
-          title="Verification Queue"
-          subtitle={`${queue.length} providers waiting for verification review.`}
+          title="Fila de Verificação"
+          subtitle={`${queue?.length || 0} provedores aguardando revisão de verificação.`}
         />
         
         <main className="flex-1 overflow-y-auto p-8">
@@ -96,8 +136,8 @@ export default function VerificationQueue() {
                     <Clock className="text-orange-600" size={20} />
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Total Pending</p>
-                    <p className="text-2xl font-bold text-gray-900">{queue.length}</p>
+                    <p className="text-sm font-medium text-gray-600">Total Pendente</p>
+                    <p className="text-2xl font-bold text-gray-900">{queue?.length || 0}</p>
                   </div>
                 </div>
               </CardContent>
@@ -110,7 +150,7 @@ export default function VerificationQueue() {
                     <FileText className="text-yellow-600" size={20} />
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Document Upload</p>
+                    <p className="text-sm font-medium text-gray-600">Upload de Documentos</p>
                     <p className="text-2xl font-bold text-gray-900">{pendingDocuments.length}</p>
                   </div>
                 </div>
@@ -124,7 +164,7 @@ export default function VerificationQueue() {
                     <Eye className="text-red-600" size={20} />
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Manual Review</p>
+                    <p className="text-sm font-medium text-gray-600">Revisão Manual</p>
                     <p className="text-2xl font-bold text-gray-900">{pendingReview.length}</p>
                   </div>
                 </div>
@@ -151,13 +191,17 @@ export default function VerificationQueue() {
                     </div>
                   ))}
                 </div>
+              ) : isError ? (
+                <div className="text-center py-12 text-red-600">
+                  <p>Erro ao carregar a fila de verificação: {error?.message}</p>
+                </div>
               ) : (queue as Provider[]).length === 0 ? (
                 <div className="text-center py-12">
                   <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Clock className="w-8 h-8 text-gray-400" />
                   </div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No pending verifications</h3>
-                  <p className="text-gray-500">All providers have been verified. Great job!</p>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhuma verificação pendente</h3>
+                  <p className="text-gray-500">Todos os provedores foram verificados. Ótimo trabalho!</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -182,7 +226,7 @@ export default function VerificationQueue() {
                           <div className="flex items-center gap-3 mb-1">
                             <h3 className="font-semibold text-gray-900">{provider.name}</h3>
                             <Badge className={`text-xs px-2 py-1 border ${statusInfo.badge}`}>
-                              {statusInfo.priority} Priority
+                              {statusInfo.priority} Prioridade
                             </Badge>
                           </div>
                           <p className="text-sm text-gray-600">{provider.email}</p>
@@ -191,14 +235,14 @@ export default function VerificationQueue() {
                         
                         <div className="text-right">
                           <Badge className={`border ${statusInfo.badge} mb-2`}>
-                            {provider.verificationStatus === "PENDING_DOCUMENTS_UPLOAD" ? "Documents" : "Review"}
+                            {provider.verificationStatus === VerificationStatus.PENDING_DOCUMENTS_UPLOAD ? "Documentos" : "Revisão"}
                           </Badge>
                           <p className="text-xs text-gray-500">
-                            {formatRelativeTime(new Date(provider.createdAt || Date.now()))}
+                            {formatRelativeTime(new Date(provider.createdAt))}
                           </p>
                           <div className="mt-2">
                             <Button size="sm" className="bg-medium-blue hover:bg-blue-700 text-white">
-                              Review
+                              Revisar
                             </Button>
                           </div>
                         </div>
@@ -219,6 +263,9 @@ export default function VerificationQueue() {
           setIsModalOpen(false);
           setSelectedProvider(null);
         }}
+        onApprove={handleApproveProvider}
+        onReject={handleRejectProvider}
+        onBlock={handleBlockProvider}
       />
     </div>
   );
