@@ -4,10 +4,10 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef } from 'react';
 import { Animated, Dimensions, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-// Importa ProviderDisplayInfo diretamente do caminho correto
-import { ProviderDisplayInfo } from '../../../../types/backend/providers';
+import { ProviderDisplayInfo, ProviderServiceOffering } from '../../../../types/backend/providers';
+import { PricingType } from '../../../../types/backend/services';
 
-const SCREEN_WIDTH = Dimensions.get('window').width; // Mantido, mas PrestadorCard não usará diretamente
+const SCREEN_WIDTH = Dimensions.get('window').width;
 
 interface PrestadorCardProps {
     item: ProviderDisplayInfo;
@@ -15,7 +15,6 @@ interface PrestadorCardProps {
 }
 
 const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
-    // Animações existentes para entrada do card
     const scaleAnim = useRef(new Animated.Value(1)).current;
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(20)).current;
@@ -35,7 +34,6 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
         ]).start();
     }, [fadeAnim, slideAnim]);
 
-    // Animação de feedback ao tocar
     const onPressInCard = () => {
         Animated.spring(scaleAnim, { toValue: 0.96, useNativeDriver: true, friction: 8, tension: 100 }).start();
     };
@@ -44,10 +42,9 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
         Animated.spring(scaleAnim, { toValue: 1, friction: 8, tension: 100, useNativeDriver: true }).start();
     };
 
-    // Função para renderizar as estrelas de avaliação (ajustadas para tamanho menor)
     const renderStars = (rating: number | undefined) => {
         const stars = [];
-        const actualRating = rating ?? 0; // Use ?? para lidar com undefined
+        const actualRating = rating ?? 0;
         const fullStars = Math.floor(actualRating);
         const hasHalfStar = actualRating % 1 !== 0;
 
@@ -59,8 +56,8 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
                 <Ionicons
                     key={i}
                     name={iconName}
-                    size={12} // Estrelas bem pequenas
-                    color="#FFC107" // Amarelo vibrante
+                    size={12}
+                    color="#FFC107"
                     style={styles.starIcon}
                 />
             );
@@ -68,45 +65,69 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
         return <View style={styles.starContainer}>{stars}</View>;
     };
 
-    // Extrai a especialidade e o preço do primeiro serviço oferecido
     const primaryService = item.providerServices && item.providerServices.length > 0 ? item.providerServices[0] : null;
     const specialtyName = primaryService && primaryService.service ? primaryService.service.name : 'Serviço';
-    const servicePrice = primaryService ? `R$ ${primaryService.price.toFixed(2).replace('.', ',')}` : 'Consultar';
 
-    // Fonte da imagem do avatar do provedor, com fallback
+    const getPriceDisplay = () => {
+        if (!primaryService) {
+            return 'Consultar';
+        }
+
+        let priceValue;
+        let priceUnit = '';
+
+        const rawPrice = primaryService.price;
+        const price = (typeof rawPrice === 'number') ? rawPrice : (rawPrice as any)?.toNumber?.() ?? 0;
+
+        switch (primaryService.pricingType) {
+            case PricingType.HOURLY:
+                priceValue = price;
+                priceUnit = '/h';
+                break;
+            case PricingType.BY_SIZE:
+                priceValue = primaryService.pricePerSquareMeter;
+                priceUnit = '/m²';
+                break;
+            case PricingType.FIXED_PRICE:
+            case PricingType.CUSTOM_QUOTE:
+            default:
+                priceValue = price;
+                priceUnit = '';
+                break;
+        }
+
+        return priceValue !== undefined && priceValue !== null && priceValue > 0
+            ? `R$ ${priceValue.toFixed(2).replace('.', ',')}${priceUnit}`
+            : 'Consultar';
+    };
+
+    const servicePrice = getPriceDisplay();
     const avatarSource = item.avatarUrl ? { uri: item.avatarUrl } : require('../../../../assets/images/default-avatar.png');
 
     return (
         <Animated.View style={[styles.animatedCardContainer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] }]}>
             <TouchableOpacity
                 style={styles.cardContainer}
-                onPress={() => onPress(item.id)} // item.id existe em ProviderDisplayInfo
+                onPress={() => onPress(item.id)}
                 onPressIn={onPressInCard}
                 onPressOut={onPressOutCard}
-                activeOpacity={0.8} // Opacidade ao tocar
+                activeOpacity={0.8}
             >
-                {/* Imagem do Prestador (Circular) */}
                 <View style={styles.imageWrapper}>
                     <Image source={avatarSource} style={styles.cardImage} />
                 </View>
-
-                {/* Detalhes do Prestador */}
                 <View style={styles.detailsContent}>
                     <Text style={styles.providerName} numberOfLines={1}>{item.fullName}</Text>
                     <Text style={styles.specialtyText} numberOfLines={1}>{specialtyName}</Text>
                     
-                    {/* Linha de Avaliação (opcional se não quiser mostrar na lista curta) */}
                     {item.averageRating !== undefined && item.reviewCount !== undefined && (
                         <View style={styles.ratingRow}>
                             {renderStars(item.averageRating)}
                             {item.reviewCount > 0 && <Text style={styles.reviewsText}>({item.reviewCount})</Text>}
                         </View>
                     )}
-
                     <Text style={styles.priceText}>{servicePrice}</Text>
                 </View>
-
-                {/* Botão de Navegação "Ir para Perfil" */}
                 <TouchableOpacity style={styles.goButton}>
                     <Ionicons name="arrow-forward-sharp" size={20} color="#FFF" />
                 </TouchableOpacity>
@@ -115,14 +136,12 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
     );
 };
 
-// --- ESTILOS DO COMPONENTE ---
 const styles = StyleSheet.create({
     animatedCardContainer: {
-        marginRight: 12, // Espaçamento entre os cards horizontais
-        marginBottom: 10, // Margem inferior se a FlatList for vertical
-        borderRadius: 12, // Bordas suaves
-        overflow: 'visible', // Permite que a sombra seja renderizada corretamente
-        // Sombras suaves e profundas
+        marginRight: 12,
+        marginBottom: 10,
+        borderRadius: 12,
+        overflow: 'visible',
         ...Platform.select({
             ios: {
                 shadowColor: '#000',
@@ -136,21 +155,21 @@ const styles = StyleSheet.create({
         }),
     },
     cardContainer: {
-        flexDirection: 'row', // Layout horizontal
+        flexDirection: 'row',
         alignItems: 'center',
-        width: 280, // Largura fixa para o card horizontal, como a referência
+        width: 280,
         backgroundColor: '#FFFFFF',
-        borderRadius: 12, // Borda arredondada consistente
-        padding: 10, // Padding interno do card
+        borderRadius: 12,
+        padding: 10,
     },
     imageWrapper: {
-        width: 60, // Tamanho da imagem
+        width: 60,
         height: 60,
-        borderRadius: 30, // Deixa a imagem circular
-        overflow: 'hidden', // Importante para o borderRadius
-        marginRight: 12, // Espaçamento entre imagem e texto
-        backgroundColor: '#E0E0E0', // Cor de fundo para fallback
-        borderWidth: 1, // Borda sutil para a imagem
+        borderRadius: 30,
+        overflow: 'hidden',
+        marginRight: 12,
+        backgroundColor: '#E0E0E0',
+        borderWidth: 1,
         borderColor: '#F0F0F0',
     },
     cardImage: {
@@ -159,7 +178,7 @@ const styles = StyleSheet.create({
         resizeMode: 'cover',
     },
     detailsContent: {
-        flex: 1, // Ocupa o espaço restante
+        flex: 1,
         justifyContent: 'center',
     },
     providerName: {
@@ -192,17 +211,16 @@ const styles = StyleSheet.create({
     priceText: {
         fontSize: 14,
         fontWeight: 'bold',
-        color: '#007AFF', // Azul primário
+        color: '#007AFF',
     },
     goButton: {
-        backgroundColor: '#1A73E8', // Azul do Google
-        borderRadius: 25, // Botão circular
+        backgroundColor: '#1A73E8',
+        borderRadius: 25,
         width: 40,
         height: 40,
         justifyContent: 'center',
         alignItems: 'center',
-        marginLeft: 15, // Espaçamento entre o texto e o botão
-        // Sombra sutil para o botão de ação
+        marginLeft: 15,
         ...Platform.select({
             ios: {
                 shadowColor: '#000',

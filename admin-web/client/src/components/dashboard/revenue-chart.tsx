@@ -1,0 +1,80 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { motion } from "framer-motion";
+
+const sampleData = [
+  { name: 'Jan', revenue: 65000 },
+  { name: 'Feb', revenue: 59000 },
+  { name: 'Mar', revenue: 80000 },
+  { name: 'Apr', revenue: 81000 },
+  { name: 'May', revenue: 56000 },
+  { name: 'Jun', revenue: 89000 },
+  { name: 'Jul', revenue: 95000 },
+];
+
+export default function RevenueChart() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      <Card className="shadow-floating hover:shadow-floating-lg transition-all duration-300 border-0">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg font-semibold text-gray-900">Revenue Analytics</CardTitle>
+            <div className="flex space-x-2">
+              <Button variant="outline" size="sm" className="text-xs bg-light-blue/20 text-medium-blue border-light-blue/30 hover:bg-light-blue/30">
+                7D
+              </Button>
+              <Button variant="outline" size="sm" className="text-xs text-gray-600 hover:text-medium-blue">
+                30D
+              </Button>
+              <Button variant="outline" size="sm" className="text-xs text-gray-600 hover:text-medium-blue">
+                90D
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={sampleData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis 
+                  dataKey="name" 
+                  stroke="#666"
+                  fontSize={12}
+                />
+                <YAxis 
+                  stroke="#666"
+                  fontSize={12}
+                  tickFormatter={(value) => `R$ ${(value / 1000).toFixed(0)}k`}
+                />
+                <Tooltip 
+                  formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR')}`, 'Revenue']}
+                  labelStyle={{ color: '#333' }}
+                  contentStyle={{ 
+                    backgroundColor: 'white', 
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                  }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="revenue" 
+                  stroke="var(--medium-blue)" 
+                  strokeWidth={3}
+                  dot={{ fill: 'var(--medium-blue)', strokeWidth: 2, r: 4 }}
+                  activeDot={{ r: 6, stroke: 'var(--medium-blue)', strokeWidth: 2, fill: 'white' }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}

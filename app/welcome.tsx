@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
   logoWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    top: 30,
+    top: 60,
     marginBottom: REFLECTION_GAP,
   },
   logoImage: {
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
   reflectionWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    bottom: 164,
+    bottom: 124,
     width: LOGO_WIDTH,
     height: LOGO_HEIGHT,
     overflow: 'hidden',

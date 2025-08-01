@@ -1,24 +1,26 @@
 // LimpeJaApp/app/(auth)/components/InputWithIcon.tsx
 import React from 'react';
-import { View, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, TextInput, StyleSheet, TouchableOpacity, TextStyle, ViewStyle } from 'react-native'; // Importe TextStyle e ViewStyle
 import { Ionicons } from '@expo/vector-icons';
+import { TextInputProps } from 'react-native'; // Importar TextInputProps
 
-interface InputWithIconProps {
-    iconName: keyof typeof Ionicons.glyphMap; // Tipo para ícones Ionicons (renomeado de 'icon' para 'iconName' para clareza)
-    placeholder: string;
-    value: string;
-    onChangeText: (text: string) => void;
-    keyboardType?: 'default' | 'numeric' | 'email-address' | 'phone-pad';
-    maxLength?: number;
-    secureTextEntry?: boolean;
-    textAlign?: 'left' | 'center' | 'right';
-    style?: any; // Para estilos adicionais passados do componente pai
-    onPressEye?: () => void; // Para o ícone de olho da senha
+// A interface InputWithIconProps agora estende TextInputProps.
+interface InputWithIconProps extends TextInputProps { // <-- AQUI ESTÁ A MUDANÇA PRINCIPAL
+    iconName: keyof typeof Ionicons.glyphMap;
+    // O 'placeholder', 'value', 'onChangeText', 'keyboardType', 'maxLength',
+    // 'secureTextEntry', 'textAlign' já vêm de TextInputProps.
+
+    // NOVO: Propriedade para o estilo do View wrapper externo
+    wrapperStyle?: ViewStyle; // Tipo para estilos de View
+    // A prop 'style' herdada de TextInputProps será usada para o TextInput interno.
+
+    // Props específicas do seu InputWithIcon:
+    onPressEye?: () => void;
     showEyeIcon?: boolean;
 }
 
 export const InputWithIcon: React.FC<InputWithIconProps> = ({
-    iconName, // Usar iconName
+    iconName,
     placeholder,
     value,
     onChangeText,
@@ -26,16 +28,21 @@ export const InputWithIcon: React.FC<InputWithIconProps> = ({
     maxLength,
     secureTextEntry = false,
     textAlign = 'left',
-    style, // Estilos adicionais do pai serão aplicados aqui
+    // Removi `style` daqui para evitar o conflito de tipo. Ele será passado via `...rest`
+    wrapperStyle, // Novo prop para o estilo do wrapper
     onPressEye,
     showEyeIcon,
+    ...rest // Captura todas as outras props (incluindo `style` do TextInputProps)
 }) => {
     return (
-        <View style={[internalStyles.inputWrapper, style]}> {/* Aplica estilos internos e depois os passados via prop */}
+        // Aplica estilos internos (internalStyles.inputWrapper) e depois o novo wrapperStyle
+        <View style={[internalStyles.inputWrapper, wrapperStyle]}>
             <View style={internalStyles.iconCircle}>
                 <Ionicons name={iconName} size={18} color="#00BCD4" />
             </View>
             <TextInput
+                // Aplica estilos internos (internalStyles.input) e depois todas as props capturadas em `...rest`
+                // que incluem o `style` original (TextStyle) do `TextInputProps`.
                 style={[internalStyles.input, { textAlign }]}
                 placeholder={placeholder}
                 placeholderTextColor="#A0AEC0"
@@ -44,7 +51,8 @@ export const InputWithIcon: React.FC<InputWithIconProps> = ({
                 keyboardType={keyboardType}
                 maxLength={maxLength}
                 secureTextEntry={secureTextEntry}
-                autoCapitalize="none"
+                textAlign={textAlign}
+                {...rest} // <-- PASSA TODAS AS PROPS RESTANTES (incluindo style de TextInputProps) PARA O TEXTINPUT
             />
             {showEyeIcon && (
                 <TouchableOpacity onPress={onPressEye} style={internalStyles.eyeIconTouchable}>
@@ -63,10 +71,7 @@ const internalStyles = StyleSheet.create({
         backgroundColor: '#FFFFFF',
         borderRadius: 28,
         height: 33,
-        // O 'bottom: 55' é um estilo de posicionamento que pode ser muito específico para o layout do LoginScreen.
-        // Se este componente for reutilizado em outros lugares, considere removê-lo daqui e aplicá-lo no componente pai,
-        // ou passá-lo via 'style' prop. Mantido por enquanto para replicar a UI original.
-        bottom: 55, 
+        bottom: 55,
         marginBottom: 10,
         shadowColor: 'rgba(100, 100, 150, 0.15)',
         shadowOffset: { width: 0, height: 8 },

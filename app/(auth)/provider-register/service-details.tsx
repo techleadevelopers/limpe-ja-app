@@ -19,6 +19,9 @@ import { BlurView } from 'expo-blur';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
+// Definição do tipo para as opções de precificação
+type PriceUnit = 'hora' | 'quarto' | 'metragem' | null;
+
 interface ServiceDetailsFormData {
   profilePhoto: string | null;
   description: string;
@@ -27,6 +30,8 @@ interface ServiceDetailsFormData {
   pixKey: string;
   specialties: string[];
   serviceAreas: string[];
+  // Novo campo para armazenar a unidade de preço selecionada
+  priceUnit: PriceUnit;
 }
 
 export default function ServiceDetailsScreen() {
@@ -37,7 +42,8 @@ export default function ServiceDetailsScreen() {
     basePrice: '',
     pixKey: '',
     specialties: [],
-    serviceAreas: []
+    serviceAreas: [],
+    priceUnit: null, // Inicialmente nenhuma opção está selecionada
   });
 
   const [isUploading, setIsUploading] = useState(false);
@@ -138,6 +144,20 @@ export default function ServiceDetailsScreen() {
     </View>
   );
 
+  // Mapeia a unidade de preço para o placeholder do input
+  const getPriceInputPlaceholder = (unit: PriceUnit) => {
+    switch (unit) {
+      case 'hora':
+        return 'Preço por hora';
+      case 'quarto':
+        return 'Preço por quarto';
+      case 'metragem':
+        return 'Preço por m²';
+      default:
+        return 'Preço base';
+    }
+  };
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -161,14 +181,13 @@ export default function ServiceDetailsScreen() {
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Detalhes do Serviço</Text>
-       
           </View>
 
           {/* Image Upload */}
           {renderImageUploadSection()}
-               <Text style={styles.headerSubtitle}>
-              Complete seu perfil profissional para começar a receber solicitações
-            </Text>
+          <Text style={styles.headerSubtitle}>
+            Complete seu perfil profissional para começar a receber solicitações
+          </Text>
 
           {/* Form Sections */}
           <View style={styles.formContainer}>
@@ -192,9 +211,41 @@ export default function ServiceDetailsScreen() {
               'time-outline'
             )}
 
+            {/* Nova seção de seleção do tipo de precificação */}
+            <View style={styles.priceTypeContainer}>
+              <Text style={styles.sectionTitle}>
+                <Ionicons name="pricetag-outline" size={16} color="#2C3E50" /> Tipo de Precificação
+              </Text>
+              <View style={styles.priceTypeGrid}>
+                {[
+                  { id: 'hora', label: 'Por Hora' },
+                  { id: 'quarto', label: 'Por Quarto' },
+                  { id: 'metragem', label: 'Por Metragem' }
+                ].map((priceOption) => (
+                  <TouchableOpacity
+                    key={priceOption.id}
+                    style={[
+                      styles.priceTypeCard,
+                      formData.priceUnit === priceOption.id && styles.priceTypeCardSelected
+                    ]}
+                    onPress={() => {
+                      setFormData(prev => ({ ...prev, priceUnit: priceOption.id as PriceUnit }));
+                    }}
+                  >
+                    <Text style={[
+                      styles.priceTypeLabel,
+                      formData.priceUnit === priceOption.id && styles.priceTypeLabelSelected
+                    ]}>
+                      {priceOption.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
             {renderInputSection(
-              'Preço Base por Serviço (R$)',
-              'Ex: 150.00',
+              `Preço Base (${formData.priceUnit ? `por ${formData.priceUnit}` : 'do Serviço'})`,
+              getPriceInputPlaceholder(formData.priceUnit),
               formData.basePrice,
               (text) => setFormData(prev => ({ ...prev, basePrice: text })),
               'numeric',
@@ -452,5 +503,41 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
     marginRight: 8,
+  },
+  // Novos estilos para a seção de precificação
+  priceTypeContainer: {
+    marginBottom: 30,
+  },
+  priceTypeGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  priceTypeCard: {
+    width: '32%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 10,
+    alignItems: 'center',
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  priceTypeCardSelected: {
+    backgroundColor: '#A0D2EB',
+    borderColor: '#2C3E50',
+  },
+  priceTypeLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2C3E50',
+    textAlign: 'center',
+  },
+  priceTypeLabelSelected: {
+    color: '#FFFFFF',
   },
 });
