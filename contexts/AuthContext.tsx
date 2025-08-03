@@ -1,29 +1,15 @@
 // LimpeJaApp/contexts/AuthContext.tsx
 
 import React, { createContext, ReactNode, useContext, useEffect, useState, useCallback } from 'react';
-// UserRole e VerificationStatus devem vir de onde são definidas (ex: '../types/backend/auth')
-// Importa AuthResponse, RegisterClientDto, RegisterProviderDto, UserRole, VerificationStatus
 import { AuthResponse, RegisterClientDto, RegisterProviderDto, UserRole, VerificationStatus } from '../types/backend/auth';
-
-// Importa authService.
 import authService from '../services/authService';
-// Importa setUnauthorizedCallback do seu serviço de API (onde o Axios é configurado)
 import { setUnauthorizedCallback } from '../services/api';
-
-// [CORREÇÃO] Importa as interfaces de tipagem do arquivo centralizado
 import { ProviderDisplayInfo } from '../types/backend/providers';
 import { UserProfile } from '../types/backend/users';
-import { ClientDetails } from '../types/backend/clients'; // [CORREÇÃO] Agora importa apenas ClientDetails de clients.ts
-import { BookingAddress } from '../types/backend/bookings'; // [CORREÇÃO] Importa BookingAddress do arquivo correto
+import { ClientDetails } from '../types/backend/clients';
+import { BookingAddress } from '../types/backend/bookings';
+import userService from '../services/userService';
 
-// NOVO: Importa o serviço de usuário para buscar o perfil completo do backend
-import userService from '../services/userService'; // <--- ADICIONADO
-
-// REMOVIDAS as definições locais de ClientDetails, ProviderDisplayInfo, BookingAddress e UserProfile
-// para evitar conflitos e usar uma fonte única de tipos.
-
-// NOVO: Tipo para dados carregados do armazenamento, que podem ser nulos.
-// Isso corresponde ao tipo de retorno de authService.loadAuthData().
 interface AuthDataFromStorage {
   token: string | null;
   user: UserProfile | null;
@@ -31,8 +17,6 @@ interface AuthDataFromStorage {
   role: UserRole | null;
 }
 
-// NOVO: Tipo que representa o perfil do usuário autenticado no contexto, incluindo o token
-// Este tipo é interno ao contexto e combina UserProfile com o token de acesso.
 interface AuthenticatedUserProfile extends UserProfile {
   token: string;
 }
@@ -51,7 +35,7 @@ interface AuthContextType {
   isRegistrationInProgress: boolean;
   setIsRegistrationInProgress: (inProgress: boolean) => void;
   setAuthData: (authData: AuthResponse) => Promise<void>;
-  updateUser: (updatedUser: UserProfile) => Promise<void>;
+  updateUser: (updatedUser: Partial<UserProfile>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -74,7 +58,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await authService.logout();
       setUser(null);
       setRole(null);
-      // CORREÇÃO: Reseta o estado de registro ao fazer logout
       setIsRegistrationInProgress(false);
     } catch (error) {
       console.error('[AuthContext | logout] Erro de logout:', error);
@@ -89,7 +72,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     loadStoredData();
   }, [logout]);
 
-  // Helper para atualizar o estado do usuário no contexto
   const updateAuthState = (authData: AuthDataFromStorage) => {
     if (authData.token && authData.role && authData.id && authData.user) {
       const authenticatedUser: AuthenticatedUserProfile = {
@@ -187,34 +169,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // !!! CORREÇÃO CRÍTICA AQUI: refreshUser agora busca do backend !!!
   const refreshUser = async () => {
     console.log('[AuthContext | refreshUser] Recarregando dados do usuário do backend...');
     try {
       setIsLoading(true);
-      // Pega o token atual do estado do usuário ou do armazenamento
       const currentToken = user?.token || (await authService.loadAuthData()).token;
       if (!currentToken) {
         console.warn('[AuthContext | refreshUser] Nenhum token encontrado para refreshUser. Realizando logout.');
-        await logout(); // Sem token, significa que o usuário não está autenticado
+        await logout();
         return;
       }
 
-      // Faz uma chamada à API para buscar o perfil de usuário mais recente
-      // Assumindo que userService.getMe() existe e retorna UserProfile
-      const latestUserProfile: UserProfile = await userService.getMe(); // <--- CHAMA O BACKEND AQUI
+      const latestUserProfile: UserProfile = await userService.getMe();
 
-      // Atualiza o estado do usuário no contexto
       const authenticatedUser: AuthenticatedUserProfile = {
         ...latestUserProfile,
-        token: currentToken, // Mantém o token existente
+        token: currentToken,
       };
       setUser(authenticatedUser);
       setRole(latestUserProfile.role as UserRole);
       console.log('[AuthContext | refreshUser] Dados do usuário atualizados com sucesso do backend.');
     } catch (error) {
       console.error('[AuthContext | refreshUser] Erro ao recarregar dados do usuário do backend:', error);
-      // Se a busca falhar, pode significar que o token é inválido ou expirou
       await logout();
       throw error;
     } finally {
@@ -222,18 +198,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const updateUser = async (updatedUser: UserProfile) => {
+  const updateUser = useCallback(async (updatedUserData: Partial<UserProfile>) => {
     if (user) {
+      const updatedProfile: UserProfile = {
+        ...user,
+        ...updatedUserData,
+      };
       const updatedAuthenticatedUser: AuthenticatedUserProfile = {
-        ...updatedUser,
+        ...updatedProfile,
         token: user.token,
       };
       setUser(updatedAuthenticatedUser);
-      setRole(updatedUser.role as UserRole);
+      setRole(updatedProfile.role as UserRole);
+
+      // Agora a chamada é válida, pois `storeAuthData` é um método público.
+      await authService.storeAuthData({
+        token: user.token,
+        user: updatedProfile,
+        id: user.id,
+        role: user.role,
+      });
+      console.log('[AuthContext | updateUser] Perfil do usuário atualizado no contexto e no armazenamento.');
     } else {
       console.warn('[AuthContext | updateUser] Tentativa de atualizar usuário não logado.');
     }
-  };
+  }, [user]);
 
   const setAuthData = async (authData: AuthResponse) => {
     try {
