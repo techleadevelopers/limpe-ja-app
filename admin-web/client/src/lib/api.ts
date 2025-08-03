@@ -1,8 +1,9 @@
-// admin-web/src/lib/api.ts
+// admin-web/src/lib.ts
 
 import { Provider, Activity, DashboardMetrics, VerificationStatus, AuthResponse, AuthUser } from './types';
 
-const API_BASE_URL = 'https://limpeja-app-backend-665493568088.southamerica-east1.run.app/api'; // URL do seu backend NestJS
+// A URL foi alterada para apontar para o servidor de desenvolvimento local
+const API_BASE_URL = 'http://127.0.0.1:3000'; // Alterado para localhost:3000
 
 /**
  * Função genérica para tratar requisições HTTP para a API.
@@ -27,6 +28,7 @@ export const fetchApi = async <T>(path: string, options: RequestInit = {}): Prom
         headers['Authorization'] = `Bearer ${token}`; // Adiciona o token ao cabeçalho
     }
 
+    // CORREÇÃO: Concatena o path com a API_BASE_URL
     const response = await fetch(`${API_BASE_URL}${path}`, {
         ...options,
         headers: headers, // Usa o objeto headers construído
@@ -78,8 +80,10 @@ export const fetchProviders = async (): Promise<Provider[]> => {
     return fetchApi('/providers');
 };
 
+// CORREÇÃO: A função agora chama o novo endpoint do backend.
+// A rota antiga foi removida do backend, então o frontend deve usar a nova rota.
 export const fetchVerificationQueue = async (): Promise<Provider[]> => {
-    return fetchApi('/providers?status=PENDING_MANUAL_REVIEW,PENDING_DOCUMENTS_UPLOAD');
+    return fetchApi('/verification/pending-queue');
 };
 
 export const fetchProviderById = async (id: string): Promise<Provider> => {
@@ -91,16 +95,14 @@ export const updateProviderStatus = async (
     status: VerificationStatus,
     rejectionReason?: string
 ): Promise<Provider> => {
-    return fetchApi(`/providers/${id}/status`, {
+    // CORREÇÃO: A rota para atualização de status também foi ajustada.
+    // A propriedade no corpo da requisição foi alterada de `verificationStatus` para `status`.
+    return fetchApi(`/verification/${id}/status`, {
         method: 'PATCH',
-        body: JSON.stringify({ verificationStatus: status, rejectionReason }),
+        body: JSON.stringify({ status: status, rejectionReason }), // <-- CORREÇÃO AQUI
     });
 };
 
 export const fetchRecentActivities = async (limit: number = 10): Promise<Activity[]> => {
     return fetchApi(`/activities?limit=${limit}`);
 };
-
-// --- Novas Funções de API (Exemplos, baseadas na documentação do backend) ---
-// Você precisará adicionar mais funções aqui conforme as funcionalidades do admin forem integradas
-// Exemplo: fetchUsers, createService, updateService, fetchOffers, etc.

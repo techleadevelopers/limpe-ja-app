@@ -7,23 +7,26 @@ import { Badge } from "@/components/ui/badge";
 import { Clock, FileText, Eye, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import VerificationModal from "@/components/verification/verification-modal";
-// Removendo mockData
-// import { getPendingProviders, updateProviderStatus, type Provider } from "@/data/mockData";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchVerificationQueue, updateProviderStatus as apiUpdateProviderStatus } from "@/lib/api";
-import { Provider, VerificationStatus } from "@/lib/types"; // Importa Provider e VerificationStatus dos tipos reais
+import { Provider, VerificationStatus } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
-
 
 function formatRelativeTime(date: Date): string {
   const now = new Date();
   const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
   
-  if (diffInMinutes < 1) return "Just now";
-  if (diffInMinutes < 60) return `${diffInMinutes} minutes ago`;
+  if (diffInMinutes < 1) {
+    return "Just now";
+  }
+  if (diffInMinutes < 60) {
+    return `${diffInMinutes} minutes ago`;
+  }
   
   const diffInHours = Math.floor(diffInMinutes / 60);
-  if (diffInHours < 24) return `${diffInHours} hours ago`;
+  if (diffInHours < 24) {
+    return `${diffInHours} hours ago`;
+  }
   
   const diffInDays = Math.floor(diffInHours / 24);
   return `${diffInDays} days ago`;
@@ -64,24 +67,22 @@ export default function VerificationQueue() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Busca a fila de verificação usando react-query
   const { data: queue, isLoading, isError, error } = useQuery<Provider[], Error>({
-    queryKey: ['/verification-queue'],
+    queryKey: ['/verification/pending-queue'],
     queryFn: () => fetchVerificationQueue(),
   });
 
-  // Mutação para atualizar o status do provedor
   const updateProviderStatusMutation = useMutation({
     mutationFn: ({ id, status, rejectionReason }: { id: string; status: VerificationStatus; rejectionReason?: string }) =>
       apiUpdateProviderStatus(id, status, rejectionReason),
     onSuccess: (updatedProvider) => {
-      queryClient.invalidateQueries({ queryKey: ['/verification-queue'] }); // Invalida a cache para refetch
-      queryClient.invalidateQueries({ queryKey: ['/providers'] }); // Também invalida a lista geral de provedores
+      queryClient.invalidateQueries({ queryKey: ['/verification/pending-queue'] });
+      queryClient.invalidateQueries({ queryKey: ['/providers'] });
       toast({
         title: "Status do Provedor Atualizado",
         description: `${updatedProvider.name} agora está ${updatedProvider.verificationStatus}.`,
       });
-      setIsModalOpen(false); // Fecha o modal após a atualização
+      setIsModalOpen(false);
       setSelectedProvider(null);
     },
     onError: (err: any) => {
@@ -98,7 +99,6 @@ export default function VerificationQueue() {
     setIsModalOpen(true);
   };
 
-  // Funções para passar para o VerificationModal
   const handleApproveProvider = (providerId: string) => {
     updateProviderStatusMutation.mutate({ id: providerId, status: VerificationStatus.APPROVED });
   };
@@ -127,7 +127,6 @@ export default function VerificationQueue() {
         />
         
         <main className="flex-1 overflow-y-auto p-8">
-          {/* Queue Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <Card className="shadow-floating border-0">
               <CardContent className="pt-6">
@@ -172,7 +171,6 @@ export default function VerificationQueue() {
             </Card>
           </div>
 
-          {/* Verification Queue List */}
           <Card className="shadow-floating border-0">
             <CardContent className="pt-6">
               {isLoading ? (

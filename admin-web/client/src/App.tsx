@@ -1,5 +1,4 @@
 import { Switch, Route, useLocation } from "wouter";
-// CORREÇÃO: Importa queryClient como um default import
 import queryClient from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -24,7 +23,7 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
   const [, setLocation] = useLocation();
 
   if (isLoading) {
-    // Pode exibir um spinner ou tela de carregamento enquanto verifica a autenticação
+    // Exibe um spinner ou tela de carregamento enquanto verifica a autenticação
     return (
       <div className="flex min-h-screen items-center justify-center bg-admin-bg">
         <Skeleton className="h-24 w-24 rounded-full" />
@@ -41,11 +40,16 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AppRouter() {
+  // O componente AppRouter agora só define as rotas e não interfere na navegação
   return (
     <Switch>
       <Route path="/login" component={LoginPage} />
-      {/* Rotas Protegidas */}
-      <Route path="/">
+      <Route path="/notifications">
+        <PrivateRoute>
+          <Notifications />
+        </PrivateRoute>
+      </Route>
+      <Route path="/dashboard">
         <PrivateRoute>
           <Dashboard />
         </PrivateRoute>
@@ -80,14 +84,15 @@ function AppRouter() {
           <ProviderMap />
         </PrivateRoute>
       </Route>
-      <Route path="/notifications">
-        <PrivateRoute>
-          <Notifications />
-        </PrivateRoute>
-      </Route>
       <Route path="/settings">
         <PrivateRoute>
           <Settings />
+        </PrivateRoute>
+      </Route>
+      {/* Adicionei a rota para a página raiz para direcionar para o dashboard se autenticado */}
+      <Route path="/">
+        <PrivateRoute>
+          <Dashboard />
         </PrivateRoute>
       </Route>
       {/* Rota 404 para qualquer outra rota não encontrada */}

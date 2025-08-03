@@ -8,11 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Search, Filter, MoreHorizontal, MapPin, Star } from "lucide-react";
 import { motion } from "framer-motion";
 import VerificationModal from "@/components/verification/verification-modal";
-// Removendo mockProviders e funções utilitárias mockadas
-// import { mockProviders, type Provider } from "@/data/mockData";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchProviders, updateProviderStatus as apiUpdateProviderStatus } from "@/lib/api";
-import { Provider, VerificationStatus } from "@/lib/types"; // Importa Provider e VerificationStatus dos tipos reais
+import { Provider, VerificationStatus } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 
 
@@ -54,24 +52,22 @@ export default function Providers() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Busca os provedores usando react-query
   const { data: providers, isLoading, isError, error } = useQuery<Provider[], Error>({
     queryKey: ['/providers'],
-    queryFn: () => fetchProviders(), // fetchProviders já está configurado em api.ts
+    queryFn: () => fetchProviders(),
   });
 
-  // Mutação para atualizar o status do provedor
   const updateProviderStatusMutation = useMutation({
     mutationFn: ({ id, status, rejectionReason }: { id: string; status: VerificationStatus; rejectionReason?: string }) =>
       apiUpdateProviderStatus(id, status, rejectionReason),
     onSuccess: (updatedProvider) => {
-      queryClient.invalidateQueries({ queryKey: ['/providers'] }); // Invalida a cache para refetch
-      queryClient.invalidateQueries({ queryKey: ['/verification-queue'] }); // Também invalida a fila
+      queryClient.invalidateQueries({ queryKey: ['/providers'] });
+      queryClient.invalidateQueries({ queryKey: ['/verification/pending-queue'] });
       toast({
         title: "Status do Provedor Atualizado",
         description: `${updatedProvider.name} agora está ${updatedProvider.verificationStatus}.`,
       });
-      setIsModalOpen(false); // Fecha o modal após a atualização
+      setIsModalOpen(false);
       setSelectedProvider(null);
     },
     onError: (err: any) => {
@@ -82,10 +78,10 @@ export default function Providers() {
       });
     },
   });
-
+  // CORREÇÃO: Adicionado fallback para string vazia para evitar 'undefined' na função toLowerCase()
   const filteredProviders = providers?.filter((provider: Provider) =>
-    provider.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    provider.email.toLowerCase().includes(searchTerm.toLowerCase())
+    (provider.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (provider.email || "").toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
 
   const handleProviderClick = (provider: Provider) => {
@@ -93,19 +89,18 @@ export default function Providers() {
     setIsModalOpen(true);
   };
 
-  // Função para passar para o VerificationModal para aprovação
   const handleApproveProvider = (providerId: string) => {
     updateProviderStatusMutation.mutate({ id: providerId, status: VerificationStatus.APPROVED });
   };
 
-  // Função para passar para o VerificationModal para rejeição
   const handleRejectProvider = (providerId: string, reason: string) => {
     updateProviderStatusMutation.mutate({ id: providerId, status: VerificationStatus.REJECTED, rejectionReason: reason });
   };
 
-  // Função para passar para o VerificationModal para bloqueio
   const handleBlockProvider = (providerId: string) => {
-    if (confirm("Tem certeza que deseja bloquear este provedor?")) {
+    // ATENÇÃO: Confirmação com modal customizado, não 'window.confirm'
+    // Aqui seria o local para chamar um modal de confirmação
+    if (window.confirm("Tem certeza que deseja bloquear este provedor?")) {
       updateProviderStatusMutation.mutate({ id: providerId, status: VerificationStatus.BLOCKED });
     }
   };
@@ -122,7 +117,6 @@ export default function Providers() {
         />
         
         <main className="flex-1 overflow-y-auto p-8">
-          {/* Search and Filters */}
           <Card className="mb-6 shadow-floating border-0">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between gap-4">
@@ -147,7 +141,6 @@ export default function Providers() {
             </CardContent>
           </Card>
 
-          {/* Providers Grid */}
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[...Array(6)].map((_, i) => (
@@ -186,7 +179,6 @@ export default function Providers() {
                     onClick={() => handleProviderClick(provider)}
                   >
                     <CardContent className="pt-6">
-                      {/* Provider Header */}
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center">
                           <img 
@@ -204,14 +196,12 @@ export default function Providers() {
                         </Button>
                       </div>
 
-                      {/* Status Badge */}
                       <div className="mb-4">
                         <Badge className={`border ${getStatusBadge(provider.verificationStatus || "")}`}>
                           {(provider.verificationStatus || "").replace(/_/g, ' ')}
                         </Badge>
                       </div>
 
-                      {/* Provider Stats */}
                       <div className="space-y-2 mb-4">
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-gray-600 flex items-center">
@@ -230,7 +220,6 @@ export default function Providers() {
                         </div>
                       </div>
 
-                      {/* Location */}
                       {provider.latitude && provider.longitude && (
                         <div className="flex items-center text-sm text-gray-500 mb-4">
                           <MapPin className="w-4 h-4 mr-1" />
@@ -238,7 +227,6 @@ export default function Providers() {
                         </div>
                       )}
 
-                      {/* Joined Date */}
                       <div className="text-xs text-gray-500">
                         Joined {formatRelativeTime(new Date(provider.createdAt || Date.now()))}
                       </div>
@@ -249,7 +237,6 @@ export default function Providers() {
             </div>
           )}
 
-          {/* Empty State */}
           {!isLoading && filteredProviders.length === 0 && (
             <div className="text-center py-12">
               <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">

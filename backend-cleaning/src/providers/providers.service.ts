@@ -1,18 +1,11 @@
 // src/providers/providers.service.ts
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma, Provider, User, UserRole, Address, ProviderService, Service, Review, Client, VerificationStatus, PricingType } from '@prisma/client'; // Import PricingType
+import { Prisma, Provider, User, UserRole, Address, ProviderService, Service, Review, Client, VerificationStatus, PricingType } from '@prisma/client';
 import { UpdateProviderProfileDto } from './dto/update-provider-profile.dto';
 import { ProviderSearchDto } from './dto/provider-search.dto';
 import { SortByOption } from '../search/dto/search-query.dto';
 
-// =========================================================================
-// Tipos Auxiliares Refinados
-// =========================================================================
-
-// CORREÇÃO: fiveStarReviewCount e monthlyBookingsCount são campos escalares, não relações.
-// Não devem ser incluídos no 'include' de Prisma.ProviderGetPayload.
-// Eles já fazem parte do tipo 'Provider' base.
 export type ProviderWithIncludes = Prisma.ProviderGetPayload<{
   include: {
     user: { select: { email: true, role: true } };
@@ -27,8 +20,6 @@ export type ProviderWithIncludes = Prisma.ProviderGetPayload<{
         }
       }
     };
-    // fiveStarReviewCount e monthlyBookingsCount são campos escalares e já fazem parte do tipo Provider.
-    // Não precisam ser listados aqui no 'include'.
   };
 }>;
 
@@ -43,9 +34,9 @@ export type ProviderServiceForFrontend = Omit<ProviderService, 'price' | 'servic
   service: ServiceForFrontend;
   createdAt: string;
   updatedAt: string;
-  pricingType: PricingType; // NEW: Pricing type
-  pricePerSquareMeter: number | null; // NEW: Price per square meter
-  pricePerRoom: number | null; // NEW: Price per room
+  pricingType: PricingType;
+  pricePerSquareMeter: number | null;
+  pricePerRoom: number | null;
 };
 
 export type ProviderWithCalculatedRating = {
@@ -62,8 +53,8 @@ export type ProviderWithCalculatedRating = {
   averageRating: number;
   reviewCount: number;
   yearsOfExperience: number | null;
-  fiveStarReviewCount: number; // NEW: Number of 5-star reviews
-  monthlyBookingsCount: number; // NEW: Number of bookings this month
+  fiveStarReviewCount: number;
+  monthlyBookingsCount: number;
   cpf: string | null;
   dateOfBirth: string | null;
   createdAt: string;
@@ -123,10 +114,10 @@ export class ProvidersService {
         },
         createdAt: ps.createdAt.toISOString(),
         updatedAt: ps.updatedAt.toISOString(),
-        pricingType: ps.pricingType, // NEW: Map new field
-        pricePerSquareMeter: ps.pricePerSquareMeter?.toNumber() || null, // NEW: Map new field
-        pricePerRoom: ps.pricePerRoom?.toNumber() || null, // NEW: Map new field
-      })) as ProviderServiceForFrontend[], // Casting is still needed as Prisma.Decimal is not directly number
+        pricingType: ps.pricingType,
+        pricePerSquareMeter: ps.pricePerSquareMeter?.toNumber() || null,
+        pricePerRoom: ps.pricePerRoom?.toNumber() || null,
+      })) as ProviderServiceForFrontend[],
       averageRating: averageRating,
       reviewCount: provider.reviewsReceived?.length || 0,
       yearsOfExperience: provider.yearsOfExperience || null,
@@ -143,10 +134,42 @@ export class ProvidersService {
       selfieWithDocumentUrl: provider.selfieWithDocumentUrl,
       backgroundCheckResult: provider.backgroundCheckResult,
       rejectionReason: provider.rejectionReason,
-      // ADICIONADO: Novos campos mapeados (estão no ProviderWithIncludes base)
       ocrResult: provider.ocrResult,
       livenessResult: provider.livenessResult,
     };
+  }
+
+  /**
+   * Busca provedores com status 'PENDING_MANUAL_REVIEW' ou 'PENDING_DOCUMENTS_UPLOAD'.
+   * @returns Uma lista de provedores pendentes de verificação.
+   */
+  async getPendingProviders(): Promise<ProviderWithCalculatedRating[]> {
+    this.logger.log(`[ProvidersService] getPendingProviders: Buscando provedores com status 'PENDING_MANUAL_REVIEW' ou 'PENDING_DOCUMENTS_UPLOAD'.`);
+
+    const providers = await this.prisma.provider.findMany({
+      where: {
+        verificationStatus: {
+          in: [VerificationStatus.PENDING_MANUAL_REVIEW, VerificationStatus.PENDING_DOCUMENTS_UPLOAD],
+        },
+      },
+      include: {
+        user: { select: { email: true, role: true } }, // Incluir user para email e role
+        address: true,
+        providerServices: { include: { service: true } }, // Incluir providerServices e service
+        reviewsReceived: { // Incluir reviews para cálculo de rating
+          include: {
+            client: {
+              include: {
+                user: { select: { id: true, avatarUrl: true } }
+              }
+            }
+          }
+        },
+      },
+    });
+
+    // findMany sempre retorna um array (mesmo que vazio), então .map é seguro.
+    return providers.map(p => this.mapProviderToCalculatedRating(p as ProviderWithIncludes));
   }
 
   async findOne(id: string): Promise<ProviderWithCalculatedRating | null> {
@@ -166,8 +189,6 @@ export class ProvidersService {
             }
           }
         },
-        // fiveStarReviewCount e monthlyBookingsCount são campos escalares e já fazem parte do tipo Provider.
-        // Não precisam ser listados aqui no 'include'.
       },
     });
 
@@ -195,12 +216,10 @@ export class ProvidersService {
             }
           }
         },
-        // fiveStarReviewCount e monthlyBookingsCount são campos escalares e já fazem parte do tipo Provider.
-        // Não precisam ser listados aqui no 'include'.
       },
     });
     if (provider) {
-        return this.mapProviderToCalculatedRating(provider as ProviderWithIncludes);
+      return this.mapProviderToCalculatedRating(provider as ProviderWithIncludes);
     }
     return null;
   }
@@ -222,8 +241,7 @@ export class ProvidersService {
       avatarUrl: data.avatarUrl,
       yearsOfExperience: data.yearsOfExperience,
       bio: data.bio,
-      // fiveStarReviewCount e monthlyBookingsCount são atualizados por outros serviços (bookings, reviews)
-      // e não devem ser atualizados diretamente via DTO de perfil.
+      pixKey: data.pixKey, // <--- LINHA ADICIONADA AQUI
     };
 
     if (data.address) {
@@ -233,16 +251,6 @@ export class ProvidersService {
           update: data.address,
         },
       };
-      // TODO: Adicionar lógica para geocodificar o endereço (CEP, rua, etc.)
-      // e preencher o campo `location` do PostGIS (address.location).
-      // Isso pode envolver uma chamada a um serviço de geocodificação externo
-      // ou uma função utilitária que use bibliotecas para converter endereço em coordenadas.
-      // Exemplo conceitual:
-      // const geoData = await this.geocodingService.geocodeAddress(data.address);
-      // if (geoData) {
-      //   updateData.address.upsert.update.location = `ST_SetSRID(ST_MakePoint(${geoData.longitude}, ${geoData.latitude}), 4326)`;
-      //   updateData.address.upsert.create.location = `ST_SetSRID(ST_MakePoint(${geoData.longitude}, ${geoData.latitude}), 4326)`;
-      // }
     }
 
     const updatedProvider = await this.prisma.provider.update({
@@ -261,8 +269,6 @@ export class ProvidersService {
             }
           }
         },
-        // fiveStarReviewCount e monthlyBookingsCount são campos escalares e já fazem parte do tipo Provider.
-        // Não precisam ser listados aqui no 'include'.
       },
     });
 
@@ -358,8 +364,8 @@ export class ProvidersService {
               p."selfieWithDocumentUrl",
               p."backgroundCheckResult",
               p."rejectionReason",
-              p."ocrResult",     -- ADICIONADO: Novo campo na query RAW
-              p."livenessResult", -- ADICIONADO: Novo campo na query RAW
+              p."ocrResult",
+              p."livenessResult",
               u.email,
               u.role,
               a.id AS "addressId",
@@ -387,9 +393,9 @@ export class ProvidersService {
                       'createdAt', ps."createdAt",
                       'updatedAt', ps."updatedAt",
                       'description', ps.description,
-                      'pricingType', ps."pricingType", -- NEW: Include in raw query
-                      'pricePerSquareMeter', ps."pricePerSquareMeter", -- NEW: Include in raw query
-                      'pricePerRoom', ps."pricePerRoom", -- NEW: Include in raw query
+                      'pricingType', ps."pricingType",
+                      'pricePerSquareMeter', ps."pricePerSquareMeter",
+                      'pricePerRoom', ps."pricePerRoom",
                       'service', json_build_object(
                           'id', s.id,
                           'name', s.name,
@@ -401,9 +407,9 @@ export class ProvidersService {
                       )
                   )
                   ORDER BY ps.id
-              ) FILTER (WHERE ps.id IS NOT NULL) AS "providerServicesAgg"
-              , p."fiveStarReviewCount" -- NEW: Include in raw query
-              , p."monthlyBookingsCount" -- NEW: Include in raw query
+              ) FILTER (WHERE ps.id IS NOT NULL) AS "providerServicesAgg",
+              p."fiveStarReviewCount",
+              p."monthlyBookingsCount"
             FROM
                 "Provider" p
             JOIN
@@ -424,67 +430,67 @@ export class ProvidersService {
                 ${serviceId ? Prisma.sql`AND ps."serviceId" = ${serviceId}` : Prisma.empty}
                 ${location ? Prisma.sql`AND (a.city ILIKE ${'%' + location + '%'} OR a.state ILIKE ${'%' + location + '%'} OR a.street ILIKE ${'%' + location + '%'} OR a.neighborhood ILIKE ${'%' + location + '%'})` : Prisma.empty}
             GROUP BY
-                p.id, u.email, u.role, a.id, a.cep, a.street, a.number, a.complement, a.neighborhood, a.city, a.state, a."providerId", a.location, p."fiveStarReviewCount", p."monthlyBookingsCount" -- CORREÇÃO: Incluir campos agregados no GROUP BY
+                p.id, u.email, u.role, a.id, a.cep, a.street, a.number, a.complement, a.neighborhood, a.city, a.state, a."providerId", a.location, p."fiveStarReviewCount", p."monthlyBookingsCount"
             ORDER BY
                 distance_km ASC
             LIMIT ${limit || 10} OFFSET ${offset || 0};
         `);
 
-providersWithDistance = rawProviders.map((rp: any) => {
-            const providerWithIncludes: ProviderWithIncludes = {
-                id: rp.id,
-                userId: rp.userId,
-                fullName: rp.fullName,
-                cpf: rp.cpf,
-                dateOfBirth: rp.dateOfBirth, // dateOfBirth from raw query will be a Date object
-                phone: rp.phone,
-                yearsOfExperience: rp.yearsOfExperience,
-                avatarUrl: rp.avatarUrl,
-                bio: rp.bio,
-                verificationStatus: rp.verificationStatus,
-                pixKey: rp.pixKey,
-                createdAt: rp.createdAt, // createdAt from raw query will be a Date object
-                updatedAt: rp.updatedAt, // updatedAt from raw query will be a Date object
-                documentPhotoFrontUrl: rp.documentPhotoFrontUrl,
-                fiveStarReviewCount: rp.fiveStarReviewCount, // NEW: Map new field
-                monthlyBookingsCount: rp.monthlyBookingsCount, // NEW: Map new field
-                documentPhotoBackUrl: rp.documentPhotoBackUrl,
-                selfieWithDocumentUrl: rp.selfieWithDocumentUrl,
-                backgroundCheckResult: rp.backgroundCheckResult,
-                rejectionReason: rp.rejectionReason,
-                ocrResult: rp.ocrResult,
-                livenessResult: rp.livenessResult,
-                user: { email: rp.email, role: rp.role },
-                address: rp.addressId ? ({ // <--- ATENÇÃO AQUI: Abre parênteses para o cast
-                    id: rp.addressId,
-                    cep: rp.cep,
-                    street: rp.street,
-                    number: rp.number,
-                    complement: rp.complement,
-                    neighborhood: rp.neighborhood,
-                    city: rp.city,
-                    state: rp.state,
-                    clientId: null,
-                    providerId: rp.providerId,
-                    location: undefined, // A propriedade 'location' é opcional e não vem da query RAW neste ponto
-                } as Address) : null, // <--- ATENÇÃO AQUI: Fecha parênteses e adiciona 'as Address'
-                providerServices: rp.providerServicesAgg ? rp.providerServicesAgg.map((ps: any) => ({
-                    ...ps,
-                    price: new Prisma.Decimal(ps.price), // Keep as Decimal if ProviderService type expects it
-                    // CORREÇÃO: pricePerSquareMeter e pricePerRoom já vêm como números da raw query
-                    // e devem ser convertidos para Decimal para o tipo ProviderService.
-                    pricePerSquareMeter: ps.pricePerSquareMeter !== null ? new Prisma.Decimal(ps.pricePerSquareMeter) : null,
-                    pricePerRoom: ps.pricePerRoom !== null ? new Prisma.Decimal(ps.pricePerRoom) : null,
-                    service: {
-                        ...ps.service,
-                        price: new Prisma.Decimal(ps.service.price),
-                    }
-                })) : [],
-                reviewsReceived: [],
-            };
-            // CORREÇÃO: No mapProviderToCalculatedRating, os campos Decimal serão convertidos para number.
-            // Aqui, o rp.distance_km já é um número.
-            return this.mapProviderToCalculatedRating(providerWithIncludes, parseFloat(rp.distance_km));
+        if (rawProviders.length === 0) {
+          this.logger.warn('Nenhum provedor encontrado na busca geoespacial.');
+        }
+
+        providersWithDistance = rawProviders.map((rp: any) => {
+          const providerWithIncludes: ProviderWithIncludes = {
+            id: rp.id,
+            userId: rp.userId,
+            fullName: rp.fullName,
+            cpf: rp.cpf,
+            dateOfBirth: rp.dateOfBirth,
+            phone: rp.phone,
+            yearsOfExperience: rp.yearsOfExperience,
+            avatarUrl: rp.avatarUrl,
+            bio: rp.bio,
+            verificationStatus: rp.verificationStatus,
+            pixKey: rp.pixKey,
+            createdAt: rp.createdAt,
+            updatedAt: rp.updatedAt,
+            documentPhotoFrontUrl: rp.documentPhotoFrontUrl,
+            fiveStarReviewCount: rp.fiveStarReviewCount,
+            monthlyBookingsCount: rp.monthlyBookingsCount,
+            documentPhotoBackUrl: rp.documentPhotoBackUrl,
+            selfieWithDocumentUrl: rp.selfieWithDocumentUrl,
+            backgroundCheckResult: rp.backgroundCheckResult,
+            rejectionReason: rp.rejectionReason,
+            ocrResult: rp.ocrResult,
+            livenessResult: rp.livenessResult,
+            user: { email: rp.email, role: rp.role },
+            address: rp.addressId ? ({
+              id: rp.addressId,
+              cep: rp.cep,
+              street: rp.street,
+              number: rp.number,
+              complement: rp.complement,
+              neighborhood: rp.neighborhood,
+              city: rp.city,
+              state: rp.state,
+              clientId: null,
+              providerId: rp.providerId,
+              location: undefined,
+            } as Address) : null,
+            providerServices: rp.providerServicesAgg ? rp.providerServicesAgg.map((ps: any) => ({
+              ...ps,
+              price: new Prisma.Decimal(ps.price),
+              pricePerSquareMeter: ps.pricePerSquareMeter !== null ? new Prisma.Decimal(ps.pricePerSquareMeter) : null,
+              pricePerRoom: ps.pricePerRoom !== null ? new Prisma.Decimal(ps.pricePerRoom) : null,
+              service: {
+                ...ps.service,
+                price: new Prisma.Decimal(ps.service.price),
+              }
+            })) : [],
+            reviewsReceived: [],
+          };
+          return this.mapProviderToCalculatedRating(providerWithIncludes, parseFloat(rp.distance_km));
         });
 
       } catch (rawQueryError: any) {
@@ -533,8 +539,6 @@ providersWithDistance = rawProviders.map((rp: any) => {
             }
           }
         },
-        // fiveStarReviewCount e monthlyBookingsCount são campos escalares e já fazem parte do tipo Provider.
-        // Não precisam ser listados aqui no 'include'.
       },
     });
 
@@ -593,8 +597,6 @@ providersWithDistance = rawProviders.map((rp: any) => {
             }
           }
         },
-        // fiveStarReviewCount e monthlyBookingsCount são campos escalares e já fazem parte do tipo Provider.
-        // Não precisam ser listados aqui no 'include'.
       },
       orderBy: {
         yearsOfExperience: 'desc',

@@ -15,6 +15,11 @@ export interface UserProfile {
   email: string;
   role: UserRole;
 
+  // ADICIONADO: Token de autenticação para uso no frontend
+  // Pode ser 'string' se for sempre esperado após o login, ou 'string | null' / 'string?' se puder ser opcional/nulo.
+  // Pelo uso em service-details.tsx, parece ser uma string não-nula quando o usuário está logado.
+  token: string; 
+
   fullName?: string | null; // Presente na raiz do fetchedUserProfile nos logs, permitir null
   phone?: string | null;     // Presente na raiz do fetchedUserProfile nos logs, permitir null
   avatarUrl?: string | null; // Permitir null

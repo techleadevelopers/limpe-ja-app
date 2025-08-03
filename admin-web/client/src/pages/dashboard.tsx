@@ -44,6 +44,7 @@ export default function Dashboard() {
           ) : null}
 
           {/* Charts and Map Section */}
+          {/* CORREÇÃO AQUI: Garante um layout de grade consistente */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             <RevenueChart />
             <ProviderMap />

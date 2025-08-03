@@ -43,6 +43,10 @@ export default function ProviderMap() {
   }, []);
 
   const filteredProviders = providers.filter(provider => {
+    // Adiciona uma verificação para garantir que o objeto 'provider' existe e tem as propriedades necessárias.
+    if (!provider || !provider.name || !provider.verificationStatus) {
+        return false;
+    }
     const matchesSearch = provider.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || provider.verificationStatus === statusFilter;
     return matchesSearch && matchesStatus && provider.latitude && provider.longitude;

@@ -7,7 +7,7 @@ import { UserProfile } from '../types/backend/users';
 import { RegisterClientDto, RegisterProviderDto, UserRole } from '../types/backend/auth';
 
 // Importa authService e AuthResponse
-import authService, { AuthResponse } from '../services/authService'; //
+import authService, { AuthResponse } from '../services/authService';
 // Importa setUnauthorizedCallback do seu serviço de API (onde o Axios é configurado)
 import { setUnauthorizedCallback } from '../services/api'; // <--- Importação adicionada
 
@@ -16,8 +16,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   role: UserRole | null;
-  // CORREÇÃO: login agora aceita email e senha diretamente
-  login: (credentials: { email: string; password: string }) => Promise<AuthResponse>;
+  login: (credentials: { email: string; password: string }) => Promise<void>;
   logout: () => Promise<void>;
   register: (userData: any, userType: 'client' | 'provider') => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -25,14 +24,13 @@ interface AuthContextType {
   signUpProvider: (data: RegisterProviderDto) => Promise<void>;
   isRegistrationInProgress: boolean;
   setIsRegistrationInProgress: (inProgress: boolean) => void;
-  // setAuthData agora recebe AuthResponse
   setAuthData: (authData: AuthResponse) => Promise<void>;
+  // CORREÇÃO: Adicionando updateUser na interface
+  updateUser: (updatedUser: UserProfile) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-// Adiciona um log para verificar se AuthContext é definido imediatamente após a criação
 console.log('[AuthContext.tsx] AuthContext definido (após createContext):', AuthContext);
-
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -46,18 +44,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const isAuthenticated = !!user;
 
-  // Função de logout (definida aqui para ser usada no callback)
   const logout = async () => {
     try {
       console.log('[AuthContext | logout] Iniciando logout...');
       setIsLoading(true);
-      await authService.logout(); // Chama o logout do serviço, que limpa o AsyncStorage e o token do Axios
-
+      await authService.logout();
       setUser(null);
       setRole(null);
-
       console.log('[AuthContext | logout] Logout bem-sucedido.');
-
     } catch (error) {
       console.error('[AuthContext | logout] Erro de logout:', error);
       throw error;
@@ -68,30 +62,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     console.log('[AuthContext | useEffect] Configurando callback de logout e carregando dados.');
-    // Registra a função de logout no interceptor do Axios.
-    // Isso garante que o interceptor tenha acesso à função logout do contexto.
-    setUnauthorizedCallback(logout); // <--- Chamada para registrar o callback
-
+    setUnauthorizedCallback(logout);
     loadStoredData();
-  }, []); // A dependência vazia garante que isso roda uma vez na montagem
+  }, []);
 
   const loadStoredData = async () => {
     try {
       console.log('[AuthContext | loadStoredData] Tentando carregar dados de autenticação armazenados...');
       setIsLoading(true);
-
       const authData = await authService.loadAuthData();
-
-      console.log('[AuthContext | loadStoredData] Dados brutos armazenados:', {
-        token: !!authData.token,
-        role: authData.role,
-        id: authData.id
-      });
-
       if (authData.token && authData.role && authData.id && authData.user) {
-        // O token é definido no Axios pelo authService.loadAuthData()
-        // Uma requisição para validar o token pode ser feita aqui se necessário,
-        // mas o interceptor de 401 já irá lidar com tokens inválidos em requisições subsequentes.
         setUser(authData.user as UserProfile);
         setRole(authData.role as UserRole);
         console.log('[AuthContext | loadStoredData] Usuário autenticado a partir do armazenamento.');
@@ -100,7 +80,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(null);
         setRole(null);
       }
-
     } catch (error) {
       console.error('[AuthContext | loadStoredData] Erro ao carregar dados armazenados:', error);
       setUser(null);
@@ -111,25 +90,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // CORREÇÃO: Função de login agora aceita email e senha.
-  // Removeu a lógica e os tipos relacionados a phoneNumber, otpCode e 'type'.
-  const login = async (credentials: { email: string; password: string }): Promise<AuthResponse> => {
+  const login = async (credentials: { email: string; password: string }): Promise<void> => {
     try {
       setIsLoading(true);
-      let authData: AuthResponse;
-
-      console.log('[AuthContext | login] Tentando login com e-mail e senha.');
-
-      // CORREÇÃO: Chama o método de login por e-mail/senha do authService
-      // IMPORTANTE: O authService.login (o que aceita email/senha) deve ser o método correto.
-      // Se o seu authService só tem loginWithPassword que espera phone, precisará ajustar lá.
-      authData = await authService.login({ email: credentials.email, password: credentials.password }); //
-
+      const authData = await authService.login(credentials);
       setUser(authData.user as UserProfile);
       setRole(authData.user.role as UserRole);
-
       console.log('[AuthContext | login] Login bem-sucedido. Papel do usuário:', authData.user.role);
-      return authData;
     } catch (error) {
       console.error('[AuthContext | login] Erro de login:', error);
       throw error;
@@ -138,25 +105,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // refreshUser e setAuthData permanecem inalterados
   const register = async (userData: any, userType: 'client' | 'provider') => {
     try {
       console.log(`[AuthContext | register] Iniciando registro como ${userType}...`);
       setIsLoading(true);
-
       let authData: AuthResponse;
-
       if (userType === 'client') {
-        authData = await authService.registerClient(userData); //
+        authData = await authService.registerClient(userData);
       } else {
-        authData = await authService.registerProvider(userData); //
+        authData = await authService.registerProvider(userData);
       }
-
       setUser(authData.user as UserProfile);
       setRole(authData.user.role as UserRole);
-
       console.log('[AuthContext | register] Registro bem-sucedido. Papel do usuário:', authData.user.role);
-
     } catch (error) {
       console.error('[AuthContext | register] Erro de registro:', error);
       throw error;
@@ -169,9 +130,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       console.log('[AuthContext | signUpClient] Iniciando cadastro de cliente...');
       setIsLoading(true);
-      const authData: AuthResponse = await authService.registerClient(data); //
-      setUser(authData.user as UserProfile);
-      setRole(authData.user.role as UserRole);
+      const authData: AuthResponse = await authService.registerClient(data);
+      await login({ email: data.email, password: data.password });
       console.log('[AuthContext | signUpClient] Cadastro de cliente bem-sucedido.');
     } catch (error) {
       console.error('[AuthContext | signUpClient] Erro no cadastro de cliente:', error);
@@ -186,9 +146,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('[AuthContext | signUpProvider] Iniciando cadastro de provedor...');
       setIsLoading(true);
       setIsRegistrationInProgress(true);
-      const authData: AuthResponse = await authService.registerProvider(data); //
-      setUser(authData.user as UserProfile);
-      setRole(authData.user.role as UserRole);
+      const authData: AuthResponse = await authService.registerProvider(data);
+      await login({ email: data.email, password: data.password });
       console.log('[AuthContext | signUpProvider] Cadastro de provedor bem-sucedido.');
     } catch (error) {
       console.error('[AuthContext | signUpProvider] Erro no cadastro de provedor:', error);
@@ -203,12 +162,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log('[AuthContext | refreshUser] Atualizando dados do usuário...');
     await loadStoredData();
   };
+  
+  // CORREÇÃO: Implementação da função updateUser
+  const updateUser = async (updatedUser: UserProfile) => {
+    // A lógica aqui atualiza o estado do usuário no contexto
+    // e também no armazenamento local (se for o caso)
+    setUser(updatedUser);
+    setRole(updatedUser.role as UserRole);
+    // TODO: Adicionar lógica para salvar no armazenamento, se necessário
+  };
 
-  // Método para definir os dados de autenticação no contexto
   const setAuthData = async (authData: AuthResponse) => {
     try {
       console.log('[AuthContext | setAuthData] Definindo dados de autenticação no contexto...');
       setIsLoading(true);
+      // A lógica de salvamento e atualização de estado está agora no método login
       setUser(authData.user as UserProfile);
       setRole(authData.user.role as UserRole);
       console.log('[AuthContext | setAuthData] Dados de autenticação definidos no contexto. Papel:', authData.user.role);
@@ -234,6 +202,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isRegistrationInProgress,
     setIsRegistrationInProgress,
     setAuthData,
+    // CORREÇÃO: Adicionando updateUser ao objeto de valor do contexto
+    updateUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -248,5 +218,4 @@ export const useAuth = (): AuthContextType => {
   return context;
 };
 
-// Adicionado: Exportação nomeada do AuthContext
 export { AuthContext };

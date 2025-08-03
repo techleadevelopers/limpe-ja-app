@@ -2,78 +2,85 @@ import { Link, useLocation } from "wouter";
 import { Sparkles, ChartLine, Users, ClipboardCheck, ChartPie, Settings, UsersRound, MapPin, Bell, Cog, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/context/AuthContext"; // Importa o contexto de autenticação
+import logoImage from "../../assets/logo2.png"; // Importa a imagem da logo
 
 export default function Sidebar() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation(); // Agora também usa setLocation
+  const { logout } = useAuth(); // Pega a função de logout do contexto
   
   const { data: metrics } = useQuery({
     queryKey: ['/api/dashboard/metrics'],
   });
 
   const { data: verificationQueue } = useQuery({
-    queryKey: ['/api/verification-queue'],
+    queryKey: ['/api/verification/pending-queue'], // AQUI: A rota foi corrigida para a nova rota de pendentes
   });
 
   const navItems = [
     {
       path: "/",
       icon: ChartLine,
-      label: "Dashboard",
+      label: "Painel",
       isActive: location === "/",
     },
     {
       path: "/providers",
       icon: Users,
-      label: "Provider Management",
+      label: "Gestão de Provedores",
       badge: (metrics as any)?.pendingVerifications || 0,
       isActive: location === "/providers",
     },
     {
       path: "/verification-queue",
       icon: ClipboardCheck,
-      label: "Verification Queue",
+      label: "Fila de Verificação",
       badge: (verificationQueue as any)?.length || 0,
       isActive: location === "/verification-queue",
     },
     {
       path: "/financial-analytics",
       icon: ChartPie,
-      label: "Financial Analytics",
+      label: "Análise Financeira",
       isActive: location === "/financial-analytics",
     },
     {
       path: "/service-management",
       icon: Settings,
-      label: "Service Management",
+      label: "Gestão de Serviços",
       isActive: location === "/service-management",
     },
     {
       path: "/user-management",
       icon: UsersRound,
-      label: "User Management",
+      label: "Gestão de Usuários",
       isActive: location === "/user-management",
     },
     {
       path: "/provider-map",
       icon: MapPin,
-      label: "Provider Map",
+      label: "Mapa de Provedores",
       isActive: location === "/provider-map",
     },
   ];
 
+  const handleLogout = async () => {
+    await logout();
+    setLocation('/login'); // Redireciona para a página de login
+  };
+
   return (
     <div className="fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-floating-lg border-r border-gray-100">
       {/* Logo Section */}
-      <div className="flex items-center px-6 py-6 border-b border-gray-100">
-        <div className="flex items-center">
-          <div className="w-10 h-10 bg-gradient-to-br from-light-blue to-medium-blue rounded-xl flex items-center justify-center shadow-floating">
-            <Sparkles className="text-white" size={20} />
-          </div>
-          <div className="ml-3">
-            <h1 className="text-xl font-bold text-gray-900">LimpeJá</h1>
-            <p className="text-sm text-gray-500">Admin Panel</p>
-          </div>
-        </div>
+      <div className="flex items-center justify-center px-6 py-6 border-b border-gray-100">
+        {/* CORREÇÃO: Adicionando a imagem da logo e removendo a div extra */}
+        <img 
+          src={logoImage} 
+          alt="LimpeJá Logo" 
+          style={{ width: '150px', height: 'auto', objectFit: 'contain' }}
+          className="rounded-2xl" 
+        />
+        {/* FIM do novo trecho */}
       </div>
 
       {/* Navigation Menu */}
@@ -86,18 +93,19 @@ export default function Sidebar() {
               className={cn(
                 "flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-300 group",
                 item.isActive
-                  ? "text-white bg-gradient-to-r from-light-blue to-medium-blue shadow-floating hover:shadow-floating-lg"
+                  ? "text-medium-blue bg-gray-50 shadow-floating hover:shadow-floating-lg"
                   : "text-gray-700 hover:bg-gray-50 hover:shadow-floating"
               )}
             >
               <item.icon 
                 className={cn(
                   "w-5 h-5 mr-3",
-                  item.isActive ? "text-white" : "text-gray-400 group-hover:text-medium-blue"
+                  item.isActive ? "text-medium-blue" : "text-gray-400 group-hover:text-medium-blue"
                 )} 
               />
               {item.label}
-              {item.badge && item.badge > 0 && (
+              {/* CORREÇÃO: Renderiza o badge apenas se for maior que 0 */}
+              {item.badge > 0 && (
                 <span className={cn(
                   "ml-auto text-xs px-2 py-1 rounded-full",
                   item.badge > 5 ? "bg-red-100 text-red-600" : "bg-orange-100 text-orange-600"
@@ -114,17 +122,33 @@ export default function Sidebar() {
           <div className="space-y-2">
             <Link
               href="/notifications"
-              className="flex items-center px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-xl transition-all duration-300 group"
+              className={cn(
+                "flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-300 group",
+                location === "/notifications" 
+                  ? "text-medium-blue bg-gray-50 shadow-floating hover:shadow-floating-lg"
+                  : "text-gray-700 hover:bg-gray-50 hover:shadow-floating"
+              )}
             >
-              <Bell className="w-5 h-5 mr-3 text-gray-400 group-hover:text-medium-blue" />
-              Notifications
+              <Bell className={cn(
+                "w-5 h-5 mr-3",
+                location === "/notifications" ? "text-medium-blue" : "text-gray-400 group-hover:text-medium-blue"
+              )} />
+              Notificações
             </Link>
             <Link
               href="/settings"
-              className="flex items-center px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-xl transition-all duration-300 group"
+              className={cn(
+                "flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-300 group",
+                location === "/settings" 
+                  ? "text-medium-blue bg-gray-50 shadow-floating hover:shadow-floating-lg"
+                  : "text-gray-700 hover:bg-gray-50 hover:shadow-floating"
+              )}
             >
-              <Cog className="w-5 h-5 mr-3 text-gray-400 group-hover:text-medium-blue" />
-              Settings
+              <Cog className={cn(
+                "w-5 h-5 mr-3",
+                location === "/settings" ? "text-medium-blue" : "text-gray-400 group-hover:text-medium-blue"
+              )} />
+              Configurações
             </Link>
           </div>
         </div>
@@ -142,7 +166,11 @@ export default function Sidebar() {
             <p className="text-sm font-medium text-gray-900">Admin User</p>
             <p className="text-xs text-gray-500">admin@limpeja.com</p>
           </div>
-          <button className="ml-auto text-gray-400 hover:text-gray-600">
+          {/* BOTÃO DE LOGOUT AGORA COM A FUNÇÃO handleLogout */}
+          <button 
+            onClick={handleLogout} 
+            className="ml-auto text-gray-400 hover:text-gray-600"
+          >
             <LogOut size={16} />
           </button>
         </div>

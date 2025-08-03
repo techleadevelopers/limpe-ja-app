@@ -16,8 +16,56 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { BlurView } from 'expo-blur';
+import { useRouter } from 'expo-router';
+import { useAuth } from '../../../hooks/useAuth';
+
+// --- NOVAS IMPORTAÇÕES ---
+import api from '../../../services/api'; // Importa a instância global do Axios
+import {
+  updateMyProviderProfile,
+  addProviderServiceOffering,
+  updateProviderServiceOffering,
+  getProviderServicesOffered, // Para buscar serviços existentes do provedor
+} from '../../../services/providerService';
+// --- FIM DAS NOVAS IMPORTAÇÕES ---
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+// Enum PricingType replicando o do backend para uso no frontend
+enum PricingType {
+  FIXED_PRICE = 'FIXED_PRICE', // Adicionado para consistência, embora não usado diretamente aqui
+  HOURLY = 'HOURLY',
+  BY_SIZE = 'BY_SIZE',
+  CUSTOM_QUOTE = 'CUSTOM_QUOTE', // Adicionado para consistência
+}
+
+// Mapeamento de especialidades do frontend para serviceId (UUIDs) do backend
+// Em um cenário real, esses UUIDs viriam de uma API de serviços (ex: GET /services)
+// Estes são UUIDs de exemplo e devem corresponder aos IDs reais dos serviços no seu DB.
+const SERVICE_MAPPINGS: { [key: string]: string } = {
+  'residencial': 'a1b2c3d4-e5f6-7890-1234-567890abcdef', // Exemplo de UUID
+  'comercial': 'b2c3d4e5-f6a1-2345-6789-0abcdef12345', // Exemplo de UUID
+  'escritorio': 'c3d4e5f6-a1b2-3456-7890-abcdef123456', // Exemplo de UUID
+  'pos_obra': 'd4e5f6a1-b2c3-4567-890a-bcdef1234567', // Exemplo de UUID
+};
+
+// Função utilitária para converter URI de arquivo em Blob para upload
+const uriToBlob = async (uri: string): Promise<Blob> => {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.onload = function () {
+      resolve(xhr.response);
+    };
+    xhr.onerror = function (e) {
+      console.error("Erro ao converter URI para Blob:", e);
+      reject(new TypeError('Network request failed'));
+    };
+    xhr.responseType = 'blob';
+    xhr.open('GET', uri, true);
+    xhr.send(null);
+  });
+};
+
 
 // Definição do tipo para as opções de precificação
 type PriceUnit = 'hora' | 'quarto' | 'metragem' | null;
@@ -29,12 +77,14 @@ interface ServiceDetailsFormData {
   basePrice: string;
   pixKey: string;
   specialties: string[];
-  serviceAreas: string[];
-  // Novo campo para armazenar a unidade de preço selecionada
+  serviceAreas: string[]; // Não utilizado na lógica de integração, mas mantido para consistência do formulário
   priceUnit: PriceUnit;
 }
 
 export default function ServiceDetailsScreen() {
+  const router = useRouter();
+  const { user, updateUser, setIsRegistrationInProgress } = useAuth();
+
   const [formData, setFormData] = useState<ServiceDetailsFormData>({
     profilePhoto: null,
     description: '',
@@ -43,7 +93,7 @@ export default function ServiceDetailsScreen() {
     pixKey: '',
     specialties: [],
     serviceAreas: [],
-    priceUnit: null, // Inicialmente nenhuma opção está selecionada
+    priceUnit: null,
   });
 
   const [isUploading, setIsUploading] = useState(false);
@@ -68,14 +118,12 @@ export default function ServiceDetailsScreen() {
   const handleImagePicker = async () => {
     try {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
       if (permissionResult.granted === false) {
         Alert.alert('Permissão necessária', 'É preciso permitir acesso à galeria para continuar.');
         return;
       }
-
+      
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
@@ -89,6 +137,135 @@ export default function ServiceDetailsScreen() {
       }
     } catch (error) {
       Alert.alert('Erro', 'Não foi possível selecionar a imagem.');
+    }
+  };
+
+  const handleContinue = async () => {
+    if (!user || !user.token || !user.id) { // user.id é necessário para buscar os serviços do provedor
+        Alert.alert('Erro de autenticação', 'Usuário não logado ou token/ID ausente. Por favor, faça login novamente.');
+        return;
+    }
+
+    // Validações básicas do formulário
+    if (!formData.profilePhoto) {
+      Alert.alert('Atenção', 'Por favor, adicione uma foto de perfil para continuar.');
+      return;
+    }
+    if (!formData.description.trim()) {
+      Alert.alert('Atenção', 'A descrição do serviço é obrigatória.');
+      return;
+    }
+    if (!formData.yearsOfExperience.trim() || isNaN(parseInt(formData.yearsOfExperience))) {
+      Alert.alert('Atenção', 'Os anos de experiência são obrigatórios e devem ser um número.');
+      return;
+    }
+    if (!formData.basePrice.trim() || isNaN(parseFloat(formData.basePrice))) {
+      Alert.alert('Atenção', 'O preço base é obrigatório e deve ser um número.');
+      return;
+    }
+    if (formData.specialties.length === 0) {
+      Alert.alert('Atenção', 'Por favor, selecione pelo menos um tipo de serviço.');
+      return;
+    }
+    if (!formData.priceUnit) {
+      Alert.alert('Atenção', 'Por favor, selecione um tipo de precificação (por hora, quarto, ou metragem).');
+      return;
+    }
+    
+    setIsUploading(true); // Inicia o estado de upload/processamento
+
+    try {
+      // 1. Upload da Foto de Perfil
+      let avatarUrl = formData.profilePhoto; 
+
+      if (formData.profilePhoto && formData.profilePhoto.startsWith('file://')) {
+        const photoBlob = await uriToBlob(formData.profilePhoto);
+        const uploadFormData = new FormData();
+        uploadFormData.append('file', photoBlob, 'profile.jpg'); // 'file' deve ser o nome esperado pelo seu backend
+
+        // Usando a instância global 'api'
+        const uploadResponse = await api.post('/upload-image', uploadFormData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+        avatarUrl = uploadResponse.data.url; // URL pública da imagem retornada pelo backend
+      }
+
+      // 2. Atualizar o Perfil do Prestador (PATCH /providers/me)
+      const profileUpdateData = {
+        avatarUrl: avatarUrl,
+        bio: formData.description, // Mapeia description do form para bio do provedor
+        yearsOfExperience: parseInt(formData.yearsOfExperience, 10),
+        pixKey: formData.pixKey,
+        // Outros campos do perfil podem ser adicionados aqui se o formulário os coletar
+      };
+      // Usando a função de serviço dedicada
+      await updateMyProviderProfile(profileUpdateData);
+
+      // 3. Gerenciar os Serviços do Prestador (POST e PATCH em /providers/:providerId/services)
+      // Primeiro, buscar os serviços já oferecidos pelo provedor para saber quais atualizar e quais criar
+      const existingProviderServices = await getProviderServicesOffered(user.id);
+
+      for (const specialty of formData.specialties) {
+        const serviceId = SERVICE_MAPPINGS[specialty];
+        if (!serviceId) {
+          console.warn(`[handleContinue] ServiceId não encontrado para a especialidade: ${specialty}`);
+          continue; // Pula se não houver mapeamento
+        }
+
+        let serviceData: any = {
+          serviceId: serviceId,
+          description: formData.description, // Pode ser uma descrição específica do serviço ou a geral do provedor
+          durationMinutes: 60, // Exemplo: duração padrão, ajuste conforme necessário
+        };
+
+        // Lógica de mapeamento do preço e tipo de precificação
+        const basePriceValue = parseFloat(formData.basePrice);
+        if (formData.priceUnit === 'hora') {
+          serviceData.pricingType = PricingType.HOURLY;
+          serviceData.price = basePriceValue;
+          serviceData.pricePerRoom = null;
+          serviceData.pricePerSquareMeter = null;
+        } else if (formData.priceUnit === 'quarto') {
+          serviceData.pricingType = PricingType.BY_SIZE;
+          serviceData.pricePerRoom = basePriceValue;
+          serviceData.pricePerSquareMeter = null;
+          serviceData.price = 0; // Preço fixo pode ser 0 ou null se for por tamanho/quarto
+        } else if (formData.priceUnit === 'metragem') {
+          serviceData.pricingType = PricingType.BY_SIZE;
+          serviceData.pricePerSquareMeter = basePriceValue;
+          serviceData.pricePerRoom = null;
+          serviceData.price = 0; // Preço fixo pode ser 0 ou null se for por tamanho/quarto
+        } else {
+            console.warn(`[handleContinue] Tipo de precificação desconhecido: ${formData.priceUnit}`);
+            continue; // Pula se o tipo de precificação não for válido
+        }
+
+        // Verifica se o serviço já existe para este provedor
+        const existingService = existingProviderServices.find(
+          (s: any) => s.serviceId === serviceId
+        );
+
+        if (existingService) {
+          // Se o serviço existe, atualiza (PATCH) usando a função de serviço dedicada
+          await updateProviderServiceOffering(user.id, existingService.id, serviceData);
+        } else {
+          // Se o serviço não existe, cria (POST) usando a função de serviço dedicada
+          await addProviderServiceOffering(user.id, serviceData);
+        }
+      }
+
+      // Sucesso: Atualiza o estado de registro e navega
+      setIsRegistrationInProgress(false);
+      Alert.alert('Sucesso', 'Seu perfil foi salvo! Agora vamos verificar seus documentos.');
+      router.push('/provider-register/verify-account');
+
+    } catch (error: any) {
+      console.error('Erro ao salvar os dados do provedor:', error.response?.data || error.message);
+      Alert.alert('Erro', `Ocorreu um erro ao salvar seus dados: ${error.response?.data?.message || error.message}. Tente novamente.`);
+    } finally {
+      setIsUploading(false); // Finaliza o estado de upload/processamento
     }
   };
 
@@ -144,7 +321,6 @@ export default function ServiceDetailsScreen() {
     </View>
   );
 
-  // Mapeia a unidade de preço para o placeholder do input
   const getPriceInputPlaceholder = (unit: PriceUnit) => {
     switch (unit) {
       case 'hora':
@@ -310,17 +486,15 @@ export default function ServiceDetailsScreen() {
           {/* Continue Button */}
           <TouchableOpacity
             style={styles.continueButton}
-            onPress={() => {
-              // Implementar navegação para próxima etapa
-              console.log('Form Data:', formData);
-            }}
+            onPress={handleContinue}
+            disabled={isUploading} // Desabilita o botão durante o upload
           >
             <LinearGradient
               colors={['#A0D2EB', '#307cc9ff']}
               style={styles.continueButtonGradient}
             >
-              <Text style={styles.continueButtonText}>Continuar</Text>
-              <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+              <Text style={styles.continueButtonText}>{isUploading ? 'Salvando...' : 'Continuar'}</Text>
+              {!isUploading && <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />}
             </LinearGradient>
           </TouchableOpacity>
         </ScrollView>
@@ -504,7 +678,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     marginRight: 8,
   },
-  // Novos estilos para a seção de precificação
   priceTypeContainer: {
     marginBottom: 30,
   },
