@@ -1,6 +1,6 @@
 // LimpeJaApp/contexts/AuthContext.tsx
 
-import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import React, { createContext, ReactNode, useContext, useEffect, useState, useCallback } from 'react'; 
 // UserRole e VerificationStatus devem vir de onde são definidas (ex: '../types/backend/auth')
 // Importa AuthResponse, RegisterClientDto, RegisterProviderDto, UserRole, VerificationStatus
 import { AuthResponse, RegisterClientDto, RegisterProviderDto, UserRole, VerificationStatus } from '../types/backend/auth';
@@ -107,9 +107,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // isAuthenticated agora verifica a presença do token no objeto user
   const isAuthenticated = !!user && !!user.token;
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       console.log('[AuthContext | logout] Iniciando logout...');
+      console.log('[AuthContext | logout] Chamada de:', new Error().stack); // <--- ADICIONADO PARA DEBUG
       setIsLoading(true);
       await authService.logout();
       setUser(null);
@@ -121,13 +122,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []); // Adicionado useCallback para otimização
 
   useEffect(() => {
     console.log('[AuthContext | useEffect] Configurando callback de logout e carregando dados.');
     setUnauthorizedCallback(logout);
     loadStoredData();
-  }, []);
+  }, [logout]); // Adicionado logout como dependência do useEffect
 
   const loadStoredData = async () => {
     try {

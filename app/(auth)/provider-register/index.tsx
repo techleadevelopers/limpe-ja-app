@@ -23,24 +23,14 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useProviderRegistration } from '../../../contexts/ProviderRegistrationContext';
 import { RegisterProviderDto } from '../../../types/backend/auth';
 
-const LOGO_IMAGE = require('../../../assets/images/logo2.png');
-
 import { AnimatedErrorMessage } from '../../../components/auth/components/AnimatedErrorMessage';
+import uploadService from '../../../services/uploadService'; // <-- NOVO: Importa o serviço de upload
 
+const LOGO_IMAGE = require('../../../assets/images/logo2.png');
 
 const ErrorMessage: React.FC<{ message: string | null }> = ({ message }) => {
     if (!message) return null;
     return <Text style={styles.errorMessage}>{message}</Text>;
-};
-
-const mockFirebaseStorageApi = {
-    uploadImage: async (uri: string) => {
-        console.log("[mockFirebaseStorageApi] Iniciando upload simulado para:", uri);
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        const mockUrl = `https://firebasestorage.googleapis.com/v0/b/limpeja.appspot.com/o/avatars%2Fmock-avatar-${Date.now()}.jpg?alt=media`;
-        console.log("[mockFirebaseStorageApi] Mock Firebase Storage URL gerada:", mockUrl);
-        return mockUrl;
-    },
 };
 
 export default function RegisterProviderScreen() {
@@ -67,7 +57,7 @@ export default function RegisterProviderScreen() {
     const [cepLoading, setCepLoading] = useState(false);
 
     // Step 4: Detalhes do Serviço
-    const { serviceDetails, setServiceDetails, submitRegistration } = useProviderRegistration();
+    const { serviceDetails, setServiceDetails, submitRegistration, setPersonalDetails: setContextPersonalDetails } = useProviderRegistration();
     const [experiencia, setExperiencia] = useState('');
     const [servicosOferecidos, setServicosOferecidos] = useState('');
     const [estruturaPreco, setEstruturaPreco] = useState('');
@@ -75,7 +65,7 @@ export default function RegisterProviderScreen() {
     const [anosExperiencia, setAnosExperiencia] = useState('');
     const [pixKey, setPixKey] = useState('');
     const [avatarUri, setAvatarUri] = useState<string | null>(null);
-    const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+    const [avatarUrl, setAvatarUrl] = useState<string | null>(null); // Esta será a URL do servidor
 
     // Error states (now only set explicitly in handlers)
     const [experienciaError, setExperienciaError] = useState<string | null>(null);
@@ -93,7 +83,7 @@ export default function RegisterProviderScreen() {
 
 
     const router = useRouter();
-    const { signUpProvider, setIsRegistrationInProgress } = useAuth();
+    const { signUpProvider, setIsRegistrationInProgress } = useAuth(); // signUpProvider é para o registro inicial
 
     const mainElementsOpacity = useRef(new Animated.Value(0)).current;
     const mainElementsTranslateY = useRef(new Animated.Value(18)).current;
@@ -149,7 +139,7 @@ export default function RegisterProviderScreen() {
         if (!pickerResult.canceled && pickerResult.assets && pickerResult.assets.length > 0) {
             setAvatarUri(pickerResult.assets[0].uri);
             setAvatarError(null); // Clear avatar error on selection
-            setAvatarUrl(null);
+            setAvatarUrl(null); // Limpa a URL do servidor para forçar um novo upload
             console.log("[ImagePicker] Imagem selecionada com URI:", pickerResult.assets[0].uri);
         } else {
             console.log("[ImagePicker] Seleção de imagem cancelada ou falhou.");
@@ -306,7 +296,7 @@ export default function RegisterProviderScreen() {
         if (!areasAtendimento.trim()) isValid = false;
         if (isNaN(Number(anosExperiencia)) || Number(anosExperiencia) < 0 || anosExperiencia.trim() === '') isValid = false;
         if (!pixKey.trim()) isValid = false;
-        if (!avatarUri) isValid = false;
+        if (!avatarUri) isValid = false; // Verifica se há um URI local (imagem selecionada)
         return isValid;
     }, [experiencia, servicosOferecidos, estruturaPreco, areasAtendimento, anosExperiencia, pixKey, avatarUri]);
 
@@ -357,14 +347,32 @@ export default function RegisterProviderScreen() {
                             complement: '',
                         },
                     };
-                    console.log("[RegisterProvider] handleNext (Step 3): Chamando signUpProvider do AuthContext.");
-                    await signUpProvider(providerData); // This is where the initial registration API call happens
+                    console.log("[RegisterProvider] handleNext (Step 3): Chamando signUpProvider do AuthContext para registro inicial.");
+                    await signUpProvider(providerData); // Esta é a chamada API de registro inicial
+                    // Se o registro inicial for bem-sucedido, salve os dados pessoais no contexto
+                    setContextPersonalDetails({
+                        email: email.trim(),
+                        password: password.trim(),
+                        fullName: username.trim(),
+                        cpf: cpf.trim(),
+                        dateOfBirth: formattedDateOfBirth,
+                        phone: phone.replace(/\D/g, ''),
+                        address: {
+                            cep: cep.trim(),
+                            street: street.trim(),
+                            number: number.trim(),
+                            neighborhood: neighborhood.trim(),
+                            city: city.trim(),
+                            state: state.trim(),
+                            complement: '',
+                        },
+                    });
                     console.log("[RegisterProvider] handleNext (Step 3): signUpProvider do AuthContext retornou sucesso. Avançando para Step 4.");
-                    setCurrentStep(4); // Advance to Service Details
+                    setCurrentStep(4); // Avançar para Detalhes do Serviço
                 } catch (error: any) {
                     console.error("[RegisterProvider] handleNext (Step 3): Erro durante o registro inicial:", error.message);
                     setGeneralError(error.message || 'Falha no registro inicial. Por favor, tente novamente.');
-                    // Do not advance to the next step on error
+                    // Não avançar para a próxima etapa em caso de erro
                 } finally {
                     setIsLoading(false);
                     console.log("[RegisterProvider] handleNext (Step 3): isLoading definido como false.");
@@ -378,16 +386,16 @@ export default function RegisterProviderScreen() {
                 console.warn("[RegisterProvider] handleNext: Falha ao avançar: Step 3 inválido.");
             }
         } else if (currentStep === 4) {
-            // If on the last step, the "Next" button should trigger final submission
+            // Se estiver na última etapa, o botão "Avançar" deve acionar a submissão final
             handleServiceDetailsSubmit();
         }
     };
 
     const handleServiceDetailsSubmit = async () => {
         console.log("[ServiceDetailsSubmit] Botão 'Finalizar Cadastro' pressionado na Etapa 4.");
-        let isValid = true; // Local flag to aggregate validation status
+        let isValid = true; // Flag local para agregar o status de validação
 
-        // Clear all previous errors for Step 4 fields
+        // Limpar todos os erros anteriores para os campos da Etapa 4
         setExperienciaError(null);
         setServicosOferecidosError(null);
         setEstruturaPrecoError(null);
@@ -396,7 +404,7 @@ export default function RegisterProviderScreen() {
         setPixKeyError(null);
         setAvatarError(null);
 
-        // Perform validation and set specific error messages
+        // Realizar validação e definir mensagens de erro específicas
         if (!experiencia.trim()) { setExperienciaError('Sua experiência é obrigatória.'); isValid = false; }
         if (!servicosOferecidos.trim()) { setServicosOferecidosError('Liste os serviços que você oferece.'); isValid = false; }
         if (!estruturaPreco.trim()) { setEstruturaPrecoError('Descreva sua estrutura de preços.'); isValid = false; }
@@ -414,15 +422,53 @@ export default function RegisterProviderScreen() {
         setIsSubmitting(true);
         console.log("[ServiceDetailsSubmit] isSubmitting definido como true.");
         try {
-            let finalAvatarServerUrl: string | null = avatarUrl;
-            if (avatarUri && !avatarUrl) {
-                console.log("[ServiceDetailsSubmit] Avatar URI presente, mas URL do servidor ausente. Iniciando upload.");
-                finalAvatarServerUrl = await mockFirebaseStorageApi.uploadImage(avatarUri);
-                console.log("[ServiceDetailsSubmit] Upload de avatar concluído. URL:", finalAvatarServerUrl);
-            } else if (avatarUrl) {
-                console.log("[ServiceDetailsSubmit] Avatar URL já presente. Não é necessário fazer upload novamente.");
+            let finalAvatarServerUrl: string | null = avatarUrl; // Valor inicial do estado (pode ser null ou URL existente)
+
+            // Log do estado atual antes do upload potencial
+            console.log("[ServiceDetailsSubmit] Estado inicial: avatarUri=", avatarUri, ", avatarUrl=", avatarUrl);
+
+            // Condição para acionar o upload: se avatarUri estiver presente E (avatarUrl for null OU avatarUrl não for uma URL http válida)
+            if (avatarUri && (!avatarUrl || !avatarUrl.startsWith('http'))) {
+                console.log("[ServiceDetailsSubmit] Avatar URI presente e URL do servidor ausente/inválida. Iniciando upload da selfie para o backend.");
+                try {
+                    // ====================================================================================
+                    // AQUI: CHAMADA PARA SUA FUNÇÃO REAL DE UPLOAD DE SELFIE PARA O BACKEND
+                    // CORREÇÃO: Usar uploadImageToCloud do uploadService e passar avatarUri e 'avatar'
+                    const uploadedUrl = await uploadService.uploadImageToCloud(avatarUri, 'avatar');
+                    // ====================================================================================
+
+                    if (uploadedUrl && uploadedUrl.startsWith('http')) { // Garante que é uma URL válida
+                        finalAvatarServerUrl = uploadedUrl;
+                        console.log("[ServiceDetailsSubmit] Upload da selfie concluído. URL:", finalAvatarServerUrl);
+                        setAvatarUrl(finalAvatarServerUrl); // Atualiza o estado avatarUrl no componente
+                    } else {
+                        console.error("[ServiceDetailsSubmit] Upload da selfie retornou uma URL inválida:", uploadedUrl);
+                        setAvatarError("Falha ao processar a imagem. Tente novamente.");
+                        setIsSubmitting(false);
+                        return; // Interrompe a submissão se o upload falhar
+                    }
+                } catch (uploadError) {
+                    console.error("[ServiceDetailsSubmit] Erro durante o upload da selfie:", uploadError);
+                    setAvatarError("Erro no upload da imagem. Tente novamente.");
+                    setIsSubmitting(false);
+                    return; // Interrompe a submissão em caso de erro de upload
+                }
+            } else if (avatarUrl && avatarUrl.startsWith('http')) {
+                console.log("[ServiceDetailsSubmit] Avatar URL já presente e válida. Não é necessário fazer upload novamente.");
+                // finalAvatarServerUrl já contém avatarUrl
             } else {
-                console.warn("[ServiceDetailsSubmit] Nenhuma URI ou URL de avatar para processar.");
+                console.warn("[ServiceDetailsSubmit] Nenhuma URI ou URL de avatar válida para processar. avatarUri:", avatarUri, "avatarUrl:", avatarUrl);
+                setAvatarError("Uma foto de perfil válida é obrigatória.");
+                setIsSubmitting(false);
+                return; // Impede a submissão se nenhuma URL de avatar válida puder ser determinada
+            }
+
+            // Neste ponto, finalAvatarServerUrl DEVE ser uma URL válida (se avatarUri estava presente e o upload foi bem-sucedido)
+            // ou null (se nenhum avatar foi selecionado, o que deve ser capturado pela validação).
+            if (!finalAvatarServerUrl) {
+                setAvatarError("Uma foto de perfil é obrigatória.");
+                setIsSubmitting(false);
+                return;
             }
 
             const currentServiceDetails = {
@@ -432,16 +478,18 @@ export default function RegisterProviderScreen() {
                 areasAtendimento: areasAtendimento.trim(),
                 anosExperiencia: Number(anosExperiencia),
                 pixKey: pixKey.trim(),
-                avatarUri,
-                avatarUrl: finalAvatarServerUrl,
+                avatarUri, // Mantém o URI local para exibição
+                avatarUrl: finalAvatarServerUrl, // Esta é a URL do GCS
             };
-            console.log("[ServiceDetailsSubmit] Detalhes do serviço a serem salvos no contexto:", currentServiceDetails);
+            console.log("[ServiceDetailsSubmit] Detalhes do serviço a serem usados na submissão:", currentServiceDetails);
+            console.log("[ServiceDetailsSubmit] avatarUri (local):", avatarUri);
+            console.log("[ServiceDetailsSubmit] finalAvatarServerUrl (após upload/determinação):", finalAvatarServerUrl);
+            console.log("[ServiceDetailsSubmit] avatarUrl (estado após atualização potencial):", avatarUrl); // Deve ser o mesmo que finalAvatarServerUrl
 
-            setServiceDetails(currentServiceDetails);
-            console.log("[ServiceDetailsSubmit] Detalhes do serviço salvos no contexto ProviderRegistrationContext.");
+            // Passa `currentServiceDetails` diretamente para `submitRegistration`
+            console.log("[ServiceDetailsSubmit] Chamando submitRegistration do ProviderRegistrationContext para enviar dados ao backend.");
+            await submitRegistration(currentServiceDetails); // Passa os dados mais recentes
 
-            console.log("[ServiceDetailsSubmit] Chamando submitRegistration do ProviderRegistrationContext.");
-            await submitRegistration();
             console.log("[ServiceDetailsSubmit] submitRegistration concluído. Preparando redirecionamento para o Dashboard.");
 
             setIsRegistrationInProgress(false);
@@ -475,12 +523,12 @@ export default function RegisterProviderScreen() {
     const signUpButtonAnims = createButtonAnimations();
     const nextButtonAnims = createButtonAnimations();
 
-    // These now only call the validation functions, which *return booleans*,
-    // so they don't cause re-renders.
+    // Estas agora apenas chamam as funções de validação, que *retornam booleanos*,
+    // para que não causem re-renderizações.
     const isFinalSignUpButtonEnabled = pureValidateStep4();
     const isNextButtonEnabledStep1 = pureValidateStep1();
     const isNextButtonEnabledStep2 = pureValidateStep2();
-    const isNextButtonEnabledStep3 = pureValidateStep3() && !cepLoading; // Also consider cepLoading here
+    const isNextButtonEnabledStep3 = pureValidateStep3() && !cepLoading; // Também considera cepLoading aqui
 
     const getWelcomeSubtitle = () => {
         switch (currentStep) {
@@ -933,7 +981,7 @@ export default function RegisterProviderScreen() {
                         <Animated.View style={[styles.navigationButtons]}>
                             <TouchableOpacity
                                 style={[styles.navButton, styles.backButton]}
-                                onPress={() => setCurrentStep(3)} // Back to Address (Step 3)
+                                onPress={() => setCurrentStep(3)} // Voltar para Endereço (Etapa 3)
                                 disabled={isSubmitting}
                             >
                                 <Ionicons name="arrow-back-outline" size={20} color="#007AFF" />

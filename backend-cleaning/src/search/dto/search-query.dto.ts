@@ -3,17 +3,19 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsOptional, IsEnum, IsInt, Min, IsDateString, IsNumber } from 'class-validator';
 import { Type } from 'class-transformer';
 
-enum SearchType {
+// CORREÇÃO: Adicionado 'export' para que SearchType possa ser importado
+export enum SearchType {
   PROVIDERS = 'providers',
   SERVICES = 'services',
   OFFERS = 'offers',
   ALL = 'all',
+  PROVIDER_SERVICES = 'providerServices',
 }
 
-export enum SortByOption { // Este enum é importante e deve ser exportado
+export enum SortByOption {
   Rating = 'rating',
   Distance = 'distance',
-  Experience = 'experience', // <-- CORRIGIDO: Agora 'experience' está aqui em minúsculas
+  Experience = 'experience',
   CreatedAt = 'createdAt',
   UpdatedAt = 'updatedAt',
   FullName = 'fullName',
@@ -24,7 +26,7 @@ export class SearchQueryDto {
   @ApiPropertyOptional({ description: 'Termo de busca geral', example: 'limpeza de casa' })
   @IsOptional()
   @IsString()
-  query?: string; // Mantido 'query' para o campo de busca geral
+  query?: string;
 
   @ApiPropertyOptional({ enum: SearchType, description: 'Tipo de entidade a ser buscada', example: SearchType.ALL })
   @IsOptional()

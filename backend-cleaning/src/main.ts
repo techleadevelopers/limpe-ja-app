@@ -6,6 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as admin from 'firebase-admin'; // Importação do Firebase Admin SDK
 import * as path from 'path'; // Adicione a importação de 'path' para o fallback do JSON
+import { json, urlencoded } from 'express'; // Importe json e urlencoded do pacote 'express'
 
 async function bootstrap() {
   console.time('AppStartupTotal'); // Inicia contagem total
@@ -13,6 +14,13 @@ async function bootstrap() {
   console.time('NestAppCreation');
   const app = await NestFactory.create(AppModule);
   console.timeEnd('NestAppCreation'); // Fim da criação da instância Nest
+
+  // --- INÍCIO DA ADIÇÃO PARA AUMENTAR O LIMITE DE PAYLOAD ---
+  // Aumenta o limite do corpo da requisição para 10MB (ajuste conforme a necessidade)
+  // Isso é crucial para uploads de imagens Base64 grandes.
+  app.use(json({ limit: '10mb' }));
+  app.use(urlencoded({ extended: true, limit: '10mb' }));
+  // --- FIM DA ADIÇÃO ---
 
   // Configuração do CORS (ATUALIZADA) para permitir comunicação com o frontend
   app.enableCors({
@@ -45,7 +53,7 @@ async function bootstrap() {
     // Tenta inicializar o SDK automaticamente (ideal para Cloud Run/GCP)
     admin.initializeApp();
     console.log('[Firebase Admin] SDK inicializado automaticamente no ambiente Cloud Run.'); // Log de sucesso
-  } catch (error) {
+  } catch (error: any) { // Adicionado 'any' para tipagem do erro
     console.error(`[Firebase Admin] Erro na inicialização automática do SDK: ${error.message}`); // Log de erro na inicialização automática
     // Fallback para ambiente local usando GOOGLE_APPLICATION_CREDENTIALS
     if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
@@ -56,7 +64,7 @@ async function bootstrap() {
                 credential: admin.credential.cert(serviceAccount)
             });
             console.log('[Firebase Admin] SDK inicializado via GOOGLE_APPLICATION_CREDENTIALS.');
-        } catch (innerError) {
+        } catch (innerError: any) { // Adicionado 'any' para tipagem do erro
             console.error(`[Firebase Admin] Erro ao carregar credenciais de GOOGLE_APPLICATION_CREDENTIALS: ${innerError.message}`); // Log de erro ao carregar credenciais
             throw new Error('Firebase Admin SDK failed to initialize via GOOGLE_APPLICATION_CREDENTIALS.'); // Lança erro fatal
         }

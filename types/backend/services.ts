@@ -21,3 +21,9 @@ export interface Service {
   description?: string | null; // Adicionar se existir no backend, permitir null
   price?: number | null; // Preço de referência da categoria de serviço (se existir no Service model)
 }
+
+/**
+ * @type ServiceDetails
+ * Alias para Service, usado para importações em outros módulos.
+ */
+export type ServiceDetails = Service; // <--- CORREÇÃO: Nova exportação

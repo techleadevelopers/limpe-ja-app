@@ -1,5 +1,4 @@
-
-import { api } from './api';
+import api from './api'; // CORREÇÃO 1: Importa 'api' como exportação padrão
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
@@ -159,7 +158,8 @@ export class SecurityService {
 
   private static setupSessionTimeout(): void {
     // Implementar timeout de sessão baseado em inatividade
-    let timeoutId: NodeJS.Timeout;
+    // CORREÇÃO 2: Usa ReturnType<typeof setTimeout> para o tipo correto do ID do timer
+    let timeoutId: ReturnType<typeof setTimeout>; 
     const resetTimeout = () => {
       clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {

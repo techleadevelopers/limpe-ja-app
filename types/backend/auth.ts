@@ -1,6 +1,6 @@
 // LimpeJaApp/src/types/backend/auth.ts
 
-import { UserProfile } from './users'; // Importar UserProfile
+import { UserProfile } from './users';
 
 /**
  * DTOs de Requisição (dados que o frontend envia para o backend)
@@ -12,19 +12,18 @@ import { UserProfile } from './users'; // Importar UserProfile
  */
 export interface LoginDto {
   email: string;
-  password: string; // O frontend envia a senha em texto plano. O backend é responsável por hashear e armazenar.
+  password: string;
 }
 
 /**
  * @interface CreateAddressDto
  * Representa a estrutura de dados para a criação de um endereço.
- * Esta interface é usada para aninhar o objeto de endereço dentro dos DTOs de registro.
  */
 export interface CreateAddressDto {
   cep: string;
   street: string;
   number: string;
-  complement?: string | null; // Opcional, permitindo null explicitamente
+  complement?: string | null;
   neighborhood: string;
   city: string;
   state: string;
@@ -33,44 +32,51 @@ export interface CreateAddressDto {
 /**
  * @interface RegisterClientDto
  * Representa os dados necessários para registrar um novo cliente.
- * Agora inclui um objeto 'address' aninhado.
  */
 export interface RegisterClientDto {
   email: string;
-  password: string; // Senha em texto plano que será hasheada pelo backend.
+  password: string;
   fullName: string;
-  phone?: string | null; // Telefone: Opcional no frontend, mas você pode torná-lo obrigatório se necessário.
-  cpf: string; // <-- ADICIONADO: Propriedade CPF para o cliente
-
-  // Endereço agora é um objeto aninhado
+  phone?: string | null;
+  cpf: string;
   address: CreateAddressDto;
 }
 
 /**
  * @interface RegisterProviderDto
  * Representa os dados necessários para registrar um novo provedor de serviços.
- * Agora inclui um objeto 'address' aninhado e os novos campos de detalhes de serviço.
  */
 export interface RegisterProviderDto {
   email: string;
-  password: string; // Senha em texto plano que será hasheada pelo backend.
+  password: string;
   fullName: string;
   cpf: string;
-  dateOfBirth: string; // Formato de data recomendado: string ISO (ex: "YYYY-MM-DD" ou "YYYY-MM-DDTHH:mm:ss.sssZ").
-  phone?: string | null; // Telefone: Opcional no frontend.
-
-  // Endereço agora é um objeto aninhado
+  dateOfBirth: string;
+  phone?: string | null;
   address: CreateAddressDto;
+  yearsOfExperience?: number | null;
+  avatarUrl?: string | null;
+  bio?: string | null;
+  offeredServices?: string | null;
+  pricingStructure?: string | null;
+  serviceAreas?: string | null;
+  pixKey?: string | null;
+}
 
-  yearsOfExperience?: number | null; // Opcional, corresponde a 'anosExperiencia'
-  avatarUrl?: string | null; // CORREÇÃO: Permitir 'null' explicitamente
-
-  // NOVOS CAMPOS ADICIONADOS PARA DETALHES DO SERVIÇO:
-  bio?: string | null; // Corresponde a 'experiencia'
-  offeredServices?: string | null; // Corresponde a 'servicosOferecidos'
-  pricingStructure?: string | null; // Corresponde a 'estruturaPreco'
-  serviceAreas?: string | null; // Corresponde a 'areasAtendimento'
-  pixKey?: string | null; // Corresponde a 'pixKey'
+/**
+ * @interface UpdateProviderProfileDto
+ * Representa os dados para atualização do perfil de um provedor existente.
+ * Usado no PATCH /providers/me.
+ */
+export interface UpdateProviderProfileDto {
+  yearsOfExperience?: number | null;
+  avatarUrl?: string | null; // Agora espera uma URL válida
+  bio?: string | null;
+  offeredServices?: string | null;
+  pricingStructure?: string | null;
+  serviceAreas?: string | null;
+  pixKey?: string | null;
+  // Adicione quaisquer outros campos que possam ser atualizados via PATCH /providers/me
 }
 
 /**
@@ -88,11 +94,10 @@ export interface ForgotPasswordDto {
 /**
  * @interface AuthResponse
  * Representa a resposta do backend após um login ou registro bem-sucedido.
- * Renomeado de AuthResponseDto para AuthResponse para consistência.
  */
 export interface AuthResponse {
   accessToken: string;
-  user: UserProfile; // <-- CORREÇÃO: Agora usa a interface UserProfile completa
+  user: UserProfile;
 }
 
 /**
@@ -110,19 +115,17 @@ export interface MessageResponseDto {
 /**
  * @enum UserRole
  * Define os papéis possíveis para um usuário no sistema.
- * Corresponde ao `enum UserRole` definido no `prisma/schema.prisma` do backend.
  */
 export enum UserRole {
   CLIENT = 'CLIENT',
   PROVIDER = 'PROVIDER',
   ADMIN = 'ADMIN',
-  SYSTEM = 'SYSTEM', // Adicionado SYSTEM para consistência com o backend
+  SYSTEM = 'SYSTEM',
 }
 
 /**
  * @enum VerificationStatus
  * Enum para o status de verificação do provedor.
- * Corresponde ao `enum VerificationStatus` definido no `prisma/schema.prisma` do backend.
  */
 export enum VerificationStatus {
   PENDING_INITIAL_REVIEW = 'PENDING_INITIAL_REVIEW',

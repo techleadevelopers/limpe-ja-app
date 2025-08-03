@@ -1,11 +1,30 @@
 // LimpeJaApp/contexts/ProviderRegistrationContext.tsx
 import React, { createContext, ReactNode, useCallback, useContext, useState } from 'react';
-// import { useAuth } from '../hooks/useAuth'; // REMOVIDO: Não desestruturar useAuth aqui
-import { CreateAddressDto, RegisterProviderDto } from '../types/backend/auth'; // CORRIGIDO: Caminho para auth.ts
-// import { UserProfile } from '../app/types/backend/users'; // REMOVIDO: UserProfile não é usado diretamente aqui
-// import * as providerService from '../app/services/providerService'; // Exemplo: serviço para atualizar o provedor
+import { CreateAddressDto, RegisterProviderDto } from '../types/backend/auth';
 
-// Tipos para os dados do formulário do provedor
+// Importe seu serviço de API real aqui.
+// Por exemplo:
+// import * as providerService from '../services/providerService';
+// Ou se você tiver uma instância global de axios/api configurada:
+// import api from '../utils/api';
+
+// MOCK: Substitua isso pela sua implementação real de serviço de API para provedores
+const mockProviderService = {
+  updateProviderProfile: async (userId: string, data: any) => {
+    console.log("[MockProviderService] Enviando PATCH para /providers/me com dados:", data);
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Simula delay da API
+    if (data.avatarUrl && !data.avatarUrl.startsWith('http')) {
+      throw new Error("Erro de validação mock: avatarUrl deve ser uma URL válida!");
+    }
+    console.log("[MockProviderService] PATCH /providers/me bem-sucedido.");
+    return { success: true, message: "Perfil atualizado com sucesso (mock)." };
+  },
+  // Você precisaria de um método para obter o userId do provedor logado,
+  // ou o backend inferiria isso do token JWT.
+  // Para este exemplo, vamos assumir um userId fixo ou que ele virá do AuthContext.
+};
+// FIM MOCK
+
 interface PersonalDetails {
   email: string;
   password: string; // Senha em texto simples
@@ -32,10 +51,11 @@ interface ProviderRegistrationContextType {
   serviceDetails: ServiceDetails | null;
   setPersonalDetails: (details: PersonalDetails) => void;
   setServiceDetails: (details: ServiceDetails) => void;
-  submitRegistration: () => Promise<void>;
+  // MODIFICAÇÃO AQUI: submitRegistration agora aceita serviceDetails como argumento
+  submitRegistration: (currentServiceDetails: ServiceDetails) => Promise<void>;
   resetRegistration: () => void;
-  isRegistrationInProgress: boolean; // ADICIONADO: Estado para o fluxo de registro
-  setIsRegistrationInProgress: (inProgress: boolean) => void; // ADICIONADO: Setter para o estado
+  isRegistrationInProgress: boolean;
+  setIsRegistrationInProgress: (inProgress: boolean) => void;
 }
 
 const ProviderRegistrationContext = createContext<ProviderRegistrationContextType | undefined>(undefined);
@@ -43,61 +63,68 @@ const ProviderRegistrationContext = createContext<ProviderRegistrationContextTyp
 export const ProviderRegistrationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [personalDetails, setPersonalDetails] = useState<PersonalDetails | null>(null);
   const [serviceDetails, setServiceDetails] = useState<ServiceDetails | null>(null);
-  const [isRegistrationInProgress, setIsRegistrationInProgress] = useState<boolean>(false); // Inicializa como falso
+  const [isRegistrationInProgress, setIsRegistrationInProgress] = useState<boolean>(false);
 
-  // A lógica de submissão final deve ser feita em um serviço ou na tela final,
-  // e não depender diretamente do `useAuth` aqui, para manter a separação de responsabilidades.
-  // A função `submitRegistration` apenas prepara os dados e sinaliza que o registro está em progresso.
-  // A chamada real para o backend (ex: `authService.registerProvider`) deve ocorrer na tela final do fluxo.
-
-  const submitRegistration = useCallback(async () => {
-    // Esta função agora apenas sinaliza o início do processo e coleta os dados.
-    // A chamada real para o backend (authService.registerProvider) deve ser feita
-    // na tela final do fluxo de registro, onde todos os dados estão disponíveis
-    // e o `setIsRegistrationInProgress(false)` será chamado após o sucesso/falha.
-
-    if (!personalDetails || !serviceDetails) {
-      console.error("[ProviderRegistrationContext] Dados de registro incompletos para submissão final.");
-      throw new Error("Dados de registro incompletos.");
+  // MODIFICAÇÃO AQUI: submitRegistration agora aceita currentServiceDetails como argumento
+  const submitRegistration = useCallback(async (currentServiceDetails: ServiceDetails) => {
+    if (!personalDetails) {
+      console.error("[ProviderRegistrationContext] Dados pessoais incompletos para submissão final.");
+      throw new Error("Dados pessoais incompletos. Por favor, complete as etapas anteriores.");
     }
 
-    // Aqui você pode consolidar os dados para o DTO final, mas não fazer a chamada de API ainda.
-    // A chamada de API será feita na tela que orquestra o registro completo.
-    const finalRegistrationData: RegisterProviderDto = {
-      email: personalDetails.email,
-      password: personalDetails.password,
-      fullName: personalDetails.fullName,
+    // O serviceDetails no estado do contexto pode estar desatualizado devido ao "stale closure",
+    // então usamos o `currentServiceDetails` passado como argumento.
+    // No entanto, para o `personalDetails`, ainda dependemos do estado do contexto,
+    // pois ele é definido em uma etapa anterior e não é a fonte do "stale closure" aqui.
+
+    // Prepara o DTO para a chamada PATCH /providers/me
+    const updateProviderProfilePayload = {
+      fullName: personalDetails.fullName, // Assumindo que fullName pode ser atualizado aqui
+      phone: personalDetails.phone,
       cpf: personalDetails.cpf,
       dateOfBirth: personalDetails.dateOfBirth,
-      phone: personalDetails.phone,
-      address: personalDetails.address,
-      yearsOfExperience: serviceDetails.anosExperiencia,
-      avatarUrl: serviceDetails.avatarUrl,
-      bio: serviceDetails.experiencia,
-      offeredServices: serviceDetails.servicosOferecidos,
-      pricingStructure: serviceDetails.estruturaPreco,
-      serviceAreas: serviceDetails.areasAtendimento,
-      pixKey: serviceDetails.pixKey,
+      yearsOfExperience: currentServiceDetails.anosExperiencia,
+      avatarUrl: currentServiceDetails.avatarUrl, // ESTE É O CAMPO CRÍTICO
+      bio: currentServiceDetails.experiencia, // Mapeando experiencia para bio
+      pixKey: currentServiceDetails.pixKey,
+      // Se houver campos para offeredServices, pricingStructure, serviceAreas no DTO de atualização,
+      // você precisaria incluí-los e mapeá-los corretamente.
+      // A documentação do backend mostra que 'bio' e 'pixKey' estão no UpdateProviderProfileDto.
+      // offeredServices, pricingStructure, serviceAreas podem precisar de endpoints separados ou serem parte de um DTO mais complexo.
+      // Para este exemplo, vamos focar nos campos que você mencionou no `index.tsx` para `currentServiceDetails`.
     };
 
-    console.log("[ProviderRegistrationContext] Dados finais do registro consolidados. Pronto para enviar na tela final.");
-    // Não faz a chamada de API aqui, apenas prepara os dados.
-    // A tela final do registro (ex: RegisterProviderScreenStep3 ou similar)
-    // será responsável por chamar `authService.registerProvider(finalRegistrationData)`
-    // e então chamar `setIsRegistrationInProgress(false)` e `resetRegistration()`.
+    setIsRegistrationInProgress(true); // Sinaliza que o processo de submissão está em andamento
+    console.log("[ProviderRegistrationContext] Iniciando submissão final do perfil do provedor...");
+    console.log("[ProviderRegistrationContext] Payload para PATCH /providers/me:", updateProviderProfilePayload);
 
-    // Por enquanto, apenas para simular o "sucesso" da coleta de dados.
-    // setIsRegistrationInProgress(true); // Isso deve ser chamado na tela que inicia o fluxo de registro
-    // e setado para false após a conclusão da chamada de API.
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simula um pequeno atraso
-    console.log("[ProviderRegistrationContext] Simulação: Dados de registro coletados com sucesso.");
+    try {
+      // MOCK: Substitua 'some-provider-user-id' pelo ID real do usuário provedor logado.
+      // Em um app real, você obteria isso do seu AuthContext ou do token JWT.
+      // Ou, se o backend infere o ID do usuário a partir do token, você não precisaria passá-lo.
+      // Para o propósito deste exemplo, vamos assumir que o backend infere o userId do token.
+      // Se o endpoint PATCH /providers/me não precisa do userId no path, a chamada seria mais simples.
+      // Vamos usar um placeholder para ilustrar a chamada.
+      // const userIdFromAuth = "some-authenticated-user-id"; // Obtenha isso do seu AuthContext
+      await mockProviderService.updateProviderProfile("some-authenticated-user-id", updateProviderProfilePayload);
 
-  }, [personalDetails, serviceDetails]);
+      console.log("[ProviderRegistrationContext] Perfil do provedor atualizado com sucesso no backend.");
+      // O `setServiceDetails` do contexto ainda é útil para manter o estado global atualizado
+      // para outras partes do aplicativo que possam depender dele.
+      setServiceDetails(currentServiceDetails);
+
+    } catch (error: any) {
+      console.error("[ProviderRegistrationContext] Erro ao submeter perfil do provedor:", error);
+      throw new Error(error.message || "Falha ao atualizar o perfil do provedor.");
+    } finally {
+      setIsRegistrationInProgress(false); // Finaliza o processo de submissão
+    }
+  }, [personalDetails]); // personalDetails ainda é uma dependência do useCallback
 
   const resetRegistration = useCallback(() => {
     setPersonalDetails(null);
     setServiceDetails(null);
-    setIsRegistrationInProgress(false); // Reseta o estado de progresso também
+    setIsRegistrationInProgress(false);
   }, []);
 
   return (

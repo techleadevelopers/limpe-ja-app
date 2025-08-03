@@ -11,12 +11,15 @@ import {
     ProviderDashboard,
     ProviderDisplayInfo, // Usado para tipar provedores em listas
     ProviderSearchQuery,
-    ProviderServiceOffering,
+    // ProviderServiceOffering, // <--- REMOVIDO DAQUI para evitar a importação duplicada
     ProviderTransaction,
     UpdateAvailabilityData, // Importado para tipar a query de busca
     UpdateProviderProfileData,
     UpdateProviderServiceData
 } from '../types/backend/providers';
+
+// <<<< CORREÇÃO: Importar ProviderServiceOffering APENAS do seu arquivo de origem >>>>
+import { ProviderServiceOffering } from '../types/backend/provider-service';
 
 // <<<< ATUALIZADO: Interface para o novo tipo de retorno de getProviderAvailability >>>>
 // Esta interface deve corresponder exatamente ao que o backend retorna para este endpoint.
