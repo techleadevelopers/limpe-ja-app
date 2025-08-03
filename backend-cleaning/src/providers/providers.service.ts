@@ -1,10 +1,13 @@
 // src/providers/providers.service.ts
+
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, Provider, User, UserRole, Address, ProviderService, Service, Review, Client, VerificationStatus, PricingType } from '@prisma/client';
 import { UpdateProviderProfileDto } from './dto/update-provider-profile.dto';
 import { ProviderSearchDto } from './dto/provider-search.dto';
 import { SortByOption } from '../search/dto/search-query.dto';
+import { File } from 'multer'; // Importar File do Multer
+import { DocumentProcessingService } from '../verification/document-processing.service'; // Importar o serviço de processamento
 
 export type ProviderWithIncludes = Prisma.ProviderGetPayload<{
   include: {
@@ -74,7 +77,10 @@ export type ProviderWithCalculatedRating = {
 export class ProvidersService {
   private readonly logger = new Logger(ProvidersService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly documentProcessingService: DocumentProcessingService, // <-- INJEÇÃO DE DEPENDÊNCIA ADICIONADA
+  ) {}
 
   public mapProviderToCalculatedRating(provider: ProviderWithIncludes, distance?: number): ProviderWithCalculatedRating {
     const totalRating = provider.reviewsReceived?.reduce((sum, review) => sum + review.rating, 0) || 0;
@@ -139,10 +145,37 @@ export class ProvidersService {
     };
   }
 
-  /**
-   * Busca provedores com status 'PENDING_MANUAL_REVIEW' ou 'PENDING_DOCUMENTS_UPLOAD'.
-   * @returns Uma lista de provedores pendentes de verificação.
-   */
+  // --- NOVA FUNÇÃO: UPLOAD E ATUALIZAÇÃO DO AVATAR ---
+  async updateAvatar(userId: string, file: File): Promise<string> {
+    this.logger.log(`[ProvidersService] updateAvatar: Iniciando upload e atualização do avatar para userId: ${userId}`);
+
+    const provider = await this.prisma.provider.findUnique({ where: { userId } });
+    if (!provider) {
+        this.logger.warn(`[ProvidersService] updateAvatar: Provedor com userId ${userId} não encontrado.`);
+        throw new NotFoundException('Provedor não encontrado.');
+    }
+
+    const fileExtension = file.originalname.split('.').pop() || 'jpg';
+    const destinationPath = `provider-avatars/${provider.id}/${Date.now()}.${fileExtension}`;
+
+    try {
+        const fileUrl = await this.documentProcessingService.uploadImage(file, destinationPath);
+        this.logger.log(`[ProvidersService] updateAvatar: Imagem enviada para GCS. URL: ${fileUrl}`);
+
+        await this.prisma.provider.update({
+            where: { userId },
+            data: { avatarUrl: fileUrl },
+        });
+
+        this.logger.log(`[ProvidersService] updateAvatar: AvatarUrl no banco de dados atualizado com sucesso para userId ${userId}.`);
+        return fileUrl;
+    } catch (error) {
+        this.logger.error(`[ProvidersService] updateAvatar: Erro ao fazer upload ou atualizar avatar para userId ${userId}: ${error.message}`);
+        throw new BadRequestException('Falha ao fazer upload da imagem do avatar. Tente novamente.');
+    }
+  }
+  // --- FIM DA NOVA FUNÇÃO ---
+
   async getPendingProviders(): Promise<ProviderWithCalculatedRating[]> {
     this.logger.log(`[ProvidersService] getPendingProviders: Buscando provedores com status 'PENDING_MANUAL_REVIEW' ou 'PENDING_DOCUMENTS_UPLOAD'.`);
 
@@ -153,10 +186,10 @@ export class ProvidersService {
         },
       },
       include: {
-        user: { select: { email: true, role: true } }, // Incluir user para email e role
+        user: { select: { email: true, role: true } },
         address: true,
-        providerServices: { include: { service: true } }, // Incluir providerServices e service
-        reviewsReceived: { // Incluir reviews para cálculo de rating
+        providerServices: { include: { service: true } },
+        reviewsReceived: {
           include: {
             client: {
               include: {
@@ -168,7 +201,6 @@ export class ProvidersService {
       },
     });
 
-    // findMany sempre retorna um array (mesmo que vazio), então .map é seguro.
     return providers.map(p => this.mapProviderToCalculatedRating(p as ProviderWithIncludes));
   }
 
@@ -194,7 +226,7 @@ export class ProvidersService {
 
     this.logger.log(`[ProvidersService] findOne: Resultado para ID ${id}: ${provider ? 'ENCONTRADO' : 'NÃO ENCONTRADO'}`);
     if (provider) {
-      return this.mapProviderToCalculatedRating(provider as ProviderWithIncludes); 
+      return this.mapProviderToCalculatedRating(provider as ProviderWithIncludes);
     }
     return null;
   }
@@ -241,7 +273,7 @@ export class ProvidersService {
       avatarUrl: data.avatarUrl,
       yearsOfExperience: data.yearsOfExperience,
       bio: data.bio,
-      pixKey: data.pixKey, // <--- LINHA ADICIONADA AQUI
+      pixKey: data.pixKey,
     };
 
     if (data.address) {

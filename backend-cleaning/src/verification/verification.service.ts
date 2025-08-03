@@ -1,4 +1,5 @@
 // src/verification/verification.service.ts
+
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { DocumentProcessingService } from './document-processing.service';
@@ -83,8 +84,7 @@ export class VerificationService {
     await this.updateProviderVerificationStatus(providerId);
   }
 
-  // MODIFICAÇÃO AQUI: Retorna a URL do arquivo
-  async uploadSelfieWithDocument(providerId: string, file: File): Promise<string> { // <-- Tipo de retorno alterado
+  async uploadSelfieWithDocument(providerId: string, file: File): Promise<string> {
     this.logger.log(`[VerificationService] uploadSelfieWithDocument: Iniciando para providerId: ${providerId}`);
     const provider = await this.providersService.findOne(providerId);
     if (!provider) {
@@ -127,7 +127,7 @@ export class VerificationService {
     this.logger.log(`[VerificationService] URL da selfie e resultados de liveness/comparação facial salvos para provider ${providerId}.`);
 
     await this.updateProviderVerificationStatus(providerId);
-    return fileUrl; // <-- Retorna a URL para o controller
+    return fileUrl;
   }
 
   async updateProviderVerificationStatusManually(providerId: string, newStatus: VerificationStatus, reason?: string): Promise<void> {

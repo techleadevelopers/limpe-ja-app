@@ -1,17 +1,19 @@
-// src/providers/providers.module.ts (Exemplo)
+// src/providers/providers.module.ts
 import { Module } from '@nestjs/common';
 import { ProvidersService } from './providers.service';
 import { PrismaModule } from '../prisma/prisma.module';
-import { UsersModule } from '../users/users.module'; // Se ProvidersService precisa de UsersService
-import { ProvidersController } from './providers.controller'; // Importe o controller aqui
+import { UsersModule } from '../users/users.module';
+import { ProvidersController } from './providers.controller';
+import { VerificationModule } from '../verification/verification.module'; // <-- IMPORTAR AQUI
 
 @Module({
   imports: [
     PrismaModule,
     UsersModule,
+    VerificationModule, // <-- ADICIONADO AQUI
   ],
-  controllers: [ProvidersController], // Adicione ProvidersController aqui
+  controllers: [ProvidersController],
   providers: [ProvidersService],
-  exports: [ProvidersService], // <--- DEVE EXPORTAR ProvidersService
+  exports: [ProvidersService],
 })
 export class ProvidersModule {}

@@ -1,42 +1,21 @@
 // LimpeJaApp/src/types/backend/providers.ts
 
-import { Service, PricingType } from './services'; // Import PricingType e Service
-import { BookingAddress } from './bookings'; // CORREÇÃO: Importar BookingAddress
-import { VerificationStatus } from './auth'; // CORREÇÃO: Importar VerificationStatus
-import { UserProfile } from './users'; // Importar UserProfile, necessário para ProviderDashboard se ela contiver o perfil do usuário
-import { ProviderServiceOffering } from './provider-service'; // <--- CORREÇÃO: Importar de novo arquivo (CORRETO)
+import { Service, PricingType } from './services';
+import { BookingAddress, BookingDetails } from './bookings'; // Adicionar BookingDetails
+import { VerificationStatus } from './auth';
+import { UserProfile } from './users';
+import { ProviderServiceOffering } from './provider-service';
 
 /**
  * @interface ProviderAvailability
  * Tipo para a disponibilidade do provedor (conforme o retorno de getProviderAvailability)
  */
 export type ProviderAvailability = {
-  id?: string; // Adicionado ID para operações de atualização/exclusão
-  dayOfWeek: number; // 0 para Domingo, 1 para Segunda, etc.
-  startTime: string; // Ex: "09:00"
-  endTime: string;   // Ex: "17:00"
+  id?: string;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
 };
-
-/*
- * REMOVIDO: A definição de ProviderServiceOffering foi movida para './provider-service.ts'
- *
- * /**
- *  * @interface ProviderServiceOffering
- *  * Representa um serviço específico oferecido por um provedor, incluindo detalhes do tipo de serviço.
- *  * /
- * export interface ProviderServiceOffering {
- *   id: string;
- *   providerId: string;
- *   serviceId: string;
- *   price: number;
- *   durationMinutes?: number | null; // Permitir null
- *   description?: string | null; // Permitir null
- *   pricingType: PricingType; // NEW: Pricing type
- *   pricePerSquareMeter?: number | null; // NEW: Price per square meter
- *   pricePerRoom?: number | null; // NEW: Price per room
- *   service: Service; // Details about the service category
- * }
- */
 
 /**
  * @interface ProviderDisplayInfo
@@ -48,38 +27,38 @@ export interface ProviderDisplayInfo {
   userId: string;
   fullName: string;
   email: string;
-  avatarUrl?: string | null; // Permitir null
-  phone?: string | null; // Permitir null
-  bio?: string | null; // Permitir null
-  verificationStatus: VerificationStatus; // CORREÇÃO: Usar o enum VerificationStatus
-  address?: BookingAddress | null; // CORREÇÃO: Usar BookingAddress e permitir null
-  providerServices?: ProviderServiceOffering[]; // Agora usa a interface importada
+  avatarUrl?: string | null;
+  phone?: string | null;
+  bio?: string | null;
+  verificationStatus: VerificationStatus;
+  address?: BookingAddress | null;
+  providerServices?: ProviderServiceOffering[];
   averageRating: number;
   reviewCount: number;
-  yearsOfExperience?: number | null; // Permitir null
-  fiveStarReviewCount?: number; // NEW: Number of 5-star reviews (tornar opcional se o backend não garantir sempre)
-  monthlyBookingsCount?: number; // NEW: Number of bookings this month (tornar opcional se o backend não garantir sempre)
-  cpf?: string | null; // Permitir null
-  dateOfBirth?: string | null; // Permitir null
+  yearsOfExperience?: number | null;
+  fiveStarReviewCount?: number;
+  monthlyBookingsCount?: number;
+  cpf?: string | null;
+  dateOfBirth?: string | null;
   createdAt: string;
   updatedAt: string;
-  pixKey?: string | null; // Permitir null
-  distance?: number | null; // Optional, for geographical searches, permitir null
-  documentPhotoFrontUrl?: string | null; // Permitir null
-  documentPhotoBackUrl?: string | null; // Permitir null
-  selfieWithDocumentUrl?: string | null; // Permitir null
-  backgroundCheckResult?: any | null; // Prisma.JsonValue, permitir null
-  rejectionReason?: string | null; // Permitir null
-  ocrResult?: any | null; // Prisma.JsonValue, permitir null
-  livenessResult?: any | null; // Prisma.JsonValue, permitir null
-  reviews?: ProviderReview[]; // Recent reviews for display
+  pixKey?: string | null;
+  distance?: number | null;
+  documentPhotoFrontUrl?: string | null;
+  documentPhotoBackUrl?: string | null;
+  selfieWithDocumentUrl?: string | null;
+  backgroundCheckResult?: any | null;
+  rejectionReason?: string | null;
+  ocrResult?: any | null;
+  livenessResult?: any | null;
+  reviews?: ProviderReview[];
 }
 
 /**
  * @type ProviderDetails
  * Alias para ProviderDisplayInfo, usado para importações em outros módulos.
  */
-export type ProviderDetails = ProviderDisplayInfo; // <--- CORREÇÃO: Nova exportação
+export type ProviderDetails = ProviderDisplayInfo;
 
 /**
  * @interface ProviderWithCalculatedRating
@@ -94,30 +73,30 @@ export type ProviderWithCalculatedRating = {
   userId: string;
   fullName: string;
   email: string;
-  avatarUrl?: string | null; // Permitir null
-  phone?: string | null; // Permitir null
-  bio?: string | null; // Permitir null
-  verificationStatus: VerificationStatus; // CORREÇÃO: Usar o enum VerificationStatus
-  address?: BookingAddress | null; // CORREÇÃO: Usar BookingAddress e permitir null
-  providerServices?: ProviderServiceOffering[]; // Agora usa a interface importada
+  avatarUrl?: string | null;
+  phone?: string | null;
+  bio?: string | null;
+  verificationStatus: VerificationStatus;
+  address?: BookingAddress | null;
+  providerServices?: ProviderServiceOffering[];
   averageRating: number;
   reviewCount: number;
-  yearsOfExperience?: number | null; // Permitir null
-  fiveStarReviewCount?: number; // NEW: Number of 5-star reviews (tornar opcional se o backend não garantir sempre)
-  monthlyBookingsCount?: number; // NEW: Number of bookings this month (tornar opcional se o backend não garantir sempre)
-  cpf?: string | null; // Permitir null
-  dateOfBirth?: string | null; // Permitir null
+  yearsOfExperience?: number | null;
+  fiveStarReviewCount?: number;
+  monthlyBookingsCount?: number;
+  cpf?: string | null;
+  dateOfBirth?: string | null;
   createdAt: string;
   updatedAt: string;
-  pixKey?: string | null; // Permitir null
+  pixKey?: string | null;
   distance?: number | null;
-  documentPhotoFrontUrl?: string | null; // Permitir null
-  documentPhotoBackUrl?: string | null; // Permitir null
-  selfieWithDocumentUrl?: string | null; // Permitir null
-  backgroundCheckResult?: any | null; // Permitir null
-  rejectionReason?: string | null; // Permitir null
-  ocrResult?: any | null; // Permitir null
-  livenessResult?: any | null; // Permitir null
+  documentPhotoFrontUrl?: string | null;
+  documentPhotoBackUrl?: string | null;
+  selfieWithDocumentUrl?: string | null;
+  backgroundCheckResult?: any | null;
+  rejectionReason?: string | null;
+  ocrResult?: any | null;
+  livenessResult?: any | null;
 };
 
 /**
@@ -127,20 +106,20 @@ export type ProviderWithCalculatedRating = {
 export interface ProviderReview {
   id: string;
   rating: number;
-  comment?: string | null; // Permitir null
+  comment?: string | null;
   createdAt: string;
   updatedAt: string;
   bookingId: string;
   clientId: string;
   providerId: string;
-  client?: { // Cliente que fez a avaliação
+  client?: {
     id: string;
     fullName: string;
     user?: {
       id: string;
-      avatarUrl?: string | null; // Permitir null
-    } | null; // Permitir null
-  } | null; // Permitir null
+      avatarUrl?: string | null;
+    } | null;
+  } | null;
 }
 
 // =========================================================================
@@ -182,10 +161,10 @@ export interface UpdateProviderServiceData {
  * Corresponde ao POST/PATCH /providers/:providerId/availability
  */
 export interface UpdateAvailabilityData {
-  id?: string; // Opcional para criação, obrigatório para atualização
+  id?: string;
   dayOfWeek: number;
-  startTime: string; // Ex: "09:00"
-  endTime: string;   // Ex: "17:00"
+  startTime: string;
+  endTime: string;
 }
 
 /**
@@ -202,11 +181,6 @@ export interface UpdateProviderProfileData {
   bio?: string;
   yearsOfExperience?: number;
   pixKey?: string;
-  // Adicione outros campos que podem ser atualizados no perfil do provedor
-  // Ex: address?: CreateAddressDto;
-  // Ex: documentPhotoFrontUrl?: string;
-  // Ex: documentPhotoBackUrl?: string;
-  // Ex: selfieWithDocumentUrl?: string;
 }
 
 /**
@@ -215,13 +189,14 @@ export interface UpdateProviderProfileData {
  * Corresponde ao GET /providers/me/dashboard
  */
 export interface ProviderDashboard {
+  fullName: string; // Adicionado para exibir o nome do provedor no DashboardHeader
   totalEarnings?: number;
-  upcomingBookingsCount?: number;
+  pendingWithdrawals?: number; // Adicionado para o FinancialSummaryCard
+  upcomingBookings: BookingDetails[]; // Alterado para listar os agendamentos pendentes/próximos
   completedBookingsCount?: number;
   averageRating?: number;
-  recentReviews?: ProviderReview[];
-  // Adicione outros campos relevantes para o dashboard
-  userProfile?: UserProfile; // Exemplo: pode incluir o perfil completo do usuário
+  reviews?: ProviderReview[]; // Alterado para a seção de reviews
+  userProfile?: UserProfile;
 }
 
 /**
@@ -232,10 +207,9 @@ export interface ProviderDashboard {
 export interface ProviderTransaction {
   id: string;
   amount: number;
-  type: 'EARNING' | 'WITHDRAWAL'; // Exemplo de tipos
+  type: 'EARNING' | 'WITHDRAWAL';
   description?: string;
   createdAt: string;
-  // Adicione outros detalhes da transação
 }
 
 /**
@@ -248,9 +222,8 @@ export interface ProviderSearchQuery {
   city?: string;
   state?: string;
   minRating?: number;
-  // Adicione outros filtros de busca
   limit?: number;
   offset?: number;
-  sortBy?: string; // Ex: 'rating', 'distance', 'price'
+  sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }

@@ -1,3 +1,5 @@
+// src/app/(provider)/provider-register/service-details.tsx
+
 import React, { useState, useRef } from 'react';
 import {
   View,
@@ -12,62 +14,38 @@ import {
   Alert,
   Dimensions,
 } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
-import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../../hooks/useAuth';
-
-// --- NOVAS IMPORTAÇÕES ---
-import api from '../../../services/api'; // Importa a instância global do Axios
 import {
   updateMyProviderProfile,
   addProviderServiceOffering,
   updateProviderServiceOffering,
-  getProviderServicesOffered, // Para buscar serviços existentes do provedor
+  getProviderServicesOffered,
 } from '../../../services/providerService';
-// --- FIM DAS NOVAS IMPORTAÇÕES ---
+import verificationService from '../../../services/verificationService';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-// Enum PricingType replicando o do backend para uso no frontend
 enum PricingType {
-  FIXED_PRICE = 'FIXED_PRICE', // Adicionado para consistência, embora não usado diretamente aqui
+  FIXED_PRICE = 'FIXED_PRICE',
   HOURLY = 'HOURLY',
   BY_SIZE = 'BY_SIZE',
-  CUSTOM_QUOTE = 'CUSTOM_QUOTE', // Adicionado para consistência
+  CUSTOM_QUOTE = 'CUSTOM_QUOTE',
 }
 
-// Mapeamento de especialidades do frontend para serviceId (UUIDs) do backend
-// Em um cenário real, esses UUIDs viriam de uma API de serviços (ex: GET /services)
-// Estes são UUIDs de exemplo e devem corresponder aos IDs reais dos serviços no seu DB.
 const SERVICE_MAPPINGS: { [key: string]: string } = {
-  'residencial': 'a1b2c3d4-e5f6-7890-1234-567890abcdef', // Exemplo de UUID
-  'comercial': 'b2c3d4e5-f6a1-2345-6789-0abcdef12345', // Exemplo de UUID
-  'escritorio': 'c3d4e5f6-a1b2-3456-7890-abcdef123456', // Exemplo de UUID
-  'pos_obra': 'd4e5f6a1-b2c3-4567-890a-bcdef1234567', // Exemplo de UUID
+  'residencial': '409c0969-0b5f-452b-8bca-d632b86633bd',
+  'comercial': '2ebac28a-11f4-4cc3-8f38-9af12b62f298',
+  'pos_obra': '43852fac-0fcd-4c22-b8ea-4b1d85a190d3',
+  'vidros': '97ea31f5-c974-4ad0-8d96-df7c20a73c41',
+  'escritorio': '18eb34ab-db35-4f13-9436-fa57571f0dd8',
+  'estofados': '3f832746-854f-4ef8-8bbf-652c764d8bab',
+  'passadoria': '5720897b-c922-4f28-9d68-48497933a01b',
 };
 
-// Função utilitária para converter URI de arquivo em Blob para upload
-const uriToBlob = async (uri: string): Promise<Blob> => {
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.onload = function () {
-      resolve(xhr.response);
-    };
-    xhr.onerror = function (e) {
-      console.error("Erro ao converter URI para Blob:", e);
-      reject(new TypeError('Network request failed'));
-    };
-    xhr.responseType = 'blob';
-    xhr.open('GET', uri, true);
-    xhr.send(null);
-  });
-};
-
-
-// Definição do tipo para as opções de precificação
 type PriceUnit = 'hora' | 'quarto' | 'metragem' | null;
 
 interface ServiceDetailsFormData {
@@ -77,7 +55,7 @@ interface ServiceDetailsFormData {
   basePrice: string;
   pixKey: string;
   specialties: string[];
-  serviceAreas: string[]; // Não utilizado na lógica de integração, mas mantido para consistência do formulário
+  serviceAreas: string[];
   priceUnit: PriceUnit;
 }
 
@@ -141,95 +119,89 @@ export default function ServiceDetailsScreen() {
   };
 
   const handleContinue = async () => {
-    console.log("[handleContinue] Iniciando...");
-    console.log("[handleContinue] user object:", user);
-    // Adicionando logs mais específicos para depuração
-    console.log("[handleContinue] user.id:", user?.id);
-    console.log("[handleContinue] user.token:", user?.token);
+    console.log("[handleContinue] Iniciando processamento do formulário.");
+    console.log("[handleContinue] Dados do formulário:", formData);
 
-
-    if (!user || !user.token || !user.id) {
-        console.log("[handleContinue] Erro: Usuário não logado ou token/ID ausente.");
-        Alert.alert('Erro de autenticação', 'Usuário não logado ou token/ID ausente. Por favor, faça login novamente.');
+    if (!user || !user.token || !user.providerDetails?.id) {
+        Alert.alert('Erro de autenticação', 'Usuário não logado ou detalhes do provedor ausentes. Por favor, faça login novamente.');
+        console.error("[handleContinue] Erro: Usuário não autenticado ou providerDetails.id ausente.");
         return;
     }
 
-    // Validações básicas do formulário
     if (!formData.profilePhoto) {
-      console.log("[handleContinue] Validação falhou: profilePhoto ausente.");
       Alert.alert('Atenção', 'Por favor, adicione uma foto de perfil para continuar.');
+      console.error("[handleContinue] Erro de validação: Foto de perfil ausente.");
       return;
     }
     if (!formData.description.trim()) {
-      console.log("[handleContinue] Validação falhou: description ausente.");
       Alert.alert('Atenção', 'A descrição do serviço é obrigatória.');
+      console.error("[handleContinue] Erro de validação: Descrição ausente.");
       return;
     }
     if (!formData.yearsOfExperience.trim() || isNaN(parseInt(formData.yearsOfExperience))) {
-      console.log("[handleContinue] Validação falhou: yearsOfExperience inválido.");
       Alert.alert('Atenção', 'Os anos de experiência são obrigatórios e devem ser um número.');
+      console.error("[handleContinue] Erro de validação: Anos de experiência inválidos.");
       return;
     }
     if (!formData.basePrice.trim() || isNaN(parseFloat(formData.basePrice))) {
-      console.log("[handleContinue] Validação falhou: basePrice inválido.");
       Alert.alert('Atenção', 'O preço base é obrigatório e deve ser um número.');
+      console.error("[handleContinue] Erro de validação: Preço base inválido.");
       return;
     }
     if (formData.specialties.length === 0) {
-      console.log("[handleContinue] Validação falhou: specialties ausente.");
       Alert.alert('Atenção', 'Por favor, selecione pelo menos um tipo de serviço.');
+      console.error("[handleContinue] Erro de validação: Nenhuma especialidade selecionada.");
       return;
     }
     if (!formData.priceUnit) {
-      console.log("[handleContinue] Validação falhou: priceUnit ausente.");
       Alert.alert('Atenção', 'Por favor, selecione um tipo de precificação (por hora, quarto, ou metragem).');
+      console.error("[handleContinue] Erro de validação: Tipo de precificação não selecionado.");
       return;
     }
     
-    setIsUploading(true); // Inicia o estado de upload/processamento
-    console.log("[handleContinue] Todas as validações passadas. Iniciando upload/atualização.");
+    setIsUploading(true);
+    console.log("[handleContinue] Todas as validações passadas. Iniciando o fluxo de atualização.");
 
     try {
-      // 1. Upload da Foto de Perfil
-      let avatarUrl = formData.profilePhoto; 
+      const providerId = user.providerDetails.id;
 
+      let avatarUrl: string | null | undefined = user.providerDetails.avatarUrl;
+      console.log(`[handleContinue] URL do avatar inicial (do user.providerDetails): ${avatarUrl}`);
+      
       if (formData.profilePhoto && formData.profilePhoto.startsWith('file://')) {
-        console.log("[handleContinue] Tentando upload de foto de perfil...");
-        const photoBlob = await uriToBlob(formData.profilePhoto);
-        const uploadFormData = new FormData();
-        uploadFormData.append('file', photoBlob, 'profile.jpg'); // 'file' deve ser o nome esperado pelo seu backend
-
-        const uploadResponse = await api.post('/upload-image', uploadFormData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        });
-        avatarUrl = uploadResponse.data.url;
-        console.log("[handleContinue] Upload de foto de perfil concluído. URL:", avatarUrl);
-      } else {
-        console.log("[handleContinue] profilePhoto não é um URI local ou está vazio. Usando valor existente:", avatarUrl);
+        console.log("[handleContinue] URI local detectada. Tentando fazer upload da foto de perfil...");
+        
+        const uploadResponse = await verificationService.uploadSelfie(formData.profilePhoto);
+        
+        if (uploadResponse && 'url' in uploadResponse && typeof uploadResponse.url === 'string') {
+          avatarUrl = uploadResponse.url;
+          console.log("[handleContinue] Upload de foto de perfil concluído. Nova URL do avatar:", avatarUrl);
+        } else {
+          console.error("[handleContinue] Erro: O backend não retornou uma URL válida para a imagem de perfil.");
+          throw new Error('O backend não retornou uma URL válida para a imagem de perfil.');
+        }
       }
 
-      // 2. Atualizar o Perfil do Prestador (PATCH /providers/me)
+      console.log("[handleContinue] Preparando dados para a atualização do perfil do provedor.");
       const profileUpdateData = {
         avatarUrl: avatarUrl,
         bio: formData.description,
         yearsOfExperience: parseInt(formData.yearsOfExperience, 10),
         pixKey: formData.pixKey,
       };
-      console.log("[handleContinue] Atualizando perfil do provedor com dados:", profileUpdateData);
+      console.log("[handleContinue] Dados de atualização do perfil:", profileUpdateData);
+      
       await updateMyProviderProfile(profileUpdateData);
       console.log("[handleContinue] Perfil do provedor atualizado com sucesso.");
 
-      // 3. Gerenciar os Serviços do Prestador (POST e PATCH em /providers/:providerId/services)
-      console.log("[handleContinue] Buscando serviços existentes do provedor...");
-      const existingProviderServices = await getProviderServicesOffered(user.id);
-      console.log("[handleContinue] Serviços existentes encontrados:", existingProviderServices);
+      console.log(`[handleContinue] Buscando serviços existentes para o providerId: ${providerId}`);
+      const existingProviderServices = await getProviderServicesOffered(providerId);
+      console.log(`[handleContinue] Encontrados ${existingProviderServices.length} serviços existentes.`);
 
       for (const specialty of formData.specialties) {
         const serviceId = SERVICE_MAPPINGS[specialty];
         if (!serviceId) {
-          console.warn(`[handleContinue] ServiceId não encontrado para a especialidade: ${specialty}. Pulando.`);
+          console.warn(`[handleContinue] Aviso: ServiceId não encontrado para a especialidade: ${specialty}. Pulando.`);
           continue;
         }
         console.log(`[handleContinue] Processando especialidade: ${specialty} (serviceId: ${serviceId})`);
@@ -237,7 +209,7 @@ export default function ServiceDetailsScreen() {
         let serviceData: any = {
           serviceId: serviceId,
           description: formData.description,
-          durationMinutes: 60, // Exemplo: duração padrão, ajuste conforme necessário
+          durationMinutes: 60,
         };
 
         const basePriceValue = parseFloat(formData.basePrice);
@@ -257,43 +229,42 @@ export default function ServiceDetailsScreen() {
           serviceData.pricePerRoom = null;
           serviceData.price = 0;
         } else {
-            console.warn(`[handleContinue] Tipo de precificação desconhecido: ${formData.priceUnit}. Pulando.`);
+            console.warn(`[handleContinue] Aviso: Tipo de precificação desconhecido para ${specialty}. Pulando.`);
             continue;
         }
-        console.log("[handleContinue] Dados do serviço a serem enviados:", serviceData);
-
-
-        const existingService = existingProviderServices.find(
-          (s: any) => s.serviceId === serviceId
-        );
+        
+        const existingService = existingProviderServices.find((s: any) => s.serviceId === serviceId);
 
         if (existingService) {
-          console.log(`[handleContinue] Serviço existente encontrado (ID: ${existingService.id}). Atualizando...`);
-          await updateProviderServiceOffering(user.id, existingService.id, serviceData);
-          console.log(`[handleContinue] Serviço ${existingService.id} atualizado.`);
+          // [CORREÇÃO AQUI] Remover o serviceId para a requisição de PATCH
+          console.log(`[handleContinue] Serviço existente encontrado para ${specialty}. Atualizando...`);
+          const updatedServiceData = { ...serviceData };
+          delete updatedServiceData.serviceId; // Remove o serviceId para o PATCH
+          await updateProviderServiceOffering(providerId, existingService.id, updatedServiceData);
+          console.log(`[handleContinue] Serviço ${existingService.id} atualizado com sucesso.`);
         } else {
-          console.log("[handleContinue] Serviço não existente. Criando novo serviço...");
-          await addProviderServiceOffering(user.id, serviceData);
-          console.log(`[handleContinue] Novo serviço criado para serviceId: ${serviceId}.`);
+          // [LÓGICA DE POST AQUI] O serviceId é necessário para a requisição de POST
+          console.log(`[handleContinue] Serviço não existente para ${specialty}. Criando novo...`);
+          await addProviderServiceOffering(providerId, serviceData);
+          console.log(`[handleContinue] Novo serviço criado com sucesso para ${specialty}.`);
         }
       }
 
       console.log("[handleContinue] Todos os serviços processados. Sucesso!");
       setIsRegistrationInProgress(false);
       Alert.alert('Sucesso', 'Seu perfil foi salvo! Agora vamos verificar seus documentos.');
-      console.log("[handleContinue] Tentando navegar para /provider-register/verify-account");
       router.push('/provider-register/verify-account');
 
     } catch (error: any) {
       console.error('Erro ao salvar os dados do provedor:', error.response?.data || error.message, error.stack);
       Alert.alert('Erro', `Ocorreu um erro ao salvar seus dados: ${error.response?.data?.message || error.message}. Tente novamente.`);
     } finally {
-      setIsUploading(false); // Finaliza o estado de upload/processamento
-      console.log("[handleContinue] Finalizando handleContinue.");
+      setIsUploading(false);
+      console.log("[handleContinue] Processo de atualização finalizado.");
     }
-  };
+};
 
-  const renderImageUploadSection = () => (
+const renderImageUploadSection = () => (
     <View style={styles.imageUploadContainer}>
       <Text style={styles.sectionTitle}>Foto do Perfil</Text>
       <TouchableOpacity
@@ -301,6 +272,7 @@ export default function ServiceDetailsScreen() {
         onPress={handleImagePicker}
         activeOpacity={0.8}
       >
+        {/* CORREÇÃO: Acessar a imagem do perfil do formData */}
         {formData.profilePhoto ? (
           <Image source={{ uri: formData.profilePhoto }} style={styles.uploadedImage} />
         ) : (
@@ -511,7 +483,7 @@ export default function ServiceDetailsScreen() {
           <TouchableOpacity
             style={styles.continueButton}
             onPress={handleContinue}
-            disabled={isUploading} // Desabilita o botão durante o upload
+            disabled={isUploading}
           >
             <LinearGradient
               colors={['#A0D2EB', '#307cc9ff']}

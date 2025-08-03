@@ -5,7 +5,7 @@ import {
     ActivityIndicator,
     Alert,
     Animated,
-    Image, // Manter se necessário para listas que não sejam SCROLLVIEW
+    Image,
     Platform,
     RefreshControl,
     ScrollView,
@@ -14,15 +14,20 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { useAuth } from '../../hooks/useAuth'; // Importação do useAuth
+import { useAuth } from '../../hooks/useAuth';
 
 // Importações dos serviços
 import { getBookingsForUser, updateBookingStatus } from '../../services/bookingService';
-import { getMyProviderDashboard } from '../../services/providerService';
+import { getMyProviderDashboard } from '../../services/dashboardService';
+import { getMyProviderEarnings } from '../../services/providerService';
 
 // Importações das tipagens centralizadas
 import { BookingDetails, BookingStatus } from '../../types/backend/bookings';
-import { ProviderDashboard } from '../../types/backend/providers'; // Importe ProviderReview aqui também, se ProviderDashboard o usa
+import { ProviderReview } from '../../types/backend/providers';
+// CORREÇÃO: Usar a interface ProviderDashboard do arquivo de provedores,
+// que é mais completa e usada na lógica do componente.
+// import { ProviderDashboard } from '../../types/backend/dashboard'; 
+import { ProviderDashboard } from '../../types/backend/providers'; // Usar a interface correta
 
 // Importações dos novos componentes
 import AdvancedReviewsSection from '../../components/provider/dashboard/AdvancedReviewsSection';
@@ -62,9 +67,9 @@ const WARNING_YELLOW = '#FFC107';
 const BORDER_SUBTLE = 'rgba(0,0,0,0.08)';
 const SHADOW_COLOR_CARD = 'rgba(0, 0, 0, 0.06)';
 const SHADOW_COLOR_SECTION = 'rgba(0, 0, 0, 0.1)';
-const PRIMARY_LIGHT = '#EBF5FF'; // Um azul claro para fundos de botões/links
+const PRIMARY_LIGHT = '#EBF5FF';
 
-// --- Componentes Reutilizáveis (Move para arquivos separados se o projeto crescer) ---
+// --- Componentes Reutilizáveis ---
 
 // Componente: DashboardHeader (para saudação e avatar)
 const DashboardHeader: React.FC<{
@@ -109,8 +114,7 @@ const headerStyles = StyleSheet.create({
     flex: 1,
   },
   greetingText: {
-    fontSize: 18,
-    marginTop: 20,
+    fontSize: 24,
     fontWeight: 'bold',
     color: TEXT_DARK,
   },
@@ -184,7 +188,7 @@ const FinancialSummaryCard: React.FC<{
 
 const summaryStyles = StyleSheet.create({
   summaryCard: {
-    backgroundColor: ICON_PRIMARY, // Usar cor primária para destaque
+    backgroundColor: ICON_PRIMARY,
     borderRadius: 18,
     padding: 20,
     marginBottom: 20,
@@ -270,7 +274,6 @@ const QuickActionsSection: React.FC<{
           <Ionicons name="chatbubbles-outline" size={30} color={ICON_PRIMARY} />
           <Text style={quickActionStyles.gridItemText}>Mensagens</Text>
         </TouchableOpacity>
-        {/* Adicione mais ações rápidas conforme necessário, ex: "Meu Perfil", "Ajuda" */}
       </View>
     </View>
   );
@@ -280,7 +283,7 @@ const quickActionStyles = StyleSheet.create({
   sectionContainer: {
     backgroundColor: WHITE,
     borderRadius: 18,
-    padding: 20, // Manter ou ajustar este padding se o espaço lateral geral da caixa é o que te incomoda
+    padding: 20,
     marginBottom: 20,
     ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 6 },
@@ -294,22 +297,20 @@ const quickActionStyles = StyleSheet.create({
     marginBottom: 15,
     textAlign: 'center',
   },
-  grid: { // Este é o container dos seus botões
+  grid: {
     flexDirection: 'row',
-    flexWrap: 'wrap', // Manter wrap para caso haja mais de 3, eles quebrem a linha
-    justifyContent: 'space-around', // ou 'space-between', 'center'
-    width: '100%', // Isso significa 100% do 'sectionContainer' (que tem padding de 20)
+    flexWrap: 'wrap',
+    justifyContent: 'space-around',
+    width: '100%',
   },
   gridItem: {
-    // ATENÇÃO AQUI: Para 3 itens por linha, você PRECISA de uma largura menor.
-    // 30% x 3 = 90%. Sobram 10% para gaps.
-    width: '30%', // <--- MUDANÇA ESSENCIAL AQUI para 3 itens por linha!
-    aspectRatio: 1, // Para manter quadrado
+    width: '30%',
+    aspectRatio: 1,
     backgroundColor: BACKGROUND_ALT,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 15, // Espaçamento vertical entre as linhas
+    marginBottom: 15,
     padding: 10,
     borderWidth: 1,
     borderColor: BORDER_SUBTLE,
@@ -345,7 +346,6 @@ const RequestItem: React.FC<{
   const clientId: string | undefined = item.clientId;
   const clientName: string = item.clientFullName || 'Cliente';
 
-  // Parse scheduledDateTime to get date and time parts
   const scheduledDate = new Date(item.scheduledDateTime).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' });
   const scheduledTime = new Date(item.scheduledDateTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
@@ -451,7 +451,6 @@ const ConfirmedServiceItem: React.FC<{
 }> = ({ item, onPress, entryAnim }) => {
   const touchAnimation = useAnimatedTouch();
 
-  // Parse scheduledDateTime to get date and time parts
   const scheduledDate = new Date(item.scheduledDateTime).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
   const scheduledTime = new Date(item.scheduledDateTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
@@ -488,10 +487,10 @@ const ConfirmedServiceItem: React.FC<{
 // Componente principal do Dashboard do Provedor
 export default function ProviderDashboardScreen() {
   const router = useRouter();
-  const { user, isLoading: authLoading, signOut } = useAuth(); // Destructuring signOut from useAuth
+  const { user, isLoading: authLoading, logout } = useAuth(); // Corrigido: usando logout em vez de signOut
 
   const [dashboardData, setDashboardData] = useState<ProviderDashboard | null>(null);
-  const [pendingRequests, setPendingRequests] = useState<BookingDetails[]>([]); // Novo estado para solicitações pendentes
+  const [pendingRequests, setPendingRequests] = useState<BookingDetails[]>([]);
   const [upcomingServices, setUpcomingServices] = useState<BookingDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -504,41 +503,25 @@ export default function ProviderDashboardScreen() {
     setIsLoading(true);
     setError(null);
     if (!user?.id) {
-        console.warn("[DashboardScreen] fetchData: user.id não disponível. Abortando busca.");
-        setError("ID do provedor não disponível para buscar dados.");
-        setIsLoading(false);
-        setIsRefreshing(false);
-        return;
+      console.warn("[DashboardScreen] fetchData: user.id não disponível. Abortando busca.");
+      setError("ID do provedor não disponível para buscar dados.");
+      setIsLoading(false);
+      setIsRefreshing(false);
+      return;
     }
     console.log(`[DashboardScreen] fetchData: Buscando dashboard para userId: ${user.id}`);
 
     try {
+      // CORRIGIDO: Chamar a função correta do serviço de dashboard
       const dashboard = await getMyProviderDashboard();
       console.log("[DashboardScreen] fetchData: Dados do dashboard recebidos.", dashboard);
-      // Log para verificar se 'reviews' está chegando
       console.log("[DashboardScreen] REVIEWS NA DASHBOARD (AGORA COM 'reviews'):", dashboard.reviews);
 
       setDashboardData(dashboard);
 
-      // Fetch all relevant booking statuses for the dashboard
-      const pendingProviderBookings = await getBookingsForUser(BookingStatus.PENDING_PROVIDER_CONFIRMATION);
-      const pendingClientBookings = await getBookingsForUser(BookingStatus.PENDING);
-      const confirmedBookings = await getBookingsForUser(BookingStatus.CONFIRMED);
-      const inProgressBookings = await getBookingsForUser(BookingStatus.IN_PROGRESS);
-
-      // Combine and filter pending requests
-      const allPendingRequests = [...pendingProviderBookings, ...pendingClientBookings]
-        .filter(b => new Date(b.scheduledDateTime) >= new Date()) // Only future requests
-        .sort((a,b) => new Date(a.scheduledDateTime).getTime() - new Date(b.scheduledDateTime).getTime());
-      setPendingRequests(allPendingRequests);
-      console.log("[DashboardScreen] fetchData: Solicitações pendentes recebidas.", allPendingRequests);
-
-      // Combine and sort upcoming confirmed/in-progress services
-      const allUpcomingServices = [...confirmedBookings, ...inProgressBookings]
-        .filter(b => new Date(b.scheduledDateTime) >= new Date()) // Only future services
-        .sort((a,b) => new Date(a.scheduledDateTime).getTime() - new Date(b.scheduledDateTime).getTime());
-      setUpcomingServices(allUpcomingServices);
-      console.log("[DashboardScreen] fetchData: Agendamentos confirmados/em progresso recebidos.", allUpcomingServices);
+      // Usar os dados recebidos do dashboard para popular os estados
+      setPendingRequests(dashboard.upcomingBookings.filter(b => b.status === BookingStatus.PENDING));
+      setUpcomingServices(dashboard.upcomingBookings.filter(b => b.status === BookingStatus.CONFIRMED || b.status === BookingStatus.IN_PROGRESS));
 
       Animated.timing(contentAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
 
@@ -645,20 +628,16 @@ export default function ProviderDashboardScreen() {
     router.push({ pathname: '/(provider)/messages/[chatId]', params: { chatId: clientId, recipientName: clientName } } as any);
   };
 
-  // --- FUNÇÃO DE LOGOUT ---
-  // Removida a confirmação do Alert.alert para um logout de 1 clique
   const handleLogout = async () => {
     console.log("[Dashboard] Botão de Logout clicado: Iniciando logout direto.");
     try {
-      await signOut(); // Chama a função signOut do AuthContext
-      console.log("[Dashboard] signOut() concluído. O _layout.tsx deve redirecionar.");
+      await logout();
+      console.log("[Dashboard] logout() concluído. O _layout.tsx deve redirecionar.");
     } catch (error) {
       console.error("[Dashboard] Erro ao fazer logout:", error);
-      // Se houver um erro no signOut (ex: problema de rede), ainda avise o usuário
       Alert.alert("Erro ao Sair", "Não foi possível sair da conta. Tente novamente ou verifique sua conexão.");
     }
   };
-  // --- FIM DA FUNÇÃO DE LOGOUT ---
 
   const renderEmptyState = (message: string, iconName: keyof typeof Ionicons.glyphMap = "sad-outline") => (
     <View style={styles.emptyStateContainer}>
@@ -698,28 +677,24 @@ export default function ProviderDashboardScreen() {
         contentContainerStyle={styles.scrollViewContent}
         refreshControl={ <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#007AFF" /> }
       >
-        {/* NOVO: Dashboard Header com nome do provedor e avatar */}
         <DashboardHeader
           providerName={dashboardData?.fullName}
-          avatarUrl={user?.avatarUrl} // Assumindo que user.avatarUrl vem do AuthContext
+          avatarUrl={user?.avatarUrl}
           onProfilePress={() => router.push('/(provider)/profile' as any)}
         />
 
-        {/* NOVO: Financial Summary Card */}
         <FinancialSummaryCard
           totalEarnings={dashboardData?.totalEarnings}
           pendingWithdrawals={dashboardData?.pendingWithdrawals}
           onViewEarnings={() => router.push('/(provider)/earnings' as any)}
         />
 
-        {/* NOVO: Quick Actions Section */}
         <QuickActionsSection
           onViewAllServicesPress={handleViewAllServicesPress}
           onViewAllMessagesPress={handleViewAllMessagesPress}
-          onManageAvailability={() => router.push('/(provider)/schedule/manage-availability' as any)} // Assumindo uma rota de disponibilidade
+          onManageAvailability={() => router.push('/(provider)/schedule/manage-availability' as any)}
         />
 
-        {/* Solicitações Pendentes */}
         <View style={styles.subsectionWrapper}>
           <View style={styles.subsectionHeader}>
             <Text style={styles.subsectionTitle}>
@@ -738,9 +713,9 @@ export default function ProviderDashboardScreen() {
                 item={item}
                 onAccept={handleAcceptRequest}
                 onReject={handleRejectRequest}
-                onDetails={() => router.push(`/(provider)/bookings/${item.id}` as any)} // Rota para detalhes do agendamento
+                onDetails={() => router.push(`/(provider)/bookings/${item.id}` as any)}
                 onChat={handleChatWithClient}
-                entryAnim={new Animated.ValueXY({x:1,y:0})} // Animação
+                entryAnim={new Animated.ValueXY({x:1,y:0})}
               />
             ))
           ) : (
@@ -748,7 +723,6 @@ export default function ProviderDashboardScreen() {
           )}
         </View>
 
-        {/* Próximos Serviços Confirmados */}
         <View style={styles.subsectionWrapper}>
           <View style={styles.subsectionHeader}>
             <Text style={styles.subsectionTitle}>
@@ -765,7 +739,7 @@ export default function ProviderDashboardScreen() {
               <ConfirmedServiceItem
                 key={item.id}
                 item={item}
-                onPress={() => router.push(`/(provider)/bookings/${item.id}` as any)} // Rota para detalhes do agendamento
+                onPress={() => router.push(`/(provider)/bookings/${item.id}` as any)}
                 entryAnim={new Animated.ValueXY({x:1,y:0})}
               />
             ))
@@ -774,25 +748,16 @@ export default function ProviderDashboardScreen() {
           )}
         </View>
 
-        {/* Seção de Insights e Sugestões IA */}
-        <SmartInsightsSection
-          dashboardData={dashboardData}
-          onViewInsights={() => router.push('/(provider)/insights' as any)}
-        />
-
-        {/* Seção de Reviews Avançada */}
         <AdvancedReviewsSection
           reviews={dashboardData?.reviews}
-          providerId={user?.providerId}
+          providerId={user?.id}
           onViewAllReviews={() => router.push('/(provider)/reviews' as any)}
         />
 
-        {/* --- BOTÃO DE LOGOUT ADICIONADO AQUI --- */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={24} color={WHITE} />
           <Text style={styles.logoutButtonText}>Sair da Conta</Text>
         </TouchableOpacity>
-        {/* --- FIM DO BOTÃO DE LOGOUT --- */}
 
       </ScrollView>
     </View>
@@ -845,42 +810,12 @@ const styles = StyleSheet.create({
   },
   scrollViewContent: {
     padding: 15,
-    paddingTop: 0, // Ajuste para o novo cabeçalho flutuante
+    paddingTop: 0,
     paddingBottom: 40,
-  },
-  sectionContainer: {
-    backgroundColor: WHITE,
-    borderRadius: 18,
-    padding: 16,
-    marginBottom: 20,
-    ...Platform.select({
-      ios: {
-        shadowColor: SHADOW_COLOR_SECTION,
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.12,
-        shadowRadius: 12,
-      },
-      android: {
-        elevation: 12,
-      },
-    }),
-  },
-  sectionHeaderWithIcon: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-    justifyContent: 'center',
-  },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: TEXT_DARK,
-    textAlign: 'center',
-    marginLeft: 8,
   },
   subsectionWrapper: {
     marginBottom: 25,
-    backgroundColor: WHITE, // Fundo para a subseção para melhor visual
+    backgroundColor: WHITE,
     borderRadius: 12,
     padding: 15,
     ...Platform.select({
@@ -911,7 +846,7 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     backgroundColor: BACKGROUND_ALT,
     borderRadius: 12,
-    marginTop: 10, // Adicionado espaçamento
+    marginTop: 10,
   },
   emptyText: {
     textAlign: 'center',
@@ -1133,26 +1068,24 @@ const styles = StyleSheet.create({
     color: TEXT_MEDIUM,
     marginBottom: 8,
   },
-  reviewRating: { // <--- ESTILO ORIGINAL - AGORA SERÁ USADO reviewRatingStarsAndName
+  reviewRating: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end', // Este estava alinhando as estrelas e o nome à direita
+    justifyContent: 'flex-end',
   },
-  // NOVOS ESTILOS: Adicionados para reposicionar as estrelas
-  reviewRatingStarsAndName: { // <--- ESTILO ADICIONADO AQUI
+  reviewRatingStarsAndName: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
   },
-  reviewStarsContainer: { // <--- ESTILO ADICIONADO AQUI
+  reviewStarsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   reviewClientName: {
     fontSize: 13,
     color: TEXT_MUTED,
-    // Não precisa de marginLeft aqui se justify-content: 'space-between'
   },
   earningsLinkCard: {
       backgroundColor: WHITE,
@@ -1173,22 +1106,16 @@ const styles = StyleSheet.create({
       flex: 1,
       marginLeft: 12,
   },
-  // --- ESTILOS PARA O BOTÃO DE LOGOUT ---
+  // CORREÇÃO: Adicionados os estilos para o botão de logout
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: DANGER_RED,
     borderRadius: 25,
-    paddingVertical: 8,
-    marginTop: 30, // Espaçamento do conteúdo acima
-    marginBottom: 20, // Espaçamento da parte inferior da tela
-    width: '90%', // Ocupa uma boa largura
-    alignSelf: 'center', // Centraliza o botão
-    ...Platform.select({
-      ios: { shadowColor: DANGER_RED, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 6 },
-      android: { elevation: 6 },
-    }),
+    paddingVertical: 12,
+    marginTop: 20,
+    marginHorizontal: 15, // Adicionar margem horizontal para espaçamento
   },
   logoutButtonText: {
     color: WHITE,

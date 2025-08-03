@@ -1,5 +1,22 @@
 // src/providers/providers.controller.ts
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, Req, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Query,
+  Req,
+  NotFoundException,
+  BadRequestException, // Importado para a nova rota
+  Logger,
+  UseInterceptors, // Importado para o FileInterceptor
+  UploadedFile, // Importado para o FileInterceptor
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express'; // Importado para a nova rota
 import { ProvidersService } from './providers.service';
 import { UpdateProviderProfileDto } from './dto/update-provider-profile.dto';
 import { ProviderDetailsDto } from './dto/provider-details.dto';
@@ -8,13 +25,22 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+  ApiQuery,
+  ApiConsumes, // Importado para a nova rota
+  ApiBody, // Importado para a nova rota
+} from '@nestjs/swagger';
 import { Request as ExpressRequest } from 'express';
+import { Multer } from 'multer'; // Tipo de arquivo Multer
 
 import { SortByOption } from '../search/dto/search-query.dto';
 
 // Importe os tipos auxiliares do service
-import { ProviderWithCalculatedRating } from './providers.service'; // <-- AGORA SÓ PRECISA DE ProviderWithCalculatedRating
+import { ProviderWithCalculatedRating } from './providers.service';
 
 @ApiTags('providers')
 @Controller('providers')
@@ -100,13 +126,13 @@ export class ProvidersController {
   async getMyProfile(@Req() req: ExpressRequest): Promise<ProviderDetailsDto> {
     const userId = req.user['userId'];
     this.logger.log(`[ProvidersController] getMyProfile: Buscando perfil para userId: ${userId}`);
-    const provider = await this.providersService.findByUserId(userId); // Retorna ProviderWithCalculatedRating
+    const provider = await this.providersService.findByUserId(userId);
     if (!provider) {
       this.logger.warn(`[ProvidersController] getMyProfile: Provedor não encontrado para userId: ${userId}`);
       throw new NotFoundException(`Provedor com User ID "${userId}" não encontrado.`);
     }
     this.logger.log(`[ProvidersController] getMyProfile: Perfil encontrado para userId ${userId}.`);
-    return new ProviderDetailsDto(provider); // Já é o tipo correto
+    return new ProviderDetailsDto(provider);
   }
 
   @Patch('me')
@@ -130,6 +156,52 @@ export class ProvidersController {
     return new ProviderDetailsDto(updatedProvider);
   }
 
+  // --- NOVA ROTA: UPLOAD DE AVATAR ---
+  @Post('me/avatar')
+  @Roles(UserRole.PROVIDER)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'Upload da foto de perfil (avatar)',
+    type: 'object',
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @ApiOperation({ summary: 'Fazer upload da foto de perfil do provedor logado' })
+  @ApiResponse({ status: 201, description: 'Avatar atualizado com sucesso.', schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', example: 'Avatar atualizado com sucesso.' },
+        url: { type: 'string', example: 'http://gcs.com/provider-avatars/123/avatar.jpg' },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Nenhum arquivo enviado ou arquivo inválido.' })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  @ApiResponse({ status: 404, description: 'Provedor não encontrado.' })
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadAvatar(
+    @Req() req: ExpressRequest,
+    @UploadedFile() file: Multer.File,
+  ) {
+    const userId = req.user['userId'];
+    if (!file) {
+      throw new BadRequestException('Nenhum arquivo de imagem enviado.');
+    }
+    this.logger.log(`[ProvidersController] uploadAvatar: Recebido arquivo de avatar para userId: ${userId}`);
+    const avatarUrl = await this.providersService.updateAvatar(userId, file);
+    return { message: 'Avatar atualizado com sucesso.', url: avatarUrl };
+  }
+  // --- FIM DA NOVA ROTA ---
+
   // =================================================================================================
   // ROTAS COM PARÂMETROS DINÂMICOS (Devem vir por último)
   // =================================================================================================
@@ -141,13 +213,13 @@ export class ProvidersController {
   @ApiResponse({ status: 404, description: 'Provedor não encontrado.' })
   async findOne(@Param('id') id: string, @Query('includeReviews') includeReviews?: boolean): Promise<ProviderDetailsDto> {
     this.logger.log(`[ProvidersController] findOne: Buscando provedor por ID: ${id}`);
-    const provider = await this.providersService.findOne(id); // Retorna ProviderWithCalculatedRating
+    const provider = await this.providersService.findOne(id);
     if (!provider) {
       this.logger.warn(`[ProvidersController] findOne: Provedor com ID "${id}" não encontrado.`);
       throw new NotFoundException(`Provedor com ID "${id}" não encontrado.`);
     }
     this.logger.log(`[ProvidersController] findOne: Provedor ${id} encontrado.`);
-    return new ProviderDetailsDto(provider); // Já é o tipo correto
+    return new ProviderDetailsDto(provider);
   }
 
   @Delete(':id')

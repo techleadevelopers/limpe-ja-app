@@ -4,8 +4,8 @@ import { VerificationController } from './verification.controller';
 import { VerificationService } from './verification.service';
 import { CriminalBackgroundCheckService } from './criminal-background-check.service';
 import { DocumentProcessingService } from './document-processing.service';
-import { PrismaService } from '../prisma/prisma.service'; // Importar PrismaService
-import { ProvidersService } from '../providers/providers.service'; // Para interagir com o modelo Provider
+import { PrismaService } from '../prisma/prisma.service';
+import { ProvidersService } from '../providers/providers.service';
 
 @Module({
   controllers: [VerificationController],
@@ -13,9 +13,13 @@ import { ProvidersService } from '../providers/providers.service'; // Para inter
     VerificationService,
     CriminalBackgroundCheckService,
     DocumentProcessingService,
-    PrismaService, // Prover PrismaService para os serviços
-    ProvidersService, // Prover ProvidersService para interagir com o provedor
+    PrismaService,
+    ProvidersService,
   ],
-  exports: [VerificationService], // Exportar se outros módulos precisarem usar VerificationService
+  // CORREÇÃO: Exportar DocumentProcessingService para que ele seja acessível ao ProvidersModule
+  exports: [
+    VerificationService,
+    DocumentProcessingService, // <-- Adicionado DocumentProcessingService aqui
+  ],
 })
 export class VerificationModule {}

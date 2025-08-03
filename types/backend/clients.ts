@@ -1,7 +1,7 @@
 // LimpeJaApp/src/types/backend/clients.ts
 
 import { UserRole } from './auth';
-import { BookingAddress } from './bookings'; // Importar BookingAddress para tipagem consistente do endereço
+import { BookingAddress } from './bookings'; // [CORREÇÃO] Importa BookingAddress para tipagem consistente do endereço
 
 /**
  * @interface Client
@@ -23,10 +23,10 @@ export interface Client {
   // user?: UserProfile; // Se você quiser aninhar o UserProfile completo
   // ... outras propriedades
 
-  // CORREÇÃO: Adicionar a propriedade 'address' do tipo BookingAddress para resolver o erro de tipagem.
+  // [CORREÇÃO] Adicionar a propriedade 'address' do tipo BookingAddress para resolver o erro de tipagem.
   // A propriedade address pode ser opcional se o cliente nem sempre tiver um endereço.
   // Se o seu backend sempre retornar um endereço, remova o '?'.
-  address?: BookingAddress | null; // CORREÇÃO: Alinhado com schema.prisma (Address?)
+  address?: BookingAddress | null; // [CORREÇÃO] Alinhado com schema.prisma (Address?)
 }
 
 /**
@@ -58,10 +58,17 @@ export interface UpdateClientProfileDto {
   phone?: string | null; // Permitir null
   // Adicione outros campos que o cliente pode atualizar aqui (ex: address)
 
-  // CORREÇÃO: A sintaxe para definir um objeto aninhado dentro de uma interface
+  // [CORREÇÃO] A sintaxe para definir um objeto aninhado dentro de uma interface
   // estava incorreta. Deve ser definida como uma propriedade que é um objeto.
   // Usamos 'Partial<BookingAddress>' aqui para indicar que todos os campos do endereço
   // são opcionais no contexto da atualização. Se o backend espera 'zipCode' e não 'cep'
   // para este DTO específico, você precisará ajustar ou criar um tipo separado.
-  address?: Partial<BookingAddress> | null; // CORREÇÃO: Alinhado com schema.prisma (Address?)
+  address?: Partial<BookingAddress> | null; // [CORREÇÃO] Alinhado com schema.prisma (Address?)
 }
+
+// [CORREÇÃO] Exporta a interface ClientDetails
+export interface ClientDetails {
+    // Adicione as propriedades reais dos detalhes do cliente aqui
+}
+
+// [CORREÇÃO] A declaração de BookingAddress foi removida daqui para evitar o conflito

@@ -1,4 +1,5 @@
 // src/verification/verification.controller.ts
+
 import {
   Controller,
   Post,
@@ -138,12 +139,12 @@ export class VerificationController {
     },
   })
   @ApiOperation({ summary: 'Upload da selfie com documento' })
-  @ApiResponse({ status: 200, description: 'Selfie enviada com sucesso.', schema: { type: 'object', properties: { message: { type: 'string' }, url: { type: 'string' } } } }) // <-- Adicionado schema para a resposta
+  @ApiResponse({ status: 200, description: 'Selfie enviada com sucesso.', schema: { type: 'object', properties: { message: { type: 'string' }, url: { type: 'string' } } } })
   @ApiResponse({ status: 400, description: 'Arquivo inválido.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Provedor não encontrado.' })
   @UseInterceptors(FileInterceptor('file'))
-  // MODIFICAÇÃO AQUI: Retorna a URL no corpo da resposta
+  // --- CORREÇÃO AQUI: Retorna a URL no corpo da resposta ---
   async uploadSelfie(
     @Req() req: Request,
     @UploadedFile() file: Multer.File,
@@ -153,8 +154,8 @@ export class VerificationController {
     if (!file) {
       throw new BadRequestException('Nenhum arquivo enviado.');
     }
-    const uploadedUrl = await this.verificationService.uploadSelfieWithDocument(providerId, file); // <-- Service agora retorna a URL
-    return { message: 'Selfie com documento enviada com sucesso.', url: uploadedUrl }; // <-- Retorna a URL
+    const uploadedUrl = await this.verificationService.uploadSelfieWithDocument(providerId, file);
+    return { message: 'Selfie com documento enviada com sucesso.', url: uploadedUrl };
   }
 
   @Patch(':providerId/status')

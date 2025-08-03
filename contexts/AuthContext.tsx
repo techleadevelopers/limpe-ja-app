@@ -1,6 +1,6 @@
 // LimpeJaApp/contexts/AuthContext.tsx
 
-import React, { createContext, ReactNode, useContext, useEffect, useState, useCallback } from 'react'; 
+import React, { createContext, ReactNode, useContext, useEffect, useState, useCallback } from 'react';
 // UserRole e VerificationStatus devem vir de onde são definidas (ex: '../types/backend/auth')
 // Importa AuthResponse, RegisterClientDto, RegisterProviderDto, UserRole, VerificationStatus
 import { AuthResponse, RegisterClientDto, RegisterProviderDto, UserRole, VerificationStatus } from '../types/backend/auth';
@@ -10,54 +10,17 @@ import authService from '../services/authService';
 // Importa setUnauthorizedCallback do seu serviço de API (onde o Axios é configurado)
 import { setUnauthorizedCallback } from '../services/api';
 
-// NOVO: Definições de detalhes específicos de cliente/provedor
-// IDEALMENTE, ESTAS INTERFACES DEVERIAM SER IMPORTADAS DE UM ARQUIVO DE TIPOS CENTRALIZADO (ex: '../types/backend/users')
-// MAS ESTÃO AQUI PARA GARANTIR QUE O AuthContext E _layout.tsx COMPILAM SEM ERROS DE TIPAGEM.
-// Por favor, mova estas definições para um local centralizado e importe-as.
+// [CORREÇÃO] Importa as interfaces de tipagem do arquivo centralizado
+import { ProviderDisplayInfo } from '../types/backend/providers';
+import { UserProfile } from '../types/backend/users';
+import { ClientDetails } from '../types/backend/clients'; // [CORREÇÃO] Agora importa apenas ClientDetails de clients.ts
+import { BookingAddress } from '../types/backend/bookings'; // [CORREÇÃO] Importa BookingAddress do arquivo correto
 
-export interface ClientDetails {
-  // Adicione as propriedades reais dos detalhes do cliente aqui
-  // Exemplo: address?: string | null; phone?: string | null;
-}
+// NOVO: Importa o serviço de usuário para buscar o perfil completo do backend
+import userService from '../services/userService'; // <--- ADICIONADO
 
-export interface ProviderDisplayInfo { // Renomeado para ProviderDisplayInfo com base nos erros
-  verificationStatus?: VerificationStatus | null; // Permite null
-  // Adicione outras propriedades de ProviderDisplayInfo aqui
-}
-
-export interface BookingAddress {
-  street: string;
-  number: string;
-  complement?: string | null;
-  neighborhood: string;
-  city: string;
-  state: string;
-  zipCode?: string; // Alterado para opcional com base nos erros anteriores
-}
-
-// DEFINIÇÃO EXPLÍCITA DE UserProfile AQUI para contornar problemas de tipo
-// Esta definição deve corresponder EXATAMENTE ao que o seu backend retorna para um usuário,
-// incluindo os detalhes específicos de cliente/provedor e permitindo 'null' onde aplicável.
-// IDEALMENTE, ESTA INTERFACE DEVERIA SER IMPORTADA DE UM ARQUIVO DE TIPOS CENTRALIZADO (ex: '../types/backend/users')
-// Mas mantemos aqui para compatibilidade imediata se a UserProfile importada não for completa.
-export interface UserProfile {
-  id: string;
-  email: string;
-  fullName?: string | null; // Alterado para permitir null
-  cpf?: string | null; // Alterado para permitir null
-  dateOfBirth?: string | null; // Alterado para permitir null
-  phone?: string | null; // Alterado para permitir null
-  avatarUrl?: string | null; // Adicionado e alterado para permitir null
-  role: UserRole;
-  createdAt?: string | null; // Adicionado e alterado para permitir null
-  updatedAt?: string | null; // Adicionado e alterado para permitir null
-  address?: BookingAddress | null; // Adicionado e alterado para permitir null
-  clientDetails?: ClientDetails | null; // Alterado para permitir null
-  providerDetails?: ProviderDisplayInfo | null; // Alterado para permitir null
-  // Adicione outras propriedades comuns do perfil de usuário aqui
-}
-
-// REMOVIDA: A interface AuthResponse local, agora importada de ../types/backend/auth
+// REMOVIDAS as definições locais de ClientDetails, ProviderDisplayInfo, BookingAddress e UserProfile
+// para evitar conflitos e usar uma fonte única de tipos.
 
 // NOVO: Tipo para dados carregados do armazenamento, que podem ser nulos.
 // Isso corresponde ao tipo de retorno de authService.loadAuthData().
@@ -75,7 +38,7 @@ interface AuthenticatedUserProfile extends UserProfile {
 }
 
 interface AuthContextType {
-  user: AuthenticatedUserProfile | null; // Alterado para AuthenticatedUserProfile
+  user: AuthenticatedUserProfile | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   role: UserRole | null;
@@ -87,7 +50,7 @@ interface AuthContextType {
   signUpProvider: (data: RegisterProviderDto) => Promise<void>;
   isRegistrationInProgress: boolean;
   setIsRegistrationInProgress: (inProgress: boolean) => void;
-  setAuthData: (authData: AuthResponse) => Promise<void>; // Esta espera um AuthResponse completo
+  setAuthData: (authData: AuthResponse) => Promise<void>;
   updateUser: (updatedUser: UserProfile) => Promise<void>;
 }
 
@@ -99,81 +62,72 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<AuthenticatedUserProfile | null>(null); // Alterado para AuthenticatedUserProfile
+  const [user, setUser] = useState<AuthenticatedUserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [role, setRole] = useState<UserRole | null>(null);
   const [isRegistrationInProgress, setIsRegistrationInProgress] = useState(false);
-
-  // isAuthenticated agora verifica a presença do token no objeto user
   const isAuthenticated = !!user && !!user.token;
 
   const logout = useCallback(async () => {
     try {
-      console.log('[AuthContext | logout] Iniciando logout...');
-      console.log('[AuthContext | logout] Chamada de:', new Error().stack); // <--- ADICIONADO PARA DEBUG
       setIsLoading(true);
       await authService.logout();
       setUser(null);
       setRole(null);
-      console.log('[AuthContext | logout] Logout bem-sucedido.');
+      // CORREÇÃO: Reseta o estado de registro ao fazer logout
+      setIsRegistrationInProgress(false);
     } catch (error) {
       console.error('[AuthContext | logout] Erro de logout:', error);
       throw error;
     } finally {
       setIsLoading(false);
     }
-  }, []); // Adicionado useCallback para otimização
+  }, []);
 
   useEffect(() => {
-    console.log('[AuthContext | useEffect] Configurando callback de logout e carregando dados.');
     setUnauthorizedCallback(logout);
     loadStoredData();
-  }, [logout]); // Adicionado logout como dependência do useEffect
+  }, [logout]);
+
+  // Helper para atualizar o estado do usuário no contexto
+  const updateAuthState = (authData: AuthDataFromStorage) => {
+    if (authData.token && authData.role && authData.id && authData.user) {
+      const authenticatedUser: AuthenticatedUserProfile = {
+        ...authData.user,
+        token: authData.token,
+      };
+      setUser(authenticatedUser);
+      setRole(authData.role);
+    } else {
+      setUser(null);
+      setRole(null);
+    }
+  };
 
   const loadStoredData = async () => {
     try {
-      console.log('[AuthContext | loadStoredData] Tentando carregar dados de autenticação armazenados...');
       setIsLoading(true);
-      // O retorno de authService.loadAuthData() já é do tipo AuthDataFromStorage
       const authData: AuthDataFromStorage = await authService.loadAuthData();
-
-      if (authData.token && authData.role && authData.id && authData.user) {
-        // Se todos os dados necessários estiverem presentes, construímos AuthenticatedUserProfile
-        const authenticatedUser: AuthenticatedUserProfile = {
-          ...authData.user, // Copia as propriedades de UserProfile
-          token: authData.token, // Adiciona o token (já checamos que não é null)
-        };
-        setUser(authenticatedUser);
-        setRole(authData.role); // authData.role é UserRole | null, mas já checamos que existe
-        console.log('[AuthContext | loadStoredData] Usuário autenticado a partir do armazenamento.');
-      } else {
-        console.log('[AuthContext | loadStoredData] Nenhum token encontrado ou dados incompletos no armazenamento. Usuário não autenticado via armazenamento.');
-        setUser(null);
-        setRole(null);
-      }
+      updateAuthState(authData);
     } catch (error) {
       console.error('[AuthContext | loadStoredData] Erro ao carregar dados armazenados:', error);
       setUser(null);
       setRole(null);
     } finally {
       setIsLoading(false);
-      console.log('[AuthContext | loadStoredData] Finalizado. isLoading:', false, 'isAuthenticated (derivado atual):', !!user && !!user.token);
     }
   };
 
   const login = async (credentials: { email: string; password: string }): Promise<void> => {
     try {
       setIsLoading(true);
-      // authService.login retorna AuthResponse (com accessToken e user)
       const authData: AuthResponse = await authService.login(credentials);
-      // Constrói o objeto AuthenticatedUserProfile usando accessToken como token
       const authenticatedUser: AuthenticatedUserProfile = {
         ...authData.user,
-        token: authData.accessToken, // Mapeia accessToken para token
+        token: authData.accessToken,
       };
       setUser(authenticatedUser);
-      setRole(authData.user.role as UserRole); // O papel está em authData.user
-      console.log('[AuthContext | login] Login bem-sucedido. Papel do usuário:', authData.user.role);
+      setRole(authData.user.role as UserRole);
     } catch (error) {
       console.error('[AuthContext | login] Erro de login:', error);
       throw error;
@@ -184,7 +138,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const register = async (userData: any, userType: 'client' | 'provider') => {
     try {
-      console.log(`[AuthContext | register] Iniciando registro como ${userType}...`);
       setIsLoading(true);
       let authData: AuthResponse;
       if (userType === 'client') {
@@ -192,14 +145,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       } else {
         authData = await authService.registerProvider(userData);
       }
-      // Constrói o objeto AuthenticatedUserProfile usando accessToken como token
       const authenticatedUser: AuthenticatedUserProfile = {
         ...authData.user,
-        token: authData.accessToken, // Mapeia accessToken para token
+        token: authData.accessToken,
       };
       setUser(authenticatedUser);
       setRole(authData.user.role as UserRole);
-      console.log('[AuthContext | register] Registro bem-sucedido. Papel do usuário:', authData.user.role);
     } catch (error) {
       console.error('[AuthContext | register] Erro de registro:', error);
       throw error;
@@ -210,12 +161,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signUpClient = async (data: RegisterClientDto) => {
     try {
-      console.log('[AuthContext | signUpClient] Iniciando cadastro de cliente...');
       setIsLoading(true);
-      // authService.registerClient deve retornar AuthResponse, mas o login subsequente é o que define o estado
-      await authService.registerClient(data); // Esta chamada pode retornar AuthResponse, mas não é usada diretamente aqui
-      await login({ email: data.email, password: data.password }); // O login já constrói AuthenticatedUserProfile
-      console.log('[AuthContext | signUpClient] Cadastro de cliente bem-sucedido.');
+      await authService.registerClient(data);
+      await login({ email: data.email, password: data.password });
     } catch (error) {
       console.error('[AuthContext | signUpClient] Erro no cadastro de cliente:', error);
       throw error;
@@ -226,13 +174,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signUpProvider = async (data: RegisterProviderDto) => {
     try {
-      console.log('[AuthContext | signUpProvider] Iniciando cadastro de provedor...');
       setIsLoading(true);
       setIsRegistrationInProgress(true);
-      // authService.registerProvider deve retornar AuthResponse, mas o login subsequente é o que define o estado
-      await authService.registerProvider(data); // Esta chamada pode retornar AuthResponse, mas não é usada diretamente aqui
-      await login({ email: data.email, password: data.password }); // O login já constrói AuthenticatedUserProfile
-      console.log('[AuthContext | signUpProvider] Cadastro de provedor bem-sucedido.');
+      await authService.registerProvider(data);
+      await login({ email: data.email, password: data.password });
     } catch (error) {
       console.error('[AuthContext | signUpProvider] Erro no cadastro de provedor:', error);
       setIsRegistrationInProgress(false);
@@ -242,20 +187,49 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // !!! CORREÇÃO CRÍTICA AQUI: refreshUser agora busca do backend !!!
   const refreshUser = async () => {
-    console.log('[AuthContext | refreshUser] Atualizando dados do usuário...');
-    await loadStoredData();
+    console.log('[AuthContext | refreshUser] Recarregando dados do usuário do backend...');
+    try {
+      setIsLoading(true);
+      // Pega o token atual do estado do usuário ou do armazenamento
+      const currentToken = user?.token || (await authService.loadAuthData()).token;
+      if (!currentToken) {
+        console.warn('[AuthContext | refreshUser] Nenhum token encontrado para refreshUser. Realizando logout.');
+        await logout(); // Sem token, significa que o usuário não está autenticado
+        return;
+      }
+
+      // Faz uma chamada à API para buscar o perfil de usuário mais recente
+      // Assumindo que userService.getMe() existe e retorna UserProfile
+      const latestUserProfile: UserProfile = await userService.getMe(); // <--- CHAMA O BACKEND AQUI
+
+      // Atualiza o estado do usuário no contexto
+      const authenticatedUser: AuthenticatedUserProfile = {
+        ...latestUserProfile,
+        token: currentToken, // Mantém o token existente
+      };
+      setUser(authenticatedUser);
+      setRole(latestUserProfile.role as UserRole);
+      console.log('[AuthContext | refreshUser] Dados do usuário atualizados com sucesso do backend.');
+    } catch (error) {
+      console.error('[AuthContext | refreshUser] Erro ao recarregar dados do usuário do backend:', error);
+      // Se a busca falhar, pode significar que o token é inválido ou expirou
+      await logout();
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const updateUser = async (updatedUser: UserProfile) => {
     if (user) {
       const updatedAuthenticatedUser: AuthenticatedUserProfile = {
         ...updatedUser,
-        token: user.token, // Mantém o token existente
+        token: user.token,
       };
       setUser(updatedAuthenticatedUser);
       setRole(updatedUser.role as UserRole);
-      // TODO: Adicionar lógica para salvar no armazenamento, se necessário
     } else {
       console.warn('[AuthContext | updateUser] Tentativa de atualizar usuário não logado.');
     }
@@ -263,16 +237,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const setAuthData = async (authData: AuthResponse) => {
     try {
-      console.log('[AuthContext | setAuthData] Definindo dados de autenticação no contexto...');
       setIsLoading(true);
-      // Constrói o objeto AuthenticatedUserProfile usando accessToken como token
       const authenticatedUser: AuthenticatedUserProfile = {
         ...authData.user,
-        token: authData.accessToken, // Mapeia accessToken para token
+        token: authData.accessToken,
       };
       setUser(authenticatedUser);
       setRole(authData.user.role as UserRole);
-      console.log('[AuthContext | setAuthData] Dados de autenticação definidos no contexto. Papel:', authData.user.role);
     } catch (error) {
       console.error('[AuthContext | setAuthData] Erro ao definir dados de autenticação:', error);
       throw error;
@@ -302,7 +273,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 };
 
 export const useAuth = (): AuthContextType => {
-  console.log('[useAuth] Valor de AuthContext antes de useContext:', AuthContext);
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');

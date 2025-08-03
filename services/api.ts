@@ -17,14 +17,12 @@ export const setUnauthorizedCallback = (callback: () => Promise<void>) => {
 };
 // --- Fim da nova lógica para callback de logout ---
 
-// Certifique-se de que EXPO_PUBLIC_API_BASE_URL está definida em seu .env ou app.config.js/ts
-// E que é acessível no ambiente de execução do Expo.
-// Usa Constants.expoConfig?.extra para acessar variáveis públicas do app.json
+
 
 // URL do backend na nuvem (original do app.json) - DESCOMENTADA PARA USO DA URL DO GCLOUD
-const API_BASE_URL = Constants.expoConfig?.extra?.backendApiUrl as string;
+//const API_BASE_URL = Constants.expoConfig?.extra?.backendApiUrl as string;
 
-// const API_BASE_URL = 'http://localhost:3000'; // OU a porta que seu backend local está usando
+ const API_BASE_URL = 'http://localhost:3000'; // OU a porta que seu backend local está usando
 
 if (!API_BASE_URL) {
     console.error('backendApiUrl não está definido em app.json ou Constants.expoConfig.extra! Verifique sua configuração.');

@@ -24,15 +24,15 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
     const scaleAnim = useRef(new Animated.Value(1)).current;
     const onPressIn = () => {
         Animated.spring(scaleAnim, {
-            toValue: 0.96, // Escala o card ligeiramente para dentro
+            toValue: 0.96,
             useNativeDriver: true,
-            friction: 8, // Mais fricção para um toque mais "macio"
+            friction: 8,
             tension: 100,
         }).start();
     };
     const onPressOut = () => {
         Animated.spring(scaleAnim, {
-            toValue: 1, // Volta à escala normal
+            toValue: 1,
             useNativeDriver: true,
             friction: 8,
             tension: 100,
@@ -55,8 +55,8 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
                 <Ionicons
                     key={i}
                     name={iconName}
-                    size={14} // Tamanho da estrela
-                    color="#007AFF" // Azul vibrante para as estrelas
+                    size={14}
+                    color="#007AFF"
                     style={styles.ratingStarIcon}
                 />
             );
@@ -72,26 +72,48 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
         }
     };
 
+    // --- CORREÇÃO NA LÓGICA DA IMAGEM ---
+    // A imagem padrão deve ser um objeto `require` para ser corretamente processada pelo Metro Bundler
     const avatarSource = item.avatarUrl
         ? { uri: item.avatarUrl }
-        : require('../../../../assets/images/default-avatar.png'); // Imagem padrão
+        : require('../../../../assets/images/default-avatar.png');
 
-    // --- Lógica do Preço: Média dos serviços do provedor, com tratamento para Prisma.Decimal ---
+    // --- CORREÇÃO NA LÓGICA DO PREÇO ---
     const averagePrice = item.providerServices && item.providerServices.length > 0
         ? item.providerServices.reduce((sum, service) => {
-            const priceValue = (service.price && typeof (service.price as any).toNumber === 'function')
-                ? (service.price as any).toNumber()
-                : (typeof service.price === 'number' ? service.price : 0);
-            return sum + priceValue;
+            // Lógica para extrair o valor do preço de qualquer um dos campos possíveis
+            let priceValue = 0;
+            if (service.price && typeof service.price === 'object' && 'toNumber' in service.price) {
+                priceValue = (service.price as any).toNumber();
+            } else if (typeof service.price === 'number') {
+                priceValue = service.price;
+            }
+
+            let pricePerRoomValue = 0;
+            if (service.pricePerRoom && typeof service.pricePerRoom === 'object' && 'toNumber' in service.pricePerRoom) {
+                pricePerRoomValue = (service.pricePerRoom as any).toNumber();
+            } else if (typeof service.pricePerRoom === 'number') {
+                pricePerRoomValue = service.pricePerRoom;
+            }
+
+            let pricePerSquareMeterValue = 0;
+            if (service.pricePerSquareMeter && typeof service.pricePerSquareMeter === 'object' && 'toNumber' in service.pricePerSquareMeter) {
+                pricePerSquareMeterValue = (service.pricePerSquareMeter as any).toNumber();
+            } else if (typeof service.pricePerSquareMeter === 'number') {
+                pricePerSquareMeterValue = service.pricePerSquareMeter;
+            }
+            
+            // Retorna o primeiro valor de preço válido que encontrar
+            return sum + (priceValue || pricePerRoomValue || pricePerSquareMeterValue);
         }, 0) / item.providerServices.length
         : 0;
-
+    
     // --- Lógica para exibir categorias (Tags) ---
     const categoriesToDisplay: string[] = [];
     if (item.providerServices && item.providerServices.length > 0) {
         // CORREÇÃO: Acessa service.name em vez de serviceType
         if (item.providerServices[0].service?.name) {
-             categoriesToDisplay.push(item.providerServices[0].service.name);
+            categoriesToDisplay.push(item.providerServices[0].service.name);
         }
     }
     // Fallback para categorias se não houver serviços ou service.name
@@ -131,13 +153,9 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
                     <View style={styles.categoryChipsContainer}>
                         {displayedCategories.map((category, index) => (
                             <View key={index} style={styles.categoryChip}>
-                                <Text style={styles.categoryChipText}>{category}</Text> {/* Texto preto aqui */}
+                                <Text style={styles.categoryChipText}>{category}</Text>
                             </View>
                         ))}
-                        {/* Removido o fallback fixo para "Comercial" e "Escritório" aqui,
-                            pois a lógica acima já os adiciona se o bio contiver as palavras.
-                            Se `displayedCategories` ainda estiver vazio, a última condição
-                            do `categoriesToDisplay` adicionará "Limpeza Geral". */}
                     </View>
 
                     {/* Preço e Avaliação */}
