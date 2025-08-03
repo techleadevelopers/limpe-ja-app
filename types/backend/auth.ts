@@ -86,10 +86,11 @@ export interface ForgotPasswordDto {
  */
 
 /**
- * @interface AuthResponseDto
+ * @interface AuthResponse
  * Representa a resposta do backend após um login ou registro bem-sucedido.
+ * Renomeado de AuthResponseDto para AuthResponse para consistência.
  */
-export interface AuthResponseDto {
+export interface AuthResponse {
   accessToken: string;
   user: UserProfile; // <-- CORREÇÃO: Agora usa a interface UserProfile completa
 }

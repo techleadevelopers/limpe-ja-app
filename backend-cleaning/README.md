@@ -15,8 +15,10 @@ Comunicação em Tempo Real: Socket.IO - Para funcionalidades de chat e notifica
 Validação: Class-validator e Class-transformer - Para validação declarativa de DTOs.
 Documentação API: Swagger (OpenAPI) - Para documentação automática e interativa da API.
 Variáveis de Ambiente: @nestjs/config com Joi - Para gerenciamento e validação de configurações.
+
 2.2. Estrutura de Módulos (NestJS)
 O backend é organizado em módulos coesos, seguindo o princípio de responsabilidade única. Cada módulo encapsula funcionalidades específicas, incluindo seus próprios controladores, serviços, DTOs e entidades.
+
 
 src/auth: Gerenciamento de autenticação (registro, login, redefinição de senha).
 src/users: Operações genéricas sobre usuários (perfis, dados básicos).
@@ -32,9 +34,13 @@ src/notifications: Gestão de notificações para usuários.
 src/reviews: Submissão e consulta de avaliações.
 src/offers: Gerenciamento de ofertas e promoções.
 src/search: Motor de busca abrangente.
+src/dashboard: Gerenciamento de dados do painel para provedores.
+src/verification: Gerenciamento do processo de verificação de provedores (documentos, selfie, OCR, liveness).
 src/prisma: Módulo global para o PrismaService.
 src/config: Módulo global para gerenciamento de configurações.
 src/common: Componentes reutilizáveis (pipes, filtros de exceção, DTOs genéricos, enums).
+
+
 2.3. Fluxo de Requisição
 Requisição HTTP/WebSocket: O frontend envia uma requisição para um endpoint específico.
 Guards (Autenticação/Autorização): JwtAuthGuard valida o token JWT. RolesGuard verifica se o usuário autenticado possui as roles necessárias para acessar a rota.
@@ -46,6 +52,7 @@ Resposta: O serviço retorna os dados para o controlador, que os formata (geralm
 Filters (Tratamento de Exceções): HttpExceptionFilter captura exceções HTTP, formatando as respostas de erro de forma consistente para o frontend.
 
 Módulos e Funcionalidades Detalhadas
+
 3.1. Módulo de Autenticação (AuthModule)
 Responsabilidade: Gerenciar o ciclo de vida da autenticação.
 Controlador (AuthController):
@@ -53,9 +60,11 @@ POST /auth/register/client: Registra um novo cliente.
 POST /auth/register/provider: Registra um novo provedor.
 POST /auth/login: Autentica um usuário (cliente/provedor) e retorna um JWT.
 POST /auth/forgot-password: Inicia o processo de redefinição de senha.
-Serviço (AuthService): Lógica de registro (hash de senha, criação de usuário/cliente/provedor), validação de credenciais, geração de JWT.
+Serviço (AuthService): Lógica de registro (hash de senha, criação de usuário/cliente/provedor), validação de credenciais, geração de JWT. **Removida a autenticação baseada em telefone/OTP. O registro de cliente e provedor agora inclui o tratamento de coordenadas geoespaciais para o endereço.**
 DTOs: LoginDto, RegisterClientDto, RegisterProviderDto, ForgotPasswordDto, AuthResponseDto, MessageResponseDto.
 Guards: LocalAuthGuard (para login), JwtAuthGuard.
+
+
 3.2. Módulo de Usuários (UsersModule)
 Responsabilidade: Gerenciar perfis de usuário genéricos (base para clientes e provedores).
 Controlador (UsersController):
@@ -65,6 +74,7 @@ GET /users/:id (ADMIN): Obtém o perfil de qualquer usuário por ID.
 DELETE /users/:id (ADMIN): Deleta um usuário por ID.
 Serviço (UsersService): Lógica para buscar (findOne com includes para client/provider e suas relações), atualizar e remover usuários.
 DTOs: UserProfileDto, UpdateUserDto.
+
 3.3. Módulo de Clientes (ClientsModule)
 Responsabilidade: Gerenciar a lógica específica para o papel de cliente.
 Controlador (ClientsController):
@@ -73,12 +83,13 @@ PATCH /clients/me (CLIENT): Atualiza o perfil do cliente logado (nome, telefone,
 GET /clients/:id (ADMIN): Obtém o perfil de qualquer cliente por ID.
 Serviço (ClientsService): Lógica para buscar clientes por ID/UserID, atualizar dados do cliente, e compilar dados para o dashboard.
 DTOs: ClientDashboardDto, UpdateClientProfileDto, ClientDetailsDto.
+
 3.4. Módulo de Provedores (ProvidersModule)
 Responsabilidade: Gerenciar a lógica específica para o papel de provedor.
 Controlador (ProvidersController):
 GET /providers/:id: Obtém detalhes públicos de um provedor.
 GET /providers/me (PROVIDER): Obtém o perfil completo do provedor logado.
-PATCH /providers/me (PROVIDER): Atualiza o perfil do provedor logado (nome, CPF, data de nascimento, telefone, bio, endereço, etc.).
+PATCH /providers/me (PROVIDER): Atualiza o perfil do provedor logado (nome, CPF, data de nascimento, telefone, bio, endereço, etc.), **incluindo a chave PIX e o status de verificação**.
 DELETE /providers/:id (ADMIN): Deleta um provedor por ID.
 GET /providers: Busca provedores com filtros (termo, localização, rating, geoespacial).
 GET /providers/recommended: Obtém uma lista de provedores recomendados.
@@ -87,8 +98,10 @@ POST /providers/:providerId/services (PROVIDER): Adiciona um novo serviço à li
 GET /providers/:providerId/services: Lista todos os serviços oferecidos por um provedor específico.
 PATCH /providers/:providerId/services/:id (PROVIDER): Atualiza um serviço específico oferecido por um provedor.
 DELETE /providers/:providerId/services/:id (PROVIDER): Remove um serviço específico oferecido por um provedor.
-Serviço (ProvidersService): Lógica para buscar provedores por ID/UserID, atualizar dados do provedor, e realizar buscas complexas.
+Serviço (ProvidersService): Lógica para buscar provedores por ID/UserID, atualizar dados do provedor, e realizar buscas complexas. **Aprimorado com busca geoespacial utilizando PostGIS (ST_DistanceSphere, ST_DWithin) para encontrar provedores por proximidade, além de filtros por termo, serviço, localização e rating. Inclui `fiveStarReviewCount` e `monthlyBookingsCount` nos resultados. Contém métodos para buscar provedores pendentes de verificação (`getPendingProviders`) e provedores recomendados/experientes (`findTopRatedOrExperiencedProviders`).**
 DTOs: ProviderDetailsDto, UpdateProviderProfileDto, ProviderSearchDto.
+
+
 3.5. Módulo de Disponibilidade (AvailabilityModule)
 Responsabilidade: Gerenciar os horários de disponibilidade dos provedores.
 Controlador (AvailabilityController):
@@ -98,6 +111,7 @@ POST /providers/:providerId/availability (PROVIDER): Adiciona um novo slot de di
 DELETE /providers/:providerId/availability/:availabilityId (PROVIDER): Deleta um slot específico.
 Serviço (AvailabilityService): Lógica para CRUD de slots de disponibilidade, incluindo validação de propriedade do provedor.
 DTOs: GetAvailabilityDto, UpdateAvailabilityDto.
+
 3.6. Módulo de Tipos de Serviço Globais (ServicesModule)
 Responsabilidade: Gerenciar os tipos de serviços que a plataforma oferece (e.g., "Limpeza Padrão", "Eletricista").
 Controlador (ServicesController):
@@ -108,6 +122,7 @@ PATCH /services/:id (ADMIN): Atualiza um tipo de serviço.
 DELETE /services/:id (ADMIN): Deleta um tipo de serviço.
 Serviço (ServicesService): Lógica para CRUD de tipos de serviço.
 DTOs: CreateServiceDto, UpdateServiceDto, ServiceDetailsDto.
+
 3.7. Módulo de Serviços Oferecidos por Provedores (ProviderServicesModule)
 Responsabilidade: Gerenciar os serviços específicos que cada provedor oferece (e.g., "Maria oferece Limpeza Padrão por R$100").
 Controlador (ProviderServicesController):
@@ -115,8 +130,11 @@ POST /providers/:providerId/services (PROVIDER): Adiciona um serviço oferecido 
 GET /providers/:providerId/services: Lista todos os serviços oferecidos por um provedor.
 PATCH /providers/:providerId/services/:id (PROVIDER): Atualiza um serviço oferecido.
 DELETE /providers/:providerId/services/:id (PROVIDER): Remove um serviço oferecido.
-Serviço (ProviderServicesService): Lógica para CRUD de ProviderService, incluindo validações de existência e unicidade.
+Serviço (ProviderServicesService): Lógica para CRUD de ProviderService, incluindo validações de existência e unicidade. **Agora suporta diferentes tipos de precificação (por preço fixo, por hora, por tamanho, por cômodo) com campos `pricePerSquareMeter` e `pricePerRoom`.**
 DTOs: CreateProviderServiceDto, UpdateProviderServiceDto.
+
+
+
 3.8. Módulo de Agendamentos (BookingsModule)
 Responsabilidade: Gerenciar o ciclo de vida dos agendamentos de serviços.
 Controlador (BookingsController):
@@ -127,13 +145,21 @@ PATCH /bookings/:id/status (CLIENT/PROVIDER): Atualiza o status de um agendament
 PATCH /bookings/:id/cancel (CLIENT): Cancela um agendamento.
 Serviço (BookingsService): Lógica para criação de agendamentos (verificando provedor/serviço), busca de agendamentos por usuário/role, e transições de status complexas.
 DTOs: CreateBookingDto, UpdateBookingStatusDto, BookingDetailsDto.
+
+
 3.9. Módulo de Pagamentos (PaymentsModule)
 Responsabilidade: Gerenciar operações de pagamento e saque.
 Controlador (PaymentsController):
 POST /payments/pix-charge: Cria uma cobrança PIX (simulada).
 POST /payments/withdrawal: Solicita um saque de um provedor.
-Serviço (PaymentsService): Lógica para simulação de PIX (geração de BR Code/QR Code) e registro de solicitações de saque.
+POST /payments/webhook/pix: **NOVO ENDPOINT.** Recebe notificações de webhook de pagamento PIX do gateway (PagSeguro).
+Serviço (PaymentsService):
+- `createPixCharge`: Lógica para criar cobranças PIX, incluindo busca de detalhes completos do cliente (email, nome, telefone, CPF, endereço) e do agendamento/serviço. Integração com a API do PagSeguro para geração de QR Code e BR Code, e atualização do status do agendamento para PENDING.
+- `requestWithdrawal`: Processa solicitações de saque de provedores, validando o saldo disponível e registrando a transação.
+- `handlePixWebhook`: **NOVO MÉTODO.** Processa notificações de webhook de PIX, atualizando o status da transação e do agendamento (para CONFIRMED ou CANCELED) conforme o retorno do gateway.
 DTOs: CreatePixChargeDto, PixChargeResponseDto, RequestWithdrawalDto, MessageResponseDto.
+
+
 3.10. Módulo de Chat (ChatModule)
 Responsabilidade: Gerenciar a comunicação de mensagens entre usuários.
 Controlador (ChatController): (REST fallback)
@@ -185,6 +211,29 @@ GET /: Rota raiz, geralmente para verificar se a API está online ou retornar um
 GET /health: Endpoint para verificações de saúde da aplicação.
 Serviço (AppService): Lógica para as rotas gerais da aplicação.
 DTOs: Nenhum DTO específico para estas rotas.
+
+3.16. Módulo de Verificação (VerificationModule)
+Responsabilidade: Gerenciar o processo de verificação de provedores, incluindo upload e processamento de documentos, selfie, OCR, verificação de vivacidade (liveness), comparação facial e aprovação/rejeição manual.
+Controlador (VerificationController):
+GET /verification/pending-queue (ADMIN): Obtém a lista de provedores com status de verificação pendente de revisão manual ou upload de documentos.
+POST /verification/upload-document/:type (PROVIDER): Permite que o provedor faça upload da foto da frente ou verso de um documento de identificação. Processa OCR no documento.
+POST /verification/upload-selfie (PROVIDER): Permite que o provedor faça upload de uma selfie com o documento. Realiza verificação de vivacidade (liveness check) e comparação facial com o documento enviado anteriormente.
+PATCH /verification/:providerId/status (ADMIN): Atualiza manualmente o status de verificação de um provedor (APROVADO, REJEITADO, etc.).
+POST /verification/reject/:providerId (ADMIN): Rejeita um provedor, exigindo um motivo.
+GET /verification/status/:providerId (ADMIN, PROVIDER): Obtém o status atual da verificação de um provedor, incluindo o progresso dos uploads e resultados de OCR/Liveness.
+Serviço (VerificationService): Orquestra o fluxo de verificação. Responsável por:
+- Gerenciar uploads de arquivos para armazenamento.
+- Chamar `DocumentProcessingService` para OCR, liveness check e comparação facial.
+- Atualizar o `verificationStatus` do provedor automaticamente com base no progresso das verificações (`updateProviderVerificationStatus`).
+- Permitir atualizações manuais de status e registro de motivos de rejeição.
+DTOs: UploadDocumentDto, UploadSelfieDto, UpdateVerificationStatusDto.
+
+3.17. Módulo de Dashboard (DashboardModule)
+Responsabilidade: Fornecer dados sumarizados e relevantes para o painel do provedor logado.
+Controlador (DashboardController):
+GET /providers/me/dashboard (PROVIDER): Obtém todos os dados necessários para o dashboard de um provedor, incluindo agendamentos futuros, ganhos, avaliações recentes, contagem de avaliações 5 estrelas e contagem de agendamentos mensais.
+Serviço (DashboardService): Agrega dados de diversos serviços (ProvidersService, BookingsService, EarningsService, ReviewsService) para compilar o `DashboardDto`.
+DTOs: DashboardDto.
 
 Modelo de Dados (Prisma Schema)
 O schema.prisma (prisma/schema.prisma) define o modelo de dados relacional e é a fonte da verdade para a estrutura do banco de dados. As principais entidades e suas relações são:

@@ -135,7 +135,7 @@ function RootLayoutContent() {
                 if (isProviderPendingVerification) {
                     if (cleanedCurrentPath !== authVerifyAccountStep) {
                         console.log(`[RootLayoutContent | decideAndRedirect] AÇÃO: Provedor (${user.email}) pendente de verificação, fora da página de verificação. Redirecionando para: '${authVerifyAccountStep}'.`);
-                        router.replace(authVerifyAccountStep as any);
+                        router.replace(authServiceDetailsStep as any);
                         console.groupEnd();
                         return;
                     }

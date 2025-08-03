@@ -141,86 +141,105 @@ export default function ServiceDetailsScreen() {
   };
 
   const handleContinue = async () => {
-    if (!user || !user.token || !user.id) { // user.id é necessário para buscar os serviços do provedor
+    console.log("[handleContinue] Iniciando...");
+    console.log("[handleContinue] user object:", user);
+    // Adicionando logs mais específicos para depuração
+    console.log("[handleContinue] user.id:", user?.id);
+    console.log("[handleContinue] user.token:", user?.token);
+
+
+    if (!user || !user.token || !user.id) {
+        console.log("[handleContinue] Erro: Usuário não logado ou token/ID ausente.");
         Alert.alert('Erro de autenticação', 'Usuário não logado ou token/ID ausente. Por favor, faça login novamente.');
         return;
     }
 
     // Validações básicas do formulário
     if (!formData.profilePhoto) {
+      console.log("[handleContinue] Validação falhou: profilePhoto ausente.");
       Alert.alert('Atenção', 'Por favor, adicione uma foto de perfil para continuar.');
       return;
     }
     if (!formData.description.trim()) {
+      console.log("[handleContinue] Validação falhou: description ausente.");
       Alert.alert('Atenção', 'A descrição do serviço é obrigatória.');
       return;
     }
     if (!formData.yearsOfExperience.trim() || isNaN(parseInt(formData.yearsOfExperience))) {
+      console.log("[handleContinue] Validação falhou: yearsOfExperience inválido.");
       Alert.alert('Atenção', 'Os anos de experiência são obrigatórios e devem ser um número.');
       return;
     }
     if (!formData.basePrice.trim() || isNaN(parseFloat(formData.basePrice))) {
+      console.log("[handleContinue] Validação falhou: basePrice inválido.");
       Alert.alert('Atenção', 'O preço base é obrigatório e deve ser um número.');
       return;
     }
     if (formData.specialties.length === 0) {
+      console.log("[handleContinue] Validação falhou: specialties ausente.");
       Alert.alert('Atenção', 'Por favor, selecione pelo menos um tipo de serviço.');
       return;
     }
     if (!formData.priceUnit) {
+      console.log("[handleContinue] Validação falhou: priceUnit ausente.");
       Alert.alert('Atenção', 'Por favor, selecione um tipo de precificação (por hora, quarto, ou metragem).');
       return;
     }
     
     setIsUploading(true); // Inicia o estado de upload/processamento
+    console.log("[handleContinue] Todas as validações passadas. Iniciando upload/atualização.");
 
     try {
       // 1. Upload da Foto de Perfil
       let avatarUrl = formData.profilePhoto; 
 
       if (formData.profilePhoto && formData.profilePhoto.startsWith('file://')) {
+        console.log("[handleContinue] Tentando upload de foto de perfil...");
         const photoBlob = await uriToBlob(formData.profilePhoto);
         const uploadFormData = new FormData();
         uploadFormData.append('file', photoBlob, 'profile.jpg'); // 'file' deve ser o nome esperado pelo seu backend
 
-        // Usando a instância global 'api'
         const uploadResponse = await api.post('/upload-image', uploadFormData, {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
         });
-        avatarUrl = uploadResponse.data.url; // URL pública da imagem retornada pelo backend
+        avatarUrl = uploadResponse.data.url;
+        console.log("[handleContinue] Upload de foto de perfil concluído. URL:", avatarUrl);
+      } else {
+        console.log("[handleContinue] profilePhoto não é um URI local ou está vazio. Usando valor existente:", avatarUrl);
       }
 
       // 2. Atualizar o Perfil do Prestador (PATCH /providers/me)
       const profileUpdateData = {
         avatarUrl: avatarUrl,
-        bio: formData.description, // Mapeia description do form para bio do provedor
+        bio: formData.description,
         yearsOfExperience: parseInt(formData.yearsOfExperience, 10),
         pixKey: formData.pixKey,
-        // Outros campos do perfil podem ser adicionados aqui se o formulário os coletar
       };
-      // Usando a função de serviço dedicada
+      console.log("[handleContinue] Atualizando perfil do provedor com dados:", profileUpdateData);
       await updateMyProviderProfile(profileUpdateData);
+      console.log("[handleContinue] Perfil do provedor atualizado com sucesso.");
 
       // 3. Gerenciar os Serviços do Prestador (POST e PATCH em /providers/:providerId/services)
-      // Primeiro, buscar os serviços já oferecidos pelo provedor para saber quais atualizar e quais criar
+      console.log("[handleContinue] Buscando serviços existentes do provedor...");
       const existingProviderServices = await getProviderServicesOffered(user.id);
+      console.log("[handleContinue] Serviços existentes encontrados:", existingProviderServices);
 
       for (const specialty of formData.specialties) {
         const serviceId = SERVICE_MAPPINGS[specialty];
         if (!serviceId) {
-          console.warn(`[handleContinue] ServiceId não encontrado para a especialidade: ${specialty}`);
-          continue; // Pula se não houver mapeamento
+          console.warn(`[handleContinue] ServiceId não encontrado para a especialidade: ${specialty}. Pulando.`);
+          continue;
         }
+        console.log(`[handleContinue] Processando especialidade: ${specialty} (serviceId: ${serviceId})`);
 
         let serviceData: any = {
           serviceId: serviceId,
-          description: formData.description, // Pode ser uma descrição específica do serviço ou a geral do provedor
+          description: formData.description,
           durationMinutes: 60, // Exemplo: duração padrão, ajuste conforme necessário
         };
 
-        // Lógica de mapeamento do preço e tipo de precificação
         const basePriceValue = parseFloat(formData.basePrice);
         if (formData.priceUnit === 'hora') {
           serviceData.pricingType = PricingType.HOURLY;
@@ -231,41 +250,46 @@ export default function ServiceDetailsScreen() {
           serviceData.pricingType = PricingType.BY_SIZE;
           serviceData.pricePerRoom = basePriceValue;
           serviceData.pricePerSquareMeter = null;
-          serviceData.price = 0; // Preço fixo pode ser 0 ou null se for por tamanho/quarto
+          serviceData.price = 0;
         } else if (formData.priceUnit === 'metragem') {
           serviceData.pricingType = PricingType.BY_SIZE;
           serviceData.pricePerSquareMeter = basePriceValue;
           serviceData.pricePerRoom = null;
-          serviceData.price = 0; // Preço fixo pode ser 0 ou null se for por tamanho/quarto
+          serviceData.price = 0;
         } else {
-            console.warn(`[handleContinue] Tipo de precificação desconhecido: ${formData.priceUnit}`);
-            continue; // Pula se o tipo de precificação não for válido
+            console.warn(`[handleContinue] Tipo de precificação desconhecido: ${formData.priceUnit}. Pulando.`);
+            continue;
         }
+        console.log("[handleContinue] Dados do serviço a serem enviados:", serviceData);
 
-        // Verifica se o serviço já existe para este provedor
+
         const existingService = existingProviderServices.find(
           (s: any) => s.serviceId === serviceId
         );
 
         if (existingService) {
-          // Se o serviço existe, atualiza (PATCH) usando a função de serviço dedicada
+          console.log(`[handleContinue] Serviço existente encontrado (ID: ${existingService.id}). Atualizando...`);
           await updateProviderServiceOffering(user.id, existingService.id, serviceData);
+          console.log(`[handleContinue] Serviço ${existingService.id} atualizado.`);
         } else {
-          // Se o serviço não existe, cria (POST) usando a função de serviço dedicada
+          console.log("[handleContinue] Serviço não existente. Criando novo serviço...");
           await addProviderServiceOffering(user.id, serviceData);
+          console.log(`[handleContinue] Novo serviço criado para serviceId: ${serviceId}.`);
         }
       }
 
-      // Sucesso: Atualiza o estado de registro e navega
+      console.log("[handleContinue] Todos os serviços processados. Sucesso!");
       setIsRegistrationInProgress(false);
       Alert.alert('Sucesso', 'Seu perfil foi salvo! Agora vamos verificar seus documentos.');
+      console.log("[handleContinue] Tentando navegar para /provider-register/verify-account");
       router.push('/provider-register/verify-account');
 
     } catch (error: any) {
-      console.error('Erro ao salvar os dados do provedor:', error.response?.data || error.message);
+      console.error('Erro ao salvar os dados do provedor:', error.response?.data || error.message, error.stack);
       Alert.alert('Erro', `Ocorreu um erro ao salvar seus dados: ${error.response?.data?.message || error.message}. Tente novamente.`);
     } finally {
       setIsUploading(false); // Finaliza o estado de upload/processamento
+      console.log("[handleContinue] Finalizando handleContinue.");
     }
   };
 
