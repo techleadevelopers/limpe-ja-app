@@ -9,16 +9,20 @@ import {
   Platform,
   Animated,
   Alert,
-  RefreshControl, // Added for pull-to-refresh
-  Image, // <--- Adicione Image aqui
-
+  RefreshControl,
+  Image,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Calendar, LocaleConfig, DateData } from 'react-native-calendars';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'; // Added MaterialCommunityIcons for more icon options
-import { formatDate } from '../../../utils/helpers'; // Adjust path as needed
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { formatDate } from '../../../utils/helpers';
 
-// Configure locale for the calendar (Brazilian Portuguese)
+// Importa a função REAL do bookingService
+import { getBookingsForUser } from '../../../services/bookingService';
+import { BookingDetails, BookingStatus } from '../../../types/backend/bookings'; // Tipos de agendamento e status
+import { useAuth } from '../../../hooks/useAuth'; // Para obter o ID do usuário logado
+
+// Configura o idioma do calendário para Português do Brasil
 LocaleConfig.locales['pt-br'] = {
   monthNames: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'],
   monthNamesShort: ['Jan.', 'Fev.', 'Mar.', 'Abr.', 'Mai.', 'Jun.', 'Jul.', 'Ago.', 'Set.', 'Out.', 'Nov.', 'Dez.'],
@@ -28,42 +32,23 @@ LocaleConfig.locales['pt-br'] = {
 };
 LocaleConfig.defaultLocale = 'pt-br';
 
-// Type for a provider appointment (consider moving to types/ if used elsewhere)
+// Tipo para um agendamento do provedor (adaptado para os dados do backend)
 interface ProviderAppointment {
-  id: string; // Appointment/service ID
+  id: string;
   clientName: string;
   serviceType: string;
-  startTime: string; // HH:MM format
-  endTime?: string; // HH:MM format (optional)
-  date: string; //<ctrl42>-MM-DD format
-  status: 'Confirmado' | 'PendenteCliente' | 'ARealizar' | 'Concluído' | 'Cancelado'; // Example statuses
-  clientAvatarUrl?: string; // Added client avatar for richer UI
-  clientAddress?: string; // Added client address for quick info
-  totalPrice?: number; // Added total price
+  startTime: string;
+  endTime?: string;
+  date: string; // Formato YYYY-MM-DD
+  status: 'Confirmado' | 'PendenteCliente' | 'ARealizar' | 'Concluído' | 'Cancelado'; // Status mapeados para o frontend
+  clientAvatarUrl?: string;
+  clientAddress?: string;
+  totalPrice?: number;
 }
 
-// DEFINIÇÃO DO TIPO DE ÍCONE PARA MaterialCommunityIcons
-// Isso é o que faltava para o TypeScript entender os nomes dos ícones
 type MaterialCommunityIconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 
-// Mock appointment data (simulating initial fetch)
-const ALL_PROVIDER_APPOINTMENTS: ProviderAppointment[] = [
-  { id: 'servA1', clientName: 'Fernanda Lima', serviceType: 'Limpeza Padrão', startTime: '09:00', endTime: '12:00', date: new Date(Date.now() + 86400000 * 1).toISOString().split('T')[0], status: 'Confirmado', clientAvatarUrl: 'https://randomuser.me/api/portraits/women/1.jpg', clientAddress: 'Rua A, 123' },
-  { id: 'servA2', clientName: 'Ricardo Alves', serviceType: 'Limpeza Pesada', startTime: '14:00', endTime: '18:00', date: new Date(Date.now() + 86400000 * 1).toISOString().split('T')[0], status: 'Confirmado', clientAvatarUrl: 'https://randomuser.me/api/portraits/men/2.jpg', clientAddress: 'Av. B, 456', totalPrice: 250.00 },
-  { id: 'servA3', clientName: 'Juliana Moreira', serviceType: 'Limpeza de Manutenção', startTime: '10:00', endTime: '13:00', date: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0], status: 'ARealizar', clientAvatarUrl: 'https://randomuser.me/api/portraits/women/3.jpg', clientAddress: 'Trav. C, 789', totalPrice: 180.00 },
-  { id: 'servA4', clientName: 'Marcos Andrade', serviceType: 'Limpeza de Vidros', startTime: '08:00', endTime: '10:00', date: new Date(Date.now() - 86400000 * 2).toISOString().split('T')[0], status: 'Concluído', clientAvatarUrl: 'https://randomuser.me/api/portraits/men/4.jpg', clientAddress: 'Alameda D, 101', totalPrice: 100.00 },
-  { id: 'servA5', clientName: 'Ana Paula', serviceType: 'Limpeza Pós-Obra', startTime: '09:00', endTime: '17:00', date: new Date(Date.now() + 86400000 * 5).toISOString().split('T')[0], status: 'PendenteCliente', clientAvatarUrl: 'https://randomuser.me/api/portraits/women/5.jpg', clientAddress: 'Praça E, 202', totalPrice: 400.00 },
-  { id: 'servA6', clientName: 'Pedro Costa', serviceType: 'Limpeza Comercial', startTime: '13:00', endTime: '17:00', date: new Date(Date.now() + 86400000 * 1).toISOString().split('T')[0], status: 'ARealizar', clientAvatarUrl: 'https://randomuser.me/api/portraits/men/6.jpg', clientAddress: 'Rua F, 303', totalPrice: 300.00 }, // Another one for the same day
-];
-
-// Mock function to fetch appointments (replace with actual API call)
-const fetchProviderAppointments = async (month?: string, year?: string): Promise<ProviderAppointment[]> => {
-  console.log(`[MyScheduleScreen] Fetching all appointments (simulated) for ${month || 'current'}/${year || 'current'}`);
-  await new Promise(resolve => setTimeout(resolve, 800)); // Simulate network delay
-  return ALL_PROVIDER_APPOINTMENTS;
-};
-
-// Component for each appointment item with animations
+// Componente para cada item de agendamento com animações
 const AnimatedAppointmentItem: React.FC<{
   item: ProviderAppointment;
   onPress: (item: ProviderAppointment) => void;
@@ -71,7 +56,7 @@ const AnimatedAppointmentItem: React.FC<{
 }> = ({ item, onPress, delay }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
-  const scaleAnim = useRef(new Animated.Value(1)).current; // For touch feedback
+  const scaleAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     Animated.parallel([
@@ -98,26 +83,25 @@ const AnimatedAppointmentItem: React.FC<{
     Animated.spring(scaleAnim, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start();
   };
 
-  // Ajuste a função getStatusStyle para tipar o `icon` corretamente
   const getStatusStyle = (status: ProviderAppointment['status']) => {
-    let iconName: MaterialCommunityIconName; // Use o tipo MaterialCommunityIconName aqui
+    let iconName: MaterialCommunityIconName;
 
     switch (status) {
       case 'Confirmado':
         iconName = 'check-circle';
-        return { text: '#2E7D32', background: '#E8F5E9', icon: iconName }; // Green
+        return { text: '#2E7D32', background: '#E8F5E9', icon: iconName };
       case 'ARealizar':
         iconName = 'clock-time-four';
-        return { text: '#007AFF', background: '#E3F2FD', icon: iconName }; // Blue (to be done)
+        return { text: '#007AFF', background: '#E3F2FD', icon: iconName };
       case 'PendenteCliente':
         iconName = 'timer-sand';
-        return { text: '#FF6F00', background: '#FFF3E0', icon: iconName }; // Orange (pending client action)
+        return { text: '#FF6F00', background: '#FFF3E0', icon: iconName };
       case 'Concluído':
         iconName = 'check-all';
-        return { text: '#546E7A', background: '#ECEFF1', icon: iconName }; // Gray (completed)
+        return { text: '#546E7A', background: '#ECEFF1', icon: iconName };
       case 'Cancelado':
         iconName = 'close-circle';
-        return { text: '#D32F2F', background: '#FFEBEE', icon: iconName }; // Red
+        return { text: '#D32F2F', background: '#FFEBEE', icon: iconName };
       default:
         iconName = 'information';
         return { text: '#546E7A', background: '#ECEFF1', icon: iconName };
@@ -167,7 +151,6 @@ const AnimatedAppointmentItem: React.FC<{
           )}
         </View>
         <View style={[styles.appointmentStatusBadge, { backgroundColor: statusStyle.background }]}>
-          {/* O erro está aqui, e será resolvido pela tipagem correta do `statusStyle.icon` */}
           <MaterialCommunityIcons name={statusStyle.icon} size={14} color={statusStyle.text} />
           <Text style={[styles.appointmentStatusText, { color: statusStyle.text, marginLeft: 4 }]}>{item.status}</Text>
         </View>
@@ -178,62 +161,86 @@ const AnimatedAppointmentItem: React.FC<{
 
 
 export default function MyScheduleScreen() {
+  const { user } = useAuth(); // Obtém o usuário logado do contexto de autenticação
   const router = useRouter();
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]); // Selected date in<ctrl42>-MM-DD format
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]); // Data selecionada no formato YYYY-MM-DD
   const [allAppointments, setAllAppointments] = useState<ProviderAppointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false); // For pull-to-refresh
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Animations
+  // Animações
   const headerAnim = useRef(new Animated.Value(0)).current;
   const calendarAnim = useRef(new Animated.Value(0)).current;
   const agendaHeaderAnim = useRef(new Animated.Value(0)).current;
-  const feedbackAnim = useRef(new Animated.Value(0)).current; // For loading/empty states
+  const feedbackAnim = useRef(new Animated.Value(0)).current;
 
   const loadAppointments = useCallback(async () => {
+    if (!user?.id) { // Verifica se o usuário está logado antes de tentar buscar dados
+      setIsLoading(false);
+      setIsRefreshing(false);
+      Alert.alert("Erro", "Usuário não autenticado. Faça login novamente.");
+      return;
+    }
     setIsLoading(true);
     try {
-      const data = await fetchProviderAppointments();
-      setAllAppointments(data);
-      // Staggered animations for calendar and agenda header after data loads
+      // CHAMADA REAL AO SERVIÇO PARA BUSCAR AGENDAMENTOS DO USUÁRIO LOGADO
+      const fetchedBookings = await getBookingsForUser(); // O endpoint /bookings/me já retorna agendamentos para o usuário logado (provedor ou cliente)
+      // Mapeia os dados do backend para o formato esperado pelo componente ProviderAppointment
+      const mappedAppointments: ProviderAppointment[] = fetchedBookings.map((booking: BookingDetails) => ({ // Explicitamente tipado
+        id: booking.id,
+        clientName: booking.clientFullName, // Usando clientFullName
+        serviceType: booking.serviceName, // Usando serviceName
+        startTime: booking.scheduledDateTime.substring(11, 16), // Extrai HH:MM de scheduledDateTime
+        endTime: booking.scheduledDateTime.substring(11, 16), // Pode ser ajustado se o backend fornecer endTime
+        date: booking.scheduledDateTime.split('T')[0], // Garante o formato YYYY-MM-DD
+        status:
+          booking.status === BookingStatus.CONFIRMED ? 'Confirmado' :
+          booking.status === BookingStatus.PENDING ? 'PendenteCliente' : // Ou 'ARealizar' dependendo da sua lógica
+          booking.status === BookingStatus.COMPLETED ? 'Concluído' :
+          booking.status === BookingStatus.CANCELED ? 'Cancelado' : 'ARealizar', // Mapear outros status conforme necessário
+        clientAvatarUrl: booking.clientAvatarUrl || undefined,
+        clientAddress: `${booking.address.street}, ${booking.address.number} - ${booking.address.neighborhood}`,
+        totalPrice: parseFloat(booking.totalPrice.toString()), // Converte Decimal para number
+      }));
+      setAllAppointments(mappedAppointments);
+      // Animações escalonadas após o carregamento dos dados
       Animated.stagger(150, [
         Animated.timing(calendarAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
         Animated.timing(agendaHeaderAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-        Animated.timing(feedbackAnim, { toValue: 1, duration: 500, useNativeDriver: true }), // For feedback states
+        Animated.timing(feedbackAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
       ]).start();
-    } catch (err) {
-      console.error("Error fetching all appointments:", err);
-      Alert.alert("Erro", "Não foi possível carregar os dados da agenda.");
+    } catch (error: any) { // Erro tipado como 'any'
+      console.error("Error fetching all appointments:", error);
+      Alert.alert("Erro", error.message || "Não foi possível carregar os dados da agenda.");
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [calendarAnim, agendaHeaderAnim, feedbackAnim]);
+  }, [user, calendarAnim, agendaHeaderAnim, feedbackAnim]); // 'user' adicionado como dependência
 
   useEffect(() => {
-    // Header entry animation
+    // Animação de entrada do cabeçalho
     Animated.timing(headerAnim, {
       toValue: 1,
       duration: 500,
       useNativeDriver: true,
     }).start();
 
-    loadAppointments();
+    loadAppointments(); // Carrega os agendamentos na montagem do componente
   }, [headerAnim, loadAppointments]);
 
-  // Memoize appointments for the selected date
+  // Memoriza os agendamentos para a data selecionada para otimização
   const appointmentsForSelectedDate = useMemo(() => {
     return allAppointments.filter(app => app.date === selectedDate).sort((a, b) => a.startTime.localeCompare(b.startTime));
   }, [allAppointments, selectedDate]);
 
-  // Memoize marked dates for the calendar
+  // Memoriza as datas marcadas no calendário
   const markedDates = useMemo(() => {
     const marks: { [date: string]: any } = {};
     allAppointments.forEach(app => {
       if (!marks[app.date]) {
-        marks[app.date] = { marked: true, dotColor: '#007AFF' }; // Simple marking
+        marks[app.date] = { marked: true, dotColor: '#007AFF' };
       }
-      // For more complex markings (e.g., multiple dots, different colors), adjust here
     });
     if (marks[selectedDate]) {
       marks[selectedDate] = { ...marks[selectedDate], selected: true, selectedColor: '#007AFF', selectedTextColor: 'white' };
@@ -249,13 +256,13 @@ export default function MyScheduleScreen() {
   };
 
   const handleAppointmentPress = (item: ProviderAppointment) => {
-    // Navigate to the appointment details screen
-    router.push(`/(provider)/services/${item.id}` as any); // Example route for service/appointment details
+    // Navega para a tela de detalhes do agendamento
+    router.push(`/(provider)/services/${item.id}` as any); // Exemplo de rota para detalhes do serviço/agendamento
   };
 
   const onRefresh = useCallback(() => {
     setIsRefreshing(true);
-    loadAppointments();
+    loadAppointments(); // Recarrega os agendamentos ao puxar para atualizar
   }, [loadAppointments]);
 
   return (
@@ -276,19 +283,18 @@ export default function MyScheduleScreen() {
 
       <Animated.View style={[styles.calendarContainer, { opacity: calendarAnim, transform: [{ translateY: calendarAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
         <Calendar
-          current={selectedDate} // Initial calendar date
+          current={selectedDate}
           onDayPress={onDayPress}
           markedDates={markedDates}
           monthFormat={'MMMM Guadeloupe'}
           onMonthChange={(month) => {
             console.log('[MyScheduleScreen] Month changed to:', month.month, month.year);
-            // TODO: Optional - Reload appointments for the newly visible month/year
-            // fetchProviderAppointments(String(month.month), String(month.year)).then(setAllAppointments);
+            // Opcional: recarregar agendamentos para o mês/ano visível se não estiverem todos carregados
           }}
-          firstDay={1} // Monday as the first day of the week
+          firstDay={1}
           theme={{
-            backgroundColor: '#F0F2F5', // Calendar background
-            calendarBackground: '#FFFFFF', // Days area background
+            backgroundColor: '#F0F2F5',
+            calendarBackground: '#FFFFFF',
             textSectionTitleColor: '#586069',
             selectedDayBackgroundColor: '#007AFF',
             selectedDayTextColor: '#ffffff',
@@ -329,7 +335,7 @@ export default function MyScheduleScreen() {
             <AnimatedAppointmentItem
               item={item}
               onPress={handleAppointmentPress}
-              delay={index * 70} // Staggered delay for each item
+              delay={index * 70}
             />
           )}
           keyExtractor={(item) => item.id}
@@ -373,9 +379,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#007AFF', // Primary app color
+    backgroundColor: '#007AFF',
     paddingHorizontal: 15,
-    paddingVertical: Platform.OS === 'ios' ? 50 : 20, // Adjust for iOS status bar
+    paddingVertical: Platform.OS === 'ios' ? 50 : 20,
     paddingTop: Platform.OS === 'ios' ? 50 : 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -387,16 +393,16 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#FFFFFF',
-    flex: 1, // To make the title occupy space and center better
+    flex: 1,
     textAlign: 'center',
   },
   headerActionIcon: {
     flexDirection: 'row',
     alignItems: 'center',
-    position: 'absolute', // To overlay if necessary or align precisely
+    position: 'absolute',
     right: 15,
-    padding: 5, // Increases touch area
-    top: Platform.OS === 'ios' ? 47 : 17, // Adjust according to paddingTop
+    padding: 5,
+    top: Platform.OS === 'ios' ? 47 : 17,
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 20,
     paddingHorizontal: 10,
@@ -410,19 +416,18 @@ const styles = StyleSheet.create({
   calendarContainer: {
     backgroundColor: '#FFFFFF',
     marginBottom: 10,
-    ...Platform.select({ // Soft shadow for the calendar
+    ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.1)', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.15, shadowRadius: 6 },
       android: { elevation: 4 },
     }),
   },
   calendarStyle: {
-    // Removido borderRadius aqui para aplicar no container se necessário, ou deixar default
   },
   agendaListHeader: {
     paddingHorizontal: 15,
     paddingTop: 15,
     paddingBottom: 10,
-    backgroundColor: '#F0F2F5', // Same background color as the screen
+    backgroundColor: '#F0F2F5',
   },
   agendaListTitle: {
     fontSize: 18,
@@ -436,14 +441,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingBottom: 20,
   },
-  appointmentCardWrapper: { // Wrapper for each item's animation
-    marginVertical: 6, // Spacing between cards
+  appointmentCardWrapper: {
+    marginVertical: 6,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF', // Card background for shadow to work
-    overflow: Platform.OS === 'ios' ? 'visible' : 'hidden', // For shadow on iOS
+    backgroundColor: '#FFFFFF',
+    overflow: Platform.OS === 'ios' ? 'visible' : 'hidden',
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.07)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3 },
-      android: { elevation: 3 }, // Slightly increase elevation for Android
+      android: { elevation: 3 },
     }),
   },
   appointmentCard: {
@@ -458,7 +463,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginRight: 15,
     borderWidth: 2,
-    borderColor: '#007AFF', // A subtle border to highlight
+    borderColor: '#007AFF',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -569,6 +574,6 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   listSeparator: {
-    height: 0, // No visible separators, marginVertical of wrapper handles spacing
+    height: 0,
   }
 });

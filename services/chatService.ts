@@ -1,4 +1,3 @@
-// LimpeJaApp/app/services/chatService.ts
 import axios, { AxiosResponse } from 'axios';
 import api from './api';
 
@@ -81,58 +80,25 @@ export const sendMessage = async (messageData: SendMessageDto): Promise<Message>
 
 /**
  * @function getChatListForUser
- * Simula a busca da lista de conversas para um usuário (cliente ou provedor).
- * Em um cenário real, este endpoint seria implementado no backend.
+ * Busca a lista de conversas para um usuário (cliente ou provedor).
+ *
+ * NOTA: A documentação do backend atual não especifica um endpoint para listar *todas* as conversas de um usuário.
+ * Para que esta função seja real, um endpoint como `GET /chat/me/conversations` ou `GET /chat/list`
+ * precisaria ser implementado no backend, retornando um array de `ConversationItem` ou um formato similar.
+ *
  * @param userId ID do usuário logado.
  * @returns Promessa com um array de ConversationItem.
  */
 export const getChatListForUser = async (userId: string): Promise<ConversationItem[]> => {
-  console.log(`[chatService] Simulação: Buscando lista de chats para o usuário ${userId}`);
-  // TODO: Substituir por uma chamada real ao backend: await api.get(`/chat/list/${userId}`);
-  await new Promise(resolve => setTimeout(resolve, 500)); // Simula delay de rede
-
-  // Dados mockados para demonstração
-  const mockConversations: ConversationItem[] = [
-    {
-      id: 'chat_mock_1',
-      otherUserId: 'prov_abc_1', // Se o userId for cliente, este é o provedor. Se for provedor, este é o cliente.
-      otherUserName: 'Dr. Limpeza (Provedor)',
-      otherUserAvatarUrl: 'https://randomuser.me/api/portraits/men/32.jpg',
-      lastMessage: 'Sua limpeza foi agendada para amanhã!',
-      lastMessageTimestamp: new Date(Date.now() - 300000).toISOString(),
-      unreadCount: 1,
-    },
-    {
-      id: 'chat_mock_2',
-      otherUserId: 'client_xyz_2',
-      otherUserName: 'Dona Maria (Cliente)',
-      otherUserAvatarUrl: 'https://randomuser.me/api/portraits/women/44.jpg',
-      lastMessage: 'Obrigado pelo ótimo serviço!',
-      lastMessageTimestamp: new Date(Date.now() - 3600000 * 2).toISOString(),
-      unreadCount: 0,
-    },
-    {
-      id: 'chat_mock_3',
-      otherUserId: 'prov_def_3',
-      otherUserName: 'Clean Express (Provedor)',
-      otherUserAvatarUrl: 'https://randomuser.me/api/portraits/men/50.jpg',
-      lastMessage: 'Por favor, confirme o endereço.',
-      lastMessageTimestamp: new Date(Date.now() - 86400000 * 1).toISOString(),
-      unreadCount: 2,
-    },
-    {
-      id: 'chat_mock_4',
-      otherUserId: 'client_pqr_4',
-      otherUserName: 'Sr. João (Cliente)',
-      otherUserAvatarUrl: 'https://randomuser.me/api/portraits/men/60.jpg',
-      lastMessage: 'Até a próxima!',
-      lastMessageTimestamp: new Date(Date.now() - 86400000 * 5).toISOString(),
-      unreadCount: 0,
-    },
-  ];
-
-  // Ordena por timestamp, mais recente primeiro
-  const sortedConversations = mockConversations.sort((a, b) => new Date(b.lastMessageTimestamp).getTime() - new Date(a.lastMessageTimestamp).getTime());
-
-  return sortedConversations;
+  console.log(`[chatService] Tentando buscar lista de chats para o usuário ${userId} do backend.`);
+  try {
+    // await new Promise(resolve => setTimeout(resolve, 500)); // Simula delay de rede
+    const response: AxiosResponse<ConversationItem[]> = await api.get(`/chat/me/conversations`); // <-- AQUI: Endpoint hipotético
+    return response.data;
+  } catch (error: any) {
+    console.error(`Erro ao buscar lista de chats para o usuário ${userId}:`, error.response?.data || error.message);
+    // Retorne um array vazio ou lance um erro, dependendo do comportamento desejado
+    // Em produção, você não deveria retornar dados mockados em caso de erro real.
+    throw new Error(error.response?.data?.message || 'Não foi possível carregar a lista de conversas. Verifique a implementação do endpoint no backend.');
+  }
 };

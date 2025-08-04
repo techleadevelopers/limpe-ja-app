@@ -24,6 +24,7 @@ import {
   ApiResponse,
   ApiTags,
   ApiBody,
+  ApiParam, // <-- ADICIONE ESTA LINHA
 } from '@nestjs/swagger';
 import { Request } from 'express';
 import { NotificationEntity } from './entities/notification.entity';
@@ -128,5 +129,33 @@ export class NotificationsController {
   ): Promise<void> {
     const userId = req.user['userId'];
     await this.notificationsService.deleteNotification(notificationId, userId);
+  }
+
+  @Get('suggestions')
+  @ApiOperation({ summary: 'Obter sugestões inteligentes baseadas em um contexto' })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de sugestões.',
+    type: [String],
+  })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  async getSuggestions(
+    @Query('context') context: string,
+  ): Promise<string[]> {
+    return this.notificationsService.getSmartSuggestions(context);
+  }
+
+  @Post('quick-action/:action')
+  @ApiOperation({ summary: 'Executar uma ação rápida associada a uma notificação' })
+  @ApiParam({ name: 'action', description: 'Tipo de ação rápida (ex: accept_booking, respond_review)', type: String })
+  @ApiBody({ description: 'Dados adicionais para a ação rápida', required: false, type: Object }) // Tipo Object para dados genéricos
+  @ApiResponse({ status: 200, description: 'Ação rápida executada com sucesso.' })
+  @ApiResponse({ status: 400, description: 'Ação rápida desconhecida ou dados inválidos.' })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  async executeQuickAction(
+    @Param('action') action: string,
+    @Body() data: any,
+  ): Promise<void> {
+    await this.notificationsService.executeQuickAction(action, data);
   }
 }

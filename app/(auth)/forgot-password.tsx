@@ -1,32 +1,20 @@
 // LimpeJaApp/app/(auth)/forgot-password.tsx
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  StyleSheet, 
-  TouchableOpacity, 
-  ActivityIndicator, 
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
   Alert,
   ScrollView,
   KeyboardAvoidingView,
   Platform
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons'; // Já estava importado corretamente
-// import { sendPasswordReset } from '../../services/authService'; // Importe o authService real
-
-// Simulação do authService.ts para demonstração
-const mockAuthService = {
-  sendPasswordReset: async (email: string) => {
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    if (email === 'cliente@limpeja.com' || email === 'pro@limpeja.com') {
-      return true; // Sucesso
-    } else {
-      throw new Error("E-mail não encontrado em nossos registros.");
-    }
-  },
-};
+import { Ionicons } from '@expo/vector-icons';
+import AuthService from '../../services/authService'; // Importa a instância padrão do AuthService
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
@@ -51,8 +39,8 @@ export default function ForgotPasswordScreen() {
 
     setIsLoading(true);
     try {
-      // Use o 'sendPasswordReset' do seu authService.ts real aqui
-      await mockAuthService.sendPasswordReset(email.trim().toLowerCase());
+      // CHAMADA REAL AO SERVIÇO DE AUTENTICAÇÃO
+      await AuthService.sendPasswordReset(email.trim().toLowerCase()); // Chama o método sendPasswordReset da instância
       setMessage('Um link para redefinir sua senha foi enviado para seu e-mail. Verifique sua caixa de entrada (e spam)!');
       setIsSuccess(true);
     } catch (error: any) {
@@ -102,8 +90,8 @@ export default function ForgotPasswordScreen() {
             </Text>
         )}
 
-        <TouchableOpacity 
-            style={[styles.resetButton, isLoading && styles.resetButtonDisabled]} 
+        <TouchableOpacity
+            style={[styles.resetButton, isLoading && styles.resetButtonDisabled]}
             onPress={handleResetPassword}
             disabled={isLoading}
         >

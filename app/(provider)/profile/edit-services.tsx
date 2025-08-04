@@ -9,42 +9,50 @@ import {
     FlatList,
     TouchableOpacity,
     Platform,
-    Animated, // Importar Animated para animações
-    KeyboardAvoidingView, // Para lidar com o teclado
-    ScrollView, // Para o formulário
+    Animated,
+    KeyboardAvoidingView,
+    ScrollView,
     ActivityIndicator,
 } from 'react-native';
-// CORREÇÃO: Importar Picker de @react-native-picker/picker
 import { Picker } from '@react-native-picker/picker';
 import { Stack, useRouter } from 'expo-router';
 import { useAuth } from '../../../hooks/useAuth';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
- 
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'; // Importação de Ionicons
+
 // Import PricingType from shared types
 import { PricingType } from '../../../types/backend/services';
- 
+// Importa as funções REAIS do providerService
+import {
+  getProviderServicesOffered, // Renomeado para refletir o nome da função no providerService.ts
+  addProviderServiceOffering,
+  updateProviderServiceOffering,
+  deleteProviderServiceOffering
+} from '../../../services/providerService';
+import { ProviderServiceOffering as ProviderServiceType } from '../../../types/backend/provider-service'; // Tipo correto para o retorno da API
+import { CreateProviderServiceData } from '../../../types/backend/providers'; // Importa o DTO correto
+
 interface ServiceOffering {
   id: string;
   name: string;
   description: string;
-  price: number; // CORREÇÃO: Alterado para number para consistência com o backend
-  duration?: string; // ex: '2 horas', 'varia'
-  pricingType: PricingType; // NEW: Pricing type
-  pricePerSquareMeter?: number; // NEW: Price per square meter (as number)
-  pricePerRoom?: number; // NEW: Price per room (as number)
+  price: number;
+  duration?: string;
+  pricingType: PricingType;
+  pricePerSquareMeter?: number;
+  pricePerRoom?: number;
 }
- 
+
 // Componente para cada item de serviço com animações
 const AnimatedServiceItem: React.FC<{
     item: ServiceOffering;
     onEdit: (service: ServiceOffering) => void;
     onDelete: (serviceId: string) => void;
-    delay: number; // Para animação escalonada
+    delay: number;
 }> = ({ item, onEdit, onDelete, delay }) => {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(20)).current;
-    const scaleAnim = useRef(new Animated.Value(1)).current; // Para feedback de toque
- 
+    const scaleAnim = useRef(new Animated.Value(1)).current;
+
     useEffect(() => {
         Animated.parallel([
             Animated.timing(fadeAnim, {
@@ -61,15 +69,15 @@ const AnimatedServiceItem: React.FC<{
             }),
         ]).start();
     }, [fadeAnim, slideAnim, delay]);
- 
+
     const onPressInItem = () => {
         Animated.spring(scaleAnim, { toValue: 0.98, useNativeDriver: true }).start();
     };
- 
+
     const onPressOutItem = () => {
         Animated.spring(scaleAnim, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start();
     };
- 
+
     const handleDelete = () => {
         Alert.alert(
             "Excluir Serviço",
@@ -81,7 +89,6 @@ const AnimatedServiceItem: React.FC<{
         );
     };
 
-    // Função auxiliar para formatar o preço baseado no tipo de precificação
     const formatPriceDisplay = (service: ServiceOffering) => {
         switch (service.pricingType) {
             case PricingType.FIXED_PRICE:
@@ -101,7 +108,7 @@ const AnimatedServiceItem: React.FC<{
                 return 'Preço a consultar';
         }
     };
- 
+
     return (
         <Animated.View
             style={[
@@ -112,13 +119,13 @@ const AnimatedServiceItem: React.FC<{
             <TouchableOpacity
                 onPressIn={onPressInItem}
                 onPressOut={onPressOutItem}
-                activeOpacity={1} // Desativa o activeOpacity padrão
+                activeOpacity={1}
                 style={styles.serviceItem}
             >
                 <View style={styles.serviceInfo}>
                     <Text style={styles.serviceName}>{item.name}</Text>
                     {item.description ? <Text style={styles.serviceDescription} numberOfLines={2}>{item.description}</Text> : null}
-                    <Text style={styles.servicePrice}>Preço: {formatPriceDisplay(item)}</Text> {/* Usar a função de formatação */}
+                    <Text style={styles.servicePrice}>Preço: {formatPriceDisplay(item)}</Text>
                     {item.duration && item.pricingType !== PricingType.BY_SIZE ? <Text style={styles.serviceDuration}>Duração: {item.duration}</Text> : null}
                 </View>
                 <View style={styles.serviceActions}>
@@ -133,83 +140,96 @@ const AnimatedServiceItem: React.FC<{
         </Animated.View>
     );
 };
- 
- 
+
+
 export default function EditProviderServicesScreen() {
   const { user } = useAuth();
   const router = useRouter();
   const [services, setServices] = useState<ServiceOffering[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  // Estados para adicionar/editar serviço
   const [isEditing, setIsEditing] = useState<ServiceOffering | null>(null);
   const [serviceName, setServiceName] = useState('');
   const [serviceDesc, setServiceDesc] = useState('');
-  const [servicePrice, setServicePrice] = useState(''); // Manter como string para input
-  const [pricingType, setPricingType] = useState<PricingType>(PricingType.FIXED_PRICE); // Default to FIXED_PRICE
+  const [servicePrice, setServicePrice] = useState('');
+  const [pricingType, setPricingType] = useState<PricingType>(PricingType.FIXED_PRICE);
   const [pricePerSquareMeter, setPricePerSquareMeter] = useState('');
   const [pricePerRoom, setPricePerRoom] = useState('');
   const [serviceDuration, setServiceDuration] = useState('');
- 
-  // Animações
+
   const headerAnim = useRef(new Animated.Value(0)).current;
   const formAnim = useRef(new Animated.Value(0)).current;
   const listHeaderAnim = useRef(new Animated.Value(0)).current;
   const saveButtonAnim = useRef(new Animated.Value(0)).current;
- 
+
   useEffect(() => {
-    // Animações de entrada do cabeçalho
     Animated.timing(headerAnim, {
       toValue: 1,
       duration: 500,
       useNativeDriver: true,
     }).start();
- 
-    console.log("[EditProviderServicesScreen] Carregando serviços...");
-    setIsLoading(true); // Set loading to true initially
-    // TODO: Chamar providerService para carregar serviços oferecidos pelo provedor
-    // const fetchServices = async () => { /* ... */ }
-    // fetchServices(); // Call your actual fetch function here
-    // Simulação
-    setTimeout(() => {
-      setServices([
-        // CORREÇÃO: Adicionar pricingType e outros campos aos dados mockados
-        { id: 's1', name: 'Limpeza Padrão Residencial', description: 'Limpeza de rotina para casas e apartamentos, incluindo aspiração, varrição, lavagem de banheiros e cozinha.', price: 60, pricingType: PricingType.HOURLY, duration: 'Mín. 2 horas' },
-        { id: 's2', name: 'Limpeza Pesada (Pós-Obra/Mudança)', description: 'Limpeza profunda e detalhada, ideal para após reformas, construções ou mudanças. Inclui remoção de resíduos, limpeza de rejuntes e vidros.', price: 90, pricingType: PricingType.HOURLY, duration: 'Mín. 3 horas' },
-        { id: 's3', name: 'Limpeza de Estofados', description: 'Higienização e lavagem a seco de sofás, cadeiras e tapetes, removendo manchas e odores.', price: 150, pricingType: PricingType.FIXED_PRICE, duration: 'Varia' },
-        { id: 's4', name: 'Limpeza por Metragem', description: 'Limpeza baseada na área total, ideal para grandes espaços.', price: 0, pricingType: PricingType.BY_SIZE, pricePerSquareMeter: 10.50, pricePerRoom: 50.00 },
-      ]);
-      setIsLoading(false); // Set loading to false after data is fetched/simulated
-      // Animação para o formulário, cabeçalho da lista e botão de salvar
-      Animated.stagger(150, [
-          Animated.timing(formAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-          Animated.timing(listHeaderAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-          Animated.timing(saveButtonAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-      ]).start();
-    }, 1000);
-  }, [headerAnim, formAnim, listHeaderAnim, saveButtonAnim]);
- 
-  const handleSaveServices = async () => {
-    setIsLoading(true);
-    // TODO: Chamar providerService para salvar todas as alterações nos serviços no backend
-    console.log("[EditProviderServicesScreen] Salvando serviços:", services);
-    setTimeout(() => {
-        Alert.alert("Sucesso", "Seus serviços foram atualizados com sucesso!");
+
+    const fetchProviderServices = async () => {
+      if (!user?.providerDetails?.id) { // Corrigido: user.providerDetails.id
+        Alert.alert("Erro", "ID do provedor não encontrado. Faça login novamente.");
         setIsLoading(false);
-        // router.back(); // Pode voltar para a tela de perfil após salvar
-    }, 1500);
+        return;
+      }
+      try {
+        // CHAMADA REAL AO SERVIÇO PARA CARREGAR SERVIÇOS
+        const fetchedServices = await getProviderServicesOffered(user.providerDetails.id); // Corrigido: user.providerDetails.id
+        const mappedServices: ServiceOffering[] = fetchedServices.map((s: ProviderServiceType) => ({ // Tipado 's'
+          id: s.id,
+          name: s.service.name, // Assumindo que o nome do serviço global está aninhado
+          description: s.description || '',
+          price: parseFloat(s.price.toString()),
+          duration: s.durationMinutes ? `${s.durationMinutes} minutos` : undefined,
+          pricingType: s.pricingType,
+          pricePerSquareMeter: s.pricePerSquareMeter ? parseFloat(s.pricePerSquareMeter.toString()) : undefined,
+          pricePerRoom: s.pricePerRoom ? parseFloat(s.pricePerRoom.toString()) : undefined,
+        }));
+        setServices(mappedServices);
+      } catch (error: any) { // Tipado 'error'
+        console.error("[EditProviderServicesScreen] Erro ao carregar serviços:", error);
+        Alert.alert("Erro", error.message || "Não foi possível carregar seus serviços.");
+      } finally {
+        setIsLoading(false);
+        Animated.stagger(150, [
+            Animated.timing(formAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+            Animated.timing(listHeaderAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+            Animated.timing(saveButtonAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+        ]).start();
+      }
+    };
+
+    fetchProviderServices();
+  }, [user, headerAnim, formAnim, listHeaderAnim, saveButtonAnim]);
+
+  const handleSaveServices = async () => {
+    // Este botão geralmente seria para salvar todas as alterações pendentes em uma única requisição.
+    // No entanto, com as funções add/update/delete sendo chamadas individualmente,
+    // este botão pode ser usado para uma confirmação final ou para persistir um estado local.
+    // Para este exemplo, ele apenas confirmará que as operações individuais foram (ou serão) salvas.
+    // Em um cenário mais complexo, você manteria um estado de 'serviços a adicionar/atualizar/deletar'
+    // e enviaria tudo aqui.
+    Alert.alert("Sucesso", "Todas as alterações foram processadas!");
+    // setIsLoading(false); // Se houvesse uma lógica de salvamento em lote aqui
   };
- 
-  const handleAddOrUpdateService = () => {
-    // Validação básica
+
+  const handleAddOrUpdateService = async () => {
+    if (!user?.providerDetails?.id) { // Corrigido: user.providerDetails.id
+      Alert.alert("Erro", "ID do provedor não encontrado. Faça login novamente.");
+      return;
+    }
+
     if (!serviceName) {
       Alert.alert("Erro", "Nome do serviço é obrigatório.");
       return;
     }
- 
+
     let finalPrice: number = 0;
     let finalPricePerSquareMeter: number | undefined = undefined;
     let finalPricePerRoom: number | undefined = undefined;
- 
+
     if (pricingType === PricingType.FIXED_PRICE || pricingType === PricingType.HOURLY) {
         if (!servicePrice || isNaN(parseFloat(servicePrice))) {
             Alert.alert("Erro", "Preço é obrigatório e deve ser um número.");
@@ -236,89 +256,136 @@ export default function EditProviderServicesScreen() {
             finalPricePerRoom = parseFloat(pricePerRoom);
         }
     }
- 
-    const newService: ServiceOffering = {
-      id: isEditing ? isEditing.id : String(Date.now()), // Reutiliza ID se estiver editando
-      name: serviceName,
+
+    // ATENÇÃO: O 'serviceId' abaixo é um placeholder.
+    // Em um cenário real, você precisaria de uma forma de associar o 'name'
+    // a um 'serviceId' global do backend (ex: através de um Picker de serviços globais).
+    // Para este exemplo, estou usando um ID fixo, o que não é ideal para produção.
+    const serviceData: CreateProviderServiceData = {
+      serviceId: "a1b2c3d4-e5f6-7890-1234-567890abcdef", // <-- SUBSTITUA POR UM ID DE SERVIÇO GLOBAL REAL
       description: serviceDesc,
-      price: finalPrice, // Usar o preço final calculado/parseado
-      duration: serviceDuration,
+      price: finalPrice,
+      durationMinutes: serviceDuration ? parseInt(serviceDuration.match(/\d+/)?.[0] || '0') : undefined,
       pricingType: pricingType,
       pricePerSquareMeter: finalPricePerSquareMeter,
       pricePerRoom: finalPricePerRoom,
     };
- 
-    if (isEditing) {
-      setServices(prev => prev.map(s => s.id === isEditing.id ? newService : s));
-    } else {
-      setServices(prev => {
-        const updatedServices = [...prev, newService];
-        return updatedServices.sort((a,b) => a.name.localeCompare(b.name)); // Sort alphabetically
-      });
+
+    setIsLoading(true);
+    try {
+      let resultService: ProviderServiceType;
+      if (isEditing) {
+        // CHAMADA REAL PARA ATUALIZAR SERVIÇO
+        resultService = await updateProviderServiceOffering(user.providerDetails.id, isEditing.id, serviceData); // Corrigido: user.providerDetails.id
+        setServices(prev => prev.map((s: ServiceOffering) => s.id === isEditing.id ? { // Tipado 's'
+          id: resultService.id,
+          name: resultService.service.name,
+          description: resultService.description || '',
+          price: parseFloat(resultService.price.toString()),
+          duration: resultService.durationMinutes ? `${resultService.durationMinutes} minutos` : undefined,
+          pricingType: resultService.pricingType,
+          pricePerSquareMeter: resultService.pricePerSquareMeter ? parseFloat(resultService.pricePerSquareMeter.toString()) : undefined,
+          pricePerRoom: resultService.pricePerRoom ? parseFloat(resultService.pricePerRoom.toString()) : undefined,
+        } : s));
+        Alert.alert("Sucesso", "Serviço atualizado com sucesso!");
+      } else {
+        // CHAMADA REAL PARA ADICIONAR NOVO SERVIÇO
+        resultService = await addProviderServiceOffering(user.providerDetails.id, serviceData); // Corrigido: user.providerDetails.id
+        setServices(prev => {
+          const newService: ServiceOffering = {
+            id: resultService.id,
+            name: resultService.service.name,
+            description: resultService.description || '',
+            price: parseFloat(resultService.price.toString()),
+            duration: resultService.durationMinutes ? `${resultService.durationMinutes} minutos` : undefined,
+            pricingType: resultService.pricingType,
+            pricePerSquareMeter: resultService.pricePerSquareMeter ? parseFloat(resultService.pricePerSquareMeter.toString()) : undefined,
+            pricePerRoom: resultService.pricePerRoom ? parseFloat(resultService.pricePerRoom.toString()) : undefined,
+          };
+          const updatedServices = [...prev, newService];
+          return updatedServices.sort((a,b) => a.name.localeCompare(b.name));
+        });
+        Alert.alert("Sucesso", "Novo serviço adicionado com sucesso!");
+      }
+    } catch (error: any) { // Tipado 'error'
+      console.error("[EditProviderServicesScreen] Erro ao adicionar/atualizar serviço:", error);
+      Alert.alert("Erro", error.message || "Não foi possível salvar o serviço.");
+    } finally {
+      setIsLoading(false);
+      // Limpar formulário
+      setIsEditing(null);
+      setServiceName('');
+      setServiceDesc('');
+      setServicePrice('');
+      setServiceDuration('');
+      setPricingType(PricingType.FIXED_PRICE);
+      setPricePerSquareMeter('');
+      setPricePerRoom('');
     }
-    // Limpar formulário
-    setIsEditing(null);
-    setServiceName('');
-    setServiceDesc('');
-    setServicePrice('');
-    setServiceDuration('');
-    setPricingType(PricingType.FIXED_PRICE);
-    setPricePerSquareMeter('');
-    setPricePerRoom('');
   };
- 
+
   const startEdit = (service: ServiceOffering) => {
     setIsEditing(service);
     setServiceName(service.name);
     setServiceDesc(service.description);
-    setServicePrice(service.price.toString()); // Converter number para string para o TextInput
+    setServicePrice(service.price.toString());
     setPricingType(service.pricingType);
     setPricePerSquareMeter(service.pricePerSquareMeter?.toString() || '');
     setPricePerRoom(service.pricePerRoom?.toString() || '');
     setServiceDuration(service.duration || '');
   };
- 
-  const deleteService = (serviceId: string) => {
-    setServices(prev => prev.filter(s => s.id !== serviceId));
-    Alert.alert("Serviço Excluído", "O serviço foi removido da sua lista.");
+
+  const deleteService = async (serviceId: string) => {
+    if (!user?.providerDetails?.id) { // Corrigido: user.providerDetails.id
+      Alert.alert("Erro", "ID do provedor não encontrado. Faça login novamente.");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      // CHAMADA REAL PARA DELETAR SERVIÇO
+      await deleteProviderServiceOffering(user.providerDetails.id, serviceId); // Corrigido: user.providerDetails.id
+      setServices(prev => prev.filter((s: ServiceOffering) => s.id !== serviceId)); // Tipado 's'
+      Alert.alert("Sucesso", "O serviço foi removido da sua lista.");
+    } catch (error: any) { // Tipado 'error'
+      console.error("[EditProviderServicesScreen] Erro ao deletar serviço:", error);
+      Alert.alert("Erro", error.message || "Não foi possível deletar o serviço.");
+    } finally {
+      setIsLoading(false);
+    }
   };
- 
+
   if (isLoading) {
     return (
-        // << CORREÇÃO: Alterado styles.container para styles.outerContainer >>
         <View style={styles.outerContainer}>
             <Stack.Screen options={{ headerShown: false }} />
-            {/* Custom Header para o estado de loading */}
             <Animated.View style={[styles.customHeader, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
                 <Text style={styles.headerTitle}>Editar Serviços</Text>
-                <View style={styles.headerActionIconPlaceholder} /> {/* Placeholder para alinhar */}
+                <View style={styles.headerActionIconPlaceholder} />
             </Animated.View>
             <View style={styles.centeredFeedback}>
-                {/* << CORREÇÃO: ActivityIndicator é agora importado e pode ser usado >> */}
                 <ActivityIndicator size="large" color="#007AFF" />
                 <Text style={styles.loadingText}>Carregando seus serviços...</Text>
             </View>
         </View>
     );
   }
- 
+
   return (
     <KeyboardAvoidingView
         style={styles.outerContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0} // Ajuste conforme a altura do cabeçalho
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
     >
       <Stack.Screen options={{ headerShown: false }} />
- 
-      {/* Custom Header */}
+
       <Animated.View style={[styles.customHeader, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.headerBackButton}>
               <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Editar Meus Serviços</Text>
-          <View style={styles.headerActionIconPlaceholder} /> {/* Placeholder para alinhar */}
+          <View style={styles.headerActionIconPlaceholder} />
       </Animated.View>
- 
+
       <ScrollView contentContainerStyle={styles.scrollViewContent}>
         <Animated.View style={[styles.formContainer, { opacity: formAnim, transform: [{ translateY: formAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
             <Text style={styles.formTitle}>{isEditing ? 'Editar Serviço Existente' : 'Adicionar Novo Serviço'}</Text>
@@ -337,14 +404,13 @@ export default function EditProviderServicesScreen() {
                 onChangeText={setServiceDesc}
                 multiline
             />
- 
+
             <Text style={styles.inputLabel}>Tipo de Precificação</Text>
             <View style={styles.pickerContainer}>
                 <Picker
                     selectedValue={pricingType}
-                    onValueChange={(itemValue: PricingType) => { // CORREÇÃO: Tipar itemValue
+                    onValueChange={(itemValue: PricingType) => {
                         setPricingType(itemValue);
-                        // Limpar campos de preço específicos ao mudar o tipo
                         setServicePrice('');
                         setPricePerSquareMeter('');
                         setPricePerRoom('');
@@ -355,11 +421,9 @@ export default function EditProviderServicesScreen() {
                     <Picker.Item label="Preço Fixo por Serviço" value={PricingType.FIXED_PRICE} />
                     <Picker.Item label="Por Hora" value={PricingType.HOURLY} />
                     <Picker.Item label="Por Metragem/Cômodo" value={PricingType.BY_SIZE} />
-                    {/* <Picker.Item label="Orçamento Personalizado" value={PricingType.CUSTOM_QUOTE} /> */}
                 </Picker>
             </View>
- 
-            {/* Render inputs based on pricingType */}
+
             {(pricingType === PricingType.FIXED_PRICE || pricingType === PricingType.HOURLY) && (
                 <>
                     <TextInput
@@ -379,7 +443,7 @@ export default function EditProviderServicesScreen() {
                     />
                 </>
             )}
- 
+
             {pricingType === PricingType.BY_SIZE && (
                 <>
                     <TextInput style={styles.input} placeholder="Preço por m² (ex: R$ 10,50)" placeholderTextColor="#ADB5BD" value={pricePerSquareMeter} onChangeText={setPricePerSquareMeter} keyboardType="numeric" />
@@ -387,7 +451,7 @@ export default function EditProviderServicesScreen() {
                     <Text style={styles.inputHint}>Preencha um ou ambos. O cliente escolherá como informar o tamanho.</Text>
                 </>
             )}
- 
+
             <TouchableOpacity style={styles.actionButtonPrimary} onPress={handleAddOrUpdateService}>
                 <Text style={styles.actionButtonPrimaryText}>{isEditing ? "Atualizar Serviço" : "Adicionar Novo Serviço"}</Text>
             </TouchableOpacity>
@@ -397,11 +461,11 @@ export default function EditProviderServicesScreen() {
                 </TouchableOpacity>
             )}
         </Animated.View>
- 
+
         <Animated.Text style={[styles.listHeader, { opacity: listHeaderAnim, transform: [{ translateY: listHeaderAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
             Serviços Cadastrados:
         </Animated.Text>
- 
+
         {services.length === 0 ? (
             <View style={styles.emptyListContainer}>
                 <Ionicons name="pricetags-outline" size={50} color="#CED4DA" />
@@ -417,15 +481,15 @@ export default function EditProviderServicesScreen() {
                         item={item}
                         onEdit={startEdit}
                         onDelete={deleteService}
-                        delay={index * 50 + 200} // Atraso para cada item
+                        delay={index * 50 + 200}
                     />
                 )}
                 contentContainerStyle={styles.flatListContent}
                 ItemSeparatorComponent={() => <View style={styles.listSeparator} />}
-                scrollEnabled={false} // Desabilita o scroll da FlatList para que o ScrollView pai gerencie
+                scrollEnabled={false}
             />
         )}
- 
+
         <Animated.View style={[styles.saveButtonContainer, { opacity: saveButtonAnim, transform: [{ translateY: saveButtonAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
             <TouchableOpacity style={styles.actionButtonPrimary} onPress={handleSaveServices}>
                 <Text style={styles.actionButtonPrimaryText}>Salvar Todas as Alterações</Text>
@@ -435,23 +499,23 @@ export default function EditProviderServicesScreen() {
     </KeyboardAvoidingView>
   );
 }
- 
+
 const styles = StyleSheet.create({
   outerContainer: {
     flex: 1,
-    backgroundColor: '#F0F2F5', // Fundo geral da tela
+    backgroundColor: '#F0F2F5',
   },
   scrollViewContent: {
-    paddingBottom: 40, // Espaço no final
+    paddingBottom: 40,
     paddingHorizontal: 15,
   },
   customHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#007AFF', // Cor primária do app
+    backgroundColor: '#007AFF',
     paddingHorizontal: 15,
-    paddingVertical: Platform.OS === 'ios' ? 50 : 20, // Ajuste para status bar iOS
+    paddingVertical: Platform.OS === 'ios' ? 50 : 20,
     paddingTop: Platform.OS === 'ios' ? 50 : 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -469,8 +533,8 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
   },
-  headerActionIconPlaceholder: { // Para alinhar o título no centro
-    width: 24, // Largura do ícone
+  headerActionIconPlaceholder: {
+    width: 24,
     marginLeft: 15,
   },
   centeredFeedback: {
@@ -488,7 +552,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 20,
-    marginTop: 20, // Espaço do cabeçalho
+    marginTop: 20,
     marginBottom: 20,
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.1)', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.15, shadowRadius: 6 },
@@ -526,7 +590,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8F9FA',
     borderRadius: 8,
     marginBottom: 15,
-    overflow: 'hidden', // Ensures the picker content respects border radius
+    overflow: 'hidden',
   },
   picker: {
     height: 50,
@@ -564,16 +628,15 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   flatListContent: {
-    // Não precisa de padding aqui, o wrapper já tem
   },
-  serviceItemWrapper: { // Wrapper para a animação de cada item
+  serviceItemWrapper: {
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
-    marginBottom: 10, // Espaço entre os itens
+    marginBottom: 10,
     overflow: 'hidden',
     ...Platform.select({
-        ios: { shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3 },
-        android: { elevation: 2 },
+      ios: { shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3 },
+      android: { elevation: 2 },
     }),
   },
   serviceItem: {
@@ -626,7 +689,7 @@ const styles = StyleSheet.create({
   listSeparator: {
     height: 1,
     backgroundColor: '#E9ECEF',
-    marginVertical: 5, // Espaço extra para a linha
+    marginVertical: 5,
   },
   saveButtonContainer: {
     marginTop: 20,

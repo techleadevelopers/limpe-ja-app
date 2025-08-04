@@ -43,13 +43,10 @@ export class NotificationService {
       const enhanced: SmartNotification = { ...notification };
 
       // Adicionar sugestões contextuais baseadas no tipo
+      // A lógica de sugestões será movida para o backend, mas a estrutura de quickActions permanece aqui
       switch (notification.type) {
         case 'NEW_BOOKING':
-          enhanced.suggestions = [
-            'Confirme rapidamente para melhorar sua classificação',
-            'Verifique se tem todos os materiais necessários',
-            'Envie uma mensagem de boas-vindas ao cliente'
-          ];
+          // enhanced.suggestions serão buscadas do backend
           enhanced.quickActions = [
             { label: 'Aceitar', action: 'accept_booking', style: 'primary' },
             { label: 'Ver Detalhes', action: 'view_booking', style: 'secondary' }
@@ -57,17 +54,11 @@ export class NotificationService {
           break;
 
         case 'PAYMENT_RECEIVED':
-          enhanced.suggestions = [
-            'Pagamento confirmado! Prepare-se para o serviço',
-            'Revise os detalhes do agendamento uma última vez'
-          ];
+          // enhanced.suggestions serão buscadas do backend
           break;
 
         case 'REVIEW_RECEIVED':
-          enhanced.suggestions = [
-            'Responda ao feedback para mostrar profissionalismo',
-            'Use este feedback para melhorar seus serviços'
-          ];
+          // enhanced.suggestions serão buscadas do backend
           enhanced.quickActions = [
             { label: 'Responder', action: 'respond_review', style: 'primary' },
             { label: 'Ver Avaliação', action: 'view_review', style: 'secondary' }
@@ -76,11 +67,7 @@ export class NotificationService {
 
         case 'LOW_RATING_ALERT':
           enhanced.priority = 'high';
-          enhanced.suggestions = [
-            'Entre em contato com o cliente para resolver problemas',
-            'Ofereça um desconto na próxima limpeza',
-            'Revise seus processos de qualidade'
-          ];
+          // enhanced.suggestions serão buscadas do backend
           break;
       }
 
@@ -108,6 +95,7 @@ export class NotificationService {
 
   static async executeQuickAction(action: string, data?: any): Promise<void> {
     try {
+      // Esta chamada já aponta para o backend, agora o backend terá a lógica completa
       await api.post(`/notifications/quick-action/${action}`, data);
     } catch (error) {
       console.error('Erro ao executar ação rápida:', error);
@@ -115,26 +103,24 @@ export class NotificationService {
     }
   }
 
+  /**
+   * @function getSmartSuggestions
+   * Busca sugestões inteligentes do backend.
+   * Corresponde a `GET /notifications/suggestions?context=<context>`.
+   * @param context O contexto para as sugestões.
+   * @returns Promessa com um array de strings com sugestões.
+   */
   static async getSmartSuggestions(context: string): Promise<string[]> {
-    const suggestions: Record<string, string[]> = {
-      'booking_flow': [
-        'Responda em até 30 minutos para melhor ranking',
-        'Seja cordial e profissional na primeira impressão',
-        'Confirme todos os detalhes antes de aceitar'
-      ],
-      'service_quality': [
-        'Chegue sempre 5 minutos antes do horário',
-        'Traga materiais extras para imprevistos',
-        'Tire fotos antes/depois para mostrar qualidade'
-      ],
-      'customer_retention': [
-        'Ofereça agendamentos recorrentes com desconto',
-        'Envie lembretes de manutenção preventiva',
-        'Mantenha contato pós-serviço para feedback'
-      ]
-    };
-
-    return suggestions[context] || [];
+    try {
+      const response: AxiosResponse<string[]> = await api.get(`/notifications/suggestions`, { params: { context } });
+      return response.data;
+    } catch (error: any) {
+      console.error(`Erro ao buscar sugestões inteligentes para o contexto ${context}:`, error.response?.data || error.message);
+      if (axios.isAxiosError(error) && error.response) {
+        throw new Error(error.response.data.message || `Erro ao buscar sugestões inteligentes.`);
+      }
+      throw new Error('Erro de rede ou servidor ao buscar sugestões inteligentes.');
+    }
   }
 
   /**

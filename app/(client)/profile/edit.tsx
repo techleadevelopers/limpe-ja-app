@@ -23,6 +23,8 @@ import { useAuth } from '../../../hooks/useAuth';
 import { updateClientProfile } from '../../../services/clientService'; // Apenas a função
 import { BookingAddress } from '../../../types/backend/bookings'; // BookingAddress vem de bookings.ts (usado para o endereço do usuário)
 import { UpdateClientProfileDto } from '../../../types/backend/clients'; // <--- CORREÇÃO: Importa UpdateClientProfileDto do caminho correto
+import { uploadImageToCloud, UploadResponse, FilePurpose } from '../../../services/uploadService'; // Importar o serviço de upload real e seus tipos
+import { UserProfile } from '../../../types/backend/users'; // Importa UserProfile
 
 // <--- CORREÇÕES: Importar funções utilitárias
 import { formatPhoneNumber, isValidPhoneNumber } from '../../../utils/helpers'; // Importar formatDate e outras utils
@@ -57,19 +59,23 @@ const AnimatedErrorMessage: React.FC<{ message: string | null }> = ({ message })
 };
 
 export default function EditClientProfileScreen() {
-    const { user, updateUser } = useAuth();
+    // Garante que 'user' seja tipado como UserProfile e 'updateUser' aceite Partial<UserProfile>
+    const { user, updateUser } = useAuth() as { user: UserProfile | null, updateUser: (user: Partial<UserProfile>) => void }; // <--- ALTERADO AQUI
+
     const router = useRouter();
 
-    const [name, setName] = useState(user?.name || '');
+    // Inicializa o estado com os dados do perfil do usuário, garantindo que 'fullName' exista
+    const [fullName, setFullName] = useState(user?.fullName || ''); // <--- AGORA 'fullName' EXISTE EM UserProfile
     const [email, setEmail] = useState(user?.email || '');
+    // Inicializa o endereço com 'cep' em vez de 'zipCode' e garante que seja tipado corretamente
     const [address, setAddress] = useState<BookingAddress>(user?.address || {
+        cep: '', // Usar cep
         street: '',
         number: '',
         complement: null,
         neighborhood: '',
         city: '',
         state: '',
-        zipCode: ''
     });
     const [phone, setPhone] = useState(user?.phone || '');
 
@@ -77,7 +83,7 @@ export default function EditClientProfileScreen() {
     const [isLoading, setIsLoading] = useState(false);
     const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
-    const [nameError, setNameError] = useState<string | null>(null);
+    const [fullNameError, setFullNameError] = useState<string | null>(null);
     const [phoneError, setPhoneError] = useState<string | null>(null);
 
     const headerAnim = useRef(new Animated.Value(0)).current;
@@ -86,12 +92,12 @@ export default function EditClientProfileScreen() {
     const saveButtonScaleAnim = useRef(new Animated.Value(1)).current;
     const linkButtonScaleAnim = useRef(new Animated.Value(1)).current;
 
-    const nameBorderAnim = useRef(new Animated.Value(0)).current;
+    const fullNameBorderAnim = useRef(new Animated.Value(0)).current;
     const phoneBorderAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
         if (user) {
-            setName(user.name || '');
+            setFullName(user.fullName || ''); // <--- AGORA 'fullName' EXISTE EM UserProfile
             setEmail(user.email || '');
             setPhone(user.phone || '');
             setAvatarUri(user.avatarUrl || null);
@@ -156,13 +162,23 @@ export default function EditClientProfileScreen() {
 
             if (!pickerResult.canceled && pickerResult.assets && pickerResult.assets.length > 0) {
                 const newAvatarUri = pickerResult.assets[0].uri;
-                setAvatarUri(newAvatarUri);
-                console.log("[EditProfile] Imagem selecionada:", newAvatarUri);
-                ReactNativeAlert.alert("Sucesso", "Foto selecionada. (Upload real ainda não implementado)");
+                // Realiza o upload real
+                // Tipa corretamente 'avatar' como FilePurpose (ajustado para 'avatar' conforme uploadService)
+                const uploadResponse: UploadResponse = await uploadImageToCloud(newAvatarUri, 'avatar' as FilePurpose); // <--- ALTERADO AQUI: 'avatars' para 'avatar'
+                if (uploadResponse && uploadResponse.url) {
+                    setAvatarUri(uploadResponse.url);
+                    ReactNativeAlert.alert("Sucesso", "Foto de perfil atualizada!");
+                    // Atualiza o contexto do usuário imediatamente para melhor UX
+                    updateUser({
+                        avatarUrl: uploadResponse.url, // Acessa corretamente a propriedade 'url'
+                    });
+                } else {
+                    ReactNativeAlert.alert("Erro no Upload", "Não foi possível enviar a imagem para o servidor.");
+                }
             }
         } catch (error) {
-            console.error("[EditProfile] Erro ao selecionar imagem:", error);
-            ReactNativeAlert.alert("Erro", "Não foi possível selecionar a imagem.");
+            console.error("[EditProfile] Erro ao selecionar ou enviar imagem:", error);
+            ReactNativeAlert.alert("Erro", "Não foi possível selecionar ou enviar a imagem.");
         } finally {
             setIsUploadingAvatar(false);
         }
@@ -171,11 +187,11 @@ export default function EditClientProfileScreen() {
     const handleSaveChanges = async () => {
         let isValid = true;
 
-        if (!name.trim()) {
-            setNameError('O nome completo é obrigatório.');
+        if (!fullName.trim()) {
+            setFullNameError('O nome completo é obrigatório.');
             isValid = false;
         } else {
-            setNameError(null);
+            setFullNameError(null);
         }
 
         if (!isValidPhoneNumber(phone)) {
@@ -185,8 +201,9 @@ export default function EditClientProfileScreen() {
             setPhoneError(null);
         }
 
-        if (!address.street || !address.number || !address.neighborhood || !address.city || !address.state) {
-            ReactNativeAlert.alert("Campos Inválidos", "Por favor, preencha todos os campos do endereço.");
+        // Verifica os campos de endereço, assumindo que 'cep' agora é obrigatório
+        if (!address.street || !address.number || !address.neighborhood || !address.city || !address.state || !address.cep) {
+            ReactNativeAlert.alert("Campos Inválidos", "Por favor, preencha todos os campos do endereço, incluindo o CEP.");
             isValid = false;
         }
 
@@ -198,7 +215,7 @@ export default function EditClientProfileScreen() {
         setIsLoading(true);
         try {
             const updateData: UpdateClientProfileDto = {
-                fullName: name,
+                fullName: fullName,
                 phone: phone.replace(/\D/g, ''),
                 address: {
                     street: address.street,
@@ -207,15 +224,15 @@ export default function EditClientProfileScreen() {
                     neighborhood: address.neighborhood,
                     city: address.city,
                     state: address.state,
-                    zipCode: address.zipCode // Inclua zipCode se o backend esperar
+                    cep: address.cep // Usar cep em vez de zipCode
                 }
             };
             
             const updatedProfile = await updateClientProfile(updateData);
 
+            // Garante que as propriedades correspondam a UserProfile
             updateUser({
-                ...user,
-                name: updatedProfile.name,
+                fullName: updatedProfile.fullName, // Mapeia fullName do DTO para fullName em UserProfile // <--- CORRIGIDO AQUI
                 phone: updatedProfile.phone,
                 avatarUrl: avatarUri ?? undefined,
                 address: updatedProfile.address,
@@ -291,21 +308,21 @@ export default function EditClientProfileScreen() {
 
                     <View style={styles.formSection}>
                         <Text style={styles.label}>Nome Completo *</Text>
-                        <Animated.View style={[styles.inputContainer, { borderColor: getInputBorderColor(nameBorderAnim, !!nameError) as any }]}>
+                        <Animated.View style={[styles.inputContainer, { borderColor: getInputBorderColor(fullNameBorderAnim, !!fullNameError) as any }]}>
                             <Ionicons name="person-outline" size={18} color="#8A8A8E" style={styles.inputIcon} />
                             <TextInput
                                 style={styles.input}
-                                value={name}
-                                onChangeText={setName}
-                                onBlur={() => { setNameError(name.trim() ? null : 'O nome completo é obrigatório.'); animateInputBorder(nameBorderAnim, false, !!nameError); }}
-                                onFocus={() => animateInputBorder(nameBorderAnim, true, !!nameError)}
+                                value={fullName}
+                                onChangeText={setFullName}
+                                onBlur={() => { setFullNameError(fullName.trim() ? null : 'O nome completo é obrigatório.'); animateInputBorder(fullNameBorderAnim, false, !!fullNameError); }}
+                                onFocus={() => animateInputBorder(fullNameBorderAnim, true, !!fullNameError)}
                                 placeholder="Seu nome como aparecerá no app"
                                 placeholderTextColor="#ADB5BD"
                                 textContentType="name"
                                 autoComplete="name"
                             />
                         </Animated.View>
-                        <AnimatedErrorMessage message={nameError} />
+                        <AnimatedErrorMessage message={fullNameError} />
 
                         <Text style={styles.label}>Email</Text>
                         <View style={[styles.inputContainer, styles.disabledInputContainer]}>
@@ -383,16 +400,16 @@ export default function EditClientProfileScreen() {
                             maxLength={2}
                             autoCapitalize="characters"
                         />
-                        {/* Se tiver CEP no UserProfile/BookingAddress */}
-                        {/* <TextInput
+                        {/* Adicionar campo CEP */}
+                        <TextInput
                             style={styles.input}
-                            placeholder="CEP"
+                            placeholder="CEP (Ex: 99999-999)"
                             placeholderTextColor="#ADB5BD"
-                            value={address.zipCode || ''}
-                            onChangeText={(text) => setAddress(prev => ({ ...prev, zipCode: text }))}
+                            value={address.cep || ''}
+                            onChangeText={(text) => setAddress(prev => ({ ...prev, cep: text }))}
                             keyboardType="numeric"
                             maxLength={9} // 99999-999
-                        /> */}
+                        />
 
                     </View>
 

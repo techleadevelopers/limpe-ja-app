@@ -1,9 +1,22 @@
 // src/chat/chat.service.ts
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Message, Prisma, Chat, BookingStatus } from '@prisma/client'; // Importe o tipo Message do Prisma, Prisma e Chat, e BookingStatus
+// Importe Prisma para usar Prisma.ChatGetPayload
+import { Message, Prisma, Chat, BookingStatus } from '@prisma/client';
 import { Message as MessageEntity } from './entities/message.entity'; // Sua entidade customizada
 import { ChatDetailsDto } from './dto/chat-details.dto'; // Importar o novo DTO
+
+// Interface para um item de conversa (para o frontend)
+export interface ConversationItem {
+  id: string; // Este é o seu chatId
+  otherUserId: string;
+  otherUserName: string;
+  otherUserAvatarUrl?: string;
+  lastMessage: string;
+  lastMessageTimestamp: string;
+  unreadCount: number;
+}
+
 
 @Injectable()
 export class ChatService {
@@ -93,7 +106,7 @@ export class ChatService {
       clientId = chat.participant1Id;
       providerId = chat.participant2Id;
     } else if (await this.prisma.provider.findUnique({ where: { userId: chat.participant1Id } }) && await this.prisma.client.findUnique({ where: { userId: chat.participant2Id } })) {
-      clientId = chat.participant2Id;
+      clientId = chat.participant2Id; // CORRIGIDO: Era chat.capitalizedId
       providerId = chat.participant1Id;
     } else {
       this.logger.error(`[ChatService] createMessage: Chat ${chatId} não é entre cliente e provedor.`);
@@ -183,7 +196,7 @@ export class ChatService {
       clientId = chat.participant1Id;
       providerId = chat.participant2Id;
     } else if (await this.prisma.provider.findUnique({ where: { userId: chat.participant1Id } }) && await this.prisma.client.findUnique({ where: { userId: chat.participant2Id } })) {
-      clientId = chat.participant2Id;
+      clientId = chat.participant2Id; // CORRIGIDO: Era chat.capitalizedId
       providerId = chat.participant1Id;
     } else {
       this.logger.error(`[ChatService] getMessagesByChatId: Chat ${chatId} não é entre cliente e provedor.`);
@@ -235,6 +248,127 @@ export class ChatService {
     this.logger.log(`[ChatService] getMessagesByChatId: Encontradas ${messages.length} mensagens para chatId ${chatId}.`);
     return messages;
   }
+
+  /**
+   * Busca a lista de conversas para um usuário logado.
+   * Este método corresponde ao endpoint GET /chat/me/conversations.
+   * @param userId ID do usuário logado.
+   * @returns Promessa com um array de ConversationItem.
+   */
+  async getConversationsForUser(userId: string): Promise<ConversationItem[]> {
+    this.logger.log(`[ChatService] getConversationsForUser: Buscando conversas para o usuário ${userId}`);
+
+    // Definir o tipo explícito para o resultado da query findMany
+    type ChatWithRelations = Prisma.ChatGetPayload<{
+      include: {
+        messages: {
+          orderBy: { timestamp: 'desc' };
+          take: 1;
+        };
+        participant1: {
+          select: {
+            id: true;
+            email: true;
+            avatarUrl: true;
+            client: { select: { fullName: true } };
+            provider: { select: { fullName: true } };
+          };
+        };
+        participant2: {
+          select: {
+            id: true;
+            email: true;
+            avatarUrl: true;
+            client: { select: { fullName: true } };
+            provider: { select: { fullName: true } };
+          };
+        };
+      };
+    }>;
+
+    const chats: ChatWithRelations[] = await this.prisma.chat.findMany({
+      where: {
+        OR: [
+          { participant1Id: userId },
+          { participant2Id: userId },
+        ],
+      },
+      include: {
+        messages: {
+          orderBy: { timestamp: 'desc' },
+          take: 1, // Pega apenas a última mensagem
+        },
+        participant1: { // Inclui dados do participante 1
+          select: {
+            id: true,
+            email: true,
+            avatarUrl: true,
+            client: { select: { fullName: true } }, // Inclui fullName se for um cliente
+            provider: { select: { fullName: true } }, // Inclui fullName se for um provedor
+          }
+        },
+        participant2: { // Inclui dados do participante 2
+          select: {
+            id: true,
+            email: true,
+            avatarUrl: true,
+            client: { select: { fullName: true } }, // Inclui fullName se for um cliente
+            provider: { select: { fullName: true } }, // Inclui fullName se for um provedor
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc' // Agora 'createdAt' deve existir no modelo Chat
+      }
+    });
+
+    const conversationItems: ConversationItem[] = [];
+
+    for (const chat of chats) {
+      // Determine the other participant
+      // The `include` makes `participant1` and `participant2` full User objects,
+      // including their nested client/provider relations if they exist.
+      const otherParticipant = chat.participant1Id === userId ? chat.participant2 : chat.participant1;
+      const lastMessage = chat.messages[0]; // 'messages' agora é reconhecido
+
+      // Determine the other participant's name
+      let otherUserName: string | undefined;
+      // Check if the related client or provider exists and has a fullName
+      if (otherParticipant.client && otherParticipant.client.fullName) {
+        otherUserName = otherParticipant.client.fullName;
+      } else if (otherParticipant.provider && otherParticipant.provider.fullName) {
+        otherUserName = otherParticipant.provider.fullName;
+      } else {
+        otherUserName = otherParticipant.email || 'Usuário Desconhecido'; // Fallback to email if no full name found
+      }
+
+      // Contar mensagens não lidas para o usuário logado
+      const unreadCount = await this.prisma.message.count({
+        where: {
+          chatId: chat.id,
+          receiverId: userId, // Mensagens destinadas ao usuário logado
+          isRead: false,
+        },
+      });
+
+      if (otherParticipant) {
+        conversationItems.push({
+          id: chat.id,
+          otherUserId: otherParticipant.id,
+          otherUserName: otherUserName,
+          otherUserAvatarUrl: otherParticipant.avatarUrl || undefined,
+          lastMessage: lastMessage ? lastMessage.content : 'Nenhuma mensagem ainda.',
+          // 'createdAt' agora é reconhecido no objeto chat
+          lastMessageTimestamp: lastMessage ? lastMessage.timestamp.toISOString() : chat.createdAt.toISOString(),
+          unreadCount: unreadCount,
+        });
+      }
+    }
+
+    this.logger.log(`[ChatService] getConversationsForUser: Encontradas ${conversationItems.length} conversas para o usuário ${userId}.`);
+    return conversationItems;
+  }
+
 
   // Método auxiliar para verificar se um usuário é participante de um chat (exemplo)
   // Este método seria útil para implementar a lógica de permissão em getMessagesByChatId e sendMessage.

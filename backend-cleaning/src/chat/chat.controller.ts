@@ -12,7 +12,7 @@ import {
   ForbiddenException,
   BadRequestException, // Importado para lidar com exceções específicas
 } from '@nestjs/common';
-import { ChatService } from './chat.service';
+import { ChatService, ConversationItem } from './chat.service'; // Importar ConversationItem (ainda necessário para a Promise, mas não para o ApiResponse.type)
 import { SendMessageDto } from './dto/send-message.dto';
 import { GetMessagesDto } from './dto/get-messages.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -29,6 +29,7 @@ import { ChatDetailsDto } from './dto/chat-details.dto';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
+import { ConversationItemDto } from './dto/conversation-item.dto'; // <-- IMPORTAR O NOVO DTO AQUI
 
 @ApiTags('chat')
 @Controller('chat')
@@ -140,5 +141,20 @@ export class ChatController {
       }
       throw new ForbiddenException('Você não tem acesso a esta conversa ou ela não existe.'); // Erro genérico
     }
+  }
+
+  @Get('me/conversations')
+  @ApiOperation({ summary: 'Obter a lista de conversas do usuário logado' })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de conversas do usuário.',
+    type: [ConversationItemDto], // <-- USAR O DTO AQUI
+  })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  async getMyConversations(
+    @Req() req: Request,
+  ): Promise<ConversationItem[]> { // O tipo de retorno da função ainda é a interface, pois é o que o serviço retorna
+    const userId = req.user['userId'];
+    return this.chatService.getConversationsForUser(userId);
   }
 }

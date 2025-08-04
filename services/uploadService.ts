@@ -1,9 +1,10 @@
 // LimpeJaApp/app/services/uploadService.ts
-import axios from 'axios';
+import axios, { AxiosResponse, isAxiosError } from 'axios'; // <--- CORREÇÃO AQUI: Adicionado AxiosResponse
 import api from './api'; // Importa a instância centralizada do Axios configurada em './api'
 import Constants from 'expo-constants'; // Importa Constants para acessar variáveis do app.json
 
 // --- CONSTANTES ---
+// Acessa a URL base da API de forma segura
 const API_BASE_URL = Constants.expoConfig?.extra?.backendApiUrl as string;
 
 // Verifica se a URL base da API foi configurada
@@ -18,15 +19,25 @@ if (!API_BASE_URL) {
  * Tipo para o propósito do arquivo, que mapeia para os endpoints do backend.
  * 'avatar' será usado para o endpoint de selfie.
  */
-type FilePurpose = 'avatar' | 'documentFront' | 'documentBack';
+export type FilePurpose = 'avatar' | 'documentFront' | 'documentBack';
+
+/**
+ * Interface para a resposta esperada do backend após um upload bem-sucedido.
+ * O backend deve retornar um objeto com uma propriedade 'url' contendo a URL pública da imagem.
+ */
+export interface UploadResponse {
+  url: string;
+  message?: string; // Opcional, se o backend também retornar uma mensagem
+  // Adicione quaisquer outras propriedades que o backend retorne, e.g., fileId, originalName
+}
 
 /**
  * Upload de uma imagem para o backend, que por sua vez a envia para o Google Cloud Storage.
  * @param uri URI local do arquivo (ex: de um ImagePicker ou FileSystem)
  * @param filePurpose Indica o propósito do upload (e.g., 'avatar', 'documentFront', 'documentBack').
- * @returns Promise<string> A URL pública da imagem após o upload.
+ * @returns Promise<UploadResponse> Um objeto contendo a URL pública da imagem e, opcionalmente, uma mensagem.
  */
-export const uploadImageToCloud = async (uri: string, filePurpose: FilePurpose): Promise<string> => {
+export const uploadImageToCloud = async (uri: string, filePurpose: FilePurpose): Promise<UploadResponse> => {
   console.log(`[uploadService] Tentando fazer upload da imagem com URI: ${uri} para o propósito: ${filePurpose}`);
 
   let formData = new FormData(); // Cria uma nova instância de FormData
@@ -43,7 +54,7 @@ export const uploadImageToCloud = async (uri: string, filePurpose: FilePurpose):
     const blob = await response.blob(); // Converte a resposta em um Blob
 
     // Extrai o nome do arquivo do URI.
-    const filename = uri.split('/').pop() || `upload-${Date.now()}.jpg`; // Garante uma extensão padrão
+    const filename = uri.split('/').pop() || `upload-${Date.now()}.jpg`; // Garante um nome de arquivo padrão
     // Adiciona o Blob ao FormData com o nome do campo 'file' (crucial para o backend @UploadedFile())
     formData.append('file', blob, filename);
     console.log(`[uploadService] Arquivo preparado: ${filename}, Tipo: ${blob.type}`);
@@ -61,7 +72,7 @@ export const uploadImageToCloud = async (uri: string, filePurpose: FilePurpose):
   // Baseado no `filePurpose`, define o endpoint correto para o seu backend.
   switch (filePurpose) {
     case 'avatar':
-      uploadPath = '/verification/upload-selfie';
+      uploadPath = '/verification/upload-selfie'; // Assumindo que 'avatar' usa o endpoint de selfie
       break;
     case 'documentFront':
       uploadPath = '/verification/upload-document/FRONT';
@@ -83,12 +94,12 @@ export const uploadImageToCloud = async (uri: string, filePurpose: FilePurpose):
 
     // Faz a requisição POST usando a instância 'api' centralizada (que já inclui o token de autenticação).
     // O Axios define automaticamente o 'Content-Type' para 'multipart/form-data' quando FormData é usado.
-    const response = await api.post(uploadPath, formData); // Headers de autenticação já são tratados pelo interceptor 'api'
+    const response: AxiosResponse<UploadResponse> = await api.post(uploadPath, formData); // <--- CORREÇÃO AQUI: Removido 'axios.'
 
     // Processa a resposta do backend. Espera-se que retorne um objeto com a URL da imagem.
     if (response.data && response.data.url) {
       console.log("[uploadService] Upload bem-sucedido. URL retornada:", response.data.url);
-      return response.data.url; // Retorna a URL pública da imagem no GCS
+      return response.data; // Retorna o objeto completo UploadResponse
     } else {
       // Caso a resposta do backend não contenha a URL esperada.
       console.error("[uploadService] Resposta inesperada do backend:", response.data);
@@ -103,9 +114,10 @@ export const uploadImageToCloud = async (uri: string, filePurpose: FilePurpose):
     if (error instanceof Error) {
         errorMessage = error.message;
     }
-    if (axios.isAxiosError(error) && error.response?.data?.message) {
+    // isAxiosError é chamado diretamente
+    if (isAxiosError(error) && error.response?.data?.message) {
         errorMessage = error.response.data.message; // Mensagem específica do backend
-    } else if (axios.isAxiosError(error) && error.message) {
+    } else if (isAxiosError(error) && error.message) {
         errorMessage = error.message; // Mensagem genérica do Axios
     }
     throw new Error(`Falha no upload da imagem: ${errorMessage}`);

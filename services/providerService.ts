@@ -11,7 +11,6 @@ import {
     ProviderDashboard,
     ProviderDisplayInfo, // Usado para tipar provedores em listas
     ProviderSearchQuery,
-    // ProviderServiceOffering, // <--- REMOVIDO DAQUI para evitar a importação duplicada
     ProviderTransaction,
     UpdateAvailabilityData, // Importado para tipar a query de busca
     UpdateProviderProfileData,

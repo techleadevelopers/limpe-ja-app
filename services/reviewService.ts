@@ -1,9 +1,9 @@
 // LimpeJaApp/app/services/reviewService.ts
-import axios, { AxiosResponse } from 'axios'; // Importar axios para isAxiosError
-import api from './api'; // Importa a instância centralizada do Axios
+import axios, { AxiosResponse } from 'axios';
+import api from './api';
 
 // Importa as tipagens de review (DTOs e Entity)
-import { MessageResponseDto } from '../types/backend/auth'; // Para respostas de sucesso/erro genéricas
+import { MessageResponseDto } from '../types/backend/auth';
 import { ReviewEntity, SubmitReviewDto } from '../types/backend/reviews';
 
 interface ReviewAnalytics {
@@ -52,10 +52,11 @@ export const submitFeedback = async (data: SubmitReviewDto): Promise<ReviewEntit
 /**
  * @function getDetailedRatingBreakdown
  * Obtém análise detalhada das avaliações de um provedor.
+ * Corresponde a `GET /reviews/provider/:providerId/breakdown`.
  * @param providerId O ID do provedor.
  * @returns Promessa com breakdown detalhado das avaliações.
  */
-export const getDetailedRatingBreakdown = async (providerId: string): Promise<any> => {
+export const getDetailedRatingBreakdown = async (providerId: string): Promise<ReviewAnalytics> => { // Tipado para ReviewAnalytics
   try {
     const response = await api.get(`/reviews/provider/${providerId}/breakdown`);
     return response.data;
@@ -71,10 +72,11 @@ export const getDetailedRatingBreakdown = async (providerId: string): Promise<an
 /**
  * @function getSmartSuggestions
  * Obtém sugestões inteligentes baseadas em IA para um provedor.
+ * Corresponde a `GET /reviews/provider/:providerId/suggestions`.
  * @param providerId O ID do provedor.
  * @returns Promessa com lista de sugestões inteligentes.
  */
-export const getSmartSuggestions = async (providerId: string): Promise<any[]> => {
+export const getSmartSuggestions = async (providerId: string): Promise<string[]> => { // Tipado para string[]
   try {
     const response = await api.get(`/reviews/provider/${providerId}/suggestions`);
     return response.data;
@@ -108,60 +110,24 @@ export class ReviewService {
     }
   }
 
-  static async getSmartSuggestions(providerId: string): Promise<any> {
-    try {
-      const response = await api.get(`/reviews/smart-suggestions/${providerId}`);
-      return response.data;
-    } catch (error) {
-      console.error('Erro ao buscar sugestões inteligentes:', error);
-      throw error;
-    }
+  static async getSmartSuggestions(providerId: string): Promise<string[]> {
+    return getSmartSuggestions(providerId);
   }
 
   static async getReviewAnalytics(providerId: string): Promise<ReviewAnalytics> {
-    try {
-      const response = await api.get(`/reviews/analytics/${providerId}`);
-      return response.data;
-    } catch (error) {
-      console.error('Erro ao buscar analytics de avaliações:', error);
-
-      // Retornar dados simulados
-      return {
-        averageRating: 4.7,
-        totalReviews: 127,
-        ratingDistribution: { 1: 2, 2: 3, 3: 8, 4: 32, 5: 82 },
-        sentimentAnalysis: { positive: 78, neutral: 15, negative: 7 },
-        commonKeywords: [
-          { word: 'pontual', frequency: 45, sentiment: 'positive' },
-          { word: 'cuidadosa', frequency: 38, sentiment: 'positive' },
-          { word: 'profissional', frequency: 42, sentiment: 'positive' },
-          { word: 'atrasou', frequency: 5, sentiment: 'negative' }
-        ],
-        improvementSuggestions: [
-          'Continue focando na pontualidade - é seu ponto forte',
-          'Considere criar um checklist de limpeza para garantir consistência',
-          'Responda mais rapidamente às avaliações negativas'
-        ]
-      };
-    }
+    return getDetailedRatingBreakdown(providerId);
   }
 
   static async getSuggestedResponse(reviewId: string): Promise<SmartReviewResponse> {
     try {
       const response = await api.get(`/reviews/suggested-response/${reviewId}`);
       return response.data;
-    } catch (error) {
-      console.error('Erro ao buscar resposta sugerida:', error);
-
-      return {
-        suggestedResponses: [
-          'Muito obrigada pelo feedback! É um prazer trabalhar com você.',
-          'Fico feliz que tenha gostado do serviço. Conte sempre comigo!',
-          'Agradeço sua confiança. Sempre à disposição para futuros serviços.'
-        ],
-        tone: 'friendly',
-        keyPoints: ['Agradecer', 'Manter relacionamento', 'Mostrar disponibilidade']
-      };
+    } catch (error: any) {
+      console.error('Erro ao buscar resposta sugerida:', error.response?.data || error.message);
+      if (axios.isAxiosError(error) && error.response) {
+        throw new Error(error.response.data.message || 'Não foi possível carregar as respostas sugeridas.');
+      }
+      throw new Error('Erro de rede ou servidor ao carregar respostas sugeridas.');
     }
   }
 
@@ -187,7 +153,9 @@ export class ReviewService {
     try {
       const response = await api.get(`/reviews/trends/${providerId}?period=${period}`);
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Erro ao buscar tendências de avaliações:', error);
+      // Ainda retorna dados mockados em caso de erro, mas em produção, isso seria um erro real.
       return {
         ratingTrend: 'increasing',
         volumeTrend: 'stable',

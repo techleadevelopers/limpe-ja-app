@@ -229,6 +229,8 @@ model Chat {
   participant2Id String
   participant2   User      @relation("ChatParticipant2", fields: [participant2Id], references: [id])
   messages       Message[] // Mensagens associadas a este chat
+  createdAt      DateTime  @default(now()) // <--- ADICIONE ESTA LINHA
+  updatedAt      DateTime  @updatedAt // <--- ADICIONE ESTA LINHA
 
   @@unique([participant1Id, participant2Id]) // Garante que não há chats duplicados para o mesmo par de usuários
 }

@@ -2,6 +2,7 @@
 
 import { UserRole } from './auth';
 import { BookingAddress } from './bookings'; // [CORREÇÃO] Importa BookingAddress para tipagem consistente do endereço
+import { UserProfile } from './users'; // Importa UserProfile para tipagem do user aninhado
 
 /**
  * @interface Client
@@ -12,20 +13,13 @@ import { BookingAddress } from './bookings'; // [CORREÇÃO] Importa BookingAddr
 export interface Client {
   id: string;
   userId: string; // Referência ao ID do usuário no sistema de autenticação
-  fullName: string;
+  fullName: string; // Propriedade 'fullName' existe no Client
   completedBookingsCount?: number; // NEW: Counter for loyalty program (tornar opcional se o backend não garantir sempre)
   phone?: string | null; // Permitir null
   avatarUrl?: string | null; // Permitir null
   walletBalance?: number;
   ordersCount?: number;
-  // Adicione outras propriedades específicas do cliente aqui, como:
-  // addressId?: string; // Se o endereço for um ID separado
-  // user?: UserProfile; // Se você quiser aninhar o UserProfile completo
-  // ... outras propriedades
-
-  // [CORREÇÃO] Adicionar a propriedade 'address' do tipo BookingAddress para resolver o erro de tipagem.
-  // A propriedade address pode ser opcional se o cliente nem sempre tiver um endereço.
-  // Se o seu backend sempre retornar um endereço, remova o '?'.
+  user?: UserProfile; // Se você quiser aninhar o UserProfile completo
   address?: BookingAddress | null; // [CORREÇÃO] Alinhado com schema.prisma (Address?)
 }
 
@@ -56,19 +50,11 @@ export interface SearchResult {
 export interface UpdateClientProfileDto {
   fullName?: string;
   phone?: string | null; // Permitir null
-  // Adicione outros campos que o cliente pode atualizar aqui (ex: address)
-
-  // [CORREÇÃO] A sintaxe para definir um objeto aninhado dentro de uma interface
-  // estava incorreta. Deve ser definida como uma propriedade que é um objeto.
-  // Usamos 'Partial<BookingAddress>' aqui para indicar que todos os campos do endereço
-  // são opcionais no contexto da atualização. Se o backend espera 'zipCode' e não 'cep'
-  // para este DTO específico, você precisará ajustar ou criar um tipo separado.
   address?: Partial<BookingAddress> | null; // [CORREÇÃO] Alinhado com schema.prisma (Address?)
 }
 
-// [CORREÇÃO] Exporta a interface ClientDetails
-export interface ClientDetails {
-    // Adicione as propriedades reais dos detalhes do cliente aqui
-}
-
-// [CORREÇÃO] A declaração de BookingAddress foi removida daqui para evitar o conflito
+/**
+ * @type ClientDetails
+ * Alias para a interface Client, usada para tipagem consistente.
+ */
+export type ClientDetails = Client;

@@ -1,8 +1,8 @@
 // LimpeJaApp/services/authService.ts
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AuthResponse, UserRole } from '../types/backend/auth';
+import { AuthResponse, UserRole, MessageResponseDto } from '../types/backend/auth'; // Import MessageResponseDto
 import { UserProfile } from '../types/backend/users';
-import api from './api';
+import api from './api'; // Assumindo que 'api' é a instância do Axios configurada
 
 const AUTH_TOKEN_KEY = 'auth_token';
 const USER_ROLE_KEY = 'user_role';
@@ -25,7 +25,8 @@ class AuthService {
     async login(credentials: { email: string; password: string }): Promise<AuthResponse> {
         try {
             console.log('[AuthService Frontend] login: Tentando login com e-mail:', credentials.email);
-            const axiosInstance = (api as any).default || api;
+            // CORREÇÃO: Usar 'api' diretamente, pois é a instância do Axios
+            const axiosInstance = api;
             const response = await axiosInstance.post('/auth/login', {
                 email: credentials.email,
                 password: credentials.password,
@@ -54,7 +55,8 @@ class AuthService {
     async registerClient(userData: any): Promise<AuthResponse> {
         try {
             console.log('[AuthService Frontend] Registrando cliente');
-            const axiosInstance = (api as any).default || api;
+            // CORREÇÃO: Usar 'api' diretamente
+            const axiosInstance = api;
             const response = await axiosInstance.post('/auth/register/client', userData);
             const authData: AuthResponse = response.data;
             await this.saveAuthData(authData);
@@ -69,7 +71,8 @@ class AuthService {
     async registerProvider(userData: any): Promise<AuthResponse> {
         try {
             console.log('[AuthService Frontend] Registrando prestador');
-            const axiosInstance = (api as any).default || api;
+            // CORREÇÃO: Usar 'api' diretamente
+            const axiosInstance = api;
             const response = await axiosInstance.post('/auth/register/provider', userData);
             const authData: AuthResponse = response.data;
             await this.saveAuthData(authData);
@@ -78,6 +81,26 @@ class AuthService {
         } catch (error: any) {
             console.error('[AuthService Frontend] Erro ao registrar prestador:', error);
             throw new Error(error.response?.data?.message || 'Erro ao registrar prestador');
+        }
+    }
+
+    /**
+     * Envia uma requisição para redefinir a senha de um usuário.
+     * Interage com o endpoint POST /auth/forgot-password do backend.
+     * @param email O e-mail do usuário que solicitou a redefinição de senha.
+     * @returns Uma promessa que resolve com uma mensagem de sucesso ou rejeita com um erro.
+     */
+    async sendPasswordReset(email: string): Promise<MessageResponseDto> {
+        try {
+            console.log(`[AuthService Frontend] Solicitando redefinição de senha para: ${email}`);
+            // CORREÇÃO: Usar 'api' diretamente
+            const axiosInstance = api;
+            const response = await axiosInstance.post<MessageResponseDto>('/auth/forgot-password', { email });
+            console.log(`[AuthService Frontend] Redefinição de senha solicitada com sucesso para: ${email}`);
+            return response.data;
+        } catch (error: any) {
+            console.error(`[AuthService Frontend] Erro ao solicitar redefinição de senha para ${email}:`, error.response?.data || error.message);
+            throw new Error(error.response?.data?.message || 'Erro ao enviar link de redefinição de senha.');
         }
     }
 
@@ -113,7 +136,6 @@ class AuthService {
         }
     }
 
-    // NOVO MÉTODO PÚBLICO: storeAuthData para ser chamado de fora da classe.
     public async storeAuthData(authData: { token: string; user: UserProfile; id: string; role: UserRole }): Promise<void> {
         try {
             await AsyncStorage.setItem(AUTH_TOKEN_KEY, authData.token);
@@ -127,10 +149,8 @@ class AuthService {
         }
     }
 
-    // MÉTODO PRIVADO EXISTENTE: saveAuthData
     private async saveAuthData(authData: AuthResponse): Promise<void> {
         try {
-            // Usando as chaves unificadas para salvar os dados
             await AsyncStorage.setItem(AUTH_TOKEN_KEY, authData.accessToken);
             await AsyncStorage.setItem(USER_ROLE_KEY, authData.user.role);
             await AsyncStorage.setItem(USER_ID_KEY, authData.user.id);
@@ -144,7 +164,8 @@ class AuthService {
 
     setAuthToken(token: string | null): void {
         this.authToken = token;
-        const axiosInstance = (api as any).default || api;
+        // CORREÇÃO: Usar 'api' diretamente
+        const axiosInstance = api;
         if (token) {
             axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
             console.log('[AuthService Frontend] Token definido no cabeçalho do Axios.');
