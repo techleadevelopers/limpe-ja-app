@@ -31,8 +31,8 @@ export class PaymentsController {
    */
   @Post('pix-charge')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Cria uma nova cobrança PIX para um serviço ou provedor.',
     description: 'Este endpoint permite que um cliente gere uma cobrança PIX para efetuar o pagamento.',
@@ -73,8 +73,8 @@ export class PaymentsController {
    */
   @Post('withdrawal')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Solicita um saque de valores disponíveis para um provedor.',
     description: 'Este endpoint permite que um provedor solicite o saque de seus ganhos para uma conta bancária.',

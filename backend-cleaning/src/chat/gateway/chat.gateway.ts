@@ -12,12 +12,20 @@ import { SendMessageDto } from '../dto/send-message.dto';
 import { UseGuards, Logger, ForbiddenException, NotFoundException, BadRequestException } from '@nestjs/common'; // Importado ForbiddenException, NotFoundException, BadRequestException
 import { WsAuthGuard } from '../../auth/guards/ws-auth.guard';
 import { Message } from '../entities/message.entity';
+// import { createAdapter } from '@socket.io/redis-adapter'; // Importar o adaptador Redis
+// import { createClient } from 'redis'; // Importar o cliente Redis
 
 @WebSocketGateway({
   cors: {
     origin: '*', // Ajuste para a origem do seu frontend em produção
     credentials: true,
   },
+  // Adaptação para scaling horizontal com Redis
+  // adapter: (() => {
+  //   const pubClient = createClient({ host: process.env.REDIS_HOST, port: parseInt(process.env.REDIS_PORT || '6379', 10), password: process.env.REDIS_PASSWORD });
+  //   const subClient = pubClient.duplicate();
+  //   return createAdapter(pubClient, subClient);
+  // })(),
 })
 export class ChatGateway {
   @WebSocketServer() server: Server;

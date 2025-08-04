@@ -3,8 +3,8 @@ import { Injectable, Logger, InternalServerErrorException } from '@nestjs/common
 import { ConfigService } from '@nestjs/config';
 import { Storage } from '@google-cloud/storage';
 import { ImageAnnotatorClient } from '@google-cloud/vision';
-import { File } from 'multer';
-// import axios from 'axios'; // <<<< REMOVIDO: Axios não é mais necessário para a API externa
+import { File } from 'multer'; // Mantém a importação para o método uploadImage
+import axios from 'axios'; // RE-ADICIONADO: Necessário para baixar arquivos de URLs
 
 @Injectable()
 export class DocumentProcessingService {
@@ -12,9 +12,6 @@ export class DocumentProcessingService {
   private storage: Storage;
   private bucketName: string;
   private visionClient: ImageAnnotatorClient;
-  // REMOVIDO: Campos para API externa
-  // private thirdPartyFacematchApiUrl: string;
-  // private thirdPartyFacematchApiKey: string;
 
   constructor(private configService: ConfigService) {
     const projectId = this.configService.get<string>('googleCloudStorage.projectId');
@@ -40,14 +37,24 @@ export class DocumentProcessingService {
     }
 
     this.logger.log('Google Cloud Storage e Vision clients inicializados via ADC.');
+  }
 
-    // REMOVIDO: Lógica de configuração da API externa
-    // this.thirdPartyFacematchApiUrl = this.configService.get<string>('thirdParty.facematchApiUrl');
-    // this.thirdPartyFacematchApiKey = this.configService.get<string>('thirdParty.facematchApiKey');
-    // if (!this.thirdPartyFacematchApiUrl || !this.thirdPartyFacematchApiKey) {
-    //   this.logger.error('THIRD_PARTY_FACEMATCH_API_URL ou THIRD_PARTY_FACEMATCH_API_KEY não configuradas.');
-    //   throw new Error('Configurações da API de comparação facial ausentes. Verifique as variáveis de ambiente.');
-    // }
+  /**
+   * Helper para baixar um arquivo de uma URL.
+   * @param url A URL do arquivo.
+   * @returns Promise<{ buffer: Buffer; mimetype: string }> O buffer do arquivo e seu mimetype.
+   */
+  private async downloadFileFromUrl(url: string): Promise<{ buffer: Buffer; mimetype: string }> {
+    try {
+      const response = await axios.get(url, { responseType: 'arraybuffer' });
+      const buffer = Buffer.from(response.data);
+      const mimetype = response.headers['content-type'] || 'application/octet-stream'; // Tenta obter o mimetype dos headers
+      this.logger.debug(`Arquivo baixado da URL: ${url}, tamanho: ${buffer.length} bytes, mimetype: ${mimetype}`);
+      return { buffer, mimetype };
+    } catch (error) {
+      this.logger.error(`Erro ao baixar arquivo da URL ${url}: ${error.message}`);
+      throw new InternalServerErrorException(`Falha ao baixar arquivo da URL: ${url}`);
+    }
   }
 
   /**
@@ -114,13 +121,14 @@ export class DocumentProcessingService {
 
   /**
    * Integração real com o Google Cloud Vision API para processamento de OCR em um documento.
-   * @param file O arquivo do documento.
+   * Agora aceita um buffer diretamente.
+   * @param buffer O buffer do arquivo do documento.
    * @returns Um objeto com o texto extraído e confiança.
    */
-  async processDocumentOcr(file: File): Promise<{ extractedText: string; confidence: number; rawResult: any }> {
+  async processDocumentOcr(buffer: Buffer): Promise<{ extractedText: string; confidence: number; rawResult: any }> {
     this.logger.log('Iniciando processamento OCR real do documento com Google Cloud Vision API...');
     try {
-      const [result] = await this.visionClient.documentTextDetection(file.buffer);
+      const [result] = await this.visionClient.documentTextDetection(buffer); // Usa o buffer diretamente
       const fullTextAnnotation = result.fullTextAnnotation;
       const extractedText = fullTextAnnotation ? fullTextAnnotation.text : '';
       
@@ -135,37 +143,36 @@ export class DocumentProcessingService {
   }
 
   /**
-   * AGORA APENAS SIMULA a comparação facial, pois a verificação real será manual.
-   * Este método não fará mais chamadas a APIs externas de face match.
-   * @param selfieFile O arquivo da selfie.
-   * @param documentImageUrl A URL da imagem do documento já enviada para o GCS.
-   * @returns Um objeto com o resultado da comparação (match, score)
+   * Simula a comparação facial usando buffers de imagem.
+   * @param selfieBuffer O buffer da imagem da selfie.
+   * @param documentBuffer O buffer da imagem do documento.
+   * @returns Um objeto com o resultado da comparação (match, score).
    */
-  async compareFaces(selfieFile: File, documentImageUrl: string): Promise<{ match: boolean; score: number; details?: string }> {
+  async compareFaces(selfieBuffer: Buffer, documentBuffer: Buffer): Promise<{ match: boolean; score: number; details?: string }> {
     this.logger.log('Iniciando simulação de comparação facial (verificação manual).');
     
-    // REMOVIDO: Verificação de thirdPartyFacematchApiUrl/ApiKey e a chamada Axios.
-
     try {
-      // Simulação: Apenas verifica se há faces em ambas as imagens usando Vision API (detecção, não comparação)
-      const [selfieDetection] = await this.visionClient.faceDetection(selfieFile.buffer);
+      // Detecta faces na selfie
+      const [selfieDetection] = await this.visionClient.faceDetection(selfieBuffer);
       const selfieFaces = selfieDetection.faceAnnotations;
-
-      // Para uma verificação 'manual', a presença de face é o suficiente para o backend
-      // indicar que a foto foi processada para revisão.
       const selfieHasFace = selfieFaces && selfieFaces.length > 0;
 
-      // O documentImageUrl virá do GCS, então podemos simular que o documento também existe
-      // e pode ser validado visualmente ou por OCR.
-      const documentExistsAndIsProcessed = true; // Assumimos que o upload do documento já ocorreu e foi OK.
+      // Detecta faces no documento
+      const [documentDetection] = await this.visionClient.faceDetection(documentBuffer);
+      const documentFaces = documentDetection.faceAnnotations;
+      const documentHasFace = documentFaces && documentFaces.length > 0;
 
-      // A 'correspondência' agora significa que a selfie tem uma face e que o documento de referência existe.
-      const match = selfieHasFace && documentExistsAndIsProcessed;
+      // A 'correspondência' agora significa que ambas as imagens têm faces detectadas.
+      const match = selfieHasFace && documentHasFace;
       const score = match ? 0.85 : 0.1; // Pontuação arbitrária para simulação.
 
       if (!selfieHasFace) {
         this.logger.warn('Nenhuma face detectada na selfie para simulação de comparação.');
         return { match: false, score: 0, details: 'Nenhuma face detectada na selfie para revisão manual.' };
+      }
+      if (!documentHasFace) {
+        this.logger.warn('Nenhuma face detectada no documento para simulação de comparação.');
+        return { match: false, score: 0, details: 'Nenhuma face detectada no documento para revisão manual.' };
       }
       
       this.logger.log(`Simulação de comparação facial concluída. Match: ${match}, Score: ${score}`);
@@ -178,21 +185,19 @@ export class DocumentProcessingService {
   }
 
   /**
-   * AGORA APENAS SIMULA a verificação de prova de vida (liveness check),
-   * pois a verificação real será manual/visual.
-   * @param selfieFile O arquivo da selfie (pode ser vídeo para algumas APIs).
+   * Simula a verificação de prova de vida (liveness check) usando um buffer de imagem.
+   * @param selfieBuffer O buffer da imagem da selfie.
    * @returns Um objeto com o resultado da prova de vida (isLive, score).
    */
-  async performLivenessCheck(selfieFile: File): Promise<{ isLive: boolean; score: number; details?: string }> {
+  async performLivenessCheck(selfieBuffer: Buffer): Promise<{ isLive: boolean; score: number; details?: string }> {
     this.logger.log('Iniciando simulação de verificação de prova de vida (liveness check).');
     try {
       // Simulação: Apenas verifica se há uma face na imagem.
-      // Para fins de 'prova de vida' manual, a presença da face indica que a foto é um rosto.
-      const [selfieDetection] = await this.visionClient.faceDetection(selfieFile.buffer);
+      const [selfieDetection] = await this.visionClient.faceDetection(selfieBuffer);
       const selfieFaces = selfieDetection.faceAnnotations;
 
-      const isLive = selfieFaces && selfieFaces.length > 0; // Simplesmente verifica se há uma face
-      const score = isLive ? 0.90 : 0.05; // Pontuação arbitrária para simulação
+      const isLive = selfieFaces && selfieFaces.length > 0;
+      const score = isLive ? 0.90 : 0.05;
 
       if (!isLive) {
         this.logger.warn('Nenhuma face detectada para prova de vida ou falha na simulação de liveness.');
@@ -206,5 +211,42 @@ export class DocumentProcessingService {
       this.logger.error(`Erro durante a simulação de prova de vida: ${error.message}`, error.stack);
       throw new InternalServerErrorException(`Falha na simulação de prova de vida: ${error.message}`);
     }
+  }
+
+  // --- NOVOS MÉTODOS QUE ACEITAM URLS ---
+
+  /**
+   * Processa OCR de um documento a partir de uma URL.
+   * @param fileUrl URL da imagem do documento.
+   * @returns Um objeto com o texto extraído e confiança.
+   */
+  async processDocumentOcrFromUrl(fileUrl: string): Promise<{ extractedText: string; confidence: number; rawResult: any }> {
+    this.logger.log(`Processando OCR da URL: ${fileUrl}`);
+    const { buffer } = await this.downloadFileFromUrl(fileUrl); // Não precisamos do mimetype aqui para o Vision API
+    return this.processDocumentOcr(buffer);
+  }
+
+  /**
+   * Realiza a verificação de prova de vida a partir de uma URL da selfie.
+   * @param selfieUrl URL da imagem da selfie.
+   * @returns Um objeto com o resultado da prova de vida.
+   */
+  async performLivenessCheckFromUrl(selfieUrl: string): Promise<{ isLive: boolean; score: number; details?: string }> {
+    this.logger.log(`Realizando verificação de vivacidade da URL: ${selfieUrl}`);
+    const { buffer } = await this.downloadFileFromUrl(selfieUrl); // Não precisamos do mimetype aqui para o Vision API
+    return this.performLivenessCheck(buffer);
+  }
+
+  /**
+   * Compara faces a partir de URLs da selfie e do documento.
+   * @param selfieUrl URL da imagem da selfie.
+   * @param documentFrontUrl URL da imagem da frente do documento.
+   * @returns Um objeto com o resultado da comparação.
+   */
+  async compareFacesFromUrls(selfieUrl: string, documentFrontUrl: string): Promise<{ match: boolean; score: number }> {
+    this.logger.log(`Comparando faces das URLs: ${selfieUrl} e ${documentFrontUrl}`);
+    const { buffer: selfieBuffer } = await this.downloadFileFromUrl(selfieUrl);
+    const { buffer: documentBuffer } = await this.downloadFileFromUrl(documentFrontUrl);
+    return this.compareFaces(selfieBuffer, documentBuffer);
   }
 }

@@ -4,7 +4,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './prisma/prisma.module';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { UsersModule } from './users/users.module';
 import { ProvidersModule } from './providers/providers.module';
 import { ClientsModule } from './clients/clients.module';
@@ -21,9 +21,15 @@ import { SearchModule } from './search/search.module';
 import { VerificationModule } from './verification/verification.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { EarningsModule } from './earnings/earnings.module';
-import { FaqsModule } from './faqs/faqs.module'; // <-- NOVO: Importe o FaqsModule
-import configuration from './config/configuration'; // <-- NOVO: Importe a configuração
-import { validationSchema } from './config/validation-schema'; // <-- NOVO: Importe o schema de validação
+import { FaqsModule } from './faqs/faqs.module';
+import configuration from './config/configuration';
+import { validationSchema } from './config/validation-schema';
+
+// NOVAS IMPORTAÇÕES DE MÓDULOS
+import { QueuesModule } from './queues/queues.module';
+import { CacheModule } from './cache/cache.module';
+import { ReferralsModule } from './referrals/referrals.module';
+import { ThrottlerModule } from '@nestjs/throttler'; // Módulo para Rate Limiting
 
 @Module({
   imports: [
@@ -35,6 +41,18 @@ import { validationSchema } from './config/validation-schema'; // <-- NOVO: Impo
         allowUnknown: true, // Permite variáveis de ambiente não definidas no schema
         abortEarly: true,   // Aborta a validação no primeiro erro
       },
+    }),
+    // Configuração do ThrottlerModule para Rate Limiting
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule], // Importa ConfigModule para acessar ConfigService
+      inject: [ConfigService], // Injeta ConfigService
+      useFactory: (config: ConfigService) => ({
+        // A propriedade 'throttlers' deve ser um array de objetos com ttl e limit
+        throttlers: [{
+          ttl: config.get<number>('THROTTLE_TTL', 60) * 1000, // Converte segundos para milissegundos
+          limit: config.get<number>('THROTTLE_LIMIT', 10),
+        }],
+      }),
     }),
     PrismaModule,
     AuthModule,
@@ -54,7 +72,11 @@ import { validationSchema } from './config/validation-schema'; // <-- NOVO: Impo
     VerificationModule,
     DashboardModule,
     EarningsModule,
-    FaqsModule, // <-- NOVO: Adicione o FaqsModule aqui
+    FaqsModule,
+    // Adicione os novos módulos aqui
+    QueuesModule,     // Módulo para gerenciar filas (BullMQ)
+    CacheModule,      // Módulo para gerenciar cache (Redis)
+    ReferralsModule,  // Módulo para o sistema de indicações
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -15,6 +15,7 @@ export type ProviderAvailability = {
   dayOfWeek: number;
   startTime: string;
   endTime: string;
+  isAvailable: boolean; // <--- ADICIONADO: Propriedade 'isAvailable'
 };
 
 /**
@@ -165,7 +166,18 @@ export interface UpdateAvailabilityData {
   dayOfWeek: number;
   startTime: string;
   endTime: string;
+  isAvailable: boolean; // <--- ADICIONADO: Propriedade 'isAvailable'
 }
+
+/**
+ * @interface GetProviderAvailabilityResponse
+ * Interface para o tipo de retorno de getProviderAvailability (movido de providerService.ts)
+ */
+export interface GetProviderAvailabilityResponse { // <--- MOVIDO PARA CÁ
+  available: ProviderAvailability[]; // Slots de tempo configurados pelo provedor
+  occupiedTimes: string[];         // Horários já agendados/ocupados
+}
+
 
 /**
  * @interface UpdateProviderProfileData

@@ -22,13 +22,11 @@ import { UserProfileDto } from '../users/dto/user-profile.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { LocalAuthGuard } from '../auth/guards/local-auth.guard';
-
-// REMOVIDO: DTOs para autenticação baseada em telefone
-// REMOVIDO: import { RequestOtpDto, VerifyOtpDto } from './dto/otp-login.dto';
-// REMOVIDO: import { CheckPhoneDto, LoginWithPhoneNumberAndPasswordDto } from './dto/phone-auth.dto';
+// import { ThrottlerGuard } from '@nestjs/throttler'; // Importe se estiver usando Throttler
 
 @ApiTags('auth')
 @Controller('auth')
+// @UseGuards(ThrottlerGuard) // Aplicar rate limiting a todas as rotas do controlador
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
 
@@ -60,6 +58,7 @@ export class AuthController {
   // Existing login (email/password) - Mantido
   @UseGuards(LocalAuthGuard)
   @Post('login')
+  // @UseGuards(ThrottlerGuard) // Pode aplicar rate limiting apenas a esta rota
   @ApiOperation({ summary: 'Login de usuário/provedor (Email/Senha)' })
   @ApiResponse({ status: 200, description: 'Login bem-sucedido.', type: AuthResponseDto })
   @ApiResponse({ status: 401, description: 'Credenciais inválidas.' })
@@ -70,6 +69,7 @@ export class AuthController {
 
   // Existing forgot-password - Mantido
   @Post('forgot-password')
+  // @UseGuards(ThrottlerGuard) // Pode aplicar rate limiting apenas a esta rota
   @ApiOperation({ summary: 'Solicitar redefinição de senha' })
   @ApiResponse({ status: 200, description: 'Link de redefinição de senha enviado (se o email existir).', type: MessageResponseDto })
   @ApiResponse({ status: 400, description: 'Email inválido.' })
@@ -78,48 +78,4 @@ export class AuthController {
     await this.authService.forgotPassword(forgotPasswordDto.email);
     return { message: 'Se um usuário com este email existir, um link de redefinição de senha será enviado.' };
   }
-
-  // REMOVIDO: Verifica existência do número de telefone
-  // @Post('check-phone')
-  // @HttpCode(HttpStatus.OK)
-  // @ApiOperation({ summary: 'Verifica se um número de telefone já está registrado.' })
-  // @ApiResponse({ status: 200, description: 'Retorna se o número de telefone existe e se tem senha.', type: Object })
-  // async checkPhone(@Body() checkPhoneDto: CheckPhoneDto): Promise<{ exists: boolean; hasPassword?: boolean }> {
-  //   this.logger.log(`[AuthController] checkPhone: Recebida solicitação para verificar telefone: ${checkPhoneDto.phoneNumber}`);
-  //   return this.authService.checkPhoneNumberExistence(checkPhoneDto.phoneNumber);
-  // }
-
-  // REMOVIDO: Envia OTP
-  // @Post('send-otp')
-  // @HttpCode(HttpStatus.OK)
-  // @ApiOperation({ summary: 'Envia um código OTP para o número de telefone fornecido.' })
-  // @ApiResponse({ status: 200, description: 'OTP enviado com sucesso.', type: MessageResponseDto })
-  // @ApiResponse({ status: 400, description: 'Número de telefone inválido ou erro ao enviar OTP.' })
-  // async sendOtp(@Body() requestOtpDto: RequestOtpDto): Promise<MessageResponseDto> {
-  //   this.logger.log(`[AuthController] sendOtp: Recebida solicitação para enviar OTP para: ${requestOtpDto.phone}`);
-  //   await this.authService.sendOtp(requestOtpDto.phone);
-  //   return { message: 'Código OTP enviado com sucesso.' };
-  // }
-
-  // REMOVIDO: Verifica OTP
-  // @Post('verify-otp')
-  // @HttpCode(HttpStatus.OK)
-  // @ApiOperation({ summary: 'Verifica o código OTP e realiza o login/registro.' })
-  // @ApiResponse({ status: 200, description: 'OTP verificado e login/registro bem-sucedido.', type: AuthResponseDto })
-  // @ApiResponse({ status: 401, description: 'Código OTP inválido ou expirado.' })
-  // async verifyOtp(@Body() verifyOtpDto: VerifyOtpDto): Promise<AuthResponseDto> {
-  //   this.logger.log(`[AuthController] verifyOtp: Recebida solicitação para verificar OTP para: ${verifyOtpDto.phone}`);
-  //   return this.authService.verifyOtp(verifyOtpDto.phone, verifyOtpDto.otpCode);
-  // }
-
-  // REMOVIDO: Login com número de telefone e senha
-  // @Post('login-phone-password')
-  // @HttpCode(HttpStatus.OK)
-  // @ApiOperation({ summary: 'Login de usuário via número de telefone e senha.' })
-  // @ApiResponse({ status: 200, description: 'Login bem-sucedido.', type: AuthResponseDto })
-  // @ApiResponse({ status: 401, description: 'Número de telefone ou senha inválidos.' })
-  // async loginPhonePassword(@Body() loginDto: LoginWithPhoneNumberAndPasswordDto): Promise<AuthResponseDto> {
-  //   this.logger.log(`[AuthController] loginPhonePassword: Recebida solicitação de login para telefone: ${loginDto.phoneNumber}`);
-  //   return this.authService.loginWithPhoneNumberAndPassword(loginDto.phoneNumber, loginDto.password);
-  // }
 }

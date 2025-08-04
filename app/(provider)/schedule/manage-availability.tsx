@@ -23,7 +23,7 @@ import {
     getProviderAvailability,
     updateProviderAvailability
 } from '../../../services/providerService';
-import { ProviderAvailability, UpdateAvailabilityData } from '../../../types/backend/providers'; //
+import { ProviderAvailability, UpdateAvailabilityData, GetProviderAvailabilityResponse } from '../../../types/backend/providers'; // <--- Importado GetProviderAvailabilityResponse
 
 // <--- IMPORTA OS NOVOS COMPONENTES CRIADOS
 import AnimatedDayCard from '../../../components/schedule/manager/AnimatedDayCard';
@@ -147,7 +147,9 @@ export default function ManageAvailabilityScreen() {
       }
 
       try {
-        const apiAvailability: ProviderAvailability[] = await getProviderAvailability(user.id);
+        // <<<< CORREÇÃO AQUI: Desestruturar a resposta da API >>>>
+        const apiResponse: GetProviderAvailabilityResponse = await getProviderAvailability(user.id);
+        const apiAvailability: ProviderAvailability[] = apiResponse.available; // <--- AGORA ACESSA A PROPRIEDADE 'available'
 
         const mappedAvailability: DailyAvailability[] = DAYS_OF_WEEK.map(day => {
           // Filtrar slots válidos da API para o dia atual. ProviderAvailability são slots individuais,
@@ -170,7 +172,9 @@ export default function ManageAvailabilityScreen() {
           return {
             dayName: day.name,
             dayIndex: day.index,
-            isAvailable: daySlots.length > 0 || !isDayExplicitlyUnavailable, // Se tem slots ou não foi explicitamente desabilitado.
+            // <--- CORREÇÃO NA LÓGICA: Se tem slots, está disponível. Se não tem slots E foi explicitamente indisponível, então não está disponível.
+            // Caso contrário (não tem slots mas também não foi explicitamente indisponível), o padrão é considerar indisponível para evitar horários vazios.
+            isAvailable: daySlots.length > 0 || !isDayExplicitlyUnavailable, 
             slots: validateSlots(daySlots),
           };
         });

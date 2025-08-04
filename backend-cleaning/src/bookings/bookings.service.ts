@@ -12,6 +12,8 @@ import { PixChargeResponseDto } from '../payments/dto/create-pix-charge.dto'; //
 import { BookingAndPixResponseDto } from './dto/booking-and-pix-response.dto';
 import { PaymentsService } from '../payments/payments.service';
 import { BookingDetailsDto } from './dto/booking-details.dto'; // <-- IMPORTADO AQUI
+import { ReportDisputeDto, DisputeReason } from './dto/report-dispute.dto'; // Importe o DTO de disputa
+import { QueuesService } from '../queues/queues.service'; // Importe o serviço de filas
 
 export type BookingWithDetailsRelations = Prisma.BookingGetPayload<{
   include: {
@@ -33,6 +35,7 @@ export class BookingsService {
     private providersService: ProvidersService,
     private providerServicesService: ProviderServicesService,
     private notificationsService: NotificationsService, // Inject NotificationsService
+    private queuesService: QueuesService, // Injetar QueuesService
     @Inject(forwardRef(() => PaymentsService))
     private paymentsService: PaymentsService,
   ) {}
@@ -359,13 +362,14 @@ export class BookingsService {
       // na consulta inicial do booking.
       const reviewNotificationMessage = `Seu serviço de ${booking.providerService.service.name} com ${booking.provider.fullName} foi concluído! Deixe uma avaliação para ele.`;
       const reviewNotificationTargetUrl = `/client/bookings/${booking.id}/review`; // Example URL
-      await this.notificationsService.createNotification(
-        booking.client.userId, // Usar booking.client.userId, que é o ID do User associado ao Client
-        'REVIEW_REQUEST',
-        reviewNotificationMessage,
-        reviewNotificationTargetUrl
-      );
-      this.logger.log(`[BookingsService] updateStatus: Notificação de avaliação enviada para cliente ${booking.client.userId}.`);
+      // Usar a fila para enviar a notificação
+      await this.queuesService.addNotificationJob('send-notification', {
+        userId: booking.client.userId,
+        type: 'REVIEW_REQUEST',
+        message: reviewNotificationMessage,
+        targetUrl: reviewNotificationTargetUrl,
+      });
+      this.logger.log(`[BookingsService] updateStatus: Notificação de avaliação adicionada à fila para cliente ${booking.client.userId}.`);
     }
     return this.prisma.booking.update({
       where: { id },
@@ -491,7 +495,126 @@ export class BookingsService {
 
     // Update booking status to PENDING_DISPUTE
     // Notify an admin (you) about the dispute
-    await this.notificationsService.createNotification('ADMIN_USER_ID', 'BOOKING_DISPUTE', `Disputa aberta para agendamento ${bookingId}. Motivo: ${reason}`, `/admin/disputes/${bookingId}`); // Replace 'ADMIN_USER_ID' with actual admin ID
+    // Usar a fila para notificar o admin
+    await this.queuesService.addNotificationJob('send-notification', {
+      userId: 'ADMIN_USER_ID', // Substitua pelo ID do usuário admin real
+      type: 'BOOKING_DISPUTE',
+      message: `Disputa aberta para agendamento ${bookingId}. Motivo: ${reason}`,
+      targetUrl: `/admin/disputes/${bookingId}`,
+    });
+    this.logger.log(`[BookingsService] reportIssue: Notificação de disputa adicionada à fila para ADMIN.`);
+
     return this.updateStatus(bookingId, BookingStatus.PENDING_DISPUTE, userRole);
+  }
+
+  // NOVO MÉTODO: Reportar Disputa (adiciona à fila)
+  async reportDispute(bookingId: string, userId: string, userRole: UserRole, dto: ReportDisputeDto): Promise<void> {
+    this.logger.log(`[BookingsService] reportDispute: Usuário ${userId} (${userRole}) reportando disputa para booking ${bookingId}.`);
+
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: { client: true, provider: true, address: true }
+    });
+
+    if (!booking) {
+      throw new NotFoundException(`Agendamento com ID "${bookingId}" não encontrado.`);
+    }
+
+    const client = await this.clientsService.findClientByUserId(userId);
+    const provider = await this.providersService.findByUserId(userId);
+
+    if (userRole === UserRole.CLIENT && booking.clientId !== client?.id) {
+      throw new ForbiddenException('Você não tem permissão para reportar uma disputa neste agendamento.');
+    }
+    if (userRole === UserRole.PROVIDER && booking.providerId !== provider?.id) {
+      throw new ForbiddenException('Você não tem permissão para reportar uma disputa neste agendamento.');
+    }
+
+    // Adiciona a tarefa de processamento da disputa à fila
+    await this.queuesService.addDisputeJob('process-booking-dispute', {
+      bookingId,
+      reporterUserId: userId,
+      reporterRole: userRole,
+      reason: dto.reason,
+      description: dto.description,
+      refundAmount: dto.refundAmount,
+      attachments: dto.attachments,
+    });
+
+    // Atualiza o status do agendamento para PENDING_DISPUTE
+    await this.updateStatus(bookingId, BookingStatus.PENDING_DISPUTE, userRole);
+
+    this.logger.log(`[BookingsService] reportDispute: Disputa para booking ${bookingId} adicionada à fila de processamento.`);
+  }
+
+  // NOVO MÉTODO: Resolver Disputa (apenas para ADMIN)
+  async resolveDispute(bookingId: string, resolution: string, refundAmount?: number, newStatus?: BookingStatus): Promise<BookingWithDetailsRelations> {
+    this.logger.log(`[BookingsService] resolveDispute: Resolvendo disputa para booking ${bookingId}. Resolução: ${resolution}.`);
+
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: { client: true, provider: true }
+    });
+
+    if (!booking) {
+      throw new NotFoundException(`Agendamento com ID "${bookingId}" não encontrado.`);
+    }
+
+    if (booking.status !== BookingStatus.PENDING_DISPUTE) {
+      throw new BadRequestException('Este agendamento não está em status de disputa.');
+    }
+
+    // Lógica para processar reembolso, se houver
+    if (refundAmount && refundAmount > 0) {
+      // Aqui você integraria com o serviço de pagamentos para processar o reembolso
+      // Ex: await this.paymentsService.processRefund(booking.id, refundAmount);
+      this.logger.log(`[BookingsService] resolveDispute: Iniciando processo de reembolso de R$${refundAmount} para booking ${bookingId}.`);
+      // Cria uma transação de reembolso (exemplo)
+      await this.prisma.transaction.create({
+        data: {
+          providerId: booking.provider.id, // O provedor que "perde" o valor
+          bookingId: booking.id,
+          amount: new Prisma.Decimal(refundAmount).neg(), // Valor negativo para indicar saída
+          type: 'REFUND', // Novo tipo de transação
+          status: 'PROCESSED',
+          description: `Reembolso de disputa para agendamento ${bookingId}. Resolução: ${resolution}`,
+        },
+      });
+    }
+
+    // Atualiza o status do agendamento conforme a resolução
+    const finalStatus = newStatus || BookingStatus.COMPLETED; // Padrão para COMPLETED ou outro status de sua escolha
+    const updatedBooking = await this.prisma.booking.update({
+      where: { id: bookingId },
+      data: {
+        status: finalStatus,
+        // Você pode adicionar um campo 'disputeResolution' no modelo Booking
+        // disputeResolution: resolution,
+      },
+      include: {
+        client: { include: { user: true } },
+        provider: { include: { user: true } },
+        providerService: { include: { service: true } },
+        review: true,
+        address: true,
+      },
+    });
+
+    // Notificar cliente e provedor sobre a resolução da disputa
+    await this.queuesService.addNotificationJob('send-notification', {
+      userId: booking.client.userId,
+      type: 'DISPUTE_RESOLUTION',
+      message: `A disputa para o agendamento ${booking.id} foi resolvida. Status: ${finalStatus}. Resolução: ${resolution}`,
+      targetUrl: `/client/bookings/${booking.id}`,
+    });
+    await this.queuesService.addNotificationJob('send-notification', {
+      userId: booking.provider.userId,
+      type: 'DISPUTE_RESOLUTION',
+      message: `A disputa para o agendamento ${booking.id} foi resolvida. Status: ${finalStatus}. Resolução: ${resolution}`,
+      targetUrl: `/provider/bookings/${booking.id}`,
+    });
+
+    this.logger.log(`[BookingsService] resolveDispute: Disputa para booking ${bookingId} resolvida. Novo status: ${finalStatus}.`);
+    return updatedBooking;
   }
 }

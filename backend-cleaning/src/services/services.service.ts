@@ -3,28 +3,51 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateServiceDto } from './dto/create-service.dto';
 import { UpdateServiceDto } from './dto/update-service.dto';
 import { Service, Prisma } from '@prisma/client'; // <-- Importar 'Prisma' aqui também
+import { CacheService } from '../cache/cache.service'; // Importar CacheService
 
 @Injectable()
 export class ServicesService {
-  constructor(private prisma: PrismaService) {}
+  private readonly SERVICES_CACHE_KEY = 'all_services';
+
+  constructor(
+    private prisma: PrismaService,
+    private cacheService: CacheService, // Injetar CacheService
+  ) {}
 
   async create(createServiceDto: CreateServiceDto): Promise<Service> {
-    return this.prisma.service.create({
+    const newService = await this.prisma.service.create({
       data: {
         ...createServiceDto, // Copia todas as outras propriedades
         price: new Prisma.Decimal(createServiceDto.price), // <-- CORREÇÃO: Converter para Prisma.Decimal
       },
     });
+    await this.cacheService.del(this.SERVICES_CACHE_KEY); // Invalida o cache após criação
+    return newService;
   }
 
   async findAll(): Promise<Service[]> {
-    return this.prisma.service.findMany();
+    let services = await this.cacheService.get<Service[]>(this.SERVICES_CACHE_KEY);
+    if (services) {
+      return services;
+    }
+    services = await this.prisma.service.findMany();
+    await this.cacheService.set(this.SERVICES_CACHE_KEY, services);
+    return services;
   }
 
   async findOne(id: string): Promise<Service | null> {
-    return this.prisma.service.findUnique({
+    const cacheKey = `${this.SERVICES_CACHE_KEY}:${id}`;
+    let service = await this.cacheService.get<Service>(cacheKey);
+    if (service) {
+      return service;
+    }
+    service = await this.prisma.service.findUnique({
       where: { id },
     });
+    if (service) {
+      await this.cacheService.set(cacheKey, service);
+    }
+    return service;
   }
 
   async update(id: string, updateServiceDto: UpdateServiceDto): Promise<Service | null> {
@@ -37,10 +60,13 @@ export class ServicesService {
         updateData.price = new Prisma.Decimal(updateServiceDto.price);
       }
 
-      return await this.prisma.service.update({
+      const updatedService = await this.prisma.service.update({
         where: { id },
         data: updateData, // <-- Usar updateData
       });
+      await this.cacheService.del(this.SERVICES_CACHE_KEY); // Invalida o cache geral
+      await this.cacheService.del(`${this.SERVICES_CACHE_KEY}:${id}`); // Invalida o cache específico
+      return updatedService;
     } catch (error) {
       if (error.code === 'P2025') { // Prisma error code for record not found
         throw new NotFoundException(`Tipo de serviço com ID "${id}" não encontrado.`);
@@ -54,6 +80,8 @@ export class ServicesService {
       await this.prisma.service.delete({
         where: { id },
       });
+      await this.cacheService.del(this.SERVICES_CACHE_KEY); // Invalida o cache geral
+      await this.cacheService.del(`${this.SERVICES_CACHE_KEY}:${id}`); // Invalida o cache específico
     } catch (error) {
       if (error.code === 'P2025') {
         throw new NotFoundException(`Tipo de serviço com ID "${id}" não encontrado.`);

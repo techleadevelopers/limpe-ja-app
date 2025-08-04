@@ -1,13 +1,14 @@
 // src/providers/providers.service.ts
 
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { Prisma, Provider, User, UserRole, Address, ProviderService, Service, Review, Client, VerificationStatus, PricingType } from '@prisma/client';
-import { UpdateProviderProfileDto } from './dto/update-provider-profile.dto';
-import { ProviderSearchDto } from './dto/provider-search.dto';
-import { SortByOption } from '../search/dto/search-query.dto';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Address, PricingType, Prisma, ProviderService, Service, VerificationStatus } from '@prisma/client';
 import { File } from 'multer'; // Importar File do Multer
-import { DocumentProcessingService } from '../verification/document-processing.service'; // Importar o serviço de processamento
+import { CacheService } from '../cache/cache.service'; // Importar CacheService
+import { DocumentProcessingService } from '../document-processing/document-processing.service'; // Importar o serviço de processamento
+import { PrismaService } from '../prisma/prisma.service';
+import { SortByOption } from '../search/dto/search-query.dto';
+import { ProviderSearchDto } from './dto/provider-search.dto';
+import { UpdateProviderProfileDto } from './dto/update-provider-profile.dto';
 
 export type ProviderWithIncludes = Prisma.ProviderGetPayload<{
   include: {
@@ -76,10 +77,12 @@ export type ProviderWithCalculatedRating = {
 @Injectable()
 export class ProvidersService {
   private readonly logger = new Logger(ProvidersService.name);
+  private readonly PROVIDERS_CACHE_KEY = 'all_approved_providers';
 
   constructor(
     private prisma: PrismaService,
-    private readonly documentProcessingService: DocumentProcessingService, // <-- INJEÇÃO DE DEPENDÊNCIA ADICIONADA
+    private readonly documentProcessingService: DocumentProcessingService,
+    private readonly cacheService: CacheService, // Injetar CacheService
   ) {}
 
   public mapProviderToCalculatedRating(provider: ProviderWithIncludes, distance?: number): ProviderWithCalculatedRating {
@@ -167,6 +170,10 @@ export class ProvidersService {
             data: { avatarUrl: fileUrl },
         });
 
+        // Invalida o cache de provedores após a atualização
+        await this.cacheService.del(this.PROVIDERS_CACHE_KEY);
+        this.logger.log(`[ProvidersService] updateAvatar: Cache de provedores invalidado.`);
+
         this.logger.log(`[ProvidersService] updateAvatar: AvatarUrl no banco de dados atualizado com sucesso para userId ${userId}.`);
         return fileUrl;
     } catch (error) {
@@ -206,7 +213,15 @@ export class ProvidersService {
 
   async findOne(id: string): Promise<ProviderWithCalculatedRating | null> {
     this.logger.log(`[ProvidersService] findOne: Buscando provedor por ID: ${id}`);
-    const provider = await this.prisma.provider.findUnique({
+    const cacheKey = `${this.PROVIDERS_CACHE_KEY}:${id}`;
+    let provider = await this.cacheService.get<ProviderWithCalculatedRating>(cacheKey);
+
+    if (provider) {
+      this.logger.log(`[ProvidersService] findOne: Provedor ${id} encontrado no cache.`);
+      return provider;
+    }
+
+    const prismaProvider = await this.prisma.provider.findUnique({
       where: { id },
       include: {
         user: { select: { email: true, role: true } },
@@ -224,16 +239,27 @@ export class ProvidersService {
       },
     });
 
-    this.logger.log(`[ProvidersService] findOne: Resultado para ID ${id}: ${provider ? 'ENCONTRADO' : 'NÃO ENCONTRADO'}`);
-    if (provider) {
-      return this.mapProviderToCalculatedRating(provider as ProviderWithIncludes);
+    if (prismaProvider) {
+      provider = this.mapProviderToCalculatedRating(prismaProvider as ProviderWithIncludes);
+      await this.cacheService.set(cacheKey, provider);
+      this.logger.log(`[ProvidersService] findOne: Provedor ${id} adicionado ao cache.`);
+      return provider;
     }
+    this.logger.log(`[ProvidersService] findOne: Resultado para ID ${id}: ${prismaProvider ? 'ENCONTRADO' : 'NÃO ENCONTRADO'}`);
     return null;
   }
 
   async findByUserId(userId: string): Promise<ProviderWithCalculatedRating | null> {
     this.logger.log(`[ProvidersService] findByUserId: Buscando provedor para userId: ${userId}`);
-    const provider = await this.prisma.provider.findUnique({
+    const cacheKey = `${this.PROVIDERS_CACHE_KEY}:user:${userId}`;
+    let provider = await this.cacheService.get<ProviderWithCalculatedRating>(cacheKey);
+
+    if (provider) {
+      this.logger.log(`[ProvidersService] findByUserId: Provedor para userId ${userId} encontrado no cache.`);
+      return provider;
+    }
+
+    const prismaProvider = await this.prisma.provider.findUnique({
       where: { userId },
       include: {
         user: { select: { email: true, role: true } },
@@ -250,8 +276,11 @@ export class ProvidersService {
         },
       },
     });
-    if (provider) {
-      return this.mapProviderToCalculatedRating(provider as ProviderWithIncludes);
+    if (prismaProvider) {
+      provider = this.mapProviderToCalculatedRating(prismaProvider as ProviderWithIncludes);
+      await this.cacheService.set(cacheKey, provider);
+      this.logger.log(`[ProvidersService] findByUserId: Provedor para userId ${userId} adicionado ao cache.`);
+      return provider;
     }
     return null;
   }
@@ -304,6 +333,12 @@ export class ProvidersService {
       },
     });
 
+    // Invalida o cache de provedores após a atualização
+    await this.cacheService.del(this.PROVIDERS_CACHE_KEY);
+    await this.cacheService.del(`${this.PROVIDERS_CACHE_KEY}:${updatedProvider.id}`);
+    await this.cacheService.del(`${this.PROVIDERS_CACHE_KEY}:user:${userId}`);
+    this.logger.log(`[ProvidersService] updateByUserId: Cache de provedores invalidado após atualização.`);
+
     this.logger.log(`[ProvidersService] updateByUserId: Provedor com userId ${userId} atualizado com sucesso.`);
     if (updatedProvider) {
       return this.mapProviderToCalculatedRating(updatedProvider as ProviderWithIncludes);
@@ -319,6 +354,11 @@ export class ProvidersService {
       throw new NotFoundException(`Provedor com ID "${id}" não encontrado.`);
     }
     await this.prisma.provider.delete({ where: { id } });
+    // Invalida o cache de provedores após a remoção
+    await this.cacheService.del(this.PROVIDERS_CACHE_KEY);
+    await this.cacheService.del(`${this.PROVIDERS_CACHE_KEY}:${id}`);
+    await this.cacheService.del(`${this.PROVIDERS_CACHE_KEY}:user:${provider.userId}`);
+    this.logger.log(`[ProvidersService] remove: Cache de provedores invalidado após remoção.`);
     this.logger.log(`[ProvidersService] remove: Provedor com ID ${id} removido com sucesso.`);
   }
 
@@ -336,6 +376,14 @@ export class ProvidersService {
       longitude,
       radius
     } = searchDto;
+
+    // A busca é complexa e pode não se beneficiar de cache direto, mas podemos cachear resultados comuns.
+    const cacheKey = `${this.PROVIDERS_CACHE_KEY}:search:${JSON.stringify(searchDto)}`;
+    let cachedResult = await this.cacheService.get<ProviderWithCalculatedRating[]>(cacheKey);
+    if (cachedResult) {
+      this.logger.log(`[ProvidersService] search: Resultados da busca encontrados no cache.`);
+      return cachedResult;
+    }
 
     const where: Prisma.ProviderWhereInput = {
       verificationStatus: VerificationStatus.APPROVED,
@@ -542,6 +590,9 @@ export class ProvidersService {
       } else if (sortBy === SortByOption.Distance) {
         providersWithDistance.sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
       }
+      // Cacheia o resultado da busca complexa
+      await this.cacheService.set(cacheKey, providersWithDistance);
+      this.logger.log(`[ProvidersService] search: Resultados da busca complexa adicionados ao cache.`);
       return providersWithDistance;
     }
 
@@ -595,6 +646,9 @@ export class ProvidersService {
       filteredProviders.sort((a, b) => (b.yearsOfExperience || 0) - (a.yearsOfExperience || 0));
     }
 
+    // Cacheia o resultado da busca complexa
+    await this.cacheService.set(cacheKey, filteredProviders);
+    this.logger.log(`[ProvidersService] search: Resultados da busca complexa (fallback) adicionados ao cache.`);
     return filteredProviders;
   }
 
@@ -612,6 +666,14 @@ export class ProvidersService {
 
   async findTopRatedOrExperiencedProviders(): Promise<ProviderWithCalculatedRating[]> {
     this.logger.log('[ProvidersService] findTopRatedOrExperiencedProviders: Buscando provedores mais bem avaliados/experientes.');
+    const cacheKey = `${this.PROVIDERS_CACHE_KEY}:top_rated_experienced`;
+    let cachedResult = await this.cacheService.get<ProviderWithCalculatedRating[]>(cacheKey);
+
+    if (cachedResult) {
+      this.logger.log(`[ProvidersService] findTopRatedOrExperiencedProviders: Resultados encontrados no cache.`);
+      return cachedResult;
+    }
+
     const providers = await this.prisma.provider.findMany({
       where: {
         verificationStatus: VerificationStatus.APPROVED,
@@ -642,6 +704,8 @@ export class ProvidersService {
       this.mapProviderToCalculatedRating(provider as ProviderWithIncludes)
     );
 
+    await this.cacheService.set(cacheKey, providersWithCalculatedRating);
+    this.logger.log(`[ProvidersService] findTopRatedOrExperiencedProviders: Resultados adicionados ao cache.`);
     return providersWithCalculatedRating;
   }
 }

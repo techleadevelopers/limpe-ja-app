@@ -1,12 +1,12 @@
 // src/verification/verification.service.ts
-
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { DocumentProcessingService } from './document-processing.service';
-import { VerificationStatus } from '../shared/enums/verification-status.enum';
-import { ProvidersService, ProviderWithIncludes, ProviderWithCalculatedRating } from '../providers/providers.service';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { File } from 'multer';
+import { DocumentProcessingService } from '../document-processing/document-processing.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { ProvidersService, ProviderWithCalculatedRating } from '../providers/providers.service';
+import { QueuesService } from '../queues/queues.service'; // Importar QueuesService
+import { VerificationStatus } from '../shared/enums/verification-status.enum';
 
 interface OcrResult {
   extractedText: string;
@@ -34,6 +34,7 @@ export class VerificationService {
     private readonly prisma: PrismaService,
     private readonly documentProcessingService: DocumentProcessingService,
     private readonly providersService: ProvidersService,
+    private readonly queuesService: QueuesService, // Injetar QueuesService
   ) {}
 
   async getPendingProviders(): Promise<ProviderWithCalculatedRating[]> {
@@ -67,19 +68,19 @@ export class VerificationService {
       updateData.documentPhotoBackUrl = fileUrl;
     }
 
-    try {
-      const ocrResult: OcrResult = await this.documentProcessingService.processDocumentOcr(file);
-      updateData.ocrResult = ocrResult as unknown as Prisma.JsonObject;
-      this.logger.log(`[VerificationService] OCR processado para ${type} do provedor ${providerId}.`);
-    } catch (ocrError: any) {
-      this.logger.error(`[VerificationService] Erro ao processar OCR para ${type} do provedor ${providerId}: ${ocrError.message}`);
-    }
-
+    // Atualiza o provedor com a URL do documento
     await this.prisma.provider.update({
       where: { id: providerId },
       data: updateData,
     });
-    this.logger.log(`[VerificationService] URL do documento (${type}) e resultados de OCR salvos para provider ${providerId}.`);
+    this.logger.log(`[VerificationService] URL do documento (${type}) salva para provider ${providerId}.`);
+
+    // Adiciona tarefa para processamento de OCR na fila
+    await this.queuesService.addVerificationJob('process-document-ocr', {
+      providerId,
+      fileUrl,
+      type,
+    });
 
     await this.updateProviderVerificationStatus(providerId);
   }
@@ -98,36 +99,66 @@ export class VerificationService {
     const fileUrl = await this.documentProcessingService.uploadImage(file, destinationPath);
     this.logger.log(`[VerificationService] uploadSelfieWithDocument: Selfie enviada para ${fileUrl}`);
 
-    const updateData: Prisma.ProviderUpdateInput = { selfieWithDocumentUrl: fileUrl };
+    // Atualiza o provedor com a URL da selfie
+    await this.prisma.provider.update({
+      where: { id: providerId },
+      data: { selfieWithDocumentUrl: fileUrl },
+    });
+    this.logger.log(`[VerificationService] URL da selfie salva para provider ${providerId}.`);
 
-    if (provider.documentPhotoFrontUrl) {
-      try {
-        const faceComparisonResult: FaceComparisonResult = await this.documentProcessingService.compareFaces(file, provider.documentPhotoFrontUrl);
-        updateData.livenessResult = faceComparisonResult as unknown as Prisma.JsonObject;
-        this.logger.log(`[VerificationService] Comparação facial processada para provedor ${providerId}.`);
-      } catch (fcError: any) {
-        this.logger.error(`[VerificationService] Erro ao processar comparação facial para provedor ${providerId}: ${fcError.message}`);
-      }
-    } else {
-      this.logger.warn(`[VerificationService] Não foi possível realizar comparação facial para ${providerId}: foto do documento frontal ausente.`);
-    }
+    // Adiciona tarefa para liveness check e comparação facial na fila
+    await this.queuesService.addVerificationJob('perform-liveness-check', {
+      providerId,
+      selfieUrl: fileUrl,
+      documentFrontUrl: provider.documentPhotoFrontUrl, // Passa a URL do documento frontal se existir
+    });
 
-    try {
-      const livenessResult: LivenessResult = await this.documentProcessingService.performLivenessCheck(file);
-      updateData.livenessResult = livenessResult as unknown as Prisma.JsonObject;
-      this.logger.log(`[VerificationService] Liveness check processado para provedor ${providerId}.`);
-    } catch (livenessError: any) {
-      this.logger.error(`[VerificationService] Erro ao processar liveness check para provedor ${providerId}: ${livenessError.message}`);
-    }
+    await this.updateProviderVerificationStatus(providerId);
+    return fileUrl;
+  }
 
+  // Novos métodos para atualizar resultados de processamento assíncrono
+  async updateProviderOcrResult(providerId: string, ocrResult: OcrResult, type: 'FRONT' | 'BACK'): Promise<void> {
+    const updateData: Prisma.ProviderUpdateInput = {
+      ocrResult: ocrResult as unknown as Prisma.JsonObject,
+    };
     await this.prisma.provider.update({
       where: { id: providerId },
       data: updateData,
     });
-    this.logger.log(`[VerificationService] URL da selfie e resultados de liveness/comparação facial salvos para provider ${providerId}.`);
-
+    this.logger.log(`[VerificationService] OCR result para ${type} do provedor ${providerId} atualizado.`);
     await this.updateProviderVerificationStatus(providerId);
-    return fileUrl;
+  }
+
+  async updateProviderLivenessResult(providerId: string, livenessResult: LivenessResult): Promise<void> {
+    const updateData: Prisma.ProviderUpdateInput = {
+      livenessResult: livenessResult as unknown as Prisma.JsonObject,
+    };
+    await this.prisma.provider.update({
+      where: { id: providerId },
+      data: updateData,
+    });
+    this.logger.log(`[VerificationService] Liveness check result para provedor ${providerId} atualizado.`);
+    await this.updateProviderVerificationStatus(providerId);
+  }
+
+  async updateProviderFaceComparisonResult(providerId: string, faceComparisonResult: FaceComparisonResult): Promise<void> {
+    // Aqui você pode decidir como armazenar o resultado da comparação facial.
+    // Pode ser parte do livenessResult ou um campo separado.
+    // Por simplicidade, vamos atualizar o livenessResult com a informação da comparação também,
+    // ou criar um campo específico se a granularidade for necessária.
+    // Para este exemplo, vamos atualizar o livenessResult.
+    const provider = await this.prisma.provider.findUnique({ where: { id: providerId } });
+    if (provider && provider.livenessResult) {
+      const currentLiveness = provider.livenessResult as unknown as LivenessResult & { faceComparison?: FaceComparisonResult };
+      currentLiveness.faceComparison = faceComparisonResult;
+      await this.prisma.provider.update({
+        where: { id: providerId },
+        data: { livenessResult: currentLiveness as unknown as Prisma.JsonObject },
+      });
+      this.logger.log(`[VerificationService] Face comparison result para provedor ${providerId} atualizado.`);
+    }
+    await this.updateProviderVerificationStatus(providerId);
   }
 
   async updateProviderVerificationStatusManually(providerId: string, newStatus: VerificationStatus, reason?: string): Promise<void> {
@@ -165,8 +196,11 @@ export class VerificationService {
     const isDocumentBackUploaded = provider.documentPhotoBackUrl !== null && provider.documentPhotoBackUrl !== undefined;
     const isSelfieUploaded = provider.selfieWithDocumentUrl !== null && provider.selfieWithDocumentUrl !== undefined;
 
+    // A validação de OCR e Liveness agora depende dos resultados que vêm do worker
     const isOcrProcessedAndOk = provider.ocrResult && (provider.ocrResult as unknown as OcrResult).confidence > 0.7;
     const isLivenessCheckPassed = provider.livenessResult && (provider.livenessResult as unknown as LivenessResult).isLive;
+    const isFaceComparisonMatch = provider.livenessResult && (provider.livenessResult as unknown as LivenessResult & { faceComparison?: FaceComparisonResult }).faceComparison?.match;
+
 
     let newStatus: VerificationStatus | undefined = undefined;
 
@@ -174,15 +208,16 @@ export class VerificationService {
       return;
     }
 
-    if (isDocumentFrontUploaded && isDocumentBackUploaded && isSelfieUploaded && isOcrProcessedAndOk && isLivenessCheckPassed) {
+    if (isDocumentFrontUploaded && isDocumentBackUploaded && isSelfieUploaded && isOcrProcessedAndOk && isLivenessCheckPassed && isFaceComparisonMatch) {
       newStatus = VerificationStatus.APPROVED;
       this.logger.log(`[VerificationService] updateProviderVerificationStatus: Provedor ${providerId} APROVADO automaticamente.`);
     } else if (
       (provider.ocrResult && !(provider.ocrResult as unknown as OcrResult).extractedText) ||
-      (provider.livenessResult && !(provider.livenessResult as unknown as LivenessResult).isLive)
+      (provider.livenessResult && !(provider.livenessResult as unknown as LivenessResult).isLive) ||
+      (provider.livenessResult && !(provider.livenessResult as unknown as LivenessResult & { faceComparison?: FaceComparisonResult }).faceComparison?.match)
     ) {
       newStatus = VerificationStatus.PENDING_MANUAL_REVIEW;
-      this.logger.log(`[VerificationService] updateProviderVerificationStatus: Provedor ${providerId} tem problemas em verificações automáticas (OCR/Liveness), requer revisão manual.`);
+      this.logger.log(`[VerificationService] updateProviderVerificationStatus: Provedor ${providerId} tem problemas em verificações automáticas (OCR/Liveness/Face Comparison), requer revisão manual.`);
     } else if (!isDocumentFrontUploaded || !isDocumentBackUploaded || !isSelfieUploaded) {
       newStatus = VerificationStatus.PENDING_DOCUMENTS_UPLOAD;
       this.logger.log(`[VerificationService] updateProviderVerificationStatus: Provedor ${providerId} passou para PENDING_DOCUMENTS_UPLOAD (faltam dados).`);

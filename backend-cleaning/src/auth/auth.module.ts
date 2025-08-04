@@ -1,3 +1,4 @@
+// src/auth/auth.module.ts
 import { Module, forwardRef } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
@@ -12,7 +13,6 @@ import { ProvidersModule } from '../providers/providers.module';
 import { WsAuthGuard } from './guards/ws-auth.guard';
 import { EmailModule } from '../common/modules/email.module';
 import { GeocodingModule } from '../common/modules/geocoding.module';
-// REMOVIDO: import { SmsModule } from '../sms/sms.module';
 
 @Module({
   imports: [
@@ -26,11 +26,10 @@ import { GeocodingModule } from '../common/modules/geocoding.module';
         signOptions: { expiresIn: configService.get<string>('JWT_EXPIRATION_TIME') },
       }),
     }),
-    UsersModule,
+    forwardRef(() => UsersModule), // Correto
     ProvidersModule,
     EmailModule,
     GeocodingModule,
-    // REMOVIDO: SmsModule,
   ],
   controllers: [AuthController],
   providers: [

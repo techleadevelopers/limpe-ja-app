@@ -1,13 +1,14 @@
 // src/bookings/bookings.module.ts
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { BookingsService } from './bookings.service';
 import { BookingsController } from './bookings.controller';
-import { PrismaModule } from '../prisma/prisma.module'; // Assuming you have this
-import { ClientsModule } from '../clients/clients.module'; // Assuming you have this
-import { ProvidersModule } from '../providers/providers.module'; // Assuming you have this
-import { ProviderServicesModule } from '../provider-services/provider-services.module'; // Assuming you have this
-import { PaymentsModule } from '../payments/payments.module'; // Assuming you have this
-import { NotificationsModule } from '../notifications/notifications.module'; // Make sure this path is correct
+import { PrismaModule } from '../prisma/prisma.module';
+import { ClientsModule } from '../clients/clients.module';
+import { ProvidersModule } from '../providers/providers.module';
+import { ProviderServicesModule } from '../provider-services/provider-services.module';
+import { PaymentsModule } from '../payments/payments.module';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { QueuesModule } from '../queues/queues.module'; // Importe o QueuesModule
 
 @Module({
   imports: [
@@ -15,11 +16,12 @@ import { NotificationsModule } from '../notifications/notifications.module'; // 
     ClientsModule,
     ProvidersModule,
     ProviderServicesModule,
-    PaymentsModule,
-    NotificationsModule, // Add NotificationsModule here
+    forwardRef(() => PaymentsModule),
+    NotificationsModule,
+    QueuesModule, // CORREÇÃO: Adicione QueuesModule para fornecer QueuesService
   ],
   controllers: [BookingsController],
   providers: [BookingsService],
-  exports: [BookingsService], // If other modules need to use BookingsService
+  exports: [BookingsService],
 })
 export class BookingsModule {}

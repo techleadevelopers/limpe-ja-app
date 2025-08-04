@@ -45,6 +45,37 @@ enum PricingType {
   CUSTOM_QUOTE // Para orçamentos mais complexos (futuro)
 }
 
+// Enum para o status do agendamento
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELED
+  PENDING_DISPUTE // NOVO: Status para agendamentos em disputa
+  RESCHEDULED
+  IN_PROGRESS
+  PENDING_PROVIDER_CONFIRMATION
+  REJECTED
+}
+
+// Enum para o tipo de transação financeira
+enum TransactionType {
+  PAYMENT    // Pagamento de cliente para plataforma
+  WITHDRAWAL // Saque de provedor da plataforma
+  COMMISSION // Comissão da plataforma
+  REFUND     // NOVO: Reembolso de valores
+}
+
+// NOVO: Enum para o motivo da disputa
+enum DisputeReason {
+  SERVICE_NOT_PERFORMED
+  SERVICE_INCOMPLETE
+  QUALITY_ISSUES
+  PROVIDER_DID_NOT_SHOW
+  CLIENT_DID_NOT_SHOW
+  OTHER
+}
+
 // Modelo de Usuário (base para Cliente e Provedor)
 model User {
   id                String         @id @default(uuid())
@@ -55,10 +86,11 @@ model User {
   avatarUrl         String?        // <--- NOVA LINHA ADICIONADA AQUI para o avatar do usuário
   firebaseUid       String?        @unique // Mantido, caso seja usado para outros serviços Firebase
   
-  // REMOVIDO: otpCode String? // Código OTP atual
-  // REMOVIDO: otpExpiresAt DateTime? // Tempo de expiração do OTP
   isPhoneVerified   Boolean        @default(false) // Se o telefone foi verificado
   
+  // NOVO: Campo para LGPD - marca a data para exclusão agendada da conta
+  deletionScheduledAt DateTime? // Data em que a exclusão da conta foi agendada (para LGPD)
+
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
 
@@ -69,6 +101,13 @@ model User {
   notifications     Notification[]
   chatsAsParticipant1 Chat[]       @relation("ChatParticipant1") // Nova relação para Chat
   chatsAsParticipant2 Chat[]       @relation("ChatParticipant2") // Nova relação para Chat
+
+  // NOVO: Relações para o modelo Referral
+  referredBy        Referral[]     @relation("ReferredByUser") // Indicações em que este usuário foi o indicado
+  referralsMade     Referral[]     @relation("ReferrerOfUser") // Indicações que este usuário fez
+
+  // NOVO: Relação para o modelo Dispute (CORREÇÃO AQUI)
+  disputesReported  Dispute[]      @relation("DisputeReporter") // Disputas reportadas por este usuário
 }
 
 // Modelo para Cliente
@@ -140,9 +179,6 @@ model Address {
   providerId   String?                      @unique
   client       Client?                      @relation("ClientAddress", fields: [clientId], references: [id])
   provider     Provider?                    @relation("ProviderAddress", fields: [providerId], references: [id])
-  // ADICIONADO: Relação para Booking, se um endereço pode ter múltiplos bookings
-  // bookings           Booking[] // Se um endereço pode ser usado por vários bookings. Menos comum para "endereço do serviço".
-
   // ALTERNATIVO para relação 1:1 com Booking (mais comum para endereço específico do serviço)
   booking      Booking?                     @relation("BookingAddress") // Se um endereço pertence a apenas um booking
 
@@ -184,19 +220,6 @@ model ProviderService {
   @@unique([providerId, serviceId]) // Um provedor não pode oferecer o mesmo tipo de serviço duas vezes
 }
 
-// Enum para o status do agendamento
-enum BookingStatus {
-  PENDING
-  CONFIRMED
-  COMPLETED
-  CANCELED
-  PENDING_DISPUTE // NOVO: Status para agendamentos em disputa
-  RESCHEDULED
-  IN_PROGRESS // <-- CONFIRME ESTE AQUI
-  PENDING_PROVIDER_CONFIRMATION // Confirme este também se usar
-  REJECTED // Confirme este também se usar
-}
-
 // Modelo de Agendamento
 model Booking {
   id                  String        @id @default(uuid())
@@ -219,6 +242,9 @@ model Booking {
   // ADICIONADO: RELAÇÃO DO ENDEREÇO ESPECÍFICO DO AGENDAMENTO
   addressId           String?       @unique // Unique porque um Booking terá um único Address
   address             Address?      @relation("BookingAddress", fields: [addressId], references: [id]) // Relação 1:1
+
+  // NOVO: Relação com o modelo Dispute
+  dispute             Dispute?      // Relação 1:1 com Dispute. Um agendamento pode ter uma disputa.
 }
 
 // Modelo de Chat (NOVO)
@@ -229,8 +255,8 @@ model Chat {
   participant2Id String
   participant2   User      @relation("ChatParticipant2", fields: [participant2Id], references: [id])
   messages       Message[] // Mensagens associadas a este chat
-  createdAt      DateTime  @default(now()) // <--- ADICIONE ESTA LINHA
-  updatedAt      DateTime  @updatedAt // <--- ADICIONE ESTA LINHA
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@unique([participant1Id, participant2Id]) // Garante que não há chats duplicados para o mesmo par de usuários
 }
@@ -273,13 +299,10 @@ model Review {
   rating     Int      // Nota de 1 a 5
   comment    String?
   createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt // <--- LINHA ADICIONADA AQUI!
+  updatedAt  DateTime @updatedAt
   client     Client   @relation("ClientReviews", fields: [clientId], references: [id])
   provider   Provider @relation("ProviderReviews", fields: [providerId], references: [id])
 
-  // NOVO: Adicionado índice único composto para garantir que um cliente só pode avaliar
-  // um provedor para um booking específico uma única vez.
-  // Isso não impedirá que um provedor tenha múltiplas avaliações (de diferentes bookings/clientes).
   @@unique([bookingId, clientId, providerId])
 }
 
@@ -296,13 +319,6 @@ model Offer {
   updatedAt           DateTime  @updatedAt
 }
 
-// Enum para o tipo de transação financeira
-enum TransactionType {
-  PAYMENT    // Pagamento de cliente para plataforma
-  WITHDRAWAL // Saque de provedor da plataforma
-  COMMISSION // Comissão da plataforma
-}
-
 // Modelo de Transação Financeira
 model Transaction {
   id                 String          @id @default(uuid())
@@ -313,10 +329,8 @@ model Transaction {
   status             String          // Status da transação (e.g., "PENDING", "COMPLETED", "FAILED")
   description        String?
   createdAt          DateTime        @default(now())
-  // ADICIONADO: Campos para bookingId e relação com Booking
   bookingId          String?         // <--- MODIFICADO: REMOVIDO @unique para permitir múltiplas transações por booking
   booking            Booking?        @relation(fields: [bookingId], references: [id])
-  // NOVOS CAMPOS PARA INTEGRAÇÃO COM GATEWAY DE PAGAMENTO
   gatewayTransactionId String?       @unique // ID da transação no gateway de pagamento (ex: PagSeguro)
   qrCodeUrl          String?         // URL do QR Code gerado pelo gateway
 }
@@ -341,4 +355,36 @@ model FAQItem {
   order     Int      @default(0) // Ordem de exibição
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// NOVO: Modelo para Indicação (Referral)
+model Referral {
+  id             String   @id @default(uuid())
+  referredUserId String   @unique // ID do usuário indicado
+  referredUser   User     @relation("ReferredByUser", fields: [referredUserId], references: [id])
+  referrerUserId String   // ID do usuário que indicou
+  referrerUser   User     @relation("ReferrerOfUser", fields: [referrerUserId], references: [id])
+  referralCode   String?  // Código de indicação usado
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([referredUserId, referrerUserId]) // Garante que um usuário só pode ser indicado uma vez por outro
+}
+
+// NOVO: Modelo para Disputa de Agendamento
+model Dispute {
+  id                String       @id @default(uuid())
+  bookingId         String       @unique // Relação 1:1 com Booking
+  booking           Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  reporterUserId    String       // Quem reportou a disputa (cliente ou provedor)
+  reporterUser      User         @relation("DisputeReporter", fields: [reporterUserId], references: [id])
+  reason            DisputeReason // Motivo da disputa
+  description       String       // Descrição detalhada do problema
+  refundAmountProposed Decimal? @db.Decimal(10, 2) // Valor de reembolso sugerido pelo reportante
+  attachments       String[]     // URLs de anexos/evidências
+  status            String       @default("PENDING_REVIEW") // Status da disputa (PENDING_REVIEW, RESOLVED, REJECTED)
+  resolutionNotes   String?      // Notas da resolução (preenchido pelo admin)
+  resolvedAt        DateTime?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 }

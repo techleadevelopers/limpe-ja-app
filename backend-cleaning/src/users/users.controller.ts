@@ -1,6 +1,7 @@
 // src/users/users.controller.ts
 import {
-  Controller, Get, Body, Patch, Param, UseGuards, Req, NotFoundException, ForbiddenException, Delete, HttpCode, HttpStatus, Logger
+  Controller, Get, Body, Patch, Param, UseGuards, Req, NotFoundException, ForbiddenException, Delete, HttpCode, HttpStatus, Logger,
+  Post, // CORREÇÃO: Adicionado 'Post' aqui
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -11,6 +12,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole, User as PrismaUser } from '@prisma/client';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express-serve-static-core';
+import { MessageResponseDto } from '../common/dto/message-response.dto'; // Importe para respostas de mensagem
 
 // A interface JwtPayload para o que *esperamos* do JWT
 interface JwtPayload {
@@ -120,5 +122,35 @@ export class UsersController {
     this.logger.log(`[UsersController] remove: Recebida solicitação para deletar userId: ${id} (ADMIN).`);
     await this.usersService.remove(id);
     this.logger.log(`[UsersController] remove: Usuário userId: ${id} deletado com sucesso.`);
+  }
+
+  // NOVO ENDPOINT: Exportar dados do usuário (LGPD)
+  @Post('data-export')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Solicitar exportação dos dados do usuário logado (LGPD)' })
+  @ApiResponse({ status: 202, description: 'Solicitação de exportação de dados recebida. O link para download será enviado por e-mail.', type: MessageResponseDto })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  @HttpCode(HttpStatus.ACCEPTED)
+  async requestDataExport(@Req() req: Request): Promise<MessageResponseDto> {
+    const userId = (req.user as RequestUserPayload).userId;
+    this.logger.log(`[UsersController] requestDataExport: Recebida solicitação de exportação de dados para userId: ${userId}.`);
+    await this.usersService.requestDataExport(userId);
+    return { message: 'Sua solicitação de exportação de dados foi recebida. Um link para download será enviado para o seu e-mail cadastrado.' };
+  }
+
+  // NOVO ENDPOINT: Excluir conta do usuário (LGPD)
+  @Delete('delete-account')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Solicitar exclusão da conta do usuário logado (LGPD)' })
+  @ApiResponse({ status: 202, description: 'Solicitação de exclusão de conta recebida. A conta será desativada e excluída permanentemente após um período de carência.', type: MessageResponseDto })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  @HttpCode(HttpStatus.ACCEPTED)
+  async requestAccountDeletion(@Req() req: Request): Promise<MessageResponseDto> {
+    const userId = (req.user as RequestUserPayload).userId;
+    this.logger.log(`[UsersController] requestAccountDeletion: Recebida solicitação de exclusão de conta para userId: ${userId}.`);
+    await this.usersService.requestAccountDeletion(userId);
+    return { message: 'Sua solicitação de exclusão de conta foi recebida. Sua conta será desativada e excluída permanentemente após um período de carência. Você receberá um e-mail de confirmação.' };
   }
 }

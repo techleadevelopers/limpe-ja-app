@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, UseGuards, Req, NotFoundException, ForbiddenException, Query, BadRequestException } from '@nestjs/common'; // CORREÇÃO: Importar BadRequestException
+import { Controller, Get, Post, Body, Patch, Param, UseGuards, Req, NotFoundException, ForbiddenException, Query, BadRequestException, HttpCode, HttpStatus } from '@nestjs/common'; // CORREÇÃO: Importar BadRequestException, HttpCode, HttpStatus
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
@@ -10,6 +10,8 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { BookingStatus, UserRole } from '@prisma/client';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
+import { ReportDisputeDto } from './dto/report-dispute.dto'; // Importe o novo DTO de disputa
+import { MessageResponseDto } from '../common/dto/message-response.dto'; // Para mensagens de sucesso
 
 @ApiTags('bookings')
 @Controller('bookings')
@@ -182,6 +184,52 @@ export class BookingsController {
     const userId = req.user['userId'];
     const userRole = req.user['role'];
     const updatedBooking = await this.bookingsService.reportIssue(id, userId, userRole, reason);
+    return new BookingDetailsDto(updatedBooking);
+  }
+
+  // NOVO ENDPOINT: Gerenciar Disputas (ADMIN ou provedor/cliente envolvido)
+  @Post(':id/dispute')
+  @Roles(UserRole.CLIENT, UserRole.PROVIDER) // Cliente/Provedor reporta, Admin gerencia
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Reportar uma disputa para um agendamento' })
+  @ApiResponse({ status: 202, description: 'Disputa reportada com sucesso. Será processada em segundo plano.', type: MessageResponseDto })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  @ApiResponse({ status: 403, description: 'Acesso proibido.' })
+  @ApiResponse({ status: 404, description: 'Agendamento não encontrado.' })
+  @ApiResponse({ status: 400, description: 'Dados da disputa inválidos.' })
+  @HttpCode(HttpStatus.ACCEPTED)
+  async reportDispute(
+    @Req() req: Request,
+    @Param('id') bookingId: string,
+    @Body() reportDisputeDto: ReportDisputeDto,
+  ): Promise<MessageResponseDto> {
+    const userId = req.user['userId'];
+    const userRole = req.user['role'];
+    await this.bookingsService.reportDispute(bookingId, userId, userRole, reportDisputeDto);
+    return { message: 'Disputa reportada com sucesso. Nossa equipe analisará e entrará em contato.' };
+  }
+
+  @Patch(':id/resolve-dispute')
+  @Roles(UserRole.ADMIN) // Apenas administradores podem resolver disputas
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Resolver uma disputa de agendamento (apenas para administradores)' })
+  @ApiResponse({ status: 200, description: 'Disputa resolvida com sucesso.', type: BookingDetailsDto })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  @ApiResponse({ status: 403, description: 'Acesso proibido.' })
+  @ApiResponse({ status: 404, description: 'Agendamento ou disputa não encontrada.' })
+  @ApiResponse({ status: 400, description: 'Requisição inválida.' })
+  async resolveDispute(
+    @Param('id') bookingId: string,
+    @Body('resolution') resolution: string,
+    @Body('refundAmount') refundAmount?: number,
+    @Body('newStatus') newStatus?: BookingStatus,
+  ): Promise<BookingDetailsDto> {
+    if (!resolution || resolution.trim().length === 0) {
+      throw new BadRequestException('A resolução da disputa é obrigatória.');
+    }
+    const updatedBooking = await this.bookingsService.resolveDispute(bookingId, resolution, refundAmount, newStatus);
     return new BookingDetailsDto(updatedBooking);
   }
 }

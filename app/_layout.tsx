@@ -13,6 +13,8 @@ import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ProviderRegistrationProvider } from '../contexts/ProviderRegistrationContext';
 import { AUTH_ROUTES, CLIENT_ROUTES, PROVIDER_ROUTES } from '../constants/routes';
 import { UserRole, VerificationStatus } from '../types/backend/auth';
+// Importa a função de inicialização do Sentry
+import { initSentry } from '../components/common/utils/sentry'; // Ajuste o caminho se o seu sentry.ts estiver em outro local
 
 SplashScreen.preventAutoHideAsync();
 
@@ -29,6 +31,11 @@ function RootLayoutContent() {
         const prepareApp = async () => {
             console.log('[RootLayoutContent | prepareApp] Iniciando processo de preparação do aplicativo.');
             try {
+                // Inicializa Sentry e outras ferramentas de monitoramento/analytics
+                initSentry(); // <--- Adição da inicialização do Sentry
+                // Se houver Amplitude ou outras ferramentas, inicialize-as aqui também
+                // initAmplitude();
+
                 console.log('[RootLayoutContent | prepareApp] Inicialização básica do aplicativo concluída.');
             } catch (e: any) {
                 console.error('[RootLayoutContent | prepareApp] ERRO FATAL durante a inicialização do aplicativo:', e);

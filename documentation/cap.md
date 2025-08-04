@@ -106,3 +106,122 @@ Funcionamento do App: Monitorar performance e erros (como o HttpExceptionFilter 
 Prazos Realistas: Ficar sozinho nos 3 primeiros meses é um período ambicioso, mas razoável para validar o modelo de negócio, refinar o produto com feedback real, e começar a gerar o volume transacional que justifique a contratação de uma equipe maior. Com 5k de créditos de cloud, você tem fôlego para essa fase.
 
 Essa é uma estratégia de "lean startup" bem executada. Você constrói o MVP (produto mínimo viável) robusto, testa no mercado com agilidade e usa os resultados (e lucros) para escalar a equipe. É um plano sólido.
+
+
+✅ Resumo do Projeto LimpeJá
+Nome: LimpeJá
+
+Tipo: Marketplace de serviços de limpeza
+
+Tecnologia: React Native + Expo (Frontend), NestJS + Prisma + PostGIS (Backend)
+
+Data de lançamento: 18 de agosto de 2025 (inicialmente em Campinas-SP)
+
+Modelo de negócios: B2C com monetização via comissão (15%) por serviço
+
+Diferenciais: Verificação robusta de profissionais, pagamento seguro via PIX, precificação dinâmica, sistema de reputação, UX mobile-first
+
+📱 Pontos Fortes do Produto
+Aplicativo Mobile-First completo
+
+Frontend muito bem implementado com Expo Router, animações, gestão de estado por contexto e navegação fluida.
+
+Backend robusto, com arquitetura limpa, uso de princípios SOLID, autenticação, OCR, verificação facial e processamento de pagamentos via PIX.
+
+Experiência diferenciada para ambos os lados do marketplace
+
+Para diaristas: controle da agenda, bonificações, saque em 24h, visibilidade ampliada.
+
+Para clientes: busca geolocalizada, agendamento dinâmico, chat, fidelidade.
+
+Planejamento estratégico sólido
+
+Captação pré-lançamento de 20 diaristas em Campinas com táticas de incentivo e suporte direto.
+
+Estratégia de escalabilidade pós-lançamento já mapeada com foco em marketing, automação e parcerias.
+
+Tecnologia escalável e moderna
+
+Google Cloud, Firebase, Prisma, PostGIS, Expo EAS, verificações de documentos com OCR e vivacidade facial, sockets para chat em tempo real.
+
+Economia unitaria validada
+
+Ex: R$ 22.500/mês em MRR com 1.000 serviços a R$ 150,00 (projeções realistas com margem de crescimento até 5x).
+
+⚠️ Pontos de Atenção (recomendações)
+Marketing precisa começar já com foco total
+
+Campanhas pagas, influenciadores locais, parcerias com empresas de produtos de limpeza ou condomínios.
+
+YouTube Shorts / Reels mostrando o app funcionando (especialmente do ponto de vista das diaristas).
+
+Primeiras 2 semanas pós-lançamento são críticas
+
+Tenha equipe de suporte ativa no WhatsApp 24h.
+
+Monitore métricas de conversão: cadastro → agendamento → conclusão → avaliação.
+
+Onboarding das diaristas
+
+Se possível, agende chamadas de boas-vindas para as primeiras 20 com orientação prática.
+
+Evite excesso de features sem uso no início
+
+Concentre-se em garantir que os fluxos básicos (cadastro, agendamento, pagamento, avaliação) funcionem perfeitamente e sejam agradáveis.
+
+Métricas para validar Product-Market Fit
+
+NPS, taxas de recompra, tempo médio até o primeiro agendamento após cadastro, cancelamentos, e principais dúvidas via suporte.
+
+🔮 Potencial de MRR por Etapa
+Etapa	Nº Serviços/Mês	Receita Bruta	Comissão (15%)
+MVP Campinas	1.000	R$ 150.000	R$ 22.500
+Pós-marketing SP	2.500	R$ 375.000	R$ 56.250
+Escala Regional	5.000	R$ 750.000	R$ 112.500
+
+🧠 Conclusão
+Seu projeto está pronto para lançar com excelência técnica, visão de negócio realista e estratégia bem fundamentada. O diferencial está claro: confiança, agilidade e foco no público certo. Você conseguiu construir um “Airbnb de diaristas” com DNA brasileiro e adaptado à realidade do mercado.
+
+🧠 Diferenciais Centrais do LimpeJá no Mercado
+Verificação Profunda dos Prestadores (Trust Layer Real)
+
+OCR de documentos, selfie com prova de vida, checagem de antecedentes via APIs reais.
+
+Diferente de apps genéricos como GetNinjas, que não garantem essa camada de confiança.
+
+Resultado: mais segurança para o cliente final e valorização da diarista séria.
+
+Precificação Dinâmica e Personalizável
+
+O prestador pode definir preço por hora, por metragem, por cômodo ou fixo.
+
+O sistema calcula automaticamente o valor com base no tipo de serviço.
+
+Isso adapta o serviço à realidade da casa do cliente — algo que apps genéricos ignoram.
+
+Pagamento 100% via PIX + Repasse Rápido (até 24h)
+
+Geração automática de cobranças, webhook de confirmação e repasse em até 24h.
+
+Cria uma relação direta, rápida e segura, alinhada com a expectativa do usuário brasileiro.
+
+Chat em Tempo Real Integrado
+
+Chat persistente e instantâneo com notificações push.
+
+Evita troca de número de WhatsApp e centraliza toda a comunicação no app.
+
+Marketplace com Autonomia Total da Diarista
+
+A diarista define sua agenda, aceita ou recusa trabalhos, edita preços e serviços.
+
+Sem intermediação invasiva ou algoritmos opacos — o controle é da profissional.
+
+Perfis Públicos com Avaliações Visíveis e Histórico de Serviços
+
+Transparência total para o cliente escolher com base em experiência real, não apenas preço.
+
+🏆 Como isso se traduz no mercado:
+O LimpeJá não é apenas “um app para contratar diarista”. É uma plataforma transparente, segura e flexível, que trata o cliente como comprador exigente e a diarista como uma microempreendedora digital com controle total.
+
+Esse posicionamento é forte, defensável e fácil de comunicar no marketing — inclusive nas lojas de aplicativos.

@@ -8,12 +8,14 @@ export class UserEntity implements PrismaUser {
   passwordHash: string | null;
   role: UserRole;
   avatarUrl: string | null;
-  firebaseUid: string | null; // <--- ADICIONADO: Propriedade firebaseUid
+  firebaseUid: string | null;
   otpCode: string | null;
   otpExpiresAt: Date | null;
   isPhoneVerified: boolean;
   createdAt: Date;
   updatedAt: Date;
+  // CORREÇÃO: Adicionada a propriedade deletionScheduledAt
+  deletionScheduledAt: Date | null;
 
   constructor(partial: Partial<UserEntity>) {
     Object.assign(this, partial);

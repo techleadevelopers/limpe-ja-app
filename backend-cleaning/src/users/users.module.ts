@@ -1,13 +1,21 @@
 // src/users/users.module.ts
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { PrismaModule } from '../prisma/prisma.module'; // Certifique-se de que está importado
-import { UsersController } from './users.controller'; // Certifique-se que o caminho está correto
+import { PrismaModule } from '../prisma/prisma.module';
+import { UsersController } from './users.controller';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { QueuesModule } from '../queues/queues.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [PrismaModule], // Adicionado para que UsersService possa usar PrismaService
-  controllers: [UsersController], // <-- ESTA LINHA É CRÍTICA!
+  imports: [
+    PrismaModule,
+    NotificationsModule,
+    QueuesModule,
+    forwardRef(() => AuthModule), // Correto
+  ],
+  controllers: [UsersController],
   providers: [UsersService],
-  exports: [UsersService],   // <--- CRÍTICO: UsersService deve ser exportado aqui
+  exports: [UsersService],
 })
 export class UsersModule {}
