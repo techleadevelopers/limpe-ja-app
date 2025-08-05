@@ -1,9 +1,11 @@
+// src/reviews/reviews.service.ts
 import { Injectable, NotFoundException, ConflictException, ForbiddenException, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SubmitReviewDto } from './dto/submit-review.dto';
 import { GetReviewsDto } from './dto/get-reviews.dto';
 import { Review, BookingStatus, Prisma } from '@prisma/client';
 import { BookingsService } from '../bookings/bookings.service'; // ADICIONADO: Importação do BookingsService
+import { ProvidersService } from '../providers/providers.service'; // NEW: Import ProvidersService
 
 export type ReviewWithIncludes = Prisma.ReviewGetPayload<{
   include: {
@@ -54,6 +56,7 @@ export class ReviewsService {
   constructor(
     private prisma: PrismaService,
     private bookingsService: BookingsService, // ADICIONADO: Injetar BookingsService
+    private providersService: ProvidersService, // NEW: Inject ProvidersService
   ) {}
 
   async submitReview(clientId: string, submitReviewDto: SubmitReviewDto): Promise<Review> {
@@ -84,15 +87,15 @@ export class ReviewsService {
       throw new ConflictException(`Agendamento com ID "${bookingId}" já possui uma avaliação.`);
     }
 
-    // Increment fiveStarReviewCount if rating is 5
-    if (rating === 5) {
-      await this.prisma.provider.update({
-        where: { id: booking.providerId },
-        data: { fiveStarReviewCount: { increment: 1 } },
-      });
-    }
+    // Increment fiveStarReviewCount if rating is 5 - This logic is now handled by ProvidersService.updateProviderBadges
+    // if (rating === 5) {
+    //   await this.prisma.provider.update({
+    //     where: { id: booking.providerId },
+    //     data: { fiveStarReviewCount: { increment: 1 } },
+    //   });
+    // }
 
-    return this.prisma.review.create({
+    const review = await this.prisma.review.create({
       data: {
         bookingId,
         clientId: booking.clientId, // Usar booking.clientId
@@ -101,6 +104,11 @@ export class ReviewsService {
         comment,
       },
     });
+
+    // NEW: Trigger provider badge update after a new review is created
+    await this.providersService.updateProviderBadges(booking.providerId);
+
+    return review;
   }
 
   async findReviews(getReviewsDto: GetReviewsDto): Promise<ReviewWithIncludes[]> {

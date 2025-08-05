@@ -30,6 +30,12 @@ import { QueuesModule } from './queues/queues.module';
 import { CacheModule } from './cache/cache.module';
 import { ReferralsModule } from './referrals/referrals.module';
 import { ThrottlerModule } from '@nestjs/throttler'; // Módulo para Rate Limiting
+import { SubscriptionsModule } from './subscriptions/subscriptions.module'; // NOVO
+import { SafetyModule } from './safety/safety.module'; // NOVO
+import { CouponsModule } from './coupons/coupons.module'; // NOVO
+import { GuaranteeModule } from './guarantee/guarantee.module'; // NOVO
+import { PricingModule } from './pricing/pricing.module'; // NOVO
+import { GeocodingModule } from './geocoding/geocoding.module'; // ABS: NOVA IMPORTAÇÃO AQUI
 
 @Module({
   imports: [
@@ -77,6 +83,12 @@ import { ThrottlerModule } from '@nestjs/throttler'; // Módulo para Rate Limiti
     QueuesModule,     // Módulo para gerenciar filas (BullMQ)
     CacheModule,      // Módulo para gerenciar cache (Redis)
     ReferralsModule,  // Módulo para o sistema de indicações
+    SubscriptionsModule, // NOVO
+    SafetyModule,        // NOVO
+    CouponsModule,       // NOVO
+    GuaranteeModule,     // NOVO
+    PricingModule,       // NOVO
+    GeocodingModule,     // ABS: ADICIONADO AQUI
   ],
   controllers: [AppController],
   providers: [AppService],

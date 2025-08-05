@@ -1,3 +1,4 @@
+// src/availability/availability.service.ts
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateAvailabilityDto } from './dto/update-availability.dto';
@@ -27,7 +28,7 @@ export class AvailabilityService {
     // independentemente do fuso horário do servidor.
     const [year, month, day] = date.split('-').map(Number);
     // month - 1 porque os meses em JavaScript são de 0 a 11.
-    const selectedDateObjUTC = new Date(Date.UTC(year, month - 1, day)); 
+    const selectedDateObjUTC = new Date(Date.UTC(year, month - 1, day));
     // <<<< FIM DA CORREÇÃO CRÍTICA >>>>
 
     const actualDayOfWeek = selectedDateObjUTC.getUTCDay(); // <<<< Use getUTCDay() para obter o dia da semana em UTC (0=Dom, 1=Seg...)
@@ -62,7 +63,7 @@ export class AvailabilityService {
                 lte: new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999)), // Fim do dia em UTC
             },
             status: {
-                in: [BookingStatus.CONFIRMED, BookingStatus.COMPLETED],
+                in: [BookingStatus.CONFIRMED, BookingStatus.COMPLETED, BookingStatus.IN_PROGRESS], // Include IN_PROGRESS
             },
         },
         select: {

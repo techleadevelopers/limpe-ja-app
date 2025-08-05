@@ -225,3 +225,90 @@ Transparência total para o cliente escolher com base em experiência real, não
 O LimpeJá não é apenas “um app para contratar diarista”. É uma plataforma transparente, segura e flexível, que trata o cliente como comprador exigente e a diarista como uma microempreendedora digital com controle total.
 
 Esse posicionamento é forte, defensável e fácil de comunicar no marketing — inclusive nas lojas de aplicativos.
+
+
+📌 Estratégia de Lançamento Manual em Campinas (Low-Budget)
+1. Grupos de Facebook, WhatsApp e Telegram locais
+Exemplo: “Moradores do Cambuí”, “Jardim Nova Europa”, “Empregos Campinas”.
+
+Poste como cliente interessado e profissional oferecendo serviços (testes A/B).
+
+Use prints reais da interface do app, fale que o app é da cidade e não cobra taxa dos diaristas.
+
+🎯 Mensagem-chave:
+
+“Lançamos um app 100% gratuito para diaristas de Campinas encontrarem clientes com mais segurança e agilidade. Sem taxas. Baixe e divulgue para quem precisa.”
+
+2. Feiras, igrejas, salões de beleza e boca a boca
+Entregue panfletos ou cartões com QR code do app.
+
+Converse diretamente com diaristas e clientes (ouça objeções).
+
+Forme 1 grupo piloto de 20 diaristas fixas. Isso vira “base” pro match no app.
+
+3. Google Meu Negócio + SEO local
+Crie um perfil da plataforma no Google Maps/Cadastro de empresa.
+
+Foque em termos como: “diarista em Campinas”, “limpeza residencial Campinas”.
+
+Isso gera tráfego recorrente e orgânico — e poucos concorrentes locais fazem bem.
+
+🎯 O Fato de Não Cobrar Taxa é Sua Arma
+Esse diferencial é perfeito pro começo:
+
+Atrai diaristas rápido.
+
+Evita resistência e fricção.
+
+Incentiva as próprias profissionais a divulgar a plataforma (você vira parceiro, não “explorador”).
+
+📌 Dica:
+Use isso como gatilho de urgência, ex:
+
+“Para as primeiras 50 diaristas cadastradas: uso 100% gratuito e com suporte exclusivo.”
+
+⚠️ Cuidados
+Evite lançar em toda a cidade de cara.
+
+Foco em 2 bairros com maior poder aquisitivo + acesso + volume de grupos (ex: Cambuí, Taquaral).
+
+Evite ativar o app nacionalmente logo.
+
+App sem profissionais em cada cidade = má reputação na loja (avaliado mal).
+
+Não dependa só de postagens soltas.
+
+Planeje uma rotina: 5 posts por semana, 2 grupos novos por dia, onboarding de 1 prestador por dia no WhatsApp (exemplo).
+
+🚀 Conclusão
+✅ Sim, é totalmente viável começar com marketing manual e gratuito:
+
+O app está pronto e autônomo ✔️
+
+Você não cobra taxa, o que facilita entrada ✔️
+
+A cidade é ideal para teste de penetração ✔️
+
+Seu foco é fazer o mercado girar antes de escalar ✔️
+
+📌 Minha sugestão: invista 30 dias só em canais orgânicos locais, e ao atingir 50 prestadoras ativas + 100 serviços agendados, aí sim vá pra tráfego pago e influenciador.
+
+🚨 NOVO APP PARA DIARISTAS EM CAMPINAS 🚨
+
+Você é diarista e quer mais clientes?
+Lançamos um app gratuito (estilo Airbnb) que conecta diaristas com clientes da cidade, com segurança e praticidade!
+
+✨ Benefícios para você:
+🔒 Atendimento com segurança
+💸 Sem taxas para a profissional
+📲 Pagamento direto no seu Pix
+✅ Suporte e verificação dos clientes
+
+⚠️ Como funciona o pagamento:
+O cliente paga antecipado pelo app, e o valor fica reservado.
+Assim que o serviço for concluído e confirmado, o pagamento é liberado direto para o seu Pix. Tudo 100% seguro para você e para o cliente.
+
+👉 Baixe o app LimpeJá agora e garanta seu lugar na plataforma:
+📲 [link do app na Play Store]
+
+📢 Vagas limitadas no lançamento! Entre agora.

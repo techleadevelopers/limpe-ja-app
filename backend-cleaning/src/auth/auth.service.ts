@@ -9,7 +9,7 @@ import { UserRole, User, Prisma, Client, Provider, Address, ProviderService, Ser
 import { AuthResponseDto } from './dto/auth-response.dto'; //
 import { UserProfileDto } from '../users/dto/user-profile.dto';
 import { ProvidersService, ProviderWithIncludes, ProviderWithCalculatedRating } from '../providers/providers.service';
-import { ClientWithIncludes } from '../users/dto/user-profile.dto';
+import { ClientWithIncludes } from '../clients/clients.service'; // Corrected import path
 import { EmailService } from '../common/services/email.service';
 import { GeocodingService } from '../common/services/geocoding.service';
 // REMOVIDO: import { SmsService } from '../sms/sms.service';
@@ -25,6 +25,8 @@ export type UserWithAllRelations = User & {
     _count?: { bookings: number };
     createdAt: Date;
     updatedAt: Date;
+    noShowCount: number; // NEW
+    cancellationCount: number; // NEW
   }) | null;
   provider?: ProviderWithIncludes | null; // Usar ProviderWithIncludes atualizado
 };
@@ -92,6 +94,11 @@ export class AuthService {
                   include: { user: true }
                 }
               }
+            },
+            bookings: { // Added for provider badges/metrics
+              where: { status: 'COMPLETED' },
+              orderBy: { createdAt: 'desc' },
+              take: 100,
             },
           },
         },
@@ -167,6 +174,8 @@ export class AuthService {
               fullName,
               phone: phone ?? null,
               cpf: cpf ?? null,
+              noShowCount: 0, // NEW
+              cancellationCount: 0, // NEW
               address: {
                 create: {
                   cep: address.cep,
@@ -176,6 +185,8 @@ export class AuthService {
                   city: address.city,
                   state: address.state,
                   complement: address.complement ?? null,
+                  latitude: geoCoordinates?.latitude, // Assuming DTO includes these
+                  longitude: geoCoordinates?.longitude, // Assuming DTO includes these
                 },
               },
             },
@@ -197,6 +208,8 @@ export class AuthService {
       });
 
       // === INÍCIO DA CORREÇÃO PARA CAMPO 'LOCATION' NO REGISTRO DE CLIENTE ===
+      // This part might be redundant if latitude/longitude are directly set in address.create
+      // but keeping it for explicit geospatial indexing if needed.
       if (geoCoordinates && newUser.client?.address?.id) {
         const wktPoint = `POINT(${geoCoordinates.longitude} ${geoCoordinates.latitude})`; // Formata como string WKT
         await this.prisma.$executeRaw(Prisma.sql`
@@ -276,6 +289,7 @@ export class AuthService {
               avatarUrl: avatarUrl ?? null,
               verificationStatus: VerificationStatus.PENDING_INITIAL_REVIEW,
               bio: null,
+              badges: [], // NEW: Initialize with empty badges
               address: {
                 create: {
                   cep: address.cep,
@@ -285,6 +299,8 @@ export class AuthService {
                   city: address.city,
                   state: address.state,
                   complement: address.complement ?? null,
+                  latitude: geoCoordinates?.latitude, // Assuming DTO includes these
+                  longitude: geoCoordinates?.longitude, // Assuming DTO includes these
                 },
               },
             },
@@ -307,15 +323,22 @@ export class AuthService {
                   }
                 }
               },
+              bookings: { // Added for provider badges/metrics
+                where: { status: 'COMPLETED' },
+                orderBy: { createdAt: 'desc' },
+                take: 100,
+              },
             }
           }
         }
       });
 
       // === INÍCIO DA CORREÇÃO PARA CAMPO 'LOCATION' NO REGISTRO DE PROVEDOR ===
+      // This part might be redundant if latitude/longitude are directly set in address.create
+      // but keeping it for explicit geospatial indexing if needed.
       if (geoCoordinates && newUser.provider?.address?.id) {
         const wktPoint = `POINT(${geoCoordinates.longitude} ${geoCoordinates.latitude})`; // Formata como string WKT
-        
+
         // Usa $executeRaw para inserir/atualizar o campo de geometria diretamente via SQL
         await this.prisma.$executeRaw(Prisma.sql`
             UPDATE "Address"

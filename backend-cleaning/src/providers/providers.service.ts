@@ -12,7 +12,7 @@ import { UpdateProviderProfileDto } from './dto/update-provider-profile.dto';
 
 export type ProviderWithIncludes = Prisma.ProviderGetPayload<{
   include: {
-    user: { select: { email: true, role: true } };
+    user: { select: { email: true, role: true, isVerified: true } }; // Added isVerified
     address: true;
     providerServices: { include: { service: true } };
     reviewsReceived: {
@@ -23,6 +23,11 @@ export type ProviderWithIncludes = Prisma.ProviderGetPayload<{
           }
         }
       }
+    };
+    bookings: { // Added for smart matching/badge logic
+      where: { status: 'COMPLETED' };
+      orderBy: { createdAt: 'desc' };
+      take: 100;
     };
   };
 }>;
@@ -72,6 +77,7 @@ export type ProviderWithCalculatedRating = {
   rejectionReason?: string | null;
   ocrResult: Prisma.JsonValue | null;
   livenessResult: Prisma.JsonValue | null;
+  badges: string[]; // NEW FIELD
 };
 
 @Injectable()
@@ -145,6 +151,7 @@ export class ProvidersService {
       rejectionReason: provider.rejectionReason,
       ocrResult: provider.ocrResult,
       livenessResult: provider.livenessResult,
+      badges: provider.badges, // NEW
     };
   }
 
@@ -193,7 +200,7 @@ export class ProvidersService {
         },
       },
       include: {
-        user: { select: { email: true, role: true } },
+        user: { select: { email: true, role: true, isVerified: true } },
         address: true,
         providerServices: { include: { service: true } },
         reviewsReceived: {
@@ -204,6 +211,11 @@ export class ProvidersService {
               }
             }
           }
+        },
+        bookings: { // Added for smart matching/badge logic
+          where: { status: 'COMPLETED' },
+          orderBy: { createdAt: 'desc' },
+          take: 100,
         },
       },
     });
@@ -224,7 +236,7 @@ export class ProvidersService {
     const prismaProvider = await this.prisma.provider.findUnique({
       where: { id },
       include: {
-        user: { select: { email: true, role: true } },
+        user: { select: { email: true, role: true, isVerified: true } },
         address: true,
         providerServices: { include: { service: true } },
         reviewsReceived: {
@@ -235,6 +247,11 @@ export class ProvidersService {
               }
             }
           }
+        },
+        bookings: { // Added for smart matching/badge logic
+          where: { status: 'COMPLETED' },
+          orderBy: { createdAt: 'desc' },
+          take: 100,
         },
       },
     });
@@ -262,7 +279,7 @@ export class ProvidersService {
     const prismaProvider = await this.prisma.provider.findUnique({
       where: { userId },
       include: {
-        user: { select: { email: true, role: true } },
+        user: { select: { email: true, role: true, isVerified: true } },
         address: true,
         providerServices: { include: { service: true } },
         reviewsReceived: {
@@ -273,6 +290,11 @@ export class ProvidersService {
               }
             }
           }
+        },
+        bookings: { // Added for smart matching/badge logic
+          where: { status: 'COMPLETED' },
+          orderBy: { createdAt: 'desc' },
+          take: 100,
         },
       },
     });
@@ -318,17 +340,20 @@ export class ProvidersService {
       where: { userId },
       data: updateData,
       include: {
-        user: { select: { email: true, role: true } },
+        user: { select: { email: true, role: true, isVerified: true } },
         address: true,
         providerServices: { include: { service: true } },
         reviewsReceived: {
           include: {
             client: {
-              include: {
-                user: { select: { id: true, avatarUrl: true } }
-              }
+              include: { user: true }
             }
           }
+        },
+        bookings: { // Added for smart matching/badge logic
+          where: { status: 'COMPLETED' },
+          orderBy: { createdAt: 'desc' },
+          take: 100,
         },
       },
     });
@@ -446,8 +471,10 @@ export class ProvidersService {
               p."rejectionReason",
               p."ocrResult",
               p."livenessResult",
+              p.badges, -- NEW: Include badges
               u.email,
               u.role,
+              u."isVerified", -- NEW: Include isVerified
               a.id AS "addressId",
               a.cep,
               a.street,
@@ -510,7 +537,7 @@ export class ProvidersService {
                 ${serviceId ? Prisma.sql`AND ps."serviceId" = ${serviceId}` : Prisma.empty}
                 ${location ? Prisma.sql`AND (a.city ILIKE ${'%' + location + '%'} OR a.state ILIKE ${'%' + location + '%'} OR a.street ILIKE ${'%' + location + '%'} OR a.neighborhood ILIKE ${'%' + location + '%'})` : Prisma.empty}
             GROUP BY
-                p.id, u.email, u.role, a.id, a.cep, a.street, a.number, a.complement, a.neighborhood, a.city, a.state, a."providerId", a.location, p."fiveStarReviewCount", p."monthlyBookingsCount"
+                p.id, u.email, u.role, u."isVerified", a.id, a.cep, a.street, a.number, a.complement, a.neighborhood, a.city, a.state, a."providerId", a.location, p."fiveStarReviewCount", p."monthlyBookingsCount", p.badges
             ORDER BY
                 distance_km ASC
             LIMIT ${limit || 10} OFFSET ${offset || 0};
@@ -544,7 +571,8 @@ export class ProvidersService {
             rejectionReason: rp.rejectionReason,
             ocrResult: rp.ocrResult,
             livenessResult: rp.livenessResult,
-            user: { email: rp.email, role: rp.role },
+            badges: rp.badges, // NEW
+            user: { email: rp.email, role: rp.role, isVerified: rp.isVerified }, // NEW
             address: rp.addressId ? ({
               id: rp.addressId,
               cep: rp.cep,
@@ -598,9 +626,7 @@ export class ProvidersService {
 
     let orderBy: Prisma.ProviderOrderByWithRelationInput = { fullName: 'asc' };
 
-    if (sortBy === SortByOption.Rating) {
-      this.logger.log('[ProvidersService] search (fallback): Ordenação por Rating será aplicada em memória.');
-    } else if (sortBy === SortByOption.Experience) {
+    if (sortBy === SortByOption.Experience) {
       orderBy = { yearsOfExperience: 'desc' };
     }
 
@@ -610,17 +636,20 @@ export class ProvidersService {
       skip: offset,
       orderBy: orderBy,
       include: {
-        user: { select: { email: true, role: true } },
+        user: { select: { email: true, role: true, isVerified: true } }, // NEW
         address: true,
         providerServices: { include: { service: true } },
         reviewsReceived: {
           include: {
             client: {
-              include: {
-                user: { select: { id: true, avatarUrl: true } }
-              }
+              include: { user: { select: { id: true, avatarUrl: true } } }
             }
           }
+        },
+        bookings: { // Added for smart matching/badge logic
+          where: { status: 'COMPLETED' },
+          orderBy: { createdAt: 'desc' },
+          take: 100,
         },
       },
     });
@@ -679,17 +708,20 @@ export class ProvidersService {
         verificationStatus: VerificationStatus.APPROVED,
       },
       include: {
-        user: { select: { email: true, role: true } },
+        user: { select: { email: true, role: true, isVerified: true } },
         address: true,
         providerServices: { include: { service: true } },
         reviewsReceived: {
           include: {
             client: {
-              include: {
-                user: { select: { id: true, avatarUrl: true } }
-              }
+              include: { user: { select: { id: true, avatarUrl: true } } }
             }
           }
+        },
+        bookings: { // Added for smart matching/badge logic
+          where: { status: 'COMPLETED' },
+          orderBy: { createdAt: 'desc' },
+          take: 100,
         },
       },
       orderBy: {
@@ -707,5 +739,127 @@ export class ProvidersService {
     await this.cacheService.set(cacheKey, providersWithCalculatedRating);
     this.logger.log(`[ProvidersService] findTopRatedOrExperiencedProviders: Resultados adicionados ao cache.`);
     return providersWithCalculatedRating;
+  }
+
+  // NEW: Logic to assign/update badges
+  async updateProviderBadges(providerId: string) {
+    const provider = await this.prisma.provider.findUnique({
+      where: { id: providerId },
+      include: {
+        user: { select: { isVerified: true } },
+        bookings: {
+          where: { status: 'COMPLETED' }, // Only completed bookings
+        },
+        reviewsReceived: {
+          where: { rating: { gte: 4 } }, // Reviews with 4+ stars
+        },
+      },
+    });
+
+    if (!provider) {
+      console.warn(`Provider ${providerId} not found for badge update.`);
+      return;
+    }
+
+    const newBadges: string[] = [];
+    const completedBookingsCount = provider.bookings.length;
+    const fiveStarReviewCount = provider.reviewsReceived.filter(r => r.rating === 5).length;
+    const averageRating = provider.reviewsReceived.length > 0
+      ? provider.reviewsReceived.reduce((sum, r) => sum + r.rating, 0) / provider.reviewsReceived.length
+      : 0;
+
+    // Example badge logic:
+    if (provider.user.isVerified) {
+      newBadges.push('VERIFIED');
+    }
+    if (averageRating >= 4.5 && fiveStarReviewCount >= 10) {
+      newBadges.push('TOP_RATED');
+    }
+    if (completedBookingsCount >= 50) {
+      newBadges.push('HIGH_VOLUME');
+    }
+    // Add more complex logic for 'ON_TIME_PRO', 'NEW_TALENT' etc.
+    // This logic should be consistent with your badge definitions
+
+    // Update badges in DB only if they have changed
+    const currentBadges = provider.badges;
+    const badgesToAdd = newBadges.filter(b => !currentBadges.includes(b));
+    const badgesToRemove = currentBadges.filter(b => !newBadges.includes(b));
+
+    if (badgesToAdd.length > 0 || badgesToRemove.length > 0) {
+      await this.prisma.provider.update({
+        where: { id: providerId },
+        data: {
+          badges: newBadges, // Overwrite with the new calculated set
+        },
+      });
+      this.logger.log(`Provider ${providerId} badges updated: ${JSON.stringify(newBadges)}`);
+      // Invalidate cache for this specific provider
+      await this.cacheService.del(`${this.PROVIDERS_CACHE_KEY}:${providerId}`);
+      await this.cacheService.del(`${this.PROVIDERS_CACHE_KEY}:user:${provider.userId}`);
+      // Invalidate general cache if search results depend on badges
+      await this.cacheService.del(this.PROVIDERS_CACHE_KEY);
+      await this.cacheService.del(`${this.PROVIDERS_CACHE_KEY}:top_rated_experienced`);
+    }
+  }
+
+  // NEW: Smart Matching Logic (simplified example)
+  async findBestMatchingProvider(serviceId: string, clientLocation: { latitude: number, longitude: number }, scheduledDate: Date) {
+    // This is a highly simplified example. Real smart matching involves:
+    // 1. Availability of providers (based on calendar, existing bookings).
+    // 2. Proximity to client location.
+    // 3. Provider's service areas.
+    // 4. Provider's rating/reputation.
+    // 5. Provider's specific skills/equipment for the service.
+    // 6. Client preferences (previous providers, specific requirements).
+    // 7. Dynamic pricing considerations.
+
+    // For demonstration, fetch providers offering the service, then filter by basic criteria
+    const providers = await this.prisma.provider.findMany({
+      where: {
+        services: {
+          some: {
+            id: serviceId,
+          },
+        },
+        verificationStatus: VerificationStatus.APPROVED,
+        // Add more filters here:
+        // - availability for scheduledDate (requires complex calendar logic)
+        // - geographical proximity (requires geospatial queries or external service)
+        // - minimum rating, etc.
+      },
+      include: {
+        user: { select: { isVerified: true } }, // Example for a badge criterion
+        reviewsReceived: { select: { rating: true } },
+        bookings: {
+          where: {
+            scheduledDate: scheduledDate, // Check for conflicts on the exact date/time
+            status: { in: ['PENDING', 'CONFIRMED', 'IN_PROGRESS'] },
+          },
+        },
+      },
+    });
+
+    // Sort providers based on a simple score (e.g., average rating, number of completed bookings)
+    const scoredProviders = providers.map(p => {
+      const averageRating = p.reviewsReceived.length > 0
+        ? p.reviewsReceived.reduce((sum, r) => sum + r.rating, 0) / p.reviewsReceived.length
+        : 0;
+      const completedBookings = p.bookings.filter(b => b.status === 'COMPLETED').length;
+      const hasConflict = p.bookings.some(b => b.scheduledDate.getTime() === scheduledDate.getTime()); // Basic conflict check
+
+      // Simple scoring: prioritize higher rating, more completed bookings, no conflicts
+      let score = averageRating * 10 + completedBookings;
+      if (hasConflict) {
+        score -= 1000; // Penalize heavily for conflicts
+      }
+      if (p.user.isVerified) {
+        score += 5; // Bonus for verified providers
+      }
+
+      return { provider: p, score };
+    }).sort((a, b) => b.score - a.score); // Sort descending by score
+
+    return scoredProviders.map(sp => sp.provider); // Return sorted providers
   }
 }

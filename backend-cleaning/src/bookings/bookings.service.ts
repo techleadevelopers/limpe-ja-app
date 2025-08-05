@@ -14,6 +14,8 @@ import { PaymentsService } from '../payments/payments.service';
 import { BookingDetailsDto } from './dto/booking-details.dto'; // <-- IMPORTADO AQUI
 import { ReportDisputeDto, DisputeReason } from './dto/report-dispute.dto'; // Importe o DTO de disputa
 import { QueuesService } from '../queues/queues.service'; // Importe o serviço de filas
+import { PricingService } from '../pricing/pricing.service'; // NEW
+import { CouponsService } from '../coupons/coupons.service'; // NEW
 
 export type BookingWithDetailsRelations = Prisma.BookingGetPayload<{
   include: {
@@ -22,6 +24,9 @@ export type BookingWithDetailsRelations = Prisma.BookingGetPayload<{
     providerService: { include: { service: true } };
     review: true;
     address: true;
+    subscription?: true; // NEW: Include subscription
+    incidents?: true; // NEW: Include incidents
+    guaranteeClaims?: true; // NEW: Include guaranteeClaims
   };
 }>;
 
@@ -36,6 +41,8 @@ export class BookingsService {
     private providerServicesService: ProviderServicesService,
     private notificationsService: NotificationsService, // Inject NotificationsService
     private queuesService: QueuesService, // Injetar QueuesService
+    private pricingService: PricingService, // NEW
+    private couponsService: CouponsService, // NEW
     @Inject(forwardRef(() => PaymentsService))
     private paymentsService: PaymentsService,
   ) {}
@@ -84,7 +91,7 @@ export class BookingsService {
         } else if (createBookingDto.requestedRoomCount && providerService.pricePerRoom) {
           calculatedTotalPrice = providerService.pricePerRoom.mul(new Prisma.Decimal(createBookingDto.requestedRoomCount));
         } else {
-          throw new BadRequestException('Metragem ou número de cômodos é obrigatório para serviços por tamanho.');
+          throw new BadRequestException('Metragem ou número de cômodos é obrigatória para serviços por tamanho.');
         }
         break;
       default:
@@ -98,6 +105,38 @@ export class BookingsService {
     }
     this.logger.log(`[BookingsService] create - Serviço do provedor encontrado: ${providerService.id}. Preço calculado: ${calculatedTotalPrice.toFixed(2)}`);
 
+    // NEW: Apply dynamic pricing
+    const { finalPrice: dynamicFinalPrice } = await this.pricingService.calculatePrice({
+      serviceId: providerService.serviceId,
+      providerId: provider.id,
+      latitude: createBookingDto.address.latitude, // Assuming address has latitude/longitude
+      longitude: createBookingDto.address.longitude,
+      scheduledDate: createBookingDto.scheduledDate,
+    });
+    calculatedTotalPrice = new Prisma.Decimal(dynamicFinalPrice); // Override with dynamic price
+
+    // NEW: Apply coupon if provided
+    let couponId: string | null = null;
+    if (createBookingDto.couponCode) {
+      const couponApplicationResult = await this.couponsService.applyCoupon(createBookingDto.couponCode, client.userId, {
+        originalPrice: calculatedTotalPrice.toNumber(),
+        clientId: client.id,
+        providerServiceId: providerService.serviceId,
+        providerId: provider.id,
+        scheduledDate: createBookingDto.scheduledDate,
+      });
+
+      if (couponApplicationResult.coupon) {
+        calculatedTotalPrice = new Prisma.Decimal(couponApplicationResult.newTotalPrice);
+        couponId = couponApplicationResult.coupon.id;
+        this.logger.log(`[BookingsService] create - Cupom ${createBookingDto.couponCode} aplicado. Novo preço: ${calculatedTotalPrice.toFixed(2)}`);
+      } else {
+        this.logger.warn(`[BookingsService] create - Cupom ${createBookingDto.couponCode} não aplicável: ${couponApplicationResult.message}`);
+        // Optionally throw an error or just proceed without coupon
+      }
+    }
+
+
     try {
       this.logger.log(`[BookingsService] create - Criando novo endereço no DB.`);
       const newAddress = await this.prisma.address.create({
@@ -109,6 +148,8 @@ export class BookingsService {
           neighborhood: createBookingDto.address.neighborhood,
           city: createBookingDto.address.city,
           state: createBookingDto.address.state,
+          latitude: createBookingDto.address.latitude, // Assuming DTO includes these
+          longitude: createBookingDto.address.longitude, // Assuming DTO includes these
         },
       });
       this.logger.log(`[BookingsService] create - Novo endereço criado com ID: ${newAddress.id}`);
@@ -124,6 +165,7 @@ export class BookingsService {
           notes: createBookingDto.notes,
           status: BookingStatus.PENDING,
           addressId: newAddress.id,
+          couponId: couponId, // NEW: Store coupon ID
         },
         include: {
           client: { include: { user: true } },
@@ -148,6 +190,68 @@ export class BookingsService {
       }
       throw new BadRequestException('Não foi possível criar o agendamento. Verifique os dados fornecidos.');
     }
+  }
+
+  // NEW: Method to create a booking specifically from a subscription
+  async createBookingFromSubscription(data: {
+    clientId: string;
+    providerId: string;
+    providerServiceId: string;
+    scheduledDate: string;
+    totalPrice: number;
+    subscriptionId: string;
+    // ... any other fields for a subscription-generated booking
+    addressId: string; // Assuming address already exists for subscription bookings
+    scheduledTime: string; // Assuming subscription also defines a time
+  }) {
+    // This method bypasses coupon/dynamic pricing logic as it's handled by subscription
+    return this.prisma.booking.create({
+      data: {
+        clientId: data.clientId,
+        providerId: data.providerId,
+        providerServiceId: data.providerServiceId,
+        scheduledDate: new Date(data.scheduledDate),
+        scheduledTime: data.scheduledTime,
+        totalPrice: new Prisma.Decimal(data.totalPrice),
+        subscriptionId: data.subscriptionId,
+        addressId: data.addressId,
+        status: BookingStatus.PENDING, // Or 'SCHEDULED'
+        // ... other default fields for subscription bookings
+      },
+      include: {
+        client: { include: { user: true } },
+        provider: { include: { user: true } },
+        providerService: { include: { service: true } },
+        review: true,
+        address: true,
+      },
+    });
+  }
+
+  // NEW: Method to infer demand for pricing service
+  async getDemandCountForArea(serviceId: string, latitude: number, longitude: number, scheduledDateTime: Date, radiusKm: number = 5) {
+    // This is a simplified example. A real implementation would involve:
+    // 1. Finding bookings in a geographical radius.
+    // 2. Filtering by time window (e.g., +/- 1 hour from scheduledDateTime).
+    // 3. Counting relevant bookings (e.g., for the same service type).
+    // This would require a geospatial database extension or complex queries.
+
+    // For demonstration, let's just count active bookings for the service in the next 2 hours
+    const futureBookingsCount = await this.prisma.booking.count({
+      where: {
+        providerServiceId: serviceId,
+        scheduledDate: {
+          gte: scheduledDateTime,
+          lte: new Date(scheduledDateTime.getTime() + 2 * 60 * 60 * 1000), // Next 2 hours
+        },
+        status: {
+          in: [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.IN_PROGRESS], // Consider only active bookings
+        },
+        // Add geographical filter here if you have location data on bookings
+        // e.g., clientLocation: { latitude: { gte: lat - delta, lte: lat + delta }, ... }
+      },
+    });
+    return futureBookingsCount;
   }
 
   async createBookingAndPixCharge(
@@ -218,14 +322,14 @@ export class BookingsService {
     return this.prisma.booking.findMany({
       where: whereClause,
       include: {
-        client: { 
-          include: { 
+        client: {
+          include: {
             user: true,
-            address: true 
-          } 
+            address: true
+          }
         },
-        provider: { 
-          include: { 
+        provider: {
+          include: {
             user: true,
             address: true,
             // Incluir serviços do provedor para mostrar especialidades
@@ -234,11 +338,14 @@ export class BookingsService {
                 service: true
               }
             }
-          } 
+          }
         },
         providerService: { include: { service: true } },
         review: true,
         address: true,
+        subscription: true, // NEW
+        incidents: true, // NEW
+        guaranteeClaims: true, // NEW
       },
       orderBy: {
         createdAt: 'desc',
@@ -256,6 +363,9 @@ export class BookingsService {
         providerService: { include: { service: true } },
         review: true,
         address: true,
+        subscription: true, // NEW
+        incidents: true, // NEW
+        guaranteeClaims: true, // NEW
       },
     });
   }
@@ -263,13 +373,13 @@ export class BookingsService {
   async updateStatus(id: string, newStatus: BookingStatus, userRole: UserRole): Promise<BookingWithDetailsRelations> {
     this.logger.log(`[BookingsService] updateStatus: Tentando atualizar agendamento ${id} para status ${newStatus} por role ${userRole}.`);
     // CORREÇÃO: Incluir 'provider' e 'providerService' para acessar suas propriedades
-    const booking = await this.prisma.booking.findUnique({ 
+    const booking = await this.prisma.booking.findUnique({
       where: { id },
-      include: { 
+      include: {
         provider: { include: { user: true } }, // Incluir user para acessar fullName
         providerService: { include: { service: true } }, // Incluir service para acessar name
         client: { include: { user: true } } // Incluir client e user para acessar userId
-      } 
+      }
     });
 
     if (!booking) {
@@ -357,6 +467,21 @@ export class BookingsService {
       });
       this.logger.log(`[BookingsService] updateStatus: Provedor ${booking.providerId} teve monthlyBookingsCount incrementado.`);
 
+      // NEW: Increment noShowCount or cancellationCount for client
+      if (newStatus === BookingStatus.CANCELED && booking.status !== BookingStatus.CANCELED) {
+        await this.prisma.client.update({
+          where: { id: booking.clientId },
+          data: { cancellationCount: { increment: 1 } },
+        });
+        this.logger.log(`[BookingsService] updateStatus: Cliente ${booking.clientId} teve cancellationCount incrementado.`);
+      } else if (newStatus === 'NO_SHOW' && booking.status !== 'NO_SHOW') { // Assuming 'NO_SHOW' is a valid status
+        await this.prisma.client.update({
+          where: { id: booking.clientId },
+          data: { noShowCount: { increment: 1 } },
+        });
+        this.logger.log(`[BookingsService] updateStatus: Cliente ${booking.clientId} teve noShowCount incrementado.`);
+      }
+
       // Send notification to client to request a review
       // CORREÇÃO: O booking.providerService.name e booking.provider.fullName só estarão disponíveis se incluídos
       // na consulta inicial do booking.
@@ -380,6 +505,9 @@ export class BookingsService {
         providerService: { include: { service: true } },
         review: true,
         address: true,
+        subscription: true, // NEW
+        incidents: true, // NEW
+        guaranteeClaims: true, // NEW
       },
     });
   }
@@ -409,6 +537,9 @@ export class BookingsService {
         providerService: { include: { service: true } },
         review: true,
         address: true,
+        subscription: true, // NEW
+        incidents: true, // NEW
+        guaranteeClaims: true, // NEW
       },
     });
     this.logger.log(`[BookingsService] findUpcomingBookings: Primas encontradas ${upcomingPrismaBookings.length} agendamentos futuros antes da filtragem de hora.`);
@@ -597,6 +728,9 @@ export class BookingsService {
         providerService: { include: { service: true } },
         review: true,
         address: true,
+        subscription: true, // NEW
+        incidents: true, // NEW
+        guaranteeClaims: true, // NEW
       },
     });
 

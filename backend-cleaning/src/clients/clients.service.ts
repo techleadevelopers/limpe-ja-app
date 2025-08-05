@@ -17,6 +17,8 @@ export type ClientWithIncludes = Client & {
   user: User; // User completo (com avatarUrl agora, se o schema foi migrado)
   address: Address | null;
   completedBookingsCount: number; // Add this field
+  noShowCount: number; // NEW
+  cancellationCount: number; // NEW
   bookings: Booking[]; // Ou se você incluir mais detalhes em bookings, atualize aqui
   reviewsMade: Review[]; // Ou se você incluir mais detalhes em reviewsMade, atualize aqui
   // Adicione _count se o Prisma retornar, ou remova se for calculado no DTO
@@ -73,8 +75,8 @@ export class ClientsService {
         data: {
           fullName: updateClientProfileDto.fullName,
           phone: updateClientProfileDto.phone,
-          // completedBookingsCount is updated in bookings.service.ts
-          // Você pode querer atualizar o endereço aqui também, se o DTO permitir
+          // noShowCount and cancellationCount are updated in bookings.service.ts
+          // You can want to update the address here too, if the DTO allows
           // address: updateClientProfileDto.address ? {
           //   upsert: {
           //     create: updateClientProfileDto.address,

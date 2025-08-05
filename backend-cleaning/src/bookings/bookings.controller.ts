@@ -1,3 +1,4 @@
+// src/bookings/bookings.controller.ts
 import { Controller, Get, Post, Body, Patch, Param, UseGuards, Req, NotFoundException, ForbiddenException, Query, BadRequestException, HttpCode, HttpStatus } from '@nestjs/common'; // CORREÇÃO: Importar BadRequestException, HttpCode, HttpStatus
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto } from './dto/create-booking.dto';

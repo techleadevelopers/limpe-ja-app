@@ -7,8 +7,9 @@ import { ProviderServicesService } from '../provider-services/provider-services.
 import { ProviderDetailsDto } from '../providers/dto/provider-details.dto';
 import { ServiceDetailsDto } from '../services/dto/service-details.dto'; // Assuming ServiceDetailsDto is Service
 import { ProviderSearchDto } from '../providers/dto/provider-search.dto';
-// import { OffersService } from '../offers/offers.service'; // Importe o OffersService se ele existir
+import { OffersService } from '../offers/offers.service'; // Importe o OffersService se ele existir
 // import { OfferDetailsDto } from '../offers/dto/offer-details.dto'; // Importe o DTO de ofertas
+import { PricingService } from '../pricing/pricing.service'; // NEW: Import PricingService
 
 // Supondo que você crie um DTO para os detalhes de um ProviderService
 import { ProviderServiceDetailsDto } from '../provider-services/dto/provider-service-details.dto'; // Exemplo
@@ -20,7 +21,8 @@ export class SearchService {
     private readonly providersService: ProvidersService,
     private readonly servicesService: ServicesService,
     private readonly providerServicesService: ProviderServicesService, // NOVO: Injetar
-    // private readonly offersService: OffersService, // Se houver um OffersService, descomente
+    private readonly offersService: OffersService, // Se houver um OffersService, descomente
+    private readonly pricingService: PricingService, // NEW: Inject PricingService
   ) {}
 
   async performSearch(searchQueryDto: SearchQueryDto): Promise<{
@@ -51,20 +53,20 @@ export class SearchService {
       providerServices: [],
       providers: [],
       services: [],
-      // offers: [],
+      offers: [], // Initialize offers array
     };
 
     // 1. Busca Principal: Serviços específicos oferecidos por provedores (ProviderService)
     // Esta seria a busca mais relevante para o usuário final
     // CORREÇÃO: Comparação correta do enum
     if (!type || type === SearchType.PROVIDER_SERVICES || type === SearchType.ALL) {
-      // O providerServicesService.search() precisaria ser implementado para:
-      // - Filtrar por 'query' (no nome/descrição do serviço ou bio do provedor)
-      // - Filtrar por 'location' e geoespacial (latitude, longitude, radius)
-      // - Ordenar por 'sortBy' (rating, distance, experience)
-      // - Retornar uma combinação de Provider e ProviderService
+      // The providerServicesService.search() would need to be implemented to:
+      // - Filter by 'query' (in service name/description or provider bio)
+      // - Filter by 'location' and geospatial (latitude, longitude, radius)
+      // - Sort by 'sortBy' (rating, distance, experience)
+      // - Return a combination of Provider and ProviderService
       // Placeholder method for ProviderServicesService.search
-      const providerServices = await (this.providerServicesService as any).search({ // <--- CORREÇÃO: Cast para 'any' para simular o método 'search'
+      const providerServicesResults = await (this.providerServicesService as any).search({ // <--- CORREÇÃO: Cast para 'any' para simular o método 'search'
         searchTerm: query,
         location,
         latitude,
@@ -75,7 +77,40 @@ export class SearchService {
         offset,
         // Adicionar outros filtros necessários, como serviceId, minRating, etc.
       });
-      results.providerServices = providerServices; // Assumindo que o serviço já retorna o DTO correto
+
+      // NEW: Apply dynamic pricing to provider services results
+      results.providerServices = await Promise.all(
+        providerServicesResults.map(async (psResult: any) => {
+          let dynamicPrice = {
+            originalPrice: psResult.price,
+            surgeFactor: 1.0,
+            finalPrice: psResult.price,
+            reason: 'Preço base.',
+          };
+          if (latitude && longitude && date) {
+            try {
+              dynamicPrice = await this.pricingService.calculatePrice({
+                serviceId: psResult.serviceId,
+                providerId: psResult.providerId,
+                latitude,
+                longitude,
+                scheduledDate: date,
+              });
+            } catch (e) {
+              this.logger.error(`Error calculating dynamic price for providerService ${psResult.id}: ${e.message}`);
+            }
+          }
+          return {
+            ...psResult,
+            dynamicPrice,
+            // Include badges from provider if available in psResult.provider
+            provider: {
+              ...psResult.provider,
+              badges: psResult.provider?.badges || [],
+            }
+          };
+        })
+      );
     }
 
     // 2. Busca Complementar: Provedores (se o tipo de busca for explicitamente 'providers' ou 'all')
@@ -102,12 +137,10 @@ export class SearchService {
     }
 
     // 4. Busca Complementar: Ofertas (se OffersService e OfferDetailsDto existirem)
-    /*
     if (!type || type === SearchType.OFFERS || type === SearchType.ALL) { // <--- CORREÇÃO: Comparação correta do enum
-      const offers = await this.offersService.searchOffers({ searchTerm: query, limit, offset });
-      results.offers = offers.map(o => new OfferDetailsDto(o));
+      const offers = await this.offersService.searchOffers(query, limit, offset);
+      results.offers = offers; // Assuming offersService.searchOffers returns the correct DTO
     }
-    */
 
     return results;
   }

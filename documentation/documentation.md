@@ -1,20 +1,19 @@
 Documentação do Frontend LimpeJáApp
-
 O LimpeJáApp é uma aplicação mobile construída com React Native e Expo, projetada para conectar clientes a profissionais de limpeza e organização. Este frontend robusto e interativo gerencia todo o ciclo de vida do usuário, desde o registro e autenticação até o agendamento de serviços, comunicação e gestão de perfis.
 
 1. Visão Geral da Arquitetura
-
 O frontend do LimpeJáApp segue uma arquitetura modular e baseada em componentes, utilizando as seguintes tecnologias e padrões:
 
 React Native & Expo: Para desenvolvimento de aplicações multiplataforma (iOS e Android).
 Expo Router: Para roteamento e navegação declarativa, com suporte a layouts aninhados e grupos de rotas.
-Context API (React): Para gerenciamento de estado global (autenticação, configurações do aplicativo, dados de registro de provedor).
+Context API (React): Para gerenciamento de estado global (autenticação, configurações do aplicativo, dados de registro de provedor). Embora ainda presente, o uso está sendo otimizado com a introdução do TanStack Query.
+TanStack Query: NOVO. Para gerenciamento de estado do servidor (data fetching, caching, sincronização e atualização de dados remotos), reduzindo boilerplate e melhorando o desempenho.
 Axios: Para requisições HTTP à API de backend, com interceptadores para tratamento de autenticação e erros globais.
 TypeScript: Para tipagem estática, garantindo maior robustez e manutenibilidade do código.
 Reanimated: Para animações fluidas e de alto desempenho.
 Estrutura de Pastas: Organizada por funcionalidades e papéis ((auth), (client), (provider), (common)), facilitando a localização e o isolamento de responsabilidades.
+Sentry: NOVO. Para monitoramento de erros e performance em tempo real, fornecendo visibilidade sobre crashes e exceções.
 2. Módulos Core e Utilitários
-
 Esta seção descreve os módulos fundamentais que suportam a operação de toda a aplicação.
 
 2.1. api.ts
@@ -63,11 +62,13 @@ isRegistrationInProgress: Sinaliza se um registro de provedor está em andamento
 Interconexões: É o coração da gestão de sessão. Componentes da UI (login.tsx, client-register.tsx, dashboard/index.tsx, _layout.tsx) consomem este contexto para exibir informações do usuário, controlar acesso e navegar.
 2.4. _layout.tsx (Root)
 Caminho: LimpeJaApp/app/_layout.tsx
-Propósito: O layout raiz da aplicação, responsável por inicializar os provedores de contexto (AuthProvider, ProviderRegistrationProvider, AppProvider) e gerenciar a lógica de roteamento e redirecionamento baseada no estado de autenticação e no papel/status de verificação do usuário.
-Dependências: expo-router, AuthContext, ProviderRegistrationContext, AppContext, UserRole, VerificationStatus, AUTH_ROUTES, CLIENT_ROUTES, PROVIDER_ROUTES.
+Propósito: O layout raiz da aplicação, responsável por inicializar os provedores de contexto (AuthProvider, ProviderRegistrationProvider, AppProvider), o TanStack Query (src/providers/query-client-provider.tsx), e gerenciar a lógica de roteamento e redirecionamento baseada no estado de autenticação e no papel/status de verificação do usuário. Também inicializa ferramentas de monitoramento como o Sentry.
+Dependências: expo-router, AuthContext, ProviderRegistrationContext, AppContext, UserRole, VerificationStatus, AUTH_ROUTES, CLIENT_ROUTES, PROVIDER_ROUTES, src/providers/query-client-provider.tsx, src/utils/sentry.ts.
 Funcionalidades Chave:
 
 SplashScreen.preventAutoHideAsync(): Mantém a splash screen visível até que o app esteja pronto.
+Inicialização do TanStack Query: Envolve a aplicação com o QueryClientProvider.
+Inicialização do Sentry: Configura o Sentry para capturar erros e monitorar a performance.
 Lógica de Redirecionamento: O useEffect principal decide para onde redirecionar o usuário com base em:
 Não Autenticado: Redireciona para /welcome ou mantém em rotas de autenticação.
 Autenticado (Provedor):
@@ -76,8 +77,40 @@ PENDING_INITIAL_REVIEW: Redireciona para provider-register/service-details.
 PENDING_DOCUMENTS_UPLOAD / Outros pendentes: Redireciona para provider-register/verify-account.
 Autenticado (Cliente/Admin): Redireciona para a tela de exploração do cliente.
 Interconexões: Depende fortemente do AuthContext para obter o estado de autenticação e os detalhes do usuário. É o ponto de entrada para a navegação principal da aplicação.
-3. Autenticação e Registro
+2.5. src/providers/query-client-provider.tsx (NOVO)
+Caminho: LimpeJaApp/src/providers/query-client-provider.tsx
+Propósito: Configura e exporta uma instância do QueryClient do TanStack Query, que será usada para gerenciar o estado do servidor em toda a aplicação.
+Dependências: @tanstack/react-query.
+Funcionalidades Chave:
 
+QueryClient Instantiation: Cria uma nova instância de QueryClient com defaultOptions para queries, incluindo staleTime (5 minutos) e gcTime (10 minutos), refetchOnWindowFocus desabilitado e retry (2 vezes).
+QueryClientProvider: Componente React que disponibiliza a instância do QueryClient para todos os componentes filhos.
+Interconexões: Envolve a aplicação no app/_layout.tsx para que todos os componentes possam usar os hooks do TanStack Query.
+2.6. src/utils/sentry.ts (NOVO)
+Caminho: LimpeJaApp/src/utils/sentry.ts
+Propósito: Arquivo de utilitário para inicializar e configurar o Sentry para monitoramento de erros e performance.
+Dependências: @sentry/react-native, @sentry/tracing.
+Funcionalidades Chave:
+
+Sentry.init(): Configura o Sentry com a DSN (Data Source Name) do projeto, ambiente, taxa de amostragem de transações e outras opções.
+Integração com Expo: Configurações específicas para garantir que o Sentry funcione corretamente em ambientes Expo.
+Interconexões: Importado e chamado no app/_layout.tsx para iniciar o monitoramento assim que o aplicativo é carregado.
+2.7. services/securityService.ts (NOVO)
+Caminho: LimpeJaApp/app/services/securityService.ts
+Propósito: Fornece funcionalidades relacionadas à segurança do aplicativo, como autenticação biométrica, armazenamento seguro de tokens e validação de sessão.
+Dependências: axios, @react-native-async-storage/async-storage, expo-local-authentication, expo-secure-store.
+Funcionalidades Chave:
+
+initSecurity(): Inicializa as configurações de segurança, verificando e ativando biometria se disponível.
+enableBiometric(): Permite ao usuário ativar a autenticação biométrica.
+authenticateWithBiometric(): Realiza a autenticação usando biometria.
+secureStoreToken() / getSecureToken(): Armazena e recupera tokens de forma segura.
+validateSession(): Valida a sessão do usuário com o backend.
+getSecurityAlerts(): Busca alertas de segurança.
+reportSuspiciousActivity(): Permite reportar atividades suspeitas.
+setupSessionTimeout() / handleSessionTimeout(): Gerencia o timeout de sessão por inatividade.
+Interconexões: Utilizado para reforçar a segurança e a experiência do usuário.
+3. Autenticação e Registro
 Esta seção detalha as telas e o fluxo para autenticação e registro de novos usuários.
 
 3.1. welcome.tsx
@@ -144,7 +177,6 @@ Configura Stack.Screen para cada tela de autenticação, definindo headerShown e
 O diretório provider-register é tratado como uma tela, permitindo que seu próprio _layout.tsx gerencie as sub-rotas.
 Interconexões: É um layout aninhado do _layout.tsx raiz.
 4. Gestão de Provedores e Onboarding
-
 Esta seção detalha o fluxo de registro e as funcionalidades específicas para provedores de serviços.
 
 4.1. provider-register/_layout.tsx
@@ -168,7 +200,7 @@ submitRegistration(): Coleta todos os dados de registrationData, chama signUpPro
 Interconexões: Consumido pelas telas de registro de provedor (service-details.tsx) para compartilhar e persistir dados.
 4.3. provider-register/service-details.tsx
 Caminho: LimpeJaApp/app/(auth)/provider-register/service-details.tsx
-Propósito: Etapa principal do registro de provedor, consolidando todas as informações necessárias para a criação de uma conta de provedor. Coleta dados pessoais (nome completo, e-mail, telefone, CPF, data de nascimento, endereço completo com CEP) e detalhes sobre os serviços que o provedor oferecerá (anos de experiência, descrição do serviço, estrutura de preços, especialidades, áreas de atendimento e chave PIX).
+Propósito: Etapa principal do registro de provedor, consolidando todas as informações necessárias para a criação de uma conta de provedor. Coleta dados pessoais (nome completo, e-mail, telefone, CPF, data de nascimento, endereço completo com CEP) e detalhes sobre os serviços que o provedor oferecerá (anos de experiência, descrição do serviço, estrutura de preços, especialidades, áreas de atendimento e chave PIX). Este componente serve como base para a implementação do Onboarding Progressivo, onde a coleta de dados pode ser dividida em etapas menores e gamificadas.
 Dependências: React, Animated, Alert, Dimensions, Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Ionicons, LinearGradient, ImagePicker, useRouter, useAuth, updateMyProviderProfile, addProviderServiceOffering, updateProviderServiceOffering, getProviderServicesOffered, verificationService.
 Funcionalidades Chave:
 
@@ -182,7 +214,7 @@ handleContinue(): Valida todos os campos do formulário. Faz upload da foto de p
 Interconexões: Interage com useAuth e vários serviços de provedor para persistir os dados no backend.
 4.4. provider-register/verify-account.tsx
 Caminho: LimpeJaApp/app/(auth)/provider-register/verify-account.tsx
-Propósito: Gerencia o fluxo de verificação de conta do provedor, incluindo upload de documentos e verificação de status.
+Propósito: Gerencia o fluxo de verificação de conta do provedor, incluindo upload de documentos e verificação de status. A lógica de processamento de documentos é agora assíncrona, utilizando filas de mensagens no backend para evitar timeouts e melhorar a resiliência.
 Dependências: React, Animated, Alert, Image, KeyboardAvoidingView, Platform, ScrollView, StatusBar, StyleSheet, Text, View, ActivityIndicator, Stack, useRouter, DocumentUploadScreen, ToastMessage, useAuth, verificationService, DocumentPhotoType, VerificationStatus, PROVIDER_ROUTES.
 Funcionalidades Chave:
 
@@ -195,6 +227,7 @@ Caminho: LimpeJaApp/app/types/backend/verification.ts
 Propósito: Define as interfaces e enums relacionadas ao processo de verificação de provedores, incluindo DTOs para submissão de CPF e tipos de fotos de documento.
 Dependências: VerificationStatus (de auth.ts).
 Exporta: SubmitCpfRequest, DocumentPhotoType, VerificationResponse, ProviderVerificationInfo.
+
 4.6. verificationService.ts
 Caminho: LimpeJaApp/app/services/verificationService.ts
 Propósito: Fornece funções para interagir com os endpoints de verificação do backend (submissão de CPF, upload de documentos/selfie, consulta de status).
@@ -210,7 +243,7 @@ Lógica para converter URIs de imagem em Blob para FormData e lidar com multipar
 Interconexões: Utilizado por provider-register/verify-account.tsx e provider-register/service-details.tsx.
 4.7. profile/edit-services.tsx
 Caminho: LimpeJaApp/app/(provider)/profile/edit-services.tsx
-Propósito: Permite que provedores editem e gerenciem os serviços que oferecem, incluindo preço e tipo de precificação.
+Propósito: Permite que provedores editem e gerenciem os serviços que oferecem, incluindo preço e tipo de precificação. Este componente pode ser integrado ao fluxo de Onboarding Progressivo, permitindo que o provedor adicione serviços de forma gradual.
 Dependências: React, Animated, Alert, FlatList, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator, Picker (@react-native-picker/picker), Stack, useRouter, useAuth, Ionicons, MaterialCommunityIcons, PricingType.
 Funcionalidades Chave:
 
@@ -222,7 +255,7 @@ formatPriceDisplay(): Função auxiliar para exibir o preço de acordo com o Pri
 Interconexões: Interage com providerService.ts para persistir os dados.
 4.8. dashboard/index.tsx (Provider Dashboard)
 Caminho: LimpeJaApp/app/(provider)/dashboard/index.tsx
-Propósito: A tela principal para provedores, exibindo um resumo de atividades, ganhos, solicitações pendentes, próximos serviços e avaliações recentes.
+Propósito: A tela principal para provedores, exibindo um resumo de atividades, ganhos, solicitações pendentes, próximos serviços e avaliações recentes. Futuramente, exibirá "Badges" de reputação para o provedor.
 Dependências: React, Animated, Alert, Image, Platform, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View, Ionicons, MaterialCommunityIcons, Stack, useRouter, useAuth, getBookingsForUser, updateBookingStatus, getMyProviderDashboard, getMyProviderEarnings, BookingDetails, BookingStatus, ProviderDashboard, ProviderReview, AdvancedReviewsSection, SmartInsightsSection.
 Funcionalidades Chave:
 
@@ -251,7 +284,7 @@ Botão para gerenciar disponibilidade.
 Interconexões: Navega para manage-availability.tsx e para telas de detalhes de serviço/agendamento.
 4.10. schedule/manage-availability.tsx
 Caminho: LimpeJaApp/app/(provider)/schedule/manage-availability.tsx
-Propósito: Permite que o provedor defina e gerencie sua disponibilidade de horários semanais.
+Propósito: Permite que o provedor defina e gerencie sua disponibilidade de horários semanais. Inclui a funcionalidade de "Bloqueio de Data" para gerenciar exceções como feriados ou férias.
 Dependências: React, Animated, Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, Stack, useRouter, Ionicons, DateTimePicker (@react-native-community/datetimepicker), useAuth, deleteProviderAvailability, getProviderAvailability, updateProviderAvailability, ProviderAvailability, UpdateAvailabilityData, AnimatedDayCard, BlockDateSection, SaveChangesButton.
 Funcionalidades Chave:
 
@@ -276,22 +309,43 @@ handleWithdrawalRequest(): Permite ao provedor solicitar um saque via requestWit
 Exibe um resumo financeiro, gráficos de ganhos e transações recentes.
 Links rápidos para "Meus Serviços Oferecidos" e "Minhas Avaliações".
 Interconexões: Consome dashboardService, earningService e paymentService.
-5. Gestão de Clientes
+4.12. services/providerService.ts (ATUALIZADO)
+Caminho: LimpeJaApp/app/services/providerService.ts
+Propósito: Fornece funções para interagir com os endpoints de provedores do backend, incluindo detalhes, disponibilidade, perfis, ganhos e serviços oferecidos. Agora inclui funções para buscar provedores recomendados e próximos, e uma função de busca geral. Será estendido para integrar a lógica de smart matching e badges/níveis de reputação.
+Dependências: axios, api.ts, CreateProviderServiceData, ProviderAvailability, ProviderDashboard, ProviderDisplayInfo, ProviderSearchQuery, ProviderTransaction, UpdateAvailabilityData, UpdateProviderProfileData, GetProviderAvailabilityResponse, ProviderServiceOffering.
+Funcionalidades Chave:
 
+getProviderDetails(providerId): Obtém detalhes de um provedor específico.
+getProviderAvailability(providerId, date?): Obtém a disponibilidade e horários ocupados de um provedor.
+updateMyProviderProfile(data): Atualiza o perfil do provedor logado.
+getMyProviderDashboard(): Obtém dados do painel do provedor.
+getMyProviderEarnings(): Obtém histórico de ganhos do provedor.
+updateProviderAvailability(providerId, data): Atualiza a disponibilidade semanal do provedor.
+addProviderAvailability(providerId, data): Adiciona um novo slot de disponibilidade.
+deleteProviderAvailability(providerId, availabilityId): Deleta um slot de disponibilidade.
+getProviderServicesOffered(providerId): Obtém serviços oferecidos por um provedor.
+addProviderServiceOffering(providerId, data): Adiciona um novo serviço oferecido.
+updateProviderServiceOffering(providerId, serviceOfferingId, data): Atualiza um serviço oferecido.
+deleteProviderServiceOffering(providerId, serviceOfferingId): Deleta um serviço oferecido.
+getRecommendedProviders(): Obtém uma lista de provedores recomendados.
+getNearbyProviders(): Obtém uma lista de provedores próximos.
+searchProviders(query): Realiza uma busca geral por provedores com base em filtros.
+Interconexões: Utilizado por diversas telas de provedor e cliente para exibir e gerenciar informações de provedores.
+5. Gestão de Clientes
 Esta seção aborda as funcionalidades específicas para usuários com o papel de cliente.
 
-5.1. clients.ts
+5.1. clients.ts (ATUALIZADO)
 Caminho: LimpeJaApp/src/types/backend/clients.ts
-Propósito: Define as interfaces relacionadas ao perfil do cliente e DTOs para busca e atualização.
+Propósito: Define as interfaces relacionadas ao perfil do cliente e DTOs para busca e atualização. Agora inclui campos para métricas de no-show e cancelamento.
 Dependências: UserRole (de auth.ts), BookingAddress (de bookings.ts).
 Exporta: Client, SearchResult (para busca de provedores/serviços), UpdateClientProfileDto, ClientDetails.
 Funcionalidades Chave:
 
 Client: Representa o perfil completo de um cliente.
 UpdateClientProfileDto: DTO para atualizar o perfil do cliente.
-5.2. clientService.ts
+5.2. clientService.ts (ATUALIZADO)
 Caminho: LimpeJaApp/app/services/clientService.ts
-Propósito: Fornece funções para interagir com os endpoints do backend relacionados a clientes, incluindo categorias de serviço, busca de provedores e atualização de perfil.
+Propósito: Fornece funções para interagir com os endpoints do backend relacionados a clientes, incluindo categorias de serviço, busca de provedores e atualização de perfil. Será estendido para incluir a lógica de atualização de métricas de no-show e cancelamento.
 Dependências: axios, api.ts, UpdateClientProfileDto, Offer, ProviderDisplayInfo, ProviderSearchQuery, Service, UserProfile.
 Exporta: getServiceCategories, searchProviders, getUserProfile, getOffers, getProviderDetails, updateClientProfile.
 Funcionalidades Chave:
@@ -305,7 +359,7 @@ updateClientProfile(data): Atualiza o perfil do cliente logado.
 Interconexões: Utilizado por diversas telas do cliente (explore/index.tsx, profile/edit.tsx, schedule-service.tsx).
 5.3. profile/index.tsx (Client Profile)
 Caminho: LimpeJaApp/app/(client)/profile/index.tsx
-Propósito: Exibe o perfil do cliente e oferece opções de navegação para gerenciar conta, preferências e suporte.
+Propósito: Exibe o perfil do cliente e oferece opções de navegação para gerenciar conta, preferências e suporte. Inclui links para funcionalidades de LGPD, como exportação e exclusão de dados.
 Dependências: React, Animated, Alert, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, Stack, useRouter, useAuth, Ionicons, MaterialCommunityIcons.
 Funcionalidades Chave:
 
@@ -326,8 +380,20 @@ handlePickImage(): Permite selecionar uma nova foto de perfil e faz o upload rea
 handleSaveChanges(): Valida os campos, chama updateClientProfile() do clientService para persistir as alterações no backend. Atualiza o user no AuthContext.
 Formatação e validação de telefone.
 Interconexões: Interage com useAuth e clientService.
-6. Serviços e Agendamentos
+5.5. services/complianceService.ts (NOVO)
+Caminho: LimpeJaApp/app/services/complianceService.ts
+Propósito: Fornece funções para interagir com endpoints de conformidade legal e privacidade de dados (LGPD), como exportação e exclusão de dados.
+Dependências: api.ts.
+Funcionalidades Chave:
 
+getComplianceStatus(providerId): Obtém o status de conformidade de um provedor.
+getLegalRequirements(): Lista requisitos legais.
+uploadComplianceDocument(type, file): Faz upload de documentos de conformidade.
+getDataPrivacyInfo(): Obtém informações sobre privacidade de dados.
+requestDataExport(): Solicita a exportação dos dados do usuário.
+requestAccountDeletion(reason): Solicita a exclusão da conta do usuário.
+Interconexões: Utilizado em telas de perfil e configurações para gerenciar dados e conformidade.
+6. Serviços e Agendamentos
 Esta seção detalha o fluxo de agendamento de serviços e a gestão de agendamentos.
 
 6.1. services.ts
@@ -337,21 +403,21 @@ Exporta: PricingType (enum para tipo de precificação: FIXED_PRICE, HOURLY, BY_
 Funcionalidades Chave:
 
 Service: Contém id, name, icon, backgroundColor, description, price.
-6.2. bookings.ts
+6.2. bookings.ts (ATUALIZADO)
 Caminho: LimpeJaApp/src/types/backend/bookings.ts
-Propósito: Define as interfaces e enums para agendamentos, incluindo status, endereço e DTOs para criação/atualização, e agora também para disputas.
+Propósito: Define as interfaces e enums para agendamentos, incluindo status, endereço e DTOs para criação/atualização, e agora também para disputas. Adicionado NO_SHOW ao BookingStatus.
 Dependências: ProviderDisplayInfo (de providers.ts), Service (de services.ts), DisputeReason (NOVO).
 Exporta: BookingStatus (enum para status do agendamento), BookingAddress, CreateBookingDto, BookingDetails, UpdateBookingStatusDto, ReportDisputeDto (NOVO), Dispute (NOVO).
 Funcionalidades Chave:
 
-BookingStatus: Enum para estados como PENDING, CONFIRMED, COMPLETED, CANCELED, PENDING_DISPUTE (NOVO), etc.
+BookingStatus: Enum para estados como PENDING, CONFIRMED, COMPLETED, CANCELED, PENDING_DISPUTE (NOVO), NO_SHOW (NOVO), etc.
 BookingAddress: Estrutura de endereço.
 BookingDetails: Representa um agendamento completo com detalhes do cliente, provedor e serviço.
 ReportDisputeDto: DTO para reportar uma disputa.
 Dispute: Interface para o modelo de disputa.
-6.3. bookingService.ts
+6.3. bookingService.ts (ATUALIZADO)
 Caminho: LimpeJaApp/app/services/bookingService.ts
-Propósito: Fornece funções para interagir com os endpoints de agendamento do backend.
+Propósito: Fornece funções para interagir com os endpoints de agendamento do backend. Será estendido para incluir a lógica de agendamentos recorrentes e atualização de métricas de cliente (no-show, cancelamento).
 Dependências: axios, api.ts, BookingDetails, BookingStatus, CreateBookingDto, UpdateBookingStatusDto, ReportDisputeDto (NOVO), Dispute (NOVO).
 Exporta: createBooking, getBookingsForUser, getBookingDetails, updateBookingStatus, cancelBooking, checkActiveChatBooking, checkConfirmedBookingBetweenUsers, reportDispute (NOVO).
 Funcionalidades Chave:
@@ -373,10 +439,10 @@ Funcionalidades Chave:
 
 reportDispute(bookingId, data): Envia os detalhes de uma disputa para um agendamento.
 getDisputeByBookingId(bookingId): Busca os detalhes de uma disputa associada a um agendamento.
-Interconexões: Utilizado por bookings/[bookingId].tsx.
-6.5. schedule-service.tsx
+Interconexões: Utilizado por bookings/[bookingId].tsx, e pelas novas telas de disputa (app/(common)/feedback/dispute/index.tsx e app/(common)/feedback/dispute/[bookingId].tsx).
+6.5. schedule-service.tsx (ATUALIZADO)
 Caminho: LimpeJaApp/app/(client)/schedule-service.tsx
-Propósito: Permite ao cliente agendar um serviço com um provedor específico, selecionando data, horário e fornecendo detalhes de endereço.
+Propósito: Permite ao cliente agendar um serviço com um provedor específico, selecionando data, horário e fornecendo detalhes de endereço. Será estendido para incluir a opção de agendamentos recorrentes.
 Dependências: React, Animated, Alert, Dimensions, Easing, Platform, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, Stack, useLocalSearchParams, useRouter, Ionicons, BlurView, Clipboard, LinearGradient, useAuth, createBooking, getProviderAvailability, getProviderDetails, BookingAddress, BookingDetails, CreateBookingDto, ProviderAvailability, ProviderDisplayInfo, ProviderServiceOffering, UserProfile, PricingType, AddressSection, CalendarHeader, ProviderBrief, TimeSlotsSection.
 Funcionalidades Chave:
 
@@ -412,7 +478,7 @@ handleCancelBooking(): Cancela o agendamento via cancelBooking().
 handleContactProvider(): Navega para a tela de chat com o provedor.
 handleReviewService(): Navega para a tela de feedback para avaliar o serviço.
 handleViewProviderProfile(): Navega para a tela de detalhes do provedor.
-handleReportDispute(): Permite ao usuário reportar uma disputa, utilizando `disputeService.reportDispute`.
+handleReportDispute(): Permite ao usuário reportar uma disputa, utilizando disputeService.reportDispute.
 Animações para os cards e botões de ação.
 getStatusStyle(): Retorna estilos e ícones baseados no BookingStatus.
 Interconexões: Consome bookingService e disputeService. Navega para messages/[chatId].tsx, feedback/[targetId].tsx, explore/[providerId].tsx.
@@ -430,13 +496,86 @@ handleAddToCalendar(): Adiciona o agendamento ao calendário do dispositivo.
 handleContactProvider(): Navega para o chat com o provedor.
 Animações para a entrada do conteúdo e elementos de fundo.
 Interconexões: Consome useAuth, bookingService, providerService, paymentService. Navega para bookings/index.tsx, explore/index.tsx, messages/[chatId].tsx.
-7. Busca e Descoberta
+6.9. app/(common)/feedback/dispute/index.tsx (NOVO)
+Caminho: LimpeJaApp/app/(common)/feedback/dispute/index.tsx
+Propósito: Exibe a lista de disputas reportadas pelo usuário, permitindo acompanhar o status.
+Dependências: react-native, useRouter (expo-router), ScreenContainer, Header, Card, PrimaryButton, Icon.
+Funcionalidades Chave:
 
+Exibe uma lista mock de disputas com ID, ID da reserva, assunto, status e data. (Em um cenário real, buscaria dados via disputeService.getDisputesForUser()).
+DisputeListItem: Componente para renderizar cada item da disputa.
+renderEmptyState: Exibe uma mensagem e um botão para criar uma nova disputa se não houver disputas.
+Navegação para DisputeDetails ao clicar em um item da lista.
+Interconexões: Navega para app/(common)/feedback/dispute/[bookingId].tsx.
+6.10. app/(common)/feedback/dispute/[bookingId].tsx (NOVO)
+Caminho: LimpeJaApp/app/(common)/feedback/dispute/[bookingId].tsx
+Propósito: Exibe os detalhes de uma disputa específica.
+Dependências: react-native, useLocalSearchParams (expo-router), ScreenContainer, Header, Card, PrimaryButton, TextInputWithIcon, Icon.
+Funcionalidades Chave:
+
+Recebe bookingId via parâmetros de rota para carregar os detalhes da disputa.
+Exibe informações detalhadas sobre a disputa, como motivo, descrição, status e histórico de comunicação.
+Permite enviar novas mensagens para a disputa e anexar arquivos.
+Interconexões: Consome disputeService para buscar os detalhes da disputa e enviar mensagens.
+Novos Módulos de Agendamento e Pagamento (Frontend)
+
+6.11. app/(client)/subscriptions/index.tsx (NOVO)
+Caminho: LimpeJaApp/app/(client)/subscriptions/index.tsx
+Propósito: Exibe a lista de assinaturas ativas e passadas do cliente, permitindo gerenciá-las.
+Dependências: React, FlatList, useAuth, subscriptionService.
+Funcionalidades Chave:
+
+Lista de assinaturas com status, frequência e próximo agendamento.
+Opções para pausar, retomar ou cancelar uma assinatura.
+Navegação para os detalhes de uma assinatura específica.
+Interconexões: Consome subscriptionService.
+6.12. app/(client)/subscriptions/[subscriptionId].tsx (NOVO)
+Caminho: LimpeJaApp/app/(client)/subscriptions/[subscriptionId].tsx
+Propósito: Exibe os detalhes de uma assinatura específica, incluindo histórico de agendamentos gerados e opções de edição.
+Dependências: React, useLocalSearchParams, subscriptionService.
+Funcionalidades Chave:
+
+Detalhes da assinatura (provedor, serviço, frequência, preço).
+Lista dos agendamentos já gerados por esta assinatura.
+Formulário para editar a frequência ou pausar/cancelar a assinatura.
+Interconexões: Consome subscriptionService.
+6.13. services/subscriptionService.ts (NOVO)
+Caminho: LimpeJaApp/app/services/subscriptionService.ts
+Propósito: Fornece funções para interagir com os endpoints de assinaturas do backend.
+Dependências: api.ts, CreateSubscriptionDto, UpdateSubscriptionDto, Subscription.
+Exporta: createSubscription, getSubscriptionsForUser, getSubscriptionDetails, updateSubscription.
+Funcionalidades Chave:
+
+createSubscription(data): Cria uma nova assinatura.
+getSubscriptionsForUser(): Obtém todas as assinaturas do usuário logado.
+getSubscriptionDetails(id): Obtém detalhes de uma assinatura específica.
+updateSubscription(id, data): Atualiza (pausar, cancelar, alterar frequência).
+Interconexões: Utilizado pelas telas de subscriptions.
+6.14. services/couponService.ts (NOVO)
+Caminho: LimpeJaApp/app/services/couponService.ts
+Propósito: Fornece funções para interagir com os endpoints de cupons do backend.
+Dependências: api.ts, CouponApplicationResult.
+Exporta: applyCoupon.
+Funcionalidades Chave:
+
+applyCoupon(code, bookingData): Valida e aplica o cupom, retornando o valor do desconto e o novo total.
+Interconexões: Utilizado na tela schedule-service.tsx para aplicar cupons.
+6.15. services/guaranteeService.ts (NOVO)
+Caminho: LimpeJaApp/app/services/guaranteeService.ts
+Propósito: Fornece funções para interagir com os endpoints de garantia de serviço/seguro do backend.
+Dependências: api.ts, SubmitClaimDto, GuaranteeClaim.
+Exporta: submitClaim, getClaimsForUser.
+Funcionalidades Chave:
+
+submitClaim(data): Envia uma solicitação de garantia.
+getClaimsForUser(): Lista as solicitações de garantia do usuário.
+Interconexões: Utilizado pelas telas de garantia e agendamento.
+7. Busca e Descoberta
 Esta seção descreve as funcionalidades de busca e exploração de serviços e provedores.
 
-7.1. search.ts
-Caminho: LimpeJaApp/types/backend/search.ts
-Propósito: Define as interfaces e enums relacionadas aos parâmetros e resultados de busca na plataforma.
+7.1. search.ts (ATUALIZADO)
+Caminho: LimpeJaApp/src/types/backend/search.ts
+Propósito: Define as interfaces e enums relacionadas aos parâmetros e resultados de busca na plataforma. Será estendido para incluir parâmetros para smart matching e precificação dinâmica.
 Dependências: ProviderDetails (de providers.ts), ServiceDetails (de services.ts), ProviderServiceDetails (de provider-service.ts).
 Exporta: SearchType (enum para tipos de busca: PROVIDERS, SERVICES, OFFERS, ALL, PROVIDER_SERVICES), SortByOption (enum para opções de ordenação), SearchQuery (interface para parâmetros de consulta de busca), ProviderServiceSearchResult (interface para resultados de serviço de provedor), SearchResult (interface para a resposta completa da API de busca).
 Funcionalidades Chave:
@@ -456,9 +595,9 @@ SecaoRecomendacoes / SecaoPrestadores: Exibem listas de provedores.
 NavBar: Barra de navegação inferior.
 Animações de entrada escalonadas para todas as seções.
 Interconexões: Consome clientService e providerService. Navega para telas de busca, detalhes de provedor e outras telas de navegação.
-7.3. explore/[providerId].tsx (Provider Details for Client)
+7.3. explore/[providerId].tsx (Provider Details for Client) (ATUALIZADO)
 Caminho: LimpeJaApp/app/(client)/explore/[providerId].tsx
-Propósito: Exibe os detalhes de um provedor de serviços para o cliente, incluindo informações de contato, biografia, avaliações e serviços oferecidos.
+Propósito: Exibe os detalhes de um provedor de serviços para o cliente, incluindo informações de contato, biografia, avaliações e serviços oferecidos. O preço exibido pode refletir a precificação dinâmica.
 Dependências: React, Animated, Alert, Dimensions, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, Stack, useLocalSearchParams, useRouter, useSafeAreaInsets, Ionicons, BookServiceButton, InfoChip, ReviewCard, StarRating, styles (de providerStyles.ts), useAuth, checkActiveChatBooking, getProviderDetails, ProviderDisplayInfo, ProviderReview, ProviderServiceOffering, VerificationStatus, PricingType.
 Funcionalidades Chave:
 
@@ -480,7 +619,6 @@ todos-prestadores-proximos.tsx: Lista todos os provedores próximos.
 servicos-por-categoria.tsx: Lista serviços filtrados por uma categoria específica.
 search-results.tsx / resultados-busca.tsx: Exibe resultados de busca com base em parâmetros.
 8. Comunicação (Chat e Notificações)
-
 Esta seção aborda as funcionalidades de comunicação dentro do aplicativo.
 
 8.1. chat.ts
@@ -516,7 +654,7 @@ Animações de entrada para o cabeçalho e itens da lista.
 Interconexões: Consome useAuth e chatService. Navega para messages/[chatId].tsx.
 8.4. messages/[chatId].tsx (Client/Provider Chat Screen)
 Caminho: LimpeJaApp/app/(client)/messages/[chatId].tsx e LimpeJaApp/app/(provider)/messages/index.tsx
-Propósito: A tela de chat para uma conversa específica, permitindo o envio e recebimento de mensagens em tempo real via WebSocket.
+Propósito: A tela de chat para uma conversa específica, permitindo o envio e recebimento de mensagens em tempo real via WebSocket. A comunicação WebSocket é agora escalável, utilizando um adaptador Redis no backend.
 Dependências: React, Animated, Alert, FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator, Stack, useLocalSearchParams, useRouter, Ionicons, io, Socket, appConfig, useAuth, getBookingDetails, getChatMessages, sendMessage (do chatService), BookingStatus, Message, SendMessageDto.
 Funcionalidades Chave:
 
@@ -530,16 +668,16 @@ socket.on('errorMessage'): Lida com erros do WebSocket.
 handleSendMessage(): Envia mensagens via WebSocket (socket.emit('sendMessage')) ou via REST (sendChatMessage()) como fallback.
 Bloqueia o input de mensagens se o chat estiver encerrado (serviço concluído/cancelado).
 Interconexões: Consome useAuth, bookingService, chatService.
-8.5. notifications.ts
+8.5. notifications.ts (ATUALIZADO)
 Caminho: LimpeJaApp/src/types/backend/notifications.ts
-Propósito: Define as interfaces e DTOs para o sistema de notificações.
+Propósito: Define as interfaces e DTOs para o sistema de notificações. Agora suporta rich media (imagens e botões de ação).
 Exporta: NotificationEntity, MarkAsReadDto.
 Funcionalidades Chave:
 
-NotificationEntity: Representa uma notificação individual com id, type, title, body, createdAt, readAt, navigateTo, relatedId, userId.
-8.6. notificationService.ts
+NotificationEntity: Representa uma notificação individual com id, type, title, body, createdAt, readAt, navigateTo, relatedId, userId, imageUrl (NOVO), actionButtons (NOVO).
+8.6. notificationService.ts (ATUALIZADO)
 Caminho: LimpeJaApp/app/services/notificationService.ts
-Propósito: Fornece funções para interagir com os endpoints de notificações do backend.
+Propósito: Fornece funções para interagir com os endpoints de notificações do backend. Será estendido para suportar o envio e processamento de notificações com rich media.
 Dependências: axios, api.ts, MessageResponseDto, NotificationEntity.
 Exporta: NotificationService (classe com métodos estáticos).
 Funcionalidades Chave:
@@ -552,14 +690,14 @@ enhanceNotifications(): (Função interna) Adiciona sugestões e ações rápida
 executeQuickAction(): (Função interna) Simula a execução de ações rápidas.
 getSmartSuggestions(): (Função interna) Simula sugestões inteligentes.
 Interconexões: Utilizado por notifications/index.tsx.
-8.7. notifications/index.tsx (Notifications List)
+8.7. notifications/index.tsx (Notifications List) (ATUALIZADO)
 Caminho: LimpeJaApp/app/(common)/notifications/index.tsx
-Propósito: Exibe a lista de notificações do usuário, permitindo marcá-las como lidas e navegar para conteúdos relacionados.
+Propósito: Exibe a lista de notificações do usuário, permitindo marcá-las como lidas e navegar para conteúdos relacionados. Agora renderiza notificações com rich media.
 Dependências: React, Animated, Alert, FlatList, Platform, RefreshControl, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, Stack, useRouter, Ionicons, MaterialCommunityIcons, useAuth, getNotifications, markAllNotificationsAsRead, markNotificationAsRead, NotificationEntity.
 Funcionalidades Chave:
 
 loadNotifications(): Carrega as notificações do backend via getNotifications().
-AnimatedNotificationItem: Componente para exibir cada notificação com ícone, título, corpo e timestamp.
+AnimatedNotificationItem: Componente para exibir cada notificação com ícone, título, corpo e timestamp. Renderiza imagens e botões de ação para rich media.
 handleNotificationPress(): Marca a notificação como lida e navega para a rota navigateTo se especificada.
 handleMarkAllAsRead(): Marca todas as notificações como lidas.
 formatNotificationTimestamp(): Formata o timestamp da notificação de forma relativa.
@@ -567,22 +705,21 @@ getNotificationIcon(): Retorna o ícone e a biblioteca apropriados para o tipo d
 Suporte a pull-to-refresh.
 Interconexões: Consome useAuth e notificationService.
 9. Pagamentos
-
 Esta seção descreve as funcionalidades relacionadas a pagamentos.
 
-9.1. payments.ts
+9.1. payments.ts (ATUALIZADO)
 Caminho: LimpeJaApp/src/types/backend/payments.ts
-Propósito: Define as interfaces e DTOs para operações de pagamento, como cobranças PIX e solicitações de saque.
+Propósito: Define as interfaces e DTOs para operações de pagamento, como cobranças PIX e solicitações de saque. Agora inclui campos para aplicação de cupons.
 Exporta: CreatePixChargeDto, PixChargeResponseDto, RequestWithdrawalDto, TransactionEntity, TransactionType (AGORA INCLUI REFUND).
 Funcionalidades Chave:
 
 CreatePixChargeDto: DTO para criar uma cobrança PIX.
 PixChargeResponseDto: Resposta do backend para uma cobrança PIX (inclui brCode, qrCodeImage, expiresAt, bookingId, providerId).
 RequestWithdrawalDto: DTO para solicitar um saque.
-TransactionType: Enum para tipos de transação, agora incluindo `REFUND`.
-9.2. paymentService.ts
+TransactionType: Enum para tipos de transação, agora incluindo REFUND.
+9.2. paymentService.ts (ATUALIZADO)
 Caminho: LimpeJaApp/app/services/paymentService.ts
-Propósito: Fornece funções para interagir com os endpoints de pagamento do backend.
+Propósito: Fornece funções para interagir com os endpoints de pagamento do backend. Será estendido para aplicar cupons no cálculo do pagamento.
 Dependências: axios, api.ts, MessageResponseDto, CreatePixChargeDto, PixChargeResponseDto, RequestWithdrawalDto.
 Exporta: createPixCharge, requestWithdrawal.
 Funcionalidades Chave:
@@ -591,7 +728,6 @@ createPixCharge(clientUserId, data): Cria uma cobrança PIX, enviando os dados p
 requestWithdrawal(data): Solicita um saque de ganhos do provedor, enviando os dados para POST /payments/withdrawal.
 Interconexões: Utilizado por bookings/success.tsx (para PIX) e earnings/index.tsx (para saques).
 10. Feedback e Avaliações
-
 Esta seção detalha as funcionalidades para feedback e avaliações.
 
 10.1. reviews.ts
@@ -602,9 +738,9 @@ Funcionalidades Chave:
 
 SubmitReviewDto: DTO para enviar uma avaliação (rating, comment, targetId, type, userId, providerId, bookingId).
 ReviewEntity: Representa uma avaliação retornada pelo backend.
-10.2. reviewService.ts
+10.2. reviewService.ts (ATUALIZADO)
 Caminho: LimpeJaApp/app/services/reviewService.ts
-Propósito: Fornece funções para interagir com os endpoints de avaliações do backend.
+Propósito: Fornece funções para interagir com os endpoints de avaliações do backend. Será estendido para integrar a lógica de badges/níveis de reputação para provedores.
 Dependências: axios, api.ts, MessageResponseDto, ReviewEntity, SubmitReviewDto.
 Exporta: submitFeedback, getDetailedRatingBreakdown, getSmartSuggestions (função e classe ReviewService).
 Funcionalidades Chave:
@@ -626,13 +762,22 @@ Recebe targetId, type, serviceName, providerName, providerId via parâmetros de 
 StarRating: Componente para seleção de avaliação por estrelas.
 handleSubmitFeedback(): Valida os dados, chama submitFeedback() do reviewService para enviar a avaliação.
 Interconexões: Consome useAuth e reviewService.
-11. Outras Telas Comuns
+10.4. services/aiSuggestionsService.ts (NOVO)
+Caminho: LimpeJaApp/app/services/aiSuggestionsService.ts
+Propósito: Fornece funções para buscar sugestões inteligentes e insights de clientes, potencialmente gerados por IA, para provedores.
+Dependências: api.ts.
+Funcionalidades Chave:
 
+getSmartSuggestions(providerId): Obtém sugestões personalizadas para o provedor (ex: otimização de preços, horários de pico).
+getCustomerInsights(providerId): Obtém insights sobre os clientes do provedor (ex: clientes recorrentes, serviços populares, avaliações).
+getMarketTrends(): Obtém tendências de mercado relevantes.
+Interconexões: Pode ser utilizado no dashboard do provedor ou em seções de análise de desempenho.
+11. Outras Telas Comuns
 Esta seção descreve telas acessíveis a ambos os tipos de usuários.
 
 11.1. settings.tsx
 Caminho: LimpeJaApp/app/(common)/settings.tsx
-Propósito: Permite ao usuário configurar preferências do aplicativo, como notificações e modo escuro, e acessar links relacionados à conta e informações legais.
+Propósito: Permite ao usuário configurar preferências do aplicativo, como notificações e modo escuro, e acessar links relacionados à conta e informações legais. Inclui links para gerenciar dados (LGPD) e excluir conta.
 Dependências: React, Animated, Alert, Linking, Platform, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View, Stack, useRouter, useAppContext, Ionicons, MaterialCommunityIcons, Constants.
 Funcionalidades Chave:
 
@@ -667,7 +812,42 @@ Dependências: React, ScrollView, StyleSheet, Text, View, Stack.
 Funcionalidades Chave:
 
 Exibe o texto completo da política de privacidade.
-11.5. _layout.tsx (Common Group)
+11.5. app/(common)/referrals.tsx (NOVO)
+Caminho: LimpeJaApp/app/(common)/referrals.tsx
+Propósito: Nova tela para o programa de indicação, onde o usuário pode ver seu código de indicação, status das indicações feitas e recompensas.
+Dependências: react-native, useAuth, useQuery (TanStack Query), referralService, Clipboard.
+Funcionalidades Chave:
+
+Exibe o código de indicação único do usuário.
+Lista de indicações feitas e seu status (pendente, concluído), com dados mockados.
+Informações sobre ganhos e ganhos pendentes.
+Seção "Como Funciona?" explicando o programa.
+Botões para compartilhar e copiar o código de indicação.
+Interconexões: Consome referralService para buscar dados de indicação (atualmente mockado).
+11.6. app/(common)/loyalty.tsx (NOVO)
+Caminho: LimpeJaApp/app/(common)/loyalty.tsx
+Propósito: Nova tela para exibir o programa de fidelidade do cliente, mostrando progresso, níveis e benefícios.
+Dependências: react-native, ScreenContainer, Header, Card, PrimaryButton, Icon, LinearGradient.
+Funcionalidades Chave:
+
+Exibe o progresso do cliente em direção a novos níveis de fidelidade (pontos atuais, pontos para o próximo nível).
+Indica o nível atual e o próximo nível.
+Barra de progresso visual.
+Lista de recompensas disponíveis e seus custos em pontos, com botão de resgate.
+Seção "Como Ganhar Pontos" detalhando as regras.
+Interconexões: Consome serviços relevantes para dados de fidelidade (atualmente mockado).
+11.7. services/referralService.ts (NOVO)
+Caminho: LimpeJaApp/app/services/referralService.ts
+Propósito: Fornece funções para interagir com os endpoints de indicações do backend.
+Dependências: api.ts, CreateReferralDto, Referral, GetReferralsMadeByUserResponse, GetReferredUsersResponse (de ../types/backend/referrals).
+Funcionalidades Chave:
+
+createReferral(data): Cria uma nova indicação.
+getReferralsMadeByUser(userId): Obtém todas as indicações feitas por um usuário.
+getReferredUsers(referrerId): Obtém os usuários que foram indicados por um usuário específico.
+getReferralById(referralId): Obtém os detalhes de uma indicação específica.
+Interconexões: Utilizado pela tela app/(common)/referrals.tsx.
+11.8. _layout.tsx (Common Group)
 Caminho: LimpeJaApp/app/(common)/_layout.tsx
 Propósito: Define o layout de navegação para as telas comuns a clientes e provedores.
 Dependências: expo-router.
@@ -675,64 +855,113 @@ Funcionalidades Chave:
 
 Configura Stack.Screen para cada tela comum, definindo title.
 Interconexões: É um layout aninhado do _layout.tsx raiz.
-12. Tipagens e DTOs
+Novos Módulos de Segurança (Frontend)
 
+11.9. app/(common)/safety/panic.tsx (NOVO)
+Caminho: LimpeJaApp/app/(common)/safety/panic.tsx
+Propósito: Tela para acionar um botão de pânico/emergência, enviando um alerta com a localização do usuário.
+Dependências: React, TouchableOpacity, Text, safetyService, expo-location.
+Funcionalidades Chave:
+
+Botão grande e visível para acionar o alerta.
+Captura e envia a localização atual do usuário.
+Pode incluir uma contagem regressiva para cancelar o alerta acidentalmente.
+Interconexões: Consome safetyService.
+11.10. app/(common)/safety/incident-report.tsx (NOVO)
+Caminho: LimpeJaApp/app/(common)/safety/incident-report.tsx
+Propósito: Tela para o usuário (cliente ou provedor) reportar um incidente detalhado.
+Dependências: React, TextInput, TouchableOpacity, Text, safetyService, ImagePicker.
+Funcionalidades Chave:
+
+Formulário para selecionar o tipo de incidente, descrever o ocorrido e anexar fotos/vídeos.
+Envio do relatório para o backend.
+Interconexões: Consome safetyService.
+11.11. services/safetyService.ts (ATUALIZADO)
+Caminho: LimpeJaApp/app/services/safetyService.ts
+Propósito: Fornece funções relacionadas à segurança do aplicativo, como autenticação biométrica, armazenamento seguro de tokens, validação de sessão, e agora, para o botão de pânico e relatório de incidentes.
+Dependências: axios, @react-native-async-storage/async-storage, expo-local-authentication, expo-secure-store, ReportPanicDto, IncidentReportDto.
+Exporta: initSecurity, enableBiometric, authenticateWithBiometric, secureStoreToken, getSecureToken, validateSession, getSecurityAlerts, reportSuspiciousActivity, setupSessionTimeout, handleSessionTimeout, reportPanic (NOVO), reportIncident (NOVO).
+Funcionalidades Chave:
+
+reportPanic(data): Envia um alerta de pânico com localização.
+reportIncident(data): Envia um relatório detalhado de incidente.
+Interconexões: Utilizado pelas novas telas de segurança.
+12. Tipagens e DTOs
 As tipagens são cruciais para a robustez do aplicativo. Elas são definidas principalmente na pasta LimpeJaApp/src/types/backend/.
 
 auth.ts: DTOs de login/registro, UserRole, VerificationStatus.
-bookings.ts: DTOs e interfaces para agendamentos, BookingStatus, **ReportDisputeDto, Dispute**.
+bookings.ts (ATUALIZADO): DTOs e interfaces para agendamentos, BookingStatus (AGORA INCLUI NO_SHOW), ReportDisputeDto, Dispute, DisputeReason.
 chat.ts: DTOs e interfaces para mensagens de chat.
-clients.ts: Interfaces para o perfil do cliente e DTOs de atualização.
+clients.ts (ATUALIZADO): Interfaces para o perfil do cliente e DTOs de atualização. Agora inclui campos para métricas de no-show e cancelamento.
 conversation-item.dto.ts: DTO para a representação da interface ConversationItem para fins de documentação da API.
-dashboard.ts: Interfaces para dados do dashboard do provedor (ProviderDashboard).
+dashboard.ts (ATUALIZADO): Interfaces para dados do dashboard do provedor (ProviderDashboard). Será estendido para incluir mais métricas de performance.
 faqs.ts: Interface para itens de FAQ (FAQItem).
-notifications.ts: Interfaces para notificações (NotificationEntity).
+notifications.ts (ATUALIZADO): Interfaces para notificações (NotificationEntity). Agora suporta rich media (imageUrl, actionButtons).
 offers.ts: Interface para ofertas promocionais (Offer).
-payments.ts: DTOs para operações de pagamento (CreatePixChargeDto, PixChargeResponseDto, RequestWithdrawalDto, TransactionEntity), **incluindo TransactionType com REFUND**.
+payments.ts (ATUALIZADO): DTOs para operações de pagamento (CreatePixChargeDto, PixChargeResponseDto, RequestWithdrawalDto, TransactionEntity), incluindo TransactionType com REFUND. Agora inclui campos para aplicação de cupons.
 provider-service.ts: Detalhes de um serviço oferecido por um provedor (ProviderServiceDetails).
-providers.ts: Interfaces para o perfil do provedor (ProviderDisplayInfo), disponibilidade (ProviderAvailability) e DTOs relacionados (CreateProviderServiceData, UpdateProviderServiceData, UpdateAvailabilityData, UpdateProviderProfileData, ProviderDashboard, ProviderTransaction, ProviderSearchQuery).
-**referrals.ts: DTOs e interfaces para o sistema de indicações (Referral, CreateReferralDto, GetReferralsMadeByUserResponse, GetReferredUsersResponse).**
-reviews.ts: DTOs e interfaces para avaliações (SubmitReviewDto, ReviewEntity).
-search.ts: DTOs e interfaces para busca (SearchQuery, ProviderServiceSearchResult, SearchResult).
+providers.ts (ATUALIZADO): Interfaces para o perfil do provedor (ProviderDisplayInfo), disponibilidade (ProviderAvailability) e DTOs relacionados (CreateProviderServiceData, UpdateProviderServiceData, UpdateAvailabilityData, UpdateProviderProfileData, ProviderDashboard, ProviderTransaction, ProviderSearchQuery). Será estendido para incluir campos para badges/níveis de reputação e lógica de smart matching.
+referrals.ts: DTOs e interfaces para o sistema de indicações (Referral, CreateReferralDto, GetReferralsMadeByUserResponse, GetReferredUsersResponse, ReferralStatus).
+reviews.ts (ATUALIZADO): DTOs e interfaces para avaliações (SubmitReviewDto, ReviewEntity). Será estendido para incluir lógica para badges/níveis de reputação.
+search.ts (ATUALIZADO): DTOs e interfaces para busca (SearchQuery, ProviderServiceSearchResult, SearchResult). Será estendido para incluir parâmetros para smart matching e precificação dinâmica.
 services.ts: Interfaces para tipos de serviço (Service, PricingType).
 upload.ts: DTO para respostas de upload (UploadResponseDto).
 users.ts: Interface UserProfile (perfil completo do usuário).
 verification.ts: DTOs e enums para o processo de verificação (SubmitCpfRequest, DocumentPhotoType, VerificationResponse, ProviderVerificationInfo).
+safety.ts (NOVO): DTOs para funcionalidades de segurança (ReportPanicDto, IncidentReportDto, Incident, PanicAlert).
+subscriptions.ts (NOVO): DTOs para gerenciamento de assinaturas (CreateSubscriptionDto, UpdateSubscriptionDto, Subscription, SubscriptionStatus, SubscriptionFrequency).
+coupons.ts (NOVO): DTOs para gerenciamento de cupons (Coupon, CouponType, CouponTarget, CouponApplicationResult).
+guarantee.ts (NOVO): DTOs para gerenciamento de garantia de serviço (SubmitClaimDto, GuaranteeClaim, ClaimStatus).
+pricing.ts (NOVO): DTOs para precificação dinâmica (GetDynamicPriceDto, DynamicPriceResult, PricingRule).
 13. Componentes Reutilizáveis (components/)
+A pasta components/ contém diversos componentes reutilizáveis para construir a UI de forma consistente e eficiente.
 
-A pasta components/ contém diversos componentes reutilizáveis para construir a UI de forma consistente e eficiente. Exemplos incluem:
-
+components/common/Card.tsx (NOVO): Componente de contêiner básico com estilo de cartão, incluindo sombra.
+components/common/Header.tsx (NOVO): Cabeçalho padrão para telas, com título e opção de botão de voltar e componente à direita.
+components/common/PrimaryButton.tsx (NOVO): Botão primário com gradiente e sombra, incluindo estado de carregamento.
+components/common/ScreenContainer.tsx (NOVO): Contêiner de tela base que gerencia safe areas, status bar e rolagem opcional.
+components/common/TextInputWithIcon.tsx (NOVO): Campo de entrada de texto com um ícone, estilizado com base no tema.
+components/common/Badges/ProviderBadge.tsx (NOVO): Componente para exibir visualmente os badges de reputação do provedor.
 auth/components/: Componentes específicos para formulários de autenticação (e.g., InputWithIcon, AnimatedErrorMessage).
 client/: Componentes específicos para o cliente (e.g., booking/success, explore/home, explore/provider).
 provider/: Componentes específicos para o provedor (e.g., dashboard, earnings, schedule/manager).
 ui/: Componentes de UI genéricos (e.g., ToastMessage).
-ServiceItemSkeleton: Componente de placeholder para carregamento de itens de serviço.
-14. Fluxo de Navegação Principal
+ServiceItemSkeleton: Componente de placeholder para carregamento de itens de serviço, utilizado para otimizar o desempenho de listas (FlatList).
+13.1. src/theme/colors.ts (NOVO)
+Caminho: LimpeJaApp/src/theme/colors.ts
+Propósito: Define a paleta de cores centralizada para toda a aplicação.
+Funcionalidades Chave:
 
+Define cores primárias, secundárias, de fundo, texto, status e bordas.
+13.2. src/theme/shadows.ts (NOVO)
+Caminho: LimpeJaApp/src/theme/shadows.ts
+Propósito: Define estilos de sombra reutilizáveis para diferentes componentes (cartões, botões, inputs).
+Dependências: colors.ts.
+
+13.3. src/theme/typography.ts (NOVO)
+Caminho: LimpeJaApp/src/theme/typography.ts
+Propósito: Define estilos de tipografia (fontes, tamanhos, pesos, cores) para garantir consistência visual.
+Dependências: colors.ts.
+
+14. Fluxo de Navegação Principal
 O Expo Router é fundamental para o fluxo de navegação, utilizando um sistema de arquivos para definir rotas e layouts aninhados.
 
 /: Ponto de entrada, redireciona para /welcome ou para o fluxo de autenticação/dashboard via _layout.tsx raiz.
 /welcome: Tela de boas-vindas.
 /(auth): Grupo de rotas de autenticação (/login, /register-options, /client-register, /provider-register, /forgot-password).
-/(client): Grupo de rotas para clientes (/explore, /[providerId], /schedule-service, /bookings, /messages, /profile).
+/(client): Grupo de rotas para clientes (/explore, /[providerId], /schedule-service, /bookings, /messages, /profile, /subscriptions (NOVO)).
 /(provider): Grupo de rotas para provedores (/dashboard, /schedule, /earnings, /messages, /profile).
-/(common): Grupo de rotas comuns a ambos os papéis (/settings, /help, /notifications, /feedback/[targetId], /termos, privacidade).
+/(common): Grupo de rotas comuns a ambos os papéis (/settings, /help, /notifications, /feedback/[targetId], feedback/dispute, referrals, loyalty, /termos, privacidade, /safety (NOVO)).
 15. Considerações Finais
-
-Esta documentação fornece uma visão aprofundada do frontend do LimpeJáApp, destacando sua estrutura modular, o uso extensivo de tipagem (TypeScript), gerenciamento de estado via Context API e a integração com o backend via Axios. As animações e a organização do código contribuem para uma experiência de usuário fluida e um código-base manutenível. A clareza nas interconexões entre arquivos e a separação de responsabilidades são pilares importantes para o desenvolvimento contínuo do aplicativo.
-
----
+Esta documentação fornece uma visão aprofundada do frontend do LimpeJáApp, destacando sua estrutura modular, o uso extensivo de tipagem (TypeScript), a transição para TanStack Query para gerenciamento de estado do servidor, e a integração com o backend via Axios e WebSockets. As animações e a organização do código contribuem para uma experiência de usuário fluida e um código-base manutenível. A clareza nas interconexões entre arquivos e a separação de responsabilidades são pilares importantes para o desenvolvimento contínuo do aplicativo, com foco em escalabilidade, segurança (LGPD, Rate Limiting), e mecanismos de crescimento (Indicação, Fidelidade). Com as novas funcionalidades de Assinaturas, Segurança (botão de pânico e relatório de incidentes), Cupons, Garantia de Serviço e Precificação Dinâmica, o LimpeJáApp está posicionado para ser uma plataforma robusta e competitiva no mercado de serviços.
 
 Documentação Técnica do Backend LimpeJá (Atualizada)
-
 1. Visão Geral e Propósito
-
 O backend do LimpeJá é a espinha dorsal da plataforma, responsável por gerenciar toda a lógica de negócios, persistência de dados e comunicação com o frontend (aplicativo móvel e futuras interfaces). Seu propósito primordial é conectar clientes que buscam serviços de limpeza e manutenção com provedores qualificados, facilitando o agendamento, a gestão de serviços, pagamentos, comunicação e avaliações.
 
 Construído com NestJS, um framework progressivo de Node.js, este backend adota uma arquitetura modular e escalável, garantindo robustez, manutenibilidade e alta performance para suportar o crescimento da base de usuários e a expansão de funcionalidades. O NestJS é conhecido por ser uma estrutura TypeScript-first que combina elementos de Programação Orientada a Objetos (OOP), Programação Funcional (FP) e Programação Reativa Funcional (FRP), utilizando o Express (com compatibilidade para Fastify) sob o capô. [GitHub - nestjs/nest] Sua filosofia é fornecer uma arquitetura de aplicação pronta para uso, permitindo a criação de aplicações altamente testáveis, escaláveis, pouco acopladas e de fácil manutenção, inspirada em frameworks front-end como o Angular. [GitHub - nestjs/nest]
 
 2. Arquitetura
-
 2.1. Tecnologias Principais
 
 Framework: NestJS (Node.js) - Escolhido por sua modularidade, forte tipagem (TypeScript), e aderência a padrões de arquitetura (MVC, DDD). É um framework progressivo que permite construir aplicações eficientes, escaláveis e de nível empresarial. [GitHub - nestjs/nest, NestJS | LinkedIn]
@@ -740,12 +969,12 @@ Linguagem: TypeScript - Oferece segurança de tipo, melhorando a qualidade e man
 Banco de Dados: PostgreSQL (configurado via DATABASE_URL) - Um banco de dados relacional robusto e escalável, com suporte a extensões geoespaciais como PostGIS (utilizado para geocodificação).
 ORM: Prisma - Um ORM moderno que oferece segurança de tipo, migrações declarativas e um cliente de banco de dados intuitivo. Utilizado para interagir com o PostgreSQL.
 Autenticação: JWT (JSON Web Tokens) com Passport.js - Para autenticação stateless e segura.
-Comunicação em Tempo Real: Socket.IO - Para funcionalidades de chat e notificações em tempo real. O ecossistema NestJS oferece suporte nativo para WebSockets. [NestJS | LinkedIn]
+Comunicação em Tempo Real: Socket.IO - Para funcionalidades de chat e notificações em tempo real. O ecossistema NestJS oferece suporte nativo para WebSockets. Utiliza socket.io-redis-adapter para escala horizontal em múltiplos servidores. [NestJS | LinkedIn]
 Validação: class-validator e class-transformer - Para validação declarativa de DTOs.
 Documentação API: Swagger (OpenAPI) - Para documentação automática e interativa da API.
 Variáveis de Ambiente: @nestjs/config com Joi - Para gerenciamento e validação de configurações.
-**Filas de Mensagens: BullMQ com Redis** - Para processamento assíncrono de tarefas (ex: envio de notificações, verificação de documentos).
-**Cache: Redis** - Para armazenamento em cache de dados frequentemente acessados, melhorando a performance.
+Filas de Mensagens: BullMQ com Redis - Para processamento assíncrono de tarefas (ex: envio de notificações, verificação de documentos), garantindo resiliência e escalabilidade.
+Cache: Redis - Para armazenamento em cache de dados frequentemente acessados, melhorando a performance e reduzindo a carga no banco de dados.
 Serviços Externos Integrados:
 PagSeguro: Para processamento de pagamentos PIX.
 Google Geocoding API: Para geocodificação de endereços.
@@ -753,6 +982,7 @@ Twilio: Para serviços de SMS/OTP (funcionalidade de OTP desativada na versão a
 Firebase Admin SDK: Para funcionalidades como autenticação (se integrada), notificações push, etc.
 Google Cloud Storage (GCS): Para armazenamento de arquivos como avatares e documentos.
 2.2. Estrutura de Módulos (NestJS)
+
 O backend é organizado em módulos coesos, seguindo o princípio de responsabilidade única. Cada módulo encapsula funcionalidades específicas, incluindo seus próprios controladores, serviços, DTOs e entidades.
 
 src/auth: Gerenciamento de autenticação (registro, login, redefinição de senha).
@@ -773,62 +1003,69 @@ src/dashboard: Gerenciamento de dados do painel para provedores.
 src/verification: Gerenciamento do processo de verificação de provedores (documentos, selfie, OCR, liveness).
 src/faqs: Gerenciamento de Perguntas Frequentes (FAQs).
 src/earnings: Gerenciamento de ganhos e saques de provedores.
-**src/referrals: Gerenciamento do programa de indicações.**
-**src/queues: Módulo para gerenciamento de filas de tarefas assíncronas.**
-**src/cache: Módulo para gerenciamento de cache.**
+src/referrals: Gerenciamento do programa de indicações.
+src/queues: Módulo para gerenciamento de filas de tarefas assíncronas.
+src/cache: Módulo para gerenciamento de cache.
+src/document-processing: Módulo para processamento de documentos (OCR, liveness, comparação facial).
 src/prisma: Módulo global para o PrismaService.
 src/config: Módulo global para gerenciamento de configurações.
 src/common: Componentes reutilizáveis (pipes, filtros de exceção, DTOs genéricos, enums, serviços utilitários como e-mail e geocodificação).
+src/subscriptions (NOVO): Gerenciamento de assinaturas e agendamentos recorrentes.
+src/safety (NOVO): Gerenciamento de alertas de pânico e relatórios de incidentes.
+src/coupons (NOVO): Gerenciamento de cupons de desconto.
+src/guarantee (NOVO): Gerenciamento de solicitações de garantia de serviço/seguro.
+src/pricing (NOVO): Lógica de precificação dinâmica (surge pricing).
+src/geocoding (NOVO): Módulo para geocodificação de endereços e obtenção de coordenadas.
 2.3. Fluxo de Requisição
 
 Requisição HTTP/WebSocket: O frontend envia uma requisição para um endpoint específico.
 Guards (Autenticação/Autorização): JwtAuthGuard valida o token JWT. RolesGuard verifica se o usuário autenticado possui as roles necessárias para acessar a rota. Para WebSockets, WsAuthGuard realiza a autenticação.
 Pipes (Validação/Transformação): ValidationPipe (globalmente aplicado) valida os DTOs de entrada, garantindo a integridade dos dados e transformando-os para o tipo correto.
 Controller: Recebe a requisição validada, extrai os parâmetros e delega a lógica de negócios para o serviço apropriado.
-Service: Contém a lógica de negócios principal, interagindo com o PrismaService para acessar o banco de dados. Pode injetar outros serviços para orquestrar operações complexas.
+Service: Contém a lógica de negócios principal, interagindo com o PrismaService para acessar o banco de dados. Pode injetar outros serviços para orchestrar operações complexas.
 PrismaService: Atua como a camada de acesso a dados, executando operações no banco de dados.
 Resposta: O serviço retorna os dados para o controlador, que os formata (geralmente usando DTOs de resposta) e os envia de volta ao frontend.
 Filters (Tratamento de Exceções): HttpExceptionFilter captura exceções HTTP, formatando as respostas de erro de forma consistente para o frontend.
 3. Módulos e Funcionalidades Detalhadas
-
 3.1. Módulo de Autenticação (AuthModule)
-Responsabilidade: Gerenciar o ciclo de vida da autenticação.
+Responsabilidade: Gerenciar o ciclo de vida da autenticação. Implementa Rate Limiting para endpoints sensíveis como /auth/login e /auth/forgot-password para proteção contra ataques de força bruta.
 
 Controlador (AuthController):
 POST /auth/register/client: Registra um novo cliente.
 POST /auth/register/provider: Registra um novo provedor.
 POST /auth/login: Autentica um usuário (cliente/provedor) e retorna um JWT.
 POST /auth/forgot-password: Inicia o processo de redefinição de senha.
-Serviço (AuthService): Lógica de registro (hash de senha, criação de usuário/cliente/provedor), validação de credenciais, geração de JWT. Removida a autenticação baseada em telefone/OTP. O registro de cliente e provedor agora inclui o tratamento de coordenadas geoespaciais para o endereço.
+Serviço (AuthService): Lógica de registro (hash de senha, criação de usuário/cliente/provedor), validação de credenciais, geração de JWT. Removida a autenticação baseada em telefone/OTP. O registro de cliente e provedor agora inclui o tratamento de coordenadas geoespaciais para o endereço, utilizando o GeocodingService. As coordenadas (latitude, longitude) são salvas no modelo Address, e o campo location (tipo PostGIS geometry(Point, 4326)) é atualizado via this.prisma.$executeRaw(Prisma.sql para garantir a indexação geoespacial.
 DTOs: LoginDto, RegisterClientDto, RegisterProviderDto, ForgotPasswordDto, AuthResponseDto, MessageResponseDto.
 Guards: LocalAuthGuard (para login), JwtAuthGuard, RolesGuard, WsAuthGuard.
 Estratégias: LocalStrategy, JwtStrategy.
 Decoradores: @Roles().
 3.2. Módulo de Usuários (UsersModule)
-Responsabilidade: Gerenciar perfis de usuário genéricos (base para clientes e provedores).
+Responsabilidade: Gerenciar perfis de usuário genéricos (base para clientes e provedores). Inclui endpoints para conformidade com a LGPD, permitindo exportação e exclusão de dados do usuário.
 
 Controlador (UsersController):
 GET /users/me: Obtém o perfil completo do usuário logado.
 PATCH /users/me: Atualiza o perfil básico do usuário logado (e-mail).
 GET /users/:id (ADMIN): Obtém o perfil de qualquer usuário por ID.
 DELETE /users/:id (ADMIN): Deleta um usuário por ID.
-Serviço (UsersService): Lógica para buscar (findOne com includes para client/provider e suas relações), atualizar e remover usuários.
+GET /users/data-export (PROTECTED): Permite ao usuário solicitar a exportação de seus dados.
+DELETE /users/delete-account (PROTECTED): Permite ao usuário solicitar a exclusão de sua conta e dados associados.
+Serviço (UsersService): Lógica para buscar (findOne com includes para client/provider e suas relações), atualizar e remover usuários. Implementa lógica para exportar e excluir dados de usuários, incluindo anonimização ou exclusão em cascata, respeitando restrições legais/fiscais.
 DTOs: UserProfileDto, UpdateUserDto.
 Entidades: UserEntity.
-3.3. Módulo de Clientes (ClientsModule)
-Responsabilidade: Gerenciar a lógica específica para o papel de cliente.
+3.3. Módulo de Clientes (ClientsModule) (ATUALIZADO)
+Responsabilidade: Gerenciar a lógica específica para o papel de cliente. Agora inclui métricas de no-show e cancelamento para clientes.
 
 Controlador (ClientsController):
 GET /clients/me/dashboard (CLIENT): Implementado. Obtém dados do dashboard do cliente logado.
 PATCH /clients/me (CLIENT): Atualiza o perfil do cliente logado (nome, telefone, endereço).
 GET /clients/:id (ADMIN): Obtém o perfil de qualquer cliente por ID.
-Serviço (ClientsService): Lógica para buscar e atualizar clientes.
-getClientDashboardData: Compila dados como agendamentos pendentes/concluídos, próximo agendamento e avaliações pendentes.
+Serviço (ClientsService): Lógica para buscar e atualizar clientes. getClientDashboardData: Compila dados como agendamentos pendentes/concluídos, próximo agendamento e avaliações pendentes. Inclui a lógica para calcular e atualizar noShowCount e cancellationCount para o cliente.
 O tipo ClientWithIncludes é utilizado para garantir a inclusão de dados relacionados (user, address, bookings, reviewsMade).
 DTOs: ClientDashboardDto, UpdateClientProfileDto, ClientDetailsDto.
 Entidades: ClientEntity.
-3.4. Módulo de Provedores (ProvidersModule)
-Responsabilidade: Gerenciar a lógica específica para o papel de provedor.
+3.4. Módulo de Provedores (ProvidersModule) (ATUALIZADO)
+Responsabilidade: Gerenciar a lógica específica para o papel de provedor. Será estendido para integrar a lógica de smart matching e badges/níveis de reputação.
 
 Controlador (ProvidersController):
 GET /providers/:id: Obtém detalhes públicos de um provedor.
@@ -839,7 +1076,7 @@ DELETE /providers/:id (ADMIN): Deleta um provedor por ID.
 GET /providers: Busca provedores com filtros (termo, localização, rating, geoespacial).
 GET /providers/recommended: Obtém uma lista de provedores recomendados.
 GET /providers/nearby: Obtém uma lista de provedores próximos, possivelmente com base na localização do usuário.
-Serviço (ProvidersService): Lógica para buscar provedores por ID/UserID, atualizar dados do provedor, e realizar buscas complexas. Aprimorado com busca geoespacial utilizando PostGIS (ST_DistanceSphere, ST_DWithin) para encontrar provedores por proximidade, além de filtros por termo, serviço, localização e rating. Inclui fiveStarReviewCount e monthlyBookingsCount nos resultados. Contém métodos para buscar provedores pendentes de verificação (getPendingProviders) e provedores recomendados/experientes (findTopRatedOrExperiencedProviders).
+Serviço (ProvidersService): Lógica para buscar provedores por ID/UserID, atualizar dados do provedor, e realizar buscas complexas. Aprimorado com busca geoespacial utilizando PostGIS (ST_DistanceSphere, ST_DWithin) para encontrar provedores por proximidade, além de filtros por termo, serviço, localização e rating. Inclui fiveStarReviewCount e monthlyBookingsCount nos resultados. Contém métodos para buscar provedores pendentes de verificação (getPendingProviders) e provedores recomendados/experientes (findTopRatedOrExperiencedProviders). Implementa lógica de cache para perfis públicos de provedores (GET /providers/:id). Será estendido para incluir a lógica de smart matching (seleção algorítmica do melhor provedor) e a gestão de badges/níveis de reputação.
 DTOs: ProviderDetailsDto, UpdateProviderProfileDto, ProviderSearchDto, ProviderServiceOfferingDto.
 Entidades: ProviderEntity.
 3.5. Módulo de Disponibilidade (AvailabilityModule)
@@ -850,9 +1087,7 @@ GET /providers/:providerId/availability: Obtém horários de disponibilidade de 
 PATCH /providers/:providerId/availability (PROVIDER): Atualiza múltiplos slots de disponibilidade (cria, atualiza, deleta).
 POST /providers/:providerId/availability (PROVIDER): Adiciona um novo slot de disponibilidade.
 DELETE /providers/:providerId/availability/:availabilityId (PROVIDER): Deleta um slot específico.
-Serviço (AvailabilityService): Lógica para CRUD de slots de disponibilidade, incluindo validação de propriedade do provedor.
-Correção de Fuso Horário: A função getAvailability foi corrigida para usar Date.UTC e getUTCDay() ao calcular o dia da semana, garantindo a precisão da busca de disponibilidade independentemente do fuso horário do servidor.
-Considera agendamentos CONFIRMED e COMPLETED para determinar horários ocupados.
+Serviço (AvailabilityService): Lógica para CRUD de slots de disponibilidade, incluindo validação de propriedade do provedor. Correção de Fuso Horário: A função getAvailability foi corrigida para usar Date.UTC e getUTCDay() ao calcular o dia da semana, garantindo a precisão da busca de disponibilidade independentemente do fuso horário do servidor. Considera agendamentos CONFIRMED e COMPLETED para determinar horários ocupados.
 DTOs: GetAvailabilityDto, UpdateAvailabilityDto.
 Entidades: AvailabilityEntity.
 3.6. Módulo de Tipos de Serviço Globais (ServicesModule)
@@ -864,7 +1099,7 @@ GET /services: Lista todos os tipos de serviço.
 GET /services/:id: Obtém um tipo de serviço por ID.
 PATCH /services/:id (ADMIN): Atualiza um tipo de serviço.
 DELETE /services/:id (ADMIN): Deleta um tipo de serviço.
-Serviço (ServicesService): Lógica para CRUD de tipos de serviço. O campo price é corretamente convertido para Prisma.Decimal tanto na criação quanto na atualização.
+Serviço (ServicesService): Lógica para CRUD de tipos de serviço. O campo price é corretamente convertido para Prisma.Decimal tanto na criação quanto na atualização. Implementa lógica de cache para lista de categorias de serviços (GET /services).
 DTOs: CreateServiceDto, UpdateServiceDto, ServiceDetailsDto.
 Entidades: ServiceEntity.
 3.7. Módulo de Serviços Oferecidos por Provedores (ProviderServicesModule)
@@ -878,8 +1113,8 @@ DELETE /providers/:providerId/services/:id (PROVIDER): Remove um serviço oferec
 Serviço (ProviderServicesService): Lógica para CRUD de ProviderService, incluindo validações de existência e unicidade. Agora suporta diferentes tipos de precificação (PricingType) como FIXED_PRICE, HOURLY, BY_SIZE, CUSTOM_QUOTE, com campos pricePerSquareMeter e pricePerRoom.
 DTOs: CreateProviderServiceDto, UpdateProviderServiceDto, ProviderServiceDetailsDto.
 Entidades: ProviderServiceEntity.
-3.8. Módulo de Agendamentos (BookingsModule)
-Responsabilidade: Gerenciar o ciclo de vida dos agendamentos de serviços.
+3.8. Módulo de Agendamentos (BookingsModule) (ATUALIZADO)
+Responsabilidade: Gerenciar o ciclo de vida dos agendamentos de serviços. Inclui um fluxo para gerenciamento de disputas e reembolsos. Agora suporta agendamentos recorrentes e atualiza métricas de cliente (no-show, cancelamento).
 
 Controlador (BookingsController):
 POST /bookings (CLIENT): Cria um novo agendamento.
@@ -888,35 +1123,22 @@ GET /bookings/me: Obtém agendamentos do usuário logado (cliente ou provedor).
 GET /bookings/:id: Obtém detalhes de um agendamento específico, com validação de permissão.
 PATCH /bookings/:id/status (CLIENT/PROVIDER): Atualiza o status de um agendamento.
 PATCH /bookings/:id/cancel (CLIENT): Cancela um agendamento.
-**POST /bookings/:id/dispute (CLIENT/PROVIDER): Permite reportar uma disputa para um agendamento. Este endpoint cria um novo registro na tabela `Dispute` e altera o status do agendamento para `PENDING_DISPUTE`.**
-Serviço (BookingsService): Lógica para criação de agendamentos (verificando provedor/serviço), busca de agendamentos por usuário/role, e transições de status complexas.
-Calcula o totalPrice com base no PricingType do ProviderService (FIXED_PRICE, HOURLY, BY_SIZE).
-Cria um novo endereço para cada agendamento.
-createBookingAndPixCharge: Orquestra a criação do agendamento e a chamada ao paymentsService.createPixCharge.
-Lógica de Fidelização: Incrementa completedBookingsCount para o cliente e monthlyBookingsCount para o provedor quando um agendamento é COMPLETED.
-Envia notificação ao cliente para solicitar uma avaliação após a conclusão do serviço.
-Correção de Tipagem: O BookingEntity e BookingDetailsDto foram corrigidos para refletir corretamente os tipos do Prisma (Prisma.Decimal, BookingStatus, Address | null).
-**Disputas: Gerencia a criação e o ciclo de vida das disputas, associando-as a agendamentos e atualizando o status do booking para `PENDING_DISPUTE`.**
-DTOs: CreateBookingDto, UpdateBookingStatusDto, BookingDetailsDto, BookingAndPixResponseDto, **ReportDisputeDto, DisputeDto.**
-Entidades: BookingEntity, **DisputeEntity.**
-3.9. Módulo de Pagamentos (PaymentsModule)
-Responsabilidade: Gerenciar operações de pagamento e saque.
+POST /bookings/:id/dispute (CLIENT/PROVIDER): Permite reportar uma disputa para um agendamento. Este endpoint cria um novo registro na tabela Dispute e altera o status do agendamento para PENDING_DISPUTE.
+Serviço (BookingsService): Lógica para criação de agendamentos (verificando provedor/serviço), busca de agendamentos por usuário/role, e transições de status complexas. Calcula o totalPrice com base no PricingType do ProviderService (FIXED_PRICE, HOURLY, BY_SIZE). Cria um novo endereço para cada agendamento. createBookingAndPixCharge: Orquestra a criação do agendamento e a chamada ao paymentsService.createPixCharge. Lógica de Fidelização: Incrementa completedBookingsCount para o cliente e monthlyBookingsCount para o provedor quando um agendamento é COMPLETED. Envia notificação ao cliente para solicitar uma avaliação após a conclusão do serviço. Correção de Tipagem: O BookingEntity e BookingDetailsDto foram corrigidos para refletir corretamente os tipos do Prisma (Prisma.Decimal, BookingStatus, Address | null). Disputas: Gerencia a criação e o ciclo de vida das disputas, associando-as a agendamentos e atualizando o status do booking para PENDING_DISPUTE. Será estendido para lidar com a criação de agendamentos a partir de assinaturas e para atualizar as métricas de noShowCount e cancellationCount no modelo Client.
+DTOs: CreateBookingDto, UpdateBookingStatusDto, BookingDetailsDto, BookingAndPixResponseDto, ReportDisputeDto, DisputeDto.
+Entidades: BookingEntity, DisputeEntity.
+3.9. Módulo de Pagamentos (PaymentsModule) (ATUALIZADO)
+Responsabilidade: Gerenciar operações de pagamento e saque. Agora integra a aplicação de cupons.
 
 Controlador (PaymentsController):
 POST /payments/pix-charge: Integrado. Cria uma cobrança PIX.
 POST /payments/withdrawal: Integrado. Solicita um saque de um provedor.
 POST /payments/webhook/pix: NOVO ENDPOINT e Integrado. Recebe notificações de webhook de pagamento PIX do gateway (PagSeguro).
-Serviço (PaymentsService):
-Integração Real com PagSeguro API:
-createPixCharge: Orquestra a criação de uma cobrança PIX. Busca os detalhes completos do cliente (e-mail, nome, telefone, CPF, endereço) e do agendamento/serviço. Cria uma transação pendente no banco de dados. Chama o método interno createPixTransactionWithGateway para interagir com a API /orders do PagSeguro, gerando o QR Code e o BR Code. Atualiza a transação local com o ID da transação do gateway e a URL do QR Code. Se houver um bookingId associado, atualiza o status do agendamento para PENDING.
-createPixTransactionWithGateway: Método interno que constrói o payload necessário e faz a requisição POST para a API /orders do PagSeguro, utilizando o PAGSEGURO_API_TOKEN e PAGSEGURO_API_BASE_URL configurados. Lida com a estrutura de resposta do PagSeguro.
-handlePixWebhook: Processa as notificações de webhook do PagSeguro. Encontra a transação local pelo gatewayTransactionId (que é o ID do pedido do PagSeguro). Atualiza o status da transação e do agendamento (BookingStatus.CONFIRMED ou BookingStatus.CANCELED) com base no status recebido do webhook.
-requestWithdrawal: Processa solicitações de saque de provedores, validando o saldo disponível e registrando a transação.
-Tratamento de Dependência Circular: O BookingsService é injetado via @Inject(forwardRef(() => BookingsService)), resolvendo a dependência circular.
+Serviço (PaymentsService): Integração Real com PagSeguro API: createPixCharge: Orquestra a criação de uma cobrança PIX. Busca os detalhes completos do cliente (e-mail, nome, telefone, CPF, endereço) e do agendamento/serviço. Cria uma transação pendente no banco de dados. Chama o método interno createPixTransactionWithGateway para interagir com a API /orders do PagSeguro, gerando o QR Code e o BR Code. Atualiza a transação local com o ID da transação do gateway e a URL do QR Code. Se houver um bookingId associado, atualiza o status do agendamento para PENDING. createPixTransactionWithGateway: Método interno que constrói o payload necessário e faz a requisição POST para a API /orders do PagSeguro, utilizando o PAGSEGURO_API_TOKEN e PAGSEGURO_API_BASE_URL configurados. Lida com a estrutura de resposta do PagSeguro. handlePixWebhook: Processa as notificações de webhook do PagSeguro. Encontra a transação local pelo gatewayTransactionId (que é o ID do pedido do PagSeguro). Atualiza o status da transação e do agendamento (BookingStatus.CONFIRMED ou BookingStatus.CANCELED) com base no status recebido do webhook. requestWithdrawal: Processa solicitações de saque de provedores, validando o saldo disponível e registrando a transação. Tratamento de Dependência Circular: O BookingsService é injetado via @Inject(forwardRef(() => BookingsService)), resolvendo a dependência circular. Será estendido para aplicar descontos de cupons no cálculo do pagamento.
 DTOs: CreatePixChargeDto, PixChargeResponseDto, RequestWithdrawalDto, MessageResponseDto.
 Entidades: TransactionEntity.
 3.10. Módulo de Chat (ChatModule)
-Responsabilidade: Gerenciar a comunicação de mensagens entre usuários.
+Responsabilidade: Gerenciar a comunicação de mensagens entre usuários. Preparado para escala horizontal utilizando socket.io-redis-adapter para sincronização de mensagens entre múltiplas instâncias do backend.
 
 Controlador (ChatController):
 GET /chat/find-or-create/provider/:providerId/client/:clientId: Encontra um chat existente ou cria um novo entre um provedor e um cliente.
@@ -929,8 +1151,8 @@ Gateway (ChatGateway): (WebSocket)
 Serviço (ChatService): Lógica para criar e buscar mensagens. Implementa lógica de permissão: só permite enviar/acessar mensagens se houver um agendamento CONFIRMED entre os participantes. Bloqueia se o agendamento estiver COMPLETED ou CANCELED.
 DTOs: SendMessageDto, GetMessagesDto, ChatDetailsDto.
 Entidades: Message.
-3.11. Módulo de Notificações (NotificationsModule)
-Responsabilidade: Gerenciar o envio e status de notificações para usuários.
+3.11. Módulo de Notificações (NotificationsModule) (ATUALIZADO)
+Responsabilidade: Gerenciar o envio e status de notificações para usuários. Utiliza o QueueService para enfileirar o envio de notificações, garantindo processamento assíncrono e resiliência. Agora suporta notificações com rich media.
 
 Controlador (NotificationsController):
 POST /notifications (ADMIN): Cria uma nova notificação.
@@ -938,11 +1160,11 @@ GET /notifications/me: Obtém notificações do usuário logado.
 PATCH /notifications/me/mark-as-read: Marca múltiplas/todas as notificações como lidas.
 PATCH /notifications/:id/mark-as-read: Marca uma notificação específica como lida.
 DELETE /notifications/:id: Deleta uma notificação.
-Serviço (NotificationsService): Lógica para criar, buscar, marcar como lidas e deletar notificações. **Utiliza o QueueService para enfileirar o envio de notificações, garantindo processamento assíncrono e resiliência.**
+Serviço (NotificationsService): Lógica para criar, buscar, marcar como lidas e deletar notificações. Utiliza o QueueService para enfileirar o envio de notificações, garantindo processamento assíncrono e resiliência. Será estendido para suportar o envio e processamento de notificações com rich media (imagens, botões de ação).
 DTOs: CreateNotificationDto, UpdateNotificationDto, MarkAsReadDto.
 Entidades: NotificationEntity.
-3.12. Módulo de Avaliações (ReviewsModule)
-Responsabilidade: Gerenciar a submissão e consulta de avaliações de serviços.
+3.12. Módulo de Avaliações (ReviewsModule) (ATUALIZADO)
+Responsabilidade: Gerenciar a submissão e consulta de avaliações de serviços. Será estendido para integrar a lógica de badges/níveis de reputação para provedores.
 
 Controlador (ReviewsController):
 POST /reviews (CLIENT): Envia uma nova avaliação para um serviço concluído.
@@ -950,7 +1172,7 @@ GET /reviews: Obtém avaliações com filtros (provedor, cliente, rating).
 GET /reviews/:id: Obtém uma avaliação por ID.
 GET /reviews/provider/:providerId/breakdown: Obtém uma análise detalhada das avaliações de um provedor.
 GET /reviews/provider/:providerId/suggestions: Obtém sugestões inteligentes para o provedor baseadas em IA.
-Serviço (ReviewsService): Lógica para submeter avaliações (verificando agendamento, status, duplicidade) e buscar avaliações. Calcula detalhamento de avaliações e gera sugestões inteligentes (precificação, disponibilidade, melhoria de serviço, marketing) com base em dados de avaliação e agendamentos.
+Serviço (ReviewsService): Lógica para submeter avaliações (verificando agendamento, status, duplicidade) e buscar avaliações. Calcula detalhamento de avaliações e gera sugestões inteligentes (precificação, disponibilidade, melhoria de serviço, marketing) com base em dados de avaliação e agendamentos. Será estendido para atualizar os badges/níveis de reputação do provedor com base nas avaliações recebidas.
 DTOs: SubmitReviewDto, GetReviewsDto, ReviewDto, SmartSuggestionDto, DetailedRatingBreakdownDto.
 Entidades: ReviewEntity.
 3.13. Módulo de Ofertas (OffersModule)
@@ -965,12 +1187,12 @@ DELETE /offers/:id (ADMIN): Exclui uma oferta.
 Serviço (OffersService): Lógica para CRUD de ofertas. Inclui método searchOffers para buscar ofertas por termo e validade.
 DTOs: CreateOfferDto, UpdateOfferDto, OfferDetailsDto.
 Entidades: Offer.
-3.14. Módulo de Busca (SearchModule)
-Responsabilidade: Fornecer um endpoint unificado para busca abrangente.
+3.14. Módulo de Busca (SearchModule) (ATUALIZADO)
+Responsabilidade: Fornecer um endpoint unificado para busca abrangente. Será estendido para integrar a lógica de smart matching e precificação dinâmica.
 
 Controlador (SearchController):
 GET /search: Realiza uma busca por provedores, serviços, etc., usando diversos critérios.
-Serviço (SearchService): Orquestra chamadas a outros serviços (ProvidersService, ServicesService, ProviderServicesService, OffersService) para compilar resultados de busca.
+Serviço (SearchService): Orchestrates calls to other services (ProvidersService, ServicesService, ProviderServicesService, OffersService) to compile search results. Será estendido para integrar a lógica de smart matching e consultar o PricingService para incluir preços dinâmicos nos resultados.
 DTOs: SearchQueryDto, ProviderServiceSearchResultDto.
 3.15. Módulo de Aplicação (AppModule / Geral)
 Responsabilidade: Gerenciar rotas de nível de aplicação e verificações de saúde.
@@ -981,7 +1203,7 @@ GET /health: Endpoint para verificações de saúde da aplicação.
 Serviço (AppService): Lógica para as rotas gerais da aplicação.
 DTOs: Nenhum DTO específico para estas rotas.
 3.16. Módulo de Verificação (VerificationModule)
-Responsabilidade: Gerenciar o processo de verificação de provedores, incluindo upload e processamento de documentos, selfie, OCR, verificação de vivacidade (liveness), comparação facial e aprovação/rejeição manual.
+Responsabilidade: Gerenciar o processo de verificação de provedores, incluindo upload e processamento de documentos, selfie, OCR, verificação de vivacidade (liveness), comparação facial e aprovação/rejeição manual. Utiliza o QueueService para enfileirar tarefas de processamento de documentos e selfies, garantindo que operações demoradas não bloqueiem a requisição HTTP.
 
 Controlador (VerificationController): Explicitamente Definido.
 GET /verification/pending-queue (ADMIN): Obtém a lista de provedores com status de verificação pendente de revisão manual ou upload de documentos.
@@ -990,15 +1212,10 @@ POST /verification/upload-selfie (PROVIDER): Permite que o provedor faça upload
 PATCH /verification/:providerId/status (ADMIN): Atualiza manualmente o status de verificação de um provedor (APROVADO, REJEITADO, etc.).
 POST /verification/reject/:providerId (ADMIN): Rejeita um provedor, exigindo um motivo.
 GET /verification/status/:providerId (ADMIN, PROVIDER): Obtém o status atual da verificação de um provedor, incluindo o progresso dos uploads e resultados de OCR/Liveness.
-Serviço (VerificationService): Orquestra o fluxo de verificação. Responsável por:
-Gerenciar uploads de arquivos para armazenamento (utilizando Google Cloud Storage).
-Chamar DocumentProcessingService para OCR, liveness check e comparação facial (integrando com APIs de terceiros como Cellereit Facematch).
-Atualizar o verificationStatus do provedor automaticamente com base no progresso das verificações (updateProviderVerificationStatus).
-Permitir atualizações manuais de status e registro de motivos de rejeição.
-**Utiliza o QueueService para enfileirar tarefas de processamento de documentos e selfies, garantindo que operações demoradas não bloqueiem a requisição HTTP.**
+Serviço (VerificationService): Orquestra o fluxo de verificação. Responsável por: Gerenciar uploads de arquivos para armazenamento (utilizando Google Cloud Storage). Chamar DocumentProcessingService para OCR, liveness check e comparação facial (integrando com APIs de terceiros como Cellereit Facematch). Atualizar o verificationStatus do provedor automaticamente com base no progresso das verificações (updateProviderVerificationStatus). Permitir atualizações manuais de status e registro de motivos de rejeição. Utiliza o QueueService para enfileirar tarefas de processamento de documentos e selfies, garantindo que operações demoradas não bloqueiem a requisição HTTP.
 DTOs: UploadDocumentDto, UploadSelfieDto.
-3.17. Módulo de Dashboard (DashboardModule)
-Responsabilidade: Fornecer dados sumarizados e relevantes para o painel do provedor logado.
+3.17. Módulo de Dashboard (DashboardModule) (ATUALIZADO)
+Responsabilidade: Fornecer dados sumarizados e relevantes para o painel do provedor logado. Será estendido para incluir mais métricas de performance e integrar-se com o módulo de reviews para exibir dados de badges/reputação.
 
 Controlador (DashboardController):
 GET /providers/me/dashboard (PROVIDER): Obtém todos os dados necessários para o dashboard de um provedor, incluindo agendamentos futuros, ganhos, avaliações recentes, contagem de avaliações 5 estrelas e contagem de agendamentos mensais.
@@ -1013,7 +1230,7 @@ POST /providers/me/earnings/withdrawal: Permite que o provedor solicite um saque
 Serviço (EarningsService): Calcula os ganhos totais, o valor disponível para saque e os saques pendentes com base nos agendamentos concluídos e transações. Inclui transações recentes e um detalhamento dos ganhos por período.
 DTOs: EarningsResponseDto, WithdrawalRequestDto, WithdrawalResponseDto.
 3.19. Módulo de FAQs (FaqsModule)
-Responsabilidade: Gerenciar as Perguntas Frequentes (FAQs) da aplicação.
+Responsabilidade: Gerenciar as Perguntas Frequentes (FAQs) da aplicação. Implementa lógica de cache para FAQs (GET /faqs).
 
 Controlador (FaqsController):
 POST /faqs (ADMIN): Cria um novo item de FAQ.
@@ -1024,37 +1241,41 @@ DELETE /faqs/:id (ADMIN): Exclui um item de FAQ.
 Serviço (FaqsService): Lógica para CRUD de itens de FAQ.
 DTOs: CreateFaqDto, UpdateFaqDto.
 Entidades: FaqItemEntity.
-**3.20. Módulo de Indicações (ReferralsModule) (NOVO)**
+3.20. Módulo de Indicações (ReferralsModule) (NOVO)
 Responsabilidade: Gerenciar o programa de indicações de usuários.
 
 Controlador (ReferralsController):
-POST /referrals: Cria uma nova indicação.
+POST /referrals: Cria uma nova indicação, associando um usuário indicado a um usuário referenciador.
 GET /referrals/me: Obtém as indicações feitas pelo usuário logado.
-GET /referrals/referred-by/:userId: Obtém os usuários que foram indicados por um usuário específico.
-GET /referrals/:id: Obtém os detalhes de uma indicação específica.
+GET /referrals/:id: Obtém os detalhes de uma indicação específica (acesso restrito a administradores).
 Serviço (ReferralsService): Lógica para criar, buscar e gerenciar indicações. Inclui validações para garantir que um usuário não seja indicado por si mesmo ou indicado múltiplas vezes pelo mesmo referenciador.
 DTOs: CreateReferralDto, ReferralDto.
 Entidades: ReferralEntity.
-**3.21. Módulo de Filas (QueuesModule) (NOVO)**
+3.21. Módulo de Filas (QueuesModule) (NOVO)
 Responsabilidade: Orquestrar o processamento de tarefas assíncronas usando filas de mensagens.
 
-Provedor (QueuesService): Gerencia a criação e o acesso a filas (ex: `verificationQueue`, `notificationQueue`).
+Provedor (QueuesService): Gerencia a criação e o acesso a filas (ex: verificationQueue, notificationsQueue, disputesQueue, dataExportQueue).
 Workers:
-`verification.worker.ts`: Processa tarefas relacionadas à verificação de provedores (ex: OCR, liveness check) de forma assíncrona.
-`notification.worker.ts`: Processa o envio de notificações (ex: e-mail, push) de forma assíncrona.
-Funcionalidades Chave:
-Permite que operações demoradas sejam executadas em segundo plano, melhorando a responsividade da API.
-Garante a resiliência do sistema, reprocessando tarefas em caso de falha.
-Interconexões: Utilizado por `VerificationModule` e `NotificationsModule` para enfileirar tarefas.
-**3.22. Módulo de Cache (CacheModule) (NOVO)**
+verification.worker.ts: Processa tarefas relacionadas à verificação de provedores (ex: OCR, liveness check) de forma assíncrona.
+notification.worker.ts: Processa o envio de notificações (ex: e-mail, push) de forma assíncrona.
+Funcionalidades Chave: Permite que operações demoradas sejam executadas em segundo plano, melhorando a responsividade da API. Garante a resiliência do sistema, reprocessando tarefas em caso de falha.
+Interconexões: Utilizado por VerificationModule e NotificationsModule para enfileirar tarefas.
+3.22. Módulo de Cache (CacheModule) (NOVO)
 Responsabilidade: Fornecer uma camada de cache para melhorar a performance da aplicação.
 
-Provedor (CacheService): Gerencia operações de cache (ex: `get`, `set`, `del`) utilizando Redis.
-Funcionalidades Chave:
-Reduz a carga no banco de dados e em serviços externos, armazenando dados frequentemente acessados.
-Configurável para diferentes estratégias de cache (TTL, invalidação).
-Interconexões: Pode ser injetado em qualquer serviço que se beneficie do cache de dados.
-3.23. Componentes Globais (common/, config/, prisma/)
+Provedor (CacheService): Gerencia operações de cache (ex: get, set, del, reset) utilizando Redis.
+Funcionalidades Chave: Reduz a carga no banco de dados e em serviços externos, armazenando dados frequentemente acessados. Configurável para diferentes estratégias de cache (TTL, invalidação).
+Interconexões: Pode ser injetado em qualquer serviço que se beneficie do cache de dados (e.g., ProvidersService, ServicesService, FaqsService).
+3.23. Módulo de Processamento de Documentos (DocumentProcessingModule) (NOVO)
+Responsabilidade: Encapsular a lógica de processamento de arquivos e imagens para verificação.
+
+Serviço (DocumentProcessingService):
+uploadImage(file, destinationPath): Lida com o upload físico de arquivos.
+processDocumentOcrFromUrl(fileUrl): Simula ou integra com um serviço de OCR para extrair dados de um documento.
+performLivenessCheckFromUrl(selfieUrl): Simula ou integra com um serviço de verificação de vivacidade.
+compareFacesFromUrls(selfieUrl, documentPhotoUrl): Simula ou integra com um serviço de comparação facial.
+Interconexões: Utilizado principalmente pelo VerificationModule para processar documentos e selfies de provedores.
+3.24. Componentes Globais (common/, config/, prisma/)
 
 common/:
 filters/http-exception.filter.ts: Implementa o filtro de exceções global, padronizando as respostas de erro.
@@ -1066,7 +1287,8 @@ entities/address.entity.ts: Entidade base para endereços.
 enums/pricing-type.enum.ts: Define o enum PricingType.
 enums/booking-status.enum.ts: Define o enum BookingStatus.
 enums/verification-status.enum.ts: Define o enum VerificationStatus.
-**enums/dispute-reason.enum.ts: Define o enum DisputeReason (NOVO).**
+enums/dispute-reason.enum.ts: Define o enum DisputeReason (NOVO).
+utils/code-generator.ts: Utilitário para gerar códigos aleatórios (ex: para referências).
 services/email.service.ts: Serviço para envio de e-mails.
 services/geocoding.service.ts: Serviço para geocodificação de endereços.
 pipes/validation.pipe.ts: Exemplo de pipe de validação customizado.
@@ -1077,27 +1299,86 @@ validation-schema.ts: Define o esquema de validação Joi para as variáveis de 
 prisma/:
 prisma.module.ts: Módulo global que exporta o PrismaService.
 prisma.service.ts: Estende PrismaClient, encapsulando a conexão com o banco de dados.
-4. Modelo de Dados (Prisma Schema)
+Novos Módulos de Backend
 
+3.25. Módulo de Assinaturas (SubscriptionsModule) (NOVO)
+Responsabilidade: Gerenciar o ciclo de vida de assinaturas de serviços e a geração de agendamentos recorrentes.
+
+Controlador (SubscriptionsController):
+POST /subscriptions: Cria uma nova assinatura.
+GET /subscriptions/me: Lista assinaturas do usuário autenticado.
+GET /subscriptions/:id: Detalhes de uma assinatura.
+PATCH /subscriptions/:id: Atualiza o status ou detalhes da assinatura.
+Serviço (SubscriptionsService): Lógica para criar assinaturas, programar a geração de agendamentos futuros (via BullMQ), e gerenciar o ciclo de vida da assinatura (pausar, cancelar).
+DTOs: CreateSubscriptionDto, UpdateSubscriptionDto, SubscriptionDto.
+Entidades: SubscriptionEntity.
+3.26. Módulo de Segurança (SafetyModule) (NOVO)
+Responsabilidade: Fornecer funcionalidades para alertas de pânico e relatórios de incidentes.
+
+Controlador (SafetyController):
+POST /safety/panic: Recebe alertas de pânico com localização.
+POST /safety/incident: Recebe relatórios detalhados de incidentes.
+GET /safety/me/incidents: Lista incidentes reportados pelo usuário.
+PATCH /safety/incident/:id/status (ADMIN): Atualiza status de um incidente.
+Serviço (SafetyService): Lógica para processar alertas de pânico (notificar admins/equipe de segurança) e incidentes (registrar, acionar workflows de investigação).
+DTOs: ReportPanicDto, IncidentReportDto, IncidentDto, PanicAlertDto.
+Entidades: IncidentEntity, PanicAlertEntity.
+3.27. Módulo de Cupons (CouponsModule) (NOVO)
+Responsabilidade: Gerenciar a criação, validação e aplicação de cupons de desconto.
+
+Controlador (CouponsController):
+POST /coupons (ADMIN): Cria um novo cupom.
+GET /coupons/:code: Valida um cupom.
+POST /coupons/apply: Endpoint para o frontend validar e aplicar o cupom em uma simulação.
+Serviço (CouponsService): Lógica para criar cupons com regras de validade, tipo de desconto, uso máximo e elegibilidade. Implementa a validação e aplicação do desconto.
+DTOs: CreateCouponDto, ApplyCouponDto, CouponDto.
+Entidades: CouponEntity.
+3.28. Módulo de Garantia (GuaranteeModule) (NOVO)
+Responsabilidade: Gerenciar solicitações de garantia de serviço e seguro.
+
+Controlador (GuaranteeController):
+POST /guarantee/claims: Recebe solicitações de garantia de serviço.
+GET /guarantee/claims/me: Lista solicitações do usuário.
+PATCH /guarantee/claims/:id/status (ADMIN): Atualiza status da solicitação.
+Serviço (GuaranteeService): Lógica para registrar solicitações de garantia, notificar equipes relevantes e gerenciar o processo de resolução.
+DTOs: SubmitClaimDto, GuaranteeClaimDto.
+Entidades: GuaranteeClaimEntity.
+3.29. Módulo de Precificação (PricingModule) (NOVO)
+Responsabilidade: Implementar a lógica de precificação dinâmica (surge pricing) baseada em demanda, localização e horário.
+
+Controlador (PricingController):
+POST /pricing/calculate: Endpoint para calcular o preço dinâmico para um serviço/provedor/local/horário.
+POST /pricing/rules (ADMIN): Cria regras de precificação dinâmica.
+Serviço (PricingService): Lógica para aplicar regras de precificação dinâmica, considerando fatores como demanda, localização, horário e tipo de serviço para determinar o preço final.
+DTOs: GetDynamicPriceDto, DynamicPriceResultDto, CreatePricingRuleDto, PricingRuleDto.
+Entidades: PricingRuleEntity.
+3.30. Módulo de Geocodificação (GeocodingModule) (NOVO)
+Responsabilidade: Encapsular a lógica de geocodificação de endereços e obtenção de coordenadas.
+
+Controlador (GeocodingController):
+GET /geocoding/address: Converte um endereço em coordenadas.
+GET /geocoding/reverse: Converte coordenadas em endereço (opcional).
+Serviço (GeocodingService): Lógica para interagir com APIs de geocodificação (ex: Google Maps Geocoding API) para converter endereços em coordenadas e vice-versa.
+DTOs: GeocodeResponseDto.
+4. Modelo de Dados (Prisma Schema) (ATUALIZADO)
 O schema.prisma define a estrutura do banco de dados, incluindo modelos, campos, tipos e relações.
 
-```prisma
 // prisma/schema.prisma
 // Este arquivo é o ponto de partida para o seu banco de dados.
 // Ele define os modelos de dados e como eles se relacionam.
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   previewFeatures = ["postgresqlExtensions"]
   // ADICIONADO: Configuração para binaryTargets para resolver o problema de libssl no Docker
   // Isso instrui o Prisma a incluir os motores de consulta binários compatíveis com diferentes ambientes Linux,
   // incluindo aqueles que usam OpenSSL 1.1.x (como Debian Bullseye) e OpenSSL 3.0.x (que é padrão em Node:22).
   // 'native' garante que o motor de consulta para o sistema operacional atual do Docker seja incluído.
-  binaryTargets = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x"]
+  binaryTargets   = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x"]
 }
 
 datasource db {
-  provider = "postgresql" // Ou "mysql", "sqlite", etc., dependendo do seu DB
-  url      = env("DATABASE_URL")
+  provider   = "postgresql" // Ou "mysql", "sqlite", etc., dependendo do seu DB
+  url        = env("DATABASE_URL")
   // ADICIONADO: Habilitar extensão PostGIS para funcionalidades geoespaciais
   extensions = [postgis]
 }
@@ -1112,13 +1393,13 @@ enum UserRole {
 
 // NOVO: Enum para o status de verificação do provedor
 enum VerificationStatus {
-  PENDING_INITIAL_REVIEW    // Após o registro básico, aguardando dados de verificação
-  PENDING_DOCUMENTS_UPLOAD  // Aguardando fotos do documento e selfie
-  PENDING_BACKGROUND_CHECK  // Dados enviados, aguardando resultado da verificação criminal
-  PENDING_MANUAL_REVIEW     // Se houver necessidade de revisão humana
-  APPROVED                  // Verificação concluída e aprovada
-  REJECTED                  // Verificação concluída e rejeitada
-  BLOCKED                   // Conta bloqueada por questões de segurança graves
+  PENDING_INITIAL_REVIEW // Após o registro básico, aguardando dados de verificação
+  PENDING_DOCUMENTS_UPLOAD // Aguardando fotos do documento e selfie
+  PENDING_BACKGROUND_CHECK // Dados enviados, aguardando resultado da verificação criminal
+  PENDING_MANUAL_REVIEW // Se houver necessidade de revisão humana
+  APPROVED // Verificação concluída e aprovada
+  REJECTED // Verificação concluída e rejeitada
+  BLOCKED // Conta bloqueada por questões de segurança graves
 }
 
 // NOVO: Enum para o tipo de precificação do serviço
@@ -1140,14 +1421,15 @@ enum BookingStatus {
   IN_PROGRESS
   PENDING_PROVIDER_CONFIRMATION
   REJECTED
+  NO_SHOW // ABS: Adicionado para métricas de cliente
 }
 
 // Enum para o tipo de transação financeira
 enum TransactionType {
-  PAYMENT    // Pagamento de cliente para plataforma
+  PAYMENT // Pagamento de cliente para plataforma
   WITHDRAWAL // Saque de provedor da plataforma
   COMMISSION // Comissão da plataforma
-  REFUND     // NOVO: Reembolso de valores
+  REFUND // NOVO: Reembolso de valores
 }
 
 // NOVO: Enum para o motivo da disputa
@@ -1160,98 +1442,173 @@ enum DisputeReason {
   OTHER
 }
 
+// ABS: NOVOS ENUMS PARA MÓDULOS AVANÇADOS
+enum SubscriptionStatus {
+  ACTIVE
+  PAUSED
+  CANCELED
+  COMPLETED
+}
+
+enum SubscriptionFrequency {
+  WEEKLY
+  BI_WEEKLY
+  MONTHLY
+}
+
+enum IncidentType {
+  DAMAGE
+  MISCONDUCT
+  THEFT
+  NO_SHOW // Pode ser reportado como incidente
+  OTHER
+}
+
+enum IncidentStatus {
+  PENDING_REVIEW
+  INVESTIGATING
+  RESOLVED
+  REJECTED
+}
+
+enum CouponType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+enum CouponTarget {
+  ALL
+  NEW_CLIENTS
+  SPECIFIC_SERVICE
+  SPECIFIC_PROVIDER
+}
+
+enum ClaimStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  SETTLED
+}
+// FIM ABS: NOVOS ENUMS PARA MÓDULOS AVANÇADOS
+
 // Modelo de Usuário (base para Cliente e Provedor)
 model User {
-  id                String         @id @default(uuid())
-  email             String         @unique
-  phone             String?        @unique // Número de telefone para login por SMS
-  passwordHash      String?        // Opcional agora, para suportar login apenas por SMS
-  role              UserRole       @default(CLIENT)
-  avatarUrl         String?        // <--- NOVA LINHA ADICIONADA AQUI para o avatar do usuário
-  firebaseUid       String?        @unique // Mantido, caso seja usado para outros serviços Firebase
-  
-  isPhoneVerified   Boolean        @default(false) // Se o telefone foi verificado
-  
+  id                      String         @id @default(uuid())
+  email                   String         @unique
+  phone                   String?        @unique // Número de telefone para login por SMS
+  passwordHash            String?        // Opcional agora, para suportar login apenas por SMS
+  role                    UserRole       @default(CLIENT)
+  avatarUrl               String?        // <--- NOVA LINHA ADICIONADA AQUI para o avatar do usuário
+  firebaseUid             String?        @unique // Mantido, caso seja usado para outros serviços Firebase
+
+  isPhoneVerified         Boolean        @default(false) // Se o telefone foi verificado
+
   // NOVO: Campo para LGPD - marca a data para exclusão agendada da conta
-  deletionScheduledAt DateTime? // Data em que a exclusão da conta foi agendada (para LGPD)
+  deletionScheduledAt     DateTime?      // Data em que a exclusão da conta foi agendada (para LGPD)
 
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
+  createdAt               DateTime       @default(now())
+  updatedAt               DateTime       @updatedAt
 
-  client            Client?
-  provider          Provider?
-  messagesSent      Message[]      @relation("SentMessages")
-  messagesReceived  Message[]      @relation("ReceivedMessages")
-  notifications     Notification[]
-  chatsAsParticipant1 Chat[]       @relation("ChatParticipant1") // Nova relação para Chat
-  chatsAsParticipant2 Chat[]       @relation("ChatParticipant2") // Nova relação para Chat
+  client                  Client?
+  provider                Provider?
+  messagesSent            Message[]      @relation("SentMessages")
+  messagesReceived        Message[]      @relation("ReceivedMessages")
+  notifications           Notification[]
+  chatsAsParticipant1     Chat[]         @relation("ChatParticipant1") // Nova relação para Chat
+  chatsAsParticipant2     Chat[]         @relation("ChatParticipant2") // Nova relação para Chat
 
   // NOVO: Relações para o modelo Referral
-  referredBy        Referral[]     @relation("ReferredByUser") // Indicações em que este usuário foi o indicado
-  referralsMade     Referral[]     @relation("ReferrerOfUser") // Indicações que este usuário fez
+  referredBy              Referral[]     @relation("ReferredByUser") // Indicações em que este usuário foi o indicado
+  referralsMade           Referral[]     @relation("ReferrerOfUser") // Indicações que este usuário fez
 
-  // NOVO: Relação para o modelo Dispute
-  disputesReported  Dispute[]      @relation("DisputeReporter") // Disputas reportadas por este usuário
+  // NOVO: Relação com o modelo Dispute (CORREÇÃO AQUI)
+  disputesReported        Dispute[]      @relation("DisputeReporter") // Disputas reportadas por este usuário
+
+  // ABS: Novas relações para Safety Module
+  reportedIncidents       Incident[]     @relation("ReportedIncidents")
+  panicAlerts             PanicAlert[]   @relation("PanicAlerts")
+  // FIM ABS: Novas relações para Safety Module
 }
 
 // Modelo para Cliente
 model Client {
-  id        String    @id @default(uuid())
-  userId    String    @unique
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  fullName  String
-  completedBookingsCount Int @default(0) // NOVO: Contador para programa de fidelidade
-  phone     String?
-  cpf       String?   @unique // CORREÇÃO: Adicionado CPF para o cliente
-  address   Address?  @relation("ClientAddress")
-  bookings  Booking[]
-  reviewsMade Review[]  @relation("ClientReviews") // Avaliações que o cliente fez
+  id                     String           @id @default(uuid())
+  userId                 String           @unique
+  user                   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName               String
+  completedBookingsCount Int              @default(0) // NOVO: Contador para programa de fidelidade
+  phone                  String?
+  cpf                    String?          @unique // CORREÇÃO: Adicionado CPF para o cliente
+  address                Address?         @relation("ClientAddress")
+  bookings               Booking[]
+  reviewsMade            Review[]         @relation("ClientReviews") // Avaliações que o cliente fez
+
+  // ABS: Novas métricas para o cliente
+  noShowCount            Int              @default(0)
+  cancellationCount      Int              @default(0)
+  // FIM ABS: Novas métricas para o cliente
+
+  // ABS: Novas relações para módulos avançados
+  subscriptions          Subscription[]
+  guaranteeClaims        GuaranteeClaim[]
+  // FIM ABS: Novas relações para módulos avançados
 
   // ADICIONADO: Campos para registro de data e hora de criação/atualização do perfil do cliente
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
 }
 
 // Modelo para Provedor
 model Provider {
-  id                  String             @id @default(uuid())
-  userId              String             @unique
-  user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  fullName            String
-  cpf                 String?            @unique // CPF para verificação
-  dateOfBirth         DateTime
-  phone               String?
-  address             Address?           @relation("ProviderAddress")
-  yearsOfExperience   Int?
+  id                      String             @id @default(uuid())
+  userId                  String             @unique
+  user                    User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName                String
+  cpf                     String?            @unique // CPF para verificação
+  dateOfBirth             DateTime
+  phone                   String?
+  address                 Address?           @relation("ProviderAddress")
+  yearsOfExperience       Int?
   // NOTA: avatarUrl no Provider é redundante se User já tem, mas mantido para consistência do seu schema original.
   // Se o avatar do provedor for sempre o mesmo do usuário associado, você pode remover esta linha aqui.
-  avatarUrl           String?
-  bio                 String? // PROPRIEDADE 'BIO' ADICIONADA AQUI
-  providerServices    ProviderService[]
-  fiveStarReviewCount Int @default(0) // NOVO: Para bônus por avaliações excelentes
-  monthlyBookingsCount Int @default(0) // NOVO: Para bônus por volume de serviços
-  availability        Availability[]
-  bookings            Booking[]
-  reviewsReceived     Review[]           @relation("ProviderReviews") // Avaliações que o provedor recebeu
-  earnings            Transaction[]
+  avatarUrl               String?
+  bio                     String?            // PROPRIEDADE 'BIO' ADICIONADA AQUI
+  providerServices        ProviderService[]
+  fiveStarReviewCount     Int                @default(0) // NOVO: Para bônus por avaliações excelentes
+  monthlyBookingsCount    Int                @default(0) // NOVO: Para bônus por volume de serviços
+  availability            Availability[]
+  bookings                Booking[]
+  reviewsReceived         Review[]           @relation("ProviderReviews") // Avaliações que o provedor recebeu
+  earnings                Transaction[]
 
   // NOVOS CAMPOS PARA VERIFICAÇÃO
-  verificationStatus  VerificationStatus @default(PENDING_INITIAL_REVIEW)
-  documentPhotoFrontUrl String?
-  documentPhotoBackUrl  String?
-  selfieWithDocumentUrl String?
-  backgroundCheckResult Json?              // Armazenar o resultado detalhado da verificação de antecedentes criminais (JSON)
-  ocrResult           Json?              // NOVO: Armazenar resultados de OCR do documento (JSON)
-  livenessResult      Json?              // NOVO: Armazenar resultados de liveness check (JSON)
-  rejectionReason     String?            // Campo para armazenar o motivo da rejeição, se houver
-  pixKey              String?            // <--- NOVA LINHA ADICIONADA AQUI
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
+  verificationStatus      VerificationStatus @default(PENDING_INITIAL_REVIEW)
+  documentPhotoFrontUrl   String?
+  documentPhotoBackUrl    String?
+  selfieWithDocumentUrl   String?
+  backgroundCheckResult   Json?              // Armazenar o resultado detalhado da verificação de antecedentes criminais (JSON)
+  ocrResult               Json?              // NOVO: Armazenar resultados de OCR do documento (JSON)
+  livenessResult          Json?              // NOVO: Armazenar resultados de liveness check (JSON)
+  rejectionReason         String?            // Campo para armazenar o motivo da rejeição, se houver
+  pixKey                  String?            // <--- NOVA LINHA ADICIONADA AQUI
+
+  // ABS: Novo campo para Badges de Provedor
+  badges                  String[]           @default([])
+  // FIM ABS: Novo campo para Badges de Provedor
+
+  // ABS: Novas relações para módulos avançados
+  subscriptions           Subscription[]
+  guaranteeClaims         GuaranteeClaim[]
+  // FIM ABS: Novas relações para módulos avançados
+
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
 }
 
 // Modelo de Endereço (pode ser relacionado a Cliente, Provedor ou AGORA Booking)
 model Address {
-  id           String                       @id @default(uuid())
+  id           String                        @id @default(uuid())
   cep          String
   street       String
   number       String
@@ -1259,17 +1616,21 @@ model Address {
   neighborhood String
   city         String
   state        String
-  clientId     String?                      @unique
-  providerId   String?                      @unique
-  client       Client?                      @relation("ClientAddress", fields: [clientId], references: [id])
-  provider     Provider?                    @relation("ProviderAddress", fields: [providerId], references: [id])
+  clientId     String?                       @unique
+  providerId   String?                       @unique
+  client       Client?                       @relation("ClientAddress", fields: [clientId], references: [id])
+  provider     Provider?                     @relation("ProviderAddress", fields: [providerId], references: [id])
   // ALTERNATIVO para relação 1:1 com Booking (mais comum para endereço específico do serviço)
-  booking      Booking?                     @relation("BookingAddress") // Se um endereço pertence a apenas um booking
+  booking      Booking?                      @relation("BookingAddress") // Se um endereço pertence a apenas um booking
 
   // --- ADIÇÃO PARA GEOESPACIAL (AGORA INTEGRADO) ---
   // Este campo permitirá armazenar coordenadas geoespaciais usando o tipo PostGIS POINT
   // 'geometry(Point, 4326)' especifica um tipo Point com SRID 4326 (WGS 84 - padrão para GPS)
   location     Unsupported("geometry(Point, 4326)")? // Campo 'location' adicionado
+  // ABS: Adicionado latitude e longitude para facilitar o uso sem precisar do tipo PostGIS no código
+  latitude     Decimal?                      @db.Decimal(10, 8)
+  longitude    Decimal?                      @db.Decimal(11, 8)
+  // FIM ABS
 }
 
 // Modelo para Tipos de Serviço (e.g., "Limpeza Padrão", "Limpeza Pesada")
@@ -1300,47 +1661,56 @@ model ProviderService {
   bookings        Booking[] // Campo reverso para Booking
   createdAt       DateTime  @default(now()) // ADICIONADO
   updatedAt       DateTime  @updatedAt // ADICIONADO
+  subscriptions   Subscription[] @relation("ProviderServiceSubscriptions") // ABS: NOVA LINHA ADICIONADA AQUI
 
   @@unique([providerId, serviceId]) // Um provedor não pode oferecer o mesmo tipo de serviço duas vezes
 }
 
 // Modelo de Agendamento
 model Booking {
-  id                  String        @id @default(uuid())
-  clientId            String
-  providerId          String
-  providerServiceId   String
-  client              Client        @relation(fields: [clientId], references: [id], onDelete: Restrict) // Não deletar cliente se tiver bookings
-  provider            Provider      @relation(fields: [providerId], references: [id], onDelete: Restrict) // Não deletar provedor se tiver bookings
-  providerService     ProviderService @relation(fields: [providerServiceId], references: [id])
-  scheduledDate       DateTime      // Data do agendamento
-  scheduledTime       String        // Horário do agendamento (e.g., "09:00")
-  status              BookingStatus @default(PENDING)
-  totalPrice          Decimal       @db.Decimal(10, 2) // ALTERADO DE 'Float' PARA 'Decimal'
-  notes               String?
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
-  review              Review?       // Relação 1:1 com Review. Um agendamento pode ter uma avaliação.
-  transactions        Transaction[] // ADICIONADO: Relação reversa para Transaction
+  id                        String             @id @default(uuid())
+  clientId                  String
+  providerId                String
+  providerServiceId         String
+  client                    Client             @relation(fields: [clientId], references: [id], onDelete: Restrict) // Não deletar cliente se tiver bookings
+  provider                  Provider           @relation(fields: [providerId], references: [id], onDelete: Restrict) // Não deletar provedor se tiver bookings
+  providerService           ProviderService    @relation(fields: [providerServiceId], references: [id])
+  scheduledDate             DateTime           // Data do agendamento
+  scheduledTime             String             // Horário do agendamento (e.g., "09:00")
+  status                    BookingStatus      @default(PENDING)
+  totalPrice                Decimal            @db.Decimal(10, 2) // ALTERADO DE 'Float' PARA 'Decimal'
+  notes                     String?
+  createdAt                 DateTime           @default(now())
+  updatedAt                 DateTime           @updatedAt
+  review                    Review?            // Relação 1:1 com Review. Um agendamento pode ter uma avaliação.
+  transactions              Transaction[]      // ADICIONADO: Relação reversa para Transaction
 
   // ADICIONADO: RELAÇÃO DO ENDEREÇO ESPECÍFICO DO AGENDAMENTO
-  addressId           String?       @unique // Unique porque um Booking terá um único Address
-  address             Address?      @relation("BookingAddress", fields: [addressId], references: [id]) // Relação 1:1
+  addressId                 String?            @unique // Unique porque um Booking terá um único Address
+  address                   Address?           @relation("BookingAddress", fields: [addressId], references: [id]) // Relação 1:1
 
   // NOVO: Relação com o modelo Dispute
-  dispute             Dispute?      // Relação 1:1 com Dispute. Um agendamento pode ter uma disputa.
+  dispute                   Dispute?           // Relação 1:1 com Dispute. Um agendamento pode ter uma disputa.
+
+  // ABS: Novas relações para módulos avançados
+  subscriptionId            String?
+  subscription              Subscription?      @relation("SubscriptionBookings", fields: [subscriptionId], references: [id])
+  incidents                 Incident[]
+  guaranteeClaims           GuaranteeClaim[]
+  couponId                  String? // ID do cupom usado neste agendamento
+  // FIM ABS: Novas relações para módulos avançados
 }
 
 // Modelo de Chat (NOVO)
 model Chat {
-  id             String    @id @default(uuid())
-  participant1Id String
-  participant1   User      @relation("ChatParticipant1", fields: [participant1Id], references: [id])
-  participant2Id String
-  participant2   User      @relation("ChatParticipant2", fields: [participant2Id], references: [id])
-  messages       Message[] // Mensagens associadas a este chat
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id              String    @id @default(uuid())
+  participant1Id  String
+  participant1    User      @relation("ChatParticipant1", fields: [participant1Id], references: [id])
+  participant2Id  String
+  participant2    User      @relation("ChatParticipant2", fields: [participant2Id], references: [id])
+  messages        Message[] // Mensagens associadas a este chat
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   @@unique([participant1Id, participant2Id]) // Garante que não há chats duplicados para o mesmo par de usuários
 }
@@ -1363,14 +1733,19 @@ model Message {
 
 // Modelo de Notificação
 model Notification {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  type      String   // Tipo de notificação (e.g., "BOOKING_CONFIRMED", "NEW_MESSAGE")
-  message   String
-  isRead    Boolean  @default(false)
-  targetUrl String? // URL para navegação no app ao clicar na notificação
-  createdAt DateTime @default(now())
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  type          String   // Tipo de notificação (e.g., "BOOKING_CONFIRMED", "NEW_MESSAGE")
+  message       String
+  isRead        Boolean  @default(false)
+  targetUrl     String?  // URL para navegação no app ao clicar na notificação
+  createdAt     DateTime @default(now())
+
+  // ABS: Novos campos para Rich Media Notifications
+  imageUrl      String?
+  actionButtons Json? // Armazenar array de objetos { text: string, url: string } como JSON
+  // FIM ABS: Novos campos para Rich Media Notifications
 }
 
 // Modelo de Avaliação
@@ -1405,28 +1780,33 @@ model Offer {
 
 // Modelo de Transação Financeira
 model Transaction {
-  id                 String          @id @default(uuid())
-  providerId         String
-  provider           Provider        @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  amount             Decimal         @db.Decimal(10, 2)
-  type               TransactionType
-  status             String          // Status da transação (e.g., "PENDING", "COMPLETED", "FAILED")
-  description        String?
-  createdAt          DateTime        @default(now())
-  bookingId          String?         // <--- MODIFICADO: REMOVIDO @unique para permitir múltiplas transações por booking
-  booking            Booking?        @relation(fields: [bookingId], references: [id])
-  gatewayTransactionId String?       @unique // ID da transação no gateway de pagamento (ex: PagSeguro)
-  qrCodeUrl          String?         // URL do QR Code gerado pelo gateway
+  id                   String          @id @default(uuid())
+  providerId           String
+  provider             Provider        @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  amount               Decimal         @db.Decimal(10, 2)
+  type                 TransactionType
+  status               String          // Status da transação (e.g., "PENDING", "COMPLETED", "FAILED")
+  description          String?
+  createdAt            DateTime        @default(now())
+  bookingId            String?         // <--- MODIFICADO: REMOVIDO @unique para permitir múltiplas transações por booking
+  booking              Booking?        @relation(fields: [bookingId], references: [id])
+  gatewayTransactionId String?         @unique // ID da transação no gateway de pagamento (ex: PagSeguro)
+  qrCodeUrl            String?         // URL do QR Code gerado pelo gateway
+
+  // ABS: Novo campo para cupons
+  couponId             String?
+  coupon               Coupon?         @relation(fields: [couponId], references: [id])
+  // FIM ABS: Novo campo para cupons
 }
 
 // Modelo de Disponibilidade do Provedor
 model Availability {
-  id         String   @id @default(uuid())
-  providerId String
-  provider   Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  dayOfWeek  Int      // 0 para Domingo, 1 para Segunda, etc.
-  startTime  String   // Horário de início (e.g., "09:00")
-  endTime    String   // Horário de término (e.g., "17:00")
+  id          String   @id @default(uuid())
+  providerId  String
+  provider    Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  dayOfWeek   Int      // 0 para Domingo, 1 para Segunda, etc.
+  startTime   String   // Horário de início (e.g., "09:00")
+  endTime     String   // Horário de término (e.g., "17:00")
   isAvailable Boolean  @default(true) // Se o provedor está disponível neste slot
 }
 
@@ -1435,7 +1815,7 @@ model FAQItem {
   id        String   @id @default(uuid())
   question  String   @unique
   answer    String
-  category  String? // Ex: "Geral", "Pagamentos", "Serviços"
+  category  String?  // Ex: "Geral", "Pagamentos", "Serviços"
   order     Int      @default(0) // Ordem de exibição
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1457,36 +1837,143 @@ model Referral {
 
 // NOVO: Modelo para Disputa de Agendamento
 model Dispute {
-  id                String       @id @default(uuid())
-  bookingId         String       @unique // Relação 1:1 com Booking
-  booking           Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  reporterUserId    String       // Quem reportou a disputa (cliente ou provedor)
-  reporterUser      User         @relation("DisputeReporter", fields: [reporterUserId], references: [id])
-  reason            DisputeReason // Motivo da disputa
-  description       String       // Descrição detalhada do problema
-  refundAmountProposed Decimal? @db.Decimal(10, 2) // Valor de reembolso sugerido pelo reportante
-  attachments       String[]     // URLs de anexos/evidências
-  status            String       @default("PENDING_REVIEW") // Status da disputa (PENDING_REVIEW, RESOLVED, REJECTED)
-  resolutionNotes   String?      // Notas da resolução (preenchido pelo admin)
-  resolvedAt        DateTime?
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
+  id                  String        @id @default(uuid())
+  bookingId           String        @unique // Relação 1:1 com Booking
+  booking             Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  reporterUserId      String        // Quem reportou a disputa (cliente ou provedor)
+  reporterUser        User          @relation("DisputeReporter", fields: [reporterUserId], references: [id])
+  reason              DisputeReason // Motivo da disputa
+  description         String        // Descrição detalhada do problema
+  refundAmountProposed Decimal?     @db.Decimal(10, 2) // Valor de reembolso sugerido pelo reportante
+  attachments         String[]      // URLs de anexos/evidências
+  status              String        @default("PENDING_REVIEW") // Status da disputa (PENDING_REVIEW, RESOLVED, REJECTED)
+  resolutionNotes     String?       // Notas da resolução (preenchido pelo admin)
+  resolvedAt          DateTime?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
 }
 
-Modelos Chave: User, Client, Provider, Address, Service, ProviderService, Booking, Chat, Message, Notification, Review, Offer, Transaction, Availability, FAQItem, Referral, Dispute.
-Enums: UserRole, VerificationStatus, PricingType, BookingStatus, TransactionType, DisputeReason.
-Correções/Detalhes Notáveis:
-Client e Provider incluem createdAt e updatedAt.
-Address suporta geometry(Point, 4326) para geolocalização (PostGIS).
-Provider inclui campos para verificação (documentPhotoFrontUrl, selfieWithDocumentUrl, ocrResult, livenessResult, rejectionReason) e métricas (fiveStarReviewCount, monthlyBookingsCount).
-ProviderService suporta diversos PricingType com campos como pricePerSquareMeter e pricePerRoom.
-Booking tem uma relação 1:1 com Address e Review, e agora com Dispute.
-Message e Notification incluem createdAt.
-Transaction inclui bookingId, qrCodeUrl, gatewayTransactionId para rastreamento de pagamentos. O enum TransactionType agora inclui REFUND.
-Availability inclui createdAt e updatedAt.
-User agora possui deletionScheduledAt para LGPD e relações inversas para Referral e Dispute.
-5. Metodologias e Funções Globais
+// ABS: NOVOS MODELOS PARA MÓDULOS AVANÇADOS
 
+// ABS: Modelo para Assinaturas/Agendamentos Recorrentes
+model Subscription {
+  id                 String                 @id @default(uuid())
+  clientId           String
+  client             Client                 @relation(fields: [clientId], references: [id])
+  providerId         String
+  provider           Provider               @relation(fields: [providerId], references: [id])
+  providerServiceId  String
+  providerService    ProviderService        @relation("ProviderServiceSubscriptions", fields: [providerServiceId], references: [id]) // ABS: NOME DA RELAÇÃO ADICIONADO AQUI
+  frequency          SubscriptionFrequency
+  startDate          DateTime
+  endDate            DateTime?
+  status             SubscriptionStatus     @default(ACTIVE)
+  totalPrice         Decimal                @db.Decimal(10, 2) // Preço por agendamento ou por ciclo
+  nextGenerationDate DateTime               // Próxima data para gerar um agendamento
+  generatedBookings  Booking[]              @relation("SubscriptionBookings") // Agendamentos gerados por esta assinatura
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+}
+
+
+// ABS: Modelo para Relatório de Incidentes
+model Incident {
+  id            String         @id @default(uuid())
+  reporterId    String
+  reporter      User           @relation("ReportedIncidents", fields: [reporterId], references: [id])
+  bookingId     String?
+  booking       Booking?       @relation(fields: [bookingId], references: [id])
+  type          IncidentType
+  description   String
+  attachments   String[]       // URLs de evidências
+  status        IncidentStatus @default(PENDING_REVIEW)
+  resolution    String?        // Descrição da resolução
+  resolvedBy    String?        // ID do admin que resolveu
+  resolvedAt    DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+// ABS: Modelo para Alertas de Pânico
+model PanicAlert {
+  id            String         @id @default(uuid())
+  userId        String
+  user          User           @relation("PanicAlerts", fields: [userId], references: [id])
+  latitude      Decimal        @db.Decimal(10, 8)
+  longitude     Decimal        @db.Decimal(11, 8)
+  message       String?
+  status        String         @default("ACTIVE") // ACTIVE, RESOLVED, FALSE_ALARM
+  createdAt     DateTime       @default(now())
+}
+
+// ABS: Modelo para Cupons de Desconto
+model Coupon {
+  id          String       @id @default(uuid())
+  code        String       @unique
+  type        CouponType
+  value       Decimal      @db.Decimal(10, 2)
+  validFrom   DateTime
+  validUntil  DateTime
+  maxUses     Int?
+  usesCount   Int          @default(0)
+  target      CouponTarget
+  targetId    String?      // ID do serviço ou provedor, se target for específico
+  status      String       @default("ACTIVE") // ACTIVE, INACTIVE, EXPIRED, USED_UP
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  transactions Transaction[] // Relação com transações que usaram este cupom
+}
+
+// ABS: Modelo para Solicitações de Garantia de Serviço
+model GuaranteeClaim {
+  id              String      @id @default(uuid())
+  bookingId       String
+  booking         Booking     @relation(fields: [bookingId], references: [id])
+  clientId        String
+  client          Client      @relation(fields: [clientId], references: [id])
+  providerId      String
+  provider        Provider    @relation(fields: [providerId], references: [id])
+  description     String
+  attachments     String[]    // URLs de fotos/vídeos
+  estimatedValue  Decimal?    @db.Decimal(10, 2)
+  resolvedValue   Decimal?    @db.Decimal(10, 2) // Valor final pago/reembolsado
+  status          ClaimStatus @default(PENDING)
+  resolutionNotes String?
+  resolvedAt      DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+// ABS: Modelo para Regras de Precificação Dinâmica
+model PricingRule {
+  id            String    @id @default(uuid())
+  zoneId        String?   // ID da zona geográfica (se aplicável)
+  dayOfWeek     Int?      // 0-6 (Domingo-Sábado), null para todos
+  startTime     String?   // Ex: "09:00" (HH:MM)
+  endTime       String?   // Ex: "17:00" (HH:MM)
+  demandThreshold Int?    // Ex: número mínimo de agendamentos para ativar surge
+  surgeFactor   Decimal   @db.Decimal(3, 2) // Multiplicador (ex: 1.2 para 20% de aumento)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+// FIM ABS: NOVOS MODELOS PARA MÓDULOS AVANÇADOS
+
+Modelos Chave: User, Client, Provider, Address, Service, ProviderService, Booking, Chat, Message, Notification, Review, Offer, Transaction, Availability, FAQItem, Referral, Dispute, Subscription (NOVO), Incident (NOVO), PanicAlert (NOVO), Coupon (NOVO), GuaranteeClaim (NOVO), PricingRule (NOVO).
+
+Enums: UserRole, VerificationStatus, PricingType, BookingStatus (AGORA INCLUI NO_SHOW), TransactionType, DisputeReason, SubscriptionStatus (NOVO), SubscriptionFrequency (NOVO), IncidentType (NOVO), IncidentStatus (NOVO), CouponType (NOVO), CouponTarget (NOVO), ClaimStatus (NOVO).
+
+Correções/Detalhes Notáveis:
+
+Client e Provider incluem createdAt e updatedAt.
+Address suporta geometry(Point, 4326) para geolocalização (PostGIS) e agora inclui latitude e longitude como campos decimais explícitos.
+Provider inclui campos para verificação (documentPhotoFrontUrl, selfieWithDocumentUrl, ocrResult, livenessResult, rejectionReason) e métricas (fiveStarReviewCount, monthlyBookingsCount). Agora inclui badges para reputação.
+ProviderService suporta diversos PricingType com campos como pricePerSquareMeter e pricePerRoom. Agora tem relação reversa com Subscription.
+Booking tem uma relação 1:1 com Address e Review, e agora com Dispute. Agora tem relação com Subscription, Incident e GuaranteeClaim.
+Message e Notification incluem createdAt. Notification agora suporta imageUrl e actionButtons para rich media.
+Transaction inclui bookingId, qrCodeUrl, gatewayTransactionId para rastreamento de pagamentos. O enum TransactionType agora inclui REFUND. Agora inclui couponId para rastrear cupons aplicados.
+Availability inclui createdAt e updatedAt.
+Metodologias e Funções Globais
 Autenticação JWT: O sistema utiliza JSON Web Tokens (JWT) para autenticação.
 LocalStrategy: Usada para o login inicial, validando credenciais (email e senha) e retornando um token JWT.
 JwtStrategy: Validada em cada requisição protegida, decodificando o token e buscando o usuário no banco de dados para garantir sua validade e status.
@@ -1503,11 +1990,24 @@ Serviços são @Injectable() e podem ser injetados em outros serviços ou contro
 PrismaService é um provedor global, facilmente acessível em qualquer lugar que precise interagir com o banco de dados.
 Validação de Propriedade (validateProviderOwnership):
 Uma função auxiliar crucial (provider-services.controller.ts) que verifica se o provedor logado (req.user['userId']) é o proprietário dos recursos (e.g., disponibilidade, serviços oferecidos) que está tentando modificar. Isso evita que um provedor manipule dados de outro.
-Filosofia NestJS:
-O NestJS promove uma arquitetura que evita o "spaghetti code" e impõe as melhores práticas de desenvolvimento, como separação de módulos, gerenciamento de dependências, princípios SOLID e padrões de arquitetura testáveis. [NestJS | LinkedIn]
-Isso significa que desenvolvedores, mesmo os juniores, são guiados a escrever código mais limpo e manutenível. [NestJS | LinkedIn]
-6. Recursos e Suporte Oficiais do NestJS
+Filosofia NestJS: O NestJS promove uma arquitetura que evita o "spaghetti code" e impõe as melhores práticas de desenvolvimento, como separação de módulos, gerenciamento de dependências, princípios SOLID e padrões de arquitetura testáveis. [NestJS | LinkedIn] Isso significa que desenvolvedores, mesmo os juniores, são guiados a escrever código mais limpo e manutenível. [NestJS | LinkedIn]
+Novas Funções Globais e Essenciais para Nível Play Store
 
+Geocodificação Avançada (src/geocoding/):
+src/geocoding/dto/geocode-response.dto.ts: Define a estrutura de dados para a resposta da geocodificação (latitude, longitude).
+src/geocoding/geocoding.service.ts: Serviço injetável que encapsula a lógica de geocodificação. Utiliza ConfigService para obter GOOGLE_MAPS_API_KEY e GOOGLE_MAPS_GEOCODING_API_URL. Método geocodeAddress(address: string): Faz uma requisição HTTP para a API de geocodificação do Google Maps (ou similar) para converter um endereço em coordenadas. Inclui tratamento de erros e logging. Método getZoneByCoordinates(latitude: number, longitude: number): Um método simplificado para demonstrar a lógica de mapeamento de coordenadas para zonas. Em um ambiente de produção, este método seria mais complexo, envolvendo consultas a dados geoespaciais.
+src/geocoding/geocoding.module.ts: Define o módulo Geocoding. Importa ConfigModule para que o GeocodingService possa usar ConfigService. Declara GeocodingService como provider e o exporta para que outros módulos possam injetá-lo.
+Rate Limiting (ThrottlerModule):
+src/app.module.ts (MODIFICADO): Importa ThrottlerModule e o configura dinamicamente via ConfigService para THROTTLE_TTL e THROTTLE_LIMIT, protegendo endpoints sensíveis contra ataques de força bruta.
+Integração de Geocodificação no Registro:
+src/auth/auth.service.ts (MODIFICADO): Importa e injeta o GeocodingService. Durante o registro de Client e Provider, o geocodeAddress do GeocodingService é chamado para obter as coordenadas de latitude e longitude a partir do endereço fornecido. Essas coordenadas são salvas diretamente no modelo Address, e o campo location (tipo PostGIS) é atualizado para garantir a indexação geoespacial.
+Inicialização de Novos Campos:
+No registro do Client, noShowCount e cancellationCount são inicializados.
+No registro do Provider, badges é inicializado como um array vazio.
+Configurações de Ambiente (JWT e Links):
+O tempo de expiração do JWT (jwt.expirationTime) agora é acessado via ConfigService.
+A construção do link de redefinição de senha utiliza APP_BASE_URL do ConfigService para criar o link completo.
+Recursos e Suporte Oficiais do NestJS
 O NestJS oferece uma vasta gama de recursos e suporte oficial para auxiliar no desenvolvimento e na adoção do framework:
 
 Documentação Oficial: A fonte mais completa de informações sobre o framework, acessível em [docs.nestjs.com]. [Documentation | NestJS]
@@ -1517,125 +2017,35 @@ Suporte Empresarial (NestJS Enterprise): Para empresas que buscam assistência d
 Devtools: Uma ferramenta para visualizar o grafo da sua aplicação NestJS e interagir com ela em tempo real. [devtools.nestjs.com]
 Deploy with Mau: Uma plataforma oficial para facilitar a implantação de aplicações NestJS na AWS. [mau.nestjs.com]
 GitHub: O repositório oficial no GitHub ([github.com/nestjs/nest]) é onde o código-fonte é mantido, e onde a comunidade pode reportar issues e enviar pull requests. [GitHub - nestjs/nest]
-LinkedIn: A página oficial do NestJS no LinkedIn ([linkedin.com/company/nestjs]) oferece atualizações sobre o framework, histórias de sucesso de empresas que o utilizam e engajamento com a comunidade. [NestJS | LinkedIn]
+LinkedIn: A página oficial do NestJS no LinkedIn ([linkedin.linkedin.com/company/nestjs]) oferece atualizações sobre o framework, histórias de sucesso de empresas que o utilizam e engajamento com a comunidade. [NestJS | LinkedIn]
 Popularidade: O NestJS atingiu a marca de 5 milhões de downloads semanais no NPM, demonstrando sua ampla adoção e maturidade. [NestJS | LinkedIn]
-7. Interligação entre Módulos e Serviços
-
+Interligação entre Módulos e Serviços
 A arquitetura modular do NestJS facilita a comunicação entre diferentes partes da aplicação:
 
 AppModule: Atua como o orquestrador principal, importando todos os módulos funcionais e garantindo que seus provedores estejam disponíveis.
-AuthModule: Depende do UsersModule para criar e validar usuários durante os processos de registro e login.
+AuthModule: Depende do UsersModule para criar e validar usuários durante os processos de registro e login. Agora depende do GeocodingModule para obter coordenadas de endereços.
 ClientsService e ProvidersService: Utilizam o UsersService para gerenciar a relação entre os perfis de cliente/provedor e as contas de usuário base. Ambos interagem diretamente com o PrismaService para operações de banco de dados.
-BookingsService: É um serviço central que depende de ClientsService, ProvidersService, ProviderServicesService e PaymentsService para validar a existência e a elegibilidade de clientes, provedores e serviços antes de criar um agendamento. Ele também gerencia as transições de status dos agendamentos e interage com NotificationsService. Agora também interage com o modelo Dispute.
-ReviewsService: Interage com o BookingsService para garantir que as avaliações sejam submetidas apenas para agendamentos concluídos e que o cliente que envia a avaliação seja o cliente do agendamento. Também depende de ProvidersService para buscar dados de provedores e ClientsService para dados de clientes.
-SearchService: Orquestra a busca de informações, consultando ProvidersService para provedores, ServicesService para tipos de serviço, ProviderServicesService para serviços oferecidos por provedores e OffersService para ofertas, agregando os resultados.
-PaymentsService: Integração Real com PagSeguro API. Utiliza o PrismaService para registrar transações financeiras e pode atualizar o status de agendamentos (BookingStatus.PENDING) após a criação de uma cobrança PIX. Depende de ProvidersService e BookingsService.
+BookingsService: É um serviço central que depende de ClientsService, ProvidersService, ProviderServicesService e PaymentsService para validar a existência e a elegibilidade de clientes, provedores e serviços antes de criar um agendamento. Ele também gerencia as transições de status dos agendamentos e interage com NotificationsService. Agora também interage com o modelo Dispute. Será estendido para interagir com SubscriptionsService para agendamentos recorrentes e atualizar métricas de cliente (noShowCount, cancellationCount).
+ReviewsService: Interage com o BookingsService para garantir que as avaliações sejam submetidas apenas para agendamentos concluídos e que o cliente que envia a avaliação seja o cliente do agendamento. Também depende de ProvidersService para buscar dados de provedores e ClientsService para dados de clientes. Será estendido para atualizar os badges/níveis de reputação do provedor.
+SearchService: Orquestra a busca de informações, consultando ProvidersService para provedores, ServicesService para tipos de serviço, ProviderServicesService para serviços oferecidos por provedores e OffersService para ofertas, agregando os resultados. Será estendido para integrar a lógica de smart matching e consultar o PricingService para incluir preços dinâmicos.
+PaymentsService: Integração Real com PagSeguro API. Utiliza o PrismaService para registrar transações financeiras e pode atualizar o status de agendamentos (BookingStatus.PENDING) após a criação de uma cobrança PIX. Depende de ProvidersService e BookingsService. Será estendido para aplicar descontos de cupons (CouponsService).
 ChatService: Responsável por armazenar e recuperar mensagens de chat, utilizando o PrismaService. O ChatGateway (WebSocket) utiliza o ChatService para persistir as mensagens em tempo real. Depende de ClientsService e ProvidersService para validação de participantes.
-NotificationsService: Gerencia a criação, recuperação e marcação de notificações, interagindo com o PrismaService. Agora utiliza o QueuesService para processamento assíncrono.
+NotificationsService: Gerencia a criação, recuperação e marcação de notificações, interagindo com o PrismaService. Agora utiliza o QueuesService para processamento assíncrono. Será estendido para suportar notificações com rich media.
 ProviderServicesService: Valida a existência de provedores e tipos de serviço (via ProvidersService e ServicesService) antes de associá-los como um serviço oferecido, além de verificar se o provedor já oferece um determinado serviço para evitar duplicatas.
 EarningsService: Depende de ProvidersService para obter dados do provedor e PrismaService para acessar bookings e transações.
-DashboardService: Agrega dados de ProvidersService, BookingsService, EarningsService e ReviewsService para compilar os dados do painel.
+DashboardService: Agrega dados de ProvidersService, BookingsService, EarningsService e ReviewsService para compilar os dados do painel. Será estendido para incluir mais métricas de performance e integrar-se com o módulo de reviews para exibir dados de badges/reputação.
 ReferralsService: Interage com o UsersService para gerenciar as relações entre usuários indicados e referenciadores.
 QueuesService: Gerencia a adição de tarefas a filas e a execução de workers. É utilizado por serviços que precisam de processamento assíncrono (e.g., VerificationService, NotificationsService).
 CacheService: Fornece métodos para armazenar e recuperar dados do cache, sendo utilizado por diversos serviços para otimizar o acesso a dados.
-8. Integração com o Frontend (Expo Router)
-
+Integração com o Frontend (Expo Router)
 A comunicação entre o frontend (Expo Router) e o backend (NestJS) é primariamente via APIs RESTful (HTTP) e, para funcionalidades de chat, é estendida com WebSockets para comunicação em tempo real.
 
 URL Base da API: O frontend será configurado com a URL base do backend (e.g., http://localhost:3000 durante o desenvolvimento).
-Autenticação (JWT):
-O frontend envia credenciais para POST /auth/login.
-O backend retorna um JWT, que o frontend armazena e inclui no cabeçalho Authorization (Bearer <token>) de todas as requisições protegidas.
+Autenticação (JWT): O frontend envia credenciais para POST /auth/login. O backend retorna um JWT, que o frontend armazena e inclui no cabeçalho Authorization (Bearer <token>) de todas as requisições protegidas.
 Consistência de Dados (DTOs): Os DTOs definidos no NestJS garantem que a estrutura de dados esperada e enviada entre frontend e backend seja consistente e validada.
 Tratamento de Erros: O HttpExceptionFilter do backend fornece respostas de erro padronizadas, permitindo que o frontend exiba mensagens significativas ao usuário.
 Comunicação em Tempo Real (Chat): O ChatGateway com @nestjs/platform-socket.io permite comunicação bidirecional para o chat, proporcionando uma experiência de usuário fluida.
 Variáveis de Ambiente: O backend utiliza arquivos .env para gerenciar configurações sensíveis e específicas do ambiente.
-9. Mapeamento de Rotas da API
-
-A tabela abaixo detalha o mapeamento entre as funcionalidades do frontend e os endpoints da API do backend, refletindo as implementações atuais.
-
-Fluxo/Tela do Frontend Endpoint do Backend (Método HTTP, Caminho) DTOs (Requisição/Resposta) Status de Implementação
-Fluxo de Autenticação
-Registro de Cliente POST /auth/register/client RegisterClientDto / AuthResponseDto ✔️ Implementado
-Registro de Provedor POST /auth/register/provider RegisterProviderDto / AuthResponseDto ✔️ Implementado
-Login POST /auth/login LoginDto / AuthResponseDto ✔️ Implementado
-Esqueci a Senha POST /auth/forgot-password ForgotPasswordDto / MessageResponseDto ✔️ Implementado
-Gerenciamento de Usuário/Perfil
-Obter Perfil do Usuário GET /users/me (protegido) UserProfileDto ✔️ Implementado
-Atualizar Perfil do Usuário PATCH /users/me (protegido) UpdateUserDto / UserProfileDto ✔️ Implementado
-Obter Perfil do Provedor (público) GET /providers/:id ProviderDetailsDto ✔️ Implementado
-Fluxo do Cliente
-Obter Dados do Dashboard do Cliente GET /clients/me/dashboard (protegido) ClientDashboardDto ✔️ Implementado
-Atualizar Perfil do Cliente PATCH /clients/me (protegido) UpdateClientProfileDto / ClientEntity ✔️ Implementado
-Obter Todos os Tipos de Serviço GET /services ServiceDetailsDto[] ✔️ Implementado
-Buscar Provedores/Serviços GET /providers (com filtros) ProviderSearchDto / ProviderDetailsDto[] ✔️ Implementado
-Buscar Provedores/Serviços (Geral) GET /search SearchQueryDto / SearchResultDto ✔️ Implementado
-Obter Agendamentos do Cliente GET /bookings/me (protegido, com filtro de status) BookingDetailsDto[] ✔️ Implementado
-Obter Detalhes do Agendamento GET /bookings/:id (protegido) BookingDetailsDto ✔️ Implementado
-Atualizar Status Agendamento (Cliente) PATCH /bookings/:id/status (cliente só pode cancelar) (protegido) UpdateBookingStatusDto / BookingDetailsDto ✔️ Implementado
-Cancelar Agendamento (Cliente) PATCH /bookings/:id/cancel (protegido) BookingDetailsDto ✔️ Implementado
-Reportar Disputa no Agendamento POST /bookings/:id/dispute (protegido) ReportDisputeDto / DisputeDto ✔️ Implementado
-Obter Horários Disponíveis GET /providers/:providerId/availability GetAvailabilityDto / AvailabilityEntity[] ✔️ Implementado
-Criar Agendamento POST /bookings (protegido) CreateBookingDto / BookingDetailsDto ✔️ Implementado
-Criar Agendamento e Cobrança PIX POST /bookings/schedule-and-pay (protegido) CreateBookingDto / BookingAndPixResponseDto ✔️ Implementado
-Obter Mensagens do Chat GET /chat/:chatId/messages (protegido) GetMessagesDto / Message[] ✔️ Implementado
-Enviar Mensagem de Chat POST /chat/:chatId/messages (protegido) SendMessageDto / Message ✔️ Implementado
-Encontrar/Criar Chat GET /chat/find-or-create/provider/:providerId/client/:clientId (protegido) ChatDetailsDto ✔️ Implementado
-Obter Lista de Conversas do Usuário GET /chat/me/conversations (protegido) ConversationItemDto[] ✔️ Implementado
-Obter Detalhes da Oferta GET /offers/:id OfferDetailsDto ✔️ Implementado
-Enviar Avaliação POST /reviews (protegido) SubmitReviewDto / ReviewEntity ✔️ Implementado
-Criar Indicação POST /referrals (protegido) CreateReferralDto / ReferralDto ✔️ Implementado
-Obter Indicações Feitas Pelo Usuário GET /referrals/me (protegido) ReferralDto[] ✔️ Implementado
-Obter Usuários Indicados por Alguém GET /referrals/referred-by/:userId (protegido) ReferralDto[] ✔️ Implementado
-Obter Detalhes de Indicação GET /referrals/:id (protegido) ReferralDto ✔️ Implementado
-Fluxo do Provedor
-Obter Dados do Dashboard do Provedor GET /providers/me/dashboard (protegido) DashboardDto ✔️ Implementado
-Atualizar Perfil do Provedor PATCH /providers/me (protegido) UpdateProviderProfileDto / ProviderDetailsDto ✔️ Implementado
-Upload de Avatar do Provedor POST /providers/me/avatar (protegido) Multer.File / { message: string, url: string } ✔️ Implementado
-Obter Agendamentos do Provedor GET /bookings/me (protegido, com filtro de status) BookingDetailsDto[] ✔️ Implementado
-Atualizar Status Agendamento (Provedor) PATCH /bookings/:id/status (provedor) (protegido) UpdateBookingStatusDto / BookingDetailsDto ✔️ Implementado
-Obter Dados de Ganhos GET /providers/me/earnings (protegido) EarningsResponseDto ✔️ Implementado
-Solicitar Saque POST /payments/withdrawal (protegido) WithdrawalRequestDto / MessageResponseDto ✔️ Implementado
-Gerenciar Disponibilidade PATCH /providers/:providerId/availability (protegido) UpdateAvailabilityDto[] / AvailabilityEntity[] ✔️ Implementado
-Adicionar Slot de Disponibilidade POST /providers/:providerId/availability (protegido) UpdateAvailabilityDto / AvailabilityEntity ✔️ Implementado
-Deletar Slot de Disponibilidade DELETE /providers/:providerId/availability/:availabilityId (protegido) void ✔️ Implementado
-Gerenciar Serviços Oferecidos GET /providers/:providerId/services (protegido) ProviderServiceEntity[] ✔️ Implementado
-Adicionar Serviço Oferecido POST /providers/:providerId/services (protegido) CreateProviderServiceDto / ProviderServiceEntity ✔️ Implementado
-Atualizar Serviço Oferecido PATCH /providers/:providerId/services/:id (protegido) UpdateProviderServiceDto / ProviderServiceEntity ✔️ Implementado
-Excluir Serviço Oferecido DELETE /providers/:providerId/services/:id (protegido) void ✔️ Implementado
-Obter Análise de Avaliações GET /reviews/provider/:providerId/breakdown DetailedRatingBreakdownDto ✔️ Implementado
-Obter Sugestões Inteligentes GET /reviews/provider/:providerId/suggestions (protegido) SmartSuggestionDto[] ✔️ Implementado
-Fluxo de Administrador
-Obter Perfil de Usuário por ID GET /users/:id (protegido, ADMIN) UserProfileDto ✔️ Implementado
-Deletar Usuário por ID DELETE /users/:id (protegido, ADMIN) void ✔️ Implementado
-Deletar Provedor por ID DELETE /providers/:id (protegido, ADMIN) void ✔️ Implementado
-Criar Tipo de Serviço POST /services (protegido, ADMIN) CreateServiceDto / ServiceDetailsDto ✔️ Implementado
-Atualizar Tipo de Serviço PATCH /services/:id (protegido, ADMIN) UpdateServiceDto / ServiceDetailsDto ✔️ Implementado
-Deletar Tipo de Serviço DELETE /services/:id (protegido, ADMIN) void ✔️ Implementado
-Criar Oferta POST /offers (protegido, ADMIN) CreateOfferDto / Offer ✔️ Implementado
-Atualizar Oferta PATCH /offers/:id (protegido, ADMIN) UpdateOfferDto / Offer ✔️ Implementado
-Excluir Oferta DELETE /offers/:id (protegido, ADMIN) Offer ✔️ Implementado
-Criar Item de FAQ POST /faqs (protegido, ADMIN) CreateFaqDto / FaqItemEntity ✔️ Implementado
-Atualizar Item de FAQ PATCH /faqs/:id (protegido, ADMIN) UpdateFaqDto / FaqItemEntity ✔️ Implementado
-Excluir Item de FAQ DELETE /faqs/:id (protegido, ADMIN) void ✔️ Implementado
-Criar Notificação POST /notifications (protegido, ADMIN) CreateNotificationDto / NotificationEntity ✔️ Implementado
-Fluxo Comum/Público
-Health Check GET /health { status: string } ✔️ Implementado
-Obter Todos os FAQs GET /faqs FaqItemEntity[] ✔️ Implementado
-Obter FAQ por ID GET /faqs/:id FaqItemEntity ✔️ Implementado
-Obter Todas as Ofertas GET /offers Offer[] ✔️ Implementado
-Obter Notificações do Usuário GET /notifications/me (protegido) NotificationEntity[] ✔️ Implementado
-Marcar Notificações como Lidas PATCH /notifications/me/mark-as-read (protegido) MarkAsReadDto / { count: number } ✔️ Implementado
-Marcar Notificação por ID como Lida PATCH /notifications/:id/mark-as-read (protegido) NotificationEntity ✔️ Implementado
-Excluir Notificação DELETE /notifications/:id (protegido) void ✔️ Implementado
-Obter Avaliações (com filtros) GET /reviews GetReviewsDto / ReviewEntity[] ✔️ Implementado
-Obter Fila de Provedores Pendentes de Verificação GET /verification/pending-queue (ADMIN) ProviderWithCalculatedRating[] ✔️ Implementado
-Upload de Documento de Provedor POST /verification/upload-document/:type (PROVIDER) Multer.File / VerificationResponse ✔️ Implementado
-Upload de Selfie de Provedor POST /verification/upload-selfie (PROVIDER) Multer.File / { message: string; url: string } ✔️ Implementado
-Atualizar Status de Verificação (Manual) PATCH /verification/:providerId/status (ADMIN) UpdateVerificationStatusDto ✔️ Implementado
-Rejeitar Provedor (Manual) POST /verification/reject/:providerId (ADMIN) { reason: string } ✔️ Implementado
-Obter Status de Verificação GET /verification/status/:providerId (ADMIN, PROVIDER) { verificationStatus: string, isCpfCheckedAndOk: boolean, ... } ✔️ Implementado
-Receber Webhook PIX POST /payments/webhook/pix any / MessageResponseDto ✔️ Implementado
 Atenciosamente,
 
 Paulo Silas de Campos Filho - Tech Lead

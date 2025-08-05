@@ -9,6 +9,8 @@ import { ProviderServicesModule } from '../provider-services/provider-services.m
 import { PaymentsModule } from '../payments/payments.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { QueuesModule } from '../queues/queues.module'; // Importe o QueuesModule
+import { PricingModule } from '../pricing/pricing.module'; // NOVO
+import { CouponsModule } from '../coupons/coupons.module'; // NOVO
 
 @Module({
   imports: [
@@ -19,6 +21,8 @@ import { QueuesModule } from '../queues/queues.module'; // Importe o QueuesModul
     forwardRef(() => PaymentsModule),
     NotificationsModule,
     QueuesModule, // CORREÇÃO: Adicione QueuesModule para fornecer QueuesService
+    PricingModule, // NOVO
+    CouponsModule, // NOVO
   ],
   controllers: [BookingsController],
   providers: [BookingsService],

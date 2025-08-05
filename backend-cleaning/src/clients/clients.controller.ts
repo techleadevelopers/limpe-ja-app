@@ -31,13 +31,13 @@ export class ClientsController {
   async getClientDashboard(@Req() req: ExpressRequest): Promise<ClientDashboardDto> {
     const userId = req.user['userId']; // ID do User do JWT
     this.logger.log(`[ClientsController] getClientDashboard: Buscando dashboard para userId: ${userId}`);
-    
+
     const client = await this.clientsService.findClientByUserId(userId);
     if (!client) {
       this.logger.warn(`[ClientsController] getClientDashboard: Cliente não encontrado para userId: ${userId}`);
       throw new NotFoundException(`Cliente associado ao usuário com ID "${userId}" não encontrado.`);
     }
-    
+
     this.logger.log(`[ClientsController] getClientDashboard: Cliente ${client.id} encontrado. Buscando dados do dashboard.`);
     return this.clientsService.getClientDashboardData(client.id);
   }
@@ -55,13 +55,13 @@ export class ClientsController {
   async updateMyProfile(@Req() req: ExpressRequest, @Body() updateClientProfileDto: UpdateClientProfileDto): Promise<ClientEntity> {
     const userId = req.user['userId'];
     this.logger.log(`[ClientsController] updateMyProfile: Iniciando atualização para userId: ${userId}`);
-    
+
     const client = await this.clientsService.findClientByUserId(userId);
     if (!client) {
       this.logger.warn(`[ClientsController] updateMyProfile: Cliente não encontrado para userId: ${userId}`);
       throw new NotFoundException(`Cliente associado ao usuário com ID "${userId}" não encontrado.`);
     }
-    
+
     const updatedClient = await this.clientsService.updateClient(client.id, updateClientProfileDto);
     this.logger.log(`[ClientsController] updateMyProfile: Perfil do cliente ${client.id} atualizado com sucesso.`);
     return new ClientEntity(updatedClient);

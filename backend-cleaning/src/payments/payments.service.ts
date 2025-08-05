@@ -9,6 +9,7 @@ import { ProvidersService } from '../providers/providers.service';
 import { BookingsService } from '../bookings/bookings.service'; // Importar BookingsService
 import { CreatePixChargeDto, PixChargeResponseDto } from './dto/create-pix-charge.dto';
 import { RequestWithdrawalDto } from './dto/request-withdrawal.dto';
+import { CouponsService } from '../coupons/coupons.service'; // NEW: Import CouponsService
 
 // Tipagem auxiliar para os dados que serão passados para a função de criação de payload
 interface PixChargeDetailsForGateway {
@@ -47,6 +48,7 @@ export class PaymentsService {
     private prisma: PrismaService,
     private configService: ConfigService,
     private readonly providersService: ProvidersService,
+    private readonly couponsService: CouponsService, // NEW: Inject CouponsService
     // Removido bookingsService do construtor
   ) {
     this.pagseguroApiToken = this.configService.get<string>('PAGSEGURO_API_TOKEN');
@@ -248,6 +250,7 @@ export class PaymentsService {
             },
           },
         },
+        couponId: true, // NEW: Select couponId
       },
     });
 
@@ -268,6 +271,7 @@ export class PaymentsService {
         type: TransactionType.PAYMENT,
         status: 'PENDING',
         description: dto.description,
+        couponId: bookingWithServiceDetails.couponId, // NEW: Store couponId from booking
       },
     });
     this.logger.log(`[PaymentsService] createPixCharge - Transação pendente criada com ID: ${transaction.id}`);
@@ -463,8 +467,8 @@ export class PaymentsService {
       }
 
       if (transaction.status === status) {
-        this.logger.log(`Status da transação ${transactionId} já é "${status}". Ignorando atualização duplicada.`);
-        return { message: `Status da transação ${transactionId} já é "${status}".` };
+        this.logger.log(`Status da transação ${transaction.id} já é "${status}". Ignorando atualização duplicada.`);
+        return { message: `Status da transação ${transaction.id} já é "${status}".` };
       }
 
       let newBookingStatus: BookingStatus | undefined;
@@ -475,6 +479,11 @@ export class PaymentsService {
         case 'completed':
           newBookingStatus = BookingStatus.CONFIRMED;
           newTransactionStatus = 'COMPLETED';
+          // NEW: Mark coupon as used if it was applied
+          if (transaction.couponId) {
+            await this.couponsService.markCouponAsUsed(transaction.couponId);
+            this.logger.log(`Coupon ${transaction.couponId} marked as used for transaction ${transaction.id}.`);
+          }
           break;
         case 'canceled':
         case 'voided':
@@ -513,5 +522,45 @@ export class PaymentsService {
       // RECOMENDAÇÃO: Retornar 200 OK mesmo em caso de erro interno para evitar reenvios do webhook
       return { message: 'Erro interno ao processar webhook PIX, mas o erro foi logado.' };
     }
+  }
+
+  // NEW: Placeholder for recurring payment setup
+  async setupRecurringPayment(clientId: string, subscriptionId: string, amount: number, frequency: string) {
+    console.log(`Setting up recurring payment for client ${clientId}, subscription ${subscriptionId}, amount ${amount}, frequency ${frequency}`);
+    // This would involve creating a subscription with your payment gateway (e.g., Stripe Subscriptions, PagSeguro Recorrência)
+    // and storing the gateway's subscription ID.
+    return { message: 'Recurring payment setup initiated.' };
+  }
+
+  // NEW: Placeholder for processing a single recurring payment
+  async processRecurringPayment(clientId: string, subscriptionId: string, bookingId: string, amount: number) {
+    console.log(`Processing recurring payment for client ${clientId}, subscription ${subscriptionId}, booking ${bookingId}, amount ${amount}`);
+    // This would trigger a charge against the stored payment method for the subscription.
+    // It would create a new transaction record linked to the booking and subscription.
+    const transaction = await this.prisma.transaction.create({
+      data: {
+        bookingId,
+        amount: new this.prisma.Decimal(amount),
+        status: 'COMPLETED', // Simulate success
+        paymentMethodId: 'recurring_payment_method', // Placeholder
+        transactionRef: `recurring_txn_${Date.now()}_${bookingId}`,
+        // Link to subscription if your Transaction model supports it directly
+      },
+    });
+    return transaction;
+  }
+
+  // NEW: Placeholder for pausing recurring payments
+  async pauseRecurringPayment(subscriptionId: string) {
+    console.log(`Pausing recurring payment for subscription ${subscriptionId}`);
+    // Call payment gateway API to pause the subscription
+    return { message: 'Recurring payment paused.' };
+  }
+
+  // NEW: Placeholder for resuming recurring payments
+  async resumeRecurringPayment(subscriptionId: string) {
+    console.log(`Resuming recurring payment for subscription ${subscriptionId}`);
+    // Call payment gateway API to resume the subscription
+    return { message: 'Recurring payment resumed.' };
   }
 }
