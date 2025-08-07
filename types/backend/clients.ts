@@ -15,6 +15,8 @@ export interface Client {
   userId: string; // Referência ao ID do usuário no sistema de autenticação
   fullName: string; // Propriedade 'fullName' existe no Client
   completedBookingsCount?: number; // NEW: Counter for loyalty program (tornar opcional se o backend não garantir sempre)
+  noShowCount: number; // CORREÇÃO: Adicionado noShowCount
+  cancellationCount: number; // CORREÇÃO: Adicionado cancellationCount
   phone?: string | null; // Permitir null
   avatarUrl?: string | null; // Permitir null
   walletBalance?: number;

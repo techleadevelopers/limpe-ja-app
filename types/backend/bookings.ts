@@ -3,6 +3,7 @@
 // Importar interfaces de tipagem relevantes de outros arquivos
 import { ProviderDisplayInfo } from './providers';
 import { Service } from './services'; // Importar Service para serviceName, etc.
+import { CreateAddressDto } from './auth'; // CORREÇÃO: Usar CreateAddressDto para o endereço
 
 /**
  * @enum BookingStatus
@@ -14,11 +15,12 @@ export enum BookingStatus {
   PENDING_PROVIDER_CONFIRMATION = 'PENDING_PROVIDER_CONFIRMATION',
   CONFIRMED = 'CONFIRMED',
   COMPLETED = 'COMPLETED',
-  CANCELED = 'CANCELED', // CORREÇÃO: Alinhado com 'CANCELED' do schema.prisma
+  CANCELED = 'CANCELED',
   PENDING_DISPUTE = 'PENDING_DISPUTE',
   RESCHEDULED = 'RESCHEDULED',
   IN_PROGRESS = 'IN_PROGRESS',
   REJECTED = 'REJECTED',
+  NO_SHOW = 'NO_SHOW', // CORREÇÃO: Adicionado NO_SHOW
 }
 
 /**
@@ -34,6 +36,8 @@ export interface BookingAddress {
   neighborhood: string;
   city: string;
   state: string;
+  latitude: number; // CORREÇÃO: Adicionado latitude
+  longitude: number; // CORREÇÃO: Adicionado longitude
 }
 
 /**
@@ -48,10 +52,11 @@ export interface CreateBookingDto {
   scheduledTime: string; // Hora agendada (ex: "HH:mm")
   totalPrice: number;
   notes?: string | null;
-  address: BookingAddress;
+  address: CreateAddressDto; // CORREÇÃO: Usar CreateAddressDto
   requestedDurationMinutes?: number; // NEW: for HOURLY services
   requestedSquareMeters?: number; // NEW: for BY_SIZE services
   requestedRoomCount?: number; // NEW: for BY_SIZE services
+  couponCode?: string; // CORREÇÃO: Adicionado couponCode
 }
 
 /**
@@ -63,7 +68,9 @@ export interface BookingDetails {
   id: string;
   status: BookingStatus; // Usar o enum definido
 
-  scheduledDateTime: string; // Data e hora agendadas, combinadas em uma string ISO 8601
+  scheduledDate: string; // CORREÇÃO: Usar scheduledDate (ISO 8601 string)
+  scheduledTime: string; // CORREÇÃO: Usar scheduledTime (HH:mm)
+  // scheduledDateTime: string; // Removido, pois os campos separados são mais precisos
 
   totalPrice: number; // Preço total do agendamento
   notes?: string | null;
@@ -98,6 +105,12 @@ export interface BookingDetails {
   reviewRating?: number | null;
   reviewComment?: string | null;
   isReviewed?: boolean; // Opção 1: Backend envia.
+
+  // CORREÇÃO: Novas relações incluídas no BookingWithDetailsRelations
+  subscriptionId?: string | null; // ID da assinatura, se aplicável
+  incidents?: any[]; // Array de incidentes relacionados (ou tipo mais específico)
+  guaranteeClaims?: any[]; // Array de solicitações de garantia (ou tipo mais específico)
+  couponId?: string | null; // ID do cupom aplicado
 }
 
 /**

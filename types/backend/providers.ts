@@ -2,9 +2,12 @@
 
 import { Service, PricingType } from './services';
 import { BookingAddress, BookingDetails } from './bookings'; // Adicionar BookingDetails
-import { VerificationStatus } from './auth';
-import { UserProfile } from './users';
+import { VerificationStatus, UserRole } from './auth'; // CORREÇÃO: Importar UserRole
+import { UserProfile } from './users'; // CORREÇÃO: Importar UserProfile para usar user.isVerified
 import { ProviderServiceOffering } from './provider-service';
+
+// CORREÇÃO: Re-exportar ProviderServiceOffering para que outros módulos possam importá-lo daqui
+export { ProviderServiceOffering };
 
 /**
  * @interface ProviderAvailability
@@ -15,7 +18,7 @@ export type ProviderAvailability = {
   dayOfWeek: number;
   startTime: string;
   endTime: string;
-  isAvailable: boolean; // <--- ADICIONADO: Propriedade 'isAvailable'
+  isAvailable: boolean; // ADICIONADO: Propriedade 'isAvailable'
 };
 
 /**
@@ -32,7 +35,7 @@ export interface ProviderDisplayInfo {
   phone?: string | null;
   bio?: string | null;
   verificationStatus: VerificationStatus;
-  address?: BookingAddress | null;
+  address?: BookingAddress | null; // CORREÇÃO: BookingAddress agora tem lat/lon
   providerServices?: ProviderServiceOffering[];
   averageRating: number;
   reviewCount: number;
@@ -53,6 +56,12 @@ export interface ProviderDisplayInfo {
   ocrResult?: any | null;
   livenessResult?: any | null;
   reviews?: ProviderReview[];
+  badges: string[]; // CORREÇÃO: Adicionado badges
+  user: { // CORREÇÃO: Adicionado objeto user com isVerified
+    email: string;
+    role: UserRole;
+    isVerified: boolean;
+  };
 }
 
 /**
@@ -78,7 +87,7 @@ export type ProviderWithCalculatedRating = {
   phone?: string | null;
   bio?: string | null;
   verificationStatus: VerificationStatus;
-  address?: BookingAddress | null;
+  address?: BookingAddress | null; // CORREÇÃO: BookingAddress agora tem lat/lon
   providerServices?: ProviderServiceOffering[];
   averageRating: number;
   reviewCount: number;
@@ -98,6 +107,12 @@ export type ProviderWithCalculatedRating = {
   rejectionReason?: string | null;
   ocrResult?: any | null;
   livenessResult?: any | null;
+  badges: string[]; // CORREÇÃO: Adicionado badges
+  user: { // CORREÇÃO: Adicionado objeto user com isVerified
+    email: string;
+    role: UserRole;
+    isVerified: boolean;
+  };
 };
 
 /**
@@ -115,7 +130,7 @@ export interface ProviderReview {
   providerId: string;
   client?: {
     id: string;
-    fullName: string;
+    fullName: string; // CORREÇÃO: name para fullName
     user?: {
       id: string;
       avatarUrl?: string | null;
@@ -166,14 +181,14 @@ export interface UpdateAvailabilityData {
   dayOfWeek: number;
   startTime: string;
   endTime: string;
-  isAvailable: boolean; // <--- ADICIONADO: Propriedade 'isAvailable'
+  isAvailable: boolean; // ADICIONADO: Propriedade 'isAvailable'
 }
 
 /**
  * @interface GetProviderAvailabilityResponse
  * Interface para o tipo de retorno de getProviderAvailability (movido de providerService.ts)
  */
-export interface GetProviderAvailabilityResponse { // <--- MOVIDO PARA CÁ
+export interface GetProviderAvailabilityResponse { // MOVIDO PARA CÁ
   available: ProviderAvailability[]; // Slots de tempo configurados pelo provedor
   occupiedTimes: string[];         // Horários já agendados/ocupados
 }
@@ -188,11 +203,12 @@ export interface GetProviderAvailabilityResponse { // <--- MOVIDO PARA CÁ
  */
 export interface UpdateProviderProfileData {
   fullName?: string;
-  phone?: string;
-  avatarUrl?: string | null;
+  phone?: string | null;
+  avatarUrl?: string | null; // Agora espera uma URL válida
   bio?: string;
   yearsOfExperience?: number;
   pixKey?: string;
+  address?: Partial<BookingAddress> | null; // CORREÇÃO: Adicionado address
 }
 
 /**
@@ -218,7 +234,7 @@ export interface ProviderDashboard {
  */
 export interface ProviderTransaction {
   id: string;
-  amount: number;
+  amount: number; // CORREÇÃO: Decimal no Prisma é number aqui
   type: 'EARNING' | 'WITHDRAWAL';
   description?: string;
   createdAt: string;
@@ -238,4 +254,7 @@ export interface ProviderSearchQuery {
   offset?: number;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
+  latitude?: number; // CORREÇÃO: Adicionado latitude
+  longitude?: number; // CORREÇÃO: Adicionado longitude
+  radius?: number; // CORREÇÃO: Adicionado radius
 }

@@ -1,7 +1,7 @@
 // src/components/PrimaryButton.tsx
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
+import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from './theme/colors';
 import { typography } from './theme/typography';
 import { shadows } from './theme/shadows';

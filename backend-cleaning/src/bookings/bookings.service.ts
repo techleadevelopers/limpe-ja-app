@@ -17,6 +17,7 @@ import { QueuesService } from '../queues/queues.service'; // Importe o serviço 
 import { PricingService } from '../pricing/pricing.service'; // NEW
 import { CouponsService } from '../coupons/coupons.service'; // NEW
 
+// CORREÇÃO: Adicionado subscription, incidents e guaranteeClaims à tipagem
 export type BookingWithDetailsRelations = Prisma.BookingGetPayload<{
   include: {
     client: { include: { user: true } };
@@ -24,9 +25,9 @@ export type BookingWithDetailsRelations = Prisma.BookingGetPayload<{
     providerService: { include: { service: true } };
     review: true;
     address: true;
-    subscription?: true; // NEW: Include subscription
-    incidents?: true; // NEW: Include incidents
-    guaranteeClaims?: true; // NEW: Include guaranteeClaims
+    subscription: true; // NEW: Include subscription
+    incidents: true; // NEW: Include incidents
+    guaranteeClaims: true; // NEW: Include guaranteeClaims
   };
 }>;
 
@@ -109,15 +110,15 @@ export class BookingsService {
     const { finalPrice: dynamicFinalPrice } = await this.pricingService.calculatePrice({
       serviceId: providerService.serviceId,
       providerId: provider.id,
-      latitude: createBookingDto.address.latitude, // Assuming address has latitude/longitude
-      longitude: createBookingDto.address.longitude,
+      latitude: createBookingDto.address.latitude, // CORREÇÃO: Adicionar latitude ao CreateAddressDto
+      longitude: createBookingDto.address.longitude, // CORREÇÃO: Adicionar longitude ao CreateAddressDto
       scheduledDate: createBookingDto.scheduledDate,
     });
     calculatedTotalPrice = new Prisma.Decimal(dynamicFinalPrice); // Override with dynamic price
 
     // NEW: Apply coupon if provided
     let couponId: string | null = null;
-    if (createBookingDto.couponCode) {
+    if (createBookingDto.couponCode) { // CORREÇÃO: Adicionar couponCode ao CreateBookingDto
       const couponApplicationResult = await this.couponsService.applyCoupon(createBookingDto.couponCode, client.userId, {
         originalPrice: calculatedTotalPrice.toNumber(),
         clientId: client.id,
@@ -148,8 +149,8 @@ export class BookingsService {
           neighborhood: createBookingDto.address.neighborhood,
           city: createBookingDto.address.city,
           state: createBookingDto.address.state,
-          latitude: createBookingDto.address.latitude, // Assuming DTO includes these
-          longitude: createBookingDto.address.longitude, // Assuming DTO includes these
+          latitude: new Prisma.Decimal(createBookingDto.address.latitude), // CORREÇÃO: Converter para Prisma.Decimal
+          longitude: new Prisma.Decimal(createBookingDto.address.longitude), // CORREÇÃO: Converter para Prisma.Decimal
         },
       });
       this.logger.log(`[BookingsService] create - Novo endereço criado com ID: ${newAddress.id}`);
@@ -173,6 +174,9 @@ export class BookingsService {
           providerService: { include: { service: true } },
           review: true,
           address: true,
+          subscription: true, // CORREÇÃO: Incluir subscription
+          incidents: true, // CORREÇÃO: Incluir incidents
+          guaranteeClaims: true, // CORREÇÃO: Incluir guaranteeClaims
         },
       });
       this.logger.log(`[BookingsService] create - Agendamento criado com sucesso no DB. ID: ${createdBooking.id}. ProviderId no booking retornado pelo Prisma: ${createdBooking.providerId}`);
@@ -224,6 +228,9 @@ export class BookingsService {
         providerService: { include: { service: true } },
         review: true,
         address: true,
+        subscription: true, // NEW
+        incidents: true, // NEW
+        guaranteeClaims: true, // NEW
       },
     });
   }
@@ -452,6 +459,8 @@ export class BookingsService {
     this.logger.log(`[BookingsService] updateStatus - Status de agendamento validado. Atualizando no DB.`);
 
     // --- Lógica de Fidelização (após validação de status) ---
+    // CORREÇÃO: Mover a lógica de incremento de contadores para fora do if (newStatus === BookingStatus.COMPLETED)
+    // para que ela possa ser aplicada a diferentes transições de status.
     if (newStatus === BookingStatus.COMPLETED) {
       // Increment completedBookingsCount for the client
       await this.prisma.client.update({
@@ -467,21 +476,6 @@ export class BookingsService {
       });
       this.logger.log(`[BookingsService] updateStatus: Provedor ${booking.providerId} teve monthlyBookingsCount incrementado.`);
 
-      // NEW: Increment noShowCount or cancellationCount for client
-      if (newStatus === BookingStatus.CANCELED && booking.status !== BookingStatus.CANCELED) {
-        await this.prisma.client.update({
-          where: { id: booking.clientId },
-          data: { cancellationCount: { increment: 1 } },
-        });
-        this.logger.log(`[BookingsService] updateStatus: Cliente ${booking.clientId} teve cancellationCount incrementado.`);
-      } else if (newStatus === 'NO_SHOW' && booking.status !== 'NO_SHOW') { // Assuming 'NO_SHOW' is a valid status
-        await this.prisma.client.update({
-          where: { id: booking.clientId },
-          data: { noShowCount: { increment: 1 } },
-        });
-        this.logger.log(`[BookingsService] updateStatus: Cliente ${booking.clientId} teve noShowCount incrementado.`);
-      }
-
       // Send notification to client to request a review
       // CORREÇÃO: O booking.providerService.name e booking.provider.fullName só estarão disponíveis se incluídos
       // na consulta inicial do booking.
@@ -496,6 +490,23 @@ export class BookingsService {
       });
       this.logger.log(`[BookingsService] updateStatus: Notificação de avaliação adicionada à fila para cliente ${booking.client.userId}.`);
     }
+
+    // CORREÇÃO: Lógica para noShowCount e cancellationCount movida para ser aplicada com base no newStatus
+    // e no status anterior, independentemente do status final ser COMPLETED.
+    if (newStatus === BookingStatus.CANCELED && booking.status !== BookingStatus.CANCELED) {
+      await this.prisma.client.update({
+        where: { id: booking.clientId },
+        data: { cancellationCount: { increment: 1 } },
+      });
+      this.logger.log(`[BookingsService] updateStatus: Cliente ${booking.clientId} teve cancellationCount incrementado.`);
+    } else if (newStatus === BookingStatus.NO_SHOW && booking.status !== BookingStatus.NO_SHOW) { // CORREÇÃO: Usar o enum BookingStatus.NO_SHOW
+      await this.prisma.client.update({
+        where: { id: booking.clientId },
+        data: { noShowCount: { increment: 1 } },
+      });
+      this.logger.log(`[BookingsService] updateStatus: Cliente ${booking.clientId} teve noShowCount incrementado.`);
+    }
+
     return this.prisma.booking.update({
       where: { id },
       data: { status: newStatus },

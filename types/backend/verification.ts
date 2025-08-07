@@ -35,5 +35,7 @@ export interface ProviderVerificationInfo {
   documentPhotoBackUrl?: string | null; // Permitir null
   selfieWithDocumentUrl?: string | null; // Permitir null
   rejectionReason?: string | null; // Permitir null
+  ocrResult?: any | null; // CORREÇÃO: Adicionado ocrResult
+  livenessResult?: any | null; // CORREÇÃO: Adicionado livenessResult
   // ... outros campos relevantes do provedor
 }

@@ -9,7 +9,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "build": "eas build"
+    "build": "eas build",
+    "check-key": "node run-check.js"
   },
   "dependencies": {
     "@expo/config-plugins": "~10.1.1",
@@ -25,6 +26,7 @@
     "@sentry/react-native": "^6.19.0",
     "@shopify/react-native-skia": "v2.0.0-next.4",
     "@tanstack/react-query": "^5.84.1",
+    "@types/google-cloud__storage": "^1.7.2",
     "axios": "^1.9.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
@@ -33,7 +35,6 @@
     "expo": "53.0.20",
     "expo-blur": "~14.1.5",
     "expo-calendar": "~14.1.4",
-    "expo-clipboard": "~7.1.5",
     "expo-constants": "~17.1.6",
     "expo-dev-client": "~5.2.4",
     "expo-font": "~13.3.1",
@@ -61,7 +62,6 @@
     "react-native-calendars": "^1.1312.1",
     "react-native-chart-kit": "^6.12.0",
     "react-native-gesture-handler": "~2.24.0",
-    "react-native-linear-gradient": "^2.8.3",
     "react-native-reanimated": "~3.17.4",
     "react-native-reanimated-carousel": "^4.0.2",
     "react-native-safe-area-context": "^5.4.0",

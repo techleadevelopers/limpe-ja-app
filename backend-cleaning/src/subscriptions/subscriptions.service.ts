@@ -62,8 +62,8 @@ export class SubscriptionsService {
     return this.prisma.subscription.findMany({
       where: { clientId },
       include: {
-        provider: { select: { name: true } },
-        providerService: { select: { name: true } },
+        provider: { select: { fullName: true } },
+        providerService: { include: { service: { select: { name: true } } } },
       },
     });
   }
@@ -72,12 +72,12 @@ export class SubscriptionsService {
     const subscription = await this.prisma.subscription.findUnique({
       where: { id },
       include: {
-        client: { select: { id: true, name: true } },
-        provider: { select: { id: true, name: true } },
-        providerService: { select: { id: true, name: true } },
+        client: { select: { id: true, fullName: true } },
+        provider: { select: { id: true, fullName: true } },
+        providerService: { include: { service: { select: { id: true, name: true } } } },
         generatedBookings: {
           orderBy: { scheduledDate: 'desc' },
-          select: { id: true, scheduledDate: true, status: true }, // Select minimal booking data
+          select: { id: true, scheduledDate: true, status: true },
         },
       },
     });
@@ -140,12 +140,17 @@ export class SubscriptionsService {
   async generateRecurringBooking(subscriptionId: string) {
     const subscription = await this.prisma.subscription.findUnique({
       where: { id: subscriptionId },
-      include: { client: true, provider: true, providerService: true },
+      include: { client: { include: { address: true } }, provider: true, providerService: true }, // Incluir address do cliente
     });
 
     if (!subscription || subscription.status !== SubscriptionStatus.ACTIVE) {
       console.warn(`Subscription ${subscriptionId} is not active or not found. Skipping booking generation.`);
       return;
+    }
+
+    if (!subscription.client?.address?.id) {
+      console.error(`Subscription ${subscriptionId} cannot generate booking: Client address not found.`);
+      throw new BadRequestException('Client address not found for subscription booking generation.');
     }
 
     const now = new Date();
@@ -155,9 +160,8 @@ export class SubscriptionsService {
         return;
     }
 
-    // Calculate the scheduled date for the new booking
-    // For simplicity, we'll use nextGenerationDate. In a real app, you'd calculate based on frequency and last booking.
     const scheduledDate = new Date(subscription.nextGenerationDate);
+    const scheduledTime = '09:00'; // Ou de subscription.scheduledTime se existir no seu modelo
 
     // Create a new booking
     const newBooking = await this.bookingsService.createBookingFromSubscription({
@@ -167,6 +171,8 @@ export class SubscriptionsService {
       scheduledDate: scheduledDate.toISOString(), // Pass as ISO string
       totalPrice: subscription.totalPrice.toNumber(), // Convert Decimal to number
       subscriptionId: subscription.id,
+      addressId: subscription.client.address.id, // Passar addressId
+      scheduledTime: scheduledTime, // Passar scheduledTime
       // Any other default booking fields
     });
 
@@ -183,7 +189,7 @@ export class SubscriptionsService {
     console.log(`Generated booking ${newBooking.id} for subscription ${subscriptionId}. Next generation scheduled for ${nextDate.toISOString()}`);
 
     // Re-schedule the job for the next generation
-    await this.scheduleNextBookingGeneration(subscriptionId, nextDate, subscription.frequency);
+    await this.scheduleNextBookingGeneration(subscription.id, nextDate, subscription.frequency);
 
     // Trigger recurring payment for this booking
     await this.paymentsService.processRecurringPayment(subscription.clientId, subscription.id, newBooking.id, subscription.totalPrice.toNumber());
@@ -211,42 +217,31 @@ export class SubscriptionsService {
 
   private async scheduleNextBookingGeneration(subscriptionId: string, nextGenerationDate: Date, frequency: SubscriptionFrequency) {
     // Remove any existing jobs for this subscription to prevent duplicates
-    await this.queuesService.removeJob(`subscription-generation-${subscriptionId}`);
+    await this.queuesService.removeSubscriptionGenerationJob(subscriptionId); // CORREÇÃO: Usar o método específico
 
     // Calculate delay in milliseconds
     const delay = nextGenerationDate.getTime() - new Date().getTime();
     if (delay < 0) {
         // If the date is in the past (e.g., due to immediate generation or missed job),
         // schedule it for a very short delay to process it ASAP.
-        // Or, handle it as an immediate job.
         console.warn(`Next generation date for ${subscriptionId} is in the past. Scheduling for immediate processing.`);
-        await this.queuesService.addJob('subscription-generation', { subscriptionId }, {
-            jobId: `subscription-generation-${subscriptionId}`,
-            delay: 1000, // 1 second delay
-            removeOnComplete: true,
-            removeOnFail: true,
-        });
+        await this.queuesService.addSubscriptionGenerationJob(subscriptionId, 1000); // CORREÇÃO: Usar o método específico
     } else {
-        await this.queuesService.addJob('subscription-generation', { subscriptionId }, {
-            jobId: `subscription-generation-${subscriptionId}`,
-            delay,
-            removeOnComplete: true,
-            removeOnFail: true,
-        });
+        await this.queuesService.addSubscriptionGenerationJob(subscriptionId, delay); // CORREÇÃO: Usar o método específico
     }
     console.log(`Scheduled next booking generation for subscription ${subscriptionId} at ${nextGenerationDate.toISOString()}`);
   }
 
   private async cancelFutureRecurringBookings(subscriptionId: string) {
     // Remove the scheduled job from the queue
-    await this.queuesService.removeJob(`subscription-generation-${subscriptionId}`);
+    await this.queuesService.removeSubscriptionGenerationJob(subscriptionId); // CORREÇÃO: Usar o método específico
 
     // Optionally, cancel any bookings that were already generated but are still in a 'pending' or 'scheduled' state
     // This depends on your booking lifecycle.
     // await this.prisma.booking.updateMany({
     //   where: {
     //     subscriptionId: subscriptionId,
-    //     status: { in: ['PENDING', 'SCHEDULED'] }, // adjust statuses as needed
+    //     status: { in: ['PENDING', 'SCHEDULEED'] }, // adjust statuses as needed
     //     scheduledDate: { gt: new Date() }, // only future bookings
     //   },
     //   data: {

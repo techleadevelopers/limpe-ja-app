@@ -45,7 +45,7 @@ export default function TermosScreen() {
       <Text style={styles.paragraph}>
         A segurança e a confiança são pilares fundamentais do LimpeJá. Todos os
         Profissionais cadastrados em nossa plataforma passam por um rigoroso
-        processo de verificação de antecedentes e validação de documentos para
+        processo de validação de documentos e verificações de segurança para
         minimizar riscos e garantir a tranquilidade dos clientes. Além disso,
         buscamos assegurar a qualidade através de um sistema transparente de avaliação
         e feedback.

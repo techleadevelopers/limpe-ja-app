@@ -38,8 +38,8 @@ export interface SearchQuery {
   date?: string;
   limit?: number;
   offset?: number;
-  latitude?: number;
-  longitude?: number;
+  latitude?: number; // CORREÇÃO: Adicionado latitude
+  longitude?: number; // CORREÇÃO: Adicionado longitude
   radius?: number; // Raio em quilômetros
   sortBy?: SortByOption;
 }
@@ -52,7 +52,7 @@ export interface SearchQuery {
 export interface ProviderServiceSearchResult {
   provider: ProviderDetails;
   providerService: ProviderServiceDetails;
-  distance?: number; // Distância se a busca for geoespacial
+  distance?: number; // Distância se a busca for geoespacial (CORREÇÃO: Decimal no Prisma é number aqui)
 }
 
 /**

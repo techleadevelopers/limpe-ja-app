@@ -11,12 +11,12 @@ export interface ProviderServiceDetails {
   id: string;
   providerId: string;
   serviceId: string;
-  price: number;
+  price: number; // CORREÇÃO: Decimal no Prisma é number aqui
   durationMinutes?: number | null;
   description?: string | null;
   pricingType: PricingType;
-  pricePerSquareMeter?: number | null;
-  pricePerRoom?: number | null;
+  pricePerSquareMeter?: number | null; // CORREÇÃO: Decimal no Prisma é number aqui
+  pricePerRoom?: number | null; // CORREÇÃO: Decimal no Prisma é number aqui
   service: Service; // Details about the service category
 }
 

@@ -18,7 +18,7 @@ export interface UserProfile {
   // ADICIONADO: Token de autenticação para uso no frontend
   // Pode ser 'string' se for sempre esperado após o login, ou 'string | null' / 'string?' se puder ser opcional/nulo.
   // Pelo uso em service-details.tsx, parece ser uma string não-nula quando o usuário está logado.
-  token: string; 
+  token?: string; // CORREÇÃO: Tornar opcional, pois não vem do banco de dados diretamente
 
   fullName?: string | null; // Presente na raiz do fetchedUserProfile nos logs, permitir null
   phone?: string | null;     // Presente na raiz do fetchedUserProfile nos logs, permitir null
@@ -43,6 +43,9 @@ export interface UserProfile {
   upcomingBookingsCount?: number;
   averageRating?: number;
   reviewCount?: number;
+
+  // CORREÇÃO: Adicionado isVerified
+  isVerified?: boolean;
 
   // Detalhes específicos do cliente ou provedor
   clientDetails?: Client | null; // Assumindo que 'Client' é a interface para ClientDetailsDto, permitir null

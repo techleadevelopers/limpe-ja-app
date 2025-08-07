@@ -35,7 +35,7 @@ interface AuthContextType {
   isRegistrationInProgress: boolean;
   setIsRegistrationInProgress: (inProgress: boolean) => void;
   setAuthData: (authData: AuthResponse) => Promise<void>;
-  updateUser: (updatedUser: Partial<UserProfile>) => Promise<void>;
+  updateUser: (updatedUser?: Partial<UserProfile>) => Promise<void>; // <-- Corrigido aqui
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -198,31 +198,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const updateUser = useCallback(async (updatedUserData: Partial<UserProfile>) => {
+  const updateUser = useCallback(async (updatedUserData?: Partial<UserProfile>) => { // <-- updatedUserData agora é opcional
     if (user) {
-      const updatedProfile: UserProfile = {
-        ...user,
-        ...updatedUserData,
-      };
-      const updatedAuthenticatedUser: AuthenticatedUserProfile = {
-        ...updatedProfile,
-        token: user.token,
-      };
-      setUser(updatedAuthenticatedUser);
-      setRole(updatedProfile.role as UserRole);
-
-      // Agora a chamada é válida, pois `storeAuthData` é um método público.
-      await authService.storeAuthData({
-        token: user.token,
-        user: updatedProfile,
-        id: user.id,
-        role: user.role,
-      });
-      console.log('[AuthContext | updateUser] Perfil do usuário atualizado no contexto e no armazenamento.');
+      if (updatedUserData) { // Se novos dados foram fornecidos, use-os
+        const updatedProfile: UserProfile = {
+          ...user,
+          ...updatedUserData,
+        };
+        const updatedAuthenticatedUser: AuthenticatedUserProfile = {
+          ...updatedProfile,
+          token: user.token,
+        };
+        setUser(updatedAuthenticatedUser);
+        setRole(updatedProfile.role as UserRole);
+        
+        await authService.storeAuthData({
+          token: user.token,
+          user: updatedProfile,
+          id: user.id,
+          role: user.role,
+        });
+        console.log('[AuthContext | updateUser] Perfil do usuário atualizado no contexto e no armazenamento.');
+      } else { // Se nenhum dado foi fornecido, recarregue do backend
+        await refreshUser();
+      }
     } else {
       console.warn('[AuthContext | updateUser] Tentativa de atualizar usuário não logado.');
     }
-  }, [user]);
+  }, [user, refreshUser]); // <- Adicionado refreshUser às dependências
 
   const setAuthData = async (authData: AuthResponse) => {
     try {

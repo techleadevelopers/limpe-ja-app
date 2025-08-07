@@ -5,7 +5,7 @@ import { File } from 'multer';
 import { DocumentProcessingService } from '../document-processing/document-processing.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProvidersService, ProviderWithCalculatedRating } from '../providers/providers.service';
-import { QueuesService } from '../queues/queues.service'; // Importar QueuesService
+import { QueuesService } from '../queues/queues.service';
 import { VerificationStatus } from '../shared/enums/verification-status.enum';
 
 interface OcrResult {
@@ -34,13 +34,36 @@ export class VerificationService {
     private readonly prisma: PrismaService,
     private readonly documentProcessingService: DocumentProcessingService,
     private readonly providersService: ProvidersService,
-    private readonly queuesService: QueuesService, // Injetar QueuesService
+    private readonly queuesService: QueuesService,
   ) {}
 
   async getPendingProviders(): Promise<ProviderWithCalculatedRating[]> {
     this.logger.log(`[VerificationService] getPendingProviders: Buscando provedores pendentes.`);
     const providers = await this.providersService.getPendingProviders();
     return providers || [];
+  }
+
+  async uploadAvatar(providerId: string, file: File): Promise<string> {
+    this.logger.log(`[VerificationService] uploadAvatar: Iniciando para providerId: ${providerId}`);
+    const provider = await this.providersService.findOne(providerId);
+    if (!provider) {
+      this.logger.warn(`[VerificationService] uploadAvatar: Provedor ${providerId} não encontrado.`);
+      throw new NotFoundException('Provedor não encontrado.');
+    }
+
+    const fileExtension = file.originalname?.split('.').pop() || 'jpg';
+    const destinationPath = `provider-documents/${providerId}/avatar-${Date.now()}.${fileExtension}`;
+
+    const fileUrl = await this.documentProcessingService.uploadImage(file, destinationPath);
+    this.logger.log(`[VerificationService] uploadAvatar: Avatar enviado para ${fileUrl}`);
+
+    await this.prisma.provider.update({
+      where: { id: providerId },
+      data: { avatarUrl: fileUrl },
+    });
+    this.logger.log(`[VerificationService] URL do avatar salva para provider ${providerId}.`);
+
+    return fileUrl;
   }
 
   async uploadDocumentPhoto(
@@ -55,7 +78,7 @@ export class VerificationService {
       throw new NotFoundException('Provedor não encontrado.');
     }
 
-    const fileExtension = file.originalname.split('.').pop() || 'jpg';
+    const fileExtension = file.originalname?.split('.').pop() || 'jpg';
     const destinationPath = `provider-documents/${providerId}/${type.toLowerCase()}-${Date.now()}.${fileExtension}`;
 
     const fileUrl = await this.documentProcessingService.uploadImage(file, destinationPath);
@@ -68,14 +91,12 @@ export class VerificationService {
       updateData.documentPhotoBackUrl = fileUrl;
     }
 
-    // Atualiza o provedor com a URL do documento
     await this.prisma.provider.update({
       where: { id: providerId },
       data: updateData,
     });
     this.logger.log(`[VerificationService] URL do documento (${type}) salva para provider ${providerId}.`);
 
-    // Adiciona tarefa para processamento de OCR na fila
     await this.queuesService.addVerificationJob('process-document-ocr', {
       providerId,
       fileUrl,
@@ -93,31 +114,47 @@ export class VerificationService {
       throw new NotFoundException('Provedor não encontrado.');
     }
 
-    const fileExtension = file.originalname.split('.').pop() || 'jpg';
+    const fileExtension = file.originalname?.split('.').pop() || 'jpg';
     const destinationPath = `provider-documents/${providerId}/selfie-${Date.now()}.${fileExtension}`;
 
     const fileUrl = await this.documentProcessingService.uploadImage(file, destinationPath);
     this.logger.log(`[VerificationService] uploadSelfieWithDocument: Selfie enviada para ${fileUrl}`);
 
-    // Atualiza o provedor com a URL da selfie
     await this.prisma.provider.update({
       where: { id: providerId },
       data: { selfieWithDocumentUrl: fileUrl },
     });
     this.logger.log(`[VerificationService] URL da selfie salva para provider ${providerId}.`);
 
-    // Adiciona tarefa para liveness check e comparação facial na fila
     await this.queuesService.addVerificationJob('perform-liveness-check', {
       providerId,
       selfieUrl: fileUrl,
-      documentFrontUrl: provider.documentPhotoFrontUrl, // Passa a URL do documento frontal se existir
+      documentFrontUrl: provider.documentPhotoFrontUrl,
     });
 
     await this.updateProviderVerificationStatus(providerId);
     return fileUrl;
   }
 
-  // Novos métodos para atualizar resultados de processamento assíncrono
+  // NOVO MÉTODO PARA AVANÇAR O STATUS DE VERIFICAÇÃO
+  async advanceVerificationStatus(providerId: string): Promise<void> {
+    const provider = await this.providersService.findOne(providerId);
+    if (!provider) {
+      throw new NotFoundException('Provedor não encontrado.');
+    }
+    if (provider.verificationStatus === VerificationStatus.PENDING_INITIAL_REVIEW) {
+      await this.prisma.provider.update({
+        where: { id: providerId },
+        data: {
+          verificationStatus: VerificationStatus.PENDING_DOCUMENTS_UPLOAD,
+        },
+      });
+      this.logger.log(`[VerificationService] Status do provedor ${providerId} avançado para PENDING_DOCUMENTS_UPLOAD.`);
+    } else {
+      throw new BadRequestException('Não é possível avançar o status de verificação a partir do estado atual.');
+    }
+  }
+
   async updateProviderOcrResult(providerId: string, ocrResult: OcrResult, type: 'FRONT' | 'BACK'): Promise<void> {
     const updateData: Prisma.ProviderUpdateInput = {
       ocrResult: ocrResult as unknown as Prisma.JsonObject,
@@ -143,11 +180,6 @@ export class VerificationService {
   }
 
   async updateProviderFaceComparisonResult(providerId: string, faceComparisonResult: FaceComparisonResult): Promise<void> {
-    // Aqui você pode decidir como armazenar o resultado da comparação facial.
-    // Pode ser parte do livenessResult ou um campo separado.
-    // Por simplicidade, vamos atualizar o livenessResult com a informação da comparação também,
-    // ou criar um campo específico se a granularidade for necessária.
-    // Para este exemplo, vamos atualizar o livenessResult.
     const provider = await this.prisma.provider.findUnique({ where: { id: providerId } });
     if (provider && provider.livenessResult) {
       const currentLiveness = provider.livenessResult as unknown as LivenessResult & { faceComparison?: FaceComparisonResult };
@@ -196,11 +228,9 @@ export class VerificationService {
     const isDocumentBackUploaded = provider.documentPhotoBackUrl !== null && provider.documentPhotoBackUrl !== undefined;
     const isSelfieUploaded = provider.selfieWithDocumentUrl !== null && provider.selfieWithDocumentUrl !== undefined;
 
-    // A validação de OCR e Liveness agora depende dos resultados que vêm do worker
     const isOcrProcessedAndOk = provider.ocrResult && (provider.ocrResult as unknown as OcrResult).confidence > 0.7;
     const isLivenessCheckPassed = provider.livenessResult && (provider.livenessResult as unknown as LivenessResult).isLive;
     const isFaceComparisonMatch = provider.livenessResult && (provider.livenessResult as unknown as LivenessResult & { faceComparison?: FaceComparisonResult }).faceComparison?.match;
-
 
     let newStatus: VerificationStatus | undefined = undefined;
 

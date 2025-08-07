@@ -8,9 +8,9 @@ import { ProvidersModule } from '../providers/providers.module';
 import { ProviderServicesModule } from '../provider-services/provider-services.module';
 import { PaymentsModule } from '../payments/payments.module';
 import { NotificationsModule } from '../notifications/notifications.module';
-import { QueuesModule } from '../queues/queues.module'; // Importe o QueuesModule
-import { PricingModule } from '../pricing/pricing.module'; // NOVO
-import { CouponsModule } from '../coupons/coupons.module'; // NOVO
+import { QueuesModule } from '../queues/queues.module';
+import { PricingModule } from '../pricing/pricing.module';
+import { CouponsModule } from '../coupons/coupons.module';
 
 @Module({
   imports: [
@@ -20,9 +20,9 @@ import { CouponsModule } from '../coupons/coupons.module'; // NOVO
     ProviderServicesModule,
     forwardRef(() => PaymentsModule),
     NotificationsModule,
-    QueuesModule, // CORREÇÃO: Adicione QueuesModule para fornecer QueuesService
-    PricingModule, // NOVO
-    CouponsModule, // NOVO
+    forwardRef(() => QueuesModule), // CORREÇÃO: Adicionado forwardRef para o QueuesModule
+    forwardRef(() => PricingModule),
+    forwardRef(() => CouponsModule),
   ],
   controllers: [BookingsController],
   providers: [BookingsService],

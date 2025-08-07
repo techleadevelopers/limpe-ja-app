@@ -32,7 +32,14 @@ export class BookingEntity implements PrismaBooking {
   address?: {
     id: string; cep: string; street: string; number: string;
     complement: string | null; neighborhood: string; city: string; state: string;
+    // CORREÇÃO: Adicionado latitude e longitude à tipagem do Address
+    latitude: Prisma.Decimal;
+    longitude: Prisma.Decimal;
   } | null;
+
+  // CORREÇÃO: Adicionado subscriptionId e couponId
+  subscriptionId: string | null;
+  couponId: string | null;
 
   // Relações opcionais para tipagem mais completa ao carregar com `include`
   client?: Client;
@@ -69,5 +76,9 @@ export class BookingEntity implements PrismaBooking {
     // Garanta que addressId e address sejam null se não forem fornecidos ou se o tipo do prisma for null
     this.addressId = partial.addressId === undefined ? null : partial.addressId;
     this.address = partial.address === undefined ? null : partial.address;
+
+    // CORREÇÃO: Inicializar subscriptionId e couponId
+    this.subscriptionId = partial.subscriptionId === undefined ? null : partial.subscriptionId;
+    this.couponId = partial.couponId === undefined ? null : partial.couponId;
   }
 }

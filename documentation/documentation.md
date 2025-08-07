@@ -7,12 +7,12 @@ O frontend do LimpeJáApp segue uma arquitetura modular e baseada em componentes
 React Native & Expo: Para desenvolvimento de aplicações multiplataforma (iOS e Android).
 Expo Router: Para roteamento e navegação declarativa, com suporte a layouts aninhados e grupos de rotas.
 Context API (React): Para gerenciamento de estado global (autenticação, configurações do aplicativo, dados de registro de provedor). Embora ainda presente, o uso está sendo otimizado com a introdução do TanStack Query.
-TanStack Query: NOVO. Para gerenciamento de estado do servidor (data fetching, caching, sincronização e atualização de dados remotos), reduzindo boilerplate e melhorando o desempenho.
+TanStack Query: Para gerenciamento de estado do servidor (data fetching, caching, sincronização e atualização de dados remotos), reduzindo boilerplate e melhorando o desempenho.
 Axios: Para requisições HTTP à API de backend, com interceptadores para tratamento de autenticação e erros globais.
 TypeScript: Para tipagem estática, garantindo maior robustez e manutenibilidade do código.
 Reanimated: Para animações fluidas e de alto desempenho.
 Estrutura de Pastas: Organizada por funcionalidades e papéis ((auth), (client), (provider), (common)), facilitando a localização e o isolamento de responsabilidades.
-Sentry: NOVO. Para monitoramento de erros e performance em tempo real, fornecendo visibilidade sobre crashes e exceções.
+Sentry: Para monitoramento de erros e performance em tempo real, fornecendo visibilidade sobre crashes e exceções.
 2. Módulos Core e Utilitários
 Esta seção descreve os módulos fundamentais que suportam a operação de toda a aplicação.
 
@@ -77,7 +77,7 @@ PENDING_INITIAL_REVIEW: Redireciona para provider-register/service-details.
 PENDING_DOCUMENTS_UPLOAD / Outros pendentes: Redireciona para provider-register/verify-account.
 Autenticado (Cliente/Admin): Redireciona para a tela de exploração do cliente.
 Interconexões: Depende fortemente do AuthContext para obter o estado de autenticação e os detalhes do usuário. É o ponto de entrada para a navegação principal da aplicação.
-2.5. src/providers/query-client-provider.tsx (NOVO)
+2.5. src/providers/query-client-provider.tsx
 Caminho: LimpeJaApp/src/providers/query-client-provider.tsx
 Propósito: Configura e exporta uma instância do QueryClient do TanStack Query, que será usada para gerenciar o estado do servidor em toda a aplicação.
 Dependências: @tanstack/react-query.
@@ -86,7 +86,7 @@ Funcionalidades Chave:
 QueryClient Instantiation: Cria uma nova instância de QueryClient com defaultOptions para queries, incluindo staleTime (5 minutos) e gcTime (10 minutos), refetchOnWindowFocus desabilitado e retry (2 vezes).
 QueryClientProvider: Componente React que disponibiliza a instância do QueryClient para todos os componentes filhos.
 Interconexões: Envolve a aplicação no app/_layout.tsx para que todos os componentes possam usar os hooks do TanStack Query.
-2.6. src/utils/sentry.ts (NOVO)
+2.6. src/utils/sentry.ts
 Caminho: LimpeJaApp/src/utils/sentry.ts
 Propósito: Arquivo de utilitário para inicializar e configurar o Sentry para monitoramento de erros e performance.
 Dependências: @sentry/react-native, @sentry/tracing.
@@ -95,7 +95,7 @@ Funcionalidades Chave:
 Sentry.init(): Configura o Sentry com a DSN (Data Source Name) do projeto, ambiente, taxa de amostragem de transações e outras opções.
 Integração com Expo: Configurações específicas para garantir que o Sentry funcione corretamente em ambientes Expo.
 Interconexões: Importado e chamado no app/_layout.tsx para iniciar o monitoramento assim que o aplicativo é carregado.
-2.7. services/securityService.ts (NOVO)
+2.7. services/securityService.ts
 Caminho: LimpeJaApp/app/services/securityService.ts
 Propósito: Fornece funcionalidades relacionadas à segurança do aplicativo, como autenticação biométrica, armazenamento seguro de tokens e validação de sessão.
 Dependências: axios, @react-native-async-storage/async-storage, expo-local-authentication, expo-secure-store.
@@ -380,7 +380,7 @@ handlePickImage(): Permite selecionar uma nova foto de perfil e faz o upload rea
 handleSaveChanges(): Valida os campos, chama updateClientProfile() do clientService para persistir as alterações no backend. Atualiza o user no AuthContext.
 Formatação e validação de telefone.
 Interconexões: Interage com useAuth e clientService.
-5.5. services/complianceService.ts (NOVO)
+5.5. services/complianceService.ts
 Caminho: LimpeJaApp/app/services/complianceService.ts
 Propósito: Fornece funções para interagir com endpoints de conformidade legal e privacidade de dados (LGPD), como exportação e exclusão de dados.
 Dependências: api.ts.
@@ -406,11 +406,11 @@ Service: Contém id, name, icon, backgroundColor, description, price.
 6.2. bookings.ts (ATUALIZADO)
 Caminho: LimpeJaApp/src/types/backend/bookings.ts
 Propósito: Define as interfaces e enums para agendamentos, incluindo status, endereço e DTOs para criação/atualização, e agora também para disputas. Adicionado NO_SHOW ao BookingStatus.
-Dependências: ProviderDisplayInfo (de providers.ts), Service (de services.ts), DisputeReason (NOVO).
-Exporta: BookingStatus (enum para status do agendamento), BookingAddress, CreateBookingDto, BookingDetails, UpdateBookingStatusDto, ReportDisputeDto (NOVO), Dispute (NOVO).
+Dependências: ProviderDisplayInfo (de providers.ts), Service (de services.ts), DisputeReason.
+Exporta: BookingStatus (enum para status do agendamento), BookingAddress, CreateBookingDto, BookingDetails, UpdateBookingStatusDto, ReportDisputeDto, Dispute.
 Funcionalidades Chave:
 
-BookingStatus: Enum para estados como PENDING, CONFIRMED, COMPLETED, CANCELED, PENDING_DISPUTE (NOVO), NO_SHOW (NOVO), etc.
+BookingStatus: Enum para estados como PENDING, CONFIRMED, COMPLETED, CANCELED, PENDING_DISPUTE, NO_SHOW, etc.
 BookingAddress: Estrutura de endereço.
 BookingDetails: Representa um agendamento completo com detalhes do cliente, provedor e serviço.
 ReportDisputeDto: DTO para reportar uma disputa.
@@ -418,8 +418,8 @@ Dispute: Interface para o modelo de disputa.
 6.3. bookingService.ts (ATUALIZADO)
 Caminho: LimpeJaApp/app/services/bookingService.ts
 Propósito: Fornece funções para interagir com os endpoints de agendamento do backend. Será estendido para incluir a lógica de agendamentos recorrentes e atualização de métricas de cliente (no-show, cancelamento).
-Dependências: axios, api.ts, BookingDetails, BookingStatus, CreateBookingDto, UpdateBookingStatusDto, ReportDisputeDto (NOVO), Dispute (NOVO).
-Exporta: createBooking, getBookingsForUser, getBookingDetails, updateBookingStatus, cancelBooking, checkActiveChatBooking, checkConfirmedBookingBetweenUsers, reportDispute (NOVO).
+Dependências: axios, api.ts, BookingDetails, BookingStatus, CreateBookingDto, UpdateBookingStatusDto, ReportDisputeDto, Dispute.
+Exporta: createBooking, getBookingsForUser, getBookingDetails, updateBookingStatus, cancelBooking, checkActiveChatBooking, checkConfirmedBookingBetweenUsers, reportDispute.
 Funcionalidades Chave:
 
 createBooking(data): Cria um novo agendamento.
@@ -430,7 +430,7 @@ cancelBooking(bookingId): Cancela um agendamento.
 reportDispute(bookingId, data): Permite ao usuário reportar uma disputa para um agendamento específico.
 Integração de Chat: Inclui checkActiveChatBooking para verificar agendamentos ativos (CONFIRMED ou IN_PROGRESS) entre cliente e provedor, controlando o acesso ao chat.
 Interconexões: Utilizado por schedule-service.tsx, bookings/index.tsx, bookings/[bookingId].tsx, dashboard/index.tsx, e telas de chat.
-6.4. disputeService.ts (NOVO)
+6.4. disputeService.ts
 Caminho: LimpeJaApp/app/services/disputeService.ts
 Propósito: Fornece funções para interagir com os endpoints de disputas do backend, especificamente para reportar e consultar disputas.
 Dependências: api.ts, ReportDisputeDto, Dispute.
@@ -461,7 +461,7 @@ Dependências: React, Animated, Alert, FlatList, Image, Platform, RefreshControl
 Funcionalidades Chave:
 
 loadBookings(): Busca agendamentos do backend via getBookingsForUser(), filtrando por status e ordenando.
-Filtros: Permite alternar entre "requests", "upcoming", "completed", "cancelled" e "disputed" (NOVO).
+Filtros: Permite alternar entre "requests", "upcoming", "completed", "cancelled" e "disputed".
 AnimatedBookingItem: Componente para exibir cada agendamento com animação de entrada.
 Suporte a pull-to-refresh.
 Exibe feedback visual para listas vazias.
@@ -469,7 +469,7 @@ Interconexões: Consome useAuth e bookingService. Navega para bookings/[bookingI
 6.7. bookings/[bookingId].tsx (Client Booking Details)
 Caminho: LimpeJaApp/app/(client)/bookings/[bookingId].tsx
 Propósito: Exibe os detalhes de um agendamento específico e oferece ações como cancelar, contatar o provedor, avaliar o serviço ou ver o perfil do provedor, e reportar uma disputa.
-Dependências: React, Animated, Alert, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, Stack, useLocalSearchParams, useRouter, Ionicons, formatDate, cancelBooking, getBookingDetails, BookingDetails, BookingStatus, disputeService (NOVO).
+Dependências: React, Animated, Alert, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, Stack, useLocalSearchParams, useRouter, Ionicons, formatDate, cancelBooking, getBookingDetails, BookingDetails, BookingStatus, disputeService.
 Funcionalidades Chave:
 
 Recebe bookingId via parâmetros de rota.
@@ -496,7 +496,7 @@ handleAddToCalendar(): Adiciona o agendamento ao calendário do dispositivo.
 handleContactProvider(): Navega para o chat com o provedor.
 Animações para a entrada do conteúdo e elementos de fundo.
 Interconexões: Consome useAuth, bookingService, providerService, paymentService. Navega para bookings/index.tsx, explore/index.tsx, messages/[chatId].tsx.
-6.9. app/(common)/feedback/dispute/index.tsx (NOVO)
+6.9. app/(common)/feedback/dispute/index.tsx
 Caminho: LimpeJaApp/app/(common)/feedback/dispute/index.tsx
 Propósito: Exibe a lista de disputas reportadas pelo usuário, permitindo acompanhar o status.
 Dependências: react-native, useRouter (expo-router), ScreenContainer, Header, Card, PrimaryButton, Icon.
@@ -507,7 +507,7 @@ DisputeListItem: Componente para renderizar cada item da disputa.
 renderEmptyState: Exibe uma mensagem e um botão para criar uma nova disputa se não houver disputas.
 Navegação para DisputeDetails ao clicar em um item da lista.
 Interconexões: Navega para app/(common)/feedback/dispute/[bookingId].tsx.
-6.10. app/(common)/feedback/dispute/[bookingId].tsx (NOVO)
+6.10. app/(common)/feedback/dispute/[bookingId].tsx
 Caminho: LimpeJaApp/app/(common)/feedback/dispute/[bookingId].tsx
 Propósito: Exibe os detalhes de uma disputa específica.
 Dependências: react-native, useLocalSearchParams (expo-router), ScreenContainer, Header, Card, PrimaryButton, TextInputWithIcon, Icon.
@@ -518,8 +518,7 @@ Exibe informações detalhadas sobre a disputa, como motivo, descrição, status
 Permite enviar novas mensagens para a disputa e anexar arquivos.
 Interconexões: Consome disputeService para buscar os detalhes da disputa e enviar mensagens.
 Novos Módulos de Agendamento e Pagamento (Frontend)
-
-6.11. app/(client)/subscriptions/index.tsx (NOVO)
+6.11. app/(client)/subscriptions/index.tsx
 Caminho: LimpeJaApp/app/(client)/subscriptions/index.tsx
 Propósito: Exibe a lista de assinaturas ativas e passadas do cliente, permitindo gerenciá-las.
 Dependências: React, FlatList, useAuth, subscriptionService.
@@ -529,7 +528,7 @@ Lista de assinaturas com status, frequência e próximo agendamento.
 Opções para pausar, retomar ou cancelar uma assinatura.
 Navegação para os detalhes de uma assinatura específica.
 Interconexões: Consome subscriptionService.
-6.12. app/(client)/subscriptions/[subscriptionId].tsx (NOVO)
+6.12. app/(client)/subscriptions/[subscriptionId].tsx
 Caminho: LimpeJaApp/app/(client)/subscriptions/[subscriptionId].tsx
 Propósito: Exibe os detalhes de uma assinatura específica, incluindo histórico de agendamentos gerados e opções de edição.
 Dependências: React, useLocalSearchParams, subscriptionService.
@@ -539,7 +538,7 @@ Detalhes da assinatura (provedor, serviço, frequência, preço).
 Lista dos agendamentos já gerados por esta assinatura.
 Formulário para editar a frequência ou pausar/cancelar a assinatura.
 Interconexões: Consome subscriptionService.
-6.13. services/subscriptionService.ts (NOVO)
+6.13. services/subscriptionService.ts
 Caminho: LimpeJaApp/app/services/subscriptionService.ts
 Propósito: Fornece funções para interagir com os endpoints de assinaturas do backend.
 Dependências: api.ts, CreateSubscriptionDto, UpdateSubscriptionDto, Subscription.
@@ -551,7 +550,7 @@ getSubscriptionsForUser(): Obtém todas as assinaturas do usuário logado.
 getSubscriptionDetails(id): Obtém detalhes de uma assinatura específica.
 updateSubscription(id, data): Atualiza (pausar, cancelar, alterar frequência).
 Interconexões: Utilizado pelas telas de subscriptions.
-6.14. services/couponService.ts (NOVO)
+6.14. services/couponService.ts
 Caminho: LimpeJaApp/app/services/couponService.ts
 Propósito: Fornece funções para interagir com os endpoints de cupons do backend.
 Dependências: api.ts, CouponApplicationResult.
@@ -560,7 +559,7 @@ Funcionalidades Chave:
 
 applyCoupon(code, bookingData): Valida e aplica o cupom, retornando o valor do desconto e o novo total.
 Interconexões: Utilizado na tela schedule-service.tsx para aplicar cupons.
-6.15. services/guaranteeService.ts (NOVO)
+6.15. services/guaranteeService.ts
 Caminho: LimpeJaApp/app/services/guaranteeService.ts
 Propósito: Fornece funções para interagir com os endpoints de garantia de serviço/seguro do backend.
 Dependências: api.ts, SubmitClaimDto, GuaranteeClaim.
@@ -674,7 +673,7 @@ Propósito: Define as interfaces e DTOs para o sistema de notificações. Agora 
 Exporta: NotificationEntity, MarkAsReadDto.
 Funcionalidades Chave:
 
-NotificationEntity: Representa uma notificação individual com id, type, title, body, createdAt, readAt, navigateTo, relatedId, userId, imageUrl (NOVO), actionButtons (NOVO).
+NotificationEntity: Representa uma notificação individual com id, type, title, body, createdAt, readAt, navigateTo, relatedId, userId, imageUrl, actionButtons.
 8.6. notificationService.ts (ATUALIZADO)
 Caminho: LimpeJaApp/app/services/notificationService.ts
 Propósito: Fornece funções para interagir com os endpoints de notificações do backend. Será estendido para suportar o envio e processamento de notificações com rich media.
@@ -762,7 +761,7 @@ Recebe targetId, type, serviceName, providerName, providerId via parâmetros de 
 StarRating: Componente para seleção de avaliação por estrelas.
 handleSubmitFeedback(): Valida os dados, chama submitFeedback() do reviewService para enviar a avaliação.
 Interconexões: Consome useAuth e reviewService.
-10.4. services/aiSuggestionsService.ts (NOVO)
+10.4. services/aiSuggestionsService.ts
 Caminho: LimpeJaApp/app/services/aiSuggestionsService.ts
 Propósito: Fornece funções para buscar sugestões inteligentes e insights de clientes, potencialmente gerados por IA, para provedores.
 Dependências: api.ts.
@@ -812,7 +811,7 @@ Dependências: React, ScrollView, StyleSheet, Text, View, Stack.
 Funcionalidades Chave:
 
 Exibe o texto completo da política de privacidade.
-11.5. app/(common)/referrals.tsx (NOVO)
+11.5. app/(common)/referrals.tsx
 Caminho: LimpeJaApp/app/(common)/referrals.tsx
 Propósito: Nova tela para o programa de indicação, onde o usuário pode ver seu código de indicação, status das indicações feitas e recompensas.
 Dependências: react-native, useAuth, useQuery (TanStack Query), referralService, Clipboard.
@@ -824,7 +823,7 @@ Informações sobre ganhos e ganhos pendentes.
 Seção "Como Funciona?" explicando o programa.
 Botões para compartilhar e copiar o código de indicação.
 Interconexões: Consome referralService para buscar dados de indicação (atualmente mockado).
-11.6. app/(common)/loyalty.tsx (NOVO)
+11.6. app/(common)/loyalty.tsx
 Caminho: LimpeJaApp/app/(common)/loyalty.tsx
 Propósito: Nova tela para exibir o programa de fidelidade do cliente, mostrando progresso, níveis e benefícios.
 Dependências: react-native, ScreenContainer, Header, Card, PrimaryButton, Icon, LinearGradient.
@@ -836,10 +835,11 @@ Barra de progresso visual.
 Lista de recompensas disponíveis e seus custos em pontos, com botão de resgate.
 Seção "Como Ganhar Pontos" detalhando as regras.
 Interconexões: Consome serviços relevantes para dados de fidelidade (atualmente mockado).
-11.7. services/referralService.ts (NOVO)
+11.7. services/referralService.ts
 Caminho: LimpeJaApp/app/services/referralService.ts
 Propósito: Fornece funções para interagir com os endpoints de indicações do backend.
 Dependências: api.ts, CreateReferralDto, Referral, GetReferralsMadeByUserResponse, GetReferredUsersResponse (de ../types/backend/referrals).
+Exporta: createReferral, getReferralsMadeByUser, getReferredUsers, getReferralById.
 Funcionalidades Chave:
 
 createReferral(data): Cria uma nova indicação.
@@ -856,8 +856,7 @@ Funcionalidades Chave:
 Configura Stack.Screen para cada tela comum, definindo title.
 Interconexões: É um layout aninhado do _layout.tsx raiz.
 Novos Módulos de Segurança (Frontend)
-
-11.9. app/(common)/safety/panic.tsx (NOVO)
+11.9. app/(common)/safety/panic.tsx
 Caminho: LimpeJaApp/app/(common)/safety/panic.tsx
 Propósito: Tela para acionar um botão de pânico/emergência, enviando um alerta com a localização do usuário.
 Dependências: React, TouchableOpacity, Text, safetyService, expo-location.
@@ -867,7 +866,7 @@ Botão grande e visível para acionar o alerta.
 Captura e envia a localização atual do usuário.
 Pode incluir uma contagem regressiva para cancelar o alerta acidentalmente.
 Interconexões: Consome safetyService.
-11.10. app/(common)/safety/incident-report.tsx (NOVO)
+11.10. app/(common)/safety/incident-report.tsx
 Caminho: LimpeJaApp/app/(common)/safety/incident-report.tsx
 Propósito: Tela para o usuário (cliente ou provedor) reportar um incidente detalhado.
 Dependências: React, TextInput, TouchableOpacity, Text, safetyService, ImagePicker.
@@ -880,7 +879,7 @@ Interconexões: Consome safetyService.
 Caminho: LimpeJaApp/app/services/safetyService.ts
 Propósito: Fornece funções relacionadas à segurança do aplicativo, como autenticação biométrica, armazenamento seguro de tokens, validação de sessão, e agora, para o botão de pânico e relatório de incidentes.
 Dependências: axios, @react-native-async-storage/async-storage, expo-local-authentication, expo-secure-store, ReportPanicDto, IncidentReportDto.
-Exporta: initSecurity, enableBiometric, authenticateWithBiometric, secureStoreToken, getSecureToken, validateSession, getSecurityAlerts, reportSuspiciousActivity, setupSessionTimeout, handleSessionTimeout, reportPanic (NOVO), reportIncident (NOVO).
+Exporta: initSecurity, enableBiometric, authenticateWithBiometric, secureStoreToken, getSecureToken, validateSession, getSecurityAlerts, reportSuspiciousActivity, setupSessionTimeout, handleSessionTimeout, reportPanic, reportIncident.
 Funcionalidades Chave:
 
 reportPanic(data): Envia um alerta de pânico com localização.
@@ -908,37 +907,37 @@ services.ts: Interfaces para tipos de serviço (Service, PricingType).
 upload.ts: DTO para respostas de upload (UploadResponseDto).
 users.ts: Interface UserProfile (perfil completo do usuário).
 verification.ts: DTOs e enums para o processo de verificação (SubmitCpfRequest, DocumentPhotoType, VerificationResponse, ProviderVerificationInfo).
-safety.ts (NOVO): DTOs para funcionalidades de segurança (ReportPanicDto, IncidentReportDto, Incident, PanicAlert).
-subscriptions.ts (NOVO): DTOs para gerenciamento de assinaturas (CreateSubscriptionDto, UpdateSubscriptionDto, Subscription, SubscriptionStatus, SubscriptionFrequency).
-coupons.ts (NOVO): DTOs para gerenciamento de cupons (Coupon, CouponType, CouponTarget, CouponApplicationResult).
-guarantee.ts (NOVO): DTOs para gerenciamento de garantia de serviço (SubmitClaimDto, GuaranteeClaim, ClaimStatus).
-pricing.ts (NOVO): DTOs para precificação dinâmica (GetDynamicPriceDto, DynamicPriceResult, PricingRule).
+safety.ts: DTOs para funcionalidades de segurança (ReportPanicDto, IncidentReportDto, Incident, PanicAlert).
+subscriptions.ts: DTOs para gerenciamento de assinaturas (CreateSubscriptionDto, UpdateSubscriptionDto, Subscription, SubscriptionStatus, SubscriptionFrequency).
+coupons.ts: DTOs para gerenciamento de cupons (Coupon, CouponType, CouponTarget, CouponApplicationResult).
+guarantee.ts: DTOs para gerenciamento de garantia de serviço (SubmitClaimDto, GuaranteeClaim, ClaimStatus).
+pricing.ts: DTOs para precificação dinâmica (GetDynamicPriceDto, DynamicPriceResult, PricingRule).
 13. Componentes Reutilizáveis (components/)
 A pasta components/ contém diversos componentes reutilizáveis para construir a UI de forma consistente e eficiente.
 
-components/common/Card.tsx (NOVO): Componente de contêiner básico com estilo de cartão, incluindo sombra.
-components/common/Header.tsx (NOVO): Cabeçalho padrão para telas, com título e opção de botão de voltar e componente à direita.
-components/common/PrimaryButton.tsx (NOVO): Botão primário com gradiente e sombra, incluindo estado de carregamento.
-components/common/ScreenContainer.tsx (NOVO): Contêiner de tela base que gerencia safe areas, status bar e rolagem opcional.
-components/common/TextInputWithIcon.tsx (NOVO): Campo de entrada de texto com um ícone, estilizado com base no tema.
-components/common/Badges/ProviderBadge.tsx (NOVO): Componente para exibir visualmente os badges de reputação do provedor.
+components/common/Card.tsx: Componente de contêiner básico com estilo de cartão, incluindo sombra.
+components/common/Header.tsx: Cabeçalho padrão para telas, com título e opção de botão de voltar e componente à direita.
+components/common/PrimaryButton.tsx: Botão primário com gradiente e sombra, incluindo estado de carregamento.
+components/common/ScreenContainer.tsx: Contêiner de tela base que gerencia safe areas, status bar e rolagem opcional.
+components/common/TextInputWithIcon.tsx: Campo de entrada de texto com um ícone, estilizado com base no tema.
+components/common/Badges/ProviderBadge.tsx: Componente para exibir visualmente os badges de reputação do provedor.
 auth/components/: Componentes específicos para formulários de autenticação (e.g., InputWithIcon, AnimatedErrorMessage).
 client/: Componentes específicos para o cliente (e.g., booking/success, explore/home, explore/provider).
 provider/: Componentes específicos para o provedor (e.g., dashboard, earnings, schedule/manager).
 ui/: Componentes de UI genéricos (e.g., ToastMessage).
 ServiceItemSkeleton: Componente de placeholder para carregamento de itens de serviço, utilizado para otimizar o desempenho de listas (FlatList).
-13.1. src/theme/colors.ts (NOVO)
+13.1. src/theme/colors.ts
 Caminho: LimpeJaApp/src/theme/colors.ts
 Propósito: Define a paleta de cores centralizada para toda a aplicação.
 Funcionalidades Chave:
 
 Define cores primárias, secundárias, de fundo, texto, status e bordas.
-13.2. src/theme/shadows.ts (NOVO)
+13.2. src/theme/shadows.ts
 Caminho: LimpeJaApp/src/theme/shadows.ts
 Propósito: Define estilos de sombra reutilizáveis para diferentes componentes (cartões, botões, inputs).
 Dependências: colors.ts.
 
-13.3. src/theme/typography.ts (NOVO)
+13.3. src/theme/typography.ts
 Caminho: LimpeJaApp/src/theme/typography.ts
 Propósito: Define estilos de tipografia (fontes, tamanhos, pesos, cores) para garantir consistência visual.
 Dependências: colors.ts.
@@ -949,9 +948,9 @@ O Expo Router é fundamental para o fluxo de navegação, utilizando um sistema 
 /: Ponto de entrada, redireciona para /welcome ou para o fluxo de autenticação/dashboard via _layout.tsx raiz.
 /welcome: Tela de boas-vindas.
 /(auth): Grupo de rotas de autenticação (/login, /register-options, /client-register, /provider-register, /forgot-password).
-/(client): Grupo de rotas para clientes (/explore, /[providerId], /schedule-service, /bookings, /messages, /profile, /subscriptions (NOVO)).
+/(client): Grupo de rotas para clientes (/explore, /[providerId], /schedule-service, /bookings, /messages, /profile, /subscriptions).
 /(provider): Grupo de rotas para provedores (/dashboard, /schedule, /earnings, /messages, /profile).
-/(common): Grupo de rotas comuns a ambos os papéis (/settings, /help, /notifications, /feedback/[targetId], feedback/dispute, referrals, loyalty, /termos, privacidade, /safety (NOVO)).
+/(common): Grupo de rotas comuns a ambos os papéis (/settings, /help, /notifications, /feedback/[targetId], feedback/dispute, referrals, loyalty, /termos, privacidade, /safety).
 15. Considerações Finais
 Esta documentação fornece uma visão aprofundada do frontend do LimpeJáApp, destacando sua estrutura modular, o uso extensivo de tipagem (TypeScript), a transição para TanStack Query para gerenciamento de estado do servidor, e a integração com o backend via Axios e WebSockets. As animações e a organização do código contribuem para uma experiência de usuário fluida e um código-base manutenível. A clareza nas interconexões entre arquivos e a separação de responsabilidades são pilares importantes para o desenvolvimento contínuo do aplicativo, com foco em escalabilidade, segurança (LGPD, Rate Limiting), e mecanismos de crescimento (Indicação, Fidelidade). Com as novas funcionalidades de Assinaturas, Segurança (botão de pânico e relatório de incidentes), Cupons, Garantia de Serviço e Precificação Dinâmica, o LimpeJáApp está posicionado para ser uma plataforma robusta e competitiva no mercado de serviços.
 
@@ -963,7 +962,6 @@ Construído com NestJS, um framework progressivo de Node.js, este backend adota 
 
 2. Arquitetura
 2.1. Tecnologias Principais
-
 Framework: NestJS (Node.js) - Escolhido por sua modularidade, forte tipagem (TypeScript), e aderência a padrões de arquitetura (MVC, DDD). É um framework progressivo que permite construir aplicações eficientes, escaláveis e de nível empresarial. [GitHub - nestjs/nest, NestJS | LinkedIn]
 Linguagem: TypeScript - Oferece segurança de tipo, melhorando a qualidade e manutenibilidade do código. O NestJS impõe as melhores práticas de desenvolvimento, como separação de módulos, gerenciamento de dependências e princípios SOLID. [NestJS | LinkedIn]
 Banco de Dados: PostgreSQL (configurado via DATABASE_URL) - Um banco de dados relacional robusto e escalável, com suporte a extensões geoespaciais como PostGIS (utilizado para geocodificação).
@@ -982,8 +980,7 @@ Twilio: Para serviços de SMS/OTP (funcionalidade de OTP desativada na versão a
 Firebase Admin SDK: Para funcionalidades como autenticação (se integrada), notificações push, etc.
 Google Cloud Storage (GCS): Para armazenamento de arquivos como avatares e documentos.
 2.2. Estrutura de Módulos (NestJS)
-
-O backend é organizado em módulos coesos, seguindo o princípio de responsabilidade única. Cada módulo encapsula funcionalidades específicas, incluindo seus próprios controladores, serviços, DTOs e entidades.
+O backend é organizado em módulos coesos, seguindo o princípio de responsabilidade única. Cada módulo encapsula funcionalidades específicas, incluindo seus próprios controladores, serviços, DTOs e entidades. A resolução de dependências circulares entre módulos é gerenciada eficientemente com o uso de forwardRef(), garantindo a correta inicialização da aplicação.
 
 src/auth: Gerenciamento de autenticação (registro, login, redefinição de senha).
 src/users: Operações genéricas sobre usuários (perfis, dados básicos).
@@ -1010,14 +1007,13 @@ src/document-processing: Módulo para processamento de documentos (OCR, liveness
 src/prisma: Módulo global para o PrismaService.
 src/config: Módulo global para gerenciamento de configurações.
 src/common: Componentes reutilizáveis (pipes, filtros de exceção, DTOs genéricos, enums, serviços utilitários como e-mail e geocodificação).
-src/subscriptions (NOVO): Gerenciamento de assinaturas e agendamentos recorrentes.
-src/safety (NOVO): Gerenciamento de alertas de pânico e relatórios de incidentes.
-src/coupons (NOVO): Gerenciamento de cupons de desconto.
-src/guarantee (NOVO): Gerenciamento de solicitações de garantia de serviço/seguro.
-src/pricing (NOVO): Lógica de precificação dinâmica (surge pricing).
-src/geocoding (NOVO): Módulo para geocodificação de endereços e obtenção de coordenadas.
+src/subscriptions: Gerenciamento de assinaturas e agendamentos recorrentes.
+src/safety: Gerenciamento de alertas de pânico e relatórios de incidentes.
+src/coupons: Gerenciamento de cupons de desconto.
+src/guarantee: Gerenciamento de solicitações de garantia de serviço/seguro.
+src/pricing: Lógica de precificação dinâmica (surge pricing).
+src/geocoding: Módulo para geocodificação de endereços e obtenção de coordenadas.
 2.3. Fluxo de Requisição
-
 Requisição HTTP/WebSocket: O frontend envia uma requisição para um endpoint específico.
 Guards (Autenticação/Autorização): JwtAuthGuard valida o token JWT. RolesGuard verifica se o usuário autenticado possui as roles necessárias para acessar a rota. Para WebSockets, WsAuthGuard realiza a autenticação.
 Pipes (Validação/Transformação): ValidationPipe (globalmente aplicado) valida os DTOs de entrada, garantindo a integridade dos dados e transformando-os para o tipo correto.
@@ -1076,10 +1072,10 @@ DELETE /providers/:id (ADMIN): Deleta um provedor por ID.
 GET /providers: Busca provedores com filtros (termo, localização, rating, geoespacial).
 GET /providers/recommended: Obtém uma lista de provedores recomendados.
 GET /providers/nearby: Obtém uma lista de provedores próximos, possivelmente com base na localização do usuário.
-Serviço (ProvidersService): Lógica para buscar provedores por ID/UserID, atualizar dados do provedor, e realizar buscas complexas. Aprimorado com busca geoespacial utilizando PostGIS (ST_DistanceSphere, ST_DWithin) para encontrar provedores por proximidade, além de filtros por termo, serviço, localização e rating. Inclui fiveStarReviewCount e monthlyBookingsCount nos resultados. Contém métodos para buscar provedores pendentes de verificação (getPendingProviders) e provedores recomendados/experientes (findTopRatedOrExperiencedProviders). Implementa lógica de cache para perfis públicos de provedores (GET /providers/:id). Será estendido para incluir a lógica de smart matching (seleção algorítmica do melhor provedor) e a gestão de badges/níveis de reputação.
+Serviço (ProvidersService): Lógica para buscar provedores por ID/UserID, atualizar dados do provedor, e realizar buscas complexas. Aprimorado com busca geoespacial utilizando PostGIS (ST_DistanceSphere, ST_DWithin) para encontrar provedores por proximidade, além de filtros por termo, serviço, localização e rating. Inclui fiveStarReviewCount e monthlyBookingsCount nos resultados. Contém métodos para buscar provedores pendentes de verificação (getPendingProviders) e provedores recomendados/experientes (findTopRatedOrExperiencedProviders). Implementa lógica de cache para perfis públicos de provedores (GET /providers/:id) e para resultados de busca. A lógica para atribuir e atualizar badges (updateProviderBadges) com base em critérios como verificação, avaliações 5 estrelas e volume de serviços concluídos foi implementada. Será estendido para incluir a lógica de smart matching (seleção algorítmica do melhor provedor) e a gestão de badges/níveis de reputação.
 DTOs: ProviderDetailsDto, UpdateProviderProfileDto, ProviderSearchDto, ProviderServiceOfferingDto.
 Entidades: ProviderEntity.
-3.5. Módulo de Disponibilidade (AvailabilityModule)
+3.5. Módulo de Disponibilidade (AvailabilityModule) (ATUALIZADO)
 Responsabilidade: Gerenciar os horários de disponibilidade dos provedores.
 
 Controlador (AvailabilityController): Explicitamente Definido.
@@ -1087,10 +1083,10 @@ GET /providers/:providerId/availability: Obtém horários de disponibilidade de 
 PATCH /providers/:providerId/availability (PROVIDER): Atualiza múltiplos slots de disponibilidade (cria, atualiza, deleta).
 POST /providers/:providerId/availability (PROVIDER): Adiciona um novo slot de disponibilidade.
 DELETE /providers/:providerId/availability/:availabilityId (PROVIDER): Deleta um slot específico.
-Serviço (AvailabilityService): Lógica para CRUD de slots de disponibilidade, incluindo validação de propriedade do provedor. Correção de Fuso Horário: A função getAvailability foi corrigida para usar Date.UTC e getUTCDay() ao calcular o dia da semana, garantindo a precisão da busca de disponibilidade independentemente do fuso horário do servidor. Considera agendamentos CONFIRMED e COMPLETED para determinar horários ocupados.
+Serviço (AvailabilityService): Lógica para CRUD de slots de disponibilidade, incluindo validação de propriedade do provedor. Correção de Fuso Horário: A função getAvailability foi corrigida para usar Date.UTC e getUTCDay() ao calcular o dia da semana, garantindo a precisão da busca de disponibilidade independentemente do fuso horário do servidor. Considera agendamentos CONFIRMED e COMPLETED para determinar horários ocupados. O ProvidersModule foi importado neste módulo.
 DTOs: GetAvailabilityDto, UpdateAvailabilityDto.
 Entidades: AvailabilityEntity.
-3.6. Módulo de Tipos de Serviço Globais (ServicesModule)
+3.6. Módulo de Tipos de Serviço Globais (ServicesModule) (ATUALIZADO)
 Responsabilidade: Gerenciar os tipos de serviços que a plataforma oferece (e.g., "Limpeza Padrão", "Eletricista").
 
 Controlador (ServicesController):
@@ -1099,10 +1095,10 @@ GET /services: Lista todos os tipos de serviço.
 GET /services/:id: Obtém um tipo de serviço por ID.
 PATCH /services/:id (ADMIN): Atualiza um tipo de serviço.
 DELETE /services/:id (ADMIN): Deleta um tipo de serviço.
-Serviço (ServicesService): Lógica para CRUD de tipos de serviço. O campo price é corretamente convertido para Prisma.Decimal tanto na criação quanto na atualização. Implementa lógica de cache para lista de categorias de serviços (GET /services).
+Serviço (ServicesService): Lógica para CRUD de tipos de serviço. O campo price é corretamente convertido para Prisma.Decimal tanto na criação quanto na atualização. Implementa lógica de cache para lista de categorias de serviços (GET /services) e para serviços individuais (GET /services/:id).
 DTOs: CreateServiceDto, UpdateServiceDto, ServiceDetailsDto.
 Entidades: ServiceEntity.
-3.7. Módulo de Serviços Oferecidos por Provedores (ProviderServicesModule)
+3.7. Módulo de Serviços Oferecidos por Provedores (ProviderServicesModule) (ATUALIZADO)
 Responsabilidade: Gerenciar os serviços específicos que cada provedor oferece (e.g., "Maria oferece Limpeza Padrão por R$100").
 
 Controlador (ProviderServicesController):
@@ -1110,7 +1106,7 @@ POST /providers/:providerId/services (PROVIDER): Adiciona um serviço oferecido 
 GET /providers/:providerId/services: Lista todos os serviços oferecidos por um provedor.
 PATCH /providers/:providerId/services/:id (PROVIDER): Atualiza um serviço oferecido.
 DELETE /providers/:providerId/services/:id (PROVIDER): Remove um serviço oferecido.
-Serviço (ProviderServicesService): Lógica para CRUD de ProviderService, incluindo validações de existência e unicidade. Agora suporta diferentes tipos de precificação (PricingType) como FIXED_PRICE, HOURLY, BY_SIZE, CUSTOM_QUOTE, com campos pricePerSquareMeter e pricePerRoom.
+Serviço (ProviderServicesService): Lógica para CRUD de ProviderService, incluindo validações de existência e unicidade. Agora suporta diferentes tipos de precificação (PricingType) como FIXED_PRICE, HOURLY, BY_SIZE, CUSTOM_QUOTE, com campos pricePerSquareMeter e pricePerRoom. Os serviços ProvidersService e ServicesService foram injetados para validação da existência de provedores e tipos de serviço.
 DTOs: CreateProviderServiceDto, UpdateProviderServiceDto, ProviderServiceDetailsDto.
 Entidades: ProviderServiceEntity.
 3.8. Módulo de Agendamentos (BookingsModule) (ATUALIZADO)
@@ -1137,7 +1133,7 @@ POST /payments/webhook/pix: NOVO ENDPOINT e Integrado. Recebe notificações de 
 Serviço (PaymentsService): Integração Real com PagSeguro API: createPixCharge: Orquestra a criação de uma cobrança PIX. Busca os detalhes completos do cliente (e-mail, nome, telefone, CPF, endereço) e do agendamento/serviço. Cria uma transação pendente no banco de dados. Chama o método interno createPixTransactionWithGateway para interagir com a API /orders do PagSeguro, gerando o QR Code e o BR Code. Atualiza a transação local com o ID da transação do gateway e a URL do QR Code. Se houver um bookingId associado, atualiza o status do agendamento para PENDING. createPixTransactionWithGateway: Método interno que constrói o payload necessário e faz a requisição POST para a API /orders do PagSeguro, utilizando o PAGSEGURO_API_TOKEN e PAGSEGURO_API_BASE_URL configurados. Lida com a estrutura de resposta do PagSeguro. handlePixWebhook: Processa as notificações de webhook do PagSeguro. Encontra a transação local pelo gatewayTransactionId (que é o ID do pedido do PagSeguro). Atualiza o status da transação e do agendamento (BookingStatus.CONFIRMED ou BookingStatus.CANCELED) com base no status recebido do webhook. requestWithdrawal: Processa solicitações de saque de provedores, validando o saldo disponível e registrando a transação. Tratamento de Dependência Circular: O BookingsService é injetado via @Inject(forwardRef(() => BookingsService)), resolvendo a dependência circular. Será estendido para aplicar descontos de cupons no cálculo do pagamento.
 DTOs: CreatePixChargeDto, PixChargeResponseDto, RequestWithdrawalDto, MessageResponseDto.
 Entidades: TransactionEntity.
-3.10. Módulo de Chat (ChatModule)
+3.10. Módulo de Chat (ChatModule) (ATUALIZADO)
 Responsabilidade: Gerenciar a comunicação de mensagens entre usuários. Preparado para escala horizontal utilizando socket.io-redis-adapter para sincronização de mensagens entre múltiplas instâncias do backend.
 
 Controlador (ChatController):
@@ -1148,7 +1144,7 @@ GET /chat/me/conversations: Implementado. Obtém a lista de conversas do usuári
 Gateway (ChatGateway): (WebSocket)
 @SubscribeMessage('sendMessage'): Lida com o envio de mensagens em tempo real.
 @SubscribeMessage('joinChat'): Permite que clientes entrem em salas de chat.
-Serviço (ChatService): Lógica para criar e buscar mensagens. Implementa lógica de permissão: só permite enviar/acessar mensagens se houver um agendamento CONFIRMED entre os participantes. Bloqueia se o agendamento estiver COMPLETED ou CANCELED.
+Serviço (ChatService): Lógica para criar e buscar mensagens. Implementa lógica de permissão: só permite enviar/acessar mensagens se houver um agendamento CONFIRMED entre os participantes. Bloqueia se o agendamento estiver COMPLETED ou CANCELED. O AuthModule foi importado neste módulo.
 DTOs: SendMessageDto, GetMessagesDto, ChatDetailsDto.
 Entidades: Message.
 3.11. Módulo de Notificações (NotificationsModule) (ATUALIZADO)
@@ -1175,7 +1171,7 @@ GET /reviews/provider/:providerId/suggestions: Obtém sugestões inteligentes pa
 Serviço (ReviewsService): Lógica para submeter avaliações (verificando agendamento, status, duplicidade) e buscar avaliações. Calcula detalhamento de avaliações e gera sugestões inteligentes (precificação, disponibilidade, melhoria de serviço, marketing) com base em dados de avaliação e agendamentos. Será estendido para atualizar os badges/níveis de reputação do provedor com base nas avaliações recebidas.
 DTOs: SubmitReviewDto, GetReviewsDto, ReviewDto, SmartSuggestionDto, DetailedRatingBreakdownDto.
 Entidades: ReviewEntity.
-3.13. Módulo de Ofertas (OffersModule)
+3.13. Módulo de Ofertas (OffersModule) (ATUALIZADO)
 Responsabilidade: Gerenciar ofertas e promoções da plataforma.
 
 Controlador (OffersController):
@@ -1184,7 +1180,7 @@ GET /offers: Lista todas as ofertas.
 GET /offers/:id: Obtém detalhes de uma oferta específica.
 PATCH /offers/:id (ADMIN): Atualiza uma oferta existente.
 DELETE /offers/:id (ADMIN): Exclui uma oferta.
-Serviço (OffersService): Lógica para CRUD de ofertas. Inclui método searchOffers para buscar ofertas por termo e validade.
+Serviço (OffersService): Lógica para CRUD de ofertas. Inclui método searchOffers para buscar ofertas por termo e validade. O campo validUntil é corretamente convertido para Date.
 DTOs: CreateOfferDto, UpdateOfferDto, OfferDetailsDto.
 Entidades: Offer.
 3.14. Módulo de Busca (SearchModule) (ATUALIZADO)
@@ -1192,7 +1188,7 @@ Responsabilidade: Fornecer um endpoint unificado para busca abrangente. Será es
 
 Controlador (SearchController):
 GET /search: Realiza uma busca por provedores, serviços, etc., usando diversos critérios.
-Serviço (SearchService): Orchestrates calls to other services (ProvidersService, ServicesService, ProviderServicesService, OffersService) to compile search results. Será estendido para integrar a lógica de smart matching e consultar o PricingService para incluir preços dinâmicos nos resultados.
+Serviço (SearchService): Orchestrates calls to other services (ProvidersService, ServicesService, ProviderServicesService, OffersService) to compile search results. O PricingModule foi importado neste módulo. Será estendido para integrar a lógica de smart matching e consultar o PricingService para incluir preços dinâmicos nos resultados.
 DTOs: SearchQueryDto, ProviderServiceSearchResultDto.
 3.15. Módulo de Aplicação (AppModule / Geral)
 Responsabilidade: Gerenciar rotas de nível de aplicação e verificações de saúde.
@@ -1202,7 +1198,7 @@ GET /: Rota raiz, geralmente para verificar se a API está online ou retornar um
 GET /health: Endpoint para verificações de saúde da aplicação.
 Serviço (AppService): Lógica para as rotas gerais da aplicação.
 DTOs: Nenhum DTO específico para estas rotas.
-3.16. Módulo de Verificação (VerificationModule)
+3.16. Módulo de Verificação (VerificationModule) (ATUALIZADO)
 Responsabilidade: Gerenciar o processo de verificação de provedores, incluindo upload e processamento de documentos, selfie, OCR, verificação de vivacidade (liveness), comparação facial e aprovação/rejeição manual. Utiliza o QueueService para enfileirar tarefas de processamento de documentos e selfies, garantindo que operações demoradas não bloqueiem a requisição HTTP.
 
 Controlador (VerificationController): Explicitamente Definido.
@@ -1212,24 +1208,24 @@ POST /verification/upload-selfie (PROVIDER): Permite que o provedor faça upload
 PATCH /verification/:providerId/status (ADMIN): Atualiza manualmente o status de verificação de um provedor (APROVADO, REJEITADO, etc.).
 POST /verification/reject/:providerId (ADMIN): Rejeita um provedor, exigindo um motivo.
 GET /verification/status/:providerId (ADMIN, PROVIDER): Obtém o status atual da verificação de um provedor, incluindo o progresso dos uploads e resultados de OCR/Liveness.
-Serviço (VerificationService): Orquestra o fluxo de verificação. Responsável por: Gerenciar uploads de arquivos para armazenamento (utilizando Google Cloud Storage). Chamar DocumentProcessingService para OCR, liveness check e comparação facial (integrando com APIs de terceiros como Cellereit Facematch). Atualizar o verificationStatus do provedor automaticamente com base no progresso das verificações (updateProviderVerificationStatus). Permitir atualizações manuais de status e registro de motivos de rejeição. Utiliza o QueueService para enfileirar tarefas de processamento de documentos e selfies, garantindo que operações demoradas não bloqueiem a requisição HTTP.
+Serviço (VerificationService): Orquestra o fluxo de verificação. Responsável por: Gerenciar uploads de arquivos para armazenamento (utilizando Google Cloud Storage). Chamar DocumentProcessingService para OCR, liveness check e comparação facial (integrando com APIs de terceiros como Cellereit Facematch). Atualizar o verificationStatus do provedor automaticamente com base no progresso das verificações (updateProviderVerificationStatus). Permitir atualizações manuais de status e registro de motivos de rejeição. Utiliza o QueueService para enfileirar tarefas de processamento de documentos e selfies, garantindo que operações demoradas não bloqueiem a requisição HTTP. O ProvidersModule e o QueuesModule foram importados neste módulo.
 DTOs: UploadDocumentDto, UploadSelfieDto.
 3.17. Módulo de Dashboard (DashboardModule) (ATUALIZADO)
 Responsabilidade: Fornecer dados sumarizados e relevantes para o painel do provedor logado. Será estendido para incluir mais métricas de performance e integrar-se com o módulo de reviews para exibir dados de badges/reputação.
 
 Controlador (DashboardController):
 GET /providers/me/dashboard (PROVIDER): Obtém todos os dados necessários para o dashboard de um provedor, incluindo agendamentos futuros, ganhos, avaliações recentes, contagem de avaliações 5 estrelas e contagem de agendamentos mensais.
-Serviço (DashboardService): Agrega dados de diversos serviços (ProvidersService, BookingsService, EarningsService, ReviewsService) para compilar o DashboardDto.
+Serviço (DashboardService): Agrega dados de diversos serviços (ProvidersService, BookingsService, EarningsService, ReviewsService) para compilar o DashboardDto. O ReviewsModule e o NotificationsModule foram importados neste módulo.
 DTOs: DashboardDto.
-3.18. Módulo de Ganhos (EarningsModule)
+3.18. Módulo de Ganhos (EarningsModule) (ATUALIZADO)
 Responsabilidade: Gerenciar os ganhos e solicitações de saque dos provedores.
 
 Controlador (EarningsController):
 GET /providers/me/earnings: Obtém os dados de ganhos do provedor logado.
 POST /providers/me/earnings/withdrawal: Permite que o provedor solicite um saque.
-Serviço (EarningsService): Calcula os ganhos totais, o valor disponível para saque e os saques pendentes com base nos agendamentos concluídos e transações. Inclui transações recentes e um detalhamento dos ganhos por período.
+Serviço (EarningsService): Calcula os ganhos totais, o valor disponível para saque e os saques pendentes com base nos agendamentos concluídos e transações. Inclui transações recentes e um detalhamento dos ganhos por período. O ProvidersModule foi importado neste módulo.
 DTOs: EarningsResponseDto, WithdrawalRequestDto, WithdrawalResponseDto.
-3.19. Módulo de FAQs (FaqsModule)
+3.19. Módulo de FAQs (FaqsModule) (ATUALIZADO)
 Responsabilidade: Gerenciar as Perguntas Frequentes (FAQs) da aplicação. Implementa lógica de cache para FAQs (GET /faqs).
 
 Controlador (FaqsController):
@@ -1238,20 +1234,20 @@ GET /faqs: Obtém todos os itens de FAQ.
 GET /faqs/:id: Obtém um item de FAQ por ID.
 PATCH /faqs/:id (ADMIN): Atualiza um item de FAQ.
 DELETE /faqs/:id (ADMIN): Exclui um item de FAQ.
-Serviço (FaqsService): Lógica para CRUD de itens de FAQ.
+Serviço (FaqsService): Lógica para CRUD de itens de FAQ. O AuthModule foi importado neste módulo.
 DTOs: CreateFaqDto, UpdateFaqDto.
 Entidades: FaqItemEntity.
-3.20. Módulo de Indicações (ReferralsModule) (NOVO)
+3.20. Módulo de Indicações (ReferralsModule) (ATUALIZADO)
 Responsabilidade: Gerenciar o programa de indicações de usuários.
 
 Controlador (ReferralsController):
 POST /referrals: Cria uma nova indicação, associando um usuário indicado a um usuário referenciador.
 GET /referrals/me: Obtém as indicações feitas pelo usuário logado.
 GET /referrals/:id: Obtém os detalhes de uma indicação específica (acesso restrito a administradores).
-Serviço (ReferralsService): Lógica para criar, buscar e gerenciar indicações. Inclui validações para garantir que um usuário não seja indicado por si mesmo ou indicado múltiplas vezes pelo mesmo referenciador.
+Serviço (ReferralsService): Lógica para criar, buscar e gerenciar indicações. Inclui validações para garantir que um usuário não seja indicado por si mesmo ou indicado múltiplas vezes pelo mesmo referenciador. O NotificationsModule, UsersModule e PrismaModule foram importados neste módulo.
 DTOs: CreateReferralDto, ReferralDto.
 Entidades: ReferralEntity.
-3.21. Módulo de Filas (QueuesModule) (NOVO)
+3.21. Módulo de Filas (QueuesModule)
 Responsabilidade: Orquestrar o processamento de tarefas assíncronas usando filas de mensagens.
 
 Provedor (QueuesService): Gerencia a criação e o acesso a filas (ex: verificationQueue, notificationsQueue, disputesQueue, dataExportQueue).
@@ -1260,13 +1256,13 @@ verification.worker.ts: Processa tarefas relacionadas à verificação de proved
 notification.worker.ts: Processa o envio de notificações (ex: e-mail, push) de forma assíncrona.
 Funcionalidades Chave: Permite que operações demoradas sejam executadas em segundo plano, melhorando a responsividade da API. Garante a resiliência do sistema, reprocessando tarefas em caso de falha.
 Interconexões: Utilizado por VerificationModule e NotificationsModule para enfileirar tarefas.
-3.22. Módulo de Cache (CacheModule) (NOVO)
+3.22. Módulo de Cache (CacheModule)
 Responsabilidade: Fornecer uma camada de cache para melhorar a performance da aplicação.
 
 Provedor (CacheService): Gerencia operações de cache (ex: get, set, del, reset) utilizando Redis.
 Funcionalidades Chave: Reduz a carga no banco de dados e em serviços externos, armazenando dados frequentemente acessados. Configurável para diferentes estratégias de cache (TTL, invalidação).
 Interconexões: Pode ser injetado em qualquer serviço que se beneficie do cache de dados (e.g., ProvidersService, ServicesService, FaqsService).
-3.23. Módulo de Processamento de Documentos (DocumentProcessingModule) (NOVO)
+3.23. Módulo de Processamento de Documentos (DocumentProcessingModule)
 Responsabilidade: Encapsular a lógica de processamento de arquivos e imagens para verificação.
 
 Serviço (DocumentProcessingService):
@@ -1276,7 +1272,6 @@ performLivenessCheckFromUrl(selfieUrl): Simula ou integra com um serviço de ver
 compareFacesFromUrls(selfieUrl, documentPhotoUrl): Simula ou integra com um serviço de comparação facial.
 Interconexões: Utilizado principalmente pelo VerificationModule para processar documentos e selfies de provedores.
 3.24. Componentes Globais (common/, config/, prisma/)
-
 common/:
 filters/http-exception.filter.ts: Implementa o filtro de exceções global, padronizando as respostas de erro.
 constants/roles.enum.ts: Define o enum UserRole (CLIENT, PROVIDER, ADMIN).
@@ -1287,7 +1282,7 @@ entities/address.entity.ts: Entidade base para endereços.
 enums/pricing-type.enum.ts: Define o enum PricingType.
 enums/booking-status.enum.ts: Define o enum BookingStatus.
 enums/verification-status.enum.ts: Define o enum VerificationStatus.
-enums/dispute-reason.enum.ts: Define o enum DisputeReason (NOVO).
+enums/dispute-reason.enum.ts: Define o enum DisputeReason.
 utils/code-generator.ts: Utilitário para gerar códigos aleatórios (ex: para referências).
 services/email.service.ts: Serviço para envio de e-mails.
 services/geocoding.service.ts: Serviço para geocodificação de endereços.
@@ -1300,8 +1295,7 @@ prisma/:
 prisma.module.ts: Módulo global que exporta o PrismaService.
 prisma.service.ts: Estende PrismaClient, encapsulando a conexão com o banco de dados.
 Novos Módulos de Backend
-
-3.25. Módulo de Assinaturas (SubscriptionsModule) (NOVO)
+3.25. Módulo de Assinaturas (SubscriptionsModule)
 Responsabilidade: Gerenciar o ciclo de vida de assinaturas de serviços e a geração de agendamentos recorrentes.
 
 Controlador (SubscriptionsController):
@@ -1312,7 +1306,7 @@ PATCH /subscriptions/:id: Atualiza o status ou detalhes da assinatura.
 Serviço (SubscriptionsService): Lógica para criar assinaturas, programar a geração de agendamentos futuros (via BullMQ), e gerenciar o ciclo de vida da assinatura (pausar, cancelar).
 DTOs: CreateSubscriptionDto, UpdateSubscriptionDto, SubscriptionDto.
 Entidades: SubscriptionEntity.
-3.26. Módulo de Segurança (SafetyModule) (NOVO)
+3.26. Módulo de Segurança (SafetyModule) (ATUALIZADO)
 Responsabilidade: Fornecer funcionalidades para alertas de pânico e relatórios de incidentes.
 
 Controlador (SafetyController):
@@ -1320,10 +1314,10 @@ POST /safety/panic: Recebe alertas de pânico com localização.
 POST /safety/incident: Recebe relatórios detalhados de incidentes.
 GET /safety/me/incidents: Lista incidentes reportados pelo usuário.
 PATCH /safety/incident/:id/status (ADMIN): Atualiza status de um incidente.
-Serviço (SafetyService): Lógica para processar alertas de pânico (notificar admins/equipe de segurança) e incidentes (registrar, acionar workflows de investigação).
+Serviço (SafetyService): Lógica para processar alertas de pânico (notificar admins/equipe de segurança) e incidentes (registrar, acionar workflows de investigação). O EmailModule, SmsModule e QueuesModule foram importados neste módulo.
 DTOs: ReportPanicDto, IncidentReportDto, IncidentDto, PanicAlertDto.
 Entidades: IncidentEntity, PanicAlertEntity.
-3.27. Módulo de Cupons (CouponsModule) (NOVO)
+3.27. Módulo de Cupons (CouponsModule)
 Responsabilidade: Gerenciar a criação, validação e aplicação de cupons de desconto.
 
 Controlador (CouponsController):
@@ -1333,7 +1327,7 @@ POST /coupons/apply: Endpoint para o frontend validar e aplicar o cupom em uma s
 Serviço (CouponsService): Lógica para criar cupons com regras de validade, tipo de desconto, uso máximo e elegibilidade. Implementa a validação e aplicação do desconto.
 DTOs: CreateCouponDto, ApplyCouponDto, CouponDto.
 Entidades: CouponEntity.
-3.28. Módulo de Garantia (GuaranteeModule) (NOVO)
+3.28. Módulo de Garantia (GuaranteeModule)
 Responsabilidade: Gerenciar solicitações de garantia de serviço e seguro.
 
 Controlador (GuaranteeController):
@@ -1343,36 +1337,31 @@ PATCH /guarantee/claims/:id/status (ADMIN): Atualiza status da solicitação.
 Serviço (GuaranteeService): Lógica para registrar solicitações de garantia, notificar equipes relevantes e gerenciar o processo de resolução.
 DTOs: SubmitClaimDto, GuaranteeClaimDto.
 Entidades: GuaranteeClaimEntity.
-3.29. Módulo de Precificação (PricingModule) (NOVO)
+3.29. Módulo de Precificação (PricingModule) (ATUALIZADO)
 Responsabilidade: Implementar a lógica de precificação dinâmica (surge pricing) baseada em demanda, localização e horário.
 
 Controlador (PricingController):
 POST /pricing/calculate: Endpoint para calcular o preço dinâmico para um serviço/provedor/local/horário.
 POST /pricing/rules (ADMIN): Cria regras de precificação dinâmica.
-Serviço (PricingService): Lógica para aplicar regras de precificação dinâmica, considerando fatores como demanda, localização, horário e tipo de serviço para determinar o preço final.
+Serviço (PricingService): Lógica para aplicar regras de precificação dinâmica, considerando fatores como demanda, localização, horário e tipo de serviço para determinar o preço final. O campo surgeFactor é corretamente convertido para Prisma.Decimal.
 DTOs: GetDynamicPriceDto, DynamicPriceResultDto, CreatePricingRuleDto, PricingRuleDto.
 Entidades: PricingRuleEntity.
-3.30. Módulo de Geocodificação (GeocodingModule) (NOVO)
+3.30. Módulo de Geocodificação (GeocodingModule) (ATUALIZADO)
 Responsabilidade: Encapsular a lógica de geocodificação de endereços e obtenção de coordenadas.
 
 Controlador (GeocodingController):
 GET /geocoding/address: Converte um endereço em coordenadas.
 GET /geocoding/reverse: Converte coordenadas em endereço (opcional).
-Serviço (GeocodingService): Lógica para interagir com APIs de geocodificação (ex: Google Maps Geocoding API) para converter endereços em coordenadas e vice-versa.
+Serviço (GeocodingService): Lógica para interagir com APIs de geocodificação (ex: Google Maps Geocoding API) para converter endereços em coordenadas e vice-versa. O ConfigModule foi importado neste módulo.
 DTOs: GeocodeResponseDto.
 4. Modelo de Dados (Prisma Schema) (ATUALIZADO)
 O schema.prisma define a estrutura do banco de dados, incluindo modelos, campos, tipos e relações.
-
-// prisma/schema.prisma
 // Este arquivo é o ponto de partida para o seu banco de dados.
 // Ele define os modelos de dados e como eles se relacionam.
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["postgresqlExtensions"]
   // ADICIONADO: Configuração para binaryTargets para resolver o problema de libssl no Docker
-  // Isso instrui o Prisma a incluir os motores de consulta binários compatíveis com diferentes ambientes Linux,
-  // incluindo aqueles que usam OpenSSL 1.1.x (como Debian Bullseye) e OpenSSL 3.0.x (que é padrão em Node:22).
-  // 'native' garante que o motor de consulta para o sistema operacional atual do Docker seja incluído.
   binaryTargets   = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x"]
 }
 
@@ -1383,6 +1372,9 @@ datasource db {
   extensions = [postgis]
 }
 
+// ---------------------------------
+// Enums
+// ---------------------------------
 // Enum para os diferentes papéis de usuário
 enum UserRole {
   CLIENT
@@ -1442,6 +1434,14 @@ enum DisputeReason {
   OTHER
 }
 
+// NOVO: Enum para o status da disputa
+enum DisputeStatus {
+  PENDING
+  IN_REVIEW
+  RESOLVED
+  REJECTED
+}
+
 // ABS: NOVOS ENUMS PARA MÓDULOS AVANÇADOS
 enum SubscriptionStatus {
   ACTIVE
@@ -1483,6 +1483,14 @@ enum CouponTarget {
   SPECIFIC_PROVIDER
 }
 
+// NOVO: ENUM CouponStatus
+enum CouponStatus {
+  ACTIVE
+  INACTIVE
+  EXPIRED
+  USED_UP
+}
+
 enum ClaimStatus {
   PENDING
   UNDER_REVIEW
@@ -1492,123 +1500,121 @@ enum ClaimStatus {
 }
 // FIM ABS: NOVOS ENUMS PARA MÓDULOS AVANÇADOS
 
+// ---------------------------------
+// Models
+// ---------------------------------
 // Modelo de Usuário (base para Cliente e Provedor)
 model User {
-  id                      String         @id @default(uuid())
-  email                   String         @unique
-  phone                   String?        @unique // Número de telefone para login por SMS
-  passwordHash            String?        // Opcional agora, para suportar login apenas por SMS
-  role                    UserRole       @default(CLIENT)
-  avatarUrl               String?        // <--- NOVA LINHA ADICIONADA AQUI para o avatar do usuário
-  firebaseUid             String?        @unique // Mantido, caso seja usado para outros serviços Firebase
-
-  isPhoneVerified         Boolean        @default(false) // Se o telefone foi verificado
-
+  id                    String           @id @default(uuid())
+  email                 String           @unique
+  phone                 String?          @unique // Número de telefone para login por SMS
+  passwordHash          String?          // Opcional agora, para suportar login apenas por SMS
+  role                  UserRole         @default(CLIENT)
+  avatarUrl             String?          // <--- NOVA LINHA ADICIONADA AQUI para o avatar do usuário
+  firebaseUid           String?          @unique // Mantido, caso seja usado para outros serviços Firebase
+  fullName              String           @default("Nome Padrão")
+  // ADICIONADO: Campo para armazenar o token FCM do dispositivo para notificações push
+  fcmToken              String?          @unique // Token Firebase Cloud Messaging para notificações push
+  isPhoneVerified       Boolean          @default(false) // Se o telefone foi verificado
+  isVerified            Boolean          @default(false) // NOVO: Status de verificação geral do usuário do sistema
   // NOVO: Campo para LGPD - marca a data para exclusão agendada da conta
-  deletionScheduledAt     DateTime?      // Data em que a exclusão da conta foi agendada (para LGPD)
+  deletionScheduledAt   DateTime?        // Data em que a exclusão da conta foi agendada (para LGPD)
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
 
-  createdAt               DateTime       @default(now())
-  updatedAt               DateTime       @updatedAt
-
-  client                  Client?
-  provider                Provider?
-  messagesSent            Message[]      @relation("SentMessages")
-  messagesReceived        Message[]      @relation("ReceivedMessages")
-  notifications           Notification[]
-  chatsAsParticipant1     Chat[]         @relation("ChatParticipant1") // Nova relação para Chat
-  chatsAsParticipant2     Chat[]         @relation("ChatParticipant2") // Nova relação para Chat
-
+  client                Client?
+  provider              Provider?
+  messagesSent          Message[]        @relation("SentMessages")
+  messagesReceived      Message[]        @relation("ReceivedMessages")
+  notifications         Notification[]
+  chatsAsParticipant1   Chat[]           @relation("ChatParticipant1")
+  chatsAsParticipant2   Chat[]           @relation("ChatParticipant2")
   // NOVO: Relações para o modelo Referral
-  referredBy              Referral[]     @relation("ReferredByUser") // Indicações em que este usuário foi o indicado
-  referralsMade           Referral[]     @relation("ReferrerOfUser") // Indicações que este usuário fez
-
-  // NOVO: Relação com o modelo Dispute (CORREÇÃO AQUI)
-  disputesReported        Dispute[]      @relation("DisputeReporter") // Disputas reportadas por este usuário
-
+  referredBy            Referral[]       @relation("ReferredByUser") // Indicações em que este usuário foi o indicado
+  referralsMade         Referral[]       @relation("ReferrerOfUser") // Indicações que este usuário fez
+  // NOVO: Relação com o modelo Dispute
+  disputesReported      Dispute[]        @relation("DisputeReporter") // Disputas reportadas por este usuário
   // ABS: Novas relações para Safety Module
-  reportedIncidents       Incident[]     @relation("ReportedIncidents")
-  panicAlerts             PanicAlert[]   @relation("PanicAlerts")
+  reportedIncidents     Incident[]       @relation("ReportedIncidents")
+  panicAlerts           PanicAlert[]     @relation("PanicAlerts")
   // FIM ABS: Novas relações para Safety Module
+  // NOVO: Relação com o modelo UserConsent
+  userConsents          UserConsent[]
+  // CORREÇÃO: Adicionando o campo de relação inversa para DisputeMessage
+  disputeMessagesSent   DisputeMessage[] @relation("DisputeSender")
 }
 
 // Modelo para Cliente
 model Client {
-  id                     String           @id @default(uuid())
-  userId                 String           @unique
-  user                   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  fullName               String
-  completedBookingsCount Int              @default(0) // NOVO: Contador para programa de fidelidade
-  phone                  String?
-  cpf                    String?          @unique // CORREÇÃO: Adicionado CPF para o cliente
-  address                Address?         @relation("ClientAddress")
-  bookings               Booking[]
-  reviewsMade            Review[]         @relation("ClientReviews") // Avaliações que o cliente fez
-
-  // ABS: Novas métricas para o cliente
-  noShowCount            Int              @default(0)
-  cancellationCount      Int              @default(0)
-  // FIM ABS: Novas métricas para o cliente
-
-  // ABS: Novas relações para módulos avançados
-  subscriptions          Subscription[]
-  guaranteeClaims        GuaranteeClaim[]
-  // FIM ABS: Novas relações para módulos avançados
-
-  // ADICIONADO: Campos para registro de data e hora de criação/atualização do perfil do cliente
-  createdAt              DateTime         @default(now())
-  updatedAt              DateTime         @updatedAt
-}
-
-// Modelo para Provedor
-model Provider {
-  id                      String             @id @default(uuid())
-  userId                  String             @unique
-  user                    User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                      String           @id @default(uuid())
+  userId                  String           @unique
+  user                    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   fullName                String
-  cpf                     String?            @unique // CPF para verificação
-  dateOfBirth             DateTime
+  completedBookingsCount  Int              @default(0) // NOVO: Contador para programa de fidelidade
   phone                   String?
-  address                 Address?           @relation("ProviderAddress")
-  yearsOfExperience       Int?
-  // NOTA: avatarUrl no Provider é redundante se User já tem, mas mantido para consistência do seu schema original.
-  // Se o avatar do provedor for sempre o mesmo do usuário associado, você pode remover esta linha aqui.
-  avatarUrl               String?
-  bio                     String?            // PROPRIEDADE 'BIO' ADICIONADA AQUI
-  providerServices        ProviderService[]
-  fiveStarReviewCount     Int                @default(0) // NOVO: Para bônus por avaliações excelentes
-  monthlyBookingsCount    Int                @default(0) // NOVO: Para bônus por volume de serviços
-  availability            Availability[]
+  cpf                     String?          @unique // CORREÇÃO: Adicionado CPF para o cliente
+  dateOfBirth             DateTime?        // <--- CORRIGIDO: Tornar dateOfBirth opcional
+  address                 Address?         @relation("ClientAddress")
   bookings                Booking[]
-  reviewsReceived         Review[]           @relation("ProviderReviews") // Avaliações que o provedor recebeu
-  earnings                Transaction[]
-
-  // NOVOS CAMPOS PARA VERIFICAÇÃO
-  verificationStatus      VerificationStatus @default(PENDING_INITIAL_REVIEW)
-  documentPhotoFrontUrl   String?
-  documentPhotoBackUrl    String?
-  selfieWithDocumentUrl   String?
-  backgroundCheckResult   Json?              // Armazenar o resultado detalhado da verificação de antecedentes criminais (JSON)
-  ocrResult               Json?              // NOVO: Armazenar resultados de OCR do documento (JSON)
-  livenessResult          Json?              // NOVO: Armazenar resultados de liveness check (JSON)
-  rejectionReason         String?            // Campo para armazenar o motivo da rejeição, se houver
-  pixKey                  String?            // <--- NOVA LINHA ADICIONADA AQUI
-
-  // ABS: Novo campo para Badges de Provedor
-  badges                  String[]           @default([])
-  // FIM ABS: Novo campo para Badges de Provedor
-
+  reviewsMade             Review[]         @relation("ClientReviews") // Avaliações que o cliente fez
+  // ABS: Novas métricas para o cliente
+  noShowCount             Int              @default(0)
+  cancellationCount       Int              @default(0)
+  // FIM ABS: Novas métricas para o cliente
   // ABS: Novas relações para módulos avançados
   subscriptions           Subscription[]
   guaranteeClaims         GuaranteeClaim[]
   // FIM ABS: Novas relações para módulos avançados
-
-  createdAt               DateTime           @default(now())
-  updatedAt               DateTime           @updatedAt
+  // ADICIONADO: Campos para registro de data e hora de criação/atualização do perfil do cliente
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
 }
 
-// Modelo de Endereço (pode ser relacionado a Cliente, Provedor ou AGORA Booking)
+// Modelo para Provedor
+model Provider {
+  id                    String            @id @default(uuid())
+  userId                String            @unique
+  user                  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName              String
+  cpf                   String?           @unique // CPF para verificação
+  dateOfBirth           DateTime
+  phone                 String?
+  address               Address?          @relation("ProviderAddress")
+  yearsOfExperience     Int?
+  // NOTA: avatarUrl no Provider é redundante se User já tem, mas mantido para consistência do seu schema original.
+  avatarUrl             String?
+  bio                   String?           // PROPRIEDADE 'BIO' ADICIONADA AQUI
+  providerServices      ProviderService[]
+  fiveStarReviewCount   Int               @default(0) // NOVO: Para bônus por avaliações excelentes
+  monthlyBookingsCount  Int               @default(0) // NOVO: Para bônus por volume de serviços
+  availability          Availability[]
+  bookings              Booking[]
+  reviewsReceived       Review[]          @relation("ProviderReviews") // Avaliações que o provedor recebeu
+  earnings              Transaction[]
+  // NOVOS CAMPOS PARA VERIFICAÇÃO
+  verificationStatus    VerificationStatus @default(PENDING_INITIAL_REVIEW)
+  documentPhotoFrontUrl String?
+  documentPhotoBackUrl  String?
+  selfieWithDocumentUrl String?
+  backgroundCheckResult Json?             // Armazenar o resultado detalhado da verificação de antecedentes criminais (JSON)
+  ocrResult             Json?             // NOVO: Armazenar resultados de OCR do documento (JSON)
+  livenessResult        Json?             // NOVO: Armazenar resultados de liveness check (JSON)
+  rejectionReason       String?           // Campo para armazenar o motivo da rejeição, se houver
+  pixKey                String?           // <--- NOVA LINHA ADICIONADA AQUI
+  // ABS: Novo campo para Badges de Provedor
+  badges                String[]          @default([])
+  // FIM ABS: Novo campo para Badges de Provedor
+  // ABS: Novas relações para módulos avançados
+  subscriptions         Subscription[]
+  guaranteeClaims       GuaranteeClaim[]
+  // FIM ABS: Novas relações para módulos avançados
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+}
+
+// Modelo de Endereço
 model Address {
-  id           String                        @id @default(uuid())
+  id           String                                 @id @default(uuid())
   cep          String
   street       String
   number       String
@@ -1616,151 +1622,143 @@ model Address {
   neighborhood String
   city         String
   state        String
-  clientId     String?                       @unique
-  providerId   String?                       @unique
-  client       Client?                       @relation("ClientAddress", fields: [clientId], references: [id])
-  provider     Provider?                     @relation("ProviderAddress", fields: [providerId], references: [id])
-  // ALTERNATIVO para relação 1:1 com Booking (mais comum para endereço específico do serviço)
-  booking      Booking?                      @relation("BookingAddress") // Se um endereço pertence a apenas um booking
-
+  clientId     String?                                @unique
+  providerId   String?                                @unique
+  client       Client?                                @relation("ClientAddress", fields: [clientId], references: [id])
+  provider     Provider?                              @relation("ProviderAddress", fields: [providerId], references: [id])
+  booking      Booking?                               @relation("BookingAddress")
   // --- ADIÇÃO PARA GEOESPACIAL (AGORA INTEGRADO) ---
-  // Este campo permitirá armazenar coordenadas geoespaciais usando o tipo PostGIS POINT
-  // 'geometry(Point, 4326)' especifica um tipo Point com SRID 4326 (WGS 84 - padrão para GPS)
-  location     Unsupported("geometry(Point, 4326)")? // Campo 'location' adicionado
-  // ABS: Adicionado latitude e longitude para facilitar o uso sem precisar do tipo PostGIS no código
-  latitude     Decimal?                      @db.Decimal(10, 8)
-  longitude    Decimal?                      @db.Decimal(11, 8)
+  location     Unsupported("geometry(Point, 4326)")?
+  latitude     Decimal?                               @db.Decimal(10, 8)
+  longitude    Decimal?                               @db.Decimal(11, 8)
   // FIM ABS
 }
 
-// Modelo para Tipos de Serviço (e.g., "Limpeza Padrão", "Limpeza Pesada")
+// Modelo para Tipos de Serviço
 model Service {
-  id               String            @id @default(uuid())
-  name             String            @unique
-  description      String?
-  price            Decimal           @db.Decimal(10, 2) // CAMPO 'PRICE' ADICIONADO AQUI COM TIPO DECIMAL
-  icon             String?           // Campo para armazenar o nome do arquivo do ícone da categoria
-  providerServices ProviderService[]
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  id                 String            @id @default(uuid())
+  name               String            @unique
+  description        String?
+  price              Decimal           @db.Decimal(10, 2)
+  icon               String?
+  providerServices   ProviderService[]
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
 }
 
 // Modelo para Serviços Oferecidos por um Provedor Específico
 model ProviderService {
-  id              String    @id @default(uuid())
-  providerId      String
-  serviceId       String
-  price           Decimal   @db.Decimal(10, 2) // ALTERADO DE 'Float' PARA 'Decimal'
-  durationMinutes Int?      // Duração estimada em minutos
-  description     String?   // Descrição específica do provedor para este serviço
-  provider        Provider  @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  pricingType     PricingType @default(FIXED_PRICE) // NOVO: Tipo de precificação
-  pricePerSquareMeter Decimal? @db.Decimal(10, 2) // NOVO: Preço por m² (para BY_SIZE)
-  pricePerRoom    Decimal? @db.Decimal(10, 2) // NOVO: Preço por cômodo (para BY_SIZE)
-  service         Service   @relation(fields: [serviceId], references: [id])
-  bookings        Booking[] // Campo reverso para Booking
-  createdAt       DateTime  @default(now()) // ADICIONADO
-  updatedAt       DateTime  @updatedAt // ADICIONADO
-  subscriptions   Subscription[] @relation("ProviderServiceSubscriptions") // ABS: NOVA LINHA ADICIONADA AQUI
-
-  @@unique([providerId, serviceId]) // Um provedor não pode oferecer o mesmo tipo de serviço duas vezes
+  id                   String            @id @default(uuid())
+  providerId           String
+  serviceId            String
+  price                Decimal           @db.Decimal(10, 2)
+  durationMinutes      Int?
+  description          String?
+  provider             Provider          @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  pricingType          PricingType       @default(FIXED_PRICE)
+  pricePerSquareMeter  Decimal?          @db.Decimal(10, 2)
+  pricePerRoom         Decimal?          @db.Decimal(10, 2)
+  service              Service           @relation(fields: [serviceId], references: [id])
+  bookings             Booking[]
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  subscriptions        Subscription[]    @relation("ProviderServiceSubscriptions")
+  
+  @@unique([providerId, serviceId])
 }
 
 // Modelo de Agendamento
 model Booking {
-  id                        String             @id @default(uuid())
-  clientId                  String
-  providerId                String
-  providerServiceId         String
-  client                    Client             @relation(fields: [clientId], references: [id], onDelete: Restrict) // Não deletar cliente se tiver bookings
-  provider                  Provider           @relation(fields: [providerId], references: [id], onDelete: Restrict) // Não deletar provedor se tiver bookings
-  providerService           ProviderService    @relation(fields: [providerServiceId], references: [id])
-  scheduledDate             DateTime           // Data do agendamento
-  scheduledTime             String             // Horário do agendamento (e.g., "09:00")
-  status                    BookingStatus      @default(PENDING)
-  totalPrice                Decimal            @db.Decimal(10, 2) // ALTERADO DE 'Float' PARA 'Decimal'
-  notes                     String?
-  createdAt                 DateTime           @default(now())
-  updatedAt                 DateTime           @updatedAt
-  review                    Review?            // Relação 1:1 com Review. Um agendamento pode ter uma avaliação.
-  transactions              Transaction[]      // ADICIONADO: Relação reversa para Transaction
-
+  id                       String            @id @default(uuid())
+  clientId                 String
+  providerId               String
+  providerServiceId        String
+  client                   Client            @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  provider                 Provider          @relation(fields: [providerId], references: [id], onDelete: Restrict)
+  providerService          ProviderService   @relation(fields: [providerServiceId], references: [id])
+  scheduledDate            DateTime
+  scheduledTime            String
+  status                   BookingStatus     @default(PENDING)
+  totalPrice               Decimal           @db.Decimal(10, 2)
+  notes                    String?
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
+  review                   Review?
+  transactions             Transaction[]
   // ADICIONADO: RELAÇÃO DO ENDEREÇO ESPECÍFICO DO AGENDAMENTO
-  addressId                 String?            @unique // Unique porque um Booking terá um único Address
-  address                   Address?           @relation("BookingAddress", fields: [addressId], references: [id]) // Relação 1:1
-
+  addressId                String?           @unique
+  address                  Address?          @relation("BookingAddress", fields: [addressId], references: [id])
   // NOVO: Relação com o modelo Dispute
-  dispute                   Dispute?           // Relação 1:1 com Dispute. Um agendamento pode ter uma disputa.
-
+  dispute                  Dispute?
   // ABS: Novas relações para módulos avançados
-  subscriptionId            String?
-  subscription              Subscription?      @relation("SubscriptionBookings", fields: [subscriptionId], references: [id])
-  incidents                 Incident[]
-  guaranteeClaims           GuaranteeClaim[]
-  couponId                  String? // ID do cupom usado neste agendamento
-  // FIM ABS: Novas relações para módulos avançados
+  subscriptionId           String?
+  subscription             Subscription?     @relation("SubscriptionBookings", fields: [subscriptionId], references: [id])
+  incidents                Incident[]
+  guaranteeClaims          GuaranteeClaim[]
+  couponId                 String?
+  coupon                   Coupon?           @relation(fields: [couponId], references: [id])
+  // FIM ABS
 }
 
-// Modelo de Chat (NOVO)
+// Modelo de Chat
 model Chat {
-  id              String    @id @default(uuid())
-  participant1Id  String
-  participant1    User      @relation("ChatParticipant1", fields: [participant1Id], references: [id])
-  participant2Id  String
-  participant2    User      @relation("ChatParticipant2", fields: [participant2Id], references: [id])
-  messages        Message[] // Mensagens associadas a este chat
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id               String    @id @default(uuid())
+  participant1Id   String
+  participant1     User      @relation("ChatParticipant1", fields: [participant1Id], references: [id])
+  participant2Id   String
+  participant2     User      @relation("ChatParticipant2", fields: [participant2Id], references: [id])
+  messages         Message[]
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  @@unique([participant1Id, participant2Id]) // Garante que não há chats duplicados para o mesmo par de usuários
+  @@unique([participant1Id, participant2Id])
 }
 
 // Modelo de Mensagem de Chat
 model Message {
-  id         String   @id @default(uuid())
-  chatId     String   // ID da conversa (pode ser um UUID gerado para cada par cliente-provedor)
-  chat       Chat     @relation(fields: [chatId], references: [id]) // Relação com o modelo Chat
-  senderId   String
-  receiverId String
-  content    String
-  timestamp  DateTime @default(now())
-  isRead     Boolean  @default(false)
-  targetUrl  String? // URL para navegação no app ao clicar na notificação
-  createdAt  DateTime @default(now())
-  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
-  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  id               String    @id @default(uuid())
+  chatId           String
+  chat             Chat      @relation(fields: [chatId], references: [id])
+  senderId         String
+  receiverId       String
+  content          String
+  timestamp        DateTime  @default(now())
+  isRead           Boolean   @default(false)
+  targetUrl        String?
+  createdAt        DateTime  @default(now())
+  sender           User      @relation("SentMessages", fields: [senderId], references: [id])
+  receiver         User      @relation("ReceivedMessages", fields: [receiverId], references: [id])
 }
 
 // Modelo de Notificação
 model Notification {
-  id            String   @id @default(uuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id])
-  type          String   // Tipo de notificação (e.g., "BOOKING_CONFIRMED", "NEW_MESSAGE")
-  message       String
-  isRead        Boolean  @default(false)
-  targetUrl     String?  // URL para navegação no app ao clicar na notificação
-  createdAt     DateTime @default(now())
-
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  type        String
+  message     String
+  isRead      Boolean  @default(false)
+  targetUrl   String?
+  createdAt   DateTime @default(now())
   // ABS: Novos campos para Rich Media Notifications
-  imageUrl      String?
-  actionButtons Json? // Armazenar array de objetos { text: string, url: string } como JSON
-  // FIM ABS: Novos campos para Rich Media Notifications
+  imageUrl    String?
+  actionButtons Json?
+  // FIM ABS
 }
 
 // Modelo de Avaliação
 model Review {
-  id         String   @id @default(uuid())
-  booking    Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade) // Relação 1:1 com Booking
-  bookingId  String   @unique // Uma avaliação por agendamento (mantido para garantir 1:1 com Booking)
-  clientId   String
-  providerId String
-  rating     Int      // Nota de 1 a 5
-  comment    String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  client     Client   @relation("ClientReviews", fields: [clientId], references: [id])
-  provider   Provider @relation("ProviderReviews", fields: [providerId], references: [id])
+  id          String   @id @default(uuid())
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId   String   @unique
+  clientId    String
+  providerId  String
+  rating      Int
+  comment     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  client      Client   @relation("ClientReviews", fields: [clientId], references: [id])
+  provider    Provider @relation("ProviderReviews", fields: [providerId], references: [id])
 
   @@unique([bookingId, clientId, providerId])
 }
@@ -1770,9 +1768,9 @@ model Offer {
   id                  String    @id @default(uuid())
   title               String
   description         String?
-  discountPercentage  Float?    // Desconto em percentual
-  fixedDiscountAmount Float?    // Desconto em valor fixo
-  validUntil          DateTime  // Data de expiração da oferta
+  discountPercentage  Float?
+  fixedDiscountAmount Float?
+  validUntil          DateTime
   imageUrl            String?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
@@ -1785,18 +1783,18 @@ model Transaction {
   provider             Provider        @relation(fields: [providerId], references: [id], onDelete: Cascade)
   amount               Decimal         @db.Decimal(10, 2)
   type                 TransactionType
-  status               String          // Status da transação (e.g., "PENDING", "COMPLETED", "FAILED")
+  status               String
   description          String?
   createdAt            DateTime        @default(now())
-  bookingId            String?         // <--- MODIFICADO: REMOVIDO @unique para permitir múltiplas transações por booking
+  bookingId            String?
   booking              Booking?        @relation(fields: [bookingId], references: [id])
-  gatewayTransactionId String?         @unique // ID da transação no gateway de pagamento (ex: PagSeguro)
-  qrCodeUrl            String?         // URL do QR Code gerado pelo gateway
-
+  gatewayTransactionId String?         @unique
+  qrCodeUrl            String?
+  transactionRef       String?
   // ABS: Novo campo para cupons
   couponId             String?
   coupon               Coupon?         @relation(fields: [couponId], references: [id])
-  // FIM ABS: Novo campo para cupons
+  // FIM ABS
 }
 
 // Modelo de Disponibilidade do Provedor
@@ -1804,164 +1802,188 @@ model Availability {
   id          String   @id @default(uuid())
   providerId  String
   provider    Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  dayOfWeek   Int      // 0 para Domingo, 1 para Segunda, etc.
-  startTime   String   // Horário de início (e.g., "09:00")
-  endTime     String   // Horário de término (e.g., "17:00")
-  isAvailable Boolean  @default(true) // Se o provedor está disponível neste slot
+  dayOfWeek   Int
+  startTime   String
+  endTime     String
+  isAvailable Boolean  @default(true)
 }
 
 // NOVO: Modelo para Perguntas Frequentes (FAQs)
 model FAQItem {
-  id        String   @id @default(uuid())
-  question  String   @unique
-  answer    String
-  category  String?  // Ex: "Geral", "Pagamentos", "Serviços"
-  order     Int      @default(0) // Ordem de exibição
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid())
+  question    String   @unique
+  answer      String
+  category    String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 // NOVO: Modelo para Indicação (Referral)
 model Referral {
   id             String   @id @default(uuid())
-  referredUserId String   @unique // ID do usuário indicado
+  referredUserId String   @unique
   referredUser   User     @relation("ReferredByUser", fields: [referredUserId], references: [id])
-  referrerUserId String   // ID do usuário que indicou
+  referrerUserId String
   referrerUser   User     @relation("ReferrerOfUser", fields: [referrerUserId], references: [id])
-  referralCode   String?  // Código de indicação usado
+  referralCode   String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  @@unique([referredUserId, referrerUserId]) // Garante que um usuário só pode ser indicado uma vez por outro
+  @@unique([referredUserId, referrerUserId])
 }
 
 // NOVO: Modelo para Disputa de Agendamento
 model Dispute {
-  id                  String        @id @default(uuid())
-  bookingId           String        @unique // Relação 1:1 com Booking
-  booking             Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  reporterUserId      String        // Quem reportou a disputa (cliente ou provedor)
-  reporterUser        User          @relation("DisputeReporter", fields: [reporterUserId], references: [id])
-  reason              DisputeReason // Motivo da disputa
-  description         String        // Descrição detalhada do problema
-  refundAmountProposed Decimal?     @db.Decimal(10, 2) // Valor de reembolso sugerido pelo reportante
-  attachments         String[]      // URLs de anexos/evidências
-  status              String        @default("PENDING_REVIEW") // Status da disputa (PENDING_REVIEW, RESOLVED, REJECTED)
-  resolutionNotes     String?       // Notas da resolução (preenchido pelo admin)
-  resolvedAt          DateTime?
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
+  id                    String        @id @default(uuid())
+  bookingId             String        @unique
+  booking               Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  reporterUserId        String
+  reporterUser          User          @relation("DisputeReporter", fields: [reporterUserId], references: [id])
+  reason                DisputeReason
+  description           String
+  refundAmountProposed  Decimal?      @db.Decimal(10, 2)
+  attachments           String[]
+  status                DisputeStatus @default(PENDING)
+  resolutionNotes       String?
+  resolvedByUserId      String?
+  resolvedAt            DateTime?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  messages              DisputeMessage[]
+}
+
+// NOVO: Modelo para Mensagens de Disputa
+model DisputeMessage {
+  id           String   @id @default(uuid())
+  disputeId    String
+  dispute      Dispute  @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  senderUserId String
+  sender       User     @relation("DisputeSender", fields: [senderUserId], references: [id])
+  content      String
+  createdAt    DateTime @default(now())
+}
+
+// NOVO: Modelo para Consentimento do Usuário (LGPD)
+model UserConsent {
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documentType  String
+  version       String
+  consentedAt   DateTime @default(now())
+
+  @@id([userId, documentType])
 }
 
 // ABS: NOVOS MODELOS PARA MÓDULOS AVANÇADOS
 
 // ABS: Modelo para Assinaturas/Agendamentos Recorrentes
 model Subscription {
-  id                 String                 @id @default(uuid())
-  clientId           String
-  client             Client                 @relation(fields: [clientId], references: [id])
-  providerId         String
-  provider           Provider               @relation(fields: [providerId], references: [id])
-  providerServiceId  String
-  providerService    ProviderService        @relation("ProviderServiceSubscriptions", fields: [providerServiceId], references: [id]) // ABS: NOME DA RELAÇÃO ADICIONADO AQUI
-  frequency          SubscriptionFrequency
-  startDate          DateTime
-  endDate            DateTime?
-  status             SubscriptionStatus     @default(ACTIVE)
-  totalPrice         Decimal                @db.Decimal(10, 2) // Preço por agendamento ou por ciclo
-  nextGenerationDate DateTime               // Próxima data para gerar um agendamento
-  generatedBookings  Booking[]              @relation("SubscriptionBookings") // Agendamentos gerados por esta assinatura
-  createdAt          DateTime               @default(now())
-  updatedAt          DateTime               @updatedAt
+  id                String              @id @default(uuid())
+  clientId          String
+  client            Client              @relation(fields: [clientId], references: [id])
+  providerId        String
+  provider          Provider            @relation(fields: [providerId], references: [id])
+  providerServiceId String
+  providerService   ProviderService     @relation("ProviderServiceSubscriptions", fields: [providerServiceId], references: [id])
+  frequency         SubscriptionFrequency
+  startDate         DateTime
+  endDate           DateTime?
+  status            SubscriptionStatus  @default(ACTIVE)
+  totalPrice        Decimal             @db.Decimal(10, 2)
+  nextGenerationDate DateTime
+  generatedBookings Booking[]           @relation("SubscriptionBookings")
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
 }
-
 
 // ABS: Modelo para Relatório de Incidentes
 model Incident {
-  id            String         @id @default(uuid())
-  reporterId    String
-  reporter      User           @relation("ReportedIncidents", fields: [reporterId], references: [id])
-  bookingId     String?
-  booking       Booking?       @relation(fields: [bookingId], references: [id])
-  type          IncidentType
-  description   String
-  attachments   String[]       // URLs de evidências
-  status        IncidentStatus @default(PENDING_REVIEW)
-  resolution    String?        // Descrição da resolução
-  resolvedBy    String?        // ID do admin que resolveu
-  resolvedAt    DateTime?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id           String         @id @default(uuid())
+  reporterId   String
+  reporter     User           @relation("ReportedIncidents", fields: [reporterId], references: [id])
+  bookingId    String?
+  booking      Booking?       @relation(fields: [bookingId], references: [id])
+  type         IncidentType
+  description  String
+  attachments  String[]
+  status       IncidentStatus @default(PENDING_REVIEW)
+  resolution   String?
+  resolvedBy   String?
+  resolvedAt   DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 }
 
 // ABS: Modelo para Alertas de Pânico
 model PanicAlert {
-  id            String         @id @default(uuid())
-  userId        String
-  user          User           @relation("PanicAlerts", fields: [userId], references: [id])
-  latitude      Decimal        @db.Decimal(10, 8)
-  longitude     Decimal        @db.Decimal(11, 8)
-  message       String?
-  status        String         @default("ACTIVE") // ACTIVE, RESOLVED, FALSE_ALARM
-  createdAt     DateTime       @default(now())
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation("PanicAlerts", fields: [userId], references: [id])
+  latitude  Decimal   @db.Decimal(10, 8)
+  longitude Decimal   @db.Decimal(11, 8)
+  message   String?
+  status    String    @default("ACTIVE")
+  createdAt DateTime  @default(now())
 }
 
 // ABS: Modelo para Cupons de Desconto
 model Coupon {
-  id          String       @id @default(uuid())
-  code        String       @unique
+  id          String         @id @default(uuid())
+  code        String         @unique
   type        CouponType
-  value       Decimal      @db.Decimal(10, 2)
+  value       Decimal        @db.Decimal(10, 2)
   validFrom   DateTime
   validUntil  DateTime
   maxUses     Int?
-  usesCount   Int          @default(0)
+  usesCount   Int            @default(0)
   target      CouponTarget
-  targetId    String?      // ID do serviço ou provedor, se target for específico
-  status      String       @default("ACTIVE") // ACTIVE, INACTIVE, EXPIRED, USED_UP
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  transactions Transaction[] // Relação com transações que usaram este cupom
+  targetId    String?
+  status      CouponStatus   @default(ACTIVE)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  transactions Transaction[]
+  bookings     Booking[]
 }
 
 // ABS: Modelo para Solicitações de Garantia de Serviço
 model GuaranteeClaim {
-  id              String      @id @default(uuid())
+  id              String        @id @default(uuid())
   bookingId       String
-  booking         Booking     @relation(fields: [bookingId], references: [id])
+  booking         Booking       @relation(fields: [bookingId], references: [id])
   clientId        String
-  client          Client      @relation(fields: [clientId], references: [id])
+  client          Client        @relation(fields: [clientId], references: [id])
   providerId      String
-  provider        Provider    @relation(fields: [providerId], references: [id])
+  provider        Provider      @relation(fields: [providerId], references: [id])
   description     String
-  attachments     String[]    // URLs de fotos/vídeos
-  estimatedValue  Decimal?    @db.Decimal(10, 2)
-  resolvedValue   Decimal?    @db.Decimal(10, 2) // Valor final pago/reembolsado
-  status          ClaimStatus @default(PENDING)
+  attachments     String[]
+  estimatedValue  Decimal?      @db.Decimal(10, 2)
+  resolvedValue   Decimal?      @db.Decimal(10, 2)
+  status          ClaimStatus   @default(PENDING)
   resolutionNotes String?
   resolvedAt      DateTime?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 }
 
 // ABS: Modelo para Regras de Precificação Dinâmica
 model PricingRule {
-  id            String    @id @default(uuid())
-  zoneId        String?   // ID da zona geográfica (se aplicável)
-  dayOfWeek     Int?      // 0-6 (Domingo-Sábado), null para todos
-  startTime     String?   // Ex: "09:00" (HH:MM)
-  endTime       String?   // Ex: "17:00" (HH:MM)
-  demandThreshold Int?    // Ex: número mínimo de agendamentos para ativar surge
-  surgeFactor   Decimal   @db.Decimal(3, 2) // Multiplicador (ex: 1.2 para 20% de aumento)
-  isActive      Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id              String    @id @default(uuid())
+  zoneId          String?
+  dayOfWeek       Int?
+  startTime       String?
+  endTime         String?
+  demandThreshold Int?
+  surgeFactor     Decimal   @db.Decimal(3, 2)
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 // FIM ABS: NOVOS MODELOS PARA MÓDULOS AVANÇADOS
 
-Modelos Chave: User, Client, Provider, Address, Service, ProviderService, Booking, Chat, Message, Notification, Review, Offer, Transaction, Availability, FAQItem, Referral, Dispute, Subscription (NOVO), Incident (NOVO), PanicAlert (NOVO), Coupon (NOVO), GuaranteeClaim (NOVO), PricingRule (NOVO).
+Modelos Chave: User, Client, Provider, Address, Service, ProviderService, Booking, Chat, Message, Notification, Review, Offer, Transaction, Availability, FAQItem, Referral, Dispute, Subscription, Incident, PanicAlert, Coupon, GuaranteeClaim, PricingRule.
 
-Enums: UserRole, VerificationStatus, PricingType, BookingStatus (AGORA INCLUI NO_SHOW), TransactionType, DisputeReason, SubscriptionStatus (NOVO), SubscriptionFrequency (NOVO), IncidentType (NOVO), IncidentStatus (NOVO), CouponType (NOVO), CouponTarget (NOVO), ClaimStatus (NOVO).
+Enums: UserRole, VerificationStatus, PricingType, BookingStatus (AGORA INCLUI NO_SHOW), TransactionType, DisputeReason, SubscriptionStatus, SubscriptionFrequency, IncidentType, IncidentStatus, CouponType, CouponTarget, ClaimStatus.
 
 Correções/Detalhes Notáveis:
 
@@ -1992,7 +2014,6 @@ Validação de Propriedade (validateProviderOwnership):
 Uma função auxiliar crucial (provider-services.controller.ts) que verifica se o provedor logado (req.user['userId']) é o proprietário dos recursos (e.g., disponibilidade, serviços oferecidos) que está tentando modificar. Isso evita que um provedor manipule dados de outro.
 Filosofia NestJS: O NestJS promove uma arquitetura que evita o "spaghetti code" e impõe as melhores práticas de desenvolvimento, como separação de módulos, gerenciamento de dependências, princípios SOLID e padrões de arquitetura testáveis. [NestJS | LinkedIn] Isso significa que desenvolvedores, mesmo os juniores, são guiados a escrever código mais limpo e manutenível. [NestJS | LinkedIn]
 Novas Funções Globais e Essenciais para Nível Play Store
-
 Geocodificação Avançada (src/geocoding/):
 src/geocoding/dto/geocode-response.dto.ts: Define a estrutura de dados para a resposta da geocodificação (latitude, longitude).
 src/geocoding/geocoding.service.ts: Serviço injetável que encapsula a lógica de geocodificação. Utiliza ConfigService para obter GOOGLE_MAPS_API_KEY e GOOGLE_MAPS_GEOCODING_API_URL. Método geocodeAddress(address: string): Faz uma requisição HTTP para a API de geocodificação do Google Maps (ou similar) para converter um endereço em coordenadas. Inclui tratamento de erros e logging. Método getZoneByCoordinates(latitude: number, longitude: number): Um método simplificado para demonstrar a lógica de mapeamento de coordenadas para zonas. Em um ambiente de produção, este método seria mais complexo, envolvendo consultas a dados geoespaciais.
@@ -2027,7 +2048,7 @@ AuthModule: Depende do UsersModule para criar e validar usuários durante os pro
 ClientsService e ProvidersService: Utilizam o UsersService para gerenciar a relação entre os perfis de cliente/provedor e as contas de usuário base. Ambos interagem diretamente com o PrismaService para operações de banco de dados.
 BookingsService: É um serviço central que depende de ClientsService, ProvidersService, ProviderServicesService e PaymentsService para validar a existência e a elegibilidade de clientes, provedores e serviços antes de criar um agendamento. Ele também gerencia as transições de status dos agendamentos e interage com NotificationsService. Agora também interage com o modelo Dispute. Será estendido para interagir com SubscriptionsService para agendamentos recorrentes e atualizar métricas de cliente (noShowCount, cancellationCount).
 ReviewsService: Interage com o BookingsService para garantir que as avaliações sejam submetidas apenas para agendamentos concluídos e que o cliente que envia a avaliação seja o cliente do agendamento. Também depende de ProvidersService para buscar dados de provedores e ClientsService para dados de clientes. Será estendido para atualizar os badges/níveis de reputação do provedor.
-SearchService: Orquestra a busca de informações, consultando ProvidersService para provedores, ServicesService para tipos de serviço, ProviderServicesService para serviços oferecidos por provedores e OffersService para ofertas, agregando os resultados. Será estendido para integrar a lógica de smart matching e consultar o PricingService para incluir preços dinâmicos.
+SearchService: Orquestra a busca de informações, consultando ProvidersService para provedores, ServicesService para tipos de serviço, ProviderServicesService para serviços oferecidos por provedores e OffersService para ofertas, agregando os resultados. Agora, o PricingService é importado no SearchModule. Será estendido para integrar a lógica de smart matching e consultar o PricingService para incluir preços dinâmicos.
 PaymentsService: Integração Real com PagSeguro API. Utiliza o PrismaService para registrar transações financeiras e pode atualizar o status de agendamentos (BookingStatus.PENDING) após a criação de uma cobrança PIX. Depende de ProvidersService e BookingsService. Será estendido para aplicar descontos de cupons (CouponsService).
 ChatService: Responsável por armazenar e recuperar mensagens de chat, utilizando o PrismaService. O ChatGateway (WebSocket) utiliza o ChatService para persistir as mensagens em tempo real. Depende de ClientsService e ProvidersService para validação de participantes.
 NotificationsService: Gerencia a criação, recuperação e marcação de notificações, interagindo com o PrismaService. Agora utiliza o QueuesService para processamento assíncrono. Será estendido para suportar notificações com rich media.
@@ -2049,3 +2070,207 @@ Variáveis de Ambiente: O backend utiliza arquivos .env para gerenciar configura
 Atenciosamente,
 
 Paulo Silas de Campos Filho - Tech Lead
+
+
+[Nest] 692  - 05/08/2025, 11:35:26     LOG [NestFactory] Starting Nest application...
+[Nest] 692  - 05/08/2025, 11:35:26     LOG [DocumentProcessingService] DocumentProcessingService inicializado.
+[Nest] 692  - 05/08/2025, 11:35:26     LOG [DocumentProcessingService] DocumentProcessingService inicializado.
+[Nest] 692  - 05/08/2025, 11:35:26     LOG [InstanceLoader] PrismaModule dependencies initialized +18ms
+[Nest] 692  - 05/08/2025, 11:35:26     LOG [InstanceLoader] PassportModule dependencies initialized +1ms
+[Nest] 692  - 05/08/2025, 11:35:26     LOG [InstanceLoader] BullModule dependencies initialized +1ms
+[Nest] 692  - 05/08/2025, 11:35:26     LOG [InstanceLoader] DocumentProcessingModule dependencies initialized +0ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] ConfigHostModule dependencies initialized +29ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] DiscoveryModule dependencies initialized +1ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] AppModule dependencies initialized +1ms      
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] ConfigModule dependencies initialized +15ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] ConfigModule dependencies initialized +0ms 
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [GeocodingService] Provedor de geocodificação configurado: GOOGLE_MAPS
+[Nest] 692  - 05/08/2025, 11:35:27    WARN [EmailService] MAILGUN_API_KEY não configurada. O envio de e-mails pode não funcionar.
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [SmsService] [SmsService] Lendo configurações do Twilio:
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [SmsService] [SmsService]   Account SID: Configurado
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [SmsService] [SmsService]   Auth Token: Configurado
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [SmsService] [SmsService]   Verify Service SID: Configurado
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [SmsService] [SmsService] Twilio client inicializado com sucesso.
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] BullModule dependencies initialized +2ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] BullModule dependencies initialized +0ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] EmailModule dependencies initialized +3ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] GeocodingModule dependencies initialized +0ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] GeocodingModule dependencies initialized +1ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] EmailModule dependencies initialized +0ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] SmsModule dependencies initialized +0ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] JwtModule dependencies initialized +1ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] ThrottlerModule dependencies initialized +0ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] CacheModule dependencies initialized +1ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] OffersModule dependencies initialized +0ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] CacheModule dependencies initialized +1ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] NotificationsModule dependencies initialized +0ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] FaqsModule dependencies initialized +1ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] ReferralsModule dependencies initialized +0ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] GuaranteeModule dependencies initialized +2ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] AvailabilityModule dependencies initialized +2ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] PricingModule dependencies initialized +5ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] QueuesModule dependencies initialized +2ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] ChatModule dependencies initialized +1ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] SafetyModule dependencies initialized +1ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] UsersModule dependencies initialized +1ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] SearchModule dependencies initialized +2ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] ServicesModule dependencies initialized +0ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] ClientsModule dependencies initialized +1ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] CouponsModule dependencies initialized +0ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] ProvidersModule dependencies initialized +1ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] EarningsModule dependencies initialized +1ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] VerificationModule dependencies initialized +4ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] ReviewsModule dependencies initialized +1ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] ProviderServicesModule dependencies initialized +1ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] PaymentsModule dependencies initialized +4ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] DashboardModule dependencies initialized +11ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] AuthModule dependencies initialized +0ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] BookingsModule dependencies initialized +1ms
+[Nest] 692  - 05/08/2025, 11:35:27     LOG [InstanceLoader] SubscriptionsModule dependencies initialized +1ms
+[Sentry] SENTRY_DSN não configurado. O monitoramento de erros e performance do Sentry está desativado.
+[Firebase Admin] SDK inicializado automaticamente no ambiente Cloud Run ou GCP.
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [WebSocketsController] ChatGateway subscribed to the "sendMessage" message +759ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [WebSocketsController] ChatGateway subscribed to the "joinChat" message +37ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RoutesResolver] AppController {/}: +3ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/, GET} route +3ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/health, GET} route +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RoutesResolver] AuthController {/auth}: +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/auth/register/client, POST} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/auth/register/provider, POST} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/auth/login, POST} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/auth/forgot-password, POST} route +2ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RoutesResolver] UsersController {/users}: +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/users/me, GET} route +2ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/users/me, PATCH} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/users/:id, GET} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/users/:id, DELETE} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/users/data-export, POST} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/users/delete-account, DELETE} route +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RoutesResolver] NotificationsController {/notifications}: +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/notifications, POST} route +2ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/notifications/me, GET} route +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/notifications/me/mark-as-read, PATCH} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/notifications/:id/mark-as-read, PATCH} route +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/notifications/:id, DELETE} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/notifications/suggestions, GET} route +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/notifications/quick-action/:action, POST} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RoutesResolver] ProvidersController {/providers}: +2ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/providers/recommended, GET} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/providers/nearby, GET} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/providers, GET} route +3ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/providers/me, GET} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/providers/me, PATCH} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/providers/me/avatar, POST} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/providers/:id, GET} route +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/providers/:id, DELETE} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RoutesResolver] VerificationController {/verification}: +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/verification/pending-queue, GET} route +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/verification/upload-document/:type, POST} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/verification/upload-selfie, POST} route +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/verification/:providerId/status, PATCH} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/verification/reject/:providerId, POST} route +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/verification/status/:providerId, GET} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RoutesResolver] SubscriptionsController {/subscriptions}: +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/subscriptions, POST} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/subscriptions/me, GET} route +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/subscriptions/:id, GET} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/subscriptions/:id, PATCH} route +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RoutesResolver] BookingsController {/bookings}: +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/bookings, POST} route +3ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/bookings/schedule-and-pay, POST} route +2ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/bookings/me, GET} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/bookings/:id, GET} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/bookings/:id/status, PATCH} route +3ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/bookings/:id/cancel, PATCH} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/bookings/:id/report-issue, POST} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/bookings/:id/dispute, POST} route +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/bookings/:id/resolve-dispute, PATCH} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RoutesResolver] ClientsController {/clients}: +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/clients/me/dashboard, GET} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/clients/me, PATCH} route +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/clients/:id, GET} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RoutesResolver] ProviderServicesController {/providers/:providerId/services}: +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/providers/:providerId/services, POST} route +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/providers/:providerId/services, GET} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/providers/:providerId/services/:id, PATCH} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/providers/:providerId/services/:id, DELETE} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RoutesResolver] ServicesController {/services}: +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/services, POST} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/services, GET} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/services/:id, GET} route +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/services/:id, PATCH} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/services/:id, DELETE} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RoutesResolver] PaymentsController {/payments}: +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/payments/pix-charge, POST} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/payments/withdrawal, POST} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/payments/webhook/pix, POST} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RoutesResolver] PricingController {/pricing}: +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/pricing/calculate, POST} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/pricing/rules, POST} route +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/pricing/rules, GET} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/pricing/rules/:id, PATCH} route +2ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RoutesResolver] CouponsController {/coupons}: +2ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/coupons, POST} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/coupons/:code, GET} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/coupons/:id, PATCH} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/coupons/apply, POST} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/coupons, GET} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RoutesResolver] AvailabilityController {/providers/:providerId/availability}: +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/providers/:providerId/availability, GET} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/providers/:providerId/availability, PATCH} route +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/providers/:providerId/availability, POST} route +2ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/providers/:providerId/availability/:availabilityId, DELETE} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RoutesResolver] ReviewsController {/reviews}: +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/reviews, POST} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/reviews, GET} route +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/reviews/:id, GET} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/reviews/provider/:providerId/breakdown, GET} route +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/reviews/provider/:providerId/suggestions, GET} route +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RoutesResolver] ChatController {/chat}: +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/chat/find-or-create/provider/:providerId/client/:clientId, GET} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/chat/:chatId/messages, POST} route +3ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/chat/:chatId/messages, GET} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/chat/me/conversations, GET} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RoutesResolver] OffersController {/offers}: +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/offers, POST} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/offers, GET} route +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/offers/:id, GET} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/offers/:id, PATCH} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/offers/:id, DELETE} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RoutesResolver] SearchController {/search}: +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/search, GET} route +2ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RoutesResolver] DashboardController {/providers/me/dashboard}: +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/providers/me/dashboard, GET} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RoutesResolver] EarningsController {/providers/me/earnings}: +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/providers/me/earnings, GET} route +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/providers/me/earnings/withdrawal, POST} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RoutesResolver] FaqsController {/faqs}: +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/faqs, POST} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/faqs, GET} route +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/faqs/:id, GET} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/faqs/:id, PATCH} route +3ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/faqs/:id, DELETE} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RoutesResolver] ReferralsController {/referrals}: +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/referrals, POST} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/referrals/me, GET} route +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/referrals/:id, GET} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RoutesResolver] SafetyController {/safety}: +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/safety/panic, POST} route +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/safety/incident, POST} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/safety/me/incidents, GET} route +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/safety/incident/:id/status, PATCH} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RoutesResolver] GuaranteeController {/guarantee}: +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/guarantee/claims, POST} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/guarantee/claims/me, GET} route +0ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/guarantee/claims/:id, GET} route +1ms
+[Nest] 692  - 05/08/2025, 11:35:28     LOG [RouterExplorer] Mapped {/guarantee/claims/:id/status, PATCH} route +1ms
+DATABASE_URL que o Prisma está vendo: postgresql://postgres:32368233@localhost:5433/cleaning_db?schema=public
+DATABASE_URL que o Prisma está vendo: postgresql://postgres:32368233@localhost:5433/cleaning_db?schema=public
+DATABASE_URL que o Prisma está vendo: postgresql://postgres:32368233@localhost:5433/cleaning_db?schema=public
+DATABASE_URL que o Prisma está vendo: postgresql://postgres:32368233@localhost:5433/cleaning_db?schema=public
+DATABASE_URL que o Prisma está vendo: postgresql://postgres:32368233@localhost:5433/cleaning_db?schema=public
+[Nest] 692  - 05/08/2025, 11:35:29     LOG [NestApplication] Nest application successfully started +1485ms
+AppListening: 2.150s
+Application is running on: http://127.0.0.1:3000
+Swagger documentation available at: http://127.0.0.1:3000/api
+AppStartupTotal: 2.836s

@@ -1,7 +1,7 @@
 // LimpeJaApp/app/(client)/bookings/success.tsx
 import { BlurView } from 'expo-blur';
 import * as Calendar from 'expo-calendar';
-import * as Clipboard from 'expo-clipboard';
+import Clipboard from '@react-native-clipboard/clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';

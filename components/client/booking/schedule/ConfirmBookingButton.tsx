@@ -1,6 +1,6 @@
 // LimpeJaApp/app/(client)/bookings/components/success/BookingSummaryCard.tsx
 import { BlurView } from 'expo-blur';
-import * as Clipboard from 'expo-clipboard'; // Importar Clipboard
+import Clipboard from '@react-native-clipboard/clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { Animated, Platform, StyleSheet, View } from 'react-native';

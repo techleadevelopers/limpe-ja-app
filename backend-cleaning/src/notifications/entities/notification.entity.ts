@@ -1,5 +1,5 @@
 // src/notifications/entities/notification.entity.ts
-import { Notification as PrismaNotification } from '@prisma/client';
+import { Notification as PrismaNotification, Prisma } from '@prisma/client'; // CORREÇÃO: Importar Prisma para JsonValue
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class NotificationEntity implements PrismaNotification {
@@ -23,6 +23,13 @@ export class NotificationEntity implements PrismaNotification {
 
   @ApiProperty({ description: 'Data e hora de criação da notificação', example: '2025-06-01T10:00:00.000Z' })
   createdAt: Date;
+
+  // CORREÇÃO: Adicionado imageUrl e actionButtons
+  @ApiPropertyOptional({ description: 'URL da imagem associada à notificação', example: 'https://example.com/notification-image.jpg' })
+  imageUrl: string | null;
+
+  @ApiPropertyOptional({ description: 'Botões de ação da notificação (JSON)', example: [{ label: 'Ver', action: 'view' }] })
+  actionButtons: Prisma.JsonValue | null;
 
   // user: User; // Propriedade de relação, não incluída diretamente na classe para DTO de saída
 

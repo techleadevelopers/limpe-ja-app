@@ -2,17 +2,19 @@
 import { Module } from '@nestjs/common';
 import { SearchService } from './search.service';
 import { SearchController } from './search.controller';
-import { ProvidersModule } from '../providers/providers.module'; // Importa o módulo de provedores
-import { ServicesModule } from '../services/services.module';   // Importa o módulo de tipos de serviço
-import { ProviderServicesModule } from '../provider-services/provider-services.module'; // NOVO: Importa o módulo de serviços de provedores
-import { OffersModule } from '../offers/offers.module'; // Importa o módulo de ofertas
+import { ProvidersModule } from '../providers/providers.module';
+import { ServicesModule } from '../services/services.module';
+import { ProviderServicesModule } from '../provider-services/provider-services.module';
+import { OffersModule } from '../offers/offers.module';
+import { PricingModule } from '../pricing/pricing.module'; // Importe o PricingModule
 
 @Module({
   imports: [
     ProvidersModule,
     ServicesModule,
-    ProviderServicesModule, // NOVO: Adicione ProviderServicesModule aqui
-    OffersModule, // Se houver um módulo de ofertas e você quiser buscar ofertas
+    ProviderServicesModule,
+    OffersModule,
+    PricingModule, // Adicione o PricingModule aqui
   ],
   controllers: [SearchController],
   providers: [SearchService],

@@ -1,14 +1,14 @@
 // backend-cleaning/src/coupons/coupons.module.ts
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common'; // Importe forwardRef
 import { CouponsService } from './coupons.service';
 import { CouponsController } from './coupons.controller';
 import { PrismaService } from '../prisma/prisma.service';
-import { UsersModule } from '../users/users.module'; // Assuming UsersModule exists
+import { UsersModule } from '../users/users.module';
 
 @Module({
-  imports: [UsersModule], // Import UsersModule to make UsersService available
+  imports: [forwardRef(() => UsersModule)], // CORREÇÃO: Adicionado forwardRef para resolver a dependência circular.
   controllers: [CouponsController],
   providers: [CouponsService, PrismaService],
-  exports: [CouponsService], // Export so BookingsModule can use it
+  exports: [CouponsService],
 })
 export class CouponsModule {}

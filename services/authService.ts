@@ -1,7 +1,7 @@
 // LimpeJaApp/services/authService.ts
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthResponse, UserRole, MessageResponseDto } from '../types/backend/auth'; // Import MessageResponseDto
-import { UserProfile } from '../types/backend/users';
+import { UserProfile } from '../types/backend/users'; // Certifique-se de que UserProfile inclui isVerified, badges, noShowCount, cancellationCount
 import api from './api'; // Assumindo que 'api' é a instância do Axios configurada
 
 const AUTH_TOKEN_KEY = 'auth_token';
@@ -25,9 +25,7 @@ class AuthService {
     async login(credentials: { email: string; password: string }): Promise<AuthResponse> {
         try {
             console.log('[AuthService Frontend] login: Tentando login com e-mail:', credentials.email);
-            // CORREÇÃO: Usar 'api' diretamente, pois é a instância do Axios
-            const axiosInstance = api;
-            const response = await axiosInstance.post('/auth/login', {
+            const response = await api.post('/auth/login', {
                 email: credentials.email,
                 password: credentials.password,
             });
@@ -55,9 +53,8 @@ class AuthService {
     async registerClient(userData: any): Promise<AuthResponse> {
         try {
             console.log('[AuthService Frontend] Registrando cliente');
-            // CORREÇÃO: Usar 'api' diretamente
-            const axiosInstance = api;
-            const response = await axiosInstance.post('/auth/register/client', userData);
+            // userData deve incluir fullName, phone, address (com latitude/longitude), cpf
+            const response = await api.post('/auth/register/client', userData);
             const authData: AuthResponse = response.data;
             await this.saveAuthData(authData);
             console.log('[AuthService Frontend] Cliente registrado com sucesso');
@@ -71,9 +68,8 @@ class AuthService {
     async registerProvider(userData: any): Promise<AuthResponse> {
         try {
             console.log('[AuthService Frontend] Registrando prestador');
-            // CORREÇÃO: Usar 'api' diretamente
-            const axiosInstance = api;
-            const response = await axiosInstance.post('/auth/register/provider', userData);
+            // userData deve incluir email, password, fullName, cpf, dateOfBirth, phone, address (com latitude/longitude), yearsOfExperience, avatarUrl
+            const response = await api.post('/auth/register/provider', userData);
             const authData: AuthResponse = response.data;
             await this.saveAuthData(authData);
             console.log('[AuthService Frontend] Prestador registrado com sucesso');
@@ -93,9 +89,7 @@ class AuthService {
     async sendPasswordReset(email: string): Promise<MessageResponseDto> {
         try {
             console.log(`[AuthService Frontend] Solicitando redefinição de senha para: ${email}`);
-            // CORREÇÃO: Usar 'api' diretamente
-            const axiosInstance = api;
-            const response = await axiosInstance.post<MessageResponseDto>('/auth/forgot-password', { email });
+            const response = await api.post<MessageResponseDto>('/auth/forgot-password', { email });
             console.log(`[AuthService Frontend] Redefinição de senha solicitada com sucesso para: ${email}`);
             return response.data;
         } catch (error: any) {
@@ -164,13 +158,11 @@ class AuthService {
 
     setAuthToken(token: string | null): void {
         this.authToken = token;
-        // CORREÇÃO: Usar 'api' diretamente
-        const axiosInstance = api;
         if (token) {
-            axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+            api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
             console.log('[AuthService Frontend] Token definido no cabeçalho do Axios.');
         } else {
-            delete axiosInstance.defaults.headers.common['Authorization'];
+            delete api.defaults.headers.common['Authorization'];
             console.log('[AuthService Frontend] Token removido do cabeçalho do Axios.');
         }
     }

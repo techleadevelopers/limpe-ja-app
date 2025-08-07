@@ -4,7 +4,7 @@ import api from './api'; // Importa a instância centralizada do Axios
 
 // Importa as tipagens de notificações
 import { MessageResponseDto } from '../types/backend/auth'; // Para respostas de sucesso/erro genéricas
-import { NotificationEntity } from '../types/backend/notifications';
+import { NotificationEntity } from '../types/backend/notifications'; // Certifique-se de que NotificationEntity está atualizado
 
 interface Notification {
   id: string;
@@ -16,6 +16,8 @@ interface Notification {
   priority?: 'high' | 'medium' | 'low';
   actionable?: boolean;
   category?: 'booking' | 'payment' | 'review' | 'system' | 'suggestion';
+  imageUrl?: string | null;
+  actionButtons?: any;
 }
 
 interface SmartNotification extends Notification {
@@ -155,7 +157,8 @@ export class NotificationService {
       // A estrutura exata do corpo da requisição depende da implementação do seu backend.
       const response: AxiosResponse<NotificationEntity> = await api.patch(`/notifications/${notificationId}/mark-as-read`, { readAt: new Date().toISOString() });
       return response.data;
-    } catch (error: any) {
+    }
+    catch (error: any) {
       console.error(`Erro ao marcar notificação ${notificationId} como lida:`, error.response?.data || error.message);
       if (axios.isAxiosError(error) && error.response) {
         throw new Error(error.response.data.message || `Erro ao marcar notificação ${notificationId} como lida.`);
@@ -202,4 +205,32 @@ export class NotificationService {
       throw new Error(`Erro de rede ou servidor ao deletar notificação ${notificationId}.`);
     }
   };
+
+  /**
+   * @function sendPushNotification
+   * Envia uma notificação push para um usuário específico.
+   * Corresponde a `POST /notifications/send-push`.
+   * @param userId O ID do usuário para quem enviar a notificação.
+   * @param title O título da notificação push.
+   * @param body O corpo da mensagem da notificação push.
+   * @param data Dados adicionais para a notificação (opcional).
+   * @returns Promessa que resolve quando a notificação é enviada.
+   */
+  static async sendPushNotification(
+    userId: string,
+    title: string,
+    body: string,
+    data?: Record<string, any>
+  ): Promise<void> {
+    try {
+      await api.post('/notifications/send-push', { userId, title, body, data });
+      console.log(`Notificação push enviada para o usuário ${userId}`);
+    } catch (error: any) {
+      console.error(`Erro ao enviar notificação push para o usuário ${userId}:`, error.response?.data || error.message);
+      if (axios.isAxiosError(error) && error.response) {
+        throw new Error(error.response.data.message || `Erro ao enviar notificação push.`);
+      }
+      throw new Error('Erro de rede ou servidor ao enviar notificação push.');
+    }
+  }
 }

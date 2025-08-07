@@ -1,7 +1,7 @@
 // backend-cleaning/src/bookings/dto/create-booking.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsDateString, IsNumber, Min, IsOptional, IsUUID, Matches, ValidateNested, IsInt } from 'class-validator'; // ADICIONE ValidateNested
-import { Type } from 'class-transformer'; // ADICIONE Type
+import { IsString, IsNotEmpty, IsDateString, IsNumber, Min, IsOptional, IsUUID, Matches, ValidateNested, IsInt } from 'class-validator';
+import { Type } from 'class-transformer';
 import { CreateAddressDto } from '../../common/dto/create-address.dto'; // Importe CreateAddressDto
 
 export class CreateBookingDto {
@@ -36,10 +36,9 @@ export class CreateBookingDto {
   @IsString()
   notes?: string;
 
-  // ESTA PROPRIEDADE É CRUCIAL E DEVE SER ADICIONADA:
   @ApiProperty({ description: 'Endereço onde o serviço será realizado' })
-  @ValidateNested() // Valida o objeto aninhado
-  @Type(() => CreateAddressDto) // Ajuda o class-transformer a instanciar o objeto correto
+  @ValidateNested()
+  @Type(() => CreateAddressDto)
   address: CreateAddressDto;
 
   @ApiPropertyOptional({ description: 'Duração solicitada em minutos (se o serviço for HOURLY)', example: 120 })
@@ -59,4 +58,10 @@ export class CreateBookingDto {
   @IsInt()
   @Min(1)
   requestedRoomCount?: number;
+
+  // PROPRIEDADE ADICIONADA PARA RESOLVER OS ERROS DO 'couponCode'
+  @ApiPropertyOptional({ description: 'Código do cupom de desconto, se aplicável', example: 'DESCONTO10' })
+  @IsOptional()
+  @IsString()
+  couponCode?: string;
 }

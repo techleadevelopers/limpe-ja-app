@@ -1,5 +1,4 @@
 // src/verification/verification.controller.ts
-
 import {
   Controller,
   Post,
@@ -43,8 +42,7 @@ import { UploadSelfieDto } from './dto/upload-selfie.dto';
 import { VerificationService } from './verification.service';
 import { ProviderWithCalculatedRating } from '../providers/providers.service';
 import { VerificationStatus } from '../shared/enums/verification-status.enum';
-
-import { Multer } from 'multer';
+import { Multer, memoryStorage } from 'multer';
 
 export class UpdateVerificationStatusDto {
   @ApiProperty({ enum: VerificationStatus, description: 'Novo status de verificação' })
@@ -64,7 +62,7 @@ export class VerificationController {
 
   constructor(
     private readonly verificationService: VerificationService,
-  ) {}
+  ) { }
 
   @Get('pending-queue')
   @Roles(UserRole.ADMIN)
@@ -102,7 +100,7 @@ export class VerificationController {
   @ApiResponse({ status: 400, description: 'Dados inválidos.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Provedor não encontrado.' })
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
   async uploadDocument(
     @Req() req: Request,
     @Param('type') type: DocumentPhotoType,
@@ -110,8 +108,9 @@ export class VerificationController {
   ) {
     const providerId = req.user['providerId'];
     this.logger.log(`[VerificationController] uploadDocument: Recebido arquivo para providerId: ${providerId}, tipo: ${type}`);
-    if (!file) {
-      throw new BadRequestException('Nenhum arquivo enviado.');
+    if (!file || !file.originalname || !file.buffer || !file.mimetype) {
+      this.logger.error(`[VerificationController] uploadDocument: Arquivo inválido ou malformado recebido.`);
+      throw new BadRequestException('Nenhum arquivo enviado ou o arquivo é inválido.');
     }
     if (!Object.values(DocumentPhotoType).includes(type)) {
       throw new BadRequestException('Tipo de documento inválido. Use FRONT ou BACK.');
@@ -143,19 +142,77 @@ export class VerificationController {
   @ApiResponse({ status: 400, description: 'Arquivo inválido.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Provedor não encontrado.' })
-  @UseInterceptors(FileInterceptor('file'))
-  // --- CORREÇÃO AQUI: Retorna a URL no corpo da resposta ---
+  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
   async uploadSelfie(
     @Req() req: Request,
     @UploadedFile() file: Multer.File,
   ) {
     const providerId = req.user['providerId'];
     this.logger.log(`[VerificationController] uploadSelfie: Recebido arquivo para providerId: ${providerId}`);
-    if (!file) {
-      throw new BadRequestException('Nenhum arquivo enviado.');
+    if (!file || !file.originalname || !file.buffer || !file.mimetype) {
+      this.logger.error(`[VerificationController] uploadSelfie: Arquivo inválido ou malformado recebido.`);
+      throw new BadRequestException('Nenhum arquivo enviado ou o arquivo é inválido.');
     }
     const uploadedUrl = await this.verificationService.uploadSelfieWithDocument(providerId, file);
     return { message: 'Selfie com documento enviada com sucesso.', url: uploadedUrl };
+  }
+
+  @Post('upload-avatar')
+  @Roles(UserRole.PROVIDER, UserRole.CLIENT)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'Upload da foto de perfil (avatar)',
+    type: 'object',
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @ApiOperation({ summary: 'Upload da foto de perfil (avatar)' })
+  @ApiResponse({ status: 200, description: 'Avatar enviado com sucesso.', schema: { type: 'object', properties: { message: { type: 'string' }, url: { type: 'string' } } } })
+  @ApiResponse({ status: 400, description: 'Arquivo inválido.' })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  @ApiResponse({ status: 404, description: 'Usuário/Provedor não encontrado.' })
+  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
+  async uploadAvatar(
+    @Req() req: Request,
+    @UploadedFile() file: Multer.File,
+  ) {
+    const providerId = req.user['providerId'];
+
+    if (!providerId) {
+      throw new BadRequestException('ID do provedor não encontrado no token. Este endpoint é para provedores.');
+    }
+
+    this.logger.log(`[VerificationController] uploadAvatar: Recebido arquivo para providerId: ${providerId}`);
+    if (!file || !file.originalname || !file.buffer || !file.mimetype) {
+      this.logger.error(`[VerificationController] uploadAvatar: Arquivo inválido ou malformado recebido.`);
+      throw new BadRequestException('Nenhum arquivo enviado ou o arquivo é inválido.');
+    }
+    const uploadedUrl = await this.verificationService.uploadAvatar(providerId, file);
+    return { message: 'Avatar enviado com sucesso.', url: uploadedUrl };
+  }
+
+  // NOVO ENDPOINT: Avançar o status de verificação
+  @Post('advance-status')
+  @Roles(UserRole.PROVIDER)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Avançar o status de verificação para PENDING_DOCUMENTS_UPLOAD' })
+  @ApiResponse({ status: 200, description: 'Status de verificação atualizado com sucesso.' })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  @ApiResponse({ status: 403, description: 'Acesso proibido.' })
+  async advanceVerificationStatus(@Req() req: Request) {
+    const providerId = req.user['providerId'];
+    await this.verificationService.advanceVerificationStatus(providerId);
+    return { message: 'Status de verificado avançado com sucesso.' };
   }
 
   @Patch(':providerId/status')

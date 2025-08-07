@@ -44,7 +44,7 @@ export default function PrivacidadeScreen() {
         <Text style={styles.listBullet}>•</Text>
         <Text style={styles.paragraph}>
           <Text style={styles.boldText}>Informações de Terceiros:</Text> Podemos receber informações de
-          parceiros de verificação de antecedentes (para profissionais) e processadores de pagamento.
+          parceiros de verificação (para profissionais) e processadores de pagamento.
         </Text>
       </View>
 
@@ -104,7 +104,7 @@ export default function PrivacidadeScreen() {
         <Text style={styles.listBullet}>•</Text>
         <Text style={styles.paragraph}>
           <Text style={styles.boldText}>Prestadores de Serviço:</Text> Terceiros que nos auxiliam em
-          operações como processamento de pagamentos, verificação de antecedentes, marketing e análise de dados.
+          operações como processamento de pagamentos, verificação, marketing e análise de dados.
         </Text>
       </View>
       <View style={styles.list}>

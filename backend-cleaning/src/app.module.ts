@@ -24,42 +24,44 @@ import { EarningsModule } from './earnings/earnings.module';
 import { FaqsModule } from './faqs/faqs.module';
 import configuration from './config/configuration';
 import { validationSchema } from './config/validation-schema';
-
-// NOVAS IMPORTAÇÕES DE MÓDULOS
 import { QueuesModule } from './queues/queues.module';
 import { CacheModule } from './cache/cache.module';
 import { ReferralsModule } from './referrals/referrals.module';
-import { ThrottlerModule } from '@nestjs/throttler'; // Módulo para Rate Limiting
-import { SubscriptionsModule } from './subscriptions/subscriptions.module'; // NOVO
-import { SafetyModule } from './safety/safety.module'; // NOVO
-import { CouponsModule } from './coupons/coupons.module'; // NOVO
-import { GuaranteeModule } from './guarantee/guarantee.module'; // NOVO
-import { PricingModule } from './pricing/pricing.module'; // NOVO
-import { GeocodingModule } from './geocoding/geocoding.module'; // ABS: NOVA IMPORTAÇÃO AQUI
+import { ThrottlerModule } from '@nestjs/throttler';
+import { SubscriptionsModule } from './subscriptions/subscriptions.module';
+import { SafetyModule } from './safety/safety.module';
+import { CouponsModule } from './coupons/coupons.module';
+import { GuaranteeModule } from './guarantee/guarantee.module';
+import { PricingModule } from './pricing/pricing.module';
+import { GeocodingModule } from './geocoding/geocoding.module';
+
+// Importe o SentryModule da forma correta
+import { SentryModule } from '@sentry/nestjs/setup';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [configuration], // Carrega a configuração customizada
-      validationSchema,      // Aplica o schema de validação
+      load: [configuration],
+      validationSchema,
       validationOptions: {
-        allowUnknown: true, // Permite variáveis de ambiente não definidas no schema
-        abortEarly: true,   // Aborta a validação no primeiro erro
+        allowUnknown: true,
+        abortEarly: true,
       },
     }),
-    // Configuração do ThrottlerModule para Rate Limiting
     ThrottlerModule.forRootAsync({
-      imports: [ConfigModule], // Importa ConfigModule para acessar ConfigService
-      inject: [ConfigService], // Injeta ConfigService
+      imports: [ConfigModule],
+      inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        // A propriedade 'throttlers' deve ser um array de objetos com ttl e limit
         throttlers: [{
-          ttl: config.get<number>('THROTTLE_TTL', 60) * 1000, // Converte segundos para milissegundos
+          ttl: config.get<number>('THROTTLE_TTL', 60) * 1000,
           limit: config.get<number>('THROTTLE_LIMIT', 10),
         }],
       }),
     }),
+    // O SentryModule deve ser importado sem argumentos, pois a inicialização
+    // já foi feita no arquivo `instrument.ts` ou `main.ts`
+    SentryModule.forRoot(),
     PrismaModule,
     AuthModule,
     UsersModule,
@@ -79,16 +81,15 @@ import { GeocodingModule } from './geocoding/geocoding.module'; // ABS: NOVA IMP
     DashboardModule,
     EarningsModule,
     FaqsModule,
-    // Adicione os novos módulos aqui
-    QueuesModule,     // Módulo para gerenciar filas (BullMQ)
-    CacheModule,      // Módulo para gerenciar cache (Redis)
-    ReferralsModule,  // Módulo para o sistema de indicações
-    SubscriptionsModule, // NOVO
-    SafetyModule,        // NOVO
-    CouponsModule,       // NOVO
-    GuaranteeModule,     // NOVO
-    PricingModule,       // NOVO
-    GeocodingModule,     // ABS: ADICIONADO AQUI
+    QueuesModule,
+    CacheModule,
+    ReferralsModule,
+    SubscriptionsModule,
+    SafetyModule,
+    CouponsModule,
+    GuaranteeModule,
+    PricingModule,
+    GeocodingModule,
   ],
   controllers: [AppController],
   providers: [AppService],

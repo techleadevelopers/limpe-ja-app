@@ -3,13 +3,14 @@ import axios, { AxiosResponse } from 'axios';
 import api from './api';
 
 // IMPORTAR DTOs E TIPAGENS DO ARQUIVO CENTRALIZADO
-import { BookingDetails, BookingStatus, CreateBookingDto, UpdateBookingStatusDto } from '../types/backend/bookings';
+import { BookingDetails, BookingStatus, CreateBookingDto, UpdateBookingStatusDto } from '../types/backend/bookings'; // Certifique-se de que CreateBookingDto e BookingDetails estão atualizados
 
 /**
  * @function createBooking
  * Cria um novo agendamento.
  * Corresponde a `POST /bookings`.
  * @param data DTO com os detalhes para criar o agendamento.
+ *             Deve incluir `couponCode` e `address` com `latitude` e `longitude`.
  * @returns Promessa com o objeto BookingDetails criado.
  */
 export const createBooking = async (data: CreateBookingDto): Promise<BookingDetails> => {

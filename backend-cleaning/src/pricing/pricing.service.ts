@@ -1,25 +1,27 @@
 // backend-cleaning/src/pricing/pricing.service.ts
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, forwardRef, Inject } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CalculatePriceDto, DynamicPriceResult } from './dto/calculate-price.dto';
 import { CreatePricingRuleDto } from './dto/create-pricing-rule.dto';
 import { UpdatePricingRuleDto } from './dto/update-pricing-rule.dto';
-import { ProviderService } from '@prisma/client'; // Assuming ProviderService model
-import { GeocodingService } from '../geocoding/geocoding.service'; // Assuming GeocodingService for zone lookup
-import { BookingsService } from '../bookings/bookings.service'; // To infer demand
+import { ProviderService } from '@prisma/client';
+import { GeocodingService } from '../geocoding/geocoding.service';
+import { BookingsService } from '../bookings/bookings.service';
+import { Decimal } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class PricingService {
   constructor(
     private prisma: PrismaService,
-    private geocodingService: GeocodingService, // For converting lat/long to zoneId
-    private bookingsService: BookingsService, // For demand sensing
+    private geocodingService: GeocodingService,
+    // CORREÇÃO: Usar @Inject(forwardRef) para injetar BookingsService
+    @Inject(forwardRef(() => BookingsService)) 
+    private bookingsService: BookingsService,
   ) {}
 
   async calculatePrice(calculatePriceDto: CalculatePriceDto): Promise<DynamicPriceResult> {
     const { serviceId, providerId, latitude, longitude, scheduledDate } = calculatePriceDto;
 
-    // 1. Get base price of the service
     const service = await this.prisma.providerService.findUnique({
       where: { id: serviceId },
     });
@@ -28,34 +30,23 @@ export class PricingService {
       throw new NotFoundException(`Service with ID ${serviceId} not found.`);
     }
 
-    const originalPrice = service.basePrice.toNumber();
+    const originalPrice = service.price.toNumber();
     let finalPrice = originalPrice;
     let surgeFactor = 1.0;
     let reason = 'Preço base do serviço.';
 
-    // 2. Determine geographical zone (if zones are implemented)
-    // const zoneId = await this.geocodingService.getZoneIdFromCoordinates(latitude, longitude);
-
-    // 3. Find applicable pricing rules
     const rules = await this.prisma.pricingRule.findMany({
       where: {
         isActive: true,
-        // Apply zone filter if zoneId is determined
-        // zoneId: zoneId || null, // Match specific zone or global rules
         OR: [
-          { dayOfWeek: null }, // Apply to all days
-          { dayOfWeek: new Date(scheduledDate).getDay() }, // Apply to specific day of week
+          { dayOfWeek: null },
+          { dayOfWeek: new Date(scheduledDate).getDay() },
         ],
-        // Time range check (simplified, could be more complex with overlapping ranges)
-        // startTime: { lte: scheduledTime },
-        // endTime: { gte: scheduledTime },
       },
-      orderBy: { createdAt: 'desc' }, // Apply newer rules first or define priority
+      orderBy: { createdAt: 'desc' },
     });
 
-    // 4. Apply rules
     for (const rule of rules) {
-      // Check time validity
       const scheduledDateTime = new Date(scheduledDate);
       const ruleStartTime = rule.startTime ? this.parseTime(rule.startTime) : null;
       const ruleEndTime = rule.endTime ? this.parseTime(rule.endTime) : null;
@@ -70,10 +61,8 @@ export class PricingService {
         const ruleEndTotalMinutes = ruleEndTime.hours * 60 + ruleEndTime.minutes;
 
         if (ruleStartTotalMinutes < ruleEndTotalMinutes) {
-          // Standard range (e.g., 09:00 - 17:00)
           isTimeValid = scheduledTotalMinutes >= ruleStartTotalMinutes && scheduledTotalMinutes <= ruleEndTotalMinutes;
         } else {
-          // Overnight range (e.g., 22:00 - 06:00)
           isTimeValid = scheduledTotalMinutes >= ruleStartTotalMinutes || scheduledTotalMinutes <= ruleEndTotalMinutes;
         }
       } else if (ruleStartTime) {
@@ -84,23 +73,19 @@ export class PricingService {
         isTimeValid = scheduledTotalMinutes <= ruleEndTotalMinutes;
       }
 
-
       if (isTimeValid) {
-        // Check demand threshold (example: count bookings for this service/provider in the next hour)
         if (rule.demandThreshold) {
           const demandCount = await this.bookingsService.getDemandCountForArea(
             serviceId,
             latitude,
             longitude,
             scheduledDateTime,
-            // You might need to pass a radius or time window
           );
           if (demandCount >= rule.demandThreshold) {
             surgeFactor *= rule.surgeFactor.toNumber();
             reason = 'Preço ajustado devido à alta demanda.';
           }
         } else {
-          // Apply rule if no demand threshold or threshold met
           surgeFactor *= rule.surgeFactor.toNumber();
           reason = 'Preço ajustado por regra de horário/dia.';
         }
@@ -108,7 +93,7 @@ export class PricingService {
     }
 
     finalPrice = originalPrice * surgeFactor;
-    finalPrice = parseFloat(finalPrice.toFixed(2)); // Round to 2 decimal places
+    finalPrice = parseFloat(finalPrice.toFixed(2));
 
     return {
       originalPrice,
@@ -128,7 +113,7 @@ export class PricingService {
     return this.prisma.pricingRule.create({
       data: {
         ...rest,
-        surgeFactor: new this.prisma.Decimal(surgeFactor),
+        surgeFactor: new Decimal(surgeFactor),
       },
     });
   }
@@ -151,7 +136,7 @@ export class PricingService {
       where: { id },
       data: {
         ...rest,
-        surgeFactor: surgeFactor ? new this.prisma.Decimal(surgeFactor) : undefined,
+        surgeFactor: surgeFactor ? new Decimal(surgeFactor) : undefined,
       },
     });
   }

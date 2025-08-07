@@ -21,19 +21,19 @@ export interface Message {
   senderId: string; // ID do usuário que enviou a mensagem
   receiverId: string; // ID do usuário que recebeu a mensagem
   content: string;
-  createdAt: string; // CORREÇÃO: Usar 'createdAt' conforme o uso no componente (ISO string)
+  createdAt: string; // ISO string
   isRead: boolean; // Propriedade 'isRead' do backend
   // readAt?: string; // Manter se você tiver uma lógica de 'lido em' no frontend/backend
 }
 
 /**
  * @interface SendMessageDto
- * DTO para enviar uma nova mensagem (POST /chat/:chatId/messages).
+ * DTO para enviar uma nova mensagem para um chat.
  * Corresponde ao que o endpoint de criação de mensagem espera no corpo da requisição.
  */
 export interface SendMessageDto {
-  chatId: string; // CORREÇÃO: Adicionado 'chatId' conforme erro e uso
-  senderId: string; // CORREÇÃO: Adicionado 'senderId' conforme uso
+  chatId: string;
+  senderId: string;
   receiverId: string; // ID do destinatário é necessário para o backend
   content: string;
 }

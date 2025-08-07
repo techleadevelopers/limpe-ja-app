@@ -27,6 +27,8 @@ export interface CreateAddressDto {
   neighborhood: string;
   city: string;
   state: string;
+  latitude: number; // CORREÇÃO: Adicionado latitude
+  longitude: number; // CORREÇÃO: Adicionado longitude
 }
 
 /**
@@ -69,6 +71,9 @@ export interface RegisterProviderDto {
  * Usado no PATCH /providers/me.
  */
 export interface UpdateProviderProfileDto {
+  fullName?: string; // CORREÇÃO: Adicionado fullName
+  phone?: string | null; // CORREÇÃO: Adicionado phone
+  address?: Partial<CreateAddressDto> | null; // CORREÇÃO: Adicionado address
   yearsOfExperience?: number | null;
   avatarUrl?: string | null; // Agora espera uma URL válida
   bio?: string | null;

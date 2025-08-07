@@ -1,4 +1,3 @@
-// src/payments/payments.service.ts
 import { BadRequestException, Injectable, InternalServerErrorException, Logger, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { BookingStatus, TransactionType, Prisma } from '@prisma/client';
@@ -10,6 +9,7 @@ import { BookingsService } from '../bookings/bookings.service'; // Importar Book
 import { CreatePixChargeDto, PixChargeResponseDto } from './dto/create-pix-charge.dto';
 import { RequestWithdrawalDto } from './dto/request-withdrawal.dto';
 import { CouponsService } from '../coupons/coupons.service'; // NEW: Import CouponsService
+import { Decimal } from '@prisma/client/runtime/library'; // CORREÇÃO: Importar Decimal
 
 // Tipagem auxiliar para os dados que serão passados para a função de criação de payload
 interface PixChargeDetailsForGateway {
@@ -265,13 +265,17 @@ export class PaymentsService {
     // 3. Criar uma transação pendente no banco de dados
     const transaction = await this.prisma.transaction.create({
       data: {
-        providerId: dto.providerId,
-        bookingId: dto.bookingId || null,
+        // CORREÇÃO: Usar 'connect' para a relação 'provider'
+        provider: { connect: { id: dto.providerId } },
+        // Use connect para a relação booking, se bookingId existir
+        ...(dto.bookingId && { booking: { connect: { id: dto.bookingId } } }), // Condicionalmente conecta o booking
         amount: new Prisma.Decimal(dto.amount),
         type: TransactionType.PAYMENT,
         status: 'PENDING',
         description: dto.description,
-        couponId: bookingWithServiceDetails.couponId, // NEW: Store couponId from booking
+        // CORREÇÃO FINAL: REMOVER A LINHA 'couponId: bookingWithServiceDetails.couponId'
+        // E USAR APENAS A CONEXÃO CONDICIONAL ABAIXO:
+        ...(bookingWithServiceDetails.couponId && { coupon: { connect: { id: bookingWithServiceDetails.couponId } } }),
       },
     });
     this.logger.log(`[PaymentsService] createPixCharge - Transação pendente criada com ID: ${transaction.id}`);
@@ -423,8 +427,8 @@ export class PaymentsService {
 
         const withdrawalTransaction = await prisma.transaction.create({
           data: {
-            providerId: providerId,
-            amount: amount,
+            provider: { connect: { id: providerId } }, // CORRIGIDO: Usar 'connect' para a relação 'provider'
+            amount: new Decimal(amount), // CORREÇÃO: Usar new Decimal
             type: TransactionType.WITHDRAWAL,
             status: 'REQUESTED',
             description: notes || `Solicitação de saque para ${bankName || 'conta padrão'} Ag: ${agencyNumber || 'N/A'} Cc: ${accountNumber || 'N/A'}`,
@@ -537,14 +541,30 @@ export class PaymentsService {
     console.log(`Processing recurring payment for client ${clientId}, subscription ${subscriptionId}, booking ${bookingId}, amount ${amount}`);
     // This would trigger a charge against the stored payment method for the subscription.
     // It would create a new transaction record linked to the booking and subscription.
+
+    // Obter providerId do booking
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      select: { providerId: true },
+    });
+
+    if (!booking) {
+      throw new NotFoundException(`Booking with ID ${bookingId} not found for recurring payment.`);
+    }
+
     const transaction = await this.prisma.transaction.create({
       data: {
-        bookingId,
-        amount: new this.prisma.Decimal(amount),
+        provider: { connect: { id: booking.providerId } }, // Usar o providerId do booking
+        amount: new Decimal(amount),
         status: 'COMPLETED', // Simulate success
-        paymentMethodId: 'recurring_payment_method', // Placeholder
-        transactionRef: `recurring_txn_${Date.now()}_${bookingId}`,
-        // Link to subscription if your Transaction model supports it directly
+        type: TransactionType.PAYMENT, // ADICIONADO: Campo 'type' é obrigatório
+        transactionRef: `recurring_txn_${Date.now()}_${bookingId}`, // 'transactionRef' agora existe no schema
+        // Use 'connect' para a relação booking, já que bookingId é um parâmetro string
+        booking: {
+          connect: {
+            id: bookingId, // Conecta à reserva existente usando seu ID
+          },
+        },
       },
     });
     return transaction;

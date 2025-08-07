@@ -1,18 +1,19 @@
 // backend-cleaning/src/pricing/pricing.module.ts
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { PricingService } from './pricing.service';
 import { PricingController } from './pricing.controller';
-import { PrismaService } from '../prisma/prisma.service';
-import { GeocodingModule } from '../geocoding/geocoding.module'; // Assuming GeocodingModule exists
-import { BookingsModule } from '../bookings/bookings.module'; // Assuming BookingsModule exists
+import { PrismaModule } from '../prisma/prisma.module';
+import { GeocodingModule } from '../geocoding/geocoding.module';
+import { BookingsModule } from '../bookings/bookings.module';
 
 @Module({
   imports: [
-    GeocodingModule, // For zone lookup
-    BookingsModule,  // For demand sensing
+    PrismaModule,
+    GeocodingModule,
+    forwardRef(() => BookingsModule),
   ],
   controllers: [PricingController],
-  providers: [PricingService, PrismaService],
-  exports: [PricingService], // Export so other modules (e.g., Bookings) can use it
+  providers: [PricingService],
+  exports: [PricingService], // PricingService é exportado aqui
 })
 export class PricingModule {}

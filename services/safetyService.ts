@@ -3,9 +3,9 @@ import api from './api'; // Assuming you have an api.ts for Axios instance
 import {
   ReportPanicDto,
   MessageResponse,
-  IncidentReportDto,
+  IncidentReportDto, // Certifique-se de que IncidentReportDto inclui involvedUsers e attachments
   Incident,
-} from '../types/backend/safety';
+} from '../types/backend/safety'; // Certifique-se de que estes tipos estão corretos
 
 export const reportPanic = async (data: ReportPanicDto): Promise<MessageResponse> => {
   const response = await api.post<MessageResponse>('/safety/panic', data);
@@ -13,6 +13,7 @@ export const reportPanic = async (data: ReportPanicDto): Promise<MessageResponse
 };
 
 export const reportIncident = async (data: IncidentReportDto): Promise<Incident> => {
+  // data deve incluir type, description, bookingId, involvedUsers, attachments
   const response = await api.post<Incident>('/safety/incident', data);
   return response.data;
 };

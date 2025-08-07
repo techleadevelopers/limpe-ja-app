@@ -1,7 +1,7 @@
 // LimpeJaApp/services/userService.ts
 
 import api from './api'; // Assumindo que sua instância do Axios (com o token JWT) está aqui
-import { UserProfile } from '../types/backend/users'; // Ajuste o caminho conforme necessário
+import { UserProfile } from '../types/backend/users'; // Ajuste o caminho conforme necessário - DEVE INCLUIR 'isVerified', 'noShowCount', 'cancellationCount', 'badges'
 
 class UserService {
   private readonly BASE_URL = '/users'; // Assumindo que /users é o caminho base para endpoints relacionados ao usuário

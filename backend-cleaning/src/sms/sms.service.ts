@@ -10,19 +10,15 @@ export class SmsService {
   private readonly logger = new Logger(SmsService.name);
 
   constructor(private configService: ConfigService) {
-    // CORREÇÃO AQUI: Acessando as variáveis de ambiente do Twilio através do objeto 'sms'
     const accountSid = this.configService.get<string>('sms.twilioAccountSid');
     const authToken = this.configService.get<string>('sms.twilioAuthToken');
     this.twilioVerifyServiceSid = this.configService.get<string>('sms.twilioVerifyServiceSid');
 
-    // Logs para verificar se as variáveis de ambiente estão sendo lidas
     this.logger.log(`[SmsService] Lendo configurações do Twilio:`);
     this.logger.log(`[SmsService]   Account SID: ${accountSid ? 'Configurado' : 'NÃO CONFIGURADO'}`);
     this.logger.log(`[SmsService]   Auth Token: ${authToken ? 'Configurado' : 'NÃO CONFIGURADO'}`);
     this.logger.log(`[SmsService]   Verify Service SID: ${this.twilioVerifyServiceSid ? 'Configurado' : 'NÃO CONFIGURADO'}`);
 
-
-    // Apenas TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN e TWILIO_VERIFY_SERVICE_SID são obrigatórios para a inicialização do serviço.
     if (!accountSid || !authToken || !this.twilioVerifyServiceSid) {
       this.logger.error('Missing Twilio credentials. Please check TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_VERIFY_SERVICE_SID in your .env or configuration.');
       throw new InternalServerErrorException('Twilio credentials are not configured.');
@@ -32,11 +28,8 @@ export class SmsService {
   }
 
   async sendSms(to: string, message: string): Promise<void> {
-    // twilioFromNumber é necessário apenas para o método sendSms, não para o Verify
-    // CORREÇÃO AQUI: Acessando a variável de ambiente do Twilio através do objeto 'sms'
     const twilioFromNumber = this.configService.get<string>('sms.twilioPhoneNumber');
 
-    // Verifica se twilioFromNumber está configurado apenas quando o método sendSms é chamado
     if (!twilioFromNumber) {
       this.logger.error('TWILIO_PHONE_NUMBER (sms.twilioPhoneNumber) is not configured. Cannot send traditional SMS.');
       throw new InternalServerErrorException('Twilio phone number is not configured for sending SMS.');
@@ -51,11 +44,36 @@ export class SmsService {
       this.logger.log(`SMS sent to ${to}: "${message}"`);
     } catch (error) {
       this.logger.error(`Failed to send SMS to ${to}: ${error.message}`, error.stack);
-      // Inclua o código de erro do Twilio se disponível
       if (error.code) {
         this.logger.error(`[SmsService] Código de erro do Twilio: ${error.code}`);
       }
       throw new InternalServerErrorException('Falha ao enviar SMS. Por favor, tente novamente mais tarde.');
+    }
+  }
+
+  // NOVO MÉTODO: sendPanicAlertSms
+  async sendPanicAlertSms(to: string, message: string): Promise<void> {
+    const twilioFromNumber = this.configService.get<string>('sms.twilioPhoneNumber');
+
+    if (!twilioFromNumber) {
+      this.logger.error('TWILIO_PHONE_NUMBER (sms.twilioPhoneNumber) is not configured. Cannot send panic alert SMS.');
+      throw new InternalServerErrorException('Twilio phone number is not configured for sending panic alert SMS.');
+    }
+    this.logger.warn(`[SmsService][ALERTA DE PÂNICO] Tentando enviar SMS de alerta para ${to} de ${twilioFromNumber}.`);
+    try {
+      await this.twilioClient.messages.create({
+        body: `ALERTA DE PÂNICO: ${message}`, // Adiciona um prefixo para destacar
+        to: to,
+        from: twilioFromNumber,
+        // Você pode adicionar opções específicas para alertas de pânico aqui, se o Twilio suportar (ex: prioridade)
+      });
+      this.logger.warn(`[SmsService][ALERTA DE PÂNICO] SMS de alerta enviado para ${to}: "${message}"`);
+    } catch (error) {
+      this.logger.error(`[SmsService][ALERTA DE PÂNICO] Falha ao enviar SMS de alerta para ${to}: ${error.message}`, error.stack);
+      if (error.code) {
+        this.logger.error(`[SmsService][ALERTA DE PÂNICO] Código de erro do Twilio: ${error.code}`);
+      }
+      throw new InternalServerErrorException('Falha ao enviar SMS de alerta de pânico. Por favor, tente novamente mais tarde.');
     }
   }
 

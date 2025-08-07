@@ -15,7 +15,7 @@ export class ReportIncidentDto {
 
   @IsOptional()
   @IsArray()
-  @IsUUID({ each: true })
+  @IsUUID(undefined, { each: true }) // CORREÇÃO: Uso correto do @IsUUID com { each: true }
   involvedUsers?: string[]; // Array of user IDs (client/provider)
 
   @IsOptional()

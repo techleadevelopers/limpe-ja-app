@@ -5,36 +5,101 @@ import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { RegisterClientDto } from './dto/register-client.dto';
 import { RegisterProviderDto } from './dto/register-provider.dto';
-import { UserRole, User, Prisma, Client, Provider, Address, ProviderService, Service, Review, VerificationStatus, Booking } from '@prisma/client'; // Importante: 'Prisma' deve estar aqui
-import { AuthResponseDto } from './dto/auth-response.dto'; //
+// Importe BookingStatus e Prisma (para Prisma.SortOrder) do Prisma
+import { UserRole, User, Prisma, Client, Provider, Address, ProviderService, Service, Review, VerificationStatus, Booking, BookingStatus } from '@prisma/client';
+import { AuthResponseDto } from './dto/auth-response.dto';
 import { UserProfileDto } from '../users/dto/user-profile.dto';
-import { ProvidersService, ProviderWithIncludes, ProviderWithCalculatedRating } from '../providers/providers.service';
-import { ClientWithIncludes } from '../clients/clients.service'; // Corrected import path
+import { ProvidersService, ProviderWithCalculatedRating } from '../providers/providers.service';
+import { ClientWithIncludes as ImportedClientWithIncludes } from '../clients/clients.service';
 import { EmailService } from '../common/services/email.service';
 import { GeocodingService } from '../common/services/geocoding.service';
-// REMOVIDO: import { SmsService } from '../sms/sms.service';
-import { ConfigService } from '@nestjs/config'; // Para acessar JWT_EXPIRATION_TIME
+import { ConfigService } from '@nestjs/config';
 
-// Tipo Auxiliar: UserWithAllRelations (mantido)
-export type UserWithAllRelations = User & {
-  client?: (Client & {
-    user: User;
-    address: Address | null;
-    bookings: Booking[];
-    reviewsMade: Review[];
-    _count?: { bookings: number };
-    createdAt: Date;
-    updatedAt: Date;
-    noShowCount: number; // NEW
-    cancellationCount: number; // NEW
-  }) | null;
-  provider?: ProviderWithIncludes | null; // Usar ProviderWithIncludes atualizado
+// --- INÍCIO DAS CORREÇÕES DE TIPAGEM E ESTRUTURA ---
+
+// 1. Define a estrutura de include para a relação 'provider' no User
+// CORRIGIDO: Usando BookingStatus.COMPLETED e Prisma.SortOrder.desc
+const loginProviderInclude = {
+  user: true,
+  address: true,
+  providerServices: {
+    include: {
+      service: true
+    }
+  },
+  reviewsReceived: {
+    include: {
+      client: {
+        include: { user: true }
+      }
+    }
+  },
+  bookings: {
+    where: { status: BookingStatus.COMPLETED }, // CORRIGIDO: Usando o enum BookingStatus
+    orderBy: { createdAt: Prisma.SortOrder.desc }, // CORRIGIDO: Usando Prisma.SortOrder.desc
+    take: 100,
+  },
 };
 
-// REMOVIDO: Interface para o retorno do verifyOtp (não mais necessário)
-// interface VerifyOtpResponse extends AuthResponseDto {
-//   isNewUser: boolean;
-// }
+// 2. Define a estrutura de include para a relação 'client' no User
+const loginClientInclude = {
+  user: true,
+  address: true,
+  bookings: true,
+  reviewsMade: true,
+  _count: {
+    select: { bookings: true }
+  }
+};
+
+// 3. Redefine ProviderWithIncludes e ClientWithIncludes localmente.
+// ESTE PASSO É CRÍTICO para resolver o erro '2344' no UserWithAllRelations
+// e para garantir que o tipo de 'fullUser.provider' seja reconhecido corretamente.
+//
+// ATENÇÃO: VOCÊ DEVE GARANTIR QUE AS DEFINIÇÕES DESTES TIPOS EM
+// `providers/providers.service.ts` e `clients/clients.service.ts`
+// SEJAM IDÊNTICAS A ESTAS DEFINIÇÕES. CASO CONTRÁRIO, VOCÊ TERÁ ERROS DE TIPAGEM
+// EM OUTROS LUGARES ONDE ESTES TIPOS SÃO IMPORTADOS E USADOS.
+export type ProviderWithIncludes = Prisma.ProviderGetPayload<{
+  include: typeof loginProviderInclude;
+}>;
+
+export type ClientWithIncludes = Prisma.ClientGetPayload<{
+  include: typeof loginClientInclude;
+}>;
+
+// 4. Tipo Auxiliar: UserWithAllRelations
+// Este tipo agora reflete exatamente a estrutura do `include` na query do Prisma,
+// usando as constantes definidas acima. Isso resolve o erro '2344'.
+export type UserWithAllRelations = Prisma.UserGetPayload<{
+  include: {
+    client?: {
+      include: typeof loginClientInclude;
+    };
+    provider?: {
+      include: typeof loginProviderInclude;
+    };
+  };
+}>;
+
+// Tipos para os retornos de `create` em registerClient e registerProvider
+type NewUserClientPayload = Prisma.UserGetPayload<{
+  include: {
+    client: {
+      include: typeof loginClientInclude;
+    };
+  };
+}>;
+
+type NewUserProviderPayload = Prisma.UserGetPayload<{
+  include: {
+    provider: {
+      include: typeof loginProviderInclude;
+    };
+  };
+}>;
+
+// --- FIM DAS CORREÇÕES DE TIPAGEM E ESTRUTURA ---
 
 @Injectable()
 export class AuthService {
@@ -46,8 +111,7 @@ export class AuthService {
     private providersService: ProvidersService,
     private emailService: EmailService,
     private geocodingService: GeocodingService,
-    // REMOVIDO: private smsService: SmsService,
-    private configService: ConfigService, // Injeta ConfigService para JWT_EXPIRATION_TIME
+    private configService: ConfigService,
   ) {}
 
   // validateUser (email/password) - Mantido
@@ -69,38 +133,10 @@ export class AuthService {
       where: { id: user.id },
       include: {
         client: {
-          include: {
-            user: true,
-            address: true,
-            bookings: true,
-            reviewsMade: true,
-            _count: {
-              select: { bookings: true }
-            }
-          },
+          include: loginClientInclude,
         },
         provider: {
-          include: {
-            user: true,
-            address: true,
-            providerServices: {
-              include: {
-                service: true
-              }
-            },
-            reviewsReceived: {
-              include: {
-                client: {
-                  include: { user: true }
-                }
-              }
-            },
-            bookings: { // Added for provider badges/metrics
-              where: { status: 'COMPLETED' },
-              orderBy: { createdAt: 'desc' },
-              take: 100,
-            },
-          },
+          include: loginProviderInclude,
         },
       },
     }) as UserWithAllRelations;
@@ -110,7 +146,7 @@ export class AuthService {
     }
 
     const payload = { email: fullUser.email, sub: fullUser.id, role: fullUser.role };
-    const expiresIn = this.configService.get<string>('jwt.expirationTime'); // Acessando do config.ts
+    const expiresIn = this.configService.get<string>('jwt.expirationTime');
     const accessToken = this.jwtService.sign(payload, { expiresIn });
 
     let mappedProvider: ProviderWithCalculatedRating | undefined;
@@ -120,7 +156,11 @@ export class AuthService {
 
     const userProfileDataForDto = {
       ...fullUser,
-      client: fullUser.client,
+      client: fullUser.client ? {
+        ...(fullUser.client as ClientWithIncludes),
+        noShowCount: (fullUser.client as any).noShowCount,
+        cancellationCount: (fullUser.client as any).cancellationCount,
+      } : undefined,
       provider: mappedProvider,
     };
 
@@ -140,14 +180,12 @@ export class AuthService {
     if (existingUser) {
       throw new ConflictException('Este email já está cadastrado.');
     }
-    // Check if phone number already exists (ainda relevante, mesmo sem OTP principal)
     if (phone) {
       const existingPhoneUser = await this.prisma.user.findUnique({ where: { phone } });
       if (existingPhoneUser) {
         throw new ConflictException('Este número de telefone já está cadastrado.');
       }
     }
-    // Check if CPF already exists
     if (cpf) {
       const existingCpfClient = await this.prisma.client.findUnique({ where: { cpf } });
       if (existingCpfClient) {
@@ -162,20 +200,20 @@ export class AuthService {
         `${address.street}, ${address.number}, ${address.neighborhood}, ${address.city}, ${address.state}, ${address.cep}`
       );
 
-      const newUser = await this.prisma.user.create({
+      const newUserClient: NewUserClientPayload = await this.prisma.user.create({
         data: {
           email,
           phone: phone || null,
           passwordHash: hashedPassword,
           role: UserRole.CLIENT,
-          isPhoneVerified: !!phone, // Se o telefone foi fornecido, considerá-lo verificado para este fluxo inicial
+          isPhoneVerified: !!phone,
           client: {
             create: {
               fullName,
               phone: phone ?? null,
               cpf: cpf ?? null,
-              noShowCount: 0, // NEW
-              cancellationCount: 0, // NEW
+              noShowCount: 0,
+              cancellationCount: 0,
               address: {
                 create: {
                   cep: address.cep,
@@ -185,8 +223,8 @@ export class AuthService {
                   city: address.city,
                   state: address.state,
                   complement: address.complement ?? null,
-                  latitude: geoCoordinates?.latitude, // Assuming DTO includes these
-                  longitude: geoCoordinates?.longitude, // Assuming DTO includes these
+                  latitude: geoCoordinates?.latitude,
+                  longitude: geoCoordinates?.longitude,
                 },
               },
             },
@@ -194,34 +232,22 @@ export class AuthService {
         },
         include: {
           client: {
-            include: {
-              user: true,
-              address: true,
-              bookings: true,
-              reviewsMade: true,
-              _count: {
-                select: { bookings: true }
-              }
-            }
+            include: loginClientInclude
           }
         }
       });
 
-      // === INÍCIO DA CORREÇÃO PARA CAMPO 'LOCATION' NO REGISTRO DE CLIENTE ===
-      // This part might be redundant if latitude/longitude are directly set in address.create
-      // but keeping it for explicit geospatial indexing if needed.
-      if (geoCoordinates && newUser.client?.address?.id) {
-        const wktPoint = `POINT(${geoCoordinates.longitude} ${geoCoordinates.latitude})`; // Formata como string WKT
+      if (geoCoordinates && newUserClient.client?.address?.id) {
+        const wktPoint = `POINT(${geoCoordinates.longitude} ${geoCoordinates.latitude})`;
         await this.prisma.$executeRaw(Prisma.sql`
             UPDATE "Address"
             SET location = ST_GeomFromText(${wktPoint}, 4326)
-            WHERE id = ${newUser.client.address.id}
+            WHERE id = ${newUserClient.client.address.id}
         `);
-        this.logger.log(`[AuthService] Endereço do cliente ID: ${newUser.client.address.id} atualizado com localização geoespacial.`);
+        this.logger.log(`[AuthService] Endereço do cliente ID: ${newUserClient.client.address.id} atualizado com localização geoespacial.`);
       }
-      // === FIM DA CORREÇÃO PARA CAMPO 'LOCATION' NO REGISTRO DE CLIENTE ===
 
-      return this.login(newUser);
+      return this.login(newUserClient);
     } catch (error) {
       this.logger.error('Erro ao registrar cliente:', error);
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
@@ -272,13 +298,13 @@ export class AuthService {
         `${address.street}, ${address.number}, ${address.neighborhood}, ${address.city}, ${address.state}, ${address.cep}`
       );
 
-      const newUser = await this.prisma.user.create({
+      const newUserProvider: NewUserProviderPayload = await this.prisma.user.create({
         data: {
           email,
           phone: phone || null,
           passwordHash: hashedPassword,
           role: UserRole.PROVIDER,
-          isPhoneVerified: !!phone, // Se o telefone foi fornecido, considerá-lo verificado para este fluxo inicial
+          isPhoneVerified: !!phone,
           provider: {
             create: {
               fullName,
@@ -289,7 +315,7 @@ export class AuthService {
               avatarUrl: avatarUrl ?? null,
               verificationStatus: VerificationStatus.PENDING_INITIAL_REVIEW,
               bio: null,
-              badges: [], // NEW: Initialize with empty badges
+              badges: [],
               address: {
                 create: {
                   cep: address.cep,
@@ -299,8 +325,8 @@ export class AuthService {
                   city: address.city,
                   state: address.state,
                   complement: address.complement ?? null,
-                  latitude: geoCoordinates?.latitude, // Assuming DTO includes these
-                  longitude: geoCoordinates?.longitude, // Assuming DTO includes these
+                  latitude: geoCoordinates?.latitude,
+                  longitude: geoCoordinates?.longitude,
                 },
               },
             },
@@ -308,48 +334,23 @@ export class AuthService {
         },
         include: {
           provider: {
-            include: {
-              user: true,
-              address: true,
-              providerServices: {
-                include: {
-                  service: true
-                }
-              },
-              reviewsReceived: {
-                include: {
-                  client: {
-                    include: { user: true }
-                  }
-                }
-              },
-              bookings: { // Added for provider badges/metrics
-                where: { status: 'COMPLETED' },
-                orderBy: { createdAt: 'desc' },
-                take: 100,
-              },
-            }
+            include: loginProviderInclude
           }
         }
       });
 
-      // === INÍCIO DA CORREÇÃO PARA CAMPO 'LOCATION' NO REGISTRO DE PROVEDOR ===
-      // This part might be redundant if latitude/longitude are directly set in address.create
-      // but keeping it for explicit geospatial indexing if needed.
-      if (geoCoordinates && newUser.provider?.address?.id) {
-        const wktPoint = `POINT(${geoCoordinates.longitude} ${geoCoordinates.latitude})`; // Formata como string WKT
+      if (geoCoordinates && newUserProvider.provider?.address?.id) {
+        const wktPoint = `POINT(${geoCoordinates.longitude} ${geoCoordinates.latitude})`;
 
-        // Usa $executeRaw para inserir/atualizar o campo de geometria diretamente via SQL
         await this.prisma.$executeRaw(Prisma.sql`
             UPDATE "Address"
             SET location = ST_GeomFromText(${wktPoint}, 4326)
-            WHERE id = ${newUser.provider.address.id}
+            WHERE id = ${newUserProvider.provider.address.id}
         `);
-        this.logger.log(`[AuthService] Endereço do provedor ID: ${newUser.provider.address.id} atualizado com localização geoespacial.`);
+        this.logger.log(`[AuthService] Endereço do provedor ID: ${newUserProvider.provider.address.id} atualizado com localização geoespacial.`);
       }
-      // === FIM DA CORREÇÃO PARA CAMPO 'LOCATION' NO REGISTRO DE PROVEDOR ===
 
-      return this.login(newUser);
+      return this.login(newUserProvider);
     } catch (error) {
       this.logger.error('Erro ao registrar provedor:', error);
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
@@ -373,7 +374,6 @@ export class AuthService {
     }
 
     const resetToken = this.jwtService.sign({ userId: user.id }, { expiresIn: '1h' });
-    // Use a APP_BASE_URL do ConfigService para construir o link
     const appBaseUrl = this.configService.get<string>('appBaseUrl');
     const resetLink = `${appBaseUrl}/reset-password?token=${resetToken}`;
 
@@ -411,10 +411,4 @@ export class AuthService {
       this.logger.error(`Falha ao enviar email de redefinição de senha para ${email}: ${emailError.message}`);
     }
   }
-
-  // REMOVIDO: checkPhoneNumberExistence
-  // REMOVIDO: sendOtp
-  // REMOVIDO: verifyOtp
-  // REMOVIDO: loginWithPhoneNumberAndPassword
-  // REMOVIDO: formatPhoneNumberToE164 (função auxiliar, não mais usada)
 }

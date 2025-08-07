@@ -1,7 +1,7 @@
 // src/verification/verification.module.ts
 import { Module, forwardRef } from '@nestjs/common';
 import { DocumentProcessingService } from '../document-processing/document-processing.service';
-import { CriminalBackgroundCheckService } from './criminal-background-check.service';
+// REMOVIDO: import { CriminalBackgroundCheckService } from './criminal-background-check.service';
 import { VerificationController } from './verification.controller';
 import { VerificationService } from './verification.service';
 
@@ -18,7 +18,7 @@ import { QueuesModule } from '../queues/queues.module'; // Importa o QueuesModul
   controllers: [VerificationController],
   providers: [
     VerificationService,
-    CriminalBackgroundCheckService,
+    // REMOVIDO: CriminalBackgroundCheckService,
     DocumentProcessingService,
   ],
   exports: [

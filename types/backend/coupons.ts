@@ -9,6 +9,7 @@ export enum CouponStatus {
   INACTIVE = 'INACTIVE',
   EXPIRED = 'EXPIRED',
   USED = 'USED',
+  USED_UP = 'USED_UP', // CORREÇÃO: Adicionado USED_UP
 }
 
 export enum CouponTarget {
@@ -22,14 +23,14 @@ export interface Coupon {
   id: string;
   code: string;
   type: CouponType;
-  value: number; // e.g., 0.10 for 10% or 10.00 for R$10
+  value: number; // e.g., 0.10 for 10% or 10.00 for R$10 (CORREÇÃO: Decimal no Prisma é number aqui)
   validFrom: string; // ISO date string
   validUntil: string; // ISO date string
   maxUses?: number;
   usesCount: number;
   target: CouponTarget;
   targetId?: string; // ID of service or provider if target is specific
-  status: string; // ACTIVE, INACTIVE, EXPIRED, USED_UP
+  status: CouponStatus; // CORREÇÃO: Usar o enum CouponStatus
   createdAt: string;
   updatedAt: string;
 }

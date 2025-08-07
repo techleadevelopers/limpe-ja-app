@@ -24,7 +24,8 @@ import { useProviderRegistration } from '../../../contexts/ProviderRegistrationC
 import { RegisterProviderDto } from '../../../types/backend/auth';
 
 import { AnimatedErrorMessage } from '../../../components/auth/components/AnimatedErrorMessage';
-import uploadService from '../../../services/uploadService'; // <-- NOVO: Importa o serviço de upload
+import uploadService from '../../../services/uploadService'; 
+import * as Location from 'expo-location'; // Importação do expo-location
 
 const LOGO_IMAGE = require('../../../assets/images/logo2.png');
 
@@ -34,20 +35,14 @@ const ErrorMessage: React.FC<{ message: string | null }> = ({ message }) => {
 };
 
 export default function RegisterProviderScreen() {
-    const [currentStep, setCurrentStep] = useState(1); // 1: Basic Info, 2: Personal Data, 3: Address Info, 4: Service Details
-
-    // Step 1: Informações Básicas (Email, Nome, Telefone)
+    const [currentStep, setCurrentStep] = useState(1);
     const [email, setEmail] = useState('');
-    const [username, setUsername] = useState(''); // será mapeado para fullName
+    const [username, setUsername] = useState('');
     const [phone, setPhone] = useState('');
-
-    // Step 2: Dados Pessoais (CPF, Data Nascimento, Senha)
     const [cpf, setCpf] = useState('');
-    const [dateOfBirth, setDateOfBirth] = useState(''); // Data no formato DD/MM/AAAA
+    const [dateOfBirth, setDateOfBirth] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
-
-    // Step 3: Endereço (CEP, Rua, Número, Bairro, Cidade, Estado)
     const [cep, setCep] = useState('');
     const [street, setStreet] = useState('');
     const [number, setNumber] = useState('');
@@ -56,7 +51,6 @@ export default function RegisterProviderScreen() {
     const [state, setState] = useState('');
     const [cepLoading, setCepLoading] = useState(false);
 
-    // Step 4: Detalhes do Serviço
     const { serviceDetails, setServiceDetails, submitRegistration, setPersonalDetails: setContextPersonalDetails } = useProviderRegistration();
     const [experiencia, setExperiencia] = useState('');
     const [servicosOferecidos, setServicosOferecidos] = useState('');
@@ -65,9 +59,8 @@ export default function RegisterProviderScreen() {
     const [anosExperiencia, setAnosExperiencia] = useState('');
     const [pixKey, setPixKey] = useState('');
     const [avatarUri, setAvatarUri] = useState<string | null>(null);
-    const [avatarUrl, setAvatarUrl] = useState<string | null>(null); // Esta será a URL do servidor
+    const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
-    // Error states (now only set explicitly in handlers)
     const [experienciaError, setExperienciaError] = useState<string | null>(null);
     const [servicosOferecidosError, setServicosOferecidosError] = useState<string | null>(null);
     const [estruturaPrecoError, setEstruturaPrecoError] = useState<string | null>(null);
@@ -76,14 +69,13 @@ export default function RegisterProviderScreen() {
     const [pixKeyError, setPixKeyError] = useState<string | null>(null);
     const [avatarError, setAvatarError] = useState<string | null>(null);
     const [addressError, setAddressError] = useState<string | null>(null);
-    const [generalError, setGeneralError] = useState<string | null>(null); // For Step 1 & 2 general errors
+    const [generalError, setGeneralError] = useState<string | null>(null);
 
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-
     const router = useRouter();
-    const { signUpProvider, setIsRegistrationInProgress } = useAuth(); // signUpProvider é para o registro inicial
+    const { signUpProvider, setIsRegistrationInProgress } = useAuth();
 
     const mainElementsOpacity = useRef(new Animated.Value(0)).current;
     const mainElementsTranslateY = useRef(new Animated.Value(18)).current;
@@ -138,8 +130,8 @@ export default function RegisterProviderScreen() {
 
         if (!pickerResult.canceled && pickerResult.assets && pickerResult.assets.length > 0) {
             setAvatarUri(pickerResult.assets[0].uri);
-            setAvatarError(null); // Clear avatar error on selection
-            setAvatarUrl(null); // Limpa a URL do servidor para forçar um novo upload
+            setAvatarError(null);
+            setAvatarUrl(null);
             console.log("[ImagePicker] Imagem selecionada com URI:", pickerResult.assets[0].uri);
         } else {
             console.log("[ImagePicker] Seleção de imagem cancelada ou falhou.");
@@ -162,12 +154,10 @@ export default function RegisterProviderScreen() {
         return formattedText;
     };
 
-    // --- CEP Integration ---
     const fetchAddressByCep = async (inputCep: string) => {
         const cleanedCep = inputCep.replace(/\D/g, '');
         if (cleanedCep.length !== 8) {
             setAddressError('CEP deve conter 8 dígitos.');
-            // Clear other address fields if CEP is incomplete
             setStreet('');
             setNeighborhood('');
             setCity('');
@@ -176,7 +166,7 @@ export default function RegisterProviderScreen() {
         }
 
         setCepLoading(true);
-        setAddressError(null); // Clear error before fetching
+        setAddressError(null);
         try {
             const response = await fetch(`https://viacep.com.br/ws/${cleanedCep}/json/`);
             const data = await response.json();
@@ -210,7 +200,6 @@ export default function RegisterProviderScreen() {
     }, [mainElementsOpacity, mainElementsTranslateY]);
 
     useEffect(() => {
-        // Reset animation values for current step transition
         headerAnim.setValue(0);
         formAnim.setValue(0);
         Animated.stagger(200, [
@@ -240,7 +229,6 @@ export default function RegisterProviderScreen() {
         }
     }, [currentStep, serviceDetails, headerAnim, formAnim]);
 
-    // **Refactored Validation Functions (return boolean only)**
     const pureValidateStep1 = useCallback(() => {
         let isValid = true;
         if (!email.trim() || !username.trim() || !phone.trim()) {
@@ -296,14 +284,13 @@ export default function RegisterProviderScreen() {
         if (!areasAtendimento.trim()) isValid = false;
         if (isNaN(Number(anosExperiencia)) || Number(anosExperiencia) < 0 || anosExperiencia.trim() === '') isValid = false;
         if (!pixKey.trim()) isValid = false;
-        if (!avatarUri) isValid = false; // Verifica se há um URI local (imagem selecionada)
+        if (!avatarUri) isValid = false;
         return isValid;
     }, [experiencia, servicosOferecidos, estruturaPreco, areasAtendimento, anosExperiencia, pixKey, avatarUri]);
 
 
     const handleNext = async () => {
         console.log(`[RegisterProvider] handleNext: Tentando avançar do Step ${currentStep}.`);
-        // Clear all general and address-related errors before validation attempts
         setGeneralError(null);
         setAddressError(null);
 
@@ -324,9 +311,28 @@ export default function RegisterProviderScreen() {
                 console.warn("[RegisterProvider] handleNext: Falha ao avançar: Step 2 inválido.");
             }
         } else if (currentStep === 3) {
-            if (pureValidateStep3() && !cepLoading) { // Ensure CEP lookup is not in progress
-                setIsLoading(true); // Activate loading for the API call
+            if (pureValidateStep3() && !cepLoading) {
+                setIsLoading(true);
                 try {
+                    // **INÍCIO DA CORREÇÃO: ADICIONANDO LÓGICA DE PERMISSÃO DE LOCALIZAÇÃO**
+                    let { status } = await Location.requestForegroundPermissionsAsync();
+                    if (status !== 'granted') {
+                        throw new Error('A permissão para acessar a localização foi negada. Por favor, habilite-a nas configurações do seu dispositivo.');
+                    }
+                    // **FIM DA CORREÇÃO**
+
+                    const fullAddress = `${street}, ${number}, ${neighborhood}, ${city}, ${state}, ${cep}`;
+                    console.log("[RegisterProvider] Geocodificando endereço:", fullAddress);
+                    
+                    const location = await Location.geocodeAsync(fullAddress);
+                    
+                    if (location.length === 0) {
+                        throw new Error('Não foi possível encontrar as coordenadas para o endereço fornecido. Por favor, verifique o endereço e tente novamente.');
+                    }
+
+                    const { latitude, longitude } = location[0];
+                    console.log(`[RegisterProvider] Coordenadas obtidas via expo-location: Latitude=${latitude}, Longitude=${longitude}`);
+
                     const [day, month, year] = dateOfBirth.split('/').map(Number);
                     const formattedDateOfBirth = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
@@ -345,11 +351,13 @@ export default function RegisterProviderScreen() {
                             city: city.trim(),
                             state: state.trim(),
                             complement: '',
+                            latitude, // Adicionado
+                            longitude, // Adicionado
                         },
                     };
                     console.log("[RegisterProvider] handleNext (Step 3): Chamando signUpProvider do AuthContext para registro inicial.");
-                    await signUpProvider(providerData); // Esta é a chamada API de registro inicial
-                    // Se o registro inicial for bem-sucedido, salve os dados pessoais no contexto
+                    await signUpProvider(providerData);
+
                     setContextPersonalDetails({
                         email: email.trim(),
                         password: password.trim(),
@@ -365,14 +373,15 @@ export default function RegisterProviderScreen() {
                             city: city.trim(),
                             state: state.trim(),
                             complement: '',
+                            latitude,
+                            longitude,
                         },
                     });
-                    console.log("[RegisterProvider] handleNext (Step 3): signUpProvider do AuthContext retornou sucesso. Avançando para Step 4.");
-                    setCurrentStep(4); // Avançar para Detalhes do Serviço
+                    console.log("[RegisterProvider] handleNext (Step 3): signUpProvider do AuthContext retornou sucesso. Avançando para Detalhes do Serviço.");
+                    router.replace('/(auth)/provider-register/service-details'); // Corrigido a navegação aqui
                 } catch (error: any) {
-                    console.error("[RegisterProvider] handleNext (Step 3): Erro durante o registro inicial:", error.message);
-                    setGeneralError(error.message || 'Falha no registro inicial. Por favor, tente novamente.');
-                    // Não avançar para a próxima etapa em caso de erro
+                    console.error("[RegisterProvider] handleNext (Step 3): Erro durante o registro inicial:", error.message, error);
+                    setAddressError(error.message || 'Falha no registro inicial. Por favor, verifique o endereço e tente novamente.');
                 } finally {
                     setIsLoading(false);
                     console.log("[RegisterProvider] handleNext (Step 3): isLoading definido como false.");
@@ -386,16 +395,14 @@ export default function RegisterProviderScreen() {
                 console.warn("[RegisterProvider] handleNext: Falha ao avançar: Step 3 inválido.");
             }
         } else if (currentStep === 4) {
-            // Se estiver na última etapa, o botão "Avançar" deve acionar a submissão final
             handleServiceDetailsSubmit();
         }
     };
-
+    
     const handleServiceDetailsSubmit = async () => {
         console.log("[ServiceDetailsSubmit] Botão 'Finalizar Cadastro' pressionado na Etapa 4.");
-        let isValid = true; // Flag local para agregar o status de validação
+        let isValid = true; 
 
-        // Limpar todos os erros anteriores para os campos da Etapa 4
         setExperienciaError(null);
         setServicosOferecidosError(null);
         setEstruturaPrecoError(null);
@@ -404,7 +411,6 @@ export default function RegisterProviderScreen() {
         setPixKeyError(null);
         setAvatarError(null);
 
-        // Realizar validação e definir mensagens de erro específicas
         if (!experiencia.trim()) { setExperienciaError('Sua experiência é obrigatória.'); isValid = false; }
         if (!servicosOferecidos.trim()) { setServicosOferecidosError('Liste os serviços que você oferece.'); isValid = false; }
         if (!estruturaPreco.trim()) { setEstruturaPrecoError('Descreva sua estrutura de preços.'); isValid = false; }
@@ -422,49 +428,40 @@ export default function RegisterProviderScreen() {
         setIsSubmitting(true);
         console.log("[ServiceDetailsSubmit] isSubmitting definido como true.");
         try {
-            let finalAvatarServerUrl: string | null = avatarUrl; // Valor inicial do estado (pode ser null ou URL existente)
+            let finalAvatarServerUrl: string | null = avatarUrl;
 
-            // Log do estado atual antes do upload potencial
             console.log("[ServiceDetailsSubmit] Estado inicial: avatarUri=", avatarUri, ", avatarUrl=", avatarUrl);
 
-            // Condição para acionar o upload: se avatarUri estiver presente E (avatarUrl for null OU avatarUrl não for uma URL http válida)
             if (avatarUri && (!avatarUrl || !avatarUrl.startsWith('http'))) {
                 console.log("[ServiceDetailsSubmit] Avatar URI presente e URL do servidor ausente/inválida. Iniciando upload da selfie para o backend.");
                 try {
-                    // ====================================================================================
-                    // AQUI: CHAMADA PARA SUA FUNÇÃO REAL DE UPLOAD DE SELFIE PARA O BACKEND
-                    // CORREÇÃO: Usar uploadImageToCloud do uploadService e passar avatarUri e 'avatar'
-                    const uploadedUrl = await uploadService.uploadImageToCloud(avatarUri, 'avatar');
-                    // ====================================================================================
+                    const uploadResponse = await uploadService.uploadImageToCloud(avatarUri, 'avatar');
 
-                    if (uploadedUrl && uploadedUrl.startsWith('http')) { // Garante que é uma URL válida
-                        finalAvatarServerUrl = uploadedUrl;
+                    if (uploadResponse && 'url' in uploadResponse && typeof uploadResponse.url === 'string') {
+                        finalAvatarServerUrl = uploadResponse.url;
                         console.log("[ServiceDetailsSubmit] Upload da selfie concluído. URL:", finalAvatarServerUrl);
-                        setAvatarUrl(finalAvatarServerUrl); // Atualiza o estado avatarUrl no componente
+                        setAvatarUrl(finalAvatarServerUrl);
                     } else {
-                        console.error("[ServiceDetailsSubmit] Upload da selfie retornou uma URL inválida:", uploadedUrl);
+                        console.error("[ServiceDetailsSubmit] Upload da selfie retornou uma resposta inválida:", uploadResponse);
                         setAvatarError("Falha ao processar a imagem. Tente novamente.");
                         setIsSubmitting(false);
-                        return; // Interrompe a submissão se o upload falhar
+                        return;
                     }
                 } catch (uploadError) {
                     console.error("[ServiceDetailsSubmit] Erro durante o upload da selfie:", uploadError);
                     setAvatarError("Erro no upload da imagem. Tente novamente.");
                     setIsSubmitting(false);
-                    return; // Interrompe a submissão em caso de erro de upload
+                    return;
                 }
             } else if (avatarUrl && avatarUrl.startsWith('http')) {
                 console.log("[ServiceDetailsSubmit] Avatar URL já presente e válida. Não é necessário fazer upload novamente.");
-                // finalAvatarServerUrl já contém avatarUrl
             } else {
                 console.warn("[ServiceDetailsSubmit] Nenhuma URI ou URL de avatar válida para processar. avatarUri:", avatarUri, "avatarUrl:", avatarUrl);
                 setAvatarError("Uma foto de perfil válida é obrigatória.");
                 setIsSubmitting(false);
-                return; // Impede a submissão se nenhuma URL de avatar válida puder ser determinada
+                return;
             }
 
-            // Neste ponto, finalAvatarServerUrl DEVE ser uma URL válida (se avatarUri estava presente e o upload foi bem-sucedido)
-            // ou null (se nenhum avatar foi selecionado, o que deve ser capturado pela validação).
             if (!finalAvatarServerUrl) {
                 setAvatarError("Uma foto de perfil é obrigatória.");
                 setIsSubmitting(false);
@@ -478,17 +475,16 @@ export default function RegisterProviderScreen() {
                 areasAtendimento: areasAtendimento.trim(),
                 anosExperiencia: Number(anosExperiencia),
                 pixKey: pixKey.trim(),
-                avatarUri, // Mantém o URI local para exibição
-                avatarUrl: finalAvatarServerUrl, // Esta é a URL do GCS
+                avatarUri,
+                avatarUrl: finalAvatarServerUrl,
             };
             console.log("[ServiceDetailsSubmit] Detalhes do serviço a serem usados na submissão:", currentServiceDetails);
             console.log("[ServiceDetailsSubmit] avatarUri (local):", avatarUri);
             console.log("[ServiceDetailsSubmit] finalAvatarServerUrl (após upload/determinação):", finalAvatarServerUrl);
-            console.log("[ServiceDetailsSubmit] avatarUrl (estado após atualização potencial):", avatarUrl); // Deve ser o mesmo que finalAvatarServerUrl
+            console.log("[ServiceDetailsSubmit] avatarUrl (estado após atualização potencial):", avatarUrl);
 
-            // Passa `currentServiceDetails` diretamente para `submitRegistration`
             console.log("[ServiceDetailsSubmit] Chamando submitRegistration do ProviderRegistrationContext para enviar dados ao backend.");
-            await submitRegistration(currentServiceDetails); // Passa os dados mais recentes
+            await submitRegistration(currentServiceDetails);
 
             console.log("[ServiceDetailsSubmit] submitRegistration concluído. Preparando redirecionamento para o Dashboard.");
 
@@ -523,12 +519,10 @@ export default function RegisterProviderScreen() {
     const signUpButtonAnims = createButtonAnimations();
     const nextButtonAnims = createButtonAnimations();
 
-    // Estas agora apenas chamam as funções de validação, que *retornam booleanos*,
-    // para que não causem re-renderizações.
     const isFinalSignUpButtonEnabled = pureValidateStep4();
     const isNextButtonEnabledStep1 = pureValidateStep1();
     const isNextButtonEnabledStep2 = pureValidateStep2();
-    const isNextButtonEnabledStep3 = pureValidateStep3() && !cepLoading; // Também considera cepLoading aqui
+    const isNextButtonEnabledStep3 = pureValidateStep3() && !cepLoading;
 
     const getWelcomeSubtitle = () => {
         switch (currentStep) {
@@ -552,19 +546,18 @@ export default function RegisterProviderScreen() {
         >
             <StatusBar barStyle="dark-content" backgroundColor={styles.scrollView.backgroundColor} />
             <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContentContainer} keyboardShouldPersistTaps="handled" >
-                {/* Header with Back Button */}
                 <Stack.Screen
                     options={{
                         headerShown: true,
                         headerTitle: '',
                         headerLeft: () => (
-                            currentStep > 1 ? ( // Only show back button if not on Step 1
+                            currentStep > 1 ? (
                                 <TouchableOpacity onPress={() => setCurrentStep(currentStep - 1)} style={styles.backButtonHeader}>
                                     <Ionicons name="arrow-back-outline" size={24} color="#00BCD4" />
                                 </TouchableOpacity>
                             ) : null
                         ),
-                        headerTransparent: true, // Make header transparent to align with content
+                        headerTransparent: true,
                     }}
                 />
                 <Animated.View style={[styles.contentWrapper, { opacity: mainElementsOpacity, transform: [{ translateY: mainElementsTranslateY }] }]}>
@@ -576,7 +569,6 @@ export default function RegisterProviderScreen() {
                         {getWelcomeSubtitle()}
                     </Text>
 
-                    {/* Step 1: Basic Info */}
                     {currentStep === 1 && (
                         <View>
                             <View style={styles.inputWrapper}>
@@ -631,7 +623,6 @@ export default function RegisterProviderScreen() {
                         </View>
                     )}
 
-                    {/* Step 2: Personal Data */}
                     {currentStep === 2 && (
                         <View>
                             <View style={styles.inputWrapper}>
@@ -686,7 +677,6 @@ export default function RegisterProviderScreen() {
                         </View>
                     )}
 
-                    {/* Step 3: Address Info */}
                     {currentStep === 3 && (
                         <View>
                             <View style={styles.inputWrapper}>
@@ -700,11 +690,9 @@ export default function RegisterProviderScreen() {
                                     value={cep}
                                     onChangeText={(text) => {
                                         setCep(text);
-                                        // Trigger CEP lookup if 8 digits are entered
                                         if (text.replace(/\D/g, '').length === 8) {
                                             fetchAddressByCep(text);
                                         } else {
-                                            // Clear fields and potential errors if CEP is incomplete
                                             setStreet('');
                                             setNeighborhood('');
                                             setCity('');
@@ -729,7 +717,7 @@ export default function RegisterProviderScreen() {
                                     value={street}
                                     onChangeText={(text) => { setStreet(text); if (addressError) setAddressError(null); }}
                                     autoCapitalize="words"
-                                    editable={!cepLoading} // Disable while loading CEP
+                                    editable={!cepLoading}
                                 />
                             </View>
 
@@ -758,7 +746,7 @@ export default function RegisterProviderScreen() {
                                     value={neighborhood}
                                     onChangeText={(text) => { setNeighborhood(text); if (addressError) setAddressError(null); }}
                                     autoCapitalize="words"
-                                    editable={!cepLoading} // Disable while loading CEP
+                                    editable={!cepLoading}
                                 />
                             </View>
 
@@ -773,7 +761,7 @@ export default function RegisterProviderScreen() {
                                     value={city}
                                     onChangeText={(text) => { setCity(text); if (addressError) setAddressError(null); }}
                                     autoCapitalize="words"
-                                    editable={!cepLoading} // Disable while loading CEP
+                                    editable={!cepLoading}
                                 />
                             </View>
 
@@ -789,7 +777,7 @@ export default function RegisterProviderScreen() {
                                     onChangeText={(text) => { setState(text); if (addressError) setAddressError(null); }}
                                     autoCapitalize="characters"
                                     maxLength={2}
-                                    editable={!cepLoading} // Disable while loading CEP
+                                    editable={!cepLoading}
                                 />
                             </View>
 
@@ -798,7 +786,6 @@ export default function RegisterProviderScreen() {
                     )}
 
 
-                    {/* Step 4: Service Details */}
                     {currentStep === 4 && (
                         <Animated.View style={[styles.formSection, formAnimatedStyle]}>
                             <Text style={styles.sectionTitle}>Serviços</Text>
@@ -926,7 +913,6 @@ export default function RegisterProviderScreen() {
                         </Animated.View>
                     )}
 
-                    {/* Navigation Buttons */}
                     {currentStep === 1 && (
                         <Animated.View style={{ transform: [{ scale: nextButtonAnims.scaleAnim }] }}>
                             <TouchableOpacity
@@ -981,7 +967,7 @@ export default function RegisterProviderScreen() {
                         <Animated.View style={[styles.navigationButtons]}>
                             <TouchableOpacity
                                 style={[styles.navButton, styles.backButton]}
-                                onPress={() => setCurrentStep(3)} // Voltar para Endereço (Etapa 3)
+                                onPress={() => setCurrentStep(3)}
                                 disabled={isSubmitting}
                             >
                                 <Ionicons name="arrow-back-outline" size={20} color="#007AFF" />
@@ -1015,7 +1001,7 @@ const styles = StyleSheet.create({
         flexGrow: 1,
         justifyContent: 'center',
         paddingBottom: 20,
-        paddingTop: 60, // Added padding to account for the header
+        paddingTop: 60,
     },
     contentWrapper: {
         paddingHorizontal: 35,
@@ -1023,7 +1009,6 @@ const styles = StyleSheet.create({
     },
     logoContainer: {
         alignItems: 'center',
-
     },
     logo: {
         width: 230,
@@ -1038,7 +1023,6 @@ const styles = StyleSheet.create({
         color: '#1D2029',
         textAlign: 'center',
         marginBottom: 6,
-
     },
     welcomeSubtitle: {
         fontSize: 15,
@@ -1115,7 +1099,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
     },
-    signUpButton: { // This style is now essentially replaced by nextButton for steps 1-3
+    signUpButton: {
         backgroundColor: '#00BCD4',
         borderRadius: 28,
         paddingVertical: 8,
@@ -1156,7 +1140,6 @@ const styles = StyleSheet.create({
         marginBottom: 30,
     },
     formSection: {
-        // No specific styles needed here, as individual input wrappers handle layout
     },
     label: {
         fontSize: 12,

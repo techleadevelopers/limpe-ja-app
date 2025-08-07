@@ -27,7 +27,7 @@ import { GeocodingModule } from '../common/modules/geocoding.module';
       }),
     }),
     forwardRef(() => UsersModule), // Correto
-    ProvidersModule,
+    forwardRef(() => ProvidersModule), // CORREÇÃO: Adicionado forwardRef para resolver a dependência circular.
     EmailModule,
     GeocodingModule,
   ],

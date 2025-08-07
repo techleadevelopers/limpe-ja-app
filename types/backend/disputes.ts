@@ -26,7 +26,7 @@ export interface Dispute {
   attachments?: string[]; // URLs de anexos/evidências
   status: string; // Ex: "PENDING_REVIEW", "RESOLVED", "REJECTED"
   resolutionNotes?: string;
-  resolvedAt?: string; // DateTime do Prisma é string em TS
+  resolvedAt: string; // CORREÇÃO: DateTime do Prisma é string em TS, e não opcional se a disputa for resolvida
   createdAt: string; // DateTime do Prisma é string em TS
   updatedAt: string; // DateTime do Prisma é string em TS
 

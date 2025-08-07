@@ -74,7 +74,7 @@ export default function VerifyAccountScreen() {
                 setCurrentVerificationStep(4); // Ou diretamente redirecione
                 router.replace(PROVIDER_ROUTES.DASHBOARD);
             } else {
-                setCurrentVerificationStep(2);
+                setCurrentVerificationStep(2); // Inicia na etapa de upload de documentos
             }
         });
     }, [fadeAnim, slideAnim, logoScale, isApproved, router]);
@@ -123,8 +123,8 @@ export default function VerifyAccountScreen() {
                 throw new Error('ID do provedor não encontrado. Faça login novamente.');
             }
 
-            if (step === 2) {
-                const documentData = data as { documentPhotoFront: string | null; documentPhotoBack: string | null };
+            if (step === 2) { // Etapa de upload de documentos
+                const documentData = data as { documentPhotoFront: string | null; documentPhotoBack: string | null; selfieWithDocument: string | null };
                 setDocumentPhotoFront(documentData.documentPhotoFront);
                 setDocumentPhotoBack(documentData.documentPhotoBack);
 
@@ -134,8 +134,13 @@ export default function VerifyAccountScreen() {
                 if (documentData.documentPhotoBack) {
                     await verificationService.uploadDocumentPhoto(documentData.documentPhotoBack, DocumentPhotoType.BACK);
                 }
-
-                setCurrentVerificationStep(4);
+                if (documentData.selfieWithDocument) {
+                    await verificationService.uploadSelfieWithDocument(documentData.selfieWithDocument);
+                }
+                
+                // Após o upload, o status de verificação será atualizado no backend
+                // e o polling no useEffect detectará a mudança.
+                setCurrentVerificationStep(4); // Move para a etapa de "verificação em andamento"
             }
         } catch (error: any) {
             console.error("Erro na verificação:", error);

@@ -1,13 +1,9 @@
-// prisma/schema.prisma
 // Este arquivo é o ponto de partida para o seu banco de dados.
 // Ele define os modelos de dados e como eles se relacionam.
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["postgresqlExtensions"]
   // ADICIONADO: Configuração para binaryTargets para resolver o problema de libssl no Docker
-  // Isso instrui o Prisma a incluir os motores de consulta binários compatíveis com diferentes ambientes Linux,
-  // incluindo aqueles que usam OpenSSL 1.1.x (como Debian Bullseye) e OpenSSL 3.0.x (que é padrão em Node:22).
-  // 'native' garante que o motor de consulta para o sistema operacional atual do Docker seja incluído.
   binaryTargets   = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x"]
 }
 
@@ -18,6 +14,9 @@ datasource db {
   extensions = [postgis]
 }
 
+// ---------------------------------
+// Enums
+// ---------------------------------
 // Enum para os diferentes papéis de usuário
 enum UserRole {
   CLIENT
@@ -77,6 +76,14 @@ enum DisputeReason {
   OTHER
 }
 
+// NOVO: Enum para o status da disputa
+enum DisputeStatus {
+  PENDING
+  IN_REVIEW
+  RESOLVED
+  REJECTED
+}
+
 // ABS: NOVOS ENUMS PARA MÓDULOS AVANÇADOS
 enum SubscriptionStatus {
   ACTIVE
@@ -118,6 +125,14 @@ enum CouponTarget {
   SPECIFIC_PROVIDER
 }
 
+// NOVO: ENUM CouponStatus
+enum CouponStatus {
+  ACTIVE
+  INACTIVE
+  EXPIRED
+  USED_UP
+}
+
 enum ClaimStatus {
   PENDING
   UNDER_REVIEW
@@ -127,123 +142,121 @@ enum ClaimStatus {
 }
 // FIM ABS: NOVOS ENUMS PARA MÓDULOS AVANÇADOS
 
+// ---------------------------------
+// Models
+// ---------------------------------
 // Modelo de Usuário (base para Cliente e Provedor)
 model User {
-  id                      String         @id @default(uuid())
-  email                   String         @unique
-  phone                   String?        @unique // Número de telefone para login por SMS
-  passwordHash            String?        // Opcional agora, para suportar login apenas por SMS
-  role                    UserRole       @default(CLIENT)
-  avatarUrl               String?        // <--- NOVA LINHA ADICIONADA AQUI para o avatar do usuário
-  firebaseUid             String?        @unique // Mantido, caso seja usado para outros serviços Firebase
-
-  isPhoneVerified         Boolean        @default(false) // Se o telefone foi verificado
-
+  id                    String           @id @default(uuid())
+  email                 String           @unique
+  phone                 String?          @unique // Número de telefone para login por SMS
+  passwordHash          String?          // Opcional agora, para suportar login apenas por SMS
+  role                  UserRole         @default(CLIENT)
+  avatarUrl             String?          // <--- NOVA LINHA ADICIONADA AQUI para o avatar do usuário
+  firebaseUid           String?          @unique // Mantido, caso seja usado para outros serviços Firebase
+  fullName              String           @default("Nome Padrão")
+  // ADICIONADO: Campo para armazenar o token FCM do dispositivo para notificações push
+  fcmToken              String?          @unique // Token Firebase Cloud Messaging para notificações push
+  isPhoneVerified       Boolean          @default(false) // Se o telefone foi verificado
+  isVerified            Boolean          @default(false) // NOVO: Status de verificação geral do usuário do sistema
   // NOVO: Campo para LGPD - marca a data para exclusão agendada da conta
-  deletionScheduledAt     DateTime?      // Data em que a exclusão da conta foi agendada (para LGPD)
+  deletionScheduledAt   DateTime?        // Data em que a exclusão da conta foi agendada (para LGPD)
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
 
-  createdAt               DateTime       @default(now())
-  updatedAt               DateTime       @updatedAt
-
-  client                  Client?
-  provider                Provider?
-  messagesSent            Message[]      @relation("SentMessages")
-  messagesReceived        Message[]      @relation("ReceivedMessages")
-  notifications           Notification[]
-  chatsAsParticipant1     Chat[]         @relation("ChatParticipant1") // Nova relação para Chat
-  chatsAsParticipant2     Chat[]         @relation("ChatParticipant2") // Nova relação para Chat
-
+  client                Client?
+  provider              Provider?
+  messagesSent          Message[]        @relation("SentMessages")
+  messagesReceived      Message[]        @relation("ReceivedMessages")
+  notifications         Notification[]
+  chatsAsParticipant1   Chat[]           @relation("ChatParticipant1")
+  chatsAsParticipant2   Chat[]           @relation("ChatParticipant2")
   // NOVO: Relações para o modelo Referral
-  referredBy              Referral[]     @relation("ReferredByUser") // Indicações em que este usuário foi o indicado
-  referralsMade           Referral[]     @relation("ReferrerOfUser") // Indicações que este usuário fez
-
-  // NOVO: Relação com o modelo Dispute (CORREÇÃO AQUI)
-  disputesReported        Dispute[]      @relation("DisputeReporter") // Disputas reportadas por este usuário
-
+  referredBy            Referral[]       @relation("ReferredByUser") // Indicações em que este usuário foi o indicado
+  referralsMade         Referral[]       @relation("ReferrerOfUser") // Indicações que este usuário fez
+  // NOVO: Relação com o modelo Dispute
+  disputesReported      Dispute[]        @relation("DisputeReporter") // Disputas reportadas por este usuário
   // ABS: Novas relações para Safety Module
-  reportedIncidents       Incident[]     @relation("ReportedIncidents")
-  panicAlerts             PanicAlert[]   @relation("PanicAlerts")
+  reportedIncidents     Incident[]       @relation("ReportedIncidents")
+  panicAlerts           PanicAlert[]     @relation("PanicAlerts")
   // FIM ABS: Novas relações para Safety Module
+  // NOVO: Relação com o modelo UserConsent
+  userConsents          UserConsent[]
+  // CORREÇÃO: Adicionando o campo de relação inversa para DisputeMessage
+  disputeMessagesSent   DisputeMessage[] @relation("DisputeSender")
 }
 
 // Modelo para Cliente
 model Client {
-  id                     String           @id @default(uuid())
-  userId                 String           @unique
-  user                   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  fullName               String
-  completedBookingsCount Int              @default(0) // NOVO: Contador para programa de fidelidade
-  phone                  String?
-  cpf                    String?          @unique // CORREÇÃO: Adicionado CPF para o cliente
-  address                Address?         @relation("ClientAddress")
-  bookings               Booking[]
-  reviewsMade            Review[]         @relation("ClientReviews") // Avaliações que o cliente fez
-
-  // ABS: Novas métricas para o cliente
-  noShowCount            Int              @default(0)
-  cancellationCount      Int              @default(0)
-  // FIM ABS: Novas métricas para o cliente
-
-  // ABS: Novas relações para módulos avançados
-  subscriptions          Subscription[]
-  guaranteeClaims        GuaranteeClaim[]
-  // FIM ABS: Novas relações para módulos avançados
-
-  // ADICIONADO: Campos para registro de data e hora de criação/atualização do perfil do cliente
-  createdAt              DateTime         @default(now())
-  updatedAt              DateTime         @updatedAt
-}
-
-// Modelo para Provedor
-model Provider {
-  id                      String             @id @default(uuid())
-  userId                  String             @unique
-  user                    User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                      String           @id @default(uuid())
+  userId                  String           @unique
+  user                    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   fullName                String
-  cpf                     String?            @unique // CPF para verificação
-  dateOfBirth             DateTime
+  completedBookingsCount  Int              @default(0) // NOVO: Contador para programa de fidelidade
   phone                   String?
-  address                 Address?           @relation("ProviderAddress")
-  yearsOfExperience       Int?
-  // NOTA: avatarUrl no Provider é redundante se User já tem, mas mantido para consistência do seu schema original.
-  // Se o avatar do provedor for sempre o mesmo do usuário associado, você pode remover esta linha aqui.
-  avatarUrl               String?
-  bio                     String?            // PROPRIEDADE 'BIO' ADICIONADA AQUI
-  providerServices        ProviderService[]
-  fiveStarReviewCount     Int                @default(0) // NOVO: Para bônus por avaliações excelentes
-  monthlyBookingsCount    Int                @default(0) // NOVO: Para bônus por volume de serviços
-  availability            Availability[]
+  cpf                     String?          @unique // CORREÇÃO: Adicionado CPF para o cliente
+  dateOfBirth             DateTime?        // <--- CORRIGIDO: Tornar dateOfBirth opcional
+  address                 Address?         @relation("ClientAddress")
   bookings                Booking[]
-  reviewsReceived         Review[]           @relation("ProviderReviews") // Avaliações que o provedor recebeu
-  earnings                Transaction[]
-
-  // NOVOS CAMPOS PARA VERIFICAÇÃO
-  verificationStatus      VerificationStatus @default(PENDING_INITIAL_REVIEW)
-  documentPhotoFrontUrl   String?
-  documentPhotoBackUrl    String?
-  selfieWithDocumentUrl   String?
-  backgroundCheckResult   Json?              // Armazenar o resultado detalhado da verificação de antecedentes criminais (JSON)
-  ocrResult               Json?              // NOVO: Armazenar resultados de OCR do documento (JSON)
-  livenessResult          Json?              // NOVO: Armazenar resultados de liveness check (JSON)
-  rejectionReason         String?            // Campo para armazenar o motivo da rejeição, se houver
-  pixKey                  String?            // <--- NOVA LINHA ADICIONADA AQUI
-
-  // ABS: Novo campo para Badges de Provedor
-  badges                  String[]           @default([])
-  // FIM ABS: Novo campo para Badges de Provedor
-
+  reviewsMade             Review[]         @relation("ClientReviews") // Avaliações que o cliente fez
+  // ABS: Novas métricas para o cliente
+  noShowCount             Int              @default(0)
+  cancellationCount       Int              @default(0)
+  // FIM ABS: Novas métricas para o cliente
   // ABS: Novas relações para módulos avançados
   subscriptions           Subscription[]
   guaranteeClaims         GuaranteeClaim[]
   // FIM ABS: Novas relações para módulos avançados
-
-  createdAt               DateTime           @default(now())
-  updatedAt               DateTime           @updatedAt
+  // ADICIONADO: Campos para registro de data e hora de criação/atualização do perfil do cliente
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
 }
 
-// Modelo de Endereço (pode ser relacionado a Cliente, Provedor ou AGORA Booking)
+// Modelo para Provedor
+model Provider {
+  id                    String            @id @default(uuid())
+  userId                String            @unique
+  user                  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName              String
+  cpf                   String?           @unique // CPF para verificação
+  dateOfBirth           DateTime
+  phone                 String?
+  address               Address?          @relation("ProviderAddress")
+  yearsOfExperience     Int?
+  // NOTA: avatarUrl no Provider é redundante se User já tem, mas mantido para consistência do seu schema original.
+  avatarUrl             String?
+  bio                   String?           // PROPRIEDADE 'BIO' ADICIONADA AQUI
+  providerServices      ProviderService[]
+  fiveStarReviewCount   Int               @default(0) // NOVO: Para bônus por avaliações excelentes
+  monthlyBookingsCount  Int               @default(0) // NOVO: Para bônus por volume de serviços
+  availability          Availability[]
+  bookings              Booking[]
+  reviewsReceived       Review[]          @relation("ProviderReviews") // Avaliações que o provedor recebeu
+  earnings              Transaction[]
+  // NOVOS CAMPOS PARA VERIFICAÇÃO
+  verificationStatus    VerificationStatus @default(PENDING_INITIAL_REVIEW)
+  documentPhotoFrontUrl String?
+  documentPhotoBackUrl  String?
+  selfieWithDocumentUrl String?
+  backgroundCheckResult Json?             // Armazenar o resultado detalhado da verificação de antecedentes criminais (JSON)
+  ocrResult             Json?             // NOVO: Armazenar resultados de OCR do documento (JSON)
+  livenessResult        Json?             // NOVO: Armazenar resultados de liveness check (JSON)
+  rejectionReason       String?           // Campo para armazenar o motivo da rejeição, se houver
+  pixKey                String?           // <--- NOVA LINHA ADICIONADA AQUI
+  // ABS: Novo campo para Badges de Provedor
+  badges                String[]          @default([])
+  // FIM ABS: Novo campo para Badges de Provedor
+  // ABS: Novas relações para módulos avançados
+  subscriptions         Subscription[]
+  guaranteeClaims       GuaranteeClaim[]
+  // FIM ABS: Novas relações para módulos avançados
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+}
+
+// Modelo de Endereço
 model Address {
-  id           String                        @id @default(uuid())
+  id           String                                 @id @default(uuid())
   cep          String
   street       String
   number       String
@@ -251,151 +264,143 @@ model Address {
   neighborhood String
   city         String
   state        String
-  clientId     String?                       @unique
-  providerId   String?                       @unique
-  client       Client?                       @relation("ClientAddress", fields: [clientId], references: [id])
-  provider     Provider?                     @relation("ProviderAddress", fields: [providerId], references: [id])
-  // ALTERNATIVO para relação 1:1 com Booking (mais comum para endereço específico do serviço)
-  booking      Booking?                      @relation("BookingAddress") // Se um endereço pertence a apenas um booking
-
+  clientId     String?                                @unique
+  providerId   String?                                @unique
+  client       Client?                                @relation("ClientAddress", fields: [clientId], references: [id])
+  provider     Provider?                              @relation("ProviderAddress", fields: [providerId], references: [id])
+  booking      Booking?                               @relation("BookingAddress")
   // --- ADIÇÃO PARA GEOESPACIAL (AGORA INTEGRADO) ---
-  // Este campo permitirá armazenar coordenadas geoespaciais usando o tipo PostGIS POINT
-  // 'geometry(Point, 4326)' especifica um tipo Point com SRID 4326 (WGS 84 - padrão para GPS)
-  location     Unsupported("geometry(Point, 4326)")? // Campo 'location' adicionado
-  // ABS: Adicionado latitude e longitude para facilitar o uso sem precisar do tipo PostGIS no código
-  latitude     Decimal?                      @db.Decimal(10, 8)
-  longitude    Decimal?                      @db.Decimal(11, 8)
+  location     Unsupported("geometry(Point, 4326)")?
+  latitude     Decimal?                               @db.Decimal(10, 8)
+  longitude    Decimal?                               @db.Decimal(11, 8)
   // FIM ABS
 }
 
-// Modelo para Tipos de Serviço (e.g., "Limpeza Padrão", "Limpeza Pesada")
+// Modelo para Tipos de Serviço
 model Service {
-  id               String            @id @default(uuid())
-  name             String            @unique
-  description      String?
-  price            Decimal           @db.Decimal(10, 2) // CAMPO 'PRICE' ADICIONADO AQUI COM TIPO DECIMAL
-  icon             String?           // Campo para armazenar o nome do arquivo do ícone da categoria
-  providerServices ProviderService[]
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  id                 String            @id @default(uuid())
+  name               String            @unique
+  description        String?
+  price              Decimal           @db.Decimal(10, 2)
+  icon               String?
+  providerServices   ProviderService[]
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
 }
 
 // Modelo para Serviços Oferecidos por um Provedor Específico
 model ProviderService {
-  id              String    @id @default(uuid())
-  providerId      String
-  serviceId       String
-  price           Decimal   @db.Decimal(10, 2) // ALTERADO DE 'Float' PARA 'Decimal'
-  durationMinutes Int?      // Duração estimada em minutos
-  description     String?   // Descrição específica do provedor para este serviço
-  provider        Provider  @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  pricingType     PricingType @default(FIXED_PRICE) // NOVO: Tipo de precificação
-  pricePerSquareMeter Decimal? @db.Decimal(10, 2) // NOVO: Preço por m² (para BY_SIZE)
-  pricePerRoom    Decimal? @db.Decimal(10, 2) // NOVO: Preço por cômodo (para BY_SIZE)
-  service         Service   @relation(fields: [serviceId], references: [id])
-  bookings        Booking[] // Campo reverso para Booking
-  createdAt       DateTime  @default(now()) // ADICIONADO
-  updatedAt       DateTime  @updatedAt // ADICIONADO
-  subscriptions   Subscription[] @relation("ProviderServiceSubscriptions") // ABS: NOVA LINHA ADICIONADA AQUI
-
-  @@unique([providerId, serviceId]) // Um provedor não pode oferecer o mesmo tipo de serviço duas vezes
+  id                   String            @id @default(uuid())
+  providerId           String
+  serviceId            String
+  price                Decimal           @db.Decimal(10, 2)
+  durationMinutes      Int?
+  description          String?
+  provider             Provider          @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  pricingType          PricingType       @default(FIXED_PRICE)
+  pricePerSquareMeter  Decimal?          @db.Decimal(10, 2)
+  pricePerRoom         Decimal?          @db.Decimal(10, 2)
+  service              Service           @relation(fields: [serviceId], references: [id])
+  bookings             Booking[]
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  subscriptions        Subscription[]    @relation("ProviderServiceSubscriptions")
+  
+  @@unique([providerId, serviceId])
 }
 
 // Modelo de Agendamento
 model Booking {
-  id                        String             @id @default(uuid())
-  clientId                  String
-  providerId                String
-  providerServiceId         String
-  client                    Client             @relation(fields: [clientId], references: [id], onDelete: Restrict) // Não deletar cliente se tiver bookings
-  provider                  Provider           @relation(fields: [providerId], references: [id], onDelete: Restrict) // Não deletar provedor se tiver bookings
-  providerService           ProviderService    @relation(fields: [providerServiceId], references: [id])
-  scheduledDate             DateTime           // Data do agendamento
-  scheduledTime             String             // Horário do agendamento (e.g., "09:00")
-  status                    BookingStatus      @default(PENDING)
-  totalPrice                Decimal            @db.Decimal(10, 2) // ALTERADO DE 'Float' PARA 'Decimal'
-  notes                     String?
-  createdAt                 DateTime           @default(now())
-  updatedAt                 DateTime           @updatedAt
-  review                    Review?            // Relação 1:1 com Review. Um agendamento pode ter uma avaliação.
-  transactions              Transaction[]      // ADICIONADO: Relação reversa para Transaction
-
+  id                       String            @id @default(uuid())
+  clientId                 String
+  providerId               String
+  providerServiceId        String
+  client                   Client            @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  provider                 Provider          @relation(fields: [providerId], references: [id], onDelete: Restrict)
+  providerService          ProviderService   @relation(fields: [providerServiceId], references: [id])
+  scheduledDate            DateTime
+  scheduledTime            String
+  status                   BookingStatus     @default(PENDING)
+  totalPrice               Decimal           @db.Decimal(10, 2)
+  notes                    String?
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
+  review                   Review?
+  transactions             Transaction[]
   // ADICIONADO: RELAÇÃO DO ENDEREÇO ESPECÍFICO DO AGENDAMENTO
-  addressId                 String?            @unique // Unique porque um Booking terá um único Address
-  address                   Address?           @relation("BookingAddress", fields: [addressId], references: [id]) // Relação 1:1
-
+  addressId                String?           @unique
+  address                  Address?          @relation("BookingAddress", fields: [addressId], references: [id])
   // NOVO: Relação com o modelo Dispute
-  dispute                   Dispute?           // Relação 1:1 com Dispute. Um agendamento pode ter uma disputa.
-
+  dispute                  Dispute?
   // ABS: Novas relações para módulos avançados
-  subscriptionId            String?
-  subscription              Subscription?      @relation("SubscriptionBookings", fields: [subscriptionId], references: [id])
-  incidents                 Incident[]
-  guaranteeClaims           GuaranteeClaim[]
-  couponId                  String? // ID do cupom usado neste agendamento
-  // FIM ABS: Novas relações para módulos avançados
+  subscriptionId           String?
+  subscription             Subscription?     @relation("SubscriptionBookings", fields: [subscriptionId], references: [id])
+  incidents                Incident[]
+  guaranteeClaims          GuaranteeClaim[]
+  couponId                 String?
+  coupon                   Coupon?           @relation(fields: [couponId], references: [id])
+  // FIM ABS
 }
 
-// Modelo de Chat (NOVO)
+// Modelo de Chat
 model Chat {
-  id              String    @id @default(uuid())
-  participant1Id  String
-  participant1    User      @relation("ChatParticipant1", fields: [participant1Id], references: [id])
-  participant2Id  String
-  participant2    User      @relation("ChatParticipant2", fields: [participant2Id], references: [id])
-  messages        Message[] // Mensagens associadas a este chat
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id               String    @id @default(uuid())
+  participant1Id   String
+  participant1     User      @relation("ChatParticipant1", fields: [participant1Id], references: [id])
+  participant2Id   String
+  participant2     User      @relation("ChatParticipant2", fields: [participant2Id], references: [id])
+  messages         Message[]
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  @@unique([participant1Id, participant2Id]) // Garante que não há chats duplicados para o mesmo par de usuários
+  @@unique([participant1Id, participant2Id])
 }
 
 // Modelo de Mensagem de Chat
 model Message {
-  id         String   @id @default(uuid())
-  chatId     String   // ID da conversa (pode ser um UUID gerado para cada par cliente-provedor)
-  chat       Chat     @relation(fields: [chatId], references: [id]) // Relação com o modelo Chat
-  senderId   String
-  receiverId String
-  content    String
-  timestamp  DateTime @default(now())
-  isRead     Boolean  @default(false)
-  targetUrl  String? // URL para navegação no app ao clicar na notificação
-  createdAt  DateTime @default(now())
-  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
-  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  id               String    @id @default(uuid())
+  chatId           String
+  chat             Chat      @relation(fields: [chatId], references: [id])
+  senderId         String
+  receiverId       String
+  content          String
+  timestamp        DateTime  @default(now())
+  isRead           Boolean   @default(false)
+  targetUrl        String?
+  createdAt        DateTime  @default(now())
+  sender           User      @relation("SentMessages", fields: [senderId], references: [id])
+  receiver         User      @relation("ReceivedMessages", fields: [receiverId], references: [id])
 }
 
 // Modelo de Notificação
 model Notification {
-  id            String   @id @default(uuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id])
-  type          String   // Tipo de notificação (e.g., "BOOKING_CONFIRMED", "NEW_MESSAGE")
-  message       String
-  isRead        Boolean  @default(false)
-  targetUrl     String?  // URL para navegação no app ao clicar na notificação
-  createdAt     DateTime @default(now())
-
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  type        String
+  message     String
+  isRead      Boolean  @default(false)
+  targetUrl   String?
+  createdAt   DateTime @default(now())
   // ABS: Novos campos para Rich Media Notifications
-  imageUrl      String?
-  actionButtons Json? // Armazenar array de objetos { text: string, url: string } como JSON
-  // FIM ABS: Novos campos para Rich Media Notifications
+  imageUrl    String?
+  actionButtons Json?
+  // FIM ABS
 }
 
 // Modelo de Avaliação
 model Review {
-  id         String   @id @default(uuid())
-  booking    Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade) // Relação 1:1 com Booking
-  bookingId  String   @unique // Uma avaliação por agendamento (mantido para garantir 1:1 com Booking)
-  clientId   String
-  providerId String
-  rating     Int      // Nota de 1 a 5
-  comment    String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  client     Client   @relation("ClientReviews", fields: [clientId], references: [id])
-  provider   Provider @relation("ProviderReviews", fields: [providerId], references: [id])
+  id          String   @id @default(uuid())
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId   String   @unique
+  clientId    String
+  providerId  String
+  rating      Int
+  comment     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  client      Client   @relation("ClientReviews", fields: [clientId], references: [id])
+  provider    Provider @relation("ProviderReviews", fields: [providerId], references: [id])
 
   @@unique([bookingId, clientId, providerId])
 }
@@ -405,9 +410,9 @@ model Offer {
   id                  String    @id @default(uuid())
   title               String
   description         String?
-  discountPercentage  Float?    // Desconto em percentual
-  fixedDiscountAmount Float?    // Desconto em valor fixo
-  validUntil          DateTime  // Data de expiração da oferta
+  discountPercentage  Float?
+  fixedDiscountAmount Float?
+  validUntil          DateTime
   imageUrl            String?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
@@ -420,18 +425,18 @@ model Transaction {
   provider             Provider        @relation(fields: [providerId], references: [id], onDelete: Cascade)
   amount               Decimal         @db.Decimal(10, 2)
   type                 TransactionType
-  status               String          // Status da transação (e.g., "PENDING", "COMPLETED", "FAILED")
+  status               String
   description          String?
   createdAt            DateTime        @default(now())
-  bookingId            String?         // <--- MODIFICADO: REMOVIDO @unique para permitir múltiplas transações por booking
+  bookingId            String?
   booking              Booking?        @relation(fields: [bookingId], references: [id])
-  gatewayTransactionId String?         @unique // ID da transação no gateway de pagamento (ex: PagSeguro)
-  qrCodeUrl            String?         // URL do QR Code gerado pelo gateway
-
+  gatewayTransactionId String?         @unique
+  qrCodeUrl            String?
+  transactionRef       String?
   // ABS: Novo campo para cupons
   couponId             String?
   coupon               Coupon?         @relation(fields: [couponId], references: [id])
-  // FIM ABS: Novo campo para cupons
+  // FIM ABS
 }
 
 // Modelo de Disponibilidade do Provedor
@@ -439,157 +444,181 @@ model Availability {
   id          String   @id @default(uuid())
   providerId  String
   provider    Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  dayOfWeek   Int      // 0 para Domingo, 1 para Segunda, etc.
-  startTime   String   // Horário de início (e.g., "09:00")
-  endTime     String   // Horário de término (e.g., "17:00")
-  isAvailable Boolean  @default(true) // Se o provedor está disponível neste slot
+  dayOfWeek   Int
+  startTime   String
+  endTime     String
+  isAvailable Boolean  @default(true)
 }
 
 // NOVO: Modelo para Perguntas Frequentes (FAQs)
 model FAQItem {
-  id        String   @id @default(uuid())
-  question  String   @unique
-  answer    String
-  category  String?  // Ex: "Geral", "Pagamentos", "Serviços"
-  order     Int      @default(0) // Ordem de exibição
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid())
+  question    String   @unique
+  answer      String
+  category    String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 // NOVO: Modelo para Indicação (Referral)
 model Referral {
   id             String   @id @default(uuid())
-  referredUserId String   @unique // ID do usuário indicado
+  referredUserId String   @unique
   referredUser   User     @relation("ReferredByUser", fields: [referredUserId], references: [id])
-  referrerUserId String   // ID do usuário que indicou
+  referrerUserId String
   referrerUser   User     @relation("ReferrerOfUser", fields: [referrerUserId], references: [id])
-  referralCode   String?  // Código de indicação usado
+  referralCode   String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  @@unique([referredUserId, referrerUserId]) // Garante que um usuário só pode ser indicado uma vez por outro
+  @@unique([referredUserId, referrerUserId])
 }
 
 // NOVO: Modelo para Disputa de Agendamento
 model Dispute {
-  id                  String        @id @default(uuid())
-  bookingId           String        @unique // Relação 1:1 com Booking
-  booking             Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  reporterUserId      String        // Quem reportou a disputa (cliente ou provedor)
-  reporterUser        User          @relation("DisputeReporter", fields: [reporterUserId], references: [id])
-  reason              DisputeReason // Motivo da disputa
-  description         String        // Descrição detalhada do problema
-  refundAmountProposed Decimal?     @db.Decimal(10, 2) // Valor de reembolso sugerido pelo reportante
-  attachments         String[]      // URLs de anexos/evidências
-  status              String        @default("PENDING_REVIEW") // Status da disputa (PENDING_REVIEW, RESOLVED, REJECTED)
-  resolutionNotes     String?       // Notas da resolução (preenchido pelo admin)
-  resolvedAt          DateTime?
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
+  id                    String        @id @default(uuid())
+  bookingId             String        @unique
+  booking               Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  reporterUserId        String
+  reporterUser          User          @relation("DisputeReporter", fields: [reporterUserId], references: [id])
+  reason                DisputeReason
+  description           String
+  refundAmountProposed  Decimal?      @db.Decimal(10, 2)
+  attachments           String[]
+  status                DisputeStatus @default(PENDING)
+  resolutionNotes       String?
+  resolvedByUserId      String?
+  resolvedAt            DateTime?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  messages              DisputeMessage[]
+}
+
+// NOVO: Modelo para Mensagens de Disputa
+model DisputeMessage {
+  id           String   @id @default(uuid())
+  disputeId    String
+  dispute      Dispute  @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  senderUserId String
+  sender       User     @relation("DisputeSender", fields: [senderUserId], references: [id])
+  content      String
+  createdAt    DateTime @default(now())
+}
+
+// NOVO: Modelo para Consentimento do Usuário (LGPD)
+model UserConsent {
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documentType  String
+  version       String
+  consentedAt   DateTime @default(now())
+
+  @@id([userId, documentType])
 }
 
 // ABS: NOVOS MODELOS PARA MÓDULOS AVANÇADOS
 
 // ABS: Modelo para Assinaturas/Agendamentos Recorrentes
 model Subscription {
-  id                 String                 @id @default(uuid())
-  clientId           String
-  client             Client                 @relation(fields: [clientId], references: [id])
-  providerId         String
-  provider           Provider               @relation(fields: [providerId], references: [id])
-  providerServiceId  String
-  providerService    ProviderService        @relation("ProviderServiceSubscriptions", fields: [providerServiceId], references: [id]) // ABS: NOME DA RELAÇÃO ADICIONADO AQUI
-  frequency          SubscriptionFrequency
-  startDate          DateTime
-  endDate            DateTime?
-  status             SubscriptionStatus     @default(ACTIVE)
-  totalPrice         Decimal                @db.Decimal(10, 2) // Preço por agendamento ou por ciclo
-  nextGenerationDate DateTime               // Próxima data para gerar um agendamento
-  generatedBookings  Booking[]              @relation("SubscriptionBookings") // Agendamentos gerados por esta assinatura
-  createdAt          DateTime               @default(now())
-  updatedAt          DateTime               @updatedAt
+  id                String              @id @default(uuid())
+  clientId          String
+  client            Client              @relation(fields: [clientId], references: [id])
+  providerId        String
+  provider          Provider            @relation(fields: [providerId], references: [id])
+  providerServiceId String
+  providerService   ProviderService     @relation("ProviderServiceSubscriptions", fields: [providerServiceId], references: [id])
+  frequency         SubscriptionFrequency
+  startDate         DateTime
+  endDate           DateTime?
+  status            SubscriptionStatus  @default(ACTIVE)
+  totalPrice        Decimal             @db.Decimal(10, 2)
+  nextGenerationDate DateTime
+  generatedBookings Booking[]           @relation("SubscriptionBookings")
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
 }
-
 
 // ABS: Modelo para Relatório de Incidentes
 model Incident {
-  id            String         @id @default(uuid())
-  reporterId    String
-  reporter      User           @relation("ReportedIncidents", fields: [reporterId], references: [id])
-  bookingId     String?
-  booking       Booking?       @relation(fields: [bookingId], references: [id])
-  type          IncidentType
-  description   String
-  attachments   String[]       // URLs de evidências
-  status        IncidentStatus @default(PENDING_REVIEW)
-  resolution    String?        // Descrição da resolução
-  resolvedBy    String?        // ID do admin que resolveu
-  resolvedAt    DateTime?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id           String         @id @default(uuid())
+  reporterId   String
+  reporter     User           @relation("ReportedIncidents", fields: [reporterId], references: [id])
+  bookingId    String?
+  booking      Booking?       @relation(fields: [bookingId], references: [id])
+  type         IncidentType
+  description  String
+  attachments  String[]
+  status       IncidentStatus @default(PENDING_REVIEW)
+  resolution   String?
+  resolvedBy   String?
+  resolvedAt   DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 }
 
 // ABS: Modelo para Alertas de Pânico
 model PanicAlert {
-  id            String         @id @default(uuid())
-  userId        String
-  user          User           @relation("PanicAlerts", fields: [userId], references: [id])
-  latitude      Decimal        @db.Decimal(10, 8)
-  longitude     Decimal        @db.Decimal(11, 8)
-  message       String?
-  status        String         @default("ACTIVE") // ACTIVE, RESOLVED, FALSE_ALARM
-  createdAt     DateTime       @default(now())
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation("PanicAlerts", fields: [userId], references: [id])
+  latitude  Decimal   @db.Decimal(10, 8)
+  longitude Decimal   @db.Decimal(11, 8)
+  message   String?
+  status    String    @default("ACTIVE")
+  createdAt DateTime  @default(now())
 }
 
 // ABS: Modelo para Cupons de Desconto
 model Coupon {
-  id          String       @id @default(uuid())
-  code        String       @unique
+  id          String         @id @default(uuid())
+  code        String         @unique
   type        CouponType
-  value       Decimal      @db.Decimal(10, 2)
+  value       Decimal        @db.Decimal(10, 2)
   validFrom   DateTime
   validUntil  DateTime
   maxUses     Int?
-  usesCount   Int          @default(0)
+  usesCount   Int            @default(0)
   target      CouponTarget
-  targetId    String?      // ID do serviço ou provedor, se target for específico
-  status      String       @default("ACTIVE") // ACTIVE, INACTIVE, EXPIRED, USED_UP
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  transactions Transaction[] // Relação com transações que usaram este cupom
+  targetId    String?
+  status      CouponStatus   @default(ACTIVE)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  transactions Transaction[]
+  bookings     Booking[]
 }
 
 // ABS: Modelo para Solicitações de Garantia de Serviço
 model GuaranteeClaim {
-  id              String      @id @default(uuid())
+  id              String        @id @default(uuid())
   bookingId       String
-  booking         Booking     @relation(fields: [bookingId], references: [id])
+  booking         Booking       @relation(fields: [bookingId], references: [id])
   clientId        String
-  client          Client      @relation(fields: [clientId], references: [id])
+  client          Client        @relation(fields: [clientId], references: [id])
   providerId      String
-  provider        Provider    @relation(fields: [providerId], references: [id])
+  provider        Provider      @relation(fields: [providerId], references: [id])
   description     String
-  attachments     String[]    // URLs de fotos/vídeos
-  estimatedValue  Decimal?    @db.Decimal(10, 2)
-  resolvedValue   Decimal?    @db.Decimal(10, 2) // Valor final pago/reembolsado
-  status          ClaimStatus @default(PENDING)
+  attachments     String[]
+  estimatedValue  Decimal?      @db.Decimal(10, 2)
+  resolvedValue   Decimal?      @db.Decimal(10, 2)
+  status          ClaimStatus   @default(PENDING)
   resolutionNotes String?
   resolvedAt      DateTime?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 }
 
 // ABS: Modelo para Regras de Precificação Dinâmica
 model PricingRule {
-  id            String    @id @default(uuid())
-  zoneId        String?   // ID da zona geográfica (se aplicável)
-  dayOfWeek     Int?      // 0-6 (Domingo-Sábado), null para todos
-  startTime     String?   // Ex: "09:00" (HH:MM)
-  endTime       String?   // Ex: "17:00" (HH:MM)
-  demandThreshold Int?    // Ex: número mínimo de agendamentos para ativar surge
-  surgeFactor   Decimal   @db.Decimal(3, 2) // Multiplicador (ex: 1.2 para 20% de aumento)
-  isActive      Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id              String    @id @default(uuid())
+  zoneId          String?
+  dayOfWeek       Int?
+  startTime       String?
+  endTime         String?
+  demandThreshold Int?
+  surgeFactor     Decimal   @db.Decimal(3, 2)
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 // FIM ABS: NOVOS MODELOS PARA MÓDULOS AVANÇADOS

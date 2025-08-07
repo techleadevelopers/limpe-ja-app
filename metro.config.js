@@ -1,10 +1,11 @@
-// metro.config.js
-const { getDefaultConfig } = require('expo/metro-config');
 const path = require('path');
+const {
+  getSentryExpoConfig
+} = require("@sentry/react-native/metro");
 
 const projectRoot = __dirname;
 
-const config = getDefaultConfig(projectRoot);
+const config = getSentryExpoConfig(projectRoot);
 
 // Adicione 'json' aos assetExts para que Metro reconheça arquivos .json como assets
 // Isso é crucial para carregar arquivos .typeface.json

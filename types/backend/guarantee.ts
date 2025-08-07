@@ -7,13 +7,13 @@ interface Booking {
 
 interface Client {
   id: string;
-  name: string;
+  fullName: string; // CORREÇÃO: name para fullName
   // ... other client fields
 }
 
 interface Provider {
   id: string;
-  name: string;
+  fullName: string; // CORREÇÃO: name para fullName
   // ... other provider fields
 }
 
@@ -29,7 +29,7 @@ export interface SubmitClaimDto {
   bookingId: string;
   description: string;
   attachments?: string[]; // URLs of uploaded photos/videos
-  estimatedValue?: number;
+  estimatedValue?: number; // CORREÇÃO: Decimal no Prisma é number aqui
 }
 
 export interface GuaranteeClaim {
@@ -42,8 +42,8 @@ export interface GuaranteeClaim {
   provider: Provider; // Full provider object or just ID
   description: string;
   attachments?: string[];
-  estimatedValue?: number;
-  resolvedValue?: number; // Final value paid/reimbursed
+  estimatedValue?: number; // CORREÇÃO: Decimal no Prisma é number aqui
+  resolvedValue?: number; // Final value paid/reimbursed (CORREÇÃO: Decimal no Prisma é number aqui)
   status: ClaimStatus;
   resolutionNotes?: string;
   resolvedAt?: string; // ISO date string

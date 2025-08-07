@@ -1,5 +1,5 @@
 // src/payments/entities/transaction.entity.ts
-import { Transaction as PrismaTransaction, TransactionType, Prisma } from '@prisma/client'; // <-- Importar Prisma
+import { Transaction as PrismaTransaction, TransactionType, Prisma } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class TransactionEntity implements PrismaTransaction {
@@ -25,7 +25,7 @@ export class TransactionEntity implements PrismaTransaction {
   createdAt: Date;
 
   @ApiPropertyOptional({ description: 'ID do agendamento associado à transação (se houver)', example: 'uuid-do-agendamento', nullable: true })
-  bookingId: string | null; // Pode ser string ou null, conforme a definição do Prisma
+  bookingId: string | null;
 
   // Propriedades para integração com gateway de pagamento
   @ApiPropertyOptional({ description: 'ID da transação no gateway de pagamento (PagSeguro, Stripe, etc.)', example: 'pagseguro-txn-12345', nullable: true })
@@ -33,6 +33,14 @@ export class TransactionEntity implements PrismaTransaction {
 
   @ApiPropertyOptional({ description: 'URL do QR Code gerado pelo gateway de pagamento (se aplicável)', example: 'https://example.com/qrcode.png', nullable: true })
   qrCodeUrl: string | null;
+
+  // NOVO: Referência interna para transações (ex: recorrentes)
+  @ApiPropertyOptional({ description: 'Referência interna para transações (ex: ID da assinatura para pagamentos recorrentes)', example: 'recurring_sub_123', nullable: true })
+  transactionRef: string | null; // <-- ADIÇÃO AQUI
+
+  // CORREÇÃO: Adicionado couponId
+  @ApiPropertyOptional({ description: 'ID do cupom associado à transação (se houver)', example: 'uuid-do-cupom', nullable: true })
+  couponId: string | null;
 
   // provider: Provider; // Relação, não incluída diretamente na entidade para DTO de saída
 

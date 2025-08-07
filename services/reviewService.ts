@@ -4,7 +4,7 @@ import api from './api';
 
 // Importa as tipagens de review (DTOs e Entity)
 import { MessageResponseDto } from '../types/backend/auth';
-import { ReviewEntity, SubmitReviewDto } from '../types/backend/reviews';
+import { ReviewEntity, SubmitReviewDto } from '../types/backend/reviews'; // Certifique-se de que estes tipos estão corretos
 
 interface ReviewAnalytics {
   averageRating: number;

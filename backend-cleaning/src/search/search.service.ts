@@ -1,5 +1,5 @@
 // src/search/search.service.ts
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common'; // CORREÇÃO: Importar Logger
 import { SearchQueryDto, SortByOption, SearchType } from './dto/search-query.dto'; // Import SearchType
 import { ProvidersService } from '../providers/providers.service';
 import { ServicesService } from '../services/services.service';
@@ -10,6 +10,7 @@ import { ProviderSearchDto } from '../providers/dto/provider-search.dto';
 import { OffersService } from '../offers/offers.service'; // Importe o OffersService se ele existir
 // import { OfferDetailsDto } from '../offers/dto/offer-details.dto'; // Importe o DTO de ofertas
 import { PricingService } from '../pricing/pricing.service'; // NEW: Import PricingService
+import { DynamicPriceResult } from '../pricing/dto/calculate-price.dto'; // CORREÇÃO: Importar DynamicPriceResult para tipagem
 
 // Supondo que você crie um DTO para os detalhes de um ProviderService
 import { ProviderServiceDetailsDto } from '../provider-services/dto/provider-service-details.dto'; // Exemplo
@@ -17,6 +18,8 @@ import { ProviderServiceSearchResultDto } from './dto/provider-service-search-re
 
 @Injectable()
 export class SearchService {
+  private readonly logger = new Logger(SearchService.name); // CORREÇÃO: Adicionar logger
+
   constructor(
     private readonly providersService: ProvidersService,
     private readonly servicesService: ServicesService,
@@ -81,11 +84,11 @@ export class SearchService {
       // NEW: Apply dynamic pricing to provider services results
       results.providerServices = await Promise.all(
         providerServicesResults.map(async (psResult: any) => {
-          let dynamicPrice = {
+          let dynamicPrice: DynamicPriceResult = { // CORREÇÃO: Tipar DynamicPriceResult
             originalPrice: psResult.price,
             surgeFactor: 1.0,
             finalPrice: psResult.price,
-            reason: 'Preço base.',
+            reason: 'Preço base.', // CORREÇÃO: Garantir que 'reason' esteja sempre presente
           };
           if (latitude && longitude && date) {
             try {
@@ -96,7 +99,7 @@ export class SearchService {
                 longitude,
                 scheduledDate: date,
               });
-            } catch (e) {
+            } catch (e: any) { // CORREÇÃO: Tipar 'e' como 'any'
               this.logger.error(`Error calculating dynamic price for providerService ${psResult.id}: ${e.message}`);
             }
           }

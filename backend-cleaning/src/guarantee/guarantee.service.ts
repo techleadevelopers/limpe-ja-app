@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { SubmitClaimDto } from './dto/submit-claim.dto';
 import { UpdateClaimDto } from './dto/update-claim.dto';
 import { NotificationsService } from '../notifications/notifications.service'; // Assuming NotificationsService
+import { Decimal } from '@prisma/client/runtime/library'; // CORREÇÃO: Importar Decimal
 
 @Injectable()
 export class GuaranteeService {
@@ -35,7 +36,7 @@ export class GuaranteeService {
         providerId: booking.providerId,
         description,
         attachments: attachments || [],
-        estimatedValue: estimatedValue ? new this.prisma.Decimal(estimatedValue) : null,
+        estimatedValue: estimatedValue ? new Decimal(estimatedValue) : null, // CORREÇÃO: Usar new Decimal
         status: 'PENDING',
       },
     });
@@ -43,6 +44,7 @@ export class GuaranteeService {
     // Notify administrators/support team about the new claim
     const adminUsers = await this.prisma.user.findMany({ where: { role: 'ADMIN' } });
     await Promise.all(adminUsers.map(admin =>
+      // CORREÇÃO: Assumindo que NotificationsService.sendPushNotification existe
       this.notificationsService.sendPushNotification(
         admin.id,
         'Nova Solicitação de Garantia',
@@ -67,8 +69,8 @@ export class GuaranteeService {
       where: { id },
       include: {
         booking: { select: { id: true, scheduledDate: true, status: true } },
-        client: { select: { id: true, name: true } },
-        provider: { select: { id: true, name: true } },
+        client: { select: { id: true, fullName: true } }, // CORREÇÃO: 'name' para 'fullName'
+        provider: { select: { id: true, fullName: true } }, // CORREÇÃO: 'name' para 'fullName'
       },
     });
 
@@ -96,12 +98,13 @@ export class GuaranteeService {
       data: {
         status: updateClaimDto.status,
         resolutionNotes: updateClaimDto.resolutionNotes,
-        resolvedValue: updateClaimDto.resolvedValue ? new this.prisma.Decimal(updateClaimDto.resolvedValue) : undefined,
+        resolvedValue: updateClaimDto.resolvedValue ? new Decimal(updateClaimDto.resolvedValue) : undefined, // CORREÇÃO: Usar new Decimal
         resolvedAt: updateClaimDto.status === 'SETTLED' || updateClaimDto.status === 'REJECTED' || updateClaimDto.status === 'APPROVED' ? new Date() : undefined,
       },
     });
 
     // Notify the client about the status update
+    // CORREÇÃO: Assumindo que NotificationsService.sendPushNotification existe
     await this.notificationsService.sendPushNotification(
       updatedClaim.clientId,
       'Atualização da Sua Solicitação de Garantia',

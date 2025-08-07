@@ -1,5 +1,4 @@
-
-import { api } from './api';
+import  api from './api';
 
 interface ComplianceStatus {
   documentsValid: boolean;
@@ -27,6 +26,8 @@ export class ComplianceService {
     } catch (error) {
       console.error('Erro ao verificar status de compliance:', error);
       
+      // Retorno de mock em caso de erro, para fins de desenvolvimento.
+      // Em produção, você deve tratar o erro de forma mais robusta.
       return {
         documentsValid: true,
         backgroundCheckPassed: true,
@@ -47,6 +48,8 @@ export class ComplianceService {
       const response = await api.get('/compliance/requirements');
       return response.data;
     } catch (error) {
+      console.error('Erro ao buscar requisitos legais:', error);
+      // Retorno de mock em caso de erro.
       return [
         {
           id: '1',
@@ -81,7 +84,7 @@ export class ComplianceService {
 
   static async uploadComplianceDocument(
     type: string,
-    file: any
+    file: any // O tipo 'file' pode ser mais específico dependendo da sua implementação (e.g., File, Blob)
   ): Promise<void> {
     try {
       const formData = new FormData();
@@ -100,6 +103,7 @@ export class ComplianceService {
   }
 
   static async getDataPrivacyInfo(): Promise<any> {
+    // Retorno de mock.
     return {
       dataCollection: [
         'Informações pessoais básicas (nome, CPF, telefone)',
@@ -144,4 +148,4 @@ export class ComplianceService {
       throw error;
     }
   }
-}
+} 

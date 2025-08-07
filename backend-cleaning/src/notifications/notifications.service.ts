@@ -1,11 +1,16 @@
 // src/notifications/notifications.service.ts
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common'; // Importe Logger
 import { PrismaService } from '../prisma/prisma.service';
 import { Notification } from '@prisma/client';
 import { MarkAsReadDto } from './dto/mark-as-read.dto';
 
+// Se você estiver usando Firebase Admin SDK, você precisaria importá-lo:
+// import * as admin from 'firebase-admin';
+
 @Injectable()
 export class NotificationsService {
+  private readonly logger = new Logger(NotificationsService.name); // Instancia o logger
+
   constructor(private prisma: PrismaService) {}
 
   /**
@@ -21,13 +26,17 @@ export class NotificationsService {
     type: string,
     message: string,
     targetUrl?: string,
+    title?: string, // Adicionado título para consistência com o push
   ): Promise<Notification> {
+    // Você pode decidir se quer armazenar o título na notificação do banco de dados
+    // ou se o título é apenas para a notificação push.
     return this.prisma.notification.create({
       data: {
         userId,
         type,
         message,
         targetUrl,
+        // title: title, // Descomente se quiser armazenar o título no banco de dados
         isRead: false,
       },
     });
@@ -134,8 +143,6 @@ export class NotificationsService {
    * @returns Um array de strings com sugestões.
    */
   async getSmartSuggestions(context: string): Promise<string[]> {
-    // Estas sugestões podem vir de um banco de dados, um serviço de IA, ou um arquivo de configuração.
-    // Por simplicidade, mantemos o mock aqui, mas agora no backend.
     const suggestions: Record<string, string[]> = {
       'booking_flow': [
         'Responda em até 30 minutos para melhor ranking',
@@ -152,7 +159,6 @@ export class NotificationsService {
         'Envie lembretes de manutenção preventiva',
         'Mantenha contato pós-serviço para feedback'
       ],
-      // Adicione mais contextos e sugestões conforme necessário
     };
 
     return suggestions[context] || [];
@@ -167,32 +173,118 @@ export class NotificationsService {
   async executeQuickAction(action: string, data: any): Promise<void> {
     switch (action) {
       case 'accept_booking':
-        // Lógica para aceitar um agendamento
-        // Ex: await this.bookingService.acceptBooking(data.bookingId);
-        this.prisma.booking.update({ // Exemplo de atualização de booking
+        this.prisma.booking.update({
           where: { id: data.bookingId },
           data: { status: 'CONFIRMED' }
-        }).catch(e => console.error(`Erro ao aceitar agendamento ${data.bookingId}:`, e));
-        console.log(`Ação Rápida: Agendamento ${data.bookingId} aceito.`);
+        }).catch(e => this.logger.error(`Erro ao aceitar agendamento ${data.bookingId}:`, e));
+        this.logger.log(`Ação Rápida: Agendamento ${data.bookingId} aceito.`);
         break;
       case 'view_booking':
-        // Lógica para visualizar detalhes do agendamento (geralmente redirecionamento no frontend, mas pode ter logging ou validação aqui)
-        console.log(`Ação Rápida: Visualizar agendamento ${data.bookingId}.`);
+        this.logger.log(`Ação Rápida: Visualizar agendamento ${data.bookingId}.`);
         break;
       case 'respond_review':
-        // Lógica para responder a uma avaliação
-        // Ex: await this.reviewService.respondToReview(data.reviewId, data.responseContent);
-        console.log(`Ação Rápida: Respondendo à avaliação ${data.reviewId} com conteúdo: "${data.responseContent}".`);
+        this.logger.log(`Ação Rápida: Respondendo à avaliação ${data.reviewId} com conteúdo: "${data.responseContent}".`);
         break;
       case 'view_review':
-        // Lógica para visualizar avaliação
-        console.log(`Ação Rápida: Visualizar avaliação ${data.reviewId}.`);
+        this.logger.log(`Ação Rápida: Visualizar avaliação ${data.reviewId}.`);
         break;
-      // Adicione outros casos de ações rápidas conforme necessário
       default:
         throw new BadRequestException(`Ação rápida desconhecida: ${action}`);
     }
-    // Em um cenário real, você pode querer notificar o usuário da conclusão da ação
-    // ou emitir um evento WebSocket.
+  }
+
+  /**
+   * Envia uma notificação push para um usuário específico.
+   * Esta função é um placeholder e precisa ser implementada
+   * com a lógica do seu provedor de notificações push (e.g., Firebase Cloud Messaging).
+   *
+   * @param userId O ID do usuário para quem enviar a notificação.
+   * @param title O título da notificação push.
+   * @param body O corpo da mensagem da notificação push.
+   * @param data Dados adicionais (payload) para a notificação (opcional).
+   * @returns Promessa que resolve quando a notificação é enviada.
+   */
+  async sendPushNotification(
+    userId: string,
+    title: string,
+    body: string,
+    data?: Record<string, any>,
+  ): Promise<void> {
+    this.logger.log(`Iniciando envio de notificação push para userId: ${userId}`);
+    this.logger.log(`Título: "${title}", Corpo: "${body}"`);
+
+    try {
+      // 1. RECUPERAR O TOKEN DO DISPOSITIVO DO USUÁRIO
+      // Você precisa ter um campo no seu modelo de usuário (ou em um modelo relacionado)
+      // que armazene o token de notificação push do dispositivo (ex: FCM token).
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          // Substitua 'fcmToken' pelo nome real do campo em seu modelo User
+          // ou inclua a relação para o modelo de dispositivo se for o caso.
+          fcmToken: true,
+        },
+      });
+
+      if (!user || !user.fcmToken) {
+        this.logger.warn(`Nenhum token de dispositivo (fcmToken) encontrado para o usuário ${userId}. Notificação push não enviada.`);
+        return; // Não há token, então não há como enviar a notificação push.
+      }
+
+      const deviceToken = user.fcmToken;
+
+      // 2. LÓGICA REAL DE ENVIO DA NOTIFICAÇÃO PUSH
+      // Esta parte dependerá do provedor de notificações push que você está usando.
+      // EXEMPLO CONCEITUAL COM FIREBASE ADMIN SDK:
+      /*
+      const message = {
+        notification: {
+          title: title,
+          body: body,
+        },
+        data: {
+          ...data, // Inclui quaisquer dados adicionais passados
+          // Você pode adicionar dados específicos para o seu app aqui,
+          // como 'bookingId', 'notificationType', etc.
+        },
+        token: deviceToken,
+      };
+
+      // Certifique-se de que o Firebase Admin SDK foi inicializado em seu aplicativo.
+      await admin.messaging().send(message);
+      this.logger.log(`Notificação push enviada com sucesso para o usuário ${userId} (token: ${deviceToken}).`);
+      */
+
+      // EXEMPLO PARA EXPO PUSH NOTIFICATIONS (se estiver usando Expo no frontend)
+      /*
+      // Você precisaria instalar o 'expo-server-sdk'
+      // import { Expo } from 'expo-server-sdk';
+      // const expo = new Expo();
+      // const messages = [];
+      // messages.push({
+      //   to: deviceToken,
+      //   sound: 'default',
+      //   title: title,
+      //   body: body,
+      //   data: data,
+      // });
+      // const chunks = expo.chunkPushNotifications(messages);
+      // for (let chunk of chunks) {
+      //   await expo.sendPushNotificationsAsync(chunk);
+      // }
+      // this.logger.log(`Notificação push Expo enviada com sucesso para o usuário ${userId}.`);
+      */
+
+      // Por enquanto, apenas um log para simular o envio:
+      this.logger.log(`[SIMULADO] Notificação push para ${userId} enviada: Título="${title}", Corpo="${body}", Dados=${JSON.stringify(data)}`);
+
+    } catch (error) {
+      this.logger.error(
+        `Erro ao enviar notificação push para o usuário ${userId}: ${error.message}`,
+        error.stack,
+      );
+      // Dependendo da sua necessidade, você pode relançar o erro ou tratá-lo silenciosamente.
+      throw new Error(`Falha ao enviar notificação push: ${error.message}`);
+    }
   }
 }

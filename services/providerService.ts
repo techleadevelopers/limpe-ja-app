@@ -9,8 +9,8 @@ import {
     CreateProviderServiceData,
     ProviderAvailability,
     ProviderDashboard,
-    ProviderDisplayInfo, // Usado para tipar provedores em listas
-    ProviderSearchQuery,
+    ProviderDisplayInfo, // Usado para tipar provedores em listas - DEVE INCLUIR 'badges', 'user.isVerified', 'address.latitude/longitude'
+    ProviderSearchQuery, // Importado para tipar a query de busca - DEVE INCLUIR 'latitude', 'longitude', 'radius'
     ProviderTransaction,
     UpdateAvailabilityData, // Importado para tipar a query de busca
     UpdateProviderProfileData,
@@ -20,12 +20,6 @@ import {
 
 // <<<< CORREÇÃO: Importar ProviderServiceOffering APENAS do seu arquivo de origem >>>>
 import { ProviderServiceOffering } from '../types/backend/provider-service';
-
-// <<<< REMOVIDO: Interface para o novo tipo de retorno de getProviderAvailability (agora em providers.ts) >>>>
-// interface GetProviderAvailabilityResponse {
-//   available: ProviderAvailability[]; // Slots de tempo configurados pelo provedor
-//   occupiedTimes: string[];         // Horários já agendados/ocupados
-// }
 
 // =========================================================================
 // FUNÇÕES DE SERVIÇO DO PROVEDOR - AJUSTADAS E COMPLETAS
@@ -317,7 +311,7 @@ export async function getNearbyProviders(): Promise<ProviderDisplayInfo[]> {
  * @function searchProviders
  * Realiza uma busca por provedores com base em filtros.
  * Corresponde a GET /providers
- * @param query Objeto com os parâmetros de busca.
+ * @param query Objeto com os parâmetros de busca. Deve incluir latitude, longitude e radius.
  * @returns Uma Promise que resolve para um array de provedores (ProviderDisplayInfo).
  */
 export async function searchProviders(query: ProviderSearchQuery): Promise<ProviderDisplayInfo[]> {

@@ -1,9 +1,9 @@
 // admin-web/src/lib.ts
 
-import { Provider, Activity, DashboardMetrics, VerificationStatus, AuthResponse, AuthUser } from './types';
+import { Activity, AuthResponse, DashboardMetrics, Provider, VerificationStatus } from './types';
 
 // A URL foi alterada para apontar para o servidor de desenvolvimento local
-const API_BASE_URL = 'http://127.0.0.1:3000'; // Alterado para localhost:3000
+const API_BASE_URL = 'http://192.168.32.262.262.262.26:3000'; // Alterado para localhost:3000
 
 /**
  * Função genérica para tratar requisições HTTP para a API.

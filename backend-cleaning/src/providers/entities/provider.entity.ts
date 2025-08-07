@@ -73,6 +73,10 @@ export class ProviderEntity implements PrismaProvider {
   @ApiProperty({ description: 'Contagem de agendamentos concluídos no mês atual', example: 20 })
   monthlyBookingsCount: number;
 
+  // CORREÇÃO: Adicionado badges
+  @ApiProperty({ description: 'Lista de badges do provedor', example: ['VERIFIED', 'TOP_RATED'] })
+  badges: string[];
+
   user?: User; // Relações (opcionais, dependem de como você as carrega)
   address?: Address | null;
   providerServices?: ProviderService[];

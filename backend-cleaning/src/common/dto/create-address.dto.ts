@@ -1,6 +1,6 @@
 // src/common/dto/create-address.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, IsNotEmpty, Length, IsAlphanumeric } from 'class-validator'; // Importe Length e IsAlphanumeric
+import { IsString, IsOptional, IsNotEmpty, Length, IsAlphanumeric, IsNumber, Min, Max } from 'class-validator'; // Importe IsNumber, Min, Max
 
 export class CreateAddressDto {
   @ApiProperty({ description: 'CEP', example: '01001000' })
@@ -41,4 +41,18 @@ export class CreateAddressDto {
   @Length(2, 2, { message: 'O estado deve ter 2 caracteres (UF).' }) // Validação para 2 caracteres
   @IsAlphanumeric('pt-BR', { message: 'O estado deve conter apenas letras e números, mas para UF geralmente são apenas letras.' }) // Opcional, para garantir que seja alfanumérico
   state: string;
+
+  @ApiProperty({ description: 'Latitude do endereço', example: -23.55052 })
+  @IsNumber({}, { message: 'A latitude deve ser um número.' })
+  @IsNotEmpty({ message: 'A latitude é obrigatória.' })
+  @Min(-90, { message: 'A latitude mínima permitida é -90.' })
+  @Max(90, { message: 'A latitude máxima permitida é 90.' })
+  latitude: number;
+
+  @ApiProperty({ description: 'Longitude do endereço', example: -46.633308 })
+  @IsNumber({}, { message: 'A longitude deve ser um número.' })
+  @IsNotEmpty({ message: 'A longitude é obrigatória.' })
+  @Min(-180, { message: 'A longitude mínima permitida é -180.' })
+  @Max(180, { message: 'A longitude máxima permitida é 180.' })
+  longitude: number;
 }

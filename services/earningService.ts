@@ -1,50 +1,54 @@
 // app/services/earningsService.ts
-// CORREÇÃO: Importar a instância 'api' como default export ou com chaves, dependendo de como ela é exportada.
-// A mensagem de erro "Você quis dizer 'importar api de "./api"' em vez disso?" indica que 'api'
-// pode ser o default export, ou que está faltando chaves. Vamos tentar com chaves primeiro,
-// pois é mais comum para instâncias de axios nomeadas.
-import api from './api'; // Se o seu 'api.ts' exporta 'export const api = axios.create(...);'
-// OU:
-// import api from './api'; // Se o seu 'api.ts' exporta 'export default axios.create(...);'
 
-// CORREÇÃO: As tipagens estão em '../types/backend/providers.ts'
-import {
-    EarningsResponseDto,
-    WithdrawalRequestDto,
-    WithdrawalResponseDto,
-} from '../types/backend/providers';
+// CORREÇÃO: As tipagens de saque são do módulo de pagamentos
+import { RequestWithdrawalDto, PixChargeResponseDto } from '../types/backend/payments';
+// CORREÇÃO: A tipagem de ganhos é do módulo de ganhos
+import { EarningsResponseDto } from '../types/backend/earning';
+// CORREÇÃO: A tipagem de transações é do módulo de provedores
+import { ProviderTransaction } from '../types/backend/providers';
+
+// Outras importações
+import api from './api';
+
+/**
+ * Interface que representa a resposta completa do endpoint de ganhos.
+ * Como o backend não tem um EarningsResponseDto explícito na sua documentação,
+ * vamos construir um tipo aqui para ser compatível com a estrutura esperada.
+ * Geralmente, inclui um resumo e a lista de transações.
+ */
+interface EarningsResponse {
+    totalEarnings: number;
+    pendingWithdrawals: number;
+    transactions: ProviderTransaction[];
+}
 
 /**
  * Busca todos os dados de ganhos do provedor logado.
  * Corresponde ao `GET /providers/me/earnings` do backend.
- * @returns Uma Promise que resolve para um objeto EarningsResponseDto.
+ * @returns Uma Promise que resolve para um objeto EarningsResponse.
  */
-export async function getMyProviderEarnings(): Promise<EarningsResponseDto> {
-  try {
-    const response = await api.get<EarningsResponseDto>('/providers/me/earnings');
-    return response.data;
-  } catch (error: any) {
-    // É importante lançar o erro para que o componente que chamou possa tratá-lo
-    // loga o erro para depuração
-    console.error("[earningsService] Erro ao buscar ganhos:", error.response?.data || error.message);
-    throw error.response?.data || error; // Lança o erro para ser tratado pelo chamador
-  }
+export async function getMyProviderEarnings(): Promise<EarningsResponse> {
+    try {
+        const response = await api.get<EarningsResponse>('/providers/me/earnings');
+        return response.data;
+    } catch (error: any) {
+        console.error("[earningsService] Erro ao buscar ganhos:", error.response?.data || error.message);
+        throw error.response?.data || error;
+    }
 }
 
 /**
  * Envia uma solicitação de saque para o provedor logado.
  * Corresponde ao `POST /payments/withdrawal` do backend.
  * @param withdrawalDto Os detalhes da solicitação de saque.
- * @returns Uma Promise que resolve para um objeto WithdrawalResponseDto.
+ * @returns Uma Promise que resolve para um objeto de resposta de saque.
  */
-export async function requestWithdrawal(withdrawalDto: WithdrawalRequestDto): Promise<WithdrawalResponseDto> {
-  try {
-    const response = await api.post<WithdrawalResponseDto>('/payments/withdrawal', withdrawalDto);
-    return response.data;
-  } catch (error: any) {
-    // É importante lançar o erro para que o componente que chamou possa tratá-lo
-    // loga o erro para depuração
-    console.error("[earningsService] Erro ao solicitar saque:", error.response?.data || error.message);
-    throw error.response?.data || error; // Lança o erro para ser tratado pelo chamador
-  }
+export async function requestWithdrawal(withdrawalDto: RequestWithdrawalDto): Promise<PixChargeResponseDto> {
+    try {
+        const response = await api.post<PixChargeResponseDto>('/payments/withdrawal', withdrawalDto);
+        return response.data;
+    } catch (error: any) {
+        console.error("[earningsService] Erro ao solicitar saque:", error.response?.data || error.message);
+        throw error.response?.data || error;
+    }
 }

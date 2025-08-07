@@ -36,8 +36,8 @@ export interface IncidentReportDto {
   type: IncidentType;
   description: string;
   bookingId?: string;
-  involvedUsers?: string[]; // Array of user IDs
-  attachments?: string[]; // URLs of uploaded files
+  involvedUsers?: string[]; // CORREÇÃO: Array de user IDs
+  attachments?: string[]; // CORREÇÃO: URLs of uploaded files
 }
 
 export interface Incident {
@@ -50,7 +50,7 @@ export interface Incident {
   status: IncidentStatus;
   resolution?: string;
   resolvedBy?: string;
-  resolvedAt?: string;
+  resolvedAt?: string; // ISO date string
   createdAt: string;
   updatedAt: string;
 }
@@ -58,8 +58,8 @@ export interface Incident {
 export interface PanicAlert {
   id: string;
   userId: string;
-  latitude: number;
-  longitude: number;
+  latitude: number; // CORREÇÃO: Decimal no Prisma é number aqui
+  longitude: number; // CORREÇÃO: Decimal no Prisma é number aqui
   message?: string;
   status: string; // "ACTIVE", "RESOLVED", "FALSE_ALARM"
   createdAt: string;

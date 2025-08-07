@@ -6,6 +6,7 @@ import { UsersController } from './users.controller';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { QueuesModule } from '../queues/queues.module';
 import { AuthModule } from '../auth/auth.module';
+import { ProvidersModule } from '../providers/providers.module'; // Importando ProvidersModule
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { AuthModule } from '../auth/auth.module';
     NotificationsModule,
     QueuesModule,
     forwardRef(() => AuthModule), // Correto
+    forwardRef(() => ProvidersModule), // CORREÇÃO: Adicionado forwardRef para resolver a dependência circular.
   ],
   controllers: [UsersController],
   providers: [UsersService],

@@ -2,9 +2,9 @@
 import api from './api'; // Assuming you have an api.ts for Axios instance
 import {
   CreateSubscriptionDto,
-  Subscription,
+  Subscription, // Certifique-se de que Subscription está atualizado com novas propriedades e relações
   UpdateSubscriptionDto,
-} from '../types/backend/subscriptions';
+} from '../types/backend/subscriptions'; // Certifique-se de que estes tipos estão corretos
 
 export const createSubscription = async (data: CreateSubscriptionDto): Promise<Subscription> => {
   const response = await api.post<Subscription>('/subscriptions', data);
