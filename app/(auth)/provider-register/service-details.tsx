@@ -1,5 +1,3 @@
-// src/app/(provider)/provider-register/service-details.tsx
-
 import React, { useState, useRef } from 'react';
 import {
   View,
@@ -37,13 +35,13 @@ enum PricingType {
 }
 
 const SERVICE_MAPPINGS: { [key: string]: string } = {
-  'residencial': 'f0c16afd-f1e5-41e4-92ef-9f64ecabf6ea',
-  'comercial': '4c03312c-15c2-40d3-a041-1217bb6877ba',
-  'pos_obra': '646b296e-6a82-4f6e-a249-8df8f3851879',
-  'vidros': '9fa978db-511d-4600-86e2-d077b9ef7650',
-  'escritorio': 'afab28ad-c1e2-48ac-bb4b-406e90781ce5',
-  'estofados': 'adaea89b-2934-4848-95fe-030c371dfed9',
-  'passadoria': '5720897b-c922-4f28-9d68-48497933a01b',
+  'residencial': '282e4bd7-6518-4d35-b097-7729f40df64e',
+  'comercial': '30aec804-d85c-4c41-b978-53105b2437e4',
+  'pos_obra': 'c8cbf3c1-2ac7-4507-8097-b00ad2ba3c2f',
+  'escritorio': '662ea63b-d901-47c0-985f-86542f3f78d9',
+  'passadoria': '7dad59ef-3b0a-431b-b700-cd18ded427ee',
+  'vidros': 'a0fa793-9b0e-43d4-956d-e9b2b4aee1f4',
+  'estofados': 'b6b120c6-51c0-4e82-be95-0e3c6a9fc261',
 };
 
 type PriceUnit = 'hora' | 'quarto' | 'metragem' | null;
@@ -167,23 +165,18 @@ export default function ServiceDetailsScreen() {
       let avatarUrl: string | null | undefined = user.providerDetails.avatarUrl;
       console.log(`[handleContinue] URL do avatar inicial (do user.providerDetails): ${avatarUrl}`);
 
-      // Lógica para fazer o upload da foto de perfil e obter a URL
       if (formData.profilePhoto && formData.profilePhoto.startsWith('file://')) {
         console.log("[handleContinue] URI local detectada. Tentando fazer upload da foto de perfil...");
         try {
-          // O `verificationService.uploadAvatar` do frontend deve retornar a URL diretamente (string),
-          // espelhando o comportamento do backend.
           const uploadResponse = await verificationService.uploadAvatar(formData.profilePhoto);
-          
-          // CORREÇÃO: Verificar se a resposta é uma string (a URL)
-          if (typeof uploadResponse === 'string') {
-            avatarUrl = uploadResponse;
+          if (uploadResponse && uploadResponse.url) {
+            avatarUrl = uploadResponse.url;
             console.log("[handleContinue] Upload de foto de perfil concluído. Nova URL do avatar:", avatarUrl);
           } else {
             console.error("[handleContinue] Erro: O serviço de upload de avatar não retornou uma URL válida.");
             throw new Error('O serviço de upload de avatar não retornou uma URL válida.');
           }
-        } catch (uploadError) {
+        } catch (uploadError: any) {
           console.error("[handleContinue] Erro durante o upload da foto de perfil:", uploadError);
           throw new Error("Não foi possível fazer o upload da foto de perfil.");
         }
@@ -243,14 +236,12 @@ export default function ServiceDetailsScreen() {
         const existingService = existingProviderServices.find((s: any) => s.serviceId === serviceId);
 
         if (existingService) {
-          // [CORREÇÃO AQUI] Remover o serviceId para a requisição de PATCH
           console.log(`[handleContinue] Serviço existente encontrado para ${specialty}. Atualizando...`);
           const updatedServiceData = { ...serviceData };
-          delete updatedServiceData.serviceId; // Remove o serviceId para o PATCH
+          delete updatedServiceData.serviceId;
           await updateProviderServiceOffering(providerId, existingService.id, updatedServiceData);
           console.log(`[handleContinue] Serviço ${existingService.id} atualizado com sucesso.`);
         } else {
-          // [LÓGICA DE POST AQUI] O serviceId é necessário para a requisição de POST
           console.log(`[handleContinue] Serviço não existente para ${specialty}. Criando novo...`);
           await addProviderServiceOffering(providerId, serviceData);
           console.log(`[handleContinue] Novo serviço criado com sucesso para ${specialty}.`);
@@ -259,11 +250,9 @@ export default function ServiceDetailsScreen() {
 
       console.log("[handleContinue] Todos os serviços processados. Sucesso!");
       
-      // AQUI, NO FINAL DA LÓGICA DO SERVIÇO, VOCÊ DEVE CHAMAR O ENDPOINT PARA MUDAR O STATUS
-      await verificationService.advanceVerificationStatus(); // Chamada para avançar o status de verificação
-
-      // CORREÇÃO: Chamar updateUser sem argumentos para forçar o recarregamento do perfil do backend.
-      // Isso garantirá que o AuthContext tenha o status de verificação mais recente.
+      // Chamada para avançar o status de verificação no backend
+      await verificationService.advanceVerificationStatus(); 
+      // Atualiza o estado do usuário no AuthContext para refletir o novo status
       await updateUser(); 
 
       setIsRegistrationInProgress(false);
@@ -287,7 +276,6 @@ const renderImageUploadSection = () => (
         onPress={handleImagePicker}
         activeOpacity={0.8}
       >
-        {/* CORREÇÃO: Acessar a imagem do perfil do formData */}
         {formData.profilePhoto ? (
           <Image source={{ uri: formData.profilePhoto }} style={styles.uploadedImage} />
         ) : (
@@ -407,7 +395,7 @@ const renderImageUploadSection = () => (
                 {[
                   { id: 'hora', label: 'Por Hora' },
                   { id: 'quarto', label: 'Por Quarto' },
-                  { id: 'metragem', label: 'Por Metragem' }
+                  { id: 'metragem', label: 'Metragem' }
                 ].map((priceOption) => (
                   <TouchableOpacity
                     key={priceOption.id}
@@ -539,13 +527,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: '700',
     color: '#2C3E50',
-    marginBottom: 8,
+    marginBottom: -2,
+    marginTop: 20,
   },
   headerSubtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#6C757D',
     textAlign: 'center',
     lineHeight: 22,
@@ -556,7 +545,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: '#2C3E50',
     marginBottom: 15,
@@ -621,7 +610,7 @@ const styles = StyleSheet.create({
   textInput: {
     paddingHorizontal: 16,
     paddingVertical: 14,
-    fontSize: 16,
+    fontSize: 15,
     color: '#2C3E50',
     borderRadius: 12,
   },
@@ -653,14 +642,13 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   serviceTypeCardSelected: {
-    backgroundColor: '#A0D2EB',
-    borderColor: '#2C3E50',
+    backgroundColor: '#a0a4ebff',
+    borderColor: '#529ae2ff',
   },
   serviceTypeLabel: {
     fontSize: 14,
     fontWeight: '600',
     color: '#2C3E50',
-    marginTop: 8,
     textAlign: 'center',
   },
   serviceTypeLabelSelected: {
@@ -712,8 +700,8 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   priceTypeCardSelected: {
-    backgroundColor: '#A0D2EB',
-    borderColor: '#2C3E50',
+    backgroundColor: '#a0a4ebff',
+    borderColor: '#529ae2ff',
   },
   priceTypeLabel: {
     fontSize: 14,

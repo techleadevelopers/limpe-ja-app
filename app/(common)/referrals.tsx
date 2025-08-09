@@ -8,7 +8,7 @@ import PrimaryButton from '../../components/common/PrimaryButton';
 import { colors } from '../../components/common/theme/colors';
 import { typography } from '../../components/common/theme/typography';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import Clipboard from '@react-native-clipboard/clipboard'; // Necessário instalar: npm install @react-native-clipboard/clipboard
+import * as Clipboard from 'expo-clipboard';
 
 // Mock de dados
 const mockReferralData = {

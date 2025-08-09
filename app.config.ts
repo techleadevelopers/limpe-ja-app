@@ -56,7 +56,7 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => {
     },
     "extra": {
       ...config.extra,
-      "backendApiUrl": process.env.EXPO_PUBLIC_API_BASE_URL || "https://limpeja-app-backend-665493568088.southamerica-east1.run.app",
+      "backendApiUrl": process.env.EXPO_PUBLIC_API_BASE_URL || "https://limpeja-app-backend-35489557635.southamerica-east1.run.app/",
       "environment": process.env.NODE_ENV || "production",
       "router": {},
       "eas": {

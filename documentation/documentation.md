@@ -2274,3 +2274,36 @@ AppListening: 2.150s
 Application is running on: http://127.0.0.1:3000
 Swagger documentation available at: http://127.0.0.1:3000/api
 AppStartupTotal: 2.836s
+
+mudancas Configuração da API (api.ts e uploadService.ts):
+
+A lógica de conexão do frontend agora utiliza a URL do backend definida no app.config.ts através de Constants.expoConfig?.extra?.backendApiUrl.
+
+Para facilitar a manutenção local, incluímos uma linha comentada que permite alternar facilmente para um backend rodando localmente (http://localhost:3000).
+
+Essa abordagem garante que o app aponte para o backend em produção (Cloud Run) de forma consistente.
+
+Fluxo de Registro e Roteamento (_layout.tsx e AuthContext.tsx):
+
+O _layout.tsx foi aprimorado para atuar como um "guarda de rota" inteligente.
+
+Quando um novo provedor se registra, ele entra no estado de PENDING_INITIAL_REVIEW.
+
+O _layout.tsx detecta esse status e redireciona automaticamente o provedor para a tela de detalhes do serviço (/provider-register/service-details) se ele não estiver lá.
+
+Fluxo de Verificação de Documentos (service-details.tsx e verify-account.tsx):
+
+Após o provedor preencher e salvar os detalhes do serviço (foto de perfil, descrição, etc.) na tela service-details, ocorre uma sequência de ações críticas:
+
+A aplicação chama uma função no backend (advanceVerificationStatus) para alterar o status do provedor para PENDING_DOCUMENTS_UPLOAD.
+
+O useAuth().updateUser() é chamado para forçar o AuthContext a recarregar o perfil do usuário do backend, garantindo que o novo status seja capturado no estado global.
+
+Em seguida, a aplicação redireciona para a tela /provider-register/verify-account.
+
+A tela verify-account.tsx agora lida com o upload dos documentos e da selfie.
+
+Ela também implementa um mecanismo de polling que verifica periodicamente o status do provedor no backend.
+
+Assim que o status muda para APPROVED (após os uploads e/ou a revisão manual), o polling detecta a mudança e redireciona o provedor para o dashboard.
+

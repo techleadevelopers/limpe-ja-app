@@ -1,137 +1,167 @@
-Relatório Detalhado: Admin Web LimpeJá - Análise de Frontend (Alinhado para Integração Backend)
-1. Introdução
-Este relatório tem como objetivo fornecer uma análise aprofundada da arquitetura e implementação do frontend do painel administrativo web do LimpeJá. A aplicação é construída com tecnologias modernas, visando modularidade, reusabilidade de componentes e uma experiência de usuário fluida. O foco principal é a estrutura atual, a forma como os dados são gerenciados (atualmente com mocks) e as considerações para uma transição eficiente para um backend real.
+Documentação do Módulo admin-web - Plataforma LimpeJá
+Este documento detalha a arquitetura, funcionalidades e tecnologias empregadas no módulo admin-web do monorepo LimpeJá. O admin-web é a interface administrativa da plataforma, essencial para o gerenciamento, monitoramento e operação de todos os aspectos do negócio, desde o cadastro de provedores até a análise financeira e gestão de usuários.
 
+1. Visão Geral do Projeto
+O admin-web é construído como uma Single Page Application (SPA) utilizando React e TypeScript, integrado com o TanStack Query para gerenciamento de estado assíncrono e Tailwind CSS para estilização. Ele se comunica com um backend (inferido como a "ponta" do servidor do monorepo) através de uma API RESTful, e as ações realizadas aqui impactam diretamente a experiência dos usuários e provedores na "ponta" do aplicativo móvel.
+
+Estrutura do Monorepo (Inferida):
+
+admin-web: Este módulo, o foco desta documentação.
+server (Backend): Responsável pela lógica de negócio, persistência de dados e exposição de APIs para o admin-web e o aplicativo móvel.
+mobile-app (Frontend Móvel): O aplicativo voltado para usuários e provedores, consumindo as mesmas APIs do backend.
 2. Tecnologias Principais
 React: Biblioteca JavaScript para construção de interfaces de usuário.
-Wouter: Uma pequena e rápida biblioteca de roteamento para React, utilizada para navegação na aplicação.
-Tailwind CSS: Framework CSS utilitário para estilização rápida e responsiva.
-Shadcn UI: Coleção de componentes UI reutilizáveis, construídos sobre Radix UI e estilizados com Tailwind CSS, fornecendo uma base sólida para a interface.
-@tanstack/react-query: Biblioteca poderosa para gerenciamento de estado assíncrono, caching, sincronização e atualização de dados no lado do cliente.
-framer-motion: Biblioteca para animações em React, utilizada para transições suaves e efeitos visuais.
-TypeScript: Superconjunto tipado de JavaScript, garantindo maior robustez e detecção de erros em tempo de desenvolvimento.
-3. Estrutura de Pastas e Módulos
-A organização do código segue uma abordagem modular, separando as preocupações em diretórios lógicos:
+TypeScript: Superset de JavaScript que adiciona tipagem estática, melhorando a robustez e manutenibilidade do código.
+Vite: Ferramenta de build rápida para desenvolvimento frontend.
+TanStack Query (React Query): Biblioteca poderosa para gerenciamento de estado do servidor, caching, sincronização e atualização de dados assíncronos.
+Tailwind CSS: Framework CSS utility-first para estilização rápida e responsiva.
+Shadcn UI: Coleção de componentes de UI reutilizáveis, construídos com Radix UI e estilizados com Tailwind CSS, fornecendo uma base sólida e acessível para a interface.
+Framer Motion: Biblioteca para animações fluidas e interativas.
+Wouter: Pequena biblioteca de roteamento para React.
+3. Configurações Globais e Utilitários
+3.1. Definições de Tipos (types.ts)
+Este arquivo é o coração da consistência de dados em todo o projeto. Ele define interfaces e enums que representam as estruturas de dados compartilhadas entre o frontend (admin-web, e presumivelmente o mobile-app) e o backend.
 
-public/: Contém o arquivo index.html, o ponto de entrada da aplicação web.
-src/: Diretório principal do código-fonte.
-App.tsx: Componente raiz que define o roteamento da aplicação e configura provedores de contexto (QueryClientProvider, TooltipProvider, Toaster).
-main.tsx: Ponto de entrada do React, renderiza o componente App.
-index.css: Arquivo CSS principal, incluindo as diretivas do Tailwind e variáveis CSS customizadas.
-lib/: Utilitários e configurações globais.
-api.ts: Funções para interação com o backend (atualmente mockadas, mas prontas para integração real).
-queryClient.ts: Configuração do cliente @tanstack/react-query, definindo o comportamento padrão para queries e mutations.
-types.ts: Definições de tipos TypeScript para as entidades de dados (usuários, provedores, atividades, métricas, etc.), garantindo consistência.
-utils.ts: Funções utilitárias diversas (ex: cn para classes Tailwind).
-hooks/: Hooks React customizados (ex: use-toast, use-mobile).
-data/:
-mockData.ts: Contém dados simulados (mockados) para todas as entidades da aplicação, utilizados para desenvolvimento e demonstração sem a necessidade de um backend ativo. Inclui funções auxiliares para manipular esses mocks.
-components/: Componentes React reutilizáveis.
-layout/: Componentes de layout da aplicação (Header, Sidebar).
-ui/: Componentes UI genéricos do Shadcn UI (Button, Card, Input, Select, Dialog, etc.).
-dashboard/: Componentes específicos da página de Dashboard (MetricsCards, RevenueChart, ProviderMap, RecentActivities, VerificationQueueWidget).
-verification/: Componentes relacionados ao fluxo de verificação (VerificationModal, RejectionModal).
-pages/: Componentes que representam as diferentes páginas da aplicação.
-dashboard.tsx, providers.tsx, verification-queue.tsx, financial-analytics.tsx, service-management.tsx, user-management.tsx, provider-map.tsx, notifications.tsx, settings.tsx, not-found.tsx.
-4. Design System e Estilização
-A aplicação adota uma abordagem de design system robusta, baseada em:
+VerificationStatus: Enum para os diferentes estados de verificação de um provedor (PENDING_DOCUMENTS_UPLOAD, PENDING_MANUAL_REVIEW, APPROVED, REJECTED, BLOCKED).
+ActivityType: Enum para os tipos de atividades registradas na plataforma (e.g., PROVIDER_REGISTRATION, BOOKING_COMPLETED).
+Provider: Interface detalhada para provedores, incluindo informações de contato, status de verificação, dados de revisão, ganhos, e localização. Conexão com o App Móvel: Os dados de Provider são cruciais. Provedores APPROVED são visíveis e agendáveis no aplicativo móvel. Seu verificationStatus determina sua capacidade de operar na plataforma.
+Activity: Interface para atividades recentes.
+DashboardMetrics: Interface para as métricas gerais do dashboard.
+AuthUser / AuthResponse: Tipos relacionados à autenticação do usuário.
+A centralização desses tipos em types.ts garante que a comunicação entre o frontend e o backend seja fortemente tipada, reduzindo erros e facilitando a manutenção e evolução do sistema.
 
-Tailwind CSS: Utilizado para a maioria das estilizações, promovendo um desenvolvimento rápido e consistente.
-Variáveis CSS Customizadas (index.css): Definem a paleta de cores principal e secundária da aplicação, incluindo modos claro e escuro. Isso permite uma fácil personalização de tema.
-Cores padrão (background, foreground, primary, secondary, etc.)
-Cores customizadas para o admin LimpeJá (--light-blue, --medium-blue, --admin-bg).
-Sombras customizadas (--shadow-floating, --shadow-floating-lg).
-Shadcn UI: Componentes UI pré-construídos e estilizados, que aceleram o desenvolvimento e garantem a consistência visual. Exemplos incluem Card, Button, Input, Select, Dialog, Badge, Tabs, Switch, Textarea, Skeleton, Toaster, Tooltip.
-Classes Utilitárias Customizadas (@layer utilities): Extensões do Tailwind para aplicar sombras e cores customizadas de forma mais ergonômica (ex: shadow-floating, text-light-blue, bg-admin-bg).
-Animações CSS (@keyframes): Animações básicas como fadeIn, slideUp e float são definidas e aplicadas via classes Tailwind, complementadas por framer-motion para animações mais complexas e baseadas em estado.
-5. Gerenciamento de Estado e Dados
-O gerenciamento de dados é centralizado através de @tanstack/react-query, que oferece:
+3.2. Cliente de API (api.ts)
+Este arquivo encapsula toda a lógica de comunicação com o backend.
 
-Caching de Dados: Os dados são armazenados em cache, evitando requisições desnecessárias e melhorando o desempenho.
-Sincronização: Facilita a atualização de dados em tempo real ou em segundo plano.
-Manuseio de Estados de Carregamento e Erro: Simplifica a lógica de UI para estados de isLoading, isError, isSuccess.
-queryClient.ts: Configurações globais para queries, incluindo refetchInterval, refetchOnWindowFocus, staleTime, e retry (desabilitado por padrão para queries e mutations). A função getQueryFn lida com a lógica de requisição e tratamento de erros 401.
-api.ts: Este arquivo é a camada de abstração para as chamadas de API. Atualmente, as funções (fetchDashboardMetrics, fetchProviders, etc.) utilizam uma função fetchApi mockada. Para integração com o backend real, basta substituir a implementação de fetchApi para fazer requisições HTTP reais (e.g., usando fetch nativo ou axios) para os endpoints do backend.
-mockData.ts: Essencial para o desenvolvimento atual, fornecendo dados simulados para todas as funcionalidades. Isso permite que o frontend seja desenvolvido e testado independentemente do status do backend.
-6. Navegação e Roteamento
-wouter: Utilizado para definir as rotas da aplicação de forma leve e declarativa.
-App.tsx: Contém o componente Router que mapeia os caminhos (/, /providers, etc.) para os respectivos componentes de página.
-Sidebar.tsx: O componente de navegação lateral utiliza useLocation do wouter para destacar o item de menu ativo, proporcionando feedback visual ao usuário.
-7. Componentes Principais (Layout)
-Header.tsx: Componente de cabeçalho presente em todas as páginas, exibindo o título da página, um subtítulo, um campo de busca genérico e um ícone de notificações com contador.
-Sidebar.tsx: Barra de navegação lateral fixa, contendo o logo "LimpeJá Admin Panel", links para todas as seções do painel, e uma área de perfil do administrador. Os itens de menu podem exibir badges com contagens dinâmicas (e.g., número de verificações pendentes), obtidas via useQuery.
-8. Módulos Funcionais (Páginas)
-Cada página representa uma seção principal do painel administrativo:
+API_BASE_URL: Define a URL base da API. Atualmente configurado para um ambiente de desenvolvimento (https://limpeja-app-backend-35489557635.southamerica-east1.run.app), mas deve ser ajustado para ambientes de produção.
+fetchApi<T>(path: string, options: RequestInit): Uma função genérica que padroniza as requisições HTTP.
+Adiciona automaticamente o token de autenticação (authToken) do localStorage ao cabeçalho Authorization.
+Define Content-Type: application/json por padrão.
+Trata respostas de erro HTTP, lançando exceções com mensagens claras.
+Conexão com o App Móvel: Embora este fetchApi seja específico para o admin-web, o backend que ele consome é o mesmo que serve o aplicativo móvel. Isso significa que as operações de CRUD (Create, Read, Update, Delete) realizadas através desta API afetam diretamente os dados exibidos e manipulados no aplicativo móvel. Por exemplo, a aprovação de um provedor aqui o torna disponível no app móvel.
+Funções Específicas de API:
+login, logout: Para autenticação.
+fetchDashboardMetrics: Busca dados para o dashboard.
+fetchProviders: Obtém a lista de provedores.
+fetchVerificationQueue: Obtém provedores pendentes de verificação.
+fetchProviderById: Busca detalhes de um provedor específico.
+updateProviderStatus: Atualiza o status de verificação de um provedor (crucial para o fluxo de aprovação).
+fetchRecentActivities: Busca atividades recentes.
+3.3. Gerenciamento de Estado com TanStack Query (queryClient.ts)
+O admin-web utiliza TanStack Query para gerenciar o estado do servidor de forma eficiente.
 
-Dashboard.tsx: Visão geral do sistema.
-MetricsCards.tsx: Exibe métricas chave como usuários ativos, provedores aprovados, serviços agendados e receita total. Utiliza framer-motion para animações de entrada.
-RevenueChart.tsx: Gráfico de linha interativo mostrando a análise de receita ao longo do tempo.
-ProviderMap.tsx: Um mapa simplificado que visualiza a distribuição geográfica dos provedores.
-RecentActivities.tsx: Lista de atividades recentes na plataforma.
+queryClient: Instância configurada do QueryClient.
+defaultOptions.queries.queryFn: Define uma função de query padrão que utiliza fetchApi. Isso simplifica a definição de queries em componentes, pois a lógica de fetching e autenticação já está centralizada.
+Benefícios: Caching automático, refetching em segundo plano, tratamento de erros, e sincronização de dados, resultando em uma experiência de usuário mais fluida e um código mais limpo.
+3.4. Estilização (index.css, tailwind.config.ts)
+Tailwind CSS: Utilizado para construir a interface com classes utilitárias, permitindo um desenvolvimento rápido e um design consistente.
+index.css: Contém diretivas Tailwind, fontes e variáveis CSS customizadas para a paleta de cores da marca LimpeJá (--light-blue, --medium-blue, --admin-bg) e sombras personalizadas (--shadow-floating).
+tailwind.config.ts: Configura o Tailwind para incluir os arquivos do projeto, estender o tema com cores e animações personalizadas, e integrar plugins.
+3.5. Configuração do Vite (vite.config.ts)
+Plugins: Configura plugins como react() e runtimeErrorOverlay().
+Aliases: Define aliases de importação (@, @shared, @assets) para facilitar a organização do código.
+Proxy: Configura um proxy de desenvolvimento para /api que redireciona as requisições para o backend (http://localhost:3000). Isso é essencial para o desenvolvimento local, evitando problemas de CORS.
+4. Módulos e Páginas Principais
+4.1. Autenticação
+AuthContext.tsx: Implementa um contexto de autenticação React (AuthProvider, useAuth).
+Gerencia o estado de autenticação (user, isAuthenticated, isLoading).
+Persiste o token de autenticação (authToken) e dados do usuário (userData) no localStorage.
+login(credentials): Chama apiLogin, armazena credenciais e redireciona para o dashboard.
+logout(): Chama apiLogout, limpa credenciais e redireciona para a página de login.
+Conexão com o App Móvel: O sistema de autenticação (login/logout) se comunica com o mesmo backend que autentica usuários e provedores no aplicativo móvel. A segurança e a gestão de sessões são compartilhadas.
+login.tsx: A página de login.
+Coleta credenciais (email, senha).
+Utiliza o useAuth para chamar a função login.
+Exibe mensagens de erro (usando useToast) em caso de falha.
+Redireciona para o dashboard se o usuário já estiver autenticado.
+App.tsx: O ponto de entrada principal da aplicação.
+Configura o QueryClientProvider para o TanStack Query.
+Envolve as rotas com AuthProvider para disponibilizar o contexto de autenticação globalmente.
+PrivateRoute: Um componente de guarda de rota que verifica isAuthenticated e isLoading do useAuth. Redireciona usuários não autenticados para a página de login. Isso garante que apenas usuários logados acessem as páginas protegidas do admin.
+4.2. Dashboard (dashboard.tsx)
+A página principal que oferece uma visão geral do estado da plataforma.
+
+MetricsCards.tsx: Exibe métricas chave como "Active Users", "Approved Providers", "Services Booked" e "Total Revenue".
+Recebe os dados de métricas (DashboardMetrics) via props.
+Conexão com o App Móvel: Estas métricas são agregadas a partir das atividades de usuários e provedores no aplicativo móvel. Por exemplo, "Approved Providers" reflete o número de provedores que passaram pelo processo de verificação (gerenciado no admin) e estão aptos a receber serviços no app móvel. "Services Booked" é o total de agendamentos realizados pelos usuários no app.
+RevenueChart.tsx: Visualiza tendências de receita ao longo do tempo.
+Atualmente usa sampleData, mas está configurado para buscar dados do backend (fetchDashboardMetrics).
+Conexão com o App Móvel: A receita é gerada a partir dos agendamentos e pagamentos processados via o aplicativo móvel.
 VerificationQueueWidget.tsx: Um widget que mostra os provedores mais recentes na fila de verificação.
-Providers.tsx: Gerenciamento de provedores.
-Lista todos os provedores, com funcionalidades de busca e filtragem.
-Cada provedor é exibido em um Card com informações essenciais e status de verificação.
-Ao clicar em um provedor, abre-se o VerificationModal para detalhes e ações.
-VerificationQueue.tsx: Fila de verificação dedicada.
-Exibe uma lista detalhada de provedores aguardando verificação, com estatísticas sobre o total, documentos pendentes e revisão manual.
-Permite a revisão individual de cada provedor através do VerificationModal.
-FinancialAnalytics.tsx: Análise financeira da plataforma.
-Apresenta métricas financeiras chave (receita total, comissão, pagamentos a provedores, margem de lucro).
-Gráficos de linha e pizza para visualização de tendências de receita e distribuição por categoria.
-Lista de transações recentes.
-ServiceManagement.tsx: Gerenciamento de serviços e categorias.
+Usa useQuery para buscar dados da fila (fetchVerificationQueue).
+Conexão com o App Móvel: Provedores que se cadastram no aplicativo móvel entram nesta fila para revisão.
+RecentActivities.tsx: Lista as atividades mais recentes na plataforma.
+Usa useQuery para buscar dados de atividades (fetchRecentActivities).
+Conexão com o App Móvel: As atividades (cadastro de provedores, agendamentos concluídos, pagamentos processados) são geradas pelas interações no aplicativo móvel.
+4.3. Gestão de Provedores
+providers.tsx: Página completa para listar e gerenciar todos os provedores.
+Permite buscar provedores por nome/email.
+Exibe detalhes como status de verificação, avaliações, agendamentos mensais e ganhos.
+Utiliza useQuery para fetchProviders e useMutation para apiUpdateProviderStatus.
+Conexão com o App Móvel: Esta página é o ponto central para gerenciar a base de provedores que oferecem serviços no aplicativo móvel. Ações como bloquear ou aprovar um provedor afetam diretamente sua visibilidade e capacidade de operar no app móvel.
+verification-queue.tsx: Página dedicada à revisão de provedores pendentes.
+Exibe provedores agrupados por status (documentos pendentes, revisão manual).
+Utiliza useQuery para fetchVerificationQueue e useMutation para apiUpdateProviderStatus.
+Conexão com o App Móvel: Este é o fluxo de trabalho crítico para on-board de novos provedores do aplicativo móvel. A aprovação aqui permite que o provedor comece a aceitar serviços.
+verification-modal.tsx: Um modal detalhado para revisar as informações de um provedor.
+Exibe fotos de documentos, resultados de OCR e verificação de vivacidade.
+Permite Aprovar, Rejeitar (com motivo via RejectionModal) ou Bloquear um provedor.
+Conexão com o App Móvel: A decisão tomada neste modal (aprovar/rejeitar/bloquear) define o status do provedor, que é refletido no aplicativo móvel, controlando se ele pode ou não prestar serviços.
+rejection-modal.tsx: Modal para coletar o motivo da rejeição de um provedor.
+provider-map.tsx: Visualiza a distribuição geográfica dos provedores.
+Filtra provedores por termo de busca e status.
+Exibe estatísticas de provedores (total, aprovados, pendentes).
+Usa useQuery para buscar dados de provedores.
+Conexão com o App Móvel: Embora o mapa seja uma ferramenta de análise para o admin, os dados de localização dos provedores são os mesmos usados pelo aplicativo móvel para mostrar provedores próximos aos usuários.
+4.4. Gestão de Serviços (service-management.tsx)
+Gerencia os serviços oferecidos pela plataforma (nome, descrição, preço, duração, categoria).
 Permite adicionar, editar e excluir serviços e categorias.
-Exibe detalhes de cada serviço (preço, duração, popularidade, avaliações, total de agendamentos).
-Funcionalidade de ativar/desativar serviços.
-UserManagement.tsx: Gerenciamento de usuários/clientes.
-Lista de clientes com busca e filtragem por status.
-Exibe detalhes do cliente (histórico de agendamentos, gastos, status, nível de fidelidade).
-Funcionalidade para adicionar novos clientes e visualizar detalhes.
-Notifications.tsx: Central de notificações.
-Exibe notificações do sistema, verificação, pagamentos e usuários.
-Funcionalidades para marcar como lida, marcar todas como lidas e excluir notificações.
-Filtragem por categoria e status (lidas/não lidas).
-Settings.tsx: Configurações da plataforma.
-Organizado em abas: Geral (nome da plataforma, email admin, taxa de comissão, moeda, modo de manutenção), Notificações (preferências de notificação), Segurança (timeout de sessão, tentativas de login, 2FA, IP Whitelist, auditoria), Banco de Dados (frequência de backup, retenção, criptografia), Email (configuração SMTP).
-Utiliza useToast para feedback de sucesso/erro ao salvar configurações.
-NotFound.tsx: Página de erro 404, exibida para rotas não encontradas.
-9. Componentes Reutilizáveis (components/ui)
-A pasta components/ui contém uma vasta coleção de componentes genéricos do Shadcn UI, que são wrappers de componentes Radix UI com estilos Tailwind. Eles são a base para a construção da interface do usuário, garantindo consistência e acessibilidade. Exemplos incluem:
+Conexão com o App Móvel: Os serviços definidos e ativados nesta página são os que os usuários podem agendar no aplicativo móvel. As categorias organizam a oferta de serviços para os usuários.
+4.5. Gestão de Usuários (user-management.tsx)
+Lista e gerencia os usuários (clientes) da plataforma.
+Exibe estatísticas de usuários (total, ativos, inativos, bloqueados).
+Permite buscar usuários e filtrar por status.
+Exibe detalhes do usuário (gastos, agendamentos concluídos, nível de fidelidade).
+Conexão com o App Móvel: Esta página gerencia a base de clientes que utilizam o aplicativo móvel para agendar serviços. Ações como bloquear um usuário aqui impediriam seu acesso ao app móvel.
+4.6. Análise Financeira (financial-analytics.tsx)
+Exibe métricas financeiras detalhadas (receita total, comissão, pagamentos a provedores, margem de lucro).
+Gráficos de tendências de receita e distribuição por categoria.
+Lista de transações recentes.
+Conexão com o App Móvel: Todos os dados financeiros são gerados a partir dos agendamentos e transações de pagamento que ocorrem através do aplicativo móvel. Esta página fornece a visão consolidada da saúde financeira da plataforma.
+4.7. Outras Páginas (Placeholders)
+Várias páginas estão estruturadas como placeholders, indicando futuras funcionalidades cruciais para a escalabilidade e completude da plataforma:
 
-alert.tsx, alert-dialog.tsx, aspect-ratio.tsx, avatar.tsx, badge.tsx, breadcrumb.tsx, button.tsx, calendar.tsx, card.tsx, carousel.tsx, chart.tsx, checkbox.tsx, collapsible.tsx, command.tsx, context-menu.tsx, dialog.tsx, drawer.tsx, dropdown-menu.tsx, form.tsx, hover-card.tsx, input.tsx, input-otp.tsx, label.tsx, menubar.tsx, navigation-menu.tsx, pagination.tsx, popover.tsx, progress.tsx, radio-group.tsx, resizable.tsx, scroll-area.tsx, select.tsx, separator.tsx, sheet.tsx, sidebar.tsx (componente UI genérico, não o do layout), skeleton.tsx, slider.tsx, switch.tsx, table.tsx, tabs.tsx, textarea.tsx, toast.tsx, toaster.tsx, toggle.tsx, toggle-group.tsx, tooltip.tsx.
+booking-management.tsx: Gestão de agendamentos. Conexão com o App Móvel: Agendamentos são o core do negócio, originados no app móvel.
+client-management.tsx: Gerenciamento de clientes (pode ser consolidado com user-management).
+coupon-management.tsx: Gestão de cupons de desconto. Conexão com o App Móvel: Cupons seriam aplicados por usuários no app móvel.
+dispute-management.tsx: Gestão de disputas. Conexão com o App Móvel: Disputas surgiriam de interações entre usuários e provedores no app móvel.
+faq-management.tsx: Gestão de perguntas frequentes. Conexão com o App Móvel: FAQs seriam exibidas no app móvel para suporte ao usuário.
+guarantee-claims.tsx: Gerenciamento de reclamações de garantia. Conexão com o App Móvel: Reclamações de garantia seriam iniciadas por usuários no app móvel.
+offer-management.tsx: Gestão de ofertas promocionais. Conexão com o App Móvel: Ofertas seriam exibidas e aplicadas no app móvel.
+payment-management.tsx: Gestão de pagamentos. Conexão com o App Móvel: Detalhes de transações do app móvel.
+pricing-rules.tsx: Regras de precificação. Conexão com o App Móvel: Regras impactariam os preços exibidos no app móvel.
+referral-management.tsx: Gestão de indicações. Conexão com o App Móvel: Programa de indicação seria usado por usuários no app móvel.
+safety-alerts.tsx: Alertas de segurança. Conexão com o App Móvel: Alertas poderiam ser gerados por usuários ou provedores em situações de emergência no app móvel.
+subscription-management.tsx: Gestão de assinaturas. Conexão com o App Móvel: Planos de assinatura seriam oferecidos a usuários/provedores no app móvel.
+user-data-export.tsx: Exportação de dados de usuário.
+notifications.tsx: Página para exibir e gerenciar notificações do sistema.
+settings.tsx: Configurações gerais da plataforma (nome, email, taxa de comissão, modo de manutenção, notificações, segurança, banco de dados, email).
+4.8. Componentes de UI (components/ui/*)
+O projeto utiliza uma vasta coleção de componentes de UI baseados em Shadcn UI (que por sua vez utiliza Radix UI). Estes componentes fornecem a base visual e funcional para a interface, garantindo acessibilidade, responsividade e consistência. Exemplos incluem Button, Card, Dialog, Input, Select, Tabs, Badge, Skeleton, entre outros. Eles são blocos de construção genéricos e reutilizáveis, essenciais para a velocidade de desenvolvimento e a qualidade da UI.
 
-10. Mocks e Simulações
-A presença de mockData.ts e a implementação mockada em api.ts são características cruciais da versão atual. Elas permitem:
+5. Escalabilidade e Considerações para Google Play
+O design atual do admin-web já incorpora várias práticas que favorecem a escalabilidade e a integração com um ecossistema maior, como o de um aplicativo no Google Play:
 
-Desenvolvimento Paralelo: Frontend e backend podem ser desenvolvidos simultaneamente, sem dependências diretas iniciais.
-Demonstração Rápida: A aplicação pode ser demonstrada e testada funcionalmente sem um backend real.
-Testes Unitários/Integração: Facilita a escrita de testes para os componentes e a lógica de dados do frontend.
-11. Considerações para Manutenção e Integração Backend
-11.1. Pontos Fortes
-Modularidade e Componentização: O código é bem organizado em componentes reutilizáveis, facilitando a manutenção e a adição de novas funcionalidades.
-Tipagem Forte (TypeScript): Reduz a probabilidade de erros em tempo de execução e melhora a legibilidade e a colaboração entre desenvolvedores. As interfaces em types.ts são um contrato claro para a comunicação com o backend.
-Gerenciamento de Estado Profissional (@tanstack/react-query): O uso de react-query simplifica o manuseio de dados assíncronos, caching e invalidação, resultando em menos boilerplate e maior estabilidade.
-Design System Consistente (Shadcn UI + Tailwind): A interface é visualmente coesa e fácil de estender, com estilos centralizados e variáveis CSS.
-Animações e Experiência do Usuário: A integração de framer-motion adiciona um toque profissional e melhora a percepção de fluidez da aplicação.
-Estrutura de API Abstrata (api.ts): A camada de API está bem definida, facilitando a substituição dos mocks por chamadas reais.
-11.2. Pontos a Melhorar / Atenção (Alinhado com Arquivos)
-Transição de Mocks para API Real: Embora a estrutura esteja pronta, a substituição dos dados mockados por chamadas reais de API em admin-web/src/lib/api.ts exigirá um trabalho cuidadoso para mapear os endpoints do backend e garantir que os dados retornados correspondam às interfaces definidas em admin-web/src/lib/types.ts. As páginas (admin-web/src/pages/*.tsx) e componentes de dashboard (admin-web/src/components/dashboard/*.tsx) deixarão de usar admin-web/src/data/mockData.ts.
-Tratamento de Erros Detalhado: Atualmente, admin-web/src/lib/queryClient.ts tem um tratamento básico de erros 401 e um throwIfResNotOk. Para um ambiente de produção, é fundamental implementar um tratamento de erros mais granular e amigável ao usuário (e.g., mensagens de erro específicas para diferentes códigos de status HTTP, logging de erros), impactando também as páginas (admin-web/src/pages/*.tsx) e componentes que realizam chamadas (admin-web/src/components/verification/*.tsx).
-Autenticação e Autorização: O código atual não detalha a implementação de autenticação (login, tokens) e autorização (permissões de usuário). Isso será um ponto crítico na integração com o backend real. O admin-web/src/lib/queryClient.ts já usa credentials: "include", mas a lógica de login/logout e proteção de rotas precisará ser adicionada, impactando admin-web/src/App.tsx (para proteção de rotas), admin-web/src/lib/api.ts (para funções de login/logout e injeção de token), e a criação de novos arquivos como admin-web/src/pages/login.tsx e admin-web/src/context/AuthContext.tsx.
-Otimização de Performance para Grandes Volumes de Dados: Para listagens extensas (e.g., provedores, usuários, atividades), a implementação atual pode não ser otimizada para grandes volumes de dados. Considerar paginação, virtualização de listas e lazy loading para melhorar o desempenho nas páginas como admin-web/src/pages/providers.tsx, admin-web/src/pages/user-management.tsx, admin-web/src/pages/notifications.tsx.
-Validação de Formulários: Para as páginas de gerenciamento (Serviços, Usuários, Configurações), é crucial implementar validação de formulários no frontend para garantir a integridade dos dados antes do envio ao backend, impactando arquivos como admin-web/src/pages/service-management.tsx, admin-web/src/pages/user-management.tsx, admin-web/src/pages/settings.tsx.
-Testes Abrangentes: Além dos testes de unidade/integração de componentes, é recomendável implementar testes end-to-end (E2E) para garantir que os fluxos de usuário funcionem corretamente com o backend real, afetando a estratégia de testes para todos os arquivos de páginas (admin-web/src/pages/*.tsx) e componentes que interagem com a API.
-11.3. Estratégia de Integração Backend (Alinhado com Arquivos)
-A transição para o backend real pode ser feita de forma incremental:
+Separação de Preocupações: O frontend (admin-web) é desacoplado do backend, comunicando-se via API. Isso permite que o backend seja escalado independentemente e sirva múltiplos clientes (web admin, mobile app).
+Tipagem Forte com TypeScript: Reduz erros em tempo de execução, melhora a colaboração da equipe e facilita a refatoração, o que é crucial para um projeto em crescimento.
+Gerenciamento de Estado do Servidor (TanStack Query): Otimiza o desempenho da UI, reduz a carga no backend através de caching e lida com a complexidade da sincronização de dados, resultando em uma experiência de usuário mais rápida e responsiva.
+Componentização com Shadcn UI: Reutilização de componentes acelera o desenvolvimento, garante consistência visual e facilita a manutenção.
+Modularidade: O código é organizado em módulos lógicos (páginas, componentes, hooks, utilitários), tornando-o mais fácil de entender, testar e expandir.
+Integração com Backend Compartilhado: A utilização de um backend comum para o admin-web e o mobile-app (inferido) garante que as operações administrativas reflitam imediatamente no aplicativo móvel e vice-versa. Por exemplo:
+Provedores Aprovados: Uma vez aprovados no admin-web, aparecem no mobile-app para agendamentos.
+Serviços Configurados: Serviços criados e atualizados no admin-web são instantaneamente disponíveis para os usuários no mobile-app.
+Alertas e Disputas: Eventos críticos do mobile-app (disputas, alertas de segurança) são centralizados no admin-web para ação rápida.
+Preparação para Funcionalidades Futuras: A presença de páginas placeholder para gestão de agendamentos, cupons, disputas, etc., demonstra uma visão de longo prazo para as necessidades administrativas de uma plataforma em crescimento.
+Experiência do Usuário (UX): O uso de Framer Motion para animações e Shadcn UI para componentes acessíveis contribui para uma UX profissional, importante para a eficiência dos operadores do admin.
+Em suma, o módulo admin-web é uma ferramenta robusta e bem estruturada, projetada para suportar o crescimento da plataforma LimpeJá, garantindo que as operações de back-office sejam eficientes e que as interações com o aplicativo móvel sejam fluidas e sincronizadas. A clareza das tipagens, a modularidade do código e a escolha de bibliotecas modernas posicionam este painel administrativo para escalar junto com a plataforma na Google Play Store.
 
-Definição de Endpoints: Mapear todos os endpoints da API do backend para as funções em admin-web/src/lib/api.ts.
-Substituição da Lógica de fetchApi: Modificar a função fetchApi em admin-web/src/lib/api.ts para realizar requisições HTTP reais (e.g., GET, POST, PUT, DELETE) para os endpoints do backend. Isso impactará diretamente todas as páginas (admin-web/src/pages/*.tsx) e componentes de dashboard (admin-web/src/components/dashboard/*.tsx, admin-web/src/components/verification/*.tsx) que atualmente usam mockData.ts.
-Ajuste de Tipos: Garantir que as interfaces em admin-web/src/lib/types.ts correspondam exatamente aos contratos de dados do backend. Qualquer divergência deve ser resolvida para evitar erros de tipagem.
-Implementação de Autenticação: Adicionar a lógica de login, gerenciamento de tokens (se aplicável, como JWT) e proteção de rotas/componentes com base no status de autenticação do usuário. Isso envolverá a criação de admin-web/src/pages/login.tsx, admin-web/src/context/AuthContext.tsx, e modificações em admin-web/src/App.tsx, admin-web/src/lib/api.ts, e admin-web/src/lib/queryClient.ts.
-Tratamento de Erros do Backend: Aprimorar o tratamento de erros para lidar com respostas de erro específicas do backend, exibindo mensagens claras ao usuário e registrando os erros para depuração, impactando admin-web/src/lib/queryClient.ts e a lógica de tratamento de erro em todas as páginas (admin-web/src/pages/*.tsx) e componentes que realizam chamadas.
-Otimizações Graduais: Conforme a aplicação for testada com dados reais, identificar e implementar otimizações de performance (paginação, lazy loading) conforme necessário em páginas como admin-web/src/pages/providers.tsx, admin-web/src/pages/user-management.tsx, admin-web/src/pages/notifications.tsx.
-12. Conclusão
-O frontend do painel administrativo LimpeJá apresenta uma base sólida e moderna, com uma arquitetura limpa e o uso de bibliotecas consagradas. A decisão de utilizar mocks durante o desenvolvimento inicial foi acertada, permitindo o progresso independente.
-
-Para a manutenção e integração com o backend real, os principais desafios residem na substituição dos mocks pelas chamadas de API reais, na implementação completa da autenticação/autorização e no aprimoramento do tratamento de erros. A clareza das interfaces de tipo (admin-web/src/lib/types.ts) será um ativo valioso nesse processo, atuando como um contrato entre frontend e backend. Com uma abordagem sistemática, a transição será eficiente e resultará em um painel administrativo robusto e escalável.

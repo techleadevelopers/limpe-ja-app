@@ -17,26 +17,16 @@ import * as Sentry from '@sentry/react-native';
 
 Sentry.init({
   dsn: 'https://947962edb662e5ff655cbcd778ee13b6@o4509792415252480.ingest.us.sentry.io/4509792431898624',
-
-  // Adds more context data to events (IP address, cookies, user, etc.)
-  // For more information, visit: https://docs.sentry.io/platforms/react-native/data-management/data-collected/
   sendDefaultPii: true,
-
-  // Configure Session Replay
   replaysSessionSampleRate: 0.1,
   replaysOnErrorSampleRate: 1,
   integrations: [Sentry.mobileReplayIntegration(), Sentry.feedbackIntegration()],
-
-  // uncomment the line below to enable Spotlight (https://spotlightjs.com)
-  // spotlight: __DEV__,
 });
-// Importa a função de inicialização do Sentry
-import { initSentry } from '../components/common/utils/sentry'; // Ajuste o caminho se o seu sentry.ts estiver em outro local
 
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutContent() {
-    const { isAuthenticated, isLoading: authIsLoading, user, isRegistrationInProgress } = useAuth();
+    const { isAuthenticated, isLoading: authIsLoading, user } = useAuth();
     const router = useRouter();
     const segments = useSegments();
     const pathname = usePathname();
@@ -48,11 +38,6 @@ function RootLayoutContent() {
         const prepareApp = async () => {
             console.log('[RootLayoutContent | prepareApp] Iniciando processo de preparação do aplicativo.');
             try {
-                // Inicializa Sentry e outras ferramentas de monitoramento/analytics
-                initSentry(); // <--- Adição da inicialização do Sentry
-                // Se houver Amplitude ou outras ferramentas, inicialize-as aqui também
-                // initAmplitude();
-
                 console.log('[RootLayoutContent | prepareApp] Inicialização básica do aplicativo concluída.');
             } catch (e: any) {
                 console.error('[RootLayoutContent | prepareApp] ERRO FATAL durante a inicialização do aplicativo:', e);
@@ -76,7 +61,6 @@ function RootLayoutContent() {
         console.log(`- isAuthenticated: ${isAuthenticated}`);
         console.log(`- user: ${user?.email ? user.email + ' (Função: ' + user.role + ')' : 'nulo/indefinido'}`);
         console.log(`- user.providerDetails.verificationStatus: ${user?.providerDetails?.verificationStatus}`);
-        console.log(`- isRegistrationInProgress (AuthContext): ${isRegistrationInProgress}`);
         console.log(`- Caminho atual: '${pathname}'`);
 
         if (initializationError) {
@@ -106,111 +90,73 @@ function RootLayoutContent() {
         const authServiceDetailsStep = normalizePath(AUTH_ROUTES.SERVICE_DETAILS_STEP);
         const providerRegistrationVerifyAccountPath = normalizePath(AUTH_ROUTES.VERIFY_ACCOUNT_STEP); 
 
-        const isProviderPendingVerification = user?.role === UserRole.PROVIDER && user?.providerDetails?.verificationStatus !== VerificationStatus.APPROVED;
-
-        console.log(`[RootLayoutContent | decideAndRedirect] Provider Flow Check:`);
-        console.log(`   - user.role: ${user?.role}`);
-        console.log(`   - user.providerDetails.verificationStatus: ${user?.providerDetails?.verificationStatus}`);
-        console.log(`   - isRegistrationInProgress (AuthContext): ${isRegistrationInProgress}`);
-        console.log(`   - isProviderPendingVerification (calculated): ${isProviderPendingVerification}`);
-
         const decideAndRedirect = async () => {
             if (!isAuthenticated) {
                 if (!inAuthGroup && !isWelcomeRoute) {
-                    console.log('[RootLayoutContent | decideAndRedirect] AÇÃO: Usuário NÃO autenticado e fora do grupo (auth) ou /welcome. Redirecionando para /welcome (Fluxo fixo).');
+                    console.log('[RootLayoutContent | decideAndRedirect] AÇÃO: Usuário NÃO autenticado. Redirecionando para /welcome.');
                     router.replace('/welcome');
                     console.groupEnd();
                     return;
                 }
-                console.log('[RootLayoutContent | decideAndRedirect] INFO: Usuário NÃO autenticado e já em /welcome ou no grupo (auth). Permitindo permanência.');
+                console.log('[RootLayoutContent | decideAndRedirect] INFO: Usuário NÃO autenticado e já em rota pública. Permitindo permanência.');
                 console.groupEnd();
                 return;
             }
 
-            // Ações de redirecionamento para provedores. A prioridade é do status de verificação.
+            // Lógica de redirecionamento para provedores
             if (user?.role === UserRole.PROVIDER) {
-                // 1. Provedor APROVADO: Redirecionar para o dashboard
-                if (user?.providerDetails?.verificationStatus === VerificationStatus.APPROVED) {
+                const verificationStatus = user?.providerDetails?.verificationStatus;
+                const isApproved = verificationStatus === VerificationStatus.APPROVED;
+                const isPendingInitialReview = verificationStatus === VerificationStatus.PENDING_INITIAL_REVIEW;
+                const isPendingDocsUpload = verificationStatus === VerificationStatus.PENDING_DOCUMENTS_UPLOAD || verificationStatus === VerificationStatus.PENDING_MANUAL_REVIEW;
+
+                if (isApproved) {
                     const targetDashboardPath = normalizePath(PROVIDER_ROUTES.DASHBOARD);
                     if (cleanedCurrentPath !== targetDashboardPath) {
-                        console.log(`[RootLayoutContent | decideAndRedirect] AÇÃO: Provedor (${user.email}) APROVADO. Redirecionando para o Dashboard: '${targetDashboardPath}'.`);
+                        console.log(`[RootLayoutContent | decideAndRedirect] AÇÃO: Provedor APROVADO. Redirecionando para o Dashboard: '${targetDashboardPath}'.`);
                         router.replace(targetDashboardPath as any);
-                        console.groupEnd();
-                        return;
                     }
-                    console.log(`[RootLayoutContent | decideAndRedirect] INFO: Provedor (${user.email}) APROVADO e já no Dashboard. Permitindo permanência.`);
-                    console.groupEnd();
-                    return;
-                }
-
-                // 2. Provedor com registro em andamento: Redirecionar para o passo correto
-                // Se o status for PENDING_INITIAL_REVIEW, redirecionar para service-details
-                if (user?.providerDetails?.verificationStatus === VerificationStatus.PENDING_INITIAL_REVIEW) {
+                } else if (isPendingInitialReview) {
                     if (cleanedCurrentPath !== authServiceDetailsStep) {
-                        console.log(`[RootLayoutContent | decideAndRedirect] AÇÃO: Provedor (${user.email}) com registro inicial pendente, redirecionando para a etapa de detalhes do serviço: '${authServiceDetailsStep}'.`);
+                        console.log(`[RootLayoutContent | decideAndRedirect] AÇÃO: Provedor com registro inicial pendente. Redirecionando para detalhes do serviço: '${authServiceDetailsStep}'.`);
                         router.replace(authServiceDetailsStep as any);
-                        console.groupEnd();
-                        return;
                     }
-                }
-                
-                // Se o status for PENDING_DOCUMENTS_UPLOAD ou outros, redirecionar para verify-account
-                if (isProviderPendingVerification) {
+                } else if (isPendingDocsUpload) {
                     if (cleanedCurrentPath !== providerRegistrationVerifyAccountPath) {
-                        console.log(`[RootLayoutContent | decideAndRedirect] AÇÃO: Provedor (${user.email}) pendente de verificação, fora da página de verificação. Redirecionando para: '${providerRegistrationVerifyAccountPath}'.`);
+                        console.log(`[RootLayoutContent | decideAndRedirect] AÇÃO: Provedor com verificação de documentos pendente. Redirecionando para: '${providerRegistrationVerifyAccountPath}'.`);
                         router.replace(providerRegistrationVerifyAccountPath as any);
-                        console.groupEnd();
-                        return;
+                    }
+                } else {
+                    // Fallback para provedores com status inesperado
+                    console.log(`[RootLayoutContent | decideAndRedirect] INFO: Provedor autenticado com status inesperado. Redirecionando para a tela de verificação de documentos.`);
+                    if (cleanedCurrentPath !== providerRegistrationVerifyAccountPath) {
+                       router.replace(providerRegistrationVerifyAccountPath as any);
                     }
                 }
-
-                // Casos de borda: O provedor está autenticado mas com um status inesperado, redirecionar para a página de verificação como padrão.
-                // Isso evita loops infinitos se a lógica acima não for atendida.
-                if (inAuthGroup && cleanedCurrentPath !== authServiceDetailsStep && cleanedCurrentPath !== providerRegistrationVerifyAccountPath) {
-                    console.log(`[RootLayoutContent | decideAndRedirect] AÇÃO: Provedor (${user.email}) com status pendente inesperado. Redirecionando para a tela de verificação: '${providerRegistrationVerifyAccountPath}'.`);
-                    router.replace(providerRegistrationVerifyAccountPath as any);
-                    console.groupEnd();
-                    return;
-                }
-                
-                console.log(`[RootLayoutContent | decideAndRedirect] INFO: Provedor (${user.email}) em uma rota de registro válida. Permitindo prosseguir.`);
                 console.groupEnd();
                 return;
             }
 
-            // Lógica para outros papéis (CLIENTE, ADMIN)
-            let targetRoute: string | null = null;
-            let shouldPerformRedirect = false;
+            // Lógica de redirecionamento para clientes e admins
+            if (user?.role && (user.role === UserRole.ADMIN || user.role === UserRole.CLIENT)) {
+                const targetRoute = normalizePath(CLIENT_ROUTES.EXPLORE);
+                const isCurrentPathInClientGroup = segments[0] === '(client)';
 
-            const isCurrentPathInClientGroup = segments[0] === '(client)';
-            const isCurrentPathInProviderGroup = segments[0] === '(provider)';
-            const isCurrentPathInCommonGroup = segments[0] === '(common)';
-
-            console.log(`[RootLayoutContent | decideAndRedirect] General Role-Based Redirection Check:`);
-            console.log(`   - Current segment: ${segments[0]}`);
-
-            if (user?.role === UserRole.ADMIN || user?.role === UserRole.CLIENT) {
-                targetRoute = CLIENT_ROUTES.EXPLORE;
-                if (!isCurrentPathInClientGroup && !isCurrentPathInCommonGroup) {
-                    shouldPerformRedirect = true;
+                if (cleanedCurrentPath !== targetRoute && !isCurrentPathInClientGroup) {
+                    console.log(`[RootLayoutContent | decideAndRedirect] AÇÃO: Usuário ${user?.role} fora da rota de cliente. Redirecionando para: '${targetRoute}'.`);
+                    router.replace(targetRoute as any);
                 }
-            }
-            
-            if (shouldPerformRedirect && targetRoute) {
-                const normalizedTargetRoute = normalizePath(targetRoute);
-                console.log(`[RootLayoutContent | decideAndRedirect] AÇÃO: Redirecionamento final ${user?.role || 'N/A'} de '${cleanedCurrentPath}' para: '${normalizedTargetRoute}'`);
-                router.replace(normalizedTargetRoute as any);
                 console.groupEnd();
                 return;
-            } else {
-                console.log(`[RootLayoutContent | decideAndRedirect] INFO: Usuário ${user?.role || 'N/A'} já está na rota correta ('${cleanedCurrentPath}') ou nenhuma ação de redirecionamento foi necessária. Final shouldPerformRedirect: ${shouldPerformRedirect}.`);
-                console.groupEnd();
             }
+
+            console.log(`[RootLayoutContent | decideAndRedirect] INFO: Nenhuma ação de redirecionamento necessária. Fim do ciclo.`);
+            console.groupEnd();
         };
 
         decideAndRedirect();
 
-    }, [isAuthenticated, user, authIsLoading, router, segments, pathname, isRegistrationInProgress, appReady]);
+    }, [isAuthenticated, user, authIsLoading, router, segments, pathname, appReady]);
 
     if (!appReady || authIsLoading || initializationError) {
         return (

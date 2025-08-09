@@ -17,22 +17,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Importações dos componentes necessários
 import BookServiceButton from '../../../components/client/explore/provider/BookServiceButton';
-import InfoChip from '../../../components/client/explore/provider/InfoChip';
+import InfoChip from '../../../components/client/explore/provider/InfoChip'; // <-- O componente InfoChip deve ser modificado para aceitar o prop 'colors'
 import ReviewCard from '../../../components/client/explore/provider/ReviewCard';
 import StarRating from '../../../components/client/explore/provider/StarRating';
 
 // Importações de dados e tipos
 import { ProviderDisplayInfo, ProviderReview, ProviderServiceOffering } from '../../../types/backend/providers';
-import { VerificationStatus } from '../../../types/backend/auth'; // CORRIGIDO: Importar de auth.ts
-import { PricingType } from '../../../types/backend/services'; // Importar o tipo de precificação
+import { VerificationStatus } from '../../../types/backend/auth';
+import { PricingType } from '../../../types/backend/services';
 
-// Importação dos estilos
-import { styles } from './styles/providerStyles';
-
-// IMPORTAR O SERVIÇO REAL DO BACKEND
+// Importação dos serviços de backend
 import { useAuth } from '../../../hooks/useAuth';
 import { checkActiveChatBooking } from '../../../services/bookingService';
 import { getProviderDetails } from '../../../services/providerService';
+import { LinearGradient } from 'expo-linear-gradient'; // Importar LinearGradient
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -51,14 +49,6 @@ export default function ProviderDetailsScreen() {
 
     const mainContentAnim = useRef(new Animated.Value(0)).current;
     const bookNowButtonAnim = useRef(new Animated.Value(0)).current;
-
-    const mockPhotos = [
-        'https://images.unsplash.com/photo-1549227318-c2b64d06a090?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTR8fGxpYnJhcnl8ZW58MHx8MHx8fDA%3D',
-        'https://images.unsplash.com/photo-1583485088000-332f553861ae?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTl8fGxpYnJhcnl8ZW58MHx8MHx8fDA%3D',
-        'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8b2ZmaWNlfGVufDB8fDB8fHww%3D',
-        'https://images.unsplash.com/photo-1628109923889-4e782627e351?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8b2ZmaWNlJTIwY2xlYW5pb Maudie?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTB8fG9mZmljZSUyMGNsZWFuaW5nfGVufDB8fDB8fDA%3D',
-    ];
-
 
     useEffect(() => {
         console.log("[ProviderDetailsScreen] useEffect - providerId recebido:", providerId);
@@ -120,7 +110,6 @@ export default function ProviderDetailsScreen() {
         }
     };
 
-    // Função para formatar a exibição do preço com base no PricingType
     const formatPriceDisplay = (service: ProviderServiceOffering) => {
         let priceValue;
         let priceUnit = '';
@@ -133,9 +122,7 @@ export default function ProviderDetailsScreen() {
                 priceValue = price;
                 priceUnit = '/h';
                 break;
-            case PricingType.BY_SIZE: // CORRIGIDO: Agora trata 'BY_SIZE' para 'por m²' ou 'por quarto'
-                // A exibição de 'por quarto' vs 'por m²' pode ser feita aqui,
-                // mas para manter a consistência com o schema, usamos '/m²'.
+            case PricingType.BY_SIZE:
                 priceValue = service.pricePerSquareMeter;
                 priceUnit = '/m²';
                 break;
@@ -154,7 +141,7 @@ export default function ProviderDetailsScreen() {
 
     if (isLoading) {
         return (
-            <View style={styles.centeredFeedback}>
+            <View style={[styles.centeredFeedback, { backgroundColor: 'white' }]}>
                 <Stack.Screen options={{ title: "Carregando...", headerShown: false }} />
                 <ActivityIndicator size="large" color={styles.errorBackButton.backgroundColor} />
             </View>
@@ -163,7 +150,7 @@ export default function ProviderDetailsScreen() {
 
     if (error || !provider) {
         return (
-            <View style={styles.centeredFeedback}>
+            <View style={[styles.centeredFeedback, { backgroundColor: 'white' }]}>
                 <Stack.Screen options={{ title: "Erro", headerShown: false }} />
                 <Ionicons name="warning-outline" size={48} color={styles.errorText.color} />
                 <Text style={styles.errorText}>{error || `Profissional não encontrado.`}</Text>
@@ -190,24 +177,24 @@ export default function ProviderDetailsScreen() {
     console.log("[ProviderDetailsScreen] ID do serviço oferecido a ser passado para agendamento (firstProviderServiceOfferingId):", firstProviderServiceOfferingId);
 
     return (
-        <View style={styles.screenContainer}>
+        <View style={[styles.screenContainer, { backgroundColor: 'white' }]}>
             <Stack.Screen options={{
                 headerTransparent: true,
                 title: '',
                 headerLeft: () => (
                     <TouchableOpacity
                         onPress={() => router.back()}
-                        style={[styles.iconButtonBackground, { marginLeft: 20, marginTop: Platform.OS === 'ios' ? insets.top : 20 }]}
+                        style={[styles.iconButtonBackground, { marginLeft: 15, marginTop: Platform.OS === 'ios' ? insets.top : 15 }]}
                     >
-                        <Ionicons name="arrow-back" size={24} color="#FFF" />
+                        <Ionicons name="arrow-back" size={20} color="#FFF" />
                     </TouchableOpacity>
                 ),
                 headerRight: () => (
                     <TouchableOpacity
                         onPress={() => Alert.alert("Salvar", "Funcionalidade de salvar/favoritar.")}
-                        style={[styles.iconButtonBackground, { marginRight: 20, marginTop: Platform.OS === 'ios' ? insets.top : 20 }]}
+                        style={[styles.iconButtonBackground, { marginRight: 15, marginTop: Platform.OS === 'ios' ? insets.top : 15 }]}
                     >
-                        <Ionicons name="bookmark-outline" size={24} color="#FFF" />
+                        <Ionicons name="bookmark-outline" size={20} color="#FFF" />
                     </TouchableOpacity>
                 ),
             }} />
@@ -223,21 +210,8 @@ export default function ProviderDetailsScreen() {
                         style={styles.favoriteButton}
                         onPress={() => Alert.alert("Favoritar", "Funcionalidade de favoritar.")}
                     >
-                        <Ionicons name="heart" size={20} color="#007AFF" />
+                        <Ionicons name="heart" size={18} color="#007AFF" />
                     </TouchableOpacity>
-                </View>
-
-                <View style={styles.photoSectionContainer}>
-                    <View style={styles.photoSectionHeader}>
-                        <Text style={styles.photoSectionTitle}>Fotos</Text>
-                    </View>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoScrollView}>
-                        {mockPhotos.map((photoUri, index) => (
-                            <TouchableOpacity key={index} style={styles.thumbnailContainer} onPress={() => Alert.alert("Visualizar Foto", `Foto ${index + 1}`)}>
-                                <Image source={{ uri: photoUri }} style={styles.thumbnailImage} />
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
                 </View>
 
                 <Animated.View style={[
@@ -245,34 +219,42 @@ export default function ProviderDetailsScreen() {
                     {
                         opacity: mainContentAnim,
                         transform: [{
-                            translateY: mainContentAnim.interpolate({ inputRange: [0, 1], outputRange: [50, 0] })
+                            translateY: mainContentAnim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] })
                         }]
                     }
                 ]}>
                     <View style={styles.providerInfoWhiteCard}>
-                        <Text style={styles.priceTextWhiteCard}>{firstServicePrice}</Text>
-
                         <View style={styles.providerNameRow}>
                             <Text style={styles.providerNameWhiteCard}>{provider.fullName}</Text>
                             <View style={styles.robustStarContainer}>
-                                <StarRating rating={provider.averageRating} size={15} color={styles.priceTextWhiteCard.color} />
+                                <StarRating rating={provider.averageRating} size={13} color={styles.priceTextWhiteCard.color} />
                                 <Text style={styles.robustReviewsText}>({provider.reviewCount} avaliações)</Text>
                             </View>
                         </View>
 
                         <View style={styles.locationContainerWhiteCard}>
-                            <Ionicons name="location-sharp" size={12} color={styles.locationTextWhiteCard.color} />
+                            <Ionicons name="location-sharp" size={10} color={styles.locationTextWhiteCard.color} />
                             <Text style={styles.locationTextWhiteCard}>{provider.address?.city || 'N/A'}</Text>
                         </View>
+
+                        <Text style={styles.priceTextWhiteCard}>{firstServicePrice}</Text>
                     </View>
 
                     <View style={styles.tabContentContainer}>
                         <View style={styles.infoChipsContainer}>
                             {provider.yearsOfExperience !== undefined && provider.yearsOfExperience !== null && (
-                                <InfoChip iconName="hourglass-outline" text={`${provider.yearsOfExperience}+ anos`} />
+                                <InfoChip
+                                    iconName="hourglass-outline"
+                                    text={`${provider.yearsOfExperience}+ anos`}
+                                    colors={['#7694f6ff', '#67adfdff', '#5c93ecff']}
+                                />
                             )}
                             {provider.verificationStatus === VerificationStatus.APPROVED && (
-                                <InfoChip iconName="shield-checkmark-outline" text="Verificado" />
+                                <InfoChip
+                                    iconName="shield-checkmark-outline"
+                                    text="Verificado"
+                                    colors={['#7694f6ff', '#67adfdff', '#5c93ecff']}
+                                />
                             )}
                         </View>
 
@@ -281,34 +263,34 @@ export default function ProviderDetailsScreen() {
 
                         <View style={styles.actionButtonsContainer}>
                             <TouchableOpacity style={styles.actionButton} onPress={() => Alert.alert("Ligar", "Funcionalidade de ligar.")}>
-                                <Ionicons name="call-outline" size={18} color={styles.actionButtonText.color} />
+                                <Ionicons name="call-outline" size={16} color={styles.actionButtonText.color} />
                                 <Text style={styles.actionButtonText}>Ligar</Text>
                             </TouchableOpacity>
 
                             {canInitiateChat ? (
                                 <TouchableOpacity style={styles.actionButton} onPress={handleChatPress}>
-                                    <Ionicons name="chatbubble-outline" size={18} color={styles.actionButtonText.color} />
+                                    <Ionicons name="chatbubble-outline" size={16} color={styles.actionButtonText.color} />
                                     <Text style={styles.actionButtonText}>Chat</Text>
                                 </TouchableOpacity>
                             ) : (
                                 <View style={[styles.actionButton, styles.disabledActionButton]}>
-                                    <Ionicons name="chatbubble-outline" size={18} color={styles.disabledActionButtonText.color} />
+                                    <Ionicons name="chatbubble-outline" size={16} color={styles.disabledActionButtonText.color} />
                                     <Text style={[styles.actionButtonText, styles.disabledActionButtonText]}>Chat</Text>
                                 </View>
                             )}
 
                             <TouchableOpacity style={styles.actionButton} onPress={() => Alert.alert("Mapa", "Funcionalidade de mapa.")}>
-                                <Ionicons name="map-outline" size={18} color={styles.actionButtonText.color} />
+                                <Ionicons name="map-outline" size={16} color={styles.actionButtonText.color} />
                                 <Text style={styles.actionButtonText}>Mapa</Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity style={styles.actionButton} onPress={() => Alert.alert("Compartilhar", "Funcionalidade de compartilhar.")}>
-                                <Ionicons name="share-social-outline" size={18} color={styles.actionButtonText.color} />
+                                <Ionicons name="share-social-outline" size={16} color={styles.actionButtonText.color} />
                                 <Text style={styles.actionButtonText}>Compartilhar</Text>
                             </TouchableOpacity>
                         </View>
 
-                        <Text style={[styles.sectionTitle, { marginTop: 15 }]}>Recomendações</Text>
+                        <Text style={[styles.sectionTitle, { marginTop: 12 }]}>Recomendações</Text>
                         {provider.reviews && provider.reviews.length > 0 ? (
                             provider.reviews.map((review: ProviderReview) => {
                                 const transformedReview = {
@@ -334,9 +316,8 @@ export default function ProviderDetailsScreen() {
                         ) : (
                             <Text style={styles.noReviewsText}>Ainda não há avaliações para {provider.fullName.split(' ')[0]}.</Text>
                         )}
-                        <TouchableOpacity style={styles.addReviewButton}>
-                            <Ionicons name="add-circle-outline" size={18} color={styles.addReviewButtonText.color} />
-                            <Text style={styles.addReviewButtonText}>Deixar uma Avaliação</Text>
+                        <TouchableOpacity style={[styles.addReviewButton, styles.compactAddReviewButton]}>
+                            <Ionicons name="add-circle-outline" size={24} color={styles.addReviewButtonText.color} />
                         </TouchableOpacity>
                     </View>
                 </Animated.View>
@@ -351,3 +332,6 @@ export default function ProviderDetailsScreen() {
         </View>
     );
 }
+
+// Estilos
+import { styles } from './styles/providerStyles';

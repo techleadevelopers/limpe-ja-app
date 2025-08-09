@@ -134,11 +134,11 @@ const CategoriaCard: React.FC<CategoriaCardProps> = ({ item, onPress }) => {
 
 const styles = StyleSheet.create({
   cardContainerWrapper: {
-    width: 50,
-    height: 50,
-    marginRight: 18,
+    width: 52,
+    height: 52,
+    marginRight: 12,
     borderRadius: 55,
-    marginBottom: 18,
+    marginBottom: 9,
     
   },
   shadowLayerPrimary: {
@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
   categoriaTexto: {
     fontSize: 10,
     color: TEXT_COLOR,
-    fontWeight: '600',
+    fontWeight: '800',
     textAlign: 'center',
     marginTop: 7,
   },

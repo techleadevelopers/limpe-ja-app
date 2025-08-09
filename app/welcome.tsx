@@ -217,6 +217,7 @@ const styles = StyleSheet.create({
     width: LOGO_WIDTH,
     height: LOGO_HEIGHT,
     overflow: 'hidden',
+    
   },
   reflectionGradientOverlay: {
     ...StyleSheet.absoluteFillObject,

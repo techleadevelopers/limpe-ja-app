@@ -49,29 +49,29 @@ const SecaoPrestadores: React.FC<SecaoPrestadoresProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 8,
-    marginBottom: 20,
+    marginTop: 2,
+    marginBottom: 5,
     backgroundColor: '#F4F7FC',
   },
   header: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 10,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 17,
     fontWeight: 'bold',
     color: '#202633',
   },
   viewAllButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 5,
+    paddingVertical: 4,
   },
   viewAllText: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#007BFF',
     fontWeight: '600',
   },

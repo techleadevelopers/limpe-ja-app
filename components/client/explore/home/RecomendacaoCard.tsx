@@ -8,6 +8,9 @@ import { Animated, Image, Platform, StyleSheet, Text, TouchableOpacity, View } f
 import { CLIENT_ROUTES } from '../../../../constants/routes';
 import { ProviderDisplayInfo } from '../../../../types/backend/providers';
 
+// 1. Importa a imagem
+const limpIcon = require('../../../../assets/images/limp-Photoroom.png');
+
 interface RecomendacaoCardProps {
     item: ProviderDisplayInfo;
 }
@@ -171,6 +174,11 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
                         
                         {/* Avaliação em Estrelas e Contagem de Avaliações */}
                         <View style={styles.ratingSection}>
+                            {/* 2. Adiciona a imagem acima das estrelas */}
+                            <Image
+                                source={limpIcon}
+                                style={styles.limpIcon}
+                            />
                             {renderStars(item.averageRating)}
                             {item.reviewCount !== undefined && (
                                 <Text style={styles.reviewsCountText}>
@@ -190,7 +198,7 @@ const styles = StyleSheet.create({
     animatedCardContainer: {
         // Estilos para o container animado que encapsula o card
         // REDUZIDO A LARGURA PARA 220
-        width: 240, // **MODIFICADO: Largura total do card, reduzida de 250 para 220**
+        width: 220, // **MODIFICADO: Largura total do card, reduzida de 250 para 220**
         marginRight: 15, // Espaçamento entre os chips
         marginBottom: 15, // Espaçamento vertical entre as linhas de cards
         borderRadius: 12, // Borda arredondada geral do card
@@ -212,11 +220,7 @@ const styles = StyleSheet.create({
         width: '100%', // Ocupa toda a largura do animatedCardContainer
         borderRadius: 12,
         overflow: 'hidden', // Importante para que a imagem respeite o borderRadius
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 5 },
-        shadowOpacity: 0.1,
-        shadowRadius: 5,
-        elevation: 8,
+ 
     },
     imageWrapper: {
         width: '100%',
@@ -262,7 +266,7 @@ const styles = StyleSheet.create({
     categoryChipsContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        marginBottom: 18, // Espaço abaixo dos chips
+        marginBottom: -48, // Espaço abaixo dos chips
     },
     categoryChip: {
         backgroundColor: '#E6EEF9', // Fundo azul claro para o chip
@@ -299,7 +303,18 @@ const styles = StyleSheet.create({
         color: '#888',
     },
     ratingSection: {
-        alignItems: 'flex-end', // Alinha estrelas e texto à direita
+        // Alinhamento para a imagem e as estrelas
+        flexDirection: 'column', // Adicionado para empilhar os itens verticalmente
+        alignItems: 'center',    // Centraliza os itens horizontalmente
+    },
+    // 3. Adiciona o estilo para a imagem limp.png
+    limpIcon: {
+        width: 76,
+        height: 106,
+        resizeMode: 'contain',
+        right: 5,
+        top: 4,
+        marginBottom: 0,
     },
     ratingStarContainer: {
         flexDirection: 'row',

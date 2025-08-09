@@ -20,7 +20,7 @@ const COLOR_WARNING = '#FFC107'; // Cor para avisos
 export const styles = StyleSheet.create({
     screenContainer: {
         flex: 1,
-        backgroundColor: COLOR_BACKGROUND, // Certifique-se que o background do container é a cor de fundo desejada
+ 
     },
     centeredFeedback: {
         flex: 1,
@@ -183,15 +183,15 @@ export const styles = StyleSheet.create({
     infoChip: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: COLOR_BACKGROUND, // Fundo do chip mais claro
-        paddingVertical: 8, // Padding vertical um pouco maior
-        paddingHorizontal: 15, // Padding horizontal um pouco maior
+        
+        paddingVertical: 6, // Padding vertical um pouco maior
+        paddingHorizontal: 5, // Padding horizontal um pouco maior
         borderRadius: 20, // Cantos mais arredondados
         borderWidth: 1, // Borda sutil
         borderColor: COLOR_BORDER_LIGHT,
     },
     infoChipText: {
-        fontSize: 12, // Tamanho da fonte ajustado
+        fontSize: 9, // Tamanho da fonte ajustado
         color: COLOR_TEXT_MEDIUM,
         marginLeft: 6,
         fontWeight: '500',
@@ -385,7 +385,7 @@ export const styles = StyleSheet.create({
         marginBottom: 6,
     },
     servicePriceTag: {
-        fontSize: 14,
+        fontSize: 10,
         fontWeight: '700',
         color: COLOR_PRIMARY,
         alignSelf: 'flex-end',
@@ -397,7 +397,7 @@ export const styles = StyleSheet.create({
         bottom: 0, // Fixado na parte inferior da tela
         left: 0,
         right: 0,
-        paddingHorizontal: 20,
+        paddingHorizontal: 10,
         paddingTop: 15, // Padding superior para o conteúdo
         paddingBottom: Platform.OS === 'ios' ? 30 : 20, // Ajuste para o safe area do iOS
         backgroundColor: COLOR_CARD_BACKGROUND,

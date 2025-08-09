@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   sectionTitle: {
-       fontSize: 19,
+       fontSize: 16.5,
     fontWeight: '700',
     color: '#1C3A5F',
   },
@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   viewAllText: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#007BFF',
     fontWeight: '600',
   },

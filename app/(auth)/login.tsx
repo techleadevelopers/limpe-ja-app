@@ -274,7 +274,7 @@ const styles = StyleSheet.create({
     },
     contentWrapper: {
         paddingHorizontal: 49,
-        paddingTop: Platform.OS === 'ios' ? 20 : 15,
+        paddingTop: Platform.OS === 'ios' ? 20 : 100,
         bottom: 100,
     },
 

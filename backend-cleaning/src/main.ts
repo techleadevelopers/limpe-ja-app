@@ -1,4 +1,4 @@
-// backend-cleaning/src/main.ts
+// src/main.ts
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
@@ -32,14 +32,8 @@ async function bootstrap() {
       profilesSampleRate: 1.0,
       integrations: [
         nodeProfilingIntegration(),
-        // Se você estiver usando @sentry/integrations/express, você pode precisar de:
-        // new Sentry.Integrations.Express({ app }),
-        // Mas para NestJS, a instrumentação automática geralmente é suficiente.
       ],
     });
-    // AS LINHAS ABAIXO FORAM REMOVIDAS/COMENTADAS PORQUE NÃO SÃO MAIS NECESSÁRIAS
-    // app.use(Sentry.Handlers.requestHandler());
-    // app.use(Sentry.Handlers.errorHandler());
     console.log('[Sentry] Inicializado com sucesso.');
   } else {
     console.warn('[Sentry] SENTRY_DSN não configurado. O monitoramento de erros e performance do Sentry está desativado.');
@@ -48,18 +42,13 @@ async function bootstrap() {
   app.use(json({ limit: '10mb' }));
   app.use(urlencoded({ extended: true, limit: '10mb' }));
 
+  // *** ALTERAÇÃO AQUI: Mude o 'origin' para '*' ***
   app.enableCors({
-    origin: [
-      'http://localhost:8081',
-      'http://localhost',
-      'exp://localhost:8081',
-      'http://localhost:19000',
-      'http://localhost:19001',
-      'http://localhost:5173',
-    ],
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS', // Mantive DELETE e OPTIONS, ajuste se necessário
+    origin: '*', // Permite requisições de QUALQUER origem
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
+  // ************************************************
 
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,

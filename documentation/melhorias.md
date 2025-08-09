@@ -1,74 +1,132 @@
-1. Sistema de "Super Provedor" e Reputação Aprofundada
-O projeto já conta com um bom sistema de avaliações, mas ele pode ser expandido para um programa de reputação mais sofisticado.
+1. Níveis + Selos de Confiança
+Como começar:
+Aproveitar os dados já disponíveis em reviewService (avaliações) e bookingService (quantidade de serviços concluídos).
+Criar níveis visuais: Bronze, Prata, Ouro, Platina.
 
-O que é: Um programa de reconhecimento que confere o status de "Super Provedor" àqueles que consistentemente entregam excelência, similar ao "Super Anfitrião" do Airbnb.
+Exemplo de regra inicial:
 
-Como Funciona:
+Bronze: até 5 serviços concluídos com nota ≥ 4
 
-Critérios de Elegibilidade: O status seria concedido automaticamente a provedores que atendam a critérios rigorosos, como:
+Prata: 6 a 20 serviços concluídos com nota ≥ 4.5
 
-Média de avaliações acima de 4.8 estrelas.
+Ouro: 21+ serviços concluídos e 90% de aprovação
 
-Taxa de cancelamento abaixo de 2% (para agendamentos não cancelados pelo cliente).
+Interface: Mostrar o selo no perfil do provedor (explore/[providerId].tsx e dashboard/index.tsx).
 
-Mais de 50 agendamentos concluídos nos últimos 6 meses.
+Evolução futura: Integrar com IA para criar badges mais personalizados (ex: “Super Pontual”, “Mais Amado da Semana”).
 
-Tempo médio de resposta a mensagens abaixo de 1 hora.
+2. Pontos por Ação
+Como começar:
+Usar o módulo loyalty.tsx (já existe) mas mudar o texto pra “Seus Pontos” e registrar:
 
-Benefícios para o Provedor: O status de Super Provedor seria exibido publicamente no perfil com um selo especial, dando prioridade nas buscas e oferecendo bônus de comissão ou acesso a novos recursos exclusivos.
++10 pontos por cada serviço concluído
 
-Benefícios para o Cliente: O selo de Super Provedor atua como um forte sinal de confiança, encorajando novos clientes a agendar serviços com esses profissionais.
++20 pontos por primeira avaliação enviada
 
-Impacto: Cria um sistema de meritocracia que motiva os provedores a manterem um alto padrão de serviço, reduzindo o atrito e a rotatividade de profissionais de alta qualidade.
++50 pontos por indicar um amigo que contrata um serviço (referralService)
 
-2. Pacotes de Serviços e Agendamentos Recorrentes
-A flexibilidade para agendar serviços é boa, mas o aplicativo pode incentivar o uso recorrente com modelos de assinatura e pacotes.
+Resgate inicial: Desconto em serviços (aplicado no couponService).
 
-O que é: A funcionalidade permite que clientes contratem pacotes de serviços (e.g., "Limpeza semanal por 3 meses") com um desconto.
+Evolução futura: Criar loja virtual de recompensas (vale-compras, produtos parceiros).
 
-Como Funciona:
+3. Missões Semanais
+Como começar:
+Exemplo de missões para clientes:
 
-Pacotes de Cliente: O cliente compra 10 limpezas com antecedência e recebe 10% de desconto. Ele agenda cada uma individualmente, mas o pagamento já foi processado. Isso gera receita previsível para a plataforma e para o provedor.
+“Agende 2 serviços esta semana e ganhe 30 pontos”
 
-Agendamento Recorrente: O cliente pode configurar a agenda para um provedor específico para toda quinta-feira às 9h, por exemplo. O sistema cria automaticamente os agendamentos e o provedor os aceita ou ajusta.
+“Avalie 3 prestadores e ganhe 20 pontos”
 
-Impacto: Fideliza o cliente, aumenta a previsibilidade de receita e a taxa de retenção, além de simplificar a experiência de agendamento para clientes que precisam de serviços regulares.
+Backend inicial: Dá pra começar mockando as missões no front, com verificação simples usando o TanStack Query e dados do bookingService/reviewService.
 
-3. Programa de Fidelidade Gamificado com Selos e Níveis
-O projeto já tem contadores de serviços concluídos, mas eles podem ser o ponto de partida para um sistema de gamificação mais envolvente.
+Evolução futura: Missões dinâmicas com base no perfil do usuário.
 
-O que é: Transformar métricas de performance em conquistas visuais para clientes e provedores.
+4. Ranking Local
+Como começar:
+Mostrar no dashboard do provedor a posição dele no ranking do bairro/cidade, usando getNearbyProviders() + nota média (reviewService).
 
-Como Funciona:
+Cliente: Pode ver um ranking de “Melhores do bairro” na tela explore/index.tsx.
 
-Para Clientes: "Cliente Ouro" após 10 serviços, com direito a 5% de desconto vitalício. "Explorador de Serviços" após experimentar 3 categorias diferentes, com um cupom de desconto.
+Evolução futura: Ranking por categoria de serviço e por período (semana/mês).
 
-Para Provedores: Selos de "Especialista em Pós-Obra" (após 20 serviços de pós-obra), "Provedor Pontual" (para uma alta taxa de pontualidade), ou "Comunicador Eficiente" (para tempo de resposta rápido no chat).
+5. Feedback Instantâneo Gamificado
+Como começar:
+Quando o cliente conclui um serviço e avalia, mostrar uma tela com confete, animação (react-native-reanimated) e “Você ganhou +20 pontos!”.
 
-Impacto: A gamificação cria um ciclo de engajamento. Clientes sentem-se valorizados por sua lealdade, e provedores são motivados a melhorar a qualidade do serviço e a explorar novas áreas para desbloquear novos selos.
+Implementação simples:
+Aproveitar já a tela feedback/[targetId].tsx e adicionar a animação + contagem de pontos.
 
-4. Gestão de Disponibilidade e Cancelamento Avançada
-Embora a gestão de disponibilidade seja uma feature, um sistema mais robusto de cancelamento e de agenda de provedores é um diferencial.
+💡 Resumo de execução rápida:
 
-O que é: Uma política de cancelamento transparente e o rastreamento do desempenho do provedor em relação a cancelamentos.
+Usar o que já existe (loyalty.tsx, referralService, reviewService) pra criar a base.
 
-Como Funciona:
+Lançar níveis, pontos e pequenas missões agora.
 
-Política de Cancelamento: Implementar uma regra clara: cancelamento gratuito até 24 horas antes do serviço. Após isso, o cliente perde um percentual do valor (e o provedor recebe uma compensação), protegendo a renda do profissional.
+Depois expandir para ranking, loja de recompensas e desafios personalizados.
 
-Taxa de Cancelamento do Provedor: A taxa de cancelamento do provedor seria uma métrica crucial. Um provedor que cancela muitos agendamentos terá seu status de "Super Provedor" revisto e poderá ser penalizado nas buscas, incentivando a responsabilidade.
+Se quiser, posso te montar uma roadmap visual de 3 fases mostrando como ir do básico até um sistema estilo Airbnb/Fiiod com gamificação e reputação avançada. Isso deixaria claro o passo a passo até bater de frente com eles.
 
-Impacto: Reduz incertezas e frustrações para ambas as partes, construindo uma base de confiança que é essencial para um marketplace de sucesso.
 
-5. Feed de Atividade e Conteúdo com Foco Social
-O aplicativo pode ir além de ser apenas uma ferramenta de agendamento e se tornar uma comunidade.
+1. Níveis + Selos de Confiança
+Melhoria:
+Adicionar subníveis dentro de cada nível principal (ex: Bronze I, Bronze II) pra dar sensação de progresso constante e evitar que o usuário fique “travado” muito tempo num nível.
 
-O que é: Uma seção social onde clientes e provedores podem compartilhar posts, dicas de limpeza, fotos de "antes e depois" e interagir com o conteúdo da plataforma.
+Extra rápido de implementar:
+Mostrar barra de progresso no perfil (ex: “Faltam 2 serviços pra chegar ao Prata”).
 
-Como Funciona:
+Impacto:
+Mantém o provedor engajado, já que a progressão fica visível e alcançável.
 
-Posts de Provedores: Provedores podem postar fotos de um serviço concluído (com permissão do cliente) ou dicas sobre como limpar um tipo específico de mancha. Isso serve como um portfólio visual, reforçando a confiança e demonstrando a expertise do profissional.
+2. Pontos por Ação
+Melhoria:
+Criar multiplicadores temporários (ex: “Essa semana, indicações valem x2 pontos”).
+Fácil de implementar: é só passar um multiplicador no cálculo de pontos no loyaltyService.
 
-Conteúdo do LimpeJá: O próprio aplicativo pode criar e exibir conteúdo útil (e.g., "Top 5 dicas de organização do mês") para manter os usuários engajados mesmo quando não estão agendando um serviço.
+Impacto:
+Aumenta picos de engajamento em campanhas específicas e facilita testes de marketing.
 
-Impacto: Transforma a plataforma em um ponto de referência para o setor, aumentando o tempo de permanência no app e a conexão emocional com a marca, gerando valor mesmo fora das transações diretas.
+3. Missões Semanais
+Melhoria:
+Introduzir missões surpresa (só aparecem depois de completar a primeira missão da semana).
+Isso mantém o usuário voltando pra conferir novidades.
+
+Extra:
+Deixar o texto das missões 100% dinâmico vindo do backend (mesmo que no início seja mock no front) — já prepara pra fase avançada.
+
+4. Ranking Local
+Melhoria:
+Mostrar ranking por filtro rápido:
+
+Mais bem avaliados
+
+Mais rápidos
+
+Mais populares
+Isso dá variedade e evita que só os top fixos apareçam sempre.
+
+Extra:
+Exibir no dashboard do provedor um “Você subiu 3 posições essa semana!” — reforça sensação de progresso.
+
+5. Feedback Instantâneo Gamificado
+Melhoria:
+Incluir frases motivacionais personalizadas baseadas na ação.
+Ex: “Sua avaliação ajudou Maria a conquistar o nível Ouro! +20 pontos pra você 🎉”
+
+Extra rápido:
+Aproveitar o notificationService pra mandar um push no mesmo momento, reforçando a ação.
+
+💡 Resumo de melhorias rápidas pro MVP:
+
+Adicionar barra de progresso nos níveis.
+
+Multiplicadores temporários de pontos.
+
+Missões surpresa semanais.
+
+Ranking com filtros e mensagens de progresso.
+
+Feedback mais humano e conectado ao impacto da ação.
+
+Isso mantém o sistema simples, mas já com um “brilho” que Airbnb e Fiiod usam — a sensação de progresso, conquista e reconhecimento constante.
+
+Se quiser, posso já te desenhar a versão visual da tela de perfil e dashboard com essas melhorias aplicadas, pra você ver como isso ficaria no app antes de implementar.

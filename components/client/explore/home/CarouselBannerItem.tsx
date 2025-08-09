@@ -77,11 +77,12 @@ const CarouselBannerItem: React.FC<CarouselBannerItemProps> = ({
 
 const styles = StyleSheet.create({
     bannerOuterContainer: {
-        width: Dimensions.get('window').width - (16 * 2), // Largura total da tela menos o padding horizontal do contentWrapper da index.tsx
+        width: Dimensions.get('window').width - (9 * 2), // Largura total da tela menos o padding horizontal do contentWrapper da index.tsx
         height: 165, // Altura fixa do banner
         borderRadius: 16,
-        paddingLeft: 20,
-        paddingRight: 20, // Mantido para espaçamento interno
+        paddingLeft: 0,
+        margin: 10,
+        paddingRight: 0, // Mantido para espaçamento interno
         paddingTop: 16, // Padding superior para espaçamento
         paddingBottom: 16, // Padding inferior para espaçamento
         overflow: 'hidden',
@@ -89,18 +90,8 @@ const styles = StyleSheet.create({
         // Removido marginHorizontal, pois agora é um banner único dentro do padding do contentWrapper
         // Adicione marginBottom se quiser espaço abaixo deste banner na index.tsx
         marginBottom: -11, // Exemplo de margem inferior para espaçamento
-        marginTop: -11, // Exemplo de margem superior para espaçamento
-        ...Platform.select({
-            ios: {
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 6 },
-                shadowOpacity: 0.15,
-                shadowRadius: 12,
-            },
-            android: {
-                elevation: 10,
-            },
-        }),
+        marginTop: -21, // Exemplo de margem superior para espaçamento
+     
     },
     backgroundImage: {
         flex: 1,
@@ -130,7 +121,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255,255,255,0.8)',
         borderRadius: 5,
         paddingVertical: 1,
-        paddingHorizontal: 8,
+        paddingHorizontal: 4,
         marginBottom: 8,
         alignSelf: 'flex-start',
     },

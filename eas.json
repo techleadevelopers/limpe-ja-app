@@ -19,7 +19,7 @@
             "image": "latest"
           },
           "env": {
-            "EXPO_PUBLIC_API_BASE_URL": "https://limpeja-app-backend-665493568088.southamerica-east1.run.app",
+            "EXPO_PUBLIC_API_BASE_URL": "https://limpeja-app-backend-b73ry5uuya-rj.a.run.app/",
             "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyBt5-IB2CI9fKOeWcGFEM4ZJ57ix-cUHpg",
             "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "semiotic-anvil-461613-c0.firebaseapp.com",
             "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "semiotic-anvil-461613-c0",

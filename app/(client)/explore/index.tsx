@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
     },
     contentWrapper: {
         flexGrow: 1,
-        paddingHorizontal: 16,
+        paddingHorizontal: 1,
     },
     navBarContainer: {
         position: 'absolute',
