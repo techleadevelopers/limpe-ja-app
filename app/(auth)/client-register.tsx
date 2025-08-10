@@ -1,7 +1,4 @@
 // LimpeJaApp/app/(auth)/client-register.tsx
-// Este arquivo não precisa de alterações diretas para a correção do AsyncStorage,
-// pois a lógica de armazenamento do token está encapsulada no useAuth hook.
-
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
@@ -19,23 +16,18 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { useAuth } from '../../contexts/AuthContext'; // Importar useAuth do AuthContext
-import { CreateAddressDto, RegisterClientDto } from '../../types/backend/auth'; // Importar DTOs
+import { useAuth } from '../../contexts/AuthContext';
+import { CreateAddressDto, RegisterClientDto } from '../../types/backend/auth';
 
-// ATENÇÃO: Substitua pelo caminho correto do seu logo em formato "V" ou "FV" azul
-const LOGO_IMAGE = require('../../assets/images/logo2.png'); // << CONFIRMADO: Este é o caminho que você deseja
+import * as Location from 'expo-location'; // << NOVO: Importação do expo-location
 
-// CORREÇÃO: Importar AnimatedErrorMessage como exportação nomeada
+const LOGO_IMAGE = require('../../assets/images/logo2.png');
 import { AnimatedErrorMessage } from '../../components/auth/components/AnimatedErrorMessage';
 
 
-// *** INÍCIO DA INTEGRAÇÃO REAL DA API VIACEP ***
-// Removida a mockViaCepApi.
-// Nova função para buscar o endereço na API ViaCEP real
 const fetchAddressFromRealCepApi = async (cep: string) => {
-    const cleanedCep = cep.replace(/\D/g, ''); // Garante que apenas dígitos sejam usados
+    const cleanedCep = cep.replace(/\D/g, '');
     if (cleanedCep.length !== 8) {
-        // Isso será tratado na função chamadora fetchAddressFromCep
         throw new Error("CEP deve conter 8 dígitos.");
     }
 
@@ -43,44 +35,34 @@ const fetchAddressFromRealCepApi = async (cep: string) => {
         const response = await fetch(`https://viacep.com.br/ws/${cleanedCep}/json/`);
         const data = await response.json();
 
-        // A ViaCEP retorna { erro: true } se o CEP não for encontrado
         if (data.erro) {
             throw new Error("CEP não encontrado ou inválido.");
         }
 
-        // Retorna os dados mapeados para os nomes que você espera
         return {
             cep: data.cep,
             logradouro: data.logradouro,
             complemento: data.complemento,
             bairro: data.bairro,
-            localidade: data.localidade, // Mapeia para 'cidade'
-            uf: data.uf,                 // Mapeia para 'estado'
+            localidade: data.localidade,
+            uf: data.uf,
         };
     } catch (error) {
         console.error("Erro na consulta ViaCEP:", error);
-        // Lança um erro mais amigável para o usuário
         throw new Error("Erro ao buscar CEP. Por favor, verifique o número e tente novamente.");
     }
 };
-// *** FIM DA INTEGRAÇÃO REAL DA API VIACEP ***
 
 
-export default function ClientRegisterScreen() { // Renomeado de RegisterOptionsScreen
-    const [currentStep, setCurrentStep] = useState(1); // 1: Basic Info, 2: Personal Data, 3: Address Info
-
-    // Step 1: Informações Básicas (Email, Nome, Telefone)
+export default function ClientRegisterScreen() {
+    const [currentStep, setCurrentStep] = useState(1);
     const [email, setEmail] = useState('');
-    const [username, setUsername] = useState(''); // Será mapeado para fullName
+    const [username, setUsername] = useState('');
     const [phone, setPhone] = useState('');
-    
-    // Step 2: Dados Pessoais (CPF, Data Nascimento, Senha)
     const [cpf, setCpf] = useState('');
     const [dateOfBirth, setDateOfBirth] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
-
-    // Step 3: Endereço (CEP, Rua, Número)
     const [cep, setCep] = useState('');
     const [street, setStreet] = useState('');
     const [number, setNumber] = useState('');
@@ -90,11 +72,11 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
     const [complement, setComplement] = useState('');
 
     const [isLoading, setIsLoading] = useState(false);
-    const [isLoadingCep, setIsLoadingCep] = useState(false); // Novo estado para loading do CEP
+    const [isLoadingCep, setIsLoadingCep] = useState(false);
     const [generalError, setGeneralError] = useState<string | null>(null);
 
     const router = useRouter();
-    const { signUpClient } = useAuth(); // Usar o hook useAuth para acessar signUpClient
+    const { signUpClient } = useAuth();
 
     const mainElementsOpacity = useRef(new Animated.Value(0)).current;
     const mainElementsTranslateY = useRef(new Animated.Value(18)).current;
@@ -118,7 +100,7 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
             return false;
         }
         const cleanedPhone = phone.replace(/\D/g, '');
-        if (cleanedPhone.length < 10 || cleanedPhone.length > 11) { 
+        if (cleanedPhone.length < 10 || cleanedPhone.length > 11) {
             setGeneralError('O telefone deve ter 10 ou 11 dígitos.');
             return false;
         }
@@ -145,12 +127,10 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
 
     const validateStep3 = () => {
         setGeneralError(null);
-        // **VALIDAÇÃO ATUALIZADA:** Inclui bairro, cidade e estado
         if (!cep.trim() || !street.trim() || !number.trim() || !neighborhood.trim() || !city.trim() || !state.trim()) {
             setGeneralError('Por favor, preencha todos os campos de endereço (CEP, Rua, Número, Bairro, Cidade, Estado).');
             return false;
         }
-        // Validação adicional para o formato do estado (UF) - 2 letras
         if (state.trim().length !== 2 || !/^[A-Z]{2}$/i.test(state.trim())) {
             setGeneralError('O estado (UF) deve ter 2 letras válidas.');
             return false;
@@ -168,12 +148,9 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
         }
     };
 
-    // Função para formatar telefone (CORRIGIDA E SIMPLIFICADA)
     const formatPhoneNumber = (text: string) => {
-        const cleanedText = text.replace(/\D/g, ''); // Remove todos os não-dígitos
+        const cleanedText = text.replace(/\D/g, '');
         let formattedPhone = '';
-
-        // Limita a entrada de dígitos brutos a 11 (máximo para celular no Brasil)
         const maxDigits = 11;
         const limitedText = cleanedText.substring(0, maxDigits);
 
@@ -181,12 +158,12 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
             formattedPhone = `(${limitedText.substring(0, 2)}`;
         }
         if (limitedText.length >= 3) {
-            if (limitedText.length <= 10) { // Número fixo (10 dígitos) ou celular antigo (8 dígitos após DDD)
+            if (limitedText.length <= 10) {
                 formattedPhone += `) ${limitedText.substring(2, 6)}`;
                 if (limitedText.length >= 7) {
                     formattedPhone += `-${limitedText.substring(6, 10)}`;
                 }
-            } else { // Celular (11 dígitos, o 9º dígito)
+            } else {
                 formattedPhone += `) ${limitedText.substring(2, 7)}`;
                 if (limitedText.length >= 8) {
                     formattedPhone += `-${limitedText.substring(7, 11)}`;
@@ -196,9 +173,8 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
         return formattedPhone;
     };
 
-    // Função para formatar CPF
     const formatCpf = (text: string) => {
-        const cleanedText = text.replace(/\D/g, ''); // Remove todos os não-dígitos
+        const cleanedText = text.replace(/\D/g, '');
         let formattedCpf = '';
 
         if (cleanedText.length > 0) {
@@ -216,7 +192,6 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
         return formattedCpf;
     };
 
-    // Função para formatar data de nascimento
     const formatDateOfBirth = (text: string) => {
         const cleanedText = text.replace(/\D/g, '');
         let formattedDate = '';
@@ -234,72 +209,85 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
     };
 
 
-    // Função para buscar endereço por CEP (AGORA USANDO A API REAL)
     const fetchAddressFromCep = async () => {
         const cleanedCep = cep.replace(/\D/g, '');
-        // Garante que a busca só ocorra com 8 dígitos
         if (cleanedCep.length === 8) {
             setIsLoadingCep(true);
-            setGeneralError(null); // Limpa erros anteriores
+            setGeneralError(null);
             try {
-                // *** CHAMADA PARA A API REAL ***
                 const data = await fetchAddressFromRealCepApi(cleanedCep);
-                
-                // Preenche os estados com os dados retornados pela ViaCEP
                 setStreet(data.logradouro || '');
                 setNeighborhood(data.bairro || '');
                 setCity(data.localidade || '');
                 setState(data.uf || '');
                 setComplement(data.complemento || '');
 
-            } catch (error: any) { // Captura o erro da API real (CEP não encontrado, rede, etc.)
+            } catch (error: any) {
                 setGeneralError(error.message || "Erro ao buscar CEP. Tente novamente.");
-                // Limpa os campos de endereço em caso de erro
                 setStreet(''); setNumber(''); setNeighborhood(''); setCity(''); setState(''); setComplement('');
             } finally {
                 setIsLoadingCep(false);
             }
         } else if (cleanedCep.length > 0 && cleanedCep.length < 8) {
             setGeneralError("CEP incompleto. Digite os 8 dígitos.");
-            // Limpa os campos se o CEP for incompleto para evitar dados parciais
             setStreet(''); setNumber(''); setNeighborhood(''); setCity(''); setState(''); setComplement('');
         } else {
-            // Se o campo CEP estiver vazio, limpa os campos de endereço e erros relacionados ao CEP
             setStreet(''); setNumber(''); setNeighborhood(''); setCity(''); setState(''); setComplement('');
             setGeneralError(null);
         }
     };
 
     const handleSignUp = async () => {
-        // Valida todas as etapas antes do registro final
-        if (!validateStep1() || !validateStep2() || !validateStep3()) { 
+        if (!validateStep1() || !validateStep2() || !validateStep3()) {
             return;
         }
         setIsLoading(true);
+        setGeneralError(null);
+
         try {
-            // Mapear os dados do formulário para o RegisterClientDto
+            // **INÍCIO DA LÓGICA DE GEOLOCALIZAÇÃO INTEGRADA DO PROVIDER-REGISTER**
+            console.log("[ClientRegisterScreen] Tentando obter permissão de localização...");
+            let { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                throw new Error('A permissão para acessar a localização foi negada. Por favor, habilite-a nas configurações do seu dispositivo.');
+            }
+            
+            const fullAddress = `${street}, ${number}, ${neighborhood}, ${city}, ${state}, ${cep}`;
+            console.log("[ClientRegisterScreen] Geocodificando endereço:", fullAddress);
+
+            const location = await Location.geocodeAsync(fullAddress);
+            
+            if (location.length === 0) {
+                throw new Error('Não foi possível encontrar as coordenadas para o endereço fornecido. Por favor, verifique o endereço e tente novamente.');
+            }
+
+            const { latitude, longitude } = location[0];
+            console.log(`[ClientRegisterScreen] Coordenadas obtidas: Latitude=${latitude}, Longitude=${longitude}`);
+            // **FIM DA LÓGICA DE GEOLOCALIZAÇÃO**
+
+
             const registerData: RegisterClientDto = {
                 email: email.trim().toLowerCase(),
                 password: password,
                 fullName: username.trim(),
-                cpf: cpf.replace(/\D/g, ''), // CPF agora é uma propriedade válida em RegisterClientDto
-                phone: phone.replace(/\D/g, ''), // Remove não-dígitos antes de enviar
+                cpf: cpf.replace(/\D/g, ''),
+                phone: phone.replace(/\D/g, ''),
                 address: {
                     cep: cep.trim(),
                     street: street.trim(),
                     number: number.trim(),
                     neighborhood: neighborhood.trim(),
-                    city: city.trim(), // Mapeado o novo campo de cidade
+                    city: city.trim(),
                     state: state.trim(),
-                    complement: complement.trim(), // Usar o campo de complemento
-                } as CreateAddressDto, // Cast para garantir conformidade com CreateAddressDto
+                    complement: complement.trim(),
+                    latitude: latitude,    // NOVO: Adicionado latitude
+                    longitude: longitude,  // NOVO: Adicionado longitude
+                } as CreateAddressDto,
             };
-
-            // console.log("Dados de endereço a serem enviados:", registerData.address); // Descomente para depurar
 
             await signUpClient(registerData);
 
-            console.log("[ClientRegisterScreen] Registro de cliente iniciado. AuthContext cuidará do resto.");
+            console.log("[ClientRegisterScreen] Registro de cliente iniciado.");
 
         } catch (error: any) {
             console.error("[ClientRegisterScreen] Erro ao registrar cliente:", error);
@@ -317,11 +305,9 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
     };
 
     const signUpButtonAnims = createButtonAnimations();
-    const nextButtonAnims = createButtonAnimations(); // Animações para o botão "Avançar"
+    const nextButtonAnims = createButtonAnimations();
 
-    // Atualizado para step 3 com validação dos 3 campos principais
-    // A validação completa agora está dentro de validateStep3()
-    const isSignUpButtonEnabled = currentStep === 3; // O botão fica habilitado se estiver na etapa 3; a validação ocorre no handleSignUp
+    const isSignUpButtonEnabled = currentStep === 3;
 
     return (
         <KeyboardAvoidingView
@@ -500,7 +486,7 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
                                     placeholderTextColor="#A0AEC0"
                                     value={cep}
                                     onChangeText={(text) => { setCep(text.replace(/\D/g, '')); if (generalError) setGeneralError(null);}}
-                                    onBlur={fetchAddressFromCep} // Dispara a busca ao perder o foco
+                                    onBlur={fetchAddressFromCep}
                                     keyboardType="numeric"
                                     maxLength={8}
                                 />
@@ -519,7 +505,6 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
                                     value={street}
                                     onChangeText={(text) => { setStreet(text); if (generalError) setGeneralError(null);}}
                                     autoCapitalize="words"
-                                    // Campo editável para permitir correções
                                 />
                             </View>
 
@@ -538,10 +523,10 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
                                 />
                             </View>
 
-                            {/* Bairro Input (Adicionado para visualização e edição) */}
+                            {/* Bairro Input */}
                             <View style={styles.inputWrapper}>
                                 <View style={styles.iconCircle}>
-                                    <Ionicons name="map-marker-outline" size={20} color="#00BCD4" />
+                                    <Ionicons name="pin-outline" size={20} color="#00BCD4" />
                                 </View>
                                 <TextInput
                                     style={styles.input}
@@ -550,11 +535,10 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
                                     value={neighborhood}
                                     onChangeText={(text) => { setNeighborhood(text); if (generalError) setGeneralError(null);}}
                                     autoCapitalize="words"
-                                    // Campo editável para permitir correções
                                 />
                             </View>
 
-                            {/* Cidade Input (Adicionado para visualização e edição) */}
+                            {/* Cidade Input */}
                             <View style={styles.inputWrapper}>
                                 <View style={styles.iconCircle}>
                                     <Ionicons name="business-outline" size={20} color="#00BCD4" />
@@ -566,11 +550,10 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
                                     value={city}
                                     onChangeText={(text) => { setCity(text); if (generalError) setGeneralError(null);}}
                                     autoCapitalize="words"
-                                    // Campo editável para permitir correções
                                 />
                             </View>
 
-                            {/* Estado (UF) Input (Adicionado para visualização e edição) */}
+                            {/* Estado (UF) Input */}
                             <View style={styles.inputWrapper}>
                                 <View style={styles.iconCircle}>
                                     <Ionicons name="globe-outline" size={20} color="#00BCD4" />
@@ -580,14 +563,13 @@ export default function ClientRegisterScreen() { // Renomeado de RegisterOptions
                                     placeholder="Estado (UF)"
                                     placeholderTextColor="#A0AEC0"
                                     value={state}
-                                    onChangeText={(text) => { setState(text.toUpperCase()); if (generalError) setGeneralError(null);}} // Converte para maiúsculas
+                                    onChangeText={(text) => { setState(text.toUpperCase()); if (generalError) setGeneralError(null);}}
                                     autoCapitalize="characters"
-                                    maxLength={2} // UF tem 2 caracteres
-                                    // Campo editável para permitir correções
+                                    maxLength={2}
                                 />
                             </View>
 
-                            {/* Complemento Input (Adicionado para visualização e edição) */}
+                            {/* Complemento Input */}
                             <View style={styles.inputWrapper}>
                                 <View style={styles.iconCircle}>
                                     <Ionicons name="information-circle-outline" size={20} color="#00BCD4" />
@@ -726,7 +708,6 @@ const styles = StyleSheet.create({
         marginBottom: 15,
         marginTop: -12,
     },
-    // Novo estilo para o botão "Avançar"
     nextButton: {
         backgroundColor: '#40C0F0',
         borderRadius: 28,

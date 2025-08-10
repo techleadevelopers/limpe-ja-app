@@ -1,8 +1,9 @@
 // LimpeJaApp/services/authService.ts
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AuthResponse, UserRole, MessageResponseDto } from '../types/backend/auth'; // Import MessageResponseDto
-import { UserProfile } from '../types/backend/users'; // Certifique-se de que UserProfile inclui isVerified, badges, noShowCount, cancellationCount
-import api from './api'; // Assumindo que 'api' é a instância do Axios configurada
+import { AuthResponse, UserRole, MessageResponseDto } from '../types/backend/auth';
+import { UserProfile } from '../types/backend/users';
+import api from './api';
+import { getUserProfile } from './clientService'; // << NOVO: Importa a função de buscar o perfil completo
 
 const AUTH_TOKEN_KEY = 'auth_token';
 const USER_ROLE_KEY = 'user_role';
@@ -50,15 +51,29 @@ class AuthService {
         }
     }
 
+    // LÓGICA CORRIGIDA
     async registerClient(userData: any): Promise<AuthResponse> {
         try {
             console.log('[AuthService Frontend] Registrando cliente');
-            // userData deve incluir fullName, phone, address (com latitude/longitude), cpf
+            // Primeiro, faça a requisição de registro
             const response = await api.post('/auth/register/client', userData);
             const authData: AuthResponse = response.data;
-            await this.saveAuthData(authData);
-            console.log('[AuthService Frontend] Cliente registrado com sucesso');
-            return authData;
+
+            // << NOVO: Busca o perfil completo após o registro
+            // Isso garante que o perfil salvo tenha todos os detalhes, incluindo o endereço
+            this.setAuthToken(authData.accessToken); // Define o token para a próxima requisição
+            const fullUserProfile = await getUserProfile(); // << Usa a função do clientService.ts para obter o perfil completo
+
+            // Prepara os dados para salvar
+            const fullAuthData = {
+                ...authData,
+                user: fullUserProfile,
+            };
+
+            await this.saveAuthData(fullAuthData); // Salva o perfil completo
+            console.log('[AuthService Frontend] Cliente registrado e perfil completo salvo com sucesso.');
+            return fullAuthData;
+
         } catch (error: any) {
             console.error('[AuthService Frontend] Erro ao registrar cliente:', error);
             throw new Error(error.response?.data?.message || 'Erro ao registrar cliente');
@@ -68,24 +83,28 @@ class AuthService {
     async registerProvider(userData: any): Promise<AuthResponse> {
         try {
             console.log('[AuthService Frontend] Registrando prestador');
-            // userData deve incluir email, password, fullName, cpf, dateOfBirth, phone, address (com latitude/longitude), yearsOfExperience, avatarUrl
+            // Primeiro, faça a requisição de registro
             const response = await api.post('/auth/register/provider', userData);
             const authData: AuthResponse = response.data;
-            await this.saveAuthData(authData);
-            console.log('[AuthService Frontend] Prestador registrado com sucesso');
-            return authData;
+
+            // << NOVO: Busca o perfil completo após o registro
+            this.setAuthToken(authData.accessToken);
+            const fullUserProfile = await getUserProfile();
+
+            const fullAuthData = {
+                ...authData,
+                user: fullUserProfile,
+            };
+            
+            await this.saveAuthData(fullAuthData);
+            console.log('[AuthService Frontend] Prestador registrado e perfil completo salvo com sucesso.');
+            return fullAuthData;
         } catch (error: any) {
             console.error('[AuthService Frontend] Erro ao registrar prestador:', error);
             throw new Error(error.response?.data?.message || 'Erro ao registrar prestador');
         }
     }
 
-    /**
-     * Envia uma requisição para redefinir a senha de um usuário.
-     * Interage com o endpoint POST /auth/forgot-password do backend.
-     * @param email O e-mail do usuário que solicitou a redefinição de senha.
-     * @returns Uma promessa que resolve com uma mensagem de sucesso ou rejeita com um erro.
-     */
     async sendPasswordReset(email: string): Promise<MessageResponseDto> {
         try {
             console.log(`[AuthService Frontend] Solicitando redefinição de senha para: ${email}`);

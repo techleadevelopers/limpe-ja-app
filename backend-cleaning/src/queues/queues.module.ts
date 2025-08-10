@@ -8,9 +8,9 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { VerificationModule } from '../verification/verification.module';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
-import { ProvidersModule } from '../providers/providers.module'; // <-- ADICIONEI ESTA LINHA
-import { DocumentProcessingModule } from '../document-processing/document-processing.module'; // <-- ADICIONEI ESTA LINHA
-import { HttpModule } from '@nestjs/axios'; // <-- ADICIONEI ESTA LINHA
+import { ProvidersModule } from '../providers/providers.module';
+import { DocumentProcessingModule } from '../document-processing/document-processing.module';
+import { HttpModule } from '@nestjs/axios';
 
 @Module({
   imports: [
@@ -30,18 +30,18 @@ import { HttpModule } from '@nestjs/axios'; // <-- ADICIONEI ESTA LINHA
       { name: 'data_export' },
       { name: 'subscription-generation' },
     ),
-    NotificationsModule,
+    NotificationsModule, // Importado para que NotificationsService possa ser injetado
     PrismaModule,
     forwardRef(() => VerificationModule),
     forwardRef(() => SubscriptionsModule),
-    HttpModule, // <-- ADICIONEI ESTA LINHA
-    ProvidersModule, // <-- ADICIONEI ESTA LINHA
-    DocumentProcessingModule, // <-- ADICIONEI ESTA LINHA
+    HttpModule,
+    ProvidersModule, // Importado para que ProvidersService possa ser injetado no worker
+    DocumentProcessingModule,
   ],
   controllers: [],
   providers: [
     QueuesService,
-    VerificationWorker,
+    VerificationWorker, // O worker agora terá acesso a NotificationsService e ProvidersService
     NotificationWorker,
   ],
   exports: [QueuesService, BullModule],

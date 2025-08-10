@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
+
 import { useAuth } from '../../../hooks/useAuth';
 import {
   updateMyProviderProfile,
@@ -24,6 +25,7 @@ import {
   getProviderServicesOffered,
 } from '../../../services/providerService';
 import verificationService from '../../../services/verificationService';
+import axios from 'axios'; // Importar axios para verificar o tipo de erro
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -75,6 +77,10 @@ export default function ServiceDetailsScreen() {
   const [isUploading, setIsUploading] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
+
+  // Adicionando a lógica da barra de progresso
+  const totalSteps = 3;
+  const currentStep = 2; // Esta tela representa a segunda etapa
 
   React.useEffect(() => {
     Animated.parallel([
@@ -252,23 +258,50 @@ export default function ServiceDetailsScreen() {
       
       // Chamada para avançar o status de verificação no backend
       await verificationService.advanceVerificationStatus(); 
+      console.log("[handleContinue] Status de verificação avançado para PENDING_DOCUMENTS_UPLOAD.");
+
       // Atualiza o estado do usuário no AuthContext para refletir o novo status
+      // A chamada updateUser agora só deslogará em caso de 401
       await updateUser(); 
+      console.log("[handleContinue] AuthContext user data refreshed.");
 
       setIsRegistrationInProgress(false);
-      Alert.alert('Sucesso', 'Seu perfil foi salvo! Agora vamos verificar seus documentos.');
-      router.push('/provider-register/verify-account');
+      Alert.alert('Sucesso', 'Seu perfil foi salvo! Agora vamos verificar seus documentos.', [
+        {
+            text: 'OK',
+            onPress: () => {
+                console.log("[handleContinue] Alerta 'OK' pressionado. Redirecionando para /provider-register/verify-account.");
+                router.push('/provider-register/verify-account');
+            },
+        },
+      ]);
 
     } catch (error: any) {
       console.error('Erro ao salvar os dados do provedor:', error.response?.data || error.message, error.stack);
-      Alert.alert('Erro', `Ocorreu um erro ao salvar seus dados: ${error.response?.data?.message || error.message}. Tente novamente.`);
+      let errorMessage = 'Ocorreu um erro ao salvar seus dados. Tente novamente.';
+
+      if (axios.isAxiosError(error) && error.response) {
+          if (error.response.status === 401) {
+              console.log("[handleContinue] Erro 401 detectado. AuthContext deve ter acionado logout. Não exibir alerta duplicado.");
+              // O AuthContext já lida com o logout e o _layout.tsx redirecionará.
+              // Não precisamos exibir um alerta duplicado ou tentar navegar.
+          } else {
+              errorMessage = error.response.data.message || `Erro do servidor com status ${error.response.status}`;
+              Alert.alert('Erro', errorMessage);
+          }
+      } else if (error.message) {
+          errorMessage = error.message;
+          Alert.alert('Erro', errorMessage);
+      } else {
+          Alert.alert('Erro', 'Ocorreu um erro desconhecido ao salvar seus dados. Tente novamente.');
+      }
     } finally {
       setIsUploading(false);
       console.log("[handleContinue] Processo de atualização finalizado.");
     }
-};
+  };
 
-const renderImageUploadSection = () => (
+  const renderImageUploadSection = () => (
     <View style={styles.imageUploadContainer}>
       <Text style={styles.sectionTitle}>Foto do Perfil</Text>
       <TouchableOpacity
@@ -353,10 +386,14 @@ const renderImageUploadSection = () => (
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
+
+          
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Detalhes do Serviço</Text>
           </View>
+          
+        
 
           {/* Image Upload */}
           {renderImageUploadSection()}
@@ -523,7 +560,7 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   header: {
-    marginBottom: 30,
+    marginBottom: 15, // Ajustado para dar espaço à barra de progresso
     alignItems: 'center',
   },
   headerTitle: {
@@ -540,6 +577,30 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: 19,
   },
+  // NOVOS ESTILOS PARA A BARRA DE PROGRESSO
+  progressContainer: {
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  progressBar: {
+    width: '100%',
+    height: 6,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#A0D2EB', // mesma cor já usada na UI
+  },
+  progressText: {
+    marginTop: 6,
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#6C757D',
+  },
+  // FIM DOS NOVOS ESTILOS
   imageUploadContainer: {
     marginBottom: 30,
     alignItems: 'center',
@@ -712,4 +773,38 @@ const styles = StyleSheet.create({
   priceTypeLabelSelected: {
     color: '#FFFFFF',
   },
+  progressWrapper: {
+  alignItems: 'center',
+  marginBottom: 20,
+},
+progressOuter: {
+  backgroundColor: 'rgba(255,255,255,0.1)',
+  borderRadius: 100,
+  paddingHorizontal: 5,
+  height: 40,
+  width: SCREEN_WIDTH - 40,
+  justifyContent: 'center',
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.1,
+  shadowRadius: 6,
+  elevation: 4,
+  
+},
+progressInner: {
+  height: 30,
+  borderRadius: 100,
+  backgroundColor: '#4facfe',
+  shadowColor: '#4facfe',
+  shadowOffset: { width: 0, height: 10 },
+  shadowOpacity: 0.6,
+  shadowRadius: 8,
+},
+progressLabel: {
+  marginTop: 8,
+  fontSize: 14,
+  fontWeight: '600',
+  color: '#2C3E50',
+},
+
 });

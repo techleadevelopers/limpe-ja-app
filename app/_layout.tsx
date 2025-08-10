@@ -5,7 +5,8 @@ import {
     StyleSheet,
     Text,
     View,
-    Alert
+    Alert,
+    Image,
 } from 'react-native';
 import 'react-native-reanimated';
 import { AppProvider } from '../contexts/AppContext';
@@ -14,16 +15,33 @@ import { ProviderRegistrationProvider } from '../contexts/ProviderRegistrationCo
 import { AUTH_ROUTES, CLIENT_ROUTES, PROVIDER_ROUTES } from '../constants/routes';
 import { UserRole, VerificationStatus } from '../types/backend/auth';
 import * as Sentry from '@sentry/react-native';
+import Toast, { BaseToast, ErrorToast } from 'react-native-toast-message';
 
 Sentry.init({
-  dsn: 'https://947962edb662e5ff655cbcd778ee13b6@o4509792415252480.ingest.us.sentry.io/4509792431898624',
-  sendDefaultPii: true,
-  replaysSessionSampleRate: 0.1,
-  replaysOnErrorSampleRate: 1,
-  integrations: [Sentry.mobileReplayIntegration(), Sentry.feedbackIntegration()],
+    dsn: 'https://947962edb662e5ff655cbcd778ee13b6@o4509792415252480.ingest.us.sentry.io/4509792431898624',
+    sendDefaultPii: true,
+    replaysSessionSampleRate: 0.1,
+    replaysOnErrorSampleRate: 1,
+    integrations: [Sentry.mobileReplayIntegration(), Sentry.feedbackIntegration()],
 });
 
 SplashScreen.preventAutoHideAsync();
+
+// Configuração do Toast
+const toastConfig = {
+    loginSuccess: ({ text1, text2 }: any) => (
+        <View style={styles.toastContainer}>
+            <Image
+                source={require('/assets/images/limp-Photoroom.png')}
+                style={styles.toastImage}
+            />
+            <View style={{ flex: 1 }}>
+                <Text style={styles.toastTitle}>{text1}</Text>
+                {text2 && <Text style={styles.toastSubtitle}>{text2}</Text>}
+            </View>
+        </View>
+    ),
+};
 
 function RootLayoutContent() {
     const { isAuthenticated, isLoading: authIsLoading, user } = useAuth();
@@ -88,7 +106,7 @@ function RootLayoutContent() {
         };
         const cleanedCurrentPath = normalizePath(pathname);
         const authServiceDetailsStep = normalizePath(AUTH_ROUTES.SERVICE_DETAILS_STEP);
-        const providerRegistrationVerifyAccountPath = normalizePath(AUTH_ROUTES.VERIFY_ACCOUNT_STEP); 
+        const providerRegistrationVerifyAccountPath = normalizePath(AUTH_ROUTES.VERIFY_ACCOUNT_STEP);
 
         const decideAndRedirect = async () => {
             if (!isAuthenticated) {
@@ -130,7 +148,7 @@ function RootLayoutContent() {
                     // Fallback para provedores com status inesperado
                     console.log(`[RootLayoutContent | decideAndRedirect] INFO: Provedor autenticado com status inesperado. Redirecionando para a tela de verificação de documentos.`);
                     if (cleanedCurrentPath !== providerRegistrationVerifyAccountPath) {
-                       router.replace(providerRegistrationVerifyAccountPath as any);
+                        router.replace(providerRegistrationVerifyAccountPath as any);
                     }
                 }
                 console.groupEnd();
@@ -171,7 +189,13 @@ function RootLayoutContent() {
         );
     }
 
-    return <Slot />;
+    // Adicionado um React.Fragment para incluir o Toast ao lado do Slot
+    return (
+        <>
+            <Slot />
+            <Toast config={toastConfig} />
+        </>
+    );
 }
 
 export default Sentry.wrap(function RootLayout() {
@@ -197,5 +221,29 @@ const styles = StyleSheet.create({
         marginTop: 10,
         fontSize: 16,
         color: '#333333',
+    },
+    // Estilos do Toast adicionados aqui
+    toastContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#4CAF50',
+        borderRadius: 8,
+        padding: 10,
+        minHeight: 60,
+    },
+    toastImage: {
+        width: 36,
+        height: 36,
+        marginRight: 10,
+        resizeMode: 'contain',
+    },
+    toastTitle: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 15,
+    },
+    toastSubtitle: {
+        color: '#fff',
+        fontSize: 13,
     },
 });

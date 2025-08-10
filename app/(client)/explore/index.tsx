@@ -1,4 +1,3 @@
-// app/(client)/explore/index.tsx
 import { Stack, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -12,7 +11,7 @@ import {
     Text,
     TouchableOpacity,
     View,
-    ViewToken // Importar ViewToken para tipagem de onViewableItemsChanged
+    ViewToken
 } from 'react-native';
 
 import {
@@ -33,7 +32,7 @@ import { UserProfile } from '../../../types/backend/users';
 
 import { CLIENT_ROUTES } from '../../../constants/routes';
 
-import CarouselBannerItem from '../../../components/client/explore/home/CarouselBannerItem'; 
+import CarouselBannerItem from '../../../components/client/explore/home/CarouselBannerItem';
 import CategoriaCard from '../../../components/client/explore/home/CategoriaCard';
 import HeaderSuperior from '../../../components/client/explore/home/HeaderSuperior';
 import NavBar from '../../../components/client/explore/home/NavBar';
@@ -58,8 +57,8 @@ const bannerData = [
         description: 'All Services Available | T&C Applied',
         buttonText: 'Claim',
         badgeText: 'Limited time!',
-        backgroundColorStart: '#f5f5dc', 
-        backgroundColorEnd: '#deb887',   
+        backgroundColorStart: '#f5f5dc',
+        backgroundColorEnd: '#deb887',
     },
     {
         id: '2',
@@ -68,8 +67,8 @@ const bannerData = [
         description: 'On Selected Services Only',
         buttonText: 'View',
         badgeText: 'Exclusive',
-        backgroundColorStart: '#e0ffff', 
-        backgroundColorEnd: '#afeeee',   
+        backgroundColorStart: '#e0ffff',
+        backgroundColorEnd: '#afeeee',
     },
     {
         id: '3',
@@ -78,8 +77,8 @@ const bannerData = [
         description: 'For New Customers',
         buttonText: 'Sign Up',
         badgeText: 'Hurry!',
-        backgroundColorStart: '#f0f8ff', 
-        backgroundColorEnd: '#e6e6fa',   
+        backgroundColorStart: '#f0f8ff',
+        backgroundColorEnd: '#e6e6fa',
     },
 ];
 
@@ -92,11 +91,10 @@ export default function ExploreClientScreen() {
     const [serviceCategories, setServiceCategories] = useState<Service[]>([]);
     const [recommendations, setRecommendations] = useState<ProviderDisplayInfo[]>([]);
     const [providers, setProviders] = useState<ProviderDisplayInfo[]>([]);
-    const [currentOffer, setCurrentOffer] = useState<Offer | null>(null); 
+    const [currentOffer, setCurrentOffer] = useState<Offer | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Animações
     const headerAnim = useRef(new Animated.Value(0)).current;
     const categoriesAnim = useRef(new Animated.Value(0)).current;
     const bannerAnim = useRef(new Animated.Value(0)).current;
@@ -110,6 +108,9 @@ export default function ExploreClientScreen() {
         try {
             const fetchedUserProfile = await getUserProfile();
             setUserProfile(fetchedUserProfile);
+
+            // << ADICIONADO: Log para inspecionar o perfil do usuário >>
+            console.log('[ExploreClientScreen] Perfil do usuário carregado:', fetchedUserProfile);
 
             const categoriesData = await getServiceCategories();
             setServiceCategories(categoriesData);
@@ -154,7 +155,7 @@ export default function ExploreClientScreen() {
 
     const handleCategoryPress = useCallback((item: Service) => {
         router.push({
-            pathname: CLIENT_ROUTES.SEARCH_RESULTS, 
+            pathname: CLIENT_ROUTES.SEARCH_RESULTS,
             params: { categoryId: item.id, categoryName: item.name }
         } as any);
     }, [router]);
@@ -173,17 +174,17 @@ export default function ExploreClientScreen() {
 
     const handleBannerPress = useCallback(() => {
         Alert.alert('Banner Pressionado', 'Você clicou em um banner! (Este é o handler do carrossel)');
-    }, []); 
+    }, []);
 
-    const viewabilityConfig = useRef({ // MANTIDO: Declaração da ref
-        itemVisiblePercentThreshold: 50, 
-    }).current; // CORREÇÃO: Acessar .current aqui para a variável
+    const viewabilityConfig = useRef({
+        itemVisiblePercentThreshold: 50,
+    }).current;
 
     const onViewableItemsChanged = useCallback(({ viewableItems }: { viewableItems: ViewToken[] }) => {
         if (viewableItems.length > 0) {
             setCurrentIndex(viewableItems[0].index || 0);
         }
-    }, []); 
+    }, []);
 
     const renderBannerItem = useCallback(({ item }: { item: (typeof bannerData)[0] }) => (
         <CarouselBannerItem
@@ -194,9 +195,9 @@ export default function ExploreClientScreen() {
             badgeText={item.badgeText}
             backgroundColorStart={item.backgroundColorStart}
             backgroundColorEnd={item.backgroundColorEnd}
-            onPress={handleBannerPress} 
+            onPress={handleBannerPress}
         />
-    ), [handleBannerPress]); 
+    ), [handleBannerPress]);
 
     const renderPagination = useCallback(() => (
         <View style={styles.pagination}>
@@ -210,7 +211,7 @@ export default function ExploreClientScreen() {
                 />
             ))}
         </View>
-    ), [currentIndex]); 
+    ), [currentIndex]);
 
     if (loading) {
         return (
@@ -231,6 +232,9 @@ export default function ExploreClientScreen() {
             </View>
         );
     }
+    
+    // NOVO: Lógica para extrair o endereço do perfil de forma mais robusta
+    const addressToDisplay = userProfile?.clientDetails?.address || userProfile?.providerDetails?.address || userProfile?.address;
 
     return (
         <View style={styles.screen}>
@@ -246,7 +250,7 @@ export default function ExploreClientScreen() {
                     <Animated.View style={{ opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-50, 0] }) }] }}>
                         <HeaderSuperior
                             userName={userProfile?.clientDetails?.fullName || userProfile?.providerDetails?.fullName || userProfile?.fullName || 'Usuário'}
-                            userAddress={userProfile?.clientDetails?.address || userProfile?.providerDetails?.address}
+                            userAddress={addressToDisplay}
                         />
                     </Animated.View>
 
@@ -280,9 +284,9 @@ export default function ExploreClientScreen() {
                             horizontal
                             pagingEnabled
                             showsHorizontalScrollIndicator={false}
-                            onViewableItemsChanged={onViewableItemsChanged} 
-                            viewabilityConfig={viewabilityConfig} // CORREÇÃO: Acessar .current da ref
-                            snapToInterval={300 + 20} 
+                            onViewableItemsChanged={onViewableItemsChanged}
+                            viewabilityConfig={viewabilityConfig}
+                            snapToInterval={300 + 20}
                             decelerationRate="fast"
                         />
                         {renderPagination()}
@@ -298,12 +302,10 @@ export default function ExploreClientScreen() {
                             renderItem={({ item }) => {
                                 if (!item || !item.fullName) return null;
 
-                                // CORREÇÃO: Passar o item original para RecomendacaoCard
-                                // RecomendacaoCard deve ser responsável por mapear/calcular as propriedades que precisa
                                 return (
                                     <RecomendacaoCard
                                         key={item.id}
-                                        item={item} // Passa o item original (ProviderDisplayInfo)
+                                        item={item}
                                     />
                                 );
                             }}
@@ -382,13 +384,13 @@ const styles = StyleSheet.create({
     carouselContainer: {
         marginTop: 20,
         marginBottom: 20,
-        alignItems: 'center', // Centraliza o FlatList horizontalmente
+        alignItems: 'center',
     },
     pagination: {
         flexDirection: 'row',
         height: 20,
         alignItems: 'center',
-        marginTop: 10, // Espaçamento entre o carrossel e os pontos
+        marginTop: 10,
     },
     paginationDot: {
         width: 8,

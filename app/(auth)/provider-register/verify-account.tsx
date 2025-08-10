@@ -11,7 +11,8 @@ import {
     StatusBar,
     StyleSheet,
     View,
-    Text
+    Text,
+    TouchableOpacity // Adicionado para o botão de tentar novamente
 } from 'react-native';
 import DocumentUploadScreen from './verification/document-upload';
 import ToastMessage from '../../../components/ui/ToastMessage';
@@ -19,7 +20,7 @@ import { useAuth } from '../../../hooks/useAuth';
 import verificationService from '../../../services/verificationService';
 import { DocumentPhotoType } from '../../../types/backend/verification';
 import { VerificationStatus, UserRole } from '../../../types/backend/auth';
-import { PROVIDER_ROUTES } from '../../../constants/routes'; // Certifique-se de que esta importação está correta
+import { PROVIDER_ROUTES } from '../../../constants/routes';
 
 const LOGO_IMAGE = require('../../../assets/images/logo.png');
 const HEADER_ICON_IMAGE = require('../../../assets/images/facer.png');
@@ -49,6 +50,7 @@ export default function VerifyAccountScreen() {
     const { user, setIsRegistrationInProgress, refreshUser } = useAuth();
     const providerId = user?.providerDetails?.id;
     const isApproved = user?.providerDetails?.verificationStatus === VerificationStatus.APPROVED;
+    const rejectionReason = user?.providerDetails?.rejectionReason; // Obter o motivo da rejeição
 
     const [isLoading, setIsLoading] = useState(false);
     const [toastMessage, setToastMessage] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -74,37 +76,63 @@ export default function VerifyAccountScreen() {
                 setCurrentVerificationStep(4); // Ou diretamente redirecione
                 router.replace(PROVIDER_ROUTES.DASHBOARD);
             } else {
-                setCurrentVerificationStep(2); // Inicia na etapa de upload de documentos
+                // Inicia na etapa de upload de documentos, ou exibe o status atual
+                if (user?.providerDetails?.verificationStatus === VerificationStatus.REJECTED) {
+                    setCurrentVerificationStep(5); // Exibe tela de rejeição
+                } else if (user?.providerDetails?.verificationStatus === VerificationStatus.PENDING_MANUAL_REVIEW) {
+                    setCurrentVerificationStep(4); // Mantém na tela de "verificação em andamento"
+                } else {
+                    setCurrentVerificationStep(2); // Inicia na etapa de upload de documentos
+                }
             }
         });
-    }, [fadeAnim, slideAnim, logoScale, isApproved, router]);
+    }, [fadeAnim, slideAnim, logoScale, isApproved, router, user?.providerDetails?.verificationStatus]);
 
-    // [CORREÇÃO] Efeito para verificar periodicamente o status do provedor
+    // Efeito para verificar periodicamente o status do provedor
     useEffect(() => {
         let interval: ReturnType<typeof setInterval> | null = null;
-        // Só inicia a verificação periódica se o provedor não estiver aprovado
-        if (providerId && !isApproved) {
+        // Só inicia a verificação periódica se o provedor não estiver aprovado ou rejeitado
+        if (providerId && !isApproved && user?.providerDetails?.verificationStatus !== VerificationStatus.REJECTED) {
             console.log("[VerifyAccountScreen] Iniciando verificação periódica do status do provedor...");
             interval = setInterval(async () => {
                 try {
                     const verificationInfo = await verificationService.getProviderVerificationInfo(providerId);
                     console.log("[VerifyAccountScreen] Status de verificação obtido:", verificationInfo.verificationStatus);
+                    
                     if (verificationInfo.verificationStatus === VerificationStatus.APPROVED) {
                         setToastMessage({ message: "Sua conta foi aprovada! Redirecionando para o Dashboard.", type: "success" });
+                        if (interval) clearInterval(interval); // Parar polling
                         await refreshUser(); // Atualiza o estado do usuário no AuthContext
-                        // Redireciona imediatamente para o dashboard
                         router.replace(PROVIDER_ROUTES.DASHBOARD);
+                    } else if (verificationInfo.verificationStatus === VerificationStatus.REJECTED) {
+                        setToastMessage({ message: `Sua verificação foi rejeitada.`, type: "error" });
+                        if (interval) clearInterval(interval); // Parar polling
+                        await refreshUser(); // Atualiza o estado para refletir a rejeição e o motivo
+                        setCurrentVerificationStep(5); // Nova etapa para exibir o motivo da rejeição e opções
+                    } else if (verificationInfo.verificationStatus === VerificationStatus.PENDING_MANUAL_REVIEW) {
+                        // Se o status mudar para revisão manual, atualiza a UI para refletir isso
+                        setCurrentVerificationStep(4); // Mantém na tela de "verificação em andamento"
+                        setToastMessage({ message: "Seus documentos estão sob revisão manual. Você será notificado em breve.", type: "info" });
                     }
+                    // Para outros status (PENDING_DOCUMENTS_UPLOAD, PENDING_BACKGROUND_CHECK), continua o polling
+                    // e a tela permanece no passo de upload ou análise.
+
                 } catch (error) {
                     console.error("[VerifyAccountScreen] Erro ao verificar status:", error);
-                    setToastMessage({ message: "Erro ao verificar o status da sua conta.", type: "error" });
+                    setToastMessage({ message: "Erro ao verificar o status da sua conta. Tente novamente mais tarde.", type: "error" });
+                    // Em caso de erro na API, pode-se parar o polling ou aumentar o intervalo
+                    // if (interval) clearInterval(interval);
                 }
             }, 5000); // Verifica a cada 5 segundos
         } else if (isApproved) {
             // Se já estiver aprovado ao montar ou ao mudar o estado, redireciona
             console.log("[VerifyAccountScreen] Provedor já aprovado. Redirecionando para o Dashboard.");
             router.replace(PROVIDER_ROUTES.DASHBOARD);
+        } else if (user?.providerDetails?.verificationStatus === VerificationStatus.REJECTED) {
+            // Se já estiver rejeitado ao montar, exibe a tela de rejeição
+            setCurrentVerificationStep(5);
         }
+
 
         return () => {
             if (interval) {
@@ -112,7 +140,7 @@ export default function VerifyAccountScreen() {
                 console.log("[VerifyAccountScreen] Verificação periódica interrompida.");
             }
         };
-    }, [providerId, isApproved, refreshUser, router]); // Adicionado 'router' às dependências
+    }, [providerId, isApproved, refreshUser, router, user?.providerDetails?.verificationStatus]);
 
     const handleStepCompletion = useCallback(async (data: any, step: number) => {
         setIsLoading(true);
@@ -141,6 +169,7 @@ export default function VerifyAccountScreen() {
                 // Após o upload, o status de verificação será atualizado no backend
                 // e o polling no useEffect detectará a mudança.
                 setCurrentVerificationStep(4); // Move para a etapa de "verificação em andamento"
+                setToastMessage({ message: "Documentos enviados com sucesso! Estamos analisando.", type: "success" });
             }
         } catch (error: any) {
             console.error("Erro na verificação:", error);
@@ -148,7 +177,7 @@ export default function VerifyAccountScreen() {
         } finally {
             setIsLoading(false);
         }
-    }, [providerId, setIsRegistrationInProgress]); // Removido setIsRegistrationInProgress se não for diretamente usado aqui
+    }, [providerId, setIsRegistrationInProgress]);
 
     const renderVerificationStep = () => {
         switch (currentVerificationStep) {
@@ -176,7 +205,31 @@ export default function VerifyAccountScreen() {
                     <View style={styles.analysisContent}>
                         <Image source={LOGO_IMAGE} style={styles.analysisLogo} />
                         <Text style={styles.analysisText}>Verificação em andamento</Text>
+                        <Text style={styles.analysisSubText}>Seus documentos estão sendo analisados. Isso pode levar alguns minutos.</Text>
                         <ActivityIndicator size="large" color={Colors.primary} style={styles.analysisIndicator} />
+                    </View>
+                );
+            case 5: // Nova etapa para rejeição
+                return (
+                    <View style={styles.analysisContent}>
+                        <Image source={LOGO_IMAGE} style={styles.analysisLogo} />
+                        <Text style={styles.analysisText}>Verificação Rejeitada</Text>
+                        <Text style={styles.rejectionReasonText}>
+                            {rejectionReason || 'Não foi possível aprovar sua conta. Entre em contato com o suporte para mais detalhes.'}
+                        </Text>
+                        <TouchableOpacity style={styles.retryButton} onPress={() => {
+                            // Limpa os estados de documentos para permitir novo upload
+                            setDocumentPhotoFront(null);
+                            setDocumentPhotoBack(null);
+                            setCurrentVerificationStep(2); // Volta para a etapa de upload
+                            setToastMessage(null); // Limpa qualquer toast anterior
+                        }}>
+                            <Text style={styles.retryButtonText}>Tentar Novamente</Text>
+                        </TouchableOpacity>
+                        {/* Opcional: Botão para contato com suporte */}
+                        {/* <TouchableOpacity onPress={() => router.push('/help')}>
+                            <Text style={styles.contactSupportText}>Contatar Suporte</Text>
+                        </TouchableOpacity> */}
                     </View>
                 );
             default:
@@ -278,6 +331,12 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: 'bold',
         color: Colors.textPrimary,
+        marginBottom: 10, // Ajustado para dar espaço ao subtexto
+    },
+    analysisSubText: { // Novo estilo para subtexto
+        fontSize: 16,
+        color: Colors.textSecondary,
+        textAlign: 'center',
         marginBottom: 20,
     },
     analysisIndicator: {
@@ -288,5 +347,30 @@ const styles = StyleSheet.create({
         height: 40,
         resizeMode: 'contain',
         marginLeft: 15,
+    },
+    rejectionReasonText: { // Novo estilo para motivo de rejeição
+        fontSize: 16,
+        color: Colors.error,
+        textAlign: 'center',
+        marginBottom: 20,
+        paddingHorizontal: 10,
+    },
+    retryButton: { // Novo estilo para botão de tentar novamente
+        backgroundColor: Colors.primary,
+        paddingVertical: 12,
+        paddingHorizontal: 25,
+        borderRadius: 8,
+        marginTop: 20,
+    },
+    retryButtonText: { // Novo estilo para texto do botão de tentar novamente
+        color: Colors.cardBackground,
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    contactSupportText: { // Estilo opcional para contato com suporte
+        color: Colors.primary,
+        fontSize: 14,
+        marginTop: 10,
+        textDecorationLine: 'underline',
     },
 });

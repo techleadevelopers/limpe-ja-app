@@ -278,7 +278,7 @@ export class NotificationsService {
       // Por enquanto, apenas um log para simular o envio:
       this.logger.log(`[SIMULADO] Notificação push para ${userId} enviada: Título="${title}", Corpo="${body}", Dados=${JSON.stringify(data)}`);
 
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Erro ao enviar notificação push para o usuário ${userId}: ${error.message}`,
         error.stack,

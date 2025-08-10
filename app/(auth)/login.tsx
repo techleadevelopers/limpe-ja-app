@@ -32,6 +32,8 @@ import AnimatedReanimated, {
 // AuthService não é mais diretamente usado para checkPhone/requestOtp na UI
 // import AuthService from '../../services/authService'; // [cite: authService.ts]
 
+import Toast from 'react-native-toast-message';
+
 const LOGO_IMAGE = require('../../assets/images/logo2.png'); // [cite: client-register.tsx]
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -105,7 +107,7 @@ export default function LoginScreen() {
         };
     });
 
-    // NOVA FUNÇÃO: handleLogin (substitui toda a lógica de OTP e telefone)
+    // FUNÇÃO: handleLogin (com a nova lógica de Toast)
     const handleLogin = async () => {
         // Validação básica para email e senha
         if (!email.trim() || !password.trim()) {
@@ -121,12 +123,31 @@ export default function LoginScreen() {
             // Chama o método login do AuthContext com email e senha
             await login({ email: email.trim(), password: password }); // [cite: authService.ts]
 
-            Alert.alert('Sucesso!', 'Login realizado com sucesso!');
+            // REMOVIDO: Alert.alert('Sucesso!', 'Login realizado com sucesso!');
+            // NOVO: Exibe o toast de sucesso
+            Toast.show({
+                type: 'loginSuccess', // tipo customizado
+                text1: 'Login realizado!',
+                text2: 'Bem-vindo de volta 👋',
+                visibilityTime: 2500,
+                topOffset: 60
+            });
+            
             // O redirecionamento para usuários existentes será tratado pelo useEffect de useAuth
             // no _layout.tsx principal do app, que verifica `isAuthenticated` e `user.role`.
         } catch (error: any) {
             console.error('Erro ao fazer login:', error.message, error);
-            setErrorMessage(error.response?.data?.message || error.message || 'Credenciais inválidas. Tente novamente.');
+            const errorMessageFromApi = error.response?.data?.message || 'Credenciais inválidas.';
+            setErrorMessage(errorMessageFromApi);
+
+            // NOVO: Exibe o toast de erro
+            Toast.show({
+                type: 'error',
+                text1: 'Erro no login',
+                text2: errorMessageFromApi, // Exibe a mensagem de erro da API ou uma mensagem padrão
+                visibilityTime: 3000,
+                topOffset: 60
+            });
         } finally {
             setLoading(false);
         }

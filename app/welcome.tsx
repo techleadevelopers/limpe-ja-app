@@ -203,6 +203,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     top: 60,
+    right: 10,
     marginBottom: REFLECTION_GAP,
   },
   logoImage: {
@@ -214,6 +215,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     bottom: 124,
+    right: 10,
     width: LOGO_WIDTH,
     height: LOGO_HEIGHT,
     overflow: 'hidden',

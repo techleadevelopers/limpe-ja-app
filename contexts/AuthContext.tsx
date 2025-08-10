@@ -9,6 +9,7 @@ import { UserProfile } from '../types/backend/users';
 import { ClientDetails } from '../types/backend/clients';
 import { BookingAddress } from '../types/backend/bookings';
 import userService from '../services/userService';
+import axios from 'axios'; // Importar axios para verificar o tipo de erro
 
 interface AuthDataFromStorage {
   token: string | null;
@@ -35,7 +36,7 @@ interface AuthContextType {
   isRegistrationInProgress: boolean;
   setIsRegistrationInProgress: (inProgress: boolean) => void;
   setAuthData: (authData: AuthResponse) => Promise<void>;
-  updateUser: (updatedUser?: Partial<UserProfile>) => Promise<void>; // <-- Corrigido aqui
+  updateUser: (updatedUser?: Partial<UserProfile>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -189,16 +190,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(authenticatedUser);
       setRole(latestUserProfile.role as UserRole);
       console.log('[AuthContext | refreshUser] Dados do usuário atualizados com sucesso do backend.');
-    } catch (error) {
+    } catch (error: any) { // Captura o erro para inspeção
       console.error('[AuthContext | refreshUser] Erro ao recarregar dados do usuário do backend:', error);
-      await logout();
-      throw error;
+      // Verifica se o erro é especificamente devido a um token expirado/inválido (status 401)
+      if (axios.isAxiosError(error) && error.response && error.response.status === 401) {
+          console.log('[AuthContext | refreshUser] Token inválido/expirado, realizando logout.');
+          await logout(); // Realiza logout apenas se for erro de autenticação
+      } else {
+          // Para outros tipos de erros (ex: problemas de rede, erros 500),
+          // não queremos deslogar o usuário. Apenas logamos o erro e o propagamos.
+          console.error('[AuthContext | refreshUser] Erro não-autenticação durante refresh. Mantendo sessão, mas pode haver inconsistência. Erro:', error.message);
+          throw error; // Propaga o erro para o chamador (service-details.tsx)
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const updateUser = useCallback(async (updatedUserData?: Partial<UserProfile>) => { // <-- updatedUserData agora é opcional
+  const updateUser = useCallback(async (updatedUserData?: Partial<UserProfile>) => {
     if (user) {
       if (updatedUserData) { // Se novos dados foram fornecidos, use-os
         const updatedProfile: UserProfile = {
@@ -225,7 +234,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } else {
       console.warn('[AuthContext | updateUser] Tentativa de atualizar usuário não logado.');
     }
-  }, [user, refreshUser]); // <- Adicionado refreshUser às dependências
+  }, [user, refreshUser]);
 
   const setAuthData = async (authData: AuthResponse) => {
     try {

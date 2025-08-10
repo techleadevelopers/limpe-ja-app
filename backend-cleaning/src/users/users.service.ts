@@ -3,8 +3,8 @@ import { Injectable, NotFoundException, BadRequestException, Logger } from '@nes
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User, Prisma } from '@prisma/client';
-import { NotificationsService } from '../notifications/notifications.service'; // Para notificações
-import { QueuesService } from '../queues/queues.service'; // Para exportação de dados
+import { NotificationsService } from '../notifications/notifications.service';
+import { QueuesService } from '../queues/queues.service';
 
 @Injectable()
 export class UsersService {
@@ -12,8 +12,8 @@ export class UsersService {
 
   constructor(
     private prisma: PrismaService,
-    private notificationsService: NotificationsService, // Injetar NotificationsService
-    private queuesService: QueuesService, // Injetar QueuesService
+    private notificationsService: NotificationsService,
+    private queuesService: QueuesService,
   ) {}
 
   async findOne(id: string): Promise<User | null> {
@@ -21,8 +21,17 @@ export class UsersService {
     const user = await this.prisma.user.findUnique({
       where: { id },
       include: {
-        client: true,
-        provider: true,
+        // CORREÇÃO: Incluir a relação de endereço dentro de 'client' e 'provider'
+        client: {
+          include: {
+            address: true, // Adiciona o objeto de endereço
+          },
+        },
+        provider: {
+          include: {
+            address: true, // Adiciona o objeto de endereço
+          },
+        },
       },
     });
     if (!user) {
@@ -49,7 +58,6 @@ export class UsersService {
         where: { id },
         data: {
           email: updateUserDto.email,
-          // Outros campos que podem ser atualizados diretamente no User
         },
       });
       this.logger.log(`[UsersService] update: Usuário com ID "${id}" atualizado com sucesso.`);
@@ -79,47 +87,34 @@ export class UsersService {
     }
   }
 
-  // NOVO MÉTODO: Solicitar exportação de dados do usuário (LGPD)
   async requestDataExport(userId: string): Promise<void> {
     this.logger.log(`[UsersService] requestDataExport: Solicitação de exportação de dados para userId: ${userId}.`);
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
       throw new NotFoundException('Usuário não encontrado.');
     }
-
-    // Adiciona a tarefa de exportação de dados à fila
     await this.queuesService.addDataExportJob('export-user-data', { userId: user.id, email: user.email });
-
-    // Notifica o usuário que a solicitação foi recebida
     await this.notificationsService.createNotification(
       user.id,
       'DATA_EXPORT_REQUESTED',
       'Sua solicitação de exportação de dados foi recebida. Você será notificado quando o arquivo estiver pronto para download.',
-      '/profile/data-privacy' // Exemplo de URL para o frontend
+      '/profile/data-privacy'
     );
     this.logger.log(`[UsersService] requestDataExport: Notificação de exportação de dados adicionada à fila para userId: ${userId}.`);
   }
 
-  // NOVO MÉTODO: Solicitar exclusão da conta do usuário (LGPD)
   async requestAccountDeletion(userId: string): Promise<void> {
     this.logger.log(`[UsersService] requestAccountDeletion: Solicitação de exclusão de conta para userId: ${userId}.`);
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
       throw new NotFoundException('Usuário não encontrado.');
     }
-
-    // Marca a conta como 'pending_deletion' ou similar (você precisaria de um novo campo no modelo User)
-    // Ex: await this.prisma.user.update({ where: { id: userId }, data: { status: 'PENDING_DELETION' } });
-    // Para simplificar, vamos apenas desativar o email e notificar
     await this.prisma.user.update({
       where: { id: userId },
       data: {
-        email: `deleted-${user.id}-${Date.now()}@limpeja.com`, // Altera email para evitar reuso e identificar
-        // Você pode adicionar um campo 'isDeleted' ou 'deletionScheduledAt' no modelo User
+        email: `deleted-${user.id}-${Date.now()}@limpeja.com`,
       },
     });
-
-    // Notifica o usuário sobre a desativação e o processo de exclusão
     await this.notificationsService.createNotification(
       user.id,
       'ACCOUNT_DELETION_REQUESTED',
@@ -127,8 +122,5 @@ export class UsersService {
       '/profile/data-privacy'
     );
     this.logger.log(`[UsersService] requestAccountDeletion: Notificação de exclusão de conta adicionada à fila para userId: ${userId}.`);
-
-    // Opcional: Adicionar uma tarefa na fila para a exclusão real após o período de carência
-    // await this.queuesService.addDeletionJob('delete-user-permanently', { userId: user.id }, { delay: 30 * 24 * 60 * 60 * 1000 }); // 30 dias de atraso
   }
 }

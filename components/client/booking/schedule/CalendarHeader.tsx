@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
   container: {
     paddingVertical: 8,
     width: '95%',
-    paddingHorizontal: 95,
+    paddingHorizontal: 65,
     marginTop: 0, // Espaçamento superior para evitar sobreposição com a barra de status
     marginBottom: 30, // Espaçamento inferior para evitar sobreposição com o conteúdo abaixo
     flexDirection: 'row',

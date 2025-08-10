@@ -8,6 +8,9 @@ import { VerificationService } from '../../verification/verification.service';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { File } from 'multer';
+import { VerificationStatus } from '../../shared/enums/verification-status.enum';
+import { QueuesService } from '../queues.service';
+import { NotificationsService } from '../../notifications/notifications.service'; // Importar NotificationsService
 
 @Injectable()
 export class VerificationWorker extends WorkerHost {
@@ -18,6 +21,8 @@ export class VerificationWorker extends WorkerHost {
     private readonly verificationService: VerificationService,
     private readonly providersService: ProvidersService,
     private readonly httpService: HttpService,
+    private readonly queuesService: QueuesService, // Injetar QueuesService
+    private readonly notificationsService: NotificationsService, // Injetar NotificationsService
   ) {
     super();
   }
@@ -25,6 +30,8 @@ export class VerificationWorker extends WorkerHost {
   async process(job: Job<any, any, string>): Promise<any> {
     const { providerId, fileUrl, type, selfieUrl, documentFrontUrl } = job.data;
     this.logger.log(`[VerificationWorker] Processando job '${job.name}' para providerId: ${providerId}`);
+
+    let processingErrorReason: string | null = null; // Para capturar o motivo específico do erro
 
     try {
       if (job.name === 'process-document-ocr') {
@@ -42,9 +49,16 @@ export class VerificationWorker extends WorkerHost {
           path: null,
         };
 
-        const ocrResult: any = await this.documentProcessingService.processDocumentOcr(ocrFile);
-        this.logger.log(`[VerificationWorker] OCR do documento (${type}) concluído para providerId: ${providerId}.`);
-        await this.verificationService.updateProviderOcrResult(providerId, ocrResult, type);
+        try {
+          const ocrResult: any = await this.documentProcessingService.processDocumentOcr(ocrFile);
+          this.logger.log(`[VerificationWorker] OCR do documento (${type}) concluído para providerId: ${providerId}.`);
+          await this.verificationService.updateProviderOcrResult(providerId, ocrResult, type);
+        } catch (ocrError: any) {
+          processingErrorReason = `Falha no processamento de OCR: ${ocrError.message}`;
+          this.logger.error(`[VerificationWorker] OCR process failed for providerId ${providerId}: ${ocrError.message}`);
+          throw ocrError; // Re-throw para ser capturado pelo catch externo para atualização de status
+        }
+
       } else if (job.name === 'perform-liveness-check') {
         const selfieBuffer = await this.downloadFileFromUrl(selfieUrl);
         const selfieFile: File = {
@@ -59,7 +73,6 @@ export class VerificationWorker extends WorkerHost {
           filename: null,
           path: null,
         };
-        const livenessResult: any = await this.documentProcessingService.performLivenessCheck(selfieFile);
 
         const documentFrontBuffer = await this.downloadFileFromUrl(documentFrontUrl);
         const documentFrontFile: File = {
@@ -74,18 +87,48 @@ export class VerificationWorker extends WorkerHost {
           filename: null,
           path: null,
         };
-        const faceComparisonResult: any = await this.documentProcessingService.compareFaces(selfieFile, documentFrontFile.buffer.toString());
 
-        this.logger.log(`[VerificationWorker] Liveness check e Face comparison concluídos para providerId: ${providerId}.`);
-        await this.verificationService.updateProviderLivenessResult(providerId, livenessResult);
-        await this.verificationService.updateProviderFaceComparisonResult(providerId, faceComparisonResult);
+        try {
+          const livenessResult: any = await this.documentProcessingService.performLivenessCheck(selfieFile);
+          const faceComparisonResult: any = await this.documentProcessingService.compareFaces(selfieFile, documentFrontFile.buffer.toString()); // Assumindo que compareFaces aceita URL ou buffer
+
+          this.logger.log(`[VerificationWorker] Liveness check e Face comparison concluídos para providerId: ${providerId}.`);
+          await this.verificationService.updateProviderLivenessResult(providerId, livenessResult);
+          await this.verificationService.updateProviderFaceComparisonResult(providerId, faceComparisonResult);
+        } catch (livenessFaceError: any) {
+          processingErrorReason = `Falha na verificação de vivacidade ou comparação facial: ${livenessFaceError.message}`;
+          this.logger.error(`[VerificationWorker] Liveness/Face comparison failed for providerId ${providerId}: ${livenessFaceError.message}`);
+          throw livenessFaceError; // Re-throw para ser capturado pelo catch externo
+        }
       }
 
       this.logger.log(`[VerificationWorker] Job '${job.name}' finalizado com sucesso.`);
-    } catch (error) {
-      this.logger.error(`[VerificationWorker] Erro no job '${job.name}' para providerId: ${providerId}. Erro: ${error.message}`);
-      // Lógica de tratamento de erro e atualização de status
-      throw error;
+    } catch (error: any) {
+      this.logger.error(`[VerificationWorker] Erro crítico no job '${job.name}' para providerId: ${providerId}. Erro: ${error.message}`);
+      
+      // Obter detalhes do provedor para enviar notificação
+      const provider = await this.providersService.findOne(providerId);
+      if (provider) {
+        // Atualizar status do provedor para PENDING_MANUAL_REVIEW com motivo de rejeição
+        await this.verificationService.updateProviderVerificationStatusManually(
+          providerId,
+          VerificationStatus.PENDING_MANUAL_REVIEW,
+          processingErrorReason || `Erro durante o processamento automático de documentos: ${error.message}`
+        );
+
+        // Enviar notificação para o provedor
+        await this.queuesService.addNotificationJob('send-notification', {
+          userId: provider.userId,
+          type: 'VERIFICATION_PROCESSING_FAILED',
+          message: `Houve um problema ao processar seus documentos. Sua conta requer revisão manual. Motivo: ${processingErrorReason || error.message}`,
+          targetUrl: '/profile/verification-status',
+        });
+        this.logger.log(`[VerificationWorker] Notificação de falha de processamento adicionada à fila para userId: ${provider.userId}.`);
+      } else {
+        this.logger.warn(`[VerificationWorker] Provedor ${providerId} não encontrado ao tentar atualizar status após falha do worker.`);
+      }
+
+      throw error; // Re-throw o erro para que o BullMQ marque o job como falho e lide com as retentativas.
     }
   }
 
@@ -94,7 +137,7 @@ export class VerificationWorker extends WorkerHost {
     try {
       const response = await firstValueFrom(this.httpService.get(url, { responseType: 'arraybuffer' }));
       return Buffer.from(response.data);
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`[VerificationWorker] Erro ao baixar arquivo da URL ${url}: ${error.message}`);
       throw new Error(`Erro ao baixar arquivo para processamento: ${error.message}`);
     }

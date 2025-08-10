@@ -1,9 +1,10 @@
-// LimpeJaApp/app/(client)/bookings/components/success/BookingSummaryCard.tsx
+// LimpeJaApp/components/client/booking/success/BookingSummaryCard.tsx
 import { BlurView } from 'expo-blur';
 import * as Clipboard from 'expo-clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { Animated, Platform, StyleSheet, View } from 'react-native';
+import Toast from 'react-native-toast-message';
 
 import AdditionalBookingDetails from './AdditionalBookingDetails';
 import BookingDetailSection from './BookingDetailSection';
@@ -12,8 +13,7 @@ import ProviderInfoSection from './ProviderInfoSection';
 import SuccessPixInfo from './SuccessPixInfo';
 
 // Importar tipos
-import Toast from 'react-native-toast-message';
-import { BookingDetails } from '../../../../types/backend/bookings'; // Certifique-se que este BookingDetails tem scheduledDateTime
+import { BookingDetails } from '../../../../types/backend/bookings';
 import { PixChargeResponseDto } from '../../../../types/backend/payments';
 import { formatCurrency, formatDate } from '../../../../utils/helpers';
 
@@ -27,6 +27,9 @@ interface BookingSummaryCardProps {
   iconColor: string;
   successColor: string;
   headerPrimaryColor: string;
+  // NOVAS PROPRIEDADES: Endereço já formatado
+  formattedAddressLine1: string;
+  formattedAddressLine2: string;
 }
 
 export default function BookingSummaryCard({
@@ -39,44 +42,38 @@ export default function BookingSummaryCard({
   iconColor,
   successColor,
   headerPrimaryColor,
+  // NOVAS PROPRIEDADES: Desestruturadas aqui
+  formattedAddressLine1,
+  formattedAddressLine2,
 }: BookingSummaryCardProps) {
   // --- CORREÇÃO AQUI: DESESTRUTURAR AS PROPRIEDADES DO BOOKING ---
+  // Removido `scheduledDateTime` e adicionado `scheduledDate` e `scheduledTime`
   const {
     providerFullName,
     providerAvatarUrl,
     serviceName,
-    // REMOVIDO: scheduledTime, // scheduledTime não vem mais sozinho
-    scheduledDateTime, // ADICIONADO: Usar o novo campo combinado
-    address,
+    scheduledDate,
+    scheduledTime,
     totalPrice,
     id: bookingIdFromBooking,
     notes,
-    // Adicione outras propriedades de 'booking' que você usa diretamente aqui
   } = booking;
 
   // >>> LOG DE DEPURACAO AQUI <<<
-  // Alterado para logar scheduledDateTime
-  console.log("[BookingSummaryCard - DEBUG] scheduledDateTime recebido como prop:", scheduledDateTime);
-
+  console.log("[BookingSummaryCard - DEBUG] scheduledDate recebido como prop:", scheduledDate);
+  console.log("[BookingSummaryCard - DEBUG] scheduledTime recebido como prop:", scheduledTime);
 
   // --- CORREÇÃO AQUI: DECLARAR AS VARIÁVEIS FORMATADAS ---
-  // Passar scheduledDateTime para a função formatDate
-  const formattedBookingDate = formatDate(scheduledDateTime, { day: 'numeric', month: 'long', year: 'numeric' });
-  const formattedBookingTime = formatDate(scheduledDateTime, { hour: '2-digit', minute: '2-digit' });
+  // A função `formatDate` será chamada com a data e hora separadas.
+  const formattedBookingDate = formatDate(new Date(`${scheduledDate}T${scheduledTime}`), { day: 'numeric', month: 'long', year: 'numeric' });
+  const formattedBookingTime = formatDate(new Date(`${scheduledDate}T${scheduledTime}`), { hour: '2-digit', minute: '2-digit' });
 
   // >>> LOG DE DEPURACAO AQUI <<<
   console.log("[BookingSummaryCard - DEBUG] formattedBookingDate após formatDate:", formattedBookingDate);
   console.log("[BookingSummaryCard - DEBUG] formattedBookingTime após formatDate:", formattedBookingTime);
 
-
-  const formattedClientAddress = address ?
-    `${address.street}, ${address.number}` +
-    `${address.complement ? ` - ${address.complement}` : ''}` +
-    `, ${address.neighborhood}, ${address.city} - ${address.state}`
-    : 'Endereço não disponível';
-
   const formattedPaymentValue = formatCurrency(totalPrice);
-  const displayPaymentMethod = paymentMethod || 'PIX'; // Usa a prop 'paymentMethod' ou 'PIX' como fallback
+  const displayPaymentMethod = paymentMethod || 'PIX';
 
   const handleCopyPixQrCode = () => {
     if (pixChargeDetails?.brCode) {
@@ -124,14 +121,14 @@ export default function BookingSummaryCard({
             <View style={styles.circle} />
           </View>
 
+          {/* ATUALIZADO: Passando as novas props para o BookingDetailSection */}
           <BookingDetailSection
             serviceName={serviceName}
-            formattedClientAddress={formattedClientAddress}
+            formattedAddressLine1={formattedAddressLine1}
+            formattedAddressLine2={formattedAddressLine2}
             notes={notes}
             iconColor={iconColor}
           />
-
-          
 
           <DateTimeCards
             formattedBookingDate={formattedBookingDate}
@@ -151,9 +148,6 @@ export default function BookingSummaryCard({
               handleCopyPixQrCode={handleCopyPixQrCode}
             />
           )}
-          
-         
-          
         </View>
       </View>
     </Animated.ScrollView>

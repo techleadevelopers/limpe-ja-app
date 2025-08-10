@@ -1,15 +1,11 @@
-// src/app/(client)/explore/components/home/RecomendacaoCard.tsx
-
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useRef } from 'react';
 import { Animated, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { CLIENT_ROUTES } from '../../../../constants/routes';
 import { ProviderDisplayInfo } from '../../../../types/backend/providers';
-
-// 1. Importa a imagem
-const limpIcon = require('../../../../assets/images/limp-Photoroom.png');
 
 interface RecomendacaoCardProps {
     item: ProviderDisplayInfo;
@@ -23,7 +19,6 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
         return null;
     }
 
-    // Animação de escala ao tocar o card
     const scaleAnim = useRef(new Animated.Value(1)).current;
     const onPressIn = () => {
         Animated.spring(scaleAnim, {
@@ -42,7 +37,6 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
         }).start();
     };
 
-    // Função para renderizar as estrelas de avaliação
     const renderStars = (rating: number | undefined) => {
         const stars = [];
         const actualRating = rating ?? 0;
@@ -75,16 +69,12 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
         }
     };
 
-    // --- CORREÇÃO NA LÓGICA DA IMAGEM ---
-    // A imagem padrão deve ser um objeto `require` para ser corretamente processada pelo Metro Bundler
     const avatarSource = item.avatarUrl
         ? { uri: item.avatarUrl }
         : require('../../../../assets/images/default-avatar.png');
 
-    // --- CORREÇÃO NA LÓGICA DO PREÇO ---
     const averagePrice = item.providerServices && item.providerServices.length > 0
         ? item.providerServices.reduce((sum, service) => {
-            // Lógica para extrair o valor do preço de qualquer um dos campos possíveis
             let priceValue = 0;
             if (service.price && typeof service.price === 'object' && 'toNumber' in service.price) {
                 priceValue = (service.price as any).toNumber();
@@ -106,29 +96,24 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
                 pricePerSquareMeterValue = service.pricePerSquareMeter;
             }
             
-            // Retorna o primeiro valor de preço válido que encontrar
             return sum + (priceValue || pricePerRoomValue || pricePerSquareMeterValue);
         }, 0) / item.providerServices.length
         : 0;
     
-    // --- Lógica para exibir categorias (Tags) ---
     const categoriesToDisplay: string[] = [];
     if (item.providerServices && item.providerServices.length > 0) {
-        // CORREÇÃO: Acessa service.name em vez de serviceType
         if (item.providerServices[0].service?.name) {
             categoriesToDisplay.push(item.providerServices[0].service.name);
         }
     }
-    // Fallback para categorias se não houver serviços ou service.name
     if (categoriesToDisplay.length === 0) {
         if (item.bio?.toLowerCase().includes('comercial')) categoriesToDisplay.push('Comercial');
         if (item.bio?.toLowerCase().includes('escritórios')) categoriesToDisplay.push('Escritório');
-        // Adicione mais fallbacks genéricos se necessário
         if (categoriesToDisplay.length === 0) {
-            categoriesToDisplay.push('Limpeza Geral'); // Categoria padrão se nada for encontrado
+            categoriesToDisplay.push('Limpeza Geral');
         }
     }
-    const displayedCategories = categoriesToDisplay.slice(0, 2); // Limita a 2 categorias
+    const displayedCategories = categoriesToDisplay.slice(0, 2);
 
     return (
         <Animated.View style={[styles.animatedCardContainer, { transform: [{ scale: scaleAnim }] }]}>
@@ -139,12 +124,10 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
                 onPressOut={onPressOut}
                 activeOpacity={0.8}
             >
-                {/* Área da Imagem */}
                 <View style={styles.imageWrapper}>
                     <Image source={avatarSource} style={styles.cardImage} />
                 </View>
 
-                {/* Área de Conteúdo */}
                 <View style={styles.infoContainer}>
                     <Text style={styles.providerName} numberOfLines={1}>{item.fullName}</Text>
                     
@@ -152,7 +135,6 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
                         {item.bio || "Nenhuma descrição disponível."}
                     </Text>
 
-                    {/* Tags/Chips de Categoria */}
                     <View style={styles.categoryChipsContainer}>
                         {displayedCategories.map((category, index) => (
                             <View key={index} style={styles.categoryChip}>
@@ -161,7 +143,6 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
                         ))}
                     </View>
 
-                    {/* Preço e Avaliação */}
                     <View style={styles.priceAndRatingSection}>
                         <View>
                             <Text style={styles.priceLabel}>A partir de</Text>
@@ -172,13 +153,17 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
                             )}
                         </View>
                         
-                        {/* Avaliação em Estrelas e Contagem de Avaliações */}
                         <View style={styles.ratingSection}>
-                            {/* 2. Adiciona a imagem acima das estrelas */}
-                            <Image
-                                source={limpIcon}
-                                style={styles.limpIcon}
-                            />
+                            {/* Botão "+" decorativo */}
+                            <LinearGradient
+                                colors={['#67adfd95', '#5c93ec','#5c93ec36']}
+                                style={styles.plusButton}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                            >
+                                <Ionicons name="add" size={22} color="#fff" />
+                            </LinearGradient>
+
                             {renderStars(item.averageRating)}
                             {item.reviewCount !== undefined && (
                                 <Text style={styles.reviewsCountText}>
@@ -193,39 +178,35 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
     );
 };
 
-// --- ESTILOS DO COMPONENTE ---
 const styles = StyleSheet.create({
     animatedCardContainer: {
-        // Estilos para o container animado que encapsula o card
-        // REDUZIDO A LARGURA PARA 220
-        width: 220, // **MODIFICADO: Largura total do card, reduzida de 250 para 220**
-        marginRight: 15, // Espaçamento entre os chips
-        marginBottom: 15, // Espaçamento vertical entre as linhas de cards
-        borderRadius: 12, // Borda arredondada geral do card
-        overflow: 'visible', // Necessário para a sombra ser renderizada
-        backgroundColor: '#FFFFFF', // Fundo do card
+        width: 220,
+        marginRight: 15,
+        marginBottom: 5,
+        borderRadius: 12,
+        overflow: 'visible',
+        backgroundColor: '#FFFFFF',
         ...Platform.select({
             ios: {
                 shadowColor: '#000',
-                shadowOffset: { width: 0, height: 4 }, // Sombra mais para baixo
-                shadowOpacity: 0.1, // Sombra sutil
-                shadowRadius: 8, // Espalhamento da sombra
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.1,
+                shadowRadius: 8,
             },
             android: {
-                elevation: 5, // Elevação para Android
+                elevation: 5,
             },
         }),
     },
     cardContentWrapper: {
-        width: '100%', // Ocupa toda a largura do animatedCardContainer
+        width: '100%',
         borderRadius: 12,
-        overflow: 'hidden', // Importante para que a imagem respeite o borderRadius
- 
+        overflow: 'hidden',
     },
     imageWrapper: {
         width: '100%',
-        height: 150, // Altura da imagem, ajustado para a imagem de referência
-        backgroundColor: '#E0E0E0', // Fundo padrão para imagem não carregada
+        height: 150,
+        backgroundColor: '#E0E0E0',
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -234,98 +215,83 @@ const styles = StyleSheet.create({
         height: '100%',
         resizeMode: 'cover',
     },
-    likeButton: {
-        position: 'absolute',
-        top: 10,
-        right: 10,
-        backgroundColor: 'rgba(255,255,255,0.8)',
-        borderRadius: 15,
-        width: 30,
-        height: 30,
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: 1, // Para garantir que fique acima da imagem
-    },
     infoContainer: {
-        padding: 12, // Padding interno para o conteúdo textual
+        padding: 12,
     },
     providerName: {
-        fontSize: 18, // Fonte maior para o nome do provedor
+        fontSize: 18,
         fontWeight: 'bold',
-        color: '#2D3748', // Cor escura para o texto principal
+        color: '#2D3748',
         marginBottom: 4,
-        marginTop: 0, // Espaço acima do nome
     },
     serviceDescription: {
-        fontSize: 12, // Tamanho menor para a descrição/bio
-        color: '#6C757D', // Cinza médio para a descrição
+        fontSize: 12,
+        color: '#6C757D',
         marginBottom: 15,
-        marginTop: 0, // Espaço acima da descrição
     },
-    // --- ESTILOS PARA AS TAGS/CHIPS DE CATEGORIA ---
     categoryChipsContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        marginBottom: -48, // Espaço abaixo dos chips
+        marginBottom: -38,
     },
     categoryChip: {
-        backgroundColor: '#E6EEF9', // Fundo azul claro para o chip
-        borderRadius: 5, // Bordas levemente arredondadas
+        backgroundColor: '#E6EEF9',
+        borderRadius: 5,
         paddingHorizontal: 8,
         paddingVertical: 4,
-        marginRight: 6, // Espaçamento entre os chips
+        marginRight: 6,
         marginBottom: 4,
     },
     categoryChipText: {
-        fontSize: 10, // Texto pequeno para o chip
+        fontSize: 10,
         fontWeight: '500',
-        color: '#000000', // **MODIFICADO: Cor do texto do chip para preto**
+        color: '#000000',
     },
-    // --- SEÇÃO DE PREÇO E AVALIAÇÃO ---
     priceAndRatingSection: {
         flexDirection: 'row',
-        justifyContent: 'space-between', // Alinha preço à esquerda, avaliação à direita
-        alignItems: 'flex-end', // Alinha os itens pela base
-        marginTop: 8, // Espaço acima desta seção
+        justifyContent: 'space-between',
+        alignItems: 'flex-end',
+        marginTop: 8,
     },
     priceLabel: {
         fontSize: 12,
         color: '#6C757D',
-        marginBottom: 2, // Pequeno espaço entre label e valor
+        marginBottom: 2,
     },
     priceValue: {
-        fontSize: 18, // Tamanho grande para o valor
+        fontSize: 18,
         fontWeight: 'bold',
-        color: '#2D3748', // Cor escura para o preço
-    },
-    noPriceText: {
-        fontSize: 14,
-        color: '#888',
+        color: '#2D3748',
     },
     ratingSection: {
-        // Alinhamento para a imagem e as estrelas
-        flexDirection: 'column', // Adicionado para empilhar os itens verticalmente
-        alignItems: 'center',    // Centraliza os itens horizontalmente
+        flexDirection: 'column',
+        alignItems: 'center',
     },
-    // 3. Adiciona o estilo para a imagem limp.png
-    limpIcon: {
-        width: 76,
-        height: 106,
-        resizeMode: 'contain',
-        right: 5,
-        top: 4,
-        marginBottom: 0,
+    plusButton: {
+        width: 38,
+        height: 38,
+        left: 6,
+        top: 5,
+        borderRadius: 53,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 16,
+        shadowColor: '#007AFF',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+        elevation: 4,
     },
     ratingStarContainer: {
         flexDirection: 'row',
-        marginBottom: 2, // Espaço entre estrelas e texto de avaliações
+        marginBottom: 2,
     },
     ratingStarIcon: {
-        marginRight: 2, // Espaçamento entre as estrelas
+        marginRight: 2,
     },
     reviewsCountText: {
-        fontSize: 11, // Tamanho pequeno para o texto de avaliações
-        color: '#6C757D', // Cinza médio
+        fontSize: 11,
+        color: '#6C757D',
     },
 });
 

@@ -1,10 +1,9 @@
-// LimpeJaApp/app/(client)/schedule-service.tsx
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import * as Clipboard from 'expo-clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -16,11 +15,12 @@ import {
     Text,
     TouchableOpacity,
     View,
-    ColorValue // CORREÇÃO: Importar ColorValue
+    ColorValue,
+    TextInput
 } from 'react-native';
 
 // --- IMPORTAÇÕES DE SERVIÇOS E TIPAGENS DO SEU BACKEND REAL ---
-import { useAuth } from '../../../hooks/useAuth'; // Para obter dados do usuário logado
+import { useAuth } from '../../../hooks/useAuth';
 import { createBooking } from '../../../services/bookingService';
 import { getProviderAvailability, getProviderDetails } from '../../../services/providerService';
 
@@ -32,15 +32,17 @@ import {
     ProviderServiceOffering
 } from '../../../types/backend/providers';
 import { UserProfile } from '../../../types/backend/users';
-import { PricingType } from '../../../types/backend/services'; // Importar PricingType
-
-// Importar formatDate de utils/helpers
+import { PricingType } from '../../../types/backend/services';
+import { formatDate } from '../../../utils/helpers';
 
 // --- Importar COMPONENTES DE UI ---
 import AddressSection from '../../../components/client/booking/schedule/AddressSection';
 import CalendarHeader from '../../../components/client/booking/schedule/CalendarHeader';
 import ProviderBrief from '../../../components/client/booking/schedule/ProviderBrief';
 import TimeSlotsSection from '../../../components/client/booking/schedule/TimeSlotsSection';
+// Componente de UI para input dinâmico
+import ServiceDetailsInput from '../../../components/client/booking/schedule/ServiceDetailsInput';
+
 
 // --- Constantes para a UI ---
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -54,9 +56,7 @@ const availabilityCache = new Map<string, { available: ProviderAvailability[], o
 
 export default function ScheduleServiceScreen() {
     const router = useRouter();
-    const { user } = useAuth(); // Obtém os dados do usuário logado
-
-    // Adicionado um cast para UserProfile para garantir que o tipo do user esteja correto
+    const { user } = useAuth();
     const typedUser = user as UserProfile | null;
 
     const { providerId: paramProviderId, serviceId: paramServiceId } = useLocalSearchParams<{ providerId?: string; serviceId?: string }>();
@@ -72,9 +72,13 @@ export default function ScheduleServiceScreen() {
         neighborhood: '',
         city: '',
         state: '',
-        cep: ''
+        cep: '',
+        latitude: 0,
+        longitude: 0,
     });
     const [notes, setNotes] = useState<string>('');
+    const [durationInMinutes, setDurationInMinutes] = useState<number | null>(null);
+    const [squareMeters, setSquareMeters] = useState<number | null>(null);
 
     const [isLoading, setIsLoading] = useState(true);
     const [isBooking, setIsBooking] = useState(false);
@@ -90,7 +94,6 @@ export default function ScheduleServiceScreen() {
 
     const selectionAnim = useRef(new Animated.Value(1)).current;
     
-    // NOVAS ANIMAÇÕES PARA RIQUEZA VISUAL
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideUpAnim = useRef(new Animated.Value(50)).current;
     const scaleAnim = useRef(new Animated.Value(0.95)).current;
@@ -100,9 +103,43 @@ export default function ScheduleServiceScreen() {
     const headerGlowAnim = useRef(new Animated.Value(0)).current;
     const calendarBreatheAnim = useRef(new Animated.Value(1)).current;
 
-    // INICIALIZAR ANIMAÇÕES MODERNAS
+    // HOOKS MOVIDOS PARA O TOPO DO COMPONENTE
+    const finalPrice = useMemo(() => {
+        if (!selectedProviderService?.pricingType || !selectedProviderService?.price) {
+            return 0;
+        }
+
+        if (selectedProviderService.pricingType === PricingType.HOURLY && durationInMinutes) {
+            return (durationInMinutes / 60) * selectedProviderService.price;
+        }
+
+        if (selectedProviderService.pricingType === PricingType.BY_SIZE && squareMeters) {
+            return squareMeters * selectedProviderService.price;
+        }
+        
+        return selectedProviderService.price;
+
+    }, [selectedProviderService, durationInMinutes, squareMeters]);
+    
+    const addressToDisplay = useMemo(() => {
+        const userAddress = typedUser?.clientDetails?.address || typedUser?.providerDetails?.address;
+        if (userAddress) {
+            return {
+                street: userAddress.street || '',
+                number: userAddress.number || '',
+                complement: userAddress.complement || null,
+                neighborhood: userAddress.neighborhood || '',
+                city: userAddress.city || '',
+                state: userAddress.state || '',
+                cep: userAddress.cep || '',
+                latitude: userAddress.latitude,
+                longitude: userAddress.longitude,
+            };
+        }
+        return null;
+    }, [typedUser]);
+
     useEffect(() => {
-        // Animação de entrada suave
         Animated.parallel([
             Animated.timing(fadeAnim, {
                 toValue: 1,
@@ -126,7 +163,6 @@ export default function ScheduleServiceScreen() {
             }),
         ]).start();
 
-        // Animação de pulso contínua para elementos ativos
         const startPulse = () => {
             Animated.loop(
                 Animated.sequence([
@@ -146,7 +182,6 @@ export default function ScheduleServiceScreen() {
             ).start();
         };
 
-        // Animação de rotação suave para elementos de fundo
         const startRotation = () => {
             Animated.loop(
                 Animated.timing(rotateAnim, {
@@ -158,7 +193,6 @@ export default function ScheduleServiceScreen() {
             ).start();
         };
 
-        // Animação flutuante para elementos de fundo
         const startFloating = () => {
             Animated.loop(
                 Animated.sequence([
@@ -178,7 +212,6 @@ export default function ScheduleServiceScreen() {
             ).start();
         };
 
-        // Animação de brilho do header
         const startHeaderGlow = () => {
             Animated.loop(
                 Animated.sequence([
@@ -198,7 +231,6 @@ export default function ScheduleServiceScreen() {
             ).start();
         };
 
-        // Respiração suave do calendário
         const startCalendarBreathe = () => {
             Animated.loop(
                 Animated.sequence([
@@ -226,7 +258,6 @@ export default function ScheduleServiceScreen() {
     }, []);
 
     const handlePrevMonth = useCallback(() => {
-        // Animação de feedback ao navegar
         Animated.sequence([
             Animated.timing(scaleAnim, { toValue: 0.98, duration: 100, useNativeDriver: true }),
             Animated.spring(scaleAnim, { toValue: 1, friction: 6, useNativeDriver: true }),
@@ -240,7 +271,6 @@ export default function ScheduleServiceScreen() {
     }, [provider?.id]);
 
     const handleNextMonth = useCallback(() => {
-        // Animação de feedback ao navegar
         Animated.sequence([
             Animated.timing(scaleAnim, { toValue: 0.98, duration: 100, useNativeDriver: true }),
             Animated.spring(scaleAnim, { toValue: 1, friction: 6, useNativeDriver: true }),
@@ -261,19 +291,18 @@ export default function ScheduleServiceScreen() {
             return;
         }
 
-        // Animação rica para seleção
         Animated.sequence([
-            Animated.timing(selectionAnim, { 
-                toValue: 1.15, 
-                duration: 150, 
-                easing: Easing.out(Easing.back(2)), 
-                useNativeDriver: true 
+            Animated.timing(selectionAnim, {
+                toValue: 1.15,
+                duration: 150,
+                easing: Easing.out(Easing.back(2)),
+                useNativeDriver: true
             }),
-            Animated.spring(selectionAnim, { 
-                toValue: 1, 
-                friction: 4, 
+            Animated.spring(selectionAnim, {
+                toValue: 1,
+                friction: 4,
                 tension: 100,
-                useNativeDriver: true 
+                useNativeDriver: true
             }),
         ]).start();
 
@@ -283,22 +312,21 @@ export default function ScheduleServiceScreen() {
     const handleTimeSelect = useCallback((time: string) => {
         const selectedSlot = displaySlotsInfo.find(slot => slot.time === time);
         if (selectedSlot?.isAvailable) {
-            // Animação de feedback mais elaborada
             Animated.sequence([
-                Animated.timing(selectionAnim, { 
-                    toValue: 1.08, 
-                    duration: 120, 
-                    easing: Easing.out(Easing.ease), 
-                    useNativeDriver: true 
+                Animated.timing(selectionAnim, {
+                    toValue: 1.08,
+                    duration: 120,
+                    easing: Easing.out(Easing.ease),
+                    useNativeDriver: true
                 }),
-                Animated.spring(selectionAnim, { 
-                    toValue: 1, 
-                    friction: 5, 
+                Animated.spring(selectionAnim, {
+                    toValue: 1,
+                    friction: 5,
                     tension: 80,
-                    useNativeDriver: true 
+                    useNativeDriver: true
                 }),
             ]).start();
-            
+
             setSelectedTime(time);
         } else {
             Alert.alert("Horário Indisponível", "Este horário já está agendado ou não disponível. Por favor, selecione outro.");
@@ -312,56 +340,57 @@ export default function ScheduleServiceScreen() {
     }, []);
 
     const handleConfirmBooking = useCallback(async () => {
-        // Validação dos campos necessários
-        if (
-            !typedUser?.id || // Verifica se o usuário está logado
-            !provider?.id || // Verifica se os dados do provedor foram carregados
-            !selectedProviderService?.id || // Verifica se um serviço do provedor foi selecionado
-            !selectedDate || // Verifica se uma data foi selecionada
-            !selectedTime || // Verifica se um horário foi selecionado
-            !address.street || !address.number || !address.neighborhood || !address.city || !address.state // Verifica campos essenciais do endereço
-        ) {
+        if (!typedUser?.id || !provider?.id || !selectedProviderService?.id || !selectedDate || !selectedTime ||
+            !address.street || !address.number || !address.neighborhood || !address.city || !address.state) {
             Alert.alert("Erro", "Por favor, preencha todos os campos necessários para o agendamento, incluindo o endereço completo e selecione um horário.");
             return;
         }
 
-        setIsBooking(true); // Ativa o estado de carregamento para o botão
+        let requestedDurationMinutes = 0;
+        let requestedSquareMeters = 0;
+        let calculatedPrice = selectedProviderService.price;
+        
+        // Validação adicional para campos dinâmicos
+        if (selectedProviderService.pricingType === PricingType.HOURLY && !durationInMinutes) {
+            Alert.alert("Erro", "Por favor, insira a duração do serviço em minutos.");
+            return;
+        }
+        if (selectedProviderService.pricingType === PricingType.BY_SIZE && !squareMeters) {
+            Alert.alert("Erro", "Por favor, insira a área do serviço em metros quadrados.");
+            return;
+        }
+
+        setIsBooking(true);
 
         try {
-            // Monta o DTO para a criação do agendamento
+            if (selectedProviderService.pricingType === PricingType.HOURLY) {
+                requestedDurationMinutes = durationInMinutes!;
+                calculatedPrice = (durationInMinutes! / 60) * selectedProviderService.price;
+            } else if (selectedProviderService.pricingType === PricingType.BY_SIZE) {
+                requestedSquareMeters = squareMeters!;
+                calculatedPrice = squareMeters! * selectedProviderService.price;
+            }
+
             const bookingData: CreateBookingDto = {
                 providerId: provider.id,
                 providerServiceId: selectedProviderService.id,
-                scheduledDate: selectedDate.toISOString().split('T')[0], // Formata a data para YYYY-MM-DD
+                scheduledDate: selectedDate.toISOString().split('T')[0],
                 scheduledTime: selectedTime,
-                totalPrice: selectedProviderService.price, // Preço base do serviço
+                totalPrice: calculatedPrice,
                 notes: notes,
                 address: address,
+                ...(selectedProviderService.pricingType === PricingType.HOURLY && { requestedDurationMinutes }),
+                ...(selectedProviderService.pricingType === PricingType.BY_SIZE && { requestedSquareMeters }),
             };
 
-            // CORREÇÃO: Adicionar campos de precificação dinâmica ao DTO
-            if (selectedProviderService.pricingType === PricingType.HOURLY) {
-                // Assumir uma duração padrão ou pedir ao usuário
-                // Por enquanto, vamos usar um valor placeholder, você deve ter uma UI para isso
-                bookingData.requestedDurationMinutes = 120; // Exemplo: 2 horas
-            } else if (selectedProviderService.pricingType === PricingType.BY_SIZE) {
-                // Assumir valores padrão ou pedir ao usuário
-                // Por enquanto, vamos usar valores placeholder, você deve ter uma UI para isso
-                bookingData.requestedSquareMeters = 50; // Exemplo: 50 m²
-                // bookingData.requestedRoomCount = 3; // Exemplo: 3 cômodos
-            }
-
-
-            // Chama o serviço real para criar o agendamento
             const newBooking: BookingDetails = await createBooking(bookingData);
 
-            // Navega para a tela de sucesso, passando os detalhes do agendamento
             router.replace({
-                pathname: '/(client)/bookings/success', // Caminho para a tela de sucesso
+                pathname: '/(client)/bookings/success',
                 params: {
                     bookingId: newBooking.id,
                     totalPrice: newBooking.totalPrice.toString(),
-                    paymentMethod: 'PIX', // Define o método de pagamento
+                    paymentMethod: 'PIX', // Pode ser dinâmico no futuro
                 }
             } as any);
 
@@ -369,87 +398,84 @@ export default function ScheduleServiceScreen() {
             console.error("Erro ao agendar serviço:", error.response?.data || error.message);
             Alert.alert("Erro", error.response?.data?.message || "Não foi possível agendar o serviço.");
         } finally {
-            setIsBooking(false); // Desativa o estado de carregamento
+            setIsBooking(false);
         }
-    }, [typedUser, provider, selectedDate, selectedTime, address, selectedProviderService, notes, router]);
+    }, [typedUser, provider, selectedDate, selectedTime, address, selectedProviderService, notes, router, durationInMinutes, squareMeters]);
 
-    // Função para pré-carregar a disponibilidade de horários para os meses vizinhos
     const prefetchAvailability = useCallback(async (provId: string | undefined, date: Date) => {
-        if (!provId) return; // Sai se o ID do provedor não estiver disponível
+        if (!provId) return;
 
-        const dateString = date.toISOString().split('T')[0]; // Formata a data para YYYY-MM-DD
-        const cacheKey = `${provId}-${dateString}`; // Cria uma chave única para o cache
+        const dateString = date.toISOString().split('T')[0];
+        const cacheKey = `${provId}-${dateString}`;
 
-        // Verifica se a disponibilidade para esta data já está no cache
         if (availabilityCache.has(cacheKey)) {
-            return; // Retorna se os dados já foram cacheados
+            return;
         }
 
         try {
-            // Chama o serviço para obter a disponibilidade do provedor
             const response = await getProviderAvailability(provId, dateString);
-            // Certifique-se de que a resposta do backend corresponde ao formato esperado { available: ProviderAvailability[], occupiedTimes: string[] }
-            availabilityCache.set(cacheKey, response); // Armazena a resposta no cache
+            availabilityCache.set(cacheKey, response);
         } catch (error) {
             console.error(`[Prefetch] Erro ao pré-carregar disponibilidade para ${dateString}:`, error);
         }
     }, []);
 
-    // Efeito para carregar os dados iniciais da tela (provedor, serviço, endereço do usuário)
     useEffect(() => {
         const loadInitialData = async () => {
-            setIsLoading(true); // Inicia o estado de carregamento
+            setIsLoading(true);
 
-            // Validações iniciais para garantir que os parâmetros necessários estão presentes
-            if (!paramProviderId || !paramServiceId || !typedUser?.id) { // Usar typedUser aqui
+            if (!paramProviderId || !paramServiceId || !typedUser?.id) {
                 Alert.alert("Erro de Navegação", "Dados essenciais ausentes. Tente novamente.");
-                router.replace('/explore'); // Retorna para a tela de exploração se os dados estiverem incompletos
+                router.replace('/explore');
                 setIsLoading(false);
                 return;
             }
 
             try {
-                // Busca os detalhes do provedor
                 const fetchedProvider = await getProviderDetails(paramProviderId);
                 setProvider(fetchedProvider);
 
-                // Busca o serviço específico selecionado pelo usuário
                 const foundService = fetchedProvider.providerServices?.find(
                     ps => ps.id === paramServiceId && ps.service && ps.service.id && ps.service.name
                 );
 
-                // Verifica se o serviço foi encontrado
                 if (!foundService) {
                     Alert.alert("Erro", "O serviço selecionado não está disponível para este provedor.");
-                    router.replace('/explore'); // Retorna para a tela de exploração
+                    router.replace('/explore');
                     setIsLoading(false);
                     return;
                 }
-                setSelectedProviderService(foundService); // Define o serviço selecionado
+                setSelectedProviderService(foundService);
+                
+                // Inicializa os valores com base no tipo de preço
+                if(foundService.pricingType === PricingType.HOURLY) {
+                    setDurationInMinutes(120); // Valor padrão
+                } else if(foundService.pricingType === PricingType.BY_SIZE) {
+                    setSquareMeters(50); // Valor padrão
+                }
 
-                // Preenche o endereço do cliente se ele estiver disponível no perfil do usuário
-                if (typedUser?.address) { // Usar typedUser aqui
+                const userAddress = typedUser?.clientDetails?.address || typedUser?.providerDetails?.address;
+                if (userAddress) {
                     setAddress({
-                        street: typedUser.address.street || '',
-                        number: typedUser.address.number || '',
-                        complement: typedUser.address.complement || null,
-                        neighborhood: typedUser.address.neighborhood || '',
-                        city: typedUser.address.city || '',
-                        state: typedUser.address.state || '',
-                        cep: typedUser.address.cep || ''
+                        street: userAddress.street || '',
+                        number: userAddress.number || '',
+                        complement: userAddress.complement || null,
+                        neighborhood: userAddress.neighborhood || '',
+                        city: userAddress.city || '',
+                        state: userAddress.state || '',
+                        cep: userAddress.cep || '',
+                        latitude: userAddress.latitude,
+                        longitude: userAddress.longitude
                     });
                 } else {
-                    // Alerta o usuário se o endereço não estiver completo
                     Alert.alert(
                         "Endereço Necessário",
                         "Seu endereço não está completo. Por favor, preencha para prosseguir."
                     );
                 }
 
-                // Define a data selecionada como a data atual inicialmente
                 setSelectedDate(new Date());
 
-                // Pré-carrega a disponibilidade para o mês atual e os meses adjacentes
                 const today = new Date();
                 const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
                 const prevMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
@@ -460,110 +486,96 @@ export default function ScheduleServiceScreen() {
             } catch (error: any) {
                 console.error("Erro ao carregar dados iniciais:", error.response?.data || error.message);
                 Alert.alert("Erro", error.response?.data?.message || "Não foi possível carregar os dados para agendamento.");
-                router.replace('/explore'); // Retorna para a tela de exploração em caso de erro
+                router.replace('/explore');
             } finally {
-                setIsLoading(false); // Finaliza o estado de carregamento
+                setIsLoading(false);
             }
         };
-        loadInitialData(); // Chama a função de carregamento de dados
-    }, [paramProviderId, typedUser?.id, typedUser?.address, paramServiceId, router, prefetchAvailability]); // Usar typedUser aqui
+        loadInitialData();
+    }, [paramProviderId, typedUser?.id, paramServiceId, router, prefetchAvailability]);
 
-    // Animação para o brilho do calendário (shine)
     const animateShine = useCallback(() => {
-        shineAnim.setValue(-SCREEN_WIDTH * 0.3); // Posição inicial fora da tela
+        shineAnim.setValue(-SCREEN_WIDTH * 0.3);
         Animated.timing(shineAnim, {
-            toValue: SCREEN_WIDTH + (SCREEN_WIDTH * 0.3), // Move para fora da tela no lado oposto
+            toValue: SCREEN_WIDTH + (SCREEN_WIDTH * 0.3),
             duration: 3000,
             easing: Easing.linear,
             useNativeDriver: true,
-        }).start(() => animateShine()); // Loop contínuo
+        }).start(() => animateShine());
     }, [shineAnim]);
 
     useEffect(() => {
-        animateShine(); // Inicia a animação do brilho quando o componente monta
+        animateShine();
     }, [animateShine]);
 
-    // Função para gerar os dias do calendário para o mês exibido
     const generateCalendarDays = useCallback((dateInMonth: Date) => {
         const year = dateInMonth.getFullYear();
         const month = dateInMonth.getMonth();
         const firstDayOfMonth = new Date(year, month, 1);
         const lastDayOfMonth = new Date(year, month + 1, 0);
         const daysInMonth = lastDayOfMonth.getDate();
-        const startDayOfWeek = firstDayOfMonth.getDay(); // 0 para Domingo, 1 para Segunda, etc.
+        const startDayOfWeek = firstDayOfMonth.getDay();
 
         const days: Array<{ day: number, month: 'current' | 'prev' | 'next', dateObj: Date }> = [];
-        const prevMonthLastDay = new Date(year, month, 0).getDate(); // Último dia do mês anterior
+        const prevMonthLastDay = new Date(year, month, 0).getDate();
 
-        // Adiciona os dias do mês anterior que caem no início da semana
         for (let i = 0; i < startDayOfWeek; i++) {
             const day = prevMonthLastDay - startDayOfWeek + 1 + i;
             days.push({ day, month: 'prev', dateObj: new Date(year, month - 1, day) });
         }
-        // Adiciona os dias do mês atual
         for (let i = 1; i <= daysInMonth; i++) {
             days.push({ day: i, month: 'current', dateObj: new Date(year, month, i) });
         }
-        // Calcula o total de células necessárias (até 42 para cobrir todos os casos)
         const totalCells = days.length > 35 ? 42 : 35;
         const remainingCells = totalCells - days.length;
-        // Adiciona os dias do próximo mês para preencher o calendário
         for (let i = 1; i <= remainingCells; i++) {
             days.push({ day: i, month: 'next', dateObj: new Date(year, month + 1, i) });
         }
-        setCalendarDays(days); // Atualiza o estado com os dias calculados
+        setCalendarDays(days);
     }, []);
 
-    // Efeito para gerar os dias do calendário quando o mês exibido muda
     useEffect(() => {
         generateCalendarDays(currentDisplayMonth);
     }, [currentDisplayMonth, generateCalendarDays]);
 
-    // Efeito para buscar e processar os slots de horário para a data selecionada
     useEffect(() => {
         const fetchAndProcessSlotsForDate = async () => {
-            // Só executa se tivermos os dados necessários
             if (!provider?.id || !selectedDate) {
-                setDisplaySlotsInfo([]); // Limpa os slots se os dados não estiverem prontos
-                setSelectedTime(null); // Limpa o horário selecionado
+                setDisplaySlotsInfo([]);
+                setSelectedTime(null);
                 return;
             }
 
-            setIsFetchingSlots(true); // Ativa o indicador de carregamento para os slots
-            const dateString = selectedDate.toISOString().split('T')[0]; // Pega a data no formato YYYY-MM-DD
-            const cacheKey = `${provider.id}-${dateString}`; // Chave para o cache
+            setIsFetchingSlots(true);
+            const dateString = selectedDate.toISOString().split('T')[0];
+            const cacheKey = `${provider.id}-${dateString}`;
 
             let backendResponse: { available: ProviderAvailability[], occupiedTimes: string[] } | undefined;
             if (availabilityCache.has(cacheKey)) {
-                // Usa dados do cache se disponíveis
                 backendResponse = availabilityCache.get(cacheKey);
             } else {
                 try {
-                    // Chama o serviço para obter a disponibilidade do provedor para a data selecionada
                     backendResponse = await getProviderAvailability(provider.id, dateString);
-                    availabilityCache.set(cacheKey, backendResponse); // Armazena no cache
+                    availabilityCache.set(cacheKey, backendResponse);
                 } catch (err: any) {
                     console.error("Erro ao carregar horários para data:", err.response?.data || err.message);
                     Alert.alert("Erro", err.response?.data?.message || "Não foi possível carregar os horários disponíveis.");
-                    setDisplaySlotsInfo([]); // Limpa os slots em caso de erro
+                    setDisplaySlotsInfo([]);
                     setIsFetchingSlots(false);
                     return;
                 }
             }
 
-            // Processa a resposta do backend para exibir os slots
             const providerConfiguredSlots: ProviderAvailability[] = backendResponse?.available || [];
             const occupiedTimesFromBackend: string[] = backendResponse?.occupiedTimes || [];
-            const dayOfWeekSelected = selectedDate.getDay(); // Dia da semana da data selecionada (0=Domingo)
+            const dayOfWeekSelected = selectedDate.getDay();
 
-            // Cria um Set com os horários configurados pelo provedor para o dia da semana selecionado
             const configuredStartTimesForSelectedDay = new Set(
                 providerConfiguredSlots
                     .filter(configSlot => configSlot.dayOfWeek === dayOfWeekSelected)
                     .map(configSlot => configSlot.startTime)
             );
 
-            // Define o intervalo de horários a serem exibidos (ex: 8h às 20h, a cada 30 minutos)
             const allDisplayableTimes: string[] = [];
             const startHour = 8;
             const endHour = 20;
@@ -574,30 +586,27 @@ export default function ScheduleServiceScreen() {
                 }
             }
 
-            // Mapeia os horários para o formato de exibição, verificando disponibilidade
             const finalDisplaySlots: Array<{ time: string; isAvailable: boolean }> = allDisplayableTimes.map(time => {
                 const [hours, minutes] = time.split(':').map(Number);
-                const slotDateTime = new Date(selectedDate); // Cria um objeto Date com a data selecionada
-                slotDateTime.setHours(hours, minutes, 0, 0); // Define o horário do slot
+                const slotDateTime = new Date(selectedDate);
+                slotDateTime.setHours(hours, minutes, 0, 0);
 
-                const isPast = slotDateTime.getTime() < new Date().getTime(); // Verifica se o horário já passou
-                const isConfiguredByProvider = configuredStartTimesForSelectedDay.has(time); // Verifica se o provedor configurou este horário
-                const isSlotOccupied = occupiedTimesFromBackend.includes(time); // Verifica se o horário está ocupado
+                const isPast = slotDateTime.getTime() < new Date().getTime();
+                const isConfiguredByProvider = configuredStartTimesForSelectedDay.has(time);
+                const isSlotOccupied = occupiedTimesFromBackend.includes(time);
 
-                // O slot está disponível se foi configurado pelo provedor, não está ocupado e não é um horário passado
                 return {
                     time: time,
                     isAvailable: isConfiguredByProvider && !isSlotOccupied && !isPast,
                 };
             });
 
-            setDisplaySlotsInfo(finalDisplaySlots); // Atualiza o estado com os slots de horário
-            setIsFetchingSlots(false); // Finaliza o carregamento dos slots
+            setDisplaySlotsInfo(finalDisplaySlots);
+            setIsFetchingSlots(false);
         };
-        fetchAndProcessSlotsForDate(); // Executa a função de busca e processamento
-    }, [selectedDate, provider?.id]); // Dependências do efeito: data selecionada e ID do provedor
+        fetchAndProcessSlotsForDate();
+    }, [selectedDate, provider?.id]);
 
-    // Tela de carregamento inicial
     if (isLoading) {
         return (
             <View style={styles.centeredFeedback}>
@@ -608,40 +617,39 @@ export default function ScheduleServiceScreen() {
         );
     }
 
-    // Verifica se o botão de confirmação deve estar desabilitado
     const isButtonDisabled = !selectedTime || !selectedProviderService || isBooking ||
-        !address.street || !address.number || !address.neighborhood || !address.city || !address.state;
+        !address.street || !address.number || !address.neighborhood || !address.city || !address.state ||
+        (selectedProviderService?.pricingType === PricingType.HOURLY && !durationInMinutes) ||
+        (selectedProviderService?.pricingType === PricingType.BY_SIZE && !squareMeters);
 
-    // Gradientes modernos para elementos visuais
     const gradientColors = [
         'rgba(173, 216, 230, 0.15)',
         'rgba(135, 206, 250, 0.25)',
         'rgba(100, 149, 237, 0.35)',
         'rgba(65, 153, 225, 0.25)',
-    ] as const; // CORREÇÃO: Adicionado 'as const'
+    ] as const;
 
     const backgroundGradientColors = [
         'rgba(248, 250, 252, 1)',
         'rgba(241, 245, 249, 1)',
         'rgba(248, 250, 252, 0.95)',
-    ] as const; // CORREÇÃO: Adicionado 'as const'
+    ] as const;
 
     return (
         <View style={styles.screenContainer}>
             <Stack.Screen options={{ headerShown: false }} />
 
-            {/* Elementos de fundo animados para riqueza visual */}
             <Animated.View style={[
                 styles.backgroundDecoration,
                 {
                     transform: [
-                        { 
+                        {
                             translateY: backgroundFloatAnim.interpolate({
                                 inputRange: [0, 1],
                                 outputRange: [-20, 20]
                             })
                         },
-                        { 
+                        {
                             rotate: rotateAnim.interpolate({
                                 inputRange: [0, 1],
                                 outputRange: ['0deg', '360deg']
@@ -660,7 +668,7 @@ export default function ScheduleServiceScreen() {
                 styles.backgroundDecoration2,
                 {
                     transform: [
-                        { 
+                        {
                             translateX: backgroundFloatAnim.interpolate({
                                 inputRange: [0, 1],
                                 outputRange: [10, -10]
@@ -676,7 +684,6 @@ export default function ScheduleServiceScreen() {
                 />
             </Animated.View>
 
-            {/* Header personalizado com gradiente e animação */}
             <Animated.View style={[
                 { paddingTop: HEADER_HEIGHT_ADJUST },
                 {
@@ -684,20 +691,18 @@ export default function ScheduleServiceScreen() {
                     transform: [{ translateY: slideUpAnim }]
                 }
             ]}>
-                {/* NOVO HEADER SUPERIOR */}
+                <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                        <Ionicons name="arrow-back" size={24} color="#435ee9ff" />
+                    </TouchableOpacity>
                 <LinearGradient
                     colors={['#4285F4', '#2A72E7']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                     style={styles.topHeaderGradient}
                 >
-                    <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-                        <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-                    </TouchableOpacity>
+                    
                     <Text style={styles.headerTitle}>Agendar</Text>
                 </LinearGradient>
-                {/* FIM DO NOVO HEADER SUPERIOR */}
-
                 <LinearGradient
                     colors={['rgba(255, 255, 255, 0.95)', 'rgba(255, 255, 255, 0.85)']}
                     style={styles.headerGradient}
@@ -707,15 +712,14 @@ export default function ScheduleServiceScreen() {
                             currentDisplayMonth={currentDisplayMonth}
                             onPrevMonth={handlePrevMonth}
                             onNextMonth={handleNextMonth}
-                            routerBack={() => router.back()} // Botão de voltar no header
+                            routerBack={() => router.back()}
                             MONTH_NAMES_PT={MONTH_NAMES_PT}
                         />
                     </BlurView>
                 </LinearGradient>
             </Animated.View>
 
-            {/* ScrollView principal com os conteúdos da tela */}
-            <Animated.ScrollView 
+            <Animated.ScrollView
                 contentContainerStyle={styles.scrollContentContainer}
                 style={{
                     opacity: fadeAnim,
@@ -723,7 +727,6 @@ export default function ScheduleServiceScreen() {
                 }}
                 showsVerticalScrollIndicator={false}
             >
-                {/* Seção do Provedor */}
                 <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
                     <ProviderBrief
                         provider={provider}
@@ -732,25 +735,23 @@ export default function ScheduleServiceScreen() {
                     />
                 </Animated.View>
 
-                {/* Seção do Endereço */}
-                <Animated.View style={{ 
+                <Animated.View style={{
                     transform: [{ scale: scaleAnim }],
-                    opacity: fadeAnim 
+                    opacity: fadeAnim
                 }}>
                     <AddressSection
                         address={address}
                         setAddress={setAddress}
-                        shineAnim={shineAnim} // Passa a animação para o componente de endereço
+                        shineAnim={shineAnim}
                         isLoading={isLoading}
-                        isInputMode={!typedUser?.address?.street || !typedUser?.address?.number || !typedUser?.address?.neighborhood || !typedUser?.address?.city || !typedUser?.address?.state} // Usar typedUser aqui
+                        isInputMode={!address.street || !address.number || !address.neighborhood || !address.city || !address.state}
                     />
                 </Animated.View>
 
-                {/* Calendário com visual ainda mais rico */}
                 <Animated.View style={{
                     transform: [
-                        { scale: calendarBreatheAnim }, // Animação de respiração do calendário
-                        { scale: scaleAnim } // Animação de escala geral
+                        { scale: calendarBreatheAnim },
+                        { scale: scaleAnim }
                     ]
                 }}>
                     <LinearGradient
@@ -761,64 +762,60 @@ export default function ScheduleServiceScreen() {
                     >
                         <BlurView intensity={5} tint="light" style={styles.calendarBlur}>
                             <View style={styles.calendarInnerContainer}>
-                                {/* Nomes dos dias da semana */}
                                 <View style={styles.dayNamesRow}>
                                     {DAY_NAMES_PT.map((dayName, index) => (
-                                        <Animated.Text 
-                                            key={dayName} 
+                                        <Animated.Text
+                                            key={dayName}
                                             style={[
                                                 styles.dayNameText,
                                                 {
-                                                    opacity: fadeAnim, // Animação de fade
-                                                    transform: [{ // Animação de slide sutil para os nomes dos dias
+                                                    opacity: fadeAnim,
+                                                    transform: [{
                                                         translateY: slideUpAnim.interpolate({
                                                             inputRange: [0, 50],
-                                                            outputRange: [0, index * 5] // Efeito cascata
+                                                            outputRange: [0, index * 5]
                                                         })
                                                     }]
                                                 }
                                             ]}
                                         >
-                                            {dayName.slice(0, 3)} {/* Exibe apenas as 3 primeiras letras */}
+                                            {dayName.slice(0, 3)}
                                         </Animated.Text>
                                     ))}
                                 </View>
-                                {/* Grade de dias do calendário */}
                                 <View style={styles.calendarGrid}>
                                     {calendarDays.map((dayInfo, index) => {
                                         const isSelected = selectedDate.toDateString() === dayInfo.dateObj.toDateString() && dayInfo.month === 'current';
-                                        const isPast = dayInfo.dateObj < new Date(new Date().setHours(0, 0, 0, 0)) && dayInfo.dateObj.toDateString() !== new Date().toDateString(); // Verifica se é um dia passado (mas não o dia atual)
-                                        const isWeekend = dayInfo.dateObj.getDay() === 0 || dayInfo.dateObj.getDay() === 6; // Verifica se é fim de semana
+                                        const isPast = dayInfo.dateObj < new Date(new Date().setHours(0, 0, 0, 0)) && dayInfo.dateObj.toDateString() !== new Date().toDateString();
+                                        const isWeekend = dayInfo.dateObj.getDay() === 0 || dayInfo.dateObj.getDay() === 6;
 
                                         return (
                                             <TouchableOpacity
                                                 key={index}
                                                 style={[
                                                     styles.dayCell,
-                                                    isSelected && styles.dayCellSelected, // Estilo para dia selecionado
-                                                    { 
-                                                        transform: [{ 
-                                                            scale: isSelected ? selectionAnim : 1 // Aplica animação de escala ao dia selecionado
-                                                        }] 
+                                                    isSelected && styles.dayCellSelected,
+                                                    {
+                                                        transform: [{
+                                                            scale: isSelected ? selectionAnim : 1
+                                                        }]
                                                     }
                                                 ]}
-                                                onPress={() => dayInfo.month === 'current' && handleDaySelect(dayInfo.dateObj)} // Apenas permite selecionar dias do mês atual
-                                                disabled={dayInfo.month !== 'current' || isPast} // Desabilita dias de meses anteriores/futuros ou dias passados
+                                                onPress={() => dayInfo.month === 'current' && handleDaySelect(dayInfo.dateObj)}
+                                                disabled={dayInfo.month !== 'current' || isPast}
                                             >
-                                                {/* Gradiente para o dia selecionado */}
                                                 {isSelected && (
                                                     <LinearGradient
                                                         colors={['#4285F4', '#2A72E7']}
                                                         style={styles.selectedDayGradient}
                                                     />
                                                 )}
-                                                {/* Texto do dia */}
                                                 <Text style={[
                                                     styles.dayText,
-                                                    dayInfo.month !== 'current' && styles.dayTextNotInMonth, // Estilo para dias fora do mês
-                                                    isSelected && styles.dayTextSelected, // Estilo para dia selecionado
-                                                    isPast && dayInfo.month === 'current' && styles.dayTextPast, // Estilo para dias passados
-                                                    !isSelected && !isPast && dayInfo.month === 'current' && (isWeekend ? styles.dayTextCurrentWeekend : styles.dayTextCurrentWeekday), // Estilo para dias atuais (weekday/weekend)
+                                                    dayInfo.month !== 'current' && styles.dayTextNotInMonth,
+                                                    isSelected && styles.dayTextSelected,
+                                                    isPast && dayInfo.month === 'current' && styles.dayTextPast,
+                                                    !isSelected && !isPast && dayInfo.month === 'current' && (isWeekend ? styles.dayTextCurrentWeekend : styles.dayTextCurrentWeekday),
                                                 ]}>
                                                     {dayInfo.day}
                                                 </Text>
@@ -831,7 +828,6 @@ export default function ScheduleServiceScreen() {
                     </LinearGradient>
                 </Animated.View>
 
-                {/* Seção de Horários Disponíveis */}
                 <Animated.View style={{
                     transform: [{ scale: scaleAnim }],
                     opacity: fadeAnim
@@ -845,25 +841,55 @@ export default function ScheduleServiceScreen() {
                     />
                 </Animated.View>
 
+                {selectedProviderService && (
+                    <Animated.View style={{
+                        transform: [{ scale: scaleAnim }],
+                        opacity: fadeAnim
+                    }}>
+                        <ServiceDetailsInput
+                            pricingType={selectedProviderService.pricingType}
+                            durationInMinutes={durationInMinutes}
+                            setDurationInMinutes={setDurationInMinutes}
+                            squareMeters={squareMeters}
+                            setSquareMeters={setSquareMeters}
+                            pricePerUnit={selectedProviderService.price}
+                            finalPrice={finalPrice}
+                        />
+                    </Animated.View>
+                )}
+
+
+                <View style={[styles.notesContainer, {opacity: fadeAnim, transform: [{ translateY: slideUpAnim }] }]}>
+                    <Text style={styles.notesTitle}>Observações (Opcional)</Text>
+                    <TextInput
+                        style={styles.notesInput}
+                        placeholder="Ex: 'Procurar por Maria na portaria', 'O apartamento é o 101, cor amarela'."
+                        value={notes}
+                        onChangeText={setNotes}
+                        multiline
+                        numberOfLines={4}
+                        placeholderTextColor="#999"
+                    />
+                </View>
+
             </Animated.ScrollView>
 
-            {/* Botão de Confirmação de Agendamento */}
             <View style={styles.confirmButtonWrapper}>
                 <TouchableOpacity
                     style={[
                         styles.confirmButton,
-                        isButtonDisabled && styles.confirmButtonDisabled // Estilo para botão desabilitado
+                        isButtonDisabled && styles.confirmButtonDisabled
                     ]}
                     onPress={handleConfirmBooking}
-                    disabled={isButtonDisabled} // Desabilita o botão se os dados não estiverem completos
+                    disabled={isButtonDisabled}
                 >
                     {isBooking ? (
-                        <ActivityIndicator color="#FFFFFF" /> // Indicador de carregamento enquanto agenda
+                        <ActivityIndicator color="#FFFFFF" />
                     ) : (
                         <Text style={styles.confirmButtonText}>
                             {selectedTime && selectedProviderService?.price ?
-                                `Agendar (R$ ${selectedProviderService.price.toFixed(2).replace('.', ',')})` : // Mostra o preço se horário e serviço estiverem selecionados
-                                "Selecione Data, Hora e Endereço" // Texto padrão se algo estiver faltando
+                                `Agendar (R$ ${finalPrice.toFixed(2).replace('.', ',')})` :
+                                "Selecione Data, Hora e Endereço"
                             }
                         </Text>
                     )}
@@ -873,27 +899,23 @@ export default function ScheduleServiceScreen() {
     );
 }
 
-// Estilos fixos para as células do dia do calendário
 const FIXED_DAY_CELL_SIZE = 40;
 
-// Estilos gerais da tela
 const styles = StyleSheet.create({
-    screenContainer: { 
-        flex: 1, 
+    screenContainer: {
+        flex: 1,
         backgroundColor: '#F8FAFB',
     },
-    centeredFeedback: { 
-        flex: 1, 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        backgroundColor: '#F8FAFB' 
+    centeredFeedback: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#F8FAFB'
     },
-    scrollContentContainer: { 
-        paddingBottom: 120, // Espaço para o botão fixo no final
+    scrollContentContainer: {
+        paddingBottom: 120,
         paddingTop: 10,
     },
-
-    // Estilos para as decorações de fundo animadas
     backgroundDecoration: {
         position: 'absolute',
         top: SCREEN_HEIGHT * 0.1,
@@ -915,25 +937,23 @@ const styles = StyleSheet.create({
     decorationGradient: {
         flex: 1,
     },
-
-    // Estilos para o header com gradiente e blur
     headerGradient: {
         borderBottomLeftRadius: 55,
         borderBottomRightRadius: 55,
         overflow: 'hidden',
         marginBottom: 8,
         top: 30,
+        
     },
     headerBlur: {
         padding: 0,
     },
-
-    // NOVO: Estilos para o header superior azul gradiente
     topHeaderGradient: {
-        width: '100%',
-        paddingTop: Platform.OS === 'ios' ? 25 : 23, // Adjust for notch
+        width: '38%',
+        paddingTop: Platform.OS === 'ios' ? 25 : 23,
         paddingBottom: 15,
-        bottom: 80,
+        bottom: 87,
+        left: 120,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
@@ -942,37 +962,34 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.2,
         shadowRadius: 5,
         elevation: 8,
-        borderBottomLeftRadius: 50, // No border radius for this header
-        borderBottomRightRadius: 50, // No border radius for this header
-        marginBottom: Platform.OS === 'ios' ? 0 : -80, // Ajuste para evitar sobreposição com a barra de status
+        borderBottomLeftRadius: 50,
+        borderBottomRightRadius: 50,
+        marginBottom: Platform.OS === 'ios' ? 0 : -80,
     },
     backButton: {
         position: 'absolute',
-        left: 20,
+        left: 15,
+        bottom: 95,
         paddingTop: Platform.OS === 'ios' ? 50 : 30,
         paddingBottom: 15,
         zIndex: 1,
     },
     headerTitle: {
         color: '#FFFFFF',
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: 'bold',
         textAlign: 'center',
-        flex: 1, // Allow title to take up available space
-        paddingTop: Platform.OS === 'ios' ? 50 : 30,
-        paddingBottom: 15,
-    },
-    // FIM DO NOVO HEADER SUPERIOR
-
-    // Estilos para o container do calendário
-    calendarGridContainer: {
+        flex: 1,
+        paddingTop: Platform.OS === 'ios' ? 15 : 13,
         
+    },
+    calendarGridContainer: {
         borderRadius: 16,
         marginHorizontal: 30,
         marginVertical: 50,
         marginTop: 25,
         overflow: 'hidden',
-         shadowColor: 'rgb(33, 34, 34)',
+        shadowColor: 'rgb(33, 34, 34)',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.2,
         shadowRadius: 5,
@@ -1055,8 +1072,6 @@ const styles = StyleSheet.create({
         color: '#AAAAAA',
         textDecorationLine: 'line-through',
     },
-
-    // Estilos do botão de confirmação
     confirmButtonWrapper: {
         position: 'absolute',
         bottom: 0,
@@ -1091,120 +1106,26 @@ const styles = StyleSheet.create({
         fontSize: 15,
         fontWeight: '700',
     },
-
-    // Estilos para os inputs de endereço (mantidos para compatibilidade)
-    addressInputContainer: {
-        backgroundColor: '#FFFFFF',
-        padding: 0,
+    notesContainer: {
         marginHorizontal: 15,
-        borderRadius: 12,
         marginTop: 20,
         marginBottom: 10,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 6,
-        elevation: 3,
     },
-    addressInputTitle: {
+    notesTitle: {
         fontSize: 15,
-        fontWeight: '500',
+        fontWeight: 'bold',
         color: '#333',
         marginBottom: 10,
-        textAlign: 'center',
     },
-    input: {
-        flex: 1,
-        height: 50,
-        fontSize: 16,
-        color: '#333',
-        paddingLeft: 10,
-        backgroundColor: '#F7F7F7',
-        borderRadius: 8,
-        borderColor: '#E0E0E0',
-        borderWidth: 1,
-        paddingHorizontal: 15,
-    },
-    inputGroup: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#F7F7F7',
-        borderRadius: 8,
-        paddingHorizontal: 15,
-        marginBottom: 15,
-        borderColor: '#E0E0E0',
-        borderWidth: 1,
-    },
-    inputIcon: {
-        marginRight: 10,
-    },
-    inputRow: {
-        flexDirection: 'row',
-        marginBottom: 15,
-    },
-    inputSmall: {
-        flex: 1,
-        height: 50,
-        fontSize: 16,
-        color: '#333',
-        paddingLeft: 10,
-        backgroundColor: '#F7F7F7',
-        borderRadius: 8,
-        borderColor: '#E0E0E0',
-        borderWidth: 1,
-        paddingHorizontal: 15,
-    },
-    // Estilos de esqueleto (mockados, para quando os dados ainda estão carregando)
-    providerBriefSkeleton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 15,
+    notesInput: {
         backgroundColor: '#FFFFFF',
+        padding: 15,
         borderRadius: 12,
-        marginHorizontal: 15,
-        marginTop: 20,
-        marginBottom: 10,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 4,
-        height: 100,
-    },
-    providerImageSkeleton: {
-        width: 70,
-        height: 70,
-        borderRadius: 35,
-        marginRight: 12,
-        backgroundColor: '#E0E0E0',
-    },
-    providerTextInfoSkeleton: {
-        flex: 1,
-        justifyContent: 'center',
-    },
-    skeletonLineLarge: {
-        height: 18,
-        width: '80%',
-        backgroundColor: '#E0E0E0',
-        borderRadius: 4,
-        marginBottom: 8,
-    },
-    skeletonLineSmall: {
-        height: 14,
-        width: '60%',
-        backgroundColor: '#E0E0E0',
-        borderRadius: 4,
-        marginBottom: 5,
-    },
-    skeletonChipsContainer: {
-        flexDirection: 'row',
-        marginTop: 5,
-        gap: 8,
-    },
-    skeletonChip: {
-        height: 24,
-        width: 70,
-        backgroundColor: '#E0E0E0',
-        borderRadius: 16,
-    },
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        minHeight: 100,
+        textAlignVertical: 'top',
+        fontSize: 14,
+        color: '#333',
+    }
 });
