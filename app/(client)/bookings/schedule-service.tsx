@@ -105,7 +105,7 @@ export default function ScheduleServiceScreen() {
 
     // HOOKS MOVIDOS PARA O TOPO DO COMPONENTE
     const finalPrice = useMemo(() => {
-        if (!selectedProviderService?.pricingType || !selectedProviderService?.price) {
+        if (!selectedProviderService?.pricingType || selectedProviderService?.price == null) {
             return 0;
         }
 
@@ -446,6 +446,7 @@ export default function ScheduleServiceScreen() {
                     return;
                 }
                 setSelectedProviderService(foundService);
+                console.log("Serviço carregado:", foundService);
                 
                 // Inicializa os valores com base no tipo de preço
                 if(foundService.pricingType === PricingType.HOURLY) {

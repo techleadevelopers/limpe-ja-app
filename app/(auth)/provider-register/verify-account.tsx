@@ -57,6 +57,9 @@ export default function VerifyAccountScreen() {
     const [documentPhotoFront, setDocumentPhotoFront] = useState<string | null>(null);
     const [documentPhotoBack, setDocumentPhotoBack] = useState<string | null>(null);
     const [currentVerificationStep, setCurrentVerificationStep] = useState(0);
+    
+    // Novo estado para o loading específico de "Confirmando Identidade"
+    const [isSubmittingDocuments, setIsSubmittingDocuments] = useState(false);
 
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(50)).current;
@@ -152,6 +155,9 @@ export default function VerifyAccountScreen() {
             }
 
             if (step === 2) { // Etapa de upload de documentos
+                // Inicia o loading robusto de "Confirmando Identidade"
+                setIsSubmittingDocuments(true);
+                
                 const documentData = data as { documentPhotoFront: string | null; documentPhotoBack: string | null; selfieWithDocument: string | null };
                 setDocumentPhotoFront(documentData.documentPhotoFront);
                 setDocumentPhotoBack(documentData.documentPhotoBack);
@@ -168,11 +174,14 @@ export default function VerifyAccountScreen() {
                 
                 // Após o upload, o status de verificação será atualizado no backend
                 // e o polling no useEffect detectará a mudança.
+                // A transição para a próxima tela será controlada aqui
+                setIsSubmittingDocuments(false); // Fim do loading de submissão
                 setCurrentVerificationStep(4); // Move para a etapa de "verificação em andamento"
                 setToastMessage({ message: "Documentos enviados com sucesso! Estamos analisando.", type: "success" });
             }
         } catch (error: any) {
             console.error("Erro na verificação:", error);
+            setIsSubmittingDocuments(false); // Certifique-se de desativar o loading em caso de erro
             setToastMessage({ message: error.message || "Erro na verificação. Tente novamente.", type: "error" });
         } finally {
             setIsLoading(false);
@@ -180,6 +189,18 @@ export default function VerifyAccountScreen() {
     }, [providerId, setIsRegistrationInProgress]);
 
     const renderVerificationStep = () => {
+        // Renderiza o loading robusto para "Confirmando Identidade"
+        if (isSubmittingDocuments) {
+            return (
+                <View style={styles.analysisContent}>
+                    <Image source={LOGO_IMAGE} style={styles.analysisLogo} />
+                    <Text style={styles.analysisText}>Confirmando Identidade?</Text>
+                    <Text style={styles.analysisSubText}>Estamos processando seus documentos...</Text>
+                    <ActivityIndicator size="large" color={Colors.primary} style={styles.analysisIndicator} />
+                </View>
+            );
+        }
+
         switch (currentVerificationStep) {
             case 0:
                 return (

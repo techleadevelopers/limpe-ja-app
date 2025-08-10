@@ -379,12 +379,11 @@ const RequestItem: React.FC<{
 
       <Text style={styles.requestClientName}>Solicitado por: {clientName}</Text>
 
-      {item.totalPrice !== undefined && (
-        <Text style={styles.requestPrice}>
-            Valor: R$ {item.totalPrice.toFixed(2).replace('.', ',')}
-        </Text>
-      )}
-
+    {item.totalPrice != null && !isNaN(Number(item.totalPrice)) && (
+  <Text style={styles.requestPrice}>
+      Valor: R$ {Number(item.totalPrice).toFixed(2).replace('.', ',')}
+  </Text>
+)}
       <View style={styles.requestInfoRow}>
         <Ionicons name="calendar-outline" size={16} color={TEXT_MUTED} style={styles.infoIcon} />
         <Text style={styles.requestInfoText}>

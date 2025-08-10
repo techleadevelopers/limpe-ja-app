@@ -1,22 +1,16 @@
-// app/(auth)/provider-register/verification/document-upload.tsx
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import * as ImagePicker from 'expo-image-picker'; // Mantenha esta importação como está
-// Remova a importação específica de MediaType, pois voltaremos a usar MediaTypeOptions por enquanto.
-// import { MediaType } from 'expo-image-picker'; 
+import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native'; // Added Platform
+import { ActivityIndicator, Alert, Animated, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { DocumentPhotoType } from '../../../../backend-cleaning/src/verification/dto/upload-document.dto';
 import AnimatedErrorMessage from '../../../../components/schedule/manager/AnimatedErrorMessage';
 import colors from '../../../../constants/Colors';
 import { SIZES } from '../../../../constants/theme';
 import verificationService from '../../../../services/verificationService';
 
-// Importações das novas imagens para uso nesta tela
-const PARTE_FRENTE_IMAGE = require('../../../../assets/images/partefrente.png'); // Imagem para o placeholder da frente do documento
-const PARTE_TRAS_IMAGE = require('../../../../assets/images/partetras.png'); // Imagem para o placeholder do verso do documento
-const FACIAL_PLACEHOLDER_IMAGE = require('../../../../assets/images/facial.png'); // Imagem para o placeholder da selfie (assumindo que 'facial.png' é o arquivo correto)
-
+const PARTE_FRENTE_IMAGE = require('../../../../assets/images/partefrente.png');
+const PARTE_TRAS_IMAGE = require('../../../../assets/images/partetras.png');
 
 const Colors = colors.light;
 
@@ -38,7 +32,6 @@ export default function DocumentUploadScreen({
   const [frontError, setFrontError] = useState<string | null>(null);
   const [backError, setBackError] = useState<string | null>(null);
   const [submissionStatus, setSubmissionStatus] = useState<'none' | 'pending' | 'success' | 'failed'>('none');
-  // New state to store validation result for button
   const [areDocumentsValid, setAreDocumentsValid] = useState(false);
 
   const buttonScale = useRef(new Animated.Value(1)).current;
@@ -60,7 +53,6 @@ export default function DocumentUploadScreen({
     ).start();
   }, [contentFade, contentSlide, pulseAnim]);
 
-  // Effect to validate documents whenever photos change
   useEffect(() => {
     let isValid = true;
     if (!documentPhotoFront) {
@@ -75,8 +67,8 @@ export default function DocumentUploadScreen({
     } else {
       setBackError(null);
     }
-    setAreDocumentsValid(isValid); // Update the state that controls the button
-  }, [documentPhotoFront, documentPhotoBack]); // Dependencies on photo URIs
+    setAreDocumentsValid(isValid);
+  }, [documentPhotoFront, documentPhotoBack]);
 
   const handlePressIn = () => Animated.spring(buttonScale, { toValue: 0.95, useNativeDriver: true }).start();
   const handlePressOut = () => Animated.spring(buttonScale, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start();
@@ -87,9 +79,7 @@ export default function DocumentUploadScreen({
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     let result = await ImagePicker.launchImageLibraryAsync({
-      // Revertendo para MediaTypeOptions.Images para resolver o erro de compilação.
-      // Isso pode gerar um aviso de depreciação em tempo de execução, mas resolverá o erro de tipo.
-      mediaTypes: ImagePicker.MediaTypeOptions.Images, // <<<< CORREÇÃO AQUI: Usando MediaTypeOptions
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.8,
@@ -110,8 +100,7 @@ export default function DocumentUploadScreen({
       return;
     }
     let result = await ImagePicker.launchCameraAsync({
-      // Revertendo para MediaTypeOptions.Images para resolver o erro de compilação.
-      mediaTypes: ImagePicker.MediaTypeOptions.Images, // <<<< CORREÇÃO AQUI: Usando MediaTypeOptions
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.8,
@@ -125,10 +114,7 @@ export default function DocumentUploadScreen({
     if (Platform.OS === 'ios' || Platform.OS === 'android') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
-    // Use the state variable for validation
     if (!areDocumentsValid) {
-      // Re-run validation to ensure errors are displayed immediately on submit attempt
-      // if the user tries to submit without completing all fields
       let isValidOnSubmit = true;
       if (!documentPhotoFront) {
         setFrontError("Por favor, envie a frente do seu documento.");
@@ -157,15 +143,13 @@ export default function DocumentUploadScreen({
     }
   };
 
-  // The button's disabled state now uses the `areDocumentsValid` state
   const isNextButtonEnabled = areDocumentsValid && !isLoading && submissionStatus !== 'pending';
 
   return (
     <Animated.View style={[styles.container, { opacity: contentFade, transform: [{ translateY: contentSlide }] }]}>
       <View style={styles.header}>
         <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-          {/* Using FACE_ICON for the header icon */}
-          
+          <Ionicons name="card" size={40} color={Colors.primary} style={styles.headerIcon} />
         </Animated.View>
         <Text style={styles.title}>Envio de Documentos</Text>
         <Text style={styles.description}>
@@ -179,16 +163,15 @@ export default function DocumentUploadScreen({
           {documentPhotoFront ? (
             <Image source={{ uri: documentPhotoFront }} style={styles.uploadedImage} />
           ) : (
-            // Using PARTE_FRENTE_IMAGE for the front document placeholder
             <Image source={PARTE_FRENTE_IMAGE} style={styles.placeholderImage} />
           )}
           <View style={styles.imageUploadButtons}>
             <TouchableOpacity style={styles.uploadButton} onPress={() => takePhoto(setDocumentPhotoFront, setFrontError)} disabled={isLoading || submissionStatus === 'success'}>
-              <Ionicons name="camera-outline" size={24} color="#fff" />
+              <Ionicons name="camera-outline" size={18} color="#fff" />
               <Text style={styles.uploadButtonText}>Tirar Foto</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage(setDocumentPhotoFront, setFrontError)} disabled={isLoading || submissionStatus === 'success'}>
-              <Ionicons name="folder-open-outline" size={24} color="#fff" />
+              <Ionicons name="folder-open-outline" size={18} color="#fff" />
               <Text style={styles.uploadButtonText}>Galeria</Text>
             </TouchableOpacity>
           </View>
@@ -200,16 +183,15 @@ export default function DocumentUploadScreen({
           {documentPhotoBack ? (
             <Image source={{ uri: documentPhotoBack }} style={styles.uploadedImage} />
           ) : (
-            // Using PARTE_TRAS_IMAGE for the back document placeholder
             <Image source={PARTE_TRAS_IMAGE} style={styles.placeholderImage} />
           )}
           <View style={styles.imageUploadButtons}>
             <TouchableOpacity style={styles.uploadButton} onPress={() => takePhoto(setDocumentPhotoBack, setBackError)} disabled={isLoading || submissionStatus === 'success'}>
-              <Ionicons name="camera-outline" size={24} color="#fff" />
+              <Ionicons name="camera-outline" size={18} color="#fff" />
               <Text style={styles.uploadButtonText}>Tirar Foto</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage(setDocumentPhotoBack, setBackError)} disabled={isLoading || submissionStatus === 'success'}>
-              <Ionicons name="folder-open-outline" size={24} color="#fff" />
+              <Ionicons name="folder-open-outline" size={18} color="#fff" />
               <Text style={styles.uploadButtonText}>Galeria</Text>
             </TouchableOpacity>
           </View>
@@ -238,10 +220,10 @@ export default function DocumentUploadScreen({
               submissionStatus === 'failed' ? styles.statusFailed : {}]}>
             <Ionicons
               name={submissionStatus === 'success' ? "checkmark-circle" :
-                      submissionStatus === 'failed' ? "warning" : "information-circle"}
-              size={20}
+                    submissionStatus === 'failed' ? "warning" : "information-circle"}
+              size={16}
               color={submissionStatus === 'success' ? Colors.secondary :
-                      submissionStatus === 'failed' ? Colors.error : Colors.info}
+                    submissionStatus === 'failed' ? Colors.error : Colors.info}
             />
             <Text style={[styles.statusText,
                     submissionStatus === 'success' ? { color: Colors.secondary } :
@@ -268,96 +250,121 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: SIZES.padding ,
-    marginTop: SIZES.padding * 2,
+    marginBottom: SIZES.padding,
+    marginTop: SIZES.padding,
   },
-  // Novo estilo para o ícone do cabeçalho
   headerIcon: {
-    width: 200, // Ajuste o tamanho conforme necessário
-    height: 200, // Ajuste o tamanho conforme necessário
-    resizeMode: 'contain',
+    marginBottom: SIZES.base,
   },
   title: {
-    fontSize: SIZES.h1 - 4,
+    fontSize: SIZES.h2,
     fontWeight: 'bold',
     color: Colors.textPrimary,
-    marginTop: SIZES.base * -4,
+    marginTop: SIZES.base * 2,
     marginBottom: SIZES.base,
     textAlign: 'center',
   },
   description: {
-    fontSize: SIZES.body3,
+    fontSize: 12,
     color: Colors.textSecondary,
     textAlign: 'center',
-    lineHeight: SIZES.body3 + 6,
+    lineHeight: 18,
   },
   card: {
     backgroundColor: Colors.cardBackground,
     borderRadius: SIZES.radius,
-    padding: SIZES.padding,
+    padding: SIZES.paddingSmall,
     width: '100%',
-    maxWidth: 400,
+    maxWidth: 360,
     shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 10 },
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 8,
+    shadowRadius: 10,
+    elevation: 4,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.primaryLight,
   },
   label: {
-    fontSize: SIZES.body3,
+    fontSize: SIZES.body4,
     fontWeight: '600',
     color: Colors.textPrimary,
     alignSelf: 'flex-start',
-    marginBottom: SIZES.base,
-    marginTop: SIZES.base * 2,
+    marginBottom: SIZES.base / 2,
+    marginTop: SIZES.base,
   },
-  inputWrapper: {
-    flexDirection: 'row',
+  imageUploadWrapper: {
+    flexDirection: 'column',
     alignItems: 'center',
     backgroundColor: Colors.primaryLight,
     borderRadius: SIZES.radius,
-    height: 50,
-    marginBottom: SIZES.base * 2,
-    paddingHorizontal: SIZES.paddingSmall,
+    paddingVertical: SIZES.base,
+    marginBottom: SIZES.base,
+    width: '100%',
     borderWidth: 1,
     borderColor: Colors.lightBlueBorder,
-    width: '100%',
   },
-  inputIcon: {
-    marginRight: SIZES.base,
+  uploadedImage: {
+    width: '80%',
+    height: 120,
+    borderRadius: SIZES.radius / 2,
+    resizeMode: 'cover',
+    marginBottom: SIZES.base,
+    borderWidth: 1,
+    borderColor: Colors.textSecondary,
   },
-  input: {
+  placeholderImage: {
+    width: '80%',
+    height: 100,
+    resizeMode: 'contain',
+    marginBottom: SIZES.base,
+    opacity: 0.6,
+  },
+  imageUploadButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '90%',
+  },
+  uploadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.primary,
+    paddingVertical: SIZES.base,
+    paddingHorizontal: SIZES.paddingSmall,
+    borderRadius: 20,
+    marginHorizontal: SIZES.base / 2,
     flex: 1,
-    fontSize: SIZES.body3,
-    color: Colors.textPrimary,
+    justifyContent: 'center',
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
-  errorMessage: {
-    color: Colors.error,
-    fontSize: SIZES.body4,
-    marginBottom: SIZES.base * 2,
-    alignSelf: 'flex-start',
+  uploadButtonText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    marginLeft: SIZES.base / 2,
+    fontWeight: '600',
   },
   submitButton: {
     backgroundColor: Colors.primaryGradientStart,
     borderRadius: SIZES.radius,
-    paddingVertical: 7,
-    paddingHorizontal: 60,
+    paddingVertical: 10,
+    paddingHorizontal: 40,
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 15,
-    elevation: 10,
-    marginTop: SIZES.padding,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+    marginTop: SIZES.paddingSmall,
   },
   submitButtonText: {
     color: '#FFFFFF',
-    fontSize: SIZES.h3,
+    fontSize: SIZES.body3,
     fontWeight: 'bold',
   },
   buttonDisabled: {
@@ -369,10 +376,10 @@ const styles = StyleSheet.create({
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: SIZES.base * 1.5,
+    paddingVertical: SIZES.base,
     paddingHorizontal: SIZES.paddingSmall,
     borderRadius: SIZES.radius,
-    marginTop: SIZES.padding,
+    marginTop: SIZES.paddingSmall,
     width: '100%',
     justifyContent: 'center',
     backgroundColor: Colors.primaryLight,
@@ -388,64 +395,9 @@ const styles = StyleSheet.create({
     borderColor: Colors.error,
   },
   statusText: {
-    fontSize: SIZES.body4,
+    fontSize: SIZES.body5,
     fontWeight: '600',
     marginLeft: SIZES.base,
     color: Colors.textPrimary,
-  },
-  imageUploadWrapper: {
-    flexDirection: 'column',
-    alignItems: 'center',
-    backgroundColor: Colors.primaryLight,
-    borderRadius: SIZES.radius,
-    paddingVertical: SIZES.paddingSmall,
-    marginBottom: SIZES.base * 2,
-    width: '100%',
-    borderWidth: 1,
-    borderColor: Colors.lightBlueBorder,
-  },
-  uploadedImage: {
-    width: '70%',
-    height: 160,
-    borderRadius: SIZES.radius / 2,
-    resizeMode: 'cover',
-    marginBottom: SIZES.base * 2,
-    borderWidth: 1,
-    borderColor: Colors.textSecondary,
-  },
-  // Novo estilo para as imagens de placeholder
-  placeholderImage: {
-    width: '90%', // Ajuste o tamanho conforme necessário
-    height: 130, // Ajuste o tamanho conforme necessário
-    resizeMode: 'contain', // Use 'contain' para não cortar a imagem se ela tiver proporções diferentes
-    marginBottom: SIZES.base * 2,
-    opacity: 0.6, // Opacifica para parecer um placeholder
-  },
-  imageUploadButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '90%',
-  },
-  uploadButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.primary,
-    paddingVertical: SIZES.base * 1.5,
-    paddingHorizontal: SIZES.paddingSmall,
-    borderRadius: 20,
-    marginHorizontal: SIZES.base / 2,
-    flex: 1,
-    justifyContent: 'center',
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 5,
-  },
-  uploadButtonText: {
-    color: '#FFFFFF',
-    fontSize: SIZES.body4,
-    marginLeft: SIZES.base,
-    fontWeight: '600',
   },
 });

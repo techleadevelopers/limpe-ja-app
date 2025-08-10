@@ -1,3 +1,5 @@
+// admin-web/src/components/modals/verification-modal.tsx
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -5,7 +7,11 @@ import { Star, CheckCircle, User, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
-// CORREÇÃO: Importa Provider e VerificationStatus como valores (não apenas 'type')
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+// Importa a função de API corrigida
+import { updateProviderStatus } from "@/lib/api";
+// CORREÇÃO: Importa Provider e VerificationStatus
 import { Provider, VerificationStatus } from "@/lib/types";
 import RejectionModal from "./rejection-modal";
 
@@ -13,9 +19,7 @@ interface VerificationModalProps {
   provider: Provider | null;
   isOpen: boolean;
   onClose: () => void;
-  onApprove: (providerId: string) => void;
-  onReject: (providerId: string, reason: string) => void;
-  onBlock: (providerId: string) => void;
+  // As props de callback foram removidas pois o componente agora lida com a lógica de API internamente
 }
 
 function formatRelativeTime(date: Date): string {
@@ -32,27 +36,54 @@ function formatRelativeTime(date: Date): string {
   return `${diffInDays} dias atrás`;
 }
 
-export default function VerificationModal({ provider, isOpen, onClose, onApprove, onReject, onBlock }: VerificationModalProps) {
+export default function VerificationModal({ provider, isOpen, onClose }: VerificationModalProps) {
   const [isRejectionModalOpen, setIsRejectionModalOpen] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  if (!provider) return null;
+
+  // Mutação para aprovar o provedor
+  const approveMutation = useMutation({
+    mutationFn: (providerId: string) => updateProviderStatus(providerId, VerificationStatus.APPROVED),
+    onSuccess: () => {
+      toast({ title: "Sucesso!", description: "Provedor aprovado com sucesso.", variant: "success" });
+      queryClient.invalidateQueries({ queryKey: ['verificationQueue'] });
+      onClose();
+    },
+    onError: (error) => {
+      toast({ title: "Erro na Aprovação", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Mutação para rejeitar o provedor
+  const rejectMutation = useMutation({
+    mutationFn: ({ providerId, reason }: { providerId: string; reason: string }) => 
+      updateProviderStatus(providerId, VerificationStatus.REJECTED, reason),
+    onSuccess: () => {
+      toast({ title: "Sucesso!", description: "Provedor rejeitado com sucesso.", variant: "success" });
+      queryClient.invalidateQueries({ queryKey: ['verificationQueue'] });
+      onClose();
+      setIsRejectionModalOpen(false);
+    },
+    onError: (error) => {
+      toast({ title: "Erro na Rejeição", description: error.message, variant: "destructive" });
+    },
+  });
 
   const handleApprove = () => {
-    if (!provider) return;
-    onApprove(provider.id); // Chama o callback passado
+    approveMutation.mutate(provider.id);
   };
 
   const handleReject = (reason: string) => {
-    if (!provider) return;
-    onReject(provider.id, reason); // Chama o callback passado
-    setIsRejectionModalOpen(false);
+    rejectMutation.mutate({ providerId: provider.id, reason });
   };
 
   const handleBlock = () => {
-    if (!provider) return;
-    onBlock(provider.id); // Chama o callback passado
+    // A lógica de bloqueio ainda precisa ser implementada
+    // Se houver um endpoint para isso, você criaria uma nova mutation aqui
+    toast({ title: "Funcionalidade em desenvolvimento", description: "A lógica de bloqueio ainda não foi implementada.", variant: "warning" });
   };
-
-  if (!provider) return null;
 
   return (
     <>
@@ -201,11 +232,11 @@ export default function VerificationModal({ provider, isOpen, onClose, onApprove
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Experiência:</span>
-                    <span className="text-sm text-gray-900">3+ anos</span> {/* Este dado não vem do mock, é um placeholder */}
+                    <span className="text-sm text-gray-900">3+ anos</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Verificação de Antecedentes:</span>
-                    <Badge className="bg-green-100 text-green-700 border-0 text-xs">Aprovado</Badge> {/* Este dado não vem do mock, é um placeholder */}
+                    <Badge className="bg-green-100 text-green-700 border-0 text-xs">Aprovado</Badge>
                   </div>
                 </div>
               </div>
@@ -216,14 +247,16 @@ export default function VerificationModal({ provider, isOpen, onClose, onApprove
               <div className="flex space-x-2">
                 <Button 
                   onClick={handleApprove}
+                  disabled={approveMutation.isPending}
                   className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 shadow-floating"
                 >
                   <CheckCircle className="mr-2" size={16} />
-                  Aprovar
+                  {approveMutation.isPending ? 'Aprovando...' : 'Aprovar'}
                 </Button>
                 <Button 
                   onClick={() => setIsRejectionModalOpen(true)}
                   variant="destructive"
+                  disabled={approveMutation.isPending || rejectMutation.isPending}
                   className="shadow-floating"
                 >
                   <X className="mr-2" size={16} />
@@ -255,6 +288,7 @@ export default function VerificationModal({ provider, isOpen, onClose, onApprove
         isOpen={isRejectionModalOpen}
         onClose={() => setIsRejectionModalOpen(false)}
         onConfirm={handleReject}
+        isPending={rejectMutation.isPending}
       />
     </>
   );

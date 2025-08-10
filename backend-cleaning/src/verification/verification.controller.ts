@@ -37,7 +37,7 @@ import {
 } from 'class-validator';
 import { Request } from 'express';
 import { SubmitCpfDto } from './dto/submit-cpf.dto';
-import { UploadDocumentDto, DocumentPhotoType } from './dto/upload-document.dto';
+import { DocumentPhotoType } from './dto/upload-document.dto';
 import { UploadSelfieDto } from './dto/upload-selfie.dto';
 import { VerificationService } from './verification.service';
 import { ProviderWithCalculatedRating } from '../providers/providers.service';
@@ -116,7 +116,7 @@ export class VerificationController {
       throw new BadRequestException('Tipo de documento inválido. Use FRONT ou BACK.');
     }
     await this.verificationService.uploadDocumentPhoto(providerId, file, type);
-    return { message: `Documento (${type}) enviado com sucesso.` };
+    return { message: `Documento (${type}) enviado com sucesso e enviado para revisão manual.` };
   }
 
   @Post('upload-selfie')
@@ -198,21 +198,6 @@ export class VerificationController {
     }
     const uploadedUrl = await this.verificationService.uploadAvatar(providerId, file);
     return { message: 'Avatar enviado com sucesso.', url: uploadedUrl };
-  }
-
-  // NOVO ENDPOINT: Avançar o status de verificação
-  @Post('advance-status')
-  @Roles(UserRole.PROVIDER)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Avançar o status de verificação para PENDING_DOCUMENTS_UPLOAD' })
-  @ApiResponse({ status: 200, description: 'Status de verificação atualizado com sucesso.' })
-  @ApiResponse({ status: 401, description: 'Não autorizado.' })
-  @ApiResponse({ status: 403, description: 'Acesso proibido.' })
-  async advanceVerificationStatus(@Req() req: Request) {
-    const providerId = req.user['providerId'];
-    await this.verificationService.advanceVerificationStatus(providerId);
-    return { message: 'Status de verificado avançado com sucesso.' };
   }
 
   @Patch(':providerId/status')

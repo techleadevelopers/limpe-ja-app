@@ -7,57 +7,37 @@ import {
     Coupon, GuaranteeClaim, PricingRule, PanicAlert, Incident, UserConsent,
     DataRequest, DetailedRatingBreakdown, SmartSuggestion, QueueInfo, QueueJob,
     BookingStatus, TransactionType, DisputeStatus, ClaimStatus, CouponType, CouponTarget,
-    SubscriptionStatus, SubscriptionFrequency, IncidentType, IncidentStatus, PricingType
+    SubscriptionStatus, SubscriptionFrequency, IncidentType, IncidentStatus, PricingType,
+    Review, Offer, Referral, FAQItem,
 } from './types';
 
-// A URL foi alterada para apontar para o servidor de desenvolvimento local
-const API_BASE_URL = 'https://limpeja-app-backend-35489557635.southamerica-east1.run.app'; // Alterado para localhost:3000
+const API_BASE_URL = 'https://limpeja-app-backend-35489557635.southamerica-east1.run.app';
 
-/**
- * Função genérica para tratar requisições HTTP para a API.
- * Adiciona o token de autenticação e trata erros, incluindo 401 Unauthorized.
- * @param path O caminho do endpoint da API (ex: '/dashboard/metrics').
- * @param options Opções padrão para a requisição fetch (method, body, etc.).
- * @returns Uma Promise que resolve com os dados da resposta em JSON.
- * @throws Error se a requisição falhar ou retornar status de erro (incluindo 401).
- */
 export const fetchApi = async <T>(path: string, options: RequestInit = {}): Promise<T> => {
-    const token = localStorage.getItem('authToken'); // Pega o token do localStorage (usando 'authToken' como em AuthContext)
-
-    // Inicializa headers como Record<string, string> para permitir adição de chaves dinâmicas
-    // e para combinar corretamente com options.headers.
+    const token = localStorage.getItem('authToken');
     const headers: Record<string, string> = {
         'Content-Type': 'application/json',
-        // Espalha os headers de options primeiro para que Content-Type possa sobrescrever se necessário
         ...(options.headers as Record<string, string> || {}),
     };
 
     if (token) {
-        headers['Authorization'] = `Bearer ${token}`; // Adiciona o token ao cabeçalho
+        headers['Authorization'] = `Bearer ${token}`;
     }
 
-    // CORREÇÃO: Concatena o path com a API_BASE_URL
     const response = await fetch(`${API_BASE_URL}${path}`, {
         ...options,
-        headers: headers, // Usa o objeto headers construído
-        credentials: 'include', // Mantém para cookies, se usado
+        headers: headers,
+        credentials: 'include',
     });
 
     if (!response.ok) {
-        // Se a resposta não for OK, tenta extrair a mensagem de erro ou usa o statusText
         const errorData = await response.json().catch(() => ({ message: response.statusText }));
-        // Lança um erro com a mensagem para ser tratado pelo chamador
         throw new Error(errorData.message || `Erro na requisição: ${response.status} ${response.statusText}`);
     }
     return response.json();
 };
 
 // --- Funções de Autenticação ---
-/**
- * Realiza o login do usuário.
- * @param credentials Objeto contendo email e password.
- * @returns Uma Promise que resolve com AuthResponse (accessToken e user).
- */
 export const login = async (credentials: { email: string; password: string }): Promise<AuthResponse> => {
     const response = await fetchApi<AuthResponse>('/auth/login', {
         method: 'POST',
@@ -66,20 +46,12 @@ export const login = async (credentials: { email: string; password: string }): P
     return response;
 };
 
-/**
- * Realiza o logout do usuário.
- * Remove o token e informações do usuário do localStorage.
- */
 export const logout = async (): Promise<void> => {
-    // Em um cenário real, você pode ter um endpoint de logout no backend
-    // await fetchApi('/auth/logout', { method: 'POST' }); // Exemplo de chamada ao backend
-    localStorage.removeItem('authToken'); // Remove o token do cliente
-    localStorage.removeItem('userData'); // Remove informações do usuário do cliente
-    // O backend pode invalidar o token no lado do servidor se necessário
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userData');
 };
 
-
-// --- Funções de Dados Existentes (agora usando fetchApi com autenticação) ---
+// --- Funções de Dados Existentes ---
 export const fetchDashboardMetrics = async (): Promise<DashboardMetrics> => {
     return fetchApi('/dashboard/metrics');
 };
@@ -93,6 +65,10 @@ export const fetchProviderById = async (id: string): Promise<Provider> => {
     return fetchApi(`/providers/${id}`);
 };
 
+/**
+ * **CORREÇÃO AQUI:** Função para atualizar o status de verificação do provedor
+ * Utiliza o endpoint PATCH /verification/:id/status
+ */
 export const updateProviderStatus = async (
     id: string,
     status: VerificationStatus,
@@ -104,7 +80,6 @@ export const updateProviderStatus = async (
     });
 };
 
-// NOVO: Atualizar perfil completo do provedor
 export const updateProviderProfile = async (id: string, data: Partial<Provider>): Promise<Provider> => {
     return fetchApi(`/providers/${id}`, {
         method: 'PATCH',
@@ -307,11 +282,11 @@ export const fetchAllTransactions = async (type?: TransactionType, status?: stri
     if (type) queryParams.append('type', type);
     if (status) queryParams.append('status', status);
     const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
-    return fetchApi(`/payments/transactions${query}`); // Supondo endpoint /payments/transactions
+    return fetchApi(`/payments/transactions${query}`);
 };
 
 export const initiateRefund = async (transactionId: string, amount?: number): Promise<Transaction> => {
-    return fetchApi(`/payments/${transactionId}/refund`, { // Supondo endpoint /payments/:id/refund
+    return fetchApi(`/payments/${transactionId}/refund`, {
         method: 'POST',
         body: JSON.stringify({ amount }),
     });
@@ -320,42 +295,42 @@ export const initiateRefund = async (transactionId: string, amount?: number): Pr
 // --- Funções de Saques de Provedores ---
 export const fetchWithdrawalRequests = async (status?: 'PENDING' | 'APPROVED' | 'REJECTED'): Promise<WithdrawalRequest[]> => {
     const query = status ? `?status=${status}` : '';
-    return fetchApi(`/payments/withdrawals${query}`); // Supondo endpoint /payments/withdrawals
+    return fetchApi(`/payments/withdrawals${query}`);
 };
 
 export const approveWithdrawal = async (id: string): Promise<WithdrawalRequest> => {
-    return fetchApi(`/payments/withdrawals/${id}/approve`, { // Supondo endpoint /payments/withdrawals/:id/approve
+    return fetchApi(`/payments/withdrawals/${id}/approve`, {
         method: 'PATCH',
     });
 };
 
 export const rejectWithdrawal = async (id: string, reason?: string): Promise<WithdrawalRequest> => {
-    return fetchApi(`/payments/withdrawals/${id}/reject`, { // Supondo endpoint /payments/withdrawals/:id/reject
+    return fetchApi(`/payments/withdrawals/${id}/reject`, {
         method: 'PATCH',
         body: JSON.stringify({ reason }),
     });
 };
 
 // --- Funções de Chat (Monitoramento) ---
-export const fetchChatLogs = async (chatId?: string, searchTerm?: string, limit: number = 100): Promise<DisputeMessage[]> => { // Reutilizando DisputeMessage para logs de chat simples
+export const fetchChatLogs = async (chatId?: string, searchTerm?: string, limit: number = 100): Promise<DisputeMessage[]> => {
     const queryParams = new URLSearchParams();
     if (chatId) queryParams.append('chatId', chatId);
     if (searchTerm) queryParams.append('searchTerm', searchTerm);
     queryParams.append('limit', limit.toString());
     const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
-    return fetchApi(`/chat/logs${query}`); // Supondo endpoint /chat/logs
+    return fetchApi(`/chat/logs${query}`);
 };
 
 // --- Funções de Notificações Push ---
 export const sendNotification = async (data: { userId?: string; providerId?: string; title: string; message: string; imageUrl?: string; actionButtons?: any[] }): Promise<any> => {
-    return fetchApi('/notifications/send', { // Supondo endpoint /notifications/send
+    return fetchApi('/notifications/send', {
         method: 'POST',
         body: JSON.stringify(data),
     });
 };
 
 export const scheduleNotification = async (data: { userId?: string; providerId?: string; title: string; message: string; scheduleAt: string; imageUrl?: string; actionButtons?: any[] }): Promise<any> => {
-    return fetchApi('/notifications/schedule', { // Supondo endpoint /notifications/schedule
+    return fetchApi('/notifications/schedule', {
         method: 'POST',
         body: JSON.stringify(data),
     });
@@ -465,20 +440,15 @@ export const fetchReferrals = async (): Promise<Referral[]> => {
     return fetchApi('/referrals');
 };
 
-// --- Funções de Programa de Fidelidade (Exemplo - Backend precisa implementar) ---
-// export const fetchLoyaltyProgramConfig = async (): Promise<any> => { return fetchApi('/loyalty/config'); };
-// export const updateLoyaltyProgramConfig = async (data: any): Promise<any> => { return fetchApi('/loyalty/config', { method: 'PATCH', body: JSON.stringify(data) }); };
-// export const adjustUserLoyalty = async (userId: string, points: number): Promise<any> => { return fetchApi(`/loyalty/user/${userId}/adjust`, { method: 'POST', body: JSON.stringify({ points }) }); };
-
 // --- Funções de Alertas de Segurança ---
 export const fetchPanicAlerts = async (status?: string): Promise<PanicAlert[]> => {
     const query = status ? `?status=${status}` : '';
-    return fetchApi(`/safety/panic-alerts${query}`); // Supondo endpoint /safety/panic-alerts
+    return fetchApi(`/safety/panic-alerts${query}`);
 };
 
 export const fetchIncidents = async (status?: IncidentStatus): Promise<Incident[]> => {
     const query = status ? `?status=${status}` : '';
-    return fetchApi(`/safety/incidents${query}`); // Supondo endpoint /safety/incidents
+    return fetchApi(`/safety/incidents${query}`);
 };
 
 export const updatePanicAlertStatus = async (id: string, status: string): Promise<PanicAlert> => {
@@ -498,7 +468,7 @@ export const updateIncidentStatus = async (id: string, status: IncidentStatus, r
 // --- Funções de LGPD: Gestão de Consentimentos ---
 export const fetchUserConsents = async (userId?: string): Promise<UserConsent[]> => {
     const query = userId ? `?userId=${userId}` : '';
-    return fetchApi(`/users/consents${query}`); // Supondo endpoint /users/consents
+    return fetchApi(`/users/consents${query}`);
 };
 
 // --- Funções de LGPD: Solicitações de Exportação/Exclusão ---
@@ -507,7 +477,7 @@ export const fetchDataRequests = async (type?: 'EXPORT' | 'DELETION', status?: s
     if (type) queryParams.append('type', type);
     if (status) queryParams.append('status', status);
     const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
-    return fetchApi(`/users/data-requests${query}`); // Supondo endpoint /users/data-requests
+    return fetchApi(`/users/data-requests${query}`);
 };
 
 export const updateDataRequestStatus = async (id: string, status: string): Promise<DataRequest> => {
@@ -517,21 +487,21 @@ export const updateDataRequestStatus = async (id: string, status: string): Promi
     });
 };
 
-// --- Funções de Monitoramento de Workers/Filas (Exemplo - Backend precisa implementar) ---
+// --- Funções de Monitoramento de Workers/Filas ---
 export const fetchQueueStatus = async (): Promise<QueueInfo[]> => {
-    return fetchApi('/admin/queues/status'); // Supondo endpoint /admin/queues/status
+    return fetchApi('/admin/queues/status');
 };
 
 export const fetchQueueJobs = async (queueName: string, status?: string): Promise<QueueJob[]> => {
     const query = status ? `?status=${status}` : '';
-    return fetchApi(`/admin/queues/${queueName}/jobs${query}`); // Supondo endpoint /admin/queues/:queueName/jobs
+    return fetchApi(`/admin/queues/${queueName}/jobs${query}`);
 };
 
 export const retryQueueJob = async (queueName: string, jobId: string): Promise<any> => {
     return fetchApi(`/admin/queues/${queueName}/jobs/${jobId}/retry`, { method: 'POST' });
 };
 
-// NOVO: Tipo para Item de FAQ (já definido no backend, mas para consistência)
+// Tipos adicionais (já estavam no seu arquivo, apenas mantidos)
 export type FAQItem = {
     id: string;
     question: string;
@@ -542,7 +512,6 @@ export type FAQItem = {
     updatedAt: string;
 };
 
-// NOVO: Tipo para Oferta (já definido no backend, mas para consistência)
 export type Offer = {
     id: string;
     title: string;
@@ -555,7 +524,6 @@ export type Offer = {
     updatedAt: string;
 };
 
-// NOVO: Tipo para Review (já definido no backend, mas para consistência)
 export type Review = {
     id: string;
     bookingId: string;
@@ -570,7 +538,6 @@ export type Review = {
     booking?: Booking;
 };
 
-// NOVO: Tipo para Referral (já definido no backend, mas para consistência)
 export type Referral = {
     id: string;
     referredUserId: string;

@@ -42,13 +42,30 @@ async function bootstrap() {
   app.use(json({ limit: '10mb' }));
   app.use(urlencoded({ extended: true, limit: '10mb' }));
 
-  // *** ALTERAÇÃO AQUI: Mude o 'origin' para '*' ***
+  // **INÍCIO DA CORREÇÃO**
+  // A configuração do CORS foi ajustada para aceitar múltiplas origens.
+  // Isso é necessário porque o seu front-end local (`localhost:5173`) precisa
+  // ser uma origem explicitamente permitida quando 'credentials: true' é usado.
+  const allowedOrigins = [
+    'http://localhost:5173', // Adicionado para o seu ambiente de desenvolvimento
+    // Adicione aqui outras origens se necessário, como a URL do front-end de produção
+    // 'https://admin.seu-site.com'
+  ];
+
   app.enableCors({
-    origin: '*', // Permite requisições de QUALQUER origem
+    origin: (origin, callback) => {
+      // Permite requisições sem `origin` (como as de ferramentas como Postman)
+      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
-  // ************************************************
+  // **FIM DA CORREÇÃO**
+
 
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,

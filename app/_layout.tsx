@@ -15,7 +15,7 @@ import { ProviderRegistrationProvider } from '../contexts/ProviderRegistrationCo
 import { AUTH_ROUTES, CLIENT_ROUTES, PROVIDER_ROUTES } from '../constants/routes';
 import { UserRole, VerificationStatus } from '../types/backend/auth';
 import * as Sentry from '@sentry/react-native';
-import Toast, { BaseToast, ErrorToast } from 'react-native-toast-message';
+import Toast from 'react-native-toast-message';
 
 Sentry.init({
     dsn: 'https://947962edb662e5ff655cbcd778ee13b6@o4509792415252480.ingest.us.sentry.io/4509792431898624',
@@ -126,12 +126,19 @@ function RootLayoutContent() {
                 const verificationStatus = user?.providerDetails?.verificationStatus;
                 const isApproved = verificationStatus === VerificationStatus.APPROVED;
                 const isPendingInitialReview = verificationStatus === VerificationStatus.PENDING_INITIAL_REVIEW;
-                const isPendingDocsUpload = verificationStatus === VerificationStatus.PENDING_DOCUMENTS_UPLOAD || verificationStatus === VerificationStatus.PENDING_MANUAL_REVIEW;
+                const isPendingDocsUpload =
+                    verificationStatus === VerificationStatus.PENDING_DOCUMENTS_UPLOAD ||
+                    verificationStatus === VerificationStatus.PENDING_MANUAL_REVIEW;
 
                 if (isApproved) {
                     const targetDashboardPath = normalizePath(PROVIDER_ROUTES.DASHBOARD);
-                    if (cleanedCurrentPath !== targetDashboardPath) {
-                        console.log(`[RootLayoutContent | decideAndRedirect] AÇÃO: Provedor APROVADO. Redirecionando para o Dashboard: '${targetDashboardPath}'.`);
+                    const allowedProviderPaths = [
+                        targetDashboardPath,
+                        normalizePath(PROVIDER_ROUTES.EARNINGS) // earnings permitido
+                    ];
+
+                    if (!allowedProviderPaths.includes(cleanedCurrentPath)) {
+                        console.log(`[RootLayoutContent | decideAndRedirect] AÇÃO: Provedor APROVADO fora das rotas permitidas. Redirecionando para o Dashboard.`);
                         router.replace(targetDashboardPath as any);
                     }
                 } else if (isPendingInitialReview) {
@@ -145,7 +152,6 @@ function RootLayoutContent() {
                         router.replace(providerRegistrationVerifyAccountPath as any);
                     }
                 } else {
-                    // Fallback para provedores com status inesperado
                     console.log(`[RootLayoutContent | decideAndRedirect] INFO: Provedor autenticado com status inesperado. Redirecionando para a tela de verificação de documentos.`);
                     if (cleanedCurrentPath !== providerRegistrationVerifyAccountPath) {
                         router.replace(providerRegistrationVerifyAccountPath as any);
@@ -173,7 +179,6 @@ function RootLayoutContent() {
         };
 
         decideAndRedirect();
-
     }, [isAuthenticated, user, authIsLoading, router, segments, pathname, appReady]);
 
     if (!appReady || authIsLoading || initializationError) {
@@ -189,7 +194,6 @@ function RootLayoutContent() {
         );
     }
 
-    // Adicionado um React.Fragment para incluir o Toast ao lado do Slot
     return (
         <>
             <Slot />
@@ -222,7 +226,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#333333',
     },
-    // Estilos do Toast adicionados aqui
     toastContainer: {
         flexDirection: 'row',
         alignItems: 'center',

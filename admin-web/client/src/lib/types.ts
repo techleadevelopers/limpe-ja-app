@@ -4,8 +4,8 @@
 export enum VerificationStatus {
     PENDING_DOCUMENTS_UPLOAD = "PENDING_DOCUMENTS_UPLOAD",
     PENDING_MANUAL_REVIEW = "PENDING_MANUAL_REVIEW",
-    PENDING_INITIAL_REVIEW = "PENDING_INITIAL_REVIEW", // NOVO: Status inicial após registro
-    PENDING_BACKGROUND_CHECK = "PENDING_BACKGROUND_CHECK", // NOVO: Após documentos, aguardando verificação de antecedentes
+    PENDING_INITIAL_REVIEW = "PENDING_INITIAL_REVIEW",
+    PENDING_BACKGROUND_CHECK = "PENDING_BACKGROUND_CHECK",
     APPROVED = "APPROVED",
     REJECTED = "REJECTED",
     BLOCKED = "BLOCKED",
@@ -16,14 +16,12 @@ export enum ActivityType {
     PROVIDER_REGISTRATION = "PROVIDER_REGISTRATION",
     BOOKING_COMPLETED = "BOOKING_COMPLETED",
     PAYMENT_PROCESSED = "PAYMENT_PROCESSED",
-    // Adicione outros tipos de atividade conforme necessário
-    NEW_DISPUTE = "NEW_DISPUTE", // NOVO
-    COUPON_CREATED = "COUPON_CREATED", // NOVO
-    SUBSCRIPTION_STARTED = "SUBSCRIPTION_STARTED", // NOVO
-    SAFETY_ALERT = "SAFETY_ALERT", // NOVO
+    NEW_DISPUTE = "NEW_DISPUTE",
+    COUPON_CREATED = "COUPON_CREATED",
+    SUBSCRIPTION_STARTED = "SUBSCRIPTION_STARTED",
+    SAFETY_ALERT = "SAFETY_ALERT",
 }
 
-// NOVO: Enum para o tipo de precificação do serviço
 export enum PricingType {
     FIXED_PRICE = "FIXED_PRICE",
     HOURLY = "HOURLY",
@@ -31,7 +29,6 @@ export enum PricingType {
     CUSTOM_QUOTE = "CUSTOM_QUOTE",
 }
 
-// NOVO: Enum para o status do agendamento
 export enum BookingStatus {
     PENDING = "PENDING",
     CONFIRMED = "CONFIRMED",
@@ -42,10 +39,9 @@ export enum BookingStatus {
     IN_PROGRESS = "IN_PROGRESS",
     PENDING_PROVIDER_CONFIRMATION = "PENDING_PROVIDER_CONFIRMATION",
     REJECTED = "REJECTED",
-    NO_SHOW = "NO_SHOW", // Adicionado para métricas de cliente
+    NO_SHOW = "NO_SHOW",
 }
 
-// NOVO: Enum para o tipo de transação financeira
 export enum TransactionType {
     PAYMENT = "PAYMENT",
     WITHDRAWAL = "WITHDRAWAL",
@@ -53,7 +49,6 @@ export enum TransactionType {
     REFUND = "REFUND",
 }
 
-// NOVO: Enum para o motivo da disputa
 export enum DisputeReason {
     SERVICE_NOT_PERFORMED = "SERVICE_NOT_PERFORMED",
     SERVICE_INCOMPLETE = "SERVICE_INCOMPLETE",
@@ -63,7 +58,6 @@ export enum DisputeReason {
     OTHER = "OTHER",
 }
 
-// NOVO: Enum para o status da disputa
 export enum DisputeStatus {
     PENDING = "PENDING",
     IN_REVIEW = "IN_REVIEW",
@@ -71,7 +65,6 @@ export enum DisputeStatus {
     REJECTED = "REJECTED",
 }
 
-// NOVO: Enum para o status da assinatura
 export enum SubscriptionStatus {
     ACTIVE = "ACTIVE",
     PAUSED = "PAUSED",
@@ -79,14 +72,12 @@ export enum SubscriptionStatus {
     COMPLETED = "COMPLETED",
 }
 
-// NOVO: Enum para a frequência da assinatura
 export enum SubscriptionFrequency {
     WEEKLY = "WEEKLY",
     BI_WEEKLY = "BI_WEEKLY",
     MONTHLY = "MONTHLY",
 }
 
-// NOVO: Enum para o tipo de incidente
 export enum IncidentType {
     DAMAGE = "DAMAGE",
     MISCONDUCT = "MISCONDUCT",
@@ -95,7 +86,6 @@ export enum IncidentType {
     OTHER = "OTHER",
 }
 
-// NOVO: Enum para o status do incidente
 export enum IncidentStatus {
     PENDING_REVIEW = "PENDING_REVIEW",
     INVESTIGATING = "INVESTIGATING",
@@ -103,13 +93,11 @@ export enum IncidentStatus {
     REJECTED = "REJECTED",
 }
 
-// NOVO: Enum para o tipo de cupom
 export enum CouponType {
     PERCENTAGE = "PERCENTAGE",
     FIXED_AMOUNT = "FIXED_AMOUNT",
 }
 
-// NOVO: Enum para o alvo do cupom
 export enum CouponTarget {
     ALL = "ALL",
     NEW_CLIENTS = "NEW_CLIENTS",
@@ -117,7 +105,6 @@ export enum CouponTarget {
     SPECIFIC_PROVIDER = "SPECIFIC_PROVIDER",
 }
 
-// NOVO: Enum para o status do cupom
 export enum CouponStatus {
     ACTIVE = "ACTIVE",
     INACTIVE = "INACTIVE",
@@ -125,7 +112,6 @@ export enum CouponStatus {
     USED_UP = "USED_UP",
 }
 
-// NOVO: Enum para o status da solicitação de garantia
 export enum ClaimStatus {
     PENDING = "PENDING",
     UNDER_REVIEW = "UNDER_REVIEW",
@@ -143,12 +129,12 @@ export type Provider = {
     documentPhotoFrontUrl?: string | null;
     documentPhotoBackUrl?: string | null;
     selfieWithDocumentUrl?: string | null;
-    ocrResult?: any | null; // Tipo genérico para o resultado JSON do OCR
-    livenessResult?: any | null; // Tipo genérico para o resultado JSON do liveness check
+    ocrResult?: any | null;
+    livenessResult?: any | null;
     rejectionReason?: string | null;
     fiveStarReviewCount: number;
     monthlyBookingsCount: number;
-    totalEarnings: string; // Mantido como string para consistência com o mock original
+    totalEarnings: string;
     latitude?: string | null;
     longitude?: string | null;
     createdAt: string;
@@ -156,35 +142,33 @@ export type Provider = {
     city?: string;
     specialties?: string[];
     jobsCompleted?: number;
-    yearsOfExperience?: number; // NOVO: Campo para provedor
-    bio?: string; // NOVO: Campo para provedor
-    pixKey?: string; // NOVO: Campo para provedor
-    avatarUrl?: string; // NOVO: Campo para provedor
-    badges?: string[]; // NOVO: Campo para provedor
+    yearsOfExperience?: number;
+    bio?: string;
+    pixKey?: string;
+    avatarUrl?: string;
+    badges?: string[];
 };
 
-// NOVO: Tipo para Cliente
 export type Client = {
     id: string;
     userId: string;
-    name: string; // Nome completo do cliente
-    email: string; // Email do usuário associado
+    name: string;
+    email: string;
     phone?: string | null;
     cpf?: string | null;
-    dateOfBirth?: string | null; // Usar string para datas vindas da API
-    address?: Address | null; // NOVO: Endereço do cliente
+    dateOfBirth?: string | null;
+    address?: Address | null;
     completedBookingsCount: number;
-    noShowCount: number; // NOVO: Métricas de comportamento
-    cancellationCount: number; // NOVO: Métricas de comportamento
-    memberSince: string; // Data de criação do perfil
-    status: 'active' | 'inactive' | 'blocked'; // Status do cliente
-    lastActivity: string; // Última atividade do cliente
-    loyaltyTier: 'bronze' | 'silver' | 'gold' | 'platinum'; // Nível de fidelidade
+    noShowCount: number;
+    cancellationCount: number;
+    memberSince: string;
+    status: 'active' | 'inactive' | 'blocked';
+    lastActivity: string;
+    loyaltyTier: 'bronze' | 'silver' | 'gold' | 'platinum';
     createdAt: string;
     updatedAt: string;
 };
 
-// NOVO: Tipo para Endereço
 export type Address = {
     id: string;
     cep: string;
@@ -216,13 +200,11 @@ export type DashboardMetrics = {
     pendingVerifications: number;
 };
 
-// --- Tipos para Autenticação ---
 export type AuthUser = {
     id: string;
     email: string;
     name: string;
-    role: 'ADMIN' | 'CLIENT' | 'PROVIDER'; // Exemplo de roles
-    // Adicione outras propriedades do usuário autenticado se necessário
+    role: 'ADMIN' | 'CLIENT' | 'PROVIDER';
 };
 
 export type AuthResponse = {
@@ -230,18 +212,16 @@ export type AuthResponse = {
     user: AuthUser;
 };
 
-// NOVO: Tipo para Serviço Global
 export type Service = {
     id: string;
     name: string;
     description?: string | null;
-    price: number; // Usar number para valores monetários no frontend
+    price: number;
     icon?: string | null;
     createdAt: string;
     updatedAt: string;
 };
 
-// NOVO: Tipo para Serviço Oferecido por Provedor
 export type ProviderService = {
     id: string;
     providerId: string;
@@ -252,51 +232,48 @@ export type ProviderService = {
     pricingType: PricingType;
     pricePerSquareMeter?: number | null;
     pricePerRoom?: number | null;
-    service?: Service; // Pode incluir os detalhes do serviço global
+    service?: Service;
     createdAt: string;
     updatedAt: string;
 };
 
-// NOVO: Tipo para Disponibilidade do Provedor
 export type Availability = {
     id: string;
     providerId: string;
-    dayOfWeek: number; // 0 (Sunday) to 6 (Saturday)
-    startTime: string; // HH:mm
-    endTime: string; // HH:mm
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
     isAvailable: boolean;
     createdAt: string;
     updatedAt: string;
 };
 
-// NOVO: Tipo para Agendamento
 export type Booking = {
     id: string;
     clientId: string;
     providerId: string;
     providerServiceId: string;
-    scheduledDate: string; // Data do agendamento
-    scheduledTime: string; // Hora do agendamento
+    scheduledDate: string;
+    scheduledTime: string;
     status: BookingStatus;
     totalPrice: number;
     notes?: string | null;
-    address?: Address | null; // Endereço específico do agendamento
-    client?: Client; // Detalhes do cliente
-    provider?: Provider; // Detalhes do provedor
-    service?: Service; // Detalhes do serviço global
-    providerService?: ProviderService; // Detalhes do serviço oferecido pelo provedor
+    address?: Address | null;
+    client?: Client;
+    provider?: Provider;
+    service?: Service;
+    providerService?: ProviderService;
     createdAt: string;
     updatedAt: string;
 };
 
-// NOVO: Tipo para Transação Financeira
 export type Transaction = {
     id: string;
-    providerId?: string | null; // Pode ser nulo para transações da plataforma
-    userId?: string | null; // Pode ser nulo para transações da plataforma
+    providerId?: string | null;
+    userId?: string | null;
     amount: number;
     type: TransactionType;
-    status: string; // Ex: 'completed', 'pending', 'failed'
+    status: string;
     description?: string | null;
     createdAt: string;
     bookingId?: string | null;
@@ -306,7 +283,6 @@ export type Transaction = {
     couponId?: string | null;
 };
 
-// NOVO: Tipo para Solicitação de Saque
 export type WithdrawalRequest = {
     id: string;
     providerId: string;
@@ -314,10 +290,9 @@ export type WithdrawalRequest = {
     status: 'PENDING' | 'APPROVED' | 'REJECTED';
     requestedAt: string;
     processedAt?: string | null;
-    provider?: Provider; // Detalhes do provedor
+    provider?: Provider;
 };
 
-// NOVO: Tipo para Disputa
 export type Dispute = {
     id: string;
     bookingId: string;
@@ -332,22 +307,20 @@ export type Dispute = {
     resolvedAt?: string | null;
     createdAt: string;
     updatedAt: string;
-    messages?: DisputeMessage[]; // Mensagens da disputa
-    booking?: Booking; // Detalhes do agendamento
-    reporterUser?: AuthUser; // Detalhes do usuário que reportou
+    messages?: DisputeMessage[];
+    booking?: Booking;
+    reporterUser?: AuthUser;
 };
 
-// NOVO: Tipo para Mensagem de Disputa
 export type DisputeMessage = {
     id: string;
     disputeId: string;
     senderUserId: string;
     content: string;
     createdAt: string;
-    sender?: AuthUser; // Detalhes do remetente
+    sender?: AuthUser;
 };
 
-// NOVO: Tipo para Assinatura
 export type Subscription = {
     id: string;
     clientId: string;
@@ -367,7 +340,6 @@ export type Subscription = {
     generatedBookings?: Booking[];
 };
 
-// NOVO: Tipo para Cupom
 export type Coupon = {
     id: string;
     code: string;
@@ -378,13 +350,12 @@ export type Coupon = {
     maxUses?: number | null;
     usesCount: number;
     target: CouponTarget;
-    targetId?: string | null; // ID do serviço/provedor específico
+    targetId?: string | null;
     status: CouponStatus;
     createdAt: string;
     updatedAt: string;
 };
 
-// NOVO: Tipo para Reclamação de Garantia
 export type GuaranteeClaim = {
     id: string;
     bookingId: string;
@@ -404,33 +375,30 @@ export type GuaranteeClaim = {
     provider?: Provider;
 };
 
-// NOVO: Tipo para Regra de Precificação Dinâmica
 export type PricingRule = {
     id: string;
     zoneId?: string | null;
-    dayOfWeek?: number | null; // 0 (Sunday) to 6 (Saturday)
-    startTime?: string | null; // HH:mm
-    endTime?: string | null; // HH:mm
+    dayOfWeek?: number | null;
+    startTime?: string | null;
+    endTime?: string | null;
     demandThreshold?: number | null;
-    surgeFactor: number; // Ex: 1.25 para 25% de aumento
+    surgeFactor: number;
     isActive: boolean;
     createdAt: string;
     updatedAt: string;
 };
 
-// NOVO: Tipo para Alerta de Pânico
 export type PanicAlert = {
     id: string;
     userId: string;
     latitude: number;
     longitude: number;
     message?: string | null;
-    status: string; // Ex: 'ACTIVE', 'RESOLVED'
+    status: string;
     createdAt: string;
-    user?: AuthUser; // Detalhes do usuário
+    user?: AuthUser;
 };
 
-// NOVO: Tipo para Relatório de Incidente
 export type Incident = {
     id: string;
     reporterId: string;
@@ -448,16 +416,14 @@ export type Incident = {
     booking?: Booking;
 };
 
-// NOVO: Tipo para Consentimento do Usuário (LGPD)
 export type UserConsent = {
     userId: string;
-    documentType: string; // Ex: 'TERMS_OF_SERVICE', 'PRIVACY_POLICY'
+    documentType: string;
     version: string;
     consentedAt: string;
     user?: AuthUser;
 };
 
-// NOVO: Tipo para Solicitação de Exportação/Exclusão de Dados (LGPD)
 export type DataRequest = {
     id: string;
     userId: string;
@@ -466,10 +432,9 @@ export type DataRequest = {
     requestedAt: string;
     processedAt?: string | null;
     user?: AuthUser;
-    reason?: string | null; // Para solicitações de exclusão
+    reason?: string | null;
 };
 
-// NOVO: Tipo para Análise de Avaliações
 export type DetailedRatingBreakdown = {
     averageRating: number;
     totalReviews: number;
@@ -480,7 +445,6 @@ export type DetailedRatingBreakdown = {
     oneStar: { count: number; percentage: number };
 };
 
-// NOVO: Tipo para Sugestões Inteligentes (IA)
 export type SmartSuggestion = {
     id: string;
     providerId: string;
@@ -492,7 +456,6 @@ export type SmartSuggestion = {
     status: 'PENDING' | 'APPLIED' | 'DISMISSED';
 };
 
-// NOVO: Tipo para Monitoramento de Fila/Worker
 export type QueueInfo = {
     name: string;
     active: number;
@@ -513,4 +476,40 @@ export type QueueJob = {
     failedReason?: string;
     createdAt: string;
     finishedAt?: string;
+};
+
+// --- Tipos adicionados para resolver os erros de importação ---
+
+export type Review = {
+    id: string;
+    bookingId: string;
+    rating: number;
+    comment?: string | null;
+    clientId: string;
+    providerId: string;
+    createdAt: string;
+};
+
+export type Offer = {
+    id: string;
+    title: string;
+    description: string;
+    discountPercentage: number;
+    validUntil: string;
+};
+
+export type Referral = {
+    id: string;
+    referrerId: string;
+    referredId: string;
+    status: 'pending' | 'completed' | 'canceled';
+    createdAt: string;
+};
+
+export type FAQItem = {
+    id: string;
+    question: string;
+    answer: string;
+    category?: string | null;
+    order: number;
 };

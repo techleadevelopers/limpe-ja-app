@@ -10,20 +10,22 @@ interface RejectionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (reason: string) => void;
+  // CORREÇÃO: Adicionada a propriedade `isPending` para gerenciar o estado de carregamento
+  isPending: boolean;
 }
 
-export default function RejectionModal({ isOpen, onClose, onConfirm }: RejectionModalProps) {
+export default function RejectionModal({ isOpen, onClose, onConfirm, isPending }: RejectionModalProps) {
   const [rejectionReason, setRejectionReason] = useState("");
 
   const handleConfirm = () => {
+    // A validação de entrada permanece a mesma.
     if (rejectionReason.trim()) {
       onConfirm(rejectionReason);
-      setRejectionReason("");
-      onClose();
     }
   };
 
   const handleClose = () => {
+    // Limpa o estado apenas quando a modal é de fato fechada
     setRejectionReason("");
     onClose();
   };
@@ -53,11 +55,12 @@ export default function RejectionModal({ isOpen, onClose, onConfirm }: Rejection
             </Button>
             <Button 
               onClick={handleConfirm}
-              disabled={!rejectionReason.trim()}
+              // CORREÇÃO: Desabilita o botão se não houver motivo ou se a requisição estiver pendente
+              disabled={!rejectionReason.trim() || isPending}
               variant="destructive"
               className="bg-red-600 hover:bg-red-700"
             >
-              Confirmar Rejeição
+              {isPending ? 'Enviando...' : 'Confirmar Rejeição'}
             </Button>
           </div>
         </motion.div>
