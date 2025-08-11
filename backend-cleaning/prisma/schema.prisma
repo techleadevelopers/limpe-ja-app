@@ -140,6 +140,18 @@ enum ClaimStatus {
   REJECTED
   SETTLED
 }
+
+// NOVO: Enum para o tipo de transação de fidelidade (Loyalty)
+enum LoyaltyTransactionType {
+  SERVICE_COMPLETED // Pontos por concluir um serviço
+  REVIEW_SUBMITTED // Pontos por enviar uma avaliação
+  FIRST_REVIEW // Pontos bônus pela primeira avaliação
+  REFERRAL // Pontos por indicar um amigo
+  REDEEM // Resgate de pontos (transação negativa)
+  MISSION_COMPLETED // Pontos por completar uma missão semanal
+  ADMIN_ADJUSTMENT // Ajuste manual de pontos por um administrador
+}
+
 // FIM ABS: NOVOS ENUMS PARA MÓDULOS AVANÇADOS
 
 // ---------------------------------
@@ -184,6 +196,9 @@ model User {
   userConsents          UserConsent[]
   // CORREÇÃO: Adicionando o campo de relação inversa para DisputeMessage
   disputeMessagesSent   DisputeMessage[] @relation("DisputeSender")
+  // NOVO: Relação com o modelo Loyalty
+  loyalty               Loyalty?
+  loyaltyTransactions   LoyaltyTransaction[]
 }
 
 // Modelo para Cliente
@@ -362,14 +377,14 @@ model Message {
   chatId           String
   chat             Chat      @relation(fields: [chatId], references: [id])
   senderId         String
+  sender           User      @relation("SentMessages", fields: [senderId], references: [id])
   receiverId       String
+  receiver         User      @relation("ReceivedMessages", fields: [receiverId], references: [id])
   content          String
   timestamp        DateTime  @default(now())
   isRead           Boolean   @default(false)
   targetUrl        String?
   createdAt        DateTime  @default(now())
-  sender           User      @relation("SentMessages", fields: [senderId], references: [id])
-  receiver         User      @relation("ReceivedMessages", fields: [receiverId], references: [id])
 }
 
 // Modelo de Notificação
@@ -621,4 +636,39 @@ model PricingRule {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 }
-// FIM ABS: NOVOS MODELOS PARA MÓDULOS AVANÇADOS
+
+// NOVO: Modelo para o saldo de pontos de fidelidade do usuário
+model Loyalty {
+  id            String   @id @default(uuid())
+  userId        String   @unique // Relaciona com o User
+  currentPoints Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+// NOVO: Modelo para o histórico de transações de pontos de fidelidade
+model LoyaltyTransaction {
+  id          String                 @id @default(uuid())
+  userId      String
+  user        User                   @relation(fields: [userId], references: [id])
+  points      Int                    // Pontos adicionados (positivo) ou resgatados (negativo)
+  type        LoyaltyTransactionType
+  referenceId String?                // ID do booking, review, referral, reward, etc.
+  createdAt   DateTime               @default(now())
+}
+
+// NOVO: Modelo para as recompensas que podem ser resgatadas com pontos de fidelidade
+model Reward {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  costPoints  Int      // Quantos pontos custa para resgatar
+  value       Decimal  @db.Decimal(10, 2) // Valor da recompensa (ex: R$10 de desconto ou 0.10 para 10% de desconto)
+  type        String   // Ex: "DISCOUNT_COUPON", "GIFT_CARD"
+  couponCode  String?  // Se for um cupom, qual o código ou template
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

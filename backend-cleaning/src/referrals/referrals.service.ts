@@ -4,11 +4,18 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateReferralDto } from './dto/create-referral.dto';
 import { Referral } from '@prisma/client'; // Importe o tipo Referral do Prisma
 
+// Importar LoyaltyService e LoyaltyTransactionType
+import { LoyaltyService } from '../loyalty/loyalty.service'; // <--- NOVA LINHA
+import { LoyaltyTransactionType } from '@prisma/client'; // <--- NOVA LINHA: Assumindo que LoyaltyTransactionType está no seu schema.prisma
+
 @Injectable()
 export class ReferralsService {
   private readonly logger = new Logger(ReferralsService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private loyaltyService: LoyaltyService, // <--- NOVA LINHA: Injetar LoyaltyService
+  ) {}
 
   async createReferral(dto: CreateReferralDto): Promise<Referral> {
     this.logger.log(`[ReferralsService] createReferral: Tentando criar indicação para referredUser ${dto.referredUserId} por referrerUser ${dto.referrerUserId}.`);
@@ -51,6 +58,18 @@ export class ReferralsService {
         },
       });
       this.logger.log(`[ReferralsService] Indicação criada com sucesso: ${referral.id}`);
+
+      // ADICIONAR PONTOS AO INDICADOR PELA INDICAÇÃO
+      // NOTA: A lógica ideal para pontos de indicação é quando o amigo indicado CONCLUI seu PRIMEIRO SERVIÇO.
+      // Este é um exemplo de adição no momento do registro da indicação, que pode ser ajustado.
+      await this.loyaltyService.addPoints({
+        userId: dto.referrerUserId,
+        points: 50, // Exemplo: +50 pontos por indicar um amigo
+        type: LoyaltyTransactionType.REFERRAL,
+        referenceId: referral.id,
+      });
+      this.logger.log(`[ReferralsService] Usuário ${dto.referrerUserId} recebeu pontos por indicação.`);
+
       return referral;
     } catch (error) {
       this.logger.error(`[ReferralsService] Erro ao criar indicação: ${error.message}`);

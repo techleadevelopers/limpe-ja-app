@@ -38,6 +38,10 @@ import { GeocodingModule } from './geocoding/geocoding.module';
 // Importe o SentryModule da forma correta
 import { SentryModule } from '@sentry/nestjs/setup';
 
+// Importar os novos módulos de Loyalty e Ranking
+import { LoyaltyModule } from './loyalty/loyalty.module'; // <--- NOVA LINHA
+import { RankingModule } from './ranking/ranking.module'; // <--- NOVA LINHA
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -90,6 +94,8 @@ import { SentryModule } from '@sentry/nestjs/setup';
     GuaranteeModule,
     PricingModule,
     GeocodingModule,
+    LoyaltyModule, // <--- NOVA LINHA: Adicionado LoyaltyModule
+    RankingModule, // <--- NOVA LINHA: Adicionado RankingModule
   ],
   controllers: [AppController],
   providers: [AppService],

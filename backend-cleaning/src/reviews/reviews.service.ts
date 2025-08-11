@@ -7,6 +7,11 @@ import { Review, BookingStatus, Prisma } from '@prisma/client';
 import { BookingsService } from '../bookings/bookings.service'; // ADICIONADO: Importação do BookingsService
 import { ProvidersService } from '../providers/providers.service'; // NEW: Import ProvidersService
 
+// Importar LoyaltyService e LoyaltyTransactionType
+import { LoyaltyService } from '../loyalty/loyalty.service'; // <--- NOVA LINHA
+import { LoyaltyTransactionType } from '@prisma/client'; // <--- NOVA LINHA: Assumindo que LoyaltyTransactionType está no seu schema.prisma
+
+
 export type ReviewWithIncludes = Prisma.ReviewGetPayload<{
   include: {
     client: { include: { user: true } };
@@ -57,6 +62,7 @@ export class ReviewsService {
     private prisma: PrismaService,
     private bookingsService: BookingsService, // ADICIONADO: Injetar BookingsService
     private providersService: ProvidersService, // NEW: Inject ProvidersService
+    private loyaltyService: LoyaltyService, // <--- NOVA LINHA: Injetar LoyaltyService
   ) {}
 
   async submitReview(clientId: string, submitReviewDto: SubmitReviewDto): Promise<Review> {
@@ -104,6 +110,30 @@ export class ReviewsService {
         comment,
       },
     });
+
+    // ADICIONAR PONTOS PELA AVALIAÇÃO
+    // Verificar se é a primeira avaliação do cliente para dar mais pontos
+    const clientReviewsCount = await this.prisma.review.count({
+      where: { clientId: booking.clientId },
+    });
+
+    if (clientReviewsCount === 1) { // Se for a primeira avaliação do cliente
+      await this.loyaltyService.addPoints({
+        userId: booking.client.userId,
+        points: 20, // Exemplo: +20 pontos pela primeira avaliação
+        type: LoyaltyTransactionType.FIRST_REVIEW,
+        referenceId: review.id,
+      });
+      this.logger.log(`[ReviewsService] submitReview: Cliente ${booking.client.userId} recebeu pontos pela primeira avaliação.`);
+    } else {
+      await this.loyaltyService.addPoints({
+        userId: booking.client.userId,
+        points: 5, // Exemplo: +5 pontos por avaliações subsequentes
+        type: LoyaltyTransactionType.REVIEW_SUBMITTED,
+        referenceId: review.id,
+      });
+      this.logger.log(`[ReviewsService] submitReview: Cliente ${booking.client.userId} recebeu pontos por avaliação subsequente.`);
+    }
 
     // NEW: Trigger provider badge update after a new review is created
     await this.providersService.updateProviderBadges(booking.providerId);

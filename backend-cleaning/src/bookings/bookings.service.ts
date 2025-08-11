@@ -17,6 +17,11 @@ import { QueuesService } from '../queues/queues.service'; // Importe o serviço 
 import { PricingService } from '../pricing/pricing.service'; // NEW
 import { CouponsService } from '../coupons/coupons.service'; // NEW
 
+// Importar LoyaltyService e LoyaltyTransactionType
+import { LoyaltyService } from '../loyalty/loyalty.service'; // <--- NOVA LINHA
+import { LoyaltyTransactionType } from '@prisma/client'; // <--- NOVA LINHA: Assumindo que LoyaltyTransactionType está no seu schema.prisma
+
+
 // CORREÇÃO: Adicionado subscription, incidents e guaranteeClaims à tipagem
 export type BookingWithDetailsRelations = Prisma.BookingGetPayload<{
   include: {
@@ -44,6 +49,7 @@ export class BookingsService {
     private queuesService: QueuesService, // Injetar QueuesService
     private pricingService: PricingService, // NEW
     private couponsService: CouponsService, // NEW
+    private loyaltyService: LoyaltyService, // <--- NOVA LINHA: Injetar LoyaltyService
     @Inject(forwardRef(() => PaymentsService))
     private paymentsService: PaymentsService,
   ) {}
@@ -475,6 +481,15 @@ export class BookingsService {
         data: { monthlyBookingsCount: { increment: 1 } },
       });
       this.logger.log(`[BookingsService] updateStatus: Provedor ${booking.providerId} teve monthlyBookingsCount incrementado.`);
+
+      // ADICIONAR PONTOS PARA O CLIENTE POR SERVIÇO CONCLUÍDO
+      await this.loyaltyService.addPoints({ // <--- NOVA LINHA
+        userId: booking.client.userId,
+        points: 10, // Exemplo: +10 pontos por serviço concluído
+        type: LoyaltyTransactionType.SERVICE_COMPLETED,
+        referenceId: booking.id,
+      });
+      this.logger.log(`[BookingsService] updateStatus: Cliente ${booking.client.userId} recebeu pontos por serviço concluído.`); // <--- NOVA LINHA
 
       // Send notification to client to request a review
       // CORREÇÃO: O booking.providerService.name e booking.provider.fullName só estarão disponíveis se incluídos

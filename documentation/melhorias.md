@@ -1,515 +1,170 @@
-1. Níveis + Selos de Confiança
-Como começar:
-Aproveitar os dados já disponíveis em reviewService (avaliações) e bookingService (quantidade de serviços concluídos).
-Criar níveis visuais: Bronze, Prata, Ouro, Platina.
-
-Exemplo de regra inicial:
-
-Bronze: até 5 serviços concluídos com nota ≥ 4
-
-Prata: 6 a 20 serviços concluídos com nota ≥ 4.5
-
-Ouro: 21+ serviços concluídos e 90% de aprovação
-
-Interface: Mostrar o selo no perfil do provedor (explore/[providerId].tsx e dashboard/index.tsx).
-
-Evolução futura: Integrar com IA para criar badges mais personalizados (ex: “Super Pontual”, “Mais Amado da Semana”).
-
-2. Pontos por Ação
-Como começar:
-Usar o módulo loyalty.tsx (já existe) mas mudar o texto pra “Seus Pontos” e registrar:
-
-+10 pontos por cada serviço concluído
-
-+20 pontos por primeira avaliação enviada
-
-+50 pontos por indicar um amigo que contrata um serviço (referralService)
-
-Resgate inicial: Desconto em serviços (aplicado no couponService).
-
-Evolução futura: Criar loja virtual de recompensas (vale-compras, produtos parceiros).
-
-3. Missões Semanais
-Como começar:
-Exemplo de missões para clientes:
-
-“Agende 2 serviços esta semana e ganhe 30 pontos”
-
-“Avalie 3 prestadores e ganhe 20 pontos”
-
-Backend inicial: Dá pra começar mockando as missões no front, com verificação simples usando o TanStack Query e dados do bookingService/reviewService.
-
-Evolução futura: Missões dinâmicas com base no perfil do usuário.
-
-4. Ranking Local
-Como começar:
-Mostrar no dashboard do provedor a posição dele no ranking do bairro/cidade, usando getNearbyProviders() + nota média (reviewService).
-
-Cliente: Pode ver um ranking de “Melhores do bairro” na tela explore/index.tsx.
-
-Evolução futura: Ranking por categoria de serviço e por período (semana/mês).
-
-5. Feedback Instantâneo Gamificado
-Como começar:
-Quando o cliente conclui um serviço e avalia, mostrar uma tela com confete, animação (react-native-reanimated) e “Você ganhou +20 pontos!”.
-
-Implementação simples:
-Aproveitar já a tela feedback/[targetId].tsx e adicionar a animação + contagem de pontos.
-
-💡 Resumo de execução rápida:
-
-Usar o que já existe (loyalty.tsx, referralService, reviewService) pra criar a base.
-
-Lançar níveis, pontos e pequenas missões agora.
-
-Depois expandir para ranking, loja de recompensas e desafios personalizados.
-
-Se quiser, posso te montar uma roadmap visual de 3 fases mostrando como ir do básico até um sistema estilo Airbnb/Fiiod com gamificação e reputação avançada. Isso deixaria claro o passo a passo até bater de frente com eles.
-
-
-1. Níveis + Selos de Confiança
-Melhoria:
-Adicionar subníveis dentro de cada nível principal (ex: Bronze I, Bronze II) pra dar sensação de progresso constante e evitar que o usuário fique “travado” muito tempo num nível.
-
-Extra rápido de implementar:
-Mostrar barra de progresso no perfil (ex: “Faltam 2 serviços pra chegar ao Prata”).
-
-Impacto:
-Mantém o provedor engajado, já que a progressão fica visível e alcançável.
-
-2. Pontos por Ação
-Melhoria:
-Criar multiplicadores temporários (ex: “Essa semana, indicações valem x2 pontos”).
-Fácil de implementar: é só passar um multiplicador no cálculo de pontos no loyaltyService.
-
-Impacto:
-Aumenta picos de engajamento em campanhas específicas e facilita testes de marketing.
-
-3. Missões Semanais
-Melhoria:
-Introduzir missões surpresa (só aparecem depois de completar a primeira missão da semana).
-Isso mantém o usuário voltando pra conferir novidades.
-
-Extra:
-Deixar o texto das missões 100% dinâmico vindo do backend (mesmo que no início seja mock no front) — já prepara pra fase avançada.
-
-4. Ranking Local
-Melhoria:
-Mostrar ranking por filtro rápido:
-
-Mais bem avaliados
-
-Mais rápidos
-
-Mais populares
-Isso dá variedade e evita que só os top fixos apareçam sempre.
-
-Extra:
-Exibir no dashboard do provedor um “Você subiu 3 posições essa semana!” — reforça sensação de progresso.
-
-5. Feedback Instantâneo Gamificado
-Melhoria:
-Incluir frases motivacionais personalizadas baseadas na ação.
-Ex: “Sua avaliação ajudou Maria a conquistar o nível Ouro! +20 pontos pra você 🎉”
-
-Extra rápido:
-Aproveitar o notificationService pra mandar um push no mesmo momento, reforçando a ação.
-
-💡 Resumo de melhorias rápidas pro MVP:
-
-Adicionar barra de progresso nos níveis.
-
-Multiplicadores temporários de pontos.
-
-Missões surpresa semanais.
-
-Ranking com filtros e mensagens de progresso.
-
-Feedback mais humano e conectado ao impacto da ação.
-
-Isso mantém o sistema simples, mas já com um “brilho” que Airbnb e Fiiod usam — a sensação de progresso, conquista e reconhecimento constante.
-
-Se quiser, posso já te desenhar a versão visual da tela de perfil e dashboard com essas melhorias aplicadas, pra você ver como isso ficaria no app antes de implementar.
-
-1. Melhorias para Usuário (Cliente)
-Agendamento inteligente: permitir sugestões automáticas de horários com base na disponibilidade do provedor, histórico do cliente e previsões de demanda.
-
-Precificação dinâmica transparente: mostrar em tempo real como o preço muda de acordo com horário, urgência e distância — já existe suporte técnico para PricingType e pode ser expandido.
-
-Assinaturas personalizadas: estender o módulo de subscriptions para permitir planos flexíveis (ex.: "2 limpezas/mês + desconto").
-
-Pagamentos facilitados:
-
-Salvar formas de pagamento para uso rápido.
-
-Adicionar parcelamento e cashback via PIX e cartão.
-
-Usar cupons e promoções de forma mais visível.
-
-Experiência pós-serviço: criar um fluxo rápido de recontratação direto da tela de avaliação.
-
-Segurança: integrar botão de pânico e relatório de incidentes já existentes de forma mais visível na UI, com acesso rápido.
-
-2. Melhorias para Provedor
-Onboarding gamificado: quebrar o fluxo de cadastro e verificação em etapas curtas com recompensas visuais e feedback imediato.
-
-Ferramentas de marketing interno:
-
-Criar pacotes e ofertas sazonais direto no app.
-
-Enviar promoções para clientes antigos.
-
-Insights acionáveis: usar o aiSuggestionsService e getCustomerInsights para dar sugestões práticas, como mudar preços em horários de baixa ou oferecer pacotes combinados.
-
-Gestão de reputação:
-
-Implementar badges/níveis de reputação no providerService e reviewService.
-
-Notificações quando o provedor atingir marcos (ex.: 100 serviços concluídos).
-
-Controle de agenda avançado: suporte a bloqueio de períodos recorrentes, férias e integração com calendários externos (Google/Outlook).
-
-3. Diferenciais de Mercado
-Garantia e seguro embutidos: tornar o guaranteeService mais visível e promover como diferencial de confiança.
-
-Programa de fidelidade e indicações:
-
-Expandir o módulo loyalty para oferecer benefícios reais (descontos, prioridade na agenda).
-
-Tornar o programa de indicações (referrals) com recompensas tanto para quem indica quanto para quem é indicado.
-
-Atendimento instantâneo:
-
-Chat com respostas automáticas para dúvidas comuns antes da contratação.
-
-Resposta preditiva para provedores baseada em IA (reviewService e aiSuggestionsService já têm base para isso).
-
-4. Eficiência e Retenção
-Otimização de performance:
-
-Continuar migrando do Context API para TanStack Query para menos re-renderizações.
-
-Melhorar cache offline para uso em áreas com baixa internet.
-
-Métricas de cancelamento e no-show: usar os campos novos em clients.ts e bookings.ts para aplicar políticas justas (ex.: bloqueio temporário para clientes com alto índice de faltas).
-
-Notificações ricas: explorar o suporte a rich media para mandar alertas com imagem, botão de ação e deep link direto para reagendar ou pagar.
-
-
-
-1. Níveis + Selos de Confiança
-Pontos fortes
-
-Regras claras e fáceis de comunicar.
-
-Base técnica já existe: reviewService (notas) + bookingService (quantidade de serviços).
-
-Exibição direta em explore/[providerId].tsx e dashboard/index.tsx garante visibilidade.
-
-Cuidados técnicos
-
-Criar uma função centralizada no backend para calcular o nível e evitar divergências entre telas.
-
-Cachear a informação para não recalcular toda hora.
-
-Sugestão extra
-
-Subníveis + barra de progresso (Bronze I, II, III…) vão manter a sensação de evolução contínua.
-
-Integração com notificações push: “Parabéns, você atingiu o nível Ouro!”.
-
-2. Pontos por Ação
-Pontos fortes
-
-Uso inteligente do loyalty.tsx + integração com referralService e couponService.
-
-Foco em ações que geram valor (avaliação, indicação, conclusão de serviço).
-
-Cuidados técnicos
-
-Criar um “pontosService” no backend para registrar logs de pontos e evitar inconsistências.
-
-Definir desde o início um limite diário/semanal para evitar abuso (ex.: spam de avaliações).
-
-Sugestão extra
-
-Multiplicadores temporários (“x2 pontos”) podem ser aplicados no cálculo no backend com base em campanhas.
-
-Adicionar um histórico visual de pontos no app para reforçar transparência.
-
-3. Missões Semanais
-Pontos fortes
-
-Pode começar mockado no frontend com TanStack Query filtrando dados do bookingService e reviewService.
-
-Incentiva frequência e diversificação de ações.
-
-Cuidados técnicos
-
-Precisa ter verificação anti-fraude simples (ex.: não contar serviços cancelados).
-
-Planejar como atualizar missões sem precisar de atualização de app (via backend).
-
-Sugestão extra
-
-Missões surpresa que desbloqueiam após completar outra aumentam engajamento.
-
-Usar textos dinâmicos para permitir ajustes de marketing rápido.
-
-4. Ranking Local
-Pontos fortes
-
-Fácil de implementar inicialmente usando getNearbyProviders() + média de notas do reviewService.
-
-Valor alto de marketing (“Top 3 da sua região”).
-
-Cuidados técnicos
-
-Ranking deve ser calculado no backend para evitar manipulação.
-
-Criar filtros claros (melhor avaliados, mais rápidos, mais populares).
-
-Sugestão extra
-
-Mensagem de progresso semanal no dashboard do provedor (“Você subiu 2 posições!”).
-
-Possibilidade de ranking por categoria (ex.: limpeza residencial vs. empresarial).
-
-5. Feedback Instantâneo Gamificado
-Pontos fortes
-
-Simples de implementar na feedback/[targetId].tsx com react-native-reanimated.
-
-Usa reforço positivo imediato para aumentar taxa de avaliações.
-
-Cuidados técnicos
-
-Garantir que a animação não atrapalhe a navegação rápida pós-avaliação.
-
-Sugestão extra
-
-Mensagem personalizada: “Sua avaliação ajudou João a atingir o nível Prata! +20 pontos pra você 🎉”.
-
-Notificação push complementar pelo notificationService.
-
-Síntese de impacto
-Alto impacto / baixo esforço: Níveis + Selos, Pontos por Ação, Feedback Gamificado.
-
-Impacto médio / esforço médio: Missões Semanais, Ranking Local.
-
-Potencial de retenção a longo prazo: loja de recompensas, badges personalizados via IA, ranking segmentado.
-
-
-Estrutura recomendada para a Home do Cliente
-1. Header com Status do Usuário
-Avatar + Nome (já existe no HeaderSuperior).
-
-Selo/Nível: pequeno badge (ex.: 🥈 Prata) ao lado do nome.
-
-Barra de progresso horizontal sutil (ex.: "Faltam 2 serviços para o nível Ouro").
-
-Pontos atuais: contador no canto, clicável para abrir loyalty.tsx.
-
-📌 Padrões UI: usar microinterações (leve fade/slide) e cores consistentes com branding. Evitar ocupar mais que 15% da altura visível.
-
-2. Seção “Suas Missões da Semana”
-Card horizontal rolável com 2–3 missões.
-
-Cada missão: ícone, título curto, barra de progresso e pontos de recompensa.
-
-Botão “Ver todas” → leva para uma tela detalhada de missões.
-
-📌 Padrões UI: manter missões com ícones consistentes (MaterialCommunityIcons), usar cores suaves para progresso, e limitar texto para leitura rápida.
-
-3. Ranking Local
-Card compacto “Ranking no seu bairro”.
-
-Mostra posição atual do cliente como avaliador/usuário ativo e incentivo para interagir mais (“Mais 1 avaliação para subir de posição!”).
-
-Botão “Ver Melhores do Bairro” → abre ranking em explore/todos-prestadores-proximos.tsx filtrado.
-
-📌 Padrões UI: mini-ranking com fotos circulares dos top 3 provedores, texto minimalista.
-
-4. Recompensas e Ofertas
-Card com “Resgate seus pontos” mostrando saldo e recompensas próximas.
-
-CTA: “Trocar pontos por desconto” → integração com couponService.
-
-📌 Padrões UI: fundo com gradiente suave, ícones de presentes, pontos destacados em tipografia bold.
-
-5. Feedback e Reforço Pós-Ação
-Não fica sempre na home, mas quando o cliente conclui um serviço, ao abrir a home no próximo acesso:
-
-Banner com animação curta (Reanimated) dizendo: “Você ganhou +20 pontos pela sua avaliação”.
-
-Botão para ver histórico de pontos.
-
-📌 Padrões UI: usar animação leve e não bloquear rolagem da home.
-
-Resumo visual da Home
-Header Superior
-
-Foto, nome, selo, barra de progresso, contador de pontos.
-
-Missões Semanais
-
-2–3 cards horizontais com progresso.
-
-Ranking Local
-
-Card compacto, ranking top 3, botão "Ver todos".
-
-Recompensas
-
-Saldo de pontos + CTA de resgate.
-
-Banners de Campanha
-
-Espaço rotativo para multiplicadores de pontos ou promoções.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-o do projeto facilita a identificação dos pontos onde as permissões são solicitadas.
-O que você PRECISA INTEGRAR/REFORÇAR para o Lançamento:
-
-Contextualização Pré-Prompt (Justificativa Clara):
-Antes de chamar a API de permissão do sistema: Exiba uma tela intermediária ou um modal personalizado que explique ao usuário por que o aplicativo precisa daquela permissão específica, naquele momento.
-Exemplos:
-Localização (Botão de Pânico): "Para sua segurança, ao acionar o botão de pânico, o LimpeJáApp precisa enviar sua localização atual para as autoridades ou contatos de emergência. Podemos acessar sua localização?" (Botão "Entendi, Continuar" que dispara o requestPermissionsAsync do Expo).
-Câmera/Galeria (Upload de Documentos/Selfie): "Para verificar sua identidade, precisamos acessar sua câmera para que você possa tirar fotos dos seus documentos e de uma selfie. Seus dados serão protegidos. Podemos acessar sua câmera?"
-Benefício: Isso aumenta a confiança do usuário e a probabilidade de ele conceder a permissão, além de estar em total conformidade com as diretrizes de privacidade do Google, que valorizam a transparência.
-Tratamento de Recusa:
-Se o usuário recusar a permissão, o aplicativo deve reagir de forma graciosa.
-Exemplo (Localização para Pânico): "Sem acesso à sua localização, não podemos enviar sua posição em caso de emergência. Você pode ativar essa permissão a qualquer momento nas configurações do seu celular." E desabilitar a funcionalidade do botão de pânico até que a permissão seja concedida.
-Evite loops infinitos de solicitação de permissão.
-3. Detalhamento de Testes
-O que você JÁ TEM (Pontos Fortes):
-
-Arquitetura Testável: A documentação destaca que o NestJS promove "aplicações altamente testáveis, escaláveis, pouco acopladas e de fácil manutenção", e o frontend com React Native/Expo, Context API e TanStack Query também segue uma arquitetura modular. Isso significa que a base para escrever testes de qualidade já existe.
-Validação de DTOs: O uso de class-validator e ValidationPipe no backend já é uma forma de teste de entrada de dados, garantindo que os dados que chegam aos serviços estejam no formato correto.
-Sentry: A integração do Sentry (mesmo que com a configuração do backend pendente) já é uma ferramenta de monitoramento de erros em produção, que pode complementar os testes.
-O que você PRECISA INTEGRAR/REFORÇAR para o Lançamento:
-
-Documento de Estratégia de Testes: Crie um documento formal (pode ser parte da documentação existente) que detalhe:
-Tipos de Testes: Quais testes são realizados (Unitários, de Integração, End-to-End/E2E, UI, Performance, Segurança).
-Ferramentas: Quais ferramentas são usadas para cada tipo de teste (ex: Jest para unitários/integração, React Native Testing Library para UI, Cypress/Detox para E2E, JMeter/K6 para performance, OWASP ZAP para segurança).
-Cobertura: Metas de cobertura de código (ex: 80% de cobertura de linha para testes unitários).
-Processo de CI/CD: Como os testes são integrados ao pipeline de Integração Contínua/Entrega Contínua (CI/CD). Os testes são executados automaticamente a cada push? O build é bloqueado se os testes falharem?
+Relatório de Integração e Arquivos Envolvidos
+Este relatório detalha a estratégia de integração e os arquivos-chave envolvidos nas melhorias e funcionalidades de gamificação propostas, visando uma implementação organizada e eficiente.
+
+1. Funcionalidades de Gamificação e Engajamento
+As seguintes funcionalidades visam aumentar o engajamento de provedores e clientes através de elementos de gamificação.
+
+1.1. Níveis + Selos de Confiança
+Objetivo: Reconhecer e incentivar o desempenho dos provedores, aumentando a confiança dos clientes através de um sistema de níveis visuais (Bronze, Prata, Ouro, Platina).
+Estratégia de Integração:
+Aproveitar dados existentes de avaliações (reviewService) e serviços concluídos (bookingService).
+Criar uma função centralizada no backend para calcular o nível do provedor e cachear essa informação para otimização.
+Exibir o selo e, futuramente, uma barra de progresso no perfil do provedor e no dashboard.
+Arquivos Envolvidos:
+Frontend (React Native / Expo):
+app/explore/[providerId].tsx: Exibição do selo de nível no perfil do provedor.
+app/dashboard/index.tsx: Exibição do selo e barra de progresso no dashboard do provedor.
+Backend (NestJS):
+src/modules/review/review.service.ts: Para obter a média de avaliações.
+src/modules/booking/booking.service.ts: Para contar os serviços concluídos.
+src/modules/provider/provider.service.ts: Para calcular e retornar o nível/selo no DTO do perfil do provedor.
+src/modules/provider/dto/provider.dto.ts: Para incluir os campos level e badge.
+Melhorias/Evolução: Adição de subníveis (ex: Bronze I, Bronze II) e barra de progresso no perfil.
+1.2. Pontos por Ação
+Objetivo: Recompensar clientes e provedores por ações que agregam valor à plataforma, como conclusão de serviços, avaliações e indicações.
+Estratégia de Integração:
+Utilizar o módulo loyalty.tsx existente, renomeando-o para "Seus Pontos".
+Registrar pontos por ações específicas (serviço concluído, primeira avaliação, indicação).
+Permitir o resgate inicial de pontos como desconto via couponService.
+Arquivos Envolvidos:
+Frontend (React Native / Expo):
+components/loyalty.tsx: Renomear e exibir o saldo de pontos.
+Backend (NestJS):
+src/modules/loyalty/loyalty.service.ts: Centralizar a lógica de cálculo de pontos e multiplicadores.
+src/modules/referral/referral.service.ts: Para pontuar indicações.
+src/modules/coupon/coupon.service.ts: Para aplicar descontos no resgate de pontos.
+(opcional) src/modules/loyalty/loyalty.controller.ts: Endpoint para histórico de pontos.
+Melhorias/Evolução: Criação de multiplicadores temporários de pontos e loja virtual de recompensas.
+1.3. Missões Semanais
+Objetivo: Incentivar a frequência e diversificação das ações dos usuários através de desafios semanais.
+Estratégia de Integração:
+Fase Inicial: Começar com missões mockadas no frontend, utilizando TanStack Query para verificar o progresso com base em dados de bookingService e reviewService.
+Fase Futura: Implementar um serviço de backend para missões dinâmicas.
+Arquivos Envolvidos:
+Frontend (React Native / Expo):
+app/dashboard/index.tsx: Exibição das missões semanais.
+components/missions/MissionList.tsx (se for criado): Para listar as missões.
+Backend (NestJS):
+(Fase 2) src/modules/missions/missions.service.ts: Para gerar missões dinâmicas.
+Melhorias/Evolução: Missões surpresa e textos de missão 100% dinâmicos via backend.
+1.4. Ranking Local
+Objetivo: Motivar provedores e clientes através da visualização de sua posição em rankings locais, incentivando a melhoria contínua e a competição saudável.
+Estratégia de Integração:
+Utilizar getNearbyProviders() e a nota média do reviewService para criar rankings.
+Exibir a posição do provedor no dashboard e um ranking de "Melhores do bairro" para clientes.
+Arquivos Envolvidos:
+Frontend (React Native / Expo):
+app/dashboard/index.tsx: Mostrar a posição do provedor no ranking.
+components/ranking/RankingCard.tsx (se existir): Para exibir a posição local.
+app/explore/index.tsx (ou explore/todos-prestadores-proximos.tsx): Para exibir o ranking de "Melhores do bairro".
+Backend (NestJS):
+src/modules/provider/provider.service.ts: Para o endpoint getNearbyProviders() com funcionalidades de ranking.
+(opcional) src/modules/ranking/ranking.service.ts: Serviço dedicado para rankings segmentados.
+Melhorias/Evolução: Ranking por filtros (mais bem avaliados, mais rápidos, mais populares) e mensagens de progresso ("Você subiu X posições!").
+1.5. Feedback Instantâneo Gamificado
+Objetivo: Reforçar positivamente a ação do usuário (avaliação de serviço) com feedback visual e pontos imediatos, incentivando a continuidade do engajamento.
+Estratégia de Integração:
+Adicionar animações (react-native-reanimated) e contagem de pontos na tela pós-avaliação.
+Aproveitar a tela feedback/[targetId].tsx existente.
+Arquivos Envolvidos:
+Frontend (React Native / Expo):
+app/feedback/[targetId].tsx: Adicionar animação e feedback gamificado.
+Melhorias/Evolução: Inclusão de frases motivacionais personalizadas e envio de notificação push complementar.
+2. Melhorias Essenciais do Sistema (Além da Gamificação)
+Estas são melhorias cruciais para a experiência do usuário e do provedor, bem como para a eficiência e diferenciação do mercado.
+
+2.1. Melhorias para o Usuário (Cliente)
+Agendamento Inteligente: Sugestões automáticas de horários com base na disponibilidade e histórico.
+Precificação Dinâmica Transparente: Exibição em tempo real de como o preço muda (horário, urgência, distância).
+Assinaturas Personalizadas: Expansão do módulo subscriptions para planos flexíveis.
+Pagamentos Facilitados: Salvar formas de pagamento, parcelamento, cashback, cupons visíveis.
+Experiência Pós-Serviço: Fluxo rápido de recontratação.
+Segurança: Botão de pânico e relatório de incidentes mais visíveis na UI.
+2.2. Melhorias para o Provedor
+Onboarding Gamificado: Quebrar o fluxo de cadastro em etapas com recompensas visuais.
+Ferramentas de Marketing Interno: Criar pacotes e ofertas sazonais, enviar promoções para clientes antigos.
+Insights Acionáveis: Sugestões práticas via aiSuggestionsService e getCustomerInsights.
+Gestão de Reputação: Badges/níveis de reputação, notificações de marcos atingidos.
+Controle de Agenda Avançado: Bloqueio de períodos recorrentes, integração com calendários externos.
+2.3. Diferenciais de Mercado
+Garantia e Seguro Embutidos: Tornar o guaranteeService mais visível.
+Programa de Fidelidade e Indicações: Expandir loyalty e referrals com benefícios reais.
+Atendimento Instantâneo: Chat com respostas automáticas e resposta preditiva para provedores.
+2.4. Eficiência e Retenção
+Otimização de Performance: Migração para TanStack Query, melhoria de cache offline.
+Métricas de Cancelamento e No-Show: Aplicação de políticas justas com base em novos campos.
+Notificações Ricas: Suporte a rich media para alertas com imagem, botão de ação e deep link.
+3. Integrações Críticas para Lançamento
+Estas são duas áreas fundamentais que exigem atenção imediata para garantir a conformidade, robustez e a experiência do usuário antes do lançamento.
+
+3.1. Contextualização Pré-Prompt (Permissões)
+Objetivo: Aumentar a taxa de concessão de permissões e a confiança do usuário, explicando o porquê da solicitação de permissão antes de chamar a API do sistema.
+Estratégia de Integração:
+Exibir um modal ou tela intermediária com justificativa clara antes de solicitar permissões sensíveis (localização, câmera/galeria).
+Tratar a recusa de forma graciosa, desabilitando funcionalidades dependentes e informando o usuário sobre como ativar a permissão posteriormente.
+Arquivos Envolvidos:
+Frontend (React Native / Expo):
+app/(common)/safety/panic.tsx: Modal explicativo para permissão de localização (botão de pânico).
+app/(auth)/provider-register/service-details.tsx: Modal explicativo para câmera/galeria (upload de documentos/selfie).
+app/(client)/profile/edit.tsx: Modal explicativo para câmera/galeria (edição de foto de perfil do cliente).
+app/services/securityService.ts: Revisar lógica de biometria (expo-local-authentication) para contextualização, se aplicável.
+components/common/PermissionModal.tsx (novo): Componente genérico para prompts de permissão reutilizável.
+3.2. Configuração do Sentry no Backend
+Objetivo: Habilitar o monitoramento de erros e performance em tempo real no backend, crucial para identificar e resolver problemas rapidamente em produção.
+Estratégia de Integração:
+Inicializar o Sentry no ponto de entrada da aplicação NestJS.
+Configurar o DSN do Sentry via variáveis de ambiente.
+Garantir a captura de exceções não tratadas e o monitoramento de performance.
+Arquivos Envolvidos:
+Backend (NestJS):
+src/main.ts: Ponto de entrada para a inicialização do Sentry.
+src/config/configuration.ts: Para definir SENTRY_DSN e outras configurações.
+src/config/validation-schema.ts: Para validar a variável SENTRY_DSN.
+.env (ou ambiente de produção): Para definir a variável de ambiente SENTRY_DSN.
+package.json: Para garantir as dependências @sentry/node, @sentry/tracing, @sentry/profiling-node.
+4. Estratégia de Testes (Reforço)
+Embora não haja arquivos de código específicos para a "estratégia" de testes em si, é fundamental reforçar a implementação de um plano de testes robusto.
+
+Objetivo: Assegurar a qualidade, estabilidade e segurança do aplicativo através de uma abordagem de testes abrangente.
+Aspectos a Reforçar:
+Documento de Estratégia de Testes: Formalizar tipos de testes (Unitários, Integração, E2E, UI, Performance, Segurança), ferramentas (Jest, React Native Testing Library, Cypress/Detox, JMeter/K6, OWASP ZAP) e metas de cobertura.
 Implementação de Testes Abrangentes:
-Frontend:
-Testes de Componentes/UI: Testar se os componentes renderizam corretamente, se interagem como esperado com o estado e se respondem a eventos do usuário.
-Testes de Integração: Testar a interação entre componentes e serviços (ex: um formulário de login chamando authService.login()).
-Testes E2E: Simular fluxos completos de usuário (ex: "cliente se registra, busca um provedor, agenda um serviço, paga e avalia").
-Backend:
-Testes Unitários: Para serviços e controladores, testando a lógica de negócios isoladamente.
-Testes de Integração: Testar a interação entre controladores, serviços e o banco de dados (usando um banco de dados de teste).
-Testes de API: Garantir que todos os endpoints funcionem como esperado, com diferentes cenários (sucesso, erro, autorização).
-Testes de Performance e Carga: Simular um grande número de usuários para garantir que o backend e o frontend se comportem bem sob carga.
-Testes de Segurança: Realizar testes de penetração e varreduras de vulnerabilidades para identificar e corrigir falhas de segurança.
-Relatórios de Teste: Ter relatórios automatizados que mostrem o status dos testes, a cobertura de código e os resultados dos testes de performance/segurança. Embora o Google não peça esses relatórios, eles são sua prova interna de qualidade.
-4. Configuração do Sentry no Backend
-O que você JÁ TEM (Pontos Fortes):
+Frontend: Testes de Componentes/UI, Testes de Integração, Testes E2E.
+Backend: Testes Unitários, Testes de Integração (com DB de teste), Testes de API, Testes de Performance e Carga, Testes de Segurança.
+Integração CI/CD: Automatizar a execução de testes no pipeline de Integração Contínua/Entrega Contínua, bloqueando builds em caso de falha.
+Relatórios de Teste: Gerar relatórios automatizados para visibilidade do status e cobertura.
+Conclusão
+A abordagem proposta permite uma integração faseada das funcionalidades, priorizando o uso de componentes e serviços existentes. As funcionalidades de gamificação, juntamente com as melhorias de experiência do usuário e as integrações críticas de permissões e monitoramento de erros, são fundamentais para o sucesso do lançamento e a retenção de usuários. A estrutura detalhada dos arquivos envolvidos facilita o desenvolvimento e a manutenção, garantindo um processo de integração mais organizado e eficiente.
 
-Dependências Instaladas: O log mostra que @sentry/react-native e @sentry/tracing estão presentes no frontend.
-Inicialização no Frontend: O src/utils/sentry.ts já inicializa o Sentry no frontend.
-O que você PRECISA INTEGRAR/REFORÇAR para o Lançamento:
+Arquivos Envolvidos
+Frontend (React Native / Expo):
 
-Configurar SENTRY_DSN no Backend:
-Variáveis de Ambiente: No seu arquivo .env (ou no sistema de gerenciamento de variáveis de ambiente do seu ambiente de produção, como Cloud Run), adicione a variável SENTRY_DSN com o valor do DSN do seu projeto Sentry.
-src/config/configuration.ts e validation-schema.ts: Certifique-se de que o SENTRY_DSN esteja sendo lido e validado corretamente pelo seu ConfigModule.
-Inicialização no main.ts ou app.module.ts do Backend:
-Você precisa adicionar o código de inicialização do Sentry no backend, geralmente no main.ts (o ponto de entrada da sua aplicação NestJS) ou no AppModule.
-Exemplo básico de como ficaria no main.ts:
-typescript
+app/explore/[providerId].tsx
+app/dashboard/index.tsx
+components/loyalty.tsx
+components/missions/MissionList.tsx (se for criado)
+components/ranking/RankingCard.tsx (se existir)
+app/explore/index.tsx (ou explore/todos-prestadores-proximos.tsx)
+app/feedback/[targetId].tsx
+app/(common)/safety/panic.tsx
+app/(auth)/provider-register/service-details.tsx
+app/(client)/profile/edit.tsx
+app/services/securityService.ts
+components/common/PermissionModal.tsx (novo)
+Backend (NestJS):
 
-Copiar
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
-import * as Sentry from '@sentry/node'; // Importar o SDK Node do Sentry
-import { ProfilingIntegration } from '@sentry/profiling-node'; // Se quiser profiling
-import { ConfigService } from '@nestjs/config'; // Para acessar variáveis de ambiente
-
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  const configService = app.get(ConfigService); // Obter o ConfigService
-
-  const sentryDsn = configService.get<string>('SENTRY_DSN'); // Obter o DSN
-
-  if (sentryDsn) {
-    Sentry.init({
-      dsn: sentryDsn,
-      integrations: [
-        // Adicione integrações relevantes para NestJS/Node.js
-        new Sentry.Integrations.Http({ tracing: true }),
-        new Sentry.Integrations.Express({ app: app.getHttpAdapter().getInstance() }),
-        new ProfilingIntegration(), // Se quiser profiling
-      ],
-      tracesSampleRate: 1.0, // Capture 100% das transações para monitoramento de performance
-      profilesSampleRate: 1.0, // Capture 100% dos perfis para monitoramento de performance
-      environment: configService.get<string>('NODE_ENV') || 'development',
-    });
-
-    // Opcional: Adicionar um handler de erros global para o Sentry
-    app.use(Sentry.Handlers.errorHandler());
-  }
-
-  // ... restante do seu bootstrap ...
-  await app.listen(configService.get<number>('PORT') || 3000);
-  console.log(`Application is running on: ${await app.getUrl()}`);
-  console.log(`Swagger documentation available at: ${await app.getUrl()}/api`);
-}
-bootstrap();
-Captura de Erros e Performance:
-Certifique-se de que o Sentry esteja configurado para capturar exceções não tratadas, erros de promessas rejeitadas e para monitorar a performance das requisições HTTP (tracing).
-Envie contexto adicional para o Sentry (ID do usuário, detalhes da requisição, etc.) para facilitar a depuração.
-Ao abordar esses pontos, você não apenas melhora a conformidade do seu aplicativo com as políticas do Google Play, mas também aumenta a robustez, a segurança e a qualidade geral da experiência do usuário, o que é fundamental para o sucesso a longo prazo na loja.
-
-
-Arquivos Envolvidos nas Melhorias Sugeridas (Excluindo Testes)
-1. Prompts de Permissão (Contextualização e Tratamento de Recusa)
-Esta é uma melhoria focada no frontend, pois envolve a interface do usuário e a interação com as APIs de permissão do dispositivo.
-
-LimpeJaApp/app/(common)/safety/panic.tsx:
-Motivo: Esta tela aciona o botão de pânico e, portanto, provavelmente solicita permissão de localização. É o local ideal para adicionar o modal de contextualização antes de chamar expo-location e para tratar a recusa da permissão.
-LimpeJaApp/app/(auth)/provider-register/service-details.tsx:
-Motivo: Esta tela lida com o handleImagePicker() para upload de foto de perfil (avatar). O ImagePicker do Expo requer permissão para acessar a câmera ou a galeria. Aqui você adicionaria o modal de contextualização para acesso à câmera/galeria e o tratamento de recusa.
-LimpeJaApp/app/(client)/profile/edit.tsx:
-Motivo: Similar ao service-details.tsx, esta tela também lida com handlePickImage() para a foto de perfil do cliente. O mesmo tratamento de permissão é necessário aqui.
-LimpeJaApp/app/services/securityService.ts:
-Motivo: Este serviço já lida com expo-local-authentication para biometria. Se houver alguma lógica de "ativar biometria" que possa ser contextualizada, seria aqui.
-Arquivos de Componentes Reutilizáveis (se aplicável):
-Se você criar um componente de modal genérico para solicitação de permissão, ele estaria em LimpeJaApp/components/common/ ou um subdiretório.
-2. Configuração do Sentry no Backend
-src/main.ts:
-Motivo: Este é o ponto de entrada da sua aplicação NestJS. A inicialização do Sentry deve ser feita aqui, antes de o aplicativo começar a escutar as requisições.
-src/config/configuration.ts:
-Motivo: Para definir a variável de ambiente SENTRY_DSN e outras configurações do Sentry (como NODE_ENV para o ambiente).
-src/config/validation-schema.ts:
-Motivo: Para adicionar a validação do SENTRY_DSN usando Joi, garantindo que a variável esteja presente e no formato correto.
-.env (ou ambiente de produção):
-Motivo: O arquivo .env (ou as variáveis de ambiente configuradas no seu ambiente de deployment, como Cloud Run) deve conter a variável SENTRY_DSN=SEU_DSN_AQUI.
-package.json:
-Motivo: Certifique-se de que as dependências do Sentry para Node.js (@sentry/node, @sentry/tracing, @sentry/profiling-node se usar profiling) estejam listadas.
-23:54
-Compartilhar
-
-Comparar
-
-
-@Claude-Opus-4.1
-Comparar
-
-
-@o3-mini-high
+src/modules/review/review.service.ts
+src/modules/booking/booking.service.ts
+src/modules/provider/provider.service.ts
+src/modules/provider/dto/provider.dto.ts
+src/modules/loyalty/loyalty.service.ts
+src/modules/referral/referral.service.ts
+src/modules/coupon/coupon.service.ts
+src/modules/loyalty/loyalty.controller.ts (opcional)
+src/modules/missions/missions.service.ts (Fase 2)
+src/modules/ranking/ranking.service.ts (opcional)
+src/main.ts
+src/config/configuration.ts
+src/config/validation-schema.ts
+.env (ou ambiente de produção)
+package.json (para dependências do Sentry)
