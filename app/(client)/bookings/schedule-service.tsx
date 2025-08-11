@@ -749,10 +749,10 @@ export default function ScheduleServiceScreen() {
                     />
                 </Animated.View>
 
+                {/* CORREÇÃO APLICADA AQUI */}
                 <Animated.View style={{
                     transform: [
-                        { scale: calendarBreatheAnim },
-                        { scale: scaleAnim }
+                        { scale: Animated.multiply(calendarBreatheAnim, scaleAnim) } // Combine as escalas
                     ]
                 }}>
                     <LinearGradient

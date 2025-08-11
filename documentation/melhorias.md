@@ -366,3 +366,150 @@ Saldo de pontos + CTA de resgate.
 Banners de Campanha
 
 Espaço rotativo para multiplicadores de pontos ou promoções.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+o do projeto facilita a identificação dos pontos onde as permissões são solicitadas.
+O que você PRECISA INTEGRAR/REFORÇAR para o Lançamento:
+
+Contextualização Pré-Prompt (Justificativa Clara):
+Antes de chamar a API de permissão do sistema: Exiba uma tela intermediária ou um modal personalizado que explique ao usuário por que o aplicativo precisa daquela permissão específica, naquele momento.
+Exemplos:
+Localização (Botão de Pânico): "Para sua segurança, ao acionar o botão de pânico, o LimpeJáApp precisa enviar sua localização atual para as autoridades ou contatos de emergência. Podemos acessar sua localização?" (Botão "Entendi, Continuar" que dispara o requestPermissionsAsync do Expo).
+Câmera/Galeria (Upload de Documentos/Selfie): "Para verificar sua identidade, precisamos acessar sua câmera para que você possa tirar fotos dos seus documentos e de uma selfie. Seus dados serão protegidos. Podemos acessar sua câmera?"
+Benefício: Isso aumenta a confiança do usuário e a probabilidade de ele conceder a permissão, além de estar em total conformidade com as diretrizes de privacidade do Google, que valorizam a transparência.
+Tratamento de Recusa:
+Se o usuário recusar a permissão, o aplicativo deve reagir de forma graciosa.
+Exemplo (Localização para Pânico): "Sem acesso à sua localização, não podemos enviar sua posição em caso de emergência. Você pode ativar essa permissão a qualquer momento nas configurações do seu celular." E desabilitar a funcionalidade do botão de pânico até que a permissão seja concedida.
+Evite loops infinitos de solicitação de permissão.
+3. Detalhamento de Testes
+O que você JÁ TEM (Pontos Fortes):
+
+Arquitetura Testável: A documentação destaca que o NestJS promove "aplicações altamente testáveis, escaláveis, pouco acopladas e de fácil manutenção", e o frontend com React Native/Expo, Context API e TanStack Query também segue uma arquitetura modular. Isso significa que a base para escrever testes de qualidade já existe.
+Validação de DTOs: O uso de class-validator e ValidationPipe no backend já é uma forma de teste de entrada de dados, garantindo que os dados que chegam aos serviços estejam no formato correto.
+Sentry: A integração do Sentry (mesmo que com a configuração do backend pendente) já é uma ferramenta de monitoramento de erros em produção, que pode complementar os testes.
+O que você PRECISA INTEGRAR/REFORÇAR para o Lançamento:
+
+Documento de Estratégia de Testes: Crie um documento formal (pode ser parte da documentação existente) que detalhe:
+Tipos de Testes: Quais testes são realizados (Unitários, de Integração, End-to-End/E2E, UI, Performance, Segurança).
+Ferramentas: Quais ferramentas são usadas para cada tipo de teste (ex: Jest para unitários/integração, React Native Testing Library para UI, Cypress/Detox para E2E, JMeter/K6 para performance, OWASP ZAP para segurança).
+Cobertura: Metas de cobertura de código (ex: 80% de cobertura de linha para testes unitários).
+Processo de CI/CD: Como os testes são integrados ao pipeline de Integração Contínua/Entrega Contínua (CI/CD). Os testes são executados automaticamente a cada push? O build é bloqueado se os testes falharem?
+Implementação de Testes Abrangentes:
+Frontend:
+Testes de Componentes/UI: Testar se os componentes renderizam corretamente, se interagem como esperado com o estado e se respondem a eventos do usuário.
+Testes de Integração: Testar a interação entre componentes e serviços (ex: um formulário de login chamando authService.login()).
+Testes E2E: Simular fluxos completos de usuário (ex: "cliente se registra, busca um provedor, agenda um serviço, paga e avalia").
+Backend:
+Testes Unitários: Para serviços e controladores, testando a lógica de negócios isoladamente.
+Testes de Integração: Testar a interação entre controladores, serviços e o banco de dados (usando um banco de dados de teste).
+Testes de API: Garantir que todos os endpoints funcionem como esperado, com diferentes cenários (sucesso, erro, autorização).
+Testes de Performance e Carga: Simular um grande número de usuários para garantir que o backend e o frontend se comportem bem sob carga.
+Testes de Segurança: Realizar testes de penetração e varreduras de vulnerabilidades para identificar e corrigir falhas de segurança.
+Relatórios de Teste: Ter relatórios automatizados que mostrem o status dos testes, a cobertura de código e os resultados dos testes de performance/segurança. Embora o Google não peça esses relatórios, eles são sua prova interna de qualidade.
+4. Configuração do Sentry no Backend
+O que você JÁ TEM (Pontos Fortes):
+
+Dependências Instaladas: O log mostra que @sentry/react-native e @sentry/tracing estão presentes no frontend.
+Inicialização no Frontend: O src/utils/sentry.ts já inicializa o Sentry no frontend.
+O que você PRECISA INTEGRAR/REFORÇAR para o Lançamento:
+
+Configurar SENTRY_DSN no Backend:
+Variáveis de Ambiente: No seu arquivo .env (ou no sistema de gerenciamento de variáveis de ambiente do seu ambiente de produção, como Cloud Run), adicione a variável SENTRY_DSN com o valor do DSN do seu projeto Sentry.
+src/config/configuration.ts e validation-schema.ts: Certifique-se de que o SENTRY_DSN esteja sendo lido e validado corretamente pelo seu ConfigModule.
+Inicialização no main.ts ou app.module.ts do Backend:
+Você precisa adicionar o código de inicialização do Sentry no backend, geralmente no main.ts (o ponto de entrada da sua aplicação NestJS) ou no AppModule.
+Exemplo básico de como ficaria no main.ts:
+typescript
+
+Copiar
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+import * as Sentry from '@sentry/node'; // Importar o SDK Node do Sentry
+import { ProfilingIntegration } from '@sentry/profiling-node'; // Se quiser profiling
+import { ConfigService } from '@nestjs/config'; // Para acessar variáveis de ambiente
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  const configService = app.get(ConfigService); // Obter o ConfigService
+
+  const sentryDsn = configService.get<string>('SENTRY_DSN'); // Obter o DSN
+
+  if (sentryDsn) {
+    Sentry.init({
+      dsn: sentryDsn,
+      integrations: [
+        // Adicione integrações relevantes para NestJS/Node.js
+        new Sentry.Integrations.Http({ tracing: true }),
+        new Sentry.Integrations.Express({ app: app.getHttpAdapter().getInstance() }),
+        new ProfilingIntegration(), // Se quiser profiling
+      ],
+      tracesSampleRate: 1.0, // Capture 100% das transações para monitoramento de performance
+      profilesSampleRate: 1.0, // Capture 100% dos perfis para monitoramento de performance
+      environment: configService.get<string>('NODE_ENV') || 'development',
+    });
+
+    // Opcional: Adicionar um handler de erros global para o Sentry
+    app.use(Sentry.Handlers.errorHandler());
+  }
+
+  // ... restante do seu bootstrap ...
+  await app.listen(configService.get<number>('PORT') || 3000);
+  console.log(`Application is running on: ${await app.getUrl()}`);
+  console.log(`Swagger documentation available at: ${await app.getUrl()}/api`);
+}
+bootstrap();
+Captura de Erros e Performance:
+Certifique-se de que o Sentry esteja configurado para capturar exceções não tratadas, erros de promessas rejeitadas e para monitorar a performance das requisições HTTP (tracing).
+Envie contexto adicional para o Sentry (ID do usuário, detalhes da requisição, etc.) para facilitar a depuração.
+Ao abordar esses pontos, você não apenas melhora a conformidade do seu aplicativo com as políticas do Google Play, mas também aumenta a robustez, a segurança e a qualidade geral da experiência do usuário, o que é fundamental para o sucesso a longo prazo na loja.
+
+
+Arquivos Envolvidos nas Melhorias Sugeridas (Excluindo Testes)
+1. Prompts de Permissão (Contextualização e Tratamento de Recusa)
+Esta é uma melhoria focada no frontend, pois envolve a interface do usuário e a interação com as APIs de permissão do dispositivo.
+
+LimpeJaApp/app/(common)/safety/panic.tsx:
+Motivo: Esta tela aciona o botão de pânico e, portanto, provavelmente solicita permissão de localização. É o local ideal para adicionar o modal de contextualização antes de chamar expo-location e para tratar a recusa da permissão.
+LimpeJaApp/app/(auth)/provider-register/service-details.tsx:
+Motivo: Esta tela lida com o handleImagePicker() para upload de foto de perfil (avatar). O ImagePicker do Expo requer permissão para acessar a câmera ou a galeria. Aqui você adicionaria o modal de contextualização para acesso à câmera/galeria e o tratamento de recusa.
+LimpeJaApp/app/(client)/profile/edit.tsx:
+Motivo: Similar ao service-details.tsx, esta tela também lida com handlePickImage() para a foto de perfil do cliente. O mesmo tratamento de permissão é necessário aqui.
+LimpeJaApp/app/services/securityService.ts:
+Motivo: Este serviço já lida com expo-local-authentication para biometria. Se houver alguma lógica de "ativar biometria" que possa ser contextualizada, seria aqui.
+Arquivos de Componentes Reutilizáveis (se aplicável):
+Se você criar um componente de modal genérico para solicitação de permissão, ele estaria em LimpeJaApp/components/common/ ou um subdiretório.
+2. Configuração do Sentry no Backend
+src/main.ts:
+Motivo: Este é o ponto de entrada da sua aplicação NestJS. A inicialização do Sentry deve ser feita aqui, antes de o aplicativo começar a escutar as requisições.
+src/config/configuration.ts:
+Motivo: Para definir a variável de ambiente SENTRY_DSN e outras configurações do Sentry (como NODE_ENV para o ambiente).
+src/config/validation-schema.ts:
+Motivo: Para adicionar a validação do SENTRY_DSN usando Joi, garantindo que a variável esteja presente e no formato correto.
+.env (ou ambiente de produção):
+Motivo: O arquivo .env (ou as variáveis de ambiente configuradas no seu ambiente de deployment, como Cloud Run) deve conter a variável SENTRY_DSN=SEU_DSN_AQUI.
+package.json:
+Motivo: Certifique-se de que as dependências do Sentry para Node.js (@sentry/node, @sentry/tracing, @sentry/profiling-node se usar profiling) estejam listadas.
+23:54
+Compartilhar
+
+Comparar
+
+
+@Claude-Opus-4.1
+Comparar
+
+
+@o3-mini-high
