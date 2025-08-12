@@ -19,6 +19,10 @@ COPY ./backend-cleaning .
 # Agora os comandos serão executados dentro de /usr/src/app/backend-cleaning
 RUN npx prisma generate # Isso agora gerará o engine debian-openssl-3.0.x
 
+# Executa a migração do banco de dados para criar a estrutura no PostgreSQL
+# O Railway já terá a variável de ambiente DATABASE_URL disponível aqui
+RUN npx prisma migrate deploy
+
 RUN npm run build
 
 
