@@ -11,6 +11,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { QueuesModule } from '../queues/queues.module';
 import { PricingModule } from '../pricing/pricing.module';
 import { CouponsModule } from '../coupons/coupons.module';
+import { LoyaltyModule } from '../loyalty/loyalty.module'; // <--- CORREÇÃO: Adicionado o LoyaltyModule
 
 @Module({
   imports: [
@@ -20,9 +21,10 @@ import { CouponsModule } from '../coupons/coupons.module';
     ProviderServicesModule,
     forwardRef(() => PaymentsModule),
     NotificationsModule,
-    forwardRef(() => QueuesModule), // CORREÇÃO: Adicionado forwardRef para o QueuesModule
+    forwardRef(() => QueuesModule),
     forwardRef(() => PricingModule),
     forwardRef(() => CouponsModule),
+    LoyaltyModule, // <--- CORREÇÃO: Adicionado o LoyaltyModule para resolver a dependência do LoyaltyService
   ],
   controllers: [BookingsController],
   providers: [BookingsService],

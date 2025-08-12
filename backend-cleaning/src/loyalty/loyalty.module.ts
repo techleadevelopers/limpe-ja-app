@@ -1,23 +1,20 @@
 // src/modules/loyalty/loyalty.module.ts
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { LoyaltyService } from './loyalty.service';
 import { LoyaltyController } from './loyalty.controller';
-import { PrismaModule } from '../prisma/prisma.module';
-import { CouponsModule } from '../coupons/coupons.module'; // Importa o módulo de cupons
-import { UsersModule } from '../users/users.module'; // Importa o módulo de usuários
-import { NotificationsModule } from '../notifications/notifications.module'; // Importação adicionada
+import { PrismaModule } from '../prisma/prisma.module'; // Importa o PrismaModule
+import { UsersModule } from '../users/users.module'; // Importa o UsersModule
+import { CouponsModule } from '../coupons/coupons.module'; // Importa o CouponsModule
 
 @Module({
-  // Remova UsersService e CouponsService daqui, pois eles serão providos pelos módulos importados
-  providers: [LoyaltyService], 
-  controllers: [LoyaltyController],
-  // Adicione UsersModule e CouponsModule aos imports
+  // Importe os módulos que fornecem os serviços necessários
   imports: [
     PrismaModule,
-    UsersModule,
+    forwardRef(() => UsersModule), // <--- CORREÇÃO: Adicionado forwardRef para resolver a dependência circular.
     CouponsModule,
-    NotificationsModule
   ],
-  exports: [LoyaltyService], // Exportar o serviço para que outros módulos possam usá-lo
+  controllers: [LoyaltyController],
+  providers: [LoyaltyService], // Apenas o LoyaltyService é provido aqui
+  exports: [LoyaltyService],
 })
 export class LoyaltyModule {}

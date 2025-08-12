@@ -9,6 +9,7 @@ import { BookingsModule } from '../bookings/bookings.module'; // Importa Booking
 import { ClientsModule } from '../clients/clients.module';     // Importa ClientsModule
 import { ProvidersModule } from '../providers/providers.module'; // Importa ProvidersModule
 import { ProviderServicesModule } from '../provider-services/provider-services.module'; // Importa ProviderServicesModule
+import { LoyaltyModule } from '../loyalty/loyalty.module'; // <--- CORREÇÃO: Adicione o LoyaltyModule
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { ProviderServicesModule } from '../provider-services/provider-services.m
     ClientsModule,           // <--- Importe o MÓDULO Clients
     ProvidersModule,         // <--- Importe o MÓDULO Providers
     ProviderServicesModule,  // <--- Importe o MÓDULO ProviderServices
+    LoyaltyModule,           // <--- CORREÇÃO: Adicionado o LoyaltyModule
     // Se ReviewsService ou ReviewsController precisarem diretamente de UsersService,
     // você também precisaria importar UsersModule aqui.
     // UsersModule,
