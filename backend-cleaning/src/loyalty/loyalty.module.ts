@@ -2,15 +2,22 @@
 import { Module } from '@nestjs/common';
 import { LoyaltyService } from './loyalty.service';
 import { LoyaltyController } from './loyalty.controller';
-import { PrismaService } from '../prisma/prisma.service';
-import { UsersService } from '../users/users.service'; // Se precisar interagir com usuários
-import { CouponsService } from '../coupons/coupons.service'; // Se precisar interagir com cupons para resgate
+import { PrismaModule } from '../prisma/prisma.module';
+import { CouponsModule } from '../coupons/coupons.module'; // Importa o módulo de cupons
+import { UsersModule } from '../users/users.module'; // Importa o módulo de usuários
 import { NotificationsModule } from '../notifications/notifications.module'; // Importação adicionada
 
 @Module({
-  providers: [LoyaltyService, PrismaService, UsersService, CouponsService], // Adicione PrismaService e outros serviços necessários
+  // Remova UsersService e CouponsService daqui, pois eles serão providos pelos módulos importados
+  providers: [LoyaltyService], 
   controllers: [LoyaltyController],
-  imports: [NotificationsModule], // Importa o NotificationsModule para resolver a dependência
+  // Adicione UsersModule e CouponsModule aos imports
+  imports: [
+    PrismaModule,
+    UsersModule,
+    CouponsModule,
+    NotificationsModule
+  ],
   exports: [LoyaltyService], // Exportar o serviço para que outros módulos possam usá-lo
 })
 export class LoyaltyModule {}
