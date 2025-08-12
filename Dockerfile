@@ -19,9 +19,6 @@ COPY ./backend-cleaning .
 # Agora os comandos serão executados dentro de /usr/src/app/backend-cleaning
 RUN npx prisma generate # Isso agora gerará o engine debian-openssl-3.0.x
 
-# REMOVIDO: A migração não pode ser executada durante o build.
-# A variável DATABASE_URL não está disponível nesta etapa.
-
 RUN npm run build
 
 
@@ -42,8 +39,4 @@ COPY --from=build /usr/src/app/backend-cleaning/prisma/schema.prisma ./prisma/sc
 # Não podemos usar a sintaxe do Railway no Dockerfile.
 ENV PORT 8080
 EXPOSE 8080
-
-# Adicionamos a migração ao comando de inicialização
-# Isso garante que a migração será executada ANTES da sua aplicação iniciar,
-# e terá acesso à variável DATABASE_URL.
-CMD ["/bin/sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
+CMD ["node", "dist/main.js"]
