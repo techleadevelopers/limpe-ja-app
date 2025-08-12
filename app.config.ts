@@ -56,7 +56,7 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => {
     },
     "extra": {
       ...config.extra,
-      "backendApiUrl": process.env.EXPO_PUBLIC_API_BASE_URL || "http://limpe-ja-app.railway.internal:8080",
+      "backendApiUrl": process.env.EXPO_PUBLIC_API_BASE_URL || "https://limpe-ja-app-production.up.railway.app/",
       "environment": process.env.NODE_ENV || "production",
       "router": {},
       "eas": {
