@@ -35,6 +35,10 @@ COPY --from=build /usr/src/app/backend-cleaning/dist ./dist
 COPY --from=build /usr/src/app/backend-cleaning/node_modules/.prisma/client ./node_modules/.prisma/client
 COPY --from=build /usr/src/app/backend-cleaning/prisma/schema.prisma ./prisma/schema.prisma
 
+# Adicionamos a variável de ambiente DATABASE_URL.
+# O Railway fará o link entre a variável do seu app e a do banco de dados
+ENV DATABASE_URL=${{Postgres.DATABASE_URL}}
+
 ENV PORT 8080
 EXPOSE 8080
 CMD ["node", "dist/main.js"]
