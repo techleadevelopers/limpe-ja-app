@@ -23,7 +23,11 @@ import { useAuth } from '../../../hooks/useAuth';
 import { updateClientProfile } from '../../../services/clientService'; // Apenas a função
 import { BookingAddress } from '../../../types/backend/bookings'; // BookingAddress vem de bookings.ts (usado para o endereço do usuário)
 import { UpdateClientProfileDto } from '../../../types/backend/clients'; // <--- CORREÇÃO: Importa UpdateClientProfileDto do caminho correto
-import { uploadImageToCloud, UploadResponse, FilePurpose } from '../../../services/uploadService'; // Importar o serviço de upload real e seus tipos
+
+// CORREÇÃO AQUI: Importa UploadResponseDto do caminho correto
+import { UploadResponseDto } from '../../../types/backend/upload'; 
+import { uploadImageToCloud, FilePurpose } from '../../../services/uploadService'; // Importar o serviço de upload real e seus tipos (sem UploadResponse)
+
 import { UserProfile } from '../../../types/backend/users'; // Importa UserProfile
 
 // <--- CORREÇÕES: Importar funções utilitárias
@@ -163,8 +167,8 @@ export default function EditClientProfileScreen() {
             if (!pickerResult.canceled && pickerResult.assets && pickerResult.assets.length > 0) {
                 const newAvatarUri = pickerResult.assets[0].uri;
                 // Realiza o upload real
-                // Tipa corretamente 'avatar' como FilePurpose (ajustado para 'avatar' conforme uploadService)
-                const uploadResponse: UploadResponse = await uploadImageToCloud(newAvatarUri, 'avatar' as FilePurpose); // <--- ALTERADO AQUI: 'avatars' para 'avatar'
+                // CORREÇÃO AQUI: Tipagem para UploadResponseDto
+                const uploadResponse: UploadResponseDto = await uploadImageToCloud(newAvatarUri, 'avatar' as FilePurpose); 
                 if (uploadResponse && uploadResponse.url) {
                     setAvatarUri(uploadResponse.url);
                     ReactNativeAlert.alert("Sucesso", "Foto de perfil atualizada!");

@@ -2,17 +2,21 @@
 # Usando a imagem Node.js 22 COMPLETA.
 FROM node:22 AS build 
 
-WORKDIR /usr/src/app
+# Define o diretório de trabalho como a pasta do backend
+# ESSA É A PRINCIPAL MUDANÇA PARA RESOLVER O ERRO DO PRISMA
+WORKDIR /usr/src/app/backend-cleaning
 
-# Remova COMPLETAMENTE todas as linhas 'RUN apt-get install libssl...' aqui.
-# E REMOVA COMPLETAMENTE a linha 'ENV PRISMA_QUERY_ENGINE_LIBRARY' aqui.
-# A imagem node:22 já tem libssl3, e o schema.prisma instruirá o Prisma a usar o motor 3.0.x.
+# Copia os arquivos de configuração do npm para o diretório de trabalho
+# A instrução 'COPY' agora leva em consideração a nova pasta de trabalho
+COPY ./backend-cleaning/package*.json ./
 
-COPY package*.json ./
+# Instala as dependências
 RUN npm install
 
-COPY . .
+# Copia todo o restante do código do backend para o diretório de trabalho
+COPY ./backend-cleaning .
 
+# Agora os comandos serão executados dentro de /usr/src/app/backend-cleaning
 RUN npx prisma generate # Isso agora gerará o engine debian-openssl-3.0.x
 
 RUN npm run build
@@ -21,15 +25,15 @@ RUN npm run build
 # Stage 2: Create a production-ready image
 FROM node:22 AS production 
 
-WORKDIR /usr/src/app
+# Define o diretório de trabalho como a pasta do backend
+WORKDIR /usr/src/app/backend-cleaning
 
-# Remova COMPLETAMENTE todas as linhas 'RUN apt-get install libssl...' aqui.
-# E REMOVA COMPLETAMENTE a linha 'ENV PRISMA_QUERY_ENGINE_LIBRARY' aqui.
-
-COPY --from=build /usr/src/app/node_modules ./node_modules
-COPY --from=build /usr/src/app/dist ./dist
-COPY --from=build /usr/src/app/node_modules/.prisma/client ./node_modules/.prisma/client
-COPY --from=build /usr/src/app/prisma/schema.prisma ./prisma/schema.prisma
+# A instrução 'COPY --from' precisa ser ajustada para o novo diretório
+# de trabalho na imagem de build
+COPY --from=build /usr/src/app/backend-cleaning/node_modules ./node_modules
+COPY --from=build /usr/src/app/backend-cleaning/dist ./dist
+COPY --from=build /usr/src/app/backend-cleaning/node_modules/.prisma/client ./node_modules/.prisma/client
+COPY --from=build /usr/src/app/backend-cleaning/prisma/schema.prisma ./prisma/schema.prisma
 
 ENV PORT 8080
 EXPOSE 8080

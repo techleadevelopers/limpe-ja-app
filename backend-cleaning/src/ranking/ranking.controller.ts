@@ -1,5 +1,5 @@
 // src/modules/ranking/ranking.controller.ts
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, Param } from '@nestjs/common'; // Adicione 'Param' aqui
 import { ApiTags, ApiOperation, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { RankingService } from './ranking.service';
 import { ProviderRankingDto } from './dto/provider-ranking.dto';
@@ -37,7 +37,7 @@ export class RankingController {
   @ApiQuery({ name: 'radius', type: Number, description: 'Raio de busca em KM (padrão: 10)', example: 5, required: false })
   @ApiQuery({ name: 'sortBy', enum: SortByOption, description: 'Critério de ordenação (padrão: Rating)', example: SortByOption.Rating, required: false })
   async getProviderPosition(
-    @Param('providerId') providerId: string,
+    @Param('providerId') providerId: string, // Esta linha agora funcionará
     @Query('latitude') latitude: number,
     @Query('longitude') longitude: number,
     @Query('radius') radius?: number,

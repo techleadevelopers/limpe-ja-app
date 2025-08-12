@@ -18,8 +18,8 @@ export default function PanicScreen() {
       Alert.alert('Alerta Enviado', 'Seu alerta de pânico foi enviado à equipe de segurança. Ajuda está a caminho.');
       router.back();
     },
-    onError: (error) => {
-      Alert.alert('Erro', `Não foi possível enviar o alerta: ${error.message}`);
+    onError: (error: any) => { // Adicionado tipo 'any' para 'error' para evitar erro de tipagem se não for um objeto Error
+      Alert.alert('Erro', `Não foi possível enviar o alerta: ${error.message || 'Erro desconhecido'}`);
       setIsCounting(false); // Allow retrying
     },
   });
@@ -37,7 +37,8 @@ export default function PanicScreen() {
   }, []);
 
   useEffect(() => {
-    let timer: NodeJS.Timeout;
+    // CORREÇÃO: Altere a tipagem de 'timer' para ReturnType<typeof setInterval>
+    let timer: ReturnType<typeof setInterval>;
     if (isCounting && countdown > 0) {
       timer = setInterval(() => {
         setCountdown((prev) => prev - 1);

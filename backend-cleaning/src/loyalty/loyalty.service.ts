@@ -62,10 +62,13 @@ export class LoyaltyService {
 
   /**
    * Resgata pontos do saldo de fidelidade de um usuário por uma recompensa.
-   * @param dto RedeemPointsDto contendo userId, pointsToRedeem e rewardType.
+   * @param userId O ID do usuário que está resgatando os pontos.
+   * @param redeemData RedeemPointsDto contendo detalhes da recompensa a ser resgatada.
    */
-  async redeemPoints(dto: RedeemPointsDto): Promise<boolean> {
-    const { userId, pointsToRedeem, rewardType, rewardId } = dto;
+  // CORREÇÃO: Altere a assinatura do método para aceitar userId e redeemData separadamente
+  async redeemPoints(userId: string, redeemData: RedeemPointsDto): Promise<boolean> {
+    // CORREÇÃO: Remova 'userId' da desestruturação do 'redeemData', pois ele já é um parâmetro
+    const { pointsToRedeem, rewardType, rewardId } = redeemData;
     this.logger.log(`Tentando resgatar ${pointsToRedeem} pontos para o usuário ${userId} para recompensa do tipo ${rewardType}.`);
 
     if (pointsToRedeem <= 0) {
@@ -83,8 +86,13 @@ export class LoyaltyService {
       // Exemplo: Criar um cupom de desconto dinamicamente ou aplicar um já existente
       // Isso dependerá da sua implementação de cupons.
       // Você pode ter um "catálogo" de recompensas no DB
+      // CORREÇÃO: Certifique-se de que 'rewardId' não seja undefined se 'rewardType' for 'DISCOUNT_COUPON'
+      if (!rewardId) {
+          throw new BadRequestException('ID da recompensa é obrigatório para o tipo DISCOUNT_COUPON.');
+      }
       const reward = await this.prisma.reward.findUnique({ where: { id: rewardId } }); // Exemplo de busca de recompensa
-      if (!reward || reward.costPoints !== pointsToRedeem) {
+      // CORREÇÃO: Adicione uma verificação para 'reward.costPoints' existir
+      if (!reward || reward.costPoints === undefined || reward.costPoints !== pointsToRedeem) {
           throw new BadRequestException('Recompensa inválida ou custo de pontos incorreto.');
       }
       

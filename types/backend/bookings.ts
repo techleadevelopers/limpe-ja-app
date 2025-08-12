@@ -32,12 +32,12 @@ export interface BookingAddress {
   cep: string;
   street: string;
   number: string;
-  complement?: string | null;
+  complement: string | null;
   neighborhood: string;
   city: string;
   state: string;
-  latitude: number; // CORREÇÃO: Adicionado latitude
-  longitude: number; // CORREÇÃO: Adicionado longitude
+  latitude?: number; // Torne opcional
+  longitude?: number; // Torne opcional
 }
 
 /**
