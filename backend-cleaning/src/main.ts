@@ -47,7 +47,8 @@ async function bootstrap() {
   // Isso é necessário porque o seu front-end local (`localhost:5173`) precisa
   // ser uma origem explicitamente permitida quando 'credentials: true' é usado.
   const allowedOrigins = [
-    'http://localhost:5173', // Adicionado para o seu ambiente de desenvolvimento
+    'http://localhost:5173',
+    'http://localhost:8081', // Adicionado para o seu ambiente de desenvolvimento
     // Adicione aqui outras origens se necessário, como a URL do front-end de produção
     // 'https://admin.seu-site.com'
   ];

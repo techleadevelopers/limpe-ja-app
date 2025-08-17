@@ -8,7 +8,8 @@ import { UploadResponseDto } from '../types/backend/upload';
 
 export type FilePurpose = 'avatar' | 'documentFront' | 'documentBack' | 'selfieWithDocument';
 
-const API_BASE_URL = Constants.expoConfig?.extra?.backendApiUrl as string;
+// const API_BASE_URL = Constants.expoConfig?.extra?.backendApiUrl as string;
+const API_BASE_URL = 'http://localhost:3000'; 
 
 if (!API_BASE_URL) {
   console.error('[uploadService] Erro crítico: backendApiUrl não está definido!');

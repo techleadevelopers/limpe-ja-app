@@ -30,8 +30,6 @@ COPY --from=build /usr/src/app/prisma/schema.prisma ./prisma/schema.prisma
 # Define DATABASE_URL a partir de variáveis de ambiente
 ENV DATABASE_URL=${DATABASE_URL}
 
-ENV GCS_PROJECT_ID="semiotic-anvil-461613-c0"
-ENV GCS_BUCKET_NAME="upload-semiotic-anvil-448955"
 
 ENV PORT 8080 
 EXPOSE 8080 

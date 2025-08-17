@@ -217,18 +217,19 @@ const styles = StyleSheet.create({
     },
     iconContainer: {
         position: 'relative',
+        bottom: 5,
         alignItems: 'center',
         justifyContent: 'center',
     },
     navText: {
         fontSize: 9.3,
         fontWeight: '600',
-        marginTop: 4,
+        marginTop: -2,
       
     },
     centralNavItemContainer: {
         position: 'absolute',
-        top: -8,
+        top: -5,
         width: 60,
         height: 60,
         borderRadius: 30,

@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
   categoriaTexto: {
     fontSize: 10,
     color: TEXT_COLOR,
-    fontWeight: '800',
+    fontWeight: '500',
     textAlign: 'center',
     marginTop: 7,
   },
