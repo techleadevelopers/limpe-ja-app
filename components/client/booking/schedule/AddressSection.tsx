@@ -146,13 +146,14 @@ const AddressSection: React.FC<AddressSectionProps> = ({ address, setAddress, sh
                 <View style={styles.textContainer}>
                     <Text style={styles.addressTextBold}>
                         {formatAddressLine1(address)}
-                    </Text>
-                    <Text style={styles.addressTextNormal}>
+                        <Text style={styles.addressTextNormal}>
                         {formatAddressLine2(address)}
                     </Text>
+                    </Text>
+                   
                 </View>
                 <TouchableOpacity onPress={onEditAddress} style={styles.editButton}>
-                    <Ionicons name="pencil-outline" size={20} color="#FFF" />
+                    <Ionicons name="pencil-outline" size={15} color="#FFF" />
                 </TouchableOpacity>
             </View>
             <Animated.View style={[styles.shineEffectContainer, { transform: [{ translateX: shineAnim }] }]}>
@@ -169,66 +170,67 @@ const AddressSection: React.FC<AddressSectionProps> = ({ address, setAddress, sh
 
 const styles = StyleSheet.create({
     addressCard: {
-        backgroundColor: '#1E1E1E',
+        backgroundColor: '#bfd4f7c3',
         borderRadius: 24,
-        marginHorizontal: 16,
+        marginHorizontal: 46,
+        paddingVertical: 15,
         marginTop: 20,
         marginBottom: 20,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.8,
-        shadowRadius: 15,
-        elevation: 15,
+      
         padding: 20,
         overflow: 'hidden',
     },
     addressTracker: {
+      marginHorizontal: 4,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 15,
+        marginBottom: 10,
     },
     trackerIcon: {
-        width: 32,
-        height: 32,
-        tintColor: '#C8F31D',
+        marginHorizontal: 5,
+        width: 31,
+        height: 31,
+        tintColor: '#2A72E7',
     },
     dottedLine: {
         height: 2,
         flex: 1,
         borderWidth: 1,
         borderStyle: 'dashed',
-        borderColor: '#C8F31D',
+        borderColor: '#2A72E7',
         marginHorizontal: 10,
     },
     addressContent: {
         flexDirection: 'row',
         alignItems: 'center',
+        width: '100%',
         flex: 1,
         zIndex: 1,
+        marginHorizontal: 6,
         paddingTop: 15,
-        borderTopColor: '#333',
+        borderTopColor: '#6ba0d9ff',
         borderTopWidth: 1,
     },
     textContainer: {
         flex: 1,
     },
     addressTextBold: {
-        fontSize: 16,
-        color: '#FFF',
+        fontSize: 14,
+        color: '#373738ff',
         fontWeight: 'bold',
         flexShrink: 1,
     },
     addressTextNormal: {
-        fontSize: 14,
-        color: '#AAA',
+        fontSize: 12,
+        color: '#363535ff',
         flexShrink: 1,
         marginTop: 4,
     },
     editButton: {
         padding: 8,
         borderRadius: 20,
-        backgroundColor: '#333',
+        backgroundColor: '#3753f0e1',
         marginLeft: 10,
     },
     shineEffectContainer: {

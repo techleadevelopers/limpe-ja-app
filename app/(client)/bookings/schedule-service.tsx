@@ -59,7 +59,8 @@ export default function ScheduleServiceScreen() {
     const { user } = useAuth();
     const typedUser = user as UserProfile | null;
 
-    const { providerId: paramProviderId, serviceId: paramServiceId } = useLocalSearchParams<{ providerId?: string; serviceId?: string }>();
+    // CAPTURA DO PREÇO ENVIADO DA TELA ANTERIOR
+    const { providerId: paramProviderId, serviceId: paramServiceId, servicePrice } = useLocalSearchParams();
 
     const [provider, setProvider] = useState<ProviderDisplayInfo | null>(null);
     const [selectedProviderService, setSelectedProviderService] = useState<ProviderServiceOffering | null>(null);
@@ -103,10 +104,13 @@ export default function ScheduleServiceScreen() {
     const headerGlowAnim = useRef(new Animated.Value(0)).current;
     const calendarBreatheAnim = useRef(new Animated.Value(1)).current;
 
-    // HOOKS MOVIDOS PARA O TOPO DO COMPONENTE
-    const finalPrice = useMemo(() => {
+    // INICIALIZA O PREÇO TOTAL COM O VALOR PASSADO VIA PARAMS
+    const initialPrice = parseFloat(servicePrice as string) || 0;
+    const [totalPrice, setTotalPrice] = useState(initialPrice);
+
+    const calculatePrice = useCallback(() => {
         if (!selectedProviderService?.pricingType || selectedProviderService?.price == null) {
-            return 0;
+            return initialPrice;
         }
 
         if (selectedProviderService.pricingType === PricingType.HOURLY && durationInMinutes) {
@@ -119,7 +123,12 @@ export default function ScheduleServiceScreen() {
         
         return selectedProviderService.price;
 
-    }, [selectedProviderService, durationInMinutes, squareMeters]);
+    }, [selectedProviderService, durationInMinutes, squareMeters, initialPrice]);
+
+    // Atualiza o estado totalPrice quando os inputs mudam
+    useEffect(() => {
+        setTotalPrice(calculatePrice());
+    }, [calculatePrice]);
     
     const addressToDisplay = useMemo(() => {
         const userAddress = typedUser?.clientDetails?.address || typedUser?.providerDetails?.address;
@@ -635,6 +644,9 @@ export default function ScheduleServiceScreen() {
         'rgba(241, 245, 249, 1)',
         'rgba(248, 250, 252, 0.95)',
     ] as const;
+    
+    // FORMATA O PREÇO PARA EXIBIÇÃO NO BOTÃO
+    const confirmButtonText = `R$ ${totalPrice.toFixed(2).replace('.', ',')}`;
 
     return (
         <View style={styles.screenContainer}>
@@ -704,20 +716,7 @@ export default function ScheduleServiceScreen() {
                     
                     <Text style={styles.headerTitle}>Agendar</Text>
                 </LinearGradient>
-                <LinearGradient
-                    colors={['rgba(255, 255, 255, 0.95)', 'rgba(255, 255, 255, 0.85)']}
-                    style={styles.headerGradient}
-                >
-                    <BlurView intensity={20} tint="light" style={styles.headerBlur}>
-                        <CalendarHeader
-                            currentDisplayMonth={currentDisplayMonth}
-                            onPrevMonth={handlePrevMonth}
-                            onNextMonth={handleNextMonth}
-                            routerBack={() => router.back()}
-                            MONTH_NAMES_PT={MONTH_NAMES_PT}
-                        />
-                    </BlurView>
-                </LinearGradient>
+        
             </Animated.View>
 
             <Animated.ScrollView
@@ -854,7 +853,7 @@ export default function ScheduleServiceScreen() {
                             squareMeters={squareMeters}
                             setSquareMeters={setSquareMeters}
                             pricePerUnit={selectedProviderService.price}
-                            finalPrice={finalPrice}
+                            finalPrice={totalPrice}
                         />
                     </Animated.View>
                 )}
@@ -889,7 +888,7 @@ export default function ScheduleServiceScreen() {
                     ) : (
                         <Text style={styles.confirmButtonText}>
                             {selectedTime && selectedProviderService?.price ?
-                                `Agendar (R$ ${finalPrice.toFixed(2).replace('.', ',')})` :
+                                `Agendar (${confirmButtonText})` :
                                 "Selecione Data, Hora e Endereço"
                             }
                         </Text>
@@ -938,17 +937,7 @@ const styles = StyleSheet.create({
     decorationGradient: {
         flex: 1,
     },
-    headerGradient: {
-        borderBottomLeftRadius: 55,
-        borderBottomRightRadius: 55,
-        overflow: 'hidden',
-        marginBottom: 8,
-        top: 30,
-        
-    },
-    headerBlur: {
-        padding: 0,
-    },
+
     topHeaderGradient: {
         width: '38%',
         paddingTop: Platform.OS === 'ios' ? 25 : 23,

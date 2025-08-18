@@ -175,6 +175,7 @@ export default function ProviderDetailsScreen() {
         : undefined;
 
     console.log("[ProviderDetailsScreen] ID do serviço oferecido a ser passado para agendamento (firstProviderServiceOfferingId):", firstProviderServiceOfferingId);
+    console.log("[ProviderDetailsScreen] Preço do serviço a ser passado:", firstProviderService?.price); // Adicionei este log para você ver o valor
 
     return (
         <View style={[styles.screenContainer, { backgroundColor: 'white' }]}>
@@ -328,6 +329,7 @@ export default function ProviderDetailsScreen() {
                 serviceId={firstProviderServiceOfferingId}
                 router={router}
                 bookNowButtonAnim={bookNowButtonAnim}
+                servicePrice={firstProviderService?.price}
             />
         </View>
     );

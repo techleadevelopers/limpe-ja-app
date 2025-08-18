@@ -1,6 +1,6 @@
 // ./app/(client)/bookings/components/schedule/ProviderBrief.tsx
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from 'expo-linear-gradient'; // Manter a importação se usada em outros lugares ou para o shine effect
 import React, { useCallback } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 // Importar VerificationStatus para ter certeza
@@ -74,14 +74,6 @@ export default function ProviderBrief({ provider, serviceName, isLoading }: Prov
         ? provider.providerServices[0].service.name
         : 'Serviço não especificado');
 
-    // Cores do gradiente com opacidade - ATUALIZADAS CONFORME SUA SOLICITAÇÃO
-    // SOLUÇÃO DO ERRO: Usando 'as const' para garantir que o tipo do array seja uma tupla readonly
-    const gradientColors = [
-        'rgba(173, 216, 230, 0.01)', // Azul claro com baixa opacidade (quase transparente)
-        'rgba(135, 189, 250, 0.42)',  // Azul com média opacidade
-        'rgba(100, 148, 237, 0)',    // Azul com opacidade zero (transparente)
-    ] as const;
-
     if (isLoading || !provider) {
         return (
             <View style={styles.providerBriefSkeleton}>
@@ -99,11 +91,8 @@ export default function ProviderBrief({ provider, serviceName, isLoading }: Prov
     }
 
     return (
-        <LinearGradient
-            colors={gradientColors}
-            start={{ x: 0, y: 0 }} // Início do gradiente (canto superior esquerdo)
-            end={{ x: 1, y: 1 }}   // Fim do gradiente (canto inferior direito)
-            style={styles.providerBriefCard} // Os estilos do card são aplicados ao gradiente
+        <View
+            style={styles.providerBriefCard}
         >
             {/* Certifique-se de que `provider.avatarUrl` seja tratado como um URI válido para `Image` */}
             {provider.avatarUrl ? (
@@ -137,7 +126,7 @@ export default function ProviderBrief({ provider, serviceName, isLoading }: Prov
                     )}
                 </View>
             </View>
-        </LinearGradient>
+        </View>
     );
 }
 
@@ -145,11 +134,11 @@ const styles = StyleSheet.create({
     providerBriefCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 14, // Mais padding para um visual mais "confortável"
+        padding: 14,
         paddingLeft: 22,
-        // Removido backgroundColor: '#FFFFFF', pois o LinearGradient o substitui
-        borderRadius: 15, // Mais arredondado para um visual moderno
-        marginHorizontal: 30, // Consistência de margem lateral
+        backgroundColor: '#bfd4f7c3', // Fundo de cor sólida aplicado aqui
+        borderRadius: 15,
+        marginHorizontal: 40,
         marginTop: 10,
         marginBottom: 25,
         shadowColor: 'rgb(9, 96, 196)',
@@ -157,17 +146,14 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.2,
         shadowRadius: 5,
         elevation: 8,
-
-        // Mantemos as sombras aqui, pois o LinearGradient pode aplicá-las
-    
     },
     providerImageSmall: {
-        width: 55, // Um pouco maior para destaque
-        height: 55, // Ajuste para ser proporcional à largura
-        borderRadius: 37.5, // Para ser circular (metade da largura/altura)
-        marginRight: 15, // Mais espaço entre a imagem e o texto
-        borderWidth: 2, // Borda um pouco mais visível
-        borderColor: '#E6F0FF', // Cor da borda para dar profundidade
+        width: 55,
+        height: 55,
+        borderRadius: 37.5,
+        marginRight: 15,
+        borderWidth: 2,
+        borderColor: '#E6F0FF',
     },
     providerImagePlaceholder: {
         width: 65,
@@ -187,20 +173,19 @@ const styles = StyleSheet.create({
     providerNameAndRatingRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 1, // Pequeno espaço entre o nome/avaliação e o serviço
+        marginBottom: 1,
         marginTop: -1,
     },
     providerNameSmall: {
-        fontSize: 13, // Um pouco maior para melhor legibilidade
-        fontWeight: '700', // Mais negrito para destaque
+        fontSize: 13,
+        fontWeight: '700',
         color: '#333',
-        marginRight: 40, // Mais espaço antes das estrelas
+        marginRight: 40,
     },
     providerServiceSmall: {
-        fontSize: 13, // Um pouco maior
+        fontSize: 13,
         color: '#666',
-        marginBottom: 9, // Mais espaço abaixo do serviço
-
+        marginBottom: 9,
     },
     ratingContainer: {
         flexDirection: 'row',
@@ -208,40 +193,39 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     noRatingText: {
-        fontSize: 9, // Tamanho de fonte ajustado
+        fontSize: 9,
         color: '#888',
         fontWeight: 'normal',
-
     },
     ratingStarContainer: {
         flexDirection: 'row',
     },
     ratingStarIcon: {
-        marginRight: 2, // Espaçamento entre as estrelas
+        marginRight: 2,
     },
     infoChipsRow: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: 5, // Aumentar espaçamento entre chips para respiro
+        gap: 5,
         marginTop: -3,
         left: 2,
     },
     infoChip: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F0F4F8', // Fundo mais suave para o chip
-        borderRadius: 20, // Mais arredondado para visual suave
-        paddingVertical: 5, // Mais padding vertical
-        paddingHorizontal: 12, // Mais padding horizontal
+        backgroundColor: '#F0F4F8',
+        borderRadius: 20,
+        paddingVertical: 5,
+        paddingHorizontal: 12,
     },
     infoChipText: {
-        fontSize: 9, // Tamanho de fonte ajustado
+        fontSize: 9,
         color: '#555',
-        marginLeft: 6, // Mais espaço entre ícone e texto
-        fontWeight: '600', // Um pouco mais negrito
+        marginLeft: 6,
+        fontWeight: '600',
     },
     infoChipVerified: {
-        backgroundColor: '#D1ECF1', // Cor de fundo mais clara para verificado
+        backgroundColor: '#D1ECF1',
     },
     infoChipTextVerified: {
         color: '#007BFF',
@@ -249,10 +233,10 @@ const styles = StyleSheet.create({
     providerBriefSkeleton: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 20, // Consistência com o card real
+        padding: 20,
         backgroundColor: '#FFFFFF',
-        borderRadius: 15, // Consistência com o card real
-        marginHorizontal: 15, // Consistência com o card real
+        borderRadius: 15,
+        marginHorizontal: 15,
         marginTop: 20,
         marginBottom: 10,
         shadowColor: '#000',
@@ -260,13 +244,13 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.15,
         shadowRadius: 6,
         elevation: 6,
-        height: 100, // A altura pode ser ajustada para corresponder ao card
+        height: 100,
     },
     providerImageSkeleton: {
-        width: 75, // Consistência com o card real
-        height: 75, // Consistência com o card real
-        borderRadius: 37.5, // Consistência com o card real
-        marginRight: 15, // Consistência com o card real
+        width: 75,
+        height: 75,
+        borderRadius: 37.5,
+        marginRight: 15,
         backgroundColor: '#E0E0E0',
     },
     providerTextInfoSkeleton: {
@@ -275,27 +259,27 @@ const styles = StyleSheet.create({
     },
     skeletonLineLarge: {
         height: 18,
-        width: '85%', // Um pouco mais longo para preencher
+        width: '85%',
         backgroundColor: '#E0E0E0',
-        borderRadius: 6, // Mais arredondado
-        marginBottom: 10, // Mais espaço
+        borderRadius: 6,
+        marginBottom: 10,
     },
     skeletonLineSmall: {
-        height: 15, // Um pouco maior
-        width: '65%', // Um pouco mais longo
+        height: 15,
+        width: '65%',
         backgroundColor: '#E0E0E0',
-        borderRadius: 6, // Mais arredondado
-        marginBottom: 8, // Mais espaço
+        borderRadius: 6,
+        marginBottom: 8,
     },
     skeletonChipsContainer: {
         flexDirection: 'row',
         marginTop: 5,
-        gap: 10, // Consistência com o chip real
+        gap: 10,
     },
     skeletonChip: {
-        height: 28, // Um pouco maior
-        width: 80, // Mais largo
+        height: 28,
+        width: 80,
         backgroundColor: '#E0E0E0',
-        borderRadius: 18, // Mais arredondado
+        borderRadius: 18,
     },
 });

@@ -72,8 +72,6 @@ const styles = StyleSheet.create({
         paddingVertical: 15,
         paddingHorizontal: 15,
         marginHorizontal: 15,
-        
-    
     },
     dayNamesRow: {
         flexDirection: 'row',
