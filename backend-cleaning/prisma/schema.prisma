@@ -296,7 +296,8 @@ model Service {
   id                 String            @id @default(uuid())
   name               String            @unique
   description        String?
-  price              Decimal           @db.Decimal(10, 2)
+  price              Decimal           @db.Decimal(10, 2) // Campo existente
+  defaultPricingType PricingType?      // NOVO: Para indicar se 'price' é fixo ou por hora para este serviço base
   icon               String?
   providerServices   ProviderService[]
   createdAt          DateTime          @default(now())

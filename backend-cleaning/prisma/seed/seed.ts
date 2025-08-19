@@ -5,6 +5,7 @@ import {
   VerificationStatus,
   BookingStatus,
   TransactionType,
+  PricingType, // Importar o novo enum PricingType
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
@@ -195,42 +196,56 @@ async function main() {
   console.log(`Usuária Admin/Provedora '${adminProviderEmail}' criada/atualizada.`);
 
 
-  // --- ADICIONADO: CRIAÇÃO DE SERVIÇOS (CATEGORIAS) COM ÍCONES ---
+  // --- ADICIONADO: CRIAÇÃO DE SERVIÇOS (CATEGORIAS) COM ÍCONES E TIPO DE PREÇO ---
   console.log('Criando/Atualizando serviços (categorias)...');
 
   type ServiceSeedData = {
     name: string;
     description: string;
-    price: number;
+    fixedPrice: number | null; // Adicionado
+    hourlyRate: number | null; // Adicionado
     icon: string;
   };
 
   const servicesData: ServiceSeedData[] = [
-    { name: 'Residencial', description: 'Limpeza completa de residências.', price: 150.0, icon: 'residencial.png' },
-    { name: 'Comercial', description: 'Limpeza para ambientes comerciais.', price: 200.0, icon: 'comercial.png' },
-    { name: 'Pós-Obra', description: 'Limpeza detalhada após reformas e construções.', price: 300.0, icon: 'obra.png' },
-    { name: 'Vidros', description: 'Limpeza especializada de janelas e superfícies de vidro.', price: 100.0, icon: 'vidro.png' },
-    { name: 'Escritório', description: 'Limpeza e organização de espaços de escritório.', price: 180.0, icon: 'escritorio.png' },
-    { name: 'Estofados', description: 'Limpeza e higienização de estofados.', price: 120.0, icon: 'estofados.png' },
-    { name: 'Passadoria', description: 'Serviço de passar roupas.', price: 80.0, icon: 'passadoria.png' },
+    { name: 'Residencial', description: 'Limpeza completa de residências.', fixedPrice: 150.0, hourlyRate: null, icon: 'residencial.png' },
+    { name: 'Comercial', description: 'Limpeza para ambientes comerciais.', fixedPrice: null, hourlyRate: 50.0, icon: 'comercial.png' },
+    { name: 'Pós-Obra', description: 'Limpeza detalhada após reformas e construções.', fixedPrice: 300.0, hourlyRate: null, icon: 'obra.png' },
+    { name: 'Vidros', description: 'Limpeza especializada de janelas e superfícies de vidro.', fixedPrice: 100.0, hourlyRate: null, icon: 'vidro.png' },
+    { name: 'Escritório', description: 'Limpeza e organização de espaços de escritório.', fixedPrice: 180.0, hourlyRate: null, icon: 'escritorio.png' },
+    { name: 'Estofados', description: 'Limpeza e higienização de estofados.', fixedPrice: 120.0, hourlyRate: null, icon: 'estofados.png' },
+    { name: 'Passadoria', description: 'Serviço de passar roupas.', fixedPrice: null, hourlyRate: 25.0, icon: 'passadoria.png' },
   ];
 
-  for (const service of servicesData) {
+  for (const serviceData of servicesData) {
+    let servicePrice: Prisma.Decimal | null = null;
+    let servicePricingType: PricingType | null = null;
+
+    if (serviceData.fixedPrice !== null) {
+      servicePrice = new Prisma.Decimal(serviceData.fixedPrice);
+      servicePricingType = PricingType.FIXED_PRICE;
+    } else if (serviceData.hourlyRate !== null) {
+      servicePrice = new Prisma.Decimal(serviceData.hourlyRate);
+      servicePricingType = PricingType.HOURLY;
+    }
+
     await prisma.service.upsert({
-      where: { name: service.name },
+      where: { name: serviceData.name },
       update: {
-        description: service.description,
-        price: new Prisma.Decimal(service.price),
-        icon: service.icon,
+        description: serviceData.description,
+        price: servicePrice || new Prisma.Decimal(0), // Atribui o preço calculado
+        defaultPricingType: servicePricingType, // Atribui o tipo de precificação
+        icon: serviceData.icon,
       },
       create: {
-        name: service.name,
-        description: service.description,
-        price: new Prisma.Decimal(service.price),
-        icon: service.icon,
+        name: serviceData.name,
+        description: serviceData.description,
+        price: servicePrice || new Prisma.Decimal(0), // Atribui o preço calculado
+        defaultPricingType: servicePricingType, // Atribui o tipo de precificação
+        icon: serviceData.icon,
       },
     });
-    console.log(`Serviço '${service.name}' criado/atualizado.`);
+    console.log(`Serviço '${serviceData.name}' criado/atualizado.`);
   }
 
   // --- ADICIONADO: CRIAÇÃO E ATUALIZAÇÃO DE PROVEDORAS DE TESTE (SOMENTE MULHERES) ---
@@ -329,7 +344,7 @@ async function main() {
         avatarUrl: providerData.avatarUrl,
       },
       include: { provider: true },
-    });
+    );
 
     const providerAddress = await upsertAddress(providerData.address);
 
@@ -387,10 +402,11 @@ async function main() {
 
     if (user.provider?.id && providerData.services && providerData.services.length > 0) {
       for (const serviceName of providerData.services) {
+        // Buscar o serviço do banco de dados para obter o 'price' e 'defaultPricingType'
         const service = await prisma.service.findUnique({ where: { name: serviceName } });
         
         // Log para mostrar o resultado da busca pelo serviço
-        console.log(`DEBUG (Service Lookup): Looking for service '${serviceName}'. Found: ${service ? 'Yes (ID: ' + service.id + ', Price: ' + service.price + ')' : 'No'}`);
+        console.log(`DEBUG (Service Lookup): Looking for service '${serviceName}'. Found: ${service ? 'Yes (ID: ' + service.id + ', Price: ' + service.price + ', PricingType: ' + service.defaultPricingType + ')' : 'No'}`);
 
         if (service) {
           await prisma.providerService.upsert({
@@ -401,14 +417,16 @@ async function main() {
               },
             },
             update: {
-              price: service.price, 
+              price: service.price, // Usar o preço do serviço base
+              pricingType: service.defaultPricingType || PricingType.FIXED_PRICE, // Usar o tipo de precificação do serviço base, com fallback
               durationMinutes: 60,
               description: `Serviço ${serviceName} por ${providerData.fullName} (Atualizado).`,
             },
             create: {
               providerId: user.provider.id,
               serviceId: service.id,
-              price: service.price, 
+              price: service.price, // Usar o preço do serviço base
+              pricingType: service.defaultPricingType || PricingType.FIXED_PRICE, // Usar o tipo de precificação do serviço base, com fallback
               durationMinutes: 60,
               description: `Serviço ${serviceName} por ${providerData.fullName}.`,
             },
