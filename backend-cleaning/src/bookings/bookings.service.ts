@@ -33,6 +33,7 @@ export type BookingWithDetailsRelations = Prisma.BookingGetPayload<{
     subscription: true; // NEW: Include subscription
     incidents: true; // NEW: Include incidents
     guaranteeClaims: true; // NEW: Include guaranteeClaims
+    coupon: true; // NEW: Include coupon
   };
 }>;
 
@@ -125,6 +126,7 @@ export class BookingsService {
     // NEW: Apply coupon if provided
     let couponId: string | null = null;
     if (createBookingDto.couponCode) { // CORREÇÃO: Adicionar couponCode ao CreateBookingDto
+      this.logger.log(`[BookingsService] create - Tentando aplicar cupom: ${createBookingDto.couponCode}`);
       const couponApplicationResult = await this.couponsService.applyCoupon(createBookingDto.couponCode, client.userId, {
         originalPrice: calculatedTotalPrice.toNumber(),
         clientId: client.id,
@@ -140,6 +142,8 @@ export class BookingsService {
       } else {
         this.logger.warn(`[BookingsService] create - Cupom ${createBookingDto.couponCode} não aplicável: ${couponApplicationResult.message}`);
         // Optionally throw an error or just proceed without coupon
+        // If you want to prevent booking if coupon is invalid, uncomment the line below:
+        // throw new BadRequestException(couponApplicationResult.message);
       }
     }
 
@@ -183,6 +187,7 @@ export class BookingsService {
           subscription: true, // CORREÇÃO: Incluir subscription
           incidents: true, // CORREÇÃO: Incluir incidents
           guaranteeClaims: true, // CORREÇÃO: Incluir guaranteeClaims
+          coupon: true, // NEW: Include coupon
         },
       });
       this.logger.log(`[BookingsService] create - Agendamento criado com sucesso no DB. ID: ${createdBooking.id}. ProviderId no booking retornado pelo Prisma: ${createdBooking.providerId}`);
@@ -237,6 +242,7 @@ export class BookingsService {
         subscription: true, // NEW
         incidents: true, // NEW
         guaranteeClaims: true, // NEW
+        coupon: true, // NEW: Include coupon
       },
     });
   }
@@ -359,6 +365,7 @@ export class BookingsService {
         subscription: true, // NEW
         incidents: true, // NEW
         guaranteeClaims: true, // NEW
+        coupon: true, // NEW: Include coupon
       },
       orderBy: {
         createdAt: 'desc',
@@ -379,6 +386,7 @@ export class BookingsService {
         subscription: true, // NEW
         incidents: true, // NEW
         guaranteeClaims: true, // NEW
+        coupon: true, // NEW: Include coupon
       },
     });
   }
@@ -491,6 +499,17 @@ export class BookingsService {
       });
       this.logger.log(`[BookingsService] updateStatus: Cliente ${booking.client.userId} recebeu pontos por serviço concluído.`); // <--- NOVA LINHA
 
+      // Mark coupon as used if one was applied to this booking
+      const bookingWithCoupon = await this.prisma.booking.findUnique({
+        where: { id: booking.id },
+        select: { couponId: true }
+      });
+
+      if (bookingWithCoupon?.couponId) {
+        await this.couponsService.markCouponAsUsed(bookingWithCoupon.couponId);
+        this.logger.log(`[BookingsService] updateStatus: Cupom ${bookingWithCoupon.couponId} marcado como usado para o agendamento ${booking.id}.`);
+      }
+
       // Send notification to client to request a review
       // CORREÇÃO: O booking.providerService.name e booking.provider.fullName só estarão disponíveis se incluídos
       // na consulta inicial do booking.
@@ -534,6 +553,7 @@ export class BookingsService {
         subscription: true, // NEW
         incidents: true, // NEW
         guaranteeClaims: true, // NEW
+        coupon: true, // NEW: Include coupon
       },
     });
   }
@@ -566,6 +586,7 @@ export class BookingsService {
         subscription: true, // NEW
         incidents: true, // NEW
         guaranteeClaims: true, // NEW
+        coupon: true, // NEW: Include coupon
       },
     });
     this.logger.log(`[BookingsService] findUpcomingBookings: Primas encontradas ${upcomingPrismaBookings.length} agendamentos futuros antes da filtragem de hora.`);
@@ -757,6 +778,7 @@ export class BookingsService {
         subscription: true, // NEW
         incidents: true, // NEW
         guaranteeClaims: true, // NEW
+        coupon: true, // NEW: Include coupon
       },
     });
 

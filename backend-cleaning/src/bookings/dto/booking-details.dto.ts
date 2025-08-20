@@ -61,12 +61,21 @@ export class BookingDetailsDto {
   @IsUUID()
   addressId?: string | null;
 
-  // CORREÇÃO: A propriedade `address` do DTO de saída deve ser tipada com `AddressDetailsDto`
   @ApiPropertyOptional({ type: AddressDetailsDto, description: 'Detalhes do endereço do agendamento' })
   @IsOptional()
   @ValidateNested()
   @Type(() => AddressDetailsDto) // <-- AGORA REFERENCIA AddressDetailsDto
   address?: AddressDetailsDto | null; // <-- TIPO CORRIGIDO AQUI
+
+  @ApiPropertyOptional({ description: 'ID do cupom aplicado, se houver', example: 'uuid-do-cupom' })
+  @IsOptional()
+  @IsUUID()
+  couponId?: string | null;
+
+  @ApiPropertyOptional({ description: 'Código do cupom aplicado', example: 'DESCONTO10' })
+  @IsOptional()
+  @IsString()
+  couponCode?: string | null;
 
   // Campos achatados do cliente/provedor/serviço para facilitar o consumo no frontend
   @ApiPropertyOptional({ description: 'Nome completo do cliente', example: 'Nome do Cliente' })
@@ -137,6 +146,8 @@ export class BookingDetailsDto {
     createdAt: Date | string;
     updatedAt: Date | string;
     addressId?: string | null;
+    couponId?: string | null; // NEW
+    coupon?: { code: string } | null; // NEW: Include coupon code
     // O construtor espera um objeto que tenha o 'id' e as outras propriedades do Address do Prisma
     address?: {
       id: string; cep: string; street: string; number: string;
@@ -167,6 +178,9 @@ export class BookingDetailsDto {
     this.addressId = data.addressId === undefined ? null : data.addressId;
     // CORREÇÃO FINAL: Mapeia o objeto 'address' do Prisma para uma nova instância de AddressDetailsDto
     this.address = data.address ? new AddressDetailsDto(data.address) : null; 
+
+    this.couponId = data.couponId === undefined ? null : data.couponId; // NEW
+    this.couponCode = data.coupon?.code || null; // NEW
 
     if (data.client) {
       this.clientFullName = data.client.fullName;

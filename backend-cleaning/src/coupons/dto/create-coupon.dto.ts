@@ -1,13 +1,17 @@
 // backend-cleaning/src/coupons/dto/create-coupon.dto.ts
-import { IsString, IsEnum, IsNumber, IsPositive, Min, IsISO8601, IsOptional, IsInt, Max } from 'class-validator';
-import { CouponType, CouponTarget } from '../entities/coupon.entity'; // Assuming entity defines enums
+import { IsString, IsEnum, IsNumber, IsPositive, Min, IsISO8601, IsOptional, IsInt, Max, IsBoolean } from 'class-validator';
+import { CouponType, CouponTarget, CouponStatus } from '@prisma/client'; // Importar do Prisma
 
 export class CreateCouponDto {
   @IsString()
   code: string;
 
+  @IsString()
+  @IsOptional()
+  description?: string;
+
   @IsEnum(CouponType)
-  type: CouponType;
+  type: CouponType; // Mapeia para 'valueType' no DB
 
   @IsNumber({ maxDecimalPlaces: 2 })
   @IsPositive()
@@ -26,9 +30,13 @@ export class CreateCouponDto {
   maxUses?: number;
 
   @IsEnum(CouponTarget)
-  target: CouponTarget;
+  target: CouponTarget; // Mapeia para 'target' no DB
 
   @IsOptional()
   @IsString() // Could be IsUUID if targeting specific entities
   targetId?: string; // ID of service or provider if target is specific
+
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean; // Corresponds to 'isActive' in the schema
 }

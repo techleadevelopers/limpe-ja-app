@@ -344,7 +344,7 @@ async function main() {
         avatarUrl: providerData.avatarUrl,
       },
       include: { provider: true },
-    );
+ });
 
     const providerAddress = await upsertAddress(providerData.address);
 
