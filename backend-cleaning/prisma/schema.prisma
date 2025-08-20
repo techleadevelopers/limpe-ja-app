@@ -113,11 +113,13 @@ enum IncidentStatus {
   REJECTED
 }
 
+// Mantido conforme o schema original, embora o modelo Coupon agora use String para valueType
 enum CouponType {
   PERCENTAGE
   FIXED_AMOUNT
 }
 
+// Mantido conforme o schema original, embora o modelo Coupon agora use String para target
 enum CouponTarget {
   ALL
   NEW_CLIENTS
@@ -199,6 +201,7 @@ model User {
   // NOVO: Relação com o modelo Loyalty
   loyalty               Loyalty?
   loyaltyTransactions   LoyaltyTransaction[]
+  couponUsages          CouponUsage[]
 }
 
 // Modelo para Cliente
@@ -355,6 +358,7 @@ model Booking {
   guaranteeClaims          GuaranteeClaim[]
   couponId                 String?
   coupon                   Coupon?           @relation(fields: [couponId], references: [id])
+  couponUsage              CouponUsage?      @relation("BookingCouponUsage")
   // FIM ABS
 }
 
@@ -585,23 +589,37 @@ model PanicAlert {
   createdAt DateTime  @default(now())
 }
 
-// ABS: Modelo para Cupons de Desconto
+// ABS: Modelo para Cupons de Desconto (Atualizado)
 model Coupon {
-  id          String         @id @default(uuid())
-  code        String         @unique
-  type        CouponType
-  value       Decimal        @db.Decimal(10, 2)
-  validFrom   DateTime
-  validUntil  DateTime
-  maxUses     Int?
-  usesCount   Int            @default(0)
-  target      CouponTarget
-  targetId    String?
-  status      CouponStatus   @default(ACTIVE)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  transactions Transaction[]
+  id           String          @id @default(uuid())
+  code         String          @unique // Ex: PRIMEIRA10
+  description  String?
+  value        Decimal         @db.Decimal(10, 2) // Valor do desconto
+  valueType    String          // 'FIXED' ou 'PERCENT' (corresponde a CouponType)
+  target       String          // 'GENERAL', 'NEW_CLIENTS', 'SPECIFIC_SERVICE', 'SPECIFIC_PROVIDER' (corresponde a CouponTarget)
+  targetId     String?         // ID do serviço ou provedor, se o target for específico
+  maxUses      Int?            // Limite de usos total
+  usesCount    Int             @default(0) // Contador de usos
+  validFrom    DateTime
+  validUntil   DateTime
+  status       CouponStatus    @default(ACTIVE) // ACTIVE, INACTIVE, USED_UP
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  usages       CouponUsage[] // Nova relação para rastrear usos
   bookings     Booking[]
+  transactions Transaction[]
+}
+
+// ABS: Modelo para rastrear o uso de cupons (Novo)
+model CouponUsage {
+  id        String   @id @default(uuid())
+  couponId  String
+  coupon    Coupon   @relation(fields: [couponId], references: [id])
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  bookingId String   @unique // Um uso de cupom por agendamento
+  booking   Booking  @relation("BookingCouponUsage", fields: [bookingId], references: [id])
+  createdAt DateTime @default(now())
 }
 
 // ABS: Modelo para Solicitações de Garantia de Serviço

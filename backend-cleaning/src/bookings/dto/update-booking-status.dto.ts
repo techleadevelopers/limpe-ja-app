@@ -2,7 +2,7 @@
 import { IsString, IsEnum, IsNumber, IsPositive, Min, IsISO8601, IsOptional, IsInt, IsBoolean } from 'class-validator';
 import { CouponType, CouponTarget, CouponStatus } from '@prisma/client'; // Importar do Prisma
 
-export class UpdateCouponDto {
+export class UpdateBookingStatusDto {
   @IsOptional()
   @IsString()
   code?: string;
