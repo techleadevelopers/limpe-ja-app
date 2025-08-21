@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 import * as Clipboard from 'expo-clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -15,8 +14,7 @@ import {
     Text,
     TouchableOpacity,
     View,
-    ColorValue,
-    TextInput
+    TextInput, // Adicionado para o campo de cupom
 } from 'react-native';
 
 // --- IMPORTAÇÕES DE SERVIÇOS E TIPAGENS DO SEU BACKEND REAL ---
@@ -31,25 +29,167 @@ import {
     ProviderDisplayInfo,
     ProviderServiceOffering
 } from '../../../types/backend/providers';
-import { UserProfile } from '../../../types/backend/users';
+import { UserProfile } from '../../../types/backend/users'; // Verifique o caminho correto para UserProfile
 import { PricingType } from '../../../types/backend/services';
 import { formatDate } from '../../../utils/helpers';
 
 // --- Importar COMPONENTES DE UI ---
 import AddressSection from '../../../components/client/booking/schedule/AddressSection';
-import CalendarHeader from '../../../components/client/booking/schedule/CalendarHeader';
 import ProviderBrief from '../../../components/client/booking/schedule/ProviderBrief';
 import TimeSlotsSection from '../../../components/client/booking/schedule/TimeSlotsSection';
-// Componente de UI para input dinâmico
 import ServiceDetailsInput from '../../../components/client/booking/schedule/ServiceDetailsInput';
+
+// NOVOS COMPONENTES IMPORTADOS
+import ScheduleHeader from '../../../components/client/booking/schedule/ScheduleHeader';
+import ScheduleCalendar from '../../../components/client/booking/schedule/ScheduleCalendar';
+import NotesInputSection from '../../../components/client/booking/schedule/NotesInputSection';
+import ConfirmBookingButton from '../../../components/client/booking/schedule/ConfirmBookingButton';
+
+// --- NOVAS INTERFACES PARA AS PROPS DOS COMPONENTES ---
+interface BookingSummaryPreviewProps {
+    provider: ProviderDisplayInfo | null;
+    selectedProviderService: ProviderServiceOffering | null;
+    selectedDate: Date;
+    selectedTime: string | null;
+    address: BookingAddress;
+    durationInMinutes: number | null;
+    squareMeters: number | null;
+    subtotal: number;
+    discountAmount: number;
+    finalPrice: number;
+    onShowCancellationPolicy: () => void;
+}
+
+interface CouponInputSectionProps {
+    couponCode: string;
+    setCouponCode: React.Dispatch<React.SetStateAction<string>>;
+    onApplyCoupon: () => Promise<void>;
+    isApplyingCoupon: boolean;
+    discountAmount: number;
+}
+// --- FIM NOVAS INTERFACES ---
+
+// --- NOVOS COMPONENTES PERSONALIZADOS PARA ESTA TELA ---
+// Componente para o resumo de confirmação final
+const BookingSummaryPreview = ({
+    provider,
+    selectedProviderService,
+    selectedDate,
+    selectedTime,
+    address,
+    durationInMinutes,
+    squareMeters,
+    subtotal,
+    discountAmount,
+    finalPrice,
+    onShowCancellationPolicy
+}: BookingSummaryPreviewProps) => { // Aplicando a interface aqui
+    if (!selectedProviderService || !selectedTime) return null;
+
+    const formattedDate = selectedDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+    const serviceDetailsText = useMemo(() => {
+        if (selectedProviderService.pricingType === PricingType.HOURLY && durationInMinutes) {
+            return `${durationInMinutes} minutos`;
+        }
+        if (selectedProviderService.pricingType === PricingType.BY_SIZE && squareMeters) {
+            return `${squareMeters} m²`;
+        }
+        return 'N/A';
+    }, [selectedProviderService, durationInMinutes, squareMeters]);
+
+    return (
+        <Animated.View style={[styles.card, { marginTop: 20 }]}>
+            <Text style={styles.sectionTitle}>Revise seu Agendamento</Text>
+            <View style={styles.summaryItem}>
+                <Ionicons name="briefcase-outline" size={18} color="#4A90E2" style={styles.summaryIcon} />
+                <Text style={styles.summaryText}>
+                    <Text style={styles.summaryLabel}>Serviço:</Text> {selectedProviderService.service?.name}
+                </Text>
+            </View>
+            <View style={styles.summaryItem}>
+                <Ionicons name="person-outline" size={18} color="#4A90E2" style={styles.summaryIcon} />
+                <Text style={styles.summaryText}>
+                    <Text style={styles.summaryLabel}>Provedor:</Text> {provider?.fullName}
+                </Text>
+            </View>
+            <View style={styles.summaryItem}>
+                <Ionicons name="calendar-outline" size={18} color="#4A90E2" style={styles.summaryIcon} />
+                <Text style={styles.summaryText}>
+                    <Text style={styles.summaryLabel}>Data e Hora:</Text> {formattedDate}, às {selectedTime}
+                </Text>
+            </View>
+            <View style={styles.summaryItem}>
+                <Ionicons name="location-outline" size={18} color="#4A90E2" style={styles.summaryIcon} />
+                <Text style={styles.summaryText}>
+                    <Text style={styles.summaryLabel}>Endereço:</Text> {address.street}, {address.number} - {address.neighborhood}, {address.city}/{address.state}
+                </Text>
+            </View>
+            {(selectedProviderService.pricingType === PricingType.HOURLY || selectedProviderService.pricingType === PricingType.BY_SIZE) && (
+                <View style={styles.summaryItem}>
+                    <Ionicons name="timer-outline" size={18} color="#4A90E2" style={styles.summaryIcon} />
+                    <Text style={styles.summaryText}>
+                        <Text style={styles.summaryLabel}>Detalhes do Serviço:</Text> {serviceDetailsText}
+                    </Text>
+                </View>
+            )}
+            <View style={styles.priceSummary}>
+                <Text style={styles.priceLabel}>Subtotal:</Text>
+                <Text style={styles.priceValue}>R$ {subtotal.toFixed(2).replace('.', ',')}</Text>
+            </View>
+            {discountAmount > 0 && (
+                <View style={styles.priceSummary}>
+                    <Text style={styles.priceLabel}>Desconto:</Text>
+                    <Text style={[styles.priceValue, styles.discountValue]}>- R$ {discountAmount.toFixed(2).replace('.', ',')}</Text>
+                </View>
+            )}
+            <View style={styles.totalPriceSummary}>
+                <Text style={styles.totalPriceLabel}>Total a Pagar:</Text>
+                <Text style={styles.totalPriceValue}>R$ {finalPrice.toFixed(2).replace('.', ',')}</Text>
+            </View>
+            <TouchableOpacity onPress={onShowCancellationPolicy} style={styles.cancellationPolicyLink}>
+                <Text style={styles.cancellationPolicyText}>Política de Cancelamento</Text>
+            </TouchableOpacity>
+        </Animated.View>
+    );
+};
+
+// Componente para o campo de cupom
+const CouponInputSection = ({ couponCode, setCouponCode, onApplyCoupon, isApplyingCoupon, discountAmount }: CouponInputSectionProps) => { // Aplicando a interface aqui
+    return (
+        <Animated.View style={[styles.card, { marginTop: 20 }]}>
+            <Text style={styles.sectionTitle}>Cupom de Desconto</Text>
+            <View style={styles.couponInputContainer}>
+                <TextInput
+                    style={styles.couponInput}
+                    placeholder="Insira seu código de cupom"
+                    value={couponCode}
+                    onChangeText={setCouponCode}
+                    autoCapitalize="characters"
+                    editable={!isApplyingCoupon}
+                />
+                <TouchableOpacity
+                    style={styles.applyCouponButton}
+                    onPress={onApplyCoupon}
+                    disabled={isApplyingCoupon || !couponCode}
+                >
+                    {isApplyingCoupon ? (
+                        <ActivityIndicator size="small" color="#FFF" />
+                    ) : (
+                        <Text style={styles.applyCouponButtonText}>Aplicar</Text>
+                    )}
+                </TouchableOpacity>
+            </View>
+            {discountAmount > 0 && (
+                <Text style={styles.couponAppliedText}>Cupom aplicado! Você economizou R$ {discountAmount.toFixed(2).replace('.', ',')}.</Text>
+            )}
+        </Animated.View>
+    );
+};
 
 
 // --- Constantes para a UI ---
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
-const MONTH_NAMES_PT = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-const DAY_NAMES_PT = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"];
-const HEADER_HEIGHT_ADJUST = Platform.OS === 'ios' ? 90 : 60;
 
 // Cache para disponibilidade do provedor por data
 const availabilityCache = new Map<string, { available: ProviderAvailability[], occupiedTimes: string[] }>();
@@ -59,8 +199,14 @@ export default function ScheduleServiceScreen() {
     const { user } = useAuth();
     const typedUser = user as UserProfile | null;
 
-    // CAPTURA DO PREÇO ENVIADO DA TELA ANTERIOR
-    const { providerId: paramProviderId, serviceId: paramServiceId, servicePrice } = useLocalSearchParams();
+    // CAPTURA DOS PARÂMETROS DA URL
+    const { providerId, serviceId, servicePrice } = useLocalSearchParams();
+
+    // NARROWING DOS TIPOS: Garante que os IDs e o preço sejam strings simples, não arrays.
+    const paramProviderId = Array.isArray(providerId) ? providerId[0] : providerId;
+    const paramServiceId = Array.isArray(serviceId) ? serviceId[0] : serviceId;
+    const paramServicePrice = Array.isArray(servicePrice) ? servicePrice[0] : servicePrice;
+
 
     const [provider, setProvider] = useState<ProviderDisplayInfo | null>(null);
     const [selectedProviderService, setSelectedProviderService] = useState<ProviderServiceOffering | null>(null);
@@ -81,13 +227,18 @@ export default function ScheduleServiceScreen() {
     const [durationInMinutes, setDurationInMinutes] = useState<number | null>(null);
     const [squareMeters, setSquareMeters] = useState<number | null>(null);
 
+    // --- NOVOS ESTADOS PARA CUPOM E DESCONTO ---
+    const [couponCode, setCouponCode] = useState<string>('');
+    const [discountAmount, setDiscountAmount] = useState<number>(0);
+    const [isApplyingCoupon, setIsApplyingCoupon] = useState<boolean>(false);
+    // --- FIM NOVOS ESTADOS ---
+
     const [isLoading, setIsLoading] = useState(true);
     const [isBooking, setIsBooking] = useState(false);
     const [isFetchingSlots, setIsFetchingSlots] = useState(false);
 
     const [currentDisplayMonth, setCurrentDisplayMonth] = useState(new Date());
     const shineAnim = useRef(new Animated.Value(-SCREEN_WIDTH * 0.3)).current;
-    const [calendarDays, setCalendarDays] = useState<Array<{ day: number, month: 'current' | 'prev' | 'next', dateObj: Date }>>([]);
 
     const [displaySlotsInfo, setDisplaySlotsInfo] = useState<
         Array<{ time: string; isAvailable: boolean }>
@@ -104,49 +255,45 @@ export default function ScheduleServiceScreen() {
     const headerGlowAnim = useRef(new Animated.Value(0)).current;
     const calendarBreatheAnim = useRef(new Animated.Value(1)).current;
 
-    // INICIALIZA O PREÇO TOTAL COM O VALOR PASSADO VIA PARAMS
-    const initialPrice = parseFloat(servicePrice as string) || 0;
-    const [totalPrice, setTotalPrice] = useState(initialPrice);
-
-    const calculatePrice = useCallback(() => {
-        if (!selectedProviderService?.pricingType || selectedProviderService?.price == null) {
-            return initialPrice;
+    // --- Lógica de cálculo de preço usando useMemo ---
+    const calculatedSubtotal = useMemo(() => {
+        if (!selectedProviderService || selectedProviderService.price == null) {
+            return 0;
         }
 
-        if (selectedProviderService.pricingType === PricingType.HOURLY && durationInMinutes) {
-            return (durationInMinutes / 60) * selectedProviderService.price;
+        switch (selectedProviderService.pricingType) {
+            case PricingType.HOURLY:
+                if (durationInMinutes != null && durationInMinutes > 0) {
+                    return (durationInMinutes / 60) * selectedProviderService.price;
+                }
+                break;
+            case PricingType.BY_SIZE:
+                if (squareMeters != null && squareMeters > 0) {
+                    return squareMeters * selectedProviderService.price;
+                }
+                break;
+            default:
+                return selectedProviderService.price;
         }
+        return 0;
+    }, [selectedProviderService, durationInMinutes, squareMeters]);
 
-        if (selectedProviderService.pricingType === PricingType.BY_SIZE && squareMeters) {
-            return squareMeters * selectedProviderService.price;
-        }
-        
-        return selectedProviderService.price;
-
-    }, [selectedProviderService, durationInMinutes, squareMeters, initialPrice]);
-
-    // Atualiza o estado totalPrice quando os inputs mudam
-    useEffect(() => {
-        setTotalPrice(calculatePrice());
-    }, [calculatePrice]);
+    // Preço final após aplicar o desconto
+    const finalCalculatedPrice = useMemo(() => {
+        const priceAfterDiscount = calculatedSubtotal - discountAmount;
+        return priceAfterDiscount > 0 ? priceAfterDiscount : 0;
+    }, [calculatedSubtotal, discountAmount]);
+    // --- Fim da lógica de cálculo de preço ---
     
-    const addressToDisplay = useMemo(() => {
-        const userAddress = typedUser?.clientDetails?.address || typedUser?.providerDetails?.address;
-        if (userAddress) {
-            return {
-                street: userAddress.street || '',
-                number: userAddress.number || '',
-                complement: userAddress.complement || null,
-                neighborhood: userAddress.neighborhood || '',
-                city: userAddress.city || '',
-                state: userAddress.state || '',
-                cep: userAddress.cep || '',
-                latitude: userAddress.latitude,
-                longitude: userAddress.longitude,
-            };
-        }
-        return null;
-    }, [typedUser]);
+    // --- NOVO: Lógica para o indicador de progresso ---
+    const currentStep = useMemo(() => {
+        if (!selectedTime) return 1; // Seleção de data/hora
+        if (!selectedProviderService || (selectedProviderService.pricingType === PricingType.HOURLY && (durationInMinutes == null || durationInMinutes <= 0)) || (selectedProviderService.pricingType === PricingType.BY_SIZE && (squareMeters == null || squareMeters <= 0))) return 2; // Detalhes do serviço
+        return 3; // Confirmação
+    }, [selectedTime, selectedProviderService, durationInMinutes, squareMeters]);
+
+    const stepTitles = ["Data e Hora", "Detalhes do Serviço", "Confirmação"];
+    // --- FIM NOVO: Lógica para o indicador de progresso ---
 
     useEffect(() => {
         Animated.parallel([
@@ -293,30 +440,8 @@ export default function ScheduleServiceScreen() {
     }, [provider?.id]);
 
     const handleDaySelect = useCallback((dateObj: Date) => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        if (dateObj < today) {
-            Alert.alert("Data Inválida", "Não é possível selecionar uma data passada.");
-            return;
-        }
-
-        Animated.sequence([
-            Animated.timing(selectionAnim, {
-                toValue: 1.15,
-                duration: 150,
-                easing: Easing.out(Easing.back(2)),
-                useNativeDriver: true
-            }),
-            Animated.spring(selectionAnim, {
-                toValue: 1,
-                friction: 4,
-                tension: 100,
-                useNativeDriver: true
-            }),
-        ]).start();
-
         setSelectedDate(dateObj);
-    }, [selectionAnim]);
+    }, []);
 
     const handleTimeSelect = useCallback((time: string) => {
         const selectedSlot = displaySlotsInfo.find(slot => slot.time === time);
@@ -342,13 +467,52 @@ export default function ScheduleServiceScreen() {
         }
     }, [displaySlotsInfo, selectionAnim]);
 
-    const copyToClipboard = useCallback(async (text: string) => {
-        if (!text) return;
-        await Clipboard.setStringAsync(text);
-        Alert.alert("Copiado!", "Chave PIX copiada para a área de transferência.");
+    // --- NOVO: Função para aplicar cupom ---
+    const handleApplyCoupon = useCallback(async () => {
+        if (!couponCode) {
+            Alert.alert("Erro", "Por favor, insira um código de cupom.");
+            return;
+        }
+        setIsApplyingCoupon(true);
+        try {
+            // Simulação de chamada de API para aplicar cupom
+            // Em um cenário real, você chamaria seu couponService aqui:
+            // const response = await applyCoupon(couponCode, bookingData);
+            // setDiscountAmount(response.discountValue);
+
+            // Simulação:
+            if (couponCode.toUpperCase() === 'LIMPEJA10') {
+                setDiscountAmount(10); // Simula um desconto de R$10
+                Alert.alert("Sucesso", "Cupom LIMPEJA10 aplicado! Você ganhou R$ 10 de desconto.");
+            } else if (couponCode.toUpperCase() === 'PRIMEIRA20') {
+                setDiscountAmount(20); // Simula um desconto de R$20
+                Alert.alert("Sucesso", "Cupom PRIMEIRA20 aplicado! Você ganhou R$ 20 de desconto.");
+            }
+            else {
+                setDiscountAmount(0);
+                Alert.alert("Erro", "Cupom inválido ou expirado.");
+            }
+        } catch (error: any) {
+            console.error("Erro ao aplicar cupom:", error.response?.data || error.message);
+            Alert.alert("Erro", error.response?.data?.message || "Não foi possível aplicar o cupom.");
+            setDiscountAmount(0);
+        } finally {
+            setIsApplyingCoupon(false);
+        }
+    }, [couponCode]);
+    // --- FIM NOVO: Função para aplicar cupom ---
+
+    // --- NOVO: Função para exibir política de cancelamento ---
+    const showCancellationPolicy = useCallback(() => {
+        Alert.alert(
+            "Política de Cancelamento",
+            "Você pode cancelar seu agendamento gratuitamente até 24 horas antes do horário programado. Após esse período, uma taxa de cancelamento pode ser aplicada. Para mais detalhes, consulte nossos Termos de Serviço."
+        );
     }, []);
+    // --- FIM NOVO: Função para exibir política de cancelamento ---
 
     const handleConfirmBooking = useCallback(async () => {
+        // Validações iniciais
         if (!typedUser?.id || !provider?.id || !selectedProviderService?.id || !selectedDate || !selectedTime ||
             !address.street || !address.number || !address.neighborhood || !address.city || !address.state) {
             Alert.alert("Erro", "Por favor, preencha todos os campos necessários para o agendamento, incluindo o endereço completo e selecione um horário.");
@@ -357,14 +521,13 @@ export default function ScheduleServiceScreen() {
 
         let requestedDurationMinutes = 0;
         let requestedSquareMeters = 0;
-        let calculatedPrice = selectedProviderService.price;
         
         // Validação adicional para campos dinâmicos
-        if (selectedProviderService.pricingType === PricingType.HOURLY && !durationInMinutes) {
+        if (selectedProviderService.pricingType === PricingType.HOURLY && (durationInMinutes == null || durationInMinutes <= 0)) {
             Alert.alert("Erro", "Por favor, insira a duração do serviço em minutos.");
             return;
         }
-        if (selectedProviderService.pricingType === PricingType.BY_SIZE && !squareMeters) {
+        if (selectedProviderService.pricingType === PricingType.BY_SIZE && (squareMeters == null || squareMeters <= 0)) {
             Alert.alert("Erro", "Por favor, insira a área do serviço em metros quadrados.");
             return;
         }
@@ -374,10 +537,8 @@ export default function ScheduleServiceScreen() {
         try {
             if (selectedProviderService.pricingType === PricingType.HOURLY) {
                 requestedDurationMinutes = durationInMinutes!;
-                calculatedPrice = (durationInMinutes! / 60) * selectedProviderService.price;
             } else if (selectedProviderService.pricingType === PricingType.BY_SIZE) {
                 requestedSquareMeters = squareMeters!;
-                calculatedPrice = squareMeters! * selectedProviderService.price;
             }
 
             const bookingData: CreateBookingDto = {
@@ -385,11 +546,16 @@ export default function ScheduleServiceScreen() {
                 providerServiceId: selectedProviderService.id,
                 scheduledDate: selectedDate.toISOString().split('T')[0],
                 scheduledTime: selectedTime,
-                totalPrice: calculatedPrice,
+                totalPrice: finalCalculatedPrice, // Usa o preço final calculado
                 notes: notes,
-                address: address,
+                address: {
+                    ...address,
+                    latitude: address.latitude ?? 0,
+                    longitude: address.longitude ?? 0,
+                },
                 ...(selectedProviderService.pricingType === PricingType.HOURLY && { requestedDurationMinutes }),
                 ...(selectedProviderService.pricingType === PricingType.BY_SIZE && { requestedSquareMeters }),
+                couponCode: discountAmount > 0 ? couponCode : undefined, // Envia o cupom se houver desconto
             };
 
             const newBooking: BookingDetails = await createBooking(bookingData);
@@ -401,7 +567,7 @@ export default function ScheduleServiceScreen() {
                     totalPrice: newBooking.totalPrice.toString(),
                     paymentMethod: 'PIX', // Pode ser dinâmico no futuro
                 }
-            } as any);
+            });
 
         } catch (error: any) {
             console.error("Erro ao agendar serviço:", error.response?.data || error.message);
@@ -409,7 +575,7 @@ export default function ScheduleServiceScreen() {
         } finally {
             setIsBooking(false);
         }
-    }, [typedUser, provider, selectedDate, selectedTime, address, selectedProviderService, notes, router, durationInMinutes, squareMeters]);
+    }, [typedUser, provider, selectedDate, selectedTime, address, selectedProviderService, notes, router, durationInMinutes, squareMeters, finalCalculatedPrice, couponCode, discountAmount]);
 
     const prefetchAvailability = useCallback(async (provId: string | undefined, date: Date) => {
         if (!provId) return;
@@ -457,11 +623,10 @@ export default function ScheduleServiceScreen() {
                 setSelectedProviderService(foundService);
                 console.log("Serviço carregado:", foundService);
                 
-                // Inicializa os valores com base no tipo de preço
                 if(foundService.pricingType === PricingType.HOURLY) {
-                    setDurationInMinutes(120); // Valor padrão
+                    setDurationInMinutes(120);
                 } else if(foundService.pricingType === PricingType.BY_SIZE) {
-                    setSquareMeters(50); // Valor padrão
+                    setSquareMeters(50);
                 }
 
                 const userAddress = typedUser?.clientDetails?.address || typedUser?.providerDetails?.address;
@@ -474,8 +639,8 @@ export default function ScheduleServiceScreen() {
                         city: userAddress.city || '',
                         state: userAddress.state || '',
                         cep: userAddress.cep || '',
-                        latitude: userAddress.latitude,
-                        longitude: userAddress.longitude
+                        latitude: userAddress.latitude ?? 0,
+                        longitude: userAddress.longitude ?? 0
                     });
                 } else {
                     Alert.alert(
@@ -517,36 +682,6 @@ export default function ScheduleServiceScreen() {
     useEffect(() => {
         animateShine();
     }, [animateShine]);
-
-    const generateCalendarDays = useCallback((dateInMonth: Date) => {
-        const year = dateInMonth.getFullYear();
-        const month = dateInMonth.getMonth();
-        const firstDayOfMonth = new Date(year, month, 1);
-        const lastDayOfMonth = new Date(year, month + 1, 0);
-        const daysInMonth = lastDayOfMonth.getDate();
-        const startDayOfWeek = firstDayOfMonth.getDay();
-
-        const days: Array<{ day: number, month: 'current' | 'prev' | 'next', dateObj: Date }> = [];
-        const prevMonthLastDay = new Date(year, month, 0).getDate();
-
-        for (let i = 0; i < startDayOfWeek; i++) {
-            const day = prevMonthLastDay - startDayOfWeek + 1 + i;
-            days.push({ day, month: 'prev', dateObj: new Date(year, month - 1, day) });
-        }
-        for (let i = 1; i <= daysInMonth; i++) {
-            days.push({ day: i, month: 'current', dateObj: new Date(year, month, i) });
-        }
-        const totalCells = days.length > 35 ? 42 : 35;
-        const remainingCells = totalCells - days.length;
-        for (let i = 1; i <= remainingCells; i++) {
-            days.push({ day: i, month: 'next', dateObj: new Date(year, month + 1, i) });
-        }
-        setCalendarDays(days);
-    }, []);
-
-    useEffect(() => {
-        generateCalendarDays(currentDisplayMonth);
-    }, [currentDisplayMonth, generateCalendarDays]);
 
     useEffect(() => {
         const fetchAndProcessSlotsForDate = async () => {
@@ -617,6 +752,22 @@ export default function ScheduleServiceScreen() {
         fetchAndProcessSlotsForDate();
     }, [selectedDate, provider?.id]);
 
+    const isButtonDisabled = !selectedTime || !selectedProviderService || isBooking ||
+        !address.street || !address.number || !address.neighborhood || !address.city || !address.state ||
+        (selectedProviderService?.pricingType === PricingType.HOURLY && (durationInMinutes == null || durationInMinutes <= 0)) ||
+        (selectedProviderService?.pricingType === PricingType.BY_SIZE && (squareMeters == null || squareMeters <= 0));
+    
+    // --- Lógica do texto do botão de confirmação usando useMemo ---
+    const confirmButtonText = useMemo(() => {
+        if (finalCalculatedPrice > 0) {
+            return `R$ ${finalCalculatedPrice.toFixed(2).replace('.', ',')}`;
+        } else {
+            return "Selecione Data, Hora e Endereço";
+        }
+    }, [finalCalculatedPrice]);
+    // --- Fim da lógica do texto do botão de confirmação ---
+
+    // Mova o retorno condicional para *depois* de todas as declarações de Hooks
     if (isLoading) {
         return (
             <View style={styles.centeredFeedback}>
@@ -626,27 +777,6 @@ export default function ScheduleServiceScreen() {
             </View>
         );
     }
-
-    const isButtonDisabled = !selectedTime || !selectedProviderService || isBooking ||
-        !address.street || !address.number || !address.neighborhood || !address.city || !address.state ||
-        (selectedProviderService?.pricingType === PricingType.HOURLY && !durationInMinutes) ||
-        (selectedProviderService?.pricingType === PricingType.BY_SIZE && !squareMeters);
-
-    const gradientColors = [
-        'rgba(173, 216, 230, 0.15)',
-        'rgba(135, 206, 250, 0.25)',
-        'rgba(100, 149, 237, 0.35)',
-        'rgba(65, 153, 225, 0.25)',
-    ] as const;
-
-    const backgroundGradientColors = [
-        'rgba(248, 250, 252, 1)',
-        'rgba(241, 245, 249, 1)',
-        'rgba(248, 250, 252, 0.95)',
-    ] as const;
-    
-    // FORMATA O PREÇO PARA EXIBIÇÃO NO BOTÃO
-    const confirmButtonText = `R$ ${totalPrice.toFixed(2).replace('.', ',')}`;
 
     return (
         <View style={styles.screenContainer}>
@@ -697,27 +827,30 @@ export default function ScheduleServiceScreen() {
                 />
             </Animated.View>
 
-            <Animated.View style={[
-                { paddingTop: HEADER_HEIGHT_ADJUST },
-                {
-                    opacity: fadeAnim,
-                    transform: [{ translateY: slideUpAnim }]
-                }
-            ]}>
-                <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-                        <Ionicons name="arrow-back" size={24} color="#435ee9ff" />
-                    </TouchableOpacity>
-                <LinearGradient
-                    colors={['#4285F4', '#2A72E7']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.topHeaderGradient}
-                >
-                    
-                    <Text style={styles.headerTitle}>Agendar</Text>
-                </LinearGradient>
-        
-            </Animated.View>
+            <ScheduleHeader
+                onBackPress={() => router.back()}
+                headerTitle="Agendar"
+                fadeAnim={fadeAnim}
+                slideUpAnim={slideUpAnim}
+            />
+            {/* NOVO: Indicador de Progresso Multi-Etapas */}
+            <View style={styles.progressBarContainer}>
+                {stepTitles.map((title, index) => (
+                    <View key={index} style={styles.progressStep}>
+                        <View style={[
+                            styles.progressDot,
+                            currentStep >= index + 1 ? styles.progressDotActive : null
+                        ]} />
+                        <Text style={[
+                            styles.progressText,
+                            currentStep >= index + 1 ? styles.progressTextActive : null
+                        ]}>
+                            {title}
+                        </Text>
+                    </View>
+                ))}
+            </View>
+            {/* FIM NOVO: Indicador de Progresso Multi-Etapas */}
 
             <Animated.ScrollView
                 contentContainerStyle={styles.scrollContentContainer}
@@ -748,85 +881,17 @@ export default function ScheduleServiceScreen() {
                     />
                 </Animated.View>
 
-                {/* CORREÇÃO APLICADA AQUI */}
-                <Animated.View style={{
-                    transform: [
-                        { scale: Animated.multiply(calendarBreatheAnim, scaleAnim) } // Combine as escalas
-                    ]
-                }}>
-                    <LinearGradient
-                        colors={gradientColors}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.calendarGridContainer}
-                    >
-                        <BlurView intensity={5} tint="light" style={styles.calendarBlur}>
-                            <View style={styles.calendarInnerContainer}>
-                                <View style={styles.dayNamesRow}>
-                                    {DAY_NAMES_PT.map((dayName, index) => (
-                                        <Animated.Text
-                                            key={dayName}
-                                            style={[
-                                                styles.dayNameText,
-                                                {
-                                                    opacity: fadeAnim,
-                                                    transform: [{
-                                                        translateY: slideUpAnim.interpolate({
-                                                            inputRange: [0, 50],
-                                                            outputRange: [0, index * 5]
-                                                        })
-                                                    }]
-                                                }
-                                            ]}
-                                        >
-                                            {dayName.slice(0, 3)}
-                                        </Animated.Text>
-                                    ))}
-                                </View>
-                                <View style={styles.calendarGrid}>
-                                    {calendarDays.map((dayInfo, index) => {
-                                        const isSelected = selectedDate.toDateString() === dayInfo.dateObj.toDateString() && dayInfo.month === 'current';
-                                        const isPast = dayInfo.dateObj < new Date(new Date().setHours(0, 0, 0, 0)) && dayInfo.dateObj.toDateString() !== new Date().toDateString();
-                                        const isWeekend = dayInfo.dateObj.getDay() === 0 || dayInfo.dateObj.getDay() === 6;
-
-                                        return (
-                                            <TouchableOpacity
-                                                key={index}
-                                                style={[
-                                                    styles.dayCell,
-                                                    isSelected && styles.dayCellSelected,
-                                                    {
-                                                        transform: [{
-                                                            scale: isSelected ? selectionAnim : 1
-                                                        }]
-                                                    }
-                                                ]}
-                                                onPress={() => dayInfo.month === 'current' && handleDaySelect(dayInfo.dateObj)}
-                                                disabled={dayInfo.month !== 'current' || isPast}
-                                            >
-                                                {isSelected && (
-                                                    <LinearGradient
-                                                        colors={['#4285F4', '#2A72E7']}
-                                                        style={styles.selectedDayGradient}
-                                                    />
-                                                )}
-                                                <Text style={[
-                                                    styles.dayText,
-                                                    dayInfo.month !== 'current' && styles.dayTextNotInMonth,
-                                                    isSelected && styles.dayTextSelected,
-                                                    isPast && dayInfo.month === 'current' && styles.dayTextPast,
-                                                    !isSelected && !isPast && dayInfo.month === 'current' && (isWeekend ? styles.dayTextCurrentWeekend : styles.dayTextCurrentWeekday),
-                                                ]}>
-                                                    {dayInfo.day}
-                                                </Text>
-                                            </TouchableOpacity>
-                                        );
-                                    })}
-                                </View>
-                            </View>
-                        </BlurView>
-                    </LinearGradient>
-                </Animated.View>
+                <ScheduleCalendar
+                    currentDisplayMonth={currentDisplayMonth}
+                    onPrevMonth={handlePrevMonth}
+                    onNextMonth={handleNextMonth}
+                    selectedDate={selectedDate}
+                    onDaySelect={handleDaySelect}
+                    fadeAnim={fadeAnim}
+                    slideUpAnim={slideUpAnim}
+                    selectionAnim={selectionAnim}
+                    calendarBreatheAnim={calendarBreatheAnim}
+                />
 
                 <Animated.View style={{
                     transform: [{ scale: scaleAnim }],
@@ -853,53 +918,72 @@ export default function ScheduleServiceScreen() {
                             squareMeters={squareMeters}
                             setSquareMeters={setSquareMeters}
                             pricePerUnit={selectedProviderService.price}
-                            finalPrice={totalPrice}
+                            finalPrice={calculatedSubtotal} // Usa o subtotal aqui
                         />
                     </Animated.View>
                 )}
 
+                <NotesInputSection
+                    notes={notes}
+                    setNotes={setNotes}
+                    fadeAnim={fadeAnim}
+                    slideUpAnim={slideUpAnim}
+                />
 
-                <View style={[styles.notesContainer, {opacity: fadeAnim, transform: [{ translateY: slideUpAnim }] }]}>
-                    <Text style={styles.notesTitle}>Observações (Opcional)</Text>
-                    <TextInput
-                        style={styles.notesInput}
-                        placeholder="Ex: 'Procurar por Maria na portaria', 'O apartamento é o 101, cor amarela'."
-                        value={notes}
-                        onChangeText={setNotes}
-                        multiline
-                        numberOfLines={4}
-                        placeholderTextColor="#999"
-                    />
-                </View>
+                {/* NOVO: Seção de Cupom de Desconto */}
+                <CouponInputSection
+                    couponCode={couponCode}
+                    setCouponCode={setCouponCode}
+                    onApplyCoupon={handleApplyCoupon}
+                    isApplyingCoupon={isApplyingCoupon}
+                    discountAmount={discountAmount}
+                />
+                {/* FIM NOVO: Seção de Cupom de Desconto */}
+
+                {/* NOVO: Resumo de Confirmação Final */}
+                <BookingSummaryPreview
+                    provider={provider}
+                    selectedProviderService={selectedProviderService}
+                    selectedDate={selectedDate}
+                    selectedTime={selectedTime}
+                    address={address}
+                    durationInMinutes={durationInMinutes}
+                    squareMeters={squareMeters}
+                    subtotal={calculatedSubtotal}
+                    discountAmount={discountAmount}
+                    finalPrice={finalCalculatedPrice}
+                    onShowCancellationPolicy={showCancellationPolicy}
+                />
+                {/* FIM NOVO: Resumo de Confirmação Final */}
 
             </Animated.ScrollView>
 
-            <View style={styles.confirmButtonWrapper}>
-                <TouchableOpacity
-                    style={[
-                        styles.confirmButton,
-                        isButtonDisabled && styles.confirmButtonDisabled
-                    ]}
-                    onPress={handleConfirmBooking}
-                    disabled={isButtonDisabled}
-                >
-                    {isBooking ? (
-                        <ActivityIndicator color="#FFFFFF" />
-                    ) : (
-                        <Text style={styles.confirmButtonText}>
-                            {selectedTime && selectedProviderService?.price ?
-                                `Agendar (${confirmButtonText})` :
-                                "Selecione Data, Hora e Endereço"
-                            }
+            {/* NOVO: Resumo Flutuante do Agendamento (Sticky Bottom Bar) */}
+            {selectedTime && finalCalculatedPrice > 0 && (
+                <View style={styles.floatingSummaryContainer}>
+                    <View style={styles.floatingSummaryContent}>
+                        <Text style={styles.floatingSummaryText}>
+                            {selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} às {selectedTime}
                         </Text>
-                    )}
-                </TouchableOpacity>
-            </View>
+                        <Text style={styles.floatingSummaryPrice}>
+                            R$ {finalCalculatedPrice.toFixed(2).replace('.', ',')}
+                        </Text>
+                    </View>
+                </View>
+            )}
+            {/* FIM NOVO: Resumo Flutuante do Agendamento */}
+
+            <ConfirmBookingButton
+                isButtonDisabled={isButtonDisabled}
+                onConfirmBooking={handleConfirmBooking}
+                isBooking={isBooking}
+                confirmButtonText={confirmButtonText}
+                selectedTime={selectedTime}
+                hasSelectedServicePrice={selectedProviderService?.price != null}
+            />
         </View>
     );
 }
-
-const FIXED_DAY_CELL_SIZE = 40;
 
 const styles = StyleSheet.create({
     screenContainer: {
@@ -937,185 +1021,193 @@ const styles = StyleSheet.create({
     decorationGradient: {
         flex: 1,
     },
-
-    topHeaderGradient: {
-        width: '38%',
-        paddingTop: Platform.OS === 'ios' ? 25 : 23,
-        paddingBottom: 15,
-        bottom: 87,
-        left: 120,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 5,
-        elevation: 8,
-        borderBottomLeftRadius: 50,
-        borderBottomRightRadius: 50,
-        marginBottom: Platform.OS === 'ios' ? 0 : -80,
-    },
-    backButton: {
-        position: 'absolute',
-        left: 15,
-        bottom: 95,
-        paddingTop: Platform.OS === 'ios' ? 50 : 30,
-        paddingBottom: 15,
-        zIndex: 1,
-    },
-    headerTitle: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: 'bold',
-        textAlign: 'center',
-        flex: 1,
-        paddingTop: Platform.OS === 'ios' ? 15 : 13,
-        
-    },
-    calendarGridContainer: {
-        borderRadius: 16,
-        marginHorizontal: 30,
-        marginVertical: 50,
-        marginTop: 25,
-        overflow: 'hidden',
-        shadowColor: 'rgb(33, 34, 34)',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 5,
-        elevation: 8,
-    },
-    calendarBlur: {
-        paddingVertical: 25,
-        paddingHorizontal: 15,
-    },
-    calendarInnerContainer: {
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-        borderRadius: 12,
-        padding: 10,
-    },
-    dayNamesRow: {
+    // --- NOVOS ESTILOS ---
+    progressBarContainer: {
         flexDirection: 'row',
         justifyContent: 'space-around',
-        marginBottom: 15,
-        paddingHorizontal: 5,
-    },
-    dayNameText: {
-        width: FIXED_DAY_CELL_SIZE,
-        textAlign: 'center',
-        fontSize: 10,
-        color: 'rgba(23, 23, 24, 0.7)',
-        fontWeight: '600',
-        letterSpacing: 0.5,
-    },
-    calendarGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'space-between',
-        paddingHorizontal: 5,
-    },
-    dayCell: {
-        width: FIXED_DAY_CELL_SIZE,
-        height: FIXED_DAY_CELL_SIZE,
-        justifyContent: 'center',
         alignItems: 'center',
-        marginVertical: 6,
-        borderRadius: FIXED_DAY_CELL_SIZE / 2,
-        position: 'relative',
-    },
-    dayCellSelected: {
-        shadowColor: '#2A72E7',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 8,
-    },
-    selectedDayGradient: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        borderRadius: FIXED_DAY_CELL_SIZE / 2,
-    },
-    dayText: {
-        fontSize: 13,
-        fontWeight: '500',
-        zIndex: 1,
-    },
-    dayTextCurrentWeekday: {
-        color: '#333333',
-        fontWeight: '600',
-    },
-    dayTextCurrentWeekend: {
-        color: '#2A72E7',
-        fontWeight: '600',
-    },
-    dayTextNotInMonth: {
-        color: 'rgba(0,0,0,0.2)',
-    },
-    dayTextSelected: {
-        color: '#FFFFFF',
-        fontWeight: '700',
-    },
-    dayTextPast: {
-        color: '#AAAAAA',
-        textDecorationLine: 'line-through',
-    },
-    confirmButtonWrapper: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        borderRadius: 40,
-        paddingHorizontal: 25,
-        paddingVertical: Platform.OS === 'ios' ? 25 : 42,
+        paddingHorizontal: 20,
+        paddingVertical: 15,
         backgroundColor: '#FFFFFF',
-        borderTopWidth: 1,
-        borderTopColor: '#E0E0E0',
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0',
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+    },
+    progressStep: {
+        alignItems: 'center',
+        flex: 1,
+    },
+    progressDot: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        backgroundColor: '#D0D0D0',
+        marginBottom: 5,
+    },
+    progressDotActive: {
+        backgroundColor: '#4A90E2',
+    },
+    progressText: {
+        fontSize: 12,
+        color: '#888',
+        textAlign: 'center',
+    },
+    progressTextActive: {
+        fontWeight: 'bold',
+        color: '#4A90E2',
+    },
+    floatingSummaryContainer: {
+        position: 'absolute',
+        bottom: 80, // Acima do ConfirmBookingButton
+        left: 0,
+        right: 0,
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        elevation: 8,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: -3 },
-        shadowOpacity: 0.1,
+        shadowOpacity: 0.15,
         shadowRadius: 5,
-        elevation: 8,
     },
-    confirmButton: {
-        backgroundColor: '#2A72E7',
-        paddingVertical: 7,
-        width: '90%',
-        borderRadius: 12,
-        bottom: 25,
-        left: 12,
+    floatingSummaryContent: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
     },
-    confirmButtonDisabled: {
-        backgroundColor: '#A0C7F2',
+    floatingSummaryText: {
+        fontSize: 16,
+        fontWeight: '500',
+        color: '#333',
     },
-    confirmButtonText: {
-        color: '#FFFFFF',
-        fontSize: 15,
-        fontWeight: '700',
+    floatingSummaryPrice: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#4A90E2',
     },
-    notesContainer: {
-        marginHorizontal: 15,
-        marginTop: 20,
-        marginBottom: 10,
+    card: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 15,
+        padding: 20,
+        marginHorizontal: 20,
+        marginBottom: 15,
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
     },
-    notesTitle: {
-        fontSize: 15,
+    sectionTitle: {
+        fontSize: 18,
         fontWeight: 'bold',
         color: '#333',
-        marginBottom: 10,
+        marginBottom: 15,
     },
-    notesInput: {
-        backgroundColor: '#FFFFFF',
-        padding: 15,
-        borderRadius: 12,
+    couponInputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
         borderWidth: 1,
         borderColor: '#E0E0E0',
-        minHeight: 100,
-        textAlignVertical: 'top',
-        fontSize: 14,
+        borderRadius: 10,
+        overflow: 'hidden',
+    },
+    couponInput: {
+        flex: 1,
+        paddingVertical: 12,
+        paddingHorizontal: 15,
+        fontSize: 16,
         color: '#333',
-    }
+    },
+    applyCouponButton: {
+        backgroundColor: '#4A90E2',
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderTopRightRadius: 10,
+        borderBottomRightRadius: 10,
+    },
+    applyCouponButtonText: {
+        color: '#FFF',
+        fontWeight: 'bold',
+        fontSize: 16,
+    },
+    couponAppliedText: {
+        marginTop: 10,
+        fontSize: 14,
+        color: '#28A745',
+        fontWeight: 'bold',
+    },
+    summaryItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    summaryIcon: {
+        marginRight: 10,
+    },
+    summaryText: {
+        fontSize: 16,
+        color: '#555',
+    },
+    summaryLabel: {
+        fontWeight: 'bold',
+        color: '#333',
+    },
+    priceSummary: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 5,
+        paddingVertical: 5,
+        borderTopWidth: 1,
+        borderTopColor: '#F0F0F0',
+    },
+    priceLabel: {
+        fontSize: 16,
+        color: '#555',
+    },
+    priceValue: {
+        fontSize: 16,
+        fontWeight: '500',
+        color: '#333',
+    },
+    discountValue: {
+        color: '#28A745',
+    },
+    totalPriceSummary: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 10,
+        paddingTop: 10,
+        borderTopWidth: 2,
+        borderTopColor: '#4A90E2',
+    },
+    totalPriceLabel: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#333',
+    },
+    totalPriceValue: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#4A90E2',
+    },
+    cancellationPolicyLink: {
+        marginTop: 15,
+        alignSelf: 'flex-start',
+    },
+    cancellationPolicyText: {
+        fontSize: 14,
+        color: '#4A90E2',
+        textDecorationLine: 'underline',
+    },
+    // --- FIM NOVOS ESTILOS ---
 });

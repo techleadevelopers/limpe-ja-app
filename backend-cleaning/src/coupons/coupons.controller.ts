@@ -2,7 +2,7 @@
 import { Controller, Get, Post, Patch, Param, Body, UseGuards, Req } from '@nestjs/common';
 import { CouponsService } from './coupons.service';
 import { CreateCouponDto } from './dto/create-coupon.dto';
-import { UpdateCouponDto } from './dto/update-coupon.dto';
+import { UpdateBookingStatusDto } from './dto/update-coupon.dto'; // CORRIGIDO: Importa UpdateBookingStatusDto
 import { ApplyCouponDto } from './dto/apply-coupon.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -28,7 +28,8 @@ export class CouponsController {
 
   @Patch(':id')
   @Roles(UserRole.ADMIN) // Only admins can update coupons
-  async update(@Param('id') id: string, @Body() updateCouponDto: UpdateCouponDto) {
+  // CORRIGIDO: O tipo do DTO no parâmetro do método 'update'
+  async update(@Param('id') id: string, @Body() updateCouponDto: UpdateBookingStatusDto) {
     return this.couponsService.update(id, updateCouponDto);
   }
 

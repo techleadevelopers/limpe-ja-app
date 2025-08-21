@@ -356,6 +356,7 @@ model Booking {
   subscription             Subscription?     @relation("SubscriptionBookings", fields: [subscriptionId], references: [id])
   incidents                Incident[]
   guaranteeClaims          GuaranteeClaim[]
+  // NOVO: Campos para integração do Módulo de Cupons
   couponId                 String?
   coupon                   Coupon?           @relation(fields: [couponId], references: [id])
   couponUsage              CouponUsage?      @relation("BookingCouponUsage")
@@ -453,10 +454,9 @@ model Transaction {
   gatewayTransactionId String?         @unique
   qrCodeUrl            String?
   transactionRef       String?
-  // ABS: Novo campo para cupons
+  // NOVO: Campo para integração do Módulo de Cupons
   couponId             String?
   coupon               Coupon?         @relation(fields: [couponId], references: [id])
-  // FIM ABS
 }
 
 // Modelo de Disponibilidade do Provedor
@@ -610,16 +610,17 @@ model Coupon {
   transactions Transaction[]
 }
 
-// ABS: Modelo para rastrear o uso de cupons (Novo)
+// ABS: Modelo para rastrear o uso de cupons (Novo) - ATUALIZADO COM appliedValue
 model CouponUsage {
-  id        String   @id @default(uuid())
-  couponId  String
-  coupon    Coupon   @relation(fields: [couponId], references: [id])
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  bookingId String   @unique // Um uso de cupom por agendamento
-  booking   Booking  @relation("BookingCouponUsage", fields: [bookingId], references: [id])
-  createdAt DateTime @default(now())
+  id           String   @id @default(uuid())
+  couponId     String
+  coupon       Coupon   @relation(fields: [couponId], references: [id])
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  bookingId    String   @unique // Um uso de cupom por agendamento
+  booking      Booking  @relation("BookingCouponUsage", fields: [bookingId], references: [id])
+  appliedValue Decimal  @db.Decimal(10, 2) // Valor do desconto aplicado neste uso específico
+  createdAt    DateTime @default(now())
 }
 
 // ABS: Modelo para Solicitações de Garantia de Serviço

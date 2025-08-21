@@ -5,6 +5,7 @@ import { Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from 're
 import { formatDate } from '../../../utils/helpers';
 
 // Importa a tipagem de transação do provedor e TransactionType
+// CORREÇÃO: Agora TransactionType é exportado de providers.ts
 import { ProviderTransaction, TransactionType } from '../../../types/backend/providers';
 
 // --- DEFINIÇÕES DE CORES (ALINHADAS COM O TEMA GERAL E ADICIONANDO AS FALTANTES) ---
@@ -70,7 +71,8 @@ const AnimatedTransactionItem: React.FC<AnimatedTransactionItemProps> = ({ item,
     const amountColor = isPositive ? SUCCESS_GREEN : DANGER_RED;
     const amountSign = isPositive ? '+' : '';
 
-    const transactionDescription = item.description || (item.type === TransactionType.PAYMENT ? 'Pagamento de Serviço' : item.type === TransactionType.WITHDRAWAL ? 'Saque' : 'Ajuste');
+    // CORREÇÃO: Usar item.type diretamente para a descrição padrão
+    const transactionDescription = item.description || (item.type === TransactionType.PAYMENT ? 'Pagamento de Serviço' : item.type === TransactionType.WITHDRAWAL ? 'Saque' : item.type === TransactionType.COMMISSION ? 'Comissão' : 'Ajuste');
 
     // LOG DEFENSIVO: Verifica se item.createdAt é válido
     let formattedDate = 'Data Inválida';
@@ -148,10 +150,10 @@ const AnimatedTransactionItem: React.FC<AnimatedTransactionItemProps> = ({ item,
                     <View style={styles.expandedDetailsContent}>
                         <Text style={styles.detailText}>**ID da Transação:** {item.id || 'N/A'}</Text> {/* LOG DEFENSIVO: ID da transação */}
                         <Text style={styles.detailText}>**Tipo:** {label}</Text>
-                        <Text style={styles.detailText}>**Status:** {item.status || 'N/A'}</Text> {/* LOG DEFENSIVO: Status da transação */}
+                        <Text style={styles.detailText}>**Status:** {item.status || 'N/A'}</Text> {/* CORREÇÃO: item.status agora existe */}
                         {/* LOG DEFENSIVO: Data completa, com fallback */}
                         <Text style={styles.detailText}>**Data Completa:** {item.createdAt ? formatDate(item.createdAt, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Data Indisponível'}</Text>
-                        {item.bookingId && <Text style={styles.detailText}>**Agendamento ID:** {item.bookingId}</Text>}
+                        {item.bookingId && <Text style={styles.detailText}>**Agendamento ID:** {item.bookingId}</Text>} {/* CORREÇÃO: item.bookingId agora existe */}
                         {/* LOG DEFENSIVO: Descrição, com fallback */}
                         {item.description && <Text style={styles.detailText}>**Descrição:** {item.description}</Text>}
                         {!item.description && <Text style={styles.detailText}>**Descrição:** Nenhuma descrição fornecida.</Text>}

@@ -1,15 +1,15 @@
 // backend-cleaning/src/coupons/dto/update-coupon.dto.ts
-import { IsString, IsEnum, IsNumber, IsPositive, Min, IsISO8601, IsOptional, IsInt } from 'class-validator';
-import { CouponType, CouponTarget, CouponStatus } from '../entities/coupon.entity';
+import { IsString, IsEnum, IsNumber, IsPositive, Min, IsISO8601, IsOptional, IsInt, IsBoolean } from 'class-validator';
+import { CouponType, CouponTarget, CouponStatus } from '../entities/coupon.entity'; // CORRIGIDO: Importar do arquivo de entidade local
 
-export class UpdateCouponDto {
+export class UpdateBookingStatusDto { // MANTIDO: Nome da classe conforme sua instrução
   @IsOptional()
   @IsString()
   code?: string;
 
   @IsOptional()
   @IsEnum(CouponType)
-  type?: CouponType;
+  type?: CouponType; // Mapeia para 'valueType' no DB
 
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
@@ -32,7 +32,7 @@ export class UpdateCouponDto {
 
   @IsOptional()
   @IsEnum(CouponTarget)
-  target?: CouponTarget;
+  target?: CouponTarget; // Mapeia para 'target' no DB
 
   @IsOptional()
   @IsString()
@@ -41,4 +41,12 @@ export class UpdateCouponDto {
   @IsOptional()
   @IsEnum(CouponStatus)
   status?: CouponStatus;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
 }

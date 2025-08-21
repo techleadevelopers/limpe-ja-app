@@ -2,34 +2,22 @@
 
 // CORREÇÃO: As tipagens de saque são do módulo de pagamentos
 import { RequestWithdrawalDto, PixChargeResponseDto } from '../types/backend/payments';
-// CORREÇÃO: A tipagem de ganhos é do módulo de ganhos
-import { EarningsResponseDto } from '../types/backend/earning';
-// CORREÇÃO: A tipagem de transações é do módulo de provedores
-import { ProviderTransaction } from '../types/backend/providers';
+// CORREÇÃO: A tipagem de ganhos é do módulo de provedores, onde EarningsResponseDto foi definida
+import { EarningsResponseDto, ProviderTransaction } from '../types/backend/providers';
 
 // Outras importações
-import api from './api';
-
-/**
- * Interface que representa a resposta completa do endpoint de ganhos.
- * Como o backend não tem um EarningsResponseDto explícito na sua documentação,
- * vamos construir um tipo aqui para ser compatível com a estrutura esperada.
- * Geralmente, inclui um resumo e a lista de transações.
- */
-interface EarningsResponse {
-    totalEarnings: number;
-    pendingWithdrawals: number;
-    transactions: ProviderTransaction[];
-}
+import api from './api'; // Supondo que 'api' é sua instância configurada do axios
 
 /**
  * Busca todos os dados de ganhos do provedor logado.
  * Corresponde ao `GET /providers/me/earnings` do backend.
- * @returns Uma Promise que resolve para um objeto EarningsResponse.
+ * O tipo de retorno esperado é EarningsResponseDto.
+ * @returns Uma Promise que resolve para um objeto EarningsResponseDto.
  */
-export async function getMyProviderEarnings(): Promise<EarningsResponse> {
+export async function getMyProviderEarnings(): Promise<EarningsResponseDto> {
     try {
-        const response = await api.get<EarningsResponse>('/providers/me/earnings');
+        // A resposta da API deve corresponder à estrutura de EarningsResponseDto
+        const response = await api.get<EarningsResponseDto>('/providers/me/earnings');
         return response.data;
     } catch (error: any) {
         console.error("[earningsService] Erro ao buscar ganhos:", error.response?.data || error.message);

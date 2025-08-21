@@ -1,29 +1,41 @@
 // src/services/entities/service.entity.ts
-import { Service as PrismaService, Prisma } from '@prisma/client';
+import { Service as PrismaService, Prisma, PricingType } from '@prisma/client'; // ADICIONADO: PricingType
 
 export class ServiceEntity implements PrismaService {
   id: string;
   name: string;
   description: string | null;
   icon: string | null;
+  price: Prisma.Decimal;
+  defaultPricingType: PricingType | null; // ADICIONADO: Propriedade que faltava
 
   createdAt: Date;
   updatedAt: Date;
-  price: Prisma.Decimal;
 
   constructor(partial: Partial<ServiceEntity>) {
     Object.assign(this, partial);
 
-    if (partial.price !== undefined && partial.price !== null) { // <-- Melhorar a verificação de nulo
+    if (partial.price !== undefined && partial.price !== null) {
         this.price = new Prisma.Decimal(partial.price);
     } else {
-        this.price = new Prisma.Decimal(0); // <-- Valor padrão para garantir que seja Decimal
+        this.price = new Prisma.Decimal(0);
     }
-    
-    if (partial.createdAt) this.createdAt = new Date(partial.createdAt); // Converte para Date se for string
-    else this.createdAt = new Date(); 
 
-    if (partial.updatedAt) this.updatedAt = new Date(partial.updatedAt); // Converte para Date se for string
-    else this.updatedAt = new Date();
+    // O Object.assign(this, partial) já deve lidar com defaultPricingType, createdAt e updatedAt
+    // se eles estiverem presentes em 'partial'.
+    // As verificações abaixo são redundantes se Object.assign for suficiente,
+    // mas são mantidas para garantir a conversão para Date se o input for string.
+
+    if (partial.createdAt && typeof partial.createdAt === 'string') {
+      this.createdAt = new Date(partial.createdAt);
+    } else if (!this.createdAt) { // Se não veio no partial ou não era string, e não foi inicializado
+      this.createdAt = new Date();
+    }
+
+    if (partial.updatedAt && typeof partial.updatedAt === 'string') {
+      this.updatedAt = new Date(partial.updatedAt);
+    } else if (!this.updatedAt) { // Se não veio no partial ou não era string, e não foi inicializado
+      this.updatedAt = new Date();
+    }
   }
 }

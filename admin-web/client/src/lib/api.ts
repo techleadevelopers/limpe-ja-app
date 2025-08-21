@@ -11,7 +11,7 @@ import {
     Review, Offer, Referral, FAQItem,
 } from './types';
 
-const API_BASE_URL = 'https://limpeja-app-backend-35489557635.southamerica-east1.run.app';
+const API_BASE_URL = 'http://127.0.0.1:3000';
 
 export const fetchApi = async <T>(path: string, options: RequestInit = {}): Promise<T> => {
     const token = localStorage.getItem('authToken');

@@ -1,5 +1,5 @@
 // app/(provider)/components/dashboard/CircularProgressChart.tsx
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react'; // Import useState
 import { View, Text, StyleSheet, TouchableOpacity, Platform, Animated } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { BlurView } from 'expo-blur';
@@ -10,10 +10,13 @@ interface CircularProgressChartProps {
   strokeWidth: number;
   color: string;
   backgroundColor: string;
-  value: string;
+  value: Animated.Value; // ALTERADO: Agora aceita um Animated.Value
   label: string;
   onDetailPress?: () => void; // Adicionado para funcionalidade do botão "Detalhe"
 }
+
+// Cria um componente de Círculo animável para a barra de progresso
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 const CircularProgressChart: React.FC<CircularProgressChartProps> = ({
   progress,
@@ -21,20 +24,40 @@ const CircularProgressChart: React.FC<CircularProgressChartProps> = ({
   strokeWidth,
   color,
   backgroundColor,
-  value,
+  value: animatedValueProp, // Renomeado para evitar conflito com variável de estado/local
   label,
   onDetailPress,
 }) => {
-  const animatedProgress = useRef(new Animated.Value(0)).current; // Para animar o progresso
+  const animatedProgress = useRef(new Animated.Value(0)).current; // Para animar a barra de progresso em si
   const buttonScale = useRef(new Animated.Value(1)).current; // Para feedback de toque no botão
 
+  // Estado para armazenar o valor formatado como string
+  const [displayValue, setDisplayValue] = useState<string>(
+    // Inicializa com o valor atual do Animated.Value formatado
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(animatedValueProp.__getValue() || 0)
+  );
+
+  // Efeito para animar a barra de progresso
   useEffect(() => {
     Animated.timing(animatedProgress, {
       toValue: progress,
       duration: 800, // Duração da animação
-      useNativeDriver: true, // Use native driver para melhor performance se possível
+      useNativeDriver: true, // Pode usar native driver para esta animação
     }).start();
-  }, [progress]); // Anima sempre que o progresso muda
+  }, [progress, animatedProgress]);
+
+  // Efeito para ouvir o animatedValueProp e atualizar displayValue
+  useEffect(() => {
+    const listenerId = animatedValueProp.addListener(({ value }) => {
+      // Formata o número animado para string de moeda
+      setDisplayValue(new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value));
+    });
+
+    // Limpa o listener quando o componente é desmontado ou animatedValueProp muda
+    return () => {
+      animatedValueProp.removeListener(listenerId);
+    };
+  }, [animatedValueProp]); // Re-executa o efeito se o animatedValueProp em si mudar
 
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = animatedProgress.interpolate({
@@ -71,12 +94,12 @@ const CircularProgressChart: React.FC<CircularProgressChartProps> = ({
           strokeDasharray={circumference}
           strokeDashoffset={strokeDashoffset} // Usando o valor animado
           strokeLinecap="round"
-          transform={`rotate(-90 ${radius} ${radius})`} // Start from top
+          transform={`rotate(-90 ${radius} ${radius})`} // Inicia do topo
         />
       </Svg>
       <View style={StyleSheet.absoluteFillObject}>
         <BlurView intensity={Platform.OS === 'ios' ? 15 : 40} tint="light" style={styles.chartOverlayContent}>
-          <Text style={styles.chartValue}>{value}</Text>
+          <Text style={styles.chartValue}>{displayValue}</Text> {/* Usa a variável de estado aqui */}
           <Text style={styles.chartLabel}>{label}</Text>
           {onDetailPress && (
             <Animated.View style={{ transform: [{ scale: buttonScale }] }}>
@@ -97,15 +120,13 @@ const CircularProgressChart: React.FC<CircularProgressChartProps> = ({
   );
 };
 
-const AnimatedCircle = Animated.createAnimatedComponent(Circle); // Cria um componente de Círculo animável
-
 const styles = StyleSheet.create({
   chartOverlayContent: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 999, // Um valor grande para garantir que seja um círculo perfeito
-    overflow: 'hidden', // Para que a blurView respeite o borderRadius
+    overflow: 'hidden', // Para que a BlurView respeite o borderRadius
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)', // Borda sutil para o efeito glassmorphic
   },

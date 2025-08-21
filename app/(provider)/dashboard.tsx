@@ -173,7 +173,10 @@ const FinancialSummaryCard: React.FC<{
       </View>
       <TouchableOpacity
         style={[summaryStyles.viewEarningsButton, { transform: [{ scale: scaleAnim }] }]}
-        onPress={onViewEarnings}
+        onPress={() => {
+          console.log("[DashboardScreen] Botão 'Gerenciar Ganhos' pressionado. Tentando navegar para ganhos."); // ADICIONE ESTA LINHA
+          onViewEarnings(); // Chama a função de navegação que foi passada como prop
+        }}
         onPressIn={onPressIn}
         onPressOut={onPressOut}
         accessibilityLabel="Ver todos os meus ganhos"
@@ -263,13 +266,11 @@ const QuickActionsSection: React.FC<{
           onPress={onManageAvailability} onPressIn={p1} onPressOut={o1}>
           <Ionicons name="calendar-outline" size={30} color={ICON_PRIMARY} />
           <Text style={quickActionStyles.gridItemText}>Minha Agenda</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[quickActionStyles.gridItem, { transform: [{ scale: s2 }] }]}
+        </TouchableOpacity><TouchableOpacity style={[quickActionStyles.gridItem, { transform: [{ scale: s2 }] }]} // Removido espaço
           onPress={onViewAllServicesPress} onPressIn={p2} onPressOut={o2}>
           <Ionicons name="briefcase-outline" size={30} color={ICON_PRIMARY} />
           <Text style={quickActionStyles.gridItemText}>Meus Serviços</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[quickActionStyles.gridItem, { transform: [{ scale: s3 }] }]}
+        </TouchableOpacity><TouchableOpacity style={[quickActionStyles.gridItem, { transform: [{ scale: s3 }] }]} // Removido espaço
           onPress={onViewAllMessagesPress} onPressIn={p3} onPressOut={o3}>
           <Ionicons name="chatbubbles-outline" size={30} color={ICON_PRIMARY} />
           <Text style={quickActionStyles.gridItemText}>Mensagens</Text>
@@ -346,8 +347,10 @@ const RequestItem: React.FC<{
   const clientId: string | undefined = item.clientId;
   const clientName: string = item.clientFullName || 'Cliente';
 
-  const scheduledDate = new Date(item.scheduledDateTime).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' });
-  const scheduledTime = new Date(item.scheduledDateTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  // CORREÇÃO: Usar item.scheduledDate e item.scheduledTime
+  const combinedDateTimeString = `${item.scheduledDate}T${item.scheduledTime}:00`; // Formato ISO para new Date()
+  const scheduledDate = new Date(combinedDateTimeString).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' });
+  const scheduledTime = new Date(combinedDateTimeString).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
   return (
     <Animated.View style={[
@@ -450,8 +453,10 @@ const ConfirmedServiceItem: React.FC<{
 }> = ({ item, onPress, entryAnim }) => {
   const touchAnimation = useAnimatedTouch();
 
-  const scheduledDate = new Date(item.scheduledDateTime).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
-  const scheduledTime = new Date(item.scheduledDateTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  // CORREÇÃO: Usar item.scheduledDate e item.scheduledTime
+  const combinedDateTimeString = `${item.scheduledDate}T${item.scheduledTime}:00`; // Formato ISO para new Date()
+  const scheduledDate = new Date(combinedDateTimeString).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+  const scheduledTime = new Date(combinedDateTimeString).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
   return (
     <Animated.View style={{ opacity: entryAnim.x, transform: [{ translateY: entryAnim.y }] }}>
@@ -681,19 +686,16 @@ export default function ProviderDashboardScreen() {
           avatarUrl={user?.avatarUrl}
           onProfilePress={() => router.push('/(provider)/profile' as any)}
         />
-
         <FinancialSummaryCard
           totalEarnings={dashboardData?.totalEarnings}
           pendingWithdrawals={dashboardData?.pendingWithdrawals}
           onViewEarnings={() => router.push('/(provider)/earnings' as any)}
         />
-
         <QuickActionsSection
           onViewAllServicesPress={handleViewAllServicesPress}
           onViewAllMessagesPress={handleViewAllMessagesPress}
           onManageAvailability={() => router.push('/(provider)/schedule/manage-availability' as any)}
         />
-
         <View style={styles.subsectionWrapper}>
           <View style={styles.subsectionHeader}>
             <Text style={styles.subsectionTitle}>
@@ -704,8 +706,7 @@ export default function ProviderDashboardScreen() {
                 <Text style={styles.viewAllText}>Ver Todas</Text>
               </TouchableOpacity>
             )}
-          </View>
-          {pendingRequests.length > 0 ? (
+          </View>{pendingRequests.length > 0 ? ( // Removido espaço
             pendingRequests.slice(0, 2).map((item, index) => (
               <RequestItem
                 key={item.id}
@@ -721,7 +722,6 @@ export default function ProviderDashboardScreen() {
             renderEmptyState("Nenhuma nova solicitação de agendamento.", "checkmark-done-circle-outline")
           )}
         </View>
-
         <View style={styles.subsectionWrapper}>
           <View style={styles.subsectionHeader}>
             <Text style={styles.subsectionTitle}>
@@ -732,8 +732,7 @@ export default function ProviderDashboardScreen() {
                 <Text style={styles.viewAllText}>Ver Todas</Text>
               </TouchableOpacity>
             )}
-          </View>
-          {upcomingServices.length > 0 ? (
+          </View>{upcomingServices.length > 0 ? ( // Removido espaço
             upcomingServices.slice(0, 2).map((item, index) => (
               <ConfirmedServiceItem
                 key={item.id}
@@ -746,18 +745,15 @@ export default function ProviderDashboardScreen() {
             renderEmptyState("Nenhum serviço confirmado agendado.", "calendar-clear-outline")
           )}
         </View>
-
         <AdvancedReviewsSection
           reviews={dashboardData?.reviews}
           providerId={user?.id}
           onViewAllReviews={() => router.push('/(provider)/reviews' as any)}
         />
-
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={24} color={WHITE} />
           <Text style={styles.logoutButtonText}>Sair da Conta</Text>
         </TouchableOpacity>
-
       </ScrollView>
     </View>
   );

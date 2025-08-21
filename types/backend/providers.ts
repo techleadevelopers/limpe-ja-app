@@ -9,6 +9,14 @@ import { ProviderServiceOffering } from './provider-service';
 // CORREÇÃO: Re-exportar ProviderServiceOffering para que outros módulos possam importá-lo daqui
 export { ProviderServiceOffering };
 
+// CORREÇÃO: Definir e exportar TransactionType
+export enum TransactionType {
+  PAYMENT = 'PAYMENT', // Corresponde ao Pagamento de Serviço (ou EARNING)
+  WITHDRAWAL = 'WITHDRAWAL', // Corresponde ao Saque Solicitado
+  COMMISSION = 'COMMISSION', // Corresponde à Comissão
+  // Adicione outros tipos de transação se existirem no backend
+}
+
 /**
  * @interface ProviderAvailability
  * Tipo para a disponibilidade do provedor (conforme o retorno de getProviderAvailability)
@@ -235,9 +243,11 @@ export interface ProviderDashboard {
 export interface ProviderTransaction {
   id: string;
   amount: number; // CORREÇÃO: Decimal no Prisma é number aqui
-  type: 'EARNING' | 'WITHDRAWAL';
+  type: TransactionType; // CORREÇÃO: Usar o enum TransactionType
   description?: string;
   createdAt: string;
+  status?: string; // CORREÇÃO: Adicionado status
+  bookingId?: string; // CORREÇÃO: Adicionado bookingId
 }
 
 /**
@@ -257,4 +267,20 @@ export interface ProviderSearchQuery {
   latitude?: number; // CORREÇÃO: Adicionado latitude
   longitude?: number; // CORREÇÃO: Adicionado longitude
   radius?: number; // CORREÇÃO: Adicionado radius
+}
+
+/**
+ * @interface EarningsResponseDto
+ * DTO para a resposta da API de ganhos do provedor.
+ * Corresponde ao GET /providers/me/earnings
+ */
+export interface EarningsResponseDto {
+  totalEarnings: number;
+  availableForWithdrawal: number;
+  pendingWithdrawals: number;
+  dailyEarnings: number;
+  weeklyEarnings: number;
+  monthlyEarnings: number;
+  earningsBreakdown: { [key: string]: number }; // Ex: { "Jan 2023": 1500, "Feb 2023": 2000 }
+  recentTransactions: ProviderTransaction[];
 }

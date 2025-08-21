@@ -27,17 +27,17 @@ export const CLIENT_ROUTES = {
 } as const;
 
 export const PROVIDER_ROUTES = {
-  DASHBOARD: '/(provider)/dashboard',
-  SCHEDULE: '/(provider)/schedule',
-  MANAGE_AVAILABILITY: '/(provider)/schedule/manage-availability',
-  SERVICES_LIST: '/(provider)/services', 
-  SERVICE_DETAILS: (serviceId: string) => `/(provider)/services/${serviceId}` as const,
-  EARNINGS: '/(provider)/earnings',
-  MESSAGES_LIST: '/(provider)/messages',
-  PROVIDER_CHAT: (chatId: string) => `/(provider)/messages/${chatId}` as const,
-  PROFILE: '/(provider)/profile',
-  EDIT_SERVICES: '/(provider)/profile/edit-services',
-  VERIFICATION: '/(provider)/verify-account', 
+  DASHBOARD: '/dashboard', // Altere de '/(provider)/dashboard' para '/dashboard'
+  SCHEDULE: '/schedule',
+  MANAGE_AVAILABILITY: '/schedule/manage-availability',
+  SERVICES_LIST: '/services',
+  SERVICE_DETAILS: (serviceId: string) => `/services/${serviceId}` as const,
+  EARNINGS: '/earnings', // Altere de '/(provider)/earnings' para '/earnings'
+  MESSAGES_LIST: '/messages',
+  PROVIDER_CHAT: (chatId: string) => `/messages/${chatId}` as const,
+  PROFILE: '/profile',
+  EDIT_SERVICES: '/profile/edit-services',
+  VERIFICATION: '/verify-account',
 } as const;
 
 export const COMMON_ROUTES = {
