@@ -1,3 +1,4 @@
+// LimpeJaApp/app/(provider)/schedule/index.tsx
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View,
@@ -11,16 +12,49 @@ import {
   Alert,
   RefreshControl,
   Image,
+  Easing,
+  AccessibilityInfo,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Calendar, LocaleConfig, DateData } from 'react-native-calendars';
-// REMOVA ESTA LINHA: import type { Theme } from 'react-native-calendars';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { formatDate } from '../../../utils/helpers';
 
-// Configuração de local para o calendário (Português-Brasil)
+// ====== Design tokens (mesmos da UI padronizada) ======
+const Colors = {
+  primary: '#4A90E2',
+  primaryDark: '#2A72E7',
+  bgSoft: '#F0F7FF',
+  surface: '#FFFFFF',
+  border: '#E9ECEF',
+  fieldBg: '#F8F9FA',
+  text: '#212529',
+  textMuted: '#6C757D',
+  textSubtle: '#868E96',
+  danger: '#D32F2F',
+  shadow: 'rgba(0,0,0,0.08)',
+};
+
+const Radii = {
+  xl: 20,
+  pill: 25,
+  md: 15,
+};
+
+const Spacing = {
+  sm: 10,
+  md: 15,
+  lg: 20,
+};
+
+const easeOut = Easing.out(Easing.ease);
+
+// ====== Locale PT-BR (Calendário) ======
 LocaleConfig.locales['pt-br'] = {
-  monthNames: ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'],
+  monthNames: [
+    'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+    'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'
+  ],
   monthNamesShort: ['Jan.','Fev.','Mar.','Abr.','Mai.','Jun.','Jul.','Ago.','Set.','Out.','Nov.','Dez.'],
   dayNames: ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'],
   dayNamesShort: ['DOM','SEG','TER','QUA','QUI','SEX','SÁB'],
@@ -28,7 +62,7 @@ LocaleConfig.locales['pt-br'] = {
 };
 LocaleConfig.defaultLocale = 'pt-br';
 
-// === NOVO BLOCO: DEFINIÇÃO LOCAL DA INTERFACE THEME ===
+// ====== Interface local para Theme (remoção do import externo) ======
 interface Theme {
   backgroundColor?: string;
   calendarBackground?: string;
@@ -47,10 +81,15 @@ interface Theme {
   textDayFontFamily?: string;
   textMonthFontFamily?: string;
   textDayHeaderFontFamily?: string;
-  // Alterado para tipos de string literais ou número para compatibilidade
-  textDayFontWeight?: "normal" | "bold" | "100" | "200" | "300" | "400" | "500" | "600" | "700" | "800" | "900" | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900;
-  textMonthFontWeight?: "normal" | "bold" | "100" | "200" | "300" | "400" | "500" | "600" | "700" | "800" | "900" | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900;
-  textDayHeaderFontWeight?: "normal" | "bold" | "100" | "200" | "300" | "400" | "500" | "600" | "700" | "800" | "900" | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900;
+  textDayFontWeight?:
+    | "normal" | "bold" | "100" | "200" | "300" | "400" | "500" | "600" | "700" | "800" | "900"
+    | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900;
+  textMonthFontWeight?:
+    | "normal" | "bold" | "100" | "200" | "300" | "400" | "500" | "600" | "700" | "800" | "900"
+    | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900;
+  textDayHeaderFontWeight?:
+    | "normal" | "bold" | "100" | "200" | "300" | "400" | "500" | "600" | "700" | "800" | "900"
+    | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900;
   textDayFontSize?: number;
   textMonthFontSize?: number;
   textDayHeaderFontSize?: number;
@@ -63,17 +102,11 @@ interface Theme {
       borderBottomColor?: string;
       paddingBottom?: number;
     };
-    dayHeader?: {
-      color?: string;
-    };
-    // Adicione outras propriedades de estilo do cabeçalho do calendário conforme necessário
+    dayHeader?: { color?: string };
   };
-  // Adicione outras propriedades de tema conforme a documentação do react-native-calendars
-  // Exemplo para 'stylesheet.day.basic': { base: { width: ..., height: ... } }
-  // Ou 'stylesheet.day.period': { base: { width: ..., height: ... } }
 }
-// === FIM DO NOVO BLOCO ===
 
+// ====== Tipos e dados simulados ======
 interface ProviderAppointment {
   id: string;
   clientName: string;
@@ -95,12 +128,12 @@ const ALL_PROVIDER_APPOINTMENTS: ProviderAppointment[] = [
   { id: 'servA6', clientName: 'Pedro Costa', clientAvatarUrl: 'https://randomuser.me/api/portraits/men/6.jpg', serviceType: 'Limpeza Comercial', startTime: '13:00', endTime: '17:00', date: new Date(Date.now() + 86400000 * 1).toISOString().split('T')[0], status: 'ARealizar', addressSummary: 'Av. Central, 800' },
 ];
 
-const fetchProviderAppointments = async (month?: string, year?: string): Promise<ProviderAppointment[]> => {
-  console.log(`[MyScheduleScreen] Buscando todos os agendamentos (simulado) para ${month || 'todos os meses'}/${year || 'todos os anos'}`);
+const fetchProviderAppointments = async (_month?: string, _year?: string): Promise<ProviderAppointment[]> => {
   await new Promise(resolve => setTimeout(resolve, 800));
   return ALL_PROVIDER_APPOINTMENTS;
 };
 
+// ====== Item animado ======
 const AnimatedAppointmentItem: React.FC<{
   item: ProviderAppointment;
   onPress: (item: ProviderAppointment) => void;
@@ -112,18 +145,8 @@ const AnimatedAppointmentItem: React.FC<{
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 400,
-        delay: delay,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 400,
-        delay: delay,
-        useNativeDriver: true,
-      }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 420, delay, easing: easeOut, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 420, delay, easing: easeOut, useNativeDriver: true }),
     ]).start();
   }, [fadeAnim, slideAnim, delay]);
 
@@ -137,12 +160,12 @@ const AnimatedAppointmentItem: React.FC<{
 
   const getStatusStyle = (status: ProviderAppointment['status']) => {
     switch (status) {
-      case 'Confirmado': return { text: '#2E7D32', background: '#E8F5E9', icon: 'check-circle' };
-      case 'ARealizar': return { text: '#007AFF', background: '#E3F2FD', icon: 'clock-time-four' };
+      case 'Confirmado':      return { text: '#2E7D32', background: '#E8F5E9', icon: 'check-circle' };
+      case 'ARealizar':       return { text: Colors.primary, background: '#E3F2FD', icon: 'clock-time-four' };
       case 'PendenteCliente': return { text: '#FF6F00', background: '#FFF3E0', icon: 'alert-circle' };
-      case 'Concluído': return { text: '#546E7A', background: '#ECEFF1', icon: 'check-all' };
-      case 'Cancelado': return { text: '#D32F2F', background: '#FFEBEE', icon: 'close-circle' };
-      default: return { text: '#546E7A', background: '#ECEFF1', icon: 'information' };
+      case 'Concluído':       return { text: '#546E7A', background: '#ECEFF1', icon: 'check-all' };
+      case 'Cancelado':       return { text: Colors.danger, background: '#FFEBEE', icon: 'close-circle' };
+      default:                return { text: '#546E7A', background: '#ECEFF1', icon: 'information' };
     }
   };
 
@@ -154,13 +177,15 @@ const AnimatedAppointmentItem: React.FC<{
         styles.appointmentCardWrapper,
         { opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] }
       ]}
+      accessibilityRole="summary"
+      accessibilityLabel={`Cliente ${item.clientName}, serviço ${item.serviceType}.`}
     >
       <TouchableOpacity
         style={styles.appointmentCard}
         onPress={() => onPress(item)}
         onPressIn={onPressInItem}
         onPressOut={onPressOutItem}
-        activeOpacity={1}
+        activeOpacity={0.9}
       >
         {item.clientAvatarUrl ? (
           <Image source={{ uri: item.clientAvatarUrl }} style={styles.clientAvatar} />
@@ -169,22 +194,27 @@ const AnimatedAppointmentItem: React.FC<{
             <Ionicons name="person" size={24} color="#FFF" />
           </View>
         )}
+
         <View style={styles.appointmentDetails}>
           <Text style={styles.appointmentClientName} numberOfLines={1}>{item.clientName}</Text>
           <Text style={styles.appointmentServiceType} numberOfLines={1}>{item.serviceType}</Text>
+
           <View style={styles.timeAndLocation}>
-            <Ionicons name="time-outline" size={14} color="#6C757D" style={{ marginRight: 4 }} />
-            <Text style={styles.appointmentTime}>{item.startTime} {item.endTime ? ` - ${item.endTime}` : ''}</Text>
+            <Ionicons name="time-outline" size={14} color={Colors.textMuted} style={{ marginRight: 4 }} />
+            <Text style={styles.appointmentTime}>
+              {item.startTime}{item.endTime ? ` - ${item.endTime}` : ''}
+            </Text>
           </View>
+
           {item.addressSummary && (
             <View style={styles.timeAndLocation}>
-              <Ionicons name="location-outline" size={14} color="#6C757D" style={{ marginRight: 4 }} />
+              <Ionicons name="location-outline" size={14} color={Colors.textMuted} style={{ marginRight: 4 }} />
               <Text style={styles.appointmentAddress}>{item.addressSummary}</Text>
             </View>
           )}
         </View>
+
         <View style={[styles.appointmentStatusBadge, { backgroundColor: statusStyle.background }]}>
-          {/* Ensure the icon name is correct for MaterialCommunityIcons */}
           <MaterialCommunityIcons name={statusStyle.icon as any} size={14} color={statusStyle.text} />
           <Text style={[styles.appointmentStatusText, { color: statusStyle.text }]}>{item.status}</Text>
         </View>
@@ -193,7 +223,7 @@ const AnimatedAppointmentItem: React.FC<{
   );
 };
 
-
+// ====== Screen ======
 export default function MyScheduleScreen() {
   const router = useRouter();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -211,14 +241,14 @@ export default function MyScheduleScreen() {
       setIsLoading(true);
       const data = await fetchProviderAppointments();
       setAllAppointments(data);
-      Animated.stagger(150, [
-        Animated.timing(calendarAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-        Animated.timing(agendaHeaderAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-        Animated.timing(feedbackAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
+      Animated.stagger(140, [
+        Animated.timing(calendarAnim, { toValue: 1, duration: 560, easing: easeOut, useNativeDriver: true }),
+        Animated.timing(agendaHeaderAnim, { toValue: 1, duration: 560, easing: easeOut, useNativeDriver: true }),
+        Animated.timing(feedbackAnim, { toValue: 1, duration: 420, easing: easeOut, useNativeDriver: true }),
       ]).start();
     } catch (err) {
-      console.error("Erro ao buscar todos os agendamentos:", err);
-      Alert.alert("Erro", "Não foi possível carregar os dados da agenda.");
+      console.error('[MyScheduleScreen] Erro ao buscar agendamentos:', err);
+      Alert.alert('Erro', 'Não foi possível carregar os dados da agenda.');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -226,12 +256,7 @@ export default function MyScheduleScreen() {
   };
 
   useEffect(() => {
-    Animated.timing(headerAnim, {
-      toValue: 1,
-      duration: 500,
-      useNativeDriver: true,
-    }).start();
-
+    Animated.timing(headerAnim, { toValue: 1, duration: 520, easing: easeOut, useNativeDriver: true }).start();
     loadAppointments();
   }, [headerAnim]);
 
@@ -241,43 +266,44 @@ export default function MyScheduleScreen() {
   };
 
   const appointmentsForSelectedDate = useMemo(() => {
-    return allAppointments.filter(app => app.date === selectedDate).sort((a, b) => a.startTime.localeCompare(b.startTime));
+    return allAppointments
+      .filter(app => app.date === selectedDate)
+      .sort((a, b) => a.startTime.localeCompare(b.startTime));
   }, [allAppointments, selectedDate]);
 
   const markedDates = useMemo(() => {
-    const marks: { [date: string]: any } = {};
+    const marks: Record<string, any> = {};
     allAppointments.forEach(app => {
       const hasConfirmed = allAppointments.some(a => a.date === app.date && a.status === 'Confirmado');
       const hasPending = allAppointments.some(a => a.date === app.date && a.status === 'PendenteCliente');
       const hasUpcoming = allAppointments.some(a => a.date === app.date && a.status === 'ARealizar');
 
-      let dotColor = '#007AFF';
-      if (hasPending) {
-        dotColor = '#FF6F00';
-      } else if (hasConfirmed || hasUpcoming) {
-        dotColor = '#2E7D32';
-      }
+      let dotColor = Colors.primary;
+      if (hasPending) dotColor = '#FF6F00';
+      else if (hasConfirmed || hasUpcoming) dotColor = '#2E7D32';
 
-      marks[app.date] = { marked: true, dotColor: dotColor };
+      marks[app.date] = { marked: true, dotColor };
     });
+
     const currentMark = marks[selectedDate] || {};
     marks[selectedDate] = {
       ...currentMark,
       selected: true,
-      selectedColor: '#007AFF',
-      selectedTextColor: 'white',
+      selectedColor: Colors.primary,
+      selectedTextColor: '#FFFFFF',
       marked: currentMark.marked || false,
-      dotColor: currentMark.dotColor || '#007AFF'
+      dotColor: currentMark.dotColor || Colors.primary,
     };
     return marks;
   }, [allAppointments, selectedDate]);
 
   const onDayPress = (day: DateData) => {
-    console.log('[MyScheduleScreen] Dia selecionado:', day.dateString);
     setSelectedDate(day.dateString);
+    AccessibilityInfo.announceForAccessibility?.(`Data selecionada ${formatDate(day.dateString, { weekday: 'long', day: 'numeric', month: 'long' })}`);
   };
 
   const handleAppointmentPress = (item: ProviderAppointment) => {
+    // mantém a navegação atual
     router.push(`/(provider)/services/${item.id}` as any);
   };
 
@@ -285,110 +311,118 @@ export default function MyScheduleScreen() {
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <Animated.View style={[
-        styles.customHeader,
-        {
-          opacity: headerAnim,
-          transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }]
-        }
-      ]}>
+      <Animated.View
+        style={[
+          styles.customHeader,
+          { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }
+        ]}
+      >
         <Text style={styles.headerTitle}>Minha Agenda</Text>
         <TouchableOpacity
           onPress={() => router.push('/(provider)/schedule/manage-availability' as any)}
           style={styles.headerActionIcon}
+          accessibilityRole="button"
+          accessibilityLabel="Gerenciar disponibilidade"
         >
-          <Ionicons name="options-outline" size={26} color="#FFFFFF" />
+          <Ionicons name="options-outline" size={22} color="#FFFFFF" />
           <Text style={styles.headerActionText}>Disponibilidade</Text>
         </TouchableOpacity>
       </Animated.View>
 
-      <Animated.View style={[styles.calendarContainer, { opacity: calendarAnim, transform: [{ translateY: calendarAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
+      <Animated.View
+        style={[
+          styles.calendarContainer,
+          { opacity: calendarAnim, transform: [{ translateY: calendarAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }
+        ]}
+      >
         <Calendar
           current={selectedDate}
           onDayPress={onDayPress}
           markedDates={markedDates}
-          monthFormat={'MMMMバシー'}
+          monthFormat={'MMMM yyyy'} // pt-BR via LocaleConfig
           onMonthChange={(month) => {
+            // manter log; futura integração para fetch por mês
             console.log('[MyScheduleScreen] Mês alterado para:', month.month, month.year);
           }}
           firstDay={1}
-          enableSwipeMonths={true}
+          enableSwipeMonths
           theme={({
-            backgroundColor: '#F0F2F5',
-            calendarBackground: '#FFFFFF',
+            backgroundColor: Colors.bgSoft,
+            calendarBackground: Colors.surface,
             textSectionTitleColor: '#586069',
-            selectedDayBackgroundColor: '#007AFF',
-            selectedDayTextColor: '#ffffff',
-            todayTextColor: '#007AFF',
+            selectedDayBackgroundColor: Colors.primary,
+            selectedDayTextColor: '#FFFFFF',
+            todayTextColor: Colors.primary,
             dayTextColor: '#2d4150',
             textDisabledColor: '#d9e1e8',
-            dotColor: '#007AFF',
-            selectedDotColor: '#ffffff',
-            arrowColor: '#007AFF',
+            dotColor: Colors.primary,
+            selectedDotColor: '#FFFFFF',
+            arrowColor: Colors.primary,
             monthTextColor: '#1C3A5F',
-            indicatorColor: '#007AFF',
+            indicatorColor: Colors.primary,
             textDayFontWeight: '400',
             textMonthFontWeight: 'bold',
             textDayHeaderFontWeight: '500',
             textDayFontSize: 15,
             textMonthFontSize: 18,
             textDayHeaderFontSize: 13,
-            'stylesheet.calendar.header': { // This structure should be recognized by react-native-calendars
+            'stylesheet.calendar.header': {
               week: {
-                marginTop: 5,
+                marginTop: 6,
                 flexDirection: 'row',
                 justifyContent: 'space-around',
                 borderBottomWidth: 1,
-                borderBottomColor: '#E9ECEF',
-                paddingBottom: 5,
-              }
-            }
-          }) as Theme} // Continuamos usando 'as Theme' que agora se refere à nossa interface local
+                borderBottomColor: Colors.border,
+                paddingBottom: 6,
+              },
+            },
+          }) as Theme}
           style={styles.calendarStyle}
         />
       </Animated.View>
 
-      <Animated.View style={[styles.agendaListHeader, { opacity: agendaHeaderAnim, transform: [{ translateY: agendaHeaderAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
+      <Animated.View
+        style={[
+          styles.agendaListHeader,
+          { opacity: agendaHeaderAnim, transform: [{ translateY: agendaHeaderAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }
+        ]}
+      >
         <Text style={styles.agendaListTitle}>
-          Agenda para: {selectedDate ? formatDate(selectedDate, { weekday: 'long', day: 'numeric', month: 'long' }) : "Selecione uma data"}
+          Agenda para: {selectedDate ? formatDate(selectedDate, { weekday: 'long', day: 'numeric', month: 'long' }) : 'Selecione uma data'}
         </Text>
       </Animated.View>
 
       {isLoading && allAppointments.length === 0 ? (
         <Animated.View style={[styles.centeredFeedback, { opacity: feedbackAnim }]}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.loadingText}>Carregando sua agenda...</Text>
         </Animated.View>
       ) : appointmentsForSelectedDate.length > 0 ? (
         <FlatList
           data={appointmentsForSelectedDate}
           renderItem={({ item, index }) => (
-            <AnimatedAppointmentItem
-              item={item}
-              onPress={handleAppointmentPress}
-              delay={index * 70}
-            />
+            <AnimatedAppointmentItem item={item} onPress={handleAppointmentPress} delay={index * 70} />
           )}
           keyExtractor={(item) => item.id}
           style={styles.listStyle}
           contentContainerStyle={styles.listContentContainer}
           ItemSeparatorComponent={() => <View style={styles.listSeparator} />}
           refreshControl={
-            <RefreshControl
-              refreshing={isRefreshing}
-              onRefresh={onRefresh}
-              tintColor="#007AFF"
-            />
+            <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={Colors.primary} colors={[Colors.primary]} />
           }
         />
       ) : (
         <Animated.View style={[styles.centeredFeedback, { opacity: feedbackAnim }]}>
           <Ionicons name="calendar-outline" size={64} color="#CED4DA" />
           <Text style={styles.emptyListText}>Nenhum serviço agendado para este dia.</Text>
-          <Text style={styles.emptyListSubText}>Aproveite para gerenciar sua disponibilidade ou confira outros dias!</Text>
+          <Text style={styles.emptyListSubText}>
+            Aproveite para gerenciar sua disponibilidade ou confira outros dias!
+          </Text>
           <TouchableOpacity
             style={styles.manageAvailabilityButton}
             onPress={() => router.push('/(provider)/schedule/manage-availability' as any)}
+            accessibilityRole="button"
+            accessibilityLabel="Ir para Gerenciar Disponibilidade"
           >
             <Text style={styles.manageAvailabilityButtonText}>Gerenciar Disponibilidade</Text>
             <Ionicons name="arrow-forward" size={18} color="#FFFFFF" style={{ marginLeft: 8 }} />
@@ -399,26 +433,27 @@ export default function MyScheduleScreen() {
   );
 }
 
+// ====== Styles ======
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F0F2F5',
+    backgroundColor: Colors.bgSoft,
   },
   customHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#007AFF',
+    backgroundColor: Colors.primary,
     paddingHorizontal: 15,
     paddingVertical: Platform.OS === 'ios' ? 50 : 20,
     paddingTop: Platform.OS === 'ios' ? 50 : 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 8,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    borderBottomLeftRadius: Radii.xl,
+    borderBottomRightRadius: Radii.xl,
   },
   headerTitle: {
     fontSize: 22,
@@ -431,8 +466,8 @@ const styles = StyleSheet.create({
   headerActionIcon: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: Radii.pill,
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
@@ -440,13 +475,13 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
-    marginLeft: 5,
+    marginLeft: 6,
   },
   calendarContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.surface,
     marginHorizontal: 15,
     marginTop: -25,
-    borderRadius: 15,
+    borderRadius: Radii.md,
     overflow: 'hidden',
     ...Platform.select({
       ios: {
@@ -455,42 +490,39 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 10,
       },
-      android: {
-        elevation: 6,
-      },
+      android: { elevation: 6 },
     }),
   },
   calendarStyle: {
-    borderRadius: 15,
+    borderRadius: Radii.md,
   },
   agendaListHeader: {
     paddingHorizontal: 15,
     paddingTop: 20,
     paddingBottom: 15,
-    backgroundColor: '#F0F2F5',
+    backgroundColor: Colors.bgSoft,
   },
   agendaListTitle: {
     fontSize: 19,
     fontWeight: 'bold',
     color: '#1C3A5F',
+    textTransform: 'capitalize',
   },
-  listStyle: {
-    flex: 1,
-  },
+  listStyle: { flex: 1 },
   listContentContainer: {
     paddingHorizontal: 15,
     paddingBottom: 20,
   },
   appointmentCardWrapper: {
     marginVertical: 8,
-    borderRadius: 15,
-    backgroundColor: '#FFFFFF',
+    borderRadius: Radii.md,
+    backgroundColor: Colors.surface,
     overflow: Platform.OS === 'ios' ? 'visible' : 'hidden',
     ...Platform.select({
       ios: {
-        shadowColor: 'rgba(0,0,0,0.08)',
+        shadowColor: Colors.shadow,
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
+        shadowOpacity: 0.4,
         shadowRadius: 8,
       },
       android: { elevation: 5 },
@@ -507,7 +539,7 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     marginRight: 15,
     borderWidth: 2,
-    borderColor: '#007AFF',
+    borderColor: Colors.primary,
   },
   clientAvatarPlaceholder: {
     width: 50,
@@ -518,13 +550,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  appointmentDetails: {
-    flex: 1,
-  },
+  appointmentDetails: { flex: 1 },
   appointmentClientName: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#212529',
+    color: Colors.text,
     marginBottom: 4,
   },
   appointmentServiceType: {
@@ -538,14 +568,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 2,
   },
-  appointmentTime: {
-    fontSize: 13,
-    color: '#6C757D',
-  },
-  appointmentAddress: {
-    fontSize: 13,
-    color: '#6C757D',
-  },
+  appointmentTime: { fontSize: 13, color: Colors.textMuted },
+  appointmentAddress: { fontSize: 13, color: Colors.textMuted },
   appointmentStatusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -568,33 +592,34 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   loadingText: {
-    fontSize: 17,
-    color: '#6C757D',
-    marginTop: 15,
+    fontSize: 16,
+    color: Colors.textMuted,
+    marginTop: 12,
     fontWeight: '500',
+    textAlign: 'center',
   },
   emptyListText: {
-    fontSize: 17,
-    color: '#6C757D',
+    fontSize: 16,
+    color: Colors.textMuted,
     marginTop: 15,
     textAlign: 'center',
-    fontWeight: '500',
+    fontWeight: '600',
   },
   emptyListSubText: {
     fontSize: 15,
-    color: '#868E96',
+    color: Colors.textSubtle,
     marginTop: 8,
     textAlign: 'center',
   },
   manageAvailabilityButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#007AFF',
+    backgroundColor: Colors.primary,
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 30,
-    marginTop: 25,
-    shadowColor: '#007AFF',
+    marginTop: 22,
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -605,7 +630,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  listSeparator: {
-    height: 0,
-  }
+  listSeparator: { height: 0 },
 });

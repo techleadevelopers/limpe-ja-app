@@ -2,8 +2,8 @@
 
 // Importar interfaces de tipagem relevantes de outros arquivos
 import { ProviderDisplayInfo } from './providers';
-import { Service } from './services'; // Importar Service para serviceName, etc.
-import { CreateAddressDto } from './auth'; // CORREÇÃO: Usar CreateAddressDto para o endereço
+import { Service } from './services';
+import { CreateAddressDto } from './auth';
 
 /**
  * @enum BookingStatus
@@ -12,15 +12,15 @@ import { CreateAddressDto } from './auth'; // CORREÇÃO: Usar CreateAddressDto 
  */
 export enum BookingStatus {
   PENDING = 'PENDING',
-  PENDING_PROVIDER_CONFIRMATION = 'PENDING_PROVIDER_CONFIRMATION',
+  // PENDING_PROVIDER_CONFIRMATION foi removido para alinhar com o uso no frontend e backend.
   CONFIRMED = 'CONFIRMED',
   COMPLETED = 'COMPLETED',
-  CANCELED = 'CANCELED',
+  CANCELLED = 'CANCELLED', // CORRIGIDO: Alterado de CANCELED para CANCELLED
   PENDING_DISPUTE = 'PENDING_DISPUTE',
   RESCHEDULED = 'RESCHEDULED',
   IN_PROGRESS = 'IN_PROGRESS',
   REJECTED = 'REJECTED',
-  NO_SHOW = 'NO_SHOW', // CORREÇÃO: Adicionado NO_SHOW
+  NO_SHOW = 'NO_SHOW',
 }
 
 /**
@@ -36,8 +36,8 @@ export interface BookingAddress {
   neighborhood: string;
   city: string;
   state: string;
-  latitude?: number; // Torne opcional
-  longitude?: number; // Torne opcional
+  latitude?: number;
+  longitude?: number;
 }
 
 /**
@@ -47,16 +47,16 @@ export interface BookingAddress {
  */
 export interface CreateBookingDto {
   providerId: string;
-  providerServiceId: string; // ID do serviço específico oferecido pelo provedor
-  scheduledDate: string; // Data agendada (ex: "YYYY-MM-DD")
-  scheduledTime: string; // Hora agendada (ex: "HH:mm")
+  providerServiceId: string;
+  scheduledDate: string;
+  scheduledTime: string;
   totalPrice: number;
   notes?: string | null;
-  address: CreateAddressDto; // CORREÇÃO: Usar CreateAddressDto
-  requestedDurationMinutes?: number; // NEW: for HOURLY services
-  requestedSquareMeters?: number; // NEW: for BY_SIZE services
-  requestedRoomCount?: number; // NEW: for BY_SIZE services
-  couponCode?: string; // CORREÇÃO: Adicionado couponCode
+  address: CreateAddressDto;
+  requestedDurationMinutes?: number;
+  requestedSquareMeters?: number;
+  requestedRoomCount?: number;
+  couponCode?: string;
 }
 
 /**
@@ -66,16 +66,16 @@ export interface CreateBookingDto {
  */
 export interface BookingDetails {
   id: string;
-  status: BookingStatus; // Usar o enum definido
+  status: BookingStatus;
 
-  scheduledDate: string; // CORREÇÃO: Usar scheduledDate (ISO 8601 string)
-  scheduledTime: string; // CORREÇÃO: Usar scheduledTime (HH:mm)
-  // scheduledDateTime: string; // Removido, pois os campos separados são mais precisos
+  scheduledDate: string;
+  scheduledTime: string;
+  scheduledEndTime?: string;
 
-  totalPrice: number; // Preço total do agendamento
+  totalPrice: number;
   notes?: string | null;
-  createdAt: string; // ISO 8601 string
-  updatedAt: string; // ISO 8601 string
+  createdAt: string;
+  updatedAt: string;
 
   // Dados do Cliente
   clientId: string;
@@ -90,8 +90,8 @@ export interface BookingDetails {
   providerAvatarUrl?: string | null;
 
   // Dados do Serviço do Provedor
-  providerServiceId: string; // ID do ProviderService
-  serviceId: string; // **GARANTIDO AQUI:** Este campo é necessário para resolver o erro no [bookingId].tsx
+  providerServiceId: string;
+  serviceId: string;
   serviceName: string;
   serviceDescription?: string | null;
   servicePrice: number;
@@ -104,13 +104,13 @@ export interface BookingDetails {
   reviewId?: string | null;
   reviewRating?: number | null;
   reviewComment?: string | null;
-  isReviewed?: boolean; // Opção 1: Backend envia.
+  isReviewed?: boolean;
 
-  // CORREÇÃO: Novas relações incluídas no BookingWithDetailsRelations
-  subscriptionId?: string | null; // ID da assinatura, se aplicável
-  incidents?: any[]; // Array de incidentes relacionados (ou tipo mais específico)
-  guaranteeClaims?: any[]; // Array de solicitações de garantia (ou tipo mais específico)
-  couponId?: string | null; // ID do cupom aplicado
+  // Novas relações incluídas no BookingWithDetailsRelations
+  subscriptionId?: string | null;
+  incidents?: any[];
+  guaranteeClaims?: any[];
+  couponId?: string | null;
 }
 
 /**

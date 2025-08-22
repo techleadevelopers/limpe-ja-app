@@ -1,3 +1,4 @@
+// NavBar.tsx
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, Image } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -66,7 +67,8 @@ const navItems: NavItemType[] = [
         iconSet: 'Ionicons',
         icon: 'mail-outline',
         activeIcon: 'mail',
-        path: '/(client)/inbox',
+        // CORRIGIDO AQUI: Aponta para a lista de mensagens (index.tsx)
+        path: '/(client)/messages',
     },
 ];
 
@@ -81,6 +83,12 @@ const NavBar: React.FC<NavBarProps> = ({ unreadMessagesCount }) => {
 
     const isRouteActive = (itemPath: string) => {
         if (itemPath === '/(client)/today' && pathname === '/') {
+            return true;
+        }
+        // A rota do inbox agora é '/(client)/messages'.
+        // Se o pathname começar com '/(client)/messages', incluindo '/(client)/messages/[chatId]',
+        // o ícone do Inbox deve estar ativo.
+        if (itemPath === '/(client)/messages' && pathname.startsWith('/(client)/messages')) {
             return true;
         }
         return pathname.startsWith(itemPath);

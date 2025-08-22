@@ -1,516 +1,634 @@
-// LimpeJaApp/app/(provider)/schedule/manage-availability.tsx
-import { Stack, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+// LimpeJaApp/app/(provider)/schedule/index.tsx
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Animated,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  ActivityIndicator,
+  Platform,
+  Animated,
+  Alert,
+  RefreshControl,
+  Image,
+  Easing,
+  AccessibilityInfo,
 } from 'react-native';
-// <--- CORREÇÃO DE CASING: datetimepicker (lowercase p)
-import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { useAuth } from '../../../hooks/useAuth';
+import { Stack, useRouter } from 'expo-router';
+import { Calendar, LocaleConfig, DateData } from 'react-native-calendars';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { formatDate } from '../../../utils/helpers';
 
-// <--- IMPORTAÇÕES DE SERVIÇOS E TIPAGENS
-import {
-    deleteProviderAvailability,
-    getProviderAvailability,
-    updateProviderAvailability
-} from '../../../services/providerService';
-import { ProviderAvailability, UpdateAvailabilityData, GetProviderAvailabilityResponse } from '../../../types/backend/providers'; // <--- Importado GetProviderAvailabilityResponse
+// ====== Design tokens (mesmos da UI padronizada) ======
+const Colors = {
+  primary: '#4A90E2',
+  primaryDark: '#2A72E7',
+  bgSoft: '#F0F7FF',
+  surface: '#FFFFFF',
+  border: '#E9ECEF',
+  fieldBg: '#F8F9FA',
+  text: '#212529',
+  textMuted: '#6C757D',
+  textSubtle: '#868E96',
+  danger: '#D32F2F',
+  shadow: 'rgba(0,0,0,0.08)',
+};
 
-// <--- IMPORTA OS NOVOS COMPONENTES CRIADOS
-import AnimatedDayCard from '../../../components/schedule/manager/AnimatedDayCard';
-import BlockDateSection from '../../../components/schedule/manager/BlockDateSection';
-import SaveChangesButton from '../../../components/schedule/manager/SaveChangesButton';
+const Radii = {
+  xl: 20,
+  pill: 25,
+  md: 15,
+};
 
-// Tipagem das estruturas de dados internas
-interface TimeSlot {
-  id: string; // Para key no map (pode ser temporário para novos slots)
-  backendId?: string; // ID real do slot no backend, se já existir
-  startTime: string; // Formato HH:MM
-  endTime: string; // Formato HH:MM
-  hasError?: boolean;
-  errorMessage?: string;
+const Spacing = {
+  sm: 10,
+  md: 15,
+  lg: 20,
+};
+
+const easeOut = Easing.out(Easing.ease);
+
+// ====== Locale PT-BR (Calendário) ======
+LocaleConfig.locales['pt-br'] = {
+  monthNames: [
+    'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+    'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'
+  ],
+  monthNamesShort: ['Jan.','Fev.','Mar.','Abr.','Mai.','Jun.','Jul.','Ago.','Set.','Out.','Nov.','Dez.'],
+  dayNames: ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'],
+  dayNamesShort: ['DOM','SEG','TER','QUA','QUI','SEX','SÁB'],
+  today: 'Hoje'
+};
+LocaleConfig.defaultLocale = 'pt-br';
+
+// ====== Interface local para Theme (remoção do import externo) ======
+interface Theme {
+  backgroundColor?: string;
+  calendarBackground?: string;
+  textSectionTitleColor?: string;
+  selectedDayBackgroundColor?: string;
+  selectedDayTextColor?: string;
+  todayTextColor?: string;
+  dayTextColor?: string;
+  textDisabledColor?: string;
+  dotColor?: string;
+  selectedDotColor?: string;
+  arrowColor?: string;
+  disabledArrowColor?: string;
+  monthTextColor?: string;
+  indicatorColor?: string;
+  textDayFontFamily?: string;
+  textMonthFontFamily?: string;
+  textDayHeaderFontFamily?: string;
+  textDayFontWeight?:
+    | "normal" | "bold" | "100" | "200" | "300" | "400" | "500" | "600" | "700" | "800" | "900"
+    | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900;
+  textMonthFontWeight?:
+    | "normal" | "bold" | "100" | "200" | "300" | "400" | "500" | "600" | "700" | "800" | "900"
+    | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900;
+  textDayHeaderFontWeight?:
+    | "normal" | "bold" | "100" | "200" | "300" | "400" | "500" | "600" | "700" | "800" | "900"
+    | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900;
+  textDayFontSize?: number;
+  textMonthFontSize?: number;
+  textDayHeaderFontSize?: number;
+  'stylesheet.calendar.header'?: {
+    week?: {
+      marginTop?: number;
+      flexDirection?: 'row' | 'column' | 'row-reverse' | 'column-reverse';
+      justifyContent?: 'flex-start' | 'flex-end' | 'center' | 'space-between' | 'space-around' | 'space-evenly';
+      borderBottomWidth?: number;
+      borderBottomColor?: string;
+      paddingBottom?: number;
+    };
+    dayHeader?: { color?: string };
+  };
 }
 
-interface DailyAvailability {
-  dayName: string;
-  dayIndex: number; // 0 (Dom) a 6 (Sab)
-  isAvailable: boolean;
-  slots: TimeSlot[];
+// ====== Tipos e dados simulados ======
+interface ProviderAppointment {
+  id: string;
+  clientName: string;
+  clientAvatarUrl?: string;
+  serviceType: string;
+  startTime: string;
+  endTime?: string;
+  date: string;
+  status: 'Confirmado' | 'PendenteCliente' | 'ARealizar' | 'Concluído' | 'Cancelado';
+  addressSummary?: string;
 }
 
-const DAYS_OF_WEEK = [
-  { name: 'Domingo', index: 0 },
-  { name: 'Segunda-feira', index: 1 },
-  { name: 'Terça-feira', index: 2 },
-  { name: 'Quarta-feira', index: 3 },
-  { name: 'Quinta-feira', index: 4 },
-  { name: 'Sexta-feira', index: 5 },
-  { name: 'Sábado', index: 6 },
+const ALL_PROVIDER_APPOINTMENTS: ProviderAppointment[] = [
+  { id: 'servA1', clientName: 'Fernanda Lima', clientAvatarUrl: 'https://randomuser.me/api/portraits/women/1.jpg', serviceType: 'Limpeza Padrão', startTime: '09:00', endTime: '12:00', date: new Date(Date.now() + 86400000 * 1).toISOString().split('T')[0], status: 'Confirmado', addressSummary: 'Rua das Flores, 100' },
+  { id: 'servA2', clientName: 'Ricardo Alves', clientAvatarUrl: 'https://randomuser.me/api/portraits/men/2.jpg', serviceType: 'Limpeza Pesada', startTime: '14:00', endTime: '18:00', date: new Date(Date.now() + 86400000 * 1).toISOString().split('T')[0], status: 'Confirmado', addressSummary: 'Av. Brasil, 500' },
+  { id: 'servA3', clientName: 'Juliana Moreira', clientAvatarUrl: 'https://randomuser.me/api/portraits/women/3.jpg', serviceType: 'Limpeza de Manutenção', startTime: '10:00', endTime: '13:00', date: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0], status: 'ARealizar', addressSummary: 'Travessa da Paz, 45' },
+  { id: 'servA4', clientName: 'Marcos Andrade', clientAvatarUrl: 'https://randomuser.me/api/portraits/men/4.jpg', serviceType: 'Limpeza de Vidros', startTime: '08:00', endTime: '10:00', date: new Date(Date.now() - 86400000 * 2).toISOString().split('T')[0], status: 'Concluído', addressSummary: 'Rua do Sol, 20' },
+  { id: 'servA5', clientName: 'Ana Paula', clientAvatarUrl: 'https://randomuser.me/api/portraits/women/5.jpg', serviceType: 'Limpeza Pós-Obra', startTime: '09:00', endTime: '17:00', date: new Date(Date.now() + 86400000 * 5).toISOString().split('T')[0], status: 'PendenteCliente', addressSummary: 'Praça da Liberdade, 10' },
+  { id: 'servA6', clientName: 'Pedro Costa', clientAvatarUrl: 'https://randomuser.me/api/portraits/men/6.jpg', serviceType: 'Limpeza Comercial', startTime: '13:00', endTime: '17:00', date: new Date(Date.now() + 86400000 * 1).toISOString().split('T')[0], status: 'ARealizar', addressSummary: 'Av. Central, 800' },
 ];
 
-// Funções utilitárias (podem ser movidas para `utils/helpers.ts` ou `schedule-helpers.ts` se houver muitos)
-const formatTime = (date: Date): string => {
-  const hours = date.getHours().toString().padStart(2, '0');
-  const minutes = date.getMinutes().toString().padStart(2, '0');
-  return `${hours}:${minutes}`;
+const fetchProviderAppointments = async (_month?: string, _year?: string): Promise<ProviderAppointment[]> => {
+  await new Promise(resolve => setTimeout(resolve, 800));
+  return ALL_PROVIDER_APPOINTMENTS;
 };
 
-const parseTime = (timeString: string): Date => {
-  const [hours, minutes] = timeString.split(':').map(Number);
-  const date = new Date();
-  date.setHours(hours, minutes, 0, 0);
-  return date;
-};
+// ====== Item animado ======
+const AnimatedAppointmentItem: React.FC<{
+  item: ProviderAppointment;
+  onPress: (item: ProviderAppointment) => void;
+  delay: number;
+}> = ({ item, onPress, delay }) => {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
 
-export default function ManageAvailabilityScreen() {
-  const router = useRouter();
-  const { user } = useAuth();
-  const [weeklyAvailability, setWeeklyAvailability] = useState<DailyAvailability[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
-
-  // Estados para o TimePicker
-  const [showTimePicker, setShowTimePicker] = useState(false);
-  const [currentPickerMode, setCurrentPickerMode] = useState<'startTime' | 'endTime'>('startTime');
-  const [editingDayIndex, setEditingDayIndex] = useState<number | null>(null);
-  const [editingSlotId, setEditingSlotId] = useState<string | null>(null); // ID do slot sendo editado
-  const [timePickerDate, setTimePickerDate] = useState(new Date());
-
-  // Animações
-  const headerAnim = useRef(new Animated.Value(0)).current;
-  const saveButtonAnim = useRef(new Animated.Value(0)).current;
-  const specialSectionAnim = useRef(new Animated.Value(0)).current;
-
-  // NOVO ESTADO: Para slots a serem excluídos na API
-  const [slotsToDelete, setSlotsToDelete] = useState<Set<string>>(new Set()); // Usar Set para IDs únicos
-
-  // Função de validação de slots
-  const validateSlots = useCallback((slots: TimeSlot[]): TimeSlot[] => {
-    let processedSlots: TimeSlot[] = slots.map(s => ({ ...s, hasError: false, errorMessage: undefined }));
-
-    processedSlots = processedSlots.map(slot => {
-      const start = parseTime(slot.startTime);
-      const end = parseTime(slot.endTime);
-      if (start >= end) {
-        return { ...slot, hasError: true, errorMessage: "Hora de término deve ser posterior à de início." };
-      }
-      return { ...slot, hasError: false, errorMessage: undefined };
-    });
-
-    const finalValidatedSlots: TimeSlot[] = [...processedSlots];
-
-    for (let i = 0; i < finalValidatedSlots.length; i++) {
-      for (let j = i + 1; j < finalValidatedSlots.length; j++) {
-        const slotA = finalValidatedSlots[i];
-        const slotB = finalValidatedSlots[j];
-
-        const startA = parseTime(slotA.startTime);
-        const endA = parseTime(slotA.endTime);
-        const startB = parseTime(slotB.startTime);
-        const endB = parseTime(slotB.endTime);
-
-        if ((startA < endB && endA > startB)) {
-          if (!slotA.hasError || slotA.errorMessage === undefined || slotA.errorMessage === "Horário se sobrepõe a outro slot.") {
-            finalValidatedSlots[i] = { ...slotA, hasError: true, errorMessage: "Horário se sobrepõe a outro slot." };
-          }
-          if (!slotB.hasError || slotB.errorMessage === undefined || slotB.errorMessage === "Horário se sobrepõe a outro slot.") {
-            finalValidatedSlots[j] = { ...slotB, hasError: true, errorMessage: "Horário se sobrepõe a outro slot." };
-          }
-        }
-      }
-    }
-
-    return finalValidatedSlots;
-  }, []);
-
-  // Carregar disponibilidade inicial (integrando com a API real)
   useEffect(() => {
-    console.log("[ManageAvailability] Carregando disponibilidade...");
-    setIsLoading(true);
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 420, delay, easing: easeOut, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 420, delay, easing: easeOut, useNativeDriver: true }),
+    ]).start();
+  }, [fadeAnim, slideAnim, delay]);
 
-    const loadInitialAvailability = async () => {
-      if (!user?.id) {
-        console.warn("[ManageAvailability] user.id não disponível, não carregando disponibilidade.");
-        Alert.alert("Erro de Autenticação", "Não foi possível carregar sua disponibilidade. Por favor, faça login novamente.");
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        // <<<< CORREÇÃO AQUI: Desestruturar a resposta da API >>>>
-        const apiResponse: GetProviderAvailabilityResponse = await getProviderAvailability(user.id);
-        const apiAvailability: ProviderAvailability[] = apiResponse.available; // <--- AGORA ACESSA A PROPRIEDADE 'available'
-
-        const mappedAvailability: DailyAvailability[] = DAYS_OF_WEEK.map(day => {
-          // Filtrar slots válidos da API para o dia atual. ProviderAvailability são slots individuais,
-          // não contêm a propriedade 'slots' como na tipagem interna.
-          const daySlots = apiAvailability.filter(a => a.dayOfWeek === day.index && a.isAvailable && a.startTime && a.endTime) //
-            .map(a => ({
-              id: a.id, // ID do backend como ID local
-              backendId: a.id, // Salva o ID do backend explicitamente
-              startTime: a.startTime,
-              endTime: a.endTime,
-              hasError: false,
-              errorMessage: undefined,
-            } as TimeSlot))
-            .sort((a, b) => a.startTime.localeCompare(b.startTime));
-
-          // Determine se o dia está disponível com base nos slots retornados ou se explicitamente marcado como indisponível no backend.
-          // Aqui, 'isDayExplicitlyUnavailable' verifica se há um registro *específico* do backend que marca o dia como indisponível.
-          const isDayExplicitlyUnavailable = apiAvailability.some(a => a.dayOfWeek === day.index && a.isAvailable === false); //
-          
-          return {
-            dayName: day.name,
-            dayIndex: day.index,
-            // <--- CORREÇÃO NA LÓGICA: Se tem slots, está disponível. Se não tem slots E foi explicitamente indisponível, então não está disponível.
-            // Caso contrário (não tem slots mas também não foi explicitamente indisponível), o padrão é considerar indisponível para evitar horários vazios.
-            isAvailable: daySlots.length > 0 || !isDayExplicitlyUnavailable, 
-            slots: validateSlots(daySlots),
-          };
-        });
-        setWeeklyAvailability(mappedAvailability);
-        console.log("[ManageAvailability] Disponibilidade carregada da API.");
-
-      } catch (error: any) {
-        console.error("Erro ao carregar disponibilidade do provedor:", error.response?.data || error.message);
-        Alert.alert("Erro", error.response?.data?.message || "Não foi possível carregar a disponibilidade.");
-        // Fallback para dados padrão (vazios) se a API falhar
-        setWeeklyAvailability(DAYS_OF_WEEK.map(day => ({
-          dayName: day.name,
-          dayIndex: day.index,
-          isAvailable: false,
-          slots: [],
-        })));
-      } finally {
-        setIsLoading(false);
-        Animated.stagger(150, [
-          Animated.timing(headerAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
-          Animated.timing(saveButtonAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
-          Animated.timing(specialSectionAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
-        ]).start();
-      }
-    };
-
-    if (user?.id) { // Só carrega se o ID do usuário estiver disponível
-      loadInitialAvailability();
-    }
-  }, [headerAnim, saveButtonAnim, specialSectionAnim, validateSlots, user?.id]);
-
-  const handleToggleDayAvailability = (dayIndex: number, value: boolean) => {
-    setWeeklyAvailability(prev =>
-      prev.map(day =>
-        day.dayIndex === dayIndex ? { ...day, isAvailable: value, slots: value ? day.slots.map(s => ({ ...s, hasError: false, errorMessage: undefined })) : [] } : day
-      )
-    );
+  const onPressInItem = () => {
+    Animated.spring(scaleAnim, { toValue: 0.98, useNativeDriver: true }).start();
   };
 
-  const openTimePicker = (dayIdx: number, slotId: string, mode: 'startTime' | 'endTime') => {
-    setEditingDayIndex(dayIdx);
-    setEditingSlotId(slotId);
-    setCurrentPickerMode(mode);
-
-    const day = weeklyAvailability[dayIdx];
-    let initialTime = new Date();
-
-    const slot = day.slots.find(s => s.id === slotId);
-    if (slot) {
-      initialTime = parseTime(mode === 'startTime' ? slot.startTime : slot.endTime);
-    }
-
-    setTimePickerDate(initialTime);
-    setShowTimePicker(true);
-    console.log(`[ManageAvailability] Abrindo TimePicker para Dia: ${dayIdx}, Slot: ${slotId}, Modo: ${mode}, Hora Inicial: ${initialTime}`);
+  const onPressOutItem = () => {
+    Animated.spring(scaleAnim, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start();
   };
 
-  const onTimeChange = (event: DateTimePickerEvent, selectedTimeValue?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowTimePicker(false);
-    }
-    if (event.type === 'set' && selectedTimeValue && editingDayIndex !== null && editingSlotId !== null) {
-      const formattedTime = formatTime(selectedTimeValue);
-      console.log(`[ManageAvailability] Horário selecionado: ${formattedTime} para Dia: ${editingDayIndex}, Slot: ${editingSlotId}, Modo: ${currentPickerMode}`);
-
-      setWeeklyAvailability(prev =>
-        prev.map((day, idx) => {
-          if (idx === editingDayIndex) {
-            let newSlots = day.slots.map(slot =>
-              slot.id === editingSlotId
-                ? { ...slot, [currentPickerMode]: formattedTime }
-                : slot
-            );
-            newSlots = newSlots.sort((a, b) => a.startTime.localeCompare(b.startTime));
-            newSlots = validateSlots(newSlots);
-            return { ...day, slots: newSlots };
-          }
-          return day;
-        })
-      );
-    }
-    if (Platform.OS === 'ios') {
-      setShowTimePicker(false);
+  const getStatusStyle = (status: ProviderAppointment['status']) => {
+    switch (status) {
+      case 'Confirmado':      return { text: '#2E7D32', background: '#E8F5E9', icon: 'check-circle' };
+      case 'ARealizar':       return { text: Colors.primary, background: '#E3F2FD', icon: 'clock-time-four' };
+      case 'PendenteCliente': return { text: '#FF6F00', background: '#FFF3E0', icon: 'alert-circle' };
+      case 'Concluído':       return { text: '#546E7A', background: '#ECEFF1', icon: 'check-all' };
+      case 'Cancelado':       return { text: Colors.danger, background: '#FFEBEE', icon: 'close-circle' };
+      default:                return { text: '#546E7A', background: '#ECEFF1', icon: 'information' };
     }
   };
 
-  const addSlot = (dayIndex: number) => {
-    setWeeklyAvailability(prev =>
-      prev.map((day, idx) => {
-        if (idx === dayIndex) {
-          const newId = `temp-${Math.random().toString(36).substring(2, 9)}`; // ID temporário para novos slots
-          let newStartTime = '09:00';
-          let newEndTime = '10:00';
-
-          if (day.slots.length > 0) {
-            const lastSlot = day.slots[day.slots.length - 1];
-            const lastEndTime = parseTime(lastSlot.endTime);
-            lastEndTime.setMinutes(lastEndTime.getMinutes() + 15);
-            newStartTime = formatTime(lastEndTime);
-            lastEndTime.setHours(lastEndTime.getHours() + 1);
-            newEndTime = formatTime(lastEndTime);
-          }
-
-          let updatedSlots = [...day.slots, { id: newId, startTime: newStartTime, endTime: newEndTime }];
-          updatedSlots = updatedSlots.sort((a, b) => a.startTime.localeCompare(b.startTime));
-          updatedSlots = validateSlots(updatedSlots);
-          return { ...day, isAvailable: true, slots: updatedSlots };
-        }
-        return day;
-      })
-    );
-  };
-
-  const removeSlot = (dayIndex: number, slotId: string) => {
-    setWeeklyAvailability(prev =>
-      prev.map((day, idx) => {
-        if (idx === dayIndex) {
-          const slotToRemove = day.slots.find(s => s.id === slotId);
-          if (slotToRemove && slotToRemove.backendId) {
-            // Marca o slot para ser deletado na API
-            setSlotsToDelete(prev => new Set(prev).add(slotToRemove.backendId!)); // Adiciona ao Set
-          }
-          let updatedSlots = day.slots.filter(slot => slot.id !== slotId);
-          updatedSlots = validateSlots(updatedSlots);
-          return { ...day, slots: updatedSlots };
-        }
-        return day;
-      })
-    );
-  };
-
-  const hasValidationErrors = weeklyAvailability.some(day =>
-    day.slots.some(slot => slot.hasError)
-  );
-
-  const handleSaveChanges = async () => {
-    if (hasValidationErrors) {
-      Alert.alert('Erro de Validação', 'Por favor, corrija os horários que apresentam erros antes de salvar.');
-      return;
-    }
-    if (!user?.id) {
-      Alert.alert("Erro", "ID do provedor não disponível para salvar.");
-      return;
-    }
-
-    setIsSaving(true);
-    setSaveSuccess(false);
-    console.log("[ManageAvailability] Salvando disponibilidade.");
-
-    try {
-      // 1. Processar adições/atualizações
-      const slotsToUpdateOrCreate: UpdateAvailabilityData[] = [];
-      weeklyAvailability.forEach(day => {
-        // Se o dia está disponível e tem slots, ou se um dia indisponível está sendo ativado com slots
-        if (day.isAvailable && day.slots.length > 0) {
-          day.slots.forEach(slot => {
-            slotsToUpdateOrCreate.push({
-              id: slot.backendId, // Inclui o ID para o backend distinguir update/create
-              dayOfWeek: day.dayIndex,
-              startTime: slot.startTime,
-              endTime: slot.endTime,
-              isAvailable: true, // Sempre true para slots individuais
-            });
-          });
-        } else if (!day.isAvailable && day.slots.length === 0) {
-          // Se o dia está marcado como indisponível E não tem slots, enviar um slot que desabilita o dia inteiro
-          slotsToUpdateOrCreate.push({
-            dayOfWeek: day.dayIndex,
-            isAvailable: false,
-            startTime: "00:00", // Valor padrão, pode ser ignorado pelo backend se isAvailable=false
-            endTime: "00:00",
-          });
-        }
-        // Se o dia está disponível mas não tem slots, e não está explicitamente desabilitado, não faz nada aqui
-        // pois a API PATCH /availability deve interpretar a ausência de slots como "sem slots"
-      });
-      
-      // 2. Chamar a API para atualizar/sincronizar todos os slots (PATCH em massa)
-      // A API `updateProviderAvailability` no seu `providerService.ts` aceita `UpdateAvailabilityData[]`.
-      // Esta API deve ser inteligente para criar novos, atualizar existentes e deletar os que não são enviados.
-      // Ou seja, ela "sincroniza" o estado do backend com o que é enviado.
-      console.log(`Sincronizando disponibilidade para provedor ${user.id}:`, slotsToUpdateOrCreate);
-      await updateProviderAvailability(user.id, slotsToUpdateOrCreate); //
-
-      // 3. Chamar a API para deletar slots marcados para exclusão (ids guardados em `slotsToDelete`)
-      await Promise.all(
-        Array.from(slotsToDelete).map(async (slotBackendId) => { // Iterar sobre o Set
-          console.log(`Deletando slot ${slotBackendId} para provedor ${user.id}`);
-          await deleteProviderAvailability(user.id, slotBackendId); //
-        })
-      );
-      
-      setSaveSuccess(true);
-      setSlotsToDelete(new Set()); // Limpa a lista de slots a serem deletados após o sucesso
-      
-      setTimeout(() => {
-        Alert.alert('Sucesso', 'Disponibilidade salva com sucesso!');
-        router.back();
-      }, 500);
-
-    } catch (error: any) {
-      console.error("Erro ao salvar disponibilidade:", error.response?.data || error.message);
-      Alert.alert('Erro', error.response?.data?.message || 'Não foi possível salvar a disponibilidade.');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <View style={styles.outerContainer}>
-        <Stack.Screen options={{ headerShown: false }} />
-        <Animated.View style={[styles.customHeader, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
-          <Text style={styles.headerTitle}>Gerenciar Disponibilidade</Text>
-          <View style={styles.headerActionIconPlaceholder} />
-        </Animated.View>
-        <View style={styles.centeredFeedback}>
-          <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>Carregando sua disponibilidade...</Text>
-        </View>
-      </View>
-    );
-  }
+  const statusStyle = getStatusStyle(item.status);
 
   return (
-    <View style={styles.outerContainer}>
+    <Animated.View
+      style={[
+        styles.appointmentCardWrapper,
+        { opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] }
+      ]}
+      accessibilityRole="summary"
+      accessibilityLabel={`Cliente ${item.clientName}, serviço ${item.serviceType}.`}
+    >
+      <TouchableOpacity
+        style={styles.appointmentCard}
+        onPress={() => onPress(item)}
+        onPressIn={onPressInItem}
+        onPressOut={onPressOutItem}
+        activeOpacity={0.9}
+      >
+        {item.clientAvatarUrl ? (
+          <Image source={{ uri: item.clientAvatarUrl }} style={styles.clientAvatar} />
+        ) : (
+          <View style={styles.clientAvatarPlaceholder}>
+            <Ionicons name="person" size={24} color="#FFF" />
+          </View>
+        )}
+
+        <View style={styles.appointmentDetails}>
+          <Text style={styles.appointmentClientName} numberOfLines={1}>{item.clientName}</Text>
+          <Text style={styles.appointmentServiceType} numberOfLines={1}>{item.serviceType}</Text>
+
+          <View style={styles.timeAndLocation}>
+            <Ionicons name="time-outline" size={14} color={Colors.textMuted} style={{ marginRight: 4 }} />
+            <Text style={styles.appointmentTime}>
+              {item.startTime}{item.endTime ? ` - ${item.endTime}` : ''}
+            </Text>
+          </View>
+
+          {item.addressSummary && (
+            <View style={styles.timeAndLocation}>
+              <Ionicons name="location-outline" size={14} color={Colors.textMuted} style={{ marginRight: 4 }} />
+              <Text style={styles.appointmentAddress}>{item.addressSummary}</Text>
+            </View>
+          )}
+        </View>
+
+        <View style={[styles.appointmentStatusBadge, { backgroundColor: statusStyle.background }]}>
+          <MaterialCommunityIcons name={statusStyle.icon as any} size={14} color={statusStyle.text} />
+          <Text style={[styles.appointmentStatusText, { color: statusStyle.text }]}>{item.status}</Text>
+        </View>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
+
+// ====== Screen ======
+export default function MyScheduleScreen() {
+  const router = useRouter();
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [allAppointments, setAllAppointments] = useState<ProviderAppointment[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const headerAnim = useRef(new Animated.Value(0)).current;
+  const calendarAnim = useRef(new Animated.Value(0)).current;
+  const agendaHeaderAnim = useRef(new Animated.Value(0)).current;
+  const feedbackAnim = useRef(new Animated.Value(0)).current;
+
+  const loadAppointments = async () => {
+    try {
+      setIsLoading(true);
+      const data = await fetchProviderAppointments();
+      setAllAppointments(data);
+      Animated.stagger(140, [
+        Animated.timing(calendarAnim, { toValue: 1, duration: 560, easing: easeOut, useNativeDriver: true }),
+        Animated.timing(agendaHeaderAnim, { toValue: 1, duration: 560, easing: easeOut, useNativeDriver: true }),
+        Animated.timing(feedbackAnim, { toValue: 1, duration: 420, easing: easeOut, useNativeDriver: true }),
+      ]).start();
+    } catch (err) {
+      console.error('[MyScheduleScreen] Erro ao buscar agendamentos:', err);
+      Alert.alert('Erro', 'Não foi possível carregar os dados da agenda.');
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    Animated.timing(headerAnim, { toValue: 1, duration: 520, easing: easeOut, useNativeDriver: true }).start();
+    loadAppointments();
+  }, [headerAnim]);
+
+  const onRefresh = () => {
+    setIsRefreshing(true);
+    loadAppointments();
+  };
+
+  const appointmentsForSelectedDate = useMemo(() => {
+    return allAppointments
+      .filter(app => app.date === selectedDate)
+      .sort((a, b) => a.startTime.localeCompare(b.startTime));
+  }, [allAppointments, selectedDate]);
+
+  const markedDates = useMemo(() => {
+    const marks: Record<string, any> = {};
+    allAppointments.forEach(app => {
+      const hasConfirmed = allAppointments.some(a => a.date === app.date && a.status === 'Confirmado');
+      const hasPending = allAppointments.some(a => a.date === app.date && a.status === 'PendenteCliente');
+      const hasUpcoming = allAppointments.some(a => a.date === app.date && a.status === 'ARealizar');
+
+      let dotColor = Colors.primary;
+      if (hasPending) dotColor = '#FF6F00';
+      else if (hasConfirmed || hasUpcoming) dotColor = '#2E7D32';
+
+      marks[app.date] = { marked: true, dotColor };
+    });
+
+    const currentMark = marks[selectedDate] || {};
+    marks[selectedDate] = {
+      ...currentMark,
+      selected: true,
+      selectedColor: Colors.primary,
+      selectedTextColor: '#FFFFFF',
+      marked: currentMark.marked || false,
+      dotColor: currentMark.dotColor || Colors.primary,
+    };
+    return marks;
+  }, [allAppointments, selectedDate]);
+
+  const onDayPress = (day: DateData) => {
+    setSelectedDate(day.dateString);
+    AccessibilityInfo.announceForAccessibility?.(`Data selecionada ${formatDate(day.dateString, { weekday: 'long', day: 'numeric', month: 'long' })}`);
+  };
+
+  const handleAppointmentPress = (item: ProviderAppointment) => {
+    // mantém a navegação atual
+    router.push(`/(provider)/services/${item.id}` as any);
+  };
+
+  return (
+    <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <Animated.View style={[styles.customHeader, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerBackButton}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+      <Animated.View
+        style={[
+          styles.customHeader,
+          { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }
+        ]}
+      >
+        <Text style={styles.headerTitle}>Minha Agenda</Text>
+        <TouchableOpacity
+          onPress={() => router.push('/(provider)/schedule/manage-availability' as any)}
+          style={styles.headerActionIcon}
+          accessibilityRole="button"
+          accessibilityLabel="Gerenciar disponibilidade"
+        >
+          <Ionicons name="options-outline" size={22} color="#FFFFFF" />
+          <Text style={styles.headerActionText}>Disponibilidade</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Gerenciar Disponibilidade</Text>
-        <View style={styles.headerActionIconPlaceholder} />
       </Animated.View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.container}>
-        <Animated.Text style={[styles.mainHeaderTitle, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
-          Horários de Trabalho Semanais
-        </Animated.Text>
-        <Animated.Text style={[styles.mainHeaderSubtitle, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
-          Defina os dias e horários em que você está disponível para realizar serviços.
-        </Animated.Text>
-
-        {weeklyAvailability.map((day, dayIdx) => (
-          <AnimatedDayCard
-            key={day.dayIndex}
-            day={day}
-            dayIdx={dayIdx}
-            onToggleAvailability={handleToggleDayAvailability}
-            onAddSlot={addSlot}
-            onOpenPicker={openTimePicker}
-            onRemoveSlot={removeSlot}
-            delay={dayIdx * 100 + 200}
-          />
-        ))}
-
-        {/* Placeholder para Bloquear Datas Específicas - Usando o novo componente */}
-        <BlockDateSection animation={specialSectionAnim} />
-
-        {/* Botão Salvar Alterações - Usando o novo componente */}
-        <SaveChangesButton
-          isSaving={isSaving}
-          saveSuccess={saveSuccess}
-          hasValidationErrors={hasValidationErrors}
-          onPress={handleSaveChanges}
-          animation={saveButtonAnim}
+      <Animated.View
+        style={[
+          styles.calendarContainer,
+          { opacity: calendarAnim, transform: [{ translateY: calendarAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }
+        ]}
+      >
+        <Calendar
+          current={selectedDate}
+          onDayPress={onDayPress}
+          markedDates={markedDates}
+          monthFormat={'MMMM yyyy'} // pt-BR via LocaleConfig
+          onMonthChange={(month) => {
+            // manter log; futura integração para fetch por mês
+            console.log('[MyScheduleScreen] Mês alterado para:', month.month, month.year);
+          }}
+          firstDay={1}
+          enableSwipeMonths
+          theme={({
+            backgroundColor: Colors.bgSoft,
+            calendarBackground: Colors.surface,
+            textSectionTitleColor: '#586069',
+            selectedDayBackgroundColor: Colors.primary,
+            selectedDayTextColor: '#FFFFFF',
+            todayTextColor: Colors.primary,
+            dayTextColor: '#2d4150',
+            textDisabledColor: '#d9e1e8',
+            dotColor: Colors.primary,
+            selectedDotColor: '#FFFFFF',
+            arrowColor: Colors.primary,
+            monthTextColor: '#1C3A5F',
+            indicatorColor: Colors.primary,
+            textDayFontWeight: '400',
+            textMonthFontWeight: 'bold',
+            textDayHeaderFontWeight: '500',
+            textDayFontSize: 15,
+            textMonthFontSize: 18,
+            textDayHeaderFontSize: 13,
+            'stylesheet.calendar.header': {
+              week: {
+                marginTop: 6,
+                flexDirection: 'row',
+                justifyContent: 'space-around',
+                borderBottomWidth: 1,
+                borderBottomColor: Colors.border,
+                paddingBottom: 6,
+              },
+            },
+          }) as Theme}
+          style={styles.calendarStyle}
         />
-      </ScrollView>
+      </Animated.View>
 
-      {showTimePicker && (
-        <DateTimePicker
-          testID="timePicker"
-          value={timePickerDate}
-          mode="time"
-          is24Hour={true}
-          display={Platform.OS === 'ios' ? "spinner" : "default"}
-          onChange={onTimeChange}
-          minuteInterval={15}
+      <Animated.View
+        style={[
+          styles.agendaListHeader,
+          { opacity: agendaHeaderAnim, transform: [{ translateY: agendaHeaderAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }
+        ]}
+      >
+        <Text style={styles.agendaListTitle}>
+          Agenda para: {selectedDate ? formatDate(selectedDate, { weekday: 'long', day: 'numeric', month: 'long' }) : 'Selecione uma data'}
+        </Text>
+      </Animated.View>
+
+      {isLoading && allAppointments.length === 0 ? (
+        <Animated.View style={[styles.centeredFeedback, { opacity: feedbackAnim }]}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={styles.loadingText}>Carregando sua agenda...</Text>
+        </Animated.View>
+      ) : appointmentsForSelectedDate.length > 0 ? (
+        <FlatList
+          data={appointmentsForSelectedDate}
+          renderItem={({ item, index }) => (
+            <AnimatedAppointmentItem item={item} onPress={handleAppointmentPress} delay={index * 70} />
+          )}
+          keyExtractor={(item) => item.id}
+          style={styles.listStyle}
+          contentContainerStyle={styles.listContentContainer}
+          ItemSeparatorComponent={() => <View style={styles.listSeparator} />}
+          refreshControl={
+            <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={Colors.primary} colors={[Colors.primary]} />
+          }
         />
+      ) : (
+        <Animated.View style={[styles.centeredFeedback, { opacity: feedbackAnim }]}>
+          <Ionicons name="calendar-outline" size={64} color="#CED4DA" />
+          <Text style={styles.emptyListText}>Nenhum serviço agendado para este dia.</Text>
+          <Text style={styles.emptyListSubText}>
+            Aproveite para gerenciar sua disponibilidade ou confira outros dias!
+          </Text>
+          <TouchableOpacity
+            style={styles.manageAvailabilityButton}
+            onPress={() => router.push('/(provider)/schedule/manage-availability' as any)}
+            accessibilityRole="button"
+            accessibilityLabel="Ir para Gerenciar Disponibilidade"
+          >
+            <Text style={styles.manageAvailabilityButtonText}>Gerenciar Disponibilidade</Text>
+            <Ionicons name="arrow-forward" size={18} color="#FFFFFF" style={{ marginLeft: 8 }} />
+          </TouchableOpacity>
+        </Animated.View>
       )}
     </View>
   );
 }
 
+// ====== Styles ======
 const styles = StyleSheet.create({
-  outerContainer: { flex: 1, backgroundColor: '#F0F2F5' },
-  scrollView: { flex: 1 },
-  container: { padding: 15, paddingBottom: 30 },
-  centeredFeedback: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { marginTop: 10, fontSize: 16, color: '#555' },
-
+  container: {
+    flex: 1,
+    backgroundColor: Colors.bgSoft,
+  },
   customHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#007AFF',
+    backgroundColor: Colors.primary,
     paddingHorizontal: 15,
     paddingVertical: Platform.OS === 'ios' ? 50 : 20,
     paddingTop: Platform.OS === 'ios' ? 50 : 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  headerBackButton: {
-    marginRight: 15,
+    shadowRadius: 8,
+    elevation: 8,
+    borderBottomLeftRadius: Radii.xl,
+    borderBottomRightRadius: Radii.xl,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#FFFFFF',
     flex: 1,
-    textAlign: 'center',
+    textAlign: 'left',
+    marginLeft: 10,
   },
-  headerActionIconPlaceholder: {
-    width: 24,
-    marginLeft: 15,
+  headerActionIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: Radii.pill,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
-  mainHeaderTitle: {
-    fontSize: 24,
+  headerActionText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  calendarContainer: {
+    backgroundColor: Colors.surface,
+    marginHorizontal: 15,
+    marginTop: -25,
+    borderRadius: Radii.md,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+      },
+      android: { elevation: 6 },
+    }),
+  },
+  calendarStyle: {
+    borderRadius: Radii.md,
+  },
+  agendaListHeader: {
+    paddingHorizontal: 15,
+    paddingTop: 20,
+    paddingBottom: 15,
+    backgroundColor: Colors.bgSoft,
+  },
+  agendaListTitle: {
+    fontSize: 19,
     fontWeight: 'bold',
     color: '#1C3A5F',
-    marginBottom: 8,
-    textAlign: 'center',
-    marginTop: 10,
+    textTransform: 'capitalize',
   },
-  mainHeaderSubtitle: {
+  listStyle: { flex: 1 },
+  listContentContainer: {
+    paddingHorizontal: 15,
+    paddingBottom: 20,
+  },
+  appointmentCardWrapper: {
+    marginVertical: 8,
+    borderRadius: Radii.md,
+    backgroundColor: Colors.surface,
+    overflow: Platform.OS === 'ios' ? 'visible' : 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: Colors.shadow,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.4,
+        shadowRadius: 8,
+      },
+      android: { elevation: 5 },
+    }),
+  },
+  appointmentCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 18,
+  },
+  clientAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: 15,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+  },
+  clientAvatarPlaceholder: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: 15,
+    backgroundColor: '#B0C4DE',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  appointmentDetails: { flex: 1 },
+  appointmentClientName: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: Colors.text,
+    marginBottom: 4,
+  },
+  appointmentServiceType: {
     fontSize: 15,
+    fontWeight: '500',
     color: '#495057',
-    textAlign: 'center',
-    marginBottom: 25,
-    paddingHorizontal: 10
+    marginBottom: 4,
   },
-
-  // Estilos de DayCard, TimeSlot, ErrorMessage, AddSlotButton movidos para os componentes filhos.
-  // Mantendo apenas estilos gerais do layout principal.
+  timeAndLocation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  appointmentTime: { fontSize: 13, color: Colors.textMuted },
+  appointmentAddress: { fontSize: 13, color: Colors.textMuted },
+  appointmentStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 15,
+    marginLeft: 15,
+  },
+  appointmentStatusText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    marginLeft: 5,
+  },
+  centeredFeedback: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    marginTop: 20,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: Colors.textMuted,
+    marginTop: 12,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  emptyListText: {
+    fontSize: 16,
+    color: Colors.textMuted,
+    marginTop: 15,
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  emptyListSubText: {
+    fontSize: 15,
+    color: Colors.textSubtle,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  manageAvailabilityButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 30,
+    marginTop: 22,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  manageAvailabilityButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  listSeparator: { height: 0 },
 });

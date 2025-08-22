@@ -205,31 +205,31 @@ export default function ProviderChatScreen() { // Renomeado para ProviderChatScr
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F0F2F5',
+    backgroundColor: '#F0F2F5', // Neutro - Fundo de tela
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F0F2F5',
+    backgroundColor: '#F0F2F5', // Neutro - Fundo de tela
   },
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#6C757D',
+    color: '#6C757D', // Neutro - Cinza
   },
   chatBlockedContainer: {
-    backgroundColor: '#FFE0E6',
+    backgroundColor: '#FFE0E6', // Vermelho - Erro
     padding: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#FFC0CB',
+    borderBottomColor: '#FFC0CB', // Vermelho - Erro
   },
   chatBlockedText: {
     marginLeft: 8,
-    color: '#DC3545',
+    color: '#DC3545', // Vermelho - Erro
     fontSize: 14,
     textAlign: 'center',
     flex: 1,
@@ -251,33 +251,37 @@ const styles = StyleSheet.create({
   },
   myMessage: {
     alignSelf: 'flex-end',
-    backgroundColor: '#007AFF',
+    backgroundColor: '#007AFF', // Azul Principal
     borderBottomRightRadius: 5,
   },
   theirMessage: {
     alignSelf: 'flex-start',
-    backgroundColor: '#E9ECEF',
+    backgroundColor: '#E9ECEF', // Neutro - Cinza claro
     borderBottomLeftRadius: 5,
   },
   messageContent: {
     fontSize: 15,
+    color: '#FFFFFF', // Neutro - Branco (para myMessage)
+    // #212529 (Neutro - Cinza escuro) (para theirMessage) - definido inline
   },
   messageTime: {
     fontSize: 10,
     alignSelf: 'flex-end',
     marginTop: 5,
+    // rgba(255,255,255,0.7) (Neutro - Branco transparent) (para myMessage) - definido inline
+    // #6C757D (Neutro - Cinza) (para theirMessage) - definido inline
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFFFFF', // Neutro - Branco
     borderTopWidth: 1,
-    borderTopColor: '#E9ECEF',
+    borderTopColor: '#E9ECEF', // Neutro - Cinza claro
   },
   input: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: '#F8F9FA', // Neutro - Cinza claro
     borderRadius: 20,
     paddingHorizontal: 15,
     paddingVertical: 10,
@@ -286,11 +290,11 @@ const styles = StyleSheet.create({
     maxHeight: 120,
   },
   disabledInput: {
-    backgroundColor: '#E9ECEF',
-    color: '#ADB5BD',
+    backgroundColor: '#E9ECEF', // Neutro - Cinza claro
+    color: '#ADB5BD', // Neutro - Cinza
   },
   sendButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#007AFF', // Azul Principal
     borderRadius: 20,
     width: 40,
     height: 40,
@@ -298,6 +302,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   disabledSendButton: {
-    backgroundColor: '#ADB5BD',
+    backgroundColor: '#ADB5BD', // Neutro - Cinza
   },
 });

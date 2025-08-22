@@ -390,17 +390,17 @@ export default function ProviderServicesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F0F2F5',
+    backgroundColor: '#F0F2F5', // Neutro - Fundo de tela
   },
   customHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#007AFF',
+    backgroundColor: '#007AFF', // Azul Principal
     paddingHorizontal: 15,
     paddingVertical: Platform.OS === 'ios' ? 50 : 20,
     paddingTop: Platform.OS === 'ios' ? 50 : 20,
-    shadowColor: '#000',
+    shadowColor: '#000', // Neutro - Preto
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#FFFFFF', // Neutro - Branco
     flex: 1,
     textAlign: 'center',
     zIndex: 1,
@@ -426,9 +426,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingVertical: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFFFFF', // Neutro - Branco
     borderBottomWidth: 1,
-    borderBottomColor: '#E9ECEF',
+    borderBottomColor: '#E9ECEF', // Neutro - Cinza claro
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3 },
       android: { elevation: 2 },
@@ -442,7 +442,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   filterButtonActive: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#007AFF', // Azul Principal
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,122,255,0.3)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.8, shadowRadius: 4 },
       android: { elevation: 5 },
@@ -451,10 +451,10 @@ const styles = StyleSheet.create({
   filterButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#6C757D',
+    color: '#6C757D', // Neutro - Cinza
   },
   filterButtonTextActive: {
-    color: '#FFFFFF',
+    color: '#FFFFFF', // Neutro - Branco
   },
   contentArea: {
     flex: 1,
@@ -468,7 +468,7 @@ const styles = StyleSheet.create({
     marginVertical: 6,
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFFFFF', // Neutro - Branco
     ...Platform.select({
       ios: { shadowColor: 'rgba(0,0,0,0.07)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3 },
       android: { elevation: 2 },
@@ -485,14 +485,14 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginRight: 10,
     borderWidth: 1,
-    borderColor: '#E9ECEF',
+    borderColor: '#E9ECEF', // Neutro - Cinza claro
   },
   clientAvatarPlaceholder: {
     width: 40,
     height: 40,
     borderRadius: 20,
     marginRight: 10,
-    backgroundColor: '#007AFF', // Cor para avatar placeholder
+    backgroundColor: '#007AFF', // Azul Principal
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -503,22 +503,22 @@ const styles = StyleSheet.create({
   serviceType: {
     fontSize: 17,
     fontWeight: 'bold',
-    color: '#212529',
+    color: '#212529', // Neutro - Cinza escuro
     marginBottom: 4,
   },
   clientName: {
     fontSize: 14,
-    color: '#495057',
+    color: '#495057', // Neutro - Cinza
     marginBottom: 4,
   },
   serviceDate: {
     fontSize: 13,
-    color: '#6C757D',
+    color: '#6C757D', // Neutro - Cinza
   },
   servicePriceText: {
     fontSize: 13,
     fontWeight: 'bold',
-    color: '#2E7D32',
+    color: '#2E7D32', // Verde - Sucesso
     marginTop: 2,
     flexDirection: 'row',
     alignItems: 'center',
@@ -549,25 +549,25 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#6C757D',
+    color: '#6C757D', // Neutro - Cinza
     marginTop: 10,
   },
   emptyText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#343A40',
+    color: '#343A40', // Neutro - Cinza escuro
     marginTop: 15,
     textAlign: 'center',
   },
   emptySubText: {
     fontSize: 14,
-    color: '#6C757D',
+    color: '#6C757D', // Neutro - Cinza
     marginTop: 5,
     textAlign: 'center',
     marginBottom: 20,
   },
   emptyStateButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#007AFF', // Azul Principal
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
@@ -580,7 +580,7 @@ const styles = StyleSheet.create({
     }),
   },
   emptyStateButtonText: {
-    color: '#FFFFFF',
+    color: '#FFFFFF', // Neutro - Branco
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,

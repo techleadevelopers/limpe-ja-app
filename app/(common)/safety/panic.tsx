@@ -1,6 +1,6 @@
 // LimpeJaApp/app/(common)/safety/panic.tsx
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Animated, Easing } from 'react-native';
 import * as Location from 'expo-location';
 import { useMutation } from '@tanstack/react-query';
 import { reportPanic } from '../../../services/safetyService';
@@ -12,15 +12,32 @@ export default function PanicScreen() {
   const [isCounting, setIsCounting] = useState(false);
   const [location, setLocation] = useState<Location.LocationObjectCoords | null>(null);
 
+  // Animações
+  const headerAnim = useRef(new Animated.Value(0)).current;
+  const descriptionAnim = useRef(new Animated.Value(0)).current;
+  const locationStatusAnim = useRef(new Animated.Value(0)).current;
+  const buttonAnim = useRef(new Animated.Value(0)).current; // Para o botão principal/countdown
+  const warningTextAnim = useRef(new Animated.Value(0)).current;
+
+  const panicButtonScaleAnim = useRef(new Animated.Value(1)).current; // Para feedback de toque no botão principal
+  const cancelButtonScaleAnim = useRef(new Animated.Value(1)).current; // Para feedback de toque no botão cancelar
+  const countdownPulseAnim = useRef(new Animated.Value(1)).current; // Para o pulso do contador
+
   const reportPanicMutation = useMutation({
     mutationFn: (data: ReportPanicDto) => reportPanic(data),
     onSuccess: () => {
       Alert.alert('Alerta Enviado', 'Seu alerta de pânico foi enviado à equipe de segurança. Ajuda está a caminho.');
       router.back();
     },
-    onError: (error: any) => { // Adicionado tipo 'any' para 'error' para evitar erro de tipagem se não for um objeto Error
+    onError: (error: any) => {
       Alert.alert('Erro', `Não foi possível enviar o alerta: ${error.message || 'Erro desconhecido'}`);
       setIsCounting(false); // Allow retrying
+      // Reset animations on error
+      Animated.parallel([
+        Animated.timing(panicButtonScaleAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+        Animated.timing(cancelButtonScaleAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+        Animated.timing(countdownPulseAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+      ]).start();
     },
   });
 
@@ -34,20 +51,40 @@ export default function PanicScreen() {
       let currentLocation = await Location.getCurrentPositionAsync({});
       setLocation(currentLocation.coords);
     })();
+
+    // Animações de entrada da tela
+    Animated.stagger(150, [
+      Animated.timing(headerAnim, { toValue: 1, duration: 500, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+      Animated.timing(descriptionAnim, { toValue: 1, duration: 500, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+      Animated.timing(locationStatusAnim, { toValue: 1, duration: 500, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+      Animated.timing(buttonAnim, { toValue: 1, duration: 600, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+      Animated.timing(warningTextAnim, { toValue: 1, duration: 500, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+    ]).start();
   }, []);
 
   useEffect(() => {
-    // CORREÇÃO: Altere a tipagem de 'timer' para ReturnType<typeof setInterval>
     let timer: ReturnType<typeof setInterval>;
     if (isCounting && countdown > 0) {
       timer = setInterval(() => {
         setCountdown((prev) => prev - 1);
       }, 1000);
+      // Iniciar pulso do contador
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(countdownPulseAnim, { toValue: 1.1, duration: 400, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+          Animated.timing(countdownPulseAnim, { toValue: 1, duration: 400, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        ])
+      ).start();
     } else if (isCounting && countdown === 0) {
       handleSendPanic();
+      countdownPulseAnim.stopAnimation(); // Parar o pulso ao zerar
+      countdownPulseAnim.setValue(1); // Resetar o valor
+    } else if (!isCounting) {
+      countdownPulseAnim.stopAnimation(); // Parar o pulso ao cancelar
+      countdownPulseAnim.setValue(1); // Resetar o valor
     }
     return () => clearInterval(timer);
-  }, [isCounting, countdown, location]);
+  }, [isCounting, countdown, location, countdownPulseAnim]);
 
   const handleInitiatePanic = () => {
     if (!location) {
@@ -80,41 +117,49 @@ export default function PanicScreen() {
     reportPanicMutation.mutate(panicData);
   };
 
+  // Feedback de toque para botões
+  const onPressInButton = (anim: Animated.Value) => { Animated.spring(anim, { toValue: 0.95, useNativeDriver: true }).start(); };
+  const onPressOutButton = (anim: Animated.Value) => { Animated.spring(anim, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start(); };
+
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Botão de Pânico</Text>
-      <Text style={styles.description}>
+      <Animated.Text style={[styles.header, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>Botão de Pânico</Animated.Text>
+      <Animated.Text style={[styles.description, { opacity: descriptionAnim, transform: [{ translateY: descriptionAnim.interpolate({ inputRange: [0, 1], outputRange: [-10, 0] }) }] }]}>
         Em caso de emergência, pressione o botão abaixo. Um alerta será enviado imediatamente à nossa equipe de segurança com sua localização.
-      </Text>
+      </Animated.Text>
 
       {!location && (
-        <View style={styles.locationStatus}>
+        <Animated.View style={[styles.locationStatus, { opacity: locationStatusAnim }]}>
           <ActivityIndicator size="small" color="#007bff" />
           <Text style={styles.locationText}>Obtendo sua localização...</Text>
-        </View>
+        </Animated.View>
       )}
       {location && (
-        <View style={styles.locationStatus}>
+        <Animated.View style={[styles.locationStatus, { opacity: locationStatusAnim }]}>
           <Text style={styles.locationText}>Localização obtida: {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}</Text>
-        </View>
+        </Animated.View>
       )}
 
       {isCounting ? (
-        <View style={styles.countdownContainer}>
+        <Animated.View style={[styles.countdownContainer, { opacity: buttonAnim, transform: [{ scale: countdownPulseAnim }] }]}>
           <Text style={styles.countdownText}>{countdown}</Text>
           <Text style={styles.countdownLabel}>Alerta será enviado em...</Text>
           <TouchableOpacity
-            style={[styles.button, styles.cancelButton]}
+            style={[styles.button, styles.cancelButton, { transform: [{ scale: cancelButtonScaleAnim }] }]}
             onPress={handleCancelPanic}
+            onPressIn={() => onPressInButton(cancelButtonScaleAnim)}
+            onPressOut={() => onPressOutButton(cancelButtonScaleAnim)}
             disabled={reportPanicMutation.isPending}
           >
             <Text style={styles.buttonText}>Cancelar</Text>
           </TouchableOpacity>
-        </View>
+        </Animated.View>
       ) : (
         <TouchableOpacity
-          style={[styles.button, styles.panicButton]}
+          style={[styles.button, styles.panicButton, { opacity: buttonAnim, transform: [{ scale: panicButtonScaleAnim }] }]}
           onPress={handleInitiatePanic}
+          onPressIn={() => onPressInButton(panicButtonScaleAnim)}
+          onPressOut={() => onPressOutButton(panicButtonScaleAnim)}
           disabled={!location || reportPanicMutation.isPending}
         >
           {reportPanicMutation.isPending ? (
@@ -125,9 +170,9 @@ export default function PanicScreen() {
         </TouchableOpacity>
       )}
 
-      <Text style={styles.warningText}>
+      <Animated.Text style={[styles.warningText, { opacity: warningTextAnim }]}>
         Use este recurso apenas em situações de emergência real. O uso indevido pode resultar em penalidades.
-      </Text>
+      </Animated.Text>
     </View>
   );
 }

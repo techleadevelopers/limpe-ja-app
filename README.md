@@ -95,19 +95,19 @@
 
 <ul style="list-style-type: disco; preenchimento esquerdo: 20px; margem superior: 5px;">
 
-<li style="margin-bottom: 5px;"><a href="#estrutura-de-pastas-frontend" style="color: #2980b9; text-decoration: none;">Estrutura de Pastas (Frontend)</a></li>
+<li style="margin-bottom: 5px;"><a href="#frontend-folder-structure" style="color: #2980b9; text-decoration: none;">Estrutura de Pastas (Frontend)</a></li>
 
-<li style="margin-bottom: 5px;"><a href="#estrutura-de-pastas-backend" style="color: #2980b9; text-decoration: none;">Estrutura de Massas (Backend)</a></li>
+<li style="margin-bottom: 5px;"><a href="#backend-folder-structure" style="color: #2980b9; text-decoration: none;">Estrutura de Pastas (Backend)</a></li>
 
 </ul>
 
 </li>
 
-<li style="margin-bottom: 8px;"><a href="#-começando-getting-started" style="color: #3498db; text-decoration: none; font-weight: bold;">🚀 Começando</a>
+<li style="margin-bottom: 8px;"><a href="#getting-started" style="color: #3498db; text-decoration: none; font-weight: bold;">🚀 Começando (Configuração para Desenvolvimento Local)</a>
 
 <ul style="list-style-type: disco; preenchimento esquerdo: 20px; margem superior: 5px;">
 
-<li style="margin-bottom: 5px;"><a href="#pré-requisitos" style="color: #2980b9; text-decoration: none;">Pré-requisitos</a></li>
+<li style="margin-bottom: 5px;"><a href="#prerequisites" style="color: #2980b9; text-decoration: none;">Pré-requisitos</a></li>
 
 <li style="margin-bottom: 5px;"><a href="#instalação" style="color: #2980b9; text-decoration: none;">Instalação</a></li>
 
@@ -181,6 +181,14 @@ Para os profissionais de limpeza, o LimpeJá é uma ferramenta poderosa para exp
 
 <li style="margin-bottom: 10px; color: #555;"><strong style="color: #3498db;">⚙️ Gerenciamento de Perfil:</strong> Atualize suas informações pessoais e de contato.</li>
 
+<li style="margin-bottom: 10px; color: #555;"><strong style="color: #3498db;">🎁 Cupons e Descontos Exclusivos:</strong> Aproveite ofertas especiais para economizar em seus agendamentos.</li>
+
+<li style="margin-bottom: 10px; color: #555;"><strong style="color: #3498db;">🛡️ Seguro de Limpeza e Garantia:</strong> Opção de adicionar seguro aos agendamentos para maior tranquilidade, cobrindo danos ou insatisfação.</li>
+
+<li style="margin-bottom: 10px; color: #555;"><strong style="color: #3498db;">💎 Planos Premium e Benefícios:</strong> Assine planos exclusivos para ter acesso a cupons diferenciados, seguro gratuito, prioridade no agendamento e suporte premium.</li>
+
+<li style="margin-bottom: 10px; color: #555;"><strong style="color: #3498db;">✨ Programa de Fidelidade:</strong> Ganhe pontos e recompensas a cada serviço concluído, avaliação enviada ou indicação.</li>
+
 </ul>
 
 </div>
@@ -206,6 +214,10 @@ Para os profissionais de limpeza, o LimpeJá é uma ferramenta poderosa para exp
 <li style="margin-bottom: 10px; color: #555;"><strong style="color: #2ecc71;">🛠️ Gerenciamento de Serviços:</strong> Adicione, edite e remova os tipos de serviços que você oferece, definindo preços e durações.</li>
 
 <li style="margin-bottom: 10px; color: #555;"><strong style="color: #2ecc71;">💬 Chat em Tempo Real:</strong> Comunique-se diretamente com seus clientes para esclarecer dúvidas e combinar detalhes.</li>
+
+<li style="margin-bottom: 10px; color: #555;"><strong style="color: #2ecc71;">🏆 Programa de Recompensas e Reconhecimento:</strong> Ganhe níveis, selos de confiança e badges por excelência, pontualidade e avaliações 5 estrelas, destacando-se na plataforma.</li>
+
+<li style="margin-bottom: 10px; color: #555;"><strong style="color: #2ecc71;">⚖️ Gestão de Incidentes e Disputas:</strong> Ferramentas e suporte para reportar e resolver problemas ou desentendimentos de forma justa e transparente.</li>
 
 </ul>
 
@@ -403,6 +415,24 @@ O backend do LimpeJá é uma camada de serviço que gerencia toda a lógica de n
 
 <li style="margin-bottom: 5px;">`src/verification`: Processo de verificação de provedores (CPF, documentos, selfie).</li>
 
+<li style="margin-bottom: 5px;">`src/coupons`: Gestão de cupons de desconto e sua aplicação.</li>
+
+<li style="margin-bottom: 5px;">`src/subscriptions`: Gerenciamento de assinaturas e agendamentos recorrentes.</li>
+
+<li style="margin-bottom: 5px;">`src/guarantee`: Módulo para solicitações de seguro e garantia de serviço.</li>
+
+<li style="margin-bottom: 5px;">`src/disputes`: Gestão de disputas e mediação de problemas em agendamentos.</li>
+
+<li style="margin-bottom: 5px;">`src/incidents`: Relatório e acompanhamento de incidentes.</li>
+
+<li style="margin-bottom: 5px;">`src/panic-alerts`: Sistema para alertas de pânico.</li>
+
+<li style="margin-bottom: 5px;">`src/loyalty`: Gerenciamento do programa de fidelidade e pontos.</li>
+
+<li style="margin-bottom: 5px;">`src/rewards`: Gerenciamento de recompensas resgatáveis com pontos de fidelidade.</li>
+
+<li style="margin-bottom: 5px;">`src/pricing-rules`: Definição e aplicação de regras de precificação dinâmica.</li>
+
 <li style="margin-bottom: 5px;">`src/prisma`: Módulo global para o `PrismaService`.</li>
 
 <li style="margin-bottom: 5px;">`src/config`: Módulo global para gerenciamento de configurações.</li>
@@ -425,7 +455,7 @@ O `prisma/schema.prisma` define o modelo de dados relacional e é a fonte da ver
 
 <ul style="list-style-type: disc; padding-left: 20px; color: #555; line-height: 1.6;">
 
-<li style="margin-bottom: 5px;"><strong>Enums:</strong> `UserRole` (CLIENTE, PROVEDOR, ADMIN, SISTEMA), `VerificationStatus` (REVISÃO_INICIAL_PENDENTE, APROVADO, REJEITADO, etc.), `BookingStatus` (PENDENTE, CONFIRMADO, CONCLUÍDO, CANCELADO, etc.), `TransactionType` (PAGAMENTO, SAQUE, COMISSÃO).</li>
+<li style="margin-bottom: 5px;"><strong>Enums:</strong> `UserRole` (CLIENTE, PROVEDOR, ADMIN, SISTEMA), `VerificationStatus` (REVISÃO_INICIAL_PENDENTE, APROVADO, REJEITADO, etc.), `BookingStatus` (PENDENTE, CONFIRMADO, CONCLUÍDO, CANCELADO, etc.), `TransactionType` (PAGAMENTO, SAQUE, COMISSÃO, REEMBOLSO), `DisputeReason`, `DisputeStatus`, `SubscriptionStatus`, `SubscriptionFrequency`, `CouponStatus`, `ClaimStatus`, `LoyaltyTransactionType`, `IncidentType`, `IncidentStatus`.</li>
 
 <li style="margin-bottom: 5px;"><strong>Modelos Principais (Tabelas):</strong>
 
@@ -443,7 +473,7 @@ O `prisma/schema.prisma` define o modelo de dados relacional e é a fonte da ver
 
 <li style="margin-bottom: 5px;">`ProviderService`: Um serviço específico oferecido por uma operadora, com `price` e `durationMinutes`.</li>
 
-<li style="margin-bottom: 5px;">`Booking`: Representa um agendamento de serviço, incluindo `totalPrice` e um `addressId` específico para o agendamento.</li>
+<li style="margin-bottom: 5px;">`Booking`: Representa um agendamento de serviço, incluindo `totalPrice` e um `addressId` específico para o agendamento, além de `couponId` e `couponUsage`.</li>
 
 <li style="margin-bottom: 5px;">`Chat` e `Message`: Para comunicação em tempo real entre usuários.</li>
 
@@ -453,9 +483,31 @@ O `prisma/schema.prisma` define o modelo de dados relacional e é a fonte da ver
 
 <li style="margin-bottom: 5px;">`Oferta`: Gerencia ofertas e promoções.</li>
 
-<li style="margin-bottom: 5px;">`Transaction`: Registra todas as transações financeiras, utilizando `Prisma.Decimal` para garantir a rentabilidade monetária.</li>
+<li style="margin-bottom: 5px;">`Transaction`: Registra todas as transações financeiras, utilizando `Prisma.Decimal` para garantir a rentabilidade monetária, e associada a `couponId`.</li>
 
 <li style="margin-bottom: 5px;">`Disponibilidade`: Define a disponibilidade de horários dos provedores.</li>
+
+<li style="margin-bottom: 5px;">`Coupon`: Define os cupons de desconto, incluindo `code`, `value`, `valueType`, `target`, `maxUses`, `validFrom`, `validUntil`.</li>
+
+<li style="margin-bottom: 5px;">`CouponUsage`: Rastreia cada uso individual de um cupom, associando-o a um `userId` e `bookingId`, e registrando o `appliedValue`.</li>
+
+<li style="margin-bottom: 5px;">`Subscription`: Gerencia assinaturas para agendamentos recorrentes, com `frequency`, `startDate`, `endDate`, `status`.</li>
+
+<li style="margin-bottom: 5px;">`GuaranteeClaim`: Registra solicitações de garantia/seguro de serviço, com `description`, `attachments`, `status`.</li>
+
+<li style="margin-bottom: 5px;">`Dispute`: Modela o processo de disputa de um agendamento, com `reason`, `description`, `status`, `messages`.</li>
+
+<li style="margin-bottom: 5px;">`Incident`: Detalhes de incidentes reportados, como `type`, `description`, `status`.</li>
+
+<li style="margin-bottom: 5px;">`PanicAlert`: Registra alertas de pânico com localização.</li>
+
+<li style="margin-bottom: 5px;">`Loyalty`: Armazena o saldo de pontos de fidelidade de um usuário.</li>
+
+<li style="margin-bottom: 5px;">`LoyaltyTransaction`: Histórico detalhado de como os pontos de fidelidade foram ganhos ou resgatados.</li>
+
+<li style="margin-bottom: 5px;">`Reward`: Define as recompensas que os usuários podem resgatar com seus pontos de fidelidade.</li>
+
+<li style="margin-bottom: 5px;">`PricingRule`: Permite a implementação de regras de precificação dinâmica, como tarifas de pico.</li>
 
 </ul>
 
@@ -884,7 +936,14 @@ O projeto LimpeJá é um monorepo, contendo pastas para o frontend (`LimpeJaApp/
 │ ├── reviewService.ts
 │ ├── searchService.ts
 │ ├── uploadService.ts
-│ └── verificationService.ts
+│ ├── verificationService.ts
+│ ├── couponService.ts # NOVO
+│ ├── subscriptionService.ts # NOVO
+│ ├── guaranteeService.ts # NOVO
+│ ├── disputeService.ts # NOVO
+│ ├── incidentService.ts # NOVO
+│ ├── loyaltyService.ts # NOVO
+│ └── rewardService.ts # NOVO
 ├── types/
 │ ├── auth.ts
 │ ├── booking.ts
@@ -905,7 +964,14 @@ O projeto LimpeJá é um monorepo, contendo pastas para o frontend (`LimpeJaApp/
 │ ├── types.ts
 │ ├── user.ts
 │ ├── users.ts
-│ └── verification.ts
+│ ├── verification.ts
+│ ├── coupon.ts # NOVO
+│ ├── subscription.ts # NOVO
+│ ├── guarantee.ts # NOVO
+│ ├── dispute.ts # NOVO
+│ ├── incident.ts # NOVO
+│ ├── loyalty.ts # NOVO
+│ └── reward.ts # NOVO
 ├── utils/
 │ ├── helpers.ts
 │ ├── permissions.ts
@@ -1029,17 +1095,71 @@ O projeto LimpeJá é um monorepo, contendo pastas para o frontend (`LimpeJaApp/
 │ │ ├── services.controller.ts
 │ │ ├── services.module.ts
 │ │ └── services.service.ts
-│ └── verification/
-│ ├── dto/
-│ │ ├── send-cpf.dto.ts
-│ │ ├── upload-document.dto.ts
-│ │ └── upload-selfie.dto.ts
-│ ├── entities/
-│ ├── criminal-background-check.service.ts
-│ ├── document-processing-service.ts
-│ ├── verification.controller.ts
-│ ├── verification.module.ts
-│ └── verification.service.ts
+│ ├── verification/
+│ │ ├── dto/
+│ │ │ ├── send-cpf.dto.ts
+│ │ │ ├── upload-document.dto.ts
+│ │ │ └── upload-selfie.dto.ts
+│ │ ├── entities/
+│ │ ├── criminal-background-check.service.ts
+│ │ ├── document-processing-service.ts
+│ │ ├── verification.controller.ts
+│ │ ├── verification.module.ts
+│ │ └── verification.service.ts
+│ ├── coupons/ # NOVO
+│ │ ├── dto/
+│ │ ├── entities/
+│ │ ├── coupons.controller.ts
+│ │ ├── coupons.module.ts
+│ │ └── coupons.service.ts
+│ ├── subscriptions/ # NOVO
+│ │ ├── dto/
+│ │ ├── entities/
+│ │ ├── subscriptions.controller.ts
+│ │ ├── subscriptions.module.ts
+│ │ └── subscriptions.service.ts
+│ ├── guarantee/ # NOVO
+│ │ ├── dto/
+│ │ ├── entities/
+│ │ ├── guarantee.controller.ts
+│ │ ├── guarantee.module.ts
+│ │ └── guarantee.service.ts
+│ ├── disputes/ # NOVO
+│ │ ├── dto/
+│ │ ├── entities/
+│ │ ├── disputes.controller.ts
+│ │ ├── disputes.module.ts
+│ │ └── disputes.service.ts
+│ ├── incidents/ # NOVO
+│ │ ├── dto/
+│ │ ├── entities/
+│ │ ├── incidents.controller.ts
+│ │ ├── incidents.module.ts
+│ │ └── incidents.service.ts
+│ ├── panic-alerts/ # NOVO
+│ │ ├── dto/
+│ │ ├── entities/
+│ │ ├── panic-alerts.controller.ts
+│ │ ├── panic-alerts.module.ts
+│ │ └── panic-alerts.service.ts
+│ ├── loyalty/ # NOVO
+│ │ ├── dto/
+│ │ ├── entities/
+│ │ ├── loyalty.controller.ts
+│ │ ├── loyalty.module.ts
+│ │ └── loyalty.service.ts
+│ ├── rewards/ # NOVO
+│ │ ├── dto/
+│ │ ├── entities/
+│ │ ├── rewards.controller.ts
+│ │ ├── rewards.module.ts
+│ │ └── rewards.service.ts
+│ ├── pricing-rules/ # NOVO
+│ │ ├── dto/
+│ │ ├── entities/
+│ │ ├── pricing-rules.controller.ts
+│ │ ├── pricing-rules.module.ts
+│ │ └── pricing-rules.service.ts
 ├── shared/
 │ ├── enums/
 │ ├── interfaces/
@@ -1071,19 +1191,19 @@ O projeto LimpeJá é um monorepo, contendo pastas para o frontend (`LimpeJaApp/
 </div>
 
 <div style="background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); margin-bottom: 40px;">
-<h2 id="getting-started" style="color: #34495e; font-size: 2em; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 20px;">🚀 Getting Started</h2>
+<h2 id="getting-started" style="color: #34495e; font-size: 2em; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 20px;">🚀 Começando (Configuração para Desenvolvimento Local)</h2>
 <p style="color: #555; line-height: 1.6; margin-bottom: 20px;">
-To set up and run the project locally, follow the steps below:
+Para configurar e rodar o projeto em seu ambiente de desenvolvimento local, siga os passos abaixo. Esta configuração é otimizada para exploração do código e desenvolvimento, não para implantação em produção.
 </p>
 <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); margin-bottom: 20px;">
-<h3 id="prerequisites" style="color: #2c3e50; font-size: 1.5em; margin-bottom: 15px;">Prerequisites</h3>
-<p style="color: #555; line-height: 1.6;">Ensure you have the following tools installed:</p>
+<h3 id="prerequisites" style="color: #2c3e50; font-size: 1.5em; margin-bottom: 15px;">Pré-requisitos</h3>
+<p style="color: #555; line-height: 1.6;">Certifique-se de ter as seguintes ferramentas instaladas:</p>
 <ul style="list-style-type: disc; padding-left: 20px; color: #555; line-height: 1.6;">
-<li style="margin-bottom: 5px;"><a href="https://nodejs.org/en/download/" style="color: #3498db; text-decoration: none;">Node.js</a> (LTS version recommended)</li>
-<li style="margin-bottom: 5px;"><a href="https://www.npmjs.com/get-npm" style="color: #3498db; text-decoration: none;">npm</a> or <a href="https://yarnpkg.com/getting-started/install" style="color: #3498db; text-decoration: none;">Yarn</a></li>
+<li style="margin-bottom: 5px;"><a href="https://nodejs.org/en/download/" style="color: #3498db; text-decoration: none;">Node.js</a> (versão LTS recomendada)</li>
+<li style="margin-bottom: 5px;"><a href="https://www.npmjs.com/get-npm" style="color: #3498db; text-decoration: none;">npm</a> ou <a href="https://yarnpkg.com/getting-started/install" style="color: #3498db; text-decoration: none;">Yarn</a></li>
 <li style="margin-bottom: 5px;"><a href="https://git-scm.com/downloads" style="color: #3498db; text-decoration: none;">Git</a></li>
-<li style="margin-bottom: 5px;"><a href="https://docs.docker.com/get-docker/" style="color: #3498db; text-decoration: none;">Docker</a> (to run PostgreSQL locally)</li>
-<li style="margin-bottom: 5px;"><a href="https://docs.expo.dev/workflow/expo-cli/" style="color: #3498db; text-decoration: none;">Expo CLI</a> (install with `npm install -g expo-cli`)</li>
+<li style="margin-bottom: 5px;"><a href="https://docs.docker.com/get-docker/" style="color: #3498db; text-decoration: none;">Docker</a> (para rodar PostgreSQL localmente em desenvolvimento)</li>
+<li style="margin-bottom: 5px;"><a href="https://docs.expo.dev/workflow/expo-cli/" style="color: #3498db; text-decoration: none;">Expo CLI</a> (instale com `npm install -g expo-cli`)</li>
 </ul>
 </div>
 
@@ -1096,7 +1216,6 @@ To set up and run the project locally, follow the steps below:
 <li style="margin-bottom: 10px;"><strong>Clone o repositório:</strong>
 
 <pre style="background-color: #ecf0f1; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 5px; color: #34495e;"><code>git clone https://github.com/techleadevelopers/limpe-ja-app.git
-
 cd limpe-ja-app</code></pre>
 
 </li>
@@ -1104,54 +1223,45 @@ cd limpe-ja-app</code></pre>
 <li style="margin-bottom: 10px;"><strong>Instale as dependências do Frontend:</strong>
 
 <pre style="background-color: #ecf0f1; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 5px; color: #34495e;"><code>cd LimpeJaApp
-
 npm install # ou yarn install
-
-cd ..</código></pre>
+cd ..</code></pre>
 
 </li>
 
-<li style="margin-bottom: 10px;"><strong>Instalar como dependências do Backend:</strong>
+<li style="margin-bottom: 10px;"><strong>Instale as dependências do Backend:</strong>
 
 <pre style="background-color: #ecf0f1; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 5px; color: #34495e;"><code>cd backend-LimpeJá
-
 npm install # ou yarn install
-
-cd ..</código></pre>
+cd ..</code></pre>
 
 </li>
 
-<li style="margin-bottom: 10px;"><strong>Configurar o banco de dados (PostgreSQL com Docker):</strong>
-
+<li style="margin-bottom: 10px;"><strong>Configurar o banco de dados para desenvolvimento (PostgreSQL com Docker):</strong>
+    <p style="margin-top: 5px; color: #555;">Esta configuração é para um ambiente de desenvolvimento local. As credenciais de produção e configurações sensíveis são gerenciadas internamente.</p>
 <ul style="list-style-type: disco; preenchimento esquerdo: 20px; margem superior: 5px;">
 
-<li style="margin-bottom: 5px;">Crie um arquivo `.env` na raiz da pasta `backend-LimpeJá` com as variáveis ​​de ambiente do banco de dados e do JWT. Exemplo:
+<li style="margin-bottom: 5px;">Crie um arquivo `.env` na raiz da pasta `backend-LimpeJá` com as variáveis ​​de ambiente necessárias para o desenvolvimento. Exemplo:
 
-<pre style="background-color: #ecf0f1; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 5px; color: #34495e;"><code>DATABASE_URL="postgresql://user:password@localhost:5432/LimpeJá_db"
-
-JWT_SECRET="sua_chave_secreta_jwt_aqui"
-
+<pre style="background-color: #ecf0f1; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 5px; color: #34495e;"><code>DATABASE_URL="postgresql://user:password@localhost:5432/limpeja_dev_db"
+JWT_SECRET="seu_segredo_jwt_para_desenvolvimento"
 JWT_EXPIRATION_TIME="1h"
-
-PORTA=3000</code></pre>
-
+PORT=3000
+# Outras variáveis de ambiente para serviços externos (se houver)</code></pre>
+<p style="margin-top: 5px; color: #e74c3c; font-weight: bold;">⚠️ Importante: Nunca adicione seu arquivo `.env` ao controle de versão (Git). Ele já está incluído no `.gitignore` para sua segurança.</p>
 </li>
 
-<li style="margin-bottom: 5px;">Suba o contêiner Docker do PostgreSQL (assumindo que você tem um `docker-compose.yml` configurado para o postgres na raiz do projeto ou em `backend-LimpeJá/`):
+<li style="margin-bottom: 5px;">Suba o contêiner Docker do PostgreSQL para desenvolvimento:
 
 <pre style="background-color: #ecf0f1; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 5px; color: #34495e;"><code>docker-compose up -d postgres # Ou o comando específico para seu docker-compose</code></pre>
 
 </li>
 
-<li style="margin-bottom: 5px;">Execute as migrações do Prisma para criar o esquema do banco de dados e gerar o Prisma Client:
+<li style="margin-bottom: 5px;">Execute as migrações do Prisma para criar o esquema do banco de dados de desenvolvimento e gerar o Prisma Client:
 
 <pre style="background-color: #ecf0f1; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 5px; color: #34495e;"><code>cd backend-LimpeJá
-
-npx prisma migrar dev --name init
-
-npx prisma gerar
-
-cd ..</código></pre>
+npx prisma migrate dev --name init # Use um nome descritivo para sua migração inicial
+npx prisma generate
+cd ..</code></pre>
 
 </li>
 
@@ -1165,31 +1275,29 @@ cd ..</código></pre>
 
 <div style="cor de fundo: #f8f9fa; preenchimento: 20px; raio da borda: 8px; sombra da caixa: 0 2px 8px rgba(0, 0, 0, 0,08); margem inferior: 20px;">
 
-<h3 id="rodando-localmente" style="color: #2c3e50; font-size: 1,5em; margin-bottom: 15px;">Rodando Localmente</h3>
+<h3 id="rodando-localmente" style="color: #2c3e50; font-size: 1,5em; margin-bottom: 15px;">Rodando Localmente (Ambiente de Desenvolvimento)</h3>
 
 <ol style="tipo-de-estilo-de-lista: decimal; preenchimento-esquerdo: 20px; cor: #555; altura-da-linha: 1,6;">
 
-<li style="margin-bottom: 10px;"><strong>Início do Backend:</strong>
+<li style="margin-bottom: 10px;"><strong>Inicie o Backend:</strong>
 
 <pre style="background-color: #ecf0f1; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 5px; color: #34495e;"><code>cd backend-LimpeJá
-
 npm run start:dev # ou yarn start:dev</code></pre>
 
-<p style="margin-top: 5px; color: #555;">O backend estará disponível em `http://localhost:3000` (ou na porta configurada em `.env`). A documentação do Swagger estará em `http://localhost:3000/api`.</p>
+<p style="margin-top: 5px; color: #555;">O backend estará disponível em `http://localhost:3000` (ou na porta configurada em `.env`). A documentação interativa do Swagger estará em `http://localhost:3000/api`.</p>
 
 </li>
 
-<li style="margin-bottom: 10px;"><strong>Início do Frontend:</strong>
+<li style="margin-bottom: 10px;"><strong>Inicie o Frontend:</strong>
 
 <p style="margin-top: 5px; color: #555;">Abra um novo terminal.</p>
 
 <pre style="background-color: #ecf0f1; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 5px; color: #34495e;"><code>cd LimpeJaApp
-
-início da exposição npx</code></pre>
+npx expo start</code></pre>
 
 <p estilo="margem superior: 5px; cor: #555;">
 
-Isso abrirá o Metro Bundler. Você pode ler o código QR com o aplicativo <a href="https://expo.dev/go" style="color: #3498db; text-decoration: none;">Expo Go</a> no seu celular, ou usar um emulador/simulador <a href="https://docs.expo.dev/workflow/android-studio-emulator/" style="color: #3498db; text-decoration: none;">Android Emulador de estúdio</a> / <a href="https://docs.expo.dev/workflow/ios-simulator/" style="color: #3498db; text-decoration: none;">Simulador iOS</a>.
+Isso abrirá o Metro Bundler. Você pode escanear o código QR com o aplicativo <a href="https://expo.dev/go" style="color: #3498db; text-decoration: none;">Expo Go</a> no seu celular, ou usar um emulador/simulador <a href="https://docs.expo.dev/workflow/android-studio-emulator/" style="color: #3498db; text-decoration: none;">Android Studio Emulator</a> / <a href="https://docs.expo.dev/workflow/ios-simulator/" style="color: #3498db; text-decoration: none;">iOS Simulator</a>.
 
 </p>
 
@@ -1213,7 +1321,7 @@ Isso abrirá o Metro Bundler. Você pode ler o código QR com o aplicativo <a hr
 
 <li style="margin-bottom: 10px;">Na pasta `LimpeJaApp`, execute:
 
-<pre style="background-color: #ecf0f1; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 5px; color: #34495e;"><code>construção eas --plataforma android --desenvolvimento de perfil</code></pre>
+<pre style="background-color: #ecf0f1; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 5px; color: #34495e;"><code>eas build --platform android --profile development</code></pre>
 
 <p style="margin-top: 5px; color: #555;">Este comando iniciará um processo de build na nuvem da Expo, utilizando o perfil `development` configurado no `eas.json` para gerar um APK de teste. Ao final, você receberá um link para baixar o APK diretamente.</p>
 
@@ -1337,6 +1445,14 @@ A principal fonte de receita do LimpeJá virá de uma <strong style="color: #2ec
 
 </li>
 
+<li style="margin-bottom: 15px;"><strong>Estratégia de Cupons (Win-Win-Win):</strong>
+    <ul style="list-style-type: disco; preenchimento esquerdo: 20px; margem superior: 5px;">
+        <li style="margin-bottom: 5px;">O LimpeJá absorve o custo do cupom de desconto para o prestador. Isso significa que, mesmo com o cliente usando um cupom, o prestador recebe o valor integral do serviço (menos a comissão padrão do LimpeJá).</li>
+        <li style="margin-bottom: 5px;">Para o LimpeJá, o custo do cupom é tratado como Custo de Aquisição de Cliente (CAC), um investimento estratégico para aquisição e retenção de usuários, com um retorno de longo prazo (LTV) significativamente maior.</li>
+        <li style="margin-bottom: 5px;">Essa abordagem garante que o ganho do prestador não seja afetado pelo cupom, incentivando o volume de agendamentos e mantendo a proposta de valor de "sem taxas adicionais" para o profissional.</li>
+    </ul>
+</li>
+
 </ol>
 
 <h3 style="color: #2c3e50; font-size: 1.5em; margin-bottom: 15px;">Transparência e Valor:</h3>
@@ -1419,6 +1535,32 @@ O projeto LimpeJá está em um estágio avançado de desenvolvimento, com a maio
 
 </li>
 
+<li style="margin-bottom: 15px;"><strong>Funcionalidades Estratégicas e de Confiança:</strong>
+    <ul style="list-style-type: disco; preenchimento esquerdo: 20px; margem superior: 5px;">
+        <li style="margin-bottom: 5px;"><strong>Implementação Completa do Módulo de Seguro de Limpeza:</strong> Finalizar o fluxo de submissão, investigação e resolução de sinistros, com equipe de suporte dedicada.</li>
+        <li style="margin-bottom: 5px;"><strong>Expansão do Plano Premium para Clientes:</strong> Desenvolver e promover os benefícios de cupons exclusivos, seguro gratuito, prioridade e suporte premium.</li>
+        <li style="margin-bottom: 5px;"><strong>Construção de Comunidade e Experiência Hiper-Localizada:</strong>
+            <ul style="list-style-type: círculo; preenchimento esquerdo: 20px; margem superior: 5px;">
+                <li style="margin-bottom: 5px;">Aprimorar o Programa de Recompensas e Reconhecimento para Profissionais (Níveis, Selos de Confiança, Badges, Ranking Local).</li>
+                <li style="margin-bottom: 5px;">Organizar Eventos e Encontros Locais (workshops, palestras) para fortalecer a comunidade.</li>
+                <li style="margin-bottom: 5px;">Desenvolver Conteúdo Educacional (blog/vídeos) para clientes e profissionais.</li>
+            </ul>
+        </li>
+        <li style="margin-bottom: 5px;"><strong>Excelência no Atendimento e Gestão de Incidentes:</strong>
+            <ul style="list-style-type: círculo; preenchimento esquerdo: 20px; margem superior: 5px;">
+                <li style="margin-bottom: 5px;">Implementar Sistema de Disputa e Mediação no aplicativo, com fluxo claro para reportar e acompanhar.</li>
+                <li style="margin-bottom: 5px;">Garantir Comunicação Transparente com notificações detalhadas sobre status de serviço, pagamento e incidentes.</li>
+            </ul>
+        </li>
+        <li style="margin-bottom: 5px;"><strong>Fortalecimento da Confiança em Ambas as Partes:</strong>
+            <ul style="list-style-type: círculo; preenchimento esquerdo: 20px; margem superior: 5px;">
+                <li style="margin-bottom: 5px;">Desenvolver Sistema de Avaliação Mútua Robusto (clientes avaliam provedores, provedores avaliam clientes).</li>
+                <li style="margin-bottom: 5px;">Publicar Relatórios de Segurança e Transparência (verificações, incidentes resolvidos).</li>
+            </ul>
+        </li>
+    </ul>
+</li>
+
 <li style="margin-bottom: 15px;"><strong>Integrações Futuras:</strong>
 
 <ul style="list-style-type: disco; preenchimento esquerdo: 20px; margem superior: 5px;">
@@ -1463,7 +1605,7 @@ O projeto LimpeJá está em um estágio avançado de desenvolvimento, com a maio
 
 </div>
 
-<div style="cor de fundo: #ffffff; preenchimento: 30px; raio da borda: 10px; sombra da caixa: 0 2px 10px rgba(0, 0, 0, 0,05); margem inferior: 40px;">
+<div style="cor de fundo: #f8f9fa; preenchimento: 30px; raio da borda: 10px; sombra da caixa: 0 2px 10px rgba(0, 0, 0, 0,05); margem inferior: 40px;">
 
 <h2 id="-recursos-e-suporte" style="color: #34495e; font-size: 2em; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 20px;">📚 Recursos e Suporte</h2>
 
@@ -1498,15 +1640,3 @@ Para informações fornecidas e suporte sobre as tecnologias e o ecossistema do 
 </ul>
 
 </div>
-
-Pesquisas relacionadas:
-
-Melhores práticas de arquitetura do React Native Expo
-Implementação de chat Socket.IO React Native NestJS
-Processo de construção da Expo EAS
-Recursos do marketplace do aplicativo LimpeJá
-Melhores práticas de modelagem de dados Prisma ORM
-Melhores práticas de arquitetura de backend do NestJS
-roteiro para desenvolvimento de aplicativos de marketplace
-estratégia de monetização para aplicativo de marketplace de serviços
-Fluxo de autenticação JWT React Native NestJS

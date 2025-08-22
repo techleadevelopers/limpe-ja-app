@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
   container: {
     paddingVertical: 8,
     width: '95%',
-    paddingHorizontal: 65,
+    paddingHorizontal: 55,
     marginTop: 0, // Espaçamento superior para evitar sobreposição com a barra de status
     marginBottom: 30, // Espaçamento inferior para evitar sobreposição com o conteúdo abaixo
     flexDirection: 'row',
@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 1, // Espaçamento entre os meses
   },
   currentMonthGradient: {
-    paddingHorizontal: 15, // Padding horizontal para o texto do mês
+    paddingHorizontal: 5, // Padding horizontal para o texto do mês
     paddingVertical: 10, // Padding vertical para o texto do mês
     borderRadius: 18, // Bordas arredondadas para o destaque do mês
     // Sombra para o destaque do mês
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   currentMonthText: {
-    fontSize: 13,
+    fontSize: 10,
     fontWeight: 'bold',
     color: '#FFFFFF', // Texto branco para contraste
     textAlign: 'center',

@@ -1,6 +1,6 @@
 // LimpeJaApp/app/(client)/ranking/index.tsx (Exemplo de tela)
-import React from 'react';
-import { View, StyleSheet, Text, FlatList } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, StyleSheet, Text, FlatList, Animated, Easing } from 'react-native';
 import RankingCard from '../../../../components/ranking/RankingCard'; // Ajuste o caminho
 
 interface UserRank {
@@ -22,17 +22,39 @@ const dummyRankingData: UserRank[] = [
 export default function RankingScreen() {
   const currentUser = 'u4'; // ID do usuário logado para destaque
 
+  // Animação para o título do cabeçalho
+  const headerAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(headerAnim, {
+      toValue: 1,
+      duration: 500,
+      easing: Easing.out(Easing.ease),
+      useNativeDriver: true,
+    }).start();
+  }, [headerAnim]);
+
   const handleCardPress = (user: UserRank) => {
     alert(`Detalhes de ${user.name}: Rank ${user.rank}, Score ${user.score}`);
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.headerTitle}>Ranking Global</Text>
+      <Animated.Text
+        style={[
+          styles.headerTitle,
+          {
+            opacity: headerAnim,
+            transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }],
+          },
+        ]}
+      >
+        Ranking Global
+      </Animated.Text>
       <FlatList
         data={dummyRankingData}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
+        renderItem={({ item, index }) => (
           <RankingCard
             rank={item.rank}
             name={item.name}
@@ -40,6 +62,7 @@ export default function RankingScreen() {
             avatarUrl={item.avatarUrl}
             isCurrentUser={item.id === currentUser}
             onPress={() => handleCardPress(item)}
+            delay={index * 100} // Atraso escalonado para cada item
           />
         )}
         contentContainerStyle={styles.listContainer}

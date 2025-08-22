@@ -68,7 +68,7 @@ export class VerificationService {
     providerId: string,
     file: File,
     type: 'FRONT' | 'BACK',
-  ): Promise<void> {
+  ): Promise<string> { // Alteração de Promise<void> para Promise<string>
     this.logger.log(`[VerificationService] uploadDocumentPhoto: Iniciando para providerId: ${providerId}, tipo: ${type}`);
     const provider = await this.providersService.findOne(providerId);
     if (!provider) {
@@ -97,6 +97,8 @@ export class VerificationService {
 
     // Após o upload, checar e atualizar o status para revisão manual.
     await this.updateStatusForManualReview(providerId);
+    
+    return fileUrl; // Adicionando o retorno da URL aqui
   }
 
   async uploadSelfieWithDocument(providerId: string, file: File): Promise<string> {
@@ -236,5 +238,22 @@ export class VerificationService {
       },
     });
     this.logger.log(`[VerificationService] rejectProvider: Provedor ${providerId} rejeitado.`);
+  }
+
+  // NOVO MÉTODO: Avança o status de verificação.
+  async advanceVerificationStatus(providerId: string): Promise<void> {
+    this.logger.log(`[VerificationService] advanceVerificationStatus: Iniciando avanço de status para o provedor ${providerId}.`);
+    const provider = await this.providersService.findOne(providerId);
+    if (!provider) {
+      this.logger.warn(`[VerificationService] advanceVerificationStatus: Provedor ${providerId} não encontrado.`);
+      throw new NotFoundException('Provedor não encontrado.');
+    }
+
+    // Altere o status para PENDING_DOCUMENTS_UPLOAD, permitindo o próximo passo no fluxo.
+    await this.prisma.provider.update({
+      where: { id: providerId },
+      data: { verificationStatus: VerificationStatus.PENDING_DOCUMENTS_UPLOAD },
+    });
+    this.logger.log(`[VerificationService] Status do provedor ${providerId} atualizado para ${VerificationStatus.PENDING_DOCUMENTS_UPLOAD}.`);
   }
 }

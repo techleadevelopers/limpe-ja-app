@@ -1,148 +1,104 @@
-// LimpeJaApp/app/services/clientService.ts
-import axios, { AxiosResponse } from 'axios'; // Importa axios e AxiosResponse para tratamento de erros
+// LimpeJaApp/app/services/chatService.ts
 import api from './api'; // Importa a instância centralizada do Axios
 
-// =========================================================================
-// IMPORTAÇÕES DE INTERFACES DE TIPAGEM CENTRALIZADAS
-// =========================================================================
-import { UpdateClientProfileDto } from '../types/backend/clients'; // Certifique-se de que este DTO está atualizado
-import { Offer } from '../types/backend/offers';
+// Importa as tipagens necessárias do seu diretório de tipos de backend
 import {
-    ProviderDisplayInfo, // Usado para tipar provedores em listas - DEVE INCLUIR 'badges', 'user.isVerified', 'address.latitude/longitude'
-    ProviderSearchQuery, // Importado para tipar a query de busca - DEVE INCLUIR 'latitude', 'longitude', 'radius'
-} from '../types/backend/providers';
-import { Service } from '../types/backend/services';
-import { UserProfile } from '../types/backend/users'; // DEVE INCLUIR 'isVerified', 'noShowCount', 'cancellationCount'
-
-// =========================================================================
-// FUNÇÕES DE SERVIÇO DO CLIENTE - AJUSTADAS PARA USAR A INSTÂNCIA 'api' CENTRALIZADA
-// =========================================================================
+  ChatDetails,
+  GetMessagesQuery,
+  Message,
+  SendMessageDto,
+  // ChatSummary, // Se ChatSummary for usado para a lista de conversas, importe aqui
+} from '../types/backend/chat'; // Ajuste o caminho conforme a sua estrutura de pastas
 
 /**
- * @function getServiceCategories
- * Obtém a lista de categorias de serviço disponíveis.
- * Corresponde a GET /services.
- * @returns Promessa com um array de objetos Service.
+ * Interface para o item de conversa no frontend.
+ * Conforme a documentação, esta interface é para uso interno do frontend.
+ * Ela representa um resumo de uma conversa na lista de chats do usuário.
  */
-export async function getServiceCategories(): Promise<Service[]> {
-  try {
-    // A requisição é feita usando a instância 'api', que já tem a baseURL configurada
-    const response: AxiosResponse<Service[]> = await api.get<Service[]>('/services');
-    return response.data;
-  } catch (error: any) {
-    console.error('Erro ao buscar categorias de serviço:', error.response?.data || error.message);
-    if (axios.isAxiosError(error) && error.response) {
-      throw new Error(error.response.data.message || 'Erro ao buscar categorias de serviço.');
-    }
-    throw new Error('Erro de rede ou servidor ao buscar categorias de serviço.');
-  }
+export interface ConversationItem {
+  id: string; // ID do chat
+  otherUserId: string; // ID do outro participante
+  otherUserName: string; // Nome do outro participante
+  otherUserAvatarUrl?: string; // URL do avatar do outro participante
+  lastMessage: string; // Conteúdo da última mensagem (simplificado para string)
+  lastMessageTimestamp: string; // Data/hora da última mensagem
+  unreadCount: number; // Número de mensagens não lidas nesta conversa
+  isPinned?: boolean; // Se a conversa está fixada
+  isTyping?: boolean; // Se o outro participante está digitando
+  messageType?: 'text' | 'voice' | 'sticker' | 'file'; // Tipo da última mensagem
+  // Adicione outros campos relevantes que o backend possa retornar para uma conversa,
+  // como o ID do booking associado, se houver.
+  bookingId?: string;
 }
 
 /**
- * @function searchProviders
- * Realiza uma busca geral por provedores.
- * Corresponde a GET /providers (com query params).
- * NOTA: Esta função pode ter sido movida para providerService.ts, mas se você tiver um endpoint /search
- * que retorna provedores, esta função pode ser usada aqui.
- * @param query Objeto com os parâmetros de busca. Deve incluir latitude, longitude e radius se aplicável.
- * @returns Promessa com um array de objetos ProviderDisplayInfo.
- */
-export async function searchProviders(query: ProviderSearchQuery): Promise<ProviderDisplayInfo[]> {
-  try {
-    // Converte o objeto de query para uma string de query parameters
-    const params = new URLSearchParams(query as any).toString(); 
-    // A requisição é feita usando a instância 'api', que já tem a baseURL configurada
-    const response: AxiosResponse<ProviderDisplayInfo[]> = await api.get<ProviderDisplayInfo[]>(`/providers?${params}`); // Assumindo que /providers é o endpoint de busca geral
-    return response.data;
-  } catch (error: any) {
-    console.error('Erro ao buscar provedores:', error.response?.data || error.message);
-    if (axios.isAxiosError(error) && error.response) {
-      throw new Error(error.response.data.message || 'Erro ao buscar provedores.');
-    }
-    throw new Error('Erro de rede ou servidor ao buscar provedores.');
-  }
-}
-
-/**
- * @function getUserProfile
- * Obtém o perfil do usuário logado (cliente ou provedor).
- * Corresponde a GET /users/me.
- * @returns Promessa com o objeto UserProfile.
- */
-export async function getUserProfile(): Promise<UserProfile> {
-  try {
-    // A requisição é feita usando a instância 'api', que já tem a baseURL configurada
-    const response: AxiosResponse<UserProfile> = await api.get<UserProfile>('/users/me');
-    return response.data;
-  } catch (error: any) {
-    console.error('Erro ao buscar perfil do usuário:', error.response?.data || error.message);
-    if (axios.isAxiosError(error) && error.response) {
-      throw new Error(error.response.data.message || 'Erro ao buscar perfil do usuário.');
-    }
-    throw new Error('Erro de rede ou servidor ao buscar perfil do usuário.');
-  }
-}
-
-/**
- * @function getOffers
- * Obtém a lista de ofertas disponíveis.
- * Corresponde a GET /offers.
- * @returns Promessa com um array de objetos Offer.
- */
-export async function getOffers(): Promise<Offer[]> {
-  try {
-    // A requisição é feita usando a instância 'api', que já tem a baseURL configurada
-    const response: AxiosResponse<Offer[]> = await api.get<Offer[]>('/offers');
-    return response.data;
-  } catch (error: any) {
-    console.error('Erro ao buscar ofertas:', error.response?.data || error.message);
-    if (axios.isAxiosError(error) && error.response) {
-      throw new Error(error.response.data.message || 'Erro ao buscar ofertas.');
-    }
-    throw new Error('Erro de rede ou servidor ao buscar ofertas.');
-  }
-}
-
-/**
- * @function getProviderDetails
- * Obtém os detalhes de um provedor específico por ID.
- * Corresponde a GET /providers/:id.
- * NOTA: Esta função também existe em 'providerService.ts'. Considere importar de lá
- * ou manter uma única fonte de verdade para evitar duplicação.
+ * Encontra um chat existente entre um provedor e um cliente ou cria um novo.
+ * Corresponde a GET /chat/find-or-create/provider/:providerId/client/:clientId.
+ *
  * @param providerId O ID do provedor.
- * @returns Promessa com o objeto ProviderDisplayInfo.
+ * @param clientId O ID do cliente.
+ * @returns Uma promessa que resolve para os detalhes do chat.
  */
-export async function getProviderDetails(providerId: string): Promise<ProviderDisplayInfo> {
+export async function findOrCreateChat(providerId: string, clientId: string): Promise<ChatDetails> {
   try {
-    // A requisição é feita usando a instância 'api', que já tem a baseURL configurada
-    const response: AxiosResponse<ProviderDisplayInfo> = await api.get<ProviderDisplayInfo>(`/providers/${providerId}`);
+    const response = await api.get<ChatDetails>(`/chat/find-or-create/provider/${providerId}/client/${clientId}`);
     return response.data;
   } catch (error: any) {
-    console.error(`Erro ao buscar detalhes do provedor ${providerId}:`, error.response?.data || error.message);
-    if (axios.isAxiosError(error) && error.response) {
-      throw new Error(error.response.data.message || `Erro ao buscar detalhes do provedor ${providerId}.`);
-    }
-    throw new Error(`Erro de rede ou servidor ao buscar detalhes do provedor ${providerId}.`);
+    console.error('Erro ao encontrar ou criar chat:', error.response?.data || error.message);
+    throw new Error(error.response?.data?.message || 'Não foi possível encontrar ou criar o chat.');
   }
 }
 
 /**
- * @function updateClientProfile
- * Atualiza o perfil do cliente logado.
- * Corresponde a PATCH /clients/me.
- * @param data DTO com os dados de atualização do perfil.
- * @returns Promessa com o objeto UserProfile atualizado.
+ * Obtém o histórico de mensagens para um chat específico.
+ * Corresponde a GET /chat/:chatId/messages.
+ *
+ * @param chatId O ID do chat.
+ * @param query Opções de paginação (limite e offset).
+ * @returns Uma promessa que resolve para um array de mensagens.
  */
-export async function updateClientProfile(data: UpdateClientProfileDto): Promise<UserProfile> {
+export async function getChatMessages(chatId: string, query?: GetMessagesQuery): Promise<Message[]> {
   try {
-    // A requisição é feita usando a instância 'api', que já tem a baseURL configurada
-    const response: AxiosResponse<UserProfile> = await api.patch<UserProfile>('/clients/me', data);
+    const response = await api.get<Message[]>(`/chat/${chatId}/messages`, { params: query });
     return response.data;
   } catch (error: any) {
-    console.error('Erro ao atualizar perfil do cliente:', error.response?.data || error.message);
-    if (axios.isAxiosError(error) && error.response) {
-      throw new Error(error.response.data.message || 'Erro ao atualizar perfil do cliente.');
-    }
-    throw new Error('Erro de rede ou servidor ao atualizar perfil do cliente.');
+    console.error('Erro ao buscar mensagens do chat:', error.response?.data || error.message);
+    throw new Error(error.response?.data?.message || 'Não foi possível carregar as mensagens do chat.');
+  }
+}
+
+/**
+ * Envia uma nova mensagem para um chat.
+ * Corresponde a POST /chat/:chatId/messages.
+ *
+ * @param messageData Os dados da mensagem a ser enviada, incluindo o chatId.
+ * @returns Uma promessa que resolve para a mensagem enviada.
+ */
+export async function sendMessage(messageData: SendMessageDto): Promise<Message> {
+  try {
+    // O backend espera o chatId na URL, então usamos messageData.chatId
+    const response = await api.post<Message>(`/chat/${messageData.chatId}/messages`, messageData);
+    return response.data;
+  } catch (error: any) {
+    console.error('Erro ao enviar mensagem:', error.response?.data || error.message);
+    throw new Error(error.response?.data?.message || 'Não foi possível enviar a mensagem.');
+  }
+}
+
+/**
+ * Busca a lista de conversas do usuário logado.
+ * Corresponde a GET /chat/me/conversations.
+ *
+ * @returns Uma promessa que resolve para um array de ConversationItem.
+ */
+export async function getChatListForUser(): Promise<ConversationItem[]> {
+  try {
+    // A documentação indica que este endpoint é para o usuário logado,
+    // então não é necessário passar o userId explicitamente na requisição.
+    const response = await api.get<ConversationItem[]>('/chat/me/conversations');
+    return response.data;
+  } catch (error: any) {
+    console.error('Erro ao buscar lista de conversas:', error.response?.data || error.message);
+    throw new Error(error.response?.data?.message || 'Não foi possível carregar a lista de conversas.');
   }
 }

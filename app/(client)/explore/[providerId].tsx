@@ -11,13 +11,15 @@ import {
     ScrollView,
     Text,
     TouchableOpacity,
-    View
+    View,
+    Easing // Importado Easing
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Importações dos componentes necessários
 import BookServiceButton from '../../../components/client/explore/provider/BookServiceButton';
-import InfoChip from '../../../components/client/explore/provider/InfoChip'; // <-- O componente InfoChip deve ser modificado para aceitar o prop 'colors'
+// O componente InfoChip deve ser modificado para aceitar o prop 'animatedStyle'
+import InfoChip from '../../../components/client/explore/provider/InfoChip';
 import ReviewCard from '../../../components/client/explore/provider/ReviewCard';
 import StarRating from '../../../components/client/explore/provider/StarRating';
 
@@ -41,6 +43,7 @@ export default function ProviderDetailsScreen() {
     const { user, isAuthenticated } = useAuth();
     const insets = useSafeAreaInsets();
 
+    // --- TODAS AS DECLARAÇÕES DE HOOKS DEVEM ESTAR AQUI NO TOPO ---
     const [provider, setProvider] = useState<ProviderDisplayInfo | null | undefined>(undefined);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -49,6 +52,17 @@ export default function ProviderDetailsScreen() {
 
     const mainContentAnim = useRef(new Animated.Value(0)).current;
     const bookNowButtonAnim = useRef(new Animated.Value(0)).current;
+    const imageFadeAnim = useRef(new Animated.Value(0)).current; // Animação para a imagem
+    const imageScaleAnim = useRef(new Animated.Value(0.8)).current; // Animação para a escala da imagem
+    const infoChipAnim = useRef(new Animated.Value(0)).current; // Animação para os InfoChips
+    const addReviewButtonPulseAnim = useRef(new Animated.Value(1)).current; // Animação de pulso para o botão de adicionar avaliação
+
+    // Animated values for action buttons - MOVIDOS PARA O NÍVEL SUPERIOR
+    const callButtonAnim = useRef(new Animated.Value(1)).current;
+    const chatButtonAnim = useRef(new Animated.Value(1)).current;
+    const mapButtonAnim = useRef(new Animated.Value(1)).current;
+    const shareButtonAnim = useRef(new Animated.Value(1)).current;
+    // --- FIM DAS DECLARAÇÕES DE HOOKS ---
 
     useEffect(() => {
         console.log("[ProviderDetailsScreen] useEffect - providerId recebido:", providerId);
@@ -57,6 +71,8 @@ export default function ProviderDetailsScreen() {
             setIsLoading(true); setError(null); setProvider(undefined);
             setCanInitiateChat(false); setActiveBookingId(undefined);
             mainContentAnim.setValue(0); bookNowButtonAnim.setValue(0);
+            imageFadeAnim.setValue(0); imageScaleAnim.setValue(0.8); // Resetar animações da imagem
+            infoChipAnim.setValue(0); // Resetar animações dos chips
 
             getProviderDetails(providerId)
                 .then(async (data) => {
@@ -76,10 +92,50 @@ export default function ProviderDetailsScreen() {
                             console.log(`[ProviderDetailsScreen] Chat pode ser iniciado: ${chatBookingStatus.canChat}, Booking ID: ${chatBookingStatus.bookingId}`);
                         }
 
-                        Animated.stagger(150, [
-                            Animated.spring(mainContentAnim, { toValue: 1, damping: 10, stiffness: 100, useNativeDriver: true }),
-                            Animated.spring(bookNowButtonAnim, { toValue: 1, damping: 10, stiffness: 100, useNativeDriver: true })
+                        // Animações de entrada
+                        Animated.parallel([
+                            Animated.timing(imageFadeAnim, {
+                                toValue: 1,
+                                duration: 500,
+                                easing: Easing.ease,
+                                useNativeDriver: true,
+                            }),
+                            Animated.spring(imageScaleAnim, {
+                                toValue: 1,
+                                friction: 8,
+                                tension: 100,
+                                useNativeDriver: true,
+                            }),
+                            Animated.stagger(150, [
+                                Animated.spring(mainContentAnim, { toValue: 1, damping: 10, stiffness: 100, useNativeDriver: true }),
+                                Animated.spring(bookNowButtonAnim, { toValue: 1, damping: 10, stiffness: 100, useNativeDriver: true }),
+                                Animated.timing(infoChipAnim, {
+                                    toValue: 1,
+                                    duration: 600,
+                                    easing: Easing.ease,
+                                    delay: 200, // Atraso para os chips aparecerem depois do conteúdo principal
+                                    useNativeDriver: true,
+                                }),
+                            ])
                         ]).start();
+
+                        // Animação de pulso para o botão de adicionar avaliação
+                        Animated.loop(
+                            Animated.sequence([
+                                Animated.timing(addReviewButtonPulseAnim, {
+                                    toValue: 1.05,
+                                    duration: 1000,
+                                    easing: Easing.inOut(Easing.ease),
+                                    useNativeDriver: true,
+                                }),
+                                Animated.timing(addReviewButtonPulseAnim, {
+                                    toValue: 1,
+                                    duration: 1000,
+                                    easing: Easing.inOut(Easing.ease),
+                                    useNativeDriver: true,
+                                }),
+                            ])
+                        ).start();
                     }
                 })
                 .catch(err => {
@@ -106,8 +162,27 @@ export default function ProviderDetailsScreen() {
                 }
             });
         } else {
-            Alert.alert("Chat Indisponível", "O chat só pode ser iniciado para agendamentos confirmados ou em andamento.");
+            Alert.alert(
+                "Chat Indisponível",
+                "O chat com este profissional só pode ser iniciado após um agendamento confirmado e ativo. Isso garante que você se conecte com o profissional certo para o seu serviço."
+            );
         }
+    };
+
+    const handleActionButtonPressIn = (animValue: Animated.Value) => {
+        Animated.spring(animValue, {
+            toValue: 0.9,
+            useNativeDriver: true,
+        }).start();
+    };
+
+    const handleActionButtonPressOut = (animValue: Animated.Value) => {
+        Animated.spring(animValue, {
+            toValue: 1,
+            friction: 3,
+            tension: 40,
+            useNativeDriver: true,
+        }).start();
     };
 
     const formatPriceDisplay = (service: ProviderServiceOffering) => {
@@ -139,6 +214,7 @@ export default function ProviderDetailsScreen() {
             : 'Preço não disponível';
     };
 
+    // --- Lógica de renderização condicional deve vir DEPOIS das declarações de Hooks ---
     if (isLoading) {
         return (
             <View style={[styles.centeredFeedback, { backgroundColor: 'white' }]}>
@@ -177,6 +253,7 @@ export default function ProviderDetailsScreen() {
     console.log("[ProviderDetailsScreen] ID do serviço oferecido a ser passado para agendamento (firstProviderServiceOfferingId):", firstProviderServiceOfferingId);
     console.log("[ProviderDetailsScreen] Preço do serviço a ser passado:", firstProviderService?.price); // Adicionei este log para você ver o valor
 
+
     return (
         <View style={[styles.screenContainer, { backgroundColor: 'white' }]}>
             <Stack.Screen options={{
@@ -201,7 +278,10 @@ export default function ProviderDetailsScreen() {
             }} />
 
             <ScrollView contentContainerStyle={styles.scrollContentContainer}>
-                <View style={styles.providerImageContainer}>
+                <Animated.View style={[
+                    styles.providerImageContainer,
+                    { opacity: imageFadeAnim, transform: [{ scale: imageScaleAnim }] }
+                ]}>
                     <Image
                         source={{ uri: provider.avatarUrl || 'https://placehold.co/600x400/E0E0E0/6C757D?text=Sem+Foto' }}
                         style={styles.providerImage}
@@ -213,7 +293,7 @@ export default function ProviderDetailsScreen() {
                     >
                         <Ionicons name="heart" size={18} color="#007AFF" />
                     </TouchableOpacity>
-                </View>
+                </Animated.View>
 
                 <Animated.View style={[
                     styles.contentArea,
@@ -242,7 +322,10 @@ export default function ProviderDetailsScreen() {
                     </View>
 
                     <View style={styles.tabContentContainer}>
-                        <View style={styles.infoChipsContainer}>
+                        <Animated.View style={[
+                            styles.infoChipsContainer,
+                            { opacity: infoChipAnim, transform: [{ translateY: infoChipAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }
+                        ]}>
                             {provider.yearsOfExperience !== undefined && provider.yearsOfExperience !== null && (
                                 <InfoChip
                                     iconName="hourglass-outline"
@@ -257,38 +340,66 @@ export default function ProviderDetailsScreen() {
                                     colors={['#7694f6ff', '#67adfdff', '#5c93ecff']}
                                 />
                             )}
-                        </View>
+                        </Animated.View>
 
                         <Text style={styles.sectionTitle}>Sobre {provider.fullName.split(' ')[0]}</Text>
                         <Text style={styles.descriptionText}>{provider.bio || "Nenhuma descrição detalhada disponível."}</Text>
 
                         <View style={styles.actionButtonsContainer}>
-                            <TouchableOpacity style={styles.actionButton} onPress={() => Alert.alert("Ligar", "Funcionalidade de ligar.")}>
-                                <Ionicons name="call-outline" size={16} color={styles.actionButtonText.color} />
-                                <Text style={styles.actionButtonText}>Ligar</Text>
-                            </TouchableOpacity>
-
-                            {canInitiateChat ? (
-                                <TouchableOpacity style={styles.actionButton} onPress={handleChatPress}>
-                                    <Ionicons name="chatbubble-outline" size={16} color={styles.actionButtonText.color} />
-                                    <Text style={styles.actionButtonText}>Chat</Text>
+                            <Animated.View style={{ transform: [{ scale: callButtonAnim }] }}>
+                                <TouchableOpacity
+                                    style={styles.actionButton}
+                                    onPress={() => Alert.alert("Ligar", "Funcionalidade de ligar.")}
+                                    onPressIn={() => handleActionButtonPressIn(callButtonAnim)}
+                                    onPressOut={() => handleActionButtonPressOut(callButtonAnim)}
+                                >
+                                    <Ionicons name="call-outline" size={16} color={styles.actionButtonText.color} />
+                                    <Text style={styles.actionButtonText}>Ligar</Text>
                                 </TouchableOpacity>
-                            ) : (
-                                <View style={[styles.actionButton, styles.disabledActionButton]}>
-                                    <Ionicons name="chatbubble-outline" size={16} color={styles.disabledActionButtonText.color} />
-                                    <Text style={[styles.actionButtonText, styles.disabledActionButtonText]}>Chat</Text>
-                                </View>
-                            )}
+                            </Animated.View>
 
-                            <TouchableOpacity style={styles.actionButton} onPress={() => Alert.alert("Mapa", "Funcionalidade de mapa.")}>
-                                <Ionicons name="map-outline" size={16} color={styles.actionButtonText.color} />
-                                <Text style={styles.actionButtonText}>Mapa</Text>
-                            </TouchableOpacity>
+                            <Animated.View style={{ transform: [{ scale: chatButtonAnim }] }}>
+                                {canInitiateChat ? (
+                                    <TouchableOpacity
+                                        style={styles.actionButton}
+                                        onPress={handleChatPress}
+                                        onPressIn={() => handleActionButtonPressIn(chatButtonAnim)}
+                                        onPressOut={() => handleActionButtonPressOut(chatButtonAnim)}
+                                    >
+                                        <Ionicons name="chatbubble-outline" size={16} color={styles.actionButtonText.color} />
+                                        <Text style={styles.actionButtonText}>Chat</Text>
+                                    </TouchableOpacity>
+                                ) : (
+                                    <View style={[styles.actionButton, styles.disabledActionButton]}>
+                                        <Ionicons name="chatbubble-outline" size={16} color={styles.disabledActionButtonText.color} />
+                                        <Text style={[styles.actionButtonText, styles.disabledActionButtonText]}>Chat</Text>
+                                    </View>
+                                )}
+                            </Animated.View>
 
-                            <TouchableOpacity style={styles.actionButton} onPress={() => Alert.alert("Compartilhar", "Funcionalidade de compartilhar.")}>
-                                <Ionicons name="share-social-outline" size={16} color={styles.actionButtonText.color} />
-                                <Text style={styles.actionButtonText}>Compartilhar</Text>
-                            </TouchableOpacity>
+                            <Animated.View style={{ transform: [{ scale: mapButtonAnim }] }}>
+                                <TouchableOpacity
+                                    style={styles.actionButton}
+                                    onPress={() => Alert.alert("Mapa", "Funcionalidade de mapa.")}
+                                    onPressIn={() => handleActionButtonPressIn(mapButtonAnim)}
+                                    onPressOut={() => handleActionButtonPressOut(mapButtonAnim)}
+                                >
+                                    <Ionicons name="map-outline" size={16} color={styles.actionButtonText.color} />
+                                    <Text style={styles.actionButtonText}>Mapa</Text>
+                                </TouchableOpacity>
+                            </Animated.View>
+
+                            <Animated.View style={{ transform: [{ scale: shareButtonAnim }] }}>
+                                <TouchableOpacity
+                                    style={styles.actionButton}
+                                    onPress={() => Alert.alert("Compartilhar", "Funcionalidade de compartilhar.")}
+                                    onPressIn={() => handleActionButtonPressIn(shareButtonAnim)}
+                                    onPressOut={() => handleActionButtonPressOut(shareButtonAnim)}
+                                >
+                                    <Ionicons name="share-social-outline" size={16} color={styles.actionButtonText.color} />
+                                    <Text style={styles.actionButtonText}>Compartilhar</Text>
+                                </TouchableOpacity>
+                            </Animated.View>
                         </View>
 
                         <Text style={[styles.sectionTitle, { marginTop: 12 }]}>Recomendações</Text>
@@ -315,11 +426,20 @@ export default function ProviderDetailsScreen() {
                                 return <ReviewCard key={review.id} review={transformedReview} />;
                             })
                         ) : (
-                            <Text style={styles.noReviewsText}>Ainda não há avaliações para {provider.fullName.split(' ')[0]}.</Text>
+                            <View style={styles.noReviewsContainer}>
+                                <Ionicons name="chatbubbles-outline" size={60} color={styles.noReviewsText.color} style={styles.noReviewsIcon} />
+                                <Text style={styles.noReviewsText}>
+                                    Ainda não há avaliações para {provider.fullName.split(' ')[0]}.
+                                    Seja o primeiro a deixar uma!
+                                </Text>
+                            </View>
                         )}
-                        <TouchableOpacity style={[styles.addReviewButton, styles.compactAddReviewButton]}>
-                            <Ionicons name="add-circle-outline" size={24} color={styles.addReviewButtonText.color} />
-                        </TouchableOpacity>
+                        <Animated.View style={{ transform: [{ scale: addReviewButtonPulseAnim }] }}>
+                            <TouchableOpacity style={[styles.addReviewButton, styles.compactAddReviewButton]}>
+                                <Ionicons name="add-circle-outline" size={24} color={styles.addReviewButtonText.color} />
+                                <Text style={styles.addReviewButtonText}>Adicionar Avaliação</Text>
+                            </TouchableOpacity>
+                        </Animated.View>
                     </View>
                 </Animated.View>
             </ScrollView>

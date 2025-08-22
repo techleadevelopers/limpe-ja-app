@@ -139,4 +139,4 @@ O LimpeJá é mais que um aplicativo; é o futuro do serviço de limpeza no Bras
 Com um mercado gigantesco, um produto robusto e uma execução de excelência, estamos prontos para escalar.
 Chamada para Investidores/Parceiros: Junte-se a nós nesta jornada para construir o maior e mais confiável marketplace de serviços de limpeza do país, com um impacto social e financeiro sem precedentes.
 Obrigado!
-[Seu Contato / LinkedIn / Website]
+(19) 99322-3932 / LinkedIn / Website

@@ -1,7 +1,7 @@
 // LimpeJaApp/app/(client)/bookings/components/success/ProviderInfoSection.tsx
-import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
-import { renderStars } from '../../../../utils/ui-helpers'; // Importa a função renderStars
+import React, { useEffect, useRef } from 'react';
+import { Image, StyleSheet, Text, View, Animated, Easing } from 'react-native';
+import { renderStars } from '../../../../utils/ui-helpers';
 
 interface ProviderInfoSectionProps {
   providerAvatarUrl?: string | null;
@@ -14,12 +14,44 @@ export default function ProviderInfoSection({
   providerFullName,
   providerRating,
 }: ProviderInfoSectionProps) {
-  const starSize = 15; // Tamanho menor para as estrelas
-  // MUDANÇA AQUI: Cor azul claro (light blue) com um tom diferente para evitar ciano
-  const starColor = '#87CEEB'; // Um tom de azul claro mais puro (SkyBlue)
+  const starSize = 15;
+  const starColor = '#87CEEB';
+
+  // Animações de entrada
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const translateYAnim = useRef(new Animated.Value(20)).current;
+  const scaleAnim = useRef(new Animated.Value(0.95)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateYAnim, {
+        toValue: 0,
+        duration: 500,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 500,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   return (
-    <View style={styles.providerHeaderSection}>
+    <Animated.View
+      style={[
+        styles.providerHeaderSection,
+        { opacity: fadeAnim, transform: [{ translateY: translateYAnim }, { scale: scaleAnim }] },
+      ]}
+    >
       <Image
         source={providerAvatarUrl ? { uri: providerAvatarUrl } : require('../../../../assets/images/default-avatar.png')}
         style={styles.providerAvatar}
@@ -28,9 +60,8 @@ export default function ProviderInfoSection({
         <Text style={styles.providerNameText}>{providerFullName}</Text>
         <Text style={styles.providerRoleText}>Prestador(a) de Serviço</Text>
       </View>
-      {/* Passa o tamanho e a cor para a função renderStars */}
       {renderStars(providerRating, starSize, starColor, starColor)}
-    </View>
+    </Animated.View>
   );
 }
 

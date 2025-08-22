@@ -1,69 +1,117 @@
 // LimpeJaApp/app/(client)/bookings/components/success/SuccessPixInfo.tsx
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import { Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Dimensions, Image, StyleSheet, Text, TouchableOpacity, View, Animated, Easing } from 'react-native';
 
 import { PixChargeResponseDto } from '../../../../types/backend/payments';
-
-// A imagem local do QR Code agora é um fallback, não a fonte principal.
-// const localPixQrCodeImage = require('../../../../../assets/images/pix.png');
-
 
 interface SuccessPixInfoProps {
   pixChargeDetails?: PixChargeResponseDto | null;
   handleCopyPixQrCode: () => void;
 }
 
-// Constante para a largura da tela para ajustar o card
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
 export default function SuccessPixInfo({ pixChargeDetails, handleCopyPixQrCode }: SuccessPixInfoProps) {
-  // Verifica se os detalhes da cobrança PIX e o brCode estão disponíveis
+  // Animações de entrada
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const translateYAnim = useRef(new Animated.Value(20)).current;
+  const scaleAnim = useRef(new Animated.Value(0.95)).current;
+
+  // Animação para o botão de copiar PIX
+  const buttonScaleAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        delay: 500, // Atraso para aparecer depois dos detalhes adicionais
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateYAnim, {
+        toValue: 0,
+        duration: 500,
+        delay: 500,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 500,
+        delay: 500,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  const onPressInButton = () => {
+    Animated.spring(buttonScaleAnim, {
+      toValue: 0.95,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const onPressOutButton = () => {
+    Animated.spring(buttonScaleAnim, {
+      toValue: 1,
+      friction: 3,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
+
   if (!pixChargeDetails || !pixChargeDetails.brCode) {
     return null;
   }
 
-  // >>>>> CORREÇÃO AQUI: Usa a URL do QR Code do backend, ou um placeholder se não houver <<<<<
   const qrCodeSource = pixChargeDetails.qrCodeImage
-    ? { uri: pixChargeDetails.qrCodeImage } // Usa a URL dinâmica
-    : require('../../../../assets/images/pix.png'); // Fallback para imagem local
+    ? { uri: pixChargeDetails.qrCodeImage }
+    : require('../../../../assets/images/pix.png');
 
   return (
-    <View style={[
-      styles.pixInfoSection,
-      {
-        width: SCREEN_WIDTH * 0.75, // Ocupa 85% da largura da tela (ajustável)
-        alignSelf: 'center',        // Centraliza horizontalmente
-      }
-    ]}>
-      {/* SEU CÓDIGO EXISTENTE - NADA ALTERADO AQUI */}
+    <Animated.View
+      style={[
+        styles.pixInfoSection,
+        {
+          width: SCREEN_WIDTH * 0.75,
+          alignSelf: 'center',
+          opacity: fadeAnim,
+          transform: [{ translateY: translateYAnim }, { scale: scaleAnim }],
+        }
+      ]}
+    >
       <View style={styles.qrCodeContainer}>
         <Image
-          source={qrCodeSource} // Agora usa a fonte dinâmica
+          source={qrCodeSource}
           style={styles.qrCodeImage}
         />
       </View>
-      <TouchableOpacity style={styles.copyPixButton} onPress={handleCopyPixQrCode}>
+      <TouchableOpacity
+        style={[styles.copyPixButton, { transform: [{ scale: buttonScaleAnim }] }]}
+        onPress={handleCopyPixQrCode}
+        onPressIn={onPressInButton}
+        onPressOut={onPressOutButton}
+      >
         <Ionicons name="copy-outline" size={15} color="#FFFFFF" />
         <Text style={styles.copyPixButtonText}>Copiar Código PIX</Text>
       </TouchableOpacity>
       <Text style={styles.pixBrCodeText} numberOfLines={1} ellipsizeMode="middle">
         {pixChargeDetails.brCode}
       </Text>
-
-    </View>
-
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   pixInfoSection: {
-    // Cores e largura serão sobrescritas pelas props de estilo inline
     borderRadius: 12,
     padding: 10,
     marginTop: 15,
     alignItems: 'center',
-    position: 'relative', // Adicionado position: 'relative' para o posicionamento absoluto do pixMessageAbsoluteContainer
+    position: 'relative',
   },
   pixInfoHeader: {
     fontSize: 18,
@@ -94,12 +142,12 @@ const styles = StyleSheet.create({
     height: 220,
     resizeMode: 'contain',
     right: 0,
-    elevation: 33, // Sombra para Android
-    shadowColor: '#000', // Sombra para iOS
+    elevation: 33,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
-    borderRadius: 8, // <--- ADICIONADO AQUI: Border radius para a imagem
+    borderRadius: 8,
   },
   copyPixButton: {
     flexDirection: 'row',
@@ -127,13 +175,11 @@ const styles = StyleSheet.create({
     maxWidth: '98%',
     right: 0,
   },
-  // NOVO CSS PARA O TEXTO NA LATERAL, SEM MEXER NO CÓDIGO EXISTENTE
   pixMessageAbsoluteContainer: {
     position: 'absolute',
     left: '47%',
     top: 10,
     width: 187,
-    
     padding: 18,
     borderRadius: 28,
     backgroundColor: '#F0F8FF',

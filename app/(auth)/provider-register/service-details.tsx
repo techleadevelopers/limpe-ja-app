@@ -37,13 +37,13 @@ enum PricingType {
 }
 
 const SERVICE_MAPPINGS: { [key: string]: string } = {
-  'residencial': '282e4bd7-6518-4d35-b097-7729f40df64e',
-  'comercial': '30aec804-d85c-4c41-b978-53105b2437e4',
-  'pos_obra': 'c8cbf3c1-2ac7-4507-8097-b00ad2ba3c2f',
-  'escritorio': '662ea63b-d901-47c0-985f-86542f3f78d9',
-  'passadoria': '7dad59ef-3b0a-431b-b700-cd18ded427ee',
-  'vidros': 'a0fa793-9b0e-43d4-956d-e9b2b4aee1f4',
-  'estofados': 'b6b120c6-51c0-4e82-be95-0e3c6a9fc261',
+  'residencial': 'f0c16afd-f1e5-41e4-92ef-9f64ecabf6ea',
+  'comercial': '4c03312c-15c2-40d3-a041-1217bb6877ba',
+  'pos_obra': '646b296e-6a82-4f6e-a249-8df8f3851879',
+  'escritorio': 'afab28ad-c1e2-48ac-bb4b-406e90781ce5',
+  'passadoria': '13d2047c-86f3-4d8d-ba56-c3b166b95115',
+  'vidros': '9fa978db-511d-4600-86e2-d077b9ef7650',
+  'estofados': 'adaea89b-2934-4848-95fe-030c371dfed9',
 };
 
 type PriceUnit = 'hora' | 'quarto' | 'metragem' | null;

@@ -95,10 +95,13 @@ function RootLayoutContent() {
 
         console.log('[RootLayoutContent | useEffect] Estado pronto para decisão de redirecionamento.');
 
-        const inAuthGroup = segments[0] === '(auth)';
-        const isWelcomeRoute = pathname === '/welcome';
-        const normalizePath = (path: string) => {
+        const normalizePath = (path: string | undefined | null) => {
+            if (typeof path !== 'string') {
+                return ''; // Retorna uma string vazia se o caminho não for uma string válida
+            }
             let p = path.trim();
+            // Esta regex verifica se o caminho termina com uma barra, mas não é um grupo de rota como /(group)/
+            // e remove a barra final para padronização.
             if (p.endsWith('/') && p.length > 1 && !/\/\(\w+\)\/$/.test(p)) {
                 p = p.slice(0, -1);
             }
@@ -109,6 +112,10 @@ function RootLayoutContent() {
         const providerRegistrationVerifyAccountPath = normalizePath(AUTH_ROUTES.VERIFY_ACCOUNT_STEP);
 
         const decideAndRedirect = async () => {
+            // MOVIDO PARA DENTRO DE decideAndRedirect
+            const inAuthGroup = segments[0] === '(auth)';
+            const isWelcomeRoute = pathname === '/welcome';
+
             if (!isAuthenticated) {
                 if (!inAuthGroup && !isWelcomeRoute) {
                     console.log('[RootLayoutContent | decideAndRedirect] AÇÃO: Usuário NÃO autenticado. Redirecionando para /welcome.');
@@ -132,12 +139,19 @@ function RootLayoutContent() {
 
                 if (isApproved) {
                     const targetDashboardPath = normalizePath(PROVIDER_ROUTES.DASHBOARD);
-                    const allowedProviderPaths = [
-                        targetDashboardPath,
-                        normalizePath(PROVIDER_ROUTES.EARNINGS) // earnings permitido
-                    ];
 
-                    if (!allowedProviderPaths.includes(cleanedCurrentPath)) {
+                    // Verifica se o caminho atual começa com as rotas permitidas para provedores aprovados
+                    const isAllowedProviderRoute =
+                        cleanedCurrentPath === targetDashboardPath || // Dashboard
+                        cleanedCurrentPath.startsWith(normalizePath(PROVIDER_ROUTES.EARNINGS)) || // Ganhos (inclui sub-rotas)
+                        cleanedCurrentPath.startsWith(normalizePath(PROVIDER_ROUTES.MESSAGES_LIST)) || // Mensagens (inclui /messages e /messages/[chatId])
+                        cleanedCurrentPath.startsWith(normalizePath(PROVIDER_ROUTES.PROFILE)) || // Perfil
+                        cleanedCurrentPath.startsWith(normalizePath(PROVIDER_ROUTES.SERVICES_LIST)) || // Meus Serviços (usando SERVICES_LIST)
+                        cleanedCurrentPath.startsWith(normalizePath(PROVIDER_ROUTES.BOOKINGS_LIST)) || // Detalhes de Agendamentos (usando BOOKINGS_LIST)
+                        cleanedCurrentPath.startsWith(normalizePath(PROVIDER_ROUTES.SCHEDULE)); // Agenda/Disponibilidade
+                        // REMOVIDO: cleanedCurrentPath.startsWith(normalizePath(PROVIDER_ROUTES.REVIEWS)); // Avaliações - Removido pois não está no seu routes.ts
+
+                    if (!isAllowedProviderRoute) {
                         console.log(`[RootLayoutContent | decideAndRedirect] AÇÃO: Provedor APROVADO fora das rotas permitidas. Redirecionando para o Dashboard.`);
                         router.replace(targetDashboardPath as any);
                     }

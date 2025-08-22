@@ -10,6 +10,7 @@ import {
     Platform,
     Linking, // Para abrir URLs
     Animated, // Importar Animated para animações
+    Easing, // Importar Easing
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useAppContext } from '../../contexts/AppContext'; // Usando o AppContext
@@ -41,6 +42,7 @@ const AnimatedSettingSwitchItem: React.FC<SettingSwitchItemProps> = ({
 }) => {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(20)).current;
+    const scaleAnim = useRef(new Animated.Value(1)).current; // Para feedback de toque
 
     useEffect(() => {
         Animated.parallel([
@@ -48,39 +50,56 @@ const AnimatedSettingSwitchItem: React.FC<SettingSwitchItemProps> = ({
                 toValue: 1,
                 duration: 400,
                 delay: delay,
+                easing: Easing.out(Easing.ease), // Adicionado Easing
                 useNativeDriver: true,
             }),
             Animated.timing(slideAnim, {
                 toValue: 0,
                 duration: 400,
                 delay: delay,
+                easing: Easing.out(Easing.ease), // Adicionado Easing
                 useNativeDriver: true,
             }),
         ]).start();
     }, [fadeAnim, slideAnim, delay]);
+
+    const onPressInItem = () => {
+        Animated.spring(scaleAnim, { toValue: 0.98, useNativeDriver: true }).start();
+    };
+    const onPressOutItem = () => {
+        Animated.spring(scaleAnim, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start();
+    };
 
     // Determine which icon component to render
     const IconComponent = iconName.includes('material') ? MaterialCommunityIcons : Ionicons;
     const resolvedIconName = iconName as any; // Cast to 'any' for flexibility with combined types
 
     return (
-        <Animated.View style={[styles.settingItemWrapper, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-            <View style={styles.settingItem}>
-                {/* Corrected: Render the chosen icon component */}
-                <IconComponent name={resolvedIconName} size={24} color={disabled ? '#CED4DA' : iconColor} style={styles.settingIcon} />
-                <View style={styles.settingTextContainer}>
-                    <Text style={[styles.settingLabel, disabled && styles.disabledText]}>{label}</Text>
-                    {description && <Text style={[styles.settingDescription, disabled && styles.disabledText]}>{description}</Text>}
+        <Animated.View style={[styles.settingItemWrapper, { opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] }]}>
+            <TouchableOpacity // Adicionado TouchableOpacity para feedback de toque no item inteiro
+                onPress={() => onValueChange(!value)} // Passa o valor invertido para o switch
+                onPressIn={onPressInItem}
+                onPressOut={onPressOutItem}
+                activeOpacity={1}
+                disabled={disabled}
+            >
+                <View style={styles.settingItem}>
+                    {/* Corrected: Render the chosen icon component */}
+                    <IconComponent name={resolvedIconName} size={24} color={disabled ? '#CED4DA' : iconColor} style={styles.settingIcon} />
+                    <View style={styles.settingTextContainer}>
+                        <Text style={[styles.settingLabel, disabled && styles.disabledText]}>{label}</Text>
+                        {description && <Text style={[styles.settingDescription, disabled && styles.disabledText]}>{description}</Text>}
+                    </View>
+                    <Switch
+                        trackColor={{ false: "#CED4DA", true: "#81b0ff" }}
+                        thumbColor={value ? "#007AFF" : "#f4f3f4"}
+                        ios_backgroundColor="#E9ECEF"
+                        onValueChange={onValueChange}
+                        value={value}
+                        disabled={disabled}
+                    />
                 </View>
-                <Switch
-                    trackColor={{ false: "#CED4DA", true: "#81b0ff" }}
-                    thumbColor={value ? "#007AFF" : "#f4f3f4"}
-                    ios_backgroundColor="#E9ECEF"
-                    onValueChange={onValueChange}
-                    value={value}
-                    disabled={disabled}
-                />
-            </View>
+            </TouchableOpacity>
         </Animated.View>
     );
 };
@@ -111,12 +130,14 @@ const AnimatedSettingNavigationItem: React.FC<SettingNavigationItemProps> = ({
                 toValue: 1,
                 duration: 400,
                 delay: delay,
+                easing: Easing.out(Easing.ease), // Adicionado Easing
                 useNativeDriver: true,
             }),
             Animated.timing(slideAnim, {
                 toValue: 0,
                 duration: 400,
                 delay: delay,
+                easing: Easing.out(Easing.ease), // Adicionado Easing
                 useNativeDriver: true,
             }),
         ]).start();
@@ -171,11 +192,11 @@ export default function SettingsScreen() {
     useEffect(() => {
         // Animações de entrada
         Animated.stagger(200, [
-            Animated.timing(headerAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
-            Animated.timing(mainTitleAnim, { toValue: 1, duration: 600, delay: 100, useNativeDriver: true }),
-            Animated.timing(sectionCardAnim1, { toValue: 1, duration: 700, delay: 200, useNativeDriver: true }),
-            Animated.timing(sectionCardAnim2, { toValue: 1, duration: 700, delay: 300, useNativeDriver: true }),
-            Animated.timing(sectionCardAnim3, { toValue: 1, duration: 700, delay: 400, useNativeDriver: true }),
+            Animated.timing(headerAnim, { toValue: 1, duration: 500, easing: Easing.out(Easing.ease), useNativeDriver: true }), // Adicionado Easing
+            Animated.timing(mainTitleAnim, { toValue: 1, duration: 600, delay: 100, easing: Easing.out(Easing.ease), useNativeDriver: true }), // Adicionado Easing
+            Animated.timing(sectionCardAnim1, { toValue: 1, duration: 700, delay: 200, easing: Easing.out(Easing.ease), useNativeDriver: true }), // Adicionado Easing
+            Animated.timing(sectionCardAnim2, { toValue: 1, duration: 700, delay: 300, easing: Easing.out(Easing.ease), useNativeDriver: true }), // Adicionado Easing
+            Animated.timing(sectionCardAnim3, { toValue: 1, duration: 700, delay: 400, easing: Easing.out(Easing.ease), useNativeDriver: true }), // Adicionado Easing
         ]).start();
     }, [headerAnim, mainTitleAnim, sectionCardAnim1, sectionCardAnim2, sectionCardAnim3]);
 
@@ -208,13 +229,24 @@ export default function SettingsScreen() {
         }
     };
 
+    // Animação para o botão de voltar do header
+    const headerBackButtonScaleAnim = useRef(new Animated.Value(1)).current;
+    const onPressInHeaderButton = () => { Animated.spring(headerBackButtonScaleAnim, { toValue: 0.95, useNativeDriver: true }).start(); };
+    const onPressOutHeaderButton = () => { Animated.spring(headerBackButtonScaleAnim, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start(); };
+
+
     return (
         <View style={styles.outerContainer}>
             <Stack.Screen options={{ headerShown: false }} />
 
             {/* Custom Header */}
             <Animated.View style={[styles.customHeader, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.headerBackButton}>
+                <TouchableOpacity
+                    onPress={() => router.back()}
+                    style={[styles.headerBackButton, { transform: [{ scale: headerBackButtonScaleAnim }] }]}
+                    onPressIn={onPressInHeaderButton}
+                    onPressOut={onPressOutHeaderButton}
+                >
                     <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Configurações</Text>

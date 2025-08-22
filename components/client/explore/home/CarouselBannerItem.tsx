@@ -1,8 +1,8 @@
 // app/(client)/explore/components/CarouselBannerItem.tsx (Renomeado para algo como StaticBanner ou OfferBanner se for fixo)
 // Mas mantendo o nome CarouselBannerItem para consistência com seu pedido atual.
 
-import React, { useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, ImageBackground, Platform, Dimensions } from 'react-native';
+import React, { useRef, useEffect } from 'react'; // Importado useEffect
+import { View, Text, StyleSheet, TouchableOpacity, Animated, ImageBackground, Platform, Dimensions, Easing } from 'react-native'; // Importado Easing
 import { LinearGradient } from 'expo-linear-gradient';
 
 // Importa a imagem do seu diretório assets. Ajuste o caminho se for diferente.
@@ -29,48 +29,81 @@ const CarouselBannerItem: React.FC<CarouselBannerItemProps> = ({
 }) => {
     // Animação para o botão
     const buttonScaleAnim = useRef(new Animated.Value(1)).current;
+    // Animação para o efeito de float/parallax no fundo
+    const backgroundFloatAnim = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        // Inicia a animação de flutuação do fundo
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(backgroundFloatAnim, {
+                    toValue: 1,
+                    duration: 8000, // Duração mais longa para um movimento sutil
+                    easing: Easing.inOut(Easing.ease),
+                    useNativeDriver: true,
+                }),
+                Animated.timing(backgroundFloatAnim, {
+                    toValue: 0,
+                    duration: 8000,
+                    easing: Easing.inOut(Easing.ease),
+                    useNativeDriver: true,
+                }),
+            ])
+        ).start();
+    }, []);
 
     const onPressInButton = () => Animated.spring(buttonScaleAnim, { toValue: 0.95, useNativeDriver: true, friction: 7 }).start();
     const onPressOutButton = () => Animated.spring(buttonScaleAnim, { toValue: 1, useNativeDriver: true, friction: 7 }).start();
 
+    const animatedBackgroundStyle = {
+        transform: [{
+            translateY: backgroundFloatAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [-5, 5] // Movimento sutil para cima e para baixo
+            })
+        }]
+    };
+
     return (
         <TouchableOpacity onPress={onPress} style={styles.bannerOuterContainer} activeOpacity={0.9}>
-            <ImageBackground
-                source={bannerImage} // Usando a imagem local
-                style={styles.backgroundImage}
-                imageStyle={styles.imageStyle}
-            >
-                {/* Gradiente para escurecer a imagem e melhorar a legibilidade do texto */}
-                <LinearGradient
-                    colors={['rgba(219, 211, 211, 0.36)', 'rgba(56, 55, 55, 0)', 'rgba(184, 183, 183, 0.18)']} // Mais escuro para o texto branco
-                    style={StyleSheet.absoluteFillObject}
-                />
+            <Animated.View style={[styles.backgroundImageWrapper, animatedBackgroundStyle]}>
+                <ImageBackground
+                    source={bannerImage} // Usando a imagem local
+                    style={styles.backgroundImage}
+                    imageStyle={styles.imageStyle}
+                >
+                    {/* Gradiente para escurecer a imagem e melhorar a legibilidade do texto */}
+                    <LinearGradient
+                        colors={['rgba(219, 211, 211, 0.36)', 'rgba(56, 55, 55, 0)', 'rgba(184, 183, 183, 0.18)']} // Mais escuro para o texto branco
+                        style={StyleSheet.absoluteFillObject}
+                    />
 
-                <View style={styles.content}>
-                    <View style={styles.leftContent}>
-                        {/* Badge no topo esquerdo */}
-                        <View style={styles.badge}>
-                            <Text style={styles.badgeText}>{badgeText}</Text>
+                    <View style={styles.content}>
+                        <View style={styles.leftContent}>
+                            {/* Badge no topo esquerdo */}
+                            <View style={styles.badge}>
+                                <Text style={styles.badgeText}>{badgeText}</Text>
+                            </View>
+                            <Text style={styles.title}>{title}</Text>
+                            <Text style={styles.discount}>{discount}</Text>
+                            <Text style={styles.description}>{description}</Text>
                         </View>
-                        <Text style={styles.title}>{title}</Text>
-                        <Text style={styles.discount}>{discount}</Text>
-                        <Text style={styles.description}>{description}</Text>
-                    </View>
 
-                    {/* Botão no canto inferior direito */}
-                    <Animated.View style={{ transform: [{ scale: buttonScaleAnim }], alignSelf: 'flex-end', marginTop: 'auto' }}>
-                        <TouchableOpacity
-                            style={styles.button}
-                            onPress={onPress}
-                            onPressIn={onPressInButton}
-                            onPressOut={onPressOutButton}
-                            activeOpacity={0.7}
-                        >
-                            <Text style={styles.buttonText}>{buttonText}</Text>
-                        </TouchableOpacity>
-                    </Animated.View>
-                </View>
-            </ImageBackground>
+                        {/* Botão no canto inferior direito */}
+                        <Animated.View style={{ transform: [{ scale: buttonScaleAnim }], alignSelf: 'flex-end', marginTop: 'auto' }}>
+                            <TouchableOpacity
+                                style={styles.button}
+                                onPress={onPress}
+                                onPressIn={onPressInButton}
+                                onPressOut={onPressOutButton}
+                                activeOpacity={0.7}
+                            >
+                                <Text style={styles.buttonText}>{buttonText}</Text>
+                            </TouchableOpacity>
+                        </Animated.View>
+                    </View>
+                </ImageBackground>
+            </Animated.View>
         </TouchableOpacity>
     );
 };
@@ -92,6 +125,11 @@ const styles = StyleSheet.create({
         marginBottom: -11, // Exemplo de margem inferior para espaçamento
         marginTop: -21, // Exemplo de margem superior para espaçamento
      
+    },
+    backgroundImageWrapper: { // Novo wrapper para aplicar a animação de flutuação
+        flex: 1,
+        borderRadius: 16, // Aplica o border radius aqui também
+        overflow: 'hidden',
     },
     backgroundImage: {
         flex: 1,

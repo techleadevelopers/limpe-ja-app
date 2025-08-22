@@ -1,5 +1,4 @@
-// LimpeJaApp/app/(provider)/messages/index.tsx
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -246,17 +245,17 @@ export default function ProviderConversationsListScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F0F2F5',
+    backgroundColor: '#F0F2F5', // Neutro - Fundo de tela
   },
   customHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#007AFF', // Cor primária do app
+    backgroundColor: '#007AFF', // Azul Principal
     paddingHorizontal: 15,
     paddingVertical: Platform.OS === 'ios' ? 50 : 20, // Ajuste para status bar iOS
     paddingTop: Platform.OS === 'ios' ? 50 : 20,
-    shadowColor: '#000',
+    shadowColor: '#000', // Neutro - Preto
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -265,7 +264,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#FFFFFF', // Neutro - Branco
     flex: 1, // Para o título ocupar o espaço e centralizar melhor
     textAlign: 'center',
   },
@@ -287,18 +286,18 @@ const styles = StyleSheet.create({
   loadingText: {
       marginTop: 15,
       fontSize: 16,
-      color: '#6C757D',
+      color: '#6C757D', // Neutro - Cinza
   },
   emptyText: {
     fontSize: 19,
     fontWeight: '600',
-    color: '#343A40',
+    color: '#343A40', // Neutro - Cinza escuro
     textAlign: 'center',
     marginBottom: 10,
   },
   emptySubText: {
       fontSize: 15,
-      color: '#6C757D',
+      color: '#6C757D', // Neutro - Cinza
       textAlign: 'center',
   },
   listContentContainer: {
@@ -308,11 +307,11 @@ const styles = StyleSheet.create({
     marginHorizontal: 10, // Margem para dar um efeito de card
     marginVertical: 4,    // Espaço entre os cards
     borderRadius: 10,     // Bordas arredondadas para o card
-    backgroundColor: '#FFFFFF', // Cor de fundo do card, essencial para sombra funcionar bem
+    backgroundColor: '#FFFFFF', // Neutro - Branco, essencial para sombra funcionar bem
     overflow: Platform.OS === 'ios' ? 'visible' : 'hidden', // 'visible' para sombra no iOS, 'hidden' para borderRadius no Android
     ...Platform.select({
         ios: {
-            shadowColor: 'rgba(0,0,0,0.1)',
+            shadowColor: 'rgba(0,0,0,0.1)', // Neutro - Preto transparente
             shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.8, // Aumentado para visibilidade
             shadowRadius: 3,
@@ -334,21 +333,21 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 25,
     marginRight: 15,
-    backgroundColor: '#E9ECEF', // Fallback background
+    backgroundColor: '#E9ECEF', // Neutro - Cinza claro (Fallback background)
     borderWidth: 1,
-    borderColor: '#DEE2E6',
+    borderColor: '#DEE2E6', // Neutro - Cinza claro
   },
   avatarPlaceholder: {
     width: 50,
     height: 50,
     borderRadius: 25,
     marginRight: 15,
-    backgroundColor: '#007AFF', // Cor primária para placeholder
+    backgroundColor: '#007AFF', // Azul Principal para placeholder
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
-    color: '#FFFFFF',
+    color: '#FFFFFF', // Neutro - Branco
     fontSize: 22,
     fontWeight: 'bold',
   },
@@ -364,7 +363,7 @@ const styles = StyleSheet.create({
   itemTitle: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#212529',
+    color: '#212529', // Neutro - Cinza escuro
     flexShrink: 1, // Para o título não empurrar o timestamp
   },
   unreadTitle: {
@@ -372,20 +371,20 @@ const styles = StyleSheet.create({
   },
   timestamp: {
     fontSize: 12,
-    color: '#868E96',
+    color: '#868E96', // Neutro - Cinza
     marginLeft: 10,
   },
   lastMessage: {
     fontSize: 14,
-    color: '#6C757D',
+    color: '#6C757D', // Neutro - Cinza
     lineHeight: 20,
   },
   unreadLastMessage: {
-    color: '#343A40', // Mensagem mais escura se não lida
+    color: '#343A40', // Neutro - Cinza escuro (Mensagem mais escura se não lida)
     fontWeight: '600',
   },
   unreadBadge: {
-    backgroundColor: '#007AFF', // Cor primária para o badge
+    backgroundColor: '#007AFF', // Azul Principal para o badge
     borderRadius: 10,
     minWidth: 22,
     height: 22,
@@ -395,7 +394,7 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   unreadText: {
-    color: '#FFFFFF',
+    color: '#FFFFFF', // Neutro - Branco
     fontSize: 12,
     fontWeight: 'bold',
   },

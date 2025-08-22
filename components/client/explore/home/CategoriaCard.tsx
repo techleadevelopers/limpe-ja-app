@@ -1,7 +1,9 @@
+// LimpeJaApp/app/(client)/components/CategoriaCard.tsx
 import React, { useRef } from 'react';
 import { Text, TouchableOpacity, StyleSheet, Platform, Animated, View, Image } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router'; // Importar useRouter
 
 interface ServiceDetailsDto {
   id: string;
@@ -11,7 +13,9 @@ interface ServiceDetailsDto {
 
 interface CategoriaCardProps {
   item: ServiceDetailsDto;
-  onPress: (item: ServiceDetailsDto) => void;
+  // A prop 'onPress' original foi removida/comentada,
+  // pois a navegação agora será tratada internamente pelo componente.
+  // onPress: (item: ServiceDetailsDto) => void;
 }
 
 const TINT_GRADIENT_START = 'rgba(230, 240, 255, 0.7)';
@@ -33,8 +37,10 @@ const SECONDARY_ELEVATION_ANDROID = 10;
 const BORDER_COLOR_LIGHT = 'rgba(255, 255, 255, 0.9)';
 const BORDER_WIDTH = 1.5;
 
-const CategoriaCard: React.FC<CategoriaCardProps> = ({ item, onPress }) => {
+const CategoriaCard: React.FC<CategoriaCardProps> = ({ item }) => { // Removida a prop onPress
+  const router = useRouter(); // Inicializa o hook useRouter
   const cardScaleAnim = useRef(new Animated.Value(1)).current;
+  const iconScaleAnim = useRef(new Animated.Value(1)).current; // Nova animação para o ícone
 
   if (!item || typeof item.id !== 'string' || typeof item.name !== 'string') {
     console.error('[CategoriaCard] ERRO: Item inválido ou incompleto:', item);
@@ -50,6 +56,11 @@ const CategoriaCard: React.FC<CategoriaCardProps> = ({ item, onPress }) => {
       toValue: 0.95,
       useNativeDriver: true,
     }).start();
+    Animated.spring(iconScaleAnim, { // Animação do ícone ao pressionar
+      toValue: 1.1,
+      friction: 5,
+      useNativeDriver: true,
+    }).start();
   };
 
   const onPressOutCard = () => {
@@ -59,6 +70,25 @@ const CategoriaCard: React.FC<CategoriaCardProps> = ({ item, onPress }) => {
       tension: 40,
       useNativeDriver: true,
     }).start();
+    Animated.spring(iconScaleAnim, { // Retorno da animação do ícone
+      toValue: 1,
+      friction: 3,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleCardPress = () => {
+    // Navega para a nova tela de listagem de provedores filtrados
+    // A rota será /(client)/services/category/[categoryId]
+    // O [categoryId] será o ID da categoria clicada
+    router.push({
+      pathname: '/(client)/category/[categoryId]', // Caminho da nova tela
+      params: { 
+        categoryId: item.id, 
+        categoryName: item.name // Passa o ID e o nome da categoria como parâmetros
+      },
+    });
   };
 
   const getIconSource = (iconFileName?: string) => {
@@ -107,7 +137,7 @@ const CategoriaCard: React.FC<CategoriaCardProps> = ({ item, onPress }) => {
 
       <TouchableOpacity
         style={styles.touchableSurface}
-        onPress={() => onPress(item)}
+        onPress={handleCardPress} // Chama a função de navegação interna
         onPressIn={onPressInCard}
         onPressOut={onPressOutCard}
         activeOpacity={0.9}
@@ -124,7 +154,7 @@ const CategoriaCard: React.FC<CategoriaCardProps> = ({ item, onPress }) => {
           end={{ x: 1, y: 1 }}
           style={styles.contentOverlay}
         >
-          <Image source={imageSource} style={styles.iconImage} />
+          <Animated.Image source={imageSource} style={[styles.iconImage, { transform: [{ scale: iconScaleAnim }] }]} />
         </LinearGradient>
       </TouchableOpacity>
       <Text style={styles.categoriaTexto}>{item.name}</Text>

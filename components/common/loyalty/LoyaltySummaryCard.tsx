@@ -1,9 +1,9 @@
 // LimpeJaApp/components/loyalty/LoyaltySummaryCard.tsx
 import React from 'react';
 import { View, Text, StyleSheet, ProgressBarAndroid, Platform } from 'react-native';
-import Card from '../../common/Card'; // Importa o Card existente
-import { colors } from '../../common/theme/colors'; // Importa as cores existentes
-import { typography } from '../../common/theme/typography'; // Importa a tipografia existente
+import Card from '../../common/Card';
+import { colors } from '../../common/theme/colors';
+import { typography } from '../../common/theme/typography';
 
 interface LoyaltySummaryCardProps {
   currentPoints: number;
@@ -25,16 +25,33 @@ const LoyaltySummaryCard: React.FC<LoyaltySummaryCardProps> = ({
   return (
     <Card style={styles.card}>
       <Text style={styles.sectionTitle}>Seu Status de Fidelidade</Text>
-      <View style={styles.pointsContainer}>
+
+      {/* Seção de Pontos Atuais */}
+      <View style={styles.currentPointsSection}>
         <Text style={styles.currentPointsText}>{currentPoints}</Text>
-        <Text style={styles.pointsLabel}>Pontos</Text>
+        <Text style={styles.pointsLabel}>Pontos Atuais</Text>
       </View>
 
-      <View style={styles.tierInfo}>
-        <Text style={styles.tierLabel}>Nível Atual: <Text style={styles.currentTierText}>{currentTier}</Text></Text>
-        <Text style={styles.tierLabel}>Próximo Nível: <Text style={styles.nextTierText}>{nextTier}</Text></Text>
+      {/* Seção de Nível e Próximo Nível */}
+      <View style={styles.tierProgressionContainer}>
+        <View style={styles.tierBox}>
+          {/* CORRIGIDO: typography.caption para typography.bodySmall */}
+          <Text style={styles.tierBoxLabel}>Nível Atual</Text>
+          {/* CORRIGIDO: typography.h4 para typography.subtitle */}
+          <Text style={styles.currentTierText}>{currentTier}</Text>
+        </View>
+        <View style={styles.tierArrow}>
+          <Text style={styles.tierArrowText}>→</Text>
+        </View>
+        <View style={styles.tierBox}>
+          {/* CORRIGIDO: typography.caption para typography.bodySmall */}
+          <Text style={styles.tierBoxLabel}>Próximo Nível</Text>
+          {/* CORRIGIDO: typography.h4 para typography.subtitle */}
+          <Text style={styles.nextTierText}>{nextTier}</Text>
+        </View>
       </View>
 
+      {/* Barra de Progresso */}
       <View style={styles.progressBarContainer}>
         {Platform.OS === 'ios' ? (
           <View style={styles.progressBarIOSBackground}>
@@ -49,9 +66,16 @@ const LoyaltySummaryCard: React.FC<LoyaltySummaryCardProps> = ({
             style={styles.progressBarAndroid}
           />
         )}
-        <Text style={styles.progressText}>{currentPoints}/{nextTierPoints} pontos para o nível {nextTier}</Text>
+        <Text style={styles.progressText}>
+          Faltam <Text style={styles.progressHighlight}>{nextTierPoints - currentPoints}</Text> pontos para o nível {nextTier}
+        </Text>
       </View>
-      <Text style={styles.pointsEarnedMonth}>Pontos Ganhos este Mês: {pointsEarnedThisMonth}</Text>
+
+      {/* Pontos Ganhos no Mês */}
+      <View style={styles.pointsEarnedMonthContainer}>
+        <Text style={styles.pointsEarnedMonthLabel}>Pontos Ganhos este Mês:</Text>
+        <Text style={styles.pointsEarnedMonthValue}>{pointsEarnedThisMonth}</Text>
+      </View>
     </Card>
   );
 };
@@ -60,78 +84,116 @@ const styles = StyleSheet.create({
   card: {
     alignItems: 'center',
     marginBottom: 15,
+    paddingVertical: 20,
+    borderRadius: 15,
   },
   sectionTitle: {
     ...typography.h3,
-    marginBottom: 10,
+    marginBottom: 20,
     color: colors.textPrimary,
+    fontWeight: 'bold',
   },
-  pointsContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    marginBottom: 10,
+  currentPointsSection: {
+    alignItems: 'center',
+    marginBottom: 20,
   },
   currentPointsText: {
     ...typography.h1,
-    fontSize: 48,
+    fontSize: 60,
     fontWeight: 'bold',
     color: colors.primaryDark,
   },
   pointsLabel: {
     ...typography.subtitle,
     color: colors.textSecondary,
-    marginLeft: 5,
+    marginTop: -10,
   },
-  tierInfo: {
+  tierProgressionContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    justifyContent: 'center',
     width: '100%',
-    paddingHorizontal: 20,
-    marginBottom: 15,
+    marginBottom: 20,
   },
-  tierLabel: {
-    ...typography.body,
-    color: colors.textPrimary,
+  tierBox: {
+    backgroundColor: colors.backgroundLight,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    alignItems: 'center',
+    minWidth: 120,
+  },
+  tierBoxLabel: {
+    ...typography.bodySmall, // Alterado de caption para bodySmall
+    color: colors.textSecondary,
+    marginBottom: 5,
   },
   currentTierText: {
+    ...typography.subtitle, // Alterado de h4 para subtitle
     fontWeight: 'bold',
     color: colors.primary,
   },
   nextTierText: {
+    ...typography.subtitle, // Alterado de h4 para subtitle
     fontWeight: 'bold',
     color: colors.primaryDark,
   },
+  tierArrow: {
+    marginHorizontal: 10,
+  },
+  tierArrowText: {
+    fontSize: 30,
+    color: colors.textLight,
+  },
   progressBarContainer: {
-    width: '100%',
-    marginBottom: 10,
+    width: '90%',
+    marginBottom: 15,
     alignItems: 'center',
   },
   progressBarIOSBackground: {
-    height: 8,
-    width: '90%',
+    height: 10,
+    width: '100%',
     backgroundColor: colors.borderPrimaryLight,
-    borderRadius: 4,
+    borderRadius: 5,
     overflow: 'hidden',
   },
   progressBarIOSFill: {
     height: '100%',
     backgroundColor: colors.primary,
-    borderRadius: 4,
+    borderRadius: 5,
   },
   progressBarAndroid: {
-    width: '90%',
-    height: 8,
+    width: '100%',
+    height: 10,
   },
   progressText: {
     ...typography.bodySmall,
     color: colors.textSecondary,
-    marginTop: 5,
+    marginTop: 8,
+    textAlign: 'center',
   },
-  pointsEarnedMonth: {
-    ...typography.bodySmall,
-    color: colors.textPrimary,
+  progressHighlight: {
+    fontWeight: 'bold',
+    color: colors.primaryDark,
+  },
+  pointsEarnedMonthContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginTop: 10,
-    fontWeight: '600',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: colors.backgroundLightest,
+    borderRadius: 10,
+  },
+  pointsEarnedMonthLabel: {
+    ...typography.body,
+    color: colors.textPrimary,
+    marginRight: 5,
+  },
+  pointsEarnedMonthValue: {
+    ...typography.body,
+    fontWeight: 'bold',
+    color: colors.primaryDark,
   },
 });
 

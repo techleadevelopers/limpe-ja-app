@@ -1,9 +1,9 @@
 // LimpeJaApp/components/loyalty/RewardItem.tsx
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import PrimaryButton from '../../common/PrimaryButton'; // Importa o PrimaryButton existente
-import { colors } from '../../common/theme/colors'; // Importa as cores existentes
-import { typography } from '../../common/theme/typography'; // Importa a tipografia existente
+import React, { useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, Animated, Easing, Platform } from 'react-native';
+import PrimaryButton from '../../common/PrimaryButton';
+import { colors } from '../../common/theme/colors';
+import { typography } from '../../common/theme/typography';
 
 interface Reward {
   id: string;
@@ -15,76 +15,124 @@ interface Reward {
 interface RewardItemProps {
   reward: Reward;
   currentPoints: number;
-  onRedeem: (rewardId: string) => void; // Callback para quando o botão de resgate for pressionado
+  onRedeem: (rewardId: string) => void;
+  delay?: number;
 }
 
-const RewardItem: React.FC<RewardItemProps> = ({ reward, currentPoints, onRedeem }) => {
+const RewardItem: React.FC<RewardItemProps> = ({ reward, currentPoints, onRedeem, delay = 0 }) => {
   const canRedeem = currentPoints >= reward.points;
 
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const translateYAnim = useRef(new Animated.Value(20)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        delay: delay,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateYAnim, {
+        toValue: 0,
+        duration: 500,
+        delay: delay,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [fadeAnim, translateYAnim, delay]);
+
   return (
-    <View style={styles.rewardItem}>
+    <Animated.View
+      style={[
+        styles.rewardItemContainer,
+        { opacity: fadeAnim, transform: [{ translateY: translateYAnim }] },
+      ]}
+    >
       <View style={styles.rewardDetails}>
-        <Text style={styles.rewardName}>{reward.name}</Text>
-        <Text style={styles.rewardDescription}>{reward.description}</Text>
+        {/* CORRIGIDO: typography.h4 para typography.subtitle */}
+        <Text style={styles.rewardName} numberOfLines={1} ellipsizeMode="tail">{reward.name}</Text>
+        <Text style={styles.rewardDescription} numberOfLines={2} ellipsizeMode="tail">{reward.description}</Text>
       </View>
-      <View style={styles.rewardPointsContainer}>
-        <Text style={styles.rewardPoints}>{reward.points}</Text>
-        <Text style={styles.rewardPointsLabel}>pts</Text>
+
+      <View style={styles.pointsAndButton}>
+        <View style={styles.rewardPointsContainer}>
+          <Text style={styles.rewardPoints}>{reward.points}</Text>
+          <Text style={styles.rewardPointsLabel}>pts</Text>
+        </View>
+        <PrimaryButton
+          title={canRedeem ? 'Resgatar' : `${reward.points - currentPoints} pts`}
+          onPress={() => onRedeem(reward.id)}
+          style={styles.redeemButton}
+          disabled={!canRedeem}
+        />
       </View>
-      <PrimaryButton
-        title="Resgatar"
-        onPress={() => onRedeem(reward.id)}
-        style={styles.redeemButton}
-        disabled={!canRedeem}
-      />
-    </View>
+    </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
-  rewardItem: {
+  rewardItemContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-    marginBottom: 5,
+    backgroundColor: colors.cardBackground,
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 10,
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.primaryLight,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.1,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   rewardDetails: {
-    flex: 3,
+    flex: 2.5,
     marginRight: 10,
+    justifyContent: 'center',
   },
   rewardName: {
-    ...typography.subtitle,
+    ...typography.subtitle, // Alterado de h4 para subtitle
     color: colors.textPrimary,
+    marginBottom: 4,
   },
   rewardDescription: {
     ...typography.bodySmall,
     color: colors.textSecondary,
   },
+  pointsAndButton: {
+    flex: 1.5,
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+  },
   rewardPointsContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.backgroundLightest,
-    borderRadius: 8,
-    paddingVertical: 5,
-    marginRight: 10,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    marginBottom: 8,
   },
   rewardPoints: {
     ...typography.h3,
     fontWeight: 'bold',
     color: colors.primaryDark,
+    marginRight: 2,
   },
   rewardPointsLabel: {
     ...typography.bodySmall,
     color: colors.textSecondary,
   },
   redeemButton: {
-    flex: 2,
-    borderRadius: 20, // Botão menor e mais arredondado
+    width: '100%',
     paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
+    borderRadius: 20,
   },
 });
 

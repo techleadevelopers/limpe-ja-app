@@ -16,22 +16,20 @@ import {
     TextInput,
     TouchableOpacity,
     View,
+    Easing, // Importar Easing
 } from 'react-native';
 import { useAuth } from '../../../hooks/useAuth';
 
-// <--- CORREÇÕES: Importações de serviços e tipagens
-import { updateClientProfile } from '../../../services/clientService'; // Apenas a função
-import { BookingAddress } from '../../../types/backend/bookings'; // BookingAddress vem de bookings.ts (usado para o endereço do usuário)
-import { UpdateClientProfileDto } from '../../../types/backend/clients'; // <--- CORREÇÃO: Importa UpdateClientProfileDto do caminho correto
+import { updateClientProfile } from '../../../services/clientService';
+import { BookingAddress } from '../../../types/backend/bookings';
+import { UpdateClientProfileDto } from '../../../types/backend/clients';
 
-// CORREÇÃO AQUI: Importa UploadResponseDto do caminho correto
-import { UploadResponseDto } from '../../../types/backend/upload'; 
-import { uploadImageToCloud, FilePurpose } from '../../../services/uploadService'; // Importar o serviço de upload real e seus tipos (sem UploadResponse)
+import { UploadResponseDto } from '../../../types/backend/upload';
+import { uploadImageToCloud, FilePurpose } from '../../../services/uploadService';
 
-import { UserProfile } from '../../../types/backend/users'; // Importa UserProfile
+import { UserProfile } from '../../../types/backend/users';
 
-// <--- CORREÇÕES: Importar funções utilitárias
-import { formatPhoneNumber, isValidPhoneNumber } from '../../../utils/helpers'; // Importar formatDate e outras utils
+import { formatPhoneNumber, isValidPhoneNumber } from '../../../utils/helpers';
 
 // Componente para exibir mensagens de erro inline com animação
 const AnimatedErrorMessage: React.FC<{ message: string | null }> = ({ message }) => {
@@ -63,17 +61,14 @@ const AnimatedErrorMessage: React.FC<{ message: string | null }> = ({ message })
 };
 
 export default function EditClientProfileScreen() {
-    // Garante que 'user' seja tipado como UserProfile e 'updateUser' aceite Partial<UserProfile>
-    const { user, updateUser } = useAuth() as { user: UserProfile | null, updateUser: (user: Partial<UserProfile>) => void }; // <--- ALTERADO AQUI
+    const { user, updateUser } = useAuth() as { user: UserProfile | null, updateUser: (user: Partial<UserProfile>) => void };
 
     const router = useRouter();
 
-    // Inicializa o estado com os dados do perfil do usuário, garantindo que 'fullName' exista
-    const [fullName, setFullName] = useState(user?.fullName || ''); // <--- AGORA 'fullName' EXISTE EM UserProfile
+    const [fullName, setFullName] = useState(user?.fullName || '');
     const [email, setEmail] = useState(user?.email || '');
-    // Inicializa o endereço com 'cep' em vez de 'zipCode' e garante que seja tipado corretamente
     const [address, setAddress] = useState<BookingAddress>(user?.address || {
-        cep: '', // Usar cep
+        cep: '',
         street: '',
         number: '',
         complement: null,
@@ -101,7 +96,7 @@ export default function EditClientProfileScreen() {
 
     useEffect(() => {
         if (user) {
-            setFullName(user.fullName || ''); // <--- AGORA 'fullName' EXISTE EM UserProfile
+            setFullName(user.fullName || '');
             setEmail(user.email || '');
             setPhone(user.phone || '');
             setAvatarUri(user.avatarUrl || null);
@@ -113,12 +108,14 @@ export default function EditClientProfileScreen() {
             Animated.timing(headerAnim, {
                 toValue: 1,
                 duration: 600,
+                easing: Easing.out(Easing.ease),
                 useNativeDriver: true,
             }),
             Animated.timing(contentAnim, {
                 toValue: 1,
                 duration: 800,
                 delay: 200,
+                easing: Easing.out(Easing.ease),
                 useNativeDriver: true,
             }),
         ]).start();
@@ -166,15 +163,12 @@ export default function EditClientProfileScreen() {
 
             if (!pickerResult.canceled && pickerResult.assets && pickerResult.assets.length > 0) {
                 const newAvatarUri = pickerResult.assets[0].uri;
-                // Realiza o upload real
-                // CORREÇÃO AQUI: Tipagem para UploadResponseDto
-                const uploadResponse: UploadResponseDto = await uploadImageToCloud(newAvatarUri, 'avatar' as FilePurpose); 
+                const uploadResponse: UploadResponseDto = await uploadImageToCloud(newAvatarUri, 'avatar' as FilePurpose);
                 if (uploadResponse && uploadResponse.url) {
                     setAvatarUri(uploadResponse.url);
                     ReactNativeAlert.alert("Sucesso", "Foto de perfil atualizada!");
-                    // Atualiza o contexto do usuário imediatamente para melhor UX
                     updateUser({
-                        avatarUrl: uploadResponse.url, // Acessa corretamente a propriedade 'url'
+                        avatarUrl: uploadResponse.url,
                     });
                 } else {
                     ReactNativeAlert.alert("Erro no Upload", "Não foi possível enviar a imagem para o servidor.");
@@ -205,7 +199,6 @@ export default function EditClientProfileScreen() {
             setPhoneError(null);
         }
 
-        // Verifica os campos de endereço, assumindo que 'cep' agora é obrigatório
         if (!address.street || !address.number || !address.neighborhood || !address.city || !address.state || !address.cep) {
             ReactNativeAlert.alert("Campos Inválidos", "Por favor, preencha todos os campos do endereço, incluindo o CEP.");
             isValid = false;
@@ -228,15 +221,14 @@ export default function EditClientProfileScreen() {
                     neighborhood: address.neighborhood,
                     city: address.city,
                     state: address.state,
-                    cep: address.cep // Usar cep em vez de zipCode
+                    cep: address.cep
                 }
             };
-            
+
             const updatedProfile = await updateClientProfile(updateData);
 
-            // Garante que as propriedades correspondam a UserProfile
             updateUser({
-                fullName: updatedProfile.fullName, // Mapeia fullName do DTO para fullName em UserProfile // <--- CORRIGIDO AQUI
+                fullName: updatedProfile.fullName,
                 phone: updatedProfile.phone,
                 avatarUrl: avatarUri ?? undefined,
                 address: updatedProfile.address,
@@ -313,7 +305,7 @@ export default function EditClientProfileScreen() {
                     <View style={styles.formSection}>
                         <Text style={styles.label}>Nome Completo *</Text>
                         <Animated.View style={[styles.inputContainer, { borderColor: getInputBorderColor(fullNameBorderAnim, !!fullNameError) as any }]}>
-                            <Ionicons name="person-outline" size={18} color="#8A8A8E" style={styles.inputIcon} />
+                            <Ionicons name="person-outline" size={18} color="#6C757D" style={styles.inputIcon} />
                             <TextInput
                                 style={styles.input}
                                 value={fullName}
@@ -330,7 +322,7 @@ export default function EditClientProfileScreen() {
 
                         <Text style={styles.label}>Email</Text>
                         <View style={[styles.inputContainer, styles.disabledInputContainer]}>
-                            <Ionicons name="mail-outline" size={20} color="#8A8A8E" style={styles.inputIcon} />
+                            <Ionicons name="mail-outline" size={20} color="#6C757D" style={styles.inputIcon} />
                             <TextInput
                                 style={[styles.input, styles.disabledInput]}
                                 value={email}
@@ -341,7 +333,7 @@ export default function EditClientProfileScreen() {
 
                         <Text style={styles.label}>Telefone *</Text>
                         <Animated.View style={[styles.inputContainer, { borderColor: getInputBorderColor(phoneBorderAnim, !!phoneError) as any }]}>
-                            <Ionicons name="call-outline" size={20} color="#8A8A8E" style={styles.inputIcon} />
+                            <Ionicons name="call-outline" size={20} color="#6C757D" style={styles.inputIcon} />
                             <TextInput
                                 style={styles.input}
                                 value={phone}
@@ -349,7 +341,7 @@ export default function EditClientProfileScreen() {
                                 onBlur={() => { setPhoneError(isValidPhoneNumber(phone) ? null : 'Telefone inválido. Formato esperado (XX) XXXXX-XXXX.'); animateInputBorder(phoneBorderAnim, false, !!phoneError); }}
                                 onFocus={() => animateInputBorder(phoneBorderAnim, true, !!phoneError)}
                                 placeholder="(XX) XXXXX-XXXX"
-                                placeholderTextColor="#ADB5BD"
+                                placeholderTextColor="#ADB57D"
                                 keyboardType="phone-pad"
                                 maxLength={15}
                                 textContentType="telephoneNumber"
@@ -357,17 +349,17 @@ export default function EditClientProfileScreen() {
                         </Animated.View>
                         <AnimatedErrorMessage message={phoneError} />
 
-                        {/* Campos de Endereço (NOVO) */}
+                        {/* Campos de Endereço */}
                         <Text style={styles.label}>Endereço</Text>
                         <TextInput
-                            style={styles.input}
+                            style={styles.inputField} // Usar estilo de input individual
                             placeholder="Rua"
                             placeholderTextColor="#ADB5BD"
                             value={address.street}
                             onChangeText={(text) => setAddress(prev => ({ ...prev, street: text }))}
                         />
                         <TextInput
-                            style={styles.input}
+                            style={styles.inputField}
                             placeholder="Número"
                             placeholderTextColor="#ADB5BD"
                             value={address.number}
@@ -375,28 +367,28 @@ export default function EditClientProfileScreen() {
                             keyboardType="numeric"
                         />
                         <TextInput
-                            style={styles.input}
+                            style={styles.inputField}
                             placeholder="Complemento (Opcional)"
                             placeholderTextColor="#ADB5BD"
                             value={address.complement || ''}
                             onChangeText={(text) => setAddress(prev => ({ ...prev, complement: text }))}
                         />
                         <TextInput
-                            style={styles.input}
+                            style={styles.inputField}
                             placeholder="Bairro"
                             placeholderTextColor="#ADB5BD"
                             value={address.neighborhood}
                             onChangeText={(text) => setAddress(prev => ({ ...prev, neighborhood: text }))}
                         />
                         <TextInput
-                            style={styles.input}
+                            style={styles.inputField}
                             placeholder="Cidade"
                             placeholderTextColor="#ADB5BD"
                             value={address.city}
                             onChangeText={(text) => setAddress(prev => ({ ...prev, city: text }))}
                         />
                         <TextInput
-                            style={styles.input}
+                            style={styles.inputField}
                             placeholder="Estado (Ex: SP)"
                             placeholderTextColor="#ADB5BD"
                             value={address.state}
@@ -404,15 +396,14 @@ export default function EditClientProfileScreen() {
                             maxLength={2}
                             autoCapitalize="characters"
                         />
-                        {/* Adicionar campo CEP */}
                         <TextInput
-                            style={styles.input}
+                            style={styles.inputField}
                             placeholder="CEP (Ex: 99999-999)"
                             placeholderTextColor="#ADB5BD"
                             value={address.cep || ''}
                             onChangeText={(text) => setAddress(prev => ({ ...prev, cep: text }))}
                             keyboardType="numeric"
-                            maxLength={9} // 99999-999
+                            maxLength={9}
                         />
 
                     </View>
@@ -456,7 +447,7 @@ export default function EditClientProfileScreen() {
 const styles = StyleSheet.create({
     keyboardAvoidingContainer: {
         flex: 1,
-        backgroundColor: '#F8F9FA',
+        backgroundColor: '#F0F8FF', // --background-light-blue
     },
     scrollView: {
         flex: 1,
@@ -471,7 +462,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        backgroundColor: '#007AFF',
+        backgroundColor: '#223355', // Cor do cabeçalho alinhada com Print 2
         paddingHorizontal: 15,
         paddingVertical: Platform.OS === 'ios' ? 50 : 20,
         paddingTop: Platform.OS === 'ios' ? 50 : 20,
@@ -565,10 +556,32 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: '#FFFFFF',
         borderWidth: 1,
-        borderColor: '#CED4DA', // Cor da borda padrão
-        borderRadius: 10,
+        borderColor: '#CED4DA',
+        borderRadius: 10, // Bordas mais suaves
         paddingHorizontal: 12,
         height: 52,
+        ...Platform.select({
+            ios: {
+                shadowColor: 'rgba(0,0,0,0.05)',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 3,
+            },
+            android: {
+                elevation: 2,
+            },
+        }),
+    },
+    inputField: { // Novo estilo para inputs de endereço para melhor alinhamento
+        backgroundColor: '#FFFFFF',
+        borderWidth: 1,
+        borderColor: '#CED4DA',
+        borderRadius: 10,
+        paddingHorizontal: 15,
+        height: 52,
+        fontSize: 16,
+        color: '#212529',
+        marginBottom: 10, // Espaçamento entre os inputs
         ...Platform.select({
             ios: {
                 shadowColor: 'rgba(0,0,0,0.05)',

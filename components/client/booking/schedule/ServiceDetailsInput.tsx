@@ -61,14 +61,9 @@ const detailsStyles = StyleSheet.create({
     container: {
         backgroundColor: '#FFFFFF',
         borderRadius: 16,
-        marginHorizontal: 30,
+        marginHorizontal: 60,
         marginTop: 20,
         padding: 20,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 4,
     },
     title: {
         fontSize: 18,

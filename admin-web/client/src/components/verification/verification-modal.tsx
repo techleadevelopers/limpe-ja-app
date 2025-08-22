@@ -25,13 +25,13 @@ interface VerificationModalProps {
 function formatRelativeTime(date: Date): string {
   const now = new Date();
   const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
-  
+
   if (diffInMinutes < 1) return "Agora mesmo";
   if (diffInMinutes < 60) return `${diffInMinutes} minutos atrás`;
-  
+
   const diffInHours = Math.floor(diffInMinutes / 60);
   if (diffInHours < 24) return `${diffInHours} horas atrás`;
-  
+
   const diffInDays = Math.floor(diffInHours / 24);
   return `${diffInDays} dias atrás`;
 }
@@ -41,9 +41,7 @@ export default function VerificationModal({ provider, isOpen, onClose }: Verific
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  if (!provider) return null;
-
-  // Mutação para aprovar o provedor
+  // Mova as declarações de useMutation para o topo do componente
   const approveMutation = useMutation({
     mutationFn: (providerId: string) => updateProviderStatus(providerId, VerificationStatus.APPROVED),
     onSuccess: () => {
@@ -51,12 +49,11 @@ export default function VerificationModal({ provider, isOpen, onClose }: Verific
       queryClient.invalidateQueries({ queryKey: ['verificationQueue'] });
       onClose();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({ title: "Erro na Aprovação", description: error.message, variant: "destructive" });
     },
   });
 
-  // Mutação para rejeitar o provedor
   const rejectMutation = useMutation({
     mutationFn: ({ providerId, reason }: { providerId: string; reason: string }) => 
       updateProviderStatus(providerId, VerificationStatus.REJECTED, reason),
@@ -66,10 +63,13 @@ export default function VerificationModal({ provider, isOpen, onClose }: Verific
       onClose();
       setIsRejectionModalOpen(false);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({ title: "Erro na Rejeição", description: error.message, variant: "destructive" });
     },
   });
+  
+  if (!provider) return null;
+
 
   const handleApprove = () => {
     approveMutation.mutate(provider.id);
@@ -150,7 +150,7 @@ export default function VerificationModal({ provider, isOpen, onClose }: Verific
                       <span className="text-gray-400">Nenhuma imagem disponível</span>
                     )}
                   </div>
-                  
+
                   {/* OCR Results */}
                   <div className="bg-blue-50 rounded-lg p-3">
                     <h5 className="text-sm font-medium text-blue-900 mb-2">Resultados OCR</h5>
@@ -186,7 +186,7 @@ export default function VerificationModal({ provider, isOpen, onClose }: Verific
                       <span className="text-gray-400">Nenhuma imagem disponível</span>
                     )}
                   </div>
-                  
+
                   {/* Liveness Check Results */}
                   <div className="bg-green-50 rounded-lg p-3">
                     <h5 className="text-sm font-medium text-green-900 mb-2">Verificação de Vivacidade</h5>
@@ -270,7 +270,7 @@ export default function VerificationModal({ provider, isOpen, onClose }: Verific
                   Bloquear
                 </Button>
               </div>
-              
+
               <div className="flex space-x-2">
                 <Button variant="outline" className="text-gray-600 border-gray-200 hover:bg-gray-50">
                   Solicitar Mais Info

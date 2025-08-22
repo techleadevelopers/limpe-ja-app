@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { Dispatch, SetStateAction } from 'react';
+import React, { Dispatch, SetStateAction, useEffect } from 'react';
 import {
     Animated,
     Dimensions,
@@ -9,7 +9,8 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View
+    View,
+    Easing
 } from 'react-native';
 import { BookingAddress } from '../../../../types/backend/bookings';
 
@@ -25,6 +26,43 @@ interface AddressSectionProps {
 }
 
 const AddressSection: React.FC<AddressSectionProps> = ({ address, setAddress, shineAnim, isLoading, isInputMode, onEditAddress }) => {
+    const trackerIconPulseAnim = new Animated.Value(1);
+    const dottedLineShineAnim = new Animated.Value(0);
+
+    useEffect(() => {
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(trackerIconPulseAnim, {
+                    toValue: 1.1,
+                    duration: 1500,
+                    easing: Easing.inOut(Easing.ease),
+                    useNativeDriver: true,
+                }),
+                Animated.timing(trackerIconPulseAnim, {
+                    toValue: 1,
+                    duration: 1500,
+                    easing: Easing.inOut(Easing.ease),
+                    useNativeDriver: true,
+                }),
+            ])
+        ).start();
+
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(dottedLineShineAnim, {
+                    toValue: 1,
+                    duration: 3000,
+                    easing: Easing.linear,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(dottedLineShineAnim, {
+                    toValue: 0,
+                    duration: 0,
+                    useNativeDriver: true,
+                }),
+            ])
+        ).start();
+    }, []);
 
     const formatAddressLine1 = (addr: BookingAddress): string => {
         return `${addr.street}, ${addr.number}`;
@@ -132,26 +170,50 @@ const AddressSection: React.FC<AddressSectionProps> = ({ address, setAddress, sh
     return (
         <TouchableOpacity style={styles.addressCard} onPress={onEditAddress}>
             <View style={styles.addressTracker}>
-                <Image
+                <Animated.Image
                     source={require('../../../../assets/images/woman.png')}
-                    style={styles.trackerIcon}
+                    style={[styles.trackerIcon, { transform: [{ scale: trackerIconPulseAnim }] }]}
                 />
-                <View style={styles.dottedLine} />
-                <Image
+                <View style={styles.dottedLineWrapper}>
+                    <View style={styles.dottedLine} />
+                    <Animated.View style={[
+                        styles.dottedLineShine,
+                        {
+                            transform: [{
+                                translateX: dottedLineShineAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [-SCREEN_WIDTH * 0.5, SCREEN_WIDTH * 0.5]
+                                })
+                            }]
+                        }
+                    ]}>
+                        <LinearGradient
+                            colors={['transparent', 'rgba(255,255,255,0.7)', 'transparent']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={{ flex: 1 }}
+                        />
+                    </Animated.View>
+                </View>
+                <Animated.Image
                     source={require('../../../../assets/images/icons/residencial.png')}
-                    style={styles.trackerIcon}
+                    style={[styles.trackerIcon, { transform: [{ scale: trackerIconPulseAnim }] }]}
                 />
             </View>
             <View style={styles.addressContent}>
-                <View style={styles.textContainer}>
-                    <Text style={styles.addressTextBold}>
-                        {formatAddressLine1(address)}
-                        <Text style={styles.addressTextNormal}>
-                        {formatAddressLine2(address)}
-                    </Text>
-                    </Text>
-                   
+                {/* INÍCIO DAS ALTERAÇÕES PARA O ÍCONE E TEXTO DO ENDEREÇO */}
+                <View style={styles.addressInfoWrapper}>
+                    <Ionicons name="location-sharp" size={22} color="#2A72E7" style={styles.locationIcon} />
+                    <View style={styles.addressTextWrapper}>
+                        <Text style={styles.addressLine1}>
+                            {formatAddressLine1(address)}
+                        </Text>
+                        <Text style={styles.addressLine2}>
+                            {formatAddressLine2(address)}
+                        </Text>
+                    </View>
                 </View>
+                {/* FIM DAS ALTERAÇÕES */}
                 <TouchableOpacity onPress={onEditAddress} style={styles.editButton}>
                     <Ionicons name="pencil-outline" size={15} color="#FFF" />
                 </TouchableOpacity>
@@ -172,16 +234,15 @@ const styles = StyleSheet.create({
     addressCard: {
         backgroundColor: '#bfd4f7c3',
         borderRadius: 24,
-        marginHorizontal: 46,
+        marginHorizontal: 36,
         paddingVertical: 15,
-        marginTop: 20,
+        marginTop: 1,
         marginBottom: 20,
-      
         padding: 20,
         overflow: 'hidden',
     },
     addressTracker: {
-      marginHorizontal: 4,
+        marginHorizontal: 4,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
@@ -193,13 +254,26 @@ const styles = StyleSheet.create({
         height: 31,
         tintColor: '#2A72E7',
     },
-    dottedLine: {
-        height: 2,
+    dottedLineWrapper: {
         flex: 1,
+        height: 2,
+        overflow: 'hidden',
+        marginHorizontal: 10,
+        position: 'relative',
+    },
+    dottedLine: {
+        height: '100%',
         borderWidth: 1,
         borderStyle: 'dashed',
         borderColor: '#2A72E7',
-        marginHorizontal: 10,
+        position: 'absolute',
+        width: '100%',
+    },
+    dottedLineShine: {
+        position: 'absolute',
+        top: 0,
+        bottom: 0,
+        width: '50%',
     },
     addressContent: {
         flexDirection: 'row',
@@ -212,21 +286,37 @@ const styles = StyleSheet.create({
         borderTopColor: '#6ba0d9ff',
         borderTopWidth: 1,
     },
-    textContainer: {
-        flex: 1,
+    // INÍCIO DOS NOVOS E MODIFICADOS ESTILOS
+    locationIcon: {
+        marginRight: 8, // Espaçamento entre o ícone e o texto
     },
-    addressTextBold: {
+    addressInfoWrapper: {
+        flexDirection: 'row',
+        alignItems: 'flex-start', // Alinha o ícone com o topo do bloco de texto
+        flex: 1, // Permite que o wrapper ocupe o espaço disponível
+    },
+    addressTextWrapper: {
+        flex: 1, // Permite que o texto quebre linha dentro deste container
+    },
+    addressLine1: {
         fontSize: 14,
-        color: '#373738ff',
+        color: '#373738ff', // Cor original do texto
         fontWeight: 'bold',
         flexShrink: 1,
     },
-    addressTextNormal: {
+    addressLine2: {
         fontSize: 12,
-        color: '#363535ff',
+        color: '#363535ff', // Cor original do texto
         flexShrink: 1,
-        marginTop: 4,
+        marginTop: 4, // Espaçamento entre as linhas
     },
+    // FIM DOS NOVOS E MODIFICADOS ESTILOS
+
+    // Estilos antigos removidos/substituídos:
+    // textContainer
+    // addressTextBold
+    // addressTextNormal
+
     editButton: {
         padding: 8,
         borderRadius: 20,
@@ -242,13 +332,12 @@ const styles = StyleSheet.create({
         transform: [{ skewX: '-20deg' }],
         overflow: 'hidden',
         zIndex: 0,
-        borderRadius: 24,
+        borderRadius: 4,
     },
     shineGradient: {
         height: '100%',
         width: '100%',
     },
-    // Estilos do Skeleton (adaptados para o novo design)
     addressBriefSkeleton: {
         borderRadius: 24,
         marginHorizontal: 16,
@@ -278,7 +367,6 @@ const styles = StyleSheet.create({
         backgroundColor: '#555',
         borderRadius: 8,
     },
-    // Estilos para o modo de input (adaptados para o novo design)
     addressInputContainer: {
         backgroundColor: '#1E1E1E',
         padding: 24,

@@ -18,7 +18,7 @@ export const setUnauthorizedCallback = (callback: () => Promise<void>) => {
 
 // Para facilitar a manutenção local, você pode comentar a linha acima
 // e descomentar a linha abaixo para apontar para um backend local.
- const API_BASE_URL = 'http://localhost:3000'; 
+ const API_BASE_URL = 'http://127.0.0.1:3000'; 
 
 if (!API_BASE_URL) {
     console.error('backendApiUrl não está definido em app.json ou Constants.expoConfig.extra! Verifique sua configuração.');

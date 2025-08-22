@@ -1,149 +1,233 @@
 // LimpeJaApp/components/missions/MissionItem.tsx
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import {
+    View,
+    Text,
+    StyleSheet,
+    TouchableOpacity,
+    Animated,
+    Easing,
+    ActivityIndicator,
+    Platform, // <-- CORREÇÃO: Adicionado Platform aqui
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-
-// Definição da interface para uma Missão
-export interface Mission {
-  id: string;
-  title: string;
-  description: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
-  dueDate: string; // Ex: "YYYY-MM-DD"
-  rewardPoints: number;
-}
+import { Mission } from '../../types/backend/mission'; // <-- Certifique-se de que esta importação está correta, conforme a solução anterior
 
 interface MissionItemProps {
-  mission: Mission;
-  onPress: (mission: Mission) => void;
+    mission: Mission; // <-- Usando a interface Mission importada
+    delay: number;
+    onClaim: (missionId: string) => void;
+    isClaiming: boolean;
 }
 
-const MissionItem: React.FC<MissionItemProps> = ({ mission, onPress }) => {
-  const getStatusColor = (status: Mission['status']) => {
-    switch (status) {
-      case 'pending':
-        return '#FFC107'; // Amarelo
-      case 'in_progress':
-        return '#007AFF'; // Azul
-      case 'completed':
-        return '#28A745'; // Verde
-      case 'cancelled':
-        return '#DC3545'; // Vermelho
-      default:
-        return '#6C757D'; // Cinza
-    }
-  };
+const MissionItem: React.FC<MissionItemProps> = ({ mission, delay, onClaim, isClaiming }) => {
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const slideAnim = useRef(new Animated.Value(20)).current;
+    const scaleAnim = useRef(new Animated.Value(1)).current;
+    const progressWidthAnim = useRef(new Animated.Value(0)).current;
 
-  const getStatusIcon = (status: Mission['status']) => {
-    switch (status) {
-      case 'pending':
-        return 'hourglass-outline';
-      case 'in_progress':
-        return 'play-circle-outline';
-      case 'completed':
-        return 'checkmark-circle-outline';
-      case 'cancelled':
-        return 'close-circle-outline';
-      default:
-        return 'information-circle-outline';
-    }
-  };
+    useEffect(() => {
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 400,
+                delay: delay,
+                easing: Easing.out(Easing.ease),
+                useNativeDriver: true,
+            }),
+            Animated.timing(slideAnim, {
+                toValue: 0,
+                duration: 400,
+                delay: delay,
+                easing: Easing.out(Easing.ease),
+                useNativeDriver: true,
+            }),
+        ]).start();
+    }, [fadeAnim, slideAnim, delay]);
 
-  return (
-    <TouchableOpacity style={styles.card} onPress={() => onPress(mission)}>
-      <View style={styles.header}>
-        <Ionicons name={getStatusIcon(mission.status)} size={24} color={getStatusColor(mission.status)} style={styles.icon} />
-        <Text style={styles.title}>{mission.title}</Text>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(mission.status) }]}>
-          <Text style={styles.statusText}>{mission.status.replace('_', ' ').toUpperCase()}</Text>
-        </View>
-      </View>
-      <Text style={styles.description} numberOfLines={2}>{mission.description}</Text>
-      <View style={styles.footer}>
-        <Text style={styles.dueDate}>Vence em: {mission.dueDate}</Text>
-        <View style={styles.rewardContainer}>
-          <Ionicons name="star" size={16} color="#FFD700" />
-          <Text style={styles.rewardPoints}>{mission.rewardPoints} Pts</Text>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
+    useEffect(() => {
+        const progressPercentage = (mission.currentProgress / mission.targetValue) * 100;
+        Animated.timing(progressWidthAnim, {
+            toValue: progressPercentage,
+            duration: 500,
+            delay: delay + 200, // Anima o progresso após a entrada do item
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: false, // 'width' não suporta native driver
+        }).start();
+    }, [mission.currentProgress, mission.targetValue, progressWidthAnim, delay]);
+
+    const onPressInButton = () => { Animated.spring(scaleAnim, { toValue: 0.96, useNativeDriver: true }).start(); };
+    const onPressOutButton = () => { Animated.spring(scaleAnim, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start(); };
+
+    const isCompleted = mission.status === 'COMPLETED';
+    const isClaimed = mission.status === 'CLAIMED';
+    const progress = Math.min(mission.currentProgress, mission.targetValue);
+    const progressText = `${progress}/${mission.targetValue}`;
+    const rewardText = mission.rewardType === 'POINTS' ? `${mission.rewardValue} Pontos` : `Cupom de R$${mission.rewardValue}`;
+
+    return (
+        <Animated.View
+            style={[
+                styles.missionItemWrapper,
+                { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
+            ]}
+        >
+            <View style={styles.missionCard}>
+                <View style={styles.missionHeader}>
+                    <Ionicons
+                        name={isCompleted ? "checkmark-circle" : "flag"}
+                        size={24}
+                        color={isCompleted ? '#28A745' : '#007AFF'}
+                        style={styles.missionIcon}
+                    />
+                    <View style={styles.missionTitleContainer}>
+                        <Text style={styles.missionName}>{mission.name}</Text>
+                        <Text style={styles.missionDescription}>{mission.description}</Text>
+                    </View>
+                </View>
+
+                <View style={styles.progressBarContainer}>
+                    <Animated.View style={[styles.progressBarFill, { width: progressWidthAnim.interpolate({
+                        inputRange: [0, 100],
+                        outputRange: ['0%', '100%'],
+                    }), backgroundColor: isCompleted ? '#28A745' : '#007AFF' }]} />
+                    <Text style={styles.progressText}>{progressText}</Text>
+                </View>
+
+                <View style={styles.missionFooter}>
+                    <Text style={styles.rewardText}>Recompensa: <Text style={styles.rewardValueText}>{rewardText}</Text></Text>
+                    {isCompleted && !isClaimed && (
+                        <TouchableOpacity
+                            style={[styles.claimButton, { transform: [{ scale: scaleAnim }] }]}
+                            onPress={() => onClaim(mission.id)}
+                            onPressIn={onPressInButton}
+                            onPressOut={onPressOutButton}
+                            disabled={isClaiming}
+                        >
+                            {isClaiming ? (
+                                <ActivityIndicator color="#fff" size="small" />
+                            ) : (
+                                <Text style={styles.claimButtonText}>Resgatar</Text>
+                            )}
+                        </TouchableOpacity>
+                    )}
+                    {isClaimed && (
+                        <View style={styles.claimedBadge}>
+                            <Ionicons name="gift" size={16} color="#6C757D" />
+                            <Text style={styles.claimedText}>Resgatada</Text>
+                        </View>
+                    )}
+                </View>
+            </View>
+        </Animated.View>
+    );
 };
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginVertical: 8,
-    marginHorizontal: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-    borderLeftWidth: 6,
-    borderLeftColor: '#007AFF', // Cor de destaque
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  icon: {
-    marginRight: 10,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    flex: 1,
-  },
-  statusBadge: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 20,
-    marginLeft: 10,
-  },
-  statusText: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  description: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 12,
-    lineHeight: 20,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#EEE',
-    paddingTop: 10,
-  },
-  dueDate: {
-    fontSize: 12,
-    color: '#888',
-  },
-  rewardContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFBE6',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#FFD700',
-  },
-  rewardPoints: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#B8860B',
-    marginLeft: 4,
-  },
+    missionItemWrapper: {
+        marginBottom: 15,
+        marginHorizontal: 15,
+    },
+    missionCard: {
+        backgroundColor: '#FFFFFF', // --card-background
+        borderRadius: 12,
+        padding: 15,
+        ...Platform.select({ // <-- Uso de Platform aqui
+            ios: {
+                shadowColor: 'rgba(0,0,0,0.08)',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.15,
+                shadowRadius: 8,
+            },
+            android: {
+                elevation: 6,
+            },
+        }),
+    },
+    missionHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    missionIcon: {
+        marginRight: 10,
+    },
+    missionTitleContainer: {
+        flex: 1,
+    },
+    missionName: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#212529', // --text-dark
+    },
+    missionDescription: {
+        fontSize: 14,
+        color: '#6C757D', // --text-medium
+        marginTop: 2,
+    },
+    progressBarContainer: {
+        height: 10,
+        backgroundColor: '#E9ECEF', // --border-light
+        borderRadius: 5,
+        overflow: 'hidden',
+        position: 'relative',
+        marginBottom: 10,
+    },
+    progressBarFill: {
+        height: '100%',
+        borderRadius: 5,
+        position: 'absolute',
+        left: 0,
+        top: 0,
+    },
+    progressText: {
+        position: 'absolute',
+        alignSelf: 'center',
+        fontSize: 10,
+        fontWeight: 'bold',
+        color: '#212529', // --text-dark
+        top: -1, // Ajuste para centralizar verticalmente
+    },
+    missionFooter: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 5,
+    },
+    rewardText: {
+        fontSize: 14,
+        color: '#495057', // --text-darker-gray
+    },
+    rewardValueText: {
+        fontWeight: 'bold',
+        color: '#28A745', // Verde para recompensa
+    },
+    claimButton: {
+        backgroundColor: '#007AFF', // --accent-blue
+        paddingVertical: 8,
+        paddingHorizontal: 15,
+        borderRadius: 8,
+        minWidth: 90,
+        alignItems: 'center',
+    },
+    claimButtonText: {
+        color: '#FFFFFF',
+        fontWeight: '600',
+        fontSize: 14,
+    },
+    claimedBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#F0F2F5', // Cinza claro
+        paddingVertical: 5,
+        paddingHorizontal: 10,
+        borderRadius: 8,
+    },
+    claimedText: {
+        marginLeft: 5,
+        color: '#6C757D', // --text-medium
+        fontSize: 13,
+    },
 });
 
 export default MissionItem;

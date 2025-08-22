@@ -22,6 +22,10 @@ import BookingSummaryCard from '../../../components/client/booking/success/Booki
 import MainActionButtons from '../../../components/client/booking/success/MainActionButtons';
 import SuccessHeader from '../../../components/client/booking/success/SuccessHeader';
 import SuccessLoadingError from '../../../components/client/booking/success/SuccessLoadingError';
+import ImmediateActionButtons from '../../../components/client/booking/success/ImmediateActionButtons';
+import SecurityInfoSection from '../../../components/client/booking/success/SecurityInfoSection';
+import LoyaltyTeaserSection from '../../../components/client/booking/success/LoyaltyTeaserSection';
+
 
 // Importar serviços e tipagens
 import { getBookingDetails } from '../../../services/bookingService';
@@ -73,10 +77,6 @@ export default function SuccessScreen() {
     // Animação para o conteúdo principal aparecer suavemente
     const contentOpacity = useRef(new Animated.Value(0)).current;
     const contentTranslateY = useRef(new Animated.Value(50)).current;
-
-    // Animações para o "tick" no cabeçalho
-    const headerTickOpacity = useRef(new Animated.Value(0)).current;
-    const headerTickScale = useRef(new Animated.Value(0.5)).current;
 
     // Animação para a "bolha" de fundo
     const blobTranslateY = useRef(new Animated.Value(0)).current;
@@ -213,20 +213,6 @@ export default function SuccessScreen() {
                     easing: Easing.out(Easing.ease),
                     useNativeDriver: true,
                 }),
-                Animated.parallel([
-                    Animated.timing(headerTickOpacity, {
-                        toValue: 1,
-                        duration: 500,
-                        delay: 300,
-                        useNativeDriver: true,
-                    }),
-                    Animated.spring(headerTickScale, {
-                        toValue: 1,
-                        friction: 5,
-                        tension: 80,
-                        useNativeDriver: true,
-                    }),
-                ]),
             ]).start(() => {
                 setTimeout(() => {
                     fetchBookingAndProviderDetails();
@@ -235,7 +221,7 @@ export default function SuccessScreen() {
         }, revealDelay);
 
         return () => clearTimeout(timer);
-    }, [fetchBookingAndProviderDetails, contentOpacity, contentTranslateY, headerTickOpacity, headerTickScale]);
+    }, [fetchBookingAndProviderDetails, contentOpacity, contentTranslateY]); // Removed headerTickOpacity, headerTickScale
 
     const handleGoToBookings = useCallback(() => {
         router.replace({ pathname: '/(client)/bookings', params: { highlightNew: true } } as any);
@@ -255,7 +241,6 @@ export default function SuccessScreen() {
             return;
         }
 
-        // CORREÇÃO: Combinar scheduledDate e scheduledTime para criar a data
         const [year, month, day] = booking.scheduledDate.split('-').map(Number);
         const [hour, minute] = booking.scheduledTime.split(':').map(Number);
         const startDate = new Date(year, month - 1, day, hour, minute);
@@ -323,10 +308,6 @@ export default function SuccessScreen() {
     }, [pixChargeDetails]);
 
 
-    // O componente SuccessLoadingError já lida com isLoading e error.
-    // Se booking for null, ele também exibirá o erro.
-    // NOVO: Incluir pixGenerationError no check de erro
-    // A tela só deve mostrar erro se o booking não carregou (já que não tem mais Lottie para esperar)
     if (isLoading || error || pixGenerationError || !booking) {
         return (
             <SuccessLoadingError
@@ -338,27 +319,22 @@ export default function SuccessScreen() {
         );
     }
 
-    // Define um valor para o ZIndex da bolha
     const blobZIndex = -1;
 
-    // LÓGICA DE FORMATAÇÃO DE ENDEREÇO
-    // Extrai o endereço do booking
     const userAddress = booking.address;
-    // Formata o endereço usando as funções importadas
     const formattedAddressLine1 = userAddress ? formatAddressLine1(userAddress) : '';
     const formattedAddressLine2 = userAddress ? formatAddressLine2(userAddress) : '';
 
 
     return (
-        <LinearGradient // <<< Gradiente de fundo geral para a tela
+        <LinearGradient
             colors={backgroundGradientColors}
             start={{ x: 0.1, y: 0.1 }}
             end={{ x: 0.9, y: 0.9 }}
-            style={styles.screenGradientBackground} // Novo estilo para o gradiente de tela
+            style={styles.screenGradientBackground}
         >
             <Stack.Screen options={{ headerShown: false }} />
 
-            {/* --- Elemento de fundo abstrato animado (Bolha) --- */}
             <Animated.View
                 style={[
                     styles.animatedBlob,
@@ -368,7 +344,7 @@ export default function SuccessScreen() {
                             { scale: blobScale },
                             { rotate: blobRotate.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) },
                         ],
-                        zIndex: blobZIndex, // Garante que a bolha fique no fundo
+                        zIndex: blobZIndex,
                     },
                 ]}
             >
@@ -380,16 +356,15 @@ export default function SuccessScreen() {
                 />
                 <BlurView intensity={30} tint="light" style={StyleSheet.absoluteFillObject} />
             </Animated.View>
-            {/* --- FIM do Elemento de fundo abstrato animado (Bolha) --- */}
 
 
             {booking && (
-                <ScrollView // << ENVOLVE O CONTEÚDO PRINCIPAL COM SCROLLVIEW
-                    contentContainerStyle={styles.scrollContentContainer} // Estilo para o conteúdo do ScrollView
+                <ScrollView
+                    contentContainerStyle={styles.scrollContentContainer}
                 >
-                    <Animated.View // Conteúdo principal animado
+                    <Animated.View
                         style={[
-                            styles.mainContentAnimatedWrapper, // NOVO ESTILO: Envolve o conteúdo principal
+                            styles.mainContentAnimatedWrapper,
                             { opacity: contentOpacity, transform: [{ translateY: contentTranslateY }] },
                         ]}
                     >
@@ -399,7 +374,6 @@ export default function SuccessScreen() {
                             successColor={successColor}
                         />
 
-                        {/* PASSANDO OS ENDEREÇOS FORMATADOS PARA O COMPONENTE FILHO */}
                         <BookingSummaryCard
                             booking={booking}
                             providerRating={providerRating}
@@ -413,6 +387,16 @@ export default function SuccessScreen() {
                             formattedAddressLine1={formattedAddressLine1}
                             formattedAddressLine2={formattedAddressLine2}
                         />
+
+                        <ImmediateActionButtons
+                            onAddToCalendar={handleAddToCalendar}
+                            onContactProvider={handleContactProvider}
+                            headerPrimaryColor={headerPrimaryColor}
+                        />
+
+                        <SecurityInfoSection successColor={successColor} />
+
+                        <LoyaltyTeaserSection headerPrimaryColor={headerPrimaryColor} />
 
                         <MainActionButtons
                             onGoToBookings={handleGoToBookings}
@@ -429,33 +413,32 @@ export default function SuccessScreen() {
 const styles = StyleSheet.create({
     screenContainer: {
         flex: 1,
-        backgroundColor: '#F0F2F5', // Este será sobreposto pelo gradiente
+        backgroundColor: '#F0F2F5',
     },
     screenGradientBackground: {
         flex: 1,
-        paddingTop: 50, // Adicionado padding no topo
+        paddingTop: 50,
     },
-    scrollContentContainer: { // Estilo para o contentContainerStyle do ScrollView
-        flexGrow: 1, // Permite que o ScrollView cresça e centralize conteúdo se houver espaço
-        justifyContent: 'center', // Centraliza o conteúdo verticalmente
-        alignItems: 'center', // Centraliza o conteúdo horizontalmente
-        paddingBottom: 20, // Garante espaço na parte inferior ao rolar
+    scrollContentContainer: {
+        flexGrow: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingBottom: 20,
     },
-    mainContentAnimatedWrapper: { // NOVO ESTILO: Wrapper para o conteúdo principal animado
-        width: '100%', // Ocupa a largura total do ScrollView
-        alignItems: 'center', // Centraliza os cards e botões dentro dele
-        backgroundColor: 'transparent', // Garante que o fundo do gradiente seja visível
+    mainContentAnimatedWrapper: {
+        width: '100%',
+        alignItems: 'center',
+        backgroundColor: 'transparent',
     },
     animatedBlob: {
         position: 'absolute',
-        width: SCREEN_WIDTH * 0.7, // Reduzido um pouco o tamanho
+        width: SCREEN_WIDTH * 0.7,
         height: SCREEN_WIDTH * 0.7,
-        borderRadius: (SCREEN_WIDTH * 0.7) / 2, // Para ser circular
-        alignSelf: 'center', // Centraliza horizontalmente
-        top: SCREEN_WIDTH * 0.1, // Movido um pouco para baixo
-        opacity: 0.4, // Reduzida a opacidade
+        borderRadius: (SCREEN_WIDTH * 0.7) / 2,
+        alignSelf: 'center',
+        top: SCREEN_WIDTH * 0.1,
+        opacity: 0.4,
         overflow: 'hidden',
-        // Sombras para a bolha
         ...Platform.select({
             ios: {
                 shadowColor: '#000',

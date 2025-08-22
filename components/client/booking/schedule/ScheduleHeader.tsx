@@ -36,10 +36,10 @@ const ScheduleHeader: React.FC<ScheduleHeaderProps> = ({ onBackPress, headerTitl
 const styles = StyleSheet.create({
   topHeaderGradient: {
     width: '38%',
-    paddingTop: Platform.OS === 'ios' ? 25 : 23,
+    paddingTop: Platform.OS === 'ios' ? 25 : 43,
     paddingBottom: 15,
     bottom: 87,
-    left: 120,
+    left: 110,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
     elevation: 8,
     borderBottomLeftRadius: 50,
     borderBottomRightRadius: 50,
-    marginBottom: Platform.OS === 'ios' ? 0 : -80,
+    marginBottom: Platform.OS === 'ios' ? 0 : -70,
   },
   backButton: {
     position: 'absolute',

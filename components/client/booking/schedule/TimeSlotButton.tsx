@@ -1,6 +1,6 @@
 // app/(client)/bookings/components/schedule/TimeSlotButton.tsx
-import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, View, ColorValue } from 'react-native'; // Adicionado ColorValue
+import React, { useRef, useEffect } from 'react'; // Importado useRef, useEffect
+import { TouchableOpacity, Text, StyleSheet, View, ColorValue, Animated, Easing } from 'react-native'; // Adicionado ColorValue, Animated, Easing
 import { LinearGradient } from 'expo-linear-gradient'; // Importe o LinearGradient
 
 interface TimeSlotButtonProps {
@@ -25,6 +25,33 @@ const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({
     isAvailable = true,
     itemWidth,
 }) => {
+    const pulseAnim = useRef(new Animated.Value(1)).current; // Animação de pulso para slots disponíveis
+
+    useEffect(() => {
+        if (isAvailable && !isSelected) {
+            // Inicia a animação de pulso para slots disponíveis e não selecionados
+            Animated.loop(
+                Animated.sequence([
+                    Animated.timing(pulseAnim, {
+                        toValue: 1.02,
+                        duration: 1500,
+                        easing: Easing.inOut(Easing.ease),
+                        useNativeDriver: true,
+                    }),
+                    Animated.timing(pulseAnim, {
+                        toValue: 1,
+                        duration: 1500,
+                        easing: Easing.inOut(Easing.ease),
+                        useNativeDriver: true,
+                    }),
+                ])
+            ).start();
+        } else {
+            pulseAnim.stopAnimation(); // Para a animação se não estiver disponível ou selecionado
+            pulseAnim.setValue(1); // Reseta o valor
+        }
+    }, [isAvailable, isSelected, pulseAnim]);
+
     const handlePress = () => {
         if (isAvailable) {
             onPress(time);
@@ -52,7 +79,7 @@ const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({
                     ? [buttonStyle, styles.buttonUnavailable]
                     : isSelected
                         ? [buttonStyle, styles.buttonSelected]
-                        : buttonStyle // Estilo base sem cor de fundo, para o gradiente
+                        : [buttonStyle, { transform: [{ scale: pulseAnim }] }] // Aplica a animação de pulso
             }
         >
             {shouldApplyGradient && (
@@ -108,7 +135,7 @@ const styles = StyleSheet.create({
     },
     buttonUnavailable: {
         backgroundColor: '#EAEAEA', // Cor de fundo mais clara para indisponível
-        opacity: 0.8,
+        opacity: 0.6, // Reduz a opacidade para indisponível
         shadowColor: 'transparent', // Sem sombra para indisponível
         elevation: 0,
     },

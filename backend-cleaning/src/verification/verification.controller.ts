@@ -14,6 +14,8 @@ import {
   ForbiddenException,
   NotFoundException,
   Patch,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -57,6 +59,7 @@ export class UpdateVerificationStatusDto {
 
 @ApiTags('verification')
 @Controller('verification')
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class VerificationController {
   private readonly logger = new Logger(VerificationController.name);
 
@@ -66,8 +69,6 @@ export class VerificationController {
 
   @Get('pending-queue')
   @Roles(UserRole.ADMIN)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Obter a fila de provedores pendentes de verificação (ADMIN apenas)' })
   @ApiResponse({ status: 200, description: 'Lista de provedores pendentes de verificação.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
@@ -79,8 +80,6 @@ export class VerificationController {
 
   @Post('upload-document/:type')
   @Roles(UserRole.PROVIDER)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @ApiBearerAuth()
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     description: 'Upload da foto do documento (frente ou verso)',
@@ -96,7 +95,7 @@ export class VerificationController {
     },
   })
   @ApiOperation({ summary: 'Upload da foto do documento (frente ou verso)' })
-  @ApiResponse({ status: 200, description: 'Documento enviado com sucesso.' })
+  @ApiResponse({ status: 200, description: 'Documento enviado com sucesso.', schema: { type: 'object', properties: { message: { type: 'string' }, url: { type: 'string' } } } })
   @ApiResponse({ status: 400, description: 'Dados inválidos.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Provedor não encontrado.' })
@@ -115,14 +114,12 @@ export class VerificationController {
     if (!Object.values(DocumentPhotoType).includes(type)) {
       throw new BadRequestException('Tipo de documento inválido. Use FRONT ou BACK.');
     }
-    await this.verificationService.uploadDocumentPhoto(providerId, file, type);
-    return { message: `Documento (${type}) enviado com sucesso e enviado para revisão manual.` };
+    const uploadedUrl = await this.verificationService.uploadDocumentPhoto(providerId, file, type);
+    return { message: `Documento (${type}) enviado com sucesso e enviado para revisão manual.`, url: uploadedUrl };
   }
 
   @Post('upload-selfie')
   @Roles(UserRole.PROVIDER)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @ApiBearerAuth()
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     description: 'Upload da selfie com documento',
@@ -159,8 +156,6 @@ export class VerificationController {
 
   @Post('upload-avatar')
   @Roles(UserRole.PROVIDER, UserRole.CLIENT)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @ApiBearerAuth()
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     description: 'Upload da foto de perfil (avatar)',
@@ -200,10 +195,22 @@ export class VerificationController {
     return { message: 'Avatar enviado com sucesso.', url: uploadedUrl };
   }
 
+  @Post('advance-status')
+  @HttpCode(HttpStatus.OK)
+  @Roles(UserRole.PROVIDER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Avança o status de verificação do provedor (pelo próprio provedor).' })
+  @ApiResponse({ status: 200, description: 'Status de verificação avançado com sucesso.' })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  @ApiResponse({ status: 403, description: 'Acesso proibido (requer função de PROVEDOR).' })
+  async advanceVerificationStatus(@Req() req: Request) {
+    const providerId = req.user['providerId'];
+    await this.verificationService.advanceVerificationStatus(providerId);
+    return { message: 'Verification status advanced successfully.' };
+  }
+
   @Patch(':providerId/status')
   @Roles(UserRole.ADMIN)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Atualizar o status de verificação de um provedor (ADMIN apenas)' })
   @ApiBody({ type: UpdateVerificationStatusDto })
   @ApiResponse({ status: 200, description: 'Status de verificação atualizado com sucesso.' })
@@ -225,8 +232,6 @@ export class VerificationController {
 
   @Post('reject/:providerId')
   @Roles(UserRole.ADMIN)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @ApiBearerAuth()
   @ApiBody({ schema: { properties: { reason: { type: 'string', description: 'Motivo da rejeição' } } }})
   @ApiOperation({ summary: 'Rejeitar um provedor e fornecer um motivo' })
   @ApiResponse({ status: 200, description: 'Provedor rejeitado com sucesso.' })
@@ -247,8 +252,6 @@ export class VerificationController {
 
   @Get('status/:providerId')
   @Roles(UserRole.ADMIN, UserRole.PROVIDER)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Obter o status de verificação de um provedor' })
   @ApiResponse({ status: 200, description: 'Status de verificação do provedor.', schema: {
     type: 'object',
@@ -260,7 +263,7 @@ export class VerificationController {
       isSelfieUploaded: { type: 'boolean' },
       rejectionReason: { type: 'string', nullable: true },
     }
-  }})
+  } })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
   @ApiResponse({ status: 404, description: 'Provedor não encontrado.' })

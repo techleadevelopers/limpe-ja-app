@@ -1,6 +1,6 @@
 // LimpeJaApp/app/(common)/loyalty.tsx
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, Alert, Animated, Easing, Platform } from 'react-native'; // Adicionado 'Platform'
 import ScreenContainer from '../../components/common/ScreenContainer';
 import Header from '../../components/common/Header';
 import Card from '../../components/common/Card'; // Card ainda é usado para a seção de recompensas
@@ -50,6 +50,38 @@ const mockLoyaltyData: LoyaltyData = {
   ],
 };
 
+// Componente AnimatedCard para encapsular as seções e aplicar animações de entrada
+const AnimatedCardWrapper: React.FC<{ children: React.ReactNode; style?: any; delay: number }> = ({ children, style, delay }) => {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const translateYAnim = useRef(new Animated.Value(50)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        delay: delay,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateYAnim, {
+        toValue: 0,
+        duration: 600,
+        delay: delay,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [fadeAnim, translateYAnim, delay]);
+
+  return (
+    <Animated.View style={[style, { opacity: fadeAnim, transform: [{ translateY: translateYAnim }] }]}>
+      {children}
+    </Animated.View>
+  );
+};
+
+
 const LoyaltyScreen: React.FC = () => {
   // Usamos useState para permitir que os pontos e recompensas sejam atualizados (ex: após um resgate)
   const [loyaltyData, setLoyaltyData] = React.useState<LoyaltyData>(mockLoyaltyData);
@@ -93,33 +125,38 @@ const LoyaltyScreen: React.FC = () => {
 
       <ScrollView contentContainerStyle={styles.scrollViewContent}>
         {/* Componente para o resumo da fidelidade */}
-        <LoyaltySummaryCard
-          currentPoints={loyaltyData.currentPoints}
-          nextTierPoints={loyaltyData.nextTierPoints}
-          currentTier={loyaltyData.currentTier}
-          nextTier={loyaltyData.nextTier}
-          pointsEarnedThisMonth={loyaltyData.pointsEarnedThisMonth}
-        />
+        <AnimatedCardWrapper delay={0}>
+          <LoyaltySummaryCard
+            currentPoints={loyaltyData.currentPoints}
+            nextTierPoints={loyaltyData.nextTierPoints}
+            currentTier={loyaltyData.currentTier}
+            nextTier={loyaltyData.nextTier}
+            pointsEarnedThisMonth={loyaltyData.pointsEarnedThisMonth}
+          />
+        </AnimatedCardWrapper>
 
         {/* Seção de Recompensas Disponíveis */}
-        <Card style={styles.rewardsCard}>
+        <AnimatedCardWrapper style={styles.rewardsCard} delay={150}>
           <Text style={styles.sectionTitle}>Recompensas Disponíveis</Text>
           {loyaltyData.rewardsAvailable.length > 0 ? (
-            loyaltyData.rewardsAvailable.map((reward) => (
+            loyaltyData.rewardsAvailable.map((reward, index) => (
               <RewardItem
                 key={reward.id}
                 reward={reward}
                 currentPoints={loyaltyData.currentPoints}
                 onRedeem={handleRedeemReward}
+                delay={index * 50} // Atraso escalonado para cada recompensa
               />
             ))
           ) : (
             <Text style={styles.noRewardsText}>Nenhuma recompensa disponível no momento.</Text>
           )}
-        </Card>
+        </AnimatedCardWrapper>
 
         {/* Seção Como Ganhar Pontos */}
-        <HowToEarnSection howToEarnRules={loyaltyData.howToEarn} />
+        <AnimatedCardWrapper delay={300}>
+          <HowToEarnSection howToEarnRules={loyaltyData.howToEarn} />
+        </AnimatedCardWrapper>
       </ScrollView>
     </ScreenContainer>
   );
@@ -136,6 +173,20 @@ const styles = StyleSheet.create({
   },
   rewardsCard: {
     marginBottom: 15,
+    backgroundColor: colors.cardBackground, // CORRIGIDO: de backgroundWhite para cardBackground
+    borderRadius: 12, // Adicionado border radius
+    padding: 20, // Adicionado padding
+    ...Platform.select({ // Adicionado sombra
+      ios: {
+        shadowColor: colors.primaryLight,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
   noRewardsText: {
     ...typography.body,

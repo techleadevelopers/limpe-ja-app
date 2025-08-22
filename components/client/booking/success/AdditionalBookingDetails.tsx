@@ -1,6 +1,6 @@
 // LimpeJaApp/app/(client)/bookings/components/success/AdditionalBookingDetails.tsx
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 
 interface AdditionalBookingDetailsProps {
   bookingId: string;
@@ -13,8 +13,44 @@ export default function AdditionalBookingDetails({
   formattedPaymentValue,
   displayPaymentMethod,
 }: AdditionalBookingDetailsProps) {
+  // Animações de entrada
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const translateYAnim = useRef(new Animated.Value(20)).current;
+  const scaleAnim = useRef(new Animated.Value(0.95)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        delay: 400, // Atraso para aparecer depois dos cartões de data/hora
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateYAnim, {
+        toValue: 0,
+        duration: 500,
+        delay: 400,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 500,
+        delay: 400,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
   return (
-    <View style={styles.additionalDetailsContainer}>
+    <Animated.View
+      style={[
+        styles.additionalDetailsContainer,
+        { opacity: fadeAnim, transform: [{ translateY: translateYAnim }, { scale: scaleAnim }] },
+      ]}
+    >
       <View style={styles.additionalDetailItem}>
         <Text style={styles.additionalDetailLabel}>ID do Agendamento</Text>
         <Text style={styles.additionalDetailValue}>{bookingId || 'N/A'}</Text>
@@ -27,7 +63,7 @@ export default function AdditionalBookingDetails({
         <Text style={styles.additionalDetailLabel}>Método de Pagamento</Text>
         <Text style={styles.additionalDetailValue}>{displayPaymentMethod}</Text>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 

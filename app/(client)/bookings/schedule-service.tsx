@@ -66,6 +66,10 @@ interface CouponInputSectionProps {
     onApplyCoupon: () => Promise<void>;
     isApplyingCoupon: boolean;
     discountAmount: number;
+    couponInputAnim: Animated.Value; // Nova prop para animação
+    couponFeedbackAnim: Animated.Value; // Nova prop para feedback de cupom
+    couponFeedbackColor: string; // Nova prop para cor do feedback
+    couponFeedbackIcon: string; // Nova prop para ícone do feedback
 }
 // --- FIM NOVAS INTERFACES ---
 
@@ -97,36 +101,85 @@ const BookingSummaryPreview = ({
         return 'N/A';
     }, [selectedProviderService, durationInMinutes, squareMeters]);
 
+    // Animação para o preço final
+    const finalPriceAnim = useRef(new Animated.Value(0)).current;
+    const previousFinalPrice = useRef(finalPrice);
+
+    useEffect(() => {
+        if (finalPrice !== previousFinalPrice.current) {
+            finalPriceAnim.setValue(0); // Reset animation
+            Animated.spring(finalPriceAnim, {
+                toValue: 1,
+                friction: 5,
+                tension: 80,
+                useNativeDriver: true,
+            }).start();
+            previousFinalPrice.current = finalPrice;
+        }
+    }, [finalPrice, finalPriceAnim]);
+
+    // Animação para os ícones do resumo
+    const iconAnim = useRef(new Animated.Value(0)).current;
+    useEffect(() => {
+        Animated.timing(iconAnim, {
+            toValue: 1,
+            duration: 500,
+            delay: 100,
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: true,
+        }).start();
+    }, []);
+
+    const animatedIconStyle = {
+        opacity: iconAnim,
+        transform: [{
+            translateX: iconAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [-20, 0]
+            })
+        }]
+    };
+
     return (
         <Animated.View style={[styles.card, { marginTop: 20 }]}>
             <Text style={styles.sectionTitle}>Revise seu Agendamento</Text>
             <View style={styles.summaryItem}>
-                <Ionicons name="briefcase-outline" size={18} color="#4A90E2" style={styles.summaryIcon} />
+                <Animated.View style={animatedIconStyle}>
+                    <Ionicons name="briefcase-outline" size={20} color="#4A90E2" style={styles.summaryIcon} />
+                </Animated.View>
                 <Text style={styles.summaryText}>
                     <Text style={styles.summaryLabel}>Serviço:</Text> {selectedProviderService.service?.name}
                 </Text>
             </View>
             <View style={styles.summaryItem}>
-                <Ionicons name="person-outline" size={18} color="#4A90E2" style={styles.summaryIcon} />
+                <Animated.View style={animatedIconStyle}>
+                    <Ionicons name="person-outline" size={20} color="#4A90E2" style={styles.summaryIcon} />
+                </Animated.View>
                 <Text style={styles.summaryText}>
                     <Text style={styles.summaryLabel}>Provedor:</Text> {provider?.fullName}
                 </Text>
             </View>
             <View style={styles.summaryItem}>
-                <Ionicons name="calendar-outline" size={18} color="#4A90E2" style={styles.summaryIcon} />
+                <Animated.View style={animatedIconStyle}>
+                    <Ionicons name="calendar-outline" size={20} color="#4A90E2" style={styles.summaryIcon} />
+                </Animated.View>
                 <Text style={styles.summaryText}>
                     <Text style={styles.summaryLabel}>Data e Hora:</Text> {formattedDate}, às {selectedTime}
                 </Text>
             </View>
             <View style={styles.summaryItem}>
-                <Ionicons name="location-outline" size={18} color="#4A90E2" style={styles.summaryIcon} />
+                <Animated.View style={animatedIconStyle}>
+                    <Ionicons name="location-outline" size={20} color="#4A90E2" style={styles.summaryIcon} />
+                </Animated.View>
                 <Text style={styles.summaryText}>
                     <Text style={styles.summaryLabel}>Endereço:</Text> {address.street}, {address.number} - {address.neighborhood}, {address.city}/{address.state}
                 </Text>
             </View>
             {(selectedProviderService.pricingType === PricingType.HOURLY || selectedProviderService.pricingType === PricingType.BY_SIZE) && (
                 <View style={styles.summaryItem}>
-                    <Ionicons name="timer-outline" size={18} color="#4A90E2" style={styles.summaryIcon} />
+                    <Animated.View style={animatedIconStyle}>
+                        <Ionicons name="timer-outline" size={20} color="#4A90E2" style={styles.summaryIcon} />
+                    </Animated.View>
                     <Text style={styles.summaryText}>
                         <Text style={styles.summaryLabel}>Detalhes do Serviço:</Text> {serviceDetailsText}
                     </Text>
@@ -144,7 +197,9 @@ const BookingSummaryPreview = ({
             )}
             <View style={styles.totalPriceSummary}>
                 <Text style={styles.totalPriceLabel}>Total a Pagar:</Text>
-                <Text style={styles.totalPriceValue}>R$ {finalPrice.toFixed(2).replace('.', ',')}</Text>
+                <Animated.Text style={[styles.totalPriceValue, { transform: [{ scale: finalPriceAnim.interpolate({ inputRange: [0, 1], outputRange: [0.95, 1] }) }] }]}>
+                    R$ {finalPrice.toFixed(2).replace('.', ',')}
+                </Animated.Text>
             </View>
             <TouchableOpacity onPress={onShowCancellationPolicy} style={styles.cancellationPolicyLink}>
                 <Text style={styles.cancellationPolicyText}>Política de Cancelamento</Text>
@@ -154,11 +209,14 @@ const BookingSummaryPreview = ({
 };
 
 // Componente para o campo de cupom
-const CouponInputSection = ({ couponCode, setCouponCode, onApplyCoupon, isApplyingCoupon, discountAmount }: CouponInputSectionProps) => { // Aplicando a interface aqui
+const CouponInputSection = ({ couponCode, setCouponCode, onApplyCoupon, isApplyingCoupon, discountAmount, couponInputAnim, couponFeedbackAnim, couponFeedbackColor, couponFeedbackIcon }: CouponInputSectionProps) => { // Aplicando a interface aqui
     return (
         <Animated.View style={[styles.card, { marginTop: 20 }]}>
             <Text style={styles.sectionTitle}>Cupom de Desconto</Text>
-            <View style={styles.couponInputContainer}>
+            <Animated.View style={[styles.couponInputContainer, { borderColor: couponInputAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: ['#E0E0E0', '#4A90E2']
+            }) }]}>
                 <TextInput
                     style={styles.couponInput}
                     placeholder="Insira seu código de cupom"
@@ -166,6 +224,8 @@ const CouponInputSection = ({ couponCode, setCouponCode, onApplyCoupon, isApplyi
                     onChangeText={setCouponCode}
                     autoCapitalize="characters"
                     editable={!isApplyingCoupon}
+                    onFocus={() => Animated.timing(couponInputAnim, { toValue: 1, duration: 200, useNativeDriver: false }).start()}
+                    onBlur={() => Animated.timing(couponInputAnim, { toValue: 0, duration: 200, useNativeDriver: false }).start()}
                 />
                 <TouchableOpacity
                     style={styles.applyCouponButton}
@@ -178,9 +238,14 @@ const CouponInputSection = ({ couponCode, setCouponCode, onApplyCoupon, isApplyi
                         <Text style={styles.applyCouponButtonText}>Aplicar</Text>
                     )}
                 </TouchableOpacity>
-            </View>
+            </Animated.View>
             {discountAmount > 0 && (
-                <Text style={styles.couponAppliedText}>Cupom aplicado! Você economizou R$ {discountAmount.toFixed(2).replace('.', ',')}.</Text>
+                <Animated.View style={[styles.couponFeedbackContainer, { opacity: couponFeedbackAnim, transform: [{ translateY: couponFeedbackAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }] }]}>
+                    <Ionicons name={couponFeedbackIcon as any} size={18} color={couponFeedbackColor} />
+                    <Text style={[styles.couponAppliedText, { color: couponFeedbackColor }]}>
+                        Cupom aplicado! Você economizou R$ {discountAmount.toFixed(2).replace('.', ',')}.
+                    </Text>
+                </Animated.View>
             )}
         </Animated.View>
     );
@@ -231,6 +296,10 @@ export default function ScheduleServiceScreen() {
     const [couponCode, setCouponCode] = useState<string>('');
     const [discountAmount, setDiscountAmount] = useState<number>(0);
     const [isApplyingCoupon, setIsApplyingCoupon] = useState<boolean>(false);
+    const couponInputAnim = useRef(new Animated.Value(0)).current; // Animação para a borda do input de cupom
+    const couponFeedbackAnim = useRef(new Animated.Value(0)).current; // Animação para o feedback de cupom
+    const [couponFeedbackColor, setCouponFeedbackColor] = useState('#28A745'); // Cor do feedback (sucesso/erro)
+    const [couponFeedbackIcon, setCouponFeedbackIcon] = useState('checkmark-circle'); // Ícone do feedback
     // --- FIM NOVOS ESTADOS ---
 
     const [isLoading, setIsLoading] = useState(true);
@@ -294,6 +363,25 @@ export default function ScheduleServiceScreen() {
 
     const stepTitles = ["Data e Hora", "Detalhes do Serviço", "Confirmação"];
     // --- FIM NOVO: Lógica para o indicador de progresso ---
+
+    // MOVIDO PARA CIMA: Declaração de prefetchAvailability
+    const prefetchAvailability = useCallback(async (provId: string | undefined, date: Date) => {
+        if (!provId) return;
+
+        const dateString = date.toISOString().split('T')[0];
+        const cacheKey = `${provId}-${dateString}`;
+
+        if (availabilityCache.has(cacheKey)) {
+            return;
+        }
+
+        try {
+            const response = await getProviderAvailability(provId, dateString);
+            availabilityCache.set(cacheKey, response);
+        } catch (error) {
+            console.error(`[Prefetch] Erro ao pré-carregar disponibilidade para ${dateString}:`, error);
+        }
+    }, []);
 
     useEffect(() => {
         Animated.parallel([
@@ -424,7 +512,7 @@ export default function ScheduleServiceScreen() {
             prefetchAvailability(provider?.id, newDate);
             return newDate;
         });
-    }, [provider?.id]);
+    }, [provider?.id, scaleAnim, prefetchAvailability]);
 
     const handleNextMonth = useCallback(() => {
         Animated.sequence([
@@ -437,7 +525,7 @@ export default function ScheduleServiceScreen() {
             prefetchAvailability(provider?.id, newDate);
             return newDate;
         });
-    }, [provider?.id]);
+    }, [provider?.id, scaleAnim, prefetchAvailability]);
 
     const handleDaySelect = useCallback((dateObj: Date) => {
         setSelectedDate(dateObj);
@@ -474,6 +562,8 @@ export default function ScheduleServiceScreen() {
             return;
         }
         setIsApplyingCoupon(true);
+        couponFeedbackAnim.setValue(0); // Reset animation
+
         try {
             // Simulação de chamada de API para aplicar cupom
             // Em um cenário real, você chamaria seu couponService aqui:
@@ -481,25 +571,75 @@ export default function ScheduleServiceScreen() {
             // setDiscountAmount(response.discountValue);
 
             // Simulação:
+            let newDiscount = 0;
+            let feedbackMessage = "";
+            let feedbackColor = "";
+            let feedbackIcon = "";
+
             if (couponCode.toUpperCase() === 'LIMPEJA10') {
-                setDiscountAmount(10); // Simula um desconto de R$10
-                Alert.alert("Sucesso", "Cupom LIMPEJA10 aplicado! Você ganhou R$ 10 de desconto.");
+                newDiscount = 10;
+                feedbackMessage = "Cupom LIMPEJA10 aplicado! Você ganhou R$ 10 de desconto.";
+                feedbackColor = '#28A745'; // Sucesso
+                feedbackIcon = 'checkmark-circle';
             } else if (couponCode.toUpperCase() === 'PRIMEIRA20') {
-                setDiscountAmount(20); // Simula um desconto de R$20
-                Alert.alert("Sucesso", "Cupom PRIMEIRA20 aplicado! Você ganhou R$ 20 de desconto.");
+                newDiscount = 20;
+                feedbackMessage = "Cupom PRIMEIRA20 aplicado! Você ganhou R$ 20 de desconto.";
+                feedbackColor = '#28A745'; // Sucesso
+                feedbackIcon = 'checkmark-circle';
             }
             else {
-                setDiscountAmount(0);
-                Alert.alert("Erro", "Cupom inválido ou expirado.");
+                newDiscount = 0;
+                feedbackMessage = "Cupom inválido ou expirado.";
+                feedbackColor = '#D32F2F'; // Erro
+                feedbackIcon = 'close-circle';
             }
+
+            setDiscountAmount(newDiscount);
+            setCouponFeedbackColor(feedbackColor);
+            setCouponFeedbackIcon(feedbackIcon);
+            Alert.alert(newDiscount > 0 ? "Sucesso" : "Erro", feedbackMessage);
+
+            Animated.timing(couponFeedbackAnim, {
+                toValue: 1,
+                duration: 300,
+                easing: Easing.out(Easing.ease),
+                useNativeDriver: true,
+            }).start(() => {
+                setTimeout(() => {
+                    Animated.timing(couponFeedbackAnim, {
+                        toValue: 0,
+                        duration: 300,
+                        easing: Easing.in(Easing.ease),
+                        useNativeDriver: true,
+                    }).start();
+                }, 3000); // Esconde o feedback após 3 segundos
+            });
+
         } catch (error: any) {
             console.error("Erro ao aplicar cupom:", error.response?.data || error.message);
-            Alert.alert("Erro", error.response?.data?.message || "Não foi possível aplicar o cupom.");
             setDiscountAmount(0);
+            setCouponFeedbackColor('#D32F2F'); // Erro
+            setCouponFeedbackIcon('close-circle');
+            Alert.alert("Erro", error.response?.data?.message || "Não foi possível aplicar o cupom.");
+            Animated.timing(couponFeedbackAnim, {
+                toValue: 1,
+                duration: 300,
+                easing: Easing.out(Easing.ease),
+                useNativeDriver: true,
+            }).start(() => {
+                setTimeout(() => {
+                    Animated.timing(couponFeedbackAnim, {
+                        toValue: 0,
+                        duration: 300,
+                        easing: Easing.in(Easing.ease),
+                        useNativeDriver: true,
+                    }).start();
+                }, 3000);
+            });
         } finally {
             setIsApplyingCoupon(false);
         }
-    }, [couponCode]);
+    }, [couponCode, couponFeedbackAnim]);
     // --- FIM NOVO: Função para aplicar cupom ---
 
     // --- NOVO: Função para exibir política de cancelamento ---
@@ -576,24 +716,6 @@ export default function ScheduleServiceScreen() {
             setIsBooking(false);
         }
     }, [typedUser, provider, selectedDate, selectedTime, address, selectedProviderService, notes, router, durationInMinutes, squareMeters, finalCalculatedPrice, couponCode, discountAmount]);
-
-    const prefetchAvailability = useCallback(async (provId: string | undefined, date: Date) => {
-        if (!provId) return;
-
-        const dateString = date.toISOString().split('T')[0];
-        const cacheKey = `${provId}-${dateString}`;
-
-        if (availabilityCache.has(cacheKey)) {
-            return;
-        }
-
-        try {
-            const response = await getProviderAvailability(provId, dateString);
-            availabilityCache.set(cacheKey, response);
-        } catch (error) {
-            console.error(`[Prefetch] Erro ao pré-carregar disponibilidade para ${dateString}:`, error);
-        }
-    }, []);
 
     useEffect(() => {
         const loadInitialData = async () => {
@@ -837,16 +959,31 @@ export default function ScheduleServiceScreen() {
             <View style={styles.progressBarContainer}>
                 {stepTitles.map((title, index) => (
                     <View key={index} style={styles.progressStep}>
-                        <View style={[
+                        <Animated.View style={[
                             styles.progressDot,
-                            currentStep >= index + 1 ? styles.progressDotActive : null
+                            currentStep >= index + 1 ? styles.progressDotActive : null,
+                            {
+                                backgroundColor: currentStep >= index + 1 ?
+                                    fadeAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: ['#D0D0D0', '#4A90E2']
+                                    }) : '#D0D0D0'
+                            }
                         ]} />
-                        <Text style={[
+                        <Animated.Text style={[
                             styles.progressText,
-                            currentStep >= index + 1 ? styles.progressTextActive : null
+                            currentStep >= index + 1 ? styles.progressTextActive : null,
+                            {
+                                color: currentStep >= index + 1 ?
+                                    fadeAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: ['#888', '#4A90E2']
+                                    }) : '#888',
+                                fontWeight: currentStep >= index + 1 ? 'bold' : 'normal'
+                            }
                         ]}>
                             {title}
-                        </Text>
+                        </Animated.Text>
                     </View>
                 ))}
             </View>
@@ -906,11 +1043,15 @@ export default function ScheduleServiceScreen() {
                     />
                 </Animated.View>
 
+                {/* NOVO: Título "Detalhes do Serviço" (Individual) */}
+                
+
                 {selectedProviderService && (
-                    <Animated.View style={{
+                    <Animated.View style={[{ // <--- AQUI: Removido 'styles.card'
                         transform: [{ scale: scaleAnim }],
-                        opacity: fadeAnim
-                    }}>
+                        opacity: fadeAnim,
+                        marginTop: 0, // O espaçamento superior é dado pelo título da seção
+                    }]}>
                         <ServiceDetailsInput
                             pricingType={selectedProviderService.pricingType}
                             durationInMinutes={durationInMinutes}
@@ -923,12 +1064,20 @@ export default function ScheduleServiceScreen() {
                     </Animated.View>
                 )}
 
-                <NotesInputSection
-                    notes={notes}
-                    setNotes={setNotes}
-                    fadeAnim={fadeAnim}
-                    slideUpAnim={slideUpAnim}
-                />
+                {/* NOVO: NotesInputSection encapsulado em um card */}
+                {/* Mantido o card aqui, pois a imagem sugere que o campo de input de observações está dentro de um card */}
+                <Animated.View style={[styles.card, {
+                    transform: [{ scale: scaleAnim }],
+                    opacity: fadeAnim,
+                    marginTop: 15, // Espaçamento entre a seção anterior e este card
+                }]}>
+                    <NotesInputSection
+                        notes={notes}
+                        setNotes={setNotes}
+                        fadeAnim={fadeAnim}
+                        slideUpAnim={slideUpAnim}
+                    />
+                </Animated.View>
 
                 {/* NOVO: Seção de Cupom de Desconto */}
                 <CouponInputSection
@@ -937,6 +1086,10 @@ export default function ScheduleServiceScreen() {
                     onApplyCoupon={handleApplyCoupon}
                     isApplyingCoupon={isApplyingCoupon}
                     discountAmount={discountAmount}
+                    couponInputAnim={couponInputAnim}
+                    couponFeedbackAnim={couponFeedbackAnim}
+                    couponFeedbackColor={couponFeedbackColor}
+                    couponFeedbackIcon={couponFeedbackIcon}
                 />
                 {/* FIM NOVO: Seção de Cupom de Desconto */}
 
@@ -1094,20 +1247,31 @@ const styles = StyleSheet.create({
     card: {
         backgroundColor: '#FFFFFF',
         borderRadius: 15,
-        padding: 20,
+        padding: 20, // Aumentado o padding para mais espaço interno
         marginHorizontal: 20,
         marginBottom: 15,
-        elevation: 5,
+        // Sombra aprimorada para um visual mais suave e moderno
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 10,
+        elevation: 8,
     },
     sectionTitle: {
-        fontSize: 18,
+        fontSize: 20, // Título maior
         fontWeight: 'bold',
         color: '#333',
-        marginBottom: 15,
+        marginBottom: 20, // Mais espaço abaixo do título
+        textAlign: 'left', // Alinhamento à esquerda para um visual mais limpo
+    },
+    // NOVO: Estilo para o título de seção que não está dentro de um card
+    sectionHeaderTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#333',
+        marginHorizontal: 20,
+        marginTop: 25, // Espaçamento maior em relação à seção anterior
+        marginBottom: 15, // Espaçamento antes do primeiro card desta seção
     },
     couponInputContainer: {
         flexDirection: 'row',
@@ -1121,7 +1285,7 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingVertical: 12,
         paddingHorizontal: 15,
-        fontSize: 16,
+        fontSize: 14,
         color: '#333',
     },
     applyCouponButton: {
@@ -1138,34 +1302,44 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontSize: 16,
     },
-    couponAppliedText: {
+    couponFeedbackContainer: { // Novo estilo para o container de feedback do cupom
+        flexDirection: 'row',
+        alignItems: 'center',
         marginTop: 10,
+        paddingHorizontal: 5,
+    },
+    couponAppliedText: {
+        marginLeft: 8, // Espaçamento entre ícone e texto
         fontSize: 14,
-        color: '#28A745',
         fontWeight: 'bold',
     },
     summaryItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 10,
+        marginBottom: 15, // Aumentado para mais espaçamento
     },
     summaryIcon: {
-        marginRight: 10,
+        marginRight: 15, // Aumentado para mais espaço entre ícone e texto
+        width: 24, // Tamanho fixo para ícones para consistência
+        height: 24,
+        textAlign: 'center', // Centralizar ícone se ele for menor que o espaço
     },
     summaryText: {
-        fontSize: 16,
+        fontSize: 16, // Tamanho de fonte padrão para itens de resumo
         color: '#555',
+        flex: 1, // Permite que o texto ocupe o espaço restante
     },
     summaryLabel: {
-        fontWeight: 'bold',
+        fontWeight: '600', // Um pouco mais bold
         color: '#333',
+        marginRight: 5, // Espaço entre label e valor
     },
     priceSummary: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginTop: 5,
-        paddingVertical: 5,
+        marginTop: 10,
+        paddingVertical: 10, // Aumentado para mais espaçamento
         borderTopWidth: 1,
         borderTopColor: '#F0F0F0',
     },
@@ -1175,7 +1349,7 @@ const styles = StyleSheet.create({
     },
     priceValue: {
         fontSize: 16,
-        fontWeight: '500',
+        fontWeight: '600', // Um pouco mais bold
         color: '#333',
     },
     discountValue: {
@@ -1185,23 +1359,23 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginTop: 10,
-        paddingTop: 10,
+        marginTop: 15, // Mais espaço antes do total
+        paddingTop: 15, // Mais espaço acima da linha
         borderTopWidth: 2,
-        borderTopColor: '#4A90E2',
+        borderTopColor: '#4A90E2', // Linha mais destacada para o total
     },
     totalPriceLabel: {
-        fontSize: 18,
+        fontSize: 22, // Bem maior para destaque
         fontWeight: 'bold',
         color: '#333',
     },
     totalPriceValue: {
-        fontSize: 20,
+        fontSize: 24, // O maior de todos para o valor final
         fontWeight: 'bold',
-        color: '#4A90E2',
+        color: '#4A90E2', // Cor de destaque para o valor final
     },
     cancellationPolicyLink: {
-        marginTop: 15,
+        marginTop: 20, // Mais espaço acima do link
         alignSelf: 'flex-start',
     },
     cancellationPolicyText: {

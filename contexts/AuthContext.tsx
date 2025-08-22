@@ -27,6 +27,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   role: UserRole | null;
+  token: string | null; // <--- CORREÇÃO: Adicionada a propriedade 'token' aqui
   login: (credentials: { email: string; password: string }) => Promise<void>;
   logout: () => Promise<void>;
   register: (userData: any, userType: 'client' | 'provider') => Promise<void>;
@@ -190,17 +191,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(authenticatedUser);
       setRole(latestUserProfile.role as UserRole);
       console.log('[AuthContext | refreshUser] Dados do usuário atualizados com sucesso do backend.');
-    } catch (error: any) { // Captura o erro para inspeção
+    } catch (error: any) {
       console.error('[AuthContext | refreshUser] Erro ao recarregar dados do usuário do backend:', error);
-      // Verifica se o erro é especificamente devido a um token expirado/inválido (status 401)
       if (axios.isAxiosError(error) && error.response && error.response.status === 401) {
           console.log('[AuthContext | refreshUser] Token inválido/expirado, realizando logout.');
-          await logout(); // Realiza logout apenas se for erro de autenticação
+          await logout();
       } else {
-          // Para outros tipos de erros (ex: problemas de rede, erros 500),
-          // não queremos deslogar o usuário. Apenas logamos o erro e o propagamos.
           console.error('[AuthContext | refreshUser] Erro não-autenticação durante refresh. Mantendo sessão, mas pode haver inconsistência. Erro:', error.message);
-          throw error; // Propaga o erro para o chamador (service-details.tsx)
+          throw error;
       }
     } finally {
       setIsLoading(false);
@@ -209,7 +207,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const updateUser = useCallback(async (updatedUserData?: Partial<UserProfile>) => {
     if (user) {
-      if (updatedUserData) { // Se novos dados foram fornecidos, use-os
+      if (updatedUserData) {
         const updatedProfile: UserProfile = {
           ...user,
           ...updatedUserData,
@@ -228,7 +226,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           role: user.role,
         });
         console.log('[AuthContext | updateUser] Perfil do usuário atualizado no contexto e no armazenamento.');
-      } else { // Se nenhum dado foi fornecido, recarregue do backend
+      } else {
         await refreshUser();
       }
     } else {
@@ -258,6 +256,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading,
     isAuthenticated,
     role,
+    token: user?.token || null, // <--- CORREÇÃO: Fornecendo o valor do token aqui
     login,
     logout,
     register,

@@ -223,6 +223,21 @@ export const styles = StyleSheet.create({
         textAlign: 'center',
         paddingVertical: 15,
     },
+    // NOVO: Estilos para o container de "sem avaliações"
+    noReviewsContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 20,
+        marginBottom: 20,
+        backgroundColor: COLOR_BACKGROUND,
+        borderRadius: 15,
+        borderWidth: 1,
+        borderColor: COLOR_BORDER_LIGHT,
+    },
+    noReviewsIcon: {
+        marginBottom: 10,
+        opacity: 0.6,
+    },
     noDetailsText: {
         fontSize: 14,
         color: COLOR_TEXT_LIGHT,

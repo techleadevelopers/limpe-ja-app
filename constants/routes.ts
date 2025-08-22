@@ -24,6 +24,7 @@ export const CLIENT_ROUTES = {
   CHAT: (chatId: string) => `/(client)/messages/${chatId}` as const,
   PROFILE: '/(client)/profile',
   EDIT_PROFILE: '/(client)/profile/edit',
+  MISSIONS: '/(client)/missions', // ROTA DE MISSÕES ADICIONADA AQUI
 } as const;
 
 export const PROVIDER_ROUTES = {
@@ -38,6 +39,7 @@ export const PROVIDER_ROUTES = {
   PROFILE: '/profile',
   EDIT_SERVICES: '/profile/edit-services',
   VERIFICATION: '/verify-account',
+  BOOKINGS_LIST: '/bookings',
 } as const;
 
 export const COMMON_ROUTES = {

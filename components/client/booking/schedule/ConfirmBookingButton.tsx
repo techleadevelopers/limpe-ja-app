@@ -1,5 +1,5 @@
-import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, Platform, View } from 'react-native';
+import React, { useRef, useEffect } from 'react'; // Importado useRef, useEffect
+import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, Platform, View, Animated, Easing } from 'react-native'; // Importado Animated, Easing
 
 interface ConfirmBookingButtonProps {
   isButtonDisabled: boolean;
@@ -18,27 +18,56 @@ const ConfirmBookingButton: React.FC<ConfirmBookingButtonProps> = ({
   selectedTime,
   hasSelectedServicePrice,
 }) => {
+  const pulseAnim = useRef(new Animated.Value(1)).current; // Animação de pulso
+
+  useEffect(() => {
+    if (!isButtonDisabled) {
+      // Inicia a animação de pulso quando o botão está habilitado
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.02, // Leve aumento de escala
+            duration: 2000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 2000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    } else {
+      pulseAnim.stopAnimation(); // Para a animação se o botão estiver desabilitado
+      pulseAnim.setValue(1); // Reseta o valor
+    }
+  }, [isButtonDisabled, pulseAnim]);
+
   return (
     <View style={styles.confirmButtonWrapper}>
-      <TouchableOpacity
-        style={[
-          styles.confirmButton,
-          isButtonDisabled && styles.confirmButtonDisabled
-        ]}
-        onPress={onConfirmBooking}
-        disabled={isButtonDisabled}
-      >
-        {isBooking ? (
-          <ActivityIndicator color="#FFFFFF" />
-        ) : (
-          <Text style={styles.confirmButtonText}>
-            {selectedTime && hasSelectedServicePrice ?
-              `Agendar (${confirmButtonText})` :
-              "Selecione Data, Hora e Endereço"
-            }
-          </Text>
-        )}
-      </TouchableOpacity>
+      <Animated.View style={[{ transform: [{ scale: pulseAnim }] }]}> {/* Aplica a animação aqui */}
+        <TouchableOpacity
+          style={[
+            styles.confirmButton,
+            isButtonDisabled && styles.confirmButtonDisabled
+          ]}
+          onPress={onConfirmBooking}
+          disabled={isButtonDisabled}
+        >
+          {isBooking ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.confirmButtonText}>
+              {selectedTime && hasSelectedServicePrice ?
+                `Agendar (${confirmButtonText})` :
+                "Selecione Data, Hora e Endereço"
+              }
+            </Text>
+          )}
+        </TouchableOpacity>
+      </Animated.View>
     </View>
   );
 };

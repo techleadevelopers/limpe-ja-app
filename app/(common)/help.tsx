@@ -14,6 +14,7 @@ import {
     TextInput,
     TouchableOpacity,
     View,
+    Easing, // Importar Easing
 } from 'react-native';
 
 // Importar o serviço de FAQ
@@ -27,8 +28,6 @@ interface FAQItem {
   keywords?: string[];
 }
 
-// REMOVIDO: const ALL_FAQS (será substituído por dados da API)
-
 // Componente para cada item da FAQ com animação de entrada
 const AnimatedFaqItem: React.FC<{
     faq: FAQItem;
@@ -36,6 +35,7 @@ const AnimatedFaqItem: React.FC<{
 }> = ({ faq, delay }) => {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(20)).current;
+    const scaleAnim = useRef(new Animated.Value(1)).current; // Para feedback de toque
 
     useEffect(() => {
         Animated.parallel([
@@ -43,21 +43,37 @@ const AnimatedFaqItem: React.FC<{
                 toValue: 1,
                 duration: 400,
                 delay: delay,
+                easing: Easing.out(Easing.ease), // Adicionado Easing
                 useNativeDriver: true,
             }),
             Animated.timing(slideAnim, {
                 toValue: 0,
                 duration: 400,
                 delay: delay,
+                easing: Easing.out(Easing.ease), // Adicionado Easing
                 useNativeDriver: true,
             }),
         ]).start();
     }, [fadeAnim, slideAnim, delay]);
 
+    const onPressInItem = () => {
+        Animated.spring(scaleAnim, { toValue: 0.98, useNativeDriver: true }).start();
+    };
+    const onPressOutItem = () => {
+        Animated.spring(scaleAnim, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start();
+    };
+
     return (
-        <Animated.View style={[styles.faqItem, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-            <Text style={styles.faqQuestion}>{faq.question}</Text>
-            <Text style={styles.faqAnswer}>{faq.answer}</Text>
+        <Animated.View style={[styles.faqItem, { opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] }]}>
+            <TouchableOpacity // Adicionado TouchableOpacity para feedback de toque
+                onPress={() => { /* expand/collapse logic here */ }}
+                onPressIn={onPressInItem}
+                onPressOut={onPressOutItem}
+                activeOpacity={1}
+            >
+                <Text style={styles.faqQuestion}>{faq.question}</Text>
+                <Text style={styles.faqAnswer}>{faq.answer}</Text>
+            </TouchableOpacity>
         </Animated.View>
     );
 };
@@ -79,12 +95,14 @@ const AnimatedContactButton: React.FC<{
                 toValue: 1,
                 duration: 400,
                 delay: delay,
+                easing: Easing.out(Easing.ease), // Adicionado Easing
                 useNativeDriver: true,
             }),
             Animated.timing(slideAnim, {
                 toValue: 0,
                 duration: 400,
                 delay: delay,
+                easing: Easing.out(Easing.ease), // Adicionado Easing
                 useNativeDriver: true,
             }),
         ]).start();
@@ -122,8 +140,15 @@ export default function HelpScreen() {
 
   // Animações
   const headerAnim = useRef(new Animated.Value(0)).current;
+  const mainHeaderAnim = useRef(new Animated.Value(0)).current; // Para o título "Como podemos te ajudar?"
   const searchAnim = useRef(new Animated.Value(0)).current;
-  const sectionCardAnim = useRef(new Animated.Value(0)).current;
+  const sectionCardAnim = useRef(new Animated.Value(0)).current; // Para a seção de FAQ e Contato
+
+  // Animação para o botão de voltar do header
+  const headerBackButtonScaleAnim = useRef(new Animated.Value(1)).current;
+  const onPressInHeaderButton = () => { Animated.spring(headerBackButtonScaleAnim, { toValue: 0.95, useNativeDriver: true }).start(); };
+  const onPressOutHeaderButton = () => { Animated.spring(headerBackButtonScaleAnim, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start(); };
+
 
   // Função para carregar FAQs da API
   const loadFaqs = useCallback(async () => {
@@ -139,12 +164,13 @@ export default function HelpScreen() {
         setIsLoadingFaqs(false);
         // Animações de entrada após o carregamento
         Animated.stagger(200, [
-            Animated.timing(headerAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
-            Animated.timing(searchAnim, { toValue: 1, duration: 600, delay: 100, useNativeDriver: true }),
-            Animated.timing(sectionCardAnim, { toValue: 1, duration: 700, delay: 200, useNativeDriver: true }),
+            Animated.timing(headerAnim, { toValue: 1, duration: 500, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+            Animated.timing(mainHeaderAnim, { toValue: 1, duration: 600, delay: 100, easing: Easing.out(Easing.ease), useNativeDriver: true }), // Atraso para o título principal
+            Animated.timing(searchAnim, { toValue: 1, duration: 600, delay: 200, easing: Easing.out(Easing.ease), useNativeDriver: true }), // Atraso para a busca
+            Animated.timing(sectionCardAnim, { toValue: 1, duration: 700, delay: 300, easing: Easing.out(Easing.ease), useNativeDriver: true }), // Atraso para as seções
         ]).start();
     }
-  }, [headerAnim, searchAnim, sectionCardAnim]); // Adiciona dependências de animação
+  }, [headerAnim, mainHeaderAnim, searchAnim, sectionCardAnim]); // Adiciona dependências de animação
 
   useEffect(() => {
     loadFaqs(); // Chama loadFaqs ao montar
@@ -177,7 +203,12 @@ export default function HelpScreen() {
 
       {/* Custom Header */}
       <Animated.View style={[styles.customHeader, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.headerBackButton}>
+          <TouchableOpacity
+              onPress={() => router.back()}
+              style={[styles.headerBackButton, { transform: [{ scale: headerBackButtonScaleAnim }] }]}
+              onPressIn={onPressInHeaderButton}
+              onPressOut={onPressOutHeaderButton}
+          >
               <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Central de Ajuda</Text>
@@ -189,7 +220,7 @@ export default function HelpScreen() {
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
-        <Animated.Text style={[styles.mainHeader, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
+        <Animated.Text style={[styles.mainHeader, { opacity: mainHeaderAnim, transform: [{ translateY: mainHeaderAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
             Como podemos te ajudar?
         </Animated.Text>
 

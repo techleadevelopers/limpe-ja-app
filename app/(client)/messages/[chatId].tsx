@@ -1,20 +1,74 @@
 // LimpeJaApp/app/(client)/messages/[chatId].tsx
 import { Ionicons } from '@expo/vector-icons';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  Animated,
+  Easing,
+  Image,
+} from 'react-native';
 import { io, Socket } from 'socket.io-client';
 import { appConfig } from '../../../config/appConfig';
 import { useAuth } from '../../../hooks/useAuth';
-import { getBookingDetails } from '../../../services/bookingService'; // Importar o serviço de booking
+import { getBookingDetails } from '../../../services/bookingService';
 import { getChatMessages, sendMessage as sendChatMessage } from '../../../services/chatService';
-import { BookingStatus } from '../../../types/backend/bookings'; // Importar BookingStatus
+import { BookingStatus } from '../../../types/backend/bookings';
 import { Message, SendMessageDto } from '../../../types/backend/chat';
 
 const SOCKET_URL = appConfig.apiUrl.replace('http', 'ws');
 
+const CustomChatHeader: React.FC<{
+  recipientName?: string;
+  recipientAvatarUrl?: string;
+  onBackPress: () => void;
+}> = ({ recipientName, recipientAvatarUrl, onBackPress }) => {
+  return (
+    <View style={chatStyles.customHeader}>
+      <TouchableOpacity onPress={onBackPress} style={chatStyles.headerButton}>
+        <Ionicons name="arrow-back" size={24} color="#FFF" />
+      </TouchableOpacity>
+      <View style={chatStyles.headerRecipientInfo}>
+        <Image
+          source={recipientAvatarUrl ? { uri: recipientAvatarUrl } : require('../../../assets/images/default-avatar.png')}
+          style={chatStyles.headerAvatar}
+        />
+        <View>
+          <Text style={chatStyles.headerRecipientName}>{recipientName || 'Chat'}</Text>
+          <Text style={chatStyles.headerRecipientStatus}>Online</Text>
+        </View>
+      </View>
+      <View style={chatStyles.headerActions}>
+        <TouchableOpacity style={chatStyles.headerButton}>
+          <Ionicons name="videocam-outline" size={24} color="#FFF" />
+        </TouchableOpacity>
+        <TouchableOpacity style={chatStyles.headerButton}>
+          <Ionicons name="call-outline" size={24} color="#FFF" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
 export default function ChatScreen() {
-  const { chatId, recipientName, recipientId, recipientAvatarUrl, bookingId } = useLocalSearchParams<{ chatId?: string, recipientName?: string, recipientId?: string, recipientAvatarUrl?: string, bookingId?: string }>();
+  const router = useRouter();
+  const { chatId, recipientName, recipientId, recipientAvatarUrl, bookingId } =
+    useLocalSearchParams<{
+      chatId?: string;
+      recipientName?: string;
+      recipientId?: string;
+      recipientAvatarUrl?: string;
+      bookingId?: string;
+    }>();
   const { user, token, isAuthenticated } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
@@ -25,48 +79,56 @@ export default function ChatScreen() {
 
   const userId = user?.id;
 
+  const chatBlockedAnim = useRef(new Animated.Value(0)).current;
+  const inputContainerAnim = useRef(new Animated.Value(0)).current;
+  const sendButtonScaleAnim = useRef(new Animated.Value(1)).current;
+
   useEffect(() => {
     if (!isAuthenticated || !token || !chatId || !userId) {
-      console.log('ChatScreen: Usuário não autenticado ou chat/user ID ausente.');
       setIsLoading(false);
-      setChatBlockedMessage("Você precisa estar logado para acessar este chat.");
+      setChatBlockedMessage('Você precisa estar logado para acessar este chat.');
       return;
     }
 
     const loadChatData = async () => {
       setIsLoading(true);
-      setChatBlockedMessage(null); // Limpa qualquer mensagem de bloqueio anterior
+      setChatBlockedMessage(null);
 
       try {
-        // 1. Carregar histórico de mensagens
         const fetchedMessages = await getChatMessages(chatId, { limit: 50, offset: 0 });
         setMessages(fetchedMessages.reverse());
 
-        // 2. Verificar status do agendamento se houver um bookingId associado
         if (bookingId) {
           const bookingDetails = await getBookingDetails(bookingId);
           if (bookingDetails.status === BookingStatus.COMPLETED) {
-            setChatBlockedMessage("Este chat foi encerrado, pois o serviço foi concluído.");
-          } else if (bookingDetails.status === BookingStatus.CANCELLED) { // CORRIGIDO AQUI
-            setChatBlockedMessage("Este chat foi encerrado, pois o agendamento foi cancelado.");
+            setChatBlockedMessage('Este chat foi encerrado, pois o serviço foi concluído.');
+          } else if (bookingDetails.status === BookingStatus.CANCELLED) {
+            setChatBlockedMessage('Este chat foi encerrado, pois o agendamento foi cancelado.');
           }
         }
       } catch (error: any) {
-        console.error('ChatScreen: Erro ao carregar mensagens ou verificar agendamento:', error);
-        if (error.message.includes("Não é possível acessar esta conversa") || error.message.includes("Não é possível enviar mensagens")) {
+        console.error('Erro ao carregar mensagens ou verificar agendamento:', error);
+        if (
+          error.message.includes('Não é possível acessar esta conversa') ||
+          error.message.includes('Não é possível enviar mensagens')
+        ) {
           setChatBlockedMessage(error.message);
         } else {
           Alert.alert('Erro', 'Não foi possível carregar as mensagens do chat.');
-          setChatBlockedMessage("Não foi possível carregar as mensagens.");
+          setChatBlockedMessage('Não foi possível carregar as mensagens.');
         }
       } finally {
         setIsLoading(false);
+        Animated.timing(inputContainerAnim, {
+          toValue: 1,
+          duration: 300,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }).start();
       }
     };
     loadChatData();
 
-    // 3. Conectar WebSocket
-    console.log(`ChatScreen: Tentando conectar WebSocket em ${SOCKET_URL}`);
     const socket = io(SOCKET_URL, {
       transports: ['websocket'],
       auth: { token },
@@ -75,18 +137,15 @@ export default function ChatScreen() {
     socketRef.current = socket;
 
     socket.on('connect', () => {
-      console.log('ChatScreen: WebSocket conectado!', socket.id);
       socket.emit('joinChat', chatId);
     });
 
     socket.on('newMessage', (newMessage: Message) => {
-      console.log('ChatScreen: Nova mensagem recebida:', newMessage);
-      setMessages(prevMessages => [...prevMessages, newMessage]);
+      setMessages((prevMessages) => [...prevMessages, newMessage]);
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
     });
 
-    socket.on('errorMessage', (data: { event: string, message: string }) => {
-      console.error(`ChatScreen: Erro no WebSocket para evento ${data.event}:`, data.message);
+    socket.on('errorMessage', (data: { event: string; message: string }) => {
       if (data.event === 'joinChat' || data.event === 'sendMessage') {
         setChatBlockedMessage(data.message);
       } else {
@@ -95,19 +154,34 @@ export default function ChatScreen() {
     });
 
     socket.on('disconnect', () => {
-      console.log('ChatScreen: WebSocket desconectado.');
-      setChatBlockedMessage("Conexão com o chat perdida.");
+      setChatBlockedMessage('Conexão com o chat perdida.');
     });
 
     return () => {
-      console.log('ChatScreen: Desmontando componente, desconectando WebSocket.');
       socket.disconnect();
     };
-  }, [isAuthenticated, token, chatId, userId, bookingId]); // Adicionar bookingId como dependência
+  }, [isAuthenticated, token, chatId, userId, bookingId, inputContainerAnim]);
+
+  useEffect(() => {
+    if (chatBlockedMessage) {
+      Animated.timing(chatBlockedAnim, {
+        toValue: 1,
+        duration: 300,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(chatBlockedAnim, {
+        toValue: 0,
+        duration: 200,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [chatBlockedMessage, chatBlockedAnim]);
 
   const handleSendMessage = useCallback(async () => {
     if (inputText.trim() === '' || !user?.id || !chatId || !recipientId || chatBlockedMessage) {
-      console.log("Não é possível enviar mensagem: input vazio, IDs ausentes ou chat bloqueado.");
       return;
     }
 
@@ -120,18 +194,14 @@ export default function ChatScreen() {
 
     try {
       if (socketRef.current && socketRef.current.connected) {
-        console.log('ChatScreen: Enviando mensagem via WebSocket:', newMessageData);
         socketRef.current.emit('sendMessage', newMessageData);
       } else {
-        console.warn('ChatScreen: WebSocket não conectado. Enviando mensagem via REST.');
         await sendChatMessage(newMessageData);
       }
       setInputText('');
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
-
     } catch (error: any) {
-      console.error('ChatScreen: Erro ao enviar mensagem:', error);
-      if (error.message.includes("Não é possível enviar mensagens")) {
+      if (error.message.includes('Não é possível enviar mensagens')) {
         setChatBlockedMessage(error.message);
       } else {
         Alert.alert('Erro', error.message || 'Não foi possível enviar a mensagem.');
@@ -142,95 +212,195 @@ export default function ChatScreen() {
   const renderMessage = ({ item }: { item: Message }) => {
     const isMyMessage = item.senderId === userId;
     return (
-      <View style={[styles.messageBubble, isMyMessage ? styles.myMessage : styles.theirMessage]}>
-        <Text style={[styles.messageContent, isMyMessage ? { color: '#FFFFFF' } : { color: '#212529' }]}>{item.content}</Text>
-        <Text style={[styles.messageTime, isMyMessage ? { color: 'rgba(255,255,255,0.7)' } : { color: '#6C757D' }]}>{new Date(item.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</Text>
+      <View
+        style={[
+          chatStyles.messageBubble,
+          isMyMessage ? chatStyles.myMessage : chatStyles.theirMessage,
+          // Removido isMyMessage ? chatStyles.myMessageTail : chatStyles.theirMessageTail,
+          chatStyles.messageShadow,
+        ]}
+      >
+        <Text style={[chatStyles.messageContent, isMyMessage ? { color: '#FFFFFF' } : { color: '#212529' }]}>
+          {item.content}
+        </Text>
+        <Text
+          style={[
+            chatStyles.messageTime,
+            isMyMessage ? { color: 'rgba(255,255,255,0.7)' } : { color: '#6C757D' },
+          ]}
+        >
+          {new Date(item.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+        </Text>
       </View>
     );
   };
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>Carregando mensagens...</Text>
+      <View style={chatStyles.loadingContainer}>
+        <ActivityIndicator size="large" color="#4A90E2" /> {/* Cor do ActivityIndicator ajustada */}
+        <Text style={chatStyles.loadingText}>Carregando mensagens...</Text>
       </View>
     );
   }
 
-  // Determina se o input de texto deve estar desabilitado
   const isInputDisabled = !isAuthenticated || !!chatBlockedMessage;
+
+  const onPressInSendButton = () => {
+    Animated.spring(sendButtonScaleAnim, { toValue: 0.9, useNativeDriver: true }).start();
+  };
+  const onPressOutSendButton = () => {
+    Animated.spring(sendButtonScaleAnim, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start();
+  };
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={chatStyles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
-      <Stack.Screen options={{ title: recipientName || 'Chat' }} />
+      <Stack.Screen options={{ headerShown: false }} />
+      <CustomChatHeader
+        recipientName={recipientName}
+        recipientAvatarUrl={recipientAvatarUrl}
+        onBackPress={() => router.back()}
+      />
 
-      {chatBlockedMessage && (
-        <View style={styles.chatBlockedContainer}>
-          <Ionicons name="information-circle-outline" size={24} color="#DC3545" />
-          <Text style={styles.chatBlockedText}>{chatBlockedMessage}</Text>
-        </View>
-      )}
+      <Animated.View
+        style={[
+          chatStyles.chatBlockedContainer,
+          { opacity: chatBlockedAnim, height: chatBlockedAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 50] }) },
+        ]}
+      >
+        {chatBlockedMessage && (
+          <>
+            <Ionicons name="information-circle-outline" size={24} color="#DC3545" />
+            <Text style={chatStyles.chatBlockedText}>{chatBlockedMessage}</Text>
+          </>
+        )}
+      </Animated.View>
 
       <FlatList
         ref={flatListRef}
         data={messages}
         keyExtractor={(item) => item.id}
         renderItem={renderMessage}
-        style={styles.messagesList}
-        contentContainerStyle={styles.messagesListContent}
+        style={chatStyles.messagesList}
+        contentContainerStyle={chatStyles.messagesListContent}
         onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
       />
-      <View style={styles.inputContainer}>
+      <Animated.View style={[chatStyles.inputContainer, { opacity: inputContainerAnim }, chatStyles.inputContainerShadow]}>
+        <TouchableOpacity style={chatStyles.inputIcon}>
+            <Ionicons name="attach-outline" size={24} color="#868E96" />
+        </TouchableOpacity>
         <TextInput
-          style={[styles.input, isInputDisabled && styles.disabledInput]}
+          style={[chatStyles.input, isInputDisabled && chatStyles.disabledInput]}
           value={inputText}
           onChangeText={setInputText}
-          placeholder={isInputDisabled ? "Chat indisponível" : "Digite sua mensagem..."}
+          placeholder={isInputDisabled ? 'Chat indisponível' : 'Digite sua mensagem...'}
           placeholderTextColor="#6C757D"
           multiline
-          editable={!isInputDisabled} // Desabilita a edição
+          editable={!isInputDisabled}
         />
-        <TouchableOpacity onPress={handleSendMessage} style={[styles.sendButton, isInputDisabled && styles.disabledSendButton]} disabled={isInputDisabled}>
+        <TouchableOpacity style={chatStyles.inputIcon}>
+            <Ionicons name="happy-outline" size={24} color="#868E96" />
+        </TouchableOpacity>
+        <TouchableOpacity style={chatStyles.inputIcon}>
+            <Ionicons name="mic-outline" size={24} color="#868E96" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={handleSendMessage}
+          style={[
+            chatStyles.sendButton,
+            isInputDisabled && chatStyles.disabledSendButton,
+            { transform: [{ scale: sendButtonScaleAnim }] },
+          ]}
+          onPressIn={onPressInSendButton}
+          onPressOut={onPressOutSendButton}
+          disabled={isInputDisabled}
+        >
           <Ionicons name="send" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-      </View>
+      </Animated.View>
     </KeyboardAvoidingView>
   );
 }
 
-const styles = StyleSheet.create({
+const chatStyles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F0F2F5',
+    backgroundColor: '#F0F8FF', // Alterado para o azul claro do perfil
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F0F2F5',
+    backgroundColor: '#F0F8FF', // Alterado para o azul claro do perfil
   },
   loadingText: {
     marginTop: 10,
     fontSize: 16,
     color: '#6C757D',
   },
+  customHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#4A90E2', // Alterado para o azul principal do perfil
+    paddingHorizontal: 15,
+    paddingVertical: Platform.OS === 'ios' ? 50 : 20,
+    paddingTop: Platform.OS === 'ios' ? 50 : 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 8,
+  },
+  headerButton: {
+    padding: 5,
+  },
+  headerRecipientInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginLeft: 10,
+  },
+  headerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: '#FFF',
+  },
+  headerRecipientName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  headerRecipientStatus: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
+  },
+  headerActions: {
+    flexDirection: 'row',
+  },
   chatBlockedContainer: {
-    backgroundColor: '#FFE0E6', // Light red background
-    padding: 10,
+    backgroundColor: '#FFE0E6',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     borderBottomWidth: 1,
     borderBottomColor: '#FFC0CB',
+    overflow: 'hidden',
   },
   chatBlockedText: {
     marginLeft: 8,
-    color: '#DC3545', // Dark red text
+    color: '#DC3545',
     fontSize: 14,
     textAlign: 'center',
     flex: 1,
@@ -243,64 +413,105 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   messageBubble: {
-    padding: 10,
-    borderRadius: 15,
+    padding: 12,
+    borderRadius: 18,
     maxWidth: '80%',
-    marginBottom: 8,
+    marginBottom: 10,
     flexDirection: 'column',
-    alignItems: 'flex-start',
+  },
+  messageShadow: {
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
   myMessage: {
     alignSelf: 'flex-end',
-    backgroundColor: '#007AFF',
-    borderBottomRightRadius: 5,
+    backgroundColor: '#4A90E2', // Alterado para o azul principal do perfil
+    borderTopRightRadius: 18,
+    borderBottomRightRadius: 4,
+    borderTopLeftRadius: 18,
+    borderBottomLeftRadius: 18,
   },
+  // myMessageTail: { }, // Removido
   theirMessage: {
     alignSelf: 'flex-start',
-    backgroundColor: '#E9ECEF',
-    borderBottomLeftRadius: 5,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 18,
+    borderBottomLeftRadius: 4,
+    borderTopRightRadius: 18,
+    borderBottomRightRadius: 18,
   },
+  // theirMessageTail: { }, // Removido
   messageContent: {
     fontSize: 15,
-    // Colors handled inline based on isMyMessage
   },
   messageTime: {
     fontSize: 10,
-    // Colors handled inline based on isMyMessage
     alignSelf: 'flex-end',
     marginTop: 5,
   },
   inputContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     padding: 10,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#E9ECEF',
+    paddingBottom: Platform.OS === 'ios' ? 25 : 10,
+  },
+  inputContainerShadow: {
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
+  },
+  inputIcon: {
+    padding: 8,
+    marginBottom: Platform.OS === 'ios' ? 0 : 5,
   },
   input: {
     flex: 1,
     backgroundColor: '#F8F9FA',
-    borderRadius: 20,
+    borderRadius: 25,
     paddingHorizontal: 15,
-    paddingVertical: 10,
+    paddingVertical: Platform.OS === 'ios' ? 12 : 10,
     fontSize: 16,
-    marginRight: 10,
+    marginHorizontal: 5,
     maxHeight: 120,
+    minHeight: 45,
+    borderColor: '#E9ECEF',
+    borderWidth: 1,
   },
   disabledInput: {
     backgroundColor: '#E9ECEF',
     color: '#ADB5BD',
   },
   sendButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 20,
-    width: 40,
-    height: 40,
+    backgroundColor: '#4A90E2', // Alterado para o azul principal do perfil
+    borderRadius: 25,
+    width: 50,
+    height: 50,
     justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: 5,
+    marginBottom: Platform.OS === 'ios' ? 0 : 5,
   },
   disabledSendButton: {
-    backgroundColor: '#ADB5BD',
+    backgroundColor: '#A0CFFF', // Azul mais claro para o botão desabilitado
   },
 });

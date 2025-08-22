@@ -1,8 +1,8 @@
 // app/(client)/explore/components/home/SecaoPrestadores.tsx
 
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useRef } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated } from 'react-native'; // Importado Animated
 
 import { ProviderDisplayInfo } from '../../../../types/backend/providers';
 
@@ -25,13 +25,39 @@ const SecaoPrestadores: React.FC<SecaoPrestadoresProps> = ({
   horizontal = false,
   renderItem,
 }) => {
+  const arrowAnim = useRef(new Animated.Value(0)).current; // Animação para a seta
+
+  const onPressInViewAll = () => {
+    Animated.spring(arrowAnim, {
+      toValue: 5, // Desloca a seta para a frente
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const onPressOutViewAll = () => {
+    Animated.spring(arrowAnim, {
+      toValue: 0, // Retorna a seta à posição original
+      friction: 3,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={[styles.sectionTitle, { color: titleColor }]}>{titulo}</Text>
         {onVerTudoPress && (
-          <TouchableOpacity onPress={onVerTudoPress} style={styles.viewAllButton}>
-            <Text style={styles.viewAllText}>Ver Tudo <Ionicons name="arrow-forward" size={14} color="#007BFF" /></Text>
+          <TouchableOpacity
+            onPress={onVerTudoPress}
+            style={styles.viewAllButton}
+            onPressIn={onPressInViewAll}
+            onPressOut={onPressOutViewAll}
+          >
+            <Text style={styles.viewAllText}>Ver Tudo </Text>
+            <Animated.View style={{ transform: [{ translateX: arrowAnim }] }}>
+              <Ionicons name="arrow-forward" size={14} color="#007BFF" />
+            </Animated.View>
           </TouchableOpacity>
         )}
       </View>

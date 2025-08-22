@@ -3,7 +3,7 @@ import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Keyboard, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Keyboard, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native'; // Importado Alert
 import Animated, {
     Easing,
     useAnimatedStyle,
@@ -32,6 +32,10 @@ const HeroHeader: React.FC<HeaderSuperiorProps> = ({ userName, userAddress }) =>
     const reflexTranslateY = useSharedValue(-200);
     const reflexRotate = useSharedValue(0);
 
+    // Animação para o ícone de busca
+    const searchIconScale = useSharedValue(1);
+    const searchPlaceholderOpacity = useSharedValue(1);
+
     useEffect(() => {
         reflexTranslateX.value = withRepeat(
             withTiming(200, { duration: 4000, easing: Easing.linear }),
@@ -48,6 +52,21 @@ const HeroHeader: React.FC<HeaderSuperiorProps> = ({ userName, userAddress }) =>
             -1,
             true
         );
+
+        // Animação para o ícone de busca
+        searchIconScale.value = withRepeat(
+            withTiming(1.1, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+            -1,
+            true
+        );
+
+        // Animação para o placeholder da busca
+        searchPlaceholderOpacity.value = withRepeat(
+            withTiming(0.7, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+            -1,
+            true
+        );
+
     }, []);
 
     const animatedReflexStyle = useAnimatedStyle(() => ({
@@ -56,6 +75,14 @@ const HeroHeader: React.FC<HeaderSuperiorProps> = ({ userName, userAddress }) =>
             { translateY: reflexTranslateY.value },
             { rotateZ: `${reflexRotate.value}deg` },
         ],
+    }));
+
+    const animatedSearchIconStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: searchIconScale.value }],
+    }));
+
+    const animatedSearchPlaceholderStyle = useAnimatedStyle(() => ({
+        opacity: searchPlaceholderOpacity.value,
     }));
 
     const handleProfilePress = () => {
@@ -81,12 +108,30 @@ const HeroHeader: React.FC<HeaderSuperiorProps> = ({ userName, userAddress }) =>
 
     const handleFilterPress = () => {
         console.log("HeroHeader: Filtros pressionado");
-        console.log("Funcionalidade de Filtros em breve!");
+        Alert.alert("Funcionalidade em breve!", "A funcionalidade de filtros estará disponível em breve.");
+    };
+
+    const handleAddressPress = () => {
+        Alert.alert(
+            "Gerenciar Endereço",
+            "Aqui você pode visualizar ou alterar seu endereço. Funcionalidade em desenvolvimento!",
+            [
+                { text: "OK", style: "cancel" },
+                { text: "Mudar Endereço", onPress: () => console.log("Navegar para tela de endereço") }
+            ]
+        );
     };
 
     const formattedAddress = userAddress ?
         `${userAddress.street || ''}, ${userAddress.number || ''} - ${userAddress.neighborhood || ''} - ${userAddress.city || ''} ${userAddress.state || ''}`.trim().replace(/,?\s*-\s*$/, '') :
         'Endereço não disponível';
+
+    const getGreeting = () => {
+        const hour = new Date().getHours();
+        if (hour < 12) return 'Bom dia';
+        if (hour < 18) return 'Boa tarde';
+        return 'Boa noite';
+    };
 
     return (
         <LinearGradient
@@ -111,7 +156,7 @@ const HeroHeader: React.FC<HeaderSuperiorProps> = ({ userName, userAddress }) =>
                     <Ionicons name="person-circle" size={40 * 0.95} color="#FFFFFF" />
                 </TouchableOpacity>
                 <View style={styles.greetingContainer}>
-                    <Text style={styles.greetingHello}>Olá, {userName}</Text>
+                    <Text style={styles.greetingHello}>{getGreeting()}, {userName}</Text>
                     <Text style={styles.greetingWelcome}>Bem-vinda de volta!</Text>
                 </View>
                 <TouchableOpacity onPress={handleMenuPress} style={styles.menuIconContainer}>
@@ -119,13 +164,15 @@ const HeroHeader: React.FC<HeaderSuperiorProps> = ({ userName, userAddress }) =>
                 </TouchableOpacity>
             </View>
 
-            <View style={styles.addressSection}>
+            <TouchableOpacity onPress={handleAddressPress} style={styles.addressSection}>
                 <Ionicons name="star" size={14 * 0.95} color="#FFD700" style={styles.addressStarIcon} />
                 <Text style={styles.addressText} numberOfLines={1} ellipsizeMode="tail">{formattedAddress}</Text>
-            </View>
+            </TouchableOpacity>
 
             <View style={styles.buscaContainer}>
-                <Ionicons name="search-outline" size={20 * 0.95} color="#6C757D" style={styles.buscaIcone} />
+                <Animated.View style={animatedSearchIconStyle}>
+                    <Ionicons name="search-outline" size={20 * 0.95} color="#6C757D" style={styles.buscaIcone} />
+                </Animated.View>
                 <TextInput
                     style={styles.buscaInput}
                     placeholder="Busque por serviço ou profissional..."
@@ -248,7 +295,6 @@ const styles = StyleSheet.create({
     },
     buscaIcone: {
         marginRight: 2 * 0.95,
-        
         fontSize: 19 * 0.95,
     },
     buscaInput: {

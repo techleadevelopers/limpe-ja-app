@@ -1,6 +1,6 @@
 // app/services/providerService.ts
-import axios, { AxiosResponse } from 'axios'; // Importa axios para isAxiosError
-import api from './api'; // Importa a instância centralizada do Axios
+import axios, { AxiosResponse } from 'axios';
+import api from './api';
 
 // =========================================================================
 // IMPORTAÇÕES DE INTERFACES DE TIPAGEM CENTRALIZADAS
@@ -300,6 +300,28 @@ export async function getNearbyProviders(): Promise<ProviderDisplayInfo[]> {
       throw new Error(error.response.data.message || 'Erro ao buscar provedores próximos.');
     }
     throw new Error(`Erro de rede ou servidor ao buscar provedores próximos.`);
+  }
+}
+
+/**
+ * @function getProvidersByServiceCategory
+ * Obtém uma lista de provedores que oferecem serviços dentro de uma categoria específica.
+ * Assume que o endpoint /providers pode aceitar um `serviceId` como query parameter.
+ * @param categoryId O ID da categoria de serviço.
+ * @returns Uma Promise que resolve para um array de provedores (ProviderDisplayInfo).
+ */
+export async function getProvidersByServiceCategory(categoryId: string): Promise<ProviderDisplayInfo[]> {
+  try {
+    // CORREÇÃO: Passa categoryId como serviceId para corresponder ao DTO do backend
+    const query: ProviderSearchQuery = { serviceId: categoryId };
+    const response: AxiosResponse<ProviderDisplayInfo[]> = await api.get(`/providers`, { params: query });
+    return response.data;
+  } catch (error: any) {
+    console.error(`Erro ao buscar provedores pela categoria ${categoryId}:`, error.response?.data || error.message);
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(error.response.data.message || `Erro ao buscar provedores pela categoria ${categoryId}.`);
+    }
+    throw new Error(`Erro de rede ou servidor ao buscar provedores pela categoria ${categoryId}.`);
   }
 }
 

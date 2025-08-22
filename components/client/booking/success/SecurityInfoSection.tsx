@@ -1,30 +1,63 @@
-import React from 'react';
-import { View, Text, StyleSheet, Image, Dimensions } from 'react-native'; // Importar Image e Dimensions
-// MaterialCommunityIcons não é mais necessário se apenas `safe-icon.png` for usado.
-// import { MaterialCommunityIcons } from '@expo/vector-icons';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Image, Dimensions, Animated, Easing } from 'react-native';
 
 interface SecurityInfoSectionProps {
-    successColor: string; // Embora a cor de sucesso ainda seja passada, o fundo será azul agora
+    successColor: string;
 }
 
-// Constante para a largura da tela
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
 export default function SecurityInfoSection({ successColor }: SecurityInfoSectionProps) {
-    // Cores azuis com transparência equivalente ao verde suave anterior
-    const blueBackgroundColor = 'rgba(196, 240, 255, 0.84)'; // Um azul médio-claro com 80% de opacidade
-    const blueBorderColor = 'rgba(74, 144, 226, 0.3)'; // Um azul um pouco mais escuro para a borda, com transparência
+    const blueBackgroundColor = 'rgba(196, 240, 255, 0.84)';
+    const blueBorderColor = 'rgba(74, 144, 226, 0.3)';
+
+    // Animações de entrada
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const translateYAnim = useRef(new Animated.Value(20)).current;
+    const scaleAnim = useRef(new Animated.Value(0.95)).current;
+
+    useEffect(() => {
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 500,
+                delay: 700, // Atraso para aparecer depois dos botões de ação imediata
+                easing: Easing.out(Easing.ease),
+                useNativeDriver: true,
+            }),
+            Animated.timing(translateYAnim, {
+                toValue: 0,
+                duration: 500,
+                delay: 700,
+                easing: Easing.out(Easing.ease),
+                useNativeDriver: true,
+            }),
+            Animated.timing(scaleAnim, {
+                toValue: 1,
+                duration: 500,
+                delay: 700,
+                easing: Easing.out(Easing.ease),
+                useNativeDriver: true,
+            }),
+        ]).start();
+    }, []);
 
     return (
-        <View style={[styles.securitySection, {
-            backgroundColor: blueBackgroundColor, // Aplicar o novo azul de fundo
-            borderColor: blueBorderColor,        // Aplicar a nova cor de borda
-            width: SCREEN_WIDTH * 0.85,           // AUMENTADO para 85% para ter um pouco mais de espaço
-            alignSelf: 'center',                 // Centraliza horizontalmente
-        }]}>
-            {/* Substituir MaterialCommunityIcons por Image */}
+        <Animated.View
+            style={[
+                styles.securitySection,
+                {
+                    backgroundColor: blueBackgroundColor,
+                    borderColor: blueBorderColor,
+                    width: SCREEN_WIDTH * 0.85,
+                    alignSelf: 'center',
+                    opacity: fadeAnim,
+                    transform: [{ translateY: translateYAnim }, { scale: scaleAnim }],
+                }
+            ]}
+        >
             <Image
-                source={require('../../../../assets/images/safe-icon.png')} // Caminho do ícone real
+                source={require('../../../../assets/images/safe-icon.png')}
                 style={styles.securityImage}
             />
             <Text style={styles.securityTextHeader}>Sua Segurança é Nossa Prioridade</Text>
@@ -37,45 +70,45 @@ export default function SecurityInfoSection({ successColor }: SecurityInfoSectio
             <Text style={styles.securityTextSmall}>
                 Seu agendamento foi registrado com segurança em nosso sistema.
             </Text>
-        </View>
+        </Animated.View>
     );
 }
 
 const styles = StyleSheet.create({
     securitySection: {
-        marginTop: 20, // REDUZIDO: de 30 para 20
-        padding: 15, // REDUZIDO: de 20 para 15
-        borderRadius: 10, // REDUZIDO: de 12 para 10
+        marginTop: 20,
+        padding: 15,
+        borderRadius: 10,
         borderWidth: 1,
         alignItems: 'center',
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 }, // REDUZIDO: de 2 para 1
-        shadowOpacity: 0.03, // REDUZIDO: de 0.05 para 0.03
-        shadowRadius: 3, // REDUZIDO: de 5 para 3
-        elevation: 2, // REDUZIDO: de 3 para 2
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.03,
+        shadowRadius: 3,
+        elevation: 2,
     },
-    securityImage: { // Novo estilo para o ícone de imagem
-        width: 120, // REDUZIDO: de 160 para 120
-        height: 120, // REDUZIDO: de 160 para 120
+    securityImage: {
+        width: 120,
+        height: 120,
         resizeMode: 'contain',
-        marginBottom: 8, // REDUZIDO: de 10 para 8
+        marginBottom: 8,
     },
     securityTextHeader: {
-        fontSize: 14, // REDUZIDO: de 16 para 14
+        fontSize: 14,
         fontWeight: 'bold',
         color: '#333',
-        marginBottom: 8, // REDUZIDO: de 10 para 8
+        marginBottom: 8,
         textAlign: 'center',
     },
     securityText: {
-        fontSize: 11, // REDUZIDO: de 12 para 11
+        fontSize: 11,
         color: '#555',
         textAlign: 'center',
-        lineHeight: 16, // Aumentado um pouco para legibilidade com fonte menor (de 13 para 16)
-        marginBottom: 10, // REDUZIDO: de 12 para 10
+        lineHeight: 16,
+        marginBottom: 10,
     },
     securityTextSmall: {
-        fontSize: 10, // REDUZIDO: de 12 para 10
+        fontSize: 10,
         color: '#777',
         textAlign: 'center',
         fontStyle: 'italic',

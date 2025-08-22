@@ -1,40 +1,71 @@
 // LimpeJaApp/app/(client)/bookings/components/success/SuccessHeader.tsx
-import React from 'react';
-import { View, StyleSheet, Platform, Image } from 'react-native';
-// import { Ionicons } from '@expo/vector-icons'; // REMOVIDO: Ionicons não é mais necessário
+import React, { useEffect, useRef } from 'react';
+import { View, StyleSheet, Platform, Image, Animated, Easing } from 'react-native';
 
-// --- DEFINIÇÕES DE CORES (RECEBIDAS VIA PROPS) ---
-// As cores não serão mais usadas para o texto ou ícone de check,
-// mas podem ser mantidas se forem usadas em outros lugares no futuro
 interface SuccessHeaderProps {
-    // onBackPress: () => void; // REMOVIDO: Não há mais botão de voltar
-    // headerTickOpacity: Animated.Value; // REMOVIDO: Não há mais ícone de check animado
-    // headerTickScale: Animated.Value; // REMOVIDO: Não há mais ícone de check animado
-    successColor: string; // Pode ser mantido, mas não é usado neste componente diretamente
-    headerPrimaryColor: string; // Pode ser mantido, mas não é usado neste componente diretamente
-    headerSecondaryColor: string; // Pode ser mantido, mas não é usado neste componente diretamente
+    successColor: string;
+    headerPrimaryColor: string;
+    headerSecondaryColor: string;
 }
 
 export default function SuccessHeader({
-    // onBackPress, // REMOVIDO
-    // headerTickOpacity, // REMOVIDO
-    // headerTickScale, // REMOVIDO
-    // successColor, // Não usado diretamente no novo layout
-    // headerPrimaryColor, // Não usado diretamente no novo layout
-    // headerSecondaryColor, // Não usado diretamente no novo layout
+    successColor,
+    headerPrimaryColor,
+    headerSecondaryColor,
 }: SuccessHeaderProps) {
-    // const CHECK_ICON_COLOR = headerPrimaryColor; // REMOVIDO: Ícone de check removido
+    // Animações para o logo
+    const logoPulseAnim = useRef(new Animated.Value(1)).current;
+    const logoRotateAnim = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        // Animação de pulso para o logo
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(logoPulseAnim, {
+                    toValue: 1.03,
+                    duration: 1000,
+                    easing: Easing.inOut(Easing.ease),
+                    useNativeDriver: true,
+                }),
+                Animated.timing(logoPulseAnim, {
+                    toValue: 1,
+                    duration: 1000,
+                    easing: Easing.inOut(Easing.ease),
+                    useNativeDriver: true,
+                }),
+            ])
+        ).start();
+
+        // Animação de rotação sutil para o logo
+        Animated.loop(
+            Animated.timing(logoRotateAnim, {
+                toValue: 1,
+                duration: 15000, // Rotação lenta
+                easing: Easing.linear,
+                useNativeDriver: true,
+            })
+        ).start();
+    }, [logoPulseAnim, logoRotateAnim]);
+
+    const rotateInterpolate = logoRotateAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: ['0deg', '360deg'],
+    });
 
     return (
         <View style={styles.headerContainer}>
-            {/* REMOVIDO: Botão de voltar */}
-            {/* REMOVIDO: View com headerContent, headerTitle e headerTick */}
-
-            {/* NOVO: Apenas a imagem do logo como header */}
-            <Image
-                source={require('../../../../assets/images/logo2.png')} // Caminho para a imagem do logo
-                style={styles.logoImage}
-                resizeMode="contain" // Garante que a imagem se ajuste sem cortar
+            <Animated.Image
+                source={require('../../../../assets/images/logo2.png')}
+                style={[
+                    styles.logoImage,
+                    {
+                        transform: [
+                            { scale: logoPulseAnim },
+                            { rotateY: rotateInterpolate }
+                        ]
+                    }
+                ]}
+                resizeMode="contain"
             />
         </View>
     );
@@ -42,23 +73,17 @@ export default function SuccessHeader({
 
 const styles = StyleSheet.create({
     headerContainer: {
-        paddingTop: Platform.OS === 'android' ? 40 : 10, // Ajuste para status bar
+        paddingTop: Platform.OS === 'android' ? 40 : 10,
         paddingBottom: 10,
         paddingHorizontal: 20,
-        flexDirection: 'row', // Para centralizar o logo
-        justifyContent: 'center', // Centraliza o logo horizontalmente
-        alignItems: 'center', // Centraliza o logo verticalmente
-        backgroundColor: 'transparent', // Fundo transparente
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'transparent',
     },
-    // REMOVIDO: backButton
-    // REMOVIDO: headerContent
-    // REMOVIDO: headerTitle
-    // REMOVIDO: headerTick
-    // REMOVIDO: checkIconImage
-    // REMOVIDO: emptySpace
     logoImage: {
-        width: 150, // Ajuste o tamanho conforme necessário para o seu logo
-        height: 50, // Ajuste a altura conforme necessário
+        width: 150,
+        height: 50,
         top: 0,
         right: 5,
     },

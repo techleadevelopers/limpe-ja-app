@@ -1,6 +1,5 @@
-// app/(common)/referrals.tsx
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Share, ScrollView, Alert } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Share, ScrollView, Alert, Animated, Easing, Platform } from 'react-native'; // Adicionado 'Platform'
 import ScreenContainer from '../../components/common/ScreenContainer';
 import Header from '../../components/common/Header';
 import Card from '../../components/common/Card';
@@ -32,8 +31,45 @@ const mockReferralData = {
   ],
 };
 
+const AnimatedCard: React.FC<{ children: React.ReactNode; style?: any; delay: number }> = ({ children, style, delay }) => {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const translateYAnim = useRef(new Animated.Value(50)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        delay: delay,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateYAnim, {
+        toValue: 0,
+        duration: 600,
+        delay: delay,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [fadeAnim, translateYAnim, delay]);
+
+  return (
+    <Animated.View style={[style, { opacity: fadeAnim, transform: [{ translateY: translateYAnim }] }]}>
+      {children}
+    </Animated.View>
+  );
+};
+
 const ReferralsScreen: React.FC = () => {
   const { referralCode, totalReferrals, successfulReferrals, earnings, pendingEarnings, referredUsers, howItWorks } = mockReferralData;
+
+  // Animação para o botão de compartilhar/copiar
+  const buttonScaleAnim = useRef(new Animated.Value(1)).current;
+
+  const onPressInButton = (anim: Animated.Value) => { Animated.spring(anim, { toValue: 0.95, useNativeDriver: true }).start(); };
+  const onPressOutButton = (anim: Animated.Value) => { Animated.spring(anim, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start(); };
+
 
   const handleShareCode = async () => {
     try {
@@ -56,69 +92,99 @@ const ReferralsScreen: React.FC = () => {
     <ScreenContainer>
       <Header title="Indique e Ganhe" showBackButton={true} />
 
-      <Card style={styles.referralCodeCard}>
-        <Text style={styles.sectionTitle}>Seu Código de Indicação</Text>
-        <View style={styles.codeContainer}>
-          <Text style={styles.referralCodeText}>{referralCode}</Text>
-          <TouchableOpacity onPress={handleCopyCode} style={styles.copyButton}>
-            <Icon name="content-copy" size={24} color={colors.primary} />
-          </TouchableOpacity>
-        </View>
-        <PrimaryButton title="Compartilhar Código" onPress={handleShareCode} style={styles.shareButton} />
-      </Card>
-
-      <Card style={styles.statsCard}>
-        <Text style={styles.sectionTitle}>Seu Desempenho</Text>
-        <View style={styles.statRow}>
-          <Text style={styles.statLabel}>Total de Indicações:</Text>
-          <Text style={styles.statValue}>{totalReferrals}</Text>
-        </View>
-        <View style={styles.statRow}>
-          <Text style={styles.statLabel}>Indicações Concluídas:</Text>
-          <Text style={styles.statValue}>{successfulReferrals}</Text>
-        </View>
-        <View style={styles.statRow}>
-          <Text style={styles.statLabel}>Ganhos Totais:</Text>
-          <Text style={styles.statValue}>{earnings}</Text>
-        </View>
-        <View style={styles.statRow}>
-          <Text style={styles.statLabel}>Ganhos Pendentes:</Text>
-          <Text style={styles.statValue}>{pendingEarnings}</Text>
-        </View>
-      </Card>
-
-      <Card style={styles.howItWorksCard}>
-        <Text style={styles.sectionTitle}>Como Funciona?</Text>
-        {howItWorks.map((step, index) => (
-          <View key={index} style={styles.howItWorksItem}>
-            <Icon name="check-circle" size={20} color={colors.success} style={styles.howItWorksIcon} />
-            <Text style={styles.howItWorksText}>{step}</Text>
+      <ScrollView contentContainerStyle={styles.scrollViewContent}>
+        <AnimatedCard style={styles.referralCodeCard} delay={0}>
+          <Text style={styles.sectionTitle}>Seu Código de Indicação</Text>
+          <View style={styles.codeContainer}>
+            <Text style={styles.referralCodeText}>{referralCode}</Text>
+            <TouchableOpacity
+              onPress={handleCopyCode}
+              style={[styles.copyButton, { transform: [{ scale: buttonScaleAnim }] }]}
+              onPressIn={() => onPressInButton(buttonScaleAnim)}
+              onPressOut={() => onPressOutButton(buttonScaleAnim)}
+            >
+              <Icon name="content-copy" size={24} color={colors.primary} />
+            </TouchableOpacity>
           </View>
-        ))}
-      </Card>
+          <PrimaryButton
+            title="Compartilhar Código"
+            onPress={handleShareCode}
+            style={styles.shareButton}
+            onPressIn={() => onPressInButton(buttonScaleAnim)} // Reutiliza a animação
+            onPressOut={() => onPressOutButton(buttonScaleAnim)} // Reutiliza a animação
+          />
+        </AnimatedCard>
 
-      {referredUsers.length > 0 && (
-        <Card style={styles.referredUsersCard}>
-          <Text style={styles.sectionTitle}>Usuários Indicados</Text>
-          {referredUsers.map((user, index) => (
-            <View key={index} style={styles.referredUserItem}>
-              <Text style={styles.referredUserName}>{user.name}</Text>
-              <Text style={[styles.referredUserStatus, styles[user.status.replace(/\s/g, '') as keyof typeof styles]]}>
-                {user.status}
-              </Text>
-              <Text style={styles.referredUserDate}>{user.date}</Text>
+        <AnimatedCard style={styles.statsCard} delay={150}>
+          <Text style={styles.sectionTitle}>Seu Desempenho</Text>
+          <View style={styles.statRow}>
+            <Text style={styles.statLabel}>Total de Indicações:</Text>
+            <Text style={styles.statValue}>{totalReferrals}</Text>
+          </View>
+          <View style={styles.statRow}>
+            <Text style={styles.statLabel}>Indicações Concluídas:</Text>
+            <Text style={styles.statValue}>{successfulReferrals}</Text>
+          </View>
+          <View style={styles.statRow}>
+            <Text style={styles.statLabel}>Ganhos Totais:</Text>
+            <Text style={styles.statValue}>{earnings}</Text>
+          </View>
+          <View style={styles.statRow}>
+            <Text style={styles.statLabel}>Ganhos Pendentes:</Text>
+            <Text style={styles.statValue}>{pendingEarnings}</Text>
+          </View>
+        </AnimatedCard>
+
+        <AnimatedCard style={styles.howItWorksCard} delay={300}>
+          <Text style={styles.sectionTitle}>Como Funciona?</Text>
+          {howItWorks.map((step, index) => (
+            <View key={index} style={styles.howItWorksItem}>
+              <Icon name="check-circle" size={20} color={colors.success} style={styles.howItWorksIcon} />
+              <Text style={styles.howItWorksText}>{step}</Text>
             </View>
           ))}
-        </Card>
-      )}
+        </AnimatedCard>
+
+        {referredUsers.length > 0 && (
+          <AnimatedCard style={styles.referredUsersCard} delay={450}>
+            <Text style={styles.sectionTitle}>Usuários Indicados</Text>
+            {referredUsers.map((user, index) => (
+              <View key={index} style={styles.referredUserItem}>
+                <Text style={styles.referredUserName}>{user.name}</Text>
+                <Text style={[styles.referredUserStatus, styles[user.status.replace(/\s/g, '') as keyof typeof styles]]}>
+                  {user.status}
+                </Text>
+                <Text style={styles.referredUserDate}>{user.date}</Text>
+              </View>
+            ))}
+          </AnimatedCard>
+        )}
+      </ScrollView>
     </ScreenContainer>
   );
 };
 
 const styles = StyleSheet.create({
+  scrollViewContent: {
+    padding: 15,
+  },
   referralCodeCard: {
     alignItems: 'center',
     marginBottom: 15,
+    backgroundColor: colors.cardBackground, // Corrigido de backgroundWhite
+    borderRadius: 12,
+    padding: 20,
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.primaryLight,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
   sectionTitle: {
     ...typography.h3,
@@ -163,6 +229,20 @@ const styles = StyleSheet.create({
   },
   statsCard: {
     marginBottom: 15,
+    backgroundColor: colors.cardBackground, // Corrigido de backgroundWhite
+    borderRadius: 12,
+    padding: 20,
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.primaryLight,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
   statRow: {
     flexDirection: 'row',
@@ -183,6 +263,20 @@ const styles = StyleSheet.create({
   },
   howItWorksCard: {
     marginBottom: 15,
+    backgroundColor: colors.cardBackground, // Corrigido de backgroundWhite
+    borderRadius: 12,
+    padding: 20,
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.primaryLight,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
   howItWorksItem: {
     flexDirection: 'row',
@@ -201,6 +295,20 @@ const styles = StyleSheet.create({
   },
   referredUsersCard: {
     marginBottom: 15,
+    backgroundColor: colors.cardBackground, // Corrigido de backgroundWhite
+    borderRadius: 12,
+    padding: 20,
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.primaryLight,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
   referredUserItem: {
     flexDirection: 'row',
@@ -242,5 +350,4 @@ const styles = StyleSheet.create({
   },
 });
 
-import { Platform } from 'react-native'; // Importar Platform aqui
 export default ReferralsScreen;

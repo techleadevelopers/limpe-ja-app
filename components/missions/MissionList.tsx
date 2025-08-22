@@ -1,7 +1,9 @@
 // LimpeJaApp/components/missions/MissionList.tsx
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, ActivityIndicator, StyleSheet, Alert, RefreshControl, ScrollView } from 'react-native'; // <--- ADICIONADO ScrollView AQUI
-import MissionItem, { Mission } from './MissionItem'; // Importa MissionItem e a interface Mission
+import { View, Text, FlatList, ActivityIndicator, StyleSheet, Alert, RefreshControl, ScrollView } from 'react-native';
+import MissionItem from './MissionItem'; // <-- CORRIGIDO: Importa apenas MissionItem
+import { Mission } from '../../types/backend/mission'; // <-- CORRIGIDO: Importa a interface Mission do arquivo de tipos
+import { Ionicons } from '@expo/vector-icons'; // <-- ADICIONADO: Importação de Ionicons
 
 // Simulação de uma função de API para buscar missões
 const fetchMissionsApi = (): Promise<Mission[]> => {
@@ -9,52 +11,68 @@ const fetchMissionsApi = (): Promise<Mission[]> => {
     setTimeout(() => {
       const dummyMissions: Mission[] = [
         {
-          id: '1',
-          title: 'Limpeza Residencial Completa',
-          description: 'Limpeza profunda de casa com 3 quartos, 2 banheiros, sala e cozinha. Inclui janelas e armários.',
-          status: 'pending',
-          dueDate: '2025-08-15',
-          rewardPoints: 150,
+          id: 'm1',
+          name: 'Primeira Limpeza!',
+          description: 'Conclua seu primeiro agendamento de limpeza.',
+          currentProgress: 0,
+          targetValue: 1,
+          rewardType: 'COUPON',
+          rewardValue: 20,
+          status: 'ACTIVE',
         },
         {
-          id: '2',
-          title: 'Organização de Escritório',
-          description: 'Organização de documentos, mesas e prateleiras em um pequeno escritório comercial.',
-          status: 'in_progress',
-          dueDate: '2025-08-12',
-          rewardPoints: 100,
+          id: 'm2',
+          name: 'Cliente Fiel',
+          description: 'Agende e conclua 3 limpezas.',
+          currentProgress: 1,
+          targetValue: 3,
+          rewardType: 'POINTS',
+          rewardValue: 100,
+          status: 'ACTIVE',
         },
         {
-          id: '3',
-          title: 'Limpeza Pós-Obra',
-          description: 'Remoção de resíduos de construção e limpeza geral após reforma de apartamento.',
-          status: 'completed',
-          dueDate: '2025-08-08',
-          rewardPoints: 200,
+          id: 'm3',
+          name: 'Avalie um Serviço',
+          description: 'Deixe uma avaliação para um serviço concluído.',
+          currentProgress: 1,
+          targetValue: 1,
+          rewardType: 'POINTS',
+          rewardValue: 50,
+          status: 'COMPLETED', // Simula uma missão concluída mas não resgatada
         },
         {
-          id: '4',
-          title: 'Lavagem de Estofados',
-          description: 'Lavagem a seco de sofá de 3 lugares e duas poltronas.',
-          status: 'pending',
-          dueDate: '2025-08-20',
-          rewardPoints: 120,
+          id: 'm4',
+          name: 'Indique um Amigo',
+          description: 'Seu amigo deve realizar o primeiro agendamento.',
+          currentProgress: 0,
+          targetValue: 1,
+          rewardType: 'COUPON',
+          rewardValue: 30,
+          status: 'ACTIVE',
         },
         {
-          id: '5',
-          title: 'Limpeza de Condomínio',
-          description: 'Limpeza de áreas comuns de um pequeno condomínio (hall, escadas, salão de festas).',
-          status: 'cancelled',
-          dueDate: '2025-08-10',
-          rewardPoints: 180,
+          id: 'm5',
+          name: 'Super Cliente',
+          description: 'Conclua 10 agendamentos.',
+          currentProgress: 10,
+          targetValue: 10,
+          rewardType: 'POINTS',
+          rewardValue: 500,
+          status: 'CLAIMED', // Simula uma missão já resgatada
         },
+        // Adicione mais missões aqui, se desejar
       ];
       resolve(dummyMissions);
     }, 1500); // Simula atraso de rede
   });
 };
 
-const MissionList: React.FC = () => {
+interface MissionListProps {
+    onClaimMission: (missionId: string) => void;
+    claimingMissionId: string | null;
+}
+
+const MissionList: React.FC<MissionListProps> = ({ onClaimMission, claimingMissionId }) => {
   const [missions, setMissions] = useState<Mission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -79,16 +97,6 @@ const MissionList: React.FC = () => {
     loadMissions();
   }, [loadMissions]);
 
-  const handleMissionPress = (mission: Mission) => {
-    Alert.alert(
-      mission.title,
-      `Status: ${mission.status.replace('_', ' ').toUpperCase()}\nVence em: ${mission.dueDate}\nRecompensa: ${mission.rewardPoints} Pts\n\n${mission.description}`,
-      [{ text: 'OK' }]
-    );
-    // Aqui você poderia navegar para uma tela de detalhes da missão
-    // Ex: navigation.navigate('MissionDetails', { missionId: mission.id });
-  };
-
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     loadMissions();
@@ -105,10 +113,16 @@ const MissionList: React.FC = () => {
 
   if (error) {
     return (
-      <View style={styles.centered}>
+      <ScrollView
+        contentContainerStyle={styles.centered}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#007AFF']} />
+        }
+      >
+        <Ionicons name="alert-circle-outline" size={50} color="#DC3545" />
         <Text style={styles.errorText}>{error}</Text>
         <Text style={styles.errorHint}>Puxe para baixo para tentar novamente.</Text>
-      </View>
+      </ScrollView>
     );
   }
 
@@ -120,6 +134,7 @@ const MissionList: React.FC = () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#007AFF']} />
         }
       >
+        <Ionicons name="flag-outline" size={50} color="#ADB5BD" />
         <Text style={styles.emptyText}>Nenhuma missão encontrada no momento.</Text>
         <Text style={styles.emptyHint}>Verifique novamente mais tarde!</Text>
       </ScrollView>
@@ -130,7 +145,14 @@ const MissionList: React.FC = () => {
     <FlatList
       data={missions}
       keyExtractor={(item) => item.id}
-      renderItem={({ item }) => <MissionItem mission={item} onPress={handleMissionPress} />}
+      renderItem={({ item, index }) => (
+        <MissionItem
+          mission={item}
+          delay={index * 100} // Animação escalonada
+          onClaim={onClaimMission}
+          isClaiming={claimingMissionId === item.id}
+        />
+      )}
       contentContainerStyle={styles.listContainer}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#007AFF']} />
@@ -144,39 +166,41 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8F9FA',
+    backgroundColor: '#F0F8FF', // Mantendo o background-light-blue do seu app
     padding: 20,
   },
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#555',
+    color: '#6C757D', // --text-medium
   },
   errorText: {
     fontSize: 18,
-    color: '#DC3545',
+    color: '#D32F2F', // Vermelho para erro
     textAlign: 'center',
     marginBottom: 10,
+    fontWeight: '600',
   },
   errorHint: {
     fontSize: 14,
-    color: '#6C757D',
+    color: '#888', // Cinza mais escuro
     textAlign: 'center',
   },
   emptyText: {
     fontSize: 18,
-    color: '#6C757D',
+    color: '#6C757D', // --text-medium
     textAlign: 'center',
     marginBottom: 10,
+    fontWeight: '600',
   },
   emptyHint: {
     fontSize: 14,
-    color: '#888',
+    color: '#888', // Cinza mais escuro
     textAlign: 'center',
   },
   listContainer: {
     paddingVertical: 10,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: '#F0F8FF', // Mantendo o background-light-blue
   },
 });
 
