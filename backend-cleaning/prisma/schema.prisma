@@ -27,13 +27,13 @@ enum UserRole {
 
 // NOVO: Enum para o status de verificação do provedor
 enum VerificationStatus {
-  PENDING_INITIAL_REVIEW // Após o registro básico, aguardando dados de verificação
-  PENDING_DOCUMENTS_UPLOAD // Aguardando fotos do documento e selfie
-  PENDING_BACKGROUND_CHECK // Dados enviados, aguardando resultado da verificação criminal
-  PENDING_MANUAL_REVIEW // Se houver necessidade de revisão humana
-  APPROVED // Verificação concluída e aprovada
-  REJECTED // Verificação concluída e rejeitada
-  BLOCKED // Conta bloqueada por questões de segurança graves
+  PENDING_INITIAL_REVIEW
+  PENDING_DOCUMENTS_UPLOAD
+  PENDING_BACKGROUND_CHECK
+  PENDING_MANUAL_REVIEW
+  APPROVED
+  REJECTED
+  BLOCKED
 }
 
 // NOVO: Enum para o tipo de precificação do serviço
@@ -50,20 +50,20 @@ enum BookingStatus {
   CONFIRMED
   COMPLETED
   CANCELED
-  PENDING_DISPUTE // NOVO: Status para agendamentos em disputa
+  PENDING_DISPUTE
   RESCHEDULED
   IN_PROGRESS
   PENDING_PROVIDER_CONFIRMATION
   REJECTED
-  NO_SHOW // ABS: Adicionado para métricas de cliente
+  NO_SHOW
 }
 
 // Enum para o tipo de transação financeira
 enum TransactionType {
-  PAYMENT // Pagamento de cliente para plataforma
-  WITHDRAWAL // Saque de provedor da plataforma
-  COMMISSION // Comissão da plataforma
-  REFUND // NOVO: Reembolso de valores
+  PAYMENT
+  WITHDRAWAL
+  COMMISSION
+  REFUND
 }
 
 // NOVO: Enum para o motivo da disputa
@@ -102,7 +102,7 @@ enum IncidentType {
   DAMAGE
   MISCONDUCT
   THEFT
-  NO_SHOW // Pode ser reportado como incidente
+  NO_SHOW
   OTHER
 }
 
@@ -145,16 +145,38 @@ enum ClaimStatus {
 
 // NOVO: Enum para o tipo de transação de fidelidade (Loyalty)
 enum LoyaltyTransactionType {
-  SERVICE_COMPLETED // Pontos por concluir um serviço
-  REVIEW_SUBMITTED // Pontos por enviar uma avaliação
-  FIRST_REVIEW // Pontos bônus pela primeira avaliação
-  REFERRAL // Pontos por indicar um amigo
-  REDEEM // Resgate de pontos (transação negativa)
-  MISSION_COMPLETED // Pontos por completar uma missão semanal
-  ADMIN_ADJUSTMENT // Ajuste manual de pontos por um administrador
+  SERVICE_COMPLETED
+  REVIEW_SUBMITTED
+  FIRST_REVIEW
+  REFERRAL
+  REDEEM
+  MISSION_COMPLETED
+  ADMIN_ADJUSTMENT
 }
 
-// FIM ABS: NOVOS ENUMS PARA MÓDULOS AVANÇADOS
+// ====== MISSIONS: NOVOS ENUMS (cada valor em uma linha) ======
+enum MissionAudience {
+  CLIENT
+  PROVIDER
+}
+
+enum MissionKind {
+  COUNT_EVENT
+  STREAK_DAYS
+  WITHIN_WINDOW
+}
+
+enum RewardType {
+  COUPON
+  POINTS
+}
+
+enum MissionStatus {
+  ACTIVE
+  COMPLETED
+  CLAIMED
+}
+// ====== FIM MISSIONS ENUMS ======
 
 // ---------------------------------
 // Models
@@ -163,18 +185,16 @@ enum LoyaltyTransactionType {
 model User {
   id                    String           @id @default(uuid())
   email                 String           @unique
-  phone                 String?          @unique // Número de telefone para login por SMS
-  passwordHash          String?          // Opcional agora, para suportar login apenas por SMS
+  phone                 String?          @unique
+  passwordHash          String?
   role                  UserRole         @default(CLIENT)
-  avatarUrl             String?          // <--- NOVA LINHA ADICIONADA AQUI para o avatar do usuário
-  firebaseUid           String?          @unique // Mantido, caso seja usado para outros serviços Firebase
+  avatarUrl             String?
+  firebaseUid           String?          @unique
   fullName              String           @default("Nome Padrão")
-  // ADICIONADO: Campo para armazenar o token FCM do dispositivo para notificações push
-  fcmToken              String?          @unique // Token Firebase Cloud Messaging para notificações push
-  isPhoneVerified       Boolean          @default(false) // Se o telefone foi verificado
-  isVerified            Boolean          @default(false) // NOVO: Status de verificação geral do usuário do sistema
-  // NOVO: Campo para LGPD - marca a data para exclusão agendada da conta
-  deletionScheduledAt   DateTime?        // Data em que a exclusão da conta foi agendada (para LGPD)
+  fcmToken              String?          @unique
+  isPhoneVerified       Boolean          @default(false)
+  isVerified            Boolean          @default(false)
+  deletionScheduledAt   DateTime?
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt
 
@@ -185,23 +205,21 @@ model User {
   notifications         Notification[]
   chatsAsParticipant1   Chat[]           @relation("ChatParticipant1")
   chatsAsParticipant2   Chat[]           @relation("ChatParticipant2")
-  // NOVO: Relações para o modelo Referral
-  referredBy            Referral[]       @relation("ReferredByUser") // Indicações em que este usuário foi o indicado
-  referralsMade         Referral[]       @relation("ReferrerOfUser") // Indicações que este usuário fez
-  // NOVO: Relação com o modelo Dispute
-  disputesReported      Dispute[]        @relation("DisputeReporter") // Disputas reportadas por este usuário
-  // ABS: Novas relações para Safety Module
+  referredBy            Referral[]       @relation("ReferredByUser")
+  referralsMade         Referral[]       @relation("ReferrerOfUser")
+  disputesReported      Dispute[]        @relation("DisputeReporter")
   reportedIncidents     Incident[]       @relation("ReportedIncidents")
   panicAlerts           PanicAlert[]     @relation("PanicAlerts")
-  // FIM ABS: Novas relações para Safety Module
-  // NOVO: Relação com o modelo UserConsent
   userConsents          UserConsent[]
-  // CORREÇÃO: Adicionando o campo de relação inversa para DisputeMessage
   disputeMessagesSent   DisputeMessage[] @relation("DisputeSender")
-  // NOVO: Relação com o modelo Loyalty
   loyalty               Loyalty?
   loyaltyTransactions   LoyaltyTransaction[]
   couponUsages          CouponUsage[]
+
+  // ====== MISSIONS: relações de conveniência ======
+  missionProgress       MissionProgress[]
+  missionEvents         MissionEvent[]
+  // ====== FIM MISSIONS ======
 }
 
 // Modelo para Cliente
@@ -210,22 +228,17 @@ model Client {
   userId                  String           @unique
   user                    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   fullName                String
-  completedBookingsCount  Int              @default(0) // NOVO: Contador para programa de fidelidade
+  completedBookingsCount  Int              @default(0)
   phone                   String?
-  cpf                     String?          @unique // CORREÇÃO: Adicionado CPF para o cliente
-  dateOfBirth             DateTime?        // <--- CORRIGIDO: Tornar dateOfBirth opcional
+  cpf                     String?          @unique
+  dateOfBirth             DateTime?
   address                 Address?         @relation("ClientAddress")
   bookings                Booking[]
-  reviewsMade             Review[]         @relation("ClientReviews") // Avaliações que o cliente fez
-  // ABS: Novas métricas para o cliente
+  reviewsMade             Review[]         @relation("ClientReviews")
   noShowCount             Int              @default(0)
   cancellationCount       Int              @default(0)
-  // FIM ABS: Novas métricas para o cliente
-  // ABS: Novas relações para módulos avançados
   subscriptions           Subscription[]
   guaranteeClaims         GuaranteeClaim[]
-  // FIM ABS: Novas relações para módulos avançados
-  // ADICIONADO: Campos para registro de data e hora de criação/atualização do perfil do cliente
   createdAt               DateTime         @default(now())
   updatedAt               DateTime         @updatedAt
 }
@@ -236,38 +249,32 @@ model Provider {
   userId                String            @unique
   user                  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   fullName              String
-  cpf                   String?           @unique // CPF para verificação
+  cpf                   String?           @unique
   dateOfBirth           DateTime
   phone                 String?
   address               Address?          @relation("ProviderAddress")
   yearsOfExperience     Int?
-  // NOTA: avatarUrl no Provider é redundante se User já tem, mas mantido para consistência do seu schema original.
   avatarUrl             String?
-  bio                   String?           // PROPRIEDADE 'BIO' ADICIONADA AQUI
+  bio                   String?
   providerServices      ProviderService[]
-  fiveStarReviewCount   Int               @default(0) // NOVO: Para bônus por avaliações excelentes
-  monthlyBookingsCount  Int               @default(0) // NOVO: Para bônus por volume de serviços
+  fiveStarReviewCount   Int               @default(0)
+  monthlyBookingsCount  Int               @default(0)
   availability          Availability[]
   bookings              Booking[]
-  reviewsReceived       Review[]          @relation("ProviderReviews") // Avaliações que o provedor recebeu
+  reviewsReceived       Review[]          @relation("ProviderReviews")
   earnings              Transaction[]
-  // NOVOS CAMPOS PARA VERIFICAÇÃO
   verificationStatus    VerificationStatus @default(PENDING_INITIAL_REVIEW)
   documentPhotoFrontUrl String?
   documentPhotoBackUrl  String?
   selfieWithDocumentUrl String?
-  backgroundCheckResult Json?             // Armazenar o resultado detalhado da verificação de antecedentes criminais (JSON)
-  ocrResult             Json?             // NOVO: Armazenar resultados de OCR do documento (JSON)
-  livenessResult        Json?             // NOVO: Armazenar resultados de liveness check (JSON)
-  rejectionReason       String?           // Campo para armazenar o motivo da rejeição, se houver
-  pixKey                String?           // <--- NOVA LINHA ADICIONADA AQUI
-  // ABS: Novo campo para Badges de Provedor
+  backgroundCheckResult Json?
+  ocrResult             Json?
+  livenessResult        Json?
+  rejectionReason       String?
+  pixKey                String?
   badges                String[]          @default([])
-  // FIM ABS: Novo campo para Badges de Provedor
-  // ABS: Novas relações para módulos avançados
   subscriptions         Subscription[]
   guaranteeClaims       GuaranteeClaim[]
-  // FIM ABS: Novas relações para módulos avançados
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
 }
@@ -299,8 +306,8 @@ model Service {
   id                 String            @id @default(uuid())
   name               String            @unique
   description        String?
-  price              Decimal           @db.Decimal(10, 2) // Campo existente
-  defaultPricingType PricingType?      // NOVO: Para indicar se 'price' é fixo ou por hora para este serviço base
+  price              Decimal           @db.Decimal(10, 2)
+  defaultPricingType PricingType?
   icon               String?
   providerServices   ProviderService[]
   createdAt          DateTime          @default(now())
@@ -324,7 +331,7 @@ model ProviderService {
   createdAt            DateTime          @default(now())
   updatedAt            DateTime          @updatedAt
   subscriptions        Subscription[]    @relation("ProviderServiceSubscriptions")
-  
+
   @@unique([providerId, serviceId])
 }
 
@@ -346,21 +353,16 @@ model Booking {
   updatedAt                DateTime          @updatedAt
   review                   Review?
   transactions             Transaction[]
-  // ADICIONADO: RELAÇÃO DO ENDEREÇO ESPECÍFICO DO AGENDAMENTO
   addressId                String?           @unique
   address                  Address?          @relation("BookingAddress", fields: [addressId], references: [id])
-  // NOVO: Relação com o modelo Dispute
   dispute                  Dispute?
-  // ABS: Novas relações para módulos avançados
   subscriptionId           String?
   subscription             Subscription?     @relation("SubscriptionBookings", fields: [subscriptionId], references: [id])
   incidents                Incident[]
   guaranteeClaims          GuaranteeClaim[]
-  // NOVO: Campos para integração do Módulo de Cupons
   couponId                 String?
   coupon                   Coupon?           @relation(fields: [couponId], references: [id])
   couponUsage              CouponUsage?      @relation("BookingCouponUsage")
-  // FIM ABS
 }
 
 // Modelo de Chat
@@ -403,10 +405,8 @@ model Notification {
   isRead      Boolean  @default(false)
   targetUrl   String?
   createdAt   DateTime @default(now())
-  // ABS: Novos campos para Rich Media Notifications
   imageUrl    String?
   actionButtons Json?
-  // FIM ABS
 }
 
 // Modelo de Avaliação
@@ -454,7 +454,6 @@ model Transaction {
   gatewayTransactionId String?         @unique
   qrCodeUrl            String?
   transactionRef       String?
-  // NOVO: Campo para integração do Módulo de Cupons
   couponId             String?
   coupon               Coupon?         @relation(fields: [couponId], references: [id])
 }
@@ -592,20 +591,20 @@ model PanicAlert {
 // ABS: Modelo para Cupons de Desconto (Atualizado)
 model Coupon {
   id           String          @id @default(uuid())
-  code         String          @unique // Ex: PRIMEIRA10
+  code         String          @unique
   description  String?
-  value        Decimal         @db.Decimal(10, 2) // Valor do desconto
-  valueType    String          // 'FIXED' ou 'PERCENT' (corresponde a CouponType)
-  target       String          // 'GENERAL', 'NEW_CLIENTS', 'SPECIFIC_SERVICE', 'SPECIFIC_PROVIDER' (corresponde a CouponTarget)
-  targetId     String?         // ID do serviço ou provedor, se o target for específico
-  maxUses      Int?            // Limite de usos total
-  usesCount    Int             @default(0) // Contador de usos
+  value        Decimal         @db.Decimal(10, 2)
+  valueType    String
+  target       String
+  targetId     String?
+  maxUses      Int?
+  usesCount    Int             @default(0)
   validFrom    DateTime
   validUntil   DateTime
-  status       CouponStatus    @default(ACTIVE) // ACTIVE, INACTIVE, USED_UP
+  status       CouponStatus    @default(ACTIVE)
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
-  usages       CouponUsage[] // Nova relação para rastrear usos
+  usages       CouponUsage[]
   bookings     Booking[]
   transactions Transaction[]
 }
@@ -617,9 +616,9 @@ model CouponUsage {
   coupon       Coupon   @relation(fields: [couponId], references: [id])
   userId       String
   user         User     @relation(fields: [userId], references: [id])
-  bookingId    String   @unique // Um uso de cupom por agendamento
+  bookingId    String   @unique
   booking      Booking  @relation("BookingCouponUsage", fields: [bookingId], references: [id])
-  appliedValue Decimal  @db.Decimal(10, 2) // Valor do desconto aplicado neste uso específico
+  appliedValue Decimal  @db.Decimal(10, 2)
   createdAt    DateTime @default(now())
 }
 
@@ -660,7 +659,7 @@ model PricingRule {
 // NOVO: Modelo para o saldo de pontos de fidelidade do usuário
 model Loyalty {
   id            String   @id @default(uuid())
-  userId        String   @unique // Relaciona com o User
+  userId        String   @unique
   currentPoints Int      @default(0)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -673,9 +672,9 @@ model LoyaltyTransaction {
   id          String                 @id @default(uuid())
   userId      String
   user        User                   @relation(fields: [userId], references: [id])
-  points      Int                    // Pontos adicionados (positivo) ou resgatados (negativo)
+  points      Int
   type        LoyaltyTransactionType
-  referenceId String?                // ID do booking, review, referral, reward, etc.
+  referenceId String?
   createdAt   DateTime               @default(now())
 }
 
@@ -684,11 +683,58 @@ model Reward {
   id          String   @id @default(uuid())
   name        String   @unique
   description String?
-  costPoints  Int      // Quantos pontos custa para resgatar
-  value       Decimal  @db.Decimal(10, 2) // Valor da recompensa (ex: R$10 de desconto ou 0.10 para 10% de desconto)
-  type        String   // Ex: "DISCOUNT_COUPON", "GIFT_CARD"
-  couponCode  String?  // Se for um cupom, qual o código ou template
+  costPoints  Int
+  value       Decimal  @db.Decimal(10, 2)
+  type        String
+  couponCode  String?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+// ====== MISSIONS: NOVOS MODELOS ======
+model Mission {
+  id               String          @id @default(uuid())
+  code             String          @unique // ex: FIRST_SERVICE, THREE_BOOKINGS_MONTH
+  title            String
+  description      String
+  audience         MissionAudience @default(CLIENT) // CLIENT, PROVIDER (para o futuro)
+  kind             MissionKind     // COUNT_EVENT, STREAK_DAYS, WITHIN_WINDOW
+  eventName        String          // booking.completed, review.created, referral.converted, etc.
+  targetValue      Int             // ex: 1 (primeiro), 3, 10
+  timeWindowDays   Int?            // ex: 30 para "3 no mês" (opcional)
+  rewardType       RewardType      // COUPON, POINTS
+  rewardValue      Int             // ex: 20 (%), 100 (points)
+  couponTemplateId String?         // opcional: template no módulo de coupons
+  isActive         Boolean         @default(true)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  progress         MissionProgress[]
+}
+
+model MissionProgress {
+  id           String        @id @default(uuid())
+  userId       String
+  missionId    String
+  currentValue Int           @default(0)
+  status       MissionStatus @default(ACTIVE) // ACTIVE, COMPLETED, CLAIMED
+  lastEventAt  DateTime?
+  completedAt  DateTime?
+  claimedAt    DateTime?
+
+  mission      Mission       @relation(fields: [missionId], references: [id])
+  user         User          @relation(fields: [userId], references: [id]) // cliente
+
+  @@unique([userId, missionId])
+}
+
+model MissionEvent {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  name      String   // booking.completed, review.created, referral.converted
+  meta      Json?
+  createdAt DateTime @default(now())
+}
+// ====== FIM MISSIONS ======
