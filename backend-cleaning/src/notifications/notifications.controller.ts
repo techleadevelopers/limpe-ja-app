@@ -48,11 +48,9 @@ export class NotificationsController {
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido (requer função de ADMIN).' })
   async create(@Body() createNotificationDto: CreateNotificationDto): Promise<NotificationEntity> {
+    // FIX: Pass the DTO directly as the service expects a single DTO argument
     const createdNotification = await this.notificationsService.createNotification(
-      createNotificationDto.userId,
-      createNotificationDto.type,
-      createNotificationDto.message,
-      createNotificationDto.targetUrl,
+      createNotificationDto,
     );
     return new NotificationEntity(createdNotification);
   }

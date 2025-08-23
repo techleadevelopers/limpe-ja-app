@@ -1,6 +1,7 @@
 // src/payments/entities/transaction.entity.ts
 import { Transaction as PrismaTransaction, TransactionType, Prisma } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { PixKeyType } from '../dto/request-withdrawal.dto'; // Importar o enum PixKeyType
 
 export class TransactionEntity implements PrismaTransaction {
   @ApiProperty({ description: 'ID da transação', example: 'uuid-da-transacao' })
@@ -15,7 +16,7 @@ export class TransactionEntity implements PrismaTransaction {
   @ApiProperty({ enum: TransactionType, description: 'Tipo da transação (PAGAMENTO, SAQUE, COMISSÃO)', example: TransactionType.PAYMENT })
   type: TransactionType;
 
-  @ApiProperty({ description: 'Status da transação (e.g., PENDING, COMPLETED, FAILED)', example: 'COMPLETED' })
+  @ApiProperty({ description: 'Status da transação (e.g., PENDING, PROCESSING, COMPLETED, FAILED)', example: 'COMPLETED' })
   status: string;
 
   @ApiPropertyOptional({ description: 'Descrição da transação', example: 'Pagamento de serviço de limpeza' })
@@ -36,13 +37,18 @@ export class TransactionEntity implements PrismaTransaction {
 
   // NOVO: Referência interna para transações (ex: recorrentes)
   @ApiPropertyOptional({ description: 'Referência interna para transações (ex: ID da assinatura para pagamentos recorrentes)', example: 'recurring_sub_123', nullable: true })
-  transactionRef: string | null; // <-- ADIÇÃO AQUI
+  transactionRef: string | null;
 
   // CORREÇÃO: Adicionado couponId
   @ApiPropertyOptional({ description: 'ID do cupom associado à transação (se houver)', example: 'uuid-do-cupom', nullable: true })
   couponId: string | null;
 
-  // provider: Provider; // Relação, não incluída diretamente na entidade para DTO de saída
+  // NOVO: Campos para chave PIX em transações de saque
+  @ApiPropertyOptional({ description: 'Tipo da chave PIX utilizada para o saque', enum: PixKeyType, example: PixKeyType.CPF, nullable: true })
+  pixKeyType: PixKeyType | null;
+
+  @ApiPropertyOptional({ description: 'Chave PIX utilizada para o saque', example: '123.456.789-00', nullable: true })
+  pixKey: string | null;
 
   constructor(partial: Partial<PrismaTransaction>) {
     Object.assign(this, partial);

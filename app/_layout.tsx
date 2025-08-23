@@ -215,7 +215,8 @@ export default Sentry.wrap(function RootLayout() {
                         <RootLayoutContent />
                     </AppProvider>
                 </ProviderRegistrationProvider>
-            </I18nextProvider>
+            </AuthProvider> {/* FIX: Adicionada a tag de fechamento para AuthProvider */}
+        </I18nextProvider>
     );
 });
 

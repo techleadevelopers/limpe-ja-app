@@ -1,156 +1,126 @@
-📩 Notifications Module — README
+🔔 notifications/ — Módulo de Notificações do LimpeJá
 
-O módulo de Notificações é responsável por gerenciar toda a lógica de criação, envio e atualização de notificações no sistema. Ele garante que usuários, provedores e administradores recebam comunicações relevantes em tempo real ou de forma persistida (armazenadas no banco para consulta posterior).
+O módulo notifications/ centraliza o envio, listagem e gerenciamento de notificações dentro do app, sendo peça-chave para engajamento, comunicação ativa, e feedback em tempo real. Suporta múltiplos canais e tipos de notificação.
 
-🔑 Objetivos do Módulo
+🎯 Objetivo
 
-Criar notificações a partir de eventos do sistema (ex.: nova reserva, mensagem de chat, missão concluída).
+Disparar notificações automáticas ou manuais (push/email)
 
-Armazenar notificações no banco (Prisma).
+Garantir que usuários recebam alertas em tempo real
 
-Permitir atualização de status (ex.: lida/não lida).
+Permitir marcação como lida, categorização e rastreio
 
-Expor endpoints seguros para clientes e provedores acessarem suas notificações.
+Ser o backbone de comunicação assíncrona entre app e usuários
 
-Servir de hub de eventos para integração futura com push notifications (FCM/APNs).
+⚙️ Estrutura de Arquivos
+notifications/
+├── notifications.module.ts            # Módulo principal NestJS
+├── notifications.controller.ts        # Endpoints públicos e admin
+├── notifications.service.ts           # Lógica de envio, listagem, update
+├── notification.entity.ts             # Estrutura ORM da notificação
+├── create-notification.dto.ts         # DTO para criação
+├── update-notification.dto.ts         # DTO para edição
+├── mark-as-read.dto.ts                # DTO para marcar como lida
 
-📂 Estrutura do Módulo
+🧠 Lógica de Funcionamento
+Tipos de Notificação Suportados:
 
-notifications.controller.ts → expõe as rotas HTTP.
+Push Notification (via Firebase, OneSignal ou Expo)
 
-notifications.service.ts → contém a lógica de negócio.
+In-App (persistente, no painel do usuário)
 
-notifications.module.ts → registra dependências no NestJS.
+E-mail (via worker de envio externo)
 
-notification.entity.ts → define a estrutura da entidade Notification.
+Categorias:
 
-DTOs → create-notification.dto.ts, update-notification.dto.ts (validação dos payloads).
+Financeira (ex: repasse realizado)
 
-🏗 Entidade: Notification
+Missões (ex: missão completada)
 
-Representa uma notificação persistida no banco. Campos principais:
+Sistema (ex: manutenção, erro)
 
-id: string → identificador único.
+Agendamento (ex: serviço confirmado)
 
-userId: string → usuário alvo da notificação.
+Avaliação / Ranking / Gamificação
 
-title: string → título resumido.
-
-message: string → corpo da notificação.
-
-type: string → categoria (BOOKING, MISSION, SYSTEM, etc.).
-
-status: 'UNREAD' | 'READ' → controla se o usuário já visualizou.
-
-createdAt / updatedAt → timestamps de rastreio.
-
-📡 Controller (notifications.controller.ts)
-
-Expõe endpoints protegidos com JWT + RolesGuard.
-
-🔹 Endpoints
-
-POST /notifications
-
-Cria uma nova notificação.
-
-Acesso: ADMIN.
-
-Payload: CreateNotificationDto.
-
-PATCH /notifications/:id
-
-Atualiza status ou conteúdo da notificação.
-
-Acesso: ADMIN.
-
-Payload: UpdateNotificationDto.
-
-GET /notifications/:userId
-
-Lista notificações de um usuário.
-
-Acesso: USER (cliente ou provedor autenticado).
-
-⚙️ Service (notifications.service.ts)
-
-Centraliza a lógica de manipulação de notificações.
-
-🔹 Funções principais
-
-create(dto: CreateNotificationDto)
-Cria uma nova notificação no banco.
-
-update(id: string, dto: UpdateNotificationDto)
-Permite alterar status ou campos de uma notificação.
-
-findByUser(userId: string)
-Lista todas notificações do usuário, ordenadas por data.
-
-markAsRead(id: string)
-Atualiza status de uma notificação para READ.
-
-delete(id: string) (se aplicável)
-Remove uma notificação.
-
-🔄 Fluxo de Negócio Atual
-
-Gatilho de Evento
-
-Exemplo: reserva criada, missão concluída, avaliação recebida.
-
-O serviço responsável chama notificationsService.create().
-
-Persistência
-
-A notificação é salva no banco via Prisma.
-
-Entrega
-
-A notificação fica disponível na listagem do usuário (findByUser).
-
-Pode ser exibida no frontend (badge, modal, feed de notificações).
-
-Interação do Usuário
-
-Ao abrir, a notificação é marcada como READ.
-
-O serviço expõe markAsRead para esse fluxo.
-
-🔒 Regras de Acesso
-
-ADMIN → pode criar e atualizar notificações (ex.: disparos manuais ou ajustes).
-
-USER (CLIENTE/PROVIDER) → pode apenas listar e atualizar o status das próprias notificações.
-
-🚀 Exemplos de Uso
-Criar notificação (ADMIN)
-POST /notifications
-Authorization: Bearer <token_admin>
+🧩 Entidade ORM — notification.entity.ts
 {
-  "userId": "user-123",
-  "title": "Nova Reserva",
-  "message": "Sua reserva foi confirmada!",
-  "type": "BOOKING"
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  type: 'push' | 'email' | 'in-app';
+  category: string;
+  read: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-Listar notificações do usuário
-GET /notifications/user-123
-Authorization: Bearer <token_user>
-
-Marcar como lida
-PATCH /notifications/abcd1234
-Authorization: Bearer <token_user>
+📥 DTOs
+create-notification.dto.ts
 {
-  "status": "READ"
+  userId: string;
+  title: string;
+  message: string;
+  type: 'push' | 'email' | 'in-app';
+  category?: string;
 }
 
-📌 Pontos de Evolução
+update-notification.dto.ts
+{
+  title?: string;
+  message?: string;
+  read?: boolean;
+}
 
-Integração com FCM/APNs para push notifications.
+mark-as-read.dto.ts
+{
+  notificationId: string;
+}
 
-Fila de processamento via QueuesModule para envio em larga escala.
+🌐 Endpoints — notifications.controller.ts
+Método	Rota	Descrição
+POST	/notifications	Cria e envia uma nova notificação
+GET	/notifications/user/:userId	Lista notificações do usuário
+PATCH	/notifications/:id	Atualiza conteúdo ou status de notificação
+POST	/notifications/mark-as-read	Marca como lida
+DELETE	/notifications/:id	Remove notificação
+🔗 Integração com Outros Módulos
+Módulo	Finalidade do Envio
+bookings/	Avisar confirmação, alterações
+earnings/	Notificar repasse efetuado
+missions/	Informar missão nova ou completa
+loyalty/	Alerta de resgate ou saldo
+ranking/	Alerta sobre posição ou destaque
+support/	Atualização de chamados
+queue workers/	Envio assíncrono com BullMQ
+📊 Estratégia de Produto
 
-Criação de categorias configuráveis de notificações.
+✅ Melhora comunicação proativa com o usuário
 
-Implementação de preferências de notificação por usuário (ex.: receber só e-mail, só push, ambos).
+🚀 Impulsiona engajamento com alertas em tempo real
+
+🧠 Reforça sensação de atividade constante
+
+🔁 Reduz fricção no fluxo de informações
+
+🛡️ Segurança e Controle
+
+Verificação por userId
+
+Filtro por categorias e status
+
+Marcação como lida individual ou em lote
+
+Possibilidade de log e histórico por tipo
+
+🧭 Próximas Evoluções Sugeridas
+Recurso	Prioridade
+Configurações de preferências	Alta
+Template dinâmico por evento	Média
+Multi-idioma	Média
+Notificações segmentadas	Alta
+WebSocket para tempo real	Alta
+✅ Conclusão
+
+O módulo notifications/ é o hub central de comunicação assíncrona do LimpeJá. Ele garante que todas as partes do sistema possam alertar os usuários de forma contextual, rápida e acionável — sendo fundamental para reforçar engajamento, fidelidade e confiança.

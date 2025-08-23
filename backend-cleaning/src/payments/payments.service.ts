@@ -1,3 +1,4 @@
+// src/payments/payments.service.ts
 import { BadRequestException, Injectable, InternalServerErrorException, Logger, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { BookingStatus, TransactionType, Prisma } from '@prisma/client';
@@ -5,11 +6,15 @@ import axios from 'axios';
 import { MessageResponseDto } from '../common/dto/message-response.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProvidersService } from '../providers/providers.service';
-import { BookingsService } from '../bookings/bookings.service'; // Importar BookingsService
+import { BookingsService } from '../bookings/bookings.service';
 import { CreatePixChargeDto, PixChargeResponseDto } from './dto/create-pix-charge.dto';
-import { RequestWithdrawalDto } from './dto/request-withdrawal.dto';
-import { CouponsService } from '../coupons/coupons.service'; // NEW: Import CouponsService
-import { Decimal } from '@prisma/client/runtime/library'; // CORREÇÃO: Importar Decimal
+import { RequestWithdrawalDto, PixKeyType } from './dto/request-withdrawal.dto';
+import { CouponsService } from '../coupons/coupons.service';
+import { Decimal } from '@prisma/client/runtime/library';
+import { NotificationsService } from '../notifications/notifications.service'; // NEW
+import { EmailService } from '../email/email.service'; // NEW
+import { QueuesService } from '../queues/queues.service'; // NEW
+import { CreateNotificationDto } from '../notifications/dto/create-notification.dto'; // NEW
 
 // Tipagem auxiliar para os dados que serão passados para a função de criação de payload
 interface PixChargeDetailsForGateway {
@@ -39,21 +44,25 @@ export class PaymentsService {
   private pagseguroApiToken: string;
   private pagseguroApiBaseUrl: string;
   private appBaseUrl: string;
+  private minWithdrawalAmount: number;
 
   // Injeção de propriedade para BookingsService para resolver dependência circular
   @Inject(forwardRef(() => BookingsService))
-  private bookingsService: BookingsService; // Removido do construtor
+  private bookingsService: BookingsService;
 
   constructor(
     private prisma: PrismaService,
     private configService: ConfigService,
     private readonly providersService: ProvidersService,
-    private readonly couponsService: CouponsService, // NEW: Inject CouponsService
-    // Removido bookingsService do construtor
+    private readonly couponsService: CouponsService,
+    private readonly notificationsService: NotificationsService, // NEW
+    private readonly emailService: EmailService, // NEW
+    private readonly queuesService: QueuesService, // NEW
   ) {
     this.pagseguroApiToken = this.configService.get<string>('PAGSEGURO_API_TOKEN');
     this.pagseguroApiBaseUrl = this.configService.get<string>('PAGSEGURO_API_BASE_URL', 'https://sandbox.api.pagseguro.com');
     this.appBaseUrl = this.configService.get<string>('APP_BASE_URL');
+    this.minWithdrawalAmount = this.configService.get<number>('MIN_WITHDRAWAL_AMOUNT', 10.00); // Default to 10.00
 
     if (!this.pagseguroApiToken) {
       this.logger.error('PAGSEGURO_API_TOKEN não configurado. As integrações com PagSeguro não funcionarão.');
@@ -184,7 +193,7 @@ export class PaymentsService {
    * @returns Os detalhes da cobrança PIX gerada.
    */
   async createPixCharge(
-    clientUserId: string, // Renomeado para clientUserId para clareza
+    clientUserId: string,
     dto: CreatePixChargeDto,
   ): Promise<PixChargeResponseDto> {
     const { amount, description, bookingId, providerId } = dto;
@@ -208,15 +217,14 @@ export class PaymentsService {
     this.logger.log(`[PaymentsService] createPixCharge - Provedor "${providerId}" encontrado.`);
 
     // Buscar o email, nome completo, telefone e CPF do cliente
-    // CORREÇÃO AQUI: Buscar o cliente pelo userId e incluir a relação 'client'
     this.logger.debug(`[PaymentsService] createPixCharge - Tentando buscar clientUserWithDetails para ID: ${clientUserId}`);
     const clientUserWithDetails = await this.prisma.user.findUnique({
-      where: { id: clientUserId }, // Use clientUserId (que é o ID do User) para buscar na tabela User
+      where: { id: clientUserId },
       select: {
         email: true,
-        client: { // Inclua a relação 'client' para acessar fullName, phone, cpf, address
+        client: {
           select: {
-            id: true, // ID do cliente
+            id: true,
             fullName: true,
             phone: true,
             cpf: true,
@@ -250,7 +258,7 @@ export class PaymentsService {
             },
           },
         },
-        couponId: true, // NEW: Select couponId
+        couponId: true,
       },
     });
 
@@ -265,16 +273,12 @@ export class PaymentsService {
     // 3. Criar uma transação pendente no banco de dados
     const transaction = await this.prisma.transaction.create({
       data: {
-        // CORREÇÃO: Usar 'connect' para a relação 'provider'
         provider: { connect: { id: dto.providerId } },
-        // Use connect para a relação booking, se bookingId existir
-        ...(dto.bookingId && { booking: { connect: { id: dto.bookingId } } }), // Condicionalmente conecta o booking
+        ...(dto.bookingId && { booking: { connect: { id: dto.bookingId } } }),
         amount: new Prisma.Decimal(dto.amount),
         type: TransactionType.PAYMENT,
         status: 'PENDING',
         description: dto.description,
-        // CORREÇÃO FINAL: REMOVER A LINHA 'couponId: bookingWithServiceDetails.couponId'
-        // E USAR APENAS A CONEXÃO CONDICIONAL ABAIXO:
         ...(bookingWithServiceDetails.couponId && { coupon: { connect: { id: bookingWithServiceDetails.couponId } } }),
       },
     });
@@ -374,23 +378,74 @@ export class PaymentsService {
   }
 
   /**
-   * Processa uma solicitação de saque de um provedor.
+   * Simula o processamento de saque via PIX com um gateway de pagamento.
+   * Em um cenário real, esta função faria uma chamada HTTP para a API do gateway de pagamento
+   * que suporta transferências PIX.
+   * @param transactionId ID da transação interna.
+   * @param amount Valor do saque.
+   * @param pixKey Chave PIX.
+   * @param pixKeyType Tipo da chave PIX.
+   * @returns Um ID de transação do gateway simulado.
+   */
+  private async processWithdrawalWithGateway(
+    transactionId: string,
+    amount: Prisma.Decimal,
+    pixKey: string,
+    pixKeyType: PixKeyType
+  ): Promise<string> {
+    this.logger.log(`[PaymentsService] processWithdrawalWithGateway - Simulando processamento de saque PIX para transação ${transactionId} no valor de ${amount.toFixed(2)}.`);
+    this.logger.debug(`[PaymentsService] processWithdrawalWithGateway - Chave PIX: ${pixKey} (Tipo: ${pixKeyType})`);
+
+    // Simulação de chamada a um gateway externo (ex: PagSeguro, Pagar.me, etc.)
+    // A API real aqui dependeria do gateway escolhido e de como ele lida com transferências PIX.
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const gatewayTxnId = `gateway_withdrawal_pix_${Date.now()}_${transactionId}`;
+        this.logger.log(`[PaymentsService] processWithdrawalWithGateway - Saque PIX simulado enviado ao gateway. ID do Gateway: ${gatewayTxnId}`);
+        resolve(gatewayTxnId);
+      }, 2000); // Simula um atraso de 2 segundos para a comunicação com o gateway
+    });
+  }
+
+  /**
+   * Processa uma solicitação de saque de um provedor usando chave PIX.
    * @param providerId O ID do provedor que está solicitando o saque.
-   * @param dto Os dados da solicitação de saque.
+   * @param dto Os dados da solicitação de saque (chave PIX e valor).
    * @returns Uma mensagem de sucesso.
    */
   async requestWithdrawal(providerId: string, dto: RequestWithdrawalDto): Promise<MessageResponseDto> {
-    const { amount, bankName, agencyNumber, accountNumber, accountType, notes } = dto;
+    const { amount, pixKey, pixKeyType, notes } = dto;
 
-    const providerExists = await this.prisma.provider.findUnique({
+    this.logger.log(`[PaymentsService] requestWithdrawal - Solicitação de saque PIX para provedor ${providerId}, valor ${amount}, chave PIX ${pixKey} (${pixKeyType}).`);
+
+    const provider = await this.prisma.provider.findUnique({
       where: { id: providerId },
+      include: { user: true } // Incluir dados do usuário para notificação
     });
-    if (!providerExists) {
+    if (!provider) {
+      this.logger.error(`[PaymentsService] requestWithdrawal - Provedor com ID "${providerId}" não encontrado.`);
       throw new NotFoundException(`Provedor com ID "${providerId}" não encontrado.`);
     }
 
+    // 1. Validar valor do saque
+    if (amount <= 0) {
+      throw new BadRequestException('O valor do saque deve ser maior que zero.');
+    }
+    if (amount < this.minWithdrawalAmount) {
+      throw new BadRequestException(`O valor mínimo para saque é de R$ ${this.minWithdrawalAmount.toFixed(2)}.`);
+    }
+
+    // 2. Validação básica da chave PIX (pode ser expandida com validações de formato mais robustas)
+    if (!pixKey || !pixKeyType) {
+      throw new BadRequestException('Chave PIX e tipo de chave PIX são obrigatórios.');
+    }
+    // TODO: Adicionar validações de formato para CPF, CNPJ, Email, Phone, etc.
+    // Ex: if (pixKeyType === PixKeyType.CPF && !isValidCPF(pixKey)) { throw new BadRequestException('CPF inválido'); }
+
     try {
+      let withdrawalTransaction;
       await this.prisma.$transaction(async (prisma) => {
+        // 3. Calcular saldo disponível
         const completedBookings = await prisma.booking.findMany({
           where: {
             providerId: providerId,
@@ -407,6 +462,8 @@ export class PaymentsService {
           where: {
             providerId: providerId,
             type: TransactionType.WITHDRAWAL,
+            // Considerar apenas saques COMPLETED, PROCESSING, PENDING para cálculo de saldo
+            status: { in: ['COMPLETED', 'PROCESSING', 'PENDING'] },
           },
           select: {
             amount: true,
@@ -416,35 +473,90 @@ export class PaymentsService {
           sum + trans.amount.toNumber(), 0);
 
         const availableBalance = totalEarnings - totalWithdrawn;
+        this.logger.log(`[PaymentsService] requestWithdrawal - Saldo disponível para ${providerId}: R$ ${availableBalance.toFixed(2)}. Saque solicitado: R$ ${amount.toFixed(2)}.`);
 
         if (availableBalance < amount) {
-          throw new BadRequestException('Saldo insuficiente para saque.');
+          throw new BadRequestException(`Saldo insuficiente para o saque. Saldo disponível: R$ ${availableBalance.toFixed(2)}.`);
         }
 
-        if (amount <= 0) {
-          throw new BadRequestException('O valor do saque deve ser maior que zero.');
-        }
-
-        const withdrawalTransaction = await prisma.transaction.create({
+        // 4. Criar transação de saque com status PENDING
+        withdrawalTransaction = await prisma.transaction.create({
           data: {
-            provider: { connect: { id: providerId } }, // CORRIGIDO: Usar 'connect' para a relação 'provider'
-            amount: new Decimal(amount), // CORREÇÃO: Usar new Decimal
+            provider: { connect: { id: providerId } },
+            amount: new Decimal(amount),
             type: TransactionType.WITHDRAWAL,
-            status: 'REQUESTED',
-            description: notes || `Solicitação de saque para ${bankName || 'conta padrão'} Ag: ${agencyNumber || 'N/A'} Cc: ${accountNumber || 'N/A'}`,
+            status: 'PENDING', // Saque solicitado, aguardando processamento do gateway
+            description: notes || `Solicitação de saque PIX para chave ${pixKey} (${pixKeyType})`,
+            pixKey: pixKey, // Salvar a chave PIX
+            pixKeyType: pixKeyType, // Salvar o tipo da chave PIX
           },
         });
+        this.logger.log(`[PaymentsService] requestWithdrawal - Transação de saque ID ${withdrawalTransaction.id} criada com status PENDING.`);
 
-        this.logger.log(`Saque de R$ ${amount} solicitado pelo provedor ${providerId}. Transação ID: ${withdrawalTransaction.id}`);
+        // 5. Chamar o gateway de pagamento para processar o saque (simulado)
+        const gatewayTransactionId = await this.processWithdrawalWithGateway(
+          withdrawalTransaction.id,
+          new Decimal(amount),
+          pixKey,
+          pixKeyType
+        );
+
+        // 6. Atualizar transação para status PROCESSING com o ID do gateway
+        await prisma.transaction.update({
+          where: { id: withdrawalTransaction.id },
+          data: {
+            status: 'PROCESSING', // Enviado ao gateway, aguardando confirmação
+            gatewayTransactionId: gatewayTransactionId,
+          },
+        });
+        this.logger.log(`[PaymentsService] requestWithdrawal - Transação de saque ID ${withdrawalTransaction.id} atualizada para PROCESSING. Gateway ID: ${gatewayTransactionId}.`);
       });
 
-      return { message: 'Solicitação de saque recebida com sucesso. Será processada em breve.' };
+      // --- Disparar Notificações de Saque Solicitado ---
+      const notificationMessage = `Sua solicitação de saque de R$ ${amount.toFixed(2)} para a chave PIX ${pixKeyType}: ${pixKey} foi recebida e está sendo processada. O valor estará disponível em breve.`;
+      const notificationTitle = 'Saque Solicitado';
+      const targetUrl = `/app/(provider)/earnings`; // Exemplo de URL para o frontend
+
+      // Notificação in-app (persistida no DB)
+      const createNotificationDto: CreateNotificationDto = {
+        userId: provider.userId,
+        type: 'WITHDRAWAL_REQUESTED',
+        message: notificationMessage,
+        targetUrl: targetUrl,
+      };
+      await this.notificationsService.createNotification(createNotificationDto);
+
+      // E-mail para o provedor
+      if (provider.user?.email) {
+        await this.emailService.sendWithdrawalRequestedEmail(
+          provider.user.email,
+          provider.user.fullName,
+          amount.toFixed(2),
+          pixKeyType,
+          pixKey,
+          withdrawalTransaction.id
+        );
+      }
+
+      // Push Notification (enfileirada)
+      await this.queuesService.addNotificationJob('send-push-notification', {
+        userId: provider.userId,
+        title: notificationTitle,
+        body: notificationMessage,
+        data: {
+          notificationType: 'WITHDRAWAL_REQUESTED',
+          transactionId: withdrawalTransaction.id,
+          targetUrl: targetUrl,
+        },
+      });
+
+      return { message: 'Solicitação de saque recebida com sucesso. O processamento pode levar alguns dias úteis.' };
     } catch (error) {
       this.logger.error('Erro ao solicitar saque:', error.response?.data || error.message, error.stack);
       if (error instanceof NotFoundException || error instanceof BadRequestException) {
         throw error;
       }
-      throw new InternalServerErrorException('Não foi possível processar a solicitação de saque.');
+      throw new InternalServerErrorException('Não foi possível processar a solicitação de saque. Verifique os dados e tente novamente.');
     }
   }
 
@@ -460,9 +572,9 @@ export class PaymentsService {
     }
 
     try {
-      // Usar o gatewayTransactionId (que é o ID do pedido do PagSeguro) para encontrar a transação local
       const transaction = await this.prisma.transaction.findFirst({
         where: { gatewayTransactionId: transactionId }, // Assumindo que webhookData.transactionId é o gatewayTransactionId
+        include: { provider: { include: { user: true } } } // Incluir dados do provedor e usuário para notificações
       });
 
       if (!transaction) {
@@ -528,6 +640,145 @@ export class PaymentsService {
     }
   }
 
+  /**
+   * NOVO: Processa notificações de webhook para saques.
+   * Este método simula a atualização do status da transação de saque com base na notificação do gateway.
+   * @param webhookData Dados recebidos do webhook do gateway de pagamento.
+   * @returns Uma mensagem de sucesso ou erro.
+   */
+  async handleWithdrawalWebhook(webhookData: any): Promise<MessageResponseDto> {
+    this.logger.log(`[PaymentsService] handleWithdrawalWebhook - Webhook de saque recebido: ${JSON.stringify(webhookData)}`);
+
+    const { gatewayTransactionId, status } = webhookData; // Assume que o webhook envia o ID do gateway e o status
+
+    if (!gatewayTransactionId || !status) {
+      this.logger.error('[PaymentsService] handleWithdrawalWebhook - Dados de webhook incompletos: gatewayTransactionId ou status ausentes.');
+      throw new BadRequestException('Dados essenciais (gatewayTransactionId, status) ausentes no webhook.');
+    }
+
+    try {
+      const transaction = await this.prisma.transaction.findFirst({
+        where: { gatewayTransactionId: gatewayTransactionId, type: TransactionType.WITHDRAWAL },
+        include: { provider: { include: { user: true } } } // Incluir dados do provedor e usuário para notificações
+      });
+
+      if (!transaction) {
+        this.logger.warn(`Transação de saque com gatewayTransactionId "${gatewayTransactionId}" não encontrada para o webhook.`);
+        return { message: `Transação de saque com gatewayTransactionId "${gatewayTransactionId}" não encontrada.` };
+      }
+
+      if (transaction.status === status) {
+        this.logger.log(`Status da transação de saque ${transaction.id} já é "${status}". Ignorando atualização duplicada.`);
+        return { message: `Status da transação de saque ${transaction.id} já é "${status}".` };
+      }
+
+      let newTransactionStatus: string;
+      let notificationMessage: string;
+      let notificationTitle: string;
+      let notificationType: string;
+      let targetUrl = `/app/(provider)/earnings`; // Exemplo de URL para o frontend
+
+      switch (status.toLowerCase()) {
+        case 'completed':
+        case 'success':
+          newTransactionStatus = 'COMPLETED';
+          notificationTitle = 'Saque Concluído!';
+          notificationMessage = `Seu saque de R$ ${transaction.amount.toFixed(2)} foi concluído com sucesso e o valor foi transferido para sua chave PIX ${transaction.pixKeyType}: ${transaction.pixKey}. Verifique seu extrato bancário.`;
+          notificationType = 'WITHDRAWAL_COMPLETED';
+          break;
+        case 'failed':
+        case 'error':
+        case 'canceled':
+          newTransactionStatus = 'FAILED';
+          notificationTitle = 'Saque Falhou!';
+          const failureReason = webhookData.reason || 'Motivo desconhecido. Por favor, entre em contato com o suporte.';
+          notificationMessage = `Seu saque de R$ ${transaction.amount.toFixed(2)} para a chave PIX ${transaction.pixKeyType}: ${transaction.pixKey} falhou. Motivo: ${failureReason}. Por favor, verifique os dados da sua chave PIX e tente novamente ou entre em contato com o suporte.`;
+          notificationType = 'WITHDRAWAL_FAILED';
+
+          // --- Notificação para Administradores (Saque Falho) ---
+          const adminEmailSubject = `ALERTA: Saque do provedor ${transaction.provider.user.fullName} (${transaction.providerId}) falhou!`;
+          const adminEmailText = `Saque de R$ ${transaction.amount.toFixed(2)} para a chave PIX ${transaction.pixKeyType}: ${transaction.pixKey} falhou. Transação ID: ${transaction.id}. Gateway ID: ${gatewayTransactionId}. Motivo: ${failureReason}.`;
+          const adminEmailHtml = `<p>ALERTA: Saque do provedor <strong>${transaction.provider.user.fullName}</strong> (ID: ${transaction.providerId}) falhou!</p><p>Valor: R$ ${transaction.amount.toFixed(2)}</p><p>Chave PIX: ${transaction.pixKey} (${transaction.pixKeyType})</p><p>Transação ID: ${transaction.id}</p><p>Gateway ID: ${gatewayTransactionId}</p><p>Motivo da Falha: ${failureReason}</p><p>Necessita investigação.</p>`;
+
+          await this.emailService.sendAdminWithdrawalFailedEmail(
+            adminEmailSubject,
+            adminEmailText,
+            adminEmailHtml
+          );
+          break;
+        case 'processing':
+          newTransactionStatus = 'PROCESSING';
+          notificationTitle = 'Saque em Processamento';
+          notificationMessage = `Seu saque de R$ ${transaction.amount.toFixed(2)} para a chave PIX ${transaction.pixKeyType}: ${transaction.pixKey} está em processamento.`;
+          notificationType = 'WITHDRAWAL_PROCESSING';
+          break;
+        default:
+          newTransactionStatus = status.toUpperCase();
+          this.logger.warn(`Status do gateway de saque "${status}" não mapeado. Atualizando transação para ${newTransactionStatus}.`);
+          notificationTitle = 'Atualização de Saque';
+          notificationMessage = `Seu saque de R$ ${transaction.amount.toFixed(2)} teve o status atualizado para ${newTransactionStatus}.`;
+          notificationType = 'WITHDRAWAL_STATUS_UPDATE';
+      }
+
+      await this.prisma.transaction.update({
+        where: { id: transaction.id },
+        data: { status: newTransactionStatus },
+      });
+      this.logger.log(`Status da transação de saque ${transaction.id} atualizado para ${newTransactionStatus}.`);
+
+      // --- Disparar Notificações para o Provedor ---
+      if (transaction.provider?.user?.id) {
+        const createNotificationDto: CreateNotificationDto = {
+          userId: transaction.provider.user.id,
+          type: notificationType,
+          message: notificationMessage,
+          targetUrl: targetUrl,
+        };
+        await this.notificationsService.createNotification(createNotificationDto);
+
+        if (transaction.provider.user.email) {
+          if (newTransactionStatus === 'COMPLETED') {
+            await this.emailService.sendWithdrawalCompletedEmail(
+              transaction.provider.user.email,
+              transaction.provider.user.fullName,
+              transaction.amount.toFixed(2),
+              transaction.pixKeyType,
+              transaction.pixKey,
+              transaction.id
+            );
+          } else if (newTransactionStatus === 'FAILED') {
+            await this.emailService.sendWithdrawalFailedEmail(
+              transaction.provider.user.email,
+              transaction.provider.user.fullName,
+              transaction.amount.toFixed(2),
+              transaction.pixKeyType,
+              transaction.pixKey,
+              transaction.id,
+              webhookData.reason || 'Motivo desconhecido.'
+            );
+          }
+        }
+
+        await this.queuesService.addNotificationJob('send-push-notification', {
+          userId: transaction.provider.user.id,
+          title: notificationTitle,
+          body: notificationMessage,
+          data: {
+            notificationType: notificationType,
+            transactionId: transaction.id,
+            targetUrl: targetUrl,
+          },
+        });
+      }
+
+
+      return { message: `Webhook de saque processado com sucesso para transação ${transaction.id}.` };
+    } catch (error) {
+      this.logger.error('Erro ao processar webhook de saque:', error.response?.data || error.message, error.stack);
+      return { message: 'Erro interno ao processar webhook de saque, mas o erro foi logado.' };
+    }
+  }
+
   // NEW: Placeholder for recurring payment setup
   async setupRecurringPayment(clientId: string, subscriptionId: string, amount: number, frequency: string) {
     console.log(`Setting up recurring payment for client ${clientId}, subscription ${subscriptionId}, amount ${amount}, frequency ${frequency}`);
@@ -554,15 +805,14 @@ export class PaymentsService {
 
     const transaction = await this.prisma.transaction.create({
       data: {
-        provider: { connect: { id: booking.providerId } }, // Usar o providerId do booking
+        provider: { connect: { id: booking.providerId } },
         amount: new Decimal(amount),
         status: 'COMPLETED', // Simulate success
-        type: TransactionType.PAYMENT, // ADICIONADO: Campo 'type' é obrigatório
-        transactionRef: `recurring_txn_${Date.now()}_${bookingId}`, // 'transactionRef' agora existe no schema
-        // Use 'connect' para a relação booking, já que bookingId é um parâmetro string
+        type: TransactionType.PAYMENT,
+        transactionRef: `recurring_txn_${Date.now()}_${bookingId}`,
         booking: {
           connect: {
-            id: bookingId, // Conecta à reserva existente usando seu ID
+            id: bookingId,
           },
         },
       },

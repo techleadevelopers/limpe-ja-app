@@ -1,3 +1,5 @@
+// src/bookings/bookings.service.ts
+
 import { Injectable, NotFoundException, ConflictException, BadRequestException, ForbiddenException, Logger, forwardRef, Inject } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
@@ -27,7 +29,14 @@ import { ReferralsService } from '../referrals/referrals.service';
 import { I18nService } from '../common/i18n/i18n.service'; // Importar I18nService
 import { Request } from 'express'; // Para acessar o locale da requisição
 
+// NOVO: Importar RedisLockService
+import { RedisLockService } from '../common/locks/redis-lock.service';
+// NOVO: Importar BookingStateMachine (se for usar para transições de status)
+// import { BookingStateMachine } from './states/booking.state-machine'; // Descomente se for implementar a máquina de estados aqui
+
 // CORREÇÃO: Adicionado subscription, incidents e guaranteeClaims à tipagem
+// CORREÇÃO IMPORTANTE: Removido paymentIntentId e paymentIntent da tipagem de Booking,
+// pois a relação agora é definida no PaymentIntent com bookingId como FK.
 export type BookingWithDetailsRelations = Prisma.BookingGetPayload<{
   include: {
     client: { include: { user: true } };
@@ -39,6 +48,7 @@ export type BookingWithDetailsRelations = Prisma.BookingGetPayload<{
     incidents: true; // NEW: Include incidents
     guaranteeClaims: true; // NEW: Include guaranteeClaims
     coupon: true; // NEW: Include coupon
+    paymentIntent: true; // NEW: Inclui o PaymentIntent relacionado
   };
 }>;
 
@@ -66,6 +76,8 @@ export class BookingsService {
     private referralsService: ReferralsService,
     // <<< FIM NOVO
     private readonly i18n: I18nService, // Injetar I18nService
+    private readonly redisLockService: RedisLockService, // NOVO: Injetar RedisLockService
+    // private readonly bookingStateMachine: BookingStateMachine, // NOVO: Injetar BookingStateMachine (se for usar)
   ) {}
 
   async create(clientUserId: string, createBookingDto: CreateBookingDto, request?: Request): Promise<BookingWithDetailsRelations> {
@@ -76,159 +88,176 @@ export class BookingsService {
 
     const locale = (request as any)?.locale || 'pt-BR'; // Obter locale da requisição
 
-    const client = await this.clientsService.findClientByUserId(clientUserId);
-    if (!client) {
-      this.logger.error(`[BookingsService] create - Cliente não encontrado para userId: ${clientUserId}`);
-      throw new NotFoundException(await this.i18n.translate('client.notFound', locale)); // Usar I18nService
-    }
-    this.logger.log(`[BookingsService] create - Cliente encontrado: ${client.id}`);
+    // NOVO: Adicionar lock para evitar race conditions na criação de agendamentos
+    const lockKey = `booking:creation:${clientUserId}:${createBookingDto.providerId}:${createBookingDto.scheduledDate}:${createBookingDto.scheduledTime}`;
+    // CORREÇÃO: Passar clientUserId como 'value' para o lock, e 5000 como 'ttlMs'
+    const lock = await this.redisLockService.acquireLock(lockKey, clientUserId, 5000); // Tenta adquirir o lock por 5 segundos
 
-    const provider = await this.providersService.findOne(createBookingDto.providerId);
-    if (!provider) {
-      this.logger.error(`[BookingsService] create - Provedor com ID "${createBookingDto.providerId}" não encontrado.`);
-      throw new NotFoundException(await this.i18n.translate('provider.notFound', locale, { id: createBookingDto.providerId })); // Usar I18nService
-    }
-    this.logger.log(`[BookingsService] create - Provedor encontrado: ${provider.id}`);
-
-    const providerService = await this.providerServicesService.findOne(createBookingDto.providerServiceId, createBookingDto.providerId);
-    if (!providerService) {
-      this.logger.error(`[BookingsService] create - Serviço do provedor com ID "${createBookingDto.providerServiceId}" não encontrado para o provedor "${createBookingDto.providerId}".`);
-      throw new NotFoundException(await this.i18n.translate('providerService.notFound', locale, { providerServiceId: createBookingDto.providerServiceId, providerId: createBookingDto.providerId })); // Usar I18nService
-    }
-
-    // --- Lógica de cálculo de totalPrice baseada no PricingType ---
-    let calculatedTotalPrice: Prisma.Decimal;
-    switch (providerService.pricingType) {
-      case 'FIXED_PRICE':
-        calculatedTotalPrice = providerService.price;
-        break;
-      case 'HOURLY':
-        if (!createBookingDto.requestedDurationMinutes) {
-          throw new BadRequestException(await this.i18n.translate('booking.badRequest.durationRequired', locale)); // Usar I18nService
-        }
-        calculatedTotalPrice = providerService.price.mul(new Prisma.Decimal(createBookingDto.requestedDurationMinutes).div(new Prisma.Decimal(60))); // Ensure division is with Decimal
-        break;
-      case 'BY_SIZE':
-        if (createBookingDto.requestedSquareMeters && providerService.pricePerSquareMeter) {
-          calculatedTotalPrice = providerService.pricePerSquareMeter.mul(new Prisma.Decimal(createBookingDto.requestedSquareMeters));
-        } else if (createBookingDto.requestedRoomCount && providerService.pricePerRoom) {
-          calculatedTotalPrice = providerService.pricePerRoom.mul(new Prisma.Decimal(createBookingDto.requestedRoomCount));
-        } else {
-          throw new BadRequestException(await this.i18n.translate('booking.badRequest.sizeOrRoomsRequired', locale)); // Usar I18nService
-        }
-        break;
-      default:
-        // Fallback para o valor do DTO se o tipo de precificação for desconhecido ou CUSTOM_QUOTE
-        calculatedTotalPrice = new Prisma.Decimal(createBookingDto.totalPrice);
-        this.logger.warn(`[BookingsService] create - Tipo de precificação desconhecido ou não implementado: ${providerService.pricingType}. Usando totalPrice do DTO.`);
-        break;
-    }
-    if (calculatedTotalPrice.lessThan(0)) {
-        throw new BadRequestException(await this.i18n.translate('booking.badRequest.negativePrice', locale)); // Usar I18nService
-    }
-    this.logger.log(`[BookingsService] create - Serviço do provedor encontrado: ${providerService.id}. Preço calculado: ${calculatedTotalPrice.toFixed(2)}`);
-
-    // NEW: Apply dynamic pricing
-    const { finalPrice: dynamicFinalPrice } = await this.pricingService.calculatePrice({
-      serviceId: providerService.serviceId,
-      providerId: provider.id,
-      latitude: createBookingDto.address.latitude, // CORREÇÃO: Adicionar latitude ao CreateAddressDto
-      longitude: createBookingDto.address.longitude, // CORREÇÃO: Adicionar longitude ao CreateAddressDto
-      scheduledDate: createBookingDto.scheduledDate,
-    });
-    calculatedTotalPrice = new Prisma.Decimal(dynamicFinalPrice); // Override with dynamic price
-
-    // NEW: Apply coupon if provided
-    let couponId: string | null = null;
-    if (createBookingDto.couponCode) { // CORREÇÃO: Adicionar couponCode ao CreateBookingDto
-      this.logger.log(`[BookingsService] create - Tentando aplicar cupom: ${createBookingDto.couponCode}`);
-      const couponApplicationResult = await this.couponsService.applyCoupon(createBookingDto.couponCode, client.userId, {
-        originalPrice: calculatedTotalPrice.toNumber(),
-        clientId: client.id,
-        providerServiceId: providerService.serviceId,
-        providerId: provider.id,
-        scheduledDate: createBookingDto.scheduledDate,
-      });
-
-      if (couponApplicationResult.coupon) {
-        calculatedTotalPrice = new Prisma.Decimal(couponApplicationResult.newTotalPrice);
-        couponId = couponApplicationResult.coupon.id;
-        this.logger.log(`[BookingsService] create - Cupom ${createBookingDto.couponCode} aplicado. Novo preço: ${calculatedTotalPrice.toFixed(2)}`);
-      } else {
-        this.logger.warn(`[BookingsService] create - Cupom ${createBookingDto.couponCode} não aplicável: ${couponApplicationResult.message}`);
-        // Optionally throw an error or just proceed without coupon
-      }
+    if (!lock) {
+      this.logger.error(`[BookingsService] create - Falha ao adquirir lock para criação de agendamento para o usuário ${clientUserId}.`);
+      throw new ConflictException(await this.i18n.translate('booking.conflict.concurrentCreation', locale));
     }
 
     try {
-      this.logger.log(`[BookingsService] create - Criando novo endereço no DB.`);
-      const newAddress = await this.prisma.address.create({
-        data: {
-          cep: createBookingDto.address.cep,
-          street: createBookingDto.address.street,
-          number: createBookingDto.address.number,
-          complement: createBookingDto.address.complement,
-          neighborhood: createBookingDto.address.neighborhood,
-          city: createBookingDto.address.city,
-          state: createBookingDto.address.state,
-          latitude: new Prisma.Decimal(createBookingDto.address.latitude), // CORREÇÃO: Converter para Prisma.Decimal
-          longitude: new Prisma.Decimal(createBookingDto.address.longitude), // CORREÇÃO: Converter para Prisma.Decimal
-        },
-      });
-      this.logger.log(`[BookingsService] create - Novo endereço criado com ID: ${newAddress.id}`);
+      const client = await this.clientsService.findClientByUserId(clientUserId);
+      if (!client) {
+        this.logger.error(`[BookingsService] create - Cliente não encontrado para userId: ${clientUserId}`);
+        throw new NotFoundException(await this.i18n.translate('client.notFound', locale)); // Usar I18nService
+      }
+      this.logger.log(`[BookingsService] create - Cliente encontrado: ${client.id}`);
 
-      const createdBooking = await this.prisma.booking.create({
-        data: {
+      const provider = await this.providersService.findOne(createBookingDto.providerId);
+      if (!provider) {
+        this.logger.error(`[BookingsService] create - Provedor com ID "${createBookingDto.providerId}" não encontrado.`);
+        throw new NotFoundException(await this.i18n.translate('provider.notFound', locale, { id: createBookingDto.providerId })); // Usar I18nService
+      }
+      this.logger.log(`[BookingsService] create - Provedor encontrado: ${provider.id}`);
+
+      const providerService = await this.providerServicesService.findOne(createBookingDto.providerServiceId, createBookingDto.providerId);
+      if (!providerService) {
+        this.logger.error(`[BookingsService] create - Serviço do provedor com ID "${createBookingDto.providerServiceId}" não encontrado para o provedor "${createBookingDto.providerId}".`);
+        throw new NotFoundException(await this.i18n.translate('providerService.notFound', locale, { providerServiceId: createBookingDto.providerServiceId, providerId: createBookingDto.providerId })); // Usar I18nService
+      }
+
+      // --- Lógica de cálculo de totalPrice baseada no PricingType ---
+      let calculatedTotalPrice: Prisma.Decimal;
+      switch (providerService.pricingType) {
+        case 'FIXED_PRICE':
+          calculatedTotalPrice = providerService.price;
+          break;
+        case 'HOURLY':
+          if (!createBookingDto.requestedDurationMinutes) {
+            throw new BadRequestException(await this.i18n.translate('booking.badRequest.durationRequired', locale)); // Usar I18nService
+          }
+          calculatedTotalPrice = providerService.price.mul(new Prisma.Decimal(createBookingDto.requestedDurationMinutes).div(new Prisma.Decimal(60))); // Ensure division is with Decimal
+          break;
+        case 'BY_SIZE':
+          if (createBookingDto.requestedSquareMeters && providerService.pricePerSquareMeter) {
+            calculatedTotalPrice = providerService.pricePerSquareMeter.mul(new Prisma.Decimal(createBookingDto.requestedSquareMeters));
+          } else if (createBookingDto.requestedRoomCount && providerService.pricePerRoom) {
+            calculatedTotalPrice = providerService.pricePerRoom.mul(new Prisma.Decimal(createBookingDto.requestedRoomCount));
+          } else {
+            throw new BadRequestException(await this.i18n.translate('booking.badRequest.sizeOrRoomsRequired', locale)); // Usar I18nService
+          }
+          break;
+        default:
+          // Fallback para o valor do DTO se o tipo de precificação for desconhecido ou CUSTOM_QUOTE
+          calculatedTotalPrice = new Prisma.Decimal(createBookingDto.totalPrice);
+          this.logger.warn(`[BookingsService] create - Tipo de precificação desconhecido ou não implementado: ${providerService.pricingType}. Usando totalPrice do DTO.`);
+          break;
+      }
+      if (calculatedTotalPrice.lessThan(0)) {
+          throw new BadRequestException(await this.i18n.translate('booking.badRequest.negativePrice', locale)); // Usar I18nService
+      }
+      this.logger.log(`[BookingsService] create - Serviço do provedor encontrado: ${providerService.id}. Preço calculado: ${calculatedTotalPrice.toFixed(2)}`);
+
+      // NEW: Apply dynamic pricing
+      const { finalPrice: dynamicFinalPrice } = await this.pricingService.calculatePrice({
+        serviceId: providerService.serviceId,
+        providerId: provider.id,
+        latitude: createBookingDto.address.latitude, // CORREÇÃO: Adicionar latitude ao CreateAddressDto
+        longitude: createBookingDto.address.longitude, // CORREÇÃO: Adicionar longitude ao CreateAddressDto
+        scheduledDate: createBookingDto.scheduledDate,
+      });
+      calculatedTotalPrice = new Prisma.Decimal(dynamicFinalPrice); // Override with dynamic price
+
+      // NEW: Apply coupon if provided
+      let couponId: string | null = null;
+      if (createBookingDto.couponCode) { // CORREÇÃO: Adicionar couponCode ao CreateBookingDto
+        this.logger.log(`[BookingsService] create - Tentando aplicar cupom: ${createBookingDto.couponCode}`);
+        const couponApplicationResult = await this.couponsService.applyCoupon(createBookingDto.couponCode, client.userId, {
+          originalPrice: calculatedTotalPrice.toNumber(),
           clientId: client.id,
+          providerServiceId: providerService.serviceId,
           providerId: provider.id,
-          providerServiceId: providerService.id,
-          scheduledDate: new Date(createBookingDto.scheduledDate), // Ensure this is a Date object
-          scheduledTime: createBookingDto.scheduledTime,
-          totalPrice: calculatedTotalPrice, // Use the calculated total price
-          notes: createBookingDto.notes,
-          status: BookingStatus.PENDING,
-          addressId: newAddress.id,
-          couponId: couponId, // NEW: Store coupon ID
-        },
-        include: {
-          client: { include: { user: true } },
-          provider: { include: { user: true } },
-          providerService: { include: { service: true } },
-          review: true,
-          address: true,
-          subscription: true, // CORREÇÃO: Incluir subscription
-          incidents: true, // CORREÇÃO: Incluir incidents
-          guaranteeClaims: true, // CORREÇÃO: Incluir guaranteeClaims
-          coupon: true, // NEW: Include coupon
-        },
-      });
-      this.logger.log(`[BookingsService] create - Agendamento criado com sucesso no DB. ID: ${createdBooking.id}. ProviderId no booking retornado pelo Prisma: ${createdBooking.providerId}`);
-
-      // >>> NOVO: evento de missão (opcional) para criação
-      try {
-        await this.missionsService.trackEvent(createdBooking.client.userId, 'booking.created', {
-          bookingId: createdBooking.id,
-          providerId: createdBooking.providerId,
-          providerServiceId: createdBooking.providerServiceId,
+          scheduledDate: createBookingDto.scheduledDate,
         });
-      } catch (e) {
-        this.logger.warn(`[BookingsService] create - Falha ao emitir evento de missão booking.created: ${e?.message}`);
-      }
-      // <<< FIM NOVO
 
-      return createdBooking;
-
-    } catch (error: any) {
-      this.logger.error('Erro detalhado ao criar agendamento no DB:', error.response?.data || error.message, error.stack);
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2002') {
-          throw new ConflictException(await this.i18n.translate('booking.conflict.alreadyExists', locale)); // Usar I18nService
-        }
-        if (error.code === 'P2003' || error.code === 'P2025') {
-            throw new BadRequestException(await this.i18n.translate('booking.badRequest.foreignKeyOrNotFound', locale)); // Usar I18nService
+        if (couponApplicationResult.coupon) {
+          calculatedTotalPrice = new Prisma.Decimal(couponApplicationResult.newTotalPrice);
+          couponId = couponApplicationResult.coupon.id;
+          this.logger.log(`[BookingsService] create - Cupom ${createBookingDto.couponCode} aplicado. Novo preço: ${calculatedTotalPrice.toFixed(2)}`);
+        } else {
+          this.logger.warn(`[BookingsService] create - Cupom ${createBookingDto.couponCode} não aplicável: ${couponApplicationResult.message}`);
+          // Optionally throw an error or just proceed without coupon
         }
       }
-      throw new BadRequestException(await this.i18n.translate('booking.badRequest.cannotCreate', locale)); // Usar I18nService
+
+      try {
+        this.logger.log(`[BookingsService] create - Criando novo endereço no DB.`);
+        const newAddress = await this.prisma.address.create({
+          data: {
+            cep: createBookingDto.address.cep,
+            street: createBookingDto.address.street,
+            number: createBookingDto.address.number,
+            complement: createBookingDto.address.complement,
+            neighborhood: createBookingDto.address.neighborhood,
+            city: createBookingDto.address.city,
+            state: createBookingDto.address.state,
+            latitude: new Prisma.Decimal(createBookingDto.address.latitude), // CORREÇÃO: Converter para Prisma.Decimal
+            longitude: new Prisma.Decimal(createBookingDto.address.longitude), // CORREÇÃO: Converter para Prisma.Decimal
+          },
+        });
+        this.logger.log(`[BookingsService] create - Novo endereço criado com ID: ${newAddress.id}`);
+
+        const createdBooking = await this.prisma.booking.create({
+          data: {
+            clientId: client.id,
+            providerId: provider.id,
+            providerServiceId: providerService.id,
+            scheduledDate: new Date(createBookingDto.scheduledDate), // Ensure this is a Date object
+            scheduledTime: createBookingDto.scheduledTime,
+            totalPrice: calculatedTotalPrice, // Use the calculated total price
+            notes: createBookingDto.notes,
+            status: BookingStatus.PENDING,
+            addressId: newAddress.id,
+            couponId: couponId, // NEW: Store coupon ID
+          },
+          include: {
+            client: { include: { user: true } },
+            provider: { include: { user: true } },
+            providerService: { include: { service: true } },
+            review: true,
+            address: true,
+            subscription: true, // CORREÇÃO: Incluir subscription
+            incidents: true, // CORREÇÃO: Incluir incidents
+            guaranteeClaims: true, // CORREÇÃO: Incluir guaranteeClaims
+            coupon: true, // NEW: Include coupon
+            paymentIntent: true, // NEW: Inclui o PaymentIntent relacionado
+          },
+        });
+        this.logger.log(`[BookingsService] create - Agendamento criado com sucesso no DB. ID: ${createdBooking.id}. ProviderId no booking retornado pelo Prisma: ${createdBooking.providerId}`);
+
+        // >>> NOVO: evento de missão (opcional) para criação
+        try {
+          await this.missionsService.trackEvent(createdBooking.client.userId, 'booking.created', {
+            bookingId: createdBooking.id,
+            providerId: createdBooking.providerId,
+            providerServiceId: createdBooking.providerServiceId,
+          });
+        } catch (e) {
+          this.logger.warn(`[BookingsService] create - Falha ao emitir evento de missão booking.created: ${e?.message}`);
+        }
+        // <<< FIM NOVO
+
+        return createdBooking;
+
+      } catch (error: any) {
+        this.logger.error('Erro detalhado ao criar agendamento no DB:', error.response?.data || error.message, error.stack);
+        if (error instanceof Prisma.PrismaClientKnownRequestError) {
+          if (error.code === 'P2002') {
+            throw new ConflictException(await this.i18n.translate('booking.conflict.alreadyExists', locale)); // Usar I18nService
+          }
+          if (error.code === 'P2003' || error.code === 'P2025') {
+              throw new BadRequestException(await this.i18n.translate('booking.badRequest.foreignKeyOrNotFound', locale)); // Usar I18nService
+          }
+        }
+        throw new BadRequestException(await this.i18n.translate('booking.badRequest.cannotCreate', locale)); // Usar I18nService
+      }
+    } finally {
+      // O valor do lock deve ser o mesmo usado na aquisição para liberar
+      await this.redisLockService.releaseLock(lockKey, clientUserId); // Garante que o lock seja liberado
+      this.logger.log(`[BookingsService] create - Lock liberado para a chave: ${lockKey}`);
     }
   }
 
@@ -268,6 +297,7 @@ export class BookingsService {
         incidents: true, // NEW
         guaranteeClaims: true, // NEW
         coupon: true, // NEW: Include coupon
+        paymentIntent: true, // NEW: Inclui o PaymentIntent relacionado
       },
     });
   }
@@ -390,6 +420,7 @@ export class BookingsService {
         incidents: true, // NEW
         guaranteeClaims: true, // NEW
         coupon: true, // NEW: Include coupon
+        paymentIntent: true, // NEW: Inclui o PaymentIntent relacionado
       },
       orderBy: {
         createdAt: 'desc',
@@ -412,6 +443,7 @@ export class BookingsService {
         incidents: true, // NEW
         guaranteeClaims: true, // NEW
         coupon: true, // NEW: Include coupon
+        paymentIntent: true, // NEW: Inclui o PaymentIntent relacionado
       },
     });
     if (!booking) {
@@ -442,6 +474,15 @@ export class BookingsService {
     let canUpdate = false;
     let errorMessageKey: string = 'booking.badRequest.invalidStatusTransition'; // Chave padrão
 
+    // NOVO: Exemplo de uso da máquina de estados (se BookingStateMachine for implementado)
+    // try {
+    //   canUpdate = this.bookingStateMachine.canTransition(booking.status, newStatus, userRole);
+    // } catch (e) {
+    //   errorMessageKey = e.message; // A máquina de estados pode lançar mensagens de erro específicas
+    //   canUpdate = false;
+    // }
+
+    // Mantendo a lógica de transição existente por enquanto, caso a máquina de estados não seja implementada imediatamente
     if (userRole === UserRole.ADMIN) {
       canUpdate = true;
       this.logger.log(`[BookingsService] updateStatus - ADMIN bypass de transição para booking ${id}.`);
@@ -551,7 +592,7 @@ export class BookingsService {
       });
       this.logger.log(`[BookingsService] updateStatus: Notificação de avaliação adicionada à fila para cliente ${booking.client.userId}.`);
 
-      // >>> NOVO: Missões — evento de conclusão
+      // >>> NOVO: Missões -- evento de conclusão
       try {
         await this.missionsService.trackEvent(booking.client.userId, 'booking.completed', {
           bookingId: booking.id,
@@ -562,7 +603,7 @@ export class BookingsService {
         this.logger.warn(`[BookingsService] updateStatus - Falha ao emitir evento de missão booking.completed: ${e?.message}`);
       }
 
-      // >>> NOVO: Indicações — verificar conversão do indicado (1º COMPLETED)
+      // >>> NOVO: Indicações -- verificar conversão do indicado (1º COMPLETED)
       try {
         await this.referralsService.handleBookingCompletedForReferral(booking.client.userId, booking.id);
       } catch (e) {
@@ -605,6 +646,7 @@ export class BookingsService {
         incidents: true, // NEW
         guaranteeClaims: true, // NEW
         coupon: true, // NEW: Include coupon
+        paymentIntent: true, // NEW: Inclui o PaymentIntent relacionado
       },
     });
   }
@@ -638,6 +680,7 @@ export class BookingsService {
         incidents: true, // NEW
         guaranteeClaims: true, // NEW
         coupon: true, // NEW: Include coupon
+        paymentIntent: true, // NEW: Inclui o PaymentIntent relacionado
       },
     });
     this.logger.log(`[BookingsService] findUpcomingBookings: Primas encontradas ${upcomingPrismaBookings.length} agendamentos futuros antes da filtragem de hora.`);
@@ -816,6 +859,7 @@ export class BookingsService {
         incidents: true, // NEW
         guaranteeClaims: true, // NEW
         coupon: true, // NEW: Include coupon
+        paymentIntent: true, // NEW: Inclui o PaymentIntent relacionado
       },
     });
 

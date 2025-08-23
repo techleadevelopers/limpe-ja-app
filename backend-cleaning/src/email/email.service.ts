@@ -1,13 +1,17 @@
 // src/email/email.service.ts
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config'; // Para acessar variáveis de ambiente
+import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '../prisma/prisma.service';
+import { PixKeyType } from '@prisma/client'; // FIX: Import PixKeyType from Prisma client
 
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
 
-  constructor(private configService: ConfigService) {
-    // Exemplo de como acessar uma variável de ambiente
+  constructor(
+    private configService: ConfigService,
+    private prisma: PrismaService,
+  ) {
     const mailgunApiKey = this.configService.get<string>('MAILGUN_API_KEY');
     if (!mailgunApiKey) {
       this.logger.warn('MAILGUN_API_KEY não configurada. O envio de e-mails pode não funcionar.');
@@ -48,7 +52,7 @@ export class EmailService {
       this.logger.log(`E-mail enviado para: ${to}, Assunto: ${subject}`);
     } catch (error) {
       this.logger.error(`Falha ao enviar e-mail para ${to}: ${error.message}`, error.stack);
-      throw error; // Re-lança o erro para que o chamador possa tratá-lo
+      throw error;
     }
   }
 
@@ -61,7 +65,6 @@ export class EmailService {
     const text = `Um alerta de pânico foi acionado pelo usuário ${panicAlert.userId} em ${panicAlert.latitude}, ${panicAlert.longitude}. Mensagem: ${panicAlert.message || 'N/A'}.`;
     const html = `<p>Um alerta de pânico foi acionado pelo usuário <strong>${panicAlert.userId}</strong> em ${panicAlert.latitude}, ${panicAlert.longitude}.</p><p>Mensagem: ${panicAlert.message || 'N/A'}.</p>`;
 
-    // TODO: Definir para quem este e-mail deve ser enviado (ex: administradores)
     const adminEmail = this.configService.get<string>('ADMIN_EMAIL');
     if (adminEmail) {
       await this.sendEmail(adminEmail, subject, text, html);
@@ -79,9 +82,7 @@ export class EmailService {
     const text = `Seu incidente (${incident.type}) foi atualizado para: ${incident.status}. Resolução: ${incident.resolutionNotes || 'N/A'}.`;
     const html = `<p>Seu incidente (<strong>${incident.type}</strong>) foi atualizado para: <strong>${incident.status}</strong>.</p><p>Resolução: ${incident.resolutionNotes || 'N/A'}.</p>`;
 
-    // TODO: Definir para quem este e-mail deve ser enviado (ex: o próprio reporterId)
-    // Para isso, você precisaria buscar o e-mail do usuário pelo incident.reporterId
-    const reporterUser = await this.configService.get('prisma').user.findUnique({
+    const reporterUser = await this.prisma.user.findUnique({
         where: { id: incident.reporterId },
         select: { email: true }
     });
@@ -90,6 +91,101 @@ export class EmailService {
         await this.sendEmail(reporterUser.email, subject, text, html);
     } else {
         this.logger.warn(`Não foi possível encontrar o e-mail do reporterId ${incident.reporterId} para enviar atualização de incidente.`);
+    }
+  }
+
+  /**
+   * NEW: Envia um e-mail para o provedor informando que o saque foi solicitado.
+   * @param recipientEmail E-mail do provedor.
+   * @param recipientName Nome do provedor.
+   * @param amount Valor do saque.
+   * @param pixKeyType Tipo da chave PIX.
+   * @param pixKey Chave PIX.
+   * @param transactionId ID da transação de saque.
+   */
+  async sendWithdrawalRequestedEmail(
+    recipientEmail: string,
+    recipientName: string,
+    amount: string,
+    pixKeyType: PixKeyType,
+    pixKey: string,
+    transactionId: string,
+  ): Promise<void> {
+    const subject = `LimpeJá: Sua solicitação de saque de R$ ${amount} foi recebida!`;
+    const text = `Olá ${recipientName},\n\nSua solicitação de saque de R$ ${amount} para a chave PIX ${pixKeyType}: ${pixKey} foi recebida com sucesso (ID da Transação: ${transactionId}).\n\nO valor estará disponível em breve. Você pode acompanhar o status na seção "Ganhos" do aplicativo.\n\nAtenciosamente,\nEquipe LimpeJá`;
+    const html = `<p>Olá <strong>${recipientName}</strong>,</p>
+                  <p>Sua solicitação de saque de <strong>R$ ${amount}</strong> para a chave PIX <strong>${pixKeyType}</strong>: <strong>${pixKey}</strong> foi recebida com sucesso (ID da Transação: ${transactionId}).</p>
+                  <p>O valor estará disponível em breve. Você pode acompanhar o status na seção "Ganhos" do aplicativo.</p>
+                  <p>Atenciosamente,<br>Equipe LimpeJá</p>`;
+    await this.sendEmail(recipientEmail, subject, text, html);
+  }
+
+  /**
+   * NEW: Envia um e-mail para o provedor informando que o saque foi concluído.
+   * @param recipientEmail E-mail do provedor.
+   * @param recipientName Nome do provedor.
+   * @param amount Valor do saque.
+   * @param pixKeyType Tipo da chave PIX.
+   * @param pixKey Chave PIX.
+   * @param transactionId ID da transação de saque.
+   */
+  async sendWithdrawalCompletedEmail(
+    recipientEmail: string,
+    recipientName: string,
+    amount: string,
+    pixKeyType: PixKeyType,
+    pixKey: string,
+    transactionId: string,
+  ): Promise<void> {
+    const subject = `LimpeJá: Seu saque de R$ ${amount} foi concluído!`;
+    const text = `Olá ${recipientName},\n\nSeu saque de R$ ${amount} (ID da Transação: ${transactionId}) foi concluído com sucesso e o valor foi transferido para sua chave PIX ${pixKeyType}: ${pixKey}. Verifique seu extrato bancário.\n\nAtenciosamente,\nEquipe LimpeJá`;
+    const html = `<p>Olá <strong>${recipientName}</strong>,</p>
+                  <p>Seu saque de <strong>R$ ${amount}</strong> (ID da Transação: ${transactionId}) foi concluído com sucesso e o valor foi transferido para sua chave PIX <strong>${pixKeyType}</strong>: <strong>${pixKey}</strong>. Verifique seu extrato bancário.</p>
+                  <p>Atenciosamente,<br>Equipe LimpeJá</p>`;
+    await this.sendEmail(recipientEmail, subject, text, html);
+  }
+
+  /**
+   * NEW: Envia um e-mail para o provedor informando que o saque falhou.
+   * @param recipientEmail E-mail do provedor.
+   * @param recipientName Nome do provedor.
+   * @param amount Valor do saque.
+   * @param pixKeyType Tipo da chave PIX.
+   * @param pixKey Chave PIX.
+   * @param transactionId ID da transação de saque.
+   * @param reason Motivo da falha.
+   */
+  async sendWithdrawalFailedEmail(
+    recipientEmail: string,
+    recipientName: string,
+    amount: string,
+    pixKeyType: PixKeyType,
+    pixKey: string,
+    transactionId: string,
+    reason: string,
+  ): Promise<void> {
+    const subject = `LimpeJá: Seu saque de R$ ${amount} falhou!`;
+    const text = `Olá ${recipientName},\n\nLamentamos informar que seu saque de R$ ${amount} (ID da Transação: ${transactionId}) para a chave PIX ${pixKeyType}: ${pixKey} falhou.\n\nMotivo da falha: ${reason}\n\nPor favor, verifique os dados da sua chave PIX e tente novamente, ou entre em contato com nosso suporte para mais informações.\n\nAtenciosamente,\nEquipe LimpeJá`;
+    const html = `<p>Olá <strong>${recipientName}</strong>,</p>
+                  <p>Lamentamos informar que seu saque de <strong>R$ ${amount}</strong> (ID da Transação: ${transactionId}) para a chave PIX <strong>${pixKeyType}</strong>: <strong>${pixKey}</strong> falhou.</p>
+                  <p><strong>Motivo da falha:</strong> ${reason}</p>
+                  <p>Por favor, verifique os dados da sua chave PIX e tente novamente, ou entre em contato com nosso suporte para mais informações.</p>
+                  <p>Atenciosamente,<br>Equipe LimpeJá</p>`;
+    await this.sendEmail(recipientEmail, subject, text, html);
+  }
+
+  /**
+   * NEW: Envia um e-mail de alerta para a equipe administrativa sobre um saque falho.
+   * @param subject Assunto do e-mail de alerta.
+   * @param text Conteúdo do e-mail em texto puro.
+   * @param html Conteúdo do e-mail em HTML.
+   */
+  async sendAdminWithdrawalFailedEmail(subject: string, text: string, html: string): Promise<void> {
+    const adminEmail = this.configService.get<string>('ADMIN_EMAIL'); // Assumindo que ADMIN_EMAIL está configurado
+    if (adminEmail) {
+      await this.sendEmail(adminEmail, subject, text, html);
+    } else {
+      this.logger.warn('ADMIN_EMAIL não configurado para enviar alertas de saque falho.');
     }
   }
 }

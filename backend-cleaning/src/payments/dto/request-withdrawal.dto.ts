@@ -1,6 +1,15 @@
 // src/payments/dto/request-withdrawal.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNumber, IsString, IsNotEmpty, Min, IsOptional } from 'class-validator';
+import { IsNumber, IsString, IsNotEmpty, Min, IsOptional, IsEnum } from 'class-validator';
+
+// Enum para os tipos de chave PIX
+export enum PixKeyType {
+  CPF = 'CPF',
+  CNPJ = 'CNPJ',
+  EMAIL = 'EMAIL',
+  PHONE = 'PHONE',
+  RANDOM = 'RANDOM',
+}
 
 export class RequestWithdrawalDto {
   @ApiProperty({ description: 'Valor do saque solicitado', example: 250.00 })
@@ -9,25 +18,15 @@ export class RequestWithdrawalDto {
   @IsNotEmpty()
   amount: number;
 
-  @ApiProperty({ description: 'Nome do banco', example: 'Banco Exemplo S.A.' })
-  @IsString()
+  @ApiProperty({ description: 'Tipo da chave PIX', enum: PixKeyType, example: PixKeyType.CPF })
+  @IsEnum(PixKeyType)
   @IsNotEmpty()
-  bankName: string;
+  pixKeyType: PixKeyType;
 
-  @ApiProperty({ description: 'Número da agência', example: '0001' })
+  @ApiProperty({ description: 'Chave PIX para o saque', example: '123.456.789-00' })
   @IsString()
   @IsNotEmpty()
-  agencyNumber: string;
-
-  @ApiProperty({ description: 'Número da conta', example: '12345-6' })
-  @IsString()
-  @IsNotEmpty()
-  accountNumber: string;
-
-  @ApiProperty({ description: 'Tipo da conta (Corrente, Poupança)', example: 'Corrente' })
-  @IsString()
-  @IsNotEmpty()
-  accountType: string;
+  pixKey: string;
 
   @ApiPropertyOptional({ description: 'Observações adicionais para o saque', example: 'Saque para despesas pessoais' })
   @IsOptional()

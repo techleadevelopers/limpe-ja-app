@@ -45,7 +45,13 @@ import { RankingModule } from './ranking/ranking.module';
 // 🔹 MISSIONS
 import { MissionsModule } from './missions/missions.module';
 // 🔹 DISPUTES
-import { DisputeModule } from './disputes/dispute.module'; // CORRIGIDO: O caminho da importação de './disputes/' para './dispute/'
+import { DisputeModule } from './disputes/dispute.module';
+
+// NOVO: Módulos para os novos recursos
+import { LocksModule } from './common/locks/locks.module'; // NOVO: Módulo de Lock Distribuído
+import { MetricsModule } from './metrics/metrics.module'; // NOVO: Módulo de Métricas
+import { SupportModule } from './support/support.module'; // NOVO: Módulo de Suporte
+import { BullModule } from '@nestjs/bull'; // Importar BullModule para configurar filas
 
 @Module({
   imports: [
@@ -69,6 +75,17 @@ import { DisputeModule } from './disputes/dispute.module'; // CORRIGIDO: O camin
       }),
     }),
     SentryModule.forRoot(),
+    // NOVO: Configuração do BullModule para a fila de suporte
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        redis: configService.get<string>('REDIS_URL'),
+      }),
+    }),
+    BullModule.registerQueue({
+      name: 'support-escalations', // Nome da fila para o módulo de suporte
+    }),
     PrismaModule,
     AuthModule,
     UsersModule,
@@ -99,10 +116,12 @@ import { DisputeModule } from './disputes/dispute.module'; // CORRIGIDO: O camin
     GeocodingModule,
     LoyaltyModule,
     RankingModule,
-    // 🔹 Adicionado: módulo de Missões
     MissionsModule,
-    // 🔹 Adicionado: módulo de Disputas
-    DisputeModule, // Mantém o nome correto do módulo
+    DisputeModule,
+    // NOVO: Inclusão dos novos módulos
+    LocksModule,
+    MetricsModule,
+    SupportModule,
   ],
   controllers: [AppController],
   providers: [AppService],

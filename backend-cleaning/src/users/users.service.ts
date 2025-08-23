@@ -5,6 +5,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { User, Prisma } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 import { QueuesService } from '../queues/queues.service';
+import { CreateNotificationDto } from '../notifications/dto/create-notification.dto'; // FIX: Import CreateNotificationDto
 
 @Injectable()
 export class UsersService {
@@ -94,12 +95,16 @@ export class UsersService {
       throw new NotFoundException('Usuário não encontrado.');
     }
     await this.queuesService.addDataExportJob('export-user-data', { userId: user.id, email: user.email });
-    await this.notificationsService.createNotification(
-      user.id,
-      'DATA_EXPORT_REQUESTED',
-      'Sua solicitação de exportação de dados foi recebida. Você será notificado quando o arquivo estiver pronto para download.',
-      '/profile/data-privacy'
-    );
+    
+    // FIX: Update createNotification call to use DTO
+    const notificationDto: CreateNotificationDto = {
+      userId: user.id,
+      type: 'DATA_EXPORT_REQUESTED',
+      message: 'Sua solicitação de exportação de dados foi recebida. Você será notificado quando o arquivo estiver pronto para download.',
+      targetUrl: '/profile/data-privacy',
+      title: 'Solicitação de Exportação de Dados Recebida', // Added title
+    };
+    await this.notificationsService.createNotification(notificationDto);
     this.logger.log(`[UsersService] requestDataExport: Notificação de exportação de dados adicionada à fila para userId: ${userId}.`);
   }
 
@@ -115,12 +120,15 @@ export class UsersService {
         email: `deleted-${user.id}-${Date.now()}@limpeja.com`,
       },
     });
-    await this.notificationsService.createNotification(
-      user.id,
-      'ACCOUNT_DELETION_REQUESTED',
-      'Sua conta foi marcada para exclusão. Ela será desativada e excluída permanentemente após um período de carência de 30 dias.',
-      '/profile/data-privacy'
-    );
+    // FIX: Update createNotification call to use DTO
+    const notificationDto: CreateNotificationDto = {
+      userId: user.id,
+      type: 'ACCOUNT_DELETION_REQUESTED',
+      message: 'Sua conta foi marcada para exclusão. Ela será desativada e excluída permanentemente após um período de carência de 30 dias.',
+      targetUrl: '/profile/data-privacy',
+      title: 'Solicitação de Exclusão de Conta Recebida', // Added title
+    };
+    await this.notificationsService.createNotification(notificationDto);
     this.logger.log(`[UsersService] requestAccountDeletion: Notificação de exclusão de conta adicionada à fila para userId: ${userId}.`);
   }
 }

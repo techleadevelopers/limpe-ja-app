@@ -1,330 +1,167 @@
-Queues Module (NestJS + Bull)
+📦 queues/ — Módulo de Processamento Assíncrono do LimpeJá
 
-Módulo de filas responsável por processar tarefas assíncronas e trabalhos de longa duração fora do ciclo de requisição HTTP. Ele reduz latência percebida pelo usuário e melhora a resiliência do sistema.
+Módulo responsável pelo processamento desacoplado e escalável de tarefas críticas e não bloqueantes do ecossistema LimpeJá. Otimiza performance, reduz latência no frontend e viabiliza estratégias de escalabilidade real.
 
-Sumário
+🎯 Objetivo
 
-Arquitetura
+Desacoplar tarefas pesadas ou agendadas da execução síncrona da aplicação, utilizando filas assíncronas (Redis + BullMQ) para garantir:
 
-Casos de uso suportados
+Escalabilidade
 
-Estrutura de pastas
+Tolerância a falhas
 
-Configuração
+Performance de API
 
-Como funciona
+Melhor experiência do usuário
 
-APIs do QueuesService
+⚙️ Estrutura de Pastas
+queues/
+├── queues.module.ts              # Módulo principal que orquestra todos os workers e providers
+├── queues.service.ts             # Serviço que expõe métodos de enfileiramento
+├── dispute.worker.ts            # Worker de resolução de disputas
+├── notification.worker.ts       # Worker para envio de notificações (push, e-mail)
+├── verification.worker.ts       # Worker de verificação documental (OCR, selfie, antecedentes)
 
-Workers
+🧠 Lógica e Casos de Uso
+✅ 1. notification.worker.ts
 
-notification.worker.ts
+Processa:
 
-verification.worker.ts
+Notificações push (Expo)
 
-Boas práticas de uso
+E-mails (transacionais e marketing)
 
-Observabilidade & Operação
+Lembretes de agendamentos e avaliações
 
-Testes
+Origem dos eventos:
 
-Perguntas frequentes
+Criação de bookings
 
-Anexos (snippets úteis)
+Confirmação de serviço
 
-Arquitetura
+Conclusão de atendimento
 
-NestJS + @nestjs/bull + bull usando Redis como broker.
+Avaliação de cliente ou prestador
 
-QueuesModule registra queues e processors (workers) e expõe o QueuesService para o resto do app.
+✅ 2. verification.worker.ts
 
-Cada worker roda dentro do mesmo processo Nest por padrão (pode ser separado em processo/instância própria para escala horizontal).
+Processa:
 
-Retentativas, backoff, rate limit, deduplicação por jobId e delays são configuráveis por job.
+Verificação de documentos do prestador
 
-Nos logs do bootstrap você verá BullModule dependencies initialized, indicando que o Bull foi carregado corretamente.
+CNH / RG (OCR)
 
-Casos de uso suportados
+Selfie com prova de vida
 
-Notificações
+Consulta de antecedentes
 
-Envio assíncrono de push, e-mail ou in-app (via NotificationsService), p.ex.:
+Origem dos eventos:
 
-Solicitar avaliação após Booking COMPLETED
+Registro de prestador
 
-Banners e toasts de missões e cupons
+Atualização de perfil
 
-Alertas administrativos (disputas, verificação)
+Auditorias internas
 
-Verificação (KYC / documentos)
+✅ 3. dispute.worker.ts
 
-Processamento de análise de documentos e validações em background (OCR, liveness, etc.)
+Processa:
 
-(Opcional/Previsto) Disputas
+Abertura, análise e resolução de disputas entre cliente e prestador
 
-Encaminhar carga de trabalho para uma fila específica de análise/resolução.
+Fluxo de suporte moderado (manual e automático)
 
-Exemplos reais no código de chamada:
+Gatilhos de reembolso, alerta ou bloqueio de usuário
 
-queuesService.addNotificationJob('send-notification', payload)
+Origem dos eventos:
 
-queuesService.addDisputeJob('process-booking-dispute', payload)
+Reclamação aberta no app
 
-queuesService.addVerificationJob('provider-verification', payload)
+Baixa avaliação com suspeita automática
 
-Estrutura de pastas
-src/queues/
-  ├─ queues.module.ts         # Registra filas e processors (workers)
-  ├─ queues.service.ts        # Fachada p/ enfileirar jobs no app
-  ├─ notification.worker.ts   # Worker de notificação (processa 'send-notification', etc.)
-  └─ verification.worker.ts   # Worker de verificação (documentos/KYC)
+Falta de check-out ou divergência no local
 
-Configuração
-Dependências
-npm i @nestjs/bull bull ioredis
+🔁 queues.service.ts
 
-Variáveis de ambiente
-Variável	Exemplo	Descrição
-REDIS_HOST	127.0.0.1	Host do Redis
-REDIS_PORT	6379	Porta
-REDIS_PASSWORD	xxxxx (opcional)	Senha se aplicável
-REDIS_TLS	false	Ativa TLS (se usar Redis gerenciado)
-QUEUE_PREFIX	cleaningapp	Prefixo p/ nomes das filas
-QUEUE_ATTEMPTS_DEFAULT	5	Retentativas padrão
-QUEUE_BACKOFF_MS	10000	Backoff linear/exponencial (ms)
-QUEUE_RATE_LIMIT	100	Jobs por intervalo (opcional)
-QUEUE_RATE_INTERVAL	60000	Janela de rate limit (ms)
+Este serviço centraliza os métodos de enfileiramento de tarefas.
 
-Se você usa ConfigModule, leia essas variáveis via ConfigService.
+Principais métodos:
+enqueueVerificationTask(data: VerificationPayload)
+enqueueNotificationTask(data: NotificationPayload)
+enqueueDisputeTask(data: DisputePayload)
 
-Como funciona
 
-Produção do job
-Qualquer módulo injeta QueuesService e chama um método especializado, p.ex.:
+Utilizado por controladores, serviços ou hooks em outras camadas da aplicação.
 
-await this.queuesService.addNotificationJob('send-notification', {
-  userId,
-  type: 'REVIEW_REQUEST',
-  message: 'Seu serviço foi concluído! Avalie o prestador.',
-  targetUrl: `/client/bookings/${bookingId}/review`,
-  imageUrl: undefined,
-  actionButtons: undefined,
-});
+📦 queues.module.ts
 
+Módulo que registra os workers, configura o BullMQ com Redis, e conecta os consumers a seus respectivos processadores de tarefas.
 
-Encaminhamento e persistência
-O Bull grava o job no Redis, com metadados (tentativas, atraso, prioridade, jobId para dedup, etc.).
+Inclui:
 
-Processamento
-O worker correspondente (registrado no queues.module.ts) consome o job e executa a ação via serviços de domínio (ex.: NotificationsService, VerificationService).
+Configurações globais de fila
 
-Retentativas, backoff e DLQ
-Falhas disparam retentativas automáticas até o limite. Jobs que esgotam retentativas permanecem como failed (pode-se configurar DLQ com filas separadas).
+Injeção de dependência dos workers
 
-APIs do QueuesService
+Registro dos queues no ecossistema NestJS
 
-A assinatura abaixo é canônica e está alinhada ao que usamos nos módulos de Bookings, Verification e (opcionalmente) Disputes.
+🔐 Segurança e Resiliência
 
-export class QueuesService {
-  // Notificações
-  addNotificationJob(
-    name: 'send-notification' | 'send-email' | string,
-    payload: {
-      userId: string;
-      type: string;              // REVIEW_REQUEST, DISPUTE_RESOLUTION, etc.
-      message: string;
-      targetUrl?: string;
-      imageUrl?: string;
-      actionButtons?: any;       // JSON com botões/ações
-    },
-    opts?: {
-      jobId?: string;            // dedupe
-      delayMs?: number;          // atraso
-      attempts?: number;         // retentativas
-      backoffMs?: number;        // backoff
-      priority?: number;         // 1 (alta) .. 10 (baixa)
-    },
-  ): Promise<void>;
+✅ Tasks com retry automático e delay exponencial
 
-  // Verificação / KYC
-  addVerificationJob(
-    name: 'provider-verification' | 'document-ocr' | string,
-    payload: Record<string, any>,
-    opts?: { jobId?: string; delayMs?: number; attempts?: number; backoffMs?: number; priority?: number },
-  ): Promise<void>;
+✅ Workers isolados, com lógica de erro dedicada
 
-  // Disputas (opcional)
-  addDisputeJob(
-    name: 'process-booking-dispute' | string,
-    payload: {
-      bookingId: string;
-      reporterUserId: string;
-      reporterRole: string;
-      reason: string;
-      description?: string;
-      refundAmount?: number;
-      attachments?: string[];
-    },
-    opts?: { jobId?: string; delayMs?: number; attempts?: number; backoffMs?: number; priority?: number },
-  ): Promise<void>;
-}
+✅ Persistência e observabilidade via Redis
 
+✅ Permite uso futuro de Prometheus para monitorar tempo de fila e erros por tipo
 
-Padrões usados se opts não for informado
+🔗 Integração com o App (Real e Validada)
+Envio de notificações:
 
-attempts: QUEUE_ATTEMPTS_DEFAULT (ou 5)
+App chama endpoint /bookings
 
-backoff: QUEUE_BACKOFF_MS (ou 10000)
+Controller → queues.service.enqueueNotificationTask()
 
-removeOnComplete: true
+Worker envia push via Expo
 
-removeOnFail: false (mantemos para auditoria)
+Verificação documental:
 
-Workers
-notification.worker.ts
+App /provider-register
 
-Fila: notifications
+Envia documentos
 
-Jobs típicos:
+Backend processa com enqueueVerificationTask()
 
-send-notification: usa NotificationsService para criar registros em Notification e enviar push (FCM) ou in-app.
+App é atualizado via status
 
-Opcionalmente send-email, se houver integração de e-mails.
+Disputas:
 
-Fluxo:
+Cliente sinaliza problema
 
-Recebe payload com { userId, type, message, targetUrl?, imageUrl?, actionButtons? }.
+App → Backend → enqueueDisputeTask()
 
-Persiste a notificação (opcional) e dispara o canal (push/email).
+Worker aciona suporte, bloqueia pagamento e emite alerta
 
-Retorna sucesso; em caso de erro, lança exceção para retentativa automática.
+📈 Estratégia Técnica
 
-Exceções e Retentativa:
+O módulo queues/ é fundamental para escalar o LimpeJá com eficiência, pois garante:
 
-Erros de rede → retentativa com backoff.
+APIs leves e responsivas
 
-4xx permanentes (ex.: token inválido) → marcar como failed com contexto.
+Processos longos rodando em background
 
-verification.worker.ts
+Baixo acoplamento entre camadas
 
-Fila: verification
+Facilidade de manutenção e debug
 
-Jobs típicos:
+Potencial para escalonamento horizontal por tipo de worker
 
-provider-verification: orquestra etapas de verificação (OCR do documento, liveness, background check, atualização do VerificationStatus no Provider).
+📌 Roadmap Futuro
+Item	Prioridade
+Integração com metrics/	Alta
+Registro de métricas Prometheus	Alta
+Retentativas customizadas por job	Média
+Painel Admin para visualizar fila	Média
+✅ Conclusão
 
-document-ocr: etapa isolada para OCR.
-
-Fluxo:
-
-Busca dados necessários (ex.: URLs de documentos no Provider).
-
-Chama VerificationService / DocumentProcessingService (OCR/Liveness).
-
-Atualiza Provider.verificationStatus.
-
-Pode disparar send-notification avisando o resultado ao provedor.
-
-Boas práticas de uso
-
-Idempotência: use jobId para evitar duplicação (ex.: jobId = review-request:${bookingId}).
-
-Delays conscientes: para review request após Booking.COMPLETED, use atraso de alguns minutos (ex.: delayMs: 5 * 60 * 1000).
-
-Backoff: prefira backoff exponencial para integrações externas instáveis.
-
-Segregue filas: picos de notificação não devem atrasar verificação (filas separadas).
-
-Remoção de jobs: mantenha failed para auditoria; completes podem ser removidos automaticamente.
-
-Rate limit: ative limiter para provedores de e-mail/SMS/push.
-
-Observabilidade & Operação
-
-Logs:
-
-Workers devem registrar job.id, name e payload key (sem PII sensível).
-
-Métricas (recomendado):
-
-Processed / Failed per queue
-
-Tempo médio de processamento
-
-Tamanho da fila
-
-UI de monitoramento:
-
-Considere bull-board para operar jobs (reprocessar, limpar).
-
-DLQ:
-
-Se necessário, crie fila *-dlq e mova failed com regra operacional.
-
-Testes
-Unit (mocks)
-
-Mock de Queue (do @nestjs/bull) injetado no QueuesService.
-
-Verifique que add é chamado com name, payload e opts corretos.
-
-E2E
-
-Suba um Redis real (ou em memória) e verifique:
-
-QueuesService.addNotificationJob enfileira job
-
-notification.worker processa e chama NotificationsService
-
-Perguntas frequentes
-
-Posso rodar workers em processo separado?
-Sim. Em produção, muitas equipes executam uma instância só de workers para cada fila (ou várias) em pods separados, e as instâncias web apenas produzem jobs.
-
-Como evitar bombar o usuário com notificações?
-
-Use jobId para deduplicar.
-
-Aplique rate limit (limiter) na fila de notificações.
-
-Como versionar payloads de job?
-Inclua payload.version e mantenha compatibilidade no worker ao longo das releases.
-
-Anexos (snippets úteis)
-Enfileirar notificação após Booking COMPLETED
-await this.queuesService.addNotificationJob('send-notification', {
-  userId: booking.client.userId,
-  type: 'REVIEW_REQUEST',
-  message: `Seu serviço de ${booking.providerService.service.name} com ${booking.provider.fullName} foi concluído! Deixe uma avaliação.`,
-  targetUrl: `/client/bookings/${booking.id}/review`,
-}, {
-  jobId: `review-request:${booking.id}`,
-  delayMs: 5 * 60 * 1000, // 5min
-});
-
-Enfileirar job de verificação
-await this.queuesService.addVerificationJob('provider-verification', {
-  providerId,
-  documents: { front: urlFront, back: urlBack, selfie: urlSelfie },
-}, {
-  attempts: 8,
-  backoffMs: 15000,
-});
-
-Enfileirar disputa (opcional)
-await this.queuesService.addDisputeJob('process-booking-dispute', {
-  bookingId,
-  reporterUserId: userId,
-  reporterRole: userRole,
-  reason,
-  description,
-  refundAmount,
-  attachments,
-}, { jobId: `dispute:${bookingId}` });
-
-Conclusão
-
-O Queues Module é a base para tarefas assíncronas do sistema (notificações, verificação, disputas, e outros fluxos futuros como cleanup, cron jobs etc.).
-Ele já está integrado aos pontos críticos do domínio (Bookings, Verification e, quando necessário, Missões), provendo resiliência, escala e boa UX com feedbacks não bloqueantes.
-
-Se quiser, eu já gero um README.md pronto e salvo no repositório com essa mesma estrutura.
+O módulo queues/ já opera em produção e cumpre seu papel com excelência: garantir performance, estabilidade e escalabilidade real da plataforma. Ele se conecta diretamente com as experiências críticas dos usuários, como notificações, suporte e verificação de identidade — e está preparado para crescer junto com a operação.

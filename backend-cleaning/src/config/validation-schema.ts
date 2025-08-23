@@ -88,4 +88,7 @@ export const validationSchema = Joi.object({
   // NOVAS VARIÁVEIS DE AMBIENTE: PagSeguro
   PAGSEGURO_API_TOKEN: Joi.string().required().description('Token da API do PagSeguro'),
   PAGSEGURO_API_BASE_URL: Joi.string().uri().required().description('URL base da API do PagSeguro (sandbox ou produção)'),
+
+  // NOVO: Variável para Redis (para locks e BullMQ)
+  REDIS_URL: Joi.string().uri().required().description('URL de conexão com o servidor Redis'),
 });

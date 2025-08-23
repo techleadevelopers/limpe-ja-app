@@ -38,10 +38,11 @@ import { I18nModule } from '../common/i18n/i18n.module';
       { name: 'disputes' },
       { name: 'data_export' },
       { name: 'subscription-generation' },
+      { name: 'emails' }, // FIX: Adicionada a fila 'emails'
     ),
     PrismaModule,
     HttpModule,
-    ProvidersModule,
+    forwardRef(() => ProvidersModule),
     DocumentProcessingModule,
     NotificationsModule,
     forwardRef(() => VerificationModule),

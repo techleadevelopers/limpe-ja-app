@@ -1,16 +1,16 @@
 // backend-cleaning/src/queues/queues.service.ts
 import { Injectable, Logger, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
-import { Queue, JobOptions } from 'bull'; // Import JobOptions from 'bull'
+import { Queue, JobOptions } from 'bull';
 
 // Interface para estender as opções de tarefa do Bull.js
 interface CustomJobOptions extends JobOptions {
   attempts?: number;
   backoff?: { type: 'exponential' | 'fixed'; delay: number };
-  jobId?: string; // Adicionado para permitir IDs de tarefa personalizados
-  delay?: number; // Adicionado para agendamento de tarefas
-  removeOnComplete?: boolean | number; // Adicionado para controle de remoção
-  removeOnFail?: boolean | number; // Adicionado para controle de remoção
+  jobId?: string;
+  delay?: number;
+  removeOnComplete?: boolean | number;
+  removeOnFail?: boolean | number;
 }
 
 @Injectable()
@@ -22,8 +22,8 @@ export class QueuesService {
     @InjectQueue('notifications') private readonly notificationsQueue: Queue,
     @InjectQueue('disputes') private readonly disputesQueue: Queue,
     @InjectQueue('data_export') private readonly dataExportQueue: Queue,
-    @InjectQueue('subscription-generation') private readonly subscriptionGenerationQueue: Queue, // NOVO: Fila dedicada para geração de assinaturas
-    // Se houver outras filas, adicione-as aqui
+    @InjectQueue('subscription-generation') private readonly subscriptionGenerationQueue: Queue,
+    @InjectQueue('emails') private readonly emailsQueue: Queue, // NEW: Fila para e-mails
   ) {}
 
   /**
@@ -42,8 +42,10 @@ export class QueuesService {
         return this.disputesQueue;
       case 'data_export':
         return this.dataExportQueue;
-      case 'subscription-generation': // NOVO: Case para a fila de geração de assinaturas
+      case 'subscription-generation':
         return this.subscriptionGenerationQueue;
+      case 'emails': // NEW: Case para a fila de e-mails
+        return this.emailsQueue;
       default:
         this.logger.error(`Fila desconhecida: ${queueName}`);
         throw new BadRequestException(`Fila desconhecida: ${queueName}`);
@@ -52,7 +54,7 @@ export class QueuesService {
 
   /**
    * Adiciona uma tarefa a uma fila específica.
-   * @param queueName O nome da fila (ex: 'verification', 'notifications', 'disputes', 'data_export', 'subscription-generation').
+   * @param queueName O nome da fila (ex: 'verification', 'notifications', 'disputes', 'data_export', 'subscription-generation', 'emails').
    * @param jobName O nome da tarefa a ser adicionada.
    * @param data Os dados da tarefa.
    * @param options Opções para a tarefa (ex: attempts, backoff, jobId, delay, removeOnComplete, removeOnFail).
@@ -61,21 +63,20 @@ export class QueuesService {
     queueName: string,
     jobName: string,
     data: T,
-    options?: CustomJobOptions, // Usa a interface CustomJobOptions
+    options?: CustomJobOptions,
   ): Promise<void> {
     const queue = this.getQueueInstance(queueName);
 
     try {
-      // Aplicar opções padrão se não forem fornecidas
       const finalOptions: CustomJobOptions = {
-        attempts: options?.attempts ?? 3, // Padrão de 3 tentativas
-        backoff: options?.backoff ?? { type: 'exponential', delay: 1000 }, // Padrão de backoff exponencial
-        removeOnComplete: options?.removeOnComplete ?? true, // Remove jobs concluídos por padrão
-        removeOnFail: options?.removeOnFail ?? false, // Mantém jobs falhos para inspeção por padrão
-        ...options, // Sobrescreve com opções específicas fornecidas
+        attempts: options?.attempts ?? 3,
+        backoff: options?.backoff ?? { type: 'exponential', delay: 1000 },
+        removeOnComplete: options?.removeOnComplete ?? true,
+        removeOnFail: options?.removeOnFail ?? false,
+        ...options,
       };
 
-      await queue.add(jobName, data, finalOptions); // Passa todas as opções diretamente
+      await queue.add(jobName, data, finalOptions);
       this.logger.log(`Tarefa '${jobName}' adicionada à fila '${queueName}' com dados: ${JSON.stringify(data)}.`);
     } catch (error) {
       this.logger.error(`Erro ao adicionar tarefa '${jobName}' à fila '${queueName}': ${error.message}`);
@@ -112,18 +113,18 @@ export class QueuesService {
    */
   async addVerificationJob(name: string, data: any): Promise<void> {
     return this.addJob('verification', name, data, {
-      attempts: 3, // Tenta novamente 3 vezes em caso de falha
+      attempts: 3,
       backoff: {
         type: 'exponential',
-        delay: 1000, // Atraso inicial de 1 segundo, exponencial
+        delay: 1000,
       },
-      removeOnFail: false, // Manter falhas para análise
+      removeOnFail: false,
     });
   }
 
   /**
-   * Adiciona uma tarefa à fila de notificações.
-   * @param name Nome da tarefa (ex: 'send-email', 'send-push-notification').
+   * Adiciona uma tarefa à fila de notificações (in-app e/ou push).
+   * @param name Nome da tarefa (ex: 'send-notification', 'send-push-notification').
    * @param data Dados da tarefa.
    */
   async addNotificationJob(name: string, data: any): Promise<void> {
@@ -133,7 +134,7 @@ export class QueuesService {
         type: 'exponential',
         delay: 1000,
       },
-      removeOnFail: false, // Manter falhas para análise
+      removeOnFail: false,
     });
   }
 
@@ -144,12 +145,12 @@ export class QueuesService {
    */
   async addDisputeJob(name: string, data: any): Promise<void> {
     return this.addJob('disputes', name, data, {
-      attempts: 5, // Mais tentativas para disputas, pois são críticas
+      attempts: 5,
       backoff: {
         type: 'exponential',
-        delay: 5000, // Atraso maior
+        delay: 5000,
       },
-      removeOnFail: false, // Manter falhas para análise
+      removeOnFail: false,
     });
   }
 
@@ -160,13 +161,13 @@ export class QueuesService {
    */
   async addDataExportJob(name: string, data: any): Promise<void> {
     return this.addJob('data_export', name, data, {
-      attempts: 1, // Não retentar exportações de dados que falharam
-      removeOnFail: true, // Remover falhas para não acumular
+      attempts: 1,
+      removeOnFail: true,
     });
   }
 
   /**
-   * NOVO: Adiciona uma tarefa à fila de geração de assinaturas.
+   * Adiciona uma tarefa à fila de geração de assinaturas.
    * @param subscriptionId O ID da assinatura.
    * @param delayMs O atraso em milissegundos para a tarefa.
    */
@@ -174,21 +175,37 @@ export class QueuesService {
     const jobName = 'generate-recurring-booking';
     const data = { subscriptionId };
     const options: CustomJobOptions = {
-      jobId: `subscription-generation-${subscriptionId}`, // ID único para o job
+      jobId: `subscription-generation-${subscriptionId}`,
       delay: delayMs,
-      removeOnComplete: true, // Remove o job da fila após conclusão
-      removeOnFail: true, // Remove o job da fila se falhar (para evitar duplicação)
-      attempts: 1, // Geralmente, jobs recorrentes não devem tentar novamente se falharem para evitar duplicatas
+      removeOnComplete: true,
+      removeOnFail: true,
+      attempts: 1,
     };
     return this.addJob('subscription-generation', jobName, data, options);
   }
 
   /**
-   * NOVO: Remove uma tarefa da fila de geração de assinaturas.
+   * Remove uma tarefa da fila de geração de assinaturas.
    * @param subscriptionId O ID da assinatura cujo job deve ser removido.
    */
   async removeSubscriptionGenerationJob(subscriptionId: string): Promise<void> {
     const jobId = `subscription-generation-${subscriptionId}`;
     return this.removeJob('subscription-generation', jobId);
+  }
+
+  /**
+   * NEW: Adiciona uma tarefa à fila de e-mails.
+   * @param name Nome da tarefa (ex: 'send-email').
+   * @param data Dados da tarefa (to, subject, text, html).
+   */
+  async addEmailJob(name: string, data: { to: string; subject: string; text: string; html: string }): Promise<void> {
+    return this.addJob('emails', name, data, {
+      attempts: 5, // Tenta novamente 5 vezes em caso de falha de e-mail
+      backoff: {
+        type: 'exponential',
+        delay: 2000, // Atraso inicial de 2 segundos, exponencial
+      },
+      removeOnFail: false, // Manter falhas para análise
+    });
   }
 }

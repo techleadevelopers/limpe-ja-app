@@ -1,410 +1,156 @@
-Missions Module — README
+🧩 missions/ — Módulo de Missões Gamificadas do LimpeJá
 
-Este documento explica como funciona o módulo de Missões no backend (NestJS + Prisma), quais entidades ele usa, como os eventos são rastreados, como o progresso é calculado, como ocorre o resgate de recompensas (cupom/pontos) e onde integrar (Bookings, Reviews, Referrals, etc.).
+O módulo missions/ é responsável por orquestrar todo o sistema de missões, progressão e recompensas dos usuários na plataforma — promovendo retenção, engajamento recorrente e comportamento positivo com base em desafios e conquistas.
 
-Visão geral
+🎯 Objetivo
 
-O módulo de Missões permite criar objetivos gamificados (ex.: “concluir 1º serviço”, “3 serviços em 30 dias”, “fazer 1 review”) que, ao serem atingidos, geram recompensas para o usuário (cliente), como cupons ou pontos de fidelidade.
+Criar um sistema gamificado real que:
 
-Fluxo resumido
+Estimule o uso recorrente do app
 
-Evento acontece (ex.: booking.completed, review.created, referral.converted).
+Incentive comportamentos desejados (avaliação, check-in, indicações)
 
-MissionsService.trackEvent(userId, eventName, meta?) grava o evento e recalcula o progresso de todas as missões que escutam esse evento.
+Aumente a retenção via reforço positivo
 
-Quando a missão atingir o target, o status passa para COMPLETED.
+Ofereça recompensas tangíveis e simbólicas por ações concretas
 
-O usuário chama claimMission (via endpoint) → o módulo emite cupom (via CouponsService) ou credita pontos (via LoyaltyService) e marca a missão como CLAIMED.
+⚙️ Estrutura de Arquivos
+missions/
+├── missions.module.ts              # Módulo principal e injeção de dependências
+├── missions.controller.ts         # Endpoints REST para missões e progresso
+├── missions.service.ts            # Lógica de criação, progresso e validação de missões
+├── progress.service.ts            # Controle e persistência do progresso por usuário
+├── claim-mission.dto.ts           # DTO para resgatar uma missão
+├── upsert-mission.dto.ts          # DTO para criar ou atualizar uma missão
 
-Modelos (Prisma)
-Enums
+🧠 Tipos de Missões Suportadas
 
-MissionAudience: CLIENT | PROVIDER (hoje usamos CLIENT)
+✅ Avaliar um serviço prestado
 
-MissionKind: COUNT_EVENT | STREAK_DAYS | WITHIN_WINDOW
+✅ Concluir X serviços por semana
 
-RewardType: COUPON | POINTS
+✅ Indicar amigos e obter adesão
 
-MissionStatus: ACTIVE | COMPLETED | CLAIMED
+✅ Check-in e check-out com geolocalização
 
-Tabelas
-Mission
+✅ Realizar o primeiro agendamento
 
-code (único), title, description
+✅ Frequência mensal mínima
 
-audience (CLIENT/PROVIDER — hoje CLIENT)
+✅ Resolutividade (sem incidentes)
 
-kind (regra de contagem)
+As missões podem ser:
 
-eventName (ex.: booking.completed, review.created, referral.converted)
+🎯 Pessoais (individuais por usuário)
 
-targetValue (ex.: 1, 3, 10)
+🏅 Campanhas temporárias (ex: “Missão Carnaval”)
 
-timeWindowDays? (opcional para janelas, ex.: 30)
+🔁 Recorrentes (ex: “Toda segunda-feira”)
 
-rewardType (COUPON | POINTS)
+🧩 Fluxo Lógico de Missão
 
-rewardValue (percentual para cupom ou pontos inteiros)
+Sistema cria missão (upsert-mission.dto.ts)
 
-couponTemplateId? (reserva para integração futura)
+Usuário realiza ações relevantes (serviços, avaliações, etc.)
 
-isActive
+progress.service.ts registra o progresso automaticamente
 
-MissionProgress
+Quando completada, o usuário pode reivindicar (claim-mission.dto.ts)
 
-Chave única (userId, missionId)
+Missão é marcada como completa e recompensa é entregue
 
-currentValue, status (ACTIVE | COMPLETED | CLAIMED)
+🔁 Principais Componentes
+✅ missions.service.ts
 
-lastEventAt?, completedAt?, claimedAt?
+Responsável por:
 
-MissionEvent
+Criar / atualizar missões
 
-userId, name (string do evento)
+Consultar status e progresso
 
-meta (JSON opcional)
+Validar se a missão foi cumprida
 
-createdAt
+✅ progress.service.ts
 
-Serviços principais
-MissionsService
-trackEvent(userId: string, name: string, meta?: any)
+Responsável por:
 
-O que faz: grava um MissionEvent e recalcula o progresso para todas as missões ativas com eventName = name e audience = CLIENT.
+Registrar progresso individual por usuário
 
-Cálculo de progresso por kind:
+Prevenir duplicações ou abusos
 
-COUNT_EVENT
+Permitir resgate apenas quando 100% concluída
 
-Sem janela: incrementa currentValue em +1.
+Integrar com outras fontes (bookings, avaliações)
 
-Com janela (timeWindowDays): recalc via COUNT de eventos no período.
+✅ missions.controller.ts
 
-WITHIN_WINDOW
+Endpoints RESTful disponíveis:
 
-Sempre recalc via COUNT de eventos dentro da janela (se não houver, conta desde o início).
+Método	Rota	Função
+GET	/missions	Lista todas as missões disponíveis
+GET	/missions/me	Missões do usuário autenticado
+POST	/missions/claim	Resgatar missão concluída
+POST	/missions	Criar nova missão
+PUT	/missions/:id	Atualizar missão existente
+🔐 Segurança e Integridade
 
-STREAK_DAYS
+Todas as rotas de progresso são autenticadas
 
-Conta dias únicos com evento dentro da janela (simplificado).
+Não permite resgatar missão incompleta
 
-Atualiza MissionProgress:
-
-currentValue, lastEventAt
-
-status = COMPLETED se currentValue >= targetValue (e seta completedAt)
-
-caso contrário, status = ACTIVE
-
-Importante: este método é idempotente para os modos de janela (WITHIN_WINDOW, COUNT_EVENT com timeWindowDays), porque recalcula via contagem. Para COUNT_EVENT sem janela, o incremento é +1 por evento disparado.
-
-getMyMissions(userId: string)
-
-Retorna as missões ativas (Mission.isActive = true, audience = CLIENT) com o snapshot do progresso do usuário:
-
-currentValue, targetValue, status, percent (0–100), completedAt, claimedAt
-
-canClaim = (status === COMPLETED)
-
-claimMission(userId: string, missionId: string)
-
-Validações:
-
-Existe MissionProgress para (userId, missionId)?
-
-status === COMPLETED e ainda não claimedAt?
-
-Recompensa (de acordo com Mission.rewardType):
-
-COUPON → chama CouponsService.issueCouponFromMission(...) e retorna o cupom criado.
-
-POINTS → LoyaltyService.addPoints({ userId, points: mission.rewardValue, type: 'MISSION_COMPLETED', referenceId: mission.id }).
-
-Marca MissionProgress.status = CLAIMED e claimedAt = now.
-
-Retorna: { mission, reward }
-
-Integrações (origem dos eventos)
-
-Você deve disparar trackEvent nos momentos certos:
-
-Bookings
-
-Essencial: quando o status muda para COMPLETED → booking.completed
-
-Local: src/bookings/bookings.service.ts dentro de updateStatus(...) após concluir.
-
-Também é onde você já faz a lógica de loyalty e cupom usado.
-
-Reviews
-
-Após criar uma avaliação → review.created
-
-Local: src/reviews/reviews.service.ts após this.prisma.review.create(...).
-
-Referrals
-
-Quando o indicado conclui o primeiro booking → referral.converted (evento contado para o indicador)
-
-Local: src/referrals/referrals.service.ts
-
-Helper sugerido: handleBookingCompletedForReferral(referredUserId, bookingId).
-
-Esses disparos conectam os eventos do negócio às missões. Sem eles, o progresso não evolui.
-
-Recompensas
-Cupom (via CouponsService)
-
-Método: issueCouponFromMission({ userId, mission, validityDays? })
-
-Padrões:
-
-valueType = 'PERCENT'
-
-value = rewardValue / 100 (20% ⇒ 0.20)
-
-target = 'GENERAL' (modelo atual não vincula cupom a usuário; se quiser exclusivo, ver Roadmap abaixo)
-
-maxUses = 1
-
-validade padrão: 30 dias
-
-código: MIS-<MISSION_CODE>-<RANDOM>
-
-Pontos (via LoyaltyService)
-
-Método: addPoints({ userId, points, type: 'MISSION_COMPLETED', referenceId: mission.id })
-
-Endpoints públicos (API)
-
-Os nomes podem variar conforme seu MissionsController. Estes são os mais comuns:
-
-GET /missions/my
-
-Retorna a lista das missões ativas + progresso do usuário logado
-
-Requer autenticação (JWT). Role: CLIENT
-
-POST /missions/claim
-
-Body: { missionId: string }
-
-Se a missão estiver COMPLETED e não CLAIMED, emite recompensa e marca como CLAIMED
-
-Requer autenticação (JWT). Role: CLIENT
-
-Dependências e Módulos
-
-MissionsModule exporta MissionsService
-
-Módulos que devem importar MissionsModule (via forwardRef quando houver ciclo):
-
-BookingsModule
-
-ReviewsModule
-
-ReferralsModule
-
-MissionsService depende de:
-
-PrismaService
-
-CouponsService (cupom como recompensa)
-
-LoyaltyService (pontos como recompensa)
-
-As importações típicas:
-
-// src/missions/missions.module.ts (exemplo)
-@Module({
-  imports: [
-    PrismaModule,
-    forwardRef(() => CouponsModule),
-    forwardRef(() => LoyaltyModule),
-  ],
-  providers: [MissionsService],
-  exports: [MissionsService],
-})
-export class MissionsModule {}
-
-
-E em módulos que usam as missões:
-
-// src/bookings/bookings.module.ts
-imports: [
-  // ...
-  forwardRef(() => MissionsModule),
-  // ...
-]
-
-// src/reviews/reviews.module.ts
-imports: [
-  // ...
-  forwardRef(() => MissionsModule),
-  // ...
-]
-
-// src/referrals/referrals.module.ts
-imports: [
-  // ...
-  forwardRef(() => MissionsModule),
-  // ...
-]
-
-Conjunto de missões sugeridas (seed)
-
-Você pode criar um seed inicial na tabela Mission:
-
-FIRST_SERVICE
-
-kind = COUNT_EVENT
-
-eventName = 'booking.completed'
-
-targetValue = 1
-
-rewardType = COUPON
-
-rewardValue = 20 (→ 20%)
-
-THREE_BOOKINGS_30D
-
-kind = COUNT_EVENT
-
-eventName = 'booking.completed'
-
-targetValue = 3
-
-timeWindowDays = 30
-
-rewardType = POINTS
-
-rewardValue = 100
-
-FIRST_REVIEW
-
-kind = COUNT_EVENT
-
-eventName = 'review.created'
-
-targetValue = 1
-
-rewardType = POINTS
-
-rewardValue = 50
-
-REFERRAL_CONVERTED
-
-kind = COUNT_EVENT
-
-eventName = 'referral.converted'
-
-targetValue = 1
-
-rewardType = COUPON
-
-rewardValue = 30 (→ 30%)
-
-Observação: STREAK_DAYS está implementado de forma simples (dias únicos com evento na janela). Ajuste conforme sua regra de negócio.
-
-Mensagens e erros comuns
-
-trackEvent: não lança erro — grava evento e recalcula progresso.
-
-claimMission:
-
-404 Not Found: progresso não encontrado para (userId, missionId)
-
-400 Bad Request: missão não está COMPLETED ou já foi CLAIMED
-
-Emissão de cupom:
-
-Gera cupom individual (1 uso), percent, validade padrão 30 dias.
-
-Crédito de pontos:
-
-Usa LoyaltyService.addPoints com type = 'MISSION_COMPLETED'.
-
-Boas práticas de integração
-
-Bookings
-
-Dispare trackEvent(userId, 'booking.completed', { bookingId }) após a transição válida para COMPLETED.
-
-Reviews
-
-Dispare trackEvent(userId, 'review.created', { reviewId, bookingId }) após create.
-
-Referrals
-
-No helper de conversão, após detectar que foi o 1º booking concluído do indicado:
-
-Dispare trackEvent(referrerUserId, 'referral.converted', { referredUserId, bookingId }).
-
-Essa ordem garante que missões não avancem indevidamente.
-
-Testes (checklist)
-
-COUNT_EVENT sem janela
-
-Dispare N eventos ⇒ currentValue soma N.
-
-COUNT_EVENT com janela
-
-Insira eventos fora/ dentro da janela ⇒ recálculo confere.
-
-WITHIN_WINDOW
-
-Varia timestamps e garanta que a contagem corresponda à janela.
-
-STREAK_DAYS
-
-Eventos em dias diferentes ⇒ currentValue = dias únicos.
-
-Claim
-
-Somente quando COMPLETED e não CLAIMED.
-
-COUPON ⇒ cupom criado com 1 uso, percent, validade 30 dias.
-
-POINTS ⇒ pontos creditados.
-
-Idempotência
-
-Repetir trackEvent não deve “quebrar” o progresso em missões com janela.
-
-Permissões
-
-Endpoints protegidos com JWT e role CLIENT.
-
-Roadmap (opcional)
-
-Cupons por usuário: adicionar SPECIFIC_USER em Coupon.target OU criar tabela CouponAssignment (couponId, userId) para vincular explicitamente o cupom ao usuário que resgatou.
-
-Missoes para Providers: permitir audience = PROVIDER.
-
-Regra de STREAK mais robusta: validação de dias consecutivos com “buracos” tolerados, etc.
-
-UI/UX: badges, animações, banners de conclusão, toasts de progresso.
-
-Anexos úteis
-
-Endpoints Cliente (frontend):
-
-GET /missions/my — listar missões e progresso
-
-POST /missions/claim { missionId } — resgatar recompensa
-
-(Opcional) GET /coupons/my — listar cupons ativos
-
-Eventos suportados (hoje):
-
-booking.completed
-
-review.created
-
-referral.converted
-
-(Fácil adicionar novos: bastar criar missões usando um novo eventName e disparar trackEvent.)
-
-Se quiser, posso te gerar um seed SQL/TS com os exemplos de missões acima e/ou um MissionsController enxuto com os dois endpoints citados.
+Previne múltiplos resgates por missão
+
+Progresso é incremental e rastreável
+
+🔗 Integração com o App
+
+Clientes e prestadores recebem notificações quando há nova missão
+
+Missões aparecem no dashboard com progresso visual
+
+Após completar, o usuário pode resgatar direto no app
+
+Cupons, badges e XP são entregues automaticamente
+
+🎮 Exemplo de Missão no App
+{
+  "id": "mission_123",
+  "title": "Avalie 3 serviços esta semana",
+  "description": "Ajude outros usuários com seu feedback",
+  "progress": 2,
+  "goal": 3,
+  "reward": "Cupom de R$ 20",
+  "status": "in_progress"
+}
+
+🧠 Papel Estratégico no LimpeJá
+Benefício Estratégico	Impacto
+Aumenta retenção (usuário volta para completar)	🔥 Alta
+Estimula bons comportamentos (avaliar, indicar, repetir)	✅ Consciente
+Substitui o vício negativo por hábitos positivos	🎯 Sustentável
+Gera recompensa sem precisar de cupom aleatório	💰 Eficiente
+Integra com sistema de Score/Ranking	🏆 Meritocracia
+🛠️ Casos de Uso Reais
+Ação do Usuário	Missão Ativada	Recompensa
+Finaliza serviço com avaliação	“Avalie 3 serviços por semana”	Cupom de desconto
+Faz check-in 3 dias seguidos	“Frequência LimpeJá”	Selo visual + cashback
+Indica um amigo que usa o app	“Indique e ganhe”	Cupom compartilhado
+Zera todos serviços do mês	“Conquistador do mês”	Badge de perfil + ranking XP
+📦 Integração com Outros Módulos
+Módulo	Função
+bookings/	Detecção de serviços concluídos
+reviews/	Acompanhamento de avaliações
+users/	Relacionamento com progresso e recompensa
+notifications/	Alertas de nova missão ou conclusão
+coupons/	Geração de cupons por missão
+ranking/	Aumento de pontuação com base em missão
+loyalty/	Conversão de missão em pontos de fidelidade
+🧩 Próximos Passos Sugeridos
+Item	Prioridade
+Histórico de missões concluídas	Alta
+Missões exclusivas por região	Média
+Missões cooperativas (2+ usuários)	Média
+Painel administrativo de criação	Alta
+✅ Conclusão
+
+O módulo missions/ é um dos pilares centrais da lógica de engajamento e retenção da plataforma LimpeJá. Ele transforma ações operacionais em jornadas divertidas, recompensadoras e repetíveis, impactando diretamente o LTV do usuário e o ciclo de uso da plataforma.

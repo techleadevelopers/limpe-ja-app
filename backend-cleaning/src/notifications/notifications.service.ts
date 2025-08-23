@@ -1,46 +1,36 @@
 // src/notifications/notifications.service.ts
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common'; // Importe Logger
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Notification } from '@prisma/client';
 import { MarkAsReadDto } from './dto/mark-as-read.dto';
-import { I18nService } from '../common/i18n/i18n.service'; // Importar I18nService
-
-// Se você estiver usando Firebase Admin SDK, você precisaria importá-lo:
-// import * as admin from 'firebase-admin';
+import { I18nService } from '../common/i18n/i18n.service';
+import { CreateNotificationDto } from './dto/create-notification.dto'; // NEW
 
 @Injectable()
 export class NotificationsService {
-  private readonly logger = new Logger(NotificationsService.name); // Instancia o logger
+  private readonly logger = new Logger(NotificationsService.name);
 
   constructor(
     private prisma: PrismaService,
-    private readonly i18n: I18nService, // Injetar I18nService
+    private readonly i18n: I18nService,
   ) {}
 
   /**
    * Cria uma nova notificação.
-   * @param userId ID do usuário que receberá a notificação.
-   * @param type Tipo da notificação (e.g., BOOKING_CONFIRMED).
-   * @param message Conteúdo da mensagem.
-   * @param targetUrl URL de destino ao clicar na notificação (opcional).
+   * @param dto DTO com os dados da notificação a ser criada.
    * @returns A notificação criada.
    */
-  async createNotification(
-    userId: string,
-    type: string,
-    message: string, // Esta mensagem já deve vir traduzida ou ser uma chave i18n
-    targetUrl?: string,
-    title?: string, // Adicionado título para consistência com o push
-  ): Promise<Notification> {
-    // Você pode decidir se quer armazenar o título na notificação do banco de dados
-    // ou se o título é apenas para a notificação push.
+  async createNotification(dto: CreateNotificationDto): Promise<Notification> { // Refactored to use DTO
+    const { userId, type, message, targetUrl, title, imageUrl, actionButtons } = dto;
     return this.prisma.notification.create({
       data: {
         userId,
         type,
         message,
         targetUrl,
-        // title: title, // Descomente se quiser armazenar o título no banco de dados
+        title, // Storing title in DB
+        imageUrl, // Storing imageUrl in DB
+        actionButtons, // Storing actionButtons in DB
         isRead: false,
       },
     });
@@ -109,7 +99,6 @@ export class NotificationsService {
     });
 
     if (!notification || notification.userId !== userId) {
-      // Usar I18nService para mensagens de erro
       throw new NotFoundException(await this.i18n.translate('notification.notFound'));
     }
 
@@ -134,7 +123,6 @@ export class NotificationsService {
     });
 
     if (!notification || notification.userId !== userId) {
-      // Usar I18nService para mensagens de erro
       throw new NotFoundException(await this.i18n.translate('notification.notFound'));
     }
 
@@ -195,7 +183,6 @@ export class NotificationsService {
         this.logger.log(`Ação Rápida: Visualizar avaliação ${data.reviewId}.`);
         break;
       default:
-        // Usar I18nService para mensagens de erro
         throw new BadRequestException(await this.i18n.translate('notification.badRequest.unknownAction', 'pt-BR', { action }));
     }
   }
@@ -221,28 +208,21 @@ export class NotificationsService {
     this.logger.log(`Título: "${title}", Corpo: "${body}"`);
 
     try {
-      // 1. RECUPERAR O TOKEN DO DISPOSITIVO DO USUÁRIO
-      // Você precisa ter um campo no seu modelo de usuário (ou em um modelo relacionado)
-      // que armazene o token de notificação push do dispositivo (ex: FCM token).
       const user = await this.prisma.user.findUnique({
         where: { id: userId },
         select: {
-          // Substitua 'fcmToken' pelo nome real do campo em seu modelo User
-          // ou inclua a relação para o modelo de dispositivo se for o caso.
           fcmToken: true,
         },
       });
 
       if (!user || !user.fcmToken) {
         this.logger.warn(`Nenhum token de dispositivo (fcmToken) encontrado para o usuário ${userId}. Notificação push não enviada.`);
-        return; // Não há token, então não há como enviar a notificação push.
+        return;
       }
 
       const deviceToken = user.fcmToken;
 
-      // 2. LÓGICA REAL DE ENVIO DA NOTIFICAÇÃO PUSH
-      // Esta parte dependerá do provedor de notificações push que você está usando.
-      // EXEMPLO CONCEITUAL COM FIREBASE ADMIN SDK:
+      // EXEMPLO CONCEITUAL COM FIREBASE ADMIN SDK (comentado, pois requer setup)
       /*
       const message = {
         notification: {
@@ -250,36 +230,12 @@ export class NotificationsService {
           body: body,
         },
         data: {
-          ...data, // Inclui quaisquer dados adicionais passados
-          // Você pode adicionar dados específicos para o seu app aqui,
-          // como 'bookingId', 'notificationType', etc.
+          ...data,
         },
         token: deviceToken,
       };
-
-      // Certifique-se de que o Firebase Admin SDK foi inicializado em seu aplicativo.
       await admin.messaging().send(message);
       this.logger.log(`Notificação push enviada com sucesso para o usuário ${userId} (token: ${deviceToken}).`);
-      */
-
-      // EXEMPLO PARA EXPO PUSH NOTIFICATIONS (se estiver usando Expo no frontend)
-      /*
-      // Você precisaria instalar o 'expo-server-sdk'
-      // import { Expo } from 'expo-server-sdk';
-      // const expo = new Expo();
-      // const messages = [];
-      // messages.push({
-      //   to: deviceToken,
-      //   sound: 'default',
-      //   title: title,
-      //   body: body,
-      //   data: data,
-      // });
-      // const chunks = expo.chunkPushNotifications(messages);
-      // for (let chunk of chunks) {
-      //   await expo.sendPushNotificationsAsync(chunk);
-      // }
-      // this.logger.log(`Notificação push Expo enviada com sucesso para o usuário ${userId}.`);
       */
 
       // Por enquanto, apenas um log para simular o envio:
@@ -290,7 +246,6 @@ export class NotificationsService {
         `Erro ao enviar notificação push para o usuário ${userId}: ${error.message}`,
         error.stack,
       );
-      // Dependendo da sua necessidade, você pode relançar o erro ou tratá-lo silenciosamente.
       throw new Error(`Falha ao enviar notificação push: ${error.message}`);
     }
   }

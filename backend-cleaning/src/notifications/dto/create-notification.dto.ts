@@ -1,6 +1,6 @@
 // src/notifications/dto/create-notification.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsUUID, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsUUID, IsOptional, IsObject } from 'class-validator'; // Added IsObject
 
 export class CreateNotificationDto {
   @ApiProperty({ description: 'ID do usuário que receberá a notificação', example: 'uuid-do-usuario' })
@@ -22,4 +22,24 @@ export class CreateNotificationDto {
   @IsOptional()
   @IsString()
   targetUrl?: string;
+
+  @ApiPropertyOptional({ description: 'Título da notificação (usado em push ou in-app)', example: 'Agendamento Confirmado!' })
+  @IsOptional()
+  @IsString()
+  title?: string; // NEW: Added title
+
+  @ApiPropertyOptional({ description: 'URL da imagem associada à notificação', example: 'https://example.com/image.png' })
+  @IsOptional()
+  @IsString()
+  imageUrl?: string; // NEW: Added imageUrl
+
+  @ApiPropertyOptional({
+    description: 'Botões de ação para a notificação (JSON)',
+    type: 'object',
+    example: { primary: { text: 'Ver', action: 'view_booking', data: { bookingId: '123' } } },
+    additionalProperties: true, // FIX: Added for Swagger compatibility with object type
+  })
+  @IsOptional()
+  @IsObject()
+  actionButtons?: object; // NEW: Added actionButtons (using object for flexibility)
 }

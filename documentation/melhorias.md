@@ -1,3 +1,7 @@
+
+## JA FORAM INTEGRADOS DE FORMA COMPLETA NO FRONT E NO BACK 
+
+
 1. Adicionar Geolocalização Precisa para Busca de Provedores Próximos
 Backend:
 

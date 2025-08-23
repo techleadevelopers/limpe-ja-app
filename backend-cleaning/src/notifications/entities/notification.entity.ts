@@ -31,6 +31,9 @@ export class NotificationEntity implements PrismaNotification {
   @ApiPropertyOptional({ description: 'Botões de ação da notificação (JSON)', example: [{ label: 'Ver', action: 'view' }] })
   actionButtons: Prisma.JsonValue | null;
 
+  @ApiPropertyOptional({ description: 'Título da notificação', example: 'Agendamento Confirmado!' })
+  title: string | null; // FIX: Added title property
+
   // user: User; // Propriedade de relação, não incluída diretamente na classe para DTO de saída
 
   constructor(partial: Partial<PrismaNotification>) {

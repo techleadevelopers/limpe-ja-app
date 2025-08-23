@@ -1,298 +1,137 @@
-Ranking Module — README
-Visão geral
+🏆 ranking/ — Módulo de Classificação de Prestadores
 
-O módulo Ranking calcula e expõe o ranking de prestadores (Providers) para fins de listagem, destaque e busca.
-Ele consolida sinais como avaliações, volume/recência de agendamentos concluídos, taxa de 5⭐, responsividade e (se disponível) proximidade geográfica para ordenar resultados.
+Responsável por calcular, classificar e disponibilizar os rankings dos prestadores de serviço com base em critérios de performance, confiança e reputação — alimentando elementos de gamificação, reputação social e visibilidade dentro da plataforma LimpeJá.
 
-Objetivo: entregar uma ordenação justa e transparente, priorizando qualidade, confiabilidade e atividade recente.
+🎯 Objetivo
 
-Principais componentes
+Fornecer um sistema meritocrático e dinâmico que:
 
-ranking.module.ts
-Declara o módulo, importa dependências (PrismaModule, etc.) e exporta o RankingService.
+Recompense prestadores de alta performance
 
-ranking.service.ts
-Motor de ranking.
+Estimule avaliações e comportamentos positivos
 
-Consulta dados no Prisma (Providers, Reviews, Bookings).
+Sirva como referência de confiança para clientes
 
-Normaliza sinais.
+Gere visibilidade e motivação dentro do app
 
-Aplica fórmula de score com pesos configuráveis.
+⚙️ Estrutura de Pastas
+ranking/
+├── ranking.controller.ts           # Exposição dos endpoints públicos e protegidos
+├── ranking.module.ts               # Registro do módulo, serviços e dependências
+├── ranking.service.ts              # Lógica principal de cálculo e agregação
+├── provider-ranking.dto.ts         # DTO para validação e tipagem dos rankings
 
-Aplica filtros (serviço, cidade, distância) e paginação.
+🧠 Lógica de Negócio
+✅ Critérios de Rank (Score Interno)
 
-Pode usar cache (in-memory/Redis) para respostas quentes.
+O ranking é construído com base em múltiplos fatores, ponderados:
 
-ranking.controller.ts
-Endpoints REST:
+Critério	Peso Relativo	Fonte
+⭐ Avaliações médias (1-5)	Alta	reviews
+📍 Pontualidade (check-in)	Média	location, bookings
+📆 Frequência de serviços	Alta	bookings
+✅ Taxa de aceitação	Média	bookings, notifications
+📣 Avaliações recentes + texto	Alta	reviews, support
+🧠 Histórico de incidentes	Baixa/Moderada	safety, faqs
+🎖️ Participação em missões	Moderada	missions, loyalty
 
-GET /ranking/providers — lista ranqueada com filtros e paginação.
+Esses dados são agregados, ponderados e convertidos em um Score Global, com atualização automática.
 
-GET /ranking/top — atalho para top N.
+🔁 Fluxo de Funcionamento
 
-POST /ranking/rebuild — força rebuild/invalidação de cache (ADMIN).
+Eventos de serviço e avaliações disparam atualizações do score.
 
-provider-ranking.dto.ts
-DTO de saída para itens ranqueados (shape de resposta do provider no ranking).
+O ranking.service recalcula o ranking para o prestador.
 
-Dependências de dados (Prisma)
+Dados são disponibilizados via ranking.controller para:
 
-O serviço lê das tabelas já existentes:
+App (ranking geral e individual)
 
-Provider
-Campos relevantes:
+Painel administrativo (futuro)
 
-id, fullName, userId
+Gamificação (selos, badges, destaque)
 
-bookings (para contagem de concluídos recentes)
+🔗 Integração com o App
+Cliente
 
-reviewsReceived (média e distribuição de notas)
+Pode ver os prestadores mais bem avaliados em sua região.
 
-monthlyBookingsCount (sinal de atividade)
+Gera confiança ao contratar quem tem badge ou ranque alto.
 
-fiveStarReviewCount (sinal de excelência)
+Prestador
 
-address (para cidade/geo, se disponível)
+Visualiza seu score no app (dashboard)
 
-providerServices (para filtrar por serviceId)
+Recebe estímulos para melhorar (ex: “Falta 0.2 para subir no ranking!”)
 
-Review
-Para média de rating, total de reviews, taxa de 5 estrelas.
+Pode receber benefícios reais: mais destaque, recompensas, acesso a missões exclusivas
 
-Booking
-Para concluídos no período (ex.: últimos 90 dias) e consistência/atividade.
+🧪 Arquitetura Técnica
+🧠 ranking.service.ts
 
-Se latitude/longitude estiverem disponíveis no Address, o módulo pode calcular distância (Haversine) para nearby.
+Contém:
 
-Fórmula de scoring (padrão)
+Lógica de agregação de métricas
 
-A pontuação consolidada usa uma combinação ponderada dos sinais.
-Pesos padrão (ajustáveis via RankingService):
+Ponderação dos critérios
 
-Qualidade (rating médio) — wRating = 0.45
+Atualização de ranking
 
-Atividade (bookings concluídos 90d) — wRecentBookings = 0.25
+Consulta por filtros geográficos ou globais
 
-Excelência (taxa de 5⭐) — wFiveStar = 0.15
+📥 provider-ranking.dto.ts
 
-Recência de review (decay) — wRecency = 0.10
+Define o shape esperado para ranking de prestadores
 
-Proximidade (se “nearby”) — wDistance = 0.05 (inverso: mais perto, maior score)
+Garante tipagem e validação via DTO
 
-Score final (0..1):
+Suporta paginação, filtros, etc.
 
-score = clamp01(
-  wRating        * normalizeRating(avgRating) +
-  wRecentBookings* normalizeCount(completed90d) +
-  wFiveStar      * normalizeRatio(fiveStarRate) +
-  wRecency       * recencyBoost(lastReviewAt) +
-  wDistance      * distanceBoost(km)  // se aplicável
-)
+🌐 ranking.controller.ts
 
-Normalizações
+GET /ranking → lista os top prestadores por critérios
 
-normalizeRating(r) → mapeia [3..5] para [0..1], com clamp
+GET /ranking/me → retorna o score atual do prestador logado
 
-normalizeCount(c) → c / max(10, p95) (p95 da amostra), clamp 1
+GET /ranking/:id → permite ver ranking de um prestador específico (admin/público)
 
-normalizeRatio(x) → já está em [0..1]
-
-recencyBoost(dt) → decai ao longo de 90 dias; recente ≈ 1, antigo → ~0.3
-
-distanceBoost(km) → se houver lat/lng; <= 3km ≈ 1, 3–10km ~0.7, 10–25km ~0.4, >25km ~0.2
-
-Dica: se a base for esparsa, o serviço usa defaults conservadores (ex.: providers novos não ficam zerados; recebem um bootstrapping leve).
-
-Filtros e paginação
-Query params suportados
-
-GET /ranking/providers
-
-serviceId?: string — filtra por serviço oferecido
-
-city?: string — filtra por cidade
-
-nearbyLat?: number / nearbyLng?: number — ativa boost por proximidade (opcional)
-
-radiusKm?: number — distância máxima (opcional; default 25)
-
-sort?: 'score' | 'rating' | 'recent' — ordenação; default score
-
-page?: number — default 1
-
-limit?: number — default 20 (máx. 50)
-
-Resposta
-{ items: ProviderRankingDto[], total: number, page: number, limit: number }
-
-ProviderRankingDto (exemplo):
-
+✅ Exemplo de Resposta
 {
-  providerId: string;
-  name: string;
-  avatarUrl?: string;
-  city?: string;
-  services: { id: string; name: string; priceFrom?: number }[];
-  rating: { avg: number; count: number; fiveStarRate: number };
-  activity: { completed90d: number; monthlyBookingsCount: number };
-  lastReviewAt?: string; // ISO
-  distanceKm?: number;
-  score: number; // 0..1
-  badges?: string[];     // ex.: “Top Rated”, “Muito requisitado”
+  "providerId": "abc123",
+  "score": 4.82,
+  "rank": 3,
+  "totalServices": 122,
+  "avgRating": 4.9,
+  "onTimePercentage": 97,
+  "missionParticipation": true,
+  "region": "São Paulo - Zona Sul"
 }
 
-Top N
-
-GET /ranking/top?limit=5&serviceId=...&city=...
-
-Endpoints
-1) Listagem ranqueada
-GET /ranking/providers?serviceId=...&city=...&nearbyLat=-23.5&nearbyLng=-46.6&radiusKm=12&sort=score&page=1&limit=20
-Auth: público (CLIENT/PROVIDER/ANÔNIMO)
-
-2) Top N
-GET /ranking/top?limit=5&serviceId=...
-Auth: público
-
-3) Rebuild/Invalidate cache
-POST /ranking/rebuild
-Auth: ADMIN
-Body: opcional { hard?: boolean } // hard=true recalcula estats base
-
-Segurança & Rate limiting
-
-Os endpoints de leitura são públicos, mas podem herdar Throttler global (já configurado no app).
-
-O endpoint POST /ranking/rebuild exige role ADMIN (via @Roles(UserRole.ADMIN)).
-
-Caching
-
-L2: opcional Redis (chave composta por filtros).
-
-TTL sugerido: 60–300s.
-
-Invalidações:
-
-Após criação de review relevante.
-
-Após mudanças de disponibilidade grandes.
-
-Job noturno/horário pode executar rebuild leve (médias e p95).
-
-O serviço lida bem sem cache; porém, em produção com tráfego, ative cache.
-
-Integrações
-Missões (Missions)
-
-Quando review é criada ou booking é concluído, outros módulos já disparam missionsService.trackEvent(...).
-
-O Ranking não dispara eventos diretamente, mas se beneficia do aumento de qualidade/atividade que o sistema de Missões incentiva.
-
-Loyalty/Cupons
-
-Indireta: reviews/atividades geradas por incentivos (pontos/cupom) impactam sinais do ranking.
-
-Badges (opcional)
-
-O RankingService pode atribuir “badges” a partir de limiares simples:
-
-Top Rated — avgRating >= 4.8 e count >= 20
-
-Muito requisitado — completed90d >= 15
-
-Consistente — fiveStarRate >= 0.6 e count >= 30
-
-Badges são retornadas no DTO e exibidas no app.
-
-Estratégia anti-gaming (resumo)
-
-Ponderação entre qualidade e volume; avaliações isoladas não dominam.
-
-Decay temporal: inércia de reviews antigas é reduzida.
-
-Mínimos estatísticos: alguns boosts exigem limiar de amostragem.
-
-Cap por sinal: evita explosões por outliers.
-
-Exemplos
-cURL — listagem
-curl "http://localhost:3000/ranking/providers?serviceId=abc123&city=Sao%20Paulo&sort=score&page=1&limit=10"
-
-cURL — top 5 próximos de mim
-curl "http://localhost:3000/ranking/top?limit=5&nearbyLat=-23.56&nearbyLng=-46.64&radiusKm=8"
-
-cURL — rebuild (ADMIN)
-curl -X POST "http://localhost:3000/ranking/rebuild" \
-  -H "Authorization: Bearer <ADMIN_JWT>" \
-  -H "Content-Type: application/json" \
-  -d '{"hard":true}'
-
-Erros comuns
-
-400 parâmetros inválidos (ex.: limit > 50, lat/lng inválidos).
-
-403 quando POST /ranking/rebuild sem ADMIN.
-
-500 erros internos (ex.: indisponibilidade de banco).
-
-Configuração/Env (opcional)
-
-RANKING_CACHE_TTL=120 (segundos)
-
-RANKING_WINDOW_DAYS=90
-
-Pesos podem ser definidos via config service (se desejar externalizar):
-
-RANKING_W_RATING=0.45
-
-RANKING_W_RECENT=0.25
-
-RANKING_W_FIVESTAR=0.15
-
-RANKING_W_RECENCY=0.10
-
-RANKING_W_DISTANCE=0.05
-
-Testes (checklist)
-
- Retorna lista ordenada por score com dados mistos
-
- Filtro serviceId e city funcionando
-
- Boost de distância quando nearbyLat/nearbyLng presentes
-
- Páginas, page/limit e total corretos
-
- top respeita limit
-
- rebuild invalida cache (ADMIN only)
-
- Providers sem reviews/booking não quebram (defaults aplicados)
-
- Cálculo de score está em [0..1] (clamp)
-
-Roadmap
-
-Considerar SLA/No-show no score (quando disponível).
-
-Ajuste dinâmico de pesos por A/B testing.
-
-Cache distribuído (Redis) e pré-computação em job.
-
-Métrica de tempo de resposta (mensagens/aceite rápido).
-
-Personalização por usuário (aprendizado/afinidade) — fase 2.
-
-FAQ rápido
-
-Q: O ranking altera dados do banco?
-A: Não, é read-only (com exceção de rebuild que só invalida cache).
-
-Q: Como evitar que um novo provedor com poucas reviews vá para o topo?
-A: Pesos + mínimos estatísticos + decay resolvem; novos entram com score moderado.
-
-Q: É obrigatório usar distância?
-A: Não. Se nearbyLat/nearbyLng não forem informados, o peso de distância é 0.
-
-Se quiser, eu também escrevo um OPENAPI (Swagger) curto desses endpoints e/ou adiciono os decorators @ApiQuery/@ApiResponse no controller para aparecer tudo bonitinho no Swagger da sua API.
+📦 Integração com Outros Módulos
+Módulo	Função
+reviews/	Fonte das avaliações (quantidade e média)
+bookings/	Base para frequência e pontualidade
+missions/	Participação e bonificações extras
+notifications/	Alertas sobre mudança de ranking
+loyalty/	Selos e badges visuais
+safety/	Redução de score em incidentes
+📈 Benefícios Estratégicos
+
+💡 Aumenta motivação interna dos prestadores (gamificação real)
+
+🤝 Cria mais confiança para o cliente (baseado em mérito)
+
+🎯 Facilita controle de qualidade interno
+
+💬 Gera oportunidades de campanhas com base em performance
+
+🧩 Próximos Passos Sugeridos
+Item	Prioridade
+Armazenar histórico de score	Alta
+Exibir evolução semanal no app	Alta
+Ranking por bairro ou zona	Média
+Integração com metrics/	Alta
+Pontuação pública (gamificação)	Alta
+✅ Conclusão
+
+O módulo ranking/ é uma peça fundamental no ecossistema de performance, meritocracia e confiança do LimpeJá. Ele alimenta não só a visibilidade do prestador, mas também impacta diretamente retenção, engajamento e reputação da plataforma.

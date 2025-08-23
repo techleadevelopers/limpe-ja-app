@@ -1,3 +1,4 @@
+// schema.prisma
 // Este arquivo é o ponto de partida para o seu banco de dados.
 // Ele define os modelos de dados e como eles se relacionam.
 generator client {
@@ -23,6 +24,7 @@ enum UserRole {
   PROVIDER
   ADMIN
   SYSTEM // ADICIONADO: Papel para operações internas do sistema (ex: webhooks)
+  SUPPORT_AGENT // NOVO: Papel para agentes de suporte
 }
 
 // NOVO: Enum para o status de verificação do provedor
@@ -66,6 +68,24 @@ enum TransactionType {
   REFUND
 }
 
+// NOVO: Enum para o status de um Payment Intent (cobrança)
+enum PaymentIntentStatus {
+  PENDING // Cobrança criada, aguardando pagamento
+  PAID // Pagamento recebido com sucesso
+  EXPIRED // Cobrança expirada (e.g., QR Code PIX expirou)
+  REFUNDED // Pagamento estornado
+  CHARGEBACK // Pagamento contestado
+}
+
+// NOVO: Enum para os tipos de chave PIX
+enum PixKeyType {
+  CPF
+  CNPJ
+  EMAIL
+  PHONE
+  RANDOM
+}
+
 // NOVO: Enum para o motivo da disputa
 enum DisputeReason {
   SERVICE_NOT_PERFORMED
@@ -82,6 +102,23 @@ enum DisputeStatus {
   IN_REVIEW
   RESOLVED
   REJECTED
+}
+
+// NOVO: Enums para o módulo de suporte
+enum SupportTicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_USER
+  RESOLVED
+  CLOSED
+  ESCALATED // Opcional, se você for usar este status
+}
+
+enum SupportTicketCategory {
+  PAYMENT
+  QUALITY
+  APP
+  OTHER
 }
 
 // ABS: NOVOS ENUMS PARA MÓDULOS AVANÇADOS
@@ -237,6 +274,11 @@ model User {
   missionProgress       MissionProgress[]
   missionEvents         MissionEvent[]
   // ====== FIM MISSIONS ======
+
+  // NOVO: Relações para o módulo de suporte
+  supportTickets        SupportTicket[]  // Tickets abertos pelo usuário
+  supportMessages       SupportMessage[] // Mensagens enviadas pelo usuário
+  assignedTickets       SupportTicket[]  @relation("AssignedTickets") // Tickets atribuídos a este usuário (se for agente/admin)
 }
 
 // Modelo para Cliente
@@ -288,7 +330,7 @@ model Provider {
   ocrResult             Json?
   livenessResult        Json?
   rejectionReason       String?
-  pixKey                String?
+  pixKey                String? // Mantido, embora o PIX de saque seja na transação, pode ser um PIX padrão do provedor
   badges                String[]          @default([])
   subscriptions         Subscription[]
   guaranteeClaims       GuaranteeClaim[]
@@ -383,6 +425,10 @@ model Booking {
   couponId                 String?
   coupon                   Coupon?           @relation(fields: [couponId], references: [id])
   couponUsage              CouponUsage?      @relation("BookingCouponUsage")
+  // NOVO: Relação para o módulo de suporte
+  supportTickets           SupportTicket[]
+  // REMOVIDO: paymentIntentId String? @unique // Esta chave estrangeira foi movida para PaymentIntent
+  paymentIntent            PaymentIntent?    // NOVO: Agora é a back-relation. Prisma infere o nome se não for ambíguo.
 }
 
 // Modelo de Chat
@@ -427,6 +473,7 @@ model Notification {
   createdAt   DateTime @default(now())
   imageUrl    String?
   actionButtons Json?
+  title       String? // NEW: Added title to Notification model
 }
 
 // Modelo de Avaliação
@@ -462,7 +509,7 @@ model Offer {
   updatedAt           DateTime  @updatedAt
 }
 
-// Modelo de Transação Financeira
+// Modelo de Transação Financeira (geral, pode ser o registro de um pagamento ou saque)
 model Transaction {
   id                   String          @id @default(uuid())
   providerId           String
@@ -479,6 +526,38 @@ model Transaction {
   transactionRef       String?
   couponId             String?
   coupon               Coupon?         @relation(fields: [couponId], references: [id])
+  // NOVOS CAMPOS PARA SAQUE VIA PIX
+  pixKeyType           PixKeyType?     // Tipo da chave PIX (CPF, CNPJ, EMAIL, PHONE, RANDOM)
+  pixKey               String?         // A chave PIX em si
+}
+
+// NOVO: Modelo para Payment Intent (representa uma intenção de pagamento/cobrança)
+model PaymentIntent {
+  id                   String              @id @default(uuid())
+  bookingId            String              @unique // Esta é a chave estrangeira
+  booking              Booking             @relation(fields: [bookingId], references: [id]) // Este lado define a relação
+  amountCents          Int                 // Valor em centavos para evitar problemas de ponto flutuante
+  status               PaymentIntentStatus @default(PENDING)
+  gateway              String              // Ex: "PAGSEGURO", "STRIPE", "MERCADOPAGO"
+  externalRef          String?             // ID da transação no gateway de pagamento
+  idempotencyKey       String?             @unique // Chave para garantir idempotência de requisições
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  expiresAt            DateTime?           // Data de expiração da cobrança (e.g., QR Code PIX)
+  qrCodeUrl            String?             // URL do QR Code PIX
+  qrCodeText           String?             // Conteúdo do QR Code PIX (copia e cola)
+  // Relação com eventos de pagamento (para rastrear webhooks, etc.)
+  paymentEvents        PaymentEvent[]
+}
+
+// NOVO: Modelo para eventos de pagamento (webhooks, notificações)
+model PaymentEvent {
+  id            String       @id @default(uuid())
+  paymentIntentId String
+  paymentIntent PaymentIntent @relation(fields: [paymentIntentId], references: [id])
+  type          String       // Ex: "WEBHOOK_PAID", "WEBHOOK_EXPIRED", "MANUAL_CONFIRMATION"
+  payload       Json?        // Conteúdo original do webhook/evento
+  createdAt     DateTime     @default(now())
 }
 
 // Modelo de Disponibilidade do Provedor
@@ -496,7 +575,7 @@ model Availability {
 model FAQItem {
   id          String   @id @default(uuid())
   question    String   @unique
-  answer      String
+  answer    String
   category    String?
   order       Int      @default(0)
   createdAt   DateTime @default(now())
@@ -638,7 +717,7 @@ model CouponUsage {
   couponId     String
   coupon       Coupon   @relation(fields: [couponId], references: [id])
   userId       String
-  user         User     @relation(fields: [userId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
   bookingId    String   @unique
   booking      Booking  @relation("BookingCouponUsage", fields: [bookingId], references: [id])
   appliedValue Decimal  @db.Decimal(10, 2)
@@ -761,3 +840,46 @@ model MissionEvent {
   createdAt DateTime @default(now())
 }
 // ====== FIM MISSIONS ENUMS ======
+
+// NOVO: Modelos para o módulo de suporte
+model SupportTicket {
+  id          String            @id @default(uuid())
+  userId      String
+  user        User              @relation(fields: [userId], references: [id])
+  role        UserRole          // Role do usuário que abriu o ticket (para auditoria)
+  subject     String
+  category    SupportTicketCategory
+  description String
+  bookingId   String?
+  booking     Booking?          @relation(fields: [bookingId], references: [id])
+  status      SupportTicketStatus @default(OPEN)
+  assignedToId String?
+  assignedTo  User?             @relation("AssignedTickets", fields: [assignedToId], references: [id])
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  closedAt    DateTime?
+
+  messages    SupportMessage[]
+  slaLogs     SupportSlaLog[]
+}
+
+model SupportMessage {
+  id          String   @id @default(uuid())
+  ticketId    String
+  ticket      SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  role        UserRole // Role do usuário que enviou a mensagem (para auditoria)
+  body        String
+  attachments String[] // URLs para arquivos no GCS
+  createdAt   DateTime @default(now())
+}
+
+model SupportSlaLog {
+  id          String   @id @default(uuid())
+  ticketId    String
+  ticket      SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  fromStatus  SupportTicketStatus
+  toStatus    SupportTicketStatus
+  createdAt   DateTime @default(now())
+}
