@@ -39,6 +39,7 @@ import { I18nModule } from '../common/i18n/i18n.module';
       { name: 'data_export' },
       { name: 'subscription-generation' },
       { name: 'emails' }, // FIX: Adicionada a fila 'emails'
+      { name: 'support-escalations' }, // <-- ADICIONADO: Registro da fila de escalonamento de suporte
     ),
     PrismaModule,
     HttpModule,

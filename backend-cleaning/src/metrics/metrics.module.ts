@@ -8,6 +8,7 @@ import { PaymentsMetricsRepository } from './repositories/payments.metrics.repo'
 import { ReviewsMetricsRepository } from './repositories/reviews.metrics.repo';
 import { PrismaModule } from '../prisma/prisma.module';
 import { AuthModule } from '../auth/auth.module'; // Para usar JwtAuthGuard
+import { PrivacyPolicy } from './policies/privacy.policy'; // Importe a classe PrivacyPolicy
 
 @Module({
   imports: [PrismaModule, AuthModule], // PrismaModule para acesso ao DB, AuthModule para guards
@@ -17,7 +18,8 @@ import { AuthModule } from '../auth/auth.module'; // Para usar JwtAuthGuard
     BookingsMetricsRepository,
     PaymentsMetricsRepository,
     ReviewsMetricsRepository,
+    PrivacyPolicy, // <-- Adicione PrivacyPolicy aqui para que seja injetável
   ],
-  exports: [MetricsService],
+  exports: [MetricsService], // Se MetricsService for usado por outros módulos
 })
 export class MetricsModule {}

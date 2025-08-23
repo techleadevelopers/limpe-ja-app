@@ -23,7 +23,8 @@ export class MetricsService {
 
     const totalBookings = await this.bookingsRepo.countBookings(userId, from, to);
     const completedBookings = await this.bookingsRepo.countBookings(userId, from, to, 'COMPLETED');
-    const canceledBookings = await this.bookingsRepo.countBookings(userId, from, to, 'CANCELED_BY_CUSTOMER');
+    // CORREÇÃO AQUI: 'CANCELED_BY_CUSTOMER' foi alterado para 'CANCELED'
+    const canceledBookings = await this.bookingsRepo.countBookings(userId, from, to, 'CANCELED');
     const avgRating = await this.reviewsRepo.getAverageRating(userId, from, to);
     const totalSpentCents = await this.paymentsRepo.getTotalSpent(userId, from, to);
 

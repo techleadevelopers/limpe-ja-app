@@ -10,7 +10,9 @@ export interface CheckSlaJobData {
   category: SupportTicketCategory;
 }
 
-@Processor('support-escalations') // Nome da fila
+const QUEUE_NAME = 'support-escalations'; // Definindo o nome da fila como uma constante
+
+@Processor(QUEUE_NAME) // Usando a constante
 export class EscalationsJobProcessor extends WorkerHost {
   constructor(private readonly supportService: SupportService) {
     super();
@@ -24,11 +26,13 @@ export class EscalationsJobProcessor extends WorkerHost {
 
   @OnWorkerEvent('completed')
   onCompleted(job: Job) {
-    console.log(`Job ${job.id} completed for queue ${job.queue.name}`);
+    // Usando o nome da fila diretamente, pois é conhecido
+    console.log(`Job ${job.id} completed for queue ${QUEUE_NAME}`);
   }
 
   @OnWorkerEvent('failed')
   onFailed(job: Job, err: Error) {
-    console.error(`Job ${job.id} failed for queue ${job.queue.name} with error ${err.message}`);
+    // Usando o nome da fila diretamente, pois é conhecido
+    console.error(`Job ${job.id} failed for queue ${QUEUE_NAME} with error ${err.message}`);
   }
 }
