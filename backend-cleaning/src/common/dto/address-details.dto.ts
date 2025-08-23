@@ -1,12 +1,13 @@
 // src/common/dto/address-details.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsUUID, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsNumber, Min } from 'class-validator';
+import { Type } from 'class-transformer';
 
-export class AddressDetailsDto {
-  @ApiProperty({ description: 'ID do endereço', example: 'uuid-do-endereco' })
+export class AddressDetailsDto { // Renomeado de CreateAddressDto
+  @ApiPropertyOptional({ description: 'ID do endereço (opcional, se já existir)', example: 'uuid-do-endereco' })
+  @IsOptional()
   @IsString()
-  @IsUUID()
-  id: string;
+  id?: string; // Adicionado id como opcional
 
   @ApiProperty({ description: 'CEP do endereço', example: '01001000' })
   @IsString()
@@ -26,7 +27,7 @@ export class AddressDetailsDto {
   @ApiPropertyOptional({ description: 'Complemento do endereço', example: 'Apt 101' })
   @IsOptional()
   @IsString()
-  complement: string | null;
+  complement?: string;
 
   @ApiProperty({ description: 'Bairro do endereço', example: 'Centro' })
   @IsString()
@@ -43,8 +44,17 @@ export class AddressDetailsDto {
   @IsNotEmpty()
   state: string;
 
-  constructor(partial: Partial<AddressDetailsDto>) {
+  @ApiProperty({ description: 'Latitude do endereço', example: -23.5505 })
+  @IsNumber()
+  @Type(() => Number)
+  latitude: number;
+
+  @ApiProperty({ description: 'Longitude do endereço', example: -46.6333 })
+  @IsNumber()
+  @Type(() => Number)
+  longitude: number;
+
+  constructor(partial: Partial<AddressDetailsDto>) { // Construtor para aceitar objeto parcial
     Object.assign(this, partial);
-    this.complement = partial.complement === undefined ? null : partial.complement;
   }
 }

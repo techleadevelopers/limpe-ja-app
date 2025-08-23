@@ -1,6 +1,5 @@
-// src/providers/providers.service.ts
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { Address, PricingType, Prisma, ProviderService, Service, VerificationStatus, UserRole } from '@prisma/client'; // Adicionado UserRole para consistência
+import { Address, PricingType, Prisma, ProviderService, Service, VerificationStatus, UserRole, BookingStatus } from '@prisma/client'; // Adicionado UserRole e BookingStatus
 import { File } from 'multer';
 import { CacheService } from '../cache/cache.service';
 import { DocumentProcessingService } from '../document-processing/document-processing.service';
@@ -92,7 +91,7 @@ export type ProviderWithCalculatedRating = {
   documentPhotoFrontUrl?: string | null;
   documentPhotoBackUrl?: string | null;
   selfieWithDocumentUrl?: string | null;
-  // backgroundCheckResult?: Prisma.JsonValue | null; // Mantido como opcional se for necessário para outros contextos
+  backgroundCheckResult?: Prisma.JsonValue | null; // Mantido como opcional se for necessário para outros contextos
   rejectionReason?: string | null;
   ocrResult: Prisma.JsonValue | null;
   livenessResult: Prisma.JsonValue | null;
@@ -102,7 +101,10 @@ export type ProviderWithCalculatedRating = {
     role: UserRole; // Usar UserRole do Prisma
     isVerified: boolean;
     fullName: string; // Adicionado fullName aqui
-  }
+  };
+  // NOVOS CAMPOS PARA MÉTRICAS DE PERFORMANCE
+  acceptanceRate: number; // Alterado para number e não opcional, pois terá um default
+  averageResponseTime: number; // Alterado para number e não opcional, pois terá um default
 };
 
 @Injectable()
@@ -164,7 +166,7 @@ export class ProvidersService {
       })) as ProviderServiceForFrontend[],
       averageRating: averageRating,
       reviewCount: provider.reviewsReceived?.length || 0,
-      yearsOfExperience: provider.yearsOfExperience || null,
+      yearsOfExperience: provider.yearsOfExperience || 0, // Default para 0 se nulo
       fiveStarReviewCount: provider.fiveStarReviewCount || 0,
       monthlyBookingsCount: provider.monthlyBookingsCount || 0,
       cpf: provider.cpf,
@@ -176,7 +178,7 @@ export class ProvidersService {
       documentPhotoFrontUrl: provider.documentPhotoFrontUrl,
       documentPhotoBackUrl: provider.documentPhotoBackUrl,
       selfieWithDocumentUrl: provider.selfieWithDocumentUrl,
-      // backgroundCheckResult: provider.backgroundCheckResult, // Manter se o campo existir no modelo Provider do Prisma
+      backgroundCheckResult: provider.backgroundCheckResult, // Manter se o campo existir no modelo Provider do Prisma
       rejectionReason: provider.rejectionReason,
       ocrResult: provider.ocrResult,
       livenessResult: provider.livenessResult,
@@ -186,7 +188,10 @@ export class ProvidersService {
         role: provider.user.role,
         isVerified: provider.user.isVerified,
         fullName: provider.user.fullName, // Adicionado fullName aqui
-      }
+      },
+      // NOVOS CAMPOS: AGORA TIPADOS DIRETAMENTE DO MODELO PRISMA
+      acceptanceRate: provider.acceptanceRate,
+      averageResponseTime: provider.averageResponseTime,
     };
   }
 
@@ -214,6 +219,8 @@ export class ProvidersService {
 
         // Invalida o cache de provedores após a atualização
         await this.cacheService.del(this.PROVIDERS_CACHE_KEY);
+        await this.cacheService.del(`${this.PROVIDERS_CACHE_KEY}:${provider.id}`);
+        await this.cacheService.del(`${this.PROVIDERS_CACHE_KEY}:user:${userId}`);
         this.logger.log(`[ProvidersService] updateAvatar: Cache de provedores invalidado.`);
 
         this.logger.log(`[ProvidersService] updateAvatar: AvatarUrl no banco de dados atualizado com sucesso para userId ${userId}.`);
@@ -493,7 +500,7 @@ export class ProvidersService {
               p."documentPhotoFrontUrl",
               p."documentPhotoBackUrl",
               p."selfieWithDocumentUrl",
-              p."backgroundCheckResult", -- <--- RE-ADICIONADO: Campo backgroundCheckResult
+              p."backgroundCheckResult",
               p."rejectionReason",
               p."ocrResult",
               p."livenessResult",
@@ -501,7 +508,7 @@ export class ProvidersService {
               u.email,
               u.role,
               u."isVerified",
-              u."fullName" AS user_fullName, -- <--- ADICIONADO: fullName do User
+              u."fullName" AS user_fullName,
               a.id AS "addressId",
               a.cep,
               a.street,
@@ -546,7 +553,9 @@ export class ProvidersService {
                   ORDER BY ps.id
               ) FILTER (WHERE ps.id IS NOT NULL) AS "providerServicesAgg",
               p."fiveStarReviewCount",
-              p."monthlyBookingsCount"
+              p."monthlyBookingsCount",
+              p."acceptanceRate", -- NOVO CAMPO: Taxa de aceitação
+              p."averageResponseTime" -- NOVO CAMPO: Tempo médio de resposta
             FROM
                 "Provider" p
             JOIN
@@ -567,7 +576,7 @@ export class ProvidersService {
                 ${serviceId ? Prisma.sql`AND ps."serviceId" = ${serviceId}` : Prisma.empty}
                 ${location ? Prisma.sql`AND (a.city ILIKE ${'%' + location + '%'} OR a.state ILIKE ${'%' + location + '%'} OR a.street ILIKE ${'%' + location + '%'} OR a.neighborhood ILIKE ${'%' + location + '%'})` : Prisma.empty}
             GROUP BY
-                p.id, u.email, u.role, u."isVerified", u."fullName", a.id, a.cep, a.street, a.number, a.complement, a.neighborhood, a.city, a.state, a."providerId", a.location, p."fiveStarReviewCount", p."monthlyBookingsCount", p.badges
+                p.id, u.email, u.role, u."isVerified", u."fullName", a.id, a.cep, a.street, a.number, a.complement, a.neighborhood, a.city, a.state, a."providerId", a.location, p."fiveStarReviewCount", p."monthlyBookingsCount", p.badges, p."acceptanceRate", p."averageResponseTime"
             ORDER BY
                 distance_km ASC
             LIMIT ${limit || 10} OFFSET ${offset || 0};
@@ -598,7 +607,7 @@ export class ProvidersService {
             monthlyBookingsCount: rp.monthlyBookingsCount,
             documentPhotoBackUrl: rp.documentPhotoBackUrl,
             selfieWithDocumentUrl: rp.selfieWithDocumentUrl,
-            backgroundCheckResult: rp.backgroundCheckResult, // Manter se o campo existir no modelo Provider do Prisma
+            backgroundCheckResult: rp.backgroundCheckResult,
             rejectionReason: rp.rejectionReason,
             ocrResult: rp.ocrResult,
             livenessResult: rp.livenessResult,
@@ -624,8 +633,9 @@ export class ProvidersService {
             // Então, inicializamos como arrays vazios para satisfazer o tipo ProviderWithIncludes
             reviewsReceived: [],
             bookings: [],
-            // As propriedades averageRating e reviewCount são calculadas diretamente na query RAW
-            // e passadas para mapProviderToCalculatedRating via o parâmetro 'rp'
+            // NOVOS CAMPOS:
+            acceptanceRate: rp.acceptanceRate,
+            averageResponseTime: rp.averageResponseTime,
           };
           return this.mapProviderToCalculatedRating(providerWithIncludes, parseFloat(rp.distance_km));
         });
@@ -867,5 +877,55 @@ export class ProvidersService {
     }).sort((a, b) => b.score - a.score);
 
     return scoredProviders.map(sp => sp.provider);
+  }
+
+  // NOVO MÉTODO: Placeholder para atualizar métricas de performance do provedor
+  // A implementação real dependeria de como você coleta esses dados (ex: via webhooks, jobs agendados)
+  async updateProviderPerformanceMetrics(providerId: string) {
+    this.logger.log(`[ProvidersService] updateProviderPerformanceMetrics: Calculando e atualizando métricas para provedor ${providerId}.`);
+
+    // Exemplo de cálculo (você precisaria buscar os dados relevantes do DB)
+    const provider = await this.prisma.provider.findUnique({
+      where: { id: providerId },
+      include: {
+        bookings: {
+          where: {
+            status: { in: [BookingStatus.CONFIRMED, BookingStatus.REJECTED, BookingStatus.CANCELED] }
+          }
+        },
+        // Assumindo que você tem um modelo para mensagens ou logs de chat para calcular o tempo de resposta
+        // chatMessages: { ... }
+      }
+    });
+
+    if (!provider) {
+      this.logger.warn(`Provedor ${providerId} não encontrado para atualização de métricas.`);
+      return;
+    }
+
+    // Lógica de cálculo da taxa de aceitação
+    const totalRequests = provider.bookings.length;
+    const acceptedRequests = provider.bookings.filter(b => b.status === BookingStatus.CONFIRMED).length;
+    const acceptanceRate = totalRequests > 0 ? (acceptedRequests / totalRequests) * 100 : 0;
+
+    // Lógica de cálculo do tempo médio de resposta (exemplo simplificado)
+    // Isso exigiria um histórico de mensagens e timestamps de envio/resposta
+    const averageResponseTime = Math.floor(Math.random() * 60); // Exemplo: 0-59 minutos
+
+    await this.prisma.provider.update({
+      where: { id: providerId },
+      data: {
+        acceptanceRate: Math.round(acceptanceRate),
+        averageResponseTime: averageResponseTime,
+      },
+    });
+
+    this.logger.log(`Métricas atualizadas para provedor ${providerId}: Taxa de Aceitação: ${acceptanceRate.toFixed(2)}%, Tempo Médio de Resposta: ${averageResponseTime}min.`);
+
+    // Invalida o cache para que as novas métricas sejam buscadas
+    await this.cacheService.del(`${this.PROVIDERS_CACHE_KEY}:${providerId}`);
+    await this.cacheService.del(`${this.PROVIDERS_CACHE_KEY}:user:${provider.userId}`);
+    await this.cacheService.del(this.PROVIDERS_CACHE_KEY);
+    await this.cacheService.del(`${this.PROVIDERS_CACHE_KEY}:top_rated_experienced`);
   }
 }

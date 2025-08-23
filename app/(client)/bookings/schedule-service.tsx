@@ -16,14 +16,17 @@ import {
     View,
     TextInput, // Adicionado para o campo de cupom
 } from 'react-native';
+import { useTranslation } from 'react-i18next'; // Importar i18n
+import Toast from '../../../components/Toast'; // Importar Toast
 
 // --- IMPORTAÇÕES DE SERVIÇOS E TIPAGENS DO SEU BACKEND REAL ---
 import { useAuth } from '../../../hooks/useAuth';
 import { createBooking } from '../../../services/bookingService';
 import { getProviderAvailability, getProviderDetails } from '../../../services/providerService';
+import { applyCoupon } from '../../../services/clientService'; // NOVO: Importar applyCoupon
 
 // Tipagens do seu backend original
-import { BookingAddress, BookingDetails, CreateBookingDto } from '../../../types/backend/bookings';
+import { BookingAddress, BookingDetails, CreateBookingDto, BookingPricing } from '../../../types/backend/bookings'; // Importar BookingPricing
 import {
     ProviderAvailability,
     ProviderDisplayInfo,
@@ -58,6 +61,7 @@ interface BookingSummaryPreviewProps {
     discountAmount: number;
     finalPrice: number;
     onShowCancellationPolicy: () => void;
+    t: any; // Adicionar prop t para i18n
 }
 
 interface CouponInputSectionProps {
@@ -70,6 +74,7 @@ interface CouponInputSectionProps {
     couponFeedbackAnim: Animated.Value; // Nova prop para feedback de cupom
     couponFeedbackColor: string; // Nova prop para cor do feedback
     couponFeedbackIcon: string; // Nova prop para ícone do feedback
+    t: any; // Adicionar prop t para i18n
 }
 // --- FIM NOVAS INTERFACES ---
 
@@ -86,20 +91,21 @@ const BookingSummaryPreview = ({
     subtotal,
     discountAmount,
     finalPrice,
-    onShowCancellationPolicy
+    onShowCancellationPolicy,
+    t, // Receber t
 }: BookingSummaryPreviewProps) => { // Aplicando a interface aqui
     if (!selectedProviderService || !selectedTime) return null;
 
     const formattedDate = selectedDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
     const serviceDetailsText = useMemo(() => {
         if (selectedProviderService.pricingType === PricingType.HOURLY && durationInMinutes) {
-            return `${durationInMinutes} minutos`;
+            return `${durationInMinutes} ${t('common.minutes_short')}`; // Traduzir "minutos"
         }
         if (selectedProviderService.pricingType === PricingType.BY_SIZE && squareMeters) {
             return `${squareMeters} m²`;
         }
         return 'N/A';
-    }, [selectedProviderService, durationInMinutes, squareMeters]);
+    }, [selectedProviderService, durationInMinutes, squareMeters, t]);
 
     // Animação para o preço final
     const finalPriceAnim = useRef(new Animated.Value(0)).current;
@@ -142,13 +148,13 @@ const BookingSummaryPreview = ({
 
     return (
         <Animated.View style={[styles.card, { marginTop: 20 }]}>
-            <Text style={styles.sectionTitle}>Revise seu Agendamento</Text>
+            <Text style={styles.sectionTitle}>{t('schedule_service.review_booking_title')}</Text>
             <View style={styles.summaryItem}>
                 <Animated.View style={animatedIconStyle}>
                     <Ionicons name="briefcase-outline" size={20} color="#4A90E2" style={styles.summaryIcon} />
                 </Animated.View>
                 <Text style={styles.summaryText}>
-                    <Text style={styles.summaryLabel}>Serviço:</Text> {selectedProviderService.service?.name}
+                    <Text style={styles.summaryLabel}>{t('schedule_service.summary_service')}</Text> {selectedProviderService.service?.name}
                 </Text>
             </View>
             <View style={styles.summaryItem}>
@@ -156,7 +162,7 @@ const BookingSummaryPreview = ({
                     <Ionicons name="person-outline" size={20} color="#4A90E2" style={styles.summaryIcon} />
                 </Animated.View>
                 <Text style={styles.summaryText}>
-                    <Text style={styles.summaryLabel}>Provedor:</Text> {provider?.fullName}
+                    <Text style={styles.summaryLabel}>{t('schedule_service.summary_provider')}</Text> {provider?.fullName}
                 </Text>
             </View>
             <View style={styles.summaryItem}>
@@ -164,7 +170,7 @@ const BookingSummaryPreview = ({
                     <Ionicons name="calendar-outline" size={20} color="#4A90E2" style={styles.summaryIcon} />
                 </Animated.View>
                 <Text style={styles.summaryText}>
-                    <Text style={styles.summaryLabel}>Data e Hora:</Text> {formattedDate}, às {selectedTime}
+                    <Text style={styles.summaryLabel}>{t('schedule_service.summary_date_time')}</Text> {formattedDate}, {t('common.at')} {selectedTime}
                 </Text>
             </View>
             <View style={styles.summaryItem}>
@@ -172,7 +178,7 @@ const BookingSummaryPreview = ({
                     <Ionicons name="location-outline" size={20} color="#4A90E2" style={styles.summaryIcon} />
                 </Animated.View>
                 <Text style={styles.summaryText}>
-                    <Text style={styles.summaryLabel}>Endereço:</Text> {address.street}, {address.number} - {address.neighborhood}, {address.city}/{address.state}
+                    <Text style={styles.summaryLabel}>{t('schedule_service.summary_address')}</Text> {address.street}, {address.number} - {address.neighborhood}, {address.city}/{address.state}
                 </Text>
             </View>
             {(selectedProviderService.pricingType === PricingType.HOURLY || selectedProviderService.pricingType === PricingType.BY_SIZE) && (
@@ -181,45 +187,45 @@ const BookingSummaryPreview = ({
                         <Ionicons name="timer-outline" size={20} color="#4A90E2" style={styles.summaryIcon} />
                     </Animated.View>
                     <Text style={styles.summaryText}>
-                        <Text style={styles.summaryLabel}>Detalhes do Serviço:</Text> {serviceDetailsText}
+                        <Text style={styles.summaryLabel}>{t('schedule_service.summary_service_details')}</Text> {serviceDetailsText}
                     </Text>
                 </View>
             )}
             <View style={styles.priceSummary}>
-                <Text style={styles.priceLabel}>Subtotal:</Text>
+                <Text style={styles.priceLabel}>{t('schedule_service.subtotal')}</Text>
                 <Text style={styles.priceValue}>R$ {subtotal.toFixed(2).replace('.', ',')}</Text>
             </View>
             {discountAmount > 0 && (
                 <View style={styles.priceSummary}>
-                    <Text style={styles.priceLabel}>Desconto:</Text>
+                    <Text style={styles.priceLabel}>{t('schedule_service.discount')}</Text>
                     <Text style={[styles.priceValue, styles.discountValue]}>- R$ {discountAmount.toFixed(2).replace('.', ',')}</Text>
                 </View>
             )}
             <View style={styles.totalPriceSummary}>
-                <Text style={styles.totalPriceLabel}>Total a Pagar:</Text>
+                <Text style={styles.totalPriceLabel}>{t('schedule_service.total_to_pay')}</Text>
                 <Animated.Text style={[styles.totalPriceValue, { transform: [{ scale: finalPriceAnim.interpolate({ inputRange: [0, 1], outputRange: [0.95, 1] }) }] }]}>
                     R$ {finalPrice.toFixed(2).replace('.', ',')}
                 </Animated.Text>
             </View>
             <TouchableOpacity onPress={onShowCancellationPolicy} style={styles.cancellationPolicyLink}>
-                <Text style={styles.cancellationPolicyText}>Política de Cancelamento</Text>
+                <Text style={styles.cancellationPolicyText}>{t('schedule_service.cancellation_policy')}</Text>
             </TouchableOpacity>
         </Animated.View>
     );
 };
 
 // Componente para o campo de cupom
-const CouponInputSection = ({ couponCode, setCouponCode, onApplyCoupon, isApplyingCoupon, discountAmount, couponInputAnim, couponFeedbackAnim, couponFeedbackColor, couponFeedbackIcon }: CouponInputSectionProps) => { // Aplicando a interface aqui
+const CouponInputSection = ({ couponCode, setCouponCode, onApplyCoupon, isApplyingCoupon, discountAmount, couponInputAnim, couponFeedbackAnim, couponFeedbackColor, couponFeedbackIcon, t }: CouponInputSectionProps) => { // Aplicando a interface aqui
     return (
         <Animated.View style={[styles.card, { marginTop: 20 }]}>
-            <Text style={styles.sectionTitle}>Cupom de Desconto</Text>
+            <Text style={styles.sectionTitle}>{t('schedule_service.coupon_section_title')}</Text>
             <Animated.View style={[styles.couponInputContainer, { borderColor: couponInputAnim.interpolate({
                 inputRange: [0, 1],
                 outputRange: ['#E0E0E0', '#4A90E2']
             }) }]}>
                 <TextInput
                     style={styles.couponInput}
-                    placeholder="Insira seu código de cupom"
+                    placeholder={t('schedule_service.coupon_input_placeholder')}
                     value={couponCode}
                     onChangeText={setCouponCode}
                     autoCapitalize="characters"
@@ -235,7 +241,7 @@ const CouponInputSection = ({ couponCode, setCouponCode, onApplyCoupon, isApplyi
                     {isApplyingCoupon ? (
                         <ActivityIndicator size="small" color="#FFF" />
                     ) : (
-                        <Text style={styles.applyCouponButtonText}>Aplicar</Text>
+                        <Text style={styles.applyCouponButtonText}>{t('schedule_service.apply_coupon_button')}</Text>
                     )}
                 </TouchableOpacity>
             </Animated.View>
@@ -243,7 +249,7 @@ const CouponInputSection = ({ couponCode, setCouponCode, onApplyCoupon, isApplyi
                 <Animated.View style={[styles.couponFeedbackContainer, { opacity: couponFeedbackAnim, transform: [{ translateY: couponFeedbackAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }] }]}>
                     <Ionicons name={couponFeedbackIcon as any} size={18} color={couponFeedbackColor} />
                     <Text style={[styles.couponAppliedText, { color: couponFeedbackColor }]}>
-                        Cupom aplicado! Você economizou R$ {discountAmount.toFixed(2).replace('.', ',')}.
+                        {t('schedule_service.coupon_applied_message', { discountValue: discountAmount.toFixed(2).replace('.', ',') })}
                     </Text>
                 </Animated.View>
             )}
@@ -263,6 +269,7 @@ export default function ScheduleServiceScreen() {
     const router = useRouter();
     const { user } = useAuth();
     const typedUser = user as UserProfile | null;
+    const { t } = useTranslation(); // Inicializar i18n
 
     // CAPTURA DOS PARÂMETROS DA URL
     const { providerId, serviceId, servicePrice } = useLocalSearchParams();
@@ -361,7 +368,7 @@ export default function ScheduleServiceScreen() {
         return 3; // Confirmação
     }, [selectedTime, selectedProviderService, durationInMinutes, squareMeters]);
 
-    const stepTitles = ["Data e Hora", "Detalhes do Serviço", "Confirmação"];
+    const stepTitles = [t('schedule_service.progress_step_date_time'), t('schedule_service.progress_step_service_details'), t('schedule_service.progress_step_confirmation')]; // Traduzir títulos
     // --- FIM NOVO: Lógica para o indicador de progresso ---
 
     // MOVIDO PARA CIMA: Declaração de prefetchAvailability
@@ -551,53 +558,41 @@ export default function ScheduleServiceScreen() {
 
             setSelectedTime(time);
         } else {
-            Alert.alert("Horário Indisponível", "Este horário já está agendado ou não disponível. Por favor, selecione outro.");
+            Alert.alert(t('schedule_service.unavailable_time_slot'), t('schedule_service.unavailable_time_slot_message'));
         }
-    }, [displaySlotsInfo, selectionAnim]);
+    }, [displaySlotsInfo, selectionAnim, t]);
 
     // --- NOVO: Função para aplicar cupom ---
     const handleApplyCoupon = useCallback(async () => {
         if (!couponCode) {
-            Alert.alert("Erro", "Por favor, insira um código de cupom.");
+            Toast.show({
+                type: 'error',
+                text1: t('common.error'),
+                text2: t('offers.invalid_coupon'),
+            });
             return;
         }
         setIsApplyingCoupon(true);
         couponFeedbackAnim.setValue(0); // Reset animation
 
         try {
-            // Simulação de chamada de API para aplicar cupom
-            // Em um cenário real, você chamaria seu couponService aqui:
-            // const response = await applyCoupon(couponCode, bookingData);
-            // setDiscountAmount(response.discountValue);
+            // Em um cenário real, você precisaria de um bookingId temporário ou de um endpoint para validar o cupom sem criar o agendamento
+            // Por simplicidade, vamos simular que o bookingId já existe ou que a validação de cupom é independente
+            // Se o backend exigir um bookingId, você precisaria criá-lo primeiro (ex: um bookingId temporário ou rascunho)
+            // Para este exemplo, vamos usar um bookingId mock ou assumir que a API de cupom não precisa de um bookingId para validação inicial
+            const mockBookingId = 'mock-booking-id-for-coupon-validation'; // Substitua por um bookingId real se necessário
 
-            // Simulação:
-            let newDiscount = 0;
-            let feedbackMessage = "";
-            let feedbackColor = "";
-            let feedbackIcon = "";
-
-            if (couponCode.toUpperCase() === 'LIMPEJA10') {
-                newDiscount = 10;
-                feedbackMessage = "Cupom LIMPEJA10 aplicado! Você ganhou R$ 10 de desconto.";
-                feedbackColor = '#28A745'; // Sucesso
-                feedbackIcon = 'checkmark-circle';
-            } else if (couponCode.toUpperCase() === 'PRIMEIRA20') {
-                newDiscount = 20;
-                feedbackMessage = "Cupom PRIMEIRA20 aplicado! Você ganhou R$ 20 de desconto.";
-                feedbackColor = '#28A745'; // Sucesso
-                feedbackIcon = 'checkmark-circle';
-            }
-            else {
-                newDiscount = 0;
-                feedbackMessage = "Cupom inválido ou expirado.";
-                feedbackColor = '#D32F2F'; // Erro
-                feedbackIcon = 'close-circle';
-            }
+            const result = await applyCoupon(mockBookingId, couponCode); // Chamar a API real
+            const newDiscount = result.discountValue || 0;
 
             setDiscountAmount(newDiscount);
-            setCouponFeedbackColor(feedbackColor);
-            setCouponFeedbackIcon(feedbackIcon);
-            Alert.alert(newDiscount > 0 ? "Sucesso" : "Erro", feedbackMessage);
+            setCouponFeedbackColor('#28A745'); // Sucesso
+            setCouponFeedbackIcon('checkmark-circle');
+            Toast.show({
+                type: 'success',
+                text1: t('common.success'),
+                text2: t('offers.coupon_applied_success', { value: newDiscount.toFixed(2).replace('.', ',') }),
+            });
 
             Animated.timing(couponFeedbackAnim, {
                 toValue: 1,
@@ -620,7 +615,11 @@ export default function ScheduleServiceScreen() {
             setDiscountAmount(0);
             setCouponFeedbackColor('#D32F2F'); // Erro
             setCouponFeedbackIcon('close-circle');
-            Alert.alert("Erro", error.response?.data?.message || "Não foi possível aplicar o cupom.");
+            Toast.show({
+                type: 'error',
+                text1: t('common.error'),
+                text2: error.response?.data?.message || t('offers.invalid_coupon'),
+            });
             Animated.timing(couponFeedbackAnim, {
                 toValue: 1,
                 duration: 300,
@@ -639,23 +638,23 @@ export default function ScheduleServiceScreen() {
         } finally {
             setIsApplyingCoupon(false);
         }
-    }, [couponCode, couponFeedbackAnim]);
+    }, [couponCode, couponFeedbackAnim, t]);
     // --- FIM NOVO: Função para aplicar cupom ---
 
     // --- NOVO: Função para exibir política de cancelamento ---
     const showCancellationPolicy = useCallback(() => {
         Alert.alert(
-            "Política de Cancelamento",
-            "Você pode cancelar seu agendamento gratuitamente até 24 horas antes do horário programado. Após esse período, uma taxa de cancelamento pode ser aplicada. Para mais detalhes, consulte nossos Termos de Serviço."
+            t('schedule_service.cancellation_policy_title'),
+            t('schedule_service.cancellation_policy_message')
         );
-    }, []);
+    }, [t]);
     // --- FIM NOVO: Função para exibir política de cancelamento ---
 
     const handleConfirmBooking = useCallback(async () => {
         // Validações iniciais
         if (!typedUser?.id || !provider?.id || !selectedProviderService?.id || !selectedDate || !selectedTime ||
             !address.street || !address.number || !address.neighborhood || !address.city || !address.state) {
-            Alert.alert("Erro", "Por favor, preencha todos os campos necessários para o agendamento, incluindo o endereço completo e selecione um horário.");
+            Alert.alert(t('schedule_service.booking_error_title'), t('schedule_service.booking_error_message'));
             return;
         }
 
@@ -664,11 +663,11 @@ export default function ScheduleServiceScreen() {
         
         // Validação adicional para campos dinâmicos
         if (selectedProviderService.pricingType === PricingType.HOURLY && (durationInMinutes == null || durationInMinutes <= 0)) {
-            Alert.alert("Erro", "Por favor, insira a duração do serviço em minutos.");
+            Alert.alert(t('schedule_service.booking_error_title'), t('schedule_service.booking_error_duration_size', { field: t('common.duration') })); // Traduzir "duração"
             return;
         }
         if (selectedProviderService.pricingType === PricingType.BY_SIZE && (squareMeters == null || squareMeters <= 0)) {
-            Alert.alert("Erro", "Por favor, insira a área do serviço em metros quadrados.");
+            Alert.alert(t('schedule_service.booking_error_title'), t('schedule_service.booking_error_duration_size', { field: t('common.area') })); // Traduzir "área"
             return;
         }
 
@@ -708,21 +707,26 @@ export default function ScheduleServiceScreen() {
                     paymentMethod: 'PIX', // Pode ser dinâmico no futuro
                 }
             });
+            Toast.show({
+                type: 'success',
+                text1: t('common.success'),
+                text2: t('schedule_service.booking_success_message'),
+            });
 
         } catch (error: any) {
             console.error("Erro ao agendar serviço:", error.response?.data || error.message);
-            Alert.alert("Erro", error.response?.data?.message || "Não foi possível agendar o serviço.");
+            Alert.alert(t('common.error'), error.response?.data?.message || t('common.network_error'));
         } finally {
             setIsBooking(false);
         }
-    }, [typedUser, provider, selectedDate, selectedTime, address, selectedProviderService, notes, router, durationInMinutes, squareMeters, finalCalculatedPrice, couponCode, discountAmount]);
+    }, [typedUser, provider, selectedDate, selectedTime, address, selectedProviderService, notes, router, durationInMinutes, squareMeters, finalCalculatedPrice, couponCode, discountAmount, t]);
 
     useEffect(() => {
         const loadInitialData = async () => {
             setIsLoading(true);
 
             if (!paramProviderId || !paramServiceId || !typedUser?.id) {
-                Alert.alert("Erro de Navegação", "Dados essenciais ausentes. Tente novamente.");
+                Alert.alert(t('common.error'), t('schedule_service.navigation_error_essential_data'));
                 router.replace('/explore');
                 setIsLoading(false);
                 return;
@@ -737,7 +741,7 @@ export default function ScheduleServiceScreen() {
                 );
 
                 if (!foundService) {
-                    Alert.alert("Erro", "O serviço selecionado não está disponível para este provedor.");
+                    Alert.alert(t('common.error'), t('schedule_service.service_not_available'));
                     router.replace('/explore');
                     setIsLoading(false);
                     return;
@@ -766,8 +770,8 @@ export default function ScheduleServiceScreen() {
                     });
                 } else {
                     Alert.alert(
-                        "Endereço Necessário",
-                        "Seu endereço não está completo. Por favor, preencha para prosseguir."
+                        t('schedule_service.address_needed_title'),
+                        t('schedule_service.address_needed_message')
                     );
                 }
 
@@ -782,14 +786,14 @@ export default function ScheduleServiceScreen() {
 
             } catch (error: any) {
                 console.error("Erro ao carregar dados iniciais:", error.response?.data || error.message);
-                Alert.alert("Erro", error.response?.data?.message || "Não foi possível carregar os dados para agendamento.");
+                Alert.alert(t('common.error'), error.response?.data?.message || t('common.network_error'));
                 router.replace('/explore');
             } finally {
                 setIsLoading(false);
             }
         };
         loadInitialData();
-    }, [paramProviderId, typedUser?.id, paramServiceId, router, prefetchAvailability]);
+    }, [paramProviderId, typedUser?.id, paramServiceId, router, prefetchAvailability, t]);
 
     const animateShine = useCallback(() => {
         shineAnim.setValue(-SCREEN_WIDTH * 0.3);
@@ -826,7 +830,7 @@ export default function ScheduleServiceScreen() {
                     availabilityCache.set(cacheKey, backendResponse);
                 } catch (err: any) {
                     console.error("Erro ao carregar horários para data:", err.response?.data || err.message);
-                    Alert.alert("Erro", err.response?.data?.message || "Não foi possível carregar os horários disponíveis.");
+                    Alert.alert(t('common.error'), err.response?.data?.message || t('schedule_service.error_fetching_slots'));
                     setDisplaySlotsInfo([]);
                     setIsFetchingSlots(false);
                     return;
@@ -872,7 +876,7 @@ export default function ScheduleServiceScreen() {
             setIsFetchingSlots(false);
         };
         fetchAndProcessSlotsForDate();
-    }, [selectedDate, provider?.id]);
+    }, [selectedDate, provider?.id, t]);
 
     const isButtonDisabled = !selectedTime || !selectedProviderService || isBooking ||
         !address.street || !address.number || !address.neighborhood || !address.city || !address.state ||
@@ -884,18 +888,18 @@ export default function ScheduleServiceScreen() {
         if (finalCalculatedPrice > 0) {
             return `R$ ${finalCalculatedPrice.toFixed(2).replace('.', ',')}`;
         } else {
-            return "Selecione Data, Hora e Endereço";
+            return t('schedule_service.select_date_time_address');
         }
-    }, [finalCalculatedPrice]);
+    }, [finalCalculatedPrice, t]);
     // --- Fim da lógica do texto do botão de confirmação ---
 
     // Mova o retorno condicional para *depois* de todas as declarações de Hooks
     if (isLoading) {
         return (
             <View style={styles.centeredFeedback}>
-                <Stack.Screen options={{ title: "Carregando..." }} />
+                <Stack.Screen options={{ title: t("common.loading"), headerShown: false }} />
                 <ActivityIndicator size="large" color="#2A72E7" />
-                <Text style={{ marginTop: 10, color: '#555' }}>Carregando dados...</Text>
+                <Text style={{ marginTop: 10, color: '#555' }}>{t('schedule_service.loading_initial_data')}</Text>
             </View>
         );
     }
@@ -951,7 +955,7 @@ export default function ScheduleServiceScreen() {
 
             <ScheduleHeader
                 onBackPress={() => router.back()}
-                headerTitle="Agendar"
+                headerTitle={t('schedule_service.header_title')}
                 fadeAnim={fadeAnim}
                 slideUpAnim={slideUpAnim}
             />
@@ -1035,7 +1039,7 @@ export default function ScheduleServiceScreen() {
                     opacity: fadeAnim
                 }}>
                     <TimeSlotsSection
-                        title={`Horários Disponíveis - ${selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}`}
+                        title={`${t('schedule_service.available_times')} - ${selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}`}
                         displaySlotsInfo={displaySlotsInfo}
                         isLoading={isFetchingSlots}
                         selectedTime={selectedTime}
@@ -1090,6 +1094,7 @@ export default function ScheduleServiceScreen() {
                     couponFeedbackAnim={couponFeedbackAnim}
                     couponFeedbackColor={couponFeedbackColor}
                     couponFeedbackIcon={couponFeedbackIcon}
+                    t={t} // Passar t para o componente
                 />
                 {/* FIM NOVO: Seção de Cupom de Desconto */}
 
@@ -1106,6 +1111,7 @@ export default function ScheduleServiceScreen() {
                     discountAmount={discountAmount}
                     finalPrice={finalCalculatedPrice}
                     onShowCancellationPolicy={showCancellationPolicy}
+                    t={t} // Passar t para o componente
                 />
                 {/* FIM NOVO: Resumo de Confirmação Final */}
 
@@ -1116,7 +1122,7 @@ export default function ScheduleServiceScreen() {
                 <View style={styles.floatingSummaryContainer}>
                     <View style={styles.floatingSummaryContent}>
                         <Text style={styles.floatingSummaryText}>
-                            {selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} às {selectedTime}
+                            {selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} {t('common.at')} {selectedTime}
                         </Text>
                         <Text style={styles.floatingSummaryPrice}>
                             R$ {finalCalculatedPrice.toFixed(2).replace('.', ',')}

@@ -1,42 +1,44 @@
-// app/(client)/explore/components/home/SecaoPrestadores.tsx
-
-import { Ionicons } from '@expo/vector-icons';
+// components/client/explore/home/SecaoContainer.tsx
 import React, { useRef } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated } from 'react-native'; // Importado Animated
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
-import { ProviderDisplayInfo } from '../../../../types/backend/providers';
-
-interface SecaoPrestadoresProps {
+// Torne SecaoContainer genérico adicionando <T>
+interface SecaoContainerProps<T> {
   titulo: string;
-  data: ProviderDisplayInfo[];
+  data: T[]; // Tipo genérico para dados
   onVerTudoPress: () => void;
   titleColor?: string;
   noDataText?: string;
   horizontal?: boolean;
-  renderItem: ({ item, index }: { item: ProviderDisplayInfo; index: number }) => React.ReactElement | null;
+  // Tipo genérico para a função renderItem
+  renderItem: ({ item, index }: { item: T; index: number }) => React.ReactElement | null;
 }
 
-const SecaoPrestadores: React.FC<SecaoPrestadoresProps> = ({
+// Use React.FC com o tipo genérico
+// Adicionei uma restrição a T para garantir que tenha uma propriedade 'id'
+// para ser usada como 'key' na renderização da lista.
+const SecaoContainer = <T extends { id: string | number } /* Restrição opcional */>({
   titulo,
   data,
   onVerTudoPress,
   titleColor = '#202633',
-  noDataText = 'Nenhum prestador disponível no momento.',
+  noDataText = 'Nenhum item disponível no momento.',
   horizontal = false,
   renderItem,
-}) => {
-  const arrowAnim = useRef(new Animated.Value(0)).current; // Animação para a seta
+}: SecaoContainerProps<T>) => {
+  const arrowAnim = useRef(new Animated.Value(0)).current;
 
   const onPressInViewAll = () => {
     Animated.spring(arrowAnim, {
-      toValue: 5, // Desloca a seta para a frente
+      toValue: 5,
       useNativeDriver: true,
     }).start();
   };
 
   const onPressOutViewAll = () => {
     Animated.spring(arrowAnim, {
-      toValue: 0, // Retorna a seta à posição original
+      toValue: 0,
       friction: 3,
       tension: 40,
       useNativeDriver: true,
@@ -64,7 +66,12 @@ const SecaoPrestadores: React.FC<SecaoPrestadoresProps> = ({
 
       <ScrollView horizontal={horizontal} showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cardsScrollContainer}>
         {data.length > 0 ? (
-          data.map((item, index) => renderItem({ item, index }))
+          data.map((item, index) => (
+            // Use item.id para a chave se T tiver uma propriedade 'id'
+            <React.Fragment key={item.id}>
+              {renderItem({ item, index })}
+            </React.Fragment>
+          ))
         ) : (
           <Text style={styles.emptyText}>{noDataText}</Text>
         )}
@@ -75,8 +82,8 @@ const SecaoPrestadores: React.FC<SecaoPrestadoresProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 2,
-    marginBottom: 5,
+    marginTop: 20, // Ajuste conforme necessário
+    marginBottom: 10,
     backgroundColor: '#F4F7FC',
   },
   header: {
@@ -114,4 +121,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default SecaoPrestadores;
+export default SecaoContainer;

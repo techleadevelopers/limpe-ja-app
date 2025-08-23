@@ -1,7 +1,6 @@
-// src/auth/guards/roles.guard.ts
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { UserRole } from '../../common/constants/roles.enum';
+import { UserRole } from '@prisma/client';               // <- alinhado ao resto do app
 import { ROLES_KEY } from '../decorators/roles.decorator';
 
 @Injectable()

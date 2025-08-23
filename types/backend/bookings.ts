@@ -122,3 +122,22 @@ export interface UpdateBookingStatusDto {
   status: BookingStatus;
   reason?: string;
 }
+
+/**
+ * NOVO: Tipagem para o cupom aplicado.
+ */
+export type AppliedCoupon = {
+  code: string;
+  kind: 'PERCENT' | 'FIXED';
+  value: number;
+};
+
+/**
+ * NOVO: Tipagem para detalhes de precificação de um agendamento.
+ */
+export type BookingPricing = {
+  subtotal: number;
+  discountValue?: number;
+  total: number;
+  appliedCoupon?: AppliedCoupon;
+};

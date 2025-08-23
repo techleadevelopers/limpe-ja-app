@@ -15,7 +15,10 @@ import { ProviderRegistrationProvider } from '../contexts/ProviderRegistrationCo
 import { AUTH_ROUTES, CLIENT_ROUTES, PROVIDER_ROUTES } from '../constants/routes';
 import { UserRole, VerificationStatus } from '../types/backend/auth';
 import * as Sentry from '@sentry/react-native';
-import Toast from 'react-native-toast-message';
+import Toast from 'react-native-toast-message'; // Importar Toast diretamente
+import { toastConfig } from '../components/Toast'; // Importar a configuração do Toast
+import i18n from '../i18n'; // Importar a instância do i18n
+import { I18nextProvider, useTranslation } from 'react-i18next'; // Importar I18nextProvider e useTranslation
 
 Sentry.init({
     dsn: 'https://947962edb662e5ff655cbcd778ee13b6@o4509792415252480.ingest.us.sentry.io/4509792431898624',
@@ -27,27 +30,12 @@ Sentry.init({
 
 SplashScreen.preventAutoHideAsync();
 
-// Configuração do Toast
-const toastConfig = {
-    loginSuccess: ({ text1, text2 }: any) => (
-        <View style={styles.toastContainer}>
-            <Image
-                source={require('/assets/images/limp-Photoroom.png')}
-                style={styles.toastImage}
-            />
-            <View style={{ flex: 1 }}>
-                <Text style={styles.toastTitle}>{text1}</Text>
-                {text2 && <Text style={styles.toastSubtitle}>{text2}</Text>}
-            </View>
-        </View>
-    ),
-};
-
 function RootLayoutContent() {
     const { isAuthenticated, isLoading: authIsLoading, user } = useAuth();
     const router = useRouter();
     const segments = useSegments();
     const pathname = usePathname();
+    const { t } = useTranslation(); // Usar hook de tradução
 
     const [appReady, setAppReady] = useState(false);
     const [initializationError, setInitializationError] = useState<string | null>(null);
@@ -56,11 +44,13 @@ function RootLayoutContent() {
         const prepareApp = async () => {
             console.log('[RootLayoutContent | prepareApp] Iniciando processo de preparação do aplicativo.');
             try {
+                // Inicializar i18n se ainda não estiver (geralmente feito no arquivo i18n.ts)
+                // await i18n.init(); // Se o i18n.js não iniciar automaticamente
                 console.log('[RootLayoutContent | prepareApp] Inicialização básica do aplicativo concluída.');
             } catch (e: any) {
                 console.error('[RootLayoutContent | prepareApp] ERRO FATAL durante a inicialização do aplicativo:', e);
                 setInitializationError(e.message || 'Erro desconhecido na inicialização.');
-                Alert.alert("Erro de Configuração", "O aplicativo não pôde iniciar devido a um erro de configuração. Por favor, tente novamente mais tarde.");
+                Alert.alert(t("common.error"), t("common.generic_error"));
             } finally {
                 setAppReady(true);
                 if (!initializationError) {
@@ -70,7 +60,7 @@ function RootLayoutContent() {
             }
         };
         prepareApp();
-    }, []);
+    }, [t]);
 
     useEffect(() => {
         console.groupCollapsed(`[RootLayoutContent | useEffect] Ciclo de Redirecionamento - Caminho: ${pathname}`);
@@ -200,9 +190,9 @@ function RootLayoutContent() {
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#007AFF" />
                 {initializationError ? (
-                    <Text style={styles.loadingText}>Erro crítico: {initializationError}</Text>
+                    <Text style={styles.loadingText}>{t("common.error")}: {initializationError}</Text>
                 ) : (
-                    <Text style={styles.loadingText}>carregando ...</Text>
+                    <Text style={styles.loadingText}>{t("common.loading")} ...</Text>
                 )}
             </View>
         );
@@ -218,13 +208,14 @@ function RootLayoutContent() {
 
 export default Sentry.wrap(function RootLayout() {
     return (
-        <AuthProvider>
-            <ProviderRegistrationProvider>
-                <AppProvider>
-                    <RootLayoutContent />
-                </AppProvider>
-            </ProviderRegistrationProvider>
-        </AuthProvider>
+        <I18nextProvider i18n={i18n}> {/* Envolver com I18nextProvider */}
+            <AuthProvider>
+                <ProviderRegistrationProvider>
+                    <AppProvider>
+                        <RootLayoutContent />
+                    </AppProvider>
+                </ProviderRegistrationProvider>
+            </I18nextProvider>
     );
 });
 
@@ -240,7 +231,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#333333',
     },
-    toastContainer: {
+    toastContainer: { // Este estilo será sobrescrito pela configuração do Toast.tsx
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#4CAF50',
@@ -248,18 +239,18 @@ const styles = StyleSheet.create({
         padding: 10,
         minHeight: 60,
     },
-    toastImage: {
+    toastImage: { // Este estilo será sobrescrito pela configuração do Toast.tsx
         width: 36,
         height: 36,
         marginRight: 10,
         resizeMode: 'contain',
     },
-    toastTitle: {
+    toastTitle: { // Este estilo será sobrescrito pela configuração do Toast.tsx
         color: '#fff',
         fontWeight: 'bold',
         fontSize: 15,
     },
-    toastSubtitle: {
+    toastSubtitle: { // Este estilo será sobrescrito pela configuração do Toast.tsx
         color: '#fff',
         fontSize: 13,
     },

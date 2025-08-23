@@ -1,3 +1,4 @@
+// [providerId].tsx
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
@@ -12,9 +13,18 @@ import {
     Text,
     TouchableOpacity,
     View,
-    Easing // Importado Easing
+    Easing, // Importado Easing
+    StyleSheet, // Importar StyleSheet para uso local, se necessário, mas já movido para providerStyles.ts
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next'; // Importar i18n
+import * as Clipboard from 'expo-clipboard'; // Importar Clipboard
+
+// NOTA: Se você estiver recebendo o erro "Não é possível localizar o módulo 'react-i18next'",
+// certifique-se de que 'react-i18next' e '@types/react-i18next' estão instalados em seu projeto:
+// npm install react-i18next @types/react-i18next
+// ou
+// yarn add react-i18next @types/react-i18next
 
 // Importações dos componentes necessários
 import BookServiceButton from '../../../components/client/explore/provider/BookServiceButton';
@@ -24,15 +34,18 @@ import ReviewCard from '../../../components/client/explore/provider/ReviewCard';
 import StarRating from '../../../components/client/explore/provider/StarRating';
 
 // Importações de dados e tipos
-import { ProviderDisplayInfo, ProviderReview, ProviderServiceOffering } from '../../../types/backend/providers';
+// Certifique-se de que ProviderMetrics e Offer estão definidos em seus respectivos arquivos de tipos
+import { ProviderDisplayInfo, ProviderReview } from '../../../types/backend/providers';
 import { VerificationStatus } from '../../../types/backend/auth';
 import { PricingType } from '../../../types/backend/services';
+import { ProviderServiceOffering } from '../../../types/backend/provider-service'; // Importar ProviderServiceOffering
+import { ProviderMetrics, Offer } from '../../../services/providerService'; // Importar ProviderMetrics e Offer do service, se não tiverem arquivos de tipo dedicados ainda. Idealmente, viriam de `../../../types/backend/providers` e `../../../types/backend/offers`
 
 // Importação dos serviços de backend
 import { useAuth } from '../../../hooks/useAuth';
 import { checkActiveChatBooking } from '../../../services/bookingService';
-import { getProviderDetails } from '../../../services/providerService';
-import { LinearGradient } from 'expo-linear-gradient'; // Importar LinearGradient
+import { getProviderDetails, getProviderMetrics, getProviderOffers } from '../../../services/providerService'; // Importar getProviderMetrics e getProviderOffers
+import Toast from '../../../components/Toast'; // Importar Toast
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -42,9 +55,12 @@ export default function ProviderDetailsScreen() {
     const router = useRouter();
     const { user, isAuthenticated } = useAuth();
     const insets = useSafeAreaInsets();
+    const { t } = useTranslation(); // Inicializar i18n
 
     // --- TODAS AS DECLARAÇÕES DE HOOKS DEVEM ESTAR AQUI NO TOPO ---
     const [provider, setProvider] = useState<ProviderDisplayInfo | null | undefined>(undefined);
+    const [providerMetrics, setProviderMetrics] = useState<ProviderMetrics | null>(null); // NOVO: Estado para métricas
+    const [providerOffers, setProviderOffers] = useState<Offer[]>([]); // NOVO: Estado para ofertas
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [canInitiateChat, setCanInitiateChat] = useState(false);
@@ -74,19 +90,28 @@ export default function ProviderDetailsScreen() {
             imageFadeAnim.setValue(0); imageScaleAnim.setValue(0.8); // Resetar animações da imagem
             infoChipAnim.setValue(0); // Resetar animações dos chips
 
-            getProviderDetails(providerId)
-                .then(async (data) => {
-                    setProvider(data || null);
-                    if (!data) {
-                        setError(`Profissional com ID "${providerId}" não encontrado.`);
+            Promise.all([
+                getProviderDetails(providerId),
+                getProviderMetrics(providerId), // NOVO: Buscar métricas
+                getProviderOffers(providerId), // NOVO: Buscar ofertas
+            ])
+                .then(async ([providerData, metricsData, offersData]) => {
+                    setProvider(providerData || null);
+                    setProviderMetrics(metricsData || null); // Definir métricas
+                    setProviderOffers(offersData || []); // Definir ofertas
+
+                    if (!providerData) {
+                        setError(t('provider_details.provider_not_found', { providerId }));
                     } else {
-                        console.log("[ProviderDetailsScreen] Dados do provedor carregados:", data);
-                        console.log("[ProviderDetailsScreen] provider.providerServices:", data.providerServices);
-                        console.log("[ProviderDetailsScreen] provider.providerServices.length:", data.providerServices?.length);
-                        console.log("[ProviderDetailsScreen] provider.reviews:", data.reviews);
+                        console.log("[ProviderDetailsScreen] Dados do provedor carregados:", providerData);
+                        console.log("[ProviderDetailsScreen] provider.providerServices:", providerData.providerServices);
+                        console.log("[ProviderDetailsScreen] provider.providerServices.length:", providerData.providerServices?.length);
+                        console.log("[ProviderDetailsScreen] provider.reviews:", providerData.reviews);
+                        console.log("[ProviderDetailsScreen] Métricas do provedor:", metricsData);
+                        console.log("[ProviderDetailsScreen] Ofertas do provedor:", offersData);
 
                         if (isAuthenticated && user?.id) {
-                            const chatBookingStatus = await checkActiveChatBooking(user.id, data.id);
+                            const chatBookingStatus = await checkActiveChatBooking(user.id, providerData.id);
                             setCanInitiateChat(chatBookingStatus.canChat);
                             setActiveBookingId(chatBookingStatus.bookingId);
                             console.log(`[ProviderDetailsScreen] Chat pode ser iniciado: ${chatBookingStatus.canChat}, Booking ID: ${chatBookingStatus.bookingId}`);
@@ -140,14 +165,15 @@ export default function ProviderDetailsScreen() {
                 })
                 .catch(err => {
                     console.error("[ProviderDetailsScreen] Erro ao carregar detalhes do provedor:", err);
-                    setError(err.response?.data?.message || err.message || "Erro ao carregar os detalhes do profissional.");
+                    setError(err.response?.data?.message || err.message || t("provider_details.error_loading_details"));
                     setProvider(null);
                 })
                 .finally(() => setIsLoading(false));
         } else {
-            setError("ID do profissional inválido."); setIsLoading(false); setProvider(null);
+            setError(t("provider_details.invalid_professional_id")); // Nova chave de tradução
+            setIsLoading(false); setProvider(null);
         }
-    }, [providerId, isAuthenticated, user?.id]);
+    }, [providerId, isAuthenticated, user?.id, t]);
 
     const handleChatPress = () => {
         if (provider && user && activeBookingId) {
@@ -163,8 +189,8 @@ export default function ProviderDetailsScreen() {
             });
         } else {
             Alert.alert(
-                "Chat Indisponível",
-                "O chat com este profissional só pode ser iniciado após um agendamento confirmado e ativo. Isso garante que você se conecte com o profissional certo para o seu serviço."
+                t("provider_details.chat_unavailable_title"),
+                t("provider_details.chat_unavailable_message")
             );
         }
     };
@@ -195,11 +221,11 @@ export default function ProviderDetailsScreen() {
         switch (service.pricingType) {
             case PricingType.HOURLY:
                 priceValue = price;
-                priceUnit = '/h';
+                priceUnit = t('common.per_hour_short'); // Nova chave de tradução
                 break;
             case PricingType.BY_SIZE:
                 priceValue = service.pricePerSquareMeter;
-                priceUnit = '/m²';
+                priceUnit = t('common.per_sqm_short'); // Nova chave de tradução
                 break;
             case PricingType.FIXED_PRICE:
             case PricingType.CUSTOM_QUOTE:
@@ -211,14 +237,23 @@ export default function ProviderDetailsScreen() {
 
         return priceValue !== undefined && priceValue !== null && priceValue > 0
             ? `R$ ${priceValue.toFixed(2).replace('.', ',')}${priceUnit}`
-            : 'Preço não disponível';
+            : t('provider_details.price_not_available');
+    };
+
+    const handleCopyCouponCode = async (code: string) => {
+        await Clipboard.setStringAsync(code);
+        Toast.show({
+            type: 'success',
+            text1: t('common.success'),
+            text2: t('offers.copy_code'),
+        });
     };
 
     // --- Lógica de renderização condicional deve vir DEPOIS das declarações de Hooks ---
     if (isLoading) {
         return (
             <View style={[styles.centeredFeedback, { backgroundColor: 'white' }]}>
-                <Stack.Screen options={{ title: "Carregando...", headerShown: false }} />
+                <Stack.Screen options={{ title: t("common.loading"), headerShown: false }} />
                 <ActivityIndicator size="large" color={styles.errorBackButton.backgroundColor} />
             </View>
         );
@@ -227,12 +262,12 @@ export default function ProviderDetailsScreen() {
     if (error || !provider) {
         return (
             <View style={[styles.centeredFeedback, { backgroundColor: 'white' }]}>
-                <Stack.Screen options={{ title: "Erro", headerShown: false }} />
+                <Stack.Screen options={{ title: t("common.error"), headerShown: false }} />
                 <Ionicons name="warning-outline" size={48} color={styles.errorText.color} />
-                <Text style={styles.errorText}>{error || `Profissional não encontrado.`}</Text>
+                <Text style={styles.errorText}>{error || t("provider_details.provider_not_found")}</Text>
                 <TouchableOpacity style={styles.errorBackButton} onPress={() => router.back()}>
                     <Ionicons name="arrow-back" size={20} color={styles.errorBackButtonText.color} />
-                    <Text style={styles.errorBackButtonText}>Voltar</Text>
+                    <Text style={styles.errorBackButtonText}>{t("common.back")}</Text>
                 </TouchableOpacity>
             </View>
         );
@@ -244,7 +279,7 @@ export default function ProviderDetailsScreen() {
 
     const firstServicePrice = firstProviderService
         ? formatPriceDisplay(firstProviderService)
-        : 'Preço não disponível';
+        : t('provider_details.price_not_available');
 
     const firstProviderServiceOfferingId = firstProviderService
         ? firstProviderService.id
@@ -269,7 +304,7 @@ export default function ProviderDetailsScreen() {
                 ),
                 headerRight: () => (
                     <TouchableOpacity
-                        onPress={() => Alert.alert("Salvar", "Funcionalidade de salvar/favoritar.")}
+                        onPress={() => Alert.alert(t("common.save"), t("provider_details.save_favorite"))}
                         style={[styles.iconButtonBackground, { marginRight: 15, marginTop: Platform.OS === 'ios' ? insets.top : 15 }]}
                     >
                         <Ionicons name="bookmark-outline" size={20} color="#FFF" />
@@ -283,13 +318,13 @@ export default function ProviderDetailsScreen() {
                     { opacity: imageFadeAnim, transform: [{ scale: imageScaleAnim }] }
                 ]}>
                     <Image
-                        source={{ uri: provider.avatarUrl || 'https://placehold.co/600x400/E0E0E0/6C757D?text=Sem+Foto' }}
+                        source={{ uri: provider.avatarUrl || 'https://placehold.co/600x400/E0E0E0/6C757D?text=' + t('provider_details.no_photo') }}
                         style={styles.providerImage}
                         onError={(e) => console.log('Erro ao carregar imagem:', e.nativeEvent.error)}
                     />
                     <TouchableOpacity
                         style={styles.favoriteButton}
-                        onPress={() => Alert.alert("Favoritar", "Funcionalidade de favoritar.")}
+                        onPress={() => Alert.alert(t("common.save"), t("provider_details.save_favorite"))}
                     >
                         <Ionicons name="heart" size={18} color="#007AFF" />
                     </TouchableOpacity>
@@ -309,7 +344,7 @@ export default function ProviderDetailsScreen() {
                             <Text style={styles.providerNameWhiteCard}>{provider.fullName}</Text>
                             <View style={styles.robustStarContainer}>
                                 <StarRating rating={provider.averageRating} size={13} color={styles.priceTextWhiteCard.color} />
-                                <Text style={styles.robustReviewsText}>({provider.reviewCount} avaliações)</Text>
+                                <Text style={styles.robustReviewsText}>{t('provider_details.reviews_count', { count: provider.reviewCount || 0 })}</Text>
                             </View>
                         </View>
 
@@ -329,32 +364,71 @@ export default function ProviderDetailsScreen() {
                             {provider.yearsOfExperience !== undefined && provider.yearsOfExperience !== null && (
                                 <InfoChip
                                     iconName="hourglass-outline"
-                                    text={`${provider.yearsOfExperience}+ anos`}
-                                    colors={['#7694f6ff', '#67adfdff', '#5c93ecff']}
+                                    text={t('provider_details.years_experience', { count: provider.yearsOfExperience })}
+                                    // colors={['#7694f6ff', '#67adfdff', '#5c93ecff']} // Removido: Propriedade 'colors' não existe em InfoChipProps
                                 />
                             )}
                             {provider.verificationStatus === VerificationStatus.APPROVED && (
                                 <InfoChip
                                     iconName="shield-checkmark-outline"
-                                    text="Verificado"
-                                    colors={['#7694f6ff', '#67adfdff', '#5c93ecff']}
+                                    text={t('provider_details.verified')}
+                                    // colors={['#7694f6ff', '#67adfdff', '#5c93ecff']} // Removido: Propriedade 'colors' não existe em InfoChipProps
+                                />
+                            )}
+                            {providerMetrics?.acceptanceRate !== undefined && ( // NOVO: Chip de Taxa de Aceitação
+                                <InfoChip
+                                    iconName="checkmark-done-circle-outline"
+                                    text={`${t('metrics.acceptance_rate')}: ${providerMetrics.acceptanceRate}%`}
+                                    // colors={['#4CAF50', '#66BB6A', '#81C784']} // Removido: Propriedade 'colors' não existe em InfoChipProps
+                                />
+                            )}
+                            {providerMetrics?.avgResponseTime !== undefined && ( // NOVO: Chip de Tempo Médio de Resposta
+                                <InfoChip
+                                    iconName="time-outline"
+                                    text={`${t('metrics.avg_response_time')}: ${providerMetrics.avgResponseTime} ${t('metrics.minutes_short')}`}
+                                    // colors={['#FFC107', '#FFD54F', '#FFEA00']} // Removido: Propriedade 'colors' não existe em InfoChipProps
                                 />
                             )}
                         </Animated.View>
 
-                        <Text style={styles.sectionTitle}>Sobre {provider.fullName.split(' ')[0]}</Text>
-                        <Text style={styles.descriptionText}>{provider.bio || "Nenhuma descrição detalhada disponível."}</Text>
+                        <Text style={styles.sectionTitle}>{t('provider_details.about_provider', { providerName: provider.fullName.split(' ')[0] })}</Text>
+                        <Text style={styles.descriptionText}>{provider.bio || t('provider_details.no_description')}</Text>
+
+                        {providerOffers.length > 0 && ( // NOVO: Seção de Ofertas
+                            <View>
+                                <Text style={styles.sectionTitle}>{t('offers.title')}</Text>
+                                {providerOffers.map((offer) => (
+                                    <View key={offer.id} style={styles.offerCard}>
+                                        <Text style={styles.offerTitle}>{offer.title}</Text>
+                                        <Text style={styles.offerDescription}>{offer.description}</Text>
+                                        <View style={styles.offerFooter}>
+                                            <Text style={styles.offerDiscount}>
+                                                {offer.discountType === 'PERCENT' ? `${offer.discountValue}% OFF` : `R$ ${offer.discountValue.toFixed(2).replace('.', ',')} OFF`}
+                                            </Text>
+                                            <TouchableOpacity
+                                                style={styles.copyCouponButton}
+                                                onPress={() => handleCopyCouponCode(offer.couponCode || '')}
+                                            >
+                                                <Ionicons name="copy-outline" size={16} color="#FFF" />
+                                                <Text style={styles.copyCouponButtonText}>{t('offers.copy_code')}</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
+                                ))}
+                            </View>
+                        )}
+
 
                         <View style={styles.actionButtonsContainer}>
                             <Animated.View style={{ transform: [{ scale: callButtonAnim }] }}>
                                 <TouchableOpacity
                                     style={styles.actionButton}
-                                    onPress={() => Alert.alert("Ligar", "Funcionalidade de ligar.")}
+                                    onPress={() => Alert.alert(t("provider_details.call"), t("provider_details.call_functionality"))}
                                     onPressIn={() => handleActionButtonPressIn(callButtonAnim)}
                                     onPressOut={() => handleActionButtonPressOut(callButtonAnim)}
                                 >
                                     <Ionicons name="call-outline" size={16} color={styles.actionButtonText.color} />
-                                    <Text style={styles.actionButtonText}>Ligar</Text>
+                                    <Text style={styles.actionButtonText}>{t("provider_details.call")}</Text>
                                 </TouchableOpacity>
                             </Animated.View>
 
@@ -367,12 +441,12 @@ export default function ProviderDetailsScreen() {
                                         onPressOut={() => handleActionButtonPressOut(chatButtonAnim)}
                                     >
                                         <Ionicons name="chatbubble-outline" size={16} color={styles.actionButtonText.color} />
-                                        <Text style={styles.actionButtonText}>Chat</Text>
+                                        <Text style={styles.actionButtonText}>{t("provider_details.chat")}</Text>
                                     </TouchableOpacity>
                                 ) : (
                                     <View style={[styles.actionButton, styles.disabledActionButton]}>
                                         <Ionicons name="chatbubble-outline" size={16} color={styles.disabledActionButtonText.color} />
-                                        <Text style={[styles.actionButtonText, styles.disabledActionButtonText]}>Chat</Text>
+                                        <Text style={[styles.actionButtonText, styles.disabledActionButtonText]}>{t("provider_details.chat")}</Text>
                                     </View>
                                 )}
                             </Animated.View>
@@ -380,29 +454,29 @@ export default function ProviderDetailsScreen() {
                             <Animated.View style={{ transform: [{ scale: mapButtonAnim }] }}>
                                 <TouchableOpacity
                                     style={styles.actionButton}
-                                    onPress={() => Alert.alert("Mapa", "Funcionalidade de mapa.")}
+                                    onPress={() => Alert.alert(t("provider_details.map"), t("provider_details.map_functionality"))}
                                     onPressIn={() => handleActionButtonPressIn(mapButtonAnim)}
                                     onPressOut={() => handleActionButtonPressOut(mapButtonAnim)}
                                 >
                                     <Ionicons name="map-outline" size={16} color={styles.actionButtonText.color} />
-                                    <Text style={styles.actionButtonText}>Mapa</Text>
+                                    <Text style={styles.actionButtonText}>{t("provider_details.map")}</Text>
                                 </TouchableOpacity>
                             </Animated.View>
 
                             <Animated.View style={{ transform: [{ scale: shareButtonAnim }] }}>
                                 <TouchableOpacity
                                     style={styles.actionButton}
-                                    onPress={() => Alert.alert("Compartilhar", "Funcionalidade de compartilhar.")}
+                                    onPress={() => Alert.alert(t("provider_details.share"), t("provider_details.share_functionality"))}
                                     onPressIn={() => handleActionButtonPressIn(shareButtonAnim)}
                                     onPressOut={() => handleActionButtonPressOut(shareButtonAnim)}
                                 >
                                     <Ionicons name="share-social-outline" size={16} color={styles.actionButtonText.color} />
-                                    <Text style={styles.actionButtonText}>Compartilhar</Text>
+                                    <Text style={styles.actionButtonText}>{t("provider_details.share")}</Text>
                                 </TouchableOpacity>
                             </Animated.View>
                         </View>
 
-                        <Text style={[styles.sectionTitle, { marginTop: 12 }]}>Recomendações</Text>
+                        <Text style={[styles.sectionTitle, { marginTop: 12 }]}>{t("provider_details.recommendations")}</Text>
                         {provider.reviews && provider.reviews.length > 0 ? (
                             provider.reviews.map((review: ProviderReview) => {
                                 const transformedReview = {
@@ -429,15 +503,16 @@ export default function ProviderDetailsScreen() {
                             <View style={styles.noReviewsContainer}>
                                 <Ionicons name="chatbubbles-outline" size={60} color={styles.noReviewsText.color} style={styles.noReviewsIcon} />
                                 <Text style={styles.noReviewsText}>
-                                    Ainda não há avaliações para {provider.fullName.split(' ')[0]}.
-                                    Seja o primeiro a deixar uma!
+                                    {t('provider_details.no_reviews', { providerName: provider.fullName.split(' ')[0] })}
+                                    {'\n'}
+                                    {t('provider_details.be_the_first_review')}
                                 </Text>
                             </View>
                         )}
                         <Animated.View style={{ transform: [{ scale: addReviewButtonPulseAnim }] }}>
-                            <TouchableOpacity style={[styles.addReviewButton, styles.compactAddReviewButton]}>
+                            <TouchableOpacity style={styles.addReviewButton}> {/* Corrigido: styles.compactAddReviewButton para styles.addReviewButton */}
                                 <Ionicons name="add-circle-outline" size={24} color={styles.addReviewButtonText.color} />
-                                <Text style={styles.addReviewButtonText}>Adicionar Avaliação</Text>
+                                <Text style={styles.addReviewButtonText}>{t('provider_details.add_review')}</Text>
                             </TouchableOpacity>
                         </Animated.View>
                     </View>
@@ -449,11 +524,14 @@ export default function ProviderDetailsScreen() {
                 serviceId={firstProviderServiceOfferingId}
                 router={router}
                 bookNowButtonAnim={bookNowButtonAnim}
-                servicePrice={firstProviderService?.price}
+                servicePrice={firstProviderService?.price} // NOTA: Certifique-se de que BookServiceButtonProps aceita 'servicePrice'
             />
         </View>
     );
 }
 
-// Estilos
+// Estilos importados do arquivo providerStyles.ts
 import { styles } from './styles/providerStyles';
+
+// NOTA: O bloco de estilos 'offerStyles' foi movido para 'providerStyles.ts'
+// e a chamada 'Object.assign(styles, offerStyles)' foi removida daqui.

@@ -77,6 +77,12 @@ export class ProviderEntity implements PrismaProvider {
   @ApiProperty({ description: 'Lista de badges do provedor', example: ['VERIFIED', 'TOP_RATED'] })
   badges: string[];
 
+  @ApiPropertyOptional({ description: 'Taxa de aceitação de agendamentos', example: 0.95 })
+  acceptanceRate: number | null; // Adicionado para satisfazer PrismaProvider
+
+  @ApiPropertyOptional({ description: 'Tempo médio de resposta em minutos', example: 15 })
+  averageResponseTime: number | null; // Adicionado para satisfazer PrismaProvider
+
   user?: User; // Relações (opcionais, dependem de como você as carrega)
   address?: Address | null;
   providerServices?: ProviderService[];

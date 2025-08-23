@@ -34,6 +34,7 @@
     "expo": "53.0.20",
     "expo-blur": "~14.1.5",
     "expo-calendar": "~14.1.4",
+    "expo-clipboard": "~7.1.5",
     "expo-constants": "~17.1.6",
     "expo-dev-client": "~5.2.4",
     "expo-font": "~13.3.1",
@@ -54,9 +55,11 @@
     "expo-system-ui": "~5.0.10",
     "expo-web-browser": "~14.2.0",
     "firebase": "^11.8.1",
+    "i18next": "^25.4.0",
     "jwt-decode": "^4.0.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",
+    "react-i18next": "^15.7.1",
     "react-native": "0.79.5",
     "react-native-calendars": "^1.1312.1",
     "react-native-chart-kit": "^6.12.0",
@@ -72,7 +75,7 @@
     "react-native-webview": "13.13.5",
     "socket.io-client": "^4.8.1",
     "twilio": "^5.8.0",
-    "expo-clipboard": "~7.1.5"
+    "expo-localization": "~16.1.6"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

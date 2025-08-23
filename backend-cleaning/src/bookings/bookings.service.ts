@@ -1,4 +1,3 @@
-// src/bookings/bookings.service.ts
 import { Injectable, NotFoundException, ConflictException, BadRequestException, ForbiddenException, Logger, forwardRef, Inject } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
@@ -21,6 +20,12 @@ import { CouponsService } from '../coupons/coupons.service'; // NEW
 import { LoyaltyService } from '../loyalty/loyalty.service'; // <--- NOVA LINHA
 import { LoyaltyTransactionType } from '@prisma/client'; // <--- NOVA LINHA: Assumindo que LoyaltyTransactionType está no seu schema.prisma
 
+// >>> NOVO: Missões & Indicações
+import { MissionsService } from '../missions/missions.service';
+import { ReferralsService } from '../referrals/referrals.service';
+// <<< FIM NOVO
+import { I18nService } from '../common/i18n/i18n.service'; // Importar I18nService
+import { Request } from 'express'; // Para acessar o locale da requisição
 
 // CORREÇÃO: Adicionado subscription, incidents e guaranteeClaims à tipagem
 export type BookingWithDetailsRelations = Prisma.BookingGetPayload<{
@@ -53,32 +58,42 @@ export class BookingsService {
     private loyaltyService: LoyaltyService, // <--- NOVA LINHA: Injetar LoyaltyService
     @Inject(forwardRef(() => PaymentsService))
     private paymentsService: PaymentsService,
+
+    // >>> NOVO: Injeções para Missões & Indicações
+    @Inject(forwardRef(() => MissionsService))
+    private missionsService: MissionsService,
+    @Inject(forwardRef(() => ReferralsService))
+    private referralsService: ReferralsService,
+    // <<< FIM NOVO
+    private readonly i18n: I18nService, // Injetar I18nService
   ) {}
 
-  async create(clientUserId: string, createBookingDto: CreateBookingDto): Promise<BookingWithDetailsRelations> {
+  async create(clientUserId: string, createBookingDto: CreateBookingDto, request?: Request): Promise<BookingWithDetailsRelations> {
     this.logger.log(`[BookingsService] create - Início da criação do agendamento.`);
     this.logger.log(`[BookingsService] create - clientUserId: ${clientUserId}`);
     this.logger.log(`[BookingsService] create - DTO recebido: ${JSON.stringify(createBookingDto)}`);
     this.logger.log(`[BookingsService] create - Endereço DTO: ${JSON.stringify(createBookingDto.address)}`);
 
+    const locale = (request as any)?.locale || 'pt-BR'; // Obter locale da requisição
+
     const client = await this.clientsService.findClientByUserId(clientUserId);
     if (!client) {
       this.logger.error(`[BookingsService] create - Cliente não encontrado para userId: ${clientUserId}`);
-      throw new NotFoundException('Cliente não encontrado.');
+      throw new NotFoundException(await this.i18n.translate('client.notFound', locale)); // Usar I18nService
     }
     this.logger.log(`[BookingsService] create - Cliente encontrado: ${client.id}`);
 
     const provider = await this.providersService.findOne(createBookingDto.providerId);
     if (!provider) {
       this.logger.error(`[BookingsService] create - Provedor com ID "${createBookingDto.providerId}" não encontrado.`);
-      throw new NotFoundException(`Provedor com ID "${createBookingDto.providerId}" não encontrado.`);
+      throw new NotFoundException(await this.i18n.translate('provider.notFound', locale, { id: createBookingDto.providerId })); // Usar I18nService
     }
     this.logger.log(`[BookingsService] create - Provedor encontrado: ${provider.id}`);
 
     const providerService = await this.providerServicesService.findOne(createBookingDto.providerServiceId, createBookingDto.providerId);
     if (!providerService) {
       this.logger.error(`[BookingsService] create - Serviço do provedor com ID "${createBookingDto.providerServiceId}" não encontrado para o provedor "${createBookingDto.providerId}".`);
-      throw new NotFoundException(`Serviço do provedor com ID "${createBookingDto.providerServiceId}" não encontrado para o provedor "${createBookingDto.providerId}".`);
+      throw new NotFoundException(await this.i18n.translate('providerService.notFound', locale, { providerServiceId: createBookingDto.providerServiceId, providerId: createBookingDto.providerId })); // Usar I18nService
     }
 
     // --- Lógica de cálculo de totalPrice baseada no PricingType ---
@@ -89,7 +104,7 @@ export class BookingsService {
         break;
       case 'HOURLY':
         if (!createBookingDto.requestedDurationMinutes) {
-          throw new BadRequestException('Duração em minutos é obrigatória para serviços por hora.');
+          throw new BadRequestException(await this.i18n.translate('booking.badRequest.durationRequired', locale)); // Usar I18nService
         }
         calculatedTotalPrice = providerService.price.mul(new Prisma.Decimal(createBookingDto.requestedDurationMinutes).div(new Prisma.Decimal(60))); // Ensure division is with Decimal
         break;
@@ -99,7 +114,7 @@ export class BookingsService {
         } else if (createBookingDto.requestedRoomCount && providerService.pricePerRoom) {
           calculatedTotalPrice = providerService.pricePerRoom.mul(new Prisma.Decimal(createBookingDto.requestedRoomCount));
         } else {
-          throw new BadRequestException('Metragem ou número de cômodos é obrigatória para serviços por tamanho.');
+          throw new BadRequestException(await this.i18n.translate('booking.badRequest.sizeOrRoomsRequired', locale)); // Usar I18nService
         }
         break;
       default:
@@ -109,7 +124,7 @@ export class BookingsService {
         break;
     }
     if (calculatedTotalPrice.lessThan(0)) {
-        throw new BadRequestException('O preço calculado não pode ser negativo.');
+        throw new BadRequestException(await this.i18n.translate('booking.badRequest.negativePrice', locale)); // Usar I18nService
     }
     this.logger.log(`[BookingsService] create - Serviço do provedor encontrado: ${providerService.id}. Preço calculado: ${calculatedTotalPrice.toFixed(2)}`);
 
@@ -142,11 +157,8 @@ export class BookingsService {
       } else {
         this.logger.warn(`[BookingsService] create - Cupom ${createBookingDto.couponCode} não aplicável: ${couponApplicationResult.message}`);
         // Optionally throw an error or just proceed without coupon
-        // If you want to prevent booking if coupon is invalid, uncomment the line below:
-        // throw new BadRequestException(couponApplicationResult.message);
       }
     }
-
 
     try {
       this.logger.log(`[BookingsService] create - Criando novo endereço no DB.`);
@@ -191,19 +203,32 @@ export class BookingsService {
         },
       });
       this.logger.log(`[BookingsService] create - Agendamento criado com sucesso no DB. ID: ${createdBooking.id}. ProviderId no booking retornado pelo Prisma: ${createdBooking.providerId}`);
+
+      // >>> NOVO: evento de missão (opcional) para criação
+      try {
+        await this.missionsService.trackEvent(createdBooking.client.userId, 'booking.created', {
+          bookingId: createdBooking.id,
+          providerId: createdBooking.providerId,
+          providerServiceId: createdBooking.providerServiceId,
+        });
+      } catch (e) {
+        this.logger.warn(`[BookingsService] create - Falha ao emitir evento de missão booking.created: ${e?.message}`);
+      }
+      // <<< FIM NOVO
+
       return createdBooking;
 
     } catch (error: any) {
       this.logger.error('Erro detalhado ao criar agendamento no DB:', error.response?.data || error.message, error.stack);
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
-          throw new ConflictException('Já existe um agendamento com os dados fornecidos.');
+          throw new ConflictException(await this.i18n.translate('booking.conflict.alreadyExists', locale)); // Usar I18nService
         }
         if (error.code === 'P2003' || error.code === 'P2025') {
-            throw new BadRequestException('Erro de dados relacionados ao endereço ou outras chaves estrangeiras. Verifique os dados fornecidos.');
+            throw new BadRequestException(await this.i18n.translate('booking.badRequest.foreignKeyOrNotFound', locale)); // Usar I18nService
         }
       }
-      throw new BadRequestException('Não foi possível criar o agendamento. Verifique os dados fornecidos.');
+      throw new BadRequestException(await this.i18n.translate('booking.badRequest.cannotCreate', locale)); // Usar I18nService
     }
   }
 
@@ -249,13 +274,6 @@ export class BookingsService {
 
   // NEW: Method to infer demand for pricing service
   async getDemandCountForArea(serviceId: string, latitude: number, longitude: number, scheduledDateTime: Date, radiusKm: number = 5) {
-    // This is a simplified example. A real implementation would involve:
-    // 1. Finding bookings in a geographical radius.
-    // 2. Filtering by time window (e.g., +/- 1 hour from scheduledDateTime).
-    // 3. Counting relevant bookings (e.g., for the same service type).
-    // This would require a geospatial database extension or complex queries.
-
-    // For demonstration, let's just count active bookings for the service in the next 2 hours
     const futureBookingsCount = await this.prisma.booking.count({
       where: {
         providerServiceId: serviceId,
@@ -266,8 +284,6 @@ export class BookingsService {
         status: {
           in: [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.IN_PROGRESS], // Consider only active bookings
         },
-        // Add geographical filter here if you have location data on bookings
-        // e.g., clientLocation: { latitude: { gte: lat - delta, lte: lat + delta }, ... }
       },
     });
     return futureBookingsCount;
@@ -276,12 +292,15 @@ export class BookingsService {
   async createBookingAndPixCharge(
     clientUserId: string,
     createBookingDto: CreateBookingDto,
+    request?: Request, // Adicionado para passar o locale
   ): Promise<BookingAndPixResponseDto> {
     this.logger.log(`[BookingsService] createBookingAndPixCharge - Início da operação combinada.`);
     this.logger.log(`[BookingsService] createBookingAndPixCharge - clientUserId: ${clientUserId}`);
     this.logger.log(`[BookingsService] createBookingAndPixCharge - DTO de criação original recebido: ${JSON.stringify(createBookingDto)}`);
 
-    const bookingPrisma = await this.create(clientUserId, createBookingDto); // Retorna BookingWithDetailsRelations
+    const locale = (request as any)?.locale || 'pt-BR';
+
+    const bookingPrisma = await this.create(clientUserId, createBookingDto, request); // Passar request
     const bookingDto = new BookingDetailsDto(bookingPrisma); // <-- CORREÇÃO: Mapeia para DTO aqui
 
     this.logger.log(`[BookingsService] createBookingAndPixCharge - Agendamento criado com sucesso (ID: ${bookingDto.id}).`);
@@ -295,35 +314,40 @@ export class BookingsService {
     };
     this.logger.log(`[BookingsService] createBookingAndPixCharge - PIX Charge DTO para PaymentsService (antes da chamada): ${JSON.stringify(pixChargeDto)}`);
 
-    const pixChargeResponse = await this.paymentsService.createPixCharge(clientUserId, pixChargeDto);
-    this.logger.log(`[BookingsService] createBookingAndPixCharge - Resposta PIX Charge recebida: ${JSON.stringify(pixChargeResponse)}`);
-
-    return { booking: bookingDto, pixCharge: pixChargeResponse }; // Retorna o DTO combinado
+    try {
+      const pixChargeResponse = await this.paymentsService.createPixCharge(clientUserId, pixChargeDto);
+      this.logger.log(`[BookingsService] createBookingAndPixCharge - Resposta PIX Charge recebida: ${JSON.stringify(pixChargeResponse)}`);
+      return { booking: bookingDto, pixCharge: pixChargeResponse }; // Retorna o DTO combinado
+    } catch (error) {
+      this.logger.error(`[BookingsService] createBookingAndPixCharge - Erro ao gerar cobrança PIX: ${error.message}`);
+      throw new BadRequestException(await this.i18n.translate('pix.chargeFailed', locale, { message: error.message })); // Usar I18nService
+    }
   }
 
-  async findUserBookings(userId: string, role: UserRole, status?: string): Promise<BookingWithDetailsRelations[]> {
+  async findUserBookings(userId: string, role: UserRole, status?: string, request?: Request): Promise<BookingWithDetailsRelations[]> {
     this.logger.log(`[BookingsService] findUserBookings: Buscando agendamentos para userId: ${userId}, role: ${role}, status: ${status || 'todos'}`);
     let whereClause: Prisma.BookingWhereInput = {};
+    const locale = (request as any)?.locale || 'pt-BR';
 
     if (role === UserRole.CLIENT) {
       const client = await this.prisma.client.findUnique({ where: { userId } });
       if (!client) {
         this.logger.error(`[BookingsService] findUserBookings - Cliente não encontrado para userId: ${userId}`);
-        throw new NotFoundException('Cliente não encontrado.');
+        throw new NotFoundException(await this.i18n.translate('client.notFound', locale)); // Usar I18nService
       }
       whereClause.clientId = client.id;
     } else if (role === UserRole.PROVIDER) {
       const provider = await this.prisma.provider.findUnique({ where: { userId } });
       if (!provider) {
         this.logger.error(`[BookingsService] findUserBookings - Provedor não encontrado para userId: ${userId}`);
-        throw new NotFoundException('Provedor não encontrado.');
+        throw new NotFoundException(await this.i18n.translate('provider.notFound', locale, { id: userId })); // Usar I18nService
       }
       whereClause.providerId = provider.id;
     } else if (role === UserRole.ADMIN) {
       this.logger.log(`[BookingsService] findUserBookings - Usuário é ADMIN. Buscando todos os agendamentos.`);
     } else {
       this.logger.error(`[BookingsService] findUserBookings - Função de usuário inválida: ${role}`);
-      throw new BadRequestException('Função de usuário inválida para buscar agendamentos.');
+      throw new BadRequestException(await this.i18n.translate('booking.badRequest.invalidUserRole', locale)); // Usar I18nService
     }
 
     if (status) {
@@ -373,9 +397,10 @@ export class BookingsService {
     });
   }
 
-  async findOne(id: string): Promise<BookingWithDetailsRelations | null> {
+  async findOne(id: string, request?: Request): Promise<BookingWithDetailsRelations | null> {
     this.logger.log(`[BookingsService] findOne: Buscando agendamento por ID: ${id}`);
-    return this.prisma.booking.findUnique({
+    const locale = (request as any)?.locale || 'pt-BR';
+    const booking = await this.prisma.booking.findUnique({
       where: { id },
       include: {
         client: { include: { user: true } },
@@ -389,11 +414,16 @@ export class BookingsService {
         coupon: true, // NEW: Include coupon
       },
     });
+    if (!booking) {
+      throw new NotFoundException(await this.i18n.translate('booking.notFound', locale, { id })); // Usar I18nService
+    }
+    return booking;
   }
 
-  async updateStatus(id: string, newStatus: BookingStatus, userRole: UserRole): Promise<BookingWithDetailsRelations> {
+  async updateStatus(id: string, newStatus: BookingStatus, userRole: UserRole, request?: Request): Promise<BookingWithDetailsRelations> {
     this.logger.log(`[BookingsService] updateStatus: Tentando atualizar agendamento ${id} para status ${newStatus} por role ${userRole}.`);
     // CORREÇÃO: Incluir 'provider' e 'providerService' para acessar suas propriedades
+    const locale = (request as any)?.locale || 'pt-BR';
     const booking = await this.prisma.booking.findUnique({
       where: { id },
       include: {
@@ -405,12 +435,12 @@ export class BookingsService {
 
     if (!booking) {
       this.logger.error(`[BookingsService] updateStatus - Agendamento com ID "${id}" não encontrado.`);
-      throw new NotFoundException(`Agendamento com ID "${id}" não encontrado.`);
+      throw new NotFoundException(await this.i18n.translate('booking.notFound', locale, { id })); // Usar I18nService
     }
     this.logger.log(`[BookingsService] updateStatus - Agendamento encontrado, status atual: ${booking.status}`);
 
     let canUpdate = false;
-    let errorMessage = 'Transição de status não permitida.';
+    let errorMessageKey: string = 'booking.badRequest.invalidStatusTransition'; // Chave padrão
 
     if (userRole === UserRole.ADMIN) {
       canUpdate = true;
@@ -418,12 +448,13 @@ export class BookingsService {
     } else if (userRole === UserRole.CLIENT) {
       if (newStatus === BookingStatus.CANCELED) {
         if (booking.status === BookingStatus.COMPLETED || booking.status === BookingStatus.CANCELED || booking.status === BookingStatus.REJECTED) {
-          errorMessage = `Não é possível cancelar um agendamento com status "${booking.status}".`;
+          errorMessageKey = 'booking.badRequest.cannotCancelCompleted';
+          canUpdate = false;
         } else {
           canUpdate = true;
         }
       } else {
-        errorMessage = 'Clientes só podem cancelar agendamentos.';
+        errorMessageKey = 'booking.badRequest.clientOnlyCancel';
       }
     } else if (userRole === UserRole.PROVIDER) {
       switch (booking.status) {
@@ -431,50 +462,49 @@ export class BookingsService {
           if (newStatus === BookingStatus.CONFIRMED || newStatus === BookingStatus.REJECTED) {
             canUpdate = true;
           } else {
-            errorMessage = `Provedor só pode CONFIRMAR ou REJEITAR um agendamento PENDENTE.`;
+            errorMessageKey = 'booking.badRequest.providerPendingStatus';
           }
           break;
         case BookingStatus.CONFIRMED:
           if (newStatus === BookingStatus.IN_PROGRESS || newStatus === BookingStatus.COMPLETED || newStatus === BookingStatus.CANCELED || newStatus === BookingStatus.RESCHEDULED) {
             canUpdate = true;
           } else {
-            errorMessage = `Provedor só pode iniciar, completar, cancelar ou reagendar um agendamento CONFIRMADO.`;
+            errorMessageKey = 'booking.badRequest.providerConfirmedStatus';
           }
           break;
         case BookingStatus.IN_PROGRESS:
           if (newStatus === BookingStatus.COMPLETED || newStatus === BookingStatus.CANCELED) {
             canUpdate = true;
           } else {
-            errorMessage = `Provedor só pode COMPLETAR ou CANCELAR um agendamento EM PROGRESSO.`;
+            errorMessageKey = 'booking.badRequest.providerInProgressStatus';
           }
           break;
         case BookingStatus.RESCHEDULED:
           if (newStatus === BookingStatus.CONFIRMED || newStatus === BookingStatus.CANCELED) {
             canUpdate = true;
           } else {
-            errorMessage = `Provedor só pode CONFIRMAR ou CANCELAR um agendamento REAGENDADO.`;
+            errorMessageKey = 'booking.badRequest.providerRescheduledStatus';
           }
           break;
         case BookingStatus.COMPLETED:
         case BookingStatus.CANCELED:
         case BookingStatus.REJECTED:
-          errorMessage = 'Não é possível alterar o status de um agendamento já finalizado, cancelado ou rejeitado.';
+          errorMessageKey = 'booking.badRequest.statusFinalized';
           break;
         default:
-          errorMessage = 'Status de agendamento inválido ou transição não suportada.';
+          errorMessageKey = 'booking.badRequest.invalidBookingStatus';
           break;
       }
     }
 
     if (!canUpdate) {
-      this.logger.warn(`[BookingsService] updateStatus: Transição de status não permitida para booking ${id}: de ${booking.status} para ${newStatus} pelo role ${userRole}. Erro: ${errorMessage}`);
-      throw new BadRequestException(errorMessage);
+      this.logger.warn(`[BookingsService] updateStatus: Transição de status não permitida para booking ${id}: de ${booking.status} para ${newStatus} pelo role ${userRole}. Erro: ${errorMessageKey}`);
+      // Usar I18nService para mensagens de erro
+      throw new BadRequestException(await this.i18n.translate(errorMessageKey, locale, { status: booking.status }));
     }
     this.logger.log(`[BookingsService] updateStatus - Status de agendamento validado. Atualizando no DB.`);
 
     // --- Lógica de Fidelização (após validação de status) ---
-    // CORREÇÃO: Mover a lógica de incremento de contadores para fora do if (newStatus === BookingStatus.COMPLETED)
-    // para que ela possa ser aplicada a diferentes transições de status.
     if (newStatus === BookingStatus.COMPLETED) {
       // Increment completedBookingsCount for the client
       await this.prisma.client.update({
@@ -491,13 +521,13 @@ export class BookingsService {
       this.logger.log(`[BookingsService] updateStatus: Provedor ${booking.providerId} teve monthlyBookingsCount incrementado.`);
 
       // ADICIONAR PONTOS PARA O CLIENTE POR SERVIÇO CONCLUÍDO
-      await this.loyaltyService.addPoints({ // <--- NOVA LINHA
+      await this.loyaltyService.addPoints({
         userId: booking.client.userId,
         points: 10, // Exemplo: +10 pontos por serviço concluído
         type: LoyaltyTransactionType.SERVICE_COMPLETED,
         referenceId: booking.id,
       });
-      this.logger.log(`[BookingsService] updateStatus: Cliente ${booking.client.userId} recebeu pontos por serviço concluído.`); // <--- NOVA LINHA
+      this.logger.log(`[BookingsService] updateStatus: Cliente ${booking.client.userId} recebeu pontos por serviço concluído.`);
 
       // Mark coupon as used if one was applied to this booking
       const bookingWithCoupon = await this.prisma.booking.findUnique({
@@ -510,12 +540,9 @@ export class BookingsService {
         this.logger.log(`[BookingsService] updateStatus: Cupom ${bookingWithCoupon.couponId} marcado como usado para o agendamento ${booking.id}.`);
       }
 
-      // Send notification to client to request a review
-      // CORREÇÃO: O booking.providerService.name e booking.provider.fullName só estarão disponíveis se incluídos
-      // na consulta inicial do booking.
-      const reviewNotificationMessage = `Seu serviço de ${booking.providerService.service.name} com ${booking.provider.fullName} foi concluído! Deixe uma avaliação para ele.`;
-      const reviewNotificationTargetUrl = `/client/bookings/${booking.id}/review`; // Example URL
-      // Usar a fila para enviar a notificação
+      // Enfileira notificação de review
+      const reviewNotificationMessage = await this.i18n.translate('notification.reviewRequest', locale, { serviceName: booking.providerService.service.name, providerName: booking.provider.fullName }); // Usar I18nService
+      const reviewNotificationTargetUrl = `/client/bookings/${booking.id}/review`;
       await this.queuesService.addNotificationJob('send-notification', {
         userId: booking.client.userId,
         type: 'REVIEW_REQUEST',
@@ -523,17 +550,41 @@ export class BookingsService {
         targetUrl: reviewNotificationTargetUrl,
       });
       this.logger.log(`[BookingsService] updateStatus: Notificação de avaliação adicionada à fila para cliente ${booking.client.userId}.`);
+
+      // >>> NOVO: Missões — evento de conclusão
+      try {
+        await this.missionsService.trackEvent(booking.client.userId, 'booking.completed', {
+          bookingId: booking.id,
+          providerId: booking.providerId,
+          providerServiceId: booking.providerServiceId,
+        });
+      } catch (e) {
+        this.logger.warn(`[BookingsService] updateStatus - Falha ao emitir evento de missão booking.completed: ${e?.message}`);
+      }
+
+      // >>> NOVO: Indicações — verificar conversão do indicado (1º COMPLETED)
+      try {
+        await this.referralsService.handleBookingCompletedForReferral(booking.client.userId, booking.id);
+      } catch (e) {
+        this.logger.warn(`[BookingsService] updateStatus - Falha ao processar conversão de referral: ${e?.message}`);
+      }
+      // <<< FIM NOVO
+
+      // NEW: Lógica para calcular e armazenar taxa de aceitação e tempo médio de resposta
+      // Isso é um placeholder. A lógica real dependeria de um histórico de interações.
+      // Você precisaria de um campo no modelo Provider para armazenar isso.
+      // Exemplo conceitual (assumindo campos no modelo Provider):
+      // await this.providersService.updateProviderPerformanceMetrics(booking.providerId);
     }
 
-    // CORREÇÃO: Lógica para noShowCount e cancellationCount movida para ser aplicada com base no newStatus
-    // e no status anterior, independentemente do status final ser COMPLETED.
+    // Métricas de cancelamento / no show
     if (newStatus === BookingStatus.CANCELED && booking.status !== BookingStatus.CANCELED) {
       await this.prisma.client.update({
         where: { id: booking.clientId },
         data: { cancellationCount: { increment: 1 } },
       });
       this.logger.log(`[BookingsService] updateStatus: Cliente ${booking.clientId} teve cancellationCount incrementado.`);
-    } else if (newStatus === BookingStatus.NO_SHOW && booking.status !== BookingStatus.NO_SHOW) { // CORREÇÃO: Usar o enum BookingStatus.NO_SHOW
+    } else if (newStatus === BookingStatus.NO_SHOW && booking.status !== BookingStatus.NO_SHOW) {
       await this.prisma.client.update({
         where: { id: booking.clientId },
         data: { noShowCount: { increment: 1 } },
@@ -608,10 +659,8 @@ export class BookingsService {
     return filteredBookings; // Retorna o tipo Prisma
   }
 
-  async cancelBooking(bookingId: string, userRole: UserRole): Promise<BookingWithDetailsRelations> { // Adicionado userRole
-    // Implementação atualiza status para CANCELED
-    // Certifique-se de que a lógica de updateStatus lida com o userRole corretamente
-    return this.updateStatus(bookingId, BookingStatus.CANCELED, userRole);
+  async cancelBooking(bookingId: string, userRole: UserRole, request?: Request): Promise<BookingWithDetailsRelations> { // Adicionado userRole e request
+    return this.updateStatus(bookingId, BookingStatus.CANCELED, userRole, request);
   }
 
   async checkConfirmedBookingBetweenUsers(clientId: string, providerId: string): Promise<boolean> {
@@ -645,8 +694,9 @@ export class BookingsService {
     };
   }
 
-  async reportIssue(bookingId: string, userId: string, userRole: UserRole, reason: string): Promise<BookingWithDetailsRelations> {
+  async reportIssue(bookingId: string, userId: string, userRole: UserRole, reason: string, request?: Request): Promise<BookingWithDetailsRelations> {
     this.logger.log(`[BookingsService] reportIssue: Usuário ${userId} (${userRole}) reportando problema no booking ${bookingId}. Motivo: ${reason}`);
+    const locale = (request as any)?.locale || 'pt-BR';
 
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId },
@@ -654,40 +704,35 @@ export class BookingsService {
     });
 
     if (!booking) {
-      throw new NotFoundException(`Agendamento com ID "${bookingId}" não encontrado.`);
+      throw new NotFoundException(await this.i18n.translate('booking.notFound', locale, { id: bookingId })); // Usar I18nService
     }
 
-    // Only the client or provider associated with the booking can report an issue
-    // CORREÇÃO: findClientByUserId e findByUserId retornam ProviderWithCalculatedRating/Client,
-    // que têm o 'id' do Client/Provider, não o userId.
-    // Você precisa comparar o ID do CLIENTE/PROVEDOR do booking com o ID do CLIENTE/PROVEDOR encontrado pelo userId.
     const client = await this.clientsService.findClientByUserId(userId);
     const provider = await this.providersService.findByUserId(userId);
 
     if (userRole === UserRole.CLIENT && booking.clientId !== client?.id) {
-      throw new ForbiddenException('Você não tem permissão para reportar um problema neste agendamento.');
+      throw new ForbiddenException(await this.i18n.translate('booking.forbidden.reportIssue', locale)); // Usar I18nService
     }
     if (userRole === UserRole.PROVIDER && booking.providerId !== provider?.id) {
-      throw new ForbiddenException('Você não tem permissão para reportar um problema neste agendamento.');
+      throw new ForbiddenException(await this.i18n.translate('booking.forbidden.reportIssue', locale)); // Usar I18nService
     }
 
-    // Update booking status to PENDING_DISPUTE
-    // Notify an admin (you) about the dispute
-    // Usar a fila para notificar o admin
+    const notificationMessage = await this.i18n.translate('notification.newDisputeAdmin', locale, { bookingId, reason }); // Usar I18nService
     await this.queuesService.addNotificationJob('send-notification', {
       userId: 'ADMIN_USER_ID', // Substitua pelo ID do usuário admin real
       type: 'BOOKING_DISPUTE',
-      message: `Disputa aberta para agendamento ${bookingId}. Motivo: ${reason}`,
+      message: notificationMessage,
       targetUrl: `/admin/disputes/${bookingId}`,
     });
     this.logger.log(`[BookingsService] reportIssue: Notificação de disputa adicionada à fila para ADMIN.`);
 
-    return this.updateStatus(bookingId, BookingStatus.PENDING_DISPUTE, userRole);
+    return this.updateStatus(bookingId, BookingStatus.PENDING_DISPUTE, userRole, request); // Passar request
   }
 
   // NOVO MÉTODO: Reportar Disputa (adiciona à fila)
-  async reportDispute(bookingId: string, userId: string, userRole: UserRole, dto: ReportDisputeDto): Promise<void> {
+  async reportDispute(bookingId: string, userId: string, userRole: UserRole, dto: ReportDisputeDto, request?: Request): Promise<void> { // Adicionado request
     this.logger.log(`[BookingsService] reportDispute: Usuário ${userId} (${userRole}) reportando disputa para booking ${bookingId}.`);
+    const locale = (request as any)?.locale || 'pt-BR';
 
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId },
@@ -695,39 +740,38 @@ export class BookingsService {
     });
 
     if (!booking) {
-      throw new NotFoundException(`Agendamento com ID "${bookingId}" não encontrado.`);
+      throw new NotFoundException(await this.i18n.translate('booking.notFound', locale, { id: bookingId })); // Usar I18nService
     }
 
     const client = await this.clientsService.findClientByUserId(userId);
     const provider = await this.providersService.findByUserId(userId);
 
     if (userRole === UserRole.CLIENT && booking.clientId !== client?.id) {
-      throw new ForbiddenException('Você não tem permissão para reportar uma disputa neste agendamento.');
+      throw new ForbiddenException(await this.i18n.translate('dispute.forbidden.access', locale)); // Usar I18nService
     }
     if (userRole === UserRole.PROVIDER && booking.providerId !== provider?.id) {
-      throw new ForbiddenException('Você não tem permissão para reportar uma disputa neste agendamento.');
+      throw new ForbiddenException(await this.i18n.translate('dispute.forbidden.access', locale)); // Usar I18nService
     }
 
-    // Adiciona a tarefa de processamento da disputa à fila
     await this.queuesService.addDisputeJob('process-booking-dispute', {
       bookingId,
       reporterUserId: userId,
       reporterRole: userRole,
       reason: dto.reason,
       description: dto.description,
-      refundAmount: dto.refundAmount,
+      refundAmount: dto.refundAmount, // CORREÇÃO: Usar dto.refundAmount
       attachments: dto.attachments,
     });
 
-    // Atualiza o status do agendamento para PENDING_DISPUTE
-    await this.updateStatus(bookingId, BookingStatus.PENDING_DISPUTE, userRole);
+    await this.updateStatus(bookingId, BookingStatus.PENDING_DISPUTE, userRole, request); // Passar request
 
     this.logger.log(`[BookingsService] reportDispute: Disputa para booking ${bookingId} adicionada à fila de processamento.`);
   }
 
   // NOVO MÉTODO: Resolver Disputa (apenas para ADMIN)
-  async resolveDispute(bookingId: string, resolution: string, refundAmount?: number, newStatus?: BookingStatus): Promise<BookingWithDetailsRelations> {
+  async resolveDispute(bookingId: string, resolution: string, refundAmount?: number, newStatus?: BookingStatus, request?: Request): Promise<BookingWithDetailsRelations> { // Adicionado request
     this.logger.log(`[BookingsService] resolveDispute: Resolvendo disputa para booking ${bookingId}. Resolução: ${resolution}.`);
+    const locale = (request as any)?.locale || 'pt-BR';
 
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId },
@@ -735,39 +779,32 @@ export class BookingsService {
     });
 
     if (!booking) {
-      throw new NotFoundException(`Agendamento com ID "${bookingId}" não encontrado.`);
+      throw new NotFoundException(await this.i18n.translate('booking.notFound', locale, { id: bookingId })); // Usar I18nService
     }
 
     if (booking.status !== BookingStatus.PENDING_DISPUTE) {
-      throw new BadRequestException('Este agendamento não está em status de disputa.');
+      throw new BadRequestException(await this.i18n.translate('dispute.badRequest.notInDisputeStatus', locale)); // Usar I18nService
     }
 
-    // Lógica para processar reembolso, se houver
     if (refundAmount && refundAmount > 0) {
-      // Aqui você integraria com o serviço de pagamentos para processar o reembolso
-      // Ex: await this.paymentsService.processRefund(booking.id, refundAmount);
       this.logger.log(`[BookingsService] resolveDispute: Iniciando processo de reembolso de R$${refundAmount} para booking ${bookingId}.`);
-      // Cria uma transação de reembolso (exemplo)
       await this.prisma.transaction.create({
         data: {
-          providerId: booking.provider.id, // O provedor que "perde" o valor
+          providerId: booking.provider.id,
           bookingId: booking.id,
-          amount: new Prisma.Decimal(refundAmount).neg(), // Valor negativo para indicar saída
-          type: 'REFUND', // Novo tipo de transação
+          amount: new Prisma.Decimal(refundAmount).neg(),
+          type: 'REFUND',
           status: 'PROCESSED',
           description: `Reembolso de disputa para agendamento ${bookingId}. Resolução: ${resolution}`,
         },
       });
     }
 
-    // Atualiza o status do agendamento conforme a resolução
-    const finalStatus = newStatus || BookingStatus.COMPLETED; // Padrão para COMPLETED ou outro status de sua escolha
+    const finalStatus = newStatus || BookingStatus.COMPLETED;
     const updatedBooking = await this.prisma.booking.update({
       where: { id: bookingId },
       data: {
         status: finalStatus,
-        // Você pode adicionar um campo 'disputeResolution' no modelo Booking
-        // disputeResolution: resolution,
       },
       include: {
         client: { include: { user: true } },
@@ -782,17 +819,18 @@ export class BookingsService {
       },
     });
 
-    // Notificar cliente e provedor sobre a resolução da disputa
+    const clientNotificationMessage = await this.i18n.translate('notification.disputeResolvedClient', locale, { bookingId: booking.id, status: finalStatus, resolution }); // Usar I18nService
     await this.queuesService.addNotificationJob('send-notification', {
       userId: booking.client.userId,
       type: 'DISPUTE_RESOLUTION',
-      message: `A disputa para o agendamento ${booking.id} foi resolvida. Status: ${finalStatus}. Resolução: ${resolution}`,
+      message: clientNotificationMessage,
       targetUrl: `/client/bookings/${booking.id}`,
     });
+    const providerNotificationMessage = await this.i18n.translate('notification.disputeResolvedProvider', locale, { bookingId: booking.id, status: finalStatus, resolution }); // Usar I18nService
     await this.queuesService.addNotificationJob('send-notification', {
       userId: booking.provider.userId,
       type: 'DISPUTE_RESOLUTION',
-      message: `A disputa para o agendamento ${booking.id} foi resolvida. Status: ${finalStatus}. Resolução: ${resolution}`,
+      message: providerNotificationMessage,
       targetUrl: `/provider/bookings/${booking.id}`,
     });
 

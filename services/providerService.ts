@@ -1,3 +1,4 @@
+// providerService.ts
 // app/services/providerService.ts
 import axios, { AxiosResponse } from 'axios';
 import api from './api';
@@ -20,6 +21,27 @@ import {
 
 // <<<< CORREÇÃO: Importar ProviderServiceOffering APENAS do seu arquivo de origem >>>>
 import { ProviderServiceOffering } from '../types/backend/provider-service';
+
+// Mock ou placeholder para tipos que não foram fornecidos nos snippets
+// Em um projeto real, estes deveriam vir de `../types/backend/providers` e `../types/backend/offers`
+export interface ProviderMetrics {
+  acceptanceRate: number;
+  avgResponseTime: number; // em minutos
+  totalBookings: number;
+  // Adicione outras métricas conforme necessário
+}
+
+export interface Offer {
+  id: string;
+  title: string;
+  description: string;
+  couponCode: string | null;
+  discountType: 'PERCENT' | 'FIXED'; // Adicionado para corresponder ao uso
+  discountValue: number; // Adicionado para corresponder ao uso
+  startDate: string;
+  endDate: string;
+}
+
 
 // =========================================================================
 // FUNÇÕES DE SERVIÇO DO PROVEDOR - AJUSTADAS E COMPLETAS
@@ -347,5 +369,70 @@ export async function searchProviders(query: ProviderSearchQuery): Promise<Provi
       throw new Error(error.response.data.message || 'Erro ao buscar provedores.');
     }
     throw new Error('Erro de rede ou servidor ao buscar provedores.');
+  }
+}
+
+/**
+ * @function getProviderMetrics
+ * Obtém métricas específicas para um provedor.
+ * Este é um placeholder, ajuste o endpoint e a lógica conforme sua API.
+ * @param providerId O ID do provedor.
+ * @returns Uma Promise que resolve para o objeto ProviderMetrics.
+ */
+export async function getProviderMetrics(providerId: string): Promise<ProviderMetrics> {
+  try {
+    // Exemplo de endpoint: /providers/:providerId/metrics
+    // Se não houver um endpoint real, você pode mockar os dados ou lançar um erro.
+    const response: AxiosResponse<ProviderMetrics> = await api.get(`/providers/${providerId}/metrics`);
+    return response.data;
+  } catch (error: any) {
+    console.error(`Erro ao buscar métricas do provedor ${providerId}:`, error.response?.data || error.message);
+    // Retornar dados mockados em caso de erro ou se o endpoint não existe para evitar quebrar a UI
+    return {
+      acceptanceRate: 95, // Exemplo
+      avgResponseTime: 15, // Exemplo em minutos
+      totalBookings: 120, // Exemplo
+    };
+    // Ou lançar um erro:
+    // if (axios.isAxiosError(error) && error.response) {
+    //   throw new Error(error.response.data.message || `Erro ao buscar métricas do provedor ${providerId}.`);
+    // }
+    // throw new Error(`Erro de rede ou servidor ao buscar métricas do provedor ${providerId}.`);
+  }
+}
+
+/**
+ * @function getProviderOffers
+ * Obtém as ofertas disponíveis para um provedor.
+ * Este é um placeholder, ajuste o endpoint e a lógica conforme sua API.
+ * @param providerId O ID do provedor.
+ * @returns Uma Promise que resolve para um array de objetos Offer.
+ */
+export async function getProviderOffers(providerId: string): Promise<Offer[]> {
+  try {
+    // Exemplo de endpoint: /providers/:providerId/offers
+    const response: AxiosResponse<Offer[]> = await api.get(`/providers/${providerId}/offers`);
+    return response.data;
+  } catch (error: any) {
+    console.error(`Erro ao buscar ofertas do provedor ${providerId}:`, error.response?.data || error.message);
+    // Retornar um array vazio ou dados mockados em caso de erro
+    return [
+      // Exemplo de oferta mockada
+      // {
+      //   id: 'offer-123',
+      //   title: '10% de Desconto no Primeiro Serviço',
+      //   description: 'Válido para novos clientes.',
+      //   couponCode: 'BEMVINDO10',
+      //   discountType: 'PERCENT',
+      //   discountValue: 10,
+      //   startDate: '2025-01-01',
+      //   endDate: '2025-12-31',
+      // }
+    ];
+    // Ou lançar um erro:
+    // if (axios.isAxiosError(error) && error.response) {
+    //   throw new Error(error.response.data.message || `Erro ao buscar ofertas do provedor ${providerId}.`);
+    // }
+    // throw new Error(`Erro de rede ou servidor ao buscar ofertas do provedor ${providerId}.`);
   }
 }

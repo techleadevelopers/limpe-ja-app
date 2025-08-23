@@ -30,9 +30,12 @@ interface SmartNotification extends Notification {
 }
 
 export class NotificationService {
+  // Este método parece ser uma versão mais antiga ou para um endpoint diferente
+  // Mantido conforme sua solicitação de não alterar o que já temos,
+  // mas o 'index.tsx' buscará as funções exportadas no final do arquivo.
   static async getNotifications(): Promise<SmartNotification[]> {
     try {
-      const response = await api.get('/notifications');
+      const response = await api.get('/notifications'); // Endpoint genérico, não /notifications/me
       return this.enhanceNotifications(response.data);
     } catch (error) {
       console.error('Erro ao buscar notificações:', error);
@@ -77,6 +80,7 @@ export class NotificationService {
     });
   }
 
+  // Este método parece ser uma versão mais antiga ou para um endpoint diferente
   static async markAsRead(notificationId: string): Promise<void> {
     try {
       await api.patch(`/notifications/${notificationId}/read`);
@@ -86,6 +90,7 @@ export class NotificationService {
     }
   }
 
+  // Este método parece ser uma versão mais antiga ou para um endpoint diferente
   static async markAllAsRead(): Promise<void> {
     try {
       await api.patch('/notifications/mark-all-read');
@@ -126,11 +131,11 @@ export class NotificationService {
   }
 
   /**
- * @function getNotifications
- * Busca a lista de notificações para o usuário logado.
- * Corresponde a `GET /notifications/me`.
- * @returns Promessa com um array de NotificationEntity.
- */
+   * @function getNotificationsMe
+   * Busca a lista de notificações para o usuário logado.
+   * Corresponde a `GET /notifications/me`.
+   * @returns Promessa com um array de NotificationEntity.
+   */
   static getNotificationsMe = async (): Promise<NotificationEntity[]> => {
     try {
       const response: AxiosResponse<NotificationEntity[]> = await api.get('/notifications/me');
@@ -145,7 +150,7 @@ export class NotificationService {
   };
 
   /**
-   * @function markNotificationAsRead
+   * @function markNotificationAsReadMe
    * Marca uma notificação específica como lida.
    * Corresponde a `PATCH /notifications/:id/mark-as-read`.
    * @param notificationId O ID da notificação a ser marcada como lida.
@@ -168,7 +173,7 @@ export class NotificationService {
   };
 
   /**
-   * @function markAllNotificationsAsRead
+   * @function markAllNotificationsAsReadMe
    * Marca todas as notificações do usuário logado como lidas.
    * Corresponde a `PATCH /notifications/me/mark-as-read`.
    * @returns Promessa com uma mensagem de resposta ou um objeto de contagem.
@@ -234,3 +239,9 @@ export class NotificationService {
     }
   }
 }
+
+// Exportações nomeadas para compatibilidade com o arquivo index.tsx
+// Estas exportações apontam para os métodos estáticos da classe NotificationService.
+export const getNotifications = NotificationService.getNotificationsMe;
+export const markNotificationAsRead = NotificationService.markNotificationAsReadMe;
+export const markAllNotificationsAsRead = NotificationService.markAllNotificationsAsReadMe;

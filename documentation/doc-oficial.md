@@ -1,0 +1,1482 @@
+Documentação do Frontend LimpeJáApp
+O LimpeJáApp é uma aplicação mobile construída com React Native e Expo, projetada para conectar clientes a profissionais de limpeza e organização. Este frontend robusto e interativo gerencia todo o ciclo de vida do usuário, desde o registro e autenticação até o agendamento de serviços, comunicação e gestão de perfis.
+
+1. Visão Geral da Arquitetura
+O frontend do LimpeJáApp segue uma arquitetura modular e baseada em componentes, utilizando as seguintes tecnologias e padrões:
+
+React Native & Expo: Para desenvolvimento de aplicações multiplataforma (iOS e Android).
+Expo Router: Para roteamento e navegação declarativa, com suporte a layouts aninhados e grupos de rotas.
+Context API (React): Para gerenciamento de estado global (autenticação, configurações do aplicativo, dados de registro de provedor).
+Axios: Para requisições HTTP à API de backend, com interceptadores para tratamento de autenticação e erros globais.
+TypeScript: Para tipagem estática, garantindo maior robustez e manutenibilidade do código.
+Reanimated: Para animações fluidas e de alto desempenho.
+Estrutura de Pastas: Organizada por funcionalidades e papéis ((auth), (client), (provider), (common)), facilitando a localização e o isolamento de responsabilidades.
+2. Módulos Core e Utilitários
+Esta seção descreve os módulos fundamentais que suportam a operação de toda a aplicação.
+
+2.1. api.ts
+Caminho: LimpeJaApp/app/services/api.ts
+Propósito: Configura e exporta uma instância global do Axios para todas as requisições HTTP ao backend. Centraliza a lógica de autenticação (JWT) e tratamento de erros (401 Unauthorized).
+Dependências: axios, @react-native-async-storage/async-storage, expo-constants.
+Exporta: Uma instância api do Axios como default export.
+Funcionalidades Chave:
+API_BASE_URL: Define a URL base do backend, obtida de Constants.expoConfig.extra.backendApiUrl ou http://localhost:3000 para desenvolvimento local.
+Interceptors de Requisição: Adiciona automaticamente o token JWT (auth_token) ao cabeçalho Authorization de cada requisição, se disponível no AsyncStorage.
+Interceptors de Resposta: Intercepta respostas da API. Em caso de 401 Unauthorized, tenta chamar um callback de logout (onUnauthorizedCallback) registrado, e remove os dados de autenticação do AsyncStorage para forçar o relogin. Isso previne loops infinitos de autenticação.
+Interconexões: É importado por quase todos os serviços (authService, providerService, clientService, etc.) para realizar chamadas HTTP.
+2.2. authService.ts
+Caminho: LimpeJaApp/services/authService.ts
+Propósito: Gerencia a lógica de autenticação do usuário, incluindo login, registro, redefinição de senha e logout, interagindo diretamente com a API de backend. Armazena e recupera dados de autenticação no AsyncStorage.
+Dependências: @react-native-async-storage/async-storage, api.ts, AuthResponse, UserRole, UserProfile.
+Exporta: Uma instância singleton de AuthService.
+Funcionalidades Chave:
+login(credentials): Envia credenciais para /auth/login, salva o accessToken, user.role, user.id e user completo no AsyncStorage. Define o token no cabeçalho do Axios.
+registerClient(userData): Envia dados para /auth/register/client, salva os dados de autenticação.
+registerProvider(userData): Envia dados para /auth/register/provider, salva os dados de autenticação.
+sendPasswordReset(email): Envia uma requisição real ao endpoint de redefinição de senha do backend (POST /auth/forgot-password).
+logout(): Remove todos os dados de autenticação do AsyncStorage e limpa o token do Axios.
+loadAuthData(): Carrega dados de autenticação do AsyncStorage na inicialização do app.
+storeAuthData(): Método público para salvar dados de autenticação programaticamente.
+setAuthToken(token) / getAuthToken(): Gerencia o token JWT em memória e no cabeçalho do Axios.
+Interconexões: Utilizado pelo AuthContext para executar as operações de autenticação e persistir o estado do usuário.
+2.3. contexts/AuthContext.tsx
+Caminho: LimpeJaApp/contexts/AuthContext.tsx
+Propósito: Fornece um contexto global para o estado de autenticação do usuário (isAuthenticated, user, isLoading) e funções relacionadas (login, logout, signUpClient, signUpProvider, refreshUser, updateUser).
+Dependências: React, AuthService, UserProfile, AuthResponse, UserRole, VerificationStatus, LoginDto, RegisterClientDto, RegisterProviderDto, UpdateProviderProfileData, UpdateClientProfileDto.
+Exporta: AuthProvider (componente provedor) e useAuth (hook customizado).
+Funcionalidades Chave:
+Carregamento Inicial: Na montagem, tenta carregar dados de autenticação do AsyncStorage via AuthService.loadAuthData().
+login(credentials): Chama AuthService.login(), atualiza o estado do contexto.
+logout(): Chama AuthService.logout(), limpa o estado do contexto.
+signUpClient(data) / signUpProvider(data): Chama AuthService.registerClient() / AuthService.registerProvider(), atualiza o estado.
+refreshUser(): Recarrega o perfil do usuário do backend via userService.getMe().
+updateUser(partialUser): Atualiza parcialmente o objeto user no contexto e no AsyncStorage.
+isRegistrationInProgress: Sinaliza se um registro de provedor está em andamento, usado para direcionar o fluxo de verificação.
+Interconexões: É o coração da gestão de sessão. Componentes da UI (login.tsx, client-register.tsx, dashboard/index.tsx, _layout.tsx) consomem este contexto para exibir informações do usuário, controlar acesso e navegar.
+2.4. _layout.tsx (Root)
+Caminho: LimpeJaApp/app/_layout.tsx
+Propósito: O layout raiz da aplicação, responsável por inicializar os provedores de contexto (AuthProvider, ProviderRegistrationProvider, AppProvider) e gerenciar a lógica de roteamento e redirecionamento baseada no estado de autenticação e no papel/status de verificação do usuário.
+Dependências: expo-router, AuthContext, ProviderRegistrationContext, AppContext, UserRole, VerificationStatus, AUTH_ROUTES, CLIENT_ROUTES, PROVIDER_ROUTES.
+Funcionalidades Chave:
+SplashScreen.preventAutoHideAsync(): Mantém a splash screen visível até que o app esteja pronto.
+Lógica de Redirecionamento: O useEffect principal decide para onde redirecionar o usuário com base em:
+Não Autenticado: Redireciona para /welcome ou mantém em rotas de autenticação.
+Autenticado (Provedor):
+APPROVED: Redireciona para o dashboard do provedor.
+PENDING_INITIAL_REVIEW: Redireciona para provider-register/service-details.
+PENDING_DOCUMENTS_UPLOAD / Outros pendentes: Redireciona para provider-register/verify-account.
+Autenticado (Cliente/Admin): Redireciona para a tela de exploração do cliente.
+Interconexões: Depende fortemente do AuthContext para obter o estado de autenticação e os detalhes do usuário. É o ponto de entrada para a navegação principal da aplicação.
+3. Autenticação e Registro
+Esta seção detalha as telas e o fluxo para autenticação e registro de novos usuários.
+
+3.1. welcome.tsx
+Caminho: LimpeJaApp/app/welcome.tsx
+Propósito: Tela inicial de boas-vindas com animações de logo, que redireciona automaticamente para a tela de login.
+Dependências: react-native-reanimated, expo-router, expo-linear-gradient.
+Funcionalidades Chave:
+Exibe um logo animado com efeitos de escala, rotação e reflexo.
+Redireciona automaticamente para a tela de login (/(auth)/login) após um curto período.
+Interconexões: É a primeira tela que o usuário vê ao abrir o aplicativo, antes de qualquer lógica de autenticação ser processada.
+3.2. login.tsx
+Caminho: LimpeJaApp/app/(auth)/login.tsx
+Propósito: Tela de login para usuários existentes, permitindo autenticação via e-mail e senha.
+Dependências: expo-router, React, Animated, Dimensions, KeyboardAvoidingView, Platform, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View, LinearGradient, useAuth, UserRole, AnimatedReanimated, Easing, Extrapolate, interpolate, useAnimatedStyle, useSharedValue, withRepeat, withTiming, AnimatedErrorMessage, InputWithIcon.
+Funcionalidades Chave:
+Formulário de entrada para e-mail e senha.
+Animações de entrada e de loop para o logo.
+handleLogin(): Valida e-mail e senha, chama login() do AuthContext. Exibe mensagens de erro ou sucesso.
+Links para cadastro e recuperação de senha.
+Interconexões: Interage com AuthContext para realizar o login. O redirecionamento pós-login é gerenciado pelo _layout.tsx raiz.
+3.3. register-options.tsx
+Caminho: LimpeJaApp/app/(auth)/register-options.tsx
+Propósito: Permite ao usuário escolher se deseja se cadastrar como "Cliente" ou "Profissional".
+Dependências: React, Animated, StatusBar, StyleSheet, TouchableOpacity, View, Image, Platform, Stack, useRouter, Link, Ionicons, MaterialCommunityIcons.
+Funcionalidades Chave:
+Botões animados para "Sou Cliente" e "Sou Profissional".
+Link para a tela de login para usuários existentes.
+Animações de entrada escalonadas para os elementos da tela.
+Interconexões: Redireciona para client-register.tsx ou para o grupo provider-register.
+3.4. client-register.tsx
+Caminho: LimpeJaApp/app/(auth)/client-register.tsx
+Propósito: Gerencia o fluxo de registro de um novo cliente em três etapas: informações básicas, dados pessoais e endereço. Integra-se com a API ViaCEP para preenchimento automático de endereço.
+Dependências: React, Animated, Image, KeyboardAvoidingView, Platform, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View, Stack, useRouter, useAuth, CreateAddressDto, RegisterClientDto, AnimatedErrorMessage.
+Funcionalidades Chave:
+Fluxo Multi-etapas: Controla a navegação entre as etapas de registro.
+Validação por Etapa: Funções validateStep1(), validateStep2(), validateStep3() para garantir a integridade dos dados antes de avançar.
+fetchAddressFromRealCepApi(cep): Função utilitária para buscar dados de endereço na API ViaCEP.
+fetchAddressFromCep(): Dispara a busca de CEP e preenche os campos de endereço.
+handleSignUp(): Coleta todos os dados, chama signUpClient() do AuthContext para registrar o cliente no backend.
+Formatação de telefone, CPF e data de nascimento em tempo real.
+Interconexões: Interage com AuthContext para o registro.
+3.5. forgot-password.tsx
+Caminho: LimpeJaApp/app/(auth)/forgot-password.tsx
+Propósito: Permite que o usuário solicite um link de redefinição de senha para seu e-mail.
+Dependências: React, Stack, useRouter, Ionicons, TextInput, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, ScrollView, KeyboardAvoidingView, Platform.
+Funcionalidades Chave:
+Formulário para inserir o e-mail.
+AuthService.sendPasswordReset(email): Chama o método sendPasswordReset da instância AuthService para enviar uma requisição real ao backend.
+Exibe mensagens de sucesso ou erro.
+Botão para voltar à tela de login.
+Interconexões: Interage com AuthService para a funcionalidade de redefinição de senha.
+3.6. _layout.tsx (Auth Group)
+Caminho: LimpeJaApp/app/(auth)/_layout.tsx
+Propósito: Define o layout de navegação para todas as telas dentro do grupo de autenticação ((auth)).
+Dependências: expo-router.
+Funcionalidades Chave:
+Configura Stack.Screen para cada tela de autenticação, definindo headerShown e title.
+O diretório provider-register é tratado como uma tela, permitindo que seu próprio _layout.tsx gerencie as sub-rotas.
+Interconexões: É um layout aninhado do _layout.tsx raiz.
+4. Gestão de Provedores e Onboarding
+Esta seção detalha o fluxo de registro e as funcionalidades específicas para provedores de serviços.
+
+4.1. provider-register/_layout.tsx
+Caminho: LimpeJaApp/app/(auth)/provider-register/_layout.tsx
+Propósito: Define o layout de navegação para as etapas do registro de provedor.
+Dependências: expo-router, ProviderRegistrationProvider.
+Funcionalidades Chave:
+Envolve as telas de registro de provedor com o ProviderRegistrationProvider.
+Define os títulos do cabeçalho para cada etapa do registro.
+Interconexões: É um layout aninhado dentro do grupo de autenticação.
+4.2. contexts/ProviderRegistrationContext.tsx
+Caminho: LimpeJaApp/contexts/ProviderRegistrationContext.tsx
+Propósito: Gerencia o estado e a lógica de registro de provedores em várias etapas, persistindo os dados entre as telas e orquestrando a submissão final ao backend.
+Dependências: React, useAuth, RegisterProviderDto, ServiceDetailsFormData.
+Exporta: ProviderRegistrationProvider (componente provedor) e useProviderRegistration (hook customizado).
+Funcionalidades Chave:
+personalDetails / serviceDetails: Armazena os dados coletados nas diferentes etapas do registro.
+submitRegistration(serviceDetailsData): Coleta todos os dados (pessoais + serviço), chama signUpProvider() do AuthContext para registrar o provedor. Após o registro inicial, atualiza o perfil do provedor com os detalhes do serviço via updateMyProviderProfile().
+Interconexões: Consumido pelas telas de registro de provedor (index.tsx, personal-details.tsx, service-details.tsx) para compartilhar e persistir dados.
+4.3. provider-register/index.tsx
+Caminho: LimpeJaApp/app/(auth)/provider-register/index.tsx
+Propósito: Primeira etapa do registro de provedor, coletando informações básicas (nome, e-mail, telefone).
+Dependências: React, Animated, Alert, Image, KeyboardAvoidingView, Platform, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View, Ionicons, MaterialCommunityIcons, ImagePicker, Stack, useRouter, useAuth, useProviderRegistration, RegisterProviderDto, AnimatedErrorMessage, uploadService.
+Funcionalidades Chave:
+Formulário para nome, e-mail e telefone.
+Validação local dos campos.
+handlePickImage(): Permite ao usuário selecionar uma foto de perfil.
+fetchAddressByCep(): Integração com ViaCEP para preencher endereço automaticamente (embora a lógica principal de endereço tenha sido movida para personal-details.tsx em refatorações posteriores).
+handleNext(): Valida os campos e avança para a próxima etapa. Na etapa 3, chama signUpProvider() do AuthContext para o registro inicial.
+handleServiceDetailsSubmit(): Na última etapa, gerencia o upload da foto de perfil (uploadService.uploadImageToCloud) e chama submitRegistration() do ProviderRegistrationContext para finalizar o registro.
+Interconexões: Interage com AuthContext para o registro inicial e ProviderRegistrationContext para a submissão final dos detalhes do serviço.
+4.4. provider-register/personal-details.tsx
+Caminho: LimpeJaApp/app/(auth)/provider-register/personal-details.tsx
+Propósito: Segunda etapa do registro de provedor, coletando dados pessoais (CPF, data de nascimento, senha) e detalhes de endereço.
+Dependências: React, Animated, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, Ionicons, ActivityIndicator, Stack, useRouter, useProviderRegistration, DatePickerInput, InputWithIcon, SectionHeader, StandardInput.
+Funcionalidades Chave:
+Formulário para CPF, data de nascimento, senha e endereço completo.
+Integração com mockViaCepApi (simulação) para preenchimento automático de endereço via CEP.
+Validação de todos os campos.
+handleNext(): Valida os campos, salva os personalDetails no ProviderRegistrationContext e navega para a próxima etapa.
+Interconexões: Consome e atualiza o ProviderRegistrationContext.
+4.5. provider-register/service-details.tsx
+Caminho: LimpeJaApp/src/app/(provider)/provider-register/service-details.tsx (Nota: o caminho no código é diferente do (auth) group, o que pode indicar uma refatoração ou erro no caminho do arquivo)
+Propósito: Terceira etapa do registro de provedor, coletando detalhes sobre os serviços oferecidos, experiência, estrutura de preços e chave PIX.
+Dependências: React, Animated, Alert, Dimensions, Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Ionicons, LinearGradient, ImagePicker, useRouter, useAuth, updateMyProviderProfile, addProviderServiceOffering, updateProviderServiceOffering, getProviderServicesOffered, verificationService.
+Funcionalidades Chave:
+Formulário para descrição do serviço, anos de experiência, preço base, chave PIX, especialidades e áreas de atendimento.
+handleImagePicker(): Permite selecionar uma foto de perfil.
+handleContinue():
+Faz upload da foto de perfil via verificationService.uploadSelfie().
+Atualiza o perfil do provedor (updateMyProviderProfile).
+Busca serviços já oferecidos (getProviderServicesOffered).
+Adiciona ou atualiza os serviços oferecidos (addProviderServiceOffering, updateProviderServiceOffering), mapeando especialidades para serviceIds.
+Atualiza o user no AuthContext com a nova avatarUrl.
+Redireciona para a tela de verificação de conta.
+Interconexões: Interage com useAuth e vários serviços de provedor para persistir os dados no backend.
+4.6. provider-register/verify-account.tsx
+Caminho: LimpeJaApp/app/(auth)/provider-register/verify-account.tsx
+Propósito: Gerencia o fluxo de verificação de conta do provedor, incluindo upload de documentos e verificação de status.
+Dependências: React, Animated, Alert, Image, KeyboardAvoidingView, Platform, ScrollView, StatusBar, StyleSheet, Text, View, ActivityIndicator, Stack, useRouter, DocumentUploadScreen, ToastMessage, useAuth, verificationService, DocumentPhotoType, VerificationStatus, PROVIDER_ROUTES.
+Funcionalidades Chave:
+Exibe diferentes etapas de verificação (splash, upload de documentos, análise).
+handleStepCompletion(): Lida com a conclusão de etapas, chamando verificationService.uploadDocumentPhoto() para o upload.
+useEffect (periódico): Verifica o status de verificação do provedor (verificationService.getProviderVerificationInfo()) a cada 5 segundos. Se aprovado, atualiza o AuthContext e redireciona para o dashboard.
+Interconexões: Interage com useAuth para obter o status do provedor e verificationService para operações de verificação.
+4.7. verification.ts
+Caminho: LimpeJaApp/app/types/backend/verification.ts
+Propósito: Define as interfaces e enums relacionadas ao processo de verificação de provedores, incluindo DTOs para submissão de CPF e tipos de fotos de documento.
+Dependências: VerificationStatus (de auth.ts).
+Exporta: SubmitCpfRequest, DocumentPhotoType, VerificationResponse, ProviderVerificationInfo.
+Funcionalidades Chave:
+DocumentPhotoType: Enum para FRONT e BACK das fotos de documento.
+ProviderVerificationInfo: Detalhes do status de verificação de um provedor.
+4.8. verificationService.ts
+Caminho: LimpeJaApp/app/services/verificationService.ts
+Propósito: Fornece funções para interagir com os endpoints de verificação do backend (submissão de CPF, upload de documentos/selfie, consulta de status).
+Dependências: axios, Platform, FileSystem (expo), api.ts, DocumentPhotoType, ProviderVerificationInfo, SubmitCpfRequest, VerificationResponse.
+Exporta: Uma instância singleton de VerificationService.
+Funcionalidades Chave:
+submitCpf(cpf): Envia CPF para verificação.
+uploadDocumentPhoto(imageUri, type): Faz upload de fotos da frente/verso do documento.
+uploadSelfie(imageUri): Faz upload da selfie.
+getProviderVerificationInfo(providerId): Busca o status de verificação de um provedor.
+Lógica para converter URIs de imagem em Blob para FormData e lidar com multipart/form-data.
+Interconexões: Utilizado por provider-register/verify-account.tsx e provider-register/service-details.tsx.
+4.9. profile/edit-services.tsx
+Caminho: LimpeJaApp/app/(provider)/profile/edit-services.tsx
+Propósito: Permite que provedores editem e gerenciem os serviços que oferecem, incluindo preço e tipo de precificação.
+Dependências: React, Animated, Alert, FlatList, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator, Picker (@react-native-picker/picker), Stack, useRouter, useAuth, Ionicons, MaterialCommunityIcons, PricingType.
+Funcionalidades Chave:
+Lista de serviços obtidos do backend via getProviderServicesOffered.
+Formulário para adicionar/editar serviços com campos para nome, descrição, preço, tipo de precificação (FIXED_PRICE, HOURLY, BY_SIZE) e duração/preços por tamanho.
+handleAddOrUpdateService(): Adiciona um novo serviço ou atualiza um existente, persistindo as alterações no backend via addProviderServiceOffering ou updateProviderServiceOffering do providerService.ts.
+handleSaveServices(): Persiste as alterações no backend. As operações de adição, atualização e exclusão de serviços são realizadas individualmente através de chamadas a addProviderServiceOffering, updateProviderServiceOffering e deleteProviderServiceOffering do providerService.ts.
+formatPriceDisplay(): Função auxiliar para exibir o preço de acordo com o PricingType.
+Interconexões: Interage com providerService.ts para persistir os dados.
+4.10. dashboard/index.tsx (Provider Dashboard)
+Caminho: LimpeJaApp/app/(provider)/dashboard/index.tsx
+Propósito: A tela principal para provedores, exibindo um resumo de atividades, ganhos, solicitações pendentes, próximos serviços e avaliações recentes.
+Dependências: React, Animated, Alert, Image, Platform, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View, Ionicons, MaterialCommunityIcons, Stack, useRouter, useAuth, getBookingsForUser, updateBookingStatus, getMyProviderDashboard, getMyProviderEarnings, BookingDetails, BookingStatus, ProviderDashboard, ProviderReview, AdvancedReviewsSection, SmartInsightsSection.
+Funcionalidades Chave:
+fetchData(): Carrega dados do dashboard (getMyProviderDashboard()) e agendamentos (getBookingsForUser()) na inicialização e ao atualizar.
+DashboardHeader: Exibe nome e avatar do provedor.
+FinancialSummaryCard: Mostra ganhos totais e saques pendentes.
+QuickActionsSection: Botões de acesso rápido para agenda, serviços e mensagens.
+RequestItem: Componente para exibir solicitações de agendamento pendentes, com ações de aceitar/rejeitar (updateBookingStatus()) e iniciar chat.
+ConfirmedServiceItem: Componente para exibir próximos serviços confirmados.
+AdvancedReviewsSection: Exibe avaliações recentes.
+handleLogout(): Permite ao provedor sair da conta.
+Suporte a pull-to-refresh.
+Interconexões: Consome useAuth, bookingService, dashboardService e providerService. Navega para diversas telas de provedor.
+4.11. schedule/index.tsx (Provider Schedule)
+Caminho: LimpeJaApp/app/(provider)/schedule/index.tsx
+Propósito: Exibe a agenda do provedor com um calendário e uma lista de agendamentos para o dia selecionado.
+Dependências: React, Animated, Alert, FlatList, Image, Platform, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View, Stack, useRouter, Calendar, LocaleConfig, DateData, Ionicons, MaterialCommunityIcons, formatDate.
+Funcionalidades Chave:
+Calendar (react-native-calendars): Componente de calendário para seleção de datas.
+markedDates: Marca os dias no calendário que possuem agendamentos.
+loadAppointments(): Realiza uma chamada real à API (getBookingsForUser do bookingService.ts) para buscar os agendamentos do provedor.
+appointmentsForSelectedDate: Filtra e exibe os agendamentos para a data selecionada.
+AnimatedAppointmentItem: Componente para exibir cada agendamento na lista.
+Botão para gerenciar disponibilidade.
+Interconexões: Navega para manage-availability.tsx e para telas de detalhes de serviço/agendamento.
+4.12. schedule/manage-availability.tsx
+Caminho: LimpeJaApp/app/(provider)/schedule/manage-availability.tsx
+Propósito: Permite que o provedor defina e gerencie sua disponibilidade de horários semanais.
+Dependências: React, Animated, Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, Stack, useRouter, Ionicons, DateTimePicker (@react-native-community/datetimepicker), useAuth, deleteProviderAvailability, getProviderAvailability, updateProviderAvailability, ProviderAvailability, UpdateAvailabilityData, AnimatedDayCard, BlockDateSection, SaveChangesButton.
+Funcionalidades Chave:
+weeklyAvailability: Estado que armazena a disponibilidade por dia da semana, incluindo slots de horário.
+loadInitialAvailability(): Carrega a disponibilidade existente do backend via getProviderAvailability().
+handleToggleDayAvailability(): Ativa/desativa a disponibilidade de um dia.
+addSlot() / removeSlot(): Adiciona ou remove slots de horário para um dia específico.
+openTimePicker() / onTimeChange(): Gerencia a seleção de horários via DateTimePicker.
+validateSlots(): Valida sobreposição e ordem dos slots de horário.
+handleSaveChanges(): Persiste as alterações no backend. Envia slots para updateProviderAvailability() e deleteProviderAvailability() (para slots removidos).
+slotsToDelete: Set para rastrear IDs de slots a serem excluídos no backend.
+Interconexões: Interage com useAuth e providerService para operações CRUD de disponibilidade.
+4.13. earnings/index.tsx (Provider Earnings)
+Caminho: LimpeJaApp/app/(provider)/earnings/index.tsx
+Propósito: Exibe um resumo dos ganhos do provedor, histórico de transações e permite solicitar saques.
+Dependências: React, Animated, Alert, Platform, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, Stack, useRouter, Ionicons, getMyProviderEarnings (do earningService), requestWithdrawal (do paymentService), getMyProviderDashboard (do providerService), EarningsResponseDto, ProviderDashboard, ProviderTransaction, MainEarningsChartSection, EarningsChartSection, EarningsSummaryCard, RecentTransactionsSection.
+Funcionalidades Chave:
+fetchData(): Carrega dados do dashboard (getMyProviderDashboard()) e detalhes de ganhos (getMyProviderEarnings()).
+setChartData(): Processa os dados de ganhos para exibição em gráficos.
+handleWithdrawalRequest(): Permite ao provedor solicitar um saque via requestWithdrawal().
+Exibe um resumo financeiro, gráficos de ganhos e transações recentes.
+Links rápidos para "Meus Serviços Oferecidos" e "Minhas Avaliações".
+Interconexões: Consome dashboardService, earningService e paymentService.
+5. Gestão de Clientes
+Esta seção aborda as funcionalidades específicas para usuários com o papel de cliente.
+
+5.1. clients.ts
+Caminho: LimpeJaApp/src/types/backend/clients.ts
+Propósito: Define as interfaces relacionadas ao perfil do cliente e DTOs para busca e atualização.
+Dependências: UserRole (de auth.ts), BookingAddress (de bookings.ts).
+Exporta: Client, SearchResult (para busca de provedores/serviços), UpdateClientProfileDto, ClientDetails.
+Funcionalidades Chave:
+Client: Representa o perfil completo de um cliente.
+UpdateClientProfileDto: DTO para atualizar o perfil do cliente.
+5.2. clientService.ts
+Caminho: LimpeJaApp/app/services/clientService.ts
+Propósito: Fornece funções para interagir com os endpoints do backend relacionados a clientes, incluindo categorias de serviço, busca de provedores e atualização de perfil.
+Dependências: axios, api.ts, UpdateClientProfileDto, Offer, ProviderDisplayInfo, ProviderSearchQuery, Service, UserProfile.
+Exporta: getServiceCategories, searchProviders, getUserProfile, getOffers, getProviderDetails, updateClientProfile.
+Funcionalidades Chave:
+getServiceCategories(): Busca as categorias de serviço disponíveis.
+searchProviders(query): Realiza uma busca por provedores.
+getUserProfile(): Obtém o perfil do usuário logado (cliente ou provedor).
+getOffers(): Obtém ofertas promocionais.
+getProviderDetails(providerId): Obtém detalhes de um provedor específico.
+updateClientProfile(data): Atualiza o perfil do cliente logado.
+Interconexões: Utilizado por diversas telas do cliente (explore/index.tsx, profile/edit.tsx, schedule-service.tsx).
+5.3. profile/index.tsx (Client Profile)
+Caminho: LimpeJaApp/app/(client)/profile/index.tsx
+Propósito: Exibe o perfil do cliente e oferece opções de navegação para gerenciar conta, preferências e suporte.
+Dependências: React, Animated, Alert, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, Stack, useRouter, useAuth, Ionicons, MaterialCommunityIcons.
+Funcionalidades Chave:
+Exibe nome, e-mail e avatar do usuário logado.
+AnimatedMenuItem: Componente reutilizável para itens de menu com animações.
+handleLogout(): Chama logout() do AuthContext para encerrar a sessão.
+handleWIP(): Placeholder para funcionalidades em desenvolvimento.
+Links para editar perfil, endereços, formas de pagamento, notificações, configurações do app, ajuda, termos e política de privacidade.
+Interconexões: Consome useAuth. Navega para profile/edit.tsx, settings.tsx, help.tsx, termos.tsx, privacidade.tsx.
+5.4. profile/edit.tsx (Client Profile Edit)
+Caminho: LimpeJaApp/app/(client)/profile/edit.tsx
+Propósito: Permite que o cliente edite suas informações de perfil, incluindo nome, telefone e endereço.
+Dependências: React, Animated, Alert, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator, Stack, useRouter, useAuth, Ionicons, MaterialCommunityIcons, ImagePicker, updateClientProfile, BookingAddress, UpdateClientProfileDto, formatPhoneNumber, isValidPhoneNumber.
+Funcionalidades Chave:
+Formulário para nome, e-mail (somente leitura), telefone e endereço.
+handlePickImage(): Permite selecionar uma nova foto de perfil (upload simulado).
+handleSaveChanges(): Valida os campos, chama updateClientProfile() do clientService para persistir as alterações no backend. Atualiza o user no AuthContext.
+Formatação e validação de telefone.
+Interconexões: Interage com useAuth e clientService.
+6. Serviços e Agendamentos
+Esta seção detalha o fluxo de agendamento de serviços e a gestão de agendamentos.
+
+6.1. services.ts
+Caminho: LimpeJaApp/src/types/backend/services.ts
+Propósito: Define as interfaces e enums relacionadas aos tipos de serviços oferecidos na plataforma.
+Exporta: PricingType (enum para tipo de precificação: FIXED_PRICE, HOURLY, BY_SIZE, CUSTOM_QUOTE), Service (interface para um tipo de serviço como "Limpeza de Casa"), ServiceDetails.
+Funcionalidades Chave:
+Service: Contém id, name, icon, backgroundColor, description, price.
+6.2. bookings.ts
+Caminho: LimpeJaApp/src/types/backend/bookings.ts
+Propósito: Define as interfaces e enums para agendamentos, incluindo status, endereço e DTOs para criação/atualização.
+Dependências: ProviderDisplayInfo (de providers.ts), Service (de services.ts).
+Exporta: BookingStatus (enum para status do agendamento), BookingAddress, CreateBookingDto, BookingDetails, UpdateBookingStatusDto.
+Funcionalidades Chave:
+BookingStatus: Enum para estados como PENDING, CONFIRMED, COMPLETED, CANCELED, etc.
+BookingAddress: Estrutura de endereço.
+BookingDetails: Representa um agendamento completo com detalhes do cliente, provedor e serviço.
+6.3. bookingService.ts
+Caminho: LimpeJaApp/app/services/bookingService.ts
+Propósito: Fornece funções para interagir com os endpoints de agendamento do backend.
+Dependências: axios, api.ts, BookingDetails, BookingStatus, CreateBookingDto, UpdateBookingStatusDto.
+Exporta: createBooking, getBookingsForUser, getBookingDetails, updateBookingStatus, cancelBooking, checkActiveChatBooking, checkConfirmedBookingBetweenUsers.
+Funcionalidades Chave:
+createBooking(data): Cria um novo agendamento.
+getBookingsForUser(status?): Obtém agendamentos do usuário logado, opcionalmente filtrados por status.
+getBookingDetails(bookingId): Obtém detalhes de um agendamento específico.
+updateBookingStatus(bookingId, data): Atualiza o status de um agendamento.
+cancelBooking(bookingId): Cancela um agendamento.
+checkActiveChatBooking(clientId, providerId): Verifica se há um agendamento ativo para permitir o chat.
+Interconexões: Utilizado por schedule-service.tsx, bookings/index.tsx, bookings/[bookingId].tsx, dashboard/index.tsx, e telas de chat.
+6.4. schedule-service.tsx
+Caminho: LimpeJaApp/app/(client)/schedule-service.tsx
+Propósito: Permite ao cliente agendar um serviço com um provedor específico, selecionando data, horário e fornecendo detalhes de endereço.
+Dependências: React, Animated, Alert, Dimensions, Easing, Platform, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, Stack, useLocalSearchParams, useRouter, Ionicons, BlurView, Clipboard, LinearGradient, useAuth, createBooking, getProviderAvailability, getProviderDetails, BookingAddress, BookingDetails, CreateBookingDto, ProviderAvailability, ProviderDisplayInfo, ProviderServiceOffering, UserProfile, PricingType, AddressSection, CalendarHeader, ProviderBrief, TimeSlotsSection.
+Funcionalidades Chave:
+Recebe providerId e serviceId via parâmetros de rota.
+fetchBookingAndProviderDetails(): Carrega detalhes do provedor e do serviço, além do endereço do usuário logado.
+prefetchAvailability(): Pré-carrega a disponibilidade do provedor para meses adjacentes e armazena em cache.
+generateCalendarDays(): Gera os dias do calendário para exibição.
+fetchAndProcessSlotsForDate(): Busca e processa os horários disponíveis para a data selecionada, considerando a configuração do provedor e horários já ocupados.
+handleConfirmBooking(): Valida os dados e chama createBooking() do bookingService. Redireciona para a tela de sucesso.
+Animações ricas para a UI.
+Interconexões: Consome useAuth, providerService, bookingService. Navega para bookings/success.tsx.
+6.5. bookings/index.tsx (Client Bookings List)
+Caminho: LimpeJaApp/app/(client)/bookings/index.tsx
+Propósito: Exibe uma lista dos agendamentos do cliente, com filtros por status (solicitações, próximos, histórico, cancelados).
+Dependências: React, Animated, Alert, FlatList, Image, Platform, RefreshControl, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, Link, Stack, useRouter, Ionicons, MaterialCommunityIcons, formatDate, useAuth, getBookingsForUser, BookingDetails, BookingStatus.
+Funcionalidades Chave:
+loadBookings(): Busca agendamentos do backend via getBookingsForUser(), filtrando por status e ordenando.
+Filtros: Permite alternar entre "requests", "upcoming", "completed" e "cancelled".
+AnimatedBookingItem: Componente para exibir cada agendamento com animação de entrada.
+Suporte a pull-to-refresh.
+Exibe feedback visual para listas vazias.
+Interconexões: Consome useAuth e bookingService. Navega para bookings/[bookingId].tsx.
+6.6. bookings/[bookingId].tsx (Client Booking Details)
+Caminho: LimpeJaApp/app/(client)/bookings/[bookingId].tsx
+Propósito: Exibe os detalhes de um agendamento específico e oferece ações como cancelar, contatar o provedor, avaliar o serviço ou ver o perfil do provedor.
+Dependências: React, Animated, Alert, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, Stack, useLocalSearchParams, useRouter, Ionicons, formatDate, cancelBooking, getBookingDetails, BookingDetails, BookingStatus.
+Funcionalidades Chave:
+Recebe bookingId via parâmetros de rota.
+fetchBooking(): Carrega os detalhes do agendamento do backend via getBookingDetails().
+handleCancelBooking(): Cancela o agendamento via cancelBooking().
+handleContactProvider(): Navega para a tela de chat com o provedor.
+handleReviewService(): Navega para a tela de feedback para avaliar o serviço.
+handleViewProviderProfile(): Navega para a tela de detalhes do provedor.
+Animações para os cards e botões de ação.
+getStatusStyle(): Retorna estilos e ícones baseados no BookingStatus.
+Interconexões: Consome bookingService. Navega para messages/[chatId].tsx, feedback/[targetId].tsx, explore/[providerId].tsx.
+6.7. bookings/success.tsx
+Caminho: LimpeJaApp/app/(client)/bookings/success.tsx
+Propósito: Tela exibida após um agendamento bem-sucedido, mostrando um resumo do agendamento e, opcionalmente, detalhes de pagamento PIX.
+Dependências: React, Animated, Alert, ColorValue, Dimensions, Easing, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, BlurView, Clipboard, Calendar (expo), LinearGradient, Stack, useLocalSearchParams, useRouter, Toast, BookingSummaryCard, MainActionButtons, SuccessHeader, SuccessLoadingError, getBookingDetails, getProviderDetails, BookingDetails, ProviderDisplayInfo, useAuth, createPixCharge, CreatePixChargeDto, PixChargeResponseDto.
+Funcionalidades Chave:
+Recebe bookingId, paymentMethod e totalPrice via parâmetros de rota.
+fetchBookingAndProviderDetails(): Carrega detalhes do agendamento e do provedor.
+createPixCharge(): Se o método de pagamento for PIX, gera uma cobrança PIX no backend e exibe os detalhes (QR Code, BR Code).
+handleCopyPixQrCode(): Copia o código PIX para a área de transferência.
+handleAddToCalendar(): Adiciona o agendamento ao calendário do dispositivo.
+handleContactProvider(): Navega para o chat com o provedor.
+Animações para a entrada do conteúdo e elementos de fundo.
+Interconexões: Consome useAuth, bookingService, providerService, paymentService. Navega para bookings/index.tsx, explore/index.tsx, messages/[chatId].tsx.
+7. Busca e Descoberta
+Esta seção descreve as funcionalidades de busca e exploração de serviços e provedores.
+
+7.1. search.ts
+Caminho: LimpeJaApp/types/backend/search.ts
+Propósito: Define as interfaces e enums relacionadas aos parâmetros e resultados de busca na plataforma.
+Dependências: ProviderDetails (de providers.ts), ServiceDetails (de services.ts), ProviderServiceDetails (de provider-service.ts).
+Exporta: SearchType (enum para tipos de busca: PROVIDERS, SERVICES, OFFERS, ALL, PROVIDER_SERVICES), SortByOption (enum para opções de ordenação), SearchQuery (interface para parâmetros de consulta de busca), ProviderServiceSearchResult (interface para resultados de serviço de provedor), SearchResult (interface para a resposta completa da API de busca).
+Funcionalidades Chave:
+SearchQuery: Contém campos como query, type, location, latitude, longitude, radius, sortBy.
+7.2. explore/index.tsx (Client Explore)
+Caminho: LimpeJaApp/app/(client)/explore/index.tsx
+Propósito: A tela principal para clientes, exibindo categorias de serviço, ofertas, provedores recomendados e próximos.
+Dependências: React, Animated, Alert, Dimensions, FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, Stack, useRouter, ViewToken, getOffers, getServiceCategories, getUserProfile, getNearbyProviders, getRecommendedProviders, Offer, ProviderDisplayInfo, Service, UserProfile, CLIENT_ROUTES, CarouselBannerItem, CategoriaCard, HeaderSuperior, NavBar, PrestadorCard, RecomendacaoCard, SecaoContainer, SecaoPrestadores, SecaoRecomendacoes.
+Funcionalidades Chave:
+fetchData(): Carrega o perfil do usuário, categorias de serviço, provedores recomendados, provedores próximos e ofertas.
+HeaderSuperior: Exibe o nome e endereço do usuário.
+SecaoContainer: Componente reutilizável para exibir listas de categorias.
+CarouselBannerItem: Carrossel de banners promocionais.
+SecaoRecomendacoes / SecaoPrestadores: Exibem listas de provedores.
+NavBar: Barra de navegação inferior.
+Animações de entrada escalonadas para todas as seções.
+Interconexões: Consome clientService e providerService. Navega para telas de busca, detalhes de provedor e outras telas de navegação.
+7.3. explore/[providerId].tsx (Provider Details for Client)
+Caminho: LimpeJaApp/app/(client)/explore/[providerId].tsx
+Propósito: Exibe os detalhes de um provedor de serviços para o cliente, incluindo informações de contato, biografia, avaliações e serviços oferecidos.
+Dependências: React, Animated, Alert, Dimensions, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, Stack, useLocalSearchParams, useRouter, useSafeAreaInsets, Ionicons, BookServiceButton, InfoChip, ReviewCard, StarRating, styles (de providerStyles.ts), useAuth, checkActiveChatBooking, getProviderDetails, ProviderDisplayInfo, ProviderReview, ProviderServiceOffering, VerificationStatus, PricingType.
+Funcionalidades Chave:
+Recebe providerId via parâmetros de rota.
+getProviderDetails(): Carrega os detalhes do provedor.
+checkActiveChatBooking(): Verifica se o cliente tem um agendamento ativo com o provedor para habilitar o botão de chat.
+Exibe nome, localização, preço, anos de experiência, status de verificação, biografia e avaliações.
+Botões de ação (Ligar, Chat, Mapa, Compartilhar).
+BookServiceButton: Botão fixo na parte inferior para agendar um serviço com o provedor.
+formatPriceDisplay(): Formata o preço com base no PricingType.
+Interconexões: Consome useAuth, providerService, bookingService. Navega para schedule-service.tsx e messages/[chatId].tsx.
+7.4. explore/todas-categorias.tsx, explore/todos-prestadores-proximos.tsx, explore/servicos-por-categoria.tsx, explore/search-results.tsx, explore/resultados-busca.tsx
+Caminho: LimpeJaApp/app/(client)/explore/*.tsx
+Propósito: Estas são telas placeholder ou de resultados de busca que ainda precisam de implementação completa da lógica de busca e exibição.
+Funcionalidades Chave (a serem implementadas):
+todas-categorias.tsx: Listar todas as categorias de serviço.
+todos-prestadores-proximos.tsx: Listar todos os provedores próximos.
+servicos-por-categoria.tsx: Listar serviços filtrados por uma categoria específica.
+search-results.tsx / resultados-busca.tsx: Exibir resultados de busca com base em parâmetros.
+8. Comunicação (Chat e Notificações)
+Esta seção aborda as funcionalidades de comunicação dentro do aplicativo.
+
+8.1. chat.ts
+Caminho: LimpeJaApp/src/types/backend/chat.ts
+Propósito: Define as interfaces e DTOs para o sistema de chat, incluindo detalhes do chat, mensagens e parâmetros de envio/busca.
+Exporta: ChatDetails, Message, SendMessageDto, GetMessagesQuery, ChatSummary.
+Funcionalidades Chave:
+Message: Contém id, chatId, senderId, receiverId, content, createdAt, isRead.
+8.2. chatService.ts
+Caminho: LimpeJaApp/app/services/chatService.ts
+Propósito: Fornece funções para interagir com a API de chat.
+Dependências: axios, api.ts, ChatDetails, GetMessagesQuery, Message, SendMessageDto.
+Exporta: ConversationItem (interface para item de conversa no frontend), findOrCreateChat, getChatMessages, sendMessage, getChatListForUser.
+Funcionalidades Chave:
+findOrCreateChat(providerId, clientId): Encontra ou cria um chat entre provedor e cliente.
+getChatMessages(chatId, query?): Busca o histórico de mensagens de um chat.
+sendMessage(messageData): Envia uma nova mensagem.
+getChatListForUser(userId): Tenta buscar a lista de conversas de um usuário do backend. Nota: Esta função depende de um endpoint específico (/chat/me/conversations) no backend que pode precisar ser implementado.
+Interconexões: Utilizado por telas de chat (messages/[chatId].tsx) e dashboards/perfis para iniciar conversas.
+8.3. messages/index.tsx (Client/Provider Chat List)
+Caminho: LimpeJaApp/app/(client)/messages/index.tsx e LimpeJaApp/app/(provider)/messages/index.tsx
+Propósito: Exibe a lista de conversas (chats) ativas do usuário (cliente ou provedor).
+Dependências: React, Animated, FlatList, Image, Platform, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, Stack, useRouter, Ionicons, formatDate, useAuth, getChatListForUser.
+Funcionalidades Chave:
+loadConversations(): Carrega a lista de conversas do backend via getChatListForUser().
+AnimatedConversationItem: Componente para exibir cada conversa com avatar, última mensagem e contador de não lidas.
+formatTimestamp(): Formata o timestamp da última mensagem.
+Animações de entrada para o cabeçalho e itens da lista.
+Interconexões: Consome useAuth e chatService. Navega para messages/[chatId].tsx.
+8.4. messages/[chatId].tsx (Client/Provider Chat Screen)
+Caminho: LimpeJaApp/app/(client)/messages/[chatId].tsx e LimpeJaApp/app/(provider)/messages/[chatId].tsx
+Propósito: A tela de chat para uma conversa específica, permitindo o envio e recebimento de mensagens em tempo real via WebSocket.
+Dependências: React, Animated, Alert, FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator, Stack, useLocalSearchParams, useRouter, Ionicons, io, Socket, appConfig, useAuth, getBookingDetails, getChatMessages, sendMessage (do chatService), BookingStatus, Message, SendMessageDto.
+Funcionalidades Chave:
+Recebe chatId, recipientName, recipientId, recipientAvatarUrl e bookingId via parâmetros de rota.
+loadChatData(): Carrega o histórico de mensagens (getChatMessages()) e verifica o status do agendamento (getBookingDetails()) para determinar se o chat deve ser bloqueado.
+Integração WebSocket: Conecta-se a um servidor WebSocket para comunicação em tempo real.
+socket.on('connect'): Confirma a conexão.
+socket.emit('joinChat', chatId): Entra na sala de chat.
+socket.on('newMessage'): Recebe novas mensagens e atualiza a UI.
+socket.on('errorMessage'): Lida com erros do WebSocket.
+handleSendMessage(): Envia mensagens via WebSocket (socket.emit('sendMessage')) ou via REST (sendChatMessage()) como fallback.
+Bloqueia o input de mensagens se o chat estiver encerrado (serviço concluído/cancelado).
+Interconexões: Consome useAuth, bookingService, chatService.
+8.5. notifications.ts
+Caminho: LimpeJaApp/src/types/backend/notifications.ts
+Propósito: Define as interfaces e DTOs para o sistema de notificações.
+Exporta: NotificationEntity, MarkAsReadDto.
+Funcionalidades Chave:
+NotificationEntity: Representa uma notificação individual com id, type, title, body, createdAt, readAt, navigateTo, relatedId, userId.
+8.6. notificationService.ts
+Caminho: LimpeJaApp/app/services/notificationService.ts
+Propósito: Fornece funções para interagir com os endpoints de notificações do backend.
+Dependências: axios, api.ts, MessageResponseDto, NotificationEntity.
+Exporta: NotificationService (classe com métodos estáticos).
+Funcionalidades Chave:
+getNotifications() / getNotificationsMe(): Busca a lista de notificações para o usuário logado.
+markAsRead(notificationId) / markNotificationAsReadMe(): Marca uma notificação específica como lida.
+markAllAsRead() / markAllNotificationsAsReadMe(): Marca todas as notificações como lidas.
+deleteNotification(notificationId) / deleteNotificationMe(): Deleta uma notificação.
+enhanceNotifications(): (Função interna) Adiciona sugestões e ações rápidas às notificações (lógica de frontend).
+executeQuickAction(): (Função interna) Simula a execução de ações rápidas.
+getSmartSuggestions(): (Função interna) Simula sugestões inteligentes.
+Interconexões: Utilizado por notifications/index.tsx.
+8.7. notifications/index.tsx (Notifications List)
+Caminho: LimpeJaApp/app/(common)/notifications/index.tsx
+Propósito: Exibe a lista de notificações do usuário, permitindo marcá-las como lidas e navegar para conteúdos relacionados.
+Dependências: React, Animated, Alert, FlatList, Platform, RefreshControl, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, Stack, useRouter, Ionicons, MaterialCommunityIcons, useAuth, getNotifications, markAllNotificationsAsRead, markNotificationAsRead, NotificationEntity.
+Funcionalidades Chave:
+loadNotifications(): Carrega as notificações do backend via getNotifications().
+AnimatedNotificationItem: Componente para exibir cada notificação com ícone, título, corpo e timestamp.
+handleNotificationPress(): Marca a notificação como lida e navega para a rota navigateTo se especificada.
+handleMarkAllAsRead(): Marca todas as notificações como lidas.
+formatNotificationTimestamp(): Formata o timestamp da notificação de forma relativa.
+getNotificationIcon(): Retorna o ícone e a biblioteca apropriados para o tipo de notificação.
+Suporte a pull-to-refresh.
+Interconexões: Consome useAuth e notificationService.
+9. Pagamentos
+Esta seção descreve as funcionalidades relacionadas a pagamentos.
+
+9.1. payments.ts
+Caminho: LimpeJaApp/src/types/backend/payments.ts
+Propósito: Define as interfaces e DTOs para operações de pagamento, como cobranças PIX e solicitações de saque.
+Exporta: CreatePixChargeDto, PixChargeResponseDto, RequestWithdrawalDto, TransactionEntity.
+Funcionalidades Chave:
+CreatePixChargeDto: DTO para criar uma cobrança PIX.
+PixChargeResponseDto: Resposta do backend para uma cobrança PIX (inclui brCode, qrCodeImage, expiresAt).
+RequestWithdrawalDto: DTO para solicitar um saque.
+9.2. paymentService.ts
+Caminho: LimpeJaApp/app/services/paymentService.ts
+Propósito: Fornece funções para interagir com os endpoints de pagamento do backend.
+Dependências: axios, api.ts, MessageResponseDto, CreatePixChargeDto, PixChargeResponseDto, RequestWithdrawalDto.
+Exporta: createPixCharge, requestWithdrawal.
+Funcionalidades Chave:
+createPixCharge(clientUserId, data): Cria uma cobrança PIX.
+requestWithdrawal(data): Solicita um saque de ganhos.
+Interconexões: Utilizado por bookings/success.tsx (para PIX) e earnings/index.tsx (para saques).
+10. Feedback e Avaliações
+Esta seção detalha as funcionalidades para feedback e avaliações.
+
+10.1. reviews.ts
+Caminho: LimpeJaApp/src/types/backend/reviews.ts
+Propósito: Define as interfaces e DTOs para o sistema de avaliações e feedback.
+Exporta: SubmitReviewDto, ReviewEntity.
+Funcionalidades Chave:
+SubmitReviewDto: DTO para enviar uma avaliação (rating, comment, targetId, type, userId).
+ReviewEntity: Representa uma avaliação retornada pelo backend.
+10.2. reviewService.ts
+Caminho: LimpeJaApp/app/services/reviewService.ts
+Propósito: Fornece funções para interagir com os endpoints de avaliações do backend.
+Dependências: axios, api.ts, MessageResponseDto, ReviewEntity, SubmitReviewDto.
+Exporta: submitFeedback, getDetailedRatingBreakdown, getSmartSuggestions (função e classe ReviewService).
+Funcionalidades Chave:
+submitFeedback(data): Envia um feedback ou avaliação.
+getDetailedRatingBreakdown(providerId): Obtém análise detalhada de avaliações.
+getReviews(providerId): Busca avaliações de um provedor.
+getReviewAnalytics(providerId): Obtém dados analíticos de avaliações do backend via getDetailedRatingBreakdown.
+getSuggestedResponse(reviewId): Obtém respostas sugeridas por IA para avaliações do backend.
+respondToReview(reviewId, response): Responde a uma avaliação.
+Interconexões: Utilizado por feedback/[targetId].tsx e dashboard/index.tsx.
+10.3. feedback/[targetId].tsx
+Caminho: LimpeJaApp/app/(common)/feedback/[targetId].tsx
+Propósito: Permite ao usuário enviar feedback ou uma avaliação para um serviço, profissional ou o próprio aplicativo.
+Dependências: React, Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator, Stack, useLocalSearchParams, useRouter, Ionicons, submitFeedback, useAuth, SubmitReviewDto.
+Funcionalidades Chave:
+Recebe targetId, type, serviceName, providerName, providerId via parâmetros de rota.
+StarRating: Componente para seleção de avaliação por estrelas.
+handleSubmitFeedback(): Valida os dados, chama submitFeedback() do reviewService para enviar a avaliação.
+Interconexões: Consome useAuth e reviewService.
+11. Outras Telas Comuns
+Esta seção descreve telas acessíveis a ambos os tipos de usuários.
+
+11.1. settings.tsx
+Caminho: LimpeJaApp/app/(common)/settings.tsx
+Propósito: Permite ao usuário configurar preferências do aplicativo, como notificações e modo escuro, e acessar links relacionados à conta e informações legais.
+Dependências: React, Animated, Alert, Linking, Platform, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View, Stack, useRouter, useAppContext, Ionicons, MaterialCommunityIcons, Constants.
+Funcionalidades Chave:
+AnimatedSettingSwitchItem / AnimatedSettingNavigationItem: Componentes reutilizáveis para itens de configuração com animações.
+handleToggleNotifications(): Gerencia a preferência de notificações.
+handleToggleDarkMode(): Alterna o tema do aplicativo via toggleTheme() do AppContext.
+Links para gerenciar dados, excluir conta, termos de serviço, política de privacidade.
+Exibe a versão do aplicativo.
+Interconexões: Consome useAppContext. Navega para profile/edit.tsx, help.tsx, termos.tsx, privacidade.tsx.
+11.2. help.tsx
+Caminho: LimpeJaApp/app/(common)/help.tsx
+Propósito: Central de ajuda com perguntas frequentes (FAQs) e opções de contato com o suporte.
+Dependências: React, Animated, Alert, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator, Stack, useRouter, Ionicons, getFaqs.
+Funcionalidades Chave:
+loadFaqs(): Carrega as FAQs do backend via getFaqs().
+Campo de busca para filtrar FAQs.
+AnimatedFaqItem: Componente para exibir cada FAQ.
+AnimatedContactButton: Botões para contato via e-mail, telefone e chat (simulado).
+Interconexões: Consome faqService.
+11.3. termos.tsx
+Caminho: LimpeJaApp/app/(common)/termos.tsx
+Propósito: Exibe os Termos de Serviço do aplicativo.
+Dependências: React, ScrollView, StyleSheet, Text, View, Stack.
+Funcionalidades Chave:
+Exibe o texto completo dos termos de serviço.
+11.4. privacidade.tsx
+Caminho: LimpeJaApp/app/(common)/privacidade.tsx
+Propósito: Exibe a Política de Privacidade do aplicativo.
+Dependências: React, ScrollView, StyleSheet, Text, View, Stack.
+Funcionalidades Chave:
+Exibe o texto completo da política de privacidade.
+11.5. _layout.tsx (Common Group)
+Caminho: LimpeJaApp/app/(common)/_layout.tsx
+Propósito: Define o layout de navegação para as telas comuns a clientes e provedores.
+Dependências: expo-router.
+Funcionalidades Chave:
+Configura Stack.Screen para cada tela comum, definindo title.
+Interconexões: É um layout aninhado do _layout.tsx raiz.
+12. Tipagens e DTOs
+As tipagens são cruciais para a robustez do aplicativo. Elas são definidas principalmente na pasta LimpeJaApp/src/types/backend/.
+
+auth.ts: DTOs de login/registro, UserRole, VerificationStatus.
+bookings.ts: DTOs e interfaces para agendamentos, BookingStatus.
+chat.ts: DTOs e interfaces para mensagens de chat.
+clients.ts: Interfaces para o perfil do cliente e DTOs de atualização.
+dashboard.ts: Interfaces para dados do dashboard (pode ser redundante com providers.ts).
+faqs.ts: Interface para itens de FAQ.
+notifications.ts: Interfaces para notificações.
+offers.ts: Interface para ofertas promocionais.
+payments.ts: DTOs para operações de pagamento (PIX, saques).
+provider-service.ts: Detalhes de um serviço oferecido por um provedor.
+providers.ts: Interfaces para o perfil do provedor, disponibilidade e DTOs relacionados.
+reviews.ts: DTOs e interfaces para avaliações.
+search.ts: DTOs e interfaces para busca.
+services.ts: Interfaces para tipos de serviço e PricingType.
+upload.ts: DTO para respostas de upload.
+users.ts: Interface UserProfile (perfil completo do usuário).
+verification.ts: DTOs e enums para o processo de verificação.
+13. Componentes Reutilizáveis (components/)
+A pasta components/ contém diversos componentes reutilizáveis para construir a UI de forma consistente e eficiente. Exemplos incluem:
+
+auth/components/: Componentes específicos para formulários de autenticação (e.g., InputWithIcon, AnimatedErrorMessage).
+client/: Componentes específicos para o cliente (e.g., booking/success, explore/home, explore/provider).
+provider/: Componentes específicos para o provedor (e.g., dashboard, earnings, schedule/manager).
+ui/: Componentes de UI genéricos (e.g., ToastMessage).
+ServiceItemSkeleton: Componente de placeholder para carregamento de itens de serviço.
+14. Fluxo de Navegação Principal
+O Expo Router é fundamental para o fluxo de navegação, utilizando um sistema de arquivos para definir rotas e layouts aninhados.
+
+/: Ponto de entrada, redireciona para /welcome ou para o fluxo de autenticação/dashboard via _layout.tsx raiz.
+/welcome: Tela de boas-vindas.
+/(auth): Grupo de rotas de autenticação.
+/login: Login.
+/register-options: Escolha de tipo de registro.
+/client-register: Registro de cliente.
+/provider-register: Grupo de rotas de registro de provedor.
+/index: Informações básicas.
+/personal-details: Dados pessoais e endereço.
+/service-details: Detalhes do serviço (provedor).
+/verify-account: Verificação de conta (provedor).
+/forgot-password: Recuperação de senha.
+/(client): Grupo de rotas para clientes.
+/explore: Tela principal de exploração.
+/[providerId]: Detalhes do provedor.
+/todas-categorias, /todos-prestadores-proximos, etc.: Telas de listagem/busca.
+/schedule-service: Agendamento de serviço.
+/bookings: Lista de agendamentos.
+/[bookingId]: Detalhes de um agendamento.
+/success: Tela de sucesso do agendamento.
+/messages: Lista de mensagens.
+/[chatId]: Tela de chat.
+/profile: Perfil do cliente.
+/edit: Edição do perfil.
+/(provider): Grupo de rotas para provedores.
+/dashboard: Painel de controle do provedor.
+/schedule: Agenda do provedor.
+/index: Visão geral da agenda.
+/manage-availability: Gerenciamento de disponibilidade.
+/services: Lista de serviços (agendamentos) do provedor.
+/[serviceId]: Detalhes de um agendamento.
+/earnings: Ganhos do provedor.
+/messages: Lista de mensagens.
+/[chatId]: Tela de chat.
+/profile: Perfil do provedor.
+/edit-services: Edição de serviços oferecidos.
+/(common): Grupo de rotas comuns a ambos os papéis.
+/settings: Configurações do aplicativo.
+/help: Central de ajuda (FAQ).
+/notifications: Lista de notificações.
+/feedback/[targetId]: Envio de feedback/avaliação.
+/termos: Termos de Serviço.
+/privacidade: Política de Privacidade.
+15. Considerações Finais
+Esta documentação fornece uma visão aprofundada do frontend do LimpeJáApp, destacando sua estrutura modular, o uso extensivo de tipagem (TypeScript), gerenciamento de estado via Context API e a integração com o backend via Axios. As animações e a organização do código contribuem para uma experiência de usuário fluida e um código-base manutenível. A clareza nas interconexões entre arquivos e a separação de responsabilidades são pilares importantes para o desenvolvimento contínuo do aplicativo.
+
+
+
+
+Documentação do Backend Limpeja
+I. Visão Geral da Arquitetura do Backend Limpeja
+A. Objetivo Geral da Plataforma
+A plataforma Limpeja visa conectar clientes que buscam serviços de limpeza com prestadores de serviço qualificados. O backend é o coração do sistema, gerenciando usuários, agendamentos, pagamentos, comunicações, verificações de segurança e gamificação, garantindo uma experiência segura, eficiente e confiável para todos os usuários.
+
+B. Tecnologias Principais
+O backend da Limpeja é construído sobre uma base robusta de tecnologias modernas:
+
+NestJS: Um framework progressivo Node.js para a construção de aplicações server-side eficientes, escaláveis e de fácil manutenção, utilizando TypeScript. Sua arquitetura modular e baseada em injeção de dependências facilita a organização do código.
+Prisma: Um ORM (Object-Relational Mapping) de próxima geração para Node.js e TypeScript. Ele simplifica o acesso ao banco de dados, oferecendo um cliente de banco de dados type-safe e um fluxo de trabalho intuitivo para migrações e modelagem de dados. (src/prisma/prisma.service.ts)
+PostgreSQL: O banco de dados relacional utilizado para persistência de dados, escolhido por sua robustez, escalabilidade e suporte a funcionalidades avançadas como tipos geoespaciais.
+Bull (Queues): Uma biblioteca para Node.js que implementa filas de processamento de jobs, utilizando Redis como broker. Essencial para tarefas assíncronas e de longa duração, como envio de notificações e processamento de documentos.
+JWT (JSON Web Tokens): Utilizado para autenticação e autorização de usuários, garantindo que apenas usuários autenticados e com as permissões corretas acessem os recursos protegidos.
+Swagger/OpenAPI: Ferramentas para documentação e teste de APIs, gerando uma documentação interativa que facilita o consumo dos endpoints por parte do frontend e outros serviços. (src/bookings/bookings.controller.ts, src/clients/clients.controller.ts, src/auth/auth.controller.ts)
+Sentry: Ferramenta de monitoramento de erros e performance, integrada para capturar exceções e rastrear o desempenho da aplicação em tempo real. (src/instrument.ts, src/app.module.ts)
+C. Estrutura Geral dos Módulos e Interconexões
+O backend é organizado em módulos coesos, cada um com responsabilidades bem definidas, promovendo a separação de preocupações e a manutenibilidade do código. A injeção de dependências do NestJS facilita a comunicação entre os módulos.
+
+II. Documentação Detalhada por Módulo
+1. Módulo Auth (Autenticação e Autorização)
+Objetivo: Gerenciar o registro, login e autenticação de usuários (clientes, provedores e administradores), além de controlar o acesso a rotas protegidas.
+Arquitetura:
+Controladores: auth.controller.ts (expõe endpoints HTTP para registro, login e recuperação de senha).
+Serviços: auth.service.ts (contém a lógica de negócio para validação de credenciais, criação de usuários, hash de senhas e geração de tokens JWT).
+Estratégias:
+local.strategy.ts: Implementa a estratégia de autenticação local (e-mail e senha).
+jwt.strategy.ts: Implementa a estratégia de autenticação JWT, validando tokens e anexando informações do usuário (userId, email, role, clientId, providerId) ao objeto de requisição.
+Guards:
+local-auth.guard.ts: Utilizado para proteger rotas de login com e-mail/senha.
+jwt-auth.guard.ts: Protege rotas que exigem um token JWT válido.
+ws-auth.guard.ts: Um guard específico para autenticação em WebSockets, validando o token JWT do handshake.
+roles.guard.ts: Trabalha em conjunto com @Roles para restringir o acesso a rotas com base na função do usuário (CLIENT, PROVIDER, ADMIN).
+Decorators: @Roles (utilizado para definir quais papéis de usuário têm permissão para acessar uma rota).
+DTOs: login.dto.ts, register-client.dto.ts, register-provider.dto.ts, forgot-password.dto.ts, auth-response.dto.ts, message-response.dto.ts.
+Fluxos de Negócio:
+Registro de Cliente: Um novo usuário se registra como cliente, fornecendo e-mail, senha, nome completo, telefone, CPF e endereço. O sistema verifica a unicidade do e-mail, telefone e CPF, faz o hash da senha e cria um novo User com o papel CLIENT e um Client associado. O endereço é geocodificado.
+Registro de Provedor: Similar ao registro de cliente, mas com dados adicionais como data de nascimento e anos de experiência. Cria um User com o papel PROVIDER e um Provider associado. O status de verificação inicial do provedor é PENDING_INITIAL_REVIEW. O endereço é geocodificado.
+Login (Email/Senha): O usuário envia e-mail e senha. O LocalAuthGuard valida as credenciais via AuthService.validateUser. Em caso de sucesso, o AuthService.login gera um accessToken JWT e retorna um UserProfileDto detalhado.
+Recuperação de Senha: O usuário solicita a redefinição de senha via e-mail. O sistema gera um token de redefinição de senha (JWT com curta duração) e envia um link para o e-mail do usuário.
+Autenticação WebSocket: O WsAuthGuard intercepta a conexão WebSocket, extrai e verifica o token de autenticação, anexando o payload do usuário ao objeto socket.data para uso posterior.
+Regras de Negócio:
+E-mails, telefones e CPFs devem ser únicos na plataforma.
+Senhas possuem requisitos mínimos de segurança (comprimento, caracteres especiais).
+A geocodificação de endereços é realizada durante o registro de clientes e provedores.
+Tokens JWT têm tempo de expiração.
+Integrações: PrismaModule (para acesso ao banco de dados), UsersModule (para mapeamento de perfil), ProvidersModule (para mapeamento de perfil de provedor), EmailModule (para envio de e-mails de recuperação de senha), GeocodingModule (para geocodificação de endereços).
+Endpoints:
+POST /auth/register/client: Registra um novo cliente.
+POST /auth/register/provider: Registra um novo provedor.
+POST /auth/login: Realiza o login.
+POST /auth/forgot-password: Solicita a redefinição de senha.
+2. Módulo Users (Gerenciamento de Usuários)
+Objetivo: Centralizar o ciclo de vida do usuário (CLIENT/PROVIDER/ADMIN), perfil, preferências e integrações transversais.
+Arquitetura:
+users.controller.ts: Expõe endpoints para gerenciar o perfil do usuário logado e para administração de usuários.
+users.service.ts: Contém a lógica de negócio para CRUD de usuários, atualização de perfil, gerenciamento de tokens e agendamento de exclusão.
+user.entity.ts: Representa o modelo de dados do usuário.
+user-profile.dto.ts: DTO para o perfil completo do usuário.
+Fluxos de Negócio:
+Criação & Onboarding: Usuário começa com role=CLIENT por padrão. Pode se tornar PROVIDER via ProvidersModule. Jobs de boas-vindas e notificações podem ser enfileirados.
+Perfil: PATCH /users/me atualiza campos permitidos (fullName, phone, avatarUrl).
+Segurança & LGPD: deletionScheduledAt permite agendar exclusão. Rotas protegidas exigem JWT e algumas @Roles(ADMIN).
+Regras de Negócio:
+Usuário começa como CLIENT.
+Atualizações sensíveis podem notificar o usuário.
+Soft delete para LGPD.
+Integrações: PrismaModule, NotificationsModule, QueuesModule, AuthModule, ProvidersModule, MissionsModule.
+Endpoints:
+GET /users/me: Retorna dados do usuário autenticado.
+PATCH /users/me: Atualiza campos do perfil do usuário autenticado.
+PATCH /users/me/avatar: Atualiza a URL do avatar.
+PATCH /users/me/fcm-token: Salva/atualiza o token de push (FCM).
+GET /users/:id (ADMIN): Busca um usuário por ID.
+GET /users (ADMIN): Listagem paginada/filtrável de usuários.
+DELETE /users/:id (ADMIN): Apaga ou agenda exclusão.
+3. Módulo Clients (Gerenciamento de Clientes)
+Objetivo: Gerenciar o perfil e dados específicos dos usuários com o papel de CLIENT.
+Arquitetura:
+clients.controller.ts: Expõe endpoints para o cliente acessar seu dashboard e atualizar seu perfil.
+clients.service.ts: Contém a lógica de negócio para buscar e atualizar dados de clientes.
+client.entity.ts: Representa a entidade Client.
+update-client-profile.dto.ts: DTO para atualização de perfil do cliente.
+client-dashboard.dto.ts: DTO para os dados do dashboard do cliente.
+Fluxos de Negócio:
+Atualização de Perfil: O cliente pode atualizar seu fullName e phone. O endereço pode ser atualizado se o DTO permitir.
+Dashboard do Cliente: Retorna dados consolidados para o dashboard, incluindo contagem de agendamentos pendentes/concluídos, próximo agendamento, agendamentos recentes, serviços populares e avaliações pendentes.
+Regras de Negócio:
+Apenas clientes podem acessar/modificar seus próprios dados de perfil.
+Administradores podem visualizar perfis de qualquer cliente.
+Integrações: PrismaModule, UsersModule (para buscar dados do usuário associado).
+Endpoints:
+GET /clients/me/dashboard (CLIENT): Obtém dados do dashboard do cliente logado.
+PATCH /clients/me (CLIENT): Atualiza o perfil do cliente logado.
+GET /clients/:id (ADMIN): Obtém o perfil de um cliente por ID.
+4. Módulo Providers (Gerenciamento de Prestadores)
+Objetivo: Gerenciar o ciclo de vida completo dos prestadores de serviços na plataforma.
+Arquitetura:
+providers.controller.ts: Define endpoints REST para Providers.
+providers.service.ts: Contém a lógica central de negócio (criação, atualização, busca, listagem, detalhamento de prestadores).
+provider.entity.ts: Entidade que representa o modelo de Provider.
+provider-details.dto.ts: DTO para retorno detalhado do provider.
+update-provider-profile.dto.ts: DTO para atualização de perfil do provider.
+Fluxos de Negócio:
+Onboarding: Registro inicial de um usuário como provedor.
+Customização de Perfil: Provedor atualiza informações (foto, descrição, localização).
+Cadastro de Serviços: Provedor seleciona e define preços para os serviços que oferece.
+Regras de Negócio:
+Um usuário pode ter apenas um perfil de provedor.
+Apenas provedores com perfil completo e serviços ativos aparecem em buscas.
+O ranking influencia os resultados de busca.
+Integrações: ProviderServicesModule, BookingsModule, RankingModule, NotificationsModule, MissionsModule.
+Endpoints: Não explicitamente detalhados no README, mas inferidos:
+POST /providers: Cria um novo provedor.
+PATCH /providers/:id: Atualiza o perfil de um provedor.
+GET /providers: Lista provedores.
+GET /providers/:id: Busca detalhes de um provedor.
+5. Módulo Services (Catálogo de Serviços Base)
+Objetivo: Gerenciar o catálogo de serviços base (ex.: “Limpeza Residencial”). Serve como referência central para ProviderServices, Search, Bookings, Pricing e Missões.
+Arquitetura:
+services.controller.ts: Rotas/Swagger/guards para CRUD de serviços.
+services.service.ts: Regras de negócio + Prisma.
+service.entity.ts: DTO/entity de resposta.
+create-service.dto.ts, update-service.dto.ts: DTOs para criação e atualização.
+Fluxos de Negócio:
+CRUD de Serviços: Criação, listagem, obtenção e atualização de serviços pelo ADMIN.
+Regras de Negócio:
+Unicidade do name do serviço.
+price base coerente (sugestão para provedores).
+defaultPricingType orienta a precificação.
+Consistência referencial: remoção deve considerar vínculos.
+Integrações: ProviderServices, Bookings, Search, Pricing, Missions.
+Endpoints:
+POST /services (ADMIN): Cria um serviço.
+GET /services: Lista serviços (público autenticado).
+GET /services/:id: Obtém um serviço por ID.
+PATCH /services/:id (ADMIN): Atualiza um serviço.
+DELETE /services/:id (ADMIN): Remove um serviço (opcional, com validação de vínculos).
+6. Módulo Provider Services (Serviços Oferecidos por Prestadores)
+Objetivo: Gerenciar os serviços específicos que cada prestador oferece, incluindo preço, duração e status.
+Arquitetura:
+provider-services.controller.ts: Define rotas REST para CRUD.
+provider-services.service.ts: Contém a lógica central de negócio, validações e interação com Prisma.
+provider-service.entity.ts: Define o modelo de dados de um ProviderService.
+create-provider-service.dto.ts, update-provider-service.dto.ts, provider-service-details.dto.ts: DTOs para validação e resposta.
+Fluxos de Negócio:
+Cadastro de Serviço: Provedor cadastra um novo serviço com detalhes como nome, descrição, preço, duração e status.
+Gerenciamento: Listagem, detalhamento, atualização e remoção de serviços oferecidos.
+Regras de Negócio:
+Um provedor pode ter múltiplos serviços ativos.
+Preço e duração devem ser valores positivos.
+Serviços inativos não podem ser reservados.
+Cada serviço deve estar vinculado a um provedor válido.
+Integrações: Bookings Module, Ranking Module, Notifications Module, Loyalty e Coupons.
+Endpoints:
+POST /provider-services: Cria um serviço oferecido pelo provedor.
+GET /provider-services: Lista serviços oferecidos.
+GET /provider-services/:id: Detalha um serviço oferecido.
+PATCH /provider-services/:id: Atualiza um serviço oferecido.
+DELETE /provider-services/:id: Remove um serviço oferecido.
+7. Módulo Availability (Disponibilidade de Prestadores)
+Objetivo: Gerenciar e consultar os horários de disponibilidade dos prestadores de serviço.
+Arquitetura:
+availability.controller.ts: Expõe endpoints para obter, atualizar, criar e deletar slots de disponibilidade.
+availability.service.ts: Contém a lógica de negócio para gerenciar a disponibilidade e verificar horários ocupados por agendamentos.
+update-availability.dto.ts: DTO para criar/atualizar slots de disponibilidade.
+get-availability.dto.ts: DTO para consultar a disponibilidade por data.
+availability.entity.ts: Representa um slot de disponibilidade.
+Fluxos de Negócio:
+Consulta de Disponibilidade: Clientes podem consultar os horários disponíveis de um provedor para uma data específica, que também considera agendamentos já confirmados.
+Gerenciamento de Disponibilidade: Provedores podem adicionar, atualizar e remover seus slots de disponibilidade (dia da semana, hora de início/fim).
+Regras de Negócio:
+A disponibilidade é configurada por dia da semana e horário.
+Horários ocupados por agendamentos confirmados (CONFIRMED, COMPLETED, IN_PROGRESS) são considerados indisponíveis.
+Apenas o provedor dono pode gerenciar sua própria disponibilidade.
+Integrações: PrismaModule, ProvidersModule (para validação de propriedade).
+Endpoints:
+GET /providers/:providerId/availability: Obtém horários de disponibilidade de um provedor para uma data específica.
+PATCH /providers/:providerId/availability (PROVIDER): Atualiza horários de disponibilidade.
+POST /providers/:providerId/availability (PROVIDER): Adiciona um novo slot de disponibilidade.
+DELETE /providers/:providerId/availability/:availabilityId (PROVIDER): Deleta um slot de disponibilidade.
+8. Módulo Bookings (Agendamentos)
+Objetivo: Gerenciar todo o ciclo de vida dos agendamentos de serviços, desde a criação até a conclusão ou disputa.
+Arquitetura:
+bookings.controller.ts: Expõe endpoints HTTP para criação, consulta, atualização de status e reporte de problemas/disputas.
+bookings.service.ts: Contém a lógica de negócio principal para agendamentos, incluindo validações, cálculo de preço, integração com pagamentos e notificações.
+create-booking.dto.ts: DTO para criação de agendamentos.
+update-booking-status.dto.ts: DTO para atualização de status.
+booking-details.dto.ts: DTO para detalhes de agendamento.
+booking-and-pix-response.dto.ts: DTO combinado para criação de agendamento e cobrança PIX.
+report-dispute.dto.ts: DTO para reporte de disputas.
+booking.entity.ts: Representa a entidade Booking.
+Fluxos de Negócio:
+Criação de Agendamento: Cliente cria um agendamento para um provedor e serviço específicos. O sistema calcula o preço total com base no PricingType do ProviderService, aplica precificação dinâmica e cupons. Um novo endereço é criado.
+Criação de Agendamento com Pagamento PIX: Combina a criação do agendamento com a geração de uma cobrança PIX, retornando os detalhes do agendamento e os dados da cobrança.
+Atualização de Status: Provedores e clientes podem atualizar o status do agendamento (PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELED, REJECTED, RESCHEDULED, PENDING_DISPUTE). Regras de transição de status são aplicadas.
+Cancelamento: Clientes podem cancelar agendamentos (com restrições de status).
+Reporte de Problemas/Disputas: Clientes ou provedores podem reportar problemas ou disputas para um agendamento, alterando o status para PENDING_DISPUTE e enfileirando uma notificação para administradores.
+Resolução de Disputas: Administradores podem resolver disputas, definindo um novo status, aplicando reembolsos e notificando as partes envolvidas.
+Regras de Negócio:
+Cálculo de preço baseado no PricingType (FIXED_PRICE, HOURLY, BY_SIZE) do ProviderService.
+Aplicação de precificação dinâmica (PricingService) e cupons (CouponsService).
+Transições de status controladas por papel de usuário e status atual.
+Incremento de contadores (completedBookingsCount, monthlyBookingsCount, cancellationCount, noShowCount) para clientes e provedores.
+Pontuação de fidelidade (LoyaltyService) para clientes após serviço concluído.
+Notificação de avaliação após serviço concluído.
+Eventos de missão (MissionsService) e conversão de indicação (ReferralsService) são disparados.
+Disputas são processadas assincronamente via QueuesModule.
+Integrações: PrismaModule, ClientsService, ProvidersService, ProviderServicesService, NotificationsService, QueuesService, PricingService, CouponsService, LoyaltyService, PaymentsService, MissionsService, ReferralsService.
+Endpoints:
+POST /bookings (CLIENT): Cria um novo agendamento.
+POST /bookings/schedule-and-pay (CLIENT): Cria agendamento e gera cobrança PIX.
+GET /bookings/me: Lista agendamentos do usuário logado.
+GET /bookings/:id: Obtém detalhes de um agendamento específico.
+PATCH /bookings/:id/status (PROVIDER/CLIENT): Atualiza o status de um agendamento.
+PATCH /bookings/:id/cancel (CLIENT): Cancela um agendamento.
+POST /bookings/:id/report-issue (CLIENT/PROVIDER): Reporta um problema.
+POST /bookings/:id/dispute (CLIENT/PROVIDER): Reporta uma disputa.
+PATCH /bookings/:id/resolve-dispute (ADMIN): Resolve uma disputa.
+9. Módulo Payments (Pagamentos)
+Objetivo: Gerenciar todo o fluxo de pagamentos, recebimentos e retiradas na plataforma, integrando com provedores de pagamento externos.
+Arquitetura:
+payments.controller.ts: Define rotas HTTP para interagir com pagamentos e retiradas.
+payments.service.ts: Contém a lógica de negócio dos fluxos financeiros.
+payments.module.ts: Declara e organiza os providers relacionados ao módulo.
+transaction.entity.ts: Representa a entidade de transação.
+create-pix-charge.dto.ts: DTO para iniciar uma cobrança PIX.
+request-withdrawal.dto.ts: DTO para solicitação de retirada.
+Fluxos de Negócio:
+Criação de Cobrança via PIX: Cliente inicia pagamento de agendamento. O backend cria uma transação PIX_CHARGE (PENDING), integra com provedor de pagamentos para gerar QR Code, e atualiza status para SUCCESS após confirmação.
+Registro e Rastreamento de Transações: Cada pagamento ou retirada é registrado na tabela Transaction para auditoria e relatórios. Tipos de transação incluem PIX_CHARGE, WITHDRAWAL, REFUND.
+Solicitação de Retirada (Withdrawals): Provedor solicita retirada de valores acumulados. Cria uma transação WITHDRAWAL (PENDING), que é marcada como SUCCESS ou FAILED após processamento.
+Regras de Negócio:
+Apenas o usuário dono da transação pode visualizar ou solicitar ações.
+Limites mínimos para retirada podem ser configurados.
+Validação de saldo disponível para retirada.
+Todas as operações financeiras são persistidas.
+Integrações: BookingsModule, LoyaltyModule, MissionsModule, NotificationsModule.
+Endpoints:
+POST /payments/pix/charge: Cria uma cobrança PIX.
+POST /payments/withdrawal: Solicita uma retirada.
+GET /payments/transactions: Lista todas as transações do usuário autenticado.
+10. Módulo Pricing (Precificação Dinâmica)
+Objetivo: Definir, gerenciar e aplicar regras de precificação dinâmica para os serviços.
+Arquitetura:
+pricing.controller.ts: Expõe endpoints REST para CRUD de regras e cálculo de preço.
+pricing.service.ts: Contém a lógica de negócio para CRUD de regras e a função principal calculatePrice().
+pricing-rule.entity.ts: Define a estrutura de uma regra de preço.
+calculate-price.dto.ts: DTO para requisição de cálculo de preço.
+create-pricing-rule.dto.ts, update-pricing-rule.dto.ts: DTOs para criação e atualização de regra.
+Fluxos de Negócio:
+Criação de Regras: Administradores podem criar regras de preço globais, por serviço ou por provedor (BASE, PERCENTAGE, FIXED_DISCOUNT, MIN_PRICE, MAX_PRICE), com condições flexíveis (JSON).
+Atualização e Gerenciamento: Administradores podem ativar/inativar regras, ajustar valores e condições.
+Cálculo de Preço (calculatePrice): Recebe serviceId, providerId, basePrice, clientId e meta (hora, localização). Busca regras ativas aplicáveis e as aplica em ordem específica, retornando originalPrice, finalPrice, appliedRules e discountsTotal.
+Regras de Negócio:
+Validação de compatibilidade entre type e value da regra.
+Ordem de aplicação das regras (BASE -> PERCENTAGE -> FIXED_DISCOUNT -> MIN_PRICE/MAX_PRICE).
+Apenas administradores podem criar/editar regras.
+Integrações: BookingsModule (para cálculo de preço durante a criação do agendamento), Coupons (futura), Loyalty (futura).
+Endpoints:
+POST /pricing/rules (ADMIN): Cria uma regra de precificação.
+PATCH /pricing/rules/:id (ADMIN): Atualiza uma regra existente.
+GET /pricing/rules (ADMIN): Lista todas as regras.
+POST /pricing/calculate: Calcula o preço de um serviço em tempo real.
+11. Módulo Coupons (Cupons de Desconto)
+Objetivo: Gerenciar a criação, aplicação e rastreamento de cupons de desconto.
+Arquitetura:
+coupons.controller.ts: Expõe endpoints REST para CRUD de cupons e aplicação.
+coupons.service.ts: Contém a lógica de negócio para criar, buscar, atualizar e aplicar cupons, além de integrar com missões.
+create-coupon.dto.ts, update-coupon.dto.ts, apply-coupon.dto.ts: DTOs para validação e aplicação.
+coupon.entity.ts: Define a estrutura da entidade Coupon e seus enums (CouponType, CouponTarget, CouponStatus).
+Fluxos de Negócio:
+CRUD de Cupons: Administradores podem criar, listar, buscar por código e atualizar cupons (código, tipo, valor, validade, usos, alvo, status).
+Aplicação de Cupons: O applyCoupon verifica a validade do cupom (data, usos, status) e as regras de alvo (NEW_CLIENTS, SPECIFIC_SERVICE, SPECIFIC_PROVIDER). Calcula o discountAmount e newTotalPrice.
+Emissão de Cupons via Missões: O issueCouponFromMission gera um cupom percentual de uso único com validade de 30 dias a partir da conclusão de uma missão.
+Regras de Negócio:
+Códigos de cupom devem ser únicos.
+Validação de datas de validade e maxUses.
+Regras de alvo (target) determinam a aplicabilidade do cupom.
+Cupons são marcados como usados (usesCount incrementado) após a conclusão do agendamento.
+Apenas administradores podem criar/editar cupons.
+Integrações: PrismaModule, MissionsModule (para emissão de cupons), BookingsModule (para aplicação e marcação de uso).
+Endpoints:
+POST /coupons (ADMIN): Cria um novo cupom.
+GET /coupons/:code (ADMIN): Busca um cupom por código.
+PATCH /coupons/:id (ADMIN): Atualiza um cupom.
+POST /coupons/apply (CLIENT): Aplica um cupom a um agendamento.
+GET /coupons (ADMIN): Lista todos os cupons.
+12. Módulo Offers (Ofertas Promocionais)
+Objetivo: Gerenciar ofertas promocionais programadas e estratégicas, complementando cupons e precificação.
+Arquitetura:
+offers.controller.ts: Expõe rotas REST para CRUD de ofertas.
+offers.service.ts: Contém a lógica de negócio para criar, gerenciar e aplicar ofertas.
+offer.entity.ts: Define o modelo da entidade Offer.
+create-offer.dto.ts, update-offer.dto.ts, offer-details.dto.ts: DTOs para validação e resposta.
+Fluxos de Negócio:
+Criação de Ofertas: Administradores criam ofertas com discountValue, discountType, target (GENERAL, SPECIFIC_SERVICE, SPECIFIC_PROVIDER, NEW_CLIENTS), validFrom e validUntil.
+Validação Automática: Ofertas têm validações de data e valor. São automaticamente marcadas como EXPIRED ao passar da data de validade.
+Aplicação de Ofertas: Durante busca ou checkout, o sistema consulta ofertas ativas e elegíveis (getActiveOffersForUser).
+Atualização e Remoção: Atualizações podem alterar datas, status e valor. Remoções marcam a oferta como INACTIVE para preservar histórico.
+Regras de Negócio:
+Ofertas programadas com escopo alvo.
+Validações de datas e valores.
+Remoção é um soft delete.
+Integrações: SearchModule, BookingsModule, NotificationsModule.
+Endpoints:
+POST /offers (ADMIN): Cria uma nova oferta.
+GET /offers/:id: Busca detalhes de uma oferta.
+GET /offers: Lista todas as ofertas.
+PATCH /offers/:id (ADMIN): Atualiza uma oferta.
+DELETE /offers/:id (ADMIN): Remove ou inativa uma oferta.
+13. Módulo Reviews (Avaliações)
+Objetivo: Permitir que clientes avaliem serviços concluídos, alimentando métricas de qualidade de prestadores e gerando pontos de fidelidade.
+Arquitetura:
+reviews.controller.ts: Expõe endpoints REST para criar e consultar avaliações.
+reviews.service.ts: Contém a lógica de negócio para validações, criação, métricas e integrações.
+review.entity.ts: Representa a entidade Review.
+Fluxos de Negócio:
+Criação de Avaliação: Cliente envia avaliação para um agendamento COMPLETED. O sistema valida elegibilidade, credita pontos de fidelidade (LoyaltyService), dispara evento de missão (MissionsService) e atualiza indicadores do provedor (ProvidersService).
+Listagem e Consulta: Lista avaliações com filtros opcionais (providerId, clientId, minRating, maxRating).
+Regras de Negócio:
+Apenas o cliente do booking pode avaliar.
+Booking deve estar COMPLETED.
+Apenas uma avaliação por booking.
+Pontuação de fidelidade diferenciada para primeira avaliação e subsequentes.
+Atualização de badges e contadores do provedor.
+Integrações: PrismaModule, BookingsService, ProvidersService, LoyaltyService, MissionsService.
+Endpoints:
+POST /reviews: Cria uma avaliação.
+GET /reviews: Lista avaliações.
+GET /reviews/:id: Busca uma avaliação específica.
+GET /reviews/:providerId/breakdown: Retorna o detalhamento de ratings para um provedor.
+GET /reviews/:providerId/suggestions: Retorna sugestões inteligentes para um provedor.
+14. Módulo Ranking (Ranqueamento de Prestadores)
+Objetivo: Calcular e expor o ranking de prestadores para fins de listagem, destaque e busca, consolidando sinais de qualidade e atividade.
+Arquitetura:
+ranking.module.ts: Declara o módulo e exporta o RankingService.
+ranking.service.ts: O motor de ranking, consulta dados, normaliza sinais, aplica fórmula de score com pesos configuráveis e filtros.
+ranking.controller.ts: Expõe endpoints REST para listagem ranqueada e rebuild de cache.
+provider-ranking.dto.ts: DTO de saída para itens ranqueados.
+Fluxos de Negócio:
+Cálculo de Score: Utiliza uma fórmula ponderada de sinais como rating médio, bookings concluídos, taxa de 5 estrelas, recência de review e proximidade geográfica.
+Listagem Ranqueada: Retorna uma lista de provedores ordenada por score, com filtros opcionais por serviceId, city, nearbyLat/nearbyLng.
+Regras de Negócio:
+Fórmula de scoring com pesos ajustáveis.
+Normalização de dados para o cálculo do score.
+Decay temporal para reviews antigas.
+Mínimos estatísticos para evitar manipulação.
+Atribuição de "badges" com base em limiares.
+Integrações: Prisma, Reviews, Bookings.
+Endpoints:
+GET /ranking/providers: Lista ranqueada com filtros e paginação.
+GET /ranking/top: Atalho para top N provedores.
+POST /ranking/rebuild (ADMIN): Força rebuild/invalidação de cache.
+15. Módulo Search (Busca de Serviços e Provedores)
+Objetivo: Fornecer mecanismos de busca inteligente de serviços e provedores, permitindo que clientes localizem ofertas e profissionais disponíveis.
+Arquitetura:
+search.controller.ts: Expõe endpoints REST para busca.
+search.service.ts: Contém a lógica de negócio para consultas ao banco via Prisma.
+search-query.dto.ts: Define parâmetros de entrada da busca.
+provider-service-search-result.dto.ts: Define o formato de resposta dos resultados.
+Fluxos de Negócio:
+Consulta de Busca: Cliente envia consulta com filtros (query, location, priceRange, categories).
+Execução da Busca: SearchService utiliza Prisma para consultar ProviderService, aplicando filtros dinâmicos.
+Montagem dos Resultados: Retorno transformado em objetos padronizados com informações do serviço, provedor, preço, categoria, etc.
+Regras de Negócio:
+Validação de parâmetros via DTO.
+Filtros dinâmicos.
+Integrações: Prisma ORM, Providers Module, Reviews Module (opcional).
+Endpoints:
+POST /search: Busca serviços/provedores.
+16. Módulo Notifications (Notificações)
+Objetivo: Gerenciar a criação, envio e atualização de notificações no sistema, garantindo que usuários e administradores recebam comunicações relevantes.
+Arquitetura:
+notifications.controller.ts: Expõe rotas HTTP.
+notifications.service.ts: Contém a lógica de negócio.
+notification.entity.ts: Define a estrutura da entidade Notification.
+create-notification.dto.ts, update-notification.dto.ts: DTOs para validação.
+Fluxos de Negócio:
+Gatilho de Evento: Serviços chamam notificationsService.create() a partir de eventos (reserva criada, missão concluída).
+Persistência: Notificação é salva no banco.
+Entrega: Notificação disponível na listagem do usuário.
+Interação do Usuário: Marcada como READ ao ser visualizada.
+Regras de Negócio:
+ADMIN pode criar e atualizar notificações.
+Usuário (CLIENTE/PROVIDER) pode listar e atualizar o status das próprias notificações.
+Integrações: Prisma, QueuesModule (futura para envio em larga escala), FCM/APNs (futura para push).
+Endpoints:
+POST /notifications (ADMIN): Cria uma nova notificação.
+PATCH /notifications/:id (ADMIN): Atualiza status ou conteúdo.
+GET /notifications/:userId (USER): Lista notificações de um usuário.
+17. Módulo Queues (Filas de Processamento Assíncrono)
+Objetivo: Processar tarefas assíncronas e trabalhos de longa duração fora do ciclo de requisição HTTP, reduzindo latência e melhorando a resiliência.
+Arquitetura:
+NestJS + @nestjs/bull + bull usando Redis como broker.
+queues.module.ts: Registra filas e processors (workers).
+queues.service.ts: Fachada para enfileirar jobs.
+Casos de Uso Suportados:
+Notificações: Envio assíncrono de push, e-mail ou in-app (ex.: solicitar avaliação, alertas administrativos).
+Verificação (KYC / documentos): Processamento de análise de documentos e validações em background (OCR, liveness).
+Disputas (Opcional/Previsto): Encaminhar carga de trabalho para uma fila específica de análise/resolução.
+Geração de Agendamentos Recorrentes (Assinaturas): Gerar novos agendamentos automaticamente para assinaturas.
+Como Funciona:
+Produção do Job: Módulos injetam QueuesService e chamam métodos especializados (addNotificationJob, addVerificationJob, addDisputeJob, addSubscriptionGenerationJob).
+Encaminhamento e Persistência: Bull grava o job no Redis com metadados.
+Processamento: O worker correspondente consome o job e executa a ação via serviços de domínio.
+Retentativas, Backoff e DLQ: Falhas disparam retentativas automáticas.
+APIs do QueuesService: Métodos para adicionar jobs de notificação, verificação, disputa e geração de assinaturas, com opções para jobId, delayMs, attempts, backoffMs, priority.
+Workers:
+notification.worker.ts: Processa jobs da fila notifications (ex.: send-notification).
+verification.worker.ts: Processa jobs da fila verification (ex.: provider-verification, document-ocr).
+subscription-generation.worker.ts (inferido): Processa jobs para gerar agendamentos de assinaturas.
+Boas Práticas: Idempotência com jobId, delays conscientes, backoff exponencial, segregação de filas, remoção de jobs, rate limit.
+Observabilidade: Logs de workers, métricas (processados/falhados, tempo de processamento, tamanho da fila), UI de monitoramento (bull-board).
+Integrações: NotificationsService, VerificationService, BookingsService, MissionsService, SubscriptionsService.
+18. Módulo Verification (Validação de Identidade)
+Objetivo: Responsável pelo processo de validação de identidade de prestadores de serviço, garantindo segurança e confiabilidade.
+Arquitetura:
+verification.controller.ts: Define endpoints HTTP.
+verification.service.ts: Contém toda a lógica de negócio (armazenar, processar e validar documentos).
+document-processing.service.ts: Serviço auxiliar para upload e processamento de imagens (OCR, comparação facial, prova de vida) via Google Cloud Storage/Vision API.
+verification.module.ts: Configura dependências.
+DTOs: upload-document.dto.ts, upload-selfie.dto.ts.
+Fluxos de Negócio:
+Upload de Documentos: Prestador envia imagens/documentos oficiais. Backend armazena e envia para DocumentProcessingService (OCR, autenticidade, cruzamento de dados).
+Upload de Selfie (Prova de Vida): Prestador envia selfie. Pode ser comparada com foto do documento.
+Processamento & Análise: VerificationService coordena o processamento, utilizando filas (QueuesModule) para tarefas assíncronas (OCR, validação facial, notificação ao compliance).
+Resultado da Verificação: Status VERIFIED (aprovado), UNDER_REVIEW (pendente), REJECTED (rejeitado com notificação).
+Regras de Negócio:
+Apenas prestadores de serviço passam pelo fluxo.
+Exige documento oficial válido e selfie de prova de vida.
+Uso de filas para escalabilidade.
+Prestador UNVERIFIED não pode aceitar serviços.
+Integrações: PrismaModule, ProvidersModule, QueuesModule, NotificationsModule, DocumentProcessingModule.
+Endpoints:
+POST /verification/document: Upload de documento.
+POST /verification/selfie: Upload de selfie.
+GET /verification/status/:providerId: Consulta status de verificação.
+19. Módulo Safety (Segurança e Incidentes)
+Objetivo: Garantir a segurança de clientes e prestadores, fornecendo mecanismos de relato de incidentes e alerta de pânico.
+Arquitetura:
+safety.controller.ts: Expõe rotas da API.
+safety.service.ts: Contém a lógica de negócio para registro, atualização e consulta.
+Entities: incident.entity.ts, panic-alert.entity.ts.
+DTOs: report-incident.dto.ts, update-incident.dto.ts, report-panic.dto.ts.
+Fluxos de Negócio:
+Relato de Incidentes: Usuário preenche detalhes do ocorrido (userId, bookingId, type, description). SafetyService cria registro PENDING, que pode ser revisado e atualizado (IN_REVIEW, RESOLVED, ESCALATED).
+Alerta de Pânico: Usuário aciona botão no app (userId, location, bookingId, notes). SafetyService cria registro ACTIVE, dispara notificações para admins/suporte.
+Monitoramento e Auditoria: Incidentes e alertas registrados para auditoria, análise de risco e aprimoramento da confiança.
+Regras de Negócio:
+Apenas usuários autenticados podem reportar.
+Incidentes PENDING até revisão manual.
+Alertas de pânico geram registros imediatos e ficam ativos até encerrados.
+Logs completos para auditoria.
+Integrações: Prisma, NotificationsModule, SmsModule (para alertas de pânico via SMS).
+Endpoints:
+Incidentes:
+POST /safety/incidents: Reportar incidente.
+PATCH /safety/incidents/:id: Atualizar status/incidente.
+GET /safety/incidents/:id: Buscar incidente específico.
+GET /safety/incidents: Listar incidentes (admin).
+Alertas de Pânico:
+POST /safety/panic: Disparar alerta de pânico.
+GET /safety/panic/:id: Consultar alerta específico.
+GET /safety/panic: Listar alertas ativos/recentes.
+20. Módulo Referrals (Indicações)
+Objetivo: Gerenciar o registro de indicações de usuários, consulta e integrações com Loyalty e Missões.
+Arquitetura:
+Modelo (Prisma): Referral (com referredUserId único e par (referredUserId, referrerUserId) único).
+DTO: CreateReferralDto.
+referrals.service.ts: Lógica para criar e buscar indicações.
+referrals.controller.ts: Expõe endpoints.
+Fluxos de Negócio:
+Criação de Indicação: createReferral verifica autoindicação, existência de usuários e unicidade. Cria a indicação e credita pontos de fidelidade (LoyaltyService) para o indicador.
+Conversão de Indicação: (Idealmente) quando o indicado conclui o primeiro booking, o BookingsService dispara um evento (referral.converted) para o MissionsService, recompensando o indicador.
+Regras de Negócio:
+Não permite autoindicação.
+Um usuário só pode ser indicado uma vez.
+Pontos de fidelidade podem ser dados na criação ou na conversão.
+Integrações: PrismaModule, LoyaltyModule, MissionsModule, BookingsService.
+Endpoints:
+POST /referrals: Cria a indicação.
+GET /referrals/:id: Detalhe de uma indicação.
+GET /referrals/me: Lista indicações feitas pelo usuário logado.
+21. Módulo Missions (Gamificação e Recompensas)
+Objetivo: Criar objetivos gamificados que, ao serem atingidos, geram recompensas (cupons ou pontos de fidelidade) para o usuário.
+Arquitetura:
+Modelos (Prisma): Mission, MissionProgress, MissionEvent.
+Enums: MissionAudience, MissionKind, RewardType, MissionStatus.
+missions.service.ts: Contém a lógica principal (trackEvent, getMyMissions, claimMission).
+Fluxos de Negócio:
+Rastreamento de Eventos: MissionsService.trackEvent(userId, eventName, meta?) grava o evento e recalcula o progresso de missões ativas que escutam esse evento.
+Cálculo de Progresso: Baseado no MissionKind (COUNT_EVENT, STREAK_DAYS, WITHIN_WINDOW). Atualiza currentValue e status.
+Resgate de Recompensas: Usuário chama claimMission. O módulo valida o status da missão (COMPLETED e não CLAIMED), emite cupom (CouponsService) ou credita pontos (LoyaltyService), e marca a missão como CLAIMED.
+Regras de Negócio:
+Missões definidas por código, título, tipo, evento, valor alvo e janela de tempo.
+Recompensas podem ser cupons ou pontos.
+trackEvent é idempotente para modos de janela.
+claimMission valida elegibilidade e emite recompensa.
+Integrações: PrismaService, CouponsService, LoyaltyService, BookingsModule, ReviewsModule, ReferralsModule.
+Endpoints:
+GET /missions/my (CLIENT): Retorna a lista de missões ativas com progresso do usuário.
+POST /missions/claim (CLIENT): Resgata a recompensa de uma missão.
+22. Módulo Chat (Comunicação em Tempo Real)
+Objetivo: Fornecer funcionalidades de comunicação em tempo real entre clientes e provedores.
+Arquitetura:
+chat.controller.ts: Expõe endpoints REST para gerenciamento de chat.
+chat.service.ts: Contém a lógica de negócio para encontrar/criar chats, enviar/receber mensagens.
+chat.gateway.ts: Implementa a comunicação WebSocket para mensagens em tempo real.
+message.entity.ts: Representa a entidade Message.
+DTOs: send-message.dto.ts, get-messages.dto.ts, chat-details.dto.ts, conversation-item.dto.ts.
+Fluxos de Negócio:
+Encontrar ou Criar Chat: findOrCreateChat encontra um chat existente entre um cliente e um provedor ou cria um novo.
+Enviar Mensagem: createMessage cria uma mensagem no banco de dados. O ChatGateway emite a mensagem em tempo real para os participantes via WebSocket.
+Obter Mensagens: getMessagesByChatId busca mensagens de uma conversa específica.
+Listar Conversas do Usuário: getConversationsForUser retorna uma lista de conversas do usuário logado, incluindo a última mensagem e contagem de não lidas.
+Regras de Negócio:
+Chats são permitidos apenas entre um cliente e um provedor.
+Mensagens só podem ser enviadas se houver um agendamento CONFIRMED entre os participantes. Chats são bloqueados se o agendamento for COMPLETED ou CANCELED.
+Validação de remetente e destinatário como participantes válidos do chat.
+Contagem de mensagens não lidas.
+Integrações: PrismaModule, AuthModule (para autenticação WebSocket).
+Endpoints:
+GET /chat/find-or-create/provider/:providerId/client/:clientId: Encontra ou cria um chat.
+POST /chat/:chatId/messages: Envia uma nova mensagem.
+GET /chat/:chatId/messages: Obtém mensagens de uma conversa.
+GET /chat/me/conversations: Obtém a lista de conversas do usuário logado.
+23. Módulo Prisma (ORM e Acesso a Dados)
+Objetivo: Fornecer uma camada de abstração para o acesso ao banco de dados PostgreSQL, garantindo operações type-safe e gerenciamento de conexões.
+Arquitetura:
+prisma.service.ts: Estende PrismaClient, gerenciando a conexão ($connect, $disconnect) e habilitando shutdown hooks para desligamento gracioso.
+prisma.module.ts: Torna o PrismaService disponível globalmente via injeção de dependência.
+Funcionalidades Principais:
+Conexão e Desconexão: Gerencia o ciclo de vida da conexão com o banco de dados.
+Type-Safety: Fornece um cliente de banco de dados totalmente tipado, reduzindo erros em tempo de execução.
+Migrações: Suporta o fluxo de migrações de esquema do Prisma.
+Query Building: Permite construir queries complexas de forma programática.
+Raw Queries: Suporte para queries SQL brutas quando necessário ($executeRaw, Prisma.sql).
+24. Módulo Config (Configuração da Aplicação)
+Objetivo: Gerenciar as variáveis de ambiente e configurações da aplicação de forma centralizada e validada.
+Arquitetura:
+config.module.ts: Importa NestConfigModule, definindo que as configurações serão carregadas de .env e validadas.
+configuration.ts: Define a estrutura da configuração, mapeando variáveis de ambiente para um objeto de configuração.
+validation-schema.ts: Utiliza Joi para definir um esquema de validação rigoroso para todas as variáveis de ambiente necessárias.
+Configurações Gerenciadas:
+Gerais: PORT, DATABASE_URL, JWT_SECRET, JWT_EXPIRATION_TIME, APP_BASE_URL.
+Serviços Externos: Google Cloud Storage (GCS), Cellereit Facematch (API de terceiros), Email Service (SendGrid/SMTP), SMS Service (Twilio), Geocoding Service (Google Maps/OpenStreetMap), PagSeguro.
+Filas: REDIS_HOST, REDIS_PORT, REDIS_PASSWORD, QUEUE_ATTEMPTS_DEFAULT, etc.
+Funcionalidades Principais:
+Carregamento de .env: Carrega variáveis de ambiente do arquivo .env.
+Validação: Garante que todas as variáveis de ambiente obrigatórias estejam presentes e no formato correto.
+Acesso Tipado: Permite acessar as configurações de forma tipada através do ConfigService.
+25. Módulo Cache (Gerenciamento de Cache)
+Objetivo: Implementar uma camada de cache para melhorar a performance da aplicação, reduzindo a carga no banco de dados e acelerando o tempo de resposta.
+Arquitetura:
+cache.module.ts: Configura o NestCacheModule com Redis como store, utilizando KeyvRedis.
+cache.service.ts: Fornece uma interface simplificada para interagir com o cache (get, set, del, reset).
+Funcionalidades Principais:
+Armazenamento em Redis: Utiliza Redis para armazenar dados em cache, permitindo escalabilidade e persistência.
+Operações Básicas: Suporta operações de leitura, escrita, deleção e reset do cache.
+TTL (Time-To-Live): Permite definir um tempo de vida para os itens em cache.
+Logging: Registra hits/misses e erros do cache.
+Integrações: ConfigModule (para obter configurações do Redis e TTL).
+26. Módulo Loyalty (Fidelidade)
+Objetivo: Gerenciar o sistema de pontos de fidelidade para usuários, recompensando ações na plataforma.
+Arquitetura:
+loyalty.module.ts: Declara o módulo.
+loyalty.service.ts: Contém a lógica para adicionar e gerenciar pontos.
+loyalty.controller.ts: Expõe endpoints para consulta de saldo e resgate de pontos.
+DTOs: add-points.dto.ts, redeem-points.dto.ts.
+Modelo (Prisma): LoyaltyTransaction (registra cada transação de pontos).
+Enum (Prisma): LoyaltyTransactionType.
+Fluxos de Negócio:
+Adicionar Pontos: addPoints registra uma transação de pontos para um userId com um type e referenceId. Pode incluir lógica de campanhas (ex: dobrar pontos).
+Resgatar Pontos: redeemPoints permite ao usuário trocar pontos por recompensas (ex: cupons). Verifica saldo, busca recompensa, cria o cupom e debita os pontos.
+Consulta de Saldo e Histórico: getUserPoints e getLoyaltyHistory fornecem o saldo atual e o histórico de transações de pontos.
+Regras de Negócio:
+Pontos são concedidos por ações específicas (SERVICE_COMPLETED, FIRST_REVIEW, REVIEW_SUBMITTED, REFERRAL, MISSION_COMPLETED).
+Cada transação é auditável.
+Saldo insuficiente impede o resgate.
+Integrações: PrismaModule, BookingsModule, ReviewsModule, ReferralsModule, MissionsModule, CouponsModule (para emissão de cupons).
+Endpoints:
+GET /loyalty/me: Obtém o saldo de pontos do usuário logado.
+GET /loyalty/me/history: Obtém o histórico de transações de pontos do usuário logado.
+POST /loyalty/redeem: Resgata pontos por uma recompensa.
+27. Módulo Compliance (Conformidade e LGPD)
+Objetivo: Garantir a conformidade com regulamentações de privacidade de dados como a LGPD, gerenciando consentimentos e solicitações de titulares de dados.
+Arquitetura:
+compliance.service.ts: Contém a lógica para registro/verificação de consentimento, DSAR e exclusão de dados.
+Modelo (Prisma): UserConsent.
+Fluxos de Negócio:
+Registro de Consentimento: recordConsent registra ou atualiza o consentimento de um usuário para termos de serviço ou política de privacidade, com controle de versão.
+Verificação de Consentimento: checkConsent verifica se um usuário consentiu com uma versão específica de um documento.
+Geração de Orçamento Itemizado (Placeholder): generateItemizedQuote é um método placeholder para gerar detalhes de orçamento para um agendamento.
+Processamento de DSAR (Data Subject Access Request): processDataSubjectAccessRequest coleta e retorna todos os dados de um usuário para atender a uma solicitação de acesso do titular.
+Processamento de Solicitação de Exclusão (Right to Erasure): processErasureRequest anonimiza os dados de um usuário em vez de excluí-los completamente para manter a integridade referencial e requisitos legais.
+Regras de Negócio:
+Consentimentos são versionados.
+Anonimização de dados é a abordagem preferida para exclusão.
+Acesso a dados sensíveis é logado.
+Integrações: PrismaService.
+Endpoints: Não explicitamente detalhados, mas operações de compliance geralmente são acessadas via rotas administrativas ou internas.
+28. Módulo Dashboard (Painel de Provedor)
+Objetivo: Fornecer dados consolidados e métricas chave para o painel de controle do provedor.
+Arquitetura:
+dashboard.controller.ts: Expõe o endpoint para obter os dados do dashboard.
+dashboard.service.ts: Orquestra a coleta de dados de outros serviços para compor o dashboard.
+dashboard.dto.ts: DTO de resposta para os dados do dashboard do provedor.
+Fluxos de Negócio:
+Obtenção de Dados: O serviço busca informações do provedor, agendamentos futuros, sumário de ganhos e avaliações recentes, consolidando-as em um único objeto de resposta.
+Regras de Negócio:
+Apenas provedores autenticados podem acessar seu próprio dashboard.
+Integrações: ProvidersModule, BookingsModule, EarningsModule, ReviewsModule, NotificationsModule.
+Endpoints:
+GET /providers/me/dashboard (PROVIDER): Obtém dados do painel do provedor logado.
+29. Módulo Dispute (Gerenciamento de Disputas)
+Objetivo: Gerenciar o ciclo de vida das disputas relacionadas a agendamentos, permitindo o reporte, comunicação e resolução.
+Arquitetura:
+dispute.controller.ts: Expõe endpoints REST para criar, consultar, listar e atualizar disputas.
+dispute.service.ts: Contém a lógica de negócio para o gerenciamento de disputas, incluindo validações, mensagens e processamento de reembolsos.
+DTOs: create-dispute.dto.ts, update-dispute.dto.ts.
+Fluxos de Negócio:
+Criação de Disputa: Clientes ou provedores podem abrir uma disputa para um agendamento, fornecendo um motivo e descrição. O sistema verifica permissões, impede disputas duplicadas e atualiza o status do agendamento para PENDING_DISPUTE.
+Comunicação na Disputa: Mensagens podem ser adicionadas à disputa por qualquer parte envolvida (cliente, provedor, admin) para facilitar a comunicação.
+Listagem e Detalhes: Administradores podem listar e consultar detalhes de qualquer disputa. Clientes/provedores podem consultar suas próprias.
+Atualização de Status e Resolução: Administradores podem atualizar o status da disputa (PENDING, IN_REVIEW, RESOLVED, etc.), adicionar notas de resolução e processar reembolsos.
+Regras de Negócio:
+Apenas clientes ou provedores envolvidos no agendamento, ou administradores, podem criar/acessar disputas.
+Não pode haver múltiplas disputas ativas para o mesmo agendamento.
+Notas de resolução são obrigatórias para disputas RESOLVED.
+Reembolsos podem ser processados como parte da resolução.
+Notificações são enviadas para todas as partes envolvidas em cada etapa.
+Integrações: PrismaModule, BookingsModule (para atualizar status de agendamento), NotificationsModule (para enviar alertas).
+Endpoints:
+POST /disputes (CLIENT/PROVIDER): Cria uma nova disputa.
+GET /disputes/:id: Busca os detalhes de uma disputa.
+GET /disputes (ADMIN): Lista disputas com filtros.
+POST /disputes/:id/message (CLIENT/PROVIDER/ADMIN): Adiciona uma mensagem a uma disputa.
+PATCH /disputes/:id/status (ADMIN): Atualiza o status de uma disputa.
+30. Módulo Earnings (Ganhos de Provedores)
+Objetivo: Gerenciar e exibir os ganhos e o histórico de transações financeiras dos provedores.
+Arquitetura:
+earnings.controller.ts: Expõe endpoints para consulta de ganhos e solicitação de saques.
+earnings.service.ts: Contém a lógica de negócio para calcular ganhos, gerenciar saques e buscar transações.
+DTOs: earnings.dto.ts (EarningsResponseDto, WithdrawalRequestDto, WithdrawalResponseDto).
+Fluxos de Negócio:
+Consulta de Ganhos: Retorna o total de ganhos, valor disponível para saque, saques pendentes, transações recentes e um breakdown de ganhos por período.
+Solicitação de Saque: Provedor solicita a retirada de um valor. O sistema verifica o saldo disponível e cria uma transação de saque com status PENDING.
+Regras de Negócio:
+Ganhos são calculados a partir de agendamentos COMPLETED.
+Saques pendentes são deduzidos do valor disponível.
+Transações de saque são registradas e aguardam processamento administrativo.
+Verificação de saldo suficiente para saque.
+Integrações: PrismaModule, ProvidersModule (para obter dados do provedor).
+Endpoints:
+GET /providers/me/earnings (PROVIDER): Obtém dados de ganhos e histórico de transações.
+POST /providers/me/earnings/withdrawal (PROVIDER): Solicita um saque.
+31. Módulo FAQS (Perguntas Frequentes)
+Objetivo: Gerenciar uma base de dados de perguntas frequentes (FAQs) para clientes e provedores.
+Arquitetura:
+faqs.controller.ts: Expõe endpoints REST para CRUD de FAQs.
+faqs.service.ts: Contém a lógica de negócio para criar, buscar, atualizar e remover itens de FAQ.
+DTOs: create-faq.dto.ts, update-faq.dto.ts.
+faq-item.entity.ts: Representa a entidade FAQItem.
+Fluxos de Negócio:
+CRUD de FAQs: Administradores podem criar, listar, buscar por ID, atualizar e remover itens de FAQ, incluindo pergunta, resposta, categoria e ordem de exibição.
+Consulta Pública: Qualquer usuário pode consultar a lista de FAQs.
+Regras de Negócio:
+Apenas administradores podem gerenciar FAQs.
+Integrações: PrismaModule, AuthModule (para autenticação e autorização).
+Endpoints:
+POST /faqs (ADMIN): Cria um novo item de FAQ.
+GET /faqs: Obtém todos os itens de FAQ.
+GET /faqs/:id: Obtém um item de FAQ por ID.
+PATCH /faqs/:id (ADMIN): Atualiza um item de FAQ.
+DELETE /faqs/:id (ADMIN): Exclui um item de FAQ.
+32. Módulo Guarantee (Garantia de Serviço)
+Objetivo: Gerenciar solicitações de garantia de serviço, permitindo que clientes reportem problemas após a conclusão do serviço e busquem resolução.
+Arquitetura:
+guarantee.controller.ts: Expõe endpoints REST para submeter, consultar e atualizar solicitações de garantia.
+guarantee.service.ts: Contém a lógica de negócio para o gerenciamento de solicitações de garantia.
+DTOs: submit-claim.dto.ts, update-claim.dto.ts.
+guarantee-claim.entity.ts: Representa a entidade GuaranteeClaim.
+Fluxos de Negócio:
+Submissão de Solicitação: Cliente pode submeter uma solicitação de garantia para um bookingId, fornecendo descrição, anexos e valor estimado. O status inicial é PENDING.
+Consulta de Solicitações: Clientes podem listar suas próprias solicitações. Administradores podem consultar qualquer solicitação.
+Atualização de Status: Administradores podem atualizar o status da solicitação (PENDING, UNDER_REVIEW, APPROVED, REJECTED, SETTLED), adicionar notas de resolução e um valor resolvido.
+Regras de Negócio:
+Apenas clientes podem submeter solicitações para seus próprios agendamentos.
+Apenas administradores podem atualizar o status das solicitações.
+Notificações são enviadas ao cliente sobre atualizações de status.
+Integrações: PrismaService, NotificationsService.
+Endpoints:
+POST /guarantee/claims (CLIENT): Submete uma nova solicitação de garantia.
+GET /guarantee/claims/me (CLIENT): Lista as solicitações de garantia do usuário logado.
+GET /guarantee/claims/:id (CLIENT/ADMIN): Obtém detalhes de uma solicitação de garantia.
+PATCH /guarantee/claims/:id/status (ADMIN): Atualiza o status de uma solicitação de garantia.
+33. Módulo Subscriptions (Assinaturas e Agendamentos Recorrentes)
+Objetivo: Gerenciar assinaturas de serviços, permitindo a criação e automação de agendamentos recorrentes.
+Arquitetura:
+subscriptions.controller.ts: Expõe endpoints REST para criar, consultar e atualizar assinaturas.
+subscriptions.service.ts: Contém a lógica de negócio para o gerenciamento de assinaturas, incluindo a geração de agendamentos recorrentes.
+DTOs: create-subscription.dto.ts, update-subscription.dto.ts.
+subscription.entity.ts: Representa a entidade Subscription e seus enums (SubscriptionFrequency, SubscriptionStatus).
+Fluxos de Negócio:
+Criação de Assinatura: Cliente cria uma assinatura para um providerId e providerServiceId com uma frequency e startDate. O sistema gera o primeiro agendamento imediatamente e agenda os próximos.
+Geração de Agendamentos Recorrentes: Um job em fila (QueuesService) é agendado para gerar automaticamente novos agendamentos com base na frequência da assinatura.
+Gerenciamento de Assinaturas: Clientes podem listar e consultar suas assinaturas. Podem pausar, cancelar ou reativar assinaturas.
+Regras de Negócio:
+Apenas clientes podem criar assinaturas para si mesmos.
+Assinaturas podem ser ACTIVE, PAUSED, CANCELED ou COMPLETED.
+A geração de agendamentos é baseada na nextGenerationDate e frequency.
+O cancelamento/pausa de assinaturas pode cancelar jobs futuros e agendamentos pendentes.
+Integrações: PrismaService, BookingsModule (para criar agendamentos), PaymentsModule (para configurar pagamentos recorrentes), QueuesModule (para agendamento de jobs de geração).
+Endpoints:
+POST /subscriptions (CLIENT): Cria uma nova assinatura.
+GET /subscriptions/me (CLIENT): Obtém as assinaturas do usuário logado.
+GET /subscriptions/:id (CLIENT/ADMIN): Obtém detalhes de uma assinatura.
+PATCH /subscriptions/:id (CLIENT/ADMIN): Atualiza uma assinatura (status, frequência, etc.).
+III. Funções Globais e Utilitários Comuns
+Esta seção detalha os serviços e componentes que são compartilhados e utilizados por múltiplos módulos da aplicação.
+
+A. Serviços Comuns (src/common/services)
+EmailService (src/common/services/email.service.ts):
+Objetivo: Enviar e-mails transacionais e de notificação.
+Funcionalidades: Abstrai o envio de e-mails, com suporte a provedores como SMTP (via Nodemailer) e SendGrid. Inclui um modo de simulação se nenhum provedor real for configurado, útil para desenvolvimento e testes.
+Integrações: ConfigService para obter credenciais (EMAIL_SERVICE_PROVIDER, SENDGRID_API_KEY, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, DEFAULT_EMAIL_FROM).
+SmsService (src/sms/sms.service.ts):
+Objetivo: Enviar mensagens SMS e gerenciar verificações de telefone (OTP).
+Funcionalidades: Integra-se com o Twilio para envio de SMS tradicional, alertas de pânico e verificação de telefone (OTP) via startVerification e checkVerification.
+Integrações: ConfigService para obter credenciais (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER, TWILIO_VERIFY_SERVICE_SID).
+GeocodingService (src/geocoding/geocoding.service.ts):
+Objetivo: Converter endereços textuais em coordenadas geográficas (latitude e longitude) e vice-versa.
+Funcionalidades: Integra-se com APIs de geocodificação como Google Maps. Oferece geocodeAddress para converter endereços em coordenadas e getZoneByCoordinates para determinar uma área geográfica.
+Integrações: ConfigService para obter chaves de API (GOOGLE_MAPS_API_KEY).
+DTOs: geocode-response.dto.ts (para o retorno de coordenadas).
+DocumentProcessingService (src/verification/document-processing.service.ts):
+Objetivo: Gerenciar o upload e o processamento de documentos e imagens, especialmente para fluxos de verificação.
+Funcionalidades: Lida com upload de imagens para Google Cloud Storage (GCS) ou armazenamento local (para desenvolvimento/testes). Integra-se com Google Cloud Vision API para processDocumentOcr (extração de texto), compareFaces (comparação facial) e performLivenessCheck (prova de vida).
+Integrações: ConfigService (para STORAGE_TYPE, GCS_PROJECT_ID, GCS_BUCKET_NAME).
+Nota: local-storage.service.ts (não é um módulo, mas um arquivo de serviço) é uma implementação mock/alternativa para DocumentProcessingService quando o STORAGE_TYPE não é gcs.
+B. Utilitários e Helpers (src/common/utils)
+Code Generator (src/common/utils/code-generator.ts):
+Objetivo: Gerar códigos aleatórios alfanuméricos de um determinado comprimento.
+Funcionalidades: Função generateRandomCode(length: number).
+C. Pipes (src/common/pipes)
+CustomValidationPipe (src/common/pipes/validation.pipe.ts):
+Objetivo: Validar DTOs em requisições HTTP.
+Funcionalidades: Um pipe global para validação de DTOs utilizando class-validator e class-transformer, formatando erros de validação de forma legível e consistente.
+D. Filters (src/common/filters)
+HttpExceptionFilter (src/common/filters/http-exception.filter.ts):
+Objetivo: Padronizar as respostas de erro para o cliente.
+Funcionalidades: Um filtro de exceções global que captura HttpException e formata a resposta de erro para o cliente, incluindo statusCode, timestamp, path e mensagens de erro detalhadas.
+E. DTOs Comuns (src/common/dto)
+CreateAddressDto (src/common/dto/create-address.dto.ts): DTO para criação de informações de endereço, incluindo CEP, rua, número, complemento, bairro, cidade, estado, latitude e longitude. Usado em registros e agendamentos.
+AddressDetailsDto (src/common/dto/address-details.dto.ts): DTO para retorno detalhado de informações de endereço, incluindo o ID.
+MessageResponseDto (src/common/dto/message-response.dto.ts): DTO simples para retornar mensagens de sucesso em operações.
+F. Enums e Tipos Comuns (src/shared/enums, src/shared/types)
+Estes arquivos re-exportam ou definem tipos e enums globais para serem usados em toda a aplicação, promovendo consistência.
+
+UserRole (src/common/constants/roles.enum.ts e re-exportado em src/shared/enums/user-role.enum.ts): Define os papéis de usuário na plataforma (CLIENT, PROVIDER, ADMIN).
+VerificationStatus (src/shared/enums/verification-status.enum.ts): Define os estados do processo de verificação de provedores.
+BookingStatus (src/shared/enums/booking-status.enum.ts): Define os estados do ciclo de vida de um agendamento.
+PricingType (src/common/enums/pricing-type.enum.ts): Define os tipos de precificação de serviços (FIXED_PRICE, HOURLY, BY_SIZE, CUSTOM_QUOTE).
+UserRoles (src/shared/types/user-roles.type.ts): Um tipo de união para os papéis de usuário.
+G. Augmentação do Objeto Request (express-request.d.ts)
+Objetivo: Estender a interface Request do Express para incluir propriedades personalizadas adicionadas pelos guards de autenticação (ex: req.user).
+Detalhes: O arquivo express-request.d.ts declara um namespace global Express e aumenta a interface Request para incluir a propriedade user do tipo User (do Prisma), garantindo que as informações do usuário autenticado estejam disponíveis de forma tipada em todo o ciclo de vida da requisição.
+H. Módulos e Controladores de Entrada (src/app)
+AppModule (src/app.module.ts):
+Objetivo: O módulo raiz da aplicação, responsável por importar e configurar todos os outros módulos.
+Configurações Globais: Configura ConfigModule (para variáveis de ambiente), ThrottlerModule (para rate limiting), SentryModule (para monitoramento de erros) e PrismaModule (para acesso ao DB) como módulos globais.
+Estrutura: Importa e organiza todos os módulos de domínio da aplicação.
+AppController (src/app.controller.ts):
+Objetivo: O controlador raiz, fornecendo endpoints básicos para verificar o status da aplicação.
+Endpoints:
+GET /: Retorna uma mensagem de boas-vindas.
+GET /health: Retorna um status ok, útil para verificações de saúde de infraestrutura.
+AppService (src/app.service.ts):
+Objetivo: O serviço raiz, contendo a lógica de negócio básica para o AppController.
+Funcionalidades: Retorna a mensagem de boas-vindas.

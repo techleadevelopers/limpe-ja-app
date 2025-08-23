@@ -43,6 +43,9 @@ export class UserEntity implements Omit<PrismaUser, 'passwordHash'> {
   @ApiProperty({ description: 'Data da última atualização do usuário', example: '2023-01-01T10:00:00.000Z' })
   updatedAt: Date;
 
+  @ApiPropertyOptional({ description: 'Idioma preferencial do usuário', example: 'pt-BR' })
+  preferredLanguage: string | null; // Adicionado para satisfazer PrismaUser
+
   // Os campos otpCode e otpExpiresAt não fazem parte do seu schema atual e foram removidos para evitar erros.
 
   constructor(partial: Partial<UserEntity>) {

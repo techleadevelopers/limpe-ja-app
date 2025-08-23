@@ -1,5 +1,5 @@
 <div align="center">
-<img src="https://drive.google.com/uc?id=1PkFFe5bAEVf-x-nPD3BMO21gptKfFosu" alt="LimpeJá-App Logo" width="280"> 
+<img src="https://drive.google.com/uc?id=1PkFFe5bAEVf-x-nPD3BMO21gptKfFosu" alt="LimpeJá-App Logo" width="280">
 
 <h1 style="color: #2c3e50; font-size: 2.8em; margin-top: 15px; margin-bottom: 10px;">Aplicativo LimpeJá ✨🧹</h1>
 
@@ -187,7 +187,9 @@ Para os profissionais de limpeza, o LimpeJá é uma ferramenta poderosa para exp
 
 <li style="margin-bottom: 10px; color: #555;"><strong style="color: #3498db;">💎 Planos Premium e Benefícios:</strong> Assine planos exclusivos para ter acesso a cupons diferenciados, seguro gratuito, prioridade no agendamento e suporte premium.</li>
 
-<li style="margin-bottom: 10px; color: #555;"><strong style="color: #3498db;">✨ Programa de Fidelidade:</strong> Ganhe pontos e recompensas a cada serviço concluído, avaliação enviada ou indicação.</li>
+<li style="margin-bottom: 10px; color: #555;"><strong style="color: #3498db;">✨ Programa de Fidelidade e Missões:</strong> Ganhe pontos e recompensas a cada serviço concluído, avaliação enviada ou indicação, com missões gamificadas para engajar o usuário.</li>
+
+<li style="margin-bottom: 10px; color: #555;"><strong style="color: #3498db;">🔒 Segurança Aprimorada:</strong> Autenticação biométrica (Face ID/Touch ID) e alertas de segurança para proteger sua conta.</li>
 
 </ul>
 
@@ -219,6 +221,12 @@ Para os profissionais de limpeza, o LimpeJá é uma ferramenta poderosa para exp
 
 <li style="margin-bottom: 10px; color: #555;"><strong style="color: #2ecc71;">⚖️ Gestão de Incidentes e Disputas:</strong> Ferramentas e suporte para reportar e resolver problemas ou desentendimentos de forma justa e transparente.</li>
 
+<li style="margin-bottom: 10px; color: #555;"><strong style="color: #2ecc71;">🔒 Segurança Aprimorada:</strong> Autenticação biométrica, alertas de segurança e controle de sessão para proteger sua conta.</li>
+
+<li style="margin-bottom: 10px; color: #555;"><strong style="color: #2ecc71;">📈 Análises e Insights de Negócio:</strong> Acesse métricas de desempenho, tendências de mercado e sugestões baseadas em IA para otimizar seus serviços e ganhos.</li>
+
+<li style="margin-bottom: 10px; color: #555;"><strong style="color: #2ecc71;">📊 Conformidade e Requisitos Legais:</strong> Ferramentas para gerenciar documentos, verificar status de conformidade e garantir que você atenda a todos os requisitos legais.</li>
+
 </ul>
 
 </div>
@@ -247,21 +255,23 @@ O projeto LimpeJá é construído sobre uma pilha tecnológica robusta e moderna
 
 <li style="margin-bottom: 8px; color: #555;"><strong style="color: #3498db;">Framework UI:</strong> <a href="https://reactnative.dev/docs" style="color: #3498db; text-decoration: none;">React Native</a> - Para construção de interfaces de usuário nativo para iOS e Android a partir de uma única base de código, com foco em desempenho e experiência do usuário.</li>
 
-<li style="margin-bottom: 8px; color: #555;"><strong style="color: #3498db;">Navegação:</strong> <a href="https://docs.expo.dev/router/introduction/" style="color: #3498db; text-decoration: none;">Expo Router</a> - Sistema de roteamento baseado em arquivos para aplicativos Expo e React Native, oferecendo navegação robusta, tipada e com suporte a deep linking.</li>
+<li style="margin-bottom: 8px; color: #555;"><strong style="color: #3498db;">Navegação:</strong> <a href="https://docs.expo.dev/router/introduction/" style="color: #3498db; text-decoration: none;">Expo Router</a> - Sistema de roteamento baseado em arquivos para aplicativos Expo e React Native, oferecendo navegação robusta, tipada e com suporte a deep linking. [4, 7, 12, 17]</li>
 
-<li style="margin-bottom: 8px; color: #555;"><strong style="color: #3498db;">Gerenciamento de Estado Global:</strong> React Context API - Para gerenciar estados compartilhados, como o contexto de autenticação (`AuthContext`), de forma eficiente, evitando 'perfuração de prop' e centralizando dados.</li>
+<li style="margin-bottom: 8px; color: #555;"><strong style="color: #3498db;">Gerenciamento de Estado Global:</strong> React Context API - Para gerenciar estados compartilhados, como o contexto de autenticação (`AuthContext`), o contexto de registro de provedor (`ProviderRegistrationContext`) e configurações globais (`AppContext`), de forma eficiente, evitando 'perfuração de prop' e centralizando dados. [4, 12]</li>
 
 <li style="margin-bottom: 8px; color: #555;"><strong style="color: #3498db;">Tipagem:</strong> <a href="https://www.typescriptlang.org/docs/" style="color: #3498db; text-decoration: none;">TypeScript</a> - Essencial para a segurança e consistência dos dados, especialmente na integração com o backend e para escalabilidade do desenvolvimento.</li>
 
-<li style="margin-bottom: 8px; color: #555;"><strong style="color: #3498db;">Estilização:</strong> StyleSheet do React Native, com temas sonoros (claro/escuro) gerenciados via `Colors.ts` e `theme.ts` para consistência visual.</li>
+<li style="margin-bottom: 8px; color: #555;"><strong style="color: #3498db;">Estilização:</strong> StyleSheet do React Native, com temas dinâmicos (claro/escuro) gerenciados via `Colors.ts` e `theme.ts` para consistência visual e fácil adaptação.</li>
 
 <li style="margin-bottom: 8px; color: #555;"><strong style="color: #3498db;">Animações:</strong> React Native Animated API para transições suaves e `react-native-reanimated` para animações complexas e performáticas, incluindo efeitos visuais com `expo-linear-gradient` e `expo-blur`.</li>
 
 <li style="margin-bottom: 8px; color: #555;"><strong style="color: #3498db;">Ícones:</strong> `@expo/vector-icons` e `react-native-svg` para ícones personalizados e animados.</li>
 
-<li style="margin-bottom: 8px; color: #555;"><strong style="color: #3498db;">Utilitários Expo:</strong> `expo-image-picker`, `expo-clipboard`, `react-native-safe-area-context`, `expo-haptics` (para feedback tátil).</li>
+<li style="margin-bottom: 8px; color: #555;"><strong style="color: #3498db;">Utilitários Expo:</strong> `expo-image-picker`, `expo-clipboard`, `react-native-safe-area-context`, `expo-haptics` (para feedback tátil), `expo-local-authentication` para biometria [1, 5, 6, 11, 22] e `expo-secure-store` para armazenamento seguro de dados sensíveis [6, 14, 16, 19, 21, 26].</li>
 
-<li style="margin-bottom: 8px; color: #555;"><strong style="color: #3498db;">Requisições HTTP:</strong> <a href="https://axios-http.com/" style="color: #3498db; text-decoration: none;">Axios</a> - Para chamadas HTTP à API backend, configuradas com interceptores para tratamento de autenticação e erros.</li>
+<li style="margin-bottom: 8px; color: #555;"><strong style="color: #3498db;">Requisições HTTP:</strong> <a href="https://axios-http.com/" style="color: #3498db; text-decoration: none;">Axios</a> - Para chamadas HTTP à API backend, configuradas com interceptores para tratamento de autenticação (JWT) e erros (especialmente 401 Unauthorized, forçando logout).</li>
+
+<li style="margin-bottom: 8px; color: #555;"><strong style="color: #3498db;">Gerenciamento de Dados (Opcional):</strong> <a href="https://tanstack.com/query/latest/docs/react/overview" style="color: #3498db; text-decoration: none;">TanStack Query</a> - Para otimização de requisições GET, caching, sincronização e gerenciamento de estado do servidor, reduzindo boilerplate e melhorando a performance [18, 25, 28, 30, 32].</li>
 
 <li style="margin-bottom: 8px; color: #555;"><strong style="color: #3498db;">Serviços Expo:</strong> <a href="https://expo.dev/eas" style="color: #3498db; text-decoration: none;">EAS (Expo Application Services)</a> - Para um fluxo de desenvolvimento gerenciado, builds e atualizações. Inclui:
 
@@ -287,23 +297,27 @@ O projeto LimpeJá é construído sobre uma pilha tecnológica robusta e moderna
 
 <ul style="list-style-type: none; preenchimento: 0;">
 
-<li style="margin-bottom: 8px; color: #555;"><strong style="color: #e74c3c;">Framework:</strong> <a href="https://docs.nestjs.com/" style="color: #e74c3c; text-decoration: none;">NestJS</a> (Node.js) - Escolha estratégica por sua modularidade, forte tipagem (TypeScript), aderência a padrões de arquitetura (DDD, MVC-like) e um ecossistema robusto para construir APIs escaláveis ​​e manuteníveis.</li>
+<li style="margin-bottom: 8px; color: #555;"><strong style="color: #e74c3c;">Framework:</strong> <a href="https://docs.nestjs.com/" style="color: #e74c3c; text-decoration: none;">NestJS</a> (Node.js) - Escolha estratégica por sua modularidade, forte tipagem (TypeScript), aderência a padrões de arquitetura (DDD, MVC-like) e um ecossistema robusto para construir APIs escaláveis ​​e manuteníveis. [8]</li>
 
 <li style="margin-bottom: 8px; color: #555;"><strong style="color: #e74c3c;">Linguagem:</strong> TypeScript - Oferece segurança de tipo em todas as camadas, desde os DTOs até a interação com o banco de dados via ORM, melhorando a manutenibilidade e reduzindo erros no tempo de execução.</li>
 
 <li style="margin-bottom: 8px; color: #555;"><strong style="color: #e74c3c;">Banco de Dados:</strong> <a href="https://www.postgresql.org/docs/" style="color: #e74c3c; text-decoration: none;">PostgreSQL</a> - Um sistema de dados relacionado a banco robusto, bastante e escalável, ideal para dados estruturados e relações complexas.</li>
 
-<li style="margin-bottom: 8px; color: #555;"><strong style="color: #e74c3c;">ORM:</strong> <a href="https://www.prisma.io/docs/" style="color: #e74c3c; text-decoration: none;">Prisma</a> - ORM moderno e type-safe que simplifica a interação com o banco de dados, oferece migrações declarativas e garantir a segurança de tipo nas operações de persistência.</li>
+<li style="margin-bottom: 8px; color: #555;"><strong style="color: #e74c3c;">ORM:</strong> <a href="https://www.prisma.io/docs/" style="color: #e74c3c; text-decoration: none;">Prisma</a> - ORM moderno e type-safe que simplifica a interação com o banco de dados, oferece migrações declarativas e garantir a segurança de tipo nas operações de persistência. [2, 3]</li>
 
-<li style="margin-bottom: 8px; color: #555;"><strong style="color: #e74c3c;">Autenticação:</strong> <a href="https://jwt.io/introduction/" style="color: #e74c3c; text-decoration: none;">JWT (JSON Web Tokens)</a> com <a href="http://www.passportjs.org/" style="color: #e74c3c; text-decoration: none;">Passport.js</a> - Para autenticação stateless e segura, permitindo controle de acesso baseado em papéis (RBAC) e protegendo rotas sensíveis.</li>
+<li style="margin-bottom: 8px; color: #555;"><strong style="color: #e74c3c;">Autenticação:</strong> <a href="https://jwt.io/introduction/" style="color: #e74c3c; text-decoration: none;">JWT (JSON Web Tokens)</a> com <a href="http://www.passportjs.org/" style="color: #e74c3c; text-decoration: none;">Passport.js</a> - Para autenticação stateless e segura, permitindo controle de acesso baseado em papéis (RBAC) e protegendo rotas sensíveis. [2, 3, 8, 9, 10]</li>
 
-<li style="margin-bottom: 8px; color: #555;"><strong style="color: #e74c3c;">Comunicação em Tempo Real:</strong> <a href="https://socket.io/docs/" style="color: #e74c3c; text-decoration: none;">Socket.IO</a> - Para comunicação bidirecional em tempo real, fundamental para funcionalidades como chat e notificações instantâneas.</li>
+<li style="margin-bottom: 8px; color: #555;"><strong style="color: #e74c3c;">Comunicação em Tempo Real:</strong> <a href="https://socket.io/docs/" style="color: #e74c3c; text-decoration: none;">Socket.IO</a> - Para comunicação bidirecional em tempo real, fundamental para funcionalidades como chat e notificações instantâneas. [29, 31, 33, 39, 40]</li>
 
 <li style="margin-bottom: 8px; color: #555;"><strong style="color: #e74c3c;">Validação:</strong> <a href="https://github.com/typestack/class-validator" style="color: #e74c3c; text-decoration: none;">Class-validator</a> e <a href="https://github.com/typestack/class-transformer" style="color: #e74c3c; text-decoration: none;">Class-transformer</a> - Para validação declarativa de DTOs, garantindo que os dados de entrada da API estejam sempre no formato e com os valores esperados.</li>
 
 <li style="margin-bottom: 8px; color: #555;"><strong style="color: #e74c3c;">API de documentação:</strong> <a href="https://swagger.io/specification/" style="color: #e74c3c; text-decoration: none;">Swagger (OpenAPI)</a> - Para documentação automática e interativa da API, facilitando o consumo por desenvolvedores de frontend e a utilização da API.</li>
 
 <li style="margin-bottom: 8px; color: #555;"><strong style="color: #e74c3c;">Variáveis ​​de Ambiente:</strong> `@nestjs/config` com <a href="https://joi.dev/api/" style="color: #e74c3c; text-decoration: none;">Joi</a> - Para gerenciamento seguro e validação rigorosas das configurações de ambiente, garantindo a integridade da aplicação.</li>
+
+<li style="margin-bottom: 8px; color: #555;"><strong style="color: #e74c3c;">Filas de Processamento:</strong> <a href="https://docs.nestjs.com/techniques/queues" style="color: #e74c3c; text-decoration: none;">Bull (Queues)</a> - Utilizando Redis como broker, para processamento assíncrono de tarefas de longa duração, como envio de notificações, processamento de documentos de verificação e geração de agendamentos recorrentes.</li>
+
+<li style="margin-bottom: 8px; color: #555;"><strong style="color: #e74c3c;">Monitoramento de Erros:</strong> <a href="https://sentry.io/" style="color: #e74c3c; text-decoration: none;">Sentry</a> - Integrado para captura de exceções e monitoramento de performance em tempo real, garantindo a estabilidade da aplicação.</li>
 
 </ul>
 
@@ -423,15 +437,29 @@ O backend do LimpeJá é uma camada de serviço que gerencia toda a lógica de n
 
 <li style="margin-bottom: 5px;">`src/disputes`: Gestão de disputas e mediação de problemas em agendamentos.</li>
 
-<li style="margin-bottom: 5px;">`src/incidents`: Relatório e acompanhamento de incidentes.</li>
-
-<li style="margin-bottom: 5px;">`src/panic-alerts`: Sistema para alertas de pânico.</li>
+<li style="margin-bottom: 5px;">`src/safety`: Gerenciamento de incidentes e alertas de pânico.</li>
 
 <li style="margin-bottom: 5px;">`src/loyalty`: Gerenciamento do programa de fidelidade e pontos.</li>
 
+<li style="margin-bottom: 5px;">`src/missions`: Criação e acompanhamento de missões gamificadas.</li>
+
 <li style="margin-bottom: 5px;">`src/rewards`: Gerenciamento de recompensas resgatáveis com pontos de fidelidade.</li>
 
-<li style="margin-bottom: 5px;">`src/pricing-rules`: Definição e aplicação de regras de precificação dinâmica.</li>
+<li style="margin-bottom: 5px;">`src/pricing`: Definição e aplicação de regras de precificação dinâmica.</li>
+
+<li style="margin-bottom: 5px;">`src/referrals`: Gerenciamento de indicações de usuários.</li>
+
+<li style="margin-bottom: 5px;">`src/compliance`: Gerenciamento de conformidade e requisitos legais.</li>
+
+<li style="margin-bottom: 5px;">`src/dashboard`: Consolidação de dados para o painel do provedor.</li>
+
+<li style="margin-bottom: 5px;">`src/earnings`: Gerenciamento de ganhos e transações financeiras de provedores.</li>
+
+<li style="margin-bottom: 5px;">`src/faqs`: Gerenciamento de perguntas frequentes.</li>
+
+<li style="margin-bottom: 5px;">`src/analytics`: Coleta e análise de métricas de desempenho e insights de negócio.</li>
+
+<li style="margin-bottom: 5px;">`src/ai-suggestions`: Geração de sugestões inteligentes baseadas em IA.</li>
 
 <li style="margin-bottom: 5px;">`src/prisma`: Módulo global para o `PrismaService`.</li>
 
@@ -455,59 +483,61 @@ O `prisma/schema.prisma` define o modelo de dados relacional e é a fonte da ver
 
 <ul style="list-style-type: disc; padding-left: 20px; color: #555; line-height: 1.6;">
 
-<li style="margin-bottom: 5px;"><strong>Enums:</strong> `UserRole` (CLIENTE, PROVEDOR, ADMIN, SISTEMA), `VerificationStatus` (REVISÃO_INICIAL_PENDENTE, APROVADO, REJEITADO, etc.), `BookingStatus` (PENDENTE, CONFIRMADO, CONCLUÍDO, CANCELADO, etc.), `TransactionType` (PAGAMENTO, SAQUE, COMISSÃO, REEMBOLSO), `DisputeReason`, `DisputeStatus`, `SubscriptionStatus`, `SubscriptionFrequency`, `CouponStatus`, `ClaimStatus`, `LoyaltyTransactionType`, `IncidentType`, `IncidentStatus`.</li>
+<li style="margin-bottom: 5px;"><strong>Enums:</strong> `UserRole` (CLIENTE, PROVEDOR, ADMIN, SISTEMA), `VerificationStatus` (REVISÃO_INICIAL_PENDENTE, APROVADO, REJEITADO, etc.), `BookingStatus` (PENDENTE, CONFIRMADO, CONCLUÍDO, CANCELADO, etc.), `TransactionType` (PAGAMENTO, SAQUE, COMISSÃO, REEMBOLSO), `DisputeReason`, `DisputeStatus`, `SubscriptionStatus`, `SubscriptionFrequency`, `CouponStatus`, `ClaimStatus`, `LoyaltyTransactionType`, `IncidentType`, `IncidentStatus`, `PanicType`, `MissionAudience`, `MissionKind`, `RewardType`, `PricingType`, `ReferralStatus`, `DocumentPhotoType`, `SearchType`, `SortByOption`.</li>
 
 <li style="margin-bottom: 5px;"><strong>Modelos Principais (Tabelas):</strong>
 
 <ul style="list-style-type: círculo; preenchimento esquerdo: 20px; margem superior: 5px;">
 
-<li style="margin-bottom: 5px;">`User`: Entidade base para todos os usuários, com `email`, `passwordHash`, `role` e `avatarUrl`.</li>
+<li style="margin-bottom: 5px;">`User`: Entidade base para todos os usuários, com `email`, `passwordHash`, `role`, `avatarUrl`, `isVerified`, `walletBalance`, `ordersCount`, `noShowCount`, `cancellationCount`.</li>
 
-<li style="margin-bottom: 5px;">`Cliente`: ​​Detalhes específicos para clientes (`fullName`, `phone`).</li>
+<li style="margin-bottom: 5px;">`Client`: ​​Detalhes específicos para clientes (`fullName`, `phone`, `completedBookingsCount`).</li>
 
-<li style="margin-bottom: 5px;">`Provider`: Detalhes específicos para provedores (`fullName`, `cpf`, `dateOfBirth`, `verificationStatus`, `pixKey`).</li>
+<li style="margin-bottom: 5px;">`Provider`: Detalhes específicos para provedores (`fullName`, `cpf`, `dateOfBirth`, `verificationStatus`, `pixKey`, `yearsOfExperience`, `bio`, `averageRating`, `reviewCount`, `fiveStarReviewCount`, `monthlyBookingsCount`, `badges`).</li>
 
-<li style="margin-bottom: 5px;">`Endereço`: Informações de endereço, usadas por clientes, provedores e agendamentos.</li>
+<li style="margin-bottom: 5px;">`Address`: Informações de endereço, usadas por clientes, provedores e agendamentos, incluindo `latitude` e `longitude`.</li>
 
-<li style="margin-bottom: 5px;">`Serviço`: Tipos de serviços que podem ser oferecidos (`nome`, `preço`, `icon`).</li>
+<li style="margin-bottom: 5px;">`Service`: Tipos de serviços que podem ser oferecidos (`name`, `description`, `price`, `icon`, `backgroundColor`).</li>
 
-<li style="margin-bottom: 5px;">`ProviderService`: Um serviço específico oferecido por uma operadora, com `price` e `durationMinutes`.</li>
+<li style="margin-bottom: 5px;">`ProviderService`: Um serviço específico oferecido por uma operadora, com `price`, `durationMinutes`, `pricingType`, `pricePerSquareMeter`, `pricePerRoom`.</li>
 
-<li style="margin-bottom: 5px;">`Booking`: Representa um agendamento de serviço, incluindo `totalPrice` e um `addressId` específico para o agendamento, além de `couponId` e `couponUsage`.</li>
+<li style="margin-bottom: 5px;">`Booking`: Representa um agendamento de serviço, incluindo `totalPrice`, um `addressId` específico para o agendamento, `couponId`, `subscriptionId`, `incidents`, `guaranteeClaims`, e detalhes do cliente/provedor/serviço aninhados.</li>
 
-<li style="margin-bottom: 5px;">`Chat` e `Message`: Para comunicação em tempo real entre usuários.</li>
+<li style="margin-bottom: 5px;">`Chat` e `Message`: Para comunicação em tempo real entre usuários, com `isRead` e `receiverId` em `Message`.</li>
 
-<li style="margin-bottom: 5px;">`Notificação`: Armazena notificações para usuários.</li>
+<li style="margin-bottom: 5px;">`Notification`: Armazena notificações para usuários, com `type`, `title`, `body`, `createdAt`, `readAt`, `navigateTo`, `relatedId`, `imageUrl`, `actionButtons`.</li>
 
-<li style="margin-bottom: 5px;">`Review`: Avaliações de serviços, vinculadas a um `Booking`.</li>
+<li style="margin-bottom: 5px;">`Review`: Avaliações de serviços, vinculadas a um `Booking`, com `targetId`, `reviewerId`, `type`, `comment`.</li>
 
-<li style="margin-bottom: 5px;">`Oferta`: Gerencia ofertas e promoções.</li>
+<li style="margin-bottom: 5px;">`Offer`: Gerencia ofertas e promoções, com `imageUrl`, `terms`, `discountPercentage`, `originalPrice`, `discountedPrice`, `validUntil`, `couponCode`, `serviceId`, `providerId`, e campos de UI como `bankName`, `buttonText`, `badgeTitle`, `backgroundColorStart/End`.</li>
 
-<li style="margin-bottom: 5px;">`Transaction`: Registra todas as transações financeiras, utilizando `Prisma.Decimal` para garantir a rentabilidade monetária, e associada a `couponId`.</li>
+<li style="margin-bottom: 5px;">`Transaction`: Registra todas as transações financeiras, utilizando `Prisma.Decimal` para garantir a rentabilidade monetária, e associada a `couponId`, `type`, `status`, `bookingId`.</li>
 
-<li style="margin-bottom: 5px;">`Disponibilidade`: Define a disponibilidade de horários dos provedores.</li>
+<li style="margin-bottom: 5px;">`ProviderAvailability`: Define a disponibilidade de horários dos provedores, com `dayOfWeek`, `startTime`, `endTime`, `isAvailable`.</li>
 
-<li style="margin-bottom: 5px;">`Coupon`: Define os cupons de desconto, incluindo `code`, `value`, `valueType`, `target`, `maxUses`, `validFrom`, `validUntil`.</li>
+<li style="margin-bottom: 5px;">`Coupon`: Define os cupons de desconto, incluindo `code`, `type`, `value`, `validFrom`, `validUntil`, `maxUses`, `usesCount`, `target`, `targetId`, `status`.</li>
 
 <li style="margin-bottom: 5px;">`CouponUsage`: Rastreia cada uso individual de um cupom, associando-o a um `userId` e `bookingId`, e registrando o `appliedValue`.</li>
 
-<li style="margin-bottom: 5px;">`Subscription`: Gerencia assinaturas para agendamentos recorrentes, com `frequency`, `startDate`, `endDate`, `status`.</li>
+<li style="margin-bottom: 5px;">`Subscription`: Gerencia assinaturas para agendamentos recorrentes, com `frequency`, `startDate`, `endDate`, `status`, `totalPrice`, `nextGenerationDate`, `generatedBookings`.</li>
 
-<li style="margin-bottom: 5px;">`GuaranteeClaim`: Registra solicitações de garantia/seguro de serviço, com `description`, `attachments`, `status`.</li>
+<li style="margin-bottom: 5px;">`GuaranteeClaim`: Registra solicitações de garantia/seguro de serviço, com `bookingId`, `description`, `attachments`, `estimatedValue`, `resolvedValue`, `status`, `resolutionNotes`, `resolvedAt`.</li>
 
-<li style="margin-bottom: 5px;">`Dispute`: Modela o processo de disputa de um agendamento, com `reason`, `description`, `status`, `messages`.</li>
+<li style="margin-bottom: 5px;">`Dispute`: Modela o processo de disputa de um agendamento, com `bookingId`, `reporterUserId`, `reason`, `description`, `refundAmountProposed`, `attachments`, `status`, `resolutionNotes`, `resolvedAt`.</li>
 
-<li style="margin-bottom: 5px;">`Incident`: Detalhes de incidentes reportados, como `type`, `description`, `status`.</li>
+<li style="margin-bottom: 5px;">`Incident`: Detalhes de incidentes reportados, com `reporterId`, `bookingId`, `type`, `description`, `attachments`, `status`, `resolution`, `resolvedBy`, `resolvedAt`.</li>
 
-<li style="margin-bottom: 5px;">`PanicAlert`: Registra alertas de pânico com localização.</li>
+<li style="margin-bottom: 5px;">`PanicAlert`: Registra alertas de pânico com `userId`, `latitude`, `longitude`, `message`, `status`.</li>
 
-<li style="margin-bottom: 5px;">`Loyalty`: Armazena o saldo de pontos de fidelidade de um usuário.</li>
+<li style="margin-bottom: 5px;">`LoyaltyTransaction`: Histórico detalhado de como os pontos de fidelidade foram ganhos ou resgatados, com `userId`, `amount`, `type`, `referenceId`.</li>
 
-<li style="margin-bottom: 5px;">`LoyaltyTransaction`: Histórico detalhado de como os pontos de fidelidade foram ganhos ou resgatados.</li>
+<li style="margin-bottom: 5px;">`Mission`: Define objetivos gamificados com `code`, `title`, `description`, `audience`, `kind`, `eventName`, `targetValue`, `timeWindowDays`, `rewardType`, `rewardValue`, `couponTemplateId`, `isActive`.</li>
 
-<li style="margin-bottom: 5px;">`Reward`: Define as recompensas que os usuários podem resgatar com seus pontos de fidelidade.</li>
+<li style="margin-bottom: 5px;">`MissionProgress`: Acompanha o progresso do usuário em uma missão, com `userId`, `missionId`, `currentValue`, `status`, `lastEventAt`, `completedAt`, `claimedAt`.</li>
 
-<li style="margin-bottom: 5px;">`PricingRule`: Permite a implementação de regras de precificação dinâmica, como tarifas de pico.</li>
+<li style="margin-bottom: 5px;">`Referral`: Registra indicações de usuários, com `referredUserId`, `referrerUserId`, `referralCode`, `status`.</li>
+
+<li style="margin-bottom: 5px;">`FAQItem`: Perguntas frequentes com `question`, `answer`, `keywords`, `category`, `order`.</li>
 
 </ul>
 
@@ -527,29 +557,31 @@ O `prisma/schema.prisma` define o modelo de dados relacional e é a fonte da ver
 
 <ul style="list-style-type: none; preenchimento: 0; cor: #555; altura da linha: 1,6;">
 
-<li style="margin-bottom: 8px;"><strong style="color: #3498db;">Arquitetura em Camadas:</strong> Tanto o frontend quanto o backend seguem uma arquitetura em camadas claras (Controladores/Telas, Serviços/Lógica de Negócios, Acesso a Dados), promovendo a separação de preocupações.</li>
+<li style="margin-bottom: 8px;"><strong style="color: #3498db;">Arquitetura em Camadas:</strong> Tanto o frontend quanto o backend seguem uma arquitetura em camadas claras (Controladores/Telas, Serviços/Lógica de Negócios, Acesso a Dados), promovendo a separação de preocupações. [46, 47, 48]</li>
 
 <li style="margin-bottom: 8px;"><strong style="color: #3498db;">Data Transfer Objects (DTOs):</strong> Utilização rigorosa de DTOs para validação de entrada (com `class-validator` e `class-transformer`) e tipagem de saída em todas as interações API, garantindo a integridade e segurança dos dados.</li>
 
-<li style="margin-bottom: 8px;"><strong style="color: #3498db;">Autenticação e Autorização:</strong> Implementação robusta de JWT e RBAC (Role-Based Access Control) para proteger rotas e recursos, com `Guards` e `Strategies` no NestJS.</li>
+<li style="margin-bottom: 8px;"><strong style="color: #3498db;">Autenticação e Autorização:</strong> Implementação robusta de JWT e RBAC (Role-Based Access Control) para proteger rotas e recursos, com `Guards` e `Strategies` no NestJS. [2, 3, 8, 9, 10]</li>
 
-<li style="margin-bottom: 8px;"><strong style="color: #3498db;">Tratamento Centralizado de Erros:</strong> O `HttpExceptionFilter` do backend padroniza as respostas de erro, permitindo que o frontend interprete e exiba mensagens significativas ao usuário via `Alert.alert` ou `ToastMessage`.</li>
+<li style="margin-bottom: 8px;"><strong style="color: #3498db;">Tratamento Centralizado de Erros:</strong> O `HttpExceptionFilter` do backend padroniza as respostas de erro, permitindo que o frontend interprete e exiba mensagens significativas ao usuário via `Alert.alert` ou `ToastMessage`. O interceptor de resposta do Axios no frontend lida com erros 401/403 de forma centralizada.</li>
 
 <li style="margin-bottom: 8px;"><strong style="color: #3498db;">Modularidade:</strong> Módulos de dados no backend (NestJS) e componentes reutilizáveis ​​no frontend (React Native) garantem organização, testabilidade e reutilização de código.</li>
 
 <li style="margin-bottom: 8px;"><strong style="color: #3498db;">Segurança de Tipos (Type-Safety):</strong> O uso extensivo de TypeScript em ambas as camadas, complementado pelo Prisma ORM no backend, garante a consistência e integridade dos dados em tempo de construção e execução.</li>
 
-<li style="margin-bottom: 8px;"><strong style="color: #3498db;">Injeção de Dependência:</strong> Sem backend (NestJS), facilita a testabilidade e modularidade dos serviços, seguindo os princípios SOLID.</li>
+<li style="margin-bottom: 8px;"><strong style="color: #3498db;">Injeção de Dependência:</strong> No backend (NestJS), facilita a testabilidade e modularidade dos serviços, seguindo os princípios SOLID.</li>
 
 <li style="margin-bottom: 8px;"><strong style="color: #3498db;">Componentização (Frontend):</strong> Divisão da UI em componentes pequenos e reutilizáveis ​​(`components/ui/`), promovendo reutilização e manutenibilidade.</li>
 
-<li style="margin-bottom: 8px;"><strong style="color: #3498db;">Gerenciamento de Estado:</strong> Combinação de Hooks do React (`useState`, `useEffect`, `useRef`) para estado local e Context API (`AuthContext`, `AppContext`, `ProviderRegistrationContext`) para estado global no frontend.</li>
+<li style="margin-bottom: 8px;"><strong style="color: #3498db;">Gerenciamento de Estado:</strong> Combinação de Hooks do React (`useState`, `useEffect`, `useRef`) para estado local e Context API (`AuthContext`, `AppContext`, `ProviderRegistrationContext`) para estado global no frontend, garantindo um fluxo de dados claro e reativo. [4, 12, 33]</li>
 
-<li style="margin-bottom: 8px;"><strong style="color: #3498db;">Navegação Declarativa:</strong> Uso do Expo Router para uma gestão de rotas intuitiva e baseada em arquivos, com layouts aninhados.</li>
+<li style="margin-bottom: 8px;"><strong style="color: #3498db;">Navegação Declarativa:</strong> Uso do Expo Router para uma gestão de rotas intuitiva e baseada em arquivos, com layouts aninhados e rotas protegidas para controle de acesso. [4, 12, 17]</li>
 
 <li style="margin-bottom: 8px;"><strong style="color: #3498db;">Animações e Responsividade:</strong> Aplicação de animações fluidas (`react-native-reanimated`, React Native Animated API) e design responsivo para aprimorar a experiência do usuário em diferentes dispositivos, com `useNativeDriver: true` para otimização.</li>
 
 <li style="margin-bottom: 8px;"><strong style="color: #3498db;">Gerenciamento de Dados e Fluxo de Informações:</strong> O frontend segue o padrão Unidirecional do React, com dados fluindo de contextos globais e estado local, e interações com o backend via camada de serviços tipada (`services/`).</li>
+
+<li style="margin-bottom: 8px;"><strong style="color: #3498db;">Estilização e Temas:</strong> Utilização de `Colors.ts` para uma paleta de cores centralizada e `theme.ts` para definição de temas claro/escuro, tamanhos e fontes, garantindo consistência visual e fácil manutenção da UI.</li>
 
 <li style="margin-bottom: 8px;"><strong style="color: #3498db;">Separação de Entidades e DTOs (Backend):</strong> Entidades (`*.entity.ts`) para o modelo de domínio e DTOs (`*.dto.ts`) para validação/formatação de API, melhorando segurança e validação.</li>
 
@@ -575,15 +607,15 @@ A interligação entre o Frontend (React Native/Expo) e o Backend (NestJS) do pr
 
 <ul style="list-style-type: none; preenchimento: 0; cor: #555; altura da linha: 1,6;">
 
-<li style="margin-bottom: 8px;"><strong style="color: #3498db;">Padrão de Comunicação:</strong> Predominantemente APIs RESTful (HTTP) para operações transacionais e de consulta, e WebSockets para funcionalidades de comunicação em tempo real (chat, notificações).</li>
+<li style="margin-bottom: 8px;"><strong style="color: #3498db;">Padrão de Comunicação:</strong> Predominantemente APIs RESTful (HTTP) para operações transacionais e de consulta, e WebSockets para funcionalidades de comunicação em tempo real (chat, notificações). [29, 31, 33, 39, 40]</li>
 
-<li style="margin-bottom: 8px;"><strong style="color: #3498db;">Autenticação JWT:</strong> O `AuthContext` no frontend gerencia o ciclo de vida do token JWT, obtido via `POST /auth/login`. Este token é armazenado de forma segura no AsyncStorage e anexado automaticamente como `Authorization: Bearer <token>` em todas as requisições protegidas ao backend.</li>
+<li style="margin-bottom: 8px;"><strong style="color: #3498db;">Autenticação JWT:</strong> O `AuthContext` no frontend gerencia o ciclo de vida do token JWT, obtido via `POST /auth/login`. Este token é armazenado de forma segura no AsyncStorage (e opcionalmente no `expo-secure-store` para maior segurança) e anexado automaticamente como `Authorization: Bearer <token>` em todas as requisições protegidas ao backend. [2, 3, 6, 8, 9, 10, 14, 16, 19, 21, 26]</li>
 
 <li style="margin-bottom: 8px;"><strong style="color: #3498db;">Consistência de Dados (DTOs e Interfaces TypeScript):</strong> Um alinhamento específico é reservado entre as interfaces TypeScript do frontend (localizadas em `LimpeJaApp/src/types/backend/`) e os DTOs definidos no backend. Isso garante a validação e consistência da estrutura de dados em ambas as camadas, minimizando erros de tipagem e facilitando a colaboração.</li>
 
 <li style="margin-bottom: 8px;"><strong style="color: #3498db;">Tratamento de Erros:</strong> O `HttpExceptionFilter` do backend padroniza as respostas de erro, permitindo que o frontend interprete e exiba mensagens significativas ao usuário. As chamadas de API no frontend incluem blocos `try-catch` para lidar com erros de rede e respostas de erro da API.</li>
 
-<li style="margin-bottom: 8px;"><strong style="color: #3498db;">Serviços Centralizados:</strong> Chamadas de API são encapsuladas em serviços centralizados (`authService.ts`, `clientService.ts`, `providerService.ts`) que utilizam o Axios, promovendo reutilização de código e padronização.</li>
+<li style="margin-bottom: 8px;"><strong style="color: #3498db;">Serviços Centralizados:</strong> Chamadas de API são encapsuladas em serviços centralizados (`authService.ts`, `clientService.ts`, `providerService.ts`, etc.) que utilizam o Axios, promovendo reutilização de código e padronização.</li>
 
 </ul>
 
@@ -593,177 +625,402 @@ A interligação entre o Frontend (React Native/Expo) e o Backend (NestJS) do pr
 
 <p style="color: #555; line-height: 1.6; margin-bottom: 15px;">Para uma lista completa de endpoints e DTOs, consulte uma documentação detalhada do backend, que pode ser acessada via Swagger UI em `http://localhost:3000/api` (após iniciar o backend). Abaixo alguns exemplos de interações:</p>
 
-<table style="largura: 100%; border-collapse: recolher; margem inferior: 20px;">
-
-<cabeça>
-
-<tr style="cor de fundo: #e0e0e0; cor: #34495e;">
-
+<table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+<thead>
+<tr style="background-color: #e0e0e0; color: #34495e;">
 <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Fluxo/Tela do Frontend</th>
-
 <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Endpoint do Backend (Método HTTP, Caminho)</th>
-
 <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">DTOs (Requisição/Resposta)</th>
-
 </tr>
-
 </thead>
-
-<tcorpo>
-
-<tr estilo="cor de fundo: #f2f2f2;">
-
-<td colspan="3" style="padding: 10px; border: 1px solid #ddd; font-weight: negrito; color: #34495e;">Fluxo de Autenticação</td>
-
+<tbody>
+<tr style="background-color: #f2f2f2;">
+<td colspan="3" style="padding: 10px; border: 1px solid #ddd; font-weight: bold; color: #34495e;">Fluxo de Autenticação</td>
 </tr>
-
 <tr>
-
 <td style="padding: 10px; border: 1px solid #ddd; color: #555;">Registro de Clientes</td>
-
 <td style="padding: 10px; border: 1px solid #ddd; color: #555;">`POST /auth/register/client`</td>
-
-<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`RegisterClientDto` / `AuthResponseDto`</td>
-
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`RegisterClientDto` / `AuthResponse`</td>
 </tr>
-
-<tr estilo="cor de fundo: #f9f9f9;">
-
+<tr style="background-color: #f9f9f9;">
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Registro de Provedores</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`POST /auth/register/provider`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`RegisterProviderDto` / `AuthResponse`</td>
+</tr>
+<tr>
 <td style="padding: 10px; border: 1px solid #ddd; color: #555;">Login</td>
-
-<td style="padding: 10px; border: 1px sólido #ddd; color: #555;">`POST /auth/login`</td>
-
-<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`LoginDto` / `AuthResponseDto`</td>
-
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`POST /auth/login`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`LoginDto` / `AuthResponse`</td>
 </tr>
-
-<tr estilo="cor de fundo: #f2f2f2;">
-
-<td colspan="3" style="padding: 10px; border: 1px solid #ddd; font-weight: negrito; color: #34495e;">Gerenciamento de Usuário/Perfil</td>
-
+<tr style="background-color: #f9f9f9;">
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Solicitar Redefinição de Senha</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`POST /auth/forgot-password`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`ForgotPasswordDto` / `MessageResponseDto`</td>
 </tr>
-
+<tr style="background-color: #f2f2f2;">
+<td colspan="3" style="padding: 10px; border: 1px solid #ddd; font-weight: bold; color: #34495e;">Gerenciamento de Usuário/Perfil</td>
+</tr>
 <tr>
-
-<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Obter Perfil do Usuário</td>
-
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Obter Perfil do Usuário Logado</td>
 <td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /users/me`</td>
-
-<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`UserProfileDto`</td>
-
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`UserProfile`</td>
 </tr>
-
-<tr estilo="cor de fundo: #f9f9f9;">
-
+<tr style="background-color: #f9f9f9;">
 <td style="padding: 10px; border: 1px solid #ddd; color: #555;">Atualizar Perfil do Cliente</td>
-
 <td style="padding: 10px; border: 1px solid #ddd; color: #555;">`PATCH /clients/me`</td>
-
-<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`UpdateClientProfileDto` / `ClientEntity`</td>
-
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`UpdateClientProfileDto` / `UserProfile`</td>
 </tr>
-
-<tr estilo="cor de fundo: #f2f2f2;">
-
+<tr>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Atualizar Perfil do Provedor</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`PATCH /providers/me`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`UpdateProviderProfileData` / `ProviderDisplayInfo`</td>
+</tr>
+<tr style="background-color: #f2f2f2;">
 <td colspan="3" style="padding: 10px; border: 1px solid #ddd; font-weight: bold; color: #34495e;">Fluxo do Cliente</td>
-
 </tr>
-
 <tr>
-
-<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Buscar Provedores/Serviços</td>
-
-<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /search`</td>
-
-<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`SearchQueryDto` / `SearchResultDto`</td>
-
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Buscar Categorias de Serviço</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /services`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`/Service[]`</td>
 </tr>
-
-<tr estilo="cor de fundo: #f9f9f9;">
-
-<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Criar Agenda</td>
-
+<tr style="background-color: #f9f9f9;">
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Buscar Provedores (Geral)</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /providers`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`ProviderSearchQuery` / `ProviderDisplayInfo[]`</td>
+</tr>
+<tr>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Obter Detalhes do Provedor</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /providers/:id`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`ProviderDisplayInfo`</td>
+</tr>
+<tr style="background-color: #f9f9f9;">
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Criar Agendamento</td>
 <td style="padding: 10px; border: 1px solid #ddd; color: #555;">`POST /bookings`</td>
-
-<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`CreateBookingDto` / `BookingDetailsDto`</td>
-
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`CreateBookingDto` / `BookingDetails`</td>
 </tr>
-
 <tr>
-
 <td style="padding: 10px; border: 1px solid #ddd; color: #555;">Criar Cobrança PIX</td>
-
 <td style="padding: 10px; border: 1px solid #ddd; color: #555;">`POST /payments/pix-charge`</td>
-
 <td style="padding: 10px; border: 1px solid #ddd; color: #555;">`CreatePixChargeDto` / `PixChargeResponseDto`</td>
-
 </tr>
-
-<tr estilo="cor de fundo: #f2f2f2;">
-
+<tr style="background-color: #f9f9f9;">
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Aplicar Cupom</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`POST /coupons/apply`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`ApplyCouponPayload` / `CouponApplicationResult`</td>
+</tr>
+<tr>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Submeter Solicitação de Garantia</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`POST /guarantee/claims`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`SubmitClaimDto` / `GuaranteeClaim`</td>
+</tr>
+<tr style="background-color: #f9f9f9;">
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Listar Minhas Solicitações de Garantia</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /guarantee/claims/me`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GuaranteeClaim[]`</td>
+</tr>
+<tr>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Criar Assinatura</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`POST /subscriptions`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`CreateSubscriptionDto` / `Subscription`</td>
+</tr>
+<tr style="background-color: #f9f9f9;">
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Listar Minhas Assinaturas</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /subscriptions/me`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`Subscription[]`</td>
+</tr>
+<tr>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Obter Detalhes da Assinatura</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /subscriptions/:id`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`Subscription`</td>
+</tr>
+<tr style="background-color: #f9f9f9;">
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Atualizar Assinatura</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`PATCH /subscriptions/:id`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`UpdateSubscriptionDto` / `Subscription`</td>
+</tr>
+<tr>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Listar Minhas Missões</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /missions/my`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`MissionItem[]`</td>
+</tr>
+<tr style="background-color: #f9f9f9;">
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Resgatar Recompensa de Missão</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`POST /missions/claim`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`{ missionId: string }` / `ClaimMissionResponse`</td>
+</tr>
+<tr>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Criar Indicação</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`POST /referrals`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`CreateReferralDto` / `Referral`</td>
+</tr>
+<tr style="background-color: #f9f9f9;">
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Listar Indicações Feitas</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /referrals/made-by/:userId`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GetReferralsMadeByUserResponse`</td>
+</tr>
+<tr>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Listar Usuários Indicados</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /referrals/referred-by/:referrerId`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GetReferredUsersResponse`</td>
+</tr>
+<tr style="background-color: #f2f2f2;">
 <td colspan="3" style="padding: 10px; border: 1px solid #ddd; font-weight: bold; color: #34495e;">Fluxo do Provedor</td>
-
 </tr>
-
 <tr>
-
-<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Obter Agendamentos do Provedor</td>
-
-<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /bookings/me`</td>
-
-<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`BookingDetailsDto[]`</td>
-
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Obter Dashboard do Provedor</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /providers/me/dashboard`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`ProviderDashboard`</td>
 </tr>
-
-<tr estilo="cor de fundo: #f9f9f9;">
-
-<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Gerenciar Disponibilidade</td>
-
+<tr style="background-color: #f9f9f9;">
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Obter Ganhos do Provedor</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /providers/me/earnings`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`EarningsResponseDto`</td>
+</tr>
+<tr>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Solicitar Saque</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`POST /payments/withdrawal`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`RequestWithdrawalDto` / `MessageResponseDto`</td>
+</tr>
+<tr style="background-color: #f9f9f9;">
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Obter Disponibilidade do Provedor</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /providers/:providerId/availability`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GetProviderAvailabilityResponse`</td>
+</tr>
+<tr>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Atualizar Disponibilidade do Provedor</td>
 <td style="padding: 10px; border: 1px solid #ddd; color: #555;">`PATCH /providers/:providerId/availability`</td>
-
-<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`UpdateAvailabilityDto[]` / `AvailabilityDto[]`</td>
-
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`UpdateAvailabilityData[]` / `ProviderAvailability[]`</td>
 </tr>
-
-<tr estilo="cor de fundo: #f2f2f2;">
-
-<td colspan="3" style="padding: 10px; border: 1px solid #ddd; font-weight: bold; color: #34495e;">Fluxo Comum</td>
-
+<tr style="background-color: #f9f9f9;">
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Adicionar Disponibilidade do Provedor</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`POST /providers/:providerId/availability`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`UpdateAvailabilityData` / `ProviderAvailability`</td>
 </tr>
-
 <tr>
-
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Deletar Disponibilidade do Provedor</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`DELETE /providers/:providerId/availability/:availabilityId`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`void`</td>
+</tr>
+<tr style="background-color: #f9f9f9;">
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Obter Serviços Oferecidos pelo Provedor</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /providers/:providerId/services`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`ProviderServiceOffering[]`</td>
+</tr>
+<tr>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Adicionar Serviço Oferecido pelo Provedor</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`POST /providers/:providerId/services`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`CreateProviderServiceData` / `ProviderServiceOffering`</td>
+</tr>
+<tr style="background-color: #f9f9f9;">
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Atualizar Serviço Oferecido pelo Provedor</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`PATCH /providers/:providerId/services/:id`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`UpdateProviderServiceData` / `ProviderServiceOffering`</td>
+</tr>
+<tr>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Deletar Serviço Oferecido pelo Provedor</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`DELETE /providers/:providerId/services/:id`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`void`</td>
+</tr>
+<tr style="background-color: #f9f9f9;">
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Upload de Avatar</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`POST /verification/upload-avatar`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`FormData` / `UploadResponseDto`</td>
+</tr>
+<tr>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Upload de Documento (Frente/Verso)</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`POST /verification/upload-document/:type`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`FormData` / `UploadResponseDto`</td>
+</tr>
+<tr style="background-color: #f9f9f9;">
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Upload de Selfie com Documento</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`POST /verification/upload-selfie`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`FormData` / `UploadResponseDto`</td>
+</tr>
+<tr>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Avançar Status de Verificação</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`POST /verification/advance-status`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`{}` / `{ message: string }`</td>
+</tr>
+<tr style="background-color: #f9f9f9;">
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Obter Informações de Verificação</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /verification/status/:providerId`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`ProviderVerificationInfo`</td>
+</tr>
+<tr>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Obter Métricas de Performance</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /analytics/performance/:providerId`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`PerformanceMetrics`</td>
+</tr>
+<tr style="background-color: #f9f9f9;">
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Obter Insights de Negócio</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /analytics/business/:providerId`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`BusinessInsights`</td>
+</tr>
+<tr>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Obter Sugestões Inteligentes (IA)</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /suggestions/provider/:providerId`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`SmartSuggestion[]`</td>
+</tr>
+<tr style="background-color: #f9f9f9;">
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Obter Insights de Clientes (IA)</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /insights/customer/:providerId`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`CustomerInsight`</td>
+</tr>
+<tr>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Obter Status de Conformidade</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /compliance/status/:providerId`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`ComplianceStatus`</td>
+</tr>
+<tr style="background-color: #f9f9f9;">
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Obter Requisitos Legais</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /compliance/requirements`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`LegalRequirement[]`</td>
+</tr>
+<tr>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Upload de Documento de Conformidade</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`POST /compliance/upload`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`FormData` / `void`</td>
+</tr>
+<tr style="background-color: #f2f2f2;">
+<td colspan="3" style="padding: 10px; border: 1px solid #ddd; font-weight: bold; color: #34495e;">Fluxo Comum (Cliente e Provedor)</td>
+</tr>
+<tr>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Listar Meus Agendamentos</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /bookings/me`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`BookingDetails[]`</td>
+</tr>
+<tr style="background-color: #f9f9f9;">
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Obter Detalhes do Agendamento</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /bookings/:id`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`BookingDetails`</td>
+</tr>
+<tr>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Atualizar Status do Agendamento</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`PATCH /bookings/:id/status`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`UpdateBookingStatusDto` / `BookingDetails`</td>
+</tr>
+<tr style="background-color: #f9f9f9;">
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Cancelar Agendamento</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`PATCH /bookings/:id/cancel`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`BookingDetails`</td>
+</tr>
+<tr>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Verificar Agendamento Ativo para Chat</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /bookings/check-active-chat/:clientId/:providerId`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`{ canChat: boolean; bookingId?: string }`</td>
+</tr>
+<tr style="background-color: #f9f9f9;">
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Encontrar ou Criar Chat</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /chat/find-or-create/provider/:providerId/client/:clientId`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`ChatDetails`</td>
+</tr>
+<tr>
 <td style="padding: 10px; border: 1px solid #ddd; color: #555;">Obter Mensagens de Chat</td>
-
 <td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /chat/:chatId/messages`</td>
-
-<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GetMessagesDto` / `Message[]`</td>
-
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GetMessagesQuery` / `Message[]`</td>
 </tr>
-
-<tr estilo="cor de fundo: #f9f9f9;">
-
-<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Enviar mensagem de chat</td>
-
+<tr style="background-color: #f9f9f9;">
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Enviar Mensagem de Chat</td>
 <td style="padding: 10px; border: 1px solid #ddd; color: #555;">`POST /chat/:chatId/messages`</td>
-
-<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`EnviarMensagemDpara` / `Mensagem`</td>
-
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`SendMessageDto` / `Message`</td>
 </tr>
-
 <tr>
-
-<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Enviar Avaliação</td>
-
-<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`POST /avaliações`</td>
-
-<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`EnviarAvaliaçãoDpara` / `EntidadeAvaliação`</td>
-
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Listar Minhas Conversas de Chat</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /chat/me/conversations`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`ConversationItem[]`</td>
 </tr>
-
+<tr style="background-color: #f9f9f9;">
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Listar Minhas Notificações</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /notifications/me`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`NotificationEntity[]`</td>
+</tr>
+<tr>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Marcar Notificação como Lida</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`PATCH /notifications/:id/mark-as-read`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`MarkAsReadDto` / `NotificationEntity`</td>
+</tr>
+<tr style="background-color: #f9f9f9;">
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Marcar Todas Notificações como Lidas</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`PATCH /notifications/me/mark-as-read`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`MessageResponseDto`</td>
+</tr>
+<tr>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Deletar Notificação</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`DELETE /notifications/:id`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`void`</td>
+</tr>
+<tr style="background-color: #f9f9f9;">
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Enviar Avaliação</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`POST /reviews`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`SubmitReviewDto` / `ReviewEntity`</td>
+</tr>
+<tr>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Obter Análise Detalhada de Avaliações</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /reviews/provider/:providerId/breakdown`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`ReviewAnalytics`</td>
+</tr>
+<tr style="background-color: #f9f9f9;">
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Obter Sugestões Inteligentes de Avaliações</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /reviews/provider/:providerId/suggestions`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`string[]`</td>
+</tr>
+<tr>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Reportar Disputa</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`POST /bookings/:id/dispute`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`ReportDisputeDto` / `DisputeResponse`</td>
+</tr>
+<tr style="background-color: #f9f9f9;">
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Obter Disputa por Agendamento</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /bookings/:id/dispute`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`DisputeResponse`</td>
+</tr>
+<tr>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Reportar Pânico</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`POST /safety/panic`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`ReportPanicDto` / `MessageResponse`</td>
+</tr>
+<tr style="background-color: #f9f9f9;">
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Reportar Incidente</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`POST /safety/incident`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`IncidentReportDto` / `Incident`</td>
+</tr>
+<tr>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Listar Meus Incidentes</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /safety/me/incidents`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`Incident[]`</td>
+</tr>
+<tr style="background-color: #f9f9f9;">
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Obter FAQs</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /faqs`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`FAQItem[]`</td>
+</tr>
+<tr>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Obter Ofertas</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /offers`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`Offer[]`</td>
+</tr>
+<tr style="background-color: #f9f9f9;">
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Obter Detalhes da Oferta</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /offers/:id`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`Offer`</td>
+</tr>
+<tr>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Validar Sessão</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /auth/validate-session`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`{ valid: boolean }`</td>
+</tr>
+<tr style="background-color: #f9f9f9;">
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Obter Alertas de Segurança</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`GET /security/alerts`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`SecurityAlert[]`</td>
+</tr>
+<tr>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">Reportar Atividade Suspeita</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`POST /security/report`</td>
+<td style="padding: 10px; border: 1px solid #ddd; color: #555;">`{ activity: string; details: any }` / `void`</td>
+</tr>
 </tbody>
-
-</tabela>
+</table>
 
 </div>
 
@@ -784,198 +1041,139 @@ O projeto LimpeJá é um monorepo, contendo pastas para o frontend (`LimpeJaApp/
 <pre style="background-color: #ecf0f1; padding: 15px; border-radius: 5px; overflow-x: auto; color: #34495e;"><code>LimpeJáApp/
 ├── app/
 │ ├── (auth)/ # Authentication Flow
-│ │ ├── api/
-│ │ ├── components/
-│ │ ├── provider-registration/
-│ │ │ ├── components/
-│ │ │ ├── verification/
-│ │ │ │ ├── background-check-status.tsx
-│ │ │ │ ├── document-upload.tsx
-│ │ │ │ ├── facial-recognition.tsx
-│ │ │ │ ├── index.tsx
-│ │ │ │ ├── layout.tsx
-│ │ │ │ ├── personal-details.tsx
-│ │ │ │ ├── service-details.tsx
-│ │ │ │ └── verify-account.tsx
-│ │ │ ├── index.tsx
-│ │ │ ├── layout.tsx
-│ │ │ ├── personal-details.tsx
-│ │ │ └── service-details.tsx
-│ │ ├── client-registration.tsx
+│ │ ├── client-register.tsx
 │ │ ├── forgot-password.tsx
-│ │ ├── layout.tsx
+│ │ ├── _layout.tsx
 │ │ ├── login.tsx
-│ │ ├── README.md
-│ │ ├── register-options.tsx
-│ │ └── connection-test.tsx
+│ │ ├── provider-register/ # Provider Registration Steps
+│ │ │ ├── _layout.tsx
+│ │ │ ├── index.tsx
+│ │ │ ├── personal-details.tsx
+│ │ │ ├── service-details.tsx
+│ │ │ └── verify-account.tsx # Account verification flow (documents, selfie)
+│ │ └── register-options.tsx
 │ ├── (client)/ # Client Functionalities
 │ │ ├── bookings/ # Client Appointments
-│ │ │ ├── api/
-│ │ │ ├── components/
 │ │ │ ├── [bookingId].tsx
 │ │ │ ├── index.tsx
 │ │ │ ├── schedule-service.tsx
 │ │ │ └── success.tsx
 │ │ ├── explore/ # Explore Services/Professionals
-│ │ │ ├── api/
-│ │ │ ├── components/
-│ │ │ ├── data/
-│ │ │ ├── styles/
 │ │ │ ├── [providerId].tsx
 │ │ │ ├── index.tsx
-│ │ │ ├── search-results.tsx
-│ │ │ ├── search-results.tsx
-│ │ │ ├── services-by-category.tsx
 │ │ │ ├── all-categories.tsx
-│ │ │ └── all-nearby-providers.tsx
+│ │ │ ├── all-nearby-providers.tsx
+│ │ │ ├── search-results.tsx
+│ │ │ └── services-by-category.tsx
 │ │ ├── messages/ # Client Messages
-│ │ │ ├── api/
-│ │ │ ├── components/
 │ │ │ ├── [chatId].tsx
 │ │ │ └── index.tsx
-│ │ ├── offers/ # Client Offers
-│ │ │ ├── api/
-│ │ │ ├── components/
-│ │ │ └── [offerId].tsx
+│ │ ├── missions/ # Client Missions (Gamification)
+│ │ │ └── index.tsx
 │ │ └── profile/ # Client Profile
-│ │ │ ├── api/
-│ │ │ ├── components/
 │ │ │ ├── edit.tsx
-│ │ │ ├── index.tsx
-│ │ │ ├── layout.tsx
-│ │ │ └── layout.tsx
+│ │ │ └── index.tsx
 │ ├── (common)/ # Common Functionalities (client and provider)
-│ │ ├── api/
-│ │ ├── components/
-│ │ ├── reviews/
+│ │ ├── feedback/ # Submit Reviews/Feedback
 │ │ │ └── [targetId].tsx
 │ │ ├── help.tsx
-│ │ ├── layout.tsx
+│ │ ├── _layout.tsx
 │ │ ├── notifications.tsx
 │ │ ├── privacy.tsx
-│ │ ├── README.md
 │ │ ├── settings.tsx
 │ │ └── terms.tsx
 │ ├── (provider)/ # Provider Functionalities
-│ │ ├── api/
-│ │ ├── components/
+│ │ ├── dashboard.tsx
+│ │ ├── earnings.tsx
+│ │ ├── _layout.tsx
 │ │ ├── messages/ # Provider Messages
-│ │ │ ├── api/
-│ │ │ ├── components/
 │ │ │ ├── [chatId].tsx
 │ │ │ └── index.tsx
 │ │ ├── profile/ # Provider Profile
-│ │ │ ├── api/
-│ │ │ ├── components/
 │ │ │ ├── edit-services.tsx
 │ │ │ └── index.tsx
-│ │ ├── scheduling/ # Provider Schedule/Availability
-│ │ │ ├── api/
-│ │ │ └── components/
-│ │ │ └── index.tsx
-│ │ ├── services/ # Provider Services/Requests
-│ │ │ ├── api/
-│ │ │ ├── components/
-│ │ │ ├── [serviceId].tsx
-│ │ │ └── index.tsx
-│ │ ├── dashboard.tsx
-│ │ ├── earnings.tsx
-│ │ ├── layout.tsx
-│ │ ├── README.md
-│ │ └── services/
-│ │ ├── authService.ts
-│ │ └── clientService.ts
-│ ├── _layout.tsx
+│ │ └── schedule/ # Provider Schedule/Availability
+│ │ ├── index.tsx
+│ │ └── manage-availability.tsx
+│ ├── _layout.tsx # Root layout for the entire app
 │ ├── +not-found.tsx
-│ ├── doc.md
 │ ├── index.tsx
-│ ├── README.md
 │ └── welcome.tsx
-├── assets/ # Static resources
-│ ├── fonts/
-│ ├── images/
-│ └── lottie/
+├── assets/ # Static resources (fonts, images, lottie animations)
 ├── components/ # Truly reusable and atomic UI components (global)
-│ ├── layout/
+│ ├── auth/
+│ ├── client/
+│ ├── common/
+│ ├── provider/
 │ └── ui/
-├── config/
-│ ├── AppConfig.ts
-│ ├── firebase.ts
-│ └── firebaseClient.ts
+├── config/ # App configuration (Firebase, etc.)
 ├── constants/
-│ ├── Colors.ts
-│ ├── routes.ts
-│ ├── strings.ts
-│ └── theme.ts
+│ ├── Colors.ts # Centralized color palette for theming
+│ ├── queryKeys.ts # Keys for TanStack Query caching
+│ ├── routes.ts # Type-safe route definitions for navigation
+│ ├── strings.ts # Localization strings
+│ └── theme.ts # Theme definitions (light/dark, sizes, fonts)
 ├── contexts/
-│ ├── AppContext.tsx
-│ ├── AuthContext.tsx
-│ └── ProviderRegistrationContext.tsx
-├── documentation/
-├── hooks/
-│ ├── useAuth.ts
-│ ├── useColorScheme.ts
-│ ├── useColorScheme.web.ts
-│ ├── useFormValidation.ts
-│ └── useThemeColor.ts
-├── node_modules/
-├── scripts/
-│ └── reset-project.js
-├── services/
-│ ├── api.ts
+│ ├── AppContext.tsx # Global app settings (theme, notifications)
+│ ├── AuthContext.tsx # Global authentication state and functions
+│ └── ProviderRegistrationContext.tsx # State for multi-step provider registration
+├── hooks/ # Custom React hooks
+├── services/ # API service calls to backend
+│ ├── api.ts # Axios instance with interceptors
+│ ├── analyticsService.ts
+│ ├── aiSuggestionsService.ts
 │ ├── authService.ts
 │ ├── bookingService.ts
 │ ├── chatService.ts
 │ ├── clientService.ts
+│ ├── complianceService.ts
+│ ├── couponService.ts
+│ ├── dashboardService.ts
+│ ├── disputeService.ts
+│ ├── earningService.ts
 │ ├── faqService.ts
-│ ├── firebaseConfig.ts
+│ ├── guaranteeService.ts
+│ ├── missionService.ts
 │ ├── notificationService.ts
 │ ├── offerService.ts
 │ ├── paymentService.ts
 │ ├── providerService.ts
+│ ├── referralService.ts
 │ ├── reviewService.ts
-│ ├── searchService.ts
+│ ├── safetyService.ts
+│ ├── securityService.ts
+│ ├── subscriptionService.ts
 │ ├── uploadService.ts
-│ ├── verificationService.ts
-│ ├── couponService.ts # NOVO
-│ ├── subscriptionService.ts # NOVO
-│ ├── guaranteeService.ts # NOVO
-│ ├── disputeService.ts # NOVO
-│ ├── incidentService.ts # NOVO
-│ ├── loyaltyService.ts # NOVO
-│ └── rewardService.ts # NOVO
-├── types/
-│ ├── auth.ts
-│ ├── booking.ts
-│ ├── bookings.ts
-│ ├── chat.ts
-│ ├── clients.ts
-│ ├── faqs.ts
-│ ├── index.ts
-│ ├── navigation.ts
-│ ├── notifications.ts
-│ ├── offers.ts
-│ ├── payments.ts
-│ ├── provider.ts
-│ ├── providers.ts
-│ ├── reviews.ts
-│ ├── service.ts
-│ ├── services.ts
-│ ├── types.ts
-│ ├── user.ts
-│ ├── users.ts
-│ ├── verification.ts
-│ ├── coupon.ts # NOVO
-│ ├── subscription.ts # NOVO
-│ ├── guarantee.ts # NOVO
-│ ├── dispute.ts # NOVO
-│ ├── incident.ts # NOVO
-│ ├── loyalty.ts # NOVO
-│ └── reward.ts # NOVO
-├── utils/
-│ ├── helpers.ts
-│ ├── permissions.ts
-│ └── storage.ts
+│ └── userService.ts
+├── types/ # TypeScript interfaces and DTOs (aligned with backend)
+│ ├── backend/
+│ │ ├── auth.ts
+│ │ ├── bookings.ts
+│ │ ├── chat.ts
+│ │ ├── clients.ts
+│ │ ├── coupons.ts
+│ │ ├── dashboard.ts
+│ │ ├── disputes.ts
+│ │ ├── earning.ts
+│ │ ├── faqs.ts
+│ │ ├── guarantee.ts
+│ │ ├── mission.ts
+│ │ ├── notifications.ts
+│ │ ├── offers.ts
+│ │ ├── payments.ts
+│ │ ├── provider-service.ts
+│ │ ├── providers.ts
+│ │ ├── referrals.ts
+│ │ ├── reviews.ts
+│ │ ├── safety.ts
+│ │ ├── search.ts
+│ │ ├── services.ts
+│ │ ├── subscriptions.ts
+│ │ ├── upload.ts
+│ │ ├── users.ts
+│ │ └── verification.ts
+│ └── navigation.ts
+├── utils/ # Utility functions (helpers, permissions, storage)
 ├── .env
 ├── .gitignore
 ├── app.json
@@ -997,9 +1195,22 @@ O projeto LimpeJá é um monorepo, contendo pastas para o frontend (`LimpeJaApp/
 ├── node_modules/
 ├── prisma/
 │ ├── migrations/
-│ └── schema.prisma
+│ └── schema.prisma # Definição do modelo de dados
 ├── src/
-│ ├── auth/
+│ ├── app.controller.ts
+│ ├── app.module.ts
+│ ├── app.service.ts
+│ ├── analytics/ # Módulo de Análises e Insights
+│ │ ├── dto/
+│ │ ├── analytics.controller.ts
+│ │ ├── analytics.module.ts
+│ │ └── analytics.service.ts
+│ ├── ai-suggestions/ # Módulo de Sugestões Inteligentes (IA)
+│ │ ├── dto/
+│ │ ├── ai-suggestions.controller.ts
+│ │ ├── ai-suggestions.module.ts
+│ │ └── ai-suggestions.service.ts
+│ ├── auth/ # Autenticação e Autorização
 │ │ ├── decorators/
 │ │ ├── dto/
 │ │ ├── guards/
@@ -1007,175 +1218,218 @@ O projeto LimpeJá é um monorepo, contendo pastas para o frontend (`LimpeJaApp/
 │ │ ├── auth.controller.ts
 │ │ ├── auth.module.ts
 │ │ └── auth.service.ts
-│ ├── availability/
+│ ├── availability/ # Disponibilidade de Prestadores
 │ │ ├── dto/
 │ │ ├── entities/
 │ │ ├── availability.controller.ts
 │ │ ├── availability.module.ts
 │ │ └── availability.service.ts
-│ ├── bookings/
+│ ├── bookings/ # Agendamentos
 │ │ ├── dto/
 │ │ ├── entities/
 │ │ ├── bookings.controller.ts
 │ │ ├── bookings.module.ts
 │ │ └── bookings.service.ts
-│ ├── chat/
+│ ├── cache/ # Gerenciamento de Cache
+│ │ ├── cache.module.ts
+│ │ └── cache.service.ts
+│ ├── chat/ # Comunicação em Tempo Real (Chat)
 │ │ ├── dto/
 │ │ ├── entities/
 │ │ ├── gateway/
 │ │ ├── chat.controller.ts
 │ │ ├── chat.module.ts
 │ │ └── chat.service.ts
-│ ├── clients/
+│ ├── clients/ # Gerenciamento de Clientes
 │ │ ├── dto/
 │ │ ├── entities/
 │ │ ├── clients.controller.ts
 │ │ ├── clients.module.ts
 │ │ └── clients.service.ts
-│ ├── common/
+│ ├── common/ # Componentes Comuns (Pipes, Filters, DTOs, Enums)
 │ │ ├── constants/
 │ │ ├── decorators/
 │ │ ├── dto/
 │ │ ├── entities/
 │ │ ├── filters/
 │ │ ├── interceptors/
-│ │ └── pipes/
-│ ├── config/
+│ │ ├── pipes/
+│ │ └── services/
+│ ├── compliance/ # Conformidade e LGPD
+│ │ ├── dto/
+│ │ ├── compliance.controller.ts
+│ │ ├── compliance.module.ts
+│ │ └── compliance.service.ts
+│ ├── config/ # Configuração da Aplicação
 │ │ ├── config.module.ts
-│ │ ├── config.ts
+│ │ ├── configuration.ts
 │ │ └── validation-schema.ts
-│ ├── notifications/
-│ │ ├── dto/
-│ │ ├── entities/
-│ │ ├── notifications.controller.ts
-│ │ ├── notifications.module.ts
-│ │ └── notifications.service.ts
-│ ├── offers/
-│ │ ├── dto/
-│ │ ├── entities/
-│ │ ├── offers.controller.ts
-│ │ ├── offers.module.ts
-│ │ └── offers.service.ts
-│ ├── payments/
-│ │ ├── dto/
-│ │ ├── entities/
-│ │ ├── payments.controller.ts
-│ │ ├── payments.module.ts
-│ │ └── payments.service.ts
-│ ├── prisma/
-│ │ ├── prisma.module.ts
-│ │ └── prisma.service.ts
-│ ├── provider-services/
-│ │ ├── dto/
-│ │ ├── entities/
-│ │ ├── provider-services.controller.ts
-│ │ ├── provider-services.module.ts
-│ │ └── provider-services.service.ts
-│ ├── providers/
-│ │ ├── dto/
-│ │ ├── entities/
-│ │ ├── providers.controller.ts
-│ │ ├── providers.module.ts
-│ │ └── providers.service.ts
-│ ├── reviews/
-│ │ ├── dto/
-│ │ ├── entities/
-│ │ ├── reviews.controller.ts
-│ │ ├── reviews.module.ts
-│ │ └── reviews.service.ts
-│ ├── search/
-│ │ ├── dto/
-│ │ ├── search.controller.ts
-│ │ ├── search.module.ts
-│ │ └── search.service.ts
-│ ├── services/
-│ │ ├── dto/
-│ │ ├── update-service.dto.ts
-│ │ ├── entities/
-│ │ ├── services.controller.ts
-│ │ ├── services.module.ts
-│ │ └── services.service.ts
-│ ├── verification/
-│ │ ├── dto/
-│ │ │ ├── send-cpf.dto.ts
-│ │ │ ├── upload-document.dto.ts
-│ │ │ └── upload-selfie.dto.ts
-│ │ ├── entities/
-│ │ ├── criminal-background-check.service.ts
-│ │ ├── document-processing-service.ts
-│ │ ├── verification.controller.ts
-│ │ ├── verification.module.ts
-│ │ └── verification.service.ts
-│ ├── coupons/ # NOVO
+│ ├── coupons/ # Cupons de Desconto
 │ │ ├── dto/
 │ │ ├── entities/
 │ │ ├── coupons.controller.ts
 │ │ ├── coupons.module.ts
 │ │ └── coupons.service.ts
-│ ├── subscriptions/ # NOVO
+│ ├── dashboard/ # Painel de Provedor
+│ │ ├── dto/
+│ │ ├── dashboard.controller.ts
+│ │ ├── dashboard.module.ts
+│ │ └── dashboard.service.ts
+│ ├── disputes/ # Gerenciamento de Disputas
 │ │ ├── dto/
 │ │ ├── entities/
-│ │ ├── subscriptions.controller.ts
-│ │ ├── subscriptions.module.ts
-│ │ └── subscriptions.service.ts
-│ ├── guarantee/ # NOVO
+│ │ ├── dispute.controller.ts
+│ │ ├── dispute.module.ts
+│ │ └── dispute.service.ts
+│ ├── earnings/ # Ganhos de Provedores
+│ │ ├── dto/
+│ │ ├── earnings.controller.ts
+│ │ ├── earnings.module.ts
+│ │ └── earnings.service.ts
+│ ├── email/ # Serviço de E-mail
+│ │ ├── email.module.ts
+│ │ └── email.service.ts
+│ ├── faqs/ # Perguntas Frequentes
+│ │ ├── dto/
+│ │ ├── entities/
+│ │ ├── faqs.controller.ts
+│ │ ├── faqs.module.ts
+│ │ └── faqs.service.ts
+│ ├── geocoding/ # Serviço de Geocodificação
+│ │ ├── dto/
+│ │ ├── geocoding.module.ts
+│ │ └── geocoding.service.ts
+│ ├── guarantee/ # Garantia de Serviço
 │ │ ├── dto/
 │ │ ├── entities/
 │ │ ├── guarantee.controller.ts
 │ │ ├── guarantee.module.ts
 │ │ └── guarantee.service.ts
-│ ├── disputes/ # NOVO
-│ │ ├── dto/
-│ │ ├── entities/
-│ │ ├── disputes.controller.ts
-│ │ ├── disputes.module.ts
-│ │ └── disputes.service.ts
-│ ├── incidents/ # NOVO
-│ │ ├── dto/
-│ │ ├── entities/
-│ │ ├── incidents.controller.ts
-│ │ ├── incidents.module.ts
-│ │ └── incidents.service.ts
-│ ├── panic-alerts/ # NOVO
-│ │ ├── dto/
-│ │ ├── entities/
-│ │ ├── panic-alerts.controller.ts
-│ │ ├── panic-alerts.module.ts
-│ │ └── panic-alerts.service.ts
-│ ├── loyalty/ # NOVO
+│ ├── loyalty/ # Programa de Fidelidade
 │ │ ├── dto/
 │ │ ├── entities/
 │ │ ├── loyalty.controller.ts
 │ │ ├── loyalty.module.ts
 │ │ └── loyalty.service.ts
-│ ├── rewards/ # NOVO
+│ ├── missions/ # Gamificação e Recompensas (Missões)
+│ │ ├── dto/
+│ │ ├── entities/
+│ │ ├── missions.controller.ts
+│ │ ├── missions.module.ts
+│ │ └── missions.service.ts
+│ ├── notifications/ # Notificações
+│ │ ├── dto/
+│ │ ├── entities/
+│ │ ├── notifications.controller.ts
+│ │ ├── notifications.module.ts
+│ │ └── notifications.service.ts
+│ ├── offers/ # Ofertas Promocionais
+│ │ ├── dto/
+│ │ ├── entities/
+│ │ ├── offers.controller.ts
+│ │ ├── offers.module.ts
+│ │ └── offers.service.ts
+│ ├── payments/ # Pagamentos
+│ │ ├── dto/
+│ │ ├── entities/
+│ │ ├── payments.controller.ts
+│ │ ├── payments.module.ts
+│ │ └── payments.service.ts
+│ ├── pricing/ # Precificação Dinâmica
+│ │ ├── dto/
+│ │ ├── entities/
+│ │ ├── pricing.controller.ts
+│ │ ├── pricing.module.ts
+│ │ └── pricing.service.ts
+│ ├── prisma/ # Módulo Prisma (ORM)
+│ │ ├── prisma.module.ts
+│ │ └── prisma.service.ts
+│ ├── provider-services/ # Serviços Oferecidos por Prestadores
+│ │ ├── dto/
+│ │ ├── entities/
+│ │ ├── provider-services.controller.ts
+│ │ ├── provider-services.module.ts
+│ │ └── provider-services.service.ts
+│ ├── providers/ # Gerenciamento de Prestadores
+│ │ ├── dto/
+│ │ ├── entities/
+│ │ ├── providers.controller.ts
+│ │ ├── providers.module.ts
+│ │ └── providers.service.ts
+│ ├── queues/ # Filas de Processamento Assíncrono
+│ │ ├── queues.module.ts
+│ │ ├── queues.service.ts
+│ │ └── workers/ # Workers (ex: notification.worker.ts, verification.worker.ts)
+│ ├── ranking/ # Ranqueamento de Prestadores
+│ │ ├── dto/
+│ │ ├── ranking.controller.ts
+│ │ ├── ranking.module.ts
+│ │ └── ranking.service.ts
+│ ├── referrals/ # Indicações
+│ │ ├── dto/
+│ │ ├── entities/
+│ │ ├── referrals.controller.ts
+│ │ ├── referrals.module.ts
+│ │ └── referrals.service.ts
+│ ├── reviews/ # Avaliações
+│ │ ├── dto/
+│ │ ├── entities/
+│ │ ├── reviews.controller.ts
+│ │ ├── reviews.module.ts
+│ │ └── reviews.service.ts
+│ ├── rewards/ # Recompensas
 │ │ ├── dto/
 │ │ ├── entities/
 │ │ ├── rewards.controller.ts
 │ │ ├── rewards.module.ts
 │ │ └── rewards.service.ts
-│ ├── pricing-rules/ # NOVO
+│ ├── safety/ # Segurança e Incidentes (inclui Incidentes e Alertas de Pânico)
 │ │ ├── dto/
 │ │ ├── entities/
-│ │ ├── pricing-rules.controller.ts
-│ │ ├── pricing-rules.module.ts
-│ │ └── pricing-rules.service.ts
-├── shared/
-│ ├── enums/
-│ ├── interfaces/
-│ └── types/
-├── users/
-│ ├── dto/
-│ ├── entities/
-│ ├── users.controller.ts
-│ ├── users.module.ts
-│ └── users.service.ts
+│ │ ├── safety.controller.ts
+│ │ ├── safety.module.ts
+│ │ └── safety.service.ts
+│ ├── search/ # Busca de Serviços e Provedores
+│ │ ├── dto/
+│ │ ├── search.controller.ts
+│ │ ├── search.module.ts
+│ │ └── search.service.ts
+│ ├── services/ # Catálogo de Serviços Base
+│ │ ├── dto/
+│ │ ├── entities/
+│ │ ├── services.controller.ts
+│ │ ├── services.module.ts
+│ │ └── services.service.ts
+│ ├── sms/ # Serviço de SMS
+│ │ ├── sms.module.ts
+│ │ └── sms.service.ts
+│ ├── subscriptions/ # Assinaturas e Agendamentos Recorrentes
+│ │ ├── dto/
+│ │ ├── entities/
+│ │ ├── subscriptions.controller.ts
+│ │ ├── subscriptions.module.ts
+│ │ └── subscriptions.service.ts
+│ ├── users/ # Gerenciamento de Usuários
+│ │ ├── dto/
+│ │ ├── entities/
+│ │ ├── users.controller.ts
+│ │ ├── users.module.ts
+│ │ └── users.service.ts
+│ ├── verification/ # Validação de Identidade (Provedores)
+│ │ ├── dto/
+│ │ ├── entities/
+│ │ ├── document-processing.service.ts
+│ │ ├── verification.controller.ts
+│ │ ├── verification.module.ts
+│ │ └── verification.service.ts
+│ └── shared/ # Componentes compartilhados entre módulos (enums, types, interfaces)
+│     ├── enums/
+│     ├── interfaces/
+│     └── types/
 ├── app.controller.spec.ts
-├── app.controller.ts
-├── app.module.ts
 ├── app.service.ts
 ├── main.ts
-└── test/
+├── instrument.ts # Para Sentry
 ├── .env
 ├── .env.example
 ├── .gitignore
@@ -1401,7 +1655,7 @@ Link do Projeto: <a href="https://github.com/techleadevelopers/limpe-ja-app" sty
 
 <p style="color: #555; altura da linha: 1,6; margem inferior: 20px;">
 
-O LimpeJá foi concebido para ser uma plataforma que beneficia tanto os clientes em busca de serviços de limpeza de qualidade quanto os profissionais que desejam ampliar sua base de clientes e gerenciar seus serviços de forma eficiente. Nossa estratégia de monetização é transparente e se baseia no sucesso mútuo, inspirada em modelos de marketplace consolidados como o Airbnb, mas aplicada ao universo dos serviços de limpeza.
+O LimpeJá foi concebido para ser uma plataforma que beneficia tanto os clientes em busca de serviços de limpeza de qualidade quanto os profissionais que desejam ampliar sua base de clientes e gerenciar seus serviços de forma eficiente. Nossa estratégia de monetização é transparente e se baseia no sucesso mútuo, inspirada em modelos de marketplace consolidados como o Airbnb, mas aplicada ao universo dos serviços de limpeza. [13, 24, 36, 37, 38, 41]
 
 </p>
 
@@ -1447,7 +1701,7 @@ A principal fonte de receita do LimpeJá virá de uma <strong style="color: #2ec
 
 <li style="margin-bottom: 15px;"><strong>Estratégia de Cupons (Win-Win-Win):</strong>
     <ul style="list-style-type: disco; preenchimento esquerdo: 20px; margem superior: 5px;">
-        <li style="margin-bottom: 5px;">O LimpeJá absorve o custo do cupom de desconto para o prestador. Isso significa que, mesmo com o cliente usando um cupom, o prestador recebe o valor integral do serviço (menos a comissão padrão do LimpeJá).</li>
+        <li style="margin-bottom: 5px;">Para incentivar a aquisição e retenção de clientes, o LimpeJá pode emitir cupons de desconto. Nesses casos, a plataforma <strong style="color: #2ecc71;">absorve o custo do desconto</strong> para o prestador. Isso significa que, mesmo com o cliente usando um cupom, o prestador recebe o valor integral do serviço (menos a comissão padrão do LimpeJá).</li>
         <li style="margin-bottom: 5px;">Para o LimpeJá, o custo do cupom é tratado como Custo de Aquisição de Cliente (CAC), um investimento estratégico para aquisição e retenção de usuários, com um retorno de longo prazo (LTV) significativamente maior.</li>
         <li style="margin-bottom: 5px;">Essa abordagem garante que o ganho do prestador não seja afetado pelo cupom, incentivando o volume de agendamentos e mantendo a proposta de valor de "sem taxas adicionais" para o profissional.</li>
     </ul>
@@ -1525,7 +1779,7 @@ O projeto LimpeJá está em um estágio avançado de desenvolvimento, com a maio
 
 <li style="margin-bottom: 5px;">Desenvolver UI abrangente para extrair e exibir `GET /reviews` e `GET /reviews/:id`.</li>
 
-<li style="margin-bottom: 5px;">Refletir e gerenciar transições de status de agendamentos de forma mais robusta.</li>
+<li style="margin-bottom: 5px;">Refletir e gerenciar transições de status de agendamento de forma mais robusta.</li>
 
 </ul>
 
@@ -1537,27 +1791,29 @@ O projeto LimpeJá está em um estágio avançado de desenvolvimento, com a maio
 
 <li style="margin-bottom: 15px;"><strong>Funcionalidades Estratégicas e de Confiança:</strong>
     <ul style="list-style-type: disco; preenchimento esquerdo: 20px; margem superior: 5px;">
-        <li style="margin-bottom: 5px;"><strong>Implementação Completa do Módulo de Seguro de Limpeza:</strong> Finalizar o fluxo de submissão, investigação e resolução de sinistros, com equipe de suporte dedicada.</li>
-        <li style="margin-bottom: 5px;"><strong>Expansão do Plano Premium para Clientes:</strong> Desenvolver e promover os benefícios de cupons exclusivos, seguro gratuito, prioridade e suporte premium.</li>
+        <li style="margin-bottom: 5px;"><strong>Implementação Completa do Módulo de Seguro de Limpeza e Garantia:</strong> Finalizar o fluxo de submissão, investigação e resolução de sinistros (`guarantee` module), com equipe de suporte dedicada. [42, 43, 44, 45]</li>
+        <li style="margin-bottom: 5px;"><strong>Expansão do Plano Premium para Clientes:</strong> Desenvolver e promover os benefícios de cupons exclusivos, seguro gratuito, prioridade e suporte premium (`subscriptions` module).</li>
         <li style="margin-bottom: 5px;"><strong>Construção de Comunidade e Experiência Hiper-Localizada:</strong>
             <ul style="list-style-type: círculo; preenchimento esquerdo: 20px; margem superior: 5px;">
-                <li style="margin-bottom: 5px;">Aprimorar o Programa de Recompensas e Reconhecimento para Profissionais (Níveis, Selos de Confiança, Badges, Ranking Local).</li>
+                <li style="margin-bottom: 5px;">Aprimorar o Programa de Recompensas e Reconhecimento para Profissionais (Níveis, Selos de Confiança, Badges, Ranking Local) (`loyalty`, `missions`, `rewards` modules). [15, 20, 23, 34, 35]</li>
                 <li style="margin-bottom: 5px;">Organizar Eventos e Encontros Locais (workshops, palestras) para fortalecer a comunidade.</li>
                 <li style="margin-bottom: 5px;">Desenvolver Conteúdo Educacional (blog/vídeos) para clientes e profissionais.</li>
             </ul>
         </li>
         <li style="margin-bottom: 5px;"><strong>Excelência no Atendimento e Gestão de Incidentes:</strong>
             <ul style="list-style-type: círculo; preenchimento esquerdo: 20px; margem superior: 5px;">
-                <li style="margin-bottom: 5px;">Implementar Sistema de Disputa e Mediação no aplicativo, com fluxo claro para reportar e acompanhar.</li>
-                <li style="margin-bottom: 5px;">Garantir Comunicação Transparente com notificações detalhadas sobre status de serviço, pagamento e incidentes.</li>
+                <li style="margin-bottom: 5px;">Implementar Sistema de Disputa e Mediação no aplicativo, com fluxo claro para reportar e acompanhar (`disputes` module).</li>
+                <li style="margin-bottom: 5px;">Garantir Comunicação Transparente com notificações detalhadas sobre status de serviço, pagamento e incidentes (`safety` module).</li>
             </ul>
         </li>
         <li style="margin-bottom: 5px;"><strong>Fortalecimento da Confiança em Ambas as Partes:</strong>
             <ul style="list-style-type: círculo; preenchimento esquerdo: 20px; margem superior: 5px;">
                 <li style="margin-bottom: 5px;">Desenvolver Sistema de Avaliação Mútua Robusto (clientes avaliam provedores, provedores avaliam clientes).</li>
-                <li style="margin-bottom: 5px;">Publicar Relatórios de Segurança e Transparência (verificações, incidentes resolvidos).</li>
+                <li style="margin-bottom: 5px;">Publicar Relatórios de Segurança e Transparência (verificações, incidentes resolvidos) (`compliance`, `analytics` modules).</li>
             </ul>
         </li>
+        <li style="margin-bottom: 5px;"><strong>Segurança Aprimorada:</strong> Implementar autenticação biométrica (Face ID/Touch ID) (`expo-local-authentication`), armazenamento seguro de tokens (`expo-secure-store`) e alertas de segurança (`security` module). [1, 5, 6, 11, 14, 16, 19, 21, 22, 26]</li>
+        <li style="margin-bottom: 5px;"><strong>Análises e Insights de Negócio:</strong> Expandir o módulo de `analytics` para fornecer relatórios detalhados e o módulo de `ai-suggestions` para sugestões personalizadas de otimização.</li>
     </ul>
 </li>
 
@@ -1636,6 +1892,12 @@ Para informações fornecidas e suporte sobre as tecnologias e o ecossistema do 
 <li style="margin-bottom: 8px;"><a href="https://www.postgresql.org/docs/" style="color: #3498db; text-decoration: none;">Documentação PostgreSQL</a></li>
 
 <li style="margin-bottom: 8px;"><a href="https://docs.expo.dev/" style="color: #3498db; text-decoration: none;">Documentação Expo</a></li>
+
+<li style="margin-bottom: 8px;"><a href="https://tanstack.com/query/latest/docs/react/overview" style="color: #3498db; text-decoration: none;">Documentação TanStack Query</a></li>
+
+<li style="margin-bottom: 8px;"><a href="https://docs.expo.dev/versions/latest/sdk/local-authentication/" style="color: #3498db; text-decoration: none;">Documentação Expo LocalAuthentication</a></li>
+
+<li style="margin-bottom: 8px;"><a href="https://docs.expo.dev/versions/latest/sdk/securestore/" style="color: #3498db; text-decoration: none;">Documentação Expo SecureStore</a></li>
 
 </ul>
 

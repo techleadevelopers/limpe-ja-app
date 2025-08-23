@@ -64,3 +64,20 @@ export interface SearchResult {
   services: ServiceDetails[];   // Lista de tipos de serviço (busca complementar)
   // offers?: OfferDetails[]; // Lista de ofertas (busca complementar)
 }
+
+/**
+ * NOVO: Interface para um item de busca de provedor com distância.
+ */
+export interface ProviderSearchItem {
+  id: string;
+  fullName: string;
+  avatarUrl?: string | null;
+  averageRating?: number;
+  reviewCount?: number;
+  distance?: number; // Distância em km
+  address?: {
+    city: string;
+    state: string;
+  };
+  // Adicione outros campos relevantes para exibição na lista de busca
+}

@@ -3,6 +3,7 @@ import { Injectable, NotFoundException, BadRequestException, Logger } from '@nes
 import { PrismaService } from '../prisma/prisma.service';
 import { Notification } from '@prisma/client';
 import { MarkAsReadDto } from './dto/mark-as-read.dto';
+import { I18nService } from '../common/i18n/i18n.service'; // Importar I18nService
 
 // Se você estiver usando Firebase Admin SDK, você precisaria importá-lo:
 // import * as admin from 'firebase-admin';
@@ -11,7 +12,10 @@ import { MarkAsReadDto } from './dto/mark-as-read.dto';
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name); // Instancia o logger
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly i18n: I18nService, // Injetar I18nService
+  ) {}
 
   /**
    * Cria uma nova notificação.
@@ -24,7 +28,7 @@ export class NotificationsService {
   async createNotification(
     userId: string,
     type: string,
-    message: string,
+    message: string, // Esta mensagem já deve vir traduzida ou ser uma chave i18n
     targetUrl?: string,
     title?: string, // Adicionado título para consistência com o push
   ): Promise<Notification> {
@@ -105,7 +109,8 @@ export class NotificationsService {
     });
 
     if (!notification || notification.userId !== userId) {
-      throw new NotFoundException('Notificação não encontrada ou você não tem permissão para acessá-la.');
+      // Usar I18nService para mensagens de erro
+      throw new NotFoundException(await this.i18n.translate('notification.notFound'));
     }
 
     if (notification.isRead) {
@@ -129,7 +134,8 @@ export class NotificationsService {
     });
 
     if (!notification || notification.userId !== userId) {
-      throw new NotFoundException('Notificação não encontrada ou você não tem permissão para excluí-la.');
+      // Usar I18nService para mensagens de erro
+      throw new NotFoundException(await this.i18n.translate('notification.notFound'));
     }
 
     await this.prisma.notification.delete({
@@ -189,7 +195,8 @@ export class NotificationsService {
         this.logger.log(`Ação Rápida: Visualizar avaliação ${data.reviewId}.`);
         break;
       default:
-        throw new BadRequestException(`Ação rápida desconhecida: ${action}`);
+        // Usar I18nService para mensagens de erro
+        throw new BadRequestException(await this.i18n.translate('notification.badRequest.unknownAction', 'pt-BR', { action }));
     }
   }
 

@@ -17,7 +17,7 @@ import { RegisterClientDto } from './dto/register-client.dto';
 import { RegisterProviderDto } from './dto/register-provider.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
-import { MessageResponseDto } from './dto/message-response.dto';
+import { MessageResponseDto } from '../common/dto/message-response.dto';
 import { UserProfileDto } from '../users/dto/user-profile.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';

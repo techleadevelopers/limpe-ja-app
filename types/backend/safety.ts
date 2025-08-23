@@ -26,6 +26,8 @@ export interface ReportPanicDto {
   latitude: number;
   longitude: number;
   message?: string;
+  accuracy?: number; // NOVO
+  source?: 'FAB' | 'MENU' | 'AUTO'; // NOVO
 }
 
 export interface MessageResponse {
@@ -63,4 +65,25 @@ export interface PanicAlert {
   message?: string;
   status: string; // "ACTIVE", "RESOLVED", "FALSE_ALARM"
   createdAt: string;
+}
+
+/**
+ * NOVO: Evento de pânico.
+ */
+export interface PanicEvent {
+  id: string;
+  status: 'ACTIVE' | 'ENDED';
+  startedAt: string;
+  // Adicione outros campos relevantes do backend, como userId, latitude, longitude, etc.
+}
+
+/**
+ * NOVO: Relatório de incidente.
+ */
+export interface IncidentReport {
+  id: string;
+  panicId: string;
+  description: string;
+  attachments?: string[];
+  // Adicione outros campos relevantes do backend
 }

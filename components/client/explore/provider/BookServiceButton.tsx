@@ -3,23 +3,28 @@ import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { Animated, Text, TouchableOpacity, Platform, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter, type Router } from 'expo-router'; // Importe Router se necessário
 
 interface BookServiceButtonProps {
   providerId: string;
   serviceId?: string; // Adicionada a prop serviceId
-  router: any;
+  router: Router; // Usar o tipo Router do expo-router para melhor tipagem
   bookNowButtonAnim: Animated.Value;
+  servicePrice?: number; // <--- CORREÇÃO: Adicionada a propriedade servicePrice
 }
 
 const BookServiceButton: React.FC<BookServiceButtonProps> = ({
   providerId,
-  serviceId, // Desestruturada a nova prop
+  serviceId,
   router,
   bookNowButtonAnim,
+  servicePrice, // <--- CORREÇÃO: Desestruturada a nova prop
 }) => {
   const insets = useSafeAreaInsets();
   const safeAreaBottom = insets.bottom;
 
+  // O alinhamento do botão já está definido nos estilos locais (position: 'absolute', bottom: 0, left: 0, right: 0)
+  // e nos paddings. Não é necessário alterar a lógica de alinhamento existente.
   return (
     <Animated.View style={[
       localStyles.bookNowButtonWrapper,
@@ -28,6 +33,7 @@ const BookServiceButton: React.FC<BookServiceButtonProps> = ({
         transform: [{
           translateY: bookNowButtonAnim.interpolate({ inputRange: [0, 1], outputRange: [100, 0] })
         }],
+        // O paddingBottom já considera o safeAreaBottom, mantendo o alinhamento
         paddingBottom: Platform.OS === 'ios' ? 25 + safeAreaBottom : 15 + safeAreaBottom
       }
     ]}>
@@ -37,7 +43,18 @@ const BookServiceButton: React.FC<BookServiceButtonProps> = ({
         end={{ x: 1, y: 0 }}
         style={localStyles.bookServiceButtonGradient}
       >
-        <TouchableOpacity style={localStyles.bookServiceButton} onPress={() => router.push({ pathname: `/(client)/bookings/schedule-service`, params: { providerId: providerId, serviceId: serviceId } })}>
+        <TouchableOpacity 
+          style={localStyles.bookServiceButton} 
+          onPress={() => router.push({ 
+            pathname: `/(client)/bookings/schedule-service`, 
+            params: { 
+              providerId: providerId, 
+              serviceId: serviceId,
+              // Você pode passar o servicePrice para a tela de agendamento se precisar lá
+              // servicePrice: servicePrice?.toString(), // Converter para string se o params só aceitar strings
+            } 
+          })}
+        >
           <Text style={localStyles.bookServiceButtonText}>Agendar Serviço</Text>
         </TouchableOpacity>
       </LinearGradient>

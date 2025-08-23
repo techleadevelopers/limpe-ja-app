@@ -1,3 +1,4 @@
+// LimpeJaApp/app/(client)/explore/index.tsx
 import { Stack, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -11,17 +12,22 @@ import {
     Text,
     TouchableOpacity,
     View,
-    ViewToken
+    ViewToken,
+    RefreshControl,
+    Platform,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 
 import {
     getOffers,
     getServiceCategories,
     getUserProfile,
+    searchProvidersWithLocation,
 } from '../../../services/clientService';
 
 import {
-    getNearbyProviders,
     getRecommendedProviders,
 } from '../../../services/providerService';
 
@@ -32,6 +38,40 @@ import { UserProfile } from '../../../types/backend/users';
 
 import { CLIENT_ROUTES } from '../../../constants/routes';
 
+// --- INTERFACES PARA COMPONENTES (DEFINIDAS AQUI PARA EXEMPLO) ---
+// Idealmente, estas interfaces deveriam estar nos arquivos de seus respectivos componentes.
+
+// Interface para CarouselBannerItem (corrigida para incluir todas as props e onPress)
+interface CarouselBannerItemProps {
+    title: string;
+    discount: string;
+    description: string;
+    buttonText: string;
+    badgeText: string;
+    // Removendo background colors, pois agora teremos uma imagem (conforme CarouselBannerItem.tsx)
+    onPress: () => void;
+}
+
+// Interface genérica para SecaoContainer (agora é realmente genérica)
+interface SecaoContainerProps<T> {
+    titulo: string;
+    onVerTudoPress: () => void;
+    data: T[]; // Tornando a prop 'data' genérica
+    renderItem: ({ item, index }: { item: T; index: number }) => React.ReactElement | null; // Tornando renderItem genérico
+    horizontal?: boolean;
+    titleColor?: string;
+    noDataText?: string;
+}
+
+// Interface para CategoriaCard (corrigida para não incluir onPress, pois é tratado internamente)
+interface CategoriaCardProps {
+    item: { id: string; name: string; icon: any }; // 'any' para o ícone se o tipo exato não for conhecido
+    // onPress: () => void; // Removido, pois a navegação é interna
+}
+
+// --- FIM DAS INTERFACES ---
+
+// Importações dos componentes
 import CarouselBannerItem from '../../../components/client/explore/home/CarouselBannerItem';
 import CategoriaCard from '../../../components/client/explore/home/CategoriaCard';
 import HeaderSuperior from '../../../components/client/explore/home/HeaderSuperior';
@@ -41,6 +81,7 @@ import RecomendacaoCard from '../../../components/client/explore/home/Recomendac
 import SecaoContainer from '../../../components/client/explore/home/SecaoContainer';
 import SecaoPrestadores from '../../../components/client/explore/home/SecaoPrestadores';
 import SecaoRecomendacoes from '../../../components/client/explore/home/SecaoRecomendacoes';
+import FAB_SOS from '../../../components/client/explore/home/FAB_SOS';
 
 const COR_AZUL_CLARO_UNIFICADA = '#A0D2EB';
 const COR_PRIMARIA_ESCURA = '#2C3E50';
@@ -49,7 +90,20 @@ const COR_BORDA_SUAVE = '#E0E0E0';
 
 const { width: screenWidth } = Dimensions.get('window');
 
-const bannerData = [
+// Define o tipo para os itens do bannerData
+type BannerDataItem = {
+    id: string;
+    title: string;
+    discount: string;
+    description: string;
+    buttonText: string;
+    badgeText: string;
+    backgroundColorStart: string; // Mantido aqui, mas não passado para CarouselBannerItem
+    backgroundColorEnd: string;   // Mantido aqui, mas não passado para CarouselBannerItem
+    onPress: () => void; // Adicionado para corresponder a CarouselBannerItemProps
+};
+
+const bannerData: BannerDataItem[] = [ // Explicitamente tipado
     {
         id: '1',
         title: 'Get Special Offer',
@@ -59,6 +113,7 @@ const bannerData = [
         badgeText: 'Limited time!',
         backgroundColorStart: '#f5f5dc',
         backgroundColorEnd: '#deb887',
+        onPress: () => console.log('Banner 1 Pressionado'), // Adicionado onPress
     },
     {
         id: '2',
@@ -69,6 +124,7 @@ const bannerData = [
         badgeText: 'Exclusive',
         backgroundColorStart: '#e0ffff',
         backgroundColorEnd: '#afeeee',
+        onPress: () => console.log('Banner 2 Pressionado'), // Adicionado onPress
     },
     {
         id: '3',
@@ -79,21 +135,24 @@ const bannerData = [
         badgeText: 'Hurry!',
         backgroundColorStart: '#f0f8ff',
         backgroundColorEnd: '#e6e6fa',
+        onPress: () => console.log('Banner 3 Pressionado'), // Adicionado onPress
     },
 ];
 
 export default function ExploreClientScreen() {
     const router = useRouter();
-    const flatListRef = useRef<FlatList>(null);
+    const flatListRef = useRef<FlatList<BannerDataItem>>(null); // Tipado com BannerDataItem
     const [currentIndex, setCurrentIndex] = useState(0);
+    const { t } = useTranslation();
 
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [serviceCategories, setServiceCategories] = useState<Service[]>([]);
     const [recommendations, setRecommendations] = useState<ProviderDisplayInfo[]>([]);
-    const [providers, setProviders] = useState<ProviderDisplayInfo[]>([]);
+    const [nearbyProviders, setNearbyProviders] = useState<ProviderDisplayInfo[]>([]); // Corrigido para ProviderDisplayInfo[]
     const [currentOffer, setCurrentOffer] = useState<Offer | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     const headerAnim = useRef(new Animated.Value(0)).current;
     const categoriesAnim = useRef(new Animated.Value(0)).current;
@@ -109,7 +168,6 @@ export default function ExploreClientScreen() {
             const fetchedUserProfile = await getUserProfile();
             setUserProfile(fetchedUserProfile);
 
-            // << ADICIONADO: Log para inspecionar o perfil do usuário >>
             console.log('[ExploreClientScreen] Perfil do usuário carregado:', fetchedUserProfile);
 
             const categoriesData = await getServiceCategories();
@@ -118,8 +176,31 @@ export default function ExploreClientScreen() {
             const recommendationsData = await getRecommendedProviders();
             setRecommendations(recommendationsData);
 
-            const providersData = await getNearbyProviders();
-            setProviders(providersData);
+            let locationCoords: Location.LocationObjectCoords | null = null;
+            try {
+                let { status } = await Location.requestForegroundPermissionsAsync();
+                if (status !== 'granted') {
+                    Alert.alert(t('safety.panic.location_permission_denied'), t('safety.panic.location_permission_message'));
+                } else {
+                    const currentLocation = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+                    locationCoords = currentLocation.coords;
+                    console.log('[ExploreClientScreen] Localização obtida:', locationCoords);
+                }
+            } catch (locError) {
+                console.error('[ExploreClientScreen] Erro ao obter localização:', locError);
+                Alert.alert(t('common.error'), t('common.network_error'));
+            }
+
+            let providersData: ProviderDisplayInfo[] = [];
+            if (locationCoords) {
+                // Correção para o Erro 3: Adicionar asserção de tipo
+                providersData = await searchProvidersWithLocation({
+                    latitude: locationCoords.latitude,
+                    longitude: locationCoords.longitude,
+                    radius: 50, // Raio de busca em km
+                }) as ProviderDisplayInfo[];
+            }
+            setNearbyProviders(providersData);
 
             const offersData = await getOffers();
             if (offersData.length > 0) {
@@ -140,14 +221,15 @@ export default function ExploreClientScreen() {
                 Animated.spring(navBarAnim, { toValue: 1, damping: 10, stiffness: 100, useNativeDriver: true }),
             ]).start();
         } catch (err: any) {
-            const errorMessage = err.message || err.response?.data?.message || "Não foi possível carregar os dados.";
+            const errorMessage = err.message || err.response?.data?.message || t("common.network_error");
             setError(errorMessage);
-            Alert.alert("Erro", errorMessage);
+            Alert.alert(t("common.error"), errorMessage);
             console.error("[ExploreClientScreen] Erro ao carregar dados:", err.response?.data || err.message);
         } finally {
             setLoading(false);
+            setIsRefreshing(false);
         }
-    }, [headerAnim, categoriesAnim, bannerAnim, recommendationsAnim, providersAnim, navBarAnim]);
+    }, [t, headerAnim, categoriesAnim, bannerAnim, recommendationsAnim, providersAnim, navBarAnim]);
 
     useEffect(() => {
         fetchData();
@@ -168,13 +250,9 @@ export default function ExploreClientScreen() {
     const safeRecommendations = Array.isArray(recommendations)
         ? recommendations.filter((item) => item && typeof item.fullName === 'string')
         : [];
-    const safeProviders = Array.isArray(providers)
-        ? providers.filter((item) => item && typeof item.fullName === 'string')
+    const safeNearbyProviders = Array.isArray(nearbyProviders)
+        ? nearbyProviders.filter((item) => item && typeof item.fullName === 'string')
         : [];
-
-    const handleBannerPress = useCallback(() => {
-        Alert.alert('Banner Pressionado', 'Você clicou em um banner! (Este é o handler do carrossel)');
-    }, []);
 
     const viewabilityConfig = useRef({
         itemVisiblePercentThreshold: 50,
@@ -186,18 +264,19 @@ export default function ExploreClientScreen() {
         }
     }, []);
 
-    const renderBannerItem = useCallback(({ item }: { item: (typeof bannerData)[0] }) => (
-        <CarouselBannerItem
-            title={item.title}
-            discount={item.discount}
-            description={item.description}
-            buttonText={item.buttonText}
-            badgeText={item.badgeText}
-            backgroundColorStart={item.backgroundColorStart}
-            backgroundColorEnd={item.backgroundColorEnd}
-            onPress={handleBannerPress}
-        />
-    ), [handleBannerPress]);
+    // Correção para o Erro do CarouselBannerItem: Passar apenas as props esperadas
+    const renderBannerItem = useCallback(({ item }: { item: BannerDataItem }) => {
+        return (
+            <CarouselBannerItem
+                title={item.title}
+                discount={item.discount}
+                description={item.description}
+                buttonText={item.buttonText}
+                badgeText={item.badgeText}
+                onPress={item.onPress}
+            />
+        );
+    }, []);
 
     const renderPagination = useCallback(() => (
         <View style={styles.pagination}>
@@ -213,11 +292,16 @@ export default function ExploreClientScreen() {
         </View>
     ), [currentIndex]);
 
-    if (loading) {
+    const onRefresh = useCallback(() => {
+        setIsRefreshing(true);
+        fetchData();
+    }, [fetchData]);
+
+    if (loading && !isRefreshing) {
         return (
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={COR_AZUL_CLARO_UNIFICADA} />
-                <Text style={{ marginTop: 10 }}>Carregando dados...</Text>
+                <Text style={{ marginTop: 10 }}>{t("common.loading")}</Text>
             </View>
         );
     }
@@ -227,46 +311,64 @@ export default function ExploreClientScreen() {
             <View style={styles.loadingContainer}>
                 <Text style={{ color: 'red', textAlign: 'center' }}>{error}</Text>
                 <TouchableOpacity onPress={fetchData} style={{ marginTop: 20, padding: 10, backgroundColor: COR_AZUL_CLARO_UNIFICADA, borderRadius: 5 }}>
-                    <Text style={{ color: '#fff' }}>Tentar Novamente</Text>
+                    <Text style={{ color: '#fff' }}>{t("common.tryAgain")}</Text>
                 </TouchableOpacity>
             </View>
         );
     }
     
-    // NOVO: Lógica para extrair o endereço do perfil de forma mais robusta
     const addressToDisplay = userProfile?.clientDetails?.address || userProfile?.providerDetails?.address || userProfile?.address;
 
     return (
         <View style={styles.screen}>
-            <Stack.Screen options={{ headerShown: false }} />
+            <Stack.Screen options={{
+                headerShown: false,
+                headerRight: () => (
+                    <TouchableOpacity
+                        onPress={() => router.push('/(common)/safety/panic' as any)}
+                        style={styles.shieldIconContainer}
+                    >
+                        <Ionicons name="shield-outline" size={24} color={COR_PRIMARIA_ESCURA} />
+                    </TouchableOpacity>
+                ),
+            }} />
             <ScrollView
                 style={styles.scrollViewArea}
                 contentContainerStyle={styles.scrollContentContainer}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
+                refreshControl={
+                    <RefreshControl
+                        refreshing={isRefreshing}
+                        onRefresh={onRefresh}
+                        tintColor={COR_AZUL_CLARO_UNIFICADA}
+                        title={t("common.loading")}
+                        titleColor={COR_AZUL_CLARO_UNIFICADA}
+                    />
+                }
             >
                 <View style={styles.contentWrapper}>
                     {/* Header Superior Animado */}
                     <Animated.View style={{ opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-50, 0] }) }] }}>
                         <HeaderSuperior
-                            userName={userProfile?.clientDetails?.fullName || userProfile?.providerDetails?.fullName || userProfile?.fullName || 'Usuário'}
+                            userName={userProfile?.clientDetails?.fullName || userProfile?.providerDetails?.fullName || userProfile?.fullName || t('common.user')}
                             userAddress={addressToDisplay}
                         />
                     </Animated.View>
 
                     {/* Categorias de Serviço Animadas */}
                     <Animated.View style={{ opacity: categoriesAnim, transform: [{ translateY: categoriesAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
-                        <SecaoContainer
-                            titulo="Categorias de Serviço"
+                        <SecaoContainer<Service> // Explicitamente tipado para Service
+                            titulo={t("search.all_categories")}
                             onVerTudoPress={() => router.push('/(client)/explore/todas-categorias' as any)}
                             data={safeServiceCategories}
                             renderItem={({ item }) => {
                                 if (!item || !item.name) return null;
                                 return (
                                     <CategoriaCard
-                                        key={item.id}
+                                        // A propriedade 'key' é tratada pelo SecaoContainer
                                         item={{ id: item.id, name: item.name, icon: item.icon as any }}
-                                        onPress={() => handleCategoryPress(item)}
+                                        // Removido onPress, pois CategoriaCard agora lida com a navegação internamente
                                     />
                                 );
                             }}
@@ -276,7 +378,7 @@ export default function ExploreClientScreen() {
 
                     {/* Novo Carrossel de Banners */}
                     <Animated.View style={[styles.carouselContainer, { opacity: bannerAnim, transform: [{ translateY: bannerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
-                        <FlatList
+                        <FlatList<BannerDataItem> // Tipado com BannerDataItem
                             ref={flatListRef}
                             data={bannerData}
                             renderItem={renderBannerItem}
@@ -286,7 +388,7 @@ export default function ExploreClientScreen() {
                             showsHorizontalScrollIndicator={false}
                             onViewableItemsChanged={onViewableItemsChanged}
                             viewabilityConfig={viewabilityConfig}
-                            snapToInterval={300 + 20}
+                            snapToInterval={screenWidth * 0.85 + 20} // Ajustado para corresponder à largura do banner + margin
                             decelerationRate="fast"
                         />
                         {renderPagination()}
@@ -296,8 +398,8 @@ export default function ExploreClientScreen() {
                     {/* Recomendações para Você Animadas */}
                     <Animated.View style={{ opacity: recommendationsAnim, transform: [{ translateY: recommendationsAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
                         <SecaoRecomendacoes
-                            titulo="Recomendações para Você"
-                            onVerTudoPress={() => router.push('/(client)/explore/todas-recomendacoes' as any)}
+                            titulo={t("search.recommended_providers")}
+                            onVerTudoPress={() => router.push('/(client)/explore/todos-recomendacoes' as any)}
                             data={safeRecommendations}
                             renderItem={({ item }) => {
                                 if (!item || !item.fullName) return null;
@@ -310,16 +412,16 @@ export default function ExploreClientScreen() {
                                 );
                             }}
                             horizontal={true}
-                            noDataText="Nenhuma recomendação disponível no momento."
+                            noDataText={t("search.no_results")}
                         />
                     </Animated.View>
 
                     {/* Profissionais por Perto Animados */}
                     <Animated.View style={{ opacity: providersAnim, transform: [{ translateY: providersAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
                         <SecaoPrestadores
-                            titulo="Profissionais por Perto"
+                            titulo={t("search.nearby_providers")}
                             onVerTudoPress={() => router.push('/(client)/explore/todos-prestadores-proximos' as any)}
-                            data={safeProviders}
+                            data={safeNearbyProviders}
                             renderItem={({ item }) => {
                                 if (!item || !item.fullName) return null;
                                 return (
@@ -331,7 +433,7 @@ export default function ExploreClientScreen() {
                                 );
                             }}
                             horizontal={true}
-                            noDataText="Nenhum prestador disponível no momento."
+                            noDataText={t("search.no_results")}
                         />
                     </Animated.View>
                 </View>
@@ -341,6 +443,9 @@ export default function ExploreClientScreen() {
             <Animated.View style={[styles.navBarContainer, { transform: [{ translateY: navBarAnim.interpolate({ inputRange: [0, 1], outputRange: [100, 0] }) }] }]}>
                 <NavBar />
             </Animated.View>
+
+            {/* FAB SOS */}
+            <FAB_SOS />
         </View>
     );
 }
@@ -403,5 +508,9 @@ const styles = StyleSheet.create({
     },
     paginationDotInactive: {
         backgroundColor: '#ddd',
+    },
+    shieldIconContainer: {
+        padding: 5,
+        marginRight: Platform.OS === 'ios' ? 10 : 0,
     },
 });

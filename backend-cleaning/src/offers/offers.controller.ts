@@ -13,7 +13,7 @@ import {
 import { OffersService } from './offers.service';
 import { CreateOfferDto } from './dto/create-offer.dto';
 import { UpdateOfferDto } from './dto/update-offer.dto';
-import { Offer } from './entities/offer.entity';
+import { OfferDetailsDto } from './dto/offer-details.dto'; // Importado o DTO de detalhes
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -38,12 +38,13 @@ export class OffersController {
   @ApiResponse({
     status: 201,
     description: 'Oferta criada com sucesso.',
-    type: Offer,
+    type: OfferDetailsDto, // Alterado para OfferDetailsDto
   })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
-  async create(@Body() createOfferDto: CreateOfferDto): Promise<Offer> {
-    return this.offersService.create(createOfferDto);
+  async create(@Body() createOfferDto: CreateOfferDto): Promise<OfferDetailsDto> {
+    const offer = await this.offersService.create(createOfferDto);
+    return new OfferDetailsDto(offer); // Retorna o DTO
   }
 
   @Get()
@@ -51,10 +52,11 @@ export class OffersController {
   @ApiResponse({
     status: 200,
     description: 'Lista de ofertas.',
-    type: [Offer],
+    type: [OfferDetailsDto], // Alterado para OfferDetailsDto
   })
-  async findAll(): Promise<Offer[]> {
-    return this.offersService.findAll();
+  async findAll(): Promise<OfferDetailsDto[]> {
+    const offers = await this.offersService.findAll();
+    return offers.map(offer => new OfferDetailsDto(offer)); // Mapeia para DTO
   }
 
   @Get(':id')
@@ -62,15 +64,15 @@ export class OffersController {
   @ApiResponse({
     status: 200,
     description: 'Detalhes da oferta.',
-    type: Offer,
+    type: OfferDetailsDto, // Alterado para OfferDetailsDto
   })
   @ApiResponse({ status: 404, description: 'Oferta não encontrada.' })
-  async findOne(@Param('id') id: string): Promise<Offer> {
+  async findOne(@Param('id') id: string): Promise<OfferDetailsDto> {
     const offer = await this.offersService.findOne(id);
     if (!offer) {
       throw new NotFoundException(`Oferta com ID "${id}" não encontrada.`); // Linha 70
     }
-    return offer;
+    return new OfferDetailsDto(offer); // Retorna o DTO
   }
 
   @Patch(':id')
@@ -81,7 +83,7 @@ export class OffersController {
   @ApiResponse({
     status: 200,
     description: 'Oferta atualizada com sucesso.',
-    type: Offer,
+    type: OfferDetailsDto, // Alterado para OfferDetailsDto
   })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
@@ -89,8 +91,9 @@ export class OffersController {
   async update(
     @Param('id') id: string,
     @Body() updateOfferDto: UpdateOfferDto,
-  ): Promise<Offer> {
-    return this.offersService.update(id, updateOfferDto);
+  ): Promise<OfferDetailsDto> {
+    const updatedOffer = await this.offersService.update(id, updateOfferDto);
+    return new OfferDetailsDto(updatedOffer); // Retorna o DTO
   }
 
   @Delete(':id')
@@ -101,12 +104,13 @@ export class OffersController {
   @ApiResponse({
     status: 200,
     description: 'Oferta excluída com sucesso.',
-    type: Offer,
+    type: OfferDetailsDto, // Alterado para OfferDetailsDto
   })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
   @ApiResponse({ status: 404, description: 'Oferta não encontrada.' })
-  async remove(@Param('id') id: string): Promise<Offer> {
-    return this.offersService.remove(id);
+  async remove(@Param('id') id: string): Promise<OfferDetailsDto> {
+    const removedOffer = await this.offersService.remove(id);
+    return new OfferDetailsDto(removedOffer); // Retorna o DTO
   }
 }

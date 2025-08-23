@@ -3,7 +3,6 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsNumber, IsOptional, IsUUID, IsEnum, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { BookingStatus, Prisma } from '@prisma/client';
-// import { CreateAddressDto } from '../../common/dto/create-address.dto'; // REMOVA OU COMENTE ESTA LINHA
 import { AddressDetailsDto } from '../../common/dto/address-details.dto'; // <<-- IMPORTANTE: Importe AddressDetailsDto AQUI
 
 export class BookingDetailsDto {
@@ -150,8 +149,12 @@ export class BookingDetailsDto {
     coupon?: { code: string } | null; // NEW: Include coupon code
     // O construtor espera um objeto que tenha o 'id' e as outras propriedades do Address do Prisma
     address?: {
-      id: string; cep: string; street: string; number: string;
-      complement: string | null; neighborhood: string; city: string; state: string;
+      id?: string; // ID pode ser opcional ao construir a partir de um objeto parcial
+      cep: string; street: string; number: string;
+      complement?: string | null; // CORREÇÃO: Tornar complement opcional aqui
+      neighborhood: string; city: string; state: string;
+      latitude: Prisma.Decimal | number; // Aceita Decimal ou number
+      longitude: Prisma.Decimal | number; // Aceita Decimal ou number
     } | null; // <-- Tipo no construtor para o que vem do Prisma
 
     client?: { user?: { avatarUrl?: string | null; }; fullName: string; email?: string; };
@@ -177,7 +180,11 @@ export class BookingDetailsDto {
 
     this.addressId = data.addressId === undefined ? null : data.addressId;
     // CORREÇÃO FINAL: Mapeia o objeto 'address' do Prisma para uma nova instância de AddressDetailsDto
-    this.address = data.address ? new AddressDetailsDto(data.address) : null; 
+    this.address = data.address ? new AddressDetailsDto({
+      ...data.address,
+      latitude: typeof data.address.latitude === 'object' ? data.address.latitude.toNumber() : data.address.latitude,
+      longitude: typeof data.address.longitude === 'object' ? data.address.longitude.toNumber() : data.address.longitude,
+    }) : null; 
 
     this.couponId = data.couponId === undefined ? null : data.couponId; // NEW
     this.couponCode = data.coupon?.code || null; // NEW

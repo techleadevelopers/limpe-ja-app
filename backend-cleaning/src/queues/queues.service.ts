@@ -66,7 +66,16 @@ export class QueuesService {
     const queue = this.getQueueInstance(queueName);
 
     try {
-      await queue.add(jobName, data, options); // Passa todas as opções diretamente
+      // Aplicar opções padrão se não forem fornecidas
+      const finalOptions: CustomJobOptions = {
+        attempts: options?.attempts ?? 3, // Padrão de 3 tentativas
+        backoff: options?.backoff ?? { type: 'exponential', delay: 1000 }, // Padrão de backoff exponencial
+        removeOnComplete: options?.removeOnComplete ?? true, // Remove jobs concluídos por padrão
+        removeOnFail: options?.removeOnFail ?? false, // Mantém jobs falhos para inspeção por padrão
+        ...options, // Sobrescreve com opções específicas fornecidas
+      };
+
+      await queue.add(jobName, data, finalOptions); // Passa todas as opções diretamente
       this.logger.log(`Tarefa '${jobName}' adicionada à fila '${queueName}' com dados: ${JSON.stringify(data)}.`);
     } catch (error) {
       this.logger.error(`Erro ao adicionar tarefa '${jobName}' à fila '${queueName}': ${error.message}`);
@@ -108,6 +117,7 @@ export class QueuesService {
         type: 'exponential',
         delay: 1000, // Atraso inicial de 1 segundo, exponencial
       },
+      removeOnFail: false, // Manter falhas para análise
     });
   }
 
@@ -123,6 +133,7 @@ export class QueuesService {
         type: 'exponential',
         delay: 1000,
       },
+      removeOnFail: false, // Manter falhas para análise
     });
   }
 
@@ -133,11 +144,12 @@ export class QueuesService {
    */
   async addDisputeJob(name: string, data: any): Promise<void> {
     return this.addJob('disputes', name, data, {
-      attempts: 3,
+      attempts: 5, // Mais tentativas para disputas, pois são críticas
       backoff: {
         type: 'exponential',
-        delay: 1000,
+        delay: 5000, // Atraso maior
       },
+      removeOnFail: false, // Manter falhas para análise
     });
   }
 
@@ -149,6 +161,7 @@ export class QueuesService {
   async addDataExportJob(name: string, data: any): Promise<void> {
     return this.addJob('data_export', name, data, {
       attempts: 1, // Não retentar exportações de dados que falharam
+      removeOnFail: true, // Remover falhas para não acumular
     });
   }
 

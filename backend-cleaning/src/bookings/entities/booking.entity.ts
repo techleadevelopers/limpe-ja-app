@@ -30,7 +30,8 @@ export class BookingEntity implements PrismaBooking {
   addressId: string | null; // O tipo é string | null, conforme definido no schema.prisma (String?)
   // ADICIONADO: Relação address também pode ser null
   address?: {
-    id: string; cep: string; street: string; number: string;
+    id?: string; // Adicionado id como opcional para o construtor
+    cep: string; street: string; number: string;
     complement: string | null; neighborhood: string; city: string; state: string;
     // CORREÇÃO: Adicionado latitude e longitude à tipagem do Address
     latitude: Prisma.Decimal;
@@ -61,13 +62,22 @@ export class BookingEntity implements PrismaBooking {
     // CORREÇÃO: Garanta que as datas sejam objetos Date
     if (partial.createdAt && typeof partial.createdAt === 'string') {
       this.createdAt = new Date(partial.createdAt);
+    } else if (partial.createdAt instanceof Date) {
+      this.createdAt = partial.createdAt;
     }
+
     if (partial.updatedAt && typeof partial.updatedAt === 'string') {
       this.updatedAt = new Date(partial.updatedAt);
+    } else if (partial.updatedAt instanceof Date) {
+      this.updatedAt = partial.updatedAt;
     }
+
     if (partial.scheduledDate && typeof partial.scheduledDate === 'string') {
       this.scheduledDate = new Date(partial.scheduledDate);
+    } else if (partial.scheduledDate instanceof Date) {
+      this.scheduledDate = partial.scheduledDate;
     }
+
 
     // O status é atribuído diretamente, o TS agora deve aceitar o enum completo
     // Se partial.status for undefined, o tipo inferido será BookingStatus | undefined

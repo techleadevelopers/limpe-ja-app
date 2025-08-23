@@ -2,6 +2,20 @@
 import { Offer as PrismaOffer } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+// Adicionado enums para consistência com o backend
+export enum OfferTarget {
+  GENERAL = 'GENERAL',
+  SPECIFIC_SERVICE = 'SPECIFIC_SERVICE',
+  SPECIFIC_PROVIDER = 'SPECIFIC_PROVIDER',
+  NEW_CLIENTS = 'NEW_CLIENTS',
+}
+
+export enum OfferStatus {
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
+  EXPIRED = 'EXPIRED',
+}
+
 export class Offer implements PrismaOffer {
   @ApiProperty({ description: 'ID da oferta', example: 'uuid-da-oferta' })
   id: string;
@@ -23,6 +37,15 @@ export class Offer implements PrismaOffer {
 
   @ApiPropertyOptional({ description: 'URL da imagem promocional', example: 'https://example.com/offer-image.jpg' })
   imageUrl: string | null;
+
+  @ApiProperty({ enum: OfferTarget, description: 'Alvo da oferta (ex: GENERAL, SPECIFIC_PROVIDER)', example: OfferTarget.GENERAL })
+  target: OfferTarget;
+
+  @ApiPropertyOptional({ description: 'ID do alvo específico (ex: providerId ou serviceId)', example: 'uuid-do-provedor' })
+  targetId: string | null;
+
+  @ApiProperty({ enum: OfferStatus, description: 'Status da oferta', example: OfferStatus.ACTIVE })
+  status: OfferStatus;
 
   @ApiProperty({ description: 'Data de criação da oferta', example: '2025-06-01T00:00:00.000Z' })
   createdAt: Date;

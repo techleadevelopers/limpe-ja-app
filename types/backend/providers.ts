@@ -9,6 +9,15 @@ import { ProviderServiceOffering } from './provider-service';
 // CORREÇÃO: Re-exportar ProviderServiceOffering para que outros módulos possam importá-lo daqui
 export { ProviderServiceOffering };
 
+/**
+ * NOVO: Tipagem para as métricas de performance do provedor.
+ * Adicionado conforme o relatório.
+ */
+export interface ProviderMetrics {
+  acceptanceRate: number;
+  avgResponseTime: number; // em minutos
+}
+
 // CORREÇÃO: Definir e exportar TransactionType
 export enum TransactionType {
   PAYMENT = 'PAYMENT', // Corresponde ao Pagamento de Serviço (ou EARNING)
@@ -70,6 +79,7 @@ export interface ProviderDisplayInfo {
     role: UserRole;
     isVerified: boolean;
   };
+  metrics?: ProviderMetrics; // NOVO: Adicionado métricas ao ProviderDisplayInfo
 }
 
 /**
@@ -233,6 +243,7 @@ export interface ProviderDashboard {
   averageRating?: number;
   reviews?: ProviderReview[]; // Alterado para a seção de reviews
   userProfile?: UserProfile;
+  metrics?: ProviderMetrics; // NOVO: Adicionado métricas ao dashboard
 }
 
 /**

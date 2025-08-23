@@ -11,7 +11,9 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { QueuesModule } from '../queues/queues.module';
 import { PricingModule } from '../pricing/pricing.module';
 import { CouponsModule } from '../coupons/coupons.module';
-import { LoyaltyModule } from '../loyalty/loyalty.module'; // <--- CORREÇÃO: Adicionado o LoyaltyModule
+import { LoyaltyModule } from '../loyalty/loyalty.module';
+import { MissionsModule } from '../missions/missions.module'; // já tínhamos injetado Missões
+import { ReferralsModule } from '../referrals/referrals.module'; // ✅ NOVO
 
 @Module({
   imports: [
@@ -24,7 +26,9 @@ import { LoyaltyModule } from '../loyalty/loyalty.module'; // <--- CORREÇÃO: A
     forwardRef(() => QueuesModule),
     forwardRef(() => PricingModule),
     forwardRef(() => CouponsModule),
-    LoyaltyModule, // <--- CORREÇÃO: Adicionado o LoyaltyModule para resolver a dependência do LoyaltyService
+    LoyaltyModule,
+    forwardRef(() => MissionsModule),
+    forwardRef(() => ReferralsModule), // ✅ ADICIONADO para resolver ReferralsService no BookingsService
   ],
   controllers: [BookingsController],
   providers: [BookingsService],

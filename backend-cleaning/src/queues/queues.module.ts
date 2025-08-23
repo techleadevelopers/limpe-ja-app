@@ -1,16 +1,19 @@
-// backend-cleaning/src/queues/queues.module.ts
-import { Module, forwardRef } from '@nestjs/common';
+import { HttpModule } from '@nestjs/axios';
 import { BullModule } from '@nestjs/bull';
-import { QueuesService } from './queues.service';
-import { VerificationWorker } from './workers/verification.worker';
-import { NotificationWorker } from './workers/notification.worker';
+import { Module, forwardRef } from '@nestjs/common';
+import { DisputeModule } from '../disputes/dispute.module';
+import { DocumentProcessingModule } from '../document-processing/document-processing.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { PrismaModule } from '../prisma/prisma.module';
-import { VerificationModule } from '../verification/verification.module';
-import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import { ProvidersModule } from '../providers/providers.module';
-import { DocumentProcessingModule } from '../document-processing/document-processing.module';
-import { HttpModule } from '@nestjs/axios';
+import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
+import { VerificationModule } from '../verification/verification.module';
+import { QueuesService } from './queues.service';
+import { DisputeWorker } from './workers/dispute.worker';
+import { NotificationWorker } from './workers/notification.worker';
+import { VerificationWorker } from './workers/verification.worker';
+// ✅ importe seu módulo de i18n
+import { I18nModule } from '../common/i18n/i18n.module';
 
 @Module({
   imports: [
@@ -21,6 +24,12 @@ import { HttpModule } from '@nestjs/axios';
           port: parseInt(process.env.REDIS_PORT || '6379', 10),
           password: process.env.REDIS_PASSWORD || undefined,
         },
+        defaultJobOptions: {
+          attempts: 3,
+          backoff: { type: 'exponential', delay: 1000 },
+          removeOnComplete: true,
+          removeOnFail: false,
+        },
       }),
     }),
     BullModule.registerQueue(
@@ -30,20 +39,18 @@ import { HttpModule } from '@nestjs/axios';
       { name: 'data_export' },
       { name: 'subscription-generation' },
     ),
-    NotificationsModule, // Importado para que NotificationsService possa ser injetado
     PrismaModule,
+    HttpModule,
+    ProvidersModule,
+    DocumentProcessingModule,
+    NotificationsModule,
     forwardRef(() => VerificationModule),
     forwardRef(() => SubscriptionsModule),
-    HttpModule,
-    ProvidersModule, // Importado para que ProvidersService possa ser injetado no worker
-    DocumentProcessingModule,
+    forwardRef(() => DisputeModule),
+    I18nModule, // ✅ garante I18nService aqui também
   ],
   controllers: [],
-  providers: [
-    QueuesService,
-    VerificationWorker, // O worker agora terá acesso a NotificationsService e ProvidersService
-    NotificationWorker,
-  ],
+  providers: [QueuesService, VerificationWorker, NotificationWorker, DisputeWorker],
   exports: [QueuesService, BullModule],
 })
 export class QueuesModule {}

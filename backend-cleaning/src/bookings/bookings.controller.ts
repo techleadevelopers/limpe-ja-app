@@ -11,13 +11,17 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { BookingStatus, UserRole } from '@prisma/client';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
-import { ReportDisputeDto } from './dto/report-dispute.dto'; // Importe o novo DTO de disputa
+import { ReportDisputeDto, DisputeReason } from './dto/report-dispute.dto'; // Importe o novo DTO de disputa
 import { MessageResponseDto } from '../common/dto/message-response.dto'; // Para mensagens de sucesso
+import { I18nService } from '../common/i18n/i18n.service'; // Importar I18nService
 
 @ApiTags('bookings')
 @Controller('bookings')
 export class BookingsController {
-  constructor(private readonly bookingsService: BookingsService) {}
+  constructor(
+    private readonly bookingsService: BookingsService,
+    private readonly i18n: I18nService, // Injetar I18nService
+  ) {}
 
   @Post()
   @Roles(UserRole.CLIENT) // Apenas clientes podem criar agendamentos
@@ -30,7 +34,8 @@ export class BookingsController {
   @ApiResponse({ status: 404, description: 'Provedor ou serviço do provedor não encontrado.' })
   async create(@Req() req: Request, @Body() createBookingDto: CreateBookingDto): Promise<BookingDetailsDto> {
     const userId = req.user['userId'];
-    const booking = await this.bookingsService.create(userId, createBookingDto);
+    // Passar o objeto 'req' completo para o service para que ele possa extrair o locale
+    const booking = await this.bookingsService.create(userId, createBookingDto, req);
     return new BookingDetailsDto(booking);
   }
 
@@ -54,7 +59,8 @@ export class BookingsController {
     @Body() createBookingDto: CreateBookingDto, // O mesmo DTO de entrada do agendamento
   ): Promise<BookingAndPixResponseDto> {
     const userId = req.user['userId'];
-    const { booking, pixCharge } = await this.bookingsService.createBookingAndPixCharge(userId, createBookingDto);
+    // Passar o objeto 'req' completo para o service para que ele possa extrair o locale
+    const { booking, pixCharge } = await this.bookingsService.createBookingAndPixCharge(userId, createBookingDto, req);
 
     // Retorna o DTO combinado
     return {
@@ -72,7 +78,8 @@ export class BookingsController {
   async findMyBookings(@Req() req: Request, @Query('status') status?: BookingStatus): Promise<BookingDetailsDto[]> {
     const userId = req.user['userId'];
     const userRole = req.user['role'];
-    const bookings = await this.bookingsService.findUserBookings(userId, userRole, status);
+    // Passar o objeto 'req' completo para o service para que ele possa extrair o locale
+    const bookings = await this.bookingsService.findUserBookings(userId, userRole, status, req);
     return bookings.map(booking => new BookingDetailsDto(booking));
   }
 
@@ -87,10 +94,12 @@ export class BookingsController {
   async findOne(@Req() req: Request, @Param('id') id: string): Promise<BookingDetailsDto> {
     const userId = req.user['userId'];
     const userRole = req.user['role'];
-    const booking = await this.bookingsService.findOne(id);
+    // Passar o objeto 'req' completo para o service para que ele possa extrair o locale
+    const booking = await this.bookingsService.findOne(id, req);
 
     if (!booking) {
-      throw new NotFoundException(`Agendamento com ID "${id}" não encontrado.`);
+      // Usar o I18nService para mensagens de erro
+      throw new NotFoundException(await this.i18n.translate('booking.notFound', (req as any).locale, { id }));
     }
 
     // Verifica se o usuário tem permissão para ver este agendamento
@@ -99,7 +108,8 @@ export class BookingsController {
     const isAdmin = userRole === UserRole.ADMIN;
 
     if (!isClientOfBooking && !isProviderOfBooking && !isAdmin) {
-      throw new ForbiddenException('Você não tem permissão para acessar este agendamento.');
+      // Usar o I18nService para mensagens de erro
+      throw new ForbiddenException(await this.i18n.translate('booking.forbidden.access', (req as any).locale));
     }
 
     return new BookingDetailsDto(booking);
@@ -122,20 +132,25 @@ export class BookingsController {
     const userId = req.user['userId'];
     const userRole = req.user['role'];
 
-    const booking = await this.bookingsService.findOne(id);
+    // Passar o objeto 'req' completo para o service para que ele possa extrair o locale
+    const booking = await this.bookingsService.findOne(id, req);
     if (!booking) {
-      throw new NotFoundException(`Agendamento com ID "${id}" não encontrado.`);
+      // Usar o I18nService para mensagens de erro
+      throw new NotFoundException(await this.i18n.translate('booking.notFound', (req as any).locale, { id }));
     }
 
     // Lógica de autorização para atualização de status
     if (userRole === UserRole.CLIENT && booking.client.userId !== userId) {
-      throw new ForbiddenException('Você não tem permissão para atualizar este agendamento.');
+      // Usar o I18nService para mensagens de erro
+      throw new ForbiddenException(await this.i18n.translate('booking.forbidden.updateStatus', (req as any).locale));
     }
     if (userRole === UserRole.PROVIDER && booking.provider.userId !== userId) {
-      throw new ForbiddenException('Você não tem permissão para atualizar este agendamento.');
+      // Usar o I18nService para mensagens de erro
+      throw new ForbiddenException(await this.i18n.translate('booking.forbidden.updateStatus', (req as any).locale));
     }
 
-    const updatedBooking = await this.bookingsService.updateStatus(id, updateBookingStatusDto.status, userRole);
+    // Passar o objeto 'req' completo para o service para que ele possa extrair o locale
+    const updatedBooking = await this.bookingsService.updateStatus(id, updateBookingStatusDto.status, userRole, req);
     return new BookingDetailsDto(updatedBooking);
   }
 
@@ -151,16 +166,20 @@ export class BookingsController {
   @ApiResponse({ status: 404, description: 'Agendamento não encontrado.' })
   async cancelBooking(@Req() req: Request, @Param('id') id: string): Promise<BookingDetailsDto> {
     const userId = req.user['userId'];
-    const booking = await this.bookingsService.findOne(id);
+    // Passar o objeto 'req' completo para o service para que ele possa extrair o locale
+    const booking = await this.bookingsService.findOne(id, req);
 
     if (!booking) {
-      throw new NotFoundException(`Agendamento com ID "${id}" não encontrado.`);
+      // Usar o I18nService para mensagens de erro
+      throw new NotFoundException(await this.i18n.translate('booking.notFound', (req as any).locale, { id }));
     }
     if (booking.client.userId !== userId) {
-      throw new ForbiddenException('Você não tem permissão para cancelar este agendamento.');
+      // Usar o I18nService para mensagens de erro
+      throw new ForbiddenException(await this.i18n.translate('booking.forbidden.updateStatus', (req as any).locale));
     }
 
-    const updatedBooking = await this.bookingsService.updateStatus(id, BookingStatus.CANCELED, UserRole.CLIENT);
+    // Passar o objeto 'req' completo para o service para que ele possa extrair o locale
+    const updatedBooking = await this.bookingsService.updateStatus(id, BookingStatus.CANCELED, UserRole.CLIENT, req);
     return new BookingDetailsDto(updatedBooking);
   }
 
@@ -180,11 +199,13 @@ export class BookingsController {
     @Body('reason') reason: string,
   ): Promise<BookingDetailsDto> {
     if (!reason || reason.trim().length === 0) {
-      throw new BadRequestException('O motivo do problema é obrigatório.');
+      // Usar o I18nService para mensagens de erro
+      throw new BadRequestException(await this.i18n.translate('booking.badRequest.issueReasonRequired', (req as any).locale));
     }
     const userId = req.user['userId'];
     const userRole = req.user['role'];
-    const updatedBooking = await this.bookingsService.reportIssue(id, userId, userRole, reason);
+    // Passar o objeto 'req' completo para o service para que ele possa extrair o locale
+    const updatedBooking = await this.bookingsService.reportIssue(id, userId, userRole, reason, req);
     return new BookingDetailsDto(updatedBooking);
   }
 
@@ -207,8 +228,10 @@ export class BookingsController {
   ): Promise<MessageResponseDto> {
     const userId = req.user['userId'];
     const userRole = req.user['role'];
-    await this.bookingsService.reportDispute(bookingId, userId, userRole, reportDisputeDto);
-    return { message: 'Disputa reportada com sucesso. Nossa equipe analisará e entrará em contato.' };
+    // Passar o objeto 'req' completo para o service para que ele possa extrair o locale
+    await this.bookingsService.reportDispute(bookingId, userId, userRole, reportDisputeDto, req);
+    // Usar o I18nService para mensagens de sucesso
+    return { message: await this.i18n.translate('booking.disputeReportedSuccess', (req as any).locale) };
   }
 
   @Patch(':id/resolve-dispute')
@@ -222,15 +245,18 @@ export class BookingsController {
   @ApiResponse({ status: 404, description: 'Agendamento ou disputa não encontrada.' })
   @ApiResponse({ status: 400, description: 'Requisição inválida.' })
   async resolveDispute(
+    @Req() req: Request, // Adicionado req aqui
     @Param('id') bookingId: string,
     @Body('resolution') resolution: string,
     @Body('refundAmount') refundAmount?: number,
     @Body('newStatus') newStatus?: BookingStatus,
   ): Promise<BookingDetailsDto> {
     if (!resolution || resolution.trim().length === 0) {
-      throw new BadRequestException('A resolução da disputa é obrigatória.');
+      // Usar o I18nService para mensagens de erro
+      throw new BadRequestException(await this.i18n.translate('booking.badRequest.disputeResolutionRequired', (req as any).locale));
     }
-    const updatedBooking = await this.bookingsService.resolveDispute(bookingId, resolution, refundAmount, newStatus);
+    // Passar o objeto 'req' completo para o service para que ele possa extrair o locale
+    const updatedBooking = await this.bookingsService.resolveDispute(bookingId, resolution, refundAmount, newStatus, req);
     return new BookingDetailsDto(updatedBooking);
   }
 }

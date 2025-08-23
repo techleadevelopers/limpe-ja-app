@@ -17,7 +17,7 @@ import { ChatModule } from './chat/chat.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { OffersModule } from './offers/offers.module';
 import { PaymentsModule } from './payments/payments.module';
-import { SearchModule } from './search/search.module';
+import { SearchModule }  from './search/search.module';
 import { VerificationModule } from './verification/verification.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { EarningsModule } from './earnings/earnings.module';
@@ -35,12 +35,17 @@ import { GuaranteeModule } from './guarantee/guarantee.module';
 import { PricingModule } from './pricing/pricing.module';
 import { GeocodingModule } from './geocoding/geocoding.module';
 
-// Importe o SentryModule da forma correta
+// Sentry
 import { SentryModule } from '@sentry/nestjs/setup';
 
-// Importar os novos módulos de Loyalty e Ranking
-import { LoyaltyModule } from './loyalty/loyalty.module'; // <--- NOVA LINHA
-import { RankingModule } from './ranking/ranking.module'; // <--- NOVA LINHA
+// Loyalty e Ranking
+import { LoyaltyModule } from './loyalty/loyalty.module';
+import { RankingModule } from './ranking/ranking.module';
+
+// 🔹 MISSIONS
+import { MissionsModule } from './missions/missions.module';
+// 🔹 DISPUTES
+import { DisputeModule } from './disputes/dispute.module'; // CORRIGIDO: O caminho da importação de './disputes/' para './dispute/'
 
 @Module({
   imports: [
@@ -63,8 +68,6 @@ import { RankingModule } from './ranking/ranking.module'; // <--- NOVA LINHA
         }],
       }),
     }),
-    // O SentryModule deve ser importado sem argumentos, pois a inicialização
-    // já foi feita no arquivo `instrument.ts` ou `main.ts`
     SentryModule.forRoot(),
     PrismaModule,
     AuthModule,
@@ -94,8 +97,12 @@ import { RankingModule } from './ranking/ranking.module'; // <--- NOVA LINHA
     GuaranteeModule,
     PricingModule,
     GeocodingModule,
-    LoyaltyModule, // <--- NOVA LINHA: Adicionado LoyaltyModule
-    RankingModule, // <--- NOVA LINHA: Adicionado RankingModule
+    LoyaltyModule,
+    RankingModule,
+    // 🔹 Adicionado: módulo de Missões
+    MissionsModule,
+    // 🔹 Adicionado: módulo de Disputas
+    DisputeModule, // Mantém o nome correto do módulo
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,22 +1,19 @@
+// app/(client)/explore/components/home/SecaoPrestadores.tsx
+
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useRef } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated } from 'react-native'; // Importado Animated
 
-// CORREÇÃO: Importa a interface ProviderDisplayInfo do seu local comum e completo
-import { ProviderDisplayInfo } from '../../../../types/backend/providers'; // AJUSTE O CAMINHO CONFORME A ESTRUTURA REAL DO SEU PROJETO
-
-// REMOVIDO: A definição local da interface ProviderDisplayInfo foi removida daqui.
-// Ela deve ser importada do arquivo de tipos centralizado.
+import { ProviderDisplayInfo } from '../../../../types/backend/providers';
 
 interface SecaoPrestadoresProps {
   titulo: string;
-  data: ProviderDisplayInfo[]; // Já estava como ProviderDisplayInfo[]
+  data: ProviderDisplayInfo[]; // Já estava correto
   onVerTudoPress: () => void;
   titleColor?: string;
-  noDataText?: string; // Adicionado para exibir mensagem quando não há dados
-  horizontal?: boolean; // Adicionada prop horizontal para ser consistente com SecaoContainer
-  // NOVO: Adiciona a prop renderItem
- renderItem: ({ item, index }: { item: ProviderDisplayInfo; index: number }) => React.ReactElement | null;
+  noDataText?: string;
+  horizontal?: boolean;
+  renderItem: ({ item, index }: { item: ProviderDisplayInfo; index: number }) => React.ReactElement | null;
 }
 
 const SecaoPrestadores: React.FC<SecaoPrestadoresProps> = ({
@@ -24,28 +21,50 @@ const SecaoPrestadores: React.FC<SecaoPrestadoresProps> = ({
   data,
   onVerTudoPress,
   titleColor = '#202633',
-  noDataText = 'Nenhum prestador disponível no momento.', // Default para o texto de não dados
-  horizontal = false, // Default para false
-  renderItem, // <-- DESESTRUTURADO AQUI!
+  noDataText = 'Nenhum prestador disponível no momento.',
+  horizontal = false,
+  renderItem,
 }) => {
-  // `router` e `handlePrestadorPress` não são mais necessários aqui se `renderItem` renderizar o `ProviderCard`
-  // const router = useRouter(); // Comentado, pois não é usado
-  // const handlePrestadorPress = useCallback((prestadorId: string) => { /* ... */ }, []); // Comentado, pois não é usado
+  const arrowAnim = useRef(new Animated.Value(0)).current; // Animação para a seta
+
+  const onPressInViewAll = () => {
+    Animated.spring(arrowAnim, {
+      toValue: 5, // Desloca a seta para a frente
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const onPressOutViewAll = () => {
+    Animated.spring(arrowAnim, {
+      toValue: 0, // Retorna a seta à posição original
+      friction: 3,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={[styles.sectionTitle, { color: titleColor }]}>{titulo}</Text>
         {onVerTudoPress && (
-          <TouchableOpacity onPress={onVerTudoPress} style={styles.viewAllButton}>
-            <Text style={styles.viewAllText}>Ver Tudo <Ionicons name="arrow-forward" size={14} color="#007BFF" /></Text>
+          <TouchableOpacity
+            onPress={onVerTudoPress}
+            style={styles.viewAllButton}
+            onPressIn={onPressInViewAll}
+            onPressOut={onPressOutViewAll}
+          >
+            <Text style={styles.viewAllText}>Ver Tudo </Text>
+            <Animated.View style={{ transform: [{ translateX: arrowAnim }] }}>
+              <Ionicons name="arrow-forward" size={14} color="#007BFF" />
+            </Animated.View>
           </TouchableOpacity>
         )}
       </View>
 
       <ScrollView horizontal={horizontal} showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cardsScrollContainer}>
         {data.length > 0 ? (
-          data.map((item, index) => renderItem({ item, index })) // <-- USANDO renderItem AQUI!
+          data.map((item, index) => renderItem({ item, index }))
         ) : (
           <Text style={styles.emptyText}>{noDataText}</Text>
         )}
@@ -56,29 +75,29 @@ const SecaoPrestadores: React.FC<SecaoPrestadoresProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 8,
-    marginBottom: 20,
+    marginTop: 2,
+    marginBottom: 5,
     backgroundColor: '#F4F7FC',
   },
   header: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 10,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 17,
     fontWeight: 'bold',
     color: '#202633',
   },
   viewAllButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 5,
+    paddingVertical: 4,
   },
   viewAllText: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#007BFF',
     fontWeight: '600',
   },

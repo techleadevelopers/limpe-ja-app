@@ -158,6 +158,7 @@ enum LoyaltyTransactionType {
 enum MissionAudience {
   CLIENT
   PROVIDER
+  GENERAL // <-- ADICIONE ESTA LINHA
 }
 
 enum MissionKind {
@@ -178,6 +179,21 @@ enum MissionStatus {
 }
 // ====== FIM MISSIONS ENUMS ======
 
+// NOVOS ENUMS PARA OFERTAS
+enum OfferTarget {
+  GENERAL
+  SPECIFIC_SERVICE
+  SPECIFIC_PROVIDER
+  NEW_CLIENTS
+}
+
+enum OfferStatus {
+  ACTIVE
+  INACTIVE
+  EXPIRED
+}
+
+
 // ---------------------------------
 // Models
 // ---------------------------------
@@ -197,6 +213,7 @@ model User {
   deletionScheduledAt   DateTime?
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt
+  preferredLanguage     String?          // NOVO: Para internacionalização (i18n) - idioma preferencial do usuário
 
   client                Client?
   provider              Provider?
@@ -277,6 +294,9 @@ model Provider {
   guaranteeClaims       GuaranteeClaim[]
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
+  // NOVOS CAMPOS ADICIONADOS PARA MÉTRICAS DE PERFORMANCE
+  acceptanceRate        Float             @default(0)
+  averageResponseTime   Int               @default(0) // Em minutos
 }
 
 // Modelo de Endereço
@@ -435,6 +455,9 @@ model Offer {
   fixedDiscountAmount Float?
   validUntil          DateTime
   imageUrl            String?
+  target              OfferTarget // ADICIONADO
+  targetId            String?     // ADICIONADO
+  status              OfferStatus // ADICIONADO
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 }
@@ -737,4 +760,4 @@ model MissionEvent {
   meta      Json?
   createdAt DateTime @default(now())
 }
-// ====== FIM MISSIONS ======
+// ====== FIM MISSIONS ENUMS ======

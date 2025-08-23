@@ -10,9 +10,13 @@ import { Offer } from '../types/backend/offers';
 import {
     ProviderDisplayInfo, // Usado para tipar provedores em listas
     ProviderSearchQuery, // Importado para tipar a query de busca
+    ProviderMetrics, // NOVO: Importar ProviderMetrics
 } from '../types/backend/providers';
 import { Service } from '../types/backend/services';
 import { UserProfile } from '../types/backend/users';
+import { ProviderSearchItem, SearchQuery } from '../types/backend/search'; // NOVO: Importar SearchQuery e ProviderSearchItem
+import { AppliedCoupon, BookingPricing, BookingDetails } from '../types/backend/bookings'; // NOVO: Importar tipos de cupom/precificação
+import { ClientMission, ClientReward } from '../types/backend/mission'; // CORREÇÃO: Importar tipos de missões (verificar caminho e arquivo)
 
 // =========================================================================
 // FUNÇÕES DE SERVIÇO DO CLIENTE - AJUSTADAS PARA USAR A INSTÂNCIA 'api' CENTRALIZADA
@@ -50,7 +54,7 @@ export async function getServiceCategories(): Promise<Service[]> {
 export async function searchProviders(query: ProviderSearchQuery): Promise<ProviderDisplayInfo[]> {
   try {
     // Converte o objeto de query para uma string de query parameters
-    const params = new URLSearchParams(query as any).toString(); 
+    const params = new URLSearchParams(query as any).toString();
     // A requisição é feita usando a instância 'api', que já tem a baseURL configurada
     const response: AxiosResponse<ProviderDisplayInfo[]> = await api.get<ProviderDisplayInfo[]>(`/providers?${params}`); // Assumindo que /providers é o endpoint de busca geral
     return response.data;
@@ -62,6 +66,32 @@ export async function searchProviders(query: ProviderSearchQuery): Promise<Provi
     throw new Error('Erro de rede ou servidor ao buscar provedores.');
   }
 }
+
+/**
+ * NOVO: Realiza uma busca de provedores com base na localização.
+ * Corresponde a GET /providers/search?lat={lat}&lng={lng}&radius={radius}.
+ * @param params Objeto com latitude, longitude e raio.
+ * @returns Promessa com um array de objetos ProviderSearchItem.
+ */
+export async function searchProvidersWithLocation(params: {
+  latitude: number;
+  longitude: number;
+  radius?: number;
+  query?: string; // Adicionado query para busca textual
+}): Promise<ProviderSearchItem[]> {
+  try {
+    // CORREÇÃO AQUI: api.get<ProviderSearchItem[]> em vez de <ProviderSearchItem>
+    const response: AxiosResponse<ProviderSearchItem[]> = await api.get<ProviderSearchItem[]>('/providers/search', { params });
+    return response.data;
+  } catch (error: any) {
+    console.error('Erro ao buscar provedores por localização:', error.response?.data || error.message);
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(error.response.data.message || 'Erro ao buscar provedores por localização.');
+    }
+    throw new Error('Erro de rede ou servidor ao buscar provedores por localização.');
+  }
+}
+
 
 /**
  * @function getUserProfile
@@ -104,6 +134,45 @@ export async function getOffers(): Promise<Offer[]> {
 }
 
 /**
+ * NOVO: Obtém as ofertas disponíveis para um provedor específico.
+ * Corresponde a GET /providers/:providerId/offers.
+ * @param providerId O ID do provedor.
+ * @returns Promessa com um array de objetos Offer.
+ */
+export async function getProviderOffers(providerId: string): Promise<Offer[]> {
+  try {
+    const response: AxiosResponse<Offer[]> = await api.get<Offer[]>(`/providers/${providerId}/offers`);
+    return response.data;
+  } catch (error: any) {
+    console.error(`Erro ao buscar ofertas do provedor ${providerId}:`, error.response?.data || error.message);
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(error.response.data.message || `Erro ao buscar ofertas do provedor ${providerId}.`);
+    }
+    throw new Error(`Erro de rede ou servidor ao buscar ofertas do provedor ${providerId}.`);
+  }
+}
+
+/**
+ * NOVO: Aplica um cupom a um agendamento.
+ * Corresponde a POST /bookings/:bookingId/apply-coupon.
+ * @param bookingId O ID do agendamento.
+ * @param code O código do cupom.
+ * @returns Promessa com o objeto BookingPricing atualizado.
+ */
+export async function applyCoupon(bookingId: string, code: string): Promise<BookingPricing> {
+  try {
+    const response: AxiosResponse<BookingPricing> = await api.post<BookingPricing>(`/bookings/${bookingId}/apply-coupon`, { code });
+    return response.data;
+  } catch (error: any) {
+    console.error(`Erro ao aplicar cupom ao agendamento ${bookingId}:`, error.response?.data || error.message);
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(error.response.data.message || `Erro ao aplicar cupom ao agendamento ${bookingId}.`);
+    }
+    throw new Error(`Erro de rede ou servidor ao aplicar cupom ao agendamento ${bookingId}.`);
+  }
+}
+
+/**
  * @function getProviderDetails
  * Obtém os detalhes de um provedor específico por ID.
  * Corresponde a GET /providers/:id.
@@ -127,6 +196,26 @@ export async function getProviderDetails(providerId: string): Promise<ProviderDi
 }
 
 /**
+ * NOVO: Obtém as métricas de performance de um provedor.
+ * Corresponde a GET /providers/:providerId/metrics.
+ * @param providerId O ID do provedor.
+ * @returns Promessa com o objeto ProviderMetrics.
+ */
+export async function getProviderMetrics(providerId: string): Promise<ProviderMetrics> {
+  try {
+    const response: AxiosResponse<ProviderMetrics> = await api.get<ProviderMetrics>(`/providers/${providerId}/metrics`);
+    return response.data;
+  } catch (error: any) {
+    console.error(`Erro ao buscar métricas do provedor ${providerId}:`, error.response?.data || error.message);
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(error.response.data.message || `Erro ao buscar métricas do provedor ${providerId}.`);
+    }
+    throw new Error(`Erro de rede ou servidor ao buscar métricas do provedor ${providerId}.`);
+  }
+}
+
+
+/**
  * @function updateClientProfile
  * Atualiza o perfil do cliente logado.
  * Corresponde a PATCH /clients/me.
@@ -144,5 +233,42 @@ export async function updateClientProfile(data: UpdateClientProfileDto): Promise
       throw new Error(error.response.data.message || 'Erro ao atualizar perfil do cliente.');
     }
     throw new Error('Erro de rede ou servidor ao atualizar perfil do cliente.');
+  }
+}
+
+/**
+ * NOVO: Obtém a lista de missões disponíveis para o cliente.
+ * Corresponde a GET /missions/client.
+ * @returns Promessa com um array de objetos ClientMission.
+ */
+export async function getClientMissions(): Promise<ClientMission[]> {
+  try {
+    const response: AxiosResponse<ClientMission[]> = await api.get<ClientMission[]>('/missions/client');
+    return response.data;
+  } catch (error: any) {
+    console.error('Erro ao buscar missões do cliente:', error.response?.data || error.message);
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(error.response.data.message || 'Erro ao buscar missões do cliente.');
+    }
+    throw new Error('Erro de rede ou servidor ao buscar missões do cliente.');
+  }
+}
+
+/**
+ * NOVO: Resgata a recompensa de uma missão concluída pelo cliente.
+ * Corresponde a POST /missions/:missionId/claim.
+ * @param missionId O ID da missão a ser resgatada.
+ * @returns Promessa com o objeto ClientReward.
+ */
+export async function claimClientReward(missionId: string): Promise<ClientReward> {
+  try {
+    const response: AxiosResponse<ClientReward> = await api.post<ClientReward>(`/missions/${missionId}/claim`);
+    return response.data;
+  } catch (error: any) {
+    console.error(`Erro ao resgatar recompensa da missão ${missionId}:`, error.response?.data || error.message);
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(error.response.data.message || `Erro ao resgatar recompensa da missão ${missionId}.`);
+    }
+    throw new Error(`Erro de rede ou servidor ao resgatar recompensa da missão ${missionId}.`);
   }
 }

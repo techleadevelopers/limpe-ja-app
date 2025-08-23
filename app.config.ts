@@ -40,6 +40,7 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => {
     },
     "plugins": [
       "expo-router",
+       "expo-localization",
       [
         "expo-splash-screen",
         {

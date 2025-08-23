@@ -1,62 +1,68 @@
 // src/offers/dto/offer-details.dto.ts
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Offer } from '@prisma/client';
-import { IsString, IsNotEmpty, IsOptional, IsNumber, IsDate, IsUrl } from 'class-validator';
-import { Type } from 'class-transformer';
+import { ApiProperty } from '@nestjs/swagger';
+import {
+  Offer as PrismaOffer,
+  OfferStatus,
+  OfferTarget,
+} from '@prisma/client';
 
+/**
+ * DTO de resposta padronizada para ofertas.
+ * Alinhado com o modelo do Prisma para evitar conflitos de enumeração.
+ */
 export class OfferDetailsDto {
-  @ApiProperty({ description: 'ID único da oferta', example: 'uuid-da-oferta' })
-  @IsString()
+  @ApiProperty()
   id: string;
 
-  @ApiProperty({ description: 'Título da oferta', example: 'Desconto de 20% na primeira limpeza' })
-  @IsString()
+  @ApiProperty()
   title: string;
 
-  @ApiPropertyOptional({ description: 'Descrição detalhada da oferta', example: 'Válido para novos clientes que agendarem uma limpeza padrão.' })
-  @IsOptional()
-  @IsString()
-  description?: string;
+  @ApiProperty({ required: false, nullable: true })
+  description?: string | null;
 
-  @ApiPropertyOptional({ description: 'Percentual de desconto', example: 20.0 })
-  @IsOptional()
-  @IsNumber()
-  discountPercentage?: number;
+  @ApiProperty({ enum: OfferStatus })
+  status: OfferStatus;
 
-  @ApiPropertyOptional({ description: 'Valor fixo de desconto', example: 50.00 })
-  @IsOptional()
-  @IsNumber()
-  fixedDiscountAmount?: number;
+  @ApiProperty({ enum: OfferTarget })
+  target: OfferTarget;
 
-  @ApiProperty({ description: 'Data de expiração da oferta', example: '2025-12-31T23:59:59.000Z' })
-  @IsDate()
-  @Type(() => Date)
-  validUntil: Date;
+  @ApiProperty({ required: false, nullable: true })
+  targetId?: string | null;
 
-  @ApiPropertyOptional({ description: 'URL da imagem promocional', example: 'https://example.com/offer-image.jpg' })
-  @IsOptional()
-  @IsUrl()
-  imageUrl?: string;
-
-  @ApiProperty({ description: 'Data de criação da oferta', example: '2023-01-01T10:00:00.000Z' })
-  @IsDate()
-  @Type(() => Date)
+  @ApiProperty()
   createdAt: Date;
 
-  @ApiProperty({ description: 'Data da última atualização da oferta', example: '2023-01-01T10:00:00.000Z' })
-  @IsDate()
-  @Type(() => Date)
+  @ApiProperty()
   updatedAt: Date;
 
-  constructor(offer: Offer) {
-    this.id = offer.id;
-    this.title = offer.title;
-    this.description = offer.description;
-    this.discountPercentage = offer.discountPercentage;
-    this.fixedDiscountAmount = offer.fixedDiscountAmount;
-    this.validUntil = offer.validUntil;
-    this.imageUrl = offer.imageUrl;
-    this.createdAt = offer.createdAt;
-    this.updatedAt = offer.updatedAt;
+  @ApiProperty({ required: false, nullable: true })
+  validFrom?: Date | null;
+
+  @ApiProperty()
+  validUntil: Date;
+
+  @ApiProperty({ required: false, nullable: true, type: Number })
+  discountPercentage?: number | null;
+
+  @ApiProperty({ required: false, nullable: true, type: Number })
+  fixedDiscountAmount?: number | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  imageUrl?: string | null;
+
+  constructor(o: PrismaOffer) {
+    this.id = o.id;
+    this.title = (o as any).title ?? (o as any).name ?? ''; // compat
+    this.description = (o as any).description ?? null;
+    this.status = o.status;
+    this.target = o.target;
+    this.targetId = (o as any).targetId ?? null;
+    this.createdAt = o.createdAt;
+    this.updatedAt = o.updatedAt;
+    this.validFrom = 'validFrom' in o ? (o as any).validFrom : null;
+    this.validUntil = (o as any).validUntil;
+    this.discountPercentage = (o as any).discountPercentage ?? null;
+    this.fixedDiscountAmount = (o as any).fixedDiscountAmount ?? null;
+    this.imageUrl = (o as any).imageUrl ?? null;
   }
 }
