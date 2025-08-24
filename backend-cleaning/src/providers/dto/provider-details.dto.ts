@@ -107,6 +107,17 @@ export class ProviderDetailsDto {
   @Type(() => ProviderReviewDto)
   reviews: ProviderReviewDto[];
 
+  // NOVAS PROPRIEDADES
+  @ApiPropertyOptional({ description: 'Taxa de aceitação de agendamentos do provedor (em %)', example: 90 })
+  @IsOptional()
+  @IsNumber()
+  acceptanceRate: number;
+
+  @ApiPropertyOptional({ description: 'Tempo médio de resposta do provedor (em minutos)', example: 15 })
+  @IsOptional()
+  @IsInt()
+  averageResponseTime: number;
+
   constructor(source: ProviderDetailsSource) {
     this.id = source.id;
     this.fullName = source.fullName;
@@ -145,5 +156,9 @@ export class ProviderDetailsDto {
     // Se você precisa das reviews detalhadas aqui, o ProviderWithCalculatedRating precisaria incluí-las ou você buscar de outra fonte.
     // Assumindo que para o DTO de detalhes, as reviews já viriam populadas se necessário.
     this.reviews = []; // Por padrão, vazio, pois ProviderWithCalculatedRating não tem reviewsReceived
+
+    // Atribuir as novas propriedades
+    this.acceptanceRate = source.acceptanceRate;
+    this.averageResponseTime = source.averageResponseTime;
   }
 }

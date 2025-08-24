@@ -372,9 +372,10 @@ export default function ClientProfileScreen() {
                     <AnimatedMenuItem label="Endereços" iconName="location-outline" onPress={() => handleWIP("Endereços")} delay={100} showChevron={false} />
                     <AnimatedMenuItem label="Formas de Pagamento" iconName="card-outline" onPress={() => handleWIP("Formas de Pagamento")} delay={150} showChevron={false} />
                     <AnimatedMenuItem label="Notificações" iconName="notifications" onPress={() => handleWIP("Notificações")} delay={200} showChevron={false} />
-                    <AnimatedMenuItem label="Segurança" iconName="lock-closed" onPress={() => handleWIP("Segurança")} delay={250} showChevron={false} />
+                    {/* MODIFICADO: Item de Segurança agora navega para a tela de Safety */}
+                    <AnimatedMenuItem label="Segurança" iconName="lock-closed" onPress={() => router.push('/(common)/safety' as any)} delay={250} showChevron={false} />
                     <AnimatedMenuItem label="Privacidade" iconName="shield-checkmark" onPress={() => handleWIP("Privacidade")} delay={300} showChevron={false} />
-                    <AnimatedMenuItem label="Ajuda" iconName="help-circle" onPress={() => router.push('/(common)/help' as any)} delay={350} showChevron={false} />
+                    <AnimatedMenuItem label="Minhas Métricas" iconName="stats-chart-outline" onPress={() => router.push('/(client)/metrics' as any)} delay={350} showChevron={false} />
                 </View>
 
                 {/* Cartão de Missões (Substitui a seção Premium) com Reflexo Robusto */}
@@ -426,7 +427,8 @@ export default function ClientProfileScreen() {
                     <AnimatedMenuItem label="Fidelidade" iconName="star-outline" onPress={() => router.push('/(common)/loyalty' as any)} delay={450} showChevron={false} />
                     <AnimatedMenuItem label="Termos de Serviço" iconName="document-text-outline" onPress={() => router.push('/(common)/termos' as any)} delay={500} showChevron={false} />
                     <AnimatedMenuItem label="Política de Privacidade" iconName="shield-outline" onPress={() => router.push('/(common)/privacidade' as any)} delay={550} showChevron={false} />
-                    <AnimatedMenuItem label="Sair da Conta" iconName="log-out-outline" onPress={handleLogout} isDestructive delay={600} showChevron={false} />
+                    <AnimatedMenuItem label="Suporte" iconName="chatbubbles-outline" onPress={() => router.push('/(common)/help' as any)} delay={600} showChevron={false} />
+                    <AnimatedMenuItem label="Sair da Conta" iconName="log-out-outline" onPress={handleLogout} isDestructive delay={650} showChevron={false} />
                 </View>
             </ScrollView>
         </View>

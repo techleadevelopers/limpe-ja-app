@@ -1,6 +1,18 @@
 // LimpeJaApp/src/types/backend/offers.ts
 
 /**
+ * @enum OfferTarget
+ * Enumeração para os tipos de alvo de uma oferta.
+ */
+export enum OfferTarget {
+  ALL = 'ALL',
+  NEW_CLIENTS = 'NEW_CLIENTS', // NOVO
+  FIRST_BOOKING = 'FIRST_BOOKING', // Exemplo de outro alvo
+  SPECIFIC_SERVICE = 'SPECIFIC_SERVICE',
+  SPECIFIC_PROVIDER = 'SPECIFIC_PROVIDER',
+}
+
+/**
  * @interface Offer
  * Representa uma oferta promocional vinda do backend.
  * Alinhado com o que a tela de detalhes da oferta espera exibir.
@@ -10,16 +22,14 @@ export interface Offer {
   title: string;
   description: string;
   imageUrl?: string | null;
-  terms?: string | null; // Termos e condições da oferta
-  discountPercentage?: number | null; // Ex: 30
-  originalPrice?: number | null; // Preço original para mostrar o desconto
-  discountedPrice?: number | null; // Preço já com desconto
-  validUntil?: string | null; // ISO String, data de validade da oferta
-  // Adicione outros campos que seu backend de ofertas possa ter
-  couponCode?: string | null; // Código do cupom associado
-  serviceId?: string | null; // ID do serviço específico ao qual a oferta se aplica
-  providerId?: string | null; // ID do provedor ao qual a oferta se aplica
-  // NOVAS PROPRIEDADES ADICIONADAS:
+  terms?: string | null;
+  discountPercentage?: number | null;
+  originalPrice?: number | null;
+  discountedPrice?: number | null;
+  validUntil?: string | null;
+  couponCode?: string | null;
+  serviceId?: string | null;
+  providerId?: string | null;
   bankName?: string | null;
   bankPaymentText?: string | null;
   buttonText?: string | null;
@@ -28,4 +38,6 @@ export interface Offer {
   badgeDates?: string | null;
   backgroundColorStart?: string | null;
   backgroundColorEnd?: string | null;
+  target?: OfferTarget; // NOVO: Adicionado para indicar o alvo da oferta
+  firstBookingOnly?: boolean; // NOVO: Indica se a oferta é apenas para a primeira reserva
 }

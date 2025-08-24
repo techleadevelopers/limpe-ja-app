@@ -44,9 +44,11 @@ export class UserEntity implements Omit<PrismaUser, 'passwordHash'> {
   updatedAt: Date;
 
   @ApiPropertyOptional({ description: 'Idioma preferencial do usuário', example: 'pt-BR' })
-  preferredLanguage: string | null; // Adicionado para satisfazer PrismaUser
+  preferredLanguage: string | null;
 
-  // Os campos otpCode e otpExpiresAt não fazem parte do seu schema atual e foram removidos para evitar erros.
+  // ADICIONADO: Propriedade myReferralCode
+  @ApiPropertyOptional({ description: 'Código de indicação único do usuário', example: 'ABC123XYZ' })
+  myReferralCode: string | null; // Deve ser string | null para corresponder ao String? no Prisma
 
   constructor(partial: Partial<UserEntity>) {
     Object.assign(this, partial);

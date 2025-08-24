@@ -20,6 +20,7 @@ import { cancelBooking, getBookingDetails } from '../../../services/bookingServi
 
 // >>> IMPORTAR BookingDetails e BookingStatus de forma centralizada <<<
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
+import { PanicBanner } from '../../../components/safety/PanicBanner'; // Importar PanicBanner
 
 // --- ATENÇÃO: A INTERFACE 'Booking' LOCAL FOI REMOVIDA DESTE ARQUIVO ---
 // Era a causa do conflito de tipagem. Agora, BookingDetails é a única fonte de verdade.
@@ -33,6 +34,8 @@ export default function BookingDetailsScreen() {
     const [booking, setBooking] = useState<BookingDetails | null>(null);
     const [isLoading, setIsLoading] = useState(true); // Estado de carregamento
     const [error, setError] = useState<string | null>(null); // Estado para erros
+    // Mock para o status do pânico
+    const [panicStatus, setPanicStatus] = useState<'IDLE'|'RECEIVED'|'ACKED'|'DISPATCHED'|'CLOSED'>('IDLE');
 
     // Animações para os cards de informação
     const providerSectionAnim = useRef(new Animated.Value(0)).current;
@@ -172,6 +175,26 @@ export default function BookingDetailsScreen() {
         });
     };
 
+    // Handler para o botão de pânico
+    const handlePanic = useCallback(() => {
+        Alert.alert(
+            "Acionar Botão de Pânico",
+            "Você tem certeza que deseja acionar o botão de pânico? Nossa equipe de segurança será notificada imediatamente.",
+            [
+                { text: "Cancelar", style: "cancel" },
+                { text: "Acionar", onPress: () => {
+                    setPanicStatus('RECEIVED');
+                    // Simular uma resposta após alguns segundos
+                    setTimeout(() => setPanicStatus('ACKED'), 3000);
+                    setTimeout(() => setPanicStatus('DISPATCHED'), 6000);
+                    setTimeout(() => setPanicStatus('CLOSED'), 10000);
+                    // Aqui você faria a chamada real para o serviço de pânico
+                    console.log("Botão de pânico acionado!");
+                }, style: "destructive" }
+            ]
+        );
+    }, []);
+
     // Função para obter estilos baseados no status do agendamento
     // >>> AGORA USA BookingStatus IMPORTADO <<<
     const getStatusStyle = (status: BookingStatus) => {
@@ -185,8 +208,8 @@ export default function BookingDetailsScreen() {
             // >>> Usar BookingStatus.CANCELLED (2 L's) <<<
             case BookingStatus.CANCELLED:
                 return { color: '#F44336', icon: 'close-circle-outline' as const, badgeBg: '#FFEBEE' };
-            case BookingStatus.PENDING_PROVIDER_CONFIRMATION:
-                return { color: '#FF6F00', icon: 'hourglass-outline' as const, badgeBg: '#FFF3E0' };
+            // REMOVIDO: case BookingStatus.PENDING_PROVIDER_CONFIRMATION: // Este status não está no enum fornecido
+            //     return { color: '#FF6F00', icon: 'hourglass-outline' as const, badgeBg: '#FFF3E0' };
             case BookingStatus.IN_PROGRESS:
                 return { color: '#007AFF', icon: 'sync-circle-outline' as const, badgeBg: '#E3F2FD' };
             case BookingStatus.REJECTED:
@@ -236,6 +259,11 @@ export default function BookingDetailsScreen() {
         <ScrollView style={styles.scrollViewContainer}>
             <Stack.Screen options={{ title: `Detalhes do Serviço` }} />
             
+            {/* PanicBanner injetado aqui */}
+            <View style={styles.panicBannerContainer}>
+                <PanicBanner onPanic={handlePanic} status={panicStatus} />
+            </View>
+
             {/* Seção do Provedor e Status */}
             <Animated.View style={[styles.card, styles.providerSectionCard, { opacity: providerSectionAnim, transform: [{ translateY: providerSectionAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
                 <View style={styles.providerSection}>
@@ -261,7 +289,10 @@ export default function BookingDetailsScreen() {
                 <View style={styles.detailRow}>
                     <Ionicons name="calendar-outline" size={20} color="#555" style={styles.icon} />
                     <Text style={styles.detailLabel}>Data e Hora:</Text>
-                    <Text style={styles.detailValue}>{formatDate(booking.scheduledDateTime, { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}</Text>
+                    <Text style={styles.detailValue}>
+                        {/* CORREÇÃO: Combinar scheduledDate e scheduledTime para criar um objeto Date */}
+                        {formatDate(new Date(`${booking.scheduledDate}T${booking.scheduledTime}`), { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
+                    </Text>
                 </View>
 
                 <View style={styles.detailRow}>
@@ -372,6 +403,10 @@ const styles = StyleSheet.create({
         color: 'red',
         textAlign: 'center',
         marginBottom: 20,
+    },
+    panicBannerContainer: {
+        marginHorizontal: 15,
+        marginTop: 15,
     },
     card: {
         backgroundColor: '#FFFFFF',

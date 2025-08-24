@@ -3,8 +3,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-    ActivityIndicator, // Importar Animated para animações
-    Alert,
+    ActivityIndicator,
+    Alert, // Manter Alert para casos específicos ou como fallback
     Animated,
     Linking,
     Platform,
@@ -14,13 +14,15 @@ import {
     TextInput,
     TouchableOpacity,
     View,
-    Easing, // Importar Easing
+    Easing,
 } from 'react-native';
 
 // Importar o serviço de FAQ
-import { getFaqs } from '../../services/faqService'; // Importa a função getFaqs
+import { getFaqs } from '../../services/faqService';
+import Toast from '../../components/Toast'; // Importar Toast (assumindo NoticeToast)
+import { Skeleton } from '../../components/Skeleton'; // Importar Skeleton
 
-// Interface FAQItem - MANTIDA AQUI (se o backend não tiver um DTO específico)
+// Interface FAQItem
 interface FAQItem {
   id: string;
   question: string;
@@ -35,7 +37,7 @@ const AnimatedFaqItem: React.FC<{
 }> = ({ faq, delay }) => {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(20)).current;
-    const scaleAnim = useRef(new Animated.Value(1)).current; // Para feedback de toque
+    const scaleAnim = useRef(new Animated.Value(1)).current;
 
     useEffect(() => {
         Animated.parallel([
@@ -43,14 +45,14 @@ const AnimatedFaqItem: React.FC<{
                 toValue: 1,
                 duration: 400,
                 delay: delay,
-                easing: Easing.out(Easing.ease), // Adicionado Easing
+                easing: Easing.out(Easing.ease),
                 useNativeDriver: true,
             }),
             Animated.timing(slideAnim, {
                 toValue: 0,
                 duration: 400,
                 delay: delay,
-                easing: Easing.out(Easing.ease), // Adicionado Easing
+                easing: Easing.out(Easing.ease),
                 useNativeDriver: true,
             }),
         ]).start();
@@ -65,7 +67,7 @@ const AnimatedFaqItem: React.FC<{
 
     return (
         <Animated.View style={[styles.faqItem, { opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] }]}>
-            <TouchableOpacity // Adicionado TouchableOpacity para feedback de toque
+            <TouchableOpacity
                 onPress={() => { /* expand/collapse logic here */ }}
                 onPressIn={onPressInItem}
                 onPressOut={onPressOutItem}
@@ -95,14 +97,14 @@ const AnimatedContactButton: React.FC<{
                 toValue: 1,
                 duration: 400,
                 delay: delay,
-                easing: Easing.out(Easing.ease), // Adicionado Easing
+                easing: Easing.out(Easing.ease),
                 useNativeDriver: true,
             }),
             Animated.timing(slideAnim, {
                 toValue: 0,
                 duration: 400,
                 delay: delay,
-                easing: Easing.out(Easing.ease), // Adicionado Easing
+                easing: Easing.out(Easing.ease),
                 useNativeDriver: true,
             }),
         ]).start();
@@ -135,14 +137,14 @@ const AnimatedContactButton: React.FC<{
 export default function HelpScreen() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
-  const [faqs, setFaqs] = useState<FAQItem[]>([]); // Estado para FAQs reais
-  const [isLoadingFaqs, setIsLoadingFaqs] = useState(true); // Estado de carregamento das FAQs
+  const [faqs, setFaqs] = useState<FAQItem[]>([]);
+  const [isLoadingFaqs, setIsLoadingFaqs] = useState(true);
 
   // Animações
   const headerAnim = useRef(new Animated.Value(0)).current;
-  const mainHeaderAnim = useRef(new Animated.Value(0)).current; // Para o título "Como podemos te ajudar?"
+  const mainHeaderAnim = useRef(new Animated.Value(0)).current;
   const searchAnim = useRef(new Animated.Value(0)).current;
-  const sectionCardAnim = useRef(new Animated.Value(0)).current; // Para a seção de FAQ e Contato
+  const sectionCardAnim = useRef(new Animated.Value(0)).current;
 
   // Animação para o botão de voltar do header
   const headerBackButtonScaleAnim = useRef(new Animated.Value(1)).current;
@@ -154,39 +156,43 @@ export default function HelpScreen() {
   const loadFaqs = useCallback(async () => {
     setIsLoadingFaqs(true);
     try {
-        const fetchedFaqs = await getFaqs(); // CHAMA API REAL
+        const fetchedFaqs = await getFaqs();
         setFaqs(fetchedFaqs);
     } catch (error: any) {
         console.error("Erro ao buscar FAQs:", error.response?.data || error.message);
-        Alert.alert("Erro", error.response?.data?.message || "Não foi possível carregar as perguntas frequentes.");
-        setFaqs([]); // Garante que a lista esteja vazia em caso de erro
+        Toast.show({
+            type: 'error',
+            text1: "Erro",
+            text2: error.response?.data?.message || "Não foi possível carregar as perguntas frequentes.",
+        });
+        setFaqs([]);
     } finally {
         setIsLoadingFaqs(false);
         // Animações de entrada após o carregamento
         Animated.stagger(200, [
             Animated.timing(headerAnim, { toValue: 1, duration: 500, easing: Easing.out(Easing.ease), useNativeDriver: true }),
-            Animated.timing(mainHeaderAnim, { toValue: 1, duration: 600, delay: 100, easing: Easing.out(Easing.ease), useNativeDriver: true }), // Atraso para o título principal
-            Animated.timing(searchAnim, { toValue: 1, duration: 600, delay: 200, easing: Easing.out(Easing.ease), useNativeDriver: true }), // Atraso para a busca
-            Animated.timing(sectionCardAnim, { toValue: 1, duration: 700, delay: 300, easing: Easing.out(Easing.ease), useNativeDriver: true }), // Atraso para as seções
+            Animated.timing(mainHeaderAnim, { toValue: 1, duration: 600, delay: 100, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+            Animated.timing(searchAnim, { toValue: 1, duration: 600, delay: 200, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+            Animated.timing(sectionCardAnim, { toValue: 1, duration: 700, delay: 300, easing: Easing.out(Easing.ease), useNativeDriver: true }),
         ]).start();
     }
-  }, [headerAnim, mainHeaderAnim, searchAnim, sectionCardAnim]); // Adiciona dependências de animação
+  }, [headerAnim, mainHeaderAnim, searchAnim, sectionCardAnim]);
 
   useEffect(() => {
-    loadFaqs(); // Chama loadFaqs ao montar
-  }, [loadFaqs]); // Dependência loadFaqs
+    loadFaqs();
+  }, [loadFaqs]);
 
   const filteredFaqs = useMemo(() => {
     if (!searchTerm.trim()) {
-      return faqs; // Usar o estado 'faqs'
+      return faqs;
     }
     const lowerSearchTerm = searchTerm.toLowerCase();
-    return faqs.filter(faq => // Usar o estado 'faqs'
+    return faqs.filter(faq =>
       faq.question.toLowerCase().includes(lowerSearchTerm) ||
       faq.answer.toLowerCase().includes(lowerSearchTerm) ||
       (faq.keywords && faq.keywords.some(keyword => keyword.toLowerCase().includes(lowerSearchTerm)))
     );
-  }, [searchTerm, faqs]); // Adicionar faqs às dependências
+  }, [searchTerm, faqs]);
 
   const handleContactSupportEmail = () => {
     Linking.openURL('mailto:suporte@limpeja.com?subject=Ajuda%20App%20LimpeJá&body=Olá,%20preciso%20de%20ajuda%20com...');
@@ -212,7 +218,7 @@ export default function HelpScreen() {
               <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Central de Ajuda</Text>
-          <View style={styles.headerActionIconPlaceholder} /> {/* Placeholder para alinhar */}
+          <View style={styles.headerActionIconPlaceholder} />
       </Animated.View>
 
       <ScrollView
@@ -242,10 +248,13 @@ export default function HelpScreen() {
             )}
           </Animated.View>
 
-          {isLoadingFaqs ? ( // Mostrar indicador de carregamento
+          {isLoadingFaqs ? (
             <View style={styles.loadingFaqsContainer}>
-              <ActivityIndicator size="small" color="#007AFF" />
-              <Text style={styles.loadingText}>Carregando FAQs...</Text> {/* Usar styles.loadingText */}
+              {/* Substituído ActivityIndicator por Skeleton */}
+              <Skeleton height={20} width="80%" radius={8} style={{ marginBottom: 10 }} />
+              <Skeleton height={20} width="70%" radius={8} style={{ marginBottom: 10 }} />
+              <Skeleton height={20} width="90%" radius={8} />
+              <Text style={styles.loadingText}>Carregando FAQs...</Text>
             </View>
           ) : filteredFaqs.length > 0 ? (
             filteredFaqs.map((faq, index) => (
@@ -414,12 +423,12 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#007AFF',
   },
-  loadingFaqsContainer: { // NOVO ESTILO: Container para o loading das FAQs
+  loadingFaqsContainer: {
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 20,
   },
-  loadingText: { // <<--- CORREÇÃO: Adicionada definição para loadingText aqui
+  loadingText: {
     marginTop: 10,
     fontSize: 16,
     color: '#555',

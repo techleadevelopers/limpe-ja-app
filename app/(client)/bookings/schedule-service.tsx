@@ -47,6 +47,12 @@ import ScheduleHeader from '../../../components/client/booking/schedule/Schedule
 import ScheduleCalendar from '../../../components/client/booking/schedule/ScheduleCalendar';
 import NotesInputSection from '../../../components/client/booking/schedule/NotesInputSection';
 import ConfirmBookingButton from '../../../components/client/booking/schedule/ConfirmBookingButton';
+import { PanicBanner } from '../../../components/safety/PanicBanner'; // NOVO: Importar PanicBanner
+
+
+// Import AppStyles
+import { AppColors, AppDurations, AppOffsets, AppShadows, AppTypography, SCREEN_WIDTH, SCREEN_HEIGHT } from '../../../constants/appStyles';
+
 
 // --- NOVAS INTERFACES PARA AS PROPS DOS COMPONENTES ---
 interface BookingSummaryPreviewProps {
@@ -129,7 +135,7 @@ const BookingSummaryPreview = ({
     useEffect(() => {
         Animated.timing(iconAnim, {
             toValue: 1,
-            duration: 500,
+            duration: AppDurations.md,
             delay: 100,
             easing: Easing.out(Easing.ease),
             useNativeDriver: true,
@@ -151,7 +157,7 @@ const BookingSummaryPreview = ({
             <Text style={styles.sectionTitle}>{t('schedule_service.review_booking_title')}</Text>
             <View style={styles.summaryItem}>
                 <Animated.View style={animatedIconStyle}>
-                    <Ionicons name="briefcase-outline" size={20} color="#4A90E2" style={styles.summaryIcon} />
+                    <Ionicons name="briefcase-outline" size={20} color={AppColors.primaryInteractive} style={styles.summaryIcon} />
                 </Animated.View>
                 <Text style={styles.summaryText}>
                     <Text style={styles.summaryLabel}>{t('schedule_service.summary_service')}</Text> {selectedProviderService.service?.name}
@@ -159,7 +165,7 @@ const BookingSummaryPreview = ({
             </View>
             <View style={styles.summaryItem}>
                 <Animated.View style={animatedIconStyle}>
-                    <Ionicons name="person-outline" size={20} color="#4A90E2" style={styles.summaryIcon} />
+                    <Ionicons name="person-outline" size={20} color={AppColors.primaryInteractive} style={styles.summaryIcon} />
                 </Animated.View>
                 <Text style={styles.summaryText}>
                     <Text style={styles.summaryLabel}>{t('schedule_service.summary_provider')}</Text> {provider?.fullName}
@@ -167,7 +173,7 @@ const BookingSummaryPreview = ({
             </View>
             <View style={styles.summaryItem}>
                 <Animated.View style={animatedIconStyle}>
-                    <Ionicons name="calendar-outline" size={20} color="#4A90E2" style={styles.summaryIcon} />
+                    <Ionicons name="calendar-outline" size={20} color={AppColors.primaryInteractive} style={styles.summaryIcon} />
                 </Animated.View>
                 <Text style={styles.summaryText}>
                     <Text style={styles.summaryLabel}>{t('schedule_service.summary_date_time')}</Text> {formattedDate}, {t('common.at')} {selectedTime}
@@ -175,7 +181,7 @@ const BookingSummaryPreview = ({
             </View>
             <View style={styles.summaryItem}>
                 <Animated.View style={animatedIconStyle}>
-                    <Ionicons name="location-outline" size={20} color="#4A90E2" style={styles.summaryIcon} />
+                    <Ionicons name="location-outline" size={20} color={AppColors.primaryInteractive} style={styles.summaryIcon} />
                 </Animated.View>
                 <Text style={styles.summaryText}>
                     <Text style={styles.summaryLabel}>{t('schedule_service.summary_address')}</Text> {address.street}, {address.number} - {address.neighborhood}, {address.city}/{address.state}
@@ -184,7 +190,7 @@ const BookingSummaryPreview = ({
             {(selectedProviderService.pricingType === PricingType.HOURLY || selectedProviderService.pricingType === PricingType.BY_SIZE) && (
                 <View style={styles.summaryItem}>
                     <Animated.View style={animatedIconStyle}>
-                        <Ionicons name="timer-outline" size={20} color="#4A90E2" style={styles.summaryIcon} />
+                        <Ionicons name="timer-outline" size={20} color={AppColors.primaryInteractive} style={styles.summaryIcon} />
                     </Animated.View>
                     <Text style={styles.summaryText}>
                         <Text style={styles.summaryLabel}>{t('schedule_service.summary_service_details')}</Text> {serviceDetailsText}
@@ -221,7 +227,7 @@ const CouponInputSection = ({ couponCode, setCouponCode, onApplyCoupon, isApplyi
             <Text style={styles.sectionTitle}>{t('schedule_service.coupon_section_title')}</Text>
             <Animated.View style={[styles.couponInputContainer, { borderColor: couponInputAnim.interpolate({
                 inputRange: [0, 1],
-                outputRange: ['#E0E0E0', '#4A90E2']
+                outputRange: [AppColors.borderNeutral, AppColors.primaryInteractive]
             }) }]}>
                 <TextInput
                     style={styles.couponInput}
@@ -230,8 +236,8 @@ const CouponInputSection = ({ couponCode, setCouponCode, onApplyCoupon, isApplyi
                     onChangeText={setCouponCode}
                     autoCapitalize="characters"
                     editable={!isApplyingCoupon}
-                    onFocus={() => Animated.timing(couponInputAnim, { toValue: 1, duration: 200, useNativeDriver: false }).start()}
-                    onBlur={() => Animated.timing(couponInputAnim, { toValue: 0, duration: 200, useNativeDriver: false }).start()}
+                    onFocus={() => Animated.timing(couponInputAnim, { toValue: 1, duration: AppDurations.xs, useNativeDriver: false }).start()}
+                    onBlur={() => Animated.timing(couponInputAnim, { toValue: 0, duration: AppDurations.xs, useNativeDriver: false }).start()}
                 />
                 <TouchableOpacity
                     style={styles.applyCouponButton}
@@ -239,7 +245,7 @@ const CouponInputSection = ({ couponCode, setCouponCode, onApplyCoupon, isApplyi
                     disabled={isApplyingCoupon || !couponCode}
                 >
                     {isApplyingCoupon ? (
-                        <ActivityIndicator size="small" color="#FFF" />
+                        <ActivityIndicator size="small" color={AppColors.white} />
                     ) : (
                         <Text style={styles.applyCouponButtonText}>{t('schedule_service.apply_coupon_button')}</Text>
                     )}
@@ -258,10 +264,6 @@ const CouponInputSection = ({ couponCode, setCouponCode, onApplyCoupon, isApplyi
 };
 
 
-// --- Constantes para a UI ---
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const SCREEN_HEIGHT = Dimensions.get('window').height;
-
 // Cache para disponibilidade do provedor por data
 const availabilityCache = new Map<string, { available: ProviderAvailability[], occupiedTimes: string[] }>();
 
@@ -272,12 +274,13 @@ export default function ScheduleServiceScreen() {
     const { t } = useTranslation(); // Inicializar i18n
 
     // CAPTURA DOS PARÂMETROS DA URL
-    const { providerId, serviceId, servicePrice } = useLocalSearchParams();
+    const { providerId, serviceId, servicePrice, couponCode: initialCouponCode } = useLocalSearchParams(); // NOVO: Captura couponCode
 
     // NARROWING DOS TIPOS: Garante que os IDs e o preço sejam strings simples, não arrays.
     const paramProviderId = Array.isArray(providerId) ? providerId[0] : providerId;
     const paramServiceId = Array.isArray(serviceId) ? serviceId[0] : serviceId;
     const paramServicePrice = Array.isArray(servicePrice) ? servicePrice[0] : servicePrice;
+    const initialCouponCodeString = Array.isArray(initialCouponCode) ? initialCouponCode[0] : initialCouponCode;
 
 
     const [provider, setProvider] = useState<ProviderDisplayInfo | null>(null);
@@ -300,14 +303,18 @@ export default function ScheduleServiceScreen() {
     const [squareMeters, setSquareMeters] = useState<number | null>(null);
 
     // --- NOVOS ESTADOS PARA CUPOM E DESCONTO ---
-    const [couponCode, setCouponCode] = useState<string>('');
+    const [couponCode, setCouponCode] = useState<string>(initialCouponCodeString || ''); // NOVO: Inicializa com o cupom da URL
     const [discountAmount, setDiscountAmount] = useState<number>(0);
     const [isApplyingCoupon, setIsApplyingCoupon] = useState<boolean>(false);
     const couponInputAnim = useRef(new Animated.Value(0)).current; // Animação para a borda do input de cupom
     const couponFeedbackAnim = useRef(new Animated.Value(0)).current; // Animação para o feedback de cupom
-    const [couponFeedbackColor, setCouponFeedbackColor] = useState('#28A745'); // Cor do feedback (sucesso/erro)
+    const [couponFeedbackColor, setCouponFeedbackColor] = useState(AppColors.successStandard); // Cor do feedback (sucesso/erro)
     const [couponFeedbackIcon, setCouponFeedbackIcon] = useState('checkmark-circle'); // Ícone do feedback
     // --- FIM NOVOS ESTADOS ---
+
+    // NOVO: Estado para o PanicBanner
+    const [panicStatus, setPanicStatus] = useState<'IDLE' | 'RECEIVED' | 'ACKED' | 'DISPATCHED' | 'CLOSED'>('IDLE');
+
 
     const [isLoading, setIsLoading] = useState(true);
     const [isBooking, setIsBooking] = useState(false);
@@ -321,7 +328,7 @@ export default function ScheduleServiceScreen() {
     >([]);
 
     const selectionAnim = useRef(new Animated.Value(1)).current;
-    
+
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideUpAnim = useRef(new Animated.Value(50)).current;
     const scaleAnim = useRef(new Animated.Value(0.95)).current;
@@ -360,7 +367,7 @@ export default function ScheduleServiceScreen() {
         return priceAfterDiscount > 0 ? priceAfterDiscount : 0;
     }, [calculatedSubtotal, discountAmount]);
     // --- Fim da lógica de cálculo de preço ---
-    
+
     // --- NOVO: Lógica para o indicador de progresso ---
     const currentStep = useMemo(() => {
         if (!selectedTime) return 1; // Seleção de data/hora
@@ -394,13 +401,13 @@ export default function ScheduleServiceScreen() {
         Animated.parallel([
             Animated.timing(fadeAnim, {
                 toValue: 1,
-                duration: 800,
+                duration: AppDurations.lg,
                 easing: Easing.out(Easing.ease),
                 useNativeDriver: true,
             }),
             Animated.timing(slideUpAnim, {
                 toValue: 0,
-                duration: 800,
+                duration: AppDurations.lg,
                 delay: 200,
                 easing: Easing.out(Easing.back(1.2)),
                 useNativeDriver: true,
@@ -465,20 +472,12 @@ export default function ScheduleServiceScreen() {
 
         const startHeaderGlow = () => {
             Animated.loop(
-                Animated.sequence([
-                    Animated.timing(headerGlowAnim, {
-                        toValue: 1,
-                        duration: 3000,
-                        easing: Easing.inOut(Easing.ease),
-                        useNativeDriver: false,
-                    }),
-                    Animated.timing(headerGlowAnim, {
-                        toValue: 0,
-                        duration: 3000,
-                        easing: Easing.inOut(Easing.ease),
-                        useNativeDriver: false,
-                    }),
-                ])
+                Animated.timing(headerGlowAnim, {
+                    toValue: 1,
+                    duration: 3000,
+                    easing: Easing.inOut(Easing.ease),
+                    useNativeDriver: false,
+                })
             ).start();
         };
 
@@ -510,7 +509,7 @@ export default function ScheduleServiceScreen() {
 
     const handlePrevMonth = useCallback(() => {
         Animated.sequence([
-            Animated.timing(scaleAnim, { toValue: 0.98, duration: 100, useNativeDriver: true }),
+            Animated.timing(scaleAnim, { toValue: 0.98, duration: AppDurations.xs, useNativeDriver: true }),
             Animated.spring(scaleAnim, { toValue: 1, friction: 6, useNativeDriver: true }),
         ]).start();
 
@@ -523,7 +522,7 @@ export default function ScheduleServiceScreen() {
 
     const handleNextMonth = useCallback(() => {
         Animated.sequence([
-            Animated.timing(scaleAnim, { toValue: 0.98, duration: 100, useNativeDriver: true }),
+            Animated.timing(scaleAnim, { toValue: 0.98, duration: AppDurations.xs, useNativeDriver: true }),
             Animated.spring(scaleAnim, { toValue: 1, friction: 6, useNativeDriver: true }),
         ]).start();
 
@@ -544,7 +543,7 @@ export default function ScheduleServiceScreen() {
             Animated.sequence([
                 Animated.timing(selectionAnim, {
                     toValue: 1.08,
-                    duration: 120,
+                    duration: AppDurations.xs,
                     easing: Easing.out(Easing.ease),
                     useNativeDriver: true
                 }),
@@ -586,7 +585,7 @@ export default function ScheduleServiceScreen() {
             const newDiscount = result.discountValue || 0;
 
             setDiscountAmount(newDiscount);
-            setCouponFeedbackColor('#28A745'); // Sucesso
+            setCouponFeedbackColor(AppColors.successStandard); // Sucesso
             setCouponFeedbackIcon('checkmark-circle');
             Toast.show({
                 type: 'success',
@@ -596,14 +595,14 @@ export default function ScheduleServiceScreen() {
 
             Animated.timing(couponFeedbackAnim, {
                 toValue: 1,
-                duration: 300,
+                duration: AppDurations.sm,
                 easing: Easing.out(Easing.ease),
                 useNativeDriver: true,
             }).start(() => {
                 setTimeout(() => {
                     Animated.timing(couponFeedbackAnim, {
                         toValue: 0,
-                        duration: 300,
+                        duration: AppDurations.sm,
                         easing: Easing.in(Easing.ease),
                         useNativeDriver: true,
                     }).start();
@@ -613,7 +612,7 @@ export default function ScheduleServiceScreen() {
         } catch (error: any) {
             console.error("Erro ao aplicar cupom:", error.response?.data || error.message);
             setDiscountAmount(0);
-            setCouponFeedbackColor('#D32F2F'); // Erro
+            setCouponFeedbackColor(AppColors.errorRed); // Erro
             setCouponFeedbackIcon('close-circle');
             Toast.show({
                 type: 'error',
@@ -622,14 +621,14 @@ export default function ScheduleServiceScreen() {
             });
             Animated.timing(couponFeedbackAnim, {
                 toValue: 1,
-                duration: 300,
+                duration: AppDurations.sm,
                 easing: Easing.out(Easing.ease),
                 useNativeDriver: true,
             }).start(() => {
                 setTimeout(() => {
                     Animated.timing(couponFeedbackAnim, {
                         toValue: 0,
-                        duration: 300,
+                        duration: AppDurations.sm,
                         easing: Easing.in(Easing.ease),
                         useNativeDriver: true,
                     }).start();
@@ -650,6 +649,19 @@ export default function ScheduleServiceScreen() {
     }, [t]);
     // --- FIM NOVO: Função para exibir política de cancelamento ---
 
+    // NOVO: Handler para o botão de pânico
+    const handlePanic = useCallback(() => {
+        Alert.alert(
+            t('safety.panic.button_pressed_title'),
+            t('safety.panic.button_pressed_message'),
+            [
+                { text: t('common.cancel'), style: 'cancel' },
+                { text: t('common.confirm'), onPress: () => setPanicStatus('RECEIVED') } // Mock status update
+            ]
+        );
+    }, [t]);
+
+
     const handleConfirmBooking = useCallback(async () => {
         // Validações iniciais
         if (!typedUser?.id || !provider?.id || !selectedProviderService?.id || !selectedDate || !selectedTime ||
@@ -660,7 +672,7 @@ export default function ScheduleServiceScreen() {
 
         let requestedDurationMinutes = 0;
         let requestedSquareMeters = 0;
-        
+
         // Validação adicional para campos dinâmicos
         if (selectedProviderService.pricingType === PricingType.HOURLY && (durationInMinutes == null || durationInMinutes <= 0)) {
             Alert.alert(t('schedule_service.booking_error_title'), t('schedule_service.booking_error_duration_size', { field: t('common.duration') })); // Traduzir "duração"
@@ -705,6 +717,9 @@ export default function ScheduleServiceScreen() {
                     bookingId: newBooking.id,
                     totalPrice: newBooking.totalPrice.toString(),
                     paymentMethod: 'PIX', // Pode ser dinâmico no futuro
+                    // NOVO: Passar info do cupom para a tela de sucesso, se aplicável
+                    couponApplied: discountAmount > 0 ? 'true' : 'false',
+                    couponCode: discountAmount > 0 ? couponCode : undefined,
                 }
             });
             Toast.show({
@@ -748,7 +763,7 @@ export default function ScheduleServiceScreen() {
                 }
                 setSelectedProviderService(foundService);
                 console.log("Serviço carregado:", foundService);
-                
+
                 if(foundService.pricingType === PricingType.HOURLY) {
                     setDurationInMinutes(120);
                 } else if(foundService.pricingType === PricingType.BY_SIZE) {
@@ -784,6 +799,13 @@ export default function ScheduleServiceScreen() {
                 await prefetchAvailability(paramProviderId, nextMonth);
                 await prefetchAvailability(paramProviderId, prevMonth);
 
+                // NOVO: Se houver couponCode na URL, tenta aplicar
+                if (initialCouponCodeString) {
+                    setCouponCode(initialCouponCodeString);
+                    // Pequeno delay para garantir que o componente esteja montado e o estado atualizado
+                    setTimeout(() => handleApplyCoupon(), 500);
+                }
+
             } catch (error: any) {
                 console.error("Erro ao carregar dados iniciais:", error.response?.data || error.message);
                 Alert.alert(t('common.error'), error.response?.data?.message || t('common.network_error'));
@@ -793,7 +815,7 @@ export default function ScheduleServiceScreen() {
             }
         };
         loadInitialData();
-    }, [paramProviderId, typedUser?.id, paramServiceId, router, prefetchAvailability, t]);
+    }, [paramProviderId, typedUser?.id, paramServiceId, router, prefetchAvailability, t, initialCouponCodeString]); // Adicionado initialCouponCodeString
 
     const animateShine = useCallback(() => {
         shineAnim.setValue(-SCREEN_WIDTH * 0.3);
@@ -882,7 +904,7 @@ export default function ScheduleServiceScreen() {
         !address.street || !address.number || !address.neighborhood || !address.city || !address.state ||
         (selectedProviderService?.pricingType === PricingType.HOURLY && (durationInMinutes == null || durationInMinutes <= 0)) ||
         (selectedProviderService?.pricingType === PricingType.BY_SIZE && (squareMeters == null || squareMeters <= 0));
-    
+
     // --- Lógica do texto do botão de confirmação usando useMemo ---
     const confirmButtonText = useMemo(() => {
         if (finalCalculatedPrice > 0) {
@@ -898,8 +920,8 @@ export default function ScheduleServiceScreen() {
         return (
             <View style={styles.centeredFeedback}>
                 <Stack.Screen options={{ title: t("common.loading"), headerShown: false }} />
-                <ActivityIndicator size="large" color="#2A72E7" />
-                <Text style={{ marginTop: 10, color: '#555' }}>{t('schedule_service.loading_initial_data')}</Text>
+                <ActivityIndicator size="large" color={AppColors.primaryInteractive} />
+                <Text style={{ marginTop: 10, color: AppColors.textBody }}>{t('schedule_service.loading_initial_data')}</Text>
             </View>
         );
     }
@@ -970,7 +992,7 @@ export default function ScheduleServiceScreen() {
                                 backgroundColor: currentStep >= index + 1 ?
                                     fadeAnim.interpolate({
                                         inputRange: [0, 1],
-                                        outputRange: ['#D0D0D0', '#4A90E2']
+                                        outputRange: ['#D0D0D0', AppColors.primaryInteractive]
                                     }) : '#D0D0D0'
                             }
                         ]} />
@@ -981,7 +1003,7 @@ export default function ScheduleServiceScreen() {
                                 color: currentStep >= index + 1 ?
                                     fadeAnim.interpolate({
                                         inputRange: [0, 1],
-                                        outputRange: ['#888', '#4A90E2']
+                                        outputRange: ['#888', AppColors.primaryInteractive]
                                     }) : '#888',
                                 fontWeight: currentStep >= index + 1 ? 'bold' : 'normal'
                             }
@@ -1001,6 +1023,16 @@ export default function ScheduleServiceScreen() {
                 }}
                 showsVerticalScrollIndicator={false}
             >
+                {/* NOVO: PanicBanner */}
+                <Animated.View style={{
+                    transform: [{ scale: scaleAnim }],
+                    opacity: fadeAnim,
+                    marginHorizontal: 20, // Adiciona margem para alinhar com outros cards
+                    marginBottom: 15, // Espaçamento abaixo do banner
+                }}>
+                    <PanicBanner onPanic={handlePanic} status={panicStatus} />
+                </Animated.View>
+
                 <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
                     <ProviderBrief
                         provider={provider}
@@ -1048,7 +1080,7 @@ export default function ScheduleServiceScreen() {
                 </Animated.View>
 
                 {/* NOVO: Título "Detalhes do Serviço" (Individual) */}
-                
+
 
                 {selectedProviderService && (
                     <Animated.View style={[{ // <--- AQUI: Removido 'styles.card'
@@ -1147,13 +1179,13 @@ export default function ScheduleServiceScreen() {
 const styles = StyleSheet.create({
     screenContainer: {
         flex: 1,
-        backgroundColor: '#F8FAFB',
+        backgroundColor: AppColors.backgroundLight,
     },
     centeredFeedback: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#F8FAFB'
+        backgroundColor: AppColors.backgroundLight
     },
     scrollContentContainer: {
         paddingBottom: 120,
@@ -1187,14 +1219,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 20,
         paddingVertical: 15,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: AppColors.white,
         borderBottomWidth: 1,
-        borderBottomColor: '#F0F0F0',
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
+        borderBottomColor: AppColors.backgroundNeutral,
+        ...AppShadows.small,
     },
     progressStep: {
         alignItems: 'center',
@@ -1204,20 +1232,20 @@ const styles = StyleSheet.create({
         width: 10,
         height: 10,
         borderRadius: 5,
-        backgroundColor: '#D0D0D0',
+        backgroundColor: AppColors.borderNeutral,
         marginBottom: 5,
     },
     progressDotActive: {
-        backgroundColor: '#4A90E2',
+        backgroundColor: AppColors.primaryInteractive,
     },
     progressText: {
         fontSize: 12,
-        color: '#888',
+        color: AppColors.mediumGray,
         textAlign: 'center',
     },
     progressTextActive: {
         fontWeight: 'bold',
-        color: '#4A90E2',
+        color: AppColors.primaryInteractive,
     },
     floatingSummaryContainer: {
         position: 'absolute',
@@ -1229,11 +1257,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
-        elevation: 8,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -3 },
-        shadowOpacity: 0.15,
-        shadowRadius: 5,
+        ...AppShadows.medium,
     },
     floatingSummaryContent: {
         flexDirection: 'row',
@@ -1243,30 +1267,26 @@ const styles = StyleSheet.create({
     floatingSummaryText: {
         fontSize: 16,
         fontWeight: '500',
-        color: '#333',
+        color: AppColors.textBody,
     },
     floatingSummaryPrice: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#4A90E2',
+        color: AppColors.primaryInteractive,
     },
     card: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: AppColors.white,
         borderRadius: 15,
         padding: 20, // Aumentado o padding para mais espaço interno
         marginHorizontal: 20,
         marginBottom: 15,
         // Sombra aprimorada para um visual mais suave e moderno
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 10,
-        elevation: 8,
+        ...AppShadows.medium,
     },
     sectionTitle: {
         fontSize: 20, // Título maior
         fontWeight: 'bold',
-        color: '#333',
+        color: AppColors.textBody,
         marginBottom: 20, // Mais espaço abaixo do título
         textAlign: 'left', // Alinhamento à esquerda para um visual mais limpo
     },
@@ -1274,7 +1294,7 @@ const styles = StyleSheet.create({
     sectionHeaderTitle: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: '#333',
+        color: AppColors.textBody,
         marginHorizontal: 20,
         marginTop: 25, // Espaçamento maior em relação à seção anterior
         marginBottom: 15, // Espaçamento antes do primeiro card desta seção
@@ -1283,7 +1303,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: '#E0E0E0',
+        borderColor: AppColors.borderNeutral,
         borderRadius: 10,
         overflow: 'hidden',
     },
@@ -1292,10 +1312,10 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         paddingHorizontal: 15,
         fontSize: 14,
-        color: '#333',
+        color: AppColors.textBody,
     },
     applyCouponButton: {
-        backgroundColor: '#4A90E2',
+        backgroundColor: AppColors.primaryInteractive,
         paddingVertical: 12,
         paddingHorizontal: 20,
         justifyContent: 'center',
@@ -1304,7 +1324,7 @@ const styles = StyleSheet.create({
         borderBottomRightRadius: 10,
     },
     applyCouponButtonText: {
-        color: '#FFF',
+        color: AppColors.white,
         fontWeight: 'bold',
         fontSize: 16,
     },
@@ -1332,12 +1352,12 @@ const styles = StyleSheet.create({
     },
     summaryText: {
         fontSize: 16, // Tamanho de fonte padrão para itens de resumo
-        color: '#555',
+        color: AppColors.textAuxiliary,
         flex: 1, // Permite que o texto ocupe o espaço restante
     },
     summaryLabel: {
         fontWeight: '600', // Um pouco mais bold
-        color: '#333',
+        color: AppColors.textBody,
         marginRight: 5, // Espaço entre label e valor
     },
     priceSummary: {
@@ -1347,19 +1367,19 @@ const styles = StyleSheet.create({
         marginTop: 10,
         paddingVertical: 10, // Aumentado para mais espaçamento
         borderTopWidth: 1,
-        borderTopColor: '#F0F0F0',
+        borderTopColor: AppColors.backgroundNeutral,
     },
     priceLabel: {
         fontSize: 16,
-        color: '#555',
+        color: AppColors.textAuxiliary,
     },
     priceValue: {
         fontSize: 16,
         fontWeight: '600', // Um pouco mais bold
-        color: '#333',
+        color: AppColors.textBody,
     },
     discountValue: {
-        color: '#28A745',
+        color: AppColors.successStandard,
     },
     totalPriceSummary: {
         flexDirection: 'row',
@@ -1368,17 +1388,17 @@ const styles = StyleSheet.create({
         marginTop: 15, // Mais espaço antes do total
         paddingTop: 15, // Mais espaço acima da linha
         borderTopWidth: 2,
-        borderTopColor: '#4A90E2', // Linha mais destacada para o total
+        borderTopColor: AppColors.primaryInteractive, // Linha mais destacada para o total
     },
     totalPriceLabel: {
         fontSize: 22, // Bem maior para destaque
         fontWeight: 'bold',
-        color: '#333',
+        color: AppColors.textBody,
     },
     totalPriceValue: {
         fontSize: 24, // O maior de todos para o valor final
         fontWeight: 'bold',
-        color: '#4A90E2', // Cor de destaque para o valor final
+        color: AppColors.primaryInteractive, // Cor de destaque para o valor final
     },
     cancellationPolicyLink: {
         marginTop: 20, // Mais espaço acima do link
@@ -1386,7 +1406,7 @@ const styles = StyleSheet.create({
     },
     cancellationPolicyText: {
         fontSize: 14,
-        color: '#4A90E2',
+        color: AppColors.primaryInteractive,
         textDecorationLine: 'underline',
     },
     // --- FIM NOVOS ESTILOS ---

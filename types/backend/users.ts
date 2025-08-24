@@ -36,6 +36,7 @@ export interface UserProfile {
   averageRating?: number;
   reviewCount?: number;
   isVerified?: boolean;
+  referralCode?: string | null; // NOVO: Adicionado para o código de indicação do usuário
 
   // Detalhes específicos do cliente ou provedor, aninhados
   clientDetails?: Client | null;

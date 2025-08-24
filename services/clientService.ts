@@ -1,6 +1,6 @@
 // LimpeJaApp/app/services/clientService.ts
-import axios, { AxiosResponse } from 'axios'; // Importa axios e AxiosResponse para tratamento de erros
-import api from './api'; // Importa a instância centralizada do Axios
+import axios, { AxiosResponse } from 'axios';
+import api from './api';
 
 // =========================================================================
 // IMPORTAÇÕES DE INTERFACES DE TIPAGEM CENTRALIZADAS
@@ -8,15 +8,15 @@ import api from './api'; // Importa a instância centralizada do Axios
 import { UpdateClientProfileDto } from '../types/backend/clients';
 import { Offer } from '../types/backend/offers';
 import {
-    ProviderDisplayInfo, // Usado para tipar provedores em listas
-    ProviderSearchQuery, // Importado para tipar a query de busca
-    ProviderMetrics, // NOVO: Importar ProviderMetrics
+    ProviderDisplayInfo,
+    ProviderSearchQuery,
+    ProviderMetrics,
 } from '../types/backend/providers';
 import { Service } from '../types/backend/services';
 import { UserProfile } from '../types/backend/users';
-import { ProviderSearchItem, SearchQuery } from '../types/backend/search'; // NOVO: Importar SearchQuery e ProviderSearchItem
-import { AppliedCoupon, BookingPricing, BookingDetails } from '../types/backend/bookings'; // NOVO: Importar tipos de cupom/precificação
-import { ClientMission, ClientReward } from '../types/backend/mission'; // CORREÇÃO: Importar tipos de missões (verificar caminho e arquivo)
+import { ProviderSearchItem, SearchQuery } from '../types/backend/search';
+import { AppliedCoupon, BookingPricing, BookingDetails } from '../types/backend/bookings';
+import { ClientMission, ClientReward } from '../types/backend/mission';
 
 // =========================================================================
 // FUNÇÕES DE SERVIÇO DO CLIENTE - AJUSTADAS PARA USAR A INSTÂNCIA 'api' CENTRALIZADA
@@ -30,7 +30,6 @@ import { ClientMission, ClientReward } from '../types/backend/mission'; // CORRE
  */
 export async function getServiceCategories(): Promise<Service[]> {
   try {
-    // A requisição é feita usando a instância 'api', que já tem a baseURL configurada
     const response: AxiosResponse<Service[]> = await api.get<Service[]>('/services');
     return response.data;
   } catch (error: any) {
@@ -46,17 +45,13 @@ export async function getServiceCategories(): Promise<Service[]> {
  * @function searchProviders
  * Realiza uma busca geral por provedores.
  * Corresponde a GET /providers (com query params).
- * NOTA: Esta função pode ter sido movida para providerService.ts, mas se você tiver um endpoint /search
- * que retorna provedores, esta função pode ser usada aqui.
  * @param query Objeto com os parâmetros de busca.
  * @returns Promessa com um array de objetos ProviderDisplayInfo.
  */
 export async function searchProviders(query: ProviderSearchQuery): Promise<ProviderDisplayInfo[]> {
   try {
-    // Converte o objeto de query para uma string de query parameters
     const params = new URLSearchParams(query as any).toString();
-    // A requisição é feita usando a instância 'api', que já tem a baseURL configurada
-    const response: AxiosResponse<ProviderDisplayInfo[]> = await api.get<ProviderDisplayInfo[]>(`/providers?${params}`); // Assumindo que /providers é o endpoint de busca geral
+    const response: AxiosResponse<ProviderDisplayInfo[]> = await api.get<ProviderDisplayInfo[]>(`/providers?${params}`);
     return response.data;
   } catch (error: any) {
     console.error('Erro ao buscar provedores:', error.response?.data || error.message);
@@ -69,19 +64,24 @@ export async function searchProviders(query: ProviderSearchQuery): Promise<Provi
 
 /**
  * NOVO: Realiza uma busca de provedores com base na localização.
- * Corresponde a GET /providers/search?lat={lat}&lng={lng}&radius={radius}.
  * @param params Objeto com latitude, longitude e raio.
- * @returns Promessa com um array de objetos ProviderSearchItem.
+ * @returns Promessa com um array de objetos ProviderDisplayInfo.
  */
 export async function searchProvidersWithLocation(params: {
   latitude: number;
   longitude: number;
   radius?: number;
-  query?: string; // Adicionado query para busca textual
-}): Promise<ProviderSearchItem[]> {
+  query?: string;
+}): Promise<ProviderDisplayInfo[]> {
   try {
-    // CORREÇÃO AQUI: api.get<ProviderSearchItem[]> em vez de <ProviderSearchItem>
-    const response: AxiosResponse<ProviderSearchItem[]> = await api.get<ProviderSearchItem[]>('/providers/search', { params });
+    const mappedParams: Record<string, any> = {
+      latitude: params.latitude,
+      longitude: params.longitude,
+      ...(params.radius != null ? { radius: params.radius } : {}),
+      ...(params.query ? { searchTerm: params.query } : {}),
+    };
+
+    const response: AxiosResponse<ProviderDisplayInfo[]> = await api.get<ProviderDisplayInfo[]>('/providers', { params: mappedParams });
     return response.data;
   } catch (error: any) {
     console.error('Erro ao buscar provedores por localização:', error.response?.data || error.message);
@@ -92,7 +92,6 @@ export async function searchProvidersWithLocation(params: {
   }
 }
 
-
 /**
  * @function getUserProfile
  * Obtém o perfil do usuário logado (cliente ou provedor).
@@ -101,7 +100,6 @@ export async function searchProvidersWithLocation(params: {
  */
 export async function getUserProfile(): Promise<UserProfile> {
   try {
-    // A requisição é feita usando a instância 'api', que já tem a baseURL configurada
     const response: AxiosResponse<UserProfile> = await api.get<UserProfile>('/users/me');
     return response.data;
   } catch (error: any) {
@@ -121,7 +119,6 @@ export async function getUserProfile(): Promise<UserProfile> {
  */
 export async function getOffers(): Promise<Offer[]> {
   try {
-    // A requisição é feita usando a instância 'api', que já tem a baseURL configurada
     const response: AxiosResponse<Offer[]> = await api.get<Offer[]>('/offers');
     return response.data;
   } catch (error: any) {
@@ -176,14 +173,11 @@ export async function applyCoupon(bookingId: string, code: string): Promise<Book
  * @function getProviderDetails
  * Obtém os detalhes de um provedor específico por ID.
  * Corresponde a GET /providers/:id.
- * NOTA: Esta função também existe em 'providerService.ts'. Considere importar de lá
- * ou manter uma única fonte de verdade para evitar duplicação.
  * @param providerId O ID do provedor.
  * @returns Promessa com o objeto ProviderDisplayInfo.
  */
 export async function getProviderDetails(providerId: string): Promise<ProviderDisplayInfo> {
   try {
-    // A requisição é feita usando a instância 'api', que já tem a baseURL configurada
     const response: AxiosResponse<ProviderDisplayInfo> = await api.get<ProviderDisplayInfo>(`/providers/${providerId}`);
     return response.data;
   } catch (error: any) {
@@ -214,7 +208,6 @@ export async function getProviderMetrics(providerId: string): Promise<ProviderMe
   }
 }
 
-
 /**
  * @function updateClientProfile
  * Atualiza o perfil do cliente logado.
@@ -224,7 +217,6 @@ export async function getProviderMetrics(providerId: string): Promise<ProviderMe
  */
 export async function updateClientProfile(data: UpdateClientProfileDto): Promise<UserProfile> {
   try {
-    // A requisição é feita usando a instância 'api', que já tem a baseURL configurada
     const response: AxiosResponse<UserProfile> = await api.patch<UserProfile>('/clients/me', data);
     return response.data;
   } catch (error: any) {

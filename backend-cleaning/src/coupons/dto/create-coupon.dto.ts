@@ -1,6 +1,6 @@
 // backend-cleaning/src/coupons/dto/create-coupon.dto.ts
 import { IsString, IsEnum, IsNumber, IsPositive, Min, IsISO8601, IsOptional, IsInt, Max, IsBoolean } from 'class-validator';
-import { CouponType, CouponTarget, CouponStatus } from '../entities/coupon.entity'; // CORRIGIDO: Importar do arquivo de entidade local
+import { CouponType, CouponTarget, CouponStatus } from '@prisma/client'; // <<-- FIXED: Import from @prisma/client
 
 export class CreateCouponDto {
   @IsString()
@@ -11,12 +11,12 @@ export class CreateCouponDto {
   description?: string;
 
   @IsEnum(CouponType)
-  type: CouponType; // Mapeia para 'valueType' no DB
+  type: CouponType;
 
   @IsNumber({ maxDecimalPlaces: 2 })
   @IsPositive()
   @Min(0.01)
-  value: number; // e.g., 0.10 for 10% or 10.00 for R$10
+  value: number;
 
   @IsISO8601()
   validFrom: string;
@@ -30,13 +30,17 @@ export class CreateCouponDto {
   maxUses?: number;
 
   @IsEnum(CouponTarget)
-  target: CouponTarget; // Mapeia para 'target' no DB
+  target: CouponTarget;
 
   @IsOptional()
-  @IsString() // Could be IsUUID if targeting specific entities
-  targetId?: string; // ID of service or provider if target is specific
+  @IsString()
+  targetId?: string;
 
   @IsOptional()
   @IsBoolean()
-  isActive?: boolean; // Corresponds to 'isActive' in the schema
+  isActive?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  firstBookingOnly?: boolean; // NOVO CAMPO
 }

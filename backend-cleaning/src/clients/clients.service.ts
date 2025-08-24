@@ -1,82 +1,88 @@
 // src/clients/clients.service.ts
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common'; // Adicionado Logger
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateClientProfileDto } from './dto/update-client-profile.dto';
-import { Client, Prisma, User, Address, Booking, Review } from '@prisma/client'; // Adicione User, Address, Booking, Review para tipagem
+import { Client, Prisma, User, Address, Booking, Review } from '@prisma/client';
 import { ClientDashboardDto } from './dto/client-dashboard.dto';
-import { UsersService } from '../users/users.service'; // Para acessar dados do User associado
+import { UsersService } from '../users/users.service';
 
-// Adicione as importações das entidades (se ainda as estiver usando assim para DTOs)
 import { BookingEntity } from '../bookings/entities/booking.entity';
 import { ReviewEntity } from '../reviews/entities/review.entity';
 
-// =========================================================================
-// NOVO: Tipo Auxiliar para Cliente com Incluções Comuns (ClientWithIncludes)
-// =========================================================================
 export type ClientWithIncludes = Client & {
-  user: User; // User completo (com avatarUrl agora, se o schema foi migrado)
+  user: User;
   address: Address | null;
-  completedBookingsCount: number; // Add this field
-  noShowCount: number; // NEW
-  cancellationCount: number; // NEW
-  bookings: Booking[]; // Ou se você incluir mais detalhes em bookings, atualize aqui
-  reviewsMade: Review[]; // Ou se você incluir mais detalhes em reviewsMade, atualize aqui
-  // Adicione _count se o Prisma retornar, ou remova se for calculado no DTO
-  _count?: { bookings: number }; // Conforme seu DTO ClientDetailsDto
-  createdAt: Date; // Necessário para consistência com o DTO de Perfil de Usuário
-  updatedAt: Date; // Necessário para consistência com o DTO de Perfil de Usuário
+  completedBookingsCount: number; // Adicionado do schema.prisma
+  noShowCount: number; // Adicionado do schema.prisma
+  cancellationCount: number; // Adicionado do schema.prisma
+  bookings: Booking[];
+  reviewsMade: Review[];
+  _count?: { bookings: number };
+  createdAt: Date;
+  updatedAt: Date;
 };
 
 
 @Injectable()
 export class ClientsService {
+  private readonly logger = new Logger(ClientsService.name); // Instancia o logger
+
   constructor(
     private prisma: PrismaService,
-    private usersService: UsersService, // Injeta UsersService para buscar o User associado
+    private usersService: UsersService,
   ) {}
 
-  async findClientById(id: string): Promise<ClientWithIncludes | null> { // Use o novo tipo
+  async findClientById(id: string): Promise<ClientWithIncludes | null> {
+    this.logger.log(`[ClientsService] findClientById: Buscando cliente por ID: ${id}`);
     const client = await this.prisma.client.findUnique({
       where: { id },
       include: {
-        user: true, // Inclui o user completo
-        _count: { select: { bookings: true } }, // Include count for bookings
+        user: true,
+        _count: { select: { bookings: true } },
         address: true,
         bookings: true,
         reviewsMade: true,
       },
     });
-    return client as ClientWithIncludes | null; // Cast para o tipo correto
+    if (!client) {
+      this.logger.warn(`[ClientsService] findClientById: Cliente com ID "${id}" não encontrado.`);
+    }
+    return client as ClientWithIncludes | null;
   }
 
-  async findClientByUserId(userId: string): Promise<ClientWithIncludes | null> { // Use o novo tipo
+  async findClientByUserId(userId: string): Promise<ClientWithIncludes | null> {
+    this.logger.log(`[ClientsService] findClientByUserId: Buscando cliente por userId: ${userId}`);
     const client = await this.prisma.client.findUnique({
       where: { userId },
       include: {
-        user: true, // Inclui o user completo
-        _count: { select: { bookings: true } }, // Include count for bookings
+        user: true,
+        _count: { select: { bookings: true } },
         address: true,
         bookings: true,
         reviewsMade: true,
       },
     });
-    return client as ClientWithIncludes | null; // Cast para o tipo correto
+    if (!client) {
+      this.logger.warn(`[ClientsService] findClientByUserId: Cliente para userId "${userId}" não encontrado.`);
+    }
+    return client as ClientWithIncludes | null;
   }
 
-  async updateClient(clientId: string, updateClientProfileDto: UpdateClientProfileDto): Promise<ClientWithIncludes> { // Retorno atualizado
+  async updateClient(clientId: string, updateClientProfileDto: UpdateClientProfileDto): Promise<ClientWithIncludes> {
+    this.logger.log(`[ClientsService] updateClient: Atualizando cliente com ID: ${clientId}`);
     const client = await this.prisma.client.findUnique({ where: { id: clientId } });
     if (!client) {
       throw new NotFoundException(`Cliente com ID "${clientId}" não encontrado.`);
     }
 
     try {
-      const updatedClient = await this.prisma.client.update({ // Captura o resultado da atualização
+      const updatedClient = await this.prisma.client.update({
         where: { id: clientId },
         data: {
           fullName: updateClientProfileDto.fullName,
           phone: updateClientProfileDto.phone,
-          // noShowCount and cancellationCount are updated in bookings.service.ts
-          // You can want to update the address here too, if the DTO allows
+          // noShowCount e cancellationCount são atualizados no BookingsService
+          // Se o DTO permitir atualização de endereço, a lógica seria aqui
           // address: updateClientProfileDto.address ? {
           //   upsert: {
           //     create: updateClientProfileDto.address,
@@ -84,20 +90,25 @@ export class ClientsService {
           //   }
           // } : undefined,
         },
-        include: { user: true, address: true, bookings: true, reviewsMade: true }, // Inclua as relações para o retorno
+        include: { user: true, address: true, bookings: true, reviewsMade: true },
       });
+      this.logger.log(`[ClientsService] updateClient: Cliente ${clientId} atualizado com sucesso.`);
+      // Telemetria: client_profile_updated
+      this.logger.log(`[TELEMETRY] client_profile_updated: { clientId: ${clientId} }`);
       return updatedClient as ClientWithIncludes;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2025') { // Record not found
+        if (error.code === 'P2025') {
           throw new NotFoundException(`Cliente com ID "${clientId}" não encontrado.`);
         }
       }
+      this.logger.error(`[ClientsService] updateClient: Erro ao atualizar cliente ${clientId}: ${error.message}`);
       throw error;
     }
   }
 
   async getClientDashboardData(clientId: string): Promise<ClientDashboardDto> {
+    this.logger.log(`[ClientsService] getClientDashboardData: Buscando dados de dashboard para cliente ${clientId}.`);
     const client = await this.prisma.client.findUnique({
       where: { id: clientId },
       include: {
@@ -126,7 +137,7 @@ export class ClientsService {
     ];
 
     const pendingReviews = client.bookings.filter(b => b.status === 'COMPLETED' && !b.review).map(b => ({
-      id: b.id, // ID do agendamento, não da review
+      id: b.id,
       bookingId: b.id,
       clientId: b.clientId,
       providerId: b.providerId,
@@ -135,6 +146,7 @@ export class ClientsService {
       createdAt: b.updatedAt,
     })) as ReviewEntity[];
 
+    this.logger.log(`[ClientsService] getClientDashboardData: Dados de dashboard para cliente ${clientId} gerados.`);
     return {
       fullName: client.fullName,
       pendingBookingsCount: pendingBookings.length,

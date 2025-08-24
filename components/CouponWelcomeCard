@@ -1,0 +1,8 @@
+type CouponWelcomeCardProps = {
+  code: string;              // ex: BEMVINDO20
+  title: string;             // ex: 20% OFF na 1ª faxina
+  subtitle?: string;         // ex: Válido por 7 dias
+  expiresAt?: string;        // ISO para contagem regressiva opcional
+  onUseNow: (code: string) => void; // navega pro schedule-service com o code
+  onDismiss: () => void;           // minimiza em pill
+};

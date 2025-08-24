@@ -5,7 +5,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { User, Prisma } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 import { QueuesService } from '../queues/queues.service';
-import { CreateNotificationDto } from '../notifications/dto/create-notification.dto'; // FIX: Import CreateNotificationDto
+import { CreateNotificationDto } from '../notifications/dto/create-notification.dto';
 
 @Injectable()
 export class UsersService {
@@ -22,15 +22,14 @@ export class UsersService {
     const user = await this.prisma.user.findUnique({
       where: { id },
       include: {
-        // CORREÇÃO: Incluir a relação de endereço dentro de 'client' e 'provider'
         client: {
           include: {
-            address: true, // Adiciona o objeto de endereço
+            address: true,
           },
         },
         provider: {
           include: {
-            address: true, // Adiciona o objeto de endereço
+            address: true,
           },
         },
       },
@@ -59,9 +58,14 @@ export class UsersService {
         where: { id },
         data: {
           email: updateUserDto.email,
+          fullName: updateUserDto.fullName, // Adicionado fullName
+          phone: updateUserDto.phone, // Adicionado phone
+          avatarUrl: updateUserDto.avatarUrl, // Adicionado avatarUrl
         },
       });
       this.logger.log(`[UsersService] update: Usuário com ID "${id}" atualizado com sucesso.`);
+      // Telemetria: user_profile_updated
+      this.logger.log(`[TELEMETRY] user_profile_updated: { userId: ${id} }`);
       return updatedUser;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
@@ -79,6 +83,8 @@ export class UsersService {
         where: { id },
       });
       this.logger.log(`[UsersService] remove: Usuário com ID "${id}" removido com sucesso.`);
+      // Telemetria: user_removed
+      this.logger.log(`[TELEMETRY] user_removed: { userId: ${id} }`);
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
         throw new NotFoundException(`Usuário com ID "${id}" não encontrado.`);
@@ -95,17 +101,18 @@ export class UsersService {
       throw new NotFoundException('Usuário não encontrado.');
     }
     await this.queuesService.addDataExportJob('export-user-data', { userId: user.id, email: user.email });
-    
-    // FIX: Update createNotification call to use DTO
+
     const notificationDto: CreateNotificationDto = {
       userId: user.id,
       type: 'DATA_EXPORT_REQUESTED',
       message: 'Sua solicitação de exportação de dados foi recebida. Você será notificado quando o arquivo estiver pronto para download.',
       targetUrl: '/profile/data-privacy',
-      title: 'Solicitação de Exportação de Dados Recebida', // Added title
+      title: 'Solicitação de Exportação de Dados Recebida',
     };
     await this.notificationsService.createNotification(notificationDto);
     this.logger.log(`[UsersService] requestDataExport: Notificação de exportação de dados adicionada à fila para userId: ${userId}.`);
+    // Telemetria: data_export_requested
+    this.logger.log(`[TELEMETRY] data_export_requested: { userId: ${userId} }`);
   }
 
   async requestAccountDeletion(userId: string): Promise<void> {
@@ -114,21 +121,25 @@ export class UsersService {
     if (!user) {
       throw new NotFoundException('Usuário não encontrado.');
     }
+    // Em vez de deletar diretamente, marcamos para exclusão e alteramos o email para evitar conflitos futuros
     await this.prisma.user.update({
       where: { id: userId },
       data: {
-        email: `deleted-${user.id}-${Date.now()}@limpeja.com`,
+        email: `deleted-${user.id}-${Date.now()}@limpeja.com`, // Altera o email para liberar o original
+        deletionScheduledAt: new Date(), // Marca a data da solicitação de exclusão
+        // TODO: Mudar o role para um "DELETED" ou "INACTIVE" para impedir login
       },
     });
-    // FIX: Update createNotification call to use DTO
     const notificationDto: CreateNotificationDto = {
       userId: user.id,
       type: 'ACCOUNT_DELETION_REQUESTED',
       message: 'Sua conta foi marcada para exclusão. Ela será desativada e excluída permanentemente após um período de carência de 30 dias.',
       targetUrl: '/profile/data-privacy',
-      title: 'Solicitação de Exclusão de Conta Recebida', // Added title
+      title: 'Solicitação de Exclusão de Conta Recebida',
     };
     await this.notificationsService.createNotification(notificationDto);
     this.logger.log(`[UsersService] requestAccountDeletion: Notificação de exclusão de conta adicionada à fila para userId: ${userId}.`);
+    // Telemetria: account_deletion_requested
+    this.logger.log(`[TELEMETRY] account_deletion_requested: { userId: ${userId} }`);
   }
 }

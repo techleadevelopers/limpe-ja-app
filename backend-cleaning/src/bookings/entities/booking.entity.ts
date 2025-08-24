@@ -41,6 +41,7 @@ export class BookingEntity implements PrismaBooking {
   // CORREÇÃO: Adicionado subscriptionId e couponId
   subscriptionId: string | null;
   couponId: string | null;
+  discountAmount: Prisma.Decimal | null; // <<-- ADICIONADO: Para corresponder a PrismaBooking
 
   // Relações opcionais para tipagem mais completa ao carregar com `include`
   client?: Client;
@@ -57,6 +58,13 @@ export class BookingEntity implements PrismaBooking {
       this.totalPrice = new Prisma.Decimal(partial.totalPrice);
     } else {
       this.totalPrice = new Prisma.Decimal(0); // Valor padrão
+    }
+
+    // ADICIONADO: Assegurar que discountAmount seja Prisma.Decimal
+    if (partial.discountAmount !== undefined && partial.discountAmount !== null) {
+      this.discountAmount = new Prisma.Decimal(partial.discountAmount);
+    } else {
+      this.discountAmount = new Prisma.Decimal(0); // Valor padrão
     }
 
     // CORREÇÃO: Garanta que as datas sejam objetos Date

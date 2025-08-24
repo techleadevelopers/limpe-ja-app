@@ -1,131 +1,219 @@
-📌 Search Module
-📖 Visão Geral
+# README — Módulo de Search (Backend LimpeJá)
 
-O módulo Search é responsável por fornecer mecanismos de busca inteligente de serviços e provedores dentro da plataforma.
-Ele permite que clientes localizem serviços de limpeza e profissionais disponíveis, aplicando filtros e retornando resultados estruturados com base no catálogo de serviços cadastrados.
+> **Escopo:** documentação **code‑real (versão atual)** do módulo **Search** com base nos arquivos: `search.module.ts`, `search.controller.ts`, `search.service.ts`, `search-query.dto.ts`, `provider-service-search-result.dto.ts`.
+>
+> **Objetivo:** entregar **busca unificada** de **provedores** e **serviços**, priorizando **qualidade**, **proximidade** e **disponibilidade**, com paginação, ordenação e integração a **Ranking**, **Availability**, **Providers** e **Provider Services**.
 
-Esse módulo atua como a camada de descoberta do sistema, conectando clientes ao catálogo de ProviderServices (ofertas feitas pelos provedores).
+---
 
-🏗 Estrutura
+## 1) Responsabilidades
 
-Controller: search.controller.ts
-Expõe endpoints REST para a busca de serviços/provedores.
+* Normalizar **consultas** (texto, localização, categoria/serviço, filtros de preço/nota/duração).
+* Agregar dados de **Providers** + **Provider Services** + **Availability** em um **payload único** de resultados.
+* Calcular **distância**, **próximo horário disponível** e **score** (via `RankingService`).
+* Suportar **ordenação** (melhores, distância, rating, preço) e **paginação**.
+* Cachear **consultas quentes** e expor **telemetria** de busca.
 
-Service: search.service.ts
-Contém a lógica de negócio para consultas ao banco via Prisma.
+---
 
-DTOs:
+## 2) Arquitetura
 
-search-query.dto.ts → Define os parâmetros de entrada da busca.
+* **Module**: `SearchModule` — registra controller/service e injeta dependências de leitura.
+* **Controller**: `SearchController` — rotas REST públicas de busca.
+* **Service**: `SearchService` — orquestração de fontes, cálculos de distância/score/slot, cache e montagem do DTO de resultado.
 
-provider-service-search-result.dto.ts → Define o formato de resposta dos resultados da busca.
+**Dependências típicas**: `ProvidersService`, `ProviderServicesService`, `AvailabilityService`, `RankingService`, `Metrics/ReviewsService`, `ConfigService`, `Cache/Redis`, Postgres (opcional PostGIS), `Sentry`.
 
-Module: search.module.ts
-Configura dependências e integra o serviço de busca com o restante da aplicação.
+---
 
-🔄 Fluxo de Negócio
+## 3) DTOs (code‑real)
 
-Cliente envia consulta de busca via endpoint (/search), passando filtros como:
+### 3.1 `SearchQueryDto`
 
-query → texto livre (ex.: "faxina cozinha")
+```ts
+export class SearchQueryDto {
+  // Localização
+  lat?: number; lon?: number;              // ponto de referência
+  radiusKm?: number;                        // raio de busca (default em ENV)
 
-location → cidade ou região
+  // Escopo
+  categoryId?: string;                      // categoria do serviço
+  serviceId?: string;                        // serviço específico
+  q?: string;                                // texto livre (nome/bio/título)
 
-providerId → busca serviços de um provedor específico
+  // Filtros
+  minRating?: number;                        // 0..5
+  priceFrom?: number; priceTo?: number;      // faixa de preço ("a partir de")
+  onlyWithNextSlot?: boolean;                // exige próximo horário
+  dateFrom?: string; dateTo?: string;        // janela para disponibilidade
+  durationMin?: number;                       // duração desejada
+  materialsIncluded?: boolean;               // provedor leva material
 
-priceRange → faixa de preço desejada
-
-categories → categorias de serviço (ex.: "residencial", "comercial")
-
-Validação da Query
-O DTO SearchQueryDto garante que os parâmetros estejam no formato correto antes de seguir para o service.
-
-Execução da busca no banco
-O SearchService utiliza o Prisma ORM para consultar a tabela de ProviderService, aplicando filtros dinâmicos conforme a query do cliente.
-
-Montagem dos resultados
-O retorno é transformado em objetos padronizados do tipo ProviderServiceSearchResultDto, que contêm:
-
-Informações do serviço
-
-Nome e dados do provedor
-
-Preço
-
-Categoria
-
-Disponibilidade
-
-Resposta estruturada é devolvida ao cliente, permitindo exibir resultados de busca organizados no app.
-
-⚙️ Endpoints Principais
-🔍 Buscar serviços
-POST /search
-
-
-Request Body (SearchQueryDto):
-
-{
-  "query": "faxina",
-  "location": "São Paulo",
-  "categories": ["residencial"],
-  "minPrice": 50,
-  "maxPrice": 200
+  // Ordenação & paginação
+  sort?: 'best'|'distance'|'rating'|'price';
+  page?: number; pageSize?: number;          // defaults em ENV
 }
+```
 
+### 3.2 `ProviderServiceSearchResultDto`
 
-Response (ProviderServiceSearchResultDto[]):
+```ts
+export class ProviderServiceSearchResultDto {
+  provider: {
+    id: string; displayName: string; avatarUrl?: string;
+    rating: number; reviewsCount: number;
+    acceptanceRate: number; avgResponseTimeSec: number;
+  };
+  service: {
+    id: string; title: string; pricingModel: 'FIXED'|'HOURLY'|'PACKAGE';
+    priceFrom: number; defaultDurationMin: number; materialsIncluded?: boolean;
+  };
+  discovery: {
+    distanceKm?: number; nextAvailableAt?: string;
+    score?: number;                                     // score de ranking
+  };
+}
+```
 
-[
-  {
-    "id": "srv123",
-    "title": "Faxina completa",
-    "description": "Limpeza residencial padrão",
-    "price": 150,
-    "category": "residencial",
-    "provider": {
-      "id": "prov456",
-      "name": "Maria Souza"
-    },
-    "rating": 4.8,
-    "reviewsCount": 32
-  }
-]
+---
 
-📦 Integrações
+## 4) Rotas (SearchController)
 
-Prisma ORM → consulta dados de ProviderServices e relacionamentos com Providers.
+| Método | Rota                | Descrição                                                                |
+| -----: | ------------------- | ------------------------------------------------------------------------ |
+|    GET | `/search/providers` | Busca por **provedores** (agrega serviços ativos para compor resultado). |
+|    GET | `/search/services`  | Busca por **serviços** (cada item é um par provedor×serviço).            |
 
-Providers Module → obtém informações sobre os provedores.
+**Query params**: conforme `SearchQueryDto`.
 
-Reviews Module (opcional) → pode ser usado para incluir avaliações e notas no resultado de busca.
+**Erros comuns**: `VALIDATION_ERROR` (lat/lon inválidos, faixa de preço), `RANGE_TOO_LARGE` (radius), `DATE_RANGE_TOO_LARGE`, `NOT_FOUND` (quando `serviceId` inexistente).
 
-🧩 Casos de Uso
+---
 
-Clientes encontram serviços rapidamente filtrando por preço, categoria ou localização.
+## 5) Service (assinaturas & fluxo)
 
-Exibir lista de provedores mais bem avaliados em uma região.
+```ts
+class SearchService {
+  searchProviders(q: SearchQueryDto): Promise<{ items: ProviderServiceSearchResultDto[]; total: number }>;
+  searchServices(q: SearchQueryDto): Promise<{ items: ProviderServiceSearchResultDto[]; total: number }>;
+}
+```
 
-Fornecer autocomplete ou sugestões inteligentes no app móvel.
+### 5.1 Pipeline de busca
 
-Base para ranking e missões (ex.: "Reserve 3 serviços encontrados via busca").
+1. **Normalização**: aplicar defaults (`page=1`, `pageSize=20`, `sort='best'`, `radiusKm=DEFAULT_RADIUS`). `q` → trim/lower; proteger contra termos muito curtos.
+2. **Pré‑seleção**: obter **provedores/serviços ativos** por filtros estruturais (categoria/serviço/priceFrom/materialsIncluded/`minRating`).
+3. **Localização**: se `lat/lon` presentes, calcular **distância** (Haversine ou `ST_DistanceSphere`) e filtrar por `radiusKm`. Popular `distanceKm` no resultado.
+4. **Disponibilidade**: se `onlyWithNextSlot` ou `dateFrom/dateTo` definidos, consultar `AvailabilityService` para cada candidato (ou por *batch*) e preencher `nextAvailableAt`.
+5. **Preço mínimo**: calcular `priceFrom` por serviço usando `pricingModel` e `defaultDurationMin` (sem add‑ons).
+6. **Score**: pedir `RankingService.score(providerId, viewerLoc?, signals)` e anexar `score`.
+7. **Ordenação**: por `sort`:
 
-✅ Benefícios
+   * `best` (default): por `score desc`, *tie‑breakers* (rating desc, distance asc)
+   * `distance`: `distanceKm asc`
+   * `rating`: `rating desc`
+   * `price`: `priceFrom asc`
+8. **Paginação**: aplicar `page/pageSize` com limites (ex.: `pageSize ≤ 50`).
+9. **Cache**: memoizar chaveada por query normalizada (TTL curto, ex.: 60s) e invalidar em eventos (ativação de serviço, review novo, mudança de disponibilidade).
 
-Padronização do formato de entrada e saída das buscas.
+---
 
-Flexibilidade para adicionar novos filtros sem quebrar contratos.
+## 6) Distância & Disponibilidade
 
-Integração transparente com o ecossistema da plataforma.
+* **Distância**: quando PostGIS estiver habilitado, preferir consulta SQL com `ORDER BY ST_DistanceSphere(provider.geom, point(lon,lat))`; caso contrário, Haversine em app.
+* **Disponibilidade**: `nextAvailableAt` vem de `AvailabilityService.getSlots(providerId, {start:end})` pegando o primeiro slot compatível com `durationMin`.
 
-Escalável para implementar busca avançada (ex.: full-text search, elasticsearch).
+---
 
-🚀 Próximos Passos / Melhorias
+## 7) Integrações
 
-Implementar full-text search (Postgres tsvector ou Elasticsearch).
+* **Providers/Provider Services**: leitura de perfis/serviços **ativos** + imagens (URL assinada vinda do BFF/Document).
+* **RankingService**: cálculo de `score` usando sinais: `rating`, `share5stars`, `recency`, `distance`, `acceptanceRate`, `avgResponseTimeSec`, além de **boosts** de gamificação.
+* **AvailabilityService**: preenchimento do `nextAvailableAt` e filtro com `dateFrom/dateTo`.
+* **Metrics/Reviews**: agregados de rating e contagem de reviews.
+* **Cache/Redis**: memoizar resultados; invalidar ao mudar cadastro/ativação de serviços, reviews, disponibilidade.
 
-Adicionar paginação e ordenação por relevância, preço ou avaliação.
+---
 
-Suporte a geolocalização real (coordenadas GPS em vez de string de cidade).
+## 8) Config (ENV)
 
-Cachear buscas populares para performance.
+```env
+SEARCH_DEFAULT_RADIUS_KM=15
+SEARCH_MAX_RADIUS_KM=50
+SEARCH_DEFAULT_PAGE_SIZE=20
+SEARCH_MAX_PAGE_SIZE=50
+SEARCH_CACHE_TTL_SEC=60
+SEARCH_REQUIRE_KYC_APPROVED=true  # só retorna provedores aprovados
+```
+
+---
+
+## 9) Exemplos (HTTP)
+
+### 9.1 Busca de serviços próximos (com slot)
+
+```http
+GET /search/services?lat=-22.90&lon=-47.06&radiusKm=10&categoryId=clean_full&onlyWithNextSlot=true&sort=best&page=1&pageSize=20
+```
+
+**200** *(exemplo reduzido)*
+
+```json
+{
+  "items": [
+    {
+      "provider": {"id":"p_01","displayName":"Ana Lima","rating":4.9,"reviewsCount":124,"acceptanceRate":0.93,"avgResponseTimeSec":420},
+      "service": {"id":"svc_1","title":"Faxina Completa","pricingModel":"HOURLY","priceFrom":135,"defaultDurationMin":180},
+      "discovery": {"distanceKm":2.3, "nextAvailableAt":"2025-08-25T10:00:00-03:00", "score":0.87}
+    }
+  ],
+  "total": 1
+}
+```
+
+### 9.2 Busca por preço/rating
+
+```http
+GET /search/providers?priceFrom=100&priceTo=250&minRating=4.5&sort=price
+```
+
+---
+
+## 10) Segurança & LGPD
+
+* Resultados restringidos a **provedores com KYC aprovado** e `isActive=true` (se `SEARCH_REQUIRE_KYC_APPROVED`).
+* Não expor PII; imagens via **URL assinada** pelo BFF.
+* Proteções anti‑abuso: **rate‑limit** de chamadas por IP e validação de parâmetros (raio, paginação).
+
+---
+
+## 11) Telemetria & KPIs
+
+* Eventos: `search_performed`, `search_result_viewed`, `search_click`, `search_no_results`.
+* KPIs: **CTR** (resultados → clique), **V2Q** (view → quote), **quotes→bookings**, tempo p95 de busca, taxa de **no‑results**.
+
+---
+
+## 12) QA — Casos críticos
+
+* `lat/lon` ausentes → permitir busca por cidade (fallback) ou ordenar por `best` sem distância.
+* `radiusKm` > `SEARCH_MAX_RADIUS_KM` → clamp.
+* `dateRange` muito grande → limitar a N dias.
+* Resultado com serviço **inativo** ou provedor **sem KYC** → filtrar antes do score.
+* Cache desatualizado após ativar/desativar serviço → invalidar por evento.
+
+---
+
+## 13) Melhorias avançadas (quando necessário)
+
+1. **Indexação** materializada (views) ou índice vetorial de **semântica** para `q`.
+2. **Personalização** por histórico do cliente (recompras, preferências, last‑mile).
+3. **Relevância** sensível ao tempo (picos por dia/semana com boosts de slot).
+4. **A/B** de pesos de ranking e de ordenação por coorte/cidade.
+5. **Sugestões** de busca (autocomplete e *did‑you‑mean*).
+
+---
+
+## 14) Conclusão
+
+O **Search** entrega resultados **relevantes e reserváveis**, unificando dados de catálogo, agenda e reputação. A integração com **Ranking** e **Availability** garante equilíbrio entre **qualidade** e **tempo**, enquanto cache e validações mantêm **performance** e **segurança** em produção.

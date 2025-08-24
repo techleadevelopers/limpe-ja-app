@@ -5,14 +5,20 @@ import { MissionsController } from './missions.controller';
 import { PrismaService } from '../prisma/prisma.service';
 import { CouponsModule } from '../coupons/coupons.module';
 import { LoyaltyModule } from '../loyalty/loyalty.module';
+import { MissionsProgressService } from './progress.service'; // Importar MissionsProgressService
 
 @Module({
   imports: [
+    // PrismaModule, // <<-- FIXED: Removed PrismaModule as it's not a module to import this way
     forwardRef(() => CouponsModule),
     forwardRef(() => LoyaltyModule),
   ],
   controllers: [MissionsController],
-  providers: [PrismaService, MissionsService],
+  providers: [
+    MissionsService,
+    MissionsProgressService, // ADICIONAR MissionsProgressService
+    PrismaService, // Garantir que PrismaService esteja disponível para MissionsProgressService
+  ],
   exports: [MissionsService],
 })
 export class MissionsModule {}

@@ -13,6 +13,7 @@ import { ProvidersModule } from '../providers/providers.module';
 import { WsAuthGuard } from './guards/ws-auth.guard';
 import { EmailModule } from '../common/modules/email.module';
 import { GeocodingModule } from '../common/modules/geocoding.module';
+import { ReferralsModule } from '../referrals/referrals.module'; // NOVO: Importar ReferralsModule
 
 @Module({
   imports: [
@@ -26,10 +27,11 @@ import { GeocodingModule } from '../common/modules/geocoding.module';
         signOptions: { expiresIn: configService.get<string>('JWT_EXPIRATION_TIME') },
       }),
     }),
-    forwardRef(() => UsersModule), // Correto
-    forwardRef(() => ProvidersModule), // CORREÇÃO: Adicionado forwardRef para resolver a dependência circular.
+    forwardRef(() => UsersModule),
+    forwardRef(() => ProvidersModule),
     EmailModule,
     GeocodingModule,
+    forwardRef(() => ReferralsModule), // NOVO: Adicionar forwardRef para ReferralsModule
   ],
   controllers: [AuthController],
   providers: [

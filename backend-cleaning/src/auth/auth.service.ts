@@ -1,24 +1,23 @@
 // src/auth/auth.service.ts
-import { Injectable, UnauthorizedException, ConflictException, BadRequestException, Logger, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, BadRequestException, Logger, InternalServerErrorException, forwardRef, Inject } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { RegisterClientDto } from './dto/register-client.dto';
 import { RegisterProviderDto } from './dto/register-provider.dto';
-// Importe BookingStatus e Prisma (para Prisma.SortOrder) do Prisma
-import { UserRole, User, Prisma, Client, Provider, Address, ProviderService, Service, Review, VerificationStatus, Booking, BookingStatus } from '@prisma/client';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { UserProfileDto } from '../users/dto/user-profile.dto';
+import { Prisma, UserRole, User, Client, Provider, Address, ProviderService, Service, Review, VerificationStatus, Booking, BookingStatus } from '@prisma/client';
 import { ProvidersService, ProviderWithCalculatedRating } from '../providers/providers.service';
 import { ClientWithIncludes as ImportedClientWithIncludes } from '../clients/clients.service';
 import { EmailService } from '../common/services/email.service';
 import { GeocodingService } from '../common/services/geocoding.service';
 import { ConfigService } from '@nestjs/config';
+import { ReferralsService } from '../referrals/referrals.service'; // NOVO: Importar ReferralsService
 
 // --- INÍCIO DAS CORREÇÕES DE TIPAGEM E ESTRUTURA ---
 
-// 1. Define a estrutura de include para a relação 'provider' no User
-// CORRIGIDO: Usando BookingStatus.COMPLETED e Prisma.SortOrder.desc
 const loginProviderInclude = {
   user: true,
   address: true,
@@ -35,13 +34,12 @@ const loginProviderInclude = {
     }
   },
   bookings: {
-    where: { status: BookingStatus.COMPLETED }, // CORRIGIDO: Usando o enum BookingStatus
-    orderBy: { createdAt: Prisma.SortOrder.desc }, // CORRIGIDO: Usando Prisma.SortOrder.desc
+    where: { status: BookingStatus.COMPLETED },
+    orderBy: { createdAt: Prisma.SortOrder.desc },
     take: 100,
   },
 };
 
-// 2. Define a estrutura de include para a relação 'client' no User
 const loginClientInclude = {
   user: true,
   address: true,
@@ -52,14 +50,6 @@ const loginClientInclude = {
   }
 };
 
-// 3. Redefine ProviderWithIncludes e ClientWithIncludes localmente.
-// ESTE PASSO É CRÍTICO para resolver o erro '2344' no UserWithAllRelations
-// e para garantir que o tipo de 'fullUser.provider' seja reconhecido corretamente.
-//
-// ATENÇÃO: VOCÊ DEVE GARANTIR QUE AS DEFINIÇÕES DESTES TIPOS EM
-// `providers/providers.service.ts` e `clients/clients.service.ts`
-// SEJAM IDÊNTICAS A ESTAS DEFINIÇÕES. CASO CONTRÁRIO, VOCÊ TERÁ ERROS DE TIPAGEM
-// EM OUTROS LUGARES ONDE ESTES TIPOS SÃO IMPORTADOS E USADOS.
 export type ProviderWithIncludes = Prisma.ProviderGetPayload<{
   include: typeof loginProviderInclude;
 }>;
@@ -68,9 +58,6 @@ export type ClientWithIncludes = Prisma.ClientGetPayload<{
   include: typeof loginClientInclude;
 }>;
 
-// 4. Tipo Auxiliar: UserWithAllRelations
-// Este tipo agora reflete exatamente a estrutura do `include` na query do Prisma,
-// usando as constantes definidas acima. Isso resolve o erro '2344'.
 export type UserWithAllRelations = Prisma.UserGetPayload<{
   include: {
     client?: {
@@ -82,7 +69,6 @@ export type UserWithAllRelations = Prisma.UserGetPayload<{
   };
 }>;
 
-// Tipos para os retornos de `create` em registerClient e registerProvider
 type NewUserClientPayload = Prisma.UserGetPayload<{
   include: {
     client: {
@@ -112,9 +98,10 @@ export class AuthService {
     private emailService: EmailService,
     private geocodingService: GeocodingService,
     private configService: ConfigService,
+    @Inject(forwardRef(() => ReferralsService)) // NOVO: Injetar ReferralsService
+    private referralsService: ReferralsService,
   ) {}
 
-  // validateUser (email/password) - Mantido
   async validateUser(email: string, pass: string): Promise<User | null> {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
@@ -127,7 +114,6 @@ export class AuthService {
     return user;
   }
 
-  // login (email/password) - Mantido. Este método é chamado internamente após validação.
   async login(user: User): Promise<AuthResponseDto> {
     const fullUser = await this.prisma.user.findUnique({
       where: { id: user.id },
@@ -166,15 +152,17 @@ export class AuthService {
 
     const userProfile = new UserProfileDto(userProfileDataForDto);
 
+    // Telemetria: user_logged_in
+    this.logger.log(`[TELEMETRY] user_logged_in: { userId: ${fullUser.id}, role: ${fullUser.role} }`);
+
     return {
       accessToken,
       user: userProfile,
     };
   }
 
-  // registerClient (email/password) - Mantido. Lógica de phoneExists ainda é válida para email/senha.
   async registerClient(registerClientDto: RegisterClientDto): Promise<AuthResponseDto> {
-    const { email, password, fullName, phone, address, cpf } = registerClientDto;
+    const { email, password, fullName, phone, address, cpf, referralCode } = registerClientDto; // NOVO: referralCode
 
     const existingUser = await this.prisma.user.findUnique({ where: { email } });
     if (existingUser) {
@@ -207,6 +195,7 @@ export class AuthService {
           passwordHash: hashedPassword,
           role: UserRole.CLIENT,
           isPhoneVerified: !!phone,
+          fullName: fullName, // Adicionado fullName ao User
           client: {
             create: {
               fullName,
@@ -247,22 +236,52 @@ export class AuthService {
         this.logger.log(`[AuthService] Endereço do cliente ID: ${newUserClient.client.address.id} atualizado com localização geoespacial.`);
       }
 
+      // --- NOVO: Lógica de Indicação no Registro ---
+      if (referralCode) {
+        try {
+          // ASSUNÇÃO: O referralCode fornecido no DTO é o ID do usuário indicador.
+          // Em um cenário real, você pode ter uma tabela de códigos de indicação
+          // ou um código gerado que precisa ser mapeado de volta para um userId.
+          const referrerUser = await this.prisma.user.findUnique({
+            where: { id: referralCode }, // Tenta encontrar o usuário pelo ID fornecido como referralCode
+          });
+
+          if (referrerUser) {
+            await this.referralsService.createReferral({
+              referredUserId: newUserClient.id,
+              referrerUserId: referrerUser.id,
+              referralCode: referralCode, // Passa o código original para o registro da indicação
+            });
+            this.logger.log(`[AuthService] Cliente ${newUserClient.id} registrado com código de indicação ${referralCode} do indicador ${referrerUser.id}.`);
+          } else {
+            this.logger.warn(`[AuthService] Código de indicação ${referralCode} não corresponde a nenhum usuário indicador. Registro sem vínculo de indicação.`);
+          }
+        } catch (e) {
+          this.logger.error(`[AuthService] Falha ao processar indicação para cliente ${newUserClient.id} com código ${referralCode}: ${e?.message || e}`);
+        }
+      }
+      // --- Fim da Lógica de Indicação ---
+
+      // Telemetria: client_registered
+      this.logger.log(`[TELEMETRY] client_registered: { userId: ${newUserClient.id}, email: ${newUserClient.email} }`);
+
       return this.login(newUserClient);
     } catch (error) {
       this.logger.error('Erro ao registrar cliente:', error);
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        if (error.meta?.target === 'User_phone_key') {
-          throw new ConflictException('Este número de telefone já está cadastrado.');
-        }
-        if (error.meta?.target === 'Client_cpf_key') {
-          throw new ConflictException('Este CPF já está cadastrado como cliente.');
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          if (error.meta?.target === 'User_phone_key') {
+            throw new ConflictException('Este número de telefone já está cadastrado.');
+          }
+          if (error.meta?.target === 'Client_cpf_key') {
+            throw new ConflictException('Este CPF já está cadastrado como cliente.');
+          }
         }
       }
       throw new BadRequestException('Não foi possível registrar o cliente. Verifique os dados.');
     }
   }
 
-  // registerProvider (email/password) - Mantido. Lógica de phoneExists ainda é válida para email/senha.
   async registerProvider(registerProviderDto: RegisterProviderDto): Promise<AuthResponseDto> {
     const {
       email,
@@ -274,6 +293,7 @@ export class AuthService {
       address,
       yearsOfExperience,
       avatarUrl,
+      referralCode, // NOVO: referralCode
     } = registerProviderDto;
 
     const existingUser = await this.prisma.user.findUnique({ where: { email } });
@@ -305,6 +325,7 @@ export class AuthService {
           passwordHash: hashedPassword,
           role: UserRole.PROVIDER,
           isPhoneVerified: !!phone,
+          fullName: fullName, // Adicionado fullName ao User
           provider: {
             create: {
               fullName,
@@ -316,6 +337,8 @@ export class AuthService {
               verificationStatus: VerificationStatus.PENDING_INITIAL_REVIEW,
               bio: null,
               badges: [],
+              acceptanceRate: 0, // NOVO: Default
+              averageResponseTime: 0, // NOVO: Default
               address: {
                 create: {
                   cep: address.cep,
@@ -350,22 +373,50 @@ export class AuthService {
         this.logger.log(`[AuthService] Endereço do provedor ID: ${newUserProvider.provider.address.id} atualizado com localização geoespacial.`);
       }
 
+      // --- NOVO: Lógica de Indicação no Registro (para provedor) ---
+      if (referralCode) {
+        try {
+          // ASSUNÇÃO: O referralCode fornecido no DTO é o ID do usuário indicador.
+          const referrerUser = await this.prisma.user.findUnique({
+            where: { id: referralCode }, // Tenta encontrar o usuário pelo ID fornecido como referralCode
+          });
+
+          if (referrerUser) {
+            await this.referralsService.createReferral({
+              referredUserId: newUserProvider.id,
+              referrerUserId: referrerUser.id,
+              referralCode: referralCode, // Passa o código original para o registro da indicação
+            });
+            this.logger.log(`[AuthService] Provedor ${newUserProvider.id} registrado com código de indicação ${referralCode} do indicador ${referrerUser.id}.`);
+          } else {
+            this.logger.warn(`[AuthService] Código de indicação ${referralCode} não corresponde a nenhum usuário indicador. Registro sem vínculo de indicação.`);
+          }
+        } catch (e) {
+          this.logger.error(`[AuthService] Falha ao processar indicação para provedor ${newUserProvider.id} com código ${referralCode}: ${e?.message || e}`);
+        }
+      }
+      // --- Fim da Lógica de Indicação ---
+
+      // Telemetria: provider_registered
+      this.logger.log(`[TELEMETRY] provider_registered: { userId: ${newUserProvider.id}, email: ${newUserProvider.email} }`);
+
       return this.login(newUserProvider);
     } catch (error) {
       this.logger.error('Erro ao registrar provedor:', error);
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        if (error.meta?.target === 'User_phone_key') {
-          throw new ConflictException('Este número de telefone já está cadastrado.');
-        }
-        if (error.meta?.target === 'Provider_cpf_key') {
-          throw new ConflictException('Este CPF já está cadastrado como provedor.');
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          if (error.meta?.target === 'User_phone_key') {
+            throw new ConflictException('Este número de telefone já está cadastrado.');
+          }
+          if (error.meta?.target === 'Provider_cpf_key') {
+            throw new ConflictException('Este CPF já está cadastrado como provedor.');
+          }
         }
       }
       throw new BadRequestException('Não foi possível registrar o provedor. Verifique os dados e o console do servidor para mais detalhes.');
     }
   }
 
-  // forgotPassword - Mantido
   async forgotPassword(email: string): Promise<void> {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
@@ -374,7 +425,7 @@ export class AuthService {
     }
 
     const resetToken = this.jwtService.sign({ userId: user.id }, { expiresIn: '1h' });
-    const appBaseUrl = this.configService.get<string>('appBaseUrl');
+    const appBaseUrl = this.configService.get<string>('jwt.appBaseUrl'); // Corrected appBaseUrl access
     const resetLink = `${appBaseUrl}/reset-password?token=${resetToken}`;
 
     try {
@@ -407,8 +458,12 @@ export class AuthService {
         `
       );
       this.logger.log(`Email de redefinição de senha enviado para ${email}`);
-    } catch (emailError) {
+      // Telemetria: forgot_password_email_sent
+      this.logger.log(`[TELEMETRY] forgot_password_email_sent: { email: ${email} }`);
+    } catch (emailError: any) {
       this.logger.error(`Falha ao enviar email de redefinição de senha para ${email}: ${emailError.message}`);
+      // Telemetria: forgot_password_email_failed
+      this.logger.log(`[TELEMETRY] forgot_password_email_failed: { email: ${email}, error: ${emailError.message} }`);
     }
   }
 }

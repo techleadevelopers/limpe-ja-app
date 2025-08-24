@@ -16,7 +16,7 @@ export class RegisterClientDto {
   @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/, {
     message: 'A senha deve conter pelo menos uma letra maiúscula, uma minúscula, um número e um caractere especial.',
   })
-  @IsNotEmpty({ message: 'A senha é obrigatória.' })
+  @IsNotEmpty({ message: 'A senha é obrigatório.' })
   password: string;
 
   @ApiProperty({ description: 'Nome completo do cliente', example: 'João da Silva' })
@@ -44,4 +44,9 @@ export class RegisterClientDto {
   @ValidateNested()
   @Type(() => CreateAddressDto)
   address: CreateAddressDto;
+
+  @ApiPropertyOptional({ description: 'Código de indicação, se houver', example: 'ABC123XYZ' })
+  @IsOptional()
+  @IsString()
+  referralCode?: string; // <<-- ADICIONADO
 }

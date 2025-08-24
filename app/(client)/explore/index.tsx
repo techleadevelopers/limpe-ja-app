@@ -15,10 +15,13 @@ import {
     ViewToken,
     RefreshControl,
     Platform,
+    Share // Importar Share para compartilhamento nativo
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // Importar AsyncStorage
+import { useFocusEffect } from '@react-navigation/native'; // Importar useFocusEffect
 
 import {
     getOffers,
@@ -26,6 +29,7 @@ import {
     getUserProfile,
     searchProvidersWithLocation,
 } from '../../../services/clientService';
+import { useAuth } from '../../../hooks/useAuth'; // Importar useAuth
 
 import {
     getRecommendedProviders,
@@ -37,6 +41,7 @@ import { Service } from '../../../types/backend/services';
 import { UserProfile } from '../../../types/backend/users';
 
 import { CLIENT_ROUTES } from '../../../constants/routes';
+import { AppColors, AppDurations, AppOffsets, AppShadows, AppTypography, SCREEN_WIDTH } from '../../../constants/appStyles';
 
 // --- INTERFACES PARA COMPONENTES (DEFINIDAS AQUI PARA EXEMPLO) ---
 // Idealmente, estas interfaces deveriam estar nos arquivos de seus respectivos componentes.
@@ -83,6 +88,13 @@ import SecaoPrestadores from '../../../components/client/explore/home/SecaoPrest
 import SecaoRecomendacoes from '../../../components/client/explore/home/SecaoRecomendacoes';
 import FAB_SOS from '../../../components/client/explore/home/FAB_SOS';
 
+// NOVOS COMPONENTES DE CUPOM E REFERRAL
+import { HtmlCouponCard } from '../../../components/coupons/HtmlCouponCard'; // Importar HtmlCouponCard
+import { CouponPill } from '../../../components/coupons/CouponPill'; // Importar CouponPill
+import { ReferralBanner } from '../../../components/referrals/ReferralBanner'; // Importar ReferralBanner
+import { ReferralSheet } from '../../../components/referrals/ReferralSheet';
+import { BottomSlideInCard } from '../../../components/common/BottomSlideInCard'; // NOVO: Importar BottomSlideInCard
+
 const COR_AZUL_CLARO_UNIFICADA = '#A0D2EB';
 const COR_PRIMARIA_ESCURA = '#2C3E50';
 const COR_CINZA_FUNDO = '#F4F7FC';
@@ -98,12 +110,10 @@ type BannerDataItem = {
     description: string;
     buttonText: string;
     badgeText: string;
-    backgroundColorStart: string; // Mantido aqui, mas não passado para CarouselBannerItem
-    backgroundColorEnd: string;   // Mantido aqui, mas não passado para CarouselBannerItem
-    onPress: () => void; // Adicionado para corresponder a CarouselBannerItemProps
+    onPress: () => void;
 };
 
-const bannerData: BannerDataItem[] = [ // Explicitamente tipado
+const bannerData: BannerDataItem[] = [
     {
         id: '1',
         title: 'Get Special Offer',
@@ -111,9 +121,7 @@ const bannerData: BannerDataItem[] = [ // Explicitamente tipado
         description: 'All Services Available | T&C Applied',
         buttonText: 'Claim',
         badgeText: 'Limited time!',
-        backgroundColorStart: '#f5f5dc',
-        backgroundColorEnd: '#deb887',
-        onPress: () => console.log('Banner 1 Pressionado'), // Adicionado onPress
+        onPress: () => console.log('Banner 1 Pressionado'),
     },
     {
         id: '2',
@@ -122,9 +130,7 @@ const bannerData: BannerDataItem[] = [ // Explicitamente tipado
         description: 'On Selected Services Only',
         buttonText: 'View',
         badgeText: 'Exclusive',
-        backgroundColorStart: '#e0ffff',
-        backgroundColorEnd: '#afeeee',
-        onPress: () => console.log('Banner 2 Pressionado'), // Adicionado onPress
+        onPress: () => console.log('Banner 2 Pressionado'),
     },
     {
         id: '3',
@@ -133,26 +139,42 @@ const bannerData: BannerDataItem[] = [ // Explicitamente tipado
         description: 'For New Customers',
         buttonText: 'Sign Up',
         badgeText: 'Hurry!',
-        backgroundColorStart: '#f0f8ff',
-        backgroundColorEnd: '#e6e6fa',
-        onPress: () => console.log('Banner 3 Pressionado'), // Adicionado onPress
+        onPress: () => console.log('Banner 3 Pressionado'),
     },
 ];
 
+// Chaves para AsyncStorage
+const WELCOME_COUPON_DISMISSED_KEY = '@LimpeJa:WelcomeCouponDismissed';
+const WELCOME_COUPON_REDEEMED_KEY = '@LimpeJa:WelcomeCouponRedeemed';
+const REFERRAL_BANNER_DISMISSED_KEY = '@LimpeJa:ReferralBannerDismissed'; // NOVO: Chave para o descarte do banner de indicação
+
 export default function ExploreClientScreen() {
     const router = useRouter();
-    const flatListRef = useRef<FlatList<BannerDataItem>>(null); // Tipado com BannerDataItem
+    const flatListRef = useRef<FlatList<BannerDataItem>>(null);
     const [currentIndex, setCurrentIndex] = useState(0);
     const { t } = useTranslation();
+    const { user, isAuthenticated } = useAuth(); // Usar o hook useAuth
 
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [serviceCategories, setServiceCategories] = useState<Service[]>([]);
     const [recommendations, setRecommendations] = useState<ProviderDisplayInfo[]>([]);
-    const [nearbyProviders, setNearbyProviders] = useState<ProviderDisplayInfo[]>([]); // Corrigido para ProviderDisplayInfo[]
-    const [currentOffer, setCurrentOffer] = useState<Offer | null>(null);
+    const [nearbyProviders, setNearbyProviders] = useState<ProviderDisplayInfo[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
+
+    // Estados para o CouponWelcomeCard e CouponPill
+    const [welcomeCouponOffer, setWelcomeCouponOffer] = useState<Offer | null>(null);
+    const [showPersistentCouponPill, setShowPersistentCouponPill] = useState(false); // Renomeado para clareza
+    const [showReferralSheet, setShowReferralSheet] = useState(false);
+
+    // NOVO ESTADO: Controla qual promoção está ativa no BottomSlideInCard
+    const [activeBottomPromotion, setActiveBottomPromotion] = useState<'coupon' | 'referral' | null>(null);
+    const promotionTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Para gerenciar o setTimeout
+
+    const referralCode = userProfile?.referralCode || "LIMPEJA123"; // Mock de um código de referência
+    const rewardReferrer = "Ganhe R$20 ou +300 pts";
+    const rewardReferred = "Seu amigo ganha 20% na 1ª";
 
     const headerAnim = useRef(new Animated.Value(0)).current;
     const categoriesAnim = useRef(new Animated.Value(0)).current;
@@ -160,13 +182,16 @@ export default function ExploreClientScreen() {
     const recommendationsAnim = useRef(new Animated.Value(0)).current;
     const providersAnim = useRef(new Animated.Value(0)).current;
     const navBarAnim = useRef(new Animated.Value(0)).current;
+    // Removido referralBannerAnim, pois agora é tratado pelo BottomSlideInCard
 
+
+    // Função para buscar os dados principais da tela
     const fetchData = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
             const fetchedUserProfile = await getUserProfile();
-            setUserProfile(fetchedUserProfile);
+            setUserProfile(fetchedUserProfile); // Isso atualiza o estado userProfile
 
             console.log('[ExploreClientScreen] Perfil do usuário carregado:', fetchedUserProfile);
 
@@ -193,20 +218,15 @@ export default function ExploreClientScreen() {
 
             let providersData: ProviderDisplayInfo[] = [];
             if (locationCoords) {
-                // Correção para o Erro 3: Adicionar asserção de tipo
                 providersData = await searchProvidersWithLocation({
                     latitude: locationCoords.latitude,
                     longitude: locationCoords.longitude,
-                    radius: 50, // Raio de busca em km
+                    radius: 50,
                 }) as ProviderDisplayInfo[];
             }
             setNearbyProviders(providersData);
 
-            const offersData = await getOffers();
-            if (offersData.length > 0) {
-                setCurrentOffer(offersData.length > 0 ? offersData.slice(0, 1)[0] : null);
-            }
-
+            // Lógica para animações de entrada
             Animated.sequence([
                 Animated.spring(headerAnim, { toValue: 1, damping: 10, stiffness: 100, useNativeDriver: true }),
                 Animated.delay(50),
@@ -231,9 +251,87 @@ export default function ExploreClientScreen() {
         }
     }, [t, headerAnim, categoriesAnim, bannerAnim, recommendationsAnim, providersAnim, navBarAnim]);
 
+    // Efeito para chamar fetchData uma vez na montagem inicial do componente
     useEffect(() => {
         fetchData();
-    }, [fetchData]);
+    }, [fetchData]); // `fetchData` é uma `useCallback` com dependências estáveis, então este efeito rodará uma vez.
+
+
+    // Use useFocusEffect para disparar a lógica de promoção quando a tela estiver em foco
+    useFocusEffect(
+        useCallback(() => {
+            let cancelled = false;
+
+            const loadAndSetPromotions = async () => {
+                // Fetch offers here, as it's specific to promotions
+                const offersData = await getOffers();
+                const welcomeOffer = offersData.find(offer =>
+                    (offer as any).target === 'NEW_CLIENTS' && (offer as any).firstBookingOnly
+                );
+                setWelcomeCouponOffer(welcomeOffer || null);
+
+                if (promotionTimeoutRef.current) {
+                    clearTimeout(promotionTimeoutRef.current);
+                }
+
+                // CORREÇÃO: Adicionar type assertion para unknown primeiro e depois para NodeJS.Timeout
+                promotionTimeoutRef.current = setTimeout(async () => {
+                    if (cancelled) return;
+
+                    let shouldShowCoupon = false;
+                    let shouldShowReferral = false;
+
+                    // Verifica a elegibilidade do Cupom
+                    // Garante que userProfile não é nulo antes de acessar suas propriedades
+                    if (welcomeOffer && userProfile) { 
+                        const dismissedCoupon = await AsyncStorage.getItem(WELCOME_COUPON_DISMISSED_KEY);
+                        const redeemedCoupon = await AsyncStorage.getItem(WELCOME_COUPON_REDEEMED_KEY);
+                        const isNewCustomer = (userProfile.clientDetails?.totalBookings || 0) === 0;
+                        const isCouponExpired = welcomeOffer.validUntil ? new Date(welcomeOffer.validUntil).getTime() < Date.now() : false;
+
+                        if (isNewCustomer && !redeemedCoupon && !isCouponExpired) {
+                            if (!dismissedCoupon) {
+                                shouldShowCoupon = true;
+                            } else {
+                                setShowPersistentCouponPill(true); // Mostra a pílula se dispensado, mas não resgatado
+                            }
+                        }
+                    }
+
+                    // Verifica a elegibilidade da Indicação (apenas se autenticado e tiver um código de indicação)
+                    if (isAuthenticated && userProfile?.referralCode) { 
+                        const dismissedReferral = await AsyncStorage.getItem(REFERRAL_BANNER_DISMISSED_KEY);
+                        if (!dismissedReferral) {
+                            shouldShowReferral = true;
+                        }
+                    }
+
+                    // Determina qual promoção mostrar (Cupom tem prioridade)
+                    if (shouldShowCoupon) {
+                        setActiveBottomPromotion('coupon');
+                    } else if (shouldShowReferral) {
+                        setActiveBottomPromotion('referral');
+                    } else {
+                        setActiveBottomPromotion(null); // Nenhuma promoção para mostrar
+                    }
+                }, 5000) as unknown as NodeJS.Timeout; // <-- CORREÇÃO APLICADA AQUI
+            };
+
+            // Somente executa a lógica de promoções se o userProfile já estiver carregado
+            // Isso evita que a lógica de promoções tente acessar userProfile antes que ele seja populado
+            if (userProfile !== null) {
+                loadAndSetPromotions();
+            }
+
+            return () => {
+                cancelled = true;
+                if (promotionTimeoutRef.current) {
+                    clearTimeout(promotionTimeoutRef.current);
+                }
+            };
+        }, [userProfile, isAuthenticated, t]) // Dependências: userProfile e isAuthenticated. `t` é estável.
+    );
+
 
     const handleCategoryPress = useCallback((item: Service) => {
         router.push({
@@ -264,7 +362,6 @@ export default function ExploreClientScreen() {
         }
     }, []);
 
-    // Correção para o Erro do CarouselBannerItem: Passar apenas as props esperadas
     const renderBannerItem = useCallback(({ item }: { item: BannerDataItem }) => {
         return (
             <CarouselBannerItem
@@ -294,14 +391,76 @@ export default function ExploreClientScreen() {
 
     const onRefresh = useCallback(() => {
         setIsRefreshing(true);
+        // Chamamos fetchData aqui para o RefreshControl.
+        // A lógica de promoção será reavaliada pelo useFocusEffect quando a tela focar novamente.
         fetchData();
     }, [fetchData]);
+
+    // Handlers para o Cupom
+    const handleUseWelcomeCoupon = useCallback(async (code: string) => {
+        setActiveBottomPromotion(null); // Fecha o card
+        setShowPersistentCouponPill(false); // Esconde a pílula se usado
+        await AsyncStorage.setItem(WELCOME_COUPON_REDEEMED_KEY, 'true'); // Marcar como resgatado
+        router.push({
+            pathname: CLIENT_ROUTES.SCHEDULE_SERVICE,
+            params: { couponCode: code }
+        } as any);
+    }, [router]);
+
+    const handleDismissWelcomeCoupon = useCallback(async () => {
+        setActiveBottomPromotion(null); // Fecha o card
+        setShowPersistentCouponPill(true); // Mostrar a pílula após dispensar
+        await AsyncStorage.setItem(WELCOME_COUPON_DISMISSED_KEY, 'true'); // Marcar como dispensado
+    }, []);
+
+    const handleReopenWelcomeCoupon = useCallback(async () => {
+        setShowPersistentCouponPill(false);
+        setActiveBottomPromotion('coupon'); // Reabre o card do cupom
+        // Opcional: remover a flag de dispensado se o usuário reengajar
+        // await AsyncStorage.removeItem(WELCOME_COUPON_DISMISSED_KEY);
+    }, []);
+
+    // Handlers para o ReferralBanner
+    const handleDismissReferralBanner = useCallback(async () => {
+        setActiveBottomPromotion(null); // Fecha o card
+        await AsyncStorage.setItem(REFERRAL_BANNER_DISMISSED_KEY, 'true'); // Marca como dispensado
+    }, []);
+
+    const handleShareReferral = useCallback(async () => {
+        try {
+            const result = await Share.share({
+                message: `Use meu código de indicação ${referralCode} no LimpeJá e ganhe um desconto na sua primeira reserva!`,
+                url: 'https://limpeja.com/referral', // URL para a página de indicação
+                title: 'Indique um amigo e ganhe no LimpeJá!',
+            });
+            if (result.action === Share.sharedAction) {
+                if (result.activityType) {
+                    console.log(`Compartilhado via ${result.activityType}`);
+                } else {
+                    console.log('Compartilhado');
+                }
+            } else if (result.action === Share.dismissedAction) {
+                console.log('Compartilhamento cancelado');
+            }
+        } catch (error: any) {
+            Alert.alert('Erro ao Compartilhar', error.message);
+        }
+        setShowReferralSheet(false); // Fecha a sheet após a tentativa de compartilhamento
+        setActiveBottomPromotion(null); // Fecha o banner após o compartilhamento
+    }, [referralCode]);
+
+    const handleHowItWorksReferral = useCallback(() => {
+        setShowReferralSheet(true);
+        setActiveBottomPromotion(null); // Fecha o banner ao abrir a sheet
+    }, []);
+
 
     if (loading && !isRefreshing) {
         return (
             <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={COR_AZUL_CLARO_UNIFICADA} />
-                <Text style={{ marginTop: 10 }}>{t("common.loading")}</Text>
+                <Stack.Screen options={{ headerShown: false }} />
+                <ActivityIndicator size="large" color={AppColors.primaryInteractive} />
+                <Text style={{ marginTop: 10, color: AppColors.textBody }}>{t("common.loading")}</Text>
             </View>
         );
     }
@@ -309,14 +468,14 @@ export default function ExploreClientScreen() {
     if (error) {
         return (
             <View style={styles.loadingContainer}>
-                <Text style={{ color: 'red', textAlign: 'center' }}>{error}</Text>
-                <TouchableOpacity onPress={fetchData} style={{ marginTop: 20, padding: 10, backgroundColor: COR_AZUL_CLARO_UNIFICADA, borderRadius: 5 }}>
-                    <Text style={{ color: '#fff' }}>{t("common.tryAgain")}</Text>
+                <Text style={{ color: AppColors.errorRed, textAlign: 'center' }}>{error}</Text>
+                <TouchableOpacity onPress={fetchData} style={{ marginTop: 20, padding: 10, backgroundColor: AppColors.primaryInteractive, borderRadius: 5 }}>
+                    <Text style={{ color: AppColors.white }}>{t("common.tryAgain")}</Text>
                 </TouchableOpacity>
             </View>
         );
     }
-    
+
     const addressToDisplay = userProfile?.clientDetails?.address || userProfile?.providerDetails?.address || userProfile?.address;
 
     return (
@@ -341,9 +500,9 @@ export default function ExploreClientScreen() {
                     <RefreshControl
                         refreshing={isRefreshing}
                         onRefresh={onRefresh}
-                        tintColor={COR_AZUL_CLARO_UNIFICADA}
+                        tintColor={AppColors.primaryInteractive}
                         title={t("common.loading")}
-                        titleColor={COR_AZUL_CLARO_UNIFICADA}
+                        titleColor={AppColors.primaryInteractive}
                     />
                 }
             >
@@ -358,7 +517,7 @@ export default function ExploreClientScreen() {
 
                     {/* Categorias de Serviço Animadas */}
                     <Animated.View style={{ opacity: categoriesAnim, transform: [{ translateY: categoriesAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
-                        <SecaoContainer<Service> // Explicitamente tipado para Service
+                        <SecaoContainer<Service>
                             titulo={t("search.all_categories")}
                             onVerTudoPress={() => router.push('/(client)/explore/todas-categorias' as any)}
                             data={safeServiceCategories}
@@ -366,9 +525,7 @@ export default function ExploreClientScreen() {
                                 if (!item || !item.name) return null;
                                 return (
                                     <CategoriaCard
-                                        // A propriedade 'key' é tratada pelo SecaoContainer
                                         item={{ id: item.id, name: item.name, icon: item.icon as any }}
-                                        // Removido onPress, pois CategoriaCard agora lida com a navegação internamente
                                     />
                                 );
                             }}
@@ -378,7 +535,7 @@ export default function ExploreClientScreen() {
 
                     {/* Novo Carrossel de Banners */}
                     <Animated.View style={[styles.carouselContainer, { opacity: bannerAnim, transform: [{ translateY: bannerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
-                        <FlatList<BannerDataItem> // Tipado com BannerDataItem
+                        <FlatList<BannerDataItem>
                             ref={flatListRef}
                             data={bannerData}
                             renderItem={renderBannerItem}
@@ -388,12 +545,11 @@ export default function ExploreClientScreen() {
                             showsHorizontalScrollIndicator={false}
                             onViewableItemsChanged={onViewableItemsChanged}
                             viewabilityConfig={viewabilityConfig}
-                            snapToInterval={screenWidth * 0.85 + 20} // Ajustado para corresponder à largura do banner + margin
+                            snapToInterval={screenWidth * 0.85 + 20}
                             decelerationRate="fast"
                         />
                         {renderPagination()}
                     </Animated.View>
-
 
                     {/* Recomendações para Você Animadas */}
                     <Animated.View style={{ opacity: recommendationsAnim, transform: [{ translateY: recommendationsAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
@@ -446,6 +602,53 @@ export default function ExploreClientScreen() {
 
             {/* FAB SOS */}
             <FAB_SOS />
+
+            {/* NOVO: BottomSlideInCard para Cupom ou Indicação (FORA DO SCROLLVIEW) */}
+            {/* Renderiza o cupom se activeBottomPromotion for 'coupon' */}
+            <BottomSlideInCard isVisible={activeBottomPromotion === 'coupon'}>
+                {welcomeCouponOffer && (
+                    <HtmlCouponCard
+                        code={(welcomeCouponOffer as any).code}
+                        title={welcomeCouponOffer.title}
+                        subtitle={welcomeCouponOffer.description}
+                        expiresAt={welcomeCouponOffer.validUntil}
+                        onUseNow={handleUseWelcomeCoupon}
+                        onDismiss={handleDismissWelcomeCoupon}
+                    />
+                )}
+            </BottomSlideInCard>
+
+            {/* Renderiza o banner de indicação se activeBottomPromotion for 'referral' */}
+            <BottomSlideInCard isVisible={activeBottomPromotion === 'referral'}>
+                {isAuthenticated && userProfile?.referralCode && (
+                    <ReferralBanner
+                        code={referralCode}
+                        rewardReferrer={rewardReferrer}
+                        rewardReferred={rewardReferred}
+                        onShare={handleShareReferral}
+                        onHowItWorks={handleHowItWorksReferral}
+                        onDismiss={handleDismissReferralBanner} // Passa o manipulador de descarte
+                    />
+                )}
+            </BottomSlideInCard>
+
+            {/* NOVO: Pílula de Cupom Persistente (usando CouponPill) */}
+            {showPersistentCouponPill && activeBottomPromotion !== 'coupon' && welcomeCouponOffer && (
+                <CouponPill
+                    code={(welcomeCouponOffer as any).code}
+                    onOpen={handleReopenWelcomeCoupon}
+                />
+            )}
+
+            {/* NOVO: ReferralSheet */}
+            <ReferralSheet
+                visible={showReferralSheet}
+                onClose={() => setShowReferralSheet(false)}
+                code={referralCode}
+                rewardReferrer={rewardReferrer}
+                rewardReferred={rewardReferred}
+                onShare={handleShareReferral}
+            />
         </View>
     );
 }
@@ -513,4 +716,6 @@ const styles = StyleSheet.create({
         padding: 5,
         marginRight: Platform.OS === 'ios' ? 10 : 0,
     },
+    // Removido referralBannerStyle, pois não está mais na visualização principal
+    // Removido couponCardOverlay style, pois não é mais um overlay de tela cheia
 });

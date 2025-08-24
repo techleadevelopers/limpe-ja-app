@@ -1,351 +1,289 @@
-Reviews Module — README
+# README — Módulo de Reviews (Backend LimpeJá)
 
-Este documento descreve o módulo de Avaliações (Reviews) da plataforma: responsabilidades, modelos de dados, regras de negócio, eventos (integração com Missões), API pública, permissões, fluxos principais e orientações de testes.
+> **Escopo:** documentação **code‑real (versão atual)** do módulo **Reviews** com base nos arquivos: `reviews.module.ts`, `reviews.controller.ts`, `reviews.service.ts`, `review.entity.ts`, `get-reviews.dto.ts`, `review.dto.ts`, `submit-review.dto.ts`, `smart-suggestions.dto.ts`.
+>
+> **Objetivo:** coletar e expor **avaliações verificadas** de clientes sobre serviços/provedores, com **uma review por reserva concluída**, resposta pública do provedor, agregados (médias/contagens), filtros, fotos e **sugestões inteligentes** de resposta. Integra com **Missions**, **Coupons**, **Ranking**, **Search** e **Notifications**.
 
-Objetivo
+---
 
-Permitir que clientes avaliem serviços concluídos, alimentar métricas de qualidade de prestadores, gerar pontos de fidelidade, acionar missões/recompensas, e fornecer insumos para ranking e insights.
+## 1) Responsabilidades
 
-Arquitetura & Dependências
+* Permitir **envio de review** somente para **bookings `COMPLETED`** pelo **cliente** daquela reserva.
+* Persistir **rating (1..5)**, comentário, fotos e metadados de verificação/moderação.
+* Expor **listagem pública** por provedor/serviço, com filtros (nota mínima, texto, fotos) e paginação.
+* Calcular **agregados**: média, distribuição por estrelas, total com fotos, NPS simplificado (opcional).
+* Habilitar **resposta do provedor** (uma resposta oficial + opcionais edições versionadas).
+* Emitir **eventos** (ex.: `review_submitted`) para **missões** e **ranking**.
 
-ReviewsController
-Exponde endpoints REST para criar e consultar avaliações.
+---
 
-ReviewsService
-Contém a lógica de negócio: validações, criação, métricas e integrações.
+## 2) Arquitetura
 
-PrismaService
-Persistência (ORM).
+* **Module**: `ReviewsModule` — registra controller/service, injeta repositório/ORM, cache e integra dependências (Bookings/Missions/Notifications/DocumentProcessing/Providers/Metrics).
+* **Controller**: `ReviewsController` — rotas públicas de consulta e rotas autenticadas para envio/gestão.
+* **Service**: `ReviewsService` — regra de negócio para validação de elegibilidade, criação, agregados, respostas e sugestões inteligentes.
+* **Entity**: `Review` — modelo persistente da avaliação.
 
-BookingsService (leitura)
-Validação de vínculo/estado do agendamento avaliado.
+---
 
-ProvidersService (leitura/escrita)
-Atualização de badges/indicadores do prestador após novas reviews.
+## 3) Modelagem (entity — code‑real esperado)
 
-LoyaltyService
-Créditos de pontos por avaliações (primeira e subsequentes).
+```ts
+export type ReviewStatus = 'PUBLISHED'|'PENDING'|'REJECTED'|'FLAGGED';   // moderação
 
-MissionsService (opcional / quando integrado)
-Emissão de eventos de missão (review.created).
+export class Review {
+  id: string;                        // uuid
+  bookingId: string;                 // FK obrigatório (1:1 com review)
+  providerId: string;                // FK provedor avaliado
+  clientId: string;                  // autor (cliente)
+  serviceId?: string | null;         // serviço referenciado na reserva
 
-Módulos importados pelo ReviewsModule (conforme sua base):
-PrismaModule, BookingsModule, ClientsModule, ProvidersModule, ProviderServicesModule, LoyaltyModule.
+  rating: number;                    // 1..5 (int)
+  comment?: string | null;           // texto (sanitizado)
+  photos?: string[] | null;          // storageKeys (Document Processing)
 
-Modelo de Dados (resumo)
+  isVerified: boolean;               // true se vínculo com booking COMPLETED
+  status: ReviewStatus;              // publicação/moderação
 
-Tabela Review (Prisma):
+  providerReply?: {
+    text: string;                    // resposta pública do provedor
+    repliedAt: Date;
+    editedAt?: Date | null;          // versão mais recente
+  } | null;
 
-id (PK)
+  helpfulYes?: number;               // votos de utilidade (opcional)
+  helpfulNo?: number;
 
-bookingId (unique) — avaliação 1:1 com agendamento
-
-clientId
-
-providerId
-
-rating (Int)
-
-comment (String?)
-
-createdAt / updatedAt
-
-Índices e unicidades importantes:
-
-@@unique([bookingId, clientId, providerId]) — evita avaliações duplicadas/mismatch.
-
-bookingId único — um booking só pode ter uma avaliação.
-
-Relacionamentos relevantes:
-
-Review → Booking (agendamento avaliado)
-
-Review → Client (autor)
-
-Review → Provider (avaliado)
-
-Regras de Negócio
-1) Elegibilidade para avaliar
-
-Apenas cliente do booking pode avaliar.
-
-O booking deve estar COMPLETED (concluído).
-
-Não pode existir review prévia para o mesmo booking.
-
-2) Pontuação (Loyalty)
-
-Primeira avaliação do cliente → +20 pontos (LoyaltyTransactionType.FIRST_REVIEW).
-
-Avaliações subsequentes → +5 pontos (LoyaltyTransactionType.REVIEW_SUBMITTED).
-
-Esses valores são configuráveis no serviço; ajuste conforme sua política.
-
-3) Eventos de Missão (opcional)
-
-Ao criar uma avaliação, o módulo pode disparar o evento:
-
-review.created → consumido pelo MissionsService para atualizar progresso de missões.
-
-Se o evento for crucial para o seu negócio, garanta a injeção/operação do MissionsService ou componha via filas/worker.
-
-4) Indicadores do Provedor
-
-Após cada review, o serviço chama ProvidersService.updateProviderBadges(providerId) para recalcular/atualizar:
-
-Badges (ex.: Top Rated, Rápido em respostas, etc.).
-
-Contadores como fiveStarReviewCount, médias, e outras métricas internas.
-
-5) Métricas & Insights
-
-ReviewsService oferece utilitários para dashboards:
-
-getDetailedRatingBreakdown(providerId):
-
-Média geral (overall)
-
-Dimensões simuladas (pontualidade, qualidade, comunicação, value)
-
-Tendência recente (últimos 30d vs 30d anteriores): improving|declining|stable
-
-satisfactionRate (% de notas ≥ 4)
-
-responseTime (simulado; use caso tenha SLO real)
-
-generateSmartSuggestions(providerId):
-
-Sugestões baseadas em rating, volume e serviços do provedor:
-
-Pricing (ajuste de preço)
-
-Availability (ampliar horários)
-
-Service improvement (foco em qualidade)
-
-Marketing (explorar avaliações altas)
-
-Os cálculos de dimensões além do overall estão simulados como placeholder; integre dados reais conforme precisar.
-
-Endpoints
-POST /reviews
-
-Criar avaliação
-
-Body (SubmitReviewDto):
-
-{
-  "bookingId": "uuid-do-agendamento",
-  "rating": 5,
-  "comment": "Excelente serviço!"
+  createdAt: Date;                   // enviada em
+  updatedAt: Date;                   // última alteração
+  deletedAt?: Date | null;           // soft delete se necessário
 }
+```
+
+**Índices recomendados:** `(providerId, status, createdAt desc)`, `bookingId (unique)`, `rating`, `clientId`, `serviceId`.
 
+---
 
-Regras:
+## 4) DTOs (code‑real)
 
-Autenticado (JwtAuthGuard).
+### 4.1 `SubmitReviewDto`
 
-Autor deve ser o cliente do booking.
+```ts
+export class SubmitReviewDto {
+  @IsString() bookingId: string;                  // reserva COMPLETED
+  @IsInt() @Min(1) @Max(5) rating: number;
+  @IsOptional() @IsString() @MaxLength(2000) comment?: string;
+  @IsOptional() @IsArray() @IsString({each:true}) photos?: string[];  // storageKeys
+}
+```
 
-Booking precisa estar COMPLETED.
+### 4.2 `GetReviewsDto`
 
-Única review por booking.
+```ts
+export class GetReviewsDto {
+  @IsOptional() @IsString() providerId?: string;
+  @IsOptional() @IsString() serviceId?: string;
+  @IsOptional() @IsInt() @Min(1) minRating?: number;        // 1..5
+  @IsOptional() @IsBoolean() withPhotos?: boolean;
+  @IsOptional() @IsString() q?: string;                     // busca por texto
+  @IsOptional() @IsIn(['recent','rating','helpful']) order?: 'recent'|'rating'|'helpful';
+  @IsOptional() @IsInt() @Min(1) page?: number;
+  @IsOptional() @IsInt() @Min(1) @Max(100) pageSize?: number;
+}
+```
 
-Efeitos colaterais:
+### 4.3 `ReviewDto` (payload público)
 
-Cria Review.
+```ts
+export class ReviewDto {
+  id: string; bookingId: string; providerId: string; clientId: string;
+  rating: number; comment?: string; photos?: string[]; createdAt: string;
+  providerReply?: { text: string; repliedAt: string; editedAt?: string } | null;
+  isVerified: boolean; serviceId?: string;
+}
+```
 
-Credita pontos de loyalty (20 se 1ª review do cliente; senão 5).
+### 4.4 `SmartSuggestionsDto` (opcional)
 
-Dispara review.created (se integrado ao Missions).
+```ts
+export class SmartSuggestionsDto {
+  reviewId: string;                   // contexto
+  suggestions: string[];              // respostas curtas sugeridas
+}
+```
 
-Atualiza badges/indicadores do provedor.
+---
 
-Responses:
+## 5) Rotas (ReviewsController)
 
-201 → Review criada.
+| Método | Rota                             | Scope           | Descrição                                                                         |                                         |
+| -----: | -------------------------------- | --------------- | --------------------------------------------------------------------------------- | --------------------------------------- |
+|    GET | `/reviews`                       | Público         | Lista reviews por `providerId`/`serviceId` com filtros e paginação.               |                                         |
+|    GET | `/reviews/:id`                   | Público         | Detalhe de uma review (publicada).                                                |                                         |
+|    GET | `/reviews/summary`               | Público         | Agregados por `providerId`/`serviceId` (média, contagem por estrelas, com fotos). |                                         |
+|   POST | `/reviews`                       | AUTH (client)   | Envia review (uma por booking). Valida booking `COMPLETED` + ownership.           |                                         |
+|   POST | `/reviews/:id/reply`             | AUTH (provider) | Resposta pública do provedor (uma resposta, com edição possível).                 |                                         |
+|   POST | `/reviews/:id/helpful`           | AUTH (user)     | Voto de utilidade (\`helpful=true                                                 | false\`) com rate‑limit por usuário/IP. |
+|    GET | `/reviews/:id/smart-suggestions` | PROVIDER (self) | Sugestões de resposta (texto curto), se habilitado.                               |                                         |
+| DELETE | `/reviews/:id`                   | ADMIN           | Remoção/soft‑delete ou `status='REJECTED'` via moderação.                         |                                         |
 
-400 → Booking não está COMPLETED / payload inválido.
+**Erros comuns**: `VALIDATION_ERROR`, `BOOKING_NOT_COMPLETED`, `ALREADY_REVIEWED`, `FORBIDDEN`, `NOT_FOUND`, `MODERATION_REQUIRED`.
 
-403 → Usuário não é o cliente do booking.
+---
 
-409 → Review já existe para este booking.
+## 6) Service (assinaturas & regra)
 
-404 → Booking inexistente.
+```ts
+class ReviewsService {
+  list(q: GetReviewsDto): Promise<{ items: ReviewDto[]; total: number; summary?: any }>;
+  getById(id: string): Promise<ReviewDto>;
 
-GET /reviews
+  submit(clientUserId: string, dto: SubmitReviewDto): Promise<ReviewDto>;  // valida elegibilidade
+  reply(providerUserId: string, reviewId: string, text: string): Promise<ReviewDto>;
+  voteHelpful(userId: string, reviewId: string, helpful: boolean): Promise<void>;
 
-Listar avaliações (filtros opcionais via GetReviewsDto)
+  summary(filter: { providerId?: string; serviceId?: string }): Promise<{
+    avg: number; count: number; stars: { s1: number; s2: number; s3: number; s4: number; s5: number }; withPhotos: number
+  }>;
 
-Query params (opcionais):
+  smartSuggestions(providerUserId: string, reviewId: string): Promise<SmartSuggestionsDto>; // opcional
+}
+```
 
-providerId
+### 6.1 Elegibilidade & janelas
 
-clientId
+* Somente **cliente** vinculado ao **bookingId** pode avaliar; booking deve estar **`COMPLETED`** e dentro da **janela** (ex.: entre 1h e 30 dias após conclusão).
+* **Uma review por booking** (`bookingId` único); permitir **edição** limitada (ex.: em 24h) — se implementado.
+* Provedor pode enviar **uma resposta** oficial (editável, com `editedAt`).
 
-minRating
+### 6.2 Moderação & sanitização
 
-maxRating
+* Sanitizar `comment`/`reply` (HTML/markdown básico) — bloquear profanity, PII sensível e **contato direto** (telefones/links/redes sociais).
+* `status`: `PENDING` (se fila de moderação ativa) → `PUBLISHED`; `FLAGGED/REJECTED` por abuso.
 
-Retorna as últimas N (padrão 10; adapte se precisar) com includes úteis para UI:
+### 6.3 Agregados & cache
 
-client.user.avatarUrl (quando necessário)
+* `summary` calcula média e histograma por estrela; **cache** por `(providerId|serviceId)` com TTL (ex.: 5 min) e **invalidação** em novos envios/edições.
+* `list` pode embutir `summary` no primeiro page para reduzir chamadas.
 
-provider.user.fullName
+### 6.4 Sugestões inteligentes (opcional)
 
-booking.providerService.service (nome do serviço)
+* Gera 2–3 **respostas curtas** e empáticas para o provedor, baseadas em rating/tema.
+* **Não envia** automaticamente; provedor edita/aceita antes de publicar.
 
-GET /reviews/:id
+### 6.5 Integrações
 
-Buscar uma avaliação específica (com includes básicos)
+* **MissionsModule**: `trackEvent(userId, 'review_submitted')` (cliente) → recompensa (cupom/pontos) quando aplicável.
+* **CouponsModule**: emissão de cupom por missão de avaliação (ex.: “avalie em 48h”).
+* **RankingService / Providers**: atualizar `rating`/`reviewsCount` agregados e disparar reindex.
+* **Notifications**: push/in‑app para provedor quando nova review publicada; para cliente quando resposta do provedor.
+* **Document Processing**: validar fotos (storageKeys) e gerar URLs assinadas no BFF.
 
-GET /reviews/:providerId/breakdown
+---
 
-(Se exposto) Retorna DetailedRatingBreakdown para um provedor.
+## 7) Segurança & LGPD
 
-GET /reviews/:providerId/suggestions
+* Acesso: reviews públicas **sem PII**; internamente, vincular por IDs. Não expor telefones, e‑mails ou endereços nos campos públicos.
+* Anti‑abuso: detecção de **contato direto** (regex de telefone/link/redes) e rate‑limit por IP/usuário para votos `helpful`.
+* Auditoria: registrar `who/when/ip` em submit/reply/delete.
 
-(Se exposto) Retorna SmartSuggestion[] para um provedor.
+---
 
-Permissões & Guards
+## 8) Config (ENV)
 
-Endpoints de criação exigem JWT válido.
+```env
+REVIEWS_PAGE_SIZE_DEFAULT=20
+REVIEWS_PAGE_SIZE_MAX=100
+REVIEWS_SUMMARY_CACHE_TTL_SEC=300
+REVIEWS_SUBMIT_WINDOW_DAYS=30
+REVIEWS_EDIT_WINDOW_HOURS=24
+REVIEWS_MODERATION_ENABLED=false
+REVIEWS_SMART_SUGGESTIONS_ENABLED=true
+```
 
-A criação garante que somente o cliente do booking avaliado possa postar.
+---
 
-Leituras em geral são públicas/semipúblicas (conforme sua política); mantenha o JwtAuthGuard se necessário.
+## 9) Exemplos (HTTP)
 
-Integrações
-Missões (MissionsService)
+### 9.1 Enviar review
 
-Evento: review.created
+```http
+POST /reviews
+Authorization: Bearer <client-token>
+{
+  "bookingId": "b_123",
+  "rating": 5,
+  "comment": "Profissional excelente. Chegou no horário e deixou tudo impecável!",
+  "photos": ["uploads/2025/08/24/foto1.jpg"]
+}
+```
 
-Quando o cliente envia review, chamamos missionsService.trackEvent(userId, 'review.created', { bookingId, providerId, rating }).
+**201** *(exemplo reduzido)*
 
-Missões típicas:
+```json
+{
+  "id":"r_01","bookingId":"b_123","providerId":"p_01","clientId":"c_01","rating":5,
+  "comment":"Profissional excelente...","photos":["uploads/.../foto1.jpg"],
+  "isVerified":true,"createdAt":"2025-08-24T14:33:00-03:00"
+}
+```
 
-“Avalie um serviço” → alvo 1 no período.
+### 9.2 Listar reviews por provedor (com fotos)
 
-“Avalie 5 serviços no mês” → alvo 5 com timeWindowDays = 30.
+```http
+GET /reviews?providerId=p_01&withPhotos=true&minRating=4&order=recent&page=1&pageSize=20
+```
 
-Fidelidade (LoyaltyService)
+### 9.3 Responder review (provedor)
 
-addPoints({ userId, points, type, referenceId })
+```http
+POST /reviews/r_01/reply
+Authorization: Bearer <provider-token>
+{
+  "text": "Obrigado pela confiança! Ficamos à disposição para o próximo agendamento."
+}
+```
 
-Transações registradas em LoyaltyTransaction para auditoria.
+### 9.4 Summary
 
-Provedores (ProvidersService)
+```http
+GET /reviews/summary?providerId=p_01
+```
 
-updateProviderBadges(providerId) após cada review para refletir conquistas.
+**200**
 
-Fluxos Principais
-Fluxo: Cliente envia avaliação
+```json
+{ "avg": 4.86, "count": 124, "stars": {"s5": 98, "s4": 20, "s3": 3, "s2": 2, "s1": 1}, "withPhotos": 37 }
+```
 
-Valida: booking existe, pertence ao cliente, e está COMPLETED.
+---
 
-Garante unicidade: não existe review para bookingId.
+## 10) Telemetria & KPIs
 
-Cria Review.
+* Eventos: `review_submitted`, `review_published`, `review_replied`, `review_flagged`, `review_deleted`, `review_helpful_voted`.
+* KPIs: **nota média** por provedor/serviço, **distribuição de estrelas**, % com **fotos**, **tempo até resposta** do provedor, impacto na **conversão** (ranking/search).
 
-Pontua: chama LoyaltyService.addPoints (20 ou 5).
+---
 
-Evento Missão: dispara review.created (se ativo).
+## 11) QA — Casos críticos
 
-Badges: atualiza provider badges/indicadores.
+* Envio sem `COMPLETED` ou fora da janela → `BOOKING_NOT_COMPLETED`/`WINDOW_EXPIRED`.
+* Duas reviews para o mesmo booking → `ALREADY_REVIEWED` (unicidade `bookingId`).
+* Comentário com PII/contatos → **bloquear**/mascarar e `status='PENDING'` se moderação ativa.
+* Fotos inexistentes/sem owner → rejeitar `photos`.
+* Resposta do provedor com ofensivo → aplicar sanitização e (se ativo) moderação.
 
-Fluxo: Listagem para UI do provedor
+---
 
-findRecentReviewsByProviderId(providerId) → últimas 5 com nome/face do cliente (avatar).
+## 12) Melhorias avançadas (quando necessário)
 
-getDetailedRatingBreakdown(providerId) → KPIs para card “reputação”.
+1. **Topic tagging** automático (ex.: pontualidade, capricho, cordialidade) para analytics e sugestões de melhoria ao provedor.
+2. **Verificação ampliada** (timestamp GPS/slot de agenda) para reforço de `isVerified`.
+3. **Detecção de anomalias** (review fraudulenta) por histograma de notas e grafos de relacionamento.
+4. **Fotos antes/depois** com comparação (opt‑in do provedor/cliente).
 
-(Opcional) generateSmartSuggestions(providerId) → dicas acionáveis.
+---
 
-Erros e Mensagens Comuns
+## 13) Conclusão
 
-NotFoundException("Agendamento... não encontrado")
-
-ForbiddenException("Você não tem permissão...")
-
-BadRequestException("A avaliação só pode ser enviada para agendamentos concluídos.")
-
-ConflictException("Agendamento já possui uma avaliação.")
-
-Mantenha logs no ReviewsService (Logger) para auditoria.
-
-Testes (checklist)
-
-Unitários
-
-submitReview():
-
-Reprova se booking não é do cliente
-
-Reprova se status != COMPLETED
-
-Reprova se já existe review
-
-Cria review com rating/comentário corretos
-
-1ª review → +20 pontos; subsequentes → +5
-
-Dispara review.created (se Missions estiver mockado/injetado)
-
-Chama providersService.updateProviderBadges
-
-getDetailedRatingBreakdown():
-
-Sem reviews → zeros e stable
-
-Com reviews → média correta e satisfactionRate coerente
-
-generateSmartSuggestions():
-
-Sugestões coerentes vs. entradas (ex.: média baixa → improvement)
-
-E2E
-
-Criar booking, finalizar (COMPLETED), autenticar cliente e POST /reviews
-
-GETs devem refletir review recém-criada
-
-Verificar side-effects: loyalty, missão (se habilitada), badges
-
-Observações de Implementação
-
-Dimensões de rating (pontualidade, etc.) estão simuladas.
-Se precisar granularidade real, adicione os campos no DTO/DB e ajuste o cálculo.
-
-O limite da listagem (10) e as regras de pontos são parametrizáveis.
-
-Integração com Missions fica atrás de injeção padrão; caso o serviço não esteja presente, trate a chamada como opcional (ou via fila).
-
-Exemplos (cURL)
-
-Criar avaliação:
-
-curl -X POST https://api.sua-base.com/reviews \
- -H "Authorization: Bearer <JWT>" \
- -H "Content-Type: application/json" \
- -d '{
-   "bookingId": "b6f1b3a2-...",
-   "rating": 5,
-   "comment": "Excelente!"
- }'
-
-
-Listar por provedor:
-
-curl "https://api.sua-base.com/reviews?providerId=prov-123&minRating=4"
-
-Roadmap / Melhorias Futuras
-
-Campos de rating granulares (ex.: punctuality, quality, communication, value) persistidos no DB.
-
-Sistema de moderação de reviews (denúncia, ocultar, contestar).
-
-Badges dinâmicos configuráveis via painel admin.
-
-Integração com RankingModule para impacto direto da reputação no ranqueamento.
-
-Suporte a media (fotos/vídeos) na review.
+O módulo **Reviews** consolida a camada de **reputação** do LimpeJá. Com elegibilidade estrita, agregados eficientes e integração com gamificação/ranking, ele apoia a **descoberta** de qualidade e eleva a **confiança** do marketplace, mantendo custo sob controle e alinhado à **LGPD**.

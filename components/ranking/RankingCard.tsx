@@ -1,7 +1,15 @@
 // LimpeJaApp/components/ranking/RankingCard.tsx
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Animated, Easing, useColorScheme, StyleProp, ViewStyle, TextStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Colors from '../../constants/Colors'; // Adjust path based on your project structure
+
+// Hook para acessar as cores do tema atual
+function useTheme() {
+  const scheme = useColorScheme?.() || 'light';
+  const theme = (Colors as any)[scheme] || (Colors as any).light;
+  return theme as typeof Colors.light;
+}
 
 interface RankingCardProps {
   rank: number;
@@ -22,6 +30,8 @@ const RankingCard: React.FC<RankingCardProps> = ({
   onPress,
   delay = 0,
 }) => {
+  const theme = useTheme(); // Obtém o tema atual
+
   // Animações de entrada para o card
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
@@ -96,9 +106,46 @@ const RankingCard: React.FC<RankingCardProps> = ({
     }).start();
   };
 
+  // Estilos dinâmicos baseados no tema e no estado do usuário
+  const dynamicStyles = StyleSheet.create({
+    card: {
+      shadowColor: theme.shadowColorCard, // Usando shadowColorCard do tema
+    },
+    defaultCard: {
+      backgroundColor: theme.background,
+      borderLeftColor: theme.border,
+    },
+    currentUserCard: {
+      backgroundColor: theme.primaryLight, // Usando primaryLight para destaque
+      borderLeftColor: theme.link, // Usando link para a borda
+      shadowColor: theme.link, // Usando link para a sombra
+    },
+    rankText: {
+      color: theme.textBody,
+    },
+    avatarPlaceholder: {
+      backgroundColor: theme.lightGrey, // Usando lightGrey para o placeholder do avatar
+      borderColor: theme.background, // Borda do avatar
+    },
+    nameText: {
+      color: theme.textBody,
+    },
+    scoreIcon: {
+      color: theme.warning, // Cor do ícone de troféu
+    },
+    scoreText: {
+      color: theme.textMuted,
+    },
+    currentUserBadge: {
+      backgroundColor: theme.link, // Cor do badge do usuário atual
+      borderColor: theme.background, // Borda do badge
+    },
+  });
+
   const cardStyle = [
     styles.card,
-    isCurrentUser ? styles.currentUserCard : styles.defaultCard,
+    isCurrentUser ? dynamicStyles.currentUserCard : dynamicStyles.defaultCard,
+    dynamicStyles.card, // Aplica a sombra baseada no tema
     {
       opacity: fadeAnim,
       transform: [
@@ -113,27 +160,27 @@ const RankingCard: React.FC<RankingCardProps> = ({
       <TouchableOpacity onPress={onPress} disabled={!onPress} onPressIn={onPressInCard} onPressOut={onPressOutCard} activeOpacity={1}>
         <View style={styles.contentWrapper}>
           <View style={styles.rankContainer}>
-            <Text style={styles.rankText}>{rank}°</Text>
+            <Text style={[styles.rankText, dynamicStyles.rankText]}>{rank}°</Text>
           </View>
           <View style={styles.avatarContainer}>
             {avatarUrl ? (
               <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
             ) : (
-              <View style={styles.avatarPlaceholder}>
-                <Ionicons name="person-circle-outline" size={40} color="#CED4DA" />
+              <View style={[styles.avatarPlaceholder, dynamicStyles.avatarPlaceholder]}>
+                <Ionicons name="person-circle-outline" size={40} color={theme.grey} /> {/* Cor do ícone placeholder */}
               </View>
             )}
           </View>
           <View style={styles.infoContainer}>
-            <Text style={styles.nameText} numberOfLines={1}>{name}</Text>
+            <Text style={[styles.nameText, dynamicStyles.nameText]} numberOfLines={1}>{name}</Text>
             <View style={styles.scoreContainer}>
-              <Ionicons name="trophy" size={16} color="#FFD700" />
-              <Text style={styles.scoreText}>{score} Pts</Text>
+              <Ionicons name="trophy" size={16} color={dynamicStyles.scoreIcon.color} />
+              <Text style={[styles.scoreText, dynamicStyles.scoreText]}>{score} Pts</Text>
             </View>
           </View>
           {isCurrentUser && (
-            <Animated.View style={[styles.currentUserBadge, { transform: [{ scale: badgePulseAnim }] }]}>
-              <Ionicons name="star" size={18} color="#FFFFFF" />
+            <Animated.View style={[styles.currentUserBadge, dynamicStyles.currentUserBadge, { transform: [{ scale: badgePulseAnim }] }]}>
+              <Ionicons name="star" size={18} color="#FFFFFF" /> {/* Cor do ícone da estrela no badge */}
             </Animated.View>
           )}
         </View>
@@ -147,7 +194,6 @@ const styles = StyleSheet.create({
     marginVertical: 6,
     marginHorizontal: 16,
     borderRadius: 12,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -160,15 +206,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   defaultCard: {
-    backgroundColor: '#FFFFFF',
     borderLeftWidth: 4,
-    borderLeftColor: '#E0E0E0',
   },
   currentUserCard: {
-    backgroundColor: '#E6F0FF', // Um azul claro para destaque
     borderLeftWidth: 4,
-    borderLeftColor: '#007AFF', // Cor principal do app
-    shadowColor: '#007AFF',
     shadowOpacity: 0.2,
     shadowRadius: 10,
     elevation: 8,
@@ -181,19 +222,16 @@ const styles = StyleSheet.create({
   rankText: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
   },
   avatarContainer: {
     width: 50,
     height: 50,
     borderRadius: 25,
     overflow: 'hidden',
-    backgroundColor: '#F0F0F0',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
     borderWidth: 2,
-    borderColor: '#FFF',
   },
   avatarImage: {
     width: '100%',
@@ -212,7 +250,6 @@ const styles = StyleSheet.create({
   nameText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 4,
   },
   scoreContainer: {
@@ -221,7 +258,6 @@ const styles = StyleSheet.create({
   },
   scoreText: {
     fontSize: 14,
-    color: '#666',
     marginLeft: 5,
     fontWeight: 'bold',
   },
@@ -229,11 +265,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -5,
     right: -5,
-    backgroundColor: '#007AFF',
     borderRadius: 15,
     padding: 5,
     borderWidth: 2,
-    borderColor: '#FFFFFF',
   },
 });
 

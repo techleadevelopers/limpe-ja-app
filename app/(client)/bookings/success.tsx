@@ -13,7 +13,10 @@ import {
     Easing,
     Platform,
     ScrollView,
-    StyleSheet
+    StyleSheet,
+    View, // Adicionado
+    Text, // Adicionado
+    TouchableOpacity // Adicionado
 } from 'react-native';
 import Toast from 'react-native-toast-message';
 
@@ -25,6 +28,35 @@ import SuccessLoadingError from '../../../components/client/booking/success/Succ
 import ImmediateActionButtons from '../../../components/client/booking/success/ImmediateActionButtons';
 import SecurityInfoSection from '../../../components/client/booking/success/SecurityInfoSection';
 import LoyaltyTeaserSection from '../../../components/client/booking/success/LoyaltyTeaserSection';
+import { ReturnCouponCard } from '../../../components/coupons/ReturnCouponCard';
+// IMPORTANTE: Adicione a interface de props para MissionReminderCard aqui ou no arquivo do componente
+interface MissionReminderCardProps {
+    missionId: string;
+    title: string;
+    description?: string; // Adicionado: Propriedade 'description'
+    deadlineAt: string;
+    reward: { kind: 'COUPON' | 'POINTS'; value: number; };
+    onGo: () => void;
+    onDismiss: () => void;
+}
+// Assumindo que MissionReminderCard é um componente React.FC
+const MissionReminderCard: React.FC<MissionReminderCardProps> = ({ missionId, title, description, deadlineAt, reward, onGo, onDismiss }) => {
+    // Implementação mock para evitar erro de componente não encontrado
+    return (
+        <View style={{ margin: 15, padding: 15, backgroundColor: '#e0ffe0', borderRadius: 10 }}>
+            <Text style={{ fontWeight: 'bold', fontSize: 16 }}>{title}</Text>
+            {description && <Text style={{ fontSize: 14, color: '#555' }}>{description}</Text>}
+            <Text style={{ fontSize: 12, color: '#777' }}>Prazo: {new Date(deadlineAt).toLocaleDateString()}</Text>
+            <Text style={{ fontSize: 12, color: '#777' }}>Recompensa: {reward.value} {reward.kind}</Text>
+            <TouchableOpacity onPress={onGo} style={{ marginTop: 10, backgroundColor: '#4CAF50', padding: 8, borderRadius: 5 }}>
+                <Text style={{ color: 'white', textAlign: 'center' }}>Ir agora</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={onDismiss} style={{ marginTop: 5, padding: 8, borderRadius: 5, borderWidth: 1, borderColor: '#ccc' }}>
+                <Text style={{ textAlign: 'center' }}>Dispensar</Text>
+            </TouchableOpacity>
+        </View>
+    );
+};
 
 
 // Importar serviços e tipagens
@@ -34,19 +66,21 @@ import { BookingDetails } from '../../../types/backend/bookings';
 import { ProviderDisplayInfo } from '../../../types/backend/providers';
 
 // NOVO: Importar serviços e tipagens para PIX
-import { useAuth } from '../../../hooks/useAuth'; // Importar useAuth para obter userId
+import { useAuth } from '../../../hooks/useAuth';
 import { createPixCharge } from '../../../services/paymentService';
 import { CreatePixChargeDto, PixChargeResponseDto } from '../../../types/backend/payments';
 
 // Importar a lógica de formatação de endereço
 import { formatAddressLine1, formatAddressLine2 } from '../../../utils/address';
 
-// Constantes de estilo
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const headerPrimaryColor = '#4A90E2'; // Azul Principal
-const headerSecondaryColor = '#A8D8FF'; // Azul Secundário
-const iconColor = '#4A90E2'; // Azul para Ícones
-const successColor = '#28a745'; // Verde de Sucesso
+// Import AppStyles
+import { AppColors, AppDurations, AppOffsets, AppShadows, AppTypography, SCREEN_WIDTH, SCREEN_HEIGHT } from '../../../constants/appStyles';
+
+
+const headerPrimaryColor = AppColors.primaryInteractive;
+const headerSecondaryColor = AppColors.primaryDark;
+const iconColor = AppColors.primaryInteractive;
+const successColor = AppColors.successStandard;
 
 const backgroundGradientColors: readonly [ColorValue, ColorValue, ColorValue, ColorValue] = [
     '#E0F7FA',
@@ -63,9 +97,9 @@ const abstractBlobColors: readonly [ColorValue, ColorValue, ColorValue] = [
 
 
 export default function SuccessScreen() {
-    const { bookingId, paymentMethod, totalPrice: totalPriceParam } = useLocalSearchParams<{ bookingId?: string; paymentMethod?: string; totalPrice?: string }>();
+    const { bookingId, paymentMethod, totalPrice: totalPriceParam, couponApplied, couponCode: appliedCouponCode } = useLocalSearchParams<{ bookingId?: string; paymentMethod?: string; totalPrice?: string; couponApplied?: string; couponCode?: string }>();
     const router = useRouter();
-    const { user } = useAuth(); // Obter o usuário logado para pegar o userId
+    const { user } = useAuth();
 
     const [booking, setBooking] = useState<BookingDetails | null>(null);
     const [providerRating, setProviderRating] = useState<number | undefined>(undefined);
@@ -73,6 +107,14 @@ export default function SuccessScreen() {
     const [error, setError] = useState<string | null>(null);
     const [pixChargeDetails, setPixChargeDetails] = useState<PixChargeResponseDto | null>(null);
     const [pixGenerationError, setPixGenerationError] = useState<string | null>(null);
+
+    // NOVO: Estado para controlar a exibição do ReturnCouponCard
+    const [showReturnCouponCard, setShowReturnCouponCard] = useState(false);
+    const [returnCouponDetails, setReturnCouponDetails] = useState<{ code: string; title: string; subtitle: string; expiresAt: Date } | null>(null);
+
+    // NOVO: Estado para controlar a exibição do MissionReminderCard
+    const [showMissionReminderCard, setShowMissionReminderCard] = useState(false);
+
 
     // Animação para o conteúdo principal aparecer suavemente
     const contentOpacity = useRef(new Animated.Value(0)).current;
@@ -118,13 +160,16 @@ export default function SuccessScreen() {
         console.log("[SuccessScreen] fetchBookingAndProviderDetails - bookingId:", bookingId);
         console.log("[SuccessScreen] fetchBookingAndProviderDetails - paymentMethod:", paymentMethod);
         console.log("[SuccessScreen] fetchBookingAndProviderDetails - totalPriceParam:", totalPriceParam);
+        console.log("[SuccessScreen] fetchBookingAndProviderDetails - couponApplied:", couponApplied);
+        console.log("[SuccessScreen] fetchBookingAndProviderDetails - appliedCouponCode:", appliedCouponCode);
+
 
         if (!bookingId) {
             setError("ID do agendamento não fornecido.");
             setIsLoading(false);
             return;
         }
-        if (!user?.id) { // Verificar se o userId está disponível
+        if (!user?.id) {
             setError("Usuário não autenticado ou ID de usuário ausente.");
             setIsLoading(false);
             return;
@@ -137,7 +182,6 @@ export default function SuccessScreen() {
             const fetchedBooking = await getBookingDetails(bookingId);
             setBooking(fetchedBooking);
             console.log("[SuccessScreen] fetchBookingAndProviderDetails - Booking real carregado:", fetchedBooking);
-            // CORREÇÃO: `scheduledDateTime` não existe mais
             console.log("[SuccessScreen - DEBUG] Valor de scheduledDate vindo do backend:", fetchedBooking?.scheduledDate);
 
 
@@ -166,7 +210,6 @@ export default function SuccessScreen() {
                     };
                     console.log("[SuccessScreen] fetchBookingAndProviderDetails - PixChargeData para backend:", pixChargeData);
 
-                    // CORREÇÃO AQUI: Passar o userId para createPixCharge
                     const pixResponse: PixChargeResponseDto = await createPixCharge(user.id, pixChargeData);
                     setPixChargeDetails(pixResponse);
                     console.log("[SuccessScreen] fetchBookingAndProviderDetails - Resposta PIX recebida:", pixResponse);
@@ -184,6 +227,27 @@ export default function SuccessScreen() {
                 console.log("[SuccessScreen] fetchBookingAndProviderDetails - PIX Generation SKIPPED. paymentMethod:", paymentMethod, "totalPriceParam:", totalPriceParam, "pixChargeDetails exists:", !!pixChargeDetails);
             }
 
+            // NOVO: Lógica para exibir o ReturnCouponCard
+            // Mock: Se o cupom NÃO foi aplicado nesta reserva, e é a primeira reserva do usuário (ou uma das primeiras)
+            const isFirstBooking = (user?.clientDetails?.totalBookings || 0) <= 1; // Verifica se é a 1ª ou 2ª reserva
+            const noWelcomeCouponUsed = couponApplied !== 'true';
+
+            if (isFirstBooking && noWelcomeCouponUsed) {
+                setReturnCouponDetails({
+                    code: "VOLTELOGO10",
+                    title: "10% OFF na Próxima!",
+                    subtitle: "Sua recompensa por confiar no LimpeJá!",
+                    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+                });
+                setShowReturnCouponCard(true);
+            }
+
+            // NOVO: Lógica para exibir o MissionReminderCard (Mock)
+            if (fetchedBooking.serviceName?.includes('limpeza')) {
+                setShowMissionReminderCard(true);
+            }
+
+
         } catch (err: any) {
             console.error("[SuccessScreen] Erro ao buscar detalhes do agendamento (API):", err.response?.data?.message || err.message, err);
             setError(err.response?.data?.message || "Não foi possível carregar os detalhes do agendamento.");
@@ -192,7 +256,7 @@ export default function SuccessScreen() {
             setIsLoading(false);
             console.log("[SuccessScreen] fetchBookingAndProviderDetails - Finalizado.");
         }
-    }, [bookingId, paymentMethod, totalPriceParam, pixChargeDetails, user?.id]);
+    }, [bookingId, paymentMethod, totalPriceParam, pixChargeDetails, user?.id, couponApplied, appliedCouponCode, user?.clientDetails?.totalBookings]);
 
 
     useEffect(() => {
@@ -203,13 +267,13 @@ export default function SuccessScreen() {
             Animated.parallel([
                 Animated.timing(contentOpacity, {
                     toValue: 1,
-                    duration: 800,
+                    duration: AppDurations.lg,
                     easing: Easing.out(Easing.ease),
                     useNativeDriver: true,
                 }),
                 Animated.timing(contentTranslateY, {
                     toValue: 0,
-                    duration: 800,
+                    duration: AppDurations.lg,
                     easing: Easing.out(Easing.ease),
                     useNativeDriver: true,
                 }),
@@ -221,7 +285,7 @@ export default function SuccessScreen() {
         }, revealDelay);
 
         return () => clearTimeout(timer);
-    }, [fetchBookingAndProviderDetails, contentOpacity, contentTranslateY]); // Removed headerTickOpacity, headerTickScale
+    }, [fetchBookingAndProviderDetails, contentOpacity, contentTranslateY]);
 
     const handleGoToBookings = useCallback(() => {
         router.replace({ pathname: '/(client)/bookings', params: { highlightNew: true } } as any);
@@ -307,6 +371,32 @@ export default function SuccessScreen() {
         }
     }, [pixChargeDetails]);
 
+    // NOVO: Handler para "Rebook Now" do ReturnCouponCard
+    const handleRebookNow = useCallback((code: string) => {
+        router.push({
+            pathname: '/(client)/schedule-service',
+            params: { couponCode: code }
+        } as any);
+        setShowReturnCouponCard(false); // Dispensar o card após usar
+    }, [router]);
+
+    // NOVO: Handler para "Ir agora" da MissionReminderCard
+    const handleGoToMission = useCallback(() => {
+        router.push('/(client)/missions' as any);
+        setShowMissionReminderCard(false);
+    }, [router]);
+
+    // NOVO: Handler para "Dispensar" da MissionReminderCard
+    const handleDismissMissionReminder = useCallback(() => {
+        setShowMissionReminderCard(false);
+        Toast.show({
+            type: 'info',
+            text1: 'Lembrete dispensado',
+            text2: 'Você pode encontrá-lo na seção de Missões.',
+            visibilityTime: 3000,
+        });
+    }, []);
+
 
     if (isLoading || error || pixGenerationError || !booking) {
         return (
@@ -388,6 +478,31 @@ export default function SuccessScreen() {
                             formattedAddressLine2={formattedAddressLine2}
                         />
 
+                        {/* NOVO: Renderiza o ReturnCouponCard se aplicável */}
+                        {showReturnCouponCard && returnCouponDetails && (
+                            <ReturnCouponCard
+                                code={returnCouponDetails.code}
+                                title={returnCouponDetails.title}
+                                expiresAt={returnCouponDetails.expiresAt.toISOString()}
+                                onBookAgain={handleRebookNow}
+                            />
+                        )}
+
+                        {/* NOVO: Renderiza o MissionReminderCard se aplicável */}
+                        {showMissionReminderCard && booking && (
+                            <MissionReminderCard
+                                // Em um cenário real, você buscaria o ID e detalhes da missão do backend
+                                missionId="mock-review-mission"
+                                title="Avalie seu serviço!"
+                                description="Sua opinião é importante para nós e te ajuda a ganhar recompensas!" // Adicionado 'description'
+                                deadlineAt={new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString()}
+                                reward={{ kind: 'POINTS', value: 50 }} // Exemplo de recompensa
+                                onGo={handleGoToMission}
+                                onDismiss={handleDismissMissionReminder}
+                            />
+                        )}
+
+
                         <ImmediateActionButtons
                             onAddToCalendar={handleAddToCalendar}
                             onContactProvider={handleContactProvider}
@@ -413,7 +528,7 @@ export default function SuccessScreen() {
 const styles = StyleSheet.create({
     screenContainer: {
         flex: 1,
-        backgroundColor: '#F0F2F5',
+        backgroundColor: AppColors.backgroundNeutral,
     },
     screenGradientBackground: {
         flex: 1,
@@ -441,7 +556,7 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
         ...Platform.select({
             ios: {
-                shadowColor: '#000',
+                shadowColor: AppColors.black,
                 shadowOffset: { width: 0, height: 8 },
                 shadowOpacity: 0.1,
                 shadowRadius: 12,

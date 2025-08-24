@@ -38,8 +38,8 @@ export interface IncidentReportDto {
   type: IncidentType;
   description: string;
   bookingId?: string;
-  involvedUsers?: string[]; // CORREÇÃO: Array de user IDs
-  attachments?: string[]; // CORREÇÃO: URLs of uploaded files
+  involvedUsers?: string[];
+  attachments?: string[];
 }
 
 export interface Incident {
@@ -52,7 +52,7 @@ export interface Incident {
   status: IncidentStatus;
   resolution?: string;
   resolvedBy?: string;
-  resolvedAt?: string; // ISO date string
+  resolvedAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -60,10 +60,10 @@ export interface Incident {
 export interface PanicAlert {
   id: string;
   userId: string;
-  latitude: number; // CORREÇÃO: Decimal no Prisma é number aqui
-  longitude: number; // CORREÇÃO: Decimal no Prisma é number aqui
+  latitude: number;
+  longitude: number;
   message?: string;
-  status: string; // "ACTIVE", "RESOLVED", "FALSE_ALARM"
+  status: string;
   createdAt: string;
 }
 
@@ -74,7 +74,6 @@ export interface PanicEvent {
   id: string;
   status: 'ACTIVE' | 'ENDED';
   startedAt: string;
-  // Adicione outros campos relevantes do backend, como userId, latitude, longitude, etc.
 }
 
 /**
@@ -85,5 +84,4 @@ export interface IncidentReport {
   panicId: string;
   description: string;
   attachments?: string[];
-  // Adicione outros campos relevantes do backend
 }

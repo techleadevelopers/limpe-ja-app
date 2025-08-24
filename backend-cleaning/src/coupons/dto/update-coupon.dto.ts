@@ -7,14 +7,13 @@ import {
   IsOptional,
   IsInt,
   IsIn,
+  IsBoolean,
 } from 'class-validator';
 
 /**
  * Observações:
- * - 'type' aceita valores normalizados: 'PERCENT' | 'FIXED'
- *   (também aceitamos 'PERCENTAGE' e 'FIXED_AMOUNT' para retrocompatibilidade).
- * - 'target' usa 'GENERAL' | 'NEW_CLIENTS' | 'SPECIFIC_SERVICE' | 'SPECIFIC_PROVIDER'
- *   (também aceitamos 'ALL' como sinônimo de 'GENERAL').
+ * - 'type' aceita valores normalizados: 'PERCENT' | 'FIXED'.
+ * - 'target' usa 'GENERAL' | 'NEW_CLIENTS' | 'SPECIFIC_SERVICE' | 'SPECIFIC_PROVIDER'.
  * - 'status' usa 'ACTIVE' | 'INACTIVE' | 'EXPIRED' | 'USED_UP'.
  * - 'value':
  *     • se type = 'PERCENT', informe FRAÇÃO (ex.: 0.20 para 20%)
@@ -26,8 +25,8 @@ export class UpdateCouponDto {
   code?: string;
 
   @IsOptional()
-  @IsIn(['PERCENT', 'FIXED', 'PERCENTAGE', 'FIXED_AMOUNT'])
-  type?: 'PERCENT' | 'FIXED' | 'PERCENTAGE' | 'FIXED_AMOUNT';
+  @IsIn(['PERCENT', 'FIXED']) // <<-- FIXED: Removed 'PERCENTAGE', 'FIXED_AMOUNT'
+  type?: 'PERCENT' | 'FIXED';
 
   @IsOptional()
   @IsNumber({ allowNaN: false, allowInfinity: false })
@@ -48,8 +47,8 @@ export class UpdateCouponDto {
   maxUses?: number;
 
   @IsOptional()
-  @IsIn(['GENERAL', 'ALL', 'NEW_CLIENTS', 'SPECIFIC_SERVICE', 'SPECIFIC_PROVIDER'])
-  target?: 'GENERAL' | 'ALL' | 'NEW_CLIENTS' | 'SPECIFIC_SERVICE' | 'SPECIFIC_PROVIDER';
+  @IsIn(['GENERAL', 'NEW_CLIENTS', 'SPECIFIC_SERVICE', 'SPECIFIC_PROVIDER', 'NEW_CUSTOMER', 'REFERRAL_REFERRED', 'REFERRAL_REFERRER', 'MISSION_REWARD', 'REPEAT_CUSTOMER']) // <<-- FIXED: Replaced 'ALL' with 'GENERAL' and added new targets
+  target?: 'GENERAL' | 'NEW_CLIENTS' | 'SPECIFIC_SERVICE' | 'SPECIFIC_PROVIDER' | 'NEW_CUSTOMER' | 'REFERRAL_REFERRED' | 'REFERRAL_REFERRER' | 'MISSION_REWARD' | 'REPEAT_CUSTOMER';
 
   @IsOptional()
   @IsString()
@@ -62,4 +61,13 @@ export class UpdateCouponDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  firstBookingOnly?: boolean;
+
+  @IsOptional()
+  @IsNumber({ allowNaN: false, allowInfinity: false })
+  @Min(0)
+  maxDiscount?: number;
 }

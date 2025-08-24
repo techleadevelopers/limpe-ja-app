@@ -11,141 +11,57 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
-  RefreshControl, // <--- ADICIONE ESTA LINHA
+  RefreshControl,
+  useColorScheme,
+  Dimensions, // Importado para SCREEN_WIDTH/HEIGHT
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useTranslation } from 'react-i18next'; // Importar i18n
+import { useTranslation } from 'react-i18next';
+import { LinearGradient } from 'expo-linear-gradient'; // Importado para o fundo animado
 
-import { getClientMissions, claimClientReward } from '../../../services/clientService';
-import { ClientMission, ClientReward, MissionCategory } from '../../../types/backend/mission'; // Corrigido para 'missions'
-import Toast from '../../../components/Toast'; // Importar o Toast
+import { claimMission, getMyMissions, MissionItem as MissionItemType, MissionStatus, RewardType, MissionAudience } from '../../../services/missionService';
+import Toast from '../../../components/Toast';
+import MissionList from '../../../components/missions/MissionList';
+import { MissionReminderCard } from '../../../components/missions/MissionReminderCard';
+import { MissionProgressSnack } from '../../../components/missions/MissionProgressSnack';
 
-// Componente para exibir o progresso da missão com animação
-const MissionProgressBar: React.FC<{ progress: number; goal: number; category: MissionCategory }> = ({ progress, goal, category }) => {
-  const progressAnim = useRef(new Animated.Value(0)).current;
-  const { t } = useTranslation();
+import Colors from '../../../constants/Colors';
 
-  const progressPct = Math.min(100, (progress / goal) * 100);
+// Dimensões da tela para o fundo animado
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-  useEffect(() => {
-    Animated.timing(progressAnim, {
-      toValue: progressPct,
-      duration: 800,
-      easing: Easing.out(Easing.ease),
-      useNativeDriver: false,
-    }).start();
-  }, [progressPct]);
-
-  const getCategoryColor = (cat: MissionCategory) => {
-    switch (cat) {
-      case 'FREQUENCY': return '#2196F3'; // Azul
-      case 'VOLUME': return '#4CAF50';    // Verde
-      case 'DIVERSITY': return '#FB8C00';  // Laranja
-      default: return '#9E9E9E'; // Cinza padrão
-    }
-  };
-
-  const backgroundColor = getCategoryColor(category);
-
-  return (
-    <View style={styles.progressBarContainer}>
-      <View style={[styles.progressBarBackground, { borderColor: backgroundColor }]}>
-        <Animated.View
-          style={[
-            styles.progressBarFill,
-            {
-              width: progressAnim.interpolate({
-                inputRange: [0, 100],
-                outputRange: ['0%', '100%'],
-              }),
-              backgroundColor: backgroundColor,
-            },
-          ]}
-        />
-      </View>
-      <Text style={styles.progressText}>{`${progress}/${goal}`}</Text>
-    </View>
-  );
-};
-
-// Componente para um card de missão individual
-const MissionCard: React.FC<{
-  mission: ClientMission;
-  onClaim: (missionId: string) => Promise<void>;
-  isClaiming: boolean;
-}> = ({ mission, onClaim, isClaiming }) => {
-  const { t } = useTranslation();
-  const { scaleAnim, onPressIn, onPressOut } = useAnimatedTouch(); // Reutilizando hook de animação de toque
-
-  const handleClaimPress = async () => {
-    if (mission.claimable && !isClaiming) {
-      await onClaim(mission.id);
-    }
-  };
-
-  const getCategoryLabel = (cat: MissionCategory) => {
-    switch (cat) {
-      case 'FREQUENCY': return t('missions.category_frequency');
-      case 'VOLUME': return t('missions.category_volume');
-      case 'DIVERSITY': return t('missions.category_diversity');
-      default: return '';
-    }
-  };
-
-  const categoryColor = getCategoryColor(mission.category);
-
-  return (
-    <Animated.View style={[styles.missionCard, { transform: [{ scale: scaleAnim }] }]}>
-      <View style={[styles.missionHeader, { borderLeftColor: categoryColor }]}>
-        <Text style={styles.missionTitle}>{mission.title}</Text>
-        <View style={[styles.categoryBadge, { backgroundColor: categoryColor }]}>
-          <Text style={styles.categoryBadgeText}>{getCategoryLabel(mission.category)}</Text>
-        </View>
-      </View>
-      <Text style={styles.missionDescription}>{mission.description}</Text>
-      <MissionProgressBar progress={mission.progress} goal={mission.goal} category={mission.category} />
-      <View style={styles.missionFooter}>
-        <Text style={styles.missionStatus}>
-          {mission.completed ? t('missions.completed') : t('missions.in_progress')}
-        </Text>
-        {mission.claimable && (
-          <TouchableOpacity
-            style={[styles.claimButton, { opacity: isClaiming ? 0.6 : 1 }]}
-            onPress={handleClaimPress}
-            onPressIn={onPressIn}
-            onPressOut={onPressOut}
-            disabled={isClaiming}
-          >
-            {isClaiming ? (
-              <ActivityIndicator size="small" color="#FFF" />
-            ) : (
-              <Text style={styles.claimButtonText}>{t('missions.claim')}</Text>
-            )}
-          </TouchableOpacity>
-        )}
-      </View>
-    </Animated.View>
-  );
-};
+function useTheme() {
+  const scheme = useColorScheme?.() || 'light';
+  const theme = (Colors as any)[scheme] || (Colors as any).light;
+  return theme as typeof Colors.light;
+}
 
 export default function ClientMissionsScreen() {
   const router = useRouter();
   const { t } = useTranslation();
+  const theme = useTheme();
 
-  const [missions, setMissions] = useState<ClientMission[]>([]);
+  const [allMissions, setAllMissions] = useState<MissionItemType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [claimingMissionId, setClaimingMissionId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'ACTIVE' | 'CAN_CLAIM' | 'CLAIMED'>('ACTIVE');
 
   const headerAnim = useRef(new Animated.Value(0)).current;
   const contentAnim = useRef(new Animated.Value(0)).current;
 
-  const fetchMissions = useCallback(async () => {
-    setIsLoading(true);
+  // Animações para o fundo
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const backgroundFloatAnim = useRef(new Animated.Value(0)).current;
+  const calendarBreatheAnim = useRef(new Animated.Value(1)).current; // Reutilizado para um efeito sutil
+
+  const loadMissions = useCallback(async () => {
+    setIsRefreshing(true);
     try {
-      const fetchedMissions = await getClientMissions();
-      setMissions(fetchedMissions);
+      const fetchedMissions = await getMyMissions(MissionAudience.CLIENT);
+      setAllMissions(fetchedMissions);
     } catch (error: any) {
       console.error('Erro ao buscar missões do cliente:', error.response?.data || error.message);
       Toast.show({
@@ -160,6 +76,7 @@ export default function ClientMissionsScreen() {
   }, [t]);
 
   useEffect(() => {
+    // Animações de entrada para o header e conteúdo
     Animated.parallel([
       Animated.timing(headerAnim, {
         toValue: 1,
@@ -176,19 +93,110 @@ export default function ClientMissionsScreen() {
       }),
     ]).start();
 
-    fetchMissions();
-  }, [headerAnim, contentAnim, fetchMissions]);
+    // Animações de fundo
+    const startPulse = () => {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.02,
+            duration: 2000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 2000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    };
+
+    const startRotation = () => {
+      Animated.loop(
+        Animated.timing(rotateAnim, {
+          toValue: 1,
+          duration: 20000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      ).start();
+    };
+
+    const startFloating = () => {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(backgroundFloatAnim, {
+            toValue: 1,
+            duration: 4000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(backgroundFloatAnim, {
+            toValue: 0,
+            duration: 4000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    };
+
+    const startCalendarBreathe = () => {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(calendarBreatheAnim, {
+            toValue: 1.005,
+            duration: 3000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(calendarBreatheAnim, {
+            toValue: 1,
+            duration: 3000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    };
+
+    startPulse();
+    startRotation();
+    startFloating();
+    startCalendarBreathe();
+
+    loadMissions();
+  }, [headerAnim, contentAnim, loadMissions, pulseAnim, rotateAnim, backgroundFloatAnim, calendarBreatheAnim]);
 
   const handleClaimMission = async (missionId: string) => {
     setClaimingMissionId(missionId);
     try {
-      const reward: ClientReward = await claimClientReward(missionId);
-      Toast.show({
-        type: 'success',
-        text1: t('common.success'),
-        text2: t('missions.claim_success', { value: reward.value }), // Ajuste conforme o tipo de recompensa
-      });
-      fetchMissions(); // Recarrega as missões para atualizar o status
+      const response = await claimMission(missionId);
+      if (response.ok) {
+        let rewardMessage = '';
+        if (response.rewardType === RewardType.COUPON && response.coupon) {
+          rewardMessage = t('missions.claim_success_coupon', { code: response.coupon.code, value: response.coupon.value });
+        } else if (response.rewardType === RewardType.POINTS && response.pointsGranted) {
+          rewardMessage = t('missions.claim_success_points', { points: response.pointsGranted });
+        } else {
+          rewardMessage = t('missions.claim_success');
+        }
+
+        Toast.show({
+          type: 'success',
+          text1: t('common.success'),
+          text2: rewardMessage,
+        });
+        loadMissions();
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: t('common.error'),
+          text2: response.reason || t('missions.claim_error'),
+        });
+      }
     } catch (error: any) {
       console.error('Erro ao resgatar missão:', error.response?.data || error.message);
       Toast.show({
@@ -203,22 +211,83 @@ export default function ClientMissionsScreen() {
 
   const onRefresh = useCallback(() => {
     setIsRefreshing(true);
-    fetchMissions();
-  }, [fetchMissions]);
+    loadMissions();
+  }, [loadMissions]);
+
+  const filteredMissions = allMissions.filter(mission => {
+    switch (activeTab) {
+      case 'ACTIVE':
+        return mission.progress?.status === MissionStatus.ACTIVE;
+      case 'CAN_CLAIM':
+        return mission.canClaim && !mission.isClaimed;
+      case 'CLAIMED':
+        return mission.isClaimed;
+      default:
+        return true;
+    }
+  });
+
+  const missionsReadyToClaim = allMissions.find(m => m.canClaim && !m.isClaimed);
 
   if (isLoading && !isRefreshing) {
     return (
-      <View style={styles.centeredFeedback}>
+      <View style={[styles.centeredFeedback, { backgroundColor: theme.background }]}>
         <Stack.Screen options={{ headerShown: false }} />
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>{t('common.loading')}</Text>
+        <ActivityIndicator size="large" color={theme.primary} />
+        <Text style={[styles.loadingText, { color: theme.textMuted }]}>{t('common.loading')}</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
+
+      {/* Background animado */}
+      <Animated.View style={[
+        styles.backgroundDecoration,
+        {
+          transform: [
+            {
+              translateY: backgroundFloatAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [-20, 20]
+              })
+            },
+            {
+              rotate: rotateAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: ['0deg', '360deg']
+              })
+            }
+          ]
+        }
+      ]}>
+        <LinearGradient
+          colors={[theme.primaryLight, theme.accent]} // Cores mais suaves para o fundo
+          style={styles.decorationGradient}
+        />
+      </Animated.View>
+
+      <Animated.View style={[
+        styles.backgroundDecoration2,
+        {
+          transform: [
+            {
+              translateX: backgroundFloatAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [10, -10]
+              })
+            },
+            { scale: calendarBreatheAnim }
+          ]
+        }
+      ]}>
+        <LinearGradient
+          colors={[theme.secondaryLight, theme.tertiary]} // Cores mais suaves para o fundo
+          style={styles.decorationGradient}
+        />
+      </Animated.View>
 
       {/* Header customizado */}
       <Animated.View
@@ -230,17 +299,19 @@ export default function ClientMissionsScreen() {
               {
                 translateY: headerAnim.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [-20, 0],
+                  outputRange: [-60, 0], // Ajuste para descer mais
                 }),
               },
             ],
+            backgroundColor: theme.background, // Fundo claro para o header
+            borderBottomColor: theme.border,
           },
         ]}
       >
         <TouchableOpacity onPress={() => router.back()} style={styles.headerBackButton}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          <Ionicons name="arrow-back" size={24} color={theme.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('missions.title')}</Text>
+        <Text style={[styles.headerTitle, { color: theme.text }]}>{t('missions.title')}</Text>
         <View style={styles.headerActionIconPlaceholder} />
       </Animated.View>
 
@@ -267,93 +338,123 @@ export default function ClientMissionsScreen() {
             <RefreshControl
               refreshing={isRefreshing}
               onRefresh={onRefresh}
-              tintColor="#007AFF"
+              tintColor={theme.primary}
               title={t('common.loading')}
-              titleColor="#007AFF"
+              titleColor={theme.primary}
             />
           }
         >
-          {missions.length === 0 ? (
-            <View style={styles.emptyStateContainer}>
-              <Ionicons name="trophy-outline" size={60} color="#9E9E9E" />
-              <Text style={styles.emptyStateText}>{t('missions.no_missions')}</Text>
-            </View>
-          ) : (
-            missions.map((mission) => (
-              <MissionCard
-                key={mission.id}
-                mission={mission}
-                onClaim={handleClaimMission}
-                isClaiming={claimingMissionId === mission.id}
+          {allMissions.length > 0 && allMissions[0].progress && (
+            <Animated.View style={[styles.summaryCard, { transform: [{ scale: pulseAnim }] }]}>
+              <MissionProgressSnack
+                current={allMissions[0].progress.currentValue}
+                goal={allMissions[0].mission.targetValue}
+                onView={() => setActiveTab('ACTIVE')}
               />
-            ))
+            </Animated.View>
           )}
+
+          {missionsReadyToClaim && (
+            <Animated.View style={[styles.reminderCard, { transform: [{ scale: pulseAnim }] }]}>
+              <MissionReminderCard
+                missionId={missionsReadyToClaim.mission.id}
+                title={missionsReadyToClaim.mission.title}
+                deadlineAt={missionsReadyToClaim.mission.updatedAt}
+                reward={{ kind: missionsReadyToClaim.mission.rewardType, value: missionsReadyToClaim.mission.rewardValue }}
+                onGo={() => setActiveTab('CAN_CLAIM')}
+                onDismiss={() => { Alert.alert(t('common.info'), t('missions.reminder_dismissed')); }}
+              />
+            </Animated.View>
+          )}
+
+          <View style={[styles.tabsContainer, { backgroundColor: theme.cardBackground }]}>
+            <TouchableOpacity
+              style={[styles.tabButton, activeTab === 'ACTIVE' && [styles.tabButtonActive, { backgroundColor: theme.primaryTransparent, borderColor: theme.primary }]]}
+              onPress={() => setActiveTab('ACTIVE')}
+            >
+              <Text style={[styles.tabButtonText, { color: theme.text }, activeTab === 'ACTIVE' && { color: theme.primary }]}>{t('missions.tab_active')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tabButton, activeTab === 'CAN_CLAIM' && [styles.tabButtonActive, { backgroundColor: theme.primaryTransparent, borderColor: theme.primary }]]}
+              onPress={() => setActiveTab('CAN_CLAIM')}
+            >
+              <Text style={[styles.tabButtonText, { color: theme.text }, activeTab === 'CAN_CLAIM' && { color: theme.primary }]}>{t('missions.tab_can_claim')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tabButton, activeTab === 'CLAIMED' && [styles.tabButtonActive, { backgroundColor: theme.primaryTransparent, borderColor: theme.primary }]]}
+              onPress={() => setActiveTab('CLAIMED')}
+            >
+              <Text style={[styles.tabButtonText, { color: theme.text }, activeTab === 'CLAIMED' && { color: theme.primary }]}>{t('missions.tab_claimed')}</Text>
+            </TouchableOpacity>
+          </View>
+
+          <MissionList
+            missions={filteredMissions}
+            onClaimMission={handleClaimMission}
+            claimingMissionId={claimingMissionId}
+            onRefresh={onRefresh}
+            isRefreshing={isRefreshing}
+          />
         </ScrollView>
       </Animated.View>
     </View>
   );
 }
 
-// Hook para animação de toque (reutilizável) - Duplicado aqui para evitar circular dependency
-// Em um projeto real, seria um arquivo separado em `components/hooks`
-const useAnimatedTouch = () => {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const onPressIn = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 0.95,
-      useNativeDriver: true,
-      friction: 5,
-    }).start();
-  };
-  const onPressOut = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      useNativeDriver: true,
-      friction: 5,
-      tension: 40,
-    }).start();
-  };
-  return { scaleAnim, onPressIn, onPressOut };
-};
-
-const getCategoryColor = (cat: MissionCategory) => {
-  switch (cat) {
-    case 'FREQUENCY': return '#2196F3'; // Azul
-    case 'VOLUME': return '#4CAF50';    // Verde
-    case 'DIVERSITY': return '#FB8C00';  // Laranja
-    default: return '#9E9E9E'; // Cinza padrão
-  }
-};
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F0F8FF', // --background-light-blue
+    // Background color is handled by theme.background
   },
   centeredFeedback: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F0F8FF',
+    // Background color is handled by theme.background
   },
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#6C757D',
+    // Color is handled by theme.textMuted
   },
+  // Estilos para o fundo animado (copiado de schedule-service.tsx e adaptado)
+  backgroundDecoration: {
+    position: 'absolute',
+    top: SCREEN_HEIGHT * 0.1,
+    right: -SCREEN_WIDTH * 0.2,
+    width: SCREEN_WIDTH * 0.6,
+    height: SCREEN_WIDTH * 0.6,
+    borderRadius: SCREEN_WIDTH * 0.3,
+    overflow: 'hidden',
+  },
+  backgroundDecoration2: {
+    position: 'absolute',
+    bottom: SCREEN_HEIGHT * 0.3,
+    left: -SCREEN_WIDTH * 0.15,
+    width: SCREEN_WIDTH * 0.5,
+    height: SCREEN_WIDTH * 0.5,
+    borderRadius: SCREEN_WIDTH * 0.25,
+    overflow: 'hidden',
+  },
+  decorationGradient: {
+    flex: 1,
+  },
+  // Fim dos estilos de fundo animado
+
   customHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#223355', // --primary-dark-blue
     paddingHorizontal: 15,
     paddingVertical: Platform.OS === 'ios' ? 50 : 20,
     paddingTop: Platform.OS === 'ios' ? 50 : 20,
+    borderBottomWidth: 1, // Borda inferior
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.05, // Sombra mais sutil
     shadowRadius: 4,
-    elevation: 5,
+    elevation: 3,
+    zIndex: 10, // Garante que o header fique acima do conteúdo
   },
   headerBackButton: {
     marginRight: 15,
@@ -361,7 +462,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#FFFFFF',
     flex: 1,
     textAlign: 'center',
   },
@@ -375,98 +475,44 @@ const styles = StyleSheet.create({
   scrollViewContentContainer: {
     flexGrow: 1,
     paddingVertical: 10,
-    paddingHorizontal: 15,
   },
-  missionCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 15,
+  summaryCard: {
+    marginHorizontal: 15,
+    marginBottom: 10,
+  },
+  reminderCard: {
+    marginHorizontal: 15,
+    marginBottom: 10,
+  },
+  tabsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginHorizontal: 15,
     marginBottom: 15,
+    borderRadius: 10,
+    padding: 5,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  missionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-    paddingLeft: 10,
-    borderLeftWidth: 4,
-    borderLeftColor: '#2196F3', // Default blue
-  },
-  missionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+  tabButton: {
     flex: 1,
-  },
-  categoryBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 15,
-    backgroundColor: '#2196F3', // Default blue
-  },
-  categoryBadgeText: {
-    fontSize: 12,
-    color: '#FFF',
-    fontWeight: '600',
-  },
-  missionDescription: {
-    fontSize: 14,
-    color: '#555',
-    marginBottom: 10,
-  },
-  progressBarContainer: {
-    flexDirection: 'row',
+    paddingVertical: 10,
     alignItems: 'center',
-    marginBottom: 10,
-  },
-  progressBarBackground: {
-    flex: 1,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#E0E0E0',
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#9E9E9E', // Default gray
-    overflow: 'hidden',
+    borderColor: 'transparent',
   },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: 5,
+  tabButtonActive: {
+    // backgroundColor handled by theme.primaryTransparent
+    // borderColor handled by theme.primary
   },
-  progressText: {
-    marginLeft: 10,
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#555',
-  },
-  missionFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  missionStatus: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-  },
-  claimButton: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  claimButtonText: {
-    color: '#FFF',
+  tabButtonText: {
     fontSize: 14,
     fontWeight: 'bold',
+    // color handled by theme.text and theme.primary
   },
   emptyStateContainer: {
     flex: 1,
@@ -474,9 +520,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     minHeight: 200,
-    backgroundColor: '#FFFFFF',
+    // backgroundColor handled by theme.cardBackground
     borderRadius: 12,
     marginTop: 20,
+    marginHorizontal: 15,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -485,8 +532,20 @@ const styles = StyleSheet.create({
   },
   emptyStateText: {
     fontSize: 16,
-    color: '#666',
+    // color handled by theme.textMuted
     textAlign: 'center',
     marginTop: 10,
+  },
+  exploreButton: {
+    // backgroundColor handled by theme.primary
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    marginTop: 20,
+  },
+  exploreButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

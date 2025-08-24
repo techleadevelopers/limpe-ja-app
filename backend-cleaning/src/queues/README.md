@@ -1,167 +1,123 @@
-📦 queues/ — Módulo de Processamento Assíncrono do LimpeJá
+# README — Módulo de Filas (Queues)
 
-Módulo responsável pelo processamento desacoplado e escalável de tarefas críticas e não bloqueantes do ecossistema LimpeJá. Otimiza performance, reduz latência no frontend e viabiliza estratégias de escalabilidade real.
+> **Escopo:** documentação **code‑real** do módulo de filas do backend LimpeJá com base nos arquivos presentes: `queues.module.ts`, `queues.service.ts`, `notification.worker.ts`, `verification.worker.ts`, `dispute.worker.ts`.
+>
+> **Objetivo:** operar **BullMQ + Redis** para tarefas assíncronas e agendadas (notificações, KYC/verificação, SLAs de disputas), com **idempotência**, **DLQ**, **observabilidade** e **plano de evolução** até 100% produção com o **melhor custo‑benefício** (sem over‑engineering).
 
-🎯 Objetivo
+---
 
-Desacoplar tarefas pesadas ou agendadas da execução síncrona da aplicação, utilizando filas assíncronas (Redis + BullMQ) para garantir:
+## 1) Arquitetura
 
-Escalabilidade
+**Tecnologias:** BullMQ, ioredis, NestJS providers, Sentry/Logs, ConfigService.
 
-Tolerância a falhas
+**Papeis:**
 
-Performance de API
+* **QueuesService** (produtor): enfileira jobs transacionais e agendados.
+* **Workers** (consumidores): `notification.worker.ts`, `verification.worker.ts`, `dispute.worker.ts`.
+* **Redis**: armazenamento de filas, locks e agendamentos (repeatable jobs).
 
-Melhor experiência do usuário
+**Filas (nomes canônicos):**
 
-⚙️ Estrutura de Pastas
-queues/
-├── queues.module.ts              # Módulo principal que orquestra todos os workers e providers
-├── queues.service.ts             # Serviço que expõe métodos de enfileiramento
-├── dispute.worker.ts            # Worker de resolução de disputas
-├── notification.worker.ts       # Worker para envio de notificações (push, e-mail)
-├── verification.worker.ts       # Worker de verificação documental (OCR, selfie, antecedentes)
+* `notification.queue` — push/in‑app, lembretes (cupom expira, missão pronta para claim).
+* `verification.queue` — KYC: OCR, selfie liveness/match, antecedentes; consolidação de decisão.
+* `dispute.queue` — timers de SLA, escalonamentos, follow‑ups automáticos.
 
-🧠 Lógica e Casos de Uso
-✅ 1. notification.worker.ts
+> *Obs.* Se houver WebSockets/notificações em tempo real, **não** usar filas para mensagens síncronas; as filas tratam envios/retries/cron e trabalhos pesados.
 
-Processa:
+---
 
-Notificações push (Expo)
+## 2) Módulos & Arquivos
 
-E-mails (transacionais e marketing)
+```
+src/queues/
+ ├─ queues.module.ts         # registra providers/consumidores
+ ├─ queues.service.ts        # API única p/ enfileirar jobs
+ ├─ workers/
+ │   ├─ notification.worker.ts
+ │   ├─ verification.worker.ts
+ │   └─ dispute.worker.ts
+ └─ types.ts (opcional)      # envelopes/DTOs de job
+```
 
-Lembretes de agendamentos e avaliações
+**`queues.module.ts`**
 
-Origem dos eventos:
+* Injeta **Redis connection** (via `ConfigService` → `REDIS_URL`).
+* Registra filas BullMQ com opções padrão (attempts, backoff, removeOnComplete/Fail, prefix por ambiente).
+* Faz bind dos **workers** com suas **concurrencies** e handlers.
 
-Criação de bookings
+**`queues.service.ts`**
 
-Confirmação de serviço
+* Fachada para producers (outros módulos chamam **apenas** aqui). Exemplos de métodos públicos:
 
-Conclusão de atendimento
+  * `enqueuePush(toUserId, payload, opts?)`
+  * `scheduleCouponExpiryReminder(userId, couponId, when)`
+  * `enqueueKycStep(providerId, step, payload)`
+  * `scheduleDisputeSla(disputeId, at, priority)`
+  * `enqueueMissionDigest(userId, kind)` *(se necessário)*
+* **Idempotência:** todos métodos aceitam `idempotencyKey`/`jobId` estável (ex.: `dispute:${id}:t+24h`) para evitar duplicação.
 
-Avaliação de cliente ou prestador
+**Workers**
 
-✅ 2. verification.worker.ts
+* **`notification.worker.ts`**: envia push/in‑app; trata retries, fallback (enfileirar novamente) e marca como **readOnly**/audit.
+* **`verification.worker.ts`**: executa pipeline KYC (OCR → selfie → antecedentes), agrega estados parciais e publica **decisão** (APPROVED/REJECTED/NEEDS\_REVIEW).
+* **`dispute.worker.ts`**: dispara timers de SLA, escalona, notifica partes e abre tarefa para suporte conforme política.
 
-Processa:
+---
 
-Verificação de documentos do prestador
+## 3) Configuração (ENV)
 
-CNH / RG (OCR)
+```env
+REDIS_URL=redis://localhost:6379
+QUEUES_PREFIX=limpeja:${NODE_ENV}
+QUEUES_DEFAULT_ATTEMPTS=5
+QUEUES_DEFAULT_BACKOFF_MS=15000      # exponencial: 15s, 30s, 60s...
+QUEUES_REMOVE_ON_COMPLETE=true
+QUEUES_REMOVE_ON_FAIL=false
 
-Selfie com prova de vida
+# Concurrency (ajustável por worker)
+Q_NOTIF_CONCURRENCY=8
+Q_VERIF_CONCURRENCY=3
+Q_DISPUTE_CONCURRENCY=2
 
-Consulta de antecedentes
+# SLAs
+DISPUTE_SLA_URGENT_HOURS=4
+DISPUTE_SLA_HIGH_HOURS=8
+DISPUTE_SLA_MEDIUM_HOURS=24
+DISPUTE_SLA_LOW_HOURS=48
 
-Origem dos eventos:
+# KYC / Provedores externos
+KYC_OCR_PROVIDER=...      # chave/endpoint
+KYC_FACE_PROVIDER=...
+KYC_BG_CHECK_PROVIDER=...
+```
 
-Registro de prestador
+---
 
-Atualização de perfil
+## 4) Envelope de Job (padrão)
 
-Auditorias internas
+Todos os jobs seguem um **envelope** comum para rastreabilidade e idempotência:
 
-✅ 3. dispute.worker.ts
+```ts
+export type JobEnvelope<T = any> = {
+  idempotencyKey?: string;   // define jobId estável no add()
+  requestedBy?: string;      // sistema/módulo/usuário
+  createdAt: string;         // ISO
+  payload: T;                // dados do trabalho
+  meta?: Record<string, any>;// contexto (cidade, campanha, etc.)
+};
+```
 
-Processa:
+**Políticas default** (`add()`): `attempts=5`, `backoff=exponential`, `timeout=25_000ms`, `removeOnComplete=true`, `removeOnFail=false`.
 
-Abertura, análise e resolução de disputas entre cliente e prestador
+**DLQ**: jobs com falha final vão para `*.dlq` (ver §8.2) com **replay** manual/automatizado.
 
-Fluxo de suporte moderado (manual e automático)
+---
 
-Gatilhos de reembolso, alerta ou bloqueio de usuário
+## 5) Notificações — `notification.worker.ts`
 
-Origem dos eventos:
+**Tipos de job (exemplos):**
 
-Reclamação aberta no app
-
-Baixa avaliação com suspeita automática
-
-Falta de check-out ou divergência no local
-
-🔁 queues.service.ts
-
-Este serviço centraliza os métodos de enfileiramento de tarefas.
-
-Principais métodos:
-enqueueVerificationTask(data: VerificationPayload)
-enqueueNotificationTask(data: NotificationPayload)
-enqueueDisputeTask(data: DisputePayload)
-
-
-Utilizado por controladores, serviços ou hooks em outras camadas da aplicação.
-
-📦 queues.module.ts
-
-Módulo que registra os workers, configura o BullMQ com Redis, e conecta os consumers a seus respectivos processadores de tarefas.
-
-Inclui:
-
-Configurações globais de fila
-
-Injeção de dependência dos workers
-
-Registro dos queues no ecossistema NestJS
-
-🔐 Segurança e Resiliência
-
-✅ Tasks com retry automático e delay exponencial
-
-✅ Workers isolados, com lógica de erro dedicada
-
-✅ Persistência e observabilidade via Redis
-
-✅ Permite uso futuro de Prometheus para monitorar tempo de fila e erros por tipo
-
-🔗 Integração com o App (Real e Validada)
-Envio de notificações:
-
-App chama endpoint /bookings
-
-Controller → queues.service.enqueueNotificationTask()
-
-Worker envia push via Expo
-
-Verificação documental:
-
-App /provider-register
-
-Envia documentos
-
-Backend processa com enqueueVerificationTask()
-
-App é atualizado via status
-
-Disputas:
-
-Cliente sinaliza problema
-
-App → Backend → enqueueDisputeTask()
-
-Worker aciona suporte, bloqueia pagamento e emite alerta
-
-📈 Estratégia Técnica
-
-O módulo queues/ é fundamental para escalar o LimpeJá com eficiência, pois garante:
-
-APIs leves e responsivas
-
-Processos longos rodando em background
-
-Baixo acoplamento entre camadas
-
-Facilidade de manutenção e debug
-
-Potencial para escalonamento horizontal por tipo de worker
-
-📌 Roadmap Futuro
-Item	Prioridade
-Integração com metrics/	Alta
-Registro de métricas Prometheus	Alta
-Retentativas customizadas por job	Média
-Painel Admin para visualizar fila	Média
-✅ Conclusão
-
-O módulo queues/ já opera em produção e cumpre seu papel com excelência: garantir performance, estabilidade e escalabilidade real da plataforma. Ele se conecta diretamente com as experiências críticas dos usuários, como notificações, suporte e verificação de identidade — e está preparado para crescer junto com a operação.
+* `push.coupon_issued`  → título/cta, deep‑link p/ `bookings/schedule`.
+* `push.coupon_expiring`→ lembretes T‑72h/T‑24h.
+* `push.mission_ready`  → missão pronta p/ claim.
+* `push.referral_converted` → “S

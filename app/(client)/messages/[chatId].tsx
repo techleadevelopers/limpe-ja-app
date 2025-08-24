@@ -24,6 +24,7 @@ import { getBookingDetails } from '../../../services/bookingService';
 import { getChatMessages, sendMessage as sendChatMessage } from '../../../services/chatService';
 import { BookingStatus } from '../../../types/backend/bookings';
 import { Message, SendMessageDto } from '../../../types/backend/chat';
+import { PanicBanner } from '../../../components/safety/PanicBanner'; // Importar PanicBanner
 
 const SOCKET_URL = appConfig.apiUrl.replace('http', 'ws');
 
@@ -76,6 +77,9 @@ export default function ChatScreen() {
   const [chatBlockedMessage, setChatBlockedMessage] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const flatListRef = useRef<FlatList>(null);
+  // Mock para o status do pânico
+  const [panicStatus, setPanicStatus] = useState<'IDLE'|'RECEIVED'|'ACKED'|'DISPATCHED'|'CLOSED'>('IDLE');
+
 
   const userId = user?.id;
 
@@ -235,6 +239,26 @@ export default function ChatScreen() {
     );
   };
 
+  // Handler para o botão de pânico
+  const handlePanic = useCallback(() => {
+    Alert.alert(
+        "Acionar Botão de Pânico",
+        "Você tem certeza que deseja acionar o botão de pânico? Nossa equipe de segurança será notificada imediatamente.",
+        [
+            { text: "Cancelar", style: "cancel" },
+            { text: "Acionar", onPress: () => {
+                setPanicStatus('RECEIVED');
+                // Simular uma resposta após alguns segundos
+                setTimeout(() => setPanicStatus('ACKED'), 3000);
+                setTimeout(() => setPanicStatus('DISPATCHED'), 6000);
+                setTimeout(() => setPanicStatus('CLOSED'), 10000);
+                // Aqui você faria a chamada real para o serviço de pânico
+                console.log("Botão de pânico acionado!");
+            }, style: "destructive" }
+        ]
+    );
+  }, []);
+
   if (isLoading) {
     return (
       <View style={chatStyles.loadingContainer}>
@@ -265,6 +289,11 @@ export default function ChatScreen() {
         recipientAvatarUrl={recipientAvatarUrl}
         onBackPress={() => router.back()}
       />
+
+      {/* PanicBanner injetado aqui */}
+      <View style={chatStyles.panicBannerWrapper}>
+        <PanicBanner onPanic={handlePanic} status={panicStatus} />
+      </View>
 
       <Animated.View
         style={[
@@ -386,6 +415,11 @@ const chatStyles = StyleSheet.create({
   },
   headerActions: {
     flexDirection: 'row',
+  },
+  panicBannerWrapper: {
+    marginHorizontal: 15,
+    marginTop: 10,
+    marginBottom: 5,
   },
   chatBlockedContainer: {
     backgroundColor: '#FFE0E6',

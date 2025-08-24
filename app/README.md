@@ -697,3 +697,256 @@ O Expo Router é fundamental para o fluxo de navegação, utilizando um sistema 
 15. Considerações Finais
 Esta documentação fornece uma visão aprofundada do frontend do LimpeJáApp, destacando sua estrutura modular, o uso extensivo de tipagem (TypeScript), gerenciamento de estado via Context API e a integração com o backend via Axios. As animações e a organização do código contribuem para uma experiência de usuário fluida e um código-base manutenível. A clareza nas interconexões entre arquivos e a separação de responsabilidades são pilares importantes para o desenvolvimento contínuo do aplicativo.
 
+📱 Documentação do Frontend — LimpeJáApp
+
+O LimpeJáApp é uma aplicação mobile construída com React Native + Expo, projetada para conectar clientes a profissionais de limpeza e organização.
+O frontend gerencia todo o ciclo de vida do usuário: registro, autenticação, agendamentos, pagamentos, métricas, suporte e perfis.
+
+1. Visão Geral da Arquitetura
+
+React Native & Expo → multiplataforma (iOS/Android).
+
+Expo Router → navegação baseada em pastas com layouts aninhados.
+
+React Context API → estado global (auth, provider registration, app settings).
+
+Axios → camada de serviços HTTP, com interceptors para autenticação e tratamento de erros.
+
+TypeScript → tipagem estática e DTOs alinhados ao backend.
+
+AsyncStorage → persistência local de sessão/cache.
+
+Reanimated → animações de alto desempenho.
+
+Sentry → rastreamento de erros.
+
+Estrutura modular → pastas separadas por papel/contexto:
+
+app/
+ ├─ (auth)      → login, registro, verificação
+ ├─ (client)    → telas do cliente
+ ├─ (common)    → telas comuns (notificações, suporte, configurações)
+ └─ (provider)  → telas do provedor
+
+2. Módulos Core e Utilitários
+2.1. app/services/api.ts
+
+Instância global do Axios.
+
+Adiciona JWT em headers.
+
+Trata erros 401 → força logout pelo AuthContext.
+
+Injeta traceId em headers para observabilidade.
+
+2.2. authService.ts
+
+Login/logout.
+
+Registro de cliente/provedor.
+
+Redefinição de senha.
+
+Persiste auth_token + user no AsyncStorage.
+
+2.3. contexts/AuthContext.tsx
+
+Estado global: user, isAuthenticated, role, verificationStatus.
+
+Integração com metrics: dispara eventos (login, booking.created, payment.paid).
+
+Fornece métodos: login, logout, signUpClient, signUpProvider, refreshUser.
+
+2.4. _layout.tsx (Root)
+
+Decide para onde redirecionar:
+
+Não autenticado → (auth)/welcome.
+
+Cliente → (client)/explore.
+
+Provedor APPROVED → (provider)/dashboard.
+
+Provedor PENDING → (auth)/provider-register/....
+
+3. Estrutura (auth)
+
+login.tsx → tela de login.
+
+register-options.tsx → escolher “Cliente” ou “Profissional”.
+
+client-register.tsx → cadastro multi-etapas de cliente.
+
+provider-register/
+
+index.tsx → dados básicos.
+
+personal-details.tsx → CPF, senha, endereço.
+
+service-details.tsx → serviços, preços, chave PIX.
+
+verify-account.tsx → upload de documentos/selfie.
+
+forgot-password.tsx → redefinição de senha.
+
+test-connection.tsx → tela de debug (ping backend).
+
+layout.tsx → stack do grupo auth.
+
+Integrações Backend: /auth/*, /verification/*.
+
+4. Estrutura (client)
+
+explore/
+
+Busca e descoberta: GET /providers/search com filtros (distância, score, preço).
+
+bookings/
+
+Criação via POST /bookings.
+
+Usa locks distribuídos → se slot já estiver ocupado, app mostra erro amigável.
+
+Detalhes → bookings/[bookingId].tsx.
+
+Tela de sucesso com QR PIX → bookings/success.tsx.
+
+category/ → lista categorias de serviço.
+
+messages/ → chat cliente ↔ provedor.
+
+metrics/ → tela de métricas do cliente (serviços feitos, GMV, missões).
+
+misions/ → gamificação, missões concluídas.
+
+offers/ e ofertas/ → cupons e promoções.
+
+profile/ → perfil e preferências LGPD (/me/data/export, /me/data/delete).
+
+subscriptions/ → planos recorrentes.
+
+layout.tsx → shell do cliente (abas/exploração).
+
+5. Estrutura (common)
+
+active-booking/ → card persistente do serviço em andamento.
+
+feedback/ → envio de reviews.
+
+safety/ → botão de pânico e fallback SMS.
+
+support/
+
+help.tsx → abrir e acompanhar tickets.
+
+Backend: /support/tickets.
+
+Integração com BullMQ → notificações de status.
+
+loyalty.tsx → pontos/recompensas.
+
+notifications.tsx → inbox de notificações.
+
+privacidade.tsx → política de privacidade e consentimento.
+
+referrals.tsx → convites.
+
+settings.tsx → idioma, tema, export/delete dados.
+
+termos.tsx → termos de uso.
+
+layout.tsx → layout comum.
+
+6. Estrutura (provider)
+
+dashboard.tsx → visão geral (agenda, ganhos, pedidos pendentes).
+
+schedule/
+
+index.tsx → calendário de agendamentos.
+
+manage-availability.tsx → slots e disponibilidade.
+
+Usa locks distribuídos → aceitar serviço dispara conflito amigável se já alocado.
+
+services/ → edição de serviços e preços.
+
+messages/ → chat com clientes.
+
+notifications/ → notificações de pedidos.
+
+active-booking/ → execução em andamento.
+
+earnings.tsx → ganhos e payouts (GET /payouts).
+
+profile/ → perfil, KYC, documentos.
+
+layout.tsx → shell do provedor (abas).
+
+7. Integrações Transversais
+
+Locks distribuídos
+
+Cliente: ao reservar (bookings/create).
+
+Provedor: ao aceitar (schedule/index).
+
+Métricas
+
+Cliente: (client)/metrics lê /metrics/user.
+
+Provedor: /metrics/provider.
+
+Eventos enviados: login, booking.created, payment.paid, review.created.
+
+Suporte
+
+(common)/support/help.tsx → criar e acompanhar tickets.
+
+Notificações push em status (PENDING → IN_REVIEW → RESOLVED).
+
+LGPD
+
+Consentimento salvo em (common)/privacidade.tsx.
+
+Exportação/eliminação em (common)/settings.tsx.
+
+8. Navegação (Expo Router)
+app/
+ ├─ (auth)/
+ │   ├─ login.tsx, register-options.tsx, client-register.tsx, provider-register/*
+ │   ├─ forgot-password.tsx, test-connection.tsx, layout.tsx
+ │
+ ├─ (client)/
+ │   ├─ explore/, bookings/, category/, messages/
+ │   ├─ metrics/, misions/, offers/, ofertas/, profile/, subscriptions/
+ │   ├─ layout.tsx
+ │
+ ├─ (common)/
+ │   ├─ active-booking/, feedback/, safety/, support/help.tsx
+ │   ├─ loyalty.tsx, notifications.tsx, privacidade.tsx, referrals.tsx
+ │   ├─ settings.tsx, termos.tsx, layout.tsx
+ │
+ └─ (provider)/
+     ├─ dashboard.tsx, schedule/, services/, messages/, notifications/
+     ├─ active-booking/, earnings.tsx, profile/, layout.tsx
+
+9. Considerações Finais
+
+Frontend e Backend estão 100% alinhados:
+
+Locks (concorrência resolvida).
+
+Métricas (eventos disparados pelo app).
+
+Suporte (tickets integrados).
+
+LGPD (consent, export/delete).
+
+Próximos passos sugeridos:
+
+Adicionar testes e2e no app (Jest + Detox).
+
+Melhorar UX em casos de conflito de lock.
+
+Evoluir gamificação em misions.

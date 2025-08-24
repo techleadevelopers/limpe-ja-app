@@ -68,7 +68,7 @@ const FAB_SOS: React.FC<FAB_SOSProps> = ({ bottomOffset = 20 }) => {
 
   return (
     <TouchableOpacity
-      style={[styles.fabContainer, { bottom: bottomOffset + (Platform.OS === 'ios' ? 30 : 0) }]} // Ajuste para safe area do iOS
+      style={[styles.fabContainer, { bottom: bottomOffset + (Platform.OS === 'ios' ? 30 : 50) }]} // Ajuste para safe area do iOS
       onPress={handlePress}
       onPressIn={onPressIn}
       onPressOut={onPressOut}

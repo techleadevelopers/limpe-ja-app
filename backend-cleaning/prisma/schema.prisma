@@ -23,7 +23,7 @@ enum UserRole {
   CLIENT
   PROVIDER
   ADMIN
-  SYSTEM // ADICIONADO: Papel para operações internas do sistema (ex: webhooks)
+  SYSTEM        // ADICIONADO: Papel para operações internas do sistema (ex: webhooks)
   SUPPORT_AGENT // NOVO: Papel para agentes de suporte
 }
 
@@ -70,10 +70,10 @@ enum TransactionType {
 
 // NOVO: Enum para o status de um Payment Intent (cobrança)
 enum PaymentIntentStatus {
-  PENDING // Cobrança criada, aguardando pagamento
-  PAID // Pagamento recebido com sucesso
-  EXPIRED // Cobrança expirada (e.g., QR Code PIX expirou)
-  REFUNDED // Pagamento estornado
+  PENDING    // Cobrança criada, aguardando pagamento
+  PAID       // Pagamento recebido com sucesso
+  EXPIRED    // Cobrança expirada (e.g., QR Code PIX expirou)
+  REFUNDED   // Pagamento estornado
   CHARGEBACK // Pagamento contestado
 }
 
@@ -150,18 +150,23 @@ enum IncidentStatus {
   REJECTED
 }
 
-// Mantido conforme o schema original, embora o modelo Coupon agora use String para valueType
+// ATUALIZADO: Enum para o tipo de cupom
 enum CouponType {
-  PERCENTAGE
-  FIXED_AMOUNT
+  PERCENT // RENOMEADO de PERCENTAGE
+  FIXED   // RENOMEADO de FIXED_AMOUNT
 }
 
-// Mantido conforme o schema original, embora o modelo Coupon agora use String para target
+// ATUALIZADO: Enum para o alvo do cupom
 enum CouponTarget {
-  ALL
+  GENERAL           // <<-- FIXED: Renamed from ALL
   NEW_CLIENTS
   SPECIFIC_SERVICE
   SPECIFIC_PROVIDER
+  NEW_CUSTOMER      // ADICIONADO
+  REFERRAL_REFERRED // ADICIONADO
+  REFERRAL_REFERRER // ADICIONADO
+  MISSION_REWARD    // ADICIONADO
+  REPEAT_CUSTOMER   // ADICIONADO
 }
 
 // NOVO: ENUM CouponStatus
@@ -189,13 +194,15 @@ enum LoyaltyTransactionType {
   REDEEM
   MISSION_COMPLETED
   ADMIN_ADJUSTMENT
+  REFERRAL_CONVERSION // ADICIONADO
+  PROFILE_COMPLETION  // ADICIONADO
 }
 
 // ====== MISSIONS: NOVOS ENUMS (cada valor em uma linha) ======
 enum MissionAudience {
   CLIENT
   PROVIDER
-  GENERAL // <-- ADICIONE ESTA LINHA
+  GENERAL // ADICIONADO
 }
 
 enum MissionKind {
@@ -230,45 +237,46 @@ enum OfferStatus {
   EXPIRED
 }
 
-
 // ---------------------------------
 // Models
 // ---------------------------------
 // Modelo de Usuário (base para Cliente e Provedor)
 model User {
-  id                    String           @id @default(uuid())
-  email                 String           @unique
-  phone                 String?          @unique
+  id                    String             @id @default(uuid())
+  email                 String             @unique
+  phone                 String?            @unique
   passwordHash          String?
-  role                  UserRole         @default(CLIENT)
+  role                  UserRole           @default(CLIENT)
   avatarUrl             String?
-  firebaseUid           String?          @unique
-  fullName              String           @default("Nome Padrão")
-  fcmToken              String?          @unique
-  isPhoneVerified       Boolean          @default(false)
-  isVerified            Boolean          @default(false)
+  firebaseUid           String?            @unique
+  fullName              String             @default("Nome Padrão")
+  fcmToken              String?            @unique
+  isPhoneVerified       Boolean            @default(false)
+  isVerified            Boolean            @default(false)
   deletionScheduledAt   DateTime?
-  createdAt             DateTime         @default(now())
-  updatedAt             DateTime         @updatedAt
-  preferredLanguage     String?          // NOVO: Para internacionalização (i18n) - idioma preferencial do usuário
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  preferredLanguage     String?            // NOVO: Para internacionalização (i18n) - idioma preferencial do usuário
+  myReferralCode        String?            @unique // ADICIONADO: Código de indicação próprio do usuário
 
   client                Client?
   provider              Provider?
-  messagesSent          Message[]        @relation("SentMessages")
-  messagesReceived      Message[]        @relation("ReceivedMessages")
+  messagesSent          Message[]          @relation("SentMessages")
+  messagesReceived      Message[]          @relation("ReceivedMessages")
   notifications         Notification[]
-  chatsAsParticipant1   Chat[]           @relation("ChatParticipant1")
-  chatsAsParticipant2   Chat[]           @relation("ChatParticipant2")
-  referredBy            Referral[]       @relation("ReferredByUser")
-  referralsMade         Referral[]       @relation("ReferrerOfUser")
-  disputesReported      Dispute[]        @relation("DisputeReporter")
-  reportedIncidents     Incident[]       @relation("ReportedIncidents")
-  panicAlerts           PanicAlert[]     @relation("PanicAlerts")
+  chatsAsParticipant1   Chat[]             @relation("ChatParticipant1")
+  chatsAsParticipant2   Chat[]             @relation("ChatParticipant2")
+  referredBy            Referral[]         @relation("ReferredByUser")
+  referralsMade         Referral[]         @relation("ReferrerOfUser")
+  disputesReported      Dispute[]          @relation("DisputeReporter")
+  reportedIncidents     Incident[]         @relation("ReportedIncidents")
+  panicAlerts           PanicAlert[]       @relation("PanicAlerts")
   userConsents          UserConsent[]
-  disputeMessagesSent   DisputeMessage[] @relation("DisputeSender")
+  disputeMessagesSent   DisputeMessage[]   @relation("DisputeSender")
   loyalty               Loyalty?
   loyaltyTransactions   LoyaltyTransaction[]
   couponUsages          CouponUsage[]
+  issuedCoupons         Coupon[]           @relation("IssuedCoupons") // ADICIONADO
 
   // ====== MISSIONS: relações de conveniência ======
   missionProgress       MissionProgress[]
@@ -276,9 +284,9 @@ model User {
   // ====== FIM MISSIONS ======
 
   // NOVO: Relações para o módulo de suporte
-  supportTickets        SupportTicket[]  // Tickets abertos pelo usuário
-  supportMessages       SupportMessage[] // Mensagens enviadas pelo usuário
-  assignedTickets       SupportTicket[]  @relation("AssignedTickets") // Tickets atribuídos a este usuário (se for agente/admin)
+  supportTickets        SupportTicket[]    // Tickets abertos pelo usuário
+  supportMessages       SupportMessage[]   // Mensagens enviadas pelo usuário
+  assignedTickets       SupportTicket[]    @relation("AssignedTickets") // Tickets atribuídos a este usuário (se for agente/admin)
 }
 
 // Modelo para Cliente
@@ -304,260 +312,262 @@ model Client {
 
 // Modelo para Provedor
 model Provider {
-  id                    String            @id @default(uuid())
-  userId                String            @unique
-  user                  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  fullName              String
-  cpf                   String?           @unique
-  dateOfBirth           DateTime
-  phone                 String?
-  address               Address?          @relation("ProviderAddress")
-  yearsOfExperience     Int?
-  avatarUrl             String?
-  bio                   String?
-  providerServices      ProviderService[]
-  fiveStarReviewCount   Int               @default(0)
-  monthlyBookingsCount  Int               @default(0)
-  availability          Availability[]
-  bookings              Booking[]
-  reviewsReceived       Review[]          @relation("ProviderReviews")
-  earnings              Transaction[]
-  verificationStatus    VerificationStatus @default(PENDING_INITIAL_REVIEW)
-  documentPhotoFrontUrl String?
-  documentPhotoBackUrl  String?
-  selfieWithDocumentUrl String?
-  backgroundCheckResult Json?
-  ocrResult             Json?
-  livenessResult        Json?
-  rejectionReason       String?
-  pixKey                String? // Mantido, embora o PIX de saque seja na transação, pode ser um PIX padrão do provedor
-  badges                String[]          @default([])
-  subscriptions         Subscription[]
-  guaranteeClaims       GuaranteeClaim[]
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
+  id                         String             @id @default(uuid())
+  userId                     String             @unique
+  user                       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName                   String
+  cpf                        String?            @unique
+  dateOfBirth                DateTime
+  phone                      String?
+  address                    Address?           @relation("ProviderAddress")
+  yearsOfExperience          Int?
+  avatarUrl                  String?
+  bio                        String?
+  providerServices           ProviderService[]
+  fiveStarReviewCount        Int                @default(0)
+  monthlyBookingsCount       Int                @default(0)
+  availability               Availability[]
+  bookings                   Booking[]
+  reviewsReceived            Review[]           @relation("ProviderReviews")
+  earnings                   Transaction[]
+  verificationStatus         VerificationStatus @default(PENDING_INITIAL_REVIEW)
+  documentPhotoFrontUrl      String?
+  documentPhotoBackUrl       String?
+  selfieWithDocumentUrl      String?
+  backgroundCheckResult      Json?
+  ocrResult                  Json?
+  livenessResult             Json?
+  rejectionReason            String?
+  pixKey                     String?            // Mantido, embora o PIX de saque seja na transação, pode ser um PIX padrão do provedor
+  badges                     String[]           @default([])
+  subscriptions              Subscription[]
+  guaranteeClaims            GuaranteeClaim[]
+  createdAt                  DateTime           @default(now())
+  updatedAt                  DateTime           @updatedAt
   // NOVOS CAMPOS ADICIONADOS PARA MÉTRICAS DE PERFORMANCE
-  acceptanceRate        Float             @default(0)
-  averageResponseTime   Int               @default(0) // Em minutos
+  acceptanceRate             Float              @default(0)
+  averageResponseTime        Int                @default(0) // Em minutos
 }
 
 // Modelo de Endereço
 model Address {
-  id           String                                 @id @default(uuid())
-  cep          String
-  street       String
-  number       String
-  complement   String?
+  id         String    @id @default(uuid())
+  cep        String
+  street     String
+  number     String
+  complement String?
   neighborhood String
-  city         String
-  state        String
-  clientId     String?                                @unique
-  providerId   String?                                @unique
-  client       Client?                                @relation("ClientAddress", fields: [clientId], references: [id])
-  provider     Provider?                              @relation("ProviderAddress", fields: [providerId], references: [id])
-  booking      Booking?                               @relation("BookingAddress")
+  city       String
+  state      String
+  clientId   String?   @unique
+  providerId String?   @unique
+  client     Client?   @relation("ClientAddress", fields: [clientId], references: [id])
+  provider   Provider? @relation("ProviderAddress", fields: [providerId], references: [id])
+  booking    Booking?  @relation("BookingAddress")
   // --- ADIÇÃO PARA GEOESPACIAL (AGORA INTEGRADO) ---
-  location     Unsupported("geometry(Point, 4326)")?
-  latitude     Decimal?                               @db.Decimal(10, 8)
-  longitude    Decimal?                               @db.Decimal(11, 8)
+  location   Unsupported("geometry(Point, 4326)")?
+  latitude   Decimal?  @db.Decimal(10, 8)
+  longitude  Decimal?  @db.Decimal(11, 8)
   // FIM ABS
 }
 
 // Modelo para Tipos de Serviço
 model Service {
-  id                 String            @id @default(uuid())
-  name               String            @unique
-  description        String?
-  price              Decimal           @db.Decimal(10, 2)
-  defaultPricingType PricingType?
-  icon               String?
-  providerServices   ProviderService[]
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
+  id                  String            @id @default(uuid())
+  name                String            @unique
+  description         String?
+  price               Decimal           @db.Decimal(10, 2)
+  defaultPricingType  PricingType?
+  icon                String?
+  providerServices    ProviderService[]
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
 }
 
 // Modelo para Serviços Oferecidos por um Provedor Específico
 model ProviderService {
-  id                   String            @id @default(uuid())
-  providerId           String
-  serviceId            String
-  price                Decimal           @db.Decimal(10, 2)
-  durationMinutes      Int?
-  description          String?
-  provider             Provider          @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  pricingType          PricingType       @default(FIXED_PRICE)
-  pricePerSquareMeter  Decimal?          @db.Decimal(10, 2)
-  pricePerRoom         Decimal?          @db.Decimal(10, 2)
-  service              Service           @relation(fields: [serviceId], references: [id])
-  bookings             Booking[]
-  createdAt            DateTime          @default(now())
-  updatedAt            DateTime          @updatedAt
-  subscriptions        Subscription[]    @relation("ProviderServiceSubscriptions")
+  id                    String         @id @default(uuid())
+  providerId            String
+  serviceId             String
+  price                 Decimal        @db.Decimal(10, 2)
+  durationMinutes       Int?
+  description           String?
+  provider              Provider       @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  pricingType           PricingType    @default(FIXED_PRICE)
+  pricePerSquareMeter   Decimal?       @db.Decimal(10, 2)
+  pricePerRoom          Decimal?       @db.Decimal(10, 2)
+  service               Service        @relation(fields: [serviceId], references: [id])
+  bookings              Booking[]
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  subscriptions         Subscription[] @relation("ProviderServiceSubscriptions")
 
   @@unique([providerId, serviceId])
 }
 
 // Modelo de Agendamento
 model Booking {
-  id                       String            @id @default(uuid())
-  clientId                 String
-  providerId               String
-  providerServiceId        String
-  client                   Client            @relation(fields: [clientId], references: [id], onDelete: Restrict)
-  provider                 Provider          @relation(fields: [providerId], references: [id], onDelete: Restrict)
-  providerService          ProviderService   @relation(fields: [providerServiceId], references: [id])
-  scheduledDate            DateTime
-  scheduledTime            String
-  status                   BookingStatus     @default(PENDING)
-  totalPrice               Decimal           @db.Decimal(10, 2)
-  notes                    String?
-  createdAt                DateTime          @default(now())
-  updatedAt                DateTime          @updatedAt
-  review                   Review?
-  transactions             Transaction[]
-  addressId                String?           @unique
-  address                  Address?          @relation("BookingAddress", fields: [addressId], references: [id])
-  dispute                  Dispute?
-  subscriptionId           String?
-  subscription             Subscription?     @relation("SubscriptionBookings", fields: [subscriptionId], references: [id])
-  incidents                Incident[]
-  guaranteeClaims          GuaranteeClaim[]
-  couponId                 String?
-  coupon                   Coupon?           @relation(fields: [couponId], references: [id])
-  couponUsage              CouponUsage?      @relation("BookingCouponUsage")
+  id                        String        @id @default(uuid())
+  clientId                  String
+  providerId                String
+  providerServiceId         String
+  client                    Client        @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  provider                  Provider      @relation(fields: [providerId], references: [id], onDelete: Restrict)
+  providerService           ProviderService @relation(fields: [providerServiceId], references: [id])
+  scheduledDate             DateTime
+  scheduledTime             String
+  status                    BookingStatus @default(PENDING)
+  totalPrice                Decimal       @db.Decimal(10, 2)
+  notes                     String?
+  createdAt                 DateTime      @default(now())
+  updatedAt                 DateTime      @updatedAt
+  review                    Review?
+  transactions              Transaction[]
+  addressId                 String?       @unique
+  address                   Address?      @relation("BookingAddress", fields: [addressId], references: [id])
+  dispute                   Dispute?
+  subscriptionId            String?
+  subscription              Subscription? @relation("SubscriptionBookings", fields: [subscriptionId], references: [id])
+  incidents                 Incident[]
+  guaranteeClaims           GuaranteeClaim[]
+  couponId                  String?
+  coupon                    Coupon?       @relation(fields: [couponId], references: [id])
+  couponUsage               CouponUsage?  @relation("BookingCouponUsage")
+  discountAmount            Decimal?      @db.Decimal(10, 2) // ADICIONADO
   // NOVO: Relação para o módulo de suporte
-  supportTickets           SupportTicket[]
+  supportTickets            SupportTicket[]
   // REMOVIDO: paymentIntentId String? @unique // Esta chave estrangeira foi movida para PaymentIntent
-  paymentIntent            PaymentIntent?    // NOVO: Agora é a back-relation. Prisma infere o nome se não for ambíguo.
+  paymentIntent             PaymentIntent? // NOVO: Agora é a back-relation. Prisma infere o nome se não for ambíguo.
 }
 
 // Modelo de Chat
 model Chat {
-  id               String    @id @default(uuid())
-  participant1Id   String
-  participant1     User      @relation("ChatParticipant1", fields: [participant1Id], references: [id])
-  participant2Id   String
-  participant2     User      @relation("ChatParticipant2", fields: [participant2Id], references: [id])
-  messages         Message[]
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id                String    @id @default(uuid())
+  participant1Id    String
+  participant1      User      @relation("ChatParticipant1", fields: [participant1Id], references: [id])
+  participant2Id    String
+  participant2      User      @relation("ChatParticipant2", fields: [participant2Id], references: [id])
+  messages          Message[]
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   @@unique([participant1Id, participant2Id])
 }
 
 // Modelo de Mensagem de Chat
 model Message {
-  id               String    @id @default(uuid())
-  chatId           String
-  chat             Chat      @relation(fields: [chatId], references: [id])
-  senderId         String
-  sender           User      @relation("SentMessages", fields: [senderId], references: [id])
-  receiverId       String
-  receiver         User      @relation("ReceivedMessages", fields: [receiverId], references: [id])
-  content          String
-  timestamp        DateTime  @default(now())
-  isRead           Boolean   @default(false)
-  targetUrl        String?
-  createdAt        DateTime  @default(now())
+  id         String   @id @default(uuid())
+  chatId     String
+  chat       Chat     @relation(fields: [chatId], references: [id])
+  senderId   String
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiverId String
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  content    String
+  timestamp  DateTime @default(now())
+  isRead     Boolean  @default(false)
+  targetUrl  String?
+  createdAt  DateTime @default(now())
 }
 
 // Modelo de Notificação
 model Notification {
-  id          String   @id @default(uuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-  type        String
-  message     String
-  isRead      Boolean  @default(false)
-  targetUrl   String?
-  createdAt   DateTime @default(now())
-  imageUrl    String?
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  type         String
+  message      String
+  isRead       Boolean  @default(false)
+  targetUrl    String?
+  createdAt    DateTime @default(now())
+  imageUrl     String?
   actionButtons Json?
-  title       String? // NEW: Added title to Notification model
+  title        String? // NEW: Added title to Notification model
 }
 
 // Modelo de Avaliação
 model Review {
-  id          String   @id @default(uuid())
-  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  bookingId   String   @unique
-  clientId    String
-  providerId  String
-  rating      Int
-  comment     String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  client      Client   @relation("ClientReviews", fields: [clientId], references: [id])
-  provider    Provider @relation("ProviderReviews", fields: [providerId], references: [id])
+  id         String   @id @default(uuid())
+  booking    Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId  String   @unique
+  clientId   String
+  providerId String
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  client     Client   @relation("ClientReviews", fields: [clientId], references: [id])
+  provider   Provider @relation("ProviderReviews", fields: [providerId], references: [id])
 
   @@unique([bookingId, clientId, providerId])
 }
 
 // Modelo de Oferta/Promoção
 model Offer {
-  id                  String    @id @default(uuid())
-  title               String
-  description         String?
-  discountPercentage  Float?
-  fixedDiscountAmount Float?
-  validUntil          DateTime
-  imageUrl            String?
-  target              OfferTarget // ADICIONADO
-  targetId            String?     // ADICIONADO
-  status              OfferStatus // ADICIONADO
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  id                 String       @id @default(uuid())
+  title              String
+  description        String?
+  discountPercentage Float?
+  fixedDiscountAmount Decimal?
+  validFrom          DateTime     // << CORREÇÃO: Adicionado validFrom
+  validUntil         DateTime
+  imageUrl           String?
+  target             OfferTarget  // ADICIONADO
+  targetId           String?      // ADICIONADO
+  status             OfferStatus  // ADICIONADO
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
 }
 
 // Modelo de Transação Financeira (geral, pode ser o registro de um pagamento ou saque)
 model Transaction {
-  id                   String          @id @default(uuid())
+  id                   String      @id @default(uuid())
   providerId           String
-  provider             Provider        @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  amount               Decimal         @db.Decimal(10, 2)
+  provider             Provider    @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  amount               Decimal     @db.Decimal(10, 2)
   type                 TransactionType
   status               String
   description          String?
-  createdAt            DateTime        @default(now())
+  createdAt            DateTime    @default(now())
   bookingId            String?
-  booking              Booking?        @relation(fields: [bookingId], references: [id])
-  gatewayTransactionId String?         @unique
+  booking              Booking?    @relation(fields: [bookingId], references: [id])
+  gatewayTransactionId String?     @unique
   qrCodeUrl            String?
   transactionRef       String?
   couponId             String?
-  coupon               Coupon?         @relation(fields: [couponId], references: [id])
+  coupon               Coupon?     @relation(fields: [couponId], references: [id])
   // NOVOS CAMPOS PARA SAQUE VIA PIX
-  pixKeyType           PixKeyType?     // Tipo da chave PIX (CPF, CNPJ, EMAIL, PHONE, RANDOM)
-  pixKey               String?         // A chave PIX em si
+  pixKeyType           PixKeyType? // Tipo da chave PIX (CPF, CNPJ, EMAIL, PHONE, RANDOM)
+  pixKey               String?     // A chave PIX em si
 }
 
 // NOVO: Modelo para Payment Intent (representa uma intenção de pagamento/cobrança)
 model PaymentIntent {
-  id                   String              @id @default(uuid())
-  bookingId            String              @unique // Esta é a chave estrangeira
-  booking              Booking             @relation(fields: [bookingId], references: [id]) // Este lado define a relação
-  amountCents          Int                 // Valor em centavos para evitar problemas de ponto flutuante
-  status               PaymentIntentStatus @default(PENDING)
-  gateway              String              // Ex: "PAGSEGURO", "STRIPE", "MERCADOPAGO"
-  externalRef          String?             // ID da transação no gateway de pagamento
-  idempotencyKey       String?             @unique // Chave para garantir idempotência de requisições
-  createdAt            DateTime            @default(now())
-  updatedAt            DateTime            @updatedAt
-  expiresAt            DateTime?           // Data de expiração da cobrança (e.g., QR Code PIX)
-  qrCodeUrl            String?             // URL do QR Code PIX
-  qrCodeText           String?             // Conteúdo do QR Code PIX (copia e cola)
+  id                 String              @id @default(uuid())
+  bookingId          String              @unique // Esta é a chave estrangeira
+  booking            Booking             @relation(fields: [bookingId], references: [id]) // Este lado define a relação
+  amountCents        Int                 // Valor em centavos para evitar problemas de ponto flutuante
+  status             PaymentIntentStatus @default(PENDING)
+  gateway            String              // Ex: "PAGSEGURO", "STRIPE", "MERCADOPAGO"
+  externalRef        String?             // ID da transação no gateway de pagamento
+  idempotencyKey     String?             @unique // Chave para garantir idempotência de requisições
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  expiresAt          DateTime?           // Data de expiração da cobrança (e.g., QR Code PIX)
+  qrCodeUrl          String?             // URL do QR Code PIX
+  qrCodeText         String?             // Conteúdo do QR Code PIX (copia e cola)
   // Relação com eventos de pagamento (para rastrear webhooks, etc.)
-  paymentEvents        PaymentEvent[]
+  paymentEvents      PaymentEvent[]
 }
 
 // NOVO: Modelo para eventos de pagamento (webhooks, notificações)
 model PaymentEvent {
-  id            String       @id @default(uuid())
+  id              String        @id @default(uuid())
   paymentIntentId String
-  paymentIntent PaymentIntent @relation(fields: [paymentIntentId], references: [id])
-  type          String       // Ex: "WEBHOOK_PAID", "WEBHOOK_EXPIRED", "MANUAL_CONFIRMATION"
-  payload       Json?        // Conteúdo original do webhook/evento
-  createdAt     DateTime     @default(now())
+  paymentIntent   PaymentIntent @relation(fields: [paymentIntentId], references: [id])
+  type            String        // Ex: "WEBHOOK_PAID", "WEBHOOK_EXPIRED", "MANUAL_CONFIRMATION"
+  payload         Json?         // Conteúdo original do webhook/evento
+  createdAt       DateTime      @default(now())
 }
 
 // Modelo de Disponibilidade do Provedor
@@ -573,13 +583,13 @@ model Availability {
 
 // NOVO: Modelo para Perguntas Frequentes (FAQs)
 model FAQItem {
-  id          String   @id @default(uuid())
-  question    String   @unique
+  id        String   @id @default(uuid())
+  question  String   @unique
   answer    String
-  category    String?
-  order       Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  category  String?
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // NOVO: Modelo para Indicação (Referral)
@@ -589,7 +599,7 @@ model Referral {
   referredUser   User     @relation("ReferredByUser", fields: [referredUserId], references: [id])
   referrerUserId String
   referrerUser   User     @relation("ReferrerOfUser", fields: [referrerUserId], references: [id])
-  referralCode   String?
+  referralCode   String?  // Este é o código que foi usado para a indicação
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -598,42 +608,44 @@ model Referral {
 
 // NOVO: Modelo para Disputa de Agendamento
 model Dispute {
-  id                    String        @id @default(uuid())
-  bookingId             String        @unique
-  booking               Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  reporterUserId        String
-  reporterUser          User          @relation("DisputeReporter", fields: [reporterUserId], references: [id])
-  reason                DisputeReason
-  description           String
-  refundAmountProposed  Decimal?      @db.Decimal(10, 2)
-  attachments           String[]
-  status                DisputeStatus @default(PENDING)
-  resolutionNotes       String?
-  resolvedByUserId      String?
-  resolvedAt            DateTime?
-  createdAt             DateTime      @default(now())
-  updatedAt             DateTime      @updatedAt
-  messages              DisputeMessage[]
+  id                 String         @id @default(uuid())
+  bookingId          String         @unique
+  booking            Booking        @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  reporterUserId     String
+  reporterUser       User           @relation("DisputeReporter", fields: [reporterUserId], references: [id])
+  reason             DisputeReason
+  description        String
+  refundAmountProposed Decimal?       @db.Decimal(10, 2)
+  attachments        String[]
+  status             DisputeStatus  @default(PENDING)
+  resolutionNotes    String?
+  resolvedByUserId   String?
+  resolvedAt         DateTime?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  messages           DisputeMessage[] @relation("DisputeMessages") // Adicione o nome da relação
 }
 
 // NOVO: Modelo para Mensagens de Disputa
 model DisputeMessage {
-  id           String   @id @default(uuid())
-  disputeId    String
-  dispute      Dispute  @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  id           String        @id @default(uuid())
+  ticketId     String
+  ticket       SupportTicket @relation("DisputeMessageTicket", fields: [ticketId], references: [id], onDelete: Cascade) // CORRIGIDO: Adicionado nome da relação
   senderUserId String
-  sender       User     @relation("DisputeSender", fields: [senderUserId], references: [id])
+  sender       User          @relation("DisputeSender", fields: [senderUserId], references: [id])
   content      String
-  createdAt    DateTime @default(now())
+  createdAt    DateTime      @default(now())
+  disputeId    String        // Adicionado para a relação com Dispute
+  dispute      Dispute       @relation("DisputeMessages", fields: [disputeId], references: [id]) // Relação com Dispute
 }
 
 // NOVO: Modelo para Consentimento do Usuário (LGPD)
 model UserConsent {
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  documentType  String
-  version       String
-  consentedAt   DateTime @default(now())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documentType String
+  version    String
+  consentedAt DateTime @default(now())
 
   @@id([userId, documentType])
 }
@@ -642,142 +654,147 @@ model UserConsent {
 
 // ABS: Modelo para Assinaturas/Agendamentos Recorrentes
 model Subscription {
-  id                String              @id @default(uuid())
-  clientId          String
-  client            Client              @relation(fields: [clientId], references: [id])
-  providerId        String
-  provider          Provider            @relation(fields: [providerId], references: [id])
-  providerServiceId String
-  providerService   ProviderService     @relation("ProviderServiceSubscriptions", fields: [providerServiceId], references: [id])
-  frequency         SubscriptionFrequency
-  startDate         DateTime
-  endDate           DateTime?
-  status            SubscriptionStatus  @default(ACTIVE)
-  totalPrice        Decimal             @db.Decimal(10, 2)
-  nextGenerationDate DateTime
-  generatedBookings Booking[]           @relation("SubscriptionBookings")
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
+  id                   String               @id @default(uuid())
+  clientId             String
+  client               Client               @relation(fields: [clientId], references: [id])
+  providerId           String
+  provider             Provider             @relation(fields: [providerId], references: [id])
+  providerServiceId    String
+  providerService      ProviderService      @relation("ProviderServiceSubscriptions", fields: [providerServiceId], references: [id])
+  frequency            SubscriptionFrequency
+  startDate            DateTime
+  endDate              DateTime?
+  status               SubscriptionStatus   @default(ACTIVE)
+  totalPrice           Decimal              @db.Decimal(10, 2)
+  nextGenerationDate   DateTime
+  generatedBookings    Booking[]            @relation("SubscriptionBookings")
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
 }
 
 // ABS: Modelo para Relatório de Incidentes
 model Incident {
-  id           String         @id @default(uuid())
-  reporterId   String
-  reporter     User           @relation("ReportedIncidents", fields: [reporterId], references: [id])
-  bookingId    String?
-  booking      Booking?       @relation(fields: [bookingId], references: [id])
-  type         IncidentType
-  description  String
-  attachments  String[]
-  status       IncidentStatus @default(PENDING_REVIEW)
-  resolution   String?
-  resolvedBy   String?
-  resolvedAt   DateTime?
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  id          String         @id @default(uuid())
+  reporterId  String
+  reporter    User           @relation("ReportedIncidents", fields: [reporterId], references: [id])
+  bookingId   String?
+  booking     Booking?       @relation(fields: [bookingId], references: [id])
+  type        IncidentType
+  description String
+  attachments String[]
+  status      IncidentStatus @default(PENDING_REVIEW)
+  resolution  String?
+  resolvedBy  String?
+  resolvedAt  DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 }
 
 // ABS: Modelo para Alertas de Pânico
 model PanicAlert {
-  id        String    @id @default(uuid())
+  id        String   @id @default(uuid())
   userId    String
-  user      User      @relation("PanicAlerts", fields: [userId], references: [id])
-  latitude  Decimal   @db.Decimal(10, 8)
-  longitude Decimal   @db.Decimal(11, 8)
+  user      User     @relation("PanicAlerts", fields: [userId], references: [id])
+  latitude  Decimal  @db.Decimal(10, 8)
+  longitude Decimal  @db.Decimal(11, 8)
   message   String?
-  status    String    @default("ACTIVE")
-  createdAt DateTime  @default(now())
+  status    String   @default("ACTIVE")
+  createdAt DateTime @default(now())
 }
 
 // ABS: Modelo para Cupons de Desconto (Atualizado)
 model Coupon {
-  id           String          @id @default(uuid())
-  code         String          @unique
-  description  String?
-  value        Decimal         @db.Decimal(10, 2)
-  valueType    String
-  target       String
-  targetId     String?
-  maxUses      Int?
-  usesCount    Int             @default(0)
-  validFrom    DateTime
-  validUntil   DateTime
-  status       CouponStatus    @default(ACTIVE)
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-  usages       CouponUsage[]
-  bookings     Booking[]
-  transactions Transaction[]
+  id             String         @id @default(uuid())
+  code           String         @unique
+  description    String?
+  value          Decimal        @db.Decimal(10, 2)
+  valueType      CouponType     // ATUALIZADO: Usando enum CouponType
+  target         CouponTarget   // ATUALIZADO: Usando enum CouponTarget
+  targetId       String?
+  maxUses        Int?
+  usesCount      Int            @default(0)
+  validFrom      DateTime
+  validUntil     DateTime
+  status         CouponStatus   @default(ACTIVE)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  usages         CouponUsage[]
+  bookings       Booking[]
+  transactions   Transaction[]
+  maxDiscount    Decimal?       @db.Decimal(10, 2) // ADICIONADO
+  firstBookingOnly Boolean      @default(false) // ADICIONADO
+  issuedToUserId String?        // ADICIONADO: ID do usuário para quem o cupom foi emitido
+  issuedToUser   User?          @relation("IssuedCoupons", fields: [issuedToUserId], references: [id]) // ADICIONADO: Relação com o usuário que recebeu o cupom
+  issuedBy       String?        // <<-- FIXED: Added issuedBy field
 }
 
 // ABS: Modelo para rastrear o uso de cupons (Novo) - ATUALIZADO COM appliedValue
 model CouponUsage {
-  id           String   @id @default(uuid())
-  couponId     String
-  coupon       Coupon   @relation(fields: [couponId], references: [id])
-  userId       String
-  user       User     @relation(fields: [userId], references: [id])
-  bookingId    String   @unique
-  booking      Booking  @relation("BookingCouponUsage", fields: [bookingId], references: [id])
+  id          String    @id @default(uuid())
+  couponId    String
+  coupon      Coupon    @relation(fields: [couponId], references: [id])
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  bookingId   String    @unique
+  booking     Booking   @relation("BookingCouponUsage", fields: [bookingId], references: [id])
   appliedValue Decimal  @db.Decimal(10, 2)
-  createdAt    DateTime @default(now())
+  createdAt   DateTime  @default(now())
 }
 
 // ABS: Modelo para Solicitações de Garantia de Serviço
 model GuaranteeClaim {
-  id              String        @id @default(uuid())
-  bookingId       String
-  booking         Booking       @relation(fields: [bookingId], references: [id])
-  clientId        String
-  client          Client        @relation(fields: [clientId], references: [id])
-  providerId      String
-  provider        Provider      @relation(fields: [providerId], references: [id])
-  description     String
-  attachments     String[]
-  estimatedValue  Decimal?      @db.Decimal(10, 2)
-  resolvedValue   Decimal?      @db.Decimal(10, 2)
-  status          ClaimStatus   @default(PENDING)
+  id             String      @id @default(uuid())
+  bookingId      String
+  booking        Booking     @relation(fields: [bookingId], references: [id])
+  clientId       String
+  client         Client      @relation(fields: [clientId], references: [id])
+  providerId     String
+  provider       Provider    @relation(fields: [providerId], references: [id])
+  description    String
+  attachments    String[]
+  estimatedValue Decimal?    @db.Decimal(10, 2)
+  resolvedValue  Decimal?    @db.Decimal(10, 2)
+  status         ClaimStatus @default(PENDING)
   resolutionNotes String?
-  resolvedAt      DateTime?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  resolvedAt     DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 }
 
 // ABS: Modelo para Regras de Precificação Dinâmica
 model PricingRule {
-  id              String    @id @default(uuid())
-  zoneId          String?
-  dayOfWeek       Int?
-  startTime       String?
-  endTime         String?
+  id             String   @id @default(uuid())
+  zoneId         String?
+  dayOfWeek      Int?
+  startTime      String?
+  endTime        String?
   demandThreshold Int?
-  surgeFactor     Decimal   @db.Decimal(3, 2)
-  isActive        Boolean   @default(true)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  surgeFactor    Decimal  @db.Decimal(3, 2)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 // NOVO: Modelo para o saldo de pontos de fidelidade do usuário
 model Loyalty {
-  id            String   @id @default(uuid())
-  userId        String   @unique
-  currentPoints Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  currentPoints Int     @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id])
+  user         User     @relation(fields: [userId], references: [id])
 }
 
 // NOVO: Modelo para o histórico de transações de pontos de fidelidade
 model LoyaltyTransaction {
-  id          String                 @id @default(uuid())
+  id          String             @id @default(uuid())
   userId      String
-  user        User                   @relation(fields: [userId], references: [id])
+  user        User               @relation(fields: [userId], references: [id])
   points      Int
-  type        LoyaltyTransactionType
+  type        LoyaltyTransactionType // ATUALIZADO: Usando enum LoyaltyTransactionType
   referenceId String?
-  createdAt   DateTime               @default(now())
+  createdAt   DateTime           @default(now())
 }
 
 // NOVO: Modelo para as recompensas que podem ser resgatadas com pontos de fidelidade
@@ -787,7 +804,7 @@ model Reward {
   description String?
   costPoints  Int
   value       Decimal  @db.Decimal(10, 2)
-  type        String
+  type        String   // Pode ser 'COUPON', 'CASHBACK', etc.
   couponCode  String?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
@@ -796,23 +813,23 @@ model Reward {
 
 // ====== MISSIONS: NOVOS MODELOS ======
 model Mission {
-  id               String          @id @default(uuid())
-  code             String          @unique // ex: FIRST_SERVICE, THREE_BOOKINGS_MONTH
-  title            String
-  description      String
-  audience         MissionAudience @default(CLIENT) // CLIENT, PROVIDER (para o futuro)
-  kind             MissionKind     // COUNT_EVENT, STREAK_DAYS, WITHIN_WINDOW
-  eventName        String          // booking.completed, review.created, referral.converted, etc.
-  targetValue      Int             // ex: 1 (primeiro), 3, 10
-  timeWindowDays   Int?            // ex: 30 para "3 no mês" (opcional)
-  rewardType       RewardType      // COUPON, POINTS
-  rewardValue      Int             // ex: 20 (%), 100 (points)
-  couponTemplateId String?         // opcional: template no módulo de coupons
-  isActive         Boolean         @default(true)
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
+  id              String         @id @default(uuid())
+  code            String         @unique // ex: FIRST_SERVICE, THREE_BOOKINGS_MONTH
+  title           String
+  description     String
+  audience        MissionAudience @default(CLIENT) // CLIENT, PROVIDER, GENERAL
+  kind            MissionKind    // COUNT_EVENT, STREAK_DAYS, WITHIN_WINDOW
+  eventName       String         // booking.completed, review.created, referral.converted, etc.
+  targetValue     Int            // ex: 1 (primeiro), 3, 10
+  timeWindowDays  Int?           // ex: 30 para "3 no mês" (opcional)
+  rewardType      RewardType     // COUPON, POINTS
+  rewardValue     Int            // ex: 20 (%), 100 (points)
+  couponTemplateId String?       // opcional: template no módulo de coupons
+  isActive        Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
-  progress         MissionProgress[]
+  progress        MissionProgress[]
 }
 
 model MissionProgress {
@@ -843,43 +860,46 @@ model MissionEvent {
 
 // NOVO: Modelos para o módulo de suporte
 model SupportTicket {
-  id          String            @id @default(uuid())
-  userId      String
-  user        User              @relation(fields: [userId], references: [id])
-  role        UserRole          // Role do usuário que abriu o ticket (para auditoria)
-  subject     String
-  category    SupportTicketCategory
-  description String
-  bookingId   String?
-  booking     Booking?          @relation(fields: [bookingId], references: [id])
-  status      SupportTicketStatus @default(OPEN)
-  assignedToId String?
-  assignedTo  User?             @relation("AssignedTickets", fields: [assignedToId], references: [id])
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  closedAt    DateTime?
+  id             String              @id @default(uuid())
+  userId         String
+  user           User                @relation(fields: [userId], references: [id])
+  role           UserRole            // Role do usuário que abriu o ticket
+  subject        String
+  category       SupportTicketCategory
+  description    String
+  bookingId      String?
+  booking        Booking?            @relation(fields: [bookingId], references: [id])
+  status         SupportTicketStatus @default(OPEN)
+  assignedToId   String?
+  assignedTo     User?               @relation("AssignedTickets", fields: [assignedToId], references: [id])
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  closedAt       DateTime?
 
-  messages    SupportMessage[]
-  slaLogs     SupportSlaLog[]
+  messages       SupportMessage[]
+  slaLogs        SupportSlaLog[]
+
+  // Adicione a relação oposta para DisputeMessage
+  disputeMessages DisputeMessage[] @relation("DisputeMessageTicket") // Nome da relação
 }
 
 model SupportMessage {
-  id          String   @id @default(uuid())
-  ticketId    String
-  ticket      SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-  role        UserRole // Role do usuário que enviou a mensagem (para auditoria)
-  body        String
+  id        String   @id @default(uuid())
+  ticketId  String
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  role      UserRole // Role do usuário que enviou a mensagem (para auditoria)
+  body      String
   attachments String[] // URLs para arquivos no GCS
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 }
 
 model SupportSlaLog {
-  id          String   @id @default(uuid())
-  ticketId    String
-  ticket      SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  fromStatus  SupportTicketStatus
-  toStatus    SupportTicketStatus
-  createdAt   DateTime @default(now())
+  id         String              @id @default(uuid())
+  ticketId   String
+  ticket     SupportTicket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  fromStatus SupportTicketStatus
+  toStatus   SupportTicketStatus
+  createdAt  DateTime            @default(now())
 }

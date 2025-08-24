@@ -2,7 +2,7 @@
 // Este é um exemplo, ajuste às cores da sua marca LimpeJá
 
 const tintColorLight = '#007AFF'; // Azul padrão iOS
-const tintColorDark  = '#FFFFFF';
+const tintColorDark  = '#FFFFFF'; // Esta constante é usada para o tint do dark mode
 
 export default {
   light: {
@@ -19,6 +19,7 @@ export default {
     lightGrey: '#EFEFF4', // Usado como background para placeholders
     darkGrey: '#3A3A3C',
     icon: '#000000',        // Cor padrão de ícone
+    textLight: '#FFFFFF', // <-- CORREÇÃO: Adicionado para o tema claro, geralmente usado para texto em fundos escuros (como headers)
     
     // Cores personalizadas adicionadas ou mapeadas para consistência:
     backgroundAlt: '#F8F9FD', // Mapeado para BACKGROUND_ALT
@@ -31,7 +32,7 @@ export default {
     // Adicionadas para resolver os erros de propriedade em document-upload.tsx e facial-recognition.tsx
     // Com base na sua paleta de cores original fornecida em document-upload.tsx e facial-recognition.tsx
     cardBackground: '#FFFFFF', 
-    textPrimary: '#2D3748', 
+    textPrimary: '#2D3748', // Usado para títulos (effects.md: #2C3E50)
     textSecondary: '#6C757D', 
     successBg: '#E8F5E9', 
     errorBg: '#FFEBEE',
@@ -59,6 +60,25 @@ export default {
     iconTransactionWithdrawal: '#DC3545',
     iconTransactionCommission: '#FFC107',
 
+    // NOVAS CORES INJETADAS DO EFFECTS.MD (Light Mode)
+    interactivePrimary: '#4A90E2', // Primário Interativo (effects.md)
+    primaryDark: '#2A72E7', // Primário Escuro (effects.md)
+    brandSupport: '#1A73E8', // Ações Relevantes/Brand Support (effects.md)
+    successStrong: '#218838', // Sucesso forte (effects.md)
+    specialIndicator: '#00BFA5', // Hoje/indicadores especiais (effects.md)
+    textBody: '#333', // Corpo (effects.md)
+    textMuted: '#666', // Auxiliar (effects.md)
+    danger: '#D32F2F', // Erro/alerta (effects.md)
+    destructive: '#E74C3C', // Ação destrutiva (effects.md)
+    sensitiveBackground: '#FFE0E6', // Contextos sensíveis (effects.md)
+    sensitiveBorder: '#FFC0CB', // Contextos sensíveis (effects.md)
+    border: '#E0E0E0', // Bordas/inputs (effects.md)
+    link: '#007AFF', // Adicionado: Cor de link para o tema claro
+    backdrop: 'rgba(0,0,0,0.5)', // Adicionado: Cor do backdrop para o tema claro
+
+    // Adições para resolver os erros de propriedade 'success' e 'warning'
+    success: '#28a745', // Mapeado para secondary/SUCCESS_GREEN
+    warning: '#FFC107', // Mapeado para accent/WARNING_YELLOW
   },
   dark: {
     text: '#FFFFFF',
@@ -74,6 +94,7 @@ export default {
     lightGrey: '#1C1C1E',
     darkGrey: '#E5E5EA',
     icon: '#FFFFFF',
+    textLight: '#212529', // <-- CORREÇÃO: Adicionado para o tema escuro. Geralmente é uma cor mais clara para texto em fundos escuros. Se você usa branco em fundos escuros, pode ser '#FFFFFF'. Ajustei para uma cor que é "clara" no contexto do dark mode, mas não branca pura, como você tinha em um exemplo anterior.
 
     // Cores personalizadas adicionadas ou mapeadas para consistência no modo escuro
     backgroundAlt: '#1E1E1E', // Exemplo para dark mode
@@ -85,7 +106,7 @@ export default {
     
     // Adicionadas para resolver os erros de propriedade no modo escuro
     cardBackground: '#1E1E1E', // Exemplo de cor para card no dark mode
-    textPrimary: '#FFFFFF', // Cor primária de texto no dark mode
+    textPrimary: '#FFFFFF', // Cor primária de texto no dark mode (para títulos)
     textSecondary: '#CCCCCC', // Cor secundária de texto no dark mode
     successBg: '#1C1C1E', // Exemplo de cor de fundo de sucesso no dark mode
     errorBg: '#2C1B1B', // Exemplo de cor de fundo de erro no dark mode
@@ -111,6 +132,26 @@ export default {
     iconTransactionPayment: '#0A84FF',
     iconTransactionWithdrawal: '#FF453A',
     iconTransactionCommission: '#FF9F0A',
+
+    // NOVAS CORES INJETADAS DO EFFECTS.MD (Dark Mode)
+    interactivePrimary: '#6FA8DC', // Tom mais claro para interativo no dark mode
+    primaryDark: '#1A52B7', // Tom mais escuro para primaryDark no dark mode
+    brandSupport: '#3A83F8', // Tom mais claro para brandSupport no dark mode
+    successStrong: '#1A6A2C', // Tom mais escuro para successStrong no dark mode
+    specialIndicator: '#00E0C5', // Tom mais claro para specialIndicator no dark mode
+    textBody: '#E5E5EA', // Usando darkGrey como textBody no dark mode
+    textMuted: '#8E8E93', // Usando grey como textMuted no dark mode
+    danger: '#FF453A', // Usando error como danger no dark mode
+    destructive: '#FF6F61', // Tom mais claro para destructive no dark mode
+    sensitiveBackground: '#3A1E20', // Fundo sensível mais escuro no dark mode
+    sensitiveBorder: '#5A2E30', // Borda sensível mais escura no dark mode
+    border: '#3A3A3C', // Usando darkGrey como border no dark mode
+    link: '#0A84FF', // Adicionado: Cor de link para o tema escuro
+    backdrop: 'rgba(0,0,0,0.7)', // Adicionado: Cor do backdrop para o tema escuro
+
+    // Adições para resolver os erros de propriedade 'success' e 'warning'
+    success: '#30D158', // Mapeado para secondary/SUCCESS_GREEN
+    warning: '#FF9F0A', // Mapeado para accent/WARNING_YELLOW
   },
   // Cores da Marca (se aplicável, fora do tema light/dark)
   brand: {

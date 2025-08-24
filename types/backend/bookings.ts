@@ -12,10 +12,9 @@ import { CreateAddressDto } from './auth';
  */
 export enum BookingStatus {
   PENDING = 'PENDING',
-  // PENDING_PROVIDER_CONFIRMATION foi removido para alinhar com o uso no frontend e backend.
   CONFIRMED = 'CONFIRMED',
   COMPLETED = 'COMPLETED',
-  CANCELLED = 'CANCELLED', // CORRIGIDO: Alterado de CANCELED para CANCELLED
+  CANCELLED = 'CANCELLED',
   PENDING_DISPUTE = 'PENDING_DISPUTE',
   RESCHEDULED = 'RESCHEDULED',
   IN_PROGRESS = 'IN_PROGRESS',
@@ -56,7 +55,7 @@ export interface CreateBookingDto {
   requestedDurationMinutes?: number;
   requestedSquareMeters?: number;
   requestedRoomCount?: number;
-  couponCode?: string;
+  couponCode?: string; // NOVO: Adicionado para permitir o envio do código do cupom
 }
 
 /**
@@ -110,7 +109,8 @@ export interface BookingDetails {
   subscriptionId?: string | null;
   incidents?: any[];
   guaranteeClaims?: any[];
-  couponId?: string | null;
+  couponId?: string | null; // NOVO: ID do cupom aplicado
+  discountAmount?: number | null; // NOVO: Valor do desconto aplicado pelo cupom
 }
 
 /**

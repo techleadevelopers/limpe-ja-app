@@ -9,8 +9,7 @@ export interface FAQItem {
   id: string;
   question: string;
   answer: string;
-  keywords?: string[]; // Palavras-chave opcionais para busca/filtragem
-  // Adicione outros campos se o seu backend de FAQ retornar (ex: category, order)
+  keywords?: string[];
   category?: string;
   order?: number;
 }

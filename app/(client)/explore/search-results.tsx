@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { searchProviders } from '../../../services/providerService';
 import ProviderCard from '../../../components/ProviderCard';
-import { IProvider } from '../../../types/backend/IProvider';
+import { ProviderDisplayInfo } from '../../../types/backend/providers'; // Importado ProviderDisplayInfo
 import { API_QUERY_KEYS } from '../../../constants/queryKeys';
 
 export default function SearchResultsScreen() {
@@ -32,9 +32,12 @@ export default function SearchResultsScreen() {
     queryKey: [API_QUERY_KEYS.SEARCH_PROVIDERS, { query, categoryId }],
     queryFn: () => {
       // O endpoint searchProviders pode lidar com os dois tipos de filtro
-      return searchProviders({ query: query as string, categoryId: categoryId as string });
+      // A geolocalização é tratada em explore/index.tsx para a busca inicial
+      // Aqui, a busca é por query ou categoria, e o backend deve retornar o priceFrom
+      // Alterado 'query' para 'searchTerm' para corresponder ao tipo esperado
+      return searchProviders({ searchTerm: query as string, categoryId: categoryId as string });
     },
-    enabled: !!query || !!categoryId, // A busca só é disparada se houver query ou categoryId
+    enabled: !!query || !!categoryId,
   });
 
   const onRefresh = () => {
@@ -92,7 +95,7 @@ export default function SearchResultsScreen() {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <ProviderCard
-            provider={item}
+            provider={item} // Agora espera ProviderDisplayInfo
             onPress={() => router.push(`/(client)/explore/${item.id}`)}
           />
         )}

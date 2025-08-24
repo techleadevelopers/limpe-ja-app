@@ -13,39 +13,31 @@ import {
     Text,
     TouchableOpacity,
     View,
-    Easing, // Importado Easing
-    StyleSheet, // Importar StyleSheet para uso local, se necessário, mas já movido para providerStyles.ts
+    Easing,
+    StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next'; // Importar i18n
-import * as Clipboard from 'expo-clipboard'; // Importar Clipboard
-
-// NOTA: Se você estiver recebendo o erro "Não é possível localizar o módulo 'react-i18next'",
-// certifique-se de que 'react-i18next' e '@types/react-i18next' estão instalados em seu projeto:
-// npm install react-i18next @types/react-i18next
-// ou
-// yarn add react-i18next @types/react-i18next
+import { useTranslation } from 'react-i18next';
+import * as Clipboard from 'expo-clipboard';
 
 // Importações dos componentes necessários
 import BookServiceButton from '../../../components/client/explore/provider/BookServiceButton';
-// O componente InfoChip deve ser modificado para aceitar o prop 'animatedStyle'
 import InfoChip from '../../../components/client/explore/provider/InfoChip';
 import ReviewCard from '../../../components/client/explore/provider/ReviewCard';
 import StarRating from '../../../components/client/explore/provider/StarRating';
 
 // Importações de dados e tipos
-// Certifique-se de que ProviderMetrics e Offer estão definidos em seus respectivos arquivos de tipos
 import { ProviderDisplayInfo, ProviderReview } from '../../../types/backend/providers';
 import { VerificationStatus } from '../../../types/backend/auth';
 import { PricingType } from '../../../types/backend/services';
-import { ProviderServiceOffering } from '../../../types/backend/provider-service'; // Importar ProviderServiceOffering
-import { ProviderMetrics, Offer } from '../../../services/providerService'; // Importar ProviderMetrics e Offer do service, se não tiverem arquivos de tipo dedicados ainda. Idealmente, viriam de `../../../types/backend/providers` e `../../../types/backend/offers`
+import { ProviderServiceOffering } from '../../../types/backend/provider-service';
+import { ProviderMetrics, Offer } from '../../../services/providerService';
 
 // Importação dos serviços de backend
 import { useAuth } from '../../../hooks/useAuth';
 import { checkActiveChatBooking } from '../../../services/bookingService';
-import { getProviderDetails, getProviderMetrics, getProviderOffers } from '../../../services/providerService'; // Importar getProviderMetrics e getProviderOffers
-import Toast from '../../../components/Toast'; // Importar Toast
+import { getProviderDetails, getProviderMetrics, getProviderOffers } from '../../../services/providerService';
+import Toast from '../../../components/Toast';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -55,12 +47,12 @@ export default function ProviderDetailsScreen() {
     const router = useRouter();
     const { user, isAuthenticated } = useAuth();
     const insets = useSafeAreaInsets();
-    const { t } = useTranslation(); // Inicializar i18n
+    const { t } = useTranslation();
 
     // --- TODAS AS DECLARAÇÕES DE HOOKS DEVEM ESTAR AQUI NO TOPO ---
     const [provider, setProvider] = useState<ProviderDisplayInfo | null | undefined>(undefined);
-    const [providerMetrics, setProviderMetrics] = useState<ProviderMetrics | null>(null); // NOVO: Estado para métricas
-    const [providerOffers, setProviderOffers] = useState<Offer[]>([]); // NOVO: Estado para ofertas
+    const [providerMetrics, setProviderMetrics] = useState<ProviderMetrics | null>(null);
+    const [providerOffers, setProviderOffers] = useState<Offer[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [canInitiateChat, setCanInitiateChat] = useState(false);
@@ -68,10 +60,10 @@ export default function ProviderDetailsScreen() {
 
     const mainContentAnim = useRef(new Animated.Value(0)).current;
     const bookNowButtonAnim = useRef(new Animated.Value(0)).current;
-    const imageFadeAnim = useRef(new Animated.Value(0)).current; // Animação para a imagem
-    const imageScaleAnim = useRef(new Animated.Value(0.8)).current; // Animação para a escala da imagem
-    const infoChipAnim = useRef(new Animated.Value(0)).current; // Animação para os InfoChips
-    const addReviewButtonPulseAnim = useRef(new Animated.Value(1)).current; // Animação de pulso para o botão de adicionar avaliação
+    const imageFadeAnim = useRef(new Animated.Value(0)).current;
+    const imageScaleAnim = useRef(new Animated.Value(0.8)).current;
+    const infoChipAnim = useRef(new Animated.Value(0)).current;
+    const addReviewButtonPulseAnim = useRef(new Animated.Value(1)).current;
 
     // Animated values for action buttons - MOVIDOS PARA O NÍVEL SUPERIOR
     const callButtonAnim = useRef(new Animated.Value(1)).current;
@@ -87,18 +79,18 @@ export default function ProviderDetailsScreen() {
             setIsLoading(true); setError(null); setProvider(undefined);
             setCanInitiateChat(false); setActiveBookingId(undefined);
             mainContentAnim.setValue(0); bookNowButtonAnim.setValue(0);
-            imageFadeAnim.setValue(0); imageScaleAnim.setValue(0.8); // Resetar animações da imagem
-            infoChipAnim.setValue(0); // Resetar animações dos chips
+            imageFadeAnim.setValue(0); imageScaleAnim.setValue(0.8);
+            infoChipAnim.setValue(0);
 
             Promise.all([
                 getProviderDetails(providerId),
-                getProviderMetrics(providerId), // NOVO: Buscar métricas
-                getProviderOffers(providerId), // NOVO: Buscar ofertas
+                getProviderMetrics(providerId),
+                getProviderOffers(providerId),
             ])
                 .then(async ([providerData, metricsData, offersData]) => {
                     setProvider(providerData || null);
-                    setProviderMetrics(metricsData || null); // Definir métricas
-                    setProviderOffers(offersData || []); // Definir ofertas
+                    setProviderMetrics(metricsData || null);
+                    setProviderOffers(offersData || []);
 
                     if (!providerData) {
                         setError(t('provider_details.provider_not_found', { providerId }));
@@ -138,7 +130,7 @@ export default function ProviderDetailsScreen() {
                                     toValue: 1,
                                     duration: 600,
                                     easing: Easing.ease,
-                                    delay: 200, // Atraso para os chips aparecerem depois do conteúdo principal
+                                    delay: 200,
                                     useNativeDriver: true,
                                 }),
                             ])
@@ -170,7 +162,7 @@ export default function ProviderDetailsScreen() {
                 })
                 .finally(() => setIsLoading(false));
         } else {
-            setError(t("provider_details.invalid_professional_id")); // Nova chave de tradução
+            setError(t("provider_details.invalid_professional_id"));
             setIsLoading(false); setProvider(null);
         }
     }, [providerId, isAuthenticated, user?.id, t]);
@@ -221,11 +213,11 @@ export default function ProviderDetailsScreen() {
         switch (service.pricingType) {
             case PricingType.HOURLY:
                 priceValue = price;
-                priceUnit = t('common.per_hour_short'); // Nova chave de tradução
+                priceUnit = t('common.per_hour_short');
                 break;
             case PricingType.BY_SIZE:
                 priceValue = service.pricePerSquareMeter;
-                priceUnit = t('common.per_sqm_short'); // Nova chave de tradução
+                priceUnit = t('common.per_sqm_short');
                 break;
             case PricingType.FIXED_PRICE:
             case PricingType.CUSTOM_QUOTE:
@@ -286,7 +278,7 @@ export default function ProviderDetailsScreen() {
         : undefined;
 
     console.log("[ProviderDetailsScreen] ID do serviço oferecido a ser passado para agendamento (firstProviderServiceOfferingId):", firstProviderServiceOfferingId);
-    console.log("[ProviderDetailsScreen] Preço do serviço a ser passado:", firstProviderService?.price); // Adicionei este log para você ver o valor
+    console.log("[ProviderDetailsScreen] Preço do serviço a ser passado:", firstProviderService?.price);
 
 
     return (
@@ -365,28 +357,24 @@ export default function ProviderDetailsScreen() {
                                 <InfoChip
                                     iconName="hourglass-outline"
                                     text={t('provider_details.years_experience', { count: provider.yearsOfExperience })}
-                                    // colors={['#7694f6ff', '#67adfdff', '#5c93ecff']} // Removido: Propriedade 'colors' não existe em InfoChipProps
                                 />
                             )}
                             {provider.verificationStatus === VerificationStatus.APPROVED && (
                                 <InfoChip
                                     iconName="shield-checkmark-outline"
                                     text={t('provider_details.verified')}
-                                    // colors={['#7694f6ff', '#67adfdff', '#5c93ecff']} // Removido: Propriedade 'colors' não existe em InfoChipProps
                                 />
                             )}
-                            {providerMetrics?.acceptanceRate !== undefined && ( // NOVO: Chip de Taxa de Aceitação
+                            {providerMetrics?.acceptanceRate !== undefined && (
                                 <InfoChip
                                     iconName="checkmark-done-circle-outline"
                                     text={`${t('metrics.acceptance_rate')}: ${providerMetrics.acceptanceRate}%`}
-                                    // colors={['#4CAF50', '#66BB6A', '#81C784']} // Removido: Propriedade 'colors' não existe em InfoChipProps
                                 />
                             )}
-                            {providerMetrics?.avgResponseTime !== undefined && ( // NOVO: Chip de Tempo Médio de Resposta
+                            {providerMetrics?.avgResponseTime !== undefined && (
                                 <InfoChip
                                     iconName="time-outline"
                                     text={`${t('metrics.avg_response_time')}: ${providerMetrics.avgResponseTime} ${t('metrics.minutes_short')}`}
-                                    // colors={['#FFC107', '#FFD54F', '#FFEA00']} // Removido: Propriedade 'colors' não existe em InfoChipProps
                                 />
                             )}
                         </Animated.View>
@@ -394,7 +382,7 @@ export default function ProviderDetailsScreen() {
                         <Text style={styles.sectionTitle}>{t('provider_details.about_provider', { providerName: provider.fullName.split(' ')[0] })}</Text>
                         <Text style={styles.descriptionText}>{provider.bio || t('provider_details.no_description')}</Text>
 
-                        {providerOffers.length > 0 && ( // NOVO: Seção de Ofertas
+                        {providerOffers.length > 0 && (
                             <View>
                                 <Text style={styles.sectionTitle}>{t('offers.title')}</Text>
                                 {providerOffers.map((offer) => (
@@ -510,7 +498,7 @@ export default function ProviderDetailsScreen() {
                             </View>
                         )}
                         <Animated.View style={{ transform: [{ scale: addReviewButtonPulseAnim }] }}>
-                            <TouchableOpacity style={styles.addReviewButton}> {/* Corrigido: styles.compactAddReviewButton para styles.addReviewButton */}
+                            <TouchableOpacity style={styles.addReviewButton}>
                                 <Ionicons name="add-circle-outline" size={24} color={styles.addReviewButtonText.color} />
                                 <Text style={styles.addReviewButtonText}>{t('provider_details.add_review')}</Text>
                             </TouchableOpacity>
@@ -524,7 +512,7 @@ export default function ProviderDetailsScreen() {
                 serviceId={firstProviderServiceOfferingId}
                 router={router}
                 bookNowButtonAnim={bookNowButtonAnim}
-                servicePrice={firstProviderService?.price} // NOTA: Certifique-se de que BookServiceButtonProps aceita 'servicePrice'
+                servicePrice={firstProviderService?.price}
             />
         </View>
     );
@@ -532,6 +520,3 @@ export default function ProviderDetailsScreen() {
 
 // Estilos importados do arquivo providerStyles.ts
 import { styles } from './styles/providerStyles';
-
-// NOTA: O bloco de estilos 'offerStyles' foi movido para 'providerStyles.ts'
-// e a chamada 'Object.assign(styles, offerStyles)' foi removida daqui.

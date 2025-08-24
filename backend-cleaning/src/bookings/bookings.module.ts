@@ -12,8 +12,10 @@ import { QueuesModule } from '../queues/queues.module';
 import { PricingModule } from '../pricing/pricing.module';
 import { CouponsModule } from '../coupons/coupons.module';
 import { LoyaltyModule } from '../loyalty/loyalty.module';
-import { MissionsModule } from '../missions/missions.module'; // já tínhamos injetado Missões
-import { ReferralsModule } from '../referrals/referrals.module'; // ✅ NOVO
+import { MissionsModule } from '../missions/missions.module';
+import { ReferralsModule } from '../referrals/referrals.module';
+import { RedisLockModule } from '../common/locks/redis-lock.module'; // NOVO: Importar RedisLockModule
+import { I18nModule } from '../common/i18n/i18n.module'; // NOVO: Importar I18nModule
 
 @Module({
   imports: [
@@ -28,7 +30,9 @@ import { ReferralsModule } from '../referrals/referrals.module'; // ✅ NOVO
     forwardRef(() => CouponsModule),
     LoyaltyModule,
     forwardRef(() => MissionsModule),
-    forwardRef(() => ReferralsModule), // ✅ ADICIONADO para resolver ReferralsService no BookingsService
+    forwardRef(() => ReferralsModule),
+    RedisLockModule, // NOVO: Adicionar RedisLockModule
+    I18nModule, // NOVO: Adicionar I18nModule
   ],
   controllers: [BookingsController],
   providers: [BookingsService],

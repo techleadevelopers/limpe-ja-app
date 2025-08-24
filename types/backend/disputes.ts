@@ -22,13 +22,13 @@ export interface Dispute {
   reporterUserId: string;
   reason: DisputeReason;
   description: string;
-  refundAmountProposed?: number; // Decimal no Prisma é number em TS
-  attachments?: string[]; // URLs de anexos/evidências
-  status: string; // Ex: "PENDING_REVIEW", "RESOLVED", "REJECTED"
+  refundAmountProposed?: number;
+  attachments?: string[];
+  status: string;
   resolutionNotes?: string;
-  resolvedAt: string; // CORREÇÃO: DateTime do Prisma é string em TS, e não opcional se a disputa for resolvida
-  createdAt: string; // DateTime do Prisma é string em TS
-  updatedAt: string; // DateTime do Prisma é string em TS
+  resolvedAt: string;
+  createdAt: string;
+  updatedAt: string;
 
   // Opcional: Incluir detalhes do booking ou dos usuários envolvidos
   booking?: {
@@ -49,7 +49,7 @@ export interface ReportDisputeDto {
   reason: DisputeReason;
   description: string;
   refundAmountProposed?: number;
-  attachments?: string[]; // URLs de anexos/evidências
+  attachments?: string[];
 }
 
 /**

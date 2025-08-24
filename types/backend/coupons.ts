@@ -9,7 +9,7 @@ export enum CouponStatus {
   INACTIVE = 'INACTIVE',
   EXPIRED = 'EXPIRED',
   USED = 'USED',
-  USED_UP = 'USED_UP', // CORREÇÃO: Adicionado USED_UP
+  USED_UP = 'USED_UP',
 }
 
 export enum CouponTarget {
@@ -17,20 +17,25 @@ export enum CouponTarget {
   NEW_CLIENTS = 'NEW_CLIENTS',
   SPECIFIC_SERVICE = 'SPECIFIC_SERVICE',
   SPECIFIC_PROVIDER = 'SPECIFIC_PROVIDER',
+  NEW_CUSTOMER = 'NEW_CUSTOMER', // NOVO
+  REFERRAL_REFERRED = 'REFERRAL_REFERRED', // NOVO
+  REFERRAL_REFERRER = 'REFERRAL_REFERRER', // NOVO
+  MISSION_REWARD = 'MISSION_REWARD', // NOVO
+  REPEAT_CUSTOMER = 'REPEAT_CUSTOMER', // NOVO
 }
 
 export interface Coupon {
   id: string;
   code: string;
   type: CouponType;
-  value: number; // e.g., 0.10 for 10% or 10.00 for R$10 (CORREÇÃO: Decimal no Prisma é number aqui)
-  validFrom: string; // ISO date string
-  validUntil: string; // ISO date string
+  value: number;
+  validFrom: string;
+  validUntil: string;
   maxUses?: number;
   usesCount: number;
   target: CouponTarget;
-  targetId?: string; // ID of service or provider if target is specific
-  status: CouponStatus; // CORREÇÃO: Usar o enum CouponStatus
+  targetId?: string;
+  status: CouponStatus;
   createdAt: string;
   updatedAt: string;
 }
@@ -39,5 +44,5 @@ export interface CouponApplicationResult {
   discountAmount: number;
   newTotalPrice: number;
   message: string;
-  coupon?: Coupon; // Optionally return the applied coupon details
+  coupon?: Coupon;
 }

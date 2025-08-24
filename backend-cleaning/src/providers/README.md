@@ -1,165 +1,278 @@
-📌 Providers Module
+# README — Módulo de Providers (Backend LimpeJá)
 
-O módulo Providers é responsável pela gestão dos prestadores de serviços da plataforma.
-Ele centraliza toda a lógica de criação, atualização, busca, listagem e detalhamento dos prestadores, além de gerenciar informações de perfil e serviços oferecidos.
+> **Escopo:** documentação **code‑real (versão atual)** do módulo **Providers** com base nos arquivos: `providers.module.ts`, `providers.controller.ts`, `providers.service.ts`, `provider.entity.ts`, `provider-details.dto.ts`, `provider-search.dto.ts`, `provider-service-offering.dto.ts`, `update-provider-profile.dto.ts`.
+>
+> **Objetivo:** gerir o **perfil do provedor** (identidade pública, cobertura, métricas de desempenho), expor **detalhes públicos** para descoberta e compor o **payload de busca**, integrando **Provider Services**, **Availability**, **Ranking**, **Reviews**, **Document Processing** e **KYC/Verification**.
 
-📂 Estrutura de Arquivos
-src/providers/
-│── providers.controller.ts      # Controlador: define endpoints REST para Providers
-│── providers.module.ts          # Módulo principal do NestJS para Providers
-│── providers.service.ts         # Camada de serviço: regras de negócio
-│── provider.entity.ts           # Entidade que representa o modelo de Provider
-│── provider-details.dto.ts      # DTO para retorno detalhado do provider
-│── provider-search.dto.ts       # DTO para critérios de busca
-│── provider-service-offering.dto.ts # DTO para vinculação de serviços oferecidos
-│── update-provider-profile.dto.ts   # DTO para atualização de perfil do provider
+---
 
-🏗️ Arquitetura do Módulo
+## 1) Responsabilidades
 
-ProvidersModule
-Registra ProvidersService, ProvidersController e importa dependências necessárias (como PrismaModule e outros módulos relacionados).
-Também exporta o serviço para ser utilizado em outros módulos (Bookings, Verification, Missions etc).
+* Persistir **dados públicos** de provedores (nome exibido, bio, fotos, cobertura/raio, cidade base).
+* Exibir **detalhes públicos** ricos (métricas, próximos horários, ofertas/serviços, distância, badges).
+* Oferecer **busca** de provedores por localização, categoria/serviço, rating e ordenação.
+* Permitir **edição de perfil** pelo próprio provedor (RBAC), com sanitização e auditoria.
 
-ProvidersController
-Responsável pelos endpoints expostos na API (/providers/...).
-Recebe requisições HTTP, valida os DTOs e chama o ProvidersService.
+---
 
-ProvidersService
-Camada de negócio.
-Implementa toda a lógica de cadastro, atualização, busca e gerenciamento de prestadores.
+## 2) Arquitetura
+
+* **Module**: `ProvidersModule` — registra controller/service, repositórios/ORM e injeta dependências de leitura.
+* **Controller**: `ProvidersController` — rotas REST para **detalhes**, **busca** e **update** do próprio perfil.
+* **Service**: `ProvidersService` — regra de negócio: composição de DTOs públicos, validações e integração de sinais para ranking.
 
-ProviderEntity
-Representa a entidade Provider no sistema.
-Usada como base para mapear dados que vêm do Prisma e trafegam pela aplicação.
+**Dependências usuais**: `ProviderServicesService` (ofertas), `AvailabilityService` (próximo horário), `RankingService`/`Search`, `ReviewsService`/`MetricsService` (rating/contagens), `DocumentProcessingService` (avatar/galeria), `Verification/KycService` (status), `Cache/Redis`, `Sentry`.
 
-DTOs (Data Transfer Objects)
-Garantem a validação e tipagem dos dados de entrada e saída.
+---
 
-📌 Funcionalidades Principais
-1. Criar um Provider
+## 3) Modelagem (entity — code‑real esperado)
 
-Fluxo de registro de prestadores.
+```ts
+export type KycStatus = 'PENDING'|'APPROVED'|'REJECTED'|'REVIEW';
+
+export class Provider {
+  id: string;                      // uuid
+  userId: string;                  // FK Users
 
-Normalmente chamado quando um usuário passa a oferecer serviços na plataforma.
+  displayName: string;             // nome público
+  bio?: string | null;             // descrição curta (sanitizada)
+  avatar?: string | null;          // storageKey (Document Processing)
 
-Cria vínculo com o User e registra dados básicos do perfil.
+  baseCity?: string | null;        // cidade base (ex.: 'Campinas/SP')
+  baseLat?: number | null;         // lat/lon para distância
+  baseLon?: number | null;
+  radiusKm?: number | null;        // raio de atendimento (fallback)
+  cityIds?: string[] | null;       // cobertura discreta (bairros/cidades)
+
+  // métricas públicas agregadas
+  rating: number;                  // 0..5
+  reviewsCount: number;
+  acceptanceRate: number;          // 0..1
+  avgResponseTimeSec: number;      // tempo médio de resposta no chat
+  completedJobs: number;           // total de reservas concluídas
 
-2. Atualizar Perfil do Provider
+  kycStatus: KycStatus;            // gating de visibilidade no search
+  isActive: boolean;               // opt‑in público
 
-Usa o UpdateProviderProfileDto.
+  createdAt: Date; updatedAt: Date; deletedAt?: Date | null;
+}
+```
 
-Permite atualizar:
+**Índices:** `(isActive, rating desc)`, `(baseCity, isActive)`, `GIST(baseLat, baseLon)` (quando PostGIS), `userId (unique)`.
 
-Nome e descrição profissional
+> **Sanitização:** campos de texto (`displayName`, `bio`) devem passar por sanitizer/whitelist de HTML.
 
-Foto de perfil / branding
+---
 
-Dados de contato
+## 4) DTOs (code‑real)
 
-Disponibilidade
+### 4.1 `ProviderDetailsDto` (público)
 
-3. Listar Providers
+```ts
+export class ProviderDetailsDto {
+  provider: {
+    id: string; displayName: string; bio?: string; avatarUrl?: string; baseCity?: string;
+    rating: number; reviewsCount: number; acceptanceRate: number; avgResponseTimeSec: number; completedJobs: number;
+  };
+  discovery: {
+    distanceKm?: number; nextAvailableAt?: string;              // via Availability
+    badges?: string[];                                          // ex.: 'Top do bairro'
+  };
+  offerings: Array<ProviderServiceOfferingDto>;                  // resumo de serviços
+}
+```
 
-Suporte a paginação e filtros de busca (via ProviderSearchDto).
+### 4.2 `ProviderServiceOfferingDto` (resumo de oferta)
 
-Pode filtrar por:
+```ts
+export class ProviderServiceOfferingDto {
+  id: string; title: string; pricingModel: 'FIXED'|'HOURLY'|'PACKAGE';
+  priceFrom: number; defaultDurationMin: number; isActive: boolean;
+}
+```
 
-Localização (cidade, região)
+### 4.3 `ProviderSearchDto` (query pública)
 
-Categoria de serviços
+```ts
+export class ProviderSearchDto {
+  lat?: number; lon?: number;           // origem para distância
+  radiusKm?: number;                     // filtro por raio
+  categoryId?: string;                   // categoria/serviço
+  q?: string;                            // texto livre (nome/bio)
+  minRating?: number;                    // 0..5
+  sort?: 'best'|'distance'|'rating'|'reviews'|'responseTime';
+  page?: number; pageSize?: number;      // paginação
+}
+```
 
-Classificação (ranking, reviews)
+### 4.4 `UpdateProviderProfileDto` (edição do próprio perfil)
 
-Status de disponibilidade
+```ts
+export class UpdateProviderProfileDto {
+  @IsOptional() @IsString() displayName?: string;
+  @IsOptional() @IsString() bio?: string;
+  @IsOptional() avatar?: string;               // storageKey válido
+  @IsOptional() @IsString() baseCity?: string;
+  @IsOptional() @IsNumber() radiusKm?: number;
+  @IsOptional() @IsArray() @IsString({each:true}) cityIds?: string[];
+}
+```
 
-4. Buscar Detalhes do Provider
+---
 
-Retorna informações completas do prestador usando ProviderDetailsDto.
+## 5) Rotas (ProvidersController)
 
-Inclui:
+| Método | Rota                   | Scope           | Descrição                                                             |
+| -----: | ---------------------- | --------------- | --------------------------------------------------------------------- |
+|    GET | `/providers/:id`       | Público         | **Detalhes públicos** do provedor (`ProviderDetailsDto`).             |
+|    GET | `/providers/search`    | Público         | Busca por provedores (`ProviderSearchDto`).                           |
+|    GET | `/providers/me`        | PROVIDER (self) | Perfil do provedor autenticado.                                       |
+|  PATCH | `/providers/me`        | PROVIDER (self) | Atualiza perfil (`UpdateProviderProfileDto`).                         |
+|   POST | `/providers/me/avatar` | PROVIDER (self) | (Opcional) upload/associação de avatar (via Document Processing/BFF). |
 
-Perfil básico
+**Erros comuns**: `VALIDATION_ERROR`, `FORBIDDEN` (owner mismatch), `NOT_FOUND`, `KYC_REQUIRED`, `INACTIVE`.
 
-Serviços oferecidos (ProviderServiceOfferingDto)
+---
 
-Avaliações / reviews
+## 6) Service (assinaturas & regras)
 
-Ranking atual (conectado ao módulo Ranking)
+```ts
+class ProvidersService {
+  getPublicDetails(providerId: string, viewerLoc?: {lat:number; lon:number}): Promise<ProviderDetailsDto>;
+  search(q: ProviderSearchDto): Promise<{ items: ProviderDetailsDto[]; total: number }>;
+  getMine(userId: string): Promise<Provider>;
+  updateProfile(userId: string, dto: UpdateProviderProfileDto): Promise<Provider>;
+}
+```
 
-Histórico de bookings
+### 6.1 Detalhes públicos
 
-5. Serviços Oferecidos
+* Compor `ProviderDetailsDto` agregando:
 
-Um provider pode ter múltiplos serviços cadastrados.
+  * Perfil (entity)
+  * **Métricas**: `rating`, `reviewsCount`, `acceptanceRate`, `avgResponseTimeSec`, `completedJobs` (via Metrics/Reviews)
+  * **Discovery**: `distanceKm` (se `viewerLoc`), `nextAvailableAt` (via Availability), `badges` (via Gamificação)
+  * **Offerings**: mapear serviços ativos do provedor (via ProviderServices) em `ProviderServiceOfferingDto`
+* Resolver `avatarUrl` via `DocumentProcessingService.getSignedUrl`.
 
-O vínculo é representado por ProviderServiceOfferingDto.
+### 6.2 Busca
 
-Permite:
+* Filtro por **raio**: `distance(provider.baseLat, baseLon, q.lat, q.lon) ≤ (q.radiusKm || provider.radiusKm || DEFAULT_RADIUS)`.
+* Filtro por **categoria**: `EXISTS(service.categoryId = q.categoryId AND service.isActive)`.
+* Filtro por **minRating**.
+* Ordenação `sort` (default `best`) usando **RankingService** (score) ou chaves secundárias (distância/rating/responseTime).
+* Paginado (`page`, `pageSize`) com limites de segurança.
 
-Associar serviços disponíveis
+### 6.3 Edição de perfil
 
-Editar preços e condições
+* **RBAC**: somente o **owner** (via `userId`) altera seu `Provider`.
+* **Sanitização** de `bio`; validar `displayName` (tamanho/char set) e `radiusKm` (0–100km, por ex.).
+* **Avatar**: `avatar` deve ser `storageKey` válido pertencente ao usuário.
+* Atualizações disparam **invalidação de cache** e, quando relevante, re‑index no **Search/Ranking**.
 
-Definir tempo de execução
+### 6.4 Visibilidade
 
-🔄 Fluxo de Negócio
+* **KYC gating**: `kycStatus='APPROVED'` e `isActive=true` para aparecer na busca.
+* Provedores `INACTIVE` podem editar o perfil, mas não aparecem publicamente.
 
-Onboarding:
+---
 
-Usuário final decide se tornar provider.
+## 7) Integrações
 
-Registro inicial feito no ProvidersService.create().
+* **Provider Services**: leitura de serviços ativos para detalhes e filtro por categoria.
+* **Availability**: cálculo de `nextAvailableAt` para experiência de descoberta.
+* **Reviews/Metrics**: rating/contagens e tempos de resposta/aceitação.
+* **Ranking/Search**: aplicação do score e ordenação.
+* **Document Processing**: avatar/galeria via URLs assinadas.
+* **Verification/KYC**: status para gating (APPROVED → público).
 
-Customização de perfil:
+---
 
-Provider atualiza informações (foto, descrição, localização).
+## 8) Config (ENV)
 
-Pode incluir detalhes extras como áreas atendidas e preferências.
+```env
+PROVIDERS_PUBLIC_PAGE_SIZE=20
+PROVIDERS_DEFAULT_RADIUS_KM=15
+PROVIDERS_SEARCH_MAX_RADIUS_KM=50
+PROVIDERS_REQUIRE_KYC_APPROVED=true
+```
 
-Cadastro de serviços:
+---
 
-O provider seleciona serviços (via ProviderServicesModule) e define preços.
+## 9) Exemplos (HTTP)
 
-Integração com bookings:
+### 9.1 Detalhes públicos
 
-Providers são listados em buscas feitas por clientes.
+```http
+GET /providers/p_01?lat=-22.90&lon=-47.06
+```
 
-Booking conecta um cliente a um provider selecionado.
+**200** *(reduzido)*
 
-Ranking e Reviews:
+```json
+{
+  "provider": {"id":"p_01","displayName":"Ana Lima","rating":4.9,"reviewsCount":124,"acceptanceRate":0.93,"avgResponseTimeSec":420,"completedJobs":310,"baseCity":"Campinas/SP"},
+  "discovery": {"distanceKm":2.3, "nextAvailableAt":"2025-08-25T10:00:00-03:00", "badges":["Top do bairro"]},
+  "offerings": [{"id":"svc_1","title":"Faxina Completa","pricingModel":"HOURLY","priceFrom":135,"defaultDurationMin":180,"isActive":true}]
+}
+```
 
-Após execução de serviços, reviews alimentam o RankingModule.
+### 9.2 Busca pública
 
-O ranking influencia os resultados de busca.
+```http
+GET /providers/search?lat=-22.90&lon=-47.06&radiusKm=10&categoryId=clean_full&minRating=4.5&sort=best&page=1&pageSize=20
+```
 
-⚙️ Integrações com Outros Módulos
+**200** *(exemplo reduzido)*
 
-ProviderServicesModule → Define os serviços que podem ser oferecidos.
+```json
+{ "items": [ { "provider": {"id":"p_01","displayName":"Ana Lima","rating":4.9}, "discovery": {"distanceKm":2.3, "nextAvailableAt":"2025-08-25T10:00:00-03:00"}, "offerings": [{"id":"svc_1","title":"Faxina Completa","priceFrom":135,"pricingModel":"HOURLY"}] } ], "total": 1 }
+```
 
-BookingsModule → Faz reservas entre cliente e provider.
+### 9.3 Atualizar perfil (self)
 
-RankingModule → Calcula ranking de providers baseado em avaliações.
+```http
+PATCH /providers/me
+Idempotency-Key: upd-123
+{
+  "displayName": "Ana L.",
+  "bio": "Profissional há 6 anos, materiais próprios.",
+  "radiusKm": 18,
+  "cityIds": ["campinas","valinhos"]
+}
+```
 
-NotificationsModule → Notifica provider sobre novas reservas ou alterações.
+**200** → retorna `Provider` atualizado.
 
-MissionsModule → Providers podem cumprir missões ligadas ao engajamento.
+---
 
-📊 Regras de Negócio
+## 10) Telemetria & KPIs
 
-Unicidade: um usuário pode ter apenas um provider vinculado.
+* Eventos: `provider_profile_viewed`, `provider_profile_updated`, `provider_search_performed`, `provider_search_result_clicked`.
+* KPIs: **views→quotes** (detalhes → cotação), **quotes→bookings**, taxa de **ativação** (KYC aprovado & ativo), **tempo de resposta** e **aceitação** por provedor.
 
-Visibilidade: apenas providers com perfil completo e pelo menos um serviço ativo aparecem em buscas.
+---
 
-Ranking: ordenação em listagens considera pontuação do módulo Ranking.
+## 11) QA — Casos críticos
 
-Notificações: provider é notificado em tempo real sobre novas reservas ou alterações.
+* Provedor sem `baseLat/Lon` → calcular distância por cidade/raio padrão; evitar exclusão indevida.
+* `radiusKm` muito alto → clamp a `PROVIDERS_SEARCH_MAX_RADIUS_KM`.
+* Avatar inexistente/sem permissão → ignorar e logar.
+* `KYC_REQUIRED` bloqueando exibição pública, mas permitindo edição.
+* Sincronizar métricas (acceptance/responseTime) com origem única para evitar divergência no payload.
 
-🚀 Próximos Passos / Possíveis Melhorias
+---
 
-Adicionar geolocalização precisa para busca de providers próximos.
+## 12) Melhorias avançadas (quando necessário)
 
-Criar lógica de promoções e descontos especiais por provider.
+1. **Score de completude de perfil** (foto, bio, serviços, disponibilidade) com missões/badges.
+2. **Idiomas** e **preferências** do provedor (animais, materiais, limpeza pesada/leves) para melhor matching.
+3. **Portfólio** (galeria) e **respostas rápidas** para chat (reduz `avgResponseTimeSec`).
+4. **Verificação estendida** (documentos adicionais) para selo “verificado+”.
+5. **Geo‑fences** dinâmicos por demanda (surge) e restrição de raio por logística.
 
-Expandir missões e gamificação para aumentar engajamento dos prestadores.
+---
 
-Conectar métricas de performance (ex: taxa de aceitação, tempo médio de resposta).
+## 13) Conclusão
+
+O módulo **Providers** centraliza a identidade pública e os sinais de qualidade do provedor, alimentando **busca** e **descoberta** com dados confiáveis e atualizados. Com integrações claras e regras de visibilidade (KYC/ativo), sustenta conversão, confiança e escala do marketplace.

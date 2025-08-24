@@ -27,8 +27,8 @@ export interface CreateAddressDto {
   neighborhood: string;
   city: string;
   state: string;
-  latitude: number; // CORREÇÃO: Adicionado latitude
-  longitude: number; // CORREÇÃO: Adicionado longitude
+  latitude: number;
+  longitude: number;
 }
 
 /**
@@ -42,6 +42,7 @@ export interface RegisterClientDto {
   phone?: string | null;
   cpf: string;
   address: CreateAddressDto;
+  referralCode?: string; // NOVO: Campo opcional para código de indicação
 }
 
 /**
@@ -63,6 +64,7 @@ export interface RegisterProviderDto {
   pricingStructure?: string | null;
   serviceAreas?: string | null;
   pixKey?: string | null;
+  referralCode?: string; // NOVO: Campo opcional para código de indicação
 }
 
 /**
@@ -71,17 +73,16 @@ export interface RegisterProviderDto {
  * Usado no PATCH /providers/me.
  */
 export interface UpdateProviderProfileDto {
-  fullName?: string; // CORREÇÃO: Adicionado fullName
-  phone?: string | null; // CORREÇÃO: Adicionado phone
-  address?: Partial<CreateAddressDto> | null; // CORREÇÃO: Adicionado address
+  fullName?: string;
+  phone?: string | null;
+  address?: Partial<CreateAddressDto> | null;
   yearsOfExperience?: number | null;
-  avatarUrl?: string | null; // Agora espera uma URL válida
+  avatarUrl?: string | null;
   bio?: string | null;
   offeredServices?: string | null;
   pricingStructure?: string | null;
   serviceAreas?: string | null;
   pixKey?: string | null;
-  // Adicione quaisquer outros campos que possam ser atualizados via PATCH /providers/me
 }
 
 /**

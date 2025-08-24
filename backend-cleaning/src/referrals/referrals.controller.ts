@@ -44,6 +44,19 @@ export class ReferralsController {
     return referrals;
   }
 
+  @Get('me/code') // NOVO ENDPOINT
+  @Roles(UserRole.CLIENT, UserRole.PROVIDER)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Obter o código de indicação do usuário autenticado' })
+  @ApiResponse({ status: 200, description: 'Código de indicação gerado com sucesso.', type: String })
+  @ApiResponse({ status: 404, description: 'Usuário não encontrado.' })
+  async getMyReferralCode(@Req() req): Promise<{ referralCode: string }> {
+    this.logger.log(`[ReferralsController] getMyReferralCode: Gerando/obtendo código de indicação para userId: ${req.user.userId}`);
+    const referralCode = await this.referralsService.generateReferralCode(req.user.userId);
+    return { referralCode };
+  }
+
   @Get(':id')
   @Roles(UserRole.ADMIN) // Apenas admin pode ver indicações por ID
   @UseGuards(JwtAuthGuard, RolesGuard)

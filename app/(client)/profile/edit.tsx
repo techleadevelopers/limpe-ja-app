@@ -2,21 +2,25 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
-import {
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react'; // Adicionado useMemo
+import { // Adicionado useColorScheme, StyleProp, ViewStyle, TextStyle
     ActivityIndicator,
     Animated,
     Image,
     KeyboardAvoidingView,
     Platform,
-    Alert as ReactNativeAlert,
     ScrollView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
     View,
-    Easing, // Importar Easing
+    Easing,
+    Pressable, // Adicionado Pressable
+    useColorScheme, // Adicionado useColorScheme
+    StyleProp, // Adicionado StyleProp
+    ViewStyle, // Adicionado ViewStyle
+    TextStyle, // Adicionado TextStyle
 } from 'react-native';
 import { useAuth } from '../../../hooks/useAuth';
 
@@ -30,6 +34,11 @@ import { uploadImageToCloud, FilePurpose } from '../../../services/uploadService
 import { UserProfile } from '../../../types/backend/users';
 
 import { formatPhoneNumber, isValidPhoneNumber } from '../../../utils/helpers';
+
+import Toast from '../../../components/Toast'; // Importar Toast (assumindo NoticeToast)
+import { Sheet } from '../../../components/Sheet'; // Importar Sheet
+import { EmptyState } from '../../../components/EmptyState'; // Importar EmptyState
+import Colors from '../../../constants/Colors'; // Importe Colors para o Button interno
 
 // Componente para exibir mensagens de erro inline com animação
 const AnimatedErrorMessage: React.FC<{ message: string | null }> = ({ message }) => {
@@ -60,6 +69,130 @@ const AnimatedErrorMessage: React.FC<{ message: string | null }> = ({ message })
     );
 };
 
+// ================================================
+// INÍCIO DO CÓDIGO DO COMPONENTE BUTTON (MOVIDO PARA DENTRO DESTE ARQUIVO)
+// ================================================
+
+interface ButtonProps {
+  title: string;
+  onPress: () => void;
+  onPressIn?: () => void;
+  onPressOut?: () => void;
+  style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
+  disabled?: boolean;
+  kind?: 'primary' | 'secondary' | 'ghost';
+}
+
+// Hook para acessar as cores do tema atual (copiado de Button.tsx)
+function useThemeForButton() { // Renomeado para evitar conflito com outros useTheme
+  const scheme = useColorScheme?.() || 'light';
+  const theme = (Colors as any)[scheme] || (Colors as any).light;
+  return theme as typeof Colors.light;
+}
+
+const Button: React.FC<ButtonProps> = ({
+  title,
+  onPress,
+  onPressIn,
+  onPressOut,
+  style,
+  textStyle,
+  disabled,
+  kind = 'primary',
+}) => {
+  const theme = useThemeForButton(); // Usando o hook renomeado
+
+  const variantStyles = useMemo(() => {
+    switch (kind) {
+      case 'secondary':
+        return {
+          button: {
+            backgroundColor: theme.secondary,
+            borderColor: theme.secondary,
+            borderWidth: 1,
+          },
+          text: {
+            color: '#FFF',
+          },
+        };
+      case 'ghost':
+        return {
+          button: {
+            backgroundColor: 'transparent',
+            borderColor: theme.interactivePrimary || theme.primary,
+            borderWidth: 1,
+          },
+          text: {
+            color: theme.interactivePrimary || theme.primary,
+          },
+        };
+      case 'primary':
+      default:
+        return {
+          button: {
+            backgroundColor: theme.primary,
+            borderColor: theme.primary,
+            borderWidth: 1,
+          },
+          text: {
+            color: '#FFF',
+          },
+        };
+    }
+  }, [kind, theme]);
+
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      disabled={disabled}
+      style={({ pressed }) => [
+        buttonStyles.baseButton, // Usando buttonStyles
+        variantStyles.button,
+        pressed && buttonStyles.buttonPressed, // Usando buttonStyles
+        disabled && buttonStyles.buttonDisabled, // Usando buttonStyles
+        style,
+      ]}
+    >
+      <Text style={[
+        buttonStyles.baseButtonText, // Usando buttonStyles
+        variantStyles.text,
+        textStyle,
+      ]}>
+        {title}
+      </Text>
+    </Pressable>
+  );
+};
+
+const buttonStyles = StyleSheet.create({ // Renomeado para evitar conflito com styles
+  baseButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 120,
+  },
+  buttonPressed: {
+    opacity: 0.8,
+  },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  baseButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});
+
+// ================================================
+// FIM DO CÓDIGO DO COMPONENTE BUTTON
+// ================================================
+
+
 export default function EditClientProfileScreen() {
     const { user, updateUser } = useAuth() as { user: UserProfile | null, updateUser: (user: Partial<UserProfile>) => void };
 
@@ -84,6 +217,9 @@ export default function EditClientProfileScreen() {
 
     const [fullNameError, setFullNameError] = useState<string | null>(null);
     const [phoneError, setPhoneError] = useState<string | null>(null);
+
+    // Estado para controlar a visibilidade do Sheet de avatar
+    const [showAvatarSheet, setShowAvatarSheet] = useState(false);
 
     const headerAnim = useRef(new Animated.Value(0)).current;
     const contentAnim = useRef(new Animated.Value(0)).current;
@@ -145,12 +281,17 @@ export default function EditClientProfileScreen() {
     const onPressOutButton = (anim: Animated.Value) => { Animated.spring(anim, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start(); };
 
 
-    const handlePickImage = async () => {
+    const pickImageFromLibrary = async () => {
         setIsUploadingAvatar(true);
+        setShowAvatarSheet(false);
         try {
             const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
             if (permissionResult.granted === false) {
-                ReactNativeAlert.alert("Permissão Necessária", "Você precisa permitir o acesso à galeria para escolher uma foto.");
+                Toast.show({
+                    type: 'error',
+                    text1: 'Permissão Necessária',
+                    text2: 'Você precisa permitir o acesso à galeria para escolher uma foto.',
+                });
                 return;
             }
 
@@ -166,21 +307,98 @@ export default function EditClientProfileScreen() {
                 const uploadResponse: UploadResponseDto = await uploadImageToCloud(newAvatarUri, 'avatar' as FilePurpose);
                 if (uploadResponse && uploadResponse.url) {
                     setAvatarUri(uploadResponse.url);
-                    ReactNativeAlert.alert("Sucesso", "Foto de perfil atualizada!");
+                    Toast.show({
+                        type: 'success',
+                        text1: 'Sucesso',
+                        text2: 'Foto de perfil atualizada!',
+                    });
                     updateUser({
                         avatarUrl: uploadResponse.url,
                     });
                 } else {
-                    ReactNativeAlert.alert("Erro no Upload", "Não foi possível enviar a imagem para o servidor.");
+                    Toast.show({
+                        type: 'error',
+                        text1: 'Erro no Upload',
+                        text2: 'Não foi possível enviar a imagem para o servidor.',
+                    });
                 }
             }
         } catch (error) {
             console.error("[EditProfile] Erro ao selecionar ou enviar imagem:", error);
-            ReactNativeAlert.alert("Erro", "Não foi possível selecionar ou enviar a imagem.");
+            Toast.show({
+                type: 'error',
+                text1: 'Erro',
+                text2: 'Não foi possível selecionar ou enviar a imagem.',
+            });
         } finally {
             setIsUploadingAvatar(false);
         }
     };
+
+    const takePhotoFromCamera = async () => {
+        setIsUploadingAvatar(true);
+        setShowAvatarSheet(false);
+        try {
+            const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+            if (permissionResult.granted === false) {
+                Toast.show({
+                    type: 'error',
+                    text1: 'Permissão Necessária',
+                    text2: 'Você precisa permitir o acesso à câmera para tirar uma foto.',
+                });
+                return;
+            }
+
+            const pickerResult = await ImagePicker.launchCameraAsync({
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.7,
+            });
+
+            if (!pickerResult.canceled && pickerResult.assets && pickerResult.assets.length > 0) {
+                const newAvatarUri = pickerResult.assets[0].uri;
+                const uploadResponse: UploadResponseDto = await uploadImageToCloud(newAvatarUri, 'avatar' as FilePurpose);
+                if (uploadResponse && uploadResponse.url) {
+                    setAvatarUri(uploadResponse.url);
+                    Toast.show({
+                        type: 'success',
+                        text1: 'Sucesso',
+                        text2: 'Foto de perfil atualizada!',
+                    });
+                    updateUser({
+                        avatarUrl: uploadResponse.url,
+                    });
+                } else {
+                    Toast.show({
+                        type: 'error',
+                        text1: 'Erro no Upload',
+                        text2: 'Não foi possível enviar a imagem para o servidor.',
+                    });
+                }
+            }
+        } catch (error) {
+            console.error("[EditProfile] Erro ao tirar ou enviar foto:", error);
+            Toast.show({
+                type: 'error',
+                text1: 'Erro',
+                text2: 'Não foi possível tirar ou enviar a foto.',
+            });
+        } finally {
+            setIsUploadingAvatar(false);
+        }
+    };
+
+    const removeAvatar = useCallback(() => {
+        setShowAvatarSheet(false);
+        setAvatarUri(null);
+        updateUser({ avatarUrl: null });
+        Toast.show({
+            type: 'info',
+            text1: 'Foto removida',
+            text2: 'Sua foto de perfil foi removida.',
+        });
+    }, [updateUser]);
+
 
     const handleSaveChanges = async () => {
         let isValid = true;
@@ -199,13 +417,22 @@ export default function EditClientProfileScreen() {
             setPhoneError(null);
         }
 
-        if (!address.street || !address.number || !address.neighborhood || !address.city || !address.state || !address.cep) {
-            ReactNativeAlert.alert("Campos Inválidos", "Por favor, preencha todos os campos do endereço, incluindo o CEP.");
+        const isAddressComplete = address.street && address.number && address.neighborhood && address.city && address.state && address.cep;
+        if (!isAddressComplete) {
+            Toast.show({
+                type: 'error',
+                text1: 'Campos Inválidos',
+                text2: 'Por favor, preencha todos os campos do endereço, incluindo o CEP.',
+            });
             isValid = false;
         }
 
         if (!isValid) {
-            ReactNativeAlert.alert("Campos Inválidos", "Por favor, corrija os erros antes de salvar.");
+            Toast.show({
+                type: 'error',
+                text1: 'Campos Inválidos',
+                text2: 'Por favor, corrija os erros antes de salvar.',
+            });
             return;
         }
 
@@ -234,11 +461,19 @@ export default function EditClientProfileScreen() {
                 address: updatedProfile.address,
             });
 
-            ReactNativeAlert.alert("Sucesso", "Perfil atualizado com sucesso!");
+            Toast.show({
+                type: 'success',
+                text1: 'Sucesso',
+                text2: 'Perfil atualizado com sucesso!',
+            });
             router.back();
         } catch (error: any) {
             console.error("[EditProfile] Erro ao salvar alterações:", error);
-            ReactNativeAlert.alert("Erro", error.message || "Não foi possível atualizar o perfil. Tente novamente.");
+            Toast.show({
+                type: 'error',
+                text1: 'Erro',
+                text2: error.message || "Não foi possível atualizar o perfil. Tente novamente.",
+            });
         } finally {
             setIsLoading(false);
         }
@@ -250,6 +485,8 @@ export default function EditClientProfileScreen() {
         setPhoneError(null);
     };
 
+    // Verifica se o endereço está incompleto para exibir o EmptyState
+    const isAddressSectionIncomplete = !address.street || !address.number || !address.neighborhood || !address.city || !address.state || !address.cep;
 
     return (
         <KeyboardAvoidingView
@@ -270,7 +507,7 @@ export default function EditClientProfileScreen() {
                 <Animated.View style={[styles.animatedContentWrapper, { opacity: contentAnim, transform: [{ translateY: contentAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
                     <View style={styles.avatarSection}>
                         <TouchableOpacity
-                            onPress={handlePickImage}
+                            onPress={() => setShowAvatarSheet(true)} // Abre o Sheet ao invés de handlePickImage direto
                             onPressIn={onPressInAvatar}
                             onPressOut={onPressOutAvatar}
                             style={[styles.avatarContainer, { transform: [{ scale: avatarScaleAnim }] }]}
@@ -292,7 +529,7 @@ export default function EditClientProfileScreen() {
                             )}
                         </TouchableOpacity>
                         <TouchableOpacity
-                            onPress={handlePickImage}
+                            onPress={() => setShowAvatarSheet(true)} // Abre o Sheet ao invés de handlePickImage direto
                             onPressIn={() => onPressInButton(linkButtonScaleAnim)}
                             onPressOut={() => onPressOutButton(linkButtonScaleAnim)}
                             style={{ transform: [{ scale: linkButtonScaleAnim }] }}
@@ -351,6 +588,15 @@ export default function EditClientProfileScreen() {
 
                         {/* Campos de Endereço */}
                         <Text style={styles.label}>Endereço</Text>
+                        {isAddressSectionIncomplete && (
+                            <EmptyState
+                                title="Endereço Incompleto"
+                                subtitle="Por favor, preencha seu endereço para completar seu perfil."
+                                ctaLabel="Completar Endereço"
+                                onPress={() => { /* Poderia focar no primeiro campo de endereço, ou apenas alertar */ }}
+                                style={{ marginBottom: 20 }}
+                            />
+                        )}
                         <TextInput
                             style={styles.inputField} // Usar estilo de input individual
                             placeholder="Rua"
@@ -440,6 +686,34 @@ export default function EditClientProfileScreen() {
                     </TouchableOpacity>
                 </Animated.View>
             </ScrollView>
+
+            {/* Sheet para ações do avatar */}
+            <Sheet
+                visible={showAvatarSheet}
+                onClose={() => setShowAvatarSheet(false)}
+                title="Foto de Perfil"
+            >
+                <View style={styles.sheetContent}>
+                    <Button
+                        title="Tirar Foto"
+                        onPress={takePhotoFromCamera}
+                        style={styles.sheetButton}
+                    />
+                    <Button
+                        title="Escolher da Galeria"
+                        onPress={pickImageFromLibrary}
+                        style={styles.sheetButton}
+                    />
+                    {avatarUri && (
+                        <Button
+                            title="Remover Foto"
+                            onPress={removeAvatar}
+                            kind="ghost"
+                            style={styles.sheetButton}
+                        />
+                    )}
+                </View>
+            </Sheet>
         </KeyboardAvoidingView>
     );
 }
@@ -667,4 +941,10 @@ const styles = StyleSheet.create({
         fontSize: 17,
         fontWeight: 'bold',
     },
+    sheetContent: {
+        paddingVertical: 10,
+    },
+    sheetButton: {
+        marginBottom: 10,
+    }
 });

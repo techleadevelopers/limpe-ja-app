@@ -1,5 +1,5 @@
 // services/missionService.ts
-import api from './api';
+import api from './api'; // Assumindo que 'api' é sua instância do Axios configurada
 
 /** ==== Tipos (espelham o Prisma/backend) ==== */
 export enum MissionAudience {
@@ -24,10 +24,11 @@ export enum MissionStatus {
   CLAIMED = 'CLAIMED',
 }
 
+// NOTE: A tipagem Mission aqui reflete a estrutura da missão em si, sem o progresso do usuário
 export type Mission = {
   id: string;
   code: string;
-  title: string;
+  title: string; // Usado como 'name' em alguns componentes antigos
   description: string;
   audience: MissionAudience;
   kind: MissionKind;
@@ -35,33 +36,34 @@ export type Mission = {
   targetValue: number;
   timeWindowDays?: number | null;
   rewardType: RewardType;
-  rewardValue: number; // % quando COUPON, pontos quando POINTS
+  rewardValue: number;
   couponTemplateId?: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
 };
 
+// NOTE: MissionProgress é o progresso de um usuário em uma missão específica
 export type MissionProgress = {
-  id: string;
+  id: string; // ID do registro de progresso
   userId: string;
   missionId: string;
-  currentValue: number;
-  status: MissionStatus;
+  currentValue: number; // Progresso atual (e.g., 2 de 3 limpezas)
+  status: MissionStatus; // Status do progresso (ACTIVE, COMPLETED, CLAIMED)
   lastEventAt?: string | null;
   completedAt?: string | null;
   claimedAt?: string | null;
-  mission: Mission; // backend já pode incluir a missão no /missions/my
+  mission: Mission; // A missão associada, incluída no progresso
 };
 
+// NOTE: MissionItem é o tipo que o frontend deve consumir, combinando Mission e MissionProgress
 export type MissionItem = {
-  mission: Mission;
-  progress: MissionProgress | null;
-  // helpers calculados para UI
-  progressPct: number;      // 0..100
-  progressLabel: string;    // "2/3", "5 dias", etc
-  canClaim: boolean;        // COMPLETED e não CLAIMED
-  isClaimed: boolean;       // CLAIMED
+  mission: Mission; // Detalhes da missão
+  progress: MissionProgress | null; // Progresso do usuário nesta missão (pode ser null se não houver progresso)
+  progressPct: number; // Percentual de progresso (0-100)
+  progressLabel: string; // Texto de progresso (e.g., "2/3" ou "5 dias")
+  canClaim: boolean; // Se a recompensa pode ser resgatada
+  isClaimed: boolean; // Se a recompensa já foi resgatada
 };
 
 export type ClaimMissionResponse =
@@ -69,7 +71,6 @@ export type ClaimMissionResponse =
       ok: true;
       missionId: string;
       rewardType: RewardType;
-      // quando COUPON
       coupon?: {
         id: string;
         code: string;
@@ -77,7 +78,6 @@ export type ClaimMissionResponse =
         value: number;
         validUntil: string;
       };
-      // quando POINTS
       pointsGranted?: number;
       message?: string;
     }
@@ -116,14 +116,12 @@ function deriveFlags(progress: MissionProgress | null): { canClaim: boolean; isC
 
 /**
  * Lista as missões do usuário logado com progresso.
- * Backend esperado: GET /missions/my -> MissionProgress[] (com mission incluída) ou {missions:[], progress:[]}.
+ * Backend esperado: GET /missions -> MissionProgress[] (com mission incluída) ou {missions:[], progress:[]}.
  */
-export async function getMyMissions(): Promise<MissionItem[]> {
-  // Suporta dois formatos de resposta: array de progressos com mission incluída
-  // ou um objeto { items: MissionItemLike[] }. Ajusta automaticamente.
-  const { data } = await api.get('/missions/my');
+export async function getMyMissions(audience: MissionAudience = MissionAudience.CLIENT): Promise<MissionItem[]> {
+  const { data } = await api.get('/missions', { params: { audience } });
 
-  // Caso 1: backend retorna um array de progressos com mission
+  // O backend pode retornar um array de MissionProgress ou um objeto com 'missions' e 'progress'
   if (Array.isArray(data)) {
     const items: MissionItem[] = data.map((p: MissionProgress) => {
       const mission = p.mission;
@@ -132,11 +130,10 @@ export async function getMyMissions(): Promise<MissionItem[]> {
       const { canClaim, isClaimed } = deriveFlags(p);
       return { mission, progress: p, progressPct, progressLabel, canClaim, isClaimed };
     });
-    // Pode haver missões ativas sem progress record ainda — opcionalmente o backend já envia.
     return items;
   }
 
-  // Caso 2: backend retorna { missions: Mission[], progress: MissionProgress[] }
+  // Caso o backend retorne { missions: [], progress: [] }
   if (data?.missions && data?.progress) {
     const progressMap: Record<string, MissionProgress> = {};
     (data.progress as MissionProgress[]).forEach((p) => (progressMap[p.missionId] = p));
@@ -152,18 +149,16 @@ export async function getMyMissions(): Promise<MissionItem[]> {
     return items;
   }
 
-  // Fallback: resposta inesperada
-  throw new Error('Formato inesperado da resposta de /missions/my');
+  throw new Error('Formato inesperado da resposta de /missions');
 }
 
 /**
  * Resgata a recompensa de uma missão concluída.
- * Backend: POST /missions/claim { missionId }
+ * Backend: POST /missions/:id/claim
  */
 export async function claimMission(missionId: string): Promise<ClaimMissionResponse> {
   try {
-    const { data } = await api.post('/missions/claim', { missionId });
-    // Normaliza resposta esperada do backend que montamos
+    const { data } = await api.post(`/missions/${missionId}/claim`);
     return {
       ok: true,
       missionId,
@@ -178,6 +173,20 @@ export async function claimMission(missionId: string): Promise<ClaimMissionRespo
       err?.message ||
       'Não foi possível resgatar a missão. Tente novamente.';
     return { ok: false, missionId, reason };
+  }
+}
+
+/**
+ * (Placeholder) Envia um evento de rastreamento para o backend.
+ * Backend: POST /missions/track
+ */
+export async function trackMissionEvent(event: string, payload: any) {
+  try {
+    await api.post('/missions/track', { event, payload });
+    return { ok: true };
+  } catch (err: any) {
+    console.error('Erro ao rastrear evento de missão:', err);
+    return { ok: false, reason: err?.response?.data?.message || err?.message || 'Erro ao rastrear evento.' };
   }
 }
 

@@ -1,22 +1,28 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, IsEmail } from 'class-validator';
+// src/users/dto/update-user.dto.ts
+
+import { IsEmail, IsOptional, IsString, IsUrl } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger'; // Se você estiver usando Swagger para documentação da API
 
 export class UpdateUserDto {
-  @ApiPropertyOptional({ description: 'Novo endereço de e-mail do usuário', example: 'novo.email@example.com' })
+  @ApiProperty({ example: 'novo.email@example.com', required: false })
   @IsOptional()
   @IsEmail()
   email?: string;
 
-  // Adicione outros campos que podem ser atualizados no perfil geral do usuário
-  // Por exemplo, se o `fullName` estiver no modelo User diretamente ou se você quiser atualizar campos comuns
-  // que não são específicos de Cliente/Provedor.
-  // Pelo seu schema.prisma, fullName está em Client e Provider, não em User.
-  // Se quiser atualizar o fullName via rota de usuário, você precisaria de um serviço de usuário
-  // que também atualize o Client ou Provider associado.
-  // Por ora, deixarei apenas email como exemplo de campo comum.
+  @ApiProperty({ example: 'Paulo Silva', required: false })
+  @IsOptional()
+  @IsString()
+  fullName?: string; // Adicionado
 
-  // @ApiPropertyOptional({ description: 'Nome completo do usuário', example: 'João da Silva Atualizado' })
-  // @IsOptional()
-  // @IsString()
-  // fullName?: string;
+  @ApiProperty({ example: '+5511987654321', required: false })
+  @IsOptional()
+  @IsString()
+  phone?: string; // Adicionado
+
+  @ApiProperty({ example: 'https://example.com/avatar.jpg', required: false })
+  @IsOptional()
+  @IsUrl()
+  avatarUrl?: string; // Adicionado
+
+  // Adicione outras propriedades que podem ser atualizadas, se houver
 }

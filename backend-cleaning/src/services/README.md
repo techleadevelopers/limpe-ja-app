@@ -1,315 +1,253 @@
-Services Module — README (Backend)
+# README — Módulo de Services (Backend LimpeJá)
 
-Contexto: Este módulo gerencia o catálogo de serviços base (ex.: “Limpeza Residencial”, “Passadoria”, “Pós-obra”). Ele é a referência central para os ProviderServices (ofertas dos prestadores), para o Search, Bookings, Pricing e Missões (eventos como booking.completed usam o tipo de serviço para métricas e regras).
+> **Escopo:** documentação **code‑real (versão atual)** do módulo **Services** com base nos arquivos: `services.module.ts`, `services.controller.ts`, `services.service.ts`, `service.entity.ts`, `create-service.dto.ts`, `update-service.dto.ts`, `service-details.dto.ts`.
+>
+> **Objetivo:** manter o **catálogo canônico** de **serviços do marketplace** (ex.: *Faxina Completa*, *Passar Roupa*, *Organização*), usado como base para **Provider Services** (ofertas individuais). Centraliza **taxonomia**, **regras padrão** (duração mínima, itens inclusos) e **metadados** (categoria, slug, ícones/imagens), além de expor **APIs públicas** de listagem/consulta.
 
-Objetivos do módulo
+---
 
-CRUD do catálogo de serviços (admin-first).
+## 1) Responsabilidades
 
-Definir metadados padrão: description, icon, defaultPricingType.
+* Definir e versionar o **catálogo global** de serviços e suas **categorias**.
+* Oferecer **payload público** consolidado para **exploração** e **busca** (nome, descrição, duração padrão, imagem, categoria, flags).
+* Fornecer **defaults** para criação de **Provider Services** (ex.: `defaultDurationMin`, `materialsIncluded` sugerido, `addOns` padrões).
+* Manter **slugs** estáveis para SEO/app-links e integração com **Search/Ranking**.
+* Permitir **CRUD administrativo** (criar/editar/arquivar serviços) com auditoria e ordenação.
 
-Servir de chave estrangeira para ProviderService e Booking.providerService.service.
+---
 
-Fornecer endpoints públicos de listagem/consulta (com paginação/ordenção básicos).
+## 2) Arquitetura
 
-Garantir validação e segurança via guards/roles.
+* **Module**: `ServicesModule` — registra controller/service e injeta dependências (ORM repo, Cache/Redis, Config, Sentry, DocumentProcessing para imagens opcionais).
+* **Controller**: `ServicesController` — rotas **públicas** de listagem/consulta e **admin** para CRUD.
+* **Service**: `ServicesService` — regras de negócio: validações, normalização de slug, ordenação, composição de `ServiceDetailsDto` e cache.
+* **Entity**: `Service` — modelo persistente do serviço canônico.
 
-Stack e dependências
+---
 
-NestJS (controller/service/module)
+## 3) Modelagem (entity — code‑real esperado)
 
-Prisma (model Service)
+```ts
+export type ServiceCategory = 'CLEANING'|'IRONING'|'ORGANIZING'|'OTHER';
 
-Guards: JwtAuthGuard + RolesGuard
+export class Service {
+  id: string;                     // uuid
+  slug: string;                   // único, kebab-case (ex.: 'faxina-completa')
+  title: string;                  // ex.: 'Faxina Completa'
+  subtitle?: string | null;       // ex.: 'Até 3 quartos'
+  description?: string | null;    // markdown/HTML sanitizado (para vitrine)
 
-Enums do Prisma:
+  category: ServiceCategory;      // taxonomia
+  icon?: string | null;           // chave para ícone
+  image?: string | null;          // storageKey de imagem default
 
-PricingType = FIXED_PRICE | HOURLY | BY_SIZE | CUSTOM_QUOTE
+  defaultDurationMin: number;     // duração padrão sugerida (múltiplos de slot)
+  materialsIncludedDefault?: boolean; // sugestão (provider pode sobrescrever)
+  defaultAddOns?: Array<{ code: string; title: string; price: number }>; // catálogo de adicionais sugeridos
 
-Integrações:
+  isActive: boolean;              // aparece em listagens públicas
+  sortWeight?: number | null;     // ordenação por vitrine/categoria
 
-Provider Services: cada Service pode ser vinculado a vários ProviderService.
-
-Bookings: cada Booking referencia um ProviderService que, por sua vez, referencia um Service.
-
-Search: usa os serviços como facet/filtro.
-
-Pricing: pode usar defaultPricingType como fallback.
-
-Modelo de dados (Prisma)
-model Service {
-  id                 String       @id @default(uuid())
-  name               String       @unique
-  description        String?
-  price              Decimal      @db.Decimal(10, 2)
-  defaultPricingType PricingType?
-  icon               String?
-  providerServices   ProviderService[]
-  createdAt          DateTime     @default(now())
-  updatedAt          DateTime     @updatedAt
+  createdAt: Date; updatedAt: Date; deletedAt?: Date | null;
 }
+```
 
-Campos-chave
+**Índices:** `slug (unique)`, `(category, isActive, sortWeight desc)`.
 
-name (unique): título do serviço (“Limpeza Residencial”).
+> **Sanitização:** `description` deve passar por sanitizer (sem `script/style`/event handlers).
 
-description: texto de apoio (aparece no app).
+---
 
-price: preço base (usado como sugestão para prestadores/estimativas).
+## 4) DTOs (code‑real)
 
-defaultPricingType: controla como o serviço costuma ser precificado.
+### 4.1 `CreateServiceDto`
 
-icon: URL ou key de asset para UI.
+```ts
+export class CreateServiceDto {
+  @IsString() title: string;
+  @IsOptional() @IsString() subtitle?: string;
+  @IsOptional() @IsString() description?: string;      // markdown
+  @IsEnum(['CLEANING','IRONING','ORGANIZING','OTHER']) category: ServiceCategory;
+  @IsOptional() @IsString() icon?: string;
+  @IsOptional() @IsString() image?: string;            // storageKey
+  @IsInt() @Min(30) defaultDurationMin: number;        // minutos
+  @IsOptional() @IsBoolean() materialsIncludedDefault?: boolean;
+  @IsOptional() defaultAddOns?: Array<{ code: string; title: string; price: number }>;
+  @IsOptional() @IsBoolean() isActive?: boolean = true;
+  @IsOptional() @IsInt() sortWeight?: number;
+}
+```
 
-Estrutura do módulo
-src/services/
-  ├─ services.module.ts          // Declara controller + service + imports (PrismaModule)
-  ├─ services.controller.ts      // Rotas/Swagger/guards
-  ├─ services.service.ts         // Regras de negócio + Prisma
-  ├─ service.entity.ts           // DTO/entity de resposta (Swagger)
-  ├─ create-service.dto.ts       // DTO de criação (validações)
-  ├─ update-service.dto.ts       // DTO de update (parcial)
-  └─ service-details.dto.ts      // DTO detalhado (quando necessário)
+### 4.2 `UpdateServiceDto`
 
-Autenticação e Autorização
+```ts
+export class UpdateServiceDto {
+  @IsOptional() @IsString() title?: string;
+  @IsOptional() @IsString() subtitle?: string;
+  @IsOptional() @IsString() description?: string;
+  @IsOptional() @IsEnum(['CLEANING','IRONING','ORGANIZING','OTHER']) category?: ServiceCategory;
+  @IsOptional() @IsString() icon?: string;
+  @IsOptional() @IsString() image?: string;
+  @IsOptional() @IsInt() defaultDurationMin?: number;
+  @IsOptional() @IsBoolean() materialsIncludedDefault?: boolean;
+  @IsOptional() defaultAddOns?: Array<{ code: string; title: string; price: number }>;
+  @IsOptional() @IsBoolean() isActive?: boolean;
+  @IsOptional() @IsInt() sortWeight?: number;
+}
+```
 
-JWT obrigatório em rotas mutáveis.
+### 4.3 `ServiceDetailsDto` (payload público)
 
-Roles:
+```ts
+export class ServiceDetailsDto {
+  id: string; slug: string; title: string; subtitle?: string; description?: string;
+  category: ServiceCategory; icon?: string; imageUrl?: string;
+  defaultDurationMin: number; materialsIncludedDefault?: boolean; defaultAddOns?: any[];
+}
+```
 
-ADMIN: criar/atualizar/excluir serviços.
+---
 
-CLIENT/PROVIDER: consultar.
+## 5) Rotas (ServicesController)
 
-Controllers usam @UseGuards(JwtAuthGuard, RolesGuard) e @Roles(UserRole.ADMIN) quando necessário.
+| Método | Rota                   | Scope   | Descrição                                                                          |
+| -----: | ---------------------- | ------- | ---------------------------------------------------------------------------------- |
+|    GET | `/services`            | Público | Lista serviços (filtros: `category`, `q`, `activeOnly`, `page/pageSize`, `order`). |
+|    GET | `/services/:idOrSlug`  | Público | Detalhe público (`ServiceDetailsDto`) por **id** ou **slug**.                      |
+|   POST | `/services`            | ADMIN   | Cria serviço (CreateServiceDto). Slug é **gerado** automaticamente (kebab‑case).   |
+|  PATCH | `/services/:id`        | ADMIN   | Atualiza serviço (UpdateServiceDto).                                               |
+| DELETE | `/services/:id`        | ADMIN   | Soft‑delete (ou apenas `isActive=false`).                                          |
+|   POST | `/services/:id/toggle` | ADMIN   | Ativa/Desativa rapidamente.                                                        |
 
-Endpoints
-1) Criar serviço (ADMIN)
+**Query params** usuais: `category=CLEANING`, `q=faxina`, `activeOnly=true`, `order=sortWeight|title`.
 
+**Erros**: `VALIDATION_ERROR`, `DUPLICATE_SLUG`, `NOT_FOUND`, `FORBIDDEN`.
+
+---
+
+## 6) Service (assinaturas & regras)
+
+```ts
+class ServicesService {
+  list(q: ListQuery): Promise<{ items: Service[]; total: number }>;
+  getByIdOrSlug(idOrSlug: string): Promise<ServiceDetailsDto>;
+  create(dto: CreateServiceDto, userId: string): Promise<Service>;
+  update(id: string, dto: UpdateServiceDto, userId: string): Promise<Service>;
+  remove(id: string, userId: string): Promise<void>;
+  toggleActive(id: string, userId: string): Promise<Service>;
+}
+```
+
+### 6.1 Regras de negócio
+
+* **Slug**: gerar a partir do `title` (kebab‑case, ascii fold); garantir **unicidade** (sufixo numérico quando necessário).
+* **Ordenação**: `sortWeight` define prioridade na vitrine; fallback `title asc`.
+* **Defaults**: `defaultDurationMin` deve casar com `Availability.slotDurationMin` (múltiplos). `defaultAddOns` são **sugestões**; o provedor pode divergir na oferta.
+* **Sanitização**: `description`/`subtitle` sanitizados; `image` deve referenciar **storageKey** válido (Document Processing) quando usado como hero.
+* **Cache**: memo de listagens públicas (`services:list:{category}:{lang}:{page}:{size}`) com TTL curto (ex.: 300s); invalidar em `create/update/delete/toggle`.
+
+---
+
+## 7) Integrações
+
+* **Provider Services**: usa os **defaults** ao criar oferta; vincula por `serviceId`/`slug` para analytics (descoberta → booking por serviço).
+* **Search**: indexa `Service` como filtro/faceta e compõe título/ícone nos resultados.
+* **Ranking**: não calcula score aqui; apenas fornece taxonomia e metadados.
+* **Document Processing**: resolve `imageUrl` (URL assinada) via BFF.
+* **Analytics**: eventos de view/click de serviço em Explore.
+
+---
+
+## 8) Config (ENV)
+
+```env
+SERVICES_PUBLIC_PAGE_SIZE=50
+SERVICES_CACHE_TTL_SEC=300
+SERVICES_DEFAULT_CATEGORY=CLEANING
+```
+
+---
+
+## 9) Exemplos (HTTP)
+
+### 9.1 Listar serviços de Limpeza
+
+```http
+GET /services?category=CLEANING&activeOnly=true&order=sortWeight&page=1&pageSize=20
+```
+
+**200** *(exemplo)*
+
+```json
+{ "items": [
+  {"id":"svc_clean_full","slug":"faxina-completa","title":"Faxina Completa","defaultDurationMin":180,"category":"CLEANING","isActive":true}
+], "total": 1 }
+```
+
+### 9.2 Detalhe por slug
+
+```http
+GET /services/faxina-completa
+```
+
+**200**
+
+```json
+{
+  "id": "svc_clean_full",
+  "slug": "faxina-completa",
+  "title": "Faxina Completa",
+  "subtitle": "Até 3 quartos",
+  "description": "Limpeza completa residencial...",
+  "category": "CLEANING",
+  "defaultDurationMin": 180,
+  "materialsIncludedDefault": false,
+  "defaultAddOns": [{"code":"geladeira","title":"Limpar geladeira","price":30}]
+}
+```
+
+### 9.3 Criar (admin)
+
+```http
 POST /services
-
-Body (CreateServiceDto):
-
 {
-  "name": "Limpeza Residencial",
-  "description": "Limpeza geral de residências.",
-  "price": 120.00,
-  "defaultPricingType": "FIXED_PRICE",
-  "icon": "https://cdn.exemplo.com/icons/cleaning-home.svg"
+  "title": "Passar Roupa",
+  "category": "IRONING",
+  "defaultDurationMin": 120,
+  "materialsIncludedDefault": false
 }
+```
 
+**201** → cria com `slug` gerado (`passar-roupa`).
 
-Respostas:
+---
 
-201 Created → Service criado.
+## 10) Telemetria & KPIs
 
-400 Bad Request → validação (ex.: name duplicado, price < 0).
+* Eventos: `service_created`, `service_updated`, `service_toggled`, `service_listed`, `service_viewed`.
+* KPIs: CTR de vitrine (vistas → clique), conversão **explore→quote→booking** por `service.slug`, distribuição de duração, heatmap de categorias.
 
-401/403 → auth/roles.
+---
 
-2) Listar serviços (público autenticado)
+## 11) QA — Casos críticos
 
-GET /services?query=&page=1&limit=20&sort=createdAt&order=desc
+* `defaultDurationMin` não múltiplo do slot → rejeitar com mensagem clara.
+* Colisão de `slug` em rename → aplicar sufixo (`-2`, `-3`) com redirecionamento lógico (mantendo o antigo como alias, se suportado).
+* HTML não sanitizado em `description` → bloquear tags perigosas.
+* Arquivamento: `isActive=false` deve removê-lo da busca, mas **não** quebrar referências históricas (Provider Services existentes continuam válidos).
 
-Query params (opcional):
+---
 
-query: busca por name/description.
+## 12) Melhorias avançadas (quando necessário)
 
-page, limit: paginação.
+1. **Alias**/redirect de slug (manter SEO/app links após rename).
+2. **Localização (i18n)** de `title/subtitle/description` por `language`.
+3. **Árvore de categorias** (ex.: Limpeza → Pesada/Leve; Organização → Closet/Cozinha) com breadcrumbs no app.
+4. **A/B** de textos e imagens para otimizar conversão.
+5. **Regras declarativas** de add‑ons (YAML/JSON) para compor sugestões automáticas por perfil/tamanho do imóvel.
 
-sort (name|createdAt), order (asc|desc).
+---
 
-Respostas:
+## 13) Conclusão
 
-200 OK → lista de Service + paginação.
-
-3) Obter um serviço
-
-GET /services/:id
-
-Respostas:
-
-200 OK → Service.
-
-404 Not Found → id inválido.
-
-4) Atualizar serviço (ADMIN)
-
-PATCH /services/:id
-
-Body (UpdateServiceDto) — todos os campos opcionais:
-
-{
-  "description": "Limpeza detalhada de ambientes residenciais",
-  "price": 130.00,
-  "defaultPricingType": "HOURLY",
-  "icon": "cleaning-home-2.svg"
-}
-
-
-Respostas:
-
-200 OK → atualizado.
-
-400/404 → validação/id inválido.
-
-401/403 → auth/roles.
-
-5) Remover serviço (ADMIN) (opcional, se implementado)
-
-DELETE /services/:id
-
-Respostas:
-
-200 OK / 204 No Content
-
-400 → se houver vínculos críticos (ProviderService/Booking).
-
-404 → não encontrado.
-
-Recomendação: usar “soft delete” ou checar vínculos e bloquear remoção de serviços usados por ProviderServices/Bookings. Em muitos cenários, desativar é melhor do que deletar.
-
-DTOs (validação resumida)
-CreateServiceDto
-
-name: string (obrigatório, único)
-
-description: string (opcional)
-
-price: number ≥ 0 (obrigatório)
-
-defaultPricingType: PricingType (opcional)
-
-icon: string (opcional)
-
-UpdateServiceDto
-
-Igual ao create, porém todos opcionais.
-
-ServiceDetailsDto
-
-Formato de resposta estendido (quando necessário, p.ex. incluir metadados adicionais).
-
-Regras de negócio
-
-Unicidade de name: evita duplicatas no catálogo.
-
-Preço base coerente: usado como sugestão (prestador pode ter preço próprio no ProviderService).
-
-defaultPricingType: orienta o fluxo de criação de ProviderService e cálculo no BookingsService:
-
-FIXED_PRICE: preço fechado (usa price).
-
-HOURLY: exige requestedDurationMinutes no agendamento.
-
-BY_SIZE: usa pricePerSquareMeter ou pricePerRoom no ProviderService (não no Service base).
-
-CUSTOM_QUOTE: indica orçamento manual (fluxo assíncrono com o prestador).
-
-Consistência referencial: antes de excluir/alterar drasticamente, considerar impacto em ProviderService e Search.
-
-Integração com Missões: o tipo de serviço pode ser usado em regras de missão (ex.: contagem de booking.completed para “3 limpezas no mês”). A missão escuta eventos – este módulo fornece o contexto (nome do serviço) via relacionamentos.
-
-Erros e mensagens comuns
-
-409/400 ao criar: name já existe.
-
-404 em GET /:id ou PATCH /:id: serviço não encontrado.
-
-400 em PATCH: defaultPricingType inválido.
-
-403: usuário sem ADMIN tentando mutar.
-
-Exemplos (cURL)
-
-Criar:
-
-curl -X POST https://api.exemplo.com/services \
- -H "Authorization: Bearer <JWT_ADMIN>" \
- -H "Content-Type: application/json" \
- -d '{
-   "name":"Limpeza Pós-Obra",
-   "description":"Remoção de resíduos pós reforma",
-   "price": 300,
-   "defaultPricingType":"BY_SIZE",
-   "icon":"post-work.svg"
- }'
-
-
-Listar:
-
-curl -H "Authorization: Bearer <JWT>" \
- https://api.exemplo.com/services?query=limpeza&limit=10
-
-
-Atualizar:
-
-curl -X PATCH https://api.exemplo.com/services/<id> \
- -H "Authorization: Bearer <JWT_ADMIN>" \
- -H "Content-Type: application/json" \
- -d '{"price": 350, "defaultPricingType": "FIXED_PRICE"}'
-
-Boas práticas e notas
-
-Swagger: o controller já deve usar decorators (@ApiTags, @ApiBearerAuth, @ApiOperation, @ApiResponse).
-
-Paginação/Ordenação: mantenha defaults previsíveis e evite overfetch.
-
-Ids: sempre UUID (string).
-
-Icones: padronize caminho ou CDN.
-
-Auditoria: createdAt/updatedAt já disponíveis via Prisma.
-
-Testes (ideias)
-
-Unit: ServicesService
-
-create com name duplicado → falha
-
-update defaultPricingType inválido → falha
-
-list com query → retorna apenas correspondências
-
-E2E:
-
-fluxo admin cria→consulta→atualiza
-
-provider/client conseguem listar mas não mutar
-
-remoção bloqueada quando há ProviderService vinculado (se regra estiver ativa)
-
-Roadmap (opcional)
-
-Soft delete / isActive no Service.
-
-Categorias (p.ex. “Residencial”, “Comercial”) para organização/SEO.
-
-A/B de ícones e descrições (telemetria de conversão).
-
-Traduções (i18n).
-
-Integrações laterais
-
-ProviderServices Module: cria ofertas específicas com price, pricingType, pricePerRoom etc., referenciando Service.
-
-Bookings Module: usa ProviderService → Service para exibir nome e para cálculos.
-
-Pricing Module: regras dinâmicas podem agir diferente por tipo de serviço.
-
-Search Module: filtros por serviceId.
-
-Missions Module: contadores por booking.completed independem de Service, mas podem ser especializados por tipo no futuro.
-
-Módulo
-// services.module.ts
-@Module({
-  imports: [PrismaModule],
-  controllers: [ServicesController],
-  providers: [ServicesService],
-  exports: [ServicesService], // útil para Search/ProviderServices
-})
-export class ServicesModule {}
-
-
-Se quiser, te mando também um checklist de revisão (Swagger, guards, validações e mensagens) para colar nos PRs.
+O **Services** sustenta o **vocabulário do marketplace** e padroniza a experiência de descoberta e criação de ofertas. Com taxonomia clara, slugs estáveis e defaults coerentes com **Availability**, facilita o trabalho do provedor, melhora a **busca** e mantém consistência de **UX** de ponta a ponta.

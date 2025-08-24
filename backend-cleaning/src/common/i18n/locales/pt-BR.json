@@ -16,7 +16,9 @@
       "not_found": "Não encontrado",
       "network_error": "Erro de rede ou servidor",
       "unauthorized_error": "Não autorizado. Por favor, faça login novamente.",
-      "generic_error": "Ocorreu um erro inesperado. Por favor, tente novamente mais tarde."
+      "generic_error": "Ocorreu um erro inesperado. Por favor, tente novamente mais tarde.",
+      "per_hour_short": "/h",
+      "per_sqm_short": "/m²"
     },
     "search": {
       "title": "Buscar Serviços",
@@ -35,7 +37,8 @@
       "copy_code": "Copiar Código",
       "apply_next_step": "Aplicar na próxima etapa",
       "invalid_coupon": "Cupom inválido ou expirado.",
-      "coupon_applied_success": "Cupom aplicado! Você economizou {{value}}."
+      "coupon_applied_success": "Cupom aplicado! Você economizou {{value}}.",
+      "title": "Ofertas"
     },
     "missions": {
       "title": "Minhas Missões",
@@ -160,7 +163,12 @@
       "be_the_first_review": "Seja o primeiro a deixar uma!",
       "add_review": "Adicionar Avaliação",
       "price_not_available": "Preço não disponível",
-      "reviews_count": "({{count}} avaliações)"
+      "reviews_count": "({{count}} avaliações)",
+      "provider_name_title": "Nome do Provedor",
+      "location_label": "Localização",
+      "price_label": "Preço",
+      "about_provider_section_title": "Sobre o Provedor",
+      "contact_section_title": "Contato"
     },
     "provider_dashboard": {
       "greeting": "Olá, {{providerName}}!",

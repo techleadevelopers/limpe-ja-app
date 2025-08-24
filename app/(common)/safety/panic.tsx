@@ -1,37 +1,39 @@
 // LimpeJaApp/app/(common)/safety/panic.tsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react'; // Adicionado useCallback
 import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Animated, Easing } from 'react-native';
 import * as Location from 'expo-location';
 import { useMutation } from '@tanstack/react-query';
 import { reportPanic } from '../../../services/safetyService';
 import { ReportPanicDto, PanicType } from '../../../types/backend/safety';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 export default function PanicScreen() {
   const [countdown, setCountdown] = useState(5);
   const [isCounting, setIsCounting] = useState(false);
   const [location, setLocation] = useState<Location.LocationObjectCoords | null>(null);
+  const { t } = useTranslation();
 
   // Animações
   const headerAnim = useRef(new Animated.Value(0)).current;
   const descriptionAnim = useRef(new Animated.Value(0)).current;
   const locationStatusAnim = useRef(new Animated.Value(0)).current;
-  const buttonAnim = useRef(new Animated.Value(0)).current; // Para o botão principal/countdown
+  const buttonAnim = useRef(new Animated.Value(0)).current;
   const warningTextAnim = useRef(new Animated.Value(0)).current;
 
-  const panicButtonScaleAnim = useRef(new Animated.Value(1)).current; // Para feedback de toque no botão principal
-  const cancelButtonScaleAnim = useRef(new Animated.Value(1)).current; // Para feedback de toque no botão cancelar
-  const countdownPulseAnim = useRef(new Animated.Value(1)).current; // Para o pulso do contador
+  const panicButtonScaleAnim = useRef(new Animated.Value(1)).current;
+  const cancelButtonScaleAnim = useRef(new Animated.Value(1)).current;
+  const countdownPulseAnim = useRef(new Animated.Value(1)).current;
 
   const reportPanicMutation = useMutation({
     mutationFn: (data: ReportPanicDto) => reportPanic(data),
     onSuccess: () => {
-      Alert.alert('Alerta Enviado', 'Seu alerta de pânico foi enviado à equipe de segurança. Ajuda está a caminho.');
+      Alert.alert(t('safety.panic.alert_sent_title'), t('safety.panic.alert_sent_message'));
       router.back();
     },
     onError: (error: any) => {
-      Alert.alert('Erro', `Não foi possível enviar o alerta: ${error.message || 'Erro desconhecido'}`);
-      setIsCounting(false); // Allow retrying
+      Alert.alert(t('common.error'), `${t('safety.panic.send_alert_error')}: ${error.message || t('common.unknown_error')}`);
+      setIsCounting(false);
       // Reset animations on error
       Animated.parallel([
         Animated.timing(panicButtonScaleAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
@@ -41,11 +43,28 @@ export default function PanicScreen() {
     },
   });
 
+  // Definido handleSendPanic antes do useEffect
+  const handleSendPanic = useCallback(() => {
+    if (!location) {
+      Alert.alert(t('common.error'), t('safety.panic.location_not_available'));
+      setIsCounting(false);
+      return;
+    }
+
+    const panicData: ReportPanicDto = {
+      type: PanicType.OTHER,
+      latitude: location.latitude,
+      longitude: location.longitude,
+      message: t('safety.panic.automatic_alert_message'),
+    };
+    reportPanicMutation.mutate(panicData);
+  }, [location, reportPanicMutation, t]);
+
   useEffect(() => {
     (async () => {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permissão de Localização Negada', 'Para sua segurança, precisamos da sua localização para enviar um alerta de pânico.');
+        Alert.alert(t('safety.panic.location_permission_denied'), t('safety.panic.location_permission_message'));
         return;
       }
       let currentLocation = await Location.getCurrentPositionAsync({});
@@ -60,7 +79,7 @@ export default function PanicScreen() {
       Animated.timing(buttonAnim, { toValue: 1, duration: 600, easing: Easing.out(Easing.ease), useNativeDriver: true }),
       Animated.timing(warningTextAnim, { toValue: 1, duration: 500, easing: Easing.out(Easing.ease), useNativeDriver: true }),
     ]).start();
-  }, []);
+  }, [t, headerAnim, descriptionAnim, locationStatusAnim, buttonAnim, warningTextAnim]);
 
   useEffect(() => {
     let timer: ReturnType<typeof setInterval>;
@@ -77,44 +96,28 @@ export default function PanicScreen() {
       ).start();
     } else if (isCounting && countdown === 0) {
       handleSendPanic();
-      countdownPulseAnim.stopAnimation(); // Parar o pulso ao zerar
-      countdownPulseAnim.setValue(1); // Resetar o valor
+      countdownPulseAnim.stopAnimation();
+      countdownPulseAnim.setValue(1);
     } else if (!isCounting) {
-      countdownPulseAnim.stopAnimation(); // Parar o pulso ao cancelar
-      countdownPulseAnim.setValue(1); // Resetar o valor
+      countdownPulseAnim.stopAnimation();
+      countdownPulseAnim.setValue(1);
     }
     return () => clearInterval(timer);
-  }, [isCounting, countdown, location, countdownPulseAnim]);
+  }, [isCounting, countdown, location, countdownPulseAnim, handleSendPanic]); // handleSendPanic é uma dependência do useCallback
 
   const handleInitiatePanic = () => {
     if (!location) {
-      Alert.alert('Localização Não Disponível', 'Aguarde enquanto obtemos sua localização ou verifique as permissões.');
+      Alert.alert(t('safety.panic.location_not_available_title'), t('safety.panic.location_not_available_message'));
       return;
     }
     setIsCounting(true);
-    setCountdown(5); // Reset countdown
+    setCountdown(5);
   };
 
   const handleCancelPanic = () => {
     setIsCounting(false);
     setCountdown(5);
-    Alert.alert('Alerta Cancelado', 'O envio do alerta de pânico foi cancelado.');
-  };
-
-  const handleSendPanic = () => {
-    if (!location) {
-      Alert.alert('Erro', 'Localização não disponível para enviar o alerta.');
-      setIsCounting(false);
-      return;
-    }
-
-    const panicData: ReportPanicDto = {
-      type: PanicType.OTHER, // Or allow user to select type
-      latitude: location.latitude,
-      longitude: location.longitude,
-      message: 'Alerta de pânico acionado automaticamente.',
-    };
-    reportPanicMutation.mutate(panicData);
+    Alert.alert(t('safety.panic.alert_cancelled_title'), t('safety.panic.alert_cancelled_message'));
   };
 
   // Feedback de toque para botões
@@ -123,27 +126,27 @@ export default function PanicScreen() {
 
   return (
     <View style={styles.container}>
-      <Animated.Text style={[styles.header, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>Botão de Pânico</Animated.Text>
+      <Animated.Text style={[styles.header, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>{t('safety.panic.button_title')}</Animated.Text>
       <Animated.Text style={[styles.description, { opacity: descriptionAnim, transform: [{ translateY: descriptionAnim.interpolate({ inputRange: [0, 1], outputRange: [-10, 0] }) }] }]}>
-        Em caso de emergência, pressione o botão abaixo. Um alerta será enviado imediatamente à nossa equipe de segurança com sua localização.
+        {t('safety.panic.description')}
       </Animated.Text>
 
       {!location && (
         <Animated.View style={[styles.locationStatus, { opacity: locationStatusAnim }]}>
           <ActivityIndicator size="small" color="#007bff" />
-          <Text style={styles.locationText}>Obtendo sua localização...</Text>
+          <Text style={styles.locationText}>{t('safety.panic.getting_location')}</Text>
         </Animated.View>
       )}
       {location && (
         <Animated.View style={[styles.locationStatus, { opacity: locationStatusAnim }]}>
-          <Text style={styles.locationText}>Localização obtida: {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}</Text>
+          <Text style={styles.locationText}>{t('safety.panic.location_obtained')}: {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}</Text>
         </Animated.View>
       )}
 
       {isCounting ? (
         <Animated.View style={[styles.countdownContainer, { opacity: buttonAnim, transform: [{ scale: countdownPulseAnim }] }]}>
           <Text style={styles.countdownText}>{countdown}</Text>
-          <Text style={styles.countdownLabel}>Alerta será enviado em...</Text>
+          <Text style={styles.countdownLabel}>{t('safety.panic.alert_will_be_sent')}</Text>
           <TouchableOpacity
             style={[styles.button, styles.cancelButton, { transform: [{ scale: cancelButtonScaleAnim }] }]}
             onPress={handleCancelPanic}
@@ -151,7 +154,7 @@ export default function PanicScreen() {
             onPressOut={() => onPressOutButton(cancelButtonScaleAnim)}
             disabled={reportPanicMutation.isPending}
           >
-            <Text style={styles.buttonText}>Cancelar</Text>
+            <Text style={styles.buttonText}>{t('common.cancel')}</Text>
           </TouchableOpacity>
         </Animated.View>
       ) : (
@@ -165,13 +168,13 @@ export default function PanicScreen() {
           {reportPanicMutation.isPending ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.buttonText}>ACIONAR PÂNICO</Text>
+            <Text style={styles.buttonText}>{t('safety.panic.activate_panic')}</Text>
           )}
         </TouchableOpacity>
       )}
 
       <Animated.Text style={[styles.warningText, { opacity: warningTextAnim }]}>
-        Use este recurso apenas em situações de emergência real. O uso indevido pode resultar em penalidades.
+        {t('safety.panic.warning_text')}
       </Animated.Text>
     </View>
   );

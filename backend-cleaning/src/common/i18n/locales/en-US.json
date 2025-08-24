@@ -16,7 +16,9 @@
       "not_found": "Not found",
       "network_error": "Network or server error",
       "unauthorized_error": "Unauthorized. Please log in again.",
-      "generic_error": "An unexpected error occurred. Please try again later."
+      "generic_error": "An unexpected error occurred. Please try again later.",
+      "per_hour_short": "/hr",
+      "per_sqm_short": "/sqm"
     },
     "search": {
       "title": "Search Services",
@@ -35,7 +37,8 @@
       "copy_code": "Copy Code",
       "apply_next_step": "Apply in next step",
       "invalid_coupon": "Invalid or expired coupon.",
-      "coupon_applied_success": "Coupon applied! You saved {{value}}."
+      "coupon_applied_success": "Coupon applied! You saved {{value}}.",
+      "title": "Offers"
     },
     "missions": {
       "title": "My Missions",
@@ -160,7 +163,12 @@
       "be_the_first_review": "Be the first to leave one!",
       "add_review": "Add Review",
       "price_not_available": "Price not available",
-      "reviews_count": "({{count}} reviews)"
+      "reviews_count": "({{count}} reviews)",
+      "provider_name_title": "Provider Name",
+      "location_label": "Location",
+      "price_label": "Price",
+      "about_provider_section_title": "About Provider",
+      "contact_section_title": "Contact"
     },
     "provider_dashboard": {
       "greeting": "Hello, {{providerName}}!",

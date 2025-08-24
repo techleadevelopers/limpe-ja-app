@@ -5,12 +5,14 @@ import { ReferralsController } from './referrals.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { LoyaltyModule } from '../loyalty/loyalty.module';
 import { MissionsModule } from '../missions/missions.module';
+import { CouponsModule } from '../coupons/coupons.module'; // NOVO: Importar CouponsModule
 
 @Module({
   imports: [
     PrismaModule,
-    LoyaltyModule,                           // para LoyaltyService
-    forwardRef(() => MissionsModule),        // para MissionsService (evita ciclo)
+    LoyaltyModule,
+    forwardRef(() => MissionsModule),
+    forwardRef(() => CouponsModule), // NOVO: Adicionar forwardRef para CouponsModule
   ],
   controllers: [ReferralsController],
   providers: [ReferralsService],

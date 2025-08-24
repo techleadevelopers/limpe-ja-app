@@ -53,4 +53,9 @@ export class RegisterProviderDto {
   @IsOptional()
   @IsString({ message: 'A URL do avatar deve ser uma string.' })
   avatarUrl?: string;
+
+  @ApiPropertyOptional({ description: 'Código de indicação, se houver', example: 'ABC123XYZ' })
+  @IsOptional()
+  @IsString()
+  referralCode?: string; // <<-- ADICIONADO
 }

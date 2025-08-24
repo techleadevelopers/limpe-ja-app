@@ -9,7 +9,7 @@ import { UserProfile } from '../types/backend/users';
 import { ClientDetails } from '../types/backend/clients';
 import { BookingAddress } from '../types/backend/bookings';
 import userService from '../services/userService';
-import axios from 'axios'; // Importar axios para verificar o tipo de erro
+import axios from 'axios';
 
 interface AuthDataFromStorage {
   token: string | null;
@@ -27,7 +27,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   role: UserRole | null;
-  token: string | null; // <--- CORREÇÃO: Adicionada a propriedade 'token' aqui
+  token: string | null;
   login: (credentials: { email: string; password: string }) => Promise<void>;
   logout: () => Promise<void>;
   register: (userData: any, userType: 'client' | 'provider') => Promise<void>;
@@ -256,7 +256,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading,
     isAuthenticated,
     role,
-    token: user?.token || null, // <--- CORREÇÃO: Fornecendo o valor do token aqui
+    token: user?.token || null,
     login,
     logout,
     register,

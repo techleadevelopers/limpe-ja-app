@@ -33,8 +33,8 @@ Exporta: Uma instância singleton de AuthService.
 Funcionalidades Chave:
 
 login(credentials): Envia credenciais para /auth/login, salva o accessToken, user.role, user.id e user completo no AsyncStorage. Define o token no cabeçalho do Axios.
-registerClient(userData): Envia dados para /auth/register/client, salva os dados de autenticação.
-registerProvider(userData): Envia dados para /auth/register/provider, salva os dados de autenticação.
+registerClient(userData): Envia dados para /auth/register/client, salva os dados de autenticação. Agora aceita um `referralCode` opcional para vincular o novo usuário a um indicador.
+registerProvider(userData): Envia dados para /auth/register/provider, salva os dados de autenticação. Agora aceita um `referralCode` opcional para vincular o novo usuário a um indicador.
 sendPasswordReset(email): Envia uma requisição real ao endpoint de redefinição de senha do backend (POST /auth/forgot-password).
 logout(): Remove todos os dados de autenticação do AsyncStorage e limpa o token do Axios.
 loadAuthData(): Carrega dados de autenticação do AsyncStorage na inicialização do app.
@@ -256,7 +256,7 @@ QuickActionsSection: Botões de acesso rápido para agenda, serviços e mensagen
 RequestItem: Componente para exibir solicitações de agendamento pendentes, com ações de aceitar/rejeitar (updateBookingStatus()) e iniciar chat.
 ConfirmedServiceItem: Componente para exibir próximos serviços confirmados.
 AdvancedReviewsSection: Exibe avaliações recentes.
-Exibição de Métricas de Performance: Integração para mostrar acceptanceRate e averageResponseTime do provedor.
+Exibição de Métricas de Performance: Integração para mostrar `acceptanceRate` e `averageResponseTime` do provedor, que são calculadas e atualizadas no backend e influenciam o ranking e a visibilidade.
 handleLogout(): Permite ao provedor sair da conta.
 Suporte a pull-to-refresh.
 Interconexões: Consome useAuth, bookingService, dashboardService e providerService. Navega para diversas telas de provedor.
@@ -379,7 +379,7 @@ Funcionalidades Chave:
 
 BookingStatus: Enum para estados como PENDING, CONFIRMED, COMPLETED, CANCELED, etc.
 BookingAddress: Estrutura de endereço.
-BookingDetails: Representa um agendamento completo com detalhes do cliente, provedor e serviço, incluindo couponId e couponUsage se um cupom foi aplicado.
+BookingDetails: Representa um agendamento completo com detalhes do cliente, provedor e serviço, incluindo `couponId` e `discountAmount` se um cupom foi aplicado.
 6.3. bookingService.ts
 Caminho: LimpeJaApp/app/services/bookingService.ts
 Propósito: Fornece funções para interagir com os endpoints de agendamento do backend.
@@ -387,7 +387,7 @@ Dependências: axios, api.ts, BookingDetails, BookingStatus, CreateBookingDto, U
 Exporta: createBooking, getBookingsForUser, getBookingDetails, updateBookingStatus, cancelBooking, checkActiveChatBooking, checkConfirmedBookingBetweenUsers.
 Funcionalidades Chave:
 
-createBooking(data): Cria um novo agendamento, com a lógica de backend utilizando RedisLockService para garantir a concorrência e evitar a dupla reserva de slots.
+createBooking(data): Cria um novo agendamento, com a lógica de backend utilizando RedisLockService para garantir a concorrência e evitar a dupla reserva de slots. Agora, ao criar um agendamento com um cupom, ele chama `CouponsModule.applyCoupon` e armazena `couponId` e `discountAmount` em `BookingDetails`. Após a conclusão (COMPLETED), o `coupon.usageCount` é atualizado. Dispara eventos para `MissionsModule.trackEvent` ('booking_completed', 'first_booking_completed').
 getBookingsForUser(status?): Obtém agendamentos do usuário logado, opcionalmente filtrados por status.
 getBookingDetails(bookingId): Obtém detalhes de um agendamento específico.
 updateBookingStatus(bookingId, data): Atualiza o status de um agendamento.
@@ -400,13 +400,13 @@ Propósito: Permite ao cliente agendar um serviço com um provedor específico, 
 Dependências: React, Animated, Alert, Dimensions, Easing, Platform, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, Stack, useLocalSearchParams, useRouter, Ionicons, BlurView, Clipboard, LinearGradient, useAuth, createBooking, getProviderAvailability, getProviderDetails, BookingAddress, BookingDetails, CreateBookingDto, ProviderAvailability, ProviderDisplayInfo, ProviderServiceOffering, UserProfile, PricingType, AddressSection, CalendarHeader, ProviderBrief, TimeSlotsSection.
 Funcionalidades Chave:
 
-Recebe providerId e serviceId via parâmetros de rota.
-fetchBookingAndProviderDetails(): Carrega detalhes do provedor e do serviço, além do endereço do usuário logado.
-prefetchAvailability(): Pré-carrega a disponibilidade do provedor para meses adjacentes e armazena em cache.
-generateCalendarDays(): Gera os dias do calendário para exibição.
-fetchAndProcessSlotsForDate(): Busca e processa os horários disponíveis para a data selecionada, considerando a configuração do provedor e horários já ocupados.
-Aplicação de Cupons/Ofertas: Interface para o usuário inserir códigos de cupom e ver o impacto no preço final.
-handleConfirmBooking(): Valida os dados e chama createBooking() do bookingService. Redireciona para a tela de sucesso.
+Recebe `providerId` e `serviceId` via parâmetros de rota.
+`fetchBookingAndProviderDetails()`: Carrega detalhes do provedor e do serviço, além do endereço do usuário logado.
+`prefetchAvailability()`: Pré-carrega a disponibilidade do provedor para meses adjacentes e armazena em cache.
+`generateCalendarDays()`: Gera os dias do calendário para exibição.
+`fetchAndProcessSlotsForDate()`: Busca e processa os horários disponíveis para a data selecionada, considerando a configuração do provedor e horários já ocupados.
+Aplicação de Cupons/Ofertas: Agora aceita `couponCode` vindo da navegação (`useLocalSearchParams`) e pré-preenche o campo de cupom. Recalcula preço e destaca economia; confirmação chama `createBooking()` com `couponId` resolvido no backend. A exibição de preços reflete o breakdown completo retornado pela API de precificação do backend, incluindo todos os componentes (base, add-ons, taxa de distância, surge, descontos).
+`handleConfirmBooking()`: Valida os dados e chama `createBooking()` do bookingService. Redireciona para a tela de sucesso.
 Animações ricas para a UI.
 Interconexões: Consome useAuth, providerService, bookingService. Navega para bookings/success.tsx.
 6.5. bookings/index.tsx (Client Bookings List)
@@ -449,6 +449,7 @@ handleCopyPixQrCode(): Copia o código PIX para a área de transferência.
 handleAddToCalendar(): Adiciona o agendamento ao calendário do dispositivo.
 handleContactProvider(): Navega para o chat com o provedor.
 Animações para a entrada do conteúdo e elementos de fundo.
+Exibe um card de retorno (7 dias) com um cupom, incentivando uma nova reserva.
 Interconexões: Consome useAuth, bookingService, providerService, paymentService. Navega para bookings/index.tsx, explore/index.tsx, messages/[chatId].tsx.
 7. Busca e Descoberta
 Esta seção descreve as funcionalidades de busca e exploração de serviços e provedores.
@@ -474,6 +475,8 @@ CarouselBannerItem: Carrossel de banners promocionais.
 SecaoRecomendacoes / SecaoPrestadores: Exibem listas de provedores.
 NavBar: Barra de navegação inferior.
 Animações de entrada escalonadas para todas as seções.
+Renderiza condicionalmente o `CouponWelcomeCard` no topo, logo abaixo do header, se for um novo cliente e houver uma oferta `NEW_CLIENTS` disponível, verificando também o `AsyncStorage` para o estado de dispensa.
+Renderiza condicionalmente o `ReferralBanner` se o usuário tiver um código de indicação.
 Interconexões: Consome clientService e providerService. Navega para telas de busca, detalhes de provedor e outras telas de navegação.
 7.3. explore/[providerId].tsx (Provider Details for Client)
 Caminho: LimpeJaApp/app/(client)/explore/[providerId].tsx
@@ -486,7 +489,7 @@ getProviderDetails(): Carrega os detalhes do provedor.
 checkActiveChatBooking(): Verifica se o cliente tem um agendamento ativo com o provedor para habilitar o botão de chat.
 Exibe nome, localização, preço, anos de experiência, status de verificação, biografia e avaliações.
 Exibição de Promoções/Descontos: Integração para exibir ofertas ou cupons específicos do provedor.
-Exibição de Métricas de Performance: Pode exibir acceptanceRate e averageResponseTime se forem consideradas públicas.
+Exibição de Métricas de Performance: Agora exibe `acceptanceRate` e `averageResponseTime` se forem consideradas públicas.
 Botões de ação (Ligar, Chat, Mapa, Compartilhar).
 BookServiceButton: Botão fixo na parte inferior para agendar um serviço com o provedor.
 formatPriceDisplay(): Formata o preço com base no PricingType.
@@ -499,7 +502,7 @@ Funcionalidades Chave (a serem implementadas):
 todas-categorias.tsx: Listar todas as categorias de serviço.
 todos-prestadores-proximos.tsx: Listar todos os provedores próximos, utilizando a funcionalidade de geolocalização.
 servicos-por-categoria.tsx: Listar serviços filtrados por uma categoria específica.
-search-results.tsx / resultados-busca.tsx: Exibir resultados de busca com base em parâmetros.
+search-results.tsx / resultados-busca.tsx: Exibir resultados de busca com base em parâmetros. As chamadas de busca (`clientService.searchProviders`) agora incluem parâmetros de geolocalização e os resultados exibem o `priceFrom` de forma proeminente.
 8. Comunicação (Chat e Notificações)
 Esta seção aborda as funcionalidades de comunicação dentro do aplicativo.
 
@@ -534,7 +537,7 @@ formatTimestamp(): Formata o timestamp da última mensagem.
 Animações de entrada para o cabeçalho e itens da lista.
 Interconexões: Consome useAuth e chatService. Navega para messages/[chatId].tsx.
 8.4. messages/[chatId].tsx (Client/Provider Chat Screen)
-Caminho: LimpeJaApp/app/(client)/messages/[chatId].tsx e LimpeJaApp/app/(provider)/messages/[chatId].tsx
+Caminho: LimpeJaApp/app/(client)/messages/[chatId].tsx e LimpeJaApp/app/(provider)/messages/chatId.tsx
 Propósito: A tela de chat para uma conversa específica, permitindo o envio e recebimento de mensagens em tempo real via WebSocket.
 Dependências: React, Animated, Alert, FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator, Stack, useLocalSearchParams, useRouter, Ionicons, io, Socket, appConfig, useAuth, getBookingDetails, getChatMessages, sendMessage (do chatService), BookingStatus, Message, SendMessa geDto.
 Funcionalidades Chave:
@@ -628,7 +631,7 @@ Dependências: axios, api.ts, MessageResponseDto, ReviewEntity, SubmitReviewDto.
 Exporta: submitFeedback, getDetailedRatingBreakdown, getSmartSuggestions (função e classe ReviewService).
 Funcionalidades Chave:
 
-submitFeedback(data): Envia um feedback ou avaliação.
+submitFeedback(data): Envia um feedback ou avaliação. Dispara `MissionsModule.trackEvent` ('review_submitted') ao enviar avaliação.
 getDetailedRatingBreakdown(providerId): Obtém análise detalhada de avaliações.
 getReviews(providerId): Busca avaliações de um provedor.
 getReviewAnalytics(providerId): Obtém dados analíticos de avaliações do backend via getDetailedRatingBreakdown.
@@ -670,6 +673,7 @@ loadFaqs(): Carrega as FAQs do backend via getFaqs().
 Campo de busca para filtrar FAQs.
 AnimatedFaqItem: Componente para exibir cada FAQ.
 AnimatedContactButton: Botões para contato via e-mail, telefone e chat (simulado), com a intenção de integração com o módulo de Suporte.
+Fornece opções claras para contato com o suporte, integrando com o módulo de suporte do backend para abrir tickets.
 Interconexões: Consome faqService.
 11.3. termos.tsx
 Caminho: LimpeJaApp/app/(common)/termos.tsx
@@ -697,16 +701,16 @@ Interconexões: É um layout aninhado do _layout.tsx raiz.
 As tipagens são cruciais para a robustez do aplicativo. Elas são definidas principalmente na pasta LimpeJaApp/src/types/backend/.
 
 auth.ts: DTOs de login/registro, UserRole, VerificationStatus.
-bookings.ts: DTOs e interfaces para agendamentos, BookingStatus, incluindo couponId e couponUsage.
+bookings.ts: DTOs e interfaces para agendamentos, BookingStatus, incluindo `couponId` e `discountAmount`.
 chat.ts: DTOs e interfaces para mensagens de chat.
 clients.ts: Interfaces para o perfil do cliente e DTOs de atualização.
 dashboard.ts: Interfaces para dados do dashboard (pode ser redundante com providers.ts).
 faqs.ts: Interface para itens de FAQ.
 notifications.ts: Interfaces para notificações.
-offers.ts: Interface para ofertas promocionais, incluindo OfferTarget e OfferStatus.
+offers.ts: Interface para ofertas promocionais, incluindo OfferTarget e OfferStatus. Agora inclui `NEW_CLIENTS` no `OfferTarget`.
 payments.ts: DTOs para operações de pagamento (PIX, saques), incluindo PaymentIntentStatus, PaymentIntent, PaymentEvent.
 provider-service.ts: Detalhes de um serviço oferecido por um provedor.
-providers.ts: Interfaces para o perfil do provedor, disponibilidade e DTOs relacionados, agora com acceptanceRate e averageResponseTime.
+providers.ts: Interfaces para o perfil do provedor, disponibilidade e DTOs relacionados, agora com `acceptanceRate` e `averageResponseTime`.
 reviews.ts: DTOs e interfaces para avaliações.
 search.ts: DTOs e interfaces para busca, incluindo latitude, longitude, radius em SearchQuery.
 services.ts: Interfaces para tipos de serviço e PricingType.
@@ -715,14 +719,17 @@ users.ts: Interface UserProfile (perfil completo do usuário).
 verification.ts: DTOs e enums para o processo de verificação.
 support.ts (NOVO): Interfaces e DTOs para o módulo de suporte, incluindo SupportTicketStatus, SupportTicketCategory, SupportTicket, SupportMessage, SupportSlaLog.
 missions.ts (NOVO): Interfaces e DTOs para o módulo de missões, incluindo MissionAudience, MissionKind, RewardType, MissionStatus, Mission, MissionProgress, MissionEvent.
+referrals.ts (NOVO): Interfaces e DTOs para o módulo de indicações, incluindo Referral, CreateReferralDto.
 13. Componentes Reutilizáveis (components/)
 A pasta components/ contém diversos componentes reutilizáveis para construir a UI de forma consistente e eficiente. Exemplos incluem:
 
 auth/components/: Componentes específicos para formulários de autenticação (e.g., InputWithIcon, AnimatedErrorMessage).
-client/: Componentes específicos para o cliente (e.g., booking/success, explore/home, explore/provider).
+client/: Componentes específicos para o cliente (e.g., booking/success, explore/home, explore/provider). Inclui o novo `CouponWelcomeCard.tsx` para exibir ofertas de boas-vindas.
 provider/: Componentes específicos para o provedor (e.g., dashboard, earnings, schedule/manager).
+referrals/: Inclui `ReferralBanner.tsx` e `ReferralSheet.tsx` para o sistema de indicações.
 ui/: Componentes de UI genéricos (e.g., ToastMessage).
 ServiceItemSkeleton: Componente de placeholder para carregamento de itens de serviço.
+client/explore/home/FAB_SOS.tsx: Botão de Ação Flutuante para acesso rápido ao módulo de segurança.
 14. Fluxo de Navegação Principal
 O Expo Router é fundamental para o fluxo de navegação, utilizando um sistema de arquivos para definir rotas e layouts aninhados.
 
@@ -770,6 +777,7 @@ O Expo Router é fundamental para o fluxo de navegação, utilizando um sistema 
 /feedback/[targetId]: Envio de feedback/avaliação.
 /termos: Termos de Serviço.
 /privacidade: Política de Privacidade.
+/safety/panic: Tela de alerta de pânico.
 15. Considerações Finais
 Esta documentação fornece uma visão aprofundada do frontend do LimpeJáApp, destacando sua estrutura modular, o uso extensivo de tipagem (TypeScript), gerenciamento de estado via Context API e a integração com o backend via Axios. As animações e a organização do código contribuem para uma experiência de usuário fluida e um código-base manutenível. A clareza nas interconexões entre arquivos e a separação de responsabilidades são pilares importantes para o desenvolvimento contínuo do aplicativo.
 
@@ -810,8 +818,8 @@ roles.guard.ts: Trabalha em conjunto com @Roles para restringir o acesso a rotas
 Decorators: @Roles (utilizado para definir quais papéis de usuário têm permissão para acessar uma rota).
 DTOs: login.dto.ts, register-client.dto.ts, register-provider.dto.ts, forgot-password.dto.ts, auth-response.dto.ts, message-response.dto.ts.
 Fluxos de Negócio:
-Registro de Cliente: Um novo usuário se registra como cliente, fornecendo e-mail, senha, nome completo, telefone, CPF e endereço. O sistema verifica a unicidade do e-mail, telefone e CPF, faz o hash da senha e cria um novo User com o papel CLIENT e um Client associado. O endereço é geocodificado.
-Registro de Provedor: Similar ao registro de cliente, mas com dados adicionais como data de nascimento e anos de experiência. Cria um User com o papel PROVIDER e um Provider associado. O status de verificação inicial do provedor é PENDING_INITIAL_REVIEW. O endereço é geocodificado.
+Registro de Cliente: Um novo usuário se registra como cliente, fornecendo e-mail, senha, nome completo, telefone, CPF e endereço. O sistema verifica a unicidade do e-mail, telefone e CPF, faz o hash da senha e cria um novo User com o papel CLIENT e um Client associado. O endereço é geocodificado. Agora, o registro aceita um `referralCode` opcional; se presente, o novo usuário é vinculado ao indicador via `ReferralsModule` e o `CouponsModule.issueCoupon` é acionado para o indicado.
+Registro de Provedor: Similar ao registro de cliente, mas com dados adicionais como data de nascimento e anos de experiência. Cria um User com o papel PROVIDER e um Provider associado. O status de verificação inicial do provedor é PENDING_INITIAL_REVIEW. O endereço é geocodificado. Assim como o registro de cliente, agora aceita um `referralCode` opcional.
 Login (Email/Senha): O usuário envia e-mail e senha. O LocalAuthGuard valida as credenciais via AuthService.validateUser. Em caso de sucesso, o AuthService.login gera um accessToken JWT e retorna um UserProfileDto detalhado.
 Recuperação de Senha: O usuário solicita a redefinição de senha via e-mail. O sistema gera um token de redefinição de senha (JWT com curta duração) e envia um link para o e-mail do usuário.
 Autenticação WebSocket: O WsAuthGuard intercepta a conexão WebSocket, extrai e verifica o token de autenticação, anexando o payload do usuário ao objeto socket.data para uso posterior.
@@ -820,7 +828,7 @@ E-mails, telefones e CPFs devem ser únicos na plataforma.
 Senhas possuem requisitos mínimos de segurança (comprimento, caracteres especiais).
 A geocodificação de endereços é realizada durante o registro de clientes e provedores.
 Tokens JWT têm tempo de expiração.
-Integrações: PrismaModule (para acesso ao banco de dados), UsersModule (para mapeamento de perfil), ProvidersModule (para mapeamento de perfil de provedor), EmailModule (para envio de e-mails de recuperação de senha), GeocodingModule (para geocodificação de endereços).
+Integrações: PrismaModule (para acesso ao banco de dados), UsersModule (para mapeamento de perfil), ProvidersModule (para mapeamento de perfil de provedor), EmailModule (para envio de e-mails de recuperação de senha), GeocodingModule (para geocodificação de endereços), `ReferralsModule` (para o fluxo de indicação).
 Endpoints:
 POST /auth/register/client: Registra um novo cliente.
 POST /auth/register/provider: Registra um novo provedor.
@@ -877,15 +885,15 @@ Objetivo: Gerenciar o ciclo de vida completo dos prestadores de serviços na pla
 Arquitetura:
 
 providers.controller.ts: Define endpoints REST para Providers.
-providers.service.ts: Contém a lógica central de negócio (criação, atualização, busca, listagem, detalhamento de prestadores), incluindo o cálculo e atualização de acceptanceRate e averageResponseTime.
-provider.entity.ts: Entidade que representa o modelo de Provider, agora com os campos acceptanceRate e averageResponseTime.
+providers.service.ts: Contém a lógica central de negócio (criação, atualização, busca, listagem, detalhamento de prestadores), incluindo o cálculo e atualização de `acceptanceRate` e `averageResponseTime`.
+provider.entity.ts: Entidade que representa o modelo de Provider, agora com os campos `acceptanceRate` e `averageResponseTime`.
 provider-details.dto.ts: DTO para retorno detalhado do provider.
 update-provider-profile.dto.ts: DTO para atualização de perfil do provider.
 Fluxos de Negócio:
 Onboarding: Registro inicial de um usuário como provedor.
 Customização de Perfil: Provedor atualiza informações (foto, descrição, localização).
 Cadastro de Serviços: Provedor seleciona e define preços para os serviços que oferece.
-Monitoramento de Performance: acceptanceRate (taxa de aceitação de agendamentos) e averageResponseTime (tempo médio para responder a mensagens/solicitações) são calculados e atualizados, influenciando o ranking e a visibilidade.
+Monitoramento de Performance: `acceptanceRate` (taxa de aceitação de agendamentos) e `averageResponseTime` (tempo médio para responder a mensagens/solicitações) são calculados e atualizados, influenciando o ranking e a visibilidade.
 Regras de Negócio:
 Um usuário pode ter apenas um perfil de provedor.
 Apenas provedores com perfil completo e serviços ativos aparecem em buscas.
@@ -982,9 +990,9 @@ booking-and-pix-response.dto.ts: DTO combinado para criação de agendamento e c
 report-dispute.dto.ts: DTO para reporte de disputas.
 booking.entity.ts: Representa a entidade Booking, agora com relações para PaymentIntent e SupportTicket.
 Fluxos de Negócio:
-Criação de Agendamento: Cliente cria um agendamento para um provedor e serviço específicos. O sistema calcula o preço total com base no PricingType do ProviderService, aplica precificação dinâmica e cupons. Um novo endereço é criado. A operação é protegida por um lock distribuído para evitar race conditions.
+Criação de Agendamento: Cliente cria um agendamento para um provedor e serviço específicos. O sistema calcula o preço total com base no PricingType do ProviderService, aplica precificação dinâmica e cupons. Um novo endereço é criado. A operação é protegida por um lock distribuído para evitar race conditions. Ao `createBooking` com um cupom, ele chama `CouponsModule.applyCoupon` e armazena `couponId` e `discountAmount` em `BookingDetails`.
 Criação de Agendamento com Pagamento PIX: Combina a criação do agendamento com a geração de uma cobrança PIX (PaymentIntent), retornando os detalhes do agendamento e os dados da cobrança.
-Atualização de Status: Provedores e clientes podem atualizar o status do agendamento (PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELED, REJECTED, RESCHEDULED, PENDING_DISPUTE). Regras de transição de status são aplicadas.
+Atualização de Status: Provedores e clientes podem atualizar o status do agendamento (PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELED, REJECTED, RESCHEDULED, PENDING_DISPUTE). Regras de transição de status são aplicadas. Após a conclusão (COMPLETED), o `coupon.usageCount` é atualizado. O sistema mantém um flag/contador no `User` ou `Client` para identificar a primeira reserva `COMPLETED`. Dispara `MissionsModule.trackEvent` ('booking_completed') e, se for a primeira, ('first_booking_completed').
 Cancelamento: Clientes podem cancelar agendamentos (com restrições de status).
 Reporte de Problemas/Disputas: Clientes ou provedores podem reportar problemas ou disputas para um agendamento, alterando o status para PENDING_DISPUTE e enfileirando uma notificação para administradores.
 Resolução de Disputas: Administradores podem resolver disputas, definindo um novo status, aplicando reembolsos e notificando as partes envolvidas.
@@ -1044,14 +1052,14 @@ Objetivo: Definir, gerenciar e aplicar regras de precificação dinâmica para o
 Arquitetura:
 
 pricing.controller.ts: Expõe endpoints REST para CRUD de regras e cálculo de preço.
-pricing.service.ts: Contém a lógica de negócio para CRUD de regras e a função principal calculatePrice().
+pricing.service.ts: Contém a lógica de negócio para CRUD de regras e a função principal `calculatePrice()`.
 pricing-rule.entity.ts: Define a estrutura de uma regra de preço.
 calculate-price.dto.ts: DTO para requisição de cálculo de preço.
 create-pricing-rule.dto.ts, update-pricing-rule.dto.ts: DTOs para criação e atualização de regra.
 Fluxos de Negócio:
 Criação de Regras: Administradores podem criar regras de preço globais, por serviço ou por provedor (BASE, PERCENTAGE, FIXED_DISCOUNT, MIN_PRICE, MAX_PRICE), com condições flexíveis (JSON).
 Atualização e Gerenciamento: Administradores podem ativar/inativar regras, ajustar valores e condições.
-Cálculo de Preço (calculatePrice): Recebe serviceId, providerId, basePrice, clientId e meta (hora, localização). Busca regras ativas aplicáveis e as aplica em ordem específica, integrando com CouponsService e OffersService para aplicar descontos, retornando originalPrice, finalPrice, appliedRules e discountsTotal.
+Cálculo de Preço (`calculatePrice`): Recebe `serviceId`, `providerId`, `basePrice`, `clientId` e `meta` (hora, localização). Busca regras ativas aplicáveis e as aplica em ordem específica, integrando com `CouponsService` e `OffersService` para aplicar descontos, retornando `originalPrice`, `finalPrice`, `appliedRules` e `discountsTotal`. O método `quote` foi refinado para aplicar todas as regras de precificação (surge, distância, cupons, ofertas) e retornar o breakdown detalhado.
 Regras de Negócio:
 Validação de compatibilidade entre type e value da regra.
 Ordem de aplicação das regras (BASE -> MIN/MAX -> PERCENTAGE -> FIXED_DISCOUNT -> COUPON -> OFFER).
@@ -1071,9 +1079,9 @@ coupons.service.ts: Contém a lógica de negócio para criar, buscar, atualizar 
 create-coupon.dto.ts, update-coupon.dto.ts, apply-coupon.dto.ts: DTOs para validação e aplicação.
 coupon.entity.ts: Define a estrutura da entidade Coupon e seus enums (CouponType, CouponTarget, CouponStatus).
 Fluxos de Negócio:
-CRUD de Cupons: Administradores podem criar, listar, buscar por código e atualizar cupons (código, tipo, valor, validade, usos, alvo, status). CouponTarget agora suporta SPECIFIC_SERVICE e SPECIFIC_PROVIDER.
-Aplicação de Cupons: O applyCoupon verifica a validade do cupom (data, usos, status) e as regras de alvo (NEW_CLIENTS, SPECIFIC_SERVICE, SPECIFIC_PROVIDER). Calcula o discountAmount e newTotalPrice.
-Emissão de Cupons via Missões: O issueCouponFromMission gera um cupom percentual de uso único com validade de 30 dias a partir da conclusão de uma missão.
+CRUD de Cupons: Administradores podem criar, listar, buscar por código e atualizar cupons (código, tipo, valor, validade, usos, alvo, status). `CouponTarget` agora suporta `SPECIFIC_SERVICE` e `SPECIFIC_PROVIDER`.
+Aplicação de Cupons: O `applyCoupon` verifica a validade do cupom (data, usos, status) e as regras de alvo (`target`). Implementa lógica robusta para `firstBookingOnly` (verificando `client.totalBookings` ou similar) e outras regras (expiração, usos). Calcula o `discountAmount` e `newTotalPrice`.
+Emissão de Cupons via Missões: O `issueCouponFromMission` gera um cupom percentual de uso único com validade de 30 dias a partir da conclusão de uma missão. Adicionado métodos para geração de cupons: `issueReturnCoupon` (para retenção) e `issueReferralCoupon` (para indicado/indicador).
 Regras de Negócio:
 Códigos de cupom devem ser únicos.
 Validação de datas de validade e maxUses.
@@ -1087,6 +1095,7 @@ GET /coupons/:code (ADMIN): Busca um cupom por código.
 PATCH /coupons/:id (ADMIN): Atualiza um cupom.
 POST /coupons/apply (CLIENT): Aplica um cupom a um agendamento.
 GET /coupons (ADMIN): Lista todos os cupons.
+GET /coupons/resolve/:code: Expõe este endpoint para o frontend validar e obter detalhes de um cupom.
 12. Módulo Offers (Ofertas Promocionais)
 Objetivo: Gerenciar ofertas promocionais programadas e estratégicas, complementando cupons e precificação, com a capacidade de direcionar ofertas a provedores e serviços específicos.
 Arquitetura:
@@ -1096,9 +1105,9 @@ offers.service.ts: Contém a lógica de negócio para criar, gerenciar e aplicar
 offer.entity.ts: Define o modelo da entidade Offer.
 create-offer.dto.ts, update-offer.dto.ts, offer-details.dto.ts: DTOs para validação e resposta.
 Fluxos de Negócio:
-Criação de Ofertas: Administradores criam ofertas com discountValue, discountType, target (GENERAL, SPECIFIC_SERVICE, SPECIFIC_PROVIDER, NEW_CLIENTS), validFrom e validUntil. OfferTarget agora suporta SPECIFIC_SERVICE e SPECIFIC_PROVIDER.
+Criação de Ofertas: Administradores criam ofertas com discountValue, discountType, target (GENERAL, SPECIFIC_SERVICE, SPECIFIC_PROVIDER, NEW_CLIENTS), validFrom e validUntil. `OfferTarget` agora suporta `SPECIFIC_SERVICE` e `SPECIFIC_PROVIDER`, e também `NEW_CLIENTS`.
 Validação Automática: Ofertas têm validações de data e valor. São automaticamente marcadas como EXPIRED ao passar da data de validade.
-Aplicação de Ofertas: Durante busca ou checkout, o sistema consulta ofertas ativas e elegíveis (getActiveOffersForUser).
+Aplicação de Ofertas: Durante busca ou checkout, o sistema consulta ofertas ativas e elegíveis (`getActiveOffersForUser`).
 Atualização e Remoção: Atualizações podem alterar datas, status e valor. Remoções marcam a oferta como INACTIVE para preservar histórico.
 Regras de Negócio:
 Ofertas programadas com escopo alvo.
@@ -1119,7 +1128,7 @@ reviews.controller.ts: Expõe endpoints REST para criar e consultar avaliações
 reviews.service.ts: Contém a lógica de negócio para validações, criação, métricas e integrações.
 review.entity.ts: Representa a entidade Review.
 Fluxos de Negócio:
-Criação de Avaliação: Cliente envia avaliação para um agendamento COMPLETED. O sistema valida elegibilidade, credita pontos de fidelidade (LoyaltyService), dispara evento de missão (MissionsService) e atualiza indicadores do provedor (ProvidersService).
+Criação de Avaliação: Cliente envia avaliação para um agendamento COMPLETED. O sistema valida elegibilidade, credita pontos de fidelidade (LoyaltyService), dispara evento de missão (MissionsService) e atualiza indicadores do provedor (ProvidersService). Aciona `MissionsModule.trackEvent` ('review_submitted') ao submeter avaliações.
 Listagem e Consulta: Lista avaliações com filtros opcionais (providerId, clientId, minRating, maxRating).
 Regras de Negócio:
 Apenas o cliente do booking pode avaliar.
@@ -1139,7 +1148,7 @@ Objetivo: Calcular e expor o ranking de prestadores para fins de listagem, desta
 Arquitetura:
 
 ranking.module.ts: Declara o módulo e exporta o RankingService.
-ranking.service.ts: O motor de ranking, consulta dados, normaliza sinais, aplica fórmula de score com pesos configuráveis e filtros.
+ranking.service.ts: O motor de ranking, consulta dados, normaliza sinais, aplica fórmula de score com pesos configuráveis e filtros. O algoritmo de ranking foi modificado para incluir `acceptanceRate`, `averageResponseTime` e possíveis "badges" na pontuação.
 ranking.controller.ts: Expõe endpoints REST para listagem ranqueada e rebuild de cache.
 provider-ranking.dto.ts: DTO de saída para itens ranqueados.
 Fluxos de Negócio:
@@ -1161,7 +1170,7 @@ Objetivo: Fornecer mecanismos de busca inteligente de serviços e provedores, pe
 Arquitetura:
 
 search.controller.ts: Expõe endpoints REST para busca.
-search.service.ts: Contém a lógica de negócio para consultas ao banco via Prisma.
+search.service.ts: Contém a lógica de negócio para consultas ao banco via Prisma. Assegura que a busca por provedores retorne o `priceFrom` corretamente, refletindo a precificação.
 search-query.dto.ts: Define parâmetros de entrada da busca, incluindo latitude, longitude e radius.
 provider-service-search-result.dto.ts: Define o formato de resposta dos resultados.
 Fluxos de Negócio:
@@ -1184,7 +1193,7 @@ notifications.service.ts: Contém a lógica de negócio.
 notification.entity.ts: Define a estrutura da entidade Notification.
 create-notification.dto.ts, update-notification.dto.ts: DTOs para validação.
 Fluxos de Negócio:
-Gatilho de Evento: Serviços chamam notificationsService.create() a partir de eventos (reserva criada, missão concluída).
+Gatilho de Evento: Serviços chamam `notificationsService.create()` a partir de eventos (reserva criada, missão concluída). Inclui novos gatilhos como: cupom emitido (boas-vindas, missão, indicação), cupom expirando em breve, missão iniciada/progresso/concluída/resgatada, atualização de status de indicação (ex: "Seu amigo concluiu a primeira reserva!"), pontos de fidelidade ganhos/resgatados.
 Persistência: Notificação é salva no banco.
 Entrega: Notificação disponível na listagem do usuário.
 Interação do Usuário: Marcada como READ ao ser visualizada.
@@ -1261,7 +1270,7 @@ Objetivo: Garantir a segurança de clientes e prestadores, fornecendo mecanismos
 Arquitetura:
 
 safety.controller.ts: Expõe rotas da API.
-safety.service.ts: Contém a lógica de negócio para registro, atualização e consulta.
+safety.service.ts: Contém a lógica de negócio para registro, atualização e consulta. Implementa a lógica completa para `reportPanic` (com notificações via `notifications.service.ts` e SMS via `sms.service.ts`) e `reportIncident`.
 Entities: incident.entity.ts, panic-alert.entity.ts.
 DTOs: report-incident.dto.ts, update-incident.dto.ts, report-panic.dto.ts.
 Fluxos de Negócio:
@@ -1290,11 +1299,12 @@ Arquitetura:
 
 Modelo (Prisma): Referral (com referredUserId único e par (referredUserId, referrerUserId) único).
 DTO: CreateReferralDto.
-referrals.service.ts: Lógica para criar e buscar indicações.
+referrals.service.ts: Lógica para criar e buscar indicações. Implementa `createReferral` para registrar a indicação, verificando autoindicação, existência de usuários e unicidade. Adiciona lógica para recompensar o indicador quando o indicado concluir sua primeira reserva (chamando `loyalty.service.ts.addPoints` ou `coupons.service.ts.issueCoupon`).
 referrals.controller.ts: Expõe endpoints.
 Fluxos de Negócio:
-Criação de Indicação: createReferral verifica autoindicação, existência de usuários e unicidade. Cria a indicação e credita pontos de fidelidade (LoyaltyService) para o indicador.
-Conversão de Indicação: (Idealmente) quando o indicado conclui o primeiro booking, o BookingsService dispara um evento (referral.converted) para o MissionsService, recompensando o indicador.
+Criação de Indicação: `createReferral` verifica autoindicação, existência de usuários e unicidade. Cria a indicação e credita pontos de fidelidade (`LoyaltyService`) para o indicador.
+Conversão de Indicação: Quando o `referredUser` tem sua primeira reserva `COMPLETED`, o `BookingsService` dispara um evento (`referral.converted`) para o `MissionsService`, recompensando o indicador. O método `handleBookingCompletedForReferral(referredUserId, bookingId)` centraliza essa lógica.
+Geração de Código de Indicação: Adicionado endpoint/lógica `generateReferralCode(userId)` para usuários obterem seu código único.
 Regras de Negócio:
 Não permite autoindicação.
 Um usuário só pode ser indicado uma vez.
@@ -1304,23 +1314,24 @@ Endpoints:
 POST /referrals: Cria a indicação.
 GET /referrals/:id: Detalhe de uma indicação.
 GET /referrals/me: Lista indicações feitas pelo usuário logado.
+GET /referrals/me/code: Endpoint para o usuário obter seu código de indicação.
 21. Módulo Missions (Gamificação e Recompensas)
 Objetivo: Criar objetivos gamificados que, ao serem atingidos, geram recompensas (cupons ou pontos de fidelidade) para o usuário, agora com suporte a missões direcionadas a provedores para aumentar o engajamento.
 Arquitetura:
 
 Modelos (Prisma): Mission, MissionProgress, MissionEvent.
 Enums: MissionAudience, MissionKind, RewardType, MissionStatus.
-missions.service.ts: Contém a lógica principal (trackEvent, getMyMissions, claimMission).
+missions.service.ts: Contém a lógica principal (`trackEvent`, `getMyMissions`, `claimMission`). Implementa `trackEvent(userId, eventName, meta?)` para registrar eventos e recalcular o progresso de missões ativas que escutam esse evento, incluindo novos gatilhos: `'first_booking_completed'` (acionado por BookingsModule), `'review_submitted'` (acionado por ReviewsModule), `'booking_accepted'` (acionado por BookingsModule), `'chat_response_time_met'` (requer nova lógica no ChatModule), `'rating_maintained'` (requer nova lógica ou integração com ReviewsModule). Implementa `claimMission` para validar e liberar recompensas (`cupons` via `CouponsService` ou `pontos` via `LoyaltyService`).
 Fluxos de Negócio:
-Rastreamento de Eventos: MissionsService.trackEvent(userId, eventName, meta?) grava o evento e recalcula o progresso de missões ativas que escutam esse evento.
+Rastreamento de Eventos: `MissionsService.trackEvent(userId, eventName, meta?)` grava o evento e recalcula o progresso de missões ativas que escutam esse evento.
 Cálculo de Progresso: Baseado no MissionKind (COUNT_EVENT, STREAK_DAYS, WITHIN_WINDOW). Atualiza currentValue e status.
-Resgate de Recompensas: Usuário chama claimMission. O módulo valida o status da missão (COMPLETED e não CLAIMED), emite cupom (CouponsService) ou credita pontos (LoyaltyService), e marca a missão como CLAIMED.
-Missões para Provedores: MissionAudience agora inclui PROVIDER, permitindo a criação de missões específicas para engajar os prestadores (ex: "Complete 10 serviços no mês", "Mantenha taxa de aceitação acima de X%").
+Resgate de Recompensas: Usuário chama `claimMission`. O módulo valida o status da missão (COMPLETED e não CLAIMED), emite cupom (`CouponsService`) ou credita pontos (`LoyaltyService`), e marca a missão como CLAIMED.
+Missões para Provedores: `MissionAudience` agora inclui `PROVIDER`, permitindo a criação de missões específicas para engajar os prestadores (ex: "Complete 10 serviços no mês", "Mantenha taxa de aceitação acima de X%").
 Regras de Negócio:
 Missões definidas por código, título, tipo, evento, valor alvo e janela de tempo.
 Recompensas podem ser cupons ou pontos.
-trackEvent é idempotente para modos de janela.
-claimMission valida elegibilidade e emite recompensa.
+`trackEvent` é idempotente para modos de janela.
+`claimMission` valida elegibilidade e emite recompensa.
 Integrações: PrismaService, CouponsService, LoyaltyService, BookingsModule, ReviewsModule, ReferralsModule, ProvidersModule (para missões de provedores).
 Endpoints:
 GET /missions/my (CLIENT/PROVIDER): Retorna a lista de missões ativas com progresso do usuário.
@@ -1330,7 +1341,7 @@ Objetivo: Fornecer funcionalidades de comunicação em tempo real entre clientes
 Arquitetura:
 
 chat.controller.ts: Expõe endpoints REST para gerenciamento de chat.
-chat.service.ts: Contém a lógica de negócio para encontrar/criar chats, enviar/receber mensagens. Pode contribuir para o cálculo de averageResponseTime do provedor.
+chat.service.ts: Contém a lógica de negócio para encontrar/criar chats, enviar/receber mensagens. Pode contribuir para o cálculo de `averageResponseTime` do provedor.
 chat.gateway.ts: Implementa a comunicação WebSocket para mensagens em tempo real.
 message.entity.ts: Representa a entidade Message.
 DTOs: send-message.dto.ts, get-messages.dto.ts, chat-details.dto.ts, conversation-item.dto.ts.
@@ -1401,9 +1412,9 @@ DTOs: add-points.dto.ts, redeem-points.dto.ts.
 Modelo (Prisma): LoyaltyTransaction (registra cada transação de pontos).
 Enum (Prisma): LoyaltyTransactionType.
 Fluxos de Negócio:
-Adicionar Pontos: addPoints registra uma transação de pontos para um userId com um type e referenceId. Pode incluir lógica de campanhas (ex: dobrar pontos).
-Resgatar Pontos: redeemPoints permite ao usuário trocar pontos por recompensas (ex: cupons). Verifica saldo, busca recompensa, cria o cupom e debita os pontos.
-Consulta de Saldo e Histórico: getUserPoints e getLoyaltyHistory fornecem o saldo atual e o histórico de transações de pontos.
+Adicionar Pontos: `addPoints` registra uma transação de pontos para um `userId` com um `type` e `referenceId`. Pode incluir lógica de campanhas (ex: dobrar pontos). Inclui novos tipos de transação: `REFERRAL_CONVERSION` (para indicações convertidas) e `MISSION_COMPLETED` (para missões concluídas).
+Resgatar Pontos: `redeemPoints` permite ao usuário trocar pontos por recompensas (ex: cupons). Verifica saldo, busca recompensa, cria o cupom e debita os pontos. Implementado para converter pontos em `Coupons` (ex: 1000 pontos = R$10 cupom).
+Consulta de Saldo e Histórico: `getUserPoints` e `getLoyaltyHistory` fornecem o saldo atual e o histórico de transações de pontos.
 Regras de Negócio:
 Pontos são concedidos por ações específicas (SERVICE_COMPLETED, FIRST_REVIEW, REVIEW_SUBMITTED, REFERRAL, MISSION_COMPLETED).
 Cada transação é auditável.
@@ -1437,7 +1448,7 @@ Arquitetura:
 
 dashboard.controller.ts: Expõe o endpoint para obter os dados do dashboard.
 dashboard.service.ts: Orquestra a coleta de dados de outros serviços para compor o dashboard.
-dashboard.dto.ts: DTO de resposta para os dados do dashboard do provedor, agora incluindo acceptanceRate e averageResponseTime.
+dashboard.dto.ts: DTO de resposta para os dados do dashboard do provedor, agora incluindo `acceptanceRate` e `averageResponseTime`.
 Fluxos de Negócio:
 Obtenção de Dados: O serviço busca informações do provedor, agendamentos futuros, sumário de ganhos e avaliações recentes, além das métricas de performance calculadas pelo ProvidersService, consolidando-as em um único objeto de resposta.
 Regras de Negócio:
@@ -1595,7 +1606,7 @@ Objetivo: Gerenciar o sistema de tickets de suporte, permitindo que usuários ab
 Arquitetura:
 
 support.controller.ts: Expõe endpoints REST para criar, consultar e interagir com tickets de suporte.
-support.service.ts: Contém a lógica de negócio para gerenciamento de tickets, mensagens, atribuição e regras de SLA.
+support.service.ts: Contém a lógica de negócio para gerenciamento de tickets, mensagens, atribuição e regras de SLA. Implementa o fluxo básico de tickets de suporte (`createSupportTicket`, `addSupportMessage`, `updateSupportTicketStatus`).
 escalations.job.ts: Processador de fila para verificar e escalar tickets de suporte que excedem o SLA.
 Modelos (Prisma): SupportTicket, SupportMessage, SupportSlaLog.
 Enums (Prisma): SupportTicketStatus, SupportTicketCategory.
@@ -1685,15 +1696,15 @@ SubscriptionFrequency (src/shared/enums/subscription-frequency.enum.ts): Define 
 IncidentType (src/shared/enums/incident-type.enum.ts): Define os tipos de incidentes.
 IncidentStatus (src/shared/enums/incident-status.enum.ts): Define os status de incidentes.
 CouponType (src/shared/enums/coupon-type.enum.ts): Define os tipos de cupom.
-CouponTarget (src/shared/enums/coupon-target.enum.ts): Define os alvos de cupom.
+CouponTarget (src/shared/enums/coupon-target.enum.ts): Define os alvos de cupom. Agora inclui `NEW_CUSTOMER`, `REFERRAL_REFERRED`, `REFERRAL_REFERRER`, `MISSION_REWARD`, `REPEAT_CUSTOMER`.
 CouponStatus (src/shared/enums/coupon-status.enum.ts): Define os status de cupom.
 ClaimStatus (src/shared/enums/claim-status.enum.ts): Define os status de reivindicação de garantia.
-LoyaltyTransactionType (src/shared/enums/loyalty-transaction-type.enum.ts): Define os tipos de transação de fidelidade.
+LoyaltyTransactionType (src/shared/enums/loyalty-transaction-type.enum.ts): Define os tipos de transação de fidelidade. Agora inclui `REFERRAL_CONVERSION` e `MISSION_COMPLETED`.
 MissionAudience (src/shared/enums/mission-audience.enum.ts): Define o público-alvo da missão.
 MissionKind (src/shared/enums/mission-kind.enum.ts): Define o tipo de missão.
 RewardType (src/shared/enums/reward-type.enum.ts): Define o tipo de recompensa.
 MissionStatus (src/shared/enums/mission-status.enum.ts): Define o status da missão.
-OfferTarget (src/shared/enums/offer-target.enum.ts): Define o alvo da oferta.
+OfferTarget (src/shared/enums/offer-target.enum.ts): Define o alvo da oferta. Agora inclui `NEW_CLIENTS`.
 OfferStatus (src/shared/enums/offer-status.enum.ts): Define o status da oferta.
 UserRoles (src/shared/types/user-roles.type.ts): Um tipo de união para os papéis de usuário.
 G. Augmentação do Objeto Request (express-request.d.ts)
@@ -1716,505 +1727,1153 @@ AppService (src/app.service.ts):
 Objetivo: O serviço raiz, contendo a lógica de negócio básica para o AppController.
 Funcionalidades: Retorna a mensagem de boas-vindas.
 
-[12:28:13] Found 0 errors. Watching for file changes.
 
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [NestFactory] Starting Nest application...
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [I18nService] Traduções carregadas: en-US (C:\Users\Paulo\desktop\relax-app\backend-cleaning\dist\common\i18n\locales\en-US.json)
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [I18nService] Traduções carregadas: pt-BR (C:\Users\Paulo\desktop\relax-app\backend-cleaning\dist\common\i18n\locales\pt-BR.json)
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] SentryModule dependencies initialized +15ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] PrismaModule dependencies initialized +4ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] PassportModule dependencies initialized +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] BullModule dependencies initialized +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] I18nModule dependencies initialized +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] ConfigHostModule dependencies initialized +32ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] HttpModule dependencies initialized +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] DiscoveryModule 
-dependencies initialized +3ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] AppModule dependencies initialized +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] ConfigModule dependencies initialized +2ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] ConfigModule dependencies initialized +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [GeocodingService] Provedor de geocodificação configurado: GOOGLE_MAPS
-[Nest] 9316  - 23/08/2025, 12:28:20    WARN [EmailService] MAILGUN_API_KEY não configurada. O envio de e-mails pode não funcionar.
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [SmsService] [SmsService] Lendo configurações do Twilio:
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [SmsService] [SmsService]   Account SID: Configurado
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [SmsService] [SmsService]   Auth 
-Token: Configurado
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [SmsService] [SmsService]   Verify Service SID: Configurado
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [SmsService] [SmsService] Twilio 
-client inicializado com sucesso.
-[Nest] 9316  - 23/08/2025, 12:28:20    WARN [DocumentProcessingService] Modo 
-de armazenamento local ativado. Clientes GCS não foram inicializados.        
-[Nest] 9316  - 23/08/2025, 12:28:20    WARN [DocumentProcessingService] Modo 
-de armazenamento local ativado. Clientes GCS não foram inicializados.        
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] BullModule dependencies initialized +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] BullModule dependencies initialized +4ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] EmailModule dependencies initialized +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] GeocodingModule 
-dependencies initialized +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] GeocodingModule 
-dependencies initialized +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] EmailModule dependencies initialized +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] SmsModule dependencies initialized +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] LocksModule dependencies initialized +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] DocumentProcessingModule dependencies initialized +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] JwtModule dependencies initialized +2ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] ThrottlerModule 
-dependencies initialized +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] CacheModule dependencies initialized +2ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] CacheModule dependencies initialized +13ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] OffersModule dependencies initialized +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] CouponsModule dependencies initialized +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] FaqsModule dependencies initialized +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] BullModule dependencies initialized +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] BullModule dependencies initialized +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] NotificationsModule dependencies initialized +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] MetricsModule dependencies initialized +2ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] LoyaltyModule dependencies initialized +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] GuaranteeModule 
-dependencies initialized +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] DisputeModule dependencies initialized +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] AvailabilityModule dependencies initialized +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] MissionsModule dependencies initialized +4ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] ReferralsModule 
-dependencies initialized +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] QueuesModule dependencies initialized +2ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] PricingModule dependencies initialized +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] ChatModule dependencies initialized +4ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] SearchModule dependencies initialized +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] ServicesModule dependencies initialized +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] ProvidersModule 
-dependencies initialized +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] RankingModule dependencies initialized +2ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] EarningsModule dependencies initialized +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] VerificationModule dependencies initialized +2ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] ReviewsModule dependencies initialized +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] SupportModule dependencies initialized +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] ProviderServicesModule dependencies initialized +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] SafetyModule dependencies initialized +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] UsersModule dependencies initialized +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] DashboardModule 
-dependencies initialized +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] ClientsModule dependencies initialized +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] AuthModule dependencies initialized +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] PaymentsModule dependencies initialized +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] SubscriptionsModule dependencies initialized +3ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [InstanceLoader] BookingsModule dependencies initialized +1ms
-NestAppCreation: 239.531ms
+[15:05:46] Found 0 errors. Watching for file changes.
+
+[Nest] 15152  - 24/08/2025, 15:06:15     LOG [NestFactory] Starting Nest application...
+[Nest] 15152  - 24/08/2025, 15:06:15     LOG [I18nService] Traduções carregadas: en-US (C:\Users\Paulo\desktop\relax-app\backend-cleaning\dist\common\i18n\locales\en-US.json)
+[Nest] 15152  - 24/08/2025, 15:06:15     LOG [I18nService] Traduções carregadas: pt-BR (C:\Users\Paulo\desktop\relax-app\backend-cleaning\dist\common\i18n\locales\pt-BR.json)
+[Nest] 15152  - 24/08/2025, 15:06:15     LOG [InstanceLoader] SentryModule dependencies initialized +88ms
+[Nest] 15152  - 24/08/2025, 15:06:21     LOG [InstanceLoader] PrismaModule dependencies initialized +5809ms
+[Nest] 15152  - 24/08/2025, 15:06:21     LOG [InstanceLoader] PassportModule dependencies initialized +1ms
+[Nest] 15152  - 24/08/2025, 15:06:21     LOG [InstanceLoader] BullModule dependencies initialized +1ms    
+[Nest] 15152  - 24/08/2025, 15:06:21     LOG [InstanceLoader] I18nModule dependencies initialized +0ms    
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] ConfigHostModule dependencies initialized +2031ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] HttpModule dependencies initialized +2ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] DiscoveryModule dependencies initialized +4ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] AppModule dependencies initialized +0ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] ConfigModule dependencies initialized +5ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] ConfigModule dependencies initialized +2ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [GeocodingService] Provedor de geocodificação configurado: GOOGLE_MAPS
+[Nest] 15152  - 24/08/2025, 15:06:23    WARN [EmailService] MAILGUN_API_KEY não configurada. O envio de e-mails pode não funcionar.
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [SmsService] [SmsService] Lendo configurações do Twilio:
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [SmsService] [SmsService]   Account SID: Configurado
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [SmsService] [SmsService]   Auth Token: Configurado
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [SmsService] [SmsService]   Verify Service SID: Configurado
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [SmsService] [SmsService] Twilio client inicializado com sucesso.
+[Nest] 15152  - 24/08/2025, 15:06:23    WARN [DocumentProcessingService] Modo de armazenamento local ativado. Clientes GCS não foram inicializados.
+[Nest] 15152  - 24/08/2025, 15:06:23    WARN [DocumentProcessingService] Modo de armazenamento local ativado. Clientes GCS não foram inicializados.
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] BullModule dependencies initialized +17ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] BullModule dependencies initialized +17ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] EmailModule dependencies initialized +3ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] GeocodingModule dependencies initialized +1ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] GeocodingModule dependencies initialized +0ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] EmailModule dependencies initialized +2ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] SmsModule dependencies initialized +0ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] LocksModule dependencies initialized +1ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] DocumentProcessingModule dependencies initialized +0ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] RedisLockModule dependencies initialized +1ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] JwtModule dependencies initialized +3ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] ThrottlerModule dependencies initialized +0ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] CacheModule dependencies initialized +3ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] CacheModule dependencies initialized +25ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] OffersModule dependencies initialized +2ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] CouponsModule dependencies initialized +6ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] FaqsModule dependencies initialized +1ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] BullModule dependencies initialized +1ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] BullModule dependencies initialized +0ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] NotificationsModule dependencies initialized +1ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] MetricsModule dependencies initialized +7ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] LoyaltyModule dependencies initialized +5ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] GuaranteeModule dependencies initialized +1ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] DisputeModule dependencies initialized +1ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] AvailabilityModule dependencies initialized +1ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] MissionsModule dependencies initialized +10ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] ReferralsModule dependencies initialized +1ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] QueuesModule dependencies initialized +2ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] PricingModule dependencies initialized +1ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] ChatModule dependencies initialized +2ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] SearchModule dependencies initialized +5ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] ServicesModule dependencies initialized +10ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] ProvidersModule dependencies initialized +2ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] RankingModule dependencies initialized +5ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] EarningsModule dependencies initialized +5ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] VerificationModule dependencies initialized +1ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] ReviewsModule dependencies initialized +2ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] SupportModule dependencies initialized +0ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] ProviderServicesModule dependencies initialized +2ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] SafetyModule dependencies initialized +1ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] UsersModule dependencies initialized +1ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] DashboardModule dependencies initialized +1ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] AuthModule dependencies initialized +2ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] ClientsModule dependencies initialized +1ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] PaymentsModule dependencies initialized +5ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] SubscriptionsModule dependencies initialized +2ms
+[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] BookingsModule dependencies initialized +1ms
+NestAppCreation: 8.592s
 [Sentry] Inicializado com sucesso.
 [Firebase Admin] SDK inicializado automaticamente no ambiente Cloud Run ou GCP.
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [WebSocketsController] ChatGateway subscribed to the "sendMessage" message +348ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [WebSocketsController] ChatGateway subscribed to the "joinChat" message +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RoutesResolver] AppController {/}: +4ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/, GET} 
-route +3ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/health, GET} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RoutesResolver] AuthController {/auth}: +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/auth/register/client, POST} route +2ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/auth/register/provider, POST} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/auth/login, POST} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/auth/forgot-password, POST} route +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RoutesResolver] UsersController 
-{/users}: +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/users/me, GET} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/users/me, PATCH} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/users/:id, GET} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/users/:id, DELETE} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/users/data-export, POST} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/users/delete-account, DELETE} route +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RoutesResolver] NotificationsController {/notifications}: +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/notifications, POST} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/notifications/me, GET} route +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/notifications/me/mark-as-read, PATCH} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/notifications/:id/mark-as-read, PATCH} route +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/notifications/:id, DELETE} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/notifications/suggestions, GET} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/notifications/quick-action/:action, POST} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RoutesResolver] ProvidersController {/providers}: +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/providers/recommended, GET} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/providers/nearby, GET} route +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/providers, GET} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/providers/me, GET} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/providers/me, PATCH} route +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/providers/me/avatar, POST} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/providers/:id, GET} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/providers/:id, DELETE} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RoutesResolver] VerificationController {/verification}: +3ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/verification/pending-queue, GET} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/verification/upload-document/:type, POST} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/verification/upload-selfie, POST} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/verification/upload-avatar, POST} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/verification/advance-status, POST} route +2ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/verification/:providerId/status, PATCH} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/verification/reject/:providerId, POST} route +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/verification/status/:providerId, GET} route +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RoutesResolver] SubscriptionsController {/subscriptions}: +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/subscriptions, POST} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/subscriptions/me, GET} route +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/subscriptions/:id, GET} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/subscriptions/:id, PATCH} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RoutesResolver] BookingsController {/bookings}: +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/bookings, POST} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/bookings/schedule-and-pay, POST} route +3ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/bookings/me, GET} route +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/bookings/:id, GET} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/bookings/:id/status, PATCH} route +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/bookings/:id/cancel, PATCH} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/bookings/:id/report-issue, POST} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/bookings/:id/dispute, POST} route +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/bookings/:id/resolve-dispute, PATCH} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RoutesResolver] ClientsController {/clients}: +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/clients/me/dashboard, GET} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/clients/me, PATCH} route +2ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/clients/:id, GET} route +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RoutesResolver] ProviderServicesController {/providers/:providerId/services}: +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/providers/:providerId/services, POST} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/providers/:providerId/services, GET} route +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/providers/:providerId/services/:id, PATCH} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/providers/:providerId/services/:id, DELETE} route +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RoutesResolver] ServicesController {/services}: +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/services, POST} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/services, GET} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/services/:id, GET} route +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/services/:id, PATCH} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/services/:id, DELETE} route +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RoutesResolver] PaymentsController {/payments}: +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/payments/pix-charge, POST} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/payments/withdrawal, POST} route +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/payments/webhook/pix, POST} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/payments/webhook/withdrawal, POST} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RoutesResolver] DisputeController {/disputes}: +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/disputes, POST} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/disputes/:id, GET} route +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/disputes, GET} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/disputes/:id/message, POST} route +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/disputes/:id/status, PATCH} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RoutesResolver] PricingController {/pricing}: +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/pricing/calculate, POST} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/pricing/rules, POST} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/pricing/rules, GET} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/pricing/rules/:id, PATCH} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RoutesResolver] CouponsController {/coupons}: +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/coupons, POST} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/coupons/:code, GET} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/coupons/:id, PATCH} route +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/coupons/apply, POST} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/coupons, GET} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RoutesResolver] LoyaltyController {/loyalty}: +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/loyalty/me, GET} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/loyalty/me/history, GET} route +2ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/loyalty/redeem, POST} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RoutesResolver] MissionsController {/missions}: +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/missions/my, GET} route +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/missions/claim, POST} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RoutesResolver] ReferralsController {/referrals}: +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/referrals, POST} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/referrals/me, GET} route +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/referrals/:id, GET} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RoutesResolver] AvailabilityController {/providers/:providerId/availability}: +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/providers/:providerId/availability, GET} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/providers/:providerId/availability, PATCH} route +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/providers/:providerId/availability, POST} route +2ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/providers/:providerId/availability/:availabilityId, DELETE} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RoutesResolver] ReviewsController {/reviews}: +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/reviews, POST} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/reviews, GET} route +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/reviews/:id, GET} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/reviews/provider/:providerId/breakdown, GET} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/reviews/provider/:providerId/suggestions, GET} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RoutesResolver] ChatController {/chat}: +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/chat/find-or-create/provider/:providerId/client/:clientId, GET} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/chat/:chatId/messages, POST} route +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/chat/:chatId/messages, GET} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/chat/me/conversations, GET} route +2ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RoutesResolver] OffersController {/offers}: +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/offers, POST} route +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/offers, GET} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/offers/:id, GET} route +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/offers/:id, PATCH} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/offers/:id, DELETE} route +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RoutesResolver] SearchController {/search}: +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/search, GET} route +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RoutesResolver] DashboardController {/providers/me/dashboard}: +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/providers/me/dashboard, GET} route +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RoutesResolver] EarningsController {/providers/me/earnings}: +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/providers/me/earnings, GET} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/providers/me/earnings/withdrawal, POST} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RoutesResolver] FaqsController {/faqs}: +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/faqs, POST} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/faqs, GET} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/faqs/:id, GET} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/faqs/:id, PATCH} route +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/faqs/:id, DELETE} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RoutesResolver] SafetyController {/safety}: +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/safety/panic, POST} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/safety/incident, POST} route +2ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/safety/me/incidents, GET} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/safety/incident/:id/status, PATCH} route +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RoutesResolver] GuaranteeController {/guarantee}: +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/guarantee/claims, POST} route +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/guarantee/claims/me, GET} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/guarantee/claims/:id, GET} route +0ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RouterExplorer] Mapped {/guarantee/claims/:id/status, PATCH} route +1ms
-[Nest] 9316  - 23/08/2025, 12:28:20     LOG [RoutesResolver] RankingControlle[12:28:21] File change detected. Starting incremental compilation...
-
-[Nest] 9316  - 23/08/2025, 12:28:21     LOG [NestApplication] Nest application successfully started +493ms
-AppListening: 649.539ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [WebSocketsController] ChatGateway subscribed to the "sendMessage" message +6072ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [WebSocketsController] ChatGateway subscribed to the "joinChat" message +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] AppController {/}: +5ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/, GET} route +6ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/health, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] AuthController {/auth}: +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/auth/register/client, POST} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/auth/register/provider, POST} route +6ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/auth/login, POST} route +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/auth/forgot-password, POST} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] UsersController {/users}: +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/users/me, GET} route +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/users/me, PATCH} route +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/users/:id, GET} route +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/users/:id, DELETE} route +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/users/data-export, POST} route +3ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/users/delete-account, DELETE} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] NotificationsController {/notifications}: +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/notifications, POST} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/notifications/me, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/notifications/me/mark-as-read, PATCH} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/notifications/:id/mark-as-read, PATCH} route +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/notifications/:id, DELETE} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/notifications/suggestions, GET} route +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/notifications/quick-action/:action, POST} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] ProvidersController {/providers}: +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/recommended, GET} route +5ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/nearby, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/me, GET} route +0ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/me, PATCH} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/me/avatar, POST} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/:id, GET} route +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/:id, DELETE} route +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] VerificationController {/verification}: +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/verification/pending-queue, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/verification/upload-document/:type, POST} route +8ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/verification/upload-selfie, POST} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/verification/upload-avatar, POST} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/verification/advance-status, POST} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/verification/:providerId/status, PATCH} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/verification/reject/:providerId, POST} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/verification/status/:providerId, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] SubscriptionsController {/subscriptions}: +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/subscriptions, POST} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/subscriptions/me, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/subscriptions/:id, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/subscriptions/:id, PATCH} route +4ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] BookingsController {/bookings}: +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/bookings, POST} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/bookings/schedule-and-pay, POST} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/bookings/me, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/bookings/:id, GET} route +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/bookings/:id/status, PATCH} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/bookings/:id/cancel, PATCH} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/bookings/:id/report-issue, POST} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/bookings/:id/dispute, POST} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/bookings/:id/resolve-dispute, PATCH} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] ClientsController {/clients}: +4ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/clients/me/dashboard, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/clients/me, PATCH} route +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/clients/:id, GET} route +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] ReferralsController {/referrals}: +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/referrals, POST} route +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/referrals/me, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/referrals/me/code, GET} route +0ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/referrals/:id, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] LoyaltyController {/loyalty}: +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/loyalty/me, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/loyalty/me/history, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/loyalty/redeem, POST} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] CouponsController {/coupons}: +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/coupons/resolve/:code, GET} route +3ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/coupons/me, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] MissionsController {/missions}: +0ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/missions/my, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/missions/claim, POST} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] ProviderServicesController {/providers/:providerId/services}: +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/:providerId/services, POST} route +3ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/:providerId/services, GET} route +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/:providerId/services/:id, PATCH} route +3ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/:providerId/services/:id, DELETE} route +7ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] ServicesController {/services}: +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/services, POST} route +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/services, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/services/:id, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/services/:id, PATCH} route +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/services/:id, DELETE} route +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] PaymentsController {/payments}: +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/payments/pix-charge, POST} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/payments/withdrawal, POST} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/payments/webhook/pix, POST} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/payments/webhook/withdrawal, POST} route +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] DisputeController {/disputes}: +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/disputes, POST} route +0ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/disputes/:id, GET} route +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/disputes, GET} route +0ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/disputes/:id/message, POST} route +4ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/disputes/:id/status, PATCH} route +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] PricingController {/pricing}: +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/pricing/calculate, POST} route +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/pricing/rules, POST} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/pricing/rules, GET} route +0ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/pricing/rules/:id, PATCH} route +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] AvailabilityController {/providers/:providerId/availability}: +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/:providerId/availability, GET} route +5ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/:providerId/availability, PATCH} route +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/:providerId/availability, POST} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/:providerId/availability/:availabilityId, DELETE} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] ReviewsController {/reviews}: +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/reviews, POST} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/reviews, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/reviews/:id, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/reviews/provider/:providerId/breakdown, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/reviews/provider/:providerId/suggestions, GET} route +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] ChatController {/chat}: +0ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/chat/find-or-create/provider/:providerId/client/:clientId, GET} route +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/chat/:chatId/messages, POST} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/chat/:chatId/messages, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/chat/me/conversations, GET} route +3ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] OffersController {/offers}: +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/offers, POST} route +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/offers, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/offers/:id, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/offers/:id, PATCH} route +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/offers/:id, DELETE} route +5ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] SearchController {/search}: +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/search, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] DashboardController {/providers/me/dashboard}: +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/me/dashboard, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] EarningsController {/providers/me/earnings}: +0ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/me/earnings, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/me/earnings/withdrawal, POST} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] FaqsController {/faqs}: +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/faqs, POST} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/faqs, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/faqs/:id, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/faqs/:id, PATCH} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/faqs/:id, DELETE} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] SafetyController {/safety}: +0ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/safety/panic, POST} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/safety/incident, POST} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/safety/me/incidents, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/safety/incident/:id/status, PATCH} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] GuaranteeController {/guarantee}: +0ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/guarantee/claims, POST} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/guarantee/claims/me, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/guarantee/claims/:id, GET} route +0ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/guarantee/claims/:id/status, PATCH} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] RankingController {/ranking}: +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/ranking/providers/local, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/ranking/providers/:providerId/position, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] MetricsController {/v1/metrics}: +0ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/v1/metrics/me/summary, GET} route +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/v1/metrics/me/timeseries, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/v1/metrics/me/funnel, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] SupportController {/v1/support}: +0ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/v1/support/tickets, POST} route +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/v1/support/tickets, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/v1/support/tickets/:id, GET} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/v1/support/tickets/:id/messages, POST} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/v1/support/tickets/:id/status, PATCH} route +2ms
+[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/v1/support/tickets/:id/assign/:agentId, PATCH} route +1ms
+[Nest] 15152  - 24/08/2025, 15:06:33     LOG [NestApplication] Nest application successfully started +3386ms
+AppListening: 4.368s
 Application is running on: http://127.0.0.1:3000
 Swagger documentation available at: http://127.0.0.1:3000/api
-AppStartupTotal: 1.211s
-[12:28:21] Found 0 errors. Watching for file changes.
+AppStartupTotal: 18.515s
 
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [NestFactory] Starting Nest application...
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [I18nService] Traduções carregadas: en-US (C:\Users\Paulo\desktop\relax-app\backend-cleaning\dist\common\i18n\locales\en-US.json)
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [I18nService] Traduções carregadas: pt-BR (C:\Users\Paulo\desktop\relax-app\backend-cleaning\dist\common\i18n\locales\pt-BR.json)
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] SentryModule dependencies initialized +13ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] PrismaModule dependencies initialized +3ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] PassportModule 
-dependencies initialized +0ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] BullModule dependencies initialized +0ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] I18nModule dependencies initialized +1ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] ConfigHostModule dependencies initialized +38ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] HttpModule dependencies initialized +1ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] DiscoveryModule dependencies initialized +2ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] AppModule dependencies initialized +0ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] ConfigModule dependencies initialized +2ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] ConfigModule dependencies initialized +0ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [GeocodingService] Provedor de geocodificação configurado: GOOGLE_MAPS
-[Nest] 10232  - 23/08/2025, 12:28:26    WARN [EmailService] MAILGUN_API_KEY não configurada. O envio de e-mails pode não funcionar.
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [SmsService] [SmsService] Lendo 
-configurações do Twilio:
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [SmsService] [SmsService]   Account SID: Configurado
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [SmsService] [SmsService]   Auth Token: Configurado
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [SmsService] [SmsService]   Verify Service SID: Configurado
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [SmsService] [SmsService] Twilio client inicializado com sucesso.
-[Nest] 10232  - 23/08/2025, 12:28:26    WARN [DocumentProcessingService] Modo de armazenamento local ativado. Clientes GCS não foram inicializados.       
-[Nest] 10232  - 23/08/2025, 12:28:26    WARN [DocumentProcessingService] Modo de armazenamento local ativado. Clientes GCS não foram inicializados.       
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] BullModule dependencies initialized +1ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] BullModule dependencies initialized +3ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] EmailModule dependencies initialized +0ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] GeocodingModule dependencies initialized +0ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] GeocodingModule dependencies initialized +1ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] EmailModule dependencies initialized +0ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] SmsModule dependencies initialized +0ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] LocksModule dependencies initialized +1ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] DocumentProcessingModule dependencies initialized +0ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] JwtModule dependencies initialized +2ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] ThrottlerModule dependencies initialized +0ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] CacheModule dependencies initialized +2ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] CacheModule dependencies initialized +16ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] OffersModule dependencies initialized +1ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] CouponsModule dependencies initialized +1ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] FaqsModule dependencies initialized +1ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] BullModule dependencies initialized +0ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] BullModule dependencies initialized +1ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] NotificationsModule dependencies initialized +1ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] MetricsModule dependencies initialized +2ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] LoyaltyModule dependencies initialized +1ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] GuaranteeModule dependencies initialized +1ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] DisputeModule dependencies initialized +0ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] AvailabilityModule dependencies initialized +4ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] MissionsModule 
-dependencies initialized +2ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] ReferralsModule dependencies initialized +1ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] QueuesModule dependencies initialized +1ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] PricingModule dependencies initialized +1ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] ChatModule dependencies initialized +2ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] SearchModule dependencies initialized +2ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] ServicesModule 
-dependencies initialized +2ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] ProvidersModule dependencies initialized +1ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] RankingModule dependencies initialized +2ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] EarningsModule 
-dependencies initialized +0ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] VerificationModule dependencies initialized +1ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] ReviewsModule dependencies initialized +4ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] SupportModule dependencies initialized +1ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] ProviderServicesModule dependencies initialized +1ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] SafetyModule dependencies initialized +0ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] UsersModule dependencies initialized +1ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] DashboardModule dependencies initialized +1ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] ClientsModule dependencies initialized +1ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] AuthModule dependencies initialized +3ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] PaymentsModule 
-dependencies initialized +0ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] SubscriptionsModule dependencies initialized +1ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [InstanceLoader] BookingsModule 
-dependencies initialized +1ms
-NestAppCreation: 247.062ms
-[Sentry] Inicializado com sucesso.
-[Firebase Admin] SDK inicializado automaticamente no ambiente Cloud Run ou GCP.
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [WebSocketsController] ChatGateway subscribed to the "sendMessage" message +270ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [WebSocketsController] ChatGateway subscribed to the "joinChat" message +0ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [RoutesResolver] AppController {/}: +2ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [RouterExplorer] Mapped {/, GET} route +3ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [RouterExplorer] Mapped {/health, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [RoutesResolver] AuthController 
-{/auth}: +0ms
-[Nest] 10232  - 23/08/2025, 12:28:26     LOG [RouterExplorer] Mapped {/auth/register/client, POST} route +2ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/auth/register/provider, POST} route +2ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/auth/login, POST} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/auth/forgot-password, POST} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RoutesResolver] UsersController {/users}: +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/users/me, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/users/me, PATCH} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/users/:id, GET} route +2ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/users/:id, DELETE} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/users/data-export, POST} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/users/delete-account, DELETE} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RoutesResolver] NotificationsController {/notifications}: +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/notifications, POST} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/notifications/me, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/notifications/me/mark-as-read, PATCH} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/notifications/:id/mark-as-read, PATCH} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/notifications/:id, DELETE} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/notifications/suggestions, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/notifications/quick-action/:action, POST} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RoutesResolver] ProvidersController {/providers}: +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/providers/recommended, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/providers/nearby, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/providers, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/providers/me, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/providers/me, PATCH} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/providers/me/avatar, POST} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/providers/:id, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/providers/:id, DELETE} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RoutesResolver] VerificationController {/verification}: +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/verification/pending-queue, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/verification/upload-document/:type, POST} route +5ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/verification/upload-selfie, POST} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/verification/upload-avatar, POST} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/verification/advance-status, POST} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/verification/:providerId/status, PATCH} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/verification/reject/:providerId, POST} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/verification/status/:providerId, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RoutesResolver] SubscriptionsController {/subscriptions}: +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/subscriptions, POST} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/subscriptions/me, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/subscriptions/:id, GET} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/subscriptions/:id, PATCH} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RoutesResolver] BookingsController {/bookings}: +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/bookings, POST} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/bookings/schedule-and-pay, POST} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/bookings/me, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/bookings/:id, GET} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/bookings/:id/status, PATCH} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/bookings/:id/cancel, PATCH} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/bookings/:id/report-issue, POST} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/bookings/:id/dispute, POST} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/bookings/:id/resolve-dispute, PATCH} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RoutesResolver] ClientsController {/clients}: +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/clients/me/dashboard, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/clients/me, PATCH} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/clients/:id, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RoutesResolver] ProviderServicesController {/providers/:providerId/services}: +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/providers/:providerId/services, POST} route +2ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/providers/:providerId/services, GET} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/providers/:providerId/services/:id, PATCH} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/providers/:providerId/services/:id, DELETE} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RoutesResolver] ServicesController {/services}: +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/services, POST} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/services, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/services/:id, GET} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/services/:id, PATCH} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/services/:id, DELETE} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RoutesResolver] PaymentsController {/payments}: +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/payments/pix-charge, POST} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/payments/withdrawal, POST} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/payments/webhook/pix, POST} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/payments/webhook/withdrawal, POST} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RoutesResolver] DisputeController {/disputes}: +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/disputes, POST} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/disputes/:id, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/disputes, GET} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/disputes/:id/message, POST} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/disputes/:id/status, PATCH} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RoutesResolver] PricingController {/pricing}: +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/pricing/calculate, POST} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/pricing/rules, POST} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/pricing/rules, GET} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/pricing/rules/:id, PATCH} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RoutesResolver] CouponsController {/coupons}: +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/coupons, POST} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/coupons/:code, GET} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/coupons/:id, PATCH} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/coupons/apply, POST} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/coupons, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RoutesResolver] LoyaltyController {/loyalty}: +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/loyalty/me, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/loyalty/me/history, GET} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/loyalty/redeem, POST} route +2ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RoutesResolver] MissionsController {/missions}: +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/missions/my, GET} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/missions/claim, POST} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RoutesResolver] ReferralsController {/referrals}: +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/referrals, POST} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/referrals/me, GET} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/referrals/:id, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RoutesResolver] AvailabilityController {/providers/:providerId/availability}: +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/providers/:providerId/availability, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/providers/:providerId/availability, PATCH} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/providers/:providerId/availability, POST} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/providers/:providerId/availability/:availabilityId, DELETE} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RoutesResolver] ReviewsController {/reviews}: +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/reviews, POST} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/reviews, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/reviews/:id, GET} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/reviews/provider/:providerId/breakdown, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/reviews/provider/:providerId/suggestions, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RoutesResolver] ChatController 
-{/chat}: +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/chat/find-or-create/provider/:providerId/client/:clientId, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/chat/:chatId/messages, POST} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/chat/:chatId/messages, GET} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/chat/me/conversations, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RoutesResolver] OffersController {/offers}: +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/offers, POST} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/offers, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/offers/:id, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/offers/:id, PATCH} route +4ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/offers/:id, DELETE} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RoutesResolver] SearchController {/search}: +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/search, GET} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RoutesResolver] DashboardController {/providers/me/dashboard}: +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/providers/me/dashboard, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RoutesResolver] EarningsController {/providers/me/earnings}: +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/providers/me/earnings, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/providers/me/earnings/withdrawal, POST} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RoutesResolver] FaqsController 
-{/faqs}: +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/faqs, 
-POST} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/faqs, 
-GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/faqs/:id, GET} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/faqs/:id, PATCH} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/faqs/:id, DELETE} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RoutesResolver] SafetyController {/safety}: +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/safety/panic, POST} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/safety/incident, POST} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/safety/me/incidents, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/safety/incident/:id/status, PATCH} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RoutesResolver] GuaranteeController {/guarantee}: +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/guarantee/claims, POST} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/guarantee/claims/me, GET} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/guarantee/claims/:id, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/guarantee/claims/:id/status, PATCH} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RoutesResolver] RankingController {/ranking}: +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/ranking/providers/local, GET} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/ranking/providers/:providerId/position, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RoutesResolver] MetricsController {/v1/metrics}: +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/v1/metrics/me/summary, GET} route +2ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/v1/metrics/me/timeseries, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/v1/metrics/me/funnel, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RoutesResolver] SupportController {/v1/support}: +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/v1/support/tickets, POST} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/v1/support/tickets, GET} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/v1/support/tickets/:id, GET} route +0ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/v1/support/tickets/:id/messages, POST} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/v1/support/tickets/:id/status, PATCH} route +1ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [RouterExplorer] Mapped {/v1/support/tickets/:id/assign/:agentId, PATCH} route +4ms
-[Nest] 10232  - 23/08/2025, 12:28:27     LOG [NestApplication] Nest application successfully started +323ms
-AppListening: 470.765ms
-Application is running on: http://127.0.0.1:3000
-Swagger documentation available at: http://127.0.0.1:3000/api
-AppStartupTotal: 965.431ms
+
+// schema.prisma
+// Este arquivo é o ponto de partida para o seu banco de dados.
+// Ele define os modelos de dados e como eles se relacionam.
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+  // ADICIONADO: Configuração para binaryTargets para resolver o problema de libssl no Docker
+  binaryTargets   = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider   = "postgresql" // Ou "mysql", "sqlite", etc., dependendo do seu DB
+  url        = env("DATABASE_URL")
+  // ADICIONADO: Habilitar extensão PostGIS para funcionalidades geoespaciais
+  extensions = [postgis]
+}
+
+// ---------------------------------
+// Enums
+// ---------------------------------
+// Enum para os diferentes papéis de usuário
+enum UserRole {
+  CLIENT
+  PROVIDER
+  ADMIN
+  SYSTEM        // ADICIONADO: Papel para operações internas do sistema (ex: webhooks)
+  SUPPORT_AGENT // NOVO: Papel para agentes de suporte
+}
+
+// NOVO: Enum para o status de verificação do provedor
+enum VerificationStatus {
+  PENDING_INITIAL_REVIEW
+  PENDING_DOCUMENTS_UPLOAD
+  PENDING_BACKGROUND_CHECK
+  PENDING_MANUAL_REVIEW
+  APPROVED
+  REJECTED
+  BLOCKED
+}
+
+// NOVO: Enum para o tipo de precificação do serviço
+enum PricingType {
+  FIXED_PRICE
+  HOURLY
+  BY_SIZE
+  CUSTOM_QUOTE // Para orçamentos mais complexos (futuro)
+}
+
+// Enum para o status do agendamento
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELED
+  PENDING_DISPUTE
+  RESCHEDULED
+  IN_PROGRESS
+  PENDING_PROVIDER_CONFIRMATION
+  REJECTED
+  NO_SHOW
+}
+
+// Enum para o tipo de transação financeira
+enum TransactionType {
+  PAYMENT
+  WITHDRAWAL
+  COMMISSION
+  REFUND
+}
+
+// NOVO: Enum para o status de um Payment Intent (cobrança)
+enum PaymentIntentStatus {
+  PENDING    // Cobrança criada, aguardando pagamento
+  PAID       // Pagamento recebido com sucesso
+  EXPIRED    // Cobrança expirada (e.g., QR Code PIX expirou)
+  REFUNDED   // Pagamento estornado
+  CHARGEBACK // Pagamento contestado
+}
+
+// NOVO: Enum para os tipos de chave PIX
+enum PixKeyType {
+  CPF
+  CNPJ
+  EMAIL
+  PHONE
+  RANDOM
+}
+
+// NOVO: Enum para o motivo da disputa
+enum DisputeReason {
+  SERVICE_NOT_PERFORMED
+  SERVICE_INCOMPLETE
+  QUALITY_ISSUES
+  PROVIDER_DID_NOT_SHOW
+  CLIENT_DID_NOT_SHOW
+  OTHER
+}
+
+// NOVO: Enum para o status da disputa
+enum DisputeStatus {
+  PENDING
+  IN_REVIEW
+  RESOLVED
+  REJECTED
+}
+
+// NOVO: Enums para o módulo de suporte
+enum SupportTicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_USER
+  RESOLVED
+  CLOSED
+  ESCALATED // Opcional, se você for usar este status
+}
+
+enum SupportTicketCategory {
+  PAYMENT
+  QUALITY
+  APP
+  OTHER
+}
+
+// ABS: NOVOS ENUMS PARA MÓDULOS AVANÇADOS
+enum SubscriptionStatus {
+  ACTIVE
+  PAUSED
+  CANCELED
+  COMPLETED
+}
+
+enum SubscriptionFrequency {
+  WEEKLY
+  BI_WEEKLY
+  MONTHLY
+}
+
+enum IncidentType {
+  DAMAGE
+  MISCONDUCT
+  THEFT
+  NO_SHOW
+  OTHER
+}
+
+enum IncidentStatus {
+  PENDING_REVIEW
+  INVESTIGATING
+  RESOLVED
+  REJECTED
+}
+
+// ATUALIZADO: Enum para o tipo de cupom
+enum CouponType {
+  PERCENT // RENOMEADO de PERCENTAGE
+  FIXED   // RENOMEADO de FIXED_AMOUNT
+}
+
+// ATUALIZADO: Enum para o alvo do cupom
+enum CouponTarget {
+  GENERAL           // <<-- FIXED: Renamed from ALL
+  NEW_CLIENTS
+  SPECIFIC_SERVICE
+  SPECIFIC_PROVIDER
+  NEW_CUSTOMER      // ADICIONADO
+  REFERRAL_REFERRED // ADICIONADO
+  REFERRAL_REFERRER // ADICIONADO
+  MISSION_REWARD    // ADICIONADO
+  REPEAT_CUSTOMER   // ADICIONADO
+}
+
+// NOVO: ENUM CouponStatus
+enum CouponStatus {
+  ACTIVE
+  INACTIVE
+  EXPIRED
+  USED_UP
+}
+
+enum ClaimStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  SETTLED
+}
+
+// NOVO: Enum para o tipo de transação de fidelidade (Loyalty)
+enum LoyaltyTransactionType {
+  SERVICE_COMPLETED
+  REVIEW_SUBMITTED
+  FIRST_REVIEW
+  REFERRAL
+  REDEEM
+  MISSION_COMPLETED
+  ADMIN_ADJUSTMENT
+  REFERRAL_CONVERSION // ADICIONADO
+  PROFILE_COMPLETION  // ADICIONADO
+}
+
+// ====== MISSIONS: NOVOS ENUMS (cada valor em uma linha) ======
+enum MissionAudience {
+  CLIENT
+  PROVIDER
+  GENERAL // ADICIONADO
+}
+
+enum MissionKind {
+  COUNT_EVENT
+  STREAK_DAYS
+  WITHIN_WINDOW
+}
+
+enum RewardType {
+  COUPON
+  POINTS
+}
+
+enum MissionStatus {
+  ACTIVE
+  COMPLETED
+  CLAIMED
+}
+// ====== FIM MISSIONS ENUMS ======
+
+// NOVOS ENUMS PARA OFERTAS
+enum OfferTarget {
+  GENERAL
+  SPECIFIC_SERVICE
+  SPECIFIC_PROVIDER
+  NEW_CLIENTS
+}
+
+enum OfferStatus {
+  ACTIVE
+  INACTIVE
+  EXPIRED
+}
+
+// ---------------------------------
+// Models
+// ---------------------------------
+// Modelo de Usuário (base para Cliente e Provedor)
+model User {
+  id                    String             @id @default(uuid())
+  email                 String             @unique
+  phone                 String?            @unique
+  passwordHash          String?
+  role                  UserRole           @default(CLIENT)
+  avatarUrl             String?
+  firebaseUid           String?            @unique
+  fullName              String             @default("Nome Padrão")
+  fcmToken              String?            @unique
+  isPhoneVerified       Boolean            @default(false)
+  isVerified            Boolean            @default(false)
+  deletionScheduledAt   DateTime?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  preferredLanguage     String?            // NOVO: Para internacionalização (i18n) - idioma preferencial do usuário
+  myReferralCode        String?            @unique // ADICIONADO: Código de indicação próprio do usuário
+
+  client                Client?
+  provider              Provider?
+  messagesSent          Message[]          @relation("SentMessages")
+  messagesReceived      Message[]          @relation("ReceivedMessages")
+  notifications         Notification[]
+  chatsAsParticipant1   Chat[]             @relation("ChatParticipant1")
+  chatsAsParticipant2   Chat[]             @relation("ChatParticipant2")
+  referredBy            Referral[]         @relation("ReferredByUser")
+  referralsMade         Referral[]         @relation("ReferrerOfUser")
+  disputesReported      Dispute[]          @relation("DisputeReporter")
+  reportedIncidents     Incident[]         @relation("ReportedIncidents")
+  panicAlerts           PanicAlert[]       @relation("PanicAlerts")
+  userConsents          UserConsent[]
+  disputeMessagesSent   DisputeMessage[]   @relation("DisputeSender")
+  loyalty               Loyalty?
+  loyaltyTransactions   LoyaltyTransaction[]
+  couponUsages          CouponUsage[]
+  issuedCoupons         Coupon[]           @relation("IssuedCoupons") // ADICIONADO
+
+  // ====== MISSIONS: relações de conveniência ======
+  missionProgress       MissionProgress[]
+  missionEvents         MissionEvent[]
+  // ====== FIM MISSIONS ======
+
+  // NOVO: Relações para o módulo de suporte
+  supportTickets        SupportTicket[]    // Tickets abertos pelo usuário
+  supportMessages       SupportMessage[]   // Mensagens enviadas pelo usuário
+  assignedTickets       SupportTicket[]    @relation("AssignedTickets") // Tickets atribuídos a este usuário (se for agente/admin)
+}
+
+// Modelo para Cliente
+model Client {
+  id                      String           @id @default(uuid())
+  userId                  String           @unique
+  user                    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName                String
+  completedBookingsCount  Int              @default(0)
+  phone                   String?
+  cpf                     String?          @unique
+  dateOfBirth             DateTime?
+  address                 Address?         @relation("ClientAddress")
+  bookings                Booking[]
+  reviewsMade             Review[]         @relation("ClientReviews")
+  noShowCount             Int              @default(0)
+  cancellationCount       Int              @default(0)
+  subscriptions           Subscription[]
+  guaranteeClaims         GuaranteeClaim[]
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
+}
+
+// Modelo para Provedor
+model Provider {
+  id                         String             @id @default(uuid())
+  userId                     String             @unique
+  user                       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName                   String
+  cpf                        String?            @unique
+  dateOfBirth                DateTime
+  phone                      String?
+  address                    Address?           @relation("ProviderAddress")
+  yearsOfExperience          Int?
+  avatarUrl                  String?
+  bio                        String?
+  providerServices           ProviderService[]
+  fiveStarReviewCount        Int                @default(0)
+  monthlyBookingsCount       Int                @default(0)
+  availability               Availability[]
+  bookings                   Booking[]
+  reviewsReceived            Review[]           @relation("ProviderReviews")
+  earnings                   Transaction[]
+  verificationStatus         VerificationStatus @default(PENDING_INITIAL_REVIEW)
+  documentPhotoFrontUrl      String?
+  documentPhotoBackUrl       String?
+  selfieWithDocumentUrl      String?
+  backgroundCheckResult      Json?
+  ocrResult                  Json?
+  livenessResult             Json?
+  rejectionReason            String?
+  pixKey                     String?            // Mantido, embora o PIX de saque seja na transação, pode ser um PIX padrão do provedor
+  badges                     String[]           @default([])
+  subscriptions              Subscription[]
+  guaranteeClaims            GuaranteeClaim[]
+  createdAt                  DateTime           @default(now())
+  updatedAt                  DateTime           @updatedAt
+  // NOVOS CAMPOS ADICIONADOS PARA MÉTRICAS DE PERFORMANCE
+  acceptanceRate             Float              @default(0)
+  averageResponseTime        Int                @default(0) // Em minutos
+}
+
+// Modelo de Endereço
+model Address {
+  id         String    @id @default(uuid())
+  cep        String
+  street     String
+  number     String
+  complement String?
+  neighborhood String
+  city       String
+  state      String
+  clientId   String?   @unique
+  providerId String?   @unique
+  client     Client?   @relation("ClientAddress", fields: [clientId], references: [id])
+  provider   Provider? @relation("ProviderAddress", fields: [providerId], references: [id])
+  booking    Booking?  @relation("BookingAddress")
+  // --- ADIÇÃO PARA GEOESPACIAL (AGORA INTEGRADO) ---
+  location   Unsupported("geometry(Point, 4326)")?
+  latitude   Decimal?  @db.Decimal(10, 8)
+  longitude  Decimal?  @db.Decimal(11, 8)
+  // FIM ABS
+}
+
+// Modelo para Tipos de Serviço
+model Service {
+  id                  String            @id @default(uuid())
+  name                String            @unique
+  description         String?
+  price               Decimal           @db.Decimal(10, 2)
+  defaultPricingType  PricingType?
+  icon                String?
+  providerServices    ProviderService[]
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+}
+
+// Modelo para Serviços Oferecidos por um Provedor Específico
+model ProviderService {
+  id                    String         @id @default(uuid())
+  providerId            String
+  serviceId             String
+  price                 Decimal        @db.Decimal(10, 2)
+  durationMinutes       Int?
+  description           String?
+  provider              Provider       @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  pricingType           PricingType    @default(FIXED_PRICE)
+  pricePerSquareMeter   Decimal?       @db.Decimal(10, 2)
+  pricePerRoom          Decimal?       @db.Decimal(10, 2)
+  service               Service        @relation(fields: [serviceId], references: [id])
+  bookings              Booking[]
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  subscriptions         Subscription[] @relation("ProviderServiceSubscriptions")
+
+  @@unique([providerId, serviceId])
+}
+
+// Modelo de Agendamento
+model Booking {
+  id                        String        @id @default(uuid())
+  clientId                  String
+  providerId                String
+  providerServiceId         String
+  client                    Client        @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  provider                  Provider      @relation(fields: [providerId], references: [id], onDelete: Restrict)
+  providerService           ProviderService @relation(fields: [providerServiceId], references: [id])
+  scheduledDate             DateTime
+  scheduledTime             String
+  status                    BookingStatus @default(PENDING)
+  totalPrice                Decimal       @db.Decimal(10, 2)
+  notes                     String?
+  createdAt                 DateTime      @default(now())
+  updatedAt                 DateTime      @updatedAt
+  review                    Review?
+  transactions              Transaction[]
+  addressId                 String?       @unique
+  address                   Address?      @relation("BookingAddress", fields: [addressId], references: [id])
+  dispute                   Dispute?
+  subscriptionId            String?
+  subscription              Subscription? @relation("SubscriptionBookings", fields: [subscriptionId], references: [id])
+  incidents                 Incident[]
+  guaranteeClaims           GuaranteeClaim[]
+  couponId                  String?
+  coupon                    Coupon?       @relation(fields: [couponId], references: [id])
+  couponUsage               CouponUsage?  @relation("BookingCouponUsage")
+  discountAmount            Decimal?      @db.Decimal(10, 2) // ADICIONADO
+  // NOVO: Relação para o módulo de suporte
+  supportTickets            SupportTicket[]
+  // REMOVIDO: paymentIntentId String? @unique // Esta chave estrangeira foi movida para PaymentIntent
+  paymentIntent             PaymentIntent? // NOVO: Agora é a back-relation. Prisma infere o nome se não for ambíguo.
+}
+
+// Modelo de Chat
+model Chat {
+  id                String    @id @default(uuid())
+  participant1Id    String
+  participant1      User      @relation("ChatParticipant1", fields: [participant1Id], references: [id])
+  participant2Id    String
+  participant2      User      @relation("ChatParticipant2", fields: [participant2Id], references: [id])
+  messages          Message[]
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([participant1Id, participant2Id])
+}
+
+// Modelo de Mensagem de Chat
+model Message {
+  id         String   @id @default(uuid())
+  chatId     String
+  chat       Chat     @relation(fields: [chatId], references: [id])
+  senderId   String
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiverId String
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  content    String
+  timestamp  DateTime @default(now())
+  isRead     Boolean  @default(false)
+  targetUrl  String?
+  createdAt  DateTime @default(now())
+}
+
+// Modelo de Notificação
+model Notification {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  type         String
+  message      String
+  isRead       Boolean  @default(false)
+  targetUrl    String?
+  createdAt    DateTime @default(now())
+  imageUrl     String?
+  actionButtons Json?
+  title        String? // NEW: Added title to Notification model
+}
+
+// Modelo de Avaliação
+model Review {
+  id         String   @id @default(uuid())
+  booking    Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId  String   @unique
+  clientId   String
+  providerId String
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  client     Client   @relation("ClientReviews", fields: [clientId], references: [id])
+  provider   Provider @relation("ProviderReviews", fields: [providerId], references: [id])
+
+  @@unique([bookingId, clientId, providerId])
+}
+
+// Modelo de Oferta/Promoção
+model Offer {
+  id                 String       @id @default(uuid())
+  title              String
+  description        String?
+  discountPercentage Float?
+  fixedDiscountAmount Float?
+  validUntil         DateTime
+  imageUrl           String?
+  target             OfferTarget  // ADICIONADO
+  targetId           String?      // ADICIONADO
+  status             OfferStatus  // ADICIONADO
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+}
+
+// Modelo de Transação Financeira (geral, pode ser o registro de um pagamento ou saque)
+model Transaction {
+  id                   String      @id @default(uuid())
+  providerId           String
+  provider             Provider    @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  amount               Decimal     @db.Decimal(10, 2)
+  type                 TransactionType
+  status               String
+  description          String?
+  createdAt            DateTime    @default(now())
+  bookingId            String?
+  booking              Booking?    @relation(fields: [bookingId], references: [id])
+  gatewayTransactionId String?     @unique
+  qrCodeUrl            String?
+  transactionRef       String?
+  couponId             String?
+  coupon               Coupon?     @relation(fields: [couponId], references: [id])
+  // NOVOS CAMPOS PARA SAQUE VIA PIX
+  pixKeyType           PixKeyType? // Tipo da chave PIX (CPF, CNPJ, EMAIL, PHONE, RANDOM)
+  pixKey               String?     // A chave PIX em si
+}
+
+// NOVO: Modelo para Payment Intent (representa uma intenção de pagamento/cobrança)
+model PaymentIntent {
+  id                 String              @id @default(uuid())
+  bookingId          String              @unique // Esta é a chave estrangeira
+  booking            Booking             @relation(fields: [bookingId], references: [id]) // Este lado define a relação
+  amountCents        Int                 // Valor em centavos para evitar problemas de ponto flutuante
+  status             PaymentIntentStatus @default(PENDING)
+  gateway            String              // Ex: "PAGSEGURO", "STRIPE", "MERCADOPAGO"
+  externalRef        String?             // ID da transação no gateway de pagamento
+  idempotencyKey     String?             @unique // Chave para garantir idempotência de requisições
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  expiresAt          DateTime?           // Data de expiração da cobrança (e.g., QR Code PIX)
+  qrCodeUrl          String?             // URL do QR Code PIX
+  qrCodeText         String?             // Conteúdo do QR Code PIX (copia e cola)
+  // Relação com eventos de pagamento (para rastrear webhooks, etc.)
+  paymentEvents      PaymentEvent[]
+}
+
+// NOVO: Modelo para eventos de pagamento (webhooks, notificações)
+model PaymentEvent {
+  id              String        @id @default(uuid())
+  paymentIntentId String
+  paymentIntent   PaymentIntent @relation(fields: [paymentIntentId], references: [id])
+  type            String        // Ex: "WEBHOOK_PAID", "WEBHOOK_EXPIRED", "MANUAL_CONFIRMATION"
+  payload         Json?         // Conteúdo original do webhook/evento
+  createdAt       DateTime      @default(now())
+}
+
+// Modelo de Disponibilidade do Provedor
+model Availability {
+  id          String   @id @default(uuid())
+  providerId  String
+  provider    Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  dayOfWeek   Int
+  startTime   String
+  endTime     String
+  isAvailable Boolean  @default(true)
+}
+
+// NOVO: Modelo para Perguntas Frequentes (FAQs)
+model FAQItem {
+  id        String   @id @default(uuid())
+  question  String   @unique
+  answer    String
+  category  String?
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// NOVO: Modelo para Indicação (Referral)
+model Referral {
+  id             String   @id @default(uuid())
+  referredUserId String   @unique
+  referredUser   User     @relation("ReferredByUser", fields: [referredUserId], references: [id])
+  referrerUserId String
+  referrerUser   User     @relation("ReferrerOfUser", fields: [referrerUserId], references: [id])
+  referralCode   String?  // Este é o código que foi usado para a indicação
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([referredUserId, referrerUserId])
+}
+
+// NOVO: Modelo para Disputa de Agendamento
+model Dispute {
+  id                 String         @id @default(uuid())
+  bookingId          String         @unique
+  booking            Booking        @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  reporterUserId     String
+  reporterUser       User           @relation("DisputeReporter", fields: [reporterUserId], references: [id])
+  reason             DisputeReason
+  description        String
+  refundAmountProposed Decimal?       @db.Decimal(10, 2)
+  attachments        String[]
+  status             DisputeStatus  @default(PENDING)
+  resolutionNotes    String?
+  resolvedByUserId   String?
+  resolvedAt         DateTime?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  messages           DisputeMessage[] @relation("DisputeMessages") // Adicione o nome da relação
+}
+
+// NOVO: Modelo para Mensagens de Disputa
+model DisputeMessage {
+  id           String        @id @default(uuid())
+  ticketId     String
+  ticket       SupportTicket @relation("DisputeMessageTicket", fields: [ticketId], references: [id], onDelete: Cascade) // CORRIGIDO: Adicionado nome da relação
+  senderUserId String
+  sender       User          @relation("DisputeSender", fields: [senderUserId], references: [id])
+  content      String
+  createdAt    DateTime      @default(now())
+  disputeId    String        // Adicionado para a relação com Dispute
+  dispute      Dispute       @relation("DisputeMessages", fields: [disputeId], references: [id]) // Relação com Dispute
+}
+
+// NOVO: Modelo para Consentimento do Usuário (LGPD)
+model UserConsent {
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documentType String
+  version    String
+  consentedAt DateTime @default(now())
+
+  @@id([userId, documentType])
+}
+
+// ABS: NOVOS MODELOS PARA MÓDULOS AVANÇADOS
+
+// ABS: Modelo para Assinaturas/Agendamentos Recorrentes
+model Subscription {
+  id                   String               @id @default(uuid())
+  clientId             String
+  client               Client               @relation(fields: [clientId], references: [id])
+  providerId           String
+  provider             Provider             @relation(fields: [providerId], references: [id])
+  providerServiceId    String
+  providerService      ProviderService      @relation("ProviderServiceSubscriptions", fields: [providerServiceId], references: [id])
+  frequency            SubscriptionFrequency
+  startDate            DateTime
+  endDate              DateTime?
+  status               SubscriptionStatus   @default(ACTIVE)
+  totalPrice           Decimal              @db.Decimal(10, 2)
+  nextGenerationDate   DateTime
+  generatedBookings    Booking[]            @relation("SubscriptionBookings")
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+}
+
+// ABS: Modelo para Relatório de Incidentes
+model Incident {
+  id          String         @id @default(uuid())
+  reporterId  String
+  reporter    User           @relation("ReportedIncidents", fields: [reporterId], references: [id])
+  bookingId   String?
+  booking     Booking?       @relation(fields: [bookingId], references: [id])
+  type        IncidentType
+  description String
+  attachments String[]
+  status      IncidentStatus @default(PENDING_REVIEW)
+  resolution  String?
+  resolvedBy  String?
+  resolvedAt  DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+// ABS: Modelo para Alertas de Pânico
+model PanicAlert {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation("PanicAlerts", fields: [userId], references: [id])
+  latitude  Decimal  @db.Decimal(10, 8)
+  longitude Decimal  @db.Decimal(11, 8)
+  message   String?
+  status    String   @default("ACTIVE")
+  createdAt DateTime @default(now())
+}
+
+// ABS: Modelo para Cupons de Desconto (Atualizado)
+model Coupon {
+  id             String         @id @default(uuid())
+  code           String         @unique
+  description    String?
+  value          Decimal        @db.Decimal(10, 2)
+  valueType      CouponType     // ATUALIZADO: Usando enum CouponType
+  target         CouponTarget   // ATUALIZADO: Usando enum CouponTarget
+  targetId       String?
+  maxUses        Int?
+  usesCount      Int            @default(0)
+  validFrom      DateTime
+  validUntil     DateTime
+  status         CouponStatus   @default(ACTIVE)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  usages         CouponUsage[]
+  bookings       Booking[]
+  transactions   Transaction[]
+  maxDiscount    Decimal?       @db.Decimal(10, 2) // ADICIONADO
+  firstBookingOnly Boolean      @default(false) // ADICIONADO
+  issuedToUserId String?        // ADICIONADO: ID do usuário para quem o cupom foi emitido
+  issuedToUser   User?          @relation("IssuedCoupons", fields: [issuedToUserId], references: [id]) // ADICIONADO: Relação com o usuário que recebeu o cupom
+  issuedBy       String?        // <<-- FIXED: Added issuedBy field
+}
+
+// ABS: Modelo para rastrear o uso de cupons (Novo) - ATUALIZADO COM appliedValue
+model CouponUsage {
+  id          String    @id @default(uuid())
+  couponId    String
+  coupon      Coupon    @relation(fields: [couponId], references: [id])
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  bookingId   String    @unique
+  booking     Booking   @relation("BookingCouponUsage", fields: [bookingId], references: [id])
+  appliedValue Decimal  @db.Decimal(10, 2)
+  createdAt   DateTime  @default(now())
+}
+
+// ABS: Modelo para Solicitações de Garantia de Serviço
+model GuaranteeClaim {
+  id             String      @id @default(uuid())
+  bookingId      String
+  booking        Booking     @relation(fields: [bookingId], references: [id])
+  clientId       String
+  client         Client      @relation(fields: [clientId], references: [id])
+  providerId     String
+  provider       Provider    @relation(fields: [providerId], references: [id])
+  description    String
+  attachments    String[]
+  estimatedValue Decimal?    @db.Decimal(10, 2)
+  resolvedValue  Decimal?    @db.Decimal(10, 2)
+  status         ClaimStatus @default(PENDING)
+  resolutionNotes String?
+  resolvedAt     DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+}
+
+// ABS: Modelo para Regras de Precificação Dinâmica
+model PricingRule {
+  id             String   @id @default(uuid())
+  zoneId         String?
+  dayOfWeek      Int?
+  startTime      String?
+  endTime        String?
+  demandThreshold Int?
+  surgeFactor    Decimal  @db.Decimal(3, 2)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// NOVO: Modelo para o saldo de pontos de fidelidade do usuário
+model Loyalty {
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  currentPoints Int     @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user         User     @relation(fields: [userId], references: [id])
+}
+
+// NOVO: Modelo para o histórico de transações de pontos de fidelidade
+model LoyaltyTransaction {
+  id          String             @id @default(uuid())
+  userId      String
+  user        User               @relation(fields: [userId], references: [id])
+  points      Int
+  type        LoyaltyTransactionType // ATUALIZADO: Usando enum LoyaltyTransactionType
+  referenceId String?
+  createdAt   DateTime           @default(now())
+}
+
+// NOVO: Modelo para as recompensas que podem ser resgatadas com pontos de fidelidade
+model Reward {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  costPoints  Int
+  value       Decimal  @db.Decimal(10, 2)
+  type        String   // Pode ser 'COUPON', 'CASHBACK', etc.
+  couponCode  String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ====== MISSIONS: NOVOS MODELOS ======
+model Mission {
+  id              String         @id @default(uuid())
+  code            String         @unique // ex: FIRST_SERVICE, THREE_BOOKINGS_MONTH
+  title           String
+  description     String
+  audience        MissionAudience @default(CLIENT) // CLIENT, PROVIDER, GENERAL
+  kind            MissionKind    // COUNT_EVENT, STREAK_DAYS, WITHIN_WINDOW
+  eventName       String         // booking.completed, review.created, referral.converted, etc.
+  targetValue     Int            // ex: 1 (primeiro), 3, 10
+  timeWindowDays  Int?           // ex: 30 para "3 no mês" (opcional)
+  rewardType      RewardType     // COUPON, POINTS
+  rewardValue     Int            // ex: 20 (%), 100 (points)
+  couponTemplateId String?       // opcional: template no módulo de coupons
+  isActive        Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  progress        MissionProgress[]
+}
+
+model MissionProgress {
+  id           String        @id @default(uuid())
+  userId       String
+  missionId    String
+  currentValue Int           @default(0)
+  status       MissionStatus @default(ACTIVE) // ACTIVE, COMPLETED, CLAIMED
+  lastEventAt  DateTime?
+  completedAt  DateTime?
+  claimedAt    DateTime?
+
+  mission      Mission       @relation(fields: [missionId], references: [id])
+  user         User          @relation(fields: [userId], references: [id]) // cliente
+
+  @@unique([userId, missionId])
+}
+
+model MissionEvent {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  name      String   // booking.completed, review.created, referral.converted
+  meta      Json?
+  createdAt DateTime @default(now())
+}
+// ====== FIM MISSIONS ENUMS ======
+
+// NOVO: Modelos para o módulo de suporte
+model SupportTicket {
+  id             String              @id @default(uuid())
+  userId         String
+  user           User                @relation(fields: [userId], references: [id])
+  role           UserRole            // Role do usuário que abriu o ticket
+  subject        String
+  category       SupportTicketCategory
+  description    String
+  bookingId      String?
+  booking        Booking?            @relation(fields: [bookingId], references: [id])
+  status         SupportTicketStatus @default(OPEN)
+  assignedToId   String?
+  assignedTo     User?               @relation("AssignedTickets", fields: [assignedToId], references: [id])
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  closedAt       DateTime?
+
+  messages       SupportMessage[]
+  slaLogs        SupportSlaLog[]
+
+  // Adicione a relação oposta para DisputeMessage
+  disputeMessages DisputeMessage[] @relation("DisputeMessageTicket") // Nome da relação
+}
+
+model SupportMessage {
+  id        String   @id @default(uuid())
+  ticketId  String
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  role      UserRole // Role do usuário que enviou a mensagem (para auditoria)
+  body      String
+  attachments String[] // URLs para arquivos no GCS
+  createdAt DateTime @default(now())
+}
+
+model SupportSlaLog {
+  id         String              @id @default(uuid())
+  ticketId   String
+  ticket     SupportTicket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  fromStatus SupportTicketStatus
+  toStatus   SupportTicketStatus
+  createdAt  DateTime            @default(now())
+}

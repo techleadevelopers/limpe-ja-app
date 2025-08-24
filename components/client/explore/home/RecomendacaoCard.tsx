@@ -73,7 +73,6 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
         ? { uri: item.avatarUrl }
         : require('../../../../assets/images/default-avatar.png');
 
-    // --- INÍCIO DA ALTERAÇÃO: Cálculo do menor preço ---
     const minPrice = item.providerServices && item.providerServices.length > 0
         ? item.providerServices.reduce((min, service) => {
             let currentServicePrice = 0;
@@ -96,18 +95,15 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
             } else if (typeof service.pricePerSquareMeter === 'number') {
                 pricePerSquareMeterValue = service.pricePerSquareMeter;
             }
-            
-            // Prioriza o 'price', depois 'pricePerRoom', depois 'pricePerSquareMeter'
+
             const effectivePrice = currentServicePrice > 0 ? currentServicePrice :
                                    pricePerRoomValue > 0 ? pricePerRoomValue :
                                    pricePerSquareMeterValue > 0 ? pricePerSquareMeterValue : 0;
 
-            // Retorna o menor preço encontrado até agora, considerando apenas preços válidos (> 0)
             return (effectivePrice > 0 && effectivePrice < min) ? effectivePrice : min;
-        }, Infinity) // Começa com infinito para garantir que qualquer preço válido seja menor
-        : 0; // Se não houver serviços, o preço mínimo é 0
-    // --- FIM DA ALTERAÇÃO ---
-    
+        }, Infinity)
+        : 0;
+
     const categoriesToDisplay: string[] = [];
     if (item.providerServices && item.providerServices.length > 0) {
         if (item.providerServices[0].service?.name) {
@@ -125,8 +121,8 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
 
     return (
         <Animated.View style={[styles.animatedCardContainer, { transform: [{ scale: scaleAnim }] }]}>
-            <TouchableOpacity 
-                style={styles.cardContentWrapper} 
+            <TouchableOpacity
+                style={styles.cardContentWrapper}
                 onPress={handleCardPress}
                 onPressIn={onPressIn}
                 onPressOut={onPressOut}
@@ -138,10 +134,18 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
 
                 <View style={styles.infoContainer}>
                     <Text style={styles.providerName} numberOfLines={1}>{item.fullName}</Text>
-                    
+
                     <Text style={styles.serviceDescription} numberOfLines={2}>
                         {item.bio || "Nenhuma descrição disponível."}
                     </Text>
+
+                    {/* NOVO: Exibir Taxa de Aceitação e Tempo Médio de Resposta */}
+                    {item.acceptanceRate !== undefined && (
+                        <Text style={styles.metricText}>Aceitação: {item.acceptanceRate}%</Text>
+                    )}
+                    {item.averageResponseTime !== undefined && (
+                        <Text style={styles.metricText}>Resp. Média: {item.averageResponseTime} min</Text>
+                    )}
 
                     <View style={styles.categoryChipsContainer}>
                         {displayedCategories.map((category, index) => (
@@ -154,17 +158,14 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
                     <View style={styles.priceAndRatingSection}>
                         <View>
                             <Text style={styles.priceLabel}>A partir de</Text>
-                            {/* --- INÍCIO DA ALTERAÇÃO: Usando minPrice --- */}
                             {minPrice > 0 && minPrice !== Infinity ? (
                                 <Text style={styles.priceValue}>R$ {minPrice.toFixed(2).replace('.', ',')}</Text>
                             ) : (
                                 <Text style={styles.priceValue}>R$ N/A</Text>
                             )}
-                            {/* --- FIM DA ALTERAÇÃO --- */}
                         </View>
-                        
+
                         <View style={styles.ratingSection}>
-                            {/* Botão "+" decorativo */}
                             <LinearGradient
                                 colors={['#67adfd95', '#5c93ec','#5c93ec36']}
                                 style={styles.plusButton}
@@ -237,12 +238,18 @@ const styles = StyleSheet.create({
     serviceDescription: {
         fontSize: 12,
         color: '#6C757D',
-        marginBottom: 15,
+        marginBottom: 8, // Ajustado para dar espaço às novas métricas
+    },
+    metricText: { // NOVO ESTILO PARA MÉTRICAS
+        fontSize: 10,
+        color: '#555',
+        marginBottom: 2,
     },
     categoryChipsContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        marginBottom: -38,
+        marginBottom: 10, // Ajustado para dar espaço às novas métricas
+        marginTop: 5,
     },
     categoryChip: {
         backgroundColor: '#E6EEF9',

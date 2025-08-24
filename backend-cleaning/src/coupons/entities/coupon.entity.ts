@@ -2,8 +2,11 @@
 // This file typically represents the structure of your database entity,
 // often derived from Prisma models or defined for DTOs.
 
-// For demonstration, these enums are defined here, but they should ideally come from prisma/schema.prisma
-// and be imported from `@prisma/client` if using Prisma Client types.
+// IMPORTANT: In a Prisma project, these enums and the Coupon interface
+// should ideally be imported directly from `@prisma/client` (e.g., `import { CouponType, CouponTarget, CouponStatus, Coupon as PrismaCoupon } from '@prisma/client';`)
+// after defining them in your `schema.prisma` file.
+// This file is provided as a conceptual representation.
+
 export enum CouponType {
   PERCENTAGE = 'PERCENTAGE',
   FIXED_AMOUNT = 'FIXED_AMOUNT',
@@ -14,6 +17,11 @@ export enum CouponTarget {
   NEW_CLIENTS = 'NEW_CLIENTS',
   SPECIFIC_SERVICE = 'SPECIFIC_SERVICE',
   SPECIFIC_PROVIDER = 'SPECIFIC_PROVIDER',
+  NEW_CUSTOMER = 'NEW_CUSTOMER', // Adicionado conforme discussão
+  REFERRAL_REFERRED = 'REFERRAL_REFERRED', // Adicionado conforme discussão
+  REFERRAL_REFERRER = 'REFERRAL_REFERRER', // Adicionado conforme discussão
+  MISSION_REWARD = 'MISSION_REWARD', // Adicionado conforme discussão
+  REPEAT_CUSTOMER = 'REPEAT_CUSTOMER', // Adicionado conforme discussão
 }
 
 export enum CouponStatus {
@@ -39,5 +47,35 @@ export interface Coupon {
   status: CouponStatus;
   createdAt: Date;
   updatedAt: Date;
-  // transactions?: any[]; // Prisma relation to Transaction
+  firstBookingOnly?: boolean; // NOVO CAMPO
+  issuedToUserId?: string; // NOVO CAMPO: Para quem o cupom foi emitido (se for pessoal)
+  issuedBy?: 'SYSTEM' | 'MISSION' | 'REFERRAL' | 'LOYALTY_REDEEM' | 'RETURN_COUPON'; // NOVO CAMPO: Origem do cupom
+  maxDiscount?: number; // NOVO CAMPO: Cap de desconto
+  description?: string; // Adicionado para consistência com `create-coupon.dto.ts`
+}
+
+// NOVO: Classe CouponEntity para ser exportada e usada em DTOs/Controllers
+export class CouponEntity implements Coupon {
+  id: string;
+  code: string;
+  type: CouponType;
+  value: number;
+  validFrom: Date;
+  validUntil: Date;
+  maxUses?: number;
+  usesCount: number;
+  target: CouponTarget;
+  targetId?: string;
+  status: CouponStatus;
+  createdAt: Date;
+  updatedAt: Date;
+  firstBookingOnly?: boolean;
+  issuedToUserId?: string;
+  issuedBy?: 'SYSTEM' | 'MISSION' | 'REFERRAL' | 'LOYALTY_REDEEM' | 'RETURN_COUPON';
+  maxDiscount?: number;
+  description?: string;
+
+  constructor(partial: Partial<CouponEntity>) {
+    Object.assign(this, partial);
+  }
 }

@@ -4,6 +4,12 @@ import { IsString, IsNumber, IsOptional, IsUUID, IsEnum, ValidateNested } from '
 import { Type } from 'class-transformer';
 import { BookingStatus, Prisma } from '@prisma/client';
 import { AddressDetailsDto } from '../../common/dto/address-details.dto'; // <<-- IMPORTANTE: Importe AddressDetailsDto AQUI
+import { Decimal } from '@prisma/client/runtime/library'; // Explicitamente importar Decimal para verificação de tipo
+
+// Função auxiliar (type guard) para verificar se um valor é uma instância de Prisma.Decimal
+function isDecimal(value: any): value is Decimal {
+  return value instanceof Decimal;
+}
 
 export class BookingDetailsDto {
   @ApiProperty({ description: 'ID do agendamento', example: 'uuid-do-agendamento' })
@@ -76,6 +82,11 @@ export class BookingDetailsDto {
   @IsString()
   couponCode?: string | null;
 
+  @ApiPropertyOptional({ description: 'Valor do desconto aplicado pelo cupom', example: 10.50 })
+  @IsOptional()
+  @IsNumber()
+  discountAmount?: number | null; // <<-- ADICIONADO
+
   // Campos achatados do cliente/provedor/serviço para facilitar o consumo no frontend
   @ApiPropertyOptional({ description: 'Nome completo do cliente', example: 'Nome do Cliente' })
   @IsOptional()
@@ -140,26 +151,27 @@ export class BookingDetailsDto {
     scheduledDate: Date | string;
     scheduledTime: string;
     status: BookingStatus;
-    totalPrice: Prisma.Decimal | number;
+    totalPrice: Decimal | number; // Aceita Decimal ou number
     notes?: string | null;
     createdAt: Date | string;
     updatedAt: Date | string;
     addressId?: string | null;
-    couponId?: string | null; // NEW
-    coupon?: { code: string } | null; // NEW: Include coupon code
+    couponId?: string | null; // NOVO
+    coupon?: { code: string } | null; // NOVO: Inclui código do cupom
+    discountAmount?: Decimal | number | null; // Aceita Decimal ou number
     // O construtor espera um objeto que tenha o 'id' e as outras propriedades do Address do Prisma
     address?: {
       id?: string; // ID pode ser opcional ao construir a partir de um objeto parcial
       cep: string; street: string; number: string;
       complement?: string | null; // CORREÇÃO: Tornar complement opcional aqui
       neighborhood: string; city: string; state: string;
-      latitude: Prisma.Decimal | number; // Aceita Decimal ou number
-      longitude: Prisma.Decimal | number; // Aceita Decimal ou number
+      latitude: Decimal | number; // Aceita Decimal ou number
+      longitude: Decimal | number; // Aceita Decimal ou number
     } | null; // <-- Tipo no construtor para o que vem do Prisma
 
     client?: { user?: { avatarUrl?: string | null; }; fullName: string; email?: string; };
     provider?: { user?: { avatarUrl?: string | null; }; fullName: string; email?: string; };
-    providerService?: { service: { name: string; price: Prisma.Decimal; }; durationMinutes: number; description?: string | null; };
+    providerService?: { service: { name: string; price: Decimal; }; durationMinutes: number; description?: string | null; }; // Aceita Decimal para preço do serviço
   }) {
     this.id = data.id;
     this.clientId = data.clientId;
@@ -169,9 +181,14 @@ export class BookingDetailsDto {
     this.scheduledTime = data.scheduledTime;
     this.status = data.status;
 
-    this.totalPrice = typeof data.totalPrice === 'object' && 'toNumber' in data.totalPrice
-      ? data.totalPrice.toNumber()
-      : data.totalPrice;
+    // Converte totalPrice de Decimal para number, se necessário
+    let convertedTotalPrice: number;
+    if (isDecimal(data.totalPrice)) {
+      convertedTotalPrice = data.totalPrice.toNumber();
+    } else {
+      convertedTotalPrice = data.totalPrice;
+    }
+    this.totalPrice = convertedTotalPrice;
 
     this.notes = data.notes === undefined ? null : data.notes;
     
@@ -182,12 +199,22 @@ export class BookingDetailsDto {
     // CORREÇÃO FINAL: Mapeia o objeto 'address' do Prisma para uma nova instância de AddressDetailsDto
     this.address = data.address ? new AddressDetailsDto({
       ...data.address,
-      latitude: typeof data.address.latitude === 'object' ? data.address.latitude.toNumber() : data.address.latitude,
-      longitude: typeof data.address.longitude === 'object' ? data.address.longitude.toNumber() : data.address.longitude,
+      latitude: isDecimal(data.address.latitude) ? data.address.latitude.toNumber() : data.address.latitude,
+      longitude: isDecimal(data.address.longitude) ? data.address.longitude.toNumber() : data.address.longitude,
     }) : null; 
 
-    this.couponId = data.couponId === undefined ? null : data.couponId; // NEW
-    this.couponCode = data.coupon?.code || null; // NEW
+    this.couponId = data.couponId === undefined ? null : data.couponId; // NOVO
+    this.couponCode = data.coupon?.code || null; // NOVO
+    // Converte discountAmount de Decimal para number, se necessário
+    let convertedDiscountAmount: number | null;
+    if (data.discountAmount === null || data.discountAmount === undefined) {
+      convertedDiscountAmount = null;
+    } else if (isDecimal(data.discountAmount)) {
+      convertedDiscountAmount = data.discountAmount.toNumber();
+    } else {
+      convertedDiscountAmount = data.discountAmount;
+    }
+    this.discountAmount = convertedDiscountAmount; // <<-- ADICIONADO
 
     if (data.client) {
       this.clientFullName = data.client.fullName;
@@ -201,7 +228,14 @@ export class BookingDetailsDto {
     }
     if (data.providerService) {
       this.serviceName = data.providerService.service.name;
-      this.servicePrice = data.providerService.service.price.toNumber();
+      // Converte servicePrice de Decimal para number, se necessário
+      let convertedServicePrice: number;
+      if (isDecimal(data.providerService.service.price)) {
+        convertedServicePrice = data.providerService.service.price.toNumber();
+      } else {
+        convertedServicePrice = data.providerService.service.price;
+      }
+      this.servicePrice = convertedServicePrice;
       this.serviceDurationMinutes = data.providerService.durationMinutes;
       this.providerServiceDescription = data.providerService.description;
     }

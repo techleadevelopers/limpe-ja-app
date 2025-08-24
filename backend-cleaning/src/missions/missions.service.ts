@@ -1,9 +1,18 @@
 // src/missions/missions.service.ts
 import { Injectable, Logger, BadRequestException, NotFoundException, forwardRef, Inject } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { MissionStatus, RewardType, MissionKind, UserRole, MissionAudience } from '@prisma/client'; // Importar UserRole, MissionAudience
+import { MissionStatus, RewardType, MissionKind, UserRole, MissionAudience, LoyaltyTransactionType, Prisma } from '@prisma/client';
 import { CouponsService } from '../coupons/coupons.service';
 import { LoyaltyService } from '../loyalty/loyalty.service';
+// <<-- CORREÇÃO: Importar MissionWithProgressView do progress.service.ts
+import { MissionsProgressService, MissionWithProgressView } from './progress.service';
+
+// <<-- CORREÇÃO: REMOVER esta definição. Ela não é mais necessária aqui
+// type MissionProgressWithMission = Prisma.MissionProgressGetPayload<{
+//   include: {
+//     mission: true;
+//   };
+// }>;
 
 @Injectable()
 export class MissionsService {
@@ -15,133 +24,43 @@ export class MissionsService {
     private couponsService: CouponsService,
     @Inject(forwardRef(() => LoyaltyService))
     private loyaltyService: LoyaltyService,
+    private missionsProgressService: MissionsProgressService,
   ) {}
 
   /**
    * Registra um evento de missão (ex.: booking.completed, review.created, referral.converted)
    * e recalcula o progresso do usuário para todas as missões ativas relacionadas ao evento.
+   * DELEGA PARA MissionsProgressService.
    */
   async trackEvent(userId: string, name: string, meta?: any) {
-    // Salva o evento
-    await this.prisma.missionEvent.create({
-      data: { userId, name, meta: meta ?? undefined },
-    });
+    this.logger.log(`[MissionsService] trackEvent: userId=${userId}, event=${name}`);
+    const result = await this.missionsProgressService.trackEvent(userId, name, meta);
 
-    // Recalcula progresso das missões que ouvem este evento
-    // Agora busca missões para CLIENT ou PROVIDER
-    const missions = await this.prisma.mission.findMany({
-      where: {
-        isActive: true,
-        // audience: 'CLIENT', // Removido filtro fixo para CLIENT
-        eventName: name,
-        // TODO: Adicionar filtro por audience se o evento for específico (ex: booking.completed pode ser para CLIENT e PROVIDER)
-        // Isso exigiria que o 'trackEvent' recebesse o role do usuário ou que o evento fosse mais granular.
-        // Por enquanto, ele processará para todas as missões ativas com o eventName correspondente.
-      },
-    });
+    this.logger.log(`[TELEMETRY] mission_event_tracked: { userId: ${userId}, eventName: ${name}, meta: ${JSON.stringify(meta)} }`);
 
-    for (const mission of missions) {
-      // Garante progress row
-      const progress = await this.prisma.missionProgress.upsert({
-        where: { userId_missionId: { userId, missionId: mission.id } },
-        update: {},
-        create: { userId, missionId: mission.id },
-      });
-
-      // Recalcular currentValue conforme a missão
-      let currentValue = progress.currentValue;
-
-      if (mission.kind === MissionKind.COUNT_EVENT) {
-        // Se tiver janela de tempo, reconta pelos eventos dentro do range
-        if (mission.timeWindowDays && mission.timeWindowDays > 0) {
-          const since = new Date(Date.now() - mission.timeWindowDays * 24 * 60 * 60 * 1000);
-          const count = await this.prisma.missionEvent.count({
-            where: { userId, name: mission.eventName, createdAt: { gte: since } },
-          });
-          currentValue = count;
-        } else {
-          currentValue = progress.currentValue + 1;
-        }
-      } else if (mission.kind === MissionKind.WITHIN_WINDOW) {
-        // Interpretação simples: contar eventos no período e comparar com target
-        const since = mission.timeWindowDays
-          ? new Date(Date.now() - mission.timeWindowDays * 24 * 60 * 60 * 1000)
-          : new Date(0);
-        const count = await this.prisma.missionEvent.count({
-          where: { userId, name: mission.eventName, createdAt: { gte: since } },
-        });
-        currentValue = count;
-      } else if (mission.kind === MissionKind.STREAK_DAYS) {
-        // (opcional) Implementação simplificada: contar dias únicos com evento
-        const since = mission.timeWindowDays
-          ? new Date(Date.now() - mission.timeWindowDays * 24 * 60 * 60 * 1000)
-          : new Date(0);
-        const events = await this.prisma.missionEvent.findMany({
-          where: { userId, name: mission.eventName, createdAt: { gte: since } },
-          select: { createdAt: true },
-          orderBy: { createdAt: 'desc' },
-        });
-        const uniqueDays = new Set(
-          events.map(e => new Date(e.createdAt).toISOString().substring(0, 10)),
-        );
-        currentValue = uniqueDays.size;
-      }
-
-      const completed = currentValue >= mission.targetValue;
-
-      await this.prisma.missionProgress.update({
-        where: { userId_missionId: { userId, missionId: mission.id } },
-        data: {
-          currentValue,
-          lastEventAt: new Date(),
-          status: completed ? MissionStatus.COMPLETED : MissionStatus.ACTIVE,
-          completedAt: completed ? new Date() : progress.completedAt,
-        },
-      });
-
+    result.updated.forEach(update => {
       this.logger.log(
-        `[trackEvent] user=${userId} mission=${mission.code} -> ${currentValue}/${mission.targetValue} ${completed ? '(COMPLETED)' : ''}`,
+        `[trackEvent] user=${userId} missionId=${update.missionId} -> ${update.currentValue}/${update.targetValue} ${update.status === MissionStatus.COMPLETED ? '(COMPLETED)' : ''}`,
       );
-    }
+      this.logger.log(`[TELEMETRY] mission_progress_updated: { userId: ${userId}, missionId: ${update.missionId}, status: ${update.status}, percent: ${update.percent} }`);
+
+      if (update.status === MissionStatus.COMPLETED) {
+        this.logger.log(`[MissionsService] Missão ${update.missionId} COMPLETED para userId ${userId}. Notificar para resgate.`);
+      }
+    });
   }
 
   /** Lista missões ativas + progresso do usuário */
-  async getMyMissions(userId: string, userRole: UserRole) { // Adicionado userRole
-    const missions = await this.prisma.mission.findMany({
-      where: {
-        isActive: true,
-        OR: [ // Filtra por audiência do usuário
-          { audience: MissionAudience.GENERAL },
-          { audience: userRole as unknown as MissionAudience }, // Cast para MissionAudience
-        ],
-      },
-      orderBy: { createdAt: 'asc' },
-    });
+  async getMyMissions(userId: string, userRole: UserRole) {
+    // <<-- CORREÇÃO: Mudar o tipo esperado para MissionWithProgressView[]
+    const missionsWithProgress: MissionWithProgressView[] = await this.missionsProgressService.getUserMissionsWithProgress(userId);
 
-    const progresses = await this.prisma.missionProgress.findMany({
-      where: { userId, missionId: { in: missions.map(m => m.id) } },
-    });
-
-    const progressByMission = new Map(progresses.map(p => [p.missionId, p]));
-
-    return missions.map(m => {
-      const p = progressByMission.get(m.id);
-      const current = p?.currentValue ?? 0;
-      const status = p?.status ?? MissionStatus.ACTIVE;
-      const percent = Math.min(100, Math.round((current / m.targetValue) * 100));
-      const canClaim = status === MissionStatus.COMPLETED;
-      return {
-        mission: m,
-        progress: {
-          currentValue: current,
-          targetValue: m.targetValue,
-          status,
-          percent,
-          completedAt: p?.completedAt ?? null,
-          claimedAt: p?.claimedAt ?? null,
-        },
-        canClaim,
-      };
+    // Filtrar por audience (se MissionsProgressService não o fizer)
+    return missionsWithProgress.filter(mp => {
+      // Agora, mp.mission é corretamente tipado como Mission, que inclui 'audience'
+      const missionAudience = mp.mission.audience;
+      return missionAudience === MissionAudience.GENERAL ||
+             missionAudience === userRole;
     });
   }
 
@@ -149,6 +68,7 @@ export class MissionsService {
    * Resgata recompensa de missão COMPLETED.
    * - COUPON: emite cupom individual para o usuário (val. padrão 30 dias)
    * - POINTS: credita pontos de fidelidade
+   * - Outros tipos (ex: destaque para provedor)
    */
   async claimMission(userId: string, missionId: string) {
     const progress = await this.prisma.missionProgress.findUnique({
@@ -161,37 +81,44 @@ export class MissionsService {
       throw new BadRequestException('Missão não está disponível para resgate.');
     }
 
-    const mission = progress.mission;
+    const mission = progress.mission; // Este 'mission' é do tipo Prisma.MissionGetPayload
     let reward: any = null;
 
+    this.logger.log(`[TELEMETRY] mission_claim_attempt: { userId: ${userId}, missionId: ${missionId}, rewardType: ${mission.rewardType} }`);
+
     if (mission.rewardType === RewardType.COUPON) {
-      // <<< FIX: passar um ÚNICO objeto para issueCouponFromMission >>>
       reward = await this.couponsService.issueCouponFromMission({
         userId,
         mission: {
           id: mission.id,
           code: mission.code,
           title: mission.title,
-          rewardType: mission.rewardType,      // 'COUPON'
-          rewardValue: mission.rewardValue,    // ex.: 20 (%)
-          couponTemplateId: mission.couponTemplateId ?? null,
+          rewardType: mission.rewardType as 'COUPON' | 'POINTS', // Cast necessário se RewardType do Prisma for 'string' e não o enum
+          rewardValue: mission.rewardValue,
+          couponTemplateId: mission.couponTemplateId ?? null, // Usa ?? null para lidar com String? do Prisma
         },
-        validityDays: 30, // opcional (default 30)
+        validityDays: 30,
       });
     } else if (mission.rewardType === RewardType.POINTS) {
       await this.loyaltyService.addPoints({
         userId,
         points: mission.rewardValue,
-        type: 'MISSION_COMPLETED',
+        type: LoyaltyTransactionType.MISSION_COMPLETED,
         referenceId: mission.id,
       });
       reward = { type: 'POINTS', points: mission.rewardValue };
+    } else {
+        this.logger.warn(`[MissionsService] Tipo de recompensa ${mission.rewardType} não suportado para resgate.`);
+        throw new BadRequestException('Tipo de recompensa não suportado para resgate.');
     }
 
     await this.prisma.missionProgress.update({
       where: { userId_missionId: { userId, missionId } },
       data: { status: MissionStatus.CLAIMED, claimedAt: new Date() },
     });
+
+    this.logger.log(`[MissionsService] Missão ${mission.code} resgatada por ${userId}. Recompensa: ${mission.rewardType}.`);
+    this.logger.log(`[TELEMETRY] mission_claimed: { userId: ${userId}, missionId: ${mission.id}, rewardType: ${mission.rewardType}, rewardValue: ${mission.rewardValue} }`);
 
     return { mission, reward };
   }

@@ -1,4 +1,6 @@
-// relax-app/types/backend/missions.ts (ou o caminho correto)
+// relax-app/types/backend/missions.ts
+// Este arquivo parece definir tipos simplificados para uso no frontend ou DTOs específicos.
+// A interface 'Mission' aqui é uma representação reduzida e não inclui todos os campos do modelo Prisma.
 
 export type MissionStatus = 'ACTIVE' | 'COMPLETED' | 'CLAIMED';
 export type RewardType = 'POINTS' | 'COUPON';
@@ -7,7 +9,7 @@ export interface Mission {
   id: string;
   title: string;
   description: string;
-  currentProgress: number; // Progressão atual do usuário PARA esta missão
+  currentProgress: number;
   targetValue: number;
   rewardType: RewardType;
   rewardValue: number;
@@ -19,17 +21,17 @@ export interface MissionProgress {
   missionId: string;
   currentValue: number;
   status: MissionStatus;
-  completedAt?: string | null; // ISO
-  claimedAt?: string | null;   // ISO
+  completedAt?: string | null;
+  claimedAt?: string | null;
 }
 
 export interface MissionItem {
   mission: Mission;
   progress: MissionProgress | null;
-  progressPct: number;     // 0..100 (clamp)
-  progressLabel: string;   // "2/3", "5 dias", etc.
-  canClaim: boolean;       // COMPLETED e não CLAIMED
-  isClaimed: boolean;      // CLAIMED
+  progressPct: number;
+  progressLabel: string;
+  canClaim: boolean;
+  isClaimed: boolean;
 }
 
 /**

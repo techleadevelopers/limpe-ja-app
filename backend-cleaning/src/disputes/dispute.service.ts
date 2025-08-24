@@ -1,10 +1,10 @@
 import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenException, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { BookingStatus, DisputeStatus, Prisma, TransactionType, UserRole } from '@prisma/client'; // Importação do UserRole corrigida
+import { BookingStatus, DisputeStatus, Prisma, TransactionType, UserRole, SupportTicketCategory, SupportTicketStatus } from '@prisma/client'; // Importações adicionadas
 import { CreateDisputeDto } from './dto/create-dispute.dto';
 import { UpdateDisputeDto } from './dto/update-dispute.dto';
 import { NotificationsService } from '../notifications/notifications.service';
-import { BookingsService } from '../bookings/bookings.service'; // Importar BookingsService
+import { BookingsService } from '../bookings/bookings.service';
 
 @Injectable()
 export class DisputeService {
@@ -29,7 +29,7 @@ export class DisputeService {
 
     const booking = await this.prisma.booking.findUnique({
       where: { id: createDisputeDto.bookingId },
-      include: { client: { include: { user: true } }, provider: { include: { user: true } } } // Incluindo User para verificar a relação
+      include: { client: { include: { user: true } }, provider: { include: { user: true } } }
     });
 
     if (!booking) {
@@ -100,7 +100,7 @@ export class DisputeService {
         },
         messages: {
           orderBy: { createdAt: 'asc' },
-          include: { sender: true } // Incluir o remetente para ter os dados do usuário
+          include: { sender: true }
         },
       },
     });
@@ -148,40 +148,80 @@ export class DisputeService {
    * @returns A mensagem criada.
    */
   async addMessageToDispute(disputeId: string, senderUserId: string, content: string) {
-    const dispute = await this.prisma.dispute.findUnique({ where: { id: disputeId } });
+    const dispute = await this.prisma.dispute.findUnique({
+        where: { id: disputeId },
+        // CORREÇÃO: Incluir 'id' na seleção
+        select: { id: true, bookingId: true, reporterUserId: true }
+    });
     if (!dispute) {
       throw new NotFoundException(`Disputa com ID "${disputeId}" não encontrada.`);
     }
 
+    // --- Lógica para encontrar ou criar o SupportTicket associado ---
+    let supportTicket = await this.prisma.supportTicket.findFirst({
+        where: {
+            bookingId: dispute.bookingId,
+        },
+        orderBy: { createdAt: 'desc' }
+    });
+
+    if (!supportTicket) {
+        const reporter = await this.prisma.user.findUnique({
+            where: { id: dispute.reporterUserId },
+            select: { role: true }
+        });
+
+        supportTicket = await this.prisma.supportTicket.create({
+            data: {
+                // CORREÇÃO: Usar 'user.connect' para a relação
+                user: { connect: { id: dispute.reporterUserId } },
+                role: reporter?.role || UserRole.SYSTEM,
+                subject: `Disputa referente ao Agendamento ${dispute.bookingId}`,
+                category: SupportTicketCategory.OTHER,
+                description: `Este ticket foi gerado automaticamente para gerenciar as mensagens da disputa ${dispute.id}.`, // Usar dispute.id
+                booking: { connect: { id: dispute.bookingId } },
+                status: SupportTicketStatus.OPEN,
+            },
+        });
+    }
+    // --- Fim da lógica do SupportTicket ---
+
     const message = await this.prisma.disputeMessage.create({
       data: {
-        disputeId,
-        senderUserId,
+        dispute: {
+          connect: { id: disputeId },
+        },
+        sender: {
+          connect: { id: senderUserId },
+        },
+        ticket: { // Agora fornecemos a relação 'ticket' obrigatória
+          connect: { id: supportTicket.id },
+        },
         content,
       },
     });
 
-    const booking = await this.prisma.booking.findUnique({ 
-      where: { id: dispute.bookingId }, 
-      select: { 
-        client: { select: { userId: true } }, 
-        provider: { select: { userId: true } } 
-      } 
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: dispute.bookingId },
+      select: {
+        client: { select: { userId: true } },
+        provider: { select: { userId: true } }
+      }
     });
 
     const recipientUserId = (booking.client.userId === senderUserId) ? booking.provider.userId : booking.client.userId;
-    
+
     await this.notificationsService.sendPushNotification(
       recipientUserId,
       'Nova Mensagem na Disputa',
       `Você tem uma nova mensagem na disputa ${dispute.bookingId}.`,
-      { type: 'dispute_message', disputeId: dispute.id }
+      { type: 'dispute_message', disputeId: dispute.id } // Usar dispute.id
     );
     await this.notificationsService.sendPushNotification(
       'ADMIN_USER_ID',
       'Nova Mensagem na Disputa (Admin)',
       `Nova mensagem na disputa ${dispute.bookingId}.`,
-      { type: 'dispute_message', disputeId: dispute.id }
+      { type: 'dispute_message', disputeId: dispute.id } // Usar dispute.id
     );
 
     return message;
@@ -219,11 +259,11 @@ export class DisputeService {
     if (updatedDispute.status === DisputeStatus.RESOLVED && updateDisputeDto.refundAmount && updateDisputeDto.refundAmount > 0) {
       const booking = await this.prisma.booking.findUnique({ where: { id: dispute.bookingId } });
       const provider = await this.prisma.provider.findUnique({ where: { userId: booking.providerId } });
-      
+
       await this.prisma.transaction.create({
         data: {
           bookingId: dispute.bookingId,
-          providerId: provider.id, // Adicionado o providerId
+          providerId: provider.id,
           amount: new Prisma.Decimal(updateDisputeDto.refundAmount).neg(),
           type: TransactionType.REFUND,
           status: 'COMPLETED',

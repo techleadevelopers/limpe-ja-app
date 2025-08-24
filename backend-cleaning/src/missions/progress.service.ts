@@ -1,6 +1,6 @@
 // src/missions/progress.service.ts
 import { Injectable, Logger } from '@nestjs/common';
-import { Prisma, MissionKind, MissionStatus } from '@prisma/client';
+import { Prisma, MissionKind, MissionStatus, MissionAudience, RewardType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface TrackEventResult {
@@ -16,19 +16,24 @@ export interface TrackEventResult {
   }>;
 }
 
+// ATUALIZADO: MissionWithProgressView para alinhar com o schema.prisma (timeWindowDays e couponTemplateId são opcionais/null)
 export interface MissionWithProgressView {
   mission: {
     id: string;
     code: string;
     title: string;
     description: string;
+    audience: MissionAudience;
     kind: MissionKind;
     eventName: string;
     targetValue: number;
-    timeWindowDays?: number | null;
-    rewardType: string;
+    timeWindowDays?: number | null; // <<-- DEVE SER OPCIONAL/NULLABLE, conforme o schema.prisma
+    rewardType: RewardType;
     rewardValue: number;
+    couponTemplateId?: string | null; // <<-- DEVE SER OPCIONAL/NULLABLE, conforme o schema.prisma
     isActive: boolean;
+    createdAt: Date;
+    updatedAt: Date;
   };
   progress: {
     id: string;
@@ -68,9 +73,7 @@ export class MissionsProgressService {
     });
 
     // 2) Descobre missões afetadas
-    const missions = await this.prisma.mission.findMany({
-      where: { isActive: true, eventName },
-    });
+    const missions = await this.prisma.mission.findMany({ where: { isActive: true, eventName } });
 
     const resultUpdates: TrackEventResult['updated'] = [];
 
@@ -116,13 +119,17 @@ export class MissionsProgressService {
           code: m.code,
           title: m.title,
           description: m.description,
+          audience: m.audience,
           kind: m.kind,
           eventName: m.eventName,
           targetValue: m.targetValue,
-          timeWindowDays: m.timeWindowDays,
-          rewardType: m.rewardType,
+          timeWindowDays: m.timeWindowDays, // Não usar '!' aqui, pois o tipo é 'number | null'
+          rewardType: m.rewardType as RewardType,
           rewardValue: m.rewardValue,
+          couponTemplateId: m.couponTemplateId, // Não usar '!' aqui, pois o tipo é 'string | null'
           isActive: m.isActive,
+          createdAt: m.createdAt,
+          updatedAt: m.updatedAt,
         },
         progress: pr
           ? {
@@ -172,13 +179,17 @@ export class MissionsProgressService {
         code: mission.code,
         title: mission.title,
         description: mission.description,
+        audience: mission.audience,
         kind: mission.kind,
         eventName: mission.eventName,
         targetValue: mission.targetValue,
-        timeWindowDays: mission.timeWindowDays,
-        rewardType: mission.rewardType,
+        timeWindowDays: mission.timeWindowDays, // Não usar '!' aqui
+        rewardType: mission.rewardType as RewardType,
         rewardValue: mission.rewardValue,
+        couponTemplateId: mission.couponTemplateId, // Não usar '!' aqui
         isActive: mission.isActive,
+        createdAt: mission.createdAt,
+        updatedAt: mission.updatedAt,
       },
       progress: finalProgress
         ? {
@@ -214,7 +225,15 @@ export class MissionsProgressService {
         break;
 
       case MissionKind.WITHIN_WINDOW:
-        progress = await this.applyWithinWindow(missionId, userId, progress, occurredAt, mission.timeWindowDays ?? 0);
+        // Se timeWindowDays é opcional, precisamos garantir que ele não é null/undefined aqui
+        if (mission.timeWindowDays === null || mission.timeWindowDays === undefined) {
+            this.logger.error(`Mission ${missionId} (kind: WITHIN_WINDOW) has null/undefined timeWindowDays. This might be an error in mission setup.`);
+            // Decida como lidar com isso: lançar um erro, usar um valor padrão, ou pular.
+            // Por simplicidade, vou usar um valor padrão de 0, mas o ideal é validar a configuração da missão.
+            // Ou, se a lógica de WITHIN_WINDOW sempre requer um valor, o campo no DB não deveria ser opcional para este tipo de missão.
+            mission.timeWindowDays = 0; // Fallback para evitar erro de tipo
+        }
+        progress = await this.applyWithinWindow(missionId, userId, progress, occurredAt, mission.timeWindowDays);
         break;
 
       case MissionKind.STREAK_DAYS:

@@ -72,13 +72,13 @@ export class ReviewsService {
     private bookingsService: BookingsService,
     private providersService: ProvidersService,
     private loyaltyService: LoyaltyService,
-    private missionsService: MissionsService, // <<— NOVO: injetado
+    private missionsService: MissionsService,
   ) {}
 
   async submitReview(clientId: string, submitReviewDto: SubmitReviewDto): Promise<Review> {
     const { bookingId, rating, comment } = submitReviewDto;
 
-    const booking = await this.bookingsService.findOne(bookingId);
+    const booking = await this.bookingsService.findOne(bookingId); // findOne já inclui client e provider
     if (!booking) {
       throw new NotFoundException(`Agendamento com ID "${bookingId}" não encontrado.`);
     }
@@ -111,12 +111,21 @@ export class ReviewsService {
       },
     });
 
+    this.logger.log(`[ReviewsService] Review ${review.id} criada para booking ${bookingId}.`);
+    // Telemetria: review_created
+    this.logger.log(`[TELEMETRY] review_created: { reviewId: ${review.id}, bookingId: ${bookingId}, clientId: ${clientId}, providerId: ${booking.providerId}, rating: ${rating} }`);
+
+
     // Fidelidade (pontos)
-    const clientReviewsCount = await this.prisma.review.count({
-      where: { clientId: booking.clientId },
+    // Usar o completedBookingsCount do Client para verificar se é a primeira review
+    const client = await this.prisma.client.findUnique({
+      where: { id: booking.clientId },
+      select: { userId: true, reviewsMade: { select: { id: true } } } // Incluir reviewsMade para contar
     });
 
-    if (clientReviewsCount === 1) {
+    const clientReviewsCount = client?.reviewsMade.length || 0;
+
+    if (clientReviewsCount === 1) { // Se esta é a primeira review do cliente
       await this.loyaltyService.addPoints({
         userId: booking.client.userId,
         points: 20,
@@ -145,13 +154,14 @@ export class ReviewsService {
         providerId: booking.providerId,
         rating,
       });
+      this.logger.log(`[ReviewsService] Evento de missão 'review.created' disparado para o cliente ${booking.client.userId}.`);
     } catch (e) {
-      // Não quebrar o fluxo de review se o rastreio falhar
       this.logger.warn(`[ReviewsService] submitReview: falha ao trackear missão review.created: ${e?.message || e}`);
     }
 
     // Atualizar badges do provedor (mantido)
     await this.providersService.updateProviderBadges(booking.providerId);
+    this.logger.log(`[ReviewsService] Badges do provedor ${booking.providerId} atualizados.`);
 
     return review;
   }
@@ -206,7 +216,7 @@ export class ReviewsService {
       };
     }
 
-    const totalRating = reviews.reduce((sum, r) => sum + r.rating, 0);
+    const totalRating = reviews.reduce((sum, r) => sum + r.rating, 0) || 0;
     const averageRating = totalRating / reviews.length;
 
     const thirtyDaysAgo = new Date();

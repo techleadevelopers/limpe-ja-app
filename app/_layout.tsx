@@ -102,6 +102,21 @@ function RootLayoutContent() {
         const providerRegistrationVerifyAccountPath = normalizePath(AUTH_ROUTES.VERIFY_ACCOUNT_STEP);
 
         const decideAndRedirect = async () => {
+            // --- INÍCIO DA MODIFICAÇÃO SUGERIDA ---
+            const path = pathname ?? ''; // Usar pathname diretamente do hook
+            const isBookingOrChat =
+                path.startsWith('/(client)/bookings') ||
+                path.startsWith('/bookings') ||
+                path.startsWith('/(client)/messages') ||
+                path.startsWith('/messages');
+
+            if (isBookingOrChat) {
+                console.log(`[RootLayoutContent | decideAndRedirect] INFO: Rota de booking/chat detectada (${path}). Evitando redirecionamento.`);
+                console.groupEnd();
+                return; // NÃO redirecione nessas rotas
+            }
+            // --- FIM DA MODIFICAÇÃO SUGERIDA ---
+
             // MOVIDO PARA DENTRO DE decideAndRedirect
             const inAuthGroup = segments[0] === '(auth)';
             const isWelcomeRoute = pathname === '/welcome';

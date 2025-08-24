@@ -147,7 +147,7 @@ export const styles = StyleSheet.create({ // <--- ESTA LINHA É CRUCIAL
     priceTextWhiteCard: {
         fontSize: 22, // Preço maior e mais proeminente
         fontWeight: '700',
-        color: "#007AFF", // Preço em destaque com a nova cor de destaque (vermelho/rosa)
+        color: '#4A90E2', // Preço em destaque com a nova cor de destaque (vermelho/rosa)
         marginBottom: 10,
     },
 

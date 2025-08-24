@@ -80,6 +80,9 @@ export interface ProviderDisplayInfo {
     isVerified: boolean;
   };
   metrics?: ProviderMetrics; // NOVO: Adicionado métricas ao ProviderDisplayInfo
+  // NOVOS CAMPOS ADICIONADOS PARA RESOLVER ERROS DE TIPAGEM NOS COMPONENTES
+  acceptanceRate?: number; // Adicionado para PrestadorCard e RecomendacaoCard
+  averageResponseTime?: number; // Adicionado para PrestadorCard e RecomendacaoCard (componentes usam este nome)
 }
 
 /**
@@ -131,6 +134,9 @@ export type ProviderWithCalculatedRating = {
     role: UserRole;
     isVerified: boolean;
   };
+  // NOVOS CAMPOS ADICIONADOS PARA ALINHAR COM ProviderDisplayInfo, se necessário no backend
+  acceptanceRate?: number;
+  averageResponseTime?: number;
 };
 
 /**
@@ -278,6 +284,8 @@ export interface ProviderSearchQuery {
   latitude?: number; // CORREÇÃO: Adicionado latitude
   longitude?: number; // CORREÇÃO: Adicionado longitude
   radius?: number; // CORREÇÃO: Adicionado radius
+  searchTerm?: string; // Adicionado para alinhar com search-results.tsx
+  categoryId?: string; // Adicionado para alinhar com search-results.tsx
 }
 
 /**

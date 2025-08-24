@@ -1,190 +1,261 @@
-📊 Pricing Module
+# README — Módulo de Pricing (Backend LimpeJá)
 
-O módulo Pricing é responsável pela definição, gerenciamento e aplicação das regras de precificação dos serviços oferecidos na plataforma.
-Ele centraliza a lógica que calcula os valores finais cobrados ao cliente, levando em conta regras dinâmicas, descontos, variações por tipo de serviço, localização e condições personalizadas.
+> **Escopo:** documentação **code‑real (versão atual)** do módulo **Pricing** com base nos arquivos: `pricing.module.ts`, `pricing.controller.ts`, `pricing.service.ts`, `pricing-rule.entity.ts`.
+>
+> **Objetivo:** calcular **preços de reserva** e expor **cotações** consistentes com o catálogo (Services/Provider Services), aplicando **regras de preço** (surge, distância, floors/caps, descontos de pacote) e retornando um **breakdown** claro (cliente ↔ provedor ↔ marketplace). Integra com **Availability** (duração/slot), **Search/Ranking** (priceFrom), **Bookings** (snapshot do preço) e **Payments**.
 
-📂 Estrutura do Módulo
+---
 
-pricing.controller.ts
-Expõe endpoints REST para:
+## 1) Responsabilidades
 
-Criar regras de precificação (POST /pricing/rules)
+* Calcular **quote** (preço estimado) para um serviço/oferta, dado **duração**, **add‑ons**, **distância** e **momento** (para regras temporais).
+* Manter **Pricing Rules** paramétricas (surge, taxa por km, floors/caps, descontos) com escopo (global/cidade/categoria/serviço/provedor) e janelas de validade.
+* Fornecer **breakdown**: `base`, `addOns`, `duration/horas`, `distanceFee`, `surgeMultiplier`, `packageDiscount`, `caps/floors`, `grossCustomer`, `providerPayout`, `marketplaceFee`.
+* Garantir **consistência** com o que será persistido em **Bookings** (snapshot) e usado por **Search** (`priceFrom`).
 
-Atualizar regras existentes (PATCH /pricing/rules/:id)
+---
 
-Listar todas as regras (GET /pricing/rules)
+## 2) Arquitetura
 
-Calcular o preço de um serviço em tempo real (POST /pricing/calculate)
+* **Module**: `PricingModule` — registra controller/service, injeta repositório/ORM para regras e dependências de leitura (ProviderServices/Services/Config/Cache).
+* **Controller**: `PricingController` — rotas de **cotação** e **admin** para regras.
+* **Service**: `PricingService` — motor de cálculo, seleção/ordenação de regras e composição do breakdown.
+* **Entity**: `PricingRule` — regra persistente parametrizável.
 
-pricing.service.ts
-Contém a lógica de negócio:
+**Dependências usuais:** `ProviderServicesService`, `ServicesService`, `ConfigService`, `Cache/Redis`, `Sentry`, (opcional) `Geo/DistanceService`.
 
-CRUD completo de Pricing Rules
+---
 
-Aplicação de regras em chamadas de cálculo
+## 3) Modelagem — `PricingRule` (entity)
 
-Função principal calculatePrice() que aplica todas as regras válidas sobre um pedido
+```ts
+export type PricingScope = 'GLOBAL'|'CITY'|'CATEGORY'|'SERVICE'|'PROVIDER';
+export type PricingKind  = 'SURGE'|'DISTANCE_FEE'|'FLOOR'|'CAP'|'PACKAGE_DISCOUNT'|'ABSOLUTE_ADJUST';
+export type ValueType    = 'MULTIPLIER'|'FIXED'|'PERCENT';
 
-Entities & DTOs
+export class PricingRule {
+  id: string;                     // uuid
+  scope: PricingScope;            // aplica onde?
+  refId?: string | null;          // cityId/categoryId/serviceId/providerId
+  kind: PricingKind;              // tipo de regra
 
-pricing-rule.entity.ts → Define a estrutura de uma regra de preço no banco.
+  valueType: ValueType;           // MULTIPLIER/FIXED/PERCENT
+  value: number;                  // ex.: 1.2 (20%), 15 (R$15), 10 (%10)
+  maxEffect?: number | null;      // limites por regra (ex.: máx. R$50 em DISTANCE_FEE)
 
-calculate-price.dto.ts → DTO para requisição de cálculo de preço.
+  // janelas de ativação
+  daysOfWeek?: number[] | null;   // 0..6 (dom..sáb)
+  timeStart?: string | null;      // 'HH:MM'
+  timeEnd?: string | null;        // 'HH:MM'
+  activeFrom?: Date | null;       // datas absolutas
+  activeTo?: Date | null;
 
-create-pricing-rule.dto.ts → DTO para criação de regra.
+  priority?: number | null;       // maior > aplica depois
+  isActive: boolean;
 
-update-pricing-rule.dto.ts → DTO para atualização de regra.
-
-pricing.module.ts
-Declara controller, service e importa o PrismaModule para persistência.
-
-🧩 Estrutura de Dados
-PricingRule (Entidade)
-
-Cada regra de preço contém:
-
-id → Identificador único
-
-name → Nome da regra
-
-serviceId? → Serviço ao qual a regra se aplica (opcional → regra pode ser global)
-
-providerId? → Provedor ao qual a regra se aplica (opcional)
-
-type → Tipo da regra:
-
-BASE → valor base
-
-PERCENTAGE → percentual aplicado
-
-FIXED_DISCOUNT → desconto fixo
-
-MIN_PRICE / MAX_PRICE → restrições de faixa
-
-value → número associado (ex.: 20% → 0.20 ou R$ 30 fixos)
-
-conditions → JSON flexível para regras específicas (ex.: horário, localização, fidelidade)
-
-status → ACTIVE | INACTIVE
-
-createdAt / updatedAt
-
-⚙️ Lógica de Negócio
-🔹 Criação de Regras
-
-Admins podem criar regras que impactam preços de forma:
-
-Global (sem serviceId ou providerId)
-
-Específica por serviço
-
-Específica por provedor
-
-O sistema valida que type e value são compatíveis (ex.: PERCENTAGE deve ter 0 < value ≤ 1).
-
-🔹 Atualização e Gerenciamento
-
-Admin pode ativar/inativar regras.
-
-Pode ajustar valores ou restrições de aplicação.
-
-Pode atualizar conditions (JSON) para regras mais complexas.
-
-🔹 Cálculo de Preço (calculatePrice)
-
-Fluxo:
-
-Recebe calculatePriceDto contendo:
-
-serviceId
-
-providerId (opcional)
-
-basePrice
-
-clientId (para aplicar fidelidade ou cupons futuros)
-
-meta (dados adicionais do agendamento, ex.: hora, duração, localização)
-
-Busca todas as regras ativas aplicáveis ao serviço e/ou provedor.
-
-Aplica as regras na seguinte ordem:
-
-BASE (define preço inicial se houver override)
-
-PERCENTAGE (aplica acréscimos/descontos proporcionais)
-
-FIXED_DISCOUNT (aplica descontos fixos)
-
-MIN_PRICE / MAX_PRICE (ajusta limites)
-
-Retorna objeto:
-
-{
-  originalPrice: number,
-  finalPrice: number,
-  appliedRules: PricingRule[],
-  discountsTotal: number
+  description?: string | null;    // help para admins
+  createdAt: Date; updatedAt: Date; deletedAt?: Date | null;
 }
+```
 
-🔹 Exemplos de Uso
+**Índices:** `(scope, refId, isActive)`, `(kind, isActive)`, `(activeFrom, activeTo)`, `(daysOfWeek, timeStart,timeEnd)`.
 
-Definir preço base para limpeza padrão.
+---
 
-Aplicar desconto de fidelidade de 10% para clientes recorrentes.
+## 4) DTOs (code‑real esperado)
 
-Definir preço mínimo de R$ 100 independente dos descontos aplicados.
+### 4.1 `QuoteQueryDto` (querystring)
 
-Aplicar promoções sazonais com validade.
+```ts
+export class QuoteQueryDto {
+  serviceId: string;                     // ProviderService ou Service canônico
+  providerId?: string;                   // se necessário
+  durationMin?: number;                  // override do default
+  addOns?: string[];                     // códigos de adicionais
+  distanceKm?: number;                   // cliente→base do provedor
+  when?: string;                         // ISO (para regras de tempo)
+  cityId?: string;                       // escopo cidade
+}
+```
 
-🚀 Endpoints Principais
-Criar Regra
+### 4.2 `UpsertPricingRuleDto`
 
+```ts
+export class UpsertPricingRuleDto {
+  scope: PricingScope; refId?: string;
+  kind: PricingKind; valueType: ValueType; value: number; maxEffect?: number;
+  daysOfWeek?: number[]; timeStart?: string; timeEnd?: string;
+  activeFrom?: string; activeTo?: string; priority?: number; isActive?: boolean;
+  description?: string;
+}
+```
+
+---
+
+## 5) Rotas (PricingController)
+
+| Método | Rota                 | Scope             | Descrição                                                    |
+| -----: | -------------------- | ----------------- | ------------------------------------------------------------ |
+|    GET | `/pricing/quote`     | Público/Autentic. | **Cotação** com breakdown. Params = `QuoteQueryDto`.         |
+|    GET | `/pricing/rules`     | ADMIN             | Lista regras (filtros por `scope/kind/refId/isActive`).      |
+|   POST | `/pricing/rules`     | ADMIN             | Cria/atualiza regra (`UpsertPricingRuleDto`).                |
+|  PATCH | `/pricing/rules/:id` | ADMIN             | Atualiza campos permitidos (enable/disable, janelas, valor). |
+| DELETE | `/pricing/rules/:id` | ADMIN             | Soft‑delete da regra.                                        |
+
+**Erros comuns:** `VALIDATION_ERROR`, `UNSUPPORTED_PRICING`, `RANGE_NOT_ALLOWED` (dur/raio), `NOT_FOUND` (service/provider), `RULE_CONFLICT`.
+
+---
+
+## 6) Service (assinaturas & fluxo)
+
+```ts
+class PricingService {
+  quote(q: QuoteQueryDto): Promise<{
+    inputs: any; breakdown: any; totals: {
+      grossCustomer: number; providerPayout: number; marketplaceFee: number;
+    }}>
+  
+  listRules(filter: any): Promise<{ items: PricingRule[]; total: number }>;
+  upsertRule(dto: UpsertPricingRuleDto): Promise<PricingRule>;
+  updateRule(id: string, dto: Partial<UpsertPricingRuleDto>): Promise<PricingRule>;
+  removeRule(id: string): Promise<void>;
+}
+```
+
+### 6.1 Pipeline de cálculo (quote)
+
+1. **Fetch do serviço** (`ProviderService` → `pricingModel`, `basePrice`, `defaultDurationMin`, `addOns`).
+2. **Duração**: `dur = durationMin || defaultDurationMin`. Se `HOURLY`, `hours = ceil(max(minHours, dur/60))` (cap em `maxHours` se houver).
+3. **Base**:
+
+   * `FIXED` → `base = basePrice`
+   * `HOURLY` → `base = hours * basePrice`
+   * `PACKAGE` → aplicar tabela/engine de pacote (service‑specific)
+4. **Add‑ons**: `addOnsSum = Σ(addOn.price)` (valida códigos).
+5. **Regras** (ordenadas por `priority asc` e depois `kind`):
+
+   * `DISTANCE_FEE` → `distanceFee = f(distanceKm)` (ex.: `rs_per_km * distanceKm`, clamp por `maxEffect`)
+   * `SURGE` (MULTIPLIER) → `subtotal *= surge`
+   * `FLOOR` → `subtotal = max(subtotal, floor)`
+   * `CAP` → `subtotal = min(subtotal, cap)`
+   * `PACKAGE_DISCOUNT` / `ABSOLUTE_ADJUST` → aplicar conforme `valueType`
+6. **Subtotal**: `subtotal = base + addOnsSum + distanceFee` antes de `SURGE`; aplicar demais regras em ordem.
+7. **Rounding**: arredondar para múltiplos configurados (ex.: `R$ 1,00`).
+8. **Split** (informativo):
+
+   * `marketplaceFee = round(subtotal * TAKE_RATE_BP / 10_000)`
+   * `providerPayout = subtotal - marketplaceFee`
+9. **Breakdown** retornado ao cliente; **nenhuma gravação** ocorre aqui (snapshot real no `Bookings`).
+
+### 6.2 Seleção de regras
+
+* **Escopos** avaliados em ordem de especificidade: `PROVIDER` > `SERVICE` > `CATEGORY` > `CITY` > `GLOBAL`.
+* Filtros por **when** (`daysOfWeek`, `timeStart/end`, `activeFrom/to`).
+* Resolver **conflitos** por `priority` (maior aplica por último) e **tipo** (ex.: múltiplos `SURGE` multiplicam sequencialmente até o limite em ENV).
+
+---
+
+## 7) Config (ENV)
+
+```env
+PRICING_TAKE_RATE_BP=1500                  # 15% em basis points
+PRICING_ROUND_TO_RS=1                      # arredonda para o real mais próximo
+PRICING_DISTANCE_RS_PER_KM=3               # fallback p/ DISTANCE_FEE
+PRICING_SURGE_MAX_MULTIPLIER=1.8
+PRICING_PRICE_MIN_RS=40
+PRICING_PRICE_CAP_RS=2000
+PRICING_CACHE_TTL_SEC=60                   # cache de quotes idênticas (chaveado por params)
+```
+
+---
+
+## 8) Exemplos (HTTP)
+
+### 8.1 Cotação — serviço por hora com add‑ons e distância
+
+```http
+GET /pricing/quote?serviceId=svc_123&providerId=p_01&durationMin=240&addOns=geladeira,forno&distanceKm=5&when=2025-08-26T10:00:00-03:00
+```
+
+**200** *(exemplo reduzido)*
+
+```json
+{
+  "inputs": {"serviceId":"svc_123","providerId":"p_01","durationMin":240,"addOns":["geladeira","forno"],"distanceKm":5},
+  "breakdown": {
+    "model": "HOURLY",
+    "hours": 4,
+    "base": 180,
+    "addOns": 45,
+    "distanceFee": 15,
+    "surgeMultiplier": 1.2,
+    "floorApplied": false,
+    "capApplied": false
+  },
+  "totals": {"grossCustomer": 276, "marketplaceFee": 41.4, "providerPayout": 234.6}
+}
+```
+
+### 8.2 Regras — criar surge por pico (cidade)
+
+```http
 POST /pricing/rules
-
 {
-  "name": "Desconto novos clientes",
-  "serviceId": "svc_123",
-  "type": "PERCENTAGE",
-  "value": 0.15,
-  "conditions": { "newClientOnly": true }
+  "scope":"CITY","refId":"campinas",
+  "kind":"SURGE","valueType":"MULTIPLIER","value":1.2,
+  "daysOfWeek":[5,6],"timeStart":"08:00","timeEnd":"12:00",
+  "activeFrom":"2025-08-01T00:00:00Z","activeTo":"2025-12-31T23:59:59Z",
+  "priority": 100, "description": "Pico manhã fim de semana"
 }
+```
 
-Calcular Preço
+---
 
-POST /pricing/calculate
+## 9) Integrações
 
-{
-  "serviceId": "svc_123",
-  "providerId": "prov_456",
-  "basePrice": 200,
-  "clientId": "cli_789"
-}
+* **Provider Services**: fonte de `pricingModel/basePrice/duration/addOns`.
+* **Services**: defaults de duração/add‑ons quando aplicável.
+* **Search/Ranking**: `priceFrom` para ordenação/filtro.
+* **Bookings**: grava **snapshot** do preço e aplica **cupom** (módulo de Coupons).
+* **Payments**: `marketplaceFee` alimenta relatórios (não altera valor de cobrança do cliente nesta etapa).
+* **Cache/Redis**: memoização de quotes idênticas por curto prazo.
 
+---
 
-Resposta:
+## 10) Segurança & LGPD
 
-{
-  "originalPrice": 200,
-  "finalPrice": 170,
-  "appliedRules": [
-    { "name": "Desconto novos clientes", "type": "PERCENTAGE", "value": 0.15 }
-  ],
-  "discountsTotal": 30
-}
+* Não expor PII; apenas IDs e valores.
+* Validar ownership/escopos em rotas **admin** de regras.
+* Rate‑limit em `/pricing/quote` para evitar abuso.
 
-🔒 Regras de Acesso
+---
 
-Apenas administradores podem criar/editar regras.
+## 11) Telemetria & KPIs
 
-Clientes podem apenas consultar cálculo de preço via endpoints seguros.
+* Eventos: `pricing_quote_requested`, `pricing_rules_applied`, `pricing_quote_cached`.
+* KPIs: **p95** de latência do quote, **hit‑rate** de cache, **variação de conversão** por regra (antes/depois), **distribuição de priceFrom** por cidade/categoria.
 
-🛠️ Integrações Futuras
+---
 
-Integração com Coupons (cupom vira regra temporária de desconto).
+## 12) QA — Casos críticos
 
-Integração com Loyalty (ex.: aplicar desconto automático baseado em pontos).
+* `durationMin` não compatível com o serviço (`HOURLY` com `minHours`) → erro claro.
+* `distanceKm` ausente em regra obrigatória de distância → usar fallback ENV ou negar cotação.
+* Regras conflitantes (`FLOOR` > `CAP`) → priorizar `CAP` final; alertar log.
+* `SURGE` acumulado > `PRICING_SURGE_MAX_MULTIPLIER` → clamp e logar.
+* `PACKAGE` sem tabela configurada → `UNSUPPORTED_PRICING`.
 
-Regras contextuais baseadas em localização e demanda (dynamic pricing).
+---
 
-Suporte a A/B Testing de precificação.
+## 13) Melhorias avançadas (quando necessário)
+
+1. **Zona dinâmica** de preço por bairro (heatmap de demanda) com auto‑surge.
+2. **Elasticidade**: experimentar passos de preço para maximizar conversão/receita.
+3. **Preços personalizados** por coorte (ex.: clientes recorrentes vs. novos), respeitando LGPD e fairness.
+4. **Simulador** de impacto de regras antes de publicar (A/B).
+
+---
+
+## 14) Conclusão
+
+O **Pricing** centraliza regras e cálculos de preço do LimpeJá, garantindo previsibilidade para o cliente, rentabilidade para o provedor e margem para o marketplace. Com regras declarativas, breakdown explícito e integração aos módulos de catálogo, reservas e pagamentos, o sistema está pronto para produção e para escalar com novas políticas de preço.

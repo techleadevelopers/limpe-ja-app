@@ -119,12 +119,19 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
                 <View style={styles.detailsContent}>
                     <Text style={styles.providerName} numberOfLines={1}>{item.fullName}</Text>
                     <Text style={styles.specialtyText} numberOfLines={1}>{specialtyName}</Text>
-                    
+
                     {item.averageRating !== undefined && item.reviewCount !== undefined && (
                         <View style={styles.ratingRow}>
                             {renderStars(item.averageRating)}
                             {item.reviewCount > 0 && <Text style={styles.reviewsText}>({item.reviewCount})</Text>}
                         </View>
+                    )}
+                    {/* NOVO: Exibir Taxa de Aceitação e Tempo Médio de Resposta */}
+                    {item.acceptanceRate !== undefined && (
+                        <Text style={styles.metricText}>Aceitação: {item.acceptanceRate}%</Text>
+                    )}
+                    {item.averageResponseTime !== undefined && (
+                        <Text style={styles.metricText}>Resp. Média: {item.averageResponseTime} min</Text>
                     )}
                     <Text style={styles.priceText}>{servicePrice}</Text>
                 </View>
@@ -207,6 +214,11 @@ const styles = StyleSheet.create({
     reviewsText: {
         fontSize: 10,
         color: '#888',
+    },
+    metricText: { // NOVO ESTILO PARA MÉTRICAS
+        fontSize: 10,
+        color: '#555',
+        marginBottom: 2,
     },
     priceText: {
         fontSize: 14,

@@ -78,7 +78,7 @@ export const toastConfig: ToastConfig = {
   loginSuccess: ({ text1, text2 }: any) => (
     <View style={styles.customToastContainer}>
       <Image
-        source={require('../../assets/images/limp-Photoroom.png')} // Ajuste o caminho conforme necessário
+        source={require('/assets/images/limp-Photoroom.png')} // Ajuste o caminho conforme necessário
         style={styles.customToastImage}
       />
       <View style={{ flex: 1 }}>
