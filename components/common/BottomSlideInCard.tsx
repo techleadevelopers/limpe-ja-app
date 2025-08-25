@@ -1,59 +1,68 @@
-// components/common/BottomSlideInCard.tsx
 import React, { useEffect, useRef } from 'react';
-import { Animated, Dimensions, StyleSheet, View, Platform, ViewStyle } from 'react-native';
+import { Animated, Dimensions, Platform, StyleSheet, ViewStyle } from 'react-native';
 
-interface BottomSlideInCardProps {
-    isVisible: boolean;
-    children: React.ReactNode;
+interface TopSlideInCardProps {
+  isVisible: boolean;
+  children: React.ReactNode;
+  /** desloca para baixo (ex: para não colar na status bar) */
+  topOffset?: number; // default 16..24
+  /** desloca da direita (espaço da borda) */
+  rightOffset?: number; // default 16
 }
 
-const { height: screenHeight } = Dimensions.get('window');
+const { width: screenWidth } = Dimensions.get('window');
 
-export const BottomSlideInCard: React.FC<BottomSlideInCardProps> = ({ isVisible, children }) => {
-    const translateY = useRef(new Animated.Value(screenHeight)).current;
+const TopSlideInCard: React.FC<TopSlideInCardProps> = ({
+  isVisible,
+  children,
+  topOffset = Platform.select({ ios: 24, android: 16, default: 16 })!,
+  rightOffset = 16,
+}) => {
+  // anima do lado direito (translateX) + leve fade
+  const translateX = useRef(new Animated.Value(80)).current;
+  const opacity    = useRef(new Animated.Value(0)).current;
 
-    useEffect(() => {
-        if (isVisible) {
-            Animated.spring(translateY, {
-                toValue: 0, // Anima para a posição natural (alinhado na parte inferior)
-                tension: 40,
-                friction: 10,
-                useNativeDriver: true,
-            }).start();
-        } else {
-            Animated.timing(translateY, {
-                toValue: screenHeight, // Anima para fora da tela (para baixo)
-                duration: 300,
-                useNativeDriver: true,
-            }).start();
-        }
-    }, [isVisible, translateY]);
+  useEffect(() => {
+    if (isVisible) {
+      Animated.parallel([
+        Animated.spring(translateX, { toValue: 0, useNativeDriver: true, speed: 18, bounciness: 8 }),
+        Animated.timing(opacity, { toValue: 1, duration: 220, useNativeDriver: true }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(translateX, { toValue: 80, duration: 180, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0, duration: 180, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [isVisible, translateX, opacity]);
 
-    return (
-        <Animated.View
-            style={[
-                styles.container,
-                { transform: [{ translateY }] },
-                // Garante que o componente só ocupe espaço quando visível
-                { display: isVisible ? 'flex' : 'none' }
-            ]}
-            pointerEvents={isVisible ? 'auto' : 'none'} // Habilita/desabilita interações com base na visibilidade
-        >
-            {children}
-        </Animated.View>
-    );
+  return (
+    <Animated.View
+      pointerEvents={isVisible ? 'auto' : 'none'}
+      style={[
+        styles.container,
+        {
+          top: topOffset,
+          right: rightOffset,
+          opacity,
+          transform: [{ translateX }],
+          display: isVisible ? 'flex' : 'none',
+        },
+      ]}
+    >
+      {children}
+    </Animated.View>
+  );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        position: Platform.select({ web: 'fixed', default: 'absolute' }) as ViewStyle['position'],
-        bottom: 20, // Distância do fundo da tela
-        left: 0,
-        right: 0,
-        alignItems: 'center', // Centraliza o conteúdo horizontalmente
-        justifyContent: 'flex-end', // Alinha o conteúdo à parte inferior do contêiner
-        zIndex: 9999, // Garante que ele fique acima da maioria dos outros elementos
-        paddingHorizontal: 16, // Padding das bordas da tela
-        pointerEvents: 'box-none' // Não bloqueia toques fora do conteúdo do card
-    },
+  container: {
+    position: Platform.select({ web: 'fixed', default: 'absolute' }) as ViewStyle['position'],
+    zIndex: 9999,
+    maxWidth: 420,
+    width: 'auto',
+    alignSelf: 'flex-end',
+  },
 });
+
+export default TopSlideInCard;
