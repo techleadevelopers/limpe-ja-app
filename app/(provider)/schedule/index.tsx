@@ -12,6 +12,7 @@ import {
   RefreshControl,
   Image,
   GestureResponderEvent, // Importação adicionada para GestureResponderEvent
+  ImageSourcePropType,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Calendar, LocaleConfig, DateData } from 'react-native-calendars';
@@ -79,6 +80,16 @@ interface Theme {
   // Ou 'stylesheet.day.period': { base: { width: ..., height: ... } }
 }
 // === FIM DO NOVO BLOCO ===
+
+// === ÍCONES 3D (injeção sutil, sem mexer no layout) ===
+const Icons3D: Record<string, ImageSourcePropType> = {
+  avatar: require('/assets/images/3d/perfil.png'),
+  empty: require('/assets/images/3d/step1-card-profile.png'),
+};
+
+const Icon3D = ({ src, size = 24, style }: { src: ImageSourcePropType; size?: number; style?: any }) => (
+  <Image source={src} style={[{ width: size, height: size }, style]} resizeMode="contain" />
+);
 
 // A interface ProviderAppointment estende BookingDetails e adiciona campos específicos da UI
 interface ProviderAppointment extends BookingDetails {
@@ -191,7 +202,8 @@ const AnimatedAppointmentItem: React.FC<{
             </>
           ) : (
             <View style={styles.clientAvatarPlaceholder}>
-              <Ionicons name="person" size={24} color="#FFF" />
+              {/* Ícone 3D no placeholder do avatar (sem alterar layout) */}
+              <Icon3D src={Icons3D.avatar} size={26} />
             </View>
           )}
         </View>
@@ -462,7 +474,8 @@ export default function MyScheduleScreen() {
         </View>
       ) : (
         <Animated.View style={[styles.centeredFeedback, { opacity: feedbackAnim }]}>
-          <Ionicons name="calendar-outline" size={64} color="#CED4DA" />
+          {/* Ícone 3D no estado vazio (mantendo tamanho ~64) */}
+          <Icon3D src={Icons3D.empty} size={64} />
           <Text style={styles.emptyListText}>Nenhum serviço agendado para este dia.</Text>
           <Text style={styles.emptyListSubText}>Aproveite para gerenciar sua disponibilidade ou confira outros dias!</Text>
           <TouchableOpacity

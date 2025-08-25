@@ -9,6 +9,7 @@ import {
     Animated,
     FlatList,
     Image,
+    ImageSourcePropType,
     Platform,
     RefreshControl,
     StyleSheet,
@@ -24,6 +25,17 @@ import { formatDate } from '../../../utils/helpers';
 import { getBookingsForUser } from '../../../services/bookingService';
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 // -------------------------------------------------------------
+
+// ===== Ícones 3D injetados (sem alterar layout) =====
+const Icons3D = {
+  avatar: require('/assets/images/3d/perfil.png'),
+  money: require('/assets/images/3d/cashback.png'),
+  empty: require('/assets/images/3d/step1-card-profile.png'),
+} satisfies Record<string, ImageSourcePropType>;
+
+const Icon3D = ({ src, size = 24, style }: { src: ImageSourcePropType; size?: number; style?: any }) => (
+  <Image source={src} style={[{ width: size, height: size }, style]} resizeMode="contain" />
+);
 
 // Componente para cada item de serviço com animações - AGORA RECEBE BookingDetails (formato achatado)
 const AnimatedServiceItem: React.FC<{
@@ -103,7 +115,8 @@ const AnimatedServiceItem: React.FC<{
           <Image source={{ uri: item.clientAvatarUrl }} style={styles.clientAvatar} />
         ) : (
           <View style={styles.clientAvatarPlaceholder}>
-            <Ionicons name="person" size={24} color="#FFF" />
+            {/* Ícone 3D no placeholder do avatar (mesmo tamanho) */}
+            <Icon3D src={Icons3D.avatar} size={24} />
           </View>
         )}
         <View style={styles.serviceInfo}>
@@ -115,7 +128,9 @@ const AnimatedServiceItem: React.FC<{
           </Text>
           {item.totalPrice !== undefined && (
             <Text style={styles.servicePriceText}>
-              <MaterialCommunityIcons name="currency-usd" size={14} color="#2E7D32" /> R$ {item.totalPrice.toFixed(2).replace('.', ',')}
+              {/* Ícone 3D de dinheiro (mantendo tamanho 14 para não alterar layout) */}
+              <Icon3D src={Icons3D.money} size={14} style={{ marginRight: 4 }} />
+              R$ {item.totalPrice.toFixed(2).replace('.', ',')}
             </Text>
           )}
         </View>
@@ -275,7 +290,8 @@ export default function ProviderServicesScreen() {
 
     return (
       <View style={styles.centeredFeedback}>
-        <Ionicons name="clipboard-outline" size={64} color="#CED4DA" />
+        {/* Ícone 3D no estado vazio (mesma hierarquia visual) */}
+        <Icon3D src={Icons3D.empty} size={64} />
         <Text style={styles.emptyText}>{title}</Text>
         <Text style={styles.emptySubText}>{subText}</Text>
         {ctaButton}

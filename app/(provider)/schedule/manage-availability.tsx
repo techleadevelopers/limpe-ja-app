@@ -1,4 +1,3 @@
-// LimpeJaApp/app/(provider)/schedule/index.tsx
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View,
@@ -14,6 +13,7 @@ import {
   Image,
   Easing,
   AccessibilityInfo,
+  ImageSourcePropType,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Calendar, LocaleConfig, DateData } from 'react-native-calendars';
@@ -106,6 +106,16 @@ interface Theme {
   };
 }
 
+// ====== ÍCONES 3D (injeção sutil, sem poluir a UI) ======
+const Icons3D = {
+  avatar: require('/assets/images/3d/perfil.png'),
+  empty: require('/assets/images/3d/step1-card-profile.png'),
+} satisfies Record<string, ImageSourcePropType>;
+
+const Icon3D = ({ src, size = 24, style }: { src: ImageSourcePropType; size?: number; style?: any }) => (
+  <Image source={src} style={[{ width: size, height: size }, style]} resizeMode="contain" />
+);
+
 // ====== Tipos e dados simulados ======
 interface ProviderAppointment {
   id: string;
@@ -191,7 +201,8 @@ const AnimatedAppointmentItem: React.FC<{
           <Image source={{ uri: item.clientAvatarUrl }} style={styles.clientAvatar} />
         ) : (
           <View style={styles.clientAvatarPlaceholder}>
-            <Ionicons name="person" size={24} color="#FFF" />
+            {/* Ícone 3D no placeholder do avatar (mesma área, sem mudar layout) */}
+            <Icon3D src={Icons3D.avatar} size={26} />
           </View>
         )}
 
@@ -413,7 +424,8 @@ export default function MyScheduleScreen() {
         />
       ) : (
         <Animated.View style={[styles.centeredFeedback, { opacity: feedbackAnim }]}>
-          <Ionicons name="calendar-outline" size={64} color="#CED4DA" />
+          {/* Substituição sutil: ícone 3D no vazio (mesmo tamanho ~64) */}
+          <Icon3D src={Icons3D.empty} size={64} />
           <Text style={styles.emptyListText}>Nenhum serviço agendado para este dia.</Text>
           <Text style={styles.emptyListSubText}>
             Aproveite para gerenciar sua disponibilidade ou confira outros dias!
