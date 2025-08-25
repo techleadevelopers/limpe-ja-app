@@ -89,11 +89,12 @@ import SecaoRecomendacoes from '../../../components/client/explore/home/SecaoRec
 import FAB_SOS from '../../../components/client/explore/home/FAB_SOS';
 
 // NOVOS COMPONENTES DE CUPOM E REFERRAL
-import { HtmlCouponCard } from '../../../components/coupons/HtmlCouponCard'; // Importar HtmlCouponCard
-import { CouponPill } from '../../../components/coupons/CouponPill'; // Importar CouponPill
-import { ReferralBanner } from '../../../components/referrals/ReferralBanner'; // Importar ReferralBanner
-import { ReferralSheet } from '../../../components/referrals/ReferralSheet';
-import { BottomSlideInCard } from '../../../components/common/BottomSlideInCard'; // NOVO: Importar BottomSlideInCard
+// CORREÇÃO: Alterado de named imports para default imports
+import HtmlCouponCard from '../../../components/coupons/HtmlCouponCard';
+import { CouponPill } from '../../../components/coupons/CouponPill'; // named
+import { ReferralBanner } from '../../../components/referrals/ReferralBanner'; // named
+import { ReferralSheet } from '../../../components/referrals/ReferralSheet'; // named
+import BottomSlideInCard from '../../../components/common/BottomSlideInCard';
 
 const COR_AZUL_CLARO_UNIFICADA = '#A0D2EB';
 const COR_PRIMARIA_ESCURA = '#2C3E50';
