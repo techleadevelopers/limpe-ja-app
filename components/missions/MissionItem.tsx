@@ -86,7 +86,7 @@ const MissionItem: React.FC<MissionItemProps> = ({ mission, delay, onClaim, isCl
                     <Ionicons
                         name={isCompleted ? "checkmark-circle" : "flag"}
                         size={24}
-                        color={isCompleted ? theme.success : theme.primary} {/* Usa cores do tema */}
+                        color={isCompleted ? theme.success : theme.primary} 
                         style={styles.missionIcon}
                     />
                     <View style={styles.missionTitleContainer}>
@@ -107,16 +107,16 @@ const MissionItem: React.FC<MissionItemProps> = ({ mission, delay, onClaim, isCl
                     <Text style={[styles.rewardText, { color: theme.textMuted }]}>Recompensa: <Text style={[styles.rewardValueText, { color: theme.success }]}>{rewardText}</Text></Text> {/* Usa cores do tema */}
                     {canClaim && (
                         <TouchableOpacity
-                            style={[styles.claimButton, { transform: [{ scale: scaleAnim }], backgroundColor: theme.primary }]} {/* Usa a cor primária do tema */}
+                            style={[styles.claimButton, { transform: [{ scale: scaleAnim }], backgroundColor: theme.primary }]} 
                             onPress={() => onClaim(mission.mission.id)}
                             onPressIn={onPressInButton}
                             onPressOut={onPressOutButton}
                             disabled={isClaiming}
                         >
                             {isClaiming ? (
-                                <ActivityIndicator color={theme.textLight} size="small" /> {/* Usa a cor do texto claro do tema */}
+                                <ActivityIndicator color={theme.textLight} size="small" /> 
                             ) : (
-                                <Text style={[styles.claimButtonText, { color: theme.textLight }]}>Resgatar</Text> {/* Usa a cor do texto claro do tema */}
+                                <Text style={[styles.claimButtonText, { color: theme.textLight }]}>Resgatar</Text> 
                             )}
                         </TouchableOpacity>
                     )}
