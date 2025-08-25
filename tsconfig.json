@@ -9,7 +9,9 @@
     "baseUrl": ".", // MUITO IMPORTANTE: Define a base para a resolução de módulos
     "paths": {
       "@app/*": ["./app/*"],
-      "@types/*": ["./types/*"] // ESTE É O ALIAS PARA SUA PASTA 'types' NA RAIZ
+      "@types/*": ["./types/*"], // ESTE É O ALIAS PARA SUA PASTA 'types' NA RAIZ
+      "@assets/*": ["assets/*"],
+      "@3d/*": ["assets/images/3d/*"]
     }
   },
   "include": [
