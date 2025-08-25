@@ -1,9 +1,19 @@
 // LimpeJaApp/app/(common)/safety/index.tsx
 import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Animated, Easing, Image } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+
+// ============ Ícones 3D (injeção leve) ============
+const Icons3D = {
+  panic: require('../../../../assets/images/3d/phone911.png'),
+  shield: require('../../../../assets/images/3d/shield-safe.png'),
+} as const;
+
+const Icon3D: React.FC<{ name: keyof typeof Icons3D; size?: number; style?: any }> = ({ name, size = 28, style }) => (
+  <Image source={Icons3D[name]} style={[{ width: size, height: size, resizeMode: 'contain' }, style]} />
+);
 
 // Reusing AnimatedMenuItem from ClientProfileScreen for consistency
 const AnimatedMenuItem: React.FC<{
@@ -55,6 +65,13 @@ const AnimatedMenuItem: React.FC<{
 
     const IconComponent = iconType === 'MaterialCommunityIcons' ? MaterialCommunityIcons : Ionicons;
 
+    // Mapeia ícone 2D para variante 3D sutil (sem alterar API)
+    const threeDMap: Record<string, keyof typeof Icons3D | undefined> = {
+      'alert-circle-outline': 'panic',          // Botão de pânico
+      'document-text-outline': 'shield',        // Relatar incidente (com selo de segurança)
+    };
+    const mapped3D = threeDMap[String(iconName)] ?? undefined;
+
     return (
         <Animated.View
             style={[
@@ -69,12 +86,17 @@ const AnimatedMenuItem: React.FC<{
                 onPressOut={onPressOutItem}
                 activeOpacity={0.7}
             >
-                <IconComponent
-                    name={iconName as any}
-                    size={24}
-                    color="#4682B4" // Robust blue icon color
-                    style={styles.menuItemIcon}
-                />
+                {/* Ícone 3D sutil + ícone atual (empilhados) */}
+                <View style={styles.menuIconStack}>
+                  {mapped3D && <Icon3D name={mapped3D} size={28} style={styles.menuIcon3D} />}
+                  <IconComponent
+                      name={iconName as any}
+                      size={22}
+                      color="#4682B4"
+                      style={styles.menuIconFG}
+                  />
+                </View>
+
                 <Text style={styles.menuItemText}>{label}</Text>
                 {showChevron && <Ionicons name="chevron-forward-outline" size={22} color="#C7C7CC" />}
             </TouchableOpacity>
@@ -232,9 +254,25 @@ const styles = StyleSheet.create({
         backgroundColor: '#F8FAFB', // Slightly different background for menu items within card
         borderRadius: 8,
     },
-    menuItemIcon: {
+
+    /* --- Pilha de ícones (3D + 2D) --- */
+    menuIconStack: {
+        width: 28,
+        height: 28,
         marginRight: 15,
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
     },
+    menuIcon3D: {
+        position: 'absolute',
+        opacity: 0.95,
+        transform: [{ scale: 0.98 }],
+    },
+    menuIconFG: {
+        // ícone 2D fica por cima
+    },
+
     menuItemText: {
         flex: 1,
         fontSize: 16,
