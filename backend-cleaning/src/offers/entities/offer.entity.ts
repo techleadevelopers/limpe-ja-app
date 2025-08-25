@@ -1,5 +1,5 @@
 // src/offers/entities/offer.entity.ts
-import { Offer as PrismaOffer } from '@prisma/client';
+import { Offer as PrismaOffer, Prisma } from '@prisma/client'; // Importe Prisma
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 // Adicionado enums para consistência com o backend
@@ -30,7 +30,10 @@ export class Offer implements PrismaOffer {
   discountPercentage: number | null;
 
   @ApiPropertyOptional({ description: 'Valor fixo de desconto (se aplicável)', example: 50.00 })
-  fixedDiscountAmount: number | null;
+  fixedDiscountAmount: Prisma.Decimal | null; // CORREÇÃO: Tipo ajustado para Prisma.Decimal
+
+  @ApiProperty({ description: 'Data de início da validade da oferta', example: '2025-01-01T00:00:00.000Z' })
+  validFrom: Date | null; // CORREÇÃO: Tipo ajustado para Date | null
 
   @ApiProperty({ description: 'Data de expiração da oferta', example: '2025-12-31T23:59:59.000Z' })
   validUntil: Date;

@@ -27,6 +27,11 @@ export class CreateOfferDto {
   @Min(0)
   fixedDiscountAmount?: number;
 
+  @ApiPropertyOptional({ description: 'Data de início da validade da oferta (ISO 8601)', example: '2025-01-01T00:00:00.000Z' }) // CORREÇÃO: Adicionado validFrom
+  @IsOptional() // CORREÇÃO: Adicionado IsOptional
+  @IsDateString() // CORREÇÃO: Adicionado IsDateString
+  validFrom?: string; // CORREÇÃO: Adicionado validFrom
+
   @ApiProperty({ description: 'Data de expiração da oferta (ISO 8601)', example: '2025-12-31T23:59:59.000Z' })
   @IsDateString()
   validUntil: string; // Usar string e converter para Date no serviço

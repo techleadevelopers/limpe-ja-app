@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
-  Prisma,
+  Prisma, // Importe Prisma para usar Prisma.Decimal
   Offer as PrismaOffer,
   OfferTarget,
   OfferStatus,
@@ -26,9 +26,7 @@ export class OffersService {
     if (dto.fixedDiscountAmount != null && dto.fixedDiscountAmount < 0) {
       throw new BadRequestException('fixedDiscountAmount não pode ser negativo.');
     }
-    if (!dto.validUntil) {
-      throw new BadRequestException('validUntil é obrigatório.');
-    }
+    // Removido o check !dto.validUntil, pois é obrigatório no DTO e no schema (validFrom é opcional)
 
     const target: OfferTarget = (dto.target as OfferTarget) ?? OfferTarget.GENERAL;
     if (target !== OfferTarget.GENERAL && !dto.targetId) {
@@ -44,9 +42,10 @@ export class OffersService {
         target,
         targetId: dto.targetId ?? null,
         status,
+        validFrom: dto.validFrom ? new Date(dto.validFrom) : null, // CORREÇÃO: Adicionado validFrom
         validUntil: new Date(dto.validUntil),
         discountPercentage: dto.discountPercentage ?? null,
-        fixedDiscountAmount: dto.fixedDiscountAmount ?? null,
+        fixedDiscountAmount: dto.fixedDiscountAmount != null ? new Prisma.Decimal(dto.fixedDiscountAmount) : null, // CORREÇÃO: Converte para Prisma.Decimal
         imageUrl: dto.imageUrl ?? null,
       },
     });
@@ -92,11 +91,12 @@ export class OffersService {
             ? null
             : dto.targetId ?? undefined,
         status: (dto.status as OfferStatus) ?? undefined,
-        validUntil: dto.validUntil ? new Date(dto.validUntil) : undefined,
+        validFrom: dto.validFrom !== undefined ? (dto.validFrom ? new Date(dto.validFrom) : null) : undefined, // CORREÇÃO: Adicionado validFrom
+        validUntil: dto.validUntil !== undefined ? new Date(dto.validUntil) : undefined, // Permite definir explicitamente para null ou undefined
         discountPercentage:
           dto.discountPercentage !== undefined ? dto.discountPercentage : undefined,
         fixedDiscountAmount:
-          dto.fixedDiscountAmount !== undefined ? dto.fixedDiscountAmount : undefined,
+          dto.fixedDiscountAmount !== undefined ? (dto.fixedDiscountAmount != null ? new Prisma.Decimal(dto.fixedDiscountAmount) : null) : undefined, // CORREÇÃO: Converte para Prisma.Decimal
         imageUrl: dto.imageUrl ?? undefined,
       },
     });

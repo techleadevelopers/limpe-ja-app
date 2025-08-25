@@ -509,7 +509,7 @@ model Offer {
   description        String?
   discountPercentage Float?
   fixedDiscountAmount Decimal?
-  validFrom          DateTime     // << CORREÇÃO: Adicionado validFrom
+  validFrom          DateTime?    // << CORREÇÃO: Adicionado '?' para tornar opcional
   validUntil         DateTime
   imageUrl           String?
   target             OfferTarget  // ADICIONADO
