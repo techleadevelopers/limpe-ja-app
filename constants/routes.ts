@@ -9,8 +9,8 @@ export const AUTH_ROUTES = {
   REGISTER_OPTIONS: '/(auth)/register-options',
   CLIENT_REGISTER: '/(auth)/client-register',
   PROVIDER_REGISTER_STEP1: '/(auth)/provider-register', 
-  SERVICE_DETAILS_STEP: '/(auth)/provider-register/service-details', // CORRIGIDO: Adicionado
-  VERIFY_ACCOUNT_STEP: '/(auth)/provider-register/verify-account',   // CORRIGIDO: Adicionado
+  SERVICE_DETAILS_STEP: '/(auth)/provider-register/service-details',
+  VERIFY_ACCOUNT_STEP: '/(auth)/provider-register/verify-account',
 } as const; // FUNDAMENTAL: usar 'as const' aqui para tipagem literal de string
 
 export const CLIENT_ROUTES = {
@@ -28,18 +28,20 @@ export const CLIENT_ROUTES = {
 } as const;
 
 export const PROVIDER_ROUTES = {
-  DASHBOARD: '/dashboard', // Altere de '/(provider)/dashboard' para '/dashboard'
-  SCHEDULE: '/schedule',
-  MANAGE_AVAILABILITY: '/schedule/manage-availability',
-  SERVICES_LIST: '/services',
-  SERVICE_DETAILS: (serviceId: string) => `/services/${serviceId}` as const,
-  EARNINGS: '/earnings', // Altere de '/(provider)/earnings' para '/earnings'
-  MESSAGES_LIST: '/messages',
-  PROVIDER_CHAT: (chatId: string) => `/messages/${chatId}` as const,
-  PROFILE: '/profile',
-  EDIT_SERVICES: '/profile/edit-services',
-  VERIFICATION: '/verify-account',
-  BOOKINGS_LIST: '/bookings',
+  DASHBOARD: '/(provider)/dashboard', // CORRIGIDO: Adicionado /(provider)
+  SCHEDULE: '/(provider)/schedule', // CORRIGIDO: Adicionado /(provider)
+  MANAGE_AVAILABILITY: '/(provider)/schedule/manage-availability', // CORRIGIDO: Adicionado /(provider)
+  SERVICES_LIST: '/(provider)/services', // CORRIGIDO: Adicionado /(provider)
+  SERVICE_DETAILS: (serviceId: string) => `/(provider)/services/${serviceId}` as const, // CORRIGIDO: Adicionado /(provider)
+  EARNINGS: '/(provider)/earnings', // CORRIGIDO: Adicionado /(provider)
+  MESSAGES_LIST: '/(provider)/messages', // CORRIGIDO: Adicionado /(provider)
+  PROVIDER_CHAT: (chatId: string) => `/(provider)/messages/${chatId}` as const, // CORRIGIDO: Adicionado /(provider)
+  PROFILE: '/(provider)/profile', // CORRIGIDO: Adicionado /(provider)
+  EDIT_SERVICES: '/(provider)/profile/edit-services', // CORRIGIDO: Adicionado /(provider)
+  VERIFICATION: '/(provider)/verify-account', // CORRIGIDO: Adicionado /(provider)
+  BOOKINGS_LIST: '/(provider)/bookings', // CORRIGIDO: Adicionado /(provider)
+  WITHDRAW: '/(provider)/withdraw', // Já estava correto
+  REVIEWS: '/(provider)/reviews/index', // Adicionado/Corrigido com base no erro de tipagem
 } as const;
 
 export const COMMON_ROUTES = {

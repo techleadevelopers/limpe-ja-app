@@ -1,8 +1,9 @@
-// icons-3d.ts
+/* constants/icons-3d.ts */
 export const Icons3D = {
+  ambulance2: require('@3d/ambulance2.png'),
   ticketAdd: require('@3d/+ticket.png'),
   bookmark: require('@3d/bookmark.png'),
-  calendar: require('@3d/calender.png'),
+  calendar: require('@3d/calender.png'), // o arquivo está como "calender.png" mesmo
   call: require('@3d/call.png'),
   cam: require('@3d/cam.png'),
   cashback: require('@3d/cashback.png'),
@@ -27,7 +28,7 @@ export const Icons3D = {
   map: require('@3d/map.png'),
   medical: require('@3d/medical.png'),
   notification: require('@3d/notification.png'),
-  panic: require('@3d/panic-sos.png'),
+  panic: require('@3d/panic.png'),
   payments: require('@3d/payments.png'),
   profile: require('@3d/perfil.png'),
   podium: require('@3d/podium.png'),
@@ -54,13 +55,19 @@ export const Icons3D = {
   time3: require('@3d/time3.png'),
   uptrend: require('@3d/uptrend.png'),
 
-  // ---- injected (kept everything else intact) ----
+  // ---- injetados ----
   shield: require('@3d/shield-safe.png'),
   trophyGold: require('@3d/trophy-gold.png'),
   medalGold: require('@3d/medal-gold-blue.png'),
   medalSilver: require('@3d/medal-silver-blue.png'),
   medalBronze: require('@3d/medal-bronze-blue.png'),
   phone911: require('@3d/phone911.png'),
+
+  // ---- Adições solicitadas ----
+  experience: require('@3d/experience.png'),
+  facial: require('@3d/facial.png'),
+  provider: require('@3d/provider.png'),
+  woman: require('@3d/woman.png'),
 } as const;
 
-export type Icon3DKey = keyof typeof Icons3D;
+export type Icon3DName = keyof typeof Icons3D;
