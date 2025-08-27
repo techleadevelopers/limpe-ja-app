@@ -2,236 +2,102 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-
-// Importa a interface PixChargeResponseDto do seu arquivo de tipagens centralizado
-// Isso garante que a tipagem seja consistente em todo o aplicativo
 import { PixChargeResponseDto as GlobalPixChargeResponseDto } from '../../../../types/backend/payments';
 
-// A interface para as props do componente PixPaymentDetails
 interface PixPaymentDetailsProps {
-    // Usamos a interface importada e renomeada para evitar conflitos de nome
-    pixChargeDetails: GlobalPixChargeResponseDto | null;
-    copyToClipboard: (text: string) => Promise<void>;
+  pixChargeDetails: GlobalPixChargeResponseDto | null;
+  copyToClipboard: (text: string) => Promise<void>;
 }
 
 export default function PixPaymentDetails({ pixChargeDetails, copyToClipboard }: PixPaymentDetailsProps) {
-    // Verifica se os dados essenciais do PIX estão disponíveis
-    // Agora usando 'amount' e 'expiresAt'
-    if (!pixChargeDetails || !pixChargeDetails.brCode || !pixChargeDetails.qrCodeImage || pixChargeDetails.amount === undefined) {
-        return null; // Não renderiza se faltarem dados essenciais
-    }
+  if (!pixChargeDetails || !pixChargeDetails.brCode || !pixChargeDetails.qrCodeImage || pixChargeDetails.amount === undefined) {
+    return null;
+  }
 
-    // Formata a data de expiração, se existir
-    // pixChargeDetails.expiresAt é um Date ou string ISO, dependendo de como é passado
-    const formattedExpiration = pixChargeDetails.expiresAt
-        ? new Date(pixChargeDetails.expiresAt).toLocaleString('pt-BR', {
-              day: '2-digit',
-              month: '2-digit',
-              year: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-          })
-        : null;
+  const formattedExpiration = pixChargeDetails.expiresAt
+    ? new Date(pixChargeDetails.expiresAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+    : null;
 
-    // Determina a fonte da imagem do QR Code
-    // Se for uma URL, usa { uri: pixChargeDetails.qrCodeImage }
-    // Se for base64, usa { uri: `data:image/png;base64,${pixChargeDetails.qrCodeImage}` }
-    // Assumindo que qrCodeImage pode ser uma URL ou base64
-    const qrCodeSource = pixChargeDetails.qrCodeImage.startsWith('http')
-        ? { uri: pixChargeDetails.qrCodeImage }
-        : { uri: `data:image/png;base64,${pixChargeDetails.qrCodeImage}` };
+  const qrCodeSource = pixChargeDetails.qrCodeImage.startsWith('http')
+    ? { uri: pixChargeDetails.qrCodeImage }
+    : { uri: `data:image/png;base64,${pixChargeDetails.qrCodeImage}` };
 
-    return (
-        <View style={styles.pixPaymentContainer}>
-            <Text style={styles.pixSectionTitle}>Pagamento via PIX</Text>
-            <View style={styles.pixCard}>
-                <View style={styles.pixAmountHighlight}>
-                    <Text style={styles.pixAmountLabel}>Valor Total:</Text>
-                    {/* Usa pixChargeDetails.amount */}
-                    <Text style={styles.pixAmountValue}>R$ {pixChargeDetails.amount.toFixed(2).replace('.', ',')}</Text>
-                </View>
-
-                <View style={styles.pixContent}>
-                    <View style={styles.pixQrContainer}>
-                        {/* Usa a imagem do QR Code vinda do DTO */}
-                        <Image
-                            source={qrCodeSource}
-                            style={styles.qrCodeImage}
-                        />
-                        <Text style={styles.pixQrCaption}>Escaneie o QR Code</Text>
-                    </View>
-                    <View style={styles.pixOrSeparator}>
-                        <View style={styles.pixSeparatorLine} />
-                        <Text style={styles.pixOrText}>OU</Text>
-                        <View style={styles.pixSeparatorLine} />
-                    </View>
-                    <View style={styles.pixCopyKeyContainer}>
-                        <Text style={styles.pixCopyLabel}>Copie a Chave PIX:</Text>
-                        <View style={styles.pixKeyBox}>
-                            {/* Usa pixChargeDetails.brCode */}
-                            <Text style={styles.pixKeyValue} numberOfLines={1} ellipsizeMode="middle">
-                                {pixChargeDetails.brCode}
-                            </Text>
-                            {/* Copia o brCode */}
-                            <TouchableOpacity onPress={() => copyToClipboard(pixChargeDetails.brCode)} style={styles.pixCopyButton}>
-                                <Ionicons name="copy-outline" size={22} color="#2A72E7" />
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
-
-                {formattedExpiration && (
-                    <Text style={styles.pixExpirationText}>
-                        Este PIX expira em: {formattedExpiration}
-                    </Text>
-                )}
-
-                <Text style={styles.pixInstructionsTitle}>Instruções:</Text>
-                <Text style={styles.pixInstructionItem}>1. Abra o app do seu banco e acesse a área PIX.</Text>
-                <Text style={styles.pixInstructionItem}>2. Escolha pagar com QR Code ou Chave PIX.</Text>
-                <Text style={styles.pixInstructionItem}>3. Escaneie o código ou cole a chave copiada.</Text>
-                <Text style={styles.pixInstructionItem}>4. Confirme os dados e o valor, depois finalize o pagamento.</Text>
-                <Text style={styles.pixInstructionItem}>Seu agendamento será confirmado após a aprovação do pagamento.</Text>
-            </View>
+  return (
+    <View style={s.container}>
+      <Text style={s.title}>Pagamento via PIX</Text>
+      <View style={s.card}>
+        <View style={s.amountBox}>
+          <Text style={s.amountLabel}>Valor Total:</Text>
+          <Text style={s.amountValue}>R$ {pixChargeDetails.amount.toFixed(2).replace('.', ',')}</Text>
         </View>
-    );
+
+        <View style={s.body}>
+          <View style={s.qr}>
+            <Image source={qrCodeSource} style={s.qrImg} />
+            <Text style={s.qrCaption}>Escaneie o QR Code</Text>
+          </View>
+
+          <View style={s.or}>
+            <View style={s.line} />
+            <Text style={s.orText}>OU</Text>
+            <View style={s.line} />
+          </View>
+
+          <View style={s.copy}>
+            <Text style={s.copyLabel}>Copie a Chave PIX:</Text>
+            <View style={s.keyBox}>
+              <Text numberOfLines={1} ellipsizeMode="middle" style={s.keyVal}>{pixChargeDetails.brCode}</Text>
+              <TouchableOpacity onPress={() => copyToClipboard(pixChargeDetails.brCode)} style={{ padding: 6 }}>
+                <Ionicons name="copy-outline" size={22} color="#2A72E7" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
+        {formattedExpiration && <Text style={s.expire}>Este PIX expira em: {formattedExpiration}</Text>}
+
+        <Text style={s.subtitle}>Instruções:</Text>
+        {['Abra o app do seu banco e acesse a área PIX.',
+          'Escolha pagar com QR Code ou Chave PIX.',
+          'Escaneie o código ou cole a chave copiada.',
+          'Confirme os dados e o valor, depois finalize o pagamento.',
+          'Seu agendamento será confirmado após a aprovação do pagamento.'].map((t, i) =>
+          <Text key={i} style={s.li}>{`${i + 1}. ${t}`}</Text>
+        )}
+      </View>
+    </View>
+  );
 }
 
-const styles = StyleSheet.create({
-    pixPaymentContainer: {
-        marginTop: 25,
-        marginBottom: 10,
-        paddingHorizontal: 15,
-    },
-    pixSectionTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#111',
-        marginBottom: 10,
-        textAlign: 'center',
-    },
-    pixCard: {
-        backgroundColor: '#F7F9FC',
-        borderRadius: 12,
-        padding: 15,
-        borderWidth: 1,
-        borderColor: '#E9EDF0',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 2,
-    },
-    pixAmountHighlight: {
-        backgroundColor: '#E6F0FF',
-        paddingVertical: 10,
-        paddingHorizontal: 15,
-        borderRadius: 8,
-        marginBottom: 15,
-        alignItems: 'center',
-    },
-    pixAmountLabel: {
-        fontSize: 14,
-        color: '#2A72E7',
-        fontWeight: '500',
-    },
-    pixAmountValue: {
-        fontSize: 20,
-        color: '#2A72E7',
-        fontWeight: 'bold',
-    },
-    pixContent: {
-        alignItems: 'center',
-    },
-    pixQrContainer: {
-        alignItems: 'center',
-        marginBottom: 10,
-    },
-    qrCodeImage: {
-        width: 150,
-        height: 150,
-        resizeMode: 'contain',
-    },
-    pixQrCaption: {
-        fontSize: 13,
-        color: '#555',
-        marginTop: 4,
-    },
-    pixOrSeparator: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginVertical: 15,
-        width: '80%',
-    },
-    pixSeparatorLine: {
-        flex: 1,
-        height: 1,
-        backgroundColor: '#DDEEFF',
-    },
-    pixOrText: {
-        marginHorizontal: 10,
-        fontSize: 13,
-        color: '#778899',
-        fontWeight: '500',
-    },
-    pixCopyKeyContainer: {
-        width: '100%',
-        alignItems: 'center',
-        marginBottom: 20,
-    },
-    pixCopyLabel: {
-        fontSize: 14,
-        color: '#333',
-        marginBottom: 6,
-        fontWeight: '500',
-    },
-    pixKeyBox: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#FFFFFF',
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        borderWidth: 1,
-        borderColor: '#DDEEFF',
-        width: '90%',
-        minHeight: 48,
-    },
-    pixKeyValue: {
-        flex: 1,
-        fontSize: 14,
-        color: '#333',
-        marginRight: 10,
-    },
-    pixCopyButton: {
-        padding: 6,
-    },
-    pixExpirationText: {
-        fontSize: 13,
-        color: '#D32F2F',
-        textAlign: 'center',
-        marginTop: 10,
-        marginBottom: 15,
-        fontWeight: '500',
-    },
-    pixInstructionsTitle: {
-        fontSize: 15,
-        fontWeight: '600',
-        color: '#334155',
-        marginTop: 10,
-        marginBottom: 8,
-    },
-    pixInstructionItem: {
-        fontSize: 13,
-        color: '#475569',
-        lineHeight: 20,
-        marginBottom: 4,
-    },
-    pixConfirmationNote: {
-        fontSize: 12,
-        color: '#64748B',
-        textAlign: 'center',
-        marginTop: 15,
-        fontStyle: 'italic',
-    },
+const s = StyleSheet.create({
+  container: { marginTop: 24, marginBottom: 10, paddingHorizontal: 16 },
+  title: { fontSize: 16, fontWeight: '700', color: '#1F2E45', textAlign: 'center', marginBottom: 10 },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1, borderColor: '#E9EDF0',
+    shadowColor: '#1E2A3B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
+  },
+  amountBox: { backgroundColor: '#E9F2FF', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 10, marginBottom: 12, alignItems: 'center' },
+  amountLabel: { fontSize: 13, color: '#2A72E7', fontWeight: '600' },
+  amountValue: { fontSize: 19, color: '#2A72E7', fontWeight: '800' },
+
+  body: { alignItems: 'center' },
+  qr: { alignItems: 'center', marginBottom: 8 },
+  qrImg: { width: 150, height: 150, resizeMode: 'contain' },
+  qrCaption: { fontSize: 12, color: '#6A7C90', marginTop: 4 },
+
+  or: { flexDirection: 'row', alignItems: 'center', marginVertical: 12, width: '80%' },
+  line: { flex: 1, height: 1, backgroundColor: '#DDEEFF' },
+  orText: { marginHorizontal: 10, fontSize: 12, color: '#7A8DA7', fontWeight: '700' },
+
+  copy: { width: '100%', alignItems: 'center', marginBottom: 14 },
+  copyLabel: { fontSize: 13, color: '#223243', marginBottom: 6, fontWeight: '600' },
+  keyBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, borderColor: '#DDEEFF', width: '90%', minHeight: 48 },
+  keyVal: { flex: 1, fontSize: 13, color: '#223243', marginRight: 8 },
+
+  expire: { fontSize: 12, color: '#D32F2F', textAlign: 'center', marginTop: 4, marginBottom: 10, fontWeight: '600' },
+  subtitle: { fontSize: 14, fontWeight: '700', color: '#334155', marginTop: 8, marginBottom: 6 },
+  li: { fontSize: 12, color: '#475569', lineHeight: 20, marginBottom: 2 },
 });

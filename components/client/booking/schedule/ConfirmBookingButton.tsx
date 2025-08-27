@@ -1,5 +1,5 @@
-import React, { useRef, useEffect } from 'react'; // Importado useRef, useEffect
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, Platform, View, Animated, Easing } from 'react-native'; // Importado Animated, Easing
+import React, { useRef, useEffect } from 'react';
+import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, Platform, View, Animated, Easing } from 'react-native';
 
 interface ConfirmBookingButtonProps {
   isButtonDisabled: boolean;
@@ -7,7 +7,7 @@ interface ConfirmBookingButtonProps {
   isBooking: boolean;
   confirmButtonText: string;
   selectedTime: string | null;
-  hasSelectedServicePrice: boolean; // Para verificar se o preço do serviço está disponível
+  hasSelectedServicePrice: boolean;
 }
 
 const ConfirmBookingButton: React.FC<ConfirmBookingButtonProps> = ({
@@ -18,52 +18,35 @@ const ConfirmBookingButton: React.FC<ConfirmBookingButtonProps> = ({
   selectedTime,
   hasSelectedServicePrice,
 }) => {
-  const pulseAnim = useRef(new Animated.Value(1)).current; // Animação de pulso
+  const pulse = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     if (!isButtonDisabled) {
-      // Inicia a animação de pulso quando o botão está habilitado
       Animated.loop(
         Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 1.02, // Leve aumento de escala
-            duration: 2000,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 2000,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
+          Animated.timing(pulse, { toValue: 1.02, duration: 2000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+          Animated.timing(pulse, { toValue: 1, duration: 2000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
         ])
       ).start();
     } else {
-      pulseAnim.stopAnimation(); // Para a animação se o botão estiver desabilitado
-      pulseAnim.setValue(1); // Reseta o valor
+      pulse.stopAnimation(); pulse.setValue(1);
     }
-  }, [isButtonDisabled, pulseAnim]);
+  }, [isButtonDisabled, pulse]);
 
   return (
-    <View style={styles.confirmButtonWrapper}>
-      <Animated.View style={[{ transform: [{ scale: pulseAnim }] }]}> {/* Aplica a animação aqui */}
+    <View style={s.wrap}>
+      <Animated.View style={{ transform: [{ scale: pulse }] }}>
         <TouchableOpacity
-          style={[
-            styles.confirmButton,
-            isButtonDisabled && styles.confirmButtonDisabled
-          ]}
+          style={[s.btn, isButtonDisabled && s.btnDisabled]}
           onPress={onConfirmBooking}
           disabled={isButtonDisabled}
+          activeOpacity={0.9}
         >
           {isBooking ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
-            <Text style={styles.confirmButtonText}>
-              {selectedTime && hasSelectedServicePrice ?
-                `Agendar (${confirmButtonText})` :
-                "Selecione Data, Hora e Endereço"
-              }
+            <Text style={s.text}>
+              {selectedTime && hasSelectedServicePrice ? `Agendar (${confirmButtonText})` : 'Selecione Data, Hora e Endereço'}
             </Text>
           )}
         </TouchableOpacity>
@@ -72,41 +55,27 @@ const ConfirmBookingButton: React.FC<ConfirmBookingButtonProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  confirmButtonWrapper: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    borderRadius: 40,
-    paddingHorizontal: 25,
-    paddingVertical: Platform.OS === 'ios' ? 25 : 42,
+const s = StyleSheet.create({
+  wrap: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    paddingHorizontal: 20, paddingTop: 18, paddingBottom: Platform.OS === 'ios' ? 24 : 28,
     backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
+    borderTopWidth: 1, borderTopColor: '#E7EEF9',
+    shadowColor: '#000', shadowOffset: { width: 0, height: -3 }, shadowOpacity: 0.08, shadowRadius: 6, elevation: 8,
+  },
+  btn: {
+    backgroundColor: '#2A72E7',
+    paddingVertical: 14,
+    borderRadius: 16,
+    alignItems: 'center',
+    shadowColor: '#2A72E7',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
     elevation: 8,
   },
-  confirmButton: {
-    backgroundColor: '#2A72E7',
-    paddingVertical: 7,
-    width: '90%',
-    borderRadius: 12,
-    bottom: 25,
-    left: 12,
-    alignItems: 'center',
-  },
-  confirmButtonDisabled: {
-    backgroundColor: '#A0C7F2',
-  },
-  confirmButtonText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
-  },
+  btnDisabled: { backgroundColor: '#A9C7F6', shadowOpacity: 0 },
+  text: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });
 
 export default ConfirmBookingButton;

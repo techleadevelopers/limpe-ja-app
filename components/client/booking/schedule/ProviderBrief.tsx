@@ -1,281 +1,130 @@
-// ./app/(client)/bookings/components/schedule/ProviderBrief.tsx
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient'; // Manter a importação se usada em outros lugares ou para o shine effect
 import React, { useCallback } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
-// Importar VerificationStatus para ter certeza
-import { VerificationStatus } from '../../../../types/backend/auth'; // CORREÇÃO: Importar VerificationStatus de auth.ts
-import { BookingAddress } from '../../../../types/backend/bookings'; // CORREÇÃO: Importar BookingAddress
+import { VerificationStatus } from '../../../../types/backend/auth';
+import { BookingAddress } from '../../../../types/backend/bookings';
 
-// A interface ProviderDetails deve espelhar a ProviderDisplayInfo
 interface ProviderDetails {
-    id: string;
-    fullName: string;
-    email?: string | null;
-    phone?: string | null;
-    bio?: string | null;
-    cpf?: string | null;
-    dateOfBirth?: string | null;
-    address?: BookingAddress | null; // CORREÇÃO: Usar BookingAddress importado
-    createdAt?: string;
-    updatedAt?: string;
-    distance?: number | null;
-    reviews?: any[];
-    pixKey?: string | null;
-
-    avatarUrl?: string | null;
-    averageRating?: number | null;
-    verificationStatus?: VerificationStatus;
-    yearsOfExperience?: number | null;
-    providerServices?: { service: { name: string; }; }[];
+  id: string;
+  fullName: string;
+  email?: string | null;
+  phone?: string | null;
+  bio?: string | null;
+  cpf?: string | null;
+  dateOfBirth?: string | null;
+  address?: BookingAddress | null;
+  createdAt?: string;
+  updatedAt?: string;
+  distance?: number | null;
+  reviews?: any[];
+  pixKey?: string | null;
+  avatarUrl?: string | null;
+  averageRating?: number | null;
+  verificationStatus?: VerificationStatus;
+  yearsOfExperience?: number | null;
+  providerServices?: { service: { name: string; }; }[];
 }
 
 interface ProviderBriefProps {
-    provider: ProviderDetails | null;
-    serviceName?: string | string[];
-    isLoading?: boolean;
+  provider: ProviderDetails | null;
+  serviceName?: string | string[];
+  isLoading?: boolean;
 }
 
 export default function ProviderBrief({ provider, serviceName, isLoading }: ProviderBriefProps) {
-    const renderStars = useCallback((rating: number | undefined | null) => {
-        const stars = [];
-        const actualRating = rating ?? 0;
-        const fullStars = Math.floor(actualRating);
-        const hasHalfStar = (actualRating * 2) % 2 !== 0;
+  const renderStars = useCallback((rating?: number | null) => {
+    const r = rating ?? 0;
+    const full = Math.floor(r);
+    const half = (r * 2) % 2 !== 0;
+    const stars = new Array(5).fill(0).map((_, i) => {
+      let name: keyof typeof Ionicons.glyphMap = 'star-outline';
+      if (i < full) name = 'star';
+      else if (half && i === full) name = 'star-half-sharp';
+      return <Ionicons key={i} name={name} size={12} color="#4A90E2" style={{ marginRight: 2 }} />;
+    });
+    return <View style={{ flexDirection: 'row' }}>{stars}</View>;
+  }, []);
 
-        for (let i = 0; i < 5; i++) {
-            let iconName: keyof typeof Ionicons.glyphMap = 'star-outline';
-            if (i < fullStars) iconName = 'star';
-            else if (hasHalfStar && i === fullStars) iconName = 'star-half-sharp';
+  const chip = useCallback((icon: keyof typeof Ionicons.glyphMap, text: string, verified?: boolean) => (
+    <View style={[styles.chip, verified && styles.chipOk]}>
+      <Ionicons name={icon} size={12} color={verified ? 'rgba(6, 78, 212, 0.85)' : '#5C6B7A'} />
+      <Text style={[styles.chipTxt, verified && styles.chipTxtOk]}>{text}</Text>
+    </View>
+  ), []);
 
-            stars.push(
-                <Ionicons
-                    key={i}
-                    name={iconName}
-                    size={12}
-                    color="#4A90E2"
-                    style={styles.ratingStarIcon}
-                />
-            );
-        }
-        return <View style={styles.ratingStarContainer}>{stars}</View>;
-    }, []);
+  const specialty = serviceName || (provider?.providerServices?.[0]?.service?.name ?? 'Serviço');
 
-    const renderInfoChip = useCallback((iconName: keyof typeof Ionicons.glyphMap, text: string, isVerified?: boolean) => {
-        return (
-            <View style={[styles.infoChip, isVerified && styles.infoChipVerified]}>
-                <Ionicons name={iconName} size={12} color={isVerified ? 'rgba(6, 78, 212, 0.85)' : '#555'} />
-                <Text style={[styles.infoChipText, isVerified && styles.infoChipTextVerified]}>{text}</Text>
-            </View>
-        );
-    }, []);
-
-    const specialtyToDisplay = serviceName || (provider?.providerServices && provider.providerServices.length > 0
-        ? provider.providerServices[0].service.name
-        : 'Serviço não especificado');
-
-    if (isLoading || !provider) {
-        return (
-            <View style={styles.providerBriefSkeleton}>
-                <View style={styles.providerImageSkeleton} />
-                <View style={styles.providerTextInfoSkeleton}>
-                    <View style={styles.skeletonLineLarge} />
-                    <View style={styles.skeletonLineSmall} />
-                    <View style={styles.skeletonChipsContainer}>
-                        <View style={styles.skeletonChip} />
-                        <View style={styles.skeletonChip} />
-                    </View>
-                </View>
-            </View>
-        );
-    }
-
+  if (isLoading || !provider) {
     return (
-        <View
-            style={styles.providerBriefCard}
-        >
-            {/* Certifique-se de que `provider.avatarUrl` seja tratado como um URI válido para `Image` */}
-            {provider.avatarUrl ? (
-                <Image source={{ uri: provider.avatarUrl }} style={styles.providerImageSmall} />
-            ) : (
-                <View style={styles.providerImagePlaceholder}>
-                    <Ionicons name="person-circle-outline" size={30} color="#666" />
-                </View>
-            )}
-            <View style={styles.providerTextInfo}>
-                <View style={styles.providerNameAndRatingRow}>
-                    <Text style={styles.providerNameSmall}>{provider.fullName}</Text>
-                    {typeof provider.averageRating === 'number' && provider.averageRating > 0 ? (
-                        <View style={styles.ratingContainer}>
-                            {renderStars(provider.averageRating)}
-                        </View>
-                    ) : (
-                        <Text style={styles.noRatingText}>Sem avaliação</Text>
-                    )}
-                </View>
-                <Text style={styles.providerServiceSmall}>
-                    {specialtyToDisplay}
-                </Text>
-                <View style={styles.infoChipsRow}>
-                    {provider.verificationStatus === VerificationStatus.APPROVED && (
-                        renderInfoChip("shield-checkmark-outline", "Verificado", true)
-                    )}
-                    {/* Certifique-se de que yearsOfExperience é um número antes de renderizar */}
-                    {typeof provider.yearsOfExperience === 'number' && provider.yearsOfExperience > 0 && (
-                        renderInfoChip("hourglass-outline", `${provider.yearsOfExperience}+ anos`)
-                    )}
-                </View>
-            </View>
+      <View style={styles.skeleton}>
+        <View style={styles.skelImg} />
+        <View style={{ flex: 1 }}>
+          <View style={styles.skelLineLg} />
+          <View style={styles.skelLineSm} />
+          <View style={{ flexDirection: 'row', marginTop: 6, gap: 8 }}>
+            <View style={styles.skelChip} /><View style={styles.skelChip} />
+          </View>
         </View>
+      </View>
     );
+  }
+
+  return (
+    <View style={styles.card}>
+      {provider.avatarUrl ? (
+        <Image source={{ uri: provider.avatarUrl }} style={styles.photo} />
+      ) : (
+        <View style={styles.photoPlaceholder}><Ionicons name="person-circle-outline" size={30} color="#7E8EA1" /></View>
+      )}
+
+      <View style={{ flex: 1 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
+          <Text style={styles.name}>{provider.fullName}</Text>
+          {typeof provider.averageRating === 'number' && provider.averageRating > 0 ? (
+            <View style={{ marginLeft: 8 }}>{renderStars(provider.averageRating)}</View>
+          ) : (
+            <Text style={styles.noRating}>Sem avaliação</Text>
+          )}
+        </View>
+        <Text style={styles.service}>{specialty}</Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2 }}>
+          {provider.verificationStatus === VerificationStatus.APPROVED && chip('shield-checkmark-outline', 'Verificado', true)}
+          {typeof provider.yearsOfExperience === 'number' && provider.yearsOfExperience > 0 && chip('hourglass-outline', `${provider.yearsOfExperience}+ anos`)}
+        </View>
+      </View>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-    providerBriefCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 14,
-        paddingLeft: 12,
-        backgroundColor: '#bfd4f7c3', // Fundo de cor sólida aplicado aqui
-        borderRadius: 15,
-        marginHorizontal: 30,
-        marginTop: 20,
-        marginBottom: 25,
-    
-    },
-    providerImageSmall: {
-        width: 55,
-        height: 55,
-        borderRadius: 37.5,
-        marginRight: 10,
-        borderWidth: 2,
-        borderColor: '#E6F0FF',
-    },
-    providerImagePlaceholder: {
-        width: 65,
-        height: 65,
-        borderRadius: 37.5,
-        marginRight: 1,
-        borderWidth: 2,
-        borderColor: '#E6F0FF',
-        backgroundColor: '#E0E0E0',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    providerTextInfo: {
-        flex: 1,
-        justifyContent: 'center',
-    },
-    providerNameAndRatingRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 1,
-        marginTop: -1,
-    },
-    providerNameSmall: {
-        fontSize: 13,
-        fontWeight: '700',
-        color: '#333',
-        marginRight: 18,
-    },
-    providerServiceSmall: {
-        fontSize: 13,
-        color: '#666',
-        marginBottom: 9,
-    },
-    ratingContainer: {
-        flexDirection: 'row',
-        marginRight: 5,
-        alignItems: 'center',
-    },
-    noRatingText: {
-        fontSize: 9,
-        color: '#888',
-        fontWeight: 'normal',
-    },
-    ratingStarContainer: {
-        flexDirection: 'row',
-    },
-    ratingStarIcon: {
-        marginRight: 2,
-    },
-    infoChipsRow: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 5,
-        marginTop: -3,
-        left: 2,
-    },
-    infoChip: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#F0F4F8',
-        borderRadius: 20,
-        paddingVertical: 5,
-        paddingHorizontal: 12,
-    },
-    infoChipText: {
-        fontSize: 9,
-        color: '#555',
-        marginLeft: 6,
-        fontWeight: '600',
-    },
-    infoChipVerified: {
-        backgroundColor: '#D1ECF1',
-    },
-    infoChipTextVerified: {
-        color: '#007BFF',
-    },
-    providerBriefSkeleton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 20,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 15,
-        marginHorizontal: 15,
-        marginTop: 20,
-        marginBottom: 10,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.15,
-        shadowRadius: 6,
-        elevation: 6,
-        height: 100,
-    },
-    providerImageSkeleton: {
-        width: 75,
-        height: 75,
-        borderRadius: 37.5,
-        marginRight: 15,
-        backgroundColor: '#E0E0E0',
-    },
-    providerTextInfoSkeleton: {
-        flex: 1,
-        justifyContent: 'center',
-    },
-    skeletonLineLarge: {
-        height: 18,
-        width: '85%',
-        backgroundColor: '#E0E0E0',
-        borderRadius: 6,
-        marginBottom: 10,
-    },
-    skeletonLineSmall: {
-        height: 15,
-        width: '65%',
-        backgroundColor: '#E0E0E0',
-        borderRadius: 6,
-        marginBottom: 8,
-    },
-    skeletonChipsContainer: {
-        flexDirection: 'row',
-        marginTop: 5,
-        gap: 10,
-    },
-    skeletonChip: {
-        height: 28,
-        width: 80,
-        backgroundColor: '#E0E0E0',
-        borderRadius: 18,
-    },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 12,
+    marginHorizontal: 16,
+    marginTop: 14,
+    shadowColor: '#1E2A3B',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.10,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  photo: { width: 58, height: 58, borderRadius: 29, marginRight: 10, borderWidth: 2, borderColor: '#E7F0FF' },
+  photoPlaceholder: { width: 58, height: 58, borderRadius: 29, marginRight: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF4FF' },
+  name: { fontSize: 14, fontWeight: '800', color: '#223243' },
+  noRating: { fontSize: 10, color: '#8CA0B3', marginLeft: 6 },
+  service: { fontSize: 12, color: '#6A7C90', marginBottom: 4 },
+  chip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0F4F8', borderRadius: 16, paddingVertical: 4, paddingHorizontal: 10 },
+  chipTxt: { fontSize: 10, color: '#5C6B7A', marginLeft: 6, fontWeight: '700' },
+  chipOk: { backgroundColor: '#D6ECFF' },
+  chipTxtOk: { color: '#2463D7' },
+
+  // skeletons
+  skeleton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 18, marginHorizontal: 16, marginTop: 14, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 4, height: 96 },
+  skelImg: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#E6EEF9', marginRight: 12 },
+  skelLineLg: { height: 16, width: '80%', backgroundColor: '#E6EEF9', borderRadius: 6, marginBottom: 8 },
+  skelLineSm: { height: 14, width: '60%', backgroundColor: '#E6EEF9', borderRadius: 6, marginBottom: 8 },
+  skelChip: { height: 24, width: 80, backgroundColor: '#E6EEF9', borderRadius: 12 },
 });

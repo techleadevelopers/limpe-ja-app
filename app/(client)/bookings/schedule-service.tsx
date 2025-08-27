@@ -47,7 +47,6 @@ import ScheduleHeader from '../../../components/client/booking/schedule/Schedule
 import ScheduleCalendar from '../../../components/client/booking/schedule/ScheduleCalendar';
 import NotesInputSection from '../../../components/client/booking/schedule/NotesInputSection';
 import ConfirmBookingButton from '../../../components/client/booking/schedule/ConfirmBookingButton';
-import { PanicBanner } from '../../../components/safety/PanicBanner'; // NOVO: Importar PanicBanner
 
 
 // Import AppStyles
@@ -1023,15 +1022,7 @@ export default function ScheduleServiceScreen() {
                 }}
                 showsVerticalScrollIndicator={false}
             >
-                {/* NOVO: PanicBanner */}
-                <Animated.View style={{
-                    transform: [{ scale: scaleAnim }],
-                    opacity: fadeAnim,
-                    marginHorizontal: 20, // Adiciona margem para alinhar com outros cards
-                    marginBottom: 15, // Espaçamento abaixo do banner
-                }}>
-                    <PanicBanner onPanic={handlePanic} status={panicStatus} />
-                </Animated.View>
+                
 
                 <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
                     <ProviderBrief
@@ -1071,7 +1062,8 @@ export default function ScheduleServiceScreen() {
                     opacity: fadeAnim
                 }}>
                     <TimeSlotsSection
-                        title={`${t('schedule_service.available_times')} - ${selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}`}
+                        titleKey="schedule_service.available_times" // Passa a chave i18n
+                        date={selectedDate} // Passa o objeto Date
                         displaySlotsInfo={displaySlotsInfo}
                         isLoading={isFetchingSlots}
                         selectedTime={selectedTime}
@@ -1218,6 +1210,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-around',
         alignItems: 'center',
         paddingHorizontal: 20,
+        marginTop: 30,
         paddingVertical: 15,
         backgroundColor: AppColors.white,
         borderBottomWidth: 1,
