@@ -140,7 +140,10 @@
       "error_fetching_slots": "Could not load available time slots.",
       "unavailable_time_slot": "Unavailable Time Slot",
       "unavailable_time_slot_message": "This time slot is already booked or unavailable. Please select another.",
-      "select_date_time_address": "Select Date, Time, and Address"
+      "select_date_time_address": "Select Date, Time, and Address",
+      "available_times": "Available Times",
+      "preferred_times": "Preferred Times",
+      "no_slots": "No time slots available for this date."
     },
     "provider_details": {
       "loading": "Loading...",

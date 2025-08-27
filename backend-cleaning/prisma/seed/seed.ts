@@ -1,3 +1,4 @@
+// seed.ts
 import { PrismaClient, UserRole, Prisma, VerificationStatus, BookingStatus, TransactionType, PricingType, CouponType, CouponTarget, CouponStatus, MissionAudience, MissionKind, RewardType, MissionStatus, LoyaltyTransactionType, OfferTarget, OfferStatus, SupportTicketStatus, SupportTicketCategory, DisputeReason, DisputeStatus, IncidentType, IncidentStatus, SubscriptionFrequency, SubscriptionStatus, ClaimStatus, PaymentIntentStatus, Service, // Importado para tipagem de createdServices
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
@@ -139,6 +140,7 @@ async function main() {
   });
   console.log(`Usuário Cliente 'Indicado' (${referredUser.email}) criada/atualizada.`);
 
+  // Existing Provider: Caroline Silva (formerly Pro Carolina)
   const providerAddress = await upsertAddress({
     cep: '01002-002',
     street: 'Av. do Provedor',
@@ -152,15 +154,15 @@ async function main() {
 
   const providerUser = await prisma.user.upsert({
     where: { email: 'provedor@teste.com' },
-    update: { passwordHash: pwd, role: UserRole.PROVIDER, fullName: 'Pro Carolina' },
+    update: { passwordHash: pwd, role: UserRole.PROVIDER, fullName: 'Caroline Silva' }, // Alterado aqui
     create: {
       email: 'provedor@teste.com',
       passwordHash: pwd,
       role: UserRole.PROVIDER,
-      fullName: 'Pro Carolina',
+      fullName: 'Caroline Silva', // Alterado aqui
       provider: {
         create: {
-          fullName: 'Pro Carolina',
+          fullName: 'Caroline Silva', // Alterado aqui
           yearsOfExperience: 5,
           verificationStatus: VerificationStatus.APPROVED,
           acceptanceRate: 0.92,
@@ -171,12 +173,137 @@ async function main() {
           dateOfBirth: new Date('1985-01-15'),
           cpf: '000.000.000-00',
           phone: '11977777777',
+          avatarUrl: 'https://randomuser.me/api/portraits/women/6.jpg', // Placeholder image
         },
       },
     },
     include: { provider: true },
   });
-  console.log(`Usuário Provedor 'Pro Carolina' (${providerUser.email}) criada/atualizada.`);
+  console.log(`Usuário Provedor 'Caroline Silva' (${providerUser.email}) criada/atualizada.`);
+
+  // NEW PROVIDER 1: Maria (formerly Pro Maria)
+  const providerAddress2 = await upsertAddress({
+    cep: '01002-003',
+    street: 'Rua das Flores',
+    number: '45',
+    neighborhood: 'Pinheiros',
+    city: 'São Paulo',
+    state: 'SP',
+    latitude: -23.56,
+    longitude: -46.68,
+  });
+
+  const providerUser2 = await prisma.user.upsert({
+    where: { email: 'provedor2@teste.com' },
+    update: { passwordHash: pwd, role: UserRole.PROVIDER, fullName: 'Maria' }, // Alterado aqui
+    create: {
+      email: 'provedor2@teste.com',
+      passwordHash: pwd,
+      role: UserRole.PROVIDER,
+      fullName: 'Maria', // Alterado aqui
+      provider: {
+        create: {
+          fullName: 'Maria', // Alterado aqui
+          yearsOfExperience: 3,
+          verificationStatus: VerificationStatus.APPROVED,
+          acceptanceRate: 0.85,
+          averageResponseTime: 240,
+          bio: 'Limpeza eficiente e com carinho, cuidando do seu lar como se fosse meu.',
+          pixKey: 'maria.pix@email.com',
+          address: { connect: { id: providerAddress2.id } },
+          dateOfBirth: new Date('1990-03-20'),
+          cpf: '111.111.111-11',
+          phone: '11966666666',
+          avatarUrl: 'https://randomuser.me/api/portraits/women/7.jpg', // Placeholder image
+        },
+      },
+    },
+    include: { provider: true },
+  });
+  console.log(`Usuário Provedor 'Maria' (${providerUser2.email}) criada/atualizada.`);
+
+  // NEW PROVIDER 2: Joana (formerly Pro Joana)
+  const providerAddress3 = await upsertAddress({
+    cep: '01002-004',
+    street: 'Av. Paulista',
+    number: '1500',
+    neighborhood: 'Bela Vista',
+    city: 'São Paulo',
+    state: 'SP',
+    latitude: -23.561,
+    longitude: -46.656,
+  });
+
+  const providerUser3 = await prisma.user.upsert({
+    where: { email: 'provedor3@teste.com' },
+    update: { passwordHash: pwd, role: UserRole.PROVIDER, fullName: 'Joana' }, // Alterado aqui
+    create: {
+      email: 'provedor3@teste.com',
+      passwordHash: pwd,
+      role: UserRole.PROVIDER,
+      fullName: 'Joana', // Alterado aqui
+      provider: {
+        create: {
+          fullName: 'Joana', // Alterado aqui
+          yearsOfExperience: 7,
+          verificationStatus: VerificationStatus.APPROVED,
+          acceptanceRate: 0.95,
+          averageResponseTime: 120,
+          bio: 'Especialista em limpeza profunda e organização de ambientes.',
+          pixKey: 'joana.pix@email.com',
+          address: { connect: { id: providerAddress3.id } },
+          dateOfBirth: new Date('1980-07-01'),
+          cpf: '222.222.222-22',
+          phone: '11955555555',
+          avatarUrl: 'https://randomuser.me/api/portraits/women/8.jpg', // Placeholder image
+        },
+      },
+    },
+    include: { provider: true },
+  });
+  console.log(`Usuário Provedor 'Joana' (${providerUser3.email}) criada/atualizada.`);
+
+  // NEW PROVIDER 3: Ana (formerly Pro Ana)
+  const providerAddress4 = await upsertAddress({
+    cep: '01002-005',
+    street: 'Rua Augusta',
+    number: '2000',
+    neighborhood: 'Consolação',
+    city: 'São Paulo',
+    state: 'SP',
+    latitude: -23.555,
+    longitude: -46.666,
+  });
+
+  const providerUser4 = await prisma.user.upsert({
+    where: { email: 'provedor4@teste.com' },
+    update: { passwordHash: pwd, role: UserRole.PROVIDER, fullName: 'Ana' }, // Alterado aqui
+    create: {
+      email: 'provedor4@teste.com',
+      passwordHash: pwd,
+      role: UserRole.PROVIDER,
+      fullName: 'Ana', // Alterado aqui
+      provider: {
+        create: {
+          fullName: 'Ana', // Alterado aqui
+          yearsOfExperience: 2,
+          verificationStatus: VerificationStatus.APPROVED,
+          acceptanceRate: 0.88,
+          averageResponseTime: 200,
+          bio: 'Dedicação e cuidado em cada detalhe para um ambiente impecável.',
+          pixKey: 'ana.pix@email.com',
+          address: { connect: { id: providerAddress4.id } },
+          dateOfBirth: new Date('1995-11-11'),
+          cpf: '333.333.333-33',
+          phone: '11944444444',
+          avatarUrl: 'https://randomuser.me/api/portraits/women/9.jpg', // Placeholder image
+        },
+      },
+    },
+    include: { provider: true },
+  });
+  console.log(`Usuário Provedor 'Ana' (${providerUser4.email}) criada/atualizada.`);
+
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 2) REFERRAL CODE (para o indicador)
@@ -201,13 +328,13 @@ async function main() {
   console.log('Criando/Atualizando serviços...');
 
   const servicesData = [
-    { name: 'Limpeza Residencial', description: 'Limpeza completa de residências.', price: 150.0, pricingType: PricingType.FIXED_PRICE, icon: 'home' },
-    { name: 'Limpeza Comercial', description: 'Limpeza para ambientes comerciais.', price: 50.0, pricingType: PricingType.HOURLY, icon: 'business' },
-    { name: 'Limpeza Pós-Obra', description: 'Limpeza detalhada após reformas e construções.', price: 300.0, pricingType: PricingType.FIXED_PRICE, icon: 'construction' },
-    { name: 'Limpeza de Vidros', description: 'Limpeza especializada de janelas e superfícies de vidro.', price: 100.0, pricingType: PricingType.FIXED_PRICE, icon: 'window' },
-    { name: 'Limpeza de Escritório', description: 'Limpeza e organização de espaços de escritório.', price: 180.0, pricingType: PricingType.FIXED_PRICE, icon: 'desk' },
-    { name: 'Limpeza de Estofados', description: 'Limpeza e higienização de estofados.', price: 120.0, pricingType: PricingType.FIXED_PRICE, icon: 'chair' },
-    { name: 'Passadoria de Roupas', description: 'Serviço de passar roupas.', price: 25.0, pricingType: PricingType.HOURLY, icon: 'iron' },
+    { name: 'Residencial', description: 'Limpeza completa de residências.', price: 150.0, pricingType: PricingType.FIXED_PRICE, icon: 'residencial' }, // Alterado de 'home' para 'residencial'
+    { name: 'Comercial', description: 'Limpeza para ambientes comerciais.', price: 50.0, pricingType: PricingType.HOURLY, icon: 'comercial' }, // Alterado de 'business' para 'comercial'
+    { name: 'Pós-Obra', description: 'Limpeza detalhada após reformas e construções.', price: 300.0, pricingType: PricingType.FIXED_PRICE, icon: 'obra' }, // Alterado de 'construction' para 'obra'
+    { name: 'Vidros', description: 'Limpeza especializada de janelas e superfícies de vidro.', price: 100.0, pricingType: PricingType.FIXED_PRICE, icon: 'vidro' }, // Alterado de 'window' para 'vidro'
+    { name: 'Escritório', description: 'Limpeza e organização de espaços de escritório.', price: 180.0, pricingType: PricingType.FIXED_PRICE, icon: 'escritorio' }, // Alterado de 'desk' para 'escritorio'
+    { name: 'Estofados', description: 'Limpeza e higienização de estofados.', price: 120.0, pricingType: PricingType.FIXED_PRICE, icon: 'estofados' }, // Alterado de 'chair' para 'estofados'
+    { name: 'Passadoria', description: 'Serviço de passar roupas.', price: 25.0, pricingType: PricingType.HOURLY, icon: 'passadoria' }, // Alterado de 'iron' para 'passadoria'
   ];
 
   const createdServices: { [key: string]: Service } = {};
@@ -232,9 +359,9 @@ async function main() {
     console.log(`Serviço '${service.name}' criado/atualizado.`);
   }
 
-  // Oferta de serviço do provedor
+  // Oferta de serviço do provedor existente
   console.log('Criando/Atualizando ofertas de serviço do provedor...');
-  const residentialCleaningService = createdServices['Limpeza Residencial'];
+  const residentialCleaningService = createdServices['Residencial'];
   if (!providerUser.provider) {
     throw new Error("Provider profile not found for providerUser. This should not happen after upsert with include.");
   }
@@ -264,7 +391,98 @@ async function main() {
     `Oferta de serviço para ${providerUser.fullName} (${residentialCleaningService.name}) criada/atualizada.`,
   );
 
-  // Disponibilidade semanal do provedor (exemplo: seg/qua/sex 09:00-12:00)
+  // Oferta de serviço para NEW PROVIDER 1: Maria
+  if (!providerUser2.provider) {
+    throw new Error("Provider profile not found for providerUser2. This should not happen after upsert with include.");
+  }
+  const providerOffering2 = await prisma.providerService.upsert({
+    where: {
+      providerId_serviceId: {
+        providerId: providerUser2.provider.id,
+        serviceId: residentialCleaningService.id,
+      },
+    },
+    update: {
+      price: new Prisma.Decimal(170.0),
+      pricingType: PricingType.FIXED_PRICE,
+      description: 'Limpeza residencial padrão',
+      durationMinutes: 160,
+    },
+    create: {
+      providerId: providerUser2.provider.id,
+      serviceId: residentialCleaningService.id,
+      pricingType: PricingType.FIXED_PRICE,
+      price: new Prisma.Decimal(170.0),
+      description: 'Limpeza residencial padrão',
+      durationMinutes: 160,
+    },
+  });
+  console.log(
+    `Oferta de serviço para ${providerUser2.fullName} (${residentialCleaningService.name}) criada/atualizada.`,
+  );
+
+  // Oferta de serviço para NEW PROVIDER 2: Joana
+  if (!providerUser3.provider) {
+    throw new Error("Provider profile not found for providerUser3. This should not happen after upsert with include.");
+  }
+  const providerOffering3 = await prisma.providerService.upsert({
+    where: {
+      providerId_serviceId: {
+        providerId: providerUser3.provider.id,
+        serviceId: residentialCleaningService.id,
+      },
+    },
+    update: {
+      price: new Prisma.Decimal(190.0),
+      pricingType: PricingType.FIXED_PRICE,
+      description: 'Limpeza residencial premium',
+      durationMinutes: 200,
+    },
+    create: {
+      providerId: providerUser3.provider.id,
+      serviceId: residentialCleaningService.id,
+      pricingType: PricingType.FIXED_PRICE,
+      price: new Prisma.Decimal(190.0),
+      description: 'Limpeza residencial premium',
+      durationMinutes: 200,
+    },
+  });
+  console.log(
+    `Oferta de serviço para ${providerUser3.fullName} (${residentialCleaningService.name}) criada/atualizada.`,
+  );
+
+  // Oferta de serviço para NEW PROVIDER 3: Ana
+  if (!providerUser4.provider) {
+    throw new Error("Provider profile not found for providerUser4. This should not happen after upsert with include.");
+  }
+  const providerOffering4 = await prisma.providerService.upsert({
+    where: {
+      providerId_serviceId: {
+        providerId: providerUser4.provider.id,
+        serviceId: residentialCleaningService.id,
+      },
+    },
+    update: {
+      price: new Prisma.Decimal(165.0),
+      pricingType: PricingType.FIXED_PRICE,
+      description: 'Limpeza residencial básica',
+      durationMinutes: 150,
+    },
+    create: {
+      providerId: providerUser4.provider.id,
+      serviceId: residentialCleaningService.id,
+      pricingType: PricingType.FIXED_PRICE,
+      price: new Prisma.Decimal(165.0),
+      description: 'Limpeza residencial básica',
+      durationMinutes: 150,
+    },
+  });
+  console.log(
+    `Oferta de serviço para ${providerUser4.fullName} (${residentialCleaningService.name}) criada/atualizada.`,
+  );
+
+
+  // Disponibilidade semanal do provedor existente (exemplo: seg/qua/sex 09:00-12:00)
   console.log('Criando/Atualizando disponibilidade do provedor...');
   const weekdays = [1, 3, 5]; // 1 = Segunda, 3 = Quarta, 5 = Sexta
   for (const wd of weekdays) {
@@ -297,6 +515,106 @@ async function main() {
     }
   }
   console.log(`Disponibilidade para ${providerUser.fullName} criada/atualizada.`);
+
+  // Disponibilidade para NEW PROVIDER 1: Maria
+  const weekdays2 = [2, 4]; // 2 = Terça, 4 = Quinta
+  for (const wd of weekdays2) {
+    const existingAvailability = await prisma.availability.findFirst({
+      where: {
+        providerId: providerUser2.provider.id,
+        dayOfWeek: wd,
+      },
+    });
+
+    if (existingAvailability) {
+      await prisma.availability.update({
+        where: { id: existingAvailability.id },
+        data: {
+          startTime: '08:00',
+          endTime: '17:00',
+          isAvailable: true,
+        },
+      });
+    } else {
+      await prisma.availability.create({
+        data: {
+          providerId: providerUser2.provider.id,
+          dayOfWeek: wd,
+          startTime: '08:00',
+          endTime: '17:00',
+          isAvailable: true,
+        },
+      });
+    }
+  }
+  console.log(`Disponibilidade para ${providerUser2.fullName} criada/atualizada.`);
+
+  // Disponibilidade para NEW PROVIDER 2: Joana
+  const weekdays3 = [1, 2, 3, 4, 5]; // Segunda a Sexta
+  for (const wd of weekdays3) {
+    const existingAvailability = await prisma.availability.findFirst({
+      where: {
+        providerId: providerUser3.provider.id,
+        dayOfWeek: wd,
+      },
+    });
+
+    if (existingAvailability) {
+      await prisma.availability.update({
+        where: { id: existingAvailability.id },
+        data: {
+          startTime: '09:00',
+          endTime: '18:00',
+          isAvailable: true,
+        },
+      });
+    } else {
+      await prisma.availability.create({
+        data: {
+          providerId: providerUser3.provider.id,
+          dayOfWeek: wd,
+          startTime: '09:00',
+          endTime: '18:00',
+          isAvailable: true,
+        },
+      });
+    }
+  }
+  console.log(`Disponibilidade para ${providerUser3.fullName} criada/atualizada.`);
+
+  // Disponibilidade para NEW PROVIDER 3: Ana
+  const weekdays4 = [6, 7]; // Sábado e Domingo
+  for (const wd of weekdays4) {
+    const existingAvailability = await prisma.availability.findFirst({
+      where: {
+        providerId: providerUser4.provider.id,
+        dayOfWeek: wd,
+      },
+    });
+
+    if (existingAvailability) {
+      await prisma.availability.update({
+        where: { id: existingAvailability.id },
+        data: {
+          startTime: '09:00',
+          endTime: '13:00',
+          isAvailable: true,
+        },
+      });
+    } else {
+      await prisma.availability.create({
+        data: {
+          providerId: providerUser4.provider.id,
+          dayOfWeek: wd,
+          startTime: '09:00',
+          endTime: '13:00',
+          isAvailable: true,
+        },
+      });
+    }
+  }
+  console.log(`Disponibilidade para ${providerUser4.fullName} criada/atualizada.`);
+
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 4) CUPONS
@@ -893,7 +1211,7 @@ async function main() {
       bookingId: booking3.id,
     },
   });
-  console.log(`Ticket de suporte 'TICKET-001' criado/atualizado.`);
+  console.log(`Ticket de suporte 'TICKET-001' criado/atualizada.`);
 
   // SupportMessage
   console.log('Criando/Atualizando mensagem de suporte...');

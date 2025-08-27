@@ -98,7 +98,7 @@
       "mark_read_success": "Notificação marcada como lida (backend e frontend):",
       "mark_read_error": "Não foi possível marcar a notificação como lida.",
       "mark_all_read_success": "Todas as notificações foram marcadas como lidas.",
-      "mark_all_read_error": "Não foi possível marcar todas as notificações como lidas.",
+      "mark_all_read_error": "Não foi possível marcar todas as notificações.",
       "navigation_error": "Erro de Navegação",
       "navigation_error_message": "Não foi possível abrir esta notificação.",
       "now": "Agora mesmo",
@@ -140,7 +140,11 @@
       "error_fetching_slots": "Não foi possível carregar os horários disponíveis.",
       "unavailable_time_slot": "Horário Indisponível",
       "unavailable_time_slot_message": "Este horário já está agendado ou não disponível. Por favor, selecione outro.",
-      "select_date_time_address": "Selecione Data, Hora e Endereço"
+      "select_date_time_address": "Selecione Data, Hora e Endereço",
+
+      "available_times": "Horários disponíveis",
+      "preferred_times": "Preferências de horário",
+      "no_slots": "Nenhum horário disponível para esta data."
     },
     "provider_details": {
       "loading": "Carregando...",
