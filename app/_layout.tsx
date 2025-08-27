@@ -20,6 +20,9 @@ import { toastConfig } from '../components/Toast'; // Importar a configuração 
 import i18n from '../i18n'; // Importar a instância do i18n
 import { I18nextProvider, useTranslation } from 'react-i18next'; // Importar I18nextProvider e useTranslation
 
+// >>> INJETADO: expo-font <<<
+import * as Font from 'expo-font';
+
 Sentry.init({
     dsn: 'https://947962edb662e5ff655cbcd778ee13b6@o4509792415252480.ingest.us.sentry.io/4509792431898624',
     sendDefaultPii: true,
@@ -44,9 +47,46 @@ function RootLayoutContent() {
         const prepareApp = async () => {
             console.log('[RootLayoutContent | prepareApp] Iniciando processo de preparação do aplicativo.');
             try {
+                // >>> INJETADO: carregar fontes antes de ocultar o Splash <<<
+                await Font.loadAsync({
+                    // DM Sans
+                    'DMSans-Regular': require('../assets/fonts/DMSans-Regular.ttf'),
+                    'DMSans-Medium': require('../assets/fonts/DMSans-Medium.ttf'),
+                    'DMSans-MediumItalic': require('../assets/fonts/DMSans-MediumItalic.ttf'),
+                    'DMSans-Bold': require('../assets/fonts/DMSans-Bold.ttf'),
+                    'DMSans-BoldItalic': require('../assets/fonts/DMSans-BoldItalic.ttf'),
+                    'DMSans-Italic': require('../assets/fonts/DMSans-Italic.ttf'),
+
+                    // Kumbh Sans
+                    'KumbhSans-Regular': require('../assets/fonts/KumbhSans-Regular.ttf'),
+                    'KumbhSans-Light': require('../assets/fonts/KumbhSans-Light.ttf'),
+                    'KumbhSans-Bold': require('../assets/fonts/KumbhSans-Bold.ttf'),
+
+                    // MADE Evolve Sans (arquivos marcados como PERSONAL USE)
+                    'MADEEvolveSans-Regular': require('../assets/fonts/MADE Evolve Sans Regular (PERSONAL USE).otf'),
+                    'MADEEvolveSans-RegularEVO': require('../assets/fonts/MADE Evolve Sans Regular EVO (PERSONAL USE).otf'),
+                    'MADEEvolveSans-Medium': require('../assets/fonts/MADE Evolve Sans Medium (PERSONAL USE).otf'),
+                    'MADEEvolveSans-MediumEVO': require('../assets/fonts/MADE Evolve Sans Medium EVO (PERSONAL USE).otf'),
+                    'MADEEvolveSans-Light': require('../assets/fonts/MADE Evolve Sans Light (PERSONAL USE).otf'),
+                    'MADEEvolveSans-LightEVO': require('../assets/fonts/MADE Evolve Sans Light EVO (PERSONAL USE).otf'),
+                    'MADEEvolveSans-Bold': require('../assets/fonts/MADE Evolve Sans Bold (PERSONAL USE).otf'),
+                    'MADEEvolveSans-BoldEVO': require('../assets/fonts/MADE Evolve Sans Bold EVO (PERSONAL USE).otf'),
+                    'MADEEvolveSans-Thin': require('../assets/fonts/MADE Evolve Sans Thin (PERSONAL USE).otf'),
+                    'MADEEvolveSans-ThinEVO': require('../assets/fonts/MADE Evolve Sans Thin EVO (PERSONAL USE).otf'),
+
+                    // Red Hat Mono (variante variável + itálico)
+                    'RedHatMono': require('../assets/fonts/RedHatMono[wght].ttf'),
+                    'RedHatMono-Italic': require('../assets/fonts/RedHatMono-Italic[wght].ttf'),
+
+                    // Space Mono
+                    'SpaceMono-Regular': require('../assets/fonts/SpaceMono-Regular.ttf'),
+
+                    // Nota: helvetiker_regular.typeface não é TTF/OTF (é fonte 3D/Three.js). Não carregamos aqui.
+                });
+
                 // Inicializar i18n se ainda não estiver (geralmente feito no arquivo i18n.ts)
-                // await i18n.init(); // Se o i18n.js não iniciar automaticamente
-                console.log('[RootLayoutContent | prepareApp] Inicialização básica do aplicativo concluída.');
+                // await i18n.init();
+                console.log('[RootLayoutContent | prepareApp] Fontes carregadas e inicialização básica concluída.');
             } catch (e: any) {
                 console.error('[RootLayoutContent | prepareApp] ERRO FATAL durante a inicialização do aplicativo:', e);
                 setInitializationError(e.message || 'Erro desconhecido na inicialização.');
@@ -87,11 +127,9 @@ function RootLayoutContent() {
 
         const normalizePath = (path: string | undefined | null) => {
             if (typeof path !== 'string') {
-                return ''; // Retorna uma string vazia se o caminho não for uma string válida
+                return '';
             }
             let p = path.trim();
-            // Esta regex verifica se o caminho termina com uma barra, mas não é um grupo de rota como /(group)/
-            // e remove a barra final para padronização.
             if (p.endsWith('/') && p.length > 1 && !/\/\(\w+\)\/$/.test(p)) {
                 p = p.slice(0, -1);
             }
@@ -102,8 +140,7 @@ function RootLayoutContent() {
         const providerRegistrationVerifyAccountPath = normalizePath(AUTH_ROUTES.VERIFY_ACCOUNT_STEP);
 
         const decideAndRedirect = async () => {
-            // --- INÍCIO DA MODIFICAÇÃO SUGERIDA ---
-            const path = pathname ?? ''; // Usar pathname diretamente do hook
+            const path = pathname ?? '';
             const isBookingOrChat =
                 path.startsWith('/(client)/bookings') ||
                 path.startsWith('/bookings') ||
@@ -113,11 +150,9 @@ function RootLayoutContent() {
             if (isBookingOrChat) {
                 console.log(`[RootLayoutContent | decideAndRedirect] INFO: Rota de booking/chat detectada (${path}). Evitando redirecionamento.`);
                 console.groupEnd();
-                return; // NÃO redirecione nessas rotas
+                return;
             }
-            // --- FIM DA MODIFICAÇÃO SUGERIDA ---
 
-            // MOVIDO PARA DENTRO DE decideAndRedirect
             const inAuthGroup = segments[0] === '(auth)';
             const isWelcomeRoute = pathname === '/welcome';
 
@@ -133,7 +168,6 @@ function RootLayoutContent() {
                 return;
             }
 
-            // Lógica de redirecionamento para provedores
             if (user?.role === UserRole.PROVIDER) {
                 const verificationStatus = user?.providerDetails?.verificationStatus;
                 const isApproved = verificationStatus === VerificationStatus.APPROVED;
@@ -144,17 +178,16 @@ function RootLayoutContent() {
 
                 if (isApproved) {
                     const targetDashboardPath = normalizePath(PROVIDER_ROUTES.DASHBOARD);
-
-                    // Verifica se o caminho atual começa com as rotas permitidas para provedores aprovados
                     const isAllowedProviderRoute =
-                        cleanedCurrentPath === targetDashboardPath || // Dashboard
-                        cleanedCurrentPath.startsWith(normalizePath(PROVIDER_ROUTES.EARNINGS)) || // Ganhos (inclui sub-rotas)
-                        cleanedCurrentPath.startsWith(normalizePath(PROVIDER_ROUTES.MESSAGES_LIST)) || // Mensagens (inclui /messages e /messages/[chatId])
-                        cleanedCurrentPath.startsWith(normalizePath(PROVIDER_ROUTES.PROFILE)) || // Perfil
-                        cleanedCurrentPath.startsWith(normalizePath(PROVIDER_ROUTES.SERVICES_LIST)) || // Meus Serviços (usando SERVICES_LIST)
-                        cleanedCurrentPath.startsWith(normalizePath(PROVIDER_ROUTES.BOOKINGS_LIST)) || // Detalhes de Agendamentos (usando BOOKINGS_LIST)
-                        cleanedCurrentPath.startsWith(normalizePath(PROVIDER_ROUTES.SCHEDULE)); // Agenda/Disponibilidade
-                        // REMOVIDO: cleanedCurrentPath.startsWith(normalizePath(PROVIDER_ROUTES.REVIEWS)); // Avaliações - Removido pois não está no seu routes.ts
+                        cleanedCurrentPath === targetDashboardPath ||
+                        cleanedCurrentPath.startsWith(normalizePath(PROVIDER_ROUTES.EARNINGS)) ||
+                        cleanedCurrentPath.startsWith(normalizePath(PROVIDER_ROUTES.MESSAGES_LIST)) ||
+                        cleanedCurrentPath.startsWith(normalizePath(PROVIDER_ROUTES.PROFILE)) ||
+                        cleanedCurrentPath.startsWith(normalizePath(PROVIDER_ROUTES.SERVICES_LIST)) ||
+                        cleanedCurrentPath.startsWith(normalizePath(PROVIDER_ROUTES.BOOKINGS_LIST)) ||
+                        cleanedCurrentPath.startsWith(normalizePath(PROVIDER_ROUTES.SCHEDULE)) ||
+                        cleanedCurrentPath.startsWith(normalizePath(PROVIDER_ROUTES.WITHDRAW)) || // ADICIONADO: Permitir rota de saque
+                        cleanedCurrentPath.startsWith(normalizePath(PROVIDER_ROUTES.REVIEWS)); // ADICIONADO: Permitir rota de avaliações
 
                     if (!isAllowedProviderRoute) {
                         console.log(`[RootLayoutContent | decideAndRedirect] AÇÃO: Provedor APROVADO fora das rotas permitidas. Redirecionando para o Dashboard.`);
@@ -180,7 +213,6 @@ function RootLayoutContent() {
                 return;
             }
 
-            // Lógica de redirecionamento para clientes e admins
             if (user?.role && (user.role === UserRole.ADMIN || user.role === UserRole.CLIENT)) {
                 const targetRoute = normalizePath(CLIENT_ROUTES.EXPLORE);
                 const isCurrentPathInClientGroup = segments[0] === '(client)';
@@ -246,6 +278,8 @@ const styles = StyleSheet.create({
         marginTop: 10,
         fontSize: 16,
         color: '#333333',
+        // exemplo: você pode trocar depois por 'DMSans-Regular'
+        // fontFamily: 'DMSans-Regular',
     },
     toastContainer: { // Este estilo será sobrescrito pela configuração do Toast.tsx
         flexDirection: 'row',
