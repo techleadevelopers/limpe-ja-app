@@ -4,17 +4,19 @@ module.exports = function (api) {
   return {
     presets: ['babel-preset-expo'],
     plugins: [
-      // 'expo-router/babel', // << REMOVA ESTA LINHA
-      // Para os aliases de caminho como @/* que você configurou no tsconfig.json
+      // 'expo-router/babel', // mantenha comentado se já estava assim
       [
         'module-resolver',
         {
-          root: ['./'], 
+          root: ['./'],
           alias: {
-            '@': './', '@assets': './assets',
-          '@3d': './assets/images/3d'
+            '@': './',
+            '@assets': './assets',
+            '@3d': './assets/images/3d',
+            '@constants': './constants',
+            '@components': './components',
           },
-          extensions: [ 
+          extensions: [
             '.js',
             '.jsx',
             '.ts',
@@ -23,13 +25,11 @@ module.exports = function (api) {
             '.android.tsx',
             '.ios.js',
             '.ios.tsx',
-            '.json'
+            '.json',
           ],
         },
       ],
-      // Se você for usar o React Native Reanimated, adicione o plugin dele.
-      // Certifique-se de que ele seja o último plugin da lista.
-      'react-native-reanimated/plugin', 
+      'react-native-reanimated/plugin', // deixe por último
     ],
   };
 };
