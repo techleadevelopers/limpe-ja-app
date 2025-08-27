@@ -86,7 +86,10 @@ import RecomendacaoCard from '../../../components/client/explore/home/Recomendac
 import SecaoContainer from '../../../components/client/explore/home/SecaoContainer';
 import SecaoPrestadores from '../../../components/client/explore/home/SecaoPrestadores';
 import SecaoRecomendacoes from '../../../components/client/explore/home/SecaoRecomendacoes';
-import FAB_SOS from '../../../components/client/explore/home/FAB_SOS';
+// REMOVIDO: import FAB_SOS from '../../../components/client/explore/home/FAB_SOS';
+// ADICIONADO:
+import DEFENSE_SOS from '../../../components/client/explore/home/DEFENSE_SOS';
+
 
 // NOVOS COMPONENTES DE CUPOM E REFERRAL
 // CORREÇÃO: Alterado de named imports para default imports
@@ -485,10 +488,11 @@ export default function ExploreClientScreen() {
                 headerShown: false,
                 headerRight: () => (
                     <TouchableOpacity
-                        onPress={() => router.push('/(common)/safety/panic' as any)}
+                        // REMOVIDO: onPress={() => router.push('/(common)/safety/panic' as any)}
+                        // O DEFENSE_SOS já lida com a navegação interna ou lógica de SOS
                         style={styles.shieldIconContainer}
                     >
-                        <Ionicons name="shield-outline" size={24} color={COR_PRIMARIA_ESCURA} />
+                        {/* O ícone de escudo agora será parte do DEFENSE_SOS se ele o incluir */}
                     </TouchableOpacity>
                 ),
             }} />
@@ -601,8 +605,8 @@ export default function ExploreClientScreen() {
                 <NavBar />
             </Animated.View>
 
-            {/* FAB SOS */}
-            <FAB_SOS />
+            {/* NOVO: DEFENSE_SOS */}
+            <DEFENSE_SOS />
 
             {/* NOVO: BottomSlideInCard para Cupom ou Indicação (FORA DO SCROLLVIEW) */}
             {/* Renderiza o cupom se activeBottomPromotion for 'coupon' */}

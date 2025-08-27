@@ -97,23 +97,24 @@ const CategoriaCard: React.FC<CategoriaCardProps> = ({ item }) => { // Removida 
       return require('../../../../assets/images/icons/residencial.png');
     }
 
-    const lowerCaseFileName = iconFileName.toLowerCase();
+    // Remove a extensão .png se presente, para que o nome base corresponda aos casos do switch
+    const baseFileName = iconFileName.toLowerCase().replace(/\.png$/, '');
 
     try {
-      switch (lowerCaseFileName) {
-        case 'residencial.png':
+      switch (baseFileName) { // Usa o nome base do arquivo aqui
+        case 'residencial':
           return require('../../../../assets/images/icons/residencial.png');
-        case 'comercial.png':
+        case 'comercial':
           return require('../../../../assets/images/icons/comercial.png');
-        case 'obra.png':
+        case 'obra':
           return require('../../../../assets/images/icons/obra.png');
-        case 'vidro.png':
+        case 'vidro':
           return require('../../../../assets/images/icons/vidro.png');
-        case 'escritorio.png':
+        case 'escritorio':
           return require('../../../../assets/images/icons/escritorio.png');
-        case 'estofados.png':
+        case 'estofados':
           return require('../../../../assets/images/icons/estofados.png');
-        case 'passadoria.png':
+        case 'passadoria':
           return require('../../../../assets/images/icons/passadoria.png');
         default:
           console.warn('[CategoriaCard] Ícone não mapeado:', iconFileName, '- usando padrão.');

@@ -6,6 +6,7 @@ import { Animated, Image, Platform, StyleSheet, Text, TouchableOpacity, View } f
 
 import { CLIENT_ROUTES } from '../../../../constants/routes';
 import { ProviderDisplayInfo } from '../../../../types/backend/providers';
+import { Icons3D } from '../../../../constants/icons3d'; // Importação do Icons3D
 
 interface RecomendacaoCardProps {
     item: ProviderDisplayInfo;
@@ -52,7 +53,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
                 <Ionicons
                     key={i}
                     name={iconName}
-                    size={14}
+                    size={12} 
                     color="#007AFF"
                     style={styles.ratingStarIcon}
                 />
@@ -133,24 +134,20 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
                 </View>
 
                 <View style={styles.infoContainer}>
-                    <Text style={styles.providerName} numberOfLines={1}>{item.fullName}</Text>
+                    {/* O nome do prestador agora está sozinho neste container */}
+                    <View style={styles.providerNameContainer}>
+                        <Text style={styles.providerName} numberOfLines={1}>{item.fullName}</Text>
+                    </View>
 
                     <Text style={styles.serviceDescription} numberOfLines={2}>
                         {item.bio || "Nenhuma descrição disponível."}
                     </Text>
 
-                    {/* NOVO: Exibir Taxa de Aceitação e Tempo Médio de Resposta */}
-                    {item.acceptanceRate !== undefined && (
-                        <Text style={styles.metricText}>Aceitação: {item.acceptanceRate}%</Text>
-                    )}
-                    {item.averageResponseTime !== undefined && (
-                        <Text style={styles.metricText}>Resp. Média: {item.averageResponseTime} min</Text>
-                    )}
 
                     <View style={styles.categoryChipsContainer}>
                         {displayedCategories.map((category, index) => (
                             <View key={index} style={styles.categoryChip}>
-                                <Text style={styles.categoryChipText}>{category}</Text>
+                               
                             </View>
                         ))}
                     </View>
@@ -185,38 +182,39 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
                     </View>
                 </View>
             </TouchableOpacity>
+            {/* Ícone docCheck2 posicionado absolutamente FORA DO FLUXO NORMAL */}
+            <Image
+                source={Icons3D.docCheck} // Caminho para o ícone docCheck2
+                style={styles.docCheckIcon}
+            />
+     
         </Animated.View>
+        
     );
 };
 
 const styles = StyleSheet.create({
     animatedCardContainer: {
-        width: 220,
-        marginRight: 15,
-        marginBottom: 5,
-        borderRadius: 12,
-        overflow: 'visible',
-        backgroundColor: '#FFFFFF',
-        ...Platform.select({
-            ios: {
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.1,
-                shadowRadius: 8,
-            },
-            android: {
-                elevation: 5,
-            },
-        }),
-    },
+  width: 170,
+  marginRight: 15,
+  marginBottom: 5,
+  borderRadius: 12,
+  overflow: 'visible',
+  backgroundColor: '#FFFFFF',
+   shadowColor: '#000',
+    shadowOffset: { width: 4, height: 7 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3, // Sombra para Android
+},
     cardContentWrapper: {
         width: '100%',
         borderRadius: 12,
-        overflow: 'hidden',
+        overflow: 'hidden', // Mantém o conteúdo interno do card dentro dos limites
     },
     imageWrapper: {
         width: '100%',
-        height: 150,
+        height: 120,
         backgroundColor: '#E0E0E0',
         justifyContent: 'center',
         alignItems: 'center',
@@ -229,18 +227,37 @@ const styles = StyleSheet.create({
     infoContainer: {
         padding: 12,
     },
-    providerName: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#2D3748',
+    // Container para o nome do prestador (agora sem o ícone ao lado no fluxo)
+    providerNameContainer: {
+        flexDirection: 'row', // Mantido como row caso queira adicionar algo no futuro
+        alignItems: 'center',
         marginBottom: 4,
     },
-    serviceDescription: {
-        fontSize: 12,
-        color: '#6C757D',
-        marginBottom: 8, // Ajustado para dar espaço às novas métricas
+    providerName: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#2D3748',
+        // marginRight removido, pois o ícone não está mais no fluxo
+        flexShrink: 1, // Permite que o texto encolha se for muito longo
     },
-    metricText: { // NOVO ESTILO PARA MÉTRICAS
+    // NOVO: Estilo para o ícone docCheck2 com posicionamento absoluto
+    docCheckIcon: {
+        position: 'absolute', // Posicionamento absoluto
+        top: 10, // Ajuste este valor para mover o ícone verticalmente
+        right: 10, // Ajuste este valor para mover o ícone horizontalmente
+        width: 40, // Largura fixa
+        height: 40, // Altura fixa
+        resizeMode: 'contain', // Garante que o ícone inteiro seja visível dentro das dimensões
+        zIndex: 1, // Garante que o ícone fique acima de outros elementos se houver sobreposição
+    },
+
+    
+    serviceDescription: {
+        fontSize: 11,
+        color: '#6C757D',
+        marginBottom: 8,
+    },
+    metricText: {
         fontSize: 10,
         color: '#555',
         marginBottom: 2,
@@ -248,7 +265,7 @@ const styles = StyleSheet.create({
     categoryChipsContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        marginBottom: 10, // Ajustado para dar espaço às novas métricas
+        marginBottom: -40,
         marginTop: 5,
     },
     categoryChip: {
@@ -268,15 +285,15 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'flex-end',
-        marginTop: 8,
+        marginTop: -10,
     },
     priceLabel: {
-        fontSize: 12,
+        fontSize: 10,
         color: '#6C757D',
         marginBottom: 2,
     },
     priceValue: {
-        fontSize: 18,
+        fontSize: 14,
         fontWeight: 'bold',
         color: '#2D3748',
     },
@@ -285,15 +302,15 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     plusButton: {
-        width: 38,
-        height: 38,
-        left: 6,
-        top: 5,
+        width: 28,
+        height: 28,
+        left: 20,
+        bottom: 28,
         borderRadius: 53,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 16,
-        shadowColor: '#007AFF',
+        shadowColor: '#212223ff', // Esta cor está em hexadecimal, mas o resto é rgba. Mantenha a consistência.
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.25,
         shadowRadius: 4,
@@ -304,10 +321,10 @@ const styles = StyleSheet.create({
         marginBottom: 2,
     },
     ratingStarIcon: {
-        marginRight: 2,
+        marginRight: 1,
     },
     reviewsCountText: {
-        fontSize: 11,
+        fontSize: 8,
         color: '#6C757D',
     },
 });

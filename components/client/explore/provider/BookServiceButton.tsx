@@ -1,7 +1,7 @@
-// components/provider/BookServiceButton.tsx
+// components/client/explore/provider/BookServiceButton.tsx
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
-import { Animated, Text, TouchableOpacity, Platform, StyleSheet } from 'react-native';
+import { Animated, Text, TouchableOpacity, Platform, StyleSheet, View } from 'react-native'; // Import View
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, type Router } from 'expo-router'; // Importe Router se necessário
 
@@ -20,21 +20,23 @@ const BookServiceButton: React.FC<BookServiceButtonProps> = ({
   bookNowButtonAnim,
   servicePrice, // <--- CORREÇÃO: Desestruturada a nova prop
 }) => {
-  const insets = useSafeAreaInsets();
-  const safeAreaBottom = insets.bottom;
+  // insets não são mais usados diretamente para o posicionamento do botão,
+  // mas o padding inferior da ScrollView principal deve considerar o safeAreaBottom.
+  // const insets = useSafeAreaInsets();
+  // const safeAreaBottom = insets.bottom;
 
-  // O alinhamento do botão já está definido nos estilos locais (position: 'absolute', bottom: 0, left: 0, right: 0)
-  // e nos paddings. Não é necessário alterar a lógica de alinhamento existente.
+  // O alinhamento do botão será agora controlado por flexbox no pai e estilos locais.
   return (
     <Animated.View style={[
-      localStyles.bookNowButtonWrapper,
+      localStyles.buttonContainer, // Estilo renomeado e modificado
       {
         opacity: bookNowButtonAnim,
         transform: [{
           translateY: bookNowButtonAnim.interpolate({ inputRange: [0, 1], outputRange: [100, 0] })
         }],
-        // O paddingBottom já considera o safeAreaBottom, mantendo o alinhamento
-        paddingBottom: Platform.OS === 'ios' ? 25 + safeAreaBottom : 15 + safeAreaBottom
+        // O paddingBottom que considerava o safeAreaBottom foi removido daqui,
+        // pois o botão não está mais fixo na parte inferior da tela.
+        // A ScrollView deve ter um padding inferior adequado.
       }
     ]}>
       <LinearGradient
@@ -63,21 +65,13 @@ const BookServiceButton: React.FC<BookServiceButtonProps> = ({
 };
 
 const localStyles = StyleSheet.create({
-  bookNowButtonWrapper: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 20,
-    paddingTop: 15,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E9ECEF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 5,
+  buttonContainer: {
+    // Removido o posicionamento absoluto e estilos de barra inferior fixa.
+    // O botão agora fluirá com o conteúdo.
+    marginVertical: 20, // Adiciona margem vertical para espaçamento do conteúdo ao redor
+    alignSelf: 'center', // Centraliza o botão horizontalmente dentro do seu container pai
+    width: '90%', // Define a largura do botão para 90% do container pai
+    maxWidth: 400, // Opcional: limita a largura máxima para telas maiores
   },
   bookServiceButtonGradient: {
     borderRadius: 12,

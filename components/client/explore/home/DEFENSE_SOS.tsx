@@ -3,6 +3,13 @@ import { TouchableOpacity, StyleSheet, Animated, Easing, Platform, Image } from 
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 
+// Importe o objeto Icons3D
+// Certifique-se de que o caminho para 'icons3d' está correto em relação a este arquivo.
+// Ex: Se icons3d.ts está em 'LimpeJaApp/constants/icons3d.ts'
+// e DEFENSE_SOS.tsx está em 'LimpeJaApp/components/client/explore/home/DEFENSE_SOS.tsx',
+// o caminho relativo é '../../../../constants/icons3d'.
+import { Icons3D } from '../../../../constants/icons3d'; 
+
 interface DefenseSOSProps {
   bottomOffset?: number; // distância do rodapé (px)
 }
@@ -15,24 +22,24 @@ const DEFENSE_SOS: React.FC<DefenseSOSProps> = ({ bottomOffset = 20 }) => {
   const pulseAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // pulso / glow contínuo
+    // pulso / glow contínuo - EXATAMENTE O MESMO EFEITO ROBUSTO DO FAB_SOS
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
           toValue: 1,
-          duration: 1500,
-          easing: Easing.inOut(Easing.ease),
+          duration: 1500, // Mesma duração
+          easing: Easing.inOut(Easing.ease), // Mesmo easing
           useNativeDriver: true,
         }),
         Animated.timing(pulseAnim, {
           toValue: 0,
-          duration: 1500,
-          easing: Easing.inOut(Easing.ease),
+          duration: 1500, // Mesma duração
+          easing: Easing.inOut(Easing.ease), // Mesmo easing
           useNativeDriver: true,
         }),
       ])
     ).start();
-  }, [pulseAnim]);
+  }, [pulseAnim]); // A dependência pulseAnim é segura aqui, pois é um useRef.current
 
   const onPressIn = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -53,14 +60,17 @@ const DEFENSE_SOS: React.FC<DefenseSOSProps> = ({ bottomOffset = 20 }) => {
   };
 
   const handlePress = () => {
-    router.push('/(common)/safety/defense' as any); // ajuste a rota se necessário
+    // Navega para a tela de defesa/segurança
+    router.push('/(common)/safety/defense' as any); 
   };
 
+  // Interpolação para a opacidade do glow - EXATAMENTE A MESMA DO FAB_SOS
   const glowOpacity = pulseAnim.interpolate({
     inputRange: [0, 0.5, 1],
     outputRange: [0, 0.5, 0],
   });
 
+  // Interpolação para a escala do glow - EXATAMENTE A MESMA DO FAB_SOS
   const glowScale = pulseAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [1, 1.2],
@@ -86,11 +96,11 @@ const DEFENSE_SOS: React.FC<DefenseSOSProps> = ({ bottomOffset = 20 }) => {
           },
         ]}
       />
-      {/* Botão */}
+      {/* Botão Principal */}
       <Animated.View style={[styles.fabButton, { transform: [{ scale: scaleAnim }] }]}>
         <Image
-          source={require('../../assets/images/3d/panic-sos.png')}
-          style={{ width: 30, height: 30, tintColor: '#FFFFFF' }}
+          source={Icons3D.support} // Usa a imagem 'docCheck2' do seu objeto Icons3D
+          style={{ width: 60, height: 60 }} // <--- tintColor REMOVIDO AQUI
         />
       </Animated.View>
     </TouchableOpacity>
@@ -101,9 +111,10 @@ const styles = StyleSheet.create({
   fabContainer: {
     position: 'absolute',
     right: 20,
-    zIndex: 1000,
+    // Ajuste o zIndex para garantir que o FAB esteja acima de outros elementos
+    zIndex: 1000, 
   },
-  // Glow azul (confortável, suave)
+  // Glow azul (confortável, suave) - Cor diferente do FAB_SOS, mas o efeito é o mesmo
   fabGlow: {
     position: 'absolute',
     width: 64,
@@ -121,7 +132,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#0A84FF', // azul principal (iOS-like)
+    backgroundColor: '#0a84ff5e', // azul principal (iOS-like)
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',

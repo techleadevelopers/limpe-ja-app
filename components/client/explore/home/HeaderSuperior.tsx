@@ -90,9 +90,12 @@ const HeroHeader: React.FC<HeaderSuperiorProps> = ({ userName, userAddress }) =>
         router.push('/(client)/profile' as any);
     };
 
+    // ✅ Alteração única: navegar para o menu em /(client)/explore/menu
+    // Se o seu arquivo estiver em /(client)/menu, mude a linha abaixo para '/(client)/menu'
     const handleMenuPress = () => {
-        console.log("HeroHeader: Abrindo o menu lateral (DrawerMenu).");
-        router.push('/(client)/drawer' as any);
+        console.log("HeroHeader: Abrindo o menu.");
+        router.push('/(client)/explore/menu' as any);
+        // router.push('/(client)/menu' as any); // <- use esta se o seu caminho for /(client)/menu
     };
 
     const handleSearchSubmit = () => {

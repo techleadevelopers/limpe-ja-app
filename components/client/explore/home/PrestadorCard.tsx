@@ -1,11 +1,10 @@
-// app/(client)/explore/components/home/PrestadorCard.tsx
-
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef } from 'react';
 import { Animated, Dimensions, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { ProviderDisplayInfo, ProviderServiceOffering } from '../../../../types/backend/providers';
 import { PricingType } from '../../../../types/backend/services';
+import { Icons3D } from '../../../../constants/icons3d'; // Importação corrigida para icons-3d
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -57,7 +56,7 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
                     key={i}
                     name={iconName}
                     size={12}
-                    color="#FFC107"
+                    color="#1a7bbbff"
                     style={styles.starIcon}
                 />
             );
@@ -85,7 +84,7 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
                 priceUnit = '/h';
                 break;
             case PricingType.BY_SIZE:
-                priceValue = primaryService.pricePerSquareMeter;
+                priceValue = primaryService.pricePerSquareMeter; // CORRIGIDO AQUI
                 priceUnit = '/m²';
                 break;
             case PricingType.FIXED_PRICE:
@@ -102,7 +101,7 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
     };
 
     const servicePrice = getPriceDisplay();
-    const avatarSource = item.avatarUrl ? { uri: item.avatarUrl } : require('../../../../assets/images/default-avatar.png');
+    const avatarSource = item.avatarUrl ? { uri: item.avatarUrl } : Icons3D.facial;
 
     return (
         <Animated.View style={[styles.animatedCardContainer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] }]}>
@@ -126,13 +125,6 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
                             {item.reviewCount > 0 && <Text style={styles.reviewsText}>({item.reviewCount})</Text>}
                         </View>
                     )}
-                    {/* NOVO: Exibir Taxa de Aceitação e Tempo Médio de Resposta */}
-                    {item.acceptanceRate !== undefined && (
-                        <Text style={styles.metricText}>Aceitação: {item.acceptanceRate}%</Text>
-                    )}
-                    {item.averageResponseTime !== undefined && (
-                        <Text style={styles.metricText}>Resp. Média: {item.averageResponseTime} min</Text>
-                    )}
                     <Text style={styles.priceText}>{servicePrice}</Text>
                 </View>
                 <TouchableOpacity style={styles.goButton}>
@@ -147,19 +139,13 @@ const styles = StyleSheet.create({
     animatedCardContainer: {
         marginRight: 12,
         marginBottom: 10,
-        borderRadius: 12,
+        borderRadius: 22,
         overflow: 'visible',
-        ...Platform.select({
-            ios: {
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.08,
-                shadowRadius: 8,
-            },
-            android: {
-                elevation: 5,
-            },
-        }),
+  shadowColor: '#000',
+    shadowOffset: { width: 4, height: 7 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3, // Sombra para Android
     },
     cardContainer: {
         flexDirection: 'row',
@@ -215,7 +201,7 @@ const styles = StyleSheet.create({
         fontSize: 10,
         color: '#888',
     },
-    metricText: { // NOVO ESTILO PARA MÉTRICAS
+    metricText: {
         fontSize: 10,
         color: '#555',
         marginBottom: 2,

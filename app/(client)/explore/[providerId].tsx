@@ -14,7 +14,7 @@ import {
     TouchableOpacity,
     View,
     Easing,
-    StyleSheet,
+    StyleSheet, // Importar StyleSheet aqui para os estilos da RecommendationsSection
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -25,6 +25,9 @@ import BookServiceButton from '../../../components/client/explore/provider/BookS
 import InfoChip from '../../../components/client/explore/provider/InfoChip';
 import ReviewCard from '../../../components/client/explore/provider/ReviewCard';
 import StarRating from '../../../components/client/explore/provider/StarRating';
+// Importe o novo componente SideIcon
+import SideIcon from '../../../components/client/explore/provider/SideIcon';
+
 
 // Importações de dados e tipos
 import { ProviderDisplayInfo, ProviderReview } from '../../../types/backend/providers';
@@ -40,6 +43,64 @@ import { getProviderDetails, getProviderMetrics, getProviderOffers } from '../..
 import Toast from '../../../components/Toast';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
+
+// Definir FONT_FAMILY aqui para que seja acessível por ambos os componentes
+const FONT_FAMILY = Platform.select({ ios: 'System', android: 'Roboto', default: 'System' });
+
+// Componente RecommendationsSection
+function RecommendationsSection() {
+  // Placeholder images for avatars
+  const avatarImages = [
+    'https://randomuser.me/api/portraits/men/32.jpg',
+    'https://randomuser.me/api/portraits/women/44.jpg',
+    'https://randomuser.me/api/portraits/men/50.jpg',
+    'https://randomuser.me/api/portraits/women/61.jpg',
+    'https://randomuser.me/api/portraits/men/73.jpg',
+  ];
+
+  return (
+    <View style={recommendationStyles.avatarsRow}>
+      {avatarImages.map((uri, i) => (
+        <Image key={i} source={{ uri }} style={[recommendationStyles.avatarImg, { marginLeft: i === 0 ? 0 : -8 }]} />
+      ))}
+      <View style={[recommendationStyles.moreBadge, { marginLeft: -8 }]}>
+        <Text style={recommendationStyles.moreBadgeTxt}>+25</Text>
+      </View>
+    </View>
+  );
+}
+
+// Estilos para o componente RecommendationsSection
+const recommendationStyles = StyleSheet.create({
+  avatarsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12, // Adiciona um espaçamento superior
+    marginBottom: 20, // Adiciona um espaçamento inferior
+  },
+  avatarImg: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+  },
+  moreBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#111827',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  moreBadgeTxt: {
+    color: '#FFF',
+    fontSize: 10,
+    fontWeight: '700',
+    fontFamily: 'RedHatMono',
+  },
+});
+
 
 export default function ProviderDetailsScreen() {
     const params = useLocalSearchParams();
@@ -406,7 +467,6 @@ export default function ProviderDetailsScreen() {
                             </View>
                         )}
 
-
                         <View style={styles.actionButtonsContainer}>
                             <Animated.View style={{ transform: [{ scale: callButtonAnim }] }}>
                                 <TouchableOpacity
@@ -464,56 +524,35 @@ export default function ProviderDetailsScreen() {
                             </Animated.View>
                         </View>
 
-                        <Text style={[styles.sectionTitle, { marginTop: 12 }]}>{t("provider_details.recommendations")}</Text>
-                        {provider.reviews && provider.reviews.length > 0 ? (
-                            provider.reviews.map((review: ProviderReview) => {
-                                const transformedReview = {
-                                    id: review.id,
-                                    rating: review.rating,
-                                    comment: review.comment || '',
-                                    createdAt: review.createdAt,
-                                    updatedAt: review.updatedAt,
-                                    clientId: review.clientId,
-                                    client: review.client ? {
-                                        id: review.client.id,
-                                        fullName: review.client.fullName,
-                                        user: review.client.user ? {
-                                            id: review.client.user.id,
-                                            avatarUrl: review.client.user.avatarUrl || null,
-                                        } : null,
-                                    } : null,
-                                    bookingId: review.bookingId,
-                                    providerId: review.providerId,
-                                };
-                                return <ReviewCard key={review.id} review={transformedReview} />;
-                            })
-                        ) : (
-                            <View style={styles.noReviewsContainer}>
-                                <Ionicons name="chatbubbles-outline" size={60} color={styles.noReviewsText.color} style={styles.noReviewsIcon} />
-                                <Text style={styles.noReviewsText}>
-                                    {t('provider_details.no_reviews', { providerName: provider.fullName.split(' ')[0] })}
-                                    {'\n'}
-                                    {t('provider_details.be_the_first_review')}
-                                </Text>
-                            </View>
-                        )}
-                        <Animated.View style={{ transform: [{ scale: addReviewButtonPulseAnim }] }}>
-                            <TouchableOpacity style={styles.addReviewButton}>
-                                <Ionicons name="add-circle-outline" size={24} color={styles.addReviewButtonText.color} />
-                                <Text style={styles.addReviewButtonText}>{t('provider_details.add_review')}</Text>
-                            </TouchableOpacity>
-                        </Animated.View>
-                    </View>
-                </Animated.View>
+                        {/* Título "Avaliações & Recomendações" e a sessão de recomendações */}
+                        <Text style={styles.sectionTitle}>{t('provider_details.reviews_and_recommendations_title', 'Avaliações & Recomendações')}</Text>
+                        <RecommendationsSection />
+
+                        {/* O BOTÃO 'AGENDAR SERVIÇO' FOI MOVIDO PARA AQUI */}
+                        <BookServiceButton
+                            providerId={provider.id}
+                            serviceId={firstProviderServiceOfferingId}
+                            router={router}
+                            bookNowButtonAnim={bookNowButtonAnim}
+                            servicePrice={firstProviderService?.price}
+                        />
+
+                    </View> {/* Fecha styles.tabContentContainer */}
+                </Animated.View> {/* Fecha styles.contentArea */}
             </ScrollView>
 
-            <BookServiceButton
-                providerId={provider.id}
-                serviceId={firstProviderServiceOfferingId}
-                router={router}
-                bookNowButtonAnim={bookNowButtonAnim}
-                servicePrice={firstProviderService?.price}
-            />
+            {/* Novo componente SideIcon, fora da ScrollView para flutuar */}
+            {provider && (
+                <SideIcon
+                    showSecurity={provider.verificationStatus === VerificationStatus.APPROVED}
+                    // 'showFacialRecognition' pode ser uma propriedade do provedor ou um valor fixo
+                    showFacialRecognition={true} // Exemplo: sempre mostra para demonstração
+                    rating={provider.averageRating}
+                    onPressSecurity={() => Alert.alert("Segurança 3D", "Este provedor passou por verificação de segurança 3D.")}
+                    onPressFacialRecognition={() => Alert.alert("Reconhecimento Facial", "Este provedor utiliza reconhecimento facial para verificação.")}
+                    onPressRating={() => Alert.alert("Avaliação", `Avaliação média do provedor: ${provider.averageRating?.toFixed(1) || 'N/A'}`)}
+                />
+            )}
         </View>
     );
 }
