@@ -232,3 +232,26 @@ Interação: O provedor pode adicionar novos tipos de serviço, editar detalhes 
 ├── earnings.tsx
 ├── layout.tsx
 └── README.md
+
+(provider)/
+ ├── active-booking/
+ │    └── [bookingId].tsx
+ ├── messages/
+ │    ├── [chatId].tsx
+ │    └── index.tsx
+ ├── notifications/
+ │    └── index.tsx
+ ├── profile/
+ │    ├── edit-services.tsx
+ │    └── index.tsx
+ ├── schedule/
+ │    ├── index.tsx
+ │    └── manage-availability.tsx
+ ├── services/
+ │    ├── [serviceId].tsx
+ │    └── index.tsx
+ ├── dashboard.tsx
+ ├── earnings.tsx
+ ├── index.tsx
+ ├── layout.tsx
+ └── README.md

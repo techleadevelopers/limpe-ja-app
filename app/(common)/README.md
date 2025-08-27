@@ -1,296 +1,451 @@
-Documentação da Área Comum (app/(common)) do LimpeJá App - Versão Atual
-A área (common) do aplicativo LimpeJá é designada para hospedar funcionalidades e telas que são compartilhadas e reutilizadas entre diferentes perfis de usuário (como provedores e clientes), garantindo uma experiência consistente e eficiente no desenvolvimento.
+Documentação do Fluxo da Área Comum (LimpeJá App)
+Esta documentação detalha a estrutura de rotas, o fluxo de navegação e as funcionalidades presentes na área comum do aplicativo LimpeJá, acessível por diferentes perfis de usuário (cliente, provedor), baseando-se nos arquivos React Native fornecidos.
 
+Estrutura de Diretórios e Rotas
+A área (common) agrupa funcionalidades e telas que são compartilhadas entre diferentes tipos de usuários (clientes e provedores). A estrutura de rotas é gerenciada pelo Expo Router.
+
+stylus
+
+Copiar
+(common)/
+├── active-booking/
+│   └── [bookingId].tsx
+├── feedback/
+│   ├── dispute/
+│   │   ├── [bookingId].tsx
+│   │   └── index.tsx
+│   └── [targetId].tsx
+├── safety/
+│   ├── _layout.tsx
+│   ├── defense.tsx
+│   ├── incident-report.tsx
+│   ├── index.tsx
+│   └── panic.tsx
+├── support/
+│   ├── _layout.tsx
+│   ├── [ticketId].tsx
+│   ├── create-ticket.tsx
+│   └── index.tsx
+├── _layout.tsx
+├── help.tsx
+├── loyalty.tsx
+├── notifications.tsx
+├── privacidade.tsx
+├── referrals.tsx
+├── settings.tsx
+└── termos.tsx
 1. Layout Principal da Área Comum (app/(common)/_layout.tsx)
-Este arquivo define a estrutura de navegação em pilha (Stack Navigator) para todas as rotas contidas no diretório (common). Ele utiliza o Expo Router para gerenciar a pilha de telas, onde cada Stack.Screen representa uma tela que pode ser acessada dentro deste grupo.
+O arquivo _layout.tsx na raiz de (common) define a estrutura de navegação em pilha (Stack) para as telas comuns que não possuem um layout de abas próprio ou que são acessadas de forma modal/secundária.
 
-import React from 'react';: Importa a biblioteca essencial do React para construir interfaces de usuário.
-import { Stack } from 'expo-router';: Importa o componente Stack do expo-router, que é usado para criar uma navegação em pilha de telas.
-export default function CommonLayout() { ... }: Declara o componente funcional CommonLayout que será o layout principal para as rotas comuns.
-<Stack>: Este é o contêiner do navegador de pilha. Todas as telas definidas dentro dele serão gerenciadas como uma pilha, permitindo navegação "push" e "pop".
-<Stack.Screen name="settings" options={{ title: 'Configurações' }} />: Define uma tela na pilha com o nome settings. O title da barra de navegação para esta tela será "Configurações". A rota correspondente seria /(common)/settings.
-<Stack.Screen name="help" options={{ title: 'Ajuda e Suporte' }} />: Define uma tela na pilha com o nome help. O título exibido será "Ajuda e Suporte". A rota correspondente seria /(common)/help.
-<Stack.Screen name="notifications" options={{ title: 'Notificações' }} />: Define uma tela para notifications com o título "Notificações". A rota seria /(common)/notifications.
-<Stack.Screen name="feedback/[targetId]" options={{ title: 'Enviar Feedback' }} />: Define uma tela com um parâmetro de rota dinâmico [targetId]. O título é "Enviar Feedback". Exemplos de rotas seriam /(common)/feedback/123 ou /(common)/feedback/service_xyz.
-{/* Adicione outras telas comuns aqui */}: Um comentário indicando um ponto de extensão para adicionar mais telas que são comuns a ambos os perfis de usuário.
-Documentação da Versão Atual:
+Componente Principal: CommonLayout
 
-Rota Base: /(common)
-Tipo de Navegação: Pilha (Stack Navigation)
-Propósito: Fornecer um layout de navegação consistente para funcionalidades e informações que são acessíveis tanto por provedores quanto por clientes.
-Telas Gerenciadas:
-settings: Para configurações gerais do aplicativo.
-help: Para a central de ajuda e FAQ.
-notifications: Para a visualização de notificações do usuário.
-feedback/[targetId]: Para envio de feedback, permitindo especificar o alvo do feedback.
-Fluxo: As telas dentro de (common) operam de forma independente da estrutura de abas dos perfis de usuário, permitindo serem "empilhadas" sobre qualquer tela de perfil ou acessadas via router.push().
-2. Tela de Notificações (app/(common)/notifications.tsx)
-Esta tela exibe uma lista de notificações para o usuário, permitindo visualização, marcação de leitura e navegação para conteúdo relacionado.
+Apresentação: Utiliza expo-router's Stack para criar uma navegação hierárquica entre as telas comuns.
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';: Importa hooks essenciais do React para gerenciamento de estado (useState), efeitos colaterais (useEffect), memorização de funções (useCallback) e referências a elementos DOM ou valores persistentes (useRef).
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Platform, Alert, Animated, } from 'react-native';: Importa componentes UI do React Native, incluindo contêineres (View), texto (Text), folha de estilos (StyleSheet), lista otimizada (FlatList), indicador de carregamento (ActivityIndicator), botão de toque (TouchableOpacity), plataforma específica (Platform), alertas (Alert) e API de animação (Animated).
-import { Stack, useRouter, Link } from 'expo-router';: Importa Stack para controle do cabeçalho da pilha, useRouter para navegação programática e Link para navegação declarativa do Expo Router.
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';: Importa conjuntos de ícones para uso visual.
-Funções Globais/Utilitários:
-formatNotificationTimestamp(isoTimestamp: string): string:
-Propósito: Formatar um timestamp ISO para uma representação relativa e amigável (ex: "Agora mesmo", "Há 5 min", "Ontem", "26 Mai").
-Lógica: Calcula a diferença entre o tempo atual e o timestamp da notificação em segundos, minutos, horas e dias para determinar a melhor representação.
-interface NotificationItem { ... }:
-Define a estrutura de dados para um item de notificação, incluindo id, type (agendamento, mensagem, pagamento, geral), title, body, timestamp (ISO String), isRead (boolean), MapsTo (rota opcional para navegação) e relatedId.
-const MOCK_NOTIFICATIONS: NotificationItem[] = [ ... ];:
-Array de dados mockados para simular notificações. Essencial para o desenvolvimento e testes sem a necessidade de um backend real.
-getNotificationIcon(type: NotificationItem['type']): { name: keyof typeof Ionicons.glyphMap, color: string }:
-Propósito: Retornar o ícone e a cor apropriados com base no type da notificação, tornando a visualização mais intuitiva.
-Lógica: Utiliza uma instrução switch para mapear os tipos de notificação a ícones específicos da biblioteca Ionicons e cores.
-Componentes Reutilizáveis:
-AnimatedNotificationItem: React.FC<{ item: NotificationItem; onPress: (item: NotificationItem) => void; delay: number; }>:
-Propósito: Renderizar um único item de notificação com efeitos de animação e feedback de toque.
-Animações: Utiliza Animated.timing para opacity (fade-in) e translateY (slide-in) com um delay escalonado, criando um efeito de "cascata" na lista. Um scaleAnim é usado para feedback visual ao tocar no item.
-Visual: Exibe um ponto azul (unreadDot) para notificações não lidas. O ícone, título, corpo e timestamp são formatados e exibidos. Um ícone de chevron é mostrado se a notificação tiver uma rota para navegação (MapsTo).
-Interação: TouchableOpacity com onPress para lidar com a marcação de leitura e navegação, e onPressIn/onPressOut para as animações de escala.
-Componente Principal: NotificationsScreen
-router = useRouter();: Instância do hook useRouter do Expo Router para navegação programática.
-[notifications, setNotifications]: Estado para armazenar a lista de notificações exibidas. Inicializado como um array vazio.
-[isLoading, setIsLoading]: Estado booleano para gerenciar o indicador de carregamento da tela.
-headerAnim, feedbackAnim, markAllButtonScaleAnim: Referências useRef para valores animados, usados para controlar as animações de entrada do cabeçalho, estados de feedback (carregando/vazio) e feedback de toque do botão "Marcar Todas como Lidas".
-useEffect (inicialização):
-Inicia a animação de entrada do cabeçalho.
-Simula um carregamento de 1 segundo para as notificações, ordenando-as por timestamp decrescente.
-Após o carregamento, inicia a animação do feedbackAnim para exibir o conteúdo (lista ou estado vazio).
-handleNotificationPress(item: NotificationItem):
-Propósito: Lidar com o toque em uma notificação individual.
-Lógica: Se a notificação não foi lida, ela é marcada como lida no estado local. Em um ambiente de produção, isso acionaria uma chamada de API para o backend.
-Se item.navigateTo estiver definido, o usuário é navegado para a rota especificada. Inclui tratamento de erros para a navegação.
-handleMarkAllAsRead():
-Propósito: Marcar todas as notificações como lidas.
-Lógica: Atualiza o estado local para marcar todas as notificações como lidas e exibe um Alert de sucesso (simulado). Em produção, faria uma chamada de API.
-Animações de Botão: onPressInMarkAll e onPressOutMarkAll controlam a animação de escala do botão "Marcar Todas como Lidas".
-Renderização Condicional:
-Se isLoading for true, exibe um ActivityIndicator e a mensagem "Carregando notificações...".
-Se notifications.length === 0 após o carregamento, exibe uma mensagem de "Nenhuma notificação por aqui." com um ícone ilustrativo.
-Caso contrário, renderiza a lista de notificações usando FlatList e o componente AnimatedNotificationItem, com um separador entre os itens.
-Documentação da Versão Atual:
+Rotas Definidas:
 
-Rota: /(common)/notifications
-Propósito: Gerenciar e exibir as notificações do usuário de forma clara e interativa.
-Dados: Lista de objetos NotificationItem, mockados para demonstração.
-Fluxo de Interação:
-Ao entrar na tela, um indicador de carregamento é exibido enquanto as notificações são "carregadas".
-As notificações são apresentadas em uma lista, com animações de entrada em cascata.
-Notificações não lidas são visualmente distintas (ponto azul e fundo claro).
-O usuário pode tocar em uma notificação para marcá-la como lida e ser redirecionado para a tela relacionada (se aplicável).
-Um botão "Marcar Todas como Lidas" aparece se houver notificações não lidas, permitindo ao usuário limpar rapidamente a lista.
-São exibidas mensagens claras para os estados de carregamento e lista vazia.
-Animações:
-Cabeçalho: translateY e opacity para entrada suave.
-Itens da Lista: translateY e opacity escalonados (50ms de atraso entre itens) para um efeito de "cascata". scale para feedback ao toque.
-Botão "Marcar Todas como Lidas": scale ao toque.
-Estados de Feedback (Loading/Empty): opacity para transição suave.
-3. Tela de Política de Privacidade (app/(common)/privacidade.tsx)
-Esta tela serve como um placeholder para exibir a política de privacidade do aplicativo LimpeJá.
-
-import React from 'react';: Importa a biblioteca React.
-import { View, Text, ScrollView, StyleSheet } from 'react-native';: Importa componentes UI do React Native, incluindo View, Text, ScrollView (para conteúdo rolável) e StyleSheet.
-import { Stack } from 'expo-router';: Importa Stack do Expo Router para definir opções de tela, como o título do cabeçalho.
-export default function PrivacidadeScreen() { ... }: Declara o componente funcional PrivacidadeScreen.
-<ScrollView style={styles.container}>: O conteúdo da tela é envolvido por um ScrollView para permitir rolagem se o texto for maior que a tela.
-<Stack.Screen options={{ title: 'Política de Privacidade' }} />: Define o título da barra de navegação superior para "Política de Privacidade".
-<Text style={styles.title}>Política de Privacidade do LimpeJá</Text>: Título principal da política de privacidade.
-<Text style={styles.paragraph}> ... </Text>: Parágrafos de texto que contêm o conteúdo da política. Atualmente, o texto é um placeholder e um comentário indica onde o conteúdo real deve ser inserido.
-<Text style={styles.subTitle}>1. Informações que Coletamos</Text>: Um subtítulo para seções da política.
-const styles = StyleSheet.create({ ... });: Define os estilos visuais para a tela, incluindo container, title, subTitle e paragraph.
-Documentação da Versão Atual:
-
-Rota: /(common)/privacidade (esta rota é definida implicitamente no _layout.tsx comum ao ser referenciada, por exemplo, na tela de configurações).
-Propósito: Apresentar a política de privacidade legal do aplicativo aos usuários.
-Conteúdo: Atualmente um placeholder. O texto real da política de privacidade deve ser adicionado para cumprir os requisitos legais.
-Componentes Principais: ScrollView, Text, Stack.Screen.
-Fluxo de Interação: Somente visualização. Não há interação além da rolagem do conteúdo.
-4. Tela de Configurações (app/(common)/settings.tsx)
-Esta tela permite ao usuário configurar várias preferências do aplicativo, como notificações, tema e gerenciar sua conta, além de acessar informações sobre o aplicativo.
-
-import React, { useState, useEffect, useRef } from 'react';: Importa hooks do React.
-import { View, Text, StyleSheet, Switch, Alert, ScrollView, TouchableOpacity, Platform, Linking, Animated, } from 'react-native';: Importa componentes UI do React Native.
-import { Stack, useRouter } from 'expo-router';: Importa Stack e useRouter do Expo Router.
-import { useAppContext } from '../../contexts/AppContext';: Importa o AppContext, que é fundamental para gerenciar e persistir configurações globais do aplicativo (como o estado de notificações e o tema).
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';: Importa bibliotecas de ícones.
-import Constants from 'expo-constants';: Importa Constants do expo-constants para acessar informações do manifesto do aplicativo, como a versão.
-Componentes Reutilizáveis:
-AnimatedSettingSwitchItem: React.FC<SettingSwitchItemProps>:
-Propósito: Componente genérico para um item de configuração que contém um Switch (liga/desliga).
-Props: label, description (opcional), iconName, iconColor, value (estado do switch), onValueChange (função de callback), disabled (opcional) e delay (para animação escalonada).
-Animações: opacity (fade-in) e translateY (slide-in) com um delay escalonado para entrada suave.
-Visual: Exibe um ícone, um rótulo e, opcionalmente, uma descrição. O Switch é estilizado.
-AnimatedSettingNavigationItem: React.FC<SettingNavigationItemProps>:
-Propósito: Componente genérico para um item de configuração que, ao ser tocado, navega para outra tela ou executa uma ação (como abrir um link).
-Props: label, iconName, iconColor, onPress (função de callback) e delay.
-Animações: opacity (fade-in), translateY (slide-in) com delay escalonado e scale para feedback de toque.
-Visual: Exibe um ícone, um rótulo e um ícone de chevron para indicar navegação.
-Componente Principal: SettingsScreen
-router = useRouter();: Hook para navegação.
-{ settings, updateSettings, toggleTheme } = useAppContext();: Desestruturação para obter as configurações atuais, função para atualizá-las e função para alternar o tema do contexto do aplicativo.
-notificationsEnabled, darkModeEnabled: Estados derivados de settings do AppContext.
-Animações (headerAnim, mainTitleAnim, sectionCardAnimX): Referências useRef para controlar a animação de entrada de vários elementos da tela em cascata (Animated.stagger).
-useEffect (animação): Inicia as animações de entrada dos elementos da tela ao montar o componente.
-handleToggleNotifications(value: boolean):
-Propósito: Alternar o estado das notificações push.
-Lógica: Atualiza o AppContext e exibe um Alert (simulado). Em um cenário real, integraria com serviços de push notification.
-handleToggleDarkMode():
-Propósito: Alternar o tema do aplicativo entre claro e escuro.
-Lógica: Chama toggleTheme do AppContext e exibe um Alert (simulado).
-appVersion, appBuildNumber, versionString: Obtém e formata a versão do aplicativo e o número de build usando Constants.expoConfig.
-openURL(url: string):
-Propósito: Abrir URLs externas (para Termos de Serviço e Política de Privacidade) usando a API Linking do React Native.
-Lógica: Verifica se a URL pode ser aberta e, em seguida, tenta abri-la, exibindo um Alert em caso de erro.
-Renderização:
-Custom Header: Cabeçalho animado com título "Configurações" e um botão de voltar.
-Título Principal: "Ajuste as suas preferências" com animação.
-Seções de Configuração: Organizadas em "cartões" animados (sectionCard), cada um com um título de seção (sectionTitle):
-"Preferências Gerais": Contém switches para notificações e modo escuro, e um item de navegação para "Preferências de Notificação" (placeholder).
-"Conta": Inclui itens de navegação para "Gerenciar Meus Dados" (placeholder) e "Excluir Minha Conta" (com um Alert de confirmação).
-"Sobre o LimpeJá": Contém links para "Termos de Serviço" e "Política de Privacidade" (abrem URLs externas), e exibe a "Versão do Aplicativo".
-Documentação da Versão Atual:
-
+Configurações (settings)
 Rota: /(common)/settings
-Propósito: Centralizar o gerenciamento de configurações do aplicativo para todos os usuários.
-Integração: Depende do AppContext para gerenciar e persistir o estado das configurações do aplicativo.
-Fluxo de Interação:
-A tela apresenta seções claras para diferentes categorias de configurações.
-O usuário pode alternar facilmente as opções de notificação e tema através de switches.
-Acesso rápido a documentos legais (Termos de Serviço, Política de Privacidade) e informações da versão do aplicativo.
-Opções de gerenciamento de conta (gerenciar dados, excluir conta) com confirmações de segurança.
-Animações:
-Cabeçalho e Título Principal: Animação de entrada translateY e opacity.
-Cartões de Seção: Animações de entrada translateY e opacity com um atraso escalonado para cada cartão.
-Itens de Configuração (Switch/Navegação): Animações de entrada translateY e opacity com atraso escalonado dentro de cada seção, e scale para feedback ao toque em itens navegáveis.
-5. Tela de Termos de Serviço (app/(common)/termos.tsx)
-Esta tela é um placeholder para a exibição dos termos de serviço do aplicativo.
-
-import React from 'react';: Importa a biblioteca React.
-import { View, Text, ScrollView, StyleSheet } from 'react-native';: Importa componentes UI do React Native.
-import { Stack } from 'expo-router';: Importa Stack do Expo Router para definir o título da tela.
-export default function TermosScreen() { ... }: Declara o componente funcional TermosScreen.
-<ScrollView style={styles.container}>: O conteúdo da tela é envolvido por um ScrollView para permitir rolagem.
-<Stack.Screen options={{ title: 'Termos de Serviço' }} />: Define o título da barra de navegação superior para "Termos de Serviço".
-<Text style={styles.title}>Termos de Serviço do LimpeJá</Text>: Título principal dos termos de serviço.
-<Text style={styles.paragraph}> ... </Text>: Parágrafos de texto contendo o conteúdo dos termos. Atualmente, possui texto Lorem ipsum e um comentário para adicionar o conteúdo real.
-<Text style={styles.subTitle}>1. Aceitação dos Termos</Text>: Um subtítulo para seções dos termos.
-const styles = StyleSheet.create({ ... });: Define os estilos visuais para a tela, incluindo container, title, subTitle e paragraph.
-Documentação da Versão Atual:
-
-Rota: /(common)/termos (esta rota é definida implicitamente no _layout.tsx comum ao ser referenciada, por exemplo, na tela de configurações).
-Propósito: Apresentar os termos de serviço legais do aplicativo aos usuários.
-Conteúdo: Atualmente um placeholder. O texto real dos termos de serviço deve ser adicionado para cumprir os requisitos legais.
-Componentes Principais: ScrollView, Text, Stack.Screen.
-Fluxo de Interação: Apenas visualização do conteúdo.
-6. Tela de Central de Ajuda (app/(common)/help.tsx)
-Esta tela fornece uma seção de Perguntas Frequentes (FAQ) com funcionalidade de busca e opções de contato para suporte.
-
-import React, { useState, useMemo, useEffect, useRef } from 'react';: Importa hooks do React, incluindo useState (estado), useMemo (memorização de valores), useEffect (efeitos colaterais) e useRef (referências).
-import { View, Text, StyleSheet, Linking, ScrollView, TouchableOpacity, TextInput, Platform, Animated, Alert, } from 'react-native';: Importa componentes UI do React Native.
-import { Stack, useRouter } from 'expo-router';: Importa Stack e useRouter do Expo Router.
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';: Importa bibliotecas de ícones.
-Funções Globais/Utilitários:
-interface FAQItem { ... }:
-Define a estrutura de dados para um item de FAQ, incluindo id, question, answer e keywords (opcional, para busca).
-const ALL_FAQS: FAQItem[] = [ ... ];:
-Array de dados mockados contendo perguntas e respostas frequentes.
-Componentes Reutilizáveis:
-AnimatedFaqItem: React.FC<{ faq: FAQItem; delay: number; }>:
-Propósito: Renderizar uma única pergunta e resposta da FAQ com animação de entrada.
-Animações: opacity (fade-in) e translateY (slide-in) com um delay escalonado.
-Visual: Exibe a pergunta (faqQuestion) e a resposta (faqAnswer).
-AnimatedContactButton: React.FC<{ label: string; iconName: keyof typeof Ionicons.glyphMap; onPress: () => void; delay: number; }>:
-Propósito: Componente genérico para um botão de contato (e-mail, telefone, chat) com animação de entrada e feedback de toque.
-Props: label, iconName, onPress e delay.
-Animações: opacity (fade-in), translateY (slide-in) com delay escalonado e scale para feedback ao toque.
-Visual: Exibe um ícone, um rótulo e um ícone de chevron.
-Componente Principal: HelpScreen
-router = useRouter();: Hook para navegação.
-[searchTerm, setSearchTerm]: Estado para o termo de busca na FAQ.
-Animações (headerAnim, searchAnim, sectionCardAnim): Referências useRef para controlar a animação de entrada de vários elementos da tela.
-useEffect (animação): Inicia as animações de entrada dos elementos da tela ao montar o componente.
-filteredFaqs = useMemo(() => { ... }, [searchTerm]);:
-Propósito: Filtrar a lista de FAQs com base no searchTerm.
-Lógica: Utiliza useMemo para otimizar o desempenho, recalculando a lista filtrada apenas quando searchTerm muda. A busca é feita no título, corpo e palavras-chave da FAQ.
-handleContactSupportEmail():
-Propósito: Abrir o aplicativo de e-mail padrão para enviar uma mensagem de suporte.
-Lógica: Usa Linking.openURL com um URI mailto:.
-handleContactSupportPhone():
-Propósito: Iniciar uma chamada telefônica para o suporte.
-Lógica: Usa Linking.openURL com um URI tel:. Exibe um Alert de confirmação.
-Renderização:
-Custom Header: Cabeçalho animado com título "Central de Ajuda" e um botão de voltar.
-Título Principal: "Como podemos te ajudar?" com animação.
-Seção de FAQ:
-Título "Perguntas Frequentes (FAQ)".
-Campo de TextInput (searchInput) com ícone de busca e animação, permitindo que o usuário digite um termo para filtrar as FAQs. Um botão "limpar" aparece se houver texto na busca.
-Exibe a lista de AnimatedFaqItems filtrados.
-Mensagem "Nenhuma pergunta encontrada..." se a busca não retornar resultados.
-Seção de Contato:
-Título "Ainda precisa de ajuda?".
-Texto introdutório.
-Botões de contato (AnimatedContactButton) para "Enviar E-mail para Suporte", "Ligar para o Suporte" e "Chat Online com Suporte" (o último é um placeholder).
-Documentação da Versão Atual:
-
+Título Padrão: 'Configurações'
+Ajuda e Suporte (help)
 Rota: /(common)/help
-Propósito: Oferecer aos usuários uma autoajuda através de perguntas frequentes e fornecer canais diretos para contato com o suporte.
-Dados: Lista de FAQItems mockados.
-Fluxo de Interação:
-Ao acessar a tela, o usuário vê um cabeçalho animado e um campo de busca para FAQs.
-Pode digitar para filtrar as perguntas frequentes em tempo real.
-A lista de FAQs é exibida com animações de entrada.
-Se a FAQ não for suficiente, o usuário pode escolher entre opções de contato direto (e-mail, telefone, chat).
-Animações:
-Cabeçalho, Título Principal e Campo de Busca: translateY e opacity para entrada suave.
-Cartões de Seção: translateY e opacity com atraso escalonado.
-Itens de FAQ e Botões de Contato: translateY e opacity com atraso escalonado, e scale para feedback ao toque nos botões.
-7. Tela de Envio de Feedback (app/(common)/feedback/[targetId].tsx)
-Esta tela permite que o usuário envie feedback, que pode incluir uma avaliação por estrelas e um comentário, para um alvo específico (serviço, perfil de provedor ou o próprio aplicativo).
+Título Padrão: 'Ajuda e Suporte'
+Notificações (notifications)
+Rota: /(common)/notifications
+Título Padrão: 'Notificações'
+Feedback Dinâmico (feedback/[targetId])
+Rota: /(common)/feedback/[targetId]
+Título Padrão: 'Enviar Feedback'
+Termos de Serviço (termos)
+Rota: /(common)/termos
+Título Padrão: 'Termos de Serviço'
+Política de Privacidade (privacidade)
+Rota: /(common)/privacidade
+Título Padrão: 'Política de Privacidade'
+Indique e Ganhe (referrals)
+Rota: /(common)/referrals
+Título Padrão: 'Indique e Ganhe'
+Programa de Fidelidade (loyalty)
+Rota: /(common)/loyalty
+Título Padrão: 'Programa de Fidelidade'
+Detalhes de Reserva Ativa (active-booking/[bookingId])
+Rota: /(common)/active-booking/[bookingId]
+Título Padrão: (Não definido explicitamente no _layout.tsx raiz, provavelmente definido na tela individual).
+2. Detalhes das Telas Comuns
+2.1. Detalhes de Reserva Ativa (app/(common)/active-booking/[bookingId].tsx)
+Esta tela é um placeholder para exibir detalhes de uma reserva ativa específica.
 
-import React, { useState } from 'react';: Importa useState para gerenciamento de estado.
-import { View, Text, StyleSheet, TextInput, Alert, TouchableOpacity, ScrollView, ActivityIndicator, Platform } from 'react-native';: Importa componentes UI do React Native.
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';: Importa Stack para opções de tela, useLocalSearchParams para obter parâmetros da rota e useRouter para navegação.
-import { Ionicons } from '@expo/vector-icons';: Importa ícones Ionicons.
-Componentes Reutilizáveis:
-StarRating: React.FC<StarRatingProps>:
-Propósito: Componente reutilizável para permitir que o usuário selecione uma avaliação de estrelas (ex: 1 a 5 estrelas).
-Props: rating (valor atual), onRate (função de callback para atualizar a avaliação), maxStars (número total de estrelas, padrão 5), starSize, activeColor e inactiveColor.
-Visual: Renderiza maxStars ícones de estrela. As estrelas são preenchidas (star) ou contornadas (star-outline) com base na avaliação atual.
-Interação: Cada estrela é um TouchableOpacity que, ao ser tocado, chama onRate com o número da estrela correspondente, atualizando a avaliação.
-Componente Principal: FeedbackScreen
-params = useLocalSearchParams<{ targetId: string; type?: 'service' | 'provider_profile' | 'app_feedback'; serviceName?: string; providerName?: string; }>();:
-Propósito: Obter os parâmetros de rota, como o targetId (ID do item sendo avaliado/feedback), type (tipo de feedback) e nomes opcionais para contexto (e.g., serviceName, providerName).
-{ targetId, type, serviceName, providerName } = params;: Desestruturação dos parâmetros da rota. type tem um valor padrão de 'app_feedback'.
-router = useRouter();: Hook para navegação.
-[rating, setRating]: Estado para armazenar a avaliação por estrelas (de 0 a 5).
-[comment, setComment]: Estado para armazenar o texto do comentário/feedback.
-[isLoading, setIsLoading]: Estado booleano para gerenciar o indicador de carregamento durante o envio do feedback.
-handleSubmitFeedback():
-Propósito: Lidar com o envio do formulário de feedback.
-Validações:
-Para service ou provider_profile feedback, exige que a avaliação (rating) seja diferente de 0.
-Para service, provider_profile ou app_feedback, exige que o comment não esteja vazio.
-Lógica (Simulada): Define isLoading como true, registra o feedback no console e simula um envio de 1.5 segundos. Em um ambiente real, faria uma chamada de API.
-Pós-envio: Exibe um Alert de sucesso e tenta voltar para a tela anterior usando router.back(). Se não houver tela anterior, redireciona para uma tela padrão (/ para feedback do app, ou /client/bookings para feedback de serviço/provedor).
-Títulos e Placeholders Dinâmicos: screenTitle, contextInfo e commentPlaceholder são definidos dinamicamente com base no type do feedback, proporcionando uma experiência de usuário mais contextual.
-Renderização Condicional:
-O componente StarRating é renderizado apenas se o type do feedback não for 'app_feedback'.
-O botão de envio exibe um ActivityIndicator quando isLoading é true.
-Documentação da Versão Atual:
+Rota: /(common)/active-booking/[bookingId]
+Parâmetro de Rota: bookingId (ID da reserva).
+Dados Exibidos: O ID da reserva passado como parâmetro.
+Componentes/Seções Principais:
+View e Text simples para exibir o ID.
+Animações:
+fadeAnim e translateYAnim: Animações de fade-in e slide-in para o texto principal na montagem da tela, com duração de 800ms.
+Interação: A tela é puramente de exibição, sem interações complexas.
+2.2. Feedback Dinâmico (app/(common)/feedback/[targetId].tsx)
+Esta tela permite ao usuário enviar feedback e avaliações para diferentes alvos (serviço, perfil de provedor, ou o próprio aplicativo).
 
 Rota: /(common)/feedback/[targetId]
-Parâmetros de Rota:
-targetId: Obrigatório. O ID do item que está sendo avaliado (ex: ID de um serviço, ID de um provedor, ou um identificador genérico para feedback do app).
-type: Opcional. Define o contexto do feedback ('service', 'provider_profile', 'app_feedback'). Padrão: 'app_feedback'.
-serviceName: Opcional. Nome do serviço para contextualização.
-providerName: Opcional. Nome do provedor para contextualização.
-Propósito: Coletar feedback do usuário sobre diferentes aspectos do aplicativo ou serviços prestados, incluindo avaliações por estrelas e comentários textuais.
-Componentes Principais: StarRating, TextInput, TouchableOpacity, ScrollView, ActivityIndicator.
-Fluxo de Interação:
-A tela se adapta dinamicamente com base no type de feedback (mudando título, contexto e placeholders).
-Para feedback de serviço/provedor, o usuário seleciona uma avaliação de 1 a 5 estrelas.
-O usuário insere um comentário no campo de texto, que é obrigatório para a maioria dos tipos de feedback.
-Ao clicar em "Enviar Feedback", validações são realizadas.
-Um indicador de carregamento é exibido durante o "envio".
-Após o "envio" (simulado), uma mensagem de sucesso é exibida e o usuário é redirecionado.
+Parâmetros de Rota: targetId (ID do item a ser avaliado), type (tipo de feedback: 'service', 'provider_profile', 'app_feedback'), serviceName, providerName, providerId.
+Dados Exibidos:
+Informações do alvo do feedback (nome do serviço/provedor).
+Avaliação em estrelas (rating).
+Comentário do usuário (comment).
+Status de carregamento (isLoading).
+ID do usuário logado (user.id) via useAuth.
+Componentes/Seções Principais:
+StarRating: Componente customizado para seleção de estrelas.
+TextInput: Para o campo de comentário.
+TouchableOpacity com ActivityIndicator: Botão de envio com feedback de carregamento.
+Animações: Nenhuma animação explícita definida neste arquivo.
+Interação:
+setRating: Atualiza a avaliação em estrelas.
+setComment: Atualiza o texto do comentário.
+handleSubmitFeedback: Envia o feedback para o serviço submitFeedback. Realiza validações (usuário logado, avaliação/comentário obrigatórios). Exibe Alert de sucesso ou erro. Navega de volta ou para uma tela inicial após o envio.
+2.3. Disputas - Lista (app/(common)/feedback/dispute/index.tsx)
+Esta tela exibe uma lista das disputas abertas ou resolvidas do usuário.
+
+Rota: /(common)/feedback/dispute
+Dados Exibidos (Mockados): mockDisputes (ID, bookingId, assunto, status, data).
+Componentes/Seções Principais:
+Header: Cabeçalho da tela.
+FlatList: Para renderizar a lista de disputas.
+DisputeListItem: Componente para cada item da lista, exibindo detalhes da disputa e seu status.
+Card: Utilizado para o layout de cada item da disputa.
+PrimaryButton: Botão para "Abrir Nova Disputa".
+Icon: Para ícones de status e navegação.
+EmptyStateContainer: Exibido quando não há disputas.
+Animações: Nenhuma animação explícita definida neste arquivo.
+Interação:
+handleCreateNewDispute: Placeholder para iniciar o fluxo de criação de uma nova disputa.
+onPress em DisputeListItem: Navega para a tela de detalhes da disputa específica (/(common)/feedback/dispute/[bookingId]).
+2.4. Disputas - Detalhes (app/(common)/feedback/dispute/[bookingId].tsx)
+Esta tela exibe os detalhes completos de uma disputa específica, incluindo histórico de mensagens e anexos.
+
+Rota: /(common)/feedback/dispute/[bookingId]
+Parâmetro de Rota: bookingId (ID da reserva associada à disputa).
+Dados Exibidos (Mockados): mockDisputeDetails (assunto, status, descrição, anexos, mensagens).
+Componentes/Seções Principais:
+Header: Cabeçalho da tela.
+ScrollView: Para o conteúdo rolável.
+Card: Para agrupar seções como "Detalhes da Disputa", "Anexos" e "Histórico de Mensagens".
+TextInputWithIcon: Para digitar novas mensagens.
+TouchableOpacity com Icon: Botões para anexar arquivos e enviar mensagens.
+Mensagens: Renderizadas em bolhas (messageBubble) com estilos diferentes para remetente (userMessage, adminMessage).
+Animações: Nenhuma animação explícita definida neste arquivo.
+Interação:
+handleSendMessage: Simula o envio de uma mensagem, limpando o campo de texto e exibindo um Alert.
+handleUploadFile: Placeholder para a funcionalidade de upload de arquivo.
+Navegação de volta via Header.
+2.5. Ajuda e Suporte (app/(common)/help.tsx)
+Esta tela serve como uma central de ajuda, oferecendo FAQs e opções de contato.
+
+Rota: /(common)/help
+Dados Exibidos:
+Perguntas Frequentes (faqs) carregadas do serviço faqService.
+Termo de busca (searchTerm) para filtrar FAQs.
+Status de carregamento (isLoadingFaqs).
+Componentes/Seções Principais:
+Custom Header: Cabeçalho animado com botão de voltar.
+TextInput com Ionicons: Campo de busca de FAQs.
+AnimatedFaqItem: Componente animado para cada item da FAQ (pergunta e resposta).
+AnimatedContactButton: Componente animado para botões de contato (e-mail, telefone, chat).
+Skeleton: Exibido durante o carregamento das FAQs.
+Toast: Para exibir mensagens de erro/sucesso.
+Animações:
+headerAnim, mainHeaderAnim, searchAnim, sectionCardAnim: Animações de entrada escalonadas para o cabeçalho, título principal, barra de busca e cartões de seção.
+AnimatedFaqItem e AnimatedContactButton: Cada um possui suas próprias animações de fade, slide e escala no momento da montagem, com atrasos escalonados para um efeito de lista.
+headerBackButtonScaleAnim: Animação de escala para feedback visual ao tocar no botão de voltar do cabeçalho.
+Interação:
+setSearchTerm: Filtra as FAQs exibidas.
+loadFaqs: Função assíncrona para buscar as FAQs.
+handleContactSupportEmail: Abre o cliente de e-mail padrão.
+handleContactSupportPhone: Abre o discador de telefone.
+Alert: Para informar sobre funcionalidades em desenvolvimento (chat).
+Navegação de volta via Custom Header.
+2.6. Programa de Fidelidade (app/(common)/loyalty.tsx)
+Esta tela apresenta o programa de fidelidade do usuário, incluindo pontos, nível e recompensas.
+
+Rota: /(common)/loyalty
+Dados Exibidos (Mockados): mockLoyaltyData (pontos atuais, pontos para o próximo nível, nível atual, próximo nível, pontos ganhos no mês, recompensas disponíveis, como ganhar pontos).
+Componentes/Seções Principais:
+Header: Cabeçalho da tela.
+ScrollView: Para o conteúdo rolável.
+LoyaltySummaryCard: Componente customizado para exibir o resumo dos pontos e níveis.
+RewardItem: Componente customizado para cada recompensa disponível.
+HowToEarnSection: Componente customizado para exibir as regras de como ganhar pontos.
+AnimatedCardWrapper: Um wrapper para aplicar animações de entrada em seções.
+Animações:
+AnimatedCardWrapper: Aplica animações de fade-in e slide-in (translateY) para as seções (LoyaltySummaryCard, rewardsCard, HowToEarnSection) com atrasos escalonados.
+RewardItem: Possui um delay próprio para animações escalonadas dentro da lista de recompensas.
+Interação:
+handleRedeemReward: Simula o resgate de uma recompensa. Verifica pontos, exibe Alert de confirmação, e atualiza o estado local (reduz pontos, remove recompensa). Em um ambiente real, faria uma chamada API.
+2.7. Notificações (app/(common)/notifications.tsx)
+Esta tela exibe uma lista das notificações do usuário, permitindo marcá-las como lidas e navegar para o conteúdo relacionado.
+
+Rota: /(common)/notifications
+Dados Exibidos:
+Lista de notificações (notifications) carregadas do serviço notificationService.
+Status de carregamento (isLoading, isRefreshing).
+ID do usuário logado (user.id) via useAuth.
+Componentes/Seções Principais:
+Custom Header: Cabeçalho animado com botão "Marcar Todas como Lidas" (se houver notificações não lidas).
+FlatList: Para exibir a lista de notificações.
+AnimatedNotificationItem: Componente animado para cada notificação, exibindo título, corpo, timestamp e ícone.
+RefreshControl: Para puxar para atualizar a lista.
+ActivityIndicator: Para feedback de carregamento.
+Ionicons, MaterialCommunityIcons: Para os ícones das notificações.
+EmptyState: Exibido quando não há notificações.
+Animações:
+headerAnim: Animação de entrada para o cabeçalho.
+feedbackAnim: Animação de fade para o feedback de carregamento ou estado vazio.
+AnimatedNotificationItem: Cada item possui animações de fade, slide e escala na montagem, com atrasos escalonados.
+markAllButtonScaleAnim: Animação de escala para feedback visual ao tocar no botão "Marcar Todas como Lidas".
+Interação:
+loadNotifications: Função assíncrona para buscar e ordenar notificações.
+handleNotificationPress: Marca a notificação como lida (no frontend e backend via markNotificationAsRead) e navega para a rota navigateTo se especificada.
+handleMarkAllAsRead: Marca todas as notificações como lidas (no frontend e backend via markAllNotificationsAsRead).
+onRefresh: Aciona loadNotifications para atualizar a lista.
+2.8. Política de Privacidade (app/(common)/privacidade.tsx)
+Esta tela exibe o texto completo da Política de Privacidade do aplicativo.
+
+Rota: /(common)/privacidade
+Dados Exibidos: Conteúdo estático da política de privacidade.
+Componentes/Seções Principais:
+ScrollView: Para o conteúdo rolável.
+Stack.Screen: Para definir o título da tela.
+Text: Para exibir o texto.
+Animações:
+titleAnim: Animação de fade-in e slide-in para o título principal da política.
+contentAnim: Animação de fade-in e slide-in para o corpo do texto da política, iniciando após o título.
+Interação: Nenhuma.
+2.9. Indique e Ganhe (app/(common)/referrals.tsx)
+Esta tela permite ao usuário gerenciar seu programa de indicações, compartilhar seu código e ver seus ganhos.
+
+Rota: /(common)/referrals
+Dados Exibidos (Mockados): mockReferralData (código de indicação, total de indicações, indicações concluídas, ganhos, usuários indicados, como funciona).
+Componentes/Seções Principais:
+Header: Cabeçalho da tela.
+ScrollView: Para o conteúdo rolável.
+AnimatedCard: Componente customizado para aplicar animações de entrada em cada seção (código, estatísticas, como funciona, usuários indicados).
+PrimaryButton: Botão para "Compartilhar Código".
+Icon: Para ícones de copiar e de status.
+Animações:
+AnimatedCard: Aplica animações de fade-in e slide-in (translateY) para as seções com atrasos escalonados.
+buttonScaleAnim: Animação de escala para feedback visual ao tocar nos botões de copiar e compartilhar.
+Interação:
+handleShareCode: Utiliza a API Share do React Native para compartilhar o código de indicação.
+handleCopyCode: Copia o código de indicação para a área de transferência usando expo-clipboard.
+Exibe Alert para informar sobre o sucesso da cópia ou erros no compartilhamento.
+2.10. Configurações (app/(common)/settings.tsx)
+Esta tela permite ao usuário ajustar as preferências do aplicativo e acessar informações da conta e legais.
+
+Rota: /(common)/settings
+Dados Exibidos:
+Preferências do usuário (settings) via AppContext (notificações, modo escuro).
+Versão e build do aplicativo via expo-constants.
+Componentes/Seções Principais:
+Custom Header: Cabeçalho animado com botão de voltar.
+ScrollView: Para o conteúdo rolável.
+AnimatedSettingSwitchItem: Componente animado para itens de configuração com um Switch (ex: notificações, modo escuro).
+AnimatedSettingNavigationItem: Componente animado para itens de navegação (ex: gerenciar dados, termos de serviço).
+Ionicons, MaterialCommunityIcons: Para os ícones dos itens de configuração.
+Animações:
+headerAnim, mainTitleAnim, sectionCardAnim1, sectionCardAnim2, sectionCardAnim3: Animações de entrada escalonadas para o cabeçalho, título principal e os cartões de seção.
+AnimatedSettingSwitchItem e AnimatedSettingNavigationItem: Cada item possui suas próprias animações de fade, slide e escala na montagem, com atrasos escalonados.
+headerBackButtonScaleAnim: Animação de escala para feedback visual ao tocar no botão de voltar do cabeçalho.
+Interação:
+handleToggleNotifications: Atualiza a preferência de notificações via AppContext e exibe um Alert simulado.
+handleToggleDarkMode: Alterna o tema via AppContext e exibe um Alert simulado.
+openURL: Abre URLs externas (para termos e política de privacidade).
+router.push: Navega para outras telas (ex: editar perfil).
+Alert: Para ações como exclusão de conta (placeholder) e funcionalidades em desenvolvimento.
+2.11. Termos de Serviço (app/(common)/termos.tsx)
+Esta tela exibe o texto completo dos Termos de Serviço do aplicativo.
+
+Rota: /(common)/termos
+Dados Exibidos: Conteúdo estático dos termos de serviço.
+Componentes/Seções Principais:
+ScrollView: Para o conteúdo rolável.
+Stack.Screen: Para definir o título da tela.
+Text: Para exibir o texto.
+Animações: Nenhuma animação explícita definida neste arquivo.
+Interação: Nenhuma.
+3. Seção de Segurança (app/(common)/safety)
+3.1. Layout da Seção de Segurança (app/(common)/safety/_layout.tsx)
+Este layout define a pilha de navegação para todas as telas relacionadas à segurança.
+
+Rota: /(common)/safety
+Componente Principal: SafetyLayout
+Apresentação: Utiliza expo-router's Stack para gerenciar a navegação entre as telas de segurança. Todos os cabeçalhos são desativados (headerShown: false) pois as telas internas implementam seus próprios cabeçalhos customizados.
+Rotas Definidas:
+Índice de Segurança (index)
+Rota: /(common)/safety
+Título Padrão: 'Segurança e Emergência'
+Botão de Pânico (panic)
+Rota: /(common)/safety/panic
+Título Padrão: 'Botão de Pânico'
+Relatar Incidente (incident-report)
+Rota: /(common)/safety/incident-report
+Título Padrão: 'Relatar Incidente'
+3.2. Índice de Segurança (app/(common)/safety/index.tsx)
+Esta tela serve como um hub central para funcionalidades de segurança e emergência.
+
+Rota: /(common)/safety
+Dados Exibidos: Nenhuns dados específicos são exibidos, apenas links para outras funcionalidades.
+Componentes/Seções Principais:
+Custom Header: Cabeçalho animado com botão de voltar.
+ScrollView: Para o conteúdo rolável.
+SectionCard: Um cartão para agrupar os recursos de segurança.
+AnimatedMenuItem: Componente customizado para os botões de navegação (Botão de Pânico, Relatar Incidente), com ícones 2D e sobreposição sutil de ícones 3D.
+Icon3D: Componente para renderizar ícones 3D.
+Animações:
+headerAnim e contentAnim: Animações de entrada escalonadas para o cabeçalho e o conteúdo principal.
+AnimatedMenuItem: Cada item de menu possui animações de fade, slide e escala na montagem, com atrasos escalonados e feedback de toque.
+Interação:
+router.push: Navega para as telas de "Botão de Pânico" e "Relatar Incidente".
+3.3. Botão de Pânico (app/(common)/safety/panic.tsx)
+Esta tela implementa um botão de pânico com contagem regressiva e envio de localização.
+
+Rota: /(common)/safety/panic
+Dados Exibidos:
+Contagem regressiva (countdown).
+Status da contagem (isCounting).
+Informações de localização (location).
+Textos traduzidos via useTranslation.
+Componentes/Seções Principais:
+Text: Para cabeçalho, descrição, status da localização, contagem regressiva e aviso.
+TouchableOpacity: Para os botões de pânico e cancelar.
+ActivityIndicator: Para feedback de carregamento (localização e envio).
+Animações:
+headerAnim, descriptionAnim, locationStatusAnim, buttonAnim, warningTextAnim: Animações de entrada escalonadas para os elementos da tela.
+panicButtonScaleAnim e cancelButtonScaleAnim: Animações de escala para feedback visual ao tocar nos botões.
+countdownPulseAnim: Animação de pulsação para o texto da contagem regressiva.
+Interação:
+Location.requestForegroundPermissionsAsync e Location.getCurrentPositionAsync: Solicita e obtém a permissão e a localização do usuário.
+handleInitiatePanic: Inicia a contagem regressiva para o envio do alerta de pânico.
+handleCancelPanic: Cancela a contagem regressiva e o envio do alerta.
+handleSendPanic: Envia o alerta de pânico (com localização) para o serviço reportPanic. Lida com erros e exibe Alert de sucesso/erro. Navega de volta após o envio.
+3.4. Defesa (app/(common)/safety/defense.tsx)
+Esta tela oferece informações sobre as garantias de segurança do aplicativo, um banner de proteção, o sistema SOS e contatos de emergência.
+
+Rota: /(common)/safety/defense
+Dados Exibidos (Mockados): panicStatus (para simular o PanicBanner).
+Componentes/Seções Principais:
+Custom Header: Cabeçalho animado com botão de voltar.
+ScrollView: Para o conteúdo rolável.
+LinearGradient: Para o banner de proteção.
+Icon3D: Componente para renderizar ícones 3D (escudo, cadeado, dinheiro, telefone 911, fogo, ambulância).
+Card: Para agrupar seções como "O que o app entrega", "SOS & Acompanhamento" e "Contatos de emergência".
+PanicBanner: Componente para exibir o status do pânico.
+Button: Botões de ação (ex: "Abrir central de pânico", "Ver políticas").
+TouchableOpacity com Icon3D: Botões de contato de emergência (Polícia, Bombeiros, SAMU).
+Animações:
+headerAnim e contentAnim: Animações de entrada para o cabeçalho e o conteúdo principal.
+float1 e float2: Animações de flutuação para ícones decorativos no banner.
+Interação:
+onCall: Abre o discador para números de emergência.
+onPanic: Simula o acionamento do pânico e atualiza o panicStatus do PanicBanner.
+router.push: Navega para a tela de pânico e políticas legais.
+3.5. Relatar Incidente (app/(common)/safety/incident-report.tsx)
+Esta tela permite ao usuário relatar um incidente, fornecendo tipo, descrição e anexos.
+
+Rota: /(common)/safety/incident-report
+Dados Exibidos:
+Tipo de incidente (incidentType).
+Descrição (description).
+ID da reserva (bookingId).
+Anexos (attachments).
+Componentes/Seções Principais:
+Custom Header: Cabeçalho animado com botão de voltar.
+ScrollView: Para o formulário rolável.
+Picker: Para selecionar o tipo de incidente.
+TextInput: Para descrição e ID da reserva.
+TouchableOpacity: Para selecionar imagens e enviar o relatório.
+ActivityIndicator: Para feedback de carregamento.
+Animações:
+headerAnim e formContentAnim: Animações de entrada escalonadas para o cabeçalho e o conteúdo do formulário.
+submitButtonScaleAnim: Animação de escala para feedback visual ao tocar nos botões de anexar e enviar.
+Interação:
+setIncidentType, setDescription, setBookingId, setAttachments: Atualizam o estado do formulário.
+pickImage: Abre a galeria de imagens para seleção, usando expo-image-picker.
+handleSubmit: Envia o relatório de incidente para o serviço reportIncident. Realiza validações, lida com carregamento e exibe Alert de sucesso/erro. Navega de volta após o envio.
+4. Seção de Suporte (app/(common)/support)
+4.1. Layout da Seção de Suporte (app/(common)/support/_layout.tsx)
+Este layout define a pilha de navegação para todas as telas relacionadas ao suporte ao cliente.
+
+Rota: /(common)/support
+Componente Principal: SupportLayout
+Apresentação: Utiliza expo-router's Stack para gerenciar a navegação entre as telas de suporte. Todos os cabeçalhos são desativados (headerShown: false) pois as telas internas implementam seus próprios cabeçalhos customizados.
+Rotas Definidas:
+Lista de Tickets (index)
+Rota: /(common)/support
+Título Padrão: 'Meus Tickets de Suporte'
+Criar Ticket (create-ticket)
+Rota: /(common)/support/create-ticket
+Título Padrão: 'Abrir Novo Ticket'
+Detalhes do Ticket ([ticketId])
+Rota: /(common)/support/[ticketId]
+Título Padrão: 'Detalhes do Ticket'
+4.2. Lista de Tickets de Suporte (app/(common)/support/index.tsx)
+Esta tela exibe uma lista dos tickets de suporte do usuário.
+
+Rota: /(common)/support
+Dados Exibidos:
+Lista de tickets (tickets) carregada do serviço supportService.
+Status de carregamento (loading).
+Componentes/Seções Principais:
+Custom Header: Cabeçalho com botão de voltar.
+ScrollView: Para o conteúdo rolável.
+TouchableOpacity: Botão "Abrir Novo Ticket".
+TicketCard: Componente para cada ticket, exibindo assunto, prévia da última mensagem e data de atualização.
+ActivityIndicator: Para feedback de carregamento.
+Ionicons: Para ícones e estado vazio.
+EmptyStateContainer: Exibido quando não há tickets.
+Animações: Nenhuma animação explícita definida neste arquivo.
+Interação:
+fetchTickets: Função assíncrona para buscar os tickets de suporte.
+router.push: Navega para a tela de "Criar Novo Ticket" ou para os "Detalhes do Ticket" específico.
+Alert: Para mensagens de erro.
+4.3. Criar Novo Ticket (app/(common)/support/create-ticket.tsx)
+Esta tela permite ao usuário abrir um novo ticket de suporte.
+
+Rota: /(common)/support/create-ticket
+Dados Exibidos:
+Assunto do ticket (subject).
+Mensagem inicial (message).
+Status de carregamento (loading).
+Componentes/Seções Principais:
+Custom Header: Cabeçalho com botão de voltar.
+TextInput: Para o assunto e a mensagem.
+TouchableOpacity: Botão "Enviar Ticket".
+ActivityIndicator: Para feedback de carregamento.
+Animações: Nenhuma animação explícita definida neste arquivo.
+Interação:
+setSubject e setMessage: Atualizam o estado do formulário.
+handleCreateTicket: Envia o novo ticket para o serviço supportService.createTicket. Realiza validações, lida com carregamento e exibe Alert de sucesso/erro. Navega de volta para a lista de tickets após o sucesso.
+4.4. Detalhes do Ticket (app/(common)/support/[ticketId].tsx)
+Esta tela exibe o histórico de mensagens de um ticket de suporte específico e permite ao usuário enviar novas mensagens.
+
+Rota: /(common)/support/[ticketId]
+Parâmetro de Rota: ticketId (ID do ticket).
+Dados Exibidos:
+Detalhes do ticket (ticket) carregados do serviço supportService.
+Nova mensagem a ser enviada (newMessage).
+ID do usuário logado (user.id) via AuthContext.
+Status de carregamento (loading, sending).
+Componentes/Seções Principais:
+KeyboardAvoidingView: Para ajustar o layout quando o teclado aparece.
+Custom Header: Cabeçalho com botão de voltar e o assunto do ticket.
+ScrollView: Para o histórico de mensagens.
+TextInput: Para digitar novas mensagens.
+TouchableOpacity: Botão de enviar mensagem.
+ActivityIndicator: Para feedback de carregamento.
+Ionicons: Para ícones e estado vazio do chat.
+MessageBubble: Componentes para exibir as mensagens, com estilos diferentes para remetente (usuário atual vs. outros).
+Animações: Nenhuma animação explícita definida neste arquivo.
+Interação:
+fetchTicketDetails: Função assíncrona para buscar os detalhes do ticket e suas mensagens.
+handleSendMessage: Envia uma nova mensagem para o ticket via supportService.addMessageToTicket. Atualiza otimisticamente a UI e lida com erros.
+scrollViewRef: Garante que o chat role automaticamente para o final ao carregar ou enviar novas mensagens.
+getMessageAlignment, getMessageBubbleStyle, getMessageTextStyle: Funções auxiliares para estilizar as bolhas de mensagem com base no remetente.
