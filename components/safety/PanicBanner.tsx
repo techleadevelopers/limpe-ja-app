@@ -1,33 +1,50 @@
 // components/safety/PanicBanner.tsx
-// ================================================
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  useColorScheme,
   Animated,
   Easing,
+  Linking,
   Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  Image,
+  useColorScheme,
+  ViewStyle,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 
-import Card from '../common/Card';
-import Button from '../common/Button';
-import Chip from '../common/Chip';
-import Colors from '../../constants/Colors';
-import { useReducedMotion } from '../utils/useReducedMotion';
+import Colors from '@constants/Colors';
+import { Icons3D } from '../../constants/icons3d';
 
-// ---------- Theming ----------
+export type PanicStatus = 'IDLE' | 'RECEIVED' | 'ACKED' | 'DISPATCHED' | 'CLOSED';
+
+type PanicBannerProps = {
+  /** Acionado ao tocar no botão SOS */
+  onPanic: () => void;
+  /** Opcional: cancelar/encerrar alerta manualmente */
+  onCancel?: () => void;
+  /** Estado atual do fluxo de pânico */
+  status?: PanicStatus;
+  /** Números rápidos (fallback: 190/193/192) */
+  phoneNumbers?: { police?: string; fire?: string; ambulance?: string };
+  /** Versão compacta para cards menores */
+  compact?: boolean;
+  /** Estilo externo */
+  style?: ViewStyle;
+};
+
 function useTheme() {
   const scheme = useColorScheme?.() || 'light';
   const theme = (Colors as any)[scheme] || (Colors as any).light;
   return theme as typeof Colors.light;
 }
+
 const withAlpha = (hex: string, alpha: number) => {
   const h = hex.replace('#', '');
-  const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+  const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
   const int = parseInt(full, 16);
   const r = (int >> 16) & 255;
   const g = (int >> 8) & 255;
@@ -35,222 +52,261 @@ const withAlpha = (hex: string, alpha: number) => {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
-// ---------- Types ----------
-export interface PanicBannerProps {
-  onPanic: () => void;
-  status?: 'IDLE' | 'RECEIVED' | 'ACKED' | 'DISPATCHED' | 'CLOSED';
-  loading?: boolean;
-  title?: string;      // default: "Está se sentindo inseguro?"
-  subtitle?: string;   // default: "Acione o botão de pânico. Nossa equipe irá atender imediatamente."
-}
+const statusMeta: Record<
+  PanicStatus,
+  { label: string; sub?: string; tint: string; icon: any }
+> = {
+  IDLE:       { label: 'Acionar SOS',                    sub: 'Resposta priorizada 24h', tint: '#EF4444', icon: Icons3D.panic },
+  RECEIVED:   { label: 'Alerta enviado',                 sub: 'Recebemos seu pedido',    tint: '#F59E0B', icon: Icons3D.notification },
+  ACKED:      { label: 'Equipe notificada',              sub: 'Aguardando despacho',     tint: '#0EA5E9', icon: Icons3D.docCheck },
+  DISPATCHED: { label: 'Socorro a caminho',              sub: 'Mantenha-se seguro',      tint: '#10B981', icon: Icons3D.shield },
+  CLOSED:     { label: 'Ocorrência encerrada',           sub: 'Esperamos que esteja bem',tint: '#6B7280', icon: Icons3D.check },
+};
 
-const PanicBanner: React.FC<PanicBannerProps> = ({
+export const PanicBanner: React.FC<PanicBannerProps> = ({
   onPanic,
+  onCancel,
   status = 'IDLE',
-  loading = false,
-  title = 'Está se sentindo inseguro?',
-  subtitle = 'Acione o botão de pânico. Nossa equipe irá atender imediatamente.',
+  phoneNumbers,
+  compact,
+  style,
 }) => {
   const theme = useTheme();
-  const reduced = useReducedMotion();
+  const [startedAt, setStartedAt] = useState<number | null>(null);
 
-  // Animações (tokens baseados no guia do projeto)
-  const pulse = useRef(new Animated.Value(1)).current;          // CTA pulso
-  const float1 = useRef(new Animated.Value(0)).current;         // ícone flutuante 1
-  const float2 = useRef(new Animated.Value(0)).current;         // ícone flutuante 2
-  const shimmer = useRef(new Animated.Value(0)).current;        // skeleton
+  // animação de pulso
+  const pulse = useRef(new Animated.Value(0)).current;
+  const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.06] });
+  const ring = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.45, 0] });
 
   useEffect(() => {
-    if (reduced) return;
-
-    // pulso do CTA (1.5–2.5s loop)
-    const pulseLoop = Animated.loop(
+    if (status === 'IDLE') {
+      pulse.stopAnimation();
+      pulse.setValue(0);
+      return;
+    }
+    Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1.03, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 1.0, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 950, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 950, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
       ])
-    );
-    // flutuação ícones (3–5s leve)
-    const mkFloat = (v: Animated.Value, dur: number) =>
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(v, { toValue: 1, duration: dur, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-          Animated.timing(v, { toValue: 0, duration: dur, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        ])
-      );
+    ).start();
+  }, [status, pulse]);
 
-    pulseLoop.start();
-    const f1 = mkFloat(float1, 2800);
-    const f2 = mkFloat(float2, 3200);
+  // cronômetro (desde o acionamento)
+  useEffect(() => {
+    if (status !== 'IDLE' && !startedAt) setStartedAt(Date.now());
+    if (status === 'IDLE') setStartedAt(null);
+  }, [status, startedAt]);
 
-    // shimmer skeleton (1.3–1.6s)
-    const sh = Animated.loop(
-      Animated.timing(shimmer, { toValue: 1, duration: 1400, easing: Easing.linear, useNativeDriver: true })
-    );
-    sh.start();
+  const elapsed = useMemo(() => {
+    if (!startedAt) return null;
+    const s = Math.floor((Date.now() - startedAt) / 1000);
+    const mm = String(Math.floor(s / 60)).padStart(2, '0');
+    const ss = String(s % 60).padStart(2, '0');
+    return `${mm}:${ss}`;
+  }, [startedAt, status]); // recalculado a cada render
 
-    return () => {
-      pulseLoop.stop();
-      f1.stop();
-      f2.stop();
-      sh.stop();
-    };
-  }, [reduced, pulse, float1, float2, shimmer]);
+  const meta = statusMeta[status];
 
-  const floatY1 = float1.interpolate({ inputRange: [0, 1], outputRange: [0, -6] });
-  const floatY2 = float2.interpolate({ inputRange: [0, 1], outputRange: [0, -8] });
-  const shimmerX = shimmer.interpolate({ inputRange: [0, 1], outputRange: [-60, 260] });
-
-  // Cores & superfícies
-  const gradFrom = theme.primary;
-  const gradTo = theme.accent || theme.primary;
-  const cardBg = theme.cardBackground || '#FFFFFF';
-  const muted = theme.textMuted || '#6B7280';
-
-  // Mapeamento de status → chip
-  const chipColor = ((): 'warning' | 'error' | undefined => {
-    if (status === 'RECEIVED') return 'error';
-    if (status === 'ACKED' || status === 'DISPATCHED') return 'warning';
-    return undefined; // IDLE/CLOSED: oculta chip
-  })();
-
-  // CTA com press feedback
-  const onPressIn = () => {
-    if (reduced) return;
-    Animated.spring(pulse, { toValue: 0.96, useNativeDriver: true, damping: 15, stiffness: 240 }).start();
-  };
-  const onPressOut = () => {
-    if (reduced) return;
-    Animated.spring(pulse, { toValue: 1.0, useNativeDriver: true, damping: 15, stiffness: 240 }).start();
+  const call = (n?: string) => {
+    const phone = n || '';
+    if (!phone) return;
+    Linking.openURL(`tel:${phone}`).catch(() => {});
   };
 
-  // Skeleton (quando loading=true)
-  if (loading) {
-    return (
-      <Card style={styles.card}>
-        <View style={styles.skelHeader} />
-        <View style={styles.skelLine} />
-        <View style={[styles.skelLine, { width: '70%' }]} />
-        <View style={styles.skelCtaRow}>
-          <View style={styles.skelBtn} />
-          <View style={styles.skelChip} />
-        </View>
+  const police = phoneNumbers?.police || '190';
+  const fire   = phoneNumbers?.fire   || '193';
+  const amb    = phoneNumbers?.ambulance || '192';
 
-        {/* shimmer */}
-        {!reduced && (
-          <Animated.View pointerEvents="none" style={[styles.skelShimmer, { transform: [{ translateX: shimmerX }] }]} />
-        )}
-      </Card>
-    );
-  }
+  const isIdle = status === 'IDLE';
+
+  const handlePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    if (isIdle) {
+      setStartedAt(Date.now());
+      onPanic?.();
+    } else if (onCancel) {
+      onCancel();
+    }
+  };
 
   return (
-    <Card style={[styles.card, { backgroundColor: cardBg }]}>
-      {/* faixa superior em gradiente */}
-      <LinearGradient colors={[gradFrom, gradTo]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.gradientTop}>
-        <View style={styles.topRow}>
-          <View style={styles.topIcon}>
-            <Ionicons name="shield-checkmark" size={18} color="#FFF" />
-          </View>
-          <Text style={styles.topLabel}>Segurança</Text>
+    <LinearGradient
+      colors={[theme.primary, theme.accent || theme.primary]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={[
+        styles.wrap,
+        compact ? styles.wrapCompact : styles.wrapLarge,
+        Platform.select({ android: { elevation: 8 } }),
+        style,
+      ]}
+    >
+      {/* Cabeçalho + status */}
+      <View style={styles.topRow}>
+        <View style={styles.titleRow}>
+          <Image source={Icons3D.shield} style={styles.titleIcon} />
+          <Text style={styles.title}>Central de Segurança</Text>
         </View>
 
-        {/* ícones flutuantes decorativos */}
-        {!reduced && (
-          <>
-            <Animated.View style={[styles.floatIcon, { right: 10, top: 6, transform: [{ translateY: floatY1 }] }]}>
-              <Ionicons name="lock-closed" size={14} color={withAlpha('#FFFFFF', 0.9)} />
-            </Animated.View>
-            <Animated.View style={[styles.floatIcon, { right: 44, bottom: 6, transform: [{ translateY: floatY2 }] }]}>
-              <Ionicons name="alert-circle" size={14} color={withAlpha('#FFFFFF', 0.9)} />
-            </Animated.View>
-          </>
-        )}
-      </LinearGradient>
-
-      {/* conteúdo */}
-      <View style={styles.body}>
-        <Text style={styles.title}>{title}</Text>
-        <Text style={[styles.subtitle, { color: muted }]}>{subtitle}</Text>
-
-        <View style={styles.footerRow}>
-          {/* CTA SOS com pulso/press */}
-          <Animated.View style={{ transform: [{ scale: pulse }] }}>
-            <Button
-              title="🚨 Pedir ajuda"
-              onPress={onPanic}
-              onPressIn={onPressIn}
-              onPressOut={onPressOut}
-            />
-          </Animated.View>
-
-          {/* Chip de status opcional */}
-          {chipColor && <Chip label={status} color={chipColor} />}
+        <View style={[styles.badge, { backgroundColor: withAlpha('#000', 0.22) }]}>
+          <Image source={meta.icon} style={styles.badgeIcon} />
+          <Text style={styles.badgeText}>{meta.label}</Text>
         </View>
       </View>
-    </Card>
+
+      {!!meta.sub && (
+        <Text style={styles.subtitle} numberOfLines={2}>
+          {meta.sub}
+        </Text>
+      )}
+
+      {/* Botão SOS */}
+      <View style={styles.sosArea}>
+        <Animated.View
+          style={[
+            styles.pulseRing,
+            { opacity: ring, transform: [{ scale }], borderColor: meta.tint },
+          ]}
+        />
+        <Pressable
+          onPress={handlePress}
+          accessibilityRole="button"
+          accessibilityLabel={isIdle ? 'Acionar SOS' : 'Encerrar alerta'}
+          style={({ pressed }) => [
+            styles.sosBtn,
+            {
+              backgroundColor: isIdle ? meta.tint : withAlpha('#FFFFFF', 0.2),
+              borderColor: withAlpha('#000', 0.15),
+              transform: [{ scale: pressed ? 0.98 : 1 }],
+            },
+          ]}
+        >
+          <Image
+            source={Icons3D.panic}
+            style={[styles.sosIcon, { tintColor: isIdle ? '#FFF' : meta.tint }]}
+          />
+          <Text
+            style={[
+              styles.sosText,
+              { color: isIdle ? '#FFF' : '#FFFFFF', opacity: isIdle ? 1 : 0.95 },
+            ]}
+          >
+            {isIdle ? 'Acionar SOS' : 'Alerta Ativo'}
+          </Text>
+          {!isIdle && (
+            <Text style={styles.timerText}>{elapsed ?? '00:00'}</Text>
+          )}
+        </Pressable>
+      </View>
+
+      {/* Ações rápidas */}
+      <View style={styles.quickRow}>
+        <QuickCall
+          label={`Polícia ${police}`}
+          onPress={() => call(police)}
+          icon={Icons3D.phone911}
+          bg={withAlpha('#DC2626', 0.15)}
+          fg="#FEE2E2"
+        />
+        <QuickCall
+          label={`Bombeiros ${fire}`}
+          onPress={() => call(fire)}
+          icon={Icons3D.flame2}
+          bg={withAlpha('#EA580C', 0.15)}
+          fg="#FFEDD5"
+        />
+        <QuickCall
+          label={`SAMU ${amb}`}
+          onPress={() => call(amb)}
+          icon={Icons3D.ambulance2}
+          bg={withAlpha('#059669', 0.15)}
+          fg="#D1FAE5"
+        />
+      </View>
+    </LinearGradient>
+  );
+};
+
+const QuickCall = ({
+  label,
+  onPress,
+  icon,
+  bg,
+  fg,
+}: {
+  label: string;
+  onPress: () => void;
+  icon: any;
+  bg: string;
+  fg: string;
+}) => {
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.quick, { backgroundColor: bg, opacity: pressed ? 0.85 : 1 }]}>
+      <Image source={icon} style={styles.quickIcon} />
+      <Text style={[styles.quickText, { color: '#fff' }]} numberOfLines={1}>
+        {label}
+      </Text>
+    </Pressable>
   );
 };
 
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: 16,
+  wrap: {
+    borderRadius: 20,
     overflow: 'hidden',
+    padding: 16,
     ...Platform.select({
       ios: {
-        shadowColor: 'rgba(0,0,0,0.08)',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.12,
-        shadowRadius: 10,
+        shadowColor: 'rgba(0,0,0,0.25)',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.18,
+        shadowRadius: 16,
       },
-      android: { elevation: 6 },
     }),
   },
+  wrapLarge: { minHeight: 160 },
+  wrapCompact: { minHeight: 120 },
 
-  // Top gradient band
-  gradientTop: {
-    height: 42,
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-  },
-  topRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  topIcon: {
-    width: 22, height: 22, borderRadius: 11,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  topLabel: { color: '#FFF', fontWeight: '800', fontSize: 12, letterSpacing: 0.3 },
+  topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  titleIcon: { width: 22, height: 22, resizeMode: 'contain' },
+  title: { color: '#FFF', fontWeight: '800', fontSize: 16 },
 
-  // Float icons
-  floatIcon: {
-    position: 'absolute',
-    width: 22, height: 22, borderRadius: 11,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    alignItems: 'center', justifyContent: 'center',
-  },
+  badge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
+  badgeIcon: { width: 16, height: 16, resizeMode: 'contain' },
+  badgeText: { color: '#FFF', fontWeight: '700', fontSize: 12 },
 
-  body: { paddingHorizontal: 12, paddingVertical: 12 },
-  title: { fontSize: 16, fontWeight: '800', color: '#111827' },
-  subtitle: { marginTop: 4, fontSize: 13 },
+  subtitle: { color: 'rgba(255,255,255,0.9)', marginTop: 6 },
 
-  footerRow: {
-    marginTop: 12,
-    flexDirection: 'row',
+  sosArea: { alignItems: 'center', justifyContent: 'center', marginTop: 14, marginBottom: 10 },
+  sosBtn: {
+    width: 160,
+    height: 54,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  sosIcon: { width: 22, height: 22, resizeMode: 'contain' },
+  sosText: { fontWeight: '900', letterSpacing: 0.4 },
+  timerText: { marginLeft: 6, color: '#FFF', fontWeight: '700', fontVariant: ['tabular-nums'] },
+
+  pulseRing: {
+    position: 'absolute',
+    width: 190,
+    height: 66,
+    borderRadius: 999,
+    borderWidth: 8,
   },
 
-  // Skeleton
-  skelHeader: { height: 42, backgroundColor: '#F0F2F5' },
-  skelLine: { marginTop: 12, height: 12, backgroundColor: '#F0F2F5', borderRadius: 8 },
-  skelCtaRow: { marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  skelBtn: { width: 140, height: 42, backgroundColor: '#F0F2F5', borderRadius: 10 },
-  skelChip: { width: 88, height: 28, backgroundColor: '#F0F2F5', borderRadius: 999 },
-  skelShimmer: {
-    position: 'absolute',
-    left: 0, right: 0, top: 0, bottom: 0,
-    backgroundColor: 'rgba(255,255,255,0.4)',
-  },
+  quickRow: { flexDirection: 'row', gap: 8, marginTop: 6 },
+  quick: { flex: 1, height: 44, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 10 },
+  quickIcon: { width: 20, height: 20, resizeMode: 'contain' },
+  quickText: { fontWeight: '800', fontSize: 12 },
 });
 
 export default PanicBanner;

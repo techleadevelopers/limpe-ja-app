@@ -40,12 +40,13 @@ const withAlpha = (hex: string, alpha: number) => {
 
 /* ==== ÍCONES 3D (injeção leve, sem alterar layout) ==== */
 const Icons3D = {
-  shield: require('../../../../assets/images/3d/shield-safe.png'),
-  lock: require('../../../../assets/images/3d/lock2.png'),
-  cash: require('../../../../assets/images/3d/cash.png'),
-  phone911: require('../../../../assets/images/3d/phone911.png'),
-  flame2: require('../../../../assets/images/3d/flame2.png'),
-  ambulance2: require('../../../../assets/images/3d/ambulance2.png'),
+  // Alinhado com os nomes de arquivo em assets/images/3d/ e a declaração em icons3d.ts
+  shield: require('@3d/shield-safe.png'),
+  lock: require('@3d/lock2.png'), // Assumindo 'lock2.png' com base no uso anterior
+  cash: require('@3d/cash.png'),
+  phone911: require('@3d/phone911.png'),
+  flame2: require('@3d/flame2.png'),
+  ambulance2: require('@3d/ambulance2.png'), // Assumindo 'ambulance2.png' com base no uso
 } as const;
 
 const Icon3D: React.FC<{ name: keyof typeof Icons3D; size?: number; style?: any }> = ({ name, size = 24, style }) => (

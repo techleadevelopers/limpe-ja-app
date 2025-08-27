@@ -7,8 +7,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 // ============ Ícones 3D (injeção leve) ============
 const Icons3D = {
-  panic: require('../../../../assets/images/3d/phone911.png'),
-  shield: require('../../../../assets/images/3d/shield-safe.png'),
+  panic: require('@3d/panic.png'),
+  shield: require('@3d/shield-safe.png'),
 } as const;
 
 const Icon3D: React.FC<{ name: keyof typeof Icons3D; size?: number; style?: any }> = ({ name, size = 28, style }) => (
