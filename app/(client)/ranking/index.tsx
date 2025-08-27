@@ -31,9 +31,9 @@ import { SLAResponseChip } from '../../../components/ranking/SLAResponseChip';
 
 // ---------- 3D Icons ----------
 const Icons3D = {
-  crown: require('/assets/images/3d/crown.png'),
-  trophy: require('/assets/images/3d/trophy.png'),
-  stats: require('/assets/images/3d/uptrend.png'),
+  crown: require('../../../assets/images/3d/crown.png'),
+  trophy: require('../../../assets/images/3d/trophy-gold.png'),
+  stats: require('../../../assets/images/3d/uptrend.png'),
 } satisfies Record<string, ImageSourcePropType>;
 
 const Icon3D = ({ src, size = 20, style }: { src: ImageSourcePropType; size?: number; style?: any }) => (

@@ -38,12 +38,12 @@ import Toast from '../../../components/Toast';
 
 // ====== 3D ICONS (absolute paths) ======
 const Icons3D = {
-  crown: require('/assets/images/3d/crown.png'),
-  ticket: require('/assets/images/3d/ticket.png'),
-  autoApply: require('/assets/images/3d/ticket3.png'),
-  notify: require('/assets/images/3d/notification.png'),
-  monthly: require('/assets/images/3d/step2-book-calendar.png'),
-  trophy: require('/assets/images/3d/trophy.png'),
+  crown: require('../../../assets/images/3d/crown.png'),
+  ticket: require('../../../assets/images/3d/ticket.png'),
+  autoApply: require('../../../assets/images/3d/ticket3.png'),
+  notify: require('../../../assets/images/3d/notification.png'),
+  monthly: require('../../../assets/images/3d/step2-book-calendar.png'),
+  trophy: require('../../../assets/images/3d/trophy-gold.png'),
 } satisfies Record<string, ImageSourcePropType>;
 
 const Icon3D = ({

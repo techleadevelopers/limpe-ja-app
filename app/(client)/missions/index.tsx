@@ -39,14 +39,14 @@ import Colors from '../../../constants/Colors';
 
 // ---------- 3D ICONS (absolute paths) ----------
 const Icons3D = {
-  heroCrown: require('/assets/images/3d/crown.png'),
-  discountTicket: require('/assets/images/3d/ticket.png'),
-  autoApply: require('/assets/images/3d/ticket3.png'),
-  notify: require('/assets/images/3d/notification.png'),
-  monthly: require('/assets/images/3d/step2-book-calendar.png'),
-  check: require('/assets/images/3d/check.png'),
-  time: require('/assets/images/3d/time.png'),
-  payments: require('/assets/images/3d/payments.png'),
+  heroCrown: require('../../../assets/images/3d/crown.png'),
+  discountTicket: require('../../../assets/images/3d/ticket.png'),
+  autoApply: require('../../../assets/images/3d/ticket3.png'),
+  notify: require('../../../assets/images/3d/notification.png'),
+  monthly: require('../../../assets/images/3d/step2-book-calendar.png'),
+  check: require('../../../assets/images/3d/check.png'),
+  time: require('../../../assets/images/3d/time.png'),
+  payments: require('../../../assets/images/3d/payments.png'),
 } satisfies Record<string, ImageSourcePropType>;
 
 const Icon3D = ({
