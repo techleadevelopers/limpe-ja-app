@@ -1,4 +1,3 @@
-// LimpeJaApp/app/(provider)/profile/edit-services.tsx
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
@@ -34,10 +33,10 @@ import { CreateProviderServiceData } from '../../../types/backend/providers';
 
 // ===== Design Tokens (Premium UI) =====
 const Colors = {
-  primary: '#4A90E2',
-  primaryDark: '#2A72E7',
-  link: '#007AFF',
-  bgSoft: '#F0F7FF',
+  primary: 'rgba(0,122,255,0.9)', // Cor alterada de '#4A90E2' para um azul mais opaco
+  primaryDark: 'rgba(0,122,255,0.7)', // Cor alterada de '#2A72E7' para um azul mais transparente
+  link: '#007AFF', // Já é uma das novas cores azuis, mantida
+  bgSoft: '#E3F2FD', // Cor alterada de '#F0F7FF' para um azul muito claro
   surface: '#FFFFFF',
   border: '#E9ECEF',
   fieldBg: '#F8F9FA',
@@ -46,7 +45,7 @@ const Colors = {
   textSubtle: '#868E96',
   danger: '#D32F2F',
   success: '#2E7D32',
-  shadow: 'rgba(0,0,0,0.08)',
+  shadow: 'rgba(0,122,255,0.3)', // Cor alterada de 'rgba(0,0,0,0.08)' para um azul transparente
 };
 
 const Radii = {
@@ -659,7 +658,7 @@ export default function EditProviderServicesScreen() {
           <Animated.View style={[styles.emptyListContainer, { opacity: feedbackAnim }]}>
             <Ionicons name="pricetags-outline" size={64} color="#CED4DA" />
             <Text style={styles.emptyListText}>Você ainda não adicionou serviços.</Text>
-            <Text style={styles.emptyListSubText}>Use o formulário acima para começar — é rapidinho.</Text>
+            <Text style={styles.emptyListSubText}>Use o formulário acima para começar -- é rapidinho.</Text>
             <TouchableOpacity style={[styles.actionButtonPrimary, { marginTop: Spacing.md }]} onPress={() => {}}>
               <Text style={styles.actionButtonPrimaryText}>Adicionar meu primeiro serviço</Text>
             </TouchableOpacity>
@@ -712,7 +711,7 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 50 : 20,
     borderBottomLeftRadius: Radii.xl,
     borderBottomRightRadius: Radii.xl,
-    shadowColor: '#000',
+    shadowColor: Colors.shadow, // Cor alterada de '#000' para usar o novo azul de sombra
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 5,
@@ -770,8 +769,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   input: {
-    borderWidth: 1,
-    borderColor: Colors.border,
+    
     backgroundColor: Colors.fieldBg,
     borderRadius: Radii.pill,
     paddingVertical: Platform.OS === 'ios' ? 12 : 10,
@@ -792,8 +790,8 @@ const styles = StyleSheet.create({
     marginTop: 15,
   },
   pickerContainer: {
-    borderWidth: 1,
-    borderColor: Colors.border,
+    
+
     backgroundColor: Colors.fieldBg,
     borderRadius: Radii.pill,
     marginBottom: Spacing.md,
@@ -803,6 +801,7 @@ const styles = StyleSheet.create({
     height: 50,
     width: '100%',
     color: Colors.text,
+    paddingHorizontal: 15, // Adicionado para melhorar o espaçamento interno do Picker
   },
   actionButtonPrimary: {
     backgroundColor: Colors.primary,
@@ -812,7 +811,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     ...Platform.select({
       ios: {
-        shadowColor: 'rgba(0,0,0,0.1)',
+        shadowColor: Colors.shadow, // Cor alterada de 'rgba(0,0,0,0.1)' para usar o novo azul de sombra
         shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.2,
         shadowRadius: 4,

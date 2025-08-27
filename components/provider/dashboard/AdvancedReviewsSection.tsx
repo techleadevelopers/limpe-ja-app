@@ -1,365 +1,381 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ActivityIndicator,
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
-// Adicionar a importação da interface ProviderReview do arquivo de tipagens central
+// Tipagens do projeto
 import { ProviderReview } from '../../../types/backend/providers';
 
 interface DetailedRatingBreakdown {
-  overall: number;
-  punctuality: number;
-  quality: number;
-  communication: number;
-  value: number;
-  totalReviews: number;
-  recentTrend: 'improving' | 'declining' | 'stable';
-  satisfactionRate: number;
-  responseTime: number;
+  overall: number;
+  punctuality: number;
+  quality: number;
+  communication: number;
+  value: number;
+  totalReviews: number;
+  recentTrend: 'improving' | 'declining' | 'stable';
+  satisfactionRate: number; // 0–100
+  responseTime: number;     // minutos
 }
 
-// REMOVIDO: A definição local da interface ProviderReview
-
 interface AdvancedReviewsSectionProps {
-  reviews?: ProviderReview[];
-  providerId?: string;
-  onViewAllReviews: () => void;
+  reviews?: ProviderReview[];
+  providerId?: string;
+  onViewAllReviews: () => void;
 }
 
 const AdvancedReviewsSection: React.FC<AdvancedReviewsSectionProps> = ({
-  reviews,
-  providerId,
-  onViewAllReviews,
+  reviews,
+  providerId,
+  onViewAllReviews,
 }) => {
-  const [ratingBreakdown, setRatingBreakdown] = useState<DetailedRatingBreakdown | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [ratingBreakdown, setRatingBreakdown] = useState<DetailedRatingBreakdown | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    if (providerId) {
-      loadRatingBreakdown();
-    }
-  }, [providerId]);
+  useEffect(() => {
+    if (providerId) loadRatingBreakdown();
+  }, [providerId]);
 
-  const loadRatingBreakdown = async () => {
-    setIsLoading(true);
-    try {
-      // Aqui você faria a chamada para o endpoint de breakdown detalhado
-      // const breakdown = await getDetailedRatingBreakdown(providerId);
-      
-      // Mock por enquanto
-      const mockBreakdown: DetailedRatingBreakdown = {
-        overall: 4.7,
-        punctuality: 4.8,
-        quality: 4.6,
-        communication: 4.9,
-        value: 4.5,
-        totalReviews: 47,
-        recentTrend: 'improving',
-        satisfactionRate: 89.4,
-        responseTime: 12,
-      };
-      
-      setRatingBreakdown(mockBreakdown);
-    } catch (error) {
-      console.error('Erro ao carregar breakdown de avaliações:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const loadRatingBreakdown = async () => {
+    setIsLoading(true);
+    try {
+      // TODO: integrar com API real
+      const mock: DetailedRatingBreakdown = {
+        overall: 4.7,
+        punctuality: 4.8,
+        quality: 4.6,
+        communication: 4.9,
+        value: 4.5,
+        totalReviews: 47,
+        recentTrend: 'improving',
+        satisfactionRate: 89.4,
+        responseTime: 12,
+      };
+      setRatingBreakdown(mock);
+    } catch (e) {
+      console.error('Erro ao carregar breakdown de avaliações:', e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const getTrendIcon = (trend: string) => {
-    switch (trend) {
-      case 'improving': return { name: 'trending-up', color: '#28a745' };
-      case 'declining': return { name: 'trending-down', color: '#dc3545' };
-      default: return { name: 'remove', color: '#6c757d' };
-    }
-  };
+  const getTrend = (trend: DetailedRatingBreakdown['recentTrend']) => {
+    switch (trend) {
+      case 'improving': return { icon: 'trending-up', color: '#28a745', text: 'Melhorando' };
+      case 'declining': return { icon: 'trending-down', color: '#dc3545', text: 'Declinando' };
+      default:          return { icon: 'remove',      color: '#6c757d', text: 'Estável' };
+    }
+  };
 
-  const renderRatingBar = (label: string, rating: number, maxRating: number = 5) => {
-    const percentage = (rating / maxRating) * 100;
-    return (
-      <View style={styles.ratingBarContainer}>
-        <Text style={styles.ratingBarLabel}>{label}</Text>
-        <View style={styles.ratingBarBackground}>
-          <LinearGradient
-            colors={['#007AFF', '#4A90E2']}
-            style={[styles.ratingBarFill, { width: `${percentage}%` }]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-          />
-        </View>
-        <Text style={styles.ratingBarValue}>{rating.toFixed(1)}</Text>
-      </View>
-    );
-  };
+  const renderRatingBar = (label: string, rating: number, max = 5) => {
+    const pct = Math.min(100, Math.max(0, (rating / max) * 100));
+    return (
+      <View style={styles.ratingRow}>
+        <Text style={styles.ratingLabel} numberOfLines={1}>{label}</Text>
+        <View style={styles.ratingBarBg}>
+          <LinearGradient
+            colors={['#007AFF', '#4A90E2']}
+            style={[styles.ratingBarFill, { width: `${pct}%` }]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+          />
+        </View>
+        <Text style={styles.ratingValue}>{rating.toFixed(1)}</Text>
+      </View>
+    );
+  };
 
-  if (isLoading) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color="#007AFF" />
-          <Text style={styles.loadingText}>Carregando insights...</Text>
-        </View>
-      </View>
-    );
-  }
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.loadingBox}>
+          <ActivityIndicator size="small" color="#007AFF" />
+          <Text style={styles.loadingText}>Carregando insights…</Text>
+        </View>
+      </View>
+    );
+  }
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>
-          <Ionicons name="analytics-outline" size={20} color="#007AFF" /> Análise de Avaliações
-        </Text>
-        <TouchableOpacity onPress={onViewAllReviews}>
-          <Text style={styles.viewAllText}>Ver Detalhes</Text>
-        </TouchableOpacity>
-      </View>
+  return (
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.title}>
+          <Ionicons name="analytics-outline" size={18} color="#007AFF" />{' '}
+          Análise de Avaliações
+        </Text>
+        <TouchableOpacity onPress={onViewAllReviews} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Text style={styles.link}>Ver Detalhes</Text>
+        </TouchableOpacity>
+      </View>
 
-      {ratingBreakdown && (
-        <View style={styles.metricsContainer}>
-          {/* Métricas principais */}
-          <View style={styles.mainMetricsRow}>
-            <View style={styles.mainMetricCard}>
-              <Text style={styles.mainMetricValue}>{ratingBreakdown.overall}</Text>
-              <Text style={styles.mainMetricLabel}>Avaliação Geral</Text>
-              <View style={styles.trendContainer}>
-                <Ionicons 
-                  name={getTrendIcon(ratingBreakdown.recentTrend).name as any} 
-                  size={16} 
-                  color={getTrendIcon(ratingBreakdown.recentTrend).color} 
-                />
-                <Text style={[styles.trendText, { color: getTrendIcon(ratingBreakdown.recentTrend).color }]}>
-                  {ratingBreakdown.recentTrend === 'improving' ? 'Melhorando' : 
-                   ratingBreakdown.recentTrend === 'declining' ? 'Declinando' : 'Estável'}
-                </Text>
-              </View>
-            </View>
+      {!!ratingBreakdown && (
+        <View style={styles.metricsWrap}>
+          {/* Dois “pilares” principais — tamanhos iguais */}
+          <View style={styles.mainRow}>
+            <View style={styles.pillar}>
+              <Text style={styles.pillarValue}>{ratingBreakdown.overall.toFixed(1)}</Text>
+              <Text style={styles.pillarLabel}>Avaliação Geral</Text>
+              <View style={styles.trendRow}>
+                <Ionicons
+                  name={getTrend(ratingBreakdown.recentTrend).icon as any}
+                  size={14}
+                  color={getTrend(ratingBreakdown.recentTrend).color}
+                />
+                <Text style={[styles.trendText, { color: getTrend(ratingBreakdown.recentTrend).color }]}>
+                  {getTrend(ratingBreakdown.recentTrend).text}
+                </Text>
+              </View>
+            </View>
 
-            <View style={styles.mainMetricCard}>
-              <Text style={styles.mainMetricValue}>{ratingBreakdown.satisfactionRate}%</Text>
-              <Text style={styles.mainMetricLabel}>Taxa de Satisfação</Text>
-              <Text style={styles.subMetricText}>{ratingBreakdown.totalReviews} avaliações</Text>
-            </View>
-          </View>
+            <View style={styles.pillar}>
+              <Text style={styles.pillarValue}>{ratingBreakdown.satisfactionRate.toFixed(1)}%</Text>
+              <Text style={styles.pillarLabel}>Taxa de Satisfação</Text>
+              <Text style={styles.pillarSub}>{ratingBreakdown.totalReviews} avaliações</Text>
+            </View>
+          </View>
 
-          {/* Breakdown detalhado */}
-          <View style={styles.breakdownContainer}>
-            <Text style={styles.breakdownTitle}>Detalhamento por Categoria</Text>
-            {renderRatingBar('Pontualidade', ratingBreakdown.punctuality)}
-            {renderRatingBar('Qualidade', ratingBreakdown.quality)}
-            {renderRatingBar('Comunicação', ratingBreakdown.communication)}
-            {renderRatingBar('Custo-Benefício', ratingBreakdown.value)}
-          </View>
+          {/* Breakdown */}
+          <View style={styles.breakdownBox}>
+            <Text style={styles.breakdownTitle}>Detalhamento por Categoria</Text>
+            {renderRatingBar('Pontualidade',   ratingBreakdown.punctuality)}
+            {renderRatingBar('Qualidade',      ratingBreakdown.quality)}
+            {renderRatingBar('Comunicação',    ratingBreakdown.communication)}
+            {renderRatingBar('Custo-Benefício', ratingBreakdown.value)}
+          </View>
 
-          {/* Tempo de resposta */}
-          <View style={styles.responseTimeContainer}>
-            <Ionicons name="time-outline" size={16} color="#007AFF" />
-            <Text style={styles.responseTimeText}>
-              Tempo médio de resposta: {ratingBreakdown.responseTime} min
-            </Text>
-          </View>
-        </View>
-      )}
+          {/* Tempo de resposta */}
+          <View style={styles.responseBox}>
+            <Ionicons name="time-outline" size={16} color="#007AFF" />
+            <Text style={styles.responseText}>
+              Tempo médio de resposta: {ratingBreakdown.responseTime} min
+            </Text>
+          </View>
+        </View>
+      )}
 
-      {/* Reviews recentes */}
-      {reviews && reviews.length > 0 && (
-        <View style={styles.recentReviewsContainer}>
-          <Text style={styles.recentReviewsTitle}>Avaliações Recentes</Text>
-          {reviews.slice(0, 2).map((review) => (
-            <View key={review.id} style={styles.reviewItem}>
-              <View style={styles.reviewHeader}>
-                <View style={styles.starsContainer}>
-                  {Array.from({ length: review.rating }).map((_, i) => (
-                    <Ionicons key={i} name="star" size={14} color="#FFB946" />
-                  ))}
-                </View>
-                <Text style={styles.reviewClientName}>
-                  {review.client?.fullName || 'Cliente'}
-                </Text>
-              </View>
-              <Text style={styles.reviewComment} numberOfLines={2}>
-                "{review.comment || 'Excelente serviço!'}"
-              </Text>
-            </View>
-          ))}
-        </View>
-      )}
-    </View>
-  );
+      {/* Recentes */}
+      {!!reviews?.length && (
+        <View style={styles.recentBox}>
+          <Text style={styles.recentTitle}>Avaliações Recentes</Text>
+          {reviews.slice(0, 2).map((review) => (
+            <View key={review.id} style={styles.reviewCard}>
+              <View style={styles.reviewHead}>
+                <View style={styles.stars}>
+                  {Array.from({ length: Math.round(review.rating ?? 0) }).map((_, i) => (
+                    <Ionicons key={i} name="star" size={14} color="#FFB946" />
+                  ))}
+                </View>
+                <Text style={styles.clientName}>
+                  {review.client?.fullName || 'Cliente'}
+                </Text>
+              </View>
+              <Text style={styles.reviewText} numberOfLines={2}>
+                “{review.comment || 'Excelente serviço!'}”
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
 };
 
+const CARD_BG = '#FFFFFF';
+const SOFT_BG = '#F6F8FD';
+const BORDER = '#E6ECF4';
+const TEXT_DARK = '#1A2538';
+const TEXT_MUTED = '#7A8599';
+
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: 25,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 5,
-    elevation: 4,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1A2538',
-  },
-  viewAllText: {
-    fontSize: 14,
-    color: '#007AFF',
-    fontWeight: '600',
-  },
-  loadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 20,
-  },
-  loadingText: {
-    marginLeft: 10,
-    color: '#4A5568',
-  },
-  metricsContainer: {
-    marginBottom: 20,
-  },
-  mainMetricsRow: {
-    flexDirection: 'row',
-    marginBottom: 20,
-    gap: 12,
-  },
-  mainMetricCard: {
-    flex: 1,
-    backgroundColor: '#F8F9FD',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  mainMetricValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1A2538',
-  },
-  mainMetricLabel: {
-    fontSize: 12,
-    color: '#4A5568',
-    marginTop: 4,
-  },
-  trendContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  trendText: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginLeft: 4,
-  },
-  subMetricText: {
-    fontSize: 12,
-    color: '#7A8599',
-    marginTop: 4,
-  },
-  breakdownContainer: {
-    marginBottom: 16,
-  },
-  breakdownTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1A2538',
-    marginBottom: 12,
-  },
-  ratingBarContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  ratingBarLabel: {
-    fontSize: 12,
-    color: '#4A5568',
-    width: 80,
-  },
-  ratingBarBackground: {
-    flex: 1,
-    height: 6,
-    backgroundColor: '#E2E8F0',
-    borderRadius: 3,
-    marginHorizontal: 8,
-    overflow: 'hidden',
-  },
-  ratingBarFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  ratingBarValue: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#1A2538',
-    width: 30,
-    textAlign: 'right',
-  },
-  responseTimeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#EBF5FF',
-    padding: 12,
-    borderRadius: 8,
-  },
-  responseTimeText: {
-    fontSize: 13,
-    color: '#007AFF',
-    marginLeft: 8,
-    fontWeight: '500',
-  },
-  recentReviewsContainer: {
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    paddingTop: 15,
-  },
-  recentReviewsTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1A2538',
-    marginBottom: 12,
-  },
-  reviewItem: {
-    backgroundColor: '#F8F9FD',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  reviewHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  starsContainer: {
-    flexDirection: 'row',
-  },
-  reviewClientName: {
-    fontSize: 12,
-    color: '#4A5568',
-    fontWeight: '500',
-  },
-  reviewComment: {
-    fontSize: 13,
-    color: '#1A2538',
-    fontStyle: 'italic',
-    lineHeight: 18,
-  },
+  container: {
+    marginBottom: 20,
+    backgroundColor: CARD_BG,
+    borderRadius: 14,
+    padding: 16,
+    ...Platform.select({
+      ios:    { shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 6 },
+      android:{ elevation: 4 },
+    }),
+  },
+
+  // Header
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: TEXT_DARK,
+  },
+  link: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#007AFF',
+  },
+
+  // Métricas principais (pilares)
+  metricsWrap: { marginTop: 4 },
+  mainRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  pillar: {
+    flex: 1,
+    height: 168, // altura uniforme (como no mock)
+    backgroundColor: SOFT_BG,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
+  pillarValue: {
+    fontSize: 28,      // maior pra dar destaque
+    lineHeight: 34,
+    fontWeight: '800',
+    color: TEXT_DARK,
+  },
+  pillarLabel: {
+    marginTop: 6,
+    fontSize: 12,
+    color: '#4A5568',
+    textAlign: 'center',
+  },
+  pillarSub: {
+    marginTop: 6,
+    fontSize: 12,
+    color: TEXT_MUTED,
+  },
+  trendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  trendText: {
+    marginLeft: 4,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+
+  // Breakdown
+  breakdownBox: {
+    backgroundColor: CARD_BG,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: BORDER,
+    padding: 12,
+    marginBottom: 12,
+  },
+  breakdownTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: TEXT_DARK,
+    marginBottom: 10,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    minHeight: 18,
+  },
+  ratingLabel: {
+    width: 110,            // largura fixa p/ alinhamento
+    fontSize: 12,
+    color: '#4A5568',
+  },
+  ratingBarBg: {
+    flex: 1,
+    height: 8,             // altura uniforme
+    backgroundColor: '#E8EDF6',
+    borderRadius: 999,
+    overflow: 'hidden',
+    marginHorizontal: 10,
+  },
+  ratingBarFill: {
+    height: '100%',
+    borderRadius: 999,
+  },
+  ratingValue: {
+    width: 36,             // largura fixa p/ colunar
+    textAlign: 'right',
+    fontSize: 12,
+    fontWeight: '700',
+    color: TEXT_DARK,
+  },
+
+  // Tempo de resposta
+  responseBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EBF5FF',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  responseText: {
+    marginLeft: 8,
+    fontSize: 13,
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+
+  // Recentes
+  recentBox: {
+    borderTopWidth: 1,
+    borderTopColor: BORDER,
+    paddingTop: 14,
+    marginTop: 6,
+  },
+  recentTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: TEXT_DARK,
+    marginBottom: 10,
+  },
+  reviewCard: {
+    backgroundColor: SOFT_BG,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 8,
+  },
+  reviewHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  stars: { flexDirection: 'row' },
+  clientName: {
+    fontSize: 12,
+    color: '#4A5568',
+    fontWeight: '600',
+  },
+  reviewText: {
+    fontSize: 13,
+    color: TEXT_DARK,
+    fontStyle: 'italic',
+    lineHeight: 18,
+  },
+
+  // Loading
+  loadingBox: {
+    paddingVertical: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: { marginLeft: 10, color: '#4A5568' },
 });
 
 export default AdvancedReviewsSection;

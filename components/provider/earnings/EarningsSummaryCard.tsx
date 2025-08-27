@@ -1,8 +1,9 @@
-// app/(provider)/earnings/components/EarningsSummaryCard.tsx
 import { Ionicons } from '@expo/vector-icons';
 import React, { useRef } from 'react';
 import { Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { formatDate } from '../../../utils/helpers'; // Certifique-se de que o caminho está correto
+import { useRouter } from 'expo-router'; // Importa o useRouter
+import { PROVIDER_ROUTES } from '../../../constants/routes'; // Importa PROVIDER_ROUTES
 
 // Importa a tipagem do Dashboard para o resumo
 import { ProviderDashboard } from '../../../types/backend/providers';
@@ -22,7 +23,7 @@ const BORDER_SUBTLE = 'rgba(0,0,0,0.08)'; // Borda sutil
 interface EarningsSummaryCardProps {
     dashboardData: ProviderDashboard | null;
     animation: Animated.Value;
-    onWithdrawalRequest: () => void;
+    // onWithdrawalRequest: () => void; // Esta prop não é mais necessária
 }
 
 // Hook de animação para o botão de saque (reutilizado de earnings.tsx ou definido aqui)
@@ -37,7 +38,8 @@ const useAnimatedTouch = () => {
     return { scaleAnim, onPressIn, onPressOut };
 };
 
-const EarningsSummaryCard: React.FC<EarningsSummaryCardProps> = ({ dashboardData, animation, onWithdrawalRequest }) => {
+const EarningsSummaryCard: React.FC<EarningsSummaryCardProps> = ({ dashboardData, animation }) => {
+    const router = useRouter(); // Inicializa o router
     const displayedTotalEarnings = dashboardData?.totalEarnings ?? 0;
     const displayedPendingWithdrawals = dashboardData?.pendingWithdrawals ?? 0;
 
@@ -84,7 +86,7 @@ const EarningsSummaryCard: React.FC<EarningsSummaryCardProps> = ({ dashboardData
                     (displayedTotalEarnings === 0 || displayedPendingWithdrawals > 0) && styles.withdrawalButtonDisabled,
                     { transform: [{ scale: scaleAnim }] }
                 ]}
-                onPress={onWithdrawalRequest}
+                onPress={() => router.push(PROVIDER_ROUTES.WITHDRAW as any)} // CORREÇÃO APLICADA AQUI: 'as any'
                 onPressIn={onPressIn}
                 onPressOut={onPressOut}
                 disabled={displayedTotalEarnings === 0 || displayedPendingWithdrawals > 0}

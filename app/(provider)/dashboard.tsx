@@ -15,6 +15,7 @@ import {
     View
 } from 'react-native';
 import { useAuth } from '../../hooks/useAuth';
+import { PROVIDER_ROUTES } from '../../constants/routes'; // Importar PROVIDER_ROUTES
 
 // Importações dos serviços
 import { getBookingsForUser, updateBookingStatus } from '../../services/bookingService';
@@ -248,34 +249,78 @@ const summaryStyles = StyleSheet.create({
   },
 });
 
-// Componente: QuickActionsSection (botões de ação rápida)
+// Componente: QuickActionsSection (botões de ação rápida) -- EXPANDIDO
 const QuickActionsSection: React.FC<{
   onViewAllServicesPress: () => void;
   onViewAllMessagesPress: () => void;
   onManageAvailability: () => void;
-}> = ({ onViewAllServicesPress, onViewAllMessagesPress, onManageAvailability }) => {
-  const { scaleAnim: s1, onPressIn: p1, onPressOut: o1 } = useAnimatedTouch();
-  const { scaleAnim: s2, onPressIn: p2, onPressOut: o2 } = useAnimatedTouch();
-  const { scaleAnim: s3, onPressIn: p3, onPressOut: o3 } = useAnimatedTouch();
+
+  // Novos handlers
+  onOpenRequests: () => void;
+  onOpenUpcoming: () => void;
+  onOpenCompleted: () => void;
+  onOpenNotifications: () => void;
+  onOpenReviews: () => void;
+  onOpenEarnings: () => void;
+  onQuickWithdraw: () => void;
+}> = ({
+  onViewAllServicesPress,
+  onViewAllMessagesPress,
+  onManageAvailability,
+  onOpenRequests,
+  onOpenUpcoming,
+  onOpenCompleted,
+  onOpenNotifications,
+  onOpenReviews,
+  onOpenEarnings,
+  onQuickWithdraw,
+}) => {
+  // até 9 botões com o mesmo padrão visual
+  const mk = () => useAnimatedTouch();
+  const a1 = mk(), a2 = mk(), a3 = mk(), a4 = mk(), a5 = mk(), a6 = mk(), a7 = mk(), a8 = mk(), a9 = mk();
+
+  const Item = ({
+    icon,
+    label,
+    anim,
+    onPress,
+  }: { icon: keyof typeof Ionicons.glyphMap; label: string; anim: ReturnType<typeof useAnimatedTouch>; onPress: () => void }) => (
+    <TouchableOpacity style={[quickActionStyles.gridItem, { transform: [{ scale: anim.scaleAnim }] }]}
+      onPress={onPress} onPressIn={anim.onPressIn} onPressOut={anim.onPressOut}>
+      <Ionicons name={icon} size={30} color={ICON_PRIMARY} />
+      <Text style={quickActionStyles.gridItemText}>{label}</Text>
+    </TouchableOpacity>
+  );
 
   return (
     <View style={quickActionStyles.sectionContainer}>
       <Text style={quickActionStyles.sectionTitle}>Ações Rápidas</Text>
       <View style={quickActionStyles.grid}>
-        <TouchableOpacity style={[quickActionStyles.gridItem, { transform: [{ scale: s1 }] }]}
-          onPress={onManageAvailability} onPressIn={p1} onPressOut={o1}>
-          <Ionicons name="calendar-outline" size={30} color={ICON_PRIMARY} />
-          <Text style={quickActionStyles.gridItemText}>Minha Agenda</Text>
-        </TouchableOpacity><TouchableOpacity style={[quickActionStyles.gridItem, { transform: [{ scale: s2 }] }]} // Removido espaço
-          onPress={onViewAllServicesPress} onPressIn={p2} onPressOut={o2}>
-          <Ionicons name="briefcase-outline" size={30} color={ICON_PRIMARY} />
-          <Text style={quickActionStyles.gridItemText}>Meus Serviços</Text>
-        </TouchableOpacity><TouchableOpacity style={[quickActionStyles.gridItem, { transform: [{ scale: s3 }] }]} // Removido espaço
-          onPress={onViewAllMessagesPress} onPressIn={p3} onPressOut={o3}>
-          <Ionicons name="chatbubbles-outline" size={30} color={ICON_PRIMARY} />
-          <Text style={quickActionStyles.gridItemText}>Mensagens</Text>
-        </TouchableOpacity>
+        <Item icon="calendar-outline" label="Minha Agenda" anim={a1} onPress={onManageAvailability} />
+        <Item icon="file-tray-outline" label="Solicitações" anim={a2} onPress={onOpenRequests} />
+        <Item icon="calendar-outline" label="Próximos" anim={a3} onPress={onOpenUpcoming} />
+        <Item icon="checkmark-done-outline" label="Concluídos" anim={a4} onPress={onOpenCompleted} />
+        <Item icon="briefcase-outline" label="Meus Serviços" anim={a5} onPress={onViewAllServicesPress} />
+        <Item icon="chatbubbles-outline" label="Mensagens" anim={a6} onPress={onViewAllMessagesPress} />
+        <Item icon="notifications-outline" label="Notificações" anim={a7} onPress={onOpenNotifications} />
+        {/* BOTÃO CORRETO PARA REVIEWS */}
+        <Item icon="analytics-outline" label="Avaliações" anim={a8} onPress={onOpenReviews} />
+        <Item icon="wallet-outline" label="Ganhos" anim={a9} onPress={onOpenEarnings} />
       </View>
+
+      {/* Linha separada com destaque para saque rápido */}
+      <TouchableOpacity
+        style={quickActionStyles.withdrawCta}
+        onPress={onQuickWithdraw}
+        onPressIn={a9.onPressIn}
+        onPressOut={a9.onPressOut}
+      >
+        <Animated.View style={{ transform: [{ scale: a9.scaleAnim }], flexDirection: 'row', alignItems: 'center' }}>
+          <Ionicons name="cash-outline" size={22} color={WHITE} />
+          <Text style={quickActionStyles.withdrawCtaText}>Saque Rápido</Text>
+          <Ionicons name="chevron-forward-outline" size={20} color={WHITE} />
+        </Animated.View>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -326,6 +371,20 @@ const quickActionStyles = StyleSheet.create({
     color: TEXT_DARK,
     marginTop: 8,
     textAlign: 'center',
+  },
+  withdrawCta: {
+    marginTop: 6,
+    backgroundColor: ICON_PRIMARY,
+    borderRadius: 14,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  withdrawCtaText: {
+    color: WHITE,
+    fontWeight: '700',
+    marginHorizontal: 8,
+    fontSize: 15,
   },
 });
 
@@ -571,6 +630,15 @@ export default function ProviderDashboardScreen() {
     router.push('/(provider)/messages' as any);
   };
 
+  // Handlers de navegação para Ações Rápidas novas
+  const goRequests = () => router.push('/(provider)/services?filter=requests' as any);
+  const goUpcoming = () => router.push('/(provider)/services?filter=upcoming' as any);
+  const goCompleted = () => router.push('/(provider)/services?filter=completed' as any);
+  const goNotifications = () => router.push('/(provider)/notifications' as any);
+  const goReviews = () => router.push(PROVIDER_ROUTES.REVIEWS as any); // CORRIGIDO: Usar a constante da rota
+  const goEarnings = () => router.push('/(provider)/earnings' as any);
+  const goWithdraw = () => router.push(PROVIDER_ROUTES.WITHDRAW as any); // CORRIGIDO: Usar a constante da rota
+
   const handleAcceptRequest = async (bookingId: string) => {
     console.log(`[DashboardScreen] handleAcceptRequest: Tentando aceitar agendamento ${bookingId}.`);
     Alert.alert(
@@ -695,6 +763,14 @@ export default function ProviderDashboardScreen() {
           onViewAllServicesPress={handleViewAllServicesPress}
           onViewAllMessagesPress={handleViewAllMessagesPress}
           onManageAvailability={() => router.push('/(provider)/schedule/manage-availability' as any)}
+
+          onOpenRequests={goRequests}
+          onOpenUpcoming={goUpcoming}
+          onOpenCompleted={goCompleted}
+          onOpenNotifications={goNotifications}
+          onOpenReviews={goReviews}
+          onOpenEarnings={goEarnings}
+          onQuickWithdraw={goWithdraw}
         />
         <View style={styles.subsectionWrapper}>
           <View style={styles.subsectionHeader}>

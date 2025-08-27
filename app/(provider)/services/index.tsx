@@ -2,7 +2,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     Alert,
@@ -147,10 +147,17 @@ const AnimatedServiceItem: React.FC<{
 
 export default function ProviderServicesScreen() {
   const router = useRouter();
+
+  // >>> NOVO: lê o query param ?filter=... para abrir já filtrado
+  const params = useLocalSearchParams<{ filter?: string }>();
+  const initialFilter = (params.filter === 'upcoming' || params.filter === 'completed' || params.filter === 'requests')
+    ? (params.filter as 'requests' | 'upcoming' | 'completed')
+    : 'requests';
+
   const [services, setServices] = useState<BookingDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [filter, setFilter] = useState<'requests' | 'upcoming' | 'completed'>('requests');
+  const [filter, setFilter] = useState<'requests' | 'upcoming' | 'completed'>(initialFilter);
   const [toastMessage, setToastMessage] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
   // Animações

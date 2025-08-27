@@ -1,3 +1,4 @@
+// LimpeJaApp/app/(provider)/earnings.tsx
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -15,7 +16,7 @@ import {
 } from 'react-native';
 
 import { getMyProviderEarnings } from '../../services/earningService';
-import { requestWithdrawal } from '../../services/paymentService';
+import { requestWithdrawal } from '../../services/paymentService'; // Esta função ainda é usada se o saque for confirmado
 import { getMyProviderDashboard } from '../../services/providerService';
 
 import { EarningsResponseDto, ProviderDashboard, ProviderTransaction } from '../../types/backend/providers';
@@ -151,6 +152,8 @@ export default function ProviderEarningsScreen() {
     fetchData();
   }, [fetchData]);
 
+  // A função handleWithdrawalRequest não é mais chamada diretamente pelo EarningsSummaryCard
+  // mas pode ser mantida aqui se for usada em outro lugar ou para futuras implementações
   const handleWithdrawalRequest = async () => {
     const amountToWithdraw = earningsData?.availableForWithdrawal ?? dashboardData?.totalEarnings;
 
@@ -233,7 +236,7 @@ export default function ProviderEarningsScreen() {
         <EarningsSummaryCard
           dashboardData={dashboardData}
           animation={summaryAnim}
-          onWithdrawalRequest={handleWithdrawalRequest}
+          // REMOVIDO: onWithdrawalRequest={handleWithdrawalRequest}
         />
 
         {earningsData && (
