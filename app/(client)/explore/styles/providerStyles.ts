@@ -4,6 +4,7 @@ import { StyleSheet, Dimensions, Platform } from 'react-native';
 const FONT_FAMILY = Platform.select({ ios: 'System', android: 'Roboto', default: 'System' });
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
+const SCREEN_HEIGHT = Dimensions.get('window').height; // Adicionado para o fundo com efeito
 const IMAGE_HEIGHT = 380; // Altura da imagem de perfil do profissional
 
 // --- Nova Paleta de Cores (Inspirada no Print 2) ---
@@ -20,9 +21,11 @@ const COLOR_ERROR = '#D32F2F'; // Cor para mensagens de erro
 const COLOR_SUCCESS = '#28A745'; // Cor para status de sucesso/verificado
 const COLOR_WARNING = '#FFC107'; // Cor para avisos
 
-export const styles = StyleSheet.create({ // <--- ESTA LINHA É CRUCIAL
+// Exporta os estilos
+export const styles = StyleSheet.create({
   screenContainer: {
     flex: 1,
+ 
   },
   centeredFeedback: {
     flex: 1,
@@ -56,6 +59,10 @@ export const styles = StyleSheet.create({ // <--- ESTA LINHA É CRUCIAL
     marginLeft: 8,
     fontWeight: '600',
   },
+  mainScrollView: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
   scrollContentContainer: {
     paddingBottom: 100, // Ajuste para dar espaço ao botão fixo "Agendar Serviço"
   },
@@ -65,7 +72,7 @@ export const styles = StyleSheet.create({ // <--- ESTA LINHA É CRUCIAL
     width: SCREEN_WIDTH, // Ocupa a largura total para a imagem principal
     height: IMAGE_HEIGHT,
     overflow: 'hidden',
-    marginTop: 0, // Ajuste para ficar no topo
+    marginTop: 0,
     marginBottom: 0,
     alignSelf: 'center',
   },
@@ -88,11 +95,10 @@ export const styles = StyleSheet.create({ // <--- ESTA LINHA É CRUCIAL
     elevation: 5,
   },
 
-  // Content Area Styles
+  // Content Area Styles (REVERTIDO PARA O FUNDO BRANCO SÓLIDO)
   contentArea: {
-    // paddingHorizontal: 10,
     paddingTop: 20,
-    backgroundColor: COLOR_CARD_BACKGROUND,
+    backgroundColor: COLOR_CARD_BACKGROUND, // Fundo branco sólido
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     marginTop: -30,
@@ -103,6 +109,7 @@ export const styles = StyleSheet.create({ // <--- ESTA LINHA É CRUCIAL
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 10,
+    // 'overflow: hidden' removido
   },
 
   // Botões de navegação (header)
@@ -116,7 +123,7 @@ export const styles = StyleSheet.create({ // <--- ESTA LINHA É CRUCIAL
     height: 45,
   },
 
-  // Informações do provedor
+  // Informações do provedor (Paddings mantidos)
   providerInfoWhiteCard: {
     paddingHorizontal: 25,
     marginBottom: 10,
@@ -170,7 +177,6 @@ export const styles = StyleSheet.create({ // <--- ESTA LINHA É CRUCIAL
     flexDirection: 'row',
   },
 
-  // InfoChip
   infoChipsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -194,7 +200,6 @@ export const styles = StyleSheet.create({ // <--- ESTA LINHA É CRUCIAL
     fontWeight: '500',
   },
 
-  // Conteúdo
   tabContentContainer: {
     paddingHorizontal: 25,
     paddingTop: 15,
@@ -246,7 +251,6 @@ export const styles = StyleSheet.create({ // <--- ESTA LINHA É CRUCIAL
     color: COLOR_TEXT_MEDIUM,
   },
 
-  // Ações (Ligar/Chat/Mapa/Share)
   actionButtonsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -284,7 +288,6 @@ export const styles = StyleSheet.create({ // <--- ESTA LINHA É CRUCIAL
     color: '#ADB5BD',
   },
 
-  // ReviewCard (mantido, mas não usado na UI atual)
   reviewCard: {
     backgroundColor: COLOR_CARD_BACKGROUND,
     borderRadius: 15,
@@ -363,7 +366,6 @@ export const styles = StyleSheet.create({ // <--- ESTA LINHA É CRUCIAL
     marginLeft: 8,
   },
 
-  // Service Item
   serviceItemCard: {
     backgroundColor: COLOR_CARD_BACKGROUND,
     padding: 15,
@@ -395,7 +397,6 @@ export const styles = StyleSheet.create({ // <--- ESTA LINHA É CRUCIAL
     alignSelf: 'flex-end',
   },
 
-  // BookServiceButton
   bookNowButtonWrapper: {
     position: 'absolute',
     bottom: 0,
@@ -447,7 +448,6 @@ export const styles = StyleSheet.create({ // <--- ESTA LINHA É CRUCIAL
     textAlign: 'center',
   },
 
-  // --- MINI SESSÃO DE FOTOS ---
   photoSectionContainer: {
     backgroundColor: COLOR_CARD_BACKGROUND,
     paddingVertical: 35,
@@ -512,7 +512,6 @@ export const styles = StyleSheet.create({ // <--- ESTA LINHA É CRUCIAL
     resizeMode: 'cover',
   },
 
-  // --- Ofertas ---
   offerCard: {
     backgroundColor: '#F8F8F8',
     borderRadius: 10,
@@ -557,7 +556,6 @@ export const styles = StyleSheet.create({ // <--- ESTA LINHA É CRUCIAL
     marginLeft: 5,
   },
 
-  // === Recomendações (social proof) ===
   recAvatarsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -621,4 +619,6 @@ export const styles = StyleSheet.create({ // <--- ESTA LINHA É CRUCIAL
     fontWeight: '700',
     fontFamily: FONT_FAMILY, // Agora FONT_FAMILY está definido
   },
+
+  // --- ESTILOS DO FUNDO COM EFEITO REMOVIDOS ---
 });

@@ -8,13 +8,13 @@ import {
   ImageSourcePropType,
   Platform,
   Pressable,
-  SectionList,
-  SectionListData,
   StatusBar,
   StyleSheet,
   Text,
   View,
   useColorScheme,
+  TouchableOpacity,
+  ScrollView,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -32,30 +32,36 @@ function useTheme() {
   return theme as typeof Colors.light;
 }
 
+// Helper para adicionar opacidade a cores hexadecimais
+const withAlpha = (hex: string, a: number) => {
+  const h = hex.replace('#', '');
+  const f = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+  const i = parseInt(f, 16);
+  const r = (i >> 16) & 255, g = (i >> 8) & 255, b = i & 255;
+  return `rgba(${r}, ${g}, ${b}, ${a})`;
+};
+
 // =================== ÍCONES 3D ===================
 const Icons3D = {
   profile: require('../../../../assets/images/3d/perfil.png'),
-  ticket: require('../../../../assets/images/3d/ticket.png'),
-  cashback: require('../../../../assets/images/3d/cashback.png'),
-  ranking: require('../../../../assets/images/3d/crown.png'),
-  missions: require('../../../../assets/images/3d/step1-card-profile.png'),
-  referral: require('../../../../assets/images/3d/gift2.png'),
-  metrics: require('../../../../assets/images/3d/uptrend.png'),
-  support: require('../../../../assets/images/3d/support.png'),
-  safety: require('../../../../assets/images/3d/security.png'),
-  privacy: require('../../../../assets/images/3d/privacidade.png'),
+  ticket: require('../../../../assets/images/3d/ticket.png'), // Cupons
+  cashback: require('../../../../assets/images/3d/cashback.png'), // Cashback
+  champions2: require('../../../../assets/images/3d/champions2.png'), // Ranking
+  missions: require('../../../../assets/images/3d/step1-card-profile.png'), // Missões
+  referral: require('../../../../assets/images/3d/gift2.png'), // Indicações
+  metrics: require('../../../../assets/images/3d/uptrend.png'), // Métricas
+  support: require('../../../../assets/images/3d/support.png'), // Suporte
+  safety: require('../../../../assets/images/3d/security.png'), // Segurança
+  privacy: require('../../../../assets/images/3d/privacidade.png'), // Configurações/Privacidade
+  bookService: require('../../../../assets/images/3d/button.png'), // Novo ícone para Agendar Serviço
 } satisfies Record<string, ImageSourcePropType>;
 
-type MenuItem = {
-  key: string;
-  title: string;
-  subtitle?: string;
-  icon: ImageSourcePropType;
-  route: string | (() => void);
-  testID?: string;
-};
+// Componente para renderizar ícones 3D
+const Icon3D = ({ src, size = 48, style }: { src: ImageSourcePropType; size?: number; style?: any }) => (
+  <Image source={src} style={[{ width: size, height: size }, style]} resizeMode="contain" />
+);
 
-// =================== SKELETON (SHIMMER) ===================
+// =================== SKELETON (SHIMMER) - DEFINIÇÃO CORRIGIDA ===================
 function Shimmer({ style, borderRadius = 12 }: { style?: any; borderRadius?: number }) {
   const progress = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -80,13 +86,13 @@ function Shimmer({ style, borderRadius = 12 }: { style?: any; borderRadius?: num
           position: 'absolute',
           top: 0,
           bottom: 0,
-          width: 100,
+          width: '100%', // Ajustado para cobrir a largura total do Shimmer
           transform: [{ translateX }],
           opacity: 0.6,
         }}
       >
         <LinearGradient
-          colors={['transparent', 'rgba(255,255,255,0.7)', 'transparent']}
+           colors={['rgba(173, 216, 230, 0.7)', 'rgba(74, 145, 226, 0.38)', 'rgba(173, 216, 230, 0.7)']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={{ flex: 1 }}
@@ -96,76 +102,55 @@ function Shimmer({ style, borderRadius = 12 }: { style?: any; borderRadius?: num
   );
 }
 
-// =================== ITEM DE LISTA ===================
-function RowItem({
-  item,
-  onPress,
-  theme,
-  pressedBg,
-}: {
-  item: MenuItem;
-  onPress: () => void;
-  theme: ReturnType<typeof useTheme>;
-  pressedBg: string;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      onPressIn={() => Haptics.selectionAsync()}
-      accessibilityRole="button"
-      accessibilityLabel={item.title}
-      style={({ pressed }) => [styles.row, { backgroundColor: pressed ? pressedBg : 'transparent' }]}
-      android_ripple={Platform.OS === 'android' ? { color: pressedBg } : undefined}
-      hitSlop={8}
-      testID={item.testID || `menu-item-${item.key}`}
-    >
-      <Image source={item.icon} style={styles.rowIcon} />
-      <View style={styles.rowTextCol}>
-        <Text style={[styles.rowTitle, { color: theme.text }]}>{item.title}</Text>
-        {!!item.subtitle && (
-          <Text style={[styles.rowSubtitle, { color: theme.textMuted }]} numberOfLines={1}>
-            {item.subtitle}
-          </Text>
-        )}
-      </View>
-      <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
-    </Pressable>
-  );
+
+// =================== DEFINIÇÃO DOS MINI-CARDS DE CATEGORIA ===================
+interface MenuCategoryItem {
+  key: string;
+  title: string;
+  icon: ImageSourcePropType;
+  route: string;
 }
 
-// =================== PILL DE ESTATÍSTICA ===================
-function StatPill({
-  value,
-  label,
-  active,
-  theme,
-  onPress,
-}: {
-  value: number;
-  label: string;
-  active?: boolean;
-  theme: ReturnType<typeof useTheme>;
-  onPress?: () => void;
-}) {
+const menuCategories: MenuCategoryItem[] = [
+  { key: 'coupons', title: 'cupons', icon: Icons3D.ticket, route: '/(client)/coupons' },
+  { key: 'missions', title: 'missões', icon: Icons3D.missions, route: '/(client)/missions' },
+  { key: 'champions2', title: 'champions2', icon: Icons3D.champions2, route: '/(client)/champions2' },
+  { key: 'cashback', title: 'cashback', icon: Icons3D.cashback, route: '/(client)/wallet/cashback' },
+  { key: 'referral', title: 'indicações', icon: Icons3D.referral, route: '/(client)/referrals' },
+  { key: 'metrics', title: 'métricas', icon: Icons3D.metrics, route: '/(client)/metrics' },
+  { key: 'bookService', title: 'agendar serviço', icon: Icons3D.bookService, route: '/(client)/booking' }, // Exemplo
+  { key: 'support', title: 'suporte', icon: Icons3D.support, route: '/(common)/support' },
+  { key: 'safety', title: 'segurança', icon: Icons3D.safety, route: '/(common)/safety' },
+  { key: 'settings', title: 'ajustes', icon: Icons3D.privacy, route: '/(client)/settings' },
+];
+
+// =================== MINI-CARD DE CATEGORIA (Substitui StatPill) ===================
+function CategoryMiniCard({ item, theme }: { item: MenuCategoryItem; theme: ReturnType<typeof useTheme> }) {
+  const router = useRouter();
+  const handlePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push(item.route as any);
+  };
+
   return (
     <Pressable
-      onPress={onPress}
+      onPress={handlePress}
       accessibilityRole="button"
-      accessibilityLabel={`${label}: ${value}`}
+      accessibilityLabel={item.title}
       style={({ pressed }) => [
-        styles.statPill,
+        styles.categoryMiniCard,
         {
-          backgroundColor: active ? (theme.primaryLight || '#DCEBFF') : theme.cardBackground,
-          borderColor: active ? (theme.primary || '#3B82F6') : theme.border,
+          backgroundColor: '#87b9ef69',
+          borderColor: '#b487efff', // Borda roxa transparente
           transform: [{ scale: pressed ? 0.98 : 1 }],
+          // Sombras já definidas em styles.categoryMiniCard
         },
       ]}
-      android_ripple={Platform.OS === 'android' ? { color: 'rgba(0,0,0,0.06)' } : undefined}
     >
-      <Text style={[styles.statValue, { color: active ? theme.primary : theme.text }]}>
-        {String(value).padStart(2, '0')}
+      <Icon3D src={item.icon} size={68} />
+      <Text style={[styles.categoryMiniCardTitle, { color: theme.text }]} numberOfLines={1}>
+        {item.title}
       </Text>
-      <Text style={[styles.statLabel, { color: active ? theme.primary : theme.textMuted }]}>{label}</Text>
     </Pressable>
   );
 }
@@ -176,16 +161,11 @@ export default function ClientMenuScreen() {
   const theme = useTheme();
   const scheme = useColorScheme?.() || 'light';
 
-  const pressedBg =
-    (Colors as any)[scheme]?.listItemPressed ||
-    (scheme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)');
-
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [reduceMotion, setReduceMotion] = useState(false);
 
-  // Animações de entrada respeitando "reduzir movimento"
   const headerFade = useRef(new Animated.Value(0)).current;
-  const headerTranslate = useRef(new Animated.Value(18)).current;
+  const headerTranslate = useRef(new Animated.Value(18)).current; // Para a animação do card principal
 
   useEffect(() => {
     AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion).catch(() => {});
@@ -215,108 +195,28 @@ export default function ClientMenuScreen() {
     }
   }, [headerFade, headerTranslate, reduceMotion]);
 
-  // Nome/email/avatar com fallbacks
   const userName =
     profile?.clientDetails?.fullName ||
     profile?.providerDetails?.fullName ||
     profile?.fullName ||
-    'Cliente';
-  const userEmail = profile?.email || '—';
+    'Cliente Indicador'; // Nome padrão
+  const userEmail = profile?.email || 'indicador@teste.com'; // Email padrão
   const avatarUri =
     profile?.avatarUrl ||
     profile?.clientDetails?.avatarUrl ||
     profile?.providerDetails?.avatarUrl;
 
-  // Estatísticas (fallbacks)
-  const statActive =
-    (profile as any)?.missions?.activeCount ??
-    (profile?.clientDetails as any)?.metrics?.missions?.active ??
-    0;
-  const statPending =
-    (profile as any)?.missions?.pendingCount ??
-    (profile?.clientDetails as any)?.metrics?.missions?.pending ??
-    0;
-  const statDone =
-    (profile as any)?.missions?.completedCount ??
-    (profile?.clientDetails as any)?.metrics?.missions?.completed ??
-    0;
-
-  // ===== Seções (mais conforto cognitivo) =====
-  const sections: Array<
-    SectionListData<MenuItem, { title: string }>
-  > = useMemo(
-    () => [
-      {
-        title: 'Benefícios',
-        data: [
-          { key: 'coupons',  title: 'Meus Cupons',     subtitle: 'Descontos e promoções',          icon: Icons3D.ticket,   route: '/(client)/coupons' as const },
-          { key: 'missions', title: 'Missões',         subtitle: 'Conclua tarefas e ganhe pontos', icon: Icons3D.missions, route: '/(client)/missions' as const },
-          { key: 'ranking',  title: 'Ranking',         subtitle: 'Veja o quadro de líderes',       icon: Icons3D.ranking,  route: '/(client)/ranking' as const },
-          { key: 'cashback', title: 'Cashback',        subtitle: 'Acompanhe seus retornos',        icon: Icons3D.cashback, route: '/(client)/wallet/cashback' as const },
-          { key: 'referral', title: 'Indicações',      subtitle: 'Convide amigos e ganhe bônus',   icon: Icons3D.referral, route: '/(client)/referrals' as const },
-          { key: 'metrics',  title: 'Minhas Métricas', subtitle: 'Pontos, streaks e histórico',    icon: Icons3D.metrics,  route: '/(client)/metrics' as const },
-        ],
-      },
-      {
-        title: 'Suporte & Segurança',
-        data: [
-          { key: 'support', title: 'Suporte',   subtitle: 'Abra um chamado ou chat',        icon: Icons3D.support, route: '/(common)/support' as const },
-          { key: 'safety',  title: 'Segurança', subtitle: 'SOS e Central de Segurança',     icon: Icons3D.safety,  route: '/(common)/safety' as const },
-        ],
-      },
-      {
-        title: 'Preferências',
-        data: [
-          { key: 'settings', title: 'Configurações', subtitle: 'Privacidade e preferências', icon: Icons3D.privacy, route: '/(client)/settings' as const },
-        ],
-      },
-    ],
-    [],
-  );
-
-  const handlePress = (route: MenuItem['route']) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (typeof route === 'string') return (router.push as any)(route);
-    route?.();
-  };
-
-  // ===== Header do cartão (perfil + stats) =====
-  const HeaderCard = (
+  // ===== Header do cartão (perfil + mini-cards de categoria) =====
+  const MainCardContent = (
     <Animated.View style={{ opacity: headerFade, transform: [{ translateY: headerTranslate }] }}>
       <LinearGradient
-        colors={[theme.primaryLight, theme.cardBackground]}
+        colors={['rgba(212, 233, 240, 0.47)', 'rgba(74, 119, 226, 0.21)', 'rgba(225, 206, 230, 0.37)']}
         start={{ x: 0.12, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={[styles.headerCard, { borderColor: theme.border }]}
+        style={[styles.glassmorphismCard, { borderColor: withAlpha('#FFF', 0.2) }]}
       >
-        <View style={styles.headerTopRow}>
-          <Pressable
-            onPress={() => router.back()}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="Voltar"
-            style={styles.iconButton}
-            android_ripple={Platform.OS === 'android' ? { color: pressedBg, borderless: true } : undefined}
-          >
-            <Ionicons name="chevron-back" size={22} color={theme.text} />
-          </Pressable>
-
-          <Text style={[styles.title, { color: theme.text }]}>Menu</Text>
-
-          <Pressable
-            onPress={() => router.push('/(client)/profile' as any)}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="Ir para perfil"
-            style={styles.iconButton}
-            android_ripple={Platform.OS === 'android' ? { color: pressedBg, borderless: true } : undefined}
-          >
-            <Ionicons name="settings-outline" size={20} color={theme.textMuted} />
-          </Pressable>
-        </View>
-
         <View style={styles.profileBlock}>
-          <View style={styles.avatarWrap}>
+          <View style={[styles.avatarWrap, { backgroundColor: withAlpha('#FFF', 0.1) }]}>
             {profile === null ? (
               <Shimmer style={{ width: '100%', height: '100%', borderRadius: 43 }} borderRadius={43} />
             ) : avatarUri ? (
@@ -333,87 +233,51 @@ export default function ClientMenuScreen() {
             </>
           ) : (
             <>
-              <Text style={[styles.userName, { color: theme.text }]} numberOfLines={1}>
+              <Text style={[styles.userName, { color: '#1158e683' }]} numberOfLines={1}>
                 {userName}
               </Text>
-              <Text style={[styles.userEmail, { color: theme.textMuted }]} numberOfLines={1}>
+              <Text style={[styles.userEmail, { color: '#666666ff' }]} numberOfLines={1}>
                 {userEmail}
               </Text>
             </>
           )}
         </View>
 
-        <View style={styles.statsRow}>
-          <StatPill
-            label="Ativas"
-            value={statActive}
-            active
-            theme={theme}
-            onPress={() => router.push('/(client)/missions' as any)}
-          />
-          <StatPill
-            label="Pendentes"
-            value={statPending}
-            theme={theme}
-            onPress={() => router.push('/(client)/missions' as any)}
-          />
-          <StatPill
-            label="Concluídas"
-            value={statDone}
-            theme={theme}
-            onPress={() => router.push('/(client)/missions' as any)}
-          />
+        {/* Grade de Mini-Cards de Categoria */}
+        <View style={styles.categoryMiniCardsGrid}>
+          {menuCategories.map((item) => (
+            <CategoryMiniCard key={item.key} item={item} theme={theme} />
+          ))}
         </View>
       </LinearGradient>
     </Animated.View>
   );
 
   return (
-    <View style={[styles.screen, { backgroundColor: theme.background }]}>
+    <View style={[styles.screen, { backgroundColor: '#FFFFFF' }]}>
       <Stack.Screen options={{ headerShown: false }} />
       <StatusBar barStyle={scheme === 'dark' ? 'light-content' : 'dark-content'} />
 
-      <SectionList
-        sections={sections}
-        keyExtractor={(it) => it.key}
-        ListHeaderComponent={HeaderCard}
-        stickySectionHeadersEnabled
-        contentContainerStyle={styles.sectionListContent}
-        ItemSeparatorComponent={() => <View style={[styles.separator, { backgroundColor: theme.border }]} />}
-        renderSectionHeader={({ section }) => (
-          <View style={[styles.sectionHeaderWrap]}>
-            <Text style={[styles.sectionHeader, { color: theme.textMuted }]}>{section.title}</Text>
-          </View>
-        )}
-        renderItem={({ item, index, section }) => {
-          const isFirst = index === 0;
-          const isLast = index === section.data.length - 1;
-          return (
-            <View
-              style={[
-                styles.rowContainer,
-                {
-                  backgroundColor: theme.cardBackground,
-                  borderColor: theme.border,
-                  borderTopLeftRadius: isFirst ? 16 : 0,
-                  borderTopRightRadius: isFirst ? 16 : 0,
-                  borderBottomLeftRadius: isLast ? 16 : 0,
-                  borderBottomRightRadius: isLast ? 16 : 0,
-                },
-              ]}
-            >
-              <RowItem
-                item={item}
-                onPress={() => handlePress(item.route)}
-                pressedBg={pressedBg}
-                theme={theme}
-              />
-            </View>
-          );
-        }}
-        SectionSeparatorComponent={() => <View style={{ height: 12 }} />}
-        showsVerticalScrollIndicator={false}
-      />
+      {/* Cabeçalho superior da tela (Menu) */}
+      <Animated.View
+        style={[
+          styles.topHeader,
+          {
+            opacity: headerFade,
+            transform: [{ translateY: headerFade.interpolate({ inputRange: [0, 1], outputRange: [-16, 0] }) }],
+          },
+        ]}
+      >
+        {/* Removido o botão de voltar e o ícone de configurações, pois é a tela principal do menu */}
+        <View style={{ width: 20 }} /> {/* Placeholder para centralizar o título */}
+        <Text style={[styles.topHeaderTitle, { color: '#1158e683' }]}>Menu Principal</Text>
+        <View style={{ width: 20 }} /> {/* Placeholder para centralizar o título */}
+      </Animated.View>
+
+      <ScrollView contentContainerStyle={styles.scrollViewContent}>
+        {MainCardContent}
+        {/* A SectionList e seus itens foram removidos, pois os mini-cards agora estão no HeaderCard */}
+      </ScrollView>
     </View>
   );
 }
@@ -421,73 +285,105 @@ export default function ClientMenuScreen() {
 // =================== STYLES ===================
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  sectionListContent: { padding: 16, paddingTop: Platform.OS === 'ios' ? 52 : 24, paddingBottom: 28 },
+  scrollViewContent: { padding: 16, paddingTop: Platform.OS === 'ios' ? 16 : 16, paddingBottom: 28 }, // Ajuste de padding
 
-  // Header
-  headerCard: {
-    borderRadius: 24,
-    borderWidth: StyleSheet.hairlineWidth,
-    padding: 16,
-    paddingBottom: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 4,
+  glassmorphismCard: {
+    borderRadius: 44,
+    borderWidth: 1,
+    // Sombra robusta para o card principal
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.25,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 15,
+      },
+    }),
   },
-  headerTopRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
-  iconButton: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  title: { flex: 1, textAlign: 'center', fontWeight: '700', fontSize: 16 },
+
+  topHeader: {
+    paddingHorizontal: 26,
+    paddingTop: Platform.OS === 'ios' ? 56 : 20,
+    paddingBottom: 12,
+    borderBottomLeftRadius: 22,
+    borderBottomRightRadius: 22,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    // Sombra robusta para o cabeçalho superior
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.25,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 15,
+      },
+    }),
+  },
+  topHeaderTitle: { fontWeight: '800', letterSpacing: 0.6, flex: 1, textAlign: 'center' }, // Centraliza o título
 
   profileBlock: { alignItems: 'center', paddingVertical: 8 },
   avatarWrap: {
-    width: 86,
-    height: 86,
+    width: 75,
+    height: 75,
     borderRadius: 43,
     overflow: 'hidden',
-    marginBottom: 10,
-    backgroundColor: '#EEF3FF',
+    marginBottom: 0,
+    marginTop: 15,
   },
   avatar: { width: '100%', height: '100%', resizeMode: 'cover' },
-  userName: { fontSize: 18, fontWeight: '700', marginTop: 6 },
+  userName: { fontSize: 17, fontWeight: '700', marginTop: 6 },
   userEmail: { marginTop: 2, fontSize: 12, opacity: 0.8 },
 
-  statsRow: { marginTop: 14, flexDirection: 'row', gap: 10, justifyContent: 'space-between' },
-  statPill: {
-    flex: 1,
-    borderRadius: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  statValue: { fontSize: 18, fontWeight: '800', letterSpacing: 0.3, marginBottom: 2 },
-  statLabel: { fontSize: 11, fontWeight: '600' },
-
-  // Seções / Lista
-  sectionHeaderWrap: { paddingHorizontal: 2, paddingVertical: 8 },
-  sectionHeader: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6 },
-  rowContainer: {
-    borderWidth: StyleSheet.hairlineWidth,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 2,
-  },
-  separator: { height: StyleSheet.hairlineWidth, marginLeft: 56, opacity: 0.6 },
-
-  // Item
-  row: {
+  // Nova grade para os mini-cards de categoria
+  categoryMiniCardsGrid: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14, // >= 48px de altura total com paddings -> conforto
-    paddingHorizontal: 14,
-    minHeight: 48,
+    flexWrap: 'wrap',
+    justifyContent: 'space-around', // Distribui os itens uniformemente
+    gap: 10, // Espaçamento entre os mini-cards
+    marginTop: 20, // Espaçamento do bloco de perfil
+    paddingHorizontal: 10, // Padding interno para a grade
+    marginBottom: 20, // Espaçamento inferior da grade
   },
-  rowIcon: { width: 30, height: 30, marginRight: 12, resizeMode: 'contain' },
-  rowTextCol: { flex: 1 },
-  rowTitle: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
-  rowSubtitle: { fontSize: 12 },
+  // Estilos para cada mini-card de categoria
+  categoryMiniCard: {
+    width: '30%', // Aproximadamente 3 por linha com gap
+    aspectRatio: 1, // Torna o card quadrado
+    borderRadius: 22,
+    padding: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  
+    // Sombra moderna para os mini-cards
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
+  },
+  categoryMiniCardTitle: {
+    fontSize: 11,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 6,
+    textTransform: 'lowercase', // Títulos em minúsculas
+  },
+
+  // Estilos de shimmer (mantidos, mas não diretamente usados nos mini-cards agora)
+  shimmer: {
+    backgroundColor: 'rgba(0,0,0,0.06)',
+  },
 });

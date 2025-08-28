@@ -14,18 +14,18 @@ import {
     TouchableOpacity,
     View,
     Easing,
-    StyleSheet, // Importar StyleSheet aqui para os estilos da RecommendationsSection
+    StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import * as Clipboard from 'expo-clipboard';
+// import { LinearGradient } from 'expo-linear-gradient'; // Removido, pois não é mais usado para o fundo animado
 
 // Importações dos componentes necessários
 import BookServiceButton from '../../../components/client/explore/provider/BookServiceButton';
 import InfoChip from '../../../components/client/explore/provider/InfoChip';
 import ReviewCard from '../../../components/client/explore/provider/ReviewCard';
 import StarRating from '../../../components/client/explore/provider/StarRating';
-// Importe o novo componente SideIcon
 import SideIcon from '../../../components/client/explore/provider/SideIcon';
 
 
@@ -43,6 +43,7 @@ import { getProviderDetails, getProviderMetrics, getProviderOffers } from '../..
 import Toast from '../../../components/Toast';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
+const SCREEN_HEIGHT = Dimensions.get('window').height;
 
 // Definir FONT_FAMILY aqui para que seja acessível por ambos os componentes
 const FONT_FAMILY = Platform.select({ ios: 'System', android: 'Roboto', default: 'System' });
@@ -126,12 +127,77 @@ export default function ProviderDetailsScreen() {
     const infoChipAnim = useRef(new Animated.Value(0)).current;
     const addReviewButtonPulseAnim = useRef(new Animated.Value(1)).current;
 
-    // Animated values for action buttons - MOVIDOS PARA O NÍVEL SUPERIOR
+    // Animated values for action buttons
     const callButtonAnim = useRef(new Animated.Value(1)).current;
     const chatButtonAnim = useRef(new Animated.Value(1)).current;
     const mapButtonAnim = useRef(new Animated.Value(1)).current;
     const shareButtonAnim = useRef(new Animated.Value(1)).current;
+
+    // --- Valores Animados para o Fundo com Efeito REMOVIDOS ---
+    // const backgroundFloatAnim = useRef(new Animated.Value(0)).current;
+    // const rotateAnim = useRef(new Animated.Value(0)).current;
+    // const calendarBreatheAnim = useRef(new Animated.Value(1)).current;
     // --- FIM DAS DECLARAÇÕES DE HOOKS ---
+
+    // --- useEffect para as Animações do Fundo com Efeito REMOVIDO ---
+    /*
+    useEffect(() => {
+        const startFloating = () => {
+            Animated.loop(
+                Animated.sequence([
+                    Animated.timing(backgroundFloatAnim, {
+                        toValue: 1,
+                        duration: 4000,
+                        easing: Easing.inOut(Easing.ease),
+                        useNativeDriver: true,
+                    }),
+                    Animated.timing(backgroundFloatAnim, {
+                        toValue: 0,
+                        duration: 4000,
+                        easing: Easing.inOut(Easing.ease),
+                        useNativeDriver: true,
+                    }),
+                ])
+            ).start();
+        };
+
+        const startRotation = () => {
+            Animated.loop(
+                Animated.timing(rotateAnim, {
+                    toValue: 1,
+                    duration: 20000,
+                    easing: Easing.linear,
+                    useNativeDriver: true,
+                })
+            ).start();
+        };
+
+        const startCalendarBreathe = () => {
+            Animated.loop(
+                Animated.sequence([
+                    Animated.timing(calendarBreatheAnim, {
+                        toValue: 1.005,
+                        duration: 3000,
+                        easing: Easing.inOut(Easing.ease),
+                        useNativeDriver: true,
+                    }),
+                    Animated.timing(calendarBreatheAnim, {
+                        toValue: 1,
+                        duration: 3000,
+                        easing: Easing.inOut(Easing.ease),
+                        useNativeDriver: true,
+                    }),
+                ])
+            ).start();
+        };
+
+        startFloating();
+        startRotation();
+        startCalendarBreathe();
+    }, []);
+    */
+    // --- Fim do useEffect para as Animações do Fundo com Efeito ---
+
 
     useEffect(() => {
         console.log("[ProviderDetailsScreen] useEffect - providerId recebido:", providerId);
@@ -343,7 +409,10 @@ export default function ProviderDetailsScreen() {
 
 
     return (
-        <View style={[styles.screenContainer, { backgroundColor: 'white' }]}>
+        <View style={styles.screenContainer}>
+            {/* --- JSX DO FUNDO COM EFEITO REMOVIDO --- */}
+            {/* Estes elementos não existem mais neste nível */}
+
             <Stack.Screen options={{
                 headerTransparent: true,
                 title: '',
@@ -365,7 +434,8 @@ export default function ProviderDetailsScreen() {
                 ),
             }} />
 
-            <ScrollView contentContainerStyle={styles.scrollContentContainer}>
+            {/* O ScrollView agora tem um estilo `mainScrollView` para garantir transparência */}
+            <ScrollView style={styles.mainScrollView} contentContainerStyle={styles.scrollContentContainer}>
                 <Animated.View style={[
                     styles.providerImageContainer,
                     { opacity: imageFadeAnim, transform: [{ scale: imageScaleAnim }] }
@@ -383,6 +453,7 @@ export default function ProviderDetailsScreen() {
                     </TouchableOpacity>
                 </Animated.View>
 
+                {/* contentArea agora é um card branco sólido novamente */}
                 <Animated.View style={[
                     styles.contentArea,
                     {
@@ -392,6 +463,9 @@ export default function ProviderDetailsScreen() {
                         }]
                     }
                 ]}>
+                    {/* --- JSX DO FUNDO COM EFEITO INTERNO REMOVIDO --- */}
+                    {/* Camada branca semi-transparente e wrapper de conteúdo removidos */}
+
                     <View style={styles.providerInfoWhiteCard}>
                         <View style={styles.providerNameRow}>
                             <Text style={styles.providerNameWhiteCard}>{provider.fullName}</Text>
@@ -439,9 +513,6 @@ export default function ProviderDetailsScreen() {
                                 />
                             )}
                         </Animated.View>
-
-                        <Text style={styles.sectionTitle}>{t('provider_details.about_provider', { providerName: provider.fullName.split(' ')[0] })}</Text>
-                        <Text style={styles.descriptionText}>{provider.bio || t('provider_details.no_description')}</Text>
 
                         {providerOffers.length > 0 && (
                             <View>

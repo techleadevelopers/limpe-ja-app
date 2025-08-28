@@ -99,6 +99,9 @@ import { ReferralBanner } from '../../../components/referrals/ReferralBanner'; /
 import { ReferralSheet } from '../../../components/referrals/ReferralSheet'; // named
 import BottomSlideInCard from '../../../components/common/BottomSlideInCard';
 
+// INJEÇÃO: SmartCouponNudge
+import SmartCouponNudge from '../../../components/coupons/CouponNudge';
+
 const COR_AZUL_CLARO_UNIFICADA = '#A0D2EB';
 const COR_PRIMARIA_ESCURA = '#2C3E50';
 const COR_CINZA_FUNDO = '#F4F7FC';
@@ -607,6 +610,19 @@ export default function ExploreClientScreen() {
 
             {/* NOVO: DEFENSE_SOS */}
             <DEFENSE_SOS />
+
+            {/* INJEÇÃO: SmartCouponNudge (aparece sutil após 3s na rota explore) */}
+            {welcomeCouponOffer && (
+                <SmartCouponNudge
+                    code={(welcomeCouponOffer as any).code}
+                    title={welcomeCouponOffer.title}
+                    subtitle={welcomeCouponOffer.description}
+                    delayMs={3000}
+                    throttleHours={24}
+                    showOnRoutes={['/(client)/explore']}
+                    onApply={handleUseWelcomeCoupon}
+                />
+            )}
 
             {/* NOVO: BottomSlideInCard para Cupom ou Indicação (FORA DO SCROLLVIEW) */}
             {/* Renderiza o cupom se activeBottomPromotion for 'coupon' */}
