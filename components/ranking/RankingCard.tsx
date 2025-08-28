@@ -1,6 +1,5 @@
-// LimpeJaApp/components/ranking/RankingCard.tsx
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Animated, Easing, useColorScheme, StyleProp, ViewStyle, TextStyle } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Animated, Easing, useColorScheme, StyleProp, ViewStyle, TextStyle, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../../constants/Colors'; // Adjust path based on your project structure
 
@@ -19,6 +18,7 @@ interface RankingCardProps {
   isCurrentUser?: boolean; // Para destacar o card do usuário logado
   onPress?: () => void; // Opcional, para permitir interatividade
   delay?: number; // Novo prop para atraso na animação de entrada
+  style?: StyleProp<ViewStyle>; // <--- A propriedade 'style' agora é aceita aqui
 }
 
 const RankingCard: React.FC<RankingCardProps> = ({
@@ -29,6 +29,7 @@ const RankingCard: React.FC<RankingCardProps> = ({
   isCurrentUser = false,
   onPress,
   delay = 0,
+  style, // <--- Recebendo a propriedade 'style'
 }) => {
   const theme = useTheme(); // Obtém o tema atual
 
@@ -42,6 +43,20 @@ const RankingCard: React.FC<RankingCardProps> = ({
 
   // Animação para o badge do usuário atual
   const badgePulseAnim = useRef(new Animated.Value(1)).current;
+
+  // Array de URLs de imagens de placeholder
+  const placeholderImages = useRef([
+    'https://randomuser.me/api/portraits/men/1.jpg',
+    'https://randomuser.me/api/portraits/women/2.jpg',
+    'https://randomuser.me/api/portraits/men/3.jpg',
+    'https://randomuser.me/api/portraits/women/4.jpg',
+    'https://randomuser.me/api/portraits/men/5.jpg',
+    'https://randomuser.me/api/portraits/women/6.jpg',
+    'https://randomuser.me/api/portraits/men/7.jpg',
+    'https://randomuser.me/api/portraits/women/8.jpg',
+    'https://randomuser.me/api/portraits/men/9.jpg',
+    'https://randomuser.me/api/portraits/women/10.jpg',
+  ]).current;
 
   useEffect(() => {
     // Animação de entrada
@@ -108,44 +123,38 @@ const RankingCard: React.FC<RankingCardProps> = ({
 
   // Estilos dinâmicos baseados no tema e no estado do usuário
   const dynamicStyles = StyleSheet.create({
-    card: {
-      shadowColor: theme.shadowColorCard, // Usando shadowColorCard do tema
-    },
     defaultCard: {
-      backgroundColor: theme.background,
-      borderLeftColor: theme.border,
+      borderLeftColor: '#3376f2af', // Borda azul para cards normais
     },
     currentUserCard: {
-      backgroundColor: theme.primaryLight, // Usando primaryLight para destaque
-      borderLeftColor: theme.link, // Usando link para a borda
-      shadowColor: theme.link, // Usando link para a sombra
+      borderLeftColor: '#c933f2af', // Borda roxa para o card do usuário atual
     },
     rankText: {
       color: theme.textBody,
     },
     avatarPlaceholder: {
-      backgroundColor: theme.lightGrey, // Usando lightGrey para o placeholder do avatar
-      borderColor: theme.background, // Borda do avatar
+      backgroundColor: '#c933f2af', // Fundo do placeholder do avatar (roxo)
+      borderColor: '#3633f2af', // Borda do placeholder do avatar (azul-roxo)
     },
     nameText: {
       color: theme.textBody,
     },
     scoreIcon: {
-      color: theme.warning, // Cor do ícone de troféu
+      color: '#c933f2af', // Cor do ícone de troféu (roxo)
     },
     scoreText: {
       color: theme.textMuted,
     },
     currentUserBadge: {
       backgroundColor: theme.link, // Cor do badge do usuário atual
-      borderColor: theme.background, // Borda do badge
+      borderColor: '#c933f2af', // Borda do badge (roxo)
     },
   });
 
   const cardStyle = [
-    styles.card,
-    isCurrentUser ? dynamicStyles.currentUserCard : dynamicStyles.defaultCard,
-    dynamicStyles.card, // Aplica a sombra baseada no tema
+    styles.baseCard, // Aplica os estilos base (margens, etc.)
+    isCurrentUser ? dynamicStyles.currentUserCard : dynamicStyles.defaultCard, // Aplica estilos específicos de usuário (como borderLeftColor)
+    style, // <--- Aplica o estilo passado via prop AQUI. Isso sobrescreverá backgroundColor, borderRadius, e shadow.
     {
       opacity: fadeAnim,
       transform: [
@@ -155,6 +164,9 @@ const RankingCard: React.FC<RankingCardProps> = ({
     },
   ];
 
+  // Lógica para selecionar a imagem de placeholder
+  const selectedPlaceholder = placeholderImages[rank % placeholderImages.length];
+
   return (
     <Animated.View style={cardStyle}>
       <TouchableOpacity onPress={onPress} disabled={!onPress} onPressIn={onPressInCard} onPressOut={onPressOutCard} activeOpacity={1}>
@@ -162,13 +174,15 @@ const RankingCard: React.FC<RankingCardProps> = ({
           <View style={styles.rankContainer}>
             <Text style={[styles.rankText, dynamicStyles.rankText]}>{rank}°</Text>
           </View>
-          <View style={styles.avatarContainer}>
+          <View style={[styles.avatarContainer, { borderColor: isCurrentUser ? '#FFF' : dynamicStyles.avatarPlaceholder.borderColor }]}>
             {avatarUrl ? (
               <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
             ) : (
-              <View style={[styles.avatarPlaceholder, dynamicStyles.avatarPlaceholder]}>
-                <Ionicons name="person-circle-outline" size={40} color={theme.grey} /> {/* Cor do ícone placeholder */}
-              </View>
+              <Image
+                source={{ uri: selectedPlaceholder }}
+                style={[styles.avatarImage, dynamicStyles.avatarPlaceholder]}
+                onError={(e) => console.log('Erro ao carregar imagem de placeholder:', e.nativeEvent.error)}
+              />
             )}
           </View>
           <View style={styles.infoContainer}>
@@ -180,7 +194,7 @@ const RankingCard: React.FC<RankingCardProps> = ({
           </View>
           {isCurrentUser && (
             <Animated.View style={[styles.currentUserBadge, dynamicStyles.currentUserBadge, { transform: [{ scale: badgePulseAnim }] }]}>
-              <Ionicons name="star" size={18} color="#FFFFFF" /> {/* Cor do ícone da estrela no badge */}
+              <Ionicons name="star" size={18} color="#FFFFFF" />
             </Animated.View>
           )}
         </View>
@@ -190,14 +204,11 @@ const RankingCard: React.FC<RankingCardProps> = ({
 };
 
 const styles = StyleSheet.create({
-  card: {
+  // Base para o card, sem propriedades que o glassmorphismCard irá sobrescrever
+  baseCard: {
     marginVertical: 6,
     marginHorizontal: 16,
-    borderRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+    // borderRadius, shadow, backgroundColor serão definidos pelo 'style' prop
   },
   contentWrapper: {
     flexDirection: 'row',
@@ -210,9 +221,8 @@ const styles = StyleSheet.create({
   },
   currentUserCard: {
     borderLeftWidth: 4,
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 8,
+    // As propriedades de sombra foram removidas daqui para serem controladas pelo glassmorphismCard
+    // Se precisar de uma sombra *adicional* apenas para o usuário atual, adicione-a no index.tsx
   },
   rankContainer: {
     width: 40,
@@ -220,7 +230,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   rankText: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
   },
   avatarContainer: {

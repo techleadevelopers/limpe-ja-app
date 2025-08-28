@@ -17,9 +17,20 @@ interface SLAResponseChipProps {
   avgResponseMin: number;
   style?: StyleProp<ViewStyle>; // Permite passar estilos para o container
   textStyle?: StyleProp<TextStyle>; // Permite passar estilos para o texto
+  // Novas propriedades para controlar as cores
+  backgroundColor?: string;
+  textColor?: string;
 }
 
-export const SLAResponseChip: React.FC<SLAResponseChipProps> = ({ rate, avgResponseMin, style, textStyle }) => {
+export const SLAResponseChip: React.FC<SLAResponseChipProps> = ({
+  rate,
+  avgResponseMin,
+  style,
+  textStyle,
+  // Definindo valores padrão para as novas props, alinhando com o azul desejado
+  backgroundColor = 'rgba(140, 0, 255, 0.15)', // Azul claro com transparência
+  textColor = '#007BFF', // Azul vibrante
+}) => {
   const reduced = useReducedMotion(); // Hook para verificar se o movimento deve ser reduzido
   const [breath] = useState(new Animated.Value(1));
   const theme = useTheme(); // Obtém o tema atual
@@ -35,10 +46,7 @@ export const SLAResponseChip: React.FC<SLAResponseChipProps> = ({ rate, avgRespo
       loop.start();
       return () => loop.stop();
     }
-  }, [rate, reduced, breath]); // Adicionado breath ao array de dependências
-
-  // Determina a cor principal do chip com base na taxa
-  const chipColor = rate >= 0.9 ? theme.success : theme.textMuted;
+  }, [rate, reduced, breath]);
 
   return (
     <Animated.View style={[{ transform: [{ scale: breath }] }, style]}>
@@ -46,12 +54,12 @@ export const SLAResponseChip: React.FC<SLAResponseChipProps> = ({ rate, avgRespo
         style={[
           styles.chipContainer,
           {
-            backgroundColor: `${chipColor}11`, // Cor com opacidade para o fundo
-            borderColor: `${chipColor}55`, // Cor com opacidade para a borda
+            backgroundColor: backgroundColor, // Usando a prop backgroundColor
+            borderColor: `${textColor}55`, // Usando a prop textColor para a borda com transparência
           },
         ]}
       >
-        <Text style={[styles.chipText, { color: chipColor }, textStyle]}>
+        <Text style={[styles.chipText, { color: textColor }, textStyle]}>
           {Math.round(rate * 100)}% resposta • {avgResponseMin} min
         </Text>
       </View>
@@ -69,6 +77,6 @@ const styles = StyleSheet.create({
     borderRadius: 999, // Para um formato de pílula
   },
   chipText: {
-    fontWeight: '700',
+    fontWeight: '600',
   },
 });
