@@ -47,11 +47,13 @@ const Icons3D = {
   check: require('../../../assets/images/3d/check.png'),
   time: require('../../../assets/images/3d/time.png'),
   payments: require('../../../assets/images/3d/payments.png'),
+  woman: require('../../../assets/images/3d/woman.png'),
+  button: require('../../../assets/images/3d/button.png'),
 } satisfies Record<string, ImageSourcePropType>;
 
 const Icon3D = ({
   src,
-  size = 18,
+  size = 28,
   style,
 }: { src: ImageSourcePropType; size?: number; style?: any }) => (
   <Image source={src} style={[{ width: size, height: size }, style]} resizeMode="contain" />
@@ -212,7 +214,7 @@ function PreferencesSection({
   );
 }
 
-/** Guia “Como funciona” — alinhado ao backend */
+/** Guia “Como funciona” -- alinhado ao backend */
 function HowItWorks() {
   return (
     <View style={styles.howCard}>
@@ -428,7 +430,7 @@ export default function ClientMissionsScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.headerBackButton} accessibilityLabel={t('common.back') || 'Voltar'}>
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: '#FFFFFF' }]}>{t('missions.header_kicker', { defaultValue: 'MISSIONS' })}</Text>
+        <Text style={[styles.headerTitle, { color: '#FFFFFF' }]}>{t('missions.header_kicker', { defaultValue: 'MISSÕES' })}</Text>
         <View style={styles.headerActionIconPlaceholder} />
       </Animated.View>
 
@@ -441,7 +443,19 @@ export default function ClientMissionsScreen() {
       >
         {/* HERO */}
         <View style={styles.heroWrapper}>
-          <LinearGradient colors={[theme.primary, theme.accent]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroGradient}>
+          {/* NOVO: Ícone 3D da Mulher, posicionado de forma isolada */}
+          <Animated.Image
+            source={Icons3D.woman}
+            style={[
+              styles.heroWomanIcon,
+              { transform: [{ scale: pulseAnim }] } // Aplica animação de pulso
+            ]}
+            resizeMode="contain"
+          />
+
+          
+
+          <LinearGradient colors={['rgba(173, 216, 230, 0.7)', 'rgba(74, 145, 226, 0.72)', 'rgba(173, 216, 230, 0.7)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroGradient}>
             {/* faint decorative crown (no layout impact) */}
             <Image
               source={Icons3D.heroCrown}
@@ -449,7 +463,7 @@ export default function ClientMissionsScreen() {
               resizeMode="contain"
             />
             <View style={styles.heroContent}>
-              <Text style={styles.heroKicker}>{t('missions.header_kicker', { defaultValue: 'MISSIONS' })}</Text>
+              <Text style={styles.heroKicker}>{t('missions.header_kicker', { defaultValue: 'MISSÕES' })}</Text>
               <Text style={styles.heroTitle}>
                 {t('missions.hero_title', { defaultValue: `Economize como um gênio, ${userFirstName}`, name: userFirstName })}
               </Text>
@@ -597,7 +611,7 @@ const styles = StyleSheet.create({
   customHeader: {
     position: 'absolute',
     top: 0, left: 0, right: 0,
-    zIndex: 20,
+    zIndex: 20, // Garante que o cabeçalho esteja acima de tudo
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -614,8 +628,26 @@ const styles = StyleSheet.create({
 
   // Hero
   heroWrapper: { height: HERO_HEIGHT, width: '100%' },
-  heroGradient: { flex: 1, paddingTop: Platform.OS === 'ios' ? 80 : 60, paddingHorizontal: 18, justifyContent: 'flex-start' },
-  heroContent: { flex: 1 },
+  heroGradient: {
+    flex: 1,
+    paddingTop: Platform.OS === 'ios' ? 280 : 180, // Mantido o paddingTop original
+    paddingHorizontal: 28,
+    justifyContent: 'flex-start',
+  },
+  // NOVO: Estilo para o ícone 3D da mulher
+  heroWomanIcon: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 340 : 360, // Posição abaixo do cabeçalho de navegação
+    left: '65%', // Centraliza horizontalmente
+    marginLeft: 0, // Metade da largura para centralizar
+    width: 200, // Tamanho grande
+    height: 200, // Tamanho grande
+    zIndex: 10, // Garante que esteja acima do gradiente, mas abaixo do cabeçalho de navegação
+  },
+  heroContent: {
+    flex: 1,
+    zIndex: 2, // Garante que o conteúdo de texto esteja acima do ícone da mulher se houver sobreposição
+  },
   heroKicker: { color: '#D7ECFF', letterSpacing: 1.2, fontWeight: '700', fontSize: 12 },
   heroTitle: { color: '#FFFFFF', fontSize: 24, fontWeight: '800', marginTop: 6, lineHeight: 30, maxWidth: '90%' },
   heroStartButton: {
@@ -623,8 +655,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10, paddingHorizontal: 16, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 6,
   },
   heroStartText: { color: '#0A84FF', fontWeight: '800', fontSize: 13 },
-  stepperRow: { flexDirection: 'row', alignItems: 'center', marginTop: 26 },
-  stepDot: { width: 10, height: 10, borderRadius: 5, borderWidth: 1.5 },
+  stepperRow: { flexDirection: 'row', alignItems: 'center', marginTop: 26, paddingHorizontal: 38 },
+  stepDot: { width: 10, height: 10, borderRadius: 15, borderWidth: 1.5 },
   stepLine: { flex: 1, height: 2, marginHorizontal: 6 },
   stepperLabels: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, paddingRight: 10 },
   stepLabel: { color: 'white', fontSize: 11, fontWeight: '600', flex: 1, textAlign: 'center' },
