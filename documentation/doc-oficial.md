@@ -1728,249 +1728,481 @@ Objetivo: O serviço raiz, contendo a lógica de negócio básica para o AppCont
 Funcionalidades: Retorna a mensagem de boas-vindas.
 
 
-[15:05:46] Found 0 errors. Watching for file changes.
+[07:32:23] Starting compilation in watch mode...
 
-[Nest] 15152  - 24/08/2025, 15:06:15     LOG [NestFactory] Starting Nest application...
-[Nest] 15152  - 24/08/2025, 15:06:15     LOG [I18nService] Traduções carregadas: en-US (C:\Users\Paulo\desktop\relax-app\backend-cleaning\dist\common\i18n\locales\en-US.json)
-[Nest] 15152  - 24/08/2025, 15:06:15     LOG [I18nService] Traduções carregadas: pt-BR (C:\Users\Paulo\desktop\relax-app\backend-cleaning\dist\common\i18n\locales\pt-BR.json)
-[Nest] 15152  - 24/08/2025, 15:06:15     LOG [InstanceLoader] SentryModule dependencies initialized +88ms
-[Nest] 15152  - 24/08/2025, 15:06:21     LOG [InstanceLoader] PrismaModule dependencies initialized +5809ms
-[Nest] 15152  - 24/08/2025, 15:06:21     LOG [InstanceLoader] PassportModule dependencies initialized +1ms
-[Nest] 15152  - 24/08/2025, 15:06:21     LOG [InstanceLoader] BullModule dependencies initialized +1ms    
-[Nest] 15152  - 24/08/2025, 15:06:21     LOG [InstanceLoader] I18nModule dependencies initialized +0ms    
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] ConfigHostModule dependencies initialized +2031ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] HttpModule dependencies initialized +2ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] DiscoveryModule dependencies initialized +4ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] AppModule dependencies initialized +0ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] ConfigModule dependencies initialized +5ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] ConfigModule dependencies initialized +2ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [GeocodingService] Provedor de geocodificação configurado: GOOGLE_MAPS
-[Nest] 15152  - 24/08/2025, 15:06:23    WARN [EmailService] MAILGUN_API_KEY não configurada. O envio de e-mails pode não funcionar.
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [SmsService] [SmsService] Lendo configurações do Twilio:
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [SmsService] [SmsService]   Account SID: Configurado
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [SmsService] [SmsService]   Auth Token: Configurado
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [SmsService] [SmsService]   Verify Service SID: Configurado
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [SmsService] [SmsService] Twilio client inicializado com sucesso.
-[Nest] 15152  - 24/08/2025, 15:06:23    WARN [DocumentProcessingService] Modo de armazenamento local ativado. Clientes GCS não foram inicializados.
-[Nest] 15152  - 24/08/2025, 15:06:23    WARN [DocumentProcessingService] Modo de armazenamento local ativado. Clientes GCS não foram inicializados.
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] BullModule dependencies initialized +17ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] BullModule dependencies initialized +17ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] EmailModule dependencies initialized +3ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] GeocodingModule dependencies initialized +1ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] GeocodingModule dependencies initialized +0ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] EmailModule dependencies initialized +2ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] SmsModule dependencies initialized +0ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] LocksModule dependencies initialized +1ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] DocumentProcessingModule dependencies initialized +0ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] RedisLockModule dependencies initialized +1ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] JwtModule dependencies initialized +3ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] ThrottlerModule dependencies initialized +0ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] CacheModule dependencies initialized +3ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] CacheModule dependencies initialized +25ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] OffersModule dependencies initialized +2ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] CouponsModule dependencies initialized +6ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] FaqsModule dependencies initialized +1ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] BullModule dependencies initialized +1ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] BullModule dependencies initialized +0ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] NotificationsModule dependencies initialized +1ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] MetricsModule dependencies initialized +7ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] LoyaltyModule dependencies initialized +5ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] GuaranteeModule dependencies initialized +1ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] DisputeModule dependencies initialized +1ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] AvailabilityModule dependencies initialized +1ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] MissionsModule dependencies initialized +10ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] ReferralsModule dependencies initialized +1ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] QueuesModule dependencies initialized +2ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] PricingModule dependencies initialized +1ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] ChatModule dependencies initialized +2ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] SearchModule dependencies initialized +5ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] ServicesModule dependencies initialized +10ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] ProvidersModule dependencies initialized +2ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] RankingModule dependencies initialized +5ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] EarningsModule dependencies initialized +5ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] VerificationModule dependencies initialized +1ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] ReviewsModule dependencies initialized +2ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] SupportModule dependencies initialized +0ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] ProviderServicesModule dependencies initialized +2ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] SafetyModule dependencies initialized +1ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] UsersModule dependencies initialized +1ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] DashboardModule dependencies initialized +1ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] AuthModule dependencies initialized +2ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] ClientsModule dependencies initialized +1ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] PaymentsModule dependencies initialized +5ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] SubscriptionsModule dependencies initialized +2ms
-[Nest] 15152  - 24/08/2025, 15:06:23     LOG [InstanceLoader] BookingsModule dependencies initialized +1ms
-NestAppCreation: 8.592s
+[07:34:32] Found 0 errors. Watching for file changes.
+
+[Nest] 1048  - 28/08/2025, 07:40:02     LOG [NestFactory] Starting Nest application...
+[Nest] 1048  - 28/08/2025, 07:40:02     LOG [I18nService] Traduções carregadas: en-US (C:\Users\Paulo\desktop\relax-app\backend-cleaning\dist\common\i18n\locales\en-US.json)
+[Nest] 1048  - 28/08/2025, 07:40:02     LOG [I18nService] Traduções carregadas: pt-BR (C:\Users\Paulo\desktop\relax-app\backend-cleaning\dist\common\i18n\locales\pt-BR.json)
+[Nest] 1048  - 28/08/2025, 07:40:02     LOG [InstanceLoader] SentryModule dependencies initialized +30ms
+[Nest] 1048  - 28/08/2025, 07:40:02     LOG [InstanceLoader] PrismaModule dependencies initialized +292ms
+[Nest] 1048  - 28/08/2025, 07:40:02     LOG [InstanceLoader] PassportModule dependencies initialized +1ms
+[Nest] 1048  - 28/08/2025, 07:40:02     LOG [InstanceLoader] BullModule dependencies initialized +1ms    
+[Nest] 1048  - 28/08/2025, 07:40:02     LOG [InstanceLoader] I18nModule dependencies initialized +0ms    
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] ConfigHostModule dependencies initialized +491ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] HttpModule dependencies initialized +1ms     
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] DiscoveryModule dependencies initialized +4ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] AppModule dependencies initialized +1ms      
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] ConfigModule dependencies initialized +5ms   
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] ConfigModule dependencies initialized +2ms   
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [GeocodingService] Provedor de geocodificação configurado: GOOGLE_MAPS
+[Nest] 1048  - 28/08/2025, 07:40:03    WARN [EmailService] MAILGUN_API_KEY não configurada. O envio de e-mails pode não funcionar.
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [SmsService] [SmsService] Lendo configurações do Twilio:
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [SmsService] [SmsService]   Account SID: Configurado
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [SmsService] [SmsService]   Auth Token: Configurado
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [SmsService] [SmsService]   Verify Service SID: Configurado
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [SmsService] [SmsService] Twilio client inicializado com sucesso.
+[Nest] 1048  - 28/08/2025, 07:40:03    WARN [DocumentProcessingService] Modo de armazenamento local ativado. Clientes GCS não foram inicializados.
+[Nest] 1048  - 28/08/2025, 07:40:03    WARN [DocumentProcessingService] Modo de armazenamento local ativado. Clientes GCS não foram inicializados.
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] BullModule dependencies initialized +2ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] BullModule dependencies initialized +4ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] EmailModule dependencies initialized +1ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] GeocodingModule dependencies initialized +0ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] GeocodingModule dependencies initialized +1ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] EmailModule dependencies initialized +0ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] SmsModule dependencies initialized +1ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] LocksModule dependencies initialized +0ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] DocumentProcessingModule dependencies initialized +0ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] RedisLockModule dependencies initialized +1ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] JwtModule dependencies initialized +5ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] ThrottlerModule dependencies initialized +1ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] CacheModule dependencies initialized +17ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] CacheModule dependencies initialized +44ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] OffersModule dependencies initialized +4ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] CouponsModule dependencies initialized +1ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] FaqsModule dependencies initialized +1ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] BullModule dependencies initialized +0ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] BullModule dependencies initialized +1ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] NotificationsModule dependencies initialized +0ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] MetricsModule dependencies initialized +3ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] LoyaltyModule dependencies initialized +2ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] GuaranteeModule dependencies initialized +1ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] DisputeModule dependencies initialized +0ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] AvailabilityModule dependencies initialized +2ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] MissionsModule dependencies initialized +5ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] ReferralsModule dependencies initialized +1ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] QueuesModule dependencies initialized +2ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] PricingModule dependencies initialized +1ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] ChatModule dependencies initialized +3ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] SearchModule dependencies initialized +5ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] ServicesModule dependencies initialized +4ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] ProvidersModule dependencies initialized +12ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] RankingModule dependencies initialized +8ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] EarningsModule dependencies initialized +1ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] VerificationModule dependencies initialized +1ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] ReviewsModule dependencies initialized +2ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] SupportModule dependencies initialized +3ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] ProviderServicesModule dependencies initialized +1ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] SafetyModule dependencies initialized +0ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] UsersModule dependencies initialized +1ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] DashboardModule dependencies initialized +1ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] AuthModule dependencies initialized +1ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] ClientsModule dependencies initialized +0ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] PaymentsModule dependencies initialized +6ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] SubscriptionsModule dependencies initialized +2ms
+[Nest] 1048  - 28/08/2025, 07:40:03     LOG [InstanceLoader] BookingsModule dependencies initialized +0ms
+NestAppCreation: 1.634s
 [Sentry] Inicializado com sucesso.
 [Firebase Admin] SDK inicializado automaticamente no ambiente Cloud Run ou GCP.
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [WebSocketsController] ChatGateway subscribed to the "sendMessage" message +6072ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [WebSocketsController] ChatGateway subscribed to the "joinChat" message +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] AppController {/}: +5ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/, GET} route +6ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/health, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] AuthController {/auth}: +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/auth/register/client, POST} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/auth/register/provider, POST} route +6ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/auth/login, POST} route +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/auth/forgot-password, POST} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] UsersController {/users}: +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/users/me, GET} route +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/users/me, PATCH} route +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/users/:id, GET} route +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/users/:id, DELETE} route +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/users/data-export, POST} route +3ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/users/delete-account, DELETE} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] NotificationsController {/notifications}: +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/notifications, POST} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/notifications/me, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/notifications/me/mark-as-read, PATCH} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/notifications/:id/mark-as-read, PATCH} route +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/notifications/:id, DELETE} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/notifications/suggestions, GET} route +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/notifications/quick-action/:action, POST} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] ProvidersController {/providers}: +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/recommended, GET} route +5ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/nearby, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/me, GET} route +0ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/me, PATCH} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/me/avatar, POST} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/:id, GET} route +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/:id, DELETE} route +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] VerificationController {/verification}: +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/verification/pending-queue, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/verification/upload-document/:type, POST} route +8ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/verification/upload-selfie, POST} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/verification/upload-avatar, POST} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/verification/advance-status, POST} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/verification/:providerId/status, PATCH} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/verification/reject/:providerId, POST} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/verification/status/:providerId, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] SubscriptionsController {/subscriptions}: +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/subscriptions, POST} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/subscriptions/me, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/subscriptions/:id, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/subscriptions/:id, PATCH} route +4ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] BookingsController {/bookings}: +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/bookings, POST} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/bookings/schedule-and-pay, POST} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/bookings/me, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/bookings/:id, GET} route +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/bookings/:id/status, PATCH} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/bookings/:id/cancel, PATCH} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/bookings/:id/report-issue, POST} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/bookings/:id/dispute, POST} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/bookings/:id/resolve-dispute, PATCH} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] ClientsController {/clients}: +4ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/clients/me/dashboard, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/clients/me, PATCH} route +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/clients/:id, GET} route +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] ReferralsController {/referrals}: +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/referrals, POST} route +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/referrals/me, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/referrals/me/code, GET} route +0ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/referrals/:id, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] LoyaltyController {/loyalty}: +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/loyalty/me, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/loyalty/me/history, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/loyalty/redeem, POST} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] CouponsController {/coupons}: +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/coupons/resolve/:code, GET} route +3ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/coupons/me, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] MissionsController {/missions}: +0ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/missions/my, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/missions/claim, POST} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] ProviderServicesController {/providers/:providerId/services}: +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/:providerId/services, POST} route +3ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/:providerId/services, GET} route +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/:providerId/services/:id, PATCH} route +3ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/:providerId/services/:id, DELETE} route +7ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] ServicesController {/services}: +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/services, POST} route +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/services, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/services/:id, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/services/:id, PATCH} route +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/services/:id, DELETE} route +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] PaymentsController {/payments}: +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/payments/pix-charge, POST} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/payments/withdrawal, POST} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/payments/webhook/pix, POST} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/payments/webhook/withdrawal, POST} route +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] DisputeController {/disputes}: +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/disputes, POST} route +0ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/disputes/:id, GET} route +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/disputes, GET} route +0ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/disputes/:id/message, POST} route +4ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/disputes/:id/status, PATCH} route +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] PricingController {/pricing}: +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/pricing/calculate, POST} route +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/pricing/rules, POST} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/pricing/rules, GET} route +0ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/pricing/rules/:id, PATCH} route +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] AvailabilityController {/providers/:providerId/availability}: +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/:providerId/availability, GET} route +5ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/:providerId/availability, PATCH} route +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/:providerId/availability, POST} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/:providerId/availability/:availabilityId, DELETE} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] ReviewsController {/reviews}: +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/reviews, POST} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/reviews, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/reviews/:id, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/reviews/provider/:providerId/breakdown, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/reviews/provider/:providerId/suggestions, GET} route +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] ChatController {/chat}: +0ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/chat/find-or-create/provider/:providerId/client/:clientId, GET} route +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/chat/:chatId/messages, POST} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/chat/:chatId/messages, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/chat/me/conversations, GET} route +3ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] OffersController {/offers}: +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/offers, POST} route +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/offers, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/offers/:id, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/offers/:id, PATCH} route +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/offers/:id, DELETE} route +5ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] SearchController {/search}: +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/search, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] DashboardController {/providers/me/dashboard}: +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/me/dashboard, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] EarningsController {/providers/me/earnings}: +0ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/me/earnings, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/providers/me/earnings/withdrawal, POST} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] FaqsController {/faqs}: +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/faqs, POST} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/faqs, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/faqs/:id, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/faqs/:id, PATCH} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/faqs/:id, DELETE} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] SafetyController {/safety}: +0ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/safety/panic, POST} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/safety/incident, POST} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/safety/me/incidents, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/safety/incident/:id/status, PATCH} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] GuaranteeController {/guarantee}: +0ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/guarantee/claims, POST} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/guarantee/claims/me, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/guarantee/claims/:id, GET} route +0ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/guarantee/claims/:id/status, PATCH} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] RankingController {/ranking}: +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/ranking/providers/local, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/ranking/providers/:providerId/position, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] MetricsController {/v1/metrics}: +0ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/v1/metrics/me/summary, GET} route +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/v1/metrics/me/timeseries, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/v1/metrics/me/funnel, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RoutesResolver] SupportController {/v1/support}: +0ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/v1/support/tickets, POST} route +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/v1/support/tickets, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/v1/support/tickets/:id, GET} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/v1/support/tickets/:id/messages, POST} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/v1/support/tickets/:id/status, PATCH} route +2ms
-[Nest] 15152  - 24/08/2025, 15:06:29     LOG [RouterExplorer] Mapped {/v1/support/tickets/:id/assign/:agentId, PATCH} route +1ms
-[Nest] 15152  - 24/08/2025, 15:06:33     LOG [NestApplication] Nest application successfully started +3386ms
-AppListening: 4.368s
-Application is running on: http://127.0.0.1:3000
-Swagger documentation available at: http://127.0.0.1:3000/api
-AppStartupTotal: 18.515s
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [WebSocketsController] ChatGateway subscribed to the "sendMessage" message +866ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [WebSocketsController] ChatGateway subscribed to the "joinChat" message +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RoutesResolver] AppController {/}: +2ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/, GET} route +3ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/health, GET} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RoutesResolver] AuthController {/auth}: +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/auth/register/client, POST} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/auth/register/provider, POST} route +2ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/auth/login, POST} route +2ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/auth/forgot-password, POST} route +2ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RoutesResolver] UsersController {/users}: +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/users/me, GET} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/users/me, PATCH} route +2ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/users/:id, GET} route +7ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/users/:id, DELETE} route +8ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/users/data-export, POST} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/users/delete-account, DELETE} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RoutesResolver] NotificationsController {/notifications}: +2ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/notifications, POST} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/notifications/me, GET} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/notifications/me/mark-as-read, PATCH} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/notifications/:id/mark-as-read, PATCH} route +5ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/notifications/:id, DELETE} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/notifications/suggestions, GET} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/notifications/quick-action/:action, POST} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RoutesResolver] ProvidersController {/providers}: +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/providers/recommended, GET} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/providers/nearby, GET} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/providers, GET} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/providers/me, GET} route +2ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/providers/me, PATCH} route +2ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/providers/me/avatar, POST} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/providers/:id, GET} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/providers/:id, DELETE} route +8ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RoutesResolver] VerificationController {/verification}: +0ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/verification/pending-queue, GET} route +2ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/verification/upload-document/:type, POST} route +3ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/verification/upload-selfie, POST} route +2ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/verification/upload-avatar, POST} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/verification/advance-status, POST} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/verification/:providerId/status, PATCH} route +2ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/verification/reject/:providerId, POST} route +2ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/verification/status/:providerId, GET} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RoutesResolver] SubscriptionsController {/subscriptions}: +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/subscriptions, POST} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/subscriptions/me, GET} route +0ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/subscriptions/:id, GET} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/subscriptions/:id, PATCH} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RoutesResolver] BookingsController {/bookings}: +3ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/bookings, POST} route +2ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/bookings/schedule-and-pay, POST} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/bookings/me, GET} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/bookings/:id, GET} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/bookings/:id/status, PATCH} route +5ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/bookings/:id/cancel, PATCH} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/bookings/:id/report-issue, POST} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/bookings/:id/dispute, POST} route +5ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/bookings/:id/resolve-dispute, PATCH} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RoutesResolver] ClientsController {/clients}: +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/clients/me/dashboard, GET} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/clients/me, PATCH} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/clients/:id, GET} route +0ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RoutesResolver] ReferralsController {/referrals}: +3ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/referrals, POST} route +2ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/referrals/me, GET} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/referrals/me/code, GET} route +2ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/referrals/:id, GET} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RoutesResolver] LoyaltyController {/loyalty}: +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/loyalty/me, GET} route +2ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/loyalty/me/history, GET} route +2ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/loyalty/redeem, POST} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RoutesResolver] CouponsController {/coupons}: +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/coupons/resolve/:code, GET} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/coupons/me, GET} route +6ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RoutesResolver] MissionsController {/missions}: +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/missions/my, GET} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/missions/claim, POST} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RoutesResolver] ProviderServicesController {/providers/:providerId/services}: +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/providers/:providerId/services, POST} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/providers/:providerId/services, GET} route +2ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/providers/:providerId/services/:id, PATCH} route +2ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/providers/:providerId/services/:id, DELETE} route +0ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RoutesResolver] ServicesController {/services}: +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/services, POST} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/services, GET} route +2ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/services/:id, GET} route +3ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/services/:id, PATCH} route +3ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/services/:id, DELETE} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RoutesResolver] PaymentsController {/payments}: +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/payments/pix-charge, POST} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/payments/withdrawal, POST} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/payments/webhook/pix, POST} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/payments/webhook/withdrawal, POST} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RoutesResolver] DisputeController {/disputes}: +0ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/disputes, POST} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/disputes/:id, GET} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/disputes, GET} route +4ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/disputes/:id/message, POST} route +2ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/disputes/:id/status, PATCH} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RoutesResolver] PricingController {/pricing}: +0ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/pricing/calculate, POST} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/pricing/rules, POST} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/pricing/rules, GET} route +0ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/pricing/rules/:id, PATCH} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RoutesResolver] AvailabilityController {/providers/:providerId/availability}: +2ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/providers/:providerId/availability, GET} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/providers/:providerId/availability, PATCH} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/providers/:providerId/availability, POST} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/providers/:providerId/availability/:availabilityId, DELETE} route +0ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RoutesResolver] ReviewsController {/reviews}: +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/reviews, POST} route +0ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/reviews, GET} route +3ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/reviews/:id, GET} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/reviews/provider/:providerId/breakdown, GET} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/reviews/provider/:providerId/suggestions, GET} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RoutesResolver] ChatController {/chat}: +0ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/chat/find-or-create/provider/:providerId/client/:clientId, GET} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/chat/:chatId/messages, POST} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/chat/:chatId/messages, GET} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/chat/me/conversations, GET} route +0ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RoutesResolver] OffersController {/offers}: +2ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/offers, POST} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/offers, GET} route +0ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/offers/:id, GET} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/offers/:id, PATCH} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/offers/:id, DELETE} route +0ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RoutesResolver] SearchController {/search}: +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/search, GET} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RoutesResolver] DashboardController {/providers/me/dashboard}: +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/providers/me/dashboard, GET} route +5ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RoutesResolver] EarningsController {/providers/me/earnings}: +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/providers/me/earnings, GET} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/providers/me/earnings/withdrawal, POST} route +0ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RoutesResolver] FaqsController {/faqs}: +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/faqs, POST} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/faqs, GET} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/faqs/:id, GET} route +2ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/faqs/:id, PATCH} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/faqs/:id, DELETE} route +0ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RoutesResolver] SafetyController {/safety}: +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/safety/panic, POST} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/safety/incident, POST} route +0ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/safety/me/incidents, GET} route +4ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/safety/incident/:id/status, PATCH} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RoutesResolver] GuaranteeController {/guarantee}: +2ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/guarantee/claims, POST} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/guarantee/claims/me, GET} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/guarantee/claims/:id, GET} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/guarantee/claims/:id/status, PATCH} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RoutesResolver] RankingController {/ranking}: +0ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/ranking/providers/local, GET} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/ranking/providers/:providerId/position, GET} route +2ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/v1/metrics/me/summary, GET} route +1ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/v1/metrics/me/timeseries, GET} route +6ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RouterExplorer] Mapped {/v1/metrics/me/funnel, GET} route +5ms
+[Nest] 1048  - 28/08/2025, 07:40:04     LOG [RoutesResolver] SupportController {/v1/support}: +3ms
+[07:41:23] Starting compilation in watch mode...
+
+[07:41:57] Found 0 errors. Watching for file changes.
+
+[Nest] 10812  - 28/08/2025, 07:42:10     LOG [NestFactory] Starting Nest application...
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [I18nService] Traduções carregadas: en-US (C:\Users\Paulo\desktop\relax-app\backend-cleaning\dist\common\i18n\locales\en-US.json)
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [I18nService] Traduções carregadas: pt-BR (C:\Users\Paulo\desktop\relax-app\backend-cleaning\dist\common\i18n\locales\pt-BR.json)
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] SentryModule dependencies initialized +29ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] PrismaModule dependencies initialized +5ms  
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] PassportModule dependencies initialized +2ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] BullModule dependencies initialized +2ms    
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] I18nModule dependencies initialized +2ms    
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] ConfigHostModule dependencies initialized +62ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] HttpModule dependencies initialized +1ms     
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] DiscoveryModule dependencies initialized +3ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] AppModule dependencies initialized +0ms      
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] ConfigModule dependencies initialized +3ms   
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] ConfigModule dependencies initialized +0ms   
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [GeocodingService] Provedor de geocodificação configurado: GOOGLE_MAPS
+[Nest] 10812  - 28/08/2025, 07:42:11    WARN [EmailService] MAILGUN_API_KEY não configurada. O envio de e-mails pode não funcionar.
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [SmsService] [SmsService] Lendo configurações do Twilio:
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [SmsService] [SmsService]   Account SID: Configurado
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [SmsService] [SmsService]   Auth Token: Configurado
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [SmsService] [SmsService]   Verify Service SID: Configurado
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [SmsService] [SmsService] Twilio client inicializado com sucesso.
+[Nest] 10812  - 28/08/2025, 07:42:11    WARN [DocumentProcessingService] Modo de armazenamento local ativado. Clientes GCS não foram inicializados.
+[Nest] 10812  - 28/08/2025, 07:42:11    WARN [DocumentProcessingService] Modo de armazenamento local ativado. Clientes GCS não foram inicializados.
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] BullModule dependencies initialized +1ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] BullModule dependencies initialized +4ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] EmailModule dependencies initialized +0ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] GeocodingModule dependencies initialized +1ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] GeocodingModule dependencies initialized +0ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] EmailModule dependencies initialized +1ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] SmsModule dependencies initialized +0ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] LocksModule dependencies initialized +1ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] DocumentProcessingModule dependencies initialized +0ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] RedisLockModule dependencies initialized +1ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] JwtModule dependencies initialized +3ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] ThrottlerModule dependencies initialized +0ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] CacheModule dependencies initialized +7ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] CacheModule dependencies initialized +59ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] OffersModule dependencies initialized +76ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] CouponsModule dependencies initialized +0ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] FaqsModule dependencies initialized +1ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] BullModule dependencies initialized +1ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] BullModule dependencies initialized +16ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] NotificationsModule dependencies initialized +4ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] MetricsModule dependencies initialized +3ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] LoyaltyModule dependencies initialized +6ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] GuaranteeModule dependencies initialized +0ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] DisputeModule dependencies initialized +1ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] AvailabilityModule dependencies initialized +2ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] MissionsModule dependencies initialized +4ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] ReferralsModule dependencies initialized +1ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] QueuesModule dependencies initialized +2ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] PricingModule dependencies initialized +1ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] ChatModule dependencies initialized +5ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] SearchModule dependencies initialized +2ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] ServicesModule dependencies initialized +2ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] ProvidersModule dependencies initialized +2ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] RankingModule dependencies initialized +2ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] EarningsModule dependencies initialized +2ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] VerificationModule dependencies initialized +1ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] ReviewsModule dependencies initialized +1ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] SupportModule dependencies initialized +3ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] ProviderServicesModule dependencies initialized +3ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] SafetyModule dependencies initialized +4ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] UsersModule dependencies initialized +4ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] DashboardModule dependencies initialized +1ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] AuthModule dependencies initialized +0ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] ClientsModule dependencies initialized +1ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] PaymentsModule dependencies initialized +1ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] SubscriptionsModule dependencies initialized +3ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [InstanceLoader] BookingsModule dependencies initialized +2ms
+NestAppCreation: 601.175ms
+[Sentry] Inicializado com sucesso.
+[Firebase Admin] SDK inicializado automaticamente no ambiente Cloud Run ou GCP.
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [WebSocketsController] ChatGateway subscribed to the "sendMessage" message +434ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [WebSocketsController] ChatGateway subscribed to the "joinChat" message +0ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [RoutesResolver] AppController {/}: +4ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [RouterExplorer] Mapped {/, GET} route +4ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [RouterExplorer] Mapped {/health, GET} route +2ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [RoutesResolver] AuthController {/auth}: +1ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [RouterExplorer] Mapped {/auth/register/client, POST} route +3ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [RouterExplorer] Mapped {/auth/register/provider, POST} route +3ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [RouterExplorer] Mapped {/auth/login, POST} route +2ms
+[Nest] 10812  - 28/08/2025, 07:42:11     LOG [RouterExplorer] Mapped {/auth/forgot-password, POST} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RoutesResolver] UsersController {/users}: +2ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/users/me, GET} route +2ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/users/me, PATCH} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/users/:id, GET} route +2ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/users/:id, DELETE} route +4ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/users/data-export, POST} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/users/delete-account, DELETE} route +2ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RoutesResolver] NotificationsController {/notifications}: +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/notifications, POST} route +3ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/notifications/me, GET} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/notifications/me/mark-as-read, PATCH} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/notifications/:id/mark-as-read, PATCH} route +2ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/notifications/:id, DELETE} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/notifications/suggestions, GET} route +0ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/notifications/quick-action/:action, POST} route +7ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RoutesResolver] ProvidersController {/providers}: +6ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/providers/recommended, GET} route +4ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/providers/nearby, GET} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/providers, GET} route +4ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/providers/me, GET} route +2ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/providers/me, PATCH} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/providers/me/avatar, POST} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/providers/:id, GET} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/providers/:id, DELETE} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RoutesResolver] VerificationController {/verification}: +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/verification/pending-queue, GET} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/verification/upload-document/:type, POST} route +2ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/verification/upload-selfie, POST} route +2ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/verification/upload-avatar, POST} route +4ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/verification/advance-status, POST} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/verification/:providerId/status, PATCH} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/verification/reject/:providerId, POST} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/verification/status/:providerId, GET} route +2ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RoutesResolver] SubscriptionsController {/subscriptions}: +0ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/subscriptions, POST} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/subscriptions/me, GET} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/subscriptions/:id, GET} route +2ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/subscriptions/:id, PATCH} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RoutesResolver] BookingsController {/bookings}: +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/bookings, POST} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/bookings/schedule-and-pay, POST} route +4ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/bookings/me, GET} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/bookings/:id, GET} route +2ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/bookings/:id/status, PATCH} route +0ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/bookings/:id/cancel, PATCH} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/bookings/:id/report-issue, POST} route +2ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/bookings/:id/dispute, POST} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/bookings/:id/resolve-dispute, PATCH} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RoutesResolver] ClientsController {/clients}: +2ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/clients/me/dashboard, GET} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/clients/me, PATCH} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/clients/:id, GET} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RoutesResolver] ReferralsController {/referrals}: +3ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/referrals, POST} route +2ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/referrals/me, GET} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/referrals/me/code, GET} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/referrals/:id, GET} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RoutesResolver] LoyaltyController {/loyalty}: +0ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/loyalty/me, GET} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/loyalty/me/history, GET} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/loyalty/redeem, POST} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RoutesResolver] CouponsController {/coupons}: +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/coupons/resolve/:code, GET} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/coupons/me, GET} route +0ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RoutesResolver] MissionsController {/missions}: +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/missions/my, GET} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/missions/claim, POST} route +0ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RoutesResolver] ProviderServicesController {/providers/:providerId/services}: +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/providers/:providerId/services, POST} route +4ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/providers/:providerId/services, GET} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/providers/:providerId/services/:id, PATCH} route +4ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/providers/:providerId/services/:id, DELETE} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RoutesResolver] ServicesController {/services}: +0ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/services, POST} route +3ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/services, GET} route +0ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/services/:id, GET} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/services/:id, PATCH} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/services/:id, DELETE} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RoutesResolver] PaymentsController {/payments}: +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/payments/pix-charge, POST} route +4ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/payments/withdrawal, POST} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/payments/webhook/pix, POST} route +2ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/payments/webhook/withdrawal, POST} route +0ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RoutesResolver] DisputeController {/disputes}: +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/disputes, POST} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/disputes/:id, GET} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/disputes, GET} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/disputes/:id/message, POST} route +2ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/disputes/:id/status, PATCH} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RoutesResolver] PricingController {/pricing}: +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/pricing/calculate, POST} route +2ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/pricing/rules, POST} route +3ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/pricing/rules, GET} route +2ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/pricing/rules/:id, PATCH} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RoutesResolver] AvailabilityController {/providers/:providerId/availability}: +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/providers/:providerId/availability, GET} route +2ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/providers/:providerId/availability, PATCH} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/providers/:providerId/availability, POST} route +3ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/providers/:providerId/availability/:availabilityId, DELETE} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RoutesResolver] ReviewsController {/reviews}: +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/reviews, POST} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/reviews, GET} route +3ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/reviews/:id, GET} route +2ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/reviews/provider/:providerId/breakdown, GET} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/reviews/provider/:providerId/suggestions, GET} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RoutesResolver] ChatController {/chat}: +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/chat/find-or-create/provider/:providerId/client/:clientId, GET} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/chat/:chatId/messages, POST} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/chat/:chatId/messages, GET} route +3ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/chat/me/conversations, GET} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RoutesResolver] OffersController {/offers}: +0ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/offers, POST} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/offers, GET} route +0ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/offers/:id, GET} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/offers/:id, PATCH} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/offers/:id, DELETE} route +3ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RoutesResolver] SearchController {/search}: +2ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/search, GET} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RoutesResolver] DashboardController {/providers/me/dashboard}: +0ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/providers/me/dashboard, GET} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RoutesResolver] EarningsController {/providers/me/earnings}: +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/providers/me/earnings, GET} route +0ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/providers/me/earnings/withdrawal, POST} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RoutesResolver] FaqsController {/faqs}: +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/faqs, POST} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/faqs, GET} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/faqs/:id, GET} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/faqs/:id, PATCH} route +0ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/faqs/:id, DELETE} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RoutesResolver] SafetyController {/safety}: +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/safety/panic, POST} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/safety/incident, POST} route +4ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/safety/me/incidents, GET} route +2ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/safety/incident/:id/status, PATCH} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RoutesResolver] GuaranteeController {/guarantee}: +0ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/guarantee/claims, POST} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/guarantee/claims/me, GET} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/guarantee/claims/:id, GET} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/guarantee/claims/:id/status, PATCH} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RoutesResolver] RankingController {/ranking}: +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/ranking/providers/local, GET} route +2ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/ranking/providers/:providerId/position, GET} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RoutesResolver] MetricsController {/v1/metrics}: +0ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/v1/metrics/me/summary, GET} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/v1/metrics/me/timeseries, GET} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/v1/metrics/me/funnel, GET} route +2ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RoutesResolver] SupportController {/v1/support}: +2ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/v1/support/tickets, POST} route +2ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/v1/support/tickets, GET} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/v1/support/tickets/:id, GET} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/v1/support/tickets/:id/messages, POST} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/v1/support/tickets/:id/status, PATCH} route +2ms
+[Nest] 10812  - 28/08/2025, 07:42:12     LOG [RouterExplorer] Mapped {/v1/support/tickets/:id/assign/:agentId, PATCH} route +1ms
+[Nest] 10812  - 28/08/2025, 07:42:13     LOG [NestApplication] Nest application successfully started +1721ms
+AppListening: 2.009s
 
 
 // schema.prisma
