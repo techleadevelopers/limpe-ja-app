@@ -7,7 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 // Importa a imagem do seu diretório assets. Ajuste o caminho se for diferente.
 // Certifique-se de que o React Native está configurado para lidar com imagens de assets.
-const bannerImage = require('../../../../assets/images/banner1.png'); // <-- O nome do arquivo e a extensão são CRUCIAIS // AJUSTE O CAMINHO CONFORME SEU PROJETO
+const bannerImage = require('../../../../assets/images/banner.png'); // <-- O nome do arquivo e a extensão são CRUCIAIS // AJUSTE O CAMINHO CONFORME SEU PROJETO
 
 interface CarouselBannerItemProps {
     title: string;

@@ -49,6 +49,7 @@ const Icons3D = {
   payments: require('../../../assets/images/3d/payments.png'),
   woman: require('../../../assets/images/3d/woman.png'),
   button: require('../../../assets/images/3d/button.png'),
+  mascrank: require('../../../assets/images/3d/masc-rank.png'),
 } satisfies Record<string, ImageSourcePropType>;
 
 const Icon3D = ({
@@ -101,7 +102,7 @@ function FeaturedDiscountCard({
     <View style={styles.discountCard}>
       <View style={styles.discountHeader}>
         {/* 3D ticket icon, tiny and subtle */}
-        <Icon3D src={Icons3D.discountTicket} size={18} style={{ marginRight: 6 }} />
+        <Icon3D src={Icons3D.discountTicket} size={40} style={{ marginRight: 6 }} />
         <View style={styles.pill}>
           <Text style={styles.pillText}>{percent}% OFF</Text>
         </View>
@@ -445,7 +446,7 @@ export default function ClientMissionsScreen() {
         <View style={styles.heroWrapper}>
           {/* NOVO: Ícone 3D da Mulher, posicionado de forma isolada */}
           <Animated.Image
-            source={Icons3D.woman}
+            source={Icons3D.mascrank}
             style={[
               styles.heroWomanIcon,
               { transform: [{ scale: pulseAnim }] } // Aplica animação de pulso
@@ -630,15 +631,15 @@ const styles = StyleSheet.create({
   heroWrapper: { height: HERO_HEIGHT, width: '100%' },
   heroGradient: {
     flex: 1,
-    paddingTop: Platform.OS === 'ios' ? 280 : 180, // Mantido o paddingTop original
+    paddingTop: Platform.OS === 'ios' ? 280 : 80, // Mantido o paddingTop original
     paddingHorizontal: 28,
     justifyContent: 'flex-start',
   },
   // NOVO: Estilo para o ícone 3D da mulher
   heroWomanIcon: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 280 : 320, // Posição abaixo do cabeçalho de navegação
-    left: '65%', // Centraliza horizontalmente
+    top: Platform.OS === 'ios' ? 280 : 180, // Posição abaixo do cabeçalho de navegação
+    left: '48%', // Centraliza horizontalmente
     marginLeft: 0, // Metade da largura para centralizar
     width: 200, // Tamanho grande
     height: 200, // Tamanho grande
@@ -648,18 +649,18 @@ const styles = StyleSheet.create({
     flex: 1,
     zIndex: 2, // Garante que o conteúdo de texto esteja acima do ícone da mulher se houver sobreposição
   },
-  heroKicker: { color: '#D7ECFF', letterSpacing: 1.2, fontWeight: '700', fontSize: 12 },
-  heroTitle: { color: '#FFFFFF', fontSize: 24, fontWeight: '800', marginTop: 6, lineHeight: 30, maxWidth: '90%' },
+  heroKicker: { color: '#D7ECFF', letterSpacing: 1.2, fontWeight: '700', fontSize: 10 },
+  heroTitle: { color: '#FFFFFF', fontSize: 20, fontWeight: '800', marginTop: 6, lineHeight: 30, maxWidth: '90%' },
   heroStartButton: {
     marginTop: 16, alignSelf: 'flex-start', backgroundColor: '#FFFFFF',
-    paddingVertical: 10, paddingHorizontal: 16, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingVertical: 4, paddingHorizontal: 9, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 6,
   },
-  heroStartText: { color: '#0A84FF', fontWeight: '800', fontSize: 13 },
-  stepperRow: { flexDirection: 'row', alignItems: 'center', marginTop: 26, paddingHorizontal: 38 },
+  heroStartText: { color: '#0A84FF', fontWeight: '800', fontSize: 10 },
+  stepperRow: { flexDirection: 'row', alignItems: 'center', marginTop: 26, paddingHorizontal: 88, right: 90, top: 50, },
   stepDot: { width: 10, height: 10, borderRadius: 15, borderWidth: 1.5 },
   stepLine: { flex: 1, height: 2, marginHorizontal: 6 },
-  stepperLabels: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, paddingRight: 10 },
-  stepLabel: { color: 'white', fontSize: 11, fontWeight: '600', flex: 1, textAlign: 'center' },
+  stepperLabels: { flexDirection: 'row', paddingHorizontal: 80, right: 120, top: 50,  justifyContent: 'space-between', marginTop: 8, paddingRight: 10 },
+  stepLabel: { color: 'white', fontSize: 8, fontWeight: '600', flex: 1, textAlign: 'center' },
 
   // Painel
   panel: {
