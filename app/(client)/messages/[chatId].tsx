@@ -24,7 +24,7 @@ import { getBookingDetails } from '../../../services/bookingService';
 import { getChatMessages, sendMessage as sendChatMessage } from '../../../services/chatService';
 import { BookingStatus } from '../../../types/backend/bookings';
 import { Message, SendMessageDto } from '../../../types/backend/chat';
-import { PanicBanner } from '../../../components/safety/PanicBanner'; // Importar PanicBanner
+
 
 const SOCKET_URL = appConfig.apiUrl.replace('http', 'ws');
 
@@ -290,10 +290,7 @@ export default function ChatScreen() {
         onBackPress={() => router.back()}
       />
 
-      {/* PanicBanner injetado aqui */}
-      <View style={chatStyles.panicBannerWrapper}>
-        <PanicBanner onPanic={handlePanic} status={panicStatus} />
-      </View>
+
 
       <Animated.View
         style={[

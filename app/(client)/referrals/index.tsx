@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
   },
   heroIcon: { // New style for the main hero 3D icon
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 260 : 280, // Adjusted position
+    top: Platform.OS === 'ios' ? 260 : 250, // Adjusted position
     left: '60%',
     marginLeft: 0,
     width: 180,

@@ -637,7 +637,7 @@ const styles = StyleSheet.create({
   // NOVO: Estilo para o ícone 3D da mulher
   heroWomanIcon: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 340 : 360, // Posição abaixo do cabeçalho de navegação
+    top: Platform.OS === 'ios' ? 280 : 320, // Posição abaixo do cabeçalho de navegação
     left: '65%', // Centraliza horizontalmente
     marginLeft: 0, // Metade da largura para centralizar
     width: 200, // Tamanho grande
