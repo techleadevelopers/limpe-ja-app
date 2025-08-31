@@ -15,7 +15,7 @@ export enum ActivityType {
     PROVIDER_STATUS_CHANGE = "PROVIDER_STATUS_CHANGE",
     PROVIDER_REGISTRATION = "PROVIDER_REGISTRATION",
     BOOKING_COMPLETED = "BOOKING_COMPLETED",
-    PAYMENT_PROCESSED = "PAYMENT_PROCESSED",
+    PAYMENT_PROCESSED = "PAYING_PROCESSED",
     NEW_DISPUTE = "NEW_DISPUTE",
     COUPON_CREATED = "COUPON_CREATED",
     SUBSCRIPTION_STARTED = "SUBSCRIPTION_STARTED",
@@ -118,6 +118,30 @@ export enum ClaimStatus {
     APPROVED = "APPROVED",
     REJECTED = "REJECTED",
     SETTLED = "SETTLED",
+}
+
+// Enums para Missões
+export enum MissionStatus {
+    ACTIVE = "ACTIVE",
+    INACTIVE = "INACTIVE",
+    COMPLETED = "COMPLETED",
+    EXPIRED = "EXPIRED",
+}
+
+export enum MissionTargetAudience {
+    ALL = "ALL",
+    NEW_CLIENTS = "NEW_CLIENTS",
+    SPECIFIC_PROVIDER = "SPECIFIC_PROVIDER",
+    SPECIFIC_CLIENT = "SPECIFIC_CLIENT",
+    SPECIFIC_SERVICE = "SPECIFIC_SERVICE",
+}
+
+// NOVO: Enum para o status da Indicação
+export enum ReferralStatus {
+    PENDING = "PENDING",
+    CONVERTED = "CONVERTED", // Indicado realizou a primeira ação (ex: primeira reserva)
+    REWARDED = "REWARDED",   // Recompensa emitida
+    CANCELED = "CANCELED",   // Indicação cancelada
 }
 
 export type Provider = {
@@ -356,6 +380,23 @@ export type Coupon = {
     updatedAt: string;
 };
 
+export type Mission = {
+    id: string;
+    title: string;
+    description: string;
+    rewardAmount: number; // Valor da recompensa (ex: R$ ou pontos)
+    rewardType: 'FIXED_AMOUNT' | 'POINTS'; // Tipo de recompensa
+    status: MissionStatus;
+    targetAudience: MissionTargetAudience;
+    targetId?: string | null; // ID do alvo (cliente, provedor, serviço, etc.)
+    startDate: string;
+    endDate: string;
+    timesCompleted: number; // Quantas vezes a missão foi completada
+    maxCompletions?: number | null; // Limite de vezes que pode ser completada (0 para ilimitado)
+    createdAt: string;
+    updatedAt: string;
+};
+
 export type GuaranteeClaim = {
     id: string;
     bookingId: string;
@@ -375,15 +416,26 @@ export type GuaranteeClaim = {
     provider?: Provider;
 };
 
+// Modificado PricingRule type para incluir campos do README
 export type PricingRule = {
     id: string;
-    zoneId?: string | null;
-    dayOfWeek?: number | null;
-    startTime?: string | null;
-    endTime?: string | null;
-    demandThreshold?: number | null;
-    surgeFactor: number;
+    scope: 'GLOBAL' | 'CITY' | 'CATEGORY' | 'SERVICE' | 'PROVIDER';
+    refId?: string | null;
+    kind: 'SURGE' | 'DISTANCE_FEE' | 'FLOOR' | 'CAP' | 'PACKAGE_DISCOUNT' | 'ABSOLUTE_ADJUST';
+    valueType: 'MULTIPLIER' | 'FIXED' | 'PERCENT';
+    value: number;
+    maxEffect?: number | null;
+
+    daysOfWeek?: number[] | null;
+    timeStart?: string | null;
+    timeEnd?: string | null;
+    activeFrom?: string | null;
+    activeTo?: string | null;
+
+    priority?: number | null;
     isActive: boolean;
+    description?: string | null;
+
     createdAt: string;
     updatedAt: string;
 };
@@ -493,23 +545,59 @@ export type Review = {
 export type Offer = {
     id: string;
     title: string;
-    description: string;
-    discountPercentage: number;
-    validUntil: string;
+    description?: string | null;
+    discountPercentage?: number | null; // Valor percentual do desconto
+    fixedDiscountAmount?: number | null; // Valor fixo do desconto
+    validUntil: string; // Data de validade
+    imageUrl?: string | null; // URL da imagem da oferta
+    createdAt: string;
+    updatedAt: string;
+    target: OfferTarget; // Público-alvo da oferta
+    targetId?: string | null; // ID do alvo específico (serviço/provedor)
+    status: OfferStatus; // Status da oferta
 };
 
+// NOVO: Tipo para o modelo de Indicação (Referral)
 export type Referral = {
     id: string;
-    referrerId: string;
-    referredId: string;
-    status: 'pending' | 'completed' | 'canceled';
+    referredUserId: string;
+    referredUser?: { fullName?: string }; // Adicionado para exibir o nome no frontend
+    referrerUserId: string;
+    referrerUser?: { fullName?: string }; // Adicionado para exibir o nome no frontend
+    referralCode?: string | null; // Código de indicação usado
+    status: ReferralStatus; // Status da indicação
     createdAt: string;
+    updatedAt: string;
+    convertedAt?: string; // Data de conversão
+    rewardIssued: boolean; // Se a recompensa foi emitida
+    notes?: string; // Notas adicionais para o admin
 };
 
+// Modificado FAQItem type para incluir campos do README
 export type FAQItem = {
     id: string;
     question: string;
     answer: string;
+    audience?: 'CLIENT' | 'PROVIDER' | 'ALL';
     category?: string | null;
-    order: number;
+    tags?: string[] | null;
+    language?: string;
+    isActive: boolean;
+    order?: number;
+    createdAt: string;
+    updatedAt: string;
 };
+
+export enum OfferTarget {
+    GENERAL = "GENERAL",
+    SPECIFIC_SERVICE = "SPECIFIC_SERVICE",
+    SPECIFIC_PROVIDER = "SPECIFIC_PROVIDER",
+    NEW_CLIENTS = "NEW_CLIENTS",
+}
+
+export enum OfferStatus {
+    ACTIVE = "ACTIVE",
+    INACTIVE = "INACTIVE",
+    EXPIRED = "EXPIRED",
+}
+
