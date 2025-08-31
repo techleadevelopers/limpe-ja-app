@@ -17,7 +17,7 @@ const SecaoRecomendacoes: React.FC<SecaoRecomendacoesProps> = ({
   titulo,
   data,
   onVerTudoPress,
-  titleColor = '#202633',
+  titleColor = '#636a79',
   noDataText = 'Nenhuma recomendação disponível no momento.',
   horizontal = false,
   renderItem,
@@ -31,7 +31,7 @@ const SecaoRecomendacoes: React.FC<SecaoRecomendacoesProps> = ({
         {onVerTudoPress && (
           <TouchableOpacity onPress={onVerTudoPress} style={styles.viewAllButton}>
             <Text style={styles.viewAllText}>
-              Ver Tudo <Ionicons name="arrow-forward" size={14} color="#007BFF" />
+              Mais <Ionicons name="chevron-forward" size={14} color="#626a74ff" />
             </Text>
           </TouchableOpacity>
         )}
@@ -73,9 +73,10 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   sectionTitle: {
-       fontSize: 16.5,
-    fontWeight: '700',
-    color: '#1C3A5F',
+     fontSize: 15,
+    fontFamily: 'Montserrat-Regular',
+    fontWeight: '800',
+    color: '#202633',
   },
   viewAllButton: {
     flexDirection: 'row',
@@ -83,8 +84,8 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   viewAllText: {
-    fontSize: 12,
-    color: '#007BFF',
+    fontSize: 11,
+    color: '#626a74ff',
     fontWeight: '600',
   },
   cardsScrollContainer: {
