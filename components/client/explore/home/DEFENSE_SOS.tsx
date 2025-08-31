@@ -100,7 +100,7 @@ const DEFENSE_SOS: React.FC<DefenseSOSProps> = ({ bottomOffset = 20 }) => {
       <Animated.View style={[styles.fabButton, { transform: [{ scale: scaleAnim }] }]}>
         <Image
           source={Icons3D.support} // Usa a imagem 'docCheck2' do seu objeto Icons3D
-          style={{ width: 60, height: 60 }} // <--- tintColor REMOVIDO AQUI
+          style={{ width: 40, height: 40 }} // <--- tintColor REMOVIDO AQUI
         />
       </Animated.View>
     </TouchableOpacity>
@@ -110,15 +110,15 @@ const DEFENSE_SOS: React.FC<DefenseSOSProps> = ({ bottomOffset = 20 }) => {
 const styles = StyleSheet.create({
   fabContainer: {
     position: 'absolute',
-    right: 20,
+    right: 30,
     // Ajuste o zIndex para garantir que o FAB esteja acima de outros elementos
     zIndex: 1000, 
   },
   // Glow azul (confortável, suave) - Cor diferente do FAB_SOS, mas o efeito é o mesmo
   fabGlow: {
     position: 'absolute',
-    width: 64,
-    height: 64,
+    width: 44,
+    height: 44,
     borderRadius: 32,
     backgroundColor: '#D0E8FF', // glow azul claro
     alignSelf: 'center',
@@ -129,10 +129,10 @@ const styles = StyleSheet.create({
   },
   // Botão azul
   fabButton: {
-    width: 64,
-    height: 64,
+    width: 44,
+    height: 44,
     borderRadius: 32,
-    backgroundColor: '#0a84ff5e', // azul principal (iOS-like)
+    backgroundColor: '#97c3eeff', // azul principal (iOS-like)
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
