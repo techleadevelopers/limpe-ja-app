@@ -510,3 +510,233 @@ Dependências:
 ./api: Instância configurada do Axios para requisições HTTP.
 Conclusão
 O módulo services é um pilar fundamental da arquitetura do aplicativo LimpeJá, pois centraliza e padroniza a comunicação com o backend. Ao encapsular a lógica de requisições, ele oferece uma interface limpa e consistente para os componentes da UI, desacoplando-os dos detalhes de implementação da API. Isso resulta em um código mais organizado, fácil de manter, testar e escalar, além de garantir um tratamento uniforme de erros e autenticação em toda a aplicação.
+
+
+Mapeamento das Funções do Módulo services (Frontend) para o admin-web
+Este mapeamento demonstra como cada capacidade do aplicativo móvel (exposta via services/) exige uma contraparte de gestão no admin-web, garantindo que o dono ou coordenador possa monitorar e operar a plataforma em sua totalidade.
+
+1. aiSuggestionsService.ts
+Funções: getSmartSuggestions(providerId), getCustomerInsights(providerId), getMarketTrends().
+Implicação para admin-web:
+Painel de Insights e Sugestões: Uma área para visualizar as sugestões de IA geradas para provedores (preços, agendamento, melhoria de serviço).
+Análise de Clientes e Mercado: Relatórios e dashboards com insights sobre o comportamento dos clientes (total, repetidos, avaliação média, serviços populares) e tendências de mercado.
+Gestão de Regras de IA: Se as sugestões forem configuráveis, o admin precisaria de uma interface para ajustar os parâmetros da IA.
+2. analyticsService.ts
+Funções: getPerformanceMetrics(providerId), getBusinessInsights(providerId, period), trackEvent(event, properties), getCompetitorAnalysis(location), generateReport(type, providerId).
+Implicação para admin-web:
+Relatórios de Performance de Provedores: Dashboards detalhados com tempo de resposta, taxa de conclusão, satisfação do cliente, taxa de clientes recorrentes, crescimento de receita e ranking.
+Insights de Negócio: Relatórios financeiros (receita total, agendamentos, valor médio do trabalho) e análise de concorrência por localização.
+Geração de Relatórios: Capacidade de gerar relatórios analíticos (mensais, trimestrais) para provedores ou para a plataforma como um todo.
+Monitoramento de Eventos: Embora trackEvent seja para o frontend, o admin precisa ver os resultados desses eventos (KPIs).
+3. api.ts (Infraestrutura)
+Funções: setUnauthorizedCallback, axios.create (interceptors para auth, tratamento de erros).
+Implicação para admin-web:
+Segurança e Auditoria: O mesmo sistema de autenticação e tratamento de erros do frontend garante que o admin-web seja seguro e que erros sejam registrados para auditoria.
+4. authService.ts
+Funções: login, logout, registerClient, registerProvider, sendPasswordReset, loadAuthData, storeAuthData, setAuthToken, getAuthToken.
+Implicação para admin-web:
+Gestão de Usuários (Completa): Além de listar, o admin pode precisar de funcionalidades para:
+Resetar senhas de usuários/provedores.
+Bloquear/desbloquear contas.
+Verificar detalhes de registro (incluindo referralCode usado no registro).
+Gerenciar roles (CLIENT, PROVIDER, ADMIN, SUPPORT_AGENT).
+5. bookingService.ts
+Funções: createBooking, getBookingsForUser, getBookingDetails, updateBookingStatus, cancelBooking, checkActiveChatBooking, checkConfirmedBookingBetweenUsers.
+Implicação para admin-web:
+Gestão de Agendamentos (Centralizada):
+Visualizar todos os agendamentos (não apenas os do usuário logado), com filtros por cliente, provedor, serviço, status (PENDING, CONFIRMED, COMPLETED, CANCELED, PENDING_DISPUTE, RESCHEDULED, IN_PROGRESS, REJECTED, NO_SHOW).
+Atualizar manualmente o status de um agendamento (em casos de suporte ou erro).
+Cancelar agendamentos (com registro de motivo).
+Visualizar detalhes completos do agendamento, incluindo couponId e discountAmount aplicados.
+6. chatService.ts
+Funções: findOrCreateChat, getChatMessages, sendMessage, getChatListForUser.
+Implicação para admin-web:
+Monitoramento e Auditoria de Chats:
+Acesso a transcrições de chat (essencial para resolução de disputas e controle de qualidade).
+Busca por conversas.
+Monitoramento do averageResponseTime dos provedores (como métrica).
+Capacidade de bloquear usuários de chat em casos de má conduta.
+7. clientService.ts
+Funções: getServiceCategories, searchProviders, searchProvidersWithLocation, getUserProfile, getOffers, getProviderOffers, applyCoupon, getProviderDetails, getProviderMetrics, updateClientProfile, getClientMissions, claimClientReward.
+Implicação para admin-web:
+Gestão de Clientes: Visualização e edição completa de perfis de clientes (além do que o próprio cliente pode editar).
+Gestão de Ofertas e Cupons (Consolidado):
+Visualizar todas as ofertas e cupons disponíveis (globais e específicos de provedores).
+Monitorar a aplicação de cupons em agendamentos.
+Gestão de Missões do Cliente: Visualizar o progresso das missões dos clientes e as recompensas resgatadas.
+Análise de Provedores: Acesso aos ProviderMetrics (taxa de aceitação, tempo médio de resposta) e ProviderOffers para análise e gestão.
+8. complianceService.ts
+Funções: getComplianceStatus(providerId), getLegalRequirements(), uploadComplianceDocument(type, file), getDataPrivacyInfo(), requestDataExport(), requestAccountDeletion(reason).
+Implicação para admin-web:
+Painel de Conformidade (LGPD e Regulatória):
+Visualizar o status de conformidade de provedores (documentos, antecedentes, seguros, impostos).
+Gerenciar requisitos legais.
+Revisar documentos de compliance enviados.
+Processar solicitações de exportação de dados (requestDataExport).
+Gerenciar solicitações de exclusão de conta (requestAccountDeletion), garantindo a anonimização.
+9. couponService.ts
+Funções: applyCoupon.
+Implicação para admin-web:
+Gestão de Cupons (Criação e Monitoramento):
+Criar, editar e desativar cupons com regras complexas (CouponTargets como NEW_CUSTOMER, REFERRAL_REFERRED, MISSION_REWARD, REPEAT_CUSTOMER, SPECIFIC_SERVICE, SPECIFIC_PROVIDER).
+Monitorar o usageCount de cada cupom.
+Auditar a aplicação de cupons em agendamentos.
+10. dashboardService.ts
+Funções: getMyProviderDashboard().
+Implicação para admin-web:
+Painel do Provedor (Admin View): O admin precisa ter a capacidade de visualizar o dashboard de qualquer provedor, não apenas o seu próprio, para fins de suporte e monitoramento.
+11. disputeService.ts
+Funções: reportDispute(bookingId, data), getDisputeByBookingId(bookingId).
+Implicação para admin-web:
+Central de Resolução de Disputas:
+Visualizar e gerenciar todas as disputas (DisputeStatus: PENDING, IN_REVIEW, RESOLVED, REJECTED).
+Acessar detalhes da disputa (motivo, descrição, anexos).
+Adicionar mensagens e propostas de acordo.
+Definir a resolução da disputa (reembolso, rejeição, etc.).
+Auditar o processo de resolução.
+12. earningService.ts
+Funções: getMyProviderEarnings(), requestWithdrawal(withdrawalDto).
+Implicação para admin-web:
+Gestão Financeira e Payouts de Provedores:
+Visualizar os ganhos de todos os provedores (saldo disponível, pendente, em hold).
+Acessar o ledger detalhado de transações financeiras por provedor.
+Gerenciar e processar solicitações de saque (requestWithdrawal), incluindo aprovação/rejeição e rastreamento do status (REQUESTED, IN_REVIEW, PROCESSING, PAID, FAILED).
+Configurar taxas de saque (WITHDRAWAL_FIXED_FEE_RS, WITHDRAWAL_PERCENT_FEE).
+13. faqService.ts
+Funções: getFaqs().
+Implicação para admin-web:
+Gestão de FAQs: Criar, editar, organizar por categoria e excluir perguntas frequentes.
+14. guaranteeService.ts
+Funções: submitClaim(data), getClaimsForUser().
+Implicação para admin-web:
+Gestão de Reclamações de Garantia:
+Visualizar e gerenciar todas as reclamações de garantia (ClaimStatus: PENDING, UNDER_REVIEW, APPROVED, REJECTED, SETTLED).
+Acessar detalhes da reclamação (descrição, anexos, valor estimado).
+Definir a resolução e o valor resolvido.
+15. incentiveService.ts
+Funções: getIncentivesForHome(), dismissIncentive(id, hours).
+Implicação para admin-web:
+Gestão de Programas de Incentivo:
+Configurar e ativar/desativar diferentes tipos de incentivos (cupons de boas-vindas, de retorno, promoções de indicação, mensagens de cashback).
+Monitorar a performance e o engajamento com esses incentivos.
+16. locationService.ts
+Funções: ensureLocationPermission, getCurrentPosition, watchPosition, stopWatchingPosition.
+Implicação para admin-web:
+Principalmente para o app. No admin-web, pode implicar em Ferramentas de Geomonitoramento para visualizar a localização de provedores (se permitido e relevante para a operação) ou o mapa de calor de demanda.
+17. metricsService.ts
+Funções: getMetricsSummary(), getMetricsTimeseries(period), getMetricsFunnel().
+Implicação para admin-web:
+Painel de Métricas de Clientes: Dashboards com resumos de comportamento do cliente, séries temporais de métricas (agendamentos, gastos) e funis de conversão.
+18. missionService.ts
+Funções: getMyMissions(audience), claimMission(missionId), trackMissionEvent(event, payload), getMyCoupons().
+Implicação para admin-web:
+Gestão de Gamificação e Missões:
+Criar, editar e desativar Missions com suas complexas regras (MissionAudience, MissionKind, eventName, targetValue, timeWindowDays, RewardType, rewardValue).
+Monitorar o MissionProgress dos usuários (clientes e provedores).
+Auditar MissionEvents e claimMissions.
+Visualizar cupons gerados por missões.
+19. notificationService.ts
+Funções: getNotificationsMe, markNotificationAsReadMe, markAllNotificationsAsReadMe, deleteNotificationMe, sendPushNotification, getSmartSuggestions, executeQuickAction.
+Implicação para admin-web:
+Central de Notificações e Campanhas:
+Visualizar e auditar todas as notificações enviadas pelo sistema.
+Criar e enviar notificações em massa ou segmentadas (push, in-app).
+Enviar notificações específicas para usuários (ex: para suporte).
+Gerenciar templates de notificação.
+Configurar e monitorar "ações rápidas" e "sugestões inteligentes" para notificações.
+20. offerService.ts
+Funções: getOffers(), getOfferDetails(offerId).
+Implicação para admin-web:
+Gestão de Ofertas Promocionais:
+Criar, editar e desativar Offers com discountValue, discountType, target (GENERAL, SPECIFIC_SERVICE, SPECIFIC_PROVIDER, NEW_CLIENTS), validFrom, validUntil e status.
+Monitorar a performance das ofertas.
+21. paymentService.ts
+Funções: createPixCharge(clientUserId, data), requestWithdrawal(data).
+Implicação para admin-web:
+Gestão de Pagamentos e Saques:
+Visualizar todas as PixCharges criadas.
+Gerenciar requestWithdrawals (conforme earningService).
+Acessar detalhes de PaymentIntent e PaymentEvent para auditoria e conciliação.
+22. providerService.ts
+Funções: getProviderDetails, getProviderAvailability, updateMyProviderProfile, getMyProviderDashboard, getMyProviderEarnings, updateProviderAvailability, addProviderAvailability, deleteProviderAvailability, getProviderServicesOffered, addProviderServiceOffering, updateProviderServiceOffering, deleteProviderServiceOffering, getRecommendedProviders, getNearbyProviders, getProvidersByServiceCategory, searchProviders, getProviderMetrics, getProviderOffers.
+Implicação para admin-web:
+Gestão de Provedores (Completa):
+Visualizar e editar perfis de provedores (incluindo acceptanceRate e averageResponseTime).
+Gerenciar Availability (disponibilidade semanal e slots).
+Gerenciar ProviderServiceOfferings (serviços que cada provedor oferece, preços, durações).
+Monitorar e ajustar a lógica de provedores "recomendados" e "próximos".
+Acessar ProviderMetrics detalhadas.
+23. rankingService.ts
+Funções: getLeaderboard(period), getMyRank(period), prefetchNeighbors(current), getCached(period).
+Implicação para admin-web:
+Configuração e Monitoramento de Ranking:
+Visualizar os leaderboards e o ranking de provedores.
+Acessar a "decomposição" do score de ranking para entender como ele é calculado.
+Configurar pesos da fórmula de ranking (se exposto ao admin).
+Aplicar/remover boosts e penalidades manuais (se não totalmente automatizado pelo backend).
+Disparar recálculos de ranking ou invalidação de cache.
+24. referralService.ts
+Funções: createReferral, getReferralsMadeByUser, getReferredUsers, getReferralById.
+Implicação para admin-web:
+Gestão do Programa de Indicações:
+Visualizar todas as indicações feitas.
+Rastrear a conversão de indicações (quando o indicado completa o primeiro booking).
+Auditar recompensas de indicação.
+Gerenciar códigos de indicação.
+25. reviewService.ts
+Funções: submitFeedback, getDetailedRatingBreakdown, getSmartSuggestions, getReviews, submitReview, getSuggestedResponse, respondToReview, flagInappropriateReview, getReviewTrends.
+Implicação para admin-web:
+Gestão e Moderação de Avaliações:
+Visualizar e moderar todas as Reviews (aprovar, rejeitar, sinalizar como inadequada).
+Acessar DetailedRatingBreakdowns para provedores.
+Monitorar ReviewTrends.
+Auditar respostas de provedores às avaliações.
+Acessar SmartSuggestions para respostas (se o admin também responder).
+26. safetyService.ts
+Funções: reportPanic, reportIncident, getIncidentsForUser, triggerPanic, updatePanicLocation, endPanic, createIncidentReport.
+Implicação para admin-web:
+Central de Emergência e Gestão de Incidentes:
+Painel de Alerta de Pânico em Tempo Real: Visualizar PanicAlerts ativos, localização, status e gerenciar o ciclo de vida (acionar, atualizar localização, encerrar).
+Gestão de Incidentes: Visualizar, filtrar, atribuir, atualizar status e adicionar notas a Incidents.
+Processar relatórios de incidentes (vindos de pânico ou diretos).
+Acessar anexos e evidências de incidentes.
+27. securityService.ts
+Funções: initSecurity, enableBiometric, authenticateWithBiometric, secureStoreToken, getSecureToken, validateSession, getSecurityAlerts, reportSuspiciousActivity.
+Implicação para admin-web:
+Monitoramento de Segurança e Auditoria:
+Visualizar SecurityAlerts (logins suspeitos, novos dispositivos, anomalias de pagamento).
+Auditar SuspiciousActivitys reportadas pelos usuários.
+Acessar logs de sessão.
+28. subscriptionService.ts
+Funções: createSubscription, getSubscriptionsForUser, getSubscriptionDetails, updateSubscription.
+Implicação para admin-web:
+Gestão de Assinaturas e Recorrência:
+Visualizar e gerenciar todas as Subscriptions.
+Controlar o SubscriptionStatus (ativar, pausar, cancelar).
+Visualizar agendamentos recorrentes gerados por assinaturas.
+29. supportService.ts
+Funções: createTicket, getTickets, getTicketDetails, addMessageToTicket, updateTicketStatus.
+Implicação para admin-web:
+Sistema de Ticketing de Suporte (Help Desk):
+Visualizar e gerenciar todos os SupportTickets.
+Atribuir tickets a agentes.
+Comunicar-se com usuários via mensagens no ticket.
+Atualizar SupportTicketStatus (OPEN, IN_PROGRESS, WAITING_USER, RESOLVED, CLOSED, ESCALATED).
+Monitorar SLAs de atendimento.
+30. uploadService.ts (Infraestrutura)
+Funções: uploadImageToCloud.
+Implicação para admin-web:
+Gestão de Mídias/Anexos: O admin precisa ter acesso para visualizar e, se necessário, gerenciar (excluir, moderar) as imagens e documentos carregados pelos usuários (avatares, documentos de verificação, anexos de disputas/incidentes).
+31. userService.ts
+Funções: getMe().
+Implicação para admin-web:
+Gestão de Perfis de Usuários: O admin precisa de uma interface para buscar e visualizar o perfil completo de qualquer usuário, não apenas o seu próprio.
+Conclusão: O admin-web como a Torre de Controle da LimpeJá
+Com base na integração das funcionalidades expostas pelo módulo services do frontend, o admin-web se configura como uma torre de controle completa e robusta, permitindo ao dono ou coordenador:
+
+Monitoramento 360°: Ter uma visão em tempo real de todas as operações, desde o onboarding de provedores até a resolução de disputas financeiras e incidentes de segurança.
+Gestão Ativa: Não apenas visualizar, mas também intervir e gerenciar ativamente cada aspecto da plataforma (usuários, provedores, agendamentos, finanças, promoções, suporte).
+Tomada de Decisão Estratégica: Acesso a dados analíticos e insights de IA para otimizar preços, serviços, programas de incentivo e a experiência geral do usuário.
+Garantia de Qualidade e Segurança: Ferramentas para gerenciar a verificação de provedores, moderar avaliações, resolver disputas e incidentes, e monitorar a segurança.
+Escalabilidade Operacional: A capacidade de gerenciar volumes crescentes de dados e interações, essencial para o crescimento da LimpeJá para múltiplas cidades.
+Essa visão consolidada mostra que o admin-web não é apenas um painel básico, mas sim uma ferramenta operacional estratégica, fundamental para a eficiência, profissionalismo e sucesso em escala da plataforma LimpeJá, alinhando-se perfeitamente com a complexidade e riqueza das lógicas de negócio que você implementou.
