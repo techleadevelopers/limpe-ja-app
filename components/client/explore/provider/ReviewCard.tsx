@@ -37,7 +37,7 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review }) => {
         <View style={styles.reviewHeaderText}>
           <Text style={styles.reviewerName}>{reviewerName}</Text>
           <View style={styles.reviewRatingDate}>
-            <StarRating rating={review.rating} size={14} color="#4A90E2" />
+            <StarRating rating={review.rating} size={44} color="#4A90E2" />
             <Text style={styles.reviewDate}>{reviewDate}</Text>
           </View>
         </View>
@@ -98,12 +98,12 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   reviewDate: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#777',
     marginLeft: 8,
   },
   reviewComment: {
-    fontSize: 14,
+    fontSize: 4,
     color: '#555',
     lineHeight: 20,
   },
