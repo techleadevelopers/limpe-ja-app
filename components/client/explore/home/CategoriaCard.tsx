@@ -18,11 +18,11 @@ interface CategoriaCardProps {
   // onPress: (item: ServiceDetailsDto) => void;
 }
 
-const TINT_GRADIENT_START = 'rgba(230, 240, 255, 0.7)';
-const TINT_GRADIENT_END = 'rgba(210, 230, 255, 0.9)';
-const BLUR_INTENSITY = Platform.OS === 'ios' ? 20 : 40;
+const TINT_GRADIENT_START = 'rgba(230, 240, 255, 0)';
+const TINT_GRADIENT_END = 'rgba(210, 230, 255, 0)';
+const BLUR_INTENSITY = Platform.OS === 'ios' ? 20 : 1;
 const BLUR_TINT = 'light';
-const TEXT_COLOR = 'rgba(0, 123, 255, 0.62)';
+const TEXT_COLOR = 'rgba(255, 255, 255, 1)';
 
 const PRIMARY_SHADOW_COLOR = 'rgba(0, 50, 150, 0.2)';
 const PRIMARY_SHADOW_OFFSET_HEIGHT = 5;
@@ -141,7 +141,7 @@ const CategoriaCard: React.FC<CategoriaCardProps> = ({ item }) => { // Removida 
         onPress={handleCardPress} // Chama a função de navegação interna
         onPressIn={onPressInCard}
         onPressOut={onPressOutCard}
-        activeOpacity={0.9}
+        activeOpacity={0.1}
       >
         <BlurView
           intensity={BLUR_INTENSITY}
@@ -165,16 +165,21 @@ const CategoriaCard: React.FC<CategoriaCardProps> = ({ item }) => { // Removida 
 
 const styles = StyleSheet.create({
   cardContainerWrapper: {
-    width: 52,
-    height: 52,
-    marginRight: 12,
-    borderRadius: 55,
+    width: 39,
+    height: 34,
+    zIndex: 100,
+    marginRight: 9,
+    borderRadius: 5,
     marginBottom: 9,
+    left: 14,
+    bottom: 0,
+
     
   },
   shadowLayerPrimary: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: 55,
+    borderRadius: 35,
+    
     shadowColor: PRIMARY_SHADOW_COLOR,
     shadowOffset: { width: 0, height: PRIMARY_SHADOW_OFFSET_HEIGHT },
     shadowOpacity: 1,
@@ -184,39 +189,38 @@ const styles = StyleSheet.create({
   shadowLayerSecondary: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: 55,
-    shadowColor: SECONDARY_SHADOW_COLOR,
-    shadowOffset: { width: 0, height: SECONDARY_SHADOW_OFFSET_HEIGHT },
-    shadowOpacity: 1,
-    shadowRadius: SECONDARY_SHADOW_RADIUS,
-    elevation: SECONDARY_ELEVATION_ANDROID,
+    
+
   },
   touchableSurface: {
     width: '100%',
     height: '100%',
     borderRadius: 55,
+    
     overflow: 'hidden',
-    borderWidth: BORDER_WIDTH,
-    borderColor: BORDER_COLOR_LIGHT,
+
   },
   contentOverlay: {
     flex: 1,
+    
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 10,
     paddingHorizontal: 5,
   },
   iconImage: {
-    width: 35,
-    height: 35,
+    width: 30,
+    height: 30,
     resizeMode: 'contain',
     marginBottom: -2,
   },
   categoriaTexto: {
-    fontSize: 10,
+    fontSize: 6.9,
     color: TEXT_COLOR,
-    fontWeight: '500',
+     fontFamily: 'Montserrat-Thin', 
+        fontWeight: 'bold',
     textAlign: 'center',
-    marginTop: 7,
+    marginTop: 5,
   },
 });
 
