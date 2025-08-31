@@ -121,7 +121,7 @@ admin/
 │   │   ├── analytics/          # [NOVO] Financeiro, retenção e ROI
 │   │   ├── referrals/          # Indicadores de referrals
 │   │   ├── settings/
-│   ├── services/
+│   ├── lib/
 │   │   ├── api.ts             # Integração REST consolidada
 │   │   ├── coupons.ts         # CRUD cupons
 │   │   ├── missions.ts        # Gestão missões
