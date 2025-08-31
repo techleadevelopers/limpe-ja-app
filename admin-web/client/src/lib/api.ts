@@ -6,7 +6,7 @@ import {
     Transaction, WithdrawalRequest, Dispute, DisputeMessage, Subscription,
     Coupon, GuaranteeClaim, PricingRule, PanicAlert, Incident, UserConsent,
     DataRequest, DetailedRatingBreakdown, SmartSuggestion, QueueInfo, QueueJob,
-    BookingStatus, TransactionType, DisputeStatus, ClaimStatus, CouponType, CouponTarget,
+    BookingStatus, TransactionType, DisputeStatus, ClaimStatus, CouponType, CouponTarget, CouponStatus, // Adicionado CouponStatus aqui
     SubscriptionStatus, SubscriptionFrequency, IncidentType, IncidentStatus, PricingType,
     Review, Offer, Referral, FAQItem, Mission, MissionStatus, MissionTargetAudience,
     ReferralStatus // Importado o novo enum ReferralStatus
