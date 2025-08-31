@@ -5,10 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // Importado Select
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Filter, MoreHorizontal, MapPin, Star } from "lucide-react";
 import { motion } from "framer-motion";
-import VerificationModal from "@/components/verification/verification-modal";
+import VerificationModal from "@/components/verification/verification-modal"; // Este componente agora gerencia suas próprias chamadas de API
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchProviders, updateProviderStatus as apiUpdateProviderStatus } from "@/lib/api";
 import { Provider, VerificationStatus } from "@/lib/types";
@@ -61,6 +61,9 @@ export default function Providers() {
     queryFn: () => fetchProviders(),
   });
 
+  // A mutation para updateProviderStatus não é mais usada diretamente aqui para o modal,
+  // mas pode ser útil para outras operações na página de provedores.
+  // Mantenho-a caso haja outras funcionalidades que a utilizem.
   const updateProviderStatusMutation = useMutation({
     mutationFn: ({ id, status, rejectionReason }: { id: string; status: VerificationStatus; rejectionReason?: string }) =>
       apiUpdateProviderStatus(id, status, rejectionReason),
@@ -71,8 +74,9 @@ export default function Providers() {
         title: "Status do Provedor Atualizado",
         description: `${updatedProvider.name} agora está ${updatedProvider.verificationStatus.replace(/_/g, ' ').toLowerCase()}.`,
       });
-      setIsModalOpen(false);
-      setSelectedProvider(null);
+      // O modal é fechado pelo próprio VerificationModal após a ação
+      // setIsModalOpen(false);
+      // setSelectedProvider(null);
     },
     onError: (err: any) => {
       toast({
@@ -96,20 +100,9 @@ export default function Providers() {
     setIsModalOpen(true);
   };
 
-  const handleApproveProvider = (providerId: string) => {
-    updateProviderStatusMutation.mutate({ id: providerId, status: VerificationStatus.APPROVED });
-  };
-
-  const handleRejectProvider = (providerId: string, reason: string) => {
-    updateProviderStatusMutation.mutate({ id: providerId, status: VerificationStatus.REJECTED, rejectionReason: reason });
-  };
-
-  const handleBlockProvider = (providerId: string) => {
-    if (window.confirm("Tem certeza que deseja bloquear este provedor? Isso impedirá que ele receba novos agendamentos e acesse a plataforma.")) {
-      updateProviderStatusMutation.mutate({ id: providerId, status: VerificationStatus.BLOCKED });
-    }
-  };
-
+  // As funções handleApproveProvider, handleRejectProvider, handleBlockProvider
+  // foram movidas para dentro do VerificationModal, pois ele agora gerencia a API.
+  // Elas não são mais necessárias aqui para serem passadas como props.
 
   return (
     <div className="flex h-screen bg-admin-bg">
@@ -278,9 +271,8 @@ export default function Providers() {
           setIsModalOpen(false);
           setSelectedProvider(null);
         }}
-        onApprove={handleApproveProvider}
-        onReject={handleRejectProvider}
-        onBlock={handleBlockProvider}
+        // As props onApprove, onReject, onBlock foram removidas daqui
+        // pois o VerificationModal agora lida com a lógica de API internamente.
       />
     </div>
   );
