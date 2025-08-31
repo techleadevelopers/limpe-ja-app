@@ -20,7 +20,7 @@ import {
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next'; // Assuming i18n is set up
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from 'expo-linear-gradient'; // Mantido caso queira reverter ou usar em outro lugar, mas não será usado no hero
 
 import Colors from '../../../constants/Colors'; // Adjust path as needed
 
@@ -259,7 +259,9 @@ function PreferencesSection({
         <Icon3D src={icon3d} size={18} />
       </View>
       <View style={styles.prefTextCol}>
-        <Text style={styles.prefTitle}>{title}</Text>
+        <Text style={styles.prefTitle}>
+          {title}
+        </Text>
         <Text style={styles.prefSubtitle}>{subtitle}</Text>
       </View>
       <Switch value={value} onValueChange={onValueChange} />
@@ -428,7 +430,7 @@ export default function ClientCouponsScreen() {
   // --- Loading initial state
   if (isLoading && !isRefreshing) {
     return (
-      <View style={[styles.centeredFeedback, { backgroundColor: theme.background }]}>
+      <View style={[styles.centeredFeedback, { backgroundColor: '#FFFFFF' }]}>
         <Stack.Screen options={{ headerShown: false }} />
         <ActivityIndicator size="large" color={theme.primary} />
         <Text style={[styles.loadingText, { color: theme.textMuted }]}>Carregando cupons...</Text>
@@ -437,7 +439,7 @@ export default function ClientCouponsScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <View style={[styles.container, { backgroundColor: '#FFFFFF' }]}>
       <Stack.Screen options={{ headerShown: false }} />
 
       {/* Header de navegação sobreposto (transparente) */}
@@ -447,16 +449,17 @@ export default function ClientCouponsScreen() {
           {
             opacity: headerAnim,
             transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-40, 0] }) }],
-            backgroundColor: 'transparent',
-            borderBottomWidth: 0,
-            shadowOpacity: 0,
+            backgroundColor: '#FFFFFF', // Fundo branco para o cabeçalho
+            borderBottomWidth: 1,
+            borderBottomColor: '#eee',
+            shadowOpacity: 0, // Remover sombra se não desejado
           },
         ]}
       >
         <TouchableOpacity onPress={() => router.back()} style={styles.headerBackButton} accessibilityLabel={t('common.back') || 'Voltar'}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          <Ionicons name="arrow-back" size={24} color="#333333" /> {/* Ícone preto */}
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: '#FFFFFF' }]}>Meus Cupons</Text>
+        <Text style={[styles.headerTitle, { color: '#333333' }]}>Meus Cupons</Text> {/* Texto preto */}
         <View style={styles.headerActionIconPlaceholder} />
       </Animated.View>
 
@@ -467,41 +470,7 @@ export default function ClientCouponsScreen() {
           <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={theme.primary} />
         }
       >
-        {/* HERO */}
-        <View style={styles.heroWrapper}>
-          <Animated.Image
-            source={Icons3D.woman} // Reusing woman icon
-            style={[
-              styles.heroWomanIcon,
-              { transform: [{ scale: pulseAnim }] }
-            ]}
-            resizeMode="contain"
-          />
-
-          <LinearGradient
-            colors={['rgba(173, 216, 230, 0.7)', 'rgba(74, 145, 226, 0.72)', 'rgba(173, 216, 230, 0.7)']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.heroGradient}
-          >
-            <Image
-              source={Icons3D.heroCoupon} // Using heroCoupon icon
-              style={{ position: 'absolute', right: 12, top: Platform.OS === 'ios' ? 56 : 40, width: 54, height: 54, opacity: 0.10 }}
-              resizeMode="contain"
-            />
-            <View style={styles.heroContent}>
-              <Text style={styles.heroKicker}>DESCONTOS E BENEFÍCIOS</Text>
-              <Text style={styles.heroTitle}>
-                Seus cupons exclusivos te esperam!
-              </Text>
-
-              <TouchableOpacity style={styles.heroStartButton} onPress={() => scrollRef.current?.scrollToEnd({ animated: true })} accessibilityLabel="Ver Cupons">
-                <Text style={styles.heroStartText}>VER CUPONS</Text>
-                <Ionicons name="ticket" size={16} color={theme.primary} />
-              </TouchableOpacity>
-            </View>
-          </LinearGradient>
-        </View>
+      
 
         {/* Painel branco sobreposto */}
         <Animated.View
@@ -510,7 +479,7 @@ export default function ClientCouponsScreen() {
             {
               opacity: contentAnim,
               transform: [{ translateY: contentAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
-              backgroundColor: theme.background,
+              backgroundColor: '#FFFFFF', // Fundo branco para o painel
             },
           ]}
         >
@@ -579,11 +548,11 @@ export default function ClientCouponsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: '#FFFFFF' }, // Definido para branco
   centeredFeedback: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { marginTop: 10, fontSize: 16 },
 
-  // Header transparente
+  // Header
   customHeader: {
     position: 'absolute',
     top: 0, left: 0, right: 0,
@@ -593,7 +562,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 15,
     paddingVertical: Platform.OS === 'ios' ? 50 : 20,
-    paddingTop: Platform.OS === 'ios' ? 50 : 20,
+    paddingTop: Platform.OS === 'ios' ? 50 : -20,
+    // Fundo branco e borda adicionados diretamente no componente
   },
   headerBackButton: { marginRight: 15 },
   headerTitle: { fontSize: 18, fontWeight: 'bold', flex: 1, textAlign: 'center' },
@@ -604,9 +574,10 @@ const styles = StyleSheet.create({
 
   // Hero
   heroWrapper: { height: HERO_HEIGHT, width: '100%' },
-  heroGradient: {
+  heroPlainBackground: { // Novo estilo para o fundo branco do hero
     flex: 1,
-    paddingTop: Platform.OS === 'ios' ? 200 : 120, // Adjusted padding for smaller hero
+    backgroundColor: '#FFFFFF',
+    paddingTop: Platform.OS === 'ios' ? 200 : 120,
     paddingHorizontal: 28,
     justifyContent: 'flex-start',
   },
@@ -623,21 +594,22 @@ const styles = StyleSheet.create({
     flex: 1,
     zIndex: 2,
   },
-  heroKicker: { color: '#D7ECFF', letterSpacing: 1.2, fontWeight: '700', fontSize: 12 },
-  heroTitle: { color: '#FFFFFF', fontSize: 24, fontWeight: '800', marginTop: 6, lineHeight: 30, maxWidth: '90%' },
-  heroStartButton: {
-    marginTop: 16, alignSelf: 'flex-start', backgroundColor: '#FFFFFF',
+  heroKickerWhiteBg: { color: '#6B7280', letterSpacing: 1.2, fontWeight: '700', fontSize: 12 }, // Cor ajustada
+  heroTitleWhiteBg: { color: '#1F2937', fontSize: 24, fontWeight: '800', marginTop: 6, lineHeight: 30, maxWidth: '90%' }, // Cor ajustada
+  heroStartButtonWhiteBg: { // Botão com fundo branco e texto azul
+    marginTop: 16, alignSelf: 'flex-start', backgroundColor: '#E0E0E0', // Cor de fundo mais clara para o botão
     paddingVertical: 10, paddingHorizontal: 16, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 6,
   },
-  heroStartText: { color: '#0A84FF', fontWeight: '800', fontSize: 13 },
+  heroStartTextWhiteBg: { color: '#333333', fontWeight: '800', fontSize: 13 }, // Cor ajustada
 
   // Panel
   panel: {
-    marginTop: -24,
+    marginTop: -14,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     paddingTop: 16,
     paddingBottom: 24,
+    // Fundo branco definido no componente
   },
 
   // Coupon Card
