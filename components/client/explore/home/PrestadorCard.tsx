@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
         borderRadius: 22,
         overflow: 'visible',
   shadowColor: '#000',
-    shadowOffset: { width: 4, height: 7 },
+    shadowOffset: { width: 4, height: 8 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3, // Sombra para Android
