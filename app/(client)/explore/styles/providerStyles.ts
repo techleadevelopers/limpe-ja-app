@@ -20,6 +20,7 @@ const COLOR_SHADOW = 'rgba(0, 0, 0, 0.08)'; // Sombra suave e discreta (reduzida
 const COLOR_ERROR = '#D32F2F'; // Cor para mensagens de erro
 const COLOR_SUCCESS = '#28A745'; // Cor para status de sucesso/verificado
 const COLOR_WARNING = '#FFC107'; // Cor para avisos
+const COR_BORDA_SUAVE = '#8197e697'; // Defina esta constante
 
 // Exporta os estilos
 export const styles = StyleSheet.create({
@@ -114,7 +115,7 @@ export const styles = StyleSheet.create({
 
   // Botões de navegação (header)
   iconButtonBackground: {
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: 'rgba(0,0,0,0.3)', // Cor de fundo original para botões de ícone
     padding: 10,
     borderRadius: 25,
     alignItems: 'center',
@@ -122,6 +123,28 @@ export const styles = StyleSheet.create({
     width: 45,
     height: 45,
   },
+
+  // --- NOVOS ESTILOS PARA O CABEÇALHO (HEADER) ---
+  headerContainer: {
+    backgroundColor: COLOR_CARD_BACKGROUND, // Fundo branco para o cabeçalho
+    ...Platform.select({
+      ios: {
+        shadowColor: COLOR_SHADOW,
+        shadowOffset: { width: 0, height: 3 }, // Sombra suave para o iOS
+        shadowOpacity: 0.15,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 8, // Elevação para o Android
+      },
+    }),
+  },
+  headerTitle: {
+    color: COLOR_TEXT_DARK, // Cor preta para o título
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  // --- FIM DOS NOVOS ESTILOS PARA O CABEÇALHO ---
 
   // Informações do provedor (Paddings mantidos)
   providerInfoWhiteCard: {
@@ -599,15 +622,15 @@ export const styles = StyleSheet.create({
     marginTop: 12, // Mantido o marginTop para espaçamento original
   },
   avatarImg: {
-    width: 28,
-    height: 28,
+    width: 34,
+    height: 34,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: '#D1D5DB',
   },
   moreBadge: {
-    width: 28,
-    height: 28,
+    width: 34,
+    height: 34,
     borderRadius: 14,
     backgroundColor: '#111827',
     alignItems: 'center',
@@ -619,6 +642,17 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     fontFamily: FONT_FAMILY, // Agora FONT_FAMILY está definido
   },
+  sectionSeparator: {
+        borderBottomWidth: 1,
+        borderBottomColor: COR_BORDA_SUAVE, // Uma cor suave para a linha
+        marginVertical: 5, // Espaçamento vertical para a linha
+        // Ajuste o `marginHorizontal` para alinhar com o padding do conteúdo principal,
+        // ou use `width: 'auto'` e ajuste o `paddingHorizontal` do container pai se necessário.
+        // O `right: 21` parece um ajuste específico, talvez seja melhor usar `marginHorizontal` ou `paddingHorizontal`
+        // no container que envolve as seções para consistência.
+        // Para este exemplo, vou ajustar para que fique centralizado e com margens laterais.
+        marginHorizontal: 20, // Exemplo: ajuste conforme o padding do seu contentArea
+    },
 
   // --- ESTILOS DO FUNDO COM EFEITO REMOVIDOS ---
 });
