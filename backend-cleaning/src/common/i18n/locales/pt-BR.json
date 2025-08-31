@@ -20,6 +20,9 @@
       "per_hour_short": "/h",
       "per_sqm_short": "/m²"
     },
+    "explore_section": {
+      "title": "Explore mais Serviços"
+    },
     "search": {
       "title": "Buscar Serviços",
       "distance": "A {{distance}} km",
@@ -141,7 +144,6 @@
       "unavailable_time_slot": "Horário Indisponível",
       "unavailable_time_slot_message": "Este horário já está agendado ou não disponível. Por favor, selecione outro.",
       "select_date_time_address": "Selecione Data, Hora e Endereço",
-
       "available_times": "Horários disponíveis",
       "preferred_times": "Preferências de horário",
       "no_slots": "Nenhum horário disponível para esta data."
