@@ -20,6 +20,9 @@
       "per_hour_short": "/hr",
       "per_sqm_short": "/sqm"
     },
+    "explore_section": {
+      "title": "Explore"
+    },
     "search": {
       "title": "Search Services",
       "distance": "{{distance}} km away",
