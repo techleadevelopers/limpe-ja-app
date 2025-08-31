@@ -1,4 +1,3 @@
-// [providerId].tsx
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
@@ -410,31 +409,43 @@ export default function ProviderDetailsScreen() {
 
     return (
         <View style={styles.screenContainer}>
-            {/* --- JSX DO FUNDO COM EFEITO REMOVIDO --- */}
-            {/* Estes elementos não existem mais neste nível */}
+            {/* Esconde o header padrão do Expo Router para usar um customizado */}
+            <Stack.Screen options={{ headerShown: false }} />
 
-            <Stack.Screen options={{
-                headerTransparent: true,
-                title: '',
-                headerLeft: () => (
-                    <TouchableOpacity
-                        onPress={() => router.back()}
-                        style={[styles.iconButtonBackground, { marginLeft: 15, marginTop: Platform.OS === 'ios' ? insets.top : 15 }]}
-                    >
-                        <Ionicons name="arrow-back" size={20} color="#FFF" />
-                    </TouchableOpacity>
-                ),
-                headerRight: () => (
-                    <TouchableOpacity
-                        onPress={() => Alert.alert(t("common.save"), t("provider_details.save_favorite"))}
-                        style={[styles.iconButtonBackground, { marginRight: 15, marginTop: Platform.OS === 'ios' ? insets.top : 15 }]}
-                    >
-                        <Ionicons name="bookmark-outline" size={20} color="#FFF" />
-                    </TouchableOpacity>
-                ),
-            }} />
+            {/* HEADER CUSTOMIZADO */}
+            <View
+                style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    paddingVertical: 14,
+                    paddingHorizontal: 16,
+                    backgroundColor: "#fff",
+                    borderBottomWidth: 1,
+                    borderBottomColor: "#eee",
+                    paddingTop: Platform.OS === 'ios' ? insets.top + 14 : 14, // Ajusta padding superior para iOS
+                }}
+            >
+                <TouchableOpacity onPress={() => router.back()}>
+                    {/* Seta de voltar com tamanho diminuído */}
+                    <Ionicons name="arrow-back" size={20} color="#333" />
+                </TouchableOpacity>
+                <Text
+                    style={{
+                        flex: 1,
+                        textAlign: "center",
+                        fontSize: 15, // Tamanho da fonte alterado
+                        fontFamily: 'Montserrat-Regular', // Fonte alterada
+                        fontWeight: '800', // Peso da fonte alterado
+                        color: "#333",
+                        marginRight: 24, // garante que o título fique centralizado
+                    }}
+                >
+                    Detalhes
+                </Text>
+            </View>
+            {/* FIM DO HEADER CUSTOMIZADO */}
 
-            {/* O ScrollView agora tem um estilo `mainScrollView` para garantir transparência */}
+            {/* O ScrollView agora contém o restante do conteúdo da página */}
             <ScrollView style={styles.mainScrollView} contentContainerStyle={styles.scrollContentContainer}>
                 <Animated.View style={[
                     styles.providerImageContainer,
@@ -463,9 +474,6 @@ export default function ProviderDetailsScreen() {
                         }]
                     }
                 ]}>
-                    {/* --- JSX DO FUNDO COM EFEITO INTERNO REMOVIDO --- */}
-                    {/* Camada branca semi-transparente e wrapper de conteúdo removidos */}
-
                     <View style={styles.providerInfoWhiteCard}>
                         <View style={styles.providerNameRow}>
                             <Text style={styles.providerNameWhiteCard}>{provider.fullName}</Text>
