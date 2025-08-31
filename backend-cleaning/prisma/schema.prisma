@@ -270,7 +270,7 @@ model User {
   referralsMade         Referral[]         @relation("ReferrerOfUser")
   disputesReported      Dispute[]          @relation("DisputeReporter")
   reportedIncidents     Incident[]         @relation("ReportedIncidents")
-  panicAlerts           PanicAlert[]       @relation("PanicAlerts")
+  panicAlerts           PanicAlert[]       @relation("PanicAlerts") // CORREÇÃO AQUI
   userConsents          UserConsent[]
   disputeMessagesSent   DisputeMessage[]   @relation("DisputeSender")
   loyalty               Loyalty?
@@ -389,20 +389,22 @@ model ProviderService {
   id                    String         @id @default(uuid())
   providerId            String
   serviceId             String
-  price                 Decimal        @db.Decimal(10, 2)
+  price                 Decimal?       @db.Decimal(10, 2) // Tornando opcional para flexibilidade
+  pricePerHour          Decimal?       @db.Decimal(10, 2) // NOVO: Campo para preço por hora
+  pricePerSquareMeter   Decimal?       @db.Decimal(10, 2)
+  pricePerRoom          Decimal?       @db.Decimal(10, 2)
   durationMinutes       Int?
   description           String?
   provider              Provider       @relation(fields: [providerId], references: [id], onDelete: Cascade)
   pricingType           PricingType    @default(FIXED_PRICE)
-  pricePerSquareMeter   Decimal?       @db.Decimal(10, 2)
-  pricePerRoom          Decimal?       @db.Decimal(10, 2)
   service               Service        @relation(fields: [serviceId], references: [id])
   bookings              Booking[]
   createdAt             DateTime       @default(now())
   updatedAt             DateTime       @updatedAt
   subscriptions         Subscription[] @relation("ProviderServiceSubscriptions")
 
-  @@unique([providerId, serviceId])
+  // ALTERAÇÃO AQUI: Adicionado 'pricingType' na restrição de unicidade
+  @@unique([providerId, serviceId, pricingType])
 }
 
 // Modelo de Agendamento
@@ -420,7 +422,7 @@ model Booking {
   totalPrice                Decimal       @db.Decimal(10, 2)
   notes                     String?
   createdAt                 DateTime      @default(now())
-  updatedAt                 DateTime      @updatedAt
+  updatedAt                 DateTime       @updatedAt
   review                    Review?
   transactions              Transaction[]
   addressId                 String?       @unique
