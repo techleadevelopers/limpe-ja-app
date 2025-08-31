@@ -134,7 +134,7 @@ const AddressSection: React.FC<AddressSectionProps> = ({
       {/* Trilho com ícone + mensagem + docCheck 3D */}
       <View style={s.track}>
         <Animated.Image
-          source={require('../../../../assets/images/woman.png')}
+          source={require('../../../../assets/images/mascote-support.png')}
           style={[s.trackIcon, { transform: [{ scale: trackerIconPulseAnim }] }]}
           resizeMode="contain"
         />
@@ -171,12 +171,7 @@ const AddressSection: React.FC<AddressSectionProps> = ({
           </Animated.View>
         </View>
 
-        {/* Ícone 3D docCheck à direita (substitui “residencial”) */}
-        <Animated.Image
-          source={Icons3D.docCheck}
-          style={[s.trackIcon, { transform: [{ scale: trackerIconPulseAnim }] }]}
-          resizeMode="contain"
-        />
+    
       </View>
 
       {/* Endereço */}
@@ -223,8 +218,8 @@ const s = StyleSheet.create({
     marginBottom: 8,
   },
   trackIcon: {
-    width: 42,
-    height: 42,
+    width: 72,
+    height: 72,
     marginHorizontal: 0,
   },
 
