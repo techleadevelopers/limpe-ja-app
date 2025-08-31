@@ -8,7 +8,8 @@ import {
     DataRequest, DetailedRatingBreakdown, SmartSuggestion, QueueInfo, QueueJob,
     BookingStatus, TransactionType, DisputeStatus, ClaimStatus, CouponType, CouponTarget,
     SubscriptionStatus, SubscriptionFrequency, IncidentType, IncidentStatus, PricingType,
-    Review, Offer, Referral, FAQItem,
+    Review, Offer, Referral, FAQItem, Mission, MissionStatus, MissionTargetAudience,
+    ReferralStatus // Importado o novo enum ReferralStatus
 } from './types';
 
 const API_BASE_URL = 'http://127.0.0.1:3000';
@@ -259,6 +260,33 @@ export const deleteCoupon = async (id: string): Promise<void> => {
     });
 };
 
+// --- Funções de Missões ---
+export const fetchMissions = async (status?: MissionStatus): Promise<Mission[]> => {
+    const query = status ? `?status=${status}` : '';
+    return fetchApi(`/missions${query}`);
+};
+
+export const createMission = async (data: Omit<Mission, 'id' | 'timesCompleted' | 'createdAt' | 'updatedAt'>): Promise<Mission> => {
+    return fetchApi('/missions', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    });
+};
+
+export const updateMission = async (id: string, data: Partial<Mission>): Promise<Mission> => {
+    return fetchApi(`/missions/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+    });
+};
+
+export const deleteMission = async (id: string): Promise<void> => {
+    return fetchApi(`/missions/${id}`, {
+        method: 'DELETE',
+    });
+};
+
+
 // --- Funções de Reclamações de Garantia ---
 export const fetchAllGuaranteeClaims = async (status?: ClaimStatus): Promise<GuaranteeClaim[]> => {
     const query = status ? `?status=${status}` : '';
@@ -411,7 +439,7 @@ export const deleteOffer = async (id: string): Promise<void> => {
 };
 
 // --- Funções de FAQs ---
-export const createFAQ = async (data: { question: string; answer: string; category?: string; order?: number }): Promise<FAQItem> => {
+export const createFAQ = async (data: Omit<FAQItem, 'id' | 'createdAt' | 'updatedAt'>): Promise<FAQItem> => {
     return fetchApi('/faqs', {
         method: 'POST',
         body: JSON.stringify(data),
@@ -436,9 +464,28 @@ export const deleteFAQ = async (id: string): Promise<void> => {
 };
 
 // --- Funções de Indicações ---
-export const fetchReferrals = async (): Promise<Referral[]> => {
-    return fetchApi('/referrals');
+export const fetchAllReferrals = async (status?: ReferralStatus): Promise<Referral[]> => {
+    const query = status ? `?status=${status}` : '';
+    return fetchApi(`/referrals${query}`);
 };
+
+export const fetchReferralDetails = async (id: string): Promise<Referral> => {
+    return fetchApi(`/referrals/${id}`);
+};
+
+export const updateReferralStatus = async (id: string, status: ReferralStatus, notes?: string): Promise<Referral> => {
+    return fetchApi(`/referrals/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status, notes }),
+    });
+};
+
+export const issueReferralReward = async (id: string): Promise<Referral> => {
+    return fetchApi(`/referrals/${id}/issue-reward`, {
+        method: 'POST',
+    });
+};
+
 
 // --- Funções de Alertas de Segurança ---
 export const fetchPanicAlerts = async (status?: string): Promise<PanicAlert[]> => {
@@ -502,6 +549,9 @@ export const retryQueueJob = async (queueName: string, jobId: string): Promise<a
 };
 
 // Tipos adicionais (já estavam no seu arquivo, apenas mantidos)
+// Estes tipos devem ser removidos daqui se já estiverem definidos em './types.ts'
+// Eles estão aqui no original para compatibilidade, mas a fonte da verdade é o './types.ts'
+/*
 export type FAQItem = {
     id: string;
     question: string;
@@ -537,14 +587,4 @@ export type Review = {
     provider?: Provider;
     booking?: Booking;
 };
-
-export type Referral = {
-    id: string;
-    referredUserId: string;
-    referrerUserId: string;
-    referralCode?: string | null;
-    createdAt: string;
-    updatedAt: string;
-    referredUser?: AuthUser;
-    referrerUser?: AuthUser;
-};
+*/
