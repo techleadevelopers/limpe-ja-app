@@ -141,6 +141,7 @@ const styles = StyleSheet.create({
         marginHorizontal: 0, // Garante que não há margem horizontal extra do próprio cartão
         marginBottom: 10, // Mantém o espaçamento vertical entre os cartões
         borderRadius: 12,
+        zIndex: 100,
         overflow: 'visible',
         ...Platform.select({
             ios: {
