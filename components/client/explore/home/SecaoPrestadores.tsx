@@ -20,7 +20,7 @@ const SecaoPrestadores: React.FC<SecaoPrestadoresProps> = ({
   titulo,
   data,
   onVerTudoPress,
-  titleColor = '#202633',
+  titleColor = '#4f5a71ff',
   noDataText = 'Nenhum prestador disponível no momento.',
   horizontal = false,
   renderItem,
@@ -54,9 +54,9 @@ const SecaoPrestadores: React.FC<SecaoPrestadoresProps> = ({
             onPressIn={onPressInViewAll}
             onPressOut={onPressOutViewAll}
           >
-            <Text style={styles.viewAllText}>Ver Tudo </Text>
+            <Text style={styles.viewAllText}>mais </Text>
             <Animated.View style={{ transform: [{ translateX: arrowAnim }] }}>
-              <Ionicons name="arrow-forward" size={14} color="#007BFF" />
+              <Ionicons name="chevron-forward" size={14} color="#65707bff" />
             </Animated.View>
           </TouchableOpacity>
         )}
@@ -75,8 +75,8 @@ const SecaoPrestadores: React.FC<SecaoPrestadoresProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 2,
-    marginBottom: 5,
+    marginTop: -2,
+    marginBottom: -18,
     backgroundColor: '#F4F7FC',
   },
   header: {
@@ -87,8 +87,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   sectionTitle: {
-    fontSize: 17,
-    fontWeight: 'bold',
+    fontSize: 15,
+    fontFamily: 'Montserrat-Regular',
+    fontWeight: '800',
     color: '#202633',
   },
   viewAllButton: {
@@ -98,7 +99,7 @@ const styles = StyleSheet.create({
   },
   viewAllText: {
     fontSize: 12,
-    color: '#007BFF',
+    color: '#65707bff',
     fontWeight: '600',
   },
   cardsScrollContainer: {
@@ -109,7 +110,7 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
     color: '#666',
-    marginTop: 20,
+    marginTop: 10,
     paddingHorizontal: 20,
   },
 });
