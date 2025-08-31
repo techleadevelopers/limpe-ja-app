@@ -144,6 +144,14 @@ export enum ReferralStatus {
     CANCELED = "CANCELED",   // Indicação cancelada
 }
 
+// NOVO: Enum para o status do PanicAlert (conforme README.md)
+export enum PanicStatus {
+    RECEIVED = 'RECEIVED',
+    ACKED = 'ACKED',
+    DISPATCHED = 'DISPATCHED',
+    CLOSED = 'CLOSED',
+}
+
 export type Provider = {
     id: string;
     name: string;
@@ -442,13 +450,20 @@ export type PricingRule = {
 
 export type PanicAlert = {
     id: string;
+    bookingId?: string | null; // Adicionado conforme README.md
     userId: string;
-    latitude: number;
-    longitude: number;
+    role: 'CLIENT' | 'PROVIDER'; // Adicionado conforme README.md
     message?: string | null;
-    status: string;
+    locationLat?: number | null; // Renomeado de 'latitude' e tornado opcional/anulável
+    locationLon?: number | null; // Renomeado de 'longitude' e tornado opcional/anulável
+    status: PanicStatus; // Alterado para o enum PanicStatus
+    ackByUserId?: string | null; // Adicionado conforme README.md
+    ackAt?: string | null; // Adicionado conforme README.md (usando string para consistência de data)
+    dispatchedAt?: string | null; // Adicionado conforme README.md
+    closedAt?: string | null; // Adicionado conforme README.md
     createdAt: string;
-    user?: AuthUser;
+    updatedAt?: string; // Adicionado para consistência, mesmo que não explicitamente no PanicAlert do README.md
+    user?: AuthUser; // Mantido para conveniência do frontend
 };
 
 export type Incident = {
@@ -600,4 +615,3 @@ export enum OfferStatus {
     INACTIVE = "INACTIVE",
     EXPIRED = "EXPIRED",
 }
-
