@@ -27,7 +27,7 @@ export interface Offer {
   originalPrice?: number | null;
   discountedPrice?: number | null;
   validUntil?: string | null;
-  couponCode?: string | null;
+  couponCode?: string | null; // ESTA PROPRIEDADE JÁ EXISTE E É A CORRETA!
   serviceId?: string | null;
   providerId?: string | null;
   bankName?: string | null;
