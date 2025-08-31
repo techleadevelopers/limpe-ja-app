@@ -169,7 +169,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
                                 start={{ x: 0, y: 0 }}
                                 end={{ x: 1, y: 1 }}
                             >
-                                <Ionicons name="add" size={22} color="#fff" />
+                                <Ionicons name="add" size={18} color="#fff" />
                             </LinearGradient>
 
                             {renderStars(item.averageRating)}
@@ -184,7 +184,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
             </TouchableOpacity>
             {/* Ícone docCheck2 posicionado absolutamente FORA DO FLUXO NORMAL */}
             <Image
-                source={Icons3D.docCheck} // Caminho para o ícone docCheck2
+                source={Icons3D.location} // Caminho para o ícone docCheck2
                 style={styles.docCheckIcon}
             />
      
@@ -195,7 +195,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
 
 const styles = StyleSheet.create({
     animatedCardContainer: {
-  width: 170,
+  width: 160,
   marginRight: 15,
   marginBottom: 5,
   borderRadius: 12,
@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
     },
     imageWrapper: {
         width: '100%',
-        height: 120,
+        height: 100,
         backgroundColor: '#E0E0E0',
         justifyContent: 'center',
         alignItems: 'center',
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     providerName: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: 'bold',
         color: '#2D3748',
         // marginRight removido, pois o ícone não está mais no fluxo
@@ -243,17 +243,17 @@ const styles = StyleSheet.create({
     // NOVO: Estilo para o ícone docCheck2 com posicionamento absoluto
     docCheckIcon: {
         position: 'absolute', // Posicionamento absoluto
-        top: 10, // Ajuste este valor para mover o ícone verticalmente
-        right: 10, // Ajuste este valor para mover o ícone horizontalmente
-        width: 40, // Largura fixa
-        height: 40, // Altura fixa
+        top: 2, // Ajuste este valor para mover o ícone verticalmente
+        right: 5, // Ajuste este valor para mover o ícone horizontalmente
+        width: 30, // Largura fixa
+        height: 30, // Altura fixa
         resizeMode: 'contain', // Garante que o ícone inteiro seja visível dentro das dimensões
         zIndex: 1, // Garante que o ícone fique acima de outros elementos se houver sobreposição
     },
 
     
     serviceDescription: {
-        fontSize: 11,
+        fontSize: 9,
         color: '#6C757D',
         marginBottom: 8,
     },
@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
         marginBottom: 2,
     },
     priceValue: {
-        fontSize: 14,
+        fontSize: 13,
         fontWeight: 'bold',
         color: '#2D3748',
     },
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
     plusButton: {
         width: 28,
         height: 28,
-        left: 20,
+        left: 12,
         bottom: 28,
         borderRadius: 53,
         justifyContent: 'center',
