@@ -16,6 +16,18 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchAllDisputes, fetchDisputeDetails, updateDisputeStatus, sendDisputeMessage } from "@/lib/api";
 import { Dispute, DisputeStatus, DisputeReason, DisputeMessage } from "@/lib/types";
 
+// Função utilitária para obter a classe do badge de status
+// MOVIDA PARA FORA DOS COMPONENTES PARA SER ACESSÍVEL GLOBALMENTE NO ARQUIVO
+const getStatusBadgeClass = (status: DisputeStatus) => {
+  switch (status) {
+    case DisputeStatus.PENDING: return "bg-yellow-100 text-yellow-700";
+    case DisputeStatus.IN_REVIEW: return "bg-blue-100 text-blue-700";
+    case DisputeStatus.RESOLVED: return "bg-green-100 text-green-700";
+    case DisputeStatus.REJECTED: return "bg-red-100 text-red-700";
+    default: return "bg-gray-100 text-gray-700";
+  }
+};
+
 // Componente de Modal para Detalhes e Ações da Disputa
 interface DisputeDetailsModalProps {
   isOpen: boolean;
@@ -247,15 +259,8 @@ export default function DisputeManagement() {
     return matchesSearch && matchesStatus;
   }) || [];
 
-  const getStatusBadgeClass = (status: DisputeStatus) => {
-    switch (status) {
-      case DisputeStatus.PENDING: return "bg-yellow-100 text-yellow-700";
-      case DisputeStatus.IN_REVIEW: return "bg-blue-100 text-blue-700";
-      case DisputeStatus.RESOLVED: return "bg-green-100 text-green-700";
-      case DisputeStatus.REJECTED: return "bg-red-100 text-red-700";
-      default: return "bg-gray-100 text-gray-700";
-    }
-  };
+  // A função getStatusBadgeClass foi movida para fora deste componente
+  // para ser acessível a ambos DisputeManagement e DisputeDetailsModal.
 
   // Calculate key metrics
   const totalDisputes = disputes?.length || 0;
