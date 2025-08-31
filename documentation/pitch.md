@@ -290,3 +290,111 @@ Seguro e garantias só dentro do app → cliente entende que fechar fora = assum
 
 Gestão de incidentes e disputas integrada para confiança mútua
 .
+
+
+🔥 LimpeJá – Blueprint de Escala & Ganhos Futuros
+🎯 Visão
+
+Ser o Airbnb das diaristas e serviços domésticos no Brasil, começando com limpeza, mas expandindo para pós-obra, Airbnb turnover e contratos B2B leves.
+
+📍 Fases de Escala
+Fase 1 – Campinas (MVP validado)
+
+Supply: já temos >40 prestadoras interessadas (orgânico).
+
+Meta: 800–1.000 serviços/mês em 90 dias.
+
+CAC Cliente: ≤R$60.
+
+Repeat: 35% em D30.
+
+Unit: ticket médio R$300 → take R$45/serviço → R$36k–45k MRR (com 800–1.000 serviços).
+
+🔑 Alvo: atingir product-channel fit → se repetir 3× + CAC ≤2 serviços, validamos.
+
+Fase 2 – São Paulo (primeira capital)
+
+Supply: 300–500 prestadoras.
+
+Meta: 5.000 serviços/mês (1 cidade).
+
+Unit: R$45 × 5.000 = R$225k MRR.
+
+Ação: Ads hiperlocal + parcerias com academias/condomínios + planos recorrentes (semanal/quinzenal).
+
+Defensivo: implementar rebook automático + fidelidade/cashback.
+
+🔑 Alvo: CAC payback ≤2 meses e suporte escalável (disputas ≤3%).
+
+Fase 3 – 5–10 Cidades Chave (interior + capitais)
+
+Meta: 25–50k serviços/mês.
+
+Unit: R$45 × 25k–50k = R$1,1M–2,2M MRR.
+
+Produto: adicionar cartão + add-ons (geladeira/forno, pós-obra light) + parcerias Airbnb.
+
+Growth: expandir modelo “B2B leve” (condomínios e coworkings).
+
+🔑 Alvo: NPS ≥60 + repeat 40% → cria barreira cultural contra GetNinjas.
+
+Fase 4 – Nacional (50+ cidades)
+
+Meta: 200k serviços/mês.
+
+Unit: R$45 × 200k = R$9M MRR (~R$108M ARR).
+
+Ops: estrutura de suporte 24/7, seguro e garantias ampliadas, programa de níveis e microcrédito para diaristas.
+
+Monetização adicional: SaaS para prestadores, fintech interna, marketplace de produtos de limpeza (B2B2C).
+
+💰 Fontes de Receita (presentes & futuras)
+
+Take por serviço (core) – 15% do ticket (R$45 médio).
+
+Planos recorrentes premium – desconto para cliente + retenção garantida.
+
+Publicidade local – fornecedores de materiais de limpeza anunciando dentro do app.
+
+Marketplace B2B – venda de insumos e produtos de limpeza (direto para prestadoras).
+
+Fintech/Wallet LimpeJá – antecipação de recebíveis, microcrédito, seguros.
+
+SaaS white-label – agenda e faturamento para prestadoras B2B (condomínios, empresas).
+
+📊 Projeções de Ganhos (3 anos)
+Ano	Cidades	Serviços/mês	Receita Bruta (GMV)	Receita LimpeJá (15%)
+2025	2–3 (Campinas+SP)	6k–7k	R$1,8–2,1M	R$270k–315k/mês
+2026	10+	30k–40k	R$9–12M	R$1,35–1,8M/mês
+2027	50+	200k	R$60M	R$9M/mês (R$108M/ano)
+🛡️ Moats (defesas contra concorrência)
+
+PIX em 24h → imbatível para supply.
+
+KYC + reputação mútua → trust layer.
+
+Gamificação + cashback → reduz desintermediação.
+
+Plano recorrente automático → retém clientes.
+
+Marca vertical (limpeza = LimpeJá) → foco contra generalistas.
+
+🚀 Próximos 90 dias (ações táticas)
+
+Onboarding seletivo (lista de espera + selo Bronze/Prata/Ouro).
+
+Ads hiperlocal em Campinas (teste CAC).
+
+Rebook automático + cashback.
+
+Parcerias locais (condomínios, academias, imobiliárias).
+
+1º contrato B2B leve (condomínio ou Airbnb host).
+
+🌟 Pitch de visão
+
+“O GetNinjas cobra moedas, o LimpeJá entrega limpeza justa, rápida e sem enrolação. Dinheiro no bolso da diarista em 24h e confiança para o cliente.”
+
+👉 Mano, esse blueprint aqui já dá pra virar um pitch deck de investidor e também um playbook operacional.
+
+Quer que eu monte uma planilha dinâmica (Excel/Google Sheets) com esses números (CAC, repeat, ticket médio) pra você brincar com cenários de Campinas, SP e Nacional?
