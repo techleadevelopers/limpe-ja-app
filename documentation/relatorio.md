@@ -1,63 +1,193 @@
-Avaliação Atualizada do Projeto LimpeJá
-1. Visão Geral e Propósito do Produto
+Veredito rápido (com percentuais)
 
-LimpeJá é um aplicativo mobile-first que conecta clientes a diaristas de forma prática, segura e acessível. Diferente de concorrentes elitizados, que cobram taxas altas dos prestadores, o LimpeJá quer ser o “iFood das diaristas” — popular, com 0% de taxa para prestadores, pagamento rápido via PIX e experiência premium no app.
-O propósito é democratizar o acesso à mão de obra doméstica, gerando renda para diaristas e conveniência para clientes. A validação inicial já mostrou tração: mais de 50 diaristas demonstraram interesse em um teste de mercado com apenas um post genérico em grupos locais.
+Sucesso local (MVP em 1 cidade): 65–80% de chance — UX sólida, fluxo completo (cadastro, KYC/estágios de verificação, busca geo, agendamento, pagamento PIX, chat, cupons/missões, disputas), tudo já mapeado no front/back, o que reduz risco de execução inicial. 
+ 
+ 
+ 
 
-2. Análise da Lógica de Negócio
+Escala multi-cidade (5–20 cidades): 35–55% — depende de supply ops, suporte e unit economics positivos; a estratégia hiperlocal e os diferenciais (verificação robusta + PIX em 24h + 0% para prestador) aumentam a chance. 
+ 
 
-O modelo continua sendo marketplace P2P, mas agora já validado na prática: a barreira de entrada para diaristas é zero (0% de taxa), e a atratividade para clientes se apoia em confiança, preços justos e cupons de incentivo.
+Liderança nacional (50+ cidades): 15–25% — viável, mas só com máquina de aquisição/retensão afiada e defesa anti-desintermediação; há caminho projetado, porém execution-heavy. 
 
-Fluxo: criação de agendamento com segurança (Redis lock, cálculo dinâmico de preços, confirmação e repasse rápido).
+Critério de “sucesso” aqui: MRR positivo e crescente, NPS>60, repeat>40% em 60 dias, CAC recuperado em ≤3 meses, e ≥5.000 serviços/mês por cidade âncora. As projeções do pitch apontam a mesma ordem de grandeza (R$45 de take por serviço; 5k serviços = R$225k MRR por cidade). 
 
-Confiança: sistema de verificação (documento, selfie, antecedentes) e avaliações mútuas.
+Por que o produto tem tração potencial
+1) Produto/UX e completude de funil
 
-Validação real: a alta resposta orgânica prova que o modelo resolve uma dor latente tanto para diaristas quanto para clientes.
+Você já cobre ponta-a-ponta:
 
-3. Estratégias Atuais de Monetização e Go-to-Market
+Auth + papéis + roteamento condicional por status de verificação (APPROVED / PENDING_*) via Expo Router + Contexts. 
 
-Monetização: comissão de ~15% sobre o valor pago pelo cliente (sem cobrar nada das diaristas). Com ticket médio de R$300, isso gera ~R$45 de receita por serviço.
+KYC e onboarding do provedor em etapas, com persistência de estado e atualização posterior do perfil. 
 
-Go-to-Market validado: com mínimo investimento em marketing, houve alta demanda. Isso mostra que o crescimento orgânico pode ser alavancado com cupons, indicações e boca a boca.
+Busca geolocalizada + recomendações + banners/ofertas (explore) — bom para CTR na home. 
 
-Escala: em vez de queimar caixa em anúncios iniciais, a estratégia acertada é construir credibilidade com base sólida, depois escalar com tráfego pago e parcerias locais.
+Agendamento + pagamento PIX + comprovante/QR + adicionar ao calendário + chat — resolve fricções críticas e diminui no-show. 
 
-4. Pontos Fortes e Diferenciais
+Disputas/suporte + notificações + missões/cupons/loyalty — cria “trust layer” e motor de retenção (lock-in). 
 
-Validação de massa crítica já alcançada — atrair diaristas não é um problema.
+Arquitetura RN/Expo com Axios, TS e interceptors JWT — base de código saudável para iterar rápido. 
 
-Proposta popular e acessível: diferentemente de GetNinjas/Parafuzo, que miram classes mais altas e cobram taxas dos prestadores, o LimpeJá se posiciona para o “povão”, oferecendo inclusão e oportunidade.
+2) Diferenciais competitivos claros
 
-UX Premium para o cliente: experiência inspirada em iFood/Uber, com chat, pagamentos instantâneos e promoções.
+Verificação robusta + reputação mútua → confiança (dói nos generalistas).
 
-Atratividade para diaristas: sem taxas, com recebimento rápido e maior autonomia.
+Repasse em até 24h via PIX → “dinheiro rápido” é o maior imã de oferta.
 
-5. Riscos e Desafios de Execução
+0% de taxa para prestador; comissão do cliente (15%) → narrativa justa.
 
-Confiança e qualidade: como no Airbnb, cada incidente pode impactar a marca, mas o modelo de verificação, avaliações e eventual seguro opcional ajuda a mitigar. O desafio é manter padrão em escala.
+Gamificação, cupons e fidelidade → antídoto contra desintermediação. 
+ 
+ 
 
-Concorrência: grandes players podem tentar entrar, mas estão distantes do público alvo (mais elitizados, menos acessíveis). O diferencial de preço e inclusão é defensável.
+3) Mercado e timing
 
-Custo operacional: manter suporte 24h, compliance e marketing exige caixa; porém, como a aquisição inicial já mostrou baixo custo, o risco se reduz.
+Pitch traz TAM ~R$40bi/ano e baixa digitalização (~15%) — espaço grande para vertical focado em diaristas; estratégia hiperlocal → escala está bem desenhada. 
+ 
 
-6. Estratégias Complementares
+Unit economics (modelo simples para guiar decisões)
 
-Fidelização com cupons: já no DNA do projeto, mas pode ser expandido com cashback e indicações agressivas (estilo iFood).
+Inputs do pitch: ticket médio R$300, take 15% ⇒ R$45/serviço. 
 
-Expansão gradual: crescer “cidade a cidade”, consolidando a base em cada região antes de escalar nacionalmente.
+Sugestão de “regra de bolso”:
 
-Serviços recorrentes: planos mensais de limpeza (assinaturas) para clientes que desejam diaristas fixas.
+Meta CAC (cliente): ≤ R$90 (2 serviços para payback).
 
-Expansão de portfólio: futuramente incluir lavanderia, passadoria, organização de casas.
+Meta CAC (prestador): ≤ R$60 (recuperado com 2–3 serviços gerados).
 
-Marketing de impacto social: reforçar a narrativa de empoderamento das diaristas para atrair mídia orgânica, ONGs e apoio institucional.
+Contribuição por pedido (após custos variáveis):
 
-7. Considerações Técnicas
+taxas de pagamento PIX (~baixas), + suporte por pedido (R$3–5), + cupom médio (5–8% bruto) ⇒ contribuição líquida alvo ≥R$30.
 
-A arquitetura (React Native + Expo, NestJS + Postgres/Redis, WebSockets, etc.) segue moderna e escalável. O desafio será monitorar performance à medida que o número de usuários crescer e preparar infraestrutura de nuvem para expansão.
-O diferencial técnico já dá suporte para cupons, agendamento com lock, chat em tempo real e promoções robustas — todos recursos-chave para crescer sem gargalos.
+LTV cliente = contribuição líquida × nº de serviços por 12 meses. Se repetir 4×/ano, LTV ≈ R$120; se 8×/ano, R$240.
 
-📌 Conclusão Atualizada
+Boa zona: LTV/CAC ≥ 3. Se LTV≈R$180, CAC deve ficar ≤R$60.
 
-O LimpeJá provou aderência de mercado antes mesmo do lançamento formal. A resposta positiva das diaristas mostra que o modelo 0% de taxa é um ímã de oferta e a estratégia de se posicionar como o “iFood das diaristas populares” cria espaço único no mercado.
-O desafio agora é consolidar confiança e qualidade na experiência do cliente, garantindo que a reputação acompanhe o crescimento. Se mantiver essa disciplina, o LimpeJá tem grande potencial de escala, impacto social e liderança nacional no setor de limpeza doméstica
+North Star: Serviços/mês por provedor ativo (meta inicial 15–25) + % de pedidos recorrentes (D30/D60).
+Gatilhos de escala: quando Fill rate ≥85%, Cancelamentos ≤8%, NPS ≥60, Payback ≤3 meses, libera próxima cidade.
+
+Riscos chave e mitigação (prioridade alta)
+
+Desintermediação
+
+Bloquear contato fora do app (telefone mascarado), rebook em 1 toque, garantia/seguro só no pedido in-app, club de fidelidade com cashback e cupons recorrentes. 
+ 
+
+Equilíbrio supply/demand
+
+Onboarding “calibrado”: listas de espera por região/horário, metas de ocupação; “hot zones” com preço dinâmico e missões para horários ociosos. 
+
+Qualidade e confiança
+
+KYC + métricas públicas (taxa de aceitação, pontualidade, cancelamento); treinamentos e niveis (Bronze/Prata/Ouro). 
+
+Suporte/Disputas (custo por pedido)
+
+Ferramentas de “pre-triagem” (flows, fotos antes/depois), SLA e tabelas de decisão; dispute center no app. 
+
+Regulatório (vínculo/LGPD)
+
+Marketplace puro (preço/agenda pelo prestador), DPA/LGPD e seguro de responsabilidade civil no roadmap. 
+
+Foco em PIX apenas
+
+PIX é ótimo para fluxo de caixa do prestador, mas inclua cartão na fase 2 para aumentar conversão e ticket (manter PIX como default do provedor). 
+
+Aquisição cara em capitais
+
+Manter hiperlocal + influência micro; otimizar SEO local/GMN e parcerias com condomínios/administradoras.
+
+Nichos adjacentes: onde expandir (e onde NÃO agora)
+
+Critérios: frequência, ticket, competição, risco regulatório, afinidade operacional, “trust need”, risco de desintermediação.
+
+Nicho	Atratividade	Por quê / Como atacar
+Pós-obra residencial	Alta	Ticket alto, forte “trust need”, pouca fidelidade a prestadores → bons para cupons e bundles.
+Condomínios/Administradoras (áreas comuns)	Alta	B2B leve, contratos recorrentes, agenda previsível; exigir CNPJ e KYC reforçado.
+Turnover de Airbnb/locação curta	Alta	Frequência alta, SLAs rígidos, upsell (enxoval). Integração com calendário do host.
+Escritórios pequenos/co-work	Média-Alta	Recorrência forte; exigem padronização e checklists. Evitar contratos longos no início.
+Passadoria/Lavanderia a domicílio	Média	Complementar ao cleaning; risco de desintermediação moderado. Testar como “add-on”.
+Organização (home organizer light)	Média	Ticket bom, porém baixa frequência; usar campanhas sazonais.
+Beleza em casa / Pet grooming	Baixa-Média	Mais concorrência vertical, requisitos e equipamentos; manter fora do core inicial.
+Cuidado idoso/infantil	Baixa (no curto prazo)	Altíssimo risco regulatório e de responsabilidade; só com compliance pesado e seguros.
+
+Recomendação: primeiro dominar “limpeza residencial + pós-obra + Airbnb”, depois B2B leve. Todos compartilham o mesmo core (agenda, KYC, geo, PIX, disputas).
+
+Scorecard do produto (0–10)
+
+Proposta de valor: 9 — clara para ambos os lados (confiança + dinheiro rápido). 
+
+Completude de funil: 9 — fluxos e módulos essenciais já especificados/implementados. 
+ 
+
+Moat/defensibilidade: 7 — KYC+PIX+fidelidade ajudam; precisa escala de comunidade. 
+
+GTM/hiperlocal: 8 — plano coerente (Campinas→SP) com metas claras. 
+
+Risco operacional: 6 — suporte e qualidade são intensivos; mitigáveis com tooling. 
+
+Unidade econômica potencial: 7 — take de R$45 é bom; controlar cupons/suporte. 
+
+Roadmap de 90/180/365 dias (objetivos mensuráveis)
+
+D+90 (Campinas)
+
+20–40 prestadores aprovados, ≥800 serviços/mês, repeat D60 ≥35%, NPS ≥60.
+
+Lançar rebook 1 toque, telefone mascarado, cashback básico. 
+
+Dispute center com templates e fotos antes/depois. 
+
+D+180 (SP + 1 cidade)
+
+5.000 serviços/mês/cidade líder; CAC cliente ≤R$70; payback ≤2 meses.
+
+Cartão como 2º método, upsell de pós-obra e Airbnb turnover. 
+
+D+365 (5–10 cidades)
+
+25–50k serviços/mês no total; MRR 1,1–2,2M (R$45 × serviços). 
+
+Programa de níveis do prestador (selos/bonificações), parcerias com condomínios.
+
+Métricas que determinam o “sim” para escalar
+
+Fill rate ≥85% (pedidos aceitos/executados).
+
+Cancelamentos ≤8%; no-show ≤3%.
+
+Repeat D30 ≥30%, D60 ≥40%.
+
+CAC cliente ≤R$60–90 (cidade), prestador ≤R$60.
+
+Suporte por pedido ≤R$4,5; reembolso ≤2% do GMV.
+
+Tempo de repasse mediano ≤24h (PIX). 
+
+Pontos de melhoria imediata no app
+
+Planos recorrentes (semanal/quinzenal) com desconto automático → eleva LTV.
+
+SKU de add-ons (geladeira/forno, pós-obra light, material incluso) na tela de agendamento. 
+
+Preço dinâmico por janela/raio e “horários populares” com surcharge — já tem base de pricing/serviços. 
+
+Checklist e fotos antes/depois embutidos no fluxo (ajuda em disputas). 
+
+Notificações de re-engajamento (D+7, D+28) com cupom “volta logo”. 
+
+Por que atribuí esses percentuais?
+
+Alta prontidão técnica reduz risco de “time-to-first-value” no piloto. 
+
+Go-to-market focado (hiperlocal) é adequado ao estágio e diminui CAC inicial. 
+
+Moat prático (PIX 24h, KYC, fidelidade) cria vantagens, mas a escala nacional exige operação pesada (suporte, reputação, prevenção de fraudes), daí o range menor no cenário 50+ cidades. 
+ 
+
+Conclusão
+
+O LimpeJá tem altíssimo potencial de “product-channel fit” no nicho de diaristas: proposta clara, fricções corretas atacadas e base técnica sólida. Execute a sequência Campinas → SP → 5 cidades, mantendo disciplina em repeat, CAC e suporte por pedido. Expandir primeiro para pós-obra, Airbnb e B2B leve maximiza receita sem fugir do core.
+
+Se quiser, monto um modelo financeiro sensível (planilha) com ranges de CAC/Repeat para você simular cenários de MRR e decidir o “go” por cidade.
