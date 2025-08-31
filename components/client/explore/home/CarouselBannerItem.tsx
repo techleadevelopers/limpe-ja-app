@@ -1,13 +1,14 @@
-// app/(client)/explore/components/CarouselBannerItem.tsx (Renomeado para algo como StaticBanner ou OfferBanner se for fixo)
-// Mas mantendo o nome CarouselBannerItem para consistência com seu pedido atual.
-
-import React, { useRef, useEffect } from 'react'; // Importado useEffect
-import { View, Text, StyleSheet, TouchableOpacity, Animated, ImageBackground, Platform, Dimensions, Easing } from 'react-native'; // Importado Easing
+import React, { useRef, useEffect, useState } from 'react'; // Importado useState
+import { View, Text, StyleSheet, TouchableOpacity, Animated, ImageBackground, Dimensions, Easing } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
-// Importa a imagem do seu diretório assets. Ajuste o caminho se for diferente.
-// Certifique-se de que o React Native está configurado para lidar com imagens de assets.
-const bannerImage = require('../../../../assets/images/banner.png'); // <-- O nome do arquivo e a extensão são CRUCIAIS // AJUSTE O CAMINHO CONFORME SEU PROJETO
+// Importa todas as imagens do seu diretório assets.
+// Certifique-se de que os caminhos e nomes de arquivo estão corretos.
+const allBannerImages = [
+    require('../../../../assets/images/banner6.png'),
+    require('../../../../assets/images/banner4.png'),
+    require('../../../../assets/images/banner3.png'),
+];
 
 interface CarouselBannerItemProps {
     title: string;
@@ -15,7 +16,6 @@ interface CarouselBannerItemProps {
     description: string;
     buttonText: string;
     badgeText: string;
-    // Removendo background colors, pois agora teremos uma imagem
     onPress: () => void;
 }
 
@@ -27,13 +27,19 @@ const CarouselBannerItem: React.FC<CarouselBannerItemProps> = ({
     badgeText,
     onPress,
 }) => {
+    // Estado para controlar o índice da imagem atual no carrossel
+    const [currentImageIndex, setCurrentImageIndex] = useState(0);
+    // Valor animado para controlar a opacidade da imagem que está entrando (next image)
+    // 0: currentImageIndex é totalmente visível, 1: nextImageIndex é totalmente visível
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+
     // Animação para o botão
     const buttonScaleAnim = useRef(new Animated.Value(1)).current;
     // Animação para o efeito de float/parallax no fundo
     const backgroundFloatAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
-        // Inicia a animação de flutuação do fundo
+        // Inicia a animação de flutuação do fundo (mantida como estava)
         Animated.loop(
             Animated.sequence([
                 Animated.timing(backgroundFloatAnim, {
@@ -50,7 +56,28 @@ const CarouselBannerItem: React.FC<CarouselBannerItemProps> = ({
                 }),
             ])
         ).start();
-    }, []);
+
+        // Animação do carrossel de imagens
+        const interval = setInterval(() => {
+            // Inicia a animação de fade-in para a próxima imagem
+            Animated.timing(fadeAnim, {
+                toValue: 1, // Aumenta a opacidade da próxima imagem para 1
+                duration: 1000, // Duração da transição (1 segundo)
+                easing: Easing.linear, // Transição suave e linear
+                useNativeDriver: true,
+            }).start(() => {
+                // Após a animação de fade-in/out completar, atualiza o índice da imagem atual
+                setCurrentImageIndex((prevIndex) => (prevIndex + 1) % allBannerImages.length);
+                // Reseta o valor de fadeAnim para 0 imediatamente para o próximo ciclo
+                // Isso faz com que a nova "currentImageIndex" comece com opacidade total (1)
+                // e a nova "nextImageIndex" comece com opacidade zero (0), pronta para o próximo fade-in.
+                fadeAnim.setValue(0);
+            });
+        }, 4000); // Tempo total por slide: 3 segundos de exibição + 1 segundo de transição
+
+        // Função de limpeza para parar o intervalo quando o componente for desmontado
+        return () => clearInterval(interval);
+    }, []); // Array de dependências vazio para rodar uma vez na montagem do componente
 
     const onPressInButton = () => Animated.spring(buttonScaleAnim, { toValue: 0.95, useNativeDriver: true, friction: 7 }).start();
     const onPressOutButton = () => Animated.spring(buttonScaleAnim, { toValue: 1, useNativeDriver: true, friction: 7 }).start();
@@ -64,45 +91,72 @@ const CarouselBannerItem: React.FC<CarouselBannerItemProps> = ({
         }]
     };
 
+    // Calcula o índice da próxima imagem que irá aparecer
+    const nextImageIndex = (currentImageIndex + 1) % allBannerImages.length;
+
     return (
         <TouchableOpacity onPress={onPress} style={styles.bannerOuterContainer} activeOpacity={0.9}>
             <Animated.View style={[styles.backgroundImageWrapper, animatedBackgroundStyle]}>
-                <ImageBackground
-                    source={bannerImage} // Usando a imagem local
-                    style={styles.backgroundImage}
-                    imageStyle={styles.imageStyle}
-                >
-                    {/* Gradiente para escurecer a imagem e melhorar a legibilidade do texto */}
-                    <LinearGradient
-                        colors={['rgba(219, 211, 211, 0.36)', 'rgba(56, 55, 55, 0)', 'rgba(184, 183, 183, 0.18)']} // Mais escuro para o texto branco
-                        style={StyleSheet.absoluteFillObject}
-                    />
+                {/* Imagem Atual (fade-out) */}
+                <Animated.View style={[StyleSheet.absoluteFillObject, {
+                    opacity: fadeAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [1, 0] // Quando fadeAnim vai de 0 a 1, a opacidade desta imagem vai de 1 a 0
+                    })
+                }]}>
+                    <ImageBackground
+                        source={allBannerImages[currentImageIndex]}
+                        style={styles.backgroundImage}
+                        imageStyle={styles.imageStyle}
+                    >
+                        {/* Gradiente para escurecer a imagem e melhorar a legibilidade do texto */}
+                        <LinearGradient
+                            colors={['rgba(219, 211, 211, 0.43)', 'rgba(237, 229, 229, 0.31)', 'rgba(184, 183, 183, 0.4)']}
+                            style={StyleSheet.absoluteFillObject}
+                        />
+                    </ImageBackground>
+                </Animated.View>
 
-                    <View style={styles.content}>
-                        <View style={styles.leftContent}>
-                            {/* Badge no topo esquerdo */}
-                            <View style={styles.badge}>
-                                <Text style={styles.badgeText}>{badgeText}</Text>
-                            </View>
-                            <Text style={styles.title}>{title}</Text>
-                            <Text style={styles.discount}>{discount}</Text>
-                            <Text style={styles.description}>{description}</Text>
+                {/* Próxima Imagem (fade-in) */}
+                <Animated.View style={[StyleSheet.absoluteFillObject, { opacity: fadeAnim }]}>
+                    <ImageBackground
+                        source={allBannerImages[nextImageIndex]}
+                        style={styles.backgroundImage}
+                        imageStyle={styles.imageStyle}
+                    >
+                        {/* Gradiente para escurecer a imagem e melhorar a legibilidade do texto */}
+                        <LinearGradient
+                            colors={['rgba(219, 211, 211, 0.43)', 'rgba(237, 229, 229, 0.31)', 'rgba(184, 183, 183, 0.4)']}
+                            style={StyleSheet.absoluteFillObject}
+                        />
+                    </ImageBackground>
+                </Animated.View>
+
+                {/* Conteúdo (sempre por cima das imagens) */}
+                <View style={styles.content}>
+                    <View style={styles.leftContent}>
+                        {/* Badge no topo esquerdo */}
+                        <View style={styles.badge}>
+                            <Text style={styles.badgeText}>{badgeText}</Text>
                         </View>
-
-                        {/* Botão no canto inferior direito */}
-                        <Animated.View style={{ transform: [{ scale: buttonScaleAnim }], alignSelf: 'flex-end', marginTop: 'auto' }}>
-                            <TouchableOpacity
-                                style={styles.button}
-                                onPress={onPress}
-                                onPressIn={onPressInButton}
-                                onPressOut={onPressOutButton}
-                                activeOpacity={0.7}
-                            >
-                                <Text style={styles.buttonText}>{buttonText}</Text>
-                            </TouchableOpacity>
-                        </Animated.View>
+                        <Text style={styles.title}>{title}</Text>
+                        <Text style={styles.discount}>{discount}</Text>
+                        <Text style={styles.description}>{description}</Text>
                     </View>
-                </ImageBackground>
+
+                    {/* Botão no canto inferior direito */}
+                    <Animated.View style={{ transform: [{ scale: buttonScaleAnim }], alignSelf: 'flex-end', marginTop: 'auto' }}>
+                        <TouchableOpacity
+                            style={styles.button}
+                            onPress={onPress}
+                            onPressIn={onPressInButton}
+                            onPressOut={onPressOutButton}
+                            activeOpacity={0.7}
+                        >
+                            <Text style={styles.buttonText}>{buttonText}</Text>
+                        </TouchableOpacity>
+                    </Animated.View>
+                </View>
             </Animated.View>
         </TouchableOpacity>
     );
@@ -110,66 +164,61 @@ const CarouselBannerItem: React.FC<CarouselBannerItemProps> = ({
 
 const styles = StyleSheet.create({
     bannerOuterContainer: {
-        width: Dimensions.get('window').width - (9 * 2), // Largura total da tela menos o padding horizontal do contentWrapper da index.tsx
-        height: 165, // Altura fixa do banner
+        width: Dimensions.get('window').width - (25 * 2),
+        height: 160,
         borderRadius: 16,
         paddingLeft: 0,
-        margin: 10,
-        paddingRight: 0, // Mantido para espaçamento interno
-        paddingTop: 16, // Padding superior para espaçamento
-        paddingBottom: 16, // Padding inferior para espaçamento
+        margin: 13,
+        paddingRight: 0,
+        paddingTop: 46,
+        paddingBottom: 16,
         overflow: 'hidden',
-        
-        // Removido marginHorizontal, pois agora é um banner único dentro do padding do contentWrapper
-        // Adicione marginBottom se quiser espaço abaixo deste banner na index.tsx
-        marginBottom: -11, // Exemplo de margem inferior para espaçamento
-        marginTop: -21, // Exemplo de margem superior para espaçamento
-     
+        marginBottom: -11,
+        marginTop: -38,
     },
-    backgroundImageWrapper: { // Novo wrapper para aplicar a animação de flutuação
+    backgroundImageWrapper: {
         flex: 1,
-        borderRadius: 16, // Aplica o border radius aqui também
+        borderRadius: 16,
         overflow: 'hidden',
     },
     backgroundImage: {
         flex: 1,
         width: '100%',
         height: '100%',
-        resizeMode: 'cover', // Garante que a imagem cubra a área
-        justifyContent: 'center', // Centraliza o conteúdo verticalmente na imagem
-        alignItems: 'center', // Centraliza o conteúdo horizontalmente na imagem
+        resizeMode: 'cover',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     imageStyle: {
-        borderRadius: 26, // Aplica o border radius na imagem também
+        borderRadius: 20,
     },
     content: {
-        // Ocupa todo o espaço para que o flexbox funcione corretamente
-        ...StyleSheet.absoluteFillObject, // Posiciona o conteúdo sobre a imagem
-        padding: 20, // Padding interno do conteúdo
+        ...StyleSheet.absoluteFillObject,
+        padding: 20,
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'flex-start', // Alinha o conteúdo principal ao topo
+        alignItems: 'flex-start',
     },
     leftContent: {
         flex: 1,
-        justifyContent: 'space-between', // Para espaçar o conteúdo do lado esquerdo (badge top, desc bottom)
-        height: '100%', // Ocupa a altura total disponível
+        justifyContent: 'space-between',
+        height: '100%',
     },
     badge: {
         backgroundColor: 'rgba(255,255,255,0.8)',
         borderRadius: 5,
         paddingVertical: 1,
         paddingHorizontal: 4,
-        marginBottom: 8,
+        marginBottom: 0,
         alignSelf: 'flex-start',
     },
     badgeText: {
-        fontSize: 11,
+        fontSize: 10,
         fontWeight: 'bold',
-        color: '#333',
+        color: '#6692bdff',
     },
     title: {
-        fontSize: 17,
+        fontSize: 10,
         fontWeight: 'bold',
         color: 'white',
         lineHeight: 22,
@@ -179,9 +228,10 @@ const styles = StyleSheet.create({
         textShadowRadius: 2,
     },
     discount: {
-        fontSize: 26,
+        fontSize: 17,
         fontWeight: '900',
         color: 'white',
+        top: 8,
         marginBottom: 5,
         textShadowColor: 'rgba(0,0,0,0.4)',
         textShadowOffset: { width: 0, height: 1 },
@@ -189,21 +239,21 @@ const styles = StyleSheet.create({
     },
     description: {
         fontSize: 12,
-        color: 'rgba(255,255,255,0.8)',
-        marginTop: 'auto', // Empurra a descrição para o final do leftContent
+        color: 'rgba(44, 138, 231, 0.8)',
+        marginTop: 'auto',
     },
     button: {
         backgroundColor: 'white',
         borderRadius: 20,
-        paddingVertical: 4,
-        paddingHorizontal: 14,
-        marginTop: 'auto', // Empurra o botão para a parte inferior do seu container flex
+        paddingVertical: 2,
+        paddingHorizontal: 10,
+        marginTop: 'auto',
     },
     buttonText: {
-        fontSize: 12,
+        fontSize: 10,
         fontWeight: 'bold',
-        color: '#ff6b6b', // Cor do botão "Claim" da imagem
+        color: '#6973bfff',
     },
 });
 
-export default CarouselBannerItem; // Mantendo o nome, mas agora é um banner único
+export default CarouselBannerItem;
