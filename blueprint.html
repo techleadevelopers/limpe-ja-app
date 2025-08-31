@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>LimpeJá — Blueprint Premium</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#fdfdfd; --card:#ffffff; --muted:#6b7280; --accent:#4f76ed; --accent2:#06b6d4; --success:#16a34ac2;
+      --shadow:0 8px 24px rgba(79,70,229,0.15);
+      font-family:'Inter',system-ui;
+    }
+    *{box-sizing:border-box;}
+    body{margin:0;background:var(--bg);color:#111827;padding:32px;}
+    .container{max-width:1300px;margin:0 auto}
+    header{display:flex;align-items:center;gap:20px;margin-bottom:28px;}
+.logo {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  border-radius: 24px; /* borda neon arredondada */
+  background: #ffffff; /* fundo branco */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  color: #fff;
+  font-size: 22px;
+  overflow: hidden;
+  animation: float 4s ease-in-out infinite;
+
+}
+
+.logo::before {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border-radius: 24px; /* mesmo border-radius da logo */
+  padding: 2px;
+  background: linear-gradient(45deg, rgba(100, 100, 236, 0.79), #4e70d5ac);
+  -webkit-mask: 
+    linear-gradient(#fff 0 0) content-box, 
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: destination-out;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+    .logo img{width:70%;height:70%;object-fit:contain;}
+    @keyframes float{0%{transform:translateY(0)}50%{transform:translateY(-6px)}100%{transform:translateY(0)}}
+    h1{margin:0;font-size:26px;font-weight:800;color:#1e1b4b}
+    p.lead{color:var(--muted);margin:4px 0 0;font-size:15px}
+
+    .grid{display:grid;grid-template-columns:2fr 1fr;gap:24px}
+    .card{background:var(--card);padding:22px;border-radius:16px;box-shadow:var(--shadow);margin-bottom:18px;transition:transform .2s}
+    
+    .card:hover{transform:translateY(-3px)}
+    .pill{display:inline-flex;align-items:center;gap:10px;background:linear-gradient(90deg,var(--accent),var(--accent2));color:#fff;padding:8px 14px;border-radius:999px;font-weight:600;font-size:13px;box-shadow:0 3px 8px rgba(0,0,0,0.1)}
+
+    .highlight{font-size:22px;font-weight:800;color:var(--success);margin-top:14px}
+
+    .phase-list{display:grid;gap:14px;margin-top:20px}
+    .phase{display:flex;gap:14px;align-items:flex-start;padding:16px;border-radius:12px;background:linear-gradient(135deg,#eef2ff,#f0f9ff);box-shadow:inset 0 0 6px rgba(79,70,229,0.08)}
+    .phase .num{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700}
+    .phase h3{margin:0;font-size:17px;color:#1e1b4b}
+    .phase p{margin:6px 0 0;color:#374151;font-size:14px}
+
+    .kpis{display:flex;gap:16px;margin-top:18px;flex-wrap:wrap}
+    .kpi{flex:1;min-width:120px;background:linear-gradient(135deg,#fff,#f9fafb);border-radius:12px;padding:14px;text-align:center;box-shadow:var(--shadow)}
+    .kpi .num{font-weight:800;font-size:20px;color:var(--accent)}
+    .kpi span{font-size:12px;color:var(--muted)}
+
+    table{width:100%;border-collapse:collapse;margin-top:14px}
+    th,td{padding:10px;border-bottom:1px solid #e5e7eb;font-size:14px}
+    th{color:#374151;text-align:left;background:#f9fafb}
+    tr:hover td{background:#f3f4f6}
+
+    .roadmap{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:16px}
+    .rm-card{padding:14px;border-radius:12px;background:linear-gradient(135deg,#ecfdf5,#f0fdfa);box-shadow:inset 0 0 6px rgba(16,185,129,0.15)}
+    .rm-card strong{color:#065f46}
+    .rm-card p{margin:8px 0 0;font-size:13px;color:#047857}
+
+    .footer{margin-top:24px;padding:18px;border-radius:12px;text-align:center;background:linear-gradient(90deg,var(--accent),var(--accent2));color:#fff;font-weight:600;font-size:14px;box-shadow:var(--shadow)}
+
+    .icon{font-size:20px;margin-right:6px}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo"><img src="../../assets/images/logo.png" alt="Logo LimpeJá"></div>
+      <div>
+        <h1>LimpeJá — Blueprint Premium</h1>
+        <p class="lead">UI robusta, efeitos suaves e visão clara de escala e ganhos futuros.</p>
+        <div class="highlight">Meta inicial: <span id="counter">0</span> MRR em 1º mês 🚀</div>
+      </div>
+    </header>
+
+    <div class="grid">
+      <div>
+        <div class="card">
+          <div class="pill">🎯 Visão: Ser o Airbnb das diaristas no Brasil</div>
+          <div class="kpis">
+            <div class="kpi"><div class="num" id="kpi1">0</div><span>Meta 1º mês</span></div>
+            <div class="kpi"><div class="num" id="kpi2">0</div><span>Meta São Paulo</span></div>
+            <div class="kpi"><div class="num" id="kpi3">0</div><span>Meta Nacional</span></div>
+          </div>
+          <h2 style="margin-top:20px">Fases de Escala</h2>
+          <div class="phase-list">
+            <div class="phase"><div class="num">1</div><div><h3>Campinas</h3><p>MVP com 800–1000 serviços/mês, CAC ≤R$60. Receita-alvo: R$40k MRR.</p></div></div>
+            <div class="phase"><div class="num">2</div><div><h3>São Paulo</h3><p>5.000 serviços/mês, R$225k MRR, Ads hiperlocal.</p></div></div>
+            <div class="phase"><div class="num">3</div><div><h3>5–10 Cidades</h3><p>25–50k serviços/mês, add-ons e B2B leve.</p></div></div>
+            <div class="phase"><div class="num">4</div><div><h3>Nacional</h3><p>200k serviços/mês, R$9M MRR, fintech e SaaS.</p></div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>📊 Projeções (3 anos)</h3>
+          <table>
+            <thead><tr><th>Ano</th><th>Cidades</th><th>Serviços/mês</th><th>Receita LimpeJá</th></tr></thead>
+            <tbody>
+              <tr><td>2025</td><td>2–3</td><td>6k–7k</td><td>R$270k–315k/mês</td></tr>
+              <tr><td>2026</td><td>10+</td><td>30k–40k</td><td>R$1,35–1,8M/mês</td></tr>
+              <tr><td>2027</td><td>50+</td><td>200k</td><td>R$9M/mês (R$108M/ano)</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <h3>🚀 Próximos 90 dias</h3>
+          <div class="roadmap">
+            <div class="rm-card"><strong>Onboarding seletivo</strong><p>Lista de espera, níveis Bronze/Prata/Ouro.</p></div>
+            <div class="rm-card"><strong>Ads hiperlocal</strong><p>Teste CAC em Campinas.</p></div>
+            <div class="rm-card"><strong>Rebook & Cashback</strong><p>Automatizar repetição e incentivo.</p></div>
+          </div>
+        </div>
+      </div>
+
+      <aside>
+        <div class="card">
+          <h3>🛡️ Moats (defesas)</h3>
+          <ul style="margin:0;padding-left:20px;color:#374151;line-height:1.6;font-size:14px">
+            <li>PIX em 24h — atrativo forte de supply</li>
+            <li>KYC + reputação mútua</li>
+            <li>Gamificação + cashback</li>
+            <li>Plano recorrente automático</li>
+            <li>Marca vertical focada</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3>💰 Fontes de Receita</h3>
+          <ul style="margin:0;padding-left:20px;color:#374151;line-height:1.6;font-size:14px">
+            <li>Take por serviço (15%)</li>
+            <li>Planos recorrentes premium</li>
+            <li>Publicidade local & Marketplace B2B</li>
+            <li>Wallet / Fintech / Seguros</li>
+            <li>SaaS white-label</li>
+          </ul>
+        </div>
+      </aside>
+    </div>
+
+    <div class="footer">🔥 Pitch: “O GetNinjas cobra moedas, o LimpeJá entrega limpeza justa, rápida e sem enrolação.”</div>
+  </div>
+
+  <script>
+    function animateValue(id, start, end, duration, prefix="R$", suffix="") {
+      const obj = document.getElementById(id);
+      let startTimestamp = null;
+      const step = (timestamp) => {
+        if (!startTimestamp) startTimestamp = timestamp;
+        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+        const value = Math.floor(progress * (end - start) + start);
+        obj.innerHTML = prefix + value.toLocaleString('pt-BR') + suffix;
+        if (progress < 1) {
+          window.requestAnimationFrame(step);
+        }
+      };
+      window.requestAnimationFrame(step);
+    }
+
+    window.onload = () => {
+      animateValue("counter", 0, 40000, 2000, "R$", "");
+      animateValue("kpi1", 0, 40000, 2000, "R$", "");
+      animateValue("kpi2", 0, 225000, 2500, "R$", "");
+      animateValue("kpi3", 0, 9000000, 3000, "R$", "");
+    };
+  </script>
+</body>
+</html>
