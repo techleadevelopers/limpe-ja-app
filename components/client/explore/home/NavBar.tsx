@@ -76,6 +76,11 @@ interface NavBarProps {
     unreadMessagesCount?: number;
 }
 
+// COPIADO DO HeaderSuperior.tsx: Cores do gradiente
+const HERO_GRADIENT_START = 'rgba(45, 108, 233, 0.7)';
+const HERO_GRADIENT_MIDDLE = 'rgba(73, 127, 236, 0.9)';
+const HERO_GRADIENT_END = 'rgba(45, 101, 232, 0.9)';
+
 const NavBar: React.FC<NavBarProps> = ({ unreadMessagesCount }) => {
     const router = useRouter();
     const pathname = usePathname();
@@ -111,7 +116,7 @@ const NavBar: React.FC<NavBarProps> = ({ unreadMessagesCount }) => {
                     onPress={() => router.push(ioniconItem.path as any)}
                 >
                     <View style={styles.iconContainer}>
-                        <Ionicons name={isActive ? ioniconItem.activeIcon : ioniconItem.icon} size={22} color={iconColor} />
+                        <Ionicons name={isActive ? ioniconItem.activeIcon : ioniconItem.icon} size={17} color={iconColor} />
                         {ioniconItem.name === 'Inbox' && unreadMessagesCount && unreadMessagesCount > 0 && (
                             <View style={styles.notificationBadge}>
                                 <Text style={styles.notificationText}>{unreadMessagesCount}</Text>
@@ -147,9 +152,10 @@ const NavBar: React.FC<NavBarProps> = ({ unreadMessagesCount }) => {
     return (
         <View style={[styles.navBarWrapper, { paddingBottom: insets.bottom }]}>
             <LinearGradient
-                colors={['#7694f6ff', '#67adfdff', '#5c93ecff']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
+                // CORES E DIREÇÃO DO GRADIENTE COPIADAS DO HeaderSuperior.tsx
+                colors={[HERO_GRADIENT_START, HERO_GRADIENT_MIDDLE, HERO_GRADIENT_END]}
+                start={{ x: 0.0, y: 0.0 }} // Mesma direção diagonal do HeaderSuperior
+                end={{ x: 1.0, y: 1.0 }}   // Mesma direção diagonal do HeaderSuperior
                 style={styles.navBar}
             >
                 {/* Itens da esquerda */}
@@ -185,20 +191,20 @@ const NavBar: React.FC<NavBarProps> = ({ unreadMessagesCount }) => {
 const styles = StyleSheet.create({
     navBarWrapper: {
         position: 'absolute',
-        bottom: 0,
+        bottom: 10,
         left: 0,
         right: 0,
         backgroundColor: 'transparent',
     },
     navBar: {
         flexDirection: 'row',
-        height: Platform.OS === 'ios' ? 80 : 55,
+        height: Platform.OS === 'ios' ? 80 : 40,
         marginHorizontal: 20,
-        bottom: 5,
-        borderBottomLeftRadius: 30,
-        borderBottomRightRadius: 30,
-        borderTopLeftRadius: 30,
-        borderTopRightRadius: 30,
+        bottom: 0,
+        borderBottomLeftRadius: 3,
+        borderBottomRightRadius: 3,
+        borderTopLeftRadius: 3,
+        borderTopRightRadius: 3,
         alignItems: 'center',
         justifyContent: 'space-around', // Mantém o espaçamento geral
         
@@ -230,16 +236,16 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     navText: {
-        fontSize: 9.3,
+        fontSize: 8.3,
         fontWeight: '600',
-        marginTop: -2,
+        marginTop: -5,
       
     },
     centralNavItemContainer: {
         position: 'absolute',
-        top: -5,
-        width: 60,
-        height: 60,
+        top: -1,
+        width: 40,
+        height: 40,
         borderRadius: 30,
         alignItems: 'center',
         justifyContent: 'center',
@@ -252,8 +258,8 @@ const styles = StyleSheet.create({
         elevation: 15,
     },
     centralButtonGradient: {
-        width: 50,
-        height: 50,
+        width: 32,
+        height: 32,
         borderRadius: 25,
         alignItems: 'center',
         justifyContent: 'center',
