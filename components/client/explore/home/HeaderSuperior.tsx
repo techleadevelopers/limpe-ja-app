@@ -3,7 +3,7 @@ import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Keyboard, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native'; // Importado Alert
+import { Keyboard, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
 import Animated, {
     Easing,
     useAnimatedStyle,
@@ -19,9 +19,8 @@ export interface HeaderSuperiorProps {
     userAddress?: UserProfile['address'];
 }
 
-// Definição das três cores para o gradiente
-const HERO_GRADIENT_START = 'rgba(45, 108, 233, 0.9)';
-const HERO_GRADIENT_MIDDLE = 'rgba(120, 160, 240, 0.9)';
+const HERO_GRADIENT_START = 'rgba(45, 108, 233, 0.7)';
+const HERO_GRADIENT_MIDDLE = 'rgba(73, 127, 236, 0.9)';
 const HERO_GRADIENT_END = 'rgba(45, 101, 232, 0.9)';
 
 const HeroHeader: React.FC<HeaderSuperiorProps> = ({ userName, userAddress }) => {
@@ -32,7 +31,6 @@ const HeroHeader: React.FC<HeaderSuperiorProps> = ({ userName, userAddress }) =>
     const reflexTranslateY = useSharedValue(-200);
     const reflexRotate = useSharedValue(0);
 
-    // Animação para o ícone de busca
     const searchIconScale = useSharedValue(1);
     const searchPlaceholderOpacity = useSharedValue(1);
 
@@ -53,14 +51,12 @@ const HeroHeader: React.FC<HeaderSuperiorProps> = ({ userName, userAddress }) =>
             true
         );
 
-        // Animação para o ícone de busca
         searchIconScale.value = withRepeat(
             withTiming(1.1, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
             -1,
             true
         );
 
-        // Animação para o placeholder da busca
         searchPlaceholderOpacity.value = withRepeat(
             withTiming(0.7, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
             -1,
@@ -90,12 +86,9 @@ const HeroHeader: React.FC<HeaderSuperiorProps> = ({ userName, userAddress }) =>
         router.push('/(client)/profile' as any);
     };
 
-    // ✅ Alteração única: navegar para o menu em /(client)/explore/menu
-    // Se o seu arquivo estiver em /(client)/menu, mude a linha abaixo para '/(client)/menu'
     const handleMenuPress = () => {
         console.log("HeroHeader: Abrindo o menu.");
         router.push('/(client)/explore/menu' as any);
-        // router.push('/(client)/menu' as any); // <- use esta se o seu caminho for /(client)/menu
     };
 
     const handleSearchSubmit = () => {
@@ -154,25 +147,32 @@ const HeroHeader: React.FC<HeaderSuperiorProps> = ({ userName, userAddress }) =>
 
             <View style={{ height: Constants.statusBarHeight * 0.95 }} />
 
-            <View style={styles.headerContent}>
+            {/* Início: Header principal com padding horizontal */}
+            <View style={[styles.headerContent, styles.headerPadding]}>
                 <TouchableOpacity onPress={handleProfilePress} style={styles.profileIconContainer}>
-                    <Ionicons name="person-circle" size={40 * 0.95} color="#FFFFFF" />
+                    <Ionicons name="person-circle" size={32 * 0.95} color="#FFFFFF" />
                 </TouchableOpacity>
                 <View style={styles.greetingContainer}>
                     <Text style={styles.greetingHello}>{getGreeting()}, {userName}</Text>
                     <Text style={styles.greetingWelcome}>Bem-vinda de volta!</Text>
                 </View>
                 <TouchableOpacity onPress={handleMenuPress} style={styles.menuIconContainer}>
-                    <Ionicons name="menu" size={27 * 0.95} color="#FFFFFF" />
+                    <Ionicons name="menu" size={20 * 0.95} color="#FFFFFF" />
                 </TouchableOpacity>
             </View>
+            {/* Fim: Header principal */}
 
-            <TouchableOpacity onPress={handleAddressPress} style={styles.addressSection}>
-                <Ionicons name="star" size={14 * 0.95} color="#FFD700" style={styles.addressStarIcon} />
+            {/* Início: Endereço (agora visível) */}
+            {/* <TouchableOpacity onPress={handleAddressPress} style={[styles.addressSection, styles.headerPadding]}>
+                <Ionicons name="location" size={14 * 0.95} color="#FFD700" style={styles.addressStarIcon} />
                 <Text style={styles.addressText} numberOfLines={1} ellipsizeMode="tail">{formattedAddress}</Text>
             </TouchableOpacity>
+            */}
+            {/* Fim: Endereço */}
 
-            <View style={styles.buscaContainer}>
+            {/* Início: Barra de busca (agora visível) */}
+            {/*
+            <View style={[styles.buscaContainer, styles.headerPadding]}>
                 <Animated.View style={animatedSearchIconStyle}>
                     <Ionicons name="search-outline" size={20 * 0.95} color="#6C757D" style={styles.buscaIcone} />
                 </Animated.View>
@@ -189,18 +189,22 @@ const HeroHeader: React.FC<HeaderSuperiorProps> = ({ userName, userAddress }) =>
                     <Ionicons name="options-outline" size={18 * 0.95} color="#FFFFFF" />
                 </TouchableOpacity>
             </View>
+            */}
+            {/* Fim: Barra de busca */}
         </LinearGradient>
     );
 };
 
 const styles = StyleSheet.create({
     outerContainerGradient: {
-        // Aumentando o padding horizontal
-        paddingHorizontal: 10, 
-        paddingBottom: 20 * 0.95,
-        borderBottomLeftRadius: 28 * 0.95,
-        borderBottomRightRadius: 28 * 0.95,
-        marginBottom: 12 * 0.95,
+        paddingBottom: 90 * 0.95, // Aumentado para dar mais espaço vertical
+        borderBottomLeftRadius: 4 * 0.95,
+        borderBottomRightRadius: 4 * 0.95,
+         borderTopLeftRadius: 4 * 0.95,
+        borderTopRightRadius: 4 * 0.95,
+        paddingHorizontal: 10,
+        marginBottom: -50 * 0.95,
+        top: 3,
         width: '100%',
         overflow: 'hidden',
         ...Platform.select({
@@ -219,6 +223,7 @@ const styles = StyleSheet.create({
         ...StyleSheet.absoluteFillObject,
         width: 200 * 0.95,
         height: 300 * 0.95,
+        
         borderRadius: 150 * 0.95,
         opacity: 0.8,
     },
@@ -230,34 +235,36 @@ const styles = StyleSheet.create({
     headerContent: {
         flexDirection: 'row',
         alignItems: 'center',
-        top: 17 * 0.95,
-        paddingHorizontal: 5,
+        top: 20 * 0.95,
         marginTop: -15 * 0.95,
     },
     profileIconContainer: {
         padding: 4 * 0.95,
+        
     },
     greetingContainer: {
         flex: 1,
         marginLeft: 0,
+        
     },
     greetingHello: {
-        fontSize: 14 * 0.95,
+        fontSize: 12 * 0.95,
+        fontFamily: 'Montserrat-Thin', 
         fontWeight: 'bold',
         color: '#FFFFFF',
     },
     greetingWelcome: {
-        fontSize: 11 * 0.95,
+        fontSize: 9 * 0.95,
         top: 2 * 0.95,
         color: '#E0EFFF',
     },
     menuIconContainer: {
         padding: 5 * 0.95,
+        
     },
     addressSection: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 24,
         marginTop: 20 * 0.95,
         marginBottom: 25 * 0.95,
     },
@@ -276,12 +283,11 @@ const styles = StyleSheet.create({
     buscaContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#FFFFFF',
         borderRadius: 15 * 0.95,
+        
         marginTop: -10 * 0.95,
         paddingHorizontal: 15 * 0.95,
         height: 33 * 0.95,
-        marginHorizontal: 10,
         ...Platform.select({
             ios: {
                 shadowColor: 'rgba(0,0,0,0.1)',
@@ -322,6 +328,9 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 5 * 0.95,
         elevation: 6 * 0.95,
+    },
+    headerPadding: {
+        paddingHorizontal: 10,
     },
 });
 
