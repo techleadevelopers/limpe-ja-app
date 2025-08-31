@@ -3,15 +3,15 @@ import queryClient from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import Dashboard from "@/pages/dashboard";
-import Providers from "@/pages/providers";
-import VerificationQueue from "@/pages/verification-queue";
-import Settings from "@/pages/settings";
-import Notifications from "@/pages/notifications";
-import ProviderMap from "@/pages/provider-map";
-import UserManagement from "@/pages/user-management";
-import ServiceManagement from "@/pages/service-management";
-import FinancialAnalytics from "@/pages/financial-analytics";
+import Dashboard from "@/pages/dashboard/dashboard";
+import Providers from "@/pages/providers/providers";
+import VerificationQueue from "@/pages/users/verification-queue";
+import Settings from "@/pages/settings/settings";
+import Notifications from "@/pages/notifications/notifications";
+import ProviderMap from "@/pages/providers/provider-map";
+import UserManagement from "@/pages/users/user-management";
+import ServiceManagement from "@/pages/services/service-management";
+import FinancialAnalytics from "@/pages/analytics/financial-analytics";
 import NotFound from "@/pages/not-found";
 import LoginPage from "@/pages/login"; // Importa a nova página de login
 import { AuthProvider, useAuth } from "@/context/AuthContext"; // Importa o AuthProvider e useAuth
