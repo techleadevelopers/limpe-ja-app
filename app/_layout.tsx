@@ -49,8 +49,8 @@ function RootLayoutContent() {
             try {
                 // >>> FONTES OTIMIZADAS: Carregando apenas as fontes essenciais <<<
                 await Font.loadAsync({
-                    'DMSans-Regular': require('../assets/fonts/DMSans-Regular.ttf'),
-                    'KumbhSans-Regular': require('../assets/fonts/KumbhSans-Regular.ttf'),
+                    'Montserrat-Regular': require('../assets/fonts/Montserrat-Regular.ttf'),
+                    'Montserrat-Thin': require('../assets/fonts/Montserrat-Thin.ttf'),
                 });
 
                 console.log('[RootLayoutContent | prepareApp] Fontes essenciais carregadas e inicialização básica concluída.');
