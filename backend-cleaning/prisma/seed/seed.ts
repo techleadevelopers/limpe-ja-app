@@ -22,6 +22,7 @@ async function upsertAddress(addressData: {
   state: string;
   latitude?: Prisma.Decimal | number;
   longitude?: Prisma.Decimal | number;
+  complement?: string; // Adicionado para ser consistente com o modelo
 }) {
   const dataToCreate = {
     ...addressData,
@@ -140,7 +141,7 @@ async function main() {
   });
   console.log(`Usuário Cliente 'Indicado' (${referredUser.email}) criada/atualizada.`);
 
-  // Existing Provider: Caroline Silva (formerly Pro Carolina)
+  // Existing Provider: Caroline Silva
   const providerAddress = await upsertAddress({
     cep: '01002-002',
     street: 'Av. do Provedor',
@@ -154,15 +155,15 @@ async function main() {
 
   const providerUser = await prisma.user.upsert({
     where: { email: 'provedor@teste.com' },
-    update: { passwordHash: pwd, role: UserRole.PROVIDER, fullName: 'Caroline Silva' }, // Alterado aqui
+    update: { passwordHash: pwd, role: UserRole.PROVIDER, fullName: 'Caroline Silva' },
     create: {
       email: 'provedor@teste.com',
       passwordHash: pwd,
       role: UserRole.PROVIDER,
-      fullName: 'Caroline Silva', // Alterado aqui
+      fullName: 'Caroline Silva',
       provider: {
         create: {
-          fullName: 'Caroline Silva', // Alterado aqui
+          fullName: 'Caroline Silva',
           yearsOfExperience: 5,
           verificationStatus: VerificationStatus.APPROVED,
           acceptanceRate: 0.92,
@@ -181,7 +182,7 @@ async function main() {
   });
   console.log(`Usuário Provedor 'Caroline Silva' (${providerUser.email}) criada/atualizada.`);
 
-  // NEW PROVIDER 1: Maria (formerly Pro Maria)
+  // NEW PROVIDER 1: Maria
   const providerAddress2 = await upsertAddress({
     cep: '01002-003',
     street: 'Rua das Flores',
@@ -195,15 +196,15 @@ async function main() {
 
   const providerUser2 = await prisma.user.upsert({
     where: { email: 'provedor2@teste.com' },
-    update: { passwordHash: pwd, role: UserRole.PROVIDER, fullName: 'Maria' }, // Alterado aqui
+    update: { passwordHash: pwd, role: UserRole.PROVIDER, fullName: 'Maria' },
     create: {
       email: 'provedor2@teste.com',
       passwordHash: pwd,
       role: UserRole.PROVIDER,
-      fullName: 'Maria', // Alterado aqui
+      fullName: 'Maria',
       provider: {
         create: {
-          fullName: 'Maria', // Alterado aqui
+          fullName: 'Maria',
           yearsOfExperience: 3,
           verificationStatus: VerificationStatus.APPROVED,
           acceptanceRate: 0.85,
@@ -222,7 +223,7 @@ async function main() {
   });
   console.log(`Usuário Provedor 'Maria' (${providerUser2.email}) criada/atualizada.`);
 
-  // NEW PROVIDER 2: Joana (formerly Pro Joana)
+  // NEW PROVIDER 2: Joana
   const providerAddress3 = await upsertAddress({
     cep: '01002-004',
     street: 'Av. Paulista',
@@ -236,15 +237,15 @@ async function main() {
 
   const providerUser3 = await prisma.user.upsert({
     where: { email: 'provedor3@teste.com' },
-    update: { passwordHash: pwd, role: UserRole.PROVIDER, fullName: 'Joana' }, // Alterado aqui
+    update: { passwordHash: pwd, role: UserRole.PROVIDER, fullName: 'Joana' },
     create: {
       email: 'provedor3@teste.com',
       passwordHash: pwd,
       role: UserRole.PROVIDER,
-      fullName: 'Joana', // Alterado aqui
+      fullName: 'Joana',
       provider: {
         create: {
-          fullName: 'Joana', // Alterado aqui
+          fullName: 'Joana',
           yearsOfExperience: 7,
           verificationStatus: VerificationStatus.APPROVED,
           acceptanceRate: 0.95,
@@ -263,7 +264,7 @@ async function main() {
   });
   console.log(`Usuário Provedor 'Joana' (${providerUser3.email}) criada/atualizada.`);
 
-  // NEW PROVIDER 3: Ana (formerly Pro Ana)
+  // NEW PROVIDER 3: Ana
   const providerAddress4 = await upsertAddress({
     cep: '01002-005',
     street: 'Rua Augusta',
@@ -277,15 +278,15 @@ async function main() {
 
   const providerUser4 = await prisma.user.upsert({
     where: { email: 'provedor4@teste.com' },
-    update: { passwordHash: pwd, role: UserRole.PROVIDER, fullName: 'Ana' }, // Alterado aqui
+    update: { passwordHash: pwd, role: UserRole.PROVIDER, fullName: 'Ana' },
     create: {
       email: 'provedor4@teste.com',
       passwordHash: pwd,
       role: UserRole.PROVIDER,
-      fullName: 'Ana', // Alterado aqui
+      fullName: 'Ana',
       provider: {
         create: {
-          fullName: 'Ana', // Alterado aqui
+          fullName: 'Ana',
           yearsOfExperience: 2,
           verificationStatus: VerificationStatus.APPROVED,
           acceptanceRate: 0.88,
@@ -328,13 +329,16 @@ async function main() {
   console.log('Criando/Atualizando serviços...');
 
   const servicesData = [
-    { name: 'Residencial', description: 'Limpeza completa de residências.', price: 150.0, pricingType: PricingType.FIXED_PRICE, icon: 'residencial' }, // Alterado de 'home' para 'residencial'
-    { name: 'Comercial', description: 'Limpeza para ambientes comerciais.', price: 50.0, pricingType: PricingType.HOURLY, icon: 'comercial' }, // Alterado de 'business' para 'comercial'
-    { name: 'Pós-Obra', description: 'Limpeza detalhada após reformas e construções.', price: 300.0, pricingType: PricingType.FIXED_PRICE, icon: 'obra' }, // Alterado de 'construction' para 'obra'
-    { name: 'Vidros', description: 'Limpeza especializada de janelas e superfícies de vidro.', price: 100.0, pricingType: PricingType.FIXED_PRICE, icon: 'vidro' }, // Alterado de 'window' para 'vidro'
-    { name: 'Escritório', description: 'Limpeza e organização de espaços de escritório.', price: 180.0, pricingType: PricingType.FIXED_PRICE, icon: 'escritorio' }, // Alterado de 'desk' para 'escritorio'
-    { name: 'Estofados', description: 'Limpeza e higienização de estofados.', price: 120.0, pricingType: PricingType.FIXED_PRICE, icon: 'estofados' }, // Alterado de 'chair' para 'estofados'
-    { name: 'Passadoria', description: 'Serviço de passar roupas.', price: 25.0, pricingType: PricingType.HOURLY, icon: 'passadoria' }, // Alterado de 'iron' para 'passadoria'
+    { name: 'Residencial', description: 'Limpeza completa de residências.', price: 150.0, defaultPricingType: PricingType.FIXED_PRICE, icon: 'residencial' },
+    { name: 'Comercial', description: 'Limpeza para ambientes comerciais.', price: 50.0, defaultPricingType: PricingType.HOURLY, icon: 'comercial' },
+    { name: 'Pós-Obra', description: 'Limpeza detalhada após reformas e construções.', price: 300.0, defaultPricingType: PricingType.FIXED_PRICE, icon: 'obra' },
+    { name: 'Vidros', description: 'Limpeza especializada de janelas e superfícies de vidro.', price: 100.0, defaultPricingType: PricingType.FIXED_PRICE, icon: 'vidro' },
+    { name: 'Escritório', description: 'Limpeza e organização de espaços de escritório.', price: 180.0, defaultPricingType: PricingType.FIXED_PRICE, icon: 'escritorio' },
+    { name: 'Estofados', description: 'Limpeza e higienização de estofados.', price: 120.0, defaultPricingType: PricingType.FIXED_PRICE, icon: 'estofados' },
+    { name: 'Passadoria', description: 'Serviço de passar roupas.', price: 25.0, defaultPricingType: PricingType.HOURLY, icon: 'passadoria' },
+    // Novos serviços para BY_SIZE
+    { name: 'Limpeza por M²', description: 'Limpeza cobrada por metro quadrado.', price: 5.0, defaultPricingType: PricingType.BY_SIZE, icon: 'area' }, // Preço por m2
+    { name: 'Limpeza por Cômodo', description: 'Limpeza cobrada por número de cômodos.', price: 80.0, defaultPricingType: PricingType.BY_SIZE, icon: 'room' }, // Preço por cômodo
   ];
 
   const createdServices: { [key: string]: Service } = {};
@@ -344,14 +348,14 @@ async function main() {
       update: {
         description: serviceData.description,
         price: new Prisma.Decimal(serviceData.price),
-        defaultPricingType: serviceData.pricingType,
+        defaultPricingType: serviceData.defaultPricingType,
         icon: serviceData.icon,
       },
       create: {
         name: serviceData.name,
         description: serviceData.description,
         price: new Prisma.Decimal(serviceData.price),
-        defaultPricingType: serviceData.pricingType,
+        defaultPricingType: serviceData.defaultPricingType,
         icon: serviceData.icon,
       },
     });
@@ -359,21 +363,28 @@ async function main() {
     console.log(`Serviço '${service.name}' criado/atualizado.`);
   }
 
-  // Oferta de serviço do provedor existente
+  // --- OFERTAS DE SERVIÇO POR PROVEDOR (COM TODOS OS TIPOS DE PRECIFICAÇÃO) ---
   console.log('Criando/Atualizando ofertas de serviço do provedor...');
-  const residentialCleaningService = createdServices['Residencial'];
-  if (!providerUser.provider) {
-    throw new Error("Provider profile not found for providerUser. This should not happen after upsert with include.");
+
+  if (!providerUser.provider || !providerUser2.provider || !providerUser3.provider || !providerUser4.provider) {
+    throw new Error("Provider profiles not found. Ensure all provider users are created with their provider profiles.");
   }
-  const providerOffering = await prisma.providerService.upsert({
+
+  // Caroline Silva (FIXED_PRICE: Residencial)
+  const residentialCleaningService = createdServices['Residencial'];
+  await prisma.providerService.upsert({
     where: {
-      providerId_serviceId: {
+      providerId_serviceId_pricingType: {
         providerId: providerUser.provider.id,
         serviceId: residentialCleaningService.id,
+        pricingType: PricingType.FIXED_PRICE,
       },
     },
     update: {
       price: new Prisma.Decimal(180.0),
+      pricePerHour: null, // Não aplicável para FIXED_PRICE
+      pricePerSquareMeter: null, // Não aplicável para FIXED_PRICE
+      pricePerRoom: null, // Não aplicável para FIXED_PRICE
       pricingType: PricingType.FIXED_PRICE,
       description: 'Limpeza completa até 3h',
       durationMinutes: 180,
@@ -388,22 +399,55 @@ async function main() {
     },
   });
   console.log(
-    `Oferta de serviço para ${providerUser.fullName} (${residentialCleaningService.name}) criada/atualizada.`,
+    `Oferta de serviço para ${providerUser.fullName} (${residentialCleaningService.name} - FIXED_PRICE) criada/atualizada.`,
   );
 
-  // Oferta de serviço para NEW PROVIDER 1: Maria
-  if (!providerUser2.provider) {
-    throw new Error("Provider profile not found for providerUser2. This should not happen after upsert with include.");
-  }
-  const providerOffering2 = await prisma.providerService.upsert({
+  // Caroline Silva (HOURLY: Comercial)
+  const commercialService = createdServices['Comercial'];
+  await prisma.providerService.upsert({
     where: {
-      providerId_serviceId: {
+      providerId_serviceId_pricingType: {
+        providerId: providerUser.provider.id,
+        serviceId: commercialService.id,
+        pricingType: PricingType.HOURLY,
+      },
+    },
+    update: {
+      price: null, // Não aplicável para HOURLY
+      pricePerHour: new Prisma.Decimal(55.0),
+      pricePerSquareMeter: null, // Não aplicável para HOURLY
+      pricePerRoom: null, // Não aplicável para HOURLY
+      pricingType: PricingType.HOURLY,
+      description: 'Limpeza comercial por hora',
+      durationMinutes: 60, // Exemplo de duração para uma hora
+    },
+    create: {
+      providerId: providerUser.provider.id,
+      serviceId: commercialService.id,
+      pricingType: PricingType.HOURLY,
+      pricePerHour: new Prisma.Decimal(55.0),
+      description: 'Limpeza comercial por hora',
+      durationMinutes: 60,
+    },
+  });
+  console.log(
+    `Oferta de serviço para ${providerUser.fullName} (${commercialService.name} - HOURLY) criada/atualizada.`,
+  );
+
+  // Maria (FIXED_PRICE: Residencial)
+  await prisma.providerService.upsert({
+    where: {
+      providerId_serviceId_pricingType: {
         providerId: providerUser2.provider.id,
         serviceId: residentialCleaningService.id,
+        pricingType: PricingType.FIXED_PRICE,
       },
     },
     update: {
       price: new Prisma.Decimal(170.0),
+      pricePerHour: null,
+      pricePerSquareMeter: null,
+      pricePerRoom: null,
       pricingType: PricingType.FIXED_PRICE,
       description: 'Limpeza residencial padrão',
       durationMinutes: 160,
@@ -418,22 +462,55 @@ async function main() {
     },
   });
   console.log(
-    `Oferta de serviço para ${providerUser2.fullName} (${residentialCleaningService.name}) criada/atualizada.`,
+    `Oferta de serviço para ${providerUser2.fullName} (${residentialCleaningService.name} - FIXED_PRICE) criada/atualizada.`,
   );
 
-  // Oferta de serviço para NEW PROVIDER 2: Joana
-  if (!providerUser3.provider) {
-    throw new Error("Provider profile not found for providerUser3. This should not happen after upsert with include.");
-  }
-  const providerOffering3 = await prisma.providerService.upsert({
+  // Maria (BY_SIZE: Limpeza por M²)
+  const cleaningBySqMeterService = createdServices['Limpeza por M²'];
+  await prisma.providerService.upsert({
     where: {
-      providerId_serviceId: {
+      providerId_serviceId_pricingType: {
+        providerId: providerUser2.provider.id,
+        serviceId: cleaningBySqMeterService.id,
+        pricingType: PricingType.BY_SIZE,
+      },
+    },
+    update: {
+      price: null, // Não aplicável para BY_SIZE
+      pricePerHour: null, // Não aplicável para BY_SIZE
+      pricePerSquareMeter: new Prisma.Decimal(6.5),
+      pricePerRoom: null, // Não aplicável para BY_SIZE
+      pricingType: PricingType.BY_SIZE,
+      description: 'Limpeza detalhada por metro quadrado',
+      durationMinutes: null, // Duração pode não ser fixa para BY_SIZE
+    },
+    create: {
+      providerId: providerUser2.provider.id,
+      serviceId: cleaningBySqMeterService.id,
+      pricingType: PricingType.BY_SIZE,
+      pricePerSquareMeter: new Prisma.Decimal(6.5),
+      description: 'Limpeza detalhada por metro quadrado',
+      durationMinutes: null,
+    },
+  });
+  console.log(
+    `Oferta de serviço para ${providerUser2.fullName} (${cleaningBySqMeterService.name} - BY_SIZE) criada/atualizada.`,
+  );
+
+  // Joana (FIXED_PRICE: Residencial)
+  await prisma.providerService.upsert({
+    where: {
+      providerId_serviceId_pricingType: {
         providerId: providerUser3.provider.id,
         serviceId: residentialCleaningService.id,
+        pricingType: PricingType.FIXED_PRICE,
       },
     },
     update: {
       price: new Prisma.Decimal(190.0),
+      pricePerHour: null,
+      pricePerSquareMeter: null,
+      pricePerRoom: null,
       pricingType: PricingType.FIXED_PRICE,
       description: 'Limpeza residencial premium',
       durationMinutes: 200,
@@ -448,22 +525,55 @@ async function main() {
     },
   });
   console.log(
-    `Oferta de serviço para ${providerUser3.fullName} (${residentialCleaningService.name}) criada/atualizada.`,
+    `Oferta de serviço para ${providerUser3.fullName} (${residentialCleaningService.name} - FIXED_PRICE) criada/atualizada.`,
   );
 
-  // Oferta de serviço para NEW PROVIDER 3: Ana
-  if (!providerUser4.provider) {
-    throw new Error("Provider profile not found for providerUser4. This should not happen after upsert with include.");
-  }
-  const providerOffering4 = await prisma.providerService.upsert({
+  // Joana (BY_SIZE: Limpeza por Cômodo)
+  const cleaningByRoomService = createdServices['Limpeza por Cômodo'];
+  await prisma.providerService.upsert({
     where: {
-      providerId_serviceId: {
+      providerId_serviceId_pricingType: {
+        providerId: providerUser3.provider.id,
+        serviceId: cleaningByRoomService.id,
+        pricingType: PricingType.BY_SIZE,
+      },
+    },
+    update: {
+      price: null, // Não aplicável para BY_SIZE
+      pricePerHour: null, // Não aplicável para BY_SIZE
+      pricePerSquareMeter: null, // Não aplicável para BY_SIZE
+      pricePerRoom: new Prisma.Decimal(90.0),
+      pricingType: PricingType.BY_SIZE,
+      description: 'Limpeza por cômodo, ideal para áreas específicas',
+      durationMinutes: null, // Duração pode não ser fixa para BY_SIZE
+    },
+    create: {
+      providerId: providerUser3.provider.id,
+      serviceId: cleaningByRoomService.id,
+      pricingType: PricingType.BY_SIZE,
+      pricePerRoom: new Prisma.Decimal(90.0),
+      description: 'Limpeza por cômodo, ideal para áreas específicas',
+      durationMinutes: null,
+    },
+  });
+  console.log(
+    `Oferta de serviço para ${providerUser3.fullName} (${cleaningByRoomService.name} - BY_SIZE) criada/atualizada.`,
+  );
+
+  // Ana (FIXED_PRICE: Residencial)
+  await prisma.providerService.upsert({
+    where: {
+      providerId_serviceId_pricingType: {
         providerId: providerUser4.provider.id,
         serviceId: residentialCleaningService.id,
+        pricingType: PricingType.FIXED_PRICE,
       },
     },
     update: {
       price: new Prisma.Decimal(165.0),
+      pricePerHour: null,
+      pricePerSquareMeter: null,
+      pricePerRoom: null,
       pricingType: PricingType.FIXED_PRICE,
       description: 'Limpeza residencial básica',
       durationMinutes: 150,
@@ -478,9 +588,8 @@ async function main() {
     },
   });
   console.log(
-    `Oferta de serviço para ${providerUser4.fullName} (${residentialCleaningService.name}) criada/atualizada.`,
+    `Oferta de serviço para ${providerUser4.fullName} (${residentialCleaningService.name} - FIXED_PRICE) criada/atualizada.`,
   );
-
 
   // Disponibilidade semanal do provedor existente (exemplo: seg/qua/sex 09:00-12:00)
   console.log('Criando/Atualizando disponibilidade do provedor...');
@@ -863,12 +972,23 @@ async function main() {
   if (!referredUser.client || !providerUser.provider) {
     throw new Error("Client or Provider profile not found for booking creation.");
   }
+  const providerServiceForBooking1 = await prisma.providerService.findFirst({
+    where: {
+      providerId: providerUser.provider.id,
+      serviceId: residentialCleaningService.id,
+      pricingType: PricingType.FIXED_PRICE,
+    }
+  });
+  if (!providerServiceForBooking1) {
+    throw new Error("ProviderService for booking 1 not found.");
+  }
+
   const booking1 = await prisma.booking.upsert({
     where: { id: 'BKG-SEED-1' },
     update: {
       clientId: referredUser.client.id,
       providerId: providerUser.provider.id,
-      providerServiceId: providerOffering.id,
+      providerServiceId: providerServiceForBooking1.id,
       scheduledDate: booking1Date,
       scheduledTime: '10:00',
       status: BookingStatus.COMPLETED,
@@ -881,7 +1001,7 @@ async function main() {
       id: 'BKG-SEED-1',
       clientId: referredUser.client.id,
       providerId: providerUser.provider.id,
-      providerServiceId: providerOffering.id,
+      providerServiceId: providerServiceForBooking1.id,
       scheduledDate: booking1Date,
       scheduledTime: '10:00',
       status: BookingStatus.COMPLETED,
@@ -899,12 +1019,23 @@ async function main() {
   if (!referrerUser.client || !providerUser.provider) {
     throw new Error("Client or Provider profile not found for booking creation.");
   }
+  const providerServiceForBooking2 = await prisma.providerService.findFirst({
+    where: {
+      providerId: providerUser.provider.id,
+      serviceId: residentialCleaningService.id,
+      pricingType: PricingType.FIXED_PRICE,
+    }
+  });
+  if (!providerServiceForBooking2) {
+    throw new Error("ProviderService for booking 2 not found.");
+  }
+
   const booking2 = await prisma.booking.upsert({
     where: { id: 'BKG-SEED-2' },
     update: {
       clientId: referrerUser.client.id,
       providerId: providerUser.provider.id,
-      providerServiceId: providerOffering.id,
+      providerServiceId: providerServiceForBooking2.id,
       scheduledDate: booking2Date,
       scheduledTime: '14:00',
       status: BookingStatus.COMPLETED,
@@ -915,7 +1046,7 @@ async function main() {
       id: 'BKG-SEED-2',
       clientId: referrerUser.client.id,
       providerId: providerUser.provider.id,
-      providerServiceId: providerOffering.id,
+      providerServiceId: providerServiceForBooking2.id,
       scheduledDate: booking2Date,
       scheduledTime: '14:00',
       status: BookingStatus.COMPLETED,
@@ -931,12 +1062,23 @@ async function main() {
   if (!referrerUser.client || !providerUser.provider) {
     throw new Error("Client or Provider profile not found for booking creation.");
   }
+  const providerServiceForBooking3 = await prisma.providerService.findFirst({
+    where: {
+      providerId: providerUser.provider.id,
+      serviceId: residentialCleaningService.id,
+      pricingType: PricingType.FIXED_PRICE,
+    }
+  });
+  if (!providerServiceForBooking3) {
+    throw new Error("ProviderService for booking 3 not found.");
+  }
+
   const booking3 = await prisma.booking.upsert({
     where: { id: 'BKG-SEED-3' },
     update: {
       clientId: referrerUser.client.id,
       providerId: providerUser.provider.id,
-      providerServiceId: providerOffering.id,
+      providerServiceId: providerServiceForBooking3.id,
       scheduledDate: booking3Date,
       scheduledTime: '09:00',
       status: BookingStatus.CONFIRMED,
@@ -947,7 +1089,7 @@ async function main() {
       id: 'BKG-SEED-3',
       clientId: referrerUser.client.id,
       providerId: providerUser.provider.id,
-      providerServiceId: providerOffering.id,
+      providerServiceId: providerServiceForBooking3.id,
       scheduledDate: booking3Date,
       scheduledTime: '09:00',
       status: BookingStatus.CONFIRMED,
@@ -1313,12 +1455,23 @@ async function main() {
 
   // Subscription
   console.log('Criando/Atualizando assinatura...');
+  const providerServiceForSubscription = await prisma.providerService.findFirst({
+    where: {
+      providerId: providerUser.provider.id,
+      serviceId: residentialCleaningService.id,
+      pricingType: PricingType.FIXED_PRICE,
+    }
+  });
+  if (!providerServiceForSubscription) {
+    throw new Error("ProviderService for subscription not found.");
+  }
+
   await prisma.subscription.upsert({
     where: { id: 'SUB-001' },
     update: {
       clientId: referrerUser.client!.id,
       providerId: providerUser.provider!.id,
-      providerServiceId: providerOffering.id,
+      providerServiceId: providerServiceForSubscription.id,
       frequency: SubscriptionFrequency.WEEKLY,
       status: SubscriptionStatus.ACTIVE,
       nextGenerationDate: addDays(now, 7),
@@ -1327,7 +1480,7 @@ async function main() {
       id: 'SUB-001',
       clientId: referrerUser.client!.id,
       providerId: providerUser.provider!.id,
-      providerServiceId: providerOffering.id,
+      providerServiceId: providerServiceForSubscription.id,
       frequency: SubscriptionFrequency.WEEKLY,
       startDate: now,
       endDate: addDays(now, 365),
