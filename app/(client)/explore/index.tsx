@@ -15,13 +15,14 @@ import {
     ViewToken,
     RefreshControl,
     Platform,
-    Share // Importar Share para compartilhamento nativo
+    Share
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
-import AsyncStorage from '@react-native-async-storage/async-storage'; // Importar AsyncStorage
-import { useFocusEffect } from '@react-navigation/native'; // Importar useFocusEffect
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
+import Constants from 'expo-constants'; // Importar Constants
 
 import {
     getOffers,
@@ -29,7 +30,7 @@ import {
     getUserProfile,
     searchProvidersWithLocation,
 } from '../../../services/clientService';
-import { useAuth } from '../../../hooks/useAuth'; // Importar useAuth
+import { useAuth } from '../../../hooks/useAuth';
 
 import {
     getRecommendedProviders,
@@ -39,44 +40,36 @@ import { Offer } from '../../../types/backend/offers';
 import { ProviderDisplayInfo } from '../../../types/backend/providers';
 import { Service } from '../../../types/backend/services';
 import { UserProfile } from '../../../types/backend/users';
+import HorizontalMiniGrid from '../../../components/client/explore/home/HorizontalMiniGrid'; // Importado
 
 import { CLIENT_ROUTES } from '../../../constants/routes';
 import { AppColors, AppDurations, AppOffsets, AppShadows, AppTypography, SCREEN_WIDTH } from '../../../constants/appStyles';
 
 // --- INTERFACES PARA COMPONENTES (DEFINIDAS AQUI PARA EXEMPLO) ---
-// Idealmente, estas interfaces deveriam estar nos arquivos de seus respectivos componentes.
-
-// Interface para CarouselBannerItem (corrigida para incluir todas as props e onPress)
 interface CarouselBannerItemProps {
     title: string;
     discount: string;
     description: string;
     buttonText: string;
     badgeText: string;
-    // Removendo background colors, pois agora teremos uma imagem (conforme CarouselBannerItem.tsx)
     onPress: () => void;
 }
 
-// Interface genérica para SecaoContainer (agora é realmente genérica)
 interface SecaoContainerProps<T> {
     titulo: string;
     onVerTudoPress: () => void;
-    data: T[]; // Tornando a prop 'data' genérica
-    renderItem: ({ item, index }: { item: T; index: number }) => React.ReactElement | null; // Tornando renderItem genérico
+    data: T[];
+    renderItem: ({ item, index }: { item: T; index: number }) => React.ReactElement | null;
     horizontal?: boolean;
     titleColor?: string;
     noDataText?: string;
 }
 
-// Interface para CategoriaCard (corrigida para não incluir onPress, pois é tratado internamente)
 interface CategoriaCardProps {
-    item: { id: string; name: string; icon: any }; // 'any' para o ícone se o tipo exato não for conhecido
-    // onPress: () => void; // Removido, pois a navegação é interna
+    item: { id: string; name: string; icon: any };
 }
-
 // --- FIM DAS INTERFACES ---
 
-// Importações dos componentes
 import CarouselBannerItem from '../../../components/client/explore/home/CarouselBannerItem';
 import CategoriaCard from '../../../components/client/explore/home/CategoriaCard';
 import HeaderSuperior from '../../../components/client/explore/home/HeaderSuperior';
@@ -86,30 +79,21 @@ import RecomendacaoCard from '../../../components/client/explore/home/Recomendac
 import SecaoContainer from '../../../components/client/explore/home/SecaoContainer';
 import SecaoPrestadores from '../../../components/client/explore/home/SecaoPrestadores';
 import SecaoRecomendacoes from '../../../components/client/explore/home/SecaoRecomendacoes';
-// REMOVIDO: import FAB_SOS from '../../../components/client/explore/home/FAB_SOS';
-// ADICIONADO:
 import DEFENSE_SOS from '../../../components/client/explore/home/DEFENSE_SOS';
-
-
-// NOVOS COMPONENTES DE CUPOM E REFERRAL
-// CORREÇÃO: Alterado de named imports para default imports
 import HtmlCouponCard from '../../../components/coupons/HtmlCouponCard';
-import { CouponPill } from '../../../components/coupons/CouponPill'; // named
-import { ReferralBanner } from '../../../components/referrals/ReferralBanner'; // named
-import { ReferralSheet } from '../../../components/referrals/ReferralSheet'; // named
+import { CouponPill } from '../../../components/coupons/CouponPill';
+import { ReferralBanner } from '../../../components/referrals/ReferralBanner';
+import { ReferralSheet } from '../../../components/referrals/ReferralSheet';
 import BottomSlideInCard from '../../../components/common/BottomSlideInCard';
-
-// INJEÇÃO: SmartCouponNudge
 import SmartCouponNudge from '../../../components/coupons/CouponNudge';
 
 const COR_AZUL_CLARO_UNIFICADA = '#A0D2EB';
 const COR_PRIMARIA_ESCURA = '#2C3E50';
 const COR_CINZA_FUNDO = '#F4F7FC';
-const COR_BORDA_SUAVE = '#E0E0E0';
+const COR_BORDA_SUAVE = '#c0b5ca92';
 
 const { width: screenWidth } = Dimensions.get('window');
 
-// Define o tipo para os itens do bannerData
 type BannerDataItem = {
     id: string;
     title: string;
@@ -123,44 +107,43 @@ type BannerDataItem = {
 const bannerData: BannerDataItem[] = [
     {
         id: '1',
-        title: 'Get Special Offer',
-        discount: 'Up to 40%',
-        description: 'All Services Available | T&C Applied',
-        buttonText: 'Claim',
-        badgeText: 'Limited time!',
+        title: 'Obtenha Oferta Especial', // Traduzido
+        discount: 'Até 40%', // Traduzido
+        description: 'Todos os Serviços Disponíveis | Termos e Condições Aplicados', // Traduzido
+        buttonText: 'Resgatar', // Traduzido
+        badgeText: 'Tempo limitado!', // Traduzido
         onPress: () => console.log('Banner 1 Pressionado'),
     },
     {
         id: '2',
-        title: 'Another Great Deal',
-        discount: 'Save Big!',
-        description: 'On Selected Services Only',
-        buttonText: 'View',
-        badgeText: 'Exclusive',
+        title: 'Outra Grande Oferta', // Traduzido
+        discount: 'Economize Muito!', // Traduzido
+        description: '', // Traduzido
+        buttonText: 'Ver', // Traduzido
+        badgeText: 'Exclusivo', // Traduzido
         onPress: () => console.log('Banner 2 Pressionado'),
     },
     {
         id: '3',
-        title: 'Last Chance!',
-        discount: '75% Off',
-        description: 'For New Customers',
-        buttonText: 'Sign Up',
-        badgeText: 'Hurry!',
+        title: 'Última Chance!', // Traduzido
+        discount: '75% de Desconto', // Traduzido
+        description: 'Para Novos Clientes', // Traduzido
+        buttonText: 'Cadastrar', // Traduzido
+        badgeText: 'Corra!', // Traduzido
         onPress: () => console.log('Banner 3 Pressionado'),
     },
 ];
 
-// Chaves para AsyncStorage
 const WELCOME_COUPON_DISMISSED_KEY = '@LimpeJa:WelcomeCouponDismissed';
 const WELCOME_COUPON_REDEEMED_KEY = '@LimpeJa:WelcomeCouponRedeemed';
-const REFERRAL_BANNER_DISMISSED_KEY = '@LimpeJa:ReferralBannerDismissed'; // NOVO: Chave para o descarte do banner de indicação
+const REFERRAL_BANNER_DISMISSED_KEY = '@LimpeJa:ReferralBannerDismissed';
 
 export default function ExploreClientScreen() {
     const router = useRouter();
     const flatListRef = useRef<FlatList<BannerDataItem>>(null);
     const [currentIndex, setCurrentIndex] = useState(0);
     const { t } = useTranslation();
-    const { user, isAuthenticated } = useAuth(); // Usar o hook useAuth
+    const { user, isAuthenticated } = useAuth();
 
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [serviceCategories, setServiceCategories] = useState<Service[]>([]);
@@ -170,16 +153,14 @@ export default function ExploreClientScreen() {
     const [error, setError] = useState<string | null>(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
 
-    // Estados para o CouponWelcomeCard e CouponPill
     const [welcomeCouponOffer, setWelcomeCouponOffer] = useState<Offer | null>(null);
-    const [showPersistentCouponPill, setShowPersistentCouponPill] = useState(false); // Renomeado para clareza
+    const [showPersistentCouponPill, setShowPersistentCouponPill] = useState(false);
     const [showReferralSheet, setShowReferralSheet] = useState(false);
 
-    // NOVO ESTADO: Controla qual promoção está ativa no BottomSlideInCard
     const [activeBottomPromotion, setActiveBottomPromotion] = useState<'coupon' | 'referral' | null>(null);
-    const promotionTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Para gerenciar o setTimeout
+    const promotionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    const referralCode = userProfile?.referralCode || "LIMPEJA123"; // Mock de um código de referência
+    const referralCode = userProfile?.referralCode || "LIMPEJA123";
     const rewardReferrer = "Ganhe R$20 ou +300 pts";
     const rewardReferred = "Seu amigo ganha 20% na 1ª";
 
@@ -189,16 +170,14 @@ export default function ExploreClientScreen() {
     const recommendationsAnim = useRef(new Animated.Value(0)).current;
     const providersAnim = useRef(new Animated.Value(0)).current;
     const navBarAnim = useRef(new Animated.Value(0)).current;
-    // Removido referralBannerAnim, pois agora é tratado pelo BottomSlideInCard
 
 
-    // Função para buscar os dados principais da tela
     const fetchData = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
             const fetchedUserProfile = await getUserProfile();
-            setUserProfile(fetchedUserProfile); // Isso atualiza o estado userProfile
+            setUserProfile(fetchedUserProfile);
 
             console.log('[ExploreClientScreen] Perfil do usuário carregado:', fetchedUserProfile);
 
@@ -233,7 +212,6 @@ export default function ExploreClientScreen() {
             }
             setNearbyProviders(providersData);
 
-            // Lógica para animações de entrada
             Animated.sequence([
                 Animated.spring(headerAnim, { toValue: 1, damping: 10, stiffness: 100, useNativeDriver: true }),
                 Animated.delay(50),
@@ -258,19 +236,15 @@ export default function ExploreClientScreen() {
         }
     }, [t, headerAnim, categoriesAnim, bannerAnim, recommendationsAnim, providersAnim, navBarAnim]);
 
-    // Efeito para chamar fetchData uma vez na montagem inicial do componente
     useEffect(() => {
         fetchData();
-    }, [fetchData]); // `fetchData` é uma `useCallback` com dependências estáveis, então este efeito rodará uma vez.
+    }, [fetchData]);
 
-
-    // Use useFocusEffect para disparar a lógica de promoção quando a tela estiver em foco
     useFocusEffect(
         useCallback(() => {
             let cancelled = false;
 
             const loadAndSetPromotions = async () => {
-                // Fetch offers here, as it's specific to promotions
                 const offersData = await getOffers();
                 const welcomeOffer = offersData.find(offer =>
                     (offer as any).target === 'NEW_CLIENTS' && (offer as any).firstBookingOnly
@@ -281,16 +255,13 @@ export default function ExploreClientScreen() {
                     clearTimeout(promotionTimeoutRef.current);
                 }
 
-                // CORREÇÃO: Adicionar type assertion para unknown primeiro e depois para NodeJS.Timeout
                 promotionTimeoutRef.current = setTimeout(async () => {
                     if (cancelled) return;
 
                     let shouldShowCoupon = false;
                     let shouldShowReferral = false;
 
-                    // Verifica a elegibilidade do Cupom
-                    // Garante que userProfile não é nulo antes de acessar suas propriedades
-                    if (welcomeOffer && userProfile) { 
+                    if (welcomeOffer && userProfile) {
                         const dismissedCoupon = await AsyncStorage.getItem(WELCOME_COUPON_DISMISSED_KEY);
                         const redeemedCoupon = await AsyncStorage.getItem(WELCOME_COUPON_REDEEMED_KEY);
                         const isNewCustomer = (userProfile.clientDetails?.totalBookings || 0) === 0;
@@ -300,32 +271,28 @@ export default function ExploreClientScreen() {
                             if (!dismissedCoupon) {
                                 shouldShowCoupon = true;
                             } else {
-                                setShowPersistentCouponPill(true); // Mostra a pílula se dispensado, mas não resgatado
+                                setShowPersistentCouponPill(true);
                             }
                         }
                     }
 
-                    // Verifica a elegibilidade da Indicação (apenas se autenticado e tiver um código de indicação)
-                    if (isAuthenticated && userProfile?.referralCode) { 
+                    if (isAuthenticated && userProfile?.referralCode) {
                         const dismissedReferral = await AsyncStorage.getItem(REFERRAL_BANNER_DISMISSED_KEY);
                         if (!dismissedReferral) {
                             shouldShowReferral = true;
                         }
                     }
 
-                    // Determina qual promoção mostrar (Cupom tem prioridade)
                     if (shouldShowCoupon) {
                         setActiveBottomPromotion('coupon');
                     } else if (shouldShowReferral) {
                         setActiveBottomPromotion('referral');
                     } else {
-                        setActiveBottomPromotion(null); // Nenhuma promoção para mostrar
+                        setActiveBottomPromotion(null);
                     }
-                }, 5000) as unknown as NodeJS.Timeout; // <-- CORREÇÃO APLICADA AQUI
+                }, 5000) as unknown as NodeJS.Timeout;
             };
 
-            // Somente executa a lógica de promoções se o userProfile já estiver carregado
-            // Isso evita que a lógica de promoções tente acessar userProfile antes que ele seja populado
             if (userProfile !== null) {
                 loadAndSetPromotions();
             }
@@ -336,9 +303,8 @@ export default function ExploreClientScreen() {
                     clearTimeout(promotionTimeoutRef.current);
                 }
             };
-        }, [userProfile, isAuthenticated, t]) // Dependências: userProfile e isAuthenticated. `t` é estável.
+        }, [userProfile, isAuthenticated, t])
     );
-
 
     const handleCategoryPress = useCallback((item: Service) => {
         router.push({
@@ -398,16 +364,13 @@ export default function ExploreClientScreen() {
 
     const onRefresh = useCallback(() => {
         setIsRefreshing(true);
-        // Chamamos fetchData aqui para o RefreshControl.
-        // A lógica de promoção será reavaliada pelo useFocusEffect quando a tela focar novamente.
         fetchData();
     }, [fetchData]);
 
-    // Handlers para o Cupom
     const handleUseWelcomeCoupon = useCallback(async (code: string) => {
-        setActiveBottomPromotion(null); // Fecha o card
-        setShowPersistentCouponPill(false); // Esconde a pílula se usado
-        await AsyncStorage.setItem(WELCOME_COUPON_REDEEMED_KEY, 'true'); // Marcar como resgatado
+        setActiveBottomPromotion(null);
+        setShowPersistentCouponPill(false);
+        await AsyncStorage.setItem(WELCOME_COUPON_REDEEMED_KEY, 'true');
         router.push({
             pathname: CLIENT_ROUTES.SCHEDULE_SERVICE,
             params: { couponCode: code }
@@ -415,29 +378,26 @@ export default function ExploreClientScreen() {
     }, [router]);
 
     const handleDismissWelcomeCoupon = useCallback(async () => {
-        setActiveBottomPromotion(null); // Fecha o card
-        setShowPersistentCouponPill(true); // Mostrar a pílula após dispensar
-        await AsyncStorage.setItem(WELCOME_COUPON_DISMISSED_KEY, 'true'); // Marcar como dispensado
+        setActiveBottomPromotion(null);
+        setShowPersistentCouponPill(true);
+        await AsyncStorage.setItem(WELCOME_COUPON_DISMISSED_KEY, 'true');
     }, []);
 
     const handleReopenWelcomeCoupon = useCallback(async () => {
         setShowPersistentCouponPill(false);
-        setActiveBottomPromotion('coupon'); // Reabre o card do cupom
-        // Opcional: remover a flag de dispensado se o usuário reengajar
-        // await AsyncStorage.removeItem(WELCOME_COUPON_DISMISSED_KEY);
+        setActiveBottomPromotion('coupon');
     }, []);
 
-    // Handlers para o ReferralBanner
     const handleDismissReferralBanner = useCallback(async () => {
-        setActiveBottomPromotion(null); // Fecha o card
-        await AsyncStorage.setItem(REFERRAL_BANNER_DISMISSED_KEY, 'true'); // Marca como dispensado
+        setActiveBottomPromotion(null);
+        await AsyncStorage.setItem(REFERRAL_BANNER_DISMISSED_KEY, 'true');
     }, []);
 
     const handleShareReferral = useCallback(async () => {
         try {
             const result = await Share.share({
                 message: `Use meu código de indicação ${referralCode} no LimpeJá e ganhe um desconto na sua primeira reserva!`,
-                url: 'https://limpeja.com/referral', // URL para a página de indicação
+                url: 'https://limpeja.com/referral',
                 title: 'Indique um amigo e ganhe no LimpeJá!',
             });
             if (result.action === Share.sharedAction) {
@@ -452,15 +412,14 @@ export default function ExploreClientScreen() {
         } catch (error: any) {
             Alert.alert('Erro ao Compartilhar', error.message);
         }
-        setShowReferralSheet(false); // Fecha a sheet após a tentativa de compartilhamento
-        setActiveBottomPromotion(null); // Fecha o banner após o compartilhamento
+        setShowReferralSheet(false);
+        setActiveBottomPromotion(null);
     }, [referralCode]);
 
     const handleHowItWorksReferral = useCallback(() => {
         setShowReferralSheet(true);
-        setActiveBottomPromotion(null); // Fecha o banner ao abrir a sheet
+        setActiveBottomPromotion(null);
     }, []);
-
 
     if (loading && !isRefreshing) {
         return (
@@ -491,11 +450,8 @@ export default function ExploreClientScreen() {
                 headerShown: false,
                 headerRight: () => (
                     <TouchableOpacity
-                        // REMOVIDO: onPress={() => router.push('/(common)/safety/panic' as any)}
-                        // O DEFENSE_SOS já lida com a navegação interna ou lógica de SOS
                         style={styles.shieldIconContainer}
                     >
-                        {/* O ícone de escudo agora será parte do DEFENSE_SOS se ele o incluir */}
                     </TouchableOpacity>
                 ),
             }} />
@@ -516,33 +472,22 @@ export default function ExploreClientScreen() {
             >
                 <View style={styles.contentWrapper}>
                     {/* Header Superior Animado */}
-                    <Animated.View style={{ opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-50, 0] }) }] }}>
+                    <Animated.View style={[styles.headerContainer, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-50, 0] }) }] }]}>
                         <HeaderSuperior
                             userName={userProfile?.clientDetails?.fullName || userProfile?.providerDetails?.fullName || userProfile?.fullName || t('common.user')}
                             userAddress={addressToDisplay}
                         />
                     </Animated.View>
 
-                    {/* Categorias de Serviço Animadas */}
-                    <Animated.View style={{ opacity: categoriesAnim, transform: [{ translateY: categoriesAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
-                        <SecaoContainer<Service>
-                            titulo={t("search.all_categories")}
-                            onVerTudoPress={() => router.push('/(client)/explore/todas-categorias' as any)}
-                            data={safeServiceCategories}
-                            renderItem={({ item }) => {
-                                if (!item || !item.name) return null;
-                                return (
-                                    <CategoriaCard
-                                        item={{ id: item.id, name: item.name, icon: item.icon as any }}
-                                    />
-                                );
-                            }}
-                            horizontal={true}
-                        />
-                    </Animated.View>
+                    {/*
+                      ALTERAÇÃO 1: O Bloco de categorias foi MOVIDO para fora do ScrollView.
+                      O espaço que ele ocupava precisa ser compensado.
+                      (A estrutura JSX já reflete isso, o componente Animated.View das categorias está fora do ScrollView, abaixo)
+                    */}
 
                     {/* Novo Carrossel de Banners */}
-                    <Animated.View style={[styles.carouselContainer, { opacity: bannerAnim, transform: [{ translateY: bannerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
+                    {/* ALTERAÇÃO 2: Adicionamos um marginTop para compensar o espaço das categorias flutuantes */}
+                    <Animated.View style={[styles.carouselContainer, {  opacity: bannerAnim, transform: [{ translateY: bannerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
                         <FlatList<BannerDataItem>
                             ref={flatListRef}
                             data={bannerData}
@@ -553,14 +498,17 @@ export default function ExploreClientScreen() {
                             showsHorizontalScrollIndicator={false}
                             onViewableItemsChanged={onViewableItemsChanged}
                             viewabilityConfig={viewabilityConfig}
-                            snapToInterval={screenWidth * 0.85 + 20}
+                            // ALTERAÇÃO AQUI: snapToInterval ajustado para alinhar corretamente
+                            snapToInterval={screenWidth - 20} // (screenWidth - 40) + 10 (margin esquerdo) + 10 (margin direito)
                             decelerationRate="fast"
+                            // ALTERAÇÃO AQUI: Adicionado paddingHorizontal para alinhar com as bordas da tela
+                            contentContainerStyle={{ paddingHorizontal: 10 }}
                         />
                         {renderPagination()}
                     </Animated.View>
 
                     {/* Recomendações para Você Animadas */}
-                    <Animated.View style={{ opacity: recommendationsAnim, transform: [{ translateY: recommendationsAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
+                    <Animated.View style={{  opacity: recommendationsAnim, transform: [{ translateY: recommendationsAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
                         <SecaoRecomendacoes
                             titulo={t("search.recommended_providers")}
                             onVerTudoPress={() => router.push('/(client)/explore/todos-recomendacoes' as any)}
@@ -578,6 +526,8 @@ export default function ExploreClientScreen() {
                             horizontal={true}
                             noDataText={t("search.no_results")}
                         />
+                        {/* INJEÇÃO: Separador sutil após Recomendações */}
+                        <View style={styles.sectionSeparator} />
                     </Animated.View>
 
                     {/* Profissionais por Perto Animados */}
@@ -599,9 +549,47 @@ export default function ExploreClientScreen() {
                             horizontal={true}
                             noDataText={t("search.no_results")}
                         />
+                        {/* INJEÇÃO: Separador sutil após Profissionais por Perto */}
+                        <View style={styles.sectionSeparator} />
                     </Animated.View>
-                </View>
-            </ScrollView>
+
+                    {/* INJEÇÃO: HorizontalMiniGrid com Badges */}
+                    <Animated.View style={{ opacity: providersAnim, transform: [{ translateY: providersAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
+                        {/* NOVO: Título para a seção de mini-cards */}
+                        <View style={styles.miniGridHeader}>
+                            {/* ÚNICA ALTERAÇÃO AQUI: De "explore_actions_title" para "explore_section.title" */}
+                            <Text style={styles.miniGridTitle}>{t("explore_section.title")}</Text>
+                            {/* INJEÇÃO: Compromisso para "badges nos mini cards" sem alterar HorizontalMiniGrid */}
+                            {welcomeCouponOffer && ( // Só mostra se houver uma oferta de cupom ativa
+                                <TouchableOpacity onPress={() => setActiveBottomPromotion('coupon')} style={styles.miniGridBadge}>
+                                    <Text style={styles.miniGridBadgeText}>
+                                        <Ionicons name="sparkles" size={12} color={AppColors.white} /> {t("explore_section.offers_available")}
+                                    </Text>
+                                </TouchableOpacity>
+                            )}
+                        </View>
+                        <HorizontalMiniGrid />
+                    </Animated.View>
+                </View> {/* Fim de contentWrapper */}
+            </ScrollView> {/* Fim de ScrollView */}
+
+            {/* ALTERAÇÃO 3: O contêiner das categorias agora está AQUI, fora e sobre o ScrollView */}
+            <Animated.View style={[styles.categoriesCard, {left: -5,  opacity: categoriesAnim, transform: [{ translateY: categoriesAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
+                <SecaoContainer<Service>
+                    titulo={t("search.all_categories")}
+                    onVerTudoPress={() => router.push('/(client)/explore/todas-categorias' as any)}
+                    data={safeServiceCategories}
+                    renderItem={({ item }) => {
+                        if (!item || !item.name) return null;
+                        return (
+                            <CategoriaCard
+                                item={{ id: item.id, name: item.name, icon: item.icon as any }}
+                            />
+                        );
+                    }}
+                    horizontal={true}
+                />
+            </Animated.View>
 
             {/* NavBar Animada */}
             <Animated.View style={[styles.navBarContainer, { transform: [{ translateY: navBarAnim.interpolate({ inputRange: [0, 1], outputRange: [100, 0] }) }] }]}>
@@ -614,9 +602,9 @@ export default function ExploreClientScreen() {
             {/* INJEÇÃO: SmartCouponNudge (aparece sutil após 3s na rota explore) */}
             {welcomeCouponOffer && (
                 <SmartCouponNudge
-                    code={(welcomeCouponOffer as any).code}
-                    title={welcomeCouponOffer.title}
-                    subtitle={welcomeCouponOffer.description}
+                    code={welcomeCouponOffer!.couponCode as string}
+                    title={welcomeCouponOffer!.title}
+                    subtitle={welcomeCouponOffer!.description}
                     delayMs={3000}
                     throttleHours={24}
                     showOnRoutes={['/(client)/explore']}
@@ -625,38 +613,35 @@ export default function ExploreClientScreen() {
             )}
 
             {/* NOVO: BottomSlideInCard para Cupom ou Indicação (FORA DO SCROLLVIEW) */}
-            {/* Renderiza o cupom se activeBottomPromotion for 'coupon' */}
-            <BottomSlideInCard isVisible={activeBottomPromotion === 'coupon'}>
-                {welcomeCouponOffer && (
+            {welcomeCouponOffer && (
+                <BottomSlideInCard isVisible={activeBottomPromotion === 'coupon'}>
                     <HtmlCouponCard
-                        code={(welcomeCouponOffer as any).code}
-                        title={welcomeCouponOffer.title}
-                        subtitle={welcomeCouponOffer.description}
-                        expiresAt={welcomeCouponOffer.validUntil}
+                        code={welcomeCouponOffer!.couponCode as string}
+                        title={welcomeCouponOffer!.title}
+                        subtitle={welcomeCouponOffer!.description}
+                        expiresAt={welcomeCouponOffer!.validUntil}
                         onUseNow={handleUseWelcomeCoupon}
                         onDismiss={handleDismissWelcomeCoupon}
                     />
-                )}
-            </BottomSlideInCard>
+                </BottomSlideInCard>
+            )}
 
-            {/* Renderiza o banner de indicação se activeBottomPromotion for 'referral' */}
-            <BottomSlideInCard isVisible={activeBottomPromotion === 'referral'}>
-                {isAuthenticated && userProfile?.referralCode && (
+            {isAuthenticated && userProfile?.referralCode && (
+                <BottomSlideInCard isVisible={activeBottomPromotion === 'referral'}>
                     <ReferralBanner
                         code={referralCode}
                         rewardReferrer={rewardReferrer}
                         rewardReferred={rewardReferred}
                         onShare={handleShareReferral}
                         onHowItWorks={handleHowItWorksReferral}
-                        onDismiss={handleDismissReferralBanner} // Passa o manipulador de descarte
+                        onDismiss={handleDismissReferralBanner}
                     />
-                )}
-            </BottomSlideInCard>
+                </BottomSlideInCard>
+            )}
 
-            {/* NOVO: Pílula de Cupom Persistente (usando CouponPill) */}
             {showPersistentCouponPill && activeBottomPromotion !== 'coupon' && welcomeCouponOffer && (
                 <CouponPill
-                    code={(welcomeCouponOffer as any).code}
+                    code={welcomeCouponOffer!.couponCode as string}
                     onOpen={handleReopenWelcomeCoupon}
                 />
             )}
@@ -686,15 +671,56 @@ const styles = StyleSheet.create({
         paddingBottom: 90,
         flexGrow: 1,
     },
+    headerContainer: {
+        marginHorizontal: 1,
+        // O zIndex aqui é importante para que o header fique abaixo das categorias
+        zIndex: 1, // Mantido, mas zIndex das categorias é maior
+    },
     contentWrapper: {
         flexGrow: 1,
-        paddingHorizontal: 1,
+        marginHorizontal: 10,
+    },
+    // ALTERAÇÃO 4: Estilo completamente novo para o container flutuante das categorias
+    categoriesCard: {
+        position: 'absolute',
+        // O valor de 'top' precisa ser ajustado para alinhar perfeitamente abaixo do header.
+        // Um bom ponto de partida é a altura do header - um pouco para sobrepor.
+        // Vamos estimar um valor e você pode ajustá-lo.
+        top: (Constants.statusBarHeight + 52), // AJUSTE ESTE VALOR PARA O ALINHAMENTO PERFEITO
+        left: 0,
+        right: 0,
+        zIndex: 100, // zIndex alto para garantir que flutue sobre tudo
+        paddingHorizontal: 5,
+        backgroundColor: 'transparent',
+        // Removendo sombras e elevações conforme solicitado ("AGORA SEM FUNDO BRANCO E SOMBRA")
+        ...Platform.select({
+            ios: {
+                shadowColor: 'transparent',
+                shadowOffset: { width: 0, height: 0 },
+                shadowOpacity: 0,
+                shadowRadius: 0,
+            },
+            android: {
+                elevation: 0,
+            },
+        }),
+        // Removendo marginTop/marginBottom que não são relevantes para position: 'absolute'
+        // A posição é controlada por 'top', 'left', 'right'.
+    },
+    // ALTERAÇÃO 5: Adicionar marginTop para o carrossel
+    carouselContainer: {
+        // Este valor deve ser suficiente para que o carrossel não fique escondido sob as categorias.
+        // A altura da linha de categorias é de aprox. 50-60px (ícone + texto).
+        marginTop: 65, // AJUSTE CONFORME NECESSÁRIO
+        marginBottom: 10,
+        alignItems: 'center',
     },
     navBarContainer: {
         position: 'absolute',
         bottom: 0,
         left: 0,
         right: 0,
+        zIndex: 200, // NavBar deve ficar sobre tudo, exceto modais
         shadowColor: "#000",
         shadowOffset: {
             width: 0,
@@ -709,11 +735,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: COR_CINZA_FUNDO,
-    },
-    carouselContainer: {
-        marginTop: 20,
-        marginBottom: 20,
-        alignItems: 'center',
     },
     pagination: {
         flexDirection: 'row',
@@ -737,6 +758,43 @@ const styles = StyleSheet.create({
         padding: 5,
         marginRight: Platform.OS === 'ios' ? 10 : 0,
     },
-    // Removido referralBannerStyle, pois não está mais na visualização principal
-    // Removido couponCardOverlay style, pois não é mais um overlay de tela cheia
+    // NOVO: Estilos para o título da seção de mini-cards
+    miniGridHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 5, // Espaçamento abaixo do título
+        paddingHorizontal: 16, // Alinhamento com outros títulos de seção
+        marginTop: 2, // Espaçamento acima do título para separar da seção anterior
+    },
+    miniGridTitle: {
+        fontSize: 15,
+        fontFamily: 'Montserrat-Regular',
+        fontWeight: '800',
+        color: '#4f5a71ff', // Cor consistente com outros títulos
+    },
+    // INJEÇÃO: Estilo para o separador de seção
+    sectionSeparator: {
+        borderBottomWidth: 1,
+        borderBottomColor: COR_BORDA_SUAVE, // Uma cor suave para a linha
+        marginVertical: 15, // Espaçamento vertical para a linha
+        right: 21,
+        marginHorizontal: 58, // Alinha com o padding dos títulos
+    },
+    // INJEÇÃO: Estilos para o "badge" da seção de mini-cards
+    miniGridBadge: {
+        backgroundColor: AppColors.primaryInteractive, // Cor de destaque
+        borderRadius: 15,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        marginLeft: 10, // Espaçamento entre o título e o badge
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    miniGridBadgeText: {
+        color: AppColors.white,
+        fontSize: 10,
+        fontWeight: 'bold',
+        marginLeft: 3, // Espaçamento entre o ícone e o texto
+    },
 });
