@@ -1,0 +1,122 @@
+      <!-- Exemplo numérico simples -->
+      <div class="example">
+        <div class="ex-icon">💡</div>
+        <div>
+          <div class="ex-title">Exemplo rápido</div>
+          <div class="ex-row">
+            <div class="ex-box">
+              <div class="ex-head">Boca a boca</div>
+              <div class="ex-price">R$300--350</div>
+              <div class="ex-note">Sem desconto, sem seguro, sem garantia.</div>
+            </div>
+            <div class="ex-arrow">→</div>
+            <div class="ex-box ok">
+              <div class="ex-head">No app</div>
+              <div class="ex-price">R$240 (com cupom)</div>
+              <div class="ex-note">Seguro + suporte + PIX em até 24h.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mitigações táticas (do relatório) -->
+      <div class="mitigations">
+        <div class="miti-title">📋 Ações prioritárias</div>
+        <ul>
+          <li><strong>Telefone mascarado</strong> em todas as interações e <strong>bloqueio de links/contatos</strong> no chat até o pagamento.</li>
+          <li><strong>Rebook 1-clique</strong> + cupom recorrente para 2ª/3ª visita (fidelidade/cashback).</li>
+          <li><strong>Seguro/garantia</strong> exclusivamente para pedidos in-app.</li>
+          <li><strong>Missões e níveis</strong> (Bronze/Prata/Ouro) com bônus atrelados a serviços via app.</li>
+        </ul>
+      </div>
+
+      <!-- KPIs de sucesso para esta defesa -->
+      <div class="kpi-wrap">
+        <div class="kpi"><div class="num">≤ 8%</div><span>Cancelamentos</span></div>
+        <div class="kpi"><div class="num">≥ 30--40%</div><span>Repeat D30/D60</span></div>
+        <div class="kpi"><div class="num">≤ 24h</div><span>Repasse PIX</span></div>
+        <div class="kpi"><div class="num">≥ 85%</div><span>Fill rate</span></div>
+      </div>
+
+      <h2 style="margin:24px 0 6px">Qualidade e Confiança (para Clientes e Prestadores)</h2>
+      <p class="lead" style="margin:0 0 14px">
+        Garantir que tanto clientes quanto prestadores confiem na plataforma e nos serviços oferecidos.
+      </p>
+      <div class="mitigations">
+        <div class="miti-title">✅ Implementações</div>
+        <ul>
+          <li>Verificação Robusta (KYC): Processo de onboarding com envio de CPF/documento, selfie biométrica e conferência de antecedentes criminais.</li>
+          <li>Avaliação Mútua e Histórico Transparente: Clientes e prestadores se avaliam, com histórico visível nos perfis.</li>
+          <li>Métricas de Performance do Prestador: Taxa de aceitação e tempo médio de resposta são calculados e exibidos, influenciando o ranking e a visibilidade.</li>
+          <li>Níveis e Treinamentos: Implementação de níveis (Bronze/Prata/Ouro) e treinamentos para garantir a padronização e qualidade.</li>
+        </ul>
+      </div>
+
+      <h2 style="margin:24px 0 6px">Suporte e Resolução de Disputas (Custo por Pedido)</h2>
+      <p class="lead" style="margin:0 0 14px">
+        Minimizar o custo e o tempo de resolução de problemas e disputas entre as partes.
+      </p>
+      <div class="mitigations">
+        <div class="miti-title">✅ Implementações</div>
+        <ul>
+          <li>Dispute Center no App: Ferramenta para clientes e prestadores reportarem problemas e disputas diretamente, com comunicação mediada.</li>
+          <li>Ferramentas de Pré-Triagem: Uso de fluxos guiados e solicitação de fotos (antes/depois) para documentação de incidentes.</li>
+          <li>SLA e Tabelas de Decisão: Definição de Service Level Agreements e tabelas de decisão para padronizar e agilizar a resolução de disputas.</li>
+        </ul>
+      </div>
+
+      <h2 style="margin:24px 0 6px">Regulatório (Vínculo Trabalhista e LGPD)</h2>
+      <p class="lead" style="margin:0 0 14px">
+        Garantir a conformidade legal da plataforma, evitando riscos trabalhistas e de privacidade de dados.
+      </p>
+      <div class="mitigations">
+        <div class="miti-title">✅ Implementações</div>
+        <ul>
+          <li>Modelo de Marketplace Puro: A plataforma atua como intermediária, onde o prestador define preço e agenda, evitando vínculo trabalhista.</li>
+          <li>LGPD Compliance: Gerenciamento de consentimentos e anonimização de dados para proteção da privacidade do usuário.</li>
+          <li>Equipe Legal: Previsão de recursos para consultoria e blindagem jurídica.</li>
+        </ul>
+      </div>
+
+      <h2 style="margin:24px 0 6px">Aquisição Cara em Capitais e Equilíbrio Supply/Demand</h2>
+      <p class="lead" style="margin:0 0 14px">
+        Otimizar os custos de aquisição de usuários e garantir o balanço entre oferta (prestadores) e demanda (clientes).
+      </p>
+      <div class="mitigations">
+        <div class="miti-title">✅ Implementações</div>
+        <ul>
+          <li>Estratégia Hiperlocal: Lançamento faseado em cidades-piloto (Campinas → São Paulo), com marketing direcionado e parcerias locais (condomínios, administradoras).</li>
+          <li>Onboarding Calibrado: Gestão de listas de espera por região/horário e metas de ocupação para garantir densidade de prestadores.</li>
+          <li>Módulos de Disponibilidade: Ferramentas para que o prestador gerencie seus horários, e para o cliente consultar a disponibilidade em tempo real.</li>
+        </ul>
+      </div>
+    </section>
+
+    <div class="footer">🔥 Pitch: “O GetNinjas cobra moedas, o LimpeJá entrega limpeza justa, rápida e sem enrolação.”</div>
+  </div>
+
+  <script>
+    function animateValue(id, start, end, duration, prefix="R$", suffix="") {
+      const obj = document.getElementById(id);
+      let startTimestamp = null;
+      const step = (timestamp) => {
+        if (!startTimestamp) startTimestamp = timestamp;
+        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+        const value = Math.floor(progress * (end - start) + start);
+        obj.innerHTML = prefix + value.toLocaleString('pt-BR') + suffix;
+        if (progress < 1) {
+          window.requestAnimationFrame(step);
+        }
+      };
+      window.requestAnimationFrame(step);
+    }
+
+    window.onload = () => {
+      animateValue("counter", 0, 40000, 2000, "R$", "");
+      animateValue("kpi1", 0, 40000, 2000, "R$", "");
+      animateValue("kpi2", 0, 225000, 2500, "R$", "");
+      animateValue("kpi3", 0, 9000000, 3000, "R$", "");
+    };
+  </script>
+</body>
+</html>
