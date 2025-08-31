@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>LimpeJá — Blueprint Premium</title>
+  <title>LimpeJá -- Blueprint Premium</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root{
@@ -42,8 +42,8 @@
   border-radius: 24px; /* mesmo border-radius da logo */
   padding: 2px;
   background: linear-gradient(45deg, rgba(100, 100, 236, 0.79), #4e70d5ac);
-  -webkit-mask: 
-    linear-gradient(#fff 0 0) content-box, 
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
   -webkit-mask-composite: destination-out;
   mask-composite: exclude;
@@ -56,7 +56,7 @@
 
     .grid{display:grid;grid-template-columns:2fr 1fr;gap:24px}
     .card{background:var(--card);padding:22px;border-radius:16px;box-shadow:var(--shadow);margin-bottom:18px;transition:transform .2s}
-    
+
     .card:hover{transform:translateY(-3px)}
     .pill{display:inline-flex;align-items:center;gap:10px;background:linear-gradient(90deg,var(--accent),var(--accent2));color:#fff;padding:8px 14px;border-radius:999px;font-weight:600;font-size:13px;box-shadow:0 3px 8px rgba(0,0,0,0.1)}
 
@@ -87,13 +87,54 @@
 
     .icon{font-size:20px;margin-right:6px}
   </style>
+  <!-- ======== ESTILO ESPECÍFICO DA SEÇÃO (usa suas variáveis do blueprint) ======== -->
+  <style>
+    /* Usa as variáveis já definidas no blueprint.html */
+    #risks .risk-grid{
+      display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin:12px 0 6px
+    }
+    #risks .risk-col{
+      background:linear-gradient(135deg,#fff,#f9fafb);
+      border:1px solid #eef2ff;border-radius:14px;padding:14px;box-shadow:var(--shadow)
+    }
+    #risks .risk-title{font-weight:700;color:#1e1b4b;margin-bottom:8px}
+    #risks .risk-list{margin:0;padding-left:18px;line-height:1.6;color:#374151;font-size:14px}
+
+    #risks .example{
+      display:flex;gap:12px;align-items:flex-start;margin:16px 0 6px;padding:14px;border-radius:14px;
+      background:linear-gradient(135deg,#eef2ff,#f0f9ff);box-shadow:inset 0 0 6px rgba(79,70,229,0.08)
+    }
+    #risks .ex-icon{font-size:22px}
+    #risks .ex-title{font-weight:700;color:#1e1b4b;margin-bottom:8px}
+    #risks .ex-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    #risks .ex-box{
+      min-width:220px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:10px;
+      box-shadow:var(--shadow)
+    }
+    #risks .ex-box.ok{border-color:#bbf7d0;background:linear-gradient(135deg,#ecfdf5,#f0fdfa)}
+    #risks .ex-head{font-weight:700;margin-bottom:4px;color:#111827}
+    #risks .ex-price{font-weight:800;color:var(--accent);font-size:18px}
+    #risks .ex-note{color:#6b7280;font-size:13px}
+    #risks .ex-arrow{font-size:22px;color:#6b7280}
+
+    #risks .mitigations{
+      margin-top:12px;background:linear-gradient(135deg,#fff,#f9fafb);border:1px solid #e5e7eb;
+      border-radius:14px;padding:14px
+    }
+    #risks .miti-title{font-weight:700;color:#1e1b4b;margin-bottom:6px}
+
+    #risks .kpi-wrap{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px}
+    #risks .kpi{flex:1;min-width:120px;background:linear-gradient(135deg,#fff,#f9fafb);border-radius:12px;padding:12px;text-align:center;box-shadow:var(--shadow)}
+    #risks .kpi .num{font-weight:800;font-size:18px;color:var(--accent)}
+    #risks .kpi span{font-size:12px;color:#6b7280}
+  </style>
 </head>
 <body>
   <div class="container">
     <header>
       <div class="logo"><img src="../../assets/images/logo.png" alt="Logo LimpeJá"></div>
       <div>
-        <h1>LimpeJá — Blueprint Premium</h1>
+        <h1>LimpeJá -- Blueprint Premium</h1>
         <p class="lead">UI robusta, efeitos suaves e visão clara de escala e ganhos futuros.</p>
         <div class="highlight">Meta inicial: <span id="counter">0</span> MRR em 1º mês 🚀</div>
       </div>
@@ -110,9 +151,9 @@
           </div>
           <h2 style="margin-top:20px">Fases de Escala</h2>
           <div class="phase-list">
-            <div class="phase"><div class="num">1</div><div><h3>Campinas</h3><p>MVP com 800–1000 serviços/mês, CAC ≤R$60. Receita-alvo: R$40k MRR.</p></div></div>
+            <div class="phase"><div class="num">1</div><div><h3>Campinas</h3><p>MVP com 800--1000 serviços/mês, CAC ≤R$60. Receita-alvo: R$40k MRR.</p></div></div>
             <div class="phase"><div class="num">2</div><div><h3>São Paulo</h3><p>5.000 serviços/mês, R$225k MRR, Ads hiperlocal.</p></div></div>
-            <div class="phase"><div class="num">3</div><div><h3>5–10 Cidades</h3><p>25–50k serviços/mês, add-ons e B2B leve.</p></div></div>
+            <div class="phase"><div class="num">3</div><div><h3>5--10 Cidades</h3><p>25--50k serviços/mês, add-ons e B2B leve.</p></div></div>
             <div class="phase"><div class="num">4</div><div><h3>Nacional</h3><p>200k serviços/mês, R$9M MRR, fintech e SaaS.</p></div></div>
           </div>
         </div>
@@ -122,8 +163,8 @@
           <table>
             <thead><tr><th>Ano</th><th>Cidades</th><th>Serviços/mês</th><th>Receita LimpeJá</th></tr></thead>
             <tbody>
-              <tr><td>2025</td><td>2–3</td><td>6k–7k</td><td>R$270k–315k/mês</td></tr>
-              <tr><td>2026</td><td>10+</td><td>30k–40k</td><td>R$1,35–1,8M/mês</td></tr>
+              <tr><td>2025</td><td>2--3</td><td>6k--7k</td><td>R$270k--315k/mês</td></tr>
+              <tr><td>2026</td><td>10+</td><td>30k--40k</td><td>R$1,35--1,8M/mês</td></tr>
               <tr><td>2027</td><td>50+</td><td>200k</td><td>R$9M/mês (R$108M/ano)</td></tr>
             </tbody>
           </table>
@@ -143,7 +184,7 @@
         <div class="card">
           <h3>🛡️ Moats (defesas)</h3>
           <ul style="margin:0;padding-left:20px;color:#374151;line-height:1.6;font-size:14px">
-            <li>PIX em 24h — atrativo forte de supply</li>
+            <li>PIX em 24h -- atrativo forte de supply</li>
             <li>KYC + reputação mútua</li>
             <li>Gamificação + cashback</li>
             <li>Plano recorrente automático</li>
@@ -163,6 +204,189 @@
         </div>
       </aside>
     </div>
+
+    <!-- ================= FOCO IMEDIATO & PRÓXIMOS PASSOS (LimpeJá) ================ -->
+    <section class="card" id="immediate-focus">
+      <div class="pill">⚡ Foco Imediato & Próximos Passos</div>
+      <h2 style="margin:14px 0 6px">Análise de Cenário Atual</h2>
+      <p class="lead" style="margin:0 0 14px">
+        A oferta (supply) está vindo naturalmente, impulsionada pelo "PIX em 24h" e ausência de taxa para o prestador. A demanda (clientes) é latente, com grande interesse já percebido. O concorrente direto (GetNinjas) possui uma UX travada e artificial, o que nos dá uma enorme vantagem com clareza e fluxo simples.
+      </p>
+      <p class="lead" style="margin:0 0 14px">
+        Neste estágio, o risco principal não é mais o produto, mas sim como escalar sem perder qualidade, confiança e tempo de resposta.
+      </p>
+
+      <h2 style="margin:24px 0 6px">Recomendações de Foco Imediato (próximos 30--90 dias)</h2>
+      <ol class="risk-list" style="padding-left: 20px;">
+        <li>
+          <strong>Organizar o onboarding das diaristas (supply controlado)</strong>
+          <ul style="margin-top: 4px;">
+            <li>Criar lista de espera com convite progressivo para garantir jobs suficientes.</li>
+            <li>Estruturar grupo fechado no WhatsApp/Telegram só para prestadoras aprovadas (comunicado oficial, missões, promoções).</li>
+            <li>Criar fluxo de “níveis” (Bronze → Ouro) já no onboarding, dando perspectiva de crescimento.</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Gerar demanda previsível (lado cliente)</strong>
+          <ul style="margin-top: 4px;">
+            <li>Teste rápido de Facebook Ads hiperlocal (raio 5--10km em Campinas) com investimento pequeno (R$300--500) para validar CAC.</li>
+            <li>Parceria com condomínios e academias (panfleto digital + QR code direto pro app).</li>
+            <li>Incentivar o primeiro pedido com cupom de boas-vindas (R$30 off) para quebrar barreira inicial.</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Mecanismos anti-desintermediação desde já</strong>
+          <ul style="margin-top: 4px;">
+            <li>Rebook em 1 clique (cliente recebe push D+7 ou D+14 para repetir com mesma diarista).</li>
+            <li>Telefone mascarado + chat interno para manter comunicação dentro do app.</li>
+            <li>Garantia LimpeJá: só pedidos feitos pelo app têm seguro/reembolso para criar confiança e travar a desintermediação.</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Métricas a medir desde já</strong>
+          <ul style="margin-top: 4px;">
+            <li>Fill rate (quantos pedidos foram aceitos e concluídos).</li>
+            <li>% de repeat D30 (quantos clientes voltaram em até 30 dias).</li>
+            <li>CAC cliente (quanto custou trazer 1º pedido).</li>
+            <li>Tempo médio até repasse PIX (se é mesmo ≤24h).</li>
+          </ul>
+          <p class="lead" style="margin-top: 8px;">Essas 4 métricas te dizem quando pode escalar para SP sem estourar suporte e reputação.</p>
+        </li>
+        <li>
+          <strong>Diferencial de comunicação (marca)</strong>
+          <ul style="margin-top: 4px;">
+            <li>Explore esse ângulo: “Sem moedas, sem enrolação. Só limpeza fácil, justa e com pagamento rápido.”</li>
+            <li>Isso posiciona LimpeJá contra GetNinjas como a alternativa simples e justa.</li>
+          </ul>
+        </li>
+      </ol>
+    </section>
+
+    <!-- ================= RISCOS & MITIGAÇÕES (LimpeJá) ================ -->
+    <section class="card" id="risks">
+      <div class="pill">⚠️ Riscos & Mitigações</div>
+      <h2 style="margin:14px 0 6px">Desintermediação (cliente ↔ prestador por fora)</h2>
+      <p class="lead" style="margin:0 0 14px">
+        Quando o contato acontece fora do app após o primeiro serviço, o marketplace perde receita e controle de qualidade.
+      </p>
+
+      <!-- Comparativo: Barreira vs Solução -->
+      <div class="risk-grid">
+        <div class="risk-col">
+          <div class="risk-title">🚫 Barreira -- “Boca a boca”</div>
+          <ul class="risk-list">
+            <li>Preço típico no ato: <strong>R$300--350</strong> (sem cupom).</li>
+            <li>Sem <strong>seguro</strong>, sem <strong>garantia</strong> e sem histórico.</li>
+            <li>Contato direto após a visita → propensão a combinar por fora.</li>
+            <li>Risco de não pagamento e disputas sem mediação.</li>
+          </ul>
+        </div>
+
+        <div class="risk-col">
+          <div class="risk-title">✅ Solução -- Pelo app</div>
+          <ul class="risk-list">
+            <li>Com cupom: cliente paga <strong>R$240</strong> 💸, prestador recebe <strong>R$300</strong>.</li>
+            <li><strong>Seguro</strong>, <strong>garantia de qualidade</strong> e suporte no app.</li>
+            <li><strong>Telefone mascarado</strong> + chat sem troca de contato antes do pagamento.</li>
+            <li><strong>Rebook em 1 toque</strong>, <strong>cashback</strong>, <strong>fidelidade</strong> e <strong>missões</strong> que mantêm o relacionamento no app.</li>
+            <li><strong>PIX em até 24h</strong> para o prestador (forte incentivo de permanência).</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Exemplo numérico simples -->
+      <div class="example">
+        <div class="ex-icon">💡</div>
+        <div>
+          <div class="ex-title">Exemplo rápido</div>
+          <div class="ex-row">
+            <div class="ex-box">
+              <div class="ex-head">Boca a boca</div>
+              <div class="ex-price">R$300--350</div>
+              <div class="ex-note">Sem desconto, sem seguro, sem garantia.</div>
+            </div>
+            <div class="ex-arrow">→</div>
+            <div class="ex-box ok">
+              <div class="ex-head">No app</div>
+              <div class="ex-price">R$240 (com cupom)</div>
+              <div class="ex-note">Seguro + suporte + PIX em até 24h.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mitigações táticas (do relatório) -->
+      <div class="mitigations">
+        <div class="miti-title">📋 Ações prioritárias</div>
+        <ul>
+          <li><strong>Telefone mascarado</strong> em todas as interações e <strong>bloqueio de links/contatos</strong> no chat até o pagamento.</li>
+          <li><strong>Rebook 1-clique</strong> + cupom recorrente para 2ª/3ª visita (fidelidade/cashback).</li>
+          <li><strong>Seguro/garantia</strong> exclusivamente para pedidos in-app.</li>
+          <li><strong>Missões e níveis</strong> (Bronze/Prata/Ouro) com bônus atrelados a serviços via app.</li>
+        </ul>
+      </div>
+
+      <!-- KPIs de sucesso para esta defesa -->
+      <div class="kpi-wrap">
+        <div class="kpi"><div class="num">≤ 8%</div><span>Cancelamentos</span></div>
+        <div class="kpi"><div class="num">≥ 30--40%</div><span>Repeat D30/D60</span></div>
+        <div class="kpi"><div class="num">≤ 24h</div><span>Repasse PIX</span></div>
+        <div class="kpi"><div class="num">≥ 85%</div><span>Fill rate</span></div>
+      </div>
+
+      <h2 style="margin:24px 0 6px">Qualidade e Confiança (para Clientes e Prestadores)</h2>
+      <p class="lead" style="margin:0 0 14px">
+        Garantir que tanto clientes quanto prestadores confiem na plataforma e nos serviços oferecidos.
+      </p>
+      <div class="mitigations">
+        <div class="miti-title">✅ Implementações</div>
+        <ul>
+          <li>Verificação Robusta (KYC): Processo de onboarding com envio de CPF/documento, selfie biométrica e conferência de antecedentes criminais.</li>
+          <li>Avaliação Mútua e Histórico Transparente: Clientes e prestadores se avaliam, com histórico visível nos perfis.</li>
+          <li>Métricas de Performance do Prestador: Taxa de aceitação e tempo médio de resposta são calculados e exibidos, influenciando o ranking e a visibilidade.</li>
+          <li>Níveis e Treinamentos: Implementação de níveis (Bronze/Prata/Ouro) e treinamentos para garantir a padronização e qualidade.</li>
+        </ul>
+      </div>
+
+      <h2 style="margin:24px 0 6px">Suporte e Resolução de Disputas (Custo por Pedido)</h2>
+      <p class="lead" style="margin:0 0 14px">
+        Minimizar o custo e o tempo de resolução de problemas e disputas entre as partes.
+      </p>
+      <div class="mitigations">
+        <div class="miti-title">✅ Implementações</div>
+        <ul>
+          <li>Dispute Center no App: Ferramenta para clientes e prestadores reportarem problemas e disputas diretamente, com comunicação mediada.</li>
+          <li>Ferramentas de Pré-Triagem: Uso de fluxos guiados e solicitação de fotos (antes/depois) para documentação de incidentes.</li>
+          <li>SLA e Tabelas de Decisão: Definição de Service Level Agreements e tabelas de decisão para padronizar e agilizar a resolução de disputas.</li>
+        </ul>
+      </div>
+
+      <h2 style="margin:24px 0 6px">Regulatório (Vínculo Trabalhista e LGPD)</h2>
+      <p class="lead" style="margin:0 0 14px">
+        Garantir a conformidade legal da plataforma, evitando riscos trabalhistas e de privacidade de dados.
+      </p>
+      <div class="mitigations">
+        <div class="miti-title">✅ Implementações</div>
+        <ul>
+          <li>Modelo de Marketplace Puro: A plataforma atua como intermediária, onde o prestador define preço e agenda, evitando vínculo trabalhista.</li>
+          <li>LGPD Compliance: Gerenciamento de consentimentos e anonimização de dados para proteção da privacidade do usuário.</li>
+          <li>Equipe Legal: Previsão de recursos para consultoria e blindagem jurídica.</li>
+        </ul>
+      </div>
+
+      <h2 style="margin:24px 0 6px">Aquisição Cara em Capitais e Equilíbrio Supply/Demand</h2>
+      <p class="lead" style="margin:0 0 14px">
+        Otimizar os custos de aquisição de usuários e garantir o balanço entre oferta (prestadores) e demanda (clientes).
+      </p>
+      <div class="mitigations">
+        <div class="miti-title">✅ Implementações</div>
+        <ul>
+          <li>Estratégia Hiperlocal: Lançamento faseado em cidades-piloto (Campinas → São Paulo), com marketing direcionado e parcerias locais (condomínios, administradoras).</li>
+          <li>Onboarding Calibrado: Gestão de listas de espera por região/horário e metas de ocupação para garantir densidade de prestadores.</li>
+          <li>Módulos de Disponibilidade: Ferramentas para que o prestador gerencie seus horários, e para o cliente consultar a disponibilidade em tempo real.</li>
+        </ul>
+      </div>
+    </section>
 
     <div class="footer">🔥 Pitch: “O GetNinjas cobra moedas, o LimpeJá entrega limpeza justa, rápida e sem enrolação.”</div>
   </div>
