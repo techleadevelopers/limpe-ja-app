@@ -125,8 +125,8 @@ const SideIcon: React.FC<SideIconProps> = ({
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    right: 40,
-    bottom: '90%',
+    right: 50,
+    bottom: '46%',
     zIndex: 10,
     alignItems: 'center',
   },
