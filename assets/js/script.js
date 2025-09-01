@@ -1,4 +1,3 @@
-
 // JavaScript for FAQ accordion functionality
 document.addEventListener('DOMContentLoaded', () => {
     const faqItems = document.querySelectorAll('.faq-item');
@@ -44,8 +43,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (phoneMockups.length === 0) return;
         
         isAnimating = true;
-        const phoneWidth = phoneMockups[0].offsetWidth + (parseFloat(getComputedStyle(phoneMockups[0]).marginRight) * 2);
-        const offset = -currentIndex * phoneWidth + (phoneSlider.offsetWidth / 2) - (phoneWidth / 2);
+        
+        // CORREÇÃO AQUI: Calcule o offset com base na posição do elemento.
+        const activePhone = phoneMockups[currentIndex];
+        const containerCenter = phoneSlider.parentElement.offsetWidth / 2;
+        const activePhoneCenter = activePhone.offsetWidth / 2;
+        const offset = containerCenter - (activePhone.offsetLeft + activePhoneCenter);
         
         if (animate) {
             phoneSlider.style.transition = 'transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
@@ -60,12 +63,8 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
                 if (index === currentIndex) {
                     phone.classList.add('active-center');
-                    phone.style.filter = 'brightness(1) saturate(1.1)';
-                    phone.style.opacity = '1';
                 } else {
                     phone.classList.remove('active-center');
-                    phone.style.filter = 'brightness(0.7) saturate(0.8)';
-                    phone.style.opacity = '0.6';
                 }
             }, Math.abs(index - currentIndex) * 50);
         });
