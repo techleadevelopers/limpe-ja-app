@@ -44,10 +44,10 @@ const MissionReminderCard: React.FC<MissionReminderCardProps> = ({ missionId, ti
     // Implementação mock para evitar erro de componente não encontrado
     return (
         <View style={{ margin: 15, padding: 15, backgroundColor: '#e0ffe0', borderRadius: 10 }}>
-            <Text style={{ fontWeight: 'bold', fontSize: 16 }}>{title}</Text>
-            {description && <Text style={{ fontSize: 14, color: '#555' }}>{description}</Text>}
-            <Text style={{ fontSize: 12, color: '#777' }}>Prazo: {new Date(deadlineAt).toLocaleDateString()}</Text>
-            <Text style={{ fontSize: 12, color: '#777' }}>Recompensa: {reward.value} {reward.kind}</Text>
+            <Text style={{ fontWeight: 'bold', fontSize: 16,fontFamily: 'Montserrat-Regular' }}>{title}</Text>
+            {description && <Text style={{ fontSize: 14, color: '#555', fontFamily: 'Montserrat-Regular' }}>{description}</Text>}
+            <Text style={{ fontSize: 12, color: '#777',fontFamily: 'Montserrat-Regular' }}>Prazo: {new Date(deadlineAt).toLocaleDateString()}</Text>
+            <Text style={{ fontSize: 12, color: '#777',fontFamily: 'Montserrat-Regular' }}>Recompensa: {reward.value} {reward.kind}</Text>
             <TouchableOpacity onPress={onGo} style={{ marginTop: 10, backgroundColor: '#4CAF50', padding: 8, borderRadius: 5 }}>
                 <Text style={{ color: 'white', textAlign: 'center' }}>Ir agora</Text>
             </TouchableOpacity>
@@ -509,10 +509,7 @@ export default function SuccessScreen() {
                             headerPrimaryColor={headerPrimaryColor}
                         />
 
-                        <SecurityInfoSection successColor={successColor} />
-
-                        <LoyaltyTeaserSection headerPrimaryColor={headerPrimaryColor} />
-
+                   
                         <MainActionButtons
                             onGoToBookings={handleGoToBookings}
                             onGoHome={handleGoHome}
