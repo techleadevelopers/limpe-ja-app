@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsNotEmpty, IsNumber, IsInt, Min, IsOptional, IsEnum } from 'class-validator';
-import { PricingType } from '@prisma/client'; // Importar o enum PricingType
+import { PricingType } from '@prisma/client';
 
 export class CreateProviderServiceDto {
   @ApiProperty({ description: 'ID do tipo de serviço (Service) que o provedor está oferecendo', example: 'uuid-do-tipo-servico' })
@@ -8,10 +8,17 @@ export class CreateProviderServiceDto {
   @IsNotEmpty()
   serviceId: string;
 
-  @ApiProperty({ description: 'Preço cobrado pelo provedor para este serviço', example: 120.50 })
+  @ApiPropertyOptional({ description: 'Preço cobrado pelo provedor para este serviço (quando aplicável, e.g., FIXED_PRICE)', example: 120.50 })
+  @IsOptional()
   @IsNumber()
   @Min(0)
-  price: number;
+  price?: number;
+
+  @ApiPropertyOptional({ description: 'Preço por hora (se pricingType for HOURLY)', example: 45.00 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  pricePerHour?: number; // <--- ESTE CAMPO É CRÍTICO
 
   @ApiPropertyOptional({ description: 'Duração estimada do serviço em minutos', example: 180 })
   @IsOptional()
