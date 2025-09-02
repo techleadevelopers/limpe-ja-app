@@ -225,10 +225,10 @@ export default function ConversationsListScreen() {
           <Text style={styles.greetingText}>Olá, {loggedInUserName}</Text>
           <View style={styles.headerIcons}>
             <TouchableOpacity style={styles.iconButton}>
-              <Ionicons name="search-outline" size={24} color="#FFF" />
+              <Ionicons name="search-outline" size={18} color="#FFF" />
             </TouchableOpacity>
             <TouchableOpacity style={styles.iconButton}>
-              <Ionicons name="ellipsis-vertical" size={24} color="#FFF" />
+              <Ionicons name="ellipsis-vertical" size={18} color="#FFF" />
             </TouchableOpacity>
           </View>
         </View>
@@ -299,12 +299,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 12,
   },
   greetingText: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+     fontSize: 15 * 0.95,
+        fontFamily: 'Montserrat-Thin', 
+        fontWeight: 'bold',
+        color: '#FFFFFF',
   },
   headerIcons: {
     flexDirection: 'row',
@@ -318,11 +319,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 25,
     padding: 3,
-    marginBottom: 10,
+    width: '60%',
+    right: 5,
+    marginTop: -11,
   },
   tabButton: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 5,
+    
     borderRadius: 25,
     alignItems: 'center',
   },
@@ -332,7 +336,7 @@ const styles = StyleSheet.create({
   tabButtonText: {
     color: '#FFFFFF',
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: 10,
   },
   activeTabButtonText: {
     color: '#4A90E2', // Alterado para o azul principal do perfil
