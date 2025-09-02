@@ -393,7 +393,7 @@ async function main() {
       providerId: providerUser.provider.id,
       serviceId: residentialCleaningService.id,
       pricingType: PricingType.FIXED_PRICE,
-      price: new Prisma.Decimal(180.0),
+      price: new Prisma.Decimal(180.0), // 'price' é obrigatório conforme regra de negócio
       description: 'Limpeza completa até 3h',
       durationMinutes: 180,
     },
@@ -413,7 +413,7 @@ async function main() {
       },
     },
     update: {
-      price: null, // Não aplicável para HOURLY
+      price: new Prisma.Decimal(commercialService.price), // 'price' é obrigatório conforme regra de negócio, usando o preço base do serviço
       pricePerHour: new Prisma.Decimal(55.0),
       pricePerSquareMeter: null, // Não aplicável para HOURLY
       pricePerRoom: null, // Não aplicável para HOURLY
@@ -425,6 +425,7 @@ async function main() {
       providerId: providerUser.provider.id,
       serviceId: commercialService.id,
       pricingType: PricingType.HOURLY,
+      price: new Prisma.Decimal(commercialService.price), // 'price' é obrigatório conforme regra de negócio, usando o preço base do serviço
       pricePerHour: new Prisma.Decimal(55.0),
       description: 'Limpeza comercial por hora',
       durationMinutes: 60,
@@ -456,7 +457,7 @@ async function main() {
       providerId: providerUser2.provider.id,
       serviceId: residentialCleaningService.id,
       pricingType: PricingType.FIXED_PRICE,
-      price: new Prisma.Decimal(170.0),
+      price: new Prisma.Decimal(170.0), // 'price' é obrigatório conforme regra de negócio
       description: 'Limpeza residencial padrão',
       durationMinutes: 160,
     },
@@ -476,7 +477,7 @@ async function main() {
       },
     },
     update: {
-      price: null, // Não aplicável para BY_SIZE
+      price: new Prisma.Decimal(50.0), // 'price' é obrigatório conforme regra de negócio, usando um valor base
       pricePerHour: null, // Não aplicável para BY_SIZE
       pricePerSquareMeter: new Prisma.Decimal(6.5),
       pricePerRoom: null, // Não aplicável para BY_SIZE
@@ -488,6 +489,7 @@ async function main() {
       providerId: providerUser2.provider.id,
       serviceId: cleaningBySqMeterService.id,
       pricingType: PricingType.BY_SIZE,
+      price: new Prisma.Decimal(50.0), // 'price' é obrigatório conforme regra de negócio, usando um valor base
       pricePerSquareMeter: new Prisma.Decimal(6.5),
       description: 'Limpeza detalhada por metro quadrado',
       durationMinutes: null,
@@ -519,7 +521,7 @@ async function main() {
       providerId: providerUser3.provider.id,
       serviceId: residentialCleaningService.id,
       pricingType: PricingType.FIXED_PRICE,
-      price: new Prisma.Decimal(190.0),
+      price: new Prisma.Decimal(190.0), // 'price' é obrigatório conforme regra de negócio
       description: 'Limpeza residencial premium',
       durationMinutes: 200,
     },
@@ -539,7 +541,7 @@ async function main() {
       },
     },
     update: {
-      price: null, // Não aplicável para BY_SIZE
+      price: new Prisma.Decimal(50.0), // 'price' é obrigatório conforme regra de negócio, usando um valor base
       pricePerHour: null, // Não aplicável para BY_SIZE
       pricePerSquareMeter: null, // Não aplicável para BY_SIZE
       pricePerRoom: new Prisma.Decimal(90.0),
@@ -551,6 +553,7 @@ async function main() {
       providerId: providerUser3.provider.id,
       serviceId: cleaningByRoomService.id,
       pricingType: PricingType.BY_SIZE,
+      price: new Prisma.Decimal(50.0), // 'price' é obrigatório conforme regra de negócio, usando um valor base
       pricePerRoom: new Prisma.Decimal(90.0),
       description: 'Limpeza por cômodo, ideal para áreas específicas',
       durationMinutes: null,
@@ -582,7 +585,7 @@ async function main() {
       providerId: providerUser4.provider.id,
       serviceId: residentialCleaningService.id,
       pricingType: PricingType.FIXED_PRICE,
-      price: new Prisma.Decimal(165.0),
+      price: new Prisma.Decimal(165.0), // 'price' é obrigatório conforme regra de negócio
       description: 'Limpeza residencial básica',
       durationMinutes: 150,
     },
