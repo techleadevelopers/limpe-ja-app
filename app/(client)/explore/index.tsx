@@ -686,22 +686,22 @@ const styles = StyleSheet.create({
         // O valor de 'top' precisa ser ajustado para alinhar perfeitamente abaixo do header.
         // Um bom ponto de partida é a altura do header - um pouco para sobrepor.
         // Vamos estimar um valor e você pode ajustá-lo.
-        top: (Constants.statusBarHeight + 52), // AJUSTE ESTE VALOR PARA O ALINHAMENTO PERFEITO
+        top: (Constants.statusBarHeight + 70), // AJUSTE ESTE VALOR PARA O ALINHAMENTO PERFEITO
         left: 0,
         right: 0,
         zIndex: 100, // zIndex alto para garantir que flutue sobre tudo
-        paddingHorizontal: 5,
+        paddingHorizontal: 20,
         backgroundColor: 'transparent',
         // Removendo sombras e elevações conforme solicitado ("AGORA SEM FUNDO BRANCO E SOMBRA")
         ...Platform.select({
             ios: {
-                shadowColor: 'transparent',
-                shadowOffset: { width: 0, height: 0 },
+                shadowColor: '#2C3E50',
+                shadowOffset: { width: 5, height: 7 },
                 shadowOpacity: 0,
-                shadowRadius: 0,
+                shadowRadius: 3,
             },
             android: {
-                elevation: 0,
+                elevation: 4,
             },
         }),
         // Removendo marginTop/marginBottom que não são relevantes para position: 'absolute'
@@ -711,8 +711,9 @@ const styles = StyleSheet.create({
     carouselContainer: {
         // Este valor deve ser suficiente para que o carrossel não fique escondido sob as categorias.
         // A altura da linha de categorias é de aprox. 50-60px (ícone + texto).
-        marginTop: 65, // AJUSTE CONFORME NECESSÁRIO
+        marginTop: 100, // AJUSTE CONFORME NECESSÁRIO
         marginBottom: 10,
+   
         alignItems: 'center',
     },
     navBarContainer: {
@@ -792,8 +793,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     miniGridBadgeText: {
-        color: AppColors.white,
-        fontSize: 10,
+        color: '#202633',
+        fontSize: 8.4,
         fontWeight: 'bold',
         marginLeft: 3, // Espaçamento entre o ícone e o texto
     },
