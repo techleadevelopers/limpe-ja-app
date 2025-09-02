@@ -15,35 +15,53 @@ export class PricingService {
     private prisma: PrismaService,
     private geocodingService: GeocodingService,
     // CORREÇÃO: Usar @Inject(forwardRef) para injetar BookingsService
-    @Inject(forwardRef(() => BookingsService)) 
+    @Inject(forwardRef(() => BookingsService))
     private bookingsService: BookingsService,
   ) {}
 
   async calculatePrice(calculatePriceDto: CalculatePriceDto): Promise<DynamicPriceResult> {
     const { serviceId, providerId, latitude, longitude, scheduledDate } = calculatePriceDto;
 
-    const service = await this.prisma.providerService.findUnique({
-      where: { id: serviceId },
+    // CORREÇÃO: Buscar o ProviderService correto usando providerId e o serviceId canônico
+    // O serviceId no DTO é o ID do serviço genérico (e.g., 'Limpeza Residencial'),
+    // não o ID do ProviderService específico.
+    const providerService = await this.prisma.providerService.findFirst({
+      where: {
+        serviceId: serviceId, // ID do serviço genérico (canônico)
+        providerId: providerId, // ID do provedor
+      },
+      include: { service: true } // Incluir o serviço genérico para acesso a outros dados se necessário
     });
 
-    if (!service) {
-      throw new NotFoundException(`Service with ID ${serviceId} not found.`);
+    if (!providerService) {
+      // Mensagem de erro mais específica, indicando que a combinação provedor-serviço não foi encontrada
+      throw new NotFoundException(`ProviderService para o serviço canônico ID "${serviceId}" e provedor ID "${providerId}" não encontrado.`);
     }
 
-    const originalPrice = service.price.toNumber();
+    // Agora, usamos o preço do ProviderService encontrado
+    const originalPrice = providerService.price.toNumber();
     let finalPrice = originalPrice;
     let surgeFactor = 1.0;
     let reason = 'Preço base do serviço.';
 
+    // Regras de precificação (surge, etc.)
     const rules = await this.prisma.pricingRule.findMany({
       where: {
         isActive: true,
+        // Adicionar filtros de escopo aqui se as regras de pricing tiverem escopo (GLOBAL, CITY, SERVICE, PROVIDER)
+        // Por exemplo, conforme o README:
+        // OR: [
+        //   { scope: 'GLOBAL' },
+        //   { scope: 'SERVICE', refId: providerService.serviceId }, // serviceId canônico
+        //   { scope: 'PROVIDER', refId: providerId },
+        //   // Adicionar CITY/CATEGORY se aplicável e se você tiver esses IDs no DTO
+        // ],
         OR: [
           { dayOfWeek: null },
           { dayOfWeek: new Date(scheduledDate).getDay() },
         ],
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: 'desc' }, // Ou por prioridade conforme o README
     });
 
     for (const rule of rules) {
@@ -62,21 +80,29 @@ export class PricingService {
 
         if (ruleStartTotalMinutes < ruleEndTotalMinutes) {
           isTimeValid = scheduledTotalMinutes >= ruleStartTotalMinutes && scheduledTotalMinutes <= ruleEndTotalMinutes;
-        } else {
+        } else { // Regra que atravessa a meia-noite
           isTimeValid = scheduledTotalMinutes >= ruleStartTotalMinutes || scheduledTotalMinutes <= ruleEndTotalMinutes;
         }
-      } else if (ruleStartTime) {
-        const ruleStartTotalMinutes = ruleStartTime.hours * 60 + ruleStartTime.minutes;
-        isTimeValid = scheduledTotalMinutes >= ruleStartTotalMinutes;
-      } else if (ruleEndTime) {
-        const ruleEndTotalMinutes = ruleEndTime.hours * 60 + ruleEndTime.minutes;
-        isTimeValid = scheduledTotalMinutes <= ruleEndTotalMinutes;
+      } else if (ruleStartTime) { // Apenas hora de início
+        isTimeValid = scheduledTotalMinutes >= (ruleStartTime.hours * 60 + ruleStartTime.minutes);
+      } else if (ruleEndTime) { // Apenas hora de fim
+        isTimeValid = scheduledTotalMinutes <= (ruleEndTime.hours * 60 + ruleEndTime.minutes);
       }
+
+      // Adicionar validação de activeFrom/activeTo se necessário
+      if (rule.activeFrom && scheduledDateTime < rule.activeFrom) {
+        isTimeValid = false;
+      }
+      if (rule.activeTo && scheduledDateTime > rule.activeTo) {
+        isTimeValid = false;
+      }
+
 
       if (isTimeValid) {
         if (rule.demandThreshold) {
+          // CORREÇÃO: Passar o ID do ProviderService para getDemandCountForArea
           const demandCount = await this.bookingsService.getDemandCountForArea(
-            serviceId,
+            providerService.id, // <--- Usar o ID do ProviderService encontrado
             latitude,
             longitude,
             scheduledDateTime,
@@ -86,6 +112,7 @@ export class PricingService {
             reason = 'Preço ajustado devido à alta demanda.';
           }
         } else {
+          // Aplicar o surgeFactor da regra se não houver threshold de demanda ou se não for atingido
           surgeFactor *= rule.surgeFactor.toNumber();
           reason = 'Preço ajustado por regra de horário/dia.';
         }
@@ -93,7 +120,7 @@ export class PricingService {
     }
 
     finalPrice = originalPrice * surgeFactor;
-    finalPrice = parseFloat(finalPrice.toFixed(2));
+    finalPrice = parseFloat(finalPrice.toFixed(2)); // Arredondar para 2 casas decimais
 
     return {
       originalPrice,
@@ -105,6 +132,9 @@ export class PricingService {
 
   private parseTime(timeString: string): { hours: number; minutes: number } {
     const [hours, minutes] = timeString.split(':').map(Number);
+    if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+      throw new BadRequestException(`Formato de hora inválido: ${timeString}. Esperado HH:MM.`);
+    }
     return { hours, minutes };
   }
 
