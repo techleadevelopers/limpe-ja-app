@@ -770,6 +770,8 @@ model PricingRule {
   dayOfWeek      Int?
   startTime      String?
   endTime        String?
+  activeFrom     DateTime? // ADICIONADO
+  activeTo       DateTime? // ADICIONADO
   demandThreshold Int?
   surgeFactor    Decimal  @db.Decimal(3, 2)
   isActive       Boolean  @default(true)
