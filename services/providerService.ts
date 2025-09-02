@@ -89,6 +89,90 @@ export async function getProviderAvailability(providerId: string, date?: string)
   }
 }
 
+// =========================================================================
+// NOVAS FUNÇÕES DE SERVIÇO PARA A DISPONIBILIDADE DO PROVEDOR AUTENTICADO (/me)
+// =========================================================================
+
+/**
+ * @function getMyProviderAvailability
+ * Obtém a disponibilidade de horários e os horários ocupados do provedor autenticado.
+ * Corresponde a GET /providers/me/availability
+ * @param date Data opcional no formato string (ex: "YYYY-MM-DD") para filtrar a disponibilidade.
+ * @returns Uma Promise que resolve para um objeto contendo 'available' (slots configurados) e 'occupiedTimes' (slots já agendados).
+ */
+export async function getMyProviderAvailability(date?: string): Promise<GetProviderAvailabilityResponse> {
+  try {
+    const params = date ? { date } : {};
+    const response: AxiosResponse<GetProviderAvailabilityResponse> = await api.get(`/providers/me/availability`, { params });
+    return response.data;
+  } catch (error: any) {
+    console.error(`Erro ao buscar disponibilidade do provedor autenticado:`, error.response?.data || error.message);
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(error.response.data.message || `Erro ao buscar disponibilidade do provedor autenticado.`);
+    }
+    throw new Error(`Erro de rede ou servidor ao buscar disponibilidade do provedor autenticado.`);
+  }
+}
+
+/**
+ * @function updateMyProviderAvailability
+ * Atualiza a disponibilidade semanal do provedor autenticado.
+ * Corresponde a PATCH /providers/me/availability
+ * @param data Array de objetos UpdateAvailabilityData contendo os slots de disponibilidade a serem atualizados.
+ * @returns Uma Promise que resolve para um array de ProviderAvailability atualizados.
+ */
+export async function updateMyProviderAvailability(data: UpdateAvailabilityData[]): Promise<ProviderAvailability[]> {
+  try {
+    const response: AxiosResponse<ProviderAvailability[]> = await api.patch(`/providers/me/availability`, data);
+    return response.data;
+  } catch (error: any) {
+    console.error(`Erro ao atualizar disponibilidade do provedor autenticado:`, error.response?.data || error.message);
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(error.response.data.message || `Erro ao atualizar disponibilidade do provedor autenticado.`);
+    }
+    throw new Error(`Erro de rede ou servidor ao atualizar disponibilidade do provedor autenticado.`);
+  }
+}
+
+/**
+ * @function addMyProviderAvailability
+ * Adiciona um novo slot de disponibilidade para o provedor autenticado.
+ * Corresponde a POST /providers/me/availability
+ * @param data Objeto UpdateAvailabilityData contendo os detalhes do novo slot.
+ * @returns Uma Promise que resolve para o objeto ProviderAvailability recém-criado.
+ */
+export async function addMyProviderAvailability(data: UpdateAvailabilityData): Promise<ProviderAvailability> {
+  try {
+    const response: AxiosResponse<ProviderAvailability> = await api.post(`/providers/me/availability`, data);
+    return response.data;
+  } catch (error: any) {
+    console.error(`Erro ao adicionar disponibilidade para o provedor autenticado:`, error.response?.data || error.message);
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(error.response.data.message || `Erro ao adicionar disponibilidade para o provedor autenticado.`);
+    }
+    throw new Error(`Erro de rede ou servidor ao adicionar disponibilidade para o provedor autenticado.`);
+  }
+}
+
+/**
+ * @function deleteMyProviderAvailability
+ * Deleta um slot de disponibilidade específico do provedor autenticado.
+ * Corresponde a DELETE /providers/me/availability/:availabilityId
+ * @param availabilityId O ID do slot de disponibilidade a ser deletado.
+ * @returns Uma Promise que resolve quando a operação é concluída.
+ */
+export async function deleteMyProviderAvailability(availabilityId: string): Promise<void> {
+  try {
+    await api.delete(`/providers/me/availability/${availabilityId}`);
+  } catch (error: any) {
+    console.error(`Erro ao deletar disponibilidade ${availabilityId} do provedor autenticado:`, error.response?.data || error.message);
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(error.response.data.message || `Erro ao deletar disponibilidade ${availabilityId} do provedor autenticado.`);
+    }
+    throw new Error(`Erro de rede ou servidor ao deletar disponibilidade ${availabilityId} do provedor autenticado.`);
+  }
+}
+
 /**
  * @function updateMyProviderProfile
  * Atualiza o perfil do provedor atualmente logado (`PATCH /providers/me`).

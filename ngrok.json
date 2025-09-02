@@ -1,0 +1,14 @@
+{
+  "version": "2",
+  "authtoken": "aebd6ebe83b77673c90c3752c53c3bf20591b26803727859d3a728a0cd57abc2",
+  "tunnels": {
+    "backend": {
+      "proto": "http",
+      "addr": 3000
+    },
+    "frontend": {
+      "proto": "http",
+      "addr": 8081
+    }
+  }
+}

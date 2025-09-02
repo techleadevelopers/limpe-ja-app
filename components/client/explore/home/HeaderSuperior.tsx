@@ -197,13 +197,13 @@ const HeroHeader: React.FC<HeaderSuperiorProps> = ({ userName, userAddress }) =>
 
 const styles = StyleSheet.create({
     outerContainerGradient: {
-        paddingBottom: 90 * 0.95, // Aumentado para dar mais espaço vertical
-        borderBottomLeftRadius: 4 * 0.95,
-        borderBottomRightRadius: 4 * 0.95,
+        paddingBottom: 30 * 0.95, // Aumentado para dar mais espaço vertical
+        borderBottomLeftRadius: 24 * 0.95,
+        borderBottomRightRadius: 24 * 0.95,
          borderTopLeftRadius: 4 * 0.95,
         borderTopRightRadius: 4 * 0.95,
         paddingHorizontal: 10,
-        marginBottom: -50 * 0.95,
+        marginBottom: -20 * 0.95,
         top: 3,
         width: '100%',
         overflow: 'hidden',

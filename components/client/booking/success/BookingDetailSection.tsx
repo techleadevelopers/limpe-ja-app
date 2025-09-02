@@ -94,6 +94,7 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 13,
+    fontFamily: 'Montserrat-Regular',
     color: '#666',
     marginLeft: 16,
     flex: 1,
@@ -104,12 +105,14 @@ const styles = StyleSheet.create({
   },
   detailValue: {
     fontSize: 13,
+    fontFamily: 'Montserrat-Regular',
     fontWeight: 'bold',
     color: '#333',
     textAlign: 'right',
   },
   detailValueNotes: {
     fontSize: 13,
+    fontFamily: 'Montserrat-Regular',
     color: '#333',
     flex: 2,
     textAlign: 'right',

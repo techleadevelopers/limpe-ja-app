@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Plano Operacional 90 Dias — LimpeJá (Campinas)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* Variáveis CSS para cores e tamanhos */
+    :root{
+      --bg:#0b1020; /* Cor de fundo principal */
+      --panel:#0f162f; /* Cor de fundo dos painéis/cards */
+      --soft:#141c3a; /* Cor suave para elementos secundários */
+      --muted:#9aa4bf; /* Cor para texto muted/secundário */
+      --text:#e6ebff; /* Cor principal do texto */
+      --accent:#6aa2ff; /* Cor de destaque primária (azul) */
+      --accent2:#22d3ee; /* Cor de destaque secundária (ciano) */
+      --ok:#22c55e; /* Cor para status de sucesso/OK */
+      --warn:#f59e0b; /* Cor para status de aviso */
+      --danger:#ef4444; /* Cor para status de perigo/erro */
+      --shadow:0 12px 30px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.04); /* Sombra padrão */
+      --radius:18px; /* Raio de borda padrão */
+    }
+
+    /* Reset básico e estilos globais */
+    *{box-sizing:border-box} /* Garante que padding e border sejam incluídos na largura/altura total */
+    html,body{
+      margin:0; /* Remove margens padrão do body */
+      background:var(--bg); /* Aplica cor de fundo do body */
+      color:var(--text); /* Aplica cor de texto padrão */
+      font-family:'Inter',system-ui; /* Define a fonte principal */
+      line-height:1.6 /* Espaçamento entre linhas */
+    }
+    a{color:var(--accent)} /* Cor dos links */
+
+    /* Estilos do container principal */
+    .wrap{
+      max-width:1200px; /* Largura máxima do conteúdo */
+      margin:0 auto; /* Centraliza o conteúdo */
+      padding:18px; /* Espaçamento interno do container */
+    }
+
+    /* Estilos do cabeçalho hero */
+    header.hero{
+      position:relative; /* Posição relativa para elementos internos */
+      border-radius:24px; /* Borda arredondada */
+      background:radial-gradient(1200px 400px at 20% -100%, #1b2a62, transparent),
+      radial-gradient(1000px 500px at 120% -50%, #0ea5e9, transparent),
+      linear-gradient(180deg, #0c1230, #081024); /* Gradientes de fundo */
+      overflow:hidden; /* Esconde conteúdo que transborda */
+      box-shadow:var(--shadow); /* Aplica sombra */
+      padding:36px 24px; /* Espaçamento interno */
+    }
+    .hero h1{margin:0;font-size:42px;letter-spacing:.2px} /* Título principal */
+    .hero p{margin:8px 0 0;color:var(--muted);max-width:760px} /* Parágrafo do hero */
+    .chip{ /* Estilo do "chip" de identificação (ex: Plano Operacional • Campinas) */
+      display:inline-flex;gap:10px;align-items:center;
+      background:linear-gradient(90deg,var(--accent),var(--accent2));
+      color:#061028;
+      font-weight:800;padding:8px 14px;border-radius:999px;margin-bottom:14px;
+      box-shadow:0 8px 24px rgba(34,211,238,.2)
+    }
+
+    /* Estilos da navegação sticky */
+    .nav{
+      position:sticky;top:0;z-index:50; /* Fixa a navegação no topo */
+      background:rgba(8,16,36,.7); /* Fundo semi-transparente */
+      backdrop-filter:blur(8px); /* Efeito de desfoque */
+      border-bottom:1px solid rgba(255,255,255,.05) /* Borda inferior */
+    }
+    .nav .container{ /* Container interno da navegação */
+      max-width:1200px;margin:0 auto;display:flex;gap:12px;align-items:center;padding:10px 16px
+    }
+    .nav a{ /* Links da navegação */
+      padding:8px 12px;border-radius:10px;color:#dbe7ff;text-decoration:none;font-weight:600;opacity:.85
+    }
+    .nav a.active{ /* Link ativo na navegação */
+      background:linear-gradient(90deg,#1d4ed8,#0ea5e9);color:#fff;opacity:1
+    }
+
+    /* Estilos de layout de grade (para Objetivos e KPIs) */
+    .grid{display:grid;grid-template-columns:2fr 1fr;gap:18px;margin-top:18px}
+
+    /* Espaçamento consistente para os cards */
+    .wrap > section.card, .wrap > aside.card {
+      margin-top: 18px;
+    }
+    /* Ajuste para o primeiro card dentro do grid (já tem margem via .grid) */
+    .wrap > section.card:first-of-type {
+        margin-top: 0;
+    }
+
+    /* Estilos gerais dos cards */
+    .card{
+      background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.01)); /* Fundo gradiente */
+      border:1px solid rgba(255,255,255,.08); /* Borda sutil */
+      border-radius:var(--radius); /* Borda arredondada */
+      padding:18px 15px; /* Espaçamento interno (horizontal ajustado) */
+      box-shadow:var(--shadow) /* Sombra */
+    }
+    h2{margin:0 0 8px} /* Títulos H2 dentro dos cards */
+    .muted{color:var(--muted);font-size:14px} /* Texto muted */
+
+    /* Estilos dos KPIs */
+    .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px} /* Layout de grade para os KPIs */
+    .kpi{ /* Cada item KPI */
+      background:linear-gradient(180deg,#0f1c42,#0b142c);border:1px solid rgba(86,125,255,.25);
+      padding:16px;border-radius:16px;box-shadow:var(--shadow)
+    }
+    .kpi .num{font-weight:900;font-size:28px} /* Número do KPI */
+    .kpi small{color:var(--muted)} /* Descrição do KPI */
+
+    /* Estilos da linha do tempo (Timeline) */
+    .timeline{display:grid;gap:12px;margin-top:10px}
+    .phase{ /* Cada fase da linha do tempo */
+      position:relative;padding:16px 16px 16px 58px;border-radius:16px;
+      background:linear-gradient(180deg,#0f1a39,#0d162f);border:1px solid rgba(255,255,255,.06)
+    }
+    .phase .badge{ /* O círculo numerado da fase */
+      position:absolute;left:16px;top:16px;width:30px;height:30px;border-radius:50%;
+      background:linear-gradient(135deg,var(--accent),var(--accent2));
+      display:flex;align-items:center;justify-content:center;font-weight:900;color:#061028
+    }
+
+    /* Estilos de listas */
+    .list{margin:8px 0 0;padding-left:18px} /* Listas não ordenadas */
+
+    /* Estilos de checklists */
+    .checklist{display:grid;gap:8px;margin-top:8px}
+    .task{ /* Cada item da tarefa no checklist */
+      display:flex;gap:10px;align-items:flex-start;background:#0e1a38;
+      border:1px solid rgba(255,255,255,.07);
+      padding:10px;border-radius:12px;
+      transition: background .2s ease-in-out; /* Transição suave para feedback */
+    }
+    .task.task-feedback { /* Classe para feedback visual ao interagir com o checkbox */
+      background: rgba(106, 162, 255, 0.15); /* Cor de destaque sutil */
+    }
+    .task input{transform:translateY(3px)} /* Alinhamento do checkbox */
+
+    /* Estilos dos "pills" (tags informativas) */
+    .pill{
+      display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;
+      background:#0c1633;border:1px solid rgba(255,255,255,.08);font-size:12px;color:var(--muted)
+    }
+    .row{display:flex;gap:8px;flex-wrap:wrap} /* Layout de linha para pills */
+
+    /* Estilos dos acordeões */
+    .accord{margin-top:10px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.08)}
+    .accord > button{ /* Botão do acordeão */
+      width:100%;text-align:left;background:#0e1733;color:#d9e4ff;padding:14px;
+      border:0;font-weight:800;letter-spacing:.3px
+    }
+    .accord .panel{display:none;padding:14px;background:#0a132b} /* Painel do acordeão (escondido por padrão) */
+
+    /* Animação de brilho (glow) */
+    .glow{box-shadow:0 0 0 0 rgba(34,211,238,.6);animation:pulse 2s infinite}
+    @keyframes pulse { /* Keyframes para a animação de pulso */
+      0%{box-shadow:0 0 0 0 rgba(34,211,238,.6)}
+      70%{box-shadow:0 0 0 16px rgba(34,211,238,0)}
+      100%{box-shadow:0 0 0 0 rgba(34,211,238,0)}
+    }
+
+    /* Barra de progresso de rolagem */
+    .progress{
+      position:fixed;left:0;top:0;height:3px;
+      background:linear-gradient(90deg,var(--accent),var(--accent2));width:0%;z-index:60
+    }
+
+    /* Estilos do rodapé */
+    .footer{margin:18px 0 40px;text-align:center;color:var(--muted)}
+
+    /* Estilos dos botões */
+    .btn{
+      display:inline-flex;gap:10px;align-items:center;
+      background:linear-gradient(90deg,#1d4ed8,#0ea5e9);border:0;color:#fff;
+      padding:10px 14px;border-radius:12px;font-weight:800;cursor:pointer
+    }
+
+    /* Botões de ação flutuantes (sticky CTA) */
+    .sticky-cta{position:fixed;right:18px;bottom:18px;display:flex;gap:10px;z-index:60}
+
+    /* Estilos de tags */
+    .tag{font-size:12px;font-weight:700;color:#9fb7ff;margin-left:6px}
+
+    /* Divisor horizontal */
+    .divider{height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent);margin:10px 0}
+
+    /* Notas informativas */
+    .note{font-size:12px;color:#9ab0ff}
+
+    /* Efeito de revelação ao rolar */
+    .reveal{opacity:0;transform:translateY(12px);transition:all .6s}
+    .reveal.on{opacity:1;transform:none}
+
+    /* Media Queries para Responsividade */
+    @media (max-width: 768px) {
+      .grid {
+        grid-template-columns: 1fr; /* Empilha as colunas em telas menores */
+      }
+      .nav .container {
+        overflow-x: auto; /* Permite rolagem horizontal na navegação */
+        justify-content: flex-start;
+      }
+      .sticky-cta {
+        flex-direction: column; /* Empilha os botões CTA em telas menores */
+        right: 10px;
+        bottom: 10px;
+      }
+      .sticky-cta .btn {
+        width: 100%; /* Botões CTA de largura total */
+        justify-content: center;
+      }
+      .wrap {
+        padding: 10px; /* Reduz o padding geral em telas menores */
+      }
+      header.hero {
+        padding: 24px 18px; /* Ajusta o padding do cabeçalho */
+      }
+      .hero h1 {
+        font-size: 32px; /* Reduz o tamanho da fonte do título principal */
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<nav class="nav">
+  <div class="container">
+    <a href="#objetivos">Objetivos</a>
+    <a href="#kpis">KPIs</a>
+    <a href="#d0">D‑30 → D0</a>
+    <a href="#w1">Semanas 1–4</a>
+    <a href="#w5">30–60–90</a>
+    <a href="#playbooks">Playbooks</a>
+    <a href="#riscos">Riscos</a>
+    <a href="#orçamento">Orçamento</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="chip">Plano Operacional • Campinas</div>
+  <h1>LimpeJá — Plano de Lançamento em 90 Dias</h1>
+  <p>Checklist acionável para sair do zero ao <b>PMF local</b>. Inclui metas semanais, KPIs de validação, playbooks de Supply/Demand/Support e automações simples. Todos os itens podem ser marcados e ficam salvos no seu navegador.</p>
+  <div class="row" style="margin-top:14px">
+    <span class="pill">Meta principal: <b>800 serviços/mês</b> <span class="tag">(D+90)</span></span>
+    <span class="pill">Repeat <b>35%+</b></span>
+    <span class="pill">NPS <b>60+</b></span>
+    <span class="pill">Payback ≤ <b>3 meses</b></span>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="grid">
+    <section class="card reveal" id="objetivos">
+      <h2>🎯 Objetivos de Validação</h2>
+      <p class="muted">O que determina “deu certo” neste piloto em Campinas.</p>
+      <div class="timeline">
+        <div class="phase">
+          <div class="badge">1</div>
+          <b>Captação e ativação de prestadores</b>
+          <ul class="list">
+            <li>40–60 prestadores <i>verificados</i> e ativos (<b>1+</b> agendamento confirmado/semana).</li>
+            <li>Tempo de 1ª resposta &lt; 10 min (horário comercial).</li>
+          </ul>
+        </div>
+        <div class="phase">
+          <div class="badge">2</div>
+          <b>Liquidar demanda consistente</b>
+          <ul class="list">
+            <li><b>800+</b> serviços/mês até D+90; taxa de aceitação <b>70%+</b>.</li>
+            <li>Conversão de agendamento (checkout) <b>35%+</b>.</li>
+          </ul>
+        </div>
+        <div class="phase">
+          <div class="badge">3</div>
+          <b>Retenção & qualidade</b>
+          <ul class="list">
+            <li>Repeat D30 <b>35%+</b>; cancelamento &lt; 10%.</li>
+            <li>NPS <b>60+</b>; avaliações <b>4,6/5+</b>.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <aside class="card reveal" id="kpis">
+      <h2>📈 KPIs (meta em 90 dias)</h2>
+      <div class="kpis">
+        <div class="kpi"><div class="num" data-counter="60">0</div><small>Prestadores ativos</small></div>
+        <div class="kpi"><div class="num" data-counter="800">0</div><small>Serviços/mês</small></div>
+        <div class="kpi"><div class="num" data-counter="35">0</div><small>Repeat %</small></div>
+        <div class="kpi"><div class="num" data-counter="60">0</div><small>NPS</small></div>
+      </div>
+      <div class="divider"></div>
+      <button class="btn" data-action="reset-checks">Zerar checklists</button>
+      <p class="note">Dica: marque tudo que concluir — as tarefas ficam salvas (LocalStorage).</p>
+    </aside>
+  </div>
+
+  <section class="card reveal" id="d0">
+    <h2>🚀 D‑30 → D0 (Preparação)</h2>
+    <div class="row">
+      <span class="pill glow">Foco: Supply ready</span>
+      <span class="pill">Região: Campinas</span>
+      <span class="pill">Canais: WhatsApp, Insta, Condos</span>
+    </div>
+    <div class="checklist" data-list="d-30">
+      <label class="task"><input type="checkbox"> Manual de marca + páginas de captura (QR/WhatsApp) publicadas.</label>
+      <label class="task"><input type="checkbox"> Funil de KYC: documentos, selfie e antecedentes — testado ponta-a-ponta.</label>
+      <label class="task"><input type="checkbox"> Onboarding de prestador com kit (templates de chat, fotos antes/depois).</label>
+      <label class="task"><input type="checkbox"> Política de disputas e reembolsos (SLA + evidências) definida.</label>
+      <label class="task"><input type="checkbox"> Configuração de PIX e conciliação; rotina D+1 para repasses.</label>
+      <label class="task"><input type="checkbox"> Playbook de aquisição local (condomínios e grupos de bairro).</label>
+      <label class="task"><input type="checkbox"> Painéis simples: serviços/dia, taxa aceitação, cancelamento.</label>
+    </div>
+  </section>
+
+  <section class="card reveal" id="w1">
+    <h2>📅 Semanas 1–4 (Go‑Live)</h2>
+    <div class="accord">
+      <button data-acc="w1">Semana 1 — “Primeiros 100 pedidos”</button>
+      <div class="panel">
+        <ul class="list">
+          <li>Boost de cupom para primeira compra (R$ 20) — limite de 300 cupons.</li>
+          <li>Monitorar tempo de resposta; ligar para pedidos “pendentes” &gt; 5 min.</li>
+          <li>Ativar rebook em 1 clique após serviço concluído.</li>
+        </ul>
+        <div class="checklist" data-list="w1">
+          <label class="task"><input type="checkbox"> 20 prestadores já com 2+ serviços cada.</label>
+          <label class="task"><input type="checkbox"> Tempo médio de resposta &lt; 8 minutos.</label>
+          <label class="task"><input type="checkbox"> 100 pedidos concluídos.</label>
+        </div>
+      </div>
+      <button data-acc="w2">Semana 2 — “Qualidade e fotos”</button>
+      <div class="panel">
+        <ul class="list">
+          <li>Solicitar fotos antes/depois no fechamento (incentivo: +R$5).</li>
+          <li>Regras de match: priorizar provedores com <b>4.7+</b> e resposta rápida.</li>
+        </ul>
+        <div class="checklist" data-list="w2">
+          <label class="task"><input type="checkbox"> 250 pedidos acumulados (total).</label>
+          <label class="task"><input type="checkbox"> Cancelamentos &lt; 12%.</label>
+        </div>
+      </div>
+      <button data-acc="w3">Semana 3 — “Hiperlocal e condomínios”</button>
+      <div class="panel">
+        <ul class="list">
+          <li>Fechar 3 parcerias com condomínios (QR + vitrine no salão).</li>
+          <li>Rodar indicações: cliente indica e ganha R$15, prestador ganha R$10.</li>
+        </ul>
+        <div class="checklist" data-list="w3">
+          <label class="task"><input type="checkbox"> 450 pedidos acumulados (total).</label>
+          <label class="task"><input type="checkbox"> 35 prestadores ativos/semana.</label>
+        </div>
+      </div>
+      <button data-acc="w4">Semana 4 — “Repetição e NPS”</button>
+      <div class="panel">
+        <ul class="list">
+          <li>Campanha de rebook D+7 com cupom personalizado.</li>
+          <li>Coletar NPS e ligar para detratores &lt;= 7 em 24h.</li>
+        </ul>
+        <div class="checklist" data-list="w4">
+          <label class="task"><input type="checkbox"> Repeat D30 <b>25%+</b> (rampa).</label>
+          <label class="task"><input type="checkbox"> NPS <b>55+</b>.</label>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card reveal" id="w5">
+    <h2>⏩ 30–60–90</h2>
+    <div class="timeline">
+      <div class="phase">
+        <div class="badge">30</div>
+        <b>Escala controlada</b>
+        <ul class="list">
+          <li>Prestadores ativos: 30–40; pedidos/mês: 400–500.</li>
+          <li>Implantar telefones mascarados e chat in‑app obrigatório.</li>
+        </ul>
+      </div>
+      <div class="phase">
+        <div class="badge">60</div>
+        <b>Eficiência e retenção</b>
+        <ul class="list">
+          <li>Pedidos/mês: 600–700; repeat <b>32%+</b>.</li>
+          <li>Missões gamificadas e cashback progressivo.</li>
+        </ul>
+      </div>
+      <div class="phase">
+        <div class="badge">90</div>
+        <b>PMF Local</b>
+        <ul class="list">
+          <li><b>800+</b> serviços/mês; NPS <b>60+</b>; payback &lt;= 3 meses.</li>
+          <li>Go/no‑go para segunda cidade.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="card reveal" id="playbooks">
+    <h2>🧭 Playbooks</h2>
+    <div class="accord">
+      <button data-acc="supply">Supply (Prestadores)</button>
+      <div class="panel">
+        <ul class="list">
+          <li>Aquisição: indicações, grupos locais, panfletagem com QR, parcerias.</li>
+          <li>Ativação: KYC + 1º job em 48h, mentoria entre pares, kit fotos.</li>
+          <li>Performance: taxa aceitação, tempo resposta, avaliações — score público.</li>
+        </ul>
+      </div>
+      <button data-acc="demand">Demand (Clientes)</button>
+      <div class="panel">
+        <ul class="list">
+          <li>Topo: Instagram local, microinfluenciadores, Ads hiperlocal + cupom.</li>
+          <li>Meio: recomendações e serviços próximos; landing pages por bairro.</li>
+          <li>Fundo: prova social, garantia, checkout simplificado.</li>
+        </ul>
+      </div>
+      <button data-acc="support">Suporte & Disputas</button>
+      <div class="panel">
+        <ul class="list">
+          <li>SLA: 2h para pedido aberto, 24h para disputa.</li>
+          <li>Evidências: fotos antes/depois obrigatórias; checklists por serviço.</li>
+          <li>Decisões guiadas e crédito em carteira quando aplicável.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="card reveal" id="riscos">
+    <h2>⚠️ Riscos & Mitigações</h2>
+    <ul class="list">
+      <li><b>Desintermediação</b> — telefones mascarados, chat obrigatório, fidelidade/cashback.</li>
+      <li><b>Qualidade inconsistente</b> — score público + coaching + bloqueio temporário.</li>
+      <li><b>CAC alto</b> — foco hiperlocal e parcerias; orgânico & indicações.</li>
+    </ul>
+  </section>
+
+  <section class="card reveal" id="orçamento">
+    <h2>💰 Orçamento (90 dias)</h2>
+    <div class="grid" style="grid-template-columns: 1fr 1fr;">
+      <div class="card">
+        <b>Custos principais</b>
+        <ul class="list">
+          <li>Marketing local (mídia + materiais): R$ 8–15k</li>
+          <li>Operação (suporte + aprovação KYC): R$ 6–10k</li>
+          <li>Incentivos (cupons/missões): R$ 6–12k</li>
+        </ul>
+      </div>
+      <div class="card">
+        <b>Metas de eficiência</b>
+        <ul class="list">
+          <li>CAC Cliente ≤ R$ 90 | CAC Prestador ≤ R$ 60</li>
+          <li>Payback ≤ 3 meses</li>
+          <li>Margem após pagamentos <b>18%+</b></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <div class="sticky-cta">
+    <button class="btn" data-action="print">Imprimir/Salvar PDF</button>
+    <button class="btn" data-action="export">Exportar Checklists (.json)</button>
+    <button class="btn" data-action="import">Importar</button>
+  </div>
+
+  <p class="footer">© LimpeJá — Plano Operacional de Lançamento • Feito para Campinas</p>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>

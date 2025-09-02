@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         paddingLeft: 0,
         margin: 13,
-        paddingRight: 0,
+        paddingHorizontal: 0,
         paddingTop: 46,
         paddingBottom: 16,
         overflow: 'hidden',

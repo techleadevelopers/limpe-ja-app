@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   sectionTitle: {
-     fontSize: 15,
+     fontSize: 14,
     fontFamily: 'Montserrat-Regular',
     fontWeight: '800',
     color: '#202633',
