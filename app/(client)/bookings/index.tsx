@@ -18,7 +18,6 @@ import {
 } from 'react-native';
 import { formatDate } from '../../../utils/helpers';
 
-// CORREÇÃO: Importar BookingDetails e BookingStatus
 import { useAuth } from '../../../hooks/useAuth';
 import { getBookingsForUser } from '../../../services/bookingService';
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
@@ -51,17 +50,16 @@ const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = (
     // Mapeia os status do backend para estilos de exibição no frontend
     const getStatusStyle = (status: BookingStatus) => {
         switch (status) {
-            case BookingStatus.CONFIRMED: return { text: '#388E3C', background: '#E8F5E9', icon: 'checkmark-circle-outline' as const, iconColor: '#4CAF50' };
-            case BookingStatus.PENDING: return { text: '#FFA000', background: '#FFF3E0', icon: 'time-outline' as const, iconColor: '#FF9800' };
-            // >>> CORREÇÃO AQUI (lin ha 58 no erro original): Usar o nome correto do enum <<<
-            case BookingStatus.PENDING_PROVIDER_CONFIRMATION: return { text: '#FF6F00', background: '#FFF3E0', icon: 'hourglass-outline' as const, iconColor: '#FF6F00' };
-            case BookingStatus.IN_PROGRESS: return { text: '#007AFF', background: '#E3F2FD', icon: 'sync-circle-outline' as const, iconColor: '#007AFF' };
-            case BookingStatus.COMPLETED: return { text: '#007AFF', background: '#E3F2FD', icon: 'flag-outline' as const, iconColor: '#007AFF' };
-            // >>> CORREÇÃO AQUI (lin ha 61 no erro original): Usar CANCELLED (dois L's) <<<
-            case BookingStatus.CANCELLED: return { text: '#D32F2F', background: '#FFEBEE', icon: 'close-circle-outline' as const, iconColor: '#F44336' }; 
-            case BookingStatus.REJECTED: return { text: '#757575', background: '#F5F5F5', icon: 'alert-circle-outline' as const, iconColor: '#757575' };
-            case BookingStatus.RESCHEDULED: return { text: '#6A1B9A', background: '#EDE7F6', icon: 'sync-outline' as const, iconColor: '#6A1B9A' };
-            default: return { text: '#546E7A', background: '#ECEFF1', icon: 'help-circle-outline' as const, iconColor: '#757575' };
+            case BookingStatus.CONFIRMED: return { text: '#28A745', background: '#D4EDDA', icon: 'checkmark-circle-outline' as const, iconColor: '#28A745' }; // Green
+            case BookingStatus.PENDING: return { text: '#FFC107', background: '#FFF3CD', icon: 'time-outline' as const, iconColor: '#FFC107' }; // Yellow/Orange
+            case BookingStatus.PENDING_PROVIDER_CONFIRMATION: return { text: '#FFC107', background: '#FFF3CD', icon: 'hourglass-outline' as const, iconColor: '#FFC107' }; // Yellow/Orange
+            case BookingStatus.IN_PROGRESS: return { text: '#007BFF', background: '#CCE5FF', icon: 'sync-circle-outline' as const, iconColor: '#007BFF' }; // Blue
+            case BookingStatus.COMPLETED: return { text: '#6C757D', background: '#E2E3E5', icon: 'flag-outline' as const, iconColor: '#6C757D' }; // Muted Grey
+            case BookingStatus.CANCELLED: return { text: '#DC3545', background: '#F8D7DA', icon: 'close-circle-outline' as const, iconColor: '#DC3545' }; // Red // Corrigido CANCELED para CANCELLED
+            case BookingStatus.REJECTED: return { text: '#6C757D', background: '#E2E3E5', icon: 'alert-circle-outline' as const, iconColor: '#6C757D' }; // Muted Grey
+            case BookingStatus.RESCHEDULED: return { text: '#6F42C1', background: '#EAE6F3', icon: 'sync-outline' as const, iconColor: '#6F42C1' }; // Purple
+            case BookingStatus.NO_SHOW: return { text: '#343A40', background: '#D6D8D9', icon: 'person-remove-outline' as const, iconColor: '#343A40' }; // Dark Grey/Black
+            default: return { text: '#6C757D', background: '#E2E3E5', icon: 'help-circle-outline' as const, iconColor: '#6C757D' };
         }
     };
 
@@ -91,7 +89,7 @@ const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = (
                         <Text style={styles.itemProviderName}>Com: {item.providerFullName}</Text>
                         <Text style={styles.itemDate}>
                             <Ionicons name="calendar-outline" size={14} color="#6C757D" />{' '}
-                            {formatDate(item.scheduledDateTime, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            {formatDate(new Date(`${item.scheduledDate}T${item.scheduledTime}`), { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })} {/* Corrigido scheduledDateTime para scheduledDate e scheduledTime */}
                         </Text>
                         {item.address && (
                             <Text style={styles.itemAddressText} numberOfLines={1}>
@@ -100,7 +98,7 @@ const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = (
                         )}
                         {item.totalPrice !== undefined && (
                             <Text style={styles.itemPriceText}>
-                                <MaterialCommunityIcons name="currency-usd" size={14} color="#2E7D32" /> R$ {item.totalPrice.toFixed(2).replace('.', ',')}
+                                <MaterialCommunityIcons name="currency-usd" size={14} color="#28A745" /> R$ {item.totalPrice.toFixed(2).replace('.', ',')}
                             </Text>
                         )}
                     </View>
@@ -172,22 +170,20 @@ export default function MyBookingsScreen() {
             
             // Mapear os filtros do frontend para os status do backend
             if (currentFilter === 'requests') {
-                // >>> CORREÇÃO AQUI (linha 179 no erro original) <<<
-                const pendingProvider = await getBookingsForUser(BookingStatus.PENDING_PROVIDER_CONFIRMATION);
+                const pendingProvider = await getBookingsForUser(BookingStatus.PENDING_PROVIDER_CONFIRMATION); // Agora reconhecido
                 const pendingClient = await getBookingsForUser(BookingStatus.PENDING);
-                fetchedBookings = [...pendingProvider, ...pendingClient].filter(b => new Date(b.scheduledDateTime) >= new Date());
+                fetchedBookings = [...pendingProvider, ...pendingClient].filter(b => new Date(`${b.scheduledDate}T${b.scheduledTime}`) >= new Date()); // Ajuste na data
             } else if (currentFilter === 'upcoming') {
                 const confirmed = await getBookingsForUser(BookingStatus.CONFIRMED);
                 const inProgress = await getBookingsForUser(BookingStatus.IN_PROGRESS);
-                fetchedBookings = [...confirmed, ...inProgress].filter(b => new Date(b.scheduledDateTime) >= new Date());
+                fetchedBookings = [...confirmed, ...inProgress].filter(b => new Date(`${b.scheduledDate}T${b.scheduledTime}`) >= new Date()); // Ajuste na data
             } else if (currentFilter === 'completed') {
                 const completed = await getBookingsForUser(BookingStatus.COMPLETED);
-                fetchedBookings = [...completed].filter(b => new Date(b.scheduledDateTime) < new Date());
+                fetchedBookings = [...completed].filter(b => new Date(`${b.scheduledDate}T${b.scheduledTime}`) < new Date()); // Ajuste na data
             } else if (currentFilter === 'cancelled') {
-                // >>> CORREÇÃO AQUI (linha 193 no erro original) <<<
-                const cancelled = await getBookingsForUser(BookingStatus.CANCELLED); // CANCELED para CANCELLED
+                const canceled = await getBookingsForUser(BookingStatus.CANCELLED); // Corrigido CANCELED para CANCELLED
                 const rejected = await getBookingsForUser(BookingStatus.REJECTED);
-                fetchedBookings = [...cancelled, ...rejected];
+                fetchedBookings = [...canceled, ...rejected];
             }
             
             // Note: O filtro de data para 'completed' e 'upcoming' deve ser feito no backend idealmente
@@ -195,7 +191,7 @@ export default function MyBookingsScreen() {
             // A lógica atual de filtro de data em 'upcoming' e 'completed' pode não ser perfeita
             // se o backend não filtrar por data.
 
-            fetchedBookings.sort((a, b) => new Date(a.scheduledDateTime).getTime() - new Date(b.scheduledDateTime).getTime());
+            fetchedBookings.sort((a, b) => new Date(`${a.scheduledDate}T${a.scheduledTime}`).getTime() - new Date(`${b.scheduledDate}T${b.scheduledTime}`).getTime()); // Ajuste na data
 
             setBookings(fetchedBookings);
             if (refreshing) Alert.alert("Sucesso", "Agendamentos atualizados!");
@@ -316,7 +312,7 @@ export default function MyBookingsScreen() {
 
             {isLoading && bookings.length === 0 ? (
                 <View style={styles.centeredFeedback}>
-                    <ActivityIndicator size="large" color="#007AFF" />
+                    <ActivityIndicator size="large" color="#007BFF" />
                     <Text style={styles.loadingText}>Carregando agendamentos...</Text>
                 </View>
             ) : bookings.length > 0 ? (
@@ -330,9 +326,9 @@ export default function MyBookingsScreen() {
                         <RefreshControl
                             refreshing={isRefreshing}
                             onRefresh={handleRefresh}
-                            tintColor="#007AFF"
+                            tintColor="#007BFF"
                             title="Atualizando agendamentos..."
-                            titleColor="#007AFF"
+                            titleColor="#007BFF"
                         />
                     }
                 />
@@ -346,7 +342,7 @@ export default function MyBookingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F0F2F5',
+    backgroundColor: '#F8F9FA', // Light background
   },
   filterContainer: {
     flexDirection: 'row',
@@ -354,10 +350,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#DEE2E6',
+    borderBottomColor: '#E9ECEF', // Lighter border
     ...Platform.select({
-        ios: { shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 1, shadowRadius: 3 },
-        android: { elevation: 2 },
+        ios: { 
+            shadowColor: 'rgba(0,0,0,0.08)', // More pronounced shadow
+            shadowOffset: { width: 0, height: 4 }, 
+            shadowOpacity: 0.2, 
+            shadowRadius: 6 
+        },
+        android: { elevation: 4 }, // Increased elevation
     }),
   },
   filterButton: {
@@ -369,13 +370,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderRadius: 25,
     marginHorizontal: 5,
-    backgroundColor: '#F1F3F5',
+    backgroundColor: '#E9ECEF', // Lighter default background
     borderWidth: 1,
     borderColor: '#DEE2E6'
   },
   filterButtonActive: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+    backgroundColor: '#007BFF', // Primary blue
+    borderColor: '#007BFF',
+    ...Platform.select({
+        ios: { 
+            shadowColor: 'rgba(0,123,255,0.4)', // Blue shadow for active
+            shadowOffset: { width: 0, height: 2 }, 
+            shadowOpacity: 0.6, 
+            shadowRadius: 4 
+        },
+        android: { elevation: 6 }, // More elevation for active
+    }),
   },
   filterIcon: {
     marginRight: 6,
@@ -396,9 +406,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     marginBottom: 15,
+    overflow: 'hidden', // Ensures content stays within rounded corners
     ...Platform.select({
-        ios: { shadowColor: 'rgba(0,0,0,0.08)', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 1, shadowRadius: 6 },
-        android: { elevation: 3 },
+        ios: { 
+            shadowColor: 'rgba(0,0,0,0.1)', // Softer, more diffuse shadow
+            shadowOffset: { width: 0, height: 6 }, 
+            shadowOpacity: 0.3, 
+            shadowRadius: 10 
+        },
+        android: { elevation: 8 }, // Increased elevation for depth
     }),
   },
   itemCardContent: {
@@ -407,37 +423,37 @@ const styles = StyleSheet.create({
     padding: 15,
   },
   itemProviderImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 55, // Slightly larger
+    height: 55, // Slightly larger
+    borderRadius: 27.5, // Perfect circle
     marginRight: 15,
-    backgroundColor: '#E9ECEF',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+    backgroundColor: '#F8F9FA', // Match container background
+    borderWidth: 2, // More prominent border
+    borderColor: '#E9ECEF', // Light border
   },
   itemIconContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 55,
+    height: 55,
+    borderRadius: 27.5,
     marginRight: 15,
-    backgroundColor: '#E9ECEF',
+    backgroundColor: '#F8F9FA',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderWidth: 2,
+    borderColor: '#E9ECEF',
   },
   itemDetails: {
     flex: 1,
   },
   itemServiceName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#212529',
+    fontSize: 17, // Slightly larger
+    fontWeight: '700', // Bolder
+    color: '#343A40', // Darker text for prominence
     marginBottom: 4,
   },
   itemProviderName: {
     fontSize: 14,
-    color: '#495057',
+    color: '#6C757D', // Softer color
     marginBottom: 6,
   },
   itemDate: {
@@ -452,25 +468,25 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   itemPriceText: {
-    fontSize: 14,
+    fontSize: 15, // Slightly larger
     fontWeight: 'bold',
-    color: '#2E7D32',
+    color: '#28A745', // Success green
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 2,
   },
   statusBadge: {
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 15,
+    paddingVertical: 6, // More padding
+    paddingHorizontal: 12, // More padding
+    borderRadius: 20, // More rounded
     marginLeft: 10,
-    alignSelf: 'center',
+    alignSelf: 'flex-start', // Align to top of its container
   },
   statusText: {
     fontSize: 10,
     fontWeight: 'bold',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.7, // Slightly more spacing
   },
   itemChevron: {
     marginLeft: 8,
@@ -480,6 +496,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    backgroundColor: '#F8F9FA',
   },
   loadingText: {
     fontSize: 16,
@@ -487,8 +504,8 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   emptyText: {
-    fontSize: 19,
-    fontWeight: '600',
+    fontSize: 20, // Larger
+    fontWeight: '700', // Bolder
     color: '#343A40',
     textAlign: 'center',
     marginBottom: 10,
@@ -500,16 +517,21 @@ const styles = StyleSheet.create({
       marginBottom: 25,
   },
   emptyStateButton: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+    backgroundColor: '#007BFF', // Primary blue
+    paddingVertical: 12, // More padding
+    paddingHorizontal: 25, // More padding
     borderRadius: 8,
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 10,
     ...Platform.select({
-      ios: { shadowColor: 'rgba(0,122,255,0.3)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.8, shadowRadius: 4 },
-      android: { elevation: 5 },
+      ios: { 
+        shadowColor: 'rgba(0,123,255,0.4)', 
+        shadowOffset: { width: 0, height: 4 }, 
+        shadowOpacity: 0.6, 
+        shadowRadius: 8 
+      },
+      android: { elevation: 6 },
     }),
   },
   emptyStateButtonText: {
@@ -519,15 +541,24 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   exploreButton: {
-      backgroundColor: '#007AFF',
-      paddingVertical: 12,
-      paddingHorizontal: 30,
-      borderRadius: 25,
+      backgroundColor: '#28A745', // Success green
+      paddingVertical: 14, // More padding
+      paddingHorizontal: 35, // More padding
+      borderRadius: 30, // More rounded
       marginTop: 15,
+      ...Platform.select({
+        ios: { 
+          shadowColor: 'rgba(40,167,69,0.4)', 
+          shadowOffset: { width: 0, height: 4 }, 
+          shadowOpacity: 0.6, 
+          shadowRadius: 8 
+        },
+        android: { elevation: 6 },
+      }),
   },
   exploreButtonText: {
       color: '#FFFFFF',
-      fontSize: 16,
-      fontWeight: '600',
+      fontSize: 17, // Larger
+      fontWeight: '700', // Bolder
   }
 });
