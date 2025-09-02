@@ -107,8 +107,8 @@ const fetchProviderAppointments = async (userId: string, selectedDateFilter?: st
   console.log(`[MyScheduleScreen] Buscando agendamentos para o usuário ${userId} na data ${selectedDateFilter || 'todos os dias'}`);
   try {
     // Buscar agendamentos confirmados e em progresso para o provedor
-    const confirmedBookings = await getBookingsForUser(BookingStatus.CONFIRMED, userId);
-    const inProgressBookings = await getBookingsForUser(BookingStatus.IN_PROGRESS, userId);
+    const confirmedBookings = await getBookingsForUser(BookingStatus.CONFIRMED);
+    const inProgressBookings = await getBookingsForUser(BookingStatus.IN_PROGRESS);
 
     const allProviderBookings: BookingDetails[] = [...confirmedBookings, ...inProgressBookings];
 
