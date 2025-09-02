@@ -413,7 +413,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 12,
-    borderRadius: Radii.pill,
+    borderRadius: 24,
     borderWidth: 1,
     borderColor: Colors.border,
     backgroundColor: Colors.fieldBg,
@@ -427,8 +427,9 @@ const styles = StyleSheet.create({
   },
   actionButtonPrimary: {
     backgroundColor: Colors.primary,
-    borderRadius: Radii.pill,
+    borderRadius: 24,
     paddingVertical: 14,
+    paddingHorizontal: 25,
     alignItems: 'center',
     marginBottom: 10,
     ...Platform.select({
