@@ -1,3 +1,4 @@
+// LimpeJaApp/app/(client)/bookings/[bookingId].tsx
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -117,8 +118,8 @@ export default function BookingDetailsScreen() {
                             await cancelBooking(booking.id);
                             Alert.alert("Sucesso", "Agendamento cancelado com sucesso!");
                             // Atualiza o estado local para refletir o cancelamento
-                            // >>> Usar BookingStatus.CANCELLED (com dois L's) do enum importado <<<
-                            setBooking(prev => prev ? { ...prev, status: BookingStatus.CANCELLED } : null);
+                            // >>> Usar BookingStatus.CANCELLED (com dois L) do enum importado <<<
+                            setBooking(prev => prev ? { ...prev, status: BookingStatus.CANCELLED } : null); // Corrigido CANCELED para CANCELLED
                         } catch (err: any) {
                             console.error("[BookingDetailsScreen] Erro ao cancelar agendamento:", err);
                             Alert.alert("Erro", err.message || "Não foi possível cancelar o agendamento.");
@@ -200,22 +201,23 @@ export default function BookingDetailsScreen() {
     const getStatusStyle = (status: BookingStatus) => {
         switch (status) {
             case BookingStatus.CONFIRMED:
-                return { color: '#4CAF50', icon: 'checkmark-circle-outline' as const, badgeBg: '#E8F5E9' };
+                return { color: '#28A745', icon: 'checkmark-circle-outline' as const, badgeBg: '#D4EDDA' }; // Success Green
             case BookingStatus.PENDING:
-                return { color: '#FFC107', icon: 'time-outline' as const, badgeBg: '#FFF3E0' };
-            case BookingStatus.COMPLETED:
-                return { color: '#007AFF', icon: 'flag-outline' as const, badgeBg: '#E3F2FD' };
-            // >>> Usar BookingStatus.CANCELLED (2 L's) <<<
-            case BookingStatus.CANCELLED:
-                return { color: '#F44336', icon: 'close-circle-outline' as const, badgeBg: '#FFEBEE' };
-            // REMOVIDO: case BookingStatus.PENDING_PROVIDER_CONFIRMATION: // Este status não está no enum fornecido
-            //     return { color: '#FF6F00', icon: 'hourglass-outline' as const, badgeBg: '#FFF3E0' };
+                return { color: '#FFC107', icon: 'time-outline' as const, badgeBg: '#FFF3CD' }; // Warning Yellow
+            case BookingStatus.PENDING_PROVIDER_CONFIRMATION: // Agora reconhecido
+                return { color: '#FFC107', icon: 'hourglass-outline' as const, badgeBg: '#FFF3CD' }; // Warning Yellow
             case BookingStatus.IN_PROGRESS:
-                return { color: '#007AFF', icon: 'sync-circle-outline' as const, badgeBg: '#E3F2FD' };
+                return { color: '#007BFF', icon: 'sync-circle-outline' as const, badgeBg: '#CCE5FF' }; // Primary Blue
+            case BookingStatus.COMPLETED:
+                return { color: '#6C757D', icon: 'flag-outline' as const, badgeBg: '#E2E3E5' }; // Muted Grey
+            case BookingStatus.CANCELLED: // Corrigido para CANCELLED (dois L)
+                return { color: '#DC3545', icon: 'close-circle-outline' as const, badgeBg: '#F8D7DA' }; // Danger Red
             case BookingStatus.REJECTED:
-                return { color: '#757575', icon: 'alert-circle-outline' as const, badgeBg: '#F5F5F5' };
+                return { color: '#6C757D', icon: 'alert-circle-outline' as const, badgeBg: '#E2E3E5' }; // Muted Grey
             case BookingStatus.RESCHEDULED:
-                return { color: '#6A1B9A', icon: 'sync-outline' as const, badgeBg: '#EDE7F6' };
+                return { color: '#6F42C1', icon: 'sync-outline' as const, badgeBg: '#EAE6F3' }; // Purple
+            case BookingStatus.NO_SHOW:
+                return { color: '#343A40', icon: 'person-remove-outline' as const, badgeBg: '#D6D8D9' }; // Dark Grey
             default: // Caso para qualquer status não mapeado explicitamente
                 return { color: '#888', icon: 'help-circle-outline' as const, badgeBg: '#ECEFF1' };
         }
@@ -227,7 +229,7 @@ export default function BookingDetailsScreen() {
         return (
             <View style={styles.centered}>
                 <Stack.Screen options={{ title: "Carregando..." }} />
-                <ActivityIndicator size="large" color="#007AFF" />
+                <ActivityIndicator size="large" color="#007BFF" />
                 <Text style={styles.loadingText}>Carregando detalhes do agendamento...</Text>
             </View>
         );
@@ -238,7 +240,7 @@ export default function BookingDetailsScreen() {
         return (
             <View style={styles.centered}>
                 <Stack.Screen options={{ title: "Erro" }} />
-                <Ionicons name="alert-circle-outline" size={48} color="#F44336" />
+                <Ionicons name="alert-circle-outline" size={48} color="#DC3545" />
                 <Text style={styles.errorText}>{error || `Agendamento "${bookingId}" não encontrado.`}</Text>
                 <TouchableOpacity onPress={() => router.back()} style={styles.actionButton}>
                     <Text style={styles.actionButtonText}>Voltar</Text>
@@ -287,7 +289,7 @@ export default function BookingDetailsScreen() {
                 <Text style={styles.sectionTitle}>Detalhes do Agendamento</Text>
                 
                 <View style={styles.detailRow}>
-                    <Ionicons name="calendar-outline" size={20} color="#555" style={styles.icon} />
+                    <Ionicons name="calendar-outline" size={20} color="#6C757D" style={styles.icon} />
                     <Text style={styles.detailLabel}>Data e Hora:</Text>
                     <Text style={styles.detailValue}>
                         {/* CORREÇÃO: Combinar scheduledDate e scheduledTime para criar um objeto Date */}
@@ -296,7 +298,7 @@ export default function BookingDetailsScreen() {
                 </View>
 
                 <View style={styles.detailRow}>
-                    <Ionicons name="location-outline" size={20} color="#555" style={styles.icon} />
+                    <Ionicons name="location-outline" size={20} color="#6C757D" style={styles.icon} />
                     <Text style={styles.detailLabel}>Endereço:</Text>
                     <Text style={styles.detailValueAddress}>
                         {`${booking.address.street}, ${booking.address.number}`}
@@ -307,14 +309,14 @@ export default function BookingDetailsScreen() {
                 </View>
 
                 <View style={styles.detailRow}>
-                    <Ionicons name="cash-outline" size={20} color="#555" style={styles.icon} />
+                    <Ionicons name="cash-outline" size={20} color="#6C757D" style={styles.icon} />
                     <Text style={styles.detailLabel}>Valor:</Text>
                     <Text style={[styles.detailValue, styles.priceText]}>{`R$ ${booking.totalPrice.toFixed(2).replace('.', ',')}`}</Text>
                 </View>
 
                 {booking.notes && (
                     <View style={styles.detailRow}>
-                        <Ionicons name="document-text-outline" size={20} color="#555" style={styles.icon} />
+                        <Ionicons name="document-text-outline" size={20} color="#6C757D" style={styles.icon} />
                         <Text style={styles.detailLabel}>Observações:</Text>
                         <Text style={styles.detailValue}>{booking.notes}</Text>
                     </View>
@@ -369,7 +371,7 @@ export default function BookingDetailsScreen() {
                     onPressIn={() => onPressInButton(profileButtonScaleAnim)}
                     onPressOut={() => onPressOutButton(profileButtonScaleAnim)}
                 >
-                    <Ionicons name="person-circle-outline" size={20} color="#007AFF" />
+                    <Ionicons name="person-circle-outline" size={20} color="#007BFF" />
                     <Text style={[styles.actionButtonText, styles.actionButtonOutlineText]}>Ver Perfil de {booking.providerFullName.split(' ')[0]}</Text>
                 </TouchableOpacity>
             </Animated.View>
@@ -377,30 +379,27 @@ export default function BookingDetailsScreen() {
     );
 }
 
-// Estilos fixos para as células do dia do calendário
-const FIXED_DAY_CELL_SIZE = 40;
-
 // Estilos gerais da tela
 const styles = StyleSheet.create({
     scrollViewContainer: {
         flex: 1,
-        backgroundColor: '#f0f2f5',
+        backgroundColor: '#F8F9FA', // Light background
     },
     centered: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
         padding: 20,
-        backgroundColor: '#f0f2f5',
+        backgroundColor: '#F8F9FA',
     },
     loadingText: {
         marginTop: 10,
         fontSize: 16,
-        color: '#555',
+        color: '#6C757D',
     },
     errorText: {
         fontSize: 16,
-        color: 'red',
+        color: '#DC3545', // Danger Red
         textAlign: 'center',
         marginBottom: 20,
     },
@@ -410,19 +409,19 @@ const styles = StyleSheet.create({
     },
     card: {
         backgroundColor: '#FFFFFF',
-        borderRadius: 12,
-        padding: 18,
+        borderRadius: 15, // Increased border radius
+        padding: 20, // Increased padding
         marginHorizontal: 15,
         marginTop: 15,
         ...Platform.select({
             ios: {
-                shadowColor: 'rgba(0,0,0,0.1)',
-                shadowOffset: { width: 0, height: 5 },
-                shadowOpacity: 0.2,
-                shadowRadius: 10,
+                shadowColor: 'rgba(0,0,0,0.15)', // Darker shadow
+                shadowOffset: { width: 0, height: 8 }, // More pronounced shadow
+                shadowOpacity: 0.25, // Increased opacity
+                shadowRadius: 15, // Larger blur radius
             },
             android: {
-                elevation: 6,
+                elevation: 10, // Higher elevation
             },
         }),
     },
@@ -438,127 +437,170 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     providerImage: {
-        width: 60,
-        height: 60,
-        borderRadius: 30,
-        marginRight: 15,
-        borderWidth: 2,
-        borderColor: '#007AFF',
+        width: 65, // Larger image
+        height: 65, // Larger image
+        borderRadius: 32.5, // Perfect circle
+        marginRight: 18, // More space
+        borderWidth: 3, // More prominent border
+        borderColor: '#007BFF', // Primary blue border
     },
     providerInfo: {
         flex: 1,
     },
     serviceNameText: {
-        fontSize: 20,
+        fontSize: 22, // Larger font size
         fontWeight: 'bold',
-        color: '#1C3A5F',
-        marginBottom: 2,
+        color: '#212529', // Darker text
+        marginBottom: 4,
     },
     providerNameText: {
         fontSize: 16,
-        color: '#555',
+        color: '#495057', // Slightly darker text
     },
     statusBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        borderRadius: 15,
+        paddingHorizontal: 12, // More padding
+        paddingVertical: 6, // More padding
+        borderRadius: 20, // Pill shape
         marginLeft: 10,
     },
     statusText: {
-        fontSize: 13,
+        fontSize: 13, // Slightly larger
         fontWeight: 'bold',
         marginLeft: 5,
+        textTransform: 'uppercase', // Uppercase text
+        letterSpacing: 0.5, // Letter spacing
     },
     sectionTitle: {
-        fontSize: 18,
+        fontSize: 19, // Larger font size
         fontWeight: 'bold',
-        color: '#1C3A5F',
+        color: '#343A40', // Darker text
         marginBottom: 15,
         borderBottomWidth: 1,
-        borderBottomColor: '#eee',
+        borderBottomColor: '#E9ECEF', // Lighter border
         paddingBottom: 8,
     },
     detailRow: {
         flexDirection: 'row',
         alignItems: 'flex-start',
-        marginBottom: 12,
+        marginBottom: 14, // More space between rows
     },
     icon: {
-        marginRight: 10,
+        marginRight: 12, // More space
         marginTop: 2,
     },
     detailLabel: {
         fontSize: 15,
-        color: '#555',
-        fontWeight: '600',
+        color: '#495057', // Darker text
+        fontWeight: '600', // Bolder
         marginRight: 5,
         width: 100,
     },
     detailValue: {
         fontSize: 15,
-        color: '#333',
+        color: '#343A40', // Darker text
         flex: 1,
     },
     detailValueAddress: {
         fontSize: 15,
-        color: '#333',
+        color: '#343A40',
         flex: 1,
         lineHeight: 22,
     },
     priceText: {
         fontWeight: 'bold',
-        color: '#007AFF'
+        color: '#007BFF' // Primary blue for price
     },
     actionsCard: {
         backgroundColor: '#FFFFFF',
-        borderRadius: 12,
-        padding: 18,
+        borderRadius: 15, // Consistent border radius
+        padding: 20, // Consistent padding
         marginHorizontal: 15,
         marginTop: 15,
         marginBottom: 30,
         ...Platform.select({
-            ios: { shadowColor: 'rgba(0,0,0,0.1)', shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.2, shadowRadius: 10 },
-            android: { elevation: 6 },
+            ios: { 
+                shadowColor: 'rgba(0,0,0,0.15)', 
+                shadowOffset: { width: 0, height: 8 }, 
+                shadowOpacity: 0.25, 
+                shadowRadius: 15 
+            },
+            android: { elevation: 10 },
         }),
     },
     actionButton: {
         flexDirection: 'row',
-        backgroundColor: '#007AFF',
-        paddingVertical: 14,
-        paddingHorizontal: 15,
-        borderRadius: 10,
+        backgroundColor: '#007BFF', // Primary blue
+        paddingVertical: 15, // More padding
+        paddingHorizontal: 18, // More padding
+        borderRadius: 10, // Softer corners
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 10,
+        marginBottom: 12, // More space between buttons
+        ...Platform.select({
+            ios: { 
+                shadowColor: 'rgba(0,123,255,0.4)', // Blue shadow
+                shadowOffset: { width: 0, height: 4 }, 
+                shadowOpacity: 0.6, 
+                shadowRadius: 8 
+            },
+            android: { elevation: 6 },
+        }),
     },
     actionButtonText: {
         color: '#FFFFFF',
-        fontSize: 16,
+        fontSize: 17, // Larger font size
         fontWeight: '600',
-        marginLeft: 8,
+        marginLeft: 10, // More space
     },
     cancelButton: {
-        backgroundColor: '#F44336',
+        backgroundColor: '#DC3545', // Danger red
+        ...Platform.select({
+            ios: { 
+                shadowColor: 'rgba(220,53,69,0.4)', 
+                shadowOffset: { width: 0, height: 4 }, 
+                shadowOpacity: 0.6, 
+                shadowRadius: 8 
+            },
+            android: { elevation: 6 },
+        }),
     },
     reviewButton: {
-        backgroundColor: '#FF9500',
+        backgroundColor: '#FFC107', // Warning yellow
+        ...Platform.select({
+            ios: { 
+                shadowColor: 'rgba(255,193,7,0.4)', 
+                shadowOffset: { width: 0, height: 4 }, 
+                shadowOpacity: 0.6, 
+                shadowRadius: 8 
+            },
+            android: { elevation: 6 },
+        }),
     },
     actionButtonOutline: {
         flexDirection: 'row',
         backgroundColor: 'transparent',
-        paddingVertical: 14,
-        paddingHorizontal: 15,
+        paddingVertical: 15, // Consistent padding
+        paddingHorizontal: 18, // Consistent padding
         borderRadius: 10,
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 10,
-        borderWidth: 2,
-        borderColor: '#007AFF',
+        marginBottom: 12,
+        borderWidth: 2, // More prominent border
+        borderColor: '#007BFF', // Primary blue border
+        ...Platform.select({
+            ios: { 
+                shadowColor: 'rgba(0,123,255,0.2)', 
+                shadowOffset: { width: 0, height: 2 }, 
+                shadowOpacity: 0.4, 
+                shadowRadius: 4 
+            },
+            android: { elevation: 3 },
+        }),
     },
     actionButtonOutlineText: {
-        color: '#007AFF',
-        marginLeft: 8,
+        color: '#007BFF', // Text color matches border
+        marginLeft: 10,
     }
 });
