@@ -1,4 +1,3 @@
-// LimpeJaApp/app/(auth)/forgot-password.tsx
 import React, { useEffect, useRef, useState } from 'react';
 import {
     View,
@@ -14,11 +13,23 @@ import {
     Dimensions
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient'; // Importar LinearGradient
-import AuthService from '../../services/authService'; // Importa a instância padrão do AuthService
-import { InputWithIcon } from '../../components/auth/components/InputWithIcon'; // Importar InputWithIcon
-import { AnimatedErrorMessage } from '../../components/auth/components/AnimatedErrorMessage'; // Importar AnimatedErrorMessage
+import { LinearGradient } from 'expo-linear-gradient';
+import AuthService from '../../services/authService';
+import { InputWithIcon } from '../../components/auth/components/InputWithIcon';
+import { AnimatedErrorMessage } from '../../components/auth/components/AnimatedErrorMessage';
+
+import AnimatedReanimated, {
+    Easing,
+    Extrapolate,
+    interpolate,
+    useAnimatedStyle,
+    useSharedValue,
+    withRepeat,
+    withTiming,
+} from 'react-native-reanimated';
+
+// Usa a mesma logo do login
+const LOGO_IMAGE = require('../../assets/images/logo.png');
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
@@ -29,18 +40,38 @@ export default function ForgotPasswordScreen() {
     const [isSuccess, setIsSuccess] = useState(false);
     const router = useRouter();
 
-    // Animações de entrada da tela, similar ao login.tsx
     const mainElementsOpacity = useRef(new Animated.Value(0)).current;
     const mainElementsTranslateY = useRef(new Animated.Value(18)).current;
+
+    // animações da logo
+    const logoRotateY = useSharedValue(0);
+    const logoPulseScale = useSharedValue(1);
 
     useEffect(() => {
         Animated.parallel([
             Animated.timing(mainElementsOpacity, { toValue: 1, duration: 700, delay: 200, useNativeDriver: true }),
             Animated.timing(mainElementsTranslateY, { toValue: 0, duration: 700, delay: 200, useNativeDriver: true })
-        ]).start();
-    }, [mainElementsOpacity, mainElementsTranslateY]);
+        ]).start(() => {
+            logoRotateY.value = withRepeat(withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.ease) }), -1, true);
+            logoPulseScale.value = withRepeat(withTiming(1.02, { duration: 1500, easing: Easing.inOut(Easing.ease) }), -1, true);
+        });
+    }, [mainElementsOpacity, mainElementsTranslateY, logoRotateY, logoPulseScale]);
 
-    // Animações do botão, similar ao login.tsx
+    const animatedLogoStyle = useAnimatedStyle(() => {
+        const rotation = interpolate(
+            logoRotateY.value,
+            [0, 0.5, 1],
+            [-5, 0, 5],
+            Extrapolate.CLAMP
+        );
+        return {
+            transform: [
+                { scale: logoPulseScale.value },
+                { rotateY: `${rotation}deg` },
+            ],
+        };
+    });
+
     const createButtonAnimations = () => {
         const scaleAnim = useRef(new Animated.Value(1)).current;
         const onPressIn = () => Animated.spring(scaleAnim, { toValue: 0.97, useNativeDriver: true, friction: 7 }).start();
@@ -106,21 +137,25 @@ export default function ForgotPasswordScreen() {
                     }
                 ]}>
                     <View style={styles.headerSection}>
-                        <Ionicons name="lock-closed-outline" size={60} color="#007BFF" style={styles.headerIcon} />
+                        {/* Logo animada no lugar do cadeado */}
+                        <AnimatedReanimated.Image
+                            source={LOGO_IMAGE}
+                            style={[styles.logo, animatedLogoStyle]}
+                            resizeMode="contain"
+                        />
                         <Text style={styles.mainTitle}>Redefinir Senha</Text>
                         <Text style={styles.welcomeSubtitle}>
                             Informe o e-mail associado à sua conta e enviaremos um link para você redefinir sua senha.
                         </Text>
                     </View>
 
-                    {/* Input para E-mail usando InputWithIcon */}
                     <InputWithIcon
-                        iconName="mail-outline" // Ícone de e-mail
+                        iconName="mail-outline"
                         placeholder="Seu E-mail"
                         value={email}
                         onChangeText={(text: string) => {
                             setEmail(text);
-                            if (message) setMessage(null); // Limpa a mensagem ao digitar
+                            if (message) setMessage(null);
                         }}
                         keyboardType="email-address"
                         autoCapitalize="none"
@@ -165,7 +200,7 @@ const styles = StyleSheet.create({
     },
     scrollView: {
         flex: 1,
-        backgroundColor: '#F7F8FC', // Cor de fundo similar ao login
+        backgroundColor: '#F7F8FC',
     },
     scrollContentContainer: {
         flexGrow: 1,
@@ -175,15 +210,19 @@ const styles = StyleSheet.create({
     contentWrapper: {
         paddingHorizontal: 49,
         paddingTop: Platform.OS === 'ios' ? 20 : 100,
-        bottom: 100, // Ajuste para posicionamento similar ao login
+        bottom: 100,
     },
     headerSection: {
         alignItems: 'center',
-        marginBottom: 30, // Espaçamento similar ao login
-        bottom: 42, // Ajuste para posicionamento similar ao login
+        marginBottom: 30,
+        bottom: 42,
     },
-    headerIcon: {
-        marginBottom: 15,
+    logo: {
+        width: 145,
+        height: 200,
+        resizeMode: 'contain',
+        marginBottom: -25,
+        marginTop: 0,
     },
     mainTitle: {
         fontSize: 26,
@@ -192,13 +231,13 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginBottom: 10,
     },
-    welcomeSubtitle: { // Renomeado de subtitle para welcomeSubtitle para consistência com login.tsx
+    welcomeSubtitle: {
         fontSize: 13.5,
         color: '#8A94A6',
         textAlign: 'center',
-        marginBottom: 50, // Espaçamento similar ao login
+        marginBottom: 50,
     },
-    signInButton: { // Estilos do botão de login
+    signInButton: {
         backgroundColor: 'rgba(64, 192, 240, 0.85)',
         borderRadius: 28,
         paddingVertical: 4,
@@ -206,7 +245,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginTop: 10,
-        bottom: 55, // Ajuste para posicionamento similar ao login
+        bottom: 55,
         marginBottom: 25,
         shadowColor: '#007BFF',
         shadowOffset: { width: 0, height: 5 },
@@ -227,7 +266,7 @@ const styles = StyleSheet.create({
     backToLoginContainer: {
         alignItems: 'center',
         marginBottom: 20,
-        bottom: 45, // Ajuste para posicionamento similar ao login
+        bottom: 45,
     },
     backToLoginLink: {
         fontSize: 13,
