@@ -9,6 +9,12 @@ export class UpdateProviderServiceDto {
   @Min(0)
   price?: number;
 
+  @ApiPropertyOptional({ description: 'Preço por hora (se pricingType for HOURLY)', example: 48.00 }) // Adicionado
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  pricePerHour?: number; // Adicionado
+
   @ApiPropertyOptional({ description: 'Nova duração estimada do serviço em minutos', example: 200 })
   @IsOptional()
   @IsInt()
