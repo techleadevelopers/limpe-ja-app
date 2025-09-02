@@ -61,7 +61,7 @@ export class PaymentsService {
   ) {
     this.pagseguroApiToken = this.configService.get<string>('PAGSEGURO_API_TOKEN');
     this.pagseguroApiBaseUrl = this.configService.get<string>('PAGSEGURO_API_BASE_URL', 'https://sandbox.api.pagseguro.com');
-    this.appBaseUrl = this.configService.get<string>('APP_BASE_URL');
+    this.appBaseUrl = this.configService.get<string>('API_BASE_URL');
     this.minWithdrawalAmount = this.configService.get<number>('MIN_WITHDRAWAL_AMOUNT', 10.00); // Default to 10.00
 
     if (!this.pagseguroApiToken) {
@@ -161,7 +161,8 @@ export class PaymentsService {
         shipping: {
           address: addressPayload,
         },
-        notification_urls: [`${this.appBaseUrl}/payments/webhook/pix`],
+        notification_urls: [`${this.configService.get('API_BASE_URL')}/payments/webhook/pix`],
+
       };
 
       this.logger.debug(`[PaymentsService] createPixTransactionWithGateway - Enviando para PagSeguro (/orders): ${JSON.stringify(payload)}`);
