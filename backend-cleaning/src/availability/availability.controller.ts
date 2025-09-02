@@ -1,4 +1,5 @@
-import { Controller, Get, Patch, Body, Param, UseGuards, Req, NotFoundException, ForbiddenException, Query, Post, Delete } from '@nestjs/common';
+// src/availability/availability.controller.ts
+import { Controller, Get, Patch, Body, Param, UseGuards, Req, NotFoundException, ForbiddenException, Query, Post, Delete, BadRequestException } from '@nestjs/common';
 import { AvailabilityService } from './availability.service';
 import { UpdateAvailabilityDto } from './dto/update-availability.dto';
 import { GetAvailabilityDto } from './dto/get-availability.dto';
@@ -8,14 +9,14 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
-import { ProvidersService } from '../providers/providers.service'; // Para verificar se o provedor logado é o dono
+import { ProvidersService } from '../providers/providers.service';
 
 @ApiTags('availability')
 @Controller('providers/:providerId/availability')
 export class AvailabilityController {
   constructor(
     private readonly availabilityService: AvailabilityService,
-    private readonly providersService: ProvidersService, // Injeta ProvidersService
+    private readonly providersService: ProvidersService,
   ) {}
 
   // Helper para verificar se o provedor logado é o dono do :providerId
@@ -27,17 +28,35 @@ export class AvailabilityController {
     }
   }
 
+  /**
+   * Valida o formato do providerId para garantir que não é "me" e é um UUID válido.
+   * Isso força o uso do endpoint /providers/me/availability para o provedor autenticado.
+   */
+  private validateProviderId(providerId: string): void {
+    // Se o ID for "me" (case-insensitive), instrua a usar o endpoint correto.
+    if (providerId.toLowerCase() === 'me') {
+      throw new BadRequestException('Para gerenciar sua própria disponibilidade, use o endpoint /providers/me/availability.');
+    }
+    // Opcional: Adicione uma validação de formato UUID se seus IDs de provedor forem UUIDs.
+    // const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    // if (!uuidRegex.test(providerId)) {
+    //   throw new BadRequestException('ID do provedor inválido. Deve ser um UUID válido.');
+    // }
+  }
+
   @Get()
   @ApiOperation({ summary: 'Obter horários de disponibilidade de um provedor' })
   @ApiResponse({ status: 200, description: 'Horários de disponibilidade do provedor.', type: [GetAvailabilityDto] })
   @ApiResponse({ status: 404, description: 'Provedor não encontrado.' })
+  @ApiResponse({ status: 400, description: 'ID do provedor inválido.' })
   async getAvailability(@Param('providerId') providerId: string, @Query() query: GetAvailabilityDto) {
+    this.validateProviderId(providerId); // Valida o providerId
     const availability = await this.availabilityService.getAvailability(providerId, query);
     return availability;
   }
 
   @Patch()
-  @Roles(UserRole.PROVIDER) // Apenas provedores podem atualizar sua própria disponibilidade
+  @Roles(UserRole.PROVIDER)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Atualizar horários de disponibilidade de um provedor' })
@@ -45,17 +64,18 @@ export class AvailabilityController {
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
   @ApiResponse({ status: 404, description: 'Provedor não encontrado.' })
+  @ApiResponse({ status: 400, description: 'ID do provedor inválido.' })
   async updateAvailability(
     @Req() req: Request,
     @Param('providerId') providerId: string,
     @Body() updateAvailabilityDto: UpdateAvailabilityDto[],
   ) {
-    await this.validateProviderOwnership(req, providerId); // Verifica se o provedor logado é o dono
+    this.validateProviderId(providerId);
+    await this.validateProviderOwnership(req, providerId);
     const updatedAvailability = await this.availabilityService.updateAvailability(providerId, updateAvailabilityDto);
     return updatedAvailability;
   }
 
-  // Exemplo de rota para adicionar um novo slot de disponibilidade
   @Post()
   @Roles(UserRole.PROVIDER)
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -64,17 +84,18 @@ export class AvailabilityController {
   @ApiResponse({ status: 201, description: 'Slot de disponibilidade adicionado com sucesso.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
+  @ApiResponse({ status: 400, description: 'ID do provedor inválido.' })
   async createAvailability(
     @Req() req: Request,
     @Param('providerId') providerId: string,
-    @Body() createAvailabilityDto: UpdateAvailabilityDto, // Reutiliza DTO para criação de slot
+    @Body() createAvailabilityDto: UpdateAvailabilityDto,
   ) {
+    this.validateProviderId(providerId);
     await this.validateProviderOwnership(req, providerId);
     const newSlot = await this.availabilityService.createAvailability(providerId, createAvailabilityDto);
     return newSlot;
   }
 
-  // Exemplo de rota para deletar um slot de disponibilidade
   @Delete(':availabilityId')
   @Roles(UserRole.PROVIDER)
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -84,11 +105,13 @@ export class AvailabilityController {
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
   @ApiResponse({ status: 404, description: 'Slot de disponibilidade não encontrado.' })
+  @ApiResponse({ status: 400, description: 'ID do provedor inválido.' })
   async deleteAvailability(
     @Req() req: Request,
     @Param('providerId') providerId: string,
     @Param('availabilityId') availabilityId: string,
   ) {
+    this.validateProviderId(providerId);
     await this.validateProviderOwnership(req, providerId);
     await this.availabilityService.deleteAvailability(availabilityId, providerId);
   }
