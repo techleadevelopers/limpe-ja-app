@@ -18,7 +18,8 @@
       "unauthorized_error": "Não autorizado. Por favor, faça login novamente.",
       "generic_error": "Ocorreu um erro inesperado. Por favor, tente novamente mais tarde.",
       "per_hour_short": "/h",
-      "per_sqm_short": "/m²"
+      "per_sqm_short": "/m²",
+      "at": "às"
     },
     "explore_section": {
       "title": "Explore mais Serviços"
