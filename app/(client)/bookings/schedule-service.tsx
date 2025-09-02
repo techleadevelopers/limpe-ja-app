@@ -708,6 +708,9 @@ export default function ScheduleServiceScreen() {
                 couponCode: discountAmount > 0 ? couponCode : undefined, // Envia o cupom se houver desconto
             };
 
+            // ADICIONADO PARA DEPURAR O ERRO 404
+            console.log("Dados de agendamento sendo enviados:", bookingData);
+
             const newBooking: BookingDetails = await createBooking(bookingData);
 
             router.replace({
