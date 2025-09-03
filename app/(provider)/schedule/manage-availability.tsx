@@ -1,4 +1,3 @@
-// LimpeJaApp/app/(provider)/schedule/manage-availability.tsx
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   View,
@@ -23,20 +22,17 @@ import { useAuth } from '../../../hooks/useAuth';
 
 // Importações de serviços e tipos do backend (ajuste os caminhos conforme sua estrutura)
 import {
-  // REMOVIDO: getProviderAvailability, // Não é mais usado diretamente aqui
-  // REMOVIDO: updateProviderAvailability, // Não é mais usado diretamente aqui
-  getMyProviderAvailability, // NOVO: Importa a função para o provedor autenticado
-  updateMyProviderAvailability, // NOVO: Importa a função para atualizar o provedor autenticado
+  getMyProviderAvailability,
+  updateMyProviderAvailability,
 } from '../../../services/providerService';
 import { getBookingsForUser } from '../../../services/bookingService';
-// Importa os tipos necessários, incluindo GetProviderAvailabilityResponse e UpdateAvailabilityData
 import { ProviderAvailability, GetProviderAvailabilityResponse, UpdateAvailabilityData } from '../../../types/backend/providers';
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 
 // ====== Design tokens (mesmos da UI padronizada) ======
 const Colors = {
   primary: '#4A90E2',
-  primaryDark: '#2A72E7',
+  primaryDark: '#2A72E7', // Added for primaryDark
   bgSoft: '#F0F7FF',
   surface: '#FFFFFF',
   border: '#E9ECEF',
@@ -47,6 +43,8 @@ const Colors = {
   danger: '#D32F2F',
   success: '#2E7D32',
   shadow: 'rgba(0,0,0,0.08)',
+  infoLight: '#E0F2F7', // New color for info card background
+  infoDark: '#007B8C', // New color for info card icon/text
 };
 
 const Radii = {
@@ -83,8 +81,6 @@ const generateTimeSlots = (startHour: number, endHour: number, intervalMinutes: 
   const slots: string[] = [];
   for (let h = startHour; h <= endHour; h++) {
     for (let m = 0; m < 60; m += intervalMinutes) {
-      // Se for a última hora e o minuto já exceder o limite, pare.
-      // Ex: se endHour é 19, não queremos 19:30, apenas até 19:00.
       if (h === endHour && m > 0) continue;
       const hour = h < 10 ? `0${h}` : `${h}`;
       const minute = m < 10 ? `0${m}` : `${m}`;
@@ -155,6 +151,14 @@ const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({ time, isSelected, onPre
         disabled={isBooked} // Desabilita se já estiver agendado
       >
         <Text style={[styles.timeSlotText, { color: textColor }]}>{time}</Text>
+        {isBooked && (
+          <Ionicons
+            name="lock-closed" // Icon for booked slots
+            size={12}
+            color={textColor}
+            style={styles.bookedIcon}
+          />
+        )}
       </TouchableOpacity>
     </Animated.View>
   );
@@ -204,21 +208,37 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
       {availability.isEnabled && (
         <View>
           <View style={styles.timeSlotGrid}>
-            {ALL_POSSIBLE_SLOTS.map(slot => (
-              <TimeSlotButton
-                key={slot}
-                time={slot}
-                isSelected={availability.selectedSlots.includes(slot)}
-                onPress={onToggleSlot.bind(null, dayOfWeek, slot)}
-                isBooked={bookedSlotsForDay.includes(slot)} // Marca como agendado
-              />
-            ))}
+            {ALL_POSSIBLE_SLOTS.map((slot, index) => {
+              const currentHour = parseInt(slot.split(':')[0]);
+              const prevSlot = ALL_POSSIBLE_SLOTS[index - 1];
+              const prevHour = prevSlot ? parseInt(prevSlot.split(':')[0]) : -1;
+
+              return (
+                <React.Fragment key={slot}>
+                  {/* Add visual separators by hour */}
+                  {index > 0 && currentHour !== prevHour && (
+                    <View style={styles.hourSeparatorContainer}>
+                      <Text style={styles.hourSeparatorText}>{`${currentHour < 10 ? '0' : ''}${currentHour}h`}</Text>
+                    </View>
+                  )}
+                  <TimeSlotButton
+                    time={slot}
+                    isSelected={availability.selectedSlots.includes(slot)}
+                    onPress={onToggleSlot.bind(null, dayOfWeek, slot)}
+                    isBooked={bookedSlotsForDay.includes(slot)}
+                  />
+                </React.Fragment>
+              );
+            })}
           </View>
+          {/* Interações secundárias: chips flutuantes alinhados à direita */}
           <View style={styles.dayActions}>
             <TouchableOpacity style={styles.actionButtonSecondary} onPress={() => onSelectAll(dayOfWeek)}>
+              <Ionicons name="checkmark-done-circle-outline" size={16} color={Colors.primary} style={styles.actionButtonIcon} />
               <Text style={styles.actionButtonSecondaryText}>Selecionar Tudo</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionButtonSecondary} onPress={() => onClearSlots(dayOfWeek)}>
+              <Ionicons name="trash-outline" size={16} color={Colors.primary} style={styles.actionButtonIcon} />
               <Text style={styles.actionButtonSecondaryText}>Limpar</Text>
             </TouchableOpacity>
           </View>
@@ -228,18 +248,27 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
   );
 };
 
+// New InfoCard Component
+const InfoCard: React.FC<{ text: string }> = ({ text }) => (
+  <View style={styles.infoCard}>
+    <Ionicons name="information-circle-outline" size={20} color={Colors.infoDark} style={styles.infoIcon} />
+    <Text style={styles.infoText}>{text}</Text>
+  </View>
+);
+
 export default function ManageAvailabilityScreen() {
   const router = useRouter();
-  const { user } = useAuth(); // Obter o ID do provedor logado
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [weeklyAvailability, setWeeklyAvailability] = useState<DayAvailability[]>([]);
   const [specificDateOverrides, setSpecificDateOverrides] = useState<SpecificDateOverride[]>([]);
   const [selectedDateForOverride, setSelectedDateForOverride] = useState<string | null>(null);
-  const [bookings, setBookings] = useState<BookingDetails[]>([]); // Para obter horários já agendados
+  const [bookings, setBookings] = useState<BookingDetails[]>([]);
 
   const headerAnim = useRef(new Animated.Value(0)).current;
   const contentAnim = useRef(new Animated.Value(0)).current;
+  const saveButtonAnim = useRef(new Animated.Value(0)).current; // For save button animation
 
   const dayNames = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
 
@@ -302,17 +331,13 @@ export default function ManageAvailabilityScreen() {
 
     setIsLoading(true);
     try {
-      // --- INÍCIO DA CORREÇÃO ---
-      // Obtenha a data atual no formato YYYY-MM-DD
       const today = new Date();
       const year = today.getFullYear();
-      const month = String(today.getMonth() + 1).padStart(2, '0'); // Mês é 0-indexado
+      const month = String(today.getMonth() + 1).padStart(2, '0');
       const day = String(today.getDate()).padStart(2, '0');
       const currentDate = `${year}-${month}-${day}`;
 
-      // CORREÇÃO: Usar getMyProviderAvailability para o provedor autenticado, passando a data atual
       const { available: providerAvailabilities } = await getMyProviderAvailability(currentDate);
-      // --- FIM DA CORREÇÃO ---
 
       const initialWeekly: DayAvailability[] = Array.from({ length: 7 }, (_, i) => ({
         dayOfWeek: i,
@@ -321,10 +346,9 @@ export default function ManageAvailabilityScreen() {
         originalSlots: [],
       }));
 
-      providerAvailabilities.forEach((avail: ProviderAvailability) => { // Adicionado tipo explícito para 'avail'
+      providerAvailabilities.forEach((avail: ProviderAvailability) => {
         const dayIndex = initialWeekly.findIndex(d => d.dayOfWeek === avail.dayOfWeek);
         if (dayIndex !== -1) {
-          // Converte startTime e endTime para blocos de 30 minutos
           const startMinutes = parseInt(avail.startTime.split(':')[0]) * 60 + parseInt(avail.startTime.split(':')[1]);
           const endMinutes = parseInt(avail.endTime.split(':')[0]) * 60 + parseInt(avail.endTime.split(':')[1]);
           const currentSlots: string[] = [];
@@ -337,19 +361,21 @@ export default function ManageAvailabilityScreen() {
             ...initialWeekly[dayIndex],
             isEnabled: true,
             selectedSlots: currentSlots,
-            originalSlots: currentSlots, // Guarda os slots originais para comparação na hora de salvar
-            id: avail.id, // Se a disponibilidade semanal tiver um ID geral
+            originalSlots: currentSlots,
+            id: avail.id,
           };
         }
       });
       setWeeklyAvailability(initialWeekly);
 
       // TODO: Carregar exceções de datas específicas do backend aqui
-      // const specificAvailabilities: SpecificDateOverride[] = await getSpecificDateOverrides(user.id);
-      // setSpecificDateOverrides(specificAvailabilities);
+      // For now, let's simulate some overrides for testing the UI
+      setSpecificDateOverrides([
+        // { date: '2025-09-15', type: 'blocked' }, // Example blocked day
+        // { date: '2025-09-16', type: 'custom', selectedSlots: ['10:00', '10:30', '11:00'] }, // Example custom day
+      ]);
 
 
-      // CORREÇÃO: Passar apenas o status para getBookingsForUser
       const allBookings: BookingDetails[] = await getBookingsForUser(BookingStatus.CONFIRMED);
       setBookings(allBookings);
 
@@ -364,7 +390,7 @@ export default function ManageAvailabilityScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [user?.id]); // Adiciona user.id como dependência
+  }, [user?.id]);
 
   useEffect(() => {
     loadData();
@@ -409,11 +435,11 @@ export default function ManageAvailabilityScreen() {
     // Tenta encontrar uma exceção existente para esta data
     const existingOverride = specificDateOverrides.find(override => override.date === day.dateString);
     if (existingOverride) {
-      // Se houver, pré-seleciona as opções
-      // TODO: Implementar a lógica de pré-seleção na UI
+      // If there is an existing override, ensure it's selected in the UI
+      // (The currentOverride memoized value handles this for rendering)
     } else {
-      // Limpa as opções se não houver exceção
-      // TODO: Implementar a lógica de limpeza na UI
+      // If no override, ensure override options are reset or empty
+      // (This is implicitly handled by currentOverride being null)
     }
   };
 
@@ -464,80 +490,83 @@ export default function ManageAvailabilityScreen() {
     }
 
     setIsSaving(true);
+    // Animate save button
+    Animated.timing(saveButtonAnim, {
+      toValue: 1,
+      duration: 300,
+      easing: Easing.in(Easing.ease),
+      useNativeDriver: false, // Must be false for width animation
+    }).start();
+
     try {
-      // 1. Salvar Disponibilidade Semanal
       const allAvailabilityUpdates: UpdateAvailabilityData[] = [];
 
       for (const day of weeklyAvailability) {
         const newBlocks = convertSlotsToBlocks(day.selectedSlots);
         if (day.isEnabled && newBlocks.length > 0) {
-          // Para cada bloco contínuo, crie um objeto UpdateAvailabilityData
           newBlocks.forEach(block => {
             allAvailabilityUpdates.push({
               dayOfWeek: day.dayOfWeek,
               startTime: block.startTime,
               endTime: block.endTime,
-              isAvailable: true, // Assumindo que slots selecionados são disponíveis
-              // Se o backend espera um 'id' para atualizar blocos existentes,
-              // a lógica aqui precisaria ser mais sofisticada para mapear IDs.
-              // Por enquanto, assume que o PATCH substitui ou adiciona.
+              isAvailable: true,
             });
           });
         }
-        // Se day.isEnabled for false ou newBlocks estiver vazio, não adicionamos nada para este dia.
-        // O backend deve interpretar a ausência de blocos para um dayOfWeek como uma remoção.
       }
 
-      // CORREÇÃO: Chama updateMyProviderAvailability uma única vez com todos os blocos de atualização
       await updateMyProviderAvailability(allAvailabilityUpdates);
-
 
       // 2. Salvar Exceções de Datas Específicas
       for (const override of specificDateOverrides) {
         if (override.type === 'blocked') {
-          // Envia para o backend que esta data está bloqueada
-          // await addSpecificDateOverride(user.id, override.date, 'blocked');
           console.log(`Bloqueando data: ${override.date}`);
+          // TODO: Call backend API to block specific date
         } else if (override.type === 'custom' && override.selectedSlots) {
           const customBlocks = convertSlotsToBlocks(override.selectedSlots);
-          // Envia para o backend os horários personalizados para esta data
-          // await addSpecificDateOverride(user.id, override.date, 'custom', customBlocks);
           console.log(`Customizando data ${override.date} com slots:`, customBlocks);
+          // TODO: Call backend API to set custom slots for specific date
         }
       }
       // TODO: Lógica para remover overrides que foram desfeitos na UI
 
+      // CORREÇÃO: Usar NotificationFeedbackType
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); // Haptic feedback
       Alert.alert('Sucesso', 'Sua disponibilidade foi salva!');
-      router.back(); // Volta para a tela da agenda
+      router.back();
     } catch (error: any) {
       console.error('Erro ao salvar disponibilidade:', error.response?.data || error.message);
+      // CORREÇÃO: Usar NotificationFeedbackType
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); // Haptic feedback
       Alert.alert('Erro', error.response?.data?.message || 'Não foi possível salvar sua disponibilidade. Tente novamente.');
     } finally {
       setIsSaving(false);
-      loadData(); // Recarrega os dados para refletir o estado atualizado
+      Animated.timing(saveButtonAnim, {
+        toValue: 0,
+        duration: 300,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: false,
+      }).start(() => {
+        loadData(); // Recarrega os dados para refletir o estado atualizado após a animação de retorno
+      });
     }
   };
 
   // Mapeia agendamentos para horários ocupados recorrentes
   const getBookedSlotsForDay = useCallback((dayOfWeek: number): string[] => {
     const bookedTimes: string[] = [];
-    // Filtra agendamentos confirmados
     const confirmedBookings = bookings.filter(b => b.status === BookingStatus.CONFIRMED);
 
     confirmedBookings.forEach(booking => {
       const bookingDate = new Date(booking.scheduledDate);
-      // Verifica se o dia da semana do agendamento corresponde ao dia em questão
       if (bookingDate.getDay() === dayOfWeek) {
-        // Converte a hora de início do agendamento para um slot de 30 minutos
         const [startHour, startMinute] = booking.scheduledTime.split(':').map(Number);
         const startTotalMinutes = startHour * 60 + startMinute;
 
-        // CORREÇÃO: Tratar scheduledEndTime como possivelmente undefined
         const endTotalMinutes = booking.scheduledEndTime
           ? parseInt(booking.scheduledEndTime.split(':')[0]) * 60 + parseInt(booking.scheduledEndTime.split(':')[1])
-          : startTotalMinutes + 30; // Assume 30 min duration if end time is missing
+          : startTotalMinutes + 30;
 
-        // Adiciona todos os slots de 30 minutos que o agendamento ocupa
         for (let time = startTotalMinutes; time < endTotalMinutes; time += 30) {
           const hour = Math.floor(time / 60);
           const minute = time % 60;
@@ -545,7 +574,7 @@ export default function ManageAvailabilityScreen() {
         }
       }
     });
-    return Array.from(new Set(bookedTimes)); // Retorna slots únicos
+    return Array.from(new Set(bookedTimes));
   }, [bookings]);
 
   // Slots já agendados para a data de override selecionada
@@ -557,10 +586,9 @@ export default function ManageAvailabilityScreen() {
       const [startHour, startMinute] = booking.scheduledTime.split(':').map(Number);
       const startTotalMinutes = startHour * 60 + startMinute;
 
-      // CORREÇÃO: Tratar scheduledEndTime como possivelmente undefined
       const endTotalMinutes = booking.scheduledEndTime
         ? parseInt(booking.scheduledEndTime.split(':')[0]) * 60 + parseInt(booking.scheduledEndTime.split(':')[1])
-        : startTotalMinutes + 30; // Assume 30 min duration if end time is missing
+        : startTotalMinutes + 30;
 
       for (let time = startTotalMinutes; time < endTotalMinutes; time += 30) {
         const hour = Math.floor(time / 60);
@@ -571,6 +599,46 @@ export default function ManageAvailabilityScreen() {
     return Array.from(new Set(bookedTimes));
   }, [bookings]);
 
+
+  // Calendar marked dates for overrides
+  const markedDates = useMemo(() => {
+    const dates: { [key: string]: any } = {};
+    specificDateOverrides.forEach(override => {
+      if (override.type === 'blocked') {
+        dates[override.date] = {
+          selected: selectedDateForOverride === override.date,
+          selectedColor: selectedDateForOverride === override.date ? Colors.primary : Colors.danger,
+          dotColor: Colors.danger, // Red dot for blocked days
+          marked: true,
+        };
+      } else if (override.type === 'custom') {
+        dates[override.date] = {
+          selected: selectedDateForOverride === override.date,
+          selectedColor: selectedDateForOverride === override.date ? Colors.primary : Colors.primary, // Or a different color for custom
+          dotColor: Colors.primary, // Blue dot for custom days
+          marked: true,
+        };
+      }
+    });
+    if (selectedDateForOverride && !dates[selectedDateForOverride]) {
+      dates[selectedDateForOverride] = { selected: true, selectedColor: Colors.primary };
+    }
+    return dates;
+  }, [specificDateOverrides, selectedDateForOverride]);
+
+  // Animated style for save button
+  const saveButtonWidth = saveButtonAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['100%', '50%'], // Shrink to 50% width
+  });
+  const saveButtonOpacity = saveButtonAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 0], // Text fades out
+  });
+  const saveButtonSpinnerOpacity = saveButtonAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1], // Spinner fades in
+  });
 
   if (isLoading) {
     return (
@@ -604,8 +672,8 @@ export default function ManageAvailabilityScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Seção de Disponibilidade Semanal Padrão */}
-        <Text style={styles.sectionTitle}>Disponibilidade Semanal Padrão</Text>
-        <Text style={styles.sectionDescription}>Defina seus horários de trabalho regulares para cada dia da semana. Os agendamentos existentes serão desabilitados.</Text>
+        <Text style={styles.sectionTitleImproved}>Disponibilidade Semanal Padrão</Text>
+        <InfoCard text="Defina seus horários de trabalho regulares para cada dia da semana. Os agendamentos existentes serão desabilitados." />
         {weeklyAvailability.map(day => (
           <DayAvailabilityCard
             key={day.dayOfWeek}
@@ -616,17 +684,17 @@ export default function ManageAvailabilityScreen() {
             onToggleSlot={handleToggleSlot}
             onSelectAll={handleSelectAllSlots}
             onClearSlots={handleClearSlots}
-            bookedSlotsForDay={getBookedSlotsForDay(day.dayOfWeek)} // Passa os slots já agendados
+            bookedSlotsForDay={getBookedSlotsForDay(day.dayOfWeek)}
           />
         ))}
 
         {/* Seção de Exceções de Datas Específicas */}
-        <Text style={styles.sectionTitle}>Exceções de Datas Específicas</Text>
-        <Text style={styles.sectionDescription}>Sobrescreva sua disponibilidade padrão para dias específicos. Agendamentos já confirmados não podem ser alterados.</Text>
+        <Text style={styles.sectionTitleImproved}>Exceções de Datas Específicas</Text>
+        <InfoCard text="Sobrescreva sua disponibilidade padrão para dias específicos. Agendamentos já confirmados não podem ser alterados." />
         <View style={styles.calendarOverrideContainer}>
           <Calendar
             onDayPress={handleDayPressOnCalendar}
-            markedDates={selectedDateForOverride ? { [selectedDateForOverride]: { selected: true, selectedColor: Colors.primary } } : {}}
+            markedDates={markedDates} // Use the memoized markedDates
             theme={({
                 backgroundColor: Colors.bgSoft,
                 calendarBackground: Colors.surface,
@@ -657,12 +725,24 @@ export default function ManageAvailabilityScreen() {
                     paddingBottom: 6,
                   },
                 },
-              }) as any} // 'as any' para evitar problemas de tipagem com o tema
+              }) as any}
             style={styles.calendarOverrideStyle}
           />
           {selectedDateForOverride && (
-            <View style={styles.overrideOptions}>
+            <View style={styles.overrideOptionsCard}> {/* Apply card style here */}
               <Text style={styles.overrideTitle}>Opções para {selectedDateForOverride}</Text>
+
+              {/* Display quick summary of custom slots if type is custom */}
+              {currentOverride?.type === 'custom' && currentOverride.selectedSlots && currentOverride.selectedSlots.length > 0 && (
+                <Text style={styles.customSlotsSummary}>
+                  Horários selecionados: {currentOverride.selectedSlots.slice(0, 3).join(', ')}
+                  {currentOverride.selectedSlots.length > 3 ? ` e mais ${currentOverride.selectedSlots.length - 3}` : ''}
+                </Text>
+              )}
+              {currentOverride?.type === 'blocked' && (
+                <Text style={styles.blockedDayBadge}>🔴 Dia Bloqueado</Text>
+              )}
+
               <TouchableOpacity
                 style={[styles.overrideButton, currentOverride?.type === 'blocked' && styles.overrideButtonSelected]}
                 onPress={() => handleSetOverrideType('blocked')}
@@ -699,14 +779,19 @@ export default function ManageAvailabilityScreen() {
         </View>
 
         <TouchableOpacity
-          style={styles.saveButton}
+          style={[styles.saveButton, { width: saveButtonWidth }]}
           onPress={handleSaveAvailability}
           disabled={isSaving}
         >
           {isSaving ? (
-            <ActivityIndicator color="#FFFFFF" />
+            <Animated.View style={{ opacity: saveButtonSpinnerOpacity, position: 'absolute' }}>
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            </Animated.View>
           ) : (
-            <Text style={styles.saveButtonText}>Salvar Todas as Alterações</Text>
+            <Animated.View style={[styles.saveButtonContent, { opacity: saveButtonOpacity }]}>
+              <MaterialCommunityIcons name="content-save" size={20} color="#FFFFFF" style={styles.saveButtonIcon} />
+              <Text style={styles.saveButtonText}>Salvar Todas as Alterações</Text>
+            </Animated.View>
           )}
         </TouchableOpacity>
       </Animated.ScrollView>
@@ -756,17 +841,32 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.lg * 2,
     paddingTop: Spacing.md,
   },
-  sectionTitle: {
-    fontSize: 18,
+  // Improved section title style
+  sectionTitleImproved: {
+    fontSize: 20, // Increased font size
     fontWeight: 'bold',
-    color: Colors.text,
+    color: Colors.primaryDark, // Darker primary color for contrast
     marginTop: Spacing.lg,
     marginBottom: Spacing.sm,
   },
-  sectionDescription: {
-    fontSize: 14,
-    color: Colors.textMuted,
+  // Info Card for description
+  infoCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.infoLight, // Soft background
+    borderRadius: Radii.md,
+    padding: Spacing.md,
     marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border, // Subtle border
+  },
+  infoIcon: {
+    marginRight: Spacing.sm,
+  },
+  infoText: {
+    flex: 1,
+    fontSize: 14,
+    color: Colors.infoDark, // Darker text for info
   },
   dayCard: {
     backgroundColor: Colors.surface,
@@ -807,21 +907,48 @@ const styles = StyleSheet.create({
     margin: Spacing.xs,
     minWidth: 65,
     alignItems: 'center',
+    flexDirection: 'row', // To align text and icon
+    justifyContent: 'center',
   },
   timeSlotText: {
     fontSize: 13,
     fontWeight: '600',
   },
+  bookedIcon: {
+    marginLeft: Spacing.xs / 2, // Small space between text and icon
+  },
+  // New style for hour separators
+  hourSeparatorContainer: {
+    width: '100%', // Take full width
+    alignItems: 'flex-start', // Align text to left
+    paddingVertical: Spacing.xs,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  hourSeparatorText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: Colors.textMuted,
+  },
   dayActions: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'flex-end', // Align to right
     marginTop: Spacing.sm,
+    width: '100%', // Ensure it takes full width to align right
   },
   actionButtonSecondary: {
     backgroundColor: Colors.fieldBg,
     borderRadius: Radii.pill,
     paddingVertical: 8,
     paddingHorizontal: 12,
+    marginLeft: Spacing.sm, // Space between buttons
+    flexDirection: 'row', // For icon and text
+    alignItems: 'center',
+  },
+  actionButtonIcon: {
+    marginRight: Spacing.xs,
   },
   actionButtonSecondaryText: {
     color: Colors.primary,
@@ -846,10 +973,22 @@ const styles = StyleSheet.create({
   calendarOverrideStyle: {
     borderRadius: Radii.md,
   },
-  overrideOptions: {
+  overrideOptionsCard: { // New style for override options as a card
     padding: Spacing.md,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
+    backgroundColor: Colors.surface, // Ensure it has a background
+    borderRadius: Radii.md, // Apply border radius
+    marginTop: Spacing.md, // Space from calendar
+    ...Platform.select({
+      ios: {
+        shadowColor: Colors.shadow,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 6,
+      },
+      android: { elevation: 4 },
+    }),
   },
   overrideTitle: {
     fontSize: 16,
@@ -857,8 +996,25 @@ const styles = StyleSheet.create({
     color: Colors.text,
     marginBottom: Spacing.sm,
   },
+  customSlotsSummary: {
+    fontSize: 13,
+    color: Colors.textMuted,
+    marginBottom: Spacing.sm,
+    fontStyle: 'italic',
+  },
+  blockedDayBadge: {
+    backgroundColor: Colors.danger,
+    color: Colors.surface,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: Radii.pill,
+    alignSelf: 'flex-start', // Fit content
+    marginBottom: Spacing.sm,
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
   overrideButton: {
-    backgroundColor: Colors.fieldBg, // Cor de fundo para botões não selecionados
+    backgroundColor: Colors.fieldBg,
     borderRadius: Radii.pill,
     paddingVertical: 10,
     alignItems: 'center',
@@ -895,7 +1051,11 @@ const styles = StyleSheet.create({
     borderRadius: Radii.pill,
     paddingVertical: Spacing.md,
     alignItems: 'center',
+    justifyContent: 'center', // Center content for spinner
     marginTop: Spacing.lg,
+    alignSelf: 'center', // Center the button itself when width changes
+    // minWidth: '50%', // Ensure it doesn't shrink too much
+    // maxWidth: '100%',
     ...Platform.select({
       ios: {
         shadowColor: Colors.primary,
@@ -905,6 +1065,14 @@ const styles = StyleSheet.create({
       },
       android: { elevation: 8 },
     }),
+  },
+  saveButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveButtonIcon: {
+    marginRight: Spacing.xs,
   },
   saveButtonText: {
     color: '#FFFFFF',
