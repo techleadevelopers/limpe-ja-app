@@ -12,7 +12,7 @@ import {
   Alert,
   Dimensions,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'; // Added MaterialCommunityIcons for text-box-outline
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
@@ -55,7 +55,7 @@ interface ServiceDetailsFormData {
   basePrice: string;
   pixKey: string;
   specialties: string[];
-  serviceAreas: string[];
+  serviceAreas: string[]; // Added serviceAreas to formData
   priceUnit: PriceUnit;
 }
 
@@ -70,17 +70,21 @@ export default function ServiceDetailsScreen() {
     basePrice: '',
     pixKey: '',
     specialties: [],
-    serviceAreas: [],
+    serviceAreas: [], // Initialize serviceAreas
     priceUnit: null,
   });
+
+  // NEW: State for current sub-step within service details
+  const [currentServiceSubStep, setCurrentServiceSubStep] = useState(1); // 1: Photo/Desc, 2: Exp/Specialties, 3: Price, 4: PIX/Areas
 
   const [isUploading, setIsUploading] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
+  const avatarScaleAnim = useRef(new Animated.Value(1)).current; // Added for avatar animation
 
-  // Adicionando a lógica da barra de progresso
-  const totalSteps = 3;
-  const currentStep = 2; // Esta tela representa a segunda etapa
+  // Adicionando a lógica da barra de progresso (already existed, keeping it)
+  const totalSteps = 4; // Total sub-steps for service details
+  const progress = currentServiceSubStep / totalSteps;
 
   React.useEffect(() => {
     Animated.parallel([
@@ -95,7 +99,23 @@ export default function ServiceDetailsScreen() {
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [currentServiceSubStep]); // Re-run animation on sub-step change
+
+  const onPressInAvatar = () => {
+    Animated.spring(avatarScaleAnim, {
+      toValue: 0.95,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const onPressOutAvatar = () => {
+    Animated.spring(avatarScaleAnim, {
+      toValue: 1,
+      friction: 3,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
 
   const handleImagePicker = async () => {
     try {
@@ -122,95 +142,141 @@ export default function ServiceDetailsScreen() {
     }
   };
 
-  const handleContinue = async () => {
-    console.log("[handleContinue] Iniciando processamento do formulário.");
-    console.log("[handleContinue] Dados do formulário:", formData);
-
-    if (!user || !user.token || !user.providerDetails?.id) {
-        Alert.alert('Erro de autenticação', 'Usuário não logado ou detalhes do provedor ausentes. Por favor, faça login novamente.');
-        console.error("[handleContinue] Erro: Usuário não autenticado ou providerDetails.id ausente.");
-        return;
-    }
-
+  // NEW: Validation functions for each sub-step
+  const validateSubStep1 = () => { // Photo + Description
     if (!formData.profilePhoto) {
       Alert.alert('Atenção', 'Por favor, adicione uma foto de perfil para continuar.');
-      console.error("[handleContinue] Erro de validação: Foto de perfil ausente.");
-      return;
+      return false;
     }
     if (!formData.description.trim()) {
       Alert.alert('Atenção', 'A descrição do serviço é obrigatória.');
-      console.error("[handleContinue] Erro de validação: Descrição ausente.");
-      return;
+      return false;
     }
+    return true;
+  };
+
+  const validateSubStep2 = () => { // Experience + Specialties
     if (!formData.yearsOfExperience.trim() || isNaN(parseInt(formData.yearsOfExperience))) {
       Alert.alert('Atenção', 'Os anos de experiência são obrigatórios e devem ser um número.');
-      console.error("[handleContinue] Erro de validação: Anos de experiência inválidos.");
-      return;
-    }
-    if (!formData.basePrice.trim() || isNaN(parseFloat(formData.basePrice))) {
-      Alert.alert('Atenção', 'O preço base é obrigatório e deve ser um número.');
-      console.error("[handleContinue] Erro de validação: Preço base inválido.");
-      return;
+      return false;
     }
     if (formData.specialties.length === 0) {
       Alert.alert('Atenção', 'Por favor, selecione pelo menos um tipo de serviço.');
-      console.error("[handleContinue] Erro de validação: Nenhuma especialidade selecionada.");
-      return;
+      return false;
     }
+    return true;
+  };
+
+  const validateSubStep3 = () => { // Price + Unit
     if (!formData.priceUnit) {
       Alert.alert('Atenção', 'Por favor, selecione um tipo de precificação (por hora, quarto, ou metragem).');
-      console.error("[handleContinue] Erro de validação: Tipo de precificação não selecionado.");
+      return false;
+    }
+    if (!formData.basePrice.trim() || isNaN(parseFloat(formData.basePrice))) {
+      Alert.alert('Atenção', 'O preço base é obrigatório e deve ser um número.');
+      return false;
+    }
+    return true;
+  };
+
+  const validateSubStep4 = () => { // PIX + Service Areas
+    if (!formData.pixKey.trim()) {
+      Alert.alert('Atenção', 'A chave PIX é obrigatória.');
+      return false;
+    }
+    if (!formData.serviceAreas.length) { // Validate if serviceAreas is empty
+      Alert.alert('Atenção', 'Por favor, informe suas áreas de atendimento.');
+      return false;
+    }
+    return true;
+  };
+
+  const handleNextSubStep = async () => {
+    if (currentServiceSubStep === 1 && validateSubStep1()) {
+      setCurrentServiceSubStep(2);
+    } else if (currentServiceSubStep === 2 && validateSubStep2()) {
+      setCurrentServiceSubStep(3);
+    } else if (currentServiceSubStep === 3 && validateSubStep3()) {
+      setCurrentServiceSubStep(4);
+    } else if (currentServiceSubStep === 4 && validateSubStep4()) {
+      // If all sub-steps are valid, proceed to final submission
+      handleFinalSubmission();
+    }
+  };
+
+  const handleBackSubStep = () => {
+    if (currentServiceSubStep > 1) {
+      setCurrentServiceSubStep(currentServiceSubStep - 1);
+    } else {
+      router.back(); // Go back to previous screen if on first sub-step
+    }
+  };
+
+  const handleFinalSubmission = async () => {
+    console.log("[handleFinalSubmission] Iniciando processamento do formulário.");
+    console.log("[handleFinalSubmission] Dados do formulário:", formData);
+
+    if (!user || !user.token || !user.providerDetails?.id) {
+        Alert.alert('Erro de autenticação', 'Usuário não logado ou detalhes do provedor ausentes. Por favor, faça login novamente.');
+        console.error("[handleFinalSubmission] Erro: Usuário não autenticado ou providerDetails.id ausente.");
+        return;
+    }
+
+    // Re-validate all steps before final submission to ensure data integrity
+    if (!validateSubStep1() || !validateSubStep2() || !validateSubStep3() || !validateSubStep4()) {
+      Alert.alert('Erro de Validação', 'Por favor, preencha todos os campos obrigatórios corretamente.');
       return;
     }
     
     setIsUploading(true);
-    console.log("[handleContinue] Todas as validações passadas. Iniciando o fluxo de atualização.");
+    console.log("[handleFinalSubmission] Todas as validações passadas. Iniciando o fluxo de atualização.");
 
     try {
       const providerId = user.providerDetails.id;
       let avatarUrl: string | null | undefined = user.providerDetails.avatarUrl;
-      console.log(`[handleContinue] URL do avatar inicial (do user.providerDetails): ${avatarUrl}`);
+      console.log(`[handleFinalSubmission] URL do avatar inicial (do user.providerDetails): ${avatarUrl}`);
 
       if (formData.profilePhoto && formData.profilePhoto.startsWith('file://')) {
-        console.log("[handleContinue] URI local detectada. Tentando fazer upload da foto de perfil...");
+        console.log("[handleFinalSubmission] URI local detectada. Tentando fazer upload da foto de perfil...");
         try {
           const uploadResponse = await verificationService.uploadAvatar(formData.profilePhoto);
           if (uploadResponse && uploadResponse.url) {
             avatarUrl = uploadResponse.url;
-            console.log("[handleContinue] Upload de foto de perfil concluído. Nova URL do avatar:", avatarUrl);
+            console.log("[handleFinalSubmission] Upload de foto de perfil concluído. Nova URL do avatar:", avatarUrl);
           } else {
-            console.error("[handleContinue] Erro: O serviço de upload de avatar não retornou uma URL válida.");
+            console.error("[handleFinalSubmission] Erro: O serviço de upload de avatar não retornou uma URL válida.");
             throw new Error('O serviço de upload de avatar não retornou uma URL válida.');
           }
         } catch (uploadError: any) {
-          console.error("[handleContinue] Erro durante o upload da foto de perfil:", uploadError);
+          console.error("[handleFinalSubmission] Erro durante o upload da foto de perfil:", uploadError);
           throw new Error("Não foi possível fazer o upload da foto de perfil.");
         }
       }
 
-      console.log("[handleContinue] Preparando dados para a atualização do perfil do provedor.");
+      console.log("[handleFinalSubmission] Preparando dados para a atualização do perfil do provedor.");
       const profileUpdateData = {
         avatarUrl: avatarUrl,
         bio: formData.description,
         yearsOfExperience: parseInt(formData.yearsOfExperience, 10),
         pixKey: formData.pixKey,
+        // serviceAreas: formData.serviceAreas.join(', '), // Assuming serviceAreas is an array of strings
       };
-      console.log("[handleContinue] Dados de atualização do perfil:", profileUpdateData);
+      console.log("[handleFinalSubmission] Dados de atualização do perfil:", profileUpdateData);
       
       await updateMyProviderProfile(profileUpdateData);
-      console.log("[handleContinue] Perfil do provedor atualizado com sucesso.");
+      console.log("[handleFinalSubmission] Perfil do provedor atualizado com sucesso.");
 
-      console.log(`[handleContinue] Buscando serviços existentes para o providerId: ${providerId}`);
+      console.log(`[handleFinalSubmission] Buscando serviços existentes para o providerId: ${providerId}`);
       const existingProviderServices = await getProviderServicesOffered(providerId);
-      console.log(`[handleContinue] Encontrados ${existingProviderServices.length} serviços existentes.`);
+      console.log(`[handleFinalSubmission] Encontrados ${existingProviderServices.length} serviços existentes.`);
 
       for (const specialty of formData.specialties) {
         const serviceId = SERVICE_MAPPINGS[specialty];
         if (!serviceId) {
-          console.warn(`[handleContinue] Aviso: ServiceId não encontrado para a especialidade: ${specialty}. Pulando.`);
+          console.warn(`[handleFinalSubmission] Aviso: ServiceId não encontrado para a especialidade: ${specialty}. Pulando.`);
           continue;
         }
-        console.log(`[handleContinue] Processando especialidade: ${specialty} (serviceId: ${serviceId})`);
+        console.log(`[handleFinalSubmission] Processando especialidade: ${specialty} (serviceId: ${serviceId})`);
 
         let serviceData: any = {
           serviceId: serviceId,
@@ -229,48 +295,47 @@ export default function ServiceDetailsScreen() {
           serviceData.pricePerRoom = basePriceValue;
           serviceData.pricePerSquareMeter = null;
           serviceData.price = 0;
-        } else if (formData.priceUnit === 'metragem') {
+        } else if (formData.priceUnit === 'metragem') { // This was the original 'metragem' condition
           serviceData.pricingType = PricingType.BY_SIZE;
           serviceData.pricePerSquareMeter = basePriceValue;
           serviceData.pricePerRoom = null;
           serviceData.price = 0;
-        } else {
-            console.warn(`[handleContinue] Aviso: Tipo de precificação desconhecido para ${specialty}. Pulando.`);
+        } else { // This 'else' was added by me in the previous turn, but it's redundant if 'metragem' is explicit
+            console.warn(`[handleFinalSubmission] Aviso: Tipo de precificação desconhecido para ${specialty}. Pulando.`);
             continue;
         }
         
         const existingService = existingProviderServices.find((s: any) => s.serviceId === serviceId);
 
         if (existingService) {
-          console.log(`[handleContinue] Serviço existente encontrado para ${specialty}. Atualizando...`);
+          console.log(`[handleFinalSubmission] Serviço existente encontrado para ${specialty}. Atualizando...`);
           const updatedServiceData = { ...serviceData };
           delete updatedServiceData.serviceId;
           await updateProviderServiceOffering(providerId, existingService.id, updatedServiceData);
-          console.log(`[handleContinue] Serviço ${existingService.id} atualizado com sucesso.`);
+          console.log(`[handleFinalSubmission] Serviço ${existingService.id} atualizado com sucesso.`);
         } else {
-          console.log(`[handleContinue] Serviço não existente para ${specialty}. Criando novo...`);
+          console.log(`[handleFinalSubmission] Serviço não existente para ${specialty}. Criando novo...`);
           await addProviderServiceOffering(providerId, serviceData);
-          console.log(`[handleContinue] Novo serviço criado com sucesso para ${specialty}.`);
+          console.log(`[handleFinalSubmission] Novo serviço criado com sucesso para ${specialty}.`);
         }
       }
 
-      console.log("[handleContinue] Todos os serviços processados. Sucesso!");
+      console.log("[handleFinalSubmission] Todos os serviços processados. Sucesso!");
       
       // Chamada para avançar o status de verificação no backend
       await verificationService.advanceVerificationStatus(); 
-      console.log("[handleContinue] Status de verificação avançado para PENDING_DOCUMENTS_UPLOAD.");
+      console.log("[handleFinalSubmission] Status de verificação avançado para PENDING_DOCUMENTS_UPLOAD.");
 
       // Atualiza o estado do usuário no AuthContext para refletir o novo status
-      // A chamada updateUser agora só deslogará em caso de 401
       await updateUser(); 
-      console.log("[handleContinue] AuthContext user data refreshed.");
+      console.log("[handleFinalSubmission] AuthContext user data refreshed.");
 
       setIsRegistrationInProgress(false);
       Alert.alert('Sucesso', 'Seu perfil foi salvo! Agora vamos verificar seus documentos.', [
         {
             text: 'OK',
             onPress: () => {
-                console.log("[handleContinue] Alerta 'OK' pressionado. Redirecionando para /provider-register/verify-account.");
+                console.log("[handleFinalSubmission] Alerta 'OK' pressionado. Redirecionando para /provider-register/verify-account.");
                 router.push('/provider-register/verify-account');
             },
         },
@@ -282,9 +347,7 @@ export default function ServiceDetailsScreen() {
 
       if (axios.isAxiosError(error) && error.response) {
           if (error.response.status === 401) {
-              console.log("[handleContinue] Erro 401 detectado. AuthContext deve ter acionado logout. Não exibir alerta duplicado.");
-              // O AuthContext já lida com o logout e o _layout.tsx redirecionará.
-              // Não precisamos exibir um alerta duplicado ou tentar navegar.
+              console.log("[handleFinalSubmission] Erro 401 detectado. AuthContext deve ter acionado logout. Não exibir alerta duplicado.");
           } else {
               errorMessage = error.response.data.message || `Erro do servidor com status ${error.response.status}`;
               Alert.alert('Erro', errorMessage);
@@ -297,33 +360,9 @@ export default function ServiceDetailsScreen() {
       }
     } finally {
       setIsUploading(false);
-      console.log("[handleContinue] Processo de atualização finalizado.");
+      console.log("[handleFinalSubmission] Processo de atualização finalizado.");
     }
   };
-
-  const renderImageUploadSection = () => (
-    <View style={styles.imageUploadContainer}>
-      <Text style={styles.sectionTitle}>Foto do Perfil</Text>
-      <TouchableOpacity
-        style={styles.imageUploadButton}
-        onPress={handleImagePicker}
-        activeOpacity={0.8}
-      >
-        {formData.profilePhoto ? (
-          <Image source={{ uri: formData.profilePhoto }} style={styles.uploadedImage} />
-        ) : (
-          <View style={styles.imagePlaceholder}>
-            <Ionicons name="camera-outline" size={40} color="#A0D2EB" />
-            <Text style={styles.uploadText}>Toque para adicionar sua foto</Text>
-          </View>
-        )}
-        <LinearGradient
-          colors={['transparent', 'rgba(160, 210, 235, 0.1)']}
-          style={styles.imageOverlay}
-        />
-      </TouchableOpacity>
-    </View>
-  );
 
   const renderInputSection = (
     title: string,
@@ -332,7 +371,8 @@ export default function ServiceDetailsScreen() {
     onChangeText: (text: string) => void,
     keyboardType: any = 'default',
     multiline: boolean = false,
-    icon: string = 'text-outline'
+    icon: string = 'text-outline',
+    maxLength?: number
   ) => (
     <View style={styles.inputSection}>
       <Text style={styles.inputLabel}>
@@ -348,6 +388,7 @@ export default function ServiceDetailsScreen() {
           keyboardType={keyboardType}
           multiline={multiline}
           textAlignVertical={multiline ? 'top' : 'center'}
+          maxLength={maxLength}
         />
       </View>
     </View>
@@ -363,6 +404,16 @@ export default function ServiceDetailsScreen() {
         return 'Preço por m²';
       default:
         return 'Preço base';
+    }
+  };
+
+  const getSubStepTitle = () => {
+    switch (currentServiceSubStep) {
+      case 1: return '1. Foto e Descrição';
+      case 2: return '2. Experiência e Especialidades';
+      case 3: return '3. Preço e Unidade';
+      case 4: return '4. Chave PIX e Áreas de Atendimento';
+      default: return 'Detalhes do Serviço';
     }
   };
 
@@ -386,153 +437,224 @@ export default function ServiceDetailsScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-
-          
-          {/* Header */}
+          {/* Header with Back Button */}
           <View style={styles.header}>
+            <TouchableOpacity onPress={handleBackSubStep} style={styles.backButtonHeader}>
+                <Ionicons name="arrow-back-outline" size={24} color="#2C3E50" />
+            </TouchableOpacity>
             <Text style={styles.headerTitle}>Detalhes do Serviço</Text>
           </View>
           
-        
+          {/* Progress Bar */}
+          <View style={styles.progressContainer}>
+            <View style={styles.progressBar}>
+              <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
+            </View>
+            <Text style={styles.progressText}>{`Etapa ${currentServiceSubStep} de ${totalSteps}`}</Text>
+          </View>
 
-          {/* Image Upload */}
-          {renderImageUploadSection()}
           <Text style={styles.headerSubtitle}>
-            Complete seu perfil profissional para começar a receber solicitações
+            {getSubStepTitle()}
           </Text>
 
-          {/* Form Sections */}
-          <View style={styles.formContainer}>
-            {renderInputSection(
-              'Descrição do Serviço',
-              'Descreva sua experiência e especialidades...',
-              formData.description,
-              (text) => setFormData(prev => ({ ...prev, description: text })),
-              'default',
-              true,
-              'document-text-outline'
-            )}
+          {/* Sub-step 1: Photo + Description */}
+          {currentServiceSubStep === 1 && (
+            <View style={styles.formContainer}>
+              <Text style={styles.sectionTitle}>Foto do Perfil</Text>
+              <TouchableOpacity
+                style={[styles.imageUploadButton, {transform: [{scale: avatarScaleAnim}]}]}
+                onPress={handleImagePicker}
+                onPressIn={onPressInAvatar}
+                onPressOut={onPressOutAvatar}
+                activeOpacity={0.8}
+              >
+                {formData.profilePhoto ? (
+                  <Image source={{ uri: formData.profilePhoto }} style={styles.uploadedImage} />
+                ) : (
+                  <View style={styles.imagePlaceholder}>
+                    <Ionicons name="camera-outline" size={40} color="#A0D2EB" />
+                    <Text style={styles.uploadText}>Toque para adicionar sua foto</Text>
+                  </View>
+                )}
+                <LinearGradient
+                  colors={['transparent', 'rgba(160, 210, 235, 0.1)']}
+                  style={styles.imageOverlay}
+                />
+              </TouchableOpacity>
 
-            {renderInputSection(
-              'Anos de Experiência',
-              'Ex: 5',
-              formData.yearsOfExperience,
-              (text) => setFormData(prev => ({ ...prev, yearsOfExperience: text })),
-              'numeric',
-              false,
-              'time-outline'
-            )}
+              {renderInputSection(
+                'Descrição do Serviço',
+                'Descreva sua experiência e especialidades...',
+                formData.description,
+                (text) => setFormData(prev => ({ ...prev, description: text })),
+                'default',
+                true,
+                'document-text-outline',
+                500 // MaxLength for description
+              )}
+            </View>
+          )}
 
-            {/* Nova seção de seleção do tipo de precificação */}
-            <View style={styles.priceTypeContainer}>
-              <Text style={styles.sectionTitle}>
-                <Ionicons name="pricetag-outline" size={16} color="#2C3E50" /> Tipo de Precificação
-              </Text>
-              <View style={styles.priceTypeGrid}>
-                {[
-                  { id: 'hora', label: 'Por Hora' },
-                  { id: 'quarto', label: 'Por Quarto' },
-                  { id: 'metragem', label: 'Metragem' }
-                ].map((priceOption) => (
-                  <TouchableOpacity
-                    key={priceOption.id}
-                    style={[
-                      styles.priceTypeCard,
-                      formData.priceUnit === priceOption.id && styles.priceTypeCardSelected
-                    ]}
-                    onPress={() => {
-                      setFormData(prev => ({ ...prev, priceUnit: priceOption.id as PriceUnit }));
-                    }}
-                  >
-                    <Text style={[
-                      styles.priceTypeLabel,
-                      formData.priceUnit === priceOption.id && styles.priceTypeLabelSelected
-                    ]}>
-                      {priceOption.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+          {/* Sub-step 2: Experience + Specialties */}
+          {currentServiceSubStep === 2 && (
+            <View style={styles.formContainer}>
+              {renderInputSection(
+                'Anos de Experiência',
+                'Ex: 5',
+                formData.yearsOfExperience,
+                (text) => setFormData(prev => ({ ...prev, yearsOfExperience: text.replace(/[^0-9]/g, '') })), // Only numbers
+                'numeric',
+                false,
+                'time-outline',
+                2 // MaxLength for years of experience
+              )}
+
+              {/* Service Type Selection */}
+              <View style={styles.serviceTypeContainer}>
+                <Text style={styles.sectionTitle}>
+                  <Ionicons name="home-outline" size={16} color="#2C3E50" /> Tipo de Serviço
+                </Text>
+                <View style={styles.serviceTypeGrid}>
+                  {[
+                    { id: 'residencial', label: 'Residencial', icon: 'home' },
+                    { id: 'comercial', label: 'Comercial', icon: 'business' },
+                    { id: 'escritorio', label: 'Escritório', icon: 'desktop' },
+                    { id: 'pos_obra', label: 'Pós-Obra', icon: 'construct' }
+                  ].map((service) => (
+                    <TouchableOpacity
+                      key={service.id}
+                      style={[
+                        styles.serviceTypeCard,
+                        formData.specialties.includes(service.id) && styles.serviceTypeCardSelected
+                      ]}
+                      onPress={() => {
+                        setFormData(prev => ({
+                          ...prev,
+                          specialties: prev.specialties.includes(service.id)
+                            ? prev.specialties.filter(s => s !== service.id)
+                            : [...prev.specialties, service.id]
+                        }));
+                      }}
+                    >
+                      <Ionicons
+                        name={service.icon as any}
+                        size={24}
+                        color={formData.specialties.includes(service.id) ? '#FFFFFF' : '#A0D2EB'}
+                      />
+                      <Text style={[
+                        styles.serviceTypeLabel,
+                        formData.specialties.includes(service.id) && styles.serviceTypeLabelSelected
+                      ]}>
+                        {service.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
             </View>
+          )}
 
-            {renderInputSection(
-              `Preço Base (${formData.priceUnit ? `por ${formData.priceUnit}` : 'do Serviço'})`,
-              getPriceInputPlaceholder(formData.priceUnit),
-              formData.basePrice,
-              (text) => setFormData(prev => ({ ...prev, basePrice: text })),
-              'numeric',
-              false,
-              'cash-outline'
-            )}
+          {/* Sub-step 3: Price + Unit */}
+          {currentServiceSubStep === 3 && (
+            <View style={styles.formContainer}>
+              <View style={styles.priceTypeContainer}>
+                <Text style={styles.sectionTitle}>
+                  <Ionicons name="pricetag-outline" size={16} color="#2C3E50" /> Tipo de Precificação
+                </Text>
+                <View style={styles.priceTypeGrid}>
+                  {[
+                    { id: 'hora', label: 'Por Hora' },
+                    { id: 'quarto', label: 'Por Quarto' },
+                    { id: 'metragem', label: 'Metragem' }
+                  ].map((priceOption) => (
+                    <TouchableOpacity
+                      key={priceOption.id}
+                      style={[
+                        styles.priceTypeCard,
+                        formData.priceUnit === priceOption.id && styles.priceTypeCardSelected
+                      ]}
+                      onPress={() => {
+                        setFormData(prev => ({ ...prev, priceUnit: priceOption.id as PriceUnit }));
+                      }}
+                    >
+                      <Text style={[
+                        styles.priceTypeLabel,
+                        formData.priceUnit === priceOption.id && styles.priceTypeLabelSelected
+                      ]}>
+                        {priceOption.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
 
-            {renderInputSection(
-              'Chave PIX',
-              'CPF, e-mail ou telefone',
-              formData.pixKey,
-              (text) => setFormData(prev => ({ ...prev, pixKey: text })),
-              'default',
-              false,
-              'card-outline'
-            )}
-          </View>
-
-          {/* Service Type Selection */}
-          <View style={styles.serviceTypeContainer}>
-            <Text style={styles.sectionTitle}>
-              <Ionicons name="home-outline" size={16} color="#2C3E50" /> Tipo de Serviço
-            </Text>
-            <View style={styles.serviceTypeGrid}>
-              {[
-                { id: 'residencial', label: 'Residencial', icon: 'home' },
-                { id: 'comercial', label: 'Comercial', icon: 'business' },
-                { id: 'escritorio', label: 'Escritório', icon: 'desktop' },
-                { id: 'pos_obra', label: 'Pós-Obra', icon: 'construct' }
-              ].map((service) => (
-                <TouchableOpacity
-                  key={service.id}
-                  style={[
-                    styles.serviceTypeCard,
-                    formData.specialties.includes(service.id) && styles.serviceTypeCardSelected
-                  ]}
-                  onPress={() => {
-                    setFormData(prev => ({
-                      ...prev,
-                      specialties: prev.specialties.includes(service.id)
-                        ? prev.specialties.filter(s => s !== service.id)
-                        : [...prev.specialties, service.id]
-                    }));
-                  }}
-                >
-                  <Ionicons
-                    name={service.icon as any}
-                    size={24}
-                    color={formData.specialties.includes(service.id) ? '#FFFFFF' : '#A0D2EB'}
-                  />
-                  <Text style={[
-                    styles.serviceTypeLabel,
-                    formData.specialties.includes(service.id) && styles.serviceTypeLabelSelected
-                  ]}>
-                    {service.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {renderInputSection(
+                `Preço Base (${formData.priceUnit ? `por ${formData.priceUnit}` : 'do Serviço'})`,
+                getPriceInputPlaceholder(formData.priceUnit),
+                formData.basePrice,
+                (text) => setFormData(prev => ({ ...prev, basePrice: text.replace(/[^0-9.]/g, '') })), // Only numbers and dot
+                'numeric',
+                false,
+                'cash-outline'
+              )}
             </View>
-          </View>
+          )}
 
-          {/* Continue Button */}
-          <TouchableOpacity
-            style={styles.continueButton}
-            onPress={handleContinue}
-            disabled={isUploading}
-          >
-            <LinearGradient
-              colors={['#A0D2EB', '#307cc9ff']}
-              style={styles.continueButtonGradient}
+          {/* Sub-step 4: PIX + Service Areas */}
+          {currentServiceSubStep === 4 && (
+            <View style={styles.formContainer}>
+              {renderInputSection(
+                'Chave PIX',
+                'CPF, e-mail ou telefone',
+                formData.pixKey,
+                (text) => setFormData(prev => ({ ...prev, pixKey: text })),
+                'default',
+                false,
+                'card-outline'
+              )}
+
+              {renderInputSection(
+                'Áreas de Atendimento',
+                'Ex: Campinas (Centro, Cambuí), Valinhos, Vinhedo',
+                formData.serviceAreas.join(', '), // Display as comma-separated string
+                (text) => setFormData(prev => ({ ...prev, serviceAreas: text.split(',').map(s => s.trim()).filter(s => s) })), // Convert back to array
+                'default',
+                true,
+                'location-outline',
+                300 // MaxLength for service areas
+              )}
+            </View>
+          )}
+
+          {/* Navigation Buttons */}
+          <View style={styles.navigationButtonsContainer}>
+            {currentServiceSubStep > 1 && (
+              <TouchableOpacity
+                style={[styles.navButton, styles.backButton]}
+                onPress={handleBackSubStep}
+                disabled={isUploading}
+              >
+                <Ionicons name="arrow-back-outline" size={20} color="#00BCD4" />
+                <Text style={styles.navButtonTextBack}>Voltar</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={[styles.navButton, styles.continueButton, isUploading && styles.buttonDisabled]}
+              onPress={handleNextSubStep}
+              disabled={isUploading}
             >
-              <Text style={styles.continueButtonText}>{isUploading ? 'Salvando...' : 'Continuar'}</Text>
-              {!isUploading && <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />}
-            </LinearGradient>
-          </TouchableOpacity>
+              <LinearGradient
+                colors={['#A0D2EB', '#307cc9ff']}
+                style={styles.continueButtonGradient}
+              >
+                <Text style={styles.continueButtonText}>
+                  {isUploading ? 'Salvando...' : (currentServiceSubStep === totalSteps ? 'Finalizar Cadastro' : 'Próximo')}
+                </Text>
+                {!isUploading && currentServiceSubStep !== totalSteps && <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />}
+                {!isUploading && currentServiceSubStep === totalSteps && <Ionicons name="checkmark-circle-outline" size={20} color="#FFFFFF" />}
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
       </Animated.View>
     </View>
@@ -560,8 +682,17 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   header: {
-    marginBottom: 15, // Ajustado para dar espaço à barra de progresso
+    flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 15,
+    justifyContent: 'center', // Center the title
+    position: 'relative', // For absolute positioning of back button
+  },
+  backButtonHeader: {
+    position: 'absolute',
+    left: 0,
+    padding: 5,
+    zIndex: 1, // Ensure it's above other elements
   },
   headerTitle: {
     fontSize: 22,
@@ -569,6 +700,8 @@ const styles = StyleSheet.create({
     color: '#2C3E50',
     marginBottom: -2,
     marginTop: 20,
+    textAlign: 'center', // Ensure title is centered
+    flex: 1, // Allow title to take up available space
   },
   headerSubtitle: {
     fontSize: 14,
@@ -577,7 +710,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: 19,
   },
-  // NOVOS ESTILOS PARA A BARRA DE PROGRESSO
   progressContainer: {
     width: '100%',
     alignItems: 'center',
@@ -592,7 +724,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#A0D2EB', // mesma cor já usada na UI
+    backgroundColor: '#A0D2EB',
   },
   progressText: {
     marginTop: 6,
@@ -600,7 +732,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#6C757D',
   },
-  // FIM DOS NOVOS ESTILOS
   imageUploadContainer: {
     marginBottom: 30,
     alignItems: 'center',
@@ -622,6 +753,7 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     overflow: 'hidden',
     position: 'relative',
+    marginBottom: 20, // Added margin for separation
   },
   uploadedImage: {
     width: '100%',
@@ -716,7 +848,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   continueButton: {
-    marginTop: 20,
     borderRadius: 12,
     overflow: 'hidden',
     shadowColor: '#000',
@@ -724,6 +855,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+    flex: 1, // Allow button to grow
+    marginLeft: 10, // Space from back button
   },
   continueButtonGradient: {
     flexDirection: 'row',
@@ -731,6 +864,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 16,
     paddingHorizontal: 24,
+    borderRadius: 12, // Apply borderRadius to the gradient too
   },
   continueButtonText: {
     fontSize: 18,
@@ -806,5 +940,35 @@ progressLabel: {
   fontWeight: '600',
   color: '#2C3E50',
 },
-
+navigationButtonsContainer: { // New style for the navigation buttons
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+    marginBottom: 20,
+},
+navButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 12, // Adjusted for new design
+    minWidth: 120,
+},
+backButton: {
+    backgroundColor: '#E9ECEF',
+    borderWidth: 1,
+    borderColor: '#CED4DA',
+    flex: 1, // Allow button to grow
+    marginRight: 10, // Space from continue button
+},
+navButtonTextBack: {
+    color: '#2C3E50', // Darker color for back button text
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 5,
+},
+buttonDisabled: {
+    opacity: 0.6, // Visual cue for disabled buttons
+},
 });

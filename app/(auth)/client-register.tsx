@@ -56,6 +56,9 @@ const fetchAddressFromRealCepApi = async (cep: string) => {
 
 export default function ClientRegisterScreen() {
     const [currentStep, setCurrentStep] = useState(1);
+    // NEW: Sub-step for address
+    const [subStepAddress, setSubStepAddress] = useState(1); // 1: CEP, 2: Details, 3: Complement
+
     const [email, setEmail] = useState('');
     const [username, setUsername] = useState('');
     const [phone, setPhone] = useState('');
@@ -125,10 +128,21 @@ export default function ClientRegisterScreen() {
         return true;
     };
 
-    const validateStep3 = () => {
+    // NEW: Validation for address sub-steps
+    const validateAddressSubStep1 = () => { // CEP
         setGeneralError(null);
-        if (!cep.trim() || !street.trim() || !number.trim() || !neighborhood.trim() || !city.trim() || !state.trim()) {
-            setGeneralError('Por favor, preencha todos os campos de endereço (CEP, Rua, Número, Bairro, Cidade, Estado).');
+        const cleanedCep = cep.replace(/\D/g, '');
+        if (cleanedCep.length !== 8) {
+            setGeneralError("CEP inválido. Digite os 8 dígitos.");
+            return false;
+        }
+        return true;
+    };
+
+    const validateAddressSubStep2 = () => { // Street, Number, Neighborhood, City, State
+        setGeneralError(null);
+        if (!street.trim() || !number.trim() || !neighborhood.trim() || !city.trim() || !state.trim()) {
+            setGeneralError('Por favor, preencha todos os campos de endereço (Rua, Número, Bairro, Cidade, Estado).');
             return false;
         }
         if (state.trim().length !== 2 || !/^[A-Z]{2}$/i.test(state.trim())) {
@@ -138,12 +152,48 @@ export default function ClientRegisterScreen() {
         return true;
     };
 
+    const validateAddressSubStep3 = () => { // Complement (optional, so always true unless specific validation is added)
+        setGeneralError(null);
+        return true;
+    };
+
     const handleNext = () => {
         if (currentStep === 1 && validateStep1()) {
             setCurrentStep(2);
             setGeneralError(null);
         } else if (currentStep === 2 && validateStep2()) {
             setCurrentStep(3);
+            setSubStepAddress(1); // Reset sub-step when entering address
+            setGeneralError(null);
+        } else if (currentStep === 3) {
+            if (subStepAddress === 1 && validateAddressSubStep1()) {
+                if (!isLoadingCep) { // Only advance if CEP search is not active
+                    setSubStepAddress(2);
+                    setGeneralError(null);
+                } else {
+                    setGeneralError("Aguarde a busca do CEP ser concluída.");
+                }
+            } else if (subStepAddress === 2 && validateAddressSubStep2()) {
+                setSubStepAddress(3);
+                setGeneralError(null);
+            } else if (subStepAddress === 3 && validateAddressSubStep3()) {
+                // All address sub-steps completed, now ready for final signup
+                handleSignUp(); // Call signup directly if all steps are valid
+            }
+        }
+    };
+
+    const handleBack = () => {
+        if (currentStep === 3) {
+            if (subStepAddress === 1) {
+                setCurrentStep(2);
+                setGeneralError(null);
+            } else {
+                setSubStepAddress(subStepAddress - 1);
+                setGeneralError(null);
+            }
+        } else if (currentStep === 2) {
+            setCurrentStep(1);
             setGeneralError(null);
         }
     };
@@ -221,6 +271,7 @@ export default function ClientRegisterScreen() {
                 setCity(data.localidade || '');
                 setState(data.uf || '');
                 setComplement(data.complemento || '');
+                setGeneralError(null); // Clear error if successful
 
             } catch (error: any) {
                 setGeneralError(error.message || "Erro ao buscar CEP. Tente novamente.");
@@ -238,14 +289,16 @@ export default function ClientRegisterScreen() {
     };
 
     const handleSignUp = async () => {
-        if (!validateStep1() || !validateStep2() || !validateStep3()) {
+        // Ensure all top-level validations pass before attempting signup
+        if (!validateStep1() || !validateStep2() || !validateAddressSubStep1() || !validateAddressSubStep2() || !validateAddressSubStep3()) {
+             setGeneralError('Por favor, preencha todos os campos obrigatórios corretamente antes de cadastrar.');
             return;
         }
+
         setIsLoading(true);
         setGeneralError(null);
 
         try {
-            // **INÍCIO DA LÓGICA DE GEOLOCALIZAÇÃO INTEGRADA DO PROVIDER-REGISTER**
             console.log("[ClientRegisterScreen] Tentando obter permissão de localização...");
             let { status } = await Location.requestForegroundPermissionsAsync();
             if (status !== 'granted') {
@@ -263,8 +316,6 @@ export default function ClientRegisterScreen() {
 
             const { latitude, longitude } = location[0];
             console.log(`[ClientRegisterScreen] Coordenadas obtidas: Latitude=${latitude}, Longitude=${longitude}`);
-            // **FIM DA LÓGICA DE GEOLOCALIZAÇÃO**
-
 
             const registerData: RegisterClientDto = {
                 email: email.trim().toLowerCase(),
@@ -280,8 +331,8 @@ export default function ClientRegisterScreen() {
                     city: city.trim(),
                     state: state.trim(),
                     complement: complement.trim(),
-                    latitude: latitude,    // NOVO: Adicionado latitude
-                    longitude: longitude,  // NOVO: Adicionado longitude
+                    latitude: latitude,
+                    longitude: longitude,
                 } as CreateAddressDto,
             };
 
@@ -307,7 +358,7 @@ export default function ClientRegisterScreen() {
     const signUpButtonAnims = createButtonAnimations();
     const nextButtonAnims = createButtonAnimations();
 
-    const isSignUpButtonEnabled = currentStep === 3;
+    const isSignUpButtonEnabled = currentStep === 3 && subStepAddress === 3; // Only enable final signup on the last address sub-step
 
     return (
         <KeyboardAvoidingView
@@ -320,7 +371,20 @@ export default function ClientRegisterScreen() {
                 contentContainerStyle={styles.scrollContentContainer}
                 keyboardShouldPersistTaps="handled"
             >
-                <Stack.Screen options={{ headerShown: false }} />
+                <Stack.Screen
+                    options={{
+                        headerShown: true,
+                        headerTitle: '',
+                        headerLeft: () => (
+                            currentStep > 1 ? (
+                                <TouchableOpacity onPress={handleBack} style={styles.backButtonHeader}>
+                                    <Ionicons name="arrow-back-outline" size={24} color="#00BCD4" />
+                                </TouchableOpacity>
+                            ) : null
+                        ),
+                        headerTransparent: true,
+                    }}
+                />
 
 
                 <Animated.View style={[styles.contentWrapper, { opacity: mainElementsOpacity, transform: [{translateY: mainElementsTranslateY}] }]}>
@@ -472,145 +536,189 @@ export default function ClientRegisterScreen() {
                         </View>
                     )}
 
-                    {/* Step 3: Endereço */}
+                    {/* Step 3: Endereço (Sub-steps) */}
                     {currentStep === 3 && (
                         <View>
-                            {/* CEP Input */}
-                            <View style={styles.inputWrapper}>
-                                <View style={styles.iconCircle}>
-                                    <Ionicons name="map-outline" size={20} color="#00BCD4" />
+                            {/* Sub-step 1: CEP */}
+                            {subStepAddress === 1 && (
+                                <View>
+                                    <Text style={styles.subStepTitle}>1. Informe seu CEP</Text>
+                                    <View style={styles.inputWrapper}>
+                                        <View style={styles.iconCircle}>
+                                            <Ionicons name="map-outline" size={20} color="#00BCD4" />
+                                        </View>
+                                        <TextInput
+                                            style={styles.input}
+                                            placeholder="CEP"
+                                            placeholderTextColor="#A0AEC0"
+                                            value={cep}
+                                            onChangeText={(text) => { setCep(text.replace(/\D/g, '')); if (generalError) setGeneralError(null);}}
+                                            onBlur={fetchAddressFromCep}
+                                            keyboardType="numeric"
+                                            maxLength={8}
+                                        />
+                                        {isLoadingCep && <ActivityIndicator size="small" color="#00BCD4" style={styles.cepLoadingIndicator} />}
+                                    </View>
+                                    <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
+                                    <View style={styles.navigationButtons}>
+                                        <TouchableOpacity style={[styles.navButton, styles.backButton]} onPress={handleBack}>
+                                            <Ionicons name="arrow-back-outline" size={20} color="#00BCD4" />
+                                            <Text style={styles.navButtonTextBack}>Voltar</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            style={[styles.navButton, styles.finalButton, isLoadingCep && styles.buttonDisabled]}
+                                            onPress={handleNext}
+                                            disabled={isLoadingCep}
+                                        >
+                                            <Text style={styles.navButtonTextNext}>Próximo</Text>
+                                            <Ionicons name="arrow-forward-outline" size={20} color="#fff" />
+                                        </TouchableOpacity>
+                                    </View>
                                 </View>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="CEP"
-                                    placeholderTextColor="#A0AEC0"
-                                    value={cep}
-                                    onChangeText={(text) => { setCep(text.replace(/\D/g, '')); if (generalError) setGeneralError(null);}}
-                                    onBlur={fetchAddressFromCep}
-                                    keyboardType="numeric"
-                                    maxLength={8}
-                                />
-                                {isLoadingCep && <ActivityIndicator size="small" color="#00BCD4" style={styles.cepLoadingIndicator} />}
-                            </View>
+                            )}
 
-                            {/* Rua Input */}
-                            <View style={styles.inputWrapper}>
-                                <View style={styles.iconCircle}>
-                                    <Ionicons name="navigate-outline" size={20} color="#00BCD4" />
+                            {/* Sub-step 2: Detalhes do Endereço */}
+                            {subStepAddress === 2 && (
+                                <View>
+                                    <Text style={styles.subStepTitle}>2. Detalhes do Endereço</Text>
+                                    {/* Rua Input */}
+                                    <View style={styles.inputWrapper}>
+                                        <View style={styles.iconCircle}>
+                                            <Ionicons name="navigate-outline" size={20} color="#00BCD4" />
+                                        </View>
+                                        <TextInput
+                                            style={styles.input}
+                                            placeholder="Rua"
+                                            placeholderTextColor="#A0AEC0"
+                                            value={street}
+                                            onChangeText={(text) => { setStreet(text); if (generalError) setGeneralError(null);}}
+                                            autoCapitalize="words"
+                                        />
+                                    </View>
+
+                                    {/* Número Input */}
+                                    <View style={styles.inputWrapper}>
+                                        <View style={styles.iconCircle}>
+                                            <Ionicons name="home-outline" size={20} color="#00BCD4" />
+                                        </View>
+                                        <TextInput
+                                            style={styles.input}
+                                            placeholder="Número"
+                                            placeholderTextColor="#A0AEC0"
+                                            value={number}
+                                            onChangeText={(text) => { setNumber(text); if (generalError) setGeneralError(null);}}
+                                            keyboardType="numeric"
+                                        />
+                                    </View>
+
+                                    {/* Bairro Input */}
+                                    <View style={styles.inputWrapper}>
+                                        <View style={styles.iconCircle}>
+                                            <Ionicons name="pin-outline" size={20} color="#00BCD4" />
+                                        </View>
+                                        <TextInput
+                                            style={styles.input}
+                                            placeholder="Bairro"
+                                            placeholderTextColor="#A0AEC0"
+                                            value={neighborhood}
+                                            onChangeText={(text) => { setNeighborhood(text); if (generalError) setGeneralError(null);}}
+                                            autoCapitalize="words"
+                                        />
+                                    </View>
+
+                                    {/* Cidade Input */}
+                                    <View style={styles.inputWrapper}>
+                                        <View style={styles.iconCircle}>
+                                            <Ionicons name="business-outline" size={20} color="#00BCD4" />
+                                        </View>
+                                        <TextInput
+                                            style={styles.input}
+                                            placeholder="Cidade"
+                                            placeholderTextColor="#A0AEC0"
+                                            value={city}
+                                            onChangeText={(text) => { setCity(text); if (generalError) setGeneralError(null);}}
+                                            autoCapitalize="words"
+                                        />
+                                    </View>
+
+                                    {/* Estado (UF) Input */}
+                                    <View style={styles.inputWrapper}>
+                                        <View style={styles.iconCircle}>
+                                            <Ionicons name="globe-outline" size={20} color="#00BCD4" />
+                                        </View>
+                                        <TextInput
+                                            style={styles.input}
+                                            placeholder="Estado (UF)"
+                                            placeholderTextColor="#A0AEC0"
+                                            value={state}
+                                            onChangeText={(text) => { setState(text.toUpperCase()); if (generalError) setGeneralError(null);}}
+                                            autoCapitalize="characters"
+                                            maxLength={2}
+                                        />
+                                    </View>
+                                    <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
+                                    <View style={styles.navigationButtons}>
+                                        <TouchableOpacity style={[styles.navButton, styles.backButton]} onPress={handleBack}>
+                                            <Ionicons name="arrow-back-outline" size={20} color="#00BCD4" />
+                                            <Text style={styles.navButtonTextBack}>Voltar</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            style={[styles.navButton, styles.finalButton]}
+                                            onPress={handleNext}
+                                        >
+                                            <Text style={styles.navButtonTextNext}>Próximo</Text>
+                                            <Ionicons name="arrow-forward-outline" size={20} color="#fff" />
+                                        </TouchableOpacity>
+                                    </View>
                                 </View>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Rua"
-                                    placeholderTextColor="#A0AEC0"
-                                    value={street}
-                                    onChangeText={(text) => { setStreet(text); if (generalError) setGeneralError(null);}}
-                                    autoCapitalize="words"
-                                />
-                            </View>
+                            )}
 
-                            {/* Número Input */}
-                            <View style={styles.inputWrapper}>
-                                <View style={styles.iconCircle}>
-                                    <Ionicons name="home-outline" size={20} color="#00BCD4" />
+                            {/* Sub-step 3: Complemento */}
+                            {subStepAddress === 3 && (
+                                <View>
+                                    <Text style={styles.subStepTitle}>3. Complemento (Opcional)</Text>
+                                    {/* Complemento Input */}
+                                    <View style={styles.inputWrapper}>
+                                        <View style={styles.iconCircle}>
+                                            <Ionicons name="information-circle-outline" size={20} color="#00BCD4" />
+                                        </View>
+                                        <TextInput
+                                            style={styles.input}
+                                            placeholder="Complemento (Ex: Apt 101, Bloco B)"
+                                            placeholderTextColor="#A0AEC0"
+                                            value={complement}
+                                            onChangeText={(text) => { setComplement(text); if (generalError) setGeneralError(null);}}
+                                            autoCapitalize="sentences"
+                                        />
+                                    </View>
+                                    <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
+                                    {/* Navigation Buttons for final signup */}
+                                    <View style={styles.navigationButtons}>
+                                        <TouchableOpacity style={[styles.navButton, styles.backButton]} onPress={handleBack}>
+                                            <Ionicons name="arrow-back-outline" size={20} color="#00BCD4" />
+                                            <Text style={styles.navButtonTextBack}>Voltar</Text>
+                                        </TouchableOpacity>
+                                        <Animated.View style={{transform: [{scale: signUpButtonAnims.scaleAnim}]}}>
+                                            <TouchableOpacity
+                                            style={[styles.navButton, styles.finalButton, isLoading && styles.buttonDisabled]}
+                                            onPress={handleSignUp}
+                                            onPressIn={signUpButtonAnims.onPressIn}
+                                            onPressOut={signUpButtonAnims.onPressOut}
+                                            disabled={isLoading || !isSignUpButtonEnabled}
+                                            >
+                                            {isLoading ? (
+                                                    <ActivityIndicator color="#FFFFFF" />
+                                                ) : (
+                                                    <>
+                                                        <Text style={styles.navButtonTextNext}>Cadastrar</Text>
+                                                        <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
+                                                    </>
+                                                )}
+                                            </TouchableOpacity>
+                                        </Animated.View>
+                                    </View>
                                 </View>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Número"
-                                    placeholderTextColor="#A0AEC0"
-                                    value={number}
-                                    onChangeText={(text) => { setNumber(text); if (generalError) setGeneralError(null);}}
-                                    keyboardType="numeric"
-                                />
-                            </View>
-
-                            {/* Bairro Input */}
-                            <View style={styles.inputWrapper}>
-                                <View style={styles.iconCircle}>
-                                    <Ionicons name="pin-outline" size={20} color="#00BCD4" />
-                                </View>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Bairro"
-                                    placeholderTextColor="#A0AEC0"
-                                    value={neighborhood}
-                                    onChangeText={(text) => { setNeighborhood(text); if (generalError) setGeneralError(null);}}
-                                    autoCapitalize="words"
-                                />
-                            </View>
-
-                            {/* Cidade Input */}
-                            <View style={styles.inputWrapper}>
-                                <View style={styles.iconCircle}>
-                                    <Ionicons name="business-outline" size={20} color="#00BCD4" />
-                                </View>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Cidade"
-                                    placeholderTextColor="#A0AEC0"
-                                    value={city}
-                                    onChangeText={(text) => { setCity(text); if (generalError) setGeneralError(null);}}
-                                    autoCapitalize="words"
-                                />
-                            </View>
-
-                            {/* Estado (UF) Input */}
-                            <View style={styles.inputWrapper}>
-                                <View style={styles.iconCircle}>
-                                    <Ionicons name="globe-outline" size={20} color="#00BCD4" />
-                                </View>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Estado (UF)"
-                                    placeholderTextColor="#A0AEC0"
-                                    value={state}
-                                    onChangeText={(text) => { setState(text.toUpperCase()); if (generalError) setGeneralError(null);}}
-                                    autoCapitalize="characters"
-                                    maxLength={2}
-                                />
-                            </View>
-
-                            {/* Complemento Input */}
-                            <View style={styles.inputWrapper}>
-                                <View style={styles.iconCircle}>
-                                    <Ionicons name="information-circle-outline" size={20} color="#00BCD4" />
-                                </View>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Complemento (Opcional)"
-                                    placeholderTextColor="#A0AEC0"
-                                    value={complement}
-                                    onChangeText={(text) => { setComplement(text); if (generalError) setGeneralError(null);}}
-                                    autoCapitalize="sentences"
-                                />
-                            </View>
-
-                            <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
-
-                            {/* Navigation Buttons */}
-                            <View style={styles.navigationButtons}>
-                                <TouchableOpacity style={[styles.navButton, styles.backButton]} onPress={() => setCurrentStep(2)}>
-                                    <Ionicons name="arrow-back-outline" size={20} color="#00BCD4" />
-                                    <Text style={styles.navButtonTextBack}>Voltar</Text>
-                                </TouchableOpacity>
-                                <Animated.View style={{transform: [{scale: signUpButtonAnims.scaleAnim}]}}>
-                                    <TouchableOpacity
-                                    style={[styles.navButton, styles.finalButton, isLoading && styles.buttonDisabled]}
-                                    onPress={handleSignUp}
-                                    onPressIn={signUpButtonAnims.onPressIn}
-                                    onPressOut={signUpButtonAnims.onPressOut}
-                                    disabled={isLoading}
-                                    >
-                                    {isLoading ? (
-                                            <ActivityIndicator color="#FFFFFF" />
-                                        ) : (
-                                            <>
-                                                <Text style={styles.navButtonTextNext}>Cadastrar</Text>
-                                                <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
-                                            </>
-                                        )}
-                                    </TouchableOpacity>
-                                </Animated.View>
-                            </View>
+                            )}
                         </View>
                     )}
                 </Animated.View>
@@ -799,4 +907,16 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         marginRight: 5,
     },
+    backButtonHeader: { // Added for the header back button
+        marginLeft: 15,
+        padding: 5,
+    },
+    subStepTitle: { // Added for sub-step titles
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#1C3A5F',
+        textAlign: 'center',
+        marginBottom: 20,
+        bottom: 90,
+    }
 });
