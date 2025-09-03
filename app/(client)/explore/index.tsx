@@ -1,5 +1,7 @@
 // LimpeJaApp/app/(client)/explore/index.tsx
 import { Stack, useRouter } from 'expo-router';
+import { Image } from 'react-native';
+
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
@@ -23,6 +25,8 @@ import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import Constants from 'expo-constants'; // Importar Constants
+import { Icons3D } from '../../../constants/icons3d';
+
 
 import {
     getOffers,
@@ -80,12 +84,16 @@ import SecaoContainer from '../../../components/client/explore/home/SecaoContain
 import SecaoPrestadores from '../../../components/client/explore/home/SecaoPrestadores';
 import SecaoRecomendacoes from '../../../components/client/explore/home/SecaoRecomendacoes';
 import DEFENSE_SOS from '../../../components/client/explore/home/DEFENSE_SOS';
-import HtmlCouponCard from '../../../components/coupons/HtmlCouponCard';
+import { HtmlCouponCard } from '../../../components/coupons/HtmlCouponCard';
 import { CouponPill } from '../../../components/coupons/CouponPill';
 import { ReferralBanner } from '../../../components/referrals/ReferralBanner';
 import { ReferralSheet } from '../../../components/referrals/ReferralSheet';
 import BottomSlideInCard from '../../../components/common/BottomSlideInCard';
 import SmartCouponNudge from '../../../components/coupons/CouponNudge';
+
+// Importar os novos componentes Nudge
+import SecurityNudge from '../../../components/nudges/SecurityNudge'; // Assumindo o caminho
+import IncentiveNudge from '../../../components/nudges/IncentiveNudge'; // Assumindo o caminho
 
 const COR_AZUL_CLARO_UNIFICADA = '#A0D2EB';
 const COR_PRIMARIA_ESCURA = '#2C3E50';
@@ -246,10 +254,25 @@ export default function ExploreClientScreen() {
 
             const loadAndSetPromotions = async () => {
                 const offersData = await getOffers();
+                console.log("DEBUG | offersData:", offersData);
                 const welcomeOffer = offersData.find(offer =>
                     (offer as any).target === 'NEW_CLIENTS' && (offer as any).firstBookingOnly
                 );
-                setWelcomeCouponOffer(welcomeOffer || null);
+                if (welcomeOffer) {
+  setWelcomeCouponOffer(welcomeOffer);
+} else {
+  // MOCK: cupom fake só para debug visual
+  setWelcomeCouponOffer({
+    id: "fake-123",
+    couponCode: "BEMVINDO10",
+    title: "Ganhe 10% na sua 1ª limpeza!",
+    description: "Use agora e economize",
+    target: "NEW_CLIENTS",
+    firstBookingOnly: true,
+    validUntil: "2025-12-31T23:59:59.000Z"
+  } as any);
+}
+
 
                 if (promotionTimeoutRef.current) {
                     clearTimeout(promotionTimeoutRef.current);
@@ -421,6 +444,9 @@ export default function ExploreClientScreen() {
         setActiveBottomPromotion(null);
     }, []);
 
+       // DEBUG: logando cupom carregado
+   console.log("DEBUG | welcomeCouponOffer:", welcomeCouponOffer);
+
     if (loading && !isRefreshing) {
         return (
             <View style={styles.loadingContainer}>
@@ -560,13 +586,19 @@ export default function ExploreClientScreen() {
                             {/* ÚNICA ALTERAÇÃO AQUI: De "explore_actions_title" para "explore_section.title" */}
                             <Text style={styles.miniGridTitle}>{t("explore_section.title")}</Text>
                             {/* INJEÇÃO: Compromisso para "badges nos mini cards" sem alterar HorizontalMiniGrid */}
-                            {welcomeCouponOffer && ( // Só mostra se houver uma oferta de cupom ativa
-                                <TouchableOpacity onPress={() => setActiveBottomPromotion('coupon')} style={styles.miniGridBadge}>
-                                    <Text style={styles.miniGridBadgeText}>
-                                        <Ionicons name="sparkles" size={12} color={AppColors.white} /> {t("explore_section.offers_available")}
-                                    </Text>
-                                </TouchableOpacity>
-                            )}
+                            {welcomeCouponOffer && activeBottomPromotion !== 'coupon' && (
+  <TouchableOpacity
+    onPress={() => setActiveBottomPromotion('coupon')}
+    style={styles.couponFab}
+    activeOpacity={0.85}
+  >
+    <Image
+      source={Icons3D.ticket}
+      style={styles.ticketIcon}
+      resizeMode="contain"
+    />
+  </TouchableOpacity>
+)}
                         </View>
                         <HorizontalMiniGrid />
                     </Animated.View>
@@ -599,6 +631,8 @@ export default function ExploreClientScreen() {
             {/* NOVO: DEFENSE_SOS */}
             <DEFENSE_SOS />
 
+
+
             {/* INJEÇÃO: SmartCouponNudge (aparece sutil após 3s na rota explore) */}
             {welcomeCouponOffer && (
                 <SmartCouponNudge
@@ -622,6 +656,7 @@ export default function ExploreClientScreen() {
                         expiresAt={welcomeCouponOffer!.validUntil}
                         onUseNow={handleUseWelcomeCoupon}
                         onDismiss={handleDismissWelcomeCoupon}
+                        visible={activeBottomPromotion === 'coupon'} // Adicione esta linha
                     />
                 </BottomSlideInCard>
             )}
@@ -655,11 +690,152 @@ export default function ExploreClientScreen() {
                 rewardReferred={rewardReferred}
                 onShare={handleShareReferral}
             />
+
+            {/* Nudges inteligentes (empilhados com delay e offset) - Adicionados aqui */}
+            <SecurityNudge
+              delayMs={3500}
+              throttleHours={24}
+              showOnRoutes={['/(client)/explore']}
+              bottomOffset={20}
+            />
+
+            <IncentiveNudge
+              delayMs={5000}
+              throttleHours={24}
+              showOnRoutes={['/(client)/explore']}
+              bottomOffset={84} // sobe para não sobrepor o Security
+              points={100}
+            />
         </View>
     );
 }
 
 const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    right: 0,
+    left: 0,
+  },
+  centeredContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  couponWrapper: {
+    width: '90%',
+    maxWidth: 400,
+    position: 'relative',
+    // A sombra e o borderRadius agora são aplicados diretamente ao ImageBackground
+  },
+  couponCardBackground: { // Estilos aplicados ao ImageBackground
+    height: 260, // Altura fixa para garantir que a imagem de fundo seja totalmente visível
+    width: '100%', // Ocupa a largura total do couponWrapper
+    borderRadius: 15, // Aplica o borderRadius ao contêiner da imagem
+    overflow: 'hidden', // Essencial para que o borderRadius funcione na imagem de fundo
+    alignItems: 'center', // Centraliza o conteúdo horizontalmente
+    justifyContent: 'space-between', // Distribui o conteúdo verticalmente
+    position: 'relative',
+    paddingTop: 20, // Espaçamento do conteúdo a partir do topo do cupom
+    paddingBottom: 10, // Espaçamento do conteúdo a partir da base do cupom
+    // Sombra aplicada diretamente aqui
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 12,
+  },
+  couponCardImageStyle: { // Estilos aplicados diretamente à imagem dentro do ImageBackground
+    borderRadius: 15, // Aplica o borderRadius à imagem em si
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 8,
+    right: 19,
+    zIndex: 2,
+    padding: 4,
+  },
+  closeButtonText: {
+    fontSize: 14,
+    color: '#fff',
+  },
+  logo: {
+    width: 85,
+    height: 40,
+    borderRadius: 8,
+    marginBottom: 3,
+    resizeMode: 'contain',
+  },
+  h3: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    lineHeight: 20,
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  h3Subtitle: {
+    fontSize: 13,
+    fontWeight: 'normal',
+    lineHeight: 18,
+    color: '#fff',
+  },
+  couponRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 5,
+  },
+  cpnCode: {
+    borderWidth: 1,
+    borderColor: '#fff',
+    paddingVertical: 3,
+    paddingHorizontal: 4,
+    borderTopLeftRadius: 5,
+    borderBottomLeftRadius: 5,
+    borderRightWidth: 0,
+    color: '#3647dfff', // Cor ajustada para melhor contraste
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    fontSize: 10,
+  },
+  cpnBtn: {
+    borderWidth: 1,
+    borderColor: '#fff',
+    backgroundColor: '#fff',
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderTopRightRadius: 5,
+    borderBottomRightRadius: 5,
+  },
+  cpnBtnText: {
+    color: '#5887feff',
+    fontWeight: 'bold',
+    fontSize: 10,
+  },
+  circle: {
+    width: 35,
+    height: 35,
+    borderRadius: 17.5,
+    position: 'absolute',
+    top: '50%',
+    transform: [{ translateY: -17.5 }],
+  },
+  circle1: { left: -17.5 },
+  circle2: { right: -17.5 },
+  useNowButton: {
+    marginTop: 15,
+    width: '50%',
+    paddingVertical: 8,
+  },
+  expiresAtText: {
+    fontSize: 11,
+    color: '#174df0ff',
+    fontWeight: 'bold',
+    marginTop: 5,
+  },
     screen: {
         flex: 1,
         backgroundColor: COR_CINZA_FUNDO,
@@ -784,7 +960,7 @@ const styles = StyleSheet.create({
     },
     // INJEÇÃO: Estilos para o "badge" da seção de mini-cards
     miniGridBadge: {
-        backgroundColor: AppColors.primaryInteractive, // Cor de destaque
+       backgroundColor: 'transparent',
         borderRadius: 15,
         paddingHorizontal: 8,
         paddingVertical: 4,
@@ -797,5 +973,35 @@ const styles = StyleSheet.create({
         fontSize: 8.4,
         fontWeight: 'bold',
         marginLeft: 3, // Espaçamento entre o ícone e o texto
+    },
+    // Novo estilo para o FAB do cupom
+    couponFab: {
+      backgroundColor: AppColors.primaryInteractive, // Cor de fundo do botão
+      borderRadius: 25, // Metade da largura/altura para torná-lo circular
+      width: 50, // Largura do botão
+      height: 50, // Altura do botão
+      justifyContent: 'center',
+      alignItems: 'center',
+      // Posição flutuante (ajuste conforme necessário)
+      position: 'absolute',
+      bottom: 20, // Distância do fundo
+      right: 20, // Distância da direita
+      zIndex: 100, // Para garantir que esteja acima de outros elementos
+      ...Platform.select({
+        ios: {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.25,
+          shadowRadius: 3.84,
+        },
+        android: {
+          elevation: 5,
+        },
+      }),
+    },
+    ticketIcon: {
+      width: 30, // Tamanho do ícone do ticket
+      height: 30, // Tamanho do ícone do ticket
+      tintColor: AppColors.white, // Cor do ícone
     },
 });
