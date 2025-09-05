@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Paulo • Founder & Builder — Portfolio / Pitch</title>
+  <meta name="description" content="Paulo Silas — Full-stack founder. Apps mobile + backend + PIX + KYC. Produtos prontos para escalar e monetizar." />
+  <style>
+    /* Reset + base */
+    :root{
+      --bg:#0b0f14;
+      --card:#0f1620;
+      --accent:#00e676; /* neon green */
+      --accent-2:#00c2ff;
+      --muted:#9aa6b2;
+      --glass: rgba(255,255,255,0.03);
+      --glass-2: rgba(255,255,255,0.02);
+      --glass-3: rgba(255,255,255,0.015);
+      --radius:14px;
+      --maxw:1100px;
+      --shadow: 0 8px 30px rgba(0,0,0,0.6);
+      color-scheme: dark;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      background:
+        radial-gradient(800px 400px at 10% 10%, rgba(0,194,255,0.06), transparent 6%),
+        radial-gradient(600px 300px at 90% 80%, rgba(0,230,118,0.04), transparent 6%),
+        var(--bg);
+      font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      color:#e6f0f2;
+      line-height:1.3;
+      padding:36px 18px;
+      display:flex;
+      justify-content:center;
+    }
+
+    .wrap{width:100%;max-width:var(--maxw);}
+
+    /* header */
+    header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom:28px;
+    }
+    .brand{
+      display:flex;align-items:center;gap:12px;
+    }
+    .logo{
+      width:56px;height:56px;border-radius:12px;
+      background:linear-gradient(135deg,var(--accent),var(--accent-2));
+      box-shadow: 0 6px 18px rgba(0,198,120,0.12), inset 0 -6px 18px rgba(255,255,255,0.06);
+      display:flex;align-items:center;justify-content:center;font-weight:700;color:#021017;font-size:20px;
+    }
+    .title{font-weight:700;font-size:18px;letter-spacing:-0.2px}
+    .subtitle{font-size:12px;color:var(--muted);margin-top:2px}
+
+    nav{display:flex;gap:12px;align-items:center}
+    .btn{
+      background:linear-gradient(90deg,var(--accent),var(--accent-2));
+      color:#021017;padding:10px 16px;border-radius:10px;font-weight:700;border:none;cursor:pointer;
+      box-shadow: 0 8px 26px rgba(0,198,120,0.12);
+    }
+    .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted);padding:8px 12px}
+
+    /* hero */
+    .hero{
+      background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+      border-radius:var(--radius); padding:28px; display:flex; gap:20px; align-items:center; box-shadow:var(--shadow);
+      overflow:hidden; position:relative;
+    }
+    .hero-left{flex:1; min-width:280px}
+    h1{
+      margin:0;font-size:34px;line-height:1.03;
+      text-transform:none;
+      letter-spacing:-0.6px;
+    }
+    .kicker{display:inline-block;padding:6px 10px;border-radius:999px;background:linear-gradient(90deg, rgba(0,230,118,0.12), rgba(0,194,255,0.06)); color:var(--accent);font-weight:800;margin-bottom:12px}
+    p.lead{color:var(--muted);margin:14px 0 18px;font-size:15px;max-width:54ch}
+    .metrics{display:flex;gap:12px;flex-wrap:wrap}
+    .metric{
+      background:var(--glass); border-radius:12px;padding:12px 16px; min-width:120px;
+      display:flex;flex-direction:column; gap:6px; box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+    }
+    .metric .big{font-weight:900;font-size:20px;color:var(--accent)}
+    .cta-row{display:flex;gap:12px;margin-top:18px;align-items:center}
+
+    /* hero-right mockup */
+    .hero-right{width:420px;min-width:280px;display:flex;flex-direction:column;gap:12px;align-items:center}
+    .mock{
+      width:100%; background:linear-gradient(180deg,#071018 0%, #0b1620 100%); border-radius:18px;padding:18px;border:1px solid rgba(255,255,255,0.03);
+      box-shadow: 0 30px 90px rgba(2,12,20,0.6), 0 2px 8px rgba(0,0,0,0.6);
+      display:flex;flex-direction:column;gap:12px;align-items:center;
+    }
+    .mock .qr{width:160px;height:160px;border-radius:8px;background:linear-gradient(135deg, rgba(255,255,255,0.02), rgba(0,0,0,0.6));display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--muted);font-size:12px}
+    .mock .tag{font-weight:700;color:var(--accent);font-size:13px}
+
+    /* sections */
+    section{margin-top:20px; background:linear-gradient(180deg,var(--glass-2),transparent); padding:18px;border-radius:14px}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+    .card{background:linear-gradient(180deg,#071219, #0b1420);padding:16px;border-radius:12px;border:1px solid rgba(255,255,255,0.02)}
+    .card h3{margin:0 0 8px;font-size:16px}
+    .feature-list{display:flex;flex-direction:column;gap:8px}
+    .feature{display:flex;gap:10px;align-items:flex-start}
+    .dot{width:10px;height:10px;border-radius:6px;background:linear-gradient(90deg,var(--accent),var(--accent-2));box-shadow:0 6px 18px rgba(0,198,120,0.08)}
+
+    /* pricing */
+    .pricing-grid{display:flex;gap:12px;align-items:stretch;flex-wrap:wrap}
+    .plan{flex:1;min-width:220px;border-radius:12px;padding:18px;background:linear-gradient(180deg,#041018,#071422);border:1px solid rgba(255,255,255,0.03)}
+    .plan h4{margin:0 0 8px}
+    .price{font-size:22px;font-weight:900;color:var(--accent);margin-top:6px}
+
+    /* founder */
+    .founder{display:flex;gap:14px;align-items:center}
+    .avatar{width:84px;height:84px;border-radius:14px;background:linear-gradient(180deg,#fff1,#000);display:flex;align-items:center;justify-content:center;font-weight:900;color:#021017;font-size:24px}
+    .bio{color:var(--muted)}
+
+    /* footer */
+    footer{margin-top:18px;display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:13px}
+
+    /* small */
+    @media (max-width:980px){
+      .hero{flex-direction:column;align-items:stretch}
+      .hero-right{width:100%}
+      .grid{grid-template-columns:repeat(1,1fr)}
+      .wrap{padding:0 12px}
+    }
+
+    /* aggressive pulsing money animation */
+    .pulse-money{
+      display:inline-block;padding:6px 10px;border-radius:999px;font-weight:900;
+      background:linear-gradient(90deg, rgba(0,230,118,0.14), rgba(0,194,255,0.08));
+      color:var(--accent); box-shadow:0 6px 30px rgba(0,230,118,0.06);
+      transform-origin:center;
+      animation: pulse 2.2s infinite;
+    }
+    @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.06)}100%{transform:scale(1)}}
+
+    /* subtle reveal */
+    .reveal{opacity:0; transform:translateY(10px);animation:in 0.7s ease forwards}
+    .reveal.delay-1{animation-delay:0.08s}
+    .reveal.delay-2{animation-delay:0.16s}
+    .reveal.delay-3{animation-delay:0.24s}
+    @keyframes in{to{opacity:1;transform:none}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo">PS</div>
+        <div>
+          <div class="title">Paulo Silas — Founder & Builder</div>
+          <div class="subtitle">Full-stack • Mobile • Fintech • KYC • PIX • SaaS</div>
+        </div>
+      </div>
+
+      <nav>
+        <button class="btn" onclick="document.getElementById('contact').scrollIntoView({behavior:'smooth'})">Quero contratar / investir</button>
+        <a class="btn ghost" href="#portfolio">Portfólio</a>
+        <a class="btn ghost" href="#pitch">Pitch</a>
+      </nav>
+    </header>
+
+    <!-- HERO -->
+    <main class="hero">
+      <div class="hero-left reveal delay-1">
+        <div class="kicker">Produto pronto • MVP full stack</div>
+        <h1>Constrói produtos que <span style="color:var(--accent)">faturam</span> — do protótipo ao MRR</h1>
+        <p class="lead">Apps mobile, sistemas de pagamento (PIX), KYC e automações. Entregas solo com qualidade de squad. Foco em resultado: aquisição, retenção e receita.</p>
+
+        <div class="metrics">
+          <div class="metric">
+            <div class="big">R$ 45</div>
+            <div class="muted">Take médio por serviço</div>
+          </div>
+          <div class="metric">
+            <div class="big">~1.2M+</div>
+            <div class="muted">Projeção MRR (escala 5 cidades)</div>
+          </div>
+          <div class="metric">
+            <div class="big">90 dias</div>
+            <div class="muted">MVP → validação local</div>
+          </div>
+        </div>
+
+        <div class="cta-row">
+          <button class="btn" onclick="document.getElementById('pitch').scrollIntoView({behavior:'smooth'})">Ver Pitch & Projeções</button>
+          <button class="btn ghost" onclick="document.getElementById('portfolio').scrollIntoView({behavior:'smooth'})">Ver Repos</button>
+        </div>
+      </div>
+
+      <div class="hero-right reveal delay-2">
+        <div class="mock">
+          <div style="display:flex;justify-content:space-between;width:100%;align-items:center">
+            <div class="tag">LimpeJá • app</div>
+            <div style="font-size:12px;color:var(--muted)">KYC • PIX • Chat</div>
+          </div>
+          <div style="display:flex;gap:12px;width:100%;align-items:center">
+            <div style="flex:1">
+              <div style="height:12px;width:100%;background:rgba(255,255,255,0.03);border-radius:8px;margin-bottom:8px"></div>
+              <div style="height:14px;width:80%;background:rgba(255,255,255,0.03);border-radius:8px"></div>
+            </div>
+            <div style="width:96px;text-align:center">
+              <div style="font-size:11px;color:var(--muted)">QR</div>
+              <div class="qr">PIX • BR Code</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;width:100%;justify-content:space-between;align-items:center">
+            <div style="font-size:12px;color:var(--muted)">Onboarding de provedor: <strong style="color:var(--accent)">3 etapas</strong></div>
+            <div style="font-size:12px;color:var(--muted)">Repasse: <strong style="color:var(--accent)">≤24h</strong></div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;width:100%;justify-content:space-between;align-items:center">
+          <div style="flex:1;background:var(--glass-3);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px;align-items:flex-start">
+            <div style="font-size:12px;color:var(--muted)">Fundador</div>
+            <div style="font-weight:800">Paulo Silas</div>
+            <div style="font-size:12px;color:var(--muted)">CTO & Founder • 10+ produtos lançados</div>
+          </div>
+          <div style="min-width:120px;text-align:center">
+            <div class="pulse-money">Foco: Monetizar</div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- FEATURES -->
+    <section id="portfolio" class="reveal delay-3">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h2 style="margin:0">Portfólio & Capacidades</h2>
+        <div style="color:var(--muted);font-size:13px">Full stack • Mobile • Infra • IA • Fintech</div>
+      </div>
+
+      <div style="margin-top:14px" class="grid">
+        <div class="card">
+          <h3>LimpeJá — Marketplace (mobile)</h3>
+          <div class="feature-list">
+            <div class="feature"><div class="dot"></div><div><strong>Auth & KYC</strong> (OCR + selfie + verificação)</div></div>
+            <div class="feature"><div class="dot"></div><div><strong>Agendamento</strong> com calendar & disponibilidade</div></div>
+            <div class="feature"><div class="dot"></div><div><strong>Payment stack</strong> (PIX QR, BR Code, saques)</div></div>
+            <div class="feature"><div class="dot"></div><div><strong>Chat</strong> realtime (socket.io)</div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Next Agents Pro • SalesEngineAI</h3>
+          <div class="feature-list">
+            <div class="feature"><div class="dot"></div><div><strong>Automação WhatsApp</strong> (playbooks)</div></div>
+            <div class="feature"><div class="dot"></div><div><strong>IA de copy</strong> para prospecção</div></div>
+            <div class="feature"><div class="dot"></div><div><strong>Billing</strong> por créditos / planos</div></div>
+            <div class="feature"><div class="dot"></div><div><strong>Integrations</strong> (CRM, Gmail)</div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Enterprise & Outros</h3>
+          <div class="feature-list">
+            <div class="feature"><div class="dot"></div><div><strong>QA Governance</strong> (Allure, CI)</div></div>
+            <div class="feature"><div class="dot"></div><div><strong>Microservices</strong> (Spring Cloud)</div></div>
+            <div class="feature"><div class="dot"></div><div><strong>IA / EdTech</strong> (PyTorch, LangChain)</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PRICING / MONETIZACAO -->
+    <section id="pitch" class="reveal delay-1" style="margin-top:18px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h2 style="margin:0">Monetização & Pitch Rápido</h2>
+        <div style="color:var(--muted);font-size:13px">MRR, CAC, LTV — pronto para modelos</div>
+      </div>
+
+      <div style="margin-top:12px;display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">
+        <div style="flex:1;min-width:320px" class="card">
+          <h3>Modelo operacional</h3>
+          <p class="bio">Comissão aplicada ao cliente (ex.: 15%). Prestadores: 0% de taxa. Estratégia hiperlocal para reduzir CAC e maximizar fill rate.</p>
+          <div style="margin-top:8px">
+            <div><strong>Ticket médio:</strong> R$300</div>
+            <div><strong>Take por pedido:</strong> R$45</div>
+            <div><strong>Meta CAC cliente:</strong> ≤ R$90</div>
+          </div>
+        </div>
+
+        <div style="width:320px" class="card">
+          <h3>Projeções (sumário)</h3>
+          <div style="margin-top:8px">
+            <div style="font-weight:800;font-size:18px">Campinas (MVP)</div>
+            <div style="color:var(--muted)">800–1.000 serviços/mês → R$36k–45k MRR (take)</div>
+            <div style="height:8px"></div>
+            <div style="font-weight:800;font-size:18px">5 cidades</div>
+            <div style="color:var(--muted)">~R$1.125.000 MRR projetado</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px" class="pricing-grid">
+        <div class="plan">
+          <h4>Consultoria técnica (contratação)</h4>
+          <div class="price">Projeto / sprint</div>
+          <div style="color:var(--muted);margin-top:6px">Arquit., roadmap, MVP, deploy e handbook operacional</div>
+          <div style="margin-top:12px"><button class="btn" onclick="contact('contratar')">Solicitar proposta</button></div>
+        </div>
+
+        <div class="plan">
+          <h4>Equity / Investidor</h4>
+          <div class="price">Seed-ready</div>
+          <div style="color:var(--muted);margin-top:6px">Material pronto para pitch e due-diligence inicial</div>
+          <div style="margin-top:12px"><button class="btn" onclick="contact('investir')">Quero investir</button></div>
+        </div>
+
+        <div class="plan">
+          <h4>Licença SaaS</h4>
+          <div class="price">White-label</div>
+          <div style="color:var(--muted);margin-top:6px">Instalação local ou multi-tenant, custos e SLA comerciais</div>
+          <div style="margin-top:12px"><button class="btn" onclick="contact('saas')">Solicitar demo</button></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Founder / Contact -->
+    <section id="contact" class="reveal delay-2" style="margin-top:18px;display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">
+      <div style="flex:1;min-width:320px" class="card">
+        <div class="founder">
+          <div class="avatar">PS</div>
+          <div>
+            <div style="font-weight:900">Paulo Silas</div>
+            <div class="bio">Founder • Full-stack • Experiência em fintech, mobile & infra. Já construiu +8 produtos prontos para monetizar.</div>
+            <div style="margin-top:10px;display:flex;gap:8px">
+              <a class="btn ghost" href="https://github.com/techleadevelopers" target="_blank" rel="noreferrer">GitHub</a>
+              <a class="btn ghost" href="#" onclick="alert('Abrir LinkedIn')">LinkedIn</a>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:12px;color:var(--muted)">
+          <div><strong>Contatos:</strong> (19) 99322-3932</div>
+        </div>
+      </div>
+
+      <div style="width:420px;min-width:280px" class="card">
+        <h3>Fale com o time / Paulo</h3>
+        <p style="color:var(--muted);margin-top:6px">Preencha rápido: objetivo, orçamento e prazo.</p>
+        <form id="leadForm" onsubmit="submitForm(event)" style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+          <input id="nome" name="nome" placeholder="Seu nome / empresa" required style="padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:inherit" />
+          <input id="email" name="email" type="email" placeholder="E-mail" required style="padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:inherit" />
+          <input id="budget" name="budget" placeholder="Orçamento estimado (R$)" style="padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:inherit" />
+          <textarea id="msg" name="msg" placeholder="Objetivo / observações" rows="4" style="padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:inherit"></textarea>
+          <div style="display:flex;gap:8px">
+            <button class="btn" type="submit">Enviar proposta</button>
+            <button class="btn ghost" type="button" onclick="copyPhone()">Copiar WhatsApp</button>
+          </div>
+          <div id="formNote" style="color:var(--muted);font-size:13px;margin-top:6px">Resposta em até 24h útil.</div>
+        </form>
+      </div>
+    </section>
+
+    <footer>
+      <div>© <strong>Paulo Silas</strong> — Founder & Builder</div>
+      <div style="display:flex;gap:12px;align-items:center">
+        <div style="color:var(--muted)">Feito com • React Native • Node • Prisma</div>
+        <div style="width:8px"></div>
+        <div style="color:var(--muted)">Versão demo</div>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    function contact(type){
+      document.getElementById('contact').scrollIntoView({behavior:'smooth'});
+      setTimeout(()=> {
+        const m = {contratar:'Quero contratar', investir:'Quero investir', saas:'Solicitar demo'}[type] || 'Contato';
+        document.getElementById('msg').value = m + " — quero conversar sobre: " + (type || '');
+      }, 350);
+    }
+
+    function copyPhone(){
+      navigator.clipboard?.writeText('+55 19 99322-3932').then(()=> {
+        alert('Número copiado: +55 19 99322-3932');
+      }).catch(()=> alert('Copiar não suportado aqui. Número: +55 19 99322-3932'));
+    }
+
+    function submitForm(e){
+      e.preventDefault();
+      const nome = document.getElementById('nome').value || '—';
+      const email = document.getElementById('email').value || '—';
+      const budget = document.getElementById('budget').value || '—';
+      const msg = document.getElementById('msg').value || '—';
+      // Simulação de envio
+      document.getElementById('formNote').textContent = 'Enviando...';
+      setTimeout(()=> {
+        document.getElementById('formNote').textContent = 'Obrigado — proposta enviada. Resposta em até 24h útil.';
+        document.getElementById('leadForm').reset();
+      },1200);
+      console.log('LEAD', {nome,email,budget,msg});
+    }
+  </script>
+</body>
+</html>
