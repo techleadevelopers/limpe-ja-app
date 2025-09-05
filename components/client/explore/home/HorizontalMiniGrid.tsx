@@ -9,19 +9,17 @@ import {
   View,
   Image,
   ImageSourcePropType,
-  Platform, // Importar Platform para estilos específicos de OS
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { LinearGradient } from 'expo-linear-gradient'; // Importar LinearGradient
 
-// Ícones 3D já existentes e adicionados os novos para completar as opções do menu
+// Ícones 3D da versão antiga
 const Icons3D = {
   ticket: require("../../../../assets/images/3d/ticket.png"),
   cashback: require("../../../../assets/images/3d/cashback.png"),
   missions: require("../../../../assets/images/3d/step1-card-profile.png"),
   referral: require("../../../../assets/images/3d/gift2.png"),
-  // Novos ícones injetados das opções que faltavam
   champions2: require("../../../../assets/images/3d/champions2.png"),
   metrics: require("../../../../assets/images/3d/uptrend.png"),
   bookService: require("../../../../assets/images/3d/button.png"),
@@ -37,12 +35,12 @@ interface GridItem {
   route: string;
 }
 
+// Itens da grade da versão antiga
 const gridItems: GridItem[] = [
   { key: "coupons", title: "Cupons", icon: Icons3D.ticket, route: "/(client)/coupons" },
   { key: "cashback", title: "Cashback", icon: Icons3D.cashback, route: "/(client)/wallet/cashback" },
   { key: "missions", title: "Missões", icon: Icons3D.missions, route: "/(client)/missions" },
   { key: "referrals", title: "Ganhe", icon: Icons3D.referral, route: "/(client)/referrals" },
-  // Opções injetadas do menu/index.tsx
   { key: "champions2", title: "Champions", icon: Icons3D.champions2, route: "/(client)/champions2" },
   { key: "metrics", title: "Métricas", icon: Icons3D.metrics, route: "/(client)/metrics" },
   { key: "bookService", title: "Agendar", icon: Icons3D.bookService, route: "/(client)/booking" },
@@ -83,21 +81,12 @@ export default function HorizontalMiniGrid() {
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         onPress={handlePress}
-        style={{ marginRight: 10 }}
+        style={styles.cardContainer} // Usa o estilo do container da segunda versão
       >
-        {/* INÍCIO DAS ALTERAÇÕES PARA BORDA GRADIENTE NEON */}
-        <LinearGradient
-          colors={['#ADD8E6', '#4169e17b', '#00008b7e']} // Azul claro, azul médio, azul escuro
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.gradientBorder}
-        >
-          <Animated.View style={[styles.cardInner, { transform: [{ scale }] }]}>
+        <Animated.View style={[styles.cardInner, { transform: [{ scale }] }]}>
             <Image source={item.icon} style={styles.icon} resizeMode="contain" />
-            <Text style={styles.cardTitle}>{item.title}</Text>
-          </Animated.View>
-        </LinearGradient>
-        {/* FIM DAS ALTERAÇÕES PARA BORDA GRADIENTE NEON */}
+        </Animated.View>
+        <Text style={styles.cardTitle}>{item.title}</Text>
       </Pressable>
     );
   };
@@ -118,54 +107,36 @@ export default function HorizontalMiniGrid() {
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 12,
-    marginBottom: 14,
-    left: 0,
-    paddingHorizontal: 10,
+    marginTop: 10,
+    marginBottom: 10,
   },
-  // O estilo 'card' original foi dividido em 'gradientBorder' e 'cardInner' para permitir a borda gradiente.
-  gradientBorder: {
-    width: 62, // 65 (card original) + 2*2 (borda de 2px)
-    height: 62,
-    borderRadius: 24, // 22 (card original) + 2 (borda de 2px)
+  cardContainer: {
     alignItems: "center",
-    justifyContent: "center",
-    // Sombras para simular o efeito neon/glow
-    shadowColor: "#4169E1", // Cor base da sombra para o efeito neon
-    shadowOffset: { width: 0, height: 0 }, // Sombra centralizada
-    shadowOpacity: 0.8, // Opacidade alta para o brilho
-    shadowRadius: 8, // Raio maior para um brilho mais difuso
-    ...Platform.select({
-      ios: {
-        shadowColor: '#4169E1',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.8,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 12, // Ajustado para Android para um efeito similar de brilho
-      },
-    }),
+    marginRight: 20, // Espaçamento entre os cards
   },
   cardInner: {
-    width: 65,
-    height: 65,
-    borderRadius: 22,
-    backgroundColor: "#FFFFFF", // Alterado de "#87b9ef69" para branco
-    alignItems: "center",
+    width: 60, // Tamanho do fundo circular
+    height: 60,
+    borderRadius: 30, // Metade da largura/altura para um círculo perfeito
+    backgroundColor: '#F0F0F0', // Cor de fundo clara para o círculo
     justifyContent: "center",
-    // As sombras originais foram movidas para 'gradientBorder' para criar o efeito de borda neon.
+    alignItems: "center",
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
   icon: {
-    width: 54,
-    height: 44,
-    left: 2,
+    width: 35, // Tamanho do ícone
+    height: 35,
+    resizeMode: 'contain',
   },
   cardTitle: {
-    marginTop: -2,
-    fontSize: 9.0,
+    marginTop: 8,
+    fontSize: 12,
     fontWeight: "500",
     textAlign: "center",
-    color: "rgba(78, 78, 78, 1)",
+    color: "#666",
   },
 });
