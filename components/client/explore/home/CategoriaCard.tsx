@@ -165,16 +165,16 @@ const CategoriaCard: React.FC<CategoriaCardProps> = ({ item }) => { // Removida 
 
 const styles = StyleSheet.create({
   cardContainerWrapper: {
-    width: 34,
-    height: 34,
+    width: 50,
+    height: 50,
     marginRight: 12,
-    borderRadius: 25,
+    borderRadius: 15,
     marginBottom: 9,
     
   },
   shadowLayerPrimary: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: 25,
+    borderRadius: 15,
     shadowColor: PRIMARY_SHADOW_COLOR,
     shadowOffset: { width: 0, height: PRIMARY_SHADOW_OFFSET_HEIGHT },
     shadowOpacity: 1,
@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
   },
   shadowLayerSecondary: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: 55,
+    borderRadius: 15,
     shadowColor: SECONDARY_SHADOW_COLOR,
     shadowOffset: { width: 0, height: SECONDARY_SHADOW_OFFSET_HEIGHT },
     shadowOpacity: 1,
@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
   touchableSurface: {
     width: '100%',
     height: '100%',
-    borderRadius: 55,
+    borderRadius: 15,
     overflow: 'hidden',
     borderWidth: BORDER_WIDTH,
     borderColor: BORDER_COLOR_LIGHT,
