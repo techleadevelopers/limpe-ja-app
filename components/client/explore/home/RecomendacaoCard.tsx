@@ -226,11 +226,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
                     </View>
                 </View>
             </TouchableOpacity>
-            {/* Ícone docCheck2 posicionado absolutamente FORA DO FLUXO NORMAL */}
-            <Image
-                source={Icons3D.location} // Caminho para o ícone docCheck2
-                style={styles.docCheckIcon}
-            />
+    
      
         </Animated.View>
         
