@@ -71,6 +71,10 @@ export const Icons3D = {
   button: require('@3d/button.png'),
   wsupport: require('@3d/wsupport.png'),
   mascrank: require('@3d/masc-rank.png'),
+  cupon: require('@3d/cupon.png'),
+  cupon2: require('@3d/cupon2.png'),
+  cupon3: require('@3d/cupon3.png'),
+  cupon4: require('@3d/cupon4.png'),
 } as const;
 
 export type Icon3DName = keyof typeof Icons3D;
