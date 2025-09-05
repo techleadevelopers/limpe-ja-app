@@ -24,9 +24,8 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
-import Constants from 'expo-constants'; // Importar Constants
+import Constants from 'expo-constants';
 import { Icons3D } from '../../../constants/icons3d';
-
 
 import {
     getOffers,
@@ -44,7 +43,7 @@ import { Offer } from '../../../types/backend/offers';
 import { ProviderDisplayInfo } from '../../../types/backend/providers';
 import { Service } from '../../../types/backend/services';
 import { UserProfile } from '../../../types/backend/users';
-import HorizontalMiniGrid from '../../../components/client/explore/home/HorizontalMiniGrid'; // Importado
+import HorizontalMiniGrid from '../../../components/client/explore/home/HorizontalMiniGrid';
 
 import { CLIENT_ROUTES } from '../../../constants/routes';
 import { AppColors, AppDurations, AppOffsets, AppShadows, AppTypography, SCREEN_WIDTH } from '../../../constants/appStyles';
@@ -76,7 +75,7 @@ interface CategoriaCardProps {
 
 import CarouselBannerItem from '../../../components/client/explore/home/CarouselBannerItem';
 import CategoriaCard from '../../../components/client/explore/home/CategoriaCard';
-import HeaderSuperior from '../../../components/client/explore/home/HeaderSuperior';
+import NewHeader from '../../../components/client/explore/home/NewHeader';
 import NavBar from '../../../components/client/explore/home/NavBar';
 import PrestadorCard from '../../../components/client/explore/home/PrestadorCard';
 import RecomendacaoCard from '../../../components/client/explore/home/RecomendacaoCard';
@@ -92,8 +91,11 @@ import BottomSlideInCard from '../../../components/common/BottomSlideInCard';
 import SmartCouponNudge from '../../../components/coupons/CouponNudge';
 
 // Importar os novos componentes Nudge
-import SecurityNudge from '../../../components/nudges/SecurityNudge'; // Assumindo o caminho
-import IncentiveNudge from '../../../components/nudges/IncentiveNudge'; // Assumindo o caminho
+import SecurityNudge from '../../../components/nudges/SecurityNudge';
+import IncentiveNudge from '../../../components/nudges/IncentiveNudge';
+
+// Importar o novo componente SearchComponent
+import SearchComponent from '../../../components/client/explore/home/SearchComponent';
 
 const COR_AZUL_CLARO_UNIFICADA = '#A0D2EB';
 const COR_PRIMARIA_ESCURA = '#2C3E50';
@@ -115,29 +117,29 @@ type BannerDataItem = {
 const bannerData: BannerDataItem[] = [
     {
         id: '1',
-        title: 'Obtenha Oferta Especial', // Traduzido
-        discount: 'Até 40%', // Traduzido
-        description: 'Todos os Serviços Disponíveis | Termos e Condições Aplicados', // Traduzido
-        buttonText: 'Resgatar', // Traduzido
-        badgeText: 'Tempo limitado!', // Traduzido
+        title: 'Obtenha Oferta Especial',
+        discount: 'Até 40%',
+        description: 'Todos os Serviços Disponíveis | Termos e Condições Aplicados',
+        buttonText: 'Resgatar',
+        badgeText: 'Tempo limitado!',
         onPress: () => console.log('Banner 1 Pressionado'),
     },
     {
         id: '2',
-        title: 'Outra Grande Oferta', // Traduzido
-        discount: 'Economize Muito!', // Traduzido
-        description: '', // Traduzido
-        buttonText: 'Ver', // Traduzido
-        badgeText: 'Exclusivo', // Traduzido
+        title: 'Outra Grande Oferta',
+        discount: 'Economize Muito!',
+        description: '',
+        buttonText: 'Ver',
+        badgeText: 'Exclusivo',
         onPress: () => console.log('Banner 2 Pressionado'),
     },
     {
         id: '3',
-        title: 'Última Chance!', // Traduzido
-        discount: '75% de Desconto', // Traduzido
-        description: 'Para Novos Clientes', // Traduzido
-        buttonText: 'Cadastrar', // Traduzido
-        badgeText: 'Corra!', // Traduzido
+        title: 'Última Chance!',
+        discount: '75% de Desconto',
+        description: 'Para Novos Clientes',
+        buttonText: 'Cadastrar',
+        badgeText: 'Corra!',
         onPress: () => console.log('Banner 3 Pressionado'),
     },
 ];
@@ -259,20 +261,18 @@ export default function ExploreClientScreen() {
                     (offer as any).target === 'NEW_CLIENTS' && (offer as any).firstBookingOnly
                 );
                 if (welcomeOffer) {
-  setWelcomeCouponOffer(welcomeOffer);
-} else {
-  // MOCK: cupom fake só para debug visual
-  setWelcomeCouponOffer({
-    id: "fake-123",
-    couponCode: "BEMVINDO10",
-    title: "Ganhe 10% na sua 1ª limpeza!",
-    description: "Use agora e economize",
-    target: "NEW_CLIENTS",
-    firstBookingOnly: true,
-    validUntil: "2025-12-31T23:59:59.000Z"
-  } as any);
-}
-
+                    setWelcomeCouponOffer(welcomeOffer);
+                } else {
+                    setWelcomeCouponOffer({
+                        id: "fake-123",
+                        couponCode: "BEMVINDO20",
+                        title: "Ganhe 20%OFF !",
+                        description: "Use agora e economize",
+                        target: "NEW_CLIENTS",
+                        firstBookingOnly: true,
+                        validUntil: "2025-12-31T23:59:59.000Z"
+                    } as any);
+                }
 
                 if (promotionTimeoutRef.current) {
                     clearTimeout(promotionTimeoutRef.current);
@@ -402,7 +402,6 @@ export default function ExploreClientScreen() {
 
     const handleDismissWelcomeCoupon = useCallback(async () => {
         setActiveBottomPromotion(null);
-        setShowPersistentCouponPill(true);
         await AsyncStorage.setItem(WELCOME_COUPON_DISMISSED_KEY, 'true');
     }, []);
 
@@ -444,8 +443,7 @@ export default function ExploreClientScreen() {
         setActiveBottomPromotion(null);
     }, []);
 
-       // DEBUG: logando cupom carregado
-   console.log("DEBUG | welcomeCouponOffer:", welcomeCouponOffer);
+    console.log("DEBUG | welcomeCouponOffer:", welcomeCouponOffer);
 
     if (loading && !isRefreshing) {
         return (
@@ -468,7 +466,15 @@ export default function ExploreClientScreen() {
         );
     }
 
-    const addressToDisplay = userProfile?.clientDetails?.address || userProfile?.providerDetails?.address || userProfile?.address;
+    const rawAddress =
+        userProfile?.clientDetails?.address ||
+        userProfile?.providerDetails?.address ||
+        userProfile?.address;
+
+    const addressToDisplay =
+        rawAddress && typeof rawAddress === 'object'
+            ? `${rawAddress.street || ''}, ${rawAddress.number || ''} - ${rawAddress.city || ''}/${rawAddress.state || ''}`
+            : (rawAddress as string | null);
 
     return (
         <View style={styles.screen}>
@@ -481,6 +487,18 @@ export default function ExploreClientScreen() {
                     </TouchableOpacity>
                 ),
             }} />
+
+            {/* Cabeçalho roxo que fica no fundo */}
+            <NewHeader
+                userName={
+                    userProfile?.clientDetails?.fullName ||
+                    userProfile?.providerDetails?.fullName ||
+                    userProfile?.fullName ||
+                    t('common.user')
+                }
+                userAddress={addressToDisplay}
+            />
+
             <ScrollView
                 style={styles.scrollViewArea}
                 contentContainerStyle={styles.scrollContentContainer}
@@ -496,24 +514,38 @@ export default function ExploreClientScreen() {
                     />
                 }
             >
+                {/* O conteúdo principal da Home começa aqui, com o fundo branco e bordas arredondadas */}
                 <View style={styles.contentWrapper}>
-                    {/* Header Superior Animado */}
-                    <Animated.View style={[styles.headerContainer, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-50, 0] }) }] }]}>
-                        <HeaderSuperior
-                            userName={userProfile?.clientDetails?.fullName || userProfile?.providerDetails?.fullName || userProfile?.fullName || t('common.user')}
-                            userAddress={addressToDisplay}
+                    {/* Seção de Categorias */}
+                    <Animated.View style={[styles.categoriesSection, { opacity: categoriesAnim, transform: [{ translateY: categoriesAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
+                        <View style={styles.categoryTitleWrapper}>
+                            <Text style={styles.categorySectionTitle}>{t("search.all_categories")}</Text>
+                            <TouchableOpacity
+                                onPress={() => router.push('/(client)/explore/todas-categorias' as any)}
+                                style={styles.viewAllButton}
+                            >
+                                <Ionicons name="chevron-forward" size={14} color="#007BFF" />
+                            </TouchableOpacity>
+                        </View>
+                        <SecaoContainer<Service>
+                            titulo={t("search.all_categories")}
+                            onVerTudoPress={() => router.push('/(client)/explore/todas-categorias' as any)}
+                            data={safeServiceCategories}
+                            renderItem={({ item }) => {
+                                if (!item || !item.name) return null;
+                                return (
+                                    <CategoriaCard
+                                        item={{ id: item.id, name: item.name, icon: item.icon as any }}
+                                    />
+                                );
+                            }}
+                            horizontal={true}
+                            noDataText={t("search.no_results")}
                         />
                     </Animated.View>
 
-                    {/*
-                      ALTERAÇÃO 1: O Bloco de categorias foi MOVIDO para fora do ScrollView.
-                      O espaço que ele ocupava precisa ser compensado.
-                      (A estrutura JSX já reflete isso, o componente Animated.View das categorias está fora do ScrollView, abaixo)
-                    */}
-
                     {/* Novo Carrossel de Banners */}
-                    {/* ALTERAÇÃO 2: Adicionamos um marginTop para compensar o espaço das categorias flutuantes */}
-                    <Animated.View style={[styles.carouselContainer, {  opacity: bannerAnim, transform: [{ translateY: bannerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
+                    <Animated.View style={[styles.carouselContainer, { opacity: bannerAnim, transform: [{ translateY: bannerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
                         <FlatList<BannerDataItem>
                             ref={flatListRef}
                             data={bannerData}
@@ -524,17 +556,15 @@ export default function ExploreClientScreen() {
                             showsHorizontalScrollIndicator={false}
                             onViewableItemsChanged={onViewableItemsChanged}
                             viewabilityConfig={viewabilityConfig}
-                            // ALTERAÇÃO AQUI: snapToInterval ajustado para alinhar corretamente
-                            snapToInterval={screenWidth - 20} // (screenWidth - 40) + 10 (margin esquerdo) + 10 (margin direito)
+                            snapToInterval={screenWidth - 20}
                             decelerationRate="fast"
-                            // ALTERAÇÃO AQUI: Adicionado paddingHorizontal para alinhar com as bordas da tela
                             contentContainerStyle={{ paddingHorizontal: 10 }}
                         />
                         {renderPagination()}
                     </Animated.View>
 
                     {/* Recomendações para Você Animadas */}
-                    <Animated.View style={{  opacity: recommendationsAnim, transform: [{ translateY: recommendationsAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
+                    <Animated.View style={{ opacity: recommendationsAnim, transform: [{ translateY: recommendationsAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
                         <SecaoRecomendacoes
                             titulo={t("search.recommended_providers")}
                             onVerTudoPress={() => router.push('/(client)/explore/todos-recomendacoes' as any)}
@@ -552,7 +582,6 @@ export default function ExploreClientScreen() {
                             horizontal={true}
                             noDataText={t("search.no_results")}
                         />
-                        {/* INJEÇÃO: Separador sutil após Recomendações */}
                         <View style={styles.sectionSeparator} />
                     </Animated.View>
 
@@ -575,63 +604,30 @@ export default function ExploreClientScreen() {
                             horizontal={true}
                             noDataText={t("search.no_results")}
                         />
-                        {/* INJEÇÃO: Separador sutil após Profissionais por Perto */}
                         <View style={styles.sectionSeparator} />
                     </Animated.View>
 
                     {/* INJEÇÃO: HorizontalMiniGrid com Badges */}
                     <Animated.View style={{ opacity: providersAnim, transform: [{ translateY: providersAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
-                        {/* NOVO: Título para a seção de mini-cards */}
                         <View style={styles.miniGridHeader}>
-                            {/* ÚNICA ALTERAÇÃO AQUI: De "explore_actions_title" para "explore_section.title" */}
                             <Text style={styles.miniGridTitle}>{t("explore_section.title")}</Text>
-                            {/* INJEÇÃO: Compromisso para "badges nos mini cards" sem alterar HorizontalMiniGrid */}
-                            {welcomeCouponOffer && activeBottomPromotion !== 'coupon' && (
-  <TouchableOpacity
-    onPress={() => setActiveBottomPromotion('coupon')}
-    style={styles.couponFab}
-    activeOpacity={0.85}
-  >
-    <Image
-      source={Icons3D.ticket}
-      style={styles.ticketIcon}
-      resizeMode="contain"
-    />
-  </TouchableOpacity>
-)}
                         </View>
                         <HorizontalMiniGrid />
                     </Animated.View>
-                </View> {/* Fim de contentWrapper */}
-            </ScrollView> {/* Fim de ScrollView */}
-
-            {/* ALTERAÇÃO 3: O contêiner das categorias agora está AQUI, fora e sobre o ScrollView */}
-            <Animated.View style={[styles.categoriesCard, {left: -5,  opacity: categoriesAnim, transform: [{ translateY: categoriesAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
-                <SecaoContainer<Service>
-                    titulo={t("search.all_categories")}
-                    onVerTudoPress={() => router.push('/(client)/explore/todas-categorias' as any)}
-                    data={safeServiceCategories}
-                    renderItem={({ item }) => {
-                        if (!item || !item.name) return null;
-                        return (
-                            <CategoriaCard
-                                item={{ id: item.id, name: item.name, icon: item.icon as any }}
-                            />
-                        );
-                    }}
-                    horizontal={true}
-                />
-            </Animated.View>
+                </View>
+            </ScrollView>
 
             {/* NavBar Animada */}
             <Animated.View style={[styles.navBarContainer, { transform: [{ translateY: navBarAnim.interpolate({ inputRange: [0, 1], outputRange: [100, 0] }) }] }]}>
-                <NavBar />
+                <NavBar
+                    welcomeCouponOffer={welcomeCouponOffer}
+                    activeBottomPromotion={activeBottomPromotion}
+                    setActiveBottomPromotion={setActiveBottomPromotion}
+                />
             </Animated.View>
 
             {/* NOVO: DEFENSE_SOS */}
             <DEFENSE_SOS />
-
-
 
             {/* INJEÇÃO: SmartCouponNudge (aparece sutil após 3s na rota explore) */}
             {welcomeCouponOffer && (
@@ -656,7 +652,7 @@ export default function ExploreClientScreen() {
                         expiresAt={welcomeCouponOffer!.validUntil}
                         onUseNow={handleUseWelcomeCoupon}
                         onDismiss={handleDismissWelcomeCoupon}
-                        visible={activeBottomPromotion === 'coupon'} // Adicione esta linha
+                        isVisible={activeBottomPromotion === 'coupon'}
                     />
                 </BottomSlideInCard>
             )}
@@ -693,203 +689,206 @@ export default function ExploreClientScreen() {
 
             {/* Nudges inteligentes (empilhados com delay e offset) - Adicionados aqui */}
             <SecurityNudge
-              delayMs={3500}
-              throttleHours={24}
-              showOnRoutes={['/(client)/explore']}
-              bottomOffset={20}
+                delayMs={3500}
+                throttleHours={24}
+                showOnRoutes={['/(client)/explore']}
+                bottomOffset={20}
             />
 
             <IncentiveNudge
-              delayMs={5000}
-              throttleHours={24}
-              showOnRoutes={['/(client)/explore']}
-              bottomOffset={84} // sobe para não sobrepor o Security
-              points={100}
+                delayMs={5000}
+                throttleHours={24}
+                showOnRoutes={['/(client)/explore']}
+                bottomOffset={84}
+                points={100}
             />
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    right: 0,
-    left: 0,
-  },
-  centeredContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  couponWrapper: {
-    width: '90%',
-    maxWidth: 400,
-    position: 'relative',
-    // A sombra e o borderRadius agora são aplicados diretamente ao ImageBackground
-  },
-  couponCardBackground: { // Estilos aplicados ao ImageBackground
-    height: 260, // Altura fixa para garantir que a imagem de fundo seja totalmente visível
-    width: '100%', // Ocupa a largura total do couponWrapper
-    borderRadius: 15, // Aplica o borderRadius ao contêiner da imagem
-    overflow: 'hidden', // Essencial para que o borderRadius funcione na imagem de fundo
-    alignItems: 'center', // Centraliza o conteúdo horizontalmente
-    justifyContent: 'space-between', // Distribui o conteúdo verticalmente
-    position: 'relative',
-    paddingTop: 20, // Espaçamento do conteúdo a partir do topo do cupom
-    paddingBottom: 10, // Espaçamento do conteúdo a partir da base do cupom
-    // Sombra aplicada diretamente aqui
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 12,
-  },
-  couponCardImageStyle: { // Estilos aplicados diretamente à imagem dentro do ImageBackground
-    borderRadius: 15, // Aplica o borderRadius à imagem em si
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 8,
-    right: 19,
-    zIndex: 2,
-    padding: 4,
-  },
-  closeButtonText: {
-    fontSize: 14,
-    color: '#fff',
-  },
-  logo: {
-    width: 85,
-    height: 40,
-    borderRadius: 8,
-    marginBottom: 3,
-    resizeMode: 'contain',
-  },
-  h3: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    lineHeight: 20,
-    color: '#fff',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  h3Subtitle: {
-    fontSize: 13,
-    fontWeight: 'normal',
-    lineHeight: 18,
-    color: '#fff',
-  },
-  couponRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 5,
-  },
-  cpnCode: {
-    borderWidth: 1,
-    borderColor: '#fff',
-    paddingVertical: 3,
-    paddingHorizontal: 4,
-    borderTopLeftRadius: 5,
-    borderBottomLeftRadius: 5,
-    borderRightWidth: 0,
-    color: '#3647dfff', // Cor ajustada para melhor contraste
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    fontSize: 10,
-  },
-  cpnBtn: {
-    borderWidth: 1,
-    borderColor: '#fff',
-    backgroundColor: '#fff',
-    paddingVertical: 3,
-    paddingHorizontal: 8,
-    borderTopRightRadius: 5,
-    borderBottomRightRadius: 5,
-  },
-  cpnBtnText: {
-    color: '#5887feff',
-    fontWeight: 'bold',
-    fontSize: 10,
-  },
-  circle: {
-    width: 35,
-    height: 35,
-    borderRadius: 17.5,
-    position: 'absolute',
-    top: '50%',
-    transform: [{ translateY: -17.5 }],
-  },
-  circle1: { left: -17.5 },
-  circle2: { right: -17.5 },
-  useNowButton: {
-    marginTop: 15,
-    width: '50%',
-    paddingVertical: 8,
-  },
-  expiresAtText: {
-    fontSize: 11,
-    color: '#174df0ff',
-    fontWeight: 'bold',
-    marginTop: 5,
-  },
+    overlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        position: 'absolute',
+        top: 0,
+        bottom: 0,
+        right: 0,
+        left: 0,
+    },
+    centeredContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    couponWrapper: {
+        width: '90%',
+        maxWidth: 400,
+        position: 'relative',
+    },
+    couponCardBackground: {
+        height: 260,
+        width: '100%',
+        borderRadius: 15,
+        overflow: 'hidden',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        position: 'relative',
+        paddingTop: 20,
+        paddingBottom: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        elevation: 12,
+    },
+    couponCardImageStyle: {
+        borderRadius: 15,
+    },
+    closeButton: {
+        position: 'absolute',
+        top: 8,
+        right: 19,
+        zIndex: 2,
+        padding: 4,
+    },
+    closeButtonText: {
+        fontSize: 14,
+        color: '#fff',
+    },
+    logo: {
+        width: 85,
+        height: 40,
+        borderRadius: 8,
+        marginBottom: 3,
+        resizeMode: 'contain',
+    },
+    h3: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        lineHeight: 20,
+        color: '#fff',
+        textAlign: 'center',
+        marginBottom: 8,
+    },
+    h3Subtitle: {
+        fontSize: 13,
+        fontWeight: 'normal',
+        lineHeight: 18,
+        color: '#fff',
+    },
+    couponRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginVertical: 5,
+    },
+    cpnCode: {
+        borderWidth: 1,
+        borderColor: '#fff',
+        paddingVertical: 3,
+        paddingHorizontal: 4,
+        borderTopLeftRadius: 5,
+        borderBottomLeftRadius: 5,
+        borderRightWidth: 0,
+        color: '#3647dfff',
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        fontSize: 10,
+    },
+    cpnBtn: {
+        borderWidth: 1,
+        borderColor: '#fff',
+        backgroundColor: '#fff',
+        paddingVertical: 3,
+        paddingHorizontal: 8,
+        borderTopRightRadius: 5,
+        borderBottomRightRadius: 5,
+    },
+    cpnBtnText: {
+        color: '#5887feff',
+        fontWeight: 'bold',
+        fontSize: 10,
+    },
+    circle: {
+        width: 35,
+        height: 35,
+        borderRadius: 17.5,
+        position: 'absolute',
+        top: '50%',
+        transform: [{ translateY: -17.5 }],
+    },
+    circle1: { left: -17.5 },
+    circle2: { right: -17.5 },
+    useNowButton: {
+        marginTop: 15,
+        width: '50%',
+        paddingVertical: 8,
+    },
+    expiresAtText: {
+        fontSize: 11,
+        color: '#174df0ff',
+        fontWeight: 'bold',
+        marginTop: 5,
+    },
     screen: {
         flex: 1,
-        backgroundColor: COR_CINZA_FUNDO,
+        backgroundColor: COR_CINZA_FUNDO, // Cor de fundo principal
     },
     scrollViewArea: {
         flex: 1,
+        zIndex: 1, // Garante que a scrollview esteja acima do NewHeader
     },
     scrollContentContainer: {
         paddingBottom: 90,
         flexGrow: 1,
     },
-    headerContainer: {
-        marginHorizontal: 1,
-        // O zIndex aqui é importante para que o header fique abaixo das categorias
-        zIndex: 1, // Mantido, mas zIndex das categorias é maior
-    },
     contentWrapper: {
         flexGrow: 1,
-        marginHorizontal: 10,
-    },
-    // ALTERAÇÃO 4: Estilo completamente novo para o container flutuante das categorias
-    categoriesCard: {
-        position: 'absolute',
-        // O valor de 'top' precisa ser ajustado para alinhar perfeitamente abaixo do header.
-        // Um bom ponto de partida é a altura do header - um pouco para sobrepor.
-        // Vamos estimar um valor e você pode ajustá-lo.
-        top: (Constants.statusBarHeight + 70), // AJUSTE ESTE VALOR PARA O ALINHAMENTO PERFEITO
-        left: 0,
-        right: 0,
-        zIndex: 100, // zIndex alto para garantir que flutue sobre tudo
-        paddingHorizontal: 20,
-        backgroundColor: 'transparent',
-        // Removendo sombras e elevações conforme solicitado ("AGORA SEM FUNDO BRANCO E SOMBRA")
+        // O marginTop negativo e os borderRadiuses são a chave para o efeito "fluindo"
+        marginTop: (Constants.statusBarHeight + 10 + 80) * -1 + 60, // Ajuste esse 60 para posicionar o topo branco
+        backgroundColor: '#fff', // Fundo branco para o conteúdo que vai "cobrir" o gradiente
+        borderTopLeftRadius: 60, // Bordas arredondadas
+        borderTopRightRadius: 60,
+        paddingTop: 30, // Espaço interno no topo para o conteúdo
+        paddingHorizontal: 12,
+        // Sombra para o contentWrapper para dar a sensação de flutuação
         ...Platform.select({
             ios: {
-                shadowColor: '#2C3E50',
-                shadowOffset: { width: 5, height: 7 },
-                shadowOpacity: 0,
-                shadowRadius: 3,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: -5 }, // Sombra vindo de baixo
+                shadowOpacity: 0.1,
+                shadowRadius: 5,
             },
             android: {
-                elevation: 4,
+                elevation: 5, // Sombra para Android
             },
         }),
-        // Removendo marginTop/marginBottom que não são relevantes para position: 'absolute'
-        // A posição é controlada por 'top', 'left', 'right'.
     },
-    // ALTERAÇÃO 5: Adicionar marginTop para o carrossel
+    searchComponentContainer: {
+        marginHorizontal: 10,
+        paddingBottom: 15,
+    },
+    categoriesSection: {
+        marginTop: 2,
+        marginBottom: -10,
+        paddingHorizontal: 0,
+    },
+    categoryTitleWrapper: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        marginBottom: 5,
+    },
+    categorySectionTitle: {
+        fontSize: 16,
+        fontFamily: 'Montserrat-Regular',
+        fontWeight: '800',
+        color: '#4f5a71c3',
+    },
     carouselContainer: {
-        // Este valor deve ser suficiente para que o carrossel não fique escondido sob as categorias.
-        // A altura da linha de categorias é de aprox. 50-60px (ícone + texto).
-        marginTop: 100, // AJUSTE CONFORME NECESSÁRIO
+        marginTop: 20,
         marginBottom: 10,
-   
         alignItems: 'center',
     },
     navBarContainer: {
@@ -897,11 +896,11 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         right: 0,
-        zIndex: 200, // NavBar deve ficar sobre tudo, exceto modais
+        zIndex: 200,
         shadowColor: "#000",
         shadowOffset: {
-            width: 0,
-            height: -5,
+            width: 9,
+            height: 5,
         },
         shadowOpacity: 0.1,
         shadowRadius: 8,
@@ -935,36 +934,33 @@ const styles = StyleSheet.create({
         padding: 5,
         marginRight: Platform.OS === 'ios' ? 10 : 0,
     },
-    // NOVO: Estilos para o título da seção de mini-cards
     miniGridHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 5, // Espaçamento abaixo do título
-        paddingHorizontal: 16, // Alinhamento com outros títulos de seção
-        marginTop: 2, // Espaçamento acima do título para separar da seção anterior
+        marginBottom: 5,
+        paddingHorizontal: 21,
+        marginTop: 2,
     },
     miniGridTitle: {
         fontSize: 15,
         fontFamily: 'Montserrat-Regular',
         fontWeight: '800',
-        color: '#4f5a71ff', // Cor consistente com outros títulos
+        color: '#4f5a71ff',
     },
-    // INJEÇÃO: Estilo para o separador de seção
     sectionSeparator: {
         borderBottomWidth: 1,
-        borderBottomColor: COR_BORDA_SUAVE, // Uma cor suave para a linha
-        marginVertical: 15, // Espaçamento vertical para a linha
+        borderBottomColor: COR_BORDA_SUAVE,
+        marginVertical: 15,
         right: 21,
-        marginHorizontal: 58, // Alinha com o padding dos títulos
+        marginHorizontal: 58,
     },
-    // INJEÇÃO: Estilos para o "badge" da seção de mini-cards
     miniGridBadge: {
-       backgroundColor: 'transparent',
+        backgroundColor: 'transparent',
         borderRadius: 15,
         paddingHorizontal: 8,
         paddingVertical: 4,
-        marginLeft: 10, // Espaçamento entre o título e o badge
+        marginLeft: 10,
         flexDirection: 'row',
         alignItems: 'center',
     },
@@ -972,36 +968,45 @@ const styles = StyleSheet.create({
         color: '#202633',
         fontSize: 8.4,
         fontWeight: 'bold',
-        marginLeft: 3, // Espaçamento entre o ícone e o texto
+        marginLeft: 3,
     },
-    // Novo estilo para o FAB do cupom
     couponFab: {
-      backgroundColor: AppColors.primaryInteractive, // Cor de fundo do botão
-      borderRadius: 25, // Metade da largura/altura para torná-lo circular
-      width: 50, // Largura do botão
-      height: 50, // Altura do botão
-      justifyContent: 'center',
-      alignItems: 'center',
-      // Posição flutuante (ajuste conforme necessário)
-      position: 'absolute',
-      bottom: 20, // Distância do fundo
-      right: 20, // Distância da direita
-      zIndex: 100, // Para garantir que esteja acima de outros elementos
-      ...Platform.select({
-        ios: {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.25,
-          shadowRadius: 3.84,
-        },
-        android: {
-          elevation: 5,
-        },
-      }),
+        backgroundColor: 'transparent',
+        borderRadius: 25,
+        width: 45,
+        height: 45,
+        justifyContent: 'center',
+        alignItems: 'center',
+        position: 'absolute',
+        top: 15,
+        right: 75,
+        zIndex: 250,
+        ...Platform.select({
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.25,
+                shadowRadius: 3.84,
+            },
+            android: {
+                elevation: 5,
+            },
+        }),
     },
     ticketIcon: {
-      width: 30, // Tamanho do ícone do ticket
-      height: 30, // Tamanho do ícone do ticket
-      tintColor: AppColors.white, // Cor do ícone
+        width: 40,
+        height: 40,
+    },
+    viewAllButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 4,
+    },
+    viewAllText: {
+        fontSize: 11,
+        color: '#007BFF',
+        fontFamily: 'Montserrat-Regular',
+        fontWeight: '800',
+        marginRight: 5,
     },
 });
