@@ -47,10 +47,7 @@ export default function SuccessHeader({
         ).start();
     }, [logoPulseAnim, logoRotateAnim]);
 
-    const rotateInterpolate = logoRotateAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: ['0deg', '360deg'],
-    });
+  
 
     return (
         <View style={styles.headerContainer}>
@@ -61,7 +58,7 @@ export default function SuccessHeader({
                     {
                         transform: [
                             { scale: logoPulseAnim },
-                            { rotateY: rotateInterpolate }
+                           
                         ]
                     }
                 ]}
