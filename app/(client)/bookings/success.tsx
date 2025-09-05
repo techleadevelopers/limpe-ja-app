@@ -84,8 +84,8 @@ const successColor = AppColors.successStandard;
 
 const backgroundGradientColors: readonly [ColorValue, ColorValue, ColorValue, ColorValue] = [
     '#E0F7FA',
-    '#B3E0FF',
-    '#ADD8E6',
+    '#6bb5e6ff',
+    '#398faca8',
     '#CDE8F7',
 ];
 
