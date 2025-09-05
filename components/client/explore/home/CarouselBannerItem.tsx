@@ -165,7 +165,7 @@ const CarouselBannerItem: React.FC<CarouselBannerItemProps> = ({
 const styles = StyleSheet.create({
     bannerOuterContainer: {
         width: Dimensions.get('window').width - (25 * 2),
-        height: 160,
+        height: 180,
         borderRadius: 16,
         paddingLeft: 0,
         margin: 13,
