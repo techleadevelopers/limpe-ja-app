@@ -87,10 +87,10 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontFamily: 'Montserrat-Regular',
     fontWeight: '800',
-    color: '#202633',
+
   },
   viewAllButton: {
     flexDirection: 'row',
