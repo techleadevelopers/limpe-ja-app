@@ -36,6 +36,10 @@ const SECONDARY_ELEVATION_ANDROID = 10;
 
 const BORDER_COLOR_LIGHT = 'rgba(255, 255, 255, 0.9)';
 const BORDER_WIDTH = 1.5;
+const COR_AZUL_CLARO_UNIFICADA = '#A0D2EB';
+const COR_PRIMARIA_ESCURA = '#2C3E50';
+const COR_CINZA_FUNDO = '#e1403eff';
+const COR_BORDA_SUAVE = '#c0b5ca92';
 
 const CategoriaCard: React.FC<CategoriaCardProps> = ({ item }) => { // Removida a prop onPress
   const router = useRouter(); // Inicializa o hook useRouter
@@ -132,7 +136,9 @@ const CategoriaCard: React.FC<CategoriaCardProps> = ({ item }) => { // Removida 
   }
 
   return (
+    
     <Animated.View style={[styles.cardContainerWrapper, { transform: [{ scale: cardScaleAnim }] }]}>
+      
       <View style={styles.shadowLayerSecondary} />
       <View style={styles.shadowLayerPrimary} />
 
@@ -159,17 +165,19 @@ const CategoriaCard: React.FC<CategoriaCardProps> = ({ item }) => { // Removida 
         </LinearGradient>
       </TouchableOpacity>
       <Text style={styles.categoriaTexto}>{item.name}</Text>
+      
     </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
   cardContainerWrapper: {
-    width: 50,
-    height: 50,
+    width: 52,
+    height: 47,
     marginRight: 12,
     borderRadius: 15,
     marginBottom: 9,
+    marginTop: 2,
     
   },
   shadowLayerPrimary: {
@@ -212,13 +220,20 @@ const styles = StyleSheet.create({
     marginBottom: -2,
   },
   categoriaTexto: {
-    fontSize: 8,
+    fontSize: 10,
     color: TEXT_COLOR,
     
-    fontWeight: '500',
+    fontWeight: '600',
     textAlign: 'center',
     marginTop: 7,
   },
+   sectionSeparator: {
+        borderBottomWidth: 1,
+        borderBottomColor: COR_BORDA_SUAVE,
+        marginVertical: 15,
+        right: 21,
+        marginHorizontal: 58,
+    },
 });
 
 export default CategoriaCard;
