@@ -43,16 +43,16 @@ interface MissionReminderCardProps {
 const MissionReminderCard: React.FC<MissionReminderCardProps> = ({ missionId, title, description, deadlineAt, reward, onGo, onDismiss }) => {
     // Implementação mock para evitar erro de componente não encontrado
     return (
-        <View style={{ margin: 15, padding: 15, backgroundColor: '#e0ffe0', borderRadius: 10 }}>
-            <Text style={{ fontWeight: 'bold', fontSize: 16,fontFamily: 'Montserrat-Regular' }}>{title}</Text>
-            {description && <Text style={{ fontSize: 14, color: '#555', fontFamily: 'Montserrat-Regular' }}>{description}</Text>}
-            <Text style={{ fontSize: 12, color: '#777',fontFamily: 'Montserrat-Regular' }}>Prazo: {new Date(deadlineAt).toLocaleDateString()}</Text>
-            <Text style={{ fontSize: 12, color: '#777',fontFamily: 'Montserrat-Regular' }}>Recompensa: {reward.value} {reward.kind}</Text>
-            <TouchableOpacity onPress={onGo} style={{ marginTop: 10, backgroundColor: '#4CAF50', padding: 8, borderRadius: 5 }}>
-                <Text style={{ color: 'white', textAlign: 'center' }}>Ir agora</Text>
+        <View style={{ margin: 15, padding: 15, backgroundColor: AppColors.successStandard + '20', borderRadius: 10 }}>
+            <Text style={{ fontWeight: 'bold', fontSize: 16,fontFamily: 'Montserrat-Regular', color: AppColors.textBody }}>{title}</Text>
+            {description && <Text style={{ fontSize: 14, color: AppColors.textAuxiliary, fontFamily: 'Montserrat-Regular' }}>{description}</Text>}
+            <Text style={{ fontSize: 12, color: AppColors.mediumGray,fontFamily: 'Montserrat-Regular' }}>Prazo: {new Date(deadlineAt).toLocaleDateString()}</Text>
+            <Text style={{ fontSize: 12, color: AppColors.mediumGray,fontFamily: 'Montserrat-Regular' }}>Recompensa: {reward.value} {reward.kind}</Text>
+            <TouchableOpacity onPress={onGo} style={{ marginTop: 10, backgroundColor: AppColors.successStandard, padding: 8, borderRadius: 5 }}>
+                <Text style={{ color: AppColors.white, textAlign: 'center' }}>Ir agora</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={onDismiss} style={{ marginTop: 5, padding: 8, borderRadius: 5, borderWidth: 1, borderColor: '#ccc' }}>
-                <Text style={{ textAlign: 'center' }}>Dispensar</Text>
+            <TouchableOpacity onPress={onDismiss} style={{ marginTop: 5, padding: 8, borderRadius: 5, borderWidth: 1, borderColor: AppColors.borderNeutral }}>
+                <Text style={{ textAlign: 'center', color: AppColors.textAuxiliary }}>Dispensar</Text>
             </TouchableOpacity>
         </View>
     );
@@ -83,16 +83,16 @@ const iconColor = AppColors.primaryInteractive;
 const successColor = AppColors.successStandard;
 
 const backgroundGradientColors: readonly [ColorValue, ColorValue, ColorValue, ColorValue] = [
-    '#E0F7FA',
-    '#6bb5e6ff',
-    '#398faca8',
-    '#CDE8F7',
+    AppColors.backgroundLight, // Mais claro
+    AppColors.primaryInteractive + '40', // Azul claro
+    AppColors.primaryInteractive + '20', // Azul mais transparente
+    AppColors.backgroundLight,
 ];
 
 const abstractBlobColors: readonly [ColorValue, ColorValue, ColorValue] = [
-    'rgba(173, 216, 230, 0.4)',
-    'rgba(65, 153, 225, 0.15)',
-    'rgba(133, 168, 231, 0.05)',
+    AppColors.primaryInteractive + '40', // Azul claro transparente
+    AppColors.primaryInteractive + '15', // Azul mais transparente
+    AppColors.primaryInteractive + '05', // Azul quase invisível
 ];
 
 
@@ -220,7 +220,7 @@ export default function SuccessScreen() {
                         visibilityTime: 4000,
                     });
                 } catch (pixErr: any) {
-                    console.error("[SuccessScreen] fetchBookingAndProviderDetails - Erro ao gerar PIX (API):", pixErr.response?.data?.message || pixErr.message, pixErr);
+                    console.error("[SuccessScreen] fetchBookingAndProviderDetails - Erro ao gerar PIX (API):", pixErr.response?.data || pixErr.message, pixErr);
                     setPixGenerationError(pixErr.response?.data?.message || "Não foi possível gerar a cobrança PIX.");
                 }
             } else {
@@ -404,7 +404,6 @@ export default function SuccessScreen() {
                 isLoading={isLoading}
                 error={error || pixGenerationError}
                 headerPrimaryColor={headerPrimaryColor}
-                onRetryPress={fetchBookingAndProviderDetails}
             />
         );
     }
@@ -551,16 +550,6 @@ const styles = StyleSheet.create({
         top: SCREEN_WIDTH * 0.1,
         opacity: 0.4,
         overflow: 'hidden',
-        ...Platform.select({
-            ios: {
-                shadowColor: AppColors.black,
-                shadowOffset: { width: 0, height: 8 },
-                shadowOpacity: 0.1,
-                shadowRadius: 12,
-            },
-            android: {
-                elevation: 8,
-            },
-        }),
+        ...AppShadows.medium, // Usando AppShadows
     },
 });
