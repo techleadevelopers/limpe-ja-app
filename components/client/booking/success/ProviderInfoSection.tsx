@@ -2,6 +2,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Image, StyleSheet, Text, View, Animated, Easing } from 'react-native';
 import { renderStars } from '../../../../utils/ui-helpers';
+import { AppColors } from '../../../../constants/appStyles'; // Importe AppColors
 
 interface ProviderInfoSectionProps {
   providerAvatarUrl?: string | null;
@@ -15,7 +16,7 @@ export default function ProviderInfoSection({
   providerRating,
 }: ProviderInfoSectionProps) {
   const starSize = 15;
-  const starColor = '#87CEEB';
+  const starColor = AppColors.primaryInteractive; // Usando AppColors
 
   // Animações de entrada
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -78,7 +79,7 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     marginRight: 10,
     borderWidth: 3,
-    borderColor: '#E0E0E0',
+    borderColor: AppColors.borderNeutral, // Usando AppColors
   },
   providerHeaderText: {
     flex: 1,
@@ -86,10 +87,10 @@ const styles = StyleSheet.create({
   providerNameText: {
     fontSize: 15,
     fontWeight: 'bold',
-    color: '#333',
+    color: AppColors.textBody, // Usando AppColors
   },
   providerRoleText: {
     fontSize: 12,
-    color: '#666',
+    color: AppColors.textAuxiliary, // Usando AppColors
   },
 });
