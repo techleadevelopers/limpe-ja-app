@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, FlatList, ActivityIndicator, StyleSheet, Dimensions } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import TimeSlotButton from './TimeSlotButton';
+import { AppColors, AppShadows } from '../../../../constants/appStyles'; // Importe AppColors e AppShadows
 
 interface TimeSlotsSectionProps {
   /** Opcional: chave i18n (ex.: "schedule_service.available_times")  */
@@ -66,7 +67,7 @@ export default function TimeSlotsSection({
       <Text style={styles.title}>{headerText}</Text>
 
       {isLoading ? (
-        <ActivityIndicator size="large" color="#2A72E7" style={{ marginVertical: 22 }} />
+        <ActivityIndicator size="large" color={AppColors.primaryDark} style={{ marginVertical: 22 }} />
       ) : displaySlotsInfo.length ? (
         <FlatList
           data={displaySlotsInfo}
@@ -96,26 +97,22 @@ const styles = StyleSheet.create({
   card: {
     marginTop: 10,
     marginHorizontal: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: AppColors.white, // Usando AppColors
     borderRadius: 18,
     paddingHorizontal: 14,
     paddingVertical: 16,
-    shadowColor: '#1E2A3B',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.10,
-    shadowRadius: 12,
-    elevation: 5,
+    ...AppShadows.medium, // Usando AppShadows
   },
   title: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1F2E45',
+    color: AppColors.textBody, // Usando AppColors
     textAlign: 'center',
     marginBottom: 12,
   },
   empty: {
     textAlign: 'center',
-    color: '#7A8DA7',
+    color: AppColors.textAuxiliary, // Usando AppColors
     fontSize: 13,
     marginVertical: 16,
     fontStyle: 'italic',
