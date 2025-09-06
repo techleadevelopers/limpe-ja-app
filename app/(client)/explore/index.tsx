@@ -833,6 +833,7 @@ const styles = StyleSheet.create({
     screen: {
         flex: 1,
         backgroundColor: COR_CINZA_FUNDO, // Cor de fundo principal
+        marginHorizontal: 15,
     },
     scrollViewArea: {
         flex: 1,
@@ -877,13 +878,13 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: 20,
+        paddingHorizontal: 10,
         marginBottom: 5,
     },
     categorySectionTitle: {
-        fontSize: 16,
+        fontSize: 14,
         fontFamily: 'Montserrat-Regular',
-        fontWeight: '800',
+        fontWeight: '600',
         color: '#4f5a71c3',
     },
     carouselContainer: {
