@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { BookingAddress } from '../../../../types/backend/bookings';
 import { Icons3D } from '../../../../constants/icons3d'; // << ícones 3D (docCheck)
+import { AppColors, AppShadows } from '../../../../constants/appStyles'; // Importe AppColors e AppShadows
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -78,10 +79,10 @@ const AddressSection: React.FC<AddressSectionProps> = ({
           { icon: 'map-outline', ph: 'Bairro', key: 'neighborhood', keyboard: 'default' },
         ].map((i) => (
           <View key={i.key} style={s.inputRow}>
-            <Ionicons name={i.icon as any} size={20} color="#8BA0B5" style={{ marginRight: 10 }} />
+            <Ionicons name={i.icon as any} size={20} color={AppColors.textAuxiliary} style={{ marginRight: 10 }} />
             <TextInput
               placeholder={i.ph}
-              placeholderTextColor="#8BA0B5"
+              placeholderTextColor={AppColors.mediumGray}
               style={s.input}
               keyboardType={i.keyboard as any}
               value={(address as any)[i.key] || ''}
@@ -91,20 +92,20 @@ const AddressSection: React.FC<AddressSectionProps> = ({
         ))}
         <View style={{ flexDirection: 'row', gap: 10 }}>
           <View style={[s.inputRow, { flex: 1 }]}>
-            <Ionicons name="business-outline" size={20} color="#8BA0B5" style={{ marginRight: 10 }} />
+            <Ionicons name="business-outline" size={20} color={AppColors.textAuxiliary} style={{ marginRight: 10 }} />
             <TextInput
               placeholder="Cidade"
-              placeholderTextColor="#8BA0B5"
+              placeholderTextColor={AppColors.mediumGray}
               style={s.input}
               value={address.city}
               onChangeText={(t) => setAddress({ ...address, city: t })}
             />
           </View>
           <View style={[s.inputRow, { width: 92 }]}>
-            <Ionicons name="bookmark-outline" size={20} color="#8BA0B5" style={{ marginRight: 10 }} />
+            <Ionicons name="bookmark-outline" size={20} color={AppColors.textAuxiliary} style={{ marginRight: 10 }} />
             <TextInput
               placeholder="UF"
-              placeholderTextColor="#8BA0B5"
+              placeholderTextColor={AppColors.mediumGray}
               style={s.input}
               value={address.state}
               onChangeText={(t) => setAddress({ ...address, state: t })}
@@ -114,10 +115,10 @@ const AddressSection: React.FC<AddressSectionProps> = ({
           </View>
         </View>
         <View style={s.inputRow}>
-          <Ionicons name="mail-outline" size={20} color="#8BA0B5" style={{ marginRight: 10 }} />
+          <Ionicons name="mail-outline" size={20} color={AppColors.textAuxiliary} style={{ marginRight: 10 }} />
           <TextInput
             placeholder="CEP"
-            placeholderTextColor="#8BA0B5"
+            placeholderTextColor={AppColors.mediumGray}
             style={s.input}
             keyboardType="numeric"
             maxLength={9}
@@ -163,7 +164,7 @@ const AddressSection: React.FC<AddressSectionProps> = ({
             ]}
           >
             <LinearGradient
-              colors={['transparent', 'rgba(255,255,255,0.55)', 'transparent']}
+              colors={['transparent', AppColors.white + '55', 'transparent']} // Usando AppColors
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={{ flex: 1 }}
@@ -176,14 +177,14 @@ const AddressSection: React.FC<AddressSectionProps> = ({
 
       {/* Endereço */}
       <View style={s.row}>
-        <Ionicons name="location-sharp" size={20} color="#2A72E7" style={{ marginRight: 8 }} />
+        <Ionicons name="location-sharp" size={20} color={AppColors.primaryInteractive} style={{ marginRight: 8 }} />
         <View style={{ flex: 1 }}>
           <Text style={s.line1}>{format1(address)}</Text>
           <Text style={s.line2}>{format2(address)}</Text>
         </View>
 
         <TouchableOpacity onPress={onEditAddress} style={s.editBtn}>
-          <Ionicons name="pencil-outline" size={15} color="#fff" />
+          <Ionicons name="pencil-outline" size={15} color={AppColors.white} />
         </TouchableOpacity>
       </View>
 
@@ -202,12 +203,13 @@ const AddressSection: React.FC<AddressSectionProps> = ({
 
 const s = StyleSheet.create({
   card: {
-    backgroundColor: '#F0F6FF',
+    backgroundColor: AppColors.backgroundLight, // Usando AppColors
     borderRadius: 18,
     marginHorizontal: 26,
     padding: 14,
     marginTop: 12,
     overflow: 'hidden',
+    ...AppShadows.small, // Adicionando sombra
   },
 
   // trilho
@@ -230,13 +232,13 @@ const s = StyleSheet.create({
     paddingHorizontal: 0,
     paddingVertical: 18,
     borderRadius: 14,
-    backgroundColor: '#EAF3FF', // azul bem leve
+    backgroundColor: AppColors.backgroundNeutral + '50', // Usando AppColors
     overflow: 'hidden',
     justifyContent: 'center',
   },
   safeMsgText: {
     fontSize: 11.2,
-    color: '#4B6B8A',
+    color: AppColors.textAuxiliary, // Usando AppColors
     fontWeight: '400', // leve/fina e confortável
     lineHeight: 16,
     left: 10, 
@@ -254,11 +256,11 @@ const s = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#CFE1FF',
+    borderTopColor: AppColors.borderNeutral, // Usando AppColors
   },
-  line1: { fontSize: 14, fontWeight: '700', color: '#223243',paddingHorizontal: 10 },
-  line2: { fontSize: 12, color: '#44596E', marginTop: 3, paddingHorizontal: 10 },
-  editBtn: { padding: 8, borderRadius: 18, backgroundColor: '#2A72E7', right: 15, },
+  line1: { fontSize: 14, fontWeight: '700', color: AppColors.textBody,paddingHorizontal: 10 }, // Usando AppColors
+  line2: { fontSize: 12, color: AppColors.textAuxiliary, marginTop: 3, paddingHorizontal: 10 }, // Usando AppColors
+  editBtn: { padding: 8, borderRadius: 18, backgroundColor: AppColors.primaryInteractive, right: 15, }, // Usando AppColors
 
   // brilho do card
   shine: {
@@ -277,28 +279,28 @@ const s = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 12,
     height: 96,
-    backgroundColor: '#E9F0FA',
+    backgroundColor: AppColors.backgroundNeutral, // Usando AppColors
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
   },
-  skeletonIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#D8E4F2', marginRight: 12 },
-  skeletonLine: { height: 12, width: '70%', backgroundColor: '#D8E4F2', borderRadius: 6 },
+  skeletonIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: AppColors.borderNeutral, marginRight: 12 }, // Usando AppColors
+  skeletonLine: { height: 12, width: '70%', backgroundColor: AppColors.borderNeutral, borderRadius: 6 }, // Usando AppColors
 
-  inputCard: { backgroundColor: '#FFFFFF', padding: 16, marginHorizontal: 16, borderRadius: 18, marginTop: 10, elevation: 4 },
-  inputTitle: { fontSize: 16, fontWeight: '700', color: '#223243', textAlign: 'center', marginBottom: 14 },
+  inputCard: { backgroundColor: AppColors.white, padding: 16, marginHorizontal: 16, borderRadius: 18, marginTop: 10, ...AppShadows.small }, // Usando AppColors e AppShadows
+  inputTitle: { fontSize: 16, fontWeight: '700', color: AppColors.textBody, textAlign: 'center', marginBottom: 14 }, // Usando AppColors
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F8FD',
+    backgroundColor: AppColors.backgroundLight, // Usando AppColors
     borderRadius: 12,
     paddingHorizontal: 14,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E5EEF9',
+    borderColor: AppColors.borderNeutral, // Usando AppColors
     height: 48,
   },
-  input: { flex: 1, fontSize: 15, color: '#223243' },
+  input: { flex: 1, fontSize: 15, color: AppColors.textBody }, // Usando AppColors
 });
 
 export default AddressSection;
