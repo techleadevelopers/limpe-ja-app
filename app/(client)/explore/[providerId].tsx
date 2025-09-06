@@ -40,6 +40,7 @@ import { useAuth } from '../../../hooks/useAuth';
 import { checkActiveChatBooking } from '../../../services/bookingService';
 import { getProviderDetails, getProviderMetrics, getProviderOffers } from '../../../services/providerService';
 import Toast from '../../../components/Toast';
+import { AppColors } from '../../../constants/appStyles'; // Importe AppColors
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
@@ -83,18 +84,18 @@ const recommendationStyles = StyleSheet.create({
     height: 28,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: AppColors.borderNeutral, // Usando AppColors
   },
   moreBadge: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#111827',
+    backgroundColor: AppColors.textBody, // Usando AppColors
     alignItems: 'center',
     justifyContent: 'center',
   },
   moreBadgeTxt: {
-    color: '#FFF',
+    color: AppColors.white, // Usando AppColors
     fontSize: 10,
     fontWeight: '700',
     fontFamily: 'RedHatMono',
@@ -370,7 +371,7 @@ export default function ProviderDetailsScreen() {
     // --- Lógica de renderização condicional deve vir DEPOIS das declarações de Hooks ---
     if (isLoading) {
         return (
-            <View style={[styles.centeredFeedback, { backgroundColor: 'white' }]}>
+            <View style={[styles.centeredFeedback, { backgroundColor: AppColors.white }]}>
                 <Stack.Screen options={{ title: t("common.loading"), headerShown: false }} />
                 <ActivityIndicator size="large" color={styles.errorBackButton.backgroundColor} />
             </View>
@@ -379,7 +380,7 @@ export default function ProviderDetailsScreen() {
 
     if (error || !provider) {
         return (
-            <View style={[styles.centeredFeedback, { backgroundColor: 'white' }]}>
+            <View style={[styles.centeredFeedback, { backgroundColor: AppColors.white }]}>
                 <Stack.Screen options={{ title: t("common.error"), headerShown: false }} />
                 <Ionicons name="warning-outline" size={48} color={styles.errorText.color} />
                 <Text style={styles.errorText}>{error || t("provider_details.provider_not_found")}</Text>
@@ -419,15 +420,15 @@ export default function ProviderDetailsScreen() {
                     alignItems: "center",
                     paddingVertical: 14,
                     paddingHorizontal: 16,
-                    backgroundColor: "#fff",
+                    backgroundColor: AppColors.white,
                     borderBottomWidth: 1,
-                    borderBottomColor: "#eee",
+                    borderBottomColor: AppColors.backgroundNeutral,
                     paddingTop: Platform.OS === 'ios' ? insets.top + 14 : 14, // Ajusta padding superior para iOS
                 }}
             >
                 <TouchableOpacity onPress={() => router.back()}>
                     {/* Seta de voltar com tamanho diminuído */}
-                    <Ionicons name="arrow-back" size={20} color="#333" />
+                    <Ionicons name="arrow-back" size={20} color={AppColors.textBody} />
                 </TouchableOpacity>
                 <Text
                     style={{
@@ -436,7 +437,7 @@ export default function ProviderDetailsScreen() {
                         fontSize: 15, // Tamanho da fonte alterado
                         fontFamily: 'Montserrat-Regular', // Fonte alterada
                         fontWeight: '800', // Peso da fonte alterado
-                        color: "#333",
+                        color: AppColors.textBody,
                         marginRight: 24, // garante que o título fique centralizado
                     }}
                 >
@@ -460,7 +461,7 @@ export default function ProviderDetailsScreen() {
                         style={styles.favoriteButton}
                         onPress={() => Alert.alert(t("common.save"), t("provider_details.save_favorite"))}
                     >
-                        <Ionicons name="heart" size={18} color="#007AFF" />
+                        <Ionicons name="heart" size={18} color={AppColors.primaryInteractive} />
                     </TouchableOpacity>
                 </Animated.View>
 
@@ -537,7 +538,7 @@ export default function ProviderDetailsScreen() {
                                                 style={styles.copyCouponButton}
                                                 onPress={() => handleCopyCouponCode(offer.couponCode || '')}
                                             >
-                                                <Ionicons name="copy-outline" size={16} color="#FFF" />
+                                                <Ionicons name="copy-outline" size={16} color={AppColors.white} />
                                                 <Text style={styles.copyCouponButtonText}>{t('offers.copy_code')}</Text>
                                             </TouchableOpacity>
                                         </View>
