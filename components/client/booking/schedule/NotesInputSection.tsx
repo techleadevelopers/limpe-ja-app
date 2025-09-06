@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TextInput, StyleSheet, Animated } from 'react-native';
+import { AppColors } from '../../../../constants/appStyles'; // Importe AppColors
 
 interface NotesInputSectionProps {
   notes: string;
@@ -19,7 +20,7 @@ const NotesInputSection: React.FC<NotesInputSectionProps> = ({ notes, setNotes, 
         onChangeText={setNotes}
         multiline
         numberOfLines={4}
-        placeholderTextColor="#999"
+        placeholderTextColor={AppColors.mediumGray} // Usando AppColors
       />
     </Animated.View>
   );
@@ -34,19 +35,19 @@ const styles = StyleSheet.create({
   notesTitle: {
     fontSize: 15,
     fontWeight: 'bold',
-    color: '#333',
+    color: AppColors.textBody, // Usando AppColors
     marginBottom: 10,
   },
   notesInput: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: AppColors.white, // Usando AppColors
     padding: 15,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: AppColors.borderNeutral, // Usando AppColors
     minHeight: 100,
     textAlignVertical: 'top',
     fontSize: 14,
-    color: '#333',
+    color: AppColors.textBody, // Usando AppColors
   },
 });
 
