@@ -2,6 +2,7 @@
 import { View, Text, TextInput, StyleSheet, Platform } from 'react-native';
 import React from 'react';
 import { PricingType } from '../../../../types/backend/services';
+import { AppColors, AppShadows } from '../../../../constants/appStyles'; // Importe AppColors e AppShadows
 
 interface ServiceDetailsInputProps {
   pricingType: PricingType;
@@ -35,7 +36,7 @@ export default function ServiceDetailsInput({
             placeholder="Ex: 120"
             value={durationInMinutes ? String(durationInMinutes) : ''}
             onChangeText={(text) => setDurationInMinutes(Number(text) || null)}
-            placeholderTextColor="#8BA0B5"
+            placeholderTextColor={AppColors.mediumGray} // Usando AppColors
           />
           <View style={s.rowRight}>
             <Text style={s.info}>Preço/hora: R$ {pricePerUnit.toFixed(2).replace('.', ',')}</Text>
@@ -53,7 +54,7 @@ export default function ServiceDetailsInput({
             placeholder="Ex: 50"
             value={squareMeters ? String(squareMeters) : ''}
             onChangeText={(text) => setSquareMeters(Number(text) || null)}
-            placeholderTextColor="#8BA0B5"
+            placeholderTextColor={AppColors.mediumGray} // Usando AppColors
           />
           <View style={s.rowRight}>
             <Text style={s.info}>Preço/m²: R$ {pricePerUnit.toFixed(2).replace('.', ',')}</Text>
@@ -67,37 +68,33 @@ export default function ServiceDetailsInput({
 
 const s = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: AppColors.white, // Usando AppColors
     borderRadius: 18,
     marginHorizontal: 16,
     marginTop: 16,
     padding: 16,
-    shadowColor: '#1E2A3B',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 6,
+    ...AppShadows.medium, // Usando AppShadows
   },
   title: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1F2E45',
+    color: AppColors.textBody, // Usando AppColors
     textAlign: 'center',
     marginBottom: 12,
     fontFamily: Platform.select({ ios: 'System', android: 'sans-serif' }),
   },
-  label: { fontSize: 13, color: '#44596E', marginBottom: 6 },
+  label: { fontSize: 13, color: AppColors.textAuxiliary, marginBottom: 6 }, // Usando AppColors
   input: {
     height: 44,
-    borderColor: '#E3ECF8',
+    borderColor: AppColors.borderNeutral, // Usando AppColors
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 14,
     marginBottom: 10,
     fontSize: 15,
-    backgroundColor: '#F8FBFF',
+    backgroundColor: AppColors.backgroundLight, // Usando AppColors
   },
   rowRight: { flexDirection: 'row', justifyContent: 'space-between' },
-  info: { fontSize: 12, color: '#667A90' },
-  price: { fontSize: 15, fontWeight: '700', color: '#2A72E7' },
+  info: { fontSize: 12, color: AppColors.textAuxiliary }, // Usando AppColors
+  price: { fontSize: 15, fontWeight: '700', color: AppColors.primaryInteractive }, // Usando AppColors
 });
