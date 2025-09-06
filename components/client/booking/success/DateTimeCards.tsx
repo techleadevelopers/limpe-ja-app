@@ -3,6 +3,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ColorValue, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { AppColors, AppShadows } from '../../../../constants/appStyles'; // Importe AppColors e AppShadows
 
 interface DateTimeCardsProps {
   formattedBookingDate: string;
@@ -16,9 +17,9 @@ export default function DateTimeCards({
   iconColor,
 }: DateTimeCardsProps) {
   const gradientColors = [
-    'rgba(173, 216, 230, 0.25)',
-    'rgba(65, 153, 225, 0.29)',
-    'rgba(133, 167, 231, 0.32)',
+    AppColors.primaryInteractive + '25', // Usando AppColors
+    AppColors.primaryInteractive + '29', // Usando AppColors
+    AppColors.primaryInteractive + '32', // Usando AppColors
   ] as const;
 
   // Animações de entrada para cada cartão
@@ -98,7 +99,7 @@ export default function DateTimeCards({
           end={{ x: 1, y: 1 }}
           style={styles.gradientBackground}
         />
-        <Ionicons name="calendar-outline" size={20} color={iconColor} style={styles.contentOverlay} />
+        <Ionicons name="calendar-outline" size={20} color={AppColors.primaryInteractive} style={styles.contentOverlay} />
         <Text style={[styles.dateTimeLabel, styles.contentOverlay]}>Data</Text>
         <Text style={[styles.dateTimeValue, styles.contentOverlay]}>{formattedBookingDate}</Text>
       </Animated.View>
@@ -116,7 +117,7 @@ export default function DateTimeCards({
           end={{ x: 1, y: 1 }}
           style={styles.gradientBackground}
         />
-        <Ionicons name="time-outline" size={20} color={iconColor} style={styles.contentOverlay} />
+        <Ionicons name="time-outline" size={20} color={AppColors.primaryInteractive} style={styles.contentOverlay} />
         <Text style={[styles.dateTimeLabel, styles.contentOverlay]}>Hora</Text>
         <Text style={[styles.dateTimeValue, styles.contentOverlay]}>{formattedBookingTime}</Text>
       </Animated.View>
@@ -132,7 +133,7 @@ const styles = StyleSheet.create({
     
   },
   dateTimeCard: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: AppColors.backgroundLight, // Usando AppColors
     borderRadius: 12,
     paddingVertical: 13,
     paddingHorizontal: 15,
@@ -140,11 +141,7 @@ const styles = StyleSheet.create({
     width: '45%',
     overflow: 'hidden',
     position: 'relative',
-     shadowColor: 'rgb(33, 34, 34)',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 5,
-        elevation: 8,
+    ...AppShadows.medium, // Usando AppShadows
   },
   gradientBackground: {
     ...StyleSheet.absoluteFillObject,
@@ -155,13 +152,13 @@ const styles = StyleSheet.create({
   },
   dateTimeLabel: {
     fontSize: 12,
-    color: '#666',
+    color: AppColors.textAuxiliary, // Usando AppColors
     marginTop: 8,
   },
   dateTimeValue: {
     fontSize: 13,
     fontWeight: 'bold',
-    color: '#333',
+    color: AppColors.textBody, // Usando AppColors
     marginTop: 5,
     textAlign: 'center',
   },
