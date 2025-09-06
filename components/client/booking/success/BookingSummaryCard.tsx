@@ -16,6 +16,7 @@ import SuccessPixInfo from './SuccessPixInfo';
 import { BookingDetails } from '../../../../types/backend/bookings';
 import { PixChargeResponseDto } from '../../../../types/backend/payments';
 import { formatCurrency, formatDate } from '../../../../utils/helpers';
+import { AppColors, AppShadows } from '../../../../constants/appStyles'; // Importe AppColors e AppShadows
 
 interface BookingSummaryCardProps {
   booking: BookingDetails;
@@ -101,7 +102,7 @@ export default function BookingSummaryCard({
     >
       <View style={styles.mainCardContainer}>
         <LinearGradient
-          colors={['rgba(255, 255, 255, 0.95)', 'rgba(240, 255, 255, 0.85)']}
+          colors={[AppColors.white + '95', AppColors.backgroundLight + '85']} // Usando AppColors
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFillObject}
@@ -168,17 +169,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginTop: 20,
     marginBottom: 25,
-    ...Platform.select({
-      ios: {
-        shadowColor: 'rgba(0,0,0,0.1)',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 5,
-      },
-    }),
+    ...AppShadows.medium, // Usando AppShadows
   },
   cardContentNew: {
     padding: 25,
@@ -193,13 +184,13 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: AppColors.backgroundNeutral, // Usando AppColors
   },
   dashedLine: {
     flex: 1,
     height: 1,
     borderStyle: 'dashed',
-    borderColor: '#E0E0E0',
+    borderColor: AppColors.backgroundNeutral, // Usando AppColors
     borderWidth: 1,
     marginHorizontal: -5,
   },
