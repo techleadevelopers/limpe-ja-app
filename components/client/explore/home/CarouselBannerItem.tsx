@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react'; // Importado useState
-import { View, Text, StyleSheet, TouchableOpacity, Animated, ImageBackground, Dimensions, Easing } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, ImageBackground, Dimensions, Easing, Platform } from 'react-native'; // Importado Platform
 import { LinearGradient } from 'expo-linear-gradient';
 
 // Importa todas as imagens do seu diretório assets.
@@ -35,29 +35,38 @@ const CarouselBannerItem: React.FC<CarouselBannerItemProps> = ({
 
     // Animação para o botão
     const buttonScaleAnim = useRef(new Animated.Value(1)).current;
-    // Animação para o efeito de float/parallax no fundo
+    // Animação para o efeito de tremor/vibração no fundo
     const backgroundFloatAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
-        // Inicia a animação de flutuação do fundo (mantida como estava)
+        // Inicia a animação de tremor/vibração do fundo com pausas
         Animated.loop(
             Animated.sequence([
+                // Fase de Vibração (movimentos rápidos e sutis)
                 Animated.timing(backgroundFloatAnim, {
-                    toValue: 1,
-                    duration: 8000, // Duração mais longa para um movimento sutil
-                    easing: Easing.inOut(Easing.ease),
+                    toValue: 0.5, // Move ligeiramente para um lado
+                    duration: 50, // Movimento rápido
+                    easing: Easing.linear,
                     useNativeDriver: true,
                 }),
                 Animated.timing(backgroundFloatAnim, {
-                    toValue: 0,
-                    duration: 8000,
-                    easing: Easing.inOut(Easing.ease),
+                    toValue: -0.5, // Move ligeiramente para o outro lado
+                    duration: 50, // Movimento rápido
+                    easing: Easing.linear,
                     useNativeDriver: true,
                 }),
+                Animated.timing(backgroundFloatAnim, {
+                    toValue: 0, // Retorna ao centro
+                    duration: 50, // Movimento rápido
+                    easing: Easing.linear,
+                    useNativeDriver: true,
+                }),
+                // Fase de Pausa (banner parado)
+                Animated.delay(4000), // Pausa de 4 segundos
             ])
         ).start();
 
-        // Animação do carrossel de imagens
+        // Animação do carrossel de imagens (mantida inalterada)
         const interval = setInterval(() => {
             // Inicia a animação de fade-in para a próxima imagem
             Animated.timing(fadeAnim, {
@@ -82,13 +91,22 @@ const CarouselBannerItem: React.FC<CarouselBannerItemProps> = ({
     const onPressInButton = () => Animated.spring(buttonScaleAnim, { toValue: 0.95, useNativeDriver: true, friction: 7 }).start();
     const onPressOutButton = () => Animated.spring(buttonScaleAnim, { toValue: 1, useNativeDriver: true, friction: 7 }).start();
 
+    // Estilo animado para criar o efeito de tremor/vibração
     const animatedBackgroundStyle = {
-        transform: [{
-            translateY: backgroundFloatAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [-5, 5] // Movimento sutil para cima e para baixo
-            })
-        }]
+        transform: [
+            {
+                translateX: backgroundFloatAnim.interpolate({
+                    inputRange: [-0.5, 0, 0.5],
+                    outputRange: [-0.5, 0, 0.5] // Muito sutil: meio pixel horizontal
+                })
+            },
+            {
+                translateY: backgroundFloatAnim.interpolate({
+                    inputRange: [-0.5, 0, 0.5],
+                    outputRange: [-0.5, 0, 0.5] // Muito sutil: meio pixel vertical
+                })
+            }
+        ]
     };
 
     // Calcula o índice da próxima imagem que irá aparecer
@@ -164,17 +182,29 @@ const CarouselBannerItem: React.FC<CarouselBannerItemProps> = ({
 
 const styles = StyleSheet.create({
     bannerOuterContainer: {
-        width: Dimensions.get('window').width - (25 * 2),
+        width: Dimensions.get('window').width - (30 * 2),
         height: 180,
         borderRadius: 16,
         paddingLeft: 0,
-        margin: 13,
+        margin: 20,
         paddingHorizontal: 0,
         paddingTop: 46,
         paddingBottom: 16,
         overflow: 'hidden',
         marginBottom: -11,
         marginTop: -38,
+        // Sombras avançadas e modernas
+        ...Platform.select({
+            ios: {
+                shadowColor: '#000', // Cor da sombra (preto)
+                shadowOffset: { width: 0, height: 10 }, // Deslocamento da sombra (10px para baixo)
+                shadowOpacity: 0.12, // Opacidade da sombra (12% visível, para ser suave)
+                shadowRadius: 15, // Raio de desfoque da sombra (15px para um efeito bem difundido)
+            },
+            android: {
+                elevation: 12, // Elevação para Android (simula a profundidade da sombra)
+            },
+        }),
     },
     backgroundImageWrapper: {
         flex: 1,
