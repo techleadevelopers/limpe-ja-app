@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, Platform, View, Animated, Easing } from 'react-native';
+import { AppColors, AppShadows } from '../../../../constants/appStyles'; // Importe AppColors e AppShadows
 
 interface ConfirmBookingButtonProps {
   isButtonDisabled: boolean;
@@ -19,6 +20,7 @@ const ConfirmBookingButton: React.FC<ConfirmBookingButtonProps> = ({
   hasSelectedServicePrice,
 }) => {
   const pulse = useRef(new Animated.Value(1)).current;
+  const buttonScaleAnim = useRef(new Animated.Value(1)).current; // Nova animação para o scale no press
 
   useEffect(() => {
     if (!isButtonDisabled) {
@@ -33,17 +35,35 @@ const ConfirmBookingButton: React.FC<ConfirmBookingButtonProps> = ({
     }
   }, [isButtonDisabled, pulse]);
 
+  const onPressInButton = () => {
+    Animated.spring(buttonScaleAnim, {
+      toValue: 0.98, // Efeito de pressionar
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const onPressOutButton = () => {
+    Animated.spring(buttonScaleAnim, {
+      toValue: 1, // Volta ao estado normal
+      friction: 3,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
+
   return (
     <View style={s.wrap}>
       <Animated.View style={{ transform: [{ scale: pulse }] }}>
         <TouchableOpacity
-          style={[s.btn, isButtonDisabled && s.btnDisabled]}
+          style={[s.btn, isButtonDisabled && s.btnDisabled, { transform: [{ scale: buttonScaleAnim }] }]}
           onPress={onConfirmBooking}
           disabled={isButtonDisabled}
           activeOpacity={0.9}
+          onPressIn={onPressInButton} // Adicionado onPressIn
+          onPressOut={onPressOutButton} // Adicionado onPressOut
         >
           {isBooking ? (
-            <ActivityIndicator color="#FFFFFF" />
+            <ActivityIndicator color={AppColors.white} />
           ) : (
             <Text style={s.text}>
               {selectedTime && hasSelectedServicePrice ? `Agendar (${confirmButtonText})` : 'Selecione Data, Hora e Endereço'}
@@ -59,23 +79,19 @@ const s = StyleSheet.create({
   wrap: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     paddingHorizontal: 20, paddingTop: 18, paddingBottom: Platform.OS === 'ios' ? 24 : 28,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1, borderTopColor: '#E7EEF9',
-    shadowColor: '#000', shadowOffset: { width: 0, height: -3 }, shadowOpacity: 0.08, shadowRadius: 6, elevation: 8,
+    backgroundColor: AppColors.white, // Usando AppColors
+    borderTopWidth: 1, borderTopColor: AppColors.borderNeutral, // Usando AppColors
+    ...AppShadows.medium, // Usando AppShadows
   },
   btn: {
-    backgroundColor: '#2A72E7',
+    backgroundColor: AppColors.primaryInteractive, // Usando AppColors
     paddingVertical: 14,
     borderRadius: 16,
     alignItems: 'center',
-    shadowColor: '#2A72E7',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 8,
+    ...AppShadows.medium, // Usando AppShadows
   },
-  btnDisabled: { backgroundColor: '#A9C7F6', shadowOpacity: 0 },
-  text: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  btnDisabled: { backgroundColor: AppColors.primaryInteractive + '50', ...AppShadows.small }, // Usando AppColors e AppShadows
+  text: { color: AppColors.white, fontSize: 15, fontWeight: '700' }, // Usando AppColors
 });
 
 export default ConfirmBookingButton;
