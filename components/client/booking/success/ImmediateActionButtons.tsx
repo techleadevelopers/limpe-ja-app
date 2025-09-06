@@ -2,6 +2,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { AppColors, AppShadows } from '../../../../constants/appStyles'; // Importe AppColors e AppShadows
 
 interface ImmediateActionButtonsProps {
   onAddToCalendar: () => void;
@@ -78,7 +79,7 @@ export default function ImmediateActionButtons({
         onPressIn={() => onPressInButton(button1ScaleAnim)}
         onPressOut={() => onPressOutButton(button1ScaleAnim)}
       >
-        <Ionicons name="calendar-outline" size={20} color={headerPrimaryColor} />
+        <Ionicons name="calendar-outline" size={20} color={AppColors.primaryInteractive} />
         <Text style={styles.actionButtonImmediateText}>Adicionar ao Calendário</Text>
       </TouchableOpacity>
 
@@ -88,7 +89,7 @@ export default function ImmediateActionButtons({
         onPressIn={() => onPressInButton(button2ScaleAnim)}
         onPressOut={() => onPressOutButton(button2ScaleAnim)}
       >
-        <Ionicons name="chatbubbles-outline" size={20} color={headerPrimaryColor} />
+        <Ionicons name="chatbubbles-outline" size={20} color={AppColors.primaryInteractive} />
         <Text style={styles.actionButtonImmediateText}>Contatar Prestador</Text>
       </TouchableOpacity>
     </Animated.View>
@@ -109,26 +110,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#E8F5E9',
+    backgroundColor: AppColors.backgroundNeutral + '50', // Usando AppColors
     borderRadius: 10,
     paddingVertical: 4,
     marginHorizontal: 8,
-    ...Platform.select({
-      ios: {
-        shadowColor: 'rgba(0,0,0,0.1)',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 3,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
+    ...AppShadows.small, // Usando AppShadows
   },
   actionButtonImmediateText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#4A90E2',
+    color: AppColors.primaryInteractive, // Usando AppColors
     marginLeft: 5,
   },
 });
