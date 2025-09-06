@@ -2,6 +2,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { AppColors, AppShadows } from '../../../../constants/appStyles'; // Importe AppColors e AppShadows
 
 interface MainActionButtonsProps {
   onGoToBookings: () => void;
@@ -73,12 +74,12 @@ export default function MainActionButtons({
       ]}
     >
       <TouchableOpacity
-        style={[styles.downloadButton, { backgroundColor: headerPrimaryColor, transform: [{ scale: button1ScaleAnim }] }]}
+        style={[styles.downloadButton, { backgroundColor: AppColors.primaryInteractive, transform: [{ scale: button1ScaleAnim }] }]}
         onPress={onGoToBookings}
         onPressIn={() => onPressInButton(button1ScaleAnim)}
         onPressOut={() => onPressOutButton(button1ScaleAnim)}
       >
-        <Ionicons name="list-outline" size={18} color="#FFFFFF" style={{ marginRight: 10 }} />
+        <Ionicons name="list-outline" size={18} color={AppColors.white} style={{ marginRight: 10 }} />
         <Text style={styles.downloadButtonText}>Ver Meus Agendamentos</Text>
       </TouchableOpacity>
 
@@ -88,8 +89,8 @@ export default function MainActionButtons({
         onPressIn={() => onPressInButton(button2ScaleAnim)}
         onPressOut={() => onPressOutButton(button2ScaleAnim)}
       >
-        <Ionicons name="home-outline" size={18} color={headerPrimaryColor} style={{ marginRight: 10 }} />
-        <Text style={[styles.downloadButtonText, { color: headerPrimaryColor }]}>Voltar para o Início</Text>
+        <Ionicons name="home-outline" size={18} color={AppColors.primaryInteractive} style={{ marginRight: 10 }} />
+        <Text style={[styles.downloadButtonText, { color: AppColors.primaryInteractive }]}>Voltar para o Início</Text>
       </TouchableOpacity>
     </Animated.View>
   );
@@ -113,35 +114,16 @@ const styles = StyleSheet.create({
     width: '90%',
     marginBottom: 20,
     marginTop :-1,
-    ...Platform.select({
-      ios: {
-        shadowColor: 'rgba(0,0,0,0.2)',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 6,
-      },
-    }),
+    ...AppShadows.medium, // Usando AppShadows
   },
   downloadButtonText: {
-    color: '#FFFFFF',
+    color: AppColors.white, // Usando AppColors
     fontSize: 13,
     fontWeight: '600',
   },
   secondaryDownloadButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: AppColors.white, // Usando AppColors
     bottom: 12,
-    ...Platform.select({
-      ios: {
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.1,
-        shadowRadius: 0,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
+    ...AppShadows.small, // Usando AppShadows
   },
 });
