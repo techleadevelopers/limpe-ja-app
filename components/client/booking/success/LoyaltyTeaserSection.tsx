@@ -3,16 +3,17 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { AppColors, AppShadows } from '../../../../constants/appStyles'; // Importe AppColors e AppShadows
 
 interface LoyaltyTeaserSectionProps {
     headerPrimaryColor: string;
 }
 
 export default function LoyaltyTeaserSection({ headerPrimaryColor }: LoyaltyTeaserSectionProps) {
-    const gradientColors: [string, string] = ['#F0F8FF', '#E0F2FF'];
-    const trophyColor = '#FFD700';
-    const darkBlueButtonColor = '#2A72E7';
-    const buttonGradientColors: [string, string] = ['#4A90E2', darkBlueButtonColor];
+    const gradientColors: [string, string] = [AppColors.backgroundLight, AppColors.backgroundNeutral + '50']; // Usando AppColors
+    const trophyColor = AppColors.warningYellow; // Usando AppColors
+    const darkBlueButtonColor = AppColors.primaryDark; // Usando AppColors
+    const buttonGradientColors: [string, string] = [AppColors.primaryInteractive, darkBlueButtonColor]; // Usando AppColors
 
     // Animações de entrada
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -108,11 +109,7 @@ const styles = StyleSheet.create({
         marginHorizontal: 15,
         marginTop: 20,
         alignItems: 'center',
-        shadowColor: 'rgba(0, 50, 100, 0.2)',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.12,
-        shadowRadius: 15,
-        elevation: 8,
+        ...AppShadows.medium, // Usando AppShadows
         overflow: 'hidden',
         borderWidth: 0,
     },
@@ -122,13 +119,13 @@ const styles = StyleSheet.create({
     loyaltyTeaserTitle: {
         fontSize: 18,
         fontWeight: '800',
-        color: '#222',
+        color: AppColors.textBody, // Usando AppColors
         marginBottom: 8,
         textAlign: 'center',
     },
     loyaltyTeaserText: {
         fontSize: 13,
-        color: '#444',
+        color: AppColors.textAuxiliary, // Usando AppColors
         textAlign: 'center',
         lineHeight: 18,
         marginBottom: 15,
@@ -146,7 +143,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     learnMoreButtonText: {
-        color: '#FFFFFF',
+        color: AppColors.white, // Usando AppColors
         fontSize: 14,
         fontWeight: '700',
         letterSpacing: 0.5,
