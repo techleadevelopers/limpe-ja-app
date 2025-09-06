@@ -22,6 +22,7 @@ import { cancelBooking, getBookingDetails } from '../../../services/bookingServi
 // >>> IMPORTAR BookingDetails e BookingStatus de forma centralizada <<<
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 import { PanicBanner } from '../../../components/safety/PanicBanner'; // Importar PanicBanner
+import { AppColors, AppShadows } from '../../../constants/appStyles'; // Importe AppColors e AppShadows
 
 // --- ATENÇÃO: A INTERFACE 'Booking' LOCAL FOI REMOVIDA DESTE ARQUIVO ---
 // Era a causa do conflito de tipagem. Agora, BookingDetails é a única fonte de verdade.
@@ -201,25 +202,25 @@ export default function BookingDetailsScreen() {
     const getStatusStyle = (status: BookingStatus) => {
         switch (status) {
             case BookingStatus.CONFIRMED:
-                return { color: '#28A745', icon: 'checkmark-circle-outline' as const, badgeBg: '#D4EDDA' }; // Success Green
+                return { color: AppColors.successStandard, icon: 'checkmark-circle-outline' as const, badgeBg: AppColors.successStandard + '20' }; // Success Green
             case BookingStatus.PENDING:
-                return { color: '#FFC107', icon: 'time-outline' as const, badgeBg: '#FFF3CD' }; // Warning Yellow
+                return { color: AppColors.warningYellow, icon: 'time-outline' as const, badgeBg: AppColors.warningYellow + '20' }; // Warning Yellow
             case BookingStatus.PENDING_PROVIDER_CONFIRMATION: // Agora reconhecido
-                return { color: '#FFC107', icon: 'hourglass-outline' as const, badgeBg: '#FFF3CD' }; // Warning Yellow
+                return { color: AppColors.warningYellow, icon: 'hourglass-outline' as const, badgeBg: AppColors.warningYellow + '20' }; // Warning Yellow
             case BookingStatus.IN_PROGRESS:
-                return { color: '#007BFF', icon: 'sync-circle-outline' as const, badgeBg: '#CCE5FF' }; // Primary Blue
+                return { color: AppColors.primaryInteractive, icon: 'sync-circle-outline' as const, badgeBg: AppColors.primaryInteractive + '20' }; // Primary Blue
             case BookingStatus.COMPLETED:
-                return { color: '#6C757D', icon: 'flag-outline' as const, badgeBg: '#E2E3E5' }; // Muted Grey
+                return { color: AppColors.textAuxiliary, icon: 'flag-outline' as const, badgeBg: AppColors.textAuxiliary + '20' }; // Muted Grey
             case BookingStatus.CANCELLED: // Corrigido para CANCELLED (dois L)
-                return { color: '#DC3545', icon: 'close-circle-outline' as const, badgeBg: '#F8D7DA' }; // Danger Red
+                return { color: AppColors.errorRed, icon: 'close-circle-outline' as const, badgeBg: AppColors.errorRed + '20' }; // Danger Red
             case BookingStatus.REJECTED:
-                return { color: '#6C757D', icon: 'alert-circle-outline' as const, badgeBg: '#E2E3E5' }; // Muted Grey
+                return { color: AppColors.textAuxiliary, icon: 'alert-circle-outline' as const, badgeBg: AppColors.textAuxiliary + '20' }; // Muted Grey
             case BookingStatus.RESCHEDULED:
                 return { color: '#6F42C1', icon: 'sync-outline' as const, badgeBg: '#EAE6F3' }; // Purple
             case BookingStatus.NO_SHOW:
-                return { color: '#343A40', icon: 'person-remove-outline' as const, badgeBg: '#D6D8D9' }; // Dark Grey
+                return { color: AppColors.textBody, icon: 'person-remove-outline' as const, badgeBg: AppColors.textBody + '20' }; // Dark Grey
             default: // Caso para qualquer status não mapeado explicitamente
-                return { color: '#888', icon: 'help-circle-outline' as const, badgeBg: '#ECEFF1' };
+                return { color: AppColors.mediumGray, icon: 'help-circle-outline' as const, badgeBg: AppColors.backgroundNeutral };
         }
     };
 
@@ -229,7 +230,7 @@ export default function BookingDetailsScreen() {
         return (
             <View style={styles.centered}>
                 <Stack.Screen options={{ title: "Carregando..." }} />
-                <ActivityIndicator size="large" color="#007BFF" />
+                <ActivityIndicator size="large" color={AppColors.primaryInteractive} />
                 <Text style={styles.loadingText}>Carregando detalhes do agendamento...</Text>
             </View>
         );
@@ -240,7 +241,7 @@ export default function BookingDetailsScreen() {
         return (
             <View style={styles.centered}>
                 <Stack.Screen options={{ title: "Erro" }} />
-                <Ionicons name="alert-circle-outline" size={48} color="#DC3545" />
+                <Ionicons name="alert-circle-outline" size={48} color={AppColors.errorRed} />
                 <Text style={styles.errorText}>{error || `Agendamento "${bookingId}" não encontrado.`}</Text>
                 <TouchableOpacity onPress={() => router.back()} style={styles.actionButton}>
                     <Text style={styles.actionButtonText}>Voltar</Text>
@@ -289,7 +290,7 @@ export default function BookingDetailsScreen() {
                 <Text style={styles.sectionTitle}>Detalhes do Agendamento</Text>
                 
                 <View style={styles.detailRow}>
-                    <Ionicons name="calendar-outline" size={20} color="#6C757D" style={styles.icon} />
+                    <Ionicons name="calendar-outline" size={20} color={AppColors.textAuxiliary} style={styles.icon} />
                     <Text style={styles.detailLabel}>Data e Hora:</Text>
                     <Text style={styles.detailValue}>
                         {/* CORREÇÃO: Combinar scheduledDate e scheduledTime para criar um objeto Date */}
@@ -298,7 +299,7 @@ export default function BookingDetailsScreen() {
                 </View>
 
                 <View style={styles.detailRow}>
-                    <Ionicons name="location-outline" size={20} color="#6C757D" style={styles.icon} />
+                    <Ionicons name="location-outline" size={20} color={AppColors.textAuxiliary} style={styles.icon} />
                     <Text style={styles.detailLabel}>Endereço:</Text>
                     <Text style={styles.detailValueAddress}>
                         {`${booking.address.street}, ${booking.address.number}`}
@@ -309,14 +310,14 @@ export default function BookingDetailsScreen() {
                 </View>
 
                 <View style={styles.detailRow}>
-                    <Ionicons name="cash-outline" size={20} color="#6C757D" style={styles.icon} />
+                    <Ionicons name="cash-outline" size={20} color={AppColors.textAuxiliary} style={styles.icon} />
                     <Text style={styles.detailLabel}>Valor:</Text>
                     <Text style={[styles.detailValue, styles.priceText]}>{`R$ ${booking.totalPrice.toFixed(2).replace('.', ',')}`}</Text>
                 </View>
 
                 {booking.notes && (
                     <View style={styles.detailRow}>
-                        <Ionicons name="document-text-outline" size={20} color="#6C757D" style={styles.icon} />
+                        <Ionicons name="document-text-outline" size={20} color={AppColors.textAuxiliary} style={styles.icon} />
                         <Text style={styles.detailLabel}>Observações:</Text>
                         <Text style={styles.detailValue}>{booking.notes}</Text>
                     </View>
@@ -335,7 +336,7 @@ export default function BookingDetailsScreen() {
                         onPressIn={() => onPressInButton(cancelButtonScaleAnim)}
                         onPressOut={() => onPressOutButton(cancelButtonScaleAnim)}
                     >
-                        <Ionicons name="close-circle-outline" size={20} color="#fff" />
+                        <Ionicons name="close-circle-outline" size={20} color={AppColors.white} />
                         <Text style={styles.actionButtonText}>Cancelar Agendamento</Text>
                     </TouchableOpacity>
                 )}
@@ -347,7 +348,7 @@ export default function BookingDetailsScreen() {
                     onPressIn={() => onPressInButton(contactButtonScaleAnim)}
                     onPressOut={() => onPressOutButton(contactButtonScaleAnim)}
                 >
-                    <Ionicons name="chatbubble-ellipses-outline" size={20} color="#fff" />
+                    <Ionicons name="chatbubble-ellipses-outline" size={20} color={AppColors.white} />
                     <Text style={styles.actionButtonText}>Contatar {booking.providerFullName.split(' ')[0]}</Text>
                 </TouchableOpacity>
 
@@ -359,7 +360,7 @@ export default function BookingDetailsScreen() {
                         onPressIn={() => onPressInButton(reviewButtonScaleAnim)}
                         onPressOut={() => onPressOutButton(reviewButtonScaleAnim)}
                     >
-                        <Ionicons name="star-outline" size={20} color="#fff" />
+                        <Ionicons name="star-outline" size={20} color={AppColors.white} />
                         <Text style={styles.actionButtonText}>Avaliar Serviço</Text>
                     </TouchableOpacity>
                 )}
@@ -371,7 +372,7 @@ export default function BookingDetailsScreen() {
                     onPressIn={() => onPressInButton(profileButtonScaleAnim)}
                     onPressOut={() => onPressOutButton(profileButtonScaleAnim)}
                 >
-                    <Ionicons name="person-circle-outline" size={20} color="#007BFF" />
+                    <Ionicons name="person-circle-outline" size={20} color={AppColors.primaryInteractive} />
                     <Text style={[styles.actionButtonText, styles.actionButtonOutlineText]}>Ver Perfil de {booking.providerFullName.split(' ')[0]}</Text>
                 </TouchableOpacity>
             </Animated.View>
@@ -383,23 +384,23 @@ export default function BookingDetailsScreen() {
 const styles = StyleSheet.create({
     scrollViewContainer: {
         flex: 1,
-        backgroundColor: '#F8F9FA', // Light background
+        backgroundColor: AppColors.backgroundLight, // Light background
     },
     centered: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
         padding: 20,
-        backgroundColor: '#F8F9FA',
+        backgroundColor: AppColors.backgroundLight,
     },
     loadingText: {
         marginTop: 10,
         fontSize: 16,
-        color: '#6C757D',
+        color: AppColors.textAuxiliary,
     },
     errorText: {
         fontSize: 16,
-        color: '#DC3545', // Danger Red
+        color: AppColors.errorRed, // Danger Red
         textAlign: 'center',
         marginBottom: 20,
     },
@@ -408,22 +409,12 @@ const styles = StyleSheet.create({
         marginTop: 15,
     },
     card: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: AppColors.white,
         borderRadius: 15, // Increased border radius
         padding: 20, // Increased padding
         marginHorizontal: 15,
         marginTop: 15,
-        ...Platform.select({
-            ios: {
-                shadowColor: 'rgba(0,0,0,0.15)', // Darker shadow
-                shadowOffset: { width: 0, height: 8 }, // More pronounced shadow
-                shadowOpacity: 0.25, // Increased opacity
-                shadowRadius: 15, // Larger blur radius
-            },
-            android: {
-                elevation: 10, // Higher elevation
-            },
-        }),
+        ...AppShadows.large, // Higher elevation
     },
     providerSectionCard: {
         paddingVertical: 20,
@@ -442,7 +433,7 @@ const styles = StyleSheet.create({
         borderRadius: 32.5, // Perfect circle
         marginRight: 18, // More space
         borderWidth: 3, // More prominent border
-        borderColor: '#007BFF', // Primary blue border
+        borderColor: AppColors.primaryInteractive, // Primary blue border
     },
     providerInfo: {
         flex: 1,
@@ -450,12 +441,12 @@ const styles = StyleSheet.create({
     serviceNameText: {
         fontSize: 22, // Larger font size
         fontWeight: 'bold',
-        color: '#212529', // Darker text
+        color: AppColors.textBody, // Darker text
         marginBottom: 4,
     },
     providerNameText: {
         fontSize: 16,
-        color: '#495057', // Slightly darker text
+        color: AppColors.textAuxiliary, // Slightly darker text
     },
     statusBadge: {
         flexDirection: 'row',
@@ -475,10 +466,10 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 19, // Larger font size
         fontWeight: 'bold',
-        color: '#343A40', // Darker text
+        color: AppColors.textBody, // Darker text
         marginBottom: 15,
         borderBottomWidth: 1,
-        borderBottomColor: '#E9ECEF', // Lighter border
+        borderBottomColor: AppColors.backgroundNeutral, // Lighter border
         paddingBottom: 8,
     },
     detailRow: {
@@ -492,73 +483,57 @@ const styles = StyleSheet.create({
     },
     detailLabel: {
         fontSize: 15,
-        color: '#495057', // Darker text
+        color: AppColors.textAuxiliary, // Darker text
         fontWeight: '600', // Bolder
         marginRight: 5,
         width: 100,
     },
     detailValue: {
         fontSize: 15,
-        color: '#343A40', // Darker text
+        color: AppColors.textBody, // Darker text
         flex: 1,
     },
     detailValueAddress: {
         fontSize: 15,
-        color: '#343A40',
+        color: AppColors.textBody,
         flex: 1,
         lineHeight: 22,
     },
     priceText: {
         fontWeight: 'bold',
-        color: '#007BFF' // Primary blue for price
+        color: AppColors.primaryInteractive // Primary blue for price
     },
     actionsCard: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: AppColors.white,
         borderRadius: 15, // Consistent border radius
         padding: 20, // Consistent padding
         marginHorizontal: 15,
         marginTop: 15,
         marginBottom: 30,
-        ...Platform.select({
-            ios: { 
-                shadowColor: 'rgba(0,0,0,0.15)', 
-                shadowOffset: { width: 0, height: 8 }, 
-                shadowOpacity: 0.25, 
-                shadowRadius: 15 
-            },
-            android: { elevation: 10 },
-        }),
+        ...AppShadows.large,
     },
     actionButton: {
         flexDirection: 'row',
-        backgroundColor: '#007BFF', // Primary blue
+        backgroundColor: AppColors.primaryInteractive, // Primary blue
         paddingVertical: 15, // More padding
         paddingHorizontal: 18, // More padding
         borderRadius: 10, // Softer corners
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 12, // More space between buttons
-        ...Platform.select({
-            ios: { 
-                shadowColor: 'rgba(0,123,255,0.4)', // Blue shadow
-                shadowOffset: { width: 0, height: 4 }, 
-                shadowOpacity: 0.6, 
-                shadowRadius: 8 
-            },
-            android: { elevation: 6 },
-        }),
+        ...AppShadows.medium,
     },
     actionButtonText: {
-        color: '#FFFFFF',
+        color: AppColors.white,
         fontSize: 17, // Larger font size
         fontWeight: '600',
         marginLeft: 10, // More space
     },
     cancelButton: {
-        backgroundColor: '#DC3545', // Danger red
+        backgroundColor: AppColors.errorRed, // Danger red
         ...Platform.select({
             ios: { 
-                shadowColor: 'rgba(220,53,69,0.4)', 
+                shadowColor: AppColors.errorRed + '40', 
                 shadowOffset: { width: 0, height: 4 }, 
                 shadowOpacity: 0.6, 
                 shadowRadius: 8 
@@ -567,10 +542,10 @@ const styles = StyleSheet.create({
         }),
     },
     reviewButton: {
-        backgroundColor: '#FFC107', // Warning yellow
+        backgroundColor: AppColors.warningYellow, // Warning yellow
         ...Platform.select({
             ios: { 
-                shadowColor: 'rgba(255,193,7,0.4)', 
+                shadowColor: AppColors.warningYellow + '40', 
                 shadowOffset: { width: 0, height: 4 }, 
                 shadowOpacity: 0.6, 
                 shadowRadius: 8 
@@ -588,19 +563,11 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         marginBottom: 12,
         borderWidth: 2, // More prominent border
-        borderColor: '#007BFF', // Primary blue border
-        ...Platform.select({
-            ios: { 
-                shadowColor: 'rgba(0,123,255,0.2)', 
-                shadowOffset: { width: 0, height: 2 }, 
-                shadowOpacity: 0.4, 
-                shadowRadius: 4 
-            },
-            android: { elevation: 3 },
-        }),
+        borderColor: AppColors.primaryInteractive, // Primary blue border
+        ...AppShadows.small,
     },
     actionButtonOutlineText: {
-        color: '#007BFF', // Text color matches border
+        color: AppColors.primaryInteractive, // Text color matches border
         marginLeft: 10,
     }
 });
