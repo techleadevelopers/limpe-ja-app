@@ -18,7 +18,7 @@ Uber: Praticidade, agilidade e UX intuitiva para agendamento e serviço.
 iFood: Mecanismos de atração e retenção de usuários (cupons, promoções).
 Slide 4: Proposta de Valor
 LimpeJá: Confiança e Praticidade para Clientes, Autonomia e Renda para Profissionais.
-
+a
 Para Clientes:
 Agendamento fácil e rápido via app.
 Pagamento seguro via PIX.
