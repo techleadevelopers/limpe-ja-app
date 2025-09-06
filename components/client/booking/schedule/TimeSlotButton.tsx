@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { TouchableOpacity, Text, StyleSheet, View, ColorValue, Animated, Easing } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { AppColors, AppShadows } from '../../../../constants/appStyles'; // Importe AppColors e AppShadows
 
 interface TimeSlotButtonProps {
   time: string;
@@ -10,7 +11,7 @@ interface TimeSlotButtonProps {
   itemWidth?: number;
 }
 
-const AVAILABLE_GRADIENT_COLORS: readonly [ColorValue, ColorValue] = ['#BFE7FF', '#97CEFF'] as const;
+const AVAILABLE_GRADIENT_COLORS: readonly [ColorValue, ColorValue] = [AppColors.primaryInteractive + '40', AppColors.primaryInteractive + '20'] as const; // Usando AppColors
 
 const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({
   time,
@@ -82,30 +83,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 10,
     overflow: 'hidden',
-    backgroundColor: '#F3F7FD',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 3,
+    backgroundColor: AppColors.backgroundLight, // Usando AppColors
+    ...AppShadows.small, // Usando AppShadows
   },
   gradientFill: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: 12,
   },
   selected: {
-    backgroundColor: '#2A72E7',
-    shadowColor: '#2A72E7',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    elevation: 8,
+    backgroundColor: AppColors.primaryInteractive, // Usando AppColors
+    ...AppShadows.medium, // Usando AppShadows
   },
-  unavailable: { backgroundColor: '#EDEFF2', opacity: 0.55, elevation: 0 },
-  text: { fontSize: 12, color: '#344255', fontWeight: '600' },       // ↓ fonte levemente menor
-  textSelected: { color: '#fff', fontWeight: '700' },
-  textUnavailable: { color: '#9AA7B6' },
-  textOnGradient: { color: '#174B93', fontWeight: '700' },
+  unavailable: { backgroundColor: AppColors.backgroundNeutral, opacity: 0.55, elevation: 0 }, // Usando AppColors
+  text: { fontSize: 12, color: AppColors.textBody, fontWeight: '600' },       // ↓ fonte levemente menor // Usando AppColors
+  textSelected: { color: AppColors.white, fontWeight: '700' }, // Usando AppColors
+  textUnavailable: { color: AppColors.mediumGray }, // Usando AppColors
+  textOnGradient: { color: AppColors.primaryDark, fontWeight: '700' }, // Usando AppColors
 });
 
 export default TimeSlotButton;
