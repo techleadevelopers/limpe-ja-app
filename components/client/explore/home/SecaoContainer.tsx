@@ -22,7 +22,7 @@ const SecaoContainer = <T extends { id: string | number } /* Restrição opciona
   titulo,
   data,
   onVerTudoPress,
-  titleColor = '#4f5a71ff',
+  titleColor = '#6a7181ff',
   noDataText = 'Nenhum item disponível no momento.',
   horizontal = false,
   renderItem,
@@ -114,13 +114,14 @@ const styles = StyleSheet.create({
   viewAllText: {
     fontSize: 12,
     color: '#007BFF',
-        fontFamily: 'Montserrat-Regular',
+     fontFamily: 'Montserrat-Regular',
     fontWeight: '800',
     marginRight: 5, // Adicionado um pequeno espaçamento entre o texto e a seta
   },
   cardsScrollContainer: {
     paddingHorizontal: 15,
     paddingBottom: 10,
+    
   },
   emptyText: {
     flex: 1,
