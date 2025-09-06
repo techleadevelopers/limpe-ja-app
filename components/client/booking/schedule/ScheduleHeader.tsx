@@ -9,6 +9,7 @@ import {
     withRepeat,
     withTiming,
 } from 'react-native-reanimated';
+import { AppColors, AppShadows } from '../../../../constants/appStyles'; // Importe AppColors e AppShadows
 
 interface ScheduleHeaderProps {
     onBackPress: () => void;
@@ -20,9 +21,9 @@ interface ScheduleHeaderProps {
 const HEADER_TOP = Platform.OS === 'ios' ? 56 : 28;
 
 // Constants for the gradient colors from HeaderSuperior.tsx
-const HERO_GRADIENT_START = 'rgba(45, 108, 233, 0.7)';
-const HERO_GRADIENT_MIDDLE = 'rgba(73, 127, 236, 0.9)';
-const HERO_GRADIENT_END = 'rgba(45, 101, 232, 0.9)';
+const HERO_GRADIENT_START = AppColors.primaryInteractive; // Usando AppColors
+const HERO_GRADIENT_MIDDLE = AppColors.primaryInteractive; // Usando AppColors
+const HERO_GRADIENT_END = AppColors.primaryDark; // Usando AppColors
 
 const ScheduleHeader: React.FC<ScheduleHeaderProps> = ({ onBackPress, headerTitle, fadeAnim, slideUpAnim }) => {
     // Shared values for the reflex animation from HeaderSuperior.tsx
@@ -86,13 +87,13 @@ const ScheduleHeader: React.FC<ScheduleHeaderProps> = ({ onBackPress, headerTitl
 
                 <View style={styles.headerRow}>
                     <TouchableOpacity onPress={onBackPress} style={styles.iconBtn}>
-                        <Ionicons name="chevron-back" size={15} color="#fff" />
+                        <Ionicons name="chevron-back" size={15} color={AppColors.white} />
                     </TouchableOpacity>
 
                     <Text numberOfLines={1} style={styles.headerTitle}>{headerTitle}</Text>
 
                     <View style={styles.iconBtn}>
-                        <Ionicons name="ellipsis-vertical" size={14} color="#fff" />
+                        <Ionicons name="ellipsis-vertical" size={14} color={AppColors.white} />
                     </View>
                 </View>
 
@@ -127,17 +128,7 @@ const styles = StyleSheet.create({
         width: '95%', // Added width
         left: 8,
         overflow: 'hidden', // Added overflow
-        ...Platform.select({ // Updated shadow/elevation [2, 4, 5, 10, 11]
-            ios: {
-                shadowColor: 'rgba(0,0,0,0.2)',
-                shadowOffset: { width: 0, height: 4 * 0.95 },
-                shadowOpacity: 0.8,
-                shadowRadius: 4 * 0.95,
-            },
-            android: {
-                elevation: 8 * 0.95,
-            },
-        }),
+        ...AppShadows.medium, // Usando AppShadows
     },
     // Styles for animated reflex from HeaderSuperior.tsx
     animatedReflex: {
@@ -168,7 +159,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         flex: 1,
         textAlign: 'center',
-        color: '#fff',
+        color: AppColors.white, // Usando AppColors
         fontSize: 13,
         fontWeight: '700',
         fontFamily: Platform.select({ ios: 'System', android: 'sans-serif' }),
@@ -176,7 +167,7 @@ const styles = StyleSheet.create({
     tabsPill: {
         marginTop: 6,
         alignSelf: 'center',
-        backgroundColor: 'rgba(255,255,255,0.13)',
+        backgroundColor: AppColors.white + '13', // Usando AppColors
         borderRadius: 40,
         padding: 6,
         flexDirection: 'row',
@@ -189,15 +180,15 @@ const styles = StyleSheet.create({
         paddingHorizontal: 6,
         
     },
-    tabItemActive: { backgroundColor: '#fff' },
+    tabItemActive: { backgroundColor: AppColors.white }, // Usando AppColors
     tabActiveText: {
-        color: '#2A72E7',
+        color: AppColors.primaryDark, // Usando AppColors
         fontWeight: '700',
         fontSize: 9,
     },
     tabItemGhost: { backgroundColor: 'transparent' },
     tabGhostText: {
-        color: 'rgba(255,255,255,0.9)',
+        color: AppColors.white + '90', // Usando AppColors
         fontWeight: '600',
         fontSize: 9,
     },
