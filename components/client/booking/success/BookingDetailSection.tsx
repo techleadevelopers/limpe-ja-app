@@ -2,6 +2,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef } from 'react';
 import { StyleSheet, Text, View, Animated, Easing } from 'react-native';
+import { AppColors } from '../../../../constants/appStyles'; // Importe AppColors
 
 interface BookingDetailSectionProps {
   serviceName: string;
@@ -57,13 +58,13 @@ export default function BookingDetailSection({
       ]}
     >
       <View style={styles.detailItem}>
-        <Ionicons name="brush-outline" size={19} color={iconColor} />
+        <Ionicons name="brush-outline" size={19} color={AppColors.primaryInteractive} />
         <Text style={styles.detailLabel}>Serviço Contratado</Text>
         <Text style={styles.detailValue}>{serviceName}</Text>
       </View>
       
       <View style={styles.detailItem}>
-        <Ionicons name="location-outline" size={19} color={iconColor} />
+        <Ionicons name="location-outline" size={19} color={AppColors.primaryInteractive} />
         <Text style={styles.detailLabel}>Local do Serviço</Text>
         <View style={styles.addressContainer}>
           <Text style={styles.detailValue}>{formattedAddressLine1}</Text>
@@ -73,7 +74,7 @@ export default function BookingDetailSection({
       
       {notes ? (
         <View style={styles.detailItem}>
-          <Ionicons name="document-text-outline" size={18} color={iconColor} />
+          <Ionicons name="document-text-outline" size={18} color={AppColors.primaryInteractive} />
           <Text style={styles.detailLabel}>Observações</Text>
           <Text style={styles.detailValueNotes}>{notes}</Text>
         </View>
@@ -95,7 +96,7 @@ const styles = StyleSheet.create({
   detailLabel: {
     fontSize: 13,
     fontFamily: 'Montserrat-Regular',
-    color: '#666',
+    color: AppColors.textAuxiliary, // Usando AppColors
     marginLeft: 16,
     flex: 1,
   },
@@ -107,13 +108,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: 'Montserrat-Regular',
     fontWeight: 'bold',
-    color: '#333',
+    color: AppColors.textBody, // Usando AppColors
     textAlign: 'right',
   },
   detailValueNotes: {
     fontSize: 13,
     fontFamily: 'Montserrat-Regular',
-    color: '#333',
+    color: AppColors.textBody, // Usando AppColors
     flex: 2,
     textAlign: 'right',
     lineHeight: 20,
