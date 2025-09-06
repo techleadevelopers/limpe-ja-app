@@ -1,5 +1,5 @@
-// relaxed-app/constants/appStyles.ts (Novo arquivo, se não existir)
-import { Dimensions } from 'react-native';
+// relaxed-app/constants/appStyles.ts
+import { Dimensions, Platform } from 'react-native';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -9,6 +9,7 @@ export const AppColors = {
   successStandard: '#28A745',
   successStrong: '#218838',
   attentionYellow: '#FFD700',
+  warningYellow: '#FFC107', // Adicionado: Cor para avisos/amarelo
   errorRed: '#D32F2F',
   backgroundLight: '#F8FAFB',
   backgroundNeutral: '#F0F2F5',
@@ -51,6 +52,17 @@ export const AppShadows = {
     shadowRadius: 10,
     elevation: 8,
   },
+  large: Platform.select({ // Adicionado: Sombra grande
+    ios: {
+      shadowColor: AppColors.black,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.2,
+      shadowRadius: 15,
+    },
+    android: {
+      elevation: 12,
+    },
+  }),
 };
 
 export const AppTypography = {
@@ -73,6 +85,11 @@ export const AppTypography = {
     fontWeight: '600',
     color: AppColors.white,
   },
+  h1: { fontSize: 28, fontWeight: 'bold', color: AppColors.textBody },
+  h2: { fontSize: 24, fontWeight: 'bold', color: AppColors.textBody },
+  h3: { fontSize: 20, fontWeight: 'bold', color: AppColors.textBody },
+  small: { fontSize: 14, color: AppColors.textAuxiliary },
+  xsmall: { fontSize: 12, color: AppColors.mediumGray },
 };
 
 export { SCREEN_WIDTH, SCREEN_HEIGHT };
