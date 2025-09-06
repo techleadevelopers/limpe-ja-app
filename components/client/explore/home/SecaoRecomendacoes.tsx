@@ -31,7 +31,7 @@ const SecaoRecomendacoes: React.FC<SecaoRecomendacoesProps> = ({
         {onVerTudoPress && (
           <TouchableOpacity onPress={onVerTudoPress} style={styles.viewAllButton}>
             <Text style={styles.viewAllText}>
-              Mais <Ionicons name="chevron-forward" size={14} color="#626a74ff" />
+             <Ionicons name="chevron-forward" size={14} color="#626a74ff" />
             </Text>
           </TouchableOpacity>
         )}
@@ -66,17 +66,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#F4F7FC',
   },
   header: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 15,
   },
   sectionTitle: {
-     fontSize: 14,
-    fontFamily: 'Montserrat-Regular',
-    fontWeight: '800',
-    color: '#202633',
+      fontSize: 15,
+        fontFamily: 'Montserrat-Regular',
+        fontWeight: '600',
+        color: '#979eac2b',
   },
   viewAllButton: {
     flexDirection: 'row',
@@ -84,18 +84,19 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   viewAllText: {
-    fontSize: 11,
-    color: '#626a74ff',
+    fontSize: 1,
+    color: '#6c7989ff',
     fontWeight: '600',
   },
   cardsScrollContainer: {
     paddingHorizontal: 15,
     paddingBottom: 10,
+    
   },
   emptyText: {
     flex: 1,
     textAlign: 'center',
-    color: '#666',
+    color: '#f8e6e6ff',
     marginTop: 20,
     paddingHorizontal: 20,
   },
