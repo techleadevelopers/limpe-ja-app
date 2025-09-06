@@ -2,6 +2,7 @@ import React, { useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { AppColors, AppShadows } from '../../../../constants/appStyles'; // Importe AppColors e AppShadows
 
 const MONTH_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 const DAY_PT = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"];
@@ -54,9 +55,9 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
     <Animated.View style={{ transform: [{ scale: Animated.multiply(calendarBreatheAnim, fadeAnim.interpolate({ inputRange: [0,1], outputRange: [0.95,1] })) }], opacity: fadeAnim }}>
       <View style={s.card}>
         <View style={s.header}>
-          <TouchableOpacity onPress={onPrevMonth} style={s.iconBtn}><Ionicons name="chevron-back" size={22} color="#334155" /></TouchableOpacity>
+          <TouchableOpacity onPress={onPrevMonth} style={s.iconBtn}><Ionicons name="chevron-back" size={22} color={AppColors.textBody} /></TouchableOpacity>
           <Text style={s.month}>{MONTH_PT[currentDisplayMonth.getMonth()]} {currentDisplayMonth.getFullYear()}</Text>
-          <TouchableOpacity onPress={onNextMonth} style={s.iconBtn}><Ionicons name="chevron-forward" size={22} color="#334155" /></TouchableOpacity>
+          <TouchableOpacity onPress={onNextMonth} style={s.iconBtn}><Ionicons name="chevron-forward" size={22} color={AppColors.textBody} /></TouchableOpacity>
         </View>
 
         <View style={s.daysHead}>
@@ -102,37 +103,72 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 
 const s = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: AppColors.white,
     borderRadius: 18,
-    paddingVertical: 18,
+    paddingVertical: 16,
     paddingHorizontal: 14,
     marginHorizontal: 16,
-    marginTop: 12,
-    shadowColor: '#1E2A3B',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.10,
-    shadowRadius: 12,
-    elevation: 4,
+    marginTop: 14,
+    ...AppShadows.medium, // sombra robusta e confortável
   },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   iconBtn: { padding: 6 },
-  month: { fontSize: 16, fontWeight: '800', color: '#334155' },
+  month: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: AppColors.textBody,
+  },
 
-  daysHead: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 8 },
-  dayHeadTxt: { width: CELL, textAlign: 'center', fontSize: 12, color: '#8DA1B7' },
+  daysHead: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 10,
+  },
+  dayHeadTxt: {
+    width: CELL,
+    textAlign: 'center',
+    fontSize: 12,
+    color: AppColors.mediumGray,
+    fontWeight: '600',
+  },
 
-  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-  cell: { width: CELL, height: CELL, borderRadius: CELL / 2, alignItems: 'center', justifyContent: 'center', marginVertical: 4 },
-  cellSel: { backgroundColor: '#2A72E7', shadowColor: '#2A72E7', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.25, shadowRadius: 10, elevation: 8 },
-  cellToday: { backgroundColor: '#E6FAF7' },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  cell: {
+    width: CELL,
+    height: CELL,
+    borderRadius: CELL / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 5,
+  },
+  cellSel: {
+    backgroundColor: AppColors.primaryInteractive,
+    ...AppShadows.medium,
+  },
+  cellToday: {
+    backgroundColor: AppColors.backgroundNeutral,
+  },
 
   cellTxt: { fontSize: 15, fontWeight: '600' },
-  txtWeek: { color: '#334155' },
-  txtWeekend: { color: '#2A72E7' },
-  txtOut: { color: 'rgba(0,0,0,0.16)' },
-  txtSel: { color: '#fff', fontWeight: '800' },
-  txtPast: { color: '#A6B4C3', textDecorationLine: 'line-through' },
-  txtToday: { color: '#0EBFA3', fontWeight: '800' },
+  txtWeek: { color: AppColors.textBody },
+  txtWeekend: { color: AppColors.primaryInteractive },
+  txtOut: { color: AppColors.black + '16' },
+  txtSel: { color: AppColors.white, fontWeight: '800' },
+  txtPast: {
+    color: AppColors.mediumGray,
+    textDecorationLine: 'line-through',
+  },
+  txtToday: { color: AppColors.successStandard, fontWeight: '800' },
 });
+
 
 export default ScheduleCalendar;
