@@ -3,6 +3,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack } from 'expo-router';
+import { AppColors } from '../../../../constants/appStyles'; // Importe AppColors
 
 interface SuccessLoadingErrorProps {
   isLoading: boolean;
@@ -26,7 +27,7 @@ export default function SuccessLoadingError({ isLoading, error, headerPrimaryCol
     return (
       <View style={styles.centered}>
         <Stack.Screen options={{ title: "Erro" }} />
-        <Ionicons name="alert-circle-outline" size={48} color="#F44336" />
+        <Ionicons name="alert-circle-outline" size={48} color={AppColors.errorRed} />
         <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity onPress={onRetryPress} style={styles.actionButton}>
           <Text style={styles.actionButtonText}>Tentar Novamente</Text>
@@ -44,28 +45,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#F0F2F5',
+    backgroundColor: AppColors.backgroundLight,
   },
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#555',
+    color: AppColors.textAuxiliary,
   },
   errorText: {
     fontSize: 16,
-    color: '#F44336',
+    color: AppColors.errorRed,
     textAlign: 'center',
     marginBottom: 20,
   },
   actionButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: AppColors.primaryInteractive,
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
     alignItems: 'center',
   },
   actionButtonText: {
-    color: '#FFFFFF',
+    color: AppColors.white,
     fontSize: 16,
     fontWeight: '600',
   },
