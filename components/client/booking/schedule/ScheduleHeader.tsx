@@ -1,9 +1,8 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, Animated } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
-    Easing,
     useAnimatedStyle,
     useSharedValue,
     withRepeat,
@@ -30,6 +29,25 @@ const ScheduleHeader: React.FC<ScheduleHeaderProps> = ({ onBackPress, headerTitl
     const reflexTranslateX = useSharedValue(-200);
     const reflexTranslateY = useSharedValue(-200);
     const reflexRotate = useSharedValue(0);
+
+    // Animação para o feedback do botão de voltar
+    const backButtonPressAnim = useRef(new Animated.Value(1)).current;
+
+    const onBackPressIn = () => {
+        Animated.spring(backButtonPressAnim, {
+            toValue: 0.9,
+            useNativeDriver: true,
+        }).start();
+    };
+
+    const onBackPressOut = () => {
+        Animated.spring(backButtonPressAnim, {
+            toValue: 1,
+            friction: 3,
+            tension: 40,
+            useNativeDriver: true,
+        }).start();
+    };
 
     // useEffect for the reflex animation from HeaderSuperior.tsx
     useEffect(() => {
@@ -86,14 +104,19 @@ const ScheduleHeader: React.FC<ScheduleHeaderProps> = ({ onBackPress, headerTitl
                 <View style={{ height: HEADER_TOP }} />
 
                 <View style={styles.headerRow}>
-                    <TouchableOpacity onPress={onBackPress} style={styles.iconBtn}>
-                        <Ionicons name="chevron-back" size={15} color={AppColors.white} />
+                    <TouchableOpacity
+                        onPress={onBackPress}
+                        style={[styles.iconBtn, { transform: [{ scale: backButtonPressAnim }] }]}
+                        onPressIn={onBackPressIn}
+                        onPressOut={onBackPressOut}
+                    >
+                        <Ionicons name="chevron-back" size={20} color={AppColors.white} />
                     </TouchableOpacity>
 
                     <Text numberOfLines={1} style={styles.headerTitle}>{headerTitle}</Text>
 
                     <View style={styles.iconBtn}>
-                        <Ionicons name="ellipsis-vertical" size={14} color={AppColors.white} />
+                        <Ionicons name="ellipsis-vertical" size={18} color={AppColors.white} />
                     </View>
                 </View>
 
@@ -129,6 +152,24 @@ const styles = StyleSheet.create({
         left: 8,
         overflow: 'hidden', // Added overflow
         ...AppShadows.medium, // Usando AppShadows
+        borderRightWidth: 0.1,
+        borderRightColor: '#45484b56',
+        borderTopStartRadius: 44,
+        borderBottomStartRadius: 44,
+        borderTopEndRadius: 44,
+        borderBottomEndRadius: 44,
+        borderBottomColor: '#45484b56',
+
+        borderRadius: 12,
+        borderBottomWidth: 0.1,
+        borderLeftColor: '#45484b56',
+        borderLeftWidth: 1,
+        // Propriedades de sombra mantidas exatamente como fornecidas
+        shadowColor: '#45484b56', // Cor da sombra
+        shadowOffset: { width: -1, height: 1 }, // Deslocamento vertical mais pronunciado
+        shadowOpacity: 1.55, // Opacidade aumentada para robustezs
+        shadowRadius: 15, // Raio de desfoque para conforto
+        elevation: 6, // Elevação aumentada para robustez no Android
     },
     // Styles for animated reflex from HeaderSuperior.tsx
     animatedReflex: {
@@ -160,7 +201,7 @@ const styles = StyleSheet.create({
         flex: 1,
         textAlign: 'center',
         color: AppColors.white, // Usando AppColors
-        fontSize: 13,
+        fontSize: 16,
         fontWeight: '700',
         fontFamily: Platform.select({ ios: 'System', android: 'sans-serif' }),
     },
@@ -173,6 +214,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: 6,
         bottom: 20,
+        
     },
     tabItem: {
         borderRadius: 40,
