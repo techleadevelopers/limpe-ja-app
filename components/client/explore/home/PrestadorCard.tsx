@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef } from 'react';
-import { Animated, Dimensions, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Dimensions, Image, Platform, StyleSheet, Text, TouchableOpacity, View, Easing } from 'react-native'; // Importar Easing
 
 import { ProviderDisplayInfo, ProviderServiceOffering } from '../../../../types/backend/providers';
 import { PricingType } from '../../../../types/backend/services';
@@ -23,22 +23,34 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
             Animated.timing(fadeAnim, {
                 toValue: 1,
                 duration: 400,
+                easing: Easing.out(Easing.ease), // Entrada suave
                 useNativeDriver: true,
             }),
             Animated.timing(slideAnim, {
                 toValue: 0,
                 duration: 400,
+                easing: Easing.out(Easing.ease), // Entrada suave
                 useNativeDriver: true,
             }),
         ]).start();
     }, [fadeAnim, slideAnim]);
 
     const onPressInCard = () => {
-        Animated.spring(scaleAnim, { toValue: 0.96, useNativeDriver: true, friction: 8, tension: 100 }).start();
+        Animated.spring(scaleAnim, { 
+            toValue: 0.96, 
+            useNativeDriver: true, 
+            friction: 5, // Mais "mola"
+            tension: 80, // Retorno rápido
+        }).start();
     };
 
     const onPressOutCard = () => {
-        Animated.spring(scaleAnim, { toValue: 1, friction: 8, tension: 100, useNativeDriver: true }).start();
+        Animated.spring(scaleAnim, { 
+            toValue: 1, 
+            friction: 5, 
+            tension: 80, 
+            useNativeDriver: true 
+        }).start();
     };
 
     const renderStars = (rating: number | undefined) => {
@@ -139,21 +151,56 @@ const styles = StyleSheet.create({
     animatedCardContainer: {
         marginRight: 12,
         marginBottom: 10,
-        borderRadius: 22,
+        marginTop: 12,
+        borderRadius: 44,
         overflow: 'visible',
-  shadowColor: '#000',
-    shadowOffset: { width: 4, height: 8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3, // Sombra para Android
+              borderRightWidth: 0,
+           borderRightColor: '#45484b56',
+           borderTopStartRadius: 44,
+           borderBottomStartRadius: 44,
+           borderTopEndRadius: 44,
+           borderBottomEndRadius: 44,
+           borderBottomColor: '#45484b56',
+   
+          
+           borderBottomWidth: 0.1,
+           borderLeftColor: '#45484b56',
+           borderLeftWidth: 1,
+           // Propriedades de sombra mantidas exatamente como fornecidas
+           shadowColor: '#45484b56', // Cor da sombra
+           shadowOffset: { width: -1, height: 1 }, // Deslocamento vertical mais pronunciado
+           shadowOpacity: 1.55, // Opacidade aumentada para robustezs
+           shadowRadius: 35, // Raio de desfoque para conforto
+           elevation: 6, // Elevação aumentada para robustez no Android
+
     },
     cardContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         width: 280,
         backgroundColor: '#FFFFFF',
-        borderRadius: 12,
+        borderRadius: 44,
         padding: 10,
+                   borderRightWidth: 0.1,
+           borderRightColor: '#45484b56',
+           borderTopStartRadius: 44,
+           borderBottomStartRadius: 44,
+           borderTopEndRadius: 44,
+           borderBottomEndRadius: 44,
+           borderBottomColor: '#45484b56',
+   
+          
+           borderBottomWidth: 0.1,
+           borderLeftColor: '#45484b56',
+           borderLeftWidth: 1,
+           // Propriedades de sombra mantidas exatamente como fornecidas
+           shadowColor: '#45484b18', // Cor da sombra
+           shadowOffset: { width: -1, height: 1 }, // Deslocamento vertical mais pronunciado
+           shadowOpacity: 1.55, // Opacidade aumentada para robustezs
+           shadowRadius: 25, // Raio de desfoque para conforto
+           elevation: 6, // Elevação aumentada para robustez no Android
+
+        
     },
     imageWrapper: {
         width: 60,
