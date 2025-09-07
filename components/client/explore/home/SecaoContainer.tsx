@@ -1,6 +1,6 @@
 // components/client/explore/home/SecaoContainer.tsx
 import React, { useRef } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated, Easing } from 'react-native'; // Importar Easing
 import { Ionicons } from '@expo/vector-icons';
 
 // Torne SecaoContainer genérico adicionando <T>
@@ -31,16 +31,18 @@ const SecaoContainer = <T extends { id: string | number } /* Restrição opciona
 
   const onPressInViewAll = () => {
     Animated.spring(arrowAnim, {
-      toValue: 5,
+      toValue: 5, // Desloca a seta para a frente
       useNativeDriver: true,
+      friction: 5, // Ajuste para um efeito de mola mais suave
+      tension: 80, // Ajuste para um retorno rápido
     }).start();
   };
 
   const onPressOutViewAll = () => {
     Animated.spring(arrowAnim, {
-      toValue: 0,
-      friction: 3,
-      tension: 40,
+      toValue: 0, // Retorna a seta à posição original
+      friction: 5,
+      tension: 80,
       useNativeDriver: true,
     }).start();
   };
