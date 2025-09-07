@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,6 +25,27 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
   fadeAnim, slideUpAnim, selectionAnim, calendarBreatheAnim,
 }) => {
   const [days, setDays] = React.useState<Array<{ day: number, month: 'current' | 'prev' | 'next', dateObj: Date }>>([]);
+
+  // Animações para os botões de navegação de mês
+  const prevMonthPressAnim = useRef(new Animated.Value(1)).current;
+  const nextMonthPressAnim = useRef(new Animated.Value(1)).current;
+
+  const onPressInMonthNav = (animValue: Animated.Value) => {
+    Animated.spring(animValue, {
+      toValue: 0.9,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const onPressOutMonthNav = (animValue: Animated.Value) => {
+    Animated.spring(animValue, {
+      toValue: 1,
+      friction: 3,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
+
 
   const makeDays = useCallback((d: Date) => {
     const y = d.getFullYear(), m = d.getMonth();
@@ -55,9 +76,23 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
     <Animated.View style={{ transform: [{ scale: Animated.multiply(calendarBreatheAnim, fadeAnim.interpolate({ inputRange: [0,1], outputRange: [0.95,1] })) }], opacity: fadeAnim }}>
       <View style={s.card}>
         <View style={s.header}>
-          <TouchableOpacity onPress={onPrevMonth} style={s.iconBtn}><Ionicons name="chevron-back" size={22} color={AppColors.textBody} /></TouchableOpacity>
+          <TouchableOpacity
+            onPress={onPrevMonth}
+            style={[s.iconBtn, { transform: [{ scale: prevMonthPressAnim }] }]}
+            onPressIn={() => onPressInMonthNav(prevMonthPressAnim)}
+            onPressOut={() => onPressOutMonthNav(prevMonthPressAnim)}
+          >
+            <Ionicons name="chevron-back" size={22} color={AppColors.textBody} />
+          </TouchableOpacity>
           <Text style={s.month}>{MONTH_PT[currentDisplayMonth.getMonth()]} {currentDisplayMonth.getFullYear()}</Text>
-          <TouchableOpacity onPress={onNextMonth} style={s.iconBtn}><Ionicons name="chevron-forward" size={22} color={AppColors.textBody} /></TouchableOpacity>
+          <TouchableOpacity
+            onPress={onNextMonth}
+            style={[s.iconBtn, { transform: [{ scale: nextMonthPressAnim }] }]}
+            onPressIn={() => onPressInMonthNav(nextMonthPressAnim)}
+            onPressOut={() => onPressOutMonthNav(nextMonthPressAnim)}
+          >
+            <Ionicons name="chevron-forward" size={22} color={AppColors.textBody} />
+          </TouchableOpacity>
         </View>
 
         <View style={s.daysHead}>
@@ -104,22 +139,25 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 const s = StyleSheet.create({
   card: {
     backgroundColor: AppColors.white,
-    borderRadius: 18,
-    paddingVertical: 16,
-    paddingHorizontal: 14,
-    marginHorizontal: 16,
+    borderRadius: 28,
+    paddingVertical: -10,
+    paddingHorizontal: 25,
+    marginHorizontal: 25,
+    marginVertical: 10,
     marginTop: 14,
-    ...AppShadows.medium, // sombra robusta e confortável
+     ...AppShadows.medium, // Usando AppShadows
+           
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+    marginTop: 20,
   },
   iconBtn: { padding: 6 },
   month: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '800',
     color: AppColors.textBody,
   },
@@ -128,19 +166,22 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     marginBottom: 10,
+    
   },
   dayHeadTxt: {
     width: CELL,
     textAlign: 'center',
-    fontSize: 12,
+    fontSize: 14,
     color: AppColors.mediumGray,
     fontWeight: '600',
+    
   },
 
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
+    
   },
   cell: {
     width: CELL,
@@ -149,10 +190,13 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginVertical: 5,
+    
   },
   cellSel: {
     backgroundColor: AppColors.primaryInteractive,
     ...AppShadows.medium,
+    borderWidth: 1.5,
+    borderColor : '#45484b56',
   },
   cellToday: {
     backgroundColor: AppColors.backgroundNeutral,
