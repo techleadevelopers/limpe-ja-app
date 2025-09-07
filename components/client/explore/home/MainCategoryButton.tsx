@@ -1,6 +1,6 @@
 // components/client/explore/home/MainCategoryButton.tsx
-import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
+import React, { useRef } from 'react'; // Importar useRef
+import { TouchableOpacity, Text, StyleSheet, View, Animated, Easing } from 'react-native'; // Importar Animated, Easing
 import { Ionicons } from '@expo/vector-icons';
 
 // Define um tipo para os nomes de ícones do Ionicons
@@ -14,8 +14,34 @@ interface MainCategoryButtonProps {
 }
 
 export default function MainCategoryButton({ title, iconName, backgroundColor, onPress }: MainCategoryButtonProps) {
+  const scaleAnim = useRef(new Animated.Value(1)).current; // Animação de escala
+
+  const onPressInButton = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.95, // Escala sutil ao pressionar
+      useNativeDriver: true,
+      friction: 5, // Mais "mola"
+      tension: 80, // Retorno rápido
+    }).start();
+  };
+
+  const onPressOutButton = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1, // Retorna à escala normal
+      friction: 5,
+      tension: 80,
+      useNativeDriver: true,
+    }).start();
+  };
+
   return (
-    <TouchableOpacity style={[styles.container, { backgroundColor }]} onPress={onPress}>
+    <TouchableOpacity
+      style={[styles.container, { backgroundColor, transform: [{ scale: scaleAnim }] }]} // Aplica a animação de escala
+      onPress={onPress}
+      onPressIn={onPressInButton} // Adiciona onPressIn
+      onPressOut={onPressOutButton} // Adiciona onPressOut
+      activeOpacity={0.7} // Controla a opacidade para evitar conflito com a animação
+    >
       <Ionicons name={iconName} size={30} color="#FFF" />
       <Text style={styles.title}>{title}</Text>
     </TouchableOpacity>
