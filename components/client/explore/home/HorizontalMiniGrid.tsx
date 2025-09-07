@@ -60,6 +60,8 @@ export default function HorizontalMiniGrid() {
         toValue: 0.92,
         useNativeDriver: true,
         speed: 40,
+        friction: 3, // Ajuste para mais "mola"
+        tension: 80, // Ajuste para um retorno mais rápido
       }).start();
     };
 
@@ -67,12 +69,13 @@ export default function HorizontalMiniGrid() {
       Animated.spring(scale, {
         toValue: 1,
         friction: 3,
+        tension: 80, // Mantém a tensão para consistência
         useNativeDriver: true,
       }).start();
     };
 
     const handlePress = () => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); // Feedback tátil
       router.push(item.route as any);
     };
 
