@@ -29,8 +29,8 @@ const numColumns = 3;
  * - padding horizontal interno do card: 14 (dos lados) => 28
  * Efetivo: SCREEN_WIDTH - 60
  */
-const CARD_MARGIN = 16 * 2;
-const CARD_PADDING = 14 * 2;
+const CARD_MARGIN = 30 * 2;
+const CARD_PADDING = 24 * 2;
 const HORIZONTAL_GUTTER = CARD_MARGIN + CARD_PADDING;
 
 const itemGap = 10;
@@ -95,20 +95,23 @@ export default function TimeSlotsSection({
 
 const styles = StyleSheet.create({
   card: {
-    marginTop: 10,
+    marginTop: 12,
     marginHorizontal: 16,
     backgroundColor: AppColors.white, // Usando AppColors
     borderRadius: 18,
-    paddingHorizontal: 14,
+    paddingHorizontal: 24,
     paddingVertical: 16,
     ...AppShadows.medium, // Usando AppShadows
   },
   title: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '800',
+    fontFamily: 'Montserrat-Regular',
     color: AppColors.textBody, // Usando AppColors
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 42,
+    marginTop: 2,
+    
   },
   empty: {
     textAlign: 'center',
@@ -116,5 +119,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginVertical: 16,
     fontStyle: 'italic',
+    
   },
 });
