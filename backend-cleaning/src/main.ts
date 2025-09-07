@@ -1,4 +1,3 @@
-// src/main.ts
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe, BadRequestException } from '@nestjs/common'; // Importar BadRequestException
@@ -47,15 +46,18 @@ async function bootstrap() {
   const allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:8081',
-    // Adicione aqui outras origens se necessário, como a URL do front-end de produção
-    // 'https://admin.seu-site.com'
+    'https://limpeja-backend-production.up.railway.app/',
   ];
 
   app.enableCors({
     origin: (origin, callback) => {
+      // Adicionado log para depuração
+      console.log(`[CORS] Origem da requisição: ${origin}`);
       if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+        console.log(`[CORS] Origem ${origin} permitida.`);
         callback(null, true);
       } else {
+        console.error(`[CORS] Origem ${origin} NÃO PERMITIDA.`);
         callback(new Error('Not allowed by CORS'));
       }
     },
