@@ -7,7 +7,7 @@ import { ActivityIndicator, Alert, Animated, Image, Platform, StyleSheet, Text, 
 import verificationService from '../../../../services/verificationService';
 
 // Importações das novas imagens
-const FACIAL_PLACEHOLDER_IMAGE = require('../../../../assets/images/facial-Photoroom.png');
+const FACIAL_PLACEHOLDER_IMAGE = require('../../../../assets/images/facial.png');
 
 // Paleta de cores (repetida para clareza)
 const Colors = {
