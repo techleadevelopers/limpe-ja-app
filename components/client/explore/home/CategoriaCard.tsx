@@ -1,6 +1,6 @@
 // LimpeJaApp/app/(client)/components/CategoriaCard.tsx
-import React, { useRef } from 'react';
-import { Text, TouchableOpacity, StyleSheet, Platform, Animated, View, Image } from 'react-native';
+import React, { useRef, useEffect } from 'react'; // Adicionado useEffect
+import { Text, TouchableOpacity, StyleSheet, Platform, Animated, View, Image, Easing } from 'react-native'; // Importado Easing
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router'; // Importar useRouter
@@ -24,27 +24,66 @@ const BLUR_INTENSITY = Platform.OS === 'ios' ? 20 : 40;
 const BLUR_TINT = 'light';
 const TEXT_COLOR = 'rgba(54, 57, 60, 0.62)';
 
-const PRIMARY_SHADOW_COLOR = 'rgba(0, 50, 150, 0.2)';
+const PRIMARY_SHADOW_COLOR = 'rgba(0, 50, 150, 0.39)';
 const PRIMARY_SHADOW_OFFSET_HEIGHT = 5;
 const PRIMARY_SHADOW_RADIUS = 8;
 const PRIMARY_ELEVATION_ANDROID = 5;
 
-const SECONDARY_SHADOW_COLOR = 'rgba(0, 50, 150, 0.08)';
+const SECONDARY_SHADOW_COLOR = 'rgba(150, 27, 0, 0.08)';
 const SECONDARY_SHADOW_OFFSET_HEIGHT = 15;
-const SECONDARY_SHADOW_RADIUS = 20;
+const SECONDARY_SHADOW_RADIUS = 2;
 const SECONDARY_ELEVATION_ANDROID = 10;
 
 const BORDER_COLOR_LIGHT = 'rgba(255, 255, 255, 0.9)';
 const BORDER_WIDTH = 1.5;
 const COR_AZUL_CLARO_UNIFICADA = '#A0D2EB';
-const COR_PRIMARIA_ESCURA = '#2C3E50';
+const COR_PRIMARIA_ESCURA = '#d6605aff';
 const COR_CINZA_FUNDO = '#e1403eff';
 const COR_BORDA_SUAVE = '#c0b5ca92';
 
-const CategoriaCard: React.FC<CategoriaCardProps> = ({ item }) => { // Removida a prop onPress
-  const router = useRouter(); // Inicializa o hook useRouter
+const CategoriaCard: React.FC<CategoriaCardProps> = ({ item }) => {
+  const router = useRouter();
   const cardScaleAnim = useRef(new Animated.Value(1)).current;
   const iconScaleAnim = useRef(new Animated.Value(1)).current; // Nova animação para o ícone
+  // ✅ NOVO: Animação para o efeito de flutuação
+  const floatAnim = useRef(new Animated.Value(0)).current;
+  const floatAnimationRef = useRef<Animated.CompositeAnimation | null>(null); // Referência para controlar a animação
+
+  // ✅ NOVO: Efeito para o Floating Card (flutuação contínua)
+  useEffect(() => {
+    // Gera um deslocamento horizontal aleatório para cada card
+    // entre -3 e 3 unidades, para o efeito "lados diferentes"
+    const randomOffsetX = (Math.random() * 6) - 3; // Valor entre -3 e 3
+    const randomDelay = Math.random() * 1000; // Delay aleatório para dessincronizar
+
+    const startFloatingAnimation = () => {
+      floatAnimationRef.current = Animated.loop(
+        Animated.sequence([
+          Animated.timing(floatAnim, {
+            toValue: 1, // Ponto 1 da animação (cima/direita ou esquerda)
+            duration: 2000,
+            delay: randomDelay, // Aplica o delay aqui
+            easing: Easing.inOut(Easing.ease), // Easing suave
+            useNativeDriver: true,
+          }),
+          Animated.timing(floatAnim, {
+            toValue: 0, // Ponto 2 da animação (volta ao centro)
+            duration: 2000,
+            easing: Easing.inOut(Easing.ease), // Easing suave
+            useNativeDriver: true,
+          }),
+        ]),
+      );
+      floatAnimationRef.current.start();
+    };
+
+    startFloatingAnimation(); // Inicia a animação ao montar
+
+    return () => {
+      floatAnimationRef.current?.stop(); // Para a animação ao desmontar
+      floatAnim.setValue(0); // Reseta a posição
+    };
+  }, [floatAnim]); // Dependência da animação
 
   if (!item || typeof item.id !== 'string' || typeof item.name !== 'string') {
     console.error('[CategoriaCard] ERRO: Item inválido ou incompleto:', item);
@@ -56,40 +95,67 @@ const CategoriaCard: React.FC<CategoriaCardProps> = ({ item }) => { // Removida 
   }
 
   const onPressInCard = () => {
+    // ✅ NOVO: Para a animação de flutuação ao pressionar
+    floatAnimationRef.current?.stop();
+    floatAnim.setValue(0); // Reseta a posição para o centro
+
     Animated.spring(cardScaleAnim, {
       toValue: 0.95,
       useNativeDriver: true,
+      friction: 5, // Mais "mola"
+      tension: 80, // Retorno rápido
     }).start();
     Animated.spring(iconScaleAnim, { // Animação do ícone ao pressionar
       toValue: 1.1,
       friction: 5,
+      tension: 80,
       useNativeDriver: true,
     }).start();
   };
 
   const onPressOutCard = () => {
+    // ✅ NOVO: Reinicia a animação de flutuação ao soltar
+    const randomOffsetX = (Math.random() * 6) - 3;
+    const randomDelay = Math.random() * 1000;
+    floatAnimationRef.current = Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnim, {
+          toValue: 1,
+          duration: 2000,
+          delay: randomDelay,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatAnim, {
+          toValue: 0,
+          duration: 2000,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    floatAnimationRef.current.start();
+
+
     Animated.spring(cardScaleAnim, {
       toValue: 1,
-      friction: 3,
-      tension: 40,
+      friction: 5,
+      tension: 80,
       useNativeDriver: true,
     }).start();
     Animated.spring(iconScaleAnim, { // Retorno da animação do ícone
       toValue: 1,
-      friction: 3,
-      tension: 40,
+      friction: 5,
+      tension: 80,
       useNativeDriver: true,
     }).start();
   };
 
   const handleCardPress = () => {
-    // Navega para a nova tela de listagem de provedores filtrados
-    // A rota será /(client)/services/category/[categoryId]
-    // O [categoryId] será o ID da categoria clicada
     router.push({
       pathname: '/(client)/category/[categoryId]', // Caminho da nova tela
-      params: { 
-        categoryId: item.id, 
+      params: {
+        categoryId: item.id,
         categoryName: item.name // Passa o ID e o nome da categoria como parâmetros
       },
     });
@@ -136,9 +202,28 @@ const CategoriaCard: React.FC<CategoriaCardProps> = ({ item }) => { // Removida 
   }
 
   return (
-    
-    <Animated.View style={[styles.cardContainerWrapper, { transform: [{ scale: cardScaleAnim }] }]}>
-      
+    // ✅ MODIFICADO: Adicionadas as transformações de flutuação
+    <Animated.View style={[
+      styles.cardContainerWrapper,
+      {
+        transform: [
+          { scale: cardScaleAnim },
+          {
+            translateY: floatAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, -3] // Move 3 unidades para cima
+            })
+          },
+          {
+            translateX: floatAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, (Math.random() * 5) - 6] // Move para um lado aleatório (entre -6 e 9)
+            })
+          }
+        ]
+      }
+    ]}>
+
       <View style={styles.shadowLayerSecondary} />
       <View style={styles.shadowLayerPrimary} />
 
@@ -165,20 +250,20 @@ const CategoriaCard: React.FC<CategoriaCardProps> = ({ item }) => { // Removida 
         </LinearGradient>
       </TouchableOpacity>
       <Text style={styles.categoriaTexto}>{item.name}</Text>
-      
+
     </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
   cardContainerWrapper: {
-    width: 52,
-    height: 47,
+    width: 45,
+    height: 45,
     marginRight: 12,
-    borderRadius: 15,
+    borderRadius: 25,
     marginBottom: 9,
     marginTop: 2,
-    
+
   },
   shadowLayerPrimary: {
     ...StyleSheet.absoluteFillObject,
@@ -214,26 +299,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
   },
   iconImage: {
-    width: 29,
-    height: 29,
+    width: 32,
+    height: 30,
     resizeMode: 'contain',
     marginBottom: -2,
   },
   categoriaTexto: {
     fontSize: 10,
     color: TEXT_COLOR,
-    
+
     fontWeight: '600',
     textAlign: 'center',
     marginTop: 7,
   },
-   sectionSeparator: {
-        borderBottomWidth: 1,
-        borderBottomColor: COR_BORDA_SUAVE,
-        marginVertical: 15,
-        right: 21,
-        marginHorizontal: 58,
-    },
+  sectionSeparator: {
+    borderBottomWidth: 1,
+    borderBottomColor: COR_BORDA_SUAVE,
+    marginVertical: 15,
+    right: 21,
+    marginHorizontal: 58,
+  },
 });
 
 export default CategoriaCard;
