@@ -57,7 +57,7 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => {
     },
     "extra": {
       ...config.extra,
-      "backendApiUrl": process.env.EXPO_PUBLIC_API_BASE_URL || "https://187.43.213.118:8081",
+      "backendApiUrl": process.env.EXPO_PUBLIC_API_BASE_URL || "https://limpeja-backend-production.up.railway.app/",
       "environment": process.env.NODE_ENV || "production",
       "router": {},
       "eas": {
