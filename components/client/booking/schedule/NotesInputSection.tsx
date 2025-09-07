@@ -5,13 +5,15 @@ import { AppColors } from '../../../../constants/appStyles'; // Importe AppColor
 interface NotesInputSectionProps {
   notes: string;
   setNotes: (text: string) => void;
-  fadeAnim: Animated.Value;
-  slideUpAnim: Animated.Value;
+  // fadeAnim: Animated.Value; // Removido, pois o ScrollView pai já aplica
+  // slideUpAnim: Animated.Value; // Removido, pois o ScrollView pai já aplica
 }
 
-const NotesInputSection: React.FC<NotesInputSectionProps> = ({ notes, setNotes, fadeAnim, slideUpAnim }) => {
+const NotesInputSection: React.FC<NotesInputSectionProps> = ({ notes, setNotes }) => { // Removido fadeAnim e slideUpAnim dos props
   return (
-    <Animated.View style={[styles.notesContainer, { opacity: fadeAnim, transform: [{ translateY: slideUpAnim }] }]}>
+    // O Animated.View aqui é mantido caso haja intenção de animações internas futuras,
+    // mas as props fadeAnim e slideUpAnim são controladas pelo componente pai.
+    <View style={styles.notesContainer}>
       <Text style={styles.notesTitle}>Observações (Opcional)</Text>
       <TextInput
         style={styles.notesInput}
@@ -22,7 +24,7 @@ const NotesInputSection: React.FC<NotesInputSectionProps> = ({ notes, setNotes, 
         numberOfLines={4}
         placeholderTextColor={AppColors.mediumGray} // Usando AppColors
       />
-    </Animated.View>
+    </View>
   );
 };
 
@@ -35,6 +37,7 @@ const styles = StyleSheet.create({
   notesTitle: {
     fontSize: 15,
     fontWeight: 'bold',
+    fontFamily: 'Montserrat-Regular',
     color: AppColors.textBody, // Usando AppColors
     marginBottom: 10,
   },
@@ -47,6 +50,7 @@ const styles = StyleSheet.create({
     minHeight: 100,
     textAlignVertical: 'top',
     fontSize: 14,
+    fontFamily: 'Montserrat-Regular',
     color: AppColors.textBody, // Usando AppColors
   },
 });
