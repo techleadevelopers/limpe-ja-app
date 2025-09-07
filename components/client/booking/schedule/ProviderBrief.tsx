@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useRef } from 'react'; // Importar useRef e useEffect
+import { Image, StyleSheet, Text, View, Animated, Easing } from 'react-native'; // Importar Animated, Easing
 import { VerificationStatus } from '../../../../types/backend/auth';
 import { BookingAddress } from '../../../../types/backend/bookings';
 
@@ -32,17 +32,56 @@ interface ProviderBriefProps {
 }
 
 export default function ProviderBrief({ provider, serviceName, isLoading }: ProviderBriefProps) {
+  // Animação de pulso para o card
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (!isLoading && provider) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.005, // Pulso muito sutil
+            duration: 3000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 3000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    } else {
+      pulseAnim.stopAnimation();
+      pulseAnim.setValue(1);
+    }
+  }, [isLoading, provider, pulseAnim]);
+
+
   const renderStars = useCallback((rating?: number | null) => {
-    const r = rating ?? 0;
-    const full = Math.floor(r);
-    const half = (r * 2) % 2 !== 0;
-    const stars = new Array(5).fill(0).map((_, i) => {
-      let name: keyof typeof Ionicons.glyphMap = 'star-outline';
-      if (i < full) name = 'star';
-      else if (half && i === full) name = 'star-half-sharp';
-      return <Ionicons key={i} name={name} size={12} color="#4A90E2" style={{ marginRight: 2 }} />;
-    });
-    return <View style={{ flexDirection: 'row' }}>{stars}</View>;
+    const stars = [];
+    const actualRating = rating ?? 0;
+    const fullStars = Math.floor(actualRating);
+    const hasHalfStar = actualRating % 1 !== 0; // Lógica de meia estrela do RecomendacaoCard
+
+    for (let i = 0; i < 5; i++) {
+      let iconName: keyof typeof Ionicons.glyphMap = 'star-outline';
+      if (i < fullStars) iconName = 'star';
+      else if (hasHalfStar && i === fullStars) iconName = 'star-half'; // Usando 'star-half'
+
+      stars.push(
+        <Ionicons
+          key={i}
+          name={iconName}
+          size={11} // Tamanho do RecomendacaoCard
+          color="#007AFF" // Cor do RecomendacaoCard
+          style={styles.ratingStarIcon} // Estilo para espaçamento entre estrelas
+        />
+      );
+    }
+    return <View style={styles.ratingStarContainer}>{stars}</View>; // Estilo para o container das estrelas
   }, []);
 
   const chip = useCallback((icon: keyof typeof Ionicons.glyphMap, text: string, verified?: boolean) => (
@@ -70,7 +109,7 @@ export default function ProviderBrief({ provider, serviceName, isLoading }: Prov
   }
 
   return (
-    <View style={styles.card}>
+    <Animated.View style={[styles.card, { transform: [{ scale: pulseAnim }] }]}>
       {provider.avatarUrl ? (
         <Image source={{ uri: provider.avatarUrl }} style={styles.photo} />
       ) : (
@@ -92,7 +131,7 @@ export default function ProviderBrief({ provider, serviceName, isLoading }: Prov
           {typeof provider.yearsOfExperience === 'number' && provider.yearsOfExperience > 0 && chip('hourglass-outline', `${provider.yearsOfExperience}+ anos`)}
         </View>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -103,13 +142,27 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 18,
     padding: 12,
-    marginHorizontal: 16,
+    marginHorizontal: 29,
     marginTop: 14,
-    shadowColor: '#1E2A3B',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.10,
-    shadowRadius: 12,
-    elevation: 4,
+    
+           borderRightWidth: 0.1,
+           borderRightColor: '#45484b56',
+           borderTopStartRadius: 44,
+           borderBottomStartRadius: 44,
+           borderTopEndRadius: 44,
+           borderBottomEndRadius: 44,
+           borderBottomColor: '#45484b56',
+   
+          
+           borderBottomWidth: 0.1,
+           borderLeftColor: '#45484b56',
+           borderLeftWidth: 1,
+           // Propriedades de sombra mantidas exatamente como fornecidas
+           shadowColor: '#45484b56', // Cor da sombra
+           shadowOffset: { width: -1, height: 1 }, // Deslocamento vertical mais pronunciado
+           shadowOpacity: 1.55, // Opacidade aumentada para robustezs
+           shadowRadius: 15, // Raio de desfoque para conforto
+           elevation: 6, // Elevação aumentada para robustez no Android
   },
   photo: { width: 58, height: 58, borderRadius: 29, marginRight: 10, borderWidth: 2, borderColor: '#E7F0FF' },
   photoPlaceholder: { width: 58, height: 58, borderRadius: 29, marginRight: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF4FF' },
@@ -120,6 +173,15 @@ const styles = StyleSheet.create({
   chipTxt: { fontSize: 10, color: '#5C6B7A', marginLeft: 6, fontWeight: '700' },
   chipOk: { backgroundColor: '#D6ECFF' },
   chipTxtOk: { color: '#2463D7' },
+
+  // Novos estilos para as estrelas, copiados de RecomendacaoCard.tsx
+  ratingStarContainer: {
+    flexDirection: 'row',
+    // marginBottom: 2 foi removido pois o View pai já controla o espaçamento vertical
+  },
+  ratingStarIcon: {
+    marginRight: 1,
+  },
 
   // skeletons
   skeleton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 18, marginHorizontal: 16, marginTop: 14, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 4, height: 96 },
