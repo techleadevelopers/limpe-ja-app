@@ -1,7 +1,7 @@
 // src/common/dto/address-details.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsNotEmpty, IsOptional, IsNumber, Min } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer'; // Importe Transform
 
 export class AddressDetailsDto { // Renomeado de CreateAddressDto
   @ApiPropertyOptional({ description: 'ID do endereço (opcional, se já existir)', example: 'uuid-do-endereco' })
@@ -12,6 +12,7 @@ export class AddressDetailsDto { // Renomeado de CreateAddressDto
   @ApiProperty({ description: 'CEP do endereço', example: '01001000' })
   @IsString()
   @IsNotEmpty()
+  @Transform(({ value }) => value ? String(value).replace(/\D/g, '') : value) // <-- ADICIONE ESTA LINHA
   cep: string;
 
   @ApiProperty({ description: 'Rua do endereço', example: 'Rua Principal' })
