@@ -38,6 +38,12 @@ const CarouselBannerItem: React.FC<CarouselBannerItemProps> = ({
     // Animação para o efeito de tremor/vibração no fundo
     const backgroundFloatAnim = useRef(new Animated.Value(0)).current;
 
+    // Animações para o efeito Ken Burns (zoom e pan)
+    const kenBurnsZoom = useRef(new Animated.Value(1)).current;
+    const kenBurnsPanX = useRef(new Animated.Value(0)).current;
+    const kenBurnsPanY = useRef(new Animated.Value(0)).current;
+
+
     useEffect(() => {
         // Inicia a animação de tremor/vibração do fundo com pausas
         Animated.loop(
@@ -84,12 +90,64 @@ const CarouselBannerItem: React.FC<CarouselBannerItemProps> = ({
             });
         }, 4000); // Tempo total por slide: 3 segundos de exibição + 1 segundo de transição
 
+        // Ken Burns Effect
+        const startKenBurns = () => {
+            kenBurnsZoom.setValue(1);
+            kenBurnsPanX.setValue(0);
+            kenBurnsPanY.setValue(0);
+
+            Animated.parallel([
+                Animated.timing(kenBurnsZoom, {
+                    toValue: 1.15, // Zoom de 15%
+                    duration: 5000, // Duração do zoom
+                    easing: Easing.inOut(Easing.ease),
+                    useNativeDriver: true,
+                }),
+                Animated.timing(kenBurnsPanX, {
+                    toValue: 15, // Pan de 15px na horizontal
+                    duration: 5000,
+                    easing: Easing.inOut(Easing.ease),
+                    useNativeDriver: true,
+                }),
+                Animated.timing(kenBurnsPanY, {
+                    toValue: 10, // Pan de 10px na vertical
+                    duration: 5000,
+                    easing: Easing.inOut(Easing.ease),
+                    useNativeDriver: true,
+                }),
+            ]).start(() => {
+                // Inverte a animação para o próximo ciclo
+                Animated.parallel([
+                    Animated.timing(kenBurnsZoom, {
+                        toValue: 1,
+                        duration: 5000,
+                        easing: Easing.inOut(Easing.ease),
+                        useNativeDriver: true,
+                    }),
+                    Animated.timing(kenBurnsPanX, {
+                        toValue: 0,
+                        duration: 5000,
+                        easing: Easing.inOut(Easing.ease),
+                        useNativeDriver: true,
+                    }),
+                    Animated.timing(kenBurnsPanY, {
+                        toValue: 0,
+                        duration: 5000,
+                        easing: Easing.inOut(Easing.ease),
+                        useNativeDriver: true,
+                    }),
+                ]).start(() => startKenBurns()); // Loop
+            });
+        };
+        startKenBurns();
+
+
         // Função de limpeza para parar o intervalo quando o componente for desmontado
         return () => clearInterval(interval);
     }, []); // Array de dependências vazio para rodar uma vez na montagem do componente
 
-    const onPressInButton = () => Animated.spring(buttonScaleAnim, { toValue: 0.95, useNativeDriver: true, friction: 7 }).start();
-    const onPressOutButton = () => Animated.spring(buttonScaleAnim, { toValue: 1, useNativeDriver: true, friction: 7 }).start();
+    const onPressInButton = () => Animated.spring(buttonScaleAnim, { toValue: 0.95, useNativeDriver: true, friction: 5, tension: 80 }).start(); // Ajuste de fricção/tensão
+    const onPressOutButton = () => Animated.spring(buttonScaleAnim, { toValue: 1, useNativeDriver: true, friction: 5, tension: 80 }).start(); // Ajuste de fricção/tensão
 
     // Estilo animado para criar o efeito de tremor/vibração
     const animatedBackgroundStyle = {
@@ -109,6 +167,15 @@ const CarouselBannerItem: React.FC<CarouselBannerItemProps> = ({
         ]
     };
 
+    // Estilo animado para o efeito Ken Burns
+    const kenBurnsAnimatedStyle = {
+        transform: [
+            { scale: kenBurnsZoom },
+            { translateX: kenBurnsPanX },
+            { translateY: kenBurnsPanY },
+        ],
+    };
+
     // Calcula o índice da próxima imagem que irá aparecer
     const nextImageIndex = (currentImageIndex + 1) % allBannerImages.length;
 
@@ -125,7 +192,7 @@ const CarouselBannerItem: React.FC<CarouselBannerItemProps> = ({
                     <ImageBackground
                         source={allBannerImages[currentImageIndex]}
                         style={styles.backgroundImage}
-                        imageStyle={styles.imageStyle}
+                        imageStyle={[styles.imageStyle, kenBurnsAnimatedStyle]} // Aplicar Ken Burns aqui
                     >
                         {/* Gradiente para escurecer a imagem e melhorar a legibilidade do texto */}
                         <LinearGradient
@@ -140,7 +207,7 @@ const CarouselBannerItem: React.FC<CarouselBannerItemProps> = ({
                     <ImageBackground
                         source={allBannerImages[nextImageIndex]}
                         style={styles.backgroundImage}
-                        imageStyle={styles.imageStyle}
+                        imageStyle={[styles.imageStyle, kenBurnsAnimatedStyle]} // Aplicar Ken Burns aqui
                     >
                         {/* Gradiente para escurecer a imagem e melhorar a legibilidade do texto */}
                         <LinearGradient
@@ -208,8 +275,24 @@ const styles = StyleSheet.create({
     },
     backgroundImageWrapper: {
         flex: 1,
-        borderRadius: 16,
+        
         overflow: 'hidden',
+                borderTopStartRadius: 22,
+        borderBottomStartRadius: 22,
+        borderTopEndRadius: 22,
+        borderBottomEndRadius: 22,
+        borderBottomColor: '#45484b56',
+
+        borderRadius: 12,
+        borderBottomWidth: 0.1,
+        borderLeftColor: '#45484b56',
+        borderLeftWidth: 1,
+        // Propriedades de sombra mantidas exatamente como fornecidas
+        shadowColor: '#45484b56', // Cor da sombra
+        shadowOffset: { width: -1, height: 1 }, // Deslocamento vertical mais pronunciado
+        shadowOpacity: 1.55, // Opacidade aumentada para robustezs
+        shadowRadius: 15, // Raio de desfoque para conforto
+        elevation: 6, // Elevação aumentada para robustez no Android
     },
     backgroundImage: {
         flex: 1,
