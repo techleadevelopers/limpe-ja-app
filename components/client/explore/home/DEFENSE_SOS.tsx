@@ -46,7 +46,8 @@ const DEFENSE_SOS: React.FC<DefenseSOSProps> = ({ bottomOffset = 20 }) => {
     Animated.spring(scaleAnim, {
       toValue: 0.9,
       useNativeDriver: true,
-      friction: 3,
+      friction: 3, // Ajuste para consistência
+      tension: 40, // Ajuste para consistência
     }).start();
   };
 
