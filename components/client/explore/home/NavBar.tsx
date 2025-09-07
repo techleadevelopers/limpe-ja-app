@@ -1,8 +1,9 @@
 // components/client/explore/home/NavBar.tsx
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, usePathname } from 'expo-router';
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useRef } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View, Animated, Easing } from 'react-native';
+import * as Haptics from 'expo-haptics'; // Importar Haptics para feedback tátil
 
 interface NavBarProps {
   welcomeCouponOffer: any;
@@ -18,10 +19,7 @@ const NavBar: React.FC<NavBarProps> = ({
   const router = useRouter();
   const currentRoute = usePathname();
 
-  const navigateTo = (path: string) => {
-    router.push(path as any);
-  };
-
+  // Mova a declaração de navItems para antes de seu uso
   const navItems = [
     { name: 'Home', icon: 'home', route: '/(client)/explore' },
     { name: 'Cupons', icon: 'pricetag', route: '/(client)/coupons' },
@@ -30,12 +28,38 @@ const NavBar: React.FC<NavBarProps> = ({
     { name: 'Profile', icon: 'person', route: '/(client)/profile' },
   ];
 
+  // Agora navItems já está declarado quando é usado aqui
+  const navItemAnims = useRef(navItems.map(() => new Animated.Value(1))).current;
+
+  const navigateTo = (path: string) => {
+    router.push(path as any);
+  };
+
+  const onPressInNavItem = (index: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Animated.spring(navItemAnims[index], {
+      toValue: 0.95,
+      useNativeDriver: true,
+      friction: 5,
+      tension: 80,
+    }).start();
+  };
+
+  const onPressOutNavItem = (index: number) => {
+    Animated.spring(navItemAnims[index], {
+      toValue: 1,
+      useNativeDriver: true,
+      friction: 5,
+      tension: 80,
+    }).start();
+  };
+
   return (
     <View style={styles.navBar}>
-      {navItems.map((item) => (
+      {navItems.map((item, index) => (
         <TouchableOpacity
           key={item.name}
-          style={styles.navItem}
+          style={[styles.navItem, { transform: [{ scale: navItemAnims[index] }] }]}
           onPress={() => {
             if (item.name === 'Cupons' && welcomeCouponOffer) {
               setActiveBottomPromotion('coupon');
@@ -43,6 +67,9 @@ const NavBar: React.FC<NavBarProps> = ({
               navigateTo(item.route);
             }
           }}
+          onPressIn={() => onPressInNavItem(index)}
+          onPressOut={() => onPressOutNavItem(index)}
+          activeOpacity={0.7}
         >
           <Ionicons
             name={
