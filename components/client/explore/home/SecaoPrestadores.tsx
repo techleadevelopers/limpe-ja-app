@@ -2,7 +2,7 @@
 
 import { Ionicons } from '@expo/vector-icons';
 import React, { useRef } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated } from 'react-native'; // Importado Animated
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated, Easing } from 'react-native'; // Importado Animated, Easing
 
 import { ProviderDisplayInfo } from '../../../../types/backend/providers';
 
@@ -31,14 +31,16 @@ const SecaoPrestadores: React.FC<SecaoPrestadoresProps> = ({
     Animated.spring(arrowAnim, {
       toValue: 5, // Desloca a seta para a frente
       useNativeDriver: true,
+      friction: 5, // Ajuste para um efeito de mola mais suave
+      tension: 80, // Ajuste para um retorno rápido
     }).start();
   };
 
   const onPressOutViewAll = () => {
     Animated.spring(arrowAnim, {
       toValue: 0, // Retorna a seta à posição original
-      friction: 3,
-      tension: 40,
+      friction: 5,
+      tension: 80,
       useNativeDriver: true,
     }).start();
   };
@@ -78,6 +80,7 @@ const styles = StyleSheet.create({
     marginTop: -2,
     marginBottom: -18,
     backgroundColor: '#F4F7FC',
+
   },
   header: {
     paddingHorizontal: 16,
