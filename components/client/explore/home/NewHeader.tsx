@@ -39,7 +39,7 @@ const NewHeader: React.FC<NewHeaderProps> = ({ userName, userAvatarUrl }) => {
 
     return (
         <LinearGradient
-            colors={['#d5d5ffff', '#c7c9f0ff']} // Cores do gradiente, do lilás ao rosa suave
+            colors={['#5090d913', '#c7c9f05b']} // Cores do gradiente, do lilás ao rosa suave
             style={styles.container}
         >
             <View style={styles.leftContent}>
@@ -72,6 +72,7 @@ const styles = StyleSheet.create({
         // paddingTop ajustado para considerar a altura da barra de status do dispositivo
         // Reduzido o 40 para 30 para um cabeçalho um pouco menos alto
         paddingVertical: Constants.statusBarHeight + 20, 
+        left: 5,
         paddingHorizontal: 15,
         // REMOVIDO: Borda arredondada do cabeçalho
         borderBottomEndRadius: 30,
@@ -84,6 +85,11 @@ const styles = StyleSheet.create({
         marginBottom: 13,
         // Adicionando zIndex para garantir que o cabeçalho fique abaixo do conteúdo principal
         zIndex: 0, // Definindo um zIndex explícito e baixo
+        shadowColor: '#2f3344e8', // Cor da sombra
+        shadowOffset: { width: 0, height: 8 }, // Deslocamento vertical mais pronunciado
+        shadowOpacity: 0.27, // Opacidade aumentada para robustezs
+        shadowRadius: 25, // Raio de desfoque para conforto
+        elevation: 6, // Elevação aumentada para robustez no Android
 
      
     },
@@ -92,14 +98,22 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     profileImageContainer: {
-        width: 35,
-        height: 35,
+        width: 37,
+        height: 37,
         borderRadius: 20,
         overflow: 'hidden', // Garante que a imagem não saia dos limites do borderRadius
-        marginRight: 10,
+        marginRight: 6,
         backgroundColor: '#E0E0E0', // Fundo de placeholder enquanto a imagem carrega ou se não houver avatar
         justifyContent: 'center',
         alignItems: 'center',
+        shadowColor: '#7b1ae2ff', // Cor da sombra
+        shadowOffset: { width: 3, height: 6 }, // Deslocamento vertical mais pronunciado
+        shadowOpacity: 0.185, // Opacidade aumentada para robustezs
+        shadowRadius: 15, // Raio de desfoque para conforto
+        elevation: 6, // Elevação aumentada para robustez no Android
+        // INJEÇÃO DA BORDA NEON AZUL CLARA AQUI
+        borderWidth: 2, // Largura da borda
+        borderColor: '#87CEEB', // Cor azul clara para o efeito neon
     },
     profileImage: {
         width: '100%',
