@@ -135,7 +135,7 @@ const AddressSection: React.FC<AddressSectionProps> = ({
       {/* Trilho com ícone + mensagem + docCheck 3D */}
       <View style={s.track}>
         <Animated.Image
-          source={require('../../../../assets/images/mascote-support.png')}
+          source={require('../../../../assets/images/facial.png')}
           style={[s.trackIcon, { transform: [{ scale: trackerIconPulseAnim }] }]}
           resizeMode="contain"
         />
@@ -205,11 +205,12 @@ const s = StyleSheet.create({
   card: {
     backgroundColor: AppColors.backgroundLight, // Usando AppColors
     borderRadius: 18,
-    marginHorizontal: 26,
+    marginHorizontal: 19,
     padding: 14,
-    marginTop: 12,
+    marginTop: 16,
     overflow: 'hidden',
     ...AppShadows.small, // Adicionando sombra
+    
   },
 
   // trilho
@@ -220,15 +221,15 @@ const s = StyleSheet.create({
     marginBottom: 8,
   },
   trackIcon: {
-    width: 72,
-    height: 72,
-    marginHorizontal: 0,
+    width: 68,
+    height: 68,
+    marginHorizontal: 20,
   },
 
   // mensagem de segurança (no lugar do pontilhado)
   safeMsgWrap: {
     flex: 1,
-    minHeight: 54,
+    left: -20,
     paddingHorizontal: 0,
     paddingVertical: 18,
     borderRadius: 14,
@@ -237,11 +238,16 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   safeMsgText: {
-    fontSize: 11.2,
+    fontSize: 13.2,
+    minWidth: 10,
+    marginHorizontal: 10,
+    fontFamily: 'Montserrat-Regular',
     color: AppColors.textAuxiliary, // Usando AppColors
-    fontWeight: '400', // leve/fina e confortável
+    fontWeight: '600', // leve/fina e confortável
     lineHeight: 16,
-    left: 10, 
+    left: -2, 
+    
+    
   },
   safeMsgShine: {
     position: 'absolute',
@@ -255,10 +261,11 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingTop: 16,
+    marginHorizontal: 16,
     borderTopWidth: 1,
     borderTopColor: AppColors.borderNeutral, // Usando AppColors
   },
-  line1: { fontSize: 14, fontWeight: '700', color: AppColors.textBody,paddingHorizontal: 10 }, // Usando AppColors
+  line1: { fontSize: 14, fontWeight: '700', color: AppColors.textBody,paddingHorizontal: 10, }, // Usando AppColors
   line2: { fontSize: 12, color: AppColors.textAuxiliary, marginTop: 3, paddingHorizontal: 10 }, // Usando AppColors
   editBtn: { padding: 8, borderRadius: 18, backgroundColor: AppColors.primaryInteractive, right: 15, }, // Usando AppColors
 
