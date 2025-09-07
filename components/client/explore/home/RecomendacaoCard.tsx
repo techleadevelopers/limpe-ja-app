@@ -1,15 +1,27 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useRef } from 'react';
-import { Animated, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native'; // Importado Platform
+import React, { useEffect, useRef } from 'react';
+import { Animated, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import AnimatedReanimated, {
+    useSharedValue,
+    useAnimatedStyle,
+    withRepeat,
+    withTiming,
+    Easing,
+    withSequence,
+    cancelAnimation
+} from 'react-native-reanimated';
 
 import { CLIENT_ROUTES } from '../../../../constants/routes';
 import { ProviderDisplayInfo } from '../../../../types/backend/providers';
 import { Icons3D } from '../../../../constants/icons3d';
 import { PricingType } from '../../../../types/backend/services';
 import { ProviderServiceOffering } from '../../../../types/backend/provider-service';
+
+const AnimatedCardBackground = AnimatedReanimated.createAnimatedComponent(LinearGradient);
+const AnimatedPlusButtonGradient = AnimatedReanimated.createAnimatedComponent(LinearGradient);
 
 interface RecomendacaoCardProps {
     item: ProviderDisplayInfo;
@@ -24,23 +36,85 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
         return null;
     }
 
-    const scaleAnim = useRef(new Animated.Value(1)).current;
-    const onPressIn = () => {
-        Animated.spring(scaleAnim, {
-            toValue: 0.96,
+    // --- Nova animação para o efeito de hover (apenas escala) ---
+    const hoverScaleAnim = useRef(new Animated.Value(1)).current; // 1: estado normal
+
+    const onPressInCard = () => {
+        Animated.spring(hoverScaleAnim, {
+            toValue: 1.03, // Leve zoom de 3% ao "hover"
             useNativeDriver: true,
-            friction: 8,
+            friction: 5, // Mais "mola" para um efeito mais vivo
+            tension: 100, // Retorno rápido
+        }).start();
+    };
+
+    const onPressOutCard = () => {
+        Animated.spring(hoverScaleAnim, {
+            toValue: 1, // Retorna ao estado normal
+            useNativeDriver: true,
+            friction: 5,
             tension: 100,
         }).start();
     };
-    const onPressOut = () => {
-        Animated.spring(scaleAnim, {
-            toValue: 1,
-            useNativeDriver: true,
-            friction: 8,
-            tension: 100,
-        }).start();
-    };
+    // --- Fim da nova animação ---
+
+    // --- Animação do Reflexo no Botão Plus ---
+    const reflectionTranslateX = useSharedValue(-60);
+
+    useEffect(() => {
+        reflectionTranslateX.value = withRepeat(
+            withTiming(38 + 60, { // Ajustado para cobrir toda a largura do botão + reflexo
+                duration: 1500,
+                easing: Easing.linear
+            }),
+            -1,
+            false
+        );
+    }, []);
+
+    const animatedReflectionStyle = useAnimatedStyle(() => {
+        return {
+            transform: [{ translateX: reflectionTranslateX.value }],
+        };
+    });
+    // --- Fim da Animação do Reflexo ---
+
+    // --- Animação do Tremor Sutil no Botão Plus (replicando o efeito do CarouselBannerItem) ---
+    const subtleTrembleValue = useSharedValue(0);
+
+    useEffect(() => {
+        const SHAKE_AMOUNT = 0.5; // 0.5 pixels para um movimento muito sutil
+        const SHAKE_DURATION = 50; // 50ms para um movimento rápido
+
+        subtleTrembleValue.value = withRepeat(
+            withSequence(
+                // Move ligeiramente para um lado (ex: direita/baixo)
+                withTiming(SHAKE_AMOUNT, { duration: SHAKE_DURATION, easing: Easing.linear }),
+                // Move para o lado oposto (ex: esquerda/cima)
+                withTiming(-SHAKE_AMOUNT, { duration: SHAKE_DURATION, easing: Easing.linear }),
+                // Retorna ao centro
+                withTiming(0, { duration: SHAKE_DURATION, easing: Easing.linear }),
+                // Pausa de 4 segundos antes de repetir
+                withTiming(0, { duration: 4000, easing: Easing.linear })
+            ),
+            -1, // Repete indefinidamente
+            false // Não inverte a sequência
+        );
+
+        return () => {
+            cancelAnimation(subtleTrembleValue);
+        };
+    }, []);
+
+    const subtleTrembleAnimatedStyle = useAnimatedStyle(() => {
+        return {
+            transform: [
+                { translateX: subtleTrembleValue.value },
+                { translateY: subtleTrembleValue.value },
+            ],
+        };
+    });
+    // --- Fim da Animação do Tremor Sutil ---
 
     const renderStars = (rating: number | undefined) => {
         const stars = [];
@@ -155,13 +229,19 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
     const displayedCategories = categoriesToDisplay.slice(0, 2);
 
     return (
-        <Animated.View style={[styles.animatedCardContainer, { transform: [{ scale: scaleAnim }] }]}>
+        <AnimatedCardBackground
+            colors={['#FDFEFF', '#F0F4F8']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            // Aplica o estilo de escala para o hover
+            style={[styles.animatedCardContainer, { transform: [{ scale: hoverScaleAnim }] }]}
+        >
             <TouchableOpacity
                 style={styles.cardContentWrapper}
                 onPress={handleCardPress}
-                onPressIn={onPressIn}
-                onPressOut={onPressOut}
-                activeOpacity={0.8}
+                onPressIn={onPressInCard} // Usa o novo handler para o zoom
+                onPressOut={onPressOutCard} // Usa o novo handler para o zoom
+                activeOpacity={1} // Desabilita a opacidade padrão do TouchableOpacity para que a animação seja controlada
             >
                 <View style={styles.imageWrapper}>
                     <Image source={avatarSource} style={styles.cardImage} />
@@ -197,14 +277,22 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
                         </View>
 
                         <View style={styles.ratingSection}>
-                            <LinearGradient
+                            <AnimatedPlusButtonGradient
                                 colors={['#67adfdec', '#5c93ec','#5c93ec92']}
-                                style={styles.plusButton}
+                                style={[styles.plusButton, { overflow: 'hidden' }, subtleTrembleAnimatedStyle]}
                                 start={{ x: 0, y: 0 }}
                                 end={{ x: 1, y: 1 }}
                             >
+                                <AnimatedReanimated.View style={[styles.reflectionOverlay, animatedReflectionStyle]}>
+                                    <LinearGradient
+                                        colors={['transparent', 'rgba(255,255,255,0.7)', 'transparent']}
+                                        start={{ x: 0, y: 0 }}
+                                        end={{ x: 1, y: 0 }}
+                                        style={StyleSheet.absoluteFillObject}
+                                    />
+                                </AnimatedReanimated.View>
                                 <Ionicons name="add" size={22} color="#ffffffc8" />
-                            </LinearGradient>
+                            </AnimatedPlusButtonGradient>
 
                             {renderStars(item.averageRating)}
                             {item.reviewCount !== undefined && (
@@ -216,7 +304,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
                     </View>
                 </View>
             </TouchableOpacity>
-        </Animated.View>
+        </AnimatedCardBackground>
     );
 };
 
@@ -225,26 +313,31 @@ const styles = StyleSheet.create({
         width: 170,
         marginRight: 15,
         marginBottom: 5,
+        marginTop: 8,
+        overflow: 'hidden',
+        
+        borderTopStartRadius: 22,
+        borderBottomStartRadius: 22,
+        borderTopEndRadius: 22,
+        borderBottomEndRadius: 22,
+        borderBottomColor: '#45484b56',
+
         borderRadius: 12,
-        overflow: 'visible',
-        backgroundColor: '#FFFFFF',
-        // Sombras avançadas e modernas para o card
-        ...Platform.select({
-            ios: {
-                shadowColor: '#000', // Cor da sombra (preto)
-                shadowOffset: { width: 0, height: 6 }, // Deslocamento da sombra (6px para baixo)
-                shadowOpacity: 0.08, // Opacidade da sombra (8% visível, bem sutil)
-                shadowRadius: 10, // Raio de desfoque da sombra (10px para um efeito difundido)
-            },
-            android: {
-                elevation: 8, // Elevação para Android (simula a profundidade da sombra)
-            },
-        }),
+        borderBottomWidth: 0.1,
+        borderLeftColor: '#45484b56',
+        borderLeftWidth: 1,
+        // Propriedades de sombra mantidas exatamente como fornecidas
+        shadowColor: '#45484b56', // Cor da sombra
+        shadowOffset: { width: -1, height: 1 }, // Deslocamento vertical mais pronunciado
+        shadowOpacity: 1.55, // Opacidade aumentada para robustezs
+        shadowRadius: 20, // Raio de desfoque para conforto
+        elevation: 6, // Elevação aumentada para robustez no Android
     },
     cardContentWrapper: {
         width: '100%',
         borderRadius: 12,
         overflow: 'hidden',
+        
     },
     imageWrapper: {
         width: '100%',
@@ -289,9 +382,7 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     metricText: {
-        fontSize: 10,
-        color: '#555',
-        marginBottom: 2,
+        // ... (mantido como está)
     },
     categoryChipsContainer: {
         flexDirection: 'row',
@@ -347,11 +438,16 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 16,
-        shadowColor: '#212223ff',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
-        elevation: 4,
+        shadowColor: '#000', // Cor da sombra
+        shadowOffset: { width: 7, height: 14 }, // Deslocamento vertical mais pronunciado
+        shadowOpacity: 0.28, // Opacidade aumentada para robustez
+        shadowRadius: 15, // Raio de desfoque para conforto
+        elevation: 6, // Elevação aumentada para robustez no Android
+    },
+    reflectionOverlay: {
+        position: 'absolute',
+        width: 60, // Largura do reflexo
+        height: '100%',
     },
     ratingStarContainer: {
         flexDirection: 'row',
