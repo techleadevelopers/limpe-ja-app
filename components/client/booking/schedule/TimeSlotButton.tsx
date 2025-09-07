@@ -1,7 +1,9 @@
 import React, { useRef, useEffect } from 'react';
-import { TouchableOpacity, Text, StyleSheet, View, ColorValue, Animated, Easing } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, View, ColorValue, Animated, Easing, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AppColors, AppShadows } from '../../../../constants/appStyles'; // Importe AppColors e AppShadows
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
 
 interface TimeSlotButtonProps {
   time: string;
@@ -11,7 +13,9 @@ interface TimeSlotButtonProps {
   itemWidth?: number;
 }
 
-const AVAILABLE_GRADIENT_COLORS: readonly [ColorValue, ColorValue] = [AppColors.primaryInteractive + '40', AppColors.primaryInteractive + '20'] as const; // Usando AppColors
+// Modificado para um gradiente azul claro robusto, conforme solicitado.
+// As cores foram escolhidas para serem azuis claros e com opacidade total (robustas).
+const AVAILABLE_GRADIENT_COLORS: readonly [ColorValue, ColorValue] = ['#6dc5ddff', '#659eedff'] as const; // Azul claro robusto
 
 const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({
   time,
@@ -21,43 +25,95 @@ const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({
   itemWidth,
 }) => {
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const pressAnim = useRef(new Animated.Value(1)).current; // Animação para feedback ao toque
+  const shineAnim = useRef(new Animated.Value(-itemWidth || -70)).current; // Animação para o brilho
 
   useEffect(() => {
     if (isAvailable && !isSelected) {
-      const loop = Animated.loop(
+      // Animação de pulso para slots disponíveis
+      const loopPulse = Animated.loop(
         Animated.sequence([
-          Animated.timing(pulseAnim, { toValue: 1.03, duration: 1200, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1.01, duration: 1200, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
           Animated.timing(pulseAnim, { toValue: 1, duration: 1200, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
         ])
       );
-      loop.start();
-      return () => loop.stop();
+      loopPulse.start();
+
+      // Animação de brilho para slots disponíveis
+      const loopShine = Animated.loop(
+        Animated.timing(shineAnim, {
+          toValue: (itemWidth || 70) + 50, // Move o brilho para fora do botão
+          duration: 2000, // Duração do brilho
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      );
+      loopShine.start();
+
+      return () => {
+        loopPulse.stop();
+        loopShine.stop();
+      };
     } else {
       pulseAnim.stopAnimation();
       pulseAnim.setValue(1);
+      shineAnim.stopAnimation();
+      shineAnim.setValue(-itemWidth || -70);
     }
-  }, [isAvailable, isSelected, pulseAnim]);
+  }, [isAvailable, isSelected, pulseAnim, shineAnim, itemWidth]);
 
-  const buttonStyle = [styles.buttonBase, itemWidth ? { width: itemWidth } : null];
+  const onPressInButton = () => {
+    Animated.spring(pressAnim, {
+      toValue: 0.95, // Escala sutil ao pressionar
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const onPressOutButton = () => {
+    Animated.spring(pressAnim, {
+      toValue: 1, // Retorna à escala normal
+      friction: 5,
+      tension: 80,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const buttonStyle = [
+    styles.buttonBase,
+    itemWidth ? { width: itemWidth } : null,
+    !isAvailable ? styles.unavailable :
+    isSelected  ? styles.selected :
+                  { transform: [{ scale: pulseAnim }] } // Aplica pulso apenas se disponível e não selecionado
+  ];
+
   const showGradient = isAvailable && !isSelected;
 
   return (
     <TouchableOpacity
       onPress={() => isAvailable && onPress(time)}
       disabled={!isAvailable}
-      style={
-        !isAvailable ? [buttonStyle, styles.unavailable] :
-        isSelected  ? [buttonStyle, styles.selected] :
-                      [buttonStyle, { transform: [{ scale: pulseAnim }] }]}
+      style={[buttonStyle, { transform: [{ scale: pressAnim }] }]} // Aplica animação de press aqui
       activeOpacity={0.9}
+      onPressIn={onPressInButton}
+      onPressOut={onPressOutButton}
     >
       {showGradient && (
-        <LinearGradient
-          colors={AVAILABLE_GRADIENT_COLORS}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.gradientFill}
-        />
+        <>
+          <LinearGradient
+            colors={AVAILABLE_GRADIENT_COLORS}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.gradientFill}
+          />
+          <Animated.View style={[styles.shineOverlay, { transform: [{ translateX: shineAnim }] }]}>
+            <LinearGradient
+              colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.3)', 'rgba(255,255,255,0)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.gradientShine}
+            />
+          </Animated.View>
+        </>
       )}
       <Text
         style={[
@@ -75,30 +131,57 @@ const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({
 
 const styles = StyleSheet.create({
   buttonBase: {
-    minWidth: 76,              // ↓ um pouco menor
-    paddingVertical: 7,        // ↓
-    paddingHorizontal: 10,
-    borderRadius: 12,          // ↓ canto mais compacto
+      marginLeft: 3,
+    minWidth: 70,
+    paddingVertical: 7,
+    paddingHorizontal: 5,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
-    overflow: 'hidden',
-    backgroundColor: AppColors.backgroundLight, // Usando AppColors
-    ...AppShadows.small, // Usando AppShadows
+    overflow: 'hidden', // Necessário para o efeito de brilho
+    backgroundColor: AppColors.backgroundLight,
+    ...AppShadows.small,
   },
   gradientFill: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: 12,
+    borderWidth: 2.5,
+    borderColor : '#45484b56',
   },
   selected: {
-    backgroundColor: AppColors.primaryInteractive, // Usando AppColors
-    ...AppShadows.medium, // Usando AppShadows
+    backgroundColor: AppColors.primaryInteractive,
+    ...AppShadows.medium,
   },
-  unavailable: { backgroundColor: AppColors.backgroundNeutral, opacity: 0.55, elevation: 0 }, // Usando AppColors
-  text: { fontSize: 12, color: AppColors.textBody, fontWeight: '600' },       // ↓ fonte levemente menor // Usando AppColors
-  textSelected: { color: AppColors.white, fontWeight: '700' }, // Usando AppColors
-  textUnavailable: { color: AppColors.mediumGray }, // Usando AppColors
-  textOnGradient: { color: AppColors.primaryDark, fontWeight: '700' }, // Usando AppColors
+  unavailable: {
+    backgroundColor: AppColors.backgroundNeutral,
+    opacity: 0.55,
+    elevation: 0,
+    borderTopStartRadius: 44,
+    borderBottomStartRadius: 44,
+    borderTopEndRadius: 44,
+    borderBottomEndRadius: 44,
+    borderBottomColor: '#45484b56',
+    shadowColor: '#45484b56',
+    shadowOffset: { width: -11, height: 2 },
+    shadowOpacity: 5.55,
+    shadowRadius: 25,
+  },
+  text: { fontSize: 14, color: AppColors.textBody, fontWeight: '600', },
+  textSelected: { color: AppColors.white, fontWeight: '700', },
+  textUnavailable: { color: AppColors.mediumGray },
+  textOnGradient: { color: AppColors.primaryDark, fontWeight: '700' },
+  shineOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    height: '100%',
+    width: 50, // Largura do brilho
+    opacity: 0.7,
+  },
+  gradientShine: {
+    flex: 1,
+  }
 });
 
 export default TimeSlotButton;
