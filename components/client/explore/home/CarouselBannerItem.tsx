@@ -249,8 +249,8 @@ const CarouselBannerItem: React.FC<CarouselBannerItemProps> = ({
 
 const styles = StyleSheet.create({
     bannerOuterContainer: {
-        width: Dimensions.get('window').width - (30 * 2),
-        height: 180,
+        width: Dimensions.get('window').width - (33 * 2),
+        height: 210,
         borderRadius: 16,
         paddingLeft: 0,
         margin: 20,
@@ -261,17 +261,7 @@ const styles = StyleSheet.create({
         marginBottom: -11,
         marginTop: -38,
         // Sombras avançadas e modernas
-        ...Platform.select({
-            ios: {
-                shadowColor: '#000', // Cor da sombra (preto)
-                shadowOffset: { width: 0, height: 10 }, // Deslocamento da sombra (10px para baixo)
-                shadowOpacity: 0.12, // Opacidade da sombra (12% visível, para ser suave)
-                shadowRadius: 15, // Raio de desfoque da sombra (15px para um efeito bem difundido)
-            },
-            android: {
-                elevation: 12, // Elevação para Android (simula a profundidade da sombra)
-            },
-        }),
+    
     },
     backgroundImageWrapper: {
         flex: 1,
@@ -291,7 +281,7 @@ const styles = StyleSheet.create({
         shadowColor: '#45484b56', // Cor da sombra
         shadowOffset: { width: -1, height: 1 }, // Deslocamento vertical mais pronunciado
         shadowOpacity: 1.55, // Opacidade aumentada para robustezs
-        shadowRadius: 15, // Raio de desfoque para conforto
+        shadowRadius: 5, // Raio de desfoque para conforto
         elevation: 6, // Elevação aumentada para robustez no Android
     },
     backgroundImage: {

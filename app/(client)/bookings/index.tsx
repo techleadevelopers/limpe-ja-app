@@ -15,6 +15,7 @@ import {
     Text,
     TouchableOpacity,
     View,
+    Easing, // Importar Easing
 } from 'react-native';
 import { formatDate } from '../../../utils/helpers';
 
@@ -36,13 +37,15 @@ const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = (
             Animated.timing(fadeAnim, {
                 toValue: 1,
                 duration: 400,
-                delay: index * 80,
+                delay: index * 80, // Atraso sequencial
+                easing: Easing.out(Easing.ease), // Entrada suave
                 useNativeDriver: true,
             }),
             Animated.timing(slideAnim, {
                 toValue: 0,
                 duration: 400,
                 delay: index * 80,
+                easing: Easing.out(Easing.ease), // Entrada suave
                 useNativeDriver: true,
             }),
         ]).start();
@@ -135,16 +138,18 @@ export default function MyBookingsScreen() {
   const onPressInFilterButton = useCallback((index: number) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       Animated.spring(filterButtonAnims[index], {
-          toValue: 0.9,
+          toValue: 0.9, // Escala para 90%
           useNativeDriver: true,
+          friction: 4, // Mais "mola"
+          tension: 60, // Retorno rápido
       }).start();
   }, [filterButtonAnims]);
 
   const onPressOutFilterButton = useCallback((index: number) => {
       Animated.spring(filterButtonAnims[index], {
           toValue: 1,
-          friction: 3,
-          tension: 40,
+          friction: 4,
+          tension: 60,
           useNativeDriver: true,
       }).start();
   }, [filterButtonAnims]);

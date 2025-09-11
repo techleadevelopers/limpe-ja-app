@@ -83,6 +83,7 @@ export interface ProviderDisplayInfo {
   // NOVOS CAMPOS ADICIONADOS PARA RESOLVER ERROS DE TIPAGEM NOS COMPONENTES
   acceptanceRate?: number; // Adicionado para PrestadorCard e RecomendacaoCard
   averageResponseTime?: number; // Adicionado para PrestadorCard e RecomendacaoCard (componentes usam este nome)
+  minPrice?: number; // NOVO: Preço mínimo pré-calculado de um serviço oferecido pelo provedor
 }
 
 /**
@@ -137,6 +138,7 @@ export type ProviderWithCalculatedRating = {
   // NOVOS CAMPOS ADICIONADOS PARA ALINHAR COM ProviderDisplayInfo, se necessário no backend
   acceptanceRate?: number;
   averageResponseTime?: number;
+  minPrice?: number; // NOVO: Preço mínimo pré-calculado de um serviço oferecido pelo provedor
 };
 
 /**

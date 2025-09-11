@@ -3,7 +3,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
+    Alert, // Removed
     Animated,
     Dimensions,
     Image,
@@ -19,6 +19,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import * as Clipboard from 'expo-clipboard';
 // import { LinearGradient } from 'expo-linear-gradient'; // Removido, pois não é mais usado para o fundo animado
+
+// Import NotificationUIService
+import NotificationUIService from '../../../services/notificationUIService'; // Added
 
 // Importações dos componentes necessários
 import BookServiceButton from '../../../components/client/explore/provider/BookServiceButton';
@@ -39,8 +42,8 @@ import { ProviderMetrics, Offer } from '../../../services/providerService';
 import { useAuth } from '../../../hooks/useAuth';
 import { checkActiveChatBooking } from '../../../services/bookingService';
 import { getProviderDetails, getProviderMetrics, getProviderOffers } from '../../../services/providerService';
-import Toast from '../../../components/Toast';
-import { AppColors } from '../../../constants/appStyles'; // Importe AppColors
+// import Toast from '../../../components/Toast'; // Removed
+import { AppColors, AppShadows } from '../../../constants/appStyles'; // Importe AppColors e AppShadows
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
@@ -307,10 +310,7 @@ export default function ProviderDetailsScreen() {
                 }
             });
         } else {
-            Alert.alert(
-                t("provider_details.chat_unavailable_title"),
-                t("provider_details.chat_unavailable_message")
-            );
+            NotificationUIService.showInfo(t("provider_details.chat_unavailable_message"), t("provider_details.chat_unavailable_title")); // Modified
         }
     };
 
@@ -361,11 +361,7 @@ export default function ProviderDetailsScreen() {
 
     const handleCopyCouponCode = async (code: string) => {
         await Clipboard.setStringAsync(code);
-        Toast.show({
-            type: 'success',
-            text1: t('common.success'),
-            text2: t('offers.copy_code'),
-        });
+        NotificationUIService.showSuccess(t('offers.copy_code'), t('common.success')); // Modified
     };
 
     // --- Lógica de renderização condicional deve vir DEPOIS das declarações de Hooks ---
@@ -459,7 +455,7 @@ export default function ProviderDetailsScreen() {
                     />
                     <TouchableOpacity
                         style={styles.favoriteButton}
-                        onPress={() => Alert.alert(t("common.save"), t("provider_details.save_favorite"))}
+                        onPress={() => NotificationUIService.showInfo(t("provider_details.save_favorite"), t("common.save"))} // Modified
                     >
                         <Ionicons name="heart" size={18} color={AppColors.primaryInteractive} />
                     </TouchableOpacity>
@@ -527,7 +523,7 @@ export default function ProviderDetailsScreen() {
                             <View>
                                 <Text style={styles.sectionTitle}>{t('offers.title')}</Text>
                                 {providerOffers.map((offer) => (
-                                    <View key={offer.id} style={styles.offerCard}>
+                                    <View key={offer.id} style={[styles.offerCard, AppShadows.small]}> {/* Added AppShadows.small */}
                                         <Text style={styles.offerTitle}>{offer.title}</Text>
                                         <Text style={styles.offerDescription}>{offer.description}</Text>
                                         <View style={styles.offerFooter}>
@@ -551,7 +547,7 @@ export default function ProviderDetailsScreen() {
                             <Animated.View style={{ transform: [{ scale: callButtonAnim }] }}>
                                 <TouchableOpacity
                                     style={styles.actionButton}
-                                    onPress={() => Alert.alert(t("provider_details.call"), t("provider_details.call_functionality"))}
+                                    onPress={() => NotificationUIService.showInfo(t("provider_details.call_functionality"), t("provider_details.call"))} // Modified
                                     onPressIn={() => handleActionButtonPressIn(callButtonAnim)}
                                     onPressOut={() => handleActionButtonPressOut(callButtonAnim)}
                                 >
@@ -582,7 +578,7 @@ export default function ProviderDetailsScreen() {
                             <Animated.View style={{ transform: [{ scale: mapButtonAnim }] }}>
                                 <TouchableOpacity
                                     style={styles.actionButton}
-                                    onPress={() => Alert.alert(t("provider_details.map"), t("provider_details.map_functionality"))}
+                                    onPress={() => NotificationUIService.showInfo(t("provider_details.map_functionality"), t("provider_details.map"))} // Modified
                                     onPressIn={() => handleActionButtonPressIn(mapButtonAnim)}
                                     onPressOut={() => handleActionButtonPressOut(mapButtonAnim)}
                                 >
@@ -594,7 +590,7 @@ export default function ProviderDetailsScreen() {
                             <Animated.View style={{ transform: [{ scale: shareButtonAnim }] }}>
                                 <TouchableOpacity
                                     style={styles.actionButton}
-                                    onPress={() => Alert.alert(t("provider_details.share"), t("provider_details.share_functionality"))}
+                                    onPress={() => NotificationUIService.showInfo(t("provider_details.share_functionality"), t("provider_details.share"))} // Modified
                                     onPressIn={() => handleActionButtonPressIn(shareButtonAnim)}
                                     onPressOut={() => handleActionButtonPressOut(shareButtonAnim)}
                                 >
@@ -628,9 +624,9 @@ export default function ProviderDetailsScreen() {
                     // 'showFacialRecognition' pode ser uma propriedade do provedor ou um valor fixo
                     showFacialRecognition={true} // Exemplo: sempre mostra para demonstração
                     rating={provider.averageRating}
-                    onPressSecurity={() => Alert.alert("Segurança 3D", "Este provedor passou por verificação de segurança 3D.")}
-                    onPressFacialRecognition={() => Alert.alert("Reconhecimento Facial", "Este provedor utiliza reconhecimento facial para verificação.")}
-                    onPressRating={() => Alert.alert("Avaliação", `Avaliação média do provedor: ${provider.averageRating?.toFixed(1) || 'N/A'}`)}
+                    onPressSecurity={() => NotificationUIService.showInfo("Este provedor passou por verificação de segurança 3D.", "Segurança 3D")} // Modified
+                    onPressFacialRecognition={() => NotificationUIService.showInfo("Este provedor utiliza reconhecimento facial para verificação.", "Reconhecimento Facial")} // Modified
+                    onPressRating={() => NotificationUIService.showInfo(`Avaliação média do provedor: ${provider.averageRating?.toFixed(1) || 'N/A'}`, "Avaliação")} // Modified
                 />
             )}
         </View>

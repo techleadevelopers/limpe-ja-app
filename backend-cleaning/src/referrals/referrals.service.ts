@@ -156,12 +156,10 @@ export class ReferralsService {
       where: { referredUserId: referredUserId },
     });
 
-    if (!referral) {
-      this.logger.log(
-        `[ReferralsService] Nenhuma indicação encontrada para referredUser=${referredUserId}. Nada a fazer.`,
-      );
-      return { converted: false };
-    }
+    // É importante verificar se há uma indicação *antes* de verificar o completedBookingsCount,
+    // pois o referido pode completar um booking sem ter sido indicado.
+    // A lógica de recompensa do referido pelo primeiro booking pode ser independente de indicação.
+    // Vou manter a estrutura atual, mas adicionar a recompensa do referido aqui.
 
     const client = await this.prisma.client.findUnique({
       where: { userId: referredUserId },
@@ -172,7 +170,7 @@ export class ReferralsService {
       this.logger.warn(
         `[ReferralsService] Usuário indicado não possui perfil de cliente. userId=${referredUserId}`,
       );
-      return { converted: false };
+      return { converted: false }; // Ou { converted: false, message: 'Client profile not found' }
     }
 
     // Usar completedBookingsCount do Client para verificar se é o PRIMEIRO COMPLETED
@@ -180,61 +178,92 @@ export class ReferralsService {
     // Então, se o count for 1, significa que este é o primeiro booking COMPLETED.
     if (client.completedBookingsCount !== 1) {
       this.logger.log(`[ReferralsService] completedBookingsCount para referredUser=${referredUserId} = ${client.completedBookingsCount}. Não é o primeiro booking COMPLETED. Não converter.`);
-      return { converted: false };
+      return { converted: false }; // Ou { converted: false, message: 'Not first completed booking' }
     }
 
     this.logger.log(
       `[ReferralsService] Indicação elegível para conversão! referredUser=${referredUserId} completedBookingsCount=${client.completedBookingsCount}`,
     );
 
-    // Disparar evento de missão para o INDICADOR
+    // --- NOVO: Recompensa para o Indicado (REFERRED_USER) por seu primeiro booking ---
     try {
-      await this.missionsService.trackEvent(referral.referrerUserId, 'referral.converted', {
-        bookingId,
-        referredUserId,
-        referralId: referral.id,
-      });
-      this.logger.log(`[ReferralsService] Evento de missão 'referral.converted' disparado para o indicador ${referral.referrerUserId}.`);
-    } catch (e) {
-      this.logger.error(`[ReferralsService] Falha ao trackear missão referral.converted para ${referral.referrerUserId}: ${e?.message || e}`);
-    }
-
-    // --- NOVO: Recompensa para o Indicador (REFERRAL_REFERRER) ---
-    // Opção A: +300 pontos
-    // Opção B: cupom REFERRAL_REFERRER R$20 (expira em 14d)
-    const rewardOption = 'POINTS'; // Pode ser configurável (ex: via DB ou feature flag)
-
-    if (rewardOption === 'POINTS') {
       await this.loyaltyService.addPoints({
-        userId: referral.referrerUserId,
-        points: 300, // Definido como 300 pontos
-        type: LoyaltyTransactionType.REFERRAL_CONVERSION, // Usar tipo mais específico
+        userId: referredUserId,
+        points: 10, // Pontos para o indicado pelo primeiro booking
+        type: LoyaltyTransactionType.SERVICE_COMPLETED, // Ou um tipo mais específico como FIRST_BOOKING_COMPLETED se existir
         referenceId: bookingId,
       });
-      this.logger.log(
-        `[ReferralsService] Indicação convertida! Indicador ${referral.referrerUserId} recebeu 300 pontos.`,
-      );
-      // Telemetria: referral_points_earned_referrer
-      this.logger.log(`[TELEMETRY] referral_points_earned_referrer: { userId: ${referral.referrerUserId}, referralId: ${referral.id}, points: 300 }`);
-    } else if (rewardOption === 'COUPON') {
-      try {
-        await this.couponsService.issueReferralReferrerCoupon(referral.referrerUserId, referral.id);
-        this.logger.log(
-          `[ReferralsService] Indicação convertida! Indicador ${referral.referrerUserId} recebeu cupom REFERRAL_REFERRER.`,
-        );
-        // Telemetria: referral_coupon_issued_referrer
-        this.logger.log(`[TELEMETRY] referral_coupon_issued_referrer: { userId: ${referral.referrerUserId}, referralId: ${referral.id} }`);
-      } catch (e) {
-        this.logger.error(`[ReferralsService] Falha ao emitir cupom REFERRAL_REFERRER para ${referral.referrerUserId}: ${e?.message || e}`);
-      }
+      this.logger.log(`[ReferralsService] Indicado ${referredUserId} recebeu 10 pontos pelo primeiro agendamento concluído.`);
+      // Telemetria: first_booking_points_earned_referred
+      this.logger.log(`[TELEMETRY] first_booking_points_earned_referred: { userId: ${referredUserId}, bookingId: ${bookingId}, points: 10 }`);
+    } catch (e) {
+      this.logger.error(`[ReferralsService] Falha ao adicionar pontos para o indicado ${referredUserId} no primeiro booking: ${e?.message || e}`);
     }
-    // --- Fim da Recompensa para o Indicador ---
 
-    this.logger.log(
-      `[ReferralsService] Indicação convertida! referrer=${referral.referrerUserId} -> referred=${referredUserId}`,
-    );
-    // Telemetria: referral_converted
-    this.logger.log(`[TELEMETRY] referral_converted: { referralId: ${referral.id}, referredUserId: ${referredUserId}, referrerUserId: ${referral.referrerUserId} }`);
+    // Disparar evento de missão para o INDICADO (first_booking_completed)
+    try {
+      await this.missionsService.trackEvent(referredUserId, 'first_booking_completed', {
+        bookingId,
+      });
+      this.logger.log(`[ReferralsService] Evento de missão 'first_booking_completed' disparado para o indicado ${referredUserId}.`);
+    } catch (e) {
+      this.logger.error(`[ReferralsService] Falha ao trackear missão first_booking_completed para ${referredUserId}: ${e?.message || e}`);
+    }
+
+    // Processar a indicação se ela existir
+    if (referral) {
+        // Disparar evento de missão para o INDICADOR
+        try {
+            await this.missionsService.trackEvent(referral.referrerUserId, 'referral.converted', {
+                bookingId,
+                referredUserId,
+                referralId: referral.id,
+            });
+            this.logger.log(`[ReferralsService] Evento de missão 'referral.converted' disparado para o indicador ${referral.referrerUserId}.`);
+        } catch (e) {
+            this.logger.error(`[ReferralsService] Falha ao trackear missão referral.converted para ${referral.referrerUserId}: ${e?.message || e}`);
+        }
+
+        // --- NOVO: Recompensa para o Indicador (REFERRAL_REFERRER) ---
+        // Opção A: +300 pontos
+        // Opção B: cupom REFERRAL_REFERRER R$20 (expira em 14d)
+        const rewardOption = 'POINTS'; // Pode ser configurável (ex: via DB ou feature flag)
+
+        if (rewardOption === 'POINTS') {
+            await this.loyaltyService.addPoints({
+                userId: referral.referrerUserId,
+                points: 300, // Definido como 300 pontos
+                type: LoyaltyTransactionType.REFERRAL_CONVERSION, // Usar tipo mais específico
+                referenceId: bookingId,
+            });
+            this.logger.log(
+                `[ReferralsService] Indicação convertida! Indicador ${referral.referrerUserId} recebeu 300 pontos.`,
+            );
+            // Telemetria: referral_points_earned_referrer
+            this.logger.log(`[TELEMETRY] referral_points_earned_referrer: { userId: ${referral.referrerUserId}, referralId: ${referral.id}, points: 300 }`);
+        } else if (rewardOption === 'COUPON') {
+            try {
+                await this.couponsService.issueReferralReferrerCoupon(referral.referrerUserId, referral.id);
+                this.logger.log(
+                    `[ReferralsService] Indicação convertida! Indicador ${referral.referrerUserId} recebeu cupom REFERRAL_REFERRER.`,
+                );
+                // Telemetria: referral_coupon_issued_referrer
+                this.logger.log(`[TELEMETRY] referral_coupon_issued_referrer: { userId: ${referral.referrerUserId}, referralId: ${referral.id} }`);
+            } catch (e) {
+                this.logger.error(`[ReferralsService] Falha ao emitir cupom REFERRAL_REFERRER para ${referral.referrerUserId}: ${e?.message || e}`);
+            }
+        }
+        // --- Fim da Recompensa para o Indicador ---
+
+        this.logger.log(
+            `[ReferralsService] Indicação convertida! referrer=${referral.referrerUserId} -> referred=${referredUserId}`,
+        );
+        // Telemetria: referral_converted
+        this.logger.log(`[TELEMETRY] referral_converted: { referralId: ${referral.id}, referredUserId: ${referredUserId}, referrerUserId: ${referral.referrerUserId} }`);
+    } else {
+        this.logger.log(`[ReferralsService] Nenhuma indicação encontrada para referredUser=${referredUserId}. Apenas pontos de primeiro booking concedidos.`);
+    }
+
 
     return { converted: true };
   }

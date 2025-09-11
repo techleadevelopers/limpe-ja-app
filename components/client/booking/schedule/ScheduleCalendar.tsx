@@ -140,12 +140,12 @@ const s = StyleSheet.create({
   card: {
     backgroundColor: AppColors.white,
     borderRadius: 28,
-    paddingVertical: -10,
+    paddingVertical: 0,
     paddingHorizontal: 25,
     marginHorizontal: 25,
     marginVertical: 10,
     marginTop: 14,
-     ...AppShadows.medium, // Usando AppShadows
+   
            
   },
   header: {
@@ -157,7 +157,7 @@ const s = StyleSheet.create({
   },
   iconBtn: { padding: 6 },
   month: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '800',
     color: AppColors.textBody,
   },
@@ -189,7 +189,7 @@ const s = StyleSheet.create({
     borderRadius: CELL / 2,
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: 5,
+    marginVertical: 3,
     
   },
   cellSel: {
@@ -202,7 +202,7 @@ const s = StyleSheet.create({
     backgroundColor: AppColors.backgroundNeutral,
   },
 
-  cellTxt: { fontSize: 15, fontWeight: '600' },
+  cellTxt: { fontSize: 14.5, fontWeight: '600' },
   txtWeek: { color: AppColors.textBody },
   txtWeekend: { color: AppColors.primaryInteractive },
   txtOut: { color: AppColors.black + '16' },

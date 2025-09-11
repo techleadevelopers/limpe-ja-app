@@ -660,6 +660,7 @@ export class PaymentsService {
     try {
       const transaction = await this.prisma.transaction.findFirst({
         where: { gatewayTransactionId: gatewayTransactionId, type: TransactionType.WITHDRAWAL },
+        
         include: { provider: { include: { user: true } } } // Incluir dados do provedor e usuário para notificações
       });
 

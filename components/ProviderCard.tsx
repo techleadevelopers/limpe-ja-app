@@ -6,7 +6,7 @@ import { ProviderDisplayInfo } from '../types/backend/providers'; // Alterado pa
 
 interface ProviderCardProps {
     provider: ProviderDisplayInfo; // Alterado o tipo para ProviderDisplayInfo
-    onPress: () => void;
+    onPress: (providerId: string) => void; // FIX: A prop onPress agora espera o ID do provedor
 }
 
 const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onPress }) => {
@@ -43,7 +43,8 @@ const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onPress }) => {
         : 0;
 
     return (
-        <TouchableOpacity style={styles.card} onPress={onPress}>
+        // FIX: Chama onPress passando provider.id
+        <TouchableOpacity style={styles.card} onPress={() => onPress(provider.id)}>
             <Image
                 source={provider.avatarUrl ? { uri: provider.avatarUrl } : require('/assets/images/default-avatar.png')}
                 style={styles.avatar}

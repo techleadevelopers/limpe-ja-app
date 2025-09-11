@@ -3,7 +3,7 @@ import { Stack, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
+    Alert, // Removed
     Animated,
     Image,
     Platform,
@@ -16,6 +16,9 @@ import {
 } from 'react-native';
 import { useAuth } from '../../hooks/useAuth';
 import { PROVIDER_ROUTES } from '../../constants/routes'; // Importar PROVIDER_ROUTES
+
+// Import NotificationUIService
+import NotificationUIService from '../../services/notificationUIService'; // Added
 
 // Importações dos serviços
 import { getBookingsForUser, updateBookingStatus } from '../../services/bookingService';
@@ -33,6 +36,7 @@ import { ProviderDashboard } from '../../types/backend/providers'; // Usar a int
 // Importações dos novos componentes
 import AdvancedReviewsSection from '../../components/provider/dashboard/AdvancedReviewsSection';
 import SmartInsightsSection from '../../components/provider/dashboard/SmartInsightsSection';
+import ProviderNudgeContainer from '../../components/provider/ProviderNudgeContainer'; // Added
 
 // Hook para animação de toque (reutilizável)
 const useAnimatedTouch = () => {
@@ -153,14 +157,18 @@ const FinancialSummaryCard: React.FC<{
   totalEarnings: number | undefined;
   pendingWithdrawals: number | undefined;
   onViewEarnings: () => void;
-}> = ({ totalEarnings, pendingWithdrawals, onViewEarnings }) => {
+  animation: Animated.Value; // Added animation prop
+}> = ({ totalEarnings, pendingWithdrawals, onViewEarnings, animation }) => {
   const { scaleAnim, onPressIn, onPressOut } = useAnimatedTouch();
 
   const formattedTotalEarnings = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalEarnings || 0);
   const formattedPendingWithdrawals = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(pendingWithdrawals || 0);
 
   return (
-    <View style={summaryStyles.summaryCard}>
+    <Animated.View style={[
+      summaryStyles.summaryCard,
+      { opacity: animation, transform: [{ translateY: animation.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] } // Apply animation
+    ]}>
       <Text style={summaryStyles.cardTitle}>Resumo Financeiro</Text>
       <View style={summaryStyles.metricsGrid}>
         <View style={summaryStyles.metricItem}>
@@ -186,7 +194,7 @@ const FinancialSummaryCard: React.FC<{
         <Text style={summaryStyles.viewEarningsButtonText}>Gerenciar Ganhos</Text>
         <Ionicons name="chevron-forward-outline" size={20} color={WHITE} />
       </TouchableOpacity>
-    </View>
+    </Animated.View>
   );
 };
 
@@ -263,6 +271,7 @@ const QuickActionsSection: React.FC<{
   onOpenReviews: () => void;
   onOpenEarnings: () => void;
   onQuickWithdraw: () => void;
+  animation: Animated.Value; // Added animation prop
 }> = ({
   onViewAllServicesPress,
   onViewAllMessagesPress,
@@ -274,6 +283,7 @@ const QuickActionsSection: React.FC<{
   onOpenReviews,
   onOpenEarnings,
   onQuickWithdraw,
+  animation, // Destructure animation prop
 }) => {
   // até 9 botões com o mesmo padrão visual
   const mk = () => useAnimatedTouch();
@@ -293,7 +303,10 @@ const QuickActionsSection: React.FC<{
   );
 
   return (
-    <View style={quickActionStyles.sectionContainer}>
+    <Animated.View style={[
+      quickActionStyles.sectionContainer,
+      { opacity: animation, transform: [{ translateY: animation.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] } // Apply animation
+    ]}>
       <Text style={quickActionStyles.sectionTitle}>Ações Rápidas</Text>
       <View style={quickActionStyles.grid}>
         <Item icon="calendar-outline" label="Minha Agenda" anim={a1} onPress={onManageAvailability} />
@@ -321,7 +334,7 @@ const QuickActionsSection: React.FC<{
           <Ionicons name="chevron-forward-outline" size={20} color={WHITE} />
         </Animated.View>
       </TouchableOpacity>
-    </View>
+    </Animated.View>
   );
 };
 
@@ -396,7 +409,7 @@ const RequestItem: React.FC<{
   onReject?: (id: string) => void;
   onDetails: (id: string) => void;
   onChat?: (clientId: string, clientName: string) => void;
-  entryAnim: Animated.ValueXY;
+  entryAnim: Animated.Value; // Changed to single Animated.Value
 }> = ({ item, onAccept, onReject, onDetails, onChat, entryAnim }) => {
   const acceptTouchAnimation = useAnimatedTouch();
   const rejectTouchAnimation = useAnimatedTouch();
@@ -415,8 +428,8 @@ const RequestItem: React.FC<{
     <Animated.View style={[
       styles.requestItem,
       {
-        opacity: entryAnim.x,
-        transform: [{ translateY: entryAnim.y }],
+        opacity: entryAnim,
+        transform: [{ translateY: entryAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
       },
     ]}>
       <View style={styles.requestItemPendingIndicator} />
@@ -508,7 +521,7 @@ const RequestItem: React.FC<{
 const ConfirmedServiceItem: React.FC<{
   item: BookingDetails;
   onPress: (id: string) => void;
-  entryAnim: Animated.ValueXY;
+  entryAnim: Animated.Value; // Changed to single Animated.Value
 }> = ({ item, onPress, entryAnim }) => {
   const touchAnimation = useAnimatedTouch();
 
@@ -518,7 +531,7 @@ const ConfirmedServiceItem: React.FC<{
   const scheduledTime = new Date(combinedDateTimeString).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <Animated.View style={{ opacity: entryAnim.x, transform: [{ translateY: entryAnim.y }] }}>
+    <Animated.View style={{ opacity: entryAnim, transform: [{ translateY: entryAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }}>
       <TouchableOpacity
         style={styles.serviceItem}
         onPress={() => onPress(item.id)}
@@ -560,6 +573,13 @@ export default function ProviderDashboardScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const contentAnim = useRef(new Animated.Value(0)).current;
+  const financialSummaryAnim = useRef(new Animated.Value(0)).current;
+  const quickActionsAnim = useRef(new Animated.Value(0)).current;
+  const newRequestsAnim = useRef(new Animated.Value(0)).current;
+  const upcomingServicesAnim = useRef(new Animated.Value(0)).current;
+  const reviewsSectionAnim = useRef(new Animated.Value(0)).current;
+  const logoutButtonAnim = useRef(new Animated.Value(0)).current;
+
 
   const fetchData = useCallback(async () => {
     console.log("[DashboardScreen] fetchData: Iniciando busca de dados.");
@@ -586,17 +606,25 @@ export default function ProviderDashboardScreen() {
       setPendingRequests(dashboard.upcomingBookings.filter(b => b.status === BookingStatus.PENDING));
       setUpcomingServices(dashboard.upcomingBookings.filter(b => b.status === BookingStatus.CONFIRMED || b.status === BookingStatus.IN_PROGRESS));
 
-      Animated.timing(contentAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+      // Animate sections in stagger
+      Animated.stagger(100, [
+        Animated.timing(financialSummaryAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+        Animated.timing(quickActionsAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+        Animated.timing(newRequestsAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+        Animated.timing(upcomingServicesAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+        Animated.timing(reviewsSectionAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+        Animated.timing(logoutButtonAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+      ]).start();
 
     } catch (err: any) {
       console.error("[DashboardScreen] Erro ao buscar dados do dashboard do provedor:", err.response?.data || err.message, err);
-      setError(err.response?.data?.message || "Não foi possível carregar os dados do dashboard.");
+      NotificationUIService.showError(err.response?.data?.message || "Não foi possível carregar os dados do dashboard.", "Erro"); // Modified
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
       console.log("[DashboardScreen] fetchData: Finalizado. isLoading:", false, "isRefreshing:", false);
     }
-  }, [user, contentAnim]);
+  }, [user, financialSummaryAnim, quickActionsAnim, newRequestsAnim, upcomingServicesAnim, reviewsSectionAnim, logoutButtonAnim]);
 
   useEffect(() => {
     console.log("[DashboardScreen] useEffect: authLoading:", authLoading, "user.id:", user?.id);
@@ -641,7 +669,7 @@ export default function ProviderDashboardScreen() {
 
   const handleAcceptRequest = async (bookingId: string) => {
     console.log(`[DashboardScreen] handleAcceptRequest: Tentando aceitar agendamento ${bookingId}.`);
-    Alert.alert(
+    Alert.alert( // Kept Alert for confirmation, not for error/success feedback
       "Aceitar Solicitação",
       `Tem certeza que deseja aceitar o agendamento ${bookingId}?`,
       [
@@ -652,12 +680,12 @@ export default function ProviderDashboardScreen() {
             setIsLoading(true);
             try {
               await updateBookingStatus(bookingId, { status: BookingStatus.CONFIRMED });
-              Alert.alert("Sucesso", "Agendamento aceito com sucesso!");
+              NotificationUIService.showSuccess("Agendamento aceito com sucesso!", "Sucesso"); // Modified
               console.log(`[DashboardScreen] Agendamento ${bookingId} aceito com sucesso.`);
               fetchData();
             } catch (error: any) {
               console.error("[DashboardScreen] Erro ao aceitar agendamento:", error.response?.data || error.message, error);
-              Alert.alert("Erro", error.response?.data?.message || "Não foi possível aceitar o agendamento.");
+              NotificationUIService.showError(error.response?.data?.message || "Não foi possível aceitar o agendamento.", "Erro"); // Modified
             } finally {
               setIsLoading(false);
             }
@@ -669,7 +697,7 @@ export default function ProviderDashboardScreen() {
 
   const handleRejectRequest = async (bookingId: string) => {
     console.log(`[DashboardScreen] handleRejectRequest: Tentando rejeitar agendamento ${bookingId}.`);
-    Alert.alert(
+    Alert.alert( // Kept Alert for confirmation
       "Rejeitar Solicitação",
       `Tem certeza que deseja rejeitar o agendamento ${bookingId}?`,
       [
@@ -680,12 +708,12 @@ export default function ProviderDashboardScreen() {
             setIsLoading(true);
             try {
               await updateBookingStatus(bookingId, { status: BookingStatus.REJECTED });
-              Alert.alert("Sucesso", "Agendamento rejeitado com sucesso!");
+              NotificationUIService.showSuccess("Agendamento rejeitado com sucesso!", "Sucesso"); // Modified
               console.log(`[DashboardScreen] Agendamento ${bookingId} rejeitado com sucesso.`);
               fetchData();
             } catch (error: any) {
               console.error("[DashboardScreen] Erro ao rejeitar agendamento:", error.response?.data || error.message, error);
-              Alert.alert("Erro", error.response?.data?.message || "Não foi possível rejeitar o agendamento.");
+              NotificationUIService.showError(error.response?.data?.message || "Não foi possível rejeitar o agendamento.", "Erro"); // Modified
             } finally {
               setIsLoading(false);
             }
@@ -707,7 +735,7 @@ export default function ProviderDashboardScreen() {
       console.log("[Dashboard] logout() concluído. O _layout.tsx deve redirecionar.");
     } catch (error) {
       console.error("[Dashboard] Erro ao fazer logout:", error);
-      Alert.alert("Erro ao Sair", "Não foi possível sair da conta. Tente novamente ou verifique sua conexão.");
+      NotificationUIService.showError("Não foi possível sair da conta. Tente novamente ou verifique sua conexão.", "Erro ao Sair"); // Modified
     }
   };
 
@@ -744,10 +772,17 @@ export default function ProviderDashboardScreen() {
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollViewContent}
-        refreshControl={ <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#007AFF" /> }
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            tintColor={ICON_PRIMARY}
+          />
+        }
       >
         <DashboardHeader
           providerName={dashboardData?.fullName}
@@ -758,6 +793,7 @@ export default function ProviderDashboardScreen() {
           totalEarnings={dashboardData?.totalEarnings}
           pendingWithdrawals={dashboardData?.pendingWithdrawals}
           onViewEarnings={() => router.push('/(provider)/earnings' as any)}
+          animation={financialSummaryAnim} // Pass animation prop
         />
         <QuickActionsSection
           onViewAllServicesPress={handleViewAllServicesPress}
@@ -771,8 +807,12 @@ export default function ProviderDashboardScreen() {
           onOpenReviews={goReviews}
           onOpenEarnings={goEarnings}
           onQuickWithdraw={goWithdraw}
+          animation={quickActionsAnim} // Pass animation prop
         />
-        <View style={styles.subsectionWrapper}>
+        <Animated.View style={[
+          styles.subsectionWrapper,
+          { opacity: newRequestsAnim, transform: [{ translateY: newRequestsAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] } // Apply animation
+        ]}>
           <View style={styles.subsectionHeader}>
             <Text style={styles.subsectionTitle}>
               <Ionicons name="hourglass-outline" size={20} color={WARNING_YELLOW} /> Novas Solicitações
@@ -791,14 +831,17 @@ export default function ProviderDashboardScreen() {
                 onReject={handleRejectRequest}
                 onDetails={() => router.push(`/(provider)/bookings/${item.id}` as any)}
                 onChat={handleChatWithClient}
-                entryAnim={new Animated.ValueXY({x:1,y:0})}
+                entryAnim={new Animated.Value(1)} // Each item gets its own animation value
               />
             ))
           ) : (
             renderEmptyState("Nenhuma nova solicitação de agendamento.", "checkmark-done-circle-outline")
           )}
-        </View>
-        <View style={styles.subsectionWrapper}>
+        </Animated.View>
+        <Animated.View style={[
+          styles.subsectionWrapper,
+          { opacity: upcomingServicesAnim, transform: [{ translateY: upcomingServicesAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] } // Apply animation
+        ]}>
           <View style={styles.subsectionHeader}>
             <Text style={styles.subsectionTitle}>
               <Ionicons name="checkmark-done-circle-outline" size={20} color={ICON_PRIMARY} /> Próximos Serviços
@@ -814,23 +857,32 @@ export default function ProviderDashboardScreen() {
                 key={item.id}
                 item={item}
                 onPress={() => router.push(`/(provider)/bookings/${item.id}` as any)}
-                entryAnim={new Animated.ValueXY({x:1,y:0})}
+                entryAnim={new Animated.Value(1)} // Each item gets its own animation value
               />
             ))
           ) : (
             renderEmptyState("Nenhum serviço confirmado agendado.", "calendar-clear-outline")
           )}
-        </View>
-        <AdvancedReviewsSection
-          reviews={dashboardData?.reviews}
-          providerId={user?.id}
-          onViewAllReviews={() => router.push('/(provider)/reviews' as any)}
-        />
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={24} color={WHITE} />
-          <Text style={styles.logoutButtonText}>Sair da Conta</Text>
-        </TouchableOpacity>
+        </Animated.View>
+        <Animated.View style={[
+          { opacity: reviewsSectionAnim, transform: [{ translateY: reviewsSectionAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] } // Apply animation
+        ]}>
+          <AdvancedReviewsSection
+            reviews={dashboardData?.reviews}
+            providerId={user?.id}
+            onViewAllReviews={() => router.push('/(provider)/reviews' as any)}
+          />
+        </Animated.View>
+        <Animated.View style={[
+          { opacity: logoutButtonAnim, transform: [{ translateY: logoutButtonAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] } // Apply animation
+        ]}>
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <Ionicons name="log-out-outline" size={24} color={WHITE} />
+            <Text style={styles.logoutButtonText}>Sair da Conta</Text>
+          </TouchableOpacity>
+        </Animated.View>
       </ScrollView>
+      <ProviderNudgeContainer /> {/* Added ProviderNudgeContainer */}
     </View>
   );
 }
@@ -838,13 +890,13 @@ export default function ProviderDashboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F0F2F5',
+    backgroundColor: BACKGROUND_ALT,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F0F2F5',
+    backgroundColor: BACKGROUND_ALT,
   },
   loadingText: {
     marginTop: 10,
@@ -855,7 +907,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F0F2F5',
+    backgroundColor: BACKGROUND_ALT,
     padding: 20,
   },
   errorText: {

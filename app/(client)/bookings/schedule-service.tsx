@@ -15,9 +15,14 @@ import {
     TouchableOpacity,
     View,
     TextInput, // Adicionado para o campo de cupom
+    ImageBackground, // NOVO: Importar ImageBackground
 } from 'react-native';
 import { useTranslation } from 'react-i18next'; // Importar i18n
-import Toast from '../../../components/Toast'; // Importar Toast
+// import Toast from '../../../components/Toast'; // Importar Toast - REMOVED
+const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
+
+// Import NotificationUIService
+import NotificationUIService from '../../../services/notificationUIService'; // Added
 
 // --- IMPORTAÇÕES DE SERVIÇOS E TIPAGENS DO SEU BACKEND REAL ---
 import { useAuth } from '../../../hooks/useAuth';
@@ -50,7 +55,10 @@ import ConfirmBookingButton from '../../../components/client/booking/schedule/Co
 
 
 // Import AppStyles
-import { AppColors, AppDurations, AppOffsets, AppShadows, AppTypography, SCREEN_WIDTH, SCREEN_HEIGHT } from '../../../constants/appStyles';
+import { AppColors, AppDurations, AppOffsets, AppShadows, SCREEN_WIDTH, SCREEN_HEIGHT } from '../../../constants/appStyles';
+
+// NOVO: Importar a imagem de fundo
+import backImage from '../../../assets/images/back.png';
 
 
 // --- NOVAS INTERFACES PARA AS PROPS DOS COMPONENTES ---
@@ -112,7 +120,7 @@ const BookingSummaryPreview = ({
         return 'N/A';
     }, [selectedProviderService, durationInMinutes, squareMeters, t]);
 
-    // Animação para o preço final
+    // Animação para o preço final - Aprimorado para mais elasticidade
     const finalPriceAnim = useRef(new Animated.Value(0)).current;
     const previousFinalPrice = useRef(finalPrice);
 
@@ -121,8 +129,8 @@ const BookingSummaryPreview = ({
             finalPriceAnim.setValue(0); // Reset animation
             Animated.spring(finalPriceAnim, {
                 toValue: 1,
-                friction: 5,
-                tension: 80,
+                friction: 3, // Menos fricção para mais "bounce"
+                tension: 120, // Mais tensão para um retorno mais rápido
                 useNativeDriver: true,
             }).start();
             previousFinalPrice.current = finalPrice;
@@ -228,9 +236,13 @@ const CouponInputSection = ({ couponCode, setCouponCode, onApplyCoupon, isApplyi
                 inputRange: [0, 1],
                 outputRange: [AppColors.borderNeutral, AppColors.primaryInteractive]
             }) }]}>
-                <TextInput
+                <AnimatedTextInput // <--- AQUI: Alterado para o componente criado
                     style={styles.couponInput}
                     placeholder={t('schedule_service.coupon_input_placeholder')}
+                    placeholderTextColor={couponInputAnim.interpolate({ // Animated placeholder color
+                        inputRange: [0, 1],
+                        outputRange: [AppColors.mediumGray, AppColors.primaryInteractive]
+                    })}
                     value={couponCode}
                     onChangeText={setCouponCode}
                     autoCapitalize="characters"
@@ -337,6 +349,10 @@ export default function ScheduleServiceScreen() {
     const headerGlowAnim = useRef(new Animated.Value(0)).current;
     const calendarBreatheAnim = useRef(new Animated.Value(1)).current;
 
+    // NOVO: Animação para o resumo flutuante
+    const floatingSummaryAnim = useRef(new Animated.Value(0)).current;
+
+
     // --- Lógica de cálculo de preço usando useMemo ---
     const calculatedSubtotal = useMemo(() => {
         if (!selectedProviderService || selectedProviderService.price == null) {
@@ -397,6 +413,7 @@ export default function ScheduleServiceScreen() {
     }, []);
 
     useEffect(() => {
+        // Animações de entrada sequencial
         Animated.parallel([
             Animated.timing(fadeAnim, {
                 toValue: 1,
@@ -506,6 +523,26 @@ export default function ScheduleServiceScreen() {
         startCalendarBreathe();
     }, []);
 
+    // NOVO: Efeito para o resumo flutuante aparecer/desaparecer
+    useEffect(() => {
+        if (selectedTime && finalCalculatedPrice > 0) {
+            Animated.timing(floatingSummaryAnim, {
+                toValue: 1,
+                duration: AppDurations.md,
+                easing: Easing.out(Easing.ease),
+                useNativeDriver: true,
+            }).start();
+        } else {
+            Animated.timing(floatingSummaryAnim, {
+                toValue: 0,
+                duration: AppDurations.md,
+                easing: Easing.in(Easing.ease),
+                useNativeDriver: true,
+            }).start();
+        }
+    }, [selectedTime, finalCalculatedPrice, floatingSummaryAnim]);
+
+
     const handlePrevMonth = useCallback(() => {
         Animated.sequence([
             Animated.timing(scaleAnim, { toValue: 0.98, duration: AppDurations.xs, useNativeDriver: true }),
@@ -556,18 +593,14 @@ export default function ScheduleServiceScreen() {
 
             setSelectedTime(time);
         } else {
-            Alert.alert(t('schedule_service.unavailable_time_slot'), t('schedule_service.unavailable_time_slot_message'));
+            NotificationUIService.showInfo(t('schedule_service.unavailable_time_slot_message'), t('schedule_service.unavailable_time_slot')); // Modified
         }
     }, [displaySlotsInfo, selectionAnim, t]);
 
     // --- NOVO: Função para aplicar cupom ---
     const handleApplyCoupon = useCallback(async () => {
         if (!couponCode) {
-            Toast.show({
-                type: 'error',
-                text1: t('common.error'),
-                text2: t('offers.invalid_coupon'),
-            });
+            NotificationUIService.showInfo(t('offers.invalid_coupon'), t('common.error')); // Modified
             return;
         }
         setIsApplyingCoupon(true);
@@ -586,11 +619,7 @@ export default function ScheduleServiceScreen() {
             setDiscountAmount(newDiscount);
             setCouponFeedbackColor(AppColors.successStandard); // Sucesso
             setCouponFeedbackIcon('checkmark-circle');
-            Toast.show({
-                type: 'success',
-                text1: t('common.success'),
-                text2: t('offers.coupon_applied_success', { value: newDiscount.toFixed(2).replace('.', ',') }),
-            });
+            NotificationUIService.showSuccess(t('offers.coupon_applied_success', { discountValue: newDiscount.toFixed(2).replace('.', ',') }), t('common.success')); // Modified
 
             Animated.timing(couponFeedbackAnim, {
                 toValue: 1,
@@ -613,11 +642,7 @@ export default function ScheduleServiceScreen() {
             setDiscountAmount(0);
             setCouponFeedbackColor(AppColors.errorRed); // Erro
             setCouponFeedbackIcon('close-circle');
-            Toast.show({
-                type: 'error',
-                text1: t('common.error'),
-                text2: error.response?.data?.message || t('offers.invalid_coupon'),
-            });
+            NotificationUIService.showError(error.response?.data?.message || t('offers.invalid_coupon'), t('common.error')); // Modified
             Animated.timing(couponFeedbackAnim, {
                 toValue: 1,
                 duration: AppDurations.sm,
@@ -641,10 +666,7 @@ export default function ScheduleServiceScreen() {
 
     // --- NOVO: Função para exibir política de cancelamento ---
     const showCancellationPolicy = useCallback(() => {
-        Alert.alert(
-            t('schedule_service.cancellation_policy_title'),
-            t('schedule_service.cancellation_policy_message')
-        );
+        NotificationUIService.showInfo(t('schedule_service.cancellation_policy_message'), t('schedule_service.cancellation_policy_title')); // Modified
     }, [t]);
     // --- FIM NOVO: Função para exibir política de cancelamento ---
 
@@ -665,7 +687,7 @@ export default function ScheduleServiceScreen() {
         // Validações iniciais
         if (!typedUser?.id || !provider?.id || !selectedProviderService?.id || !selectedDate || !selectedTime ||
             !address.street || !address.number || !address.neighborhood || !address.city || !address.state) {
-            Alert.alert(t('schedule_service.booking_error_title'), t('schedule_service.booking_error_message'));
+            NotificationUIService.showError(t('schedule_service.booking_error_message'), t('schedule_service.booking_error_title')); // Modified
             return;
         }
 
@@ -674,11 +696,11 @@ export default function ScheduleServiceScreen() {
 
         // Validação adicional para campos dinâmicos
         if (selectedProviderService.pricingType === PricingType.HOURLY && (durationInMinutes == null || durationInMinutes <= 0)) {
-            Alert.alert(t('schedule_service.booking_error_title'), t('schedule_service.booking_error_duration_size', { field: t('common.duration') })); // Traduzir "duração"
+            NotificationUIService.showError(t('schedule_service.booking_error_duration_size', { field: t('common.duration') }), t('schedule_service.booking_error_title')); // Modified
             return;
         }
         if (selectedProviderService.pricingType === PricingType.BY_SIZE && (squareMeters == null || squareMeters <= 0)) {
-            Alert.alert(t('schedule_service.booking_error_title'), t('schedule_service.booking_error_duration_size', { field: t('common.area') })); // Traduzir "área"
+            NotificationUIService.showError(t('schedule_service.booking_error_duration_size', { field: t('common.area') }), t('schedule_service.booking_error_title')); // Modified
             return;
         }
 
@@ -724,15 +746,11 @@ export default function ScheduleServiceScreen() {
                     couponCode: discountAmount > 0 ? couponCode : undefined,
                 }
             });
-            Toast.show({
-                type: 'success',
-                text1: t('common.success'),
-                text2: t('schedule_service.booking_success_message'),
-            });
+            NotificationUIService.showSuccess(t('schedule_service.booking_success_message'), t('common.success')); // Modified
 
         } catch (error: any) {
             console.error("Erro ao agendar serviço:", error.response?.data || error.message);
-            Alert.alert(t('common.error'), error.response?.data?.message || t('common.network_error'));
+            NotificationUIService.showError(error.response?.data?.message || t('common.network_error'), t('common.error')); // Modified
         } finally {
             setIsBooking(false);
         }
@@ -743,7 +761,7 @@ export default function ScheduleServiceScreen() {
             setIsLoading(true);
 
             if (!paramProviderId || !paramServiceId || !typedUser?.id) {
-                Alert.alert(t('common.error'), t('schedule_service.navigation_error_essential_data'));
+                NotificationUIService.showError(t('schedule_service.navigation_error_essential_data'), t('common.error')); // Modified
                 router.replace('/explore');
                 setIsLoading(false);
                 return;
@@ -758,7 +776,7 @@ export default function ScheduleServiceScreen() {
                 );
 
                 if (!foundService) {
-                    Alert.alert(t('common.error'), t('schedule_service.service_not_available'));
+                    NotificationUIService.showError(t('schedule_service.service_not_available'), t('common.error')); // Modified
                     router.replace('/explore');
                     setIsLoading(false);
                     return;
@@ -786,10 +804,7 @@ export default function ScheduleServiceScreen() {
                         longitude: userAddress.longitude ?? 0
                     });
                 } else {
-                    Alert.alert(
-                        t('schedule_service.address_needed_title'),
-                        t('schedule_service.address_needed_message')
-                    );
+                    NotificationUIService.showInfo(t('schedule_service.address_needed_message'), t('schedule_service.address_needed_title')); // Modified
                 }
 
                 setSelectedDate(new Date());
@@ -810,7 +825,7 @@ export default function ScheduleServiceScreen() {
 
             } catch (error: any) {
                 console.error("Erro ao carregar dados iniciais:", error.response?.data || error.message);
-                Alert.alert(t('common.error'), error.response?.data?.message || t('common.network_error'));
+                NotificationUIService.showError(error.response?.data?.message || t('common.network_error'), t('common.error')); // Modified
                 router.replace('/explore');
             } finally {
                 setIsLoading(false);
@@ -854,7 +869,7 @@ export default function ScheduleServiceScreen() {
                     availabilityCache.set(cacheKey, backendResponse);
                 } catch (err: any) {
                     console.error("Erro ao carregar horários para data:", err.response?.data || err.message);
-                    Alert.alert(t('common.error'), err.response?.data?.message || t('schedule_service.error_fetching_slots'));
+                    NotificationUIService.showError(err.response?.data?.message || t('schedule_service.error_fetching_slots'), t('common.error')); // Modified
                     setDisplaySlotsInfo([]);
                     setIsFetchingSlots(false);
                     return;
@@ -929,23 +944,30 @@ export default function ScheduleServiceScreen() {
     }
 
     return (
-        <View style={styles.screenContainer}>
-            <Stack.Screen options={{ headerShown: false }} />
+        <ImageBackground source={backImage} style={styles.fullScreenBackground}>
+            {/* NOVO: Overlay para aplicar opacidade na imagem de fundo */}
+            <View style={styles.overlay} />
 
-            <Animated.View style={[
-                styles.backgroundDecoration,
-                {
-                    transform: [
-                        {
-                            translateY: backgroundFloatAnim.interpolate({
-                                inputRange: [0, 1],
-                                outputRange: [-20, 20]
-                            })
-                        },
-                        {
-                            rotate: rotateAnim.interpolate({
-                                inputRange: [0, 1],
-                                outputRange: ['0deg', '360deg']
+            <View style={styles.contentWrapper}>
+                <Stack.Screen options={{ headerShown: false }} />
+
+                {/* As decorações de fundo (LinearGradient) também devem ter um zIndex para aparecerem acima do overlay,
+                    ou você pode ajustar suas cores para serem semi-transparentes.
+                    Por enquanto, vou mantê-las como estão, pois elas já usam rgba. */}
+                <Animated.View style={[
+                    styles.backgroundDecoration,
+                    {
+                        transform: [
+                            {
+                                translateY: backgroundFloatAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [-20, 20]
+                                })
+                            },
+                            {
+                                rotate: rotateAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: ['0deg', '360deg']
                             })
                         }
                     ]
@@ -1025,7 +1047,7 @@ export default function ScheduleServiceScreen() {
                 }}
                 showsVerticalScrollIndicator={false}
             >
-                
+
 
                 <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
                     <ProviderBrief
@@ -1105,8 +1127,8 @@ export default function ScheduleServiceScreen() {
                     <NotesInputSection
                         notes={notes}
                         setNotes={setNotes}
-                        fadeAnim={fadeAnim}
-                        slideUpAnim={slideUpAnim}
+                        // fadeAnim={fadeAnim} // Removido, pois o ScrollView pai já aplica
+                        // slideUpAnim={slideUpAnim} // Removido, pois o ScrollView pai já aplica
                     />
                 </Animated.View>
 
@@ -1146,7 +1168,18 @@ export default function ScheduleServiceScreen() {
 
             {/* NOVO: Resumo Flutuante do Agendamento (Sticky Bottom Bar) */}
             {selectedTime && finalCalculatedPrice > 0 && (
-                <View style={styles.floatingSummaryContainer}>
+                <Animated.View style={[
+                    styles.floatingSummaryContainer,
+                    {
+                        transform: [{
+                            translateY: floatingSummaryAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [100, 0] // Desliza de baixo para cima
+                            })
+                        }],
+                        opacity: floatingSummaryAnim
+                    }
+                ]}>
                     <View style={styles.floatingSummaryContent}>
                         <Text style={styles.floatingSummaryText}>
                             {selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} {t('common.at')} {selectedTime}
@@ -1155,7 +1188,7 @@ export default function ScheduleServiceScreen() {
                             R$ {finalCalculatedPrice.toFixed(2).replace('.', ',')}
                         </Text>
                     </View>
-                </View>
+                </Animated.View>
             )}
             {/* FIM NOVO: Resumo Flutuante do Agendamento */}
 
@@ -1168,19 +1201,34 @@ export default function ScheduleServiceScreen() {
                 hasSelectedServicePrice={selectedProviderService?.price != null}
             />
         </View>
-    );
+    </ImageBackground>
+);
 }
 
 const styles = StyleSheet.create({
-    screenContainer: {
+    fullScreenBackground: { // Renomeado de screenContainer
         flex: 1,
-        backgroundColor: AppColors.backgroundLight,
+        width: '100%',
+        height: '100%',
+        resizeMode: 'cover', // Garante que a imagem cubra todo o fundo
+        // REMOVIDO: opacity: 10, (valor inválido e não necessário com overlay)
+    },
+    overlay: { // NOVO ESTILO PARA O OVERLAY
+        ...StyleSheet.absoluteFillObject, // Preenche todo o espaço do pai
+        backgroundColor: 'rgba(255,255,255,0.7)', // Branco com 70% de opacidade. Ajuste o valor RGBA conforme necessário.
+        // Se quiser um fundo mais escuro, use 'rgba(0,0,0,0.5)' por exemplo.
+    },
+    contentWrapper: { // Novo estilo para o conteúdo interno
+        flex: 1,
+        backgroundColor: 'transparent', // Garante que a imagem de fundo seja visível
+        // Opcional: Adicione um zIndex se as decorações de fundo estiverem sobrepondo o conteúdo principal
+        // zIndex: 1,
     },
     centeredFeedback: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: AppColors.backgroundLight
+        backgroundColor: 'transparent', // Alterado para transparente para mostrar a imagem de fundo
     },
     scrollContentContainer: {
         paddingBottom: 120,
@@ -1194,6 +1242,7 @@ const styles = StyleSheet.create({
         height: SCREEN_WIDTH * 0.6,
         borderRadius: SCREEN_WIDTH * 0.3,
         overflow: 'hidden',
+        // zIndex: 0, // Pode ser necessário ajustar o zIndex se sobrepor o overlay
     },
     backgroundDecoration2: {
         position: 'absolute',
@@ -1203,6 +1252,7 @@ const styles = StyleSheet.create({
         height: SCREEN_WIDTH * 0.5,
         borderRadius: SCREEN_WIDTH * 0.25,
         overflow: 'hidden',
+        // zIndex: 0, // Pode ser necessário ajustar o zIndex se sobrepor o overlay
     },
     decorationGradient: {
         flex: 1,
@@ -1212,21 +1262,19 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-around',
         alignItems: 'center',
-        paddingHorizontal: 20,
+        paddingHorizontal: 50,
         marginTop: 30,
         paddingVertical: 15,
-        backgroundColor: AppColors.white,
-        borderBottomWidth: 1,
-        borderBottomColor: AppColors.backgroundNeutral,
-        ...AppShadows.small,
+    
+
     },
     progressStep: {
         alignItems: 'center',
         flex: 1,
     },
     progressDot: {
-        width: 10,
-        height: 10,
+        width: 8,
+        height: 8,
         borderRadius: 5,
         backgroundColor: AppColors.borderNeutral,
         marginBottom: 5,
@@ -1235,7 +1283,7 @@ const styles = StyleSheet.create({
         backgroundColor: AppColors.primaryInteractive,
     },
     progressText: {
-        fontSize: 12,
+        fontSize: 11,
         color: AppColors.mediumGray,
         textAlign: 'center',
     },

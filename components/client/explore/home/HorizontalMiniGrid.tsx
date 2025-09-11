@@ -120,8 +120,8 @@ const styles = StyleSheet.create({
   cardInner: {
     width: 60, // Tamanho do fundo circular
     height: 60,
-    borderRadius: 30, // Metade da largura/altura para um círculo perfeito
-    backgroundColor: '#F0F0F0', // Cor de fundo clara para o círculo
+    borderRadius: 10, // Metade da largura/altura para um círculo perfeito
+    backgroundColor: '#b6d3e097', // Cor de fundo clara para o círculo
     justifyContent: "center",
     alignItems: "center",
     shadowColor: '#000',
@@ -131,8 +131,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   icon: {
-    width: 35, // Tamanho do ícone
-    height: 35,
+    width: 39, // Tamanho do ícone
+    height: 39,
     resizeMode: 'contain',
   },
   cardTitle: {

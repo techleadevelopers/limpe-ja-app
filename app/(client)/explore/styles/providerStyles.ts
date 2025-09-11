@@ -85,8 +85,7 @@ export const styles = StyleSheet.create({
     marginTop: -30,
     minHeight: Dimensions.get('window').height * 0.5,
     paddingBottom: 20,
-    ...AppShadows.large, // Usando AppShadows
-    // 'overflow: hidden' removido
+   
   },
 
   // Botões de navegação (header)
@@ -98,12 +97,14 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 45,
     height: 45,
+    
   },
 
   // --- NOVOS ESTILOS PARA O CABEÇALHO (HEADER) ---
   headerContainer: {
     backgroundColor: AppColors.white, // Usando AppColors
     ...AppShadows.medium, // Usando AppShadows
+    
   },
   headerTitle: {
     color: AppColors.textBody, // Usando AppColors
@@ -135,6 +136,7 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 10,
+    
   },
   locationTextWhiteCard: {
     fontSize: 14,
@@ -169,32 +171,34 @@ export const styles = StyleSheet.create({
   infoChipsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 4,
     marginBottom: 5,
+    marginTop: -10,
     paddingHorizontal: 0,
+    
   },
   infoChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 5,
+    paddingVertical: 9,
+    paddingHorizontal: 8,
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: AppColors.borderNeutral, // Usando AppColors
+
   },
   infoChipText: {
-    fontSize: 9,
+    fontSize: 12,
     color: AppColors.textAuxiliary, // Usando AppColors
     marginLeft: 6,
     fontWeight: '500',
   },
 
   tabContentContainer: {
-    paddingHorizontal: 25,
+    paddingHorizontal: 15,
     paddingTop: 15,
+    
   },
   sectionTitle: {
-    fontSize: 17,
+    fontSize: 20,
     fontWeight: '700',
     color: AppColors.textBody, // Usando AppColors
     marginBottom: 10,
@@ -227,6 +231,7 @@ export const styles = StyleSheet.create({
   noReviewsIcon: {
     marginBottom: 10,
     opacity: 0.6,
+    
   },
   noDetailsText: {
     fontSize: 14,
@@ -246,6 +251,7 @@ export const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 10,
     paddingHorizontal: 0,
+    
   },
   actionButton: {
     alignItems: 'center',
@@ -281,11 +287,13 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: AppColors.borderNeutral, // Usando AppColors
     ...AppShadows.small, // Usando AppShadows
+    
   },
   reviewHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 10,
+    
   },
   reviewerImage: {
     width: 45,

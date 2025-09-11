@@ -1,8 +1,9 @@
 // backend-cleaning/src/bookings/dto/create-booking.dto.ts
+// backend-cleaning/src/bookings/dto/create-booking.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsDateString, IsNumber, Min, IsOptional, IsUUID, Matches, ValidateNested, IsInt } from 'class-validator';
+import { IsString, IsNotEmpty, IsDateString, IsNumber, Min, IsOptional, IsUUID, Matches, ValidateNested, IsInt, IsDefined } from 'class-validator'; // <-- Adicione IsDefined aqui!
 import { Type } from 'class-transformer';
-import { CreateAddressDto } from '../../common/dto/create-address.dto'; // Importe CreateAddressDto
+import { CreateAddressDto } from '../../common/dto/create-address.dto';
 
 export class CreateBookingDto {
   @ApiProperty({ description: 'ID do provedor para quem o agendamento está sendo feito', example: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' })
@@ -37,6 +38,7 @@ export class CreateBookingDto {
   notes?: string;
 
   @ApiProperty({ description: 'Endereço onde o serviço será realizado' })
+  @IsDefined({ message: 'O endereço é obrigatório.' }) // Adicione esta linha
   @ValidateNested()
   @Type(() => CreateAddressDto)
   address: CreateAddressDto;

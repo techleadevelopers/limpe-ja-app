@@ -1,9 +1,9 @@
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+// LimpeJaApp/app/(provider)/messages/index.tsx
+import { Ionicons } from '@expo/vector-icons'; // MaterialCommunityIcons não é usado no client, então removido
 import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
     Animated,
     FlatList,
     Image,
@@ -12,48 +12,38 @@ import {
     Text,
     TouchableOpacity,
     View,
+    Easing, // Adicionado Easing para animações
 } from 'react-native';
 
-import { useAuth } from '../../../hooks/useAuth'; // Para obter o ID do usuário
-import { getChatListForUser } from '../../../services/chatService'; // Reutiliza a função de listar conversas
+import { useAuth } from '../../../hooks/useAuth';
+import { getChatListForUser, ConversationItem } from '../../../services/chatService'; // Assumindo ConversationItem é exportado de chatService
 
-// Interface para um item de conversa
-interface ConversationItem {
-  id: string; // Este é o seu chatId
-  otherUserId: string;
-  otherUserName: string;
-  otherUserAvatarUrl?: string;
-  lastMessage: string;
-  lastMessageTimestamp: string;
-  unreadCount: number;
-}
-
-// Helper simples para formatar timestamp de forma relativa ou absoluta
-const formatTimestamp = (isoTimestamp: string): string => {
-    const now = new Date();
+// Helper para formatar data/hora (copiado de utils/helpers do cliente)
+const formatDate = (isoTimestamp: string, options?: Intl.DateTimeFormatOptions): string => {
+    if (!isoTimestamp) return '';
     const date = new Date(isoTimestamp);
-    const diffSeconds = Math.round((now.getTime() - date.getTime()) / 1000);
-    const diffMinutes = Math.round(diffSeconds / 60);
-    const diffHours = Math.round(diffMinutes / 60);
-    const diffDays = Math.round(diffHours / 24);
+    // Para simplificar, vamos formatar apenas a hora se for hoje, ou data se for outro dia
+    const now = new Date();
+    const isToday = date.getDate() === now.getDate() &&
+                    date.getMonth() === now.getMonth() &&
+                    date.getFullYear() === now.getFullYear();
 
-    if (diffSeconds < 60) return "Agora";
-    if (diffMinutes < 60) return `${diffMinutes} min`;
-    if (diffHours < 24) return `${diffHours} h`;
-    if (diffDays === 1) return "Ontem";
-    if (diffDays < 7) return `${diffDays} d`;
-    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }); // Ex: 26 Mai
+    if (isToday) {
+        return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    } else {
+        return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+    }
 };
 
-// Componente para cada item da conversa com animações
+// Componente para cada item da conversa com animações (adaptado do cliente)
 const AnimatedConversationItem: React.FC<{
     item: ConversationItem;
     onPress: (item: ConversationItem) => void;
-    delay: number; // Para animação escalonada
+    delay: number;
 }> = ({ item, onPress, delay }) => {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(20)).current;
-    const scaleAnim = useRef(new Animated.Value(1)).current; // Para feedback de toque
+    const scaleAnim = useRef(new Animated.Value(1)).current;
 
     useEffect(() => {
         Animated.parallel([
@@ -61,63 +51,109 @@ const AnimatedConversationItem: React.FC<{
                 toValue: 1,
                 duration: 400,
                 delay: delay,
+                easing: Easing.out(Easing.ease),
                 useNativeDriver: true,
             }),
             Animated.timing(slideAnim, {
                 toValue: 0,
                 duration: 400,
                 delay: delay,
+                easing: Easing.out(Easing.ease),
                 useNativeDriver: true,
             }),
         ]).start();
     }, [fadeAnim, slideAnim, delay]);
 
-    const onPressInItem = () => {
-        Animated.spring(scaleAnim, { toValue: 0.98, useNativeDriver: true }).start();
+    const onPressInCard = () => {
+        Animated.spring(scaleAnim, {
+            toValue: 0.98,
+            useNativeDriver: true,
+            friction: 5,
+            tension: 80,
+        }).start();
     };
 
-    const onPressOutItem = () => {
-        Animated.spring(scaleAnim, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start();
+    const onPressOutCard = () => {
+        Animated.spring(scaleAnim, {
+            toValue: 1,
+            friction: 5,
+            tension: 80,
+            useNativeDriver: true,
+        }).start();
+    };
+
+    const renderMessageStatus = (message: string, type?: string, isTyping?: boolean) => {
+        if (isTyping) {
+            return <Text style={styles.typingText}>Digitando...</Text>;
+        }
+        switch (type) {
+            case 'voice':
+                return (
+                    <View style={styles.messageStatusContainer}>
+                        <Ionicons name="mic-outline" size={14} color="#6C757D" />
+                        <Text style={styles.lastMessageText}> Mensagem de voz</Text>
+                    </View>
+                );
+            case 'sticker':
+                return (
+                    <View style={styles.messageStatusContainer}>
+                        <Ionicons name="happy-outline" size={14} color="#6C757D" />
+                        <Text style={styles.lastMessageText}> Adesivo</Text>
+                    </View>
+                );
+            default:
+                return (
+                    <Text style={[styles.lastMessageText, item.unreadCount > 0 && styles.unreadMessageText]} numberOfLines={1}>
+                        {message}
+                    </Text>
+                );
+        }
     };
 
     return (
         <Animated.View
             style={[
-                styles.itemWrapper,
-                { opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] }
+                styles.conversationCard,
+                {
+                    opacity: fadeAnim,
+                    transform: [{ translateY: slideAnim }, { scale: scaleAnim }]
+                }
             ]}
         >
             <TouchableOpacity
                 onPress={() => onPress(item)}
-                onPressIn={onPressInItem}
-                onPressOut={onPressOutItem}
-                activeOpacity={1} // Desativa o activeOpacity padrão
-                style={styles.itemContainer}
+                onPressIn={onPressInCard}
+                onPressOut={onPressOutCard}
+                activeOpacity={1}
+                style={styles.conversationCardInner}
             >
-                {item.otherUserAvatarUrl ? (
-                    <Image source={{ uri: item.otherUserAvatarUrl }} style={styles.avatar} />
-                ) : (
-                    <View style={styles.avatarPlaceholder}>
-                        <Text style={styles.avatarText}>{item.otherUserName.charAt(0).toUpperCase()}</Text>
-                    </View>
-                )}
-                <View style={styles.content}>
-                    <View style={styles.headerRow}>
-                        <Text style={[styles.itemTitle, item.unreadCount > 0 && styles.unreadTitle]} numberOfLines={1}>{item.otherUserName}</Text>
-                        <Text style={styles.timestamp}>{formatTimestamp(item.lastMessageTimestamp)}</Text>
-                    </View>
-                    <Text
-                        style={[styles.lastMessage, item.unreadCount > 0 && styles.unreadLastMessage]}
-                        numberOfLines={1}
-                    >
-                        {item.lastMessage}
-                    </Text>
+                <View style={styles.avatarContainer}>
+                    <Image
+                        source={item.otherUserAvatarUrl ? { uri: item.otherUserAvatarUrl } : require('../../../assets/images/default-avatar.png')}
+                        style={styles.avatar}
+                    />
+                    {item.isPinned && ( // isPinned é uma propriedade opcional da ConversationItem
+                        <View style={styles.pinIcon}>
+                            <Ionicons name="pin" size={14} color="#FFF" />
+                        </View>
+                    )}
                 </View>
-                {item.unreadCount > 0 && (
-                    <View style={styles.unreadBadge}>
-                        <Text style={styles.unreadText}>{item.unreadCount}</Text>
+                <View style={styles.conversationDetails}>
+                    <View style={styles.nameTimeRow}>
+                        <Text style={styles.userNameText}>{item.otherUserName}</Text>
+                        <Text style={styles.timestampText}>
+                            {formatDate(item.lastMessageTimestamp, { hour: '2-digit', minute: '2-digit' })}
+                        </Text>
                     </View>
-                )}
+                    <View style={styles.messageBadgeRow}>
+                        {renderMessageStatus(item.lastMessage, item.messageType, item.isTyping)}
+                        {item.unreadCount > 0 && (
+                            <View style={styles.unreadBadge}>
+                                <Text style={styles.unreadCountText}>{item.unreadCount > 9 ? '9+' : item.unreadCount}</Text>
+                            </View>
+                        )}
+                    </View>
+                </View>
             </TouchableOpacity>
         </Animated.View>
     );
@@ -126,44 +162,53 @@ const AnimatedConversationItem: React.FC<{
 
 export default function ProviderConversationsListScreen() {
   const router = useRouter();
-  const { user, isAuthenticated } = useAuth(); // Obtém o usuário logado
+  const { user, isAuthenticated } = useAuth();
   const [conversations, setConversations] = useState<ConversationItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('Todas'); // Adicionado do cliente
 
-  // Animações
   const headerAnim = useRef(new Animated.Value(0)).current;
-  const feedbackAnim = useRef(new Animated.Value(0)).current; // Para loading/empty states
+  const feedbackAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Animação de entrada do cabeçalho
     Animated.timing(headerAnim, {
       toValue: 1,
       duration: 500,
+      easing: Easing.out(Easing.ease),
       useNativeDriver: true,
     }).start();
 
     const loadConversations = async () => {
       if (!isAuthenticated || !user?.id) {
-        console.log("[ProviderConversationsListScreen] Usuário não autenticado, não carregando conversas.");
         setIsLoading(false);
         return;
       }
 
-      console.log("[ProviderConversationsListScreen] Carregando conversas para o provedor:", user.id);
       setIsLoading(true);
       try {
         // A chamada real ao backend para obter a lista de conversas
-        const fetchedConversations = await getChatListForUser(user.id);
-        setConversations(fetchedConversations);
+        // Assumindo que getChatListForUser não precisa do user.id como argumento
+        const fetchedConversations = await getChatListForUser();
+
+        // Mock data para provedor (adaptado do cliente, com avatares de cliente)
+        const mockConversations: ConversationItem[] = [
+            { id: 'chat10', otherUserId: 'client1', otherUserName: 'João da Silva', otherUserAvatarUrl: 'https://randomuser.me/api/portraits/men/10.jpg', lastMessage: 'Preciso reagendar o serviço para amanhã.', lastMessageTimestamp: new Date().toISOString(), unreadCount: 1, isPinned: true, isTyping: false, messageType: 'text' },
+            { id: 'chat11', otherUserId: 'client2', otherUserName: 'Maria Oliveira', otherUserAvatarUrl: 'https://randomuser.me/api/portraits/women/11.jpg', lastMessage: 'Maria está digitando...', lastMessageTimestamp: new Date().toISOString(), unreadCount: 0, isTyping: true, messageType: 'text' },
+            { id: 'chat12', otherUserId: 'client3', otherUserName: 'Pedro Souza', otherUserAvatarUrl: 'https://randomuser.me/api/portraits/men/12.jpg', lastMessage: 'Mensagem de voz', lastMessageTimestamp: new Date(Date.now() - 3600000).toISOString(), unreadCount: 0, messageType: 'voice', isTyping: false },
+            { id: 'chat13', otherUserId: 'client4', otherUserName: 'Ana Costa', otherUserAvatarUrl: 'https://randomuser.me/api/portraits/women/13.jpg', lastMessage: 'Quando você pode vir?', lastMessageTimestamp: new Date(Date.now() - 86400000).toISOString(), unreadCount: 0, isTyping: false, messageType: 'text' },
+            { id: 'chat14', otherUserId: 'client5', otherUserName: 'Carlos Santos', otherUserAvatarUrl: 'https://randomuser.me/api/portraits/men/14.jpg', lastMessage: 'Obrigado pelo serviço!', lastMessageTimestamp: new Date(Date.now() - 2592000000).toISOString(), unreadCount: 0, isTyping: false, messageType: 'text' },
+            { id: 'chat15', otherUserId: 'client6', otherUserName: 'Fernanda Lima', otherUserAvatarUrl: 'https://randomuser.me/api/portraits/women/15.jpg', lastMessage: 'Adesivo', lastMessageTimestamp: new Date(Date.now() - 5184000000).toISOString(), unreadCount: 0, messageType: 'sticker', isTyping: false },
+            ...fetchedConversations // Adiciona as conversas reais após os mocks
+        ];
+        setConversations(mockConversations);
       } catch (error) {
-        console.error("[ProviderConversationsListScreen] Erro ao carregar conversas:", error);
-        // Tratar erro, talvez mostrar uma mensagem para o usuário
+        console.error("Erro ao carregar conversas:", error);
       } finally {
         setIsLoading(false);
-        // Animação para o feedback (carregando/vazio)
         Animated.timing(feedbackAnim, {
           toValue: 1,
           duration: 500,
+          easing: Easing.out(Easing.ease),
           useNativeDriver: true,
         }).start();
       }
@@ -173,70 +218,76 @@ export default function ProviderConversationsListScreen() {
   }, [headerAnim, feedbackAnim, isAuthenticated, user?.id]);
 
   const handleConversationPress = (item: ConversationItem) => {
-    // Navega para a tela de chat, passando o ID da conversa e o nome do cliente
-    // A tela de chat (chatId.tsx) será responsável por verificar o status do agendamento e bloquear o input.
-    // Assumimos que o item.id (chatId) pode ser usado para buscar o bookingId associado no backend,
-    // ou que o bookingId pode ser passado se a conversa for iniciada de um contexto de agendamento.
-    // Para este exemplo, não estamos passando o bookingId explicitamente da lista de conversas,
-    // o que significa que o chat screen terá que inferir ou buscar o bookingId.
     router.push({
-        pathname: '/(provider)/messages/[chatId]',
-        params: {
-            chatId: item.id,
-            recipientName: item.otherUserName,
-            recipientId: item.otherUserId, // ID do cliente
-            recipientAvatarUrl: item.otherUserAvatarUrl // Avatar do cliente
-        }
+      pathname: '/(provider)/messages/[chatId]', // Atualizado para a rota do provedor
+      params: {
+        chatId: item.id,
+        recipientName: item.otherUserName,
+        recipientId: item.otherUserId,
+        recipientAvatarUrl: item.otherUserAvatarUrl
+      }
     });
   };
 
-  if (isLoading) {
-    return (
-        <View style={styles.container}>
-            <Stack.Screen options={{ headerShown: false }} />
-            <Animated.View style={[styles.customHeader, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
-                <Text style={styles.headerTitle}>Mensagens</Text>
-                <View style={styles.headerActionIconPlaceholder} />
-            </Animated.View>
-            <Animated.View style={[styles.centeredFeedback, { opacity: feedbackAnim }]}>
-                <ActivityIndicator size="large" color="#007AFF" />
-                <Text style={styles.loadingText}>Carregando suas conversas...</Text>
-            </Animated.View>
-        </View>
-    );
-  }
+  const tabs = ['Todas', 'Grupos', 'Contatos'];
+  const loggedInUserName = user?.fullName || 'Provedor'; // Usar o nome real do usuário logado
 
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <Animated.View style={[styles.customHeader, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
-          <Text style={styles.headerTitle}>Mensagens</Text>
-          <TouchableOpacity style={styles.headerActionIcon} onPress={() => Alert.alert("Nova Conversa", "Funcionalidade de iniciar nova conversa.")}>
-              <Ionicons name="add-circle-outline" size={28} color="#FFFFFF" />
-          </TouchableOpacity>
+      <Animated.View style={[styles.mainHeader, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
+        <View style={styles.topRow}>
+          <Text style={styles.greetingText}>Olá, {loggedInUserName}</Text>
+          <View style={styles.headerIcons}>
+            <TouchableOpacity style={styles.iconButton}>
+              <Ionicons name="search-outline" size={18} color="#FFF" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.iconButton}>
+              <Ionicons name="ellipsis-vertical" size={18} color="#FFF" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.segmentedControl}>
+          {tabs.map((tab) => (
+            <TouchableOpacity
+              key={tab}
+              style={[styles.tabButton, activeTab === tab && styles.activeTabButton]}
+              onPress={() => setActiveTab(tab)}
+            >
+              <Text style={[styles.tabButtonText, activeTab === tab && styles.activeTabButtonText]}>
+                {tab}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </Animated.View>
 
-      {conversations.length === 0 ? (
+       {isLoading ? (
         <Animated.View style={[styles.centeredFeedback, { opacity: feedbackAnim }]}>
-            <Ionicons name="chatbubbles-outline" size={64} color="#CED4DA" />
-            <Text style={styles.emptyText}>Nenhuma conversa encontrada.</Text>
-            <Text style={styles.emptySubText}>Comece a interagir com seus clientes!</Text>
+            <ActivityIndicator size="large" color="#4A90E2"/>
+            <Text style={styles.loadingText}>Carregando conversas...</Text>
         </Animated.View>
-      ) : (
+      ) : conversations.length > 0 ? (
         <FlatList
           data={conversations}
           renderItem={({ item, index }) => (
             <AnimatedConversationItem
-                item={item}
-                onPress={handleConversationPress}
-                delay={index * 50}
+              item={item}
+              onPress={handleConversationPress}
+              delay={index * 50 + 200}
             />
           )}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContentContainer}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
         />
+      ) : (
+        <Animated.View style={[styles.centeredFeedback, { opacity: feedbackAnim }]}>
+            <Ionicons name="chatbubbles-outline" size={64} color="#CED4DA" />
+            <Text style={styles.emptyText}>Nenhuma conversa por aqui.</Text>
+            <Text style={styles.emptySubText}>Comece a interagir com seus clientes!</Text> {/* Mensagem adaptada para provedor */}
+        </Animated.View>
       )}
     </View>
   );
@@ -245,165 +296,198 @@ export default function ProviderConversationsListScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F0F2F5', // Neutro - Fundo de tela
+    backgroundColor: '#F0F8FF', // Alterado para o azul claro do perfil
   },
-  customHeader: {
+  mainHeader: {
+    backgroundColor: '#4A90E2', // Alterado para o azul principal do perfil
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : 20,
+    paddingBottom: 15,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 8,
+  },
+  topRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  greetingText: {
+     fontSize: 15 * 0.95,
+        fontFamily: 'Montserrat-Thin',
+        fontWeight: 'bold',
+        color: '#FFFFFF',
+  },
+  headerIcons: {
+    flexDirection: 'row',
+  },
+  iconButton: {
+    padding: 8,
+    marginLeft: 10,
+  },
+  segmentedControl: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 25,
+    padding: 3,
+    width: '60%',
+    right: 5,
+    marginTop: -11,
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 5,
+
+    borderRadius: 25,
+    alignItems: 'center',
+  },
+  activeTabButton: {
+    backgroundColor: '#FFFFFF',
+  },
+  tabButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 10,
+  },
+  activeTabButtonText: {
+    color: '#4A90E2', // Alterado para o azul principal do perfil
+  },
+  listContentContainer: {
+    paddingTop: 10,
+    paddingBottom: 20,
+  },
+  conversationCard: {
+    marginHorizontal: 15,
+    marginVertical: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    ...Platform.select({
+        ios: {
+            shadowColor: 'rgba(0,0,0,0.08)',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.15,
+            shadowRadius: 8,
+        },
+        android: {
+            elevation: 6,
+        },
+    }),
+  },
+  conversationCardInner: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 18,
+    paddingVertical: 15,
+    borderRadius: 20,
+  },
+  avatarContainer: {
+    position: 'relative',
+  },
+  avatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    marginRight: 15,
+    backgroundColor: '#E9ECEF',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  pinIcon: {
+    position: 'absolute',
+    top: -5,
+    right: 10,
+    backgroundColor: '#4A90E2', // Alterado para o azul principal do perfil
+    borderRadius: 10,
+    padding: 3,
+    zIndex: 1,
+  },
+  conversationDetails: {
+    flex: 1,
+  },
+  nameTimeRow: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: '#007AFF', // Azul Principal
-    paddingHorizontal: 15,
-    paddingVertical: Platform.OS === 'ios' ? 50 : 20, // Ajuste para status bar iOS
-    paddingTop: Platform.OS === 'ios' ? 50 : 20,
-    shadowColor: '#000', // Neutro - Preto
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
+    alignItems: 'center',
+    marginBottom: 5,
   },
-  headerTitle: {
-    fontSize: 20,
+  userNameText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#212529',
+  },
+  timestampText: {
+    fontSize: 13,
+    color: '#868E96',
+  },
+  messageBadgeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  lastMessageText: {
+    fontSize: 15,
+    color: '#6C757D',
+    flexShrink: 1,
+    flex: 1,
+  },
+  unreadMessageText: {
     fontWeight: 'bold',
-    color: '#FFFFFF', // Neutro - Branco
-    flex: 1, // Para o título ocupar o espaço e centralizar melhor
-    textAlign: 'center',
+    color: '#212529',
   },
-  headerActionIcon: {
-    position: 'absolute', // Para sobrepor se necessário ou alinhar precisamente
-    right: 15,
-    padding: 5, // Aumenta a área de toque
-    top: Platform.OS === 'ios' ? 47 : 17, // Ajuste de acordo com paddingTop
+  typingText: {
+    fontSize: 15,
+    color: '#4A90E2', // Alterado para o azul principal do perfil
+    fontStyle: 'italic',
+    flex: 1,
   },
-  headerActionIconPlaceholder: { // Para alinhar o título no centro quando não há ícone
-    width: 28 + 10, // Largura do ícone + padding
+  messageStatusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  unreadBadge: {
+    backgroundColor: '#4A90E2', // Alterado para o azul principal do perfil
+    borderRadius: 15,
+    minWidth: 28,
+    height: 28,
+    paddingHorizontal: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 12,
+  },
+  unreadCountText: {
+    color: 'white',
+    fontSize: 13,
+    fontWeight: 'bold',
   },
   centeredFeedback: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    backgroundColor: '#F0F8FF', // Alterado para o azul claro do perfil
   },
   loadingText: {
-      marginTop: 15,
-      fontSize: 16,
-      color: '#6C757D', // Neutro - Cinza
+    marginTop: 15,
+    fontSize: 16,
+    color: '#6C757D',
   },
   emptyText: {
-    fontSize: 19,
-    fontWeight: '600',
-    color: '#343A40', // Neutro - Cinza escuro
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#343A40',
     textAlign: 'center',
     marginBottom: 10,
   },
   emptySubText: {
-      fontSize: 15,
-      color: '#6C757D', // Neutro - Cinza
-      textAlign: 'center',
-  },
-  listContentContainer: {
-    paddingVertical: 8, // Um pouco de espaço no topo e final da lista
-  },
-  itemWrapper: { // Wrapper para a animação de cada item
-    marginHorizontal: 10, // Margem para dar um efeito de card
-    marginVertical: 4,    // Espaço entre os cards
-    borderRadius: 10,     // Bordas arredondadas para o card
-    backgroundColor: '#FFFFFF', // Neutro - Branco, essencial para sombra funcionar bem
-    overflow: Platform.OS === 'ios' ? 'visible' : 'hidden', // 'visible' para sombra no iOS, 'hidden' para borderRadius no Android
-    ...Platform.select({
-        ios: {
-            shadowColor: 'rgba(0,0,0,0.1)', // Neutro - Preto transparente
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.8, // Aumentado para visibilidade
-            shadowRadius: 3,
-        },
-        android: {
-            elevation: 3, // Aumentado para visibilidade
-        },
-    }),
-  },
-  itemContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 15,
-    paddingHorizontal: 15,
-    // backgroundColor: '#FFFFFF', // Movido para itemWrapper
-  },
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 15,
-    backgroundColor: '#E9ECEF', // Neutro - Cinza claro (Fallback background)
-    borderWidth: 1,
-    borderColor: '#DEE2E6', // Neutro - Cinza claro
-  },
-  avatarPlaceholder: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 15,
-    backgroundColor: '#007AFF', // Azul Principal para placeholder
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: {
-    color: '#FFFFFF', // Neutro - Branco
-    fontSize: 22,
-    fontWeight: 'bold',
-  },
-  content: {
-    flex: 1,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 2,
-  },
-  itemTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#212529', // Neutro - Cinza escuro
-    flexShrink: 1, // Para o título não empurrar o timestamp
-  },
-  unreadTitle: {
-    fontWeight: 'bold', // Título mais negrito se houver mensagens não lidas
-  },
-  timestamp: {
-    fontSize: 12,
-    color: '#868E96', // Neutro - Cinza
-    marginLeft: 10,
-  },
-  lastMessage: {
-    fontSize: 14,
-    color: '#6C757D', // Neutro - Cinza
-    lineHeight: 20,
-  },
-  unreadLastMessage: {
-    color: '#343A40', // Neutro - Cinza escuro (Mensagem mais escura se não lida)
-    fontWeight: '600',
-  },
-  unreadBadge: {
-    backgroundColor: '#007AFF', // Azul Principal para o badge
-    borderRadius: 10,
-    minWidth: 22,
-    height: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 6,
-    marginLeft: 10,
-  },
-  unreadText: {
-    color: '#FFFFFF', // Neutro - Branco
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  separator: {
-    // O espaçamento agora é dado pelo marginVertical em itemWrapper
-    // Se precisar de uma linha visual, pode adicionar aqui:
-    // height: StyleSheet.hairlineWidth,
-    // backgroundColor: '#E0E0E0',
-    // marginLeft: 80, // Alinha a linha com o conteúdo (após avatar e margem)
-    // marginRight: 10,
+    fontSize: 15,
+    color: '#6C757D',
+    textAlign: 'center',
+    paddingHorizontal: 20,
   },
 });

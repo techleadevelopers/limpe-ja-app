@@ -145,23 +145,17 @@ const styles = StyleSheet.create({
     marginHorizontal: 29,
     marginTop: 14,
     
-           borderRightWidth: 0.1,
-           borderRightColor: '#45484b56',
+      
            borderTopStartRadius: 44,
            borderBottomStartRadius: 44,
            borderTopEndRadius: 44,
            borderBottomEndRadius: 44,
-           borderBottomColor: '#45484b56',
-   
-          
-           borderBottomWidth: 0.1,
-           borderLeftColor: '#45484b56',
-           borderLeftWidth: 1,
+           
            // Propriedades de sombra mantidas exatamente como fornecidas
            shadowColor: '#45484b56', // Cor da sombra
            shadowOffset: { width: -1, height: 1 }, // Deslocamento vertical mais pronunciado
-           shadowOpacity: 1.55, // Opacidade aumentada para robustezs
-           shadowRadius: 15, // Raio de desfoque para conforto
+           shadowOpacity: 1.05, // Opacidade aumentada para robustezs
+           shadowRadius: 9, // Raio de desfoque para conforto
            elevation: 6, // Elevação aumentada para robustez no Android
   },
   photo: { width: 58, height: 58, borderRadius: 29, marginRight: 10, borderWidth: 2, borderColor: '#E7F0FF' },

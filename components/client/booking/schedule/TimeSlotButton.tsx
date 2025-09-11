@@ -26,7 +26,8 @@ const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({
 }) => {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const pressAnim = useRef(new Animated.Value(1)).current; // Animação para feedback ao toque
-  const shineAnim = useRef(new Animated.Value(-itemWidth || -70)).current; // Animação para o brilho
+  // Ajuste o valor inicial e final do brilho para o novo tamanho do item
+  const shineAnim = useRef(new Animated.Value(- (itemWidth || 60) * 0.5)).current; // Ajustado
 
   useEffect(() => {
     if (isAvailable && !isSelected) {
@@ -42,7 +43,7 @@ const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({
       // Animação de brilho para slots disponíveis
       const loopShine = Animated.loop(
         Animated.timing(shineAnim, {
-          toValue: (itemWidth || 70) + 50, // Move o brilho para fora do botão
+          toValue: (itemWidth || 60) + (itemWidth || 60) * 0.5, // Move o brilho para fora do botão, ajustado
           duration: 2000, // Duração do brilho
           easing: Easing.linear,
           useNativeDriver: true,
@@ -58,7 +59,7 @@ const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({
       pulseAnim.stopAnimation();
       pulseAnim.setValue(1);
       shineAnim.stopAnimation();
-      shineAnim.setValue(-itemWidth || -70);
+      shineAnim.setValue(- (itemWidth || 60) * 0.5); // Reset ajustado
     }
   }, [isAvailable, isSelected, pulseAnim, shineAnim, itemWidth]);
 
@@ -131,11 +132,11 @@ const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({
 
 const styles = StyleSheet.create({
   buttonBase: {
-      marginLeft: 3,
-    minWidth: 70,
-    paddingVertical: 7,
-    paddingHorizontal: 5,
-    borderRadius: 12,
+      marginLeft: 9,
+    // minWidth: 70, // Removido ou ajustado, pois itemWidth do pai vai controlar
+    paddingVertical: 4, // Reduzido
+    paddingHorizontal: 8, // Adicionado para controlar o espaçamento horizontal
+    borderRadius: 10, // Reduzido
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
@@ -145,9 +146,10 @@ const styles = StyleSheet.create({
   },
   gradientFill: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: 12,
+    borderRadius: 10, // Ajustado para combinar com o buttonBase
     borderWidth: 2.5,
     borderColor : '#45484b56',
+    
   },
   selected: {
     backgroundColor: AppColors.primaryInteractive,
@@ -156,18 +158,23 @@ const styles = StyleSheet.create({
   unavailable: {
     backgroundColor: AppColors.backgroundNeutral,
     opacity: 0.55,
-    elevation: 0,
-    borderTopStartRadius: 44,
-    borderBottomStartRadius: 44,
-    borderTopEndRadius: 44,
-    borderBottomEndRadius: 44,
-    borderBottomColor: '#45484b56',
-    shadowColor: '#45484b56',
-    shadowOffset: { width: -11, height: 2 },
-    shadowOpacity: 5.55,
-    shadowRadius: 25,
+    marginTop: 10,
+    marginHorizontal: 0,
+    left: 4,
+
+         borderTopStartRadius: 44,
+           borderBottomStartRadius: 44,
+           borderTopEndRadius: 44,
+           borderBottomEndRadius: 44,
+           
+           // Propriedades de sombra mantidas exatamente como fornecidas
+           shadowColor: '#45484b56', // Cor da sombra
+           shadowOffset: { width: -1, height: 1 }, // Deslocamento vertical mais pronunciado
+           shadowOpacity: 1.05, // Opacidade aumentada para robustezs
+           shadowRadius: 9, // Raio de desfoque para conforto
+           elevation: 6, // Elevação aumentada para robustez no Android
   },
-  text: { fontSize: 14, color: AppColors.textBody, fontWeight: '600', },
+  text: { fontSize: 12, color: AppColors.textBody, fontWeight: '600', }, // Reduzido o tamanho da fonte
   textSelected: { color: AppColors.white, fontWeight: '700', },
   textUnavailable: { color: AppColors.mediumGray },
   textOnGradient: { color: AppColors.primaryDark, fontWeight: '700' },
@@ -176,7 +183,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     height: '100%',
-    width: 50, // Largura do brilho
+    width: 30, // Largura do brilho ajustada
     opacity: 0.7,
   },
   gradientShine: {

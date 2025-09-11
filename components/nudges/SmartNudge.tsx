@@ -34,20 +34,23 @@ type SmartNudgeProps = {
 
   /** Ação principal */
   actionLabel: string;
-  onAction: () => void;
+  onAction: () => void; // <-- Permanece sem argumentos, a função que a chama deve fechar sobre o 'code' se necessário
 
   /** Aparição suave */
   delayMs?: number;           // default 3000
   throttleHours?: number;     // default 24
   showOnRoutes?: string[];    // default ['/(client)/explore']
-  bottomOffset?: number;      // default 20 (px) — útil pra “empilhar” nudges
+  bottomOffset?: number;      // default 20 (px) -- útil pra “empilhar” nudges
 
   /** Estilo/ícone */
   icon?: keyof typeof Ionicons.glyphMap; // default 'information-circle-outline'
   color?: string;             // cor do CTA/ícone (default primary)
 
-  /** Namespace para chaves (opcional – ajuda a separar famílias de nudges) */
-  namespace?: 'security' | 'incentive' | 'generic';
+  /** Namespace para chaves (opcional -- ajuda a separar famílias de nudges) */
+  namespace?: 'security' | 'incentive' | 'generic' | 'provider_mission' | 'coupon'; // <-- TIPO 'provider_mission' e 'coupon' ADICIONADO AQUI
+
+  /** Código associado ao nudge (opcional, para uso interno ou exibição) */
+  code?: string; // <-- ADICIONADO: Propriedade 'code'
 };
 
 const hoursSince = (iso?: string | null) => {
@@ -70,6 +73,7 @@ const SmartNudge: React.FC<SmartNudgeProps> = ({
   icon = 'information-circle-outline',
   color = TOKENS.primary,
   namespace = 'generic',
+  code, // <-- ADICIONADO: Desestruturar a prop 'code'
 }) => {
   const pathname = usePathname();
   const keyBase = useMemo(() => `nudge:${namespace}:${id}`, [id, namespace]);
@@ -162,6 +166,8 @@ const SmartNudge: React.FC<SmartNudgeProps> = ({
           <View style={{ marginLeft: 10, flex: 1 }}>
             <Text style={styles.title}>{title}</Text>
             {!!message && <Text style={styles.message}>{message}</Text>}
+            {/* Você pode exibir o código aqui se quiser, por exemplo: */}
+            {/* {!!code && <Text style={styles.message}>Código: {code}</Text>} */}
           </View>
         </View>
 

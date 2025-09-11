@@ -102,12 +102,20 @@ export default function ChatScreen() {
         const fetchedMessages = await getChatMessages(chatId, { limit: 50, offset: 0 });
         setMessages(fetchedMessages.reverse());
 
+        // 👇 Correção: Limpe o estado de erro após o sucesso da requisição
+        setChatBlockedMessage(null);
+
         if (bookingId) {
           const bookingDetails = await getBookingDetails(bookingId);
           if (bookingDetails.status === BookingStatus.COMPLETED) {
             setChatBlockedMessage('Este chat foi encerrado, pois o serviço foi concluído.');
           } else if (bookingDetails.status === BookingStatus.CANCELLED) {
             setChatBlockedMessage('Este chat foi encerrado, pois o agendamento foi cancelado.');
+          } else if (bookingDetails.status === BookingStatus.PENDING) {
+            // 👇 Aqui entra a mensagem mais humana
+            setChatBlockedMessage(
+              `Faça o pagamento do serviço para falar com ${recipientName || bookingDetails.providerFullName || 'o prestador'}.`
+            );
           }
         }
       } catch (error: any) {
@@ -245,16 +253,16 @@ export default function ChatScreen() {
         "Acionar Botão de Pânico",
         "Você tem certeza que deseja acionar o botão de pânico? Nossa equipe de segurança será notificada imediatamente.",
         [
-            { text: "Cancelar", style: "cancel" },
-            { text: "Acionar", onPress: () => {
-                setPanicStatus('RECEIVED');
-                // Simular uma resposta após alguns segundos
-                setTimeout(() => setPanicStatus('ACKED'), 3000);
-                setTimeout(() => setPanicStatus('DISPATCHED'), 6000);
-                setTimeout(() => setPanicStatus('CLOSED'), 10000);
-                // Aqui você faria a chamada real para o serviço de pânico
-                console.log("Botão de pânico acionado!");
-            }, style: "destructive" }
+          { text: "Cancelar", style: "cancel" },
+          { text: "Acionar", onPress: () => {
+              setPanicStatus('RECEIVED');
+              // Simular uma resposta após alguns segundos
+              setTimeout(() => setPanicStatus('ACKED'), 3000);
+              setTimeout(() => setPanicStatus('DISPATCHED'), 6000);
+              setTimeout(() => setPanicStatus('CLOSED'), 10000);
+              // Aqui você faria a chamada real para o serviço de pânico
+              console.log("Botão de pânico acionado!");
+          }, style: "destructive" }
         ]
     );
   }, []);
@@ -271,10 +279,20 @@ export default function ChatScreen() {
   const isInputDisabled = !isAuthenticated || !!chatBlockedMessage;
 
   const onPressInSendButton = () => {
-    Animated.spring(sendButtonScaleAnim, { toValue: 0.9, useNativeDriver: true }).start();
+    Animated.spring(sendButtonScaleAnim, { 
+      toValue: 0.9, 
+      useNativeDriver: true,
+      friction: 5, // Ajuste para mais "mola"
+      tension: 80, // Retorno rápido
+    }).start();
   };
   const onPressOutSendButton = () => {
-    Animated.spring(sendButtonScaleAnim, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start();
+    Animated.spring(sendButtonScaleAnim, { 
+      toValue: 1, 
+      friction: 5, 
+      tension: 80, 
+      useNativeDriver: true 
+    }).start();
   };
 
   return (

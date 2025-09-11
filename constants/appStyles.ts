@@ -92,4 +92,5 @@ export const AppTypography = {
   xsmall: { fontSize: 12, color: AppColors.mediumGray },
 };
 
+
 export { SCREEN_WIDTH, SCREEN_HEIGHT };

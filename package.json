@@ -10,7 +10,11 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "build": "eas build",
-    "check-key": "node run-check.js"
+    "check-key": "node run-check.js",
+    "detox:build:ios": "detox build --configuration ios.sim.debug",
+    "detox:test:ios": "detox test --configuration ios.sim.debug",
+    "detox:build:android": "detox build --configuration android.emu.debug",
+    "detox:test:android": "detox test --configuration android.emu.debug"
   },
   "dependencies": {
     "@expo/config-plugins": "~10.1.1",
@@ -79,19 +83,28 @@
     "twilio": "^5.8.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.25.2",
+    "@babel/core": "^7.28.4",
+    "@babel/preset-env": "^7.28.3",
+    "@babel/preset-typescript": "^7.27.1",
     "@prisma/client": "^5.13.0",
     "@types/bcrypt": "^5.0.2",
+    "@types/detox": "^18.1.3",
+    "@types/jest": "^30.0.0",
     "@types/jwt-decode": "^2.2.1",
     "@types/node": "^22.15.30",
+    "@types/node-fetch": "^2.6.13",
     "@types/react": "~19.0.10",
     "@types/react-native-vector-icons": "^6.4.18",
+    "babel-jest": "^30.1.2",
     "babel-plugin-module-resolver": "^5.0.2",
     "bcrypt": "^6.0.0",
+    "detox": "^20.41.1",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~9.2.0",
     "firebase-tools": "^14.5.1",
+    "jest": "^30.1.3",
     "prisma": "^5.13.0",
+    "ts-jest": "^29.4.1",
     "ts-node": "^10.9.2",
     "typescript": "~5.8.3"
   },

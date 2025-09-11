@@ -4,7 +4,7 @@ import { Stack, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
+    Alert, // Removed
     Animated,
     Platform,
     RefreshControl,
@@ -14,6 +14,9 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+
+// Import NotificationUIService
+import NotificationUIService from '../../services/notificationUIService'; // Added
 
 import { getMyProviderEarnings } from '../../services/earningService';
 import { requestWithdrawal } from '../../services/paymentService'; // Esta função ainda é usada se o saque for confirmado
@@ -25,6 +28,7 @@ import MainEarningsChartSection from '../../components/provider/dashboard/MainEa
 import EarningsChartSection from '../../components/provider/earnings/EarningsChartSection';
 import EarningsSummaryCard from '../../components/provider/earnings/EarningsSummaryCard';
 import RecentTransactionsSection from '../../components/provider/earnings/RecentTransactionsSection';
+import ProviderNudgeContainer from '../../components/provider/ProviderNudgeContainer'; // Added
 
 const WHITE = '#FFFFFF';
 const BACKGROUND_ALT = '#F8F9FD';
@@ -127,7 +131,7 @@ export default function ProviderEarningsScreen() {
 
     } catch (err: any) {
       console.error("[ProviderEarningsScreen] Erro ao buscar dados de ganhos:", err.response?.data || err.message, err);
-      Alert.alert("Erro", err.response?.data?.message || "Não foi possível carregar seus dados de ganhos. Tente novamente mais tarde.");
+      NotificationUIService.showError(err.response?.data?.message || "Não foi possível carregar seus dados de ganhos. Tente novamente mais tarde.", "Erro"); // Modified
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -137,6 +141,7 @@ export default function ProviderEarningsScreen() {
   useEffect(() => {
     fetchData();
 
+    // Staggered animation for sections
     Animated.stagger(150, [
       Animated.timing(headerAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
       Animated.timing(summaryAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
@@ -158,11 +163,11 @@ export default function ProviderEarningsScreen() {
     const amountToWithdraw = earningsData?.availableForWithdrawal ?? dashboardData?.totalEarnings;
 
     if (!amountToWithdraw || amountToWithdraw <= 0 || (earningsData?.pendingWithdrawals ?? 0) > 0) {
-      Alert.alert("Atenção", "Você não possui saldo disponível para saque ou já tem um saque pendente.");
+      NotificationUIService.showInfo("Você não possui saldo disponível para saque ou já tem um saque pendente.", "Atenção"); // Modified
       return;
     }
 
-    Alert.alert(
+    Alert.alert( // Kept Alert for confirmation
       "Solicitar Saque",
       `Deseja solicitar o saque de R$ ${amountToWithdraw.toFixed(2).replace('.', ',')} para sua conta bancária cadastrada?`,
       [
@@ -180,11 +185,11 @@ export default function ProviderEarningsScreen() {
                 accountType: 'CONTA_CORRENTE',
                 notes: 'Saque solicitado pelo app'
               });
-              Alert.alert("Saque Solicitado", "Seu pedido de saque foi enviado com sucesso e será processado em breve! Você será notificado sobre o status.");
+              NotificationUIService.showSuccess("Seu pedido de saque foi enviado com sucesso e será processado em breve! Você será notificado sobre o status.", "Saque Solicitado"); // Modified
               fetchData();
             } catch (error: any) {
               console.error("Erro ao solicitar saque:", error.response?.data || error.message);
-              Alert.alert("Erro", error.response?.data?.message || "Não foi possível solicitar o saque.");
+              NotificationUIService.showError(error.response?.data?.message || "Não foi possível solicitar o saque.", "Erro"); // Modified
             } finally {
               setIsLoading(false);
             }
@@ -278,6 +283,7 @@ export default function ProviderEarningsScreen() {
           <Ionicons name="chevron-forward-outline" size={20} color={TEXT_MUTED} />
         </TouchableOpacity>
       </ScrollView>
+      <ProviderNudgeContainer /> {/* Added ProviderNudgeContainer */}
     </View>
   );
 }

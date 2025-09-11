@@ -34,16 +34,16 @@ const AnimatedConversationItem: React.FC<{
         Animated.parallel([
             Animated.timing(fadeAnim, {
                 toValue: 1,
-                duration: 400,
+                duration: 400, // Duração ajustada para fluidez
                 delay: delay,
-                easing: Easing.out(Easing.ease),
+                easing: Easing.out(Easing.ease), // Easing para entrada suave
                 useNativeDriver: true,
             }),
             Animated.timing(slideAnim, {
                 toValue: 0,
-                duration: 400,
+                duration: 400, // Duração ajustada
                 delay: delay,
-                easing: Easing.out(Easing.ease),
+                easing: Easing.out(Easing.ease), // Easing para entrada suave
                 useNativeDriver: true,
             }),
         ]).start();
@@ -51,16 +51,18 @@ const AnimatedConversationItem: React.FC<{
 
     const onPressInCard = () => {
         Animated.spring(scaleAnim, {
-            toValue: 0.98,
+            toValue: 0.98, // Escala sutil
             useNativeDriver: true,
+            friction: 5, // Mais "mola"
+            tension: 80, // Retorno rápido
         }).start();
     };
 
     const onPressOutCard = () => {
         Animated.spring(scaleAnim, {
             toValue: 1,
-            friction: 3,
-            tension: 40,
+            friction: 5,
+            tension: 80,
             useNativeDriver: true,
         }).start();
     };
@@ -260,7 +262,7 @@ export default function ConversationsListScreen() {
             <AnimatedConversationItem
               item={item}
               onPress={handleConversationPress}
-              delay={index * 50 + 200}
+              delay={index * 50 + 200} // Atraso sequencial para cada item
             />
           )}
           keyExtractor={(item) => item.id}

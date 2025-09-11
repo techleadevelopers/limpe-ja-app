@@ -22,6 +22,10 @@ import {
 // <<<< CORREÇÃO: Importar ProviderServiceOffering APENAS do seu arquivo de origem >>>>
 import { ProviderServiceOffering } from '../types/backend/provider-service';
 
+// Importar Service do seu arquivo de serviços
+import { Service } from '../types/backend/services';
+
+
 // Mock ou placeholder para tipos que não foram fornecidos nos snippets
 // Em um projeto real, estes deveriam vir de `../types/backend/providers` e `../types/backend/offers`
 export interface ProviderMetrics {
@@ -317,7 +321,8 @@ export async function addProviderServiceOffering(providerId: string, data: Creat
   try {
     const response: AxiosResponse<ProviderServiceOffering> = await api.post(`/providers/${providerId}/services`, data);
     return response.data;
-  } catch (error: any) {
+  }
+  catch (error: any) {
     console.error(`Erro ao adicionar serviço para o provedor ${providerId}:`, error.response?.data || error.message);
     if (axios.isAxiosError(error) && error.response) {
       throw new Error(error.response.data.message || `Erro ao adicionar serviço para o provedor ${providerId}.`);
@@ -395,10 +400,11 @@ export async function getRecommendedProviders(): Promise<ProviderDisplayInfo[]> 
  * Chama o endpoint GET /providers/nearby.
  * @returns Uma Promise que resolve para um array de provedores (ProviderDisplayInfo para frontend).
  */
-export async function getNearbyProviders(): Promise<ProviderDisplayInfo[]> {
+export async function getNearbyProviders(latitude?: number, longitude?: number): Promise<ProviderDisplayInfo[]> {
   try {
     // Você pode adicionar parâmetros de localização aqui no futuro, se necessário
-    const response: AxiosResponse<ProviderDisplayInfo[]> = await api.get('/providers/nearby');
+    const params = (latitude !== undefined && longitude !== undefined) ? { latitude, longitude } : {};
+    const response: AxiosResponse<ProviderDisplayInfo[]> = await api.get('/providers/nearby', { params });
     return response.data;
   } catch (error: any) {
     console.error('Erro ao buscar provedores próximos:', error.response?.data || error.message);
@@ -430,6 +436,33 @@ export async function getProvidersByServiceCategory(categoryId: string): Promise
     throw new Error(`Erro de rede ou servidor ao buscar provedores pela categoria ${categoryId}.`);
   }
 }
+
+/**
+ * @function getServicesByCategoryId
+ * Obtém uma lista de serviços (não provedores) que pertencem a uma categoria específica.
+ * NOTA: Este endpoint não está explicitamente detalhado no README.md do backend.
+ * VOCÊ PRECISA IMPLEMENTAR ESTE ENDPOINT NO BACKEND (ex: GET /services?categoryId=...)
+ * ou adaptar o frontend para usar `getProvidersByServiceCategory` se a intenção for listar provedores.
+ * @param categoryId O ID da categoria de serviço.
+ * @returns Uma Promise que resolve para um array de objetos Service.
+ */
+export async function getServicesByCategoryId(categoryId: string): Promise<Service[]> {
+  try {
+    // Exemplo de como o endpoint poderia ser. Ajuste conforme sua implementação real.
+    const response: AxiosResponse<Service[]> = await api.get(`/services`, { params: { categoryId } });
+    return response.data;
+  } catch (error: any) {
+    console.error(`Erro ao buscar serviços pela categoria ${categoryId}:`, error.response?.data || error.message);
+    // Retorna um array vazio para não quebrar o frontend se o backend não tiver o endpoint
+    return [];
+    // Ou lance o erro se preferir que o frontend trate:
+    // if (axios.isAxiosError(error) && error.response) {
+    //   throw new Error(error.response.data.message || `Erro ao buscar serviços pela categoria ${categoryId}.`);
+    // }
+    // throw new Error(`Erro de rede ou servidor ao buscar serviços pela categoria ${categoryId}.`);
+  }
+}
+
 
 // =========================================================================
 // FUNÇÃO PARA BUSCA GERAL DE PROVEDORES (GET /providers)
@@ -500,19 +533,7 @@ export async function getProviderOffers(providerId: string): Promise<Offer[]> {
   } catch (error: any) {
     console.error(`Erro ao buscar ofertas do provedor ${providerId}:`, error.response?.data || error.message);
     // Retornar um array vazio ou dados mockados em caso de erro
-    return [
-      // Exemplo de oferta mockada
-      // {
-      //   id: 'offer-123',
-      //   title: '10% de Desconto no Primeiro Serviço',
-      //   description: 'Válido para novos clientes.',
-      //   couponCode: 'BEMVINDO10',
-      //   discountType: 'PERCENT',
-      //   discountValue: 10,
-      //   startDate: '2025-01-01',
-      //   endDate: '2025-12-31',
-      // }
-    ];
+    return [];
     // Ou lançar um erro:
     // if (axios.isAxiosError(error) && error.response) {
     //   throw new Error(error.response.data.message || `Erro ao buscar ofertas do provedor ${providerId}.`);

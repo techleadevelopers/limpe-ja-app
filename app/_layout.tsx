@@ -1,3 +1,4 @@
+// LimpeJaApp/app/_layout.tsx
 import { Slot, SplashScreen, usePathname, useRouter, useSegments } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -5,7 +6,7 @@ import {
     StyleSheet,
     Text,
     View,
-    Alert,
+    // Alert, // Removed
     Image,
 } from 'react-native';
 import 'react-native-reanimated';
@@ -22,6 +23,9 @@ import { I18nextProvider, useTranslation } from 'react-i18next'; // Importar I18
 
 // >>> INJETADO: expo-font <<<
 import * as Font from 'expo-font';
+
+// Import NotificationUIService
+import NotificationUIService from '../services/notificationUIService'; // Added
 
 Sentry.init({
     dsn: 'https://947962edb662e5ff655cbcd778ee13b6@o4509792415252480.ingest.us.sentry.io/4509792431898624',
@@ -57,7 +61,7 @@ function RootLayoutContent() {
             } catch (e: any) {
                 console.error('[RootLayoutContent | prepareApp] ERRO FATAL durante a inicialização do aplicativo:', e);
                 setInitializationError(e.message || 'Erro desconhecido na inicialização.');
-                Alert.alert(t("common.error"), t("common.generic_error"));
+                NotificationUIService.showError(t("common.generic_error"), t("common.error")); // Modified
             } finally {
                 setAppReady(true);
                 if (!initializationError) {

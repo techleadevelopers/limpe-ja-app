@@ -223,14 +223,14 @@ const s = StyleSheet.create({
   trackIcon: {
     width: 68,
     height: 68,
-    marginHorizontal: 20,
+    marginHorizontal: 10,
   },
 
   // mensagem de segurança (no lugar do pontilhado)
   safeMsgWrap: {
     flex: 1,
-    left: -20,
-    paddingHorizontal: 0,
+    left: -10,
+    paddingHorizontal: 5,
     paddingVertical: 18,
     borderRadius: 14,
     backgroundColor: AppColors.backgroundNeutral + '50', // Usando AppColors
@@ -240,7 +240,7 @@ const s = StyleSheet.create({
   safeMsgText: {
     fontSize: 13.2,
     minWidth: 10,
-    marginHorizontal: 10,
+    marginHorizontal: 0,
     fontFamily: 'Montserrat-Regular',
     color: AppColors.textAuxiliary, // Usando AppColors
     fontWeight: '600', // leve/fina e confortável

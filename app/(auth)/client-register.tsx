@@ -1,7 +1,7 @@
 // LimpeJaApp/app/(auth)/client-register.tsx
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react'; // Added useCallback
 import {
     ActivityIndicator,
     Animated,
@@ -14,12 +14,13 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View
+    View,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { CreateAddressDto, RegisterClientDto } from '../../types/backend/auth';
 
-import * as Location from 'expo-location'; // << NOVO: Importação do expo-location
+import * as Location from 'expo-location';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // Import AsyncStorage
 
 const LOGO_IMAGE = require('../../assets/images/logo2.png');
 import { AnimatedErrorMessage } from '../../components/auth/components/AnimatedErrorMessage';
@@ -56,7 +57,6 @@ const fetchAddressFromRealCepApi = async (cep: string) => {
 
 export default function ClientRegisterScreen() {
     const [currentStep, setCurrentStep] = useState(1);
-    // NEW: Sub-step for address
     const [subStepAddress, setSubStepAddress] = useState(1); // 1: CEP, 2: Details, 3: Complement
 
     const [email, setEmail] = useState('');
@@ -78,12 +78,29 @@ export default function ClientRegisterScreen() {
     const [isLoadingCep, setIsLoadingCep] = useState(false);
     const [generalError, setGeneralError] = useState<string | null>(null);
 
+    // Specific error states for inline validation
+    const [emailError, setEmailError] = useState<string | null>(null);
+    const [usernameError, setUsernameError] = useState<string | null>(null);
+    const [phoneError, setPhoneError] = useState<string | null>(null);
+    const [cpfError, setCpfError] = useState<string | null>(null);
+    const [dateOfBirthError, setDateOfBirthError] = useState<string | null>(null);
+    const [passwordError, setPasswordError] = useState<string | null>(null);
+    const [cepInputError, setCepInputError] = useState<string | null>(null); // Renamed to avoid conflict with `cep` state
+    const [streetError, setStreetError] = useState<string | null>(null);
+    const [numberError, setNumberError] = useState<string | null>(null);
+    const [neighborhoodError, setNeighborhoodError] = useState<string | null>(null);
+    const [cityError, setCityError] = useState<string | null>(null);
+    const [stateError, setStateError] = useState<string | null>(null);
+    const [complementError, setComplementError] = useState<string | null>(null);
+
+
     const router = useRouter();
     const { signUpClient } = useAuth();
 
     const mainElementsOpacity = useRef(new Animated.Value(0)).current;
     const mainElementsTranslateY = useRef(new Animated.Value(18)).current;
 
+    // Animation for screen entry
     useEffect(() => {
         Animated.parallel([
             Animated.timing(mainElementsOpacity, { toValue: 1, duration: 700, delay: 200, useNativeDriver: true }),
@@ -91,110 +108,241 @@ export default function ClientRegisterScreen() {
         ]).start();
     }, [mainElementsOpacity, mainElementsTranslateY]);
 
-    const validateStep1 = () => {
-        setGeneralError(null);
-        if (!email.trim() || !username.trim() || !phone.trim()) {
-            setGeneralError('Por favor, preencha todos os campos básicos.');
-            return false;
-        }
-        const emailRegex = /^[^\s@]+@[^\s@]+\.\S+$/;
-        if (!emailRegex.test(email.trim())) {
-            setGeneralError('Formato de e-mail inválido.');
-            return false;
-        }
-        const cleanedPhone = phone.replace(/\D/g, '');
-        if (cleanedPhone.length < 10 || cleanedPhone.length > 11) {
-            setGeneralError('O telefone deve ter 10 ou 11 dígitos.');
-            return false;
-        }
-        return true;
-    };
+    // Auto-save to AsyncStorage
+    useEffect(() => {
+        const saveFormData = async () => {
+            try {
+                const formData = {
+                    email, username, phone, cpf, dateOfBirth, password,
+                    cep, street, number, neighborhood, city, state, complement,
+                    currentStep, subStepAddress
+                };
+                await AsyncStorage.setItem('clientRegisterFormData', JSON.stringify(formData));
+                console.log("Form data saved to AsyncStorage.");
+            } catch (e) {
+                console.error("Failed to save form data to AsyncStorage", e);
+            }
+        };
+        // Debounce saving to avoid too frequent writes
+        const handler = setTimeout(() => {
+            saveFormData();
+        }, 500); // Save 500ms after last change
+        return () => clearTimeout(handler);
+    }, [email, username, phone, cpf, dateOfBirth, password, cep, street, number, neighborhood, city, state, complement, currentStep, subStepAddress]);
 
-    const validateStep2 = () => {
-        setGeneralError(null);
-        if (!cpf.trim() || !dateOfBirth.trim() || !password.trim()) {
-            setGeneralError('Por favor, preencha todos os campos pessoais.');
-            return false;
-        }
-        const cleanedCpf = cpf.replace(/\D/g, '');
-        if (cleanedCpf.length !== 11) {
-            setGeneralError('CPF inválido. Deve conter 11 dígitos.');
-            return false;
-        }
-        if (password.length < 6) {
-            setGeneralError('A senha deve ter no mínimo 6 caracteres.');
-            return false;
-        }
-        return true;
-    };
+    // Load from AsyncStorage on component mount
+    useEffect(() => {
+        const loadFormData = async () => {
+            try {
+                const savedData = await AsyncStorage.getItem('clientRegisterFormData');
+                if (savedData) {
+                    const formData = JSON.parse(savedData);
+                    setEmail(formData.email || '');
+                    setUsername(formData.username || '');
+                    setPhone(formData.phone || '');
+                    setCpf(formData.cpf || '');
+                    setDateOfBirth(formData.dateOfBirth || '');
+                    setPassword(formData.password || '');
+                    setCep(formData.cep || '');
+                    setStreet(formData.street || '');
+                    setNumber(formData.number || '');
+                    setNeighborhood(formData.neighborhood || '');
+                    setCity(formData.city || '');
+                    setState(formData.state || '');
+                    setComplement(formData.complement || '');
+                    setCurrentStep(formData.currentStep || 1);
+                    setSubStepAddress(formData.subStepAddress || 1);
+                    setGeneralError("Dados carregados automaticamente. Continue seu cadastro.");
+                    console.log("Form data loaded from AsyncStorage.");
+                }
+            } catch (e) {
+                console.error("Failed to load form data from AsyncStorage", e);
+            }
+        };
+        loadFormData();
+    }, []);
 
-    // NEW: Validation for address sub-steps
-    const validateAddressSubStep1 = () => { // CEP
-        setGeneralError(null);
+
+    // Validation functions - now setting specific errors
+    const validateStep1 = useCallback(() => {
+        let isValid = true;
+        setEmailError(null);
+        setUsernameError(null);
+        setPhoneError(null);
+
+        if (!email.trim()) {
+            setEmailError('O e-mail é obrigatório.');
+            isValid = false;
+        } else {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.\S+$/;
+            if (!emailRegex.test(email.trim())) {
+                setEmailError('Formato de e-mail inválido.');
+                isValid = false;
+            }
+        }
+
+        if (!username.trim()) {
+            setUsernameError('O nome completo é obrigatório.');
+            isValid = false;
+        }
+
+        if (!phone.trim()) {
+            setPhoneError('O telefone é obrigatório.');
+            isValid = false;
+        } else {
+            const cleanedPhone = phone.replace(/\D/g, '');
+            if (cleanedPhone.length < 10 || cleanedPhone.length > 11) {
+                setPhoneError('O telefone deve ter 10 ou 11 dígitos.');
+                isValid = false;
+            }
+        }
+        return isValid;
+    }, [email, username, phone]);
+
+    const validateStep2 = useCallback(() => {
+        let isValid = true;
+        setCpfError(null);
+        setDateOfBirthError(null);
+        setPasswordError(null);
+
+        if (!cpf.trim()) {
+            setCpfError('O CPF é obrigatório.');
+            isValid = false;
+        } else {
+            const cleanedCpf = cpf.replace(/\D/g, '');
+            if (cleanedCpf.length !== 11) {
+                setCpfError('CPF inválido. Deve conter 11 dígitos.');
+                isValid = false;
+            }
+        }
+
+        if (!dateOfBirth.trim()) {
+            setDateOfBirthError('A data de nascimento é obrigatória.');
+            isValid = false;
+        } else {
+            const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
+            if (!dateRegex.test(dateOfBirth)) {
+                setDateOfBirthError('Formato de data inválido (DD/MM/AAAA).');
+                isValid = false;
+            } else {
+                const [day, month, year] = dateOfBirth.split('/').map(Number);
+                const dateObj = new Date(year, month - 1, day);
+                if (dateObj.getDate() !== day || dateObj.getMonth() !== month - 1 || dateObj.getFullYear() !== year) {
+                    setDateOfBirthError('Data de nascimento inválida.');
+                    isValid = false;
+                }
+            }
+        }
+
+        if (!password.trim()) {
+            setPasswordError('A senha é obrigatória.');
+            isValid = false;
+        } else if (password.length < 6) {
+            setPasswordError('A senha deve ter no mínimo 6 caracteres.');
+            isValid = false;
+        }
+        return isValid;
+    }, [cpf, dateOfBirth, password]);
+
+    const validateAddressSubStep1 = useCallback(() => { // CEP
+        setCepInputError(null);
         const cleanedCep = cep.replace(/\D/g, '');
         if (cleanedCep.length !== 8) {
-            setGeneralError("CEP inválido. Digite os 8 dígitos.");
+            setCepInputError("CEP inválido. Digite os 8 dígitos.");
             return false;
         }
         return true;
-    };
+    }, [cep]);
 
-    const validateAddressSubStep2 = () => { // Street, Number, Neighborhood, City, State
-        setGeneralError(null);
-        if (!street.trim() || !number.trim() || !neighborhood.trim() || !city.trim() || !state.trim()) {
-            setGeneralError('Por favor, preencha todos os campos de endereço (Rua, Número, Bairro, Cidade, Estado).');
-            return false;
-        }
-        if (state.trim().length !== 2 || !/^[A-Z]{2}$/i.test(state.trim())) {
-            setGeneralError('O estado (UF) deve ter 2 letras válidas.');
-            return false;
-        }
-        return true;
-    };
+    const validateAddressSubStep2 = useCallback(() => { // Street, Number, Neighborhood, City, State
+        let isValid = true;
+        setStreetError(null);
+        setNumberError(null);
+        setNeighborhoodError(null);
+        setCityError(null);
+        setStateError(null);
 
-    const validateAddressSubStep3 = () => { // Complement (optional, so always true unless specific validation is added)
-        setGeneralError(null);
+        if (!street.trim()) {
+            setStreetError('A rua é obrigatória.');
+            isValid = false;
+        }
+        if (!number.trim()) {
+            setNumberError('O número é obrigatório.');
+            isValid = false;
+        }
+        if (!neighborhood.trim()) {
+            setNeighborhoodError('O bairro é obrigatório.');
+            isValid = false;
+        }
+        if (!city.trim()) {
+            setCityError('A cidade é obrigatória.');
+            isValid = false;
+        }
+        if (!state.trim()) {
+            setStateError('O estado é obrigatório.');
+            isValid = false;
+        } else if (state.trim().length !== 2 || !/^[A-Z]{2}$/i.test(state.trim())) {
+            setStateError('O estado (UF) deve ter 2 letras válidas.');
+            isValid = false;
+        }
+        return isValid;
+    }, [street, number, neighborhood, city, state]);
+
+    const validateAddressSubStep3 = useCallback(() => { // Complement (optional, so always true unless specific validation is added)
+        setComplementError(null); // No specific validation for complement, but clear any previous error
         return true;
-    };
+    }, []);
 
     const handleNext = () => {
-        if (currentStep === 1 && validateStep1()) {
-            setCurrentStep(2);
-            setGeneralError(null);
-        } else if (currentStep === 2 && validateStep2()) {
-            setCurrentStep(3);
-            setSubStepAddress(1); // Reset sub-step when entering address
-            setGeneralError(null);
+        setGeneralError(null); // Clear general errors before attempting to advance
+        if (currentStep === 1) {
+            if (validateStep1()) {
+                setCurrentStep(2);
+            } else {
+                setGeneralError('Por favor, preencha todos os campos básicos corretamente.');
+            }
+        } else if (currentStep === 2) {
+            if (validateStep2()) {
+                setCurrentStep(3);
+                setSubStepAddress(1); // Reset sub-step when entering address
+            } else {
+                setGeneralError('Por favor, preencha todos os campos pessoais corretamente.');
+            }
         } else if (currentStep === 3) {
-            if (subStepAddress === 1 && validateAddressSubStep1()) {
-                if (!isLoadingCep) { // Only advance if CEP search is not active
-                    setSubStepAddress(2);
-                    setGeneralError(null);
+            if (subStepAddress === 1) {
+                if (validateAddressSubStep1()) {
+                    if (!isLoadingCep) { // Only advance if CEP search is not active
+                        setSubStepAddress(2);
+                    } else {
+                        setGeneralError("Aguarde a busca do CEP ser concluída.");
+                    }
                 } else {
-                    setGeneralError("Aguarde a busca do CEP ser concluída.");
+                    setGeneralError("CEP inválido. Digite os 8 dígitos.");
                 }
-            } else if (subStepAddress === 2 && validateAddressSubStep2()) {
-                setSubStepAddress(3);
-                setGeneralError(null);
-            } else if (subStepAddress === 3 && validateAddressSubStep3()) {
-                // All address sub-steps completed, now ready for final signup
-                handleSignUp(); // Call signup directly if all steps are valid
+            } else if (subStepAddress === 2) {
+                if (validateAddressSubStep2()) {
+                    setSubStepAddress(3);
+                } else {
+                    setGeneralError('Por favor, preencha todos os campos de endereço corretamente.');
+                }
+            } else if (subStepAddress === 3) {
+                if (validateAddressSubStep3()) {
+                    handleSignUp(); // Call signup directly if all steps are valid
+                }
             }
         }
     };
 
     const handleBack = () => {
+        setGeneralError(null); // Clear general errors when going back
         if (currentStep === 3) {
             if (subStepAddress === 1) {
                 setCurrentStep(2);
-                setGeneralError(null);
             } else {
                 setSubStepAddress(subStepAddress - 1);
-                setGeneralError(null);
             }
         } else if (currentStep === 2) {
             setCurrentStep(1);
-            setGeneralError(null);
         }
     };
 
@@ -208,12 +356,12 @@ export default function ClientRegisterScreen() {
             formattedPhone = `(${limitedText.substring(0, 2)}`;
         }
         if (limitedText.length >= 3) {
-            if (limitedText.length <= 10) {
+            if (limitedText.length <= 10) { // For 9-digit numbers (like 9xxxx-xxxx)
                 formattedPhone += `) ${limitedText.substring(2, 6)}`;
                 if (limitedText.length >= 7) {
                     formattedPhone += `-${limitedText.substring(6, 10)}`;
                 }
-            } else {
+            } else { // For 10-digit numbers (like 9xxxx-xxxxx)
                 formattedPhone += `) ${limitedText.substring(2, 7)}`;
                 if (limitedText.length >= 8) {
                     formattedPhone += `-${limitedText.substring(7, 11)}`;
@@ -261,9 +409,11 @@ export default function ClientRegisterScreen() {
 
     const fetchAddressFromCep = async () => {
         const cleanedCep = cep.replace(/\D/g, '');
+        setCepInputError(null); // Clear specific CEP error
+        setGeneralError(null); // Clear general error
+
         if (cleanedCep.length === 8) {
             setIsLoadingCep(true);
-            setGeneralError(null);
             try {
                 const data = await fetchAddressFromRealCepApi(cleanedCep);
                 setStreet(data.logradouro || '');
@@ -271,27 +421,24 @@ export default function ClientRegisterScreen() {
                 setCity(data.localidade || '');
                 setState(data.uf || '');
                 setComplement(data.complemento || '');
-                setGeneralError(null); // Clear error if successful
-
             } catch (error: any) {
-                setGeneralError(error.message || "Erro ao buscar CEP. Tente novamente.");
+                setCepInputError(error.message || "Erro ao buscar CEP. Tente novamente.");
                 setStreet(''); setNumber(''); setNeighborhood(''); setCity(''); setState(''); setComplement('');
             } finally {
                 setIsLoadingCep(false);
             }
         } else if (cleanedCep.length > 0 && cleanedCep.length < 8) {
-            setGeneralError("CEP incompleto. Digite os 8 dígitos.");
+            setCepInputError("CEP incompleto. Digite os 8 dígitos.");
             setStreet(''); setNumber(''); setNeighborhood(''); setCity(''); setState(''); setComplement('');
         } else {
             setStreet(''); setNumber(''); setNeighborhood(''); setCity(''); setState(''); setComplement('');
-            setGeneralError(null);
         }
     };
 
     const handleSignUp = async () => {
         // Ensure all top-level validations pass before attempting signup
         if (!validateStep1() || !validateStep2() || !validateAddressSubStep1() || !validateAddressSubStep2() || !validateAddressSubStep3()) {
-             setGeneralError('Por favor, preencha todos os campos obrigatórios corretamente antes de cadastrar.');
+            setGeneralError('Por favor, preencha todos os campos obrigatórios corretamente antes de cadastrar.');
             return;
         }
 
@@ -339,6 +486,8 @@ export default function ClientRegisterScreen() {
             await signUpClient(registerData);
 
             console.log("[ClientRegisterScreen] Registro de cliente iniciado.");
+            // Optionally clear AsyncStorage after successful registration
+            await AsyncStorage.removeItem('clientRegisterFormData');
 
         } catch (error: any) {
             console.error("[ClientRegisterScreen] Erro ao registrar cliente:", error);
@@ -358,7 +507,53 @@ export default function ClientRegisterScreen() {
     const signUpButtonAnims = createButtonAnimations();
     const nextButtonAnims = createButtonAnimations();
 
-    const isSignUpButtonEnabled = currentStep === 3 && subStepAddress === 3; // Only enable final signup on the last address sub-step
+    // Helper for progress indicator and microcopy
+    const getStepInfo = () => {
+        let stepText = '';
+        let microcopy = '';
+        let totalSteps = 3; // Basic, Personal, Address
+
+        switch (currentStep) {
+            case 1:
+                stepText = `Etapa 1 de ${totalSteps}: Dados Básicos`;
+                microcopy = 'Precisamos só dos seus dados básicos para começar.';
+                break;
+            case 2:
+                stepText = `Etapa 2 de ${totalSteps}: Dados Pessoais`;
+                microcopy = 'Agora, seus dados pessoais para segurança e identificação.';
+                break;
+            case 3:
+                switch (subStepAddress) {
+                    case 1:
+                        stepText = `Etapa 3.1 de ${totalSteps}: Endereço (CEP)`;
+                        microcopy = 'Informe seu CEP e buscamos o endereço automaticamente.';
+                        break;
+                    case 2:
+                        stepText = `Etapa 3.2 de ${totalSteps}: Endereço (Detalhes)`;
+                        microcopy = 'Confirme e complete os detalhes do seu endereço.';
+                        break;
+                    case 3:
+                        stepText = `Etapa 3.3 de ${totalSteps}: Endereço (Complemento)`;
+                        microcopy = 'Adicione um complemento para facilitar a localização.';
+                        break;
+                }
+                break;
+        }
+        return { stepText, microcopy };
+    };
+
+    const getBackButtonText = () => {
+        if (currentStep === 3) {
+            if (subStepAddress === 1) return 'Voltar para Dados Pessoais';
+            if (subStepAddress === 2) return 'Voltar para CEP';
+            if (subStepAddress === 3) return 'Voltar para Detalhes do Endereço';
+        } else if (currentStep === 2) {
+            return 'Voltar para Dados Básicos';
+        }
+        return ''; // Should not be shown on step 1
+    };
+
+    const { stepText, microcopy } = getStepInfo();
 
     return (
         <KeyboardAvoidingView
@@ -379,6 +574,7 @@ export default function ClientRegisterScreen() {
                             currentStep > 1 ? (
                                 <TouchableOpacity onPress={handleBack} style={styles.backButtonHeader}>
                                     <Ionicons name="arrow-back-outline" size={24} color="#00BCD4" />
+                                    <Text style={styles.backButtonHeaderText}>{getBackButtonText()}</Text>
                                 </TouchableOpacity>
                             ) : null
                         ),
@@ -386,20 +582,20 @@ export default function ClientRegisterScreen() {
                     }}
                 />
 
-
                 <Animated.View style={[styles.contentWrapper, { opacity: mainElementsOpacity, transform: [{translateY: mainElementsTranslateY}] }]}>
                     <View style={styles.logoContainer}>
                         <Image source={LOGO_IMAGE} style={styles.logo} />
                     </View>
 
-
                     <Text style={styles.welcomeSubtitle}>Crie sua conta no LimpeJá !</Text>
+                    <Text style={styles.stepIndicatorText}>{stepText}</Text>
+                    <Text style={styles.microcopyText}>{microcopy}</Text>
 
                     {/* Step 1: Informações Básicas */}
                     {currentStep === 1 && (
                         <View>
                             {/* Email Input */}
-                            <View style={styles.inputWrapper}>
+                            <View style={[styles.inputWrapper, emailError ? styles.inputWrapperError : {}]}>
                                 <View style={styles.iconCircle}>
                                     <Ionicons name="mail-outline" size={20} color="#00BCD4" />
                                 </View>
@@ -408,16 +604,18 @@ export default function ClientRegisterScreen() {
                                     placeholder="Email"
                                     placeholderTextColor="#A0AEC0"
                                     value={email}
-                                    onChangeText={(text) => { setEmail(text); if (generalError) setGeneralError(null);}}
+                                    onChangeText={(text) => { setEmail(text); setEmailError(null); }}
+                                    onBlur={validateStep1}
                                     keyboardType="email-address"
                                     autoCapitalize="none"
                                     textContentType="emailAddress"
                                     autoComplete="email"
                                 />
                             </View>
+                            <AnimatedErrorMessage message={emailError} isVisible={!!emailError} centered={false} />
 
                             {/* Nome Completo Input */}
-                            <View style={styles.inputWrapper}>
+                            <View style={[styles.inputWrapper, usernameError ? styles.inputWrapperError : {}]}>
                                 <View style={styles.iconCircle}>
                                     <Ionicons name="person-outline" size={20} color="#00BCD4" />
                                 </View>
@@ -426,27 +624,32 @@ export default function ClientRegisterScreen() {
                                     placeholder="Nome Completo"
                                     placeholderTextColor="#A0AEC0"
                                     value={username}
-                                    onChangeText={(text) => { setUsername(text); if (generalError) setGeneralError(null);}}
+                                    onChangeText={(text) => { setUsername(text); setUsernameError(null); }}
+                                    onBlur={validateStep1}
                                     autoCapitalize="words"
                                     textContentType="name"
                                     autoComplete="name"
                                 />
                             </View>
+                            <AnimatedErrorMessage message={usernameError} isVisible={!!usernameError} centered={false} />
 
                             {/* Telefone Input */}
-                            <View style={styles.inputWrapper}>
+                            <View style={[styles.inputWrapper, phoneError ? styles.inputWrapperError : {}]}>
                                 <View style={styles.iconCircle}>
                                     <Ionicons name="call-outline" size={20} color="#00BCD4" />
                                 </View>
                                 <TextInput
                                     style={styles.input}
-                                    placeholder="Telefone"
+                                    placeholder="Telefone (DDD + Número)"
                                     placeholderTextColor="#A0AEC0"
                                     value={phone}
-                                    onChangeText={(text) => { setPhone(formatPhoneNumber(text)); if (generalError) setGeneralError(null);}}
-                                    keyboardType="numeric"
+                                    onChangeText={(text) => { setPhone(formatPhoneNumber(text)); setPhoneError(null); }}
+                                    onBlur={validateStep1}
+                                    keyboardType="phone-pad"
+                                    maxLength={15} // (XX) XXXXX-XXXX
                                 />
                             </View>
+                            <AnimatedErrorMessage message={phoneError} isVisible={!!phoneError} centered={false} />
 
                             <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
 
@@ -469,23 +672,25 @@ export default function ClientRegisterScreen() {
                     {currentStep === 2 && (
                         <View>
                             {/* CPF Input */}
-                            <View style={styles.inputWrapper}>
+                            <View style={[styles.inputWrapper, cpfError ? styles.inputWrapperError : {}]}>
                                 <View style={styles.iconCircle}>
                                     <Ionicons name="document-text-outline" size={20} color="#00BCD4" />
                                 </View>
                                 <TextInput
                                     style={styles.input}
-                                    placeholder="CPF"
+                                    placeholder="CPF (apenas números)"
                                     placeholderTextColor="#A0AEC0"
                                     value={cpf}
-                                    onChangeText={(text) => { setCpf(formatCpf(text)); if (generalError) setGeneralError(null);}}
+                                    onChangeText={(text) => { setCpf(formatCpf(text)); setCpfError(null); }}
+                                    onBlur={validateStep2}
                                     keyboardType="numeric"
-                                    maxLength={14}
+                                    maxLength={14} // XXX.XXX.XXX-XX
                                 />
                             </View>
+                            <AnimatedErrorMessage message={cpfError} isVisible={!!cpfError} centered={false} />
 
                             {/* Data de Nascimento Input */}
-                            <View style={styles.inputWrapper}>
+                            <View style={[styles.inputWrapper, dateOfBirthError ? styles.inputWrapperError : {}]}>
                                 <View style={styles.iconCircle}>
                                     <Ionicons name="calendar-outline" size={20} color="#00BCD4" />
                                 </View>
@@ -494,23 +699,26 @@ export default function ClientRegisterScreen() {
                                     placeholder="Data de Nascimento (DD/MM/AAAA)"
                                     placeholderTextColor="#A0AEC0"
                                     value={dateOfBirth}
-                                    onChangeText={(text) => { setDateOfBirth(formatDateOfBirth(text)); if (generalError) setGeneralError(null);}}
+                                    onChangeText={(text) => { setDateOfBirth(formatDateOfBirth(text)); setDateOfBirthError(null); }}
+                                    onBlur={validateStep2}
                                     keyboardType="numeric"
-                                    maxLength={10}
+                                    maxLength={10} // DD/MM/AAAA
                                 />
                             </View>
+                            <AnimatedErrorMessage message={dateOfBirthError} isVisible={!!dateOfBirthError} centered={false} />
 
                             {/* Password Input */}
-                            <View style={styles.inputWrapper}>
+                            <View style={[styles.inputWrapper, passwordError ? styles.inputWrapperError : {}]}>
                                 <View style={styles.iconCircle}>
                                     <Ionicons name="lock-closed-outline" size={20} color="#00BCD4" />
                                 </View>
                                 <TextInput
                                     style={styles.input}
-                                    placeholder="Senha"
+                                    placeholder="Senha (mínimo 6 caracteres)"
                                     placeholderTextColor="#A0AEC0"
                                     value={password}
-                                    onChangeText={(text) => { setPassword(text); if (generalError) setGeneralError(null);}}
+                                    onChangeText={(text) => { setPassword(text); setPasswordError(null); }}
+                                    onBlur={validateStep2}
                                     secureTextEntry={!showPassword}
                                     textContentType="password"
                                 />
@@ -518,14 +726,18 @@ export default function ClientRegisterScreen() {
                                     <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={22} color="#A0AEC0" />
                                 </TouchableOpacity>
                             </View>
+                            <AnimatedErrorMessage message={passwordError} isVisible={!!passwordError} centered={false} />
 
                             <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
 
                             {/* Navigation Buttons */}
                             <View style={styles.navigationButtons}>
-                            
+                                <TouchableOpacity style={[styles.navButton, styles.backButton]} onPress={handleBack}>
+                                    <Ionicons name="arrow-back-outline" size={20} color="#00BCD4" />
+                                    <Text style={styles.navButtonTextBack}>Voltar</Text>
+                                </TouchableOpacity>
                                 <TouchableOpacity
-                                    style={[styles.navButton, styles.nextButton]}
+                                    style={[styles.navButton, styles.finalButton, isLoading && styles.buttonDisabled]}
                                     onPress={handleNext}
                                     disabled={isLoading}
                                 >
@@ -543,22 +755,23 @@ export default function ClientRegisterScreen() {
                             {subStepAddress === 1 && (
                                 <View>
                                     <Text style={styles.subStepTitle}>1. Informe seu CEP</Text>
-                                    <View style={styles.inputWrapper}>
+                                    <View style={[styles.inputWrapper, cepInputError ? styles.inputWrapperError : {}]}>
                                         <View style={styles.iconCircle}>
                                             <Ionicons name="map-outline" size={20} color="#00BCD4" />
                                         </View>
                                         <TextInput
                                             style={styles.input}
-                                            placeholder="CEP"
+                                            placeholder="CEP (apenas números)"
                                             placeholderTextColor="#A0AEC0"
                                             value={cep}
-                                            onChangeText={(text) => { setCep(text.replace(/\D/g, '')); if (generalError) setGeneralError(null);}}
+                                            onChangeText={(text) => { setCep(text.replace(/\D/g, '')); setCepInputError(null); }}
                                             onBlur={fetchAddressFromCep}
                                             keyboardType="numeric"
                                             maxLength={8}
                                         />
                                         {isLoadingCep && <ActivityIndicator size="small" color="#00BCD4" style={styles.cepLoadingIndicator} />}
                                     </View>
+                                    <AnimatedErrorMessage message={cepInputError} isVisible={!!cepInputError} centered={false} />
                                     <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
                                     <View style={styles.navigationButtons}>
                                         <TouchableOpacity style={[styles.navButton, styles.backButton]} onPress={handleBack}>
@@ -566,9 +779,9 @@ export default function ClientRegisterScreen() {
                                             <Text style={styles.navButtonTextBack}>Voltar</Text>
                                         </TouchableOpacity>
                                         <TouchableOpacity
-                                            style={[styles.navButton, styles.finalButton, isLoadingCep && styles.buttonDisabled]}
+                                            style={[styles.navButton, styles.finalButton, (isLoadingCep || !validateAddressSubStep1()) && styles.buttonDisabled]}
                                             onPress={handleNext}
-                                            disabled={isLoadingCep}
+                                            disabled={isLoadingCep || !validateAddressSubStep1()}
                                         >
                                             <Text style={styles.navButtonTextNext}>Próximo</Text>
                                             <Ionicons name="arrow-forward-outline" size={20} color="#fff" />
@@ -582,7 +795,7 @@ export default function ClientRegisterScreen() {
                                 <View>
                                     <Text style={styles.subStepTitle}>2. Detalhes do Endereço</Text>
                                     {/* Rua Input */}
-                                    <View style={styles.inputWrapper}>
+                                    <View style={[styles.inputWrapper, streetError ? styles.inputWrapperError : {}]}>
                                         <View style={styles.iconCircle}>
                                             <Ionicons name="navigate-outline" size={20} color="#00BCD4" />
                                         </View>
@@ -591,13 +804,15 @@ export default function ClientRegisterScreen() {
                                             placeholder="Rua"
                                             placeholderTextColor="#A0AEC0"
                                             value={street}
-                                            onChangeText={(text) => { setStreet(text); if (generalError) setGeneralError(null);}}
+                                            onChangeText={(text) => { setStreet(text); setStreetError(null); }}
+                                            onBlur={validateAddressSubStep2}
                                             autoCapitalize="words"
                                         />
                                     </View>
+                                    <AnimatedErrorMessage message={streetError} isVisible={!!streetError} centered={false} />
 
                                     {/* Número Input */}
-                                    <View style={styles.inputWrapper}>
+                                    <View style={[styles.inputWrapper, numberError ? styles.inputWrapperError : {}]}>
                                         <View style={styles.iconCircle}>
                                             <Ionicons name="home-outline" size={20} color="#00BCD4" />
                                         </View>
@@ -606,13 +821,15 @@ export default function ClientRegisterScreen() {
                                             placeholder="Número"
                                             placeholderTextColor="#A0AEC0"
                                             value={number}
-                                            onChangeText={(text) => { setNumber(text); if (generalError) setGeneralError(null);}}
+                                            onChangeText={(text) => { setNumber(text); setNumberError(null); }}
+                                            onBlur={validateAddressSubStep2}
                                             keyboardType="numeric"
                                         />
                                     </View>
+                                    <AnimatedErrorMessage message={numberError} isVisible={!!numberError} centered={false} />
 
                                     {/* Bairro Input */}
-                                    <View style={styles.inputWrapper}>
+                                    <View style={[styles.inputWrapper, neighborhoodError ? styles.inputWrapperError : {}]}>
                                         <View style={styles.iconCircle}>
                                             <Ionicons name="pin-outline" size={20} color="#00BCD4" />
                                         </View>
@@ -621,13 +838,15 @@ export default function ClientRegisterScreen() {
                                             placeholder="Bairro"
                                             placeholderTextColor="#A0AEC0"
                                             value={neighborhood}
-                                            onChangeText={(text) => { setNeighborhood(text); if (generalError) setGeneralError(null);}}
+                                            onChangeText={(text) => { setNeighborhood(text); setNeighborhoodError(null); }}
+                                            onBlur={validateAddressSubStep2}
                                             autoCapitalize="words"
                                         />
                                     </View>
+                                    <AnimatedErrorMessage message={neighborhoodError} isVisible={!!neighborhoodError} centered={false} />
 
                                     {/* Cidade Input */}
-                                    <View style={styles.inputWrapper}>
+                                    <View style={[styles.inputWrapper, cityError ? styles.inputWrapperError : {}]}>
                                         <View style={styles.iconCircle}>
                                             <Ionicons name="business-outline" size={20} color="#00BCD4" />
                                         </View>
@@ -636,13 +855,15 @@ export default function ClientRegisterScreen() {
                                             placeholder="Cidade"
                                             placeholderTextColor="#A0AEC0"
                                             value={city}
-                                            onChangeText={(text) => { setCity(text); if (generalError) setGeneralError(null);}}
+                                            onChangeText={(text) => { setCity(text); setCityError(null); }}
+                                            onBlur={validateAddressSubStep2}
                                             autoCapitalize="words"
                                         />
                                     </View>
+                                    <AnimatedErrorMessage message={cityError} isVisible={!!cityError} centered={false} />
 
                                     {/* Estado (UF) Input */}
-                                    <View style={styles.inputWrapper}>
+                                    <View style={[styles.inputWrapper, stateError ? styles.inputWrapperError : {}]}>
                                         <View style={styles.iconCircle}>
                                             <Ionicons name="globe-outline" size={20} color="#00BCD4" />
                                         </View>
@@ -651,11 +872,13 @@ export default function ClientRegisterScreen() {
                                             placeholder="Estado (UF)"
                                             placeholderTextColor="#A0AEC0"
                                             value={state}
-                                            onChangeText={(text) => { setState(text.toUpperCase()); if (generalError) setGeneralError(null);}}
+                                            onChangeText={(text) => { setState(text.toUpperCase()); setStateError(null); }}
+                                            onBlur={validateAddressSubStep2}
                                             autoCapitalize="characters"
                                             maxLength={2}
                                         />
                                     </View>
+                                    <AnimatedErrorMessage message={stateError} isVisible={!!stateError} centered={false} />
                                     <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
                                     <View style={styles.navigationButtons}>
                                         <TouchableOpacity style={[styles.navButton, styles.backButton]} onPress={handleBack}>
@@ -678,19 +901,21 @@ export default function ClientRegisterScreen() {
                                 <View>
                                     <Text style={styles.subStepTitle}>3. Complemento (Opcional)</Text>
                                     {/* Complemento Input */}
-                                    <View style={styles.inputWrapper}>
+                                    <View style={[styles.inputWrapper, complementError ? styles.inputWrapperError : {}]}>
                                         <View style={styles.iconCircle}>
                                             <Ionicons name="information-circle-outline" size={20} color="#00BCD4" />
                                         </View>
                                         <TextInput
                                             style={styles.input}
-                                            placeholder="Complemento (Ex: Apt 101, Bloco B)"
+                                            placeholder="Ex: Apt 101, Bloco B"
                                             placeholderTextColor="#A0AEC0"
                                             value={complement}
-                                            onChangeText={(text) => { setComplement(text); if (generalError) setGeneralError(null);}}
+                                            onChangeText={(text) => { setComplement(text); setComplementError(null); }}
+                                            onBlur={validateAddressSubStep3}
                                             autoCapitalize="sentences"
                                         />
                                     </View>
+                                    <AnimatedErrorMessage message={complementError} isVisible={!!complementError} centered={false} />
                                     <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
                                     {/* Navigation Buttons for final signup */}
                                     <View style={styles.navigationButtons}>
@@ -700,17 +925,17 @@ export default function ClientRegisterScreen() {
                                         </TouchableOpacity>
                                         <Animated.View style={{transform: [{scale: signUpButtonAnims.scaleAnim}]}}>
                                             <TouchableOpacity
-                                            style={[styles.navButton, styles.finalButton, isLoading && styles.buttonDisabled]}
-                                            onPress={handleSignUp}
+                                            style={[styles.navButton, styles.finalButton, (isLoading || !validateAddressSubStep3()) && styles.buttonDisabled]}
+                                            onPress={handleNext} // Calls handleSignUp internally if all valid
                                             onPressIn={signUpButtonAnims.onPressIn}
                                             onPressOut={signUpButtonAnims.onPressOut}
-                                            disabled={isLoading || !isSignUpButtonEnabled}
+                                            disabled={isLoading || !validateAddressSubStep3()}
                                             >
                                             {isLoading ? (
                                                     <ActivityIndicator color="#FFFFFF" />
                                                 ) : (
                                                     <>
-                                                        <Text style={styles.navButtonTextNext}>Cadastrar</Text>
+                                                        <Text style={styles.navButtonTextNext}>Finalizar Cadastro</Text>
                                                         <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
                                                     </>
                                                 )}
@@ -756,7 +981,7 @@ const styles = StyleSheet.create({
         height: 300, // Ajustado para o tamanho da imagem
         resizeMode: 'contain',
     },
-    welcomeTitle: {
+    welcomeTitle: { // This style is not used in the current client-register.tsx
         fontSize: 28,
         fontWeight: 'bold',
         color: '#1C3A5F',
@@ -768,6 +993,22 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginBottom: 30,
         bottom: 110, // Ajustado para centralizar o título
+    },
+    stepIndicatorText: { // New style for step indicator
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#1C3A5F',
+        textAlign: 'center',
+        marginBottom: 5,
+        bottom: 100,
+    },
+    microcopyText: { // New style for microcopy
+        fontSize: 13,
+        color: '#6C757D',
+        textAlign: 'center',
+        marginBottom: 20,
+        bottom: 100,
+        paddingHorizontal: 10,
     },
     inputWrapper: {
         flexDirection: 'row',
@@ -785,6 +1026,11 @@ const styles = StyleSheet.create({
         paddingRight: 15,
         bottom: 90,
         right: 5,
+        borderWidth: 1, // Added for error highlighting
+        borderColor: 'transparent', // Default
+    },
+    inputWrapperError: { // Style for error state
+        borderColor: '#E53E3E',
     },
     iconCircle: {
         width: 50,
@@ -809,7 +1055,7 @@ const styles = StyleSheet.create({
         height: '100%',
         justifyContent: 'center',
     },
-    inlineErrorMessage: {
+    inlineErrorMessage: { // This style is already defined in the component, but I'll make sure it's used correctly.
         color: '#E53E3E',
         fontSize: 13,
         textAlign: 'center',
@@ -838,7 +1084,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
     },
-    signUpButton: { // Renomeado de signInButton
+    signUpButton: { // This style is not used in the current client-register.tsx
         backgroundColor: '#00BCD4',
         borderRadius: 28,
         paddingVertical: 10, // Ajustado
@@ -859,7 +1105,7 @@ const styles = StyleSheet.create({
         elevation: 0,
         shadowOpacity: 0,
     },
-    signUpButtonText: { // Renomeado de signInButtonText
+    signUpButtonText: { // This style is not used in the current client-register.tsx
         color: '#FFFFFF',
         fontSize: 16,
         fontWeight: '600',
@@ -881,6 +1127,8 @@ const styles = StyleSheet.create({
         borderRadius: 28,
         minWidth: 120,
         justifyContent: 'center',
+        flex: 1, // Make buttons take equal space
+        marginHorizontal: 5, // Add some space between them
     },
     backButton: {
         backgroundColor: '#F7F8FC',
@@ -910,6 +1158,13 @@ const styles = StyleSheet.create({
     backButtonHeader: { // Added for the header back button
         marginLeft: 15,
         padding: 5,
+        flexDirection: 'row', // To align icon and text
+        alignItems: 'center',
+    },
+    backButtonHeaderText: { // Style for the back button text in header
+        color: '#00BCD4',
+        fontSize: 14,
+        marginLeft: 5,
     },
     subStepTitle: { // Added for sub-step titles
         fontSize: 18,

@@ -1,6 +1,6 @@
 // src/users/dto/user-profile.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { User, UserRole, Prisma } from '@prisma/client';
+import { User, UserRole, Prisma, Loyalty } from '@prisma/client'; // ADICIONADO: Loyalty
 import { IsString, IsEnum, IsDate, ValidateNested, IsOptional, IsNumber, IsInt } from 'class-validator';
 import { Type } from 'class-transformer';
 // Importe ClientDetailsDto se estiver em um arquivo separado, ou defina-o aqui
@@ -16,19 +16,24 @@ import { ProviderWithCalculatedRating } from '../../providers/providers.service'
 // e então importada aqui. Mantido aqui para compatibilidade com o código fornecido.
 import { Address, Booking, Review } from '@prisma/client';
 
-// CORREÇÃO: Adicionando 'cpf' a ClientWithIncludes
+// CORREÇÃO: Removendo 'loyalty' de ClientWithIncludes, pois está na User
 export type ClientWithIncludes = {
   id: string;
   userId: string;
   fullName: string;
   phone: string | null;
-  cpf: string | null; // CORREÇÃO: Adicionado CPF aqui
+  cpf: string | null;
+  dateOfBirth?: Date | null; // Adicionado do schema.prisma para precisão
+  completedBookingsCount: number; // Adicionado do schema.prisma para precisão
   createdAt: Date;
   updatedAt: Date;
   user: User;
   address: Address | null;
   bookings: Booking[];
   reviewsMade: Review[];
+  noShowCount: number; // Adicionado do schema.prisma para precisão
+  cancellationCount: number; // Adicionado do schema.prisma para precisão
+  // loyalty?: Loyalty | null; // <--- REMOVIDO: Relação com Loyalty (agora está diretamente no User)
   _count?: { bookings: number };
 };
 
@@ -36,7 +41,7 @@ export type ClientWithIncludes = {
 // CORREÇÃO: Usando os tipos de serviço já definidos
 // =========================================================================
 
-// CORREÇÃO: Atualizando ClientDetailsDto para incluir CPF
+// CORREÇÃO: Atualizando ClientDetailsDto para incluir CPF (removendo loyaltyPoints)
 // Assumindo que ClientDetailsDto está definido aqui ou em src/clients/dto/client-details.dto.ts
 // Se estiver em um arquivo separado, certifique-se de que a definição lá seja a mesma.
 export class ClientDetailsDto {
@@ -53,7 +58,7 @@ export class ClientDetailsDto {
   phone: string | null;
 
   @ApiPropertyOptional({ description: 'CPF do cliente', example: '123.456.789-00' })
-  cpf: string | null; // CORREÇÃO: Adicionado CPF aqui
+  cpf: string | null;
 
   @ApiProperty({ description: 'Data de criação do cliente', example: '2023-01-01T10:00:00.000Z' })
   createdAt: Date; 
@@ -61,11 +66,14 @@ export class ClientDetailsDto {
   @ApiProperty({ description: 'Data da última atualização do cliente', example: '2023-01-01T10:00:00.000Z' })
   updatedAt: Date; 
 
-  // Se você tiver outras propriedades ou relações, adicione-as aqui
-  // address?: AddressDto; // Exemplo de relação aninhada
+  // @ApiPropertyOptional({ description: 'Pontos de fidelidade do cliente', example: 100 })
+  // @IsOptional()
+  // @IsNumber()
+  // loyaltyPoints?: number | null; // <--- REMOVIDO: Campo para pontos de fidelidade (agora no UserProfileDto)
 
-  constructor(partial: Partial<ClientDetailsDto>) { // Use Partial<ClientDetailsDto> ou o tipo do Prisma
+  constructor(partial: Partial<ClientWithIncludes>) { // Alterado para Partial<ClientWithIncludes>
     Object.assign(this, partial);
+    // this.loyaltyPoints = partial.loyalty?.currentPoints ?? null; // <--- REMOVIDO: Mapeamento dos pontos
   }
 }
 
@@ -120,13 +128,17 @@ export class UserProfileDto {
   @Type(() => ProviderDetailsDto)
   providerDetails?: ProviderDetailsDto;
 
+  @ApiPropertyOptional({ description: 'Pontos de fidelidade do usuário', example: 100 })
+  @IsOptional()
+  @IsNumber()
+  loyaltyPoints?: number | null; // <--- ADICIONADO AQUI: Campo de pontos de fidelidade no UserProfileDto
+
   constructor(
     user: User & {
       avatarUrl?: string | null;
-      // O construtor de ClientDetailsDto deve aceitar ClientWithIncludes
       client?: ClientWithIncludes;
-      // O construtor de ProviderDetailsDto agora aceita ProviderWithCalculatedRating
       provider?: ProviderWithCalculatedRating;
+      loyalty?: Loyalty | null; // <--- ADICIONADO AQUI: Para tipagem correta do objeto 'user' recebido
     }
   ) {
     this.id = user.id;
@@ -139,11 +151,14 @@ export class UserProfileDto {
     if (user.role === UserRole.CLIENT && user.client) {
       this.fullName = user.client.fullName;
       this.phone = user.client.phone;
-      this.clientDetails = new ClientDetailsDto(user.client);
+      this.clientDetails = new ClientDetailsDto(user.client); // Passando user.client
     } else if (user.role === UserRole.PROVIDER && user.provider) {
       this.fullName = user.provider.fullName;
       this.phone = user.provider.phone;
       this.providerDetails = new ProviderDetailsDto(user.provider);
     }
+
+    // Mapeamento dos pontos de fidelidade diretamente do objeto User
+    this.loyaltyPoints = user.loyalty?.currentPoints ?? null; // <--- Mapeamento CORRIGIDO
   }
 }

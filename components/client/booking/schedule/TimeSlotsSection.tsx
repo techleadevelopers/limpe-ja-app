@@ -16,7 +16,7 @@ interface TimeSlotsSectionProps {
   isLoading: boolean;
   selectedTime: string | null;
   onTimeSelect: (time: string) => void;
-  /** Usa apenas para a segunda seção (preferências) – muda o espaçamento superior */
+  /** Usa apenas para a segunda seção (preferências) -- muda o espaçamento superior */
   isPreference?: boolean;
 }
 
@@ -25,15 +25,15 @@ const numColumns = 3;
 
 /**
  * Largura útil do card:
- * - margem horizontal: 16 (dos lados)  => 32
- * - padding horizontal interno do card: 14 (dos lados) => 28
- * Efetivo: SCREEN_WIDTH - 60
+ * - margem horizontal: 30 (dos lados) => 60
+ * - padding horizontal interno do card: 40 (dos lados) => 80
+ * Efetivo: SCREEN_WIDTH - (60 + 80) = SCREEN_WIDTH - 140
  */
-const CARD_MARGIN = 30 * 2;
-const CARD_PADDING = 24 * 2;
-const HORIZONTAL_GUTTER = CARD_MARGIN + CARD_PADDING;
+const CARD_MARGIN_TOTAL = 30 * 2; // Ajustado de 26 para 30
+const CARD_PADDING_TOTAL = 30 * 4; // Ajustado de 34 para 40
+const HORIZONTAL_GUTTER = CARD_MARGIN_TOTAL + CARD_PADDING_TOTAL; // Agora 140
 
-const itemGap = 10;
+const itemGap = 10; // Mantido
 const itemWidth = (SCREEN_WIDTH - HORIZONTAL_GUTTER - itemGap * (numColumns - 1)) / numColumns;
 
 export default function TimeSlotsSection({
@@ -59,7 +59,7 @@ export default function TimeSlotsSection({
     const d = new Date(date);
     const locale = i18n?.language || 'pt-BR';
     const dateStr = d.toLocaleDateString(locale, { day: '2-digit', month: 'long' });
-    return `${base} — ${dateStr}`;
+    return `${base} -- ${dateStr}`;
   }, [title, titleKey, date, t, i18n?.language]);
 
   return (
@@ -96,12 +96,16 @@ export default function TimeSlotsSection({
 const styles = StyleSheet.create({
   card: {
     marginTop: 12,
-    marginHorizontal: 16,
+    marginHorizontal: 26, // Aumentado para diminuir o espaço útil e, consequentemente, o itemWidth
     backgroundColor: AppColors.white, // Usando AppColors
-    borderRadius: 18,
-    paddingHorizontal: 24,
-    paddingVertical: 16,
+    borderRadius: 12, // Reduzido para combinar com o botão
+    paddingHorizontal: 40, // Aumentado para diminuir o espaço útil e, consequentemente, o itemWidth
+    paddingVertical: 22, // Reduzido para tornar o card mais compacto
     ...AppShadows.medium, // Usando AppShadows
+        borderTopStartRadius: 28,
+           borderBottomStartRadius: 28,
+           borderTopEndRadius: 28,
+           borderBottomEndRadius: 28,
   },
   title: {
     fontSize: 16,
@@ -109,7 +113,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat-Regular',
     color: AppColors.textBody, // Usando AppColors
     textAlign: 'center',
-    marginBottom: 42,
+    marginBottom: 25, // Reduzido o espaçamento
     marginTop: 2,
     
   },

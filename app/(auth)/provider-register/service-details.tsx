@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,11 +11,13 @@ import {
   Animated,
   Alert,
   Dimensions,
+  ActivityIndicator, // Added ActivityIndicator for loading state
 } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'; // Added MaterialCommunityIcons for text-box-outline
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // Import AsyncStorage
 
 import { useAuth } from '../../../hooks/useAuth';
 import {
@@ -25,7 +27,7 @@ import {
   getProviderServicesOffered,
 } from '../../../services/providerService';
 import verificationService from '../../../services/verificationService';
-import axios from 'axios'; // Importar axios para verificar o tipo de erro
+import axios from 'axios';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -37,13 +39,13 @@ enum PricingType {
 }
 
 const SERVICE_MAPPINGS: { [key: string]: string } = {
-  'residencial': 'f0c16afd-f1e5-41e4-92ef-9f64ecabf6ea',
-  'comercial': '4c03312c-15c2-40d3-a041-1217bb6877ba',
-  'pos_obra': '646b296e-6a82-4f6e-a249-8df8f3851879',
-  'escritorio': 'afab28ad-c1e2-48ac-bb4b-406e90781ce5',
-  'passadoria': '13d2047c-86f3-4d8d-ba56-c3b166b95115',
-  'vidros': '9fa978db-511d-4600-86e2-d077b9ef7650',
-  'estofados': 'adaea89b-2934-4848-95fe-030c371dfed9',
+    'residencial': 'f0c16afd-f1e5-41e4-92ef-9f64ecabf6ea',
+    'comercial': '4c03312c-15c2-40d3-a041-1217bb6877ba',
+    'pos_obra': '646b296e-6a82-4f6e-a249-8df8f3851879',
+    'escritorio': 'afab28ad-c1e2-48ac-bb4b-406e90781ce5',
+    'passadoria': '13d2047c-86f3-4d8d-ba56-c3b166b95115',
+    'vidros': '9fa978db-511d-4600-86e2-d077b9ef7650',
+    'estofados': 'adaea89b-2934-4848-95fe-030c371dfed9',
 };
 
 type PriceUnit = 'hora' | 'quarto' | 'metragem' | null;
@@ -55,7 +57,7 @@ interface ServiceDetailsFormData {
   basePrice: string;
   pixKey: string;
   specialties: string[];
-  serviceAreas: string[]; // Added serviceAreas to formData
+  serviceAreas: string[];
   priceUnit: PriceUnit;
 }
 
@@ -70,20 +72,29 @@ export default function ServiceDetailsScreen() {
     basePrice: '',
     pixKey: '',
     specialties: [],
-    serviceAreas: [], // Initialize serviceAreas
+    serviceAreas: [],
     priceUnit: null,
   });
 
-  // NEW: State for current sub-step within service details
-  const [currentServiceSubStep, setCurrentServiceSubStep] = useState(1); // 1: Photo/Desc, 2: Exp/Specialties, 3: Price, 4: PIX/Areas
-
+  const [currentServiceSubStep, setCurrentServiceSubStep] = useState(1);
   const [isUploading, setIsUploading] = useState(false);
+
+  // Error states for inline validation
+  const [profilePhotoError, setProfilePhotoError] = useState<string | null>(null);
+  const [descriptionError, setDescriptionError] = useState<string | null>(null);
+  const [yearsOfExperienceError, setYearsOfExperienceError] = useState<string | null>(null);
+  const [specialtiesError, setSpecialtiesError] = useState<string | null>(null);
+  const [priceUnitError, setPriceUnitError] = useState<string | null>(null);
+  const [basePriceError, setBasePriceError] = useState<string | null>(null);
+  const [pixKeyError, setPixKeyError] = useState<string | null>(null);
+  const [serviceAreasError, setServiceAreasError] = useState<string | null>(null);
+  const [generalError, setGeneralError] = useState<string | null>(null); // For general API errors
+
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
-  const avatarScaleAnim = useRef(new Animated.Value(1)).current; // Added for avatar animation
+  const avatarScaleAnim = useRef(new Animated.Value(1)).current;
 
-  // Adicionando a lógica da barra de progresso (already existed, keeping it)
-  const totalSteps = 4; // Total sub-steps for service details
+  const totalSteps = 4;
   const progress = currentServiceSubStep / totalSteps;
 
   React.useEffect(() => {
@@ -99,7 +110,7 @@ export default function ServiceDetailsScreen() {
         useNativeDriver: true,
       }),
     ]).start();
-  }, [currentServiceSubStep]); // Re-run animation on sub-step change
+  }, [currentServiceSubStep]);
 
   const onPressInAvatar = () => {
     Animated.spring(avatarScaleAnim, {
@@ -116,6 +127,52 @@ export default function ServiceDetailsScreen() {
       useNativeDriver: true,
     }).start();
   };
+
+  // Auto-save to AsyncStorage
+  useEffect(() => {
+    const saveFormData = async () => {
+      try {
+        const dataToSave = { ...formData, currentServiceSubStep };
+        await AsyncStorage.setItem('serviceDetailsFormData', JSON.stringify(dataToSave));
+        console.log("Service details form data saved to AsyncStorage.");
+      } catch (e) {
+        console.error("Failed to save service details form data to AsyncStorage", e);
+      }
+    };
+    const handler = setTimeout(() => {
+      saveFormData();
+    }, 500); // Debounce saving
+    return () => clearTimeout(handler);
+  }, [formData, currentServiceSubStep]);
+
+  // Load from AsyncStorage on component mount
+  useEffect(() => {
+    const loadFormData = async () => {
+      try {
+        const savedData = await AsyncStorage.getItem('serviceDetailsFormData');
+        if (savedData) {
+          const loadedData = JSON.parse(savedData);
+          setFormData({
+            profilePhoto: loadedData.profilePhoto || null,
+            description: loadedData.description || '',
+            yearsOfExperience: loadedData.yearsOfExperience || '',
+            basePrice: loadedData.basePrice || '',
+            pixKey: loadedData.pixKey || '',
+            specialties: loadedData.specialties || [],
+            serviceAreas: loadedData.serviceAreas || [],
+            priceUnit: loadedData.priceUnit || null,
+          });
+          setCurrentServiceSubStep(loadedData.currentServiceSubStep || 1);
+          setGeneralError("Dados carregados automaticamente. Continue preenchendo seus detalhes de serviço.");
+          console.log("Service details form data loaded from AsyncStorage.");
+        }
+      } catch (e) {
+        console.error("Failed to load service details form data from AsyncStorage", e);
+      }
+    };
+    loadFormData();
+  }, []);
+
 
   const handleImagePicker = async () => {
     try {
@@ -136,6 +193,7 @@ export default function ServiceDetailsScreen() {
           ...prev,
           profilePhoto: result.assets[0].uri
         }));
+        setProfilePhotoError(null); // Clear error on successful pick
       }
     } catch (error) {
       Alert.alert('Erro', 'Não foi possível selecionar a imagem.');
@@ -143,68 +201,105 @@ export default function ServiceDetailsScreen() {
   };
 
   // NEW: Validation functions for each sub-step
-  const validateSubStep1 = () => { // Photo + Description
+  const validateSubStep1 = useCallback(() => { // Photo + Description
+    let isValid = true;
+    setProfilePhotoError(null);
+    setDescriptionError(null);
+
     if (!formData.profilePhoto) {
-      Alert.alert('Atenção', 'Por favor, adicione uma foto de perfil para continuar.');
-      return false;
+      setProfilePhotoError('Por favor, adicione uma foto de perfil.');
+      isValid = false;
     }
     if (!formData.description.trim()) {
-      Alert.alert('Atenção', 'A descrição do serviço é obrigatória.');
-      return false;
+      setDescriptionError('A descrição do serviço é obrigatória.');
+      isValid = false;
     }
-    return true;
-  };
+    return isValid;
+  }, [formData.profilePhoto, formData.description]);
 
-  const validateSubStep2 = () => { // Experience + Specialties
-    if (!formData.yearsOfExperience.trim() || isNaN(parseInt(formData.yearsOfExperience))) {
-      Alert.alert('Atenção', 'Os anos de experiência são obrigatórios e devem ser um número.');
-      return false;
+  const validateSubStep2 = useCallback(() => { // Experience + Specialties
+    let isValid = true;
+    setYearsOfExperienceError(null);
+    setSpecialtiesError(null);
+
+    const years = parseInt(formData.yearsOfExperience);
+    if (!formData.yearsOfExperience.trim() || isNaN(years) || years < 0) {
+      setYearsOfExperienceError('Os anos de experiência são obrigatórios e devem ser um número válido.');
+      isValid = false;
     }
     if (formData.specialties.length === 0) {
-      Alert.alert('Atenção', 'Por favor, selecione pelo menos um tipo de serviço.');
-      return false;
+      setSpecialtiesError('Por favor, selecione pelo menos um tipo de serviço.');
+      isValid = false;
     }
-    return true;
-  };
+    return isValid;
+  }, [formData.yearsOfExperience, formData.specialties]);
 
-  const validateSubStep3 = () => { // Price + Unit
+  const validateSubStep3 = useCallback(() => { // Price + Unit
+    let isValid = true;
+    setPriceUnitError(null);
+    setBasePriceError(null);
+
     if (!formData.priceUnit) {
-      Alert.alert('Atenção', 'Por favor, selecione um tipo de precificação (por hora, quarto, ou metragem).');
-      return false;
+      setPriceUnitError('Por favor, selecione um tipo de precificação.');
+      isValid = false;
     }
-    if (!formData.basePrice.trim() || isNaN(parseFloat(formData.basePrice))) {
-      Alert.alert('Atenção', 'O preço base é obrigatório e deve ser um número.');
-      return false;
+    const price = parseFloat(formData.basePrice);
+    if (!formData.basePrice.trim() || isNaN(price) || price <= 0) {
+      setBasePriceError('O preço base é obrigatório e deve ser um número maior que zero.');
+      isValid = false;
     }
-    return true;
-  };
+    return isValid;
+  }, [formData.priceUnit, formData.basePrice]);
 
-  const validateSubStep4 = () => { // PIX + Service Areas
+  const validateSubStep4 = useCallback(() => { // PIX + Service Areas
+    let isValid = true;
+    setPixKeyError(null);
+    setServiceAreasError(null);
+
     if (!formData.pixKey.trim()) {
-      Alert.alert('Atenção', 'A chave PIX é obrigatória.');
-      return false;
+      setPixKeyError('A chave PIX é obrigatória para que você possa receber pagamentos.');
+      isValid = false;
     }
     if (!formData.serviceAreas.length) { // Validate if serviceAreas is empty
-      Alert.alert('Atenção', 'Por favor, informe suas áreas de atendimento.');
-      return false;
+      setServiceAreasError('Por favor, informe suas áreas de atendimento (cidades ou bairros).');
+      isValid = false;
     }
-    return true;
-  };
+    return isValid;
+  }, [formData.pixKey, formData.serviceAreas]);
+
 
   const handleNextSubStep = async () => {
-    if (currentServiceSubStep === 1 && validateSubStep1()) {
-      setCurrentServiceSubStep(2);
-    } else if (currentServiceSubStep === 2 && validateSubStep2()) {
-      setCurrentServiceSubStep(3);
-    } else if (currentServiceSubStep === 3 && validateSubStep3()) {
-      setCurrentServiceSubStep(4);
-    } else if (currentServiceSubStep === 4 && validateSubStep4()) {
-      // If all sub-steps are valid, proceed to final submission
-      handleFinalSubmission();
+    setGeneralError(null); // Clear general error before next step attempt
+    if (currentServiceSubStep === 1) {
+      if (validateSubStep1()) {
+        setCurrentServiceSubStep(2);
+      } else {
+        setGeneralError('Por favor, preencha todos os campos obrigatórios da etapa atual.');
+      }
+    } else if (currentServiceSubStep === 2) {
+      if (validateSubStep2()) {
+        setCurrentServiceSubStep(3);
+      } else {
+        setGeneralError('Por favor, preencha todos os campos obrigatórios da etapa atual.');
+      }
+    } else if (currentServiceSubStep === 3) {
+      if (validateSubStep3()) {
+        setCurrentServiceSubStep(4);
+      } else {
+        setGeneralError('Por favor, preencha todos os campos obrigatórios da etapa atual.');
+      }
+    } else if (currentServiceSubStep === 4) {
+      if (validateSubStep4()) {
+        // If all sub-steps are valid, proceed to final submission
+        handleFinalSubmission();
+      } else {
+        setGeneralError('Por favor, preencha todos os campos obrigatórios da etapa atual.');
+      }
     }
   };
 
   const handleBackSubStep = () => {
+    setGeneralError(null); // Clear general error when going back
     if (currentServiceSubStep > 1) {
       setCurrentServiceSubStep(currentServiceSubStep - 1);
     } else {
@@ -224,7 +319,7 @@ export default function ServiceDetailsScreen() {
 
     // Re-validate all steps before final submission to ensure data integrity
     if (!validateSubStep1() || !validateSubStep2() || !validateSubStep3() || !validateSubStep4()) {
-      Alert.alert('Erro de Validação', 'Por favor, preencha todos os campos obrigatórios corretamente.');
+      setGeneralError('Por favor, preencha todos os campos obrigatórios corretamente antes de finalizar.');
       return;
     }
     
@@ -295,12 +390,12 @@ export default function ServiceDetailsScreen() {
           serviceData.pricePerRoom = basePriceValue;
           serviceData.pricePerSquareMeter = null;
           serviceData.price = 0;
-        } else if (formData.priceUnit === 'metragem') { // This was the original 'metragem' condition
+        } else if (formData.priceUnit === 'metragem') {
           serviceData.pricingType = PricingType.BY_SIZE;
           serviceData.pricePerSquareMeter = basePriceValue;
           serviceData.pricePerRoom = null;
           serviceData.price = 0;
-        } else { // This 'else' was added by me in the previous turn, but it's redundant if 'metragem' is explicit
+        } else {
             console.warn(`[handleFinalSubmission] Aviso: Tipo de precificação desconhecido para ${specialty}. Pulando.`);
             continue;
         }
@@ -331,6 +426,9 @@ export default function ServiceDetailsScreen() {
       console.log("[handleFinalSubmission] AuthContext user data refreshed.");
 
       setIsRegistrationInProgress(false);
+      // Clear AsyncStorage after successful registration
+      await AsyncStorage.removeItem('serviceDetailsFormData');
+
       Alert.alert('Sucesso', 'Seu perfil foi salvo! Agora vamos verificar seus documentos.', [
         {
             text: 'OK',
@@ -350,13 +448,13 @@ export default function ServiceDetailsScreen() {
               console.log("[handleFinalSubmission] Erro 401 detectado. AuthContext deve ter acionado logout. Não exibir alerta duplicado.");
           } else {
               errorMessage = error.response.data.message || `Erro do servidor com status ${error.response.status}`;
-              Alert.alert('Erro', errorMessage);
+              setGeneralError(errorMessage); // Display error below form
           }
       } else if (error.message) {
           errorMessage = error.message;
-          Alert.alert('Erro', errorMessage);
+          setGeneralError(errorMessage); // Display error below form
       } else {
-          Alert.alert('Erro', 'Ocorreu um erro desconhecido ao salvar seus dados. Tente novamente.');
+          setGeneralError('Ocorreu um erro desconhecido ao salvar seus dados. Tente novamente.');
       }
     } finally {
       setIsUploading(false);
@@ -372,13 +470,15 @@ export default function ServiceDetailsScreen() {
     keyboardType: any = 'default',
     multiline: boolean = false,
     icon: string = 'text-outline',
-    maxLength?: number
+    maxLength?: number,
+    error: string | null = null, // Added error prop
+    onBlur?: () => void // Added onBlur prop
   ) => (
     <View style={styles.inputSection}>
       <Text style={styles.inputLabel}>
         <Ionicons name={icon as any} size={16} color="#2C3E50" /> {title}
       </Text>
-      <View style={styles.inputContainer}>
+      <View style={[styles.inputContainer, error ? styles.inputContainerError : {}]}>
         <TextInput
           style={[styles.textInput, multiline && styles.multilineInput]}
           placeholder={placeholder}
@@ -389,19 +489,21 @@ export default function ServiceDetailsScreen() {
           multiline={multiline}
           textAlignVertical={multiline ? 'top' : 'center'}
           maxLength={maxLength}
+          onBlur={onBlur} // Apply onBlur
         />
       </View>
+      {error && <Text style={styles.inlineErrorMessage}>{error}</Text>}
     </View>
   );
 
   const getPriceInputPlaceholder = (unit: PriceUnit) => {
     switch (unit) {
       case 'hora':
-        return 'Preço por hora';
+        return 'Ex: 50.00 (por hora)';
       case 'quarto':
-        return 'Preço por quarto';
+        return 'Ex: 150.00 (por quarto)';
       case 'metragem':
-        return 'Preço por m²';
+        return 'Ex: 5.00 (por m²)';
       default:
         return 'Preço base';
     }
@@ -416,6 +518,25 @@ export default function ServiceDetailsScreen() {
       default: return 'Detalhes do Serviço';
     }
   };
+
+  const getMicrocopyText = () => {
+    switch (currentServiceSubStep) {
+      case 1: return 'Sua foto e uma breve descrição ajudam os clientes a te conhecerem.';
+      case 2: return 'Conte-nos sobre sua experiência e os serviços que você oferece.';
+      case 3: return 'Defina como você precifica seus serviços.';
+      case 4: return 'Para receber pagamentos e informar suas áreas de atuação.';
+      default: return '';
+    }
+  };
+
+  const getBackButtonText = () => {
+    if (currentServiceSubStep === 1) return 'Voltar para Cadastro'; // Assuming it goes back to provider-register/index
+    if (currentServiceSubStep === 2) return 'Voltar para Foto/Descrição';
+    if (currentServiceSubStep === 3) return 'Voltar para Experiência';
+    if (currentServiceSubStep === 4) return 'Voltar para Preço';
+    return 'Voltar';
+  };
+
 
   return (
     <View style={styles.container}>
@@ -441,6 +562,7 @@ export default function ServiceDetailsScreen() {
           <View style={styles.header}>
             <TouchableOpacity onPress={handleBackSubStep} style={styles.backButtonHeader}>
                 <Ionicons name="arrow-back-outline" size={24} color="#2C3E50" />
+                <Text style={styles.backButtonHeaderText}>{getBackButtonText()}</Text>
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Detalhes do Serviço</Text>
           </View>
@@ -456,13 +578,14 @@ export default function ServiceDetailsScreen() {
           <Text style={styles.headerSubtitle}>
             {getSubStepTitle()}
           </Text>
+          <Text style={styles.microcopyText}>{getMicrocopyText()}</Text>
 
           {/* Sub-step 1: Photo + Description */}
           {currentServiceSubStep === 1 && (
             <View style={styles.formContainer}>
               <Text style={styles.sectionTitle}>Foto do Perfil</Text>
               <TouchableOpacity
-                style={[styles.imageUploadButton, {transform: [{scale: avatarScaleAnim}]}]}
+                style={[styles.imageUploadButton, {transform: [{scale: avatarScaleAnim}]}, profilePhotoError ? styles.imageUploadButtonError : {}]}
                 onPress={handleImagePicker}
                 onPressIn={onPressInAvatar}
                 onPressOut={onPressOutAvatar}
@@ -481,16 +604,20 @@ export default function ServiceDetailsScreen() {
                   style={styles.imageOverlay}
                 />
               </TouchableOpacity>
+              {profilePhotoError && <Text style={styles.inlineErrorMessageCentered}>{profilePhotoError}</Text>}
+
 
               {renderInputSection(
                 'Descrição do Serviço',
                 'Descreva sua experiência e especialidades...',
                 formData.description,
-                (text) => setFormData(prev => ({ ...prev, description: text })),
+                (text) => { setFormData(prev => ({ ...prev, description: text })); setDescriptionError(null); },
                 'default',
                 true,
                 'document-text-outline',
-                500 // MaxLength for description
+                500, // MaxLength for description
+                descriptionError,
+                validateSubStep1
               )}
             </View>
           )}
@@ -502,11 +629,13 @@ export default function ServiceDetailsScreen() {
                 'Anos de Experiência',
                 'Ex: 5',
                 formData.yearsOfExperience,
-                (text) => setFormData(prev => ({ ...prev, yearsOfExperience: text.replace(/[^0-9]/g, '') })), // Only numbers
+                (text) => { setFormData(prev => ({ ...prev, yearsOfExperience: text.replace(/[^0-9]/g, '') })); setYearsOfExperienceError(null); }, // Only numbers
                 'numeric',
                 false,
                 'time-outline',
-                2 // MaxLength for years of experience
+                2, // MaxLength for years of experience
+                yearsOfExperienceError,
+                validateSubStep2
               )}
 
               {/* Service Type Selection */}
@@ -534,6 +663,7 @@ export default function ServiceDetailsScreen() {
                             ? prev.specialties.filter(s => s !== service.id)
                             : [...prev.specialties, service.id]
                         }));
+                        setSpecialtiesError(null); // Clear error on selection
                       }}
                     >
                       <Ionicons
@@ -550,6 +680,7 @@ export default function ServiceDetailsScreen() {
                     </TouchableOpacity>
                   ))}
                 </View>
+                {specialtiesError && <Text style={styles.inlineErrorMessage}>{specialtiesError}</Text>}
               </View>
             </View>
           )}
@@ -565,7 +696,7 @@ export default function ServiceDetailsScreen() {
                   {[
                     { id: 'hora', label: 'Por Hora' },
                     { id: 'quarto', label: 'Por Quarto' },
-                    { id: 'metragem', label: 'Metragem' }
+                    { id: 'metragem', label: 'Por m²' }
                   ].map((priceOption) => (
                     <TouchableOpacity
                       key={priceOption.id}
@@ -575,6 +706,7 @@ export default function ServiceDetailsScreen() {
                       ]}
                       onPress={() => {
                         setFormData(prev => ({ ...prev, priceUnit: priceOption.id as PriceUnit }));
+                        setPriceUnitError(null); // Clear error on selection
                       }}
                     >
                       <Text style={[
@@ -586,16 +718,20 @@ export default function ServiceDetailsScreen() {
                     </TouchableOpacity>
                   ))}
                 </View>
+                {priceUnitError && <Text style={styles.inlineErrorMessage}>{priceUnitError}</Text>}
               </View>
 
               {renderInputSection(
                 `Preço Base (${formData.priceUnit ? `por ${formData.priceUnit}` : 'do Serviço'})`,
                 getPriceInputPlaceholder(formData.priceUnit),
                 formData.basePrice,
-                (text) => setFormData(prev => ({ ...prev, basePrice: text.replace(/[^0-9.]/g, '') })), // Only numbers and dot
+                (text) => { setFormData(prev => ({ ...prev, basePrice: text.replace(/[^0-9.]/g, '') })); setBasePriceError(null); }, // Only numbers and dot
                 'numeric',
                 false,
-                'cash-outline'
+                'cash-outline',
+                undefined, // No max length for price
+                basePriceError,
+                validateSubStep3
               )}
             </View>
           )}
@@ -605,26 +741,32 @@ export default function ServiceDetailsScreen() {
             <View style={styles.formContainer}>
               {renderInputSection(
                 'Chave PIX',
-                'CPF, e-mail ou telefone',
+                'Ex: seuemail@email.com ou 000.000.000-00',
                 formData.pixKey,
-                (text) => setFormData(prev => ({ ...prev, pixKey: text })),
+                (text) => { setFormData(prev => ({ ...prev, pixKey: text })); setPixKeyError(null); },
                 'default',
                 false,
-                'card-outline'
+                'card-outline',
+                undefined, // No max length
+                pixKeyError,
+                validateSubStep4
               )}
 
               {renderInputSection(
                 'Áreas de Atendimento',
                 'Ex: Campinas (Centro, Cambuí), Valinhos, Vinhedo',
                 formData.serviceAreas.join(', '), // Display as comma-separated string
-                (text) => setFormData(prev => ({ ...prev, serviceAreas: text.split(',').map(s => s.trim()).filter(s => s) })), // Convert back to array
+                (text) => { setFormData(prev => ({ ...prev, serviceAreas: text.split(',').map(s => s.trim()).filter(s => s) })); setServiceAreasError(null); }, // Convert back to array
                 'default',
                 true,
                 'location-outline',
-                300 // MaxLength for service areas
+                300, // MaxLength for service areas
+                serviceAreasError,
+                validateSubStep4
               )}
             </View>
           )}
+          {generalError && <Text style={styles.inlineErrorMessageCentered}>{generalError}</Text>}
 
           {/* Navigation Buttons */}
           <View style={styles.navigationButtonsContainer}>
@@ -647,11 +789,17 @@ export default function ServiceDetailsScreen() {
                 colors={['#A0D2EB', '#307cc9ff']}
                 style={styles.continueButtonGradient}
               >
-                <Text style={styles.continueButtonText}>
-                  {isUploading ? 'Salvando...' : (currentServiceSubStep === totalSteps ? 'Finalizar Cadastro' : 'Próximo')}
-                </Text>
-                {!isUploading && currentServiceSubStep !== totalSteps && <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />}
-                {!isUploading && currentServiceSubStep === totalSteps && <Ionicons name="checkmark-circle-outline" size={20} color="#FFFFFF" />}
+                {isUploading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Text style={styles.continueButtonText}>
+                      {currentServiceSubStep === totalSteps ? 'Finalizar Cadastro' : 'Próximo'}
+                    </Text>
+                    {currentServiceSubStep !== totalSteps && <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />}
+                    {currentServiceSubStep === totalSteps && <Ionicons name="checkmark-circle-outline" size={20} color="#FFFFFF" />}
+                  </>
+                )}
               </LinearGradient>
             </TouchableOpacity>
           </View>
@@ -693,6 +841,13 @@ const styles = StyleSheet.create({
     left: 0,
     padding: 5,
     zIndex: 1, // Ensure it's above other elements
+    flexDirection: 'row', // Align icon and text
+    alignItems: 'center',
+  },
+  backButtonHeaderText: { // Style for the back button text in header
+    color: '#2C3E50',
+    fontSize: 14,
+    marginLeft: 5,
   },
   headerTitle: {
     fontSize: 22,
@@ -708,7 +863,14 @@ const styles = StyleSheet.create({
     color: '#6C757D',
     textAlign: 'center',
     lineHeight: 22,
-    marginBottom: 19,
+    marginBottom: 8, // Reduced margin
+  },
+  microcopyText: { // New style for microcopy
+    fontSize: 13,
+    color: '#6C757D',
+    textAlign: 'center',
+    marginBottom: 19, // Adjusted margin
+    paddingHorizontal: 10,
   },
   progressContainer: {
     width: '100%',
@@ -732,7 +894,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#6C757D',
   },
-  imageUploadContainer: {
+  imageUploadContainer: { // Not directly used, but related to image upload
     marginBottom: 30,
     alignItems: 'center',
   },
@@ -754,6 +916,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
     marginBottom: 20, // Added margin for separation
+  },
+  imageUploadButtonError: { // Style for error state
+    borderColor: '#E53E3E',
   },
   uploadedImage: {
     width: '100%',
@@ -799,6 +964,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    borderWidth: 1, // Added for error highlighting
+    borderColor: 'transparent', // Default
+  },
+  inputContainerError: { // Style for error state
+    borderColor: '#E53E3E',
   },
   textInput: {
     paddingHorizontal: 16,
@@ -907,11 +1077,11 @@ const styles = StyleSheet.create({
   priceTypeLabelSelected: {
     color: '#FFFFFF',
   },
-  progressWrapper: {
+  progressWrapper: { // Not used in this component
   alignItems: 'center',
   marginBottom: 20,
 },
-progressOuter: {
+progressOuter: { // Not used in this component
   backgroundColor: 'rgba(255,255,255,0.1)',
   borderRadius: 100,
   paddingHorizontal: 5,
@@ -925,7 +1095,7 @@ progressOuter: {
   elevation: 4,
   
 },
-progressInner: {
+progressInner: { // Not used in this component
   height: 30,
   borderRadius: 100,
   backgroundColor: '#4facfe',
@@ -934,7 +1104,7 @@ progressInner: {
   shadowOpacity: 0.6,
   shadowRadius: 8,
 },
-progressLabel: {
+progressLabel: { // Not used in this component
   marginTop: 8,
   fontSize: 14,
   fontWeight: '600',
@@ -970,5 +1140,20 @@ navButtonTextBack: {
 },
 buttonDisabled: {
     opacity: 0.6, // Visual cue for disabled buttons
+},
+inlineErrorMessage: { // For inline field errors
+    color: '#E53E3E',
+    fontSize: 12,
+    marginTop: 4,
+    marginBottom: -10, // Adjust to pull up next element
+    marginLeft: 5,
+    alignSelf: 'flex-start',
+},
+inlineErrorMessageCentered: { // For general errors, centered
+    color: '#E53E3E',
+    fontSize: 13,
+    textAlign: 'center',
+    marginTop: 10,
+    marginBottom: 10,
 },
 });

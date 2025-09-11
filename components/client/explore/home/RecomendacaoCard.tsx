@@ -36,6 +36,8 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
         return null;
     }
 
+    
+
     // --- Nova animação para o efeito de hover (apenas escala) ---
     const hoverScaleAnim = useRef(new Animated.Value(1)).current; // 1: estado normal
 
@@ -152,58 +154,93 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
         ? { uri: item.avatarUrl }
         : require('../../../../assets/images/default-avatar.png');
 
+    // --- Helper para obter o valor numérico do preço de um serviço ---
+    const getNumericPriceValue = (service: ProviderServiceOffering): number => {
+        let rawPrice = service.price;
+        let price = typeof rawPrice === 'number'
+            ? rawPrice
+            : (rawPrice as any)?.toNumber?.() ?? 0;
+
+        if (service.pricingType === PricingType.BY_SIZE) {
+            const rawPricePerSqm = service.pricePerSquareMeter;
+            const pricePerSqm = typeof rawPricePerSqm === 'number'
+                ? rawPricePerSqm
+                : (rawPricePerSqm as any)?.toNumber?.() ?? 0;
+            if (pricePerSqm > 0) {
+                price = pricePerSqm;
+            }
+        }
+        return price;
+    };
+
+    // --- Função para formatar preço ---
     const formatServicePrice = (service: ProviderServiceOffering) => {
-        let priceValue;
+        let priceValue = 0; // Inicializa para garantir que é um número
         let priceUnit = '';
 
-        const rawPrice = service.price;
-        const price = (typeof rawPrice === 'number') ? rawPrice : (rawPrice as any)?.toNumber?.() ?? 0;
+        // normaliza o preço principal
+        const price = getNumericPriceValue(service);
 
         switch (service.pricingType) {
             case PricingType.HOURLY:
                 priceValue = price;
-                priceUnit = t('common.per_hour_short');
+                priceUnit = t('common.per_hour_short'); // "/h"
                 break;
             case PricingType.BY_SIZE:
-                const rawPricePerSqm = service.pricePerSquareMeter;
-                const pricePerSqm = (typeof rawPricePerSqm === 'number') ? rawPricePerSqm : (rawPricePerSqm as any)?.toNumber?.() ?? 0;
-                priceValue = pricePerSqm > 0 ? pricePerSqm : price;
-                priceUnit = t('common.per_sqm_short');
+                priceValue = price; // getNumericPriceValue já lida com pricePerSquareMeter
+                priceUnit = t('common.per_sqm_short'); // "/m²"
                 break;
             case PricingType.FIXED_PRICE:
             case PricingType.CUSTOM_QUOTE:
             default:
                 priceValue = price;
-                priceUnit = '';
+                priceUnit = ''; // Garante que a unidade seja vazia para outros tipos
                 break;
         }
 
-        return priceValue !== undefined && priceValue !== null && priceValue > 0
+        // Verifica se o preço é positivo e finito antes de formatar
+        return priceValue > 0 && Number.isFinite(priceValue)
             ? `R$ ${priceValue.toFixed(2).replace('.', ',')}${priceUnit}`
             : t('provider_details.price_not_available');
     };
 
-    const firstProviderService = item.providerServices && item.providerServices.length > 0
-        ? item.providerServices[0]
-        : undefined;
+    // --- Lógica para determinar o serviço principal a ser exibido como "A partir de" ---
+    let mainServiceForDisplay: ProviderServiceOffering | undefined = undefined;
+    let lowestFixedPrice: number | null = null;
 
-    const mainDisplayedPrice = firstProviderService
-        ? formatServicePrice(firstProviderService)
+    if (item.providerServices && item.providerServices.length > 0) {
+        // 1. Tenta encontrar o menor preço fixo
+        item.providerServices.forEach(service => {
+            if (service.pricingType === PricingType.FIXED_PRICE) {
+                const currentPrice = getNumericPriceValue(service);
+                if (currentPrice > 0 && (lowestFixedPrice === null || currentPrice < lowestFixedPrice)) {
+                    lowestFixedPrice = currentPrice;
+                    mainServiceForDisplay = service;
+                }
+            }
+        });
+
+        // 2. Se não encontrou preço fixo, usa o primeiro serviço como fallback
+        if (!mainServiceForDisplay) {
+            mainServiceForDisplay = item.providerServices[0];
+        }
+    }
+
+    // Formata a string do preço principal a ser exibida
+    const mainDisplayedPrice = mainServiceForDisplay
+        ? formatServicePrice(mainServiceForDisplay)
         : t('provider_details.price_not_available');
 
-    let minHourlyPrice: number | null = null;
-    let mainPriceIsHourly = firstProviderService?.pricingType === PricingType.HOURLY;
+    // Obtém o valor numérico do preço principal para comparações futuras
+    const numericMainPrice = mainServiceForDisplay ? getNumericPriceValue(mainServiceForDisplay) : null;
 
+
+    // --- Calcula menor preço por hora entre todos os serviços ---
+    let minHourlyPrice: number | null = null;
     if (item.providerServices && item.providerServices.length > 0) {
         item.providerServices.forEach(service => {
             if (service.pricingType === PricingType.HOURLY) {
-                let hourlyPrice = 0;
-                if (service.price && typeof service.price === 'object' && 'toNumber' in service.price) {
-                    hourlyPrice = (service.price as any).toNumber();
-                } else if (typeof service.price === 'number') {
-                    hourlyPrice = service.price;
-                }
-
+                const hourlyPrice = getNumericPriceValue(service);
                 if (hourlyPrice > 0) {
                     if (minHourlyPrice === null || hourlyPrice < minHourlyPrice) {
                         minHourlyPrice = hourlyPrice;
@@ -213,16 +250,31 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
         });
     }
 
+    // Determina se o preço principal exibido é explicitamente um preço por hora
+    const mainPriceIsExplicitlyHourly = mainServiceForDisplay?.pricingType === PricingType.HOURLY;
+
+    // --- Lógica para decidir se deve mostrar o "ou R$ X,XX/h" ---
+    const shouldShowMinHourlyPrice = typeof minHourlyPrice === 'number' && minHourlyPrice > 0 && (
+        // Condição 1: O preço principal NÃO é por hora (ex: fixo, por m²)
+        !mainPriceIsExplicitlyHourly ||
+        // Condição 2: O preço principal É por hora, MAS o menor preço por hora encontrado é menor que o preço principal
+        (mainPriceIsExplicitlyHourly && numericMainPrice !== null && minHourlyPrice < numericMainPrice)
+    );
+
     const categoriesToDisplay: string[] = [];
     if (item.providerServices && item.providerServices.length > 0) {
-        if (item.providerServices[0].service?.name) {
+        // Pega o nome do serviço do mainServiceForDisplay, se existir
+        if (mainServiceForDisplay?.service?.name) {
+            categoriesToDisplay.push(mainServiceForDisplay.service.name);
+        } else if (item.providerServices[0].service?.name) { // Fallback para o primeiro serviço se o mainServiceForDisplay não tiver nome
             categoriesToDisplay.push(item.providerServices[0].service.name);
         }
     }
+    // Lógica de fallback para categorias se nenhuma for encontrada nos serviços
     if (categoriesToDisplay.length === 0) {
         if (item.bio?.toLowerCase().includes('comercial')) categoriesToDisplay.push('Comercial');
-        if (item.bio?.toLowerCase().includes('escritórios')) categoriesToDisplay.push('Escritório');
-        if (categoriesToDisplay.length === 0) {
+        else if (item.bio?.toLowerCase().includes('escritórios')) categoriesToDisplay.push('Escritório');
+        else {
             categoriesToDisplay.push('Limpeza Geral');
         }
     }
@@ -230,7 +282,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
 
     return (
         <AnimatedCardBackground
-            colors={['#FDFEFF', '#F0F4F8']}
+            colors={['rgba(230, 240, 255, 0.7)', 'rgba(196, 197, 205, 0.23)']}
             start={{ x: 0, y: 0 }}
             end={{ x: 0, y: 1 }}
             // Aplica o estilo de escala para o hover
@@ -269,7 +321,8 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
                             <Text style={styles.priceLabel}>A partir de</Text>
                             <Text style={styles.priceValue}>{mainDisplayedPrice}</Text>
 
-                            {minHourlyPrice !== null && !mainPriceIsHourly && (
+                            {/* Renderiza o menor preço por hora se a condição for verdadeira */}
+                            {shouldShowMinHourlyPrice && (
                                 <Text style={styles.hourlyPriceValue}>
                                     {t('common.or')} R$ {minHourlyPrice.toFixed(2).replace('.', ',')}/h
                                 </Text>
@@ -278,7 +331,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
 
                         <View style={styles.ratingSection}>
                             <AnimatedPlusButtonGradient
-                                colors={['#67adfdec', '#5c93ec','#5c93ec92']}
+                                colors={['#67adfdec', '#5c93ecd2','#5c93ec92']}
                                 style={[styles.plusButton, { overflow: 'hidden' }, subtleTrembleAnimatedStyle]}
                                 start={{ x: 0, y: 0 }}
                                 end={{ x: 1, y: 1 }}
@@ -310,28 +363,30 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
 
 const styles = StyleSheet.create({
     animatedCardContainer: {
-        width: 170,
+        width: 190,
+        height: 270,
         marginRight: 15,
         marginBottom: 5,
         marginTop: 8,
         overflow: 'hidden',
+        borderRightWidth: 1,
+        borderBottomWidth: 0.5,
+       
+        borderLeftWidth: 1,
+        borderTopWidth: 1,
+        borderColor: '#d1d5db53',
+        borderRadius: 12,
         
         borderTopStartRadius: 22,
         borderBottomStartRadius: 22,
         borderTopEndRadius: 22,
         borderBottomEndRadius: 22,
-        borderBottomColor: '#45484b56',
+        borderBottomColor: '#d1d5db53',
 
-        borderRadius: 12,
-        borderBottomWidth: 0.1,
-        borderLeftColor: '#45484b56',
-        borderLeftWidth: 1,
+     
+   
         // Propriedades de sombra mantidas exatamente como fornecidas
-        shadowColor: '#45484b56', // Cor da sombra
-        shadowOffset: { width: -1, height: 1 }, // Deslocamento vertical mais pronunciado
-        shadowOpacity: 1.55, // Opacidade aumentada para robustezs
-        shadowRadius: 20, // Raio de desfoque para conforto
-        elevation: 6, // Elevação aumentada para robustez no Android
+  
     },
     cardContentWrapper: {
         width: '100%',
@@ -341,7 +396,7 @@ const styles = StyleSheet.create({
     },
     imageWrapper: {
         width: '100%',
-        height: 100,
+        height: 120,
         backgroundColor: '#E0E0E0',
         justifyContent: 'center',
         alignItems: 'center',
@@ -360,7 +415,7 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     providerName: {
-        fontSize: 14,
+        fontSize: 15,
         fontFamily: 'Montserrat-Regular',
         paddingHorizontal: 0,
         fontWeight: 'bold',
@@ -377,7 +432,8 @@ const styles = StyleSheet.create({
         zIndex: 1,
     },
     serviceDescription: {
-        fontSize: 10,
+        fontSize: 11,
+        paddingHorizontal: 2,
         color: '#6C757D',
         marginBottom: 8,
     },
@@ -387,7 +443,7 @@ const styles = StyleSheet.create({
     categoryChipsContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        marginBottom: -40,
+        marginBottom: -25,
         marginTop: 5,
     },
     categoryChip: {
@@ -396,10 +452,10 @@ const styles = StyleSheet.create({
         paddingHorizontal: 8,
         paddingVertical: 4,
         marginRight: 6,
-        marginBottom: 4,
+        marginBottom: -10,
     },
     categoryChipText: {
-        fontSize: 10,
+        fontSize: 14,
         fontWeight: '500',
         color: '#000000',
     },
@@ -407,15 +463,16 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'flex-end',
-        marginTop: -10,
+        paddingHorizontal: 2,
+        marginTop: 0,
     },
     priceLabel: {
-        fontSize: 10,
+        fontSize: 13,
         color: '#6C757D',
-        marginBottom: 2,
+        marginBottom: -2,
     },
     priceValue: {
-        fontSize: 13,
+        fontSize: 16,
         fontWeight: 'bold',
         color: '#2D3748',
     },
@@ -430,18 +487,18 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     plusButton: {
-        width: 38,
-        height: 38,
-        left: 12,
-        bottom: 48,
+        width: 42,
+        height: 42,
+        left: 8,
+        bottom: 50,
         borderRadius: 53,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 16,
-        shadowColor: '#000', // Cor da sombra
-        shadowOffset: { width: 7, height: 14 }, // Deslocamento vertical mais pronunciado
-        shadowOpacity: 0.28, // Opacidade aumentada para robustez
-        shadowRadius: 15, // Raio de desfoque para conforto
+        shadowColor: '#4519f5ff', // Cor da sombra
+        shadowOffset: { width: 0, height: 0 }, // Deslocamento vertical mais pronunciado
+        shadowOpacity: 0.38, // Opacidade aumentada para robustez
+        shadowRadius: 28, // Raio de desfoque para conforto
         elevation: 6, // Elevação aumentada para robustez no Android
     },
     reflectionOverlay: {

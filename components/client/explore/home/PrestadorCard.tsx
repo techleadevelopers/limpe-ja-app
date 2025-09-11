@@ -154,51 +154,30 @@ const styles = StyleSheet.create({
         marginTop: 12,
         borderRadius: 44,
         overflow: 'visible',
-              borderRightWidth: 0,
-           borderRightColor: '#45484b56',
-           borderTopStartRadius: 44,
-           borderBottomStartRadius: 44,
-           borderTopEndRadius: 44,
-           borderBottomEndRadius: 44,
-           borderBottomColor: '#45484b56',
-   
-          
-           borderBottomWidth: 0.1,
-           borderLeftColor: '#45484b56',
-           borderLeftWidth: 1,
-           // Propriedades de sombra mantidas exatamente como fornecidas
-           shadowColor: '#45484b56', // Cor da sombra
-           shadowOffset: { width: -1, height: 1 }, // Deslocamento vertical mais pronunciado
-           shadowOpacity: 1.55, // Opacidade aumentada para robustezs
-           shadowRadius: 35, // Raio de desfoque para conforto
-           elevation: 6, // Elevação aumentada para robustez no Android
+
+        borderRightWidth: 1,
+        borderBottomWidth: 5.5,
+       
+        borderLeftWidth: 5.1,
+        borderTopWidth: 0.2,
+        borderColor: '#9cb6df53',
+        borderBottomColor: '#9cb6df53',
+        
+        borderTopStartRadius: 42,
+        borderBottomStartRadius: 42,
+        borderTopEndRadius: 42,
+        borderBottomEndRadius: 42,
+       
+
 
     },
     cardContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         width: 280,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: 'rgba(213, 220, 230, 0.41)',
         borderRadius: 44,
         padding: 10,
-                   borderRightWidth: 0.1,
-           borderRightColor: '#45484b56',
-           borderTopStartRadius: 44,
-           borderBottomStartRadius: 44,
-           borderTopEndRadius: 44,
-           borderBottomEndRadius: 44,
-           borderBottomColor: '#45484b56',
-   
-          
-           borderBottomWidth: 0.1,
-           borderLeftColor: '#45484b56',
-           borderLeftWidth: 1,
-           // Propriedades de sombra mantidas exatamente como fornecidas
-           shadowColor: '#45484b18', // Cor da sombra
-           shadowOffset: { width: -1, height: 1 }, // Deslocamento vertical mais pronunciado
-           shadowOpacity: 1.55, // Opacidade aumentada para robustezs
-           shadowRadius: 25, // Raio de desfoque para conforto
-           elevation: 6, // Elevação aumentada para robustez no Android
 
         
     },

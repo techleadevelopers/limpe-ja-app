@@ -1,7 +1,7 @@
 // src/users/users.controller.ts
 import {
   Controller, Get, Body, Patch, Param, UseGuards, Req, NotFoundException, ForbiddenException, Delete, HttpCode, HttpStatus, Logger,
-  Post, // CORREÇÃO: Adicionado 'Post' aqui
+  Post,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -12,7 +12,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole, User as PrismaUser } from '@prisma/client';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express-serve-static-core';
-import { MessageResponseDto } from '../common/dto/message-response.dto'; // Importe para respostas de mensagem
+import { MessageResponseDto } from '../common/dto/message-response.dto';
 
 // A interface JwtPayload para o que *esperamos* do JWT
 interface JwtPayload {
@@ -30,7 +30,6 @@ interface RequestUserPayload {
   providerId?: string;
 }
 
-
 @ApiTags('users')
 @Controller('users')
 export class UsersController {
@@ -46,8 +45,8 @@ export class UsersController {
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Usuário não encontrado.' })
   async getMyProfile(@Req() req: Request): Promise<UserProfileDto> {
-    const requestUserPayload = req.user as RequestUserPayload; // Cast para a nova interface
-    const userId = requestUserPayload?.userId; // AGORA LENDO 'userId'
+    const requestUserPayload = req.user as RequestUserPayload;
+    const userId = requestUserPayload?.userId;
 
     this.logger.log(`[UsersController] getMyProfile: req.user payload recebido: ${JSON.stringify(requestUserPayload)}`);
     this.logger.log(`[UsersController] getMyProfile: Tentando extrair userId: ${userId}`);
@@ -58,12 +57,12 @@ export class UsersController {
     }
 
     const user = await this.usersService.findOne(userId);
-    
+
     if (!user) {
       this.logger.warn(`[UsersController] getMyProfile: Usuário com ID "${userId}" não encontrado no serviço UsersService.`);
       throw new NotFoundException(`Usuário com ID "${userId}" não encontrado.`);
     }
-    
+
     this.logger.log(`[UsersController] getMyProfile: Perfil encontrado para userId: ${userId}. Retornando UserProfileDto.`);
     return new UserProfileDto(user as any);
   }
@@ -76,7 +75,7 @@ export class UsersController {
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Usuário não encontrado.' })
   async updateMyProfile(@Req() req: Request, @Body() updateUserDto: UpdateUserDto): Promise<UserProfileDto> {
-    const userId = (req.user as RequestUserPayload).userId; // ATUALIZADO AQUI TAMBÉM
+    const userId = (req.user as RequestUserPayload).userId;
     this.logger.log(`[UsersController] updateMyProfile: Recebida solicitação de atualização para userId: ${userId}`);
 
     const updatedUser = await this.usersService.update(userId, updateUserDto);
@@ -87,6 +86,24 @@ export class UsersController {
     this.logger.log(`[UsersController] updateMyProfile: Perfil de userId: ${userId} atualizado com sucesso.`);
     return new UserProfileDto(updatedUser as any);
   }
+
+  // NOVO ENDPOINT: Listar todos os usuários (apenas para administradores)
+  @Get() // Este é o endpoint GET /users
+  @Roles(UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Listar todos os usuários (apenas para administradores)' })
+  @ApiResponse({ status: 200, description: 'Lista de usuários.', type: [UserProfileDto] }) // Retorna um array de UserProfileDto
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  @ApiResponse({ status: 403, description: 'Acesso proibido.' })
+  async findAll(): Promise<UserProfileDto[]> {
+    this.logger.log(`[UsersController] findAll: Recebida solicitação para listar todos os usuários (ADMIN).`);
+    const users = await this.usersService.findAllUsers(); // Você precisará criar este método no UsersService
+    this.logger.log(`[UsersController] findAll: Retornando ${users.length} usuários.`);
+    // Mapear para UserProfileDto se o UsersService retornar o modelo Prisma diretamente
+    return users.map(user => new UserProfileDto(user as any));
+  }
+
 
   @Get(':id')
   @Roles(UserRole.ADMIN)
@@ -112,19 +129,19 @@ export class UsersController {
   @Roles(UserRole.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Deletar um usuário por ID (apenas para administradores)' })
-  @ApiResponse({ status: 204, description: 'Usuário deletado com sucesso.' })
+  @ApiOperation({ summary: 'Marcar usuário para exclusão por ID (apenas para administradores)' })
+  @ApiResponse({ status: 200, description: 'Usuário marcado para exclusão com sucesso.', type: MessageResponseDto })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
   @ApiResponse({ status: 404, description: 'Usuário não encontrado.' })
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@Param('id') id: string): Promise<void> {
-    this.logger.log(`[UsersController] remove: Recebida solicitação para deletar userId: ${id} (ADMIN).`);
+  @HttpCode(HttpStatus.OK)
+  async remove(@Param('id') id: string): Promise<MessageResponseDto> {
+    this.logger.log(`[UsersController] remove: Recebida solicitação para marcar exclusão de userId: ${id} (ADMIN).`);
     await this.usersService.remove(id);
-    this.logger.log(`[UsersController] remove: Usuário userId: ${id} deletado com sucesso.`);
+    this.logger.log(`[UsersController] remove: Usuário userId: ${id} marcado para exclusão com sucesso.`);
+    return { message: `Usuário com ID ${id} foi marcado para exclusão.` };
   }
 
-  // NOVO ENDPOINT: Exportar dados do usuário (LGPD)
   @Post('data-export')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
@@ -139,7 +156,6 @@ export class UsersController {
     return { message: 'Sua solicitação de exportação de dados foi recebida. Um link para download será enviado para o seu e-mail cadastrado.' };
   }
 
-  // NOVO ENDPOINT: Excluir conta do usuário (LGPD)
   @Delete('delete-account')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

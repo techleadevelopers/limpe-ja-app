@@ -140,30 +140,24 @@ const ScheduleHeader: React.FC<ScheduleHeaderProps> = ({ onBackPress, headerTitl
 const styles = StyleSheet.create({
     // Updated headerGradient to include properties from HeaderSuperior's outerContainerGradient
     headerGradient: {
-        paddingBottom: -30 * 0.95, // Increased paddingBottom
-        borderBottomLeftRadius: 44 * 0.95,
-        borderBottomRightRadius: 44 * 0.95,
+        paddingBottom: -10 * 0.95, // Increased paddingBottom
+        borderBottomLeftRadius: 34 * 0.95,
+        borderBottomRightRadius: 34 * 0.95,
         borderTopLeftRadius: 4 * 0.95, // Added top radii
         borderTopRightRadius: 4 * 0.95, // Added top radii
         paddingHorizontal: 20, // Changed from 16 to 10
         marginBottom: -9 * 0.95, // Added marginBottom
-        top: 6, // Added top
-        width: '95%', // Added width
-        left: 8,
+        top: 0, // Added top
+        width: '100%', // Added width
+        left: 0,
         overflow: 'hidden', // Added overflow
         ...AppShadows.medium, // Usando AppShadows
-        borderRightWidth: 0.1,
-        borderRightColor: '#45484b56',
-        borderTopStartRadius: 44,
-        borderBottomStartRadius: 44,
-        borderTopEndRadius: 44,
-        borderBottomEndRadius: 44,
-        borderBottomColor: '#45484b56',
+       
+     
+        borderBottomColor: '#45484b0d',
 
-        borderRadius: 12,
-        borderBottomWidth: 0.1,
-        borderLeftColor: '#45484b56',
-        borderLeftWidth: 1,
+      
+      
         // Propriedades de sombra mantidas exatamente como fornecidas
         shadowColor: '#45484b56', // Cor da sombra
         shadowOffset: { width: -1, height: 1 }, // Deslocamento vertical mais pronunciado

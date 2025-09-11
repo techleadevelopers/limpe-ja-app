@@ -114,3 +114,34 @@ lightTheme: Um objeto que implementa AppThemeType para o tema claro, mapeando as
 darkTheme: Um objeto que implementa AppThemeType para o tema escuro, mapeando as cores de Colors.dark e incluindo SIZES e FONTS.
 Exporta um objeto padrão appTheme que contém SIZES, FONTS, lightTheme, e darkTheme.
 Uso: Os objetos de tema (lightTheme, darkTheme) são tipicamente utilizados com provedores de tema de bibliotecas de navegação (e.g., react-navigation) ou componentes de UI (e.g., react-native-paper) para aplicar o tema globalmente. SIZES e FONTS podem ser importados diretamente por componentes que precisam de valores de espaçamento ou tipografia.
+
+
+9. UnifiedTheme.ts
+
+📍 Caminho: LimpeJaApp/src/constants/UnifiedTheme.ts
+
+Propósito:
+Unifica em um único objeto (UnifiedTheme) todos os elementos de design system definidos nos arquivos theme.ts, appStyles.ts e Colors.ts. É o ponto de entrada central para consumo de temas, cores, tipografia e tokens de design. Simplifica importações, garantindo consistência no uso dos estilos em todo o app.
+
+Conteúdo Principal:
+
+UnifiedTheme:
+Objeto que agrupa:
+
+colors (derivados de Colors.ts)
+
+typography (de AppTypography)
+
+sizes (de SIZES)
+
+fonts (de FONTS)
+
+shadows, durations, offsets (de appStyles.ts)
+
+Pode expor funções auxiliares para detectar se o tema ativo é dark ou light.
+
+Uso:
+Importado em qualquer lugar onde se precise de acesso ao design system unificado, evitando múltiplos imports.
+
+import { UnifiedTheme } from "@/constants";
+

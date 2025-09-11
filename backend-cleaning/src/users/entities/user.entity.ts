@@ -46,9 +46,11 @@ export class UserEntity implements Omit<PrismaUser, 'passwordHash'> {
   @ApiPropertyOptional({ description: 'Idioma preferencial do usuário', example: 'pt-BR' })
   preferredLanguage: string | null;
 
-  // ADICIONADO: Propriedade myReferralCode
   @ApiPropertyOptional({ description: 'Código de indicação único do usuário', example: 'ABC123XYZ' })
-  myReferralCode: string | null; // Deve ser string | null para corresponder ao String? no Prisma
+  myReferralCode: string | null;
+
+  @ApiProperty({ description: 'Indica se a conta está ativa (soft delete)', example: true })
+  isActive: boolean; // ✅ Adicionado para alinhar com Prisma
 
   constructor(partial: Partial<UserEntity>) {
     Object.assign(this, partial);

@@ -31,7 +31,8 @@ export class SupportController {
   @Post('tickets')
   @ApiOperation({ summary: 'Abre um novo ticket de suporte' })
   async createTicket(@Request() req, @Body() createTicketDto: CreateTicketDto) {
-    const userId = req.user.id;
+    // CORREÇÃO: Alterado req.user.id para req.user.userId
+    const userId = req.user.userId;
     const userRole = req.user.role; // Assumindo que a role está no token JWT
     return this.supportService.createTicket(userId, userRole, createTicketDto);
   }
@@ -44,7 +45,7 @@ export class SupportController {
     @Query('status') status?: string,
     @Query('category') category?: string,
   ) {
-    const userId = req.user.id;
+    const userId = req.user.userId; // Ajuste similar pode ser necessário aqui se este endpoint for usado por não-admins
     const userRole = req.user.role;
     const showMine = mine === 'true';
 
@@ -59,7 +60,7 @@ export class SupportController {
   @Get('tickets/:id')
   @ApiOperation({ summary: 'Obtém detalhes de um ticket de suporte' })
   async getTicketDetails(@Request() req, @Param('id') ticketId: string) {
-    const userId = req.user.id;
+    const userId = req.user.userId; // Ajuste similar pode ser necessário aqui
     const userRole = req.user.role;
     const ticket = await this.supportService.findTicketById(ticketId);
 
@@ -82,7 +83,7 @@ export class SupportController {
     @Param('id') ticketId: string,
     @Body('body') body: string,
   ) {
-    const userId = req.user.id;
+    const userId = req.user.userId; // Ajuste similar pode ser necessário aqui
     const userRole = req.user.role;
     return this.supportService.addMessageToTicket(ticketId, userId, userRole, body);
   }

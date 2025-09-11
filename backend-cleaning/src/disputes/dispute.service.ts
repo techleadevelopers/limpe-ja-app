@@ -1,6 +1,8 @@
+// backend-cleaning/src/disputes/dispute.service.ts
+
 import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenException, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { BookingStatus, DisputeStatus, Prisma, TransactionType, UserRole, SupportTicketCategory, SupportTicketStatus } from '@prisma/client'; // Importações adicionadas
+import { BookingStatus, DisputeStatus, Prisma, TransactionType, UserRole, SupportTicketCategory, SupportTicketStatus } from '@prisma/client';
 import { CreateDisputeDto } from './dto/create-dispute.dto';
 import { UpdateDisputeDto } from './dto/update-dispute.dto';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -258,7 +260,12 @@ export class DisputeService {
 
     if (updatedDispute.status === DisputeStatus.RESOLVED && updateDisputeDto.refundAmount && updateDisputeDto.refundAmount > 0) {
       const booking = await this.prisma.booking.findUnique({ where: { id: dispute.bookingId } });
-      const provider = await this.prisma.provider.findUnique({ where: { userId: booking.providerId } });
+      // CORREÇÃO: Buscar o provedor pelo 'id' do provedor do agendamento, não pelo 'userId'
+      const provider = await this.prisma.provider.findUnique({ where: { id: booking.providerId } });
+
+      if (!provider) { // Adiciona uma verificação para provedor nulo
+        throw new BadRequestException('Provedor associado ao agendamento não encontrado para processar o reembolso.');
+      }
 
       await this.prisma.transaction.create({
         data: {

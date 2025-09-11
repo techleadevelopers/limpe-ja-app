@@ -15,13 +15,13 @@ import {
   Easing,
   AccessibilityInfo,
 } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
+import { Picker } from '@react-native-picker/picker'; // Certifique-se de que esta importação está correta
 import { Stack, useRouter } from 'expo-router';
 import { useAuth } from '../../../hooks/useAuth';
 import { Ionicons } from '@expo/vector-icons';
 
 // Types
-import { PricingType } from '../../../types/backend/services';
+import { PricingType, Service } from '../../../types/backend/services'; // Importe Service aqui
 import {
   getProviderServicesOffered,
   addProviderServiceOffering,
@@ -30,13 +30,15 @@ import {
 } from '../../../services/providerService';
 import { ProviderServiceOffering as ProviderServiceType } from '../../../types/backend/provider-service';
 import { CreateProviderServiceData } from '../../../types/backend/providers';
+// ADICIONE ESTA LINHA PARA IMPORTAR DO NOVO ARQUIVO:
+import { getServiceCategories } from '../../../services/commonServiceCatalog'; 
 
 // ===== Design Tokens (Premium UI) =====
 const Colors = {
-  primary: 'rgba(0,122,255,0.9)', // Cor alterada de '#4A90E2' para um azul mais opaco
-  primaryDark: 'rgba(0,122,255,0.7)', // Cor alterada de '#2A72E7' para um azul mais transparente
-  link: '#007AFF', // Já é uma das novas cores azuis, mantida
-  bgSoft: '#E3F2FD', // Cor alterada de '#F0F7FF' para um azul muito claro
+  primary: 'rgba(0,122,255,0.9)',
+  primaryDark: 'rgba(0,122,255,0.7)',
+  link: '#007AFF',
+  bgSoft: '#E3F2FD',
   surface: '#FFFFFF',
   border: '#E9ECEF',
   fieldBg: '#F8F9FA',
@@ -45,7 +47,7 @@ const Colors = {
   textSubtle: '#868E96',
   danger: '#D32F2F',
   success: '#2E7D32',
-  shadow: 'rgba(0,122,255,0.3)', // Cor alterada de 'rgba(0,0,0,0.08)' para um azul transparente
+  shadow: 'rgba(0,122,255,0.3)',
 };
 
 const Radii = {
@@ -66,10 +68,8 @@ const Spacing = {
 const easeOut = Easing.out(Easing.ease);
 
 function normalizeCurrencyInput(v: string) {
-  // remove tudo que não é número
   const digits = v.replace(/[^\d]/g, '');
   if (!digits) return { raw: '', display: '' };
-  // formata em centavos -> BRL simples (sem Intl por performance/consistência)
   const cents = parseInt(digits, 10);
   const raw = (cents / 100).toFixed(2);
   const parts = raw.split('.');
@@ -80,7 +80,6 @@ function normalizeCurrencyInput(v: string) {
 
 function parseDurationToMinutes(input: string | undefined) {
   if (!input) return undefined;
-  // aceita "120", "120 min", "2 horas", "2h", "2h30"
   const str = input.toLowerCase().trim();
 
   const onlyNumber = str.match(/^\d+$/);
@@ -96,7 +95,6 @@ function parseDurationToMinutes(input: string | undefined) {
   const minutes = str.match(/(\d+)\s*(?:min|mins|minutos?)/);
   if (minutes) return parseInt(minutes[1], 10);
 
-  // fallback: primeiro número encontrado
   const anyNum = str.match(/\d+/);
   return anyNum ? parseInt(anyNum[0], 10) : undefined;
 }
@@ -105,6 +103,7 @@ function parseDurationToMinutes(input: string | undefined) {
 interface ServiceOffering {
   id: string;
   name: string;
+  serviceId: string; // Adicione esta linha
   description: string;
   price: number;
   duration?: string;
@@ -235,7 +234,13 @@ export default function EditProviderServicesScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState<ServiceOffering | null>(null);
 
-  const [serviceName, setServiceName] = useState('');
+  // Novos estados para o catálogo de serviços base e o serviço base selecionado
+  const [availableBaseServices, setAvailableBaseServices] = useState<Service[]>([]);
+  // FIX: Change null to undefined for selectedBaseServiceId to match Picker's expected type
+  const [selectedBaseServiceId, setSelectedBaseServiceId] = useState<string | undefined>(undefined);
+
+  // Remova serviceName, pois ele será derivado do Picker
+  // const [serviceName, setServiceName] = useState('');
   const [serviceDesc, setServiceDesc] = useState('');
   const [servicePrice, setServicePrice] = useState(''); // raw numeric string ('.' as decimal)
   const [servicePriceDisplay, setServicePriceDisplay] = useState(''); // masked BRL for UX
@@ -258,7 +263,7 @@ export default function EditProviderServicesScreen() {
   useEffect(() => {
     Animated.timing(headerAnim, { toValue: 1, duration: 520, easing: easeOut, useNativeDriver: true }).start();
 
-    const fetchProviderServices = async () => {
+    const fetchAllData = async () => {
       if (!user?.providerDetails?.id) {
         Alert.alert('Erro', 'ID do provedor não encontrado. Faça login novamente.');
         setIsLoading(false);
@@ -266,10 +271,16 @@ export default function EditProviderServicesScreen() {
         return;
       }
       try {
-        const fetched = await getProviderServicesOffered(user.providerDetails.id);
-        const mapped: ServiceOffering[] = fetched.map((s: ProviderServiceType) => ({
+        // 1. Buscar o catálogo de serviços base do backend usando a nova importação
+        const fetchedBaseServices = await getServiceCategories(); // <-- AQUI ESTÁ A MUDANÇA
+        setAvailableBaseServices(fetchedBaseServices);
+
+        // 2. Buscar os serviços já oferecidos pelo provedor
+        const fetchedProviderServices = await getProviderServicesOffered(user.providerDetails.id);
+        const mapped: ServiceOffering[] = fetchedProviderServices.map((s: ProviderServiceType) => ({
           id: s.id,
           name: s.service.name,
+          serviceId: s.service.id, // Armazene o ID do serviço base aqui
           description: s.description || '',
           price: parseFloat(s.price.toString()),
           duration: s.durationMinutes ? `${s.durationMinutes} minutos` : undefined,
@@ -278,9 +289,18 @@ export default function EditProviderServicesScreen() {
           pricePerRoom: s.pricePerRoom ? parseFloat(s.pricePerRoom.toString()) : undefined,
         }));
         setServices(mapped.sort((a, b) => a.name.localeCompare(b.name)));
+
+        // 3. Definir o serviço base selecionado inicial (primeiro da lista ou null)
+        if (fetchedBaseServices.length > 0) {
+          // FIX: Use undefined instead of null for initial selectedBaseServiceId
+          setSelectedBaseServiceId(fetchedBaseServices[0].id);
+        } else {
+          setSelectedBaseServiceId(undefined); // Ensure it's undefined if no services
+        }
+
       } catch (error: any) {
-        console.error('[EditProviderServicesScreen] Erro ao carregar serviços:', error);
-        Alert.alert('Erro', error?.message || 'Não foi possível carregar seus serviços.');
+        console.error('[EditProviderServicesScreen] Erro ao carregar dados:', error);
+        Alert.alert('Erro', error?.message || 'Não foi possível carregar seus serviços ou o catálogo de serviços.');
       } finally {
         setIsLoading(false);
         Animated.stagger(140, [
@@ -292,7 +312,7 @@ export default function EditProviderServicesScreen() {
       }
     };
 
-    fetchProviderServices();
+    fetchAllData();
   }, [user, headerAnim, formAnim, listHeaderAnim, saveButtonAnim, feedbackAnim]);
 
   // ===== Handlers =====
@@ -302,7 +322,9 @@ export default function EditProviderServicesScreen() {
 
   const resetForm = () => {
     setIsEditing(null);
-    setServiceName('');
+    // setServiceName(''); // Remova esta linha
+    // FIX: Use undefined for initial selectedBaseServiceId
+    setSelectedBaseServiceId(availableBaseServices.length > 0 ? availableBaseServices[0].id : undefined); // Resetar para o primeiro serviço base disponível
     setServiceDesc('');
     setServicePrice('');
     setServicePriceDisplay('');
@@ -321,6 +343,15 @@ export default function EditProviderServicesScreen() {
     setterDisplay(display);
   };
 
+  // FIX: Dedicated handlers for onChangeText to provide clearer type boundaries
+  const handlePricePerSquareMeterChange = (text: string) => {
+    handlePriceChange(text, setPricePerSquareMeter, setPricePerSquareMeterDisplay);
+  };
+
+  const handlePricePerRoomChange = (text: string) => {
+    handlePriceChange(text, setPricePerRoom, setPricePerRoomDisplay);
+  };
+
   const handleAddOrUpdateService = async () => {
     setFormError(null);
 
@@ -329,9 +360,10 @@ export default function EditProviderServicesScreen() {
       return;
     }
 
-    if (!serviceName.trim()) {
-      setFormError('Nome do serviço é obrigatório.');
-      AccessibilityInfo.announceForAccessibility?.('Nome do serviço é obrigatório.');
+    // Validação para garantir que um tipo de serviço base foi selecionado
+    if (!selectedBaseServiceId) {
+      setFormError('Selecione um tipo de serviço.');
+      AccessibilityInfo.announceForAccessibility?.('Selecione um tipo de serviço.');
       return;
     }
 
@@ -374,8 +406,7 @@ export default function EditProviderServicesScreen() {
 
     const durationMinutes = parseDurationToMinutes(serviceDuration);
     const serviceData: CreateProviderServiceData = {
-      // TODO: substituir por ID real do serviço selecionado no catálogo global
-      serviceId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
+      serviceId: selectedBaseServiceId, // Use o ID do serviço base selecionado aqui!
       description: serviceDesc.trim(),
       price: finalPrice,
       durationMinutes,
@@ -396,6 +427,7 @@ export default function EditProviderServicesScreen() {
                 ? {
                     id: resultService.id,
                     name: resultService.service.name,
+                    serviceId: resultService.service.id, // Atualize o serviceId também
                     description: resultService.description || '',
                     price: parseFloat(resultService.price.toString()),
                     duration: resultService.durationMinutes ? `${resultService.durationMinutes} minutos` : undefined,
@@ -415,6 +447,7 @@ export default function EditProviderServicesScreen() {
         const newService: ServiceOffering = {
           id: resultService.id,
           name: resultService.service.name,
+          serviceId: resultService.service.id, // Defina o serviceId para o novo serviço
           description: resultService.description || '',
           price: parseFloat(resultService.price.toString()),
           duration: resultService.durationMinutes ? `${resultService.durationMinutes} minutos` : undefined,
@@ -438,27 +471,33 @@ export default function EditProviderServicesScreen() {
 
   const startEdit = (service: ServiceOffering) => {
     setIsEditing(service);
-    setServiceName(service.name);
-    setServiceDesc(service.description);
+    // Não use setServiceName, pois o nome será derivado do Picker
+    // setServiceName(service.name);
+    setSelectedBaseServiceId(service.serviceId); // Pré-seleciona o Picker com o ID do serviço base
+    // FIX: Explicitly cast to String to try and resolve type inference issue (Code 2349)
+    setServiceDesc(String(service.description));
 
     // preencher preços conforme tipo
     if (service.pricingType === PricingType.FIXED_PRICE || service.pricingType === PricingType.HOURLY) {
       const display = normalizeCurrencyInput(String(Math.round(service.price * 100))).display;
-      setServicePrice(service.price.toFixed(2));
-      setServicePriceDisplay(display);
+      // FIX: Explicitly cast to String to try and resolve type inference issue (Code 2349)
+      setServicePrice(String(service.price.toFixed(2)));
+      setServicePriceDisplay(String(display));
     } else {
       if (service.pricePerSquareMeter != null) {
         const display = normalizeCurrencyInput(String(Math.round(service.pricePerSquareMeter * 100))).display;
-        setPricePerSquareMeter(service.pricePerSquareMeter.toFixed(2));
-        setPricePerSquareMeterDisplay(display);
+        // FIX: Explicitly cast to String to try and resolve type inference issue (Code 2349)
+        setPricePerSquareMeter(String(service.pricePerSquareMeter.toFixed(2)));
+        setPricePerSquareMeterDisplay(String(display));
       } else {
         setPricePerSquareMeter('');
         setPricePerSquareMeterDisplay('');
       }
       if (service.pricePerRoom != null) {
         const display = normalizeCurrencyInput(String(Math.round(service.pricePerRoom * 100))).display;
-        setPricePerRoom(service.pricePerRoom.toFixed(2));
-        setPricePerRoomDisplay(display);
+        // FIX: Explicitly cast to String to try and resolve type inference issue (Code 2349)
+        setPricePerRoom(String(service.pricePerRoom.toFixed(2)));
+        setPricePerRoomDisplay(String(display));
       } else {
         setPricePerRoom('');
         setPricePerRoomDisplay('');
@@ -466,7 +505,8 @@ export default function EditProviderServicesScreen() {
     }
 
     setPricingType(service.pricingType);
-    setServiceDuration(service.duration || '');
+    // FIX: Explicitly cast to String to try and resolve type inference issue (Code 2349)
+    setServiceDuration(String(service.duration || ''));
     setFormError(null);
   };
 
@@ -542,7 +582,29 @@ export default function EditProviderServicesScreen() {
         >
           <Text style={styles.formTitle}>{isEditing ? 'Editar Serviço Existente' : 'Adicionar Novo Serviço'}</Text>
 
-          <TextInput
+          {/* NOVO: Picker para selecionar o tipo de serviço base */}
+          <Text style={styles.inputLabel}>Tipo de Serviço</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={selectedBaseServiceId}
+              onValueChange={(itemValue: string | undefined) => setSelectedBaseServiceId(itemValue)} // Ensure itemValue can be undefined
+              style={styles.picker}
+              enabled={!isEditing && availableBaseServices.length > 0} // Desabilitar se estiver editando ou se não houver serviços base
+            >
+              {availableBaseServices.map(service => (
+                <Picker.Item key={service.id} label={service.name} value={service.id} />
+              ))}
+            </Picker>
+          </View>
+          {isEditing && (
+            <Text style={styles.inputHint}>Você não pode alterar o tipo de serviço de um serviço existente.</Text>
+          )}
+          {availableBaseServices.length === 0 && !isLoading && (
+            <Text style={styles.formErrorText}>Nenhum tipo de serviço base disponível. Verifique a conexão ou o backend.</Text>
+          )}
+
+          {/* Remova o TextInput para serviceName */}
+          {/* <TextInput
             style={[styles.input, formError === 'Nome do serviço é obrigatório.' && styles.inputError]}
             placeholder="Nome do Serviço (ex: Limpeza Padrão)"
             placeholderTextColor={Colors.textMuted}
@@ -550,7 +612,7 @@ export default function EditProviderServicesScreen() {
             onChangeText={setServiceName}
             accessibilityLabel="Nome do serviço"
             returnKeyType="next"
-          />
+          /> */}
 
           <TextInput
             style={[styles.input, { height: 90, textAlignVertical: 'top' }]}
@@ -615,7 +677,7 @@ export default function EditProviderServicesScreen() {
                 placeholder="Preço por m² (ex: R$ 10,50)"
                 placeholderTextColor={Colors.textMuted}
                 value={pricePerSquareMeterDisplay}
-                onChangeText={txt => handlePriceChange(txt, setPricePerSquareMeter, setPricePerSquareMeterDisplay)}
+                onChangeText={handlePricePerSquareMeterChange} // FIX: Use dedicated handler
                 keyboardType="numeric"
                 accessibilityLabel="Preço por metro quadrado"
               />
@@ -624,7 +686,7 @@ export default function EditProviderServicesScreen() {
                 placeholder="Preço por Cômodo (ex: R$ 50,00)"
                 placeholderTextColor={Colors.textMuted}
                 value={pricePerRoomDisplay}
-                onChangeText={txt => handlePriceChange(txt, setPricePerRoom, setPricePerRoomDisplay)}
+                onChangeText={handlePricePerRoomChange} // FIX: Use dedicated handler
                 keyboardType="numeric"
                 accessibilityLabel="Preço por cômodo"
               />
@@ -711,7 +773,7 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 50 : 20,
     borderBottomLeftRadius: Radii.xl,
     borderBottomRightRadius: Radii.xl,
-    shadowColor: Colors.shadow, // Cor alterada de '#000' para usar o novo azul de sombra
+    shadowColor: Colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 5,
@@ -769,7 +831,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   input: {
-    
     backgroundColor: Colors.fieldBg,
     borderRadius: Radii.pill,
     paddingVertical: Platform.OS === 'ios' ? 12 : 10,
@@ -790,8 +851,6 @@ const styles = StyleSheet.create({
     marginTop: 15,
   },
   pickerContainer: {
-    
-
     backgroundColor: Colors.fieldBg,
     borderRadius: Radii.pill,
     marginBottom: Spacing.md,
@@ -801,7 +860,7 @@ const styles = StyleSheet.create({
     height: 50,
     width: '100%',
     color: Colors.text,
-    paddingHorizontal: 15, // Adicionado para melhorar o espaçamento interno do Picker
+    paddingHorizontal: 15,
   },
   actionButtonPrimary: {
     backgroundColor: Colors.primary,
@@ -811,7 +870,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     ...Platform.select({
       ios: {
-        shadowColor: Colors.shadow, // Cor alterada de 'rgba(0,0,0,0.1)' para usar o novo azul de sombra
+        shadowColor: Colors.shadow,
         shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.2,
         shadowRadius: 4,
@@ -948,5 +1007,11 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     textAlign: 'center',
     paddingHorizontal: 20,
+  },
+  formErrorText: {
+    color: Colors.danger,
+    textAlign: 'center',
+    marginBottom: Spacing.md,
+    fontSize: 14,
   },
 });

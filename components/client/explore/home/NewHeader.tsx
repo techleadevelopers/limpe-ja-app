@@ -86,9 +86,9 @@ const styles = StyleSheet.create({
         // Adicionando zIndex para garantir que o cabeçalho fique abaixo do conteúdo principal
         zIndex: 0, // Definindo um zIndex explícito e baixo
         shadowColor: '#2f3344e8', // Cor da sombra
-        shadowOffset: { width: 0, height: 8 }, // Deslocamento vertical mais pronunciado
-        shadowOpacity: 0.27, // Opacidade aumentada para robustezs
-        shadowRadius: 25, // Raio de desfoque para conforto
+        shadowOffset: { width: 0, height: 4 }, // Deslocamento vertical mais pronunciado
+        shadowOpacity: 0.17, // Opacidade aumentada para robustezs
+        shadowRadius: 10, // Raio de desfoque para conforto
         elevation: 6, // Elevação aumentada para robustez no Android
 
      
@@ -106,14 +106,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#E0E0E0', // Fundo de placeholder enquanto a imagem carrega ou se não houver avatar
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: '#7b1ae2ff', // Cor da sombra
-        shadowOffset: { width: 3, height: 6 }, // Deslocamento vertical mais pronunciado
-        shadowOpacity: 0.185, // Opacidade aumentada para robustezs
-        shadowRadius: 15, // Raio de desfoque para conforto
-        elevation: 6, // Elevação aumentada para robustez no Android
-        // INJEÇÃO DA BORDA NEON AZUL CLARA AQUI
-        borderWidth: 2, // Largura da borda
-        borderColor: '#87CEEB', // Cor azul clara para o efeito neon
+
     },
     profileImage: {
         width: '100%',

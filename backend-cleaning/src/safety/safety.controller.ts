@@ -8,7 +8,10 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'; // Assuming JWT gu
 import { RolesGuard } from '../auth/guards/roles.guard'; // Assuming Roles guard
 import { Roles } from '../auth/decorators/roles.decorator'; // Assuming Roles decorator
 import { UserRole } from '@prisma/client'; // Assuming Prisma enum for roles
+import { ApiBearerAuth, ApiOperation, ApiTags, ApiResponse } from '@nestjs/swagger'; // Importações adicionadas para Swagger
 
+@ApiBearerAuth() // Adiciona o cabeçalho de autenticação Bearer para Swagger
+@ApiTags('safety') // Agrupa endpoints sob a tag 'safety' no Swagger
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('safety')
 export class SafetyController {
@@ -16,24 +19,42 @@ export class SafetyController {
 
   @Post('panic')
   @Roles(UserRole.CLIENT, UserRole.PROVIDER) // Both clients and providers can report panic
+  @ApiOperation({ summary: 'Reporta um incidente de pânico' }) // Descrição para Swagger
+  @ApiResponse({ status: 201, description: 'Incidente de pânico reportado com sucesso.' })
   async reportPanic(@Body() reportPanicDto: ReportPanicDto, @Req() req) {
     return this.safetyService.reportPanic(req.user.id, reportPanicDto);
   }
 
   @Post('incident')
   @Roles(UserRole.CLIENT, UserRole.PROVIDER) // Both clients and providers can report incidents
+  @ApiOperation({ summary: 'Reporta um incidente de segurança' }) // Descrição para Swagger
+  @ApiResponse({ status: 201, description: 'Incidente de segurança reportado com sucesso.' })
   async reportIncident(@Body() reportIncidentDto: ReportIncidentDto, @Req() req) {
     return this.safetyService.reportIncident(req.user.id, reportIncidentDto);
   }
 
   @Get('me/incidents')
   @Roles(UserRole.CLIENT, UserRole.PROVIDER) // Users can list their own incidents
+  @ApiOperation({ summary: 'Lista os incidentes de segurança reportados pelo usuário logado' }) // Descrição para Swagger
+  @ApiResponse({ status: 200, description: 'Lista de incidentes do usuário retornada com sucesso.' })
   async getIncidentsForUser(@Req() req) {
     return this.safetyService.getIncidentsForUser(req.user.id);
   }
 
+  // NOVO ENDPOINT: Para administradores listarem todos os incidentes
+  @Get('incidents') // Caminho específico para listar todos os incidentes
+  @Roles(UserRole.ADMIN) // Apenas administradores podem acessar
+  @ApiOperation({ summary: 'Lista todos os incidentes de segurança (apenas para administradores)' }) // Descrição para Swagger
+  @ApiResponse({ status: 200, description: 'Lista de todos os incidentes retornada com sucesso.' })
+  async getAllIncidents() {
+    return this.safetyService.listAllIncidents(); // Você precisará implementar este método no SafetyService
+  }
+
   @Patch('incident/:id/status')
   @Roles(UserRole.ADMIN) // Only admins can update incident status
+  @ApiOperation({ summary: 'Atualiza o status de um incidente de segurança (apenas para administradores)' }) // Descrição para Swagger
+  @ApiResponse({ status: 200, description: 'Status do incidente atualizado com sucesso.' })
+  @ApiResponse({ status: 404, description: 'Incidente não encontrado.' })
   async updateIncidentStatus(@Param('id') id: string, @Body() updateIncidentDto: UpdateIncidentDto, @Req() req) {
     return this.safetyService.updateIncidentStatus(id, updateIncidentDto, req.user.id);
   }

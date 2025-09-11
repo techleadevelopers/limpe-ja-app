@@ -100,7 +100,7 @@ const FilteredProvidersScreen: React.FC = () => {
   // Função para lidar com o clique em um cartão de prestador
   const handleProviderPress = (providerId: string) => {
     router.push({
-      pathname: '/(client)/providers/[providerId]',
+      pathname: '/(client)/explore/[providerId]',
       params: { providerId: providerId }
     });
   };

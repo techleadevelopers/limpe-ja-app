@@ -254,6 +254,7 @@ model User {
   isPhoneVerified       Boolean            @default(false)
   isVerified            Boolean            @default(false)
   deletionScheduledAt   DateTime?
+  isActive              Boolean            @default(true)  // <<< ADICIONADO
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
   preferredLanguage     String?            // NOVO: Para internacionalização (i18n) - idioma preferencial do usuário

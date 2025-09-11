@@ -59,13 +59,36 @@ export default function LoginScreen() {
     const mainElementsOpacity = useRef(new Animated.Value(0)).current;
     const mainElementsTranslateY = useRef(new Animated.Value(18)).current;
 
+    // Shared values para as animações do logo
     const logoRotateY = useSharedValue(0);
     const logoPulseScale = useSharedValue(1);
+    const logoGlow = useSharedValue(0); // NOVO: Para o efeito de brilho
+    const logoFloatY = useSharedValue(0); // NOVO: Para a flutuação vertical
 
     useEffect(() => {
         const startLogoLoopAnimations = () => {
-            logoRotateY.value = withRepeat(withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.ease) }), -1, true);
-            logoPulseScale.value = withRepeat(withTiming(1.02, { duration: 1500, easing: Easing.inOut(Easing.ease) }), -1, true);
+            logoRotateY.value = withRepeat(
+                withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+                -1,
+                true
+            );
+            logoPulseScale.value = withRepeat(
+                withTiming(1.02, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+                -1,
+                true
+            );
+            // NOVO: Animação de brilho
+            logoGlow.value = withRepeat(
+                withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+                -1,
+                true
+            );
+            // NOVO: Animação de flutuação
+            logoFloatY.value = withRepeat(
+                withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
+                -1,
+                true
+            );
         };
 
         if (!authIsLoading && isAuthenticated) {
@@ -81,7 +104,7 @@ export default function LoginScreen() {
                 startLogoLoopAnimations();
             });
         }
-    }, [isAuthenticated, authIsLoading, user, router, logoRotateY, logoPulseScale, mainElementsOpacity, mainElementsTranslateY]);
+    }, [isAuthenticated, authIsLoading, user, router, logoRotateY, logoPulseScale, logoGlow, logoFloatY, mainElementsOpacity, mainElementsTranslateY]);
 
     const createButtonAnimations = () => {
         const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -92,6 +115,7 @@ export default function LoginScreen() {
 
     const signInButtonAnims = createButtonAnimations();
 
+    // Estilo animado adicional para o logo
     const animatedLogoStyle = useAnimatedStyle(() => {
         const rotation = interpolate(
             logoRotateY.value,
@@ -99,11 +123,29 @@ export default function LoginScreen() {
             [-5, 0, 5],
             Extrapolate.CLAMP
         );
+
+        // NOVO: Interpolação para a flutuação vertical
+        const floatY = interpolate(
+            logoFloatY.value,
+            [0, 0.5, 1],
+            [0, -6, 0], // sobe e desce suavemente
+            Extrapolate.CLAMP
+        );
+
+        // NOVO: Interpolação para a opacidade do brilho
+        const glowOpacity = interpolate(logoGlow.value, [0, 1], [0.4, 0.9]);
+
         return {
             transform: [
                 { scale: logoPulseScale.value },
                 { rotateY: `${rotation}deg` },
+                { translateY: floatY } // NOVO: Aplica a flutuação
             ],
+            // NOVO: Propriedades de sombra para o efeito de brilho
+            shadowColor: '#40C0F0',
+            shadowOpacity: glowOpacity,
+            shadowRadius: 20,
+            shadowOffset: { width: 0, height: 0 },
         };
     });
 

@@ -15,11 +15,13 @@ import SuccessPixInfo from './SuccessPixInfo';
 // Importar tipos
 import { BookingDetails } from '../../../../types/backend/bookings';
 import { PixChargeResponseDto } from '../../../../types/backend/payments';
+import { ProviderDisplayInfo } from '../../../../types/backend/providers'; // <--- NOVO: Importa ProviderDisplayInfo
 import { formatCurrency, formatDate } from '../../../../utils/helpers';
 import { AppColors, AppShadows } from '../../../../constants/appStyles'; // Importe AppColors e AppShadows
 
 interface BookingSummaryCardProps {
   booking: BookingDetails;
+  provider: ProviderDisplayInfo | null; // <--- ATUALIZADO: Nova prop para detalhes completos do provedor
   providerRating?: number;
   pixChargeDetails?: PixChargeResponseDto | null;
   paymentMethod?: string;
@@ -35,6 +37,7 @@ interface BookingSummaryCardProps {
 
 export default function BookingSummaryCard({
   booking,
+  provider, // <--- ATUALIZADO: Desestrutura a nova prop
   providerRating,
   pixChargeDetails,
   paymentMethod,
@@ -50,8 +53,8 @@ export default function BookingSummaryCard({
   // --- CORREÇÃO AQUI: DESESTRUTURAR AS PROPRIEDADES DO BOOKING ---
   // Removido `scheduledDateTime` e adicionado `scheduledDate` e `scheduledTime`
   const {
-    providerFullName,
-    providerAvatarUrl,
+    // providerFullName, // REMOVIDO: Será obtido de 'provider'
+    // providerAvatarUrl, // REMOVIDO: Será obtido de 'provider'
     serviceName,
     scheduledDate,
     scheduledTime,
@@ -111,8 +114,8 @@ export default function BookingSummaryCard({
 
         <View style={styles.cardContentNew}>
           <ProviderInfoSection
-            providerAvatarUrl={providerAvatarUrl}
-            providerFullName={providerFullName}
+            providerAvatarUrl={provider?.avatarUrl} // <--- ATUALIZADO: Usa avatarUrl do objeto provider
+            providerFullName={provider?.fullName || booking.providerFullName} // <--- ATUALIZADO: Usa fullName do objeto provider, com fallback para booking.providerFullName
             providerRating={providerRating}
           />
 

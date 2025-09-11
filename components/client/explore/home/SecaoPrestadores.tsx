@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
   container: {
     marginTop: -2,
     marginBottom: -18,
-    backgroundColor: '#F4F7FC',
+   backgroundColor: 'transparent',
 
   },
   header: {

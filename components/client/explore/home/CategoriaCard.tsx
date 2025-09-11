@@ -19,20 +19,20 @@ interface CategoriaCardProps {
 }
 
 const TINT_GRADIENT_START = 'rgba(230, 240, 255, 0.7)';
-const TINT_GRADIENT_END = 'rgba(9, 34, 220, 0.23)';
+const TINT_GRADIENT_END = 'rgba(196, 197, 205, 0.23)';
 const BLUR_INTENSITY = Platform.OS === 'ios' ? 20 : 40;
 const BLUR_TINT = 'light';
 const TEXT_COLOR = 'rgba(54, 57, 60, 0.62)';
 
-const PRIMARY_SHADOW_COLOR = 'rgba(0, 50, 150, 0.39)';
-const PRIMARY_SHADOW_OFFSET_HEIGHT = 5;
-const PRIMARY_SHADOW_RADIUS = 8;
+const PRIMARY_SHADOW_COLOR = 'rgba(0, 50, 150, 0.26)';
+const PRIMARY_SHADOW_OFFSET_HEIGHT = 4;
+const PRIMARY_SHADOW_RADIUS = 5;
 const PRIMARY_ELEVATION_ANDROID = 5;
 
 const SECONDARY_SHADOW_COLOR = 'rgba(150, 27, 0, 0.08)';
-const SECONDARY_SHADOW_OFFSET_HEIGHT = 15;
+const SECONDARY_SHADOW_OFFSET_HEIGHT = 1;
 const SECONDARY_SHADOW_RADIUS = 2;
-const SECONDARY_ELEVATION_ANDROID = 10;
+const SECONDARY_ELEVATION_ANDROID = 5;
 
 const BORDER_COLOR_LIGHT = 'rgba(255, 255, 255, 0.9)';
 const BORDER_WIDTH = 1.5;
@@ -257,12 +257,12 @@ const CategoriaCard: React.FC<CategoriaCardProps> = ({ item }) => {
 
 const styles = StyleSheet.create({
   cardContainerWrapper: {
-    width: 45,
-    height: 45,
-    marginRight: 12,
+    width: 39,
+    height: 39,
+    marginRight: 18,
     borderRadius: 25,
     marginBottom: 9,
-    marginTop: 2,
+    marginTop: 12,
 
   },
   shadowLayerPrimary: {
@@ -312,13 +312,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 7,
   },
-  sectionSeparator: {
-    borderBottomWidth: 1,
-    borderBottomColor: COR_BORDA_SUAVE,
-    marginVertical: 15,
-    right: 21,
-    marginHorizontal: 58,
-  },
+
 });
 
 export default CategoriaCard;

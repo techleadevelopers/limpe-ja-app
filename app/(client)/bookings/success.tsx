@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    Alert,
+    // Alert, // Removed - if you want to use Alert, uncomment this
     Animated,
     ColorValue,
     Dimensions,
@@ -18,7 +18,10 @@ import {
     Text, // Adicionado
     TouchableOpacity // Adicionado
 } from 'react-native';
-import Toast from 'react-native-toast-message';
+// import Toast from 'react-native-toast-message'; // Removed
+
+// Import NotificationUIService
+import NotificationUIService from '../../../services/notificationUIService'; // Added
 
 // Importar componentes refatorados
 import BookingSummaryCard from '../../../components/client/booking/success/BookingSummaryCard';
@@ -44,10 +47,10 @@ const MissionReminderCard: React.FC<MissionReminderCardProps> = ({ missionId, ti
     // Implementação mock para evitar erro de componente não encontrado
     return (
         <View style={{ margin: 15, padding: 15, backgroundColor: AppColors.successStandard + '20', borderRadius: 10 }}>
-            <Text style={{ fontWeight: 'bold', fontSize: 16,fontFamily: 'Montserrat-Regular', color: AppColors.textBody }}>{title}</Text>
+            <Text style={{ fontWeight: 'bold', fontSize: 16, fontFamily: 'Montserrat-Regular', color: AppColors.textBody }}>{title}</Text>
             {description && <Text style={{ fontSize: 14, color: AppColors.textAuxiliary, fontFamily: 'Montserrat-Regular' }}>{description}</Text>}
-            <Text style={{ fontSize: 12, color: AppColors.mediumGray,fontFamily: 'Montserrat-Regular' }}>Prazo: {new Date(deadlineAt).toLocaleDateString()}</Text>
-            <Text style={{ fontSize: 12, color: AppColors.mediumGray,fontFamily: 'Montserrat-Regular' }}>Recompensa: {reward.value} {reward.kind}</Text>
+            <Text style={{ fontSize: 12, color: AppColors.mediumGray, fontFamily: 'Montserrat-Regular' }}>Prazo: {new Date(deadlineAt).toLocaleDateString()}</Text>
+            <Text style={{ fontSize: 12, color: AppColors.mediumGray, fontFamily: 'Montserrat-Regular' }}>Recompensa: {reward.value} {reward.kind}</Text>
             <TouchableOpacity onPress={onGo} style={{ marginTop: 10, backgroundColor: AppColors.successStandard, padding: 8, borderRadius: 5 }}>
                 <Text style={{ color: AppColors.white, textAlign: 'center' }}>Ir agora</Text>
             </TouchableOpacity>
@@ -102,6 +105,7 @@ export default function SuccessScreen() {
     const { user } = useAuth();
 
     const [booking, setBooking] = useState<BookingDetails | null>(null);
+    const [provider, setProvider] = useState<ProviderDisplayInfo | null>(null); // Estado para armazenar os detalhes do provedor
     const [providerRating, setProviderRating] = useState<number | undefined>(undefined);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -187,6 +191,7 @@ export default function SuccessScreen() {
 
             if (fetchedBooking?.providerId) {
                 const providerDetails: ProviderDisplayInfo = await getProviderDetails(fetchedBooking.providerId);
+                setProvider(providerDetails); // <--- ATUALIZADO: Armazena os detalhes completos do provedor
                 setProviderRating(providerDetails.averageRating);
                 console.log("[SuccessScreen] fetchBookingAndProviderDetails - Detalhes do provedor carregados para rating.");
             }
@@ -213,12 +218,7 @@ export default function SuccessScreen() {
                     const pixResponse: PixChargeResponseDto = await createPixCharge(user.id, pixChargeData);
                     setPixChargeDetails(pixResponse);
                     console.log("[SuccessScreen] fetchBookingAndProviderDetails - Resposta PIX recebida:", pixResponse);
-                    Toast.show({
-                        type: 'success',
-                        text1: 'PIX Gerado com Sucesso!',
-                        text2: 'Use o código para finalizar o pagamento.',
-                        visibilityTime: 4000,
-                    });
+                    NotificationUIService.showSuccess('Use o código para finalizar o pagamento.', 'PIX Gerado com Sucesso!'); // Modified
                 } catch (pixErr: any) {
                     console.error("[SuccessScreen] fetchBookingAndProviderDetails - Erro ao gerar PIX (API):", pixErr.response?.data || pixErr.message, pixErr);
                     setPixGenerationError(pixErr.response?.data?.message || "Não foi possível gerar a cobrança PIX.");
@@ -287,6 +287,11 @@ export default function SuccessScreen() {
         return () => clearTimeout(timer);
     }, [fetchBookingAndProviderDetails, contentOpacity, contentTranslateY]);
 
+    // Adicione esta função para lidar com a tentativa de re-fetch
+    const handleRetry = useCallback(() => {
+        fetchBookingAndProviderDetails();
+    }, [fetchBookingAndProviderDetails]);
+
     const handleGoToBookings = useCallback(() => {
         router.replace({ pathname: '/(client)/bookings', params: { highlightNew: true } } as any);
     }, [router]);
@@ -297,11 +302,11 @@ export default function SuccessScreen() {
 
     const handleAddToCalendar = useCallback(async () => {
         if (!booking) {
-            Alert.alert("Erro", "Informações do agendamento não carregadas para adicionar ao calendário.");
+            NotificationUIService.showError("Informações do agendamento não carregadas para adicionar ao calendário.", "Erro"); // Modified
             return;
         }
         if (!booking.address) {
-            Alert.alert("Erro", "Endereço do agendamento não disponível para adicionar ao calendário.");
+            NotificationUIService.showError("Endereço do agendamento não disponível para adicionar ao calendário.", "Erro"); // Modified
             return;
         }
 
@@ -324,50 +329,39 @@ export default function SuccessScreen() {
                     endDate: endDate,
                     alarms: [{ relativeOffset: -60 }],
                 });
-                Toast.show({
-                    type: 'success',
-                    text1: 'Sucesso!',
-                    text2: 'Agendamento adicionado ao seu calendário.',
-                    visibilityTime: 4000,
-                });
+                NotificationUIService.showSuccess('Agendamento adicionado ao seu calendário.', 'Sucesso!'); // Modified
             } else {
-                Alert.alert("Permissão Negada", "Não foi possível adicionar ao calendário sem permissão. Por favor, conceda acesso nas configurações do seu dispositivo.");
+                NotificationUIService.showInfo("Não foi possível adicionar ao calendário sem permissão. Por favor, conceda acesso nas configurações do seu dispositivo.", "Permissão Negada"); // Modified
             }
         } catch (error) {
             console.error("Erro ao adicionar ao calendário:", error);
-            Toast.show({
-                type: 'error',
-                text1: 'Erro ao adicionar ao calendário',
-                text2: 'Por favor, tente novamente mais tarde.',
-                visibilityTime: 4000,
-            });
+            NotificationUIService.showError('Por favor, tente novamente mais tarde.', 'Erro ao adicionar ao calendário'); // Modified
         }
     }, [booking]);
 
     const handleContactProvider = useCallback(() => {
         if (booking?.providerId && booking?.providerFullName) {
-            router.push({ pathname: '/(client)/messages/[chatId]', params: { chatId: booking.providerId, recipientName: booking.providerFullName } } as any);
+            router.push({
+                pathname: '/(client)/messages/[chatId]',
+                params: {
+                    chatId: booking.providerId,
+                    recipientId: booking.providerId, // Usando o providerId como recipientId
+                    recipientName: booking.providerFullName,
+                    // AQUI ESTÁ A MUDANÇA: Passando o avatar real do provedor
+                    recipientAvatarUrl: provider?.avatarUrl,
+                },
+            } as any);
         } else {
-            Alert.alert("Erro", "ID ou nome do prestador não disponível para iniciar o chat.");
+            NotificationUIService.showError("ID ou nome do prestador não disponível para iniciar o chat.", "Erro"); // Modified
         }
-    }, [booking, router]);
+    }, [booking, provider, router]);
 
     const handleCopyPixQrCode = useCallback(() => {
         if (pixChargeDetails?.brCode) {
             Clipboard.setString(pixChargeDetails.brCode);
-            Toast.show({
-                type: 'info',
-                text1: 'Código PIX copiado!',
-                text2: 'Cole no seu aplicativo bancário para finalizar o pagamento.',
-                visibilityTime: 4000,
-            });
+            NotificationUIService.showInfo('Cole no seu aplicativo bancário para finalizar o pagamento.', 'Código PIX copiado!'); // Modified
         } else {
-            Toast.show({
-                type: 'error',
-                text1: 'Erro',
-                text2: 'Nenhum código PIX disponível para copiar.',
-                visibilityTime: 4000,
-            });
+            NotificationUIService.showError('Nenhum código PIX disponível para copiar.', 'Erro'); // Modified
         }
     }, [pixChargeDetails]);
 
@@ -389,12 +383,7 @@ export default function SuccessScreen() {
     // NOVO: Handler para "Dispensar" da MissionReminderCard
     const handleDismissMissionReminder = useCallback(() => {
         setShowMissionReminderCard(false);
-        Toast.show({
-            type: 'info',
-            text1: 'Lembrete dispensado',
-            text2: 'Você pode encontrá-lo na seção de Missões.',
-            visibilityTime: 3000,
-        });
+        NotificationUIService.showInfo('Você pode encontrá-lo na seção de Missões.', 'Lembrete dispensado'); // Modified
     }, []);
 
 
@@ -404,6 +393,7 @@ export default function SuccessScreen() {
                 isLoading={isLoading}
                 error={error || pixGenerationError}
                 headerPrimaryColor={headerPrimaryColor}
+                onRetryPress={handleRetry}
             />
         );
     }
@@ -465,6 +455,7 @@ export default function SuccessScreen() {
 
                         <BookingSummaryCard
                             booking={booking}
+                            provider={provider}
                             providerRating={providerRating}
                             pixChargeDetails={pixChargeDetails}
                             paymentMethod={paymentMethod}
@@ -508,7 +499,7 @@ export default function SuccessScreen() {
                             headerPrimaryColor={headerPrimaryColor}
                         />
 
-                   
+
                         <MainActionButtons
                             onGoToBookings={handleGoToBookings}
                             onGoHome={handleGoHome}

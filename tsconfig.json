@@ -26,7 +26,8 @@
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts",
-    "types/**/*.ts"
+    "types/**/*.ts",
+    "e2e/**/*.ts"
   ],
   "exclude": [
     "node_modules",

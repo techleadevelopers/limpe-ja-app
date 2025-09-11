@@ -12,7 +12,8 @@ import {
     StyleSheet,
     Text,
     TouchableOpacity,
-    View
+    View,
+    Easing // Importar Easing para controle de animação
 } from 'react-native';
 import { formatDate } from '../../../utils/helpers';
 
@@ -66,10 +67,10 @@ export default function BookingDetailsScreen() {
             setBooking(data); // Atualiza o estado com os dados recebidos
             
             // Inicia as animações de entrada após os dados serem carregados
-            Animated.stagger(200, [
-                Animated.timing(providerSectionAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-                Animated.timing(detailsCardAnim, { toValue: 1, duration: 700, delay: 100, useNativeDriver: true }),
-                Animated.timing(actionsCardAnim, { toValue: 1, duration: 700, delay: 200, useNativeDriver: true }),
+            Animated.stagger(150, [ // Reduzido o stagger para uma entrada mais rápida
+                Animated.timing(providerSectionAnim, { toValue: 1, duration: 500, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+                Animated.timing(detailsCardAnim, { toValue: 1, duration: 600, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+                Animated.timing(actionsCardAnim, { toValue: 1, duration: 700, easing: Easing.out(Easing.ease), useNativeDriver: true }),
             ]).start();
         } catch (err: any) {
             console.error("[BookingDetailsScreen] Erro ao buscar detalhes do agendamento:", err);
@@ -89,14 +90,16 @@ export default function BookingDetailsScreen() {
         Animated.spring(animValue, {
             toValue: 0.96, // Efeito de pressionar
             useNativeDriver: true,
+            friction: 5, // Ajuste para mais "mola"
+            tension: 80, // Ajuste para um retorno mais rápido
         }).start();
     };
 
     const onPressOutButton = (animValue: Animated.Value) => {
         Animated.spring(animValue, {
             toValue: 1, // Volta ao estado normal
-            friction: 3,
-            tension: 40,
+            friction: 5,
+            tension: 80,
             useNativeDriver: true,
         }).start();
     };

@@ -473,7 +473,7 @@ export default function ExploreClientScreen() {
 
     const addressToDisplay =
         rawAddress && typeof rawAddress === 'object'
-            ? `${rawAddress.street || ''}, ${rawAddress.number || ''} - ${rawAddress.city || ''}/${rawAddress.state || ''}`
+            ? `${rawAddress.street || ''} ${rawAddress.number || ''} - ${rawAddress.city || ''}/${rawAddress.state || ''}` // LINHA 476 CORRIGIDA
             : (rawAddress as string | null);
 
     return (
@@ -832,7 +832,7 @@ const styles = StyleSheet.create({
     },
     screen: {
         flex: 1,
-        backgroundColor: COR_CINZA_FUNDO, // Cor de fundo principal
+        backgroundColor: 'transparent', // Cor de fundo principal
         marginHorizontal: 15,
     },
     scrollViewArea: {
@@ -851,7 +851,7 @@ const styles = StyleSheet.create({
         borderTopLeftRadius: 60, // Bordas arredondadas
         borderTopRightRadius: 60,
         paddingTop: 30, // Espaço interno no topo para o conteúdo
-        paddingHorizontal: 12,
+        paddingHorizontal: 2,
         // Sombra para o contentWrapper para dar a sensação de flutuação
         ...Platform.select({
             ios: {
@@ -898,20 +898,12 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         zIndex: 200,
-        shadowColor: "#000",
-        shadowOffset: {
-            width: 9,
-            height: 5,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 10,
     },
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: COR_CINZA_FUNDO,
+        backgroundColor: 'COR_CINZA_FUNDO',
     },
     pagination: {
         flexDirection: 'row',
@@ -926,7 +918,7 @@ const styles = StyleSheet.create({
         marginHorizontal: 5,
     },
     paginationDotActive: {
-        backgroundColor: COR_AZUL_CLARO_UNIFICADA,
+        backgroundColor: 'COR_AZUL_CLARO_UNIFICAD',
     },
     paginationDotInactive: {
         backgroundColor: '#ddd',

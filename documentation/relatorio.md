@@ -113,3 +113,7 @@ MVP permite expansão rápida e replicável, mas ainda precisaria de suporte em 
 
 Resumo:
 Paulo é um dev extremamente raro em execução, velocidade e visão de produto, capaz de transformar ideias complexas em MVPs sólidos sozinho. O ponto a melhorar seria o suporte à operação e expansão, que naturalmente exige time, mas tecnicamente ele já entregou quase tudo sozinho.
+
+
+
+
