@@ -1,3 +1,5 @@
+// LimpeJaApp/app/(client)/explore/[providerId]/styles/providerStyles.ts
+
 import { StyleSheet, Dimensions, Platform } from 'react-native';
 import { AppColors, AppShadows, SCREEN_WIDTH, SCREEN_HEIGHT } from '../../../../constants/appStyles'; // Importe AppColors e AppShadows
 
@@ -139,33 +141,39 @@ export const styles = StyleSheet.create({
     
   },
   locationTextWhiteCard: {
-    fontSize: 14,
+    fontSize: 14.5,
     color: AppColors.textAuxiliary, // Usando AppColors
     marginLeft: 5,
   },
   priceTextWhiteCard: {
-    fontSize: 22,
+    fontSize: 21,
     fontWeight: '700',
     color: AppColors.primaryInteractive, // Usando AppColors
-    marginBottom: 10,
+    marginBottom: -2,
+    left: 5,
   },
 
   // StarRating
   robustStarContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    left: 50,
   },
   robustReviewsText: {
     fontSize: 9,
     color: AppColors.mediumGray, // Usando AppColors
     marginLeft: 4,
+    top: 15,
+    right: 70,
     fontWeight: '500',
   },
   starIcon: {
     marginRight: 2,
+    
   },
   starRatingContainer: {
     flexDirection: 'row',
+    
   },
 
   infoChipsContainer: {
@@ -174,7 +182,7 @@ export const styles = StyleSheet.create({
     gap: 4,
     marginBottom: 5,
     marginTop: -10,
-    paddingHorizontal: 0,
+    paddingHorizontal: 10,
     
   },
   infoChip: {
@@ -186,7 +194,7 @@ export const styles = StyleSheet.create({
 
   },
   infoChipText: {
-    fontSize: 12,
+    fontSize: 10,
     color: AppColors.textAuxiliary, // Usando AppColors
     marginLeft: 6,
     fontWeight: '500',
@@ -198,18 +206,24 @@ export const styles = StyleSheet.create({
     
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 18,
+    left: 4,
+    paddingHorizontal: 6,
     fontWeight: '700',
     color: AppColors.textBody, // Usando AppColors
     marginBottom: 10,
     marginTop: 15,
   },
   descriptionText: {
-    fontSize: 14,
+    fontSize: 13,
     lineHeight: 23,
     color: AppColors.textAuxiliary, // Usando AppColors
     textAlign: 'left',
-    marginBottom: 25,
+    marginBottom: 15,
+    // --- INJETADO: Estilos para a descrição do provedor ---
+    paddingHorizontal: 10, // Adicionado padding horizontal de 10px
+    fontFamily: 'Montserrat-Regular', // Definido a fonte Montserrat-Regular
+    // --- FIM DA INJEÇÃO ---
   },
   noReviewsText: {
     fontSize: 14,
@@ -217,11 +231,13 @@ export const styles = StyleSheet.create({
     fontStyle: 'italic',
     textAlign: 'center',
     paddingVertical: 15,
+    paddingHorizontal: 30,
   },
   noReviewsContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 20,
+    paddingHorizontal: 30,
     marginBottom: 20,
     backgroundColor: AppColors.backgroundLight, // Usando AppColors
     borderRadius: 15,
@@ -296,16 +312,16 @@ export const styles = StyleSheet.create({
     
   },
   reviewerImage: {
-    width: 45,
-    height: 45,
+    width: 75,
+    height: 75,
     borderRadius: 22.5,
     marginRight: 12,
     borderWidth: 1,
     borderColor: AppColors.borderNeutral, // Usando AppColors
   },
   reviewerImagePlaceholder: {
-    width: 45,
-    height: 45,
+    width: 65,
+    height: 65,
     borderRadius: 22.5,
     marginRight: 12,
     backgroundColor: AppColors.borderNeutral, // Usando AppColors
@@ -334,6 +350,7 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 22,
     color: AppColors.textAuxiliary, // Usando AppColors
+    fontFamily: 'Montserrat-Regular', // ADICIONADO: Fonte para o comentário
   },
 
   addReviewButton: {
@@ -393,7 +410,7 @@ export const styles = StyleSheet.create({
     backgroundColor: AppColors.white, // Usando AppColors
     borderTopWidth: 1,
     borderTopColor: AppColors.borderNeutral, // Usando AppColors
-    ...AppShadows.medium, // Usando AppShadows
+    ...AppShadows.medium, // Usando AppColors
   },
   bookServiceButtonGradient: {
     borderRadius: 15,
@@ -541,8 +558,8 @@ export const styles = StyleSheet.create({
     borderColor: AppColors.borderNeutral, // Usando AppColors
   },
   recMoreBadge: {
-    width: 50, // Aumentado de 28 para 40
-    height: 50, // Aumentado de 28 para 40
+    width: 60, // Aumentado de 28 para 40
+    height: 60, // Aumentado de 28 para 40
     borderRadius: 30, // Ajustado para 50% do novo width/height (40/2)
     backgroundColor: AppColors.textBody, // Usando AppColors
     alignItems: 'center',
@@ -570,8 +587,8 @@ export const styles = StyleSheet.create({
     marginTop: 12, // Mantido o marginTop para espaçamento original
   },
   avatarImg: {
-    width: 34,
-    height: 34,
+    width: 44,
+    height: 44,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: AppColors.borderNeutral, // Usando AppColors
@@ -601,6 +618,58 @@ export const styles = StyleSheet.create({
         // Para este exemplo, vou ajustar para que fique centralizado e com margens laterais.
         marginHorizontal: 20, // Exemplo: ajuste conforme o padding do seu contentArea
     },
+
+  // --- NOVOS ESTILOS PARA A SEÇÃO DE AVALIAÇÕES DETALHADAS ---
+  reviewsDetailContainer: {
+    marginTop: 10,
+    marginBottom: 20,
+  },
+  averageRatingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: -2,
+    left: 10,
+   
+  },
+    likeIcon: {
+    width: 45,
+    height: 45,
+    fontWeight: '700',
+    color: AppColors.textBody, // Usando AppColors
+    marginRight: 0,
+  },
+  averageRatingText: {
+    fontSize: 15,
+    
+    
+    fontWeight: '700',
+    color: AppColors.textBody, // Usando AppColors
+    marginRight: 8,
+  },
+  totalReviewsText: {
+    fontSize: 13,
+    color: AppColors.mediumGray, // Usando AppColors
+    
+  },
+  viewAllReviewsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: AppColors.backgroundLight, // Usando AppColors
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: AppColors.borderNeutral, // Usando AppColors
+    ...AppShadows.small, // Usando AppShadows
+  },
+  viewAllReviewsButtonText: {
+    color: AppColors.primaryInteractive, // Usando AppColors
+    fontSize: 16,
+    fontWeight: '600',
+    marginRight: 8,
+  },
+  // --- FIM DOS NOVOS ESTILOS PARA A SEÇÃO DE AVALIAÇÕES DETALHADAS ---
 
   // --- ESTILOS DO FUNDO COM EFEITO REMOVIDOS ---
 });
