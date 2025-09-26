@@ -8,11 +8,13 @@ import { UploadResponseDto } from '../types/backend/upload';
 
 export type FilePurpose = 'avatar' | 'documentFront' | 'documentBack' | 'selfieWithDocument';
 
-// const API_BASE_URL = Constants.expoConfig?.extra?.backendApiUrl as string;
-const API_BASE_URL = 'http://localhost:3000'; 
+// A API_BASE_URL deve ser carregada de Constants para consistência em produção
+const API_BASE_URL = Constants.expoConfig?.extra?.backendApiUrl as string;
 
+// Validação para garantir que API_BASE_URL está definida
 if (!API_BASE_URL) {
   console.error('[uploadService] Erro crítico: backendApiUrl não está definido!');
+  // Em um ambiente de produção, você pode querer lançar um erro ou ter um fallback mais robusto
 }
 
 export const uploadImageToCloud = async (uri: string, filePurpose: FilePurpose): Promise<UploadResponseDto> => {
