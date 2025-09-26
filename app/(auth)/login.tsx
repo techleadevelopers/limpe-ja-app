@@ -17,7 +17,7 @@ import {
 
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../contexts/AuthContext';
-import { UserRole } from '../../types/backend/auth'; // [cite: documentation.md]
+import { UserRole } from '../../types/backend/auth';
 
 import AnimatedReanimated, {
     Easing,
@@ -29,12 +29,9 @@ import AnimatedReanimated, {
     withTiming,
 } from 'react-native-reanimated';
 
-// AuthService não é mais diretamente usado para checkPhone/requestOtp na UI
-// import AuthService from '../../services/authService'; // [cite: authService.ts]
-
 import Toast from 'react-native-toast-message';
 
-const LOGO_IMAGE = require('../../assets/images/logo2.png'); // [cite: client-register.tsx]
+const LOGO_IMAGE = require('../../assets/images/logo2.png');
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
@@ -44,12 +41,9 @@ import { InputWithIcon } from '../../components/auth/components/InputWithIcon';
 
 
 export default function LoginScreen() {
-    // REMOVIDOS: phoneNumber, otpCode, timer, loginFlowStep
-    // Agora, os estados são apenas para email e senha
-    const [email, setEmail] = useState(''); // Estado para o email
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     
-    // Estados de UI e feedback
     const [loading, setLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -59,11 +53,10 @@ export default function LoginScreen() {
     const mainElementsOpacity = useRef(new Animated.Value(0)).current;
     const mainElementsTranslateY = useRef(new Animated.Value(18)).current;
 
-    // Shared values para as animações do logo
     const logoRotateY = useSharedValue(0);
     const logoPulseScale = useSharedValue(1);
-    const logoGlow = useSharedValue(0); // NOVO: Para o efeito de brilho
-    const logoFloatY = useSharedValue(0); // NOVO: Para a flutuação vertical
+    const logoGlow = useSharedValue(0);
+    const logoFloatY = useSharedValue(0);
 
     useEffect(() => {
         const startLogoLoopAnimations = () => {
@@ -77,13 +70,11 @@ export default function LoginScreen() {
                 -1,
                 true
             );
-            // NOVO: Animação de brilho
             logoGlow.value = withRepeat(
                 withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
                 -1,
                 true
             );
-            // NOVO: Animação de flutuação
             logoFloatY.value = withRepeat(
                 withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
                 -1,
@@ -124,34 +115,29 @@ export default function LoginScreen() {
             Extrapolate.CLAMP
         );
 
-        // NOVO: Interpolação para a flutuação vertical
         const floatY = interpolate(
             logoFloatY.value,
             [0, 0.5, 1],
-            [0, -6, 0], // sobe e desce suavemente
+            [0, -6, 0],
             Extrapolate.CLAMP
         );
 
-        // NOVO: Interpolação para a opacidade do brilho
         const glowOpacity = interpolate(logoGlow.value, [0, 1], [0.4, 0.9]);
 
         return {
             transform: [
                 { scale: logoPulseScale.value },
                 { rotateY: `${rotation}deg` },
-                { translateY: floatY } // NOVO: Aplica a flutuação
+                { translateY: floatY }
             ],
-            // NOVO: Propriedades de sombra para o efeito de brilho
-            shadowColor: '#40C0F0',
+            // Apenas shadowOpacity é animada aqui.
+            // As outras propriedades de sombra (shadowColor, shadowRadius, shadowOffset)
+            // serão definidas no styles.logo estaticamente.
             shadowOpacity: glowOpacity,
-            shadowRadius: 20,
-            shadowOffset: { width: 0, height: 0 },
         };
     });
 
-    // FUNÇÃO: handleLogin (com a nova lógica de Toast)
     const handleLogin = async () => {
-        // Validação básica para email e senha
         if (!email.trim() || !password.trim()) {
             setErrorMessage('Por favor, preencha seu e-mail e senha.');
             return;
@@ -162,31 +148,25 @@ export default function LoginScreen() {
 
         try {
             console.log('[LoginScreen] handleLogin: Tentando login com e-mail:', email);
-            // Chama o método login do AuthContext com email e senha
-            await login({ email: email.trim(), password: password }); // [cite: authService.ts]
+            await login({ email: email.trim(), password: password });
 
-            // REMOVIDO: Alert.alert('Sucesso!', 'Login realizado com sucesso!');
-            // NOVO: Exibe o toast de sucesso
             Toast.show({
-                type: 'loginSuccess', // tipo customizado
+                type: 'loginSuccess',
                 text1: 'Login realizado!',
                 text2: 'Bem-vindo de volta 👋',
                 visibilityTime: 2500,
                 topOffset: 60
             });
             
-            // O redirecionamento para usuários existentes será tratado pelo useEffect de useAuth
-            // no _layout.tsx principal do app, que verifica `isAuthenticated` e `user.role`.
         } catch (error: any) {
             console.error('Erro ao fazer login:', error.message, error);
             const errorMessageFromApi = error.response?.data?.message || 'Credenciais inválidas.';
             setErrorMessage(errorMessageFromApi);
 
-            // NOVO: Exibe o toast de erro
             Toast.show({
                 type: 'error',
                 text1: 'Erro no login',
-                text2: errorMessageFromApi, // Exibe a mensagem de erro da API ou uma mensagem padrão
+                text2: errorMessageFromApi,
                 visibilityTime: 3000,
                 topOffset: 60
             });
@@ -194,9 +174,6 @@ export default function LoginScreen() {
             setLoading(false);
         }
     };
-
-    // REMOVIDOS: handlePhoneSubmit, handleOtpSubmit, handlePasswordSubmit, handleResendOtp
-    // REMOVIDA: formatPhoneNumber (não é mais necessária para o input aqui)
 
     if (authIsLoading || (!authIsLoading && isAuthenticated)) {
         return (
@@ -237,21 +214,18 @@ export default function LoginScreen() {
                     <View style={styles.logoContainer}>
                         <AnimatedReanimated.Image
                             source={LOGO_IMAGE}
-                            style={[styles.logo, animatedLogoStyle]}
+                            style={[styles.logo, animatedLogoStyle]} // Aplica ambos os estilos
                             resizeMode="contain"
                         />
                     </View>
 
-                    {/* Subtítulo ajustado para login por email/senha */}
                     <Text style={styles.welcomeSubtitle}>
                         Entrar com seu e-mail e senha
                     </Text>
 
                     <>
-                        {/* Input para E-mail (substitui o input de telefone) */}
-                        {/* Mantém a mesma estrutura de InputWithIcon e estilos */}
                         <InputWithIcon
-                            iconName="mail-outline" // Ícone de e-mail
+                            iconName="mail-outline"
                             placeholder="Seu E-mail"
                             value={email}
                             onChangeText={(text: string) => {
@@ -264,17 +238,15 @@ export default function LoginScreen() {
                             autoComplete="email"
                         />
 
-                        {/* Input para Senha (mantido como estava) */}
-                        {/* Mantém a mesma estrutura de InputWithIcon e estilos */}
                         <InputWithIcon
-                            iconName="lock-closed-outline" // Ícone de senha
+                            iconName="lock-closed-outline"
                             placeholder="Sua Senha"
                             value={password}
                             onChangeText={(text: string) => {
                                 setPassword(text);
                                 if (errorMessage) setErrorMessage(null);
                             }}
-                            secureTextEntry={true} // Mantém como campo de senha
+                            secureTextEntry={true}
                         />
                         
                         <AnimatedErrorMessage message={errorMessage} isVisible={!!errorMessage} centered={true} />
@@ -282,7 +254,7 @@ export default function LoginScreen() {
                         <Animated.View style={{ transform: [{ scale: signInButtonAnims.scaleAnim }] }}>
                             <TouchableOpacity
                                 style={[styles.signInButton, loading && styles.buttonDisabled]}
-                                onPress={handleLogin} // Chama a nova função de login
+                                onPress={handleLogin}
                                 onPressIn={signInButtonAnims.onPressIn}
                                 onPressOut={signInButtonAnims.onPressOut}
                                 disabled={loading}
@@ -291,14 +263,11 @@ export default function LoginScreen() {
                                     <ActivityIndicator color="#FFFFFF" />
                                 ) : (
                                     <Text style={styles.signInButtonText}>
-                                        Entrar {/* Texto fixo para o botão de login */}
+                                        Entrar
                                     </Text>
                                 )}
                             </TouchableOpacity>
                         </Animated.View>
-
-                        {/* REMOVIDA: Seção de OTP Actions (Voltar, Reenviar Código) */}
-                        {/* Esta View e seus conteúdos foram removidos porque não há mais fluxo de OTP */}
                     </>
 
                     <View style={styles.signUpContainer}>
@@ -350,6 +319,11 @@ const styles = StyleSheet.create({
         width: 205,
         height: 310,
         resizeMode: 'contain',
+        // Adicione as propriedades de sombra estáticas aqui
+        shadowColor: '#40C0F0',
+        shadowRadius: 20,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.8, // Opacidade base para a sombra
     },
     welcomeSubtitle: {
         fontSize: 13.5,
@@ -469,8 +443,6 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#4A5568',
     },
-    // REMOVIDOS: estilos otpInput, otpActions, backButton, resendButton, resendButtonDisabled, resendButtonText, resendButtonTextDisabled
-    // Mantendo os estilos não utilizados aqui para não quebrar o CSS se outras partes o usarem.
     otpInput: {
         letterSpacing: 8,
         fontSize: 18,
