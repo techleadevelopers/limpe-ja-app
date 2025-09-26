@@ -42,4 +42,9 @@ export class CreateNotificationDto {
   @IsOptional()
   @IsObject()
   actionButtons?: object; // NEW: Added actionButtons (using object for flexibility)
+
+  @ApiPropertyOptional({ description: 'Categoria da notificação (ex: booking, payment, dispute)', example: 'booking' })
+  @IsOptional()
+  @IsString()
+  category?: string; // NEW: Added category for better filtering/UI handling
 }
