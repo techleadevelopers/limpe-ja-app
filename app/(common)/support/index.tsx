@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supportService } from '../../../services/supportService';
-import { SupportTicket } from '../../../types/backend/support';
+import { SupportTicket } from '../../../types/backend/support'; // <<-- Este é o arquivo onde TicketStatus é definido
 
 /**
  * SupportTicketsScreen component displays a list of support tickets for the current user.
@@ -43,10 +43,12 @@ export default function SupportTicketsScreen() {
      */
     const getStatusColor = (status: SupportTicket['status']) => {
         switch (status) {
-            case 'open': return '#4CAF50'; // Green for open tickets
-            case 'pending': return '#FFC107'; // Yellow for pending tickets
-            case 'closed': return '#6C757D'; // Gray for closed tickets
-            default: return '#6C757D';
+            case 'OPEN': return '#4CAF50'; // Green for open tickets (AGORA EM MAIÚSCULAS)
+            case 'IN_PROGRESS': return '#FFC107'; // Yellow for in-progress tickets (ASSUMINDO QUE 'pending' É 'IN_PROGRESS')
+            case 'CLOSED': return '#6C757D'; // Gray for closed tickets (AGORA EM MAIÚSCULAS)
+            case 'RESOLVED': return '#28A745'; // Adicionado para RESOLVED (cor verde diferente)
+            case 'CANCELLED': return '#DC3545'; // Adicionado para CANCELLED (cor vermelha)
+            default: return '#6C757D'; // Default para outros estados, como RESOLVED ou CANCELLED se não forem tratados acima
         }
     };
 
@@ -116,9 +118,11 @@ export default function SupportTicketsScreen() {
                                     <Text style={styles.statusText}>{ticket.status.toUpperCase()}</Text>
                                 </View>
                             </View>
-                            {ticket.lastMessagePreview && (
+                            {/* ticket.lastMessagePreview não está definido em SupportTicket que você forneceu,
+                                mas se existir no seu tipo real, descomente. */}
+                            {/* {ticket.lastMessagePreview && (
                                 <Text style={styles.ticketLastMessage}>{ticket.lastMessagePreview}</Text>
-                            )}
+                            )} */}
                             <Text style={styles.ticketDate}>
                                 Última atualização: {new Date(ticket.updatedAt).toLocaleDateString('pt-BR')}
                             </Text>
