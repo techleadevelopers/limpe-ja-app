@@ -24,7 +24,7 @@ import {
   ApiResponse,
   ApiTags,
   ApiBody,
-  ApiParam, // <-- ADICIONE ESTA LINHA
+  ApiParam,
 } from '@nestjs/swagger';
 import { Request } from 'express';
 import { NotificationEntity } from './entities/notification.entity';
@@ -48,7 +48,6 @@ export class NotificationsController {
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido (requer função de ADMIN).' })
   async create(@Body() createNotificationDto: CreateNotificationDto): Promise<NotificationEntity> {
-    // FIX: Pass the DTO directly as the service expects a single DTO argument
     const createdNotification = await this.notificationsService.createNotification(
       createNotificationDto,
     );
