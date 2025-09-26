@@ -13,7 +13,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Easing,
-  AccessibilityInfo,
+  AccessibilityInfo, // Importar AccessibilityInfo
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker'; // Certifique-se de que esta importação está correta
 import { Stack, useRouter } from 'expo-router';
@@ -31,7 +31,7 @@ import {
 import { ProviderServiceOffering as ProviderServiceType } from '../../../types/backend/provider-service';
 import { CreateProviderServiceData } from '../../../types/backend/providers';
 // ADICIONE ESTA LINHA PARA IMPORTAR DO NOVO ARQUIVO:
-import { getServiceCategories } from '../../../services/commonServiceCatalog'; 
+import { getServiceCategories } from '../../../services/commonServiceCatalog';
 
 // ===== Design Tokens (Premium UI) =====
 const Colors = {
@@ -67,6 +67,17 @@ const Spacing = {
 // ===== Helpers =====
 const easeOut = Easing.out(Easing.ease);
 
+/**
+ * Helper para aplicar toFixed() de forma segura, evitando erros em valores não numéricos.
+ * Retorna uma string formatada ou uma string vazia/padrão se o valor não for um número válido.
+ */
+function safeToFixed(value: any, digits: number = 2, defaultValue: string = ''): string {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value.toFixed(digits);
+  }
+  return defaultValue;
+}
+
 function normalizeCurrencyInput(v: string) {
   const digits = v.replace(/[^\d]/g, '');
   if (!digits) return { raw: '', display: '' };
@@ -99,6 +110,29 @@ function parseDurationToMinutes(input: string | undefined) {
   return anyNum ? parseInt(anyNum[0], 10) : undefined;
 }
 
+// Hook para verificar se o movimento reduzido está ativado
+function useReducedMotion() {
+  const [isReducedMotionEnabled, setIsReducedMotionEnabled] = useState(false);
+
+  useEffect(() => {
+    const updateReducedMotion = async () => {
+      const enabled = await AccessibilityInfo.isReduceMotionEnabled();
+      setIsReducedMotionEnabled(enabled);
+    };
+
+    updateReducedMotion();
+
+    const subscription = AccessibilityInfo.addEventListener(
+      'reduceMotionChanged',
+      setIsReducedMotionEnabled
+    );
+
+    return () => subscription.remove();
+  }, []);
+
+  return isReducedMotionEnabled;
+}
+
 // ===== Animated Item =====
 interface ServiceOffering {
   id: string;
@@ -117,30 +151,38 @@ const AnimatedServiceItem: React.FC<{
   onEdit: (service: ServiceOffering) => void;
   onDelete: (serviceId: string) => void;
   delay: number;
-}> = ({ item, onEdit, onDelete, delay }) => {
+  isReducedMotionEnabled: boolean; // Adicionar prop
+}> = ({ item, onEdit, onDelete, delay, isReducedMotionEnabled }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
+    const animationDuration = isReducedMotionEnabled ? 0 : 420; // Desabilitar animação se movimento reduzido estiver ativado
+    const animationDelay = isReducedMotionEnabled ? 0 : delay;
+
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 420, delay, easing: easeOut, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 420, delay, easing: easeOut, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: animationDuration, delay: animationDelay, easing: easeOut, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: animationDuration, delay: animationDelay, easing: easeOut, useNativeDriver: true }),
     ]).start();
-  }, [fadeAnim, slideAnim, delay]);
+  }, [fadeAnim, slideAnim, delay, isReducedMotionEnabled]);
 
   const onPressInItem = () => {
-    Animated.spring(scaleAnim, { toValue: 0.98, useNativeDriver: true }).start();
+    if (!isReducedMotionEnabled) { // Apenas animar se movimento reduzido não estiver ativado
+      Animated.spring(scaleAnim, { toValue: 0.98, useNativeDriver: true }).start();
+    }
   };
 
   const onPressOutItem = () => {
-    Animated.spring(scaleAnim, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start();
+    if (!isReducedMotionEnabled) { // Apenas animar se movimento reduzido não estiver ativado
+      Animated.spring(scaleAnim, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start();
+    }
   };
 
   const confirmDelete = () => {
     Alert.alert(
       'Excluir Serviço',
-      `Tem certeza que deseja excluir "${item.name}"?`,
+      `Tem certeza que deseja excluir "${item.name}"? Esta ação não pode ser desfeita.`,
       [
         { text: 'Cancelar', style: 'cancel' },
         { text: 'Excluir', style: 'destructive', onPress: () => onDelete(item.id) },
@@ -152,16 +194,24 @@ const AnimatedServiceItem: React.FC<{
   const formatPriceDisplay = (service: ServiceOffering) => {
     switch (service.pricingType) {
       case PricingType.FIXED_PRICE:
-        return `R$ ${service.price.toFixed(2).replace('.', ',')}`;
+        // Usando safeToFixed
+        const fixedPrice = safeToFixed(service.price, 2);
+        return fixedPrice ? `R$ ${fixedPrice.replace('.', ',')}` : 'Preço a definir';
       case PricingType.HOURLY:
-        return `R$ ${service.price.toFixed(2).replace('.', ',')}/hora`;
+        // Usando safeToFixed
+        const hourlyPrice = safeToFixed(service.price, 2);
+        return hourlyPrice ? `R$ ${hourlyPrice.replace('.', ',')}/hora` : 'Preço a definir';
       case PricingType.BY_SIZE: {
         let sizePrice = '';
-        if (service.pricePerSquareMeter) {
-          sizePrice += `R$ ${service.pricePerSquareMeter.toFixed(2).replace('.', ',')}/m²`;
+        // Usando safeToFixed
+        const pricePerSquareMeterFormatted = safeToFixed(service.pricePerSquareMeter, 2);
+        if (pricePerSquareMeterFormatted) {
+          sizePrice += `R$ ${pricePerSquareMeterFormatted.replace('.', ',')}/m²`;
         }
-        if (service.pricePerRoom) {
-          sizePrice += (sizePrice ? ' · ' : '') + `R$ ${service.pricePerRoom.toFixed(2).replace('.', ',')}/cômodo`;
+        // Usando safeToFixed
+        const pricePerRoomFormatted = safeToFixed(service.pricePerRoom, 2);
+        if (pricePerRoomFormatted) {
+          sizePrice += (sizePrice ? ' · ' : '') + `R$ ${pricePerRoomFormatted.replace('.', ',')}/cômodo`;
         }
         return sizePrice || 'A definir';
       }
@@ -176,8 +226,7 @@ const AnimatedServiceItem: React.FC<{
         styles.serviceItemWrapper,
         { opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] },
       ]}
-      accessibilityRole="summary"
-      accessibilityLabel={`Serviço ${item.name}. Toque para ações.`}
+      accessibilityLabel={`Serviço ${item.name}. Descrição: ${item.description}. Preço: ${formatPriceDisplay(item)}. Toque para editar ou excluir.`}
     >
       <TouchableOpacity
         onPressIn={onPressInItem}
@@ -208,7 +257,7 @@ const AnimatedServiceItem: React.FC<{
             accessibilityRole="button"
             accessibilityLabel={`Editar ${item.name}`}
           >
-            <Ionicons name="create-outline" size={22} color={Colors.primary} />
+            <Ionicons name="create-outline" size={22} color={Colors.primary} accessibilityHidden={true} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={confirmDelete}
@@ -217,7 +266,7 @@ const AnimatedServiceItem: React.FC<{
             accessibilityRole="button"
             accessibilityLabel={`Excluir ${item.name}`}
           >
-            <Ionicons name="trash-outline" size={22} color={Colors.danger} />
+            <Ionicons name="trash-outline" size={22} color={Colors.danger} accessibilityHidden={true} />
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -234,13 +283,9 @@ export default function EditProviderServicesScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState<ServiceOffering | null>(null);
 
-  // Novos estados para o catálogo de serviços base e o serviço base selecionado
   const [availableBaseServices, setAvailableBaseServices] = useState<Service[]>([]);
-  // FIX: Change null to undefined for selectedBaseServiceId to match Picker's expected type
   const [selectedBaseServiceId, setSelectedBaseServiceId] = useState<string | undefined>(undefined);
 
-  // Remova serviceName, pois ele será derivado do Picker
-  // const [serviceName, setServiceName] = useState('');
   const [serviceDesc, setServiceDesc] = useState('');
   const [servicePrice, setServicePrice] = useState(''); // raw numeric string ('.' as decimal)
   const [servicePriceDisplay, setServicePriceDisplay] = useState(''); // masked BRL for UX
@@ -260,42 +305,44 @@ export default function EditProviderServicesScreen() {
   const saveButtonAnim = useRef(new Animated.Value(0)).current;
   const feedbackAnim = useRef(new Animated.Value(0)).current;
 
+  const isReducedMotionEnabled = useReducedMotion(); // Usar o hook de movimento reduzido
+
   useEffect(() => {
-    Animated.timing(headerAnim, { toValue: 1, duration: 520, easing: easeOut, useNativeDriver: true }).start();
+    const animationDuration = isReducedMotionEnabled ? 0 : 520; // Desabilitar animação se movimento reduzido estiver ativado
+    Animated.timing(headerAnim, { toValue: 1, duration: animationDuration, easing: easeOut, useNativeDriver: true }).start();
 
     const fetchAllData = async () => {
       if (!user?.providerDetails?.id) {
         Alert.alert('Erro', 'ID do provedor não encontrado. Faça login novamente.');
         setIsLoading(false);
-        Animated.timing(feedbackAnim, { toValue: 1, duration: 420, easing: easeOut, useNativeDriver: true }).start();
+        Animated.timing(feedbackAnim, { toValue: 1, duration: animationDuration, easing: easeOut, useNativeDriver: true }).start();
         return;
       }
       try {
-        // 1. Buscar o catálogo de serviços base do backend usando a nova importação
-        const fetchedBaseServices = await getServiceCategories(); // <-- AQUI ESTÁ A MUDANÇA
+        const fetchedBaseServices = await getServiceCategories();
         setAvailableBaseServices(fetchedBaseServices);
 
-        // 2. Buscar os serviços já oferecidos pelo provedor
         const fetchedProviderServices = await getProviderServicesOffered(user.providerDetails.id);
         const mapped: ServiceOffering[] = fetchedProviderServices.map((s: ProviderServiceType) => ({
           id: s.id,
           name: s.service.name,
-          serviceId: s.service.id, // Armazene o ID do serviço base aqui
+          serviceId: s.service.id,
           description: s.description || '',
-          price: parseFloat(s.price.toString()),
+          // Garantir que price seja um número finito ou 0 para evitar toFixed em undefined/null
+          price: typeof s.price === 'number' && Number.isFinite(s.price) ? parseFloat(s.price.toString()) : 0,
           duration: s.durationMinutes ? `${s.durationMinutes} minutos` : undefined,
           pricingType: s.pricingType,
-          pricePerSquareMeter: s.pricePerSquareMeter ? parseFloat(s.pricePerSquareMeter.toString()) : undefined,
-          pricePerRoom: s.pricePerRoom ? parseFloat(s.pricePerRoom.toString()) : undefined,
+          // Garantir que pricePerSquareMeter seja um número finito ou undefined
+          pricePerSquareMeter: typeof s.pricePerSquareMeter === 'number' && Number.isFinite(s.pricePerSquareMeter) ? parseFloat(s.pricePerSquareMeter.toString()) : undefined,
+          // Garantir que pricePerRoom seja um número finito ou undefined
+          pricePerRoom: typeof s.pricePerRoom === 'number' && Number.isFinite(s.pricePerRoom) ? parseFloat(s.pricePerRoom.toString()) : undefined,
         }));
         setServices(mapped.sort((a, b) => a.name.localeCompare(b.name)));
 
-        // 3. Definir o serviço base selecionado inicial (primeiro da lista ou null)
         if (fetchedBaseServices.length > 0) {
-          // FIX: Use undefined instead of null for initial selectedBaseServiceId
           setSelectedBaseServiceId(fetchedBaseServices[0].id);
         } else {
-          setSelectedBaseServiceId(undefined); // Ensure it's undefined if no services
+          setSelectedBaseServiceId(undefined);
         }
 
       } catch (error: any) {
@@ -303,17 +350,18 @@ export default function EditProviderServicesScreen() {
         Alert.alert('Erro', error?.message || 'Não foi possível carregar seus serviços ou o catálogo de serviços.');
       } finally {
         setIsLoading(false);
-        Animated.stagger(140, [
-          Animated.timing(formAnim, { toValue: 1, duration: 560, easing: easeOut, useNativeDriver: true }),
-          Animated.timing(listHeaderAnim, { toValue: 1, duration: 560, easing: easeOut, useNativeDriver: true }),
-          Animated.timing(saveButtonAnim, { toValue: 1, duration: 560, easing: easeOut, useNativeDriver: true }),
+        const staggerDelay = isReducedMotionEnabled ? 0 : 140;
+        Animated.stagger(staggerDelay, [
+          Animated.timing(formAnim, { toValue: 1, duration: animationDuration, easing: easeOut, useNativeDriver: true }),
+          Animated.timing(listHeaderAnim, { toValue: 1, duration: animationDuration, easing: easeOut, useNativeDriver: true }),
+          Animated.timing(saveButtonAnim, { toValue: 1, duration: animationDuration, easing: easeOut, useNativeDriver: true }),
         ]).start();
-        Animated.timing(feedbackAnim, { toValue: 1, duration: 420, easing: easeOut, useNativeDriver: true }).start();
+        Animated.timing(feedbackAnim, { toValue: 1, duration: animationDuration, easing: easeOut, useNativeDriver: true }).start();
       }
     };
 
     fetchAllData();
-  }, [user, headerAnim, formAnim, listHeaderAnim, saveButtonAnim, feedbackAnim]);
+  }, [user, headerAnim, formAnim, listHeaderAnim, saveButtonAnim, feedbackAnim, isReducedMotionEnabled]);
 
   // ===== Handlers =====
   const handleSaveServices = () => {
@@ -322,9 +370,7 @@ export default function EditProviderServicesScreen() {
 
   const resetForm = () => {
     setIsEditing(null);
-    // setServiceName(''); // Remova esta linha
-    // FIX: Use undefined for initial selectedBaseServiceId
-    setSelectedBaseServiceId(availableBaseServices.length > 0 ? availableBaseServices[0].id : undefined); // Resetar para o primeiro serviço base disponível
+    setSelectedBaseServiceId(availableBaseServices.length > 0 ? availableBaseServices[0].id : undefined);
     setServiceDesc('');
     setServicePrice('');
     setServicePriceDisplay('');
@@ -343,7 +389,6 @@ export default function EditProviderServicesScreen() {
     setterDisplay(display);
   };
 
-  // FIX: Dedicated handlers for onChangeText to provide clearer type boundaries
   const handlePricePerSquareMeterChange = (text: string) => {
     handlePriceChange(text, setPricePerSquareMeter, setPricePerSquareMeterDisplay);
   };
@@ -360,10 +405,10 @@ export default function EditProviderServicesScreen() {
       return;
     }
 
-    // Validação para garantir que um tipo de serviço base foi selecionado
     if (!selectedBaseServiceId) {
-      setFormError('Selecione um tipo de serviço.');
-      AccessibilityInfo.announceForAccessibility?.('Selecione um tipo de serviço.');
+      const errorMessage = 'Selecione um tipo de serviço.';
+      setFormError(errorMessage);
+      AccessibilityInfo.announceForAccessibility?.(errorMessage);
       return;
     }
 
@@ -373,23 +418,31 @@ export default function EditProviderServicesScreen() {
 
     if (pricingType === PricingType.FIXED_PRICE || pricingType === PricingType.HOURLY) {
       if (!servicePrice) {
-        setFormError('Preço é obrigatório.');
+        const errorMessage = 'O preço é obrigatório para este tipo de precificação.';
+        setFormError(errorMessage);
+        AccessibilityInfo.announceForAccessibility?.(errorMessage);
         return;
       }
       finalPrice = parseFloat(servicePrice);
       if (Number.isNaN(finalPrice) || finalPrice <= 0) {
-        setFormError('Preço inválido.');
+        const errorMessage = 'Preço inválido. Deve ser um número maior que zero.';
+        setFormError(errorMessage);
+        AccessibilityInfo.announceForAccessibility?.(errorMessage);
         return;
       }
     } else if (pricingType === PricingType.BY_SIZE) {
       if (!pricePerSquareMeter && !pricePerRoom) {
-        setFormError('Preencha preço por m² e/ou por cômodo.');
+        const errorMessage = 'Preencha o preço por m² e/ou por cômodo.';
+        setFormError(errorMessage);
+        AccessibilityInfo.announceForAccessibility?.(errorMessage);
         return;
       }
       if (pricePerSquareMeter) {
         const v = parseFloat(pricePerSquareMeter);
         if (Number.isNaN(v) || v <= 0) {
-          setFormError('Preço por m² inválido.');
+          const errorMessage = 'Preço por m² inválido. Deve ser um número maior que zero.';
+          setFormError(errorMessage);
+          AccessibilityInfo.announceForAccessibility?.(errorMessage);
           return;
         }
         finalPricePerSquareMeter = v;
@@ -397,7 +450,9 @@ export default function EditProviderServicesScreen() {
       if (pricePerRoom) {
         const v = parseFloat(pricePerRoom);
         if (Number.isNaN(v) || v <= 0) {
-          setFormError('Preço por cômodo inválido.');
+          const errorMessage = 'Preço por cômodo inválido. Deve ser um número maior que zero.';
+          setFormError(errorMessage);
+          AccessibilityInfo.announceForAccessibility?.(errorMessage);
           return;
         }
         finalPricePerRoom = v;
@@ -406,7 +461,7 @@ export default function EditProviderServicesScreen() {
 
     const durationMinutes = parseDurationToMinutes(serviceDuration);
     const serviceData: CreateProviderServiceData = {
-      serviceId: selectedBaseServiceId, // Use o ID do serviço base selecionado aqui!
+      serviceId: selectedBaseServiceId,
       description: serviceDesc.trim(),
       price: finalPrice,
       durationMinutes,
@@ -427,15 +482,17 @@ export default function EditProviderServicesScreen() {
                 ? {
                     id: resultService.id,
                     name: resultService.service.name,
-                    serviceId: resultService.service.id, // Atualize o serviceId também
+                    serviceId: resultService.service.id,
                     description: resultService.description || '',
-                    price: parseFloat(resultService.price.toString()),
+                    price: typeof resultService.price === 'number' && Number.isFinite(resultService.price) ? parseFloat(resultService.price.toString()) : 0,
                     duration: resultService.durationMinutes ? `${resultService.durationMinutes} minutos` : undefined,
-                    pricingType: resultService.pricingType,
-                    pricePerSquareMeter: resultService.pricePerSquareMeter
+                    pricePerSquareMeter: typeof resultService.pricePerSquareMeter === 'number' && Number.isFinite(resultService.pricePerSquareMeter)
                       ? parseFloat(resultService.pricePerSquareMeter.toString())
                       : undefined,
-                    pricePerRoom: resultService.pricePerRoom ? parseFloat(resultService.pricePerRoom.toString()) : undefined,
+                    pricePerRoom: typeof resultService.pricePerRoom === 'number' && Number.isFinite(resultService.pricePerRoom)
+                      ? parseFloat(resultService.pricePerRoom.toString())
+                      : undefined,
+                    pricingType: resultService.pricingType,
                   }
                 : s
             )
@@ -447,15 +504,17 @@ export default function EditProviderServicesScreen() {
         const newService: ServiceOffering = {
           id: resultService.id,
           name: resultService.service.name,
-          serviceId: resultService.service.id, // Defina o serviceId para o novo serviço
+          serviceId: resultService.service.id,
           description: resultService.description || '',
-          price: parseFloat(resultService.price.toString()),
+          price: typeof resultService.price === 'number' && Number.isFinite(resultService.price) ? parseFloat(resultService.price.toString()) : 0,
           duration: resultService.durationMinutes ? `${resultService.durationMinutes} minutos` : undefined,
           pricingType: resultService.pricingType,
-          pricePerSquareMeter: resultService.pricePerSquareMeter
+          pricePerSquareMeter: typeof resultService.pricePerSquareMeter === 'number' && Number.isFinite(resultService.pricePerSquareMeter)
             ? parseFloat(resultService.pricePerSquareMeter.toString())
             : undefined,
-          pricePerRoom: resultService.pricePerRoom ? parseFloat(resultService.pricePerRoom.toString()) : undefined,
+          pricePerRoom: typeof resultService.pricePerRoom === 'number' && Number.isFinite(resultService.pricePerRoom)
+            ? parseFloat(resultService.pricePerRoom.toString())
+            : undefined,
         };
         setServices(prev => [...prev, newService].sort((a, b) => a.name.localeCompare(b.name)));
         Alert.alert('Sucesso', 'Novo serviço adicionado com sucesso!');
@@ -471,41 +530,27 @@ export default function EditProviderServicesScreen() {
 
   const startEdit = (service: ServiceOffering) => {
     setIsEditing(service);
-    // Não use setServiceName, pois o nome será derivado do Picker
-    // setServiceName(service.name);
-    setSelectedBaseServiceId(service.serviceId); // Pré-seleciona o Picker com o ID do serviço base
-    // FIX: Explicitly cast to String to try and resolve type inference issue (Code 2349)
+    setSelectedBaseServiceId(service.serviceId);
     setServiceDesc(String(service.description));
 
-    // preencher preços conforme tipo
     if (service.pricingType === PricingType.FIXED_PRICE || service.pricingType === PricingType.HOURLY) {
-      const display = normalizeCurrencyInput(String(Math.round(service.price * 100))).display;
-      // FIX: Explicitly cast to String to try and resolve type inference issue (Code 2349)
-      setServicePrice(String(service.price.toFixed(2)));
-      setServicePriceDisplay(String(display));
+      // Usando safeToFixed para service.price
+      const rawPrice = safeToFixed(service.price, 2);
+      setServicePrice(rawPrice);
+      setServicePriceDisplay(normalizeCurrencyInput(String(Math.round(service.price * 100))).display);
     } else {
-      if (service.pricePerSquareMeter != null) {
-        const display = normalizeCurrencyInput(String(Math.round(service.pricePerSquareMeter * 100))).display;
-        // FIX: Explicitly cast to String to try and resolve type inference issue (Code 2349)
-        setPricePerSquareMeter(String(service.pricePerSquareMeter.toFixed(2)));
-        setPricePerSquareMeterDisplay(String(display));
-      } else {
-        setPricePerSquareMeter('');
-        setPricePerSquareMeterDisplay('');
-      }
-      if (service.pricePerRoom != null) {
-        const display = normalizeCurrencyInput(String(Math.round(service.pricePerRoom * 100))).display;
-        // FIX: Explicitly cast to String to try and resolve type inference issue (Code 2349)
-        setPricePerRoom(String(service.pricePerRoom.toFixed(2)));
-        setPricePerRoomDisplay(String(display));
-      } else {
-        setPricePerRoom('');
-        setPricePerRoomDisplay('');
-      }
+      // Usando safeToFixed para pricePerSquareMeter
+      const rawPricePerSquareMeter = safeToFixed(service.pricePerSquareMeter, 2);
+      setPricePerSquareMeter(rawPricePerSquareMeter);
+      setPricePerSquareMeterDisplay(rawPricePerSquareMeter ? normalizeCurrencyInput(String(Math.round(parseFloat(rawPricePerSquareMeter) * 100))).display : '');
+
+      // Usando safeToFixed para pricePerRoom
+      const rawPricePerRoom = safeToFixed(service.pricePerRoom, 2);
+      setPricePerRoom(rawPricePerRoom);
+      setPricePerRoomDisplay(rawPricePerRoom ? normalizeCurrencyInput(String(Math.round(parseFloat(rawPricePerRoom) * 100))).display : '');
     }
 
     setPricingType(service.pricingType);
-    // FIX: Explicitly cast to String to try and resolve type inference issue (Code 2349)
     setServiceDuration(String(service.duration || ''));
     setFormError(null);
   };
@@ -520,6 +565,7 @@ export default function EditProviderServicesScreen() {
       await deleteProviderServiceOffering(user.providerDetails.id, serviceId);
       setServices(prev => prev.filter(s => s.id !== serviceId));
       Alert.alert('Sucesso', 'O serviço foi removido da sua lista.');
+      resetForm(); // Resetar o formulário após a exclusão
     } catch (error: any) {
       console.error('[EditProviderServicesScreen] Erro ao deletar serviço:', error);
       Alert.alert('Erro', error?.message || 'Não foi possível deletar o serviço.');
@@ -544,7 +590,7 @@ export default function EditProviderServicesScreen() {
         </Animated.View>
 
         <Animated.View style={[styles.centeredFeedback, { opacity: feedbackAnim }]}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <ActivityIndicator size="large" color={Colors.primary} accessibilityLabel="Carregando seus serviços" />
           <Text style={styles.loadingText}>Carregando seus serviços...</Text>
         </Animated.View>
       </View>
@@ -566,8 +612,8 @@ export default function EditProviderServicesScreen() {
           { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] },
         ]}
       >
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerBackButton} accessibilityRole="button" accessibilityLabel="Voltar">
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+        <TouchableOpacity onPress={() => router.back()} style={styles.headerBackButton} accessibilityRole="button" accessibilityLabel="Voltar para a tela anterior">
+          <Ionicons name="arrow-back" size={24} color="#FFFFFF" accessibilityHidden={true} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Editar Meus Serviços</Text>
         <View style={styles.headerActionIconPlaceholder} />
@@ -582,46 +628,42 @@ export default function EditProviderServicesScreen() {
         >
           <Text style={styles.formTitle}>{isEditing ? 'Editar Serviço Existente' : 'Adicionar Novo Serviço'}</Text>
 
-          {/* NOVO: Picker para selecionar o tipo de serviço base */}
           <Text style={styles.inputLabel}>Tipo de Serviço</Text>
           <View style={styles.pickerContainer}>
             <Picker
               selectedValue={selectedBaseServiceId}
-              onValueChange={(itemValue: string | undefined) => setSelectedBaseServiceId(itemValue)} // Ensure itemValue can be undefined
+              onValueChange={(itemValue: string | undefined) => setSelectedBaseServiceId(itemValue)}
               style={styles.picker}
-              enabled={!isEditing && availableBaseServices.length > 0} // Desabilitar se estiver editando ou se não houver serviços base
+              enabled={!isEditing && availableBaseServices.length > 0}
+              accessibilityLabel="Selecione o tipo de serviço"
+              accessibilityHint={isEditing ? "Não é possível alterar o tipo de serviço em edição." : "Escolha um serviço base para adicionar ou editar."}
             >
-              {availableBaseServices.map(service => (
-                <Picker.Item key={service.id} label={service.name} value={service.id} />
-              ))}
+              {availableBaseServices.length === 0 ? (
+                 <Picker.Item label="Nenhum serviço disponível" value={undefined} />
+              ) : (
+                availableBaseServices.map(service => (
+                  <Picker.Item key={service.id} label={service.name} value={service.id} />
+                ))
+              )}
             </Picker>
           </View>
           {isEditing && (
             <Text style={styles.inputHint}>Você não pode alterar o tipo de serviço de um serviço existente.</Text>
           )}
           {availableBaseServices.length === 0 && !isLoading && (
-            <Text style={styles.formErrorText}>Nenhum tipo de serviço base disponível. Verifique a conexão ou o backend.</Text>
+            <Text style={styles.formErrorText} accessibilityLiveRegion="polite">Nenhum tipo de serviço base disponível. Verifique a conexão ou o backend.</Text>
           )}
 
-          {/* Remova o TextInput para serviceName */}
-          {/* <TextInput
-            style={[styles.input, formError === 'Nome do serviço é obrigatório.' && styles.inputError]}
-            placeholder="Nome do Serviço (ex: Limpeza Padrão)"
-            placeholderTextColor={Colors.textMuted}
-            value={serviceName}
-            onChangeText={setServiceName}
-            accessibilityLabel="Nome do serviço"
-            returnKeyType="next"
-          /> */}
-
+          <Text style={styles.inputLabel}>Descrição Detalhada</Text>
           <TextInput
             style={[styles.input, { height: 90, textAlignVertical: 'top' }]}
-            placeholder="Descrição Detalhada (ex: Inclui aspiração, lavagem de banheiros...)"
+            placeholder="Ex: Inclui aspiração, lavagem de banheiros, limpeza de cozinha..."
             placeholderTextColor={Colors.textMuted}
             value={serviceDesc}
             onChangeText={setServiceDesc}
             multiline
             accessibilityLabel="Descrição do serviço"
+            accessibilityHint="Descreva o que seu serviço inclui para o cliente."
           />
 
           <Text style={styles.inputLabel}>Tipo de Precificação</Text>
@@ -630,7 +672,6 @@ export default function EditProviderServicesScreen() {
               selectedValue={pricingType}
               onValueChange={(v: PricingType) => {
                 setPricingType(v);
-                // limpar campos relacionados ao tipo ao alternar
                 setServicePrice('');
                 setServicePriceDisplay('');
                 setPricePerSquareMeter('');
@@ -641,6 +682,7 @@ export default function EditProviderServicesScreen() {
                 setFormError(null);
               }}
               style={styles.picker}
+              accessibilityLabel="Selecione o tipo de precificação"
             >
               <Picker.Item label="Preço Fixo por Serviço" value={PricingType.FIXED_PRICE} />
               <Picker.Item label="Por Hora" value={PricingType.HOURLY} />
@@ -650,58 +692,69 @@ export default function EditProviderServicesScreen() {
 
           {(pricingType === PricingType.FIXED_PRICE || pricingType === PricingType.HOURLY) && (
             <>
+              <Text style={styles.inputLabel}>
+                {pricingType === PricingType.FIXED_PRICE ? 'Preço Fixo' : 'Valor por Hora'}
+              </Text>
               <TextInput
                 style={[styles.input, formError?.includes('Preço') ? styles.inputError : undefined]}
-                placeholder={pricingType === PricingType.FIXED_PRICE ? 'Preço Fixo (ex: R$ 250,00)' : 'Valor por Hora (ex: R$ 60,00)'}
+                placeholder={pricingType === PricingType.FIXED_PRICE ? 'Ex: R$ 250,00' : 'Ex: R$ 60,00'}
                 placeholderTextColor={Colors.textMuted}
                 value={servicePriceDisplay}
                 onChangeText={txt => handlePriceChange(txt, setServicePrice, setServicePriceDisplay)}
                 keyboardType="numeric"
-                accessibilityLabel="Preço"
+                accessibilityLabel={pricingType === PricingType.FIXED_PRICE ? 'Preço Fixo' : 'Valor por Hora'}
+                accessibilityHint="Informe o valor do serviço ou da hora trabalhada."
               />
+              <Text style={styles.inputLabel}>Duração Estimada</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Duração (ex: 2h • 120 min • 2 horas)"
+                placeholder="Ex: 2h ou 120 min ou 2 horas"
                 placeholderTextColor={Colors.textMuted}
                 value={serviceDuration}
                 onChangeText={setServiceDuration}
-                accessibilityLabel="Duração estimada"
+                keyboardType="default" // Pode ser 'numeric' se você quiser forçar apenas números, mas 'default' permite "2h"
+                accessibilityLabel="Duração estimada do serviço"
+                accessibilityHint="Informe a duração esperada do serviço."
               />
             </>
           )}
 
           {pricingType === PricingType.BY_SIZE && (
             <>
+              <Text style={styles.inputLabel}>Preço por Metro Quadrado</Text>
               <TextInput
                 style={[styles.input, formError?.includes('m²') ? styles.inputError : undefined]}
-                placeholder="Preço por m² (ex: R$ 10,50)"
+                placeholder="Ex: R$ 10,50"
                 placeholderTextColor={Colors.textMuted}
                 value={pricePerSquareMeterDisplay}
-                onChangeText={handlePricePerSquareMeterChange} // FIX: Use dedicated handler
+                onChangeText={handlePricePerSquareMeterChange}
                 keyboardType="numeric"
                 accessibilityLabel="Preço por metro quadrado"
+                accessibilityHint="Informe o valor cobrado por metro quadrado."
               />
+              <Text style={styles.inputLabel}>Preço por Cômodo</Text>
               <TextInput
                 style={[styles.input, formError?.includes('cômodo') ? styles.inputError : undefined]}
-                placeholder="Preço por Cômodo (ex: R$ 50,00)"
+                placeholder="Ex: R$ 50,00"
                 placeholderTextColor={Colors.textMuted}
                 value={pricePerRoomDisplay}
-                onChangeText={handlePricePerRoomChange} // FIX: Use dedicated handler
+                onChangeText={handlePricePerRoomChange}
                 keyboardType="numeric"
                 accessibilityLabel="Preço por cômodo"
+                accessibilityHint="Informe o valor cobrado por cômodo."
               />
-              <Text style={styles.inputHint}>Preencha um ou ambos. O cliente escolherá como informar o tamanho.</Text>
+              <Text style={styles.inputHint}>Preencha um ou ambos os campos acima. O cliente escolherá como informar o tamanho.</Text>
             </>
           )}
 
-          {!!formError && <Text style={styles.formErrorText}>{formError}</Text>}
+          {!!formError && <Text style={styles.formErrorText} accessibilityLiveRegion="polite">{formError}</Text>}
 
-          <TouchableOpacity style={styles.actionButtonPrimary} onPress={handleAddOrUpdateService} accessibilityRole="button">
+          <TouchableOpacity style={styles.actionButtonPrimary} onPress={handleAddOrUpdateService} accessibilityRole="button" accessibilityLabel={isEditing ? 'Atualizar Serviço' : 'Adicionar Novo Serviço'}>
             <Text style={styles.actionButtonPrimaryText}>{isEditing ? 'Atualizar Serviço' : 'Adicionar Novo Serviço'}</Text>
           </TouchableOpacity>
 
           {isEditing && (
-            <TouchableOpacity style={styles.actionButtonSecondary} onPress={resetForm} accessibilityRole="button">
+            <TouchableOpacity style={styles.actionButtonSecondary} onPress={resetForm} accessibilityRole="button" accessibilityLabel="Cancelar Edição e Limpar Formulário">
               <Text style={styles.actionButtonSecondaryText}>Cancelar Edição</Text>
             </TouchableOpacity>
           )}
@@ -718,10 +771,10 @@ export default function EditProviderServicesScreen() {
 
         {services.length === 0 ? (
           <Animated.View style={[styles.emptyListContainer, { opacity: feedbackAnim }]}>
-            <Ionicons name="pricetags-outline" size={64} color="#CED4DA" />
+            <Ionicons name="pricetags-outline" size={64} color="#CED4DA" accessibilityHidden={true} />
             <Text style={styles.emptyListText}>Você ainda não adicionou serviços.</Text>
             <Text style={styles.emptyListSubText}>Use o formulário acima para começar -- é rapidinho.</Text>
-            <TouchableOpacity style={[styles.actionButtonPrimary, { marginTop: Spacing.md }]} onPress={() => {}}>
+            <TouchableOpacity style={[styles.actionButtonPrimary, { marginTop: Spacing.md }]} onPress={() => {}} accessibilityRole="button" accessibilityLabel="Adicionar meu primeiro serviço">
               <Text style={styles.actionButtonPrimaryText}>Adicionar meu primeiro serviço</Text>
             </TouchableOpacity>
           </Animated.View>
@@ -730,11 +783,12 @@ export default function EditProviderServicesScreen() {
             data={services}
             keyExtractor={item => item.id}
             renderItem={({ item, index }) => (
-              <AnimatedServiceItem item={item} onEdit={startEdit} onDelete={deleteService} delay={index * 60 + 140} />
+              <AnimatedServiceItem item={item} onEdit={startEdit} onDelete={deleteService} delay={index * 60 + 140} isReducedMotionEnabled={isReducedMotionEnabled} />
             )}
             contentContainerStyle={styles.flatListContent}
             ItemSeparatorComponent={() => <View style={styles.listSeparator} />}
             scrollEnabled={false}
+            accessibilityLabel="Lista de serviços que você oferece"
           />
         )}
 
@@ -744,7 +798,7 @@ export default function EditProviderServicesScreen() {
             { opacity: saveButtonAnim, transform: [{ translateY: saveButtonAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] },
           ]}
         >
-          <TouchableOpacity style={styles.actionButtonPrimary} onPress={handleSaveServices} accessibilityRole="button">
+          <TouchableOpacity style={styles.actionButtonPrimary} onPress={handleSaveServices} accessibilityRole="button" accessibilityLabel="Salvar Todas as Alterações">
             <Text style={styles.actionButtonPrimaryText}>Salvar Todas as Alterações</Text>
           </TouchableOpacity>
         </Animated.View>
@@ -842,6 +896,7 @@ const styles = StyleSheet.create({
   },
   inputError: {
     borderColor: Colors.danger,
+    borderWidth: 1, // Adicionar borda para destacar o erro
   },
   inputLabel: {
     fontSize: 16,
@@ -959,6 +1014,7 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     marginBottom: 15,
     textAlign: 'center',
+    paddingHorizontal: 10,
   },
   serviceActions: {
     flexDirection: 'row',
@@ -1013,5 +1069,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: Spacing.md,
     fontSize: 14,
+    fontWeight: '500',
+    paddingHorizontal: 10,
   },
 });
