@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, NotFoundException, ForbiddenException, Query } from '@nestjs/common';
+// src/reviews/reviews.controller.ts
+import { Controller, Get, Post, Body, Param, UseGuards, Req, NotFoundException, ForbiddenException, Query, Logger } from '@nestjs/common';
 import { ReviewsService } from './reviews.service';
 import { SubmitReviewDto } from './dto/submit-review.dto';
 import { GetReviewsDto } from './dto/get-reviews.dto';
@@ -13,6 +14,9 @@ import { ReviewEntity } from './entities/review.entity';
 @ApiTags('reviews')
 @Controller('reviews')
 export class ReviewsController {
+  // Declare and initialize the logger
+  private readonly logger = new Logger(ReviewsController.name);
+
   constructor(private readonly reviewsService: ReviewsService) {}
 
   @Post()
@@ -37,6 +41,21 @@ export class ReviewsController {
   @ApiResponse({ status: 404, description: 'Nenhuma avaliação encontrada com os filtros fornecidos.' })
   async getReviews(@Query() getReviewsDto: GetReviewsDto): Promise<ReviewEntity[]> {
     const reviews = await this.reviewsService.findReviews(getReviewsDto);
+    return reviews.map(review => new ReviewEntity(review));
+  }
+
+  // NEW ENDPOINT: Get reviews for a specific provider
+  @Get('provider/:providerId')
+  @ApiOperation({ summary: 'Obter todas as avaliações para um provedor específico' })
+  @ApiResponse({ status: 200, description: 'Lista de avaliações do provedor.', type: [ReviewEntity] })
+  @ApiResponse({ status: 404, description: 'Nenhuma avaliação encontrada para o provedor.' })
+  async getReviewsByProviderId(@Param('providerId') providerId: string): Promise<ReviewEntity[]> {
+    this.logger.log(`[ReviewsController] getReviewsByProviderId: Buscando avaliações para provedor ID: ${providerId}`);
+    const reviews = await this.reviewsService.findReviews({ providerId }); // Reusing findReviews with providerId filter
+    if (!reviews || reviews.length === 0) {
+      // É melhor retornar um array vazio do que lançar 404 para um endpoint de lista
+      return [];
+    }
     return reviews.map(review => new ReviewEntity(review));
   }
 
