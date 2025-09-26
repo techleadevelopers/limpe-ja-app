@@ -1,12 +1,22 @@
 // LimpeJaApp/app/types/backend/support.ts
+
+// CORREÇÃO: Mover as definições de TicketCategory e TicketSeverity para este arquivo
+export type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'WAITING_USER' | 'RESOLVED' | 'CLOSED' | 'CANCELLED' | 'ESCALATED'; 
+export type TicketSeverity = 'LOW' | 'MEDIUM' | 'HIGH';
+export type TicketCategory = 'PAYMENT' | 'QUALITY' | 'APP' | 'OTHER' | 'BOOKING' | 'ACCOUNT' | 'TECHNICAL' | 'SAFETY'; // Alinhar com 'SupportTicketCategory' do backend
+
 export interface SupportTicket {
     id: string;
     subject: string;
-    status: 'open' | 'pending' | 'closed';
+    status: TicketStatus; // Usar o tipo exportado
     createdAt: string;
     updatedAt: string;
     lastMessagePreview?: string; // Optional: A short preview of the last message
     messages?: SupportMessage[]; // Optional: Full list of messages for ticket details
+    category: TicketCategory; // Usar o tipo exportado
+    severity?: TicketSeverity; // Usar o tipo exportado
+    bookingId?: string | null;
+    message: string; // Para exibição no frontend, o corpo do ticket
 }
 
 export interface SupportMessage {
@@ -18,9 +28,14 @@ export interface SupportMessage {
     createdAt: string;
 }
 
+// CORREÇÃO: Ajustado para refletir o DTO do backend que espera 'description', category, severity, bookingId, attachments
 export interface CreateTicketPayload {
     subject: string;
-    initialMessage: string;
+    description: string; // Alterado de 'initialMessage' para 'description'
+    category: TicketCategory; // Usar o tipo exportado
+    severity?: TicketSeverity; // Usar o tipo exportado
+    bookingId?: string;
+    attachments?: string[]; // Adicionado attachments
 }
 
 export interface AddMessagePayload {
