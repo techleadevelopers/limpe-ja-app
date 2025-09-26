@@ -1,16 +1,15 @@
 // components/client/explore/provider/BookServiceButton.tsx
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
-import { Animated, Text, TouchableOpacity, Platform, StyleSheet, View } from 'react-native'; // Import View
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter, type Router } from 'expo-router'; // Importe Router se necessário
+import { Animated, Text, TouchableOpacity, Platform, StyleSheet, View } from 'react-native';
+import { useRouter, type Router } from 'expo-router';
 
 interface BookServiceButtonProps {
   providerId: string;
   serviceId?: string; // Adicionada a prop serviceId
   router: Router; // Usar o tipo Router do expo-router para melhor tipagem
   bookNowButtonAnim: Animated.Value;
-  servicePrice?: number; // <--- CORREÇÃO: Adicionada a propriedade servicePrice
+  servicePrice?: number; // <--- CORREÇÃO: Adicionada a propriedade servicePrice como número opcional
 }
 
 const BookServiceButton: React.FC<BookServiceButtonProps> = ({
@@ -20,12 +19,6 @@ const BookServiceButton: React.FC<BookServiceButtonProps> = ({
   bookNowButtonAnim,
   servicePrice, // <--- CORREÇÃO: Desestruturada a nova prop
 }) => {
-  // insets não são mais usados diretamente para o posicionamento do botão,
-  // mas o padding inferior da ScrollView principal deve considerar o safeAreaBottom.
-  // const insets = useSafeAreaInsets();
-  // const safeAreaBottom = insets.bottom;
-
-  // O alinhamento do botão será agora controlado por flexbox no pai e estilos locais.
   return (
     <Animated.View style={[
       localStyles.buttonContainer, // Estilo renomeado e modificado
@@ -34,9 +27,6 @@ const BookServiceButton: React.FC<BookServiceButtonProps> = ({
         transform: [{
           translateY: bookNowButtonAnim.interpolate({ inputRange: [0, 1], outputRange: [100, 0] })
         }],
-        // O paddingBottom que considerava o safeAreaBottom foi removido daqui,
-        // pois o botão não está mais fixo na parte inferior da tela.
-        // A ScrollView deve ter um padding inferior adequado.
       }
     ]}>
       <LinearGradient
@@ -45,19 +35,24 @@ const BookServiceButton: React.FC<BookServiceButtonProps> = ({
         end={{ x: 1, y: 0 }}
         style={localStyles.bookServiceButtonGradient}
       >
-        <TouchableOpacity 
-          style={localStyles.bookServiceButton} 
-          onPress={() => router.push({ 
-            pathname: `/(client)/bookings/schedule-service`, 
-            params: { 
-              providerId: providerId, 
+        <TouchableOpacity
+          style={localStyles.bookServiceButton}
+          onPress={() => router.push({
+            pathname: `/(client)/bookings/schedule-service`,
+            params: {
+              providerId: providerId,
               serviceId: serviceId,
-              // Você pode passar o servicePrice para a tela de agendamento se precisar lá
-              // servicePrice: servicePrice?.toString(), // Converter para string se o params só aceitar strings
-            } 
+              // ✅ CORREÇÃO: Passar servicePrice como string, com verificação de null/undefined
+              servicePrice: servicePrice != null ? servicePrice.toString() : undefined,
+            }
           })}
         >
-          <Text style={localStyles.bookServiceButtonText}>Agendar Serviço</Text>
+          {/* ✅ CORREÇÃO: Exibir preço formatado se for um número válido, senão "Agendar Serviço" */}
+          <Text style={localStyles.bookServiceButtonText}>
+            {servicePrice != null && typeof servicePrice === 'number' && Number.isFinite(servicePrice)
+              ? `Agendar por R$ ${servicePrice.toFixed(2).replace('.', ',')}`
+              : 'Agendar Serviço'}
+          </Text>
         </TouchableOpacity>
       </LinearGradient>
     </Animated.View>
