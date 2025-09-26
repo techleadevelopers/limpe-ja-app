@@ -47,29 +47,35 @@ export async function getIncentivesForHome(): Promise<IncentiveMessage[]> {
     list.push({
       id: `welcome:${welcome.code}`,
       kind: 'COUPON_WELCOME',
-      title: 'Welcome coupon',
-      subtitle: 'Save up to 30% on your first booking',
+      // Estes campos (title, subtitle, percentOff, rewardReferrer, rewardReferred)
+      // devem vir do backend via a entidade Offer ou um endpoint de incentivos.
+      // Para um app premium, não devem ser hardcoded aqui.
+      // Exemplo: welcome.title, welcome.subtitle, welcome.payload.percentOff
+      title: welcome.title || 'Welcome coupon', // Assumindo que o backend pode fornecer
+      subtitle: welcome.subtitle || 'Save up to 30% on your first booking', // Assumindo que o backend pode fornecer
       priority: 1,
       payload: {
         code: welcome.code,
         expiresAt: welcome.expiresAt ?? null,
-        percentOff: 30,
+        percentOff: welcome.percentOff ?? 30, // Assumindo que o backend pode fornecer
       },
     } as IncentiveMessage);
   }
 
   // 2) Referral (priority 2)
   if ((profile as any)?.referralCode) {
+    // Assumindo que o backend pode fornecer os detalhes da recompensa de indicação
+    const referralRewardInfo = (profile as any)?.referralRewardInfo; // Exemplo de como viria do backend
     list.push({
       id: `ref:${(profile as any).referralCode}`,
       kind: 'REFERRAL',
-      title: 'Refer & earn',
-      subtitle: 'You and your friend get rewards',
+      title: referralRewardInfo?.title || 'Refer & earn',
+      subtitle: referralRewardInfo?.subtitle || 'You and your friend get rewards',
       priority: 2,
       payload: {
         myCode: (profile as any).referralCode,
-        rewardReferrer: 'R$25',
-        rewardReferred: 'R$20',
+        rewardReferrer: referralRewardInfo?.rewardReferrer || 'R$25', // Assumindo que o backend pode fornecer
+        rewardReferred: referralRewardInfo?.rewardReferred || 'R$20', // Assumindo que o backend pode fornecer
       },
     } as IncentiveMessage);
   }
@@ -83,13 +89,13 @@ export async function getIncentivesForHome(): Promise<IncentiveMessage[]> {
     list.push({
       id: `return:${ret.code}`,
       kind: 'COUPON_RETURN',
-      title: 'Come back & save',
-      subtitle: 'Special coupon for your next cleaning',
+      title: ret.title || 'Come back & save', // Assumindo que o backend pode fornecer
+      subtitle: ret.subtitle || 'Special coupon for your next cleaning', // Assumindo que o backend pode fornecer
       priority: 3,
       payload: {
         code: ret.code,
         expiresAt: ret.expiresAt ?? null,
-        percentOff: ret.percentOff ?? 20,
+        percentOff: ret.percentOff ?? 20, // Assumindo que o backend pode fornecer
       },
     } as IncentiveMessage);
   }
@@ -103,11 +109,13 @@ export async function getIncentivesForHome(): Promise<IncentiveMessage[]> {
     0;
 
   if (loyaltyPoints > 0) {
+    // Assumindo que o backend pode fornecer os detalhes da mensagem de cashback
+    const cashbackInfo = (profile as any)?.cashbackInfo; // Exemplo de como viria do backend
     list.push({
       id: `cashback:${Math.ceil(loyaltyPoints)}`,
       kind: 'CASHBACK',
-      title: 'Earn cashback with missions',
-      subtitle: 'Complete tasks and trade for up to 30% OFF',
+      title: cashbackInfo?.title || 'Earn cashback with missions',
+      subtitle: cashbackInfo?.subtitle || 'Complete tasks and trade for up to 30% OFF',
       priority: 4,
     } as IncentiveMessage);
   }
