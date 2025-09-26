@@ -110,7 +110,7 @@ const SideIcon: React.FC<SideIconProps> = ({
           <View style={styles.pulsingIconContainer}>
             <Ring delay={0}   cycleDuration={pulseCycleDuration} size={iconSize + 10} color={ringColor} />
             <Ring delay={500} cycleDuration={pulseCycleDuration} size={iconSize + 28} color={ringColor} />
-            <Image source={Icons3D.docCheck2} style={styles.iconImage} />
+            <Image source={Icons3D.facial} style={styles.iconImage} />
           </View>
         </TouchableOpacity>
       )}
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     right: 50,
-    bottom: '46%',
+    bottom: '100%',
     zIndex: 10,
     alignItems: 'center',
   },
