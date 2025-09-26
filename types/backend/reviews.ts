@@ -27,11 +27,18 @@ export interface SubmitReviewDto {
  */
 export interface ReviewEntity {
   id: string;
-  targetId: string;
-  reviewerId: string; // Quem fez a avaliação
   rating: number;
-  comment?: string | null; // Permitir null
-  createdAt: string; // ISO string
-  type: 'service' | 'provider_profile' | 'app_feedback';
-  // Inclua outras propriedades que o backend pode retornar (ex: detalhes do cliente/provedor avaliado)
+  comment?: string | null;
+  createdAt: string; // Ou Date, dependendo de como o backend envia
+  updatedAt: string; // Ou Date
+  bookingId: string; // <<-- CORREÇÃO: Adicionado bookingId
+  clientId: string;  // <<-- CORREÇÃO: Adicionado clientId
+  providerId: string; // <<-- CORREÇÃO: Adicionado providerId
+  client?: { // <<-- CORREÇÃO: Adicionado client
+    fullName: string;
+    user?: {
+      avatarUrl?: string | null;
+    } | null;
+  } | null;
+  // Adicione quaisquer outras propriedades que ReviewEntity possa ter
 }
