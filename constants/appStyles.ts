@@ -1,5 +1,5 @@
 // relaxed-app/constants/appStyles.ts
-import { Dimensions, Platform } from 'react-native';
+import { Dimensions, Platform, TextStyle, ViewStyle } from 'react-native'; // Import TextStyle and ViewStyle
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -21,6 +21,7 @@ export const AppColors = {
   black: '#000000',
   lightGray: '#CED4DA',
   mediumGray: '#868E96',
+  accentLight: '#EBF5FF', // Adicionado: Um azul claro para acentos
 };
 
 export const AppDurations = {
@@ -44,14 +45,14 @@ export const AppShadows = {
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-  },
+  } as ViewStyle, // Explicitamente tipado como ViewStyle
   medium: {
     shadowColor: AppColors.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 10,
     elevation: 8,
-  },
+  } as ViewStyle, // Explicitamente tipado como ViewStyle
   large: Platform.select({ // Adicionado: Sombra grande
     ios: {
       shadowColor: AppColors.black,
@@ -62,34 +63,35 @@ export const AppShadows = {
     android: {
       elevation: 12,
     },
-  }),
+  }) as ViewStyle, // Explicitamente tipado como ViewStyle
 };
 
 export const AppTypography = {
   title: {
-    fontSize: 20,
+    fontSize: 22, // Ajustado para corresponder ao uso em ReturnCouponCard
     fontWeight: 'bold',
     color: AppColors.textTitle,
-  },
+  } as TextStyle, // Explicitamente tipado como TextStyle
   subtitle: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 16, // Ajustado para corresponder ao uso em ReturnCouponCard
+    fontWeight: '500', // Exemplo de fontWeight literal
     color: AppColors.textAuxiliary,
-  },
+  } as TextStyle, // Explicitamente tipado como TextStyle
   body: {
     fontSize: 16,
+    fontWeight: 'normal', // Exemplo de fontWeight literal
     color: AppColors.textBody,
-  },
+  } as TextStyle, // Explicitamente tipado como TextStyle
   buttonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '600', // Exemplo de fontWeight literal
     color: AppColors.white,
-  },
-  h1: { fontSize: 28, fontWeight: 'bold', color: AppColors.textBody },
-  h2: { fontSize: 24, fontWeight: 'bold', color: AppColors.textBody },
-  h3: { fontSize: 20, fontWeight: 'bold', color: AppColors.textBody },
-  small: { fontSize: 14, color: AppColors.textAuxiliary },
-  xsmall: { fontSize: 12, color: AppColors.mediumGray },
+  } as TextStyle, // Explicitamente tipado como TextStyle
+  h1: { fontSize: 28, fontWeight: 'bold', color: AppColors.textBody } as TextStyle,
+  h2: { fontSize: 24, fontWeight: 'bold', color: AppColors.textBody } as TextStyle,
+  h3: { fontSize: 20, fontWeight: 'bold', color: AppColors.textBody } as TextStyle,
+  small: { fontSize: 14, fontWeight: 'normal', color: AppColors.textAuxiliary } as TextStyle, // Exemplo de fontWeight literal
+  xsmall: { fontSize: 12, fontWeight: 'normal', color: AppColors.mediumGray } as TextStyle, // Exemplo de fontWeight literal
 };
 
 
