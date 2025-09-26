@@ -1,9 +1,18 @@
 // LimpeJaApp/app/services/metricsService.ts
 import axios from 'axios';
 import { MetricsSummary, MetricsTimeseriesDataPoint, MetricsFunnel } from '../types/backend/metrics';
+import api from './api'; // Importa a instância centralizada do Axios
+import Constants from 'expo-constants'; // Importar Constants para API_BASE_URL consistente
 
-// Replace with your actual API base URL. It's recommended to use environment variables.
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api'; 
+// A API_BASE_URL deve ser carregada de Constants para consistência em produção
+const API_BASE_URL = Constants.expoConfig?.extra?.backendApiUrl as string;
+
+// Validação para garantir que API_BASE_URL está definida
+if (!API_BASE_URL) {
+  console.error('[metricsService] Erro crítico: backendApiUrl não está definido!');
+  // Em um ambiente de produção, você pode querer lançar um erro ou ter um fallback mais robusto
+}
+
 
 export const metricsService = {
     /**
@@ -12,10 +21,13 @@ export const metricsService = {
      */
     async getMetricsSummary(): Promise<MetricsSummary> {
         try {
-            const response = await axios.get(`${API_BASE_URL}/v1/metrics/me/summary`);
+            // Usa a instância 'api' centralizada para todas as requisições
+            const response = await api.get(`/v1/metrics/me/summary`);
             return response.data;
         } catch (error) {
             console.error('Error fetching metrics summary:', error);
+            // Em um ambiente de produção "premium", não devemos retornar dados mockados em caso de erro.
+            // O erro deve ser propagado para que a UI possa lidar com ele (ex: exibir uma mensagem de erro).
             throw error;
         }
     },
@@ -27,12 +39,15 @@ export const metricsService = {
      */
     async getMetricsTimeseries(period: 'day' | 'week' | 'month' | 'year'): Promise<MetricsTimeseriesDataPoint[]> {
         try {
-            const response = await axios.get(`${API_BASE_URL}/v1/metrics/me/timeseries`, {
+            // Usa a instância 'api' centralizada para todas as requisições
+            const response = await api.get(`/v1/metrics/me/timeseries`, {
                 params: { period },
             });
             return response.data;
         } catch (error) {
             console.error('Error fetching metrics timeseries:', error);
+            // Em um ambiente de produção "premium", não devemos retornar dados mockados em caso de erro.
+            // O erro deve ser propagado para que a UI possa lidar com ele (ex: exibir uma mensagem de erro).
             throw error;
         }
     },
@@ -43,10 +58,13 @@ export const metricsService = {
      */
     async getMetricsFunnel(): Promise<MetricsFunnel> {
         try {
-            const response = await axios.get(`${API_BASE_URL}/v1/metrics/me/funnel`);
+            // Usa a instância 'api' centralizada para todas as requisições
+            const response = await api.get(`/v1/metrics/me/funnel`);
             return response.data;
         } catch (error) {
             console.error('Error fetching metrics funnel:', error);
+            // Em um ambiente de produção "premium", não devemos retornar dados mockados em caso de erro.
+            // O erro deve ser propagado para que a UI possa lidar com ele (ex: exibir uma mensagem de erro).
             throw error;
         }
     },
