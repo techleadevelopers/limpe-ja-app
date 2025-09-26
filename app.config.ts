@@ -25,11 +25,12 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => {
       "supportsTablet": true,
       // "googleServicesFile": "./GoogleService-Info.plist" // REMOVIDO: Esta linha não é válida e o foco é Android
     },
-    "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
+  "android": {
+  "versionCode": 1,
+  "adaptiveIcon": {
+    "foregroundImage": "./assets/images/adaptive-icon.png",
+    "backgroundColor": "#ffffff"
+  },
       "package": "com.techleadevelopers.limpeja",
       "googleServicesFile": "./google-services.json" // Certifique-se de que este arquivo existe na raiz do seu projeto
     },
@@ -41,6 +42,7 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => {
     "plugins": [
       "expo-router",
        "expo-localization",
+       "expo-secure-store",
       [
         "expo-splash-screen",
         {
@@ -61,7 +63,7 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => {
       "environment": process.env.NODE_ENV || "production",
       "router": {},
       "eas": {
-        "projectId": process.env.EAS_PROJECT_ID || "f4b19077-130d-469b-be83-e94b2f768190"
+        "projectId": process.env.EAS_PROJECT_ID || "a33ee4a2-86fc-43b8-8d99-b258381b2a1f"
       },
       "firebaseApiKey": process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
       "firebaseAuthDomain": process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
