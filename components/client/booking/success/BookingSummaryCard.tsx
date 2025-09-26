@@ -3,7 +3,7 @@ import { BlurView } from 'expo-blur';
 import * as Clipboard from 'expo-clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
-import { Animated, Platform, StyleSheet, View } from 'react-native';
+import { Animated, Platform, StyleSheet, View, Text } from 'react-native'; // Adicionado Text
 import Toast from 'react-native-toast-message';
 
 import AdditionalBookingDetails from './AdditionalBookingDetails';
@@ -15,29 +15,29 @@ import SuccessPixInfo from './SuccessPixInfo';
 // Importar tipos
 import { BookingDetails } from '../../../../types/backend/bookings';
 import { PixChargeResponseDto } from '../../../../types/backend/payments';
-import { ProviderDisplayInfo } from '../../../../types/backend/providers'; // <--- NOVO: Importa ProviderDisplayInfo
-import { formatCurrency, formatDate } from '../../../../utils/helpers';
-import { AppColors, AppShadows } from '../../../../constants/appStyles'; // Importe AppColors e AppShadows
+import { ProviderDisplayInfo } from '../../../../types/backend/providers';
+// Importar utilitários de formatação e sanitização
+import { formatPriceBRL, formatDateTime, sanitizeText } from '../../../../utils/formatters';
+import { AppColors, AppShadows } from '../../../../constants/appStyles';
 
 interface BookingSummaryCardProps {
   booking: BookingDetails;
-  provider: ProviderDisplayInfo | null; // <--- ATUALIZADO: Nova prop para detalhes completos do provedor
+  provider: ProviderDisplayInfo | null;
   providerRating?: number;
   pixChargeDetails?: PixChargeResponseDto | null;
   paymentMethod?: string;
   contentOpacity: Animated.Value;
   contentTranslateY: Animated.Value;
-  iconColor: string;
-  successColor: string;
-  headerPrimaryColor: string;
-  // NOVAS PROPRIEDADES: Endereço já formatado
+  iconColor: string; // Não usado diretamente
+  successColor: string; // Não usado diretamente
+  headerPrimaryColor: string; // Não usado diretamente
   formattedAddressLine1: string;
   formattedAddressLine2: string;
 }
 
 export default function BookingSummaryCard({
   booking,
-  provider, // <--- ATUALIZADO: Desestrutura a nova prop
+  provider,
   providerRating,
   pixChargeDetails,
   paymentMethod,
@@ -46,15 +46,10 @@ export default function BookingSummaryCard({
   iconColor,
   successColor,
   headerPrimaryColor,
-  // NOVAS PROPRIEDADES: Desestruturadas aqui
   formattedAddressLine1,
   formattedAddressLine2,
 }: BookingSummaryCardProps) {
-  // --- CORREÇÃO AQUI: DESESTRUTURAR AS PROPRIEDADES DO BOOKING ---
-  // Removido `scheduledDateTime` e adicionado `scheduledDate` e `scheduledTime`
   const {
-    // providerFullName, // REMOVIDO: Será obtido de 'provider'
-    // providerAvatarUrl, // REMOVIDO: Será obtido de 'provider'
     serviceName,
     scheduledDate,
     scheduledTime,
@@ -63,20 +58,19 @@ export default function BookingSummaryCard({
     notes,
   } = booking;
 
-  // >>> LOG DE DEPURACAO AQUI <<<
-  console.log("[BookingSummaryCard - DEBUG] scheduledDate recebido como prop:", scheduledDate);
-  console.log("[BookingSummaryCard - DEBUG] scheduledTime recebido como prop:", scheduledTime);
+  // Usando formatDateTime do novo utilitário
+  const formattedBookingDate = formatDateTime(scheduledDate, scheduledTime, {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+  const formattedBookingTime = formatDateTime(scheduledDate, scheduledTime, {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 
-  // --- CORREÇÃO AQUI: DECLARAR AS VARIÁVEIS FORMATADAS ---
-  // A função `formatDate` será chamada com a data e hora separadas.
-  const formattedBookingDate = formatDate(new Date(`${scheduledDate}T${scheduledTime}`), { day: 'numeric', month: 'long', year: 'numeric' });
-  const formattedBookingTime = formatDate(new Date(`${scheduledDate}T${scheduledTime}`), { hour: '2-digit', minute: '2-digit' });
-
-  // >>> LOG DE DEPURACAO AQUI <<<
-  console.log("[BookingSummaryCard - DEBUG] formattedBookingDate após formatDate:", formattedBookingDate);
-  console.log("[BookingSummaryCard - DEBUG] formattedBookingTime após formatDate:", formattedBookingTime);
-
-  const formattedPaymentValue = formatCurrency(totalPrice);
+  // Usando formatPriceBRL do novo utilitário
+  const formattedPaymentValue = formatPriceBRL(totalPrice);
   const displayPaymentMethod = paymentMethod || 'PIX';
 
   const handleCopyPixQrCode = () => {
@@ -105,7 +99,7 @@ export default function BookingSummaryCard({
     >
       <View style={styles.mainCardContainer}>
         <LinearGradient
-          colors={[AppColors.white + '95', AppColors.backgroundLight + '85']} // Usando AppColors
+          colors={[AppColors.white + '95', AppColors.backgroundLight + '85']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFillObject}
@@ -114,8 +108,8 @@ export default function BookingSummaryCard({
 
         <View style={styles.cardContentNew}>
           <ProviderInfoSection
-            providerAvatarUrl={provider?.avatarUrl} // <--- ATUALIZADO: Usa avatarUrl do objeto provider
-            providerFullName={provider?.fullName || booking.providerFullName} // <--- ATUALIZADO: Usa fullName do objeto provider, com fallback para booking.providerFullName
+            providerAvatarUrl={provider?.avatarUrl}
+            providerFullName={provider?.fullName || booking.providerFullName}
             providerRating={providerRating}
           />
 
@@ -125,19 +119,18 @@ export default function BookingSummaryCard({
             <View style={styles.circle} />
           </View>
 
-          {/* ATUALIZADO: Passando as novas props para o BookingDetailSection */}
           <BookingDetailSection
             serviceName={serviceName}
             formattedAddressLine1={formattedAddressLine1}
             formattedAddressLine2={formattedAddressLine2}
             notes={notes}
-            iconColor={iconColor}
+            iconColor={AppColors.primaryInteractive} // Usando AppColors diretamente
           />
 
           <DateTimeCards
             formattedBookingDate={formattedBookingDate}
             formattedBookingTime={formattedBookingTime}
-            iconColor={iconColor}
+            iconColor={AppColors.primaryInteractive} // Usando AppColors diretamente
           />
 
           <AdditionalBookingDetails
@@ -172,7 +165,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginTop: 20,
     marginBottom: 25,
-    ...AppShadows.medium, // Usando AppShadows
+    ...AppShadows.medium,
   },
   cardContentNew: {
     padding: 25,
@@ -187,13 +180,13 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: AppColors.backgroundNeutral, // Usando AppColors
+    backgroundColor: AppColors.backgroundNeutral,
   },
   dashedLine: {
     flex: 1,
     height: 1,
     borderStyle: 'dashed',
-    borderColor: AppColors.backgroundNeutral, // Usando AppColors
+    borderColor: AppColors.backgroundNeutral,
     borderWidth: 1,
     marginHorizontal: -5,
   },
