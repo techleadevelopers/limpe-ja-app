@@ -11,7 +11,8 @@ import AnimatedReanimated, {
     withTiming,
     Easing,
     withSequence,
-    cancelAnimation
+    cancelAnimation,
+    withDelay
 } from 'react-native-reanimated';
 
 import { CLIENT_ROUTES } from '../../../../constants/routes';
@@ -19,6 +20,9 @@ import { ProviderDisplayInfo } from '../../../../types/backend/providers';
 import { Icons3D } from '../../../../constants/icons3d';
 import { PricingType } from '../../../../types/backend/services';
 import { ProviderServiceOffering } from '../../../../types/backend/provider-service';
+// Importar os novos formatadores e helpers
+import { formatDistance } from '../../../../utils/formatters';
+import { getFormattedServicePrice, getNumericPriceValue } from '../../../../utils/service-helpers';
 
 const AnimatedCardBackground = AnimatedReanimated.createAnimatedComponent(LinearGradient);
 const AnimatedPlusButtonGradient = AnimatedReanimated.createAnimatedComponent(LinearGradient);
@@ -36,36 +40,31 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
         return null;
     }
 
-    
-
-    // --- Nova animação para o efeito de hover (apenas escala) ---
-    const hoverScaleAnim = useRef(new Animated.Value(1)).current; // 1: estado normal
+    const hoverScaleAnim = useRef(new Animated.Value(1)).current;
 
     const onPressInCard = () => {
         Animated.spring(hoverScaleAnim, {
-            toValue: 1.03, // Leve zoom de 3% ao "hover"
-            useNativeDriver: true,
-            friction: 5, // Mais "mola" para um efeito mais vivo
-            tension: 100, // Retorno rápido
-        }).start();
-    };
-
-    const onPressOutCard = () => {
-        Animated.spring(hoverScaleAnim, {
-            toValue: 1, // Retorna ao estado normal
+            toValue: 1.03,
             useNativeDriver: true,
             friction: 5,
             tension: 100,
         }).start();
     };
-    // --- Fim da nova animação ---
 
-    // --- Animação do Reflexo no Botão Plus ---
+    const onPressOutCard = () => {
+        Animated.spring(hoverScaleAnim, {
+            toValue: 1,
+            useNativeDriver: true,
+            friction: 5,
+            tension: 100,
+        }).start();
+    };
+
     const reflectionTranslateX = useSharedValue(-60);
 
     useEffect(() => {
         reflectionTranslateX.value = withRepeat(
-            withTiming(38 + 60, { // Ajustado para cobrir toda a largura do botão + reflexo
+            withTiming(38 + 60, {
                 duration: 1500,
                 easing: Easing.linear
             }),
@@ -79,28 +78,22 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
             transform: [{ translateX: reflectionTranslateX.value }],
         };
     });
-    // --- Fim da Animação do Reflexo ---
 
-    // --- Animação do Tremor Sutil no Botão Plus (replicando o efeito do CarouselBannerItem) ---
     const subtleTrembleValue = useSharedValue(0);
 
     useEffect(() => {
-        const SHAKE_AMOUNT = 0.5; // 0.5 pixels para um movimento muito sutil
-        const SHAKE_DURATION = 50; // 50ms para um movimento rápido
+        const SHAKE_AMOUNT = 0.5;
+        const SHAKE_DURATION = 50;
 
         subtleTrembleValue.value = withRepeat(
             withSequence(
-                // Move ligeiramente para um lado (ex: direita/baixo)
                 withTiming(SHAKE_AMOUNT, { duration: SHAKE_DURATION, easing: Easing.linear }),
-                // Move para o lado oposto (ex: esquerda/cima)
                 withTiming(-SHAKE_AMOUNT, { duration: SHAKE_DURATION, easing: Easing.linear }),
-                // Retorna ao centro
                 withTiming(0, { duration: SHAKE_DURATION, easing: Easing.linear }),
-                // Pausa de 4 segundos antes de repetir
                 withTiming(0, { duration: 4000, easing: Easing.linear })
             ),
-            -1, // Repete indefinidamente
-            false // Não inverte a sequência
+            -1,
+            false
         );
 
         return () => {
@@ -116,7 +109,6 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
             ],
         };
     });
-    // --- Fim da Animação do Tremor Sutil ---
 
     const renderStars = (rating: number | undefined) => {
         const stars = [];
@@ -154,62 +146,11 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
         ? { uri: item.avatarUrl }
         : require('../../../../assets/images/default-avatar.png');
 
-    // --- Helper para obter o valor numérico do preço de um serviço ---
-    const getNumericPriceValue = (service: ProviderServiceOffering): number => {
-        let rawPrice = service.price;
-        let price = typeof rawPrice === 'number'
-            ? rawPrice
-            : (rawPrice as any)?.toNumber?.() ?? 0;
-
-        if (service.pricingType === PricingType.BY_SIZE) {
-            const rawPricePerSqm = service.pricePerSquareMeter;
-            const pricePerSqm = typeof rawPricePerSqm === 'number'
-                ? rawPricePerSqm
-                : (rawPricePerSqm as any)?.toNumber?.() ?? 0;
-            if (pricePerSqm > 0) {
-                price = pricePerSqm;
-            }
-        }
-        return price;
-    };
-
-    // --- Função para formatar preço ---
-    const formatServicePrice = (service: ProviderServiceOffering) => {
-        let priceValue = 0; // Inicializa para garantir que é um número
-        let priceUnit = '';
-
-        // normaliza o preço principal
-        const price = getNumericPriceValue(service);
-
-        switch (service.pricingType) {
-            case PricingType.HOURLY:
-                priceValue = price;
-                priceUnit = t('common.per_hour_short'); // "/h"
-                break;
-            case PricingType.BY_SIZE:
-                priceValue = price; // getNumericPriceValue já lida com pricePerSquareMeter
-                priceUnit = t('common.per_sqm_short'); // "/m²"
-                break;
-            case PricingType.FIXED_PRICE:
-            case PricingType.CUSTOM_QUOTE:
-            default:
-                priceValue = price;
-                priceUnit = ''; // Garante que a unidade seja vazia para outros tipos
-                break;
-        }
-
-        // Verifica se o preço é positivo e finito antes de formatar
-        return priceValue > 0 && Number.isFinite(priceValue)
-            ? `R$ ${priceValue.toFixed(2).replace('.', ',')}${priceUnit}`
-            : t('provider_details.price_not_available');
-    };
-
     // --- Lógica para determinar o serviço principal a ser exibido como "A partir de" ---
     let mainServiceForDisplay: ProviderServiceOffering | undefined = undefined;
     let lowestFixedPrice: number | null = null;
 
     if (item.providerServices && item.providerServices.length > 0) {
-        // 1. Tenta encontrar o menor preço fixo
         item.providerServices.forEach(service => {
             if (service.pricingType === PricingType.FIXED_PRICE) {
                 const currentPrice = getNumericPriceValue(service);
@@ -220,20 +161,18 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
             }
         });
 
-        // 2. Se não encontrou preço fixo, usa o primeiro serviço como fallback
         if (!mainServiceForDisplay) {
             mainServiceForDisplay = item.providerServices[0];
         }
     }
 
-    // Formata a string do preço principal a ser exibida
+    // Formata a string do preço principal a ser exibida usando o helper
     const mainDisplayedPrice = mainServiceForDisplay
-        ? formatServicePrice(mainServiceForDisplay)
+        ? getFormattedServicePrice(mainServiceForDisplay, t)
         : t('provider_details.price_not_available');
 
     // Obtém o valor numérico do preço principal para comparações futuras
     const numericMainPrice = mainServiceForDisplay ? getNumericPriceValue(mainServiceForDisplay) : null;
-
 
     // --- Calcula menor preço por hora entre todos os serviços ---
     let minHourlyPrice: number | null = null;
@@ -250,27 +189,21 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
         });
     }
 
-    // Determina se o preço principal exibido é explicitamente um preço por hora
     const mainPriceIsExplicitlyHourly = mainServiceForDisplay?.pricingType === PricingType.HOURLY;
 
-    // --- Lógica para decidir se deve mostrar o "ou R$ X,XX/h" ---
     const shouldShowMinHourlyPrice = typeof minHourlyPrice === 'number' && minHourlyPrice > 0 && (
-        // Condição 1: O preço principal NÃO é por hora (ex: fixo, por m²)
         !mainPriceIsExplicitlyHourly ||
-        // Condição 2: O preço principal É por hora, MAS o menor preço por hora encontrado é menor que o preço principal
         (mainPriceIsExplicitlyHourly && numericMainPrice !== null && minHourlyPrice < numericMainPrice)
     );
 
     const categoriesToDisplay: string[] = [];
     if (item.providerServices && item.providerServices.length > 0) {
-        // Pega o nome do serviço do mainServiceForDisplay, se existir
         if (mainServiceForDisplay?.service?.name) {
             categoriesToDisplay.push(mainServiceForDisplay.service.name);
-        } else if (item.providerServices[0].service?.name) { // Fallback para o primeiro serviço se o mainServiceForDisplay não tiver nome
+        } else if (item.providerServices[0].service?.name) {
             categoriesToDisplay.push(item.providerServices[0].service.name);
         }
     }
-    // Lógica de fallback para categorias se nenhuma for encontrada nos serviços
     if (categoriesToDisplay.length === 0) {
         if (item.bio?.toLowerCase().includes('comercial')) categoriesToDisplay.push('Comercial');
         else if (item.bio?.toLowerCase().includes('escritórios')) categoriesToDisplay.push('Escritório');
@@ -280,20 +213,23 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
     }
     const displayedCategories = categoriesToDisplay.slice(0, 2);
 
+    // Formatar a distância
+    const distanceLabel = formatDistance(item.distance);
+
     return (
         <AnimatedCardBackground
             colors={['rgba(230, 240, 255, 0.7)', 'rgba(196, 197, 205, 0.23)']}
             start={{ x: 0, y: 0 }}
             end={{ x: 0, y: 1 }}
-            // Aplica o estilo de escala para o hover
             style={[styles.animatedCardContainer, { transform: [{ scale: hoverScaleAnim }] }]}
         >
             <TouchableOpacity
                 style={styles.cardContentWrapper}
                 onPress={handleCardPress}
-                onPressIn={onPressInCard} // Usa o novo handler para o zoom
-                onPressOut={onPressOutCard} // Usa o novo handler para o zoom
-                activeOpacity={1} // Desabilita a opacidade padrão do TouchableOpacity para que a animação seja controlada
+                onPressIn={onPressInCard}
+                onPressOut={onPressOutCard}
+                activeOpacity={1}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
                 <View style={styles.imageWrapper}>
                     <Image source={avatarSource} style={styles.cardImage} />
@@ -301,12 +237,19 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
 
                 <View style={styles.infoContainer}>
                     <View style={styles.providerNameContainer}>
-                        <Text style={styles.providerName} numberOfLines={1}>{item.fullName}</Text>
+                        <Text style={styles.providerName} numberOfLines={1} allowFontScaling={false}>{item.fullName}</Text>
                     </View>
 
-                    <Text style={styles.serviceDescription} numberOfLines={2}>
+                    <Text style={styles.serviceDescription} numberOfLines={2} allowFontScaling={false}>
                         {item.bio || "Nenhuma descrição disponível."}
                     </Text>
+
+                    {distanceLabel && (
+                        <View style={styles.distanceRow}>
+                            <Ionicons name="location-outline" size={12} color="#6C757D" />
+                            <Text style={styles.distanceText} allowFontScaling={false}>{distanceLabel}</Text>
+                        </View>
+                    )}
 
                     <View style={styles.categoryChipsContainer}>
                         {displayedCategories.map((category, index) => (
@@ -318,20 +261,28 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
 
                     <View style={styles.priceAndRatingSection}>
                         <View>
-                            <Text style={styles.priceLabel}>A partir de</Text>
-                            <Text style={styles.priceValue}>{mainDisplayedPrice}</Text>
+                            <Text style={styles.priceLabel} allowFontScaling={false}>A partir de</Text>
+                            <Text style={styles.priceValue} allowFontScaling={false}>{mainDisplayedPrice}</Text>
 
-                            {/* Renderiza o menor preço por hora se a condição for verdadeira */}
                             {shouldShowMinHourlyPrice && (
-                                <Text style={styles.hourlyPriceValue}>
-                                    {t('common.or')} R$ {minHourlyPrice.toFixed(2).replace('.', ',')}/h
+                                <Text style={styles.hourlyPriceValue} allowFontScaling={false}>
+                                    {t('common.or')} {getFormattedServicePrice({
+                                        // Usar o operador de asserção não-nula (!) em minHourlyPrice
+                                        price: minHourlyPrice!,
+                                        pricingType: PricingType.HOURLY,
+                                        // Incluir outras propriedades obrigatórias da interface ProviderServiceOffering
+                                        // com valores fictícios se elas não forem usadas por getFormattedServicePrice
+                                        id: '', // Exemplo: se 'id' for obrigatório
+                                        providerId: '', // Exemplo: se 'providerId' for obrigatório
+                                        serviceId: '', // Exemplo: se 'serviceId' for obrigatório
+                                    } as ProviderServiceOffering, t)}
                                 </Text>
                             )}
                         </View>
 
                         <View style={styles.ratingSection}>
                             <AnimatedPlusButtonGradient
-                                colors={['#67adfdec', '#5c93ecd2','#5c93ec92']}
+                                colors={['#73c5f5e8', '#70c0eecc','#4fade4d5']}
                                 style={[styles.plusButton, { overflow: 'hidden' }, subtleTrembleAnimatedStyle]}
                                 start={{ x: 0, y: 0 }}
                                 end={{ x: 1, y: 1 }}
@@ -349,7 +300,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
 
                             {renderStars(item.averageRating)}
                             {item.reviewCount !== undefined && (
-                                <Text style={styles.reviewsCountText}>
+                                <Text style={styles.reviewsCountText} allowFontScaling={false}>
                                     {item.reviewCount === 0 ? 'Sem Avaliações' : `${item.reviewCount} Avaliações`}
                                 </Text>
                             )}
@@ -371,28 +322,21 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
         borderRightWidth: 1,
         borderBottomWidth: 0.5,
-       
         borderLeftWidth: 1,
         borderTopWidth: 1,
         borderColor: '#d1d5db53',
         borderRadius: 12,
-        
         borderTopStartRadius: 22,
         borderBottomStartRadius: 22,
         borderTopEndRadius: 22,
         borderBottomEndRadius: 22,
         borderBottomColor: '#d1d5db53',
-
-     
-   
-        // Propriedades de sombra mantidas exatamente como fornecidas
-  
     },
     cardContentWrapper: {
         width: '100%',
         borderRadius: 12,
         overflow: 'hidden',
-        
+        zIndex: 1,
     },
     imageWrapper: {
         width: '100%',
@@ -419,7 +363,7 @@ const styles = StyleSheet.create({
         fontFamily: 'Montserrat-Regular',
         paddingHorizontal: 0,
         fontWeight: 'bold',
-        color: '#2D3748',
+        color: '#5b6e8eff',
         flexShrink: 1,
     },
     docCheckIcon: {
@@ -474,7 +418,7 @@ const styles = StyleSheet.create({
     priceValue: {
         fontSize: 16,
         fontWeight: 'bold',
-        color: '#2D3748',
+        color: '#838891ff',
     },
     hourlyPriceValue: {
         fontSize: 11,
@@ -486,24 +430,41 @@ const styles = StyleSheet.create({
         flexDirection: 'column',
         alignItems: 'center',
     },
+
+    profileImage: {
+        position: 'relative',
+        top: -80,
+        left: 30,
+        width: 47,
+        height: 47,
+        borderTopRightRadius: 20,
+        borderBottomRightRadius: 20,
+        borderTopLeftRadius: 20,
+        borderBottomLeftRadius: 20,
+        borderRadius: 20,
+        overflow: 'hidden',
+        marginRight: 6,
+        backgroundColor: 'transparent',
+    },
+
     plusButton: {
-        width: 42,
-        height: 42,
-        left: 8,
-        bottom: 50,
+        width: 36,
+        height: 36,
+        left: 4,
+        bottom: 60,
         borderRadius: 53,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 16,
-        shadowColor: '#4519f5ff', // Cor da sombra
-        shadowOffset: { width: 0, height: 0 }, // Deslocamento vertical mais pronunciado
-        shadowOpacity: 0.38, // Opacidade aumentada para robustez
-        shadowRadius: 28, // Raio de desfoque para conforto
-        elevation: 6, // Elevação aumentada para robustez no Android
+        shadowColor: '#1966f5ff',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.48,
+        shadowRadius: 28,
+        elevation: 6,
     },
     reflectionOverlay: {
         position: 'absolute',
-        width: 60, // Largura do reflexo
+        width: 60,
         height: '100%',
     },
     ratingStarContainer: {
@@ -516,6 +477,17 @@ const styles = StyleSheet.create({
     reviewsCountText: {
         fontSize: 8,
         color: '#6C757D',
+    },
+    distanceRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 4,
+        paddingHorizontal: 2,
+    },
+    distanceText: {
+        fontSize: 10,
+        color: '#6C757D',
+        marginLeft: 4,
     },
 });
 
