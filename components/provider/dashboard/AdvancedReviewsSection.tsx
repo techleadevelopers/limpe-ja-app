@@ -68,9 +68,9 @@ const AdvancedReviewsSection: React.FC<AdvancedReviewsSectionProps> = ({
 
   const getTrend = (trend: DetailedRatingBreakdown['recentTrend']) => {
     switch (trend) {
-      case 'improving': return { icon: 'trending-up', color: '#28a745', text: 'Melhorando' };
-      case 'declining': return { icon: 'trending-down', color: '#dc3545', text: 'Declinando' };
-      default:          return { icon: 'remove',      color: '#6c757d', text: 'Estável' };
+      case 'improving': return { icon: 'trending-up' as keyof typeof Ionicons.glyphMap, color: '#28a745', text: 'Melhorando' };
+      case 'declining': return { icon: 'trending-down' as keyof typeof Ionicons.glyphMap, color: '#dc3545', text: 'Declinando' };
+      default:          return { icon: 'remove' as keyof typeof Ionicons.glyphMap,      color: '#6c757d', text: 'Estável' };
     }
   };
 
@@ -125,7 +125,7 @@ const AdvancedReviewsSection: React.FC<AdvancedReviewsSectionProps> = ({
               <Text style={styles.pillarLabel}>Avaliação Geral</Text>
               <View style={styles.trendRow}>
                 <Ionicons
-                  name={getTrend(ratingBreakdown.recentTrend).icon as any}
+                  name={getTrend(ratingBreakdown.recentTrend).icon} // Removed as any
                   size={14}
                   color={getTrend(ratingBreakdown.recentTrend).color}
                 />
