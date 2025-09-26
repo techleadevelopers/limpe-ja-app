@@ -90,8 +90,9 @@ export const getSmartSuggestions = async (providerId: string): Promise<string[]>
 };
 
 export class ReviewService {
-  static async getReviews(providerId: string): Promise<any> {
+  static async getReviews(providerId: string): Promise<ReviewEntity[]> { // Changed return type to ReviewEntity[]
     try {
+      // This now calls the new backend endpoint /reviews/provider/:providerId
       const response = await api.get(`/reviews/provider/${providerId}`);
       return response.data;
     } catch (error) {
@@ -155,17 +156,12 @@ export class ReviewService {
       return response.data;
     } catch (error: any) {
       console.error('Erro ao buscar tendências de avaliações:', error);
-      // Ainda retorna dados mockados em caso de erro, mas em produção, isso seria um erro real.
-      return {
-        ratingTrend: 'increasing',
-        volumeTrend: 'stable',
-        sentimentTrend: 'improving',
-        keyInsights: [
-          'Suas avaliações melhoraram 15% no último mês',
-          'Clientes elogiam principalmente sua pontualidade',
-          'Considere oferecer serviços adicionais mencionados em comentários'
-        ]
-      };
+      // Em um ambiente de produção "premium", não devemos retornar dados mockados em caso de erro.
+      // O erro deve ser propagado para que a UI possa lidar com ele (ex: exibir uma mensagem de erro).
+      if (axios.isAxiosError(error) && error.response) {
+        throw new Error(error.response.data.message || 'Não foi possível carregar tendências de avaliações.');
+      }
+      throw new Error('Erro de rede ou servidor ao carregar tendências de avaliações.');
     }
   }
 }
