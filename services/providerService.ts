@@ -1,7 +1,9 @@
-// providerService.ts
 // app/services/providerService.ts
 import axios, { AxiosResponse } from 'axios';
 import api from './api';
+
+// Importa o serviço de reviews do frontend
+import { ReviewService as FrontendReviewService } from './reviewService'; // Renomeado para evitar conflito
 
 // =========================================================================
 // IMPORTAÇÕES DE INTERFACES DE TIPAGEM CENTRALIZADAS
@@ -10,13 +12,15 @@ import {
     CreateProviderServiceData,
     ProviderAvailability,
     ProviderDashboard,
-    ProviderDisplayInfo, // Usado para tipar provedores em listas - DEVE INCLUIR 'badges', 'user.isVerified', 'address.latitude/longitude'
-    ProviderSearchQuery, // Importado para tipar a query de busca - DEVE INCLUIR 'latitude', 'longitude', 'radius'
+    ProviderDisplayInfo,
+    ProviderSearchQuery,
     ProviderTransaction,
-    UpdateAvailabilityData, // Importado para tipar a query de busca
+    UpdateAvailabilityData,
     UpdateProviderProfileData,
     UpdateProviderServiceData,
-    GetProviderAvailabilityResponse // <--- IMPORTADO DE providers.ts
+    GetProviderAvailabilityResponse,
+    ProviderMetrics, // <<-- CORREÇÃO: Importado de ../types/backend/providers
+    Offer // <<-- CORREÇÃO: Importado de ../types/backend/providers
 } from '../types/backend/providers';
 
 // <<<< CORREÇÃO: Importar ProviderServiceOffering APENAS do seu arquivo de origem >>>>
@@ -25,27 +29,8 @@ import { ProviderServiceOffering } from '../types/backend/provider-service';
 // Importar Service do seu arquivo de serviços
 import { Service } from '../types/backend/services';
 
-
-// Mock ou placeholder para tipos que não foram fornecidos nos snippets
-// Em um projeto real, estes deveriam vir de `../types/backend/providers` e `../types/backend/offers`
-export interface ProviderMetrics {
-  acceptanceRate: number;
-  avgResponseTime: number; // em minutos
-  totalBookings: number;
-  // Adicione outras métricas conforme necessário
-}
-
-export interface Offer {
-  id: string;
-  title: string;
-  description: string;
-  couponCode: string | null;
-  discountType: 'PERCENT' | 'FIXED'; // Adicionado para corresponder ao uso
-  discountValue: number; // Adicionado para corresponder ao uso
-  startDate: string;
-  endDate: string;
-}
-
+// Importar ReviewEntity para tipar as avaliações
+import { ReviewEntity } from '../types/backend/reviews'; // Certifique-se de que este caminho está correto
 
 // =========================================================================
 // FUNÇÕES DE SERVIÇO DO PROVEDOR - AJUSTADAS E COMPLETAS
@@ -60,8 +45,27 @@ export interface Offer {
  */
 export async function getProviderDetails(providerId: string): Promise<ProviderDisplayInfo> {
   try {
-    const response: AxiosResponse<ProviderDisplayInfo> = await api.get(`/providers/${providerId}`);
-    return response.data;
+    // Busca os detalhes principais do provedor
+    const providerResponse: AxiosResponse<ProviderDisplayInfo> = await api.get(`/providers/${providerId}`);
+    let providerDetails: ProviderDisplayInfo = providerResponse.data;
+
+    // Busca as avaliações do provedor usando o ReviewService do frontend
+    // Assumindo que ReviewService.getReviews retorna um array de ReviewEntity
+    const reviews: ReviewEntity[] = await FrontendReviewService.getReviews(providerId);
+
+    // Adiciona as avaliações ao objeto de detalhes do provedor
+    // É crucial que ProviderDisplayInfo em '../types/backend/providers' inclua 'reviews?: ReviewEntity[];'
+    providerDetails = {
+      ...providerDetails,
+      reviews: reviews,
+      // Atualiza reviewCount e averageRating com base nas reviews reais
+      reviewCount: reviews.length,
+      averageRating: reviews.length > 0
+        ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+        : 0,
+    };
+
+    return providerDetails;
   } catch (error: any) {
     console.error(`Erro ao buscar detalhes do provedor ${providerId}:`, error.response?.data || error.message);
     if (axios.isAxiosError(error) && error.response) {
@@ -79,10 +83,10 @@ export async function getProviderDetails(providerId: string): Promise<ProviderDi
  * @param date Data opcional no formato string (ex: "YYYY-MM-DD") para filtrar a disponibilidade.
  * @returns Uma Promise que resolve para um objeto contendo 'available' (slots configurados) e 'occupiedTimes' (slots já agendados).
  */
-export async function getProviderAvailability(providerId: string, date?: string): Promise<GetProviderAvailabilityResponse> { // <<<< TIPO DE RETORNO ATUALIZADO AQUI
+export async function getProviderAvailability(providerId: string, date?: string): Promise<GetProviderAvailabilityResponse> {
   try {
     const params = date ? { date } : {};
-    const response: AxiosResponse<GetProviderAvailabilityResponse> = await api.get(`/providers/${providerId}/availability`, { params }); // <<<< TIPO DE RESPOSTA AXIOS ATUALIZADO
+    const response: AxiosResponse<GetProviderAvailabilityResponse> = await api.get(`/providers/${providerId}/availability`, { params });
     return response.data;
   } catch (error: any) {
     console.error(`Erro ao buscar disponibilidade do provedor ${providerId}:`, error.response?.data || error.message);
@@ -114,7 +118,7 @@ export async function getMyProviderAvailability(date?: string): Promise<GetProvi
     if (axios.isAxiosError(error) && error.response) {
       throw new Error(error.response.data.message || `Erro ao buscar disponibilidade do provedor autenticado.`);
     }
-    throw new Error(`Erro de rede ou servidor ao buscar disponibilidade do provedor autenticado.`);
+    throw new Error('Erro de rede ou servidor ao buscar disponibilidade do provedor autenticado.');
   }
 }
 
@@ -398,11 +402,12 @@ export async function getRecommendedProviders(): Promise<ProviderDisplayInfo[]> 
  * @function getNearbyProviders
  * Obtém uma lista de provedores próximos para a tela inicial.
  * Chama o endpoint GET /providers/nearby.
+ * @param latitude Latitude da localização atual para busca.
+ * @param longitude Longitude da localização atual para busca.
  * @returns Uma Promise que resolve para um array de provedores (ProviderDisplayInfo para frontend).
  */
 export async function getNearbyProviders(latitude?: number, longitude?: number): Promise<ProviderDisplayInfo[]> {
   try {
-    // Você pode adicionar parâmetros de localização aqui no futuro, se necessário
     const params = (latitude !== undefined && longitude !== undefined) ? { latitude, longitude } : {};
     const response: AxiosResponse<ProviderDisplayInfo[]> = await api.get('/providers/nearby', { params });
     return response.data;
@@ -453,13 +458,12 @@ export async function getServicesByCategoryId(categoryId: string): Promise<Servi
     return response.data;
   } catch (error: any) {
     console.error(`Erro ao buscar serviços pela categoria ${categoryId}:`, error.response?.data || error.message);
-    // Retorna um array vazio para não quebrar o frontend se o backend não tiver o endpoint
-    return [];
-    // Ou lance o erro se preferir que o frontend trate:
-    // if (axios.isAxiosError(error) && error.response) {
-    //   throw new Error(error.response.data.message || `Erro ao buscar serviços pela categoria ${categoryId}.`);
-    // }
-    // throw new Error(`Erro de rede ou servidor ao buscar serviços pela categoria ${categoryId}.`);
+    // Para um app premium, não devemos retornar um array vazio em caso de erro.
+    // O erro deve ser propagado para que a UI possa lidar com ele.
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(error.response.data.message || `Erro ao buscar serviços pela categoria ${categoryId}.`);
+    }
+    throw new Error(`Erro de rede ou servidor ao buscar serviços pela categoria ${categoryId}.`);
   }
 }
 
@@ -499,22 +503,16 @@ export async function searchProviders(query: ProviderSearchQuery): Promise<Provi
 export async function getProviderMetrics(providerId: string): Promise<ProviderMetrics> {
   try {
     // Exemplo de endpoint: /providers/:providerId/metrics
-    // Se não houver um endpoint real, você pode mockar os dados ou lançar um erro.
     const response: AxiosResponse<ProviderMetrics> = await api.get(`/providers/${providerId}/metrics`);
     return response.data;
   } catch (error: any) {
     console.error(`Erro ao buscar métricas do provedor ${providerId}:`, error.response?.data || error.message);
-    // Retornar dados mockados em caso de erro ou se o endpoint não existe para evitar quebrar a UI
-    return {
-      acceptanceRate: 95, // Exemplo
-      avgResponseTime: 15, // Exemplo em minutos
-      totalBookings: 120, // Exemplo
-    };
-    // Ou lançar um erro:
-    // if (axios.isAxiosError(error) && error.response) {
-    //   throw new Error(error.response.data.message || `Erro ao buscar métricas do provedor ${providerId}.`);
-    // }
-    // throw new Error(`Erro de rede ou servidor ao buscar métricas do provedor ${providerId}.`);
+    // Em um ambiente de produção "premium", não devemos retornar dados mockados em caso de erro.
+    // O erro deve ser propagado para que a UI possa lidar com ele.
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(error.response.data.message || `Erro ao buscar métricas do provedor ${providerId}.`);
+    }
+    throw new Error(`Erro de rede ou servidor ao buscar métricas do provedor ${providerId}.`);
   }
 }
 
@@ -532,12 +530,11 @@ export async function getProviderOffers(providerId: string): Promise<Offer[]> {
     return response.data;
   } catch (error: any) {
     console.error(`Erro ao buscar ofertas do provedor ${providerId}:`, error.response?.data || error.message);
-    // Retornar um array vazio ou dados mockados em caso de erro
-    return [];
-    // Ou lançar um erro:
-    // if (axios.isAxiosError(error) && error.response) {
-    //   throw new Error(error.response.data.message || `Erro ao buscar ofertas do provedor ${providerId}.`);
-    // }
-    // throw new Error(`Erro de rede ou servidor ao buscar ofertas do provedor ${providerId}.`);
+    // Em um ambiente de produção "premium", não devemos retornar um array vazio em caso de erro.
+    // O erro deve ser propagado para que a UI possa lidar com ele.
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(error.response.data.message || `Erro ao buscar ofertas do provedor ${providerId}.`);
+    }
+    throw new Error(`Erro de rede ou servidor ao buscar ofertas do provedor ${providerId}.`);
   }
 }
