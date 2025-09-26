@@ -67,15 +67,17 @@ const RequestItem: React.FC<{
   const chatTouchAnimation = useAnimatedTouch();
 
   // Captura o cliente e o nome do cliente de forma explícita para garantir a tipagem
-  // Usando item.clientId e item.clientFullName diretamente do tipo Booking/BookingDetails
-  const clientId: string | undefined = item.clientId;
-  const clientName: string = item.clientFullName || 'Cliente'; // Garante que clientName é sempre string
+  const clientId: string | undefined = item.client?.id; // Acessar client.id
+  const clientName: string = item.client?.fullName || 'Cliente'; // Garante que clientName é sempre string
 
   return (
     <Animated.View style={[
       styles.requestItem,
       {
-        opacity: entryAnim.x,
+        opacity: entryAnim.x.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, 1],
+        }),
         transform: [{ translateY: entryAnim.y }],
       },
     ]}>
@@ -84,14 +86,14 @@ const RequestItem: React.FC<{
         <View style={styles.clientAvatarPlaceholder}>
           <Ionicons name="person-outline" size={20} color={TEXT_MEDIUM} />
         </View>
-        <Text style={styles.requestServiceName} numberOfLines={1}>{item.serviceName}</Text> {/* <-- Corrigido: serviceSnapshot.name para serviceName */}
+        <Text style={styles.requestServiceName} numberOfLines={1}>{item.serviceSnapshot.name}</Text> {/* <-- Corrigido: serviceSnapshot.name */}
         <TouchableOpacity
           style={styles.acceptButtonCorner}
           onPress={() => onAccept && onAccept(item.id)}
           onPressIn={acceptTouchAnimation.onPressIn}
           onPressOut={acceptTouchAnimation.onPressOut}
           accessibilityRole="button"
-          accessibilityLabel={`Aceitar solicitação de ${item.serviceName}`} 
+          accessibilityLabel={`Aceitar solicitação de ${item.serviceSnapshot.name}`}
         >
           <Animated.View style={{ transform: [{ scale: acceptTouchAnimation.scaleAnim }] }}>
             <Ionicons name="checkmark-circle" size={32} color={SUCCESS_GREEN} />
@@ -100,11 +102,11 @@ const RequestItem: React.FC<{
       </View>
 
       <Text style={styles.requestClientName}>Solicitado por: {clientName}</Text>
-      
-      {/* Usando servicePrice diretamente do BookingDetails */}
-      {item.servicePrice !== undefined && ( 
+
+      {/* Usando totalPrice do BookingDetails */}
+      {typeof item.totalPrice === 'number' && ( // Verifica se totalPrice é um número
         <Text style={styles.requestPrice}>
-            Valor: R$ {item.servicePrice.toFixed(2).replace('.', ',')} {/* <-- Corrigido: priceValueAtBooking para servicePrice */}
+            Valor: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.totalPrice)}
         </Text>
       )}
 
@@ -125,10 +127,10 @@ const RequestItem: React.FC<{
 
       <View style={styles.requestActionsRow}>
         {/* Agora, onChat e clientId são verificados, e clientId e clientName são garantidamente strings */}
-        {onChat && clientId && ( 
+        {onChat && clientId && (
           <TouchableOpacity
             style={[styles.actionButtonBase, styles.chatButton]}
-            onPress={() => onChat(clientId, clientName)} 
+            onPress={() => onChat(clientId, clientName)}
             onPressIn={chatTouchAnimation.onPressIn}
             onPressOut={chatTouchAnimation.onPressOut}
             accessibilityLabel={`Conversar com ${clientName}`}
@@ -143,7 +145,7 @@ const RequestItem: React.FC<{
           onPress={() => onReject && onReject(item.id)}
           onPressIn={rejectTouchAnimation.onPressIn}
           onPressOut={rejectTouchAnimation.onPressOut}
-          accessibilityLabel={`Recusar solicitação de ${item.serviceName}`} 
+          accessibilityLabel={`Recusar solicitação de ${item.serviceSnapshot.name}`}
         >
           <Animated.View style={[styles.actionButtonContent, { transform: [{ scale: rejectTouchAnimation.scaleAnim }] }]}>
             <Ionicons name="close-circle-outline" size={20} color={WHITE} />
@@ -155,7 +157,7 @@ const RequestItem: React.FC<{
           onPress={() => onDetails(item.id)}
           onPressIn={detailsTouchAnimation.onPressIn}
           onPressOut={detailsTouchAnimation.onPressOut}
-          accessibilityLabel={`Ver detalhes da solicitação de ${item.serviceName}`} 
+          accessibilityLabel={`Ver detalhes da solicitação de ${item.serviceSnapshot.name}`}
         >
           <Animated.View style={[styles.actionButtonContent, { transform: [{ scale: detailsTouchAnimation.scaleAnim }] }]}>
             <Ionicons name="eye-outline" size={20} color={ICON_PRIMARY} />
@@ -176,23 +178,29 @@ const ConfirmedServiceItem: React.FC<{
   const touchAnimation = useAnimatedTouch();
 
   return (
-    <Animated.View style={{ opacity: entryAnim.x, transform: [{ translateY: entryAnim.y }] }}>
+    <Animated.View style={{
+      opacity: entryAnim.x.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0, 1],
+      }),
+      transform: [{ translateY: entryAnim.y }]
+    }}>
       <TouchableOpacity
         style={styles.serviceItem}
         onPress={() => onPress(item.id)}
         onPressIn={touchAnimation.onPressIn}
         onPressOut={touchAnimation.onPressOut}
         accessibilityRole="button"
-        accessibilityLabel={`Ver detalhes do serviço ${item.serviceName} com ${item.clientFullName}`} 
+        accessibilityLabel={`Ver detalhes do serviço ${item.serviceSnapshot.name} com ${item.client?.fullName}`}
       >
         <Animated.View style={[styles.serviceItemContent, { transform: [{ scale: touchAnimation.scaleAnim }] }]}>
           <View style={styles.serviceItemIconWrapper}>
-            <MaterialCommunityIcons name="calendar-check-outline" size={28} color={ICON_PRIMARY} /> 
+            <MaterialCommunityIcons name="calendar-check-outline" size={28} color={ICON_PRIMARY} />
           </View>
           <View style={styles.serviceItemDetails}>
             <Text style={styles.serviceItemText} numberOfLines={1}>
-              <Text style={{ fontWeight: 'bold' }}>{item.serviceName}</Text> 
-              {item.clientFullName ? ` com ${item.clientFullName}` : ''} 
+              <Text style={{ fontWeight: 'bold' }}>{item.serviceSnapshot.name}</Text>
+              {item.client?.fullName ? ` com ${item.client.fullName}` : ''}
             </Text>
             <Text style={styles.serviceItemTime}>
               {new Date(item.scheduledDateTime).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}, {new Date(item.scheduledDateTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
@@ -218,32 +226,51 @@ const ProviderOverviewSection: React.FC<ProviderOverviewSectionProps> = ({
   unreadMessagesCount = 0,
 }) => {
   // Corrigido: Usar os valores do enum BookingStatus
-  const pendingRequests = upcomingServices.filter(s => s.status === BookingStatus.PENDING); 
+  const pendingRequests = upcomingServices.filter(s => s.status === BookingStatus.PENDING);
   const confirmedUpcomingServices = upcomingServices.filter(s => s.status === BookingStatus.CONFIRMED);
 
   // Animações para itens da lista
-  const animatedItems = useRef<Animated.ValueXY[]>([]).current;
+  // Usamos um Map para gerenciar Animated.ValueXY por ID, o que é mais robusto para listas dinâmicas
+  const animatedItemsMap = useRef(new Map<string, Animated.ValueXY>()).current;
 
-  const createItemAnimation = (index: number) => {
-    if (!animatedItems[index]) {
-      animatedItems[index] = new Animated.ValueXY({ x: 0, y: 50 });
-    }
-    return animatedItems[index];
-  };
-
+  // Cleanup para animações quando o componente é desmontado ou a lista muda
   React.useEffect(() => {
-    const animations = upcomingServices.map((_, index) => {
-      const itemAnim = createItemAnimation(index);
+    // Para cada item na lista atual, garante que tem um Animated.ValueXY
+    upcomingServices.forEach(item => {
+      if (!animatedItemsMap.has(item.id)) {
+        animatedItemsMap.set(item.id, new Animated.ValueXY({ x: 0, y: 50 }));
+      }
+    });
+
+    // Remove Animated.ValueXY de itens que não estão mais na lista
+    const currentItemIds = new Set(upcomingServices.map(item => item.id));
+    animatedItemsMap.forEach((value, key) => {
+      if (!currentItemIds.has(key)) {
+        animatedItemsMap.delete(key);
+      }
+    });
+
+    const animations = upcomingServices.map((item, index) => {
+      const itemAnim = animatedItemsMap.get(item.id)!;
       return Animated.timing(itemAnim, {
         toValue: { x: 1, y: 0 },
         duration: 300,
+        delay: index * 50, // Stagger effect
         useNativeDriver: true,
         easing: Platform.OS === 'ios' ? undefined : undefined,
       });
     });
-    Animated.stagger(100, animations).start();
-  }, [upcomingServices.length]);
 
+    // Inicia todas as animações em paralelo, o stagger já está no delay individual
+    const animationSequence = Animated.parallel(animations);
+    animationSequence.start();
+
+    // Cleanup function para parar animações se o componente for desmontado
+    return () => {
+      animationSequence.stop();
+      animatedItemsMap.forEach(anim => anim.stopAnimation()); // Garante que todas as animações são paradas
+    };
+  }, [upcomingServices]); // Depende de upcomingServices para re-renderizar e re-animar
 
   const messageLinkTouchAnimation = useAnimatedTouch();
 
@@ -269,7 +296,8 @@ const ProviderOverviewSection: React.FC<ProviderOverviewSectionProps> = ({
                 <Ionicons name="alert-circle-outline" size={20} color={WARNING_YELLOW} /> Novas Solicitações ({pendingRequests.length})
             </Text>
           </View>
-          {pendingRequests.map((item, index) => (
+          {/* Manter map para pequenas listas com animação stagger */}
+          {pendingRequests.map((item) => ( // Removido 'index' pois o delay já é tratado no useEffect
             <RequestItem
               key={item.id}
               item={item}
@@ -277,7 +305,7 @@ const ProviderOverviewSection: React.FC<ProviderOverviewSectionProps> = ({
               onReject={onRejectRequest}
               onDetails={onServicePress}
               onChat={onChatWithClient}
-              entryAnim={createItemAnimation(index)}
+              entryAnim={animatedItemsMap.get(item.id)!} // Garante que o Animated.ValueXY existe
             />
           ))}
         </View>
@@ -296,12 +324,13 @@ const ProviderOverviewSection: React.FC<ProviderOverviewSectionProps> = ({
           )}
         </View>
         {confirmedUpcomingServices.length > 0 ? (
-          confirmedUpcomingServices.slice(0, 2).map((item, index) => (
+          // Manter map para pequenas listas com animação stagger (exibindo apenas os 2 primeiros)
+          confirmedUpcomingServices.slice(0, 2).map((item) => ( // Removido 'index'
             <ConfirmedServiceItem
               key={item.id}
               item={item}
               onPress={onServicePress}
-              entryAnim={createItemAnimation(pendingRequests.length + index)}
+              entryAnim={animatedItemsMap.get(item.id)!} // Garante que o Animated.ValueXY existe
             />
           ))
         ) : (
@@ -318,7 +347,7 @@ const ProviderOverviewSection: React.FC<ProviderOverviewSectionProps> = ({
         accessibilityRole="button"
         accessibilityLabel={unreadMessagesCount > 0 ? `Ir para mensagens, ${unreadMessagesCount} não lidas` : "Ir para mensagens"}
       >
-        <Animated.View style={[styles.messageLinkContent, { transform: [{ scale: messageLinkTouchAnimation.scaleAnim }] }]}>
+        <Animated.View style={[styles.messageLinkContent, { transform: [{ scale: messageLinkTouchAnimation.scaleAnim }] }]} >
           <Ionicons name="chatbubbles-outline" size={28} color={ICON_PRIMARY} />
           <Text style={styles.messageLinkText}>Mensagens</Text>
           {unreadMessagesCount > 0 && (
