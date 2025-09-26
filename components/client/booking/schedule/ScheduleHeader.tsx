@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Animated, Easing, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
@@ -7,36 +7,41 @@ import {
     useSharedValue,
     withRepeat,
     withTiming,
+    interpolate,
 } from 'react-native-reanimated';
-import { AppColors, AppShadows } from '../../../../constants/appStyles'; // Importe AppColors e AppShadows
+import { AppColors, AppShadows } from '../../../../constants/appStyles';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface ScheduleHeaderProps {
     onBackPress: () => void;
     headerTitle: string;
     fadeAnim: Animated.Value;
     slideUpAnim: Animated.Value;
+    onMenuPress?: () => void;
+    showBackButton?: boolean;
 }
 
-const HEADER_TOP = Platform.OS === 'ios' ? 56 : 28;
+const HEADER_TOP = Platform.OS === 'ios' ? 52 : 22;
 
-// Constants for the gradient colors from HeaderSuperior.tsx
-const HERO_GRADIENT_START = AppColors.primaryInteractive; // Usando AppColors
-const HERO_GRADIENT_MIDDLE = AppColors.primaryInteractive; // Usando AppColors
-const HERO_GRADIENT_END = AppColors.primaryDark; // Usando AppColors
+// Mudança para tema moderno premium: Gradiente leve de branco para cinza claro, alinhado ao fundo #FAFAFA
+const HERO_GRADIENT_START = '#FFFFFF';
+const HERO_GRADIENT_MIDDLE = '#FFFFFF';
+const HERO_GRADIENT_END = '#FFFFFF';
 
-const ScheduleHeader: React.FC<ScheduleHeaderProps> = ({ onBackPress, headerTitle, fadeAnim, slideUpAnim }) => {
-    // Shared values for the reflex animation from HeaderSuperior.tsx
-    const reflexTranslateX = useSharedValue(-200);
-    const reflexTranslateY = useSharedValue(-200);
+const ScheduleHeader: React.FC<ScheduleHeaderProps> = ({ onBackPress, headerTitle, fadeAnim, slideUpAnim, onMenuPress, showBackButton = true }) => {
+    const reflexTranslateX = useSharedValue(-SCREEN_WIDTH * 0.5);
+    const reflexTranslateY = useSharedValue(-SCREEN_HEIGHT * 0.3);
     const reflexRotate = useSharedValue(0);
 
-    // Animação para o feedback do botão de voltar
     const backButtonPressAnim = useRef(new Animated.Value(1)).current;
 
     const onBackPressIn = () => {
         Animated.spring(backButtonPressAnim, {
             toValue: 0.9,
             useNativeDriver: true,
+            friction: 3,
+            tension: 40,
         }).start();
     };
 
@@ -49,33 +54,42 @@ const ScheduleHeader: React.FC<ScheduleHeaderProps> = ({ onBackPress, headerTitl
         }).start();
     };
 
-    // useEffect for the reflex animation from HeaderSuperior.tsx
     useEffect(() => {
+        // Manter a animação do reflex para um efeito sutil de brilho, mas adaptado ao tema claro
         reflexTranslateX.value = withRepeat(
-            withTiming(200, { duration: 4000, easing: Easing.linear }),
-            -1,
+            withTiming(SCREEN_WIDTH * 0.5, { duration: 4000, easing: Easing.linear }),
+            -1, // -1 para repetição infinita
             true
         );
         reflexTranslateY.value = withRepeat(
-            withTiming(200, { duration: 4000, easing: Easing.linear }),
-            -1,
+            withTiming(SCREEN_HEIGHT * 0.3, { duration: 4000, easing: Easing.linear }),
+            -1, // -1 para repetição infinita
             true
         );
         reflexRotate.value = withRepeat(
             withTiming(360, { duration: 8000, easing: Easing.linear }),
-            -1,
+            -1, // -1 para repetição infinita
             true
         );
-    }, []);
+    }, []); // Dependências vazias para rodar apenas uma vez na montagem
 
-    // Animated style for the reflex from HeaderSuperior.tsx
-    const animatedReflexStyle = useAnimatedStyle(() => ({
-        transform: [
-            { translateX: reflexTranslateX.value },
-            { translateY: reflexTranslateY.value },
-            { rotateZ: `${reflexRotate.value}deg` },
-        ],
-    }));
+    const animatedReflexStyle = useAnimatedStyle(() => {
+        const opacity = interpolate(
+            reflexTranslateX.value,
+            [-SCREEN_WIDTH * 0.5, 0, SCREEN_WIDTH * 0.5],
+            [0.05, 0.15, 0.05], // Opacidade reduzida para tema claro, efeito mais sutil
+            'clamp'
+        );
+
+        return {
+            transform: [
+                { translateX: reflexTranslateX.value },
+                { translateY: reflexTranslateY.value },
+                { rotateZ: `${reflexRotate.value}deg` },
+            ],
+            opacity: opacity,
+        };
+    });
 
     return (
         <Animated.View
@@ -83,18 +97,16 @@ const ScheduleHeader: React.FC<ScheduleHeaderProps> = ({ onBackPress, headerTitl
                 { opacity: fadeAnim, transform: [{ translateY: slideUpAnim }] },
             ]}
         >
-            {/* Barra superior em gradiente + borda inferior arredondada (mock-like) */}
             <LinearGradient
-                // Updated colors, start, and end from HeaderSuperior.tsx
-                colors={[HERO_GRADIENT_START, HERO_GRADIENT_MIDDLE, HERO_GRADIENT_END]}
+                colors={[HERO_GRADIENT_START, HERO_GRADIENT_MIDDLE, HERO_GRADIENT_END]} // Gradiente claro e premium
                 start={{ x: 0.0, y: 0.0 }}
                 end={{ x: 1.0, y: 1.0 }}
-                style={styles.headerGradient} // This style now includes properties from outerContainerGradient
+                style={styles.headerGradient}
             >
-                {/* Animated Reflex from HeaderSuperior.tsx */}
+                {/* Reflex animado adaptado: Agora com gradiente sutil de branco para cinza claro */}
                 <Animated.View style={[styles.animatedReflex, animatedReflexStyle]}>
                     <LinearGradient
-                        colors={['rgba(255, 255, 255, 0)', 'rgba(255, 255, 255, 0.3)', 'rgba(255, 255, 255, 0)']}
+                        colors={['rgba(255, 255, 255, 0)', 'rgba(255, 255, 255, 0.1)', 'rgba(255, 255, 255, 0)']} // Efeito de brilho mais sutil
                         start={{ x: 0, y: 0.5 }}
                         end={{ x: 1, y: 0.5 }}
                         style={styles.reflexGradient}
@@ -104,130 +116,89 @@ const ScheduleHeader: React.FC<ScheduleHeaderProps> = ({ onBackPress, headerTitl
                 <View style={{ height: HEADER_TOP }} />
 
                 <View style={styles.headerRow}>
-                    <TouchableOpacity
-                        onPress={onBackPress}
-                        style={[styles.iconBtn, { transform: [{ scale: backButtonPressAnim }] }]}
-                        onPressIn={onBackPressIn}
-                        onPressOut={onBackPressOut}
-                    >
-                        <Ionicons name="chevron-back" size={20} color={AppColors.white} />
-                    </TouchableOpacity>
+                    {showBackButton ? (
+                        // ✅ Correção: Envolver TouchableOpacity em Animated.View para aplicar transformações
+                        <Animated.View style={{ transform: [{ scale: backButtonPressAnim }] }}>
+                            <TouchableOpacity
+                                onPress={onBackPress}
+                                style={styles.iconBtn}
+                                onPressIn={onBackPressIn}
+                                onPressOut={onBackPressOut}
+                            >
+                                <Ionicons name="chevron-back" size={24} color={AppColors.textBody} /> {/* Cor escura para tema claro */}
+                            </TouchableOpacity>
+                        </Animated.View>
+                    ) : (
+                        <View style={styles.iconBtn} />
+                    )}
 
-                    <Text numberOfLines={1} style={styles.headerTitle}>{headerTitle}</Text>
+                    <Text numberOfLines={1} style={styles.headerTitle}>{headerTitle}</Text> {/* Título em cor escura */}
 
-                    <View style={styles.iconBtn}>
-                        <Ionicons name="ellipsis-vertical" size={18} color={AppColors.white} />
-                    </View>
+                    {onMenuPress ? (
+                        <TouchableOpacity style={styles.iconBtn} onPress={onMenuPress}>
+                            <Ionicons name="ellipsis-vertical" size={24} color={AppColors.textBody} /> {/* Cor escura */}
+                        </TouchableOpacity>
+                    ) : (
+                        <View style={styles.iconBtn} />
+                    )}
                 </View>
 
-                {/* Abas arredondadas (decorativas -- não quebram sua lógica) */}
-                <View style={styles.tabsPill}>
-                    <View style={[styles.tabItem, styles.tabItemGhost]}>
-                        <Text style={styles.tabGhostText}>PONTOS</Text>
-                    </View>
-                    <View style={[styles.tabItem, styles.tabItemActive]}>
-                        <Text style={styles.tabActiveText}>ROUND TRIP</Text>
-                    </View>
-                    <View style={[styles.tabItem, styles.tabItemGhost]}>
-                        <Text style={styles.tabGhostText}>CUPONS</Text>
-                    </View>
-                </View>
+                {/* Removido o tabsPill com PONTOS, ROUND TRIP e CUPONS, deixando apenas o título e botão de volta */}
             </LinearGradient>
         </Animated.View>
     );
 };
 
 const styles = StyleSheet.create({
-    // Updated headerGradient to include properties from HeaderSuperior's outerContainerGradient
     headerGradient: {
-        paddingBottom: -10 * 0.95, // Increased paddingBottom
-        borderBottomLeftRadius: 34 * 0.95,
-        borderBottomRightRadius: 34 * 0.95,
-        borderTopLeftRadius: 4 * 0.95, // Added top radii
-        borderTopRightRadius: 4 * 0.95, // Added top radii
-        paddingHorizontal: 20, // Changed from 16 to 10
-        marginBottom: -9 * 0.95, // Added marginBottom
-        top: 0, // Added top
-        width: '100%', // Added width
+        paddingBottom: 0, // Mantido o padding, mas sem o bottom: 20 do tabsPill
+        borderBottomLeftRadius: 34,
+        borderBottomRightRadius: 34,
+        borderTopLeftRadius: 4,
+        borderTopRightRadius: 4,
+        paddingHorizontal: 20,
+        width: '100%',
         left: 0,
-        overflow: 'hidden', // Added overflow
-        ...AppShadows.medium, // Usando AppShadows
-       
-     
-        borderBottomColor: '#45484b0d',
-
-      
-      
-        // Propriedades de sombra mantidas exatamente como fornecidas
-        shadowColor: '#45484b56', // Cor da sombra
-        shadowOffset: { width: -1, height: 1 }, // Deslocamento vertical mais pronunciado
-        shadowOpacity: 1.55, // Opacidade aumentada para robustezs
-        shadowRadius: 15, // Raio de desfoque para conforto
+        overflow: 'hidden',
+                shadowColor: '#2f3344e8', // Cor da sombra
+        shadowOffset: { width: 0, height: 1 }, // Deslocamento vertical mais pronunciado
+        shadowOpacity: 0.17, // Opacidade aumentada para robustezs
+        shadowRadius: 9, // Raio de desfoque para conforto
         elevation: 6, // Elevação aumentada para robustez no Android
     },
-    // Styles for animated reflex from HeaderSuperior.tsx
     animatedReflex: {
-        ...StyleSheet.absoluteFillObject, // [8]
-        width: 200 * 0.95,
-        height: 300 * 0.95,
-        borderRadius: 150 * 0.95,
-        opacity: 0.8,
+        ...StyleSheet.absoluteFillObject,
+        width: SCREEN_WIDTH * 0.5,
+        height: SCREEN_HEIGHT * 0.3,
+        borderRadius: Math.max(SCREEN_WIDTH, SCREEN_HEIGHT) * 0.25,
     },
     reflexGradient: {
         width: '100%',
         height: '100%',
-        borderRadius: 150 * 0.95,
+        borderRadius: Math.max(SCREEN_WIDTH, SCREEN_HEIGHT) * 0.25,
     },
     headerRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingBottom: 12,
+        paddingBottom: 2,
         bottom: 15,
-        paddingHorizontal: 25,
+        paddingHorizontal: 5,
     },
     iconBtn: {
-        width: 2,
-        height: 2,
+        width: 40,
+        height: 40,
         justifyContent: 'center',
         alignItems: 'center',
     },
     headerTitle: {
         flex: 1,
         textAlign: 'center',
-        color: AppColors.white, // Usando AppColors
+        color: AppColors.textBody, // Cor escura para legibilidade no fundo claro
         fontSize: 16,
         fontWeight: '700',
         fontFamily: Platform.select({ ios: 'System', android: 'sans-serif' }),
     },
-    tabsPill: {
-        marginTop: 6,
-        alignSelf: 'center',
-        backgroundColor: AppColors.white + '13', // Usando AppColors
-        borderRadius: 40,
-        padding: 6,
-        flexDirection: 'row',
-        gap: 6,
-        bottom: 20,
-        
-    },
-    tabItem: {
-        borderRadius: 40,
-        paddingVertical: 3,
-        paddingHorizontal: 6,
-        
-    },
-    tabItemActive: { backgroundColor: AppColors.white }, // Usando AppColors
-    tabActiveText: {
-        color: AppColors.primaryDark, // Usando AppColors
-        fontWeight: '700',
-        fontSize: 9,
-    },
-    tabItemGhost: { backgroundColor: 'transparent' },
-    tabGhostText: {
-        color: AppColors.white + '90', // Usando AppColors
-        fontWeight: '600',
-        fontSize: 9,
-    },
+    // Removidos todos os estilos relacionados ao tabsPill (tabItem, tabItemActive, tabActiveText, tabItemGhost, tabGhostText, tabsPill)
 });
 
 export default ScheduleHeader;
