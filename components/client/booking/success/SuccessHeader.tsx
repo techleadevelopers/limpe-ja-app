@@ -1,6 +1,7 @@
 // LimpeJaApp/app/(client)/bookings/components/success/SuccessHeader.tsx
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Platform, Image, Animated, Easing } from 'react-native';
+import { AppDurations } from '../../../../constants/appStyles'; // Importar AppDurations
 
 interface SuccessHeaderProps {
     successColor: string;
@@ -13,13 +14,11 @@ export default function SuccessHeader({
     headerPrimaryColor,
     headerSecondaryColor,
 }: SuccessHeaderProps) {
-    // Animações para o logo
     const logoPulseAnim = useRef(new Animated.Value(1)).current;
-    const logoRotateAnim = useRef(new Animated.Value(0)).current;
+    const logoRotateAnim = useRef(new Animated.Value(0)).current; // Mantido para possível uso futuro, mas não usado diretamente no transform atual
 
     useEffect(() => {
-        // Animação de pulso para o logo
-        Animated.loop(
+        const pulseLoop = Animated.loop(
             Animated.sequence([
                 Animated.timing(logoPulseAnim, {
                     toValue: 1.03,
@@ -34,20 +33,25 @@ export default function SuccessHeader({
                     useNativeDriver: true,
                 }),
             ])
-        ).start();
+        );
 
-        // Animação de rotação sutil para o logo
-        Animated.loop(
+        const rotateLoop = Animated.loop(
             Animated.timing(logoRotateAnim, {
                 toValue: 1,
-                duration: 15000, // Rotação lenta
+                duration: 15000,
                 easing: Easing.linear,
                 useNativeDriver: true,
             })
-        ).start();
-    }, [logoPulseAnim, logoRotateAnim]);
+        );
 
-  
+        pulseLoop.start();
+        rotateLoop.start();
+
+        return () => {
+            pulseLoop.stop();
+            rotateLoop.stop();
+        };
+    }, [logoPulseAnim, logoRotateAnim]);
 
     return (
         <View style={styles.headerContainer}>
@@ -58,7 +62,6 @@ export default function SuccessHeader({
                     {
                         transform: [
                             { scale: logoPulseAnim },
-                           
                         ]
                     }
                 ]}
@@ -70,7 +73,7 @@ export default function SuccessHeader({
 
 const styles = StyleSheet.create({
     headerContainer: {
-        paddingTop: Platform.OS === 'android' ? 40 : 10,
+        paddingTop: Platform.OS === 'android' ? 40 : 10, // Considerar SafeAreaView para iOS
         paddingBottom: 10,
         paddingHorizontal: 20,
         flexDirection: 'row',
@@ -83,5 +86,8 @@ const styles = StyleSheet.create({
         height: 50,
         top: 0,
         right: 5,
+        // Remover tamanho fixo se a imagem precisar ser responsiva
+        // Se a imagem for um SVG ou puder ser escalada, usar flex ou porcentagem
+        // Ex: width: '80%', height: undefined, aspectRatio: 3,
     },
 });
