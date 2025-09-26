@@ -25,6 +25,7 @@ export const CLIENT_ROUTES = {
   PROFILE: '/(client)/profile',
   EDIT_PROFILE: '/(client)/profile/edit',
   MISSIONS: '/(client)/missions', // ROTA DE MISSÕES ADICIONADA AQUI
+  SAFETY_REPORT: '/(client)/safety/report-incident', // ✅ novo
 } as const;
 
 export const PROVIDER_ROUTES = {
