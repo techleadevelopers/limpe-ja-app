@@ -333,6 +333,39 @@ include: { provider: true },
 });
 console.log(`Usuário Provedor 'Ana' (${providerUser4.email}) criada/atualizada.`);
 
+// NOVO CLIENTE PARA AVALIAR A JOANA
+const clientJoanaReviewerAddress = await upsertAddress({
+    cep: '01001002',
+    street: 'Rua do Avaliador',
+    number: '50',
+    neighborhood: 'Centro',
+    city: 'São Paulo',
+    state: 'SP',
+    latitude: -23.54,
+    longitude: -46.62,
+});
+
+const clientUserJoanaReviewer = await prisma.user.upsert({
+    where: { email: 'clientjoana@teste.com' },
+    update: { passwordHash: pwd, role: UserRole.CLIENT, fullName: 'Cliente Joana Reviewer' },
+    create: {
+        email: 'clientjoana@teste.com',
+        passwordHash: pwd,
+        role: UserRole.CLIENT,
+        fullName: 'Cliente Joana Reviewer',
+        client: {
+            create: {
+                fullName: 'Cliente Joana Reviewer',
+                phone: '11933333333',
+                address: { connect: { id: clientJoanaReviewerAddress.id } },
+            },
+        },
+    },
+    include: { client: true },
+});
+console.log(`Usuário Cliente 'Cliente Joana Reviewer' (${clientUserJoanaReviewer.email}) criada/atualizada.`);
+
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 2) REFERRAL CODE (para o indicador)
 console.log('Criando/Atualizando código de indicação...');
@@ -996,6 +1029,30 @@ latitude: -23.582,
 longitude: -46.662,
 });
 
+// NOVO: Endereços para agendamentos da Joana
+const bookingAddressJoana1 = await upsertAddress({
+    cep: '01003-006',
+    street: 'Rua das Rosas',
+    number: '10',
+    neighborhood: 'Centro',
+    city: 'São Paulo',
+    state: 'SP',
+    latitude: -23.57,
+    longitude: -46.67,
+});
+
+const bookingAddressJoana2 = await upsertAddress({
+    cep: '01003-007',
+    street: 'Av. Brasil',
+    number: '200',
+    neighborhood: 'Jardim América',
+    city: 'São Paulo',
+    state: 'SP',
+    latitude: -23.58,
+    longitude: -46.68,
+});
+
+
 // Agendamento COMPLETED (do indicado, para testar referral conversion)
 const booking1Date = addDays(now, -7);
 if (!referredUser.client || !providerUser.provider) {
@@ -1129,8 +1186,79 @@ addressId: bookingAddress3.id, // Usando addressId único
 });
 console.log(`Agendamento Confirmado 'BKG-SEED-3' criado/atualizado.`);
 
+// NOVO: Agendamentos Concluídos para Joana
+const joanaService = await prisma.providerService.findFirst({
+    where: {
+        providerId: providerUser3.provider.id,
+        serviceId: residentialCleaningService.id,
+        pricingType: PricingType.FIXED_PRICE,
+    }
+});
+if (!joanaService) {
+    throw new Error("ProviderService for Joana not found.");
+}
+
+const bookingJoana1Date = addDays(now, -10);
+const bookingJoana1 = await prisma.booking.upsert({
+    where: { id: 'BKG-SEED-JOANA-1' },
+    update: {
+        clientId: clientUserJoanaReviewer.client.id,
+        providerId: providerUser3.provider.id,
+        providerServiceId: joanaService.id,
+        scheduledDate: bookingJoana1Date,
+        scheduledTime: '09:30',
+        status: BookingStatus.COMPLETED,
+        totalPrice: new Prisma.Decimal(190.00),
+        notes: 'Serviço de limpeza para avaliação da Joana (5 estrelas).',
+        addressId: bookingAddressJoana1.id,
+    },
+    create: {
+        id: 'BKG-SEED-JOANA-1',
+        clientId: clientUserJoanaReviewer.client.id,
+        providerId: providerUser3.provider.id,
+        providerServiceId: joanaService.id,
+        scheduledDate: bookingJoana1Date,
+        scheduledTime: '09:30',
+        status: BookingStatus.COMPLETED,
+        totalPrice: new Prisma.Decimal(190.00),
+        notes: 'Serviço de limpeza para avaliação da Joana (5 estrelas).',
+        addressId: bookingAddressJoana1.id,
+    },
+});
+console.log(`Agendamento Concluído 'BKG-SEED-JOANA-1' (para Joana) criado/atualizado.`);
+
+const bookingJoana2Date = addDays(now, -5);
+const bookingJoana2 = await prisma.booking.upsert({
+    where: { id: 'BKG-SEED-JOANA-2' },
+    update: {
+        clientId: clientUserJoanaReviewer.client.id,
+        providerId: providerUser3.provider.id,
+        providerServiceId: joanaService.id,
+        scheduledDate: bookingJoana2Date,
+        scheduledTime: '14:00',
+        status: BookingStatus.COMPLETED,
+        totalPrice: new Prisma.Decimal(190.00),
+        notes: 'Serviço de limpeza para avaliação da Joana (4 estrelas).',
+        addressId: bookingAddressJoana2.id,
+    },
+    create: {
+        id: 'BKG-SEED-JOANA-2',
+        clientId: clientUserJoanaReviewer.client.id,
+        providerId: providerUser3.provider.id,
+        providerServiceId: joanaService.id,
+        scheduledDate: bookingJoana2Date,
+        scheduledTime: '14:00',
+        status: BookingStatus.COMPLETED,
+        totalPrice: new Prisma.Decimal(190.00),
+        notes: 'Serviço de limpeza para avaliação da Joana (4 estrelas).',
+        addressId: bookingAddressJoana2.id,
+    },
+});
+console.log(`Agendamento Concluído 'BKG-SEED-JOANA-2' (para Joana) criado/atualizado.`);
+
+
 // Pagamentos confirmados dos agendamentos concluídos
-for (const booking of [booking1, booking2]) {
+for (const booking of [booking1, booking2, bookingJoana1, bookingJoana2]) { // Adicionado bookings da Joana aqui
 await prisma.paymentIntent.upsert({
 where: { bookingId: booking.id },
 update: {
@@ -1154,7 +1282,7 @@ console.log(`PaymentIntent para Booking ${booking.id} criado/atualizado.`);
 await prisma.transaction.upsert({
 where: { gatewayTransactionId: `TRANS-${booking.id}` },
 update: {
-providerId: providerUser.provider!.id,
+providerId: booking.providerId, // Usar o providerId do booking para a transação
 amount: booking.totalPrice,
 type: TransactionType.PAYMENT,
 status: 'COMPLETED',
@@ -1162,7 +1290,7 @@ description: `Pagamento do serviço ${booking.id}`,
 bookingId: booking.id,
 },
 create: {
-providerId: providerUser.provider!.id,
+providerId: booking.providerId, // Usar o providerId do booking para a transação
 amount: booking.totalPrice,
 type: TransactionType.PAYMENT,
 status: 'COMPLETED',
@@ -1269,6 +1397,44 @@ comment: 'Serviço excelente! Provedora muito profissional e atenciosa.',
 },
 });
 console.log(`Avaliação para Booking ${booking2.id} criada/atualizada.`);
+
+// NOVO: Avaliações para Joana
+await prisma.review.upsert({
+    where: { bookingId: bookingJoana1.id },
+    update: {
+        rating: 5,
+        comment: 'Joana é excelente! Super atenciosa e deixou tudo impecável. Recomendo muito!',
+        clientId: clientUserJoanaReviewer.client!.id,
+        providerId: providerUser3.provider!.id,
+    },
+    create: {
+        bookingId: bookingJoana1.id,
+        clientId: clientUserJoanaReviewer.client!.id,
+        providerId: providerUser3.provider!.id,
+        rating: 5,
+        comment: 'Joana é excelente! Super atenciosa e deixou tudo impecável. Recomendo muito!',
+    },
+});
+console.log(`Avaliação para Booking ${bookingJoana1.id} (Joana) criada/atualizada.`);
+
+await prisma.review.upsert({
+    where: { bookingId: bookingJoana2.id },
+    update: {
+        rating: 4,
+        comment: 'Bom serviço, chegou no horário e fez um bom trabalho. Fiquei satisfeita.',
+        clientId: clientUserJoanaReviewer.client!.id,
+        providerId: providerUser3.provider!.id,
+    },
+    create: {
+        bookingId: bookingJoana2.id,
+        clientId: clientUserJoanaReviewer.client!.id,
+        providerId: providerUser3.provider!.id,
+        rating: 4,
+        comment: 'Bom serviço, chegou no horário e fez um bom trabalho. Fiquei satisfeita.',
+    },
+});
+console.log(`Avaliação para Booking ${bookingJoana2.id} (Joana) criada/atualizada.`);
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 11) OUTROS MODELOS (Exemplos básicos)
