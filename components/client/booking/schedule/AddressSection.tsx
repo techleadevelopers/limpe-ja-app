@@ -205,8 +205,8 @@ const s = StyleSheet.create({
   card: {
     backgroundColor: AppColors.backgroundLight, // Usando AppColors
     borderRadius: 18,
-    marginHorizontal: 19,
-    padding: 14,
+    marginHorizontal: 25,
+    padding: 12,
     marginTop: 16,
     overflow: 'hidden',
     ...AppShadows.small, // Adicionando sombra
@@ -221,8 +221,8 @@ const s = StyleSheet.create({
     marginBottom: 8,
   },
   trackIcon: {
-    width: 68,
-    height: 68,
+    width: 50,
+    height: 50,
     marginHorizontal: 10,
   },
 
@@ -238,12 +238,12 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   safeMsgText: {
-    fontSize: 13.2,
+    fontSize: 13,
     minWidth: 10,
     marginHorizontal: 0,
     fontFamily: 'Montserrat-Regular',
     color: AppColors.textAuxiliary, // Usando AppColors
-    fontWeight: '600', // leve/fina e confortável
+    fontWeight: '500', // leve/fina e confortável
     lineHeight: 16,
     left: -2, 
     
