@@ -4,7 +4,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { Notification } from '@prisma/client';
 import { MarkAsReadDto } from './dto/mark-as-read.dto';
 import { I18nService } from '../common/i18n/i18n.service';
-import { CreateNotificationDto } from './dto/create-notification.dto'; // NEW
+import { CreateNotificationDto } from './dto/create-notification.dto';
+import * as Sentry from '@sentry/node'; // NEW: Import Sentry (conceptual, requires setup)
 
 @Injectable()
 export class NotificationsService {
@@ -20,20 +21,36 @@ export class NotificationsService {
    * @param dto DTO com os dados da notificação a ser criada.
    * @returns A notificação criada.
    */
-  async createNotification(dto: CreateNotificationDto): Promise<Notification> { // Refactored to use DTO
-    const { userId, type, message, targetUrl, title, imageUrl, actionButtons } = dto;
-    return this.prisma.notification.create({
-      data: {
-        userId,
+  async createNotification(dto: CreateNotificationDto): Promise<Notification> {
+    const { userId, type, message, targetUrl, title, imageUrl, actionButtons, category } = dto; // NEW: Added category
+    try {
+      const notification = await this.prisma.notification.create({
+        data: {
+          userId,
+          type,
+          message,
+          targetUrl,
+          title,
+          imageUrl,
+          actionButtons,
+          category, // NEW: Storing category in DB
+          isRead: false,
+        },
+      });
+      // Optionally, send push notification immediately after creating DB entry
+      this.sendPushNotification(userId, title || message, message, {
         type,
-        message,
+        notificationId: notification.id,
         targetUrl,
-        title, // Storing title in DB
-        imageUrl, // Storing imageUrl in DB
-        actionButtons, // Storing actionButtons in DB
-        isRead: false,
-      },
-    });
+        category,
+        ...actionButtons // Pass action buttons data to push notification payload
+      }).catch(e => this.logger.error(`Failed to send push notification for ${notification.id}: ${e.message}`, e.stack));
+      return notification;
+    } catch (error) {
+      this.logger.error(`Erro ao criar notificação para userId ${userId}: ${error.message}`, error.stack);
+      Sentry.captureException(error); // NEW: Capture exception with Sentry
+      throw error;
+    }
   }
 
   /**
@@ -43,13 +60,19 @@ export class NotificationsService {
    * @returns Lista de notificações.
    */
   async getUserNotifications(userId: string, includeRead: boolean = false): Promise<Notification[]> {
-    return this.prisma.notification.findMany({
-      where: {
-        userId,
-        ...(includeRead ? {} : { isRead: false }),
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    try {
+      return this.prisma.notification.findMany({
+        where: {
+          userId,
+          ...(includeRead ? {} : { isRead: false }),
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    } catch (error) {
+      this.logger.error(`Erro ao buscar notificações para userId ${userId}: ${error.message}`, error.stack);
+      Sentry.captureException(error);
+      throw error;
+    }
   }
 
   /**
@@ -59,31 +82,35 @@ export class NotificationsService {
    * @returns Contagem de notificações atualizadas.
    */
   async markNotificationsAsRead(userId: string, markAsReadDto: MarkAsReadDto): Promise<{ count: number }> {
-    if (markAsReadDto.notificationIds && markAsReadDto.notificationIds.length > 0) {
-      // Marca notificações específicas como lidas
-      const result = await this.prisma.notification.updateMany({
-        where: {
-          id: { in: markAsReadDto.notificationIds },
-          userId: userId, // Garante que o usuário só pode marcar suas próprias notificações
-          isRead: false, // Apenas marca as que ainda não foram lidas
-        },
-        data: {
-          isRead: true,
-        },
-      });
-      return { count: result.count };
-    } else {
-      // Marca todas as notificações não lidas do usuário como lidas
-      const result = await this.prisma.notification.updateMany({
-        where: {
-          userId: userId,
-          isRead: false,
-        },
-        data: {
-          isRead: true,
-        },
-      });
-      return { count: result.count };
+    try {
+      if (markAsReadDto.notificationIds && markAsReadDto.notificationIds.length > 0) {
+        const result = await this.prisma.notification.updateMany({
+          where: {
+            id: { in: markAsReadDto.notificationIds },
+            userId: userId,
+            isRead: false,
+          },
+          data: {
+            isRead: true,
+          },
+        });
+        return { count: result.count };
+      } else {
+        const result = await this.prisma.notification.updateMany({
+          where: {
+            userId: userId,
+            isRead: false,
+          },
+          data: {
+            isRead: true,
+          },
+        });
+        return { count: result.count };
+      }
+    } catch (error) {
+      this.logger.error(`Erro ao marcar notificações como lidas para userId ${userId}: ${error.message}`, error.stack);
+      Sentry.captureException(error);
+      throw error;
     }
   }
 
@@ -106,10 +133,16 @@ export class NotificationsService {
       return notification;
     }
 
-    return this.prisma.notification.update({
-      where: { id: notificationId },
-      data: { isRead: true },
-    });
+    try {
+      return this.prisma.notification.update({
+        where: { id: notificationId },
+        data: { isRead: true },
+      });
+    } catch (error) {
+      this.logger.error(`Erro ao marcar notificação ${notificationId} como lida: ${error.message}`, error.stack);
+      Sentry.captureException(error);
+      throw error;
+    }
   }
 
   /**
@@ -126,14 +159,20 @@ export class NotificationsService {
       throw new NotFoundException(await this.i18n.translate('notification.notFound'));
     }
 
-    await this.prisma.notification.delete({
-      where: { id: notificationId },
-    });
+    try {
+      await this.prisma.notification.delete({
+        where: { id: notificationId },
+      });
+    } catch (error) {
+      this.logger.error(`Erro ao deletar notificação ${notificationId}: ${error.message}`, error.stack);
+      Sentry.captureException(error);
+      throw error;
+    }
   }
 
   /**
    * Fornece sugestões inteligentes baseadas em um contexto.
-   * @param context O contexto para as sugestões (ex: 'booking_flow', 'service_quality').
+   * @param context O contexto para as sugestões (ex: 'booking_flow', 'service_quality', 'dispute').
    * @returns Um array de strings com sugestões.
    */
   async getSmartSuggestions(context: string): Promise<string[]> {
@@ -153,6 +192,11 @@ export class NotificationsService {
         'Envie lembretes de manutenção preventiva',
         'Mantenha contato pós-serviço para feedback'
       ],
+      'dispute': [ // NEW: Suggestions for disputes
+        'Mantenha a comunicação clara e objetiva.',
+        'Anexe todas as evidências relevantes.',
+        'Proponha uma solução justa para ambas as partes.'
+      ]
     };
 
     return suggestions[context] || [];
@@ -160,30 +204,45 @@ export class NotificationsService {
 
   /**
    * Executa uma ação rápida associada a uma notificação.
-   * @param action O tipo de ação a ser executada (ex: 'accept_booking', 'respond_review').
-   * @param data Dados adicionais necessários para a ação (ex: bookingId, reviewId, message).
+   * @param action O tipo de ação a ser executada (ex: 'accept_booking', 'respond_review', 'view_dispute').
+   * @param data Dados adicionais necessários para a ação (ex: bookingId, reviewId, message, disputeId).
    * @returns Promessa que resolve quando a ação é concluída.
    */
   async executeQuickAction(action: string, data: any): Promise<void> {
-    switch (action) {
-      case 'accept_booking':
-        this.prisma.booking.update({
-          where: { id: data.bookingId },
-          data: { status: 'CONFIRMED' }
-        }).catch(e => this.logger.error(`Erro ao aceitar agendamento ${data.bookingId}:`, e));
-        this.logger.log(`Ação Rápida: Agendamento ${data.bookingId} aceito.`);
-        break;
-      case 'view_booking':
-        this.logger.log(`Ação Rápida: Visualizar agendamento ${data.bookingId}.`);
-        break;
-      case 'respond_review':
-        this.logger.log(`Ação Rápida: Respondendo à avaliação ${data.reviewId} com conteúdo: "${data.responseContent}".`);
-        break;
-      case 'view_review':
-        this.logger.log(`Ação Rápida: Visualizar avaliação ${data.reviewId}.`);
-        break;
-      default:
-        throw new BadRequestException(await this.i18n.translate('notification.badRequest.unknownAction', 'pt-BR', { action }));
+    try {
+      switch (action) {
+        case 'accept_booking':
+          await this.prisma.booking.update({
+            where: { id: data.bookingId },
+            data: { status: 'CONFIRMED' }
+          });
+          this.logger.log(`Ação Rápida: Agendamento ${data.bookingId} aceito.`);
+          break;
+        case 'view_booking':
+          this.logger.log(`Ação Rápida: Visualizar agendamento ${data.bookingId}.`);
+          break;
+        case 'respond_review':
+          this.logger.log(`Ação Rápida: Respondendo à avaliação ${data.reviewId} com conteúdo: "${data.responseContent}".`);
+          break;
+        case 'view_review':
+          this.logger.log(`Ação Rápida: Visualizar avaliação ${data.reviewId}.`);
+          break;
+        case 'view_dispute': // NEW: Quick action for disputes
+          this.logger.log(`Ação Rápida: Visualizar disputa ${data.disputeId}.`);
+          break;
+        case 'view_dispute_message': // NEW: Quick action for dispute messages
+          this.logger.log(`Ação Rápida: Visualizar mensagem na disputa ${data.disputeId}.`);
+          break;
+        case 'view_dispute_resolution': // NEW: Quick action for dispute resolution
+          this.logger.log(`Ação Rápida: Visualizar resolução da disputa ${data.disputeId}.`);
+          break;
+        default:
+          throw new BadRequestException(await this.i18n.translate('notification.badRequest.unknownAction', 'pt-BR', { action }));
+      }
+    } catch (error) {
+      this.logger.error(`Erro ao executar ação rápida '${action}': ${error.message}`, error.stack);
+      Sentry.captureException(error);
+      throw error;
     }
   }
 
@@ -246,6 +305,7 @@ export class NotificationsService {
         `Erro ao enviar notificação push para o usuário ${userId}: ${error.message}`,
         error.stack,
       );
+      Sentry.captureException(error); // NEW: Capture exception with Sentry
       throw new Error(`Falha ao enviar notificação push: ${error.message}`);
     }
   }
