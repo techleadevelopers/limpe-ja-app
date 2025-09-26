@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -39,9 +38,9 @@ const SmartInsightsSection: React.FC<SmartInsightsSectionProps> = ({
   const loadSuggestions = async () => {
     setIsLoading(true);
     try {
-      // Aqui você faria a chamada para o endpoint de sugestões IA
+      // TODO: integrar com API real
       // const response = await getSmartSuggestions();
-      
+
       // Mock de sugestões por enquanto
       const mockSuggestions: SmartSuggestion[] = [
         {
@@ -59,7 +58,7 @@ const SmartInsightsSection: React.FC<SmartInsightsSectionProps> = ({
           actionable: true,
         },
       ];
-      
+
       setSuggestions(mockSuggestions);
     } catch (error) {
       console.error('Erro ao carregar sugestões:', error);
@@ -77,7 +76,7 @@ const SmartInsightsSection: React.FC<SmartInsightsSectionProps> = ({
     }
   };
 
-  const getTypeIcon = (type: string) => {
+  const getTypeIcon = (type: string): keyof typeof Ionicons.glyphMap => { // Explicitly type the return
     switch (type) {
       case 'pricing': return 'cash-outline';
       case 'availability': return 'calendar-outline';
@@ -111,7 +110,7 @@ const SmartInsightsSection: React.FC<SmartInsightsSectionProps> = ({
             >
               <View style={styles.cardHeader}>
                 <View style={[styles.iconContainer, { backgroundColor: getImpactColor(suggestion.impact) }]}>
-                  <Ionicons name={getTypeIcon(suggestion.type) as any} size={20} color="#FFFFFF" />
+                  <Ionicons name={getTypeIcon(suggestion.type)} size={20} color="#FFFFFF" />
                 </View>
                 <View style={[styles.impactBadge, { backgroundColor: getImpactColor(suggestion.impact) }]}>
                   <Text style={styles.impactText}>{suggestion.impact.toUpperCase()}</Text>
@@ -120,7 +119,7 @@ const SmartInsightsSection: React.FC<SmartInsightsSectionProps> = ({
               <Text style={styles.suggestionTitle}>{suggestion.title}</Text>
               <Text style={styles.suggestionDescription}>{suggestion.description}</Text>
               {suggestion.actionable && (
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.actionButton}
                   onPress={() => Alert.alert('Ação', 'Funcionalidade em desenvolvimento')}
                 >
