@@ -4,7 +4,7 @@ import {
   Offer as PrismaOffer,
   OfferStatus,
   OfferTarget,
-  Prisma, // Importe Prisma para usar Prisma.Decimal
+  Prisma,
 } from '@prisma/client';
 
 /**
@@ -46,7 +46,7 @@ export class OfferDetailsDto {
   discountPercentage?: number | null;
 
   @ApiProperty({ required: false, nullable: true, type: Number })
-  fixedDiscountAmount?: Prisma.Decimal | null; // CORREÇÃO: Tipo ajustado para Prisma.Decimal
+  fixedDiscountAmount?: Prisma.Decimal | null;
 
   @ApiProperty({ required: false, nullable: true })
   imageUrl?: string | null;
