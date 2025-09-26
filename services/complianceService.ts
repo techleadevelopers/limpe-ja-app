@@ -25,21 +25,9 @@ export class ComplianceService {
       return response.data;
     } catch (error) {
       console.error('Erro ao verificar status de compliance:', error);
-      
-      // Retorno de mock em caso de erro, para fins de desenvolvimento.
-      // Em produção, você deve tratar o erro de forma mais robusta.
-      return {
-        documentsValid: true,
-        backgroundCheckPassed: true,
-        insuranceActive: false,
-        taxStatusRegular: true,
-        lastUpdate: new Date().toISOString(),
-        expirationDates: {
-          'background_check': '2025-12-15',
-          'insurance': '2024-03-30',
-          'tax_certificate': '2025-06-30'
-        }
-      };
+      // Em um ambiente de produção "premium", não devemos retornar dados mockados em caso de erro.
+      // O erro deve ser propagado para que a UI possa lidar com ele (ex: exibir uma mensagem de erro).
+      throw error;
     }
   }
 
@@ -49,36 +37,9 @@ export class ComplianceService {
       return response.data;
     } catch (error) {
       console.error('Erro ao buscar requisitos legais:', error);
-      // Retorno de mock em caso de erro.
-      return [
-        {
-          id: '1',
-          title: 'Seguro de Responsabilidade Civil',
-          description: 'Obrigatório para prestadores de serviços de limpeza',
-          status: 'expired',
-          dueDate: '2024-03-30',
-          actions: [
-            'Renovar seguro',
-            'Enviar comprovante atualizado',
-            'Verificar cobertura adequada'
-          ]
-        },
-        {
-          id: '2',
-          title: 'Certidão de Antecedentes Criminais',
-          description: 'Renovação anual obrigatória',
-          status: 'compliant',
-          dueDate: '2025-12-15',
-          actions: []
-        },
-        {
-          id: '3',
-          title: 'Declaração de MEI',
-          description: 'Manter situação fiscal regular',
-          status: 'compliant',
-          actions: ['Verificar DAS em dia']
-        }
-      ];
+      // Em um ambiente de produção "premium", não devemos retornar dados mockados em caso de erro.
+      // O erro deve ser propagado para que a UI possa lidar com ele (ex: exibir uma mensagem de erro).
+      throw error;
     }
   }
 
@@ -103,32 +64,15 @@ export class ComplianceService {
   }
 
   static async getDataPrivacyInfo(): Promise<any> {
-    // Retorno de mock.
-    return {
-      dataCollection: [
-        'Informações pessoais básicas (nome, CPF, telefone)',
-        'Dados de localização para prestação de serviços',
-        'Histórico de serviços e avaliações',
-        'Dados de pagamento (criptografados)'
-      ],
-      dataUsage: [
-        'Facilitar conexão entre clientes e prestadores',
-        'Melhorar qualidade dos serviços',
-        'Garantir segurança e confiabilidade',
-        'Cumprir obrigações legais e fiscais'
-      ],
-      rights: [
-        'Acessar seus dados pessoais',
-        'Corrigir informações incorretas',
-        'Solicitar exclusão de dados',
-        'Portabilidade de dados',
-        'Retirar consentimento'
-      ],
-      contact: {
-        email: 'privacidade@limpeja.com.br',
-        phone: '(11) 1234-5678'
-      }
-    };
+    try {
+      const response = await api.get('/compliance/privacy-info'); // Assumindo um endpoint real para privacidade
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao buscar informações de privacidade de dados:', error);
+      // Em um ambiente de produção "premium", não devemos retornar dados mockados em caso de erro.
+      // O erro deve ser propagado para que a UI possa lidar com ele (ex: exibir uma mensagem de erro).
+      throw error;
+    }
   }
 
   static async requestDataExport(): Promise<void> {
@@ -148,4 +92,4 @@ export class ComplianceService {
       throw error;
     }
   }
-} 
+}
