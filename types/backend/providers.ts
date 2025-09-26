@@ -6,6 +6,10 @@ import { VerificationStatus, UserRole } from './auth'; // CORREÇÃO: Importar U
 import { UserProfile } from './users'; // CORREÇÃO: Importar UserProfile para usar user.isVerified
 import { ProviderServiceOffering } from './provider-service';
 
+// Importa ReviewEntity do seu local canônico.
+// Ajuste o caminho conforme a estrutura real do seu projeto se necessário.
+import { ReviewEntity } from './reviews'; // <-- Importação adicionada/ajustada
+
 // CORREÇÃO: Re-exportar ProviderServiceOffering para que outros módulos possam importá-lo daqui
 export { ProviderServiceOffering };
 
@@ -15,7 +19,8 @@ export { ProviderServiceOffering };
  */
 export interface ProviderMetrics {
   acceptanceRate: number;
-  avgResponseTime: number; // em minutos
+  averageResponseTime: number; // <<-- CORREÇÃO: Alterado de 'avgResponseTime' para 'averageResponseTime'
+  totalBookings: number; // <<-- CORREÇÃO: Adicionado 'totalBookings' aqui para resolver o erro
 }
 
 // CORREÇÃO: Definir e exportar TransactionType
@@ -72,7 +77,7 @@ export interface ProviderDisplayInfo {
   rejectionReason?: string | null;
   ocrResult?: any | null;
   livenessResult?: any | null;
-  reviews?: ProviderReview[];
+  reviews?: ReviewEntity[]; // <<-- CORREÇÃO: Alterado para ReviewEntity[]
   badges: string[]; // CORREÇÃO: Adicionado badges
   user: { // CORREÇÃO: Adicionado objeto user com isVerified
     email: string;
@@ -144,24 +149,24 @@ export type ProviderWithCalculatedRating = {
 /**
  * @interface ProviderReview
  * Representa uma avaliação de um provedor, incluindo informações do cliente.
+ * <<-- CORREÇÃO: Alterado para ser um alias de ReviewEntity para consistência
  */
-export interface ProviderReview {
+export type ProviderReview = ReviewEntity;
+
+/**
+ * @interface Offer
+ * Representa uma oferta ou promoção.
+ * <<-- CORREÇÃO: Adicionado e exportado 'Offer' aqui para resolver o erro
+ */
+export interface Offer {
   id: string;
-  rating: number;
-  comment?: string | null;
-  createdAt: string;
-  updatedAt: string;
-  bookingId: string;
-  clientId: string;
-  providerId: string;
-  client?: {
-    id: string;
-    fullName: string; // CORREÇÃO: name para fullName
-    user?: {
-      id: string;
-      avatarUrl?: string | null;
-    } | null;
-  } | null;
+  title: string;
+  description: string;
+  couponCode: string | null;
+  discountType: 'PERCENT' | 'FIXED';
+  discountValue: number;
+  startDate: string;
+  endDate: string;
 }
 
 // =========================================================================
@@ -249,7 +254,7 @@ export interface ProviderDashboard {
   upcomingBookings: BookingDetails[]; // Alterado para listar os agendamentos pendentes/próximos
   completedBookingsCount?: number;
   averageRating?: number;
-  reviews?: ProviderReview[]; // Alterado para a seção de reviews
+  reviews?: ReviewEntity[]; // <<-- CORREÇÃO: Alterado para ReviewEntity[]
   userProfile?: UserProfile;
   metrics?: ProviderMetrics; // NOVO: Adicionado métricas ao dashboard
 }
