@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useRef } from 'react'; // Importar useRe
 import { Image, StyleSheet, Text, View, Animated, Easing } from 'react-native'; // Importar Animated, Easing
 import { VerificationStatus } from '../../../../types/backend/auth';
 import { BookingAddress } from '../../../../types/backend/bookings';
+import { AppColors } from '../../../../constants/appStyles'; // Importar AppColors para consistência de cores
 
 interface ProviderDetails {
   id: string;
@@ -36,8 +37,9 @@ export default function ProviderBrief({ provider, serviceName, isLoading }: Prov
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
+    let pulseLoop: Animated.CompositeAnimation | undefined;
     if (!isLoading && provider) {
-      Animated.loop(
+      pulseLoop = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
             toValue: 1.005, // Pulso muito sutil
@@ -52,11 +54,16 @@ export default function ProviderBrief({ provider, serviceName, isLoading }: Prov
             useNativeDriver: true,
           }),
         ])
-      ).start();
+      );
+      pulseLoop.start();
     } else {
       pulseAnim.stopAnimation();
       pulseAnim.setValue(1);
     }
+
+    return () => {
+      pulseLoop?.stop(); // Cleanup da animação
+    };
   }, [isLoading, provider, pulseAnim]);
 
 
@@ -76,7 +83,7 @@ export default function ProviderBrief({ provider, serviceName, isLoading }: Prov
           key={i}
           name={iconName}
           size={11} // Tamanho do RecomendacaoCard
-          color="#007AFF" // Cor do RecomendacaoCard
+          color={AppColors.primaryInteractive} // Usando AppColors para consistência
           style={styles.ratingStarIcon} // Estilo para espaçamento entre estrelas
         />
       );
@@ -86,8 +93,8 @@ export default function ProviderBrief({ provider, serviceName, isLoading }: Prov
 
   const chip = useCallback((icon: keyof typeof Ionicons.glyphMap, text: string, verified?: boolean) => (
     <View style={[styles.chip, verified && styles.chipOk]}>
-      <Ionicons name={icon} size={12} color={verified ? 'rgba(6, 78, 212, 0.85)' : '#5C6B7A'} />
-      <Text style={[styles.chipTxt, verified && styles.chipTxtOk]}>{text}</Text>
+      <Ionicons name={icon} size={12} color={verified ? AppColors.primaryDark : AppColors.mediumGray} /> {/* Usando AppColors */}
+      <Text style={[styles.chipTxt, verified && styles.chipTxtOk]} maxFontSizeMultiplier={1.2}>{text}</Text>
     </View>
   ), []);
 
@@ -113,19 +120,19 @@ export default function ProviderBrief({ provider, serviceName, isLoading }: Prov
       {provider.avatarUrl ? (
         <Image source={{ uri: provider.avatarUrl }} style={styles.photo} />
       ) : (
-        <View style={styles.photoPlaceholder}><Ionicons name="person-circle-outline" size={30} color="#7E8EA1" /></View>
+        <View style={styles.photoPlaceholder}><Ionicons name="person-circle-outline" size={30} color={AppColors.mediumGray} /></View> 
       )}
 
       <View style={{ flex: 1 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
-          <Text style={styles.name}>{provider.fullName}</Text>
+          <Text style={styles.name} maxFontSizeMultiplier={1.2}>{provider.fullName}</Text>
           {typeof provider.averageRating === 'number' && provider.averageRating > 0 ? (
             <View style={{ marginLeft: 8 }}>{renderStars(provider.averageRating)}</View>
           ) : (
-            <Text style={styles.noRating}>Sem avaliação</Text>
+            <Text style={styles.noRating} maxFontSizeMultiplier={1.2}>Sem avaliação</Text>
           )}
         </View>
-        <Text style={styles.service}>{specialty}</Text>
+        <Text style={styles.service} maxFontSizeMultiplier={1.2}>{specialty}</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2 }}>
           {provider.verificationStatus === VerificationStatus.APPROVED && chip('shield-checkmark-outline', 'Verificado', true)}
           {typeof provider.yearsOfExperience === 'number' && provider.yearsOfExperience > 0 && chip('hourglass-outline', `${provider.yearsOfExperience}+ anos`)}
@@ -144,13 +151,12 @@ const styles = StyleSheet.create({
     padding: 12,
     marginHorizontal: 29,
     marginTop: 14,
-    
-      
+
            borderTopStartRadius: 44,
            borderBottomStartRadius: 44,
            borderTopEndRadius: 44,
            borderBottomEndRadius: 44,
-           
+
            // Propriedades de sombra mantidas exatamente como fornecidas
            shadowColor: '#45484b56', // Cor da sombra
            shadowOffset: { width: -1, height: 1 }, // Deslocamento vertical mais pronunciado
