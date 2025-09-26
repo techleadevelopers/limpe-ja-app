@@ -17,7 +17,8 @@ import {
     ViewToken,
     RefreshControl,
     Platform,
-    Share
+    Share,
+    SafeAreaView
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -41,12 +42,16 @@ import {
 
 import { Offer } from '../../../types/backend/offers';
 import { ProviderDisplayInfo } from '../../../types/backend/providers';
-import { Service } from '../../../types/backend/services';
+import { Service, PricingType } from '../../../types/backend/services';
 import { UserProfile } from '../../../types/backend/users';
 import HorizontalMiniGrid from '../../../components/client/explore/home/HorizontalMiniGrid';
 
 import { CLIENT_ROUTES } from '../../../constants/routes';
 import { AppColors, AppDurations, AppOffsets, AppShadows, AppTypography, SCREEN_WIDTH } from '../../../constants/appStyles';
+
+// Importar o formatAddress e getNumericPriceValue
+import { formatAddress } from '../../../utils/formatters';
+import { getNumericPriceValue } from '../../../utils/service-helpers';
 
 // --- INTERFACES PARA COMPONENTES (DEFINIDAS AQUI PARA EXEMPLO) ---
 interface CarouselBannerItemProps {
@@ -162,6 +167,11 @@ export default function ExploreClientScreen() {
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    // Novo estado para o raio de busca
+    const [searchRadiusKm, setSearchRadiusKm] = useState<number>(50); // Padrão 50 km (como no código original)
+    // Novo estado para o filtro de preço
+    const [priceFilter, setPriceFilter] = useState<PricingType | null>(null);
+
 
     const [welcomeCouponOffer, setWelcomeCouponOffer] = useState<Offer | null>(null);
     const [showPersistentCouponPill, setShowPersistentCouponPill] = useState(false);
@@ -181,20 +191,28 @@ export default function ExploreClientScreen() {
     const providersAnim = useRef(new Animated.Value(0)).current;
     const navBarAnim = useRef(new Animated.Value(0)).current;
 
+    // Adicionado ref para verificar se o componente está montado
+    const isMounted = useRef(true);
+
 
     const fetchData = useCallback(async () => {
-        setLoading(true);
-        setError(null);
+        if (isMounted.current) {
+            setLoading(true);
+            setError(null);
+        }
         try {
             const fetchedUserProfile = await getUserProfile();
+            if (!isMounted.current) return;
             setUserProfile(fetchedUserProfile);
 
             console.log('[ExploreClientScreen] Perfil do usuário carregado:', fetchedUserProfile);
 
             const categoriesData = await getServiceCategories();
+            if (!isMounted.current) return;
             setServiceCategories(categoriesData);
 
             const recommendationsData = await getRecommendedProviders();
+            if (!isMounted.current) return;
             setRecommendations(recommendationsData);
 
             let locationCoords: Location.LocationObjectCoords | null = null;
@@ -209,7 +227,8 @@ export default function ExploreClientScreen() {
                 }
             } catch (locError) {
                 console.error('[ExploreClientScreen] Erro ao obter localização:', locError);
-                Alert.alert(t('common.error'), t('common.network_error'));
+                // Não exibir alerta de erro de rede aqui, pois é um erro de localização
+                // Alert.alert(t('common.error'), t('common.network_error'));
             }
 
             let providersData: ProviderDisplayInfo[] = [];
@@ -217,9 +236,10 @@ export default function ExploreClientScreen() {
                 providersData = await searchProvidersWithLocation({
                     latitude: locationCoords.latitude,
                     longitude: locationCoords.longitude,
-                    radius: 50,
+                    radius: searchRadiusKm * 1000,
                 }) as ProviderDisplayInfo[];
             }
+            if (!isMounted.current) return;
             setNearbyProviders(providersData);
 
             Animated.sequence([
@@ -237,17 +257,25 @@ export default function ExploreClientScreen() {
             ]).start();
         } catch (err: any) {
             const errorMessage = err.message || err.response?.data?.message || t("common.network_error");
-            setError(errorMessage);
-            Alert.alert(t("common.error"), errorMessage);
+            if (isMounted.current) {
+                setError(errorMessage);
+                Alert.alert(t("common.error"), errorMessage);
+            }
             console.error("[ExploreClientScreen] Erro ao carregar dados:", err.response?.data || err.message);
         } finally {
-            setLoading(false);
-            setIsRefreshing(false);
+            if (isMounted.current) {
+                setLoading(false);
+                setIsRefreshing(false);
+            }
         }
-    }, [t, headerAnim, categoriesAnim, bannerAnim, recommendationsAnim, providersAnim, navBarAnim]);
+    }, [t, headerAnim, categoriesAnim, bannerAnim, recommendationsAnim, providersAnim, navBarAnim, searchRadiusKm]);
 
     useEffect(() => {
+        isMounted.current = true; // Componente montado
         fetchData();
+        return () => {
+            isMounted.current = false; // Componente desmontado
+        };
     }, [fetchData]);
 
     useFocusEffect(
@@ -256,22 +284,25 @@ export default function ExploreClientScreen() {
 
             const loadAndSetPromotions = async () => {
                 const offersData = await getOffers();
+                if (cancelled) return;
                 console.log("DEBUG | offersData:", offersData);
                 const welcomeOffer = offersData.find(offer =>
                     (offer as any).target === 'NEW_CLIENTS' && (offer as any).firstBookingOnly
                 );
                 if (welcomeOffer) {
-                    setWelcomeCouponOffer(welcomeOffer);
+                    if (isMounted.current) setWelcomeCouponOffer(welcomeOffer);
                 } else {
-                    setWelcomeCouponOffer({
-                        id: "fake-123",
-                        couponCode: "BEMVINDO20",
-                        title: "Ganhe 20%OFF !",
-                        description: "Use agora e economize",
-                        target: "NEW_CLIENTS",
-                        firstBookingOnly: true,
-                        validUntil: "2025-12-31T23:59:59.000Z"
-                    } as any);
+                    if (isMounted.current) {
+                        setWelcomeCouponOffer({
+                            id: "fake-123",
+                            couponCode: "BEMVINDO20",
+                            title: "Ganhe 20%OFF !",
+                            description: "Use agora e economize",
+                            target: "NEW_CLIENTS",
+                            firstBookingOnly: true,
+                            validUntil: "2025-12-31T23:59:59.000Z"
+                        } as any);
+                    }
                 }
 
                 if (promotionTimeoutRef.current) {
@@ -279,7 +310,7 @@ export default function ExploreClientScreen() {
                 }
 
                 promotionTimeoutRef.current = setTimeout(async () => {
-                    if (cancelled) return;
+                    if (cancelled || !isMounted.current) return;
 
                     let shouldShowCoupon = false;
                     let shouldShowReferral = false;
@@ -294,7 +325,7 @@ export default function ExploreClientScreen() {
                             if (!dismissedCoupon) {
                                 shouldShowCoupon = true;
                             } else {
-                                setShowPersistentCouponPill(true);
+                                if (isMounted.current) setShowPersistentCouponPill(true);
                             }
                         }
                     }
@@ -306,12 +337,14 @@ export default function ExploreClientScreen() {
                         }
                     }
 
-                    if (shouldShowCoupon) {
-                        setActiveBottomPromotion('coupon');
-                    } else if (shouldShowReferral) {
-                        setActiveBottomPromotion('referral');
-                    } else {
-                        setActiveBottomPromotion(null);
+                    if (isMounted.current) {
+                        if (shouldShowCoupon) {
+                            setActiveBottomPromotion('coupon');
+                        } else if (shouldShowReferral) {
+                            setActiveBottomPromotion('referral');
+                        } else {
+                            setActiveBottomPromotion(null);
+                        }
                     }
                 }, 5000) as unknown as NodeJS.Timeout;
             };
@@ -344,9 +377,24 @@ export default function ExploreClientScreen() {
     const safeRecommendations = Array.isArray(recommendations)
         ? recommendations.filter((item) => item && typeof item.fullName === 'string')
         : [];
-    const safeNearbyProviders = Array.isArray(nearbyProviders)
-        ? nearbyProviders.filter((item) => item && typeof item.fullName === 'string')
+    
+    // Filtrar nearbyProviders com base no priceFilter
+    const filteredNearbyProviders = Array.isArray(nearbyProviders)
+        ? nearbyProviders.filter((item) => {
+            if (!item || !item.fullName) return false;
+            if (!priceFilter) return true; // Sem filtro de preço, mostra todos
+
+            // Verifica se o provedor tem algum serviço que corresponda ao tipo de preço
+            return item.providerServices?.some(service => {
+                if (service.pricingType === priceFilter) {
+                    const price = getNumericPriceValue(service);
+                    return price > 0; // Apenas serviços com preço válido
+                }
+                return false;
+            });
+        })
         : [];
+
 
     const viewabilityConfig = useRef({
         itemVisiblePercentThreshold: 50,
@@ -391,8 +439,10 @@ export default function ExploreClientScreen() {
     }, [fetchData]);
 
     const handleUseWelcomeCoupon = useCallback(async (code: string) => {
-        setActiveBottomPromotion(null);
-        setShowPersistentCouponPill(false);
+        if (isMounted.current) {
+            setActiveBottomPromotion(null);
+            setShowPersistentCouponPill(false);
+        }
         await AsyncStorage.setItem(WELCOME_COUPON_REDEEMED_KEY, 'true');
         router.push({
             pathname: CLIENT_ROUTES.SCHEDULE_SERVICE,
@@ -401,17 +451,19 @@ export default function ExploreClientScreen() {
     }, [router]);
 
     const handleDismissWelcomeCoupon = useCallback(async () => {
-        setActiveBottomPromotion(null);
+        if (isMounted.current) setActiveBottomPromotion(null);
         await AsyncStorage.setItem(WELCOME_COUPON_DISMISSED_KEY, 'true');
     }, []);
 
     const handleReopenWelcomeCoupon = useCallback(async () => {
-        setShowPersistentCouponPill(false);
-        setActiveBottomPromotion('coupon');
+        if (isMounted.current) {
+            setShowPersistentCouponPill(false);
+            setActiveBottomPromotion('coupon');
+        }
     }, []);
 
     const handleDismissReferralBanner = useCallback(async () => {
-        setActiveBottomPromotion(null);
+        if (isMounted.current) setActiveBottomPromotion(null);
         await AsyncStorage.setItem(REFERRAL_BANNER_DISMISSED_KEY, 'true');
     }, []);
 
@@ -434,13 +486,17 @@ export default function ExploreClientScreen() {
         } catch (error: any) {
             Alert.alert('Erro ao Compartilhar', error.message);
         }
-        setShowReferralSheet(false);
-        setActiveBottomPromotion(null);
+        if (isMounted.current) {
+            setShowReferralSheet(false);
+            setActiveBottomPromotion(null);
+        }
     }, [referralCode]);
 
     const handleHowItWorksReferral = useCallback(() => {
-        setShowReferralSheet(true);
-        setActiveBottomPromotion(null);
+        if (isMounted.current) {
+            setShowReferralSheet(true);
+            setActiveBottomPromotion(null);
+        }
     }, []);
 
     console.log("DEBUG | welcomeCouponOffer:", welcomeCouponOffer);
@@ -448,9 +504,9 @@ export default function ExploreClientScreen() {
     if (loading && !isRefreshing) {
         return (
             <View style={styles.loadingContainer}>
-                <Stack.Screen options={{ headerShown: false }} />
+                <Stack.Screen options={{ title: t("common.loading"), headerShown: false }} />
                 <ActivityIndicator size="large" color={AppColors.primaryInteractive} />
-                <Text style={{ marginTop: 10, color: AppColors.textBody }}>{t("common.loading")}</Text>
+                <Text style={{ marginTop: 10, color: AppColors.textBody }} allowFontScaling={false}>{t("common.loading")}</Text>
             </View>
         );
     }
@@ -458,9 +514,9 @@ export default function ExploreClientScreen() {
     if (error) {
         return (
             <View style={styles.loadingContainer}>
-                <Text style={{ color: AppColors.errorRed, textAlign: 'center' }}>{error}</Text>
+                <Text style={{ color: AppColors.errorRed, textAlign: 'center' }} allowFontScaling={false}>{error}</Text>
                 <TouchableOpacity onPress={fetchData} style={{ marginTop: 20, padding: 10, backgroundColor: AppColors.primaryInteractive, borderRadius: 5 }}>
-                    <Text style={{ color: AppColors.white }}>{t("common.tryAgain")}</Text>
+                    <Text style={{ color: AppColors.white }} allowFontScaling={false}>{t("common.tryAgain")}</Text>
                 </TouchableOpacity>
             </View>
         );
@@ -471,242 +527,296 @@ export default function ExploreClientScreen() {
         userProfile?.providerDetails?.address ||
         userProfile?.address;
 
-    const addressToDisplay =
-        rawAddress && typeof rawAddress === 'object'
-            ? `${rawAddress.street || ''} ${rawAddress.number || ''} - ${rawAddress.city || ''}/${rawAddress.state || ''}` // LINHA 476 CORRIGIDA
-            : (rawAddress as string | null);
+    // Usar o formatAddress helper
+    const addressToDisplay = formatAddress(rawAddress);
 
     return (
-        <View style={styles.screen}>
-            <Stack.Screen options={{
-                headerShown: false,
-                headerRight: () => (
-                    <TouchableOpacity
-                        style={styles.shieldIconContainer}
-                    >
-                    </TouchableOpacity>
-                ),
-            }} />
+        <SafeAreaView style={styles.safeArea}>
+            <View style={styles.screen}>
+                <Stack.Screen options={{
+                    headerShown: false,
+                    headerRight: () => (
+                        <TouchableOpacity
+                            style={styles.shieldIconContainer}
+                        >
+                        </TouchableOpacity>
+                    ),
+                }} />
 
-            {/* Cabeçalho roxo que fica no fundo */}
-            <NewHeader
-                userName={
-                    userProfile?.clientDetails?.fullName ||
-                    userProfile?.providerDetails?.fullName ||
-                    userProfile?.fullName ||
-                    t('common.user')
-                }
-                userAddress={addressToDisplay}
-            />
+                {/* Cabeçalho roxo que fica no fundo */}
+                <NewHeader
+                    userName={
+                        userProfile?.clientDetails?.fullName ||
+                        userProfile?.providerDetails?.fullName ||
+                        userProfile?.fullName ||
+                        t('common.user')
+                    }
+                    userAddress={addressToDisplay}
+                />
 
-            <ScrollView
-                style={styles.scrollViewArea}
-                contentContainerStyle={styles.scrollContentContainer}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-                refreshControl={
-                    <RefreshControl
-                        refreshing={isRefreshing}
-                        onRefresh={onRefresh}
-                        tintColor={AppColors.primaryInteractive}
-                        title={t("common.loading")}
-                        titleColor={AppColors.primaryInteractive}
+                <ScrollView
+                    style={styles.scrollViewArea}
+                    contentContainerStyle={styles.scrollContentContainer}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={isRefreshing}
+                            onRefresh={onRefresh}
+                            tintColor={AppColors.primaryInteractive}
+                            title={t("common.loading")}
+                            titleColor={AppColors.primaryInteractive}
+                        />
+                    }
+                >
+                    {/* O conteúdo principal da Home começa aqui, com o fundo branco e bordas arredondadas */}
+                    <View style={styles.contentWrapper}>
+                        {/* Seção de Filtro por Raio */}
+                        {/*
+                        <Animated.View style={[styles.radiusFilterContainer, { opacity: providersAnim, transform: [{ translateY: providersAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
+                            <Text style={styles.radiusFilterTitle} allowFontScaling={false}>{t("search.search_radius")}</Text>
+                            <View style={styles.radiusChipsWrapper}>
+                                {[1, 2, 4, 10, 25, 50].map(km => (
+                                    <TouchableOpacity
+                                        key={km}
+                                        onPress={() => { setSearchRadiusKm(km); fetchData(); }}
+                                        style={[styles.radiusChip, searchRadiusKm === km && styles.radiusChipActive]}
+                                        hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                                    >
+                                        <Text style={searchRadiusKm === km ? styles.radiusTextActive : styles.radiusText} allowFontScaling={false}>{km} km</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </Animated.View>
+                        */}
+
+                        {/* Seção de Filtro por Preço */}
+                        {/*
+                        <Animated.View style={[styles.priceFilterContainer, { opacity: providersAnim, transform: [{ translateY: providersAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
+                            <Text style={styles.radiusFilterTitle} allowFontScaling={false}>{t("search.price_type")}</Text>
+                            <View style={styles.priceFilterOptions}>
+                                <TouchableOpacity
+                                    onPress={() => setPriceFilter(priceFilter === PricingType.HOURLY ? null : PricingType.HOURLY)}
+                                    style={[styles.radiusChip, priceFilter === PricingType.HOURLY && styles.radiusChipActive]}
+                                    hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                                >
+                                    <Text style={priceFilter === PricingType.HOURLY ? styles.radiusTextActive : styles.radiusText} allowFontScaling={false}>{t("common.hourly")}</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    onPress={() => setPriceFilter(priceFilter === PricingType.BY_SIZE ? null : PricingType.BY_SIZE)}
+                                    style={[styles.radiusChip, priceFilter === PricingType.BY_SIZE && styles.radiusChipActive]}
+                                    hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                                >
+                                    <Text style={priceFilter === PricingType.BY_SIZE ? styles.radiusTextActive : styles.radiusText} allowFontScaling={false}>{t("common.per_sqm")}</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    onPress={() => setPriceFilter(priceFilter === PricingType.FIXED_PRICE ? null : PricingType.FIXED_PRICE)}
+                                    style={[styles.radiusChip, priceFilter === PricingType.FIXED_PRICE && styles.radiusChipActive]}
+                                    hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                                >
+                                    <Text style={priceFilter === PricingType.FIXED_PRICE ? styles.radiusTextActive : styles.radiusText} allowFontScaling={false}>{t("common.fixed_price")}</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </Animated.View>
+                        */}
+
+                        {/* Seção de Categorias */}
+                        <Animated.View style={[styles.categoriesSection, { opacity: categoriesAnim, transform: [{ translateY: categoriesAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
+                            <View style={styles.categoryTitleWrapper}>
+                                <Text style={styles.categorySectionTitle} allowFontScaling={false}>{t("search.all_categories")}</Text>
+                                <TouchableOpacity
+                                    onPress={() => router.push('/(client)/explore/todas-categorias' as any)}
+                                    style={styles.viewAllButton}
+                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                >
+                                    <Ionicons name="chevron-forward" size={14} color="#007BFF" />
+                                </TouchableOpacity>
+                            </View>
+                            <SecaoContainer<Service>
+                                titulo={t("search.all_categories")}
+                                onVerTudoPress={() => router.push('/(client)/explore/todas-categorias' as any)}
+                                data={safeServiceCategories}
+                                renderItem={({ item }) => {
+                                    if (!item || !item.name) return null;
+                                    return (
+                                        <CategoriaCard
+                                            item={{ id: item.id, name: item.name, icon: item.icon as any }}
+                                        />
+                                    );
+                                }}
+                                horizontal={true}
+                                noDataText={t("search.no_results")}
+                            />
+                        </Animated.View>
+
+                        {/* Novo Carrossel de Banners */}
+                        <Animated.View style={[styles.carouselContainer, { opacity: bannerAnim, transform: [{ translateY: bannerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
+                            <FlatList<BannerDataItem>
+                                ref={flatListRef}
+                                data={bannerData}
+                                renderItem={renderBannerItem}
+                                keyExtractor={(item) => item.id}
+                                horizontal
+                                pagingEnabled
+                                showsHorizontalScrollIndicator={false}
+                                onViewableItemsChanged={onViewableItemsChanged}
+                                viewabilityConfig={viewabilityConfig}
+                                snapToInterval={screenWidth} // Alterado para screenWidth para melhor controle
+                                decelerationRate="fast"
+                                contentContainerStyle={{ paddingHorizontal: 10, paddingRight: 20 }} // Adicionado paddingRight para compensar snapToInterval
+                            />
+                            {renderPagination()}
+                        </Animated.View>
+
+                        {/* Recomendações para Você Animadas */}
+                        <Animated.View style={{ opacity: recommendationsAnim, transform: [{ translateY: recommendationsAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
+                            <SecaoRecomendacoes
+                                titulo={t("search.recommended_providers")}
+                                onVerTudoPress={() => router.push('/(client)/explore/todos-recomendacoes' as any)}
+                                data={safeRecommendations}
+                                renderItem={({ item }) => {
+                                    if (!item || !item.fullName) return null;
+
+                                    return (
+                                        <RecomendacaoCard
+                                            key={item.id}
+                                            item={item}
+                                        />
+                                    );
+                                }}
+                                horizontal={true}
+                                noDataText={t("search.no_results")}
+                            />
+                        
+                        </Animated.View>
+
+                        {/* Profissionais por Perto Animados */}
+                        <Animated.View style={{ opacity: providersAnim, transform: [{ translateY: providersAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
+                            <SecaoPrestadores
+                                titulo={t("search.nearby_providers")}
+                                onVerTudoPress={() => router.push('/(client)/explore/todos-prestadores-proximos' as any)}
+                                data={filteredNearbyProviders} // Usar os provedores filtrados
+                                renderItem={({ item }) => {
+                                    if (!item || !item.fullName) return null;
+                                    return (
+                                        <PrestadorCard
+                                            key={item.id}
+                                            item={item}
+                                            onPress={() => handleProviderPress(item)}
+                                        />
+                                    );
+                                }}
+                                horizontal={true}
+                                noDataText={t("search.no_results")}
+                            />
+                            <View style={styles.sectionSeparator} />
+                        </Animated.View>
+
+                        {/* INJEÇÃO: HorizontalMiniGrid com Badges */}
+                        <Animated.View style={{ opacity: providersAnim, transform: [{ translateY: providersAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
+                            <View style={styles.miniGridHeader}>
+                                <Text style={styles.miniGridTitle} allowFontScaling={false}>{t("explore_section.title")}</Text>
+                            </View>
+                            <HorizontalMiniGrid />
+                        </Animated.View>
+                    </View>
+                </ScrollView>
+
+                {/* NavBar Animada */}
+                <Animated.View style={[styles.navBarContainer, { transform: [{ translateY: navBarAnim.interpolate({ inputRange: [0, 1], outputRange: [100, 0] }) }] }]}>
+                    <NavBar
+                        welcomeCouponOffer={welcomeCouponOffer}
+                        activeBottomPromotion={activeBottomPromotion}
+                        setActiveBottomPromotion={setActiveBottomPromotion}
                     />
-                }
-            >
-                {/* O conteúdo principal da Home começa aqui, com o fundo branco e bordas arredondadas */}
-                <View style={styles.contentWrapper}>
-                    {/* Seção de Categorias */}
-                    <Animated.View style={[styles.categoriesSection, { opacity: categoriesAnim, transform: [{ translateY: categoriesAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
-                        <View style={styles.categoryTitleWrapper}>
-                            <Text style={styles.categorySectionTitle}>{t("search.all_categories")}</Text>
-                            <TouchableOpacity
-                                onPress={() => router.push('/(client)/explore/todas-categorias' as any)}
-                                style={styles.viewAllButton}
-                            >
-                                <Ionicons name="chevron-forward" size={14} color="#007BFF" />
-                            </TouchableOpacity>
-                        </View>
-                        <SecaoContainer<Service>
-                            titulo={t("search.all_categories")}
-                            onVerTudoPress={() => router.push('/(client)/explore/todas-categorias' as any)}
-                            data={safeServiceCategories}
-                            renderItem={({ item }) => {
-                                if (!item || !item.name) return null;
-                                return (
-                                    <CategoriaCard
-                                        item={{ id: item.id, name: item.name, icon: item.icon as any }}
-                                    />
-                                );
-                            }}
-                            horizontal={true}
-                            noDataText={t("search.no_results")}
-                        />
-                    </Animated.View>
+                </Animated.View>
 
-                    {/* Novo Carrossel de Banners */}
-                    <Animated.View style={[styles.carouselContainer, { opacity: bannerAnim, transform: [{ translateY: bannerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
-                        <FlatList<BannerDataItem>
-                            ref={flatListRef}
-                            data={bannerData}
-                            renderItem={renderBannerItem}
-                            keyExtractor={(item) => item.id}
-                            horizontal
-                            pagingEnabled
-                            showsHorizontalScrollIndicator={false}
-                            onViewableItemsChanged={onViewableItemsChanged}
-                            viewabilityConfig={viewabilityConfig}
-                            snapToInterval={screenWidth - 20}
-                            decelerationRate="fast"
-                            contentContainerStyle={{ paddingHorizontal: 10 }}
-                        />
-                        {renderPagination()}
-                    </Animated.View>
+                {/* NOVO: DEFENSE_SOS <DEFENSE_SOS />*/}
+                
 
-                    {/* Recomendações para Você Animadas */}
-                    <Animated.View style={{ opacity: recommendationsAnim, transform: [{ translateY: recommendationsAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
-                        <SecaoRecomendacoes
-                            titulo={t("search.recommended_providers")}
-                            onVerTudoPress={() => router.push('/(client)/explore/todos-recomendacoes' as any)}
-                            data={safeRecommendations}
-                            renderItem={({ item }) => {
-                                if (!item || !item.fullName) return null;
-
-                                return (
-                                    <RecomendacaoCard
-                                        key={item.id}
-                                        item={item}
-                                    />
-                                );
-                            }}
-                            horizontal={true}
-                            noDataText={t("search.no_results")}
-                        />
-                        <View style={styles.sectionSeparator} />
-                    </Animated.View>
-
-                    {/* Profissionais por Perto Animados */}
-                    <Animated.View style={{ opacity: providersAnim, transform: [{ translateY: providersAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
-                        <SecaoPrestadores
-                            titulo={t("search.nearby_providers")}
-                            onVerTudoPress={() => router.push('/(client)/explore/todos-prestadores-proximos' as any)}
-                            data={safeNearbyProviders}
-                            renderItem={({ item }) => {
-                                if (!item || !item.fullName) return null;
-                                return (
-                                    <PrestadorCard
-                                        key={item.id}
-                                        item={item}
-                                        onPress={() => handleProviderPress(item)}
-                                    />
-                                );
-                            }}
-                            horizontal={true}
-                            noDataText={t("search.no_results")}
-                        />
-                        <View style={styles.sectionSeparator} />
-                    </Animated.View>
-
-                    {/* INJEÇÃO: HorizontalMiniGrid com Badges */}
-                    <Animated.View style={{ opacity: providersAnim, transform: [{ translateY: providersAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
-                        <View style={styles.miniGridHeader}>
-                            <Text style={styles.miniGridTitle}>{t("explore_section.title")}</Text>
-                        </View>
-                        <HorizontalMiniGrid />
-                    </Animated.View>
-                </View>
-            </ScrollView>
-
-            {/* NavBar Animada */}
-            <Animated.View style={[styles.navBarContainer, { transform: [{ translateY: navBarAnim.interpolate({ inputRange: [0, 1], outputRange: [100, 0] }) }] }]}>
-                <NavBar
-                    welcomeCouponOffer={welcomeCouponOffer}
-                    activeBottomPromotion={activeBottomPromotion}
-                    setActiveBottomPromotion={setActiveBottomPromotion}
-                />
-            </Animated.View>
-
-            {/* NOVO: DEFENSE_SOS */}
-            <DEFENSE_SOS />
-
-            {/* INJEÇÃO: SmartCouponNudge (aparece sutil após 3s na rota explore) */}
-            {welcomeCouponOffer && (
-                <SmartCouponNudge
-                    code={welcomeCouponOffer!.couponCode as string}
-                    title={welcomeCouponOffer!.title}
-                    subtitle={welcomeCouponOffer!.description}
-                    delayMs={3000}
-                    throttleHours={24}
-                    showOnRoutes={['/(client)/explore']}
-                    onApply={handleUseWelcomeCoupon}
-                />
-            )}
-
-            {/* NOVO: BottomSlideInCard para Cupom ou Indicação (FORA DO SCROLLVIEW) */}
-            {welcomeCouponOffer && (
-                <BottomSlideInCard isVisible={activeBottomPromotion === 'coupon'}>
-                    <HtmlCouponCard
+                {/* INJEÇÃO: SmartCouponNudge (aparece sutil após 3s na rota explore) */}
+                {welcomeCouponOffer && (
+                    <SmartCouponNudge
                         code={welcomeCouponOffer!.couponCode as string}
                         title={welcomeCouponOffer!.title}
                         subtitle={welcomeCouponOffer!.description}
-                        expiresAt={welcomeCouponOffer!.validUntil}
-                        onUseNow={handleUseWelcomeCoupon}
-                        onDismiss={handleDismissWelcomeCoupon}
-                        isVisible={activeBottomPromotion === 'coupon'}
+                        delayMs={3000}
+                        throttleHours={24}
+                        showOnRoutes={['/(client)/explore']}
+                        onApply={handleUseWelcomeCoupon}
                     />
-                </BottomSlideInCard>
-            )}
+                )}
 
-            {isAuthenticated && userProfile?.referralCode && (
-                <BottomSlideInCard isVisible={activeBottomPromotion === 'referral'}>
-                    <ReferralBanner
-                        code={referralCode}
-                        rewardReferrer={rewardReferrer}
-                        rewardReferred={rewardReferred}
-                        onShare={handleShareReferral}
-                        onHowItWorks={handleHowItWorksReferral}
-                        onDismiss={handleDismissReferralBanner}
+                {/* NOVO: BottomSlideInCard para Cupom ou Indicação (FORA DO SCROLLVIEW) */}
+                {welcomeCouponOffer && (
+                    <BottomSlideInCard isVisible={activeBottomPromotion === 'coupon'}>
+                        <HtmlCouponCard
+                            code={welcomeCouponOffer!.couponCode as string}
+                            title={welcomeCouponOffer!.title}
+                            subtitle={welcomeCouponOffer!.description}
+                            expiresAt={welcomeCouponOffer!.validUntil}
+                            onUseNow={handleUseWelcomeCoupon}
+                            onDismiss={handleDismissWelcomeCoupon}
+                            isVisible={activeBottomPromotion === 'coupon'}
+                        />
+                    </BottomSlideInCard>
+                )}
+
+                {isAuthenticated && userProfile?.referralCode && (
+                    <BottomSlideInCard isVisible={activeBottomPromotion === 'referral'}>
+                        <ReferralBanner
+                            code={referralCode}
+                            rewardReferrer={rewardReferrer}
+                            rewardReferred={rewardReferred}
+                            onShare={handleShareReferral}
+                            onHowItWorks={handleHowItWorksReferral}
+                            onDismiss={handleDismissReferralBanner}
+                        />
+                    </BottomSlideInCard>
+                )}
+
+                {showPersistentCouponPill && activeBottomPromotion !== 'coupon' && welcomeCouponOffer && (
+                    <CouponPill
+                        code={welcomeCouponOffer!.couponCode as string}
+                        onOpen={handleReopenWelcomeCoupon}
                     />
-                </BottomSlideInCard>
-            )}
+                )}
 
-            {showPersistentCouponPill && activeBottomPromotion !== 'coupon' && welcomeCouponOffer && (
-                <CouponPill
-                    code={welcomeCouponOffer!.couponCode as string}
-                    onOpen={handleReopenWelcomeCoupon}
+                {/* NOVO: ReferralSheet */}
+                <ReferralSheet
+                    visible={showReferralSheet}
+                    onClose={() => setShowReferralSheet(false)}
+                    code={referralCode}
+                    rewardReferrer={rewardReferrer}
+                    rewardReferred={rewardReferred}
+                    onShare={handleShareReferral}
                 />
-            )}
 
-            {/* NOVO: ReferralSheet */}
-            <ReferralSheet
-                visible={showReferralSheet}
-                onClose={() => setShowReferralSheet(false)}
-                code={referralCode}
-                rewardReferrer={rewardReferrer}
-                rewardReferred={rewardReferred}
-                onShare={handleShareReferral}
-            />
+                {/* Nudges inteligentes (empilhados com delay e offset) - Adicionados aqui */}
+                <SecurityNudge
+                    delayMs={3500}
+                    throttleHours={24}
+                    showOnRoutes={['/(client)/explore']}
+                    bottomOffset={20}
+                />
 
-            {/* Nudges inteligentes (empilhados com delay e offset) - Adicionados aqui */}
-            <SecurityNudge
-                delayMs={3500}
-                throttleHours={24}
-                showOnRoutes={['/(client)/explore']}
-                bottomOffset={20}
-            />
-
-            <IncentiveNudge
-                delayMs={5000}
-                throttleHours={24}
-                showOnRoutes={['/(client)/explore']}
-                bottomOffset={84}
-                points={100}
-            />
-        </View>
+                <IncentiveNudge
+                    delayMs={5000}
+                    throttleHours={24}
+                    showOnRoutes={['/(client)/explore']}
+                    bottomOffset={84}
+                    points={100}
+                />
+            </View>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
+    safeArea: {
+        flex: 1,
+        backgroundColor: 'transparent',
+    },
     overlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',
@@ -832,12 +942,12 @@ const styles = StyleSheet.create({
     },
     screen: {
         flex: 1,
-        backgroundColor: 'transparent', // Cor de fundo principal
+        backgroundColor: 'transparent',
         marginHorizontal: 15,
     },
     scrollViewArea: {
         flex: 1,
-        zIndex: 1, // Garante que a scrollview esteja acima do NewHeader
+        zIndex: 1,
     },
     scrollContentContainer: {
         paddingBottom: 90,
@@ -845,23 +955,21 @@ const styles = StyleSheet.create({
     },
     contentWrapper: {
         flexGrow: 1,
-        // O marginTop negativo e os borderRadiuses são a chave para o efeito "fluindo"
-        marginTop: (Constants.statusBarHeight + 10 + 80) * -1 + 60, // Ajuste esse 60 para posicionar o topo branco
-        backgroundColor: '#fff', // Fundo branco para o conteúdo que vai "cobrir" o gradiente
-        borderTopLeftRadius: 60, // Bordas arredondadas
+        marginTop: (Constants.statusBarHeight + 10 + 80) * -1 + 60,
+        backgroundColor: '#fff',
+        borderTopLeftRadius: 60,
         borderTopRightRadius: 60,
-        paddingTop: 30, // Espaço interno no topo para o conteúdo
+        paddingTop: 30,
         paddingHorizontal: 2,
-        // Sombra para o contentWrapper para dar a sensação de flutuação
         ...Platform.select({
             ios: {
                 shadowColor: '#000',
-                shadowOffset: { width: 0, height: -5 }, // Sombra vindo de baixo
+                shadowOffset: { width: 0, height: -5 },
                 shadowOpacity: 0.1,
                 shadowRadius: 5,
             },
             android: {
-                elevation: 5, // Sombra para Android
+                elevation: 5,
             },
         }),
     },
@@ -873,6 +981,7 @@ const styles = StyleSheet.create({
         marginTop: 2,
         marginBottom: -10,
         paddingHorizontal: 0,
+
     },
     categoryTitleWrapper: {
         flexDirection: 'row',
@@ -880,12 +989,14 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 10,
         marginBottom: 5,
+
     },
     categorySectionTitle: {
         fontSize: 14,
         fontFamily: 'Montserrat-Regular',
         fontWeight: '600',
         color: '#4f5a71c3',
+        
     },
     carouselContainer: {
         marginTop: 20,
@@ -903,7 +1014,7 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'COR_CINZA_FUNDO',
+        backgroundColor: COR_CINZA_FUNDO,
     },
     pagination: {
         flexDirection: 'row',
@@ -918,7 +1029,7 @@ const styles = StyleSheet.create({
         marginHorizontal: 5,
     },
     paginationDotActive: {
-        backgroundColor: 'COR_AZUL_CLARO_UNIFICAD',
+        backgroundColor: COR_AZUL_CLARO_UNIFICADA,
     },
     paginationDotInactive: {
         backgroundColor: '#ddd',
@@ -1002,4 +1113,52 @@ const styles = StyleSheet.create({
         fontWeight: '800',
         marginRight: 5,
     },
+    radiusFilterContainer: {
+        paddingHorizontal: 10,
+        marginBottom: 15,
+        marginTop: 10,
+    },
+    radiusFilterTitle: {
+        fontSize: 14,
+        fontFamily: 'Montserrat-Regular',
+        fontWeight: '600',
+        color: '#4f5a71c3',
+        marginBottom: 8,
+    },
+    radiusChipsWrapper: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+    },
+    radiusChip: {
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        borderRadius: 20,
+        backgroundColor: '#E6EEF9',
+        borderWidth: 1,
+        borderColor: '#D1D5DB',
+        marginRight: 8,
+        marginBottom: 8,
+    },
+    radiusChipActive: {
+        backgroundColor: '#007BFF',
+        borderColor: '#007BFF',
+    },
+    radiusText: {
+        fontSize: 12,
+        color: '#4f5a71ff',
+        fontWeight: '500',
+    },
+    radiusTextActive: {
+        color: '#FFFFFF',
+        fontWeight: 'bold',
+    },
+    priceFilterContainer: {
+        paddingHorizontal: 10,
+        marginBottom: 15,
+        marginTop: 10,
+    },
+    priceFilterOptions: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+    }
 });
