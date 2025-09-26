@@ -4,7 +4,7 @@ import { Stack, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert, // Removed
+    Alert,
     Animated,
     Platform,
     RefreshControl,
@@ -27,8 +27,8 @@ import { EarningsResponseDto, ProviderDashboard, ProviderTransaction } from '../
 import MainEarningsChartSection from '../../components/provider/dashboard/MainEarningsChartSection';
 import EarningsChartSection from '../../components/provider/earnings/EarningsChartSection';
 import EarningsSummaryCard from '../../components/provider/earnings/EarningsSummaryCard';
-import RecentTransactionsSection from '../../components/provider/earnings/RecentTransactionsSection';
 import ProviderNudgeContainer from '../../components/provider/ProviderNudgeContainer'; // Added
+import RecentTransactionsSection from '../../components/provider/earnings/RecentTransactionsSection';
 
 const WHITE = '#FFFFFF';
 const BACKGROUND_ALT = '#F8F9FD';
@@ -98,17 +98,27 @@ export default function ProviderEarningsScreen() {
   const chartSectionAnim = useRef(new Animated.Value(0)).current;
   const transactionsSectionAnim = useRef(new Animated.Value(0)).current;
 
+  // Adicionado ref para verificar se o componente está montado
+  const isMounted = useRef(true);
+  // Ref para armazenar a animação composta
+  const animationSequenceRef = useRef<Animated.CompositeAnimation | null>(null);
+
+
   const fetchData = useCallback(async () => {
-    setIsLoading(true);
+    if (isMounted.current) {
+      setIsLoading(true);
+    }
     try {
-      const fetchedDashboardData = await getMyProviderDashboard(); 
-      const fetchedEarnings: EarningsResponseDto = await getMyProviderEarnings(); 
+      const fetchedDashboardData = await getMyProviderDashboard();
+      const fetchedEarnings: EarningsResponseDto = await getMyProviderEarnings();
 
-      setDashboardData(fetchedDashboardData); 
-      setEarningsData(fetchedEarnings); 
-      setRecentTransactions(fetchedEarnings.recentTransactions || []); 
+      if (!isMounted.current) return;
 
-      const monthlyEarningsMap: { [key: string]: number } = fetchedEarnings.earningsBreakdown || {}; 
+      setDashboardData(fetchedDashboardData);
+      setEarningsData(fetchedEarnings);
+      setRecentTransactions(fetchedEarnings.recentTransactions || []);
+
+      const monthlyEarningsMap: { [key: string]: number } = fetchedEarnings.earningsBreakdown || {};
       const today = new Date();
       const labels: string[] = [];
       const dataPoints: number[] = [];
@@ -131,25 +141,39 @@ export default function ProviderEarningsScreen() {
 
     } catch (err: any) {
       console.error("[ProviderEarningsScreen] Erro ao buscar dados de ganhos:", err.response?.data || err.message, err);
-      NotificationUIService.showError(err.response?.data?.message || "Não foi possível carregar seus dados de ganhos. Tente novamente mais tarde.", "Erro"); // Modified
+      if (isMounted.current) {
+        NotificationUIService.showError(err.response?.data?.message || "Não foi possível carregar seus dados de ganhos. Tente novamente mais tarde.", "Erro");
+      }
     } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
+      if (isMounted.current) {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
     }
   }, []);
 
   useEffect(() => {
+    isMounted.current = true; // Componente montado
     fetchData();
 
     // Staggered animation for sections
-    Animated.stagger(150, [
+    const animationSequence = Animated.stagger(150, [
       Animated.timing(headerAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
       Animated.timing(summaryAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
       Animated.timing(mainChartAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
       Animated.timing(chartSectionAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
       Animated.timing(transactionsSectionAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-    ]).start();
+    ]);
+    animationSequenceRef.current = animationSequence; // Armazenar a referência
+    animationSequence.start();
 
+    return () => {
+      isMounted.current = false; // Componente desmontado
+      // Stop all animations if component unmounts mid-animation
+      if (animationSequenceRef.current) {
+        animationSequenceRef.current.stop();
+      }
+    };
   }, [fetchData, headerAnim, summaryAnim, mainChartAnim, chartSectionAnim, transactionsSectionAnim]);
 
   const onRefresh = useCallback(() => {
@@ -163,7 +187,7 @@ export default function ProviderEarningsScreen() {
     const amountToWithdraw = earningsData?.availableForWithdrawal ?? dashboardData?.totalEarnings;
 
     if (!amountToWithdraw || amountToWithdraw <= 0 || (earningsData?.pendingWithdrawals ?? 0) > 0) {
-      NotificationUIService.showInfo("Você não possui saldo disponível para saque ou já tem um saque pendente.", "Atenção"); // Modified
+      NotificationUIService.showInfo("Você não possui saldo disponível para saque ou já tem um saque pendente.", "Atenção");
       return;
     }
 
@@ -175,7 +199,9 @@ export default function ProviderEarningsScreen() {
         {
           text: "Confirmar Saque",
           onPress: async () => {
-            setIsLoading(true);
+            if (isMounted.current) {
+              setIsLoading(true);
+            }
             try {
               await requestWithdrawal({
                 amount: amountToWithdraw,
@@ -185,13 +211,19 @@ export default function ProviderEarningsScreen() {
                 accountType: 'CONTA_CORRENTE',
                 notes: 'Saque solicitado pelo app'
               });
-              NotificationUIService.showSuccess("Seu pedido de saque foi enviado com sucesso e será processado em breve! Você será notificado sobre o status.", "Saque Solicitado"); // Modified
-              fetchData();
+              if (isMounted.current) {
+                NotificationUIService.showSuccess("Seu pedido de saque foi enviado com sucesso e será processado em breve! Você será notificado sobre o status.", "Saque Solicitado");
+                fetchData();
+              }
             } catch (error: any) {
               console.error("Erro ao solicitar saque:", error.response?.data || error.message);
-              NotificationUIService.showError(error.response?.data?.message || "Não foi possível solicitar o saque.", "Erro"); // Modified
+              if (isMounted.current) {
+                NotificationUIService.showError(error.response?.data?.message || "Não foi possível solicitar o saque.", "Erro");
+              }
             } finally {
-              setIsLoading(false);
+              if (isMounted.current) {
+                setIsLoading(false);
+              }
             }
           },
         },
