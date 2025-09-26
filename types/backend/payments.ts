@@ -39,13 +39,20 @@ export interface PixChargeResponseDto {
  * ALINHADO COM O BACKEND: Inclui todos os campos esperados pelo backend.
  */
 export interface RequestWithdrawalDto {
-  amount: number; // ✅ agora aceita qualquer número
-  bankName: string;
-  agencyNumber: string;
-  accountNumber: string;
-  accountType: 'CONTA_CORRENTE' | 'CONTA_POUPANCA';
+  amount: number;
+  pixKeyType: 'CPF' | 'CNPJ' | 'EMAIL' | 'PHONE' | 'RANDOM';
+  pixKey: string;
   notes?: string | null;
 }
+
+export enum PixKeyType {
+  CPF = 'CPF',
+  CNPJ = 'CNPJ',
+  EMAIL = 'EMAIL',
+  PHONE = 'PHONE',
+  RANDOM = 'RANDOM',
+}
+
 
 /**
  * @interface TransactionEntity
