@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, Image, Platform } from 'react-native'; // Importe Platform
 import { LinearGradient } from 'expo-linear-gradient'; // Importação do LinearGradient
+import { Icons3D } from '@/constants/icons3d';
 
 interface NewHeaderProps {
     userName: string;
@@ -39,12 +40,12 @@ const NewHeader: React.FC<NewHeaderProps> = ({ userName, userAvatarUrl }) => {
 
     return (
         <LinearGradient
-            colors={['#5090d913', '#c7c9f05b']} // Cores do gradiente, do lilás ao rosa suave
+            colors={['#a6abb213', '#a6abb213']} // Cores do gradiente, do lilás ao rosa suave
             style={styles.container}
         >
             <View style={styles.leftContent}>
                 <TouchableOpacity onPress={handleProfilePress} style={styles.profileImageContainer}>
-                    <Image source={avatarSource} style={styles.profileImage} />
+                    <Image source={require('../../../../assets/images/default-avatar.png')} style={styles.profileImage} />
                 </TouchableOpacity>
                 <View>
                     <Text style={styles.greetingText}>{getGreeting()}</Text>
@@ -55,7 +56,7 @@ const NewHeader: React.FC<NewHeaderProps> = ({ userName, userAvatarUrl }) => {
                 <TouchableOpacity onPress={handleNotificationsPress} style={styles.notificationIconContainer}>
                     {/* Alteração aqui: Substituindo Ionicons por Image */}
                     <Image
-                        source={require('../../../../assets/images/3d/category.png')}
+                        source={require('../../../../assets/images/3d/category2.png')}
                         style={styles.categoryIcon} // Novo estilo para o ícone da categoria
                         resizeMode="contain" // Garante que a imagem se ajuste sem cortar
                     />
@@ -86,9 +87,9 @@ const styles = StyleSheet.create({
         // Adicionando zIndex para garantir que o cabeçalho fique abaixo do conteúdo principal
         zIndex: 0, // Definindo um zIndex explícito e baixo
         shadowColor: '#2f3344e8', // Cor da sombra
-        shadowOffset: { width: 0, height: 4 }, // Deslocamento vertical mais pronunciado
+        shadowOffset: { width: 0, height: 1 }, // Deslocamento vertical mais pronunciado
         shadowOpacity: 0.17, // Opacidade aumentada para robustezs
-        shadowRadius: 10, // Raio de desfoque para conforto
+        shadowRadius: 9, // Raio de desfoque para conforto
         elevation: 6, // Elevação aumentada para robustez no Android
 
      
@@ -103,7 +104,7 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         overflow: 'hidden', // Garante que a imagem não saia dos limites do borderRadius
         marginRight: 6,
-        backgroundColor: '#E0E0E0', // Fundo de placeholder enquanto a imagem carrega ou se não houver avatar
+        backgroundColor: 'transparent', // Fundo de placeholder enquanto a imagem carrega ou se não houver avatar
         justifyContent: 'center',
         alignItems: 'center',
 
