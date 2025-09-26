@@ -1,4 +1,3 @@
-// LimpeJaApp/app/(common)/support/[ticketId].tsx
 import React, { useState, useEffect, useRef } from 'react';
 import {
     View,
@@ -10,13 +9,15 @@ import {
     TextInput,
     KeyboardAvoidingView,
     Platform,
-    Alert
+    SafeAreaView,
 } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supportService } from '../../../services/supportService';
 import { SupportTicket, SupportMessage } from '../../../types/backend/support';
-import { useAuth } from '../../../contexts/AuthContext'; // Assuming AuthContext provides user ID
+import { useAuth } from '../../../contexts/AuthContext';
+import { showAppAlert } from '../../../utils/alerts';
+import { safeFormatDate } from '../../../utils/formatters';
 
 /**
  * TicketDetailsScreen component displays the messages within a specific support ticket.
@@ -24,20 +25,20 @@ import { useAuth } from '../../../contexts/AuthContext'; // Assuming AuthContext
  */
 export default function TicketDetailsScreen() {
     const router = useRouter();
-    const { ticketId } = useLocalSearchParams(); // Get ticketId from URL parameters
-    const { user } = useAuth(); // Get current user from AuthContext to identify sender
+    const { ticketId } = useLocalSearchParams();
+    const { user } = useAuth();
     const [ticket, setTicket] = useState<SupportTicket | null>(null);
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(true);
     const [sending, setSending] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const scrollViewRef = useRef<ScrollView>(null); // Ref for auto-scrolling chat
+    const scrollViewRef = useRef<ScrollView>(null);
 
     /**
      * Fetches the details of the specific ticket, including its messages.
      */
     const fetchTicketDetails = async () => {
-        if (!ticketId || typeof ticketId !== 'string') {
+        if (typeof ticketId !== 'string' || !ticketId) {
             setError('ID do ticket inválido.');
             setLoading(false);
             return;
@@ -46,9 +47,9 @@ export default function TicketDetailsScreen() {
             setLoading(true);
             const fetchedTicket = await supportService.getTicketDetails(ticketId);
             setTicket(fetchedTicket);
-        } catch (err) {
+        } catch (err: any) {
             console.error(`Failed to fetch ticket ${ticketId}:`, err);
-            setError('Não foi possível carregar os detalhes do ticket. Tente novamente mais tarde.');
+            setError(err?.message || 'Não foi possível carregar os detalhes do ticket. Tente novamente mais tarde.');
         } finally {
             setLoading(false);
         }
@@ -56,48 +57,45 @@ export default function TicketDetailsScreen() {
 
     useEffect(() => {
         fetchTicketDetails();
-    }, [ticketId]); // Re-fetch if ticketId changes
+    }, [ticketId]);
 
     useEffect(() => {
-        // Scroll to the bottom of the chat when messages load or a new message is sent
         if (ticket?.messages?.length) {
-            // Use a timeout to ensure layout has updated before scrolling
             setTimeout(() => {
                 scrollViewRef.current?.scrollToEnd({ animated: true });
             }, 100);
         }
-    }, [ticket?.messages]); // Trigger scroll when messages array updates
+    }, [ticket?.messages]);
 
     /**
      * Handles sending a new message to the ticket.
      * Validates input and calls the support service to add the message.
      */
     const handleSendMessage = async () => {
-        if (!newMessage.trim() || !ticketId || typeof ticketId !== 'string') {
-            Alert.alert('Mensagem Vazia', 'Por favor, digite sua mensagem.');
+        if (typeof ticketId !== 'string' || !ticketId || !newMessage.trim()) {
+            showAppAlert('Mensagem Vazia', 'Por favor, digite sua mensagem.');
             return;
         }
         if (!user?.id) {
-            Alert.alert('Erro', 'Usuário não autenticado. Faça login novamente.');
+            showAppAlert('Erro de Autenticação', 'Usuário não autenticado. Faça login novamente.');
             return;
         }
 
         setSending(true);
         try {
-            const addedMessage = await supportService.addMessageToTicket(ticketId, { content: newMessage });
-            // Optimistically update the UI with the new message
+            const addedMessage = await supportService.addMessageToTicket(ticketId, { content: newMessage.trim() });
             setTicket(prevTicket => {
                 if (!prevTicket) return null;
                 return {
                     ...prevTicket,
                     messages: [...(prevTicket.messages || []), addedMessage],
-                    updatedAt: new Date().toISOString(), // Update last updated timestamp
+                    updatedAt: new Date().toISOString(),
                 };
             });
-            setNewMessage(''); // Clear input field
-        } catch (err) {
+            setNewMessage('');
+        } catch (err: any) {
             console.error('Error sending message:', err);
-            Alert.alert('Erro', 'Não foi possível enviar a mensagem. Tente novamente.');
+            showAppAlert('Erro', err);
         } finally {
             setSending(false);
         }
@@ -109,7 +107,7 @@ export default function TicketDetailsScreen() {
      * @returns {'right' | 'left'} Alignment string.
      */
     const getMessageAlignment = (message: SupportMessage) => {
-        return message.senderId === user?.id ? 'right' : 'left';
+        return user?.id && message.senderId === user.id ? 'right' : 'left';
     };
 
     /**
@@ -118,7 +116,7 @@ export default function TicketDetailsScreen() {
      * @returns {object} StyleSheet style object.
      */
     const getMessageBubbleStyle = (message: SupportMessage) => {
-        return message.senderId === user?.id ? styles.myMessageBubble : styles.otherMessageBubble;
+        return user?.id && message.senderId === user.id ? styles.myMessageBubble : styles.otherMessageBubble;
     };
 
     /**
@@ -127,7 +125,7 @@ export default function TicketDetailsScreen() {
      * @returns {object} StyleSheet style object.
      */
     const getMessageTextStyle = (message: SupportMessage) => {
-        return message.senderId === user?.id ? styles.myMessageText : styles.otherMessageText;
+        return user?.id && message.senderId === user.id ? styles.myMessageText : styles.otherMessageText;
     };
 
     if (loading) {
@@ -165,32 +163,35 @@ export default function TicketDetailsScreen() {
     return (
         <KeyboardAvoidingView
             style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'} // Adjust behavior for keyboard
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20} // Offset for keyboard
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
             <Stack.Screen options={{ headerShown: false }} />
 
             {/* Custom Header with back button and ticket subject */}
-            <View style={styles.customHeader}>
+            <SafeAreaView style={styles.customHeader}>
                 <TouchableOpacity style={styles.headerIconLeft} onPress={() => router.back()}>
                     <Ionicons name="arrow-back" size={24} color="#2F4F4F" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>{ticket.subject}</Text>
                 <View style={styles.headerIconRightPlaceholder} /> {/* Placeholder for alignment */}
-            </View>
+            </SafeAreaView>
 
             {/* Scrollable area for messages */}
             <ScrollView ref={scrollViewRef} contentContainerStyle={styles.messagesContainer}>
                 {ticket.messages && ticket.messages.length > 0 ? (
                     ticket.messages.map((msg, index) => (
-                        <View key={msg.id || index} style={[styles.messageRow, { justifyContent: getMessageAlignment(msg) === 'right' ? 'flex-end' : 'flex-start' }]}>
+                        <View 
+                            key={msg.id || `msg-${index}`}
+                            style={[styles.messageRow, { justifyContent: getMessageAlignment(msg) === 'right' ? 'flex-end' : 'flex-start' }]}
+                        >
                             <View style={getMessageBubbleStyle(msg)}>
                                 <Text style={[styles.messageSender, getMessageAlignment(msg) === 'right' ? { color: '#FFFFFF' } : { color: '#4A90E2' }]}>
                                     {msg.senderType === 'client' && msg.senderId === user?.id ? 'Você' : (msg.senderType === 'admin' ? 'Suporte' : 'Provedor')}
                                 </Text>
                                 <Text style={getMessageTextStyle(msg)}>{msg.content}</Text>
                                 <Text style={[styles.messageTime, getMessageAlignment(msg) === 'right' ? { color: 'rgba(255,255,255,0.7)' } : { color: '#A0A0A0' }]}>
-                                    {new Date(msg.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                    {safeFormatDate(msg.createdAt, { timeOnly: true })}
                                 </Text>
                             </View>
                         </View>
@@ -218,7 +219,7 @@ export default function TicketDetailsScreen() {
                 <TouchableOpacity
                     style={[styles.sendButton, sending && styles.sendButtonDisabled]}
                     onPress={handleSendMessage}
-                    disabled={sending}
+                    disabled={sending || !newMessage.trim()}
                 >
                     {sending ? (
                         <ActivityIndicator color="#FFFFFF" />
@@ -371,11 +372,11 @@ const styles = StyleSheet.create({
         backgroundColor: '#F8FAFB',
         borderRadius: 20,
         paddingHorizontal: 15,
-        paddingVertical: Platform.OS === 'ios' ? 10 : 8, // Adjust vertical padding for iOS/Android
+        paddingVertical: Platform.OS === 'ios' ? 10 : 8,
         fontSize: 16,
         color: '#212529',
         marginRight: 10,
-        maxHeight: 100, // Limit height for multiline input
+        maxHeight: 100,
     },
     sendButton: {
         backgroundColor: '#4A90E2',
@@ -397,7 +398,7 @@ const styles = StyleSheet.create({
         }),
     },
     sendButtonDisabled: {
-        backgroundColor: '#A0C7F2', // Lighter blue when disabled
+        backgroundColor: '#A0C7F2',
     },
     emptyChatContainer: {
         flex: 1,
