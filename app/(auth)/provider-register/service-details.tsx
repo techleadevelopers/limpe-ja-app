@@ -18,6 +18,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Import AsyncStorage
+import { SafeAreaView } from 'react-native-safe-area-context'; // Imported for use
 
 import { useAuth } from '../../../hooks/useAuth';
 import {
@@ -188,7 +189,7 @@ export default function ServiceDetailsScreen() {
         quality: 0.8,
       });
 
-      if (!result.canceled && result.assets[0]) {
+      if (!result.canceled && result.assets && result.assets.length > 0) { // Added check for result.assets and its length
         setFormData(prev => ({
           ...prev,
           profilePhoto: result.assets[0].uri
@@ -298,14 +299,33 @@ export default function ServiceDetailsScreen() {
     }
   };
 
-  const handleBackSubStep = () => {
+ const handleBackSubStep = () => {
     setGeneralError(null); // Clear general error when going back
+    // Clear all specific errors when going back
+    setProfilePhotoError(null);
+    setDescriptionError(null);
+    setYearsOfExperienceError(null);
+    setSpecialtiesError(null);
+    setPriceUnitError(null);
+    setBasePriceError(null);
+    setPixKeyError(null);
+    setServiceAreasError(null);
+
     if (currentServiceSubStep > 1) {
-      setCurrentServiceSubStep(currentServiceSubStep - 1);
+        setCurrentServiceSubStep(currentServiceSubStep - 1);
     } else {
-      router.back(); // Go back to previous screen if on first sub-step
+        // Check if there's a screen to go back to in the navigation history
+        if (router.canGoBack()) {
+            router.back();
+        } else {
+            // If there's no screen to go back to, navigate to a specific known route.
+            // Assuming '/provider-register' is the root of this flow.
+            // Using `replace` prevents adding the current screen to the history if it's an initial entry.
+            router.replace('/provider-register');
+            console.warn("Attempted to go back from the first step with no history. Navigating to '/provider-register'.");
+        }
     }
-  };
+};
 
   const handleFinalSubmission = async () => {
     console.log("[handleFinalSubmission] Iniciando processamento do formulário.");
@@ -539,277 +559,283 @@ export default function ServiceDetailsScreen() {
 
 
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={['#F4F7FC', '#FFFFFF']}
-        style={styles.backgroundGradient}
-      />
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <LinearGradient
+          colors={['#F4F7FC', '#FFFFFF']}
+          style={styles.backgroundGradient}
+        />
 
-      <Animated.View
-        style={[
-          styles.content,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }]
-          }
-        ]}
-      >
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
+        <Animated.View
+          style={[
+            styles.content,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }
+          ]}
         >
-          {/* Header with Back Button */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={handleBackSubStep} style={styles.backButtonHeader}>
-                <Ionicons name="arrow-back-outline" size={24} color="#2C3E50" />
-                <Text style={styles.backButtonHeaderText}>{getBackButtonText()}</Text>
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Detalhes do Serviço</Text>
-          </View>
-          
-          {/* Progress Bar */}
-          <View style={styles.progressContainer}>
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
-            </View>
-            <Text style={styles.progressText}>{`Etapa ${currentServiceSubStep} de ${totalSteps}`}</Text>
-          </View>
-
-          <Text style={styles.headerSubtitle}>
-            {getSubStepTitle()}
-          </Text>
-          <Text style={styles.microcopyText}>{getMicrocopyText()}</Text>
-
-          {/* Sub-step 1: Photo + Description */}
-          {currentServiceSubStep === 1 && (
-            <View style={styles.formContainer}>
-              <Text style={styles.sectionTitle}>Foto do Perfil</Text>
-              <TouchableOpacity
-                style={[styles.imageUploadButton, {transform: [{scale: avatarScaleAnim}]}, profilePhotoError ? styles.imageUploadButtonError : {}]}
-                onPress={handleImagePicker}
-                onPressIn={onPressInAvatar}
-                onPressOut={onPressOutAvatar}
-                activeOpacity={0.8}
-              >
-                {formData.profilePhoto ? (
-                  <Image source={{ uri: formData.profilePhoto }} style={styles.uploadedImage} />
-                ) : (
-                  <View style={styles.imagePlaceholder}>
-                    <Ionicons name="camera-outline" size={40} color="#A0D2EB" />
-                    <Text style={styles.uploadText}>Toque para adicionar sua foto</Text>
-                  </View>
-                )}
-                <LinearGradient
-                  colors={['transparent', 'rgba(160, 210, 235, 0.1)']}
-                  style={styles.imageOverlay}
-                />
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+          >
+            {/* Header with Back Button */}
+            <View style={styles.header}>
+              <TouchableOpacity onPress={handleBackSubStep} style={styles.backButtonHeader}>
+                  <Ionicons name="arrow-back-outline" size={24} color="#2C3E50" />
+                  <Text style={styles.backButtonHeaderText}>{getBackButtonText()}</Text>
               </TouchableOpacity>
-              {profilePhotoError && <Text style={styles.inlineErrorMessageCentered}>{profilePhotoError}</Text>}
-
-
-              {renderInputSection(
-                'Descrição do Serviço',
-                'Descreva sua experiência e especialidades...',
-                formData.description,
-                (text) => { setFormData(prev => ({ ...prev, description: text })); setDescriptionError(null); },
-                'default',
-                true,
-                'document-text-outline',
-                500, // MaxLength for description
-                descriptionError,
-                validateSubStep1
-              )}
+              <Text style={styles.headerTitle}>Detalhes do Serviço</Text>
             </View>
-          )}
-
-          {/* Sub-step 2: Experience + Specialties */}
-          {currentServiceSubStep === 2 && (
-            <View style={styles.formContainer}>
-              {renderInputSection(
-                'Anos de Experiência',
-                'Ex: 5',
-                formData.yearsOfExperience,
-                (text) => { setFormData(prev => ({ ...prev, yearsOfExperience: text.replace(/[^0-9]/g, '') })); setYearsOfExperienceError(null); }, // Only numbers
-                'numeric',
-                false,
-                'time-outline',
-                2, // MaxLength for years of experience
-                yearsOfExperienceError,
-                validateSubStep2
-              )}
-
-              {/* Service Type Selection */}
-              <View style={styles.serviceTypeContainer}>
-                <Text style={styles.sectionTitle}>
-                  <Ionicons name="home-outline" size={16} color="#2C3E50" /> Tipo de Serviço
-                </Text>
-                <View style={styles.serviceTypeGrid}>
-                  {[
-                    { id: 'residencial', label: 'Residencial', icon: 'home' },
-                    { id: 'comercial', label: 'Comercial', icon: 'business' },
-                    { id: 'escritorio', label: 'Escritório', icon: 'desktop' },
-                    { id: 'pos_obra', label: 'Pós-Obra', icon: 'construct' }
-                  ].map((service) => (
-                    <TouchableOpacity
-                      key={service.id}
-                      style={[
-                        styles.serviceTypeCard,
-                        formData.specialties.includes(service.id) && styles.serviceTypeCardSelected
-                      ]}
-                      onPress={() => {
-                        setFormData(prev => ({
-                          ...prev,
-                          specialties: prev.specialties.includes(service.id)
-                            ? prev.specialties.filter(s => s !== service.id)
-                            : [...prev.specialties, service.id]
-                        }));
-                        setSpecialtiesError(null); // Clear error on selection
-                      }}
-                    >
-                      <Ionicons
-                        name={service.icon as any}
-                        size={24}
-                        color={formData.specialties.includes(service.id) ? '#FFFFFF' : '#A0D2EB'}
-                      />
-                      <Text style={[
-                        styles.serviceTypeLabel,
-                        formData.specialties.includes(service.id) && styles.serviceTypeLabelSelected
-                      ]}>
-                        {service.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-                {specialtiesError && <Text style={styles.inlineErrorMessage}>{specialtiesError}</Text>}
+            
+            {/* Progress Bar */}
+            <View style={styles.progressContainer}>
+              <View style={styles.progressBar}>
+                <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
               </View>
+              <Text style={styles.progressText}>{`Etapa ${currentServiceSubStep} de ${totalSteps}`}</Text>
             </View>
-          )}
 
-          {/* Sub-step 3: Price + Unit */}
-          {currentServiceSubStep === 3 && (
-            <View style={styles.formContainer}>
-              <View style={styles.priceTypeContainer}>
-                <Text style={styles.sectionTitle}>
-                  <Ionicons name="pricetag-outline" size={16} color="#2C3E50" /> Tipo de Precificação
-                </Text>
-                <View style={styles.priceTypeGrid}>
-                  {[
-                    { id: 'hora', label: 'Por Hora' },
-                    { id: 'quarto', label: 'Por Quarto' },
-                    { id: 'metragem', label: 'Por m²' }
-                  ].map((priceOption) => (
-                    <TouchableOpacity
-                      key={priceOption.id}
-                      style={[
-                        styles.priceTypeCard,
-                        formData.priceUnit === priceOption.id && styles.priceTypeCardSelected
-                      ]}
-                      onPress={() => {
-                        setFormData(prev => ({ ...prev, priceUnit: priceOption.id as PriceUnit }));
-                        setPriceUnitError(null); // Clear error on selection
-                      }}
-                    >
-                      <Text style={[
-                        styles.priceTypeLabel,
-                        formData.priceUnit === priceOption.id && styles.priceTypeLabelSelected
-                      ]}>
-                        {priceOption.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-                {priceUnitError && <Text style={styles.inlineErrorMessage}>{priceUnitError}</Text>}
+            <Text style={styles.headerSubtitle}>
+              {getSubStepTitle()}
+            </Text>
+            <Text style={styles.microcopyText}>{getMicrocopyText()}</Text>
+
+            {/* Sub-step 1: Photo + Description */}
+            {currentServiceSubStep === 1 && (
+              <View style={styles.formContainer}>
+                <Text style={styles.sectionTitle}>Foto do Perfil</Text>
+                <TouchableOpacity
+                  style={[styles.imageUploadButton, {transform: [{scale: avatarScaleAnim}]}, profilePhotoError ? styles.imageUploadButtonError : {}]}
+                  onPress={handleImagePicker}
+                  onPressIn={onPressInAvatar}
+                  onPressOut={onPressOutAvatar}
+                  activeOpacity={0.8}
+                >
+                  {formData.profilePhoto ? (
+                    <Image source={{ uri: formData.profilePhoto }} style={styles.uploadedImage} />
+                  ) : (
+                    <View style={styles.imagePlaceholder}>
+                      <Ionicons name="camera-outline" size={40} color="#A0D2EB" />
+                      <Text style={styles.uploadText}>Toque para adicionar sua foto</Text>
+                    </View>
+                  )}
+                  <LinearGradient
+                    colors={['transparent', 'rgba(160, 210, 235, 0.1)']}
+                    style={styles.imageOverlay}
+                  />
+                </TouchableOpacity>
+                {profilePhotoError && <Text style={styles.inlineErrorMessageCentered}>{profilePhotoError}</Text>}
+
+
+                {renderInputSection(
+                  'Descrição do Serviço',
+                  'Descreva sua experiência e especialidades...',
+                  formData.description,
+                  (text) => { setFormData(prev => ({ ...prev, description: text })); setDescriptionError(null); },
+                  'default',
+                  true,
+                  'document-text-outline',
+                  500, // MaxLength for description
+                  descriptionError,
+                  validateSubStep1
+                )}
               </View>
+            )}
 
-              {renderInputSection(
-                `Preço Base (${formData.priceUnit ? `por ${formData.priceUnit}` : 'do Serviço'})`,
-                getPriceInputPlaceholder(formData.priceUnit),
-                formData.basePrice,
-                (text) => { setFormData(prev => ({ ...prev, basePrice: text.replace(/[^0-9.]/g, '') })); setBasePriceError(null); }, // Only numbers and dot
-                'numeric',
-                false,
-                'cash-outline',
-                undefined, // No max length for price
-                basePriceError,
-                validateSubStep3
+            {/* Sub-step 2: Experience + Specialties */}
+            {currentServiceSubStep === 2 && (
+              <View style={styles.formContainer}>
+                {renderInputSection(
+                  'Anos de Experiência',
+                  'Ex: 5',
+                  formData.yearsOfExperience,
+                  (text) => { setFormData(prev => ({ ...prev, yearsOfExperience: text.replace(/[^0-9]/g, '') })); setYearsOfExperienceError(null); }, // Only numbers
+                  'numeric',
+                  false,
+                  'time-outline',
+                  2, // MaxLength for years of experience
+                  yearsOfExperienceError,
+                  validateSubStep2
+                )}
+
+                {/* Service Type Selection */}
+                <View style={styles.serviceTypeContainer}>
+                  <Text style={styles.sectionTitle}>
+                    <Ionicons name="home-outline" size={16} color="#2C3E50" /> Tipo de Serviço
+                  </Text>
+                  <View style={styles.serviceTypeGrid}>
+                    {[
+                      { id: 'residencial', label: 'Residencial', icon: 'home' },
+                      { id: 'comercial', label: 'Comercial', icon: 'business' },
+                      { id: 'escritorio', label: 'Escritório', icon: 'desktop' },
+                      { id: 'pos_obra', label: 'Pós-Obra', icon: 'construct' }
+                    ].map((service) => (
+                      <TouchableOpacity
+                        key={service.id}
+                        style={[
+                          styles.serviceTypeCard,
+                          formData.specialties.includes(service.id) && styles.serviceTypeCardSelected
+                        ]}
+                        onPress={() => {
+                          setFormData(prev => ({
+                            ...prev,
+                            specialties: prev.specialties.includes(service.id)
+                              ? prev.specialties.filter(s => s !== service.id)
+                              : [...prev.specialties, service.id]
+                          }));
+                          setSpecialtiesError(null); // Clear error on selection
+                        }}
+                      >
+                        <Ionicons
+                          name={service.icon as any}
+                          size={24}
+                          color={formData.specialties.includes(service.id) ? '#FFFFFF' : '#A0D2EB'}
+                        />
+                        <Text style={[
+                          styles.serviceTypeLabel,
+                          formData.specialties.includes(service.id) && styles.serviceTypeLabelSelected
+                        ]}>
+                          {service.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  {specialtiesError && <Text style={styles.inlineErrorMessage}>{specialtiesError}</Text>}
+                </View>
+              </View>
+            )}
+
+            {/* Sub-step 3: Price + Unit */}
+            {currentServiceSubStep === 3 && (
+              <View style={styles.formContainer}>
+                <View style={styles.priceTypeContainer}>
+                  <Text style={styles.sectionTitle}>
+                    <Ionicons name="pricetag-outline" size={16} color="#2C3E50" /> Tipo de Precificação
+                  </Text>
+                  <View style={styles.priceTypeGrid}>
+                    {[
+                      { id: 'hora', label: 'Por Hora' },
+                      { id: 'quarto', label: 'Por Quarto' },
+                      { id: 'metragem', label: 'Por m²' }
+                    ].map((priceOption) => (
+                      <TouchableOpacity
+                        key={priceOption.id}
+                        style={[
+                          styles.priceTypeCard,
+                          formData.priceUnit === priceOption.id && styles.priceTypeCardSelected
+                        ]}
+                        onPress={() => {
+                          setFormData(prev => ({ ...prev, priceUnit: priceOption.id as PriceUnit }));
+                          setPriceUnitError(null); // Clear error on selection
+                        }}
+                      >
+                        <Text style={[
+                          styles.priceTypeLabel,
+                          formData.priceUnit === priceOption.id && styles.priceTypeLabelSelected
+                        ]}>
+                          {priceOption.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  {priceUnitError && <Text style={styles.inlineErrorMessage}>{priceUnitError}</Text>}
+                </View>
+
+                {renderInputSection(
+                  `Preço Base (${formData.priceUnit ? `por ${formData.priceUnit}` : 'do Serviço'})`,
+                  getPriceInputPlaceholder(formData.priceUnit),
+                  formData.basePrice,
+                  (text) => { setFormData(prev => ({ ...prev, basePrice: text.replace(/[^0-9.]/g, '') })); setBasePriceError(null); }, // Only numbers and dot
+                  'numeric',
+                  false,
+                  'cash-outline',
+                  undefined, // No max length for price
+                  basePriceError,
+                  validateSubStep3
+                )}
+              </View>
+            )}
+
+            {/* Sub-step 4: PIX + Service Areas */}
+            {currentServiceSubStep === 4 && (
+              <View style={styles.formContainer}>
+                {renderInputSection(
+                  'Chave PIX',
+                  'Ex: seuemail@email.com ou 000.000.000-00',
+                  formData.pixKey,
+                  (text) => { setFormData(prev => ({ ...prev, pixKey: text })); setPixKeyError(null); },
+                  'default',
+                  false,
+                  'card-outline',
+                  undefined, // No max length
+                  pixKeyError,
+                  validateSubStep4
+                )}
+
+                {renderInputSection(
+                  'Áreas de Atendimento',
+                  'Ex: Campinas (Centro, Cambuí), Valinhos, Vinhedo',
+                  formData.serviceAreas.join(', '), // Display as comma-separated string
+                  (text) => { setFormData(prev => ({ ...prev, serviceAreas: text.split(',').map(s => s.trim()).filter(s => s) })); setServiceAreasError(null); }, // Convert back to array
+                  'default',
+                  true,
+                  'location-outline',
+                  300, // MaxLength for service areas
+                  serviceAreasError,
+                  validateSubStep4
+                )}
+              </View>
+            )}
+            {generalError && <Text style={styles.inlineErrorMessageCentered}>{generalError}</Text>}
+
+            {/* Navigation Buttons */}
+            <View style={styles.navigationButtonsContainer}>
+              {currentServiceSubStep > 1 && (
+                <TouchableOpacity
+                  style={[styles.navButton, styles.backButton]}
+                  onPress={handleBackSubStep}
+                  disabled={isUploading}
+                >
+                  <Ionicons name="arrow-back-outline" size={20} color="#00BCD4" />
+                  <Text style={styles.navButtonTextBack}>Voltar</Text>
+                </TouchableOpacity>
               )}
-            </View>
-          )}
-
-          {/* Sub-step 4: PIX + Service Areas */}
-          {currentServiceSubStep === 4 && (
-            <View style={styles.formContainer}>
-              {renderInputSection(
-                'Chave PIX',
-                'Ex: seuemail@email.com ou 000.000.000-00',
-                formData.pixKey,
-                (text) => { setFormData(prev => ({ ...prev, pixKey: text })); setPixKeyError(null); },
-                'default',
-                false,
-                'card-outline',
-                undefined, // No max length
-                pixKeyError,
-                validateSubStep4
-              )}
-
-              {renderInputSection(
-                'Áreas de Atendimento',
-                'Ex: Campinas (Centro, Cambuí), Valinhos, Vinhedo',
-                formData.serviceAreas.join(', '), // Display as comma-separated string
-                (text) => { setFormData(prev => ({ ...prev, serviceAreas: text.split(',').map(s => s.trim()).filter(s => s) })); setServiceAreasError(null); }, // Convert back to array
-                'default',
-                true,
-                'location-outline',
-                300, // MaxLength for service areas
-                serviceAreasError,
-                validateSubStep4
-              )}
-            </View>
-          )}
-          {generalError && <Text style={styles.inlineErrorMessageCentered}>{generalError}</Text>}
-
-          {/* Navigation Buttons */}
-          <View style={styles.navigationButtonsContainer}>
-            {currentServiceSubStep > 1 && (
               <TouchableOpacity
-                style={[styles.navButton, styles.backButton]}
-                onPress={handleBackSubStep}
+                style={[styles.navButton, styles.continueButton, isUploading && styles.buttonDisabled]}
+                onPress={handleNextSubStep}
                 disabled={isUploading}
               >
-                <Ionicons name="arrow-back-outline" size={20} color="#00BCD4" />
-                <Text style={styles.navButtonTextBack}>Voltar</Text>
+                <LinearGradient
+                  colors={['#A0D2EB', '#307cc9ff']}
+                  style={styles.continueButtonGradient}
+                >
+                  {isUploading ? (
+                    <ActivityIndicator color="#FFFFFF" />
+                  ) : (
+                    <>
+                      <Text style={styles.continueButtonText}>
+                        {currentServiceSubStep === totalSteps ? 'Finalizar Cadastro' : 'Próximo'}
+                      </Text>
+                      {currentServiceSubStep !== totalSteps && <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />}
+                      {currentServiceSubStep === totalSteps && <Ionicons name="checkmark-circle-outline" size={20} color="#FFFFFF" />}
+                    </>
+                  )}
+                </LinearGradient>
               </TouchableOpacity>
-            )}
-            <TouchableOpacity
-              style={[styles.navButton, styles.continueButton, isUploading && styles.buttonDisabled]}
-              onPress={handleNextSubStep}
-              disabled={isUploading}
-            >
-              <LinearGradient
-                colors={['#A0D2EB', '#307cc9ff']}
-                style={styles.continueButtonGradient}
-              >
-                {isUploading ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <>
-                    <Text style={styles.continueButtonText}>
-                      {currentServiceSubStep === totalSteps ? 'Finalizar Cadastro' : 'Próximo'}
-                    </Text>
-                    {currentServiceSubStep !== totalSteps && <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />}
-                    {currentServiceSubStep === totalSteps && <Ionicons name="checkmark-circle-outline" size={20} color="#FFFFFF" />}
-                  </>
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </Animated.View>
-    </View>
+            </View>
+          </ScrollView>
+        </Animated.View>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F4F7FC',
+  },
   container: {
     flex: 1,
     backgroundColor: '#F4F7FC',
@@ -823,7 +849,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingTop: Platform.OS === 'ios' ? 50 : 30,
+    // paddingTop: Platform.OS === 'ios' ? 50 : 30, // Removed as SafeAreaView handles it
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -833,12 +859,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 15,
+    marginTop: 70,
     justifyContent: 'center', // Center the title
     position: 'relative', // For absolute positioning of back button
   },
   backButtonHeader: {
     position: 'absolute',
     left: 0,
+    bottom: 60,
     padding: 5,
     zIndex: 1, // Ensure it's above other elements
     flexDirection: 'row', // Align icon and text
@@ -853,8 +881,8 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '700',
     color: '#2C3E50',
-    marginBottom: -2,
-    marginTop: 20,
+    marginBottom: 12,
+    marginTop: 10,
     textAlign: 'center', // Ensure title is centered
     flex: 1, // Allow title to take up available space
   },
@@ -863,6 +891,7 @@ const styles = StyleSheet.create({
     color: '#6C757D',
     textAlign: 'center',
     lineHeight: 22,
+    
     marginBottom: 8, // Reduced margin
   },
   microcopyText: { // New style for microcopy
@@ -915,6 +944,7 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     overflow: 'hidden',
     position: 'relative',
+    left: 90,
     marginBottom: 20, // Added margin for separation
   },
   imageUploadButtonError: { // Style for error state
@@ -1020,11 +1050,7 @@ const styles = StyleSheet.create({
   continueButton: {
     borderRadius: 12,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+  
     flex: 1, // Allow button to grow
     marginLeft: 10, // Space from back button
   },
@@ -1032,12 +1058,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
+    paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 12, // Apply borderRadius to the gradient too
   },
   continueButtonText: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '700',
     color: '#FFFFFF',
     marginRight: 8,
