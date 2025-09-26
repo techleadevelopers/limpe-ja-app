@@ -1,8 +1,9 @@
 // LimpeJaApp/app/(client)/bookings/components/success/ProviderInfoSection.tsx
 import React, { useEffect, useRef } from 'react';
 import { Image, StyleSheet, Text, View, Animated, Easing } from 'react-native';
-import { renderStars } from '../../../../utils/ui-helpers';
+import { renderStars } from '../../../../utils/ui-helpers'; // Assumindo que renderStars está aqui
 import { AppColors } from '../../../../constants/appStyles'; // Importe AppColors
+import { sanitizeText } from '../../../../utils/formatters'; // Importar sanitizeText
 
 interface ProviderInfoSectionProps {
   providerAvatarUrl?: string | null;
@@ -16,15 +17,14 @@ export default function ProviderInfoSection({
   providerRating,
 }: ProviderInfoSectionProps) {
   const starSize = 15;
-  const starColor = AppColors.primaryInteractive; // Usando AppColors
+  const starColor = AppColors.primaryInteractive; // Usando AppColors para consistência
 
-  // Animações de entrada
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const translateYAnim = useRef(new Animated.Value(20)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
 
   useEffect(() => {
-    Animated.parallel([
+    const entryAnimation = Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 500,
@@ -43,7 +43,10 @@ export default function ProviderInfoSection({
         easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }),
-    ]).start();
+    ]);
+    entryAnimation.start();
+
+    return () => entryAnimation.stop(); // Cleanup da animação
   }, []);
 
   return (
@@ -56,10 +59,11 @@ export default function ProviderInfoSection({
       <Image
         source={providerAvatarUrl ? { uri: providerAvatarUrl } : require('../../../../assets/images/default-avatar.png')}
         style={styles.providerAvatar}
+        resizeMode="cover" // Garante que a imagem preencha o espaço sem distorcer
       />
       <View style={styles.providerHeaderText}>
-        <Text style={styles.providerNameText}>{providerFullName}</Text>
-        <Text style={styles.providerRoleText}>Prestador(a) de Serviço</Text>
+        <Text style={styles.providerNameText} numberOfLines={2} maxFontSizeMultiplier={1.2}>{sanitizeText(providerFullName)}</Text>
+        <Text style={styles.providerRoleText} maxFontSizeMultiplier={1.2}>Prestador(a) de Serviço</Text>
       </View>
       {renderStars(providerRating, starSize, starColor, starColor)}
     </Animated.View>
@@ -79,7 +83,7 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     marginRight: 10,
     borderWidth: 3,
-    borderColor: AppColors.borderNeutral, // Usando AppColors
+    borderColor: AppColors.borderNeutral,
   },
   providerHeaderText: {
     flex: 1,
@@ -87,10 +91,10 @@ const styles = StyleSheet.create({
   providerNameText: {
     fontSize: 15,
     fontWeight: 'bold',
-    color: AppColors.textBody, // Usando AppColors
+    color: AppColors.textBody,
   },
   providerRoleText: {
     fontSize: 12,
-    color: AppColors.textAuxiliary, // Usando AppColors
+    color: AppColors.textAuxiliary,
   },
 });
