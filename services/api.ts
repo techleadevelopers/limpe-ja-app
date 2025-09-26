@@ -3,6 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import Toast from 'react-native-toast-message'; // Importar Toast
 import i18n from '../i18n'; // Importar i18n
+import axiosRetry from 'axios-retry'; // NEW: Importar axios-retry
+import * as Sentry from '@sentry/react-native'; // NEW: Importar Sentry (assumindo que já está configurado)
 
 // --- Início da nova lógica para callback de logout ---
 let onUnauthorizedCallback: (() => Promise<void>) | null = null;
@@ -18,16 +20,36 @@ const API_BASE_URL = Constants.expoConfig?.extra?.backendApiUrl as string;
 
 // Para facilitar a manutenção local, você pode comentar a linha acima
 // e descomentar a linha abaixo para apontar para um backend local.
-// const API_BASE_URL = 'http://127.0.0.1:3000'; 
+// const API_BASE_URL = 'http://127.0.0.1:3000';
 
 if (!API_BASE_URL) {
     console.error('backendApiUrl não está definido em app.json ou Constants.expoConfig.extra! Verifique sua configuração.');
+    // NEW: Captura o erro com Sentry se a URL base não estiver definida
+    Sentry.captureMessage('backendApiUrl não está definido!', 'fatal');
 }
 
 const api = axios.create({
     baseURL: API_BASE_URL,
+    timeout: 20000, // NEW: 20 segundos de timeout para todas as requisições
     headers: {
         'Content-Type': 'application/json',
+    },
+});
+
+// NEW: Configuração de retry para requisições
+axiosRetry(api, {
+    retries: 3, // Tenta 3 vezes
+    retryDelay: axiosRetry.exponentialDelay, // Aumenta o tempo de espera exponencialmente
+    retryCondition: (error) => {
+        // Retenta se for erro de rede ou status 429 (Too Many Requests) ou 5xx
+        return axiosRetry.isNetworkError(error) ||
+               axiosRetry.isRetryableError(error) || // Erros 5xx, timeouts
+               error.response?.status === 429;
+    },
+    onRetry: (retryCount, error, requestConfig) => {
+        console.warn(`[API Interceptor] Tentativa ${retryCount} para ${requestConfig.url} falhou: ${error.message}`);
+        // NEW: Captura a tentativa de retry com Sentry como um evento de aviso
+        Sentry.captureMessage(`Retry attempt ${retryCount} for ${requestConfig.url}`, 'warning');
     },
 });
 
@@ -41,6 +63,8 @@ api.interceptors.request.use(
         return config;
     },
     (error) => {
+        // NEW: Captura o erro na fase de requisição com Sentry
+        Sentry.captureException(error);
         return Promise.reject(error);
     }
 );
@@ -49,10 +73,13 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => response,
     async (error) => {
+        // NEW: Captura o erro da resposta com Sentry
+        Sentry.captureException(error);
+
         const originalRequest = error.config;
 
         // Erro 401: Não autorizado (token expirado ou inválido)
-        if (error.response && error.response.status === 401 && !originalRequest._isRetryRequest) {
+        if (axios.isAxiosError(error) && error.response && error.response.status === 401 && !originalRequest._isRetryRequest) {
             console.warn('[API Interceptor] Requisição 401 Unauthorized. Token pode ter expirado ou é inválido. Iniciando processo de logout.');
             originalRequest._isRetryRequest = true; // Marca a requisição para evitar loops infinitos
 
@@ -79,7 +106,7 @@ api.interceptors.response.use(
         }
 
         // Erro 404: Não encontrado
-        if (error.response && error.response.status === 404) {
+        if (axios.isAxiosError(error) && error.response && error.response.status === 404) {
             Toast.show({
                 type: 'error',
                 text1: i18n.t('common.error'),
@@ -87,17 +114,35 @@ api.interceptors.response.use(
             });
         }
 
+        // Erro 403: Acesso Proibido
+        if (axios.isAxiosError(error) && error.response && error.response.status === 403) {
+            Toast.show({
+                type: 'error',
+                text1: i18n.t('common.error'),
+                text2: error.response.data?.message || i18n.t('common.forbidden_error'), // NEW: Adicionado i18n para 403
+            });
+        }
+
         // Erro 422 (Unprocessable Entity) ou 409 (Conflict): Erros de validação ou de negócio
-        if (error.response && (error.response.status === 422 || error.response.status === 409)) {
+        if (axios.isAxiosError(error) && error.response && (error.response.status === 422 || error.response.status === 409)) {
             Toast.show({
                 type: 'error',
                 text1: i18n.t('common.error'),
                 text2: error.response.data?.message || i18n.t('common.generic_error'),
+            });
+        }
+
+        // NEW: Erro 429 (Too Many Requests)
+        if (axios.isAxiosError(error) && error.response && error.response.status === 429) {
+            Toast.show({
+                type: 'error',
+                text1: i18n.t('common.error'),
+                text2: error.response.data?.message || i18n.t('common.too_many_requests'), // NEW: Adicionado i18n para 429
             });
         }
 
         // Erro 5xx: Erros de servidor
-        if (error.response && error.response.status >= 500 && error.response.status < 600) {
+        if (axios.isAxiosError(error) && error.response && error.response.status >= 500 && error.response.status < 600) {
             Toast.show({
                 type: 'error',
                 text1: i18n.t('common.error'),
@@ -105,8 +150,8 @@ api.interceptors.response.use(
             });
         }
 
-        // Erros de rede (sem resposta do servidor)
-        if (!error.response) {
+        // Erros de rede (sem resposta do servidor) ou timeout
+        if (axios.isAxiosError(error) && !error.response) { // Inclui erros de rede e timeouts
             Toast.show({
                 type: 'error',
                 text1: i18n.t('common.error'),
