@@ -1,6 +1,6 @@
 // app/(provider)/components/dashboard/RecentReviewsSection.tsx
 import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform, Image, FlatList } from 'react-native'; // Import FlatList
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient'; // Adicionado para efeito Glassmorphic sutil
 import { BlurView } from 'expo-blur'; // Adicionado para efeito Glassmorphic sutil
@@ -14,23 +14,31 @@ interface ProviderReview {
   comment?: string;
   serviceName: string;
   date: string;
-  avatarUrl?: string;
+  avatarUrl?: string; // Pode ser undefined ou null
   // Adicionado: ID do agendamento relacionado, para linkar aos detalhes do serviço
   bookingId?: string;
 }
 
 // Helper para formatar a data (pode ser movido para um utilitário)
 const formatDate = (isoDateString: string): string => {
-  const date = new Date(isoDateString);
-  const now = new Date();
-  const diffTime = Math.abs(now.getTime() - date.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  if (!isoDateString) return 'Data inválida';
+  try {
+    const date = new Date(isoDateString); // CORRIGIDO: isoDateTimeString para isoDateString
+    if (isNaN(date.getTime())) return 'Data inválida'; // Robust validation
 
-  if (diffDays === 0) return 'Hoje';
-  if (diffDays === 1) return 'Ontem';
-  if (diffDays < 7) return `Há ${diffDays} dias`;
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    if (diffDays === 0) return 'Hoje';
+    if (diffDays === 1) return 'Ontem';
+    if (diffDays < 7) return `Há ${diffDays} dias`;
+
+    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  } catch (e) {
+    console.error("Erro ao formatar data:", e);
+    return 'Data inválida';
+  }
 };
 
 interface RecentReviewItemProps {
@@ -44,12 +52,15 @@ const RecentReviewItem: React.FC<RecentReviewItemProps> = ({ review, index, onPr
   const scaleAnim = useRef(new Animated.Value(1)).current; // Para feedback de toque
 
   useEffect(() => {
-    Animated.timing(itemAnim, {
+    const animation = Animated.timing(itemAnim, {
       toValue: 1,
       duration: 300,
       delay: index * 50,
       useNativeDriver: true,
-    }).start();
+    });
+    animation.start();
+
+    return () => animation.stop(); // Cleanup function to stop animation
   }, [itemAnim, index]);
 
   const handlePressIn = () => {
@@ -91,7 +102,7 @@ const RecentReviewItem: React.FC<RecentReviewItemProps> = ({ review, index, onPr
 
           <View style={styles.reviewHeader}>
             <View style={styles.clientInfo}>
-              {review.avatarUrl ? (
+              {review.avatarUrl && typeof review.avatarUrl === 'string' && review.avatarUrl.length > 0 ? ( // Check for non-empty string
                 <Image source={{ uri: review.avatarUrl }} style={styles.clientAvatar} />
               ) : (
                 <View style={styles.clientAvatarPlaceholder}>
@@ -161,6 +172,10 @@ const RecentReviewsSection: React.FC<RecentReviewsSectionProps> = ({
     }).start();
   };
 
+  const renderRecentReviewItem = ({ item, index }: { item: ProviderReview; index: number }) => (
+    <RecentReviewItem review={item} index={index} onPressReview={onPressReview} />
+  );
+
   return (
     <Animated.View
       style={[
@@ -170,9 +185,17 @@ const RecentReviewsSection: React.FC<RecentReviewsSectionProps> = ({
     >
       <Text style={styles.sectionTitle}>Últimas Avaliações</Text>
       {recentReviews.length > 0 ? (
-        recentReviews.map((review, index) => (
-          <RecentReviewItem key={review.id} review={review} index={index} onPressReview={onPressReview} />
-        ))
+        <FlatList
+          data={recentReviews}
+          renderItem={renderRecentReviewItem}
+          keyExtractor={(item) => item.id}
+          scrollEnabled={false} // Desabilitar rolagem interna se a seção for pequena e a rolagem for gerenciada pelo pai
+          contentContainerStyle={styles.flatListContentContainer}
+          // Adicionar props de otimização se a lista for potencialmente muito longa
+          // initialNumToRender={5}
+          // maxToRenderPerBatch={10}
+          // windowSize={10}
+        />
       ) : (
         <View style={styles.emptyStateContainer}>
           <Ionicons name="chatbox-outline" size={60} color="#CED4DA" style={styles.emptyStateIcon} />
@@ -216,6 +239,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#1C3A5F',
     marginBottom: 15,
+  },
+  flatListContentContainer: {
+    // Adicione estilos aqui se precisar de padding ou margem para os itens da FlatList
   },
   emptyStateContainer: {
     alignItems: 'center',
