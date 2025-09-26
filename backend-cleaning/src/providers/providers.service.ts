@@ -1,6 +1,22 @@
-// Arquivo: providers.service.ts
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { Address, PricingType, Prisma, ProviderService, Service, VerificationStatus, UserRole, BookingStatus } from '@prisma/client';
+// src/providers/providers.service.ts
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  Address,
+  PricingType,
+  Prisma,
+  ProviderService,
+  Service,
+  VerificationStatus,
+  UserRole,
+  BookingStatus,
+  Offer as PrismaOffer, // IMPORTANTE: Importe o tipo Offer do Prisma aqui
+  OfferTarget, // NOVO: Importe OfferTarget
+} from '@prisma/client';
 import { File } from 'multer';
 import { CacheService } from '../cache/cache.service';
 import { DocumentProcessingService } from '../document-processing/document-processing.service';
@@ -10,7 +26,7 @@ import { ProviderSearchDto } from './dto/provider-search.dto';
 import { UpdateProviderProfileDto } from './dto/update-provider-profile.dto';
 import { Decimal } from '@prisma/client/runtime/library';
 
-// Tipo principal para provedores com todas as inclusões necessárias para mapeamento
+// Type principal para provedores com todas as inclusões necessárias para mapeamento
 export type ProviderWithIncludes = Prisma.ProviderGetPayload<{
   include: {
     user: { select: { email: true, role: true, isVerified: true, fullName: true } };
@@ -106,6 +122,13 @@ export type ProviderWithCalculatedRating = {
   // NOVO: Campo para boosts de gamificação no score de ranking
   rankingBoostScore?: number; // Representa o +beta, +gamma, +delta
 };
+
+// NEW: Backend type for ProviderMetrics to match frontend
+export interface ProviderMetrics {
+  acceptanceRate: number;
+  averageResponseTime: number; // Changed from avgResponseTime to averageResponseTime
+  totalBookings: number;
+}
 
 @Injectable()
 export class ProvidersService {
@@ -928,7 +951,7 @@ export class ProvidersService {
     // Lógica de cálculo do tempo médio de resposta (exemplo simplificado)
     // Isso exigiria um histórico de mensagens de chat e timestamps de envio/resposta.
     // Por exemplo, calcular a média de (tempo de resposta do provedor - tempo de envio do cliente)
-    const averageResponseTime = Math.floor(Math.random() * 60); // Exemplo: 0-59 minutos
+    const averageResponseTime = Math.floor(Math.random() * 60) + 5; // Exemplo: 5-64 minutos
 
     await this.prisma.provider.update({
       where: { id: providerId },
@@ -947,6 +970,59 @@ export class ProvidersService {
     await this.cacheService.del(`${this.PROVIDERS_CACHE_KEY}:top_rated_experienced`);
     // Telemetria: provider_metrics_updated
     this.logger.log(`[TELEMETRY] provider_metrics_updated: { providerId: ${providerId}, acceptanceRate: ${acceptanceRate.toFixed(2)}, averageResponseTime: ${averageResponseTime} }`);
+  }
+
+  // NEW METHOD: Get calculated performance metrics for a provider
+  async getProviderPerformanceMetrics(providerId: string): Promise<ProviderMetrics> {
+    this.logger.log(`[ProvidersService] getProviderPerformanceMetrics: Buscando métricas para provedor ${providerId}.`);
+
+    const provider = await this.prisma.provider.findUnique({
+      where: { id: providerId },
+      select: {
+        acceptanceRate: true,
+        averageResponseTime: true,
+        bookings: {
+          where: { status: BookingStatus.COMPLETED },
+          select: { id: true }
+        }
+      }
+    });
+
+    if (!provider) {
+      throw new NotFoundException(`Provedor com ID "${providerId}" não encontrado.`);
+    }
+
+    return {
+      acceptanceRate: provider.acceptanceRate !== null ? Math.round(provider.acceptanceRate) : 0,
+      averageResponseTime: provider.averageResponseTime !== null ? Math.round(provider.averageResponseTime) : 0,
+      totalBookings: provider.bookings.length,
+    };
+  }
+
+  // NEW METHOD: Get offers for a provider
+  async getProviderOffers(providerId: string): Promise<PrismaOffer[]> {
+    this.logger.log(`[ProvidersService] getProviderOffers: Buscando ofertas para provedor ${providerId}.`);
+    
+    const offers = await this.prisma.offer.findMany({
+      where: {
+        // CORREÇÃO: Usar 'target' e 'targetId' para filtrar por provedor
+        OR: [
+          {
+            target: OfferTarget.GENERAL, // Ofertas gerais se aplicam a todos os provedores
+          },
+          {
+            target: OfferTarget.SPECIFIC_PROVIDER,
+            targetId: providerId, // Ofertas específicas para este provedor
+          },
+        ],
+        status: 'ACTIVE', // Apenas ofertas ativas
+        validUntil: {
+          gte: new Date(), // Apenas ofertas que ainda não expiraram
+        },
+      },
+    });
+
+    return offers;
   }
 
   // NOVO MÉTODO: Aplicar boost de ranking (ex: de uma missão)
