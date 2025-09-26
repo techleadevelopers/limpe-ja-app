@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'rea
 import { Ionicons } from '@expo/vector-icons';
 import { Stack } from 'expo-router';
 import { AppColors } from '../../../../constants/appStyles'; // Importe AppColors
+import { sanitizeText } from '../../../../utils/formatters'; // Importar sanitizeText
 
 interface SuccessLoadingErrorProps {
   isLoading: boolean;
@@ -18,7 +19,7 @@ export default function SuccessLoadingError({ isLoading, error, headerPrimaryCol
       <View style={styles.centered}>
         <Stack.Screen options={{ title: "Carregando..." }} />
         <ActivityIndicator size="large" color={headerPrimaryColor} />
-        <Text style={styles.loadingText}>Carregando detalhes do agendamento...</Text>
+        <Text style={styles.loadingText} maxFontSizeMultiplier={1.2}>Carregando detalhes do agendamento...</Text>
       </View>
     );
   }
@@ -28,9 +29,9 @@ export default function SuccessLoadingError({ isLoading, error, headerPrimaryCol
       <View style={styles.centered}>
         <Stack.Screen options={{ title: "Erro" }} />
         <Ionicons name="alert-circle-outline" size={48} color={AppColors.errorRed} />
-        <Text style={styles.errorText}>{error}</Text>
+        <Text style={styles.errorText} maxFontSizeMultiplier={1.2}>{sanitizeText(error)}</Text>
         <TouchableOpacity onPress={onRetryPress} style={styles.actionButton}>
-          <Text style={styles.actionButtonText}>Tentar Novamente</Text>
+          <Text style={styles.actionButtonText} maxFontSizeMultiplier={1.2}>Tentar Novamente</Text>
         </TouchableOpacity>
       </View>
     );
