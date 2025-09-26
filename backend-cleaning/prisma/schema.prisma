@@ -254,7 +254,6 @@ model User {
   isPhoneVerified       Boolean            @default(false)
   isVerified            Boolean            @default(false)
   deletionScheduledAt   DateTime?
-  isActive              Boolean            @default(true)  // <<< ADICIONADO
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
   preferredLanguage     String?            // NOVO: Para internacionalização (i18n) - idioma preferencial do usuário
@@ -392,8 +391,8 @@ model ProviderService {
   serviceId             String
   price                 Decimal?       @db.Decimal(10, 2) // Tornando opcional para flexibilidade
   pricePerHour          Decimal?       @db.Decimal(10, 2) // NOVO: Campo para preço por hora
-  pricePerSquareMeter   Decimal?       @db.Decimal(10, 2)
-  pricePerRoom          Decimal?       @db.Decimal(10, 2)
+  pricePerSquareMeter   Decimal?       @db.Decimal(10, 2) // NOVO: Campo para preço por metro quadrado
+  pricePerRoom          Decimal?       @db.Decimal(10, 2) // NOVO: Campo para preço por cômodo
   durationMinutes       Int?
   description           String?
   provider              Provider       @relation(fields: [providerId], references: [id], onDelete: Cascade)
@@ -485,7 +484,8 @@ model Notification {
   createdAt    DateTime @default(now())
   imageUrl     String?
   actionButtons Json?
-  title        String? // NEW: Added title to Notification model
+  title        String?
+  category     String? // CORREÇÃO: Adicionado category ao modelo Notification
 }
 
 // Modelo de Avaliação
