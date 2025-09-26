@@ -1,9 +1,11 @@
-// LimpeJaApp/app/(common)/support/create-ticket.tsx
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Platform, SafeAreaView, KeyboardAvoidingView } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supportService } from '../../../services/supportService';
+import { showAppAlert } from '../../../utils/alerts';
+// CORREÇÃO: Importar tipos do arquivo centralizado
+import { CreateTicketPayload, TicketCategory, TicketSeverity } from '../../../types/backend/support';
 
 /**
  * CreateTicketScreen component allows users to open a new support ticket
@@ -12,8 +14,10 @@ import { supportService } from '../../../services/supportService';
 export default function CreateTicketScreen() {
     const router = useRouter();
     const [subject, setSubject] = useState('');
-    const [message, setMessage] = useState('');
+    const [message, setMessage] = useState(''); // Mantido como 'message' para o input do usuário
     const [loading, setLoading] = useState(false);
+    const [category, setCategory] = useState<TicketCategory>('OTHER'); // Adicionado estado para categoria
+    const [severity, setSeverity] = useState<TicketSeverity>('LOW'); // Adicionado estado para severidade
 
     /**
      * Handles the submission of the new ticket form.
@@ -21,18 +25,25 @@ export default function CreateTicketScreen() {
      */
     const handleCreateTicket = async () => {
         if (!subject.trim() || !message.trim()) {
-            Alert.alert('Campos Vazios', 'Por favor, preencha o assunto e a mensagem.');
+            showAppAlert('Campos Vazios', 'Por favor, preencha o assunto e a mensagem.');
             return;
         }
 
         setLoading(true);
         try {
-            await supportService.createTicket({ subject, initialMessage: message });
-            Alert.alert('Sucesso', 'Seu ticket de suporte foi criado com sucesso!');
-            router.replace('/(common)/support' as any); // Navigate back to the tickets list after success
-        } catch (error) {
+            // CORREÇÃO: Mapear 'message' do frontend para 'description' do backend DTO
+            const payload: CreateTicketPayload = {
+                subject: subject.trim(),
+                description: message.trim(), // CORREÇÃO AQUI
+                category: category, // Usar o estado da categoria
+                severity: severity, // Usar o estado da severidade
+            };
+            await supportService.createTicket(payload);
+            showAppAlert('Sucesso', 'Seu ticket de suporte foi criado com sucesso!');
+            router.replace('/(common)/support');
+        } catch (error: any) {
             console.error('Error creating ticket:', error);
-            Alert.alert('Erro', 'Não foi possível criar o ticket. Por favor, tente novamente.');
+            showAppAlert('Erro', error); // Passar o erro diretamente para showAppAlert
         } finally {
             setLoading(false);
         }
@@ -43,15 +54,19 @@ export default function CreateTicketScreen() {
             <Stack.Screen options={{ headerShown: false }} />
 
             {/* Custom Header with back button */}
-            <View style={styles.customHeader}>
+            <SafeAreaView style={styles.customHeader}>
                 <TouchableOpacity style={styles.headerIconLeft} onPress={() => router.back()}>
                     <Ionicons name="arrow-back" size={24} color="#2F4F4F" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Abrir Novo Ticket</Text>
                 <View style={styles.headerIconRightPlaceholder} /> {/* Placeholder for alignment */}
-            </View>
+            </SafeAreaView>
 
-            <View style={styles.formContainer}>
+            <KeyboardAvoidingView
+                style={styles.formContainer}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+            >
                 <Text style={styles.label}>Assunto</Text>
                 <TextInput
                     style={styles.input}
@@ -59,7 +74,7 @@ export default function CreateTicketScreen() {
                     placeholderTextColor="#A0A0A0"
                     value={subject}
                     onChangeText={setSubject}
-                    maxLength={100} // Limit subject length
+                    maxLength={100}
                 />
 
                 <Text style={styles.label}>Mensagem</Text>
@@ -69,15 +84,15 @@ export default function CreateTicketScreen() {
                     placeholderTextColor="#A0A0A0"
                     value={message}
                     onChangeText={setMessage}
-                    multiline // Allow multiple lines of text
-                    textAlignVertical="top" // Align text to the top for multiline input
-                    maxLength={1000} // Limit message length
+                    multiline
+                    textAlignVertical="top"
+                    maxLength={1000}
                 />
 
                 <TouchableOpacity
                     style={[styles.submitButton, loading && styles.submitButtonDisabled]}
                     onPress={handleCreateTicket}
-                    disabled={loading} // Disable button while loading
+                    disabled={loading}
                 >
                     {loading ? (
                         <ActivityIndicator color="#FFFFFF" />
@@ -85,7 +100,7 @@ export default function CreateTicketScreen() {
                         <Text style={styles.submitButtonText}>Enviar Ticket</Text>
                     )}
                 </TouchableOpacity>
-            </View>
+            </KeyboardAvoidingView>
         </View>
     );
 }
