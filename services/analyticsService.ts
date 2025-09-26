@@ -1,4 +1,3 @@
-
 import { api } from './api';
 
 interface PerformanceMetrics {
@@ -31,16 +30,9 @@ export class AnalyticsService {
       return response.data;
     } catch (error) {
       console.error('Erro ao buscar métricas de performance:', error);
-      
-      // Retornar métricas simuladas para desenvolvimento
-      return {
-        responseTime: 12, // minutos
-        completionRate: 94.5,
-        customerSatisfaction: 4.7,
-        repeatCustomerRate: 68,
-        revenueGrowth: 23.5,
-        ranking: 8
-      };
+      // Em um ambiente de produção "premium", não devemos retornar dados mockados em caso de erro.
+      // O erro deve ser propagado para que a UI possa lidar com ele (ex: exibir uma mensagem de erro).
+      throw error;
     }
   }
 
@@ -50,24 +42,9 @@ export class AnalyticsService {
       return response.data;
     } catch (error) {
       console.error('Erro ao buscar insights de negócio:', error);
-      
-      return {
-        totalRevenue: 3450.00,
-        totalBookings: 28,
-        averageJobValue: 123.21,
-        peakDays: ['Sábado', 'Domingo', 'Segunda'],
-        topServices: [
-          { name: 'Limpeza Residencial', bookings: 18, revenue: 2160.00 },
-          { name: 'Limpeza Pesada', bookings: 7, revenue: 980.00 },
-          { name: 'Limpeza Comercial', bookings: 3, revenue: 310.00 }
-        ],
-        customerRetention: 72,
-        recommendations: [
-          'Foque em limpezas pesadas para aumentar ticket médio',
-          'Ofereça pacotes semanais para melhorar retenção',
-          'Considere expandir para limpeza comercial'
-        ]
-      };
+      // Em um ambiente de produção "premium", não devemos retornar dados mockados em caso de erro.
+      // O erro deve ser propagado para que a UI possa lidar com ele (ex: exibir uma mensagem de erro).
+      throw error;
     }
   }
 
@@ -80,6 +57,7 @@ export class AnalyticsService {
       });
     } catch (error) {
       console.error('Erro ao rastrear evento:', error);
+      throw error; // Propagar o erro para tratamento superior
     }
   }
 
@@ -88,17 +66,10 @@ export class AnalyticsService {
       const response = await api.get(`/analytics/competitors?location=${location}`);
       return response.data;
     } catch (error) {
-      return {
-        averagePrice: 89.50,
-        marketShare: 12.3,
-        competitorCount: 47,
-        yourPosition: 8,
-        suggestions: [
-          'Seus preços estão competitivos',
-          'Considere expandir para bairros vizinhos',
-          'Foque em diferenciação por qualidade'
-        ]
-      };
+      console.error('Erro ao buscar análise de concorrência:', error);
+      // Em um ambiente de produção "premium", não devemos retornar dados mockados em caso de erro.
+      // O erro deve ser propagado para que a UI possa lidar com ele (ex: exibir uma mensagem de erro).
+      throw error;
     }
   }
 
