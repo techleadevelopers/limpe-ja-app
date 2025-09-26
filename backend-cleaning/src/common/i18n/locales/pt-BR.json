@@ -19,7 +19,12 @@
       "generic_error": "Ocorreu um erro inesperado. Por favor, tente novamente mais tarde.",
       "per_hour_short": "/h",
       "per_sqm_short": "/m²",
-      "at": "às"
+      "at": "às",
+      "continue": "Continuar",
+      "hourly_price": "Por Hora",
+      "per_sqm_price": "Por m²",
+      "fixed_price_label": "Preço Fixo",
+      "locale": "pt-BR"
     },
     "explore_section": {
       "title": "Explore mais Serviços"
@@ -33,7 +38,9 @@
       "recommended_providers": "Recomendações para Você",
       "all_categories": "Navegue por serviços",
       "all_providers": "Prestadores",
-      "all_recommendations": "Todas as Recomendações"
+      "all_recommendations": "Todas as Recomendações",
+      "search_radius": "Raio de Busca",
+      "price_type": "Tipo de Preço"
     },
     "offers": {
       "apply": "Aplicar",
@@ -42,7 +49,11 @@
       "apply_next_step": "Aplicar na próxima etapa",
       "invalid_coupon": "Cupom inválido ou expirado.",
       "coupon_applied_success": "Cupom aplicado! Você economizou {{value}}.",
-      "title": "Ofertas"
+      "title": "Ofertas",
+      "expires_in_days": "Expira em {{count}} dias",
+      "rebook_now": "Agendar novamente",
+      "coupon_code_copied": "Código '{{code}}' copiado!",
+      "failed_to_copy_coupon": "Falha ao copiar o cupom."
     },
     "missions": {
       "title": "Minhas Missões",
@@ -114,8 +125,7 @@
     "schedule_service": {
       "header_title": "Agendar",
       "progress_step_date_time": "Data e Hora",
-      "progress_step_service_details": "Detalhes do Serviço",
-      "progress_step_confirmation": "Confirmação",
+      "progress_step_complete_review": "Revisão Completa",
       "coupon_section_title": "Cupom de Desconto",
       "coupon_input_placeholder": "Insira seu código de cupom",
       "apply_coupon_button": "Aplicar",
@@ -147,7 +157,9 @@
       "select_date_time_address": "Selecione Data, Hora e Endereço",
       "available_times": "Horários disponíveis",
       "preferred_times": "Preferências de horário",
-      "no_slots": "Nenhum horário disponível para esta data."
+      "no_slots": "Nenhum horário disponível para esta data.",
+      "review_booking_button": "Revisar Agendamento",
+      "step1_validation_error": "Por favor, selecione a data, o horário e preencha o endereço completo para continuar."
     },
     "provider_details": {
       "loading": "Carregando...",
