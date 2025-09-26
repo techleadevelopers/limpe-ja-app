@@ -1,4 +1,3 @@
-// LimpeJaApp/components/client/booking/success/ReturnCouponCard.tsx
 import React, { useRef, useEffect, useCallback } from 'react';
 import {
   Animated,
@@ -6,6 +5,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Easing,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,7 +13,7 @@ import * as Clipboard from 'expo-clipboard';
 import Toast from 'react-native-toast-message';
 import { useTranslation } from 'react-i18next';
 
-import { AppColors, AppDurations, AppOffsets, AppShadows, AppTypography, SCREEN_WIDTH } from '../../../constants/appStyles';
+import { AppColors, AppDurations, AppOffsets, AppShadows, AppTypography, SCREEN_WIDTH } from '../../../../constants/appStyles';
 
 interface ReturnCouponCardProps {
   code: string;
@@ -23,7 +23,7 @@ interface ReturnCouponCardProps {
   onRebookNow: (code: string) => void;
 }
 
-const ReturnCouponCard: React.FC<ReturnCouponCardProps> = ({
+export const ReturnCouponCard: React.FC<ReturnCouponCardProps> = ({
   code,
   title,
   subtitle,
@@ -50,7 +50,7 @@ const ReturnCouponCard: React.FC<ReturnCouponCardProps> = ({
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [fadeAnim, slideUpAnim]); // Adicionado fadeAnim e slideUpAnim para dependências
 
   const handleCopyCode = useCallback(async () => {
     try {
@@ -71,22 +71,22 @@ const ReturnCouponCard: React.FC<ReturnCouponCardProps> = ({
         text2: t('offers.failed_to_copy_coupon'),
       });
     }
-  }, [code, t]);
+  }, [code, t, scaleButtonAnim]);
 
   const handleRebookNowPress = useCallback(() => {
     Animated.sequence([
       Animated.timing(scaleButtonAnim, { toValue: 0.96, duration: AppDurations.xs, useNativeDriver: true }),
       Animated.spring(scaleButtonAnim, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }),
     ]).start(() => onRebookNow(code));
-  }, [code, onRebookNow]);
+  }, [code, onRebookNow, scaleButtonAnim]);
 
-  const formattedExpiresAt = expiresAt ? new Date(expiresAt).toLocaleDateString(t('common.locale'), { day: 'numeric', month: 'short', year: 'numeric' }) : '';
-  const expiresInDays = expiresAt ? Math.ceil((new Date(expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null;
+  const formattedExpiresAt = expiresAt ? expiresAt.toLocaleDateString(t('common.locale'), { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+  const expiresInDays = expiresAt ? Math.ceil((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null;
 
   return (
     <Animated.View style={[styles.cardContainer, { opacity: fadeAnim, transform: [{ translateY: slideUpAnim }] }]}>
       <LinearGradient
-        colors={[AppColors.successStandard, AppColors.successStrong]} // Cores de sucesso para cupom de retorno
+        colors={[AppColors.successStandard, AppColors.successStrong]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.gradientBackground}
@@ -149,9 +149,10 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   title: {
-    ...AppTypography.title,
+    // Usando as propriedades de AppTypography.title e sobrescrevendo apenas a cor
+    fontSize: AppTypography.title.fontSize,
+    fontWeight: AppTypography.title.fontWeight,
     color: AppColors.white,
-    fontSize: 22,
   },
   badge: {
     flexDirection: 'row',
@@ -168,10 +169,10 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   subtitle: {
-    ...AppTypography.body,
+    // Usando as propriedades de AppTypography.body e sobrescrevendo apenas a cor
+    fontSize: AppTypography.body.fontSize,
+    fontWeight: AppTypography.body.fontWeight,
     color: AppColors.white,
-    fontSize: 16,
-    marginBottom: 15,
   },
   couponCodeContainer: {
     flexDirection: 'row',
@@ -215,5 +216,3 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
-
-export default ReturnCouponCard;
