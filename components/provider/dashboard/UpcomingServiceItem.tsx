@@ -1,18 +1,17 @@
 // app/(provider)/components/dashboard/UpcomingServiceItem.tsx
 import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, Animated, Alert } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { Booking } from '../../../../types/booking'; // Certifique-se que o caminho para seus tipos está correto
+import { BookingDetails, BookingStatus } from '../../../types/backend/bookings'; // CORRIGIDO: Importação e uso de BookingDetails e BookingStatus
 import Toast from 'react-native-toast-message'; // Supondo a instalação de uma biblioteca de Toast
+import { Ionicons } from '@expo/vector-icons';
 
 interface UpcomingServiceItemProps {
-  booking: Booking;
+  booking: BookingDetails; // CORRIGIDO: Usar BookingDetails
   onPress: (bookingId: string) => void;
   // Adicionado: Funções para ações rápidas
   onAcceptPress?: (bookingId: string) => void;
   onRejectPress?: (bookingId: string) => void;
-  onContactClientPress?: (clientId: string) => void;
-  onContactClient: (clientId: string) => void; // <--- ADICIONE ESTA LINHA
+  onContactClient: (clientId: string) => void;
 }
 
 const UpcomingServiceItem: React.FC<UpcomingServiceItemProps> = ({
@@ -20,7 +19,7 @@ const UpcomingServiceItem: React.FC<UpcomingServiceItemProps> = ({
   onPress,
   onAcceptPress,
   onRejectPress,
-  onContactClientPress,
+  onContactClient,
 }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current; // Para feedback de toque
 
@@ -33,10 +32,13 @@ const UpcomingServiceItem: React.FC<UpcomingServiceItemProps> = ({
   };
 
   // Funções para extrair data e hora de scheduledDateTime
-  const getFormattedDate = (isoDateTime: string) => {
-    if (!isoDateTime) return 'Data não definida';
+  const getFormattedDate = (dateString: string, timeString: string) => {
+    if (!dateString || !timeString) return 'Data não definida';
     try {
+      const isoDateTime = `${dateString}T${timeString}:00`; // Combinar data e hora
       const date = new Date(isoDateTime);
+      if (isNaN(date.getTime())) return 'Data inválida'; // Validação robusta
+
       const now = new Date();
       const tomorrow = new Date(now);
       tomorrow.setDate(now.getDate() + 1);
@@ -49,30 +51,36 @@ const UpcomingServiceItem: React.FC<UpcomingServiceItemProps> = ({
       }
       return date.toLocaleDateString('pt-BR');
     } catch (e) {
+      console.error("Erro ao formatar data:", e);
       return 'Data inválida';
     }
   };
 
-  const getFormattedTime = (isoDateTime: string) => {
-    if (!isoDateTime) return 'Hora não definida';
+  const getFormattedTime = (dateString: string, timeString: string) => {
+    if (!dateString || !timeString) return 'Hora não definida';
     try {
-      return new Date(isoDateTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      const isoDateTime = `${dateString}T${timeString}:00`; // Combinar data e hora
+      const date = new Date(isoDateTime);
+      if (isNaN(date.getTime())) return 'Hora inválida'; // Validação robusta
+      return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     } catch (e) {
+      console.error("Erro ao formatar hora:", e);
       return 'Hora inválida';
     }
   };
 
   // Determinar se o serviço é iminente (ex: nas próximas 2 horas)
   const isImminent = () => {
-    if (!booking.scheduledDateTime) return false;
-    const bookingTime = new Date(booking.scheduledDateTime).getTime();
+    if (!booking.scheduledDate || !booking.scheduledTime) return false;
+    const isoDateTime = `${booking.scheduledDate}T${booking.scheduledTime}:00`;
+    const bookingTime = new Date(isoDateTime).getTime();
     const now = new Date().getTime();
     const twoHoursInMs = 2 * 60 * 60 * 1000;
     return bookingTime > now && (bookingTime - now) <= twoHoursInMs;
   };
 
   const renderQuickActions = () => {
-    if (booking.status === 'pending_provider_confirmation') {
+    if (booking.status === BookingStatus.PENDING_PROVIDER_CONFIRMATION) { // CORRIGIDO: Usar enum BookingStatus
       return (
         <View style={styles.quickActions}>
           <TouchableOpacity
@@ -109,14 +117,14 @@ const UpcomingServiceItem: React.FC<UpcomingServiceItemProps> = ({
           </TouchableOpacity>
         </View>
       );
-    } else if (booking.status === 'confirmed') {
+    } else if (booking.status === BookingStatus.CONFIRMED) { // CORRIGIDO: Usar enum BookingStatus
       return (
         <View style={styles.quickActions}>
           <TouchableOpacity
             style={styles.actionButtonContact}
             onPress={() => {
-              if (onContactClientPress && booking.client?.id) {
-                onContactClientPress(booking.client.id);
+              if (onContactClient && booking.clientId) { // CORRIGIDO: Usar booking.clientId
+                onContactClient(booking.clientId);
                 Toast.show({ type: 'info', text1: 'Abrindo chat com o cliente...', position: 'bottom' }); // Feedback de Toast
               }
             }}
@@ -142,13 +150,13 @@ const UpcomingServiceItem: React.FC<UpcomingServiceItemProps> = ({
         {isImminent() && <View style={styles.imminentIndicator} />}
 
         <View style={styles.serviceInfo}>
-          <Text style={styles.serviceName}>{booking.serviceSnapshot.name}</Text>
-          <Text style={styles.clientName}>{booking.client?.name || 'Cliente não informado'}</Text>
+          <Text style={styles.serviceName}>{booking.serviceName}</Text> {/* CORRIGIDO: serviceSnapshot.name para serviceName */}
+          <Text style={styles.clientName}>{booking.clientFullName || 'Cliente não informado'}</Text> {/* CORRIGIDO: client?.fullName para clientFullName */}
           <Text style={styles.dateTime}>
             <Ionicons name="calendar-outline" size={14} color="#6C757D" />
-            {getFormattedDate(booking.scheduledDateTime)} às{' '}
+            {getFormattedDate(booking.scheduledDate, booking.scheduledTime)} às{' '} {/* CORRIGIDO: Passar scheduledDate e scheduledTime */}
             <Ionicons name="time-outline" size={14} color="#6C757D" />
-            {getFormattedTime(booking.scheduledDateTime)}
+            {getFormattedTime(booking.scheduledDate, booking.scheduledTime)} {/* CORRIGIDO: Passar scheduledDate e scheduledTime */}
           </Text>
           <Text style={styles.addressInfo}>
             <Ionicons name="location-outline" size={14} color="#6C757D" />{' '}
@@ -159,7 +167,7 @@ const UpcomingServiceItem: React.FC<UpcomingServiceItemProps> = ({
           <Text style={styles.serviceAmount}>
             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(booking.totalPrice || 0)}
           </Text>
-          {booking.status === 'pending_provider_confirmation' ? (
+          {booking.status === BookingStatus.PENDING_PROVIDER_CONFIRMATION ? ( // CORRIGIDO: Usar enum BookingStatus
             <View style={styles.statusBadgePending}>
               <Text style={styles.statusBadgeTextPending}>Nova Solicitação</Text>
             </View>
