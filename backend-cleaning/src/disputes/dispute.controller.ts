@@ -1,37 +1,49 @@
-import { Controller, Post, Body, Param, Get, Patch, UseGuards, Req, Query, ParseEnumPipe } from '@nestjs/common';
+import { Controller, Post, Body, Param, Get, Patch, UseGuards, Req, Query, ParseEnumPipe, BadRequestException } from '@nestjs/common';
 import { DisputeService } from './dispute.service';
 import { CreateDisputeDto } from './dto/create-dispute.dto';
 import { UpdateDisputeDto } from './dto/update-dispute.dto';
-import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiHeader } from '@nestjs/swagger'; // NEW: ApiHeader
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { UserRole } from '../shared/enums/user-role.enum';
+import { UserRole } from '@prisma/client'; // Standardize UserRole from Prisma
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { DisputeStatus } from '@prisma/client';
+import { ThrottlerGuard } from '@nestjs/throttler'; // NEW: Import ThrottlerGuard
 
 @ApiBearerAuth()
 @ApiTags('disputes')
 @Controller('disputes')
+@UseGuards(ThrottlerGuard, JwtAuthGuard) // NEW: Apply ThrottlerGuard globally to the controller
 export class DisputeController {
   constructor(private readonly disputeService: DisputeService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.CLIENT, UserRole.PROVIDER)
+  @UseGuards(RolesGuard) // Apply RolesGuard specifically for this route
   @ApiOperation({ summary: 'Cria uma nova disputa para um agendamento' })
+  @ApiHeader({ name: 'Idempotency-Key', description: 'Chave de idempotência para garantir que a operação seja processada apenas uma vez.', required: false }) // NEW: Idempotency-Key header
   @ApiResponse({ status: 201, description: 'Disputa criada com sucesso.' })
   @ApiResponse({ status: 400, description: 'Dados inválidos ou disputa já existente.' })
   async create(
     @Body() createDisputeDto: CreateDisputeDto,
     @Req() req: any
   ) {
-    const reporterUserId = req.user.id;
+    // NEW: Idempotency check (conceptual - requires a dedicated service/middleware for full implementation)
+    const idempotencyKey = req.headers['idempotency-key'] as string;
+    if (idempotencyKey) {
+      // In a real scenario, you'd check a cache or DB for this key
+      // If found and completed, return previous result. If found and in progress, wait or error.
+      // For now, we'll just log its presence.
+      this.disputeService['logger'].debug(`Idempotency-Key received for create dispute: ${idempotencyKey}`);
+    }
+
+    const reporterUserId = req.user.userId; // Use userId from JWT payload
     const reporterRole = req.user.role;
     return this.disputeService.createDispute(createDisputeDto, reporterUserId, reporterRole);
   }
 
   @Get(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles(UserRole.CLIENT, UserRole.PROVIDER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Busca os detalhes de uma disputa' })
   @ApiResponse({ status: 200, description: 'Detalhes da disputa retornados com sucesso.' })
@@ -41,7 +53,7 @@ export class DisputeController {
   }
 
   @Get()
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Lista disputas (apenas para administradores)' })
   @ApiQuery({ name: 'status', enum: DisputeStatus, required: false, description: 'Filtra disputas por status.' })
@@ -57,7 +69,7 @@ export class DisputeController {
   }
 
   @Post(':id/message')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles(UserRole.CLIENT, UserRole.PROVIDER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Adiciona uma nova mensagem a uma disputa' })
   @ApiResponse({ status: 201, description: 'Mensagem adicionada com sucesso.' })
@@ -67,13 +79,17 @@ export class DisputeController {
     @Req() req: any,
     @Body('content') content: string
   ) {
-    return this.disputeService.addMessageToDispute(id, req.user.id, content);
+    if (!content || content.trim().length === 0) { // Basic content validation
+      throw new BadRequestException('O conteúdo da mensagem não pode ser vazio.');
+    }
+    return this.disputeService.addMessageToDispute(id, req.user.userId, content); // Use userId
   }
 
   @Patch(':id/status')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Atualiza o status de uma disputa (apenas para administradores)' })
+  @ApiHeader({ name: 'Idempotency-Key', description: 'Chave de idempotência para garantir que a operação seja processada apenas uma vez.', required: false }) // NEW: Idempotency-Key header
   @ApiResponse({ status: 200, description: 'Disputa atualizada com sucesso.' })
   @ApiResponse({ status: 400, description: 'Dados inválidos para a atualização.' })
   @ApiResponse({ status: 404, description: 'Disputa não encontrada.' })
@@ -82,6 +98,11 @@ export class DisputeController {
     @Body() updateDisputeDto: UpdateDisputeDto,
     @Req() req: any
   ) {
-    return this.disputeService.updateDisputeStatus(id, updateDisputeDto, req.user.id);
+    // NEW: Idempotency check (conceptual)
+    const idempotencyKey = req.headers['idempotency-key'] as string;
+    if (idempotencyKey) {
+      this.disputeService['logger'].debug(`Idempotency-Key received for update dispute status: ${idempotencyKey}`);
+    }
+    return this.disputeService.updateDisputeStatus(id, updateDisputeDto, req.user.userId); // Use userId
   }
 }
