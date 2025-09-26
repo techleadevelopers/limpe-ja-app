@@ -27,21 +27,10 @@ class RankingService {
       cache.set(period, { t: Date.now(), data });
       return data;
     } catch (err) {
-      // fallback de DEV p/ não travar UI
-      console.warn('[RankingService] usando mock por erro:', (err as any)?.message);
-      const now = new Date().toISOString();
-      const mockTop: LeaderboardEntry[] = [
-        { userId: '3', displayName: 'Você', handle: '@voce', score: 3000, rank: 1, delta: +2, badges: ['SLA_90'], slaResponseRate: 0.94, avgResponseMinutes: 7, isCurrentUser: true },
-        { userId: '2', displayName: 'Analista Pro', handle: '@capsicle', score: 2500, rank: 2, delta: -1, badges: ['TOP_NEIGHBORHOOD'] },
-        { userId: '4', displayName: 'Speed Cleaner', handle: '@point_break', score: 2490, rank: 3, delta: 0, badges: ['STREAK_10'] },
-        { userId: '5', displayName: 'Underoos', handle: '@underoos', score: 2400, rank: 4, delta: +1 },
-        { userId: '6', displayName: 'Jolly Green', handle: '@jolly_green', score: 2300, rank: 5, delta: -1 },
-        { userId: '7', displayName: 'Triple Imposter', handle: '@triple', score: 2299, rank: 6, delta: 0 },
-        { userId: '8', displayName: 'The Wizard', handle: '@wizard', score: 2230, rank: 7, delta: +3 },
-      ];
-      const mock: LeaderboardResponse = { period, updatedAt: now, top: mockTop, myRank: mockTop[0], totalUsers: 124 };
-      cache.set(period, { t: Date.now(), data: mock });
-      return mock;
+      console.error('[RankingService] Erro ao buscar leaderboard:', (err as any)?.message);
+      // Em um ambiente de produção "premium", não devemos retornar dados mockados em caso de erro.
+      // O erro deve ser propagado para que a UI possa lidar com ele (ex: exibir uma mensagem de erro).
+      throw err;
     }
   }
 
@@ -50,8 +39,9 @@ class RankingService {
     try {
       const { data } = await api.get<LeaderboardEntry | null>('/ranking/me', { params: { period } });
       return data ?? null;
-    } catch {
-      return null;
+    } catch (err) {
+      console.error('[RankingService] Erro ao buscar meu ranking:', (err as any)?.message);
+      throw err; // Propagar o erro
     }
   }
 
@@ -65,7 +55,10 @@ class RankingService {
       try {
         const d = await fetchLeaderboard(p);
         cache.set(p, { t: Date.now(), data: d });
-      } catch { /* ignora */ }
+      } catch (err) {
+        console.warn(`[RankingService] Erro ao prefetch leaderboard para período ${p}:`, (err as any)?.message);
+        // Não relançar erro para não interromper outros prefetches
+      }
     }));
   }
 
