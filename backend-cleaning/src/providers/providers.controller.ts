@@ -11,12 +11,12 @@ import {
   Query,
   Req,
   NotFoundException,
-  BadRequestException, // Importado para a nova rota
+  BadRequestException,
   Logger,
-  UseInterceptors, // Importado para o FileInterceptor
-  UploadedFile, // Importado para o FileInterceptor
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express'; // Importado para a nova rota
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ProvidersService } from './providers.service';
 import { UpdateProviderProfileDto } from './dto/update-provider-profile.dto';
 import { ProviderDetailsDto } from './dto/provider-details.dto';
@@ -31,16 +31,23 @@ import {
   ApiResponse,
   ApiTags,
   ApiQuery,
-  ApiConsumes, // Importado para a nova rota
-  ApiBody, // Importado para a nova rota
+  ApiConsumes,
+  ApiBody,
 } from '@nestjs/swagger';
 import { Request as ExpressRequest } from 'express';
-import { Multer } from 'multer'; // Tipo de arquivo Multer
+import { Multer } from 'multer';
 
 import { SortByOption } from '../search/dto/search-query.dto';
 
 // Importe os tipos auxiliares do service
-import { ProviderWithCalculatedRating } from './providers.service';
+// ALTERADO: 'Offer' foi removido daqui. O tipo de retorno do serviço para ofertas agora será PrismaOffer[],
+// que é mapeado para OfferDetailsDto. Não precisamos de um tipo 'Offer' customizado no controller.
+import { ProviderWithCalculatedRating, ProviderMetrics } from './providers.service'; 
+// Importe os novos DTOs
+import { OfferDetailsDto } from '../offers/dto/offer-details.dto'; // Verifique o caminho relativo!
+
+import { ProviderMetricsDto } from './dto/provider-metrics.dto';
+
 
 @ApiTags('providers')
 @Controller('providers')
@@ -201,6 +208,32 @@ export class ProvidersController {
     return { message: 'Avatar atualizado com sucesso.', url: avatarUrl };
   }
   // --- FIM DA NOVA ROTA ---
+
+  // NEW ENDPOINT: Get provider performance metrics
+  @Get(':providerId/metrics')
+  @ApiOperation({ summary: 'Obter métricas de performance de um provedor por ID' })
+  @ApiResponse({ status: 200, description: 'Métricas de performance do provedor.', type: ProviderMetricsDto }) // Alterado para ProviderMetricsDto
+  @ApiResponse({ status: 404, description: 'Provedor não encontrado.' })
+  async getProviderMetrics(@Param('providerId') providerId: string): Promise<ProviderMetrics> {
+    this.logger.log(`[ProvidersController] getProviderMetrics: Buscando métricas para provedor ID: ${providerId}`);
+    return this.providersService.getProviderPerformanceMetrics(providerId);
+  }
+
+  // NEW ENDPOINT: Get provider offers
+  @Get(':providerId/offers')
+  @ApiOperation({ summary: 'Obter ofertas de um provedor por ID' })
+  // ALTERADO: type: [OfferDetailsDto] para usar o DTO correto para Swagger
+  @ApiResponse({ status: 200, description: 'Lista de ofertas do provedor.', type: [OfferDetailsDto] }) 
+  @ApiResponse({ status: 404, description: 'Provedor não encontrado.' })
+  // ALTERADO: Promise<OfferDetailsDto[]> para refletir o tipo de retorno
+  async getProviderOffers(@Param('providerId') providerId: string): Promise<OfferDetailsDto[]> {
+    this.logger.log(`[ProvidersController] getProviderOffers: Buscando ofertas para provedor ID: ${providerId}`);
+    // ASSUMIMOS QUE this.providersService.getProviderOffers AGORA RETORNA Promise<PrismaOffer[]>
+    const offers = await this.providersService.getProviderOffers(providerId);
+    // ADICIONADO: Mapeamento para converter objetos Offer do Prisma para OfferDetailsDto
+    // AQUI, 'offer' agora será do tipo PrismaOffer devido à correção no serviço.
+    return offers.map(offer => new OfferDetailsDto(offer)); 
+  }
 
   // =================================================================================================
   // ROTAS COM PARÂMETROS DINÂMICOS (Devem vir por último)
