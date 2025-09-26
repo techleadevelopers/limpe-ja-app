@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, Platform, View, Animated, Easing, Dimensions } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient'; // Importar LinearGradient
+import { LinearGradient } from 'expo-linear-gradient';
 import { AppColors, AppShadows } from '../../../../constants/appStyles';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -24,32 +24,47 @@ const ConfirmBookingButton: React.FC<ConfirmBookingButtonProps> = ({
 }) => {
   const pulse = useRef(new Animated.Value(1)).current;
   const buttonScaleAnim = useRef(new Animated.Value(1)).current;
-  const shineAnim = useRef(new Animated.Value(-SCREEN_WIDTH)).current; // Animação para o brilho
+  const shineAnim = useRef(new Animated.Value(-SCREEN_WIDTH)).current;
+
+  // Referências para as animações de loop para permitir o cleanup adequado
+  const pulseLoopRef = useRef<Animated.CompositeAnimation | null>(null);
+  const shineLoopRef = useRef<Animated.CompositeAnimation | null>(null);
 
   useEffect(() => {
     if (!isButtonDisabled) {
       // Animação de pulso mais sutil
-      Animated.loop(
+      pulseLoopRef.current = Animated.loop(
         Animated.sequence([
           Animated.timing(pulse, { toValue: 1.01, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
           Animated.timing(pulse, { toValue: 1, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
         ])
-      ).start();
+      );
+      pulseLoopRef.current.start();
 
       // Animação de brilho contínuo
-      Animated.loop(
+      shineLoopRef.current = Animated.loop(
         Animated.timing(shineAnim, {
           toValue: SCREEN_WIDTH + 50, // Move o brilho para fora da tela
           duration: 2500, // Duração do brilho
           easing: Easing.linear,
           useNativeDriver: true,
         })
-      ).start();
+      );
+      shineLoopRef.current.start();
 
     } else {
-      pulse.stopAnimation(); pulse.setValue(1);
-      shineAnim.stopAnimation(); shineAnim.setValue(-SCREEN_WIDTH); // Reseta o brilho
+      // ✅ Correção: Parar as instâncias de loop e resetar os valores
+      pulseLoopRef.current?.stop();
+      pulse.setValue(1);
+      shineLoopRef.current?.stop();
+      shineAnim.setValue(-SCREEN_WIDTH);
     }
+
+    // ✅ Correção: Cleanup para parar as animações quando o componente for desmontado ou a condição mudar
+    return () => {
+      pulseLoopRef.current?.stop();
+      shineLoopRef.current?.stop();
+    };
   }, [isButtonDisabled, pulse, shineAnim]);
 
   const onPressInButton = () => {
@@ -68,36 +83,38 @@ const ConfirmBookingButton: React.FC<ConfirmBookingButtonProps> = ({
     }).start();
   };
 
+  // ✅ Correção: Combinar as animações de escala (pulse e press)
+  const combinedScale = Animated.multiply(pulse, buttonScaleAnim);
+
   return (
     <View style={s.wrap}>
-      <Animated.View style={{ transform: [{ scale: pulse }] }}>
-        <TouchableOpacity
-          style={[s.btn, isButtonDisabled && s.btnDisabled, { transform: [{ scale: buttonScaleAnim }] }]}
-          onPress={onConfirmBooking}
-          disabled={isButtonDisabled}
-          activeOpacity={0.9}
-          onPressIn={onPressInButton}
-          onPressOut={onPressOutButton}
-        >
-          {!isButtonDisabled && ( // Apenas mostra o brilho se o botão não estiver desabilitado
-            <Animated.View style={[s.shineOverlay, { transform: [{ translateX: shineAnim }] }]}>
-              <LinearGradient
-                colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.3)', 'rgba(255,255,255,0)']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={s.gradientShine}
-              />
-            </Animated.View>
-          )}
-          {isBooking ? (
-            <ActivityIndicator color={AppColors.white} />
-          ) : (
-            <Text style={s.text}>
-              {selectedTime && hasSelectedServicePrice ? `Agendar (${confirmButtonText})` : 'Selecione Data, Hora e Endereço'}
-            </Text>
-          )}
-        </TouchableOpacity>
-      </Animated.View>
+      {/* ✅ Correção: Aplicar a escala combinada diretamente ao TouchableOpacity */}
+      <TouchableOpacity
+        style={[s.btn, isButtonDisabled && s.btnDisabled, { transform: [{ scale: combinedScale }] }]}
+        onPress={onConfirmBooking}
+        disabled={isButtonDisabled}
+        activeOpacity={0.9}
+        onPressIn={onPressInButton}
+        onPressOut={onPressOutButton}
+      >
+        {!isButtonDisabled && ( // Apenas mostra o brilho se o botão não estiver desabilitado
+          <Animated.View style={[s.shineOverlay, { transform: [{ translateX: shineAnim }] }]}>
+            <LinearGradient
+              colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.3)', 'rgba(255,255,255,0)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={s.gradientShine}
+            />
+          </Animated.View>
+        )}
+        {isBooking ? (
+          <ActivityIndicator color={AppColors.white} />
+        ) : (
+          <Text style={s.text}>
+            {selectedTime && hasSelectedServicePrice ? `Agendar (${confirmButtonText})` : 'Selecione Data, Hora e Endereço'}
+          </Text>
+        )}
+      </TouchableOpacity>
     </View>
   );
 };
