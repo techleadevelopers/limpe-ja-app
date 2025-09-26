@@ -3,7 +3,7 @@ import { Stack, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert, // Removed
+    Alert,
     Animated,
     Image,
     Platform,
@@ -30,7 +30,7 @@ import { BookingDetails, BookingStatus } from '../../types/backend/bookings';
 import { ProviderReview } from '../../types/backend/providers';
 // CORREÇÃO: Usar a interface ProviderDashboard do arquivo de provedores,
 // que é mais completa e usada na lógica do componente.
-// import { ProviderDashboard } from '../../types/backend/dashboard'; 
+// import { ProviderDashboard } from '../../types/backend/dashboard';
 import { ProviderDashboard } from '../../types/backend/providers'; // Usar a interface correta
 
 // Importações dos novos componentes
@@ -89,7 +89,7 @@ const DashboardHeader: React.FC<{
     </View>
     <TouchableOpacity onPress={onProfilePress} style={headerStyles.avatarButton}>
       {avatarUrl ? (
-        <Image source={{ uri: avatarUrl }} style={headerStyles.avatar} />
+        <Image source={{ uri: avatarUrl }} style={headerStyles.avatar} defaultSource={require('../../assets/images/default-avatar.png')} />
       ) : (
         <View style={headerStyles.avatarPlaceholder}>
           <Ionicons name="person" size={24} color={WHITE} />
@@ -454,11 +454,13 @@ const RequestItem: React.FC<{
 
       <Text style={styles.requestClientName}>Solicitado por: {clientName}</Text>
 
-    {item.totalPrice != null && !isNaN(Number(item.totalPrice)) && (
-  <Text style={styles.requestPrice}>
-      Valor: R$ {Number(item.totalPrice).toFixed(2).replace('.', ',')}
-  </Text>
-)}
+    {item.totalPrice != null && !isNaN(Number(item.totalPrice)) ? (
+      <Text style={styles.requestPrice}>
+          Valor: R$ {Number(item.totalPrice).toFixed(2).replace('.', ',')}
+      </Text>
+    ) : (
+      <Text style={styles.requestPrice}>Valor: N/A</Text>
+    )}
       <View style={styles.requestInfoRow}>
         <Ionicons name="calendar-outline" size={16} color={TEXT_MUTED} style={styles.infoIcon} />
         <Text style={styles.requestInfoText}>
@@ -546,7 +548,7 @@ const ConfirmedServiceItem: React.FC<{
           </View>
           <View style={styles.serviceItemDetails}>
             <Text style={styles.serviceItemText} numberOfLines={1}>
-              <Text style={{ fontWeight: 'bold' }}>{item.serviceName}</Text>
+              <Text style={{ fontWeight: 'bold' }}>{item.serviceName || 'Serviço Desconhecido'}</Text>
               {item.clientFullName ? ` com ${item.clientFullName}` : ''}
             </Text>
             <Text style={styles.serviceItemTime}>
@@ -572,7 +574,7 @@ export default function ProviderDashboardScreen() {
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const contentAnim = useRef(new Animated.Value(0)).current;
+  // Animated Values
   const financialSummaryAnim = useRef(new Animated.Value(0)).current;
   const quickActionsAnim = useRef(new Animated.Value(0)).current;
   const newRequestsAnim = useRef(new Animated.Value(0)).current;
@@ -580,16 +582,25 @@ export default function ProviderDashboardScreen() {
   const reviewsSectionAnim = useRef(new Animated.Value(0)).current;
   const logoutButtonAnim = useRef(new Animated.Value(0)).current;
 
+  // Adicionado ref para verificar se o componente está montado
+  const isMounted = useRef(true);
+  // Ref para armazenar a animação composta do stagger
+  const staggerAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
+
 
   const fetchData = useCallback(async () => {
     console.log("[DashboardScreen] fetchData: Iniciando busca de dados.");
-    setIsLoading(true);
-    setError(null);
+    if (isMounted.current) {
+      setIsLoading(true);
+      setError(null);
+    }
     if (!user?.id) {
       console.warn("[DashboardScreen] fetchData: user.id não disponível. Abortando busca.");
-      setError("ID do provedor não disponível para buscar dados.");
-      setIsLoading(false);
-      setIsRefreshing(false);
+      if (isMounted.current) {
+        setError("ID do provedor não disponível para buscar dados.");
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
       return;
     }
     console.log(`[DashboardScreen] fetchData: Buscando dashboard para userId: ${user.id}`);
@@ -597,6 +608,8 @@ export default function ProviderDashboardScreen() {
     try {
       // CORRIGIDO: Chamar a função correta do serviço de dashboard
       const dashboard = await getMyProviderDashboard();
+      if (!isMounted.current) return; // Verificar se o componente ainda está montado
+
       console.log("[DashboardScreen] fetchData: Dados do dashboard recebidos.", dashboard);
       console.log("[DashboardScreen] REVIEWS NA DASHBOARD (AGORA COM 'reviews'):", dashboard.reviews);
 
@@ -607,35 +620,53 @@ export default function ProviderDashboardScreen() {
       setUpcomingServices(dashboard.upcomingBookings.filter(b => b.status === BookingStatus.CONFIRMED || b.status === BookingStatus.IN_PROGRESS));
 
       // Animate sections in stagger
-      Animated.stagger(100, [
+      const animationSequence = Animated.stagger(100, [
         Animated.timing(financialSummaryAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
         Animated.timing(quickActionsAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
         Animated.timing(newRequestsAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
         Animated.timing(upcomingServicesAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
         Animated.timing(reviewsSectionAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
         Animated.timing(logoutButtonAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-      ]).start();
+      ]);
+      staggerAnimationRef.current = animationSequence; // Armazenar a referência da animação composta
+      animationSequence.start();
 
     } catch (err: any) {
       console.error("[DashboardScreen] Erro ao buscar dados do dashboard do provedor:", err.response?.data || err.message, err);
-      NotificationUIService.showError(err.response?.data?.message || "Não foi possível carregar os dados do dashboard.", "Erro"); // Modified
+      if (isMounted.current) {
+        NotificationUIService.showError(err.response?.data?.message || "Não foi possível carregar os dados do dashboard.", "Erro");
+      }
     } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
+      if (isMounted.current) {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
       console.log("[DashboardScreen] fetchData: Finalizado. isLoading:", false, "isRefreshing:", false);
     }
   }, [user, financialSummaryAnim, quickActionsAnim, newRequestsAnim, upcomingServicesAnim, reviewsSectionAnim, logoutButtonAnim]);
 
   useEffect(() => {
+    isMounted.current = true; // Componente montado
+
     console.log("[DashboardScreen] useEffect: authLoading:", authLoading, "user.id:", user?.id);
     if (!authLoading && user?.id) {
       fetchData();
     } else if (!authLoading && !user?.id) {
+      if (isMounted.current) {
         setIsLoading(false);
         setError("Provedor não autenticado ou perfil não encontrado.");
-        console.warn("[DashboardScreen] useEffect: Usuário não autenticado ou ID não encontrado após authLoading.");
+      }
+      console.warn("[DashboardScreen] useEffect: Usuário não autenticado ou ID não encontrado após authLoading.");
     }
-  }, [authLoading, user, fetchData]);
+
+    return () => {
+      isMounted.current = false; // Componente desmontado
+      // Parar a animação composta do stagger se ela estiver em andamento
+      if (staggerAnimationRef.current) {
+        staggerAnimationRef.current.stop();
+      }
+    };
+  }, [authLoading, user, fetchData]); // Removidas as dependências individuais das Animated.Value, pois a animação composta é controlada por staggerAnimationRef
 
   const onRefresh = useCallback(() => {
     console.log("[DashboardScreen] onRefresh: Iniciando refresh.");
@@ -677,17 +708,25 @@ export default function ProviderDashboardScreen() {
         {
           text: "Aceitar",
           onPress: async () => {
-            setIsLoading(true);
+            if (isMounted.current) {
+              setIsLoading(true);
+            }
             try {
               await updateBookingStatus(bookingId, { status: BookingStatus.CONFIRMED });
-              NotificationUIService.showSuccess("Agendamento aceito com sucesso!", "Sucesso"); // Modified
-              console.log(`[DashboardScreen] Agendamento ${bookingId} aceito com sucesso.`);
-              fetchData();
+              if (isMounted.current) {
+                NotificationUIService.showSuccess("Agendamento aceito com sucesso!", "Sucesso");
+                console.log(`[DashboardScreen] Agendamento ${bookingId} aceito com sucesso.`);
+                fetchData();
+              }
             } catch (error: any) {
               console.error("[DashboardScreen] Erro ao aceitar agendamento:", error.response?.data || error.message, error);
-              NotificationUIService.showError(error.response?.data?.message || "Não foi possível aceitar o agendamento.", "Erro"); // Modified
+              if (isMounted.current) {
+                NotificationUIService.showError(error.response?.data?.message || "Não foi possível aceitar o agendamento.", "Erro");
+              }
             } finally {
-              setIsLoading(false);
+              if (isMounted.current) {
+                setIsLoading(false);
+              }
             }
           },
         },
@@ -705,17 +744,25 @@ export default function ProviderDashboardScreen() {
         {
           text: "Rejeitar",
           onPress: async () => {
-            setIsLoading(true);
+            if (isMounted.current) {
+              setIsLoading(true);
+            }
             try {
               await updateBookingStatus(bookingId, { status: BookingStatus.REJECTED });
-              NotificationUIService.showSuccess("Agendamento rejeitado com sucesso!", "Sucesso"); // Modified
-              console.log(`[DashboardScreen] Agendamento ${bookingId} rejeitado com sucesso.`);
-              fetchData();
+              if (isMounted.current) {
+                NotificationUIService.showSuccess("Agendamento rejeitado com sucesso!", "Sucesso");
+                console.log(`[DashboardScreen] Agendamento ${bookingId} rejeitado com sucesso.`);
+                fetchData();
+              }
             } catch (error: any) {
               console.error("[DashboardScreen] Erro ao rejeitar agendamento:", error.response?.data || error.message, error);
-              NotificationUIService.showError(error.response?.data?.message || "Não foi possível rejeitar o agendamento.", "Erro"); // Modified
+              if (isMounted.current) {
+                NotificationUIService.showError(error.response?.data?.message || "Não foi possível rejeitar o agendamento.", "Erro");
+              }
             } finally {
-              setIsLoading(false);
+              if (isMounted.current) {
+                setIsLoading(false);
+              }
             }
           },
         },
@@ -735,7 +782,7 @@ export default function ProviderDashboardScreen() {
       console.log("[Dashboard] logout() concluído. O _layout.tsx deve redirecionar.");
     } catch (error) {
       console.error("[Dashboard] Erro ao fazer logout:", error);
-      NotificationUIService.showError("Não foi possível sair da conta. Tente novamente ou verifique sua conexão.", "Erro ao Sair"); // Modified
+      NotificationUIService.showError("Não foi possível sair da conta. Tente novamente ou verifique sua conexão.", "Erro ao Sair");
     }
   };
 
@@ -815,14 +862,14 @@ export default function ProviderDashboardScreen() {
         ]}>
           <View style={styles.subsectionHeader}>
             <Text style={styles.subsectionTitle}>
-              <Ionicons name="hourglass-outline" size={20} color={WARNING_YELLOW} /> Novas Solicitações
+              <Ionicons name="hourglass-outline" size={20} color={WARNING_YELLOW} />{' '}Novas Solicitações
             </Text>
             {pendingRequests.length > 2 && (
               <TouchableOpacity onPress={() => router.push('/(provider)/schedule' as any)} accessibilityRole="button" accessibilityLabel="Ver todas as solicitações">
                 <Text style={styles.viewAllText}>Ver Todas</Text>
               </TouchableOpacity>
             )}
-          </View>{pendingRequests.length > 0 ? ( // Removido espaço
+          </View>{pendingRequests.length > 0 ? (
             pendingRequests.slice(0, 2).map((item, index) => (
               <RequestItem
                 key={item.id}
@@ -844,14 +891,14 @@ export default function ProviderDashboardScreen() {
         ]}>
           <View style={styles.subsectionHeader}>
             <Text style={styles.subsectionTitle}>
-              <Ionicons name="checkmark-done-circle-outline" size={20} color={ICON_PRIMARY} /> Próximos Serviços
+              <Ionicons name="checkmark-done-circle-outline" size={20} color={ICON_PRIMARY} />{' '}Próximos Serviços
               </Text>
             {upcomingServices.length > 2 && (
               <TouchableOpacity onPress={() => router.push('/(provider)/schedule' as any)} accessibilityRole="button" accessibilityLabel="Ver todos os próximos serviços">
                 <Text style={styles.viewAllText}>Ver Todas</Text>
               </TouchableOpacity>
             )}
-          </View>{upcomingServices.length > 0 ? ( // Removido espaço
+          </View>{upcomingServices.length > 0 ? (
             upcomingServices.slice(0, 2).map((item, index) => (
               <ConfirmedServiceItem
                 key={item.id}
