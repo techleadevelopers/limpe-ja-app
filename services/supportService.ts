@@ -1,19 +1,29 @@
 // LimpeJaApp/app/services/supportService.ts
 import axios from 'axios';
 import { SupportTicket, CreateTicketPayload, AddMessagePayload, SupportMessage } from '../types/backend/support';
+import api from './api'; // Importa a instância centralizada do Axios
+import Constants from 'expo-constants'; // Importar Constants para API_BASE_URL consistente
 
-// Replace with your actual API base URL. It's recommended to use environment variables.
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api'; 
+// A API_BASE_URL deve ser carregada de Constants para consistência em produção
+const API_BASE_URL = Constants.expoConfig?.extra?.backendApiUrl as string;
+
+// Validação para garantir que API_BASE_URL está definida
+if (!API_BASE_URL) {
+  console.error('[supportService] Erro crítico: backendApiUrl não está definido!');
+  // Em um ambiente de produção, você pode querer lançar um erro ou ter um fallback mais robusto
+}
+
 
 export const supportService = {
     /**
      * Creates a new support ticket.
-     * @param {CreateTicketPayload} payload - The subject and initial message for the new ticket.
+     * @param {CreateTicketPayload} payload - The subject and initial message (description) for the new ticket.
      * @returns {Promise<SupportTicket>} A promise that resolves to the newly created ticket.
      */
     async createTicket(payload: CreateTicketPayload): Promise<SupportTicket> {
         try {
-            const response = await axios.post(`${API_BASE_URL}/v1/support/tickets`, payload);
+            // Usa a instância 'api' centralizada para todas as requisições
+            const response = await api.post(`/v1/support/tickets`, payload);
             return response.data;
         } catch (error) {
             console.error('Error creating support ticket:', error);
@@ -27,7 +37,8 @@ export const supportService = {
      */
     async getTickets(): Promise<SupportTicket[]> {
         try {
-            const response = await axios.get(`${API_BASE_URL}/v1/support/tickets`);
+            // Usa a instância 'api' centralizada para todas as requisições
+            const response = await api.get(`/v1/support/tickets`, { params: { mine: true } }); // Adicionado params.mine=true
             return response.data;
         } catch (error) {
             console.error('Error fetching support tickets:', error);
@@ -42,7 +53,8 @@ export const supportService = {
      */
     async getTicketDetails(ticketId: string): Promise<SupportTicket> {
         try {
-            const response = await axios.get(`${API_BASE_URL}/v1/support/tickets/${ticketId}`);
+            // Usa a instância 'api' centralizada para todas as requisições
+            const response = await api.get(`/v1/support/tickets/${ticketId}`);
             return response.data;
         } catch (error) {
             console.error(`Error fetching ticket details for ${ticketId}:`, error);
@@ -58,7 +70,8 @@ export const supportService = {
      */
     async addMessageToTicket(ticketId: string, payload: AddMessagePayload): Promise<SupportMessage> {
         try {
-            const response = await axios.post(`${API_BASE_URL}/v1/support/tickets/${ticketId}/messages`, payload);
+            // Usa a instância 'api' centralizada para todas as requisições
+            const response = await api.post(`/v1/support/tickets/${ticketId}/messages`, { body: payload.content });
             return response.data;
         } catch (error) {
             console.error(`Error adding message to ticket ${ticketId}:`, error);
@@ -69,12 +82,13 @@ export const supportService = {
     /**
      * Updates the status of a support ticket.
      * @param {string} ticketId - The ID of the ticket to update.
-     * @param {'open' | 'pending' | 'closed'} status - The new status for the ticket.
+     * @param {string} status - The new status for the ticket.
      * @returns {Promise<SupportTicket>} A promise that resolves to the updated ticket information.
      */
-    async updateTicketStatus(ticketId: string, status: 'open' | 'pending' | 'closed'): Promise<SupportTicket> {
+    async updateTicketStatus(ticketId: string, status: string): Promise<SupportTicket> { // Status agora é string para flexibilidade
         try {
-            const response = await axios.patch(`${API_BASE_URL}/v1/support/tickets/${ticketId}/status`, { status });
+            // Usa a instância 'api' centralizada para todas as requisições
+            const response = await api.patch(`/v1/support/tickets/${ticketId}/status`, { status });
             return response.data;
         } catch (error) {
             console.error(`Error updating ticket status for ${ticketId}:`, error);
