@@ -3,13 +3,14 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef } from 'react';
 import { StyleSheet, Text, View, Animated, Easing } from 'react-native';
 import { AppColors } from '../../../../constants/appStyles'; // Importe AppColors
+import { sanitizeText } from '../../../../utils/formatters'; // Importar sanitizeText
 
 interface BookingDetailSectionProps {
   serviceName: string;
   formattedAddressLine1: string;
   formattedAddressLine2: string;
   notes?: string | null;
-  iconColor: string;
+  iconColor: string; // Mantido, mas AppColors.primaryInteractive é usado diretamente
 }
 
 export default function BookingDetailSection({
@@ -17,19 +18,18 @@ export default function BookingDetailSection({
   formattedAddressLine1,
   formattedAddressLine2,
   notes,
-  iconColor,
+  iconColor, // Não usado diretamente, AppColors.primaryInteractive é usado
 }: BookingDetailSectionProps) {
-  // Animações de entrada
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const translateYAnim = useRef(new Animated.Value(20)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
 
   useEffect(() => {
-    Animated.parallel([
+    const entryAnimation = Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 500,
-        delay: 100, // Leve atraso em relação à seção anterior
+        delay: 100,
         easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }),
@@ -47,7 +47,10 @@ export default function BookingDetailSection({
         easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }),
-    ]).start();
+    ]);
+    entryAnimation.start();
+
+    return () => entryAnimation.stop(); // Cleanup da animação
   }, []);
 
   return (
@@ -59,24 +62,24 @@ export default function BookingDetailSection({
     >
       <View style={styles.detailItem}>
         <Ionicons name="brush-outline" size={19} color={AppColors.primaryInteractive} />
-        <Text style={styles.detailLabel}>Serviço Contratado</Text>
-        <Text style={styles.detailValue}>{serviceName}</Text>
+        <Text style={styles.detailLabel} maxFontSizeMultiplier={1.2}>Serviço Contratado</Text>
+        <Text style={styles.detailValue} maxFontSizeMultiplier={1.2}>{sanitizeText(serviceName)}</Text>
       </View>
-      
+
       <View style={styles.detailItem}>
         <Ionicons name="location-outline" size={19} color={AppColors.primaryInteractive} />
-        <Text style={styles.detailLabel}>Local do Serviço</Text>
+        <Text style={styles.detailLabel} maxFontSizeMultiplier={1.2}>Local do Serviço</Text>
         <View style={styles.addressContainer}>
-          <Text style={styles.detailValue}>{formattedAddressLine1}</Text>
-          <Text style={styles.detailValue}>{formattedAddressLine2}</Text>
+          <Text style={styles.detailValue} maxFontSizeMultiplier={1.2}>{sanitizeText(formattedAddressLine1)}</Text>
+          <Text style={styles.detailValue} maxFontSizeMultiplier={1.2}>{sanitizeText(formattedAddressLine2)}</Text>
         </View>
       </View>
-      
+
       {notes ? (
         <View style={styles.detailItem}>
           <Ionicons name="document-text-outline" size={18} color={AppColors.primaryInteractive} />
-          <Text style={styles.detailLabel}>Observações</Text>
-          <Text style={styles.detailValueNotes}>{notes}</Text>
+          <Text style={styles.detailLabel} maxFontSizeMultiplier={1.2}>Observações</Text>
+          <Text style={styles.detailValueNotes} maxFontSizeMultiplier={1.2}>{sanitizeText(notes)}</Text>
         </View>
       ) : null}
     </Animated.View>
@@ -96,7 +99,7 @@ const styles = StyleSheet.create({
   detailLabel: {
     fontSize: 13,
     fontFamily: 'Montserrat-Regular',
-    color: AppColors.textAuxiliary, // Usando AppColors
+    color: AppColors.textAuxiliary,
     marginLeft: 16,
     flex: 1,
   },
@@ -108,13 +111,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: 'Montserrat-Regular',
     fontWeight: 'bold',
-    color: AppColors.textBody, // Usando AppColors
+    color: AppColors.textBody,
     textAlign: 'right',
   },
   detailValueNotes: {
     fontSize: 13,
     fontFamily: 'Montserrat-Regular',
-    color: AppColors.textBody, // Usando AppColors
+    color: AppColors.textBody,
     flex: 2,
     textAlign: 'right',
     lineHeight: 20,
