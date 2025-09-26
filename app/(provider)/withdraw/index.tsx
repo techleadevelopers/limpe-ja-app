@@ -15,23 +15,17 @@ import {
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+// ✅ Importar a tipagem correta
+import { RequestWithdrawalDto, PixKeyType } from '../../../types/backend/payments';
 
-// Assumindo que estas tipagens viriam do seu projeto
-enum PixKeyType {
-  CPF = 'CPF',
-  CNPJ = 'CNPJ',
-  EMAIL = 'EMAIL',
-  PHONE = 'PHONE',
-  RANDOM = 'RANDOM',
-}
 
-interface RequestWithdrawalDto {
-  amount: number;
-  pixKeyType: PixKeyType;
-  pixKey: string;
-}
+// 🔗 Importar serviços reais
+import { requestWithdrawal } from '../../../services/paymentService';
+import api from '../../../services/api';
 
-// ===== Design Tokens (Premium UI) - Mantendo as cores azuis atualizadas =====
+
+
+// ===== Design Tokens (Premium UI) =====
 const Colors = {
   primary: 'rgba(0,122,255,0.9)',
   primaryDark: 'rgba(0,122,255,0.7)',
@@ -48,25 +42,17 @@ const Colors = {
   shadow: 'rgba(0,122,255,0.3)',
 };
 
-const Radii = {
-  xl: 20,
-  pill: 25,
-  sm: 10,
-};
-
-const Spacing = {
-  xs: 6,
-  sm: 10,
-  md: 15,
-  lg: 20,
-  xl: 28,
-};
+const Radii = { xl: 20, pill: 25, sm: 10 };
+const Spacing = { xs: 6, sm: 10, md: 15, lg: 20, xl: 28 };
 
 const easeOut = Easing.out(Easing.ease);
 
 // Helper para formatar moeda (ex: R$ 1.234,56)
 const formatCurrency = (value: number) => {
-  return `R$ ${value.toFixed(2).replace('.', ',').replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.')}`;
+  return `R$ ${value
+    .toFixed(2)
+    .replace('.', ',')
+    .replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.')}`;
 };
 
 export default function WithdrawScreen() {
@@ -75,43 +61,84 @@ export default function WithdrawScreen() {
   const [amount, setAmount] = useState<string>('');
   const [availableBalance, setAvailableBalance] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isProcessingWithdrawal, setIsProcessingWithdrawal] = useState<boolean>(false);
-  const [isWithdrawalSuccessful, setIsWithdrawalSuccessful] = useState<boolean>(false);
+  const [isProcessingWithdrawal, setIsProcessingWithdrawal] =
+    useState<boolean>(false);
+  const [isWithdrawalSuccessful, setIsWithdrawalSuccessful] =
+    useState<boolean>(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   // Animated values for screen transitions
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
 
+  // Adicionado ref para verificar se o componente está montado
+  const isMounted = useRef(true);
+  // Ref para armazenar a animação composta
+  const initialAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
+
+
   useEffect(() => {
-    // Simulate fetching available balance
+    isMounted.current = true; // Componente montado
+
     const fetchBalance = async () => {
-      setIsLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      setAvailableBalance(458.78); // Hardcoded for demo, would come from backend
-      setIsLoading(false);
-      Animated.parallel([
-        Animated.timing(fadeAnim, { toValue: 1, duration: 500, easing: easeOut, useNativeDriver: true }),
-        Animated.timing(slideAnim, { toValue: 0, duration: 500, easing: easeOut, useNativeDriver: true }),
-      ]).start();
+      if (isMounted.current) {
+        setIsLoading(true);
+      }
+      try {
+        const response = await api.get<{ balance: number }>(
+          '/payments/balance'
+        );
+        if (isMounted.current) {
+          setAvailableBalance(response.data.balance);
+        }
+      } catch (err) {
+        console.error('Erro ao buscar saldo:', err);
+        if (isMounted.current) {
+          Alert.alert('Erro', 'Não foi possível carregar o saldo.');
+        }
+      } finally {
+        if (isMounted.current) {
+          setIsLoading(false);
+          // Armazenar a referência da animação composta
+          initialAnimationRef.current = Animated.parallel([
+            Animated.timing(fadeAnim, {
+              toValue: 1,
+              duration: 500,
+              easing: easeOut,
+              useNativeDriver: true,
+            }),
+            Animated.timing(slideAnim, {
+              toValue: 0,
+              duration: 500,
+              easing: easeOut,
+              useNativeDriver: true,
+            }),
+          ]);
+          initialAnimationRef.current.start();
+        }
+      }
     };
     fetchBalance();
+
+    return () => {
+      isMounted.current = false; // Componente desmontado
+      // Parar a animação se ela estiver em andamento
+      if (initialAnimationRef.current) {
+        initialAnimationRef.current.stop();
+      }
+    };
   }, []);
 
   const handleAmountChange = (text: string) => {
-    // Remove non-numeric characters except for comma/dot for decimals
     const cleanedText = text.replace(/[^0-9.,]/g, '');
-    // Replace comma with dot for float conversion
     const formattedText = cleanedText.replace(',', '.');
-
-    // Allow only one decimal point
     const parts = formattedText.split('.');
     if (parts.length > 2) {
       setAmount(`${parts[0]}.${parts.slice(1).join('')}`);
     } else {
       setAmount(formattedText);
     }
-    setFormError(null); // Clear error on change
+    setFormError(null);
   };
 
   const handleConfirmWithdrawal = async () => {
@@ -127,39 +154,53 @@ export default function WithdrawScreen() {
       return;
     }
 
-    // Simulate PIX account details (in a real app, this would be selected/entered by the user)
     const pixData: RequestWithdrawalDto = {
       amount: parsedAmount,
-      pixKeyType: PixKeyType.CPF, // Example
-      pixKey: '123.456.789-00', // Example
+      pixKeyType: PixKeyType.CPF,
+      pixKey: '123.456.789-00', // TODO: trocar para chave real
     };
 
-    setIsProcessingWithdrawal(true);
-    setFormError(null);
+    if (isMounted.current) {
+      setIsProcessingWithdrawal(true);
+      setFormError(null);
+    }
 
     try {
-      // Simulate API call to request withdrawal
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate network delay
-      // In a real app: await paymentService.requestWithdrawal(pixData);
+      await requestWithdrawal(pixData);
 
-      setIsWithdrawalSuccessful(true);
-      setAvailableBalance(prev => prev - parsedAmount); // Update balance locally
-      Alert.alert('Sucesso', `Saque de ${formatCurrency(parsedAmount)} solicitado com sucesso!`);
+      if (isMounted.current) {
+        setIsWithdrawalSuccessful(true);
+        setAvailableBalance((prev) => prev - parsedAmount);
+        Alert.alert(
+          'Sucesso',
+          `Saque de ${formatCurrency(parsedAmount)} solicitado com sucesso!`
+        );
+      }
     } catch (error: any) {
       console.error('Erro ao solicitar saque:', error);
-      Alert.alert('Erro', error?.message || 'Não foi possível processar o saque. Tente novamente.');
-      setIsWithdrawalSuccessful(false); // Ensure success screen is not shown on error
+      if (isMounted.current) {
+        Alert.alert(
+          'Erro',
+          error?.message || 'Não foi possível processar o saque. Tente novamente.'
+        );
+        setIsWithdrawalSuccessful(false);
+      }
     } finally {
-      setIsProcessingWithdrawal(false);
+      if (isMounted.current) {
+        setIsProcessingWithdrawal(false);
+      }
     }
   };
 
   const handleReceiveStatement = (type: 'email' | 'download') => {
-    Alert.alert('Funcionalidade em desenvolvimento', `Gerar extrato via ${type === 'email' ? 'e-mail' : 'download'}.`);
+    Alert.alert(
+      'Funcionalidade em desenvolvimento',
+      `Gerar extrato via ${type === 'email' ? 'e-mail' : 'download'}.`
+    );
   };
 
   const handleSkipStatement = () => {
-    router.back(); // Or navigate to another screen like earnings history
+    router.back();
   };
 
   if (isLoading) {
@@ -176,34 +217,68 @@ export default function WithdrawScreen() {
     return (
       <View style={styles.outerContainer}>
         <Stack.Screen options={{ headerShown: false }} />
-        <Animated.View style={[styles.successContainer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-          <Ionicons name="checkmark-circle-outline" size={100} color={Colors.success} />
+        <Animated.View
+          style={[
+            styles.successContainer,
+            { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
+          ]}
+        >
+          <Ionicons
+            name="checkmark-circle-outline"
+            size={100}
+            color={Colors.success}
+          />
           <Text style={styles.successTitle}>Saque Solicitado!</Text>
-          <Text style={styles.successMessage}>Seu pedido de saque foi enviado com sucesso e está aguardando processamento.</Text>
+          <Text style={styles.successMessage}>
+            Seu pedido de saque foi enviado com sucesso e está aguardando
+            processamento.
+          </Text>
 
           <View style={styles.statementOptions}>
             <Text style={styles.statementText}>Receber extrato via:</Text>
             <View style={styles.statementButtons}>
-              <TouchableOpacity style={styles.statementButton} onPress={() => handleReceiveStatement('email')}>
-                <Ionicons name="mail-outline" size={20} color={Colors.primary} />
+              <TouchableOpacity
+                style={styles.statementButton}
+                onPress={() => handleReceiveStatement('email')}
+              >
+                <Ionicons
+                  name="mail-outline"
+                  size={20}
+                  color={Colors.primary}
+                />
                 <Text style={styles.statementButtonText}>Email</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.statementButton} onPress={() => handleReceiveStatement('download')}>
-                <Ionicons name="download-outline" size={20} color={Colors.primary} />
+              <TouchableOpacity
+                style={styles.statementButton}
+                onPress={() => handleReceiveStatement('download')}
+              >
+                <Ionicons
+                  name="download-outline"
+                  size={20}
+                  color={Colors.primary}
+                />
                 <Text style={styles.statementButtonText}>Download</Text>
               </TouchableOpacity>
             </View>
           </View>
 
-          <TouchableOpacity style={styles.actionButtonPrimary} onPress={handleSkipStatement}>
-            <Text style={styles.actionButtonPrimaryText}>Voltar para Ganhos</Text>
+          <TouchableOpacity
+            style={styles.actionButtonPrimary}
+            onPress={handleSkipStatement}
+          >
+            <Text style={styles.actionButtonPrimaryText}>
+              Voltar para Ganhos
+            </Text>
           </TouchableOpacity>
         </Animated.View>
       </View>
     );
   }
 
-  const isConfirmButtonEnabled = parseFloat(amount) > 0 && parseFloat(amount) <= availableBalance && !isProcessingWithdrawal;
+  const isConfirmButtonEnabled =
+    parseFloat(amount) > 0 &&
+    parseFloat(amount) <= availableBalance &&
+    !isProcessingWithdrawal;
 
   return (
     <KeyboardAvoidingView
@@ -216,18 +291,41 @@ export default function WithdrawScreen() {
       <Animated.View
         style={[
           styles.customHeader,
-          { opacity: fadeAnim, transform: [{ translateY: slideAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] },
+          {
+            opacity: fadeAnim,
+            transform: [
+              {
+                translateY: slideAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [-20, 0],
+                }),
+              },
+            ],
+          },
         ]}
       >
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerBackButton} accessibilityRole="button" accessibilityLabel="Voltar">
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.headerBackButton}
+          accessibilityRole="button"
+          accessibilityLabel="Voltar"
+        >
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Solicitar Saque</Text>
         <View style={styles.headerActionIconPlaceholder} />
       </Animated.View>
 
-      <ScrollView contentContainerStyle={styles.scrollViewContent} keyboardShouldPersistTaps="handled">
-        <Animated.View style={[styles.card, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+      <ScrollView
+        contentContainerStyle={styles.scrollViewContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Animated.View
+          style={[
+            styles.card,
+            { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
+          ]}
+        >
           <Text style={styles.cardTitle}>Valor do Saque</Text>
           <TextInput
             style={[styles.amountInput, formError ? styles.inputError : {}]}
@@ -239,12 +337,22 @@ export default function WithdrawScreen() {
             autoFocus
           />
           <Text style={styles.availableBalanceText}>
-            Saldo Disponível: <Text style={{ color: Colors.primary }}>{formatCurrency(availableBalance)}</Text>
+            Saldo Disponível:{' '}
+            <Text style={{ color: Colors.primary }}>
+              {formatCurrency(availableBalance)}
+            </Text>
           </Text>
-          {!!formError && <Text style={styles.formErrorText}>{formError}</Text>}
+          {!!formError && (
+            <Text style={styles.formErrorText}>{formError}</Text>
+          )}
         </Animated.View>
 
-        <Animated.View style={[styles.card, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+        <Animated.View
+          style={[
+            styles.card,
+            { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
+          ]}
+        >
           <Text style={styles.cardTitle}>Sacar Para</Text>
           <TouchableOpacity style={styles.accountOption}>
             <Ionicons name="wallet-outline" size={24} color={Colors.primary} />
@@ -252,11 +360,21 @@ export default function WithdrawScreen() {
               <Text style={styles.accountName}>Conta PIX Principal</Text>
               <Text style={styles.accountDetails}>CPF: ***.***.***-00</Text>
             </View>
-            <Ionicons name="checkmark-circle" size={24} color={Colors.primary} />
+            <Ionicons
+              name="checkmark-circle"
+              size={24}
+              color={Colors.primary}
+            />
           </TouchableOpacity>
           <TouchableOpacity style={styles.addBeneficiaryButton}>
-            <Ionicons name="add-circle-outline" size={20} color={Colors.primary} />
-            <Text style={styles.addBeneficiaryButtonText}>Adicionar Nova Conta PIX</Text>
+            <Ionicons
+              name="add-circle-outline"
+              size={20}
+              color={Colors.primary}
+            />
+            <Text style={styles.addBeneficiaryButtonText}>
+              Adicionar Nova Conta PIX
+            </Text>
           </TouchableOpacity>
         </Animated.View>
 
@@ -267,14 +385,19 @@ export default function WithdrawScreen() {
           ]}
         >
           <TouchableOpacity
-            style={[styles.actionButtonPrimary, !isConfirmButtonEnabled && styles.actionButtonDisabled]}
+            style={[
+              styles.actionButtonPrimary,
+              !isConfirmButtonEnabled && styles.actionButtonDisabled,
+            ]}
             onPress={handleConfirmWithdrawal}
             disabled={!isConfirmButtonEnabled || isProcessingWithdrawal}
           >
             {isProcessingWithdrawal ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.actionButtonPrimaryText}>Confirmar Saque</Text>
+              <Text style={styles.actionButtonPrimaryText}>
+                Confirmar Saque
+              </Text>
             )}
           </TouchableOpacity>
         </Animated.View>
@@ -382,7 +505,7 @@ const styles = StyleSheet.create({
   inputError: {
     borderColor: Colors.danger,
     borderWidth: 2,
-    borderRadius: Radii.sm, // Add border radius to inputError
+    borderRadius: Radii.sm,
   },
   accountOption: {
     flexDirection: 'row',
@@ -393,7 +516,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     marginBottom: Spacing.sm,
     borderWidth: 1,
-    borderColor: Colors.primary, // Highlight selected account
+    borderColor: Colors.primary,
   },
   accountInfo: {
     flex: 1,
