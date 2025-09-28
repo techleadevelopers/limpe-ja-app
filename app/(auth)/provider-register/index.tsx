@@ -28,6 +28,16 @@ import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context'; // Imported but not used directly in JSX
 
+import AnimatedReanimated, {
+    Easing,
+    Extrapolate,
+    interpolate,
+    useAnimatedStyle,
+    useSharedValue,
+    withRepeat,
+    withTiming,
+} from 'react-native-reanimated';
+
 const LOGO_IMAGE = require('../../../assets/images/logo2.png');
 
 export default function RegisterProviderScreen() {
@@ -74,6 +84,12 @@ export default function RegisterProviderScreen() {
 
     const mainElementsOpacity = useRef(new Animated.Value(0)).current;
     const mainElementsTranslateY = useRef(new Animated.Value(18)).current;
+
+    // Logo animation shared values (same as login)
+    const logoRotateY = useSharedValue(0);
+    const logoPulseScale = useSharedValue(1);
+    const logoGlow = useSharedValue(0);
+    const logoFloatY = useSharedValue(0);
 
     const formatDateForDisplay = (text: string) => {
         const cleanedText = text.replace(/\D/g, '');
@@ -131,12 +147,69 @@ export default function RegisterProviderScreen() {
         }
     };
 
+    // Animation for screen entry
     useEffect(() => {
         Animated.parallel([
             Animated.timing(mainElementsOpacity, { toValue: 1, duration: 700, delay: 200, useNativeDriver: true }),
             Animated.timing(mainElementsTranslateY, { toValue: 0, duration: 700, delay: 200, useNativeDriver: true })
-        ]).start();
-    }, [mainElementsOpacity, mainElementsTranslateY]);
+        ]).start(() => {
+            // Start logo loop animations after entry animation (same as login)
+            const startLogoLoopAnimations = () => {
+                logoRotateY.value = withRepeat(
+                    withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+                    -1,
+                    true
+                );
+                logoPulseScale.value = withRepeat(
+                    withTiming(1.02, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+                    -1,
+                    true
+                );
+                logoGlow.value = withRepeat(
+                    withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+                    -1,
+                    true
+                );
+                logoFloatY.value = withRepeat(
+                    withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
+                    -1,
+                    true
+                );
+            };
+            startLogoLoopAnimations();
+        });
+    }, [mainElementsOpacity, mainElementsTranslateY, logoRotateY, logoPulseScale, logoGlow, logoFloatY]);
+
+    // Estilo animado adicional para o logo (same as login)
+    const animatedLogoStyle = useAnimatedStyle(() => {
+        const rotation = interpolate(
+            logoRotateY.value,
+            [0, 0.5, 1],
+            [-5, 0, 5],
+            Extrapolate.CLAMP
+        );
+
+        const floatY = interpolate(
+            logoFloatY.value,
+            [0, 0.5, 1],
+            [0, -6, 0],
+            Extrapolate.CLAMP
+        );
+
+        const glowOpacity = interpolate(logoGlow.value, [0, 1], [0.4, 0.9]);
+
+        return {
+            transform: [
+                { scale: logoPulseScale.value },
+                { rotateY: `${rotation}deg` },
+                { translateY: floatY }
+            ],
+            // Apenas shadowOpacity é animada aqui.
+            // As outras propriedades de sombra (shadowColor, shadowRadius, shadowOffset)
+            // serão definidas no styles.logo estaticamente.
+            shadowOpacity: glowOpacity,
+        };
+    });
 
     // Auto-save to AsyncStorage
     useEffect(() => {
@@ -190,52 +263,64 @@ export default function RegisterProviderScreen() {
         loadFormData();
     }, []);
 
-    // --- PURE VALIDATION FUNCTIONS (NO STATE SETTERS) ---
-    const checkStep1Validity = useCallback(() => {
+    // Automatic and robust CEP fetching: Trigger when exactly 8 digits are entered (debounced for robustness)
+    useEffect(() => {
+        const cleanedCep = cep.replace(/\D/g, '');
+        if (cleanedCep.length === 8 && !cepLoading) {
+            // Debounce to avoid rapid API calls
+            const timer = setTimeout(() => {
+                fetchAddressByCep(cep);
+            }, 500);
+            return () => clearTimeout(timer);
+        } else if (cleanedCep.length > 0 && cleanedCep.length !== 8) {
+            // Clear fields if CEP is invalid/incomplete for robustness
+            setStreet(''); setNumber(''); setNeighborhood(''); setCity(''); setState('');
+            setCepInputError(cleanedCep.length < 8 ? "CEP incompleto. Digite os 8 dígitos." : null);
+            setAddressError(null);
+        } else if (cleanedCep.length === 0) {
+            // Clear on empty
+            setStreet(''); setNumber(''); setNeighborhood(''); setCity(''); setState('');
+            setCepInputError(null);
+            setAddressError(null);
+        }
+    }, [cep, cepLoading]);
+
+    // --- PURE VALIDATION FUNCTIONS (NO STATE SETTERS) FOR DISABLED PROP ---
+    const checkStep1Validity = useCallback(() => { // Step 1: Username + Email
         let valid = true;
-        if (!email.trim()) {
-            valid = false;
-        } else {
+        if (!username.trim()) valid = false;
+        if (!email.trim()) valid = false;
+        else {
             const emailRegex = /^[^\s@]+@[^\s@]+\.\S+$/;
-            if (!emailRegex.test(email.trim())) {
-                valid = false;
-            }
-        }
-        if (!username.trim()) {
-            valid = false;
-        }
-        const cleanedPhone = phone.replace(/\D/g, '');
-        if (!phone.trim() || (cleanedPhone.length < 10 || cleanedPhone.length > 11)) {
-            valid = false;
+            if (!emailRegex.test(email.trim())) valid = false;
         }
         return valid;
-    }, [email, username, phone]);
+    }, [email, username]);
 
-    const checkStep2Validity = useCallback(() => {
+    const checkStep2Validity = useCallback(() => { // Step 2: Phone + CPF
         let valid = true;
+        const cleanedPhone = phone.replace(/\D/g, '');
+        if (!phone.trim() || (cleanedPhone.length < 10 || cleanedPhone.length > 11)) valid = false;
         const cleanedCpf = cpf.replace(/\D/g, '');
-        if (!cpf.trim() || cleanedCpf.length !== 11) {
-            valid = false;
-        }
-        if (!dateOfBirth.trim()) {
-            valid = false;
-        } else {
+        if (!cpf.trim() || cleanedCpf.length !== 11) valid = false;
+        return valid;
+    }, [phone, cpf]);
+
+    const checkStep3Validity = useCallback(() => { // Step 3: DateOfBirth + Password
+        let valid = true;
+        if (!dateOfBirth.trim()) valid = false;
+        else {
             const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
-            if (!dateRegex.test(dateOfBirth)) {
-                valid = false;
-            } else {
+            if (!dateRegex.test(dateOfBirth)) valid = false;
+            else {
                 const [day, month, year] = dateOfBirth.split('/').map(Number);
                 const dateObj = new Date(year, month - 1, day);
-                if (isNaN(dateObj.getTime()) || dateObj.getDate() !== day || dateObj.getMonth() !== month - 1 || dateObj.getFullYear() !== year) {
-                    valid = false;
-                }
+                if (isNaN(dateObj.getTime()) || dateObj.getDate() !== day || dateObj.getMonth() !== month - 1 || dateObj.getFullYear() !== year) valid = false;
             }
         }
-        if (!password.trim() || password.length < 6) {
-            valid = false;
-        }
+        if (!password.trim() || password.length < 6) valid = false;
         return valid;
-    }, [cpf, dateOfBirth, password]);
+    }, [dateOfBirth, password]);
 
     const checkAddressSubStep1Validity = useCallback(() => { 
         const cleanedCep = cep.replace(/\D/g, '');
@@ -384,32 +469,41 @@ export default function RegisterProviderScreen() {
         setGeneralError(null);
         setAddressError(null);
 
-        if (currentStep === 1) {
+        if (currentStep === 1) { // Step 1: Username + Email
             const isValid = checkStep1Validity();
             if (!isValid) {
-                handleEmailBlur();
                 handleUsernameBlur();
-                handlePhoneBlur();
-                setGeneralError('Por favor, preencha todos os campos básicos corretamente.');
+                handleEmailBlur();
+                setGeneralError('Por favor, preencha nome e e-mail corretamente.');
                 console.warn("[RegisterProvider] handleNext: Falha ao avançar: Step 1 inválido.");
                 return;
             }
             setCurrentStep(2);
-            console.log("[RegisterProvider] handleNext: Avançando para o Step 2 (Dados Pessoais).");
-        } else if (currentStep === 2) {
+            console.log("[RegisterProvider] handleNext: Avançando para o Step 2 (Telefone + CPF).");
+        } else if (currentStep === 2) { // Step 2: Phone + CPF
             const isValid = checkStep2Validity();
             if (!isValid) {
+                handlePhoneBlur();
                 handleCpfBlur();
-                handleDateOfBirthBlur();
-                handlePasswordBlur();
-                setGeneralError('Por favor, preencha todos os campos pessoais corretamente.');
+                setGeneralError('Por favor, preencha telefone e CPF corretamente.');
                 console.warn("[RegisterProvider] handleNext: Falha ao avançar: Step 2 inválido.");
                 return;
             }
             setCurrentStep(3);
+            console.log("[RegisterProvider] handleNext: Avançando para o Step 3 (Data + Senha).");
+        } else if (currentStep === 3) { // Step 3: DateOfBirth + Password
+            const isValid = checkStep3Validity();
+            if (!isValid) {
+                handleDateOfBirthBlur();
+                handlePasswordBlur();
+                setGeneralError('Por favor, preencha data de nascimento e senha corretamente.');
+                console.warn("[RegisterProvider] handleNext: Falha ao avançar: Step 3 inválido.");
+                return;
+            }
+            setCurrentStep(4); // New Step 4 for Address
             setSubStepAddress(1);
-            console.log("[RegisterProvider] handleNext: Avançando para o Step 3 (Endereço).");
-        } else if (currentStep === 3) {
+            console.log("[RegisterProvider] handleNext: Avançando para o Step 4 (Endereço).");
+        } else if (currentStep === 4) { // Step 4: Address
             if (subStepAddress === 1) {
                 const isValid = checkAddressSubStep1Validity();
                 if (!isValid) {
@@ -481,7 +575,7 @@ export default function RegisterProviderScreen() {
                             longitude,
                         },
                     };
-                    console.log("[RegisterProvider] handleNext (Step 3 - final sub-step): Chamando signUpProvider do AuthContext para registro inicial.");
+                    console.log("[RegisterProvider] handleNext (Step 4 - final sub-step): Chamando signUpProvider do AuthContext para registro inicial.");
                     await signUpProvider(providerData);
 
                     setContextPersonalDetails({
@@ -503,19 +597,21 @@ export default function RegisterProviderScreen() {
                             longitude,
                         },
                     });
-                    console.log("[RegisterProvider] handleNext (Step 3 - final sub-step): signUpProvider do AuthContext retornou sucesso. Redirecionando para Detalhes do Serviço.");
+                    console.log("[RegisterProvider] handleNext (Step 4 - final sub-step): signUpProvider do AuthContext retornou sucesso. Redirecionando para Detalhes do Serviço.");
                     // Clear AsyncStorage after successful registration
                     await AsyncStorage.removeItem('providerRegisterFormData');
                     router.replace('/(auth)/provider-register/service-details');
                 } catch (error: any) {
-                    console.error("[RegisterProvider] handleNext (Step 3 - final sub-step): Erro durante o registro inicial:", error.message, error);
+                    console.error("[RegisterProvider] handleNext (Step 4 - final sub-step): Erro durante o registro inicial:", error.message, error);
                     setAddressError(error.message || 'Falha no registro inicial. Por favor, verifique o endereço e tente novamente.');
                 } finally {
                     setIsLoading(false);
-                    console.log("[RegisterProvider] handleNext (Step 3 - final sub-step): isLoading definido como false.");
+                    console.log("[RegisterProvider] handleNext (Step 4 - final sub-step): isLoading definido como false.");
                 }
             }
         }
+        // Sutil delay para transição suave (premium feel)
+        await new Promise(resolve => setTimeout(resolve, 150));
     };
 
     const handleBack = () => {
@@ -535,14 +631,15 @@ export default function RegisterProviderScreen() {
         setCityError(null);
         setStateError(null);
 
-        if (currentStep === 3) {
+        if (currentStep === 4) { // Address step
             if (subStepAddress === 1) {
-                setCurrentStep(2);
+                setCurrentStep(3);
+                setSubStepAddress(1); // Reset substep when leaving address
             } else {
                 setSubStepAddress(subStepAddress - 1);
             }
-        } else if (currentStep === 2) {
-            setCurrentStep(1);
+        } else if (currentStep > 1) {
+            setCurrentStep(currentStep - 1);
         }
     };
 
@@ -559,32 +656,37 @@ export default function RegisterProviderScreen() {
     // These variables now only reflect the validation status, not trigger re-renders
     const isNextButtonEnabledStep1 = checkStep1Validity();
     const isNextButtonEnabledStep2 = checkStep2Validity();
+    const isNextButtonEnabledStep3 = checkStep3Validity();
     const isNextButtonEnabledAddressSubStep1 = checkAddressSubStep1Validity() && !cepLoading;
     const isNextButtonEnabledAddressSubStep2 = checkAddressSubStep2Validity();
 
-    // Helper for progress indicator and microcopy
+    // Helper for progress indicator and microcopy (updated for 4 steps)
     const getStepInfo = () => {
         let stepText = '';
         let microcopy = '';
-        let totalSteps = 3;
+        let totalSteps = 4;
 
         switch (currentStep) {
             case 1:
-                stepText = `Etapa 1 de ${totalSteps}: Dados Básicos`;
-                microcopy = 'Precisamos só dos seus dados básicos para começar.';
+                stepText = `Dados Básicos`;
+                microcopy = 'Vamos começar com seu nome e e-mail. É rápido!';
                 break;
             case 2:
-                stepText = `Etapa 2 de ${totalSteps}: Dados Pessoais`;
-                microcopy = 'Agora, seus dados pessoais para segurança e identificação.';
+                stepText = ` Contato e Identidade`;
+                microcopy = 'Agora, telefone e CPF para contato e verificação.';
                 break;
             case 3:
+                stepText = `Dados Pessoais`;
+                microcopy = 'Data de nascimento e senha para segurança.';
+                break;
+            case 4:
                 switch (subStepAddress) {
                     case 1:
-                        stepText = `Etapa 3.1 de ${totalSteps}: Endereço (CEP)`;
+                        stepText = ` Endereço (CEP)`;
                         microcopy = 'Informe seu CEP e buscamos o endereço automaticamente.';
                         break;
                     case 2:
-                        stepText = `Etapa 3.2 de ${totalSteps}: Endereço (Detalhes)`;
+                        stepText = `Endereço (Detalhes)`;
                         microcopy = 'Confirme e complete os detalhes do seu endereço.';
                         break;
                 }
@@ -594,9 +696,11 @@ export default function RegisterProviderScreen() {
     };
 
     const getBackButtonText = () => {
-        if (currentStep === 3) {
+        if (currentStep === 4) {
             if (subStepAddress === 1) return 'Voltar para Dados Pessoais';
             if (subStepAddress === 2) return 'Voltar para CEP';
+        } else if (currentStep === 3) {
+            return 'Voltar para Contato e Identidade';
         } else if (currentStep === 2) {
             return 'Voltar para Dados Básicos';
         }
@@ -609,10 +713,12 @@ export default function RegisterProviderScreen() {
     const getWelcomeSubtitle = () => {
         switch (currentStep) {
             case 1:
-                return 'Informações Básicas';
+                return 'Nome e E-mail';
             case 2:
-                return 'Dados Pessoais';
+                return 'Telefone e CPF';
             case 3:
+                return 'Data e Senha';
+            case 4:
                 switch (subStepAddress) {
                     case 1: return 'Endereço: CEP';
                     case 2: return 'Endereço: Detalhes';
@@ -693,7 +799,11 @@ export default function RegisterProviderScreen() {
                     />
                     <Animated.View style={[styles.contentWrapper, { opacity: mainElementsOpacity, transform: [{ translateY: mainElementsTranslateY }] }]}>
                         <View style={styles.logoContainer}>
-                            <Image source={LOGO_IMAGE} style={styles.logo} />
+                            <AnimatedReanimated.Image
+                                source={LOGO_IMAGE}
+                                style={[styles.logo, animatedLogoStyle]} // Aplica ambos os estilos
+                                resizeMode="contain"
+                            />
                         </View>
 
                         <Text style={styles.welcomeSubtitle}>
@@ -702,6 +812,7 @@ export default function RegisterProviderScreen() {
                         <Text style={styles.stepIndicatorText}>{stepText}</Text>
                         <Text style={styles.microcopyText}>{microcopy}</Text>
 
+                        {/* Step 1: Name + Email */}
                         {currentStep === 1 && (
                             <View>
                                 <View style={[styles.inputWrapper, usernameError ? styles.inputWrapperError : {}]}>
@@ -710,7 +821,7 @@ export default function RegisterProviderScreen() {
                                     </View>
                                     <TextInput
                                         style={styles.input}
-                                        placeholder="Nome Completo / Nome de Usuário"
+                                        placeholder="Nome Completo"
                                         placeholderTextColor="#A0AEC0"
                                         value={username}
                                         onChangeText={(text) => { setUsername(text); setUsernameError(null); }}
@@ -741,6 +852,13 @@ export default function RegisterProviderScreen() {
                                 </View>
                                 <AnimatedErrorMessage message={emailError} isVisible={!!emailError} centered={false} />
 
+                                <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
+                            </View>
+                        )}
+
+                        {/* Step 2: Phone + CPF */}
+                        {currentStep === 2 && (
+                            <View>
                                 <View style={[styles.inputWrapper, phoneError ? styles.inputWrapperError : {}]}>
                                     <View style={styles.iconCircle}>
                                         <Ionicons name="call-outline" size={20} color="#00BCD4" />
@@ -758,12 +876,6 @@ export default function RegisterProviderScreen() {
                                 </View>
                                 <AnimatedErrorMessage message={phoneError} isVisible={!!phoneError} centered={false} />
 
-                                <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
-                            </View>
-                        )}
-
-                        {currentStep === 2 && (
-                            <View>
                                 <View style={[styles.inputWrapper, cpfError ? styles.inputWrapperError : {}]}>
                                     <View style={styles.iconCircle}>
                                         <Ionicons name="card-outline" size={20} color="#00BCD4" />
@@ -781,6 +893,13 @@ export default function RegisterProviderScreen() {
                                 </View>
                                 <AnimatedErrorMessage message={cpfError} isVisible={!!cpfError} centered={false} />
 
+                                <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
+                            </View>
+                        )}
+
+                        {/* Step 3: DateOfBirth + Password */}
+                        {currentStep === 3 && (
+                            <View>
                                 <View style={[styles.inputWrapper, dateOfBirthError ? styles.inputWrapperError : {}]}>
                                     <View style={styles.iconCircle}>
                                         <Ionicons name="calendar-outline" size={20} color="#00BCD4" />
@@ -822,7 +941,8 @@ export default function RegisterProviderScreen() {
                             </View>
                         )}
 
-                        {currentStep === 3 && (
+                        {/* Step 4: Endereço (Sub-steps) */}
+                        {currentStep === 4 && (
                             <View>
                                 {/* Sub-step 1: CEP */}
                                 {subStepAddress === 1 && (
@@ -840,17 +960,16 @@ export default function RegisterProviderScreen() {
                                                 onChangeText={(text) => {
                                                     setCep(text.replace(/\D/g, ''));
                                                     setCepInputError(null);
-                                                    if (text.replace(/\D/g, '').length === 8) {
-                                                        fetchAddressByCep(text);
-                                                    } else {
+                                                    setAddressError(null);
+                                                    // Removido o fetch manual aqui; agora é gerenciado pelo useEffect
+                                                    if (text.replace(/\D/g, '').length < 8) {
                                                         setStreet('');
                                                         setNeighborhood('');
                                                         setCity('');
                                                         setState('');
-                                                        setAddressError(null);
                                                     }
                                                 }}
-                                                onBlur={handleCepBlur}
+                                                // Removido onBlur para depender da automação via useEffect
                                                 keyboardType="numeric"
                                                 maxLength={8}
                                             />
@@ -990,6 +1109,7 @@ export default function RegisterProviderScreen() {
                             </View>
                         )}
 
+                        {/* Next Buttons for Steps 1-3 */}
                         {currentStep === 1 && (
                             <Animated.View style={{ transform: [{ scale: nextButtonAnims.scaleAnim }] }}>
                                 <TouchableOpacity
@@ -1005,13 +1125,27 @@ export default function RegisterProviderScreen() {
                         )}
 
                         {currentStep === 2 && (
-                            <Animated.View style={{ transform: [{ scale: signUpButtonAnims.scaleAnim }] }}>
+                            <Animated.View style={{ transform: [{ scale: nextButtonAnims.scaleAnim }] }}>
                                 <TouchableOpacity
                                     style={[styles.nextButton, (isLoading || !isNextButtonEnabledStep2) && styles.buttonDisabled]}
                                     onPress={handleNext}
+                                    onPressIn={nextButtonAnims.onPressIn}
+                                    onPressOut={nextButtonAnims.onPressOut}
+                                    disabled={isLoading || !isNextButtonEnabledStep2}
+                                >
+                                    <Text style={styles.nextButtonText}>Avançar</Text>
+                                </TouchableOpacity>
+                            </Animated.View>
+                        )}
+
+                        {currentStep === 3 && (
+                            <Animated.View style={{ transform: [{ scale: signUpButtonAnims.scaleAnim }] }}>
+                                <TouchableOpacity
+                                    style={[styles.nextButton, (isLoading || !isNextButtonEnabledStep3) && styles.buttonDisabled]}
+                                    onPress={handleNext}
                                     onPressIn={signUpButtonAnims.onPressIn}
                                     onPressOut={signUpButtonAnims.onPressOut}
-                                    disabled={isLoading || !isNextButtonEnabledStep2}
+                                    disabled={isLoading || !isNextButtonEnabledStep3}
                                 >
                                     {isLoading ? (
                                         <ActivityIndicator color="#FFFFFF" />
@@ -1044,7 +1178,7 @@ const styles = StyleSheet.create({
         flexGrow: 1,
         justifyContent: 'center',
         paddingBottom: 20,
-        paddingTop: 60,
+        paddingTop: 10,
     },
     contentWrapper: {
         paddingHorizontal: 35,
@@ -1054,21 +1188,26 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     logo: {
-        width: 230,
+        width: 210,
         height: 300,
         resizeMode: 'contain',
-        bottom: 16,
+        bottom: 1,
         right: 15,
+        // Adicione as propriedades de sombra estáticas aqui (same as login)
+        shadowColor: '#8ca3ac98',
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.8, // Opacidade base para a sombra
     },
     welcomeSubtitle: {
         fontSize: 15,
         color: '#8A94A6',
         textAlign: 'center',
         marginBottom: 30,
-        bottom: 140,
+        bottom: 120,
     },
     stepIndicatorText: {
-        fontSize: 16,
+        fontSize: 20,
         fontWeight: 'bold',
         color: '#1C3A5F',
         textAlign: 'center',
@@ -1141,7 +1280,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginTop: 10,
-        bottom: 110,
+        bottom: 135,
         marginBottom: 15,
         shadowColor: '#00BCD4',
         shadowOffset: { width: 0, height: 5 },

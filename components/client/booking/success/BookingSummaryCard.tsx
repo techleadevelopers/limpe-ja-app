@@ -3,7 +3,7 @@ import { BlurView } from 'expo-blur';
 import * as Clipboard from 'expo-clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
-import { Animated, Platform, StyleSheet, View, Text } from 'react-native'; // Adicionado Text
+import { Animated, Platform, StyleSheet, View, Text, Dimensions } from 'react-native';
 import Toast from 'react-native-toast-message';
 
 import AdditionalBookingDetails from './AdditionalBookingDetails';
@@ -19,6 +19,8 @@ import { ProviderDisplayInfo } from '../../../../types/backend/providers';
 // Importar utilitários de formatação e sanitização
 import { formatPriceBRL, formatDateTime, sanitizeText } from '../../../../utils/formatters';
 import { AppColors, AppShadows } from '../../../../constants/appStyles';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
 
 interface BookingSummaryCardProps {
   booking: BookingDetails;
@@ -93,8 +95,8 @@ export default function BookingSummaryCard({
   };
 
   return (
-    <Animated.ScrollView
-      contentContainerStyle={styles.scrollContent}
+    // ✅ FIX: Mudado de Animated.ScrollView para Animated.View (remove aninhado, permite scroll externo fluido)
+    <Animated.View
       style={{ opacity: contentOpacity, transform: [{ translateY: contentTranslateY }] }}
     >
       <View style={styles.mainCardContainer}>
@@ -147,34 +149,37 @@ export default function BookingSummaryCard({
           )}
         </View>
       </View>
-    </Animated.ScrollView>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollContent: {
-    paddingHorizontal: 40,
-    paddingBottom: 30,
+  // ✅ FIX: Removido flexGrow: 1 (evita travar scroll externo); adicionado paddingBottom: 20 para expansão natural e gap confortável
+  scrollContent: { // Agora usado como wrapper simples, sem contentContainerStyle
+    position: 'relative',
+    paddingHorizontal: 16, // Gap lateral premium (16px padrão)
+    paddingBottom: 20, // ✅ Adicionado: Expansão natural no final, sem forçar altura
     alignItems: 'center',
     backgroundColor: 'transparent',
-    flexGrow: 1,
+    maxWidth: '100%',
   },
   mainCardContainer: {
     width: '100%',
+    maxWidth: SCREEN_WIDTH - 32, // Fix: Previne overflow lateral no iOS
     borderRadius: 15,
     overflow: 'hidden',
-    marginTop: 20,
-    marginBottom: 25,
+    marginTop: 12, // Gap acima confortável
+    marginBottom: 0, // FIX: Zero gap abaixo – cupom/PIX cuida do spacing (cola suavemente)
     ...AppShadows.medium,
   },
   cardContentNew: {
-    padding: 25,
+    padding: 25, // Padding interno premium (confortável, 44px+ touch)
     backgroundColor: 'transparent',
   },
   dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 20,
+    marginVertical: 12, // Gap vertical simétrico e lógico (era 2, aumentado para conforto)
   },
   circle: {
     width: 10,
@@ -188,6 +193,6 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     borderColor: AppColors.backgroundNeutral,
     borderWidth: 1,
-    marginHorizontal: -5,
+    marginHorizontal: 8, // ✅ Ajustado: Gap horizontal confortável sem apertar
   },
 });

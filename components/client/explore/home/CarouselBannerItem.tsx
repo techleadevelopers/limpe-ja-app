@@ -1,5 +1,5 @@
-import React, { useRef, useEffect, useState } from 'react'; // Importado useState
-import { View, Text, StyleSheet, TouchableOpacity, Animated, ImageBackground, Dimensions, Easing, Platform } from 'react-native'; // Importado Platform
+import React, { useRef, useEffect, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, ImageBackground, Dimensions, Easing, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 // Importa todas as imagens do seu diretório assets.
@@ -38,11 +38,10 @@ const CarouselBannerItem: React.FC<CarouselBannerItemProps> = ({
     // Animação para o efeito de tremor/vibração no fundo
     const backgroundFloatAnim = useRef(new Animated.Value(0)).current;
 
-    // Animações para o efeito Ken Burns (zoom e pan)
+    // Animações para o efeito Ken Burns (zoom e pan) - Corrigido para números puros
     const kenBurnsZoom = useRef(new Animated.Value(1)).current;
     const kenBurnsPanX = useRef(new Animated.Value(0)).current;
     const kenBurnsPanY = useRef(new Animated.Value(0)).current;
-
 
     useEffect(() => {
         // Inicia a animação de tremor/vibração do fundo com pausas
@@ -90,57 +89,70 @@ const CarouselBannerItem: React.FC<CarouselBannerItemProps> = ({
             });
         }, 4000); // Tempo total por slide: 3 segundos de exibição + 1 segundo de transição
 
-        // Ken Burns Effect
+        // Ken Burns Effect - Corrigido: Interpola para números puros e usa useNativeDriver: false para imagens (evita erro no Fabric)
         const startKenBurns = () => {
             kenBurnsZoom.setValue(1);
             kenBurnsPanX.setValue(0);
             kenBurnsPanY.setValue(0);
 
+            // Interpola os valores para garantir números puros no transform
+            const zoomInterpolated = kenBurnsZoom.interpolate({
+                inputRange: [0, 1],
+                outputRange: [1, 1.15], // Zoom de 15% como número
+            });
+            const panXInterpolated = kenBurnsPanX.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, 15], // Pan horizontal como número
+            });
+            const panYInterpolated = kenBurnsPanY.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, 10], // Pan vertical como número
+            });
+
             Animated.parallel([
                 Animated.timing(kenBurnsZoom, {
-                    toValue: 1.15, // Zoom de 15%
+                    toValue: 1, // Use valores base para timing, mas interpolate no style
                     duration: 5000, // Duração do zoom
                     easing: Easing.inOut(Easing.ease),
-                    useNativeDriver: true,
+                    useNativeDriver: false, // Fallback para imagens (evita erro de transform inválido)
                 }),
                 Animated.timing(kenBurnsPanX, {
-                    toValue: 15, // Pan de 15px na horizontal
+                    toValue: 1,
                     duration: 5000,
                     easing: Easing.inOut(Easing.ease),
-                    useNativeDriver: true,
+                    useNativeDriver: false,
                 }),
                 Animated.timing(kenBurnsPanY, {
-                    toValue: 10, // Pan de 10px na vertical
+                    toValue: 1,
                     duration: 5000,
                     easing: Easing.inOut(Easing.ease),
-                    useNativeDriver: true,
+                    useNativeDriver: false,
                 }),
             ]).start(() => {
-                // Inverte a animação para o próximo ciclo
+                // Inverte a animação para o próximo ciclo (reset para 0)
                 Animated.parallel([
                     Animated.timing(kenBurnsZoom, {
-                        toValue: 1,
+                        toValue: 0,
                         duration: 5000,
                         easing: Easing.inOut(Easing.ease),
-                        useNativeDriver: true,
+                        useNativeDriver: false,
                     }),
                     Animated.timing(kenBurnsPanX, {
                         toValue: 0,
                         duration: 5000,
                         easing: Easing.inOut(Easing.ease),
-                        useNativeDriver: true,
+                        useNativeDriver: false,
                     }),
                     Animated.timing(kenBurnsPanY, {
                         toValue: 0,
                         duration: 5000,
                         easing: Easing.inOut(Easing.ease),
-                        useNativeDriver: true,
+                        useNativeDriver: false,
                     }),
-                ]).start(() => startKenBurns()); // Loop
+                ]).start(() => startKenBurns()); // Loop infinito
             });
         };
         startKenBurns();
-
 
         // Função de limpeza para parar o intervalo quando o componente for desmontado
         return () => clearInterval(interval);
@@ -167,12 +179,12 @@ const CarouselBannerItem: React.FC<CarouselBannerItemProps> = ({
         ]
     };
 
-    // Estilo animado para o efeito Ken Burns
+    // Estilo animado para o efeito Ken Burns - Corrigido: Usa interpolate para números puros no transform
     const kenBurnsAnimatedStyle = {
         transform: [
-            { scale: kenBurnsZoom },
-            { translateX: kenBurnsPanX },
-            { translateY: kenBurnsPanY },
+            { scale: kenBurnsZoom.interpolate({ inputRange: [0, 1], outputRange: [1, 1.15] }) }, // Garante número puro
+            { translateX: kenBurnsPanX.interpolate({ inputRange: [0, 1], outputRange: [0, 15] }) }, // Número puro
+            { translateY: kenBurnsPanY.interpolate({ inputRange: [0, 1], outputRange: [0, 10] }) }, // Número puro
         ],
     };
 
@@ -189,32 +201,36 @@ const CarouselBannerItem: React.FC<CarouselBannerItemProps> = ({
                         outputRange: [1, 0] // Quando fadeAnim vai de 0 a 1, a opacidade desta imagem vai de 1 a 0
                     })
                 }]}>
-                    <ImageBackground
-                        source={allBannerImages[currentImageIndex]}
-                        style={styles.backgroundImage}
-                        imageStyle={[styles.imageStyle, kenBurnsAnimatedStyle]} // Aplicar Ken Burns aqui
-                    >
-                        {/* Gradiente para escurecer a imagem e melhorar a legibilidade do texto */}
-                        <LinearGradient
-                            colors={['rgba(219, 211, 211, 0.43)', 'rgba(237, 229, 229, 0.31)', 'rgba(184, 183, 183, 0.4)']}
-                            style={StyleSheet.absoluteFillObject}
-                        />
-                    </ImageBackground>
+                    <Animated.View style={[styles.backgroundImage, kenBurnsAnimatedStyle]}>
+                        <ImageBackground
+                            source={allBannerImages[currentImageIndex]}
+                            style={styles.backgroundImageInner}
+                            imageStyle={styles.imageStyle} // Apenas bordas aqui, sem transform (estático)
+                        >
+                            {/* Gradiente para escurecer a imagem e melhorar a legibilidade do texto */}
+                            <LinearGradient
+                                colors={['rgba(219, 211, 211, 0.43)', 'rgba(237, 229, 229, 0.31)', 'rgba(184, 183, 183, 0.4)']}
+                                style={StyleSheet.absoluteFillObject}
+                            />
+                        </ImageBackground>
+                    </Animated.View>
                 </Animated.View>
 
                 {/* Próxima Imagem (fade-in) */}
                 <Animated.View style={[StyleSheet.absoluteFillObject, { opacity: fadeAnim }]}>
-                    <ImageBackground
-                        source={allBannerImages[nextImageIndex]}
-                        style={styles.backgroundImage}
-                        imageStyle={[styles.imageStyle, kenBurnsAnimatedStyle]} // Aplicar Ken Burns aqui
-                    >
-                        {/* Gradiente para escurecer a imagem e melhorar a legibilidade do texto */}
-                        <LinearGradient
-                            colors={['rgba(219, 211, 211, 0.43)', 'rgba(237, 229, 229, 0.31)', 'rgba(184, 183, 183, 0.4)']}
-                            style={StyleSheet.absoluteFillObject}
-                        />
-                    </ImageBackground>
+                    <Animated.View style={[styles.backgroundImage, kenBurnsAnimatedStyle]}>
+                        <ImageBackground
+                            source={allBannerImages[nextImageIndex]}
+                            style={styles.backgroundImageInner}
+                            imageStyle={styles.imageStyle} // Apenas bordas aqui, sem transform (estático)
+                        >
+                            {/* Gradiente para escurecer a imagem e melhorar a legibilidade do texto */}
+                            <LinearGradient
+                                colors={['rgba(219, 211, 211, 0.43)', 'rgba(237, 229, 229, 0.31)', 'rgba(184, 183, 183, 0.4)']}
+                                style={StyleSheet.absoluteFillObject}
+                            />
+                        </ImageBackground>
+                    </Animated.View>
                 </Animated.View>
 
                 {/* Conteúdo (sempre por cima das imagens) */}
@@ -249,51 +265,49 @@ const CarouselBannerItem: React.FC<CarouselBannerItemProps> = ({
 
 const styles = StyleSheet.create({
     bannerOuterContainer: {
-        width: Dimensions.get('window').width - (33 * 2),
-        height: 200,
-        borderRadius: 16,
-        paddingLeft: 0,
-        margin: 20,
-        paddingHorizontal: 0,
-        paddingTop: 46,
-        paddingBottom: 16,
+        width: Dimensions.get('window').width - 50, // Alinhado com padding do FlatList (10 left + 20 right)
+        height: 120,
+        marginRight: 10,
+        
+        borderRadius: 22, // Arredondado premium
+        marginHorizontal: 0, // Sem margins laterais para alinhamento perfeito
         overflow: 'hidden',
-        marginBottom: -11,
-        marginTop: -38,
-        // Sombras avançadas e modernas
-    
+        // Sombras premium iOS (mais profundas e suaves)
+        ...Platform.select({
+            ios: {
+                shadowColor: '#45484b56',
+                shadowOffset: { width: -1, height: 2 }, // Offset vertical para "flutuar"
+                shadowOpacity: 1.0, // Opacidade total para premium iOS
+                shadowRadius: 8, // Blur suave como no iOS 17
+            },
+            android: {
+                elevation: 8, // Compatível, mas menos blur
+            },
+        }),
     },
     backgroundImageWrapper: {
         flex: 1,
-        
         overflow: 'hidden',
-                borderTopStartRadius: 22,
-        borderBottomStartRadius: 22,
-        borderTopEndRadius: 22,
-        borderBottomEndRadius: 22,
-        borderBottomColor: '#45484b56',
-
-        borderRadius: 12,
-        borderBottomWidth: 0.1,
-        borderLeftColor: '#45484b56',
-        borderLeftWidth: 1,
-        // Propriedades de sombra mantidas exatamente como fornecidas
-        shadowColor: '#45484b56', // Cor da sombra
-        shadowOffset: { width: -1, height: 1 }, // Deslocamento vertical mais pronunciado
-        shadowOpacity: 1.55, // Opacidade aumentada para robustezs
-        shadowRadius: 5, // Raio de desfoque para conforto
-        elevation: 6, // Elevação aumentada para robustez no Android
+        borderRadius: 22, // Consistente com outer
+        borderWidth: 0.5, // Borda sutil para definição
+        borderColor: '#45484b56',
     },
     backgroundImage: {
         flex: 1,
         width: '100%',
         height: '100%',
-        resizeMode: 'cover',
         justifyContent: 'center',
         alignItems: 'center',
+        overflow: 'hidden', // Evita vazamentos em iOS
+    },
+    backgroundImageInner: {
+        flex: 1,
+        width: '100%',
+        height: '100%',
+        resizeMode: 'cover',
     },
     imageStyle: {
-        borderRadius: 20,
+        borderRadius: 22, // Apenas bordas, sem transform (estático, corrige erro)
     },
     content: {
         ...StyleSheet.absoluteFillObject,
@@ -301,18 +315,21 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
+        paddingTop: 16, // Padding ajustado para alinhamento sem hacks
+        paddingBottom: 16,
     },
     leftContent: {
         flex: 1,
         justifyContent: 'space-between',
         height: '100%',
+        alignItems: 'flex-start', // Alinhamento à esquerda premium
     },
     badge: {
-        backgroundColor: 'rgba(255,255,255,0.8)',
+        backgroundColor: 'rgba(255,255,255,0.9)', // Mais opaco para legibilidade iOS
         borderRadius: 5,
-        paddingVertical: 1,
-        paddingHorizontal: 4,
-        marginBottom: 0,
+        paddingVertical: 2,
+        paddingHorizontal: 6,
+        marginBottom: 4, // Espaçamento sutil
         alignSelf: 'flex-start',
     },
     badgeText: {
@@ -321,41 +338,54 @@ const styles = StyleSheet.create({
         color: '#6692bdff',
     },
     title: {
-        fontSize: 10,
+        fontSize: 16, // Aumentado para premium
         fontWeight: 'bold',
         color: 'white',
         lineHeight: 22,
-        marginBottom: 2,
-        textShadowColor: 'rgba(0,0,0,0.3)',
+        marginBottom: 4,
+        textShadowColor: 'rgba(0,0,0,0.75)', // Sombra mais forte para contraste iOS
         textShadowOffset: { width: 0, height: 1 },
-        textShadowRadius: 2,
+        textShadowRadius: 4,
     },
     discount: {
-        fontSize: 17,
+        fontSize: 24, // Maior para destaque premium
         fontWeight: '900',
         color: 'white',
-        top: 8,
-        marginBottom: 5,
-        textShadowColor: 'rgba(0,0,0,0.4)',
-        textShadowOffset: { width: 0, height: 1 },
-        textShadowRadius: 3,
+        marginBottom: 8,
+        bottom: 5,
+        textShadowColor: 'rgba(0,0,0,0.8)',
+        textShadowOffset: { width: 0, height: 2 },
+        textShadowRadius: 4,
     },
     description: {
-        fontSize: 12,
-        color: 'rgba(44, 138, 231, 0.8)',
+        fontSize: 14, // Ajustado para legibilidade
+        color: 'rgba(255, 255, 255, 0.9)', // Branco semi-transparente para premium
         marginTop: 'auto',
+        lineHeight: 18,
     },
     button: {
         backgroundColor: 'white',
         borderRadius: 20,
-        paddingVertical: 2,
-        paddingHorizontal: 10,
+        paddingVertical: 8, // Padding maior para touch iOS
+        paddingHorizontal: 16,
         marginTop: 'auto',
+        ...Platform.select({
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.2,
+                shadowRadius: 2,
+            },
+            android: {
+                elevation: 3,
+            },
+        }),
     },
     buttonText: {
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: 'bold',
         color: '#6973bfff',
+        textAlign: 'center',
     },
 });
 

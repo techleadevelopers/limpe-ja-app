@@ -40,25 +40,21 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
         return null;
     }
 
-    const hoverScaleAnim = useRef(new Animated.Value(1)).current;
+    // CORRIGIDO: Use Reanimated para scale (compatível com AnimatedCardBackground)
+    const hoverScale = useSharedValue(1); // SharedValue do Reanimated para scale
 
     const onPressInCard = () => {
-        Animated.spring(hoverScaleAnim, {
-            toValue: 1.03,
-            useNativeDriver: true,
-            friction: 5,
-            tension: 100,
-        }).start();
+        hoverScale.value = withTiming(1.03, { duration: 200, easing: Easing.out(Easing.ease) });
     };
 
     const onPressOutCard = () => {
-        Animated.spring(hoverScaleAnim, {
-            toValue: 1,
-            useNativeDriver: true,
-            friction: 5,
-            tension: 100,
-        }).start();
+        hoverScale.value = withTiming(1, { duration: 200, easing: Easing.out(Easing.ease) });
     };
+
+    // Estilo animado para scale - CORRIGIDO: Usa interpolate implícito via useAnimatedStyle para número puro
+    const hoverScaleStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: hoverScale.value }], // Garante número puro (Reanimated extruda automaticamente)
+    }));
 
     const reflectionTranslateX = useSharedValue(-60);
 
@@ -125,8 +121,8 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
                 <Ionicons
                     key={i}
                     name={iconName}
-                    size={11}
-                    color="#007AFF"
+                    size={13}
+                    color="#5da2ecff"
                     style={styles.ratingStarIcon}
                 />
             );
@@ -217,11 +213,12 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
     const distanceLabel = formatDistance(item.distance);
 
     return (
+        // CORRIGIDO: Aplica hoverScaleStyle (Reanimated) ao AnimatedCardBackground para compatibilidade
         <AnimatedCardBackground
             colors={['rgba(230, 240, 255, 0.7)', 'rgba(196, 197, 205, 0.23)']}
             start={{ x: 0, y: 0 }}
             end={{ x: 0, y: 1 }}
-            style={[styles.animatedCardContainer, { transform: [{ scale: hoverScaleAnim }] }]}
+            style={[styles.animatedCardContainer, hoverScaleStyle]} // Usa Reanimated style para scale número puro
         >
             <TouchableOpacity
                 style={styles.cardContentWrapper}
@@ -282,7 +279,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
 
                         <View style={styles.ratingSection}>
                             <AnimatedPlusButtonGradient
-                                colors={['#73c5f5e8', '#70c0eecc','#4fade4d5']}
+                                colors={['#73c5f5ff', '#70c0eeee','#4fade4ff']}
                                 style={[styles.plusButton, { overflow: 'hidden' }, subtleTrembleAnimatedStyle]}
                                 start={{ x: 0, y: 0 }}
                                 end={{ x: 1, y: 1 }}
@@ -359,11 +356,11 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     providerName: {
-        fontSize: 15,
+        fontSize: 16,
         fontFamily: 'Montserrat-Regular',
         paddingHorizontal: 0,
-        fontWeight: 'bold',
-        color: '#5b6e8eff',
+        fontWeight: '700',
+        color: '#373e49ff',
         flexShrink: 1,
     },
     docCheckIcon: {
@@ -376,8 +373,12 @@ const styles = StyleSheet.create({
         zIndex: 1,
     },
     serviceDescription: {
-        fontSize: 11,
+        fontSize: 12,
         paddingHorizontal: 2,
+                  fontWeight: Platform.select({
+      ios: '300', // Deixa a variante da font cuidar no iOS
+      android: 'bold' // Mantém original (leve bold no Android)
+    }),
         color: '#6C757D',
         marginBottom: 8,
     },
@@ -450,7 +451,7 @@ const styles = StyleSheet.create({
     plusButton: {
         width: 36,
         height: 36,
-        left: 4,
+        left: 15,
         bottom: 60,
         borderRadius: 53,
         justifyContent: 'center',

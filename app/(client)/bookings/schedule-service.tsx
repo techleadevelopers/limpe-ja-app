@@ -16,7 +16,7 @@ import {
     View,
     TextInput,
     ImageBackground,
-    ScrollView, // ADICIONADO: Para ref no Animated.ScrollView (tipagem)
+    ScrollView,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
@@ -25,7 +25,6 @@ import NotificationUIService from '../../../services/notificationUIService';
 import { useAuth } from '../../../hooks/useAuth';
 import { createBooking } from '../../../services/bookingService';
 import { getProviderAvailability, getProviderDetails } from '../../../services/providerService';
-// import { applyCoupon } from '../../../services/clientService'; // Removido, agora no hook
 
 import { BookingAddress, BookingDetails, CreateBookingDto, BookingPricing } from '../../../types/backend/bookings';
 import {
@@ -36,10 +35,8 @@ import {
 import { UserProfile } from '../../../types/backend/users';
 import { PricingType } from '../../../types/backend/services';
 import { formatDate } from '../../../utils/helpers';
-// Importar formatBRL para formatação monetária consistente
 import { formatBRL } from '../../../utils/formatters';
 
-// Novos hooks e utilitários
 import { useBookingPricing } from '../../../utils/useBookingPricing';
 import { useCouponValidation } from '../../../utils/useCouponValidation';
 import { generateDailySlots } from '../../../utils/timeSlots';
@@ -73,6 +70,9 @@ interface BookingSummaryPreviewProps {
     finalPrice: number;
     onShowCancellationPolicy: () => void;
     t: any;
+    // ✅ NOVO: Animações para premium entrance no step 2
+    reviewEntranceAnim?: Animated.Value;
+    reviewStaggerDelay?: number;
 }
 
 interface CouponInputSectionProps {
@@ -85,7 +85,10 @@ interface CouponInputSectionProps {
     couponFeedbackAnim: Animated.Value;
     couponFeedbackColor: string;
     couponFeedbackIcon: string;
-    t: any;
+    t: pequeno;
+    // ✅ NOVO: Animação para seção cupom
+    cupomEntranceAnim?: Animated.Value;
+    cupomStaggerDelay?: number;
 }
 
 const BookingSummaryPreview = ({
@@ -101,18 +104,20 @@ const BookingSummaryPreview = ({
     finalPrice,
     onShowCancellationPolicy,
     t,
+    reviewEntranceAnim, // ✅ PREMIUM: Animação de entrada suave para review
+    reviewStaggerDelay = 0, // Delay para stagger (sequencial)
 }: BookingSummaryPreviewProps) => {
     if (!selectedProviderService || !selectedTime) return null;
 
     const formattedDate = selectedDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
     const serviceDetailsText = useMemo(() => {
         if (selectedProviderService.pricingType === PricingType.HOURLY && durationInMinutes) {
-            return `${durationInMinutes} ${t('common.minutes_short', { maxFontSizeMultiplier: 1.2 })}`;
+            return `${durationInMinutes} ${t('common.minutes_short', { defaultValue: 'min' })}`;
         }
         if (selectedProviderService.pricingType === PricingType.BY_SIZE && squareMeters) {
             return `${squareMeters} m²`;
         }
-        return 'N/A';
+        return t('common.na', { defaultValue: 'N/A' });
     }, [selectedProviderService, durationInMinutes, squareMeters, t]);
 
     const finalPriceAnim = useRef(new Animated.Value(0)).current;
@@ -133,58 +138,74 @@ const BookingSummaryPreview = ({
 
     const iconAnim = useRef(new Animated.Value(0)).current;
     useEffect(() => {
-        Animated.timing(iconAnim, {
-            toValue: 1,
-            duration: AppDurations.md,
-            delay: 100,
-            easing: Easing.out(Easing.ease),
-            useNativeDriver: true,
-        }).start();
-    }, []);
+        // ✅ PREMIUM: Delay stagger para icons aparecerem sequencialmente
+        Animated.sequence([
+            Animated.timing(iconAnim, {
+                toValue: 1,
+                duration: AppDurations.xs, // Ainda mais rápido para ícones
+                delay: reviewStaggerDelay + 0, // Sem delay adicional para ícones
+                easing: Easing.out(Easing.ease),
+                useNativeDriver: true,
+            }),
+        ]).start();
+    }, [iconAnim, reviewStaggerDelay]);
 
     const animatedIconStyle = {
         opacity: iconAnim,
         transform: [{
             translateX: iconAnim.interpolate({
                 inputRange: [0, 1],
-                outputRange: [-20, 0]
+                outputRange: [-10, 0] // Movimento menor para mais rápido
             })
         }]
     };
 
+    // ✅ PREMIUM: Animação de entrada suave para o card review (slide up + fade + subtle scale)
+    const reviewCardAnim = reviewEntranceAnim ? {
+        opacity: reviewEntranceAnim,
+        transform: [
+            { translateY: reviewEntranceAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }, // Menos slide para mais rápido
+            { scale: reviewEntranceAnim.interpolate({ inputRange: [0, 1], outputRange: [0.98, 1] }) } // Scale menor
+        ]
+    } : {};
+
     return (
-        <Animated.View style={[styles.card, { marginTop: 20 }]}>
-            <Text style={styles.sectionTitle} maxFontSizeMultiplier={1.2}>{t('schedule_service.review_booking_title')}</Text>
+        <Animated.View style={[styles.card, { marginTop: 20 }, reviewCardAnim]}>
+            <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionTitlePlain}>
+                    {t('schedule_service.review_booking_title', { defaultValue: 'Revisar Agendamento' })}
+                </Text>
+            </View>
             <View style={styles.summaryItem}>
                 <Animated.View style={animatedIconStyle}>
                     <Ionicons name="briefcase-outline" size={20} color={AppColors.primaryInteractive} style={styles.summaryIcon} />
                 </Animated.View>
-                <Text style={styles.summaryText} maxFontSizeMultiplier={1.2}>
-                    <Text style={styles.summaryLabel} maxFontSizeMultiplier={1.2}>{t('schedule_service.summary_service')}</Text> {selectedProviderService.service?.name}
+                <Text style={styles.summaryText}>
+                    <Text style={styles.summaryLabel}>{t('schedule_service.summary_service', { defaultValue: 'Serviço' })}</Text> {selectedProviderService.service?.name || t('common.na', { defaultValue: 'N/A' })}
                 </Text>
             </View>
             <View style={styles.summaryItem}>
                 <Animated.View style={animatedIconStyle}>
                     <Ionicons name="person-outline" size={20} color={AppColors.primaryInteractive} style={styles.summaryIcon} />
                 </Animated.View>
-                <Text style={styles.summaryText} maxFontSizeMultiplier={1.2}>
-                    <Text style={styles.summaryLabel} maxFontSizeMultiplier={1.2}>{t('schedule_service.summary_provider')}</Text> {provider?.fullName}
+                <Text style={styles.summaryText}>
+                    <Text style={styles.summaryLabel}>{t('schedule_service.summary_provider', { defaultValue: 'Prestador' })}</Text> {provider?.fullName || t('common.na', { defaultValue: 'N/A' })}
                 </Text>
             </View>
             <View style={styles.summaryItem}>
                 <Animated.View style={animatedIconStyle}>
                     <Ionicons name="calendar-outline" size={20} color={AppColors.primaryInteractive} style={styles.summaryIcon} />
                 </Animated.View>
-                <Text style={styles.summaryText} maxFontSizeMultiplier={1.2}>
-                    <Text style={styles.summaryLabel} maxFontSizeMultiplier={1.2}>{t('schedule_service.summary_date_time')}</Text> {formattedDate}, {t('common.at', { maxFontSizeMultiplier: 1.2 })} {selectedTime}
+                <Text style={styles.summaryText}>
+                    <Text style={styles.summaryLabel}>{t('schedule_service.summary_date_time', { defaultValue: 'Data e Hora' })}</Text> {formattedDate}, {t('common.at', { defaultValue: 'às' })} {selectedTime}
                 </Text>
             </View>
             <View style={styles.summaryItem}>
                 <Animated.View style={animatedIconStyle}>
                     <Ionicons name="location-outline" size={20} color={AppColors.primaryInteractive} style={styles.summaryIcon} />
                 </Animated.View>
-                <Text style={styles.summaryText} maxFontSizeMultiplier={1.2}>
-                    <Text style={styles.summaryLabel} maxFontSizeMultiplier={1.2}>{t('schedule_service.summary_address')}</Text> {address.street}, {address.number} - {address.neighborhood}, {address.city}/{address.state}
+                <Text style={styles.summaryText}>
+                    <Text style={styles.summaryLabel}>{t('schedule_service.summary_address', { defaultValue: 'Endereço' })}</Text> {address.street || ''}, {address.number || ''} - {address.neighborhood || ''}, {address.city || ''}/{address.state || ''}
                 </Text>
             </View>
             {(selectedProviderService.pricingType === PricingType.HOURLY || selectedProviderService.pricingType === PricingType.BY_SIZE) && (
@@ -192,45 +213,54 @@ const BookingSummaryPreview = ({
                     <Animated.View style={animatedIconStyle}>
                         <Ionicons name="timer-outline" size={20} color={AppColors.primaryInteractive} style={styles.summaryIcon} />
                     </Animated.View>
-                    <Text style={styles.summaryText} maxFontSizeMultiplier={1.2}>
-                        <Text style={styles.summaryLabel} maxFontSizeMultiplier={1.2}>{t('schedule_service.summary_service_details')}</Text> {serviceDetailsText}
+                    <Text style={styles.summaryText}>
+                        <Text style={styles.summaryLabel}>{t('schedule_service.summary_service_details', { defaultValue: 'Detalhes do Serviço' })}</Text> {serviceDetailsText}
                     </Text>
                 </View>
             )}
             <View style={styles.priceSummary}>
-                <Text style={styles.priceLabel} maxFontSizeMultiplier={1.2}>{t('schedule_service.subtotal')}</Text>
-                <Text style={styles.priceValue} maxFontSizeMultiplier={1.2}>{formatBRL(subtotal)}</Text>
+                <Text style={styles.priceLabel}>{t('schedule_service.subtotal', { defaultValue: 'Subtotal' })}</Text>
+                <Text style={styles.priceValue}>{formatBRL(subtotal)}</Text>
             </View>
             {discountAmount > 0 && (
                 <View style={styles.priceSummary}>
-                    <Text style={styles.priceLabel} maxFontSizeMultiplier={1.2}>{t('schedule_service.discount')}</Text>
-                    <Text style={[styles.priceValue, styles.discountValue]} maxFontSizeMultiplier={1.2}>- {formatBRL(discountAmount)}</Text>
+                    <Text style={styles.priceLabel}>{t('schedule_service.discount', { defaultValue: 'Desconto' })}</Text>
+                    <Text style={[styles.priceValue, styles.discountValue]}>- {formatBRL(discountAmount)}</Text>
                 </View>
             )}
             <View style={styles.totalPriceSummary}>
-                <Text style={styles.totalPriceLabel} maxFontSizeMultiplier={1.2}>{t('schedule_service.total_to_pay')}</Text>
-                <Animated.Text style={[styles.totalPriceValue, { transform: [{ scale: finalPriceAnim.interpolate({ inputRange: [0, 1], outputRange: [0.95, 1] }) }] }]} maxFontSizeMultiplier={1.2}>
+                <Text style={styles.totalPriceLabel}>{t('schedule_service.total_to_pay', { defaultValue: 'Total a Pagar' })}</Text>
+                <Animated.Text style={[styles.totalPriceValue, { transform: [{ scale: finalPriceAnim.interpolate({ inputRange: [0, 1], outputRange: [0.95, 1] }) }] }]}>
                     {formatBRL(finalPrice)}
                 </Animated.Text>
             </View>
             <TouchableOpacity onPress={onShowCancellationPolicy} style={styles.cancellationPolicyLink}>
-                <Text style={styles.cancellationPolicyText} maxFontSizeMultiplier={1.2}>{t('schedule_service.cancellation_policy')}</Text>
+                <Text style={styles.cancellationPolicyText}>{t('schedule_service.cancellation_policy', { defaultValue: 'Política de Cancelamento' })}</Text>
             </TouchableOpacity>
         </Animated.View>
     );
 };
 
-const CouponInputSection = ({ couponCode, setCouponCode, onApplyCoupon, isApplyingCoupon, discountAmount, couponInputAnim, couponFeedbackAnim, couponFeedbackColor, couponFeedbackIcon, t }: CouponInputSectionProps) => {
+const CouponInputSection = ({ couponCode, setCouponCode, onApplyCoupon, isApplyingCoupon, discountAmount, couponInputAnim, couponFeedbackAnim, couponFeedbackColor, couponFeedbackIcon, t, cupomEntranceAnim, cupomStaggerDelay = 0 }: CouponInputSectionProps) => {
+    // ✅ PREMIUM: Animação de entrada para cupom (slide up + fade)
+    const cupomCardAnim = cupomEntranceAnim ? {
+        opacity: cupomEntranceAnim,
+        transform: [
+            { translateY: cupomEntranceAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }, // Menos slide
+            { scale: cupomEntranceAnim.interpolate({ inputRange: [0, 1], outputRange: [0.99, 1] }) } // Scale mínimo
+        ]
+    } : {};
+
     return (
-        <Animated.View style={[styles.card, { marginTop: 20 }]}>
-            <Text style={styles.sectionTitle} maxFontSizeMultiplier={1.2}>{t('schedule_service.coupon_section_title')}</Text>
+        <Animated.View style={[styles.card, { marginTop: 20 }, cupomCardAnim]}>
+            <Text style={styles.sectionTitle}>{t('schedule_service.coupon_section_title', { defaultValue: 'Cupom de Desconto' })}</Text>
             <Animated.View style={[styles.couponInputContainer, { borderColor: couponInputAnim.interpolate({
                 inputRange: [0, 1],
                 outputRange: [AppColors.borderNeutral, AppColors.primaryInteractive]
             }) }]}>
                 <AnimatedTextInput
                     style={styles.couponInput}
-                    placeholder={t('schedule_service.coupon_input_placeholder')}
+                    placeholder={t('schedule_service.coupon_input_placeholder', { defaultValue: 'Digite o código do cupom' })}
                     placeholderTextColor={couponInputAnim.interpolate({
                         inputRange: [0, 1],
                         outputRange: [AppColors.mediumGray, AppColors.primaryInteractive]
@@ -241,7 +271,6 @@ const CouponInputSection = ({ couponCode, setCouponCode, onApplyCoupon, isApplyi
                     editable={!isApplyingCoupon}
                     onFocus={() => Animated.timing(couponInputAnim, { toValue: 1, duration: AppDurations.xs, useNativeDriver: false }).start()}
                     onBlur={() => Animated.timing(couponInputAnim, { toValue: 0, duration: AppDurations.xs, useNativeDriver: false }).start()}
-                    maxFontSizeMultiplier={1.2} // Adicionado para consistência
                 />
                 <TouchableOpacity
                     style={styles.applyCouponButton}
@@ -251,15 +280,15 @@ const CouponInputSection = ({ couponCode, setCouponCode, onApplyCoupon, isApplyi
                     {isApplyingCoupon ? (
                         <ActivityIndicator size="small" color={AppColors.white} />
                     ) : (
-                        <Text style={styles.applyCouponButtonText} maxFontSizeMultiplier={1.2}>{t('schedule_service.apply_coupon_button')}</Text>
+                        <Text style={styles.applyCouponButtonText}>{t('schedule_service.apply_coupon_button', { defaultValue: 'Aplicar' })}</Text>
                     )}
                 </TouchableOpacity>
             </Animated.View>
             {discountAmount > 0 && (
-                <Animated.View style={[styles.couponFeedbackContainer, { opacity: couponFeedbackAnim, transform: [{ translateY: couponFeedbackAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }] }]}>
+                <Animated.View style={[styles.couponFeedbackContainer, { opacity: couponFeedbackAnim, transform: [{ translateY: couponFeedbackAnim.interpolate({ inputRange: [0, 1], outputRange: [5, 0] }) }] }]}>
                     <Ionicons name={couponFeedbackIcon as any} size={18} color={couponFeedbackColor} />
-                    <Text style={[styles.couponAppliedText, { color: couponFeedbackColor }]} maxFontSizeMultiplier={1.2}>
-                        {t('schedule_service.coupon_applied_message', { discountValue: formatBRL(discountAmount), maxFontSizeMultiplier: 1.2 })}
+                    <Text style={[styles.couponAppliedText, { color: couponFeedbackColor }]}>
+                        {t('schedule_service.coupon_applied_message', { discountValue: formatBRL(discountAmount), defaultValue: `Cupom aplicado! Desconto de ${formatBRL(discountAmount)}` })}
                     </Text>
                 </Animated.View>
             )}
@@ -323,6 +352,7 @@ export default function ScheduleServiceScreen() {
     const [isLoading, setIsLoading] = useState(true);
     const [isBooking, setIsBooking] = useState(false);
     const [isFetchingSlots, setIsFetchingSlots] = useState(false);
+    const [isSearchingNextDate, setIsSearchingNextDate] = useState(false); // ✅ NOVO: Flag para prevenir buscas simultâneas
 
     const [currentDisplayMonth, setCurrentDisplayMonth] = useState(new Date());
     const shineAnim = useRef(new Animated.Value(-SCREEN_WIDTH * 0.3)).current;
@@ -344,16 +374,20 @@ export default function ScheduleServiceScreen() {
 
     const floatingSummaryAnim = useRef(new Animated.Value(0)).current;
 
+    // ✅ PREMIUM: Animações específicas para step 2 (review) - entrance suave, stagger para cards
+    const reviewStepAnim = useRef(new Animated.Value(0)).current; // Controla entrada do step 2 inteiro
+    const serviceDetailsAnim = useRef(new Animated.Value(0)).current; // Stagger 1: ServiceDetailsInput
+    const notesAnim = useRef(new Animated.Value(0)).current; // Stagger 2: Notes
+    const cupomAnim = useRef(new Animated.Value(0)).current; // Stagger 3: Coupon
+    const summaryAnim = useRef(new Animated.Value(0)).current; // Stagger 4: Summary
+
     const [currentStep, setCurrentStep] = useState(1);
 
-    // ADICIONADO: Refs para scroll suave no step moderno (data → timeslot)
     const scrollViewRef = useRef<ScrollView>(null);
     const timeSlotsRef = useRef<View>(null);
 
-    // Adicionado ref para verificar se o componente está montado
     const isMounted = useRef(true);
 
-    // Usando o hook useBookingPricing
     const { calculatedSubtotal, finalCalculatedPrice } = useBookingPricing({
         selectedProviderService,
         durationInMinutes,
@@ -361,21 +395,21 @@ export default function ScheduleServiceScreen() {
         discountAmount,
     });
 
-    const stepTitles = [t('schedule_service.progress_step_date_time'), t('schedule_service.progress_step_complete_review')];
+    // ✅ CORREÇÃO: Use t() fora do array para evitar re-run do useEffect de slots; fallback para undefined
+    const stepDateTimeTitle = useMemo(() => t('schedule_service.progress_step_date_time', { defaultValue: 'Data e Hora' }), [t]);
+    const stepReviewTitle = useMemo(() => t('schedule_service.progress_step_complete_review', { defaultValue: 'Revisão Completa' }), [t]);
+    const stepTitles = [stepDateTimeTitle, stepReviewTitle];
 
-    // PREMIUM: Prefetch com TTL e limpeza de cache antigo (evita dados velhos, paralelo com allSettled)
     const prefetchAvailability = useCallback(async (provId: string | undefined, baseDate: Date) => {
         if (!provId) return;
 
-        // Limpa cache antigo (>1h) antes de prefetch (premium: gerencia memória)
         const now = Date.now();
         for (const [key, value] of availabilityCache.entries()) {
-            if (now - value.timestamp > 3600000) { // 1h TTL
+            if (now - value.timestamp > 3600000) {
                 availabilityCache.delete(key);
             }
         }
 
-        // Pré-carrega baseDate e +/- 3 dias (paralelo para robustez e velocidade)
         const prefetchDates = [];
         for (let offset = -3; offset <= 3; offset++) {
             const prefetchDate = new Date(baseDate);
@@ -387,7 +421,6 @@ export default function ScheduleServiceScreen() {
             }
         }
 
-        // Fetch paralelo: Não falha se um dia errar (allSettled premium)
         await Promise.allSettled(
             prefetchDates.map(({ dateString, cacheKey }) =>
                 getProviderAvailability(provId, dateString).then(response => {
@@ -402,7 +435,7 @@ export default function ScheduleServiceScreen() {
     }, []);
 
     useEffect(() => {
-        isMounted.current = true; // Componente montado
+        isMounted.current = true;
 
         Animated.parallel([
             Animated.timing(fadeAnim, {
@@ -427,7 +460,6 @@ export default function ScheduleServiceScreen() {
             }),
         ]).start();
 
-        // Animações de loop
         const pulseLoop = Animated.loop(
             Animated.sequence([
                 Animated.timing(pulseAnim, {
@@ -476,7 +508,7 @@ export default function ScheduleServiceScreen() {
                 toValue: 1,
                 duration: 3000,
                 easing: Easing.inOut(Easing.ease),
-                useNativeDriver: false, // Correctly false for color-related animation
+                useNativeDriver: false,
             })
         );
 
@@ -503,9 +535,8 @@ export default function ScheduleServiceScreen() {
         headerGlowLoop.start();
         calendarBreatheLoop.start();
 
-        // Cleanup das animações ao desmontar o componente ou ao re-renderizar
         return () => {
-            isMounted.current = false; // Componente desmontado
+            isMounted.current = false;
             pulseLoop.stop();
             rotateLoop.stop();
             floatLoop.stop();
@@ -514,24 +545,88 @@ export default function ScheduleServiceScreen() {
         };
     }, []);
 
+    // ✅ PREMIUM: Animação de entrada para step 2 (review) - inicia baixo e sobe suavemente para conforto UX
+    // ✅ AJUSTE: Animações paralelas com delays mínimos para entrada quase instantânea (profissional e rápida)
+    useEffect(() => {
+        if (currentStep === 2) {
+            // Reset todos os valores para 0
+            reviewStepAnim.setValue(0);
+            serviceDetailsAnim.setValue(0);
+            notesAnim.setValue(0);
+            cupomAnim.setValue(0);
+            summaryAnim.setValue(0);
+
+            // ✅ MUDANÇA: Usar parallel em vez de sequence para que todas entrem ao mesmo tempo, com delays mínimos
+            // Isso faz a seção de Detalhes do Serviço aparecer imediatamente (delay 0)
+            Animated.parallel([
+                // Entrada geral do step 2 (rápida)
+                Animated.timing(reviewStepAnim, {
+                    toValue: 1,
+                    duration: AppDurations.xs, // Extra rápido (ex: 100ms)
+                    delay: 0, // Sem delay inicial
+                    easing: Easing.out(Easing.ease), // Sem back para mais direto
+                    useNativeDriver: true,
+                }),
+                // Detalhes do Serviço: Imediato e rápido (prioridade alta)
+                Animated.timing(serviceDetailsAnim, {
+                    toValue: 1,
+                    duration: AppDurations.xs, // Extra rápido
+                    delay: 0, // Entra imediatamente
+                    easing: Easing.out(Easing.ease),
+                    useNativeDriver: true,
+                }),
+                // Notes: Delay mínimo
+                Animated.timing(notesAnim, {
+                    toValue: 1,
+                    duration: AppDurations.xs,
+                    delay: 50, // 50ms após o primeiro
+                    easing: Easing.out(Easing.ease),
+                    useNativeDriver: true,
+                }),
+                // Cupom: Delay mínimo
+                Animated.timing(cupomAnim, {
+                    toValue: 1,
+                    duration: AppDurations.xs,
+                    delay: 100, // 100ms
+                    easing: Easing.out(Easing.ease),
+                    useNativeDriver: true,
+                }),
+                // Summary: Último, com leve delay para destaque
+                Animated.timing(summaryAnim, {
+                    toValue: 1,
+                    duration: AppDurations.sm, // Um pouco mais lenta para ênfase
+                    delay: 150, // 150ms total
+                    easing: Easing.out(Easing.back(1.05)),
+                    useNativeDriver: true,
+                }),
+            ]).start();
+        } else {
+            // Reset para step 1
+            reviewStepAnim.setValue(0);
+            serviceDetailsAnim.setValue(0);
+            notesAnim.setValue(0);
+            cupomAnim.setValue(0);
+            summaryAnim.setValue(0);
+        }
+    }, [currentStep]);
+
     useEffect(() => {
         if (currentStep === 2 && selectedTime && finalCalculatedPrice > 0) {
             Animated.timing(floatingSummaryAnim, {
                 toValue: 1,
-                duration: AppDurations.md,
+                duration: AppDurations.xs, // Extra rápido
                 easing: Easing.out(Easing.ease),
                 useNativeDriver: true,
             }).start();
         } else {
             Animated.timing(floatingSummaryAnim, {
                 toValue: 0,
-                duration: AppDurations.md,
+                duration: AppDurations.xs,
                 easing: Easing.in(Easing.ease),
                 useNativeDriver: true,
             }).start();
         }
     }, [currentStep, selectedTime, finalCalculatedPrice, floatingSummaryAnim]);
-
 
     const handlePrevMonth = useCallback(() => {
         Animated.sequence([
@@ -544,7 +639,7 @@ export default function ScheduleServiceScreen() {
             prefetchAvailability(provider?.id, newDate);
             return newDate;
         });
-    }, [provider?.id, scaleAnim, prefetchAvailability]);
+    }, [provider?.id, prefetchAvailability, scaleAnim]);
 
     const handleNextMonth = useCallback(() => {
         Animated.sequence([
@@ -557,34 +652,28 @@ export default function ScheduleServiceScreen() {
             prefetchAvailability(provider?.id, newDate);
             return newDate;
         });
-    }, [provider?.id, scaleAnim, prefetchAvailability]);
+    }, [provider?.id, prefetchAvailability, scaleAnim]);
 
-    // ALTERADO: handleDaySelect moderno - animação, scroll suave para timeslots, prefetch adjacente, reset time
     const handleDaySelect = useCallback((dateObj: Date) => {
-        // Animação suave no calendário (usando existentes)
         Animated.sequence([
             Animated.timing(scaleAnim, { toValue: 0.98, duration: AppDurations.xs, useNativeDriver: true }),
             Animated.spring(scaleAnim, { toValue: 1, friction: 6, useNativeDriver: true }),
         ]).start();
 
         setSelectedDate(dateObj);
-
-        // Pré-carrega slots para datas próximas (conforto em mudanças rápidas)
         prefetchAvailability(provider?.id, dateObj);
 
-        // Scroll suave até timeslots após ~300ms (tempo de fetch + animação), guiando o usuário
         setTimeout(() => {
             if (timeSlotsRef.current && scrollViewRef.current) {
                 scrollViewRef.current.scrollTo({
-                    y: 400, // Ajuste este valor baseado na posição real dos timeslots no seu layout (teste em dispositivo)
+                    y: 400,
                     animated: true,
                 });
             }
         }, 300);
 
-        // Reset selectedTime para forçar re-seleção (foco no step atual)
         setSelectedTime(null);
-    }, [provider?.id, scaleAnim, prefetchAvailability]);
+    }, [provider?.id, prefetchAvailability, scaleAnim]);
 
     const handleTimeSelect = useCallback((time: string) => {
         const selectedSlot = displaySlotsInfo.find(slot => slot.time === time);
@@ -606,23 +695,27 @@ export default function ScheduleServiceScreen() {
 
             setSelectedTime(time);
         } else {
-            NotificationUIService.showInfo(t('schedule_service.unavailable_time_slot_message'), t('schedule_service.unavailable_time_slot'));
+            NotificationUIService.showInfo(
+                t('schedule_service.unavailable_time_slot_message', { defaultValue: 'Horário não disponível.' }),
+                t('schedule_service.unavailable_time_slot', { defaultValue: 'Horário Indisponível' })
+            );
         }
     }, [displaySlotsInfo, selectionAnim, t]);
 
-    // O handleApplyCoupon foi movido para o useCouponValidation hook
-
     const showCancellationPolicy = useCallback(() => {
-        NotificationUIService.showInfo(t('schedule_service.cancellation_policy_message'), t('schedule_service.cancellation_policy_title'));
+        NotificationUIService.showInfo(
+            t('schedule_service.cancellation_policy_message', { defaultValue: 'Política de cancelamento: 24h antes sem custo.' }),
+            t('schedule_service.cancellation_policy_title', { defaultValue: 'Política de Cancelamento' })
+        );
     }, [t]);
 
     const handlePanic = useCallback(() => {
         Alert.alert(
-            t('safety.panic.button_pressed_title'),
-            t('safety.panic.button_pressed_message'),
+            t('safety.panic.button_pressed_title', { defaultValue: 'Pânico Ativado' }),
+            t('safety.panic.button_pressed_message', { defaultValue: 'Ajuda será enviada em breve.' }),
             [
-                { text: t('common.cancel'), style: 'cancel' },
-                { text: t('common.confirm'), onPress: () => setPanicStatus('RECEIVED') }
+                { text: t('common.cancel', { defaultValue: 'Cancelar' }), style: 'cancel' },
+                { text: t('common.confirm', { defaultValue: 'Confirmar' }), onPress: () => setPanicStatus('RECEIVED') }
             ]
         );
     }, [t]);
@@ -630,38 +723,88 @@ export default function ScheduleServiceScreen() {
     const handleNextStep = useCallback(() => {
         if (currentStep === 1) {
             if (!selectedTime || !address.street || !address.number || !address.neighborhood || !address.city || !address.state) {
-                NotificationUIService.showError(t('schedule_service.step1_validation_error'), t('common.error'));
+                NotificationUIService.showError(
+                    t('schedule_service.step1_validation_error', { defaultValue: 'Selecione data, hora e endereço.' }),
+                    t('common.error', { defaultValue: 'Erro' })
+                );
                 return;
             }
         }
-        setCurrentStep(prev => prev + 1);
-    }, [currentStep, selectedTime, address, t]);
+        // ✅ PREMIUM: Animação suave na transição para step 2 (fade out step 1 + prepare review entrance)
+        // ✅ AJUSTE: Transição ultra-rápida e scroll para topo ao entrar no step 2
+        Animated.sequence([
+            // Fade e scale rápido para transição
+            Animated.parallel([
+                Animated.timing(fadeAnim, { toValue: 0, duration: AppDurations.xs, useNativeDriver: true }), // Fade out completo e rápido
+                Animated.timing(scaleAnim, { toValue: 0.95, duration: AppDurations.xs, useNativeDriver: true }),
+            ]),
+        ]).start(() => {
+            // Após fade out, muda o step e reseta animações
+            setCurrentStep(prev => prev + 1);
+            reviewStepAnim.setValue(0);
+            serviceDetailsAnim.setValue(0);
+            notesAnim.setValue(0);
+            cupomAnim.setValue(0);
+            summaryAnim.setValue(0);
+            
+            // ✅ FIX: Scroll para o TOPO imediatamente ao entrar no step 2 (profissional, sem começar embaixo)
+            // Usar animated: false para instantâneo, ou true para suave
+            setTimeout(() => {
+                scrollViewRef.current?.scrollTo({ y: 0, animated: false }); // Instantâneo para evitar "salto"
+            }, 50); // Pequeno delay para garantir que o conteúdo novo seja renderizado
+
+            // Fade in suave após scroll
+            setTimeout(() => {
+                fadeAnim.setValue(1); // Restaura opacidade
+                scaleAnim.setValue(1);
+            }, 100);
+        });
+    }, [currentStep, selectedTime, address, t, fadeAnim, scaleAnim]);
 
     const handlePreviousStep = useCallback(() => {
         if (currentStep > 1) {
-            setCurrentStep(prev => prev - 1);
+            // ✅ PREMIUM: Suave saída do step 2 (fade in step 1)
+            // ✅ AJUSTE: Saída rápida e scroll para topo se necessário
+            Animated.sequence([
+                Animated.timing(reviewStepAnim, { toValue: 0, duration: AppDurations.xs, useNativeDriver: true }),
+                Animated.parallel([
+                    Animated.timing(fadeAnim, { toValue: 1, duration: AppDurations.xs, useNativeDriver: true }),
+                    Animated.timing(scaleAnim, { toValue: 1, duration: AppDurations.xs, useNativeDriver: true }),
+                ]),
+            ]).start(() => {
+                setCurrentStep(prev => prev - 1);
+                // Scroll para topo ao voltar para step 1 também (boa UX)
+                scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+            });
         } else {
             router.back();
         }
-    }, [currentStep, router]);
-
+    }, [currentStep, router, reviewStepAnim, fadeAnim, scaleAnim]);
 
     const handleConfirmBooking = useCallback(async () => {
         if (!typedUser?.id || !provider?.id || !selectedProviderService?.id || !selectedDate || !selectedTime ||
             !address.street || !address.number || !address.neighborhood || !address.city || !address.state) {
-            NotificationUIService.showError(t('schedule_service.booking_error_message'), t('schedule_service.booking_error_title'));
+            NotificationUIService.showError(
+                t('schedule_service.booking_error_message', { defaultValue: 'Dados incompletos para agendar.' }),
+                t('schedule_service.booking_error_title', { defaultValue: 'Erro no Agendamento' })
+            );
             return;
         }
 
         if (selectedProviderService?.pricingType === PricingType.HOURLY && (durationInMinutes == null || durationInMinutes <= 0)) {
-            NotificationUIService.showError(t('schedule_service.booking_error_duration_size', { field: t('common.duration') }), t('schedule_service.booking_error_title'));
+            NotificationUIService.showError(
+                t('schedule_service.booking_error_duration_size', { field: t('common.duration', { defaultValue: 'duração' }) }),
+                t('schedule_service.booking_error_title', { defaultValue: 'Erro no Agendamento' })
+            );
             return;
         }
         if (selectedProviderService?.pricingType === PricingType.BY_SIZE && (squareMeters == null || squareMeters <= 0)) {
-            NotificationUIService.showError(t('schedule_service.booking_error_duration_size', { field: t('common.area') }), t('schedule_service.booking_error_title'));
+            NotificationUIService.showError(
+                t('schedule_service.booking_error_duration_size', { field: t('common.area', { defaultValue: 'área' }) }),
+                t('schedule_service.booking_error_title', { defaultValue: 'Erro no Agendamento' })
+            );
             return;
         }
-
 
         let requestedDurationMinutes = 0;
         let requestedSquareMeters = 0;
@@ -704,19 +847,23 @@ export default function ScheduleServiceScreen() {
                 params: {
                     bookingId: newBooking.id,
                     totalPrice: newBooking.totalPrice.toString(),
-                    // ATENÇÃO: paymentMethod está fixo como 'PIX'. Considere torná-lo dinâmico
-                    // se você planeja oferecer múltiplas opções de pagamento.
-                    paymentMethod: 'PIX', // PONTO DE ATENÇÃO: Hardcoded payment method
+                    paymentMethod: 'PIX',
                     couponApplied: discountAmount > 0 ? 'true' : 'false',
                     couponCode: discountAmount > 0 ? couponCode : undefined,
                 }
             });
-            NotificationUIService.showSuccess(t('schedule_service.booking_success_message'), t('common.success'));
+            NotificationUIService.showSuccess(
+                t('schedule_service.booking_success_message', { defaultValue: 'Agendamento realizado com sucesso!' }),
+                t('common.success', { defaultValue: 'Sucesso' })
+            );
 
         } catch (error: any) {
             console.error("Erro ao agendar serviço:", error.response?.data || error.message);
             if (isMounted.current) {
-                NotificationUIService.showError(error.response?.data?.message || t('common.network_error'), t('common.error'));
+                NotificationUIService.showError(
+                    error.response?.data?.message || t('common.network_error', { defaultValue: 'Erro de rede.' }),
+                    t('common.error', { defaultValue: 'Erro' })
+                );
             }
         } finally {
             if (isMounted.current) {
@@ -733,7 +880,10 @@ export default function ScheduleServiceScreen() {
 
             if (!paramProviderId || !paramServiceId || !typedUser?.id) {
                 if (isMounted.current) {
-                    NotificationUIService.showError(t('schedule_service.navigation_error_essential_data'), t('common.error'));
+                    NotificationUIService.showError(
+                        t('schedule_service.navigation_error_essential_data', { defaultValue: 'Dados essenciais ausentes.' }),
+                        t('common.error', { defaultValue: 'Erro' })
+                    );
                     router.replace('/explore');
                     setIsLoading(false);
                 }
@@ -751,7 +901,10 @@ export default function ScheduleServiceScreen() {
 
                 if (!foundService) {
                     if (isMounted.current) {
-                        NotificationUIService.showError(t('schedule_service.service_not_available'), t('common.error'));
+                        NotificationUIService.showError(
+                            t('schedule_service.service_not_available', { defaultValue: 'Serviço não disponível.' }),
+                            t('common.error', { defaultValue: 'Erro' })
+                        );
                         router.replace('/explore');
                         setIsLoading(false);
                     }
@@ -762,9 +915,9 @@ export default function ScheduleServiceScreen() {
                 }
                 console.log("Serviço carregado:", foundService);
 
-                if(foundService.pricingType === PricingType.HOURLY) {
+                if (foundService.pricingType === PricingType.HOURLY) {
                     if (isMounted.current) setDurationInMinutes(120);
-                } else if(foundService.pricingType === PricingType.BY_SIZE) {
+                } else if (foundService.pricingType === PricingType.BY_SIZE) {
                     if (isMounted.current) setSquareMeters(50);
                 }
 
@@ -784,7 +937,10 @@ export default function ScheduleServiceScreen() {
                         });
                     }
                 } else {
-                    NotificationUIService.showInfo(t('schedule_service.address_needed_message'), t('schedule_service.address_needed_title'));
+                    NotificationUIService.showInfo(
+                        t('schedule_service.address_needed_message', { defaultValue: 'Informe o endereço para continuar.' }),
+                        t('schedule_service.address_needed_title', { defaultValue: 'Endereço Necessário' })
+                    );
                 }
 
                 if (isMounted.current) {
@@ -794,12 +950,11 @@ export default function ScheduleServiceScreen() {
                 const today = new Date();
                 const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
                 const prevMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-                await prefetchAvailability(paramProviderId, today); // Agora expandido para +/-3 dias
+                await prefetchAvailability(paramProviderId, today);
                 await prefetchAvailability(paramProviderId, nextMonth);
                 await prefetchAvailability(paramProviderId, prevMonth);
 
                 if (initialCouponCodeString) {
-                    // Chamar o handleApplyCoupon do hook useCouponValidation
                     setTimeout(() => {
                         if (isMounted.current) handleApplyCoupon();
                     }, 500);
@@ -808,7 +963,10 @@ export default function ScheduleServiceScreen() {
             } catch (error: any) {
                 console.error("Erro ao carregar dados iniciais:", error.response?.data || error.message);
                 if (isMounted.current) {
-                    NotificationUIService.showError(error.response?.data?.message || t('common.network_error'), t('common.error'));
+                    NotificationUIService.showError(
+                        error.response?.data?.message || t('common.network_error', { defaultValue: 'Erro de rede.' }),
+                        t('common.error', { defaultValue: 'Erro' })
+                    );
                     router.replace('/explore');
                 }
             } finally {
@@ -818,7 +976,7 @@ export default function ScheduleServiceScreen() {
             }
         };
         loadInitialData();
-    }, [paramProviderId, typedUser?.id, paramServiceId, router, prefetchAvailability, t, initialCouponCodeString, handleApplyCoupon]); // Adicionado handleApplyCoupon às dependências
+    }, [paramProviderId, typedUser?.id, paramServiceId, router, prefetchAvailability, initialCouponCodeString, handleApplyCoupon, t]);
 
     const animateShine = useCallback(() => {
         shineAnim.setValue(-SCREEN_WIDTH * 0.3);
@@ -829,21 +987,23 @@ export default function ScheduleServiceScreen() {
             useNativeDriver: true,
         });
         animation.start(() => {
-            if (isMounted.current) animateShine(); // Loop apenas se o componente ainda estiver montado
+            if (isMounted.current) animateShine();
         });
-        return animation; // Retorna a animação para poder pará-la
+        return animation;
     }, [shineAnim]);
 
     useEffect(() => {
         const shineAnimation = animateShine();
-        return () => shineAnimation.stop(); // Cleanup
+        return () => shineAnimation.stop();
     }, [animateShine]);
 
-    // PREMIUM: UseEffect para fetch de slots - Prioriza selectedDate com retry, loop só se zero slots reais
+    // ✅ CORREÇÃO: UseEffect para slots otimizado - Flag para loop, deps limpas, fallback para slots false
     useEffect(() => {
+        let isCancelled = false; // Para cleanup async
+
         const fetchAndProcessSlotsForDate = async () => {
-            if (!provider?.id || !selectedDate) {
-                if (isMounted.current) {
+            if (!provider?.id || !selectedDate || isCancelled) {
+                if (isMounted.current && !isCancelled) {
                     setDisplaySlotsInfo([]);
                     setSelectedTime(null);
                 }
@@ -854,25 +1014,23 @@ export default function ScheduleServiceScreen() {
                 setIsFetchingSlots(true);
             }
 
-            // Delay suave para animação (mantido, mas opcional em prod para real-time)
-            await new Promise(resolve => setTimeout(resolve, 200));
+            await new Promise(resolve => setTimeout(resolve, 200)); // Delay para animação
 
             const dateString = selectedDate.toISOString().split('T')[0];
             const cacheKey = `${provider.id}-${dateString}`;
 
-            // PRIORIDADE 1: Fetch/Retry para selectedDate (premium: garante captura real do dia escolhido)
             let backendResponse: { available: ProviderAvailability[], occupiedTimes: string[] } | undefined = undefined;
             let fetchAttempts = 0;
-            const maxRetries = 2; // Retry se falhar (ex: rede fraca)
+            const maxRetries = 2;
 
-            while (fetchAttempts < maxRetries && !backendResponse) {
+            while (fetchAttempts < maxRetries && !backendResponse && !isCancelled) {
                 try {
                     if (availabilityCache.has(cacheKey)) {
                         const cached = availabilityCache.get(cacheKey);
-                        if (Date.now() - cached!.timestamp < 3600000) { // Cache fresco?
+                        if (Date.now() - cached!.timestamp < 3600000) {
                             backendResponse = { available: cached!.available, occupiedTimes: cached!.occupiedTimes };
                         } else {
-                            availabilityCache.delete(cacheKey); // Expira cache velho
+                            availabilityCache.delete(cacheKey);
                         }
                     }
 
@@ -884,7 +1042,8 @@ export default function ScheduleServiceScreen() {
                     if (__DEV__) {
                         console.log(`[Slots Premium] Fetch sucesso para ${dateString}:`, {
                             available: backendResponse.available.length,
-                            occupied: backendResponse.occupiedTimes.length
+                            occupied: backendResponse.occupiedTimes.length,
+                            configuredSlots: backendResponse.available.map(s => s.time) // ✅ Debug: Log horários configurados
                         });
                     }
                 } catch (err: any) {
@@ -894,70 +1053,68 @@ export default function ScheduleServiceScreen() {
                     }
                     if (fetchAttempts >= maxRetries) {
                         console.error(`[Slots] Erro final para ${dateString}:`, err.response?.data || err.message);
-                        if (isMounted.current) {
+                        if (isMounted.current && !isCancelled) {
                             NotificationUIService.showError(
                                 t('schedule_service.error_fetching_slots_day', { date: dateString, defaultValue: 'Erro ao carregar horários para este dia. Tente novamente.' }),
-                                t('common.error')
+                                t('common.error', { defaultValue: 'Erro' })
                             );
-                            setDisplaySlotsInfo([]); // Fallback: Sem slots
+                            setDisplaySlotsInfo([]);
                             setIsFetchingSlots(false);
                         }
                         return;
                     }
-                    // Delay entre retries (rede)
                     await new Promise(resolve => setTimeout(resolve, 500 * fetchAttempts));
                 }
             }
 
-            if (!backendResponse) return; // Sem dados após retries
+            if (!backendResponse || isCancelled) return;
 
             const providerConfiguredSlots: ProviderAvailability[] = backendResponse.available || [];
             const occupiedTimesFromBackend: string[] = backendResponse.occupiedTimes || [];
 
-            // GERAÇÃO MELHORADA: Validação extra para garantir isAvailable correto (premium: evita falso "zero slots")
             const finalDisplaySlots = generateDailySlots(
                 selectedDate,
                 providerConfiguredSlots,
                 occupiedTimesFromBackend
             );
 
-            // VALIDAÇÃO PREMIUM: Check rigoroso - só considera "zero slots" se realmente nenhum disponível
             const hasRealAvailableSlots = finalDisplaySlots.some(slot => slot.isAvailable);
             if (__DEV__ && !hasRealAvailableSlots) {
-                console.warn(`[Slots] Dia ${dateString} sem slots reais:`, finalDisplaySlots.map(s => ({ time: s.time, available: s.isAvailable })));
+                console.warn(`[Slots] Dia ${dateString} sem slots reais (backend: ${providerConfiguredSlots.length} disponíveis):`, 
+                    finalDisplaySlots.map(s => ({ time: s.time, available: s.isAvailable })));
+                // ✅ SUGESTÃO: Debug generateDailySlots - verifique se horários batem (ex: '08:00' vs '8:00')
             }
 
-            if (isMounted.current) {
+            if (isMounted.current && !isCancelled) {
                 setDisplaySlotsInfo(finalDisplaySlots);
 
-                // Animação fade-in (mantida)
                 Animated.parallel([
-                    Animated.timing(fadeAnim, { toValue: 1, duration: AppDurations.sm, useNativeDriver: true }),
+                    Animated.timing(fadeAnim, { toValue: 1, duration: AppDurations.xs, useNativeDriver: true }), // Mais rápido
                     Animated.spring(scaleAnim, { toValue: 1, friction: 5, useNativeDriver: true }),
                 ]).start();
 
-                // SCROLL SUAVE PARA TIMESLOTS (mantido, mas só se tem slots)
                 if (hasRealAvailableSlots && timeSlotsRef.current && scrollViewRef.current) {
                     setTimeout(() => {
                         scrollViewRef.current?.scrollTo({ y: 400, animated: true });
                     }, 300);
                 }
 
-                // LOOP INTELIGENTE: SÓ SE ZERO SLOTS REAIS NO DIA SELECIONADO
-                if (!hasRealAvailableSlots) {
-                    // Notificação progressiva (premium: UX informativa)
+                // LOOP INTELIGENTE: Só se zero slots e não buscando já
+                if (!hasRealAvailableSlots && !isSearchingNextDate) {
+                    setIsSearchingNextDate(true); // ✅ Flag para bloquear múltiplas buscas
+
                     NotificationUIService.showInfo(
                         t('schedule_service.searching_next_available', { defaultValue: 'Procurando próximo dia disponível...' }),
                         t('schedule_service.no_slots_title', { defaultValue: 'Buscando Horários' })
                     );
 
                     let foundAvailableDate = false;
-                    const searchPromises = []; // Paralelo para velocidade
+                    const searchPromises = [];
 
-                    // Busca paralela +1 a +7 dias (premium: allSettled, não falha total)
                     for (let i = 1; i <= 7; i++) {
                         searchPromises.push(
                             (async (dayOffset: number) => {
+                                if (isCancelled) return null;
                                 const searchDate = new Date(selectedDate);
                                 searchDate.setDate(selectedDate.getDate() + dayOffset);
                                 const searchDateString = searchDate.toISOString().split('T')[0];
@@ -971,15 +1128,17 @@ export default function ScheduleServiceScreen() {
                                     }
                                 }
 
-                                if (!searchResponse) {
+                                if (!searchResponse && !isCancelled) {
                                     try {
                                         searchResponse = await getProviderAvailability(provider.id, searchDateString);
                                         availabilityCache.set(searchCacheKey, { ...searchResponse, timestamp: Date.now() });
                                     } catch (err: any) {
                                         if (__DEV__) console.warn(`[Loop] Erro para +${dayOffset}:`, err.message);
-                                        return null; // Pula dia com erro
+                                        return null;
                                     }
                                 }
+
+                                if (isCancelled) return null;
 
                                 const searchSlots = generateDailySlots(
                                     searchDate,
@@ -987,7 +1146,6 @@ export default function ScheduleServiceScreen() {
                                     searchResponse?.occupiedTimes || []
                                 );
 
-                                // Retorna {date, slots} se tem disponíveis
                                 if (searchSlots.some(slot => slot.isAvailable)) {
                                     return { date: searchDate, slots: searchSlots };
                                 }
@@ -996,55 +1154,54 @@ export default function ScheduleServiceScreen() {
                         );
                     }
 
-                    // Executa buscas paralelas e processa a primeira com slots
                     const results = await Promise.allSettled(searchPromises);
                     for (const result of results) {
+                        if (isCancelled) break;
                         if (result.status === 'fulfilled' && result.value) {
                             const { date, slots } = result.value;
-                            if (isMounted.current) {
-                                setSelectedDate(date); // Atualiza data automaticamente
+                            if (isMounted.current && !isCancelled) {
+                                setSelectedDate(date);
                                 setDisplaySlotsInfo(slots);
                                 foundAvailableDate = true;
 
-                                // Sucesso premium: Notificação + animação + scroll
                                 NotificationUIService.showSuccess(
                                     t('schedule_service.found_available_date', { 
                                         date: date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }),
                                         defaultValue: 'Horários encontrados!' 
                                     }),
-                                    t('common.success')
+                                    t('common.success', { defaultValue: 'Sucesso' })
                                 );
 
-                                // Animação de transição suave
                                 Animated.sequence([
                                     Animated.timing(scaleAnim, { toValue: 0.98, duration: 150, useNativeDriver: true }),
                                     Animated.spring(scaleAnim, { toValue: 1, friction: 6, useNativeDriver: true }),
                                 ]).start();
 
-                                // Scroll para timeslots
                                 setTimeout(() => {
                                     if (timeSlotsRef.current && scrollViewRef.current) {
                                         scrollViewRef.current.scrollTo({ y: 400, animated: true });
                                     }
                                 }, 300);
 
-                                // Reset time para nova data
                                 setSelectedTime(null);
                                 break;
                             }
                         }
                     }
 
-                    if (!foundAvailableDate) {
-                        // Fallback premium: Erro amigável + opção manual
-                        NotificationUIService.showError(
-                            t('schedule_service.no_available_nearby', { 
-                                defaultValue: 'Nenhum horário nos próximos 7 dias. Selecione outra data no calendário.' 
-                            }),
-                            t('common.error')
-                        );
-                        // Opcional: Volta para data original ou abre calendário expandido
+                    if (!isCancelled && isMounted.current) {
+                        setIsSearchingNextDate(false); // ✅ Reset flag
+                        if (!foundAvailableDate) {
+                            NotificationUIService.showError(
+                                t('schedule_service.no_available_nearby', { 
+                                    defaultValue: 'Nenhum horário nos próximos 7 dias. Selecione outra data no calendário.' 
+                                }),
+                                t('common.error', { defaultValue: 'Erro' })
+                            );
+                        }
                     }
+                } else if (hasRealAvailableSlots) {
+                    setIsSearchingNextDate(false); // Reset se encontrou no dia atual
                 }
 
                 setIsFetchingSlots(false);
@@ -1052,7 +1209,11 @@ export default function ScheduleServiceScreen() {
         };
 
         fetchAndProcessSlotsForDate();
-    }, [selectedDate, provider?.id, t, fadeAnim, scaleAnim]); // Dependências mantidas
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [selectedDate, provider?.id, prefetchAvailability, t, fadeAnim, scaleAnim]);
 
     const isNextButtonDisabled = useMemo(() => {
         if (currentStep === 1) {
@@ -1075,21 +1236,20 @@ export default function ScheduleServiceScreen() {
         return baseDisabled;
     }, [selectedTime, address, selectedProviderService, durationInMinutes, squareMeters, isBooking]);
 
-
     const confirmButtonText = useMemo(() => {
         if (finalCalculatedPrice > 0) {
             return formatBRL(finalCalculatedPrice);
         } else {
-            return t('schedule_service.select_date_time_address');
+            return t('schedule_service.select_date_time_address', { defaultValue: 'Selecione Data, Hora e Endereço' });
         }
     }, [finalCalculatedPrice, t]);
 
     if (isLoading) {
         return (
             <View style={styles.centeredFeedback}>
-                <Stack.Screen options={{ title: t("common.loading"), headerShown: false }} />
+                <Stack.Screen options={{ title: t("common.loading", { defaultValue: 'Carregando' }), headerShown: false }} />
                 <ActivityIndicator size="large" color={AppColors.primaryInteractive} />
-                <Text style={{ marginTop: 10, color: AppColors.textBody }} maxFontSizeMultiplier={1.2}>{t('schedule_service.loading_initial_data')}</Text>
+                <Text style={{ marginTop: 10, color: AppColors.textBody }}>{t('schedule_service.loading_initial_data', { defaultValue: 'Carregando dados iniciais...' })}</Text>
             </View>
         );
     }
@@ -1101,14 +1261,13 @@ export default function ScheduleServiceScreen() {
 
                 <ScheduleHeader
                     onBackPress={handlePreviousStep}
-                    headerTitle={t('schedule_service.header_title')}
+                    headerTitle={t('schedule_service.header_title', { defaultValue: 'Agendar Serviço' })}
                     fadeAnim={fadeAnim}
                     slideUpAnim={slideUpAnim}
                     showBackButton={currentStep > 1}
                 />
-                {/* Tabs Pill para steps, igual ao tema Round Trip: "Data e Hora" ativo/ghost, "Revisão Completa" */}
                 <View style={styles.stepsPill}>
-                    <View style={[
+                    <View key="step1" style={[
                         styles.stepItem, 
                         styles.stepItemGhost, 
                         { marginRight: 6 },
@@ -1121,7 +1280,7 @@ export default function ScheduleServiceScreen() {
                             {stepTitles[0]}
                         </Text>
                     </View>
-                    <View style={[
+                    <View key="step2" style={[
                         styles.stepItem, 
                         currentStep === 2 ? styles.stepItemActive : styles.stepItemGhost,
                         { marginRight: 6 }
@@ -1135,15 +1294,21 @@ export default function ScheduleServiceScreen() {
                     </View>
                 </View>
 
-                {/* ALTERADO: Animated.ScrollView com ref para scroll suave no step */}
                 <Animated.ScrollView
-                    ref={scrollViewRef} // Ref para scroll automático até timeslots
+                    ref={scrollViewRef}
                     contentContainerStyle={styles.scrollContentContainer}
                     style={{
                         opacity: fadeAnim,
                         transform: [{ translateY: slideUpAnim }]
                     }}
                     showsVerticalScrollIndicator={false}
+                    nestedScrollEnabled={true} // ✅ FIX: Permite FlatList aninhada sem quebrar virtualização
+                    // ✅ FIX: Scroll inicial sempre no topo ao montar (evita problemas iniciais)
+                    onContentSizeChange={() => {
+                        if (currentStep === 1) {
+                            scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+                        }
+                    }}
                 >
                     {currentStep === 1 && (
                         <>
@@ -1180,9 +1345,8 @@ export default function ScheduleServiceScreen() {
                                 calendarBreatheAnim={calendarBreatheAnim}
                             />
 
-                            {/* ALTERADO: Ref na View dos timeslots para scroll preciso */}
                             <Animated.View 
-                                ref={timeSlotsRef} // Ref para posicionar o scroll
+                                ref={timeSlotsRef}
                                 style={{
                                     transform: [{ scale: scaleAnim }],
                                     opacity: fadeAnim
@@ -1192,7 +1356,7 @@ export default function ScheduleServiceScreen() {
                                     titleKey="schedule_service.available_times"
                                     date={selectedDate}
                                     displaySlotsInfo={displaySlotsInfo}
-                                    isLoading={isFetchingSlots}
+                                    isLoading={isFetchingSlots || isSearchingNextDate} // ✅ Inclui flag na loading
                                     selectedTime={selectedTime}
                                     onTimeSelect={handleTimeSelect}
                                 />
@@ -1203,17 +1367,24 @@ export default function ScheduleServiceScreen() {
                                 onPress={handleNextStep}
                                 disabled={isNextButtonDisabled}
                             >
-                                <Text style={styles.nextStepButtonText} maxFontSizeMultiplier={1.2}>{"Continuar"}</Text>
+                                <Text style={styles.nextStepButtonText}>{"Continuar"}</Text>
                             </TouchableOpacity>
                         </>
                     )}
 
+                    {/* ✅ PREMIUM: Wrapper para step 2 com animação global de entrada (inicia baixo, sobe suave) */}
                     {currentStep === 2 && (
-                        <>
+                        <Animated.View style={{
+                            opacity: reviewStepAnim,
+                            transform: [
+                                { translateY: reviewStepAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }, // Menos slide para rápido
+                                { scale: reviewStepAnim.interpolate({ inputRange: [0, 1], outputRange: [0.98, 1] }) } // Scale mínimo
+                            ]
+                        }}>
                             {selectedProviderService && (
                                 <Animated.View style={[{
-                                    transform: [{ scale: scaleAnim }],
-                                    opacity: fadeAnim,
+                                    transform: [{ scale: serviceDetailsAnim }],
+                                    opacity: serviceDetailsAnim,
                                     marginTop: 0,
                                 }]}>
                                     <ServiceDetailsInput
@@ -1229,8 +1400,8 @@ export default function ScheduleServiceScreen() {
                             )}
 
                             <Animated.View style={[styles.card, {
-                                transform: [{ scale: scaleAnim }],
-                                opacity: fadeAnim,
+                                transform: [{ scale: notesAnim }],
+                                opacity: notesAnim,
                                 marginTop: 15,
                             }]}>
                                 <NotesInputSection
@@ -1250,6 +1421,8 @@ export default function ScheduleServiceScreen() {
                                 couponFeedbackColor={couponFeedbackColor}
                                 couponFeedbackIcon={couponFeedbackIcon}
                                 t={t}
+                                cupomEntranceAnim={cupomAnim} // Passa stagger anim
+                                cupomStaggerDelay={100} // Delay mínimo
                             />
 
                             <BookingSummaryPreview
@@ -1265,10 +1438,11 @@ export default function ScheduleServiceScreen() {
                                 finalPrice={finalCalculatedPrice}
                                 onShowCancellationPolicy={showCancellationPolicy}
                                 t={t}
+                                reviewEntranceAnim={summaryAnim} // Passa stagger para summary
+                                reviewStaggerDelay={150} // Delay mínimo
                             />
-                        </>
+                        </Animated.View>
                     )}
-
                 </Animated.ScrollView>
 
                 {currentStep === 2 && selectedTime && finalCalculatedPrice > 0 && (
@@ -1285,10 +1459,10 @@ export default function ScheduleServiceScreen() {
                         }
                     ]}>
                         <View style={styles.floatingSummaryContent}>
-                            <Text style={styles.floatingSummaryText} maxFontSizeMultiplier={1.2}>
-                                {selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} {t('common.at', { maxFontSizeMultiplier: 1.2 })} {selectedTime}
+                            <Text style={styles.floatingSummaryText}>
+                                {selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} {t('common.at', { defaultValue: 'às' })} {selectedTime}
                             </Text>
-                            <Text style={styles.floatingSummaryPrice} maxFontSizeMultiplier={1.2}>
+                            <Text style={styles.floatingSummaryPrice}>
                                 {formatBRL(finalCalculatedPrice)}
                             </Text>
                         </View>
@@ -1302,7 +1476,7 @@ export default function ScheduleServiceScreen() {
                         isBooking={isBooking}
                         confirmButtonText={confirmButtonText}
                         selectedTime={selectedTime}
-                        hasSelectedServicePrice={selectedProviderService?.price != null}
+                        hasSelectedServicePrice={!!selectedProviderService?.price}
                     />
                 )}
             </View>
@@ -1315,11 +1489,11 @@ const styles = StyleSheet.create({
         flex: 1,
         width: '100%',
         height: '100%',
-        backgroundColor: '#FAFAFA', // Fundo branco com tom leve de cinza para look premium moderno (iOS/Android)
+        backgroundColor: '#FAFAFA',
     },
     contentWrapper: {
         flex: 1,
-        backgroundColor: '#FAFAFA', // Mantém o fundo leve e premium
+        backgroundColor: '#FAFAFA',
     },
     centeredFeedback: {
         flex: 1,
@@ -1331,44 +1505,43 @@ const styles = StyleSheet.create({
         paddingBottom: 120,
         paddingTop: 10,
     },
-    // Estilos para Tabs Pill dos steps, igual ao tema Round Trip (header)
     stepsPill: {
         marginTop: 30,
         marginBottom: 3,
         alignSelf: 'center',
-        backgroundColor: 'rgba(202, 214, 241, 0.8)', // Fundo semi-transparente como no header
+        backgroundColor: 'rgba(202, 214, 241, 0.8)',
         borderRadius: 40,
         padding: 6,
         flexDirection: 'row',
-                shadowColor: '#2f3344e8', // Cor da sombra
-        shadowOffset: { width: 0, height: 1 }, // Deslocamento vertical mais pronunciado
-        shadowOpacity: 0.17, // Opacidade aumentada para robustezs
-        shadowRadius: 9, // Raio de desfoque para conforto
-        elevation: 6, // Elevação aumentada para robustez no Android
+        shadowColor: '#2f3344e8',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.17,
+        shadowRadius: 9,
+        elevation: 6,
     },
     stepItem: {
         borderRadius: 40,
         paddingVertical: 5,
         paddingHorizontal: 9,
         flexShrink: 1,
-        minWidth: 100, // Largura mínima para acomodar textos longos
+        minWidth: 100,
         borderWidth: 1,
         borderColor: AppColors.borderNeutral,
     },
     stepItemActive: { 
-        backgroundColor: AppColors.primaryInteractive // Fundo azul para ativo, como Round Trip
+        backgroundColor: AppColors.primaryInteractive 
     },
     stepActiveText: {
-        color: AppColors.white, // Texto branco no ativo para contraste
+        color: AppColors.white,
         fontWeight: '700',
-        fontSize: 10, // Tamanho maior para legibilidade dos textos dos steps
+        fontSize: 10,
         textAlign: 'center',
     },
     stepItemGhost: { 
         backgroundColor: 'transparent' 
     },
     stepGhostText: {
-        color: AppColors.mediumGray, // Cinza para ghosts, como no header
+        color: AppColors.mediumGray,
         fontWeight: '600',
         fontSize: 10,
         textAlign: 'center',
@@ -1400,14 +1573,40 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: AppColors.primaryInteractive,
     },
-    card: {
-        backgroundColor: AppColors.white, // Cards brancos com sombra leve, mantidos como solicitado
-        borderRadius: 15,
-        padding: 20,
+    /* HEADER LIMPO - sem fundo nem sombra (apenas texto refinado) */
+    sectionHeaderRow: {
         marginHorizontal: 20,
-        marginBottom: 15,
-        ...AppShadows.medium, // Sombra leve para tom premium
+        marginTop: 6,
+        marginBottom: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'flex-start',
     },
+    sectionTitlePlain: {
+        fontSize: 18,                 // um pouco menor que antes pra ficar refinado
+        fontWeight: Platform.OS === 'ios' ? '600' : '700', // heavy on android, sem exagero no iOS
+        color: AppColors.textBody,
+        letterSpacing: 0.2,
+        textTransform: 'none',
+        // sem background, sem sombra
+        paddingVertical: 4,
+        paddingHorizontal: 0,
+    },
+    /* Ajuste sutil do card para visual premium: sombras mais suaves, bordas arredondadas */
+    card: {
+        backgroundColor: AppColors.white,
+        borderRadius: 18,            // mais arredondado para look premium
+        padding: 18,                 // padding levemente menor
+        marginHorizontal: 18,
+        marginBottom: 15,
+        // sombras mais sutis (reduzidas)
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.06,
+        shadowRadius: 12,
+        elevation: 3,
+    },
+    /* Opcional: título das seções internas (se quiser manter o estilo anterior em outros lugares) */
     sectionTitle: {
         fontSize: 20,
         fontWeight: 'bold',

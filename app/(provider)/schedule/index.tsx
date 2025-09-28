@@ -18,9 +18,10 @@ import {
 import { Stack, useRouter } from 'expo-router';
 import { Calendar, LocaleConfig, DateData } from 'react-native-calendars';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics'; // Adicionado para iOS premium feedback
 import { formatDate } from '../../../utils/helpers';
 
-// ====== Design tokens (mesmos da UI padronizada) ======
+// ====== Design tokens (mesmos da UI padronizada - Premium iOS) ======
 const Colors = {
   primary: '#4A90E2',
   primaryDark: '#2A72E7',
@@ -32,19 +33,19 @@ const Colors = {
   textMuted: '#6C757D',
   textSubtle: '#868E96',
   danger: '#D32F2F',
-  shadow: 'rgba(0,0,0,0.08)',
+  shadow: 'rgba(0,0,0,0.08)', // Sutil para iOS
 };
 
 const Radii = {
-  xl: 20,
-  pill: 25,
-  md: 15,
+  xl: 24, // Mais arredondado para iOS clean
+  pill: 28,
+  md: 16,
 };
 
 const Spacing = {
-  sm: 10,
-  md: 15,
-  lg: 20,
+  sm: 12, // Aumentado para conforto
+  md: 18,
+  lg: 24,
 };
 
 const easeOut = Easing.out(Easing.ease);
@@ -105,6 +106,39 @@ interface Theme {
     dayHeader?: { color?: string };
   };
 }
+
+// ====== Tema do Calendário (objeto estático para corrigir TS(2560)) ======
+const calendarTheme: Partial<Theme> = {
+  backgroundColor: Colors.bgSoft,
+  calendarBackground: Colors.surface,
+  textSectionTitleColor: '#586069',
+  selectedDayBackgroundColor: Colors.primary,
+  selectedDayTextColor: '#FFFFFF',
+  todayTextColor: Colors.primary,
+  dayTextColor: '#2d4150',
+  textDisabledColor: '#d9e1e8',
+  dotColor: Colors.primary,
+  selectedDotColor: '#FFFFFF',
+  arrowColor: Colors.primary,
+  monthTextColor: '#1C3A5F',
+  indicatorColor: Colors.primary,
+  textDayFontWeight: '400',
+  textMonthFontWeight: 'bold',
+  textDayHeaderFontWeight: '500',
+  textDayFontSize: 16, // Maior para iOS
+  textMonthFontSize: 19,
+  textDayHeaderFontSize: 13,
+  'stylesheet.calendar.header': {
+    week: {
+      marginTop: 8, // Mais espaço iOS
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      borderBottomWidth: 1,
+      borderBottomColor: Colors.border,
+      paddingBottom: 8,
+    },
+  },
+};
 
 // ====== Tipos e dados simulados ======
 interface ProviderAppointment {
@@ -168,7 +202,7 @@ const AnimatedAppointmentItem: React.FC<{
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    const animationDuration = isReducedMotionEnabled ? 0 : 420; // Desabilitar animação se movimento reduzido estiver ativado
+    const animationDuration = isReducedMotionEnabled ? 0 : 500; // Suave para iOS
     const animationDelay = isReducedMotionEnabled ? 0 : delay;
 
     Animated.parallel([
@@ -178,14 +212,15 @@ const AnimatedAppointmentItem: React.FC<{
   }, [fadeAnim, slideAnim, delay, isReducedMotionEnabled]);
 
   const onPressInItem = () => {
-    if (!isReducedMotionEnabled) { // Apenas animar se movimento reduzido não estiver ativado
-      Animated.spring(scaleAnim, { toValue: 0.98, useNativeDriver: true }).start();
+    if (!isReducedMotionEnabled) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); // iOS premium haptic
+      Animated.spring(scaleAnim, { toValue: 0.97, useNativeDriver: true, tension: 200 }).start();
     }
   };
 
   const onPressOutItem = () => {
-    if (!isReducedMotionEnabled) { // Apenas animar se movimento reduzido não estiver ativado
-      Animated.spring(scaleAnim, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start();
+    if (!isReducedMotionEnabled) {
+      Animated.spring(scaleAnim, { toValue: 1, friction: 4, tension: 50, useNativeDriver: true }).start();
     }
   };
 
@@ -208,7 +243,6 @@ const AnimatedAppointmentItem: React.FC<{
         styles.appointmentCardWrapper,
         { opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] }
       ]}
-      // REMOVIDO: accessibilityRole="listitem" - não é um role válido para View
       accessibilityLabel={`Agendamento para ${item.clientName}, serviço ${item.serviceType} às ${item.startTime}. Status: ${item.status}. Endereço: ${item.addressSummary || 'Não informado'}.`}
     >
       <TouchableOpacity
@@ -216,7 +250,9 @@ const AnimatedAppointmentItem: React.FC<{
         onPress={() => onPress(item)}
         onPressIn={onPressInItem}
         onPressOut={onPressOutItem}
-        activeOpacity={0.9}
+        activeOpacity={0.92} // Suave iOS
+        accessibilityRole="button"
+        accessibilityHint="Abrir detalhes do agendamento"
       >
         {item.clientAvatarUrl ? (
           <Image source={{ uri: item.clientAvatarUrl }} style={styles.clientAvatar} accessibilityLabel={`Foto de perfil de ${item.clientName}`} />
@@ -231,7 +267,7 @@ const AnimatedAppointmentItem: React.FC<{
           <Text style={styles.appointmentServiceType} numberOfLines={1}>{item.serviceType}</Text>
 
           <View style={styles.timeAndLocation}>
-            <Ionicons name="time-outline" size={14} color={Colors.textMuted} style={{ marginRight: 4 }} accessibilityHidden={true} />
+            <Ionicons name="time-outline" size={14} color={Colors.textMuted} style={{ marginRight: 6 }} accessibilityHidden={true} />
             <Text style={styles.appointmentTime}>
               {item.startTime}{item.endTime ? ` - ${item.endTime}` : ''}
             </Text>
@@ -239,7 +275,7 @@ const AnimatedAppointmentItem: React.FC<{
 
           {item.addressSummary && (
             <View style={styles.timeAndLocation}>
-              <Ionicons name="location-outline" size={14} color={Colors.textMuted} style={{ marginRight: 4 }} accessibilityHidden={true} />
+              <Ionicons name="location-outline" size={14} color={Colors.textMuted} style={{ marginRight: 6 }} accessibilityHidden={true} />
               <Text style={styles.appointmentAddress}>{item.addressSummary}</Text>
             </View>
           )}
@@ -275,8 +311,8 @@ export default function MyScheduleScreen() {
       const data = await fetchProviderAppointments();
       setAllAppointments(data);
 
-      const animationDuration = isReducedMotionEnabled ? 0 : 140; // Desabilitar animações se movimento reduzido estiver ativado
-      const staggerDelay = isReducedMotionEnabled ? 0 : 140;
+      const animationDuration = isReducedMotionEnabled ? 0 : 160; // Suave iOS
+      const staggerDelay = isReducedMotionEnabled ? 0 : 160;
 
       Animated.stagger(staggerDelay, [
         Animated.timing(calendarAnim, { toValue: 1, duration: animationDuration, easing: easeOut, useNativeDriver: true }),
@@ -293,7 +329,7 @@ export default function MyScheduleScreen() {
   };
 
   useEffect(() => {
-    const animationDuration = isReducedMotionEnabled ? 0 : 520; // Desabilitar animação se movimento reduzido estiver ativado
+    const animationDuration = isReducedMotionEnabled ? 0 : 600; // Confortável iOS
     Animated.timing(headerAnim, { toValue: 1, duration: animationDuration, easing: easeOut, useNativeDriver: true }).start();
     loadAppointments();
   }, [headerAnim, isReducedMotionEnabled]);
@@ -325,7 +361,7 @@ export default function MyScheduleScreen() {
 
     const currentMark = marks[selectedDate] || {};
     marks[selectedDate] = {
-      ...currentMark,
+      ...currentMark, // Spread correto para fusão
       selected: true,
       selectedColor: Colors.primary,
       selectedTextColor: '#FFFFFF',
@@ -345,7 +381,7 @@ export default function MyScheduleScreen() {
     } else {
       announcement += `. Nenhum agendamento para este dia.`;
     }
-    AccessibilityInfo.announceForAccessibility?.(announcement);
+    AccessibilityInfo.announceForAccessibility(announcement); // Fallback sem ? para compatibilidade
   };
 
   const handleAppointmentPress = (item: ProviderAppointment) => {
@@ -369,6 +405,7 @@ export default function MyScheduleScreen() {
           style={styles.headerActionIcon}
           accessibilityRole="button"
           accessibilityLabel="Gerenciar disponibilidade"
+          accessibilityHint="Navegar para tela de gerenciamento de horários"
         >
           <Ionicons name="options-outline" size={22} color="#FFFFFF" accessibilityHidden={true} />
           <Text style={styles.headerActionText}>Disponibilidade</Text>
@@ -389,43 +426,14 @@ export default function MyScheduleScreen() {
           onMonthChange={(month) => {
             // manter log; futura integração para fetch por mês
             console.log('[MyScheduleScreen] Mês alterado para:', month.month, month.year);
-            AccessibilityInfo.announceForAccessibility?.(`Mês alterado para ${LocaleConfig.locales['pt-br'].monthNames[month.month - 1]} de ${month.year}`);
+            AccessibilityInfo.announceForAccessibility(`Mês alterado para ${LocaleConfig.locales['pt-br'].monthNames[month.month - 1]} de ${month.year}`);
           }}
           firstDay={1}
           enableSwipeMonths
-          theme={({
-            backgroundColor: Colors.bgSoft,
-            calendarBackground: Colors.surface,
-            textSectionTitleColor: '#586069',
-            selectedDayBackgroundColor: Colors.primary,
-            selectedDayTextColor: '#FFFFFF',
-            todayTextColor: Colors.primary,
-            dayTextColor: '#2d4150',
-            textDisabledColor: '#d9e1e8',
-            dotColor: Colors.primary,
-            selectedDotColor: '#FFFFFF',
-            arrowColor: Colors.primary,
-            monthTextColor: '#1C3A5F',
-            indicatorColor: Colors.primary,
-            textDayFontWeight: '400',
-            textMonthFontWeight: 'bold',
-            textDayHeaderFontWeight: '500',
-            textDayFontSize: 15,
-            textMonthFontSize: 18,
-            textDayHeaderFontSize: 13,
-            'stylesheet.calendar.header': {
-              week: {
-                marginTop: 6,
-                flexDirection: 'row',
-                justifyContent: 'space-around',
-                borderBottomWidth: 1,
-                borderBottomColor: Colors.border,
-                paddingBottom: 6,
-              },
-            },
-          }) as Theme}
+          theme={calendarTheme} // Objeto estático (corrige TS(2560))
           style={styles.calendarStyle}
           accessibilityLabel="Calendário de agendamentos"
+          accessibilityHint="Selecione uma data para ver agendamentos"
         />
       </Animated.View>
 
@@ -449,7 +457,7 @@ export default function MyScheduleScreen() {
         <FlatList
           data={appointmentsForSelectedDate}
           renderItem={({ item, index }) => (
-            <AnimatedAppointmentItem item={item} onPress={handleAppointmentPress} delay={index * 70} isReducedMotionEnabled={isReducedMotionEnabled} />
+            <AnimatedAppointmentItem item={item} onPress={handleAppointmentPress} delay={index * 80} isReducedMotionEnabled={isReducedMotionEnabled} /> // Delay suave
           )}
           keyExtractor={(item) => item.id}
           style={styles.listStyle}
@@ -462,7 +470,7 @@ export default function MyScheduleScreen() {
         />
       ) : (
         <Animated.View style={[styles.centeredFeedback, { opacity: feedbackAnim }]}>
-          <Ionicons name="calendar-outline" size={64} color="#CED4DA" accessibilityHidden={true} />
+          <Ionicons name="calendar-outline" size={68} color="#CED4DA" accessibilityHidden={true} />
           <Text style={styles.emptyListText}>Nenhum serviço agendado para este dia.</Text>
           <Text style={styles.emptyListSubText}>
             Aproveite para gerenciar sua disponibilidade ou confira outros dias!
@@ -472,9 +480,10 @@ export default function MyScheduleScreen() {
             onPress={() => router.push('/(provider)/schedule/manage-availability' as any)}
             accessibilityRole="button"
             accessibilityLabel="Ir para Gerenciar Disponibilidade"
+            accessibilityHint="Navegar para tela de gerenciamento de horários disponíveis"
           >
             <Text style={styles.manageAvailabilityButtonText}>Gerenciar Disponibilidade</Text>
-            <Ionicons name="arrow-forward" size={18} color="#FFFFFF" style={{ marginLeft: 8 }} accessibilityHidden={true} />
+            <Ionicons name="arrow-forward" size={20} color="#FFFFFF" style={{ marginLeft: 10 }} accessibilityHidden={true} />
           </TouchableOpacity>
         </Animated.View>
       )}
@@ -482,7 +491,7 @@ export default function MyScheduleScreen() {
   );
 }
 
-// ====== Styles ======
+// ====== Styles (Premium iOS Clean e Confortável) ======
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -493,191 +502,234 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: Colors.primary,
-    paddingHorizontal: 15,
-    paddingVertical: Platform.OS === 'ios' ? 50 : 20,
-    paddingTop: Platform.OS === 'ios' ? 50 : 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 8,
+    paddingHorizontal: 18,
+    paddingVertical: Platform.OS === 'ios' ? 55 : 20,
+    paddingTop: Platform.OS === 'ios' ? 55 : 20,
+    // iOS Premium Shadow (sutil)
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+      },
+      android: { elevation: 10 },
+    }),
     borderBottomLeftRadius: Radii.xl,
     borderBottomRightRadius: Radii.xl,
   },
   headerTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
+    fontSize: 24, // Maior para iOS
+    fontWeight: '600',
     color: '#FFFFFF',
     flex: 1,
     textAlign: 'left',
-    marginLeft: 10,
+    marginLeft: 12,
+    fontFamily: Platform.OS === 'ios' ? 'SFProDisplay-Semibold' : 'System',
   },
   headerActionIcon: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(255,255,255,0.2)', // Mais sutil
     borderRadius: Radii.pill,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  headerActionText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 6,
-  },
-  calendarContainer: {
-    backgroundColor: Colors.surface,
-    marginHorizontal: 15,
-    marginTop: -25,
-    borderRadius: Radii.md,
-    overflow: 'hidden',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    // iOS clean shadow
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 6 },
+        shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
-        shadowRadius: 10,
+        shadowRadius: 4,
       },
-      android: { elevation: 6 },
+      android: { elevation: 3 },
+    }),
+  },
+  headerActionText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
+    marginLeft: 8,
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Medium' : 'System',
+  },
+  calendarContainer: {
+    backgroundColor: Colors.surface,
+    marginHorizontal: 18,
+    marginTop: -28, // Ajustado para iOS
+    borderRadius: Radii.md,
+    overflow: 'hidden',
+    // iOS Premium Shadow
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.1,
+        shadowRadius: 16,
+      },
+      android: { elevation: 8 },
     }),
   },
   calendarStyle: {
     borderRadius: Radii.md,
   },
   agendaListHeader: {
-    paddingHorizontal: 15,
-    paddingTop: 20,
-    paddingBottom: 15,
+    paddingHorizontal: 18,
+    paddingTop: 24,
+    paddingBottom: 18,
     backgroundColor: Colors.bgSoft,
   },
   agendaListTitle: {
-    fontSize: 19,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: '600',
     color: '#1C3A5F',
     textTransform: 'capitalize',
+    fontFamily: Platform.OS === 'ios' ? 'SFProDisplay-Semibold' : 'System',
   },
   listStyle: { flex: 1 },
   listContentContainer: {
-    paddingHorizontal: 15,
-    paddingBottom: 20,
+    paddingHorizontal: 18,
+    paddingBottom: 24, // Mais bottom para iOS
   },
   appointmentCardWrapper: {
-    marginVertical: 8,
+    marginVertical: 10, // Mais espaço
     borderRadius: Radii.md,
     backgroundColor: Colors.surface,
     overflow: Platform.OS === 'ios' ? 'visible' : 'hidden',
+    // iOS Premium Shadow (clean)
     ...Platform.select({
       ios: {
         shadowColor: Colors.shadow,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.4,
-        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.12,
+        shadowRadius: 12,
       },
-      android: { elevation: 5 },
+      android: { elevation: 6 },
     }),
   },
   appointmentCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 18,
+    padding: 20, // Mais padding iOS
   },
   clientAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 15,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    marginRight: 16,
     borderWidth: 2,
     borderColor: Colors.primary,
   },
   clientAvatarPlaceholder: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 15,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    marginRight: 16,
     backgroundColor: '#B0C4DE',
     justifyContent: 'center',
     alignItems: 'center',
   },
   appointmentDetails: { flex: 1 },
   appointmentClientName: {
-    fontSize: 17,
+    fontSize: 18, // Maior iOS
     fontWeight: '700',
     color: Colors.text,
     marginBottom: 4,
+    fontFamily: Platform.OS === 'ios' ? 'SFProDisplay-Bold' : 'System',
   },
   appointmentServiceType: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '500',
     color: '#495057',
-    marginBottom: 4,
+    marginBottom: 6,
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Medium' : 'System',
   },
   timeAndLocation: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 2,
+    marginBottom: 4, // Mais espaço
   },
-  appointmentTime: { fontSize: 13, color: Colors.textMuted },
-  appointmentAddress: { fontSize: 13, color: Colors.textMuted },
+  appointmentTime: { fontSize: 14, color: Colors.textMuted, fontFamily: Platform.OS === 'ios' ? 'SFProText-Regular' : 'System' },
+  appointmentAddress: { fontSize: 14, color: Colors.textMuted, fontFamily: Platform.OS === 'ios' ? 'SFProText-Regular' : 'System' },
   appointmentStatusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 15,
-    marginLeft: 15,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 18, // Mais arredondado iOS
+    marginLeft: 16,
+    // iOS clean shadow
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+      },
+      android: { elevation: 2 },
+    }),
   },
   appointmentStatusText: {
     fontSize: 12,
     fontWeight: 'bold',
     textTransform: 'uppercase',
-    marginLeft: 5,
+    marginLeft: 6,
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Semibold' : 'System',
   },
   centeredFeedback: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
-    marginTop: 20,
+    padding: 24,
+    marginTop: 24,
   },
   loadingText: {
-    fontSize: 16,
+    fontSize: 17,
     color: Colors.textMuted,
-    marginTop: 12,
+    marginTop: 14,
     fontWeight: '500',
     textAlign: 'center',
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Medium' : 'System',
   },
   emptyListText: {
-    fontSize: 16,
+    fontSize: 18,
     color: Colors.textMuted,
-    marginTop: 15,
+    marginTop: 18,
     textAlign: 'center',
     fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Semibold' : 'System',
   },
   emptyListSubText: {
-    fontSize: 15,
+    fontSize: 16,
     color: Colors.textSubtle,
-    marginTop: 8,
+    marginTop: 10,
     textAlign: 'center',
+    lineHeight: 22,
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Regular' : 'System',
   },
   manageAvailabilityButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 30,
-    marginTop: 22,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+    paddingVertical: 14,
+    paddingHorizontal: 22,
+    borderRadius: 32, // Mais pill para iOS
+    marginTop: 24,
+    // iOS Premium Shadow
+    ...Platform.select({
+      ios: {
+        shadowColor: Colors.primary,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+      },
+      android: { elevation: 8 },
+    }),
   },
   manageAvailabilityButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 17,
+    fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Semibold' : 'System',
   },
   listSeparator: { height: 0 },
 });

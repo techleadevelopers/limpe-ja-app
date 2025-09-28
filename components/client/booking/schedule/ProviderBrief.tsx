@@ -1,9 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useRef } from 'react'; // Importar useRef e useEffect
-import { Image, StyleSheet, Text, View, Animated, Easing } from 'react-native'; // Importar Animated, Easing
+import React, { useCallback, useEffect, useRef } from 'react';
+import { Image, StyleSheet, Text, View, Animated, Easing } from 'react-native';
 import { VerificationStatus } from '../../../../types/backend/auth';
 import { BookingAddress } from '../../../../types/backend/bookings';
-import { AppColors } from '../../../../constants/appStyles'; // Importar AppColors para consistência de cores
+import { AppColors } from '../../../../constants/appStyles';
 
 interface ProviderDetails {
   id: string;
@@ -33,7 +33,6 @@ interface ProviderBriefProps {
 }
 
 export default function ProviderBrief({ provider, serviceName, isLoading }: ProviderBriefProps) {
-  // Animação de pulso para o card
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -42,7 +41,7 @@ export default function ProviderBrief({ provider, serviceName, isLoading }: Prov
       pulseLoop = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
-            toValue: 1.005, // Pulso muito sutil
+            toValue: 1.005,
             duration: 3000,
             easing: Easing.inOut(Easing.ease),
             useNativeDriver: true,
@@ -62,39 +61,41 @@ export default function ProviderBrief({ provider, serviceName, isLoading }: Prov
     }
 
     return () => {
-      pulseLoop?.stop(); // Cleanup da animação
+      pulseLoop?.stop();
     };
   }, [isLoading, provider, pulseAnim]);
-
 
   const renderStars = useCallback((rating?: number | null) => {
     const stars = [];
     const actualRating = rating ?? 0;
     const fullStars = Math.floor(actualRating);
-    const hasHalfStar = actualRating % 1 !== 0; // Lógica de meia estrela do RecomendacaoCard
+    const hasHalfStar = actualRating % 1 !== 0;
 
     for (let i = 0; i < 5; i++) {
       let iconName: keyof typeof Ionicons.glyphMap = 'star-outline';
       if (i < fullStars) iconName = 'star';
-      else if (hasHalfStar && i === fullStars) iconName = 'star-half'; // Usando 'star-half'
+      else if (hasHalfStar && i === fullStars) iconName = 'star-half';
 
       stars.push(
         <Ionicons
           key={i}
           name={iconName}
-          size={11} // Tamanho do RecomendacaoCard
-          color={AppColors.primaryInteractive} // Usando AppColors para consistência
-          style={styles.ratingStarIcon} // Estilo para espaçamento entre estrelas
+          size={11}
+          color={AppColors.primaryInteractive}
+          style={styles.ratingStarIcon}
         />
       );
     }
-    return <View style={styles.ratingStarContainer}>{stars}</View>; // Estilo para o container das estrelas
+    return <View style={styles.ratingStarContainer}>{stars}</View>;
   }, []);
 
-  const chip = useCallback((icon: keyof typeof Ionicons.glyphMap, text: string, verified?: boolean) => (
+  // ✅ FIX: Fallback para text (evita undefined em <Text>)
+  const chip = useCallback((icon: keyof typeof Ionicons.glyphMap, text: string | number, verified?: boolean) => (
     <View style={[styles.chip, verified && styles.chipOk]}>
-      <Ionicons name={icon} size={12} color={verified ? AppColors.primaryDark : AppColors.mediumGray} /> {/* Usando AppColors */}
-      <Text style={[styles.chipTxt, verified && styles.chipTxtOk]} maxFontSizeMultiplier={1.2}>{text}</Text>
+      <Ionicons name={icon} size={12} color={verified ? AppColors.primaryDark : AppColors.mediumGray} />
+      <Text style={[styles.chipTxt, verified && styles.chipTxtOk]} maxFontSizeMultiplier={1.2}>
+        {String(text || 'N/A')} {/* ✅ Garante string */}
+      </Text>
     </View>
   ), []);
 
@@ -120,7 +121,9 @@ export default function ProviderBrief({ provider, serviceName, isLoading }: Prov
       {provider.avatarUrl ? (
         <Image source={{ uri: provider.avatarUrl }} style={styles.photo} />
       ) : (
-        <View style={styles.photoPlaceholder}><Ionicons name="person-circle-outline" size={30} color={AppColors.mediumGray} /></View> 
+        <View style={styles.photoPlaceholder}>
+          <Ionicons name="person-circle-outline" size={30} color={AppColors.mediumGray} />
+        </View> 
       )}
 
       <View style={{ flex: 1 }}>
@@ -135,7 +138,11 @@ export default function ProviderBrief({ provider, serviceName, isLoading }: Prov
         <Text style={styles.service} maxFontSizeMultiplier={1.2}>{specialty}</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2 }}>
           {provider.verificationStatus === VerificationStatus.APPROVED && chip('shield-checkmark-outline', 'Verificado', true)}
-          {typeof provider.yearsOfExperience === 'number' && provider.yearsOfExperience > 0 && chip('hourglass-outline', `${provider.yearsOfExperience}+ anos`)}
+          {/* ✅ FIX: Verificação extra para yearsOfExperience */}
+          {typeof provider.yearsOfExperience === 'number' && provider.yearsOfExperience > 0 
+            ? chip('hourglass-outline', `${provider.yearsOfExperience}+ anos`, true)
+            : null
+          }
         </View>
       </View>
     </Animated.View>
@@ -151,18 +158,15 @@ const styles = StyleSheet.create({
     padding: 12,
     marginHorizontal: 29,
     marginTop: 14,
-
-           borderTopStartRadius: 44,
-           borderBottomStartRadius: 44,
-           borderTopEndRadius: 44,
-           borderBottomEndRadius: 44,
-
-           // Propriedades de sombra mantidas exatamente como fornecidas
-           shadowColor: '#45484b56', // Cor da sombra
-           shadowOffset: { width: -1, height: 1 }, // Deslocamento vertical mais pronunciado
-           shadowOpacity: 1.05, // Opacidade aumentada para robustezs
-           shadowRadius: 9, // Raio de desfoque para conforto
-           elevation: 6, // Elevação aumentada para robustez no Android
+    borderTopStartRadius: 44,
+    borderBottomStartRadius: 44,
+    borderTopEndRadius: 44,
+    borderBottomEndRadius: 44,
+    shadowColor: '#45484b56',
+    shadowOffset: { width: -1, height: 1 },
+    shadowOpacity: 1.05,
+    shadowRadius: 9,
+    elevation: 6,
   },
   photo: { width: 58, height: 58, borderRadius: 29, marginRight: 10, borderWidth: 2, borderColor: '#E7F0FF' },
   photoPlaceholder: { width: 58, height: 58, borderRadius: 29, marginRight: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF4FF' },
@@ -173,17 +177,12 @@ const styles = StyleSheet.create({
   chipTxt: { fontSize: 10, color: '#5C6B7A', marginLeft: 6, fontWeight: '700' },
   chipOk: { backgroundColor: '#D6ECFF' },
   chipTxtOk: { color: '#2463D7' },
-
-  // Novos estilos para as estrelas, copiados de RecomendacaoCard.tsx
   ratingStarContainer: {
     flexDirection: 'row',
-    // marginBottom: 2 foi removido pois o View pai já controla o espaçamento vertical
   },
   ratingStarIcon: {
     marginRight: 1,
   },
-
-  // skeletons
   skeleton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 18, marginHorizontal: 16, marginTop: 14, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 4, height: 96 },
   skelImg: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#E6EEF9', marginRight: 12 },
   skelLineLg: { height: 16, width: '80%', backgroundColor: '#E6EEF9', borderRadius: 6, marginBottom: 8 },

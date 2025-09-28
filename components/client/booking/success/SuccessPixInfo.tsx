@@ -1,7 +1,7 @@
 // LimpeJaApp/app/(client)/bookings/components/success/SuccessPixInfo.tsx
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef } from 'react';
-import { Dimensions, Image, StyleSheet, Text, TouchableOpacity, View, Animated, Easing } from 'react-native';
+import { Dimensions, Image, StyleSheet, Text, TouchableOpacity, View, Animated, Easing, Platform } from 'react-native';
 import Toast from 'react-native-toast-message'; // Importar Toast para feedback de erro
 
 import { PixChargeResponseDto } from '../../../../types/backend/payments';
@@ -89,10 +89,12 @@ export default function SuccessPixInfo({ pixChargeDetails, handleCopyPixQrCode }
       style={[
         styles.pixInfoSection,
         {
-          width: SCREEN_WIDTH * 0.75,
+          width: SCREEN_WIDTH * 0.85, // Alinhado centralizado premium
           alignSelf: 'center',
           opacity: fadeAnim,
           transform: [{ translateY: translateYAnim }, { scale: scaleAnim }],
+          marginTop: 15,
+          marginBottom: Platform.OS === 'ios' ? 10 : 8,
         }
       ]}
     >
@@ -107,6 +109,7 @@ export default function SuccessPixInfo({ pixChargeDetails, handleCopyPixQrCode }
         onPress={handleCopyPixQrCode}
         onPressIn={onPressInButton}
         onPressOut={onPressOutButton}
+        activeOpacity={0.7}
       >
         <Ionicons name="copy-outline" size={15} color={AppColors.white} />
         <Text style={styles.copyPixButtonText} maxFontSizeMultiplier={1.2}>Copiar Código PIX</Text>
@@ -121,8 +124,7 @@ export default function SuccessPixInfo({ pixChargeDetails, handleCopyPixQrCode }
 const styles = StyleSheet.create({
   pixInfoSection: {
     borderRadius: 12,
-    padding: 10,
-    marginTop: 15,
+    padding: 15, // Padding aumentado para conforto
     alignItems: 'center',
     position: 'relative',
     backgroundColor: AppColors.white,
@@ -149,15 +151,14 @@ const styles = StyleSheet.create({
     borderColor: AppColors.primaryInteractive + '10',
     borderRadius: 8,
     padding: 5,
-    right: 0,
     backgroundColor: AppColors.primaryInteractive + '10',
+    alignSelf: 'center',
   },
   qrCodeImage: {
     width: 240,
     height: 220,
     resizeMode: 'contain',
-    right: 0,
-    elevation: 33,
+    elevation: 3,
     shadowColor: AppColors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -167,28 +168,27 @@ const styles = StyleSheet.create({
   copyPixButton: {
     flexDirection: 'row',
     backgroundColor: AppColors.primaryInteractive,
-    paddingVertical: 8,
-    paddingHorizontal: 68,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 2,
-    right: 0,
+    marginTop: 8,
+    minHeight: 44,
   },
   copyPixButtonText: {
     color: AppColors.white,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 'bold',
     marginLeft: 8,
   },
   pixBrCodeText: {
-    marginTop: 5,
+    marginTop: 8,
     fontSize: 12,
     color: AppColors.mediumGray,
     textAlign: 'center',
     fontStyle: 'italic',
     maxWidth: '98%',
-    right: 0,
   },
   pixMessageAbsoluteContainer: {
     position: 'absolute',

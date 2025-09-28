@@ -1,7 +1,7 @@
 // LimpeJaApp/app/(client)/bookings/components/success/BookingDetailSection.tsx
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, Animated, Easing } from 'react-native';
+import { StyleSheet, Text, View, Animated, Easing, Platform } from 'react-native';
 import { AppColors } from '../../../../constants/appStyles'; // Importe AppColors
 import { sanitizeText } from '../../../../utils/formatters'; // Importar sanitizeText
 
@@ -63,15 +63,15 @@ export default function BookingDetailSection({
       <View style={styles.detailItem}>
         <Ionicons name="brush-outline" size={19} color={AppColors.primaryInteractive} />
         <Text style={styles.detailLabel} maxFontSizeMultiplier={1.2}>Serviço Contratado</Text>
-        <Text style={styles.detailValue} maxFontSizeMultiplier={1.2}>{sanitizeText(serviceName)}</Text>
+        <Text style={styles.detailValue} numberOfLines={2} maxFontSizeMultiplier={1.2}>{sanitizeText(serviceName)}</Text>
       </View>
 
       <View style={styles.detailItem}>
         <Ionicons name="location-outline" size={19} color={AppColors.primaryInteractive} />
         <Text style={styles.detailLabel} maxFontSizeMultiplier={1.2}>Local do Serviço</Text>
         <View style={styles.addressContainer}>
-          <Text style={styles.detailValue} maxFontSizeMultiplier={1.2}>{sanitizeText(formattedAddressLine1)}</Text>
-          <Text style={styles.detailValue} maxFontSizeMultiplier={1.2}>{sanitizeText(formattedAddressLine2)}</Text>
+          <Text style={styles.detailValue} numberOfLines={1} maxFontSizeMultiplier={1.2}>{sanitizeText(formattedAddressLine1)}</Text>
+          <Text style={styles.detailValue} numberOfLines={1} maxFontSizeMultiplier={1.2}>{sanitizeText(formattedAddressLine2)}</Text>
         </View>
       </View>
 
@@ -79,7 +79,7 @@ export default function BookingDetailSection({
         <View style={styles.detailItem}>
           <Ionicons name="document-text-outline" size={18} color={AppColors.primaryInteractive} />
           <Text style={styles.detailLabel} maxFontSizeMultiplier={1.2}>Observações</Text>
-          <Text style={styles.detailValueNotes} maxFontSizeMultiplier={1.2}>{sanitizeText(notes)}</Text>
+          <Text style={styles.detailValueNotes} numberOfLines={3} maxFontSizeMultiplier={1.2}>{sanitizeText(notes)}</Text>
         </View>
       ) : null}
     </Animated.View>
@@ -90,11 +90,12 @@ const styles = StyleSheet.create({
   detailSection: {
     marginBottom: 25,
     paddingHorizontal: 10,
+    paddingTop: Platform.OS === 'android' ? 5 : 0,
   },
   detailItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 16, // Espaçamento lógico
   },
   detailLabel: {
     fontSize: 13,

@@ -13,15 +13,16 @@ import {
   ScrollView,
   ActivityIndicator,
   Easing,
-  AccessibilityInfo, // Importar AccessibilityInfo
+  AccessibilityInfo,
 } from 'react-native';
-import { Picker } from '@react-native-picker/picker'; // Certifique-se de que esta importação está correta
+import { Picker } from '@react-native-picker/picker';
 import { Stack, useRouter } from 'expo-router';
 import { useAuth } from '../../../hooks/useAuth';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 
 // Types
-import { PricingType, Service } from '../../../types/backend/services'; // Importe Service aqui
+import { PricingType, Service } from '../../../types/backend/services';
 import {
   getProviderServicesOffered,
   addProviderServiceOffering,
@@ -30,10 +31,9 @@ import {
 } from '../../../services/providerService';
 import { ProviderServiceOffering as ProviderServiceType } from '../../../types/backend/provider-service';
 import { CreateProviderServiceData } from '../../../types/backend/providers';
-// ADICIONE ESTA LINHA PARA IMPORTAR DO NOVO ARQUIVO:
 import { getServiceCategories } from '../../../services/commonServiceCatalog';
 
-// ===== Design Tokens (Premium UI) =====
+// ===== Design Tokens (Premium UI - Alinhado para iOS Clean) =====
 const Colors = {
   primary: 'rgba(0,122,255,0.9)',
   primaryDark: 'rgba(0,122,255,0.7)',
@@ -51,17 +51,17 @@ const Colors = {
 };
 
 const Radii = {
-  xl: 20,
-  pill: 25,
-  sm: 10,
+  xl: 24,
+  pill: 28,
+  sm: 12,
 };
 
 const Spacing = {
-  xs: 6,
-  sm: 10,
-  md: 15,
-  lg: 20,
-  xl: 28,
+  xs: 8,
+  sm: 12,
+  md: 18,
+  lg: 24,
+  xl: 32,
 };
 
 // ===== Helpers =====
@@ -133,11 +133,11 @@ function useReducedMotion() {
   return isReducedMotionEnabled;
 }
 
-// ===== Animated Item =====
+// ===== Animated Item (tipado estritamente) =====
 interface ServiceOffering {
   id: string;
   name: string;
-  serviceId: string; // Adicione esta linha
+  serviceId: string;
   description: string;
   price: number;
   duration?: string;
@@ -151,14 +151,14 @@ const AnimatedServiceItem: React.FC<{
   onEdit: (service: ServiceOffering) => void;
   onDelete: (serviceId: string) => void;
   delay: number;
-  isReducedMotionEnabled: boolean; // Adicionar prop
+  isReducedMotionEnabled: boolean;
 }> = ({ item, onEdit, onDelete, delay, isReducedMotionEnabled }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    const animationDuration = isReducedMotionEnabled ? 0 : 420; // Desabilitar animação se movimento reduzido estiver ativado
+    const animationDuration = isReducedMotionEnabled ? 0 : 500;
     const animationDelay = isReducedMotionEnabled ? 0 : delay;
 
     Animated.parallel([
@@ -168,14 +168,15 @@ const AnimatedServiceItem: React.FC<{
   }, [fadeAnim, slideAnim, delay, isReducedMotionEnabled]);
 
   const onPressInItem = () => {
-    if (!isReducedMotionEnabled) { // Apenas animar se movimento reduzido não estiver ativado
-      Animated.spring(scaleAnim, { toValue: 0.98, useNativeDriver: true }).start();
+    if (!isReducedMotionEnabled) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      Animated.spring(scaleAnim, { toValue: 0.97, useNativeDriver: true, tension: 200 }).start();
     }
   };
 
   const onPressOutItem = () => {
-    if (!isReducedMotionEnabled) { // Apenas animar se movimento reduzido não estiver ativado
-      Animated.spring(scaleAnim, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start();
+    if (!isReducedMotionEnabled) {
+      Animated.spring(scaleAnim, { toValue: 1, friction: 4, tension: 50, useNativeDriver: true }).start();
     }
   };
 
@@ -194,21 +195,17 @@ const AnimatedServiceItem: React.FC<{
   const formatPriceDisplay = (service: ServiceOffering) => {
     switch (service.pricingType) {
       case PricingType.FIXED_PRICE:
-        // Usando safeToFixed
         const fixedPrice = safeToFixed(service.price, 2);
         return fixedPrice ? `R$ ${fixedPrice.replace('.', ',')}` : 'Preço a definir';
       case PricingType.HOURLY:
-        // Usando safeToFixed
         const hourlyPrice = safeToFixed(service.price, 2);
         return hourlyPrice ? `R$ ${hourlyPrice.replace('.', ',')}/hora` : 'Preço a definir';
       case PricingType.BY_SIZE: {
         let sizePrice = '';
-        // Usando safeToFixed
         const pricePerSquareMeterFormatted = safeToFixed(service.pricePerSquareMeter, 2);
         if (pricePerSquareMeterFormatted) {
           sizePrice += `R$ ${pricePerSquareMeterFormatted.replace('.', ',')}/m²`;
         }
-        // Usando safeToFixed
         const pricePerRoomFormatted = safeToFixed(service.pricePerRoom, 2);
         if (pricePerRoomFormatted) {
           sizePrice += (sizePrice ? ' · ' : '') + `R$ ${pricePerRoomFormatted.replace('.', ',')}/cômodo`;
@@ -231,7 +228,7 @@ const AnimatedServiceItem: React.FC<{
       <TouchableOpacity
         onPressIn={onPressInItem}
         onPressOut={onPressOutItem}
-        activeOpacity={0.9}
+        activeOpacity={0.92}
         style={styles.serviceItem}
       >
         <View style={styles.serviceInfo}>
@@ -253,7 +250,7 @@ const AnimatedServiceItem: React.FC<{
           <TouchableOpacity
             onPress={() => onEdit(item)}
             style={styles.iconBtn}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             accessibilityRole="button"
             accessibilityLabel={`Editar ${item.name}`}
           >
@@ -262,7 +259,7 @@ const AnimatedServiceItem: React.FC<{
           <TouchableOpacity
             onPress={confirmDelete}
             style={styles.iconBtn}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             accessibilityRole="button"
             accessibilityLabel={`Excluir ${item.name}`}
           >
@@ -287,8 +284,8 @@ export default function EditProviderServicesScreen() {
   const [selectedBaseServiceId, setSelectedBaseServiceId] = useState<string | undefined>(undefined);
 
   const [serviceDesc, setServiceDesc] = useState('');
-  const [servicePrice, setServicePrice] = useState(''); // raw numeric string ('.' as decimal)
-  const [servicePriceDisplay, setServicePriceDisplay] = useState(''); // masked BRL for UX
+  const [servicePrice, setServicePrice] = useState('');
+  const [servicePriceDisplay, setServicePriceDisplay] = useState('');
   const [pricingType, setPricingType] = useState<PricingType>(PricingType.FIXED_PRICE);
   const [pricePerSquareMeter, setPricePerSquareMeter] = useState('');
   const [pricePerSquareMeterDisplay, setPricePerSquareMeterDisplay] = useState('');
@@ -298,17 +295,17 @@ export default function EditProviderServicesScreen() {
 
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Animations
+  // Animations (refinadas para iOS premium)
   const headerAnim = useRef(new Animated.Value(0)).current;
   const formAnim = useRef(new Animated.Value(0)).current;
   const listHeaderAnim = useRef(new Animated.Value(0)).current;
   const saveButtonAnim = useRef(new Animated.Value(0)).current;
   const feedbackAnim = useRef(new Animated.Value(0)).current;
 
-  const isReducedMotionEnabled = useReducedMotion(); // Usar o hook de movimento reduzido
+  const isReducedMotionEnabled = useReducedMotion();
 
   useEffect(() => {
-    const animationDuration = isReducedMotionEnabled ? 0 : 520; // Desabilitar animação se movimento reduzido estiver ativado
+    const animationDuration = isReducedMotionEnabled ? 0 : 600;
     Animated.timing(headerAnim, { toValue: 1, duration: animationDuration, easing: easeOut, useNativeDriver: true }).start();
 
     const fetchAllData = async () => {
@@ -328,13 +325,10 @@ export default function EditProviderServicesScreen() {
           name: s.service.name,
           serviceId: s.service.id,
           description: s.description || '',
-          // Garantir que price seja um número finito ou 0 para evitar toFixed em undefined/null
           price: typeof s.price === 'number' && Number.isFinite(s.price) ? parseFloat(s.price.toString()) : 0,
           duration: s.durationMinutes ? `${s.durationMinutes} minutos` : undefined,
           pricingType: s.pricingType,
-          // Garantir que pricePerSquareMeter seja um número finito ou undefined
           pricePerSquareMeter: typeof s.pricePerSquareMeter === 'number' && Number.isFinite(s.pricePerSquareMeter) ? parseFloat(s.pricePerSquareMeter.toString()) : undefined,
-          // Garantir que pricePerRoom seja um número finito ou undefined
           pricePerRoom: typeof s.pricePerRoom === 'number' && Number.isFinite(s.pricePerRoom) ? parseFloat(s.pricePerRoom.toString()) : undefined,
         }));
         setServices(mapped.sort((a, b) => a.name.localeCompare(b.name)));
@@ -350,7 +344,7 @@ export default function EditProviderServicesScreen() {
         Alert.alert('Erro', error?.message || 'Não foi possível carregar seus serviços ou o catálogo de serviços.');
       } finally {
         setIsLoading(false);
-        const staggerDelay = isReducedMotionEnabled ? 0 : 140;
+        const staggerDelay = isReducedMotionEnabled ? 0 : 160;
         Animated.stagger(staggerDelay, [
           Animated.timing(formAnim, { toValue: 1, duration: animationDuration, easing: easeOut, useNativeDriver: true }),
           Animated.timing(listHeaderAnim, { toValue: 1, duration: animationDuration, easing: easeOut, useNativeDriver: true }),
@@ -534,17 +528,14 @@ export default function EditProviderServicesScreen() {
     setServiceDesc(String(service.description));
 
     if (service.pricingType === PricingType.FIXED_PRICE || service.pricingType === PricingType.HOURLY) {
-      // Usando safeToFixed para service.price
       const rawPrice = safeToFixed(service.price, 2);
       setServicePrice(rawPrice);
       setServicePriceDisplay(normalizeCurrencyInput(String(Math.round(service.price * 100))).display);
     } else {
-      // Usando safeToFixed para pricePerSquareMeter
       const rawPricePerSquareMeter = safeToFixed(service.pricePerSquareMeter, 2);
       setPricePerSquareMeter(rawPricePerSquareMeter);
       setPricePerSquareMeterDisplay(rawPricePerSquareMeter ? normalizeCurrencyInput(String(Math.round(parseFloat(rawPricePerSquareMeter) * 100))).display : '');
 
-      // Usando safeToFixed para pricePerRoom
       const rawPricePerRoom = safeToFixed(service.pricePerRoom, 2);
       setPricePerRoom(rawPricePerRoom);
       setPricePerRoomDisplay(rawPricePerRoom ? normalizeCurrencyInput(String(Math.round(parseFloat(rawPricePerRoom) * 100))).display : '');
@@ -565,7 +556,7 @@ export default function EditProviderServicesScreen() {
       await deleteProviderServiceOffering(user.providerDetails.id, serviceId);
       setServices(prev => prev.filter(s => s.id !== serviceId));
       Alert.alert('Sucesso', 'O serviço foi removido da sua lista.');
-      resetForm(); // Resetar o formulário após a exclusão
+      resetForm();
     } catch (error: any) {
       console.error('[EditProviderServicesScreen] Erro ao deletar serviço:', error);
       Alert.alert('Erro', error?.message || 'Não foi possível deletar o serviço.');
@@ -602,7 +593,7 @@ export default function EditProviderServicesScreen() {
     <KeyboardAvoidingView
       style={styles.outerContainer}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
     >
       <Stack.Screen options={{ headerShown: false }} />
 
@@ -639,7 +630,7 @@ export default function EditProviderServicesScreen() {
               accessibilityHint={isEditing ? "Não é possível alterar o tipo de serviço em edição." : "Escolha um serviço base para adicionar ou editar."}
             >
               {availableBaseServices.length === 0 ? (
-                 <Picker.Item label="Nenhum serviço disponível" value={undefined} />
+                <Picker.Item label="Nenhum serviço disponível" value={undefined} />
               ) : (
                 availableBaseServices.map(service => (
                   <Picker.Item key={service.id} label={service.name} value={service.id} />
@@ -656,7 +647,7 @@ export default function EditProviderServicesScreen() {
 
           <Text style={styles.inputLabel}>Descrição Detalhada</Text>
           <TextInput
-            style={[styles.input, { height: 90, textAlignVertical: 'top' }]}
+            style={[styles.input, { height: 100, textAlignVertical: 'top' }]}
             placeholder="Ex: Inclui aspiração, lavagem de banheiros, limpeza de cozinha..."
             placeholderTextColor={Colors.textMuted}
             value={serviceDesc}
@@ -712,7 +703,7 @@ export default function EditProviderServicesScreen() {
                 placeholderTextColor={Colors.textMuted}
                 value={serviceDuration}
                 onChangeText={setServiceDuration}
-                keyboardType="default" // Pode ser 'numeric' se você quiser forçar apenas números, mas 'default' permite "2h"
+                keyboardType="default"
                 accessibilityLabel="Duração estimada do serviço"
                 accessibilityHint="Informe a duração esperada do serviço."
               />
@@ -807,57 +798,64 @@ export default function EditProviderServicesScreen() {
   );
 }
 
-// ===== Styles =====
+// ===== Styles (corrigidos: Platform.select com spread, limpos) =====
 const styles = StyleSheet.create({
   outerContainer: {
     flex: 1,
     backgroundColor: Colors.bgSoft,
   },
   scrollViewContent: {
-    paddingBottom: 40,
-    paddingHorizontal: 15,
+    paddingBottom: 50,
+    paddingHorizontal: Spacing.sm,
   },
   customHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: Colors.primary,
-    paddingHorizontal: 15,
-    paddingVertical: Platform.OS === 'ios' ? 50 : 20,
-    paddingTop: Platform.OS === 'ios' ? 50 : 20,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Platform.OS === 'ios' ? 55 : Spacing.lg,
+    paddingTop: Platform.OS === 'ios' ? 55 : Spacing.lg,
     borderBottomLeftRadius: Radii.xl,
     borderBottomRightRadius: Radii.xl,
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 8,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+      },
+      android: { elevation: 10 },
+    }),
   },
   headerBackButton: {
-    marginRight: 15,
+    marginRight: Spacing.xs,
+    padding: Spacing.sm,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '600',
     color: '#FFFFFF',
     flex: 1,
     textAlign: 'center',
+    fontFamily: Platform.OS === 'ios' ? 'SFProDisplay-Regular' : 'System',
   },
   headerActionIconPlaceholder: {
-    width: 24,
-    marginLeft: 15,
+    width: 28,
+    marginLeft: Spacing.xs,
   },
   centeredFeedback: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: Spacing.lg,
     backgroundColor: Colors.bgSoft,
   },
   loadingText: {
-    marginTop: 15,
-    fontSize: 16,
+    marginTop: Spacing.sm,
+    fontSize: 17,
     color: Colors.textMuted,
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Regular' : 'System',
   },
   formContainer: {
     backgroundColor: Colors.surface,
@@ -868,208 +866,231 @@ const styles = StyleSheet.create({
     ...Platform.select({
       ios: {
         shadowColor: Colors.shadow,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.4,
-        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.12,
+        shadowRadius: 16,
       },
-      android: {
-        elevation: 6,
-      },
+      android: { elevation: 8 },
     }),
   },
   formTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '600',
     color: Colors.text,
     marginBottom: Spacing.lg,
     textAlign: 'center',
+    fontFamily: Platform.OS === 'ios' ? 'SFProDisplay-Semibold' : 'System',
   },
   input: {
     backgroundColor: Colors.fieldBg,
     borderRadius: Radii.pill,
-    paddingVertical: Platform.OS === 'ios' ? 12 : 10,
-    paddingHorizontal: 15,
-    fontSize: 16,
+    paddingVertical: Platform.OS === 'ios' ? 14 : 12,
+    paddingHorizontal: Spacing.lg,
+    fontSize: 17,
     color: Colors.text,
     marginBottom: Spacing.md,
-    minHeight: 45,
+    minHeight: 48,
+    ...Platform.select({
+      ios: { borderWidth: 0.5, borderColor: Colors.border },
+    }),
   },
   inputError: {
     borderColor: Colors.danger,
-    borderWidth: 1, // Adicionar borda para destacar o erro
+    borderWidth: 1.5,
   },
   inputLabel: {
     fontSize: 16,
     fontWeight: '600',
     color: '#495057',
-    marginBottom: 8,
-    marginTop: 15,
+    marginBottom: Spacing.xs,
+    marginTop: Spacing.sm,
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Medium' : 'System',
   },
   pickerContainer: {
     backgroundColor: Colors.fieldBg,
     borderRadius: Radii.pill,
     marginBottom: Spacing.md,
     overflow: 'hidden',
+    ...Platform.select({
+      ios: { borderWidth: 0.5, borderColor: Colors.border },
+    }),
   },
   picker: {
-    height: 50,
+    height: 52,
     width: '100%',
     color: Colors.text,
-    paddingHorizontal: 15,
+    paddingHorizontal: Spacing.lg,
   },
   actionButtonPrimary: {
     backgroundColor: Colors.primary,
     borderRadius: Radii.pill,
-    paddingVertical: 14,
+    paddingVertical: 16,
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: Spacing.sm,
     ...Platform.select({
       ios: {
         shadowColor: Colors.shadow,
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
       },
-      android: {
-        elevation: 5,
-      },
+      android: { elevation: 6 },
     }),
   },
   actionButtonPrimaryText: {
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 17,
+    fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Semibold' : 'System',
   },
   actionButtonSecondary: {
     backgroundColor: Colors.border,
     borderRadius: Radii.pill,
-    paddingVertical: 14,
+    paddingVertical: 16,
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: Spacing.sm,
   },
   actionButtonSecondaryText: {
     color: '#495057',
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 17,
+    fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Medium' : 'System',
   },
   listHeader: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: '600',
     color: Colors.text,
-    marginTop: 10,
-    marginBottom: 15,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.md,
+    fontFamily: Platform.OS === 'ios' ? 'SFProDisplay-Semibold' : 'System',
   },
   flatListContent: {},
   serviceItemWrapper: {
     backgroundColor: Colors.surface,
     borderRadius: Radii.xl,
-    marginVertical: 8,
+    marginVertical: Spacing.sm,
     ...Platform.select({
       ios: {
         shadowColor: Colors.shadow,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.4,
-        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
       },
-      android: {
-        elevation: 6,
-      },
+      android: { elevation: 8 },
     }),
   },
   serviceItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 15,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
     borderRadius: Radii.xl,
   },
   serviceInfo: {
     flex: 1,
-    marginRight: 10,
+    marginRight: Spacing.sm,
   },
   serviceName: {
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: '700',
     color: Colors.text,
-    marginBottom: 4,
+    marginBottom: Spacing.xs,
+    fontFamily: Platform.OS === 'ios' ? 'SFProDisplay-Bold' : 'System',
   },
   serviceDescription: {
-    fontSize: 15,
+    fontSize: 16,
     color: Colors.textMuted,
-    marginBottom: 4,
+    marginBottom: Spacing.xs,
+    lineHeight: 22,
   },
   servicePrice: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
     color: Colors.primary,
-    marginBottom: 2,
+    marginBottom: 4,
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Semibold' : 'System',
   },
   serviceDuration: {
-    fontSize: 13,
+    fontSize: 14,
     color: Colors.textSubtle,
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Regular' : 'System',
   },
   inputHint: {
-    fontSize: 12,
+    fontSize: 13,
     color: Colors.textMuted,
-    marginBottom: 15,
+    marginBottom: Spacing.lg,
     textAlign: 'center',
-    paddingHorizontal: 10,
+    paddingHorizontal: Spacing.sm,
+    lineHeight: 18,
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Regular' : 'System',
   },
   serviceActions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: Spacing.sm,
     alignItems: 'center',
   },
   iconBtn: {
-    padding: 8,
-    borderRadius: 12,
+    padding: Spacing.sm,
+    borderRadius: 14,
     backgroundColor: Colors.fieldBg,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+      },
+      android: { elevation: 2 },
+    }),
   },
   listSeparator: {
     height: 0,
   },
   saveButtonContainer: {
-    marginTop: 20,
-    marginBottom: 10,
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.sm,
   },
   emptyListContainer: {
     alignItems: 'center',
-    paddingVertical: 36,
+    paddingVertical: Spacing.xl,
     backgroundColor: Colors.surface,
     borderRadius: Radii.xl,
     ...Platform.select({
       ios: {
         shadowColor: Colors.shadow,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.4,
-        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
       },
-      android: {
-        elevation: 6,
-      },
+      android: { elevation: 8 },
     }),
   },
   emptyListText: {
-    fontSize: 20,
+    fontSize: 21,
     fontWeight: '700',
     color: '#343A40',
-    marginTop: 15,
-    marginBottom: 5,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.xs,
     textAlign: 'center',
+    fontFamily: Platform.OS === 'ios' ? 'SFProDisplay-Bold' : 'System',
   },
   emptyListSubText: {
-    fontSize: 15,
+    fontSize: 16,
     color: Colors.textMuted,
     textAlign: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: Spacing.lg,
+    lineHeight: 22,
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Regular' : 'System',
   },
   formErrorText: {
     color: Colors.danger,
     textAlign: 'center',
     marginBottom: Spacing.md,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '500',
-    paddingHorizontal: 10,
+    paddingHorizontal: Spacing.sm,
+    lineHeight: 20,
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Medium' : 'System',
   },
 });

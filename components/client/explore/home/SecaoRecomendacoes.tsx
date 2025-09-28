@@ -17,7 +17,7 @@ const SecaoRecomendacoes: React.FC<SecaoRecomendacoesProps> = ({
   titulo,
   data,
   onVerTudoPress,
-  titleColor = '#636a79',
+  titleColor = '#636a79', // Cor original mantida como fallback
   noDataText = 'Nenhuma recomendação disponível no momento.',
   horizontal = false,
   renderItem,
@@ -27,7 +27,7 @@ const SecaoRecomendacoes: React.FC<SecaoRecomendacoesProps> = ({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={[styles.sectionTitle, { color: titleColor }]}>{titulo}</Text>
+        <Text style={styles.sectionTitle}>{titulo}</Text>
         {onVerTudoPress && (
           <TouchableOpacity onPress={onVerTudoPress} style={styles.viewAllButton}>
             <Text style={styles.viewAllText}>
@@ -63,20 +63,24 @@ const styles = StyleSheet.create({
   container: {
     marginTop: -15,
     marginBottom: 1,
-   backgroundColor: 'transparent',
+    backgroundColor: 'transparent', // Mantido transparente conforme original, mas pode ser 'rgba(255,255,255,0.65)' para efeito de vidro
+    // borderRadius: 18, // Adicionar se o background for ativado
+    // paddingTop: 5, // Adicionar se o background for ativado
   },
   header: {
     paddingHorizontal: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 5,
   },
   sectionTitle: {
-      fontSize: 15,
-        fontFamily: 'Montserrat-Regular',
-        fontWeight: '600',
-        color: '#979eac2b',
+      fontSize: 18,
+      fontFamily: 'Montserrat-Regular',
+      fontWeight: '600',
+      // PREMIUM: Estilo de título refinado
+      color: 'rgba(44, 62, 80, 0.85)',
+      letterSpacing: 0.5,
   },
   viewAllButton: {
     flexDirection: 'row',
@@ -91,7 +95,6 @@ const styles = StyleSheet.create({
   cardsScrollContainer: {
     paddingHorizontal: 15,
     paddingBottom: 10,
-    
   },
   emptyText: {
     flex: 1,

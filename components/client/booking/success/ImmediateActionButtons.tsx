@@ -1,8 +1,10 @@
 // LimpeJaApp/app/(client)/bookings/components/success/ImmediateActionButtons.tsx
-import React, { useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform, Animated, Easing } from 'react-native';
+import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { AppColors, AppShadows } from '../../../../constants/appStyles'; // Importe AppColors e AppShadows
+import { AppColors, AppShadows } from '../../../../constants/appStyles';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
 
 interface ImmediateActionButtonsProps {
   onAddToCalendar: () => void;
@@ -15,111 +17,60 @@ export default function ImmediateActionButtons({
   onContactProvider,
   headerPrimaryColor,
 }: ImmediateActionButtonsProps) {
-  // Animações de entrada para a seção
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const translateYAnim = useRef(new Animated.Value(20)).current;
-  const scaleAnim = useRef(new Animated.Value(0.95)).current;
-
-  // Animações para os botões
-  const button1ScaleAnim = useRef(new Animated.Value(1)).current;
-  const button2ScaleAnim = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 500,
-        delay: 600, // Atraso para aparecer depois da seção PIX
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-      Animated.timing(translateYAnim, {
-        toValue: 0,
-        duration: 500,
-        delay: 600,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 500,
-        delay: 600,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
-
-  const onPressInButton = (animValue: Animated.Value) => {
-    Animated.spring(animValue, {
-      toValue: 0.95,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const onPressOutButton = (animValue: Animated.Value) => {
-    Animated.spring(animValue, {
-      toValue: 1,
-      friction: 3,
-      tension: 40,
-      useNativeDriver: true,
-    }).start();
-  };
-
   return (
-    <Animated.View
-      style={[
-        styles.actionButtonsContainerImmediate,
-        { opacity: fadeAnim, transform: [{ translateY: translateYAnim }, { scale: scaleAnim }] },
-      ]}
-    >
+    <View style={styles.actionButtonsContainerImmediate}>
       <TouchableOpacity
-        style={[styles.actionButtonImmediate, { transform: [{ scale: button1ScaleAnim }] }]}
+        style={styles.actionButtonImmediate}
         onPress={onAddToCalendar}
-        onPressIn={() => onPressInButton(button1ScaleAnim)}
-        onPressOut={() => onPressOutButton(button1ScaleAnim)}
+        activeOpacity={0.7} // Feedback tátil nativo, sem jitter
       >
         <Ionicons name="calendar-outline" size={20} color={AppColors.primaryInteractive} />
-        <Text style={styles.actionButtonImmediateText}>Adicionar ao Calendário</Text>
+        <Text style={styles.actionButtonImmediateText} numberOfLines={1} maxFontSizeMultiplier={1.2}>Adicionar ao Calendário</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={[styles.actionButtonImmediate, { transform: [{ scale: button2ScaleAnim }] }]}
+        style={[styles.actionButtonImmediate, styles.actionButtonSpacing]} // Espaçamento fixo sem gap
         onPress={onContactProvider}
-        onPressIn={() => onPressInButton(button2ScaleAnim)}
-        onPressOut={() => onPressOutButton(button2ScaleAnim)}
+        activeOpacity={0.7}
       >
         <Ionicons name="chatbubbles-outline" size={20} color={AppColors.primaryInteractive} />
-        <Text style={styles.actionButtonImmediateText}>Contatar Prestador</Text>
+        <Text style={styles.actionButtonImmediateText} numberOfLines={1} maxFontSizeMultiplier={1.2}>Contatar Prestador</Text>
       </TouchableOpacity>
-    </Animated.View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   actionButtonsContainerImmediate: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-evenly', // Espaçamento uniforme, sem flutuação
     width: '100%',
-    marginTop: 15,
-    marginBottom: 20,
-    paddingHorizontal: 20,
+    maxWidth: SCREEN_WIDTH - 32, // Fix: Ajuste para safe areas iOS, previne lateral scroll
+    alignSelf: 'center',
+    marginTop: 16,
+    marginBottom: 24,
+    paddingHorizontal: 16, // Fix: Padding fixo para evitar gaps laterais no iOS
   },
   actionButtonImmediate: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: AppColors.backgroundNeutral + '50', // Usando AppColors
+    backgroundColor: `${AppColors.backgroundNeutral}50`,
     borderRadius: 10,
-    paddingVertical: 4,
-    marginHorizontal: 8,
-    ...AppShadows.small, // Usando AppShadows
+    paddingVertical: 12, // Touch target maior para conforto (44px+)
+    marginHorizontal: 4, // Fix: Reduzido para caber no iOS sem overflow
+    minHeight: 44, // HIG compliance
+    ...AppShadows.small,
+  },
+  actionButtonSpacing: {
+    marginLeft: 8, // Espaçamento fixo entre botões, sem wrap/gap (reduzido para iOS)
   },
   actionButtonImmediateText: {
     fontSize: 12,
     fontWeight: '600',
-    color: AppColors.primaryInteractive, // Usando AppColors
-    marginLeft: 5,
+    color: AppColors.primaryInteractive,
+    marginLeft: 8, // Alinhamento fixo do texto
+    flexShrink: 1, // Evita overflow lateral
   },
 });

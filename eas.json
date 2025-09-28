@@ -1,47 +1,52 @@
-    {
-      "cli": {
-        "version": ">= 7.6.0",
-        "appVersionSource": "remote"
+{
+  "cli": {
+    "version": ">= 7.6.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "ios": {
+        "image": "latest",
+        "simulator": false
       },
-      "build": {
-        "development": {
-          "developmentClient": true,
-          "distribution": "internal",
-          "android": {
-            "image": "latest",
-            "buildType": "apk"
-          }
-        },
-        "apk_direct_test": {
-          "distribution": "internal",
-          "android": {
-            "buildType": "apk",
-            "image": "latest"
-          },
-          "env": {
-            "EXPO_PUBLIC_API_BASE_URL": "https://limpeja-backend-production.up.railway.app",
-            "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyBt5-IB2CI9fKOeWcGFEM4ZJ57ix-cUHpg",
-            "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "semiotic-anvil-461613-c0.firebaseapp.com",
-            "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "semiotic-anvil-461613-c0",
-            "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "semiotic-anvil-461613-c0.appspot.com",
-            "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "35489557635",
-            "EXPO_PUBLIC_FIREBASE_APP_ID": "1:35489557635:android:fa20487f5dbc67e07fffb6"
-            // Adicione outras variáveis EXPO_PUBLIC_ que você usa no seu app
-          }
-        },
-        "production": {
-          "distribution": "store",
-          "android": {
-            "image": "latest"
-          }
-        }
+      "android": {
+        "image": "latest",
+        "buildType": "apk"
+      }
+    },
+    "apk_direct_test": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "image": "latest"
       },
-      "submit": {
-        "production": {
-          "android": {
-            "track": "internal"
-          }
-        }
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://limpeja-backend-production.up.railway.app",
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyBt5-IB2CI9fKOeWcGFEM4ZJ57ix-cUHpg",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "semiotic-anvil-461613-c0.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "semiotic-anvil-461613-c0",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "semiotic-anvil-461613-c0.appspot.com",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "35489557635",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:35489557635:android:fa20487f5dbc67e07fffb6"
+      }
+    },
+    "production": {
+      "distribution": "store",
+      "ios": {
+        "image": "latest"
+      },
+      "android": {
+        "image": "latest"
       }
     }
-    
+  },
+  "submit": {
+    "production": {
+      "android": {
+        "track": "internal"
+      }
+    }
+  }
+}

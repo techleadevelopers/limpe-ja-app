@@ -1,6 +1,6 @@
 // LimpeJaApp/app/(client)/bookings/components/success/ProviderInfoSection.tsx
 import React, { useEffect, useRef } from 'react';
-import { Image, StyleSheet, Text, View, Animated, Easing } from 'react-native';
+import { Image, StyleSheet, Text, View, Animated, Easing, Platform } from 'react-native';
 import { renderStars } from '../../../../utils/ui-helpers'; // Assumindo que renderStars está aqui
 import { AppColors } from '../../../../constants/appStyles'; // Importe AppColors
 import { sanitizeText } from '../../../../utils/formatters'; // Importar sanitizeText
@@ -28,18 +28,21 @@ export default function ProviderInfoSection({
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 500,
+        delay: 0, // Início imediato para header premium
         easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }),
       Animated.timing(translateYAnim, {
         toValue: 0,
         duration: 500,
+        delay: 0,
         easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }),
       Animated.timing(scaleAnim, {
         toValue: 1,
         duration: 500,
+        delay: 0,
         easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }),
@@ -74,19 +77,21 @@ const styles = StyleSheet.create({
   providerHeaderSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 5,
+    marginBottom: 16, // Alinhamento lógico para fluxo downward
     paddingHorizontal: 5,
+    paddingTop: Platform.OS === 'android' ? 8 : 0, // Cross-platform
   },
   providerAvatar: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    marginRight: 10,
+    marginRight: 12, // Espaçamento fixo
     borderWidth: 3,
     borderColor: AppColors.borderNeutral,
   },
   providerHeaderText: {
     flex: 1,
+    flexShrink: 1, // Evita overflow
   },
   providerNameText: {
     fontSize: 15,

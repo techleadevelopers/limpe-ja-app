@@ -1,77 +1,83 @@
-// LimpeJaApp/app.config.ts
 import 'dotenv/config'; // Garante que as variáveis do .env sejam carregadas
-
 import { ExpoConfig } from '@expo/config';
 
 export default ({ config }: { config: ExpoConfig }): ExpoConfig => {
   return {
     ...config,
-    "name": "LimpeJá",
-    "slug": "limpeja",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "cleaning",
-    "userInterfaceStyle": "automatic",
-    "splash": {
-      "image": "./assets/images/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+    name: "LimpeJá",
+    slug: "limpeja",
+    version: "1.0.0",
+    orientation: "portrait",
+    icon: "./assets/images/icon.png",
+    scheme: "cleaning",
+    userInterfaceStyle: "automatic",
+    splash: {
+      image: "./assets/images/splash.png",
+      resizeMode: "contain",
+      backgroundColor: "#ffffff"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
-    "ios": {
-      "supportsTablet": true,
-      // "googleServicesFile": "./GoogleService-Info.plist" // REMOVIDO: Esta linha não é válida e o foco é Android
+    assetBundlePatterns: ["**/*"],
+
+    ios: {
+      supportsTablet: true,
+      bundleIdentifier: "com.techleadevelopers.limpeja", // 🔹 obrigatório
+      infoPlist: {
+        ITSAppUsesNonExemptEncryption: false, // 🔹 criptografia padrão/exempt
+      },
+      // googleServicesFile: "./GoogleService-Info.plist" // só se usar Firebase iOS
     },
-  "android": {
-  "versionCode": 1,
-  "adaptiveIcon": {
-    "foregroundImage": "./assets/images/adaptive-icon.png",
-    "backgroundColor": "#ffffff"
-  },
-      "package": "com.techleadevelopers.limpeja",
-      "googleServicesFile": "./google-services.json" // Certifique-se de que este arquivo existe na raiz do seu projeto
+
+    android: {
+      versionCode: 1,
+      adaptiveIcon: {
+        foregroundImage: "./assets/images/adaptive-icon.png",
+        backgroundColor: "#ffffff"
+      },
+      package: "com.techleadevelopers.limpeja",
+      googleServicesFile: "./google-services.json"
     },
-    "web": {
-      "bundler": "metro",
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
+
+    web: {
+      bundler: "metro",
+      output: "static",
+      favicon: "./assets/images/favicon.png"
     },
-    "plugins": [
+
+    plugins: [
       "expo-router",
-       "expo-localization",
-       "expo-secure-store",
+      "expo-localization",
+      "expo-secure-store",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          image: "./assets/images/splash.png",
+          imageWidth: 200,
+          resizeMode: "contain",
+          backgroundColor: "#ffffff"
         }
       ],
-      "@react-native-firebase/app" // Plugin para configurar o Firebase no Expo
+      "@react-native-firebase/app"
     ],
-    "experiments": {
-      "typedRoutes": true
+
+    experiments: {
+      typedRoutes: true
     },
-    "extra": {
+
+    extra: {
       ...config.extra,
-      "backendApiUrl": process.env.EXPO_PUBLIC_API_BASE_URL || "https://limpeja-backend-production.up.railway.app/",
-      "environment": process.env.NODE_ENV || "production",
-      "router": {},
-      "eas": {
-        "projectId": process.env.EAS_PROJECT_ID || "a33ee4a2-86fc-43b8-8d99-b258381b2a1f"
+      backendApiUrl: process.env.EXPO_PUBLIC_API_BASE_URL || "https://limpeja-backend-production.up.railway.app/",
+      environment: process.env.NODE_ENV || "production",
+      router: {},
+      eas: {
+        projectId: process.env.EAS_PROJECT_ID || "a33ee4a2-86fc-43b8-8d99-b258381b2a1f"
       },
-      "firebaseApiKey": process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
-      "firebaseAuthDomain": process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
-      "firebaseProjectId": process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
-      "firebaseStorageBucket": process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
-      "firebaseMessagingSenderId": process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-      "firebaseAppId": process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
-      "firebaseMeasurementId": process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID // Opcional
+      firebaseApiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+      firebaseAuthDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+      firebaseProjectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+      firebaseStorageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+      firebaseMessagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+      firebaseAppId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
+      firebaseMeasurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID
     }
   };
 };

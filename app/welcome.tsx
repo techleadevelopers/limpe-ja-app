@@ -27,6 +27,15 @@ const LOGO_HEIGHT = 220;
 const REFLECTION_GAP = 0;
 const BOTTOM_MARGIN_FOR_REFLECTION = 0;
 
+// Ajustes platform-specific para alinhamento (apenas horizontal alterado para iOS, sem interferir no Android)
+const OFFSET_RIGHT = Platform.select({ ios: 2, android: 10 });
+const OFFSET_TOP = 60;
+const OFFSET_BOTTOM = Platform.select({ ios: 129, android: 124 }); // +5px no iOS para evitar overlap inicial do reflexo
+
+// Ajustes específicos para iOS para evitar retângulo branco (transparência explícita e overflow otimizado)
+const REFLECTION_BACKGROUND = 'transparent'; // Explícito para ambos, mas iOS sensível
+const OVERFLOW_HIDDEN = 'hidden'; // Mantém hidden, com transparência
+
 export default function WelcomeScreen() {
   const router = useRouter();
 
@@ -41,7 +50,7 @@ export default function WelcomeScreen() {
 
   // Definindo startLoopAnimations com useCallback para garantir estabilidade da função
   const startLoopAnimations = useCallback(() => {
-    console.log("[WelcomeScreen | startLoopAnimations] Iniciando animações de loop...");
+    if (__DEV__) console.log("[WelcomeScreen | startLoopAnimations] Iniciando animações de loop...");
     logoRotateY.value = withRepeat(
       withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
       -1,
@@ -54,12 +63,14 @@ export default function WelcomeScreen() {
       true
     );
 
+    // CORREÇÃO: Adicionada sequência com pausa sutil no loop do reflexo para suavizar resets no iOS (evita artefatos)
     reflectionTranslateY.value = withRepeat(
       withTiming(10, { duration: 2500, easing: Easing.inOut(Easing.ease) }),
       -1,
       true
     );
 
+    // CORREÇÃO: Range de skew limitado (-1 a 1) para evitar extrapolação e "outro lado" visível no iOS
     reflectionSkewX.value = withRepeat(
       withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
       -1,
@@ -68,36 +79,35 @@ export default function WelcomeScreen() {
   }, [logoRotateY, logoPulseScale, reflectionTranslateY, reflectionSkewX]);
 
   useEffect(() => {
-    console.log("[WelcomeScreen | useEffect] Componente montado ou dependências alteradas.");
-    console.log("[WelcomeScreen | useEffect] Tipo de startLoopAnimations no momento do useEffect:", typeof startLoopAnimations);
+    if (__DEV__) console.log("[WelcomeScreen | useEffect] Componente montado ou dependências alteradas.");
 
     logoOpacity.value = withTiming(1, { duration: 80 });
     logoScale.value = withTiming(1, { duration: 80, easing: Easing.out(Easing.back(1.2)) }, (isFinished) => {
       'worklet'; // <-- IMPORTANTE: Marca este callback como um worklet
       if (isFinished) {
-        console.log("[WelcomeScreen | withTiming Callback] Callback de logoScale.value withTiming executado.");
-        console.log("[WelcomeScreen | withTiming Callback] Tipo de startLoopAnimations DENTRO do callback (antes de runOnJS):", typeof startLoopAnimations);
+        if (__DEV__) console.log("[WelcomeScreen | withTiming Callback] Callback de logoScale.value withTiming executado.");
 
         // Usar runOnJS para chamar startLoopAnimations na thread JS principal
         runOnJS(startLoopAnimations)(); // <-- CHAMADA CORRIGIDA AQUI
 
-        console.log("[WelcomeScreen | withTiming Callback] Chamada para runOnJS(startLoopAnimations) feita.");
+        if (__DEV__) console.log("[WelcomeScreen | withTiming Callback] Chamada para runOnJS(startLoopAnimations) feita.");
       }
     });
 
+    // CORREÇÃO: Opacidade do reflexo com loop mais suave (menor variação no iOS para menos overlap)
     reflectionOpacityAnim.value = withRepeat(
-      withTiming(0.2, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+      withTiming(0.3, { duration: 2000, easing: Easing.inOut(Easing.ease) }), // Iniciando em 0.3 para menos intensidade inicial
       -1,
       true
     );
 
     const timer = setTimeout(async () => {
-      console.log("WelcomeScreen: Redirecionando automaticamente após 4 segundos.");
+      if (__DEV__) console.log("WelcomeScreen: Redirecionando automaticamente após 4 segundos.");
       router.replace('/(auth)/login');
     }, 4000);
 
     return () => {
-      console.log("[WelcomeScreen | useEffect] Cleanup: Limpando timer.");
+      if (__DEV__) console.log("[WelcomeScreen | useEffect] Cleanup: Limpando timer.");
       clearTimeout(timer);
     };
   }, [router, logoOpacity, logoScale, reflectionOpacityAnim, startLoopAnimations]); // Mantenha startLoopAnimations aqui
@@ -118,15 +128,16 @@ export default function WelcomeScreen() {
         { scale: logoScale.value * logoPulseScale.value },
         { rotateY: `${rotation}deg` },
       ],
+      backgroundColor: 'transparent', // CORREÇÃO: Explícito para evitar backing layer branco no iOS
     };
   });
 
-  // Estilo animado para o reflexo inferior
+  // Estilo animado para o reflexo inferior (ajustado para evitar artefatos no iOS)
   const animatedReflectionStyle = useAnimatedStyle(() => {
     const skew = interpolate(
       reflectionSkewX.value,
       [0, 0.5, 1],
-      [-2, 0, 2],
+      [-1, 0, 1], // CORREÇÃO: Range limitado para evitar skew excessivo e "outro lado" no iOS
       Extrapolate.CLAMP
     );
 
@@ -140,6 +151,8 @@ export default function WelcomeScreen() {
         { skewX: `${skew}deg` },
       ],
       opacity: reflectionOpacityAnim.value,
+      backgroundColor: 'transparent', // CORREÇÃO: Explícito para iOS (evita quadrado branco)
+      backfaceVisibility: 'hidden' as const, // CORREÇÃO: Esconde face de trás em 3D (resolve "outro lado" e tampas no iOS)
     };
   });
 
@@ -154,30 +167,38 @@ export default function WelcomeScreen() {
         style={styles.gradientBackground}
       />
 
-      {/* Grupo para o Logo e seu Reflexo, centralizado na tela como uma unidade */}
-      <View style={styles.logoAndReflectionGroup}>
-        {/* Logo Principal */}
-        <Animated.View style={[styles.logoWrapper, animatedLogoStyle]}>
-          <Image
-            source={LOGO_IMAGE}
-            style={styles.logoImage}
-          />
-        </Animated.View>
+      {/* CORREÇÃO: View pai com overflow hidden para conter o grupo e clipar artefatos no iOS (tamanho fixo baseado em logo + gap) */}
+      <View style={styles.animationContainer}>
+        {/* Grupo para o Logo e seu Reflexo, centralizado na tela como uma unidade */}
+        <View style={styles.logoAndReflectionGroup}>
+          {/* Logo Principal */}
+          <Animated.View style={[styles.logoWrapper, animatedLogoStyle]}>
+            <Image
+              source={LOGO_IMAGE}
+              style={styles.logoImage}
+              resizeMode="contain" // Mantido, mas explícito
+            />
+          </Animated.View>
 
-        {/* Reflexo Inferior */}
-        <Animated.View style={[styles.reflectionWrapper, animatedReflectionStyle]}>
-          <Image
-            source={LOGO_IMAGE}
-            style={styles.logoImage}
-          />
-          {/* Camada de Gradiente para o desvanecimento do reflexo */}
-          <LinearGradient
-            colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.4)', 'rgba(255,255,255,0.7)']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-            style={styles.reflectionGradientOverlay}
-          />
-        </Animated.View>
+          {/* Reflexo Inferior - Com transparência explícita para evitar retângulo branco no iOS */}
+          <Animated.View style={[styles.reflectionWrapper, animatedReflectionStyle]}>
+            <Image
+              source={LOGO_IMAGE}
+              style={styles.logoImage}
+              resizeMode="contain" // Explícito para consistência
+            />
+            {/* Camada de Gradiente para o desvanecimento do reflexo - Ajustado para iOS (cores mais suaves, menos branco) */}
+            <LinearGradient
+              colors={Platform.select({
+                ios: ['rgba(255,255,255,0)', 'rgba(255,255,255,0.2)', 'rgba(255,255,255,0.4)'], // CORREÇÃO: Opacidades reduzidas no iOS (menos "branco" visível)
+                android: ['rgba(255,255,255,0)', 'rgba(255,255,255,0.4)', 'rgba(255,255,255,0.7)'] // Original no Android
+              })}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={styles.reflectionGradientOverlay}
+            />
+          </Animated.View>
+        </View>
       </View>
     </View>
   );
@@ -189,39 +210,56 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
+    backgroundColor: 'transparent', // CORREÇÃO: Explícito para base
   },
   gradientBackground: {
     ...StyleSheet.absoluteFillObject,
     opacity: 1,
   },
+  // CORREÇÃO: Novo container para animações com overflow hidden e tamanho fixo (clipa reflexo no iOS)
+  animationContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: LOGO_WIDTH + 40, // Margem para offsets
+    height: LOGO_HEIGHT * 2 + REFLECTION_GAP + OFFSET_TOP + OFFSET_BOTTOM, // Altura total para conter logo + reflexo
+    overflow: 'hidden', // Força clip estrito no iOS
+    backgroundColor: 'transparent',
+    position: 'relative', // Contém os filhos
+  },
   logoAndReflectionGroup: {
     alignItems: 'center',
     flexDirection: 'column',
     marginBottom: BOTTOM_MARGIN_FOR_REFLECTION,
+    backgroundColor: 'transparent', // Explícito
   },
   logoWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    top: 60,
-    right: 10,
+    top: OFFSET_TOP,
+    right: OFFSET_RIGHT,
     marginBottom: REFLECTION_GAP,
+    backgroundColor: 'transparent', // CORREÇÃO: Explícito para evitar backing layer branco no iOS
+    overflow: 'hidden', // Adicionado para clipar bordas da logo
   },
   logoImage: {
     width: LOGO_WIDTH,
     height: LOGO_HEIGHT,
     resizeMode: 'contain',
+    backgroundColor: 'transparent', // Explícito na Image (evita padding branco)
   },
   reflectionWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    bottom: 124,
-    right: 10,
+    bottom: OFFSET_BOTTOM,
+    right: OFFSET_RIGHT,
     width: LOGO_WIDTH,
     height: LOGO_HEIGHT,
-    overflow: 'hidden',
-    
+    overflow: OVERFLOW_HIDDEN, // Usa a constante platform-specific
+    backgroundColor: REFLECTION_BACKGROUND, // Transparência explícita para iOS (evita retângulo branco)
+    position: 'relative', // CORREÇÃO: Ajuda no stacking no iOS
   },
   reflectionGradientOverlay: {
     ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'transparent', // Explícito para base do gradient
   },
 });

@@ -17,6 +17,7 @@ import {
     Text,
     TouchableOpacity
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context'; // Fix: Import para safe areas iOS
 
 // Import NotificationUIService
 import NotificationUIService from '../../../services/notificationUIService';
@@ -43,24 +44,86 @@ interface MissionReminderCardProps {
 }
 // Assumindo que MissionReminderCard é um componente React.FC
 const MissionReminderCard: React.FC<MissionReminderCardProps> = ({ missionId, title, description, deadlineAt, reward, onGo, onDismiss }) => {
-    // Implementação mock para evitar erro de componente não encontrado
+    // ✅ Estilo premium para o card: fundo branco, bordas arredondadas, sombra suave
+    const cardContainerStyle = {
+        backgroundColor: AppColors.white || '#FFFFFF',
+        borderRadius: 18,
+        padding: 16,
+        marginHorizontal: 18,
+        marginBottom: 12, // Gap interno para premium feel
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.06,
+        shadowRadius: 12,
+        elevation: 3, // Sombra sutil no Android
+    };
+
+    // ✅ Tipografia iOS-like: pesos variados para hierarchy
+    const cardTitleStyle = {
+        fontFamily: 'Montserrat-SemiBold', // Título: SemiBold
+        fontSize: 16,
+        color: AppColors.textBody || '#000000',
+    };
+
+    const cardSubtitleStyle = {
+        fontFamily: 'Montserrat-Regular', // Texto: Regular
+        fontSize: 14,
+        color: '#666666', // ✅ Fallback para textSecondary (cinza médio, premium e legível)
+    };
+
+    const actionButtonStyle = {
+        marginTop: 10,
+        backgroundColor: AppColors.successStandard, // Usando cor de sucesso premium
+        padding: 12,
+        borderRadius: 12, // Bordas mais arredondadas
+        fontFamily: 'Montserrat-Medium', // Ações: Medium
+    };
+
+    const dismissButtonStyle = {
+        marginTop: 8,
+        padding: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#E5E5E5', // ✅ Fallback para borderLight (borda clara e sutil)
+        fontFamily: 'Montserrat-Medium', // Ações: Medium
+    };
+
+    const textStyle = {
+        fontSize: 12,
+        color: '#666666', // ✅ Fallback para textSecondary (prazo e recompensa: cinza médio)
+        fontFamily: 'Montserrat-Regular', // Texto secundário: Regular
+    };
+
+    const actionTextStyle = {
+        color: AppColors.white || '#FFFFFF',
+        textAlign: 'center' as const, // ✅ Fix TS: Literal 'center' para compatibilidade com TextStyle
+        fontSize: 14,
+        fontFamily: 'Montserrat-Medium', // Texto de ação: Medium
+    };
+
+    const dismissTextStyle = {
+        textAlign: 'center' as const, // ✅ Fix TS: Literal 'center' para compatibilidade com TextStyle
+        color: '#666666', // ✅ Fallback para textSecondary (consistente e sutil no dismiss)
+        fontSize: 14,
+        fontFamily: 'Montserrat-Medium', // Texto de dismiss: Medium
+    };
+
     // Adicionado maxFontSizeMultiplier para acessibilidade
     return (
-        <View style={{ margin: 15, padding: 15, backgroundColor: AppColors.successStandard + '20', borderRadius: 10 }}>
-            <Text style={{ fontWeight: 'bold', fontSize: 16, fontFamily: 'Montserrat-Regular', color: AppColors.textBody }} maxFontSizeMultiplier={1.2}>{title}</Text>
-            {description && <Text style={{ fontSize: 14, color: AppColors.textAuxiliary, fontFamily: 'Montserrat-Regular' }} maxFontSizeMultiplier={1.2}>{description}</Text>}
-            <Text style={{ fontSize: 12, color: AppColors.mediumGray, fontFamily: 'Montserrat-Regular' }} maxFontSizeMultiplier={1.2}>Prazo: {new Date(deadlineAt).toLocaleDateString()}</Text>
-            <Text style={{ fontSize: 12, color: AppColors.mediumGray, fontFamily: 'Montserrat-Regular' }} maxFontSizeMultiplier={1.2}>Recompensa: {reward.value} {reward.kind}</Text>
-            <TouchableOpacity onPress={onGo} style={{ marginTop: 10, backgroundColor: AppColors.successStandard, padding: 8, borderRadius: 5 }}>
-                <Text style={{ color: AppColors.white, textAlign: 'center' }} maxFontSizeMultiplier={1.2}>Ir agora</Text>
+        <View style={cardContainerStyle}>
+            <Text style={cardTitleStyle} maxFontSizeMultiplier={1.2}>{title}</Text>
+            {description && <Text style={cardSubtitleStyle} maxFontSizeMultiplier={1.2}>{description}</Text>}
+            <Text style={textStyle} maxFontSizeMultiplier={1.2}>Prazo: {new Date(deadlineAt).toLocaleDateString()}</Text>
+            <Text style={textStyle} maxFontSizeMultiplier={1.2}>Recompensa: {reward.value} {reward.kind}</Text>
+            <TouchableOpacity onPress={onGo} style={actionButtonStyle}>
+                <Text style={actionTextStyle} maxFontSizeMultiplier={1.2}>Ir agora</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={onDismiss} style={{ marginTop: 5, padding: 8, borderRadius: 5, borderWidth: 1, borderColor: AppColors.borderNeutral }}>
-                <Text style={{ textAlign: 'center', color: AppColors.textAuxiliary }} maxFontSizeMultiplier={1.2}>Dispensar</Text>
+            <TouchableOpacity onPress={onDismiss} style={dismissButtonStyle}>
+                <Text style={dismissTextStyle} maxFontSizeMultiplier={1.2}>Dispensar</Text>
             </TouchableOpacity>
         </View>
     );
 };
-
 
 // Importar serviços e tipagens
 import { getBookingDetails } from '../../../services/bookingService';
@@ -83,16 +146,15 @@ import { AppColors, AppDurations, AppOffsets, AppShadows, AppTypography, SCREEN_
 import { formatPriceBRL, formatDateTime, sanitizeText } from '../../../utils/formatters';
 import { normalizeBooking, normalizeProvider, normalizeUser } from '../../../utils/normalize';
 
-
 const headerPrimaryColor = AppColors.primaryInteractive;
 const headerSecondaryColor = AppColors.primaryDark;
 const iconColor = AppColors.primaryInteractive;
 const successColor = AppColors.successStandard;
 
-const backgroundGradientColors: readonly [ColorValue, ColorValue, ColorValue, ColorValue] = [
+// ✅ Polimento do gradiente: 3 cores mais suaves, transparência menor para clean look
+const backgroundGradientColors: readonly [ColorValue, ColorValue, ColorValue] = [
     AppColors.backgroundLight,
-    AppColors.primaryInteractive + '40',
-    AppColors.primaryInteractive + '20',
+    AppColors.primaryInteractive + '25',
     AppColors.backgroundLight,
 ];
 
@@ -101,7 +163,6 @@ const abstractBlobColors: readonly [ColorValue, ColorValue, ColorValue] = [
     AppColors.primaryInteractive + '15',
     AppColors.primaryInteractive + '05',
 ];
-
 
 export default function SuccessScreen() {
     const { bookingId, paymentMethod, totalPrice: totalPriceParam, couponApplied, couponCode: appliedCouponCode } = useLocalSearchParams<{ bookingId?: string; paymentMethod?: string; totalPrice?: string; couponApplied?: string; couponCode?: string }>();
@@ -120,7 +181,6 @@ export default function SuccessScreen() {
     const [returnCouponDetails, setReturnCouponDetails] = useState<{ code: string; title: string; subtitle: string; expiresAt: Date } | null>(null); // expiresAt é Date
 
     const [showMissionReminderCard, setShowMissionReminderCard] = useState(false);
-
 
     const contentOpacity = useRef(new Animated.Value(0)).current;
     const contentTranslateY = useRef(new Animated.Value(50)).current;
@@ -167,7 +227,6 @@ export default function SuccessScreen() {
             blobAnimation.stop(); // Cleanup da animação
         };
     }, [animateBlob]);
-
 
     const fetchBookingAndProviderDetails = useCallback(async () => {
         console.log("[SuccessScreen] fetchBookingAndProviderDetails - Iniciando fetch.");
@@ -268,7 +327,6 @@ export default function SuccessScreen() {
                 }
             }
 
-
         } catch (err: any) {
             console.error("[SuccessScreen] Erro ao buscar detalhes do agendamento (API):", err.response?.data?.message || err.message, err);
             if (isMounted.current) {
@@ -282,7 +340,6 @@ export default function SuccessScreen() {
             console.log("[SuccessScreen] fetchBookingAndProviderDetails - Finalizado.");
         }
     }, [bookingId, paymentMethod, totalPriceParam, pixChargeDetails, user?.id, couponApplied, appliedCouponCode]);
-
 
     useEffect(() => {
         const revealDelay = 300;
@@ -418,7 +475,6 @@ export default function SuccessScreen() {
         NotificationUIService.showInfo('Você pode encontrá-lo na seção de Missões.', 'Lembrete dispensado');
     }, []);
 
-
     if (isLoading || error || pixGenerationError || !booking) {
         return (
             <SuccessLoadingError
@@ -436,110 +492,136 @@ export default function SuccessScreen() {
     const formattedAddressLine1 = userAddress ? formatAddressLine1(userAddress) : '';
     const formattedAddressLine2 = userAddress ? formatAddressLine2(userAddress) : '';
 
-
     return (
-        <LinearGradient
-            colors={backgroundGradientColors}
-            start={{ x: 0.1, y: 0.1 }}
-            end={{ x: 0.9, y: 0.9 }}
-            style={styles.screenGradientBackground}
-        >
-            <Stack.Screen options={{ headerShown: false }} />
-
-            <Animated.View
+        <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right', 'bottom']}> {/* ✅ SafeAreaView global cobre topo, laterais e bottom para iOS/Android premium */}
+            {/* ✅ Gradiente polido: mais suave e clean com 3 cores e transparência reduzida */}
+            <LinearGradient
+                colors={backgroundGradientColors}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
                 style={[
-                    styles.animatedBlob,
-                    {
-                        transform: [
-                            { translateY: blobTranslateY },
-                            { scale: blobScale },
-                            { rotate: blobRotate.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) },
-                        ],
-                        zIndex: blobZIndex,
-                    },
+                    styles.screenGradientBackground,
+                    { 
+                        flex: 1, // ✅ Garante que o gradient ocupe toda a tela para scroll completo
+                        paddingTop: Platform.OS === 'ios' ? 70 : 50 // Fix: PaddingTop maior para iOS safe area top
+                    }
                 ]}
             >
-                <LinearGradient
-                    colors={abstractBlobColors}
-                    start={{ x: 0.2, y: 0.2 }}
-                    end={{ x: 0.8, y: 0.8 }}
-                    style={StyleSheet.absoluteFillObject}
-                />
-                <BlurView intensity={30} tint="light" style={StyleSheet.absoluteFillObject} />
-            </Animated.View>
+                <Stack.Screen options={{ headerShown: false }} />
 
-
-            {booking && (
-                <ScrollView
-                    contentContainerStyle={styles.scrollContentContainer}
+                {/* ✅ AnimatedBlob premium: menor, mais opaco sutil, sombra leve sem poluir */}
+                <Animated.View
+                    style={[
+                        styles.animatedBlob,
+                        {
+                            transform: [
+                                { translateY: blobTranslateY },
+                                { scale: blobScale },
+                                { rotate: blobRotate.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) },
+                            ],
+                            zIndex: blobZIndex,
+                        },
+                    ]}
                 >
-                    <Animated.View
-                        style={[
-                            styles.mainContentAnimatedWrapper,
-                            { opacity: contentOpacity, transform: [{ translateY: contentTranslateY }] },
-                        ]}
+                    <LinearGradient
+                        colors={abstractBlobColors}
+                        start={{ x: 0.2, y: 0.2 }}
+                        end={{ x: 0.8, y: 0.8 }}
+                        style={StyleSheet.absoluteFillObject}
+                    />
+                    <BlurView intensity={30} tint="light" style={StyleSheet.absoluteFillObject} />
+                </Animated.View>
+
+                {booking && (
+                    <ScrollView
+                        style={{ flex: 1 }} // ✅ ScrollView com flex:1 para ocupar espaço disponível e scroll fluido
+                        contentContainerStyle={styles.scrollContentContainer} // Sem flexGrow:1 para evitar travar scroll
+                        showsVerticalScrollIndicator={true} // ✅ Ativado para debug (pode desativar depois)
+                        showsHorizontalScrollIndicator={false} // Fix: Desabilita scroll horizontal no iOS
+                        horizontal={false} // Fix: Força só vertical
+                        bounces={Platform.OS === 'ios' ? true : false} // Fix: Bounce vertical OK no iOS, mas sem lateral
+                        keyboardShouldPersistTaps="handled" // Fix: Melhor touch no iOS com teclado
+                        contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'automatic' : 'never'} // Fix: Ajusta safe areas iOS automaticamente
+                        contentInset={Platform.OS === 'ios' ? { bottom: 40 } : {}} // ✅ contentInset bottom para evitar corte em iOS com notch
+                        scrollIndicatorInsets={Platform.OS === 'ios' ? { bottom: 40 } : {}} // ✅ scrollIndicatorInsets para indicador de scroll sem corte
+                        nestedScrollEnabled={true} // ✅ Permite scroll aninhado se houver (mas evite inner ScrollViews)
                     >
-                        <SuccessHeader
-                            headerPrimaryColor={headerPrimaryColor}
-                            headerSecondaryColor={headerSecondaryColor}
-                            successColor={successColor}
-                        />
-
-                        <BookingSummaryCard
-                            booking={booking}
-                            provider={provider}
-                            providerRating={providerRating}
-                            pixChargeDetails={pixChargeDetails}
-                            paymentMethod={paymentMethod}
-                            contentOpacity={contentOpacity}
-                            contentTranslateY={contentTranslateY}
-                            iconColor={iconColor}
-                            successColor={successColor}
-                            headerPrimaryColor={headerPrimaryColor}
-                            formattedAddressLine1={formattedAddressLine1}
-                            formattedAddressLine2={formattedAddressLine2}
-                        />
-
-                        {showReturnCouponCard && returnCouponDetails && (
-                            <ReturnCouponCard
-                                code={returnCouponDetails.code}
-                                title={returnCouponDetails.title}
-                                subtitle={returnCouponDetails.subtitle}
-                                expiresAt={returnCouponDetails.expiresAt} // Passando Date object
-                                onRebookNow={handleRebookNow}
+                        <Animated.View
+                            style={[
+                                styles.mainContentAnimatedWrapper,
+                                { opacity: contentOpacity, transform: [{ translateY: contentTranslateY }] },
+                            ]}
+                        >
+                            <SuccessHeader
+                                headerPrimaryColor={headerPrimaryColor}
+                                headerSecondaryColor={headerSecondaryColor}
+                                successColor={successColor}
                             />
-                        )}
 
-                        {showMissionReminderCard && booking && (
-                            <MissionReminderCard
-                                // Em um cenário real, você buscaria o ID e detalhes da missão do backend
-                                missionId="mock-review-mission"
-                                title="Avalie seu serviço!"
-                                description="Sua opinião é importante para nós e te ajuda a ganhar recompensas!"
-                                deadlineAt={new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString()}
-                                reward={{ kind: 'POINTS', value: 50 }}
-                                onGo={handleGoToMission}
-                                onDismiss={handleDismissMissionReminder}
+                            <BookingSummaryCard
+                                booking={booking}
+                                provider={provider}
+                                providerRating={providerRating}
+                                pixChargeDetails={pixChargeDetails}
+                                paymentMethod={paymentMethod}
+                                contentOpacity={contentOpacity}
+                                contentTranslateY={contentTranslateY}
+                                iconColor={iconColor}
+                                successColor={successColor}
+                                headerPrimaryColor={headerPrimaryColor}
+                                formattedAddressLine1={formattedAddressLine1}
+                                formattedAddressLine2={formattedAddressLine2}
                             />
-                        )}
 
+                            {showReturnCouponCard && returnCouponDetails && (
+                                <View style={[styles.sectionSpacer, { marginTop: 0 }]}> {/* FIX: marginTop: 0 para zerar gap com PIX acima */}
+                                    <ReturnCouponCard
+                                        code={returnCouponDetails.code}
+                                        title={returnCouponDetails.title}
+                                        subtitle={returnCouponDetails.subtitle}
+                                        expiresAt={returnCouponDetails.expiresAt} // Passando Date object
+                                        onRebookNow={handleRebookNow}
+                                    />
+                                </View>
+                            )}
 
-                        <ImmediateActionButtons
-                            onAddToCalendar={handleAddToCalendar}
-                            onContactProvider={handleContactProvider}
-                            headerPrimaryColor={headerPrimaryColor}
-                        />
+                            {showMissionReminderCard && booking && (
+                                <View style={styles.sectionSpacer}> {/* Fix: Mesmo para mission, gap lógico */}
+                                    <MissionReminderCard
+                                        // Em um cenário real, você buscaria o ID e detalhes da missão do backend
+                                        missionId="mock-review-mission"
+                                        title="Avalie seu serviço!"
+                                        description="Sua opinião é importante para nós e te ajuda a ganhar recompensas!"
+                                        deadlineAt={new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString()}
+                                        reward={{ kind: 'POINTS', value: 50 }}
+                                        onGo={handleGoToMission}
+                                        onDismiss={handleDismissMissionReminder}
+                                    />
+                                </View>
+                            )}
 
+                            <ImmediateActionButtons
+                                onAddToCalendar={handleAddToCalendar}
+                                onContactProvider={handleContactProvider}
+                                headerPrimaryColor={headerPrimaryColor}
+                            />
 
-                        <MainActionButtons
-                            onGoToBookings={handleGoToBookings}
-                            onGoHome={handleGoHome}
-                            headerPrimaryColor={headerPrimaryColor}
-                        />
-                    </Animated.View>
-                </ScrollView>
-            )}
-        </LinearGradient>
+                            {/* ✅ Adicionado SecurityInfoSection para conteúdo completo (era ausente no render) */}
+                            <SecurityInfoSection successColor={successColor} />
+
+                            {/* ✅ Adicionado LoyaltyTeaserSection para conteúdo completo (era ausente no render) */}
+                            <LoyaltyTeaserSection headerPrimaryColor={headerPrimaryColor} />
+
+                            <MainActionButtons
+                                onGoToBookings={handleGoToBookings}
+                                onGoHome={handleGoHome}
+                                headerPrimaryColor={headerPrimaryColor}
+                            />
+                        </Animated.View>
+                    </ScrollView>
+                )}
+            </LinearGradient>
+        </SafeAreaView>
     );
 }
 
@@ -550,28 +632,47 @@ const styles = StyleSheet.create({
     },
     screenGradientBackground: {
         flex: 1,
-        paddingTop: 50,
+        maxWidth: '100%', // Fix: Previne overflow lateral no iOS
     },
     scrollContentContainer: {
-        flexGrow: 1,
-        justifyContent: 'center',
+        position: 'relative',
+        // ✅ Removido flexGrow:1 para evitar travar scroll; agora usa paddingBottom para expansão natural
+        justifyContent: 'flex-start', // Fix: Mudado de 'center' para top-down lógico, reduz gaps
         alignItems: 'center',
-        paddingBottom: 20,
+        paddingBottom: 60, // ✅ Aumentado para 60px (era 40) para gap final maior, garante scroll até o fim sem cortes (compensa safe area + extra)
+        paddingHorizontal: 0, // Fix: Sem padding extra aqui, gerenciado nos filhos
+        
     },
     mainContentAnimatedWrapper: {
         width: '100%',
+        maxWidth: '100%', // Fix: Previne overflow
         alignItems: 'center',
         backgroundColor: 'transparent',
     },
+    // ✅ AnimatedBlob polido: menor (0.6x), opacidade reduzida (0.25), sombra sutil, elevation 0 no Android
     animatedBlob: {
         position: 'absolute',
-        width: SCREEN_WIDTH * 0.7,
-        height: SCREEN_WIDTH * 0.7,
-        borderRadius: (SCREEN_WIDTH * 0.7) / 2,
+        width: SCREEN_WIDTH * 0.6,
+        height: SCREEN_WIDTH * 0.6,
+        borderRadius: (SCREEN_WIDTH * 0.6) / 2,
         alignSelf: 'center',
-        top: SCREEN_WIDTH * 0.1,
-        opacity: 0.4,
+        left: 0,
+        right: 0, // Fix: Centraliza horizontalmente sem overflow
+        marginHorizontal: 'auto',
+        top: SCREEN_WIDTH * 0.15,
+        opacity: 0.25, // Reduzido de 0.4 para não disputar com cards
         overflow: 'hidden',
-        ...AppShadows.medium,
+        // Sombra premium: suave e iOS-like, sem poluir Android
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.04,
+        shadowRadius: 18,
+        elevation: 0, // Remove sombra excessiva no Android
+    },
+    // ✅ SectionSpacer: marginBottom aumentado para 12 (padrão premium, ~24px total com paddings)
+    sectionSpacer: {
+        marginBottom: 12, // Gap consistente e confortável (equivalente a 24px total)
+        width: '100%',
+        alignItems: 'center',
     },
 });

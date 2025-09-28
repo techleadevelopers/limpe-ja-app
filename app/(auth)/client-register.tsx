@@ -23,6 +23,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AnimatedErrorMessage } from '../../components/auth/components/AnimatedErrorMessage';
 import { SafeAreaView } from 'react-native-safe-area-context'; // Imported but not used directly in JSX
 
+import AnimatedReanimated, {
+    Easing,
+    Extrapolate,
+    interpolate,
+    useAnimatedStyle,
+    useSharedValue,
+    withRepeat,
+    withTiming,
+} from 'react-native-reanimated';
+
 const LOGO_IMAGE = require('../../assets/images/logo2.png');
 
 const fetchAddressFromRealCepApi = async (cep: string) => {
@@ -99,13 +109,75 @@ export default function ClientRegisterScreen() {
     const mainElementsOpacity = useRef(new Animated.Value(0)).current;
     const mainElementsTranslateY = useRef(new Animated.Value(18)).current;
 
+    // Logo animation shared values (same as login)
+    const logoRotateY = useSharedValue(0);
+    const logoPulseScale = useSharedValue(1);
+    const logoGlow = useSharedValue(0);
+    const logoFloatY = useSharedValue(0);
+
     // Animation for screen entry
     useEffect(() => {
         Animated.parallel([
             Animated.timing(mainElementsOpacity, { toValue: 1, duration: 700, delay: 200, useNativeDriver: true }),
             Animated.timing(mainElementsTranslateY, { toValue: 0, duration: 700, delay: 200, useNativeDriver: true })
-        ]).start();
-    }, [mainElementsOpacity, mainElementsTranslateY]);
+        ]).start(() => {
+            // Start logo loop animations after entry animation (same as login)
+            const startLogoLoopAnimations = () => {
+                logoRotateY.value = withRepeat(
+                    withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+                    -1,
+                    true
+                );
+                logoPulseScale.value = withRepeat(
+                    withTiming(1.02, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+                    -1,
+                    true
+                );
+                logoGlow.value = withRepeat(
+                    withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+                    -1,
+                    true
+                );
+                logoFloatY.value = withRepeat(
+                    withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
+                    -1,
+                    true
+                );
+            };
+            startLogoLoopAnimations();
+        });
+    }, [mainElementsOpacity, mainElementsTranslateY, logoRotateY, logoPulseScale, logoGlow, logoFloatY]);
+
+    // Estilo animado adicional para o logo (same as login)
+    const animatedLogoStyle = useAnimatedStyle(() => {
+        const rotation = interpolate(
+            logoRotateY.value,
+            [0, 0.5, 1],
+            [-5, 0, 5],
+            Extrapolate.CLAMP
+        );
+
+        const floatY = interpolate(
+            logoFloatY.value,
+            [0, 0.5, 1],
+            [0, -6, 0],
+            Extrapolate.CLAMP
+        );
+
+        const glowOpacity = interpolate(logoGlow.value, [0, 1], [0.4, 0.9]);
+
+        return {
+            transform: [
+                { scale: logoPulseScale.value },
+                { rotateY: `${rotation}deg` },
+                { translateY: floatY }
+            ],
+            // Apenas shadowOpacity é animada aqui.
+            // As outras propriedades de sombra (shadowColor, shadowRadius, shadowOffset)
+            // serão definidas no styles.logo estaticamente.
+            shadowOpacity: glowOpacity,
+        };
+    });
 
     // Auto-save to AsyncStorage
     useEffect(() => {
@@ -161,9 +233,29 @@ export default function ClientRegisterScreen() {
         loadFormData();
     }, []);
 
+    // Automatic and robust CEP fetching: Trigger when exactly 8 digits are entered (debounced for robustness)
+    useEffect(() => {
+        const cleanedCep = cep.replace(/\D/g, '');
+        if (cleanedCep.length === 8 && !isLoadingCep) {
+            // Debounce to avoid rapid API calls
+            const timer = setTimeout(() => {
+                fetchAddressFromCep();
+            }, 500);
+            return () => clearTimeout(timer);
+        } else if (cleanedCep.length > 0 && cleanedCep.length !== 8) {
+            // Clear fields if CEP is invalid/incomplete for robustness
+            setStreet(''); setNumber(''); setNeighborhood(''); setCity(''); setState(''); setComplement('');
+            setCepInputError(cleanedCep.length < 8 ? "CEP incompleto. Digite os 8 dígitos." : null);
+        } else if (cleanedCep.length === 0) {
+            // Clear on empty
+            setStreet(''); setNumber(''); setNeighborhood(''); setCity(''); setState(''); setComplement('');
+            setCepInputError(null);
+        }
+    }, [cep, isLoadingCep]);
+
 
     // --- Pure Validation Functions (do not set state, used for `disabled` prop) ---
-    const checkStep1Validity = useCallback(() => {
+    const checkStep1Validity = useCallback(() => { // Step 1: Email + Username
         let isValid = true;
         if (!email.trim()) { isValid = false; }
         else {
@@ -171,30 +263,31 @@ export default function ClientRegisterScreen() {
             if (!emailRegex.test(email.trim())) { isValid = false; }
         }
         if (!username.trim()) { isValid = false; }
-        if (!phone.trim()) {
-            isValid = false;
-        } else {
+        return isValid;
+    }, [email, username]);
+
+    const checkStep2Validity = useCallback(() => { // Step 2: Phone + CPF
+        let isValid = true;
+        if (!phone.trim()) { isValid = false; }
+        else {
             const cleanedPhone = phone.replace(/\D/g, '');
             if (cleanedPhone.length < 10 || cleanedPhone.length > 11) { isValid = false; }
         }
-        return isValid;
-    }, [email, username, phone]);
-
-    const checkStep2Validity = useCallback(() => {
-        let isValid = true;
-        if (!cpf.trim()) {
-            isValid = false;
-        } else {
+        if (!cpf.trim()) { isValid = false; }
+        else {
             const cleanedCpf = cpf.replace(/\D/g, '');
             if (cleanedCpf.length !== 11) { isValid = false; }
         }
-        if (!dateOfBirth.trim()) {
-            isValid = false;
-        } else {
+        return isValid;
+    }, [phone, cpf]);
+
+    const checkStep3Validity = useCallback(() => { // Step 3: DateOfBirth + Password
+        let isValid = true;
+        if (!dateOfBirth.trim()) { isValid = false; }
+        else {
             const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
-            if (!dateRegex.test(dateOfBirth)) {
-                isValid = false;
-            } else {
+            if (!dateRegex.test(dateOfBirth)) { isValid = false; }
+            else {
                 const [day, month, year] = dateOfBirth.split('/').map(Number);
                 const dateObj = new Date(year, month - 1, day);
                 if (isNaN(dateObj.getTime()) || dateObj.getDate() !== day || dateObj.getMonth() !== month - 1 || dateObj.getFullYear() !== year) {
@@ -202,13 +295,10 @@ export default function ClientRegisterScreen() {
                 }
             }
         }
-        if (!password.trim()) {
-            isValid = false;
-        } else if (password.length < 6) {
-            isValid = false;
-        }
+        if (!password.trim()) { isValid = false; }
+        else if (password.length < 6) { isValid = false; }
         return isValid;
-    }, [cpf, dateOfBirth, password]);
+    }, [dateOfBirth, password]);
 
     const checkAddressSubStep1Validity = useCallback(() => { // CEP
         const cleanedCep = cep.replace(/\D/g, '');
@@ -231,11 +321,10 @@ export default function ClientRegisterScreen() {
     }, []);
 
     // --- Validation functions (set state for errors, used for onBlur and handleNext) ---
-    const validateStep1 = useCallback(() => {
+    const validateStep1 = useCallback(() => { // Step 1: Email + Username
         let isValid = true;
         setEmailError(null);
         setUsernameError(null);
-        setPhoneError(null);
 
         if (!email.trim()) {
             setEmailError('O e-mail é obrigatório.');
@@ -252,6 +341,13 @@ export default function ClientRegisterScreen() {
             setUsernameError('O nome completo é obrigatório.');
             isValid = false;
         }
+        return isValid;
+    }, [email, username]);
+
+    const validateStep2 = useCallback(() => { // Step 2: Phone + CPF
+        let isValid = true;
+        setPhoneError(null);
+        setCpfError(null);
 
         if (!phone.trim()) {
             setPhoneError('O telefone é obrigatório.');
@@ -263,14 +359,6 @@ export default function ClientRegisterScreen() {
                 isValid = false;
             }
         }
-        return isValid;
-    }, [email, username, phone]);
-
-    const validateStep2 = useCallback(() => {
-        let isValid = true;
-        setCpfError(null);
-        setDateOfBirthError(null);
-        setPasswordError(null);
 
         if (!cpf.trim()) {
             setCpfError('O CPF é obrigatório.');
@@ -282,6 +370,13 @@ export default function ClientRegisterScreen() {
                 isValid = false;
             }
         }
+        return isValid;
+    }, [phone, cpf]);
+
+    const validateStep3 = useCallback(() => { // Step 3: DateOfBirth + Password
+        let isValid = true;
+        setDateOfBirthError(null);
+        setPasswordError(null);
 
         if (!dateOfBirth.trim()) {
             setDateOfBirthError('A data de nascimento é obrigatória.');
@@ -309,7 +404,7 @@ export default function ClientRegisterScreen() {
             isValid = false;
         }
         return isValid;
-    }, [cpf, dateOfBirth, password]);
+    }, [dateOfBirth, password]);
 
     const validateAddressSubStep1 = useCallback(() => { // CEP
         setCepInputError(null);
@@ -362,22 +457,28 @@ export default function ClientRegisterScreen() {
 
     const handleNext = () => {
         setGeneralError(null);
-        if (currentStep === 1) {
-            if (validateStep1()) { // This one sets errors and returns boolean
+        if (currentStep === 1) { // Step 1: Email + Username
+            if (validateStep1()) {
                 setCurrentStep(2);
             } else {
-                setGeneralError('Por favor, preencha todos os campos básicos corretamente.');
+                setGeneralError('Por favor, preencha e-mail e nome corretamente.');
             }
-        } else if (currentStep === 2) {
-            if (validateStep2()) { // This one sets errors and returns boolean
+        } else if (currentStep === 2) { // Step 2: Phone + CPF
+            if (validateStep2()) {
                 setCurrentStep(3);
+            } else {
+                setGeneralError('Por favor, preencha telefone e CPF corretamente.');
+            }
+        } else if (currentStep === 3) { // Step 3: DateOfBirth + Password
+            if (validateStep3()) {
+                setCurrentStep(4); // New Step 4 for Address
                 setSubStepAddress(1);
             } else {
-                setGeneralError('Por favor, preencha todos os campos pessoais corretamente.');
+                setGeneralError('Por favor, preencha data de nascimento e senha corretamente.');
             }
-        } else if (currentStep === 3) {
+        } else if (currentStep === 4) { // Step 4: Address
             if (subStepAddress === 1) {
-                if (validateAddressSubStep1()) { // This one sets errors and returns boolean
+                if (validateAddressSubStep1()) {
                     if (!isLoadingCep) {
                         setSubStepAddress(2);
                     } else {
@@ -387,17 +488,19 @@ export default function ClientRegisterScreen() {
                     setGeneralError("CEP inválido. Digite os 8 dígitos.");
                 }
             } else if (subStepAddress === 2) {
-                if (validateAddressSubStep2()) { // This one sets errors and returns boolean
+                if (validateAddressSubStep2()) {
                     setSubStepAddress(3);
                 } else {
                     setGeneralError('Por favor, preencha todos os campos de endereço corretamente.');
                 }
             } else if (subStepAddress === 3) {
-                if (validateAddressSubStep3()) { // This one sets errors and returns boolean
+                if (validateAddressSubStep3()) {
                     handleSignUp();
                 }
             }
         }
+        // Sutil delay para transição suave (premium feel)
+        setTimeout(() => {}, 150);
     };
 
     const handleBack = () => {
@@ -417,14 +520,15 @@ export default function ClientRegisterScreen() {
         setStateError(null);
         setComplementError(null);
 
-        if (currentStep === 3) {
+        if (currentStep === 4) { // Address step
             if (subStepAddress === 1) {
-                setCurrentStep(2);
+                setCurrentStep(3);
+                setSubStepAddress(1); // Reset substep when leaving address
             } else {
                 setSubStepAddress(subStepAddress - 1);
             }
-        } else if (currentStep === 2) {
-            setCurrentStep(1);
+        } else if (currentStep > 1) {
+            setCurrentStep(currentStep - 1);
         }
     };
 
@@ -522,11 +626,12 @@ export default function ClientRegisterScreen() {
         // These calls will set errors if validation fails
         const step1Valid = validateStep1();
         const step2Valid = validateStep2();
+        const step3Valid = validateStep3();
         const subStep1Valid = validateAddressSubStep1();
         const subStep2Valid = validateAddressSubStep2();
         const subStep3Valid = validateAddressSubStep3();
 
-        if (!step1Valid || !step2Valid || !subStep1Valid || !subStep2Valid || !subStep3Valid) {
+        if (!step1Valid || !step2Valid || !step3Valid || !subStep1Valid || !subStep2Valid || !subStep3Valid) {
             setGeneralError('Por favor, preencha todos os campos obrigatórios corretamente antes de cadastrar.');
             return;
         }
@@ -600,34 +705,38 @@ export default function ClientRegisterScreen() {
     const signUpButtonAnims = createButtonAnimations();
     const nextButtonAnims = createButtonAnimations();
 
-    // Helper for progress indicator and microcopy
+    // Helper for progress indicator and microcopy (updated for 4 steps)
     const getStepInfo = () => {
         let stepText = '';
         let microcopy = '';
-        let totalSteps = 3;
+        let totalSteps = 4;
 
         switch (currentStep) {
             case 1:
-                stepText = `Etapa 1 de ${totalSteps}: Dados Básicos`;
-                microcopy = 'Precisamos só dos seus dados básicos para começar.';
+                stepText = ` Dados Básicos`;
+                microcopy = 'Vamos começar com e-mail e nome. É rápido!';
                 break;
             case 2:
-                stepText = `Etapa 2 de ${totalSteps}: Dados Pessoais`;
-                microcopy = 'Agora, seus dados pessoais para segurança e identificação.';
+                stepText = `Contato e Identidade`;
+                microcopy = 'Agora, telefone e CPF para contato e verificação.';
                 break;
             case 3:
+                stepText = ` Dados Pessoais`;
+                microcopy = 'Data de nascimento e senha para segurança.';
+                break;
+            case 4:
                 switch (subStepAddress) {
                     case 1:
-                        stepText = `Etapa ${totalSteps}: Endereço`;
+                        stepText = `Etapa 4.1 de ${totalSteps}: Endereço`;
                         microcopy = 'Informe seu CEP e buscamos o endereço automaticamente.';
                         break;
                     case 2:
-                        stepText = `Etapa  ${totalSteps}: Endereço (Detalhes)`;
+                        stepText = `Etapa 4.2 de ${totalSteps}: Endereço (Detalhes)`;
                         microcopy = 'Confirme e complete os detalhes do seu endereço.';
                         break;
                     case 3:
-                        stepText = `Etapa  ${totalSteps}: Endereço (Complemento)`;
-                        microcopy = 'Adicione um complemento para facilitar a localização.';
+                        stepText = `Etapa 4.3 de ${totalSteps}: Endereço (Complemento)`;
+                        microcopy = 'Adicione um complemento para facilitar a localização (opcional).';
                         break;
                 }
                 break;
@@ -636,10 +745,12 @@ export default function ClientRegisterScreen() {
     };
 
     const getBackButtonText = () => {
-        if (currentStep === 3) {
+        if (currentStep === 4) {
             if (subStepAddress === 1) return 'Voltar para Dados Pessoais';
             if (subStepAddress === 2) return 'Voltar para CEP';
             if (subStepAddress === 3) return 'Voltar para Detalhes do Endereço';
+        } else if (currentStep === 3) {
+            return 'Voltar para Contato e Identidade';
         } else if (currentStep === 2) {
             return 'Voltar para Dados Básicos';
         }
@@ -678,14 +789,18 @@ export default function ClientRegisterScreen() {
 
                     <Animated.View style={[styles.contentWrapper, { opacity: mainElementsOpacity, transform: [{translateY: mainElementsTranslateY}] }]}>
                         <View style={styles.logoContainer}>
-                            <Image source={LOGO_IMAGE} style={styles.logo} />
+                            <AnimatedReanimated.Image
+                                source={LOGO_IMAGE}
+                                style={[styles.logo, animatedLogoStyle]} // Aplica ambos os estilos
+                                resizeMode="contain"
+                            />
                         </View>
 
                         <Text style={styles.welcomeSubtitle}>Crie sua conta no LimpeJá !</Text>
                         <Text style={styles.stepIndicatorText}>{stepText}</Text>
                         <Text style={styles.microcopyText}>{microcopy}</Text>
 
-                        {/* Step 1: Informações Básicas */}
+                        {/* Step 1: Email + Username */}
                         {currentStep === 1 && (
                             <View>
                                 {/* Email Input */}
@@ -727,24 +842,6 @@ export default function ClientRegisterScreen() {
                                 </View>
                                 <AnimatedErrorMessage message={usernameError} isVisible={!!usernameError} centered={false} />
 
-                                {/* Telefone Input */}
-                                <View style={[styles.inputWrapper, phoneError ? styles.inputWrapperError : {}]}>
-                                    <View style={styles.iconCircle}>
-                                        <Ionicons name="call-outline" size={20} color="#00BCD4" />
-                                    </View>
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="Telefone (DDD + Número)"
-                                        placeholderTextColor="#A0AEC0"
-                                        value={phone}
-                                        onChangeText={(text) => { setPhone(formatPhoneNumber(text)); setPhoneError(null); }}
-                                        onBlur={validateStep1}
-                                        keyboardType="phone-pad"
-                                        maxLength={15}
-                                    />
-                                </View>
-                                <AnimatedErrorMessage message={phoneError} isVisible={!!phoneError} centered={false} />
-
                                 <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
 
                                 {/* Next Button */}
@@ -762,9 +859,27 @@ export default function ClientRegisterScreen() {
                             </View>
                         )}
 
-                        {/* Step 2: Dados Pessoais */}
+                        {/* Step 2: Phone + CPF */}
                         {currentStep === 2 && (
                             <View>
+                                {/* Telefone Input */}
+                                <View style={[styles.inputWrapper, phoneError ? styles.inputWrapperError : {}]}>
+                                    <View style={styles.iconCircle}>
+                                        <Ionicons name="call-outline" size={20} color="#00BCD4" />
+                                    </View>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="Telefone (DDD + Número)"
+                                        placeholderTextColor="#A0AEC0"
+                                        value={phone}
+                                        onChangeText={(text) => { setPhone(formatPhoneNumber(text)); setPhoneError(null); }}
+                                        onBlur={validateStep2}
+                                        keyboardType="phone-pad"
+                                        maxLength={15}
+                                    />
+                                </View>
+                                <AnimatedErrorMessage message={phoneError} isVisible={!!phoneError} centered={false} />
+
                                 {/* CPF Input */}
                                 <View style={[styles.inputWrapper, cpfError ? styles.inputWrapperError : {}]}>
                                     <View style={styles.iconCircle}>
@@ -782,45 +897,6 @@ export default function ClientRegisterScreen() {
                                     />
                                 </View>
                                 <AnimatedErrorMessage message={cpfError} isVisible={!!cpfError} centered={false} />
-
-                                {/* Data de Nascimento Input */}
-                                <View style={[styles.inputWrapper, dateOfBirthError ? styles.inputWrapperError : {}]}>
-                                    <View style={styles.iconCircle}>
-                                        <Ionicons name="calendar-outline" size={20} color="#00BCD4" />
-                                    </View>
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="Data de Nascimento (DD/MM/AAAA)"
-                                        placeholderTextColor="#A0AEC0"
-                                        value={dateOfBirth}
-                                        onChangeText={(text) => { setDateOfBirth(formatDateOfBirth(text)); setDateOfBirthError(null); }}
-                                        onBlur={validateStep2}
-                                        keyboardType="numeric"
-                                        maxLength={10}
-                                    />
-                                </View>
-                                <AnimatedErrorMessage message={dateOfBirthError} isVisible={!!dateOfBirthError} centered={false} />
-
-                                {/* Password Input */}
-                                <View style={[styles.inputWrapper, passwordError ? styles.inputWrapperError : {}]}>
-                                    <View style={styles.iconCircle}>
-                                        <Ionicons name="lock-closed-outline" size={20} color="#00BCD4" />
-                                    </View>
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="Senha (mínimo 6 caracteres)"
-                                        placeholderTextColor="#A0AEC0"
-                                        value={password}
-                                        onChangeText={(text) => { setPassword(text); setPasswordError(null); }}
-                                        onBlur={validateStep2}
-                                        secureTextEntry={!showPassword}
-                                        textContentType="password"
-                                    />
-                                    <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIconTouchable}>
-                                        <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={22} color="#A0AEC0" />
-                                    </TouchableOpacity>
-                                </View>
-                                <AnimatedErrorMessage message={passwordError} isVisible={!!passwordError} centered={false} />
 
                                 <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
 
@@ -842,8 +918,70 @@ export default function ClientRegisterScreen() {
                             </View>
                         )}
 
-                        {/* Step 3: Endereço (Sub-steps) */}
+                        {/* Step 3: DateOfBirth + Password */}
                         {currentStep === 3 && (
+                            <View>
+                                {/* Data de Nascimento Input */}
+                                <View style={[styles.inputWrapper, dateOfBirthError ? styles.inputWrapperError : {}]}>
+                                    <View style={styles.iconCircle}>
+                                        <Ionicons name="calendar-outline" size={20} color="#00BCD4" />
+                                    </View>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="Data de Nascimento (DD/MM/AAAA)"
+                                        placeholderTextColor="#A0AEC0"
+                                        value={dateOfBirth}
+                                        onChangeText={(text) => { setDateOfBirth(formatDateOfBirth(text)); setDateOfBirthError(null); }}
+                                        onBlur={validateStep3}
+                                        keyboardType="numeric"
+                                        maxLength={10}
+                                    />
+                                </View>
+                                <AnimatedErrorMessage message={dateOfBirthError} isVisible={!!dateOfBirthError} centered={false} />
+
+                                {/* Password Input */}
+                                <View style={[styles.inputWrapper, passwordError ? styles.inputWrapperError : {}]}>
+                                    <View style={styles.iconCircle}>
+                                        <Ionicons name="lock-closed-outline" size={20} color="#00BCD4" />
+                                    </View>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="Senha (mínimo 6 caracteres)"
+                                        placeholderTextColor="#A0AEC0"
+                                        value={password}
+                                        onChangeText={(text) => { setPassword(text); setPasswordError(null); }}
+                                        onBlur={validateStep3}
+                                        secureTextEntry={!showPassword}
+                                        textContentType="password"
+                                    />
+                                    <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIconTouchable}>
+                                        <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={22} color="#A0AEC0" />
+                                    </TouchableOpacity>
+                                </View>
+                                <AnimatedErrorMessage message={passwordError} isVisible={!!passwordError} centered={false} />
+
+                                <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
+
+                                {/* Navigation Buttons */}
+                                <View style={styles.navigationButtons}>
+                                    <TouchableOpacity style={[styles.navButton, styles.backButton]} onPress={handleBack}>
+                                        <Ionicons name="arrow-back-outline" size={20} color="#00BCD4" />
+                                        <Text style={styles.navButtonTextBack}>Voltar</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={[styles.navButton, styles.finalButton, (isLoading || !checkStep3Validity()) && styles.buttonDisabled]} // Usando a função pura aqui
+                                        onPress={handleNext}
+                                        disabled={isLoading || !checkStep3Validity()} // Usando a função pura aqui
+                                    >
+                                        <Text style={styles.navButtonTextNext}>Avançar</Text>
+                                        <Ionicons name="arrow-forward-outline" size={20} color="#fff" />
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        )}
+
+                        {/* Step 4: Endereço (Sub-steps) */}
+                        {currentStep === 4 && (
                             <View>
                                 {/* Sub-step 1: CEP */}
                                 {subStepAddress === 1 && (
@@ -859,7 +997,7 @@ export default function ClientRegisterScreen() {
                                                 placeholderTextColor="#A0AEC0"
                                                 value={cep}
                                                 onChangeText={(text) => { setCep(text.replace(/\D/g, '')); setCepInputError(null); }}
-                                                onBlur={fetchAddressFromCep}
+                                                // Removido onBlur para depender da automação via useEffect
                                                 keyboardType="numeric"
                                                 maxLength={8}
                                             />
@@ -887,7 +1025,7 @@ export default function ClientRegisterScreen() {
                                 {/* Sub-step 2: Detalhes do Endereço */}
                                 {subStepAddress === 2 && (
                                     <View>
-                                        <Text style={styles.subStepTitle}>2. Detalhes do Endereço</Text>
+                                        
                                         {/* Rua Input */}
                                         <View style={[styles.inputWrapper, streetError ? styles.inputWrapperError : {}]}>
                                             <View style={styles.iconCircle}>
@@ -1067,27 +1205,32 @@ const styles = StyleSheet.create({
     },
     contentWrapper: {
         paddingHorizontal: 55,
-        paddingTop: Platform.OS === 'ios' ? 20 : 15,
+        paddingTop: Platform.OS === 'ios' ? 10 : 15,
     },
     logoContainer: {
         alignItems: 'center',
-        top: 10,
-        left: -15,
+        top: 34,
+        left: -8,
     },
     logo: {
-        width: 240,
+        width: 210,
         height: 300,
         resizeMode: 'contain',
+        // Adicione as propriedades de sombra estáticas aqui (same as login)
+        shadowColor: '#8ca3ac98',
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.8, // Opacidade base para a sombra
     },
     welcomeSubtitle: {
         fontSize: 14,
         color: '#8A94A6',
         textAlign: 'center',
         marginBottom: 30,
-        bottom: 110,
+        bottom: 90,
     },
     stepIndicatorText: {
-        fontSize: 16,
+        fontSize: 20,
         fontWeight: 'bold',
         color: '#1C3A5F',
         textAlign: 'center',
@@ -1160,7 +1303,7 @@ const styles = StyleSheet.create({
         paddingVertical: 5,
         width: '100%',
         left: 0,
-        bottom: 40,
+        bottom: 75,
         alignItems: 'center',
         justifyContent: 'center',
         marginTop: 10,

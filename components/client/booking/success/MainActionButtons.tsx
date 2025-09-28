@@ -25,7 +25,7 @@ export default function MainActionButtons({
   const button2ScaleAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    Animated.parallel([
+    const entryAnim = Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 500,
@@ -47,7 +47,10 @@ export default function MainActionButtons({
         easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }),
-    ]).start();
+    ]);
+    entryAnim.start();
+
+    return () => entryAnim.stop(); // Cleanup
   }, []);
 
   const onPressInButton = (animValue: Animated.Value) => {
@@ -78,9 +81,10 @@ export default function MainActionButtons({
         onPress={onGoToBookings}
         onPressIn={() => onPressInButton(button1ScaleAnim)}
         onPressOut={() => onPressOutButton(button1ScaleAnim)}
+        activeOpacity={0.7}
       >
         <Ionicons name="list-outline" size={18} color={AppColors.white} style={{ marginRight: 10 }} />
-        <Text style={styles.downloadButtonText}>Ver Meus Agendamentos</Text>
+        <Text style={styles.downloadButtonText} numberOfLines={1} maxFontSizeMultiplier={1.2}>Ver Meus Agendamentos</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -88,9 +92,10 @@ export default function MainActionButtons({
         onPress={onGoHome}
         onPressIn={() => onPressInButton(button2ScaleAnim)}
         onPressOut={() => onPressOutButton(button2ScaleAnim)}
+        activeOpacity={0.7}
       >
         <Ionicons name="home-outline" size={18} color={AppColors.primaryInteractive} style={{ marginRight: 10 }} />
-        <Text style={[styles.downloadButtonText, { color: AppColors.primaryInteractive }]}>Voltar para o Início</Text>
+        <Text style={[styles.downloadButtonText, { color: AppColors.primaryInteractive }]} numberOfLines={1} maxFontSizeMultiplier={1.2}>Voltar para o Início</Text>
       </TouchableOpacity>
     </Animated.View>
   );
@@ -98,32 +103,34 @@ export default function MainActionButtons({
 
 const styles = StyleSheet.create({
   actionButtonsContainerNew: {
-    width: '98%',
+    width: '100%', // Alinhado full-width para bottom fixo
     alignItems: 'center',
-    paddingVertical: 15,
-    bottom: 13,
-    marginBottom: 0,
+    paddingVertical: 0,
+    // ✅ FIX: Removida margem negativa (-300px iOS); agora 20px consistente para scroll completo e gap confortável no final
+    marginBottom: 20, // Gap premium (20px, permite rolar até o fim sem corte)
+    marginTop: 12, // Gap acima simétrico (era 8/5, aumentado para conforto)
+    paddingHorizontal: 16, // Espaçamento lógico lateral (16px padrão)
   },
   downloadButton: {
     flexDirection: 'row',
-    paddingVertical: 6,
+    paddingVertical: 12, // Touch target ampliado (44px+)
     paddingHorizontal: 25,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    width: '90%',
-    marginBottom: 20,
-    marginTop :-1,
+    width: '100%',
+    marginBottom: 12, // Gap entre botões confortável (era 16, reduzido para compacto mas premium)
+    minHeight: 44, // HIG compliance
     ...AppShadows.medium, // Usando AppShadows
   },
   downloadButtonText: {
     color: AppColors.white, // Usando AppColors
     fontSize: 13,
     fontWeight: '600',
+    flexShrink: 1, // Evita overflow
   },
   secondaryDownloadButton: {
     backgroundColor: AppColors.white, // Usando AppColors
-    bottom: 12,
     ...AppShadows.small, // Usando AppShadows
   },
 });

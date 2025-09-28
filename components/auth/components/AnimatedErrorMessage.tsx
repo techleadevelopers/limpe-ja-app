@@ -37,9 +37,9 @@ export const AnimatedErrorMessage: React.FC<AnimatedErrorMessageProps> = ({
 // Estilos específicos para o AnimatedErrorMessage, agora definidos internamente
 const internalStyles = StyleSheet.create({
   container: {
-    bottom: 35,
+    bottom: 60,
     paddingVertical: 8,
-    paddingHorizontal: 15,
+    paddingHorizontal: 10,
     // Removido backgroundColor e borderRadius daqui se você quiser que o componente pai controle isso
     // ou se o estilo 'inlineErrorMessage' do pai já faz isso.
     // Para manter a UI original, vou manter o que estava no seu código.
@@ -47,7 +47,7 @@ const internalStyles = StyleSheet.create({
   },
   messageText: {
     color: '#E53E3E', // Cor do erro
-    fontSize: 10,
+    fontSize: 11,
     textAlign: 'center', // Padrão para erros centralizados
     marginBottom: 5, // Mantenha se for parte do estilo padrão do erro, senão remova
     marginTop: -32, // Mantenha se for parte do estilo padrão do erro, senão remova

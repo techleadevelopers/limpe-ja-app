@@ -1,26 +1,26 @@
-// LimpeJaApp/app/(provider)/schedule/index.tsx
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+// LimpeJaApp/app/(provider)/profile/index.tsx
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  FlatList,
+  ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
+  Image,
   Platform,
   Animated,
   Alert,
-  RefreshControl,
-  Image,
   Easing,
   AccessibilityInfo,
+  ActivityIndicator, // ADICIONADO: Import para ActivityIndicator
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { Calendar, LocaleConfig, DateData } from 'react-native-calendars';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { formatDate } from '../../../utils/helpers';
+import * as Haptics from 'expo-haptics';
+import { useAuth } from '../../../hooks/useAuth';
+import NotificationUIService from '../../../services/notificationUIService';
 
-// ====== Design tokens (mesmos da UI padronizada) ======
+// ====== Design tokens (consistentes com o projeto - Premium iOS Clean) ======
 const Colors = {
   primary: '#4A90E2',
   primaryDark: '#2A72E7',
@@ -32,603 +32,571 @@ const Colors = {
   textMuted: '#6C757D',
   textSubtle: '#868E96',
   danger: '#D32F2F',
+  success: '#2E7D32',
   shadow: 'rgba(0,0,0,0.08)',
 };
 
 const Radii = {
-  xl: 20,
-  pill: 25,
-  md: 15,
+  xl: 24,
+  pill: 28,
+  md: 16,
+  sm: 12,
 };
 
 const Spacing = {
-  sm: 10,
-  md: 15,
-  lg: 20,
+  xs: 8,
+  sm: 12,
+  md: 18,
+  lg: 24,
+  xl: 32, // ADICIONADO: xl: 32 para resolver o erro TS(2339) em Spacing.xl
 };
 
 const easeOut = Easing.out(Easing.ease);
 
-// ====== Locale PT-BR (Calendário) ======
-LocaleConfig.locales['pt-br'] = {
-  monthNames: [
-    'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
-    'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'
-  ],
-  monthNamesShort: ['Jan.','Fev.','Mar.','Abr.','Mai.','Jun.','Jul.','Ago.','Set.','Out.','Nov.','Dez.'],
-  dayNames: ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'],
-  dayNamesShort: ['DOM','SEG','TER','QUA','QUI','SEX','SÁB'],
-  today: 'Hoje'
-};
-LocaleConfig.defaultLocale = 'pt-br';
-
-// ====== Interface local para Theme (remoção do import externo) ======
-interface Theme {
-  backgroundColor?: string;
-  calendarBackground?: string;
-  textSectionTitleColor?: string;
-  selectedDayBackgroundColor?: string;
-  selectedDayTextColor?: string;
-  todayTextColor?: string;
-  dayTextColor?: string;
-  textDisabledColor?: string;
-  dotColor?: string;
-  selectedDotColor?: string;
-  arrowColor?: string;
-  disabledArrowColor?: string;
-  monthTextColor?: string;
-  indicatorColor?: string;
-  textDayFontFamily?: string;
-  textMonthFontFamily?: string;
-  textDayHeaderFontFamily?: string;
-  textDayFontWeight?:
-    | "normal" | "bold" | "100" | "200" | "300" | "400" | "500" | "600" | "700" | "800" | "900"
-    | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900;
-  textMonthFontWeight?:
-    | "normal" | "bold" | "100" | "200" | "300" | "400" | "500" | "600" | "700" | "800" | "900"
-    | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900;
-  textDayHeaderFontWeight?:
-    | "normal" | "bold" | "100" | "200" | "300" | "400" | "500" | "600" | "700" | "800" | "900"
-    | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900;
-  textDayFontSize?: number;
-  textMonthFontSize?: number;
-  textDayHeaderFontSize?: number;
-  'stylesheet.calendar.header'?: {
-    week?: {
-      marginTop?: number;
-      flexDirection?: 'row' | 'column' | 'row-reverse' | 'column-reverse';
-      justifyContent?: 'flex-start' | 'flex-end' | 'center' | 'space-between' | 'space-around' | 'space-evenly';
-      borderBottomWidth?: number;
-      borderBottomColor?: string;
-      paddingBottom?: number;
-    };
-    dayHeader?: { color?: string };
-  };
-}
-
-// ====== Tipos e dados simulados ======
-interface ProviderAppointment {
-  id: string;
-  clientName: string;
-  clientAvatarUrl?: string;
-  serviceType: string;
-  startTime: string;
-  endTime?: string;
-  date: string;
-  status: 'Confirmado' | 'PendenteCliente' | 'ARealizar' | 'Concluído' | 'Cancelado';
-  addressSummary?: string;
-}
-
-const ALL_PROVIDER_APPOINTMENTS: ProviderAppointment[] = [
-  { id: 'servA1', clientName: 'Fernanda Lima', clientAvatarUrl: 'https://randomuser.me/api/portraits/women/1.jpg', serviceType: 'Limpeza Padrão', startTime: '09:00', endTime: '12:00', date: new Date(Date.now() + 86400000 * 1).toISOString().split('T')[0], status: 'Confirmado', addressSummary: 'Rua das Flores, 100' },
-  { id: 'servA2', clientName: 'Ricardo Alves', clientAvatarUrl: 'https://randomuser.me/api/portraits/men/2.jpg', serviceType: 'Limpeza Pesada', startTime: '14:00', endTime: '18:00', date: new Date(Date.now() + 86400000 * 1).toISOString().split('T')[0], status: 'Confirmado', addressSummary: 'Av. Brasil, 500' },
-  { id: 'servA3', clientName: 'Juliana Moreira', clientAvatarUrl: 'https://randomuser.me/api/portraits/women/3.jpg', serviceType: 'Limpeza de Manutenção', startTime: '10:00', endTime: '13:00', date: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0], status: 'ARealizar', addressSummary: 'Travessa da Paz, 45' },
-  { id: 'servA4', clientName: 'Marcos Andrade', clientAvatarUrl: 'https://randomuser.me/api/portraits/men/4.jpg', serviceType: 'Limpeza de Vidros', startTime: '08:00', endTime: '10:00', date: new Date(Date.now() - 86400000 * 2).toISOString().split('T')[0], status: 'Concluído', addressSummary: 'Rua do Sol, 20' },
-  { id: 'servA5', clientName: 'Ana Paula', clientAvatarUrl: 'https://randomuser.me/api/portraits/women/5.jpg', serviceType: 'Limpeza Pós-Obra', startTime: '09:00', endTime: '17:00', date: new Date(Date.now() + 86400000 * 5).toISOString().split('T')[0], status: 'PendenteCliente', addressSummary: 'Praça da Liberdade, 10' },
-  { id: 'servA6', clientName: 'Pedro Costa', clientAvatarUrl: 'https://randomuser.me/api/portraits/men/6.jpg', serviceType: 'Limpeza Comercial', startTime: '13:00', endTime: '17:00', date: new Date(Date.now() + 86400000 * 1).toISOString().split('T')[0], status: 'ARealizar', addressSummary: 'Av. Central, 800' },
-];
-
-const fetchProviderAppointments = async (_month?: string, _year?: string): Promise<ProviderAppointment[]> => {
-  await new Promise(resolve => setTimeout(resolve, 800));
-  return ALL_PROVIDER_APPOINTMENTS;
-};
-
-// ====== Item animado ======
-const AnimatedAppointmentItem: React.FC<{
-  item: ProviderAppointment;
-  onPress: (item: ProviderAppointment) => void;
-  delay: number;
-}> = ({ item, onPress, delay }) => {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(20)).current;
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+// ====== Hook para Reduced Motion (premium accessibility iOS) ======
+const useReducedMotion = () => {
+  const [isReducedMotionEnabled, setIsReducedMotionEnabled] = useState(false);
 
   useEffect(() => {
+    const updateReducedMotion = async () => {
+      const enabled = await AccessibilityInfo.isReduceMotionEnabled();
+      setIsReducedMotionEnabled(enabled);
+    };
+
+    updateReducedMotion();
+
+    const subscription = AccessibilityInfo.addEventListener(
+      'reduceMotionChanged',
+      setIsReducedMotionEnabled
+    );
+
+    return () => subscription.remove();
+  }, []);
+
+  return isReducedMotionEnabled;
+};
+
+// ====== Hook para Animação de Toque (com haptics premium) ======
+const useAnimatedTouch = () => {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const onPressIn = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Animated.spring(scaleAnim, { toValue: 0.95, useNativeDriver: true, friction: 5 }).start();
+  };
+  const onPressOut = () => {
+    Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, friction: 5, tension: 40 }).start();
+  };
+  return { scaleAnim, onPressIn, onPressOut };
+};
+
+// ====== Componente: AnimatedMenuItem (reutilizável, com animações e accessibility) ======
+interface AnimatedMenuItemProps {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  onPress: () => void;
+  isReducedMotionEnabled: boolean;
+  delay?: number;
+  rightIcon?: keyof typeof Ionicons.glyphMap;
+  isDanger?: boolean; // Para itens como logout
+}
+
+const AnimatedMenuItem: React.FC<AnimatedMenuItemProps> = ({
+  icon,
+  label,
+  onPress,
+  isReducedMotionEnabled,
+  delay = 0,
+  rightIcon = 'chevron-forward',
+  isDanger = false,
+}) => {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
+  const { scaleAnim, onPressIn, onPressOut } = useAnimatedTouch();
+
+  useEffect(() => {
+    const duration = isReducedMotionEnabled ? 0 : 400;
+    const animDelay = isReducedMotionEnabled ? 0 : delay;
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 420, delay, easing: easeOut, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 420, delay, easing: easeOut, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1, duration, delay: animDelay, easing: easeOut, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration, delay: animDelay, easing: easeOut, useNativeDriver: true }),
     ]).start();
-  }, [fadeAnim, slideAnim, delay]);
+  }, [isReducedMotionEnabled, delay]);
 
-  const onPressInItem = () => {
-    Animated.spring(scaleAnim, { toValue: 0.98, useNativeDriver: true }).start();
-  };
-
-  const onPressOutItem = () => {
-    Animated.spring(scaleAnim, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start();
-  };
-
-  const getStatusStyle = (status: ProviderAppointment['status']) => {
-    switch (status) {
-      case 'Confirmado':      return { text: '#2E7D32', background: '#E8F5E9', icon: 'check-circle' };
-      case 'ARealizar':       return { text: Colors.primary, background: '#E3F2FD', icon: 'clock-time-four' };
-      case 'PendenteCliente': return { text: '#FF6F00', background: '#FFF3E0', icon: 'alert-circle' };
-      case 'Concluído':       return { text: '#546E7A', background: '#ECEFF1', icon: 'check-all' };
-      case 'Cancelado':       return { text: Colors.danger, background: '#FFEBEE', icon: 'close-circle' };
-      default:                return { text: '#546E7A', background: '#ECEFF1', icon: 'information' };
-    }
-  };
-
-  const statusStyle = getStatusStyle(item.status);
+  const itemColor = isDanger ? Colors.danger : Colors.primary;
+  const bgColor = isDanger ? '#FFF5F5' : Colors.fieldBg;
 
   return (
     <Animated.View
       style={[
-        styles.appointmentCardWrapper,
-        { opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] }
+        styles.menuItemWrapper,
+        { opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] },
+        { backgroundColor: bgColor },
       ]}
-      accessibilityRole="summary"
-      accessibilityLabel={`Cliente ${item.clientName}, serviço ${item.serviceType}.`}
+      accessibilityRole="button"
+      accessibilityLabel={`${label}. Toque para acessar esta seção.`}
+      accessibilityHint={`Navegue para ${label.toLowerCase()}.`}
     >
       <TouchableOpacity
-        style={styles.appointmentCard}
-        onPress={() => onPress(item)}
-        onPressIn={onPressInItem}
-        onPressOut={onPressOutItem}
-        activeOpacity={0.9}
+        style={styles.menuItem}
+        onPress={onPress}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+        activeOpacity={0.92}
       >
-        {item.clientAvatarUrl ? (
-          <Image source={{ uri: item.clientAvatarUrl }} style={styles.clientAvatar} />
-        ) : (
-          <View style={styles.clientAvatarPlaceholder}>
-            <Ionicons name="person" size={24} color="#FFF" />
-          </View>
-        )}
-
-        <View style={styles.appointmentDetails}>
-          <Text style={styles.appointmentClientName} numberOfLines={1}>{item.clientName}</Text>
-          <Text style={styles.appointmentServiceType} numberOfLines={1}>{item.serviceType}</Text>
-
-          <View style={styles.timeAndLocation}>
-            <Ionicons name="time-outline" size={14} color={Colors.textMuted} style={{ marginRight: 4 }} />
-            <Text style={styles.appointmentTime}>
-              {item.startTime}{item.endTime ? ` - ${item.endTime}` : ''}
-            </Text>
-          </View>
-
-          {item.addressSummary && (
-            <View style={styles.timeAndLocation}>
-              <Ionicons name="location-outline" size={14} color={Colors.textMuted} style={{ marginRight: 4 }} />
-              <Text style={styles.appointmentAddress}>{item.addressSummary}</Text>
-            </View>
-          )}
+        <Ionicons name={icon} size={24} color={itemColor} style={styles.menuItemIcon} accessibilityHidden={true} />
+        <View style={styles.menuItemTextContainer}>
+          <Text style={styles.menuItemLabel}>{label}</Text>
         </View>
-
-        <View style={[styles.appointmentStatusBadge, { backgroundColor: statusStyle.background }]}>
-          <MaterialCommunityIcons name={statusStyle.icon as any} size={14} color={statusStyle.text} />
-          <Text style={[styles.appointmentStatusText, { color: statusStyle.text }]}>{item.status}</Text>
-        </View>
+        <Ionicons name={rightIcon} size={20} color={Colors.textMuted} accessibilityHidden={true} />
       </TouchableOpacity>
     </Animated.View>
   );
 };
 
-// ====== Screen ======
-export default function MyScheduleScreen() {
+// ====== Componente Principal: ProviderProfileScreen ======
+export default function ProviderProfileScreen() {
   const router = useRouter();
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [allAppointments, setAllAppointments] = useState<ProviderAppointment[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { user, logout } = useAuth();
+  const isReducedMotionEnabled = useReducedMotion();
 
+  const [isLogoutConfirming, setIsLogoutConfirming] = useState(false);
+
+  // Animações (otimizadas para reduced motion)
   const headerAnim = useRef(new Animated.Value(0)).current;
-  const calendarAnim = useRef(new Animated.Value(0)).current;
-  const agendaHeaderAnim = useRef(new Animated.Value(0)).current;
-  const feedbackAnim = useRef(new Animated.Value(0)).current;
-
-  const loadAppointments = async () => {
-    try {
-      setIsLoading(true);
-      const data = await fetchProviderAppointments();
-      setAllAppointments(data);
-      Animated.stagger(140, [
-        Animated.timing(calendarAnim, { toValue: 1, duration: 560, easing: easeOut, useNativeDriver: true }),
-        Animated.timing(agendaHeaderAnim, { toValue: 1, duration: 560, easing: easeOut, useNativeDriver: true }),
-        Animated.timing(feedbackAnim, { toValue: 1, duration: 420, easing: easeOut, useNativeDriver: true }),
-      ]).start();
-    } catch (err) {
-      console.error('[MyScheduleScreen] Erro ao buscar agendamentos:', err);
-      Alert.alert('Erro', 'Não foi possível carregar os dados da agenda.');
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  };
+  const menuAnim = useRef(new Animated.Value(0)).current;
+  const logoutAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(headerAnim, { toValue: 1, duration: 520, easing: easeOut, useNativeDriver: true }).start();
-    loadAppointments();
-  }, [headerAnim]);
+    const duration = isReducedMotionEnabled ? 0 : 500;
+    Animated.parallel([
+      Animated.timing(headerAnim, { toValue: 1, duration, easing: easeOut, useNativeDriver: true }),
+      Animated.timing(menuAnim, { toValue: 1, duration: 600, delay: 100, easing: easeOut, useNativeDriver: true }),
+      Animated.timing(logoutAnim, { toValue: 1, duration: 600, delay: 200, easing: easeOut, useNativeDriver: true }),
+    ]).start();
+  }, [isReducedMotionEnabled]);
 
-  const onRefresh = () => {
-    setIsRefreshing(true);
-    loadAppointments();
+  const handleLogout = async () => {
+    if (isReducedMotionEnabled) {
+      // Sem haptic em reduced motion
+    } else {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    }
+    setIsLogoutConfirming(true);
+    Alert.alert(
+      'Sair da Conta',
+      'Tem certeza que deseja sair? Você precisará fazer login novamente para acessar sua conta.',
+      [
+        { text: 'Cancelar', style: 'cancel', onPress: () => setIsLogoutConfirming(false) },
+        {
+          text: 'Sair',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await logout();
+              NotificationUIService.showInfo('Você saiu da conta com sucesso.', 'Logout');
+              AccessibilityInfo.announceForAccessibility('Logout realizado. Redirecionando para tela inicial.');
+              router.replace('/welcome');
+            } catch (error) {
+              console.error('Erro no logout:', error);
+              NotificationUIService.showError('Erro ao sair da conta. Tente novamente.', 'Erro');
+              setIsLogoutConfirming(false);
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
-  const appointmentsForSelectedDate = useMemo(() => {
-    return allAppointments
-      .filter(app => app.date === selectedDate)
-      .sort((a, b) => a.startTime.localeCompare(b.startTime));
-  }, [allAppointments, selectedDate]);
-
-  const markedDates = useMemo(() => {
-    const marks: Record<string, any> = {};
-    allAppointments.forEach(app => {
-      const hasConfirmed = allAppointments.some(a => a.date === app.date && a.status === 'Confirmado');
-      const hasPending = allAppointments.some(a => a.date === app.date && a.status === 'PendenteCliente');
-      const hasUpcoming = allAppointments.some(a => a.date === app.date && a.status === 'ARealizar');
-
-      let dotColor = Colors.primary;
-      if (hasPending) dotColor = '#FF6F00';
-      else if (hasConfirmed || hasUpcoming) dotColor = '#2E7D32';
-
-      marks[app.date] = { marked: true, dotColor };
-    });
-
-    const currentMark = marks[selectedDate] || {};
-    marks[selectedDate] = {
-      ...currentMark,
-      selected: true,
-      selectedColor: Colors.primary,
-      selectedTextColor: '#FFFFFF',
-      marked: currentMark.marked || false,
-      dotColor: currentMark.dotColor || Colors.primary,
-    };
-    return marks;
-  }, [allAppointments, selectedDate]);
-
-  const onDayPress = (day: DateData) => {
-    setSelectedDate(day.dateString);
-    AccessibilityInfo.announceForAccessibility?.(`Data selecionada ${formatDate(day.dateString, { weekday: 'long', day: 'numeric', month: 'long' })}`);
+  const handleMenuPress = (route: string, label: string) => {
+    if (!isReducedMotionEnabled) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    AccessibilityInfo.announceForAccessibility(`Navegando para ${label.toLowerCase()}.`);
+    router.push(route as any);
   };
 
-  const handleAppointmentPress = (item: ProviderAppointment) => {
-    // mantém a navegação atual
-    router.push(`/(provider)/services/${item.id}` as any);
-  };
+  if (!user) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <ActivityIndicator size="large" color={Colors.primary} />
+        <Text style={styles.loadingText}>Carregando perfil...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
+      {/* Header Animado com Avatar */}
       <Animated.View
         style={[
-          styles.customHeader,
-          { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }
+          styles.header,
+          {
+            opacity: headerAnim,
+            transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }],
+          },
         ]}
       >
-        <Text style={styles.headerTitle}>Minha Agenda</Text>
         <TouchableOpacity
-          onPress={() => router.push('/(provider)/schedule/manage-availability' as any)}
-          style={styles.headerActionIcon}
+          style={styles.avatarContainer}
+          onPress={() => handleMenuPress('/(provider)/profile/edit', 'Editar Perfil')}
           accessibilityRole="button"
-          accessibilityLabel="Gerenciar disponibilidade"
+          accessibilityLabel="Editar foto de perfil"
+          accessibilityHint="Toque para alterar sua foto de perfil."
         >
-          <Ionicons name="options-outline" size={22} color="#FFFFFF" />
-          <Text style={styles.headerActionText}>Disponibilidade</Text>
+          {user.avatarUrl ? (
+            <Image source={{ uri: user.avatarUrl }} style={styles.avatar} />
+          ) : (
+            <View style={styles.avatarPlaceholder}>
+              <Ionicons name="person" size={48} color={Colors.primary} />
+            </View>
+          )}
+        </TouchableOpacity>
+        <View style={styles.profileInfo}>
+          <Text style={styles.profileName}>{user.fullName || 'Nome do Provedor'}</Text>
+          <Text style={styles.profileRole}>Profissional de Limpeza</Text>
+          <Text style={styles.profileEmail}>{user.email}</Text>
+          <TouchableOpacity
+            style={styles.editProfileButton}
+            onPress={() => handleMenuPress('/(provider)/profile/edit', 'Editar Perfil')}
+          >
+            <Text style={styles.editProfileButtonText}>Editar Perfil</Text>
+            <Ionicons name="create-outline" size={18} color={Colors.primary} />
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
+
+      {/* Menu Principal Animado */}
+      <Animated.ScrollView
+        style={styles.menuScroll}
+        contentContainerStyle={styles.menuContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <Animated.View
+          style={[
+            styles.menuSection,
+            {
+              opacity: menuAnim,
+              transform: [{ translateY: menuAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
+            },
+          ]}
+        >
+          <Text style={styles.sectionTitle}>Conta e Perfil</Text>
+          <AnimatedMenuItem
+            icon="person-outline"
+            label="Editar Perfil"
+            onPress={() => handleMenuPress('/(provider)/profile/edit', 'Editar Perfil')}
+            isReducedMotionEnabled={isReducedMotionEnabled}
+            delay={0}
+          />
+          <AnimatedMenuItem
+            icon="id-card-outline"
+            label="Verificação de Conta"
+            onPress={() => handleMenuPress('/(provider)/profile/verify', 'Verificação de Conta')}
+            isReducedMotionEnabled={isReducedMotionEnabled}
+            delay={100}
+          />
+          <AnimatedMenuItem
+            icon="briefcase-outline"
+            label="Meus Serviços Oferecidos"
+            onPress={() => handleMenuPress('/(provider)/profile/edit-services', 'Editar Serviços')}
+            isReducedMotionEnabled={isReducedMotionEnabled}
+            delay={200}
+          />
+          <AnimatedMenuItem
+            icon="time-outline"
+            label="Gerenciar Disponibilidade"
+            onPress={() => handleMenuPress('/(provider)/schedule/manage-availability', 'Disponibilidade')}
+            isReducedMotionEnabled={isReducedMotionEnabled}
+            delay={300}
+          />
+        </Animated.View>
+
+        <Animated.View
+          style={[
+            styles.menuSection,
+            {
+              opacity: menuAnim,
+              transform: [{ translateY: menuAnim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] }) }],
+            },
+          ]}
+        >
+          <Text style={styles.sectionTitle}>Atividades e Relatórios</Text>
+          <AnimatedMenuItem
+            icon="star-outline"
+            label="Minhas Avaliações"
+            onPress={() => handleMenuPress('/(provider)/profile/reviews', 'Avaliações')}
+            isReducedMotionEnabled={isReducedMotionEnabled}
+            delay={400}
+          />
+          <AnimatedMenuItem
+            icon="wallet-outline"
+            label="Meus Ganhos"
+            onPress={() => handleMenuPress('/(provider)/earnings', 'Ganhos')}
+            isReducedMotionEnabled={isReducedMotionEnabled}
+            delay={500}
+          />
+          <AnimatedMenuItem
+            icon="trending-up-outline"
+            label="Relatórios e Métricas"
+            onPress={() => handleMenuPress('/(provider)/profile/metrics', 'Métricas')}
+            isReducedMotionEnabled={isReducedMotionEnabled}
+            delay={600}
+          />
+        </Animated.View>
+
+        <Animated.View
+          style={[
+            styles.menuSection,
+            {
+              opacity: menuAnim,
+              transform: [{ translateY: menuAnim.interpolate({ inputRange: [0, 1], outputRange: [60, 0] }) }],
+            },
+          ]}
+        >
+          <Text style={styles.sectionTitle}>Configurações e Suporte</Text>
+          <AnimatedMenuItem
+            icon="notifications-outline"
+            label="Notificações"
+            onPress={() => handleMenuPress('/(common)/settings/notifications', 'Notificações')}
+            isReducedMotionEnabled={isReducedMotionEnabled}
+            delay={700}
+          />
+          <AnimatedMenuItem
+            icon="card-outline"
+            label="Dados Bancários"
+            onPress={() => handleMenuPress('/(provider)/profile/bank-details', 'Dados Bancários')}
+            isReducedMotionEnabled={isReducedMotionEnabled}
+            delay={800}
+          />
+          <AnimatedMenuItem
+            icon="help-circle-outline"
+            label="Ajuda e Suporte"
+            onPress={() => handleMenuPress('/(common)/help', 'Ajuda')}
+            isReducedMotionEnabled={isReducedMotionEnabled}
+            delay={900}
+          />
+          <AnimatedMenuItem
+            icon="document-text-outline"
+            label="Termos e Privacidade"
+            onPress={() => handleMenuPress('/(common)/termos', 'Termos')}
+            isReducedMotionEnabled={isReducedMotionEnabled}
+            delay={1000}
+          />
+        </Animated.View>
+      </Animated.ScrollView>
+
+      {/* Botão de Logout Animado (no final, com confirmação haptic) */}
+      <Animated.View
+        style={[
+          styles.logoutSection,
+          {
+            opacity: logoutAnim,
+            transform: [{ translateY: logoutAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
+          },
+        ]}
+      >
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={handleLogout}
+          disabled={isLogoutConfirming}
+          accessibilityRole="button"
+          accessibilityLabel="Sair da Conta"
+          accessibilityHint="Toque para fazer logout da aplicação. Isso encerrará sua sessão atual."
+        >
+          <Ionicons name="log-out-outline" size={24} color={Colors.danger} />
+          <Text style={styles.logoutButtonText}>Sair da Conta</Text>
         </TouchableOpacity>
       </Animated.View>
-
-      <Animated.View
-        style={[
-          styles.calendarContainer,
-          { opacity: calendarAnim, transform: [{ translateY: calendarAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }
-        ]}
-      >
-        <Calendar
-          current={selectedDate}
-          onDayPress={onDayPress}
-          markedDates={markedDates}
-          monthFormat={'MMMM yyyy'} // pt-BR via LocaleConfig
-          onMonthChange={(month) => {
-            // manter log; futura integração para fetch por mês
-            console.log('[MyScheduleScreen] Mês alterado para:', month.month, month.year);
-          }}
-          firstDay={1}
-          enableSwipeMonths
-          theme={({
-            backgroundColor: Colors.bgSoft,
-            calendarBackground: Colors.surface,
-            textSectionTitleColor: '#586069',
-            selectedDayBackgroundColor: Colors.primary,
-            selectedDayTextColor: '#FFFFFF',
-            todayTextColor: Colors.primary,
-            dayTextColor: '#2d4150',
-            textDisabledColor: '#d9e1e8',
-            dotColor: Colors.primary,
-            selectedDotColor: '#FFFFFF',
-            arrowColor: Colors.primary,
-            monthTextColor: '#1C3A5F',
-            indicatorColor: Colors.primary,
-            textDayFontWeight: '400',
-            textMonthFontWeight: 'bold',
-            textDayHeaderFontWeight: '500',
-            textDayFontSize: 15,
-            textMonthFontSize: 18,
-            textDayHeaderFontSize: 13,
-            'stylesheet.calendar.header': {
-              week: {
-                marginTop: 6,
-                flexDirection: 'row',
-                justifyContent: 'space-around',
-                borderBottomWidth: 1,
-                borderBottomColor: Colors.border,
-                paddingBottom: 6,
-              },
-            },
-          }) as Theme}
-          style={styles.calendarStyle}
-        />
-      </Animated.View>
-
-      <Animated.View
-        style={[
-          styles.agendaListHeader,
-          { opacity: agendaHeaderAnim, transform: [{ translateY: agendaHeaderAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }
-        ]}
-      >
-        <Text style={styles.agendaListTitle}>
-          Agenda para: {selectedDate ? formatDate(selectedDate, { weekday: 'long', day: 'numeric', month: 'long' }) : 'Selecione uma data'}
-        </Text>
-      </Animated.View>
-
-      {isLoading && allAppointments.length === 0 ? (
-        <Animated.View style={[styles.centeredFeedback, { opacity: feedbackAnim }]}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={styles.loadingText}>Carregando sua agenda...</Text>
-        </Animated.View>
-      ) : appointmentsForSelectedDate.length > 0 ? (
-        <FlatList
-          data={appointmentsForSelectedDate}
-          renderItem={({ item, index }) => (
-            <AnimatedAppointmentItem item={item} onPress={handleAppointmentPress} delay={index * 70} />
-          )}
-          keyExtractor={(item) => item.id}
-          style={styles.listStyle}
-          contentContainerStyle={styles.listContentContainer}
-          ItemSeparatorComponent={() => <View style={styles.listSeparator} />}
-          refreshControl={
-            <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={Colors.primary} colors={[Colors.primary]} />
-          }
-        />
-      ) : (
-        <Animated.View style={[styles.centeredFeedback, { opacity: feedbackAnim }]}>
-          <Ionicons name="calendar-outline" size={64} color="#CED4DA" />
-          <Text style={styles.emptyListText}>Nenhum serviço agendado para este dia.</Text>
-          <Text style={styles.emptyListSubText}>
-            Aproveite para gerenciar sua disponibilidade ou confira outros dias!
-          </Text>
-          <TouchableOpacity
-            style={styles.manageAvailabilityButton}
-            onPress={() => router.push('/(provider)/schedule/manage-availability' as any)}
-            accessibilityRole="button"
-            accessibilityLabel="Ir para Gerenciar Disponibilidade"
-          >
-            <Text style={styles.manageAvailabilityButtonText}>Gerenciar Disponibilidade</Text>
-            <Ionicons name="arrow-forward" size={18} color="#FFFFFF" style={{ marginLeft: 8 }} />
-          </TouchableOpacity>
-        </Animated.View>
-      )}
     </View>
   );
 }
 
-// ====== Styles ======
+// ====== Styles (Premium iOS Clean, com spacing confortável e shadows sutis) ======
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.bgSoft,
   },
-  customHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 15,
-    paddingVertical: Platform.OS === 'ios' ? 50 : 20,
-    paddingTop: Platform.OS === 'ios' ? 50 : 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 8,
-    borderBottomLeftRadius: Radii.xl,
-    borderBottomRightRadius: Radii.xl,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+  loadingContainer: {
     flex: 1,
-    textAlign: 'left',
-    marginLeft: 10,
-  },
-  headerActionIcon: {
-    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    borderRadius: Radii.pill,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  headerActionText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 6,
-  },
-  calendarContainer: {
-    backgroundColor: Colors.surface,
-    marginHorizontal: 15,
-    marginTop: -25,
-    borderRadius: Radii.md,
-    overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.1,
-        shadowRadius: 10,
-      },
-      android: { elevation: 6 },
-    }),
-  },
-  calendarStyle: {
-    borderRadius: Radii.md,
-  },
-  agendaListHeader: {
-    paddingHorizontal: 15,
-    paddingTop: 20,
-    paddingBottom: 15,
     backgroundColor: Colors.bgSoft,
   },
-  agendaListTitle: {
-    fontSize: 19,
-    fontWeight: 'bold',
-    color: '#1C3A5F',
-    textTransform: 'capitalize',
+  loadingText: {
+    marginTop: Spacing.sm,
+    fontSize: 17,
+    color: Colors.textMuted,
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Medium' : 'System',
   },
-  listStyle: { flex: 1 },
-  listContentContainer: {
-    paddingHorizontal: 15,
-    paddingBottom: 20,
-  },
-  appointmentCardWrapper: {
-    marginVertical: 8,
-    borderRadius: Radii.md,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: Colors.surface,
-    overflow: Platform.OS === 'ios' ? 'visible' : 'hidden',
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
     ...Platform.select({
       ios: {
         shadowColor: Colors.shadow,
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.4,
+        shadowOpacity: 0.1,
         shadowRadius: 8,
       },
-      android: { elevation: 5 },
+      android: { elevation: 6 },
     }),
   },
-  appointmentCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 18,
+  avatarContainer: {
+    marginRight: Spacing.lg,
   },
-  clientAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 15,
-    borderWidth: 2,
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 3,
     borderColor: Colors.primary,
   },
-  clientAvatarPlaceholder: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 15,
-    backgroundColor: '#B0C4DE',
+  avatarPlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: Colors.fieldBg,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 3,
+    borderColor: Colors.primary,
   },
-  appointmentDetails: { flex: 1 },
-  appointmentClientName: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: Colors.text,
-    marginBottom: 4,
-  },
-  appointmentServiceType: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#495057',
-    marginBottom: 4,
-  },
-  timeAndLocation: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 2,
-  },
-  appointmentTime: { fontSize: 13, color: Colors.textMuted },
-  appointmentAddress: { fontSize: 13, color: Colors.textMuted },
-  appointmentStatusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 15,
-    marginLeft: 15,
-  },
-  appointmentStatusText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
-    marginLeft: 5,
-  },
-  centeredFeedback: {
+  profileInfo: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    marginTop: 20,
   },
-  loadingText: {
-    fontSize: 16,
-    color: Colors.textMuted,
-    marginTop: 12,
-    fontWeight: '500',
-    textAlign: 'center',
+  profileName: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: Colors.text,
+    marginBottom: Spacing.xs,
+    fontFamily: Platform.OS === 'ios' ? 'SFProDisplay-Bold' : 'System',
   },
-  emptyListText: {
+  profileRole: {
     fontSize: 16,
-    color: Colors.textMuted,
-    marginTop: 15,
-    textAlign: 'center',
+    color: Colors.primary,
+    marginBottom: Spacing.xs,
     fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Semibold' : 'System',
   },
-  emptyListSubText: {
-    fontSize: 15,
-    color: Colors.textSubtle,
-    marginTop: 8,
-    textAlign: 'center',
+  profileEmail: {
+    fontSize: 16,
+    color: Colors.textMuted,
+    marginBottom: Spacing.md,
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Regular' : 'System',
   },
-  manageAvailabilityButton: {
+  editProfileButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 30,
-    marginTop: 22,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    backgroundColor: Colors.fieldBg,
+    borderRadius: Radii.pill,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
-  manageAvailabilityButtonText: {
-    color: '#FFFFFF',
+  editProfileButtonText: {
+    color: Colors.primary,
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
+    marginRight: Spacing.xs,
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Semibold' : 'System',
   },
-  listSeparator: { height: 0 },
+  menuScroll: {
+    flex: 1,
+  },
+  menuContent: {
+    paddingHorizontal: Spacing.md,
+    paddingBottom: Spacing.xl,
+  },
+  menuSection: {
+    backgroundColor: Colors.surface,
+    borderRadius: Radii.xl,
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
+    ...Platform.select({
+      ios: {
+        shadowColor: Colors.shadow,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+      },
+      android: { elevation: 4 },
+    }),
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.text,
+    marginBottom: Spacing.md,
+    fontFamily: Platform.OS === 'ios' ? 'SFProDisplay-Bold' : 'System',
+  },
+  menuItemWrapper: {
+    marginBottom: Spacing.sm,
+    borderRadius: Radii.md,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: Colors.shadow,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+      },
+      android: { elevation: 2 },
+    }),
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+  },
+  menuItemIcon: {
+    marginRight: Spacing.lg,
+  },
+  menuItemTextContainer: {
+    flex: 1,
+  },
+  menuItemLabel: {
+    fontSize: 16,
+    color: Colors.text,
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Regular' : 'System',
+  },
+  logoutSection: {
+    paddingHorizontal: Spacing.md,
+    paddingBottom: Spacing.xl, // CORRIGIDO: Usar Spacing.xl (agora definido)
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.fieldBg,
+    borderRadius: Radii.pill,
+    paddingVertical: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.danger,
+    ...Platform.select({
+      ios: {
+        shadowColor: Colors.shadow,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: { elevation: 3 },
+    }),
+  },
+  logoutButtonText: {
+    color: Colors.danger,
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: Spacing.sm,
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Semibold' : 'System',
+  },
 });

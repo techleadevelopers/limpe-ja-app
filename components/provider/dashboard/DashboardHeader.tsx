@@ -72,7 +72,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
 
 const styles = StyleSheet.create({
   customHeader: {
-    paddingTop: Platform.OS === 'ios' ? 50 : 30, // Ajuste para status bar
+    paddingTop: Platform.OS === 'ios' ? 90 : 30, // Ajuste para status bar
     paddingBottom: 15,
     paddingHorizontal: 15,
     shadowColor: '#000',

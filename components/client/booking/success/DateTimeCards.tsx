@@ -33,7 +33,7 @@ export default function DateTimeCards({
 
   useEffect(() => {
     // Animação para o primeiro cartão (Data)
-    Animated.parallel([
+    const anim1 = Animated.parallel([
       Animated.timing(card1FadeAnim, {
         toValue: 1,
         duration: 500,
@@ -55,10 +55,11 @@ export default function DateTimeCards({
         easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }),
-    ]).start();
+    ]);
+    anim1.start();
 
     // Animação para o segundo cartão (Hora) com um pequeno atraso em relação ao primeiro
-    Animated.parallel([
+    const anim2 = Animated.parallel([
       Animated.timing(card2FadeAnim, {
         toValue: 1,
         duration: 500,
@@ -80,9 +81,14 @@ export default function DateTimeCards({
         easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }),
-    ]).start();
-  }, []);
+    ]);
+    anim2.start();
 
+    return () => {
+      anim1.stop();
+      anim2.stop(); // Cleanup premium para performance
+    };
+  }, []);
 
   return (
     <View style={styles.dateTimeContainer}>
@@ -100,8 +106,8 @@ export default function DateTimeCards({
           style={styles.gradientBackground}
         />
         <Ionicons name="calendar-outline" size={20} color={AppColors.primaryInteractive} style={styles.contentOverlay} />
-        <Text style={[styles.dateTimeLabel, styles.contentOverlay]}>Data</Text>
-        <Text style={[styles.dateTimeValue, styles.contentOverlay]}>{formattedBookingDate}</Text>
+        <Text style={[styles.dateTimeLabel, styles.contentOverlay]} numberOfLines={1} maxFontSizeMultiplier={1.2}>Data</Text>
+        <Text style={[styles.dateTimeValue, styles.contentOverlay]} numberOfLines={2} maxFontSizeMultiplier={1.2}>{formattedBookingDate}</Text>
       </Animated.View>
 
       {/* Segundo Card: Hora */}
@@ -118,8 +124,8 @@ export default function DateTimeCards({
           style={styles.gradientBackground}
         />
         <Ionicons name="time-outline" size={20} color={AppColors.primaryInteractive} style={styles.contentOverlay} />
-        <Text style={[styles.dateTimeLabel, styles.contentOverlay]}>Hora</Text>
-        <Text style={[styles.dateTimeValue, styles.contentOverlay]}>{formattedBookingTime}</Text>
+        <Text style={[styles.dateTimeLabel, styles.contentOverlay]} numberOfLines={1} maxFontSizeMultiplier={1.2}>Hora</Text>
+        <Text style={[styles.dateTimeValue, styles.contentOverlay]} numberOfLines={1} maxFontSizeMultiplier={1.2}>{formattedBookingTime}</Text>
       </Animated.View>
     </View>
   );
@@ -128,9 +134,9 @@ export default function DateTimeCards({
 const styles = StyleSheet.create({
   dateTimeContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-evenly', // Alinhamento premium uniforme
     marginBottom: 25,
-    
+    paddingHorizontal: 8, // Espaçamento lógico sem gaps
   },
   dateTimeCard: {
     backgroundColor: AppColors.backgroundLight, // Usando AppColors
@@ -138,7 +144,8 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     paddingHorizontal: 15,
     alignItems: 'center',
-    width: '45%',
+    width: '48%', // Ajustado para space-evenly sem overlap
+    minHeight: 80, // Touch target confortável
     overflow: 'hidden',
     position: 'relative',
     ...AppShadows.medium, // Usando AppShadows

@@ -14,6 +14,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import * as Haptics from 'expo-haptics'; // Adicionado para iOS premium
 
 // Import NotificationUIService
 import NotificationUIService from '../../services/notificationUIService'; // Added
@@ -57,6 +58,7 @@ const useAnimatedTouch = () => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const onPressIn = () => {
     Animated.spring(scaleAnim, { toValue: 0.95, useNativeDriver: true, friction: 5 }).start();
+    if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); // Premium haptic
   };
   const onPressOut = () => {
     Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, friction: 5, tension: 40 }).start();
@@ -71,11 +73,11 @@ const CustomHeader: React.FC<{
 }> = ({ onBackPress, onManageBankDetailsPress, animation }) => {
   return (
     <Animated.View style={[styles.customHeader, { opacity: animation, transform: [{ translateY: animation.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
-      <TouchableOpacity onPress={onBackPress} style={styles.headerBackButton}>
+      <TouchableOpacity onPress={onBackPress} style={styles.headerBackButton} activeOpacity={0.92}>
         <Ionicons name="arrow-back" size={24} color={WHITE} />
       </TouchableOpacity>
       <Text style={[styles.headerTitle, { color: WHITE }]}>Meus Ganhos</Text>
-      <TouchableOpacity onPress={onManageBankDetailsPress} style={styles.headerActionIcon}>
+      <TouchableOpacity onPress={onManageBankDetailsPress} style={styles.headerActionIcon} activeOpacity={0.92}>
         <Ionicons name="card-outline" size={26} color={WHITE} />
       </TouchableOpacity>
     </Animated.View>
@@ -156,13 +158,13 @@ export default function ProviderEarningsScreen() {
     isMounted.current = true; // Componente montado
     fetchData();
 
-    // Staggered animation for sections
-    const animationSequence = Animated.stagger(150, [
-      Animated.timing(headerAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
-      Animated.timing(summaryAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-      Animated.timing(mainChartAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-      Animated.timing(chartSectionAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-      Animated.timing(transactionsSectionAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+    // Staggered animation for sections (suave iOS)
+    const animationSequence = Animated.stagger(180, [
+      Animated.timing(headerAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.timing(summaryAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
+      Animated.timing(mainChartAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
+      Animated.timing(chartSectionAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
+      Animated.timing(transactionsSectionAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
     ]);
     animationSequenceRef.current = animationSequence; // Armazenar a referência
     animationSequence.start();
@@ -300,6 +302,7 @@ export default function ProviderEarningsScreen() {
         <TouchableOpacity
           style={styles.quickLinkCard}
           onPress={() => router.push('/(provider)/services' as any)}
+          activeOpacity={0.92}
         >
           <Ionicons name="briefcase-outline" size={24} color={ICON_PRIMARY} />
           <Text style={[styles.quickLinkText, { color: TEXT_DARK }]}>Meus Serviços Oferecidos</Text>
@@ -309,6 +312,7 @@ export default function ProviderEarningsScreen() {
         <TouchableOpacity
           style={styles.quickLinkCard}
           onPress={() => router.push('/(provider)/reviews' as any)}
+          activeOpacity={0.92}
         >
           <Ionicons name="star-outline" size={24} color={WARNING_YELLOW} />
           <Text style={[styles.quickLinkText, { color: TEXT_DARK }]}>Minhas Avaliações</Text>
@@ -328,239 +332,260 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollViewContent: {
-    padding: 15,
-    paddingBottom: 40,
+    padding: 18, // Mais padding iOS
+    paddingBottom: 50,
   },
   centeredFeedback: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 24,
   },
   loadingText: {
-    marginTop: 15,
-    fontSize: 16,
+    marginTop: 18,
+    fontSize: 17,
     color: TEXT_MUTED,
-    fontFamily: 'System'
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Medium' : 'System',
   },
   customHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: ICON_PRIMARY,
-    paddingHorizontal: 15,
-    paddingVertical: Platform.OS === 'ios' ? 50 : 10,
-    paddingTop: Platform.OS === 'ios' ? 50 : 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    marginTop: 15,
-    elevation: 5,
+    paddingHorizontal: 18,
+    paddingVertical: Platform.OS === 'ios' ? 15 : 12,
+    paddingTop: Platform.OS === 'ios' ? 55 : 24,
+    // iOS Premium Shadow
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+      },
+      android: { elevation: 8 },
+    }),
   },
   headerBackButton: {
-    padding: 5,
-    marginRight: 15,
+    padding: 8,
+    marginRight: 16,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: '600',
     color: WHITE,
     flex: 1,
     textAlign: 'center',
-    fontFamily: 'System'
+    fontFamily: Platform.OS === 'ios' ? 'SFProDisplay-Semibold' : 'System',
   },
   headerActionIcon: {
-    padding: 5,
-    marginLeft: 15,
+    padding: 8,
+    marginLeft: 16,
   },
   headerActionIconPlaceholder: {
-    width: 36,
-    marginLeft: 15,
+    width: 40,
+    marginLeft: 16,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '600',
     color: TEXT_DARK,
-    marginBottom: 15,
-    marginTop: 10,
-    fontFamily: 'System'
+    marginBottom: 18,
+    marginTop: 12,
+    fontFamily: Platform.OS === 'ios' ? 'SFProDisplay-Semibold' : 'System',
   },
   summaryContainer: {
     backgroundColor: WHITE,
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 20,
+    borderRadius: 16, // Mais arredondado iOS
+    padding: 24,
+    marginBottom: 24,
+    // iOS Premium Shadow
     ...Platform.select({
-      ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.15, shadowRadius: 6 },
-      android: { elevation: 4 },
+      ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 12 },
+      android: { elevation: 6 },
     }),
   },
   summaryGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   summaryCard: {
     width: '48%',
     backgroundColor: BACKGROUND_ALT,
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 15,
+    borderRadius: 12,
+    padding: 18,
+    marginBottom: 18,
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: BORDER_SUBTLE,
+    // iOS clean shadow
+    ...Platform.select({
+      ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4 },
+      android: { elevation: 2 },
+    }),
   },
   summaryCardTitle: {
-    fontSize: 14,
+    fontSize: 15,
     color: TEXT_MUTED,
-    marginTop: 8,
-    marginBottom: 5,
+    marginTop: 10,
+    marginBottom: 6,
     textAlign: 'center',
-    fontFamily: 'System'
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Regular' : 'System',
   },
   summaryCardValue: {
-    fontSize: 22,
+    fontSize: 24, // Maior iOS
     fontWeight: 'bold',
     color: TEXT_DARK,
     textAlign: 'center',
-    fontFamily: 'System'
+    fontFamily: Platform.OS === 'ios' ? 'SFProDisplay-Bold' : 'System',
   },
   summaryCardSubtitle: {
-    fontSize: 12,
+    fontSize: 13,
     color: TEXT_MUTED,
-    marginTop: 2,
+    marginTop: 3,
     textAlign: 'center',
-    fontFamily: 'System'
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Regular' : 'System',
   },
   withdrawalButton: {
     backgroundColor: SUCCESS_GREEN,
-    borderRadius: 8,
-    paddingVertical: 14,
+    borderRadius: 10,
+    paddingVertical: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    // iOS Premium Shadow
     ...Platform.select({
-      ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 6 },
-      android: { elevation: 6 },
+      ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.2, shadowRadius: 8 },
+      android: { elevation: 8 },
     }),
   },
   withdrawalButtonDisabled: {
-    backgroundColor: '#A5D6A7', // Cor de desabilitado para o verde
-    opacity: 0.6,
+    backgroundColor: '#A5D6A7',
+    opacity: 0.7,
     elevation: 0,
     shadowOpacity: 0,
   },
   withdrawalButtonText: {
     color: WHITE,
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 10,
-    fontFamily: 'System'
+    fontSize: 17,
+    fontWeight: '600',
+    marginLeft: 12,
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Semibold' : 'System',
   },
   chartSection: {
     backgroundColor: WHITE,
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 20,
+    borderRadius: 16,
+    padding: 24,
+    marginBottom: 24,
+    // iOS Premium Shadow
     ...Platform.select({
-      ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.15, shadowRadius: 6 },
-      android: { elevation: 4 },
+      ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 12 },
+      android: { elevation: 6 },
     }),
   },
   chartContainerPlaceholder: {
     backgroundColor: BACKGROUND_ALT,
-    borderRadius: 10,
+    borderRadius: 12,
     width: '100%',
-    height: 200,
+    height: 220, // Maior para iOS
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 10,
-    borderWidth: 1,
+    marginBottom: 12,
+    borderWidth: 0.5,
     borderColor: BORDER_SUBTLE,
     borderStyle: 'dashed',
   },
   chartPlaceholderText: {
-    fontSize: 16,
+    fontSize: 17,
     color: TEXT_MUTED,
-    marginTop: 10,
-    fontFamily: 'System'
+    marginTop: 12,
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Regular' : 'System',
   },
   transactionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: BORDER_SUBTLE,
   },
   transactionDetails: {
     flex: 1,
-    marginLeft: 10,
+    marginLeft: 12,
   },
   transactionDescription: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '500',
     color: TEXT_DARK,
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Medium' : 'System',
   },
   transactionDate: {
-    fontSize: 13,
+    fontSize: 14,
     color: TEXT_MUTED,
-    marginTop: 2,
+    marginTop: 3,
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Regular' : 'System',
   },
   transactionAmount: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: 'bold',
     color: TEXT_DARK,
+    fontFamily: Platform.OS === 'ios' ? 'SFProDisplay-Bold' : 'System',
   },
   viewAllButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
-    marginTop: 10,
+    paddingVertical: 12,
+    marginTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderColor: BORDER_SUBTLE,
   },
   viewAllButtonText: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
     color: ICON_PRIMARY,
-    marginRight: 5,
+    marginRight: 6,
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Semibold' : 'System',
   },
   emptyStateContainer: {
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingVertical: 24,
     backgroundColor: BACKGROUND_ALT,
-    borderRadius: 12,
-    marginTop: 10,
+    borderRadius: 16,
+    marginTop: 12,
   },
   emptyText: {
     textAlign: 'center',
     color: TEXT_MUTED,
-    fontSize: 15,
-    marginTop: 8,
+    fontSize: 16,
+    marginTop: 10,
+    lineHeight: 22,
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Regular' : 'System',
   },
   quickLinkCard: {
     backgroundColor: WHITE,
-    borderRadius: 12,
-    paddingVertical: 15,
-    paddingHorizontal: 20,
-    marginBottom: 10,
+    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 22,
+    marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: BORDER_SUBTLE,
+    // iOS Premium Shadow
     ...Platform.select({
-      ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4 },
-      android: { elevation: 3 },
+      ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 6 },
+      android: { elevation: 4 },
     }),
   },
   quickLinkText: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
     color: TEXT_DARK,
     flex: 1,
-    marginLeft: 15,
+    marginLeft: 16,
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Semibold' : 'System',
   },
 });

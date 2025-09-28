@@ -320,8 +320,8 @@ const styles = StyleSheet.create({
         height: 310,
         resizeMode: 'contain',
         // Adicione as propriedades de sombra estáticas aqui
-        shadowColor: '#40C0F0',
-        shadowRadius: 20,
+        shadowColor: '#8ca3ac98',
+        shadowRadius: 10,
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.8, // Opacidade base para a sombra
     },

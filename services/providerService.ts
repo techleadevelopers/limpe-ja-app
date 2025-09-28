@@ -9,18 +9,18 @@ import { ReviewService as FrontendReviewService } from './reviewService'; // Ren
 // IMPORTAÇÕES DE INTERFACES DE TIPAGEM CENTRALIZADAS
 // =========================================================================
 import {
-    CreateProviderServiceData,
-    ProviderAvailability,
-    ProviderDashboard,
-    ProviderDisplayInfo,
-    ProviderSearchQuery,
-    ProviderTransaction,
-    UpdateAvailabilityData,
-    UpdateProviderProfileData,
-    UpdateProviderServiceData,
-    GetProviderAvailabilityResponse,
-    ProviderMetrics, // <<-- CORREÇÃO: Importado de ../types/backend/providers
-    Offer // <<-- CORREÇÃO: Importado de ../types/backend/providers
+  CreateProviderServiceData,
+  ProviderAvailability,
+  ProviderDashboard,
+  ProviderDisplayInfo,
+  ProviderSearchQuery,
+  ProviderTransaction,
+  UpdateAvailabilityData,
+  UpdateProviderProfileData,
+  UpdateProviderServiceData,
+  GetProviderAvailabilityResponse,
+  ProviderMetrics, // <<-- CORREÇÃO: Importado de ../types/backend/providers
+  Offer // <<-- CORREÇÃO: Importado de ../types/backend/providers
 } from '../types/backend/providers';
 
 // <<<< CORREÇÃO: Importar ProviderServiceOffering APENAS do seu arquivo de origem >>>>
@@ -183,7 +183,7 @@ export async function deleteMyProviderAvailability(availabilityId: string): Prom
 
 /**
  * @function updateMyProviderProfile
- * Atualiza o perfil do provedor atualmente logado (`PATCH /providers/me`).
+ * Atualiza o perfil do provedor atualmente logado (PATCH /providers/me).
  * @param data Os dados de atualização do perfil.
  * @returns Uma Promise que resolve para o objeto ProviderDisplayInfo atualizado.
  */
@@ -202,7 +202,7 @@ export async function updateMyProviderProfile(data: UpdateProviderProfileData): 
 
 /**
  * @function getMyProviderDashboard
- * Obtém os dados do painel do provedor atualmente logado (`GET /providers/me/dashboard`).
+ * Obtém os dados do painel do provedor atualmente logado (GET /providers/me/dashboard).
  * @returns Uma Promise que resolve para o objeto ProviderDashboard.
  */
 export async function getMyProviderDashboard(): Promise<ProviderDashboard> {
@@ -220,7 +220,7 @@ export async function getMyProviderDashboard(): Promise<ProviderDashboard> {
 
 /**
  * @function getMyProviderEarnings
- * Obtém o histórico de transações de ganhos do provedor atualmente logado (`GET /providers/me/earnings`).
+ * Obtém o histórico de transações de ganhos do provedor atualmente logado (GET /providers/me/earnings).
  * @returns Uma Promise que resolve para um array de ProviderTransaction.
  */
 export async function getMyProviderEarnings(): Promise<ProviderTransaction[]> {
@@ -238,7 +238,7 @@ export async function getMyProviderEarnings(): Promise<ProviderTransaction[]> {
 
 /**
  * @function updateProviderAvailability
- * Atualiza a disponibilidade semanal de um provedor (`PATCH /providers/:providerId/availability`).
+ * Atualiza a disponibilidade semanal de um provedor (PATCH /providers/:providerId/availability).
  * @param providerId O ID do provedor.
  * @param data Array de objetos UpdateAvailabilityData contendo os slots de disponibilidade a serem atualizados.
  * @returns Uma Promise que resolve para um array de ProviderAvailability atualizados.
@@ -258,7 +258,7 @@ export async function updateProviderAvailability(providerId: string, data: Updat
 
 /**
  * @function addProviderAvailability
- * Adiciona um novo slot de disponibilidade para um provedor (`POST /providers/:providerId/availability`).
+ * Adiciona um novo slot de disponibilidade para um provedor (POST /providers/:providerId/availability).
  * @param providerId O ID do provedor.
  * @param data Objeto UpdateAvailabilityData contendo os detalhes do novo slot.
  * @returns Uma Promise que resolve para o objeto ProviderAvailability recém-criado.
@@ -278,7 +278,7 @@ export async function addProviderAvailability(providerId: string, data: UpdateAv
 
 /**
  * @function deleteProviderAvailability
- * Deleta um slot de disponibilidade específico de um provedor (`DELETE /providers/:providerId/availability/:availabilityId`).
+ * Deleta um slot de disponibilidade específico de um provedor (DELETE /providers/:providerId/availability/:availabilityId).
  * @param providerId O ID do provedor.
  * @param availabilityId O ID do slot de disponibilidade a ser deletado.
  * @returns Uma Promise que resolve quando a operação é concluída.
@@ -297,7 +297,7 @@ export async function deleteProviderAvailability(providerId: string, availabilit
 
 /**
  * @function getProviderServicesOffered
- * Obtém a lista de serviços que um provedor oferece (`GET /providers/:providerId/services`).
+ * Obtém a lista de serviços que um provedor oferece (GET /providers/:providerId/services).
  * @param providerId O ID do provedor.
  * @returns Uma Promise que resolve para um array de ProviderServiceOffering.
  */
@@ -316,7 +316,7 @@ export async function getProviderServicesOffered(providerId: string): Promise<Pr
 
 /**
  * @function addProviderServiceOffering
- * Adiciona um novo serviço à lista de serviços oferecidos por um provedor (`POST /providers/:providerId/services`).
+ * Adiciona um novo serviço à lista de serviços oferecidos por um provedor (POST /providers/:providerId/services).
  * @param providerId O ID do provedor.
  * @param data Os dados do novo serviço a ser oferecido.
  * @returns Uma Promise que resolve para o objeto ProviderServiceOffering recém-criado.
@@ -325,8 +325,7 @@ export async function addProviderServiceOffering(providerId: string, data: Creat
   try {
     const response: AxiosResponse<ProviderServiceOffering> = await api.post(`/providers/${providerId}/services`, data);
     return response.data;
-  }
-  catch (error: any) {
+  } catch (error: any) {
     console.error(`Erro ao adicionar serviço para o provedor ${providerId}:`, error.response?.data || error.message);
     if (axios.isAxiosError(error) && error.response) {
       throw new Error(error.response.data.message || `Erro ao adicionar serviço para o provedor ${providerId}.`);
@@ -337,13 +336,17 @@ export async function addProviderServiceOffering(providerId: string, data: Creat
 
 /**
  * @function updateProviderServiceOffering
- * Atualiza um serviço específico oferecido por um provedor (`PATCH /providers/:providerId/services/:id`).
+ * Atualiza um serviço específico oferecido por um provedor (PATCH /providers/:providerId/services/:id).
  * @param providerId O ID do provedor.
  * @param serviceOfferingId O ID do serviço oferecido a ser atualizado.
  * @param data Os dados de atualização do serviço.
  * @returns Uma Promise que resolve para o objeto ProviderServiceOffering atualizado.
  */
-export async function updateProviderServiceOffering(providerId: string, serviceOfferingId: string, data: UpdateProviderServiceData): Promise<ProviderServiceOffering> {
+export async function updateProviderServiceOffering(
+  providerId: string,
+  serviceOfferingId: string,
+  data: UpdateProviderServiceData
+): Promise<ProviderServiceOffering> {
   try {
     const response: AxiosResponse<ProviderServiceOffering> = await api.patch(`/providers/${providerId}/services/${serviceOfferingId}`, data);
     return response.data;
@@ -358,7 +361,7 @@ export async function updateProviderServiceOffering(providerId: string, serviceO
 
 /**
  * @function deleteProviderServiceOffering
- * Deleta um serviço específico oferecido por um provedor (`DELETE /providers/:providerId/services/:id`).
+ * Deleta um serviço específico oferecido por um provedor (DELETE /providers/:providerId/services/:id).
  * @param providerId O ID do provedor.
  * @param serviceOfferingId O ID do serviço oferecido a ser deletado.
  * @returns Uma Promise que resolve quando a operação é concluída.
@@ -423,7 +426,7 @@ export async function getNearbyProviders(latitude?: number, longitude?: number):
 /**
  * @function getProvidersByServiceCategory
  * Obtém uma lista de provedores que oferecem serviços dentro de uma categoria específica.
- * Assume que o endpoint /providers pode aceitar um `serviceId` como query parameter.
+ * Assume que o endpoint /providers pode aceitar um serviceId como query parameter.
  * @param categoryId O ID da categoria de serviço.
  * @returns Uma Promise que resolve para um array de provedores (ProviderDisplayInfo).
  */
@@ -447,7 +450,7 @@ export async function getProvidersByServiceCategory(categoryId: string): Promise
  * Obtém uma lista de serviços (não provedores) que pertencem a uma categoria específica.
  * NOTA: Este endpoint não está explicitamente detalhado no README.md do backend.
  * VOCÊ PRECISA IMPLEMENTAR ESTE ENDPOINT NO BACKEND (ex: GET /services?categoryId=...)
- * ou adaptar o frontend para usar `getProvidersByServiceCategory` se a intenção for listar provedores.
+ * ou adaptar o frontend para usar getProvidersByServiceCategory se a intenção for listar provedores.
  * @param categoryId O ID da categoria de serviço.
  * @returns Uma Promise que resolve para um array de objetos Service.
  */
@@ -466,7 +469,6 @@ export async function getServicesByCategoryId(categoryId: string): Promise<Servi
     throw new Error(`Erro de rede ou servidor ao buscar serviços pela categoria ${categoryId}.`);
   }
 }
-
 
 // =========================================================================
 // FUNÇÃO PARA BUSCA GERAL DE PROVEDORES (GET /providers)
@@ -536,5 +538,29 @@ export async function getProviderOffers(providerId: string): Promise<Offer[]> {
       throw new Error(error.response.data.message || `Erro ao buscar ofertas do provedor ${providerId}.`);
     }
     throw new Error(`Erro de rede ou servidor ao buscar ofertas do provedor ${providerId}.`);
+  }
+}
+
+// =========================================================================
+// FUNÇÃO ADICIONAL: getProviderAvatar (NOVA - Para otimizar fetches em listas)
+// =========================================================================
+
+/**
+ * @function getProviderAvatar
+ * Obtém apenas a URL do avatar de um provedor específico por seu ID.
+ * Wrapper otimizado em torno de getProviderDetails para evitar fetch completo em listas (ex.: telas de booking).
+ * Retorna apenas { url: string }, com fallback silencioso para não quebrar a UI.
+ * @param providerId O ID do provedor.
+ * @returns Uma Promise que resolve para { url: string } (vazio em erro).
+ */
+export async function getProviderAvatar(providerId: string): Promise<{ url: string }> {
+  try {
+    const details = await getProviderDetails(providerId);
+    // Assumindo que ProviderDisplayInfo tem 'avatarUrl' (ajuste o campo se for 'avatar' ou 'profileImage')
+    return { url: details.avatarUrl || '' };
+  } catch (error: any) {
+    console.error(`Erro ao buscar avatar do provedor ${providerId}:`, error.response?.data || error.message);
+    // Fallback silencioso: retorna URL vazia para expo-image lidar com placeholder
+    return { url: '' };
   }
 }

@@ -1,5 +1,4 @@
-// LimpeJaApp/app/services/bookingService.ts
-import axios, { AxiosResponse } from 'axios';
+import axios, { AxiosResponse, AxiosError } from 'axios';
 import api from './api';
 
 // IMPORTAR DTOs E TIPAGENS DO ARQUIVO CENTRALIZADO
@@ -18,7 +17,9 @@ export const createBooking = async (data: CreateBookingDto): Promise<BookingDeta
         const response: AxiosResponse<BookingDetails> = await api.post<BookingDetails>('/bookings', data);
         return response.data;
     } catch (error: any) {
-        console.error('Erro ao criar agendamento:', error.response?.data || error.message);
+        if (__DEV__) {
+            console.warn('Erro ao criar agendamento (dev only):', error.response?.data || error.message);
+        }
         if (axios.isAxiosError(error) && error.response) {
             throw new Error(error.response.data.message || 'Erro ao criar agendamento.');
         }
@@ -40,7 +41,9 @@ export async function getBookingsForUser(status?: BookingStatus): Promise<Bookin
         const response: AxiosResponse<BookingDetails[]> = await api.get<BookingDetails[]>('/bookings/me', { params });
         return response.data;
     } catch (error: any) {
-        console.error('Erro ao buscar agendamentos do usuário:', error.response?.data || error.message);
+        if (__DEV__) {
+            console.warn('Erro ao buscar agendamentos do usuário (dev only):', error.response?.data || error.message);
+        }
         if (axios.isAxiosError(error) && error.response) {
             throw new Error(error.response.data.message || 'Erro ao buscar agendamentos.');
         }
@@ -60,7 +63,9 @@ export async function getBookingDetails(bookingId: string): Promise<BookingDetai
         const response: AxiosResponse<BookingDetails> = await api.get<BookingDetails>(`/bookings/${bookingId}`);
         return response.data;
     } catch (error: any) {
-        console.error(`Erro ao buscar detalhes do agendamento ${bookingId}:`, error.response?.data || error.message);
+        if (__DEV__) {
+            console.warn(`Erro ao buscar detalhes do agendamento ${bookingId} (dev only):`, error.response?.data || error.message);
+        }
         if (axios.isAxiosError(error) && error.response) {
             throw new Error(error.response.data.message || `Erro ao buscar detalhes do agendamento ${bookingId}.`);
         }
@@ -81,7 +86,9 @@ export async function updateBookingStatus(bookingId: string, data: UpdateBooking
         const response: AxiosResponse<BookingDetails> = await api.patch<BookingDetails>(`/bookings/${bookingId}/status`, data);
         return response.data;
     } catch (error: any) {
-        console.error(`Erro ao atualizar status do agendamento ${bookingId}:`, error.response?.data || error.message);
+        if (__DEV__) {
+            console.warn(`Erro ao atualizar status do agendamento ${bookingId} (dev only):`, error.response?.data || error.message);
+        }
         if (axios.isAxiosError(error) && error.response) {
             throw new Error(error.response.data.message || `Erro ao atualizar status do agendamento ${bookingId}.`);
         }
@@ -101,7 +108,9 @@ export async function cancelBooking(bookingId: string): Promise<BookingDetails> 
         const response: AxiosResponse<BookingDetails> = await api.patch<BookingDetails>(`/bookings/${bookingId}/cancel`);
         return response.data;
     } catch (error: any) {
-        console.error(`Erro ao cancelar agendamento ${bookingId}:`, error.response?.data || error.message);
+        if (__DEV__) {
+            console.warn(`Erro ao cancelar agendamento ${bookingId} (dev only):`, error.response?.data || error.message);
+        }
         if (axios.isAxiosError(error) && error.response) {
             throw new Error(error.response.data.message || `Erro ao cancelar agendamento ${bookingId}.`);
         }
@@ -119,14 +128,30 @@ export async function cancelBooking(bookingId: string): Promise<BookingDetails> 
  * @remarks Este método assume que o backend terá um endpoint correspondente, por exemplo:
  *          GET /bookings/check-active-chat/:clientId/:providerId
  *          que retorna { canChat: boolean, bookingId?: string }.
+ *          Se o endpoint não existir (404), retorna { canChat: false } silenciosamente.
+ *          IMPLEMENTE NO BACKEND: Query DB por bookings ativos entre os IDs.
  */
 export const checkActiveChatBooking = async (clientId: string, providerId: string): Promise<{ canChat: boolean; bookingId?: string }> => {
     try {
         const response: AxiosResponse<{ canChat: boolean; bookingId?: string }> = await api.get(`/bookings/check-active-chat/${clientId}/${providerId}`);
-        return response.data;
+        // Validação extra: Se response.data inválido, fallback para false
+        return {
+            canChat: response.data?.canChat ?? false,
+            bookingId: response.data?.bookingId,
+        };
     } catch (error: any) {
-        console.error(`Erro ao verificar agendamento ativo para chat entre cliente ${clientId} e provedor ${providerId}:`, error.response?.data || error.message);
-        // Em caso de erro, por segurança, retornamos que o chat não pode ser iniciado.
+        // MELHORIA: Log silencioso só em dev; não mostra nada ao usuário
+        if (__DEV__) {
+            if (axios.isAxiosError(error)) {
+                console.warn(
+                    `Erro ao verificar agendamento ativo para chat (dev only):`,
+                    error.response?.status === 404 ? 'Endpoint não implementado (404)' : (error.response?.data || error.message)
+                );
+            } else {
+                console.warn(`Erro não-Axios no check chat (dev only):`, error);
+            }
+        }
+        // SEMPRE RETORNA FALSE EM ERRO: UX premium, chat desabilitado silenciosamente
         return { canChat: false };
     }
 };
@@ -137,9 +162,11 @@ export const checkActiveChatBooking = async (clientId: string, providerId: strin
 export const checkConfirmedBookingBetweenUsers = async (clientId: string, providerId: string): Promise<boolean> => {
     try {
         const response: AxiosResponse<{ hasConfirmedBooking: boolean }> = await api.get(`/bookings/check-confirmed/${clientId}/${providerId}`);
-        return response.data.hasConfirmedBooking;
+        return response.data.hasConfirmedBooking ?? false;
     } catch (error: any) {
-        console.error(`Erro ao verificar agendamento confirmado entre cliente ${clientId} e provedor ${providerId}:`, error.response?.data || error.message);
-        return false;
+        if (__DEV__) {
+            console.warn(`Erro ao verificar agendamento confirmado (dev only):`, error.response?.data || error.message);
+        }
+        return false; // Fallback silencioso
     }
 };

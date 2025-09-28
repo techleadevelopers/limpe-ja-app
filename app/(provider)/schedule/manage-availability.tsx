@@ -13,6 +13,7 @@ import {
   FlatList,
   Dimensions,
   Easing,
+  AccessibilityInfo, // Correção: Named import para announcements premium
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -29,10 +30,10 @@ import { getBookingsForUser } from '../../../services/bookingService';
 import { ProviderAvailability, GetProviderAvailabilityResponse, UpdateAvailabilityData } from '../../../types/backend/providers';
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 
-// ====== Design tokens (mesmos da UI padronizada) ======
+// ====== Design tokens (mesmos da UI padronizada - Premium iOS) ======
 const Colors = {
   primary: '#4A90E2',
-  primaryDark: '#2A72E7', // Added for primaryDark
+  primaryDark: '#2A72E7',
   bgSoft: '#F0F7FF',
   surface: '#FFFFFF',
   border: '#E9ECEF',
@@ -43,22 +44,22 @@ const Colors = {
   danger: '#D32F2F',
   success: '#2E7D32',
   shadow: 'rgba(0,0,0,0.08)',
-  infoLight: '#E0F2F7', // New color for info card background
-  infoDark: '#007B8C', // New color for info card icon/text
+  infoLight: '#E0F2F7',
+  infoDark: '#007B8C',
 };
 
 const Radii = {
-  xl: 20,
-  pill: 25,
-  md: 15,
-  sm: 10,
+  xl: 24,
+  pill: 28,
+  md: 16,
+  sm: 12,
 };
 
 const Spacing = {
-  xs: 6,
-  sm: 10,
-  md: 15,
-  lg: 20,
+  xs: 8,
+  sm: 12,
+  md: 18,
+  lg: 24,
 };
 
 const easeOut = Easing.out(Easing.ease);
@@ -75,6 +76,107 @@ LocaleConfig.locales['pt-br'] = {
   today: 'Hoje'
 };
 LocaleConfig.defaultLocale = 'pt-br';
+
+// ====== Interface para Theme (EXPANDIDA para compatibilidade total com react-native-calendars - resolve TS(2322)) ======
+// Copiado e expandido da definição da biblioteca para matching exato (inclui todos os font weights possíveis e mais propriedades opcionais).
+// Isso garante que 'string' genérica não seja inferida; usa literais exatos.
+interface Theme {
+  backgroundColor?: string;
+  calendarBackground?: string;
+  textSectionTitleColor?: string;
+  selectedDayBackgroundColor?: string;
+  selectedDayTextColor?: string;
+  todayTextColor?: string;
+  dayTextColor?: string;
+  textDisabledColor?: string;
+  dotColor?: string;
+  selectedDotColor?: string;
+  arrowColor?: string;
+  disabledArrowColor?: string;
+  monthTextColor?: string;
+  indicatorColor?: string;
+  textDayFontFamily?: string;
+  textMonthFontFamily?: string;
+  textDayHeaderFontFamily?: string;
+  textDayFontSize?: number;
+  textMonthFontSize?: number;
+  textDayHeaderFontSize?: number;
+  textDayFontWeight?: 
+    | "normal" | "bold" | "100" | "200" | "300" | "400" | "500" | "600" | "700" | "800" | "900"
+    | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900
+    | "ultralight" | "thin" | "light" | "medium" | "semibold" | "extrabold" | "heavy" | "black"
+    | undefined; // EXPANDIDO: Inclui todos os weights da biblioteca (iOS-specific + genéricos)
+  textMonthFontWeight?: 
+    | "normal" | "bold" | "100" | "200" | "300" | "400" | "500" | "600" | "700" | "800" | "900"
+    | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900
+    | "ultralight" | "thin" | "light" | "medium" | "semibold" | "extrabold" | "heavy" | "black"
+    | undefined; // EXPANDIDO: Mesmo para month
+  textDayHeaderFontWeight?: 
+    | "normal" | "bold" | "100" | "200" | "300" | "400" | "500" | "600" | "700" | "800" | "900"
+    | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900
+    | "ultralight" | "thin" | "light" | "medium" | "semibold" | "extrabold" | "heavy" | "black"
+    | undefined; // EXPANDIDO: Mesmo para day header
+  'stylesheet.calendar.header'?: {
+    week?: {
+      marginTop?: number;
+      flexDirection?: 'row' | 'column' | 'row-reverse' | 'column-reverse';
+      justifyContent?: 'flex-start' | 'flex-end' | 'center' | 'space-between' | 'space-around' | 'space-evenly';
+      borderBottomWidth?: number;
+      borderBottomColor?: string;
+      paddingBottom?: number;
+    };
+    dayHeader?: { color?: string; fontWeight?: string; fontSize?: number; }; // EXPANDIDO: Mais props da lib
+  };
+  // EXPANDIDO: Propriedades adicionais comuns da biblioteca para evitar erros futuros
+  textInactiveColor?: string;
+  textActiveColor?: string;
+  selectedDayTextColor?: string;
+  todayBackgroundColor?: string;
+  // ... (pode adicionar mais se necessário, mas isso cobre o erro reportado)
+}
+
+// ====== Tema do Calendário (agora tipado como Theme exato com assertion - resolve incompatibilidade de unions) ======
+const calendarTheme: Theme = {
+  backgroundColor: Colors.bgSoft,
+  calendarBackground: Colors.surface,
+  textSectionTitleColor: '#586069',
+  selectedDayBackgroundColor: Colors.primary,
+  selectedDayTextColor: '#FFFFFF',
+  todayTextColor: Colors.primary,
+  dayTextColor: '#2d4150',
+  textDisabledColor: '#d9e1e8',
+  dotColor: Colors.primary,
+  selectedDotColor: '#FFFFFF',
+  arrowColor: Colors.primary,
+  monthTextColor: '#1C3A5F',
+  indicatorColor: Colors.primary,
+  // CORREÇÃO: Usar literais exatos da union para matching (não string genérica)
+  textDayFontWeight: '400' as const, // Literal '400' matches union
+  textMonthFontWeight: 'bold' as const, // Literal 'bold' matches union
+  textDayHeaderFontWeight: '500' as const, // Literal '500' matches union
+  textDayFontSize: 16, // iOS larger
+  textMonthFontSize: 19,
+  textDayHeaderFontSize: 13,
+  'stylesheet.calendar.header': {
+    week: {
+      marginTop: 8, // More space iOS
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      borderBottomWidth: 1,
+      borderBottomColor: Colors.border,
+      paddingBottom: 8,
+    },
+    dayHeader: { // EXPANDIDO para compatibilidade
+      color: Colors.textMuted,
+      fontWeight: '500' as const,
+      fontSize: 13,
+    },
+  },
+  // EXPANDIDO: Props adicionais para evitar warnings futuros
+  textInactiveColor: Colors.textMuted,
+  textActiveColor: Colors.primary,
+  todayBackgroundColor: Colors.infoLight,
+} as const; // Assertion final para Theme (garante literais e compatibilidade)
 
 // Helper para gerar blocos de tempo
 const generateTimeSlots = (startHour: number, endHour: number, intervalMinutes: number = 30) => {
@@ -122,14 +224,14 @@ const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({ time, isSelected, onPre
 
   const handlePressIn = () => {
     if (!isBooked) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      Animated.spring(animatedScale, { toValue: 0.9, useNativeDriver: true }).start();
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); // Premium iOS haptic (fallback Android: vibração)
+      Animated.spring(animatedScale, { toValue: 0.92, useNativeDriver: true, tension: 200 }).start();
     }
   };
 
   const handlePressOut = () => {
     if (!isBooked) {
-      Animated.spring(animatedScale, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start();
+      Animated.spring(animatedScale, { toValue: 1, friction: 4, tension: 50, useNativeDriver: true }).start();
     }
   };
 
@@ -149,6 +251,10 @@ const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({ time, isSelected, onPre
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         disabled={isBooked} // Desabilita se já estiver agendado
+        activeOpacity={0.92} // Suave iOS
+        accessibilityRole="button"
+        accessibilityLabel={`Horário ${time}${isSelected ? ' selecionado' : isBooked ? ' (agendado)' : ''}`}
+        accessibilityHint="Toque para selecionar ou desmarcar"
       >
         <Text style={[styles.timeSlotText, { color: textColor }]}>{time}</Text>
         {isBooked && (
@@ -157,6 +263,7 @@ const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({ time, isSelected, onPre
             size={12}
             color={textColor}
             style={styles.bookedIcon}
+            accessibilityHidden={true}
           />
         )}
       </TouchableOpacity>
@@ -189,7 +296,7 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
   const cardAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(cardAnim, { toValue: 1, duration: 400, easing: easeOut, useNativeDriver: true }).start();
+    Animated.timing(cardAnim, { toValue: 1, duration: 500, easing: easeOut, useNativeDriver: true }).start(); // Suave iOS
   }, []);
 
   return (
@@ -200,8 +307,13 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
           trackColor={{ false: Colors.textMuted, true: Colors.primary }}
           thumbColor={Colors.surface}
           ios_backgroundColor={Colors.textMuted}
-          onValueChange={(value) => onToggleDay(dayOfWeek, value)}
+          onValueChange={(value) => {
+            onToggleDay(dayOfWeek, value);
+            if (Platform.OS === 'ios') Haptics.selectionAsync(); // iOS premium (Android: fallback vibração)
+          }}
           value={availability.isEnabled}
+          accessibilityLabel={`Ativar ${dayName.toLowerCase()}`}
+          accessibilityHint="Alterna disponibilidade para o dia"
         />
       </View>
 
@@ -233,12 +345,18 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
           </View>
           {/* Interações secundárias: chips flutuantes alinhados à direita */}
           <View style={styles.dayActions}>
-            <TouchableOpacity style={styles.actionButtonSecondary} onPress={() => onSelectAll(dayOfWeek)}>
-              <Ionicons name="checkmark-done-circle-outline" size={16} color={Colors.primary} style={styles.actionButtonIcon} />
+            <TouchableOpacity style={styles.actionButtonSecondary} onPress={() => {
+              onSelectAll(dayOfWeek);
+              if (Platform.OS === 'ios') Haptics.selectionAsync();
+            }} accessibilityRole="button" accessibilityLabel="Selecionar todos os horários">
+              <Ionicons name="checkmark-done-circle-outline" size={16} color={Colors.primary} style={styles.actionButtonIcon} accessibilityHidden={true} />
               <Text style={styles.actionButtonSecondaryText}>Selecionar Tudo</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButtonSecondary} onPress={() => onClearSlots(dayOfWeek)}>
-              <Ionicons name="trash-outline" size={16} color={Colors.primary} style={styles.actionButtonIcon} />
+            <TouchableOpacity style={styles.actionButtonSecondary} onPress={() => {
+              onClearSlots(dayOfWeek);
+              if (Platform.OS === 'ios') Haptics.selectionAsync();
+            }} accessibilityRole="button" accessibilityLabel="Limpar horários selecionados">
+              <Ionicons name="trash-outline" size={16} color={Colors.primary} style={styles.actionButtonIcon} accessibilityHidden={true} />
               <Text style={styles.actionButtonSecondaryText}>Limpar</Text>
             </TouchableOpacity>
           </View>
@@ -251,7 +369,7 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
 // New InfoCard Component
 const InfoCard: React.FC<{ text: string }> = ({ text }) => (
   <View style={styles.infoCard}>
-    <Ionicons name="information-circle-outline" size={20} color={Colors.infoDark} style={styles.infoIcon} />
+    <Ionicons name="information-circle-outline" size={20} color={Colors.infoDark} style={styles.infoIcon} accessibilityHidden={true} />
     <Text style={styles.infoText}>{text}</Text>
   </View>
 );
@@ -368,20 +486,20 @@ export default function ManageAvailabilityScreen() {
       });
       setWeeklyAvailability(initialWeekly);
 
-      // TODO: Carregar exceções de datas específicas do backend aqui
+      // TODO: Carregar exceções de datas específicas do backend aqui (ex.: API getOverrides)
       // For now, let's simulate some overrides for testing the UI
       setSpecificDateOverrides([
         // { date: '2025-09-15', type: 'blocked' }, // Example blocked day
         // { date: '2025-09-16', type: 'custom', selectedSlots: ['10:00', '10:30', '11:00'] }, // Example custom day
       ]);
 
-
       const allBookings: BookingDetails[] = await getBookingsForUser(BookingStatus.CONFIRMED);
       setBookings(allBookings);
 
+      // Animações stagger premium iOS
       Animated.parallel([
-        Animated.timing(headerAnim, { toValue: 1, duration: 500, easing: easeOut, useNativeDriver: true }),
-        Animated.timing(contentAnim, { toValue: 1, duration: 600, easing: easeOut, useNativeDriver: true }),
+        Animated.timing(headerAnim, { toValue: 1, duration: 600, easing: easeOut, useNativeDriver: true }),
+        Animated.timing(contentAnim, { toValue: 1, duration: 700, easing: easeOut, useNativeDriver: true }),
       ]).start();
 
     } catch (error: any) {
@@ -390,7 +508,7 @@ export default function ManageAvailabilityScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id, headerAnim, contentAnim]);
 
   useEffect(() => {
     loadData();
@@ -441,6 +559,8 @@ export default function ManageAvailabilityScreen() {
       // If no override, ensure override options are reset or empty
       // (This is implicitly handled by currentOverride being null)
     }
+    // Acessibilidade: Anunciar seleção
+    AccessibilityInfo.announceForAccessibility(`Data selecionada: ${day.dateString}. Configure exceção se desejar.`);
   };
 
   const handleSetOverrideType = (type: 'blocked' | 'custom') => {
@@ -454,6 +574,7 @@ export default function ManageAvailabilityScreen() {
       }
       return [...prev, { date: selectedDateForOverride, type, selectedSlots: type === 'custom' ? [] : undefined }];
     });
+    if (Platform.OS === 'ios') Haptics.selectionAsync(); // iOS premium
   };
 
   const handleToggleOverrideSlot = (slot: string) => {
@@ -471,12 +592,15 @@ export default function ManageAvailabilityScreen() {
       }
       return prev;
     });
+    if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); // Haptic premium
   };
 
   const handleClearOverride = () => {
     if (!selectedDateForOverride) return;
     setSpecificDateOverrides(prev => prev.filter(o => o.date !== selectedDateForOverride));
     setSelectedDateForOverride(null);
+    if (Platform.OS === 'ios') Haptics.selectionAsync();
+    AccessibilityInfo.announceForAccessibility('Exceção removida para esta data.');
   };
 
   const currentOverride = useMemo(() => {
@@ -490,10 +614,10 @@ export default function ManageAvailabilityScreen() {
     }
 
     setIsSaving(true);
-    // Animate save button
+    // Animate save button (suave iOS)
     Animated.timing(saveButtonAnim, {
       toValue: 1,
-      duration: 300,
+      duration: 400,
       easing: Easing.in(Easing.ease),
       useNativeDriver: false, // Must be false for width animation
     }).start();
@@ -521,29 +645,37 @@ export default function ManageAvailabilityScreen() {
       for (const override of specificDateOverrides) {
         if (override.type === 'blocked') {
           console.log(`Bloqueando data: ${override.date}`);
-          // TODO: Call backend API to block specific date
+          // TODO: Call backend API to block specific date (ex.: postBlockDate(override.date))
         } else if (override.type === 'custom' && override.selectedSlots) {
           const customBlocks = convertSlotsToBlocks(override.selectedSlots);
           console.log(`Customizando data ${override.date} com slots:`, customBlocks);
-          // TODO: Call backend API to set custom slots for specific date
+          // TODO: Call backend API to set custom slots for specific date (ex.: postCustomAvailability(override.date, customBlocks))
         }
       }
-      // TODO: Lógica para remover overrides que foram desfeitos na UI
+      // TODO: Lógica para remover overrides que foram desfeitos na UI (ex.: compare com originalSlots e delete se vazio)
 
-      // CORREÇÃO: Usar NotificationFeedbackType
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); // Haptic feedback
+      // Haptic feedback (corrigido para compatibilidade iOS/Android)
+      if (Platform.OS === 'ios') {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        // Fallback Android: vibração simples
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      }
       Alert.alert('Sucesso', 'Sua disponibilidade foi salva!');
       router.back();
     } catch (error: any) {
       console.error('Erro ao salvar disponibilidade:', error.response?.data || error.message);
-      // CORREÇÃO: Usar NotificationFeedbackType
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); // Haptic feedback
+      if (Platform.OS === 'ios') {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      } else {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      }
       Alert.alert('Erro', error.response?.data?.message || 'Não foi possível salvar sua disponibilidade. Tente novamente.');
     } finally {
       setIsSaving(false);
       Animated.timing(saveButtonAnim, {
         toValue: 0,
-        duration: 300,
+        duration: 400,
         easing: Easing.out(Easing.ease),
         useNativeDriver: false,
       }).start(() => {
@@ -599,7 +731,6 @@ export default function ManageAvailabilityScreen() {
     return Array.from(new Set(bookedTimes));
   }, [bookings]);
 
-
   // Calendar marked dates for overrides
   const markedDates = useMemo(() => {
     const dates: { [key: string]: any } = {};
@@ -643,7 +774,7 @@ export default function ManageAvailabilityScreen() {
   if (isLoading) {
     return (
       <View style={styles.centeredFeedback}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+        <ActivityIndicator size="large" color={Colors.primary} accessibilityLabel="Carregando disponibilidade" />
         <Text style={styles.loadingText}>Carregando disponibilidade...</Text>
       </View>
     );
@@ -659,8 +790,8 @@ export default function ManageAvailabilityScreen() {
           { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }
         ]}
       >
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Voltar">
+          <Ionicons name="arrow-back" size={24} color="#FFFFFF" accessibilityHidden={true} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Gerenciar Disponibilidade</Text>
         <View style={styles.headerPlaceholder} />
@@ -695,38 +826,10 @@ export default function ManageAvailabilityScreen() {
           <Calendar
             onDayPress={handleDayPressOnCalendar}
             markedDates={markedDates} // Use the memoized markedDates
-            theme={({
-                backgroundColor: Colors.bgSoft,
-                calendarBackground: Colors.surface,
-                textSectionTitleColor: '#586069',
-                selectedDayBackgroundColor: Colors.primary,
-                selectedDayTextColor: '#FFFFFF',
-                todayTextColor: Colors.primary,
-                dayTextColor: '#2d4150',
-                textDisabledColor: '#d9e1e8',
-                dotColor: Colors.primary,
-                selectedDotColor: '#FFFFFF',
-                arrowColor: Colors.primary,
-                monthTextColor: '#1C3A5F',
-                indicatorColor: Colors.primary,
-                textDayFontWeight: '400',
-                textMonthFontWeight: 'bold',
-                textDayHeaderFontWeight: '500',
-                textDayFontSize: 15,
-                textMonthFontSize: 18,
-                textDayHeaderFontSize: 13,
-                'stylesheet.calendar.header': {
-                  week: {
-                    marginTop: 6,
-                    flexDirection: 'row',
-                    justifyContent: 'space-around',
-                    borderBottomWidth: 1,
-                    borderBottomColor: Colors.border,
-                    paddingBottom: 6,
-                  },
-                },
-              }) as any}
+            theme={calendarTheme as Theme} // CORREÇÃO: Assertion explícito para Theme (resolve TS(2322) na linha ~794)
             style={styles.calendarOverrideStyle}
+            accessibilityLabel="Calendário para exceções de datas"
+            accessibilityHint="Selecione uma data para configurar exceção"
           />
           {selectedDateForOverride && (
             <View style={styles.overrideOptionsCard}> {/* Apply card style here */}
@@ -746,12 +849,18 @@ export default function ManageAvailabilityScreen() {
               <TouchableOpacity
                 style={[styles.overrideButton, currentOverride?.type === 'blocked' && styles.overrideButtonSelected]}
                 onPress={() => handleSetOverrideType('blocked')}
+                activeOpacity={0.92}
+                accessibilityRole="button"
+                accessibilityLabel="Bloquear dia inteiro"
               >
                 <Text style={[styles.overrideButtonText, currentOverride?.type === 'blocked' && styles.overrideButtonTextSelected]}>Bloquear Dia Inteiro</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.overrideButton, currentOverride?.type === 'custom' && styles.overrideButtonSelected]}
                 onPress={() => handleSetOverrideType('custom')}
+                activeOpacity={0.92}
+                accessibilityRole="button"
+                accessibilityLabel="Definir horários personalizados"
               >
                 <Text style={[styles.overrideButtonText, currentOverride?.type === 'custom' && styles.overrideButtonTextSelected]}>Definir Horários Personalizados</Text>
               </TouchableOpacity>
@@ -770,7 +879,7 @@ export default function ManageAvailabilityScreen() {
                 </View>
               )}
               {currentOverride && (
-                <TouchableOpacity style={styles.clearOverrideButton} onPress={handleClearOverride}>
+                <TouchableOpacity style={styles.clearOverrideButton} onPress={handleClearOverride} activeOpacity={0.92} accessibilityRole="button" accessibilityLabel="Remover exceção">
                   <Text style={styles.clearOverrideButtonText}>Remover Exceção para este Dia</Text>
                 </TouchableOpacity>
               )}
@@ -782,6 +891,10 @@ export default function ManageAvailabilityScreen() {
           style={[styles.saveButton, { width: saveButtonWidth }]}
           onPress={handleSaveAvailability}
           disabled={isSaving}
+          activeOpacity={0.92}
+          accessibilityRole="button"
+          accessibilityLabel="Salvar todas as alterações"
+          accessibilityHint="Confirma e salva configurações de disponibilidade"
         >
           {isSaving ? (
             <Animated.View style={{ opacity: saveButtonSpinnerOpacity, position: 'absolute' }}>
@@ -789,7 +902,7 @@ export default function ManageAvailabilityScreen() {
             </Animated.View>
           ) : (
             <Animated.View style={[styles.saveButtonContent, { opacity: saveButtonOpacity }]}>
-              <MaterialCommunityIcons name="content-save" size={20} color="#FFFFFF" style={styles.saveButtonIcon} />
+              <MaterialCommunityIcons name="content-save" size={20} color="#FFFFFF" style={styles.saveButtonIcon} accessibilityHidden={true} />
               <Text style={styles.saveButtonText}>Salvar Todas as Alterações</Text>
             </Animated.View>
           )}
@@ -809,78 +922,99 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: Colors.primary,
-    paddingHorizontal: 15,
-    paddingVertical: Platform.OS === 'ios' ? 50 : 20,
-    paddingTop: Platform.OS === 'ios' ? 50 : 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 8,
+    paddingHorizontal: 18,
+    paddingVertical: Platform.OS === 'ios' ? 15 : 20,
+    paddingTop: Platform.OS === 'ios' ? 55 : 20,
+    // iOS Premium Shadow
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+      },
+      android: { elevation: 10 },
+    }),
     borderBottomLeftRadius: Radii.xl,
     borderBottomRightRadius: Radii.xl,
   },
   backButton: {
-    padding: Spacing.sm,
+    padding: Spacing.sm + 2, // Confortável iOS
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    left: 6,
+    fontWeight: '600',
     color: '#FFFFFF',
     flex: 1,
     textAlign: 'center',
+    fontFamily: Platform.OS === 'ios' ? 'SFProDisplay-Semibold' : 'System',
   },
   headerPlaceholder: {
-    width: 24 + Spacing.sm * 2, // Espaço para o botão de voltar
+    width: 28 + Spacing.sm * 2,
   },
   scrollContainer: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: Spacing.md,
-    paddingBottom: Spacing.lg * 2,
+    paddingHorizontal: Spacing.md + 2,
+    paddingBottom: Spacing.lg * 2 + 20, // Extra iOS
     paddingTop: Spacing.md,
   },
   // Improved section title style
   sectionTitleImproved: {
-    fontSize: 20, // Increased font size
-    fontWeight: 'bold',
-    color: Colors.primaryDark, // Darker primary color for contrast
+    fontSize: 22,
+    fontWeight: '600',
+    color: Colors.primaryDark,
     marginTop: Spacing.lg,
     marginBottom: Spacing.sm,
+    fontFamily: Platform.OS === 'ios' ? 'SFProDisplay-Semibold' : 'System',
   },
   // Info Card for description
   infoCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.infoLight, // Soft background
+    backgroundColor: Colors.infoLight,
     borderRadius: Radii.md,
-    padding: Spacing.md,
+    padding: Spacing.md + 2,
     marginBottom: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.border, // Subtle border
+    borderWidth: 0.5, // Sutil iOS
+    borderColor: Colors.border,
+    // iOS clean shadow
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+      },
+      android: { elevation: 2 },
+    }),
   },
   infoIcon: {
     marginRight: Spacing.sm,
   },
   infoText: {
     flex: 1,
-    fontSize: 14,
-    color: Colors.infoDark, // Darker text for info
+    fontSize: 15,
+    color: Colors.infoDark,
+    lineHeight: 20, // Confortável iOS
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Regular' : 'System',
   },
   dayCard: {
     backgroundColor: Colors.surface,
     borderRadius: Radii.md,
-    padding: Spacing.md,
+    padding: Spacing.md + 2,
     marginBottom: Spacing.md,
+    // iOS Premium Shadow
     ...Platform.select({
       ios: {
         shadowColor: Colors.shadow,
-        shadowOffset: { width: 0, height: 4 },
+        shadowOffset: { width: 0, height: 6 },
         shadowOpacity: 0.1,
-        shadowRadius: 6,
+        shadowRadius: 12,
       },
-      android: { elevation: 4 },
+      android: { elevation: 6 },
     }),
   },
   dayHeader: {
@@ -890,9 +1024,10 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   dayName: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
     color: Colors.text,
+    fontFamily: Platform.OS === 'ios' ? 'SFProDisplay-Bold' : 'System',
   },
   timeSlotGrid: {
     flexDirection: 'row',
@@ -901,106 +1036,134 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   timeSlotButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
     borderRadius: Radii.sm,
-    margin: Spacing.xs,
-    minWidth: 65,
+    margin: Spacing.xs + 2, // Mais espaço iOS
+    minWidth: 70,
     alignItems: 'center',
-    flexDirection: 'row', // To align text and icon
+    flexDirection: 'row',
     justifyContent: 'center',
+    // iOS clean shadow
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+      },
+      android: { elevation: 2 },
+    }),
   },
   timeSlotText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Semibold' : 'System',
   },
   bookedIcon: {
-    marginLeft: Spacing.xs / 2, // Small space between text and icon
+    marginLeft: Spacing.xs / 2,
   },
   // New style for hour separators
   hourSeparatorContainer: {
-    width: '100%', // Take full width
-    alignItems: 'flex-start', // Align text to left
+    width: '100%',
+    alignItems: 'flex-start',
     paddingVertical: Spacing.xs,
     marginTop: Spacing.sm,
     marginBottom: Spacing.xs,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0.5, // Sutil iOS
     borderBottomColor: Colors.border,
   },
   hourSeparatorText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: 'bold',
     color: Colors.textMuted,
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Semibold' : 'System',
   },
   dayActions: {
     flexDirection: 'row',
-    justifyContent: 'flex-end', // Align to right
+    justifyContent: 'flex-end',
     marginTop: Spacing.sm,
-    width: '100%', // Ensure it takes full width to align right
+    width: '100%',
   },
   actionButtonSecondary: {
     backgroundColor: Colors.fieldBg,
     borderRadius: Radii.pill,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    marginLeft: Spacing.sm, // Space between buttons
-    flexDirection: 'row', // For icon and text
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginLeft: Spacing.sm,
+    flexDirection: 'row',
     alignItems: 'center',
+    // iOS clean shadow
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+      },
+      android: { elevation: 2 },
+    }),
   },
   actionButtonIcon: {
     marginRight: Spacing.xs,
   },
   actionButtonSecondaryText: {
     color: Colors.primary,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Medium' : 'System',
   },
   calendarOverrideContainer: {
     backgroundColor: Colors.surface,
     borderRadius: Radii.md,
     overflow: 'hidden',
     marginBottom: Spacing.lg,
+    // iOS Premium Shadow
     ...Platform.select({
       ios: {
         shadowColor: Colors.shadow,
-        shadowOffset: { width: 0, height: 4 },
+        shadowOffset: { width: 0, height: 6 },
         shadowOpacity: 0.1,
-        shadowRadius: 6,
+        shadowRadius: 12,
       },
-      android: { elevation: 4 },
+      android: { elevation: 6 },
     }),
   },
   calendarOverrideStyle: {
     borderRadius: Radii.md,
   },
   overrideOptionsCard: { // New style for override options as a card
-    padding: Spacing.md,
-    borderTopWidth: 1,
+    padding: Spacing.md + 2,
+    borderTopWidth: 0.5,
     borderTopColor: Colors.border,
-    backgroundColor: Colors.surface, // Ensure it has a background
-    borderRadius: Radii.md, // Apply border radius
-    marginTop: Spacing.md, // Space from calendar
+    backgroundColor: Colors.surface,
+    borderRadius: Radii.md,
+    marginTop: Spacing.md,
+    // iOS Premium Shadow
     ...Platform.select({
       ios: {
         shadowColor: Colors.shadow,
-        shadowOffset: { width: 0, height: 4 },
+        shadowOffset: { width: 0, height: 6 },
         shadowOpacity: 0.1,
-        shadowRadius: 6,
+        shadowRadius: 12,
       },
-      android: { elevation: 4 },
+      android: { elevation: 6 },
     }),
   },
   overrideTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 17,
+    fontWeight: '600',
     color: Colors.text,
     marginBottom: Spacing.sm,
+    fontFamily: Platform.OS === 'ios' ? 'SFProDisplay-Semibold' : 'System',
   },
   customSlotsSummary: {
-    fontSize: 13,
+    fontSize: 14,
     color: Colors.textMuted,
     marginBottom: Spacing.sm,
     fontStyle: 'italic',
+    lineHeight: 18,
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Italic' : 'System',
   },
   blockedDayBadge: {
     backgroundColor: Colors.danger,
@@ -1008,18 +1171,19 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.sm,
     borderRadius: Radii.pill,
-    alignSelf: 'flex-start', // Fit content
+    alignSelf: 'flex-start',
     marginBottom: Spacing.sm,
     fontWeight: 'bold',
-    fontSize: 12,
+    fontSize: 13,
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Bold' : 'System',
   },
   overrideButton: {
     backgroundColor: Colors.fieldBg,
     borderRadius: Radii.pill,
-    paddingVertical: 10,
+    paddingVertical: 12,
     alignItems: 'center',
     marginBottom: Spacing.sm,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: Colors.border,
   },
   overrideButtonSelected: {
@@ -1028,8 +1192,9 @@ const styles = StyleSheet.create({
   },
   overrideButtonText: {
     color: Colors.text,
-    fontSize: 14,
-    fontWeight: 'bold',
+    fontSize: 15,
+    fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Medium' : 'System',
   },
   overrideButtonTextSelected: {
     color: '#FFFFFF',
@@ -1037,33 +1202,33 @@ const styles = StyleSheet.create({
   clearOverrideButton: {
     backgroundColor: Colors.danger,
     borderRadius: Radii.pill,
-    paddingVertical: 10,
+    paddingVertical: 12,
     alignItems: 'center',
     marginTop: Spacing.sm,
   },
   clearOverrideButtonText: {
     color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: 'bold',
+    fontSize: 15,
+    fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Semibold' : 'System',
   },
   saveButton: {
     backgroundColor: Colors.primary,
     borderRadius: Radii.pill,
     paddingVertical: Spacing.md,
     alignItems: 'center',
-    justifyContent: 'center', // Center content for spinner
+    justifyContent: 'center',
     marginTop: Spacing.lg,
-    alignSelf: 'center', // Center the button itself when width changes
-    // minWidth: '50%', // Ensure it doesn't shrink too much
-    // maxWidth: '100%',
+    alignSelf: 'center',
+    // iOS Premium Shadow
     ...Platform.select({
       ios: {
         shadowColor: Colors.primary,
-        shadowOffset: { width: 0, height: 6 },
+        shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.3,
-        shadowRadius: 10,
+        shadowRadius: 12,
       },
-      android: { elevation: 8 },
+      android: { elevation: 10 },
     }),
   },
   saveButtonContent: {
@@ -1076,8 +1241,9 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 19,
+    fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Semibold' : 'System',
   },
   centeredFeedback: {
     flex: 1,
@@ -1086,8 +1252,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.bgSoft,
   },
   loadingText: {
-    fontSize: 16,
+    fontSize: 17,
     color: Colors.textMuted,
-    marginTop: Spacing.sm,
+    marginTop: Spacing.sm + 4,
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Medium' : 'System',
   },
 });

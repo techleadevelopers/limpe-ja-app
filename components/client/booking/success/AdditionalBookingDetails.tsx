@@ -1,6 +1,8 @@
 // LimpeJaApp/app/(client)/bookings/components/success/AdditionalBookingDetails.tsx
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, Animated, Easing, Platform, Dimensions } from 'react-native';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
 
 interface AdditionalBookingDetailsProps {
   bookingId: string;
@@ -19,7 +21,7 @@ export default function AdditionalBookingDetails({
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
 
   useEffect(() => {
-    Animated.parallel([
+    const entryAnim = Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 500,
@@ -41,7 +43,10 @@ export default function AdditionalBookingDetails({
         easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }),
-    ]).start();
+    ]);
+    entryAnim.start();
+
+    return () => entryAnim.stop();
   }, []);
 
   return (
@@ -52,16 +57,16 @@ export default function AdditionalBookingDetails({
       ]}
     >
       <View style={styles.additionalDetailItem}>
-        <Text style={styles.additionalDetailLabel}>ID do Agendamento</Text>
-        <Text style={styles.additionalDetailValue}>{bookingId || 'N/A'}</Text>
+        <Text style={styles.additionalDetailLabel} maxFontSizeMultiplier={1.2}>ID do Agendamento</Text>
+        <Text style={styles.additionalDetailValue} numberOfLines={1} maxFontSizeMultiplier={1.2}>{bookingId || 'N/A'}</Text>
       </View>
       <View style={styles.additionalDetailItem}>
-        <Text style={styles.additionalDetailLabel}>Valor Total</Text>
-        <Text style={styles.additionalDetailValue}>{formattedPaymentValue}</Text>
+        <Text style={styles.additionalDetailLabel} maxFontSizeMultiplier={1.2}>Valor Total</Text>
+        <Text style={styles.additionalDetailValue} numberOfLines={1} maxFontSizeMultiplier={1.2}>{formattedPaymentValue}</Text>
       </View>
       <View style={styles.additionalDetailItem}>
-        <Text style={styles.additionalDetailLabel}>Método de Pagamento</Text>
-        <Text style={styles.additionalDetailValue}>{displayPaymentMethod}</Text>
+        <Text style={styles.additionalDetailLabel} maxFontSizeMultiplier={1.2}>Método de Pagamento</Text>
+        <Text style={styles.additionalDetailValue} numberOfLines={1} maxFontSizeMultiplier={1.2}>{displayPaymentMethod}</Text>
       </View>
     </Animated.View>
   );
@@ -70,17 +75,22 @@ export default function AdditionalBookingDetails({
 const styles = StyleSheet.create({
   additionalDetailsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
+    justifyContent: 'space-between', // Fix: Space-between em vez de space-evenly para evitar overflow no iOS
+    flexWrap: 'nowrap', // Fix: No wrap para prevenir scroll horizontal
     marginTop: 15,
     borderTopWidth: 1,
     borderTopColor: '#E0E0E0',
     paddingTop: 20,
+    paddingHorizontal: 16, // Fix: Padding fixo para safe areas iOS
+    width: '100%',
+    maxWidth: SCREEN_WIDTH - 32, // Fix: Ajuste para safe areas laterais no iOS
   },
   additionalDetailItem: {
-    width: '32%',
+    flex: 1, // Fix: Flex em vez de width fixa para responsivo no iOS
     alignItems: 'center',
+    marginHorizontal: 4, // Espaçamento mínimo sem overflow
     marginBottom: 15,
+    minHeight: 60,
   },
   additionalDetailLabel: {
     fontSize: 11,

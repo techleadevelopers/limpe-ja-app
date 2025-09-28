@@ -1,6 +1,6 @@
 // LimpeJaApp/app/(client)/bookings/components/success/SuccessHeader.tsx
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Platform, Image, Animated, Easing } from 'react-native';
+import { View, StyleSheet, Platform, Image, Animated, Easing, SafeAreaView } from 'react-native';
 import { AppDurations } from '../../../../constants/appStyles'; // Importar AppDurations
 
 interface SuccessHeaderProps {
@@ -54,38 +54,43 @@ export default function SuccessHeader({
     }, [logoPulseAnim, logoRotateAnim]);
 
     return (
-        <View style={styles.headerContainer}>
-            <Animated.Image
-                source={require('../../../../assets/images/logo2.png')}
-                style={[
-                    styles.logoImage,
-                    {
-                        transform: [
-                            { scale: logoPulseAnim },
-                        ]
-                    }
-                ]}
-                resizeMode="contain"
-            />
-        </View>
+        <SafeAreaView style={styles.safeAreaHeader}> {/* Fix: SafeAreaView para iOS notch/status bar */}
+            <View style={styles.headerContainer}>
+                <Animated.Image
+                    source={require('../../../../assets/images/logo2.png')}
+                    style={[
+                        styles.logoImage,
+                        {
+                            transform: [
+                                { scale: logoPulseAnim },
+                            ]
+                        }
+                    ]}
+                    resizeMode="contain"
+                />
+            </View>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
+    safeAreaHeader: {
+        flex: 0,
+        backgroundColor: 'transparent', // Mantém transparência
+    },
     headerContainer: {
-        paddingTop: Platform.OS === 'android' ? 40 : 10, // Considerar SafeAreaView para iOS
+        paddingTop: Platform.OS === 'ios' ? 20 : 50, // Fix: Reduzido para iOS (SafeAreaView cuida do resto), mas ainda centraliza
         paddingBottom: 10,
         paddingHorizontal: 20,
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: 'transparent',
+        maxWidth: '100%', // Fix: Previne overflow lateral
     },
     logoImage: {
         width: 150,
         height: 50,
-        top: 0,
-        right: 5,
         // Remover tamanho fixo se a imagem precisar ser responsiva
         // Se a imagem for um SVG ou puder ser escalada, usar flex ou porcentagem
         // Ex: width: '80%', height: undefined, aspectRatio: 3,

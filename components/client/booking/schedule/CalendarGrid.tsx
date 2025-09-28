@@ -30,7 +30,7 @@ export default function CalendarGrid({ calendarDays, selectedDate, onDaySelect, 
                 ))}
             </View>
             <View style={styles.calendarGrid}>
-                {calendarDays.map((dayInfo, index) => {
+                {calendarDays.map((dayInfo) => { // ✅ CORREÇÃO: Removido o index do map para evitar uso de index como key
                     const isSelected = selectedDate.toDateString() === dayInfo.dateObj.toDateString() && dayInfo.month === 'current';
                     const isPast = dayInfo.dateObj < new Date(new Date().setHours(0, 0, 0, 0)) && dayInfo.dateObj.toDateString() !== new Date().toDateString();
                     
@@ -39,7 +39,8 @@ export default function CalendarGrid({ calendarDays, selectedDate, onDaySelect, 
 
                     return (
                         <TouchableOpacity
-                            key={index}
+                            // ✅ CORREÇÃO: Usar dateObj.toISOString() como key único em vez de index, evitando warnings de keys duplicadas ou instáveis
+                            key={dayInfo.dateObj.toISOString()}
                             style={[
                                 styles.dayCell,
                                 isSelected && styles.dayCellSelected, // Aplica o estilo de seleção apenas quando selecionado

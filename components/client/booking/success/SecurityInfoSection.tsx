@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Image, Dimensions, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, Image, Dimensions, Animated, Easing, Platform } from 'react-native';
 
 interface SecurityInfoSectionProps {
     successColor: string;
@@ -17,7 +17,7 @@ export default function SecurityInfoSection({ successColor }: SecurityInfoSectio
     const scaleAnim = useRef(new Animated.Value(0.95)).current;
 
     useEffect(() => {
-        Animated.parallel([
+        const entryAnim = Animated.parallel([
             Animated.timing(fadeAnim, {
                 toValue: 1,
                 duration: 500,
@@ -39,7 +39,10 @@ export default function SecurityInfoSection({ successColor }: SecurityInfoSectio
                 easing: Easing.out(Easing.ease),
                 useNativeDriver: true,
             }),
-        ]).start();
+        ]);
+        entryAnim.start();
+
+        return () => entryAnim.stop();
     }, []);
 
     return (
@@ -49,10 +52,11 @@ export default function SecurityInfoSection({ successColor }: SecurityInfoSectio
                 {
                     backgroundColor: blueBackgroundColor,
                     borderColor: blueBorderColor,
-                    width: SCREEN_WIDTH * 0.85,
+                    width: SCREEN_WIDTH * 0.9, // Alinhado centralizado premium
                     alignSelf: 'center',
                     opacity: fadeAnim,
                     transform: [{ translateY: translateYAnim }, { scale: scaleAnim }],
+                    marginHorizontal: Platform.OS === 'ios' ? 10 : 5, // Cross-platform
                 }
             ]}
         >
@@ -60,14 +64,14 @@ export default function SecurityInfoSection({ successColor }: SecurityInfoSectio
                 source={require('../../../../assets/images/safe-icon.png')}
                 style={styles.securityImage}
             />
-            <Text style={styles.securityTextHeader}>Sua Segurança é Nossa Prioridade</Text>
-            <Text style={styles.securityText}>
+            <Text style={styles.securityTextHeader} maxFontSizeMultiplier={1.2}>Sua Segurança é Nossa Prioridade</Text>
+            <Text style={styles.securityText} maxFontSizeMultiplier={1.2} numberOfLines={5}>
                 Para sua tranquilidade, todos os nossos prestadores passam por um rigoroso processo de
                 **verificação de antecedentes** e o serviço está coberto por **seguro**.
                 Sua avaliação pós-serviço é fundamental para mantermos a qualidade e a segurança da comunidade.
                 Em caso de qualquer problema ou disputa, entre em contato com nosso suporte imediatamente.
             </Text>
-            <Text style={styles.securityTextSmall}>
+            <Text style={styles.securityTextSmall} maxFontSizeMultiplier={1.2}>
                 Seu agendamento foi registrado com segurança em nosso sistema.
             </Text>
         </Animated.View>
