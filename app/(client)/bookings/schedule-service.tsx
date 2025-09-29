@@ -53,7 +53,7 @@ import ConfirmBookingButton from '../../../components/client/booking/schedule/Co
 
 import { AppColors, AppDurations, AppOffsets, AppShadows, SCREEN_WIDTH, SCREEN_HEIGHT } from '../../../constants/appStyles';
 
-import backImage from '../../../assets/images/back.png';
+
 
 const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
@@ -85,7 +85,7 @@ interface CouponInputSectionProps {
     couponFeedbackAnim: Animated.Value;
     couponFeedbackColor: string;
     couponFeedbackIcon: string;
-    t: pequeno;
+    t: any;
     // ✅ NOVO: Animação para seção cupom
     cupomEntranceAnim?: Animated.Value;
     cupomStaggerDelay?: number;
@@ -397,7 +397,7 @@ export default function ScheduleServiceScreen() {
 
     // ✅ CORREÇÃO: Use t() fora do array para evitar re-run do useEffect de slots; fallback para undefined
     const stepDateTimeTitle = useMemo(() => t('schedule_service.progress_step_date_time', { defaultValue: 'Data e Hora' }), [t]);
-    const stepReviewTitle = useMemo(() => t('schedule_service.progress_step_complete_review', { defaultValue: 'Revisão Completa' }), [t]);
+    const stepReviewTitle = useMemo(() => t('schedule_service.progress_step_complete_review', { defaultValue: 'Revisão' }), [t]);
     const stepTitles = [stepDateTimeTitle, stepReviewTitle];
 
     const prefetchAvailability = useCallback(async (provId: string | undefined, baseDate: Date) => {
@@ -820,10 +820,12 @@ export default function ScheduleServiceScreen() {
                 requestedSquareMeters = squareMeters!;
             }
 
+            // ✅ PATCH 2.1: Blindagem para selectedDate undefined
+            const safeSelectedDate = selectedDate ?? new Date();
             const bookingData: CreateBookingDto = {
                 providerId: provider.id,
                 providerServiceId: selectedProviderService.id,
-                scheduledDate: selectedDate.toISOString().split('T')[0],
+                scheduledDate: safeSelectedDate.toISOString().split('T')[0],
                 scheduledTime: selectedTime,
                 totalPrice: finalCalculatedPrice,
                 notes: notes,
@@ -1016,7 +1018,9 @@ export default function ScheduleServiceScreen() {
 
             await new Promise(resolve => setTimeout(resolve, 200)); // Delay para animação
 
-            const dateString = selectedDate.toISOString().split('T')[0];
+            // ✅ PATCH 2.1: Blindagem para selectedDate undefined no useEffect de slots
+            const safeSelectedDate = selectedDate ?? new Date();
+            const dateString = safeSelectedDate.toISOString().split('T')[0];
             const cacheKey = `${provider.id}-${dateString}`;
 
             let backendResponse: { available: ProviderAvailability[], occupiedTimes: string[] } | undefined = undefined;
@@ -1043,7 +1047,7 @@ export default function ScheduleServiceScreen() {
                         console.log(`[Slots Premium] Fetch sucesso para ${dateString}:`, {
                             available: backendResponse.available.length,
                             occupied: backendResponse.occupiedTimes.length,
-                            configuredSlots: backendResponse.available.map(s => s.time) // ✅ Debug: Log horários configurados
+                            configuredSlots: backendResponse.available.map(s => s.startTime) // ✅ CORREÇÃO: Usa s.startTime em vez de s.time (alinhado com tipo ProviderAvailability)
                         });
                     }
                 } catch (err: any) {
@@ -1069,11 +1073,28 @@ export default function ScheduleServiceScreen() {
 
             if (!backendResponse || isCancelled) return;
 
-            const providerConfiguredSlots: ProviderAvailability[] = backendResponse.available || [];
+            // ✅ CORREÇÃO: Filtra entradas inválidas (sem .startTime string) e normaliza shape do backend
+            // Usa startTime como time principal (compatível com ProviderAvailability: startTime/endTime)
+            const providerConfiguredSlots: ProviderAvailability[] =
+              (backendResponse.available || [])
+                .map(s => {
+                  if (s && typeof s.startTime === 'string' && s.startTime.length > 0) return s; // ✅ CORREÇÃO: Verifica startTime diretamente (sem 'as any')
+                  if (s && typeof (s as any).time === 'string' && (s as any).time.length > 0) {
+                    // Fallback para time se backend variar (raro, mas blindagem)
+                    return { ...s, startTime: (s as any).time };
+                  }
+                  if (s && typeof s.startTime !== 'string') {
+                    // Ignora entradas inválidas sem startTime
+                    return null;
+                  }
+                  return s; // ✅ CORREÇÃO: Mantém se válido, sem forçar time
+                })
+                .filter(Boolean) as ProviderAvailability[];
+
             const occupiedTimesFromBackend: string[] = backendResponse.occupiedTimes || [];
 
             const finalDisplaySlots = generateDailySlots(
-                selectedDate,
+                safeSelectedDate,
                 providerConfiguredSlots,
                 occupiedTimesFromBackend
             );
@@ -1507,26 +1528,27 @@ const styles = StyleSheet.create({
     },
     stepsPill: {
         marginTop: 30,
-        marginBottom: 3,
+        marginBottom: 16,
         alignSelf: 'center',
         backgroundColor: 'rgba(202, 214, 241, 0.8)',
         borderRadius: 40,
         padding: 6,
         flexDirection: 'row',
         shadowColor: '#2f3344e8',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.17,
-        shadowRadius: 9,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.57,
+        shadowRadius: 2,
         elevation: 6,
+         borderWidth: 0.2,
+        borderColor: 'rgba(85, 123, 228, 0.86)',
     },
     stepItem: {
         borderRadius: 40,
-        paddingVertical: 5,
-        paddingHorizontal: 9,
+        paddingVertical: 4,
+        paddingHorizontal: 6,
         flexShrink: 1,
         minWidth: 100,
-        borderWidth: 1,
-        borderColor: AppColors.borderNeutral,
+       
     },
     stepItemActive: { 
         backgroundColor: AppColors.primaryInteractive 
@@ -1534,7 +1556,7 @@ const styles = StyleSheet.create({
     stepActiveText: {
         color: AppColors.white,
         fontWeight: '700',
-        fontSize: 10,
+        fontSize: 11,
         textAlign: 'center',
     },
     stepItemGhost: { 
@@ -1543,7 +1565,7 @@ const styles = StyleSheet.create({
     stepGhostText: {
         color: AppColors.mediumGray,
         fontWeight: '600',
-        fontSize: 10,
+        fontSize: 11,
         textAlign: 'center',
     },
     floatingSummaryContainer: {
@@ -1734,19 +1756,19 @@ const styles = StyleSheet.create({
     },
     nextStepButton: {
         backgroundColor: AppColors.primaryInteractive,
-        marginHorizontal: 20,
-        paddingVertical: 15,
+        marginHorizontal: 50,
+        paddingVertical: 7,
         borderRadius: 15,
         alignItems: 'center',
         marginTop: 30,
-        marginBottom: 20,
+        marginBottom: -8,
     },
     nextStepButtonDisabled: {
-        backgroundColor: AppColors.mediumGray,
+        backgroundColor: '#94aee688'
     },
     nextStepButtonText: {
         color: AppColors.white,
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: 'bold',
     },
 });

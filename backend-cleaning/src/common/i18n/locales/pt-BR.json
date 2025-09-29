@@ -24,7 +24,11 @@
       "hourly_price": "Por Hora",
       "per_sqm_price": "Por m²",
       "fixed_price_label": "Preço Fixo",
-      "locale": "pt-BR"
+      "locale": "pt-BR",
+      "minutes_short": "min",
+      "na": "N/A",
+      "area": "área",
+      "duration": "duração"
     },
     "explore_section": {
       "title": "Explore mais Serviços"
@@ -53,7 +57,8 @@
       "expires_in_days": "Expira em {{count}} dias",
       "rebook_now": "Agendar novamente",
       "coupon_code_copied": "Código '{{code}}' copiado!",
-      "failed_to_copy_coupon": "Falha ao copiar o cupom."
+      "failed_to_copy_coupon": "Falha ao copiar o cupom.",
+      "no_offers_available": "Nenhuma oferta disponível no momento"
     },
     "missions": {
       "title": "Minhas Missões",
@@ -125,7 +130,7 @@
     "schedule_service": {
       "header_title": "Agendar",
       "progress_step_date_time": "Data e Hora",
-      "progress_step_complete_review": "Revisão Completa",
+      "progress_step_complete_review": "Revisão ",
       "coupon_section_title": "Cupom de Desconto",
       "coupon_input_placeholder": "Insira seu código de cupom",
       "apply_coupon_button": "Aplicar",
@@ -146,7 +151,7 @@
       "booking_error_message": "Por favor, preencha todos os campos necessários para o agendamento, incluindo o endereço completo e selecione um horário.",
       "booking_error_duration_size": "Por favor, insira a {{field}} do serviço.",
       "booking_success_message": "Agendamento realizado com sucesso!",
-      "loading_initial_data": "Carregando dados...",
+      "loading_initial_data": "Carregando dados iniciais...",
       "navigation_error_essential_data": "Dados essenciais ausentes. Tente novamente.",
       "service_not_available": "O serviço selecionado não está disponível para este provedor.",
       "address_needed_title": "Endereço Necessário",
@@ -159,7 +164,12 @@
       "preferred_times": "Preferências de horário",
       "no_slots": "Nenhum horário disponível para esta data.",
       "review_booking_button": "Revisar Agendamento",
-      "step1_validation_error": "Por favor, selecione a data, o horário e preencha o endereço completo para continuar."
+      "step1_validation_error": "Por favor, selecione a data, o horário e preencha o endereço completo para continuar.",
+      "searching_next_available": "Procurando próximo dia disponível...",
+      "no_slots_title": "Buscando Horários",
+      "found_available_date": "Horários encontrados!",
+      "error_fetching_slots_day": "Erro ao carregar horários para este dia. Tente novamente.",
+      "no_available_nearby": "Nenhum horário nos próximos 7 dias. Selecione outra data no calendário."
     },
     "provider_details": {
       "loading": "Carregando...",
@@ -187,7 +197,8 @@
       "location_label": "Localização",
       "price_label": "Preço",
       "about_provider_section_title": "Sobre o Provedor",
-      "contact_section_title": "Contato"
+      "contact_section_title": "Contato",
+      "reviews_and_recommendations_title": "Avaliações & Recomendações"
     },
     "provider_dashboard": {
       "greeting": "Olá, {{providerName}}!",

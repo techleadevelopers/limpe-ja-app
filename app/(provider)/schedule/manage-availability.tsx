@@ -17,9 +17,51 @@ import {
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { Calendar, LocaleConfig, DateData } from 'react-native-calendars';
+import { Calendar, LocaleConfig, DateData } from 'react-native-calendars'; // CORREÇÃO: Removido 'Theme' do import (não é exportado diretamente)
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '../../../hooks/useAuth';
+
+// CORREÇÃO: Definição manual da interface Theme (baseada na doc oficial da lib e props usadas no código)
+// Isso replica o tipo exato, garantindo compatibilidade sem depender da biblioteca
+interface Theme {
+  backgroundColor?: string;
+  calendarBackground?: string;
+  textSectionTitleColor?: string;
+  selectedDayBackgroundColor?: string;
+  selectedDayTextColor?: string;
+  todayTextColor?: string;
+  dayTextColor?: string;
+  textDisabledColor?: string;
+  dotColor?: string;
+  selectedDotColor?: string;
+  arrowColor?: string;
+  monthTextColor?: string;
+  indicatorColor?: string;
+  textDayFontWeight?: '300' | '400' | '500' | '600' | '700' | '800' | '900' | 'bold' | 'normal';
+  textMonthFontWeight?: '300' | '400' | '500' | '600' | '700' | '800' | '900' | 'bold' | 'normal';
+  textDayHeaderFontWeight?: '300' | '400' | '500' | '600' | '700' | '800' | '900' | 'bold' | 'normal';
+  textDayFontSize?: number;
+  textMonthFontSize?: number;
+  textDayHeaderFontSize?: number;
+  'stylesheet.calendar.header'?: {
+    week?: {
+      marginTop?: number;
+      flexDirection?: string;
+      justifyContent?: string;
+      borderBottomWidth?: number;
+      borderBottomColor?: string;
+      paddingBottom?: number;
+    };
+    dayHeader?: {
+      color?: string;
+      fontWeight?: '300' | '400' | '500' | '600' | '700' | '800' | '900' | 'bold' | 'normal';
+      fontSize?: number;
+    };
+  };
+  textInactiveColor?: string;
+  textActiveColor?: string;
+  todayBackgroundColor?: string;
+}
 
 // Importações de serviços e tipos do backend (ajuste os caminhos conforme sua estrutura)
 import {
@@ -77,66 +119,8 @@ LocaleConfig.locales['pt-br'] = {
 };
 LocaleConfig.defaultLocale = 'pt-br';
 
-// ====== Interface para Theme (EXPANDIDA para compatibilidade total com react-native-calendars - resolve TS(2322)) ======
-// Copiado e expandido da definição da biblioteca para matching exato (inclui todos os font weights possíveis e mais propriedades opcionais).
-// Isso garante que 'string' genérica não seja inferida; usa literais exatos.
-interface Theme {
-  backgroundColor?: string;
-  calendarBackground?: string;
-  textSectionTitleColor?: string;
-  selectedDayBackgroundColor?: string;
-  selectedDayTextColor?: string;
-  todayTextColor?: string;
-  dayTextColor?: string;
-  textDisabledColor?: string;
-  dotColor?: string;
-  selectedDotColor?: string;
-  arrowColor?: string;
-  disabledArrowColor?: string;
-  monthTextColor?: string;
-  indicatorColor?: string;
-  textDayFontFamily?: string;
-  textMonthFontFamily?: string;
-  textDayHeaderFontFamily?: string;
-  textDayFontSize?: number;
-  textMonthFontSize?: number;
-  textDayHeaderFontSize?: number;
-  textDayFontWeight?: 
-    | "normal" | "bold" | "100" | "200" | "300" | "400" | "500" | "600" | "700" | "800" | "900"
-    | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900
-    | "ultralight" | "thin" | "light" | "medium" | "semibold" | "extrabold" | "heavy" | "black"
-    | undefined; // EXPANDIDO: Inclui todos os weights da biblioteca (iOS-specific + genéricos)
-  textMonthFontWeight?: 
-    | "normal" | "bold" | "100" | "200" | "300" | "400" | "500" | "600" | "700" | "800" | "900"
-    | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900
-    | "ultralight" | "thin" | "light" | "medium" | "semibold" | "extrabold" | "heavy" | "black"
-    | undefined; // EXPANDIDO: Mesmo para month
-  textDayHeaderFontWeight?: 
-    | "normal" | "bold" | "100" | "200" | "300" | "400" | "500" | "600" | "700" | "800" | "900"
-    | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900
-    | "ultralight" | "thin" | "light" | "medium" | "semibold" | "extrabold" | "heavy" | "black"
-    | undefined; // EXPANDIDO: Mesmo para day header
-  'stylesheet.calendar.header'?: {
-    week?: {
-      marginTop?: number;
-      flexDirection?: 'row' | 'column' | 'row-reverse' | 'column-reverse';
-      justifyContent?: 'flex-start' | 'flex-end' | 'center' | 'space-between' | 'space-around' | 'space-evenly';
-      borderBottomWidth?: number;
-      borderBottomColor?: string;
-      paddingBottom?: number;
-    };
-    dayHeader?: { color?: string; fontWeight?: string; fontSize?: number; }; // EXPANDIDO: Mais props da lib
-  };
-  // EXPANDIDO: Propriedades adicionais comuns da biblioteca para evitar erros futuros
-  textInactiveColor?: string;
-  textActiveColor?: string;
-  selectedDayTextColor?: string;
-  todayBackgroundColor?: string;
-  // ... (pode adicionar mais se necessário, mas isso cobre o erro reportado)
-}
-
-// ====== Tema do Calendário (agora tipado como Theme exato com assertion - resolve incompatibilidade de unions) ======
-const calendarTheme: Theme = {
+// ====== Tema do Calendario (agora tipado com a interface Theme definida acima) ======
+const calendarTheme: Theme = { // CORREÇÃO: Usa a interface local Theme (sem import da lib)
   backgroundColor: Colors.bgSoft,
   calendarBackground: Colors.surface,
   textSectionTitleColor: '#586069',
@@ -176,7 +160,7 @@ const calendarTheme: Theme = {
   textInactiveColor: Colors.textMuted,
   textActiveColor: Colors.primary,
   todayBackgroundColor: Colors.infoLight,
-} as const; // Assertion final para Theme (garante literais e compatibilidade)
+}; // Removido 'as const' desnecessário aqui (a interface já garante tipagem)
 
 // Helper para gerar blocos de tempo
 const generateTimeSlots = (startHour: number, endHour: number, intervalMinutes: number = 30) => {
@@ -826,7 +810,7 @@ export default function ManageAvailabilityScreen() {
           <Calendar
             onDayPress={handleDayPressOnCalendar}
             markedDates={markedDates} // Use the memoized markedDates
-            theme={calendarTheme as Theme} // CORREÇÃO: Assertion explícito para Theme (resolve TS(2322) na linha ~794)
+            theme={calendarTheme} // CORREÇÃO: Removido 'as Theme' (agora tipado corretamente pela interface local)
             style={styles.calendarOverrideStyle}
             accessibilityLabel="Calendário para exceções de datas"
             accessibilityHint="Selecione uma data para configurar exceção"

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { AxiosRequestConfig } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import Toast from 'react-native-toast-message'; // Importar Toast
@@ -7,9 +8,10 @@ import axiosRetry from 'axios-retry'; // NEW: Importar axios-retry
 import * as Sentry from '@sentry/react-native'; // NEW: Importar Sentry (assumindo que já está configurado)
 
 // --- Início da nova lógica para callback de logout ---
-let onUnauthorizedCallback: (() => Promise<void>) | null = null;
+type UnauthorizedHandler = (context: { originalRequest: AxiosRequestConfig }) => Promise<void>;
+let onUnauthorizedCallback: UnauthorizedHandler | null = null;
 
-export const setUnauthorizedCallback = (callback: () => Promise<void>) => {
+export const setUnauthorizedCallback = (callback: UnauthorizedHandler) => {
     onUnauthorizedCallback = callback;
 };
 // --- Fim da nova lógica para callback de logout ---
@@ -79,12 +81,17 @@ api.interceptors.response.use(
         const originalRequest = error.config;
 
         // Erro 401: Não autorizado (token expirado ou inválido)
-        if (axios.isAxiosError(error) && error.response && error.response.status === 401 && !originalRequest._isRetryRequest) {
+        if (axios.isAxiosError(error) && error.response?.status === 401 && !originalRequest._isRetryRequest) {
             console.warn('[API Interceptor] Requisição 401 Unauthorized. Token pode ter expirado ou é inválido. Iniciando processo de logout.');
             originalRequest._isRetryRequest = true; // Marca a requisição para evitar loops infinitos
 
             if (onUnauthorizedCallback) {
-                await onUnauthorizedCallback();
+                try {
+                    await onUnauthorizedCallback({ originalRequest });
+                    return api(originalRequest);
+                } catch (refreshError) {
+                    console.warn('[API Interceptor] Refresh callback failed:', refreshError);
+                }
                 Toast.show({
                     type: 'error',
                     text1: i18n.t('common.error'),

@@ -1,5 +1,4 @@
 // LimpeJaApp/contexts/AuthContext.tsx
-
 import React, { createContext, ReactNode, useContext, useEffect, useState, useCallback } from 'react';
 import { AuthResponse, RegisterClientDto, RegisterProviderDto, UserRole, VerificationStatus } from '../types/backend/auth';
 import authService from '../services/authService';
@@ -10,6 +9,7 @@ import { ClientDetails } from '../types/backend/clients';
 import { BookingAddress } from '../types/backend/bookings';
 import userService from '../services/userService';
 import axios from 'axios';
+import type { AxiosRequestConfig } from 'axios';
 
 interface AuthDataFromStorage {
   token: string | null;
@@ -69,10 +69,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
+  const handleUnauthorized = useCallback(async ({ originalRequest }: { originalRequest: AxiosRequestConfig }) => {
+    try {
+      const refreshed = await authService.refreshSession();
+      const authenticatedUser: AuthenticatedUserProfile = {
+        ...refreshed.user,
+        token: refreshed.accessToken,
+      };
+      setUser(authenticatedUser);
+      setRole(refreshed.user.role as UserRole);
+
+      const headers = (originalRequest?.headers ?? {}) as Record<string, unknown>;
+      originalRequest.headers = {
+        ...headers,
+        Authorization: `Bearer ${refreshed.accessToken}`
+      };
+    } catch (error) {
+      await logout();
+      throw error;
+    }
+  }, [logout]); // << CORREÇÃO: Dependência alterada de [handleUnauthorized] para [logout] para evitar referência circular
+
   useEffect(() => {
-    setUnauthorizedCallback(logout);
+    setUnauthorizedCallback(handleUnauthorized);
     loadStoredData();
-  }, [logout]);
+  }, [handleUnauthorized]); // << Isso agora é válido, pois handleUnauthorized depende de logout (que é estável via useCallback)
 
   const updateAuthState = (authData: AuthDataFromStorage) => {
     if (authData.token && authData.role && authData.id && authData.user) {

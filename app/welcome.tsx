@@ -28,9 +28,14 @@ const REFLECTION_GAP = 0;
 const BOTTOM_MARGIN_FOR_REFLECTION = 0;
 
 // Ajustes platform-specific para alinhamento (apenas horizontal alterado para iOS, sem interferir no Android)
-const OFFSET_RIGHT = Platform.select({ ios: 2, android: 10 });
+const OFFSET_RIGHT = Platform.select({ ios: 2, android: 10 }) ?? 10;
 const OFFSET_TOP = 60;
-const OFFSET_BOTTOM = Platform.select({ ios: 129, android: 124 }); // +5px no iOS para evitar overlap inicial do reflexo
+const OFFSET_BOTTOM = Platform.select({ ios: 129, android: 124 }) ?? 124; // +5px no iOS para evitar overlap inicial do reflexo
+
+const REFLECTION_GRADIENT_COLORS: readonly [string, string, string] = Platform.select({
+  ios: ['rgba(255,255,255,0)', 'rgba(255,255,255,0.2)', 'rgba(255,255,255,0.4)'],
+  android: ['rgba(255,255,255,0)', 'rgba(255,255,255,0.4)', 'rgba(255,255,255,0.7)'],
+}) ?? ['rgba(255,255,255,0)', 'rgba(255,255,255,0.3)', 'rgba(255,255,255,0.5)'];
 
 // Ajustes específicos para iOS para evitar retângulo branco (transparência explícita e overflow otimizado)
 const REFLECTION_BACKGROUND = 'transparent'; // Explícito para ambos, mas iOS sensível
@@ -188,11 +193,9 @@ export default function WelcomeScreen() {
               resizeMode="contain" // Explícito para consistência
             />
             {/* Camada de Gradiente para o desvanecimento do reflexo - Ajustado para iOS (cores mais suaves, menos branco) */}
+            {/* ✅ CORREÇÃO: Usa REFLECTION_GRADIENT_COLORS (já com fallback ??, garantindo tipo readonly [string, string, string] sem undefined) */}
             <LinearGradient
-              colors={Platform.select({
-                ios: ['rgba(255,255,255,0)', 'rgba(255,255,255,0.2)', 'rgba(255,255,255,0.4)'], // CORREÇÃO: Opacidades reduzidas no iOS (menos "branco" visível)
-                android: ['rgba(255,255,255,0)', 'rgba(255,255,255,0.4)', 'rgba(255,255,255,0.7)'] // Original no Android
-              })}
+              colors={REFLECTION_GRADIENT_COLORS}
               start={{ x: 0, y: 0 }}
               end={{ x: 0, y: 1 }}
               style={styles.reflectionGradientOverlay}

@@ -104,10 +104,11 @@ export default function WithdrawScreen() {
       }
       try {
         // Backend endpoint para saldo (ajuste se necessário, integrado ao payments)
-        const response = await api.get<{ balance: number }>('/providers/me/metrics'); // Usa metrics para totalBookings/earnings proxy
+        // CORREÇÃO: Tipagem expandida para incluir 'earnings' opcional (caso backend retorne mais campos)
+        const response = await api.get<{ balance: number; earnings?: number; acceptanceRate?: number }>('/providers/me/metrics');
         if (isMounted.current) {
-          // Simula saldo baseado em earnings (ajuste backend se preciso)
-          setAvailableBalance(response.data.acceptanceRate * 100 || 0); // Placeholder: use real earnings field
+          // CORREÇÃO: Usa 'balance' em vez de 'acceptanceRate' (alinhado com tipagem). Se for earnings, mude para response.data.earnings || 0
+          setAvailableBalance(response.data.balance || 0);
         }
       } catch (err: any) {
         console.error('Erro ao buscar saldo:', err);
@@ -484,7 +485,7 @@ export default function WithdrawScreen() {
             onChangeText={setNotes}
             multiline
             maxLength={200}
-            characterCount={notes.length}
+            // CORREÇÃO: Removida prop 'characterCount' (não existe no TextInput do RN)
             accessibilityLabel="Observações do saque"
             accessibilityHint="Adicione notas opcionais para o saque (máx. 200 caracteres)."
           />
@@ -514,7 +515,7 @@ export default function WithdrawScreen() {
               <ActivityIndicator color="#FFFFFF" size="small" />
             ) : (
               <Text style={styles.actionButtonPrimaryText}>
-                Confirmar Saque de {formatCurrency(parseFloat(amount.replace(',', '.') || 0))}
+                Confirmar Saque de {formatCurrency(parseFloat((amount.replace(',', '.') || '0')))} {/* CORREÇÃO: Força string para parseFloat (resolve tipo string | number) */}
               </Text>
             )}
           </TouchableOpacity>

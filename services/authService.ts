@@ -13,6 +13,7 @@ const USER_PROFILE_KEY = 'user_profile';
 class AuthService {
     private static instance: AuthService;
     private authToken: string | null = null;
+    private refreshPromise: Promise<AuthResponse> | null = null;
 
     private constructor() {}
 
@@ -48,9 +49,29 @@ class AuthService {
             console.log('[AuthService Frontend] Logout realizado com sucesso');
         } catch (error) {
             console.error('[AuthService Frontend] Erro ao fazer logout:', error);
+        } finally {
+            this.refreshPromise = null;
         }
-    }
+    } // << CORREÇÃO: Fechamento da método logout adicionado aqui para corrigir os erros de sintaxe em linhas subsequentes
 
+    async refreshSession(): Promise<AuthResponse> {
+        if (!this.refreshPromise) {
+            this.refreshPromise = (async () => {
+                try {
+                    const response = await api.post<AuthResponse>('/auth/refresh');
+                    const authData: AuthResponse = response.data;
+                    await this.saveAuthData(authData);
+                    return authData;
+                } catch (error) {
+                    throw error;
+                } finally {
+                    this.refreshPromise = null;
+                }
+            })();
+        }
+
+        return this.refreshPromise;
+    }
     // LÓGICA CORRIGIDA
     async registerClient(userData: any): Promise<AuthResponse> {
         try {

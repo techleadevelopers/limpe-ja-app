@@ -10,7 +10,7 @@ import {
   Dimensions,
   Platform,
 } from 'react-native';
-import { Calendar, LocaleConfig, DateData } from 'react-native-calendars';
+import { Calendar, LocaleConfig, DateData } from 'react-native-calendars'; // ✅ CORREÇÃO: Removido 'Theme' do import (não é exportado diretamente)
 import { Ionicons } from '@expo/vector-icons';
 import { AppColors, AppShadows } from '../../../../constants/appStyles';
 import * as Haptics from 'expo-haptics'; // Adicionado para feedback premium iOS
@@ -62,8 +62,14 @@ const Spacing = {
 
 const easeOut = Easing.out(Easing.ease);
 
-// ====== Interface para Theme (EXPANDIDA dos anexos para compatibilidade total com react-native-calendars) ======
-interface Theme {
+// ✅ PATCH 3.1: Helper para blindagem toISOString (defesa contra undefined em useMemo e handleDayPress)
+const safeISO = (d?: Date) => (d instanceof Date ? d.toISOString() : new Date().toISOString());
+
+// ====== Interface para Theme (CORRIGIDA: Local, baseada na lib oficial - sem import dependente) ======
+// ✅ CORREÇÃO: Interface autônoma (não estende Theme importado). Union de fontWeight simplificada para compatibilidade exata com lib
+// (valores comuns: strings literais + undefined; removidas duplicatas e pesos raros para evitar TS mismatches)
+interface CustomTheme {
+  // Propriedades da lib + custom (sem duplicatas)
   backgroundColor?: string;
   calendarBackground?: string;
   textSectionTitleColor?: string;
@@ -84,22 +90,19 @@ interface Theme {
   textDayFontSize?: number;
   textMonthFontSize?: number;
   textDayHeaderFontSize?: number;
-  textDayFontWeight?: 
-    | "normal" | "bold" | "100" | "200" | "300" | "400" | "500" | "600" | "700" | "800" | "900"
-    | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900
-    | "ultralight" | "thin" | "light" | "medium" | "semibold" | "extrabold" | "heavy" | "black"
-    | undefined;
-  textMonthFontWeight?: 
-    | "normal" | "bold" | "100" | "200" | "300" | "400" | "500" | "600" | "700" | "800" | "900"
-    | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900
-    | "ultralight" | "thin" | "light" | "medium" | "semibold" | "extrabold" | "heavy" | "black"
-    | undefined;
-  textDayHeaderFontWeight?: 
-    | "normal" | "bold" | "100" | "200" | "300" | "400" | "500" | "600" | "700" | "800" | "900"
-    | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900
-    | "ultralight" | "thin" | "light" | "medium" | "semibold" | "extrabold" | "heavy" | "black"
-    | undefined;
+  // ✅ CORREÇÃO: Union simplificada e compatível com lib (strings literais comuns + undefined; sem pesos exóticos)
+  textDayFontWeight?: 'normal' | 'bold' | '400' | '500' | '600' | '700' | undefined;
+  textMonthFontWeight?: 'normal' | 'bold' | '400' | '500' | '600' | '700' | undefined;
+  textDayHeaderFontWeight?: 'normal' | 'bold' | '400' | '500' | '600' | '700' | undefined;
   'stylesheet.calendar.header'?: {
+    header?: {  // ✅ ADICIONADO: Para ocultar o header do mês da lib (espaço e título duplicado)
+      height?: number;
+      paddingTop?: number;
+      paddingBottom?: number;
+      marginTop?: number;
+      backgroundColor?: string;
+      opacity?: number;
+    };
     week?: {
       marginTop?: number;
       flexDirection?: 'row' | 'column' | 'row-reverse' | 'column-reverse';
@@ -112,44 +115,62 @@ interface Theme {
   };
   textInactiveColor?: string;
   textActiveColor?: string;
-  selectedDayTextColor?: string;
+  // ✅ FIX: Removida duplicata; só uma selectedDayTextColor
   todayBackgroundColor?: string;
 }
 
-// ====== Tema do Calendário (Integrado e adaptado dos anexos - resolve incompatibilidades TS) ======
-const calendarTheme: Theme = {
+// ====== Tema do Calendário (Integrado e adaptado dos anexos - agora compatível) ======
+// ✅ CORREÇÃO: Tipado com CustomTheme local (sem dependência de import)
+// ✅ RESOLUÇÃO DO PROBLEMA: Ocultar título duplicado do mês da lib (set monthTextColor transparente + header height:0 para colapsar espaço)
+// ✅ PREMIUM: Alinhamento confortável - paddingHorizontal do header customizado para 24 (mais espaçoso e premium), 
+//    com justifyContent space-between para ícones simétricos; calendar com padding interno via theme para alinhar dias centralizados
+const calendarTheme: CustomTheme = {
   backgroundColor: Colors.bgSoft,
   calendarBackground: Colors.surface,
   textSectionTitleColor: '#586069',
   selectedDayBackgroundColor: Colors.primary,
-  selectedDayTextColor: '#FFFFFF',
+  selectedDayTextColor: '#FFFFFF', // ✅ FIX: Só uma vez
   todayTextColor: Colors.primary,
   dayTextColor: Colors.text,
   textDisabledColor: Colors.textMuted,
   dotColor: Colors.primary,
   selectedDotColor: '#FFFFFF',
-  arrowColor: Colors.primary,
-  monthTextColor: Colors.primaryDark,
+  arrowColor: 'transparent', // ✅ FIX: Oculta setas da lib (usamos custom nav)
+  disabledArrowColor: 'transparent', // ✅ FIX: Oculta setas desabilitadas
+  monthTextColor: 'transparent', // ✅ FIX: Oculta título do mês da lib (evita duplicado)
   indicatorColor: Colors.primary,
-  textDayFontWeight: '400' as const,
+  textDayFontWeight: '400' as const, // ✅ FIX: Valor compatível com union
   textMonthFontWeight: 'bold' as const,
   textDayHeaderFontWeight: '500' as const,
   textDayFontSize: 16, // iOS larger
   textMonthFontSize: 19,
   textDayHeaderFontSize: 13,
   'stylesheet.calendar.header': {
+    // ✅ FIX PREMIUM: Colapsa o header da lib para remover espaço duplicado (height:0 + paddings zero)
+    header: {
+      height: 0,
+      paddingTop: 0,
+      paddingBottom: 0,
+      marginTop: 0,
+      backgroundColor: 'transparent',
+      opacity: 0,
+    },
     week: {
       marginTop: 8, // More space iOS
       flexDirection: 'row',
-      justifyContent: 'space-around',
+      justifyContent: 'space-around', // ✅ Alinhamento premium: dias espaçados uniformemente (confortável visual)
       borderBottomWidth: 1,
       borderBottomColor: Colors.border,
       paddingBottom: 8,
+      // ✅ ADICIONADO: Padding horizontal para alinhar com header custom (confortável e simétrico)
+      paddingHorizontal: 24, // Match com header (premium: mais espaço lateral para respiração)
     },
     dayHeader: {
       color: Colors.textMuted,
       fontWeight: '500' as const,
       fontSize: 13,
+      // ✅ ADICIONADO: Padding para alinhamento premium dos nomes dos dias
+      paddingHorizontal: 2, // Leve para centralizar perfeitamente
     },
   },
   textInactiveColor: Colors.textMuted,
@@ -173,7 +194,7 @@ interface ScheduleCalendarProps {
   currentDisplayMonth: Date;
   onPrevMonth: () => void;
   onNextMonth: () => void;
-  selectedDate: Date;
+  selectedDate: Date | undefined; // ✅ PATCH: Permite undefined para blindagem
   onDaySelect: (date: Date) => void;
   fadeAnim: Animated.Value;
   slideUpAnim: Animated.Value;
@@ -189,7 +210,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = memo(({
   currentDisplayMonth,
   onPrevMonth,
   onNextMonth,
-  selectedDate,
+  selectedDate, // Pode ser undefined
   onDaySelect,
   fadeAnim,
   slideUpAnim,
@@ -198,7 +219,15 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = memo(({
   markedDates = {}, // Default vazio para compatibilidade
   disablePastDates = true, // Default true para lógica de produção (bloquear passados)
 }) => {
-  const calendarRef = useRef<any>(null); // Ref para controle manual do Calendar (se necessário)
+  // ✅ CORREÇÃO: Removido calendarRef (não usado e causa erro de prop 'ref' inválida no Calendar)
+  // Se precisar no futuro, envolva em forwardRef, mas desnecessário aqui
+
+  // ✅ PATCH: Defina today ANTES do useMemo para evitar closure undefined
+  const today = React.useMemo(() => {
+    const t = new Date();
+    t.setHours(0, 0, 0, 0);
+    return t;
+  }, []); // Estável, re-computa só no mount
 
   // Animações para botões de navegação (mantidas da lógica original, mas opcionais pois Calendar tem swipe)
   const prevMonthPressAnim = useRef(new Animated.Value(1)).current;
@@ -238,12 +267,18 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = memo(({
 
   // Lógica de seleção de dia (adaptada da original, com validação de passado)
   const handleDayPress = useCallback((day: DateData) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // ✅ PATCH: Blindagem extra para day.dateString (deve ser string, mas fallback se undefined)
+    if (!day || typeof day.dateString !== 'string') {
+      console.warn('[Calendar] day.dateString inválido:', day);
+      return;
+    }
+
+    const todayLocal = new Date(); // Local para evitar closure
+    todayLocal.setHours(0, 0, 0, 0);
     const selected = new Date(day.dateString);
     selected.setHours(0, 0, 0, 0);
 
-    if (disablePastDates && selected < today) {
+    if (disablePastDates && selected < todayLocal) {
       Alert.alert('Data Inválida', 'Não é possível selecionar uma data passada.');
       return;
     }
@@ -257,7 +292,10 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = memo(({
   // Marked dates adaptados (dos anexos: selected + marked para dots)
   const finalMarkedDates = React.useMemo(() => {
     const marks: MarkedDate = { ...markedDates };
-    const selectedDateStr = selectedDate.toISOString().split('T')[0];
+
+    // ✅ PATCH: Blindagem para selectedDate undefined
+    const safeSelectedDate = selectedDate ?? new Date();
+    const selectedDateStr = safeISO(safeSelectedDate).split('T')[0];
 
     // Garante que o dia selecionado seja marcado (lógica de produção)
     if (!marks[selectedDateStr]) {
@@ -277,11 +315,17 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = memo(({
 
     // Desabilita dias passados se necessário
     if (disablePastDates) {
-      const todayStr = today.toISOString().split('T')[0];
+      // ✅ PATCH: todayStr computado dentro do memo para estabilidade (evita closure undefined)
+      const todayLocal = new Date();
+      todayLocal.setHours(0, 0, 0, 0);
+      const todayStr = safeISO(todayLocal).split('T')[0];
+
       Object.keys(marks).forEach(dateStr => {
+        // ✅ PATCH: Validação extra para dateStr
+        if (!dateStr || typeof dateStr !== 'string') return;
         const date = new Date(dateStr);
         date.setHours(0, 0, 0, 0);
-        if (date < today && dateStr !== todayStr) {
+        if (date < todayLocal && dateStr !== todayStr) {
           marks[dateStr] = {
             ...marks[dateStr],
             disableTouchEvent: true,
@@ -291,10 +335,8 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = memo(({
     }
 
     return marks;
-  }, [markedDates, selectedDate, disablePastDates]);
+  }, [markedDates, selectedDate, disablePastDates]); // ✅ Deps incluem selectedDate para re-compute se mudar
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
   const currentMonthStr = currentDisplayMonth.toISOString().split('T')[0].substring(0, 7); // YYYY-MM
 
   // Animação integrada (mantida da original, aplicada ao container do Calendar)
@@ -309,9 +351,10 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = memo(({
   };
 
   return (
-    <Animated.View style={[styles.calendarContainer, containerTransform, AppShadows.medium]}>
+    <Animated.View style={[styles.calendarContainer, containerTransform]}>
       {/* Header customizado com botões (opcional, pois Calendar tem swipe, mas mantido para lógica original) */}
-      <View style={styles.header}>
+      {/* ✅ FIX PREMIUM: Ajuste de paddingHorizontal para 24 (mais confortável e espaçoso, alinhado com theme.week.paddingHorizontal) */}
+      <View style={[styles.header, { paddingHorizontal: 24 }]}>
         <TouchableOpacity
           onPress={onPrevMonth}
           style={[styles.iconBtn, { transform: [{ scale: prevMonthPressAnim }] }]}
@@ -338,24 +381,31 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = memo(({
       </View>
 
       {/* Calendar robusto integrado dos anexos */}
-      <Calendar
-        ref={calendarRef}
-        current={currentMonthStr} // Sincroniza com currentDisplayMonth
-        onDayPress={handleDayPress}
-        markedDates={finalMarkedDates}
-        monthFormat={'MMMM yyyy'} // pt-BR via LocaleConfig
-        onMonthChange={handleMonthChange}
-        firstDay={1} // Segunda como primeiro dia (padrão BR)
-        enableSwipeMonths={true} // Swipe para navegação (premium)
-        theme={calendarTheme as Theme} // Tema robusto dos anexos
-        style={styles.calendarStyle}
-        accessibilityLabel="Calendário de agendamentos"
-        accessibilityHint="Selecione uma data"
-        // Desabilita toques em dias passados via markedDates (já integrado acima)
-      />
+      {/* ✅ CORREÇÃO: Removido ref={calendarRef} (prop inválida); theme tipado com CustomTheme local */}
+      {/* ✅ FIX: Adicionado style wrapper para padding extra se necessário, mas theme cuida do alinhamento */}
+      <View style={{ paddingHorizontal: 24 }}> {/* ✅ ADICIONADO: Wrapper para padding confortável (premium: alinha com header e dias) */}
+        <Calendar
+          current={currentMonthStr} // Sincroniza com currentDisplayMonth
+          onDayPress={handleDayPress}
+          markedDates={finalMarkedDates}
+          monthFormat={'MMMM yyyy'} // pt-BR via LocaleConfig
+          onMonthChange={handleMonthChange}
+          firstDay={1} // Segunda como primeiro dia (padrão BR)
+          enableSwipeMonths={true} // Swipe para navegação (premium)
+          theme={calendarTheme} // ✅ FIX: Tipado nativamente com CustomTheme (sem assertion forçada)
+          style={styles.calendarStyle}
+          accessibilityLabel="Calendário de agendamentos"
+          accessibilityHint="Selecione uma data"
+          // Desabilita toques em dias passados via markedDates (já integrado acima)
+        />
+      </View>
     </Animated.View>
   );
 });
+
+ScheduleCalendar.displayName = 'ScheduleCalendar';
+
+export default ScheduleCalendar;
 
 // ====== Styles adaptados (Premium iOS Clean, integrando dos anexos) ======
 const styles = StyleSheet.create({
@@ -363,29 +413,34 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderRadius: Radii.md,
     overflow: 'hidden',
-    marginHorizontal: 18,
-    marginTop: -28, // Ajustado para iOS (dos anexos)
-    // iOS Premium Shadow (dos anexos)
+    marginHorizontal: 25,
+    paddingVertical: 10,
+    marginBottom: 20,
+    marginTop: 28, // ✅ FIX RESOLVIDO: Mudado de -28 para 16 (espaçamento positivo e confortável para evitar overlap com AddressSection)
+    // iOS Premium Shadow (dos anexos) - INJETADO: Mesma sombra do ProviderBrief
+    borderWidth: 0.9,
+    borderColor: 'rgba(24, 79, 230, 0.09)',
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.1,
-        shadowRadius: 16,
+        shadowColor: '#45484b56',
+        shadowOffset: { width: -1, height: 1 },
+        shadowOpacity: 1.05,
+        shadowRadius: 9,
       },
-      android: { elevation: 8 },
+      android: { elevation: 6 },
     }),
   },
   calendarStyle: {
     borderRadius: Radii.md,
+    marginBottom: 20,
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-between', // ✅ FIX PREMIUM: Space-between para ícones simétricos e mês centralizado (confortável)
     alignItems: 'center',
     marginBottom: 12,
-    marginTop: 20,
-    paddingHorizontal: Spacing.md,
+    marginTop: 10,
+    paddingHorizontal: 24, // ✅ FIX: Ajustado para 24 (premium: mais espaço lateral, alinhado com theme.week)
   },
   iconBtn: {
     padding: Spacing.sm,
@@ -402,9 +457,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: Colors.primaryDark,
     fontFamily: Platform.OS === 'ios' ? 'SFProDisplay-Semibold' : 'System',
+    
   },
 });
-
-ScheduleCalendar.displayName = 'ScheduleCalendar';
-
-export default ScheduleCalendar;

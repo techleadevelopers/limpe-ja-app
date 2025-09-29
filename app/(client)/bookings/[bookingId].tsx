@@ -30,6 +30,16 @@ import { cancelBooking, getBookingDetails } from '../../../services/bookingServi
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 import { AppColors, AppShadows } from '../../../constants/appStyles';
 
+// ✅ CORREÇÃO: Type guards para narrowing de BookingStatus (resolve warnings de "sempre verdadeiro" em condições)
+// Cada guard retorna true/false e narrow o tipo para o literal específico
+const isCancellableStatus = (status: BookingStatus): status is BookingStatus.CONFIRMED | BookingStatus.PENDING => {
+  return status === BookingStatus.CONFIRMED || status === BookingStatus.PENDING;
+};
+
+const isCompletedStatus = (status: BookingStatus): status is BookingStatus.COMPLETED => {
+  return status === BookingStatus.COMPLETED;
+};
+
 // Função unificada para renderizar avatar REAL (inspirada na ProviderBrief) - Integração premium
 // ALINHADO: Mesma de index.tsx e explore/[providerId].tsx
 const renderProviderAvatar = (avatarUrl?: string | null, size: number = 80) => {
@@ -581,7 +591,8 @@ export default function BookingDetailsScreen() {
           <Text style={styles.sectionTitle}>Ações</Text>
         </View>
 
-        {(booking.status === BookingStatus.CONFIRMED || booking.status === BookingStatus.PENDING) && (
+        {/* ✅ CORREÇÃO: Usa type guard isCancellableStatus (resolve warning "sempre verdadeiro" na linha ~375) */}
+        {isCancellableStatus(booking.status) && (
           <LinearGradient
             colors={['#FF6B6B', '#EE5A52'] as const} // CORREÇÃO: as const para consistência
             start={{ x: 0, y: 0 }}
@@ -621,7 +632,8 @@ export default function BookingDetailsScreen() {
           </TouchableOpacity>
         </LinearGradient>
 
-        {booking.status === BookingStatus.COMPLETED && !isReviewed && (
+        {/* ✅ CORREÇÃO: Usa type guard isCompletedStatus (resolve warning "sempre verdadeiro" na linha ~431) */}
+        {isCompletedStatus(booking.status) && !isReviewed && (
           <LinearGradient
             colors={['#FFD93D', '#FEC200'] as const} // CORREÇÃO: as const para consistência
             start={{ x: 0, y: 0 }}

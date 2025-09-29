@@ -13,7 +13,7 @@ interface ScheduleHeaderProps {
     fadeAnim: Animated.Value;
     slideUpAnim: Animated.Value;
     onMenuPress?: () => void;
-    showBackButton?: boolean;
+    // Removido showBackButton para forçar exibição sempre
 }
 
 const HEADER_TOP = Platform.OS === 'ios' ? 52 : 22;
@@ -28,7 +28,6 @@ const ScheduleHeader: React.FC<ScheduleHeaderProps> = ({
     fadeAnim,
     slideUpAnim,
     onMenuPress,
-    showBackButton = true,
 }) => {
     return (
         <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideUpAnim }] }}>
@@ -43,17 +42,14 @@ const ScheduleHeader: React.FC<ScheduleHeaderProps> = ({
                 <View style={{ height: HEADER_TOP }} />
 
                 <View style={styles.headerRow}>
-                    {showBackButton ? (
-                        <TouchableOpacity
-                            onPress={onBackPress}
-                            style={styles.iconBtn}
-                            // Removida animação de press (scale) para simplicidade e performance
-                        >
-                            <Ionicons name="chevron-back" size={24} color={AppColors.textBody} />
-                        </TouchableOpacity>
-                    ) : (
-                        <View style={styles.iconBtn} />
-                    )}
+                    {/* Sempre exibe o botão de voltar, independentemente de steps */}
+                    <TouchableOpacity
+                        onPress={onBackPress}
+                        style={styles.iconBtn}
+                        // Removida animação de press (scale) para simplicidade e performance
+                    >
+                        <Ionicons name="arrow-back" size={24} color={AppColors.textBody} />
+                    </TouchableOpacity>
 
                     <Text numberOfLines={1} style={styles.headerTitle}>
                         {headerTitle || 'Agendamento'}

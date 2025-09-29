@@ -670,7 +670,7 @@ await prisma.availability.update({
 where: { id: existingAvailability.id },
 data: {
 startTime: '09:00',
-endTime: '12:00',
+endTime: '18:00', // MODIFICAÇÃO: Estendendo o horário disponível para Carolina (de 12:00 para 18:00)
 isAvailable: true,
 },
 });
@@ -680,13 +680,46 @@ data: {
 providerId: providerUser.provider.id,
 dayOfWeek: wd,
 startTime: '09:00',
-endTime: '12:00',
+endTime: '18:00', // MODIFICAÇÃO: Estendendo o horário disponível para Carolina (de 12:00 para 18:00)
 isAvailable: true,
 },
 });
 }
 }
 console.log(`Disponibilidade para ${providerUser.fullName} criada/atualizada.`);
+
+// Adicionando mais dias para Carolina (Joana é providerUser3, mas Carolina é providerUser)
+const additionalWeekdaysForCaroline = [2, 4, 6, 7]; // Terça, Quinta, Sábado, Domingo
+for (const wd of additionalWeekdaysForCaroline) {
+const existingAvailability = await prisma.availability.findFirst({
+where: {
+providerId: providerUser.provider.id,
+dayOfWeek: wd,
+},
+});
+
+if (existingAvailability) {
+await prisma.availability.update({
+where: { id: existingAvailability.id },
+data: {
+startTime: '09:00',
+endTime: '18:00', // Horário estendido
+isAvailable: true,
+},
+});
+} else {
+await prisma.availability.create({
+data: {
+providerId: providerUser.provider.id,
+dayOfWeek: wd,
+startTime: '09:00',
+endTime: '18:00', // Horário estendido
+isAvailable: true,
+},
+});
+}
+}
+console.log(`Disponibilidade adicional para ${providerUser.fullName} (mais dias) criada/atualizada.`);
 
 // Disponibilidade para NEW PROVIDER 1: Maria
 const weekdays2 = [2, 4]; // 2 = Terça, 4 = Quinta
@@ -736,7 +769,7 @@ await prisma.availability.update({
 where: { id: existingAvailability.id },
 data: {
 startTime: '09:00',
-endTime: '18:00',
+endTime: '20:00', // MODIFICAÇÃO: Estendendo o horário disponível para Joana (de 18:00 para 20:00)
 isAvailable: true,
 },
 });
@@ -746,13 +779,46 @@ data: {
 providerId: providerUser3.provider.id,
 dayOfWeek: wd,
 startTime: '09:00',
-endTime: '18:00',
+endTime: '20:00', // MODIFICAÇÃO: Estendendo o horário disponível para Joana (de 18:00 para 20:00)
 isAvailable: true,
 },
 });
 }
 }
 console.log(`Disponibilidade para ${providerUser3.fullName} criada/atualizada.`);
+
+// Adicionando mais dias para Joana
+const additionalWeekdaysForJoana = [6, 7]; // Sábado e Domingo
+for (const wd of additionalWeekdaysForJoana) {
+const existingAvailability = await prisma.availability.findFirst({
+where: {
+providerId: providerUser3.provider.id,
+dayOfWeek: wd,
+},
+});
+
+if (existingAvailability) {
+await prisma.availability.update({
+where: { id: existingAvailability.id },
+data: {
+startTime: '09:00',
+endTime: '20:00', // Horário estendido
+isAvailable: true,
+},
+});
+} else {
+await prisma.availability.create({
+data: {
+providerId: providerUser3.provider.id,
+dayOfWeek: wd,
+startTime: '09:00',
+endTime: '20:00', // Horário estendido
+isAvailable: true,
+},
+});
+}
+}
+console.log(`Disponibilidade adicional para ${providerUser3.fullName} (mais dias) criada/atualizada.`);
 
 // Disponibilidade para NEW PROVIDER 3: Ana
 const weekdays4 = [6, 7]; // Sábado e Domingo

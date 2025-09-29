@@ -1,5 +1,5 @@
 // services/missionService.ts
-import api from './api'; // Assumindo que 'api' é sua instância do Axios configurada
+import api from './api';
 
 /** ==== Tipos (espelham o Prisma/backend) ==== */
 export enum MissionAudience {
@@ -66,26 +66,19 @@ export type MissionItem = {
   isClaimed: boolean; // Se a recompensa já foi resgatada
 };
 
-export type ClaimMissionResponse =
-  | {
-      ok: true;
-      missionId: string;
-      rewardType: RewardType;
-      coupon?: {
-        id: string;
-        code: string;
-        valueType: 'PERCENT' | 'FIXED' | string;
-        value: number;
-        validUntil: string;
-      };
-      pointsGranted?: number;
-      message?: string;
-    }
-  | {
-      ok: false;
-      missionId: string;
-      reason: string;
-    };
+export interface ClaimMissionResponse {
+  missionId: string;
+  rewardType: RewardType;
+  coupon?: {
+    id: string;
+    code: string;
+    valueType: 'PERCENT' | 'FIXED' | string;
+    value: number;
+    validUntil: string;
+  };
+  pointsGranted?: number;
+  message?: string;
+}
 
 /** ==== Helpers internos ==== */
 const clamp = (n: number, min = 0, max = 100) => Math.max(min, Math.min(max, n));
@@ -155,12 +148,12 @@ export async function getMyMissions(audience: MissionAudience = MissionAudience.
 /**
  * Resgata a recompensa de uma missão concluída.
  * Backend: POST /missions/:id/claim
+ * Em caso de erro, lança para a UI tratar via i18n/messageKey.
  */
 export async function claimMission(missionId: string): Promise<ClaimMissionResponse> {
   try {
     const { data } = await api.post(`/missions/${missionId}/claim`);
     return {
-      ok: true,
       missionId,
       rewardType: data.rewardType as RewardType,
       coupon: data.coupon ?? undefined,
@@ -168,30 +161,25 @@ export async function claimMission(missionId: string): Promise<ClaimMissionRespo
       message: data.message ?? undefined,
     };
   } catch (err: any) {
-    const reason =
-      err?.response?.data?.message ||
-      err?.message ||
-      'Não foi possível resgatar a missão. Tente novamente.';
-    return { ok: false, missionId, reason };
+    throw (err?.response?.data ?? err);
   }
 }
 
 /**
- * (Placeholder) Envia um evento de rastreamento para o backend.
+ * Envia um evento de rastreamento para o backend.
  * Backend: POST /missions/track
+ * Em caso de erro, lança para a UI tratar.
  */
-export async function trackMissionEvent(event: string, payload: any) {
+export async function trackMissionEvent(event: string, payload: unknown): Promise<void> {
   try {
     await api.post('/missions/track', { event, payload });
-    return { ok: true };
   } catch (err: any) {
-    console.error('Erro ao rastrear evento de missão:', err);
-    return { ok: false, reason: err?.response?.data?.message || err?.message || 'Erro ao rastrear evento.' };
+    throw (err?.response?.data ?? err);
   }
 }
 
 /**
- * (Opcional, mas útil na UI) Lista cupons do usuário para a tela "Meus Cupons".
+ * Lista cupons do usuário para a tela "Meus Cupons".
  * Backend: GET /coupons/my
  */
 export async function getMyCoupons(): Promise<

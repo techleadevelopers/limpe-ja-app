@@ -221,11 +221,7 @@ const styles = StyleSheet.create({
     width: '120%',
     borderTopLeftRadius: 5,
     borderTopRightRadius: 5,
-    shadowColor: '#42bfcfff',
-    shadowOffset: { width: 0, height: 1 }, // Sombra para baixo (como box-shadow 0 5px)
-    shadowOpacity: 1.3,
-    shadowRadius: 5,
-    elevation: 5,
+
     bottom: '100%', // Posiciona a barra superior acima da área principal do indicador
   },
   currentIndicatorBottom: {
@@ -233,26 +229,13 @@ const styles = StyleSheet.create({
     left: 0,
     height: 6, // Aproximação de calc(@height / 10) = 60/10 = 6
     width: '100%',
-    borderBottomLeftRadius: 5,
-    borderBottomRightRadius: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -5 }, // Sombra para cima (como box-shadow 0 -5px)
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
+
     elevation: 5,
     top: '100%', // Posiciona a barra inferior abaixo da área principal do indicador
   },
   currentIndicatorTriangle: {
     position: 'absolute',
-    width: 0,
-    height: 0,
-    backgroundColor: 'transparent',
-    borderStyle: 'solid',
-    // borderLeftWidth e borderRightWidth são dinâmicos
-    // borderTopColor ou borderBottomColor são dinâmicos
-    borderTopWidth: -6, // Altura aproximada do triângulo
-    borderBottomWidth: -6, // Altura aproximada do triângulo
-    left: '50%',
+
     transform: [{ translateX: -6 }], // Centraliza o triângulo (metade da largura da borda)
   },
 });
