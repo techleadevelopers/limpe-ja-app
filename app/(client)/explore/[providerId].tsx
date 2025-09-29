@@ -308,31 +308,32 @@ export default function ProviderDetailsScreen() {
         if (!finalProviderData) {
           setError(t('provider_details.provider_not_found_friendly', { providerId: tempProviderId }));
         } else {
-          // Chat check - MELHORIA: Try-catch ainda mais isolado e silencioso (SEM ALERT)
-          if (isAuthenticated && user?.id) {
-            (async () => {
-              try {
-                const chatBookingStatus = await checkActiveChatBooking(
-                  user.id,
-                  finalProviderData.id
-                );
-                if (!isMounted.current) return;
-                setCanInitiateChat(chatBookingStatus.canChat);
-                setActiveBookingId(chatBookingStatus.bookingId);
-                if (__DEV__) {
-                  console.log(`[ProviderDetailsScreen] Chat OK: ${chatBookingStatus.canChat}`);
-                }
-              } catch (chatError) {
-                // TOTALMENTE SILENCIOSO: Não loga nada em prod, só desabilita chat (SEM ALERT)
-                if (__DEV__) {
-                  console.warn('[ProviderDetailsScreen] Chat check falhou (silencioso):', chatError);
-                }
-                setCanInitiateChat(false);
-                setActiveBookingId(undefined);
-                // NÃO MOSTRA NADA AO USUÁRIO AQUI - só no handleChatPress se tentar usar
-              }
-            })();
-          }
+         // Chat check - MELHORIA: Try-catch ainda mais isolado e silencioso (SEM ALERT)
+if (isAuthenticated && user?.id) {
+  (async () => {
+    try {
+      const chatBookingStatus = await checkActiveChatBooking(
+        user.id,
+        finalProviderData.id
+      );
+      if (!isMounted.current) return;
+      setCanInitiateChat(chatBookingStatus.canChat);
+      setActiveBookingId(chatBookingStatus.bookingId);
+      if (__DEV__) {
+        console.log(`[ProviderDetailsScreen] Chat OK: ${chatBookingStatus.canChat}`);
+      }
+    } catch (chatError) {
+      // TOTALMENTE SILENCIOSO: Não loga nada em prod, só desabilita chat (SEM ALERT)
+      // REFORÇO: Como o service não throw mais, isso é redundante, mas mantém para safety
+      if (__DEV__) {
+        console.warn('[ProviderDetailsScreen] Chat check falhou (silencioso, do service fallback):', chatError);
+      }
+      setCanInitiateChat(false);
+      setActiveBookingId(undefined);
+      // NÃO MOSTRA NADA AO USUÁRIO AQUI - só no handleChatPress se tentar usar
+    }
+  })();
+}
 
           // Animações só se provider carregou
           Animated.parallel([
