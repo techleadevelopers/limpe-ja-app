@@ -151,11 +151,9 @@ const headerSecondaryColor = AppColors.primaryDark;
 const iconColor = AppColors.primaryInteractive;
 const successColor = AppColors.successStandard;
 
-// ✅ Polimento do gradiente: 3 cores mais suaves, transparência menor para clean look
+// Fundo sólido #f2f2f2 (clean/flat, sem gradient)
 const backgroundGradientColors: readonly [ColorValue, ColorValue, ColorValue] = [
-    AppColors.backgroundLight,
-    AppColors.primaryInteractive + '25',
-    AppColors.backgroundLight,
+    '#f2f2f2', '#f2f2f2', '#f2f2f2'
 ];
 
 const abstractBlobColors: readonly [ColorValue, ColorValue, ColorValue] = [
@@ -191,6 +189,9 @@ export default function SuccessScreen() {
 
     // Adicionado ref para verificar se o componente está montado
     const isMounted = useRef(true);
+
+    // NOVO: Guard para geração de PIX (roda uma vez só)
+    const pixRequestedRef = useRef(false);
 
     const animateBlob = useCallback(() => {
         const blobLoop = Animated.loop(
@@ -228,6 +229,7 @@ export default function SuccessScreen() {
         };
     }, [animateBlob]);
 
+    // REFACTOR: fetchBookingAndProviderDetails independente (só busca booking/provider e lógica de coupons/missions)
     const fetchBookingAndProviderDetails = useCallback(async () => {
         console.log("[SuccessScreen] fetchBookingAndProviderDetails - Iniciando fetch.");
 
@@ -268,42 +270,6 @@ export default function SuccessScreen() {
                 console.log("[SuccessScreen] fetchBookingAndProviderDetails - Detalhes do provedor carregados para rating.");
             }
 
-            if (paymentMethod === 'PIX' && totalPriceParam && !pixChargeDetails) {
-                const amount = Number(totalPriceParam); // Converte para número de forma segura
-                console.log("[SuccessScreen] fetchBookingAndProviderDetails - Tentando gerar PIX. Amount:", amount);
-
-                if (isNaN(amount) || amount <= 0) {
-                    if (isMounted.current) {
-                        setPixGenerationError("Valor total inválido para gerar o PIX.");
-                    }
-                    console.error("[SuccessScreen] fetchBookingAndProviderDetails - Erro: Valor total é NaN ou <= 0.");
-                    return;
-                }
-
-                try {
-                    const pixChargeData: CreatePixChargeDto = {
-                        amount: amount,
-                        description: sanitizeText(`Agendamento ${fetchedBooking.serviceName || 'Serviço'} com ${fetchedBooking.providerFullName}`),
-                        bookingId: fetchedBooking.id,
-                        providerId: fetchedBooking.providerId,
-                    };
-                    console.log("[SuccessScreen] fetchBookingAndProviderDetails - PixChargeData para backend:", pixChargeData);
-
-                    const pixResponse: PixChargeResponseDto = await createPixCharge(user.id, pixChargeData);
-                    if (!isMounted.current) return;
-                    setPixChargeDetails(pixResponse);
-                    console.log("[SuccessScreen] fetchBookingAndProviderDetails - Resposta PIX recebida:", pixResponse);
-                    NotificationUIService.showSuccess('Use o código para finalizar o pagamento.', 'PIX Gerado com Sucesso!');
-                } catch (pixErr: any) {
-                    console.error("[SuccessScreen] fetchBookingAndProviderDetails - Erro ao gerar PIX (API):", pixErr.response?.data || pixErr.message, pixErr);
-                    if (isMounted.current) {
-                        setPixGenerationError(pixErr.response?.data?.message || "Não foi possível gerar a cobrança PIX.");
-                    }
-                }
-            } else {
-                console.log("[SuccessScreen] fetchBookingAndProviderDetails - PIX Generation SKIPPED. paymentMethod:", paymentMethod, "totalPriceParam:", totalPriceParam, "pixChargeDetails exists:", !!pixChargeDetails);
-            }
-
             // NOVO: Lógica para exibir o ReturnCouponCard
             const isFirstBooking = (user?.clientDetails?.totalBookings || 0) <= 1;
             const noWelcomeCouponUsed = couponApplied !== 'true';
@@ -339,11 +305,46 @@ export default function SuccessScreen() {
             }
             console.log("[SuccessScreen] fetchBookingAndProviderDetails - Finalizado.");
         }
-    }, [bookingId, paymentMethod, totalPriceParam, pixChargeDetails, user?.id, couponApplied, appliedCouponCode]);
+    }, [bookingId, user?.id, couponApplied, appliedCouponCode]);
 
+    // NOVO: useEffect separado para geração de PIX (com guard, roda só 1x)
+    useEffect(() => {
+        if (!booking) return;
+        if (paymentMethod !== 'PIX') return;
+        if (!totalPriceParam) return;
+        if (pixChargeDetails) return;        // já temos PIX, não refazer
+        if (pixRequestedRef.current) return; // guard
+
+        const amount = Number(totalPriceParam);
+        if (isNaN(amount) || amount <= 0) {
+            setPixGenerationError('Valor total inválido para gerar o PIX.');
+            return;
+        }
+
+        pixRequestedRef.current = true;
+
+        (async () => {
+            try {
+                const pixChargeData: CreatePixChargeDto = {
+                    amount,
+                    description: sanitizeText(`Agendamento ${booking.serviceName || 'Serviço'} com ${booking.providerFullName}`),
+                    bookingId: booking.id,
+                    providerId: booking.providerId,
+                };
+                const pixResponse = await createPixCharge(user!.id, pixChargeData);
+                if (!isMounted.current) return;
+                setPixChargeDetails(pixResponse);
+                NotificationUIService.showSuccess('Use o código para finalizar o pagamento.', 'PIX Gerado com Sucesso!');
+            } catch (e: any) {
+                if (!isMounted.current) return;
+                setPixGenerationError(e?.response?.data?.message || 'Não foi possível gerar a cobrança PIX.');
+            }
+        })();
+    }, [booking, paymentMethod, totalPriceParam, pixChargeDetails, user?.id]);
+
+    // REFACTOR: useEffect de entrada sem pixGenerationDelay (fetch 1x só)
     useEffect(() => {
         const revealDelay = 300;
-        const pixGenerationDelay = 2000;
 
         const entryAnimation = Animated.parallel([
             Animated.timing(contentOpacity, {
@@ -362,9 +363,7 @@ export default function SuccessScreen() {
 
         const timer = setTimeout(() => {
             entryAnimation.start(() => {
-                setTimeout(() => {
-                    fetchBookingAndProviderDetails();
-                }, pixGenerationDelay);
+                fetchBookingAndProviderDetails();   // 🚫 sem setTimeout extra pra PIX
             });
         }, revealDelay);
 
@@ -475,11 +474,12 @@ export default function SuccessScreen() {
         NotificationUIService.showInfo('Você pode encontrá-lo na seção de Missões.', 'Lembrete dispensado');
     }, []);
 
-    if (isLoading || error || pixGenerationError || !booking) {
+    // BONUS: Removido pixGenerationError da condição de erro (não volta ao loader por falha no PIX)
+    if (isLoading || error || !booking) {
         return (
             <SuccessLoadingError
                 isLoading={isLoading}
-                error={error || pixGenerationError}
+                error={error}
                 headerPrimaryColor={headerPrimaryColor}
                 onRetryPress={handleRetry}
             />
@@ -493,20 +493,20 @@ export default function SuccessScreen() {
     const formattedAddressLine2 = userAddress ? formatAddressLine2(userAddress) : '';
 
     return (
-        <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right', 'bottom']}> {/* ✅ SafeAreaView global cobre topo, laterais e bottom para iOS/Android premium */}
+       <SafeAreaView style={{ flex: 1 }} edges={['left', 'right', 'bottom']}>  {/* Removido 'top' */}
             {/* ✅ Gradiente polido: mais suave e clean com 3 cores e transparência reduzida */}
             <LinearGradient
-                colors={backgroundGradientColors}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={[
-                    styles.screenGradientBackground,
-                    { 
-                        flex: 1, // ✅ Garante que o gradient ocupe toda a tela para scroll completo
-                        paddingTop: Platform.OS === 'ios' ? 70 : 50 // Fix: PaddingTop maior para iOS safe area top
-                    }
-                ]}
-            >
+    colors={backgroundGradientColors}
+    start={{ x: 0, y: 0 }}
+    end={{ x: 1, y: 1 }}
+    style={[
+        styles.screenGradientBackground,
+        { 
+            flex: 1, // ✅ Garante que o gradient ocupe toda a tela para scroll completo
+            paddingTop: 0  // ✅ ZERADO: Remove o padding fixo de 70/50px
+        }
+    ]}
+>
                 <Stack.Screen options={{ headerShown: false }} />
 
                 {/* ✅ AnimatedBlob premium: menor, mais opaco sutil, sombra leve sem poluir */}
@@ -574,16 +574,16 @@ export default function SuccessScreen() {
                             />
 
                             {showReturnCouponCard && returnCouponDetails && (
-                                <View style={[styles.sectionSpacer, { marginTop: 0 }]}> {/* FIX: marginTop: 0 para zerar gap com PIX acima */}
-                                    <ReturnCouponCard
-                                        code={returnCouponDetails.code}
-                                        title={returnCouponDetails.title}
-                                        subtitle={returnCouponDetails.subtitle}
-                                        expiresAt={returnCouponDetails.expiresAt} // Passando Date object
-                                        onRebookNow={handleRebookNow}
-                                    />
-                                </View>
-                            )}
+    <View style={[styles.sectionSpacer, { marginTop: 0, marginBottom: 8 }]}> {/* ✅ FIX: marginTop: 0 zera gap com PIX; marginBottom: 8 para gap controlado abaixo */}
+        <ReturnCouponCard
+            code={returnCouponDetails.code}
+            title={returnCouponDetails.title}
+            subtitle={returnCouponDetails.subtitle}
+            expiresAt={returnCouponDetails.expiresAt}
+            onRebookNow={handleRebookNow}
+        />
+    </View>
+)}
 
                             {showMissionReminderCard && booking && (
                                 <View style={styles.sectionSpacer}> {/* Fix: Mesmo para mission, gap lógico */}
