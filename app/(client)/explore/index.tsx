@@ -423,19 +423,20 @@ export default function ExploreClientScreen() {
     );
   }, []);
 
-  const renderPagination = useCallback(() => (
-    <View style={styles.pagination}>
-      {bannerData.map((_, index) => (
-        <View
-          key={index}
-          style={[
-            styles.paginationDot,
-            index === currentIndex ? styles.paginationDotActive : styles.paginationDotInactive,
-          ]}
-        />
-      ))}
-    </View>
-  ), [currentIndex]);
+  // REMOVIDO: Função renderPagination() - Não é mais necessária, pois removemos os dots
+  // const renderPagination = useCallback(() => (
+  //   <View style={styles.pagination}>
+  //     {bannerData.map((_, index) => (
+  //       <View
+  //         key={index}
+  //         style={[
+  //           styles.paginationDot,
+  //           index === currentIndex ? styles.paginationDotActive : styles.paginationDotInactive,
+  //         ]}
+  //       />
+  //     ))}
+  //   </View>
+  // ), [currentIndex]);
 
   const onRefresh = useCallback(() => {
     setIsRefreshing(true);
@@ -647,7 +648,7 @@ export default function ExploreClientScreen() {
                   onPress={() => router.push('/(client)/explore/todas-categorias' as any)}
                   style={styles.viewAllButton}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                  <Ionicons name="chevron-forward" size={14} color="#007BFF" />
+                  <Ionicons name="add" size={16} color="#398beeff" />
                 </TouchableOpacity>
               </View>
               <SecaoContainer<Service>
@@ -665,7 +666,7 @@ export default function ExploreClientScreen() {
               />
             </Animated.View>
 
-            {/* Novo Carrossel de Banners */}
+            {/* Novo Carrossel de Banners - REMOVIDO: {renderPagination()} para eliminar as bolinhas */}
             <Animated.View
               style={[
                 styles.carouselContainer,
@@ -685,7 +686,7 @@ export default function ExploreClientScreen() {
                 decelerationRate="fast"
                 contentContainerStyle={{ paddingHorizontal: 10, paddingRight: 20 }} // Adicionado paddingRight para compensar snapToInterval
               />
-              {renderPagination()}
+              {/* REMOVIDO: {renderPagination()} - Isso elimina as 3 bolinhas de paginação */}
             </Animated.View>
 
             {/* Recomendações para Você Animadas */}
@@ -1026,24 +1027,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: COR_CINZA_FUNDO,
   },
-  pagination: {
-    flexDirection: 'row',
-    height: 20,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  paginationDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginHorizontal: 5,
-  },
-  paginationDotActive: {
-    backgroundColor: COR_AZUL_CLARO_UNIFICADA,
-  },
-  paginationDotInactive: {
-    backgroundColor: '#ddd',
-  },
+  // REMOVIDO: Estilos de paginação (não mais necessários)
+  // pagination: {
+  //   flexDirection: 'row',
+  //   height: 20,
+  //   alignItems: 'center',
+  //   marginTop: 10,
+  // },
+  // paginationDot: {
+  //   width: 8,
+  //   height: 8,
+  //   borderRadius: 4,
+  //   marginHorizontal: 5,
+  // },
+  // paginationDotActive: {
+  //   backgroundColor: COR_AZUL_CLARO_UNIFICADA,
+  // },
+  // paginationDotInactive: {
+  //   backgroundColor: '#ddd',
+  // },
   shieldIconContainer: {
     padding: 5,
     marginRight: Platform.OS === 'ios' ? 10 : 0,
