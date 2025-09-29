@@ -96,7 +96,7 @@ const SideIcon: React.FC<SideIconProps> = ({
   onPressFacialRecognition,
   onPressRating,
 }) => {
-  const iconSize = 50;
+  const iconSize = 60;
   const ringColor = '#87CEEB';
   const pulseCycleDuration = 2000; // 2s
 
@@ -143,17 +143,17 @@ const styles = StyleSheet.create({
   ring: {
     position: 'absolute',
     borderWidth: 2,
-    top: '50%',
-    left: '50%',
+    top: '35%',
+    left: '48%',
   },
   iconImage: {
-    width: 60,
-    height: 60,
+    width: 80,
+    height: 80,
     resizeMode: 'contain',
     position: 'absolute',
     zIndex: 1,
-    top: '40%',
-    left: '34%',
+    top: '15%',
+    left: '18%',
     transform: [{ translateX: -20 }, { translateY: -20 }],
   },
   iconText: {
