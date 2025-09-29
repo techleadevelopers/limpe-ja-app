@@ -128,7 +128,7 @@ export const styles = StyleSheet.create({
     marginBottom: 5,
   },
   providerNameWhiteCard: {
-    fontSize: 18,
+    fontSize: 23,
     fontWeight: '700',
     color: AppColors.textBody, // Usando AppColors
     flexShrink: 1,
@@ -206,7 +206,7 @@ export const styles = StyleSheet.create({
     
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 20,
     left: 4,
     paddingHorizontal: 6,
     fontWeight: '700',
@@ -665,7 +665,7 @@ export const styles = StyleSheet.create({
   },
   viewAllReviewsButtonText: {
     color: AppColors.primaryInteractive, // Usando AppColors
-    fontSize: 16,
+    fontSize: 6,
     fontWeight: '600',
     marginRight: 8,
   },
