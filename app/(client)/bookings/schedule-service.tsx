@@ -1285,7 +1285,6 @@ export default function ScheduleServiceScreen() {
                     headerTitle={t('schedule_service.header_title', { defaultValue: 'Agendar Serviço' })}
                     fadeAnim={fadeAnim}
                     slideUpAnim={slideUpAnim}
-                    showBackButton={currentStep > 1}
                 />
                 <View style={styles.stepsPill}>
                     <View key="step1" style={[
