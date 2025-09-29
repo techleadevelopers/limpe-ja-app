@@ -1,13 +1,14 @@
+// TimeSlotButton.tsx (ajustado para badges e animações só no modo "ver todos" - slots limpos no modo oculto)
 import React, { useRef, useEffect } from 'react';
 import { TouchableOpacity, Text, StyleSheet, View, ColorValue, Animated, Easing } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AppColors, AppShadows } from '../../../../constants/appStyles';
 
 interface TimeSlotButtonProps {
-  time: string;
+  time: string;  // <— Reforçado: obrigatório e string (alinhado com SlotItem)
   isSelected: boolean;
   onPress: (time: string) => void;
-  isAvailable?: boolean;
+  isAvailable: boolean;  // <— Reforçado: obrigatório e boolean (alinhado com SlotItem)
   itemWidth?: number;
   /** microdestaque (próximos horários) */
   isRecommended?: boolean;
@@ -21,7 +22,7 @@ const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({
   time,
   isSelected,
   onPress,
-  isAvailable = true,
+  isAvailable,
   itemWidth,
   isRecommended = false,
   dense = false,
@@ -33,8 +34,9 @@ const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({
   const loopPulseRef = useRef<Animated.CompositeAnimation | null>(null);
   const loopShineRef = useRef<Animated.CompositeAnimation | null>(null);
 
+  // <— AJUSTE PREMIUM: Animações e brilho só no modo "dense" (ver todos); no modo oculto, slots 100% limpos e sem interferência visual
   useEffect(() => {
-    if (isAvailable && !isSelected && isRecommended) {
+    if (isAvailable && !isSelected && isRecommended && dense) {  // <— NOVO: && dense (só anima no modo "ver todos")
       loopPulseRef.current = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, { toValue: 1.012, duration: 1200, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
@@ -63,7 +65,7 @@ const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({
       loopPulseRef.current?.stop();
       loopShineRef.current?.stop();
     };
-  }, [isAvailable, isSelected, isRecommended, pulseAnim, shineAnim, itemWidth]);
+  }, [isAvailable, isSelected, isRecommended, dense, pulseAnim, shineAnim, itemWidth]);  // <— NOVO: dense nas deps
 
   const onPressInButton = () => {
     Animated.spring(pressAnim, { toValue: 0.99, useNativeDriver: true }).start();
@@ -73,8 +75,12 @@ const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({
     Animated.spring(pressAnim, { toValue: 1, friction: 6, tension: 90, useNativeDriver: true }).start();
   };
 
-  const showGradient = isAvailable && !isSelected;
+  const showGradient = isAvailable && !isSelected && dense;  // <— NOVO: Gradient só no modo dense (ver todos); no modo oculto, cor plana sem interferência
   const combinedScale = Animated.multiply(pulseAnim, pressAnim);
+
+  // <— AJUSTE PREMIUM: Badge só no modo dense (ver todos) e para recomendados não selecionados/disponíveis
+  // No modo oculto (!dense), NADA dentro do slot (sem badge, sem brilho, slots limpos e premium)
+  const showBadge = isRecommended && !isSelected && isAvailable && dense;
 
   return (
     <Animated.View style={{ transform: [{ scale: combinedScale }], width: itemWidth }}>
@@ -101,7 +107,7 @@ const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({
             <Animated.View
               style={[
                 styles.shineOverlay,
-                dense && { width: 20, opacity: 0.5 },                 // <— brilho mais estreito no modo denso
+                dense && { width: 18, opacity: 0.5 },                 // <— brilho mais estreito no modo denso (reduzido para anti-overlap)
                 { transform: [{ translateX: shineAnim }] },
               ]}
             >
@@ -115,7 +121,8 @@ const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({
           </>
         )}
 
-        {isRecommended && !isSelected && isAvailable && !dense && ( // esconde badge no modo denso
+        {/* Badge com condição reforçada: SÓ aparece no modo dense (ver todos); no modo oculto, slot vazio e limpo */}
+        {showBadge && (
           <View style={styles.badgeRecommended}>
             <Text style={styles.badgeText}>recomendado</Text>
           </View>
@@ -133,6 +140,7 @@ const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({
           ellipsizeMode="clip"
           maxFontSizeMultiplier={1.1}
           allowFontScaling={false}
+          // <— Removido paddingTop (causava erro TS); espaço via lineHeight no estilo text
         >
           {time}
         </Text>
@@ -143,15 +151,16 @@ const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({
 
 const styles = StyleSheet.create({
   buttonBase: {
-    marginHorizontal: 6,
+    marginHorizontal: 1,
     height: 30,
     
     minWidth: 84,
     paddingHorizontal: 12,
+    paddingVertical: 4,  // <— Adicionado sutil para centralizar texto verticalmente (sem aumentar altura)
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: 8,  // <— Reduzido de 12 para 8 (melhor alinhamento vertical, evita vazamento)
     overflow: 'hidden',
     
     backgroundColor: AppColors.backgroundLight,
@@ -161,8 +170,9 @@ const styles = StyleSheet.create({
     height: 30,                 // ↓ menor
     minWidth: 78,
     paddingHorizontal: 10,
+    paddingVertical: 3,         // <— Sutil no dense também
     borderRadius: 14,
-    marginBottom: 8,            // ↓ menos espaço vertical
+    marginBottom: 6,            // <— Reduzido de 8 para 6 (compacto sem vazamento)
   },
   available: {
     ...AppShadows.small,
@@ -196,7 +206,7 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 14,
-    lineHeight: 18,
+    lineHeight: 20,  // <— Aumentado de 18 para 20 (espaço vertical ao texto sem paddingTop)
     letterSpacing: 0.2,
     color: AppColors.textBody,
     fontWeight: '600',
@@ -206,7 +216,7 @@ const styles = StyleSheet.create({
   },
   textDense: {
     fontSize: 13,               // ↓ menor
-    lineHeight: 16,
+    lineHeight: 17,             // <— Ajustado para 17 (espaço no dense sem overlap)
    
   },
   textSelected: { color: AppColors.white, fontWeight: '700' },
@@ -217,24 +227,26 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     height: '100%',
-    width: 26,
+    width: 20,  // <— Reduzido de 26 para 20 (anti-overlap no texto)
     opacity: 0.55,
   },
   gradientShine: { flex: 1 },
   badgeRecommended: {
     position: 'absolute',
-    top: 6,
+    top: -2,  // <— Ajustado de 6 para -2 (sobe para fora do botão, evita overlap no texto)
     right: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingHorizontal: 4,  // <— Reduzido de 6 para 4 (equilíbrio, mais espaço para texto)
+    paddingVertical: 1,  // <— Reduzido de 2 para 1 (menor altura)
     borderRadius: 10,
     backgroundColor: 'rgba(255,255,255,0.72)',
+    minWidth: 45,  // <— Adicionado para garantir espaço mínimo ao texto longo sem corte
   },
   badgeText: {
-    fontSize: 9.5,
+    fontSize: 7.5,  // <— Reduzido de 8 para 7.5 (cabe "recomendado" completo sem cortar)
     fontWeight: '700',
     color: AppColors.textBody,
     textTransform: 'uppercase',
+    letterSpacing: 0.1,  // <— Adicionado para compactar texto (evita corte no final)
   },
 });
 
