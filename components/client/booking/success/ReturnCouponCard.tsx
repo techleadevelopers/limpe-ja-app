@@ -1,3 +1,4 @@
+// LimpeJaApp/components/coupons/ReturnCouponCard.tsx (ou o caminho equivalente)
 import React, { useRef, useEffect, useCallback } from 'react';
 import {
   Animated,
@@ -145,8 +146,8 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     overflow: 'hidden',
     alignSelf: 'center',
-    marginTop: 5, // FIX: Reduzido de 10 para 5 – minimiza gap acima do cupom (com PIX)
-    marginBottom: 20, // Gap final confortável (20px, permite scroll suave)
+    marginTop: 10, // ✅ FIX: Reduzido para 5px (era 35) – minimiza gap acima do cupom (com PIX), conforme comentário original
+    marginBottom: 10, // Gap final confortável (20px, permite scroll suave)
     ...AppShadows.medium,
     // ✅ Mantido minHeight sem alteração (250px iOS/260px Android) – elementos internos ajustados para caber
     minHeight: Platform.OS === 'ios' ? 250 : 260,
@@ -165,7 +166,7 @@ const styles = StyleSheet.create({
   },
   title: {
     // ✅ Fonte menor (18px bold, era AppTypography.title ~20px) para caber em 1 linha sem wrap
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: AppColors.white,
     flexShrink: 1, // Permite encolher se código longo
@@ -188,7 +189,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     // ✅ Fonte ligeiramente menor (13px era 14/AppTypography.body) e lineHeight otimizado para caber em 2 linhas
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '400', // Regular para leveza
     color: AppColors.white,
     marginBottom: 12, // ✅ Reduzido de 16 para 12 – comprime sem apertar
@@ -207,7 +208,7 @@ const styles = StyleSheet.create({
   },
   couponCode: {
     // ✅ Fonte menor (18px bold, era 20) para caber melhor ao lado do botão copy
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: AppColors.white,
     letterSpacing: 1,
@@ -225,7 +226,7 @@ const styles = StyleSheet.create({
   },
   copyButtonText: {
     color: AppColors.white,
-    fontSize: 12, // ✅ Menor (era 14) para caber no botão compacto
+    fontSize: 10, // ✅ Menor (era 14) para caber no botão compacto
     fontWeight: '600',
     marginLeft: 4, // ✅ Gap menor (era 5)
   },
@@ -239,7 +240,7 @@ const styles = StyleSheet.create({
   rebookNowButtonText: {
     // ✅ Fonte menor (14px bold, era 16) para caber centralizado sem pular
     color: AppColors.successStandard,
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: 'bold',
   },
 });
