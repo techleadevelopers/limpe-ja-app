@@ -31,7 +31,7 @@ const SecaoRecomendacoes: React.FC<SecaoRecomendacoesProps> = ({
         {onVerTudoPress && (
           <TouchableOpacity onPress={onVerTudoPress} style={styles.viewAllButton}>
             <Text style={styles.viewAllText}>
-             <Ionicons name="chevron-forward" size={14} color="#626a74ff" />
+            <Ionicons name="add" size={16} color="#398beeff" />
             </Text>
           </TouchableOpacity>
         )}
@@ -75,22 +75,24 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   sectionTitle: {
-      fontSize: 18,
+      fontSize: 17,
       fontFamily: 'Montserrat-Regular',
       fontWeight: '600',
       // PREMIUM: Estilo de título refinado
       color: 'rgba(44, 62, 80, 0.85)',
       letterSpacing: 0.5,
+      marginTop:30,
   },
   viewAllButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 5,
+    paddingVertical: 1,
   },
   viewAllText: {
     fontSize: 1,
     color: '#6c7989ff',
     fontWeight: '600',
+    marginTop: 25,
   },
   cardsScrollContainer: {
     paddingHorizontal: 15,
