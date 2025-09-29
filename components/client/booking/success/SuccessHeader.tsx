@@ -76,10 +76,10 @@ export default function SuccessHeader({
 const styles = StyleSheet.create({
     safeAreaHeader: {
         flex: 0,
-        backgroundColor: 'transparent', // Mantém transparência
+        backgroundColor: '#FFFFF', // Mantém transparência
     },
     headerContainer: {
-        paddingTop: Platform.OS === 'ios' ? 20 : 50, // Fix: Reduzido para iOS (SafeAreaView cuida do resto), mas ainda centraliza
+        paddingTop: Platform.OS === 'ios' ? 2 : 5, // Fix: Reduzido para iOS (SafeAreaView cuida do resto), mas ainda centraliza
         paddingBottom: 10,
         paddingHorizontal: 20,
         flexDirection: 'row',
@@ -89,8 +89,9 @@ const styles = StyleSheet.create({
         maxWidth: '100%', // Fix: Previne overflow lateral
     },
     logoImage: {
-        width: 150,
+        width: 210,
         height: 50,
+        right: 5,
         // Remover tamanho fixo se a imagem precisar ser responsiva
         // Se a imagem for um SVG ou puder ser escalada, usar flex ou porcentagem
         // Ex: width: '80%', height: undefined, aspectRatio: 3,
