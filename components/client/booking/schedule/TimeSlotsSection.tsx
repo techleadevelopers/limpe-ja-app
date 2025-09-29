@@ -1,8 +1,16 @@
+// TimeSlotsSection.tsx (ajustado para gaps laterais zero no modo "ver todos" - colados horizontalmente, sem afetar modo oculto)
 import React from 'react';
 import { View, Text, FlatList, ActivityIndicator, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import TimeSlotButton from './TimeSlotButton';
 import { AppColors, AppShadows } from '../../../../constants/appStyles';
+
+// <— NOVA: Interface para itens da FlatList (elimina 'any' e resolve mismatch de props)
+interface SlotItem {
+  time: string;
+  isAvailable: boolean;
+  isRecommended?: boolean;
+}
 
 interface TimeSlotsSectionProps {
   titleKey?: string;
@@ -49,7 +57,7 @@ export default function TimeSlotsSection({
   const [showUnavailable, setShowUnavailable] = React.useState(false);
 
   const dense = showUnavailable;                   // ao "ver todos", ativa layout compacto
-  const currentGap = dense ? 10 : 16;              // ↓ gap menor quando denso
+  const currentGap = dense ? 0 : 12;               // <— AJUSTE PREMIUM: Gap horizontal ZERO no modo dense (slots colados); 12px no modo oculto para espaçamento natural
   const itemWidth = (SCREEN_WIDTH - HORIZONTAL_GUTTER - currentGap * (numColumns - 1)) / numColumns;
 
   const headerText = React.useMemo(() => {
@@ -84,13 +92,23 @@ export default function TimeSlotsSection({
       }
     }
 
-    const enriched = sorted.map((s, i) => ({ ...s, isRecommended: nextIdx.has(i) }));
+    // <— Tipado explicitamente como SlotItem[] (elimina 'as any')
+    const enriched: SlotItem[] = sorted.map((s: SlotItem, i: number) => ({ 
+      ...s, 
+      isRecommended: nextIdx.has(i) 
+    }));
 
-    const grouped: Record<'morning'|'afternoon'|'evening', typeof enriched> = { morning: [], afternoon: [], evening: [] };
+    // <— Tipado grouped com SlotItem[]
+    const grouped: Record<'morning'|'afternoon'|'evening', SlotItem[]> = { 
+      morning: [], 
+      afternoon: [], 
+      evening: [] 
+    };
     enriched.forEach(item => grouped[getPeriod(item.time)].push(item));
 
+    // <— mk retorna array com data tipada como SlotItem[]
     const mk = (k: 'morning'|'afternoon'|'evening', label: string) =>
-      grouped[k].length ? [{ key: k, label, data: grouped[k] as any }] : [];
+      grouped[k].length ? [{ key: k, label, data: grouped[k] }] : [];
 
     return [
       ...mk('morning', t('common.morning', { defaultValue: 'Manhã' })),
@@ -113,25 +131,32 @@ export default function TimeSlotsSection({
 
               <FlatList
                 data={section.data}
-                keyExtractor={(item) => item.time}
+                keyExtractor={(item: SlotItem) => item.time}  // <— Tipado keyExtractor
                 numColumns={numColumns}
-                renderItem={({ item }) => (
+                renderItem={({ item }: { item: SlotItem }) => (  // <— Type guard explícito: resolve mismatch de props (time não é 'any')
                   <TimeSlotButton
-                    time={item.time}
+                    time={item.time}  // Agora tipado como string
                     isSelected={selectedTime === item.time}
                     onPress={onTimeSelect}
-                    isAvailable={item.isAvailable}
+                    isAvailable={item.isAvailable}  // Agora tipado como boolean
                     itemWidth={itemWidth}
-                    isRecommended={item.isRecommended}
+                    isRecommended={item.isRecommended && dense}  // <— NOVO: isRecommended só se dense (modo "ver todos"); no modo oculto, slots limpos sem destaque
                     dense={dense}                                // <— liga o modo compacto
+                    noHorizontalMargin={dense}                   // <— NOVO: Prop para remover margins laterais no modo dense (slots colados)
                   />
                 )}
                 columnWrapperStyle={{
-                  justifyContent: 'flex-start',
-                  gap: currentGap,                               // <— gap dinâmico
-                  marginBottom: currentGap,
+                  justifyContent: 'flex-start',  // <— MUDANÇA PREMIUM: Alinha à esquerda (perto do título "Manhã"), em vez de centralizar com 'space-around'
+                  alignItems: 'center',            // <— Alinhamento vertical perfeito
+                  gap: currentGap,                 // <— Gap dinâmico: 0 no dense (colados horizontalmente), 12px no oculto (espaçamento natural)
+                  // <— Removido marginBottom aqui (evita empurrar última row para fora do card)
                 }}
-                contentContainerStyle={{ paddingVertical: dense ? 2 : 4 }} // <— menos respiro vertical
+                contentContainerStyle={{ 
+                  paddingVertical: dense ? 3 : 6,
+                  paddingBottom: dense ? 8 : 12,  // <— Adicionado paddingBottom controlado (espaço final na lista, evita vazamento da última row)
+                  paddingLeft: 0,  // <— NOVO: Sem padding extra à esquerda para alinhamento premium rente ao título
+                  paddingRight: dense ? 0 : 12,    // <— NOVO: No modo dense, sem padding direito (permite slots colados até a borda direita); no oculto, padding para respiro
+                }}
                 initialNumToRender={numColumns * 2}
                 maxToRenderPerBatch={numColumns * 3}
                 windowSize={7}
@@ -167,6 +192,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     paddingHorizontal: 24,
     paddingVertical: 18,
+    paddingBottom: 20,  // <— Aumentado de 18 para 20 (respiro para última row, sem cortar botões)
     ...AppShadows.medium,
   },
   title: {
