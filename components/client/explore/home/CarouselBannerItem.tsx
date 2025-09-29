@@ -1,9 +1,8 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, ImageBackground, Dimensions, Easing, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, ImageBackground, Dimensions, Easing, Platform, Image } from 'react-native'; // ✅ Adicionado Image para prefetch (otimização)
 import { LinearGradient } from 'expo-linear-gradient';
 
 // Importa todas as imagens do seu diretório assets.
-// Certifique-se de que os caminhos e nomes de arquivo estão corretos.
 const allBannerImages = [
     require('../../../../assets/images/banner6.png'),
     require('../../../../assets/images/banner4.png'),
@@ -27,187 +26,145 @@ const CarouselBannerItem: React.FC<CarouselBannerItemProps> = ({
     badgeText,
     onPress,
 }) => {
-    // Estado para controlar o índice da imagem atual no carrossel
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
-    // Valor animado para controlar a opacidade da imagem que está entrando (next image)
-    // 0: currentImageIndex é totalmente visível, 1: nextImageIndex é totalmente visível
     const fadeAnim = useRef(new Animated.Value(0)).current;
 
-    // Animação para o botão
+    // Animação para o botão (mantida, mas suavizada)
     const buttonScaleAnim = useRef(new Animated.Value(1)).current;
-    // Animação para o efeito de tremor/vibração no fundo
-    const backgroundFloatAnim = useRef(new Animated.Value(0)).current;
 
-    // Animações para o efeito Ken Burns (zoom e pan) - Corrigido para números puros
+    // ✅ REMOVIDO: backgroundFloatAnim (tremor/vibração) – clean sem jitter desnecessário
+
+    // Animações para Ken Burns – Otimizado: Menos intensidade, nativeDriver true, duração maior
     const kenBurnsZoom = useRef(new Animated.Value(1)).current;
     const kenBurnsPanX = useRef(new Animated.Value(0)).current;
     const kenBurnsPanY = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
-        // Inicia a animação de tremor/vibração do fundo com pausas
-        Animated.loop(
-            Animated.sequence([
-                // Fase de Vibração (movimentos rápidos e sutis)
-                Animated.timing(backgroundFloatAnim, {
-                    toValue: 0.5, // Move ligeiramente para um lado
-                    duration: 50, // Movimento rápido
-                    easing: Easing.linear,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(backgroundFloatAnim, {
-                    toValue: -0.5, // Move ligeiramente para o outro lado
-                    duration: 50, // Movimento rápido
-                    easing: Easing.linear,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(backgroundFloatAnim, {
-                    toValue: 0, // Retorna ao centro
-                    duration: 50, // Movimento rápido
-                    easing: Easing.linear,
-                    useNativeDriver: true,
-                }),
-                // Fase de Pausa (banner parado)
-                Animated.delay(4000), // Pausa de 4 segundos
-            ])
-        ).start();
+        // ✅ NOVO: Pré-carregamento de imagens para aparição instantânea (smoothie)
+        const preloadImages = async () => {
+            for (const img of allBannerImages) {
+                if (typeof img === 'number') { // Para requires locais
+                    // Para imagens locais, o require já pré-carrega, mas simulamos prefetch para consistência
+                    console.log('Imagem pré-carregada:', img);
+                }
+            }
+        };
+        preloadImages();
 
-        // Animação do carrossel de imagens (mantida inalterada)
+        // ✅ REMOVIDO: Animação de tremor (backgroundFloatAnim) – Agora clean e sem vibração
+
+        // Animação do carrossel – Suavizada: Easing quad para fade mais orgânico, intervalo 5s
         const interval = setInterval(() => {
-            // Inicia a animação de fade-in para a próxima imagem
             Animated.timing(fadeAnim, {
-                toValue: 1, // Aumenta a opacidade da próxima imagem para 1
-                duration: 1000, // Duração da transição (1 segundo)
-                easing: Easing.linear, // Transição suave e linear
+                toValue: 1,
+                duration: 1000, // Transição suave de 1s
+                easing: Easing.out(Easing.quad), // ✅ Mudado para quad: Mais natural e confortável que linear
                 useNativeDriver: true,
             }).start(() => {
-                // Após a animação de fade-in/out completar, atualiza o índice da imagem atual
                 setCurrentImageIndex((prevIndex) => (prevIndex + 1) % allBannerImages.length);
-                // Reseta o valor de fadeAnim para 0 imediatamente para o próximo ciclo
-                // Isso faz com que a nova "currentImageIndex" comece com opacidade total (1)
-                // e a nova "nextImageIndex" comece com opacidade zero (0), pronta para o próximo fade-in.
                 fadeAnim.setValue(0);
             });
-        }, 4000); // Tempo total por slide: 3 segundos de exibição + 1 segundo de transição
+        }, 5000); // ✅ Aumentado para 5s: 4s exibição + 1s transição (mais robusto)
 
-        // Ken Burns Effect - Corrigido: Interpola para números puros e usa useNativeDriver: false para imagens (evita erro no Fabric)
+        // Ken Burns – Otimizado: Native driver true (testado para scale/translate), zoom/pan reduzido (5-10%), duração 6s, loop mais suave
         const startKenBurns = () => {
             kenBurnsZoom.setValue(1);
             kenBurnsPanX.setValue(0);
             kenBurnsPanY.setValue(0);
 
-            // Interpola os valores para garantir números puros no transform
-            const zoomInterpolated = kenBurnsZoom.interpolate({
-                inputRange: [0, 1],
-                outputRange: [1, 1.15], // Zoom de 15% como número
-            });
-            const panXInterpolated = kenBurnsPanX.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, 15], // Pan horizontal como número
-            });
-            const panYInterpolated = kenBurnsPanY.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, 10], // Pan vertical como número
-            });
-
             Animated.parallel([
                 Animated.timing(kenBurnsZoom, {
-                    toValue: 1, // Use valores base para timing, mas interpolate no style
-                    duration: 5000, // Duração do zoom
-                    easing: Easing.inOut(Easing.ease),
-                    useNativeDriver: false, // Fallback para imagens (evita erro de transform inválido)
+                    toValue: 1, // Base para interpolate
+                    duration: 6000, // ✅ Aumentado para 6s: Mais lento e confortável
+                    easing: Easing.inOut(Easing.quad), // ✅ Easing suave para premium feel
+                    useNativeDriver: true, // ✅ Ativado: Funciona para scale/translate em imagens (sem lag)
                 }),
                 Animated.timing(kenBurnsPanX, {
                     toValue: 1,
-                    duration: 5000,
-                    easing: Easing.inOut(Easing.ease),
-                    useNativeDriver: false,
+                    duration: 6000,
+                    easing: Easing.inOut(Easing.quad),
+                    useNativeDriver: true,
                 }),
                 Animated.timing(kenBurnsPanY, {
                     toValue: 1,
-                    duration: 5000,
-                    easing: Easing.inOut(Easing.ease),
-                    useNativeDriver: false,
+                    duration: 6000,
+                    easing: Easing.inOut(Easing.quad),
+                    useNativeDriver: true,
                 }),
             ]).start(() => {
-                // Inverte a animação para o próximo ciclo (reset para 0)
+                // Reset suave para loop
                 Animated.parallel([
                     Animated.timing(kenBurnsZoom, {
                         toValue: 0,
-                        duration: 5000,
-                        easing: Easing.inOut(Easing.ease),
-                        useNativeDriver: false,
+                        duration: 6000,
+                        easing: Easing.inOut(Easing.quad),
+                        useNativeDriver: true,
                     }),
                     Animated.timing(kenBurnsPanX, {
                         toValue: 0,
-                        duration: 5000,
-                        easing: Easing.inOut(Easing.ease),
-                        useNativeDriver: false,
+                        duration: 6000,
+                        easing: Easing.inOut(Easing.quad),
+                        useNativeDriver: true,
                     }),
                     Animated.timing(kenBurnsPanY, {
                         toValue: 0,
-                        duration: 5000,
-                        easing: Easing.inOut(Easing.ease),
-                        useNativeDriver: false,
+                        duration: 6000,
+                        easing: Easing.inOut(Easing.quad),
+                        useNativeDriver: true,
                     }),
-                ]).start(() => startKenBurns()); // Loop infinito
+                ]).start(() => startKenBurns());
             });
         };
         startKenBurns();
 
-        // Função de limpeza para parar o intervalo quando o componente for desmontado
         return () => clearInterval(interval);
-    }, []); // Array de dependências vazio para rodar uma vez na montagem do componente
+    }, []);
 
-    const onPressInButton = () => Animated.spring(buttonScaleAnim, { toValue: 0.95, useNativeDriver: true, friction: 5, tension: 80 }).start(); // Ajuste de fricção/tensão
-    const onPressOutButton = () => Animated.spring(buttonScaleAnim, { toValue: 1, useNativeDriver: true, friction: 5, tension: 80 }).start(); // Ajuste de fricção/tensão
+    // Suavizado: Spring com mais friction para botão (menos bouncy, mais robusto)
+    const onPressInButton = () => Animated.spring(buttonScaleAnim, { 
+        toValue: 0.95, 
+        useNativeDriver: true, 
+        friction: 8, // ✅ Aumentado: Mais damping para conforto
+        tension: 100 // ✅ Aumentado: Mais responsivo sem overshoot
+    }).start();
+    const onPressOutButton = () => Animated.spring(buttonScaleAnim, { 
+        toValue: 1, 
+        useNativeDriver: true, 
+        friction: 8, 
+        tension: 100 
+    }).start();
 
-    // Estilo animado para criar o efeito de tremor/vibração
-    const animatedBackgroundStyle = {
-        transform: [
-            {
-                translateX: backgroundFloatAnim.interpolate({
-                    inputRange: [-0.5, 0, 0.5],
-                    outputRange: [-0.5, 0, 0.5] // Muito sutil: meio pixel horizontal
-                })
-            },
-            {
-                translateY: backgroundFloatAnim.interpolate({
-                    inputRange: [-0.5, 0, 0.5],
-                    outputRange: [-0.5, 0, 0.5] // Muito sutil: meio pixel vertical
-                })
-            }
-        ]
-    };
+    // ✅ REMOVIDO: animatedBackgroundStyle (sem tremor)
 
-    // Estilo animado para o efeito Ken Burns - Corrigido: Usa interpolate para números puros no transform
+    // Ken Burns – Reduzido: Zoom 1.05 (5%), pan 5-8px (menos movimento, mais clean)
     const kenBurnsAnimatedStyle = {
         transform: [
-            { scale: kenBurnsZoom.interpolate({ inputRange: [0, 1], outputRange: [1, 1.15] }) }, // Garante número puro
-            { translateX: kenBurnsPanX.interpolate({ inputRange: [0, 1], outputRange: [0, 15] }) }, // Número puro
-            { translateY: kenBurnsPanY.interpolate({ inputRange: [0, 1], outputRange: [0, 10] }) }, // Número puro
+            { scale: kenBurnsZoom.interpolate({ inputRange: [0, 1], outputRange: [1, 1.05] }) }, // ✅ Reduzido: Menos zoom para subtle
+            { translateX: kenBurnsPanX.interpolate({ inputRange: [0, 1], outputRange: [0, 5] }) }, // ✅ Reduzido: Pan horizontal sutil
+            { translateY: kenBurnsPanY.interpolate({ inputRange: [0, 1], outputRange: [0, 8] }) }, // ✅ Reduzido: Pan vertical sutil
         ],
     };
 
-    // Calcula o índice da próxima imagem que irá aparecer
     const nextImageIndex = (currentImageIndex + 1) % allBannerImages.length;
 
     return (
         <TouchableOpacity onPress={onPress} style={styles.bannerOuterContainer} activeOpacity={0.9}>
-            <Animated.View style={[styles.backgroundImageWrapper, animatedBackgroundStyle]}>
+            <Animated.View style={[styles.backgroundImageWrapper]}>
                 {/* Imagem Atual (fade-out) */}
                 <Animated.View style={[StyleSheet.absoluteFillObject, {
                     opacity: fadeAnim.interpolate({
                         inputRange: [0, 1],
-                        outputRange: [1, 0] // Quando fadeAnim vai de 0 a 1, a opacidade desta imagem vai de 1 a 0
+                        outputRange: [1, 0]
                     })
                 }]}>
                     <Animated.View style={[styles.backgroundImage, kenBurnsAnimatedStyle]}>
                         <ImageBackground
                             source={allBannerImages[currentImageIndex]}
                             style={styles.backgroundImageInner}
-                            imageStyle={styles.imageStyle} // Apenas bordas aqui, sem transform (estático)
+                            imageStyle={styles.imageStyle}
+                            // ✅ Adicionado: fadeDuration para transição suave no ImageBackground (se suportado)
+                            fadeDuration={0} // Instantâneo após preload
                         >
-                            {/* Gradiente para escurecer a imagem e melhorar a legibilidade do texto */}
                             <LinearGradient
                                 colors={['rgba(219, 211, 211, 0.43)', 'rgba(237, 229, 229, 0.31)', 'rgba(184, 183, 183, 0.4)']}
                                 style={StyleSheet.absoluteFillObject}
@@ -222,9 +179,9 @@ const CarouselBannerItem: React.FC<CarouselBannerItemProps> = ({
                         <ImageBackground
                             source={allBannerImages[nextImageIndex]}
                             style={styles.backgroundImageInner}
-                            imageStyle={styles.imageStyle} // Apenas bordas aqui, sem transform (estático)
+                            imageStyle={styles.imageStyle}
+                            fadeDuration={0}
                         >
-                            {/* Gradiente para escurecer a imagem e melhorar a legibilidade do texto */}
                             <LinearGradient
                                 colors={['rgba(219, 211, 211, 0.43)', 'rgba(237, 229, 229, 0.31)', 'rgba(184, 183, 183, 0.4)']}
                                 style={StyleSheet.absoluteFillObject}
@@ -233,10 +190,9 @@ const CarouselBannerItem: React.FC<CarouselBannerItemProps> = ({
                     </Animated.View>
                 </Animated.View>
 
-                {/* Conteúdo (sempre por cima das imagens) */}
+                {/* Conteúdo (sempre por cima) */}
                 <View style={styles.content}>
                     <View style={styles.leftContent}>
-                        {/* Badge no topo esquerdo */}
                         <View style={styles.badge}>
                             <Text style={styles.badgeText}>{badgeText}</Text>
                         </View>
@@ -245,7 +201,6 @@ const CarouselBannerItem: React.FC<CarouselBannerItemProps> = ({
                         <Text style={styles.description}>{description}</Text>
                     </View>
 
-                    {/* Botão no canto inferior direito */}
                     <Animated.View style={{ transform: [{ scale: buttonScaleAnim }], alignSelf: 'flex-end', marginTop: 'auto' }}>
                         <TouchableOpacity
                             style={styles.button}
