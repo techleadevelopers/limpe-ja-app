@@ -94,7 +94,8 @@ export default function SuccessPixInfo({ pixChargeDetails, handleCopyPixQrCode }
           opacity: fadeAnim,
           transform: [{ translateY: translateYAnim }, { scale: scaleAnim }],
           marginTop: 15,
-          marginBottom: Platform.OS === 'ios' ? 10 : 8,
+          // ... (dentro do style do Animated.View)
+marginBottom: Platform.OS === 'ios' ? 5 : 4, // ✅ FIX: Reduzido de 10/8 para 5/4 – minimiza gap com cupom abaixo
         }
       ]}
     >
