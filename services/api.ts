@@ -78,6 +78,20 @@ api.interceptors.response.use(
         // NEW: Captura o erro da resposta com Sentry
         Sentry.captureException(error);
 
+        // MODIFICAÇÃO ROBUSTA: Verificar header 'x-silent' para chamadas silenciosas (NÃO mostrar toasts)
+        // Early-return ANTES de qualquer tratamento de erro/Toast
+        const config = error.config as AxiosRequestConfig | undefined;
+        const silentHeader = config?.headers?.['x-silent'] || config?.headers?.['X-Silent']; // Case-insensitive fallback
+        if (silentHeader) {
+            if (__DEV__) {
+                console.log('[API Interceptor] Chamada SILENCIOSA detectada (x-silent presente). Pulando toasts e logs visuais.');
+                console.warn('[Silent API] Erro ignorado visualmente:', error.response?.status, error.response?.data?.message || error.message);
+            }
+            // NÃO mostra Toast, NÃO loga visível, só propaga o erro para o service catch
+            return Promise.reject(error);
+        }
+
+        // Se não for silent, continua com o comportamento normal (toasts para erros)
         const originalRequest = error.config;
 
         // Erro 401: Não autorizado (token expirado ou inválido)
