@@ -79,11 +79,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#E0E0E0', // Placeholder background
   },
   reviewerImagePlaceholder: {
-    width: 38,
-    height: 38,
+    width: 40,
+    height: 40,
     borderRadius: 20,
     marginRight: 10,
-    top: 8,
+    top: 18,
     backgroundColor: '#999',
     justifyContent: 'center',
     alignItems: 'center',
@@ -92,9 +92,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   reviewerName: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '600',
     left: 2,
+    
     top: 0,
     color: '#333',
   },
@@ -113,7 +114,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   reviewComment: {
-    fontSize: 10.8,
+    fontSize: 13.8,
     paddingHorizontal: 32,
     minWidth: 0,
     left: 22,
