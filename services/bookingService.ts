@@ -131,29 +131,26 @@ export async function cancelBooking(bookingId: string): Promise<BookingDetails> 
  *          Se o endpoint não existir (404), retorna { canChat: false } silenciosamente.
  *          IMPLEMENTE NO BACKEND: Query DB por bookings ativos entre os IDs.
  */
-export const checkActiveChatBooking = async (clientId: string, providerId: string): Promise<{ canChat: boolean; bookingId?: string }> => {
-    try {
-        const response: AxiosResponse<{ canChat: boolean; bookingId?: string }> = await api.get(`/bookings/check-active-chat/${clientId}/${providerId}`);
-        // Validação extra: Se response.data inválido, fallback para false
-        return {
-            canChat: response.data?.canChat ?? false,
-            bookingId: response.data?.bookingId,
-        };
-    } catch (error: any) {
-        // MELHORIA: Log silencioso só em dev; não mostra nada ao usuário
-        if (__DEV__) {
-            if (axios.isAxiosError(error)) {
-                console.warn(
-                    `Erro ao verificar agendamento ativo para chat (dev only):`,
-                    error.response?.status === 404 ? 'Endpoint não implementado (404)' : (error.response?.data || error.message)
-                );
-            } else {
-                console.warn(`Erro não-Axios no check chat (dev only):`, error);
-            }
-        }
-        // SEMPRE RETORNA FALSE EM ERRO: UX premium, chat desabilitado silenciosamente
-        return { canChat: false };
+export async function checkActiveChatBooking(
+  clientId: string,
+  providerId: string
+): Promise<{ canChat: boolean; bookingId?: string }> {
+  try {
+    const res = await api.get(`/bookings/check-active-chat/${clientId}/${providerId}`, {
+      headers: { 'x-silent': '1' }, // dica para o interceptor não exibir toast
+    });
+    const data = res?.data || {};
+    return {
+      canChat: !!data.canChat,
+      bookingId: data.bookingId ?? undefined,
+    };
+  } catch (err: any) {
+    if (__DEV__) {
+      console.warn('[checkActiveChatBooking] silent fail:', err?.response?.data || err?.message);
     }
+    // silencioso: NADA de showError nem throw
+    return { canChat: false, bookingId: undefined };
+  }
 };
 
 // Mantido para compatibilidade, mas `checkActiveChatBooking` é mais específico para o contexto do chat.
