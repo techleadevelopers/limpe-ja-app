@@ -100,8 +100,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   profileImageContainer: {
-    width: 37,
-    height: 37,
+    width: 38,
+    height: 38,
     borderRadius: 20,
     overflow: 'hidden', // Garante que a imagem não saia dos limites do borderRadius
     marginRight: 6,
@@ -131,14 +131,14 @@ const styles = StyleSheet.create({
   // Inversão: UserName agora é um pouco MAIS FINO (Medium/SemiBold no iOS; Thin + 'bold' no Android)
   // Mesma família: Montserrat para ambos (variante mais leve que greeting)
   userNameText: {
-    fontSize: 16,
+    fontSize: 18,
     fontFamily: Platform.select({
-      ios: 'Montserrat-Medium', // Mais fina que ExtraBold (mas ainda bold leve) no iOS
+      ios: 'Montserrat-Regular', // Mais fina que ExtraBold (mas ainda bold leve) no iOS
       android: 'Montserrat-Thin' // Mantém base no Android
     }),
     color: '#7398b9ff',
     fontWeight: Platform.select({
-      ios: '300', // Deixa a variante da font cuidar no iOS
+      ios: '500', // Deixa a variante da font cuidar no iOS
       android: 'bold' // Mantém original (leve bold no Android)
     }),
   },
@@ -158,8 +158,8 @@ const styles = StyleSheet.create({
   },
   // NOVO ESTILO PARA O ÍCONE DA CATEGORIA
   categoryIcon: {
-    width: 24, // Ajuste o tamanho conforme necessário para o ícone da categoria
-    height: 24,
+    width: 25, // Ajuste o tamanho conforme necessário para o ícone da categoria
+    height: 25,
   },
   notificationBadge: {
     position: 'absolute',
