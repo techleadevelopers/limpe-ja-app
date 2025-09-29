@@ -56,9 +56,9 @@ const SecaoPrestadores: React.FC<SecaoPrestadoresProps> = ({
             onPressIn={onPressInViewAll}
             onPressOut={onPressOutViewAll}
           >
-            <Text style={styles.viewAllText}>mais </Text>
+            
             <Animated.View style={{ transform: [{ translateX: arrowAnim }] }}>
-              <Ionicons name="chevron-forward" size={14} color="#65707bff" />
+             <Ionicons name="add" size={16} color="#398beeff" />
             </Animated.View>
           </TouchableOpacity>
         )}
@@ -90,9 +90,10 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   sectionTitle: {
-    fontSize: 15,
+    fontSize: 17,
     fontFamily: 'Montserrat-Regular',
     fontWeight: '800',
+    marginTop: 10,
 
   },
   viewAllButton: {
