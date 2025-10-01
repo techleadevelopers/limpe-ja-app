@@ -361,6 +361,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = memo(({
           onPressIn={() => onPressInMonthNav(prevMonthPressAnim)}
           onPressOut={() => onPressOutMonthNav(prevMonthPressAnim)}
           accessibilityLabel={`Mês anterior`}
+          accessibilityHint="Navegar para o mês anterior no calendário" // ✅ NOVO: Hint extra para acessibilidade
           accessible={true}
         >
           <Ionicons name="chevron-back" size={22} color={Colors.text} />
@@ -374,6 +375,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = memo(({
           onPressIn={() => onPressInMonthNav(nextMonthPressAnim)}
           onPressOut={() => onPressOutMonthNav(nextMonthPressAnim)}
           accessibilityLabel={`Próximo mês`}
+          accessibilityHint="Navegar para o próximo mês no calendário" // ✅ NOVO: Hint extra para acessibilidade
           accessible={true}
         >
           <Ionicons name="chevron-forward" size={22} color={Colors.text} />
@@ -395,7 +397,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = memo(({
           theme={calendarTheme} // ✅ FIX: Tipado nativamente com CustomTheme (sem assertion forçada)
           style={styles.calendarStyle}
           accessibilityLabel="Calendário de agendamentos"
-          accessibilityHint="Selecione uma data"
+          accessibilityHint="Selecione uma data para agendamento" // ✅ AJUSTE: Hint mais claro
           // Desabilita toques em dias passados via markedDates (já integrado acima)
         />
       </View>
