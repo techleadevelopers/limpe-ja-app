@@ -3,27 +3,20 @@ import {
   Controller, Get, Body, Patch, Param, UseGuards, Req, NotFoundException, ForbiddenException, Delete, HttpCode, HttpStatus, Logger,
   Post,
 } from '@nestjs/common';
-import { UsersService } from './users.service';
+import { UsersService, UserWithIncludes } from './users.service'; // CORRIGIDO: Importe UserWithIncludes
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserProfileDto } from './dto/user-profile.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { UserRole, User as PrismaUser } from '@prisma/client';
+import { UserRole } from '@prisma/client'; // Removido PrismaUser desnecessário
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express-serve-static-core';
 import { MessageResponseDto } from '../common/dto/message-response.dto';
 
-// A interface JwtPayload para o que *esperamos* do JWT
-interface JwtPayload {
-  sub: string; // O ID do usuário (do payload JWT original)
-  email: string;
-  role: UserRole;
-}
-
-// A interface para o que o JwtStrategy *realmente* anexa ao req.user
+// Interface para req.user (alinhado com JwtStrategy)
 interface RequestUserPayload {
-  userId: string; // ID do usuário (como o JwtStrategy o formata)
+  userId: string;
   email: string;
   role: UserRole;
   clientId?: string;
@@ -44,129 +37,180 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'Perfil do usuário.', type: UserProfileDto })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Usuário não encontrado.' })
+  @ApiResponse({ status: 500, description: 'Erro interno no servidor (ex: query falhou).' })
   async getMyProfile(@Req() req: Request): Promise<UserProfileDto> {
-    const requestUserPayload = req.user as RequestUserPayload;
-    const userId = requestUserPayload?.userId;
+    try {
+      const requestUserPayload = req.user as RequestUserPayload;
+      const userId = requestUserPayload?.userId;
 
-    this.logger.log(`[UsersController] getMyProfile: req.user payload recebido: ${JSON.stringify(requestUserPayload)}`);
-    this.logger.log(`[UsersController] getMyProfile: Tentando extrair userId: ${userId}`);
+      this.logger.log(`[UsersController] getMyProfile: req.user payload: ${JSON.stringify(requestUserPayload)}`);
+      this.logger.log(`[UsersController] getMyProfile: Extrair userId: ${userId}`);
 
-    if (!userId) {
-      this.logger.error('[UsersController] getMyProfile: userId é undefined ou nulo após JWT Payload. Payload:', requestUserPayload);
-      throw new NotFoundException('ID do usuário não encontrado no token de autenticação ou usuário não logado.');
+      if (!userId) {
+        this.logger.error('[UsersController] getMyProfile: userId undefined. Payload completo:', requestUserPayload);
+        throw new NotFoundException('ID do usuário não encontrado no token ou não logado.');
+      }
+
+      const user = await this.usersService.findOne(userId) as UserWithIncludes | null; // Tipado corretamente
+      if (!user) {
+        this.logger.warn(`[UsersController] getMyProfile: Usuário ${userId} não encontrado.`);
+        throw new NotFoundException(`Usuário com ID "${userId}" não encontrado.`);
+      }
+
+      // CORRIGIDO: Removida verificação problemática (DTO lida com opcionais); valide só null
+      if (!user.client && user.role === UserRole.CLIENT) {
+        this.logger.warn(`[UsersController] getMyProfile: Client details ausentes para ${userId} - verifique schema.`);
+      }
+      if (!user.provider && user.role === UserRole.PROVIDER) {
+        this.logger.warn(`[UsersController] getMyProfile: Provider details ausentes para ${userId}.`);
+      }
+      if (!user.loyalty) {
+        this.logger.warn(`[UsersController] getMyProfile: Loyalty ausente para ${userId}.`);
+      }
+
+      this.logger.log(`[UsersController] getMyProfile: Perfil pronto para ${userId}.`);
+      return new UserProfileDto(user); // Agora tipado, sem 'as any'
+    } catch (error) {
+      this.logger.error(`[UsersController] getMyProfile: Erro geral: ${error.message}. Stack: ${error.stack}`);
+      if (error instanceof NotFoundException) throw error;
+      throw new NotFoundException('Erro ao carregar perfil. Verifique o token e tente novamente.'); // Mascara 502
     }
-
-    const user = await this.usersService.findOne(userId);
-
-    if (!user) {
-      this.logger.warn(`[UsersController] getMyProfile: Usuário com ID "${userId}" não encontrado no serviço UsersService.`);
-      throw new NotFoundException(`Usuário com ID "${userId}" não encontrado.`);
-    }
-
-    this.logger.log(`[UsersController] getMyProfile: Perfil encontrado para userId: ${userId}. Retornando UserProfileDto.`);
-    return new UserProfileDto(user as any);
   }
 
   @Patch('me')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Atualizar perfil do usuário logado' })
-  @ApiResponse({ status: 200, description: 'Perfil do usuário atualizado com sucesso.', type: UserProfileDto })
+  @ApiResponse({ status: 200, description: 'Perfil atualizado.', type: UserProfileDto })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Usuário não encontrado.' })
+  @ApiResponse({ status: 500, description: 'Erro interno.' })
   async updateMyProfile(@Req() req: Request, @Body() updateUserDto: UpdateUserDto): Promise<UserProfileDto> {
-    const userId = (req.user as RequestUserPayload).userId;
-    this.logger.log(`[UsersController] updateMyProfile: Recebida solicitação de atualização para userId: ${userId}`);
+    try {
+      const userId = (req.user as RequestUserPayload).userId;
+      this.logger.log(`[UsersController] updateMyProfile: Atualizando para userId: ${userId}. DTO: ${JSON.stringify(updateUserDto)}`);
 
-    const updatedUser = await this.usersService.update(userId, updateUserDto);
-    if (!updatedUser) {
-      this.logger.warn(`[UsersController] updateMyProfile: Usuário com ID "${userId}" não encontrado para atualização.`);
-      throw new NotFoundException(`Usuário com ID "${userId}" não encontrado.`);
+      const updatedUser = await this.usersService.update(userId, updateUserDto) as UserWithIncludes;
+      if (!updatedUser) {
+        this.logger.warn(`[UsersController] updateMyProfile: Usuário ${userId} não encontrado para update.`);
+        throw new NotFoundException(`Usuário com ID "${userId}" não encontrado.`);
+      }
+
+      this.logger.log(`[UsersController] updateMyProfile: Perfil atualizado para ${userId}.`);
+      return new UserProfileDto(updatedUser); // Tipado
+    } catch (error) {
+      this.logger.error(`[UsersController] updateMyProfile: Erro: ${error.message}`);
+      throw error;
     }
-    this.logger.log(`[UsersController] updateMyProfile: Perfil de userId: ${userId} atualizado com sucesso.`);
-    return new UserProfileDto(updatedUser as any);
   }
 
-  // NOVO ENDPOINT: Listar todos os usuários (apenas para administradores)
-  @Get() // Este é o endpoint GET /users
+  // ENDPOINT ADMIN: Listar todos
+  @Get()
   @Roles(UserRole.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Listar todos os usuários (apenas para administradores)' })
-  @ApiResponse({ status: 200, description: 'Lista de usuários.', type: [UserProfileDto] }) // Retorna um array de UserProfileDto
+  @ApiOperation({ summary: 'Listar todos os usuários (apenas admin)' })
+  @ApiResponse({ status: 200, description: 'Lista de usuários.', type: [UserProfileDto] })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
+  @ApiResponse({ status: 500, description: 'Erro interno.' })
   async findAll(): Promise<UserProfileDto[]> {
-    this.logger.log(`[UsersController] findAll: Recebida solicitação para listar todos os usuários (ADMIN).`);
-    const users = await this.usersService.findAllUsers(); // Você precisará criar este método no UsersService
-    this.logger.log(`[UsersController] findAll: Retornando ${users.length} usuários.`);
-    // Mapear para UserProfileDto se o UsersService retornar o modelo Prisma diretamente
-    return users.map(user => new UserProfileDto(user as any));
+    try {
+      this.logger.log(`[UsersController] findAll: Listando usuários (ADMIN).`);
+      const users = await this.usersService.findAllUsers() as UserWithIncludes[];
+      this.logger.log(`[UsersController] findAll: Mapeando ${users.length} usuários para DTOs.`);
+      return users.map(user => new UserProfileDto(user)); // Tipado
+    } catch (error) {
+      this.logger.error(`[UsersController] findAll: Erro: ${error.message}`);
+      throw error;
+    }
   }
-
 
   @Get(':id')
   @Roles(UserRole.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Obter perfil de um usuário por ID (apenas para administradores)' })
+  @ApiOperation({ summary: 'Obter perfil por ID (apenas admin)' })
   @ApiResponse({ status: 200, description: 'Perfil do usuário.', type: UserProfileDto })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
   @ApiResponse({ status: 404, description: 'Usuário não encontrado.' })
+  @ApiResponse({ status: 500, description: 'Erro interno.' })
   async findOne(@Param('id') id: string): Promise<UserProfileDto> {
-    this.logger.log(`[UsersController] findOne: Recebida solicitação para obter perfil de userId: ${id} (ADMIN).`);
-    const user = await this.usersService.findOne(id);
-    if (!user) {
-      this.logger.warn(`[UsersController] findOne: Usuário com ID "${id}" não encontrado para ADMIN.`);
-      throw new NotFoundException(`Usuário com ID "${id}" não encontrado.`);
+    try {
+      this.logger.log(`[UsersController] findOne: Obtendo perfil de ${id} (ADMIN).`);
+      const user = await this.usersService.findOne(id) as UserWithIncludes | null;
+      if (!user) {
+        this.logger.warn(`[UsersController] findOne: Usuário ${id} não encontrado.`);
+        throw new NotFoundException(`Usuário com ID "${id}" não encontrado.`);
+      }
+      this.logger.log(`[UsersController] findOne: Perfil pronto para ${id}.`);
+      return new UserProfileDto(user); // Tipado
+    } catch (error) {
+      this.logger.error(`[UsersController] findOne: Erro: ${error.message}`);
+      throw error;
     }
-    this.logger.log(`[UsersController] findOne: Perfil encontrado para userId: ${id} (ADMIN).`);
-    return new UserProfileDto(user as any);
   }
 
   @Delete(':id')
   @Roles(UserRole.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Marcar usuário para exclusão por ID (apenas para administradores)' })
-  @ApiResponse({ status: 200, description: 'Usuário marcado para exclusão com sucesso.', type: MessageResponseDto })
+  @ApiOperation({ summary: 'Marcar para exclusão por ID (apenas admin)' })
+  @ApiResponse({ status: 200, description: 'Marcado para exclusão.', type: MessageResponseDto })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
   @ApiResponse({ status: 404, description: 'Usuário não encontrado.' })
   @HttpCode(HttpStatus.OK)
   async remove(@Param('id') id: string): Promise<MessageResponseDto> {
-    this.logger.log(`[UsersController] remove: Recebida solicitação para marcar exclusão de userId: ${id} (ADMIN).`);
-    await this.usersService.remove(id);
-    this.logger.log(`[UsersController] remove: Usuário userId: ${id} marcado para exclusão com sucesso.`);
-    return { message: `Usuário com ID ${id} foi marcado para exclusão.` };
+    try {
+      this.logger.log(`[UsersController] remove: Marcando exclusão de ${id} (ADMIN).`);
+      await this.usersService.remove(id);
+      this.logger.log(`[UsersController] remove: Sucesso para ${id}.`);
+      return { message: `Usuário com ID ${id} foi marcado para exclusão.` };
+    } catch (error) {
+      this.logger.error(`[UsersController] remove: Erro: ${error.message}`);
+      throw error;
+    }
   }
 
   @Post('data-export')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Solicitar exportação dos dados do usuário logado (LGPD)' })
-  @ApiResponse({ status: 202, description: 'Solicitação de exportação de dados recebida. O link para download será enviado por e-mail.', type: MessageResponseDto })
+  @ApiOperation({ summary: 'Solicitar exportação de dados (LGPD)' })
+  @ApiResponse({ status: 202, description: 'Solicitação recebida.', type: MessageResponseDto })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  @ApiResponse({ status: 500, description: 'Erro interno.' })
   @HttpCode(HttpStatus.ACCEPTED)
   async requestDataExport(@Req() req: Request): Promise<MessageResponseDto> {
-    const userId = (req.user as RequestUserPayload).userId;
-    this.logger.log(`[UsersController] requestDataExport: Recebida solicitação de exportação de dados para userId: ${userId}.`);
-    await this.usersService.requestDataExport(userId);
-    return { message: 'Sua solicitação de exportação de dados foi recebida. Um link para download será enviado para o seu e-mail cadastrado.' };
+    try {
+      const userId = (req.user as RequestUserPayload).userId;
+      this.logger.log(`[UsersController] requestDataExport: Para ${userId}.`);
+      await this.usersService.requestDataExport(userId);
+      return { message: 'Solicitação de exportação recebida. Link será enviado por e-mail.' };
+    } catch (error) {
+      this.logger.error(`[UsersController] requestDataExport: Erro: ${error.message}`);
+      throw error;
+    }
   }
 
   @Delete('delete-account')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Solicitar exclusão da conta do usuário logado (LGPD)' })
-  @ApiResponse({ status: 202, description: 'Solicitação de exclusão de conta recebida. A conta será desativada e excluída permanentemente após um período de carência.', type: MessageResponseDto })
+  @ApiOperation({ summary: 'Solicitar exclusão de conta (LGPD)' })
+  @ApiResponse({ status: 202, description: 'Solicitação recebida.', type: MessageResponseDto })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  @ApiResponse({ status: 500, description: 'Erro interno.' })
   @HttpCode(HttpStatus.ACCEPTED)
   async requestAccountDeletion(@Req() req: Request): Promise<MessageResponseDto> {
-    const userId = (req.user as RequestUserPayload).userId;
-    this.logger.log(`[UsersController] requestAccountDeletion: Recebida solicitação de exclusão de conta para userId: ${userId}.`);
-    await this.usersService.requestAccountDeletion(userId);
-    return { message: 'Sua solicitação de exclusão de conta foi recebida. Sua conta será desativada e excluída permanentemente após um período de carência. Você receberá um e-mail de confirmação.' };
+    try {
+      const userId = (req.user as RequestUserPayload).userId;
+      this.logger.log(`[UsersController] requestAccountDeletion: Para ${userId}.`);
+      await this.usersService.requestAccountDeletion(userId);
+      return { message: 'Solicitação de exclusão recebida. Conta será desativada após carência. E-mail de confirmação será enviado.' };
+    } catch (error) {
+      this.logger.error(`[UsersController] requestAccountDeletion: Erro: ${error.message}`);
+      throw error;
+    }
   }
 }
