@@ -1,49 +1,36 @@
-// src/users/dto/user-profile.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { User, UserRole, Prisma, Loyalty } from '@prisma/client'; // ADICIONADO: Loyalty
-import { IsString, IsEnum, IsDate, ValidateNested, IsOptional, IsNumber, IsInt } from 'class-validator';
+import { User, UserRole, Prisma, Loyalty, Referral } from '@prisma/client'; // Importe Referral do schema
+import { IsString, IsEnum, IsDate, ValidateNested, IsOptional, IsNumber } from 'class-validator';
 import { Type } from 'class-transformer';
-// Importe ClientDetailsDto se estiver em um arquivo separado, ou defina-o aqui
-// import { ClientDetailsDto } from '../../clients/dto/client-details.dto';
 import { ProviderDetailsDto } from '../../providers/dto/provider-details.dto';
+import { UserWithIncludes } from '../users.service'; // CORRIGIDO: Importe o type do service
 
-// === IMPORTANDO OS TIPOS DE SERVIÇO DEFINITIVOS ===
-// Importa o tipo mapeado para o frontend, que é o que ProviderDetailsDto espera
+// === TIPOS DE SERVIÇO (MANTIDOS) ===
 import { ProviderWithCalculatedRating } from '../../providers/providers.service';
 
-// <<-- DEFINIÇÃO DE ClientWithIncludes -->>
-// IDEALMENTE: Esta definição deveria ser movida para um arquivo em 'src/clients/' (ex: clients/clients.service.ts)
-// e então importada aqui. Mantido aqui para compatibilidade com o código fornecido.
+// Definição de ClientWithIncludes (alinhado ao schema: campos em Client)
 import { Address, Booking, Review } from '@prisma/client';
 
-// CORREÇÃO: Removendo 'loyalty' de ClientWithIncludes, pois está na User
 export type ClientWithIncludes = {
   id: string;
   userId: string;
   fullName: string;
   phone: string | null;
   cpf: string | null;
-  dateOfBirth?: Date | null; // Adicionado do schema.prisma para precisão
-  completedBookingsCount: number; // Adicionado do schema.prisma para precisão
+  dateOfBirth?: Date | null;
+  completedBookingsCount: number;
   createdAt: Date;
   updatedAt: Date;
   user: User;
   address: Address | null;
   bookings: Booking[];
   reviewsMade: Review[];
-  noShowCount: number; // Adicionado do schema.prisma para precisão
-  cancellationCount: number; // Adicionado do schema.prisma para precisão
-  // loyalty?: Loyalty | null; // <--- REMOVIDO: Relação com Loyalty (agora está diretamente no User)
+  noShowCount: number;
+  cancellationCount: number;
   _count?: { bookings: number };
 };
 
-// =========================================================================
-// CORREÇÃO: Usando os tipos de serviço já definidos
-// =========================================================================
-
-// CORREÇÃO: Atualizando ClientDetailsDto para incluir CPF (removendo loyaltyPoints)
-// Assumindo que ClientDetailsDto está definido aqui ou em src/clients/dto/client-details.dto.ts
-// Se estiver em um arquivo separado, certifique-se de que a definição lá seja a mesma.
+// ClientDetailsDto (sem loyaltyPoints, do schema)
 export class ClientDetailsDto {
   @ApiProperty({ description: 'ID do cliente', example: 'uuid-do-cliente' })
   id: string;
@@ -66,17 +53,10 @@ export class ClientDetailsDto {
   @ApiProperty({ description: 'Data da última atualização do cliente', example: '2023-01-01T10:00:00.000Z' })
   updatedAt: Date; 
 
-  // @ApiPropertyOptional({ description: 'Pontos de fidelidade do cliente', example: 100 })
-  // @IsOptional()
-  // @IsNumber()
-  // loyaltyPoints?: number | null; // <--- REMOVIDO: Campo para pontos de fidelidade (agora no UserProfileDto)
-
-  constructor(partial: Partial<ClientWithIncludes>) { // Alterado para Partial<ClientWithIncludes>
+  constructor(partial: Partial<ClientWithIncludes>) {
     Object.assign(this, partial);
-    // this.loyaltyPoints = partial.loyalty?.currentPoints ?? null; // <--- REMOVIDO: Mapeamento dos pontos
   }
 }
-
 
 export class UserProfileDto {
   @ApiProperty({ description: 'ID único do usuário', example: 'uuid-do-usuario' })
@@ -89,7 +69,7 @@ export class UserProfileDto {
 
   @ApiPropertyOptional({ description: 'URL do avatar do usuário', example: 'http://example.com/user_avatar.jpg' })
   @IsOptional()
-  @IsString() // Ou IsUrl se você validar o formato da URL
+  @IsString()
   avatarUrl?: string | null;
 
   @ApiProperty({ enum: UserRole, description: 'Papel do usuário na aplicação', example: UserRole.CLIENT })
@@ -131,16 +111,18 @@ export class UserProfileDto {
   @ApiPropertyOptional({ description: 'Pontos de fidelidade do usuário', example: 100 })
   @IsOptional()
   @IsNumber()
-  loyaltyPoints?: number | null; // <--- ADICIONADO AQUI: Campo de pontos de fidelidade no UserProfileDto
+  loyaltyPoints?: number | null;
 
-  constructor(
-    user: User & {
-      avatarUrl?: string | null;
-      client?: ClientWithIncludes;
-      provider?: ProviderWithCalculatedRating;
-      loyalty?: Loyalty | null; // <--- ADICIONADO AQUI: Para tipagem correta do objeto 'user' recebido
-    }
-  ) {
+  // CORRIGIDO: Suporte a indicações do schema (Referral[])
+  @ApiPropertyOptional({ description: 'Indicações feitas pelo usuário', type: [String] })
+  @IsOptional()
+  referralsMade?: string[]; // IDs de Referral
+
+  @ApiPropertyOptional({ description: 'Indicações recebidas pelo usuário', type: [String] })
+  @IsOptional()
+  referredBy?: string[]; // CORRIGIDO: 'referredBy' do schema (IDs de Referral recebidas)
+
+  constructor(user: UserWithIncludes) { // Tipado com includes
     this.id = user.id;
     this.email = user.email;
     this.avatarUrl = user.avatarUrl;
@@ -148,17 +130,100 @@ export class UserProfileDto {
     this.createdAt = user.createdAt;
     this.updatedAt = user.updatedAt;
 
+    // Fallbacks para opcionais (do schema)
     if (user.role === UserRole.CLIENT && user.client) {
       this.fullName = user.client.fullName;
       this.phone = user.client.phone;
-      this.clientDetails = new ClientDetailsDto(user.client); // Passando user.client
+      this.clientDetails = new ClientDetailsDto(user.client);
     } else if (user.role === UserRole.PROVIDER && user.provider) {
-      this.fullName = user.provider.fullName;
+      this.fullName = user.provider.fullName; // Do schema: fullName em Provider
       this.phone = user.provider.phone;
-      this.providerDetails = new ProviderDetailsDto(user.provider);
+
+      // === CORREÇÃO: Função utilitária para converter Prisma.Decimal para number ===
+      // O erro ocorre porque DTOs de frontend esperam 'number', mas o Prisma retorna 'Decimal'.
+      const convertDecimalToNumber = (decimalValue: Prisma.Decimal | null | undefined): number | null => {
+        if (decimalValue && decimalValue instanceof Prisma.Decimal) {
+            // Usa .toNumber() para conversão segura
+            return decimalValue.toNumber();
+        }
+        return null;
+      };
+
+      // 1. Converte os 'providerServices', garantindo que todos os campos Decimal sejam number
+      const providerServicesConverted = user.provider.providerServices?.map(ps => {
+          const pricePerSquareMeter = convertDecimalToNumber(ps.pricePerSquareMeter) ?? 0;
+          const pricePerRoom = convertDecimalToNumber(ps.pricePerRoom) ?? 0;
+
+          // Conversão do preço do Service aninhado (mencionado no erro: 'service.price')
+          const baseServicePrice = convertDecimalToNumber(ps.service.price) ?? 0;
+
+          return {
+              ...ps,
+              // Campos ProviderService (conversão)
+              pricePerSquareMeter,
+              pricePerRoom,
+              
+              // Service aninhado (conversão do preço base)
+              service: {
+                  ...ps.service,
+                  price: baseServicePrice,
+              },
+          };
+      }) || []; // Retorna array vazio se não houver serviços
+
+      // 2. Calcular propriedades ausentes
+      const reviews = user.provider.reviewsReceived || [];
+      const averageRating = reviews.length > 0 ? parseFloat((reviews.reduce((sum, r) => sum + (r as any).rating, 0) / reviews.length).toFixed(1)) : 0;
+      const reviewCount = reviews.length;
+
+      // 3. Mapeamento para ProviderWithCalculatedRating (usando os serviços convertidos)
+      
+      // NOVO: Converte dateOfBirth para string (ISO) se for um objeto Date
+      const dateOfBirthString = user.provider.dateOfBirth instanceof Date
+        ? user.provider.dateOfBirth.toISOString()
+        : user.provider.dateOfBirth; // Mantém null ou string se já for
+
+      // NOVO: Converte createdAt para string (ISO)
+      const createdAtString = user.provider.createdAt instanceof Date
+        ? user.provider.createdAt.toISOString()
+        : user.provider.createdAt;
+
+      // NOVO: Converte updatedAt para string (ISO)
+      const updatedAtString = user.provider.updatedAt instanceof Date
+        ? user.provider.updatedAt.toISOString()
+        : user.provider.updatedAt;
+
+
+      const calculatedProvider: ProviderWithCalculatedRating = {
+        ...user.provider,
+        
+        // CORREÇÃO DO ERRO 2352: Sobrescreve dateOfBirth, createdAt e updatedAt
+        dateOfBirth: dateOfBirthString,
+        createdAt: createdAtString,
+        updatedAt: updatedAtString,
+
+        // Sobrescreve 'providerServices' com a nova estrutura 'number'
+        providerServices: providerServicesConverted as any, // 'as any' para forçar a compatibilidade de tipo após a conversão Decimal -> number
+
+        email: user.email, // Email vem do User principal
+        averageRating,
+        reviewCount,
+        // Outros campos calculados/ausentes (como address, city, state, etc., que vêm do spread)
+        user: {
+          email: user.email,
+          role: user.role,
+          isVerified: user.isVerified,
+          fullName: user.fullName,
+        },
+      } as ProviderWithCalculatedRating; // Type assertion para resolver o erro de tipo de nível superior
+
+      this.providerDetails = new ProviderDetailsDto(calculatedProvider);
     }
 
-    // Mapeamento dos pontos de fidelidade diretamente do objeto User
-    this.loyaltyPoints = user.loyalty?.currentPoints ?? null; // <--- Mapeamento CORRIGIDO
+    this.loyaltyPoints = user.loyalty?.currentPoints ?? null; // Do schema: currentPoints em Loyalty
+
+    // CORRIGIDO: Mapeamento de referrals do schema
+    this.referralsMade = user.referralsMade?.map((r: Referral) => r.id) ?? [];
+    this.referredBy = user.referredBy?.map((r: Referral) => r.id) ?? [];
   }
 }
