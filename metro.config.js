@@ -1,27 +1,31 @@
-const path = require('path');
-const {
-  getSentryExpoConfig
-} = require("@sentry/react-native/metro");
+﻿const path = require('path');
+const { getSentryExpoConfig } = require('@sentry/react-native/metro');
 
 const projectRoot = __dirname;
 
 const config = getSentryExpoConfig(projectRoot);
 
-// Adicione 'json' aos assetExts para que Metro reconheça arquivos .json como assets
-// Isso é crucial para carregar arquivos .typeface.json
+// Add JSON extension so Metro can load .typeface.json assets
 config.resolver.assetExts = [...config.resolver.assetExts, 'json'];
 
-// Forçando o Metro a encontrar o tslib na node_modules da raiz
+// Ensure Metro resolves tslib from the project root node_modules
 config.resolver.extraNodeModules = {
-  ...(config.resolver.extraNodeModules || {}), // Preserva outros extraNodeModules se houver
+  ...(config.resolver.extraNodeModules || {}),
   tslib: path.resolve(projectRoot, 'node_modules/tslib'),
 };
 
-// Se você estiver em um monorepo, você pode precisar ajustar os watchFolders.
-// Para um projeto Expo padrão, isso geralmente não é necessário.
-// config.watchFolders = [projectRoot, path.resolve(projectRoot, '../outra-pasta-do-monorepo')];
-
-// Se você tem symlinks, pode ser necessário configurar o 'preserveSymlinks'
-// config.resolver.preserveSymlinks = true; // Cuidado com esta opção
+// Hide Hermes internal bytecode frames to avoid symbolication errors
+const previousCustomizeFrame = config.symbolicator?.customizeFrame;
+config.symbolicator = {
+  ...config.symbolicator,
+  customizeFrame(frame, ...rest) {
+    if (frame.file && frame.file.includes('InternalBytecode')) {
+      return { collapse: true };
+    }
+    return previousCustomizeFrame
+      ? previousCustomizeFrame(frame, ...rest)
+      : null;
+  },
+};
 
 module.exports = config;
