@@ -32,25 +32,31 @@ if (!API_BASE_URL) {
 
 const api = axios.create({
     baseURL: API_BASE_URL,
-    timeout: 20000, // NEW: 20 segundos de timeout para todas as requisições
+    timeout: __DEV__ ? 30000 : 10000, // AUMENTADO: 30s em dev para folga em rede lenta; 10s em prod
     headers: {
         'Content-Type': 'application/json',
     },
 });
 
-// NEW: Configuração de retry para requisições
+// NEW: Configuração de retry para requisições (com foco em timeouts/rede)
 axiosRetry(api, {
     retries: 3, // Tenta 3 vezes
     retryDelay: axiosRetry.exponentialDelay, // Aumenta o tempo de espera exponencialmente
     retryCondition: (error) => {
-        // Retenta se for erro de rede ou status 429 (Too Many Requests) ou 5xx
+        // Retenta se for erro de rede, timeout, 429 ou 5xx
         return axiosRetry.isNetworkError(error) ||
                axiosRetry.isRetryableError(error) || // Erros 5xx, timeouts
-               error.response?.status === 429;
+               error.response?.status === 429 ||
+               error.code === 'ECONNABORTED'; // Específico para timeouts
     },
     onRetry: (retryCount, error, requestConfig) => {
-        console.warn(`[API Interceptor] Tentativa ${retryCount} para ${requestConfig.url} falhou: ${error.message}`);
-        // NEW: Captura a tentativa de retry com Sentry como um evento de aviso
+        // Só loga se NÃO for silent (evita ruído no Metro)
+        const config = requestConfig as AxiosRequestConfig | undefined;
+        const silentHeader = config?.headers?.['x-silent'] || config?.headers?.['X-Silent'];
+        if (!silentHeader) {
+            console.warn(`[API Interceptor] Tentativa ${retryCount} para ${requestConfig.url} falhou: ${error.message}`);
+        }
+        // NEW: Captura a tentativa de retry com Sentry como um evento de aviso (sempre, para monitoramento)
         Sentry.captureMessage(`Retry attempt ${retryCount} for ${requestConfig.url}`, 'warning');
     },
 });
@@ -65,7 +71,7 @@ api.interceptors.request.use(
         return config;
     },
     (error) => {
-        // NEW: Captura o erro na fase de requisição com Sentry
+        // NEW: Captura o erro na fase de requisição com Sentry (sempre, pois é request)
         Sentry.captureException(error);
         return Promise.reject(error);
     }
@@ -75,34 +81,33 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => response,
     async (error) => {
-        // NEW: Captura o erro da resposta com Sentry
-        Sentry.captureException(error);
-
-        // MODIFICAÇÃO ROBUSTA: Verificar header 'x-silent' para chamadas silenciosas (NÃO mostrar toasts)
-        // Early-return ANTES de qualquer tratamento de erro/Toast
+        // MODIFICAÇÃO ROBUSTA: Verificar header 'x-silent' para chamadas silenciosas (NÃO mostrar toasts/logs)
+        // Early-return ANTES de qualquer tratamento de erro/Toast/Sentry (exceto request errors, que são raros)
         const config = error.config as AxiosRequestConfig | undefined;
-        const silentHeader = config?.headers?.['x-silent'] || config?.headers?.['X-Silent']; // Case-insensitive fallback
-        if (silentHeader) {
-            if (__DEV__) {
-                console.log('[API Interceptor] Chamada SILENCIOSA detectada (x-silent presente). Pulando toasts e logs visuais.');
-                console.warn('[Silent API] Erro ignorado visualmente:', error.response?.status, error.response?.data?.message || error.message);
-            }
-            // NÃO mostra Toast, NÃO loga visível, só propaga o erro para o service catch
-            return Promise.reject(error);
+        const silentHeader = config?.headers?.['x-silent'] || config?.headers?.['X-Silent']; // Case-insensitive
+        const isSilent = silentHeader === '1' || silentHeader === 1 || silentHeader === true;
+
+        if (isSilent) {
+            // MODO SILENT: Nada de Toast, console.error ou logs visíveis → evita symbolication do Metro
+            // Sentry ainda captura para monitoramento (mas sem tags de UI)
+            Sentry.captureException(error, { tags: { silent: true } });
+            return Promise.reject(error); // Propaga o erro para o caller (ex: service catch silencioso)
         }
 
-        // Se não for silent, continua com o comportamento normal (toasts para erros)
+        // Se não for silent, continua com o comportamento normal (toasts para erros) + Sentry
+        Sentry.captureException(error); // Captura normal para não-silent
+
         const originalRequest = error.config;
 
         // Erro 401: Não autorizado (token expirado ou inválido)
-        if (axios.isAxiosError(error) && error.response?.status === 401 && !originalRequest._isRetryRequest) {
+        if (axios.isAxiosError(error) && error.response?.status === 401 && !originalRequest?._isRetryRequest) {
             console.warn('[API Interceptor] Requisição 401 Unauthorized. Token pode ter expirado ou é inválido. Iniciando processo de logout.');
-            originalRequest._isRetryRequest = true; // Marca a requisição para evitar loops infinitos
+            originalRequest!._isRetryRequest = true; // Marca a requisição para evitar loops infinitos
 
             if (onUnauthorizedCallback) {
                 try {
-                    await onUnauthorizedCallback({ originalRequest });
-                    return api(originalRequest);
+                    await onUnauthorizedCallback({ originalRequest: originalRequest! });
+                    return api(originalRequest!);
                 } catch (refreshError) {
                     console.warn('[API Interceptor] Refresh callback failed:', refreshError);
                 }
