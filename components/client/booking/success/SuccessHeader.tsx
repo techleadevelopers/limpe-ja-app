@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFFFF', // Mantém transparência
     },
     headerContainer: {
-        paddingTop: Platform.OS === 'ios' ? 2 : 5, // Fix: Reduzido para iOS (SafeAreaView cuida do resto), mas ainda centraliza
+        paddingTop: Platform.OS === 'ios' ? 80 : 50, // Fix: Reduzido para iOS (SafeAreaView cuida do resto), mas ainda centraliza
         paddingBottom: 10,
         paddingHorizontal: 20,
         flexDirection: 'row',
@@ -91,7 +91,8 @@ const styles = StyleSheet.create({
     logoImage: {
         width: 210,
         height: 50,
-        right: 5,
+        right: 7,
+        bottom: 20,
         // Remover tamanho fixo se a imagem precisar ser responsiva
         // Se a imagem for um SVG ou puder ser escalada, usar flex ou porcentagem
         // Ex: width: '80%', height: undefined, aspectRatio: 3,
