@@ -3,23 +3,23 @@ import React from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack } from 'expo-router';
-import { AppColors } from '../../../../constants/appStyles'; // Importe AppColors
-import { sanitizeText } from '../../../../utils/formatters'; // Importar sanitizeText
+import { AppColors } from '../../../../constants/appStyles';
+import { sanitizeText } from '../../../../utils/formatters';
 
 interface SuccessLoadingErrorProps {
   isLoading: boolean;
   error: string | null;
   headerPrimaryColor: string;
-  onRetryPress: () => void; // Para o botão de tentar novamente em caso de erro
+  onRetryPress: () => void;
 }
 
 export default function SuccessLoadingError({ isLoading, error, headerPrimaryColor, onRetryPress }: SuccessLoadingErrorProps) {
   if (isLoading) {
     return (
       <View style={styles.centered}>
-        <Stack.Screen options={{ title: "Carregando..." }} />
+        <Stack.Screen options={{ title: "Carregando" }} />
         <ActivityIndicator size="large" color={headerPrimaryColor} />
-        <Text style={styles.loadingText} maxFontSizeMultiplier={1.2}>Carregando detalhes do agendamento...</Text>
+        <Text style={styles.loadingText} maxFontSizeMultiplier={1.2}>Preparando os detalhes do seu agendamento…</Text>
       </View>
     );
   }
@@ -27,17 +27,17 @@ export default function SuccessLoadingError({ isLoading, error, headerPrimaryCol
   if (error) {
     return (
       <View style={styles.centered}>
-        <Stack.Screen options={{ title: "Erro" }} />
+        <Stack.Screen options={{ title: "Não foi possível carregar" }} />
         <Ionicons name="alert-circle-outline" size={48} color={AppColors.errorRed} />
         <Text style={styles.errorText} maxFontSizeMultiplier={1.2}>{sanitizeText(error)}</Text>
         <TouchableOpacity onPress={onRetryPress} style={styles.actionButton} activeOpacity={0.7}>
-          <Text style={styles.actionButtonText} maxFontSizeMultiplier={1.2}>Tentar Novamente</Text>
+          <Text style={styles.actionButtonText} maxFontSizeMultiplier={1.2}>Tentar novamente</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  return null; // Não renderiza nada se não estiver carregando nem com erro
+  return null;
 }
 
 const styles = StyleSheet.create({
@@ -47,7 +47,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     backgroundColor: AppColors.backgroundLight,
-    paddingTop: Platform.OS === 'android' ? 100 : 80, // Alinhamento cross-platform
+    paddingTop: Platform.OS === 'android' ? 100 : 80,
   },
   loadingText: {
     marginTop: 10,
