@@ -45,13 +45,14 @@ export class AvailabilityController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Obter horários de disponibilidade de um provedor' })
+  @ApiOperation({ summary: 'Obter horários de disponibilidade de um provedor (suporte a nextAvailable para cards)' })
   @ApiResponse({ status: 200, description: 'Horários de disponibilidade do provedor.', type: [GetAvailabilityDto] })
   @ApiResponse({ status: 404, description: 'Provedor não encontrado.' })
   @ApiResponse({ status: 400, description: 'ID do provedor inválido.' })
   async getAvailability(@Param('providerId') providerId: string, @Query() query: GetAvailabilityDto) {
     this.validateProviderId(providerId); // Valida o providerId
     const availability = await this.availabilityService.getAvailability(providerId, query);
+    // NOVO: Opcionalmente, calcular nextAvailable aqui se necessário para integração com cards
     return availability;
   }
 
