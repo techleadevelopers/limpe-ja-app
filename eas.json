@@ -16,6 +16,11 @@
         "buildType": "apk"
       }
     },
+    // eas.json (adicione)
+"internal_ios": {
+  "distribution": "internal",
+  "ios": { "image": "latest", "simulator": false }
+},
     "apk_direct_test": {
       "distribution": "internal",
       "android": {
