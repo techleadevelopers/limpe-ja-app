@@ -1,4 +1,3 @@
-// components/client/explore/home/NavBar.tsx
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, usePathname } from 'expo-router';
 import React, { useRef, useState, useEffect, useCallback } from 'react';
@@ -29,57 +28,22 @@ const NavBar: React.FC<NavBarProps> = ({
 
   // Animated values para o efeito de escala dos itens ao pressionar
   const navItemAnims = useRef(navItems.map(() => new Animated.Value(1))).current;
-  // Animated value para a posição horizontal do indicador "current"
-  const currentIndicatorAnim = useRef(new Animated.Value(0)).current;
 
-  // Estados para armazenar as dimensões da barra de navegação e dos itens
+  // Estados para armazenar as dimensões da barra de navegação e dos itens (mantido para compatibilidade, mas não usado no indicador)
   const [navBarWidth, setNavBarWidth] = useState(0);
   const [navItemWidth, setNavItemWidth] = useState(0);
 
-  // Constantes de cor baseadas nas variáveis Less do documento
+  // Constantes de cor baseadas nas variáveis Less do documento (azul removido)
   const NAVBAR_HEIGHT = 60; // Altura da navbar existente
-  const CURRENT_COLOR = '#86cbf3ff'; // Cor de destaque para item selecionado/hover (@current-color)
-  const CURRENT_COLOR_HOVER = '#3c5cecff'; // Cor de destaque para hover (@current-color-hover)
+  const CURRENT_COLOR = '#4A5568'; // Cor neutra escura para item selecionado (substitui o azul)
   const LI_COLOR = '#969b9cff'; // Cor do texto para itens não selecionados (@li-color)
   const BACKGROUND_COLOR = '#ffffffff'; // Cor de fundo da barra de navegação (@background-color do div.menu)
 
-  // Função para calcular a posição X do indicador com base no índice do item
-  // A lógica é baseada na fórmula Less: (largura_item / 4) + (largura_item * índice)
-  const calculateIndicatorPosition = useCallback((index: number, totalWidth: number) => {
-    if (totalWidth === 0) return 0;
-    const itemFullWidth = totalWidth / navItems.length;
-    // O indicador é centralizado na metade do item, com sua borda esquerda começando a 1/4 da largura do item.
-    return (itemFullWidth / 4) + (itemFullWidth * index);
-  }, [navItems.length]);
-
-  // Efeito para atualizar a posição do indicador quando a rota atual ou a largura da navbar mudam
-  useEffect(() => {
-    if (navBarWidth > 0) {
-      const currentIndex = navItems.findIndex(item => item.route === currentRoute);
-      if (currentIndex !== -1) {
-        const targetX = calculateIndicatorPosition(currentIndex, navBarWidth);
-        Animated.timing(currentIndicatorAnim, {
-          toValue: targetX,
-          duration: 400, // Duração da transição (400ms do Less)
-          easing: Easing.bezier(0.35, 1.30, 0.80, 1.10), // Curva de easing cúbica do Less
-          useNativeDriver: true,
-        }).start();
-      }
-    }
-  }, [currentRoute, navBarWidth, navItems, calculateIndicatorPosition, currentIndicatorAnim]);
-
-  // Callback para obter a largura da barra de navegação após o layout
+  // Callback para obter a largura da barra de navegação após o layout (mantido para layout inicial)
   const onNavBarLayout = (event: LayoutChangeEvent) => {
     const { width } = event.nativeEvent.layout;
     setNavBarWidth(width);
     setNavItemWidth(width / navItems.length);
-
-    // Define a posição inicial do indicador sem animação
-    const initialIndex = navItems.findIndex(item => item.route === currentRoute);
-    if (initialIndex !== -1) {
-      const initialX = calculateIndicatorPosition(initialIndex, width);
-      currentIndicatorAnim.setValue(initialX);
-    }
   };
 
   const navigateTo = (path: string) => {
@@ -106,36 +70,9 @@ const NavBar: React.FC<NavBarProps> = ({
     }).start();
   };
 
-  // Largura do indicador: metade da largura de um item de navegação
-  const indicatorWidth = navItemWidth / 2;
-  const indicatorHeight = NAVBAR_HEIGHT; // A mesma altura da navbar
-
   return (
     <View style={[styles.navBar, { backgroundColor: BACKGROUND_COLOR }]} onLayout={onNavBarLayout}>
-      {navBarWidth > 0 && ( // Renderiza o indicador somente após a largura da navbar ser conhecida
-        <Animated.View
-          style={[
-            styles.currentIndicator,
-            {
-              width: indicatorWidth,
-              height: indicatorHeight,
-              transform: [{ translateX: currentIndicatorAnim }],
-            },
-          ]}
-        >
-          {/* Parte superior do indicador */}
-          <View style={[styles.currentIndicatorTop, { backgroundColor: CURRENT_COLOR }]}>
-            {/* Triângulo superior */}
-            <View style={[styles.currentIndicatorTriangle, {
-                borderTopColor: CURRENT_COLOR,
-                borderLeftWidth: indicatorWidth / 6, // Aproximação de (width / (num_li * 12))
-                borderRightWidth: indicatorWidth / 6,
-                top: '100%', // Posiciona o triângulo na parte inferior da barra superior
-            }]} />
-          </View>
-       
-        </Animated.View>
-      )}
+      {/* Indicador removido completamente - sem barra azul superior ou inferior */}
 
       {navItems.map((item, index) => {
         const isSelected = currentRoute === item.route;
@@ -161,12 +98,12 @@ const NavBar: React.FC<NavBarProps> = ({
                   : (`${item.icon}-outline` as keyof typeof Ionicons.glyphMap)
               }
               size={24}
-              color={isSelected ? CURRENT_COLOR : LI_COLOR} // Aplica a cor de destaque ou a cor padrão
+              color={isSelected ? CURRENT_COLOR : LI_COLOR} // Cor neutra para selecionado (sem azul)
             />
             <Text
               style={[
                 styles.navText,
-                { color: isSelected ? CURRENT_COLOR : LI_COLOR }, // Aplica a cor de destaque ou a cor padrão
+                { color: isSelected ? CURRENT_COLOR : LI_COLOR }, // Cor neutra para selecionado (sem azul)
               ]}
             >
               {item.name}
@@ -198,7 +135,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 5,
-    zIndex: 1, // Garante que os itens de navegação fiquem acima do indicador
+    zIndex: 1, // Mantido para itens de navegação
   },
   navText: {
     fontSize: 10,
@@ -207,37 +144,7 @@ const styles = StyleSheet.create({
     // fontFamily: 'Asap', // Se você deseja usar a fonte 'Asap', certifique-se de carregá-la com expo-font
     letterSpacing: 0.5, // Aproximação de 0.1em para React Native
   },
-  currentIndicator: {
-    position: 'absolute',
-    top: 4,
-    // A propriedade 'left' é animada via 'transformX'
-    zIndex: 0, // Garante que o indicador fique atrás dos itens de navegação
-  },
-  currentIndicatorTop: {
-    position: 'absolute',
-    left: -3,
-    
-    height: 4, // Aproximação de calc(@height / 10) = 60/10 = 6
-    width: '120%',
-    borderTopLeftRadius: 5,
-    borderTopRightRadius: 5,
-
-    bottom: '100%', // Posiciona a barra superior acima da área principal do indicador
-  },
-  currentIndicatorBottom: {
-    position: 'absolute',
-    left: 0,
-    height: 6, // Aproximação de calc(@height / 10) = 60/10 = 6
-    width: '100%',
-
-    elevation: 5,
-    top: '100%', // Posiciona a barra inferior abaixo da área principal do indicador
-  },
-  currentIndicatorTriangle: {
-    position: 'absolute',
-
-    transform: [{ translateX: -6 }], // Centraliza o triângulo (metade da largura da borda)
-  },
+  // Estilos do indicador removidos completamente
 });
 
 export default NavBar;
