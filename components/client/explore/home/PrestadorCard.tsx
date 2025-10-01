@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef } from 'react';
 import { Animated, Dimensions, Image, Platform, StyleSheet, Text, TouchableOpacity, View, Easing } from 'react-native';
-import { useTranslation } from 'react-i18next'; // Adicionar useTranslation
+import { useTranslation } from 'react-i18next';
 
 import { ProviderDisplayInfo } from '../../../../types/backend/providers';
 import { PricingType } from '../../../../types/backend/services';
@@ -21,7 +21,7 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
     const scaleAnim = useRef(new Animated.Value(1)).current;
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(20)).current;
-    const { t } = useTranslation(); // Inicializar useTranslation
+    const { t } = useTranslation();
 
     useEffect(() => {
         Animated.parallel([
@@ -58,6 +58,18 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
         }).start();
     };
 
+    // Helper para formatar próximo horário (discreto, baseado em data atual)
+    const formatNextAvailable = (next: { date: string; time: string } | undefined): string | null => {
+        if (!next) return null;
+        const today = new Date();
+        const nextDate = new Date(next.date);
+        const diffDays = Math.floor((nextDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+        if (diffDays === 0) return `Hoje, ${next.time}`;
+        if (diffDays === 1) return `Amanhã, ${next.time}`;
+        return `${days[nextDate.getDay()]} ${next.time}`;
+    };
+
     const renderStars = (rating: number | undefined) => {
         const stars = [];
         const actualRating = rating ?? 0;
@@ -73,7 +85,7 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
                     key={i}
                     name={iconName}
                     size={12}
-                    color="#1a7bbbff"
+                    color="#5da2ecff" // Mantendo o azul para consistência com o ícone de localização
                     style={styles.starIcon}
                 />
             );
@@ -84,12 +96,18 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
     const primaryService = item.providerServices && item.providerServices.length > 0 ? item.providerServices[0] : null;
     const specialtyName = primaryService && primaryService.service ? primaryService.service.name : 'Serviço';
 
+    // Cálculo de distância
+    const safeDistance = __DEV__ && item.distance == null ? 4000 : item.distance;
+    const distanceLabel = formatDistance(safeDistance);
+
+    // Label para próximo horário
+    const nextAvailableLabel = formatNextAvailable(item.nextAvailable);
+
     // Usar o helper getFormattedServicePrice
     const servicePrice = primaryService ? getFormattedServicePrice(primaryService, t) : t('provider_details.price_not_available');
     const avatarSource = item.avatarUrl ? { uri: item.avatarUrl } : Icons3D.facial;
 
-    // Usar o formatador para a distância
-    const distanceLabel = formatDistance(item.distance);
+    // REMOVIDO: renderAbsoluteLocation()
 
     return (
         <Animated.View style={[styles.animatedCardContainer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] }]}>
@@ -101,19 +119,51 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
                 activeOpacity={0.8}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
+                {/* REMOVIDO: Renderiza a Distância/Localização no canto superior direito (absoluto) */}
+
                 <View style={styles.imageWrapper}>
                     <Image source={avatarSource} style={styles.cardImage} />
+                    {/* Selo Verificado: overlay discreto no avatar, cor azul */}
+                    {item.verificationStatus === 'APPROVED' && (
+                        <View style={styles.verifiedBadge}>
+                            <Ionicons name="shield-checkmark" size={12} color="#5da2ecff" />
+                        </View>
+                    )}
                 </View>
                 <View style={styles.detailsContent}>
                     <Text style={styles.providerName} numberOfLines={1} allowFontScaling={false}>{item.fullName}</Text>
                     <Text style={styles.specialtyText} numberOfLines={1} allowFontScaling={false}>{specialtyName}</Text>
 
-                    {distanceLabel && (
-                        <View style={styles.distanceRow}>
-                            <Ionicons name="location-outline" size={12} color="#888" />
-                            <Text style={styles.distanceText} allowFontScaling={false}>{distanceLabel}</Text>
-                        </View>
-                    )}
+                    {/* Linha de métricas (Aceitação, Tempo de Resposta e AGORA Distância Inline) */}
+                    <View style={styles.metricsRow}>
+                        {item.acceptanceRate != null && (
+                            <>
+                                <Text style={styles.metricText} allowFontScaling={false}>✓ {Math.round(item.acceptanceRate)}%</Text>
+                                {/* Separador só se houver Tempo de Resposta OU Distância/Localização */}
+                                {(item.averageResponseTime != null || distanceLabel || item.address?.city) && <Text style={styles.metricSep}> · </Text>}
+                            </>
+                        )}
+                        
+                        {item.averageResponseTime != null && (
+                            <>
+                                <Text style={styles.metricText} allowFontScaling={false}>⏱ {item.averageResponseTime} min</Text>
+                                {/* Separador só se houver Distância/Localização E não for o primeiro item */}
+                                {(distanceLabel || item.address?.city) && <Text style={styles.metricSep}> · </Text>}
+                            </>
+                        )}
+
+                        {/* Distância inline (ou bairro·cidade como fallback) */}
+                        {distanceLabel ? (
+                            <View style={styles.metricInlineLoc}>
+                                <Ionicons name="location-outline" size={10} color="#5da2ecff" />
+                                <Text style={[styles.metricText, { marginLeft: 4 }]} allowFontScaling={false}>{distanceLabel}</Text>
+                            </View>
+                        ) : item.address?.city ? (
+                            <Text style={styles.metricText} allowFontScaling={false}>
+                                {item.address.neighborhood ? `${item.address.neighborhood} · ` : ''}{item.address.city}
+                            </Text>
+                        ) : null}
+                    </View>
 
                     {item.averageRating !== undefined && item.reviewCount !== undefined && (
                         <View style={styles.ratingRow}>
@@ -121,7 +171,13 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
                             {item.reviewCount > 0 && <Text style={styles.reviewsText} allowFontScaling={false}>({item.reviewCount})</Text>}
                         </View>
                     )}
-                    <Text style={styles.priceText} allowFontScaling={false}>{servicePrice}</Text>
+                    <View style={styles.priceRow}>
+                        <Text style={styles.priceText} allowFontScaling={false}>{servicePrice}</Text>
+                        {/* Chip Próximo Horário: ao lado do preço, condicional */}
+                        {nextAvailableLabel && (
+                            <Text style={styles.nextAvailableText} allowFontScaling={false}>{nextAvailableLabel}</Text>
+                        )}
+                    </View>
                 </View>
           
             </TouchableOpacity>
@@ -137,38 +193,60 @@ const styles = StyleSheet.create({
         borderRadius: 44,
         overflow: 'visible',
         borderRightWidth: 1,
-        borderBottomWidth: 5.5,
-        borderLeftWidth: 5.1,
+        borderBottomWidth: 1.5,
+        borderLeftWidth: 1.1,
         borderTopWidth: 0.2,
         borderColor: '#9cb6df53',
         borderBottomColor: '#9cb6df53',
-        borderTopStartRadius: 42,
-        borderBottomStartRadius: 42,
-        borderTopEndRadius: 42,
-        borderBottomEndRadius: 42,
+        borderTopStartRadius: 22,
+        borderBottomStartRadius: 22,
+        borderTopEndRadius: 22,
+        borderBottomEndRadius: 22,
     },
     cardContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        width: 190,
+        width: 230,
         backgroundColor: 'rgba(213, 220, 230, 0.41)',
-        borderRadius: 44,
-        padding: 10,
+        borderRadius: 20, // Raio do card 20
+        padding: 8, // Densidade maior (padding 8)
+        position: 'relative',
     },
+    // REMOVIDO: absoluteLocation
+    
     imageWrapper: {
-        width: 60,
-        height: 60,
-        borderRadius: 30,
+        width: 64, // Avatar maior: 64dp
+        height: 64, // Avatar maior: 64dp
+        borderRadius: 32,
         overflow: 'hidden',
         marginRight: 12,
         backgroundColor: '#E0E0E0',
-        borderWidth: 1,
-        borderColor: '#F0F0F0',
+        // Ring premium: 1.5dp branco + 0.5dp #E8EEF8
+        borderWidth: 2, 
+        borderColor: '#E8EEF8', 
+        padding: 1, // Simula o anel interno branco
+        position: 'relative', 
+    },
+    verifiedBadge: { 
+        position: 'absolute',
+        top: 4,
+        right: 4,
+        backgroundColor: '#fff',
+        borderRadius: 10,
+        padding: 2,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.2,
+        shadowRadius: 2,
     },
     cardImage: {
         width: '100%',
         height: '100%',
         resizeMode: 'cover',
+        borderRadius: 32, // Para garantir que a imagem se encaixe no anel
+        borderWidth: 1.5, // Simula o anel interno branco
+        borderColor: '#FFF',
     },
     detailsContent: {
         flex: 1,
@@ -176,15 +254,38 @@ const styles = StyleSheet.create({
     },
     providerName: {
         fontSize: 15,
-        fontWeight: '600',
+        fontWeight: '600', // Nome (15/600)
         color: '#2C3E50',
         marginBottom: 2,
     },
     specialtyText: {
         fontSize: 12,
         color: '#666',
-        marginBottom: 4,
+        marginBottom: 2,
     },
+    // Estilos da linha de métricas (agora com distância inline)
+    metricsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 2,
+        marginBottom: 6,       
+        flexWrap: 'wrap'
+    },
+    metricText: {
+        fontSize: 10,
+        color: '#555',
+        fontWeight: '600', // Fonte 10/600
+    },
+    metricSep: {
+        fontSize: 10,
+        color: '#6C757D'
+    },
+    metricInlineLoc: {
+        flexDirection: 'row',
+        alignItems: 'center'
+    },
+    // Fim dos estilos de métricas
+
     ratingRow: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -201,15 +302,25 @@ const styles = StyleSheet.create({
         fontSize: 10,
         color: '#888',
     },
-    metricText: {
-        fontSize: 10,
-        color: '#555',
-        marginBottom: 2,
-    },
     priceText: {
-        fontSize: 14,
+        fontSize: 15, // Preço grande (14--15/bold)
         fontWeight: 'bold',
         color: '#838891ff',
+    },
+    priceRow: { 
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    nextAvailableText: { // Chip Próximo Horário
+        fontSize: 10,
+        color: '#6C757D',
+        fontWeight: '600', // Fonte 10/600
+        backgroundColor: 'rgba(255,255,255,0.5)', // Fundo branco 40--50%
+        paddingHorizontal: 4,
+        paddingVertical: 2,
+        borderRadius: 8, // Borda-radius 8
+        marginLeft: 8,
     },
     goButton: {
         backgroundColor: '#29a2e7b0',
@@ -230,16 +341,6 @@ const styles = StyleSheet.create({
                 elevation: 4,
             },
         }),
-    },
-    distanceRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 4,
-    },
-    distanceText: {
-        fontSize: 10,
-        color: '#888',
-        marginLeft: 4,
     },
 });
 
