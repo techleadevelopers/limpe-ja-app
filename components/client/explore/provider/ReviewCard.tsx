@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 15,
     paddingHorizontal: 20,
-    left: -1,
+    // left: -1, // REMOVIDO
     marginBottom: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -65,61 +65,60 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
+  // CORREÇÃO 3: Header limpo
   reviewHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: -15,
+    marginBottom: 8, // Ajustado para 8
   },
   reviewerImage: {
-    width: 40,
-    height: 40,
+    width: 40, 
+    height: 40, 
     borderRadius: 20,
-    marginRight: 10,
-    top: 30,
-    backgroundColor: '#E0E0E0', // Placeholder background
+    marginRight: 10, 
+    // top: 30, // REMOVIDO
+    backgroundColor: '#E0E0E0', 
   },
   reviewerImagePlaceholder: {
-    width: 40,
-    height: 40,
+    width: 40, 
+    height: 40, 
     borderRadius: 20,
-    marginRight: 10,
-    top: 18,
+    marginRight: 10, 
+    // top: 18, // REMOVIDO
     backgroundColor: '#999',
-    justifyContent: 'center',
+    justifyContent: 'center', 
     alignItems: 'center',
   },
   reviewHeaderText: {
     flex: 1,
   },
   reviewerName: {
-    fontSize: 15,
-    fontWeight: '600',
-    left: 2,
-    
-    top: 0,
-    color: '#333',
+    fontSize: 15, 
+    fontWeight: '600', 
+    // left: 2, // REMOVIDO
+    // top: 0, // REMOVIDO
+    color: '#333'
   },
   reviewRatingDate: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 2,
-    
-    left: 154,
-    bottom: 20,
-   
+    // left: 154, // REMOVIDO
+    // bottom: 20, // REMOVIDO
   },
   reviewDate: {
     fontSize: 10,
     color: '#777',
     marginLeft: 8,
   },
+  // CORREÇÃO 3: Comentário limpo
   reviewComment: {
     fontSize: 13.8,
-    paddingHorizontal: 32,
-    minWidth: 0,
-    left: 22,
+    // paddingHorizontal: 32, // REMOVIDO
+    // left: 22, // REMOVIDO
     color: '#555',
     lineHeight: 20,
+    marginTop: 8, // Adicionado marginTop
   },
 });
 
