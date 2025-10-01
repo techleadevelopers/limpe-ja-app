@@ -9,6 +9,7 @@ import {
   Easing,
   Platform,
   Dimensions,
+  AccessibilityInfo, // ✅ NOVO: Para reduceMotion check interno
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -35,10 +36,26 @@ export const ReturnCouponCard: React.FC<ReturnCouponCardProps> = ({
 }) => {
   const { t } = useTranslation();
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideUpAnim = useRef(new Animated.Value(AppOffsets.translateY)).current;
+  const slideUpAnim = useRef(new Animated.Value(30)).current; // ✅ FIX: Valor fixo 30px para slide up visível (era AppOffsets — genérico)
   const scaleButtonAnim = useRef(new Animated.Value(1)).current;
 
+  // ✅ NOVO: ReduceMotion ref interno para este componente
+  const reduceMotionRef = useRef(false);
   useEffect(() => {
+      AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
+          reduceMotionRef.current = enabled;
+      });
+  }, []);
+
+  useEffect(() => {
+    // ✅ FIX: Pula animação se reduceMotion (A11y)
+    if (reduceMotionRef.current) {
+        console.log("[ReturnCouponCard] ReduceMotion ativado — pulando animação."); // ✅ DEBUG
+        return;
+    }
+
+    console.log("[ReturnCouponCard] Iniciando animação slide up + fade."); // ✅ DEBUG: Confirma disparo
+
     const entryAnim = Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -56,7 +73,7 @@ export const ReturnCouponCard: React.FC<ReturnCouponCardProps> = ({
     entryAnim.start();
 
     return () => entryAnim.stop(); // Cleanup
-  }, [fadeAnim, slideUpAnim]);
+  }, [fadeAnim, slideUpAnim]); // ✅ FIX: Dependências corretas para re-run se re-mount
 
   const handleCopyCode = useCallback(async () => {
     try {
@@ -103,7 +120,7 @@ export const ReturnCouponCard: React.FC<ReturnCouponCardProps> = ({
             <Text style={styles.title} numberOfLines={1} maxFontSizeMultiplier={1.2}>{title}</Text>
             {expiresInDays !== null && expiresInDays > 0 && (
               <View style={styles.badge}>
-                <Ionicons name="time-outline" size={12} color={AppColors.white} /> {/* Ícone menor (era 14) para compacto */}
+                <Ionicons name="time-outline" size={11} color={AppColors.white} /> {/* Ícone menor para compacto */}
                 <Text style={styles.badgeText} maxFontSizeMultiplier={1.2}>{t('offers.expires_in_days', { count: expiresInDays })}</Text>
               </View>
             )}
@@ -112,7 +129,7 @@ export const ReturnCouponCard: React.FC<ReturnCouponCardProps> = ({
           {/* ✅ Subtitle: numberOfLines=2, mas com lineHeight otimizado para caber sem pular linha extra */}
           <Text style={styles.subtitle} numberOfLines={2} maxFontSizeMultiplier={1.2}>{subtitle}</Text>
 
-          {/* ✅ CodeContainer: Código menor (18px era 20), botão copy compacto (paddingVertical:5 era 6, ícone 18px era 20) para caber lado a lado */}
+          {/* ✅ CodeContainer: Código menor, botão copy compacto para caber lado a lado */}
           <View style={styles.couponCodeContainer}>
             <Text style={styles.couponCode} numberOfLines={1}>{code}</Text>
             <TouchableOpacity
@@ -120,12 +137,12 @@ export const ReturnCouponCard: React.FC<ReturnCouponCardProps> = ({
               style={[styles.copyButton, { transform: [{ scale: scaleButtonAnim }] }]}
               activeOpacity={0.7}
             >
-              <Ionicons name="copy-outline" size={18} color={AppColors.white} /> {/* Ícone menor para encaixe */}
+              <Ionicons name="copy-outline" size={16} color={AppColors.white} /> {/* Ícone menor para encaixe */}
               <Text style={styles.copyButtonText} numberOfLines={1} maxFontSizeMultiplier={1.2}>{t('offers.copy_code')}</Text>
             </TouchableOpacity>
           </View>
 
-          {/* ✅ RebookButton: Texto menor (14px era 16), paddingVertical:12 (era 14) para compacto mas touch 44px+ */}
+          {/* ✅ RebookButton: Texto menor, paddingVertical:10 para compacto mas touch 44px+ */}
           <TouchableOpacity
             onPress={handleRebookNowPress}
             style={[styles.rebookNowButton, { transform: [{ scale: scaleButtonAnim }] }]}
@@ -145,15 +162,16 @@ const styles = StyleSheet.create({
     maxWidth: SCREEN_WIDTH - 32, // Fix: Ajuste para safe areas iOS, previne lateral scroll
     borderRadius: 15,
     overflow: 'hidden',
+    
     alignSelf: 'center',
     marginTop: 10, // ✅ FIX: Reduzido para 5px (era 35) – minimiza gap acima do cupom (com PIX), conforme comentário original
     marginBottom: 10, // Gap final confortável (20px, permite scroll suave)
     ...AppShadows.medium,
-    // ✅ Mantido minHeight sem alteração (250px iOS/260px Android) – elementos internos ajustados para caber
-    minHeight: Platform.OS === 'ios' ? 250 : 260,
+    // ✅ AJUSTADO: minHeight reduzido para 220px iOS/230px Android (elementos menores cabem)
+    minHeight: Platform.OS === 'ios' ? 220 : 230,
   },
   gradientBackground: {
-    padding: 16, // ✅ Reduzido de 20 para 16 – comprime interno sem perder conforto, elementos cabem melhor
+    padding: 14, // ✅ REDUZIDO: de 16 para 14px – comprime interno, card mais curto
   },
   contentWrapper: {
     // Flex direction can be adjusted if needed
@@ -162,11 +180,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between', // ✅ Alinhamento premium: Título esquerdo, badge direito
     alignItems: 'center',
-    marginBottom: 6, // ✅ Reduzido de 8 para 6 – comprime para caber mais conteúdo vertical
+    marginBottom: 5, // ✅ REDUZIDO: de 6 para 5px – comprime vertical
   },
   title: {
-    // ✅ Fonte menor (18px bold, era AppTypography.title ~20px) para caber em 1 linha sem wrap
-    fontSize: 16,
+    // ✅ REDUZIDO: fontSize 15px (era 16) para caber em 1 linha sem wrap
+    fontSize: 15,
     fontWeight: 'bold',
     color: AppColors.white,
     flexShrink: 1, // Permite encolher se código longo
@@ -176,24 +194,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 16, // ✅ Radius menor (era 20) para compacto
-    paddingHorizontal: 6, // ✅ Padding horizontal reduzido (era 8) para encaixe
-    paddingVertical: 3, // ✅ Vertical reduzido (era 4)
-    minWidth: 80, // Largura mínima para badge não "pular"
+    borderRadius: 14, // ✅ Radius menor para compacto
+    paddingHorizontal: 5, // ✅ REDUZIDO: de 6 para 5px
+    paddingVertical: 2, // ✅ REDUZIDO: de 3 para 2px
+    minWidth: 75, // Largura mínima para badge não "pular"
   },
   badgeText: {
     color: AppColors.white,
-    fontSize: 11, // ✅ Menor (era 12) para caber no badge compacto
+    fontSize: 10, // ✅ REDUZIDO: de 11 para 10px para caber no badge compacto
     fontWeight: '600',
-    marginLeft: 3, // ✅ Menor gap (era 4)
+    marginLeft: 2, // ✅ REDUZIDO: Gap menor
   },
   subtitle: {
-    // ✅ Fonte ligeiramente menor (13px era 14/AppTypography.body) e lineHeight otimizado para caber em 2 linhas
-    fontSize: 11,
+    // ✅ REDUZIDO: fontSize 12px (era 11), lineHeight 17px para caber em 2 linhas
+    fontSize: 12,
     fontWeight: '400', // Regular para leveza
     color: AppColors.white,
-    marginBottom: 12, // ✅ Reduzido de 16 para 12 – comprime sem apertar
-    lineHeight: 16, // LineHeight ajustado para texto fluir sem gaps extras
+    marginBottom: 10, // ✅ REDUZIDO: de 12 para 10px – comprime sem apertar
+    lineHeight: 17, // LineHeight ajustado para texto fluir sem gaps extras
     textAlign: 'center',
   },
   couponCodeContainer: {
@@ -201,14 +219,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between', // ✅ Space-between para código e botão caberem lado a lado
     backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 10,
-    paddingVertical: 10, // ✅ Reduzido de 12 para 10 – compacto mas touch ok
-    paddingHorizontal: 12, // ✅ Horizontal reduzido (era 15) para elementos caberem
-    marginBottom: 12, // ✅ Reduzido de 16 para 12 – comprime para botão rebook
+    borderRadius: 9, // ✅ Ligeiramente menor
+    paddingVertical: 8, // ✅ REDUZIDO: de 10 para 8px – compacto mas touch ok
+    paddingHorizontal: 10, // ✅ REDUZIDO: de 12 para 10px
+    marginBottom: 10, // ✅ REDUZIDO: de 12 para 10px – comprime para botão rebook
   },
   couponCode: {
-    // ✅ Fonte menor (18px bold, era 20) para caber melhor ao lado do botão copy
-    fontSize: 16,
+    // ✅ REDUZIDO: fontSize 15px (era 16) para caber melhor ao lado do botão copy
+    fontSize: 15,
     fontWeight: 'bold',
     color: AppColors.white,
     letterSpacing: 1,
@@ -219,28 +237,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 8,
-    paddingHorizontal: 8, // ✅ Reduzido de 10 para 8 – botão menor para caber
-    paddingVertical: 5, // ✅ Vertical reduzido (era 6) para compacto
-    minHeight: 36, // ✅ Mantido touch target (36px+ com padding, cabe sem esticar)
+    borderRadius: 7, // ✅ Menor para compacto
+    paddingHorizontal: 7, // ✅ REDUZIDO: de 8 para 7px – botão menor para caber
+    paddingVertical: 4, // ✅ REDUZIDO: de 5 para 4px
+    minHeight: 34, // ✅ REDUZIDO: touch target (34px+ com padding, cabe sem esticar)
   },
   copyButtonText: {
     color: AppColors.white,
-    fontSize: 10, // ✅ Menor (era 14) para caber no botão compacto
+    fontSize: 9, // ✅ REDUZIDO: de 10 para 9px para caber no botão compacto
     fontWeight: '600',
-    marginLeft: 4, // ✅ Gap menor (era 5)
+    marginLeft: 3, // ✅ Gap menor
   },
   rebookNowButton: {
     backgroundColor: AppColors.white,
-    borderRadius: 10,
-    paddingVertical: 12, // ✅ Reduzido de 14 para 12 – compacto mas minHeight garante touch
+    borderRadius: 9, // ✅ Menor
+    paddingVertical: 10, // ✅ REDUZIDO: de 12 para 10px – compacto mas minHeight garante touch
     alignItems: 'center',
-    minHeight: 44, // Touch target premium mantido
+    minHeight: 40, // ✅ REDUZIDO: Touch target premium (40px, ainda acessível)
   },
   rebookNowButtonText: {
-    // ✅ Fonte menor (14px bold, era 16) para caber centralizado sem pular
+    // ✅ REDUZIDO: fontSize 11px (era 12) para caber centralizado sem pular
     color: AppColors.successStandard,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: 'bold',
   },
 });
