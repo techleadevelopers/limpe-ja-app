@@ -25,6 +25,8 @@ export enum SortByOption {
   CreatedAt = 'createdAt',
   UpdatedAt = 'updatedAt',
   FullName = 'fullName',
+  AverageResponseTime = 'averageResponseTime', // NOVO: Para ordenar por tempo médio de resposta (alinhado com relatório)
+  AcceptanceRate = 'acceptanceRate', // NOVO: Para ordenar por taxa de aceitação
   // Adicione outras opções conforme necessário
 }
 
@@ -48,18 +50,26 @@ export interface SearchQuery {
  * Interface para o resultado de um serviço específico oferecido por um provedor,
  * combinando detalhes do provedor e do serviço oferecido.
  * Este seria o principal tipo de resultado para a busca de serviços.
+ * NOVO: Adicionado campos opcionais para sinais premium (alinhado com relatório).
  */
 export interface ProviderServiceSearchResult {
   provider: ProviderDetails;
   providerService: ProviderServiceDetails;
   distance?: number; // Distância se a busca for geoespacial (CORREÇÃO: Decimal no Prisma é number aqui)
+  // NOVOS CAMPOS OPCIONAIS PARA ALINHAMENTO COM CARDS
+  verificationStatus?: string; // Ex.: 'APPROVED' para selo
+  acceptanceRate?: number; // Para métricas mini
+  averageResponseTime?: number; // Para métricas mini
+  nextAvailable?: { date: string; time: string }; // Para chip de horário
+  badges?: string[]; // Para badges opcionais
 }
 
 /**
  * Interface para a resposta completa da API de busca.
+ * NOVO: Adicionado providerServices como principal, com novos campos opcionais.
  */
 export interface SearchResult {
-  providerServices: ProviderServiceSearchResult[]; // NOVO: Lista principal de resultados
+  providerServices: ProviderServiceSearchResult[]; // NOVO: Lista principal de resultados (com sinais premium)
   providers: ProviderDetails[]; // Lista de provedores (busca complementar)
   services: ServiceDetails[];   // Lista de tipos de serviço (busca complementar)
   // offers?: OfferDetails[]; // Lista de ofertas (busca complementar)
@@ -67,6 +77,7 @@ export interface SearchResult {
 
 /**
  * NOVO: Interface para um item de busca de provedor com distância.
+ * NOVO: Adicionados campos para sinais premium (alinhado com relatório).
  */
 export interface ProviderSearchItem {
   id: string;
@@ -79,5 +90,11 @@ export interface ProviderSearchItem {
     city: string;
     state: string;
   };
+  // NOVOS CAMPOS PARA SINAIS PREMIUM (opcionais, para consistência com ProviderDisplayInfo e relatório)
+  verificationStatus?: string; // Ex.: 'APPROVED' para selo verificado
+  acceptanceRate?: number; // Para métricas mini (✓ X%)
+  averageResponseTime?: number; // Para métricas mini (⏱ X min)
+  nextAvailable?: { date: string; time: string }; // Para chip de horário
+  badges?: string[]; // Para badges opcionais
   // Adicione outros campos relevantes para exibição na lista de busca
 }
