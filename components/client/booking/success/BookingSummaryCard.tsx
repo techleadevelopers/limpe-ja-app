@@ -1,9 +1,10 @@
 // LimpeJaApp/components/client/booking/success/BookingSummaryCard.tsx
 import { BlurView } from 'expo-blur';
 import * as Clipboard from 'expo-clipboard';
+import * as Haptics from 'expo-haptics'; 
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
-import { Animated, Platform, StyleSheet, View, Text, Dimensions } from 'react-native';
+import { Animated, Platform, StyleSheet, View, Text, Dimensions, AccessibilityInfo } from 'react-native'; // ✅ NOVO: AccessibilityInfo para A11y
 import Toast from 'react-native-toast-message';
 
 import AdditionalBookingDetails from './AdditionalBookingDetails';
@@ -75,6 +76,14 @@ export default function BookingSummaryCard({
   const formattedPaymentValue = formatPriceBRL(totalPrice);
   const displayPaymentMethod = paymentMethod || 'PIX';
 
+  // ✅ NOVO: ReduceMotion para A11y no copy
+  const reduceMotionRef = React.useRef(false);
+  React.useEffect(() => {
+      AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
+          reduceMotionRef.current = enabled;
+      });
+  }, []);
+
   const handleCopyPixQrCode = () => {
     if (pixChargeDetails?.brCode) {
       Clipboard.setString(pixChargeDetails.brCode);
@@ -84,6 +93,12 @@ export default function BookingSummaryCard({
         text2: 'Cole no seu aplicativo bancário para finalizar o pagamento.',
         visibilityTime: 4000,
       });
+      // ✅ Haptics: Feedback tátil no copy (leve, premium)
+      Haptics.selectionAsync();
+      // ✅ A11y: Se reduceMotion, pula qualquer anim interna (se houver)
+      if (!reduceMotionRef.current) {
+          // Aqui você pode adicionar uma micro-animação se quiser, mas mantive simples
+      }
     } else {
       Toast.show({
         type: 'error',
@@ -141,6 +156,12 @@ export default function BookingSummaryCard({
             displayPaymentMethod={displayPaymentMethod}
           />
 
+          {/* ✅ NOVO: Barra de total "tint" (ênfase elegante, hierarquia premium sem poluir) */}
+          <View style={styles.totalBar}>
+            <Text style={styles.totalLabel}>Total a Pagar</Text>
+            <Text style={styles.totalValue}>{formattedPaymentValue}</Text>
+          </View>
+
           {displayPaymentMethod === 'PIX' && pixChargeDetails && (
             <SuccessPixInfo
               pixChargeDetails={pixChargeDetails}
@@ -194,5 +215,29 @@ const styles = StyleSheet.create({
     borderColor: AppColors.backgroundNeutral,
     borderWidth: 1,
     marginHorizontal: 8, // ✅ Ajustado: Gap horizontal confortável sem apertar
+  },
+  // ✅ NOVO: Estilos para barra de total tint (ênfase clean, contraste alto)
+  totalBar: {
+    marginTop: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16, // Gap consistente (16px)
+    borderRadius: 12,
+    backgroundColor: 'rgba(42, 114, 231, 0.06)', // Tint azul sutil da marca
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    ...AppShadows.small, // Sombra leve para elevação
+  },
+  totalLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#2F3A4A', // Body premium (escuro, legível)
+    fontFamily: 'Montserrat-SemiBold', // Consistente com tipografia
+  },
+  totalValue: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: AppColors.primaryInteractive, // Primário da marca para destaque
+    fontFamily: 'Montserrat-Bold',
   },
 });
