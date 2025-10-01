@@ -198,7 +198,18 @@
       "price_label": "Preço",
       "about_provider_section_title": "Sobre o Provedor",
       "contact_section_title": "Contato",
-      "reviews_and_recommendations_title": "Avaliações & Recomendações"
+      "reviews_and_recommendations_title": "Avaliações & Recomendações",
+      "reviews_count_short_one": "1 Avaliação",
+      "reviews_count_short_other": "{{count}} Avaliações",
+      "provider_not_found_friendly": "Profissional não encontrado.",
+      "error_loading_details_friendly": "Erro ao carregar os detalhes do profissional.",
+      "chat_unavailable_title_friendly": "Chat Indisponível",
+      "chat_unavailable_message_friendly": "O chat com {{providerName}} só fica disponível após um agendamento ativo.",
+      "view_all_reviews": "Ver todas as avaliações",
+      "call_functionality": "Em breve você poderá ligar diretamente para o profissional.",
+      "map_functionality": "Em breve abriremos o mapa aqui.",
+      "share_functionality": "Link para compartilhamento gerado.",
+      "invalid_professional_id_friendly": "ID do profissional inválido."
     },
     "provider_dashboard": {
       "greeting": "Olá, {{providerName}}!",
