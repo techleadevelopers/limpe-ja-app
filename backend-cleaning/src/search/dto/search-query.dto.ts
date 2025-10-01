@@ -19,6 +19,8 @@ export enum SortByOption {
   CreatedAt = 'createdAt',
   UpdatedAt = 'updatedAt',
   FullName = 'fullName',
+  AcceptanceRate = 'acceptanceRate', // NOVO: Para ordenar por taxa de aceitação (relatório)
+  AverageResponseTime = 'averageResponseTime', // NOVO: Para ordenar por tempo médio de resposta
   // Adicione outras opções de ordenação se necessário, seguindo o padrão
 }
 
@@ -76,7 +78,7 @@ export class SearchQueryDto {
   @Min(0)
   radius?: number;
 
-  @ApiPropertyOptional({ enum: SortByOption, description: 'Critério de ordenação dos resultados', example: SortByOption.Rating })
+  @ApiPropertyOptional({ enum: SortByOption, description: 'Critério de ordenação dos resultados (inclui novos para métricas)', example: SortByOption.Rating })
   @IsOptional()
   @IsEnum(SortByOption)
   sortBy?: SortByOption;
