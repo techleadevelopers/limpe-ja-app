@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
   },
   servicePriceTag: {
     fontSize: 15,
-    fontWeight: 'bold',
+    fontWeight: '700', // CORREÇÃO 7: Peso 700
     color: '#2A72E7',
   },
   noDetailsText: {
