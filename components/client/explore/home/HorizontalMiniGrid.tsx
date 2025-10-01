@@ -1,4 +1,3 @@
-// LimpeJaApp/components/client/explore/home/HorizontalMiniGrid.tsx
 import React from "react";
 import {
   Animated,
@@ -11,6 +10,7 @@ import {
   ImageSourcePropType,
   Platform,
 } from "react-native";
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 
@@ -87,7 +87,14 @@ export default function HorizontalMiniGrid() {
         style={styles.cardContainer} // Usa o estilo do container da segunda versão
       >
         <Animated.View style={[styles.cardInner, { transform: [{ scale }] }]}>
+          <LinearGradient
+            colors={['rgba(230, 240, 255, 0.7)', 'rgba(196, 197, 205, 0.23)']}
+            style={styles.gradientBackground}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
             <Image source={item.icon} style={styles.icon} resizeMode="contain" />
+          </LinearGradient>
         </Animated.View>
         <Text style={styles.cardTitle}>{item.title}</Text>
       </Pressable>
@@ -120,15 +127,30 @@ const styles = StyleSheet.create({
   cardInner: {
     width: 60, // Tamanho do fundo circular
     height: 60,
-    borderRadius: 10, // Metade da largura/altura para um círculo perfeito
-    backgroundColor: '#b6d3e097', // Cor de fundo clara para o círculo
+    borderRadius: 30, // Corrigido para círculo perfeito (metade de 60)
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
+    overflow: 'hidden', // Garante que o gradiente não vaze
+    // Sombras premium: sutis e consistentes para iOS e Android (alinhado com Apple Store / Play Store)
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1, // Sombra mais suave para visual premium
+        shadowRadius: 4, // Raio ligeiramente maior para suavidade
+      },
+      android: {
+        elevation: 4, // Elevação moderada para profundidade sem exageros
+      },
+    }),
+  },
+  gradientBackground: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 30, // Herda o borderRadius para o gradiente
   },
   icon: {
     width: 39, // Tamanho do ícone
