@@ -48,7 +48,6 @@ import { OfferDetailsDto } from '../offers/dto/offer-details.dto'; // Verifique 
 
 import { ProviderMetricsDto } from './dto/provider-metrics.dto';
 
-
 @ApiTags('providers')
 @Controller('providers')
 export class ProvidersController {
@@ -62,11 +61,19 @@ export class ProvidersController {
 
   @Get('recommended')
   @ApiOperation({ summary: 'Obter provedores recomendados' })
+  // CORREÇÃO: Adicionado queries opcionais para lat/lng (pra calcular distance se fornecido)
+  @ApiQuery({ name: 'latitude', required: false, type: Number, description: 'Latitude do cliente para cálculo de distância' })
+  @ApiQuery({ name: 'longitude', required: false, type: Number, description: 'Longitude do cliente para cálculo de distância' })
   @ApiResponse({ status: 200, description: 'Lista de provedores recomendados.', type: [ProviderDetailsDto] })
-  async findRecommendedProviders(): Promise<ProviderDetailsDto[]> {
+  async findRecommendedProviders(
+    @Query('latitude') latitude?: number,
+    @Query('longitude') longitude?: number,
+  ): Promise<ProviderDetailsDto[]> {
     this.logger.log('[ProvidersController] findRecommendedProviders: Chamando serviço.');
-    const providers = await this.providersService.findTopRatedOrExperiencedProviders();
+    // CORREÇÃO: Passe lat/lng pro service pra cálculo de distance (se fornecidos)
+    const providers = await this.providersService.findTopRatedOrExperiencedProviders(latitude, longitude);
     this.logger.log(`[ProvidersController] findRecommendedProviders: Retornando ${providers.length} provedores.`);
+    // NOVO: Mapeamento inclui novos campos opcionais para sinais premium
     return providers.map(provider => new ProviderDetailsDto(provider));
   }
 
@@ -95,6 +102,7 @@ export class ProvidersController {
 
     const providers = await this.providersService.findAllProviders(findAllParams);
     this.logger.log(`[ProvidersController] findNearbyProviders: Retornando ${providers.length} provedores.`);
+    // NOVO: Mapeamento inclui novos campos opcionais (ex.: nextAvailable, acceptanceRate)
     return providers.map(provider => new ProviderDetailsDto(provider));
   }
 
@@ -115,6 +123,7 @@ export class ProvidersController {
     this.logger.log(`[ProvidersController] search: Chamando serviço com DTO de busca: ${JSON.stringify(searchDto)}`);
     const providers = await this.providersService.search(searchDto);
     this.logger.log(`[ProvidersController] search: Retornando ${providers.length} provedores.`);
+    // NOVO: Mapeamento inclui novos campos opcionais para cards (ex.: nextAvailable calculado no service)
     return providers.map(provider => new ProviderDetailsDto(provider));
   }
 
@@ -139,6 +148,7 @@ export class ProvidersController {
       throw new NotFoundException(`Provedor com User ID "${userId}" não encontrado.`);
     }
     this.logger.log(`[ProvidersController] getMyProfile: Perfil encontrado para userId ${userId}.`);
+    // NOVO: Inclui novos campos opcionais no mapeamento
     return new ProviderDetailsDto(provider);
   }
 
@@ -160,6 +170,7 @@ export class ProvidersController {
       throw new NotFoundException(`Provedor com User ID "${userId}" não encontrado.`);
     }
     this.logger.log(`[ProvidersController] updateMyProfile: Perfil atualizado com sucesso para userId ${userId}.`);
+    // NOVO: Inclui novos campos opcionais após atualização (ex.: recalcular métricas se necessário)
     return new ProviderDetailsDto(updatedProvider);
   }
 
@@ -252,6 +263,7 @@ export class ProvidersController {
       throw new NotFoundException(`Provedor com ID "${id}" não encontrado.`);
     }
     this.logger.log(`[ProvidersController] findOne: Provedor ${id} encontrado.`);
+    // NOVO: Inclui novos campos opcionais (ex.: nextAvailable, badges)
     return new ProviderDetailsDto(provider);
   }
 
