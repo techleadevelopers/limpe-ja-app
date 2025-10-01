@@ -47,6 +47,7 @@ export type ProviderAvailability = {
  * @interface ProviderDisplayInfo
  * Representa um provedor com informações essenciais para exibição no frontend.
  * Contém dados "achatados" para fácil consumo.
+ * NOVO: Adicionados campos opcionais para sinais premium (alinhado com relatório: verificationStatus, acceptanceRate, averageResponseTime, nextAvailable, badges).
  */
 export interface ProviderDisplayInfo {
   id: string;
@@ -56,7 +57,7 @@ export interface ProviderDisplayInfo {
   avatarUrl?: string | null;
   phone?: string | null;
   bio?: string | null;
-  verificationStatus: VerificationStatus;
+  verificationStatus?: VerificationStatus; // NOVO: Opcional para selo verificado nos cards
   address?: BookingAddress | null; // CORREÇÃO: BookingAddress agora tem lat/lon
   providerServices?: ProviderServiceOffering[];
   averageRating: number;
@@ -78,17 +79,19 @@ export interface ProviderDisplayInfo {
   ocrResult?: any | null;
   livenessResult?: any | null;
   reviews?: ReviewEntity[]; // <<-- CORREÇÃO: Alterado para ReviewEntity[]
-  badges: string[]; // CORREÇÃO: Adicionado badges
+  badges?: string[]; // CORREÇÃO: Adicionado badges (opcional para consistência com relatório)
   user: { // CORREÇÃO: Adicionado objeto user com isVerified
     email: string;
     role: UserRole;
     isVerified: boolean;
   };
   metrics?: ProviderMetrics; // NOVO: Adicionado métricas ao ProviderDisplayInfo
-  // NOVOS CAMPOS ADICIONADOS PARA RESOLVER ERROS DE TIPAGEM NOS COMPONENTES
-  acceptanceRate?: number; // Adicionado para PrestadorCard e RecomendacaoCard
-  averageResponseTime?: number; // Adicionado para PrestadorCard e RecomendacaoCard (componentes usam este nome)
+  // NOVOS CAMPOS ADICIONADOS PARA RESOLVER ERROS DE TIPAGEM NOS COMPONENTES E RELATÓRIO
+  acceptanceRate?: number; // Adicionado para PrestadorCard e RecomendacaoCard (métricas mini)
+  averageResponseTime?: number; // Adicionado para PrestadorCard e RecomendacaoCard (métricas mini, componentes usam este nome)
   minPrice?: number; // NOVO: Preço mínimo pré-calculado de um serviço oferecido pelo provedor
+  // NOVOS CAMPOS PARA SINAIS PREMIUM (opcionais, sem quebrar compatibilidade, conforme relatório)
+  nextAvailable?: { date: string; time: string }; // Ex.: { date: '2025-09-29', time: '09:00' } — para chip de horário
 }
 
 /**
@@ -102,6 +105,7 @@ export type ProviderDetails = ProviderDisplayInfo;
  * Estende o tipo Provider para incluir campos calculados (averageRating, reviewCount)
  * e todas as relações necessárias para construir o ProviderDisplayInfo.
  * Usado no backend para mapeamento.
+ * NOVO: Adicionados campos opcionais para sinais premium (alinhado com ProviderDisplayInfo).
  * NOTA: Esta interface é muito similar a ProviderDisplayInfo e pode ser redundante.
  * Considere usar apenas ProviderDisplayInfo se ela já contém todos os campos necessários.
  */
@@ -113,7 +117,7 @@ export type ProviderWithCalculatedRating = {
   avatarUrl?: string | null;
   phone?: string | null;
   bio?: string | null;
-  verificationStatus: VerificationStatus;
+  verificationStatus?: VerificationStatus; // NOVO: Opcional para selo verificado
   address?: BookingAddress | null; // CORREÇÃO: BookingAddress agora tem lat/lon
   providerServices?: ProviderServiceOffering[];
   averageRating: number;
@@ -134,16 +138,18 @@ export type ProviderWithCalculatedRating = {
   rejectionReason?: string | null;
   ocrResult?: any | null;
   livenessResult?: any | null;
-  badges: string[]; // CORREÇÃO: Adicionado badges
+  badges?: string[]; // CORREÇÃO: Adicionado badges (opcional)
   user: { // CORREÇÃO: Adicionado objeto user com isVerified
     email: string;
     role: UserRole;
     isVerified: boolean;
   };
   // NOVOS CAMPOS ADICIONADOS PARA ALINHAR COM ProviderDisplayInfo, se necessário no backend
-  acceptanceRate?: number;
-  averageResponseTime?: number;
+  acceptanceRate?: number; // NOVO: Para métricas mini
+  averageResponseTime?: number; // NOVO: Para métricas mini
   minPrice?: number; // NOVO: Preço mínimo pré-calculado de um serviço oferecido pelo provedor
+  // NOVOS CAMPOS PARA SINAIS PREMIUM (opcionais)
+  nextAvailable?: { date: string; time: string }; // NOVO: Para chip de horário
 };
 
 /**
@@ -223,7 +229,6 @@ export interface GetProviderAvailabilityResponse { // MOVIDO PARA CÁ
   available: ProviderAvailability[]; // Slots de tempo configurados pelo provedor
   occupiedTimes: string[];         // Horários já agendados/ocupados
 }
-
 
 /**
  * @interface UpdateProviderProfileData
