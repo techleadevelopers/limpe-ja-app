@@ -7,7 +7,6 @@ import { Type } from 'class-transformer';
 import { ProviderWithIncludes, ProviderWithCalculatedRating } from '../providers.service'; // <-- AGORA ProviderWithIncludes É EXPORTADO
 import { ProviderServiceOfferingDto } from './provider-service-offering.dto';
 
-
 export class ProviderReviewDto {
   @ApiProperty({ description: 'ID da avaliação', example: 'uuid-da-avaliacao' })
   id: string;
@@ -62,9 +61,10 @@ export class ProviderDetailsDto {
   @IsInt()
   yearsOfExperience: number | null;
 
-  @ApiProperty({ enum: VerificationStatus, description: 'Status de verificação do provedor', example: VerificationStatus.APPROVED })
+  @ApiPropertyOptional({ enum: VerificationStatus, description: 'Status de verificação do provedor (opcional para selo nos cards)', example: VerificationStatus.APPROVED }) // NOVO: Opcional para relatório
+  @IsOptional()
   @IsEnum(VerificationStatus)
-  verificationStatus: VerificationStatus;
+  verificationStatus?: VerificationStatus;
 
   @ApiPropertyOptional({ type: () => CreateAddressDto, description: 'Informações de endereço do provedor' })
   @IsOptional()
@@ -97,6 +97,10 @@ export class ProviderDetailsDto {
   @IsInt()
   reviewCount: number;
 
+  @ApiPropertyOptional({ type: () => [String], description: 'Badges do provedor (opcional para exibição)', example: ['TOP_RATED', 'VERIFIED'] }) // NOVO: Opcional para badges
+  @IsOptional()
+  badges?: string[];
+
   @ApiProperty({ type: () => [ProviderServiceOfferingDto], description: 'Serviços oferecidos por este provedor' })
   @ValidateNested({ each: true })
   @Type(() => ProviderServiceOfferingDto)
@@ -107,16 +111,26 @@ export class ProviderDetailsDto {
   @Type(() => ProviderReviewDto)
   reviews: ProviderReviewDto[];
 
-  // NOVAS PROPRIEDADES
+  // NOVAS PROPRIEDADES (alinhado com relatório: opcionais para métricas mini e chip horário)
   @ApiPropertyOptional({ description: 'Taxa de aceitação de agendamentos do provedor (em %)', example: 90 })
   @IsOptional()
   @IsNumber()
-  acceptanceRate: number;
+  acceptanceRate?: number;
 
   @ApiPropertyOptional({ description: 'Tempo médio de resposta do provedor (em minutos)', example: 15 })
   @IsOptional()
   @IsInt()
-  averageResponseTime: number;
+  averageResponseTime?: number;
+
+  @ApiPropertyOptional({ description: 'Próximo horário disponível (opcional para chip nos cards)', example: { date: '2025-09-29', time: '09:00' } }) // NOVO: Para chip de horário
+  @IsOptional()
+  nextAvailable?: { date: string; time: string };
+
+  // CORREÇÃO: Adicionado distance (em metros, calculado via PostGIS se lat/lng fornecidos)
+  @ApiPropertyOptional({ description: 'Distância em metros do provedor (calculada se lat/lng do cliente fornecidos; front formata pra km)', example: 4200 })
+  @IsOptional()
+  @IsNumber()
+  distance?: number;
 
   constructor(source: ProviderDetailsSource) {
     this.id = source.id;
@@ -124,7 +138,7 @@ export class ProviderDetailsDto {
     this.avatarUrl = source.avatarUrl;
     this.yearsOfExperience = source.yearsOfExperience;
     this.bio = source.bio;
-    this.verificationStatus = source.verificationStatus;
+    this.verificationStatus = source.verificationStatus; // NOVO
 
     // Email já vem direto em ProviderWithCalculatedRating
     this.email = source.email;
@@ -144,6 +158,9 @@ export class ProviderDetailsDto {
     this.averageRating = source.averageRating;
     this.reviewCount = source.reviewCount;
 
+    // NOVO: Badges opcionais
+    this.badges = source.badges;
+
     // Mapear os serviços oferecidos
     if (source.providerServices) {
       this.providerServices = source.providerServices.map(ps => new ProviderServiceOfferingDto(ps));
@@ -157,8 +174,12 @@ export class ProviderDetailsDto {
     // Assumindo que para o DTO de detalhes, as reviews já viriam populadas se necessário.
     this.reviews = []; // Por padrão, vazio, pois ProviderWithCalculatedRating não tem reviewsReceived
 
-    // Atribuir as novas propriedades
+    // Atribuir as novas propriedades (opcionais, alinhado com relatório)
     this.acceptanceRate = source.acceptanceRate;
     this.averageResponseTime = source.averageResponseTime;
+    this.nextAvailable = source.nextAvailable; // NOVO
+
+    // CORREÇÃO: Atribui distance (em metros, opcional)
+    this.distance = source.distance || undefined;
   }
 }
