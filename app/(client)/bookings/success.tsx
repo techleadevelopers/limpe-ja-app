@@ -2,6 +2,8 @@
 import { BlurView } from 'expo-blur';
 import * as Calendar from 'expo-calendar';
 import * as Clipboard from 'expo-clipboard';
+import * as Haptics from 'expo-haptics'; 
+import { AccessibilityInfo } from 'react-native'; // ✅ NOVO: Para reduceMotion (A11y)
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -108,6 +110,14 @@ const MissionReminderCard: React.FC<MissionReminderCardProps> = ({ missionId, ti
         fontFamily: 'Montserrat-Medium', // Texto de dismiss: Medium
     };
 
+    // ✅ NOVO: ReduceMotion para A11y no MissionReminderCard
+    const reduceMotionRef = useRef(false);
+    useEffect(() => {
+        AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
+            reduceMotionRef.current = enabled;
+        });
+    }, []);
+
     // Adicionado maxFontSizeMultiplier para acessibilidade
     return (
         <View style={cardContainerStyle}>
@@ -190,10 +200,21 @@ export default function SuccessScreen() {
     // Adicionado ref para verificar se o componente está montado
     const isMounted = useRef(true);
 
+    // ✅ NOVO: ReduceMotion para A11y (respeita preferências do usuário)
+    const reduceMotionRef = useRef(false);
+    useEffect(() => {
+        AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
+            reduceMotionRef.current = enabled;
+        });
+    }, []);
+
     // NOVO: Guard para geração de PIX (roda uma vez só)
     const pixRequestedRef = useRef(false);
 
     const animateBlob = useCallback(() => {
+        // ✅ A11y: Pula animação se reduceMotion
+        if (reduceMotionRef.current) return null;
+
         const blobLoop = Animated.loop(
             Animated.parallel([
                 Animated.timing(blobTranslateY, {
@@ -225,7 +246,7 @@ export default function SuccessScreen() {
         const blobAnimation = animateBlob();
         return () => {
             isMounted.current = false; // Define como desmontado no cleanup
-            blobAnimation.stop(); // Cleanup da animação
+            if (blobAnimation) blobAnimation.stop(); // Cleanup da animação
         };
     }, [animateBlob]);
 
@@ -283,6 +304,7 @@ export default function SuccessScreen() {
                         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Passando Date object
                     });
                     setShowReturnCouponCard(true);
+                    console.log("[SuccessScreen] ReturnCoupon ativado - deve animar agora."); // ✅ DEBUG: Log para confirmar
                 }
             }
 
@@ -335,6 +357,8 @@ export default function SuccessScreen() {
                 if (!isMounted.current) return;
                 setPixChargeDetails(pixResponse);
                 NotificationUIService.showSuccess('Use o código para finalizar o pagamento.', 'PIX Gerado com Sucesso!');
+                // ✅ Haptics: Feedback de sucesso no PIX
+                await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             } catch (e: any) {
                 if (!isMounted.current) return;
                 setPixGenerationError(e?.response?.data?.message || 'Não foi possível gerar a cobrança PIX.');
@@ -344,7 +368,13 @@ export default function SuccessScreen() {
 
     // REFACTOR: useEffect de entrada sem pixGenerationDelay (fetch 1x só)
     useEffect(() => {
-        const revealDelay = 300;
+        // ✅ A11y: Pula animação se reduceMotion
+        if (reduceMotionRef.current) {
+            fetchBookingAndProviderDetails();
+            return;
+        }
+
+        const revealDelay = 400; // ✅ AJUSTADO: Aumentado para 400ms (era 300) — dá tempo pro cupom animar após fetch
 
         const entryAnimation = Animated.parallel([
             Animated.timing(contentOpacity, {
@@ -378,14 +408,19 @@ export default function SuccessScreen() {
     }, [fetchBookingAndProviderDetails]);
 
     const handleGoToBookings = useCallback(() => {
+        // ✅ Haptics: Feedback tátil em CTA principal
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         router.replace({ pathname: '/(client)/bookings', params: { highlightNew: true } } as any);
     }, [router]);
 
     const handleGoHome = useCallback(() => {
+        // ✅ Haptics: Feedback tátil em CTA principal
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         router.replace('/(client)/explore' as any);
     }, [router]);
 
     const handleAddToCalendar = useCallback(async () => {
+        // ✅ A11y: Role e hint para acessibilidade
         if (!booking) {
             NotificationUIService.showError("Informações do agendamento não carregadas para adicionar ao calendário.", "Erro");
             return;
@@ -417,6 +452,8 @@ export default function SuccessScreen() {
                     alarms: [{ relativeOffset: -60 }],
                 });
                 NotificationUIService.showSuccess('Agendamento adicionado ao seu calendário.', 'Sucesso!');
+                // ✅ Haptics: Feedback de sucesso
+                await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             } else {
                 NotificationUIService.showInfo("Não foi possível adicionar ao calendário sem permissão. Por favor, conceda acesso nas configurações do seu dispositivo.", "Permissão Negada");
             }
@@ -427,10 +464,13 @@ export default function SuccessScreen() {
     }, [booking]);
 
     const handleContactProvider = useCallback(() => {
+        // ✅ A11y: Role e hint para botão de chat
         if (!booking?.providerId || !booking?.providerFullName) { // Adicionada validação para booking?.providerId
             NotificationUIService.showError("ID ou nome do prestador não disponível para iniciar o chat.", "Erro");
             return;
         }
+        // ✅ Haptics: Feedback tátil em CTA de contato
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         router.push({
             pathname: '/(client)/messages/[chatId]',
             params: {
@@ -447,6 +487,8 @@ export default function SuccessScreen() {
             try {
                 await Clipboard.setStringAsync(pixChargeDetails.brCode);
                 NotificationUIService.showInfo('Cole no seu aplicativo bancário para finalizar o pagamento.', 'Código PIX copiado!');
+                // ✅ Haptics: Feedback de seleção/cópia
+                await Haptics.selectionAsync();
             } catch (error) {
                 console.error("Erro ao copiar código PIX:", error);
                 NotificationUIService.showError('Não foi possível copiar o código PIX.', 'Erro');
@@ -457,6 +499,8 @@ export default function SuccessScreen() {
     }, [pixChargeDetails]);
 
     const handleRebookNow = useCallback((code: string) => {
+        // ✅ Haptics: Feedback tátil em rebook (premium CTA)
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         router.push({
             pathname: '/(client)/schedule-service',
             params: { couponCode: code }
@@ -465,6 +509,8 @@ export default function SuccessScreen() {
     }, [router]);
 
     const handleGoToMission = useCallback(() => {
+        // ✅ Haptics: Feedback tátil em missão
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         router.push('/(client)/missions' as any);
         setShowMissionReminderCard(false);
     }, [router]);
@@ -574,7 +620,7 @@ export default function SuccessScreen() {
                             />
 
                             {showReturnCouponCard && returnCouponDetails && (
-    <View style={[styles.sectionSpacer, { marginTop: 0, marginBottom: 8 }]}> {/* ✅ FIX: marginTop: 0 zera gap com PIX; marginBottom: 8 para gap controlado abaixo */}
+    <View key={showReturnCouponCard ? 'coupon-shown' : 'coupon-hidden'} style={[styles.sectionSpacer, { marginTop: 0, marginBottom: 20 }]}> {/* ✅ FIX: Key força re-mount/animação quando estado muda; marginBottom 20px */}
         <ReturnCouponCard
             code={returnCouponDetails.code}
             title={returnCouponDetails.title}
