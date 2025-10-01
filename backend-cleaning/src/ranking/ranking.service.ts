@@ -17,6 +17,7 @@ export class RankingService {
   /**
    * Calcula o score de ranking de um provedor com base em múltiplos fatores.
    * Esta é a fórmula central de ranking.
+   * NOVO: Incluídos acceptanceRate e averageResponseTime no score (alinhado com relatório).
    * @param provider O objeto ProviderWithCalculatedRating.
    * @returns O score de ranking calculado.
    */
@@ -26,24 +27,24 @@ export class RankingService {
     const share5Star_norm = provider.reviewCount > 0 ? provider.fiveStarReviewCount / provider.reviewCount : 0;
     const recency_norm = 1.0; // Placeholder, exigiria lógica de data do último booking/review
     const distance_norm = provider.distance ? Math.min(provider.distance / 50, 1) : 0; // Normaliza distância (ex: até 50km)
-    const acceptanceRate_norm = provider.acceptanceRate / 100; // Normaliza de 0 a 1
-    const avgResponseTime_norm = provider.averageResponseTime ? Math.min(provider.averageResponseTime / 60, 1) : 1; // Normaliza tempo de resposta (ex: até 60min)
+    const acceptanceRate_norm = (provider.acceptanceRate || 0) / 100; // NOVO: Normaliza de 0 a 1 (padrão 0 se nulo)
+    const avgResponseTime_norm = (provider.averageResponseTime || 60) ? Math.min((provider.averageResponseTime || 60) / 60, 1) : 1; // NOVO: Normaliza tempo de resposta (padrão 60min se nulo)
 
     // Boosts de gamificação (já incluído no provider.rankingBoostScore)
     const boosts_gamificacao = provider.rankingBoostScore || 0;
 
-    // Fórmula de score:
-    // score = 0.35·rating_norm + 0.2·share5⭐ + 0.15·recency_norm + 0.15·(1 - distance_norm) + 0.1·acceptanceRate + 0.05·(1/avgResponseTime_norm) + boosts_gamificação
-    // Nota: (1/avgResponseTime_norm) pode ser problemático se avgResponseTime_norm for 0. Usar (1 - avgResponseTime_norm) ou uma função inversa mais robusta.
-    // Usando (1 - avgResponseTime_norm) para simplicidade e garantir que quanto menor o tempo, maior o score.
+    // Fórmula de score (atualizada com novos pesos para métricas):
+    // score = 0.30·rating_norm + 0.15·share5⭐ + 0.15·recency_norm + 0.15·(1 - distance_norm) + 0.15·acceptanceRate_norm + 0.05·(1 - avgResponseTime_norm) + 0.05·badges_bonus + boosts_gamificação
+    let badges_bonus = (provider.badges?.length || 0) * 0.02; // NOVO: Bônus por badges (ex.: 0.02 por badge)
 
     let score =
-      0.35 * rating_norm +
-      0.2 * share5Star_norm +
+      0.30 * rating_norm +
+      0.15 * share5Star_norm +
       0.15 * recency_norm +
       0.15 * (1 - distance_norm) +
-      0.1 * acceptanceRate_norm +
-      0.05 * (1 - avgResponseTime_norm) + // Quanto menor o tempo, maior (1-x)
+      0.15 * acceptanceRate_norm + // NOVO: Peso para aceitação
+      0.05 * (1 - avgResponseTime_norm) + // NOVO: Peso para resposta (quanto menor, maior score)
+      0.05 * badges_bonus + // NOVO: Bônus por badges
       boosts_gamificacao;
 
     // Garantir que o score não seja negativo
@@ -54,10 +55,11 @@ export class RankingService {
 
   /**
    * Obtém o ranking de provedores para uma determinada localização e critério.
+   * NOVO: Inclui novos campos no mapeamento (acceptanceRate, averageResponseTime, nextAvailable, badges).
    * @param latitude Latitude da localização central.
    * @param longitude Longitude da localização central.
    * @param radius Raio em KM para a busca.
-   * @param sortBy Critério de ordenação (e.g., Rating, Experience, Distance).
+   * @param sortBy Critério de ordenação (e.g., Rating, Experience, Distance, novos como AcceptanceRate).
    * @param limit Limite de resultados.
    */
   async getProviderRanking(
@@ -79,7 +81,7 @@ export class RankingService {
       offset: 0,
     });
 
-    // Calcular o score para cada provedor
+    // Calcular o score para cada provedor (atualizado com novos fatores)
     const providersWithScore = providers.map(p => ({
       provider: p,
       score: this.calculateProviderScore(p),
@@ -91,7 +93,7 @@ export class RankingService {
     // Aplicar o limite final
     const finalRankedProviders = providersWithScore.slice(0, limit);
 
-    // Mapear para o DTO de Ranking
+    // Mapear para o DTO de Ranking (inclui novos campos opcionais)
     return finalRankedProviders.map((entry, index) => ({
       providerId: entry.provider.id,
       fullName: entry.provider.fullName,
@@ -101,6 +103,12 @@ export class RankingService {
       position: index + 1,
       distance: entry.provider.distance,
       yearsOfExperience: entry.provider.yearsOfExperience,
+      // NOVOS CAMPOS OPCIONAIS (alinhado com relatório)
+      verificationStatus: entry.provider.verificationStatus,
+      acceptanceRate: entry.provider.acceptanceRate,
+      averageResponseTime: entry.provider.averageResponseTime,
+      nextAvailable: entry.provider.nextAvailable,
+      badges: entry.provider.badges,
       // Telemetria: provider_ranked
       // this.logger.log(`[TELEMETRY] provider_ranked: { providerId: ${entry.provider.id}, position: ${index + 1}, score: ${entry.score.toFixed(2)} }`);
     }));
@@ -108,6 +116,7 @@ export class RankingService {
 
   /**
    * Obtém a posição de um provedor específico no ranking.
+   * NOVO: Inclui novos campos no retorno.
    * @param providerId ID do provedor.
    * @param latitude Latitude da localização central.
    * @param longitude Longitude da localização central.
@@ -133,7 +142,7 @@ export class RankingService {
     return {
       position: providerEntry ? providerEntry.position : null,
       totalProvidersInRanking: allRankedProviders.length,
-      currentProviderData: providerEntry,
+      currentProviderData: providerEntry, // Inclui novos campos se disponível
     };
   }
 
