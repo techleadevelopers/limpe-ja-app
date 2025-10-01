@@ -145,6 +145,12 @@ export const styles = StyleSheet.create({
     color: AppColors.textAuxiliary, // Usando AppColors
     marginLeft: 5,
   },
+  // ESTILO ADICIONADO PARA O SEPARADOR DE DISTÂNCIA
+  locationDot: {
+    fontSize: 14.5, 
+    color: AppColors.textAuxiliary,
+    marginHorizontal: 4, 
+  },
   priceTextWhiteCard: {
     fontSize: 21,
     fontWeight: '700',
@@ -176,14 +182,15 @@ export const styles = StyleSheet.create({
     
   },
 
+  // MODIFICAÇÃO: Container dos InfoChips alinhado horizontalmente (melhorado)
   infoChipsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 4,
+    flexDirection: 'row', // Horizontal
+    justifyContent: 'flex-start', // Alinhado à esquerda para melhor distribuição
+    flexWrap: 'wrap', // Quebra linha se necessário
+    gap: 8, // Aumentado para melhor espaçamento horizontal
     marginBottom: 5,
     marginTop: -10,
-    paddingHorizontal: 10,
-    
+    paddingHorizontal: 10, // Padding para centralizar no card
   },
   infoChip: {
     flexDirection: 'row',
