@@ -44,12 +44,12 @@ const styles = StyleSheet.create({
   notesInput: {
     backgroundColor: AppColors.white, // Usando AppColors
     padding: 15,
-    borderRadius: 12,
+    borderRadius: 12, // ✅ PRESERVADO: Borda 12 para coerência premium
     borderWidth: 1,
     borderColor: AppColors.borderNeutral, // Usando AppColors
     minHeight: 100,
     textAlignVertical: 'top',
-    fontSize: 14,
+    fontSize: 14, // ✅ PRESERVADO: Fonte 14 para conforto
     fontFamily: 'Montserrat-Regular',
     color: AppColors.textBody, // Usando AppColors
   },
