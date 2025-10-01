@@ -8,7 +8,7 @@ import { ProviderDisplayInfo, ProviderReview } from '../../../../types/backend/p
 import { VerificationStatus } from '../../../../types/backend/auth';
 
 import ActionButtons from './ActionButtons';
-import InfoChip from './InfoChip';
+import InfoChip from './InfoChip'; // Importa o InfoChip
 import ReviewCard from './ReviewCard';
 import StarRating from './StarRating';
 
@@ -22,34 +22,41 @@ const OverviewContent: React.FC<OverviewContentProps> = ({ provider, providerMet
 
   return (
     <View style={styles.tabContentContainer}>
+      {/* O bloco robustStarContainer aqui está com estilos que parecem ser de um arquivo de estilos diferente (providerStyles.ts)
+          e não é o mesmo que o cabeçalho principal, mas manteremos o tamanho 20. */}
       <View style={styles.robustStarContainer}>
         <StarRating rating={provider.averageRating} size={20} color="#4A90E2" />
         <Text style={styles.robustReviewsText}>({provider.reviewCount} {t('provider_details.reviews_count_short')})</Text>
       </View>
 
+      {/* CORREÇÃO 5: Usando InfoChip com prop compact */}
       <View style={styles.infoChipsContainer}>
         {provider.yearsOfExperience !== undefined && provider.yearsOfExperience !== null && (
           <InfoChip
-            icon3DName="experience"
+            iconName="hourglass-outline" // Usando ícone Ionicons (assumindo que o componente InfoChip foi atualizado para usar iconName)
             text={t('provider_details.years_experience', { count: provider.yearsOfExperience })}
+            compact
           />
         )}
         {provider.verificationStatus === VerificationStatus.APPROVED && (
           <InfoChip
-            icon3DName="facial"
+            iconName="shield-checkmark-outline" // Usando ícone Ionicons
             text={t('provider_details.verified')}
+            compact
           />
         )}
         {providerMetrics?.acceptanceRate !== undefined && (
           <InfoChip
-            icon3DName="check"
+            iconName="checkmark-done-circle-outline" // Usando ícone Ionicons
             text={`${t('metrics.acceptance_rate')}: ${providerMetrics.acceptanceRate}%`}
+            compact
           />
         )}
         {providerMetrics?.avgResponseTime !== undefined && (
           <InfoChip
-            icon3DName="time"
+            iconName="time-outline" // Usando ícone Ionicons
             text={`${t('metrics.avg_response_time')}: ${providerMetrics.avgResponseTime} ${t('metrics.minutes_short')}`}
+            compact
           />
         )}
       </View>
