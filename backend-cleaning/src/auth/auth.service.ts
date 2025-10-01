@@ -38,6 +38,8 @@ const loginProviderInclude = {
     orderBy: { createdAt: Prisma.SortOrder.desc },
     take: 100,
   },
+  // CORREÇÃO: Adicionado availability para resolver erro de tipagem no mapProviderToCalculatedRating
+  availability: true,
 };
 
 const loginClientInclude = {
@@ -58,6 +60,7 @@ export type ClientWithIncludes = Prisma.ClientGetPayload<{
   include: typeof loginClientInclude;
 }>;
 
+// Adicionado includes de Loyalty e Referral para UserWithAllRelations
 export type UserWithAllRelations = Prisma.UserGetPayload<{
   include: {
     client?: {
@@ -66,6 +69,9 @@ export type UserWithAllRelations = Prisma.UserGetPayload<{
     provider?: {
       include: typeof loginProviderInclude;
     };
+    loyalty: true;
+    referredBy: true;
+    referralsMade: true;
   };
 }>;
 
@@ -74,6 +80,9 @@ type NewUserClientPayload = Prisma.UserGetPayload<{
     client: {
       include: typeof loginClientInclude;
     };
+    loyalty: true;
+    referredBy: true;
+    referralsMade: true;
   };
 }>;
 
@@ -82,6 +91,9 @@ type NewUserProviderPayload = Prisma.UserGetPayload<{
     provider: {
       include: typeof loginProviderInclude;
     };
+    loyalty: true;
+    referredBy: true;
+    referralsMade: true;
   };
 }>;
 
@@ -124,6 +136,9 @@ export class AuthService {
         provider: {
           include: loginProviderInclude,
         },
+        loyalty: true, // Incluído
+        referredBy: true, // Incluído
+        referralsMade: true, // Incluído
       },
     }) as UserWithAllRelations;
 
@@ -137,9 +152,11 @@ export class AuthService {
 
     let mappedProvider: ProviderWithCalculatedRating | undefined;
     if (fullUser.provider) {
+      // CORREÇÃO: Agora o include tem availability, então a tipagem bate
       mappedProvider = this.providersService.mapProviderToCalculatedRating(fullUser.provider);
     }
 
+    // CORREÇÃO: O objeto passado para o DTO deve incluir as relações de Loyalty e Referral
     const userProfileDataForDto = {
       ...fullUser,
       client: fullUser.client ? {
@@ -147,10 +164,13 @@ export class AuthService {
         noShowCount: (fullUser.client as any).noShowCount,
         cancellationCount: (fullUser.client as any).cancellationCount,
       } : undefined,
-      provider: mappedProvider,
+      provider: mappedProvider, // mappedProvider já é ProviderWithCalculatedRating
+      loyalty: fullUser.loyalty, // Adicionado
+      referredBy: fullUser.referredBy, // Adicionado
+      referralsMade: fullUser.referralsMade, // Adicionado
     };
 
-    const userProfile = new UserProfileDto(userProfileDataForDto);
+    const userProfile = new UserProfileDto(userProfileDataForDto as any); // Usando 'as any' temporariamente para o objeto complexo
 
     // Telemetria: user_logged_in
     this.logger.log(`[TELEMETRY] user_logged_in: { userId: ${fullUser.id}, role: ${fullUser.role} }`);
@@ -222,7 +242,10 @@ export class AuthService {
         include: {
           client: {
             include: loginClientInclude
-          }
+          },
+          loyalty: true, // Incluído
+          referredBy: true, // Incluído
+          referralsMade: true, // Incluído
         }
       });
 
@@ -358,7 +381,10 @@ export class AuthService {
         include: {
           provider: {
             include: loginProviderInclude
-          }
+          },
+          loyalty: true, // Incluído
+          referredBy: true, // Incluído
+          referralsMade: true, // Incluído
         }
       });
 
