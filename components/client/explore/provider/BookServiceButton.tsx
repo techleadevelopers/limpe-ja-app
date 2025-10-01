@@ -33,7 +33,7 @@ const BookServiceButton: React.FC<BookServiceButtonProps> = ({
         colors={['#A8D8FF', '#4A90E2']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
-        style={localStyles.bookServiceButtonGradient}
+        style={localStyles.bookServiceButtonGradient} // Aplicando a sombra aqui
       >
         <TouchableOpacity
           style={localStyles.bookServiceButton}
@@ -70,9 +70,15 @@ const localStyles = StyleSheet.create({
   },
   bookServiceButtonGradient: {
     borderRadius: 12,
+    // CORREÇÃO 2: Adicionando sombra sutil
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 3,
   },
   bookServiceButton: {
-    paddingVertical: 15,
+    paddingVertical: 16, // +1dp (Corrigido para 16)
     borderRadius: 12,
     flexDirection: 'row',
     justifyContent: 'center',
