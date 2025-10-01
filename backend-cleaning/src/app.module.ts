@@ -4,7 +4,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './prisma/prisma.module';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config'; // Mantenha para injeção em forRootAsync
 import { UsersModule } from './users/users.module';
 import { ProvidersModule } from './providers/providers.module';
 import { ClientsModule } from './clients/clients.module';
@@ -17,13 +17,11 @@ import { ChatModule } from './chat/chat.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { OffersModule } from './offers/offers.module';
 import { PaymentsModule } from './payments/payments.module';
-import { SearchModule }  from './search/search.module';
+import { SearchModule } from './search/search.module';
 import { VerificationModule } from './verification/verification.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { EarningsModule } from './earnings/earnings.module';
 import { FaqsModule } from './faqs/faqs.module';
-import configuration from './config/configuration';
-import { validationSchema } from './config/validation-schema';
 import { QueuesModule } from './queues/queues.module';
 import { CacheModule } from './cache/cache.module';
 import { ReferralsModule } from './referrals/referrals.module';
@@ -34,6 +32,9 @@ import { CouponsModule } from './coupons/coupons.module';
 import { GuaranteeModule } from './guarantee/guarantee.module';
 import { PricingModule } from './pricing/pricing.module';
 import { GeocodingModule } from './geocoding/geocoding.module';
+
+// NOVO: Import do ConfigModule customizado (centraliza configuration e validationSchema)
+import { ConfigModule as CustomConfigModule } from './config/config.module';
 
 // Sentry
 import { SentryModule } from '@sentry/nestjs/setup';
@@ -55,37 +56,37 @@ import { BullModule } from '@nestjs/bull'; // Importar BullModule para configura
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-      load: [configuration],
-      validationSchema,
-      validationOptions: {
-        allowUnknown: true,
-        abortEarly: true,
-      },
-    }),
+    // NOVO: Use o ConfigModule customizado (substitui o forRoot direto)
+    CustomConfigModule,
+
+    // ThrottlerModule ajustado para usar as configs de configuration.ts
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         throttlers: [{
-          ttl: config.get<number>('THROTTLE_TTL', 60) * 1000,
-          limit: config.get<number>('THROTTLE_LIMIT', 10),
+          ttl: config.get<number>('throttle.ttl', 60) * 1000, // Ajustado: throttle.ttl (de configuration.ts)
+          limit: config.get<number>('throttle.limit', 10),     // Ajustado: throttle.limit (de configuration.ts)
         }],
       }),
     }),
+
+    // SentryModule (pode injetar config se necessário: dsn: config.get('sentry.dsn'))
     SentryModule.forRoot(),
-    // NOVO: Configuração do BullModule para a fila de suporte
+
+    // NOVO: Configuração do BullModule para a fila de suporte (ajustado para redis.url)
     BullModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        redis: configService.get<string>('REDIS_URL'),
+        redis: configService.get<string>('redis.url'), // Ajustado: redis.url (de configuration.ts)
       }),
     }),
     BullModule.registerQueue({
       name: 'support-escalations', // Nome da fila para o módulo de suporte
     }),
+
+    // Todos os outros módulos permanecem iguais
     PrismaModule,
     AuthModule,
     UsersModule,
