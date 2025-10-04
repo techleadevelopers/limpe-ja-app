@@ -1,5 +1,5 @@
 // LimpeJaApp/services/guaranteeService.ts
-import api from './api'; // Assuming you have an api.ts for Axios instance
+import { api } from './api'; // Assuming you have an api.ts for Axios instance
 import { SubmitClaimDto, GuaranteeClaim } from '../types/backend/guarantee';
 
 export const submitClaim = async (data: SubmitClaimDto): Promise<GuaranteeClaim> => {
