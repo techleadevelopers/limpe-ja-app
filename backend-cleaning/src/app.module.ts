@@ -1,5 +1,5 @@
 // src/app.module.ts
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -22,7 +22,6 @@ import { VerificationModule } from './verification/verification.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { EarningsModule } from './earnings/earnings.module';
 import { FaqsModule } from './faqs/faqs.module';
-import { QueuesModule } from './queues/queues.module';
 import { CacheModule } from './cache/cache.module';
 import { ReferralsModule } from './referrals/referrals.module';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -30,7 +29,7 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { SafetyModule } from './safety/safety.module';
 import { CouponsModule } from './coupons/coupons.module';
 import { GuaranteeModule } from './guarantee/guarantee.module';
-import { PricingModule } from './pricing/pricing.module';
+import { PricingModule } from './pricing/pricing.module';\nimport { PayoutsModule } from './payouts/payouts.module';
 import { GeocodingModule } from './geocoding/geocoding.module';
 
 // NOVO: Import do ConfigModule customizado (centraliza configuration e validationSchema)
@@ -52,7 +51,12 @@ import { DisputeModule } from './disputes/dispute.module';
 import { LocksModule } from './common/locks/locks.module'; // NOVO: Módulo de Lock Distribuído
 import { MetricsModule } from './metrics/metrics.module'; // NOVO: Módulo de Métricas
 import { SupportModule } from './support/support.module'; // NOVO: Módulo de Suporte
-import { BullModule } from '@nestjs/bull'; // Importar BullModule para configurar filas
+
+// NOVO: Import do AdminModule (ajuste o path se necessário)
+import { AdminModule } from './admin/admin.module';
+
+// Import do QueuesModule SEM forwardRef no import (forwardRef é de common)
+import { QueuesModule } from './queues/queues.module';
 
 @Module({
   imports: [
@@ -61,7 +65,7 @@ import { BullModule } from '@nestjs/bull'; // Importar BullModule para configura
 
     // ThrottlerModule ajustado para usar as configs de configuration.ts
     ThrottlerModule.forRootAsync({
-      imports: [ConfigModule],
+      imports: [CustomConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         throttlers: [{
@@ -71,26 +75,18 @@ import { BullModule } from '@nestjs/bull'; // Importar BullModule para configura
       }),
     }),
 
-    // SentryModule (pode injetar config se necessário: dsn: config.get('sentry.dsn'))
+    // FIX DEFINITIVO Sentry: Use forRoot() SEM ARGUMENTOS (resolve "propriedade não existe" e "0 args esperados")
+    // Sentry auto-detecta DSN de SENTRY_DSN no .env (validado pelo CustomConfigModule)
+    // Se precisar de configs extras, adicione manualmente no main.ts ou atualize pacote
     SentryModule.forRoot(),
 
-    // NOVO: Configuração do BullModule para a fila de suporte (ajustado para redis.url)
-    BullModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        redis: configService.get<string>('redis.url'), // Ajustado: redis.url (de configuration.ts)
-      }),
-    }),
-    BullModule.registerQueue({
-      name: 'support-escalations', // Nome da fila para o módulo de suporte
-    }),
+    // REMOVIDO: BullModule duplicado – QueuesModule já configura forRootAsync com redis.url de config
 
-    // Todos os outros módulos permanecem iguais
+    // Todos os outros módulos permanecem iguais (com forwardRef onde necessário para circular deps)
     PrismaModule,
     AuthModule,
     UsersModule,
-    ProvidersModule,
+    forwardRef(() => ProvidersModule), // ForwardRef para Providers se houver circular com Queues/Verification
     ClientsModule,
     ServicesModule,
     ProviderServicesModule,
@@ -100,13 +96,13 @@ import { BullModule } from '@nestjs/bull'; // Importar BullModule para configura
     ChatModule,
     NotificationsModule,
     OffersModule,
-    PaymentsModule,
+    PaymentsModule,\n    PayoutsModule,
     SearchModule,
     VerificationModule,
     DashboardModule,
     EarningsModule,
     FaqsModule,
-    QueuesModule,
+    forwardRef(() => QueuesModule), // forwardRef direto de common
     CacheModule,
     ReferralsModule,
     SubscriptionsModule,
@@ -119,6 +115,8 @@ import { BullModule } from '@nestjs/bull'; // Importar BullModule para configura
     RankingModule,
     MissionsModule,
     DisputeModule,
+    // NOVO: Inclusão do AdminModule
+    AdminModule,
     // NOVO: Inclusão dos novos módulos
     LocksModule,
     MetricsModule,
