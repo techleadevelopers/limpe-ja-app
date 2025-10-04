@@ -8,7 +8,7 @@ import {
     SubmitCpfRequest,
     VerificationResponse,
 } from '../types/backend/verification';
-import api from './api';
+import { api } from './api';
 import uploadService from './uploadService';
 import { UploadResponseDto } from '../types/backend/upload';
 import * as FileSystem from 'expo-file-system';
