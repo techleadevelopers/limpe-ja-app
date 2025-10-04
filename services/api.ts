@@ -1,4 +1,4 @@
-import axios, { AxiosError, AxiosRequestConfig } from 'axios';
+ï»¿import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import Toast from 'react-native-toast-message';
@@ -20,8 +20,8 @@ const API_BASE_URL =
   'http://localhost:3000';
 
 if (!API_BASE_URL) {
-  console.error('backendApiUrl não está definido. Verifique sua configuração.');
-  Sentry.captureMessage('backendApiUrl não está definido!', 'fatal');
+  console.error('backendApiUrl nÃ£o estÃ¡ definido. Verifique sua configuraÃ§Ã£o.');
+  Sentry.captureMessage('backendApiUrl nÃ£o estÃ¡ definido!', 'fatal');
 }
 
 export const api = axios.create({
@@ -42,6 +42,9 @@ const IDEMP_PATHS = [
   '/payments/intent',
   '/support/tickets',
   '/providers/me/availability',
+  '/payments/withdrawal',
+  '/providers/me/earnings/withdrawal',
+  '/payouts/withdrawals',
 ];
 
 const createRandomId = () => {
@@ -92,7 +95,7 @@ const buildUnifiedError = (error: AxiosError) => {
     messageKey: responseData.messageKey ?? 'errors.network.retry_saved',
     message:
       responseData.message ??
-      'We couldn’t complete this now. Your progress is safe; try again.',
+      'We couldnâ€™t complete this now. Your progress is safe; try again.',
     requestId: responseData.requestId ?? error.response?.headers?.['x-request-id'],
     fieldErrors: responseData.fieldErrors ?? null,
   };
@@ -156,3 +159,4 @@ export async function fetchApi<T = unknown>(path: string, init?: AxiosRequestCon
   const response = await api.request({ url: path, ...(init ?? {}) });
   return response.data as T;
 }
+
