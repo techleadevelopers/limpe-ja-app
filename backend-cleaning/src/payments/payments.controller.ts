@@ -1,8 +1,9 @@
 // src/payments/payments.controller.ts
-import { Controller, Post, Body, UseGuards, Req, HttpCode, HttpStatus, Logger, InternalServerErrorException } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Req, Param, HttpCode, HttpStatus, Logger, InternalServerErrorException, Headers } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PaymentsService } from './payments.service';
 import { CreatePixChargeDto, PixChargeResponseDto } from './dto/create-pix-charge.dto';
+import { PaymentIntentResponseDto } from './dto/payment-intent-response.dto';
 import { RequestWithdrawalDto } from './dto/request-withdrawal.dto'; // DTO de saque atualizado
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request } from 'express';
@@ -68,7 +69,41 @@ export class PaymentsController {
    * Endpoint para um provedor solicitar um saque via PIX.
    * Requer autenticação de provedor.
    */
-  @Post('withdrawal')
+        @Get('intent/:bookingId')
+
+  @UseGuards(JwtAuthGuard)
+
+  @ApiBearerAuth()
+
+  @ApiOperation({ summary: 'Recupera o PaymentIntent associado a um agendamento' })
+
+  @ApiResponse({ status: HttpStatus.OK, description: 'PaymentIntent encontrado com sucesso.', type: PaymentIntentResponseDto })
+
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Booking ID inválido.' })
+
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Usuário não autorizado a visualizar o PaymentIntent.' })
+
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'PaymentIntent não encontrado.' })
+
+  async getPaymentIntent(
+
+    @Req() req: Request,
+
+    @Param('bookingId') bookingId: string,
+
+  ): Promise<PaymentIntentResponseDto> {
+
+    const requestUser = req.user as RequestUserPayload;
+
+    this.logger.log(`[PaymentsController] getPaymentIntent: Usuário ${requestUser.userId} consultando PaymentIntent para booking ${bookingId}.`);
+
+    return this.paymentsService.getPaymentIntentForBooking(bookingId, requestUser.userId);
+
+  }
+
+
+
+@Post('withdrawal')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
@@ -88,19 +123,20 @@ export class PaymentsController {
   async requestWithdrawal(
     @Req() req: Request,
     @Body() requestWithdrawalDto: RequestWithdrawalDto,
-  ): Promise<MessageResponseDto> {
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ) {
     const requestUser = req.user as RequestUserPayload;
     const providerId = requestUser.providerId;
 
-    this.logger.log(`[PaymentsController] requestWithdrawal: Recebida solicitação de saque. Provedor ID: ${providerId}`);
-    this.logger.debug(`[PaymentsController] requestWithdrawal: req.user payload: ${JSON.stringify(requestUser)}`);
+    this.logger.log([PaymentsController] requestWithdrawal: Recebida solicita��o de saque. Provedor ID: );
+    this.logger.debug([PaymentsController] requestWithdrawal: req.user payload: );
 
     if (!providerId) {
-      this.logger.error('[PaymentsController] requestWithdrawal: providerId não encontrado no token do usuário. Payload:', requestUser);
-      throw new InternalServerErrorException('ID do provedor não disponível no token de autenticação.');
+      this.logger.error('[PaymentsController] requestWithdrawal: providerId nao encontrado no token do usu�rio. Payload:', requestUser);
+      throw new InternalServerErrorException('ID do provedor nao dispon�vel no token de autentica��o.');
     }
 
-    return this.paymentsService.requestWithdrawal(providerId, requestWithdrawalDto);
+    return this.paymentsService.requestWithdrawal(providerId, requestWithdrawalDto, idempotencyKey);
   }
 
   /**
@@ -140,16 +176,13 @@ export class PaymentsController {
   })
   @ApiResponse({ status: HttpStatus.OK, description: 'Webhook de saque recebido e processado com sucesso (ou erro logado internamente).' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Dados do webhook inválidos.' })
-  async handleWithdrawalWebhook(@Body() webhookData: any): Promise<MessageResponseDto> {
-    this.logger.log('Recebendo webhook de saque...');
-    this.logger.debug(`[PaymentsController] handleWithdrawalWebhook: Dados do webhook: ${JSON.stringify(webhookData)}`);
-    try {
-      const result = await this.paymentsService.handleWithdrawalWebhook(webhookData);
-      this.logger.log('[PaymentsController] handleWithdrawalWebhook: Webhook de saque processado com sucesso.');
-      return result;
-    } catch (error) {
-      this.logger.error('Erro inesperado no controller ao processar webhook de saque:', error.message, error.stack);
-      return { message: 'Erro interno ao processar webhook de saque, mas o erro foi logado.' };
-    }
+  async handleWithdrawalWebhook(
+    @Headers('x-signature') signature: string,
+    @Headers('x-event-id') eventId: string,
+    @Body() payload: any,
+  ) {
+    this.logger.log('[PaymentsController] handleWithdrawalWebhook: received event from PSP.');
+    return this.paymentsService.handleWithdrawalWebhook(signature, eventId, payload);
   }
 }
+
