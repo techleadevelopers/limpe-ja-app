@@ -24,7 +24,7 @@ import { RequestWithdrawalDto, PixKeyType } from '../../../types/backend/payment
 
 // 🔗 Importar serviços reais
 import { requestWithdrawal } from '../../../services/paymentService';
-import api from '../../../services/api';
+import { api } from '../../../services/api';
 import NotificationUIService from '../../../services/notificationUIService'; // Para toasts premium
 
 // ===== Design Tokens (Premium UI - Clean, iOS/Android consistente) =====
