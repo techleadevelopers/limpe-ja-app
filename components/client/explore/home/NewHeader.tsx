@@ -33,6 +33,11 @@ const NewHeader: React.FC<NewHeaderProps> = ({ userName, userAvatarUrl, userAddr
     // router.push('/(client)/notifications' as any); // Exemplo de navegação
   };
 
+  // NOVO: Função para lidar com o clique no ícone de categoria
+  const handleCategoryPress = () => {
+    router.push('/(client)/explore/menu' as any); // Navegação para a rota especificada
+  };
+
   // Define a fonte da imagem do avatar. Se userAvatarUrl for nulo ou indefinido, usa o avatar padrão.
   const avatarSource = userAvatarUrl
     ? { uri: userAvatarUrl }
@@ -40,7 +45,7 @@ const NewHeader: React.FC<NewHeaderProps> = ({ userName, userAvatarUrl, userAddr
 
   return (
     <LinearGradient
-      colors={['#a6abb213', '#a6abb213']} // Cores do gradiente, do lilás ao rosa suave
+      colors={['#9ebfec13', '#a6abb213']} // Cores do gradiente, do lilás ao rosa suave
       style={styles.container}
     >
       <View style={styles.leftContent}>
@@ -54,7 +59,7 @@ const NewHeader: React.FC<NewHeaderProps> = ({ userName, userAvatarUrl, userAddr
         </View>
       </View>
       <View style={styles.rightContent}>
-        <TouchableOpacity onPress={handleNotificationsPress} style={styles.notificationIconContainer}>
+        <TouchableOpacity onPress={handleCategoryPress} style={styles.notificationIconContainer}>
           {/* Alteração aqui: Substituindo Ionicons por Image */}
           <Image
             source={require('../../../../assets/images/3d/category2.png')}
@@ -73,7 +78,7 @@ const styles = StyleSheet.create({
   container: {
     // paddingTop ajustado para considerar a altura da barra de status do dispositivo
     // Reduzido o 40 para 30 para um cabeçalho um pouco menos alto
-    paddingVertical: Constants.statusBarHeight - 38, // PREMIUM: Inclui status bar no topo para fluxo seamless
+    paddingVertical: Constants.statusBarHeight - 28, // PREMIUM: Inclui status bar no topo para fluxo seamless
     left: 0,
     paddingHorizontal: 15,
     // REMOVIDO: Borda arredondada do cabeçalho (para unificação com ScrollView)
@@ -131,7 +136,7 @@ const styles = StyleSheet.create({
   // Inversão: UserName agora é um pouco MAIS FINO (Medium/SemiBold no iOS; Thin + 'bold' no Android)
   // Mesma família: Montserrat para ambos (variante mais leve que greeting)
   userNameText: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: Platform.select({
       ios: 'Montserrat-Regular', // Mais fina que ExtraBold (mas ainda bold leve) no iOS
       android: 'Montserrat-Thin' // Mantém base no Android
