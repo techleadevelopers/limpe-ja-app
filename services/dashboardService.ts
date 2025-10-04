@@ -1,7 +1,7 @@
 // app/services/dashboardService.ts
 
 import axios, { AxiosResponse } from 'axios';
-import api from './api'; // Importa a instância centralizada do Axios
+import { api } from './api'; // Importa a instância centralizada do Axios
 import { ProviderDashboard } from '../types/backend/providers'; // Importa a tipagem do DTO de resposta
 
 /**
