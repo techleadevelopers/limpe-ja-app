@@ -8,7 +8,7 @@ import { BookingsModule } from '../bookings/bookings.module';
 import { CouponsModule } from '../coupons/coupons.module';
 import { NotificationsModule } from '../notifications/notifications.module'; // NEW
 import { EmailModule } from '../email/email.module'; // NEW
-import { QueuesModule } from '../queues/queues.module'; // NEW
+import { QueuesModule } from '../queues/queues.module'; // NEW\nimport { PayoutsModule } from '../payouts/payouts.module';
 
 @Module({
   imports: [
