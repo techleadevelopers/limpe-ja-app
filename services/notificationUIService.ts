@@ -1,10 +1,13 @@
-// app/services/notificationUIService.ts
-import RNToast from 'react-native-toast-message'; // Renamed to avoid conflict with 'Toast' component
+﻿// app/services/notificationUIService.ts
+import RNToast from 'react-native-toast-message';
+import i18n from '../i18n';
 
 interface ToastOptions {
   type: 'success' | 'error' | 'info';
   title: string;
   message: string;
+  visibilityTime?: number;
+  position?: 'top' | 'bottom';
 }
 
 class NotificationUIService {
@@ -13,39 +16,55 @@ class NotificationUIService {
       type: options.type,
       text1: options.title,
       text2: options.message,
-      visibilityTime: 4000,
-      position: 'top', // Default position, can be overridden if needed
+      visibilityTime: options.visibilityTime ?? 4000,
+      position: options.position ?? 'top',
     });
   }
 
-  showSuccess(message: string, title: string = 'Sucesso!') {
+  showSuccess(message: string, title: string = i18n.t('common.success')) {
     this.show({ type: 'success', title, message });
   }
 
-  showInfo(message: string, title: string = 'Aviso') {
+  showInfo(message: string, title: string = i18n.t('common.info')) {
     this.show({ type: 'info', title, message });
   }
 
-  // Centralizes humanized error messages
-  showError(error: any, title: string = 'Ops! Algo deu errado.') {
-    let message = 'Por favor, verifique sua conexão e tente novamente.'; // Default message
-    
+  showError(error: unknown, title: string = i18n.t('common.error')) {
+    let message = i18n.t('errors.network.retry_saved');
+    let messageKey: string | undefined;
+    let status: number | undefined;
+
     if (typeof error === 'string') {
       message = error;
-    } else if (error?.response?.data?.message) {
-      // Handles backend-specific errors
-      message = error.response.data.message;
-    } else if (error instanceof Error) {
-      // General JavaScript errors
-      message = error.message;
+    } else if (error && typeof error === 'object') {
+      const anyError = error as Record<string, any>;
+      if (typeof anyError.messageKey === 'string') {
+        messageKey = anyError.messageKey;
+      }
+      if (anyError.response) {
+        status = anyError.response.status;
+        const data = anyError.response.data ?? {};
+        if (typeof data.messageKey === 'string') {
+          messageKey = data.messageKey;
+        }
+        if (typeof data.message === 'string') {
+          message = data.message;
+        }
+      }
+      if (anyError.message && typeof anyError.message === 'string') {
+        message = anyError.message;
+      }
     }
 
-    // Add a helpful suffix for critical errors
-    if (error?.response?.status >= 500) {
-      message += ' Se o problema persistir, entre em contato com o suporte. 😊';
+    const translated = messageKey ? i18n.t(messageKey, { defaultValue: message }) : message;
+    let finalMessage = translated || i18n.t('errors.network.retry_saved');
+
+    if (status && status >= 500) {
+      const supportCopy = i18n.t('errors.network.contact_support');
+      finalMessage = `${finalMessage} ${supportCopy}`.trim();
     }
 
-    this.show({ type: 'error', title, message });
+    this.show({ type: 'error', title, message: finalMessage });
   }
 }
 
