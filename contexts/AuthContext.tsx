@@ -167,11 +167,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signUpClient = async (data: RegisterClientDto) => {
     try {
       setIsLoading(true);
+      console.log('[AuthContext | signUpClient] Iniciando registro de cliente com dados:', { ...data, password: '***' });
       await authService.registerClient(data);
+      console.log('[AuthContext | signUpClient] Registro de cliente bem-sucedido. Fazendo login...');
       await login({ email: data.email, password: data.password });
-    } catch (error) {
-      console.error('[AuthContext | signUpClient] Erro no cadastro de cliente:', error);
-      throw error;
+      console.log('[AuthContext | signUpClient] Login após registro concluído.');
+    } catch (error: any) {
+      console.error('[AuthContext | signUpClient] Erro no cadastro de cliente:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      throw new Error(`Falha no registro: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -181,12 +188,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setIsLoading(true);
       setIsRegistrationInProgress(true);
+      console.log('[AuthContext | signUpProvider] Iniciando registro de provedor com dados:', { ...data, password: '***' }); // Log sem senha
       await authService.registerProvider(data);
+      console.log('[AuthContext | signUpProvider] Registro de provedor bem-sucedido. Fazendo login...');
       await login({ email: data.email, password: data.password });
-    } catch (error) {
-      console.error('[AuthContext | signUpProvider] Erro no cadastro de provedor:', error);
+      console.log('[AuthContext | signUpProvider] Login após registro concluído.');
+    } catch (error: any) {
+      console.error('[AuthContext | signUpProvider] Erro no cadastro de provedor:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        fullError: error
+      });
       setIsRegistrationInProgress(false);
-      throw error;
+      throw new Error(`Falha no registro: ${error.message}`); // Mensagem mais amigável para UI
     } finally {
       setIsLoading(false);
     }
