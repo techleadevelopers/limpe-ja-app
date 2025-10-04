@@ -231,6 +231,11 @@ export type DashboardMetrics = {
     totalRevenue: number;
     pendingVerifications: number;
 };
+export type RevenueTrendPoint = {
+    month: string;
+    revenue: number;
+};
+
 
 export type AuthUser = {
     id: string;
