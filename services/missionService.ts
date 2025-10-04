@@ -1,5 +1,5 @@
 // services/missionService.ts
-import api from './api';
+import { api } from './api';
 
 /** ==== Tipos (espelham o Prisma/backend) ==== */
 export enum MissionAudience {
