@@ -1,5 +1,5 @@
 import axios, { AxiosResponse, AxiosError } from 'axios';
-import api from './api';
+import { api } from './api';
 
 // IMPORTAR DTOs E TIPAGENS DO ARQUIVO CENTRALIZADO
 import { BookingDetails, BookingStatus, CreateBookingDto, UpdateBookingStatusDto } from '../types/backend/bookings'; // Certifique-se de que CreateBookingDto e BookingDetails estão atualizados
