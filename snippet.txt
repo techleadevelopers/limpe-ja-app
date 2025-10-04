@@ -1,0 +1,7 @@
+     });
+      this.logger.log(`[PaymentsService] createPixCharge - Transação local ${transaction.id} atualizada com gatewayTransactionId ${gatewayTransactionId}.`);
+
+
+      // Se houver um bookingId associado, atualize o status do agendamento para PENDING
+      if (bookingId) {
+        this
