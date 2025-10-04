@@ -1,10 +1,10 @@
-import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsString, IsNumber, Min } from 'class-validator';
 import { PixKeyType } from '@prisma/client';
 
 export class RequestWithdrawalDto {
-  @IsString()
-  @IsNotEmpty()
-  amount!: string;
+  @IsNumber()
+  @Min(0.01)
+  amount!: number;
 
   @IsString()
   @IsNotEmpty()
