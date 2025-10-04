@@ -4,6 +4,7 @@ import { Animated, Dimensions, Image, Platform, StyleSheet, Text, TouchableOpaci
 import { useTranslation } from 'react-i18next';
 
 import { ProviderDisplayInfo } from '../../../../types/backend/providers';
+import { useProviderMetrics } from '../../../../hooks/useProviderMetrics';
 import { PricingType } from '../../../../types/backend/services';
 import { Icons3D } from '../../../../constants/icons3d';
 // Importar os novos formatadores e helpers
@@ -22,6 +23,7 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(20)).current;
     const { t } = useTranslation();
+    const providerMetrics = useProviderMetrics(item.id);
 
     useEffect(() => {
         Animated.parallel([
@@ -215,9 +217,9 @@ const styles = StyleSheet.create({
     // REMOVIDO: absoluteLocation
     
     imageWrapper: {
-        width: 64, // Avatar maior: 64dp
-        height: 64, // Avatar maior: 64dp
-        borderRadius: 32,
+        width: 80, // Avatar maior: 64dp
+        height: 80, // Avatar maior: 64dp
+        borderRadius: 42,
         overflow: 'hidden',
         marginRight: 12,
         backgroundColor: '#E0E0E0',
@@ -283,6 +285,24 @@ const styles = StyleSheet.create({
     metricInlineLoc: {
         flexDirection: 'row',
         alignItems: 'center'
+    },
+    badgesRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        marginBottom: 6,
+    },
+    badge: {
+        backgroundColor: '#E8EEF8',
+        borderRadius: 12,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        marginRight: 6,
+        marginBottom: 6,
+    },
+    badgeText: {
+        fontSize: 10,
+        color: '#2C3E50',
+        fontWeight: '600',
     },
     // Fim dos estilos de métricas
 
