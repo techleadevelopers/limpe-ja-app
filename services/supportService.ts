@@ -1,7 +1,7 @@
 // LimpeJaApp/app/services/supportService.ts
 import axios from 'axios';
 import { SupportTicket, CreateTicketPayload, AddMessagePayload, SupportMessage } from '../types/backend/support';
-import api from './api'; // Importa a instância centralizada do Axios
+import { api } from './api'; // Importa a instância centralizada do Axios
 import Constants from 'expo-constants'; // Importar Constants para API_BASE_URL consistente
 
 // A API_BASE_URL deve ser carregada de Constants para consistência em produção
