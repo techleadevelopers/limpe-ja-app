@@ -96,11 +96,21 @@ export class PayoutsService {
         return newPayout;
       });
 
-      return {
+      const result = {
         message: 'Withdrawal request received and queued for processing.',
         payoutId: payout.id,
         status: payout.status,
       };
+      // Notificação de solicitado
+      try {
+        await this.queues.addNotificationJob('send-notification', {
+          userId,
+          type: 'WITHDRAWAL_REQUESTED',
+          message: `Solicitação de saque criada (R$ ${payout.amount.toFixed(2)}).`,
+          targetUrl: '/app/(provider)/earnings',
+        });
+      } catch {}
+      return result;
     } finally {
       await this.redisLock.releaseLock(lockKey, lockValue);
     }
@@ -206,6 +216,16 @@ export class PayoutsService {
         });
       }
     });
+    // Notificações básicas (via fila)
+    try {
+      const type = targetStatus === PayoutStatus.PAID ? 'WITHDRAWAL_PAID' : (targetStatus === PayoutStatus.FAILED || targetStatus === PayoutStatus.CANCELED) ? 'WITHDRAWAL_FAILED' : 'WITHDRAWAL_STATUS';
+      await this.queues.addNotificationJob('send-notification', {
+        userId: (await this.prisma.user.findUnique({ where: { id: (await this.prisma.user.findFirst({ where: { id: payout.userId } }))?.id || payout.userId }))?.id || payout.userId,
+        type,
+        message: `Saque ${targetStatus}.`,
+        targetUrl: '/app/(provider)/earnings',
+      });
+    } catch {}
   }
 
   private normalizeStatus(status: string | PayoutStatus): PayoutStatus {
