@@ -4,20 +4,32 @@ import { Image, StyleSheet, Text, View, Animated, Easing, Platform } from 'react
 import { renderStars } from '../../../../utils/ui-helpers'; // Assumindo que renderStars está aqui
 import { AppColors } from '../../../../constants/appStyles'; // Importe AppColors
 import { sanitizeText } from '../../../../utils/formatters'; // Importar sanitizeText
+import { useProviderMetrics } from '../../../../hooks/useProviderMetrics';
+
+interface ProviderMetrics {
+  acceptanceRate?: number | null;
+  averageResponseTime?: number | null;
+  badges?: string[];
+}
 
 interface ProviderInfoSectionProps {
+  providerId?: string;
   providerAvatarUrl?: string | null;
   providerFullName: string;
   providerRating?: number;
 }
 
 export default function ProviderInfoSection({
+  providerId,
   providerAvatarUrl,
   providerFullName,
   providerRating,
 }: ProviderInfoSectionProps) {
   const starSize = 15;
   const starColor = AppColors.primaryInteractive; // Usando AppColors para consistência
+
+  // Invocar o hook para obter as métricas do provedor
+  const providerMetrics: ProviderMetrics = useProviderMetrics(providerId);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const translateYAnim = useRef(new Animated.Value(20)).current;
@@ -65,8 +77,37 @@ export default function ProviderInfoSection({
         resizeMode="cover" // Garante que a imagem preencha o espaço sem distorcer
       />
       <View style={styles.providerHeaderText}>
-        <Text style={styles.providerNameText} numberOfLines={2} maxFontSizeMultiplier={1.2}>{sanitizeText(providerFullName)}</Text>
-        <Text style={styles.providerRoleText} maxFontSizeMultiplier={1.2}>Prestador(a) de Serviço</Text>
+        <Text style={styles.providerNameText} numberOfLines={2} maxFontSizeMultiplier={1.2}>
+          {sanitizeText(providerFullName)}
+        </Text>
+        <Text style={styles.providerRoleText} maxFontSizeMultiplier={1.2}>
+          Prestador(a) de Serviço
+        </Text>
+        {(providerMetrics.acceptanceRate != null ||
+          providerMetrics.averageResponseTime != null ||
+          (providerMetrics.badges && providerMetrics.badges.length > 0)) && (
+          <View style={styles.badgesRow}>
+            {providerMetrics.acceptanceRate != null && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>
+                  {`${providerMetrics.acceptanceRate}% aceitação`}
+                </Text>
+              </View>
+            )}
+            {providerMetrics.averageResponseTime != null && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>
+                  {`${providerMetrics.averageResponseTime} min resposta`}
+                </Text>
+              </View>
+            )}
+            {(providerMetrics.badges || []).slice(0, 2).map((badge: string, index: number) => (
+              <View key={index} style={styles.badge}>
+                <Text style={styles.badgeText}>{badge}</Text>
+              </View>
+            ))}
+          </View>
+        )}
       </View>
       {renderStars(providerRating, starSize, starColor, starColor)}
     </Animated.View>
@@ -101,5 +142,23 @@ const styles = StyleSheet.create({
   providerRoleText: {
     fontSize: 12,
     color: AppColors.textAuxiliary,
+  },
+  badgesRow: {
+    flexDirection: 'row',
+    marginTop: 4,
+    flexWrap: 'wrap',
+  },
+  badge: {
+    backgroundColor: AppColors.primaryInteractive,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    marginRight: 8,
+    marginBottom: 4,
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: 11,
+    fontWeight: '500',
   },
 });
