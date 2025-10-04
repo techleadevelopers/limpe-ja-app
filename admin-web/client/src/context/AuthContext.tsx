@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useLocation } from 'wouter'; // CORREÇÃO: useLocation no lugar de useNavigate
-import { login as apiLogin, logout as apiLogout } from '@/lib/api'; // Importa as funções de login/logout da API
+import { login as apiLogin, logout as apiLogout, setUnauthorizedHandler } from '@/lib/api'; // Importa as funções de login/logout da API
 import { AuthUser } from '@/lib/types'; // Importa AuthUser do types.ts
 
 // 1. Definição dos Tipos
@@ -59,6 +59,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     setIsLoading(false); // Finaliza o carregamento inicial.
   }, []); // Executa apenas uma vez na montagem do componente.
+
+  useEffect(() => {
+    const handleUnauthorized = async () => {
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('userData');
+      setUser(null);
+      setIsAuthenticated(false);
+      setIsLoading(false);
+      navigate('/login');
+    };
+
+    setUnauthorizedHandler(handleUnauthorized);
+    return () => setUnauthorizedHandler();
+  }, [navigate]);
 
   /**
    * Função para lidar com o processo de login.
@@ -126,3 +140,6 @@ export const useAuth = () => {
   }
   return context;
 };
+
+
+
