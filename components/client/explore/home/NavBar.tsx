@@ -21,8 +21,8 @@ const NavBar: React.FC<NavBarProps> = ({
   const navItems = [
     { name: 'Home', icon: 'home', route: '/(client)/explore' },
     { name: 'Cupons', icon: 'pricetag', route: '/(client)/coupons' },
-    { name: 'Booking', icon: 'calendar', route: '/(client)/booking' },
-    { name: 'Setting', icon: 'settings', route: '/(client)/settings' },
+    { name: 'Booking', icon: 'calendar', route: '/(client)/bookings' },
+    { name: 'Chat', icon: 'chatbubble', route: '/messages' },
     { name: 'Profile', icon: 'person', route: '/(client)/profile' },
   ];
 
