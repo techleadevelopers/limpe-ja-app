@@ -6,7 +6,7 @@ import { CreateAddressDto, RegisterProviderDto } from '../types/backend/auth';
 // Por exemplo:
 // import * as providerService from '../services/providerService';
 // Ou se você tiver uma instância global de axios/api configurada:
-// import api from '../utils/api';
+// import { api } from '../utils/api';
 
 // MOCK: Substitua isso pela sua implementação real de serviço de API para provedores
 const mockProviderService = {
