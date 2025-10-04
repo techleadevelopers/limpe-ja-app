@@ -28,7 +28,11 @@
       "minutes_short": "min",
       "na": "N/A",
       "area": "área",
-      "duration": "duração"
+      "duration": "duração",
+      "info": "Aviso",
+      "morning": "Manhã",
+      "afternoon": "Tarde",
+      "evening": "Noite"
     },
     "explore_section": {
       "title": "Explore mais Serviços"
@@ -55,9 +59,9 @@
       "coupon_applied_success": "Cupom aplicado! Você economizou {{value}}.",
       "title": "Ofertas",
       "expires_in_days": "Expira em {{count}} dias",
-      "rebook_now": "Agendar novamente",
-      "coupon_code_copied": "Código '{{code}}' copiado!",
-      "failed_to_copy_coupon": "Falha ao copiar o cupom.",
+      "rebook_now": "Agendar Agora",
+      "coupon_code_copied": "Código {{code}} copiado!",
+      "failed_to_copy_coupon": "Falha ao copiar. Tente manualmente.",
       "no_offers_available": "Nenhuma oferta disponível no momento"
     },
     "missions": {
@@ -75,7 +79,9 @@
     "metrics": {
       "acceptance_rate": "Taxa de Aceitação",
       "avg_response_time": "Tempo Médio de Resposta",
-      "minutes_short": "min"
+      "minutes_short": "min",
+      "acceptance_short": "Aceitação",
+      "response_short": "Resposta"
     },
     "safety": {
       "panic": {
@@ -159,6 +165,12 @@
       "error_fetching_slots": "Não foi possível carregar os horários disponíveis.",
       "unavailable_time_slot": "Horário Indisponível",
       "unavailable_time_slot_message": "Este horário já está agendado ou não disponível. Por favor, selecione outro.",
+      "show_unavailable": "Ver todos",
+      "details_title": "Detalhes do Serviço",
+      "notes_title": "Observações",
+      "floating_summary_accessibility": "Resumo do pedido, total R$ {{total}}",
+      "apply_coupon_accessibility": "Aplicar cupom de desconto",
+      "summary_accessibility": "Resumo do pedido, total R$ {{total}}",
       "select_date_time_address": "Selecione Data, Hora e Endereço",
       "available_times": "Horários disponíveis",
       "preferred_times": "Preferências de horário",
@@ -241,6 +253,46 @@
       "logout": "Sair da Conta",
       "logout_error": "Não foi possível sair da conta. Tente novamente ou verifique sua conexão.",
       "provider_not_authenticated": "Provedor não autenticado ou perfil não encontrado."
+    },
+    "errors": {
+      "network": {
+        "retry_saved": "Não conseguimos concluir agora. Salvamos seu progresso; tente novamente em instantes.",
+        "contact_support": "Se o problema persistir, fale com o suporte."
+      },
+      "cep": {
+        "lookup_failed": "Erro ao buscar CEP. Tente novamente."
+      }
+    },
+    "validation": {
+      "cpf": {
+        "required": "O CPF é obrigatório.",
+        "invalid": "CPF inválido. Verifique os dígitos."
+      },
+      "cep": {
+        "required": "O CEP é obrigatório.",
+        "invalid": "CEP inválido. Digite os 8 dígitos.",
+        "not_found": "CEP não encontrado. Verifique e tente novamente."
+      },
+      "pixKey": {
+        "required": "Informe sua chave PIX para receber.",
+        "invalid": "Chave PIX inválida. Revise o formato."
+      },
+      "step": {
+        "phone_cpf": "Por favor, preencha telefone e CPF corretamente.",
+        "name_email": "Por favor, preencha nome e e-mail corretamente."
+      },
+      "address": {
+        "incomplete": "Por favor, preencha todos os campos de endereço corretamente.",
+        "wait_lookup": "Aguarde a busca do CEP ser concluída."
+      }
+    },
+    "payments": {
+      "pix": {
+        "copy_success_title": "Código PIX copiado!",
+        "copy_success_message": "Cole no app do seu banco para finalizar o pagamento.",
+        "copy_error_title": "PIX indisponível",
+        "copy_error_message": "Nenhum código PIX disponível para copiar agora."
+      }
     }
   }
 }
