@@ -1,192 +1,158 @@
-import axios from 'axios';
-import type { AxiosRequestConfig } from 'axios';
+import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
-import Toast from 'react-native-toast-message'; // Importar Toast
-import i18n from '../i18n'; // Importar i18n
-import axiosRetry from 'axios-retry'; // NEW: Importar axios-retry
-import * as Sentry from '@sentry/react-native'; // NEW: Importar Sentry (assumindo que já está configurado)
+import Toast from 'react-native-toast-message';
+import i18n from '../i18n';
+import * as Sentry from '@sentry/react-native';
 
-// --- Início da nova lógica para callback de logout ---
+// --- Callback disparado em 401 ---
 type UnauthorizedHandler = (context: { originalRequest: AxiosRequestConfig }) => Promise<void>;
 let onUnauthorizedCallback: UnauthorizedHandler | null = null;
-
 export const setUnauthorizedCallback = (callback: UnauthorizedHandler) => {
-    onUnauthorizedCallback = callback;
+  onUnauthorizedCallback = callback;
 };
-// --- Fim da nova lógica para callback de logout ---
 
-// Acessa a URL do backend a partir do arquivo de configuração do Expo (app.config.ts)
-// Esta é a abordagem recomendada para ambientes de produção.
-const API_BASE_URL = Constants.expoConfig?.extra?.backendApiUrl as string;
-
-// Para facilitar a manutenção local, você pode comentar a linha acima
-// e descomentar a linha abaixo para apontar para um backend local.
-// const API_BASE_URL = 'http://127.0.0.1:3000';
+const API_BASE_URL =
+  Constants.expoConfig?.extra?.backendApiUrl ??
+  (globalThis as any)?.env?.EXPO_PUBLIC_API_BASE_URL ??
+  (globalThis as any)?.env?.VITE_API_BASE_URL ??
+  process.env.API_BASE_URL ??
+  'http://localhost:3000';
 
 if (!API_BASE_URL) {
-    console.error('backendApiUrl não está definido em app.json ou Constants.expoConfig.extra! Verifique sua configuração.');
-    // NEW: Captura o erro com Sentry se a URL base não estiver definida
-    Sentry.captureMessage('backendApiUrl não está definido!', 'fatal');
+  console.error('backendApiUrl n�o est� definido. Verifique sua configura��o.');
+  Sentry.captureMessage('backendApiUrl n�o est� definido!', 'fatal');
 }
 
-const api = axios.create({
-    baseURL: API_BASE_URL,
-    timeout: __DEV__ ? 30000 : 10000, // AUMENTADO: 30s em dev para folga em rede lenta; 10s em prod
-    headers: {
-        'Content-Type': 'application/json',
-    },
+export const api = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
-// NEW: Configuração de retry para requisições (com foco em timeouts/rede)
-axiosRetry(api, {
-    retries: 3, // Tenta 3 vezes
-    retryDelay: axiosRetry.exponentialDelay, // Aumenta o tempo de espera exponencialmente
-    retryCondition: (error) => {
-        // Retenta se for erro de rede, timeout, 429 ou 5xx
-        return axiosRetry.isNetworkError(error) ||
-               axiosRetry.isRetryableError(error) || // Erros 5xx, timeouts
-               error.response?.status === 429 ||
-               error.code === 'ECONNABORTED'; // Específico para timeouts
-    },
-    onRetry: (retryCount, error, requestConfig) => {
-        // Só loga se NÃO for silent (evita ruído no Metro)
-        const config = requestConfig as AxiosRequestConfig | undefined;
-        const silentHeader = config?.headers?.['x-silent'] || config?.headers?.['X-Silent'];
-        if (!silentHeader) {
-            console.warn(`[API Interceptor] Tentativa ${retryCount} para ${requestConfig.url} falhou: ${error.message}`);
-        }
-        // NEW: Captura a tentativa de retry com Sentry como um evento de aviso (sempre, para monitoramento)
-        Sentry.captureMessage(`Retry attempt ${retryCount} for ${requestConfig.url}`, 'warning');
-    },
-});
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const shouldRetry = (error: AxiosError) => !error.response || error.response.status >= 500;
+const IDEMP_PATHS = [
+  '/bookings',
+  '/missions/track',
+  '/missions/',
+  '/reviews',
+  '/payments/intent',
+  '/support/tickets',
+  '/providers/me/availability',
+];
 
-// Interceptor para adicionar o token JWT a cada requisição
-api.interceptors.request.use(
-    async (config) => {
-        const token = await AsyncStorage.getItem('auth_token');
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-    },
-    (error) => {
-        // NEW: Captura o erro na fase de requisição com Sentry (sempre, pois é request)
-        Sentry.captureException(error);
-        return Promise.reject(error);
+const createRandomId = () => {
+  try {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
     }
-);
+  } catch (_) {
+    // ignore
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+};
 
-// Interceptor de resposta para lidar com erros 401/403 de forma centralizada
+api.interceptors.request.use(async config => {
+  const cfg = config;
+  const token = await AsyncStorage.getItem('auth_token');
+  if (token) {
+    cfg.headers = cfg.headers ?? {};
+    cfg.headers.Authorization = `Bearer ${token}`;
+  }
+
+  const method = cfg.method?.toLowerCase();
+  if (method && ['post', 'put', 'patch'].includes(method)) {
+    const path = String(cfg.url ?? '');
+    if (IDEMP_PATHS.some(p => path.includes(p))) {
+      cfg.headers = cfg.headers ?? {};
+      cfg.headers['Idempotency-Key'] = cfg.headers['Idempotency-Key'] ?? createRandomId();
+    }
+  }
+
+  cfg.headers = cfg.headers ?? {};
+  cfg.headers['X-Client-Request-Id'] = createRandomId();
+  return cfg;
+});
+
+const errorBucket = new Map<string, number>();
+const shouldDedupe = (key: string) => {
+  const now = Date.now();
+  const last = errorBucket.get(key) ?? 0;
+  errorBucket.set(key, now);
+  return now - last < 30000;
+};
+
+const buildUnifiedError = (error: AxiosError) => {
+  const responseData: any = error.response?.data ?? {};
+  return {
+    status: error.response?.status,
+    messageKey: responseData.messageKey ?? 'errors.network.retry_saved',
+    message:
+      responseData.message ??
+      'We couldn�t complete this now. Your progress is safe; try again.',
+    requestId: responseData.requestId ?? error.response?.headers?.['x-request-id'],
+    fieldErrors: responseData.fieldErrors ?? null,
+  };
+};
+
 api.interceptors.response.use(
-    (response) => response,
-    async (error) => {
-        // MODIFICAÇÃO ROBUSTA: Verificar header 'x-silent' para chamadas silenciosas (NÃO mostrar toasts/logs)
-        // Early-return ANTES de qualquer tratamento de erro/Toast/Sentry (exceto request errors, que são raros)
-        const config = error.config as AxiosRequestConfig | undefined;
-        const silentHeader = config?.headers?.['x-silent'] || config?.headers?.['X-Silent']; // Case-insensitive
-        const isSilent = silentHeader === '1' || silentHeader === 1 || silentHeader === true;
+  response => response,
+  async error => {
+    const axiosError = error as AxiosError & { config: AxiosRequestConfig & { __tries?: number; _isRetryRequest?: boolean } };
+    const config = axiosError.config;
+    config.__tries = (config.__tries ?? 0) + 1;
 
-        if (isSilent) {
-            // MODO SILENT: Nada de Toast, console.error ou logs visíveis → evita symbolication do Metro
-            // Sentry ainda captura para monitoramento (mas sem tags de UI)
-            Sentry.captureException(error, { tags: { silent: true } });
-            return Promise.reject(error); // Propaga o erro para o caller (ex: service catch silencioso)
-        }
-
-        // Se não for silent, continua com o comportamento normal (toasts para erros) + Sentry
-        Sentry.captureException(error); // Captura normal para não-silent
-
-        const originalRequest = error.config;
-
-        // Erro 401: Não autorizado (token expirado ou inválido)
-        if (axios.isAxiosError(error) && error.response?.status === 401 && !originalRequest?._isRetryRequest) {
-            console.warn('[API Interceptor] Requisição 401 Unauthorized. Token pode ter expirado ou é inválido. Iniciando processo de logout.');
-            originalRequest!._isRetryRequest = true; // Marca a requisição para evitar loops infinitos
-
-            if (onUnauthorizedCallback) {
-                try {
-                    await onUnauthorizedCallback({ originalRequest: originalRequest! });
-                    return api(originalRequest!);
-                } catch (refreshError) {
-                    console.warn('[API Interceptor] Refresh callback failed:', refreshError);
-                }
-                Toast.show({
-                    type: 'error',
-                    text1: i18n.t('common.error'),
-                    text2: i18n.t('common.unauthorized_error'),
-                });
-            } else {
-                console.warn('[API Interceptor] Nenhum callback de logout registrado. Limpando apenas o token e dados básicos.');
-                await AsyncStorage.removeItem('auth_token');
-                await AsyncStorage.removeItem('user_role');
-                await AsyncStorage.removeItem('user_id');
-                await AsyncStorage.removeItem('user_profile');
-                Toast.show({
-                    type: 'error',
-                    text1: i18n.t('common.error'),
-                    text2: i18n.t('common.unauthorized_error'),
-                });
-            }
-            return Promise.reject(error); // Rejeita o erro após tentar o logout
-        }
-
-        // Erro 404: Não encontrado
-        if (axios.isAxiosError(error) && error.response && error.response.status === 404) {
-            Toast.show({
-                type: 'error',
-                text1: i18n.t('common.error'),
-                text2: error.response.data?.message || i18n.t('common.not_found'),
-            });
-        }
-
-        // Erro 403: Acesso Proibido
-        if (axios.isAxiosError(error) && error.response && error.response.status === 403) {
-            Toast.show({
-                type: 'error',
-                text1: i18n.t('common.error'),
-                text2: error.response.data?.message || i18n.t('common.forbidden_error'), // NEW: Adicionado i18n para 403
-            });
-        }
-
-        // Erro 422 (Unprocessable Entity) ou 409 (Conflict): Erros de validação ou de negócio
-        if (axios.isAxiosError(error) && error.response && (error.response.status === 422 || error.response.status === 409)) {
-            Toast.show({
-                type: 'error',
-                text1: i18n.t('common.error'),
-                text2: error.response.data?.message || i18n.t('common.generic_error'),
-            });
-        }
-
-        // NEW: Erro 429 (Too Many Requests)
-        if (axios.isAxiosError(error) && error.response && error.response.status === 429) {
-            Toast.show({
-                type: 'error',
-                text1: i18n.t('common.error'),
-                text2: error.response.data?.message || i18n.t('common.too_many_requests'), // NEW: Adicionado i18n para 429
-            });
-        }
-
-        // Erro 5xx: Erros de servidor
-        if (axios.isAxiosError(error) && error.response && error.response.status >= 500 && error.response.status < 600) {
-            Toast.show({
-                type: 'error',
-                text1: i18n.t('common.error'),
-                text2: error.response.data?.message || i18n.t('common.generic_error'),
-            });
-        }
-
-        // Erros de rede (sem resposta do servidor) ou timeout
-        if (axios.isAxiosError(error) && !error.response) { // Inclui erros de rede e timeouts
-            Toast.show({
-                type: 'error',
-                text1: i18n.t('common.error'),
-                text2: i18n.t('common.network_error'),
-            });
-        }
-
-        return Promise.reject(error);
+    if (shouldRetry(axiosError) && config.__tries < 3) {
+      await sleep(1000 * Math.pow(2, config.__tries - 1));
+      return api(config);
     }
+
+    const headers = (config?.headers ?? {}) as Record<string, unknown>;
+    const silentHeader = headers['x-silent'] ?? headers['X-Silent'];
+    const isSilent = silentHeader === '1' || silentHeader === 1 || silentHeader === true;
+
+    const unified = buildUnifiedError(axiosError);
+    const dedupeKey = `${unified.messageKey}:${unified.status}`;
+
+    if (!isSilent && !shouldDedupe(dedupeKey)) {
+      const localized = i18n.t(unified.messageKey as any, { defaultValue: unified.message });
+      Toast.show({ type: 'error', text1: i18n.t('common.error'), text2: localized });
+    }
+
+    if (!isSilent) {
+      Sentry.captureException(axiosError, {
+        tags: { scope: 'network' },
+        extra: unified,
+      });
+    }
+
+    if (axiosError.response?.status === 401 && !config._isRetryRequest) {
+      config._isRetryRequest = true;
+      if (onUnauthorizedCallback) {
+        try {
+          await onUnauthorizedCallback({ originalRequest: config });
+          return api(config);
+        } catch (refreshError) {
+          Sentry.captureException(refreshError, { tags: { scope: 'auth' } });
+        }
+      }
+
+      await AsyncStorage.multiRemove(['auth_token', 'user_role', 'user_id', 'user_profile']);
+      Toast.show({
+        type: 'error',
+        text1: i18n.t('common.error'),
+        text2: i18n.t('common.unauthorized_error'),
+      });
+    }
+
+    return Promise.reject(unified);
+  }
 );
 
-export default api;
+export async function fetchApi<T = unknown>(path: string, init?: AxiosRequestConfig): Promise<T> {
+  const response = await api.request({ url: path, ...(init ?? {}) });
+  return response.data as T;
+}
