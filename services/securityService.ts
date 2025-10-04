@@ -1,4 +1,4 @@
-import api from './api'; // CORREÇÃO 1: Importa 'api' como exportação padrão
+import { api } from './api'; // CORREÇÃO 1: Importa 'api' como exportação padrão
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
