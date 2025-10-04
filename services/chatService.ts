@@ -1,5 +1,5 @@
 // LimpeJaApp/app/services/chatService.ts
-import api from './api'; // Importa a instância centralizada do Axios
+import { api } from './api'; // Importa a instância centralizada do Axios
 
 // Importa as tipagens necessárias do seu diretório de tipos de backend
 import {
