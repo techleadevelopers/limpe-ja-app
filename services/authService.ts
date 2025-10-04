@@ -2,8 +2,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthResponse, UserRole, MessageResponseDto } from '../types/backend/auth';
 import { UserProfile } from '../types/backend/users';
-import api from './api';
-import { getUserProfile } from './clientService'; // << NOVO: Importa a função de buscar o perfil completo
+import { api } from './api';
+import axios from 'axios';
 
 const AUTH_TOKEN_KEY = 'auth_token';
 const USER_ROLE_KEY = 'user_role';
@@ -52,7 +52,7 @@ class AuthService {
         } finally {
             this.refreshPromise = null;
         }
-    } // << CORREÇÃO: Fechamento da método logout adicionado aqui para corrigir os erros de sintaxe em linhas subsequentes
+    }
 
     async refreshSession(): Promise<AuthResponse> {
         if (!this.refreshPromise) {
@@ -72,31 +72,31 @@ class AuthService {
 
         return this.refreshPromise;
     }
-    // LÓGICA CORRIGIDA
+
     async registerClient(userData: any): Promise<AuthResponse> {
         try {
             console.log('[AuthService Frontend] Registrando cliente');
-            // Primeiro, faça a requisição de registro
             const response = await api.post('/auth/register/client', userData);
             const authData: AuthResponse = response.data;
 
-            // << NOVO: Busca o perfil completo após o registro
-            // Isso garante que o perfil salvo tenha todos os detalhes, incluindo o endereço
-            this.setAuthToken(authData.accessToken); // Define o token para a próxima requisição
-            const fullUserProfile = await getUserProfile(); // << Usa a função do clientService.ts para obter o perfil completo
-
-            // Prepara os dados para salvar
-            const fullAuthData = {
-                ...authData,
-                user: fullUserProfile,
-            };
-
-            await this.saveAuthData(fullAuthData); // Salva o perfil completo
-            console.log('[AuthService Frontend] Cliente registrado e perfil completo salvo com sucesso.');
-            return fullAuthData;
-
+            await this.saveAuthData(authData);
+            console.log('[AuthService Frontend] Cliente registrado com sucesso. Perfil salvo do response do backend.');
+            return authData;
         } catch (error: any) {
-            console.error('[AuthService Frontend] Erro ao registrar cliente:', error);
+            console.error('[AuthService Frontend] Erro ao registrar cliente:', {
+                status: error.response?.status,
+                message: error.response?.data?.message,
+                data: error.response?.data
+            });
+            if (error.response?.status === 409) {
+                throw new Error(error.response.data.message || 'Dados duplicados (ex: email ou CPF já cadastrado).');
+            }
+            if (error.response?.status === 400) {
+                throw new Error(error.response.data.message || 'Dados inválidos. Verifique o formato.');
+            }
+            if (error.response?.status >= 500) {
+                throw new Error('Erro no servidor. Tente novamente em alguns minutos.');
+            }
             throw new Error(error.response?.data?.message || 'Erro ao registrar cliente');
         }
     }
@@ -104,24 +104,28 @@ class AuthService {
     async registerProvider(userData: any): Promise<AuthResponse> {
         try {
             console.log('[AuthService Frontend] Registrando prestador');
-            // Primeiro, faça a requisição de registro
             const response = await api.post('/auth/register/provider', userData);
             const authData: AuthResponse = response.data;
 
-            // << NOVO: Busca o perfil completo após o registro
-            this.setAuthToken(authData.accessToken);
-            const fullUserProfile = await getUserProfile();
-
-            const fullAuthData = {
-                ...authData,
-                user: fullUserProfile,
-            };
-            
-            await this.saveAuthData(fullAuthData);
-            console.log('[AuthService Frontend] Prestador registrado e perfil completo salvo com sucesso.');
-            return fullAuthData;
+            await this.saveAuthData(authData);
+            console.log('[AuthService Frontend] Prestador registrado com sucesso. Perfil salvo do response do backend.');
+            return authData;
         } catch (error: any) {
-            console.error('[AuthService Frontend] Erro ao registrar prestador:', error);
+            console.error('[AuthService Frontend] Erro ao registrar prestador:', {
+                status: error.response?.status,
+                message: error.response?.data?.message,
+                data: error.response?.data,
+                fullError: error.message
+            });
+            if (error.response?.status === 409) {
+                throw new Error(error.response.data.message || 'Dados duplicados (ex: CPF ou telefone já cadastrado).');
+            }
+            if (error.response?.status === 400) {
+                throw new Error(error.response.data.message || 'Dados inválidos. Verifique CPF, data de nascimento ou endereço.');
+            }
+            if (error.response?.status >= 500) {
+                throw new Error('Erro no servidor. Tente novamente em alguns minutos.');
+            }
             throw new Error(error.response?.data?.message || 'Erro ao registrar prestador');
         }
     }
