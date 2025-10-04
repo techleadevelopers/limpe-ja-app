@@ -1,5 +1,5 @@
 // src/auth/auth.service.ts
-import { Injectable, UnauthorizedException, ConflictException, BadRequestException, Logger, InternalServerErrorException, forwardRef, Inject } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, BadRequestException, NotFoundException, Logger, InternalServerErrorException, forwardRef, Inject } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
@@ -17,7 +17,6 @@ import { ConfigService } from '@nestjs/config';
 import { ReferralsService } from '../referrals/referrals.service'; // NOVO: Importar ReferralsService
 
 // --- INÍCIO DAS CORREÇÕES DE TIPAGEM E ESTRUTURA ---
-
 const loginProviderInclude = {
   user: true,
   address: true,
@@ -290,7 +289,14 @@ export class AuthService {
 
       return this.login(newUserClient);
     } catch (error) {
-      this.logger.error('Erro ao registrar cliente:', error);
+      this.logger.error('Erro ao registrar cliente:', {
+        message: error.message,
+        code: (error as any).code,
+        meta: (error as any).meta,
+        stack: (error as any).stack,
+        data: registerClientDto // Log dos dados de entrada (sem senha)
+      });
+
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
           if (error.meta?.target === 'User_phone_key') {
@@ -299,7 +305,17 @@ export class AuthService {
           if (error.meta?.target === 'Client_cpf_key') {
             throw new ConflictException('Este CPF já está cadastrado como cliente.');
           }
+          throw new ConflictException('Dados duplicados. Verifique email, telefone ou CPF.');
         }
+        if (error.code === 'P2000') {
+          throw new BadRequestException('Dados inválidos (ex: valores decimais ou datas incorretas). Verifique o formato.');
+        }
+        if (error.code === 'P2025') {
+          throw new NotFoundException('Usuário ou entidade relacionada não encontrada.');
+        }
+      }
+      if (error instanceof BadRequestException) {
+        throw error;
       }
       throw new BadRequestException('Não foi possível registrar o cliente. Verifique os dados.');
     }
@@ -337,6 +353,17 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     try {
+      // NOVO: Validação robusta de dateOfBirth
+      let parsedDateOfBirth: Date | undefined;
+      if (dateOfBirth) {
+        parsedDateOfBirth = new Date(dateOfBirth);
+        if (isNaN(parsedDateOfBirth.getTime())) {
+          throw new BadRequestException('Data de nascimento inválida. Use o formato YYYY-MM-DD.');
+        }
+      } else {
+        throw new BadRequestException('Data de nascimento é obrigatória para provedores.');
+      }
+
       const geoCoordinates = await this.geocodingService.geocodeAddress(
         `${address.street}, ${address.number}, ${address.neighborhood}, ${address.city}, ${address.state}, ${address.cep}`
       );
@@ -353,15 +380,15 @@ export class AuthService {
             create: {
               fullName,
               cpf,
-              dateOfBirth: new Date(dateOfBirth),
+              dateOfBirth: parsedDateOfBirth, // CORREÇÃO: Usa data validada
               phone: phone ?? null,
               yearsOfExperience: yearsOfExperience ?? 0,
               avatarUrl: avatarUrl ?? null,
               verificationStatus: VerificationStatus.PENDING_INITIAL_REVIEW,
               bio: null,
               badges: [],
-              acceptanceRate: 0, // NOVO: Default
-              averageResponseTime: 0, // NOVO: Default
+              acceptanceRate: 0, // CORREÇÃO: Float aceita 0 diretamente (conforme schema)
+              averageResponseTime: 0, // CORREÇÃO: Int aceita 0 diretamente (conforme schema)
               address: {
                 create: {
                   cep: address.cep,
@@ -388,15 +415,21 @@ export class AuthService {
         }
       });
 
+      // NOVO: Try-catch isolado para o SQL raw de localização (isola falhas de PostGIS sem quebrar o registro)
       if (geoCoordinates && newUserProvider.provider?.address?.id) {
-        const wktPoint = `POINT(${geoCoordinates.longitude} ${geoCoordinates.latitude})`;
+        try {
+          const wktPoint = `POINT(${geoCoordinates.longitude} ${geoCoordinates.latitude})`;
 
-        await this.prisma.$executeRaw(Prisma.sql`
-            UPDATE "Address"
-            SET location = ST_GeomFromText(${wktPoint}, 4326)
-            WHERE id = ${newUserProvider.provider.address.id}
-        `);
-        this.logger.log(`[AuthService] Endereço do provedor ID: ${newUserProvider.provider.address.id} atualizado com localização geoespacial.`);
+          await this.prisma.$executeRaw(Prisma.sql`
+              UPDATE "Address"
+              SET location = ST_GeomFromText(${wktPoint}, 4326)
+              WHERE id = ${newUserProvider.provider.address.id}
+          `);
+          this.logger.log(`[AuthService] Endereço do provedor ID: ${newUserProvider.provider.address.id} atualizado com localização geoespacial.`);
+        } catch (geoError: any) {
+          this.logger.warn(`[AuthService] Falha ao atualizar localização geoespacial para provedor ${newUserProvider.provider.address.id}: ${geoError.message}. Continuando sem localização espacial.`);
+          // Não interrompe o registro; lat/lng já estão setados se geocoding succeeded
+        }
       }
 
       // --- NOVO: Lógica de Indicação no Registro (para provedor) ---
@@ -428,7 +461,15 @@ export class AuthService {
 
       return this.login(newUserProvider);
     } catch (error) {
-      this.logger.error('Erro ao registrar provedor:', error);
+      // MELHORIA: Logging mais detalhado no catch para debug
+      this.logger.error('Erro ao registrar provedor:', {
+        message: error.message,
+        code: (error as any).code,
+        meta: (error as any).meta,
+        stack: (error as any).stack,
+        data: { email, cpf, phone, dateOfBirth, referralCode } // Log dos dados de entrada (sem senha)
+      });
+
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
           if (error.meta?.target === 'User_phone_key') {
@@ -437,9 +478,26 @@ export class AuthService {
           if (error.meta?.target === 'Provider_cpf_key') {
             throw new ConflictException('Este CPF já está cadastrado como provedor.');
           }
+          if (error.meta?.target === 'User_email_idx') { // Assumindo unique index para email
+            throw new ConflictException('Este email já está cadastrado.');
+          }
+          throw new ConflictException('Dados duplicados. Verifique email, telefone ou CPF.');
+        }
+        if (error.code === 'P2000') { // Validação de tipo/dados inválidos
+          throw new BadRequestException('Dados inválidos (ex: data de nascimento ou valores numéricos incorretos). Verifique o formato.');
+        }
+        if (error.code === 'P2025') { // Record not found (ex: foreign key)
+          throw new NotFoundException('Entidade relacionada não encontrada (ex: endereço ou serviço).');
+        }
+        if (error.code === 'P2021') { // Input required
+          throw new BadRequestException('Campos obrigatórios ausentes. Verifique CPF, data de nascimento ou endereço.');
         }
       }
-      throw new BadRequestException('Não foi possível registrar o provedor. Verifique os dados e o console do servidor para mais detalhes.');
+      if (error instanceof BadRequestException) {
+        throw error; // Relança se já for BadRequest (ex: de validação de data)
+      }
+      // Para erros não-Prisma (ex: geocoding falhou, mas isolado acima)
+      throw new BadRequestException('Não foi possível registrar o provedor. Verifique os dados e consulte o console do servidor para detalhes técnicos.');
     }
   }
 
