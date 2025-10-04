@@ -6,7 +6,7 @@ import { RequestWithdrawalDto, PixChargeResponseDto } from '../types/backend/pay
 import { EarningsResponseDto, ProviderTransaction } from '../types/backend/providers';
 
 // Outras importações
-import api from './api'; // Supondo que 'api' é sua instância configurada do axios
+import { api } from './api'; // Supondo que 'api' é sua instância configurada do axios
 
 /**
  * Busca todos os dados de ganhos do provedor logado.
