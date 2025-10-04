@@ -32,7 +32,7 @@ const Icons3D = {
 // =============================================================
 // API (usa instância centralizada do projeto)
 // =============================================================
-import api from '../../../services/api';
+import { api } from '../../../services/api';
 
 // Tipos mínimos para alinhar ao backend de tickets (flexível)
 export type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED' | 'CANCELLED';
