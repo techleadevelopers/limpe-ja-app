@@ -1,6 +1,6 @@
 // LimpeJaApp/app/services/reviewService.ts
 import axios, { AxiosResponse } from 'axios';
-import api from './api';
+import { api } from './api';
 
 // Importa as tipagens de review (DTOs e Entity)
 import { MessageResponseDto } from '../types/backend/auth';
