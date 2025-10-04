@@ -1,32 +1,30 @@
 {
   "cli": {
-    "version": ">= 7.6.0",
+    "version": ">= 16.0.0",
     "appVersionSource": "remote"
   },
   "build": {
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "ios": {
-        "image": "latest",
-        "simulator": false
-      },
-      "android": {
-        "image": "latest",
-        "buildType": "apk"
-      }
+      "ios": { "image": "latest", "simulator": false },
+      "android": { "image": "latest", "buildType": "apk" },
+      "node": "20.19.5"
     },
-    // eas.json (adicione)
-"internal_ios": {
-  "distribution": "internal",
-  "ios": { "image": "latest", "simulator": false }
-},
+    "preflight_ios": {
+      "distribution": "internal",
+      "ios": { "image": "latest", "simulator": true },
+      "developmentClient": false,
+      "node": "20.19.5"
+    },
+    "internal_ios": {
+      "distribution": "internal",
+      "ios": { "image": "latest", "simulator": false },
+      "node": "20.19.5"
+    },
     "apk_direct_test": {
       "distribution": "internal",
-      "android": {
-        "buildType": "apk",
-        "image": "latest"
-      },
+      "android": { "buildType": "apk", "image": "latest" },
       "env": {
         "EXPO_PUBLIC_API_BASE_URL": "https://limpeja-backend-production.up.railway.app",
         "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyBt5-IB2CI9fKOeWcGFEM4ZJ57ix-cUHpg",
@@ -35,23 +33,19 @@
         "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "semiotic-anvil-461613-c0.appspot.com",
         "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "35489557635",
         "EXPO_PUBLIC_FIREBASE_APP_ID": "1:35489557635:android:fa20487f5dbc67e07fffb6"
-      }
+      },
+      "node": "20.19.5"
     },
     "production": {
       "distribution": "store",
-      "ios": {
-        "image": "latest"
-      },
-      "android": {
-        "image": "latest"
-      }
+      "ios": { "image": "latest" },
+      "android": { "image": "latest" },
+      "node": "20.19.5"
     }
   },
   "submit": {
     "production": {
-      "android": {
-        "track": "internal"
-      }
+      "android": { "track": "internal" }
     }
   }
 }
