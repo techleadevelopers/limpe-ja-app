@@ -1,6 +1,6 @@
 // LimpeJaApp/app/services/clientService.ts
 import axios, { AxiosResponse } from 'axios';
-import api from './api';
+import { api } from './api';
 
 // =========================================================================
 // IMPORTAÇÕES DE INTERFACES DE TIPAGEM CENTRALIZADAS
