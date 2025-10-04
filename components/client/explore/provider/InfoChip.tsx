@@ -2,20 +2,21 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Text, View } from 'react-native';
-import { styles } from '../../../../app/(client)/explore/styles/providerStyles'; // Importa os estilos
+import { styles } from '../../../../app/(client)/explore/styles/providerStyles';
 
 interface InfoChipProps {
-  iconName: keyof typeof Ionicons.glyphMap; // Para garantir que é um nome de ícone válido
-  text: string;
-  compact?: boolean; // CORREÇÃO 5: Nova prop
+  iconName: keyof typeof Ionicons.glyphMap;
+  text?: string | number | null;
+  compact?: boolean;
 }
 
 const InfoChip: React.FC<InfoChipProps> = ({ iconName, text, compact }) => {
+  const resolvedText = text == null ? '' : String(text);
+
   return (
-    // CORREÇÃO 5: Aplica estilos compactos se a prop for true
     <View style={[styles.infoChip, compact && { paddingVertical: 6, paddingHorizontal: 10 }]}>
-      <Ionicons name={iconName} size={14} color="#555" /> {/* Ícone 14px */}
-      <Text style={[styles.infoChipText, compact && { fontSize: 12 }]}>{text}</Text> {/* Fonte 12px para compact */}
+      <Ionicons name={iconName} size={14} color="#555" />
+      <Text style={[styles.infoChipText, compact && { fontSize: 12 }]}>{resolvedText}</Text>
     </View>
   );
 };
