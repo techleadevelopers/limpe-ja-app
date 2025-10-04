@@ -1,6 +1,6 @@
 // services/disputeService.ts
 
-import api from './api'; // Assumindo que você tem um arquivo api.ts para suas requisições HTTP
+import { api } from './api'; // Assumindo que você tem um arquivo api.ts para suas requisições HTTP
 import { ReportDisputeDto, Dispute, DisputeResponse } from '../types/backend/disputes'; // Ajuste o caminho conforme a sua estrutura de pastas
 import axios from 'axios'; // <-- Adicione esta linha para importar a biblioteca axios
 import { NotificationService } from '../services/notificationService'; // NEW: Import NotificationService for error handling
