@@ -1,4 +1,4 @@
-// backend-cleaning/src/queues/queues.service.ts
+// src/queues/queues.service.ts
 import { Injectable, Logger, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue, JobOptions } from 'bull';
@@ -16,6 +16,16 @@ interface CustomJobOptions extends JobOptions {
 @Injectable()
 export class QueuesService {
   private readonly logger = new Logger(QueuesService.name);
+  private readonly queueNames = [
+    'verification',
+    'notifications',
+    'disputes',
+    'data_export',
+    'subscription-generation',
+    'emails',
+    'support-escalations',
+    'payouts',
+  ] as const;
 
   constructor(
     @InjectQueue('verification') private readonly verificationQueue: Queue,
@@ -24,6 +34,8 @@ export class QueuesService {
     @InjectQueue('data_export') private readonly dataExportQueue: Queue,
     @InjectQueue('subscription-generation') private readonly subscriptionGenerationQueue: Queue,
     @InjectQueue('emails') private readonly emailsQueue: Queue, // NEW: Fila para e-mails
+    @InjectQueue('support-escalations') private readonly supportEscalationsQueue: Queue, // Fila de escalonamento de suporte
+    @InjectQueue('payouts') private readonly payoutsQueue: Queue,
   ) {}
 
   /**
@@ -46,6 +58,8 @@ export class QueuesService {
         return this.subscriptionGenerationQueue;
       case 'emails': // NEW: Case para a fila de e-mails
         return this.emailsQueue;
+      case 'support-escalations':
+        return this.supportEscalationsQueue;
       default:
         this.logger.error(`Fila desconhecida: ${queueName}`);
         throw new BadRequestException(`Fila desconhecida: ${queueName}`);
@@ -207,5 +221,97 @@ export class QueuesService {
       },
       removeOnFail: false, // Manter falhas para análise
     });
+  }
+
+  /**
+   * Retorna o status resumido de todas as filas monitoradas pelo admin.
+   */
+  async getAllQueuesStatus(): Promise<any[]> {
+    return Promise.all(
+      this.queueNames.map(async (queueName) => this.getQueueStatus(queueName))
+    );
+  }
+
+  /**
+   * Retorna o status detalhado de uma fila específica.
+   */
+  async getQueueStatus(queueName: string): Promise<any> {
+    const queue = this.getQueueInstance(queueName);
+    const counts = await queue.getJobCounts();
+    const isPaused = await queue.isPaused();
+
+    return {
+      name: queueName,
+      counts,
+      isPaused,
+    };
+  }
+
+  /**
+   * Lista jobs de uma fila com base no status informado.
+   * @param queueName Nome da fila.
+   * @param status Status desejado (waiting, active, completed, failed, delayed ou all).
+   * @param limit Quantidade máxima de jobs a retornar.
+   */
+  async getJobsByStatus(queueName: string, status: string = 'waiting', limit = 50): Promise<any[]> {
+    const queue = this.getQueueInstance(queueName);
+    const validStatuses = ['waiting', 'active', 'completed', 'failed', 'delayed', 'paused'];
+
+    const normalizedStatus = status.toLowerCase();
+    const statusesToFetch = normalizedStatus === 'all'
+      ? validStatuses
+      : validStatuses.includes(normalizedStatus)
+        ? [normalizedStatus]
+        : ['waiting'];
+
+    try {
+      const jobs = await queue.getJobs(statusesToFetch as any, 0, limit - 1, false);
+
+      return Promise.all(
+        jobs.map(async (job) => {
+          const jobState = await job.getState();
+          return {
+            id: job.id,
+            name: job.name,
+            data: job.data,
+            attemptsMade: job.attemptsMade,
+            progress: job.progress,
+            timestamp: job.timestamp,
+            processedOn: job.processedOn,
+            finishedOn: job.finishedOn,
+            failedReason: job.failedReason,
+            state: jobState,
+          };
+        })
+      );
+    } catch (error) {
+      this.logger.error(`Erro ao listar jobs na fila ${queueName}: ${error.message}`);
+      throw new InternalServerErrorException(`Falha ao listar jobs: ${error.message}`);
+    }
+  }
+
+  /**
+   * Reexecuta um job específico de determinada fila.
+   */
+  async retryJobById(queueName: string, jobId: string): Promise<void> {
+    const queue = this.getQueueInstance(queueName);
+    const job = await queue.getJob(jobId);
+
+    if (!job) {
+      throw new BadRequestException(`Job ${jobId} não encontrado na fila ${queueName}`);
+    }
+
+    const jobState = await job.getState();
+    if (jobState === 'failed') {
+      await job.retry();
+      this.logger.log(`Job ${jobId} da fila ${queueName} reenfileirado para nova tentativa.`);
+    } else if (jobState === 'completed' || jobState === 'delayed') {
+      // FIX: Checagem de estado + type assertion para compatibilidade Bull/BullMQ
+      // O método existe runtime, mas TS precisa do 'as any' em alguns tipos
+      (job as any).moveToWaiting();
+      this.logger.log(`Job ${jobId} da fila ${queueName} movido para waiting.`);
+    } else {
+      throw new BadRequestException(`Job ${jobId} está em estado '${jobState}' – não pode ser reenfileirado.`);
+    }
   }
 }
