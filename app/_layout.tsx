@@ -10,6 +10,8 @@ import {
     Image,
 } from 'react-native';
 import 'react-native-reanimated';
+import { io } from 'socket.io-client';
+import Constants from 'expo-constants';
 import { AppProvider } from '../contexts/AppContext';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ProviderRegistrationProvider } from '../contexts/ProviderRegistrationContext';
@@ -26,6 +28,7 @@ import * as Font from 'expo-font';
 
 // Import NotificationUIService
 import NotificationUIService from '../services/notificationUIService'; // Added
+import AppQueryClientProvider from '../components/provider/query-client-provider';
 
 Sentry.init({
     dsn: 'https://947962edb662e5ff655cbcd778ee13b6@o4509792415252480.ingest.us.sentry.io/4509792431898624',
@@ -37,8 +40,44 @@ Sentry.init({
 
 SplashScreen.preventAutoHideAsync();
 
+function resolveSocketUrl() {
+    const envUrl = (globalThis as any)?.EXPO_PUBLIC_WS_URL
+        || (typeof process !== 'undefined' ? process.env?.EXPO_PUBLIC_WS_URL : undefined)
+        || (Constants.expoConfig?.extra as any)?.wsUrl
+        || (Constants.expoConfig?.extra as any)?.backendWsUrl;
+    if (envUrl) {
+        return envUrl;
+    }
+    const apiUrl = (Constants.expoConfig?.extra as any)?.backendApiUrl || '';
+    if (typeof apiUrl === 'string' && apiUrl.startsWith('http')) {
+        return apiUrl.replace(/^http/, 'ws');
+    }
+    return 'ws://localhost:3000';
+}
+
+function useNotificationsSocket(authToken?: string | null) {
+    useEffect(() => {
+        if (!authToken) {
+            return;
+        }
+        const socket = io(resolveSocketUrl(), {
+            auth: { token: authToken },
+            transports: ['websocket'],
+        });
+        socket.on('notification', (payload: any) => {
+            NotificationUIService.showInfo(payload?.message ?? 'Você tem uma nova notificação.', payload?.title ?? 'Notificação');
+        });
+        socket.on('mission-progress', () => {
+            NotificationUIService.showInfo('Seu progresso nas missões foi atualizado.', 'Missões');
+        });
+        return () => {
+            socket.disconnect();
+        };
+    }, [authToken]);
+}
+
 function RootLayoutContent() {
-    const { isAuthenticated, isLoading: authIsLoading, user } = useAuth();
+    const { isAuthenticated, isLoading: authIsLoading, user, token } = useAuth();
     const router = useRouter();
     const segments = useSegments();
     const pathname = usePathname();
@@ -285,3 +324,4 @@ const styles = StyleSheet.create({
         fontSize: 13,
     },
 });
+
