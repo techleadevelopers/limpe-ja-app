@@ -31,3 +31,13 @@ export interface EarningsResponseDto {
  * Alias para EarningsResponseDto para maior clareza.
  */
 export type GetMyProviderEarnings = EarningsResponseDto;
+
+/**
+ * @interface WithdrawalResponseDto
+ * Resposta padronizada ao solicitar saque.
+ */
+export interface WithdrawalResponseDto {
+  success: boolean;
+  message: string;
+  transactionId?: string;
+}
