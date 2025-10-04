@@ -18,7 +18,8 @@
       "unauthorized_error": "Unauthorized. Please log in again.",
       "generic_error": "An unexpected error occurred. Please try again later.",
       "per_hour_short": "/hr",
-      "per_sqm_short": "/sqm"
+      "per_sqm_short": "/sqm",
+      "info": "Notice"
     },
     "explore_section": {
       "title": "Explore"
@@ -58,7 +59,9 @@
     "metrics": {
       "acceptance_rate": "Acceptance Rate",
       "avg_response_time": "Avg. Response Time",
-      "minutes_short": "min"
+      "minutes_short": "min",
+      "acceptance_short": "Acceptance",
+      "response_short": "Response"
     },
     "safety": {
       "panic": {
@@ -206,6 +209,46 @@
       "logout": "Log Out",
       "logout_error": "Could not log out. Please try again or check your connection.",
       "provider_not_authenticated": "Provider not authenticated or profile not found."
+    },
+    "errors": {
+      "network": {
+        "retry_saved": "We couldn't finish now. Your progress is safe—try again shortly.",
+        "contact_support": "If this keeps happening, contact support."
+      },
+      "cep": {
+        "lookup_failed": "We couldn't fetch the postal code. Please try again."
+      }
+    },
+    "validation": {
+      "cpf": {
+        "required": "CPF is required.",
+        "invalid": "Invalid CPF. Check the digits."
+      },
+      "cep": {
+        "required": "Postal code is required.",
+        "invalid": "Invalid postal code. Enter all 8 digits.",
+        "not_found": "Postal code not found. Please double-check and try again."
+      },
+      "pixKey": {
+        "required": "Enter your PIX key to receive payouts.",
+        "invalid": "Invalid PIX key. Please review the format."
+      },
+      "step": {
+        "phone_cpf": "Please fill in phone and CPF correctly.",
+        "name_email": "Please fill in your name and email correctly."
+      },
+      "address": {
+        "incomplete": "Please fill in all address fields correctly.",
+        "wait_lookup": "Please wait for the postal code lookup to finish."
+      }
+    },
+    "payments": {
+      "pix": {
+        "copy_success_title": "PIX code copied!",
+        "copy_success_message": "Paste it in your bank app to finish the payment.",
+        "copy_error_title": "PIX unavailable",
+        "copy_error_message": "There's no PIX code to copy right now."
+      }
     }
   }
 }
