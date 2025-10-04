@@ -1,6 +1,6 @@
 // LimpeJaApp/app/services/offerService.ts
 import axios, { AxiosResponse } from 'axios'; // Importar axios para isAxiosError
-import api from './api'; // Importa a instância centralizada do Axios
+import { api } from './api'; // Importa a instância centralizada do Axios
 
 // Importa a tipagem da Offer
 import { Offer } from '../types/backend/offers'; //
