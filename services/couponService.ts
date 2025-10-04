@@ -1,5 +1,5 @@
 // LimpeJaApp/services/couponService.ts
-import api from './api';
+import { api } from './api';
 import { CouponApplicationResult } from '../types/backend/coupons';
 import { CreateBookingDto } from '../types/backend/bookings';
 import axios from 'axios';
