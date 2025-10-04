@@ -23,7 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'; // Para alin
 import { RequestWithdrawalDto, PixKeyType } from '../../../types/backend/payments';
 
 // 🔗 Importar serviços reais
-import { requestWithdrawal } from '../../../services/paymentService';
+import { requestWithdrawal } from '../../../services/earningService';
 import { api } from '../../../services/api';
 import NotificationUIService from '../../../services/notificationUIService'; // Para toasts premium
 
