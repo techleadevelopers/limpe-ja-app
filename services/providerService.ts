@@ -1,6 +1,6 @@
 // app/services/providerService.ts
 import axios, { AxiosResponse } from 'axios';
-import api from './api';
+import { api } from './api';
 
 // Importa o serviço de reviews do frontend
 import { ReviewService as FrontendReviewService } from './reviewService'; // Renomeado para evitar conflito
