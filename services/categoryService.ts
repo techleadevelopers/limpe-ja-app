@@ -1,5 +1,5 @@
 // LimpeJaApp/services/categoryService.ts
-import api from '../services/api'; // use o mesmo axios/api centralizado do projeto
+import { api } from '../services/api'; // use o mesmo axios/api centralizado do projeto
 
 // Tipo básico para Category (ajuste se já tiver em types/backend)
 export interface Category {
