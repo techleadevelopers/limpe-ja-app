@@ -27,5 +27,8 @@
   },
   "include": [
     "src/**/*.ts" // Esta linha garante que todos os arquivos .ts (incluindo .d.ts) em src sejam compilados
+  ],
+  "exclude": [
+    "src/payments/payments.controller.ts"
   ]
 }
