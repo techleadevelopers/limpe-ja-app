@@ -1,15 +1,7 @@
 // src/payments/dto/request-withdrawal.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsNumber, IsString, IsNotEmpty, Min, IsOptional, IsEnum } from 'class-validator';
-
-// Enum para os tipos de chave PIX
-export enum PixKeyType {
-  CPF = 'CPF',
-  CNPJ = 'CNPJ',
-  EMAIL = 'EMAIL',
-  PHONE = 'PHONE',
-  RANDOM = 'RANDOM',
-}
+import { PixKeyType } from '@prisma/client';
 
 export class RequestWithdrawalDto {
   @ApiProperty({ description: 'Valor do saque solicitado', example: 250.00 })
