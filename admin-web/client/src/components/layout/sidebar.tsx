@@ -3,6 +3,7 @@ import { Sparkles, ChartLine, Users, ClipboardCheck, ChartPie, Settings, UsersRo
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
+import { fetchVerificationQueue } from "@/lib/api";
 import logoImage from "../../assets/logo2.png";
 
 export default function Sidebar() {
@@ -13,7 +14,7 @@ export default function Sidebar() {
   // As rotas para estas queries precisam ser implementadas no backend.
   const { data: pendingProvidersData } = useQuery({
     queryKey: ['verification-queue'],
-    queryFn: () => fetch('/api/verification/pending-queue').then(res => res.json()), // Exemplo de busca da fila
+    queryFn: () => fetchVerificationQueue(), // Exemplo de busca da fila
   });
 
   const { data: pendingDisputesData } = useQuery({
@@ -208,3 +209,6 @@ export default function Sidebar() {
     </div>
   );
 }
+
+
+
