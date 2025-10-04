@@ -1,6 +1,6 @@
 // LimpeJaApp/app/services/notificationService.ts
 import axios, { AxiosResponse } from 'axios';
-import api from './api'; // Importa a instância centralizada do Axios
+import { api } from './api'; // Importa a instância centralizada do Axios
 
 // Importa as tipagens de notificações
 import { MessageResponseDto } from '../types/backend/auth';
