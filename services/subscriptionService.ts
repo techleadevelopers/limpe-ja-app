@@ -1,5 +1,5 @@
 // LimpeJaApp/services/subscriptionService.ts
-import api from './api'; // Assuming you have an api.ts for Axios instance
+import { api } from './api'; // Assuming you have an api.ts for Axios instance
 import {
   CreateSubscriptionDto,
   Subscription, // Certifique-se de que Subscription está atualizado com novas propriedades e relações
