@@ -84,11 +84,11 @@ export class SearchService {
       // NEW: Apply dynamic pricing to provider services results
       results.providerServices = await Promise.all(
         providerServicesResults.map(async (psResult: any) => {
-          let dynamicPrice: DynamicPriceResult = { // CORREÇÃO: Tipar DynamicPriceResult
+          let dynamicPrice: DynamicPriceResult = {
             originalPrice: psResult.price,
             surgeFactor: 1.0,
             finalPrice: psResult.price,
-            reason: 'Preço base.', // CORREÇÃO: Garantir que 'reason' esteja sempre presente
+            appliedRules: [],
           };
           if (latitude && longitude && date) {
             try {
@@ -98,6 +98,8 @@ export class SearchService {
                 latitude,
                 longitude,
                 scheduledDate: date,
+                cityCode: psResult.provider?.address?.city,
+                categoryId: psResult.service?.categoryId,
               });
             } catch (e: any) { // CORREÇÃO: Tipar 'e' como 'any'
               this.logger.error(`Error calculating dynamic price for providerService ${psResult.id}: ${e.message}`);
@@ -148,3 +150,4 @@ export class SearchService {
     return results;
   }
 }
+
