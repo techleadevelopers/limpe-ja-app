@@ -4,7 +4,7 @@ import { Injectable, NotFoundException, ConflictException, BadRequestException, 
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
-import { Booking, BookingStatus, UserRole, Prisma, CouponType, CouponTarget } from '@prisma/client'; // Importar CouponType e CouponTarget
+import { Booking, BookingStatus, UserRole, Prisma, CouponType, CouponTarget, LedgerEntryType } from '@prisma/client'; // Importar CouponType e CouponTarget
 import { ClientsService } from '../clients/clients.service';
 import { ProvidersService, ProviderWithCalculatedRating } from '../providers/providers.service';
 import { ProviderServicesService } from '../provider-services/provider-services.service';
@@ -153,12 +153,15 @@ export class BookingsService {
       this.logger.log(`[BookingsService] create - Serviço do provedor encontrado: ${providerService.id}. Preço calculado: ${calculatedTotalPrice.toFixed(2)}`);
 
       // NEW: Apply dynamic pricing
+      const serviceCategoryId = (providerService.service as any)?.categoryId as string | undefined;
       const { finalPrice: dynamicFinalPrice } = await this.pricingService.calculatePrice({
         serviceId: providerService.serviceId,
         providerId: provider.id,
         latitude: createBookingDto.address.latitude,
         longitude: createBookingDto.address.longitude,
         scheduledDate: createBookingDto.scheduledDate,
+        cityCode: createBookingDto.address?.city,
+        categoryId: serviceCategoryId,
       });
       calculatedTotalPrice = new Prisma.Decimal(dynamicFinalPrice);
 
@@ -689,6 +692,56 @@ export class BookingsService {
       },
     });
 
+    // Ledger: creditar ganho e fee ao concluir (idempotente)
+    if (newStatus === BookingStatus.COMPLETED && updatedBooking.provider?.userId) {
+      const exists = await this.prisma.ledgerEntry.findFirst({
+        where: { bookingId: updatedBooking.id, type: LedgerEntryType.EARNING },
+      });
+      if (!exists) {
+        await this.prisma.ledgerEntry.create({
+          data: {
+            userId: updatedBooking.provider.userId,
+            bookingId: updatedBooking.id,
+            amount: new Prisma.Decimal(updatedBooking.totalPrice.toNumber()),
+            type: LedgerEntryType.EARNING,
+            note: `Earning for completed booking ${updatedBooking.id}`,
+          },
+        });
+        this.logger.log(`[BookingsService] updateStatus: Ledger EARNING criado para booking ${updatedBooking.id}.`);
+      }
+      // Plataforma: piso de margem (opcional via ENV)
+      try {
+        const takeRatePercent = Math.max(0, Math.min(1, parseFloat(process.env.TAKE_RATE_PERCENT ?? '0.15')));
+        const minPlatformFee = Math.max(0, parseFloat(process.env.MIN_PLATFORM_FEE ?? '0'));
+        const platformRevenue = Number(calculatedTotalPrice.toFixed(2)) * takeRatePercent;
+        if (minPlatformFee > 0 && platformRevenue < minPlatformFee) {
+          throw new BadRequestException(await this.i18n.translate('pricing.badRequest.minPlatformFee', locale));
+        }
+      } catch (e) {
+        if (e instanceof BadRequestException) { throw e; }
+        this.logger.warn(`[BookingsService] create - Falha ao validar piso de margem: ${e?.message || e}`);
+      }
+
+      // Fee da plataforma (take rate)
+      const feeExists = await this.prisma.ledgerEntry.findFirst({ where: { bookingId: updatedBooking.id, type: LedgerEntryType.FEE } });
+      if (!feeExists) {
+        const takeRatePercent = Math.max(0, Math.min(1, parseFloat(process.env.TAKE_RATE_PERCENT ?? '0.15')));
+        const feeAmount = Number(updatedBooking.totalPrice.toFixed(2)) * takeRatePercent;
+        if (feeAmount > 0) {
+          await this.prisma.ledgerEntry.create({
+            data: {
+              userId: updatedBooking.provider.userId,
+              bookingId: updatedBooking.id,
+              amount: new Prisma.Decimal(-feeAmount),
+              type: LedgerEntryType.FEE,
+              note: `Take rate fee for booking ${updatedBooking.id}`,
+            },
+          });
+          this.logger.log(`[BookingsService] updateStatus: Ledger FEE criado (take rate) para booking ${updatedBooking.id}.`);
+        }
+      }
+    }
+
     // Telemetria: booking_status_updated
     this.logger.log(`[TELEMETRY] booking_status_updated: { bookingId: ${updatedBooking.id}, oldStatus: ${booking.status}, newStatus: ${newStatus}, userRole: ${userRole} }`);
 
@@ -909,6 +962,42 @@ export class BookingsService {
       },
     });
 
+    // Criar entradas no Ledger quando completar (idempotente por bookingId)
+    if (finalStatus === BookingStatus.COMPLETED && updatedBooking.provider?.userId) {
+      const existingEarning = await this.prisma.ledgerEntry.findFirst({
+        where: { bookingId: updatedBooking.id, type: LedgerEntryType.EARNING },
+      });
+      if (!existingEarning) {
+        await this.prisma.ledgerEntry.create({
+          data: {
+            userId: updatedBooking.provider.userId,
+            bookingId: updatedBooking.id,
+            amount: new Prisma.Decimal(updatedBooking.totalPrice.toNumber()),
+            type: LedgerEntryType.EARNING,
+            note: `Earning for completed booking ${updatedBooking.id}`,
+          },
+        });
+        this.logger.log(`[BookingsService] resolveDispute: Ledger EARNING criado para booking ${updatedBooking.id}.`);
+      }
+      // Fee da plataforma (take rate)
+      const feeExists = await this.prisma.ledgerEntry.findFirst({ where: { bookingId: updatedBooking.id, type: LedgerEntryType.FEE } });
+      if (!feeExists) {
+        const takeRatePercent = Math.max(0, Math.min(1, parseFloat(process.env.TAKE_RATE_PERCENT ?? '0.15')));
+        const feeAmount = Number(updatedBooking.totalPrice.toFixed(2)) * takeRatePercent;
+        if (feeAmount > 0) {
+          await this.prisma.ledgerEntry.create({
+            data: {
+              userId: updatedBooking.provider.userId,
+              bookingId: updatedBooking.id,
+              amount: new Prisma.Decimal(-feeAmount),
+              type: LedgerEntryType.FEE,
+              note: `Take rate fee for booking ${updatedBooking.id}`,
+            },
+          });
+        }
+      }
+    }
+
     const clientNotificationMessage = await this.i18n.translate('notification.disputeResolvedClient', locale, { bookingId: booking.id, status: finalStatus, resolution });
     await this.queuesService.addNotificationJob('send-notification', {
       userId: booking.client.userId,
@@ -931,3 +1020,5 @@ export class BookingsService {
     return updatedBooking;
   }
 }
+
+
