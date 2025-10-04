@@ -8,10 +8,8 @@
 export interface CreatePixChargeDto {
   amount: number;
   description: string;
-  bookingId?: string | null; // Se a cobrança PIX está ligada a um agendamento
-  providerId?: string | null; // ID do provedor para quem o pagamento será direcionado (necessário pelo backend)
-  // clientEmail: string; // REMOVIDO: Esta propriedade não deve ser enviada do frontend para o backend neste DTO.
-                        // O backend já obtém o email do cliente a partir do token de autenticação.
+  bookingId: string;
+  providerId: string;
 }
 
 /**
@@ -20,17 +18,18 @@ export interface CreatePixChargeDto {
  * ALINHADO COM O BACKEND: qrCodeImage e expiresAt são requeridos e do tipo string.
  */
 export interface PixChargeResponseDto {
-  transactionId: string; // ALTERADO: De 'id' para 'transactionId' para espelhar o backend
-  status: 'PENDING' | 'PAID' | 'EXPIRED' | 'CANCELLED'; // Mantido o status que você definiu
-  brCode: string; // ALTERADO: De 'pixCode' e 'qrCodeData' para 'brCode' (código copia e cola)
-  qrCodeImage: string; // CORREÇÃO: Agora requerido, pois o backend sempre retorna a URL
-  expiresAt: string; // CORREÇÃO: Agora requerido e do tipo string (ISO 8601), como é comum em APIs
+  transactionId: string;
+  status: 'PENDING' | 'PAID' | 'EXPIRED' | 'CANCELLED';
+  brCode: string;
+  qrCodeImage: string;
+  expiresAt: string;
   amount: number;
   description: string;
-  bookingId?: string | null; // <<<<< CORREÇÃO: ADICIONADO A PROPRIEDADE AQUI >>>>>
-  brCodeError?: string | null; // CORREÇÃO: Adicionado para resolver erro de tipagem no frontend
-  expirationDate?: string | null; // CORREÇÃO: Adicionado para resolver erro de tipagem no frontend (se usado para formatar)
-  providerId: string; // Adicionado aqui, pois é uma informação importante na resposta.
+  bookingId?: string | null;
+  brCodeError?: string | null;
+  expirationDate?: string | null;
+  providerId: string;
+  paymentIntent?: PaymentIntent;
 }
 
 /**
@@ -70,4 +69,30 @@ export interface TransactionEntity {
   updatedAt: string; // ISO string
   bookingId?: string | null;
   relatedUserId?: string | null; // ID do outro usuário envolvido na transação (cliente ou provedor)
+}
+
+
+
+
+export enum PaymentIntentStatus {
+  PENDING = 'PENDING',
+  PAID = 'PAID',
+  EXPIRED = 'EXPIRED',
+  REFUNDED = 'REFUNDED',
+  CHARGEBACK = 'CHARGEBACK',
+}
+
+export interface PaymentIntent {
+  id: string;
+  bookingId: string;
+  amountCents: number;
+  amount: number;
+  status: PaymentIntentStatus;
+  gateway: string;
+  externalRef?: string | null;
+  qrCodeUrl?: string | null;
+  qrCodeText?: string | null;
+  expiresAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
