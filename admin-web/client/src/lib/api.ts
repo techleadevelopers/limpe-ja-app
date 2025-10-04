@@ -1,43 +1,178 @@
-// admin-web/src/lib/api.ts
+import axios, { AxiosError, AxiosRequestConfig, Method } from "axios";
 
 import {
     Activity, AuthResponse, DashboardMetrics, Provider, VerificationStatus,
+    RevenueTrendPoint,
     Client, Address, Service, ProviderService, Availability, Booking,
     Transaction, WithdrawalRequest, Dispute, DisputeMessage, Subscription,
     Coupon, GuaranteeClaim, PricingRule, PanicAlert, Incident, UserConsent,
     DataRequest, DetailedRatingBreakdown, SmartSuggestion, QueueInfo, QueueJob,
-    BookingStatus, TransactionType, DisputeStatus, ClaimStatus, CouponType, CouponTarget, CouponStatus, // Adicionado CouponStatus aqui
+    BookingStatus, TransactionType, DisputeStatus, ClaimStatus, CouponType, CouponTarget, CouponStatus,
     SubscriptionStatus, SubscriptionFrequency, IncidentType, IncidentStatus, PricingType,
     Review, Offer, Referral, FAQItem, Mission, MissionStatus, MissionTargetAudience,
-    ReferralStatus // Importado o novo enum ReferralStatus
-} from './types';
+    ReferralStatus
+} from "./types";
 
-const API_BASE_URL = 'http://127.0.0.1:3000';
+type UnauthorizedHandler = (context: { originalRequest: AdminAxiosRequestConfig }) => Promise<void> | void;
 
-export const fetchApi = async <T>(path: string, options: RequestInit = {}): Promise<T> => {
-    const token = localStorage.getItem('authToken');
-    const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        ...(options.headers as Record<string, string> || {}),
-    };
+interface AdminAxiosRequestConfig extends AxiosRequestConfig {
+    _retry?: boolean;
+    __tries?: number;
+}
 
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const response = await fetch(`${API_BASE_URL}${path}`, {
-        ...options,
-        headers: headers,
-        credentials: 'include',
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: response.statusText }));
-        throw new Error(errorData.message || `Erro na requisição: ${response.status} ${response.statusText}`);
-    }
-    return response.json();
+const resolveBaseUrl = (): string => {
+    const envUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_ADMIN_API_BASE_URL;
+    return (envUrl?.trim()?.replace(/\/$/, "")) || "https://limpeja-backend-production.up.railway.app";
 };
 
+const API_BASE_URL = resolveBaseUrl();
+const DEFAULT_TIMEOUT_MS = import.meta.env.DEV ? 30000 : 12000;
+
+let onUnauthorizedCallback: UnauthorizedHandler | null = null;
+export const setUnauthorizedHandler = (callback?: UnauthorizedHandler) => {
+    onUnauthorizedCallback = callback ?? null;
+};
+
+const apiClient = axios.create({
+    baseURL: API_BASE_URL,
+    withCredentials: true,
+    timeout: DEFAULT_TIMEOUT_MS,
+    headers: {
+        "Content-Type": "application/json",
+    },
+});
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const shouldRetry = (error: AxiosError) => !error.response || error.response.status >= 500;
+const IDEMP_PATHS = [
+    "/auth/login",
+    "/bookings",
+    "/disputes",
+    "/missions",
+    "/notifications",
+    "/payments",
+    "/providers",
+    "/queues",
+    "/support",
+];
+
+const randomId = () => {
+    try {
+        if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+            return crypto.randomUUID();
+        }
+    } catch (_) {
+        // ignore
+    }
+    return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+};
+
+apiClient.interceptors.request.use(config => {
+    const cfg = config;
+    cfg.headers = cfg.headers ?? {};
+
+    const token = localStorage.getItem("authToken");
+    if (token) {
+        cfg.headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    const method = cfg.method?.toLowerCase();
+    if (method && ["post", "put", "patch"].includes(method)) {
+        const path = String(cfg.url ?? "");
+        if (IDEMP_PATHS.some(p => path.includes(p))) {
+            cfg.headers["Idempotency-Key"] = cfg.headers["Idempotency-Key"] ?? randomId();
+        }
+    }
+
+    cfg.headers["X-Client-Request-Id"] = randomId();
+    return cfg;
+});
+
+const errorBucket = new Map<string, number>();
+const shouldDedupe = (key: string) => {
+    const now = Date.now();
+    const last = errorBucket.get(key) ?? 0;
+    errorBucket.set(key, now);
+    return now - last < 30000;
+};
+
+const buildUnifiedError = (error: AxiosError) => {
+    const payload: any = error.response?.data ?? {};
+    return {
+        status: error.response?.status,
+        messageKey: payload.messageKey ?? "errors.network.retry_saved",
+        message: payload.message ?? "We couldn�t complete this now. Your progress is safe; try again.",
+        requestId: payload.requestId ?? error.response?.headers?.["x-request-id"],
+        fieldErrors: payload.fieldErrors ?? null,
+    };
+};
+
+apiClient.interceptors.response.use(
+    response => response,
+    async error => {
+        const axiosError = error as AxiosError & { config: AdminAxiosRequestConfig };
+        const config = axiosError.config || {};
+        config.__tries = (config.__tries ?? 0) + 1;
+
+        if (shouldRetry(axiosError) && config.__tries < 3) {
+            await sleep(1000 * Math.pow(2, config.__tries - 1));
+            return apiClient(config);
+        }
+
+        const headers = (config.headers ?? {}) as Record<string, unknown>;
+        const silentHeader = headers["x-silent"] ?? headers["X-Silent"];
+        const isSilent = silentHeader === "1" || silentHeader === 1 || silentHeader === true;
+
+        const unified = buildUnifiedError(axiosError);
+        if (!isSilent && !shouldDedupe(`${unified.messageKey}:${unified.status}`)) {
+            console.error("[API] Request failed:", unified.messageKey, unified.message, unified.requestId ?? "");
+        }
+
+        if (axiosError.response?.status === 401 && !config._retry) {
+            config._retry = true;
+            localStorage.removeItem("authToken");
+            localStorage.removeItem("userData");
+            if (onUnauthorizedCallback) {
+                await onUnauthorizedCallback({ originalRequest: config });
+            }
+        }
+
+        return Promise.reject(unified);
+    }
+);
+
+export const fetchApi = async <T>(path: string, options: RequestInit = {}): Promise<T> => {
+    const { method, headers, body, signal } = options;
+    const axiosConfig: AdminAxiosRequestConfig = {
+        url: path,
+        method: (method ? method.toUpperCase() : "GET") as Method,
+        headers: { ...(headers as Record<string, string>) } ?? {},
+        data: undefined,
+        signal: signal || undefined,
+    };
+
+    if (body !== undefined) {
+        if (typeof body === "string") {
+            try {
+                axiosConfig.data = JSON.parse(body);
+            } catch (_) {
+                axiosConfig.data = body;
+            }
+        } else {
+            axiosConfig.data = body;
+        }
+    }
+
+    try {
+        const response = await apiClient.request<T>(axiosConfig);
+        return response.data;
+    } catch (err) {
+        if (axios.isAxiosError(err)) {
+            throw buildUnifiedError(err);
+        }
+        throw err;
+    }
+};
 // --- Funções de Autenticação ---
 export const login = async (credentials: { email: string; password: string }): Promise<AuthResponse> => {
     const response = await fetchApi<AuthResponse>('/auth/login', {
@@ -54,7 +189,12 @@ export const logout = async (): Promise<void> => {
 
 // --- Funções de Dados Existentes ---
 export const fetchDashboardMetrics = async (): Promise<DashboardMetrics> => {
-    return fetchApi('/dashboard/metrics');
+    return fetchApi('/admin/dashboard/metrics');
+};
+
+export const fetchRevenueTrend = async (months?: number): Promise<RevenueTrendPoint[]> => {
+    const query = months ? `?months=${months}` : '';
+    return fetchApi(`/admin/dashboard/revenue-trend${query}`);
 };
 
 // --- Funções de Provedores ---
@@ -588,3 +728,4 @@ export type Review = {
     booking?: Booking;
 };
 */
+
