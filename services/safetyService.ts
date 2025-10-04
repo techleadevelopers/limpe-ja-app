@@ -1,5 +1,5 @@
 // LimpeJaApp/services/safetyService.ts
-import api from './api'; // Assuming you have an api.ts for Axios instance
+import { api } from './api'; // Assuming you have an api.ts for Axios instance
 import {
   ReportPanicDto,
   MessageResponse,
