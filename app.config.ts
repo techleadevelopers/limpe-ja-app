@@ -1,83 +1,105 @@
-import 'dotenv/config'; // Garante que as variáveis do .env sejam carregadas
-import { ExpoConfig } from '@expo/config';
+// app.config.ts
+import dotenv from 'dotenv';
+dotenv.config();
+import type { ExpoConfig } from '@expo/config';
 
 export default ({ config }: { config: ExpoConfig }): ExpoConfig => {
   return {
     ...config,
-    name: "LimpeJá",
-    slug: "limpeja",
-    version: "1.0.0",
-    orientation: "portrait",
-    icon: "./assets/images/icon.png",
-    scheme: "cleaning",
-    userInterfaceStyle: "automatic",
+
+    name: 'LimpeJá',
+    slug: 'limpeja',
+    version: '1.0.0',
+    orientation: 'portrait',
+    icon: './assets/images/icon.png',
+    scheme: 'cleaning',
+    userInterfaceStyle: 'automatic',
+
     splash: {
-      image: "./assets/images/splash.png",
-      resizeMode: "contain",
-      backgroundColor: "#ffffff"
+      image: './assets/images/splash.png',
+      resizeMode: 'contain',
+      backgroundColor: '#ffffff',
     },
-    assetBundlePatterns: ["**/*"],
+
+    assetBundlePatterns: ['**/*'],
 
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "com.techleadevelopers.limpeja", // 🔹 obrigatório
+      bundleIdentifier: 'com.techleadevelopers.limpeja',
+      // 🔻 sem Firebase: NÃO há googleServicesFile aqui
       infoPlist: {
-        ITSAppUsesNonExemptEncryption: false, // 🔹 criptografia padrão/exempt
+        ITSAppUsesNonExemptEncryption: false,
       },
-      // googleServicesFile: "./GoogleService-Info.plist" // só se usar Firebase iOS
     },
 
     android: {
       versionCode: 1,
       adaptiveIcon: {
-        foregroundImage: "./assets/images/adaptive-icon.png",
-        backgroundColor: "#ffffff"
+        foregroundImage: './assets/images/adaptive-icon.png',
+        backgroundColor: '#ffffff',
       },
-      package: "com.techleadevelopers.limpeja",
-      googleServicesFile: "./google-services.json"
+      package: 'com.techleadevelopers.limpeja',
+      // 🔻 sem Firebase: NÃO há googleServicesFile aqui
     },
 
     web: {
-      bundler: "metro",
-      output: "static",
-      favicon: "./assets/images/favicon.png"
+      bundler: 'metro',
+      output: 'static',
+      favicon: './assets/images/favicon.png',
     },
 
     plugins: [
-      "expo-router",
-      "expo-localization",
-      "expo-secure-store",
+      'expo-router',
+      'expo-localization',
+      'expo-secure-store',
       [
-        "expo-splash-screen",
+        'expo-splash-screen',
         {
-          image: "./assets/images/splash.png",
+          image: './assets/images/splash.png',
           imageWidth: 200,
-          resizeMode: "contain",
-          backgroundColor: "#ffffff"
+          resizeMode: 'contain',
+          backgroundColor: '#ffffff',
+        },
+      ],
+      // ✅ Adicionado para corrigir os pods Swift/Firebase como static libraries:
+      [
+        'expo-build-properties',
+        {
+          ios: {
+            // Não habilitamos useFrameworks por padrão; apenas modular headers para os pods problemáticos
+            // "useFrameworks": "static",
+            extraPods: [
+              { name: 'GoogleUtilities', modular_headers: true },
+              { name: 'FirebaseCore', modular_headers: true },
+              { name: 'FirebaseCoreInternal', modular_headers: true },
+              { name: 'FirebaseCoreExtension', modular_headers: true },
+              { name: 'FirebaseAuth', modular_headers: true },
+              { name: 'RecaptchaInterop', modular_headers: true },
+              { name: 'FirebaseAppCheckInterop', modular_headers: true }
+            ]
+          }
         }
       ],
-      "@react-native-firebase/app"
+      // 🔻 removidos:
+      // '@react-native-firebase/app',
+      // ['expo-build-properties', { ios: { useFrameworks: 'static' } }],
     ],
 
     experiments: {
-      typedRoutes: true
+      typedRoutes: true,
     },
 
     extra: {
       ...config.extra,
-      backendApiUrl: process.env.EXPO_PUBLIC_API_BASE_URL || "https://limpeja-backend-production.up.railway.app/",
-      environment: process.env.NODE_ENV || "production",
+      backendApiUrl:
+        process.env.EXPO_PUBLIC_API_BASE_URL ??
+        'https://limpeja-backend-production.up.railway.app/',
+      environment: process.env.NODE_ENV || 'production',
       router: {},
       eas: {
-        projectId: process.env.EAS_PROJECT_ID || "a33ee4a2-86fc-43b8-8d99-b258381b2a1f"
+        projectId:
+          process.env.EAS_PROJECT_ID || 'a33ee4a2-86fc-43b8-8d99-b258381b2a1f',
       },
-      firebaseApiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
-      firebaseAuthDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
-      firebaseProjectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
-      firebaseStorageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
-      firebaseMessagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-      firebaseAppId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
-      firebaseMeasurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID
-    }
+    },
   };
 };
