@@ -1,11 +1,12 @@
 // LimpeJaApp/components/client/booking/success/BookingSummaryCard.tsx
 import { BlurView } from 'expo-blur';
-import * as Clipboard from 'expo-clipboard';
-import * as Haptics from 'expo-haptics'; 
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
-import { Animated, Platform, StyleSheet, View, Text, Dimensions, AccessibilityInfo } from 'react-native'; // ✅ NOVO: AccessibilityInfo para A11y
+import { Animated, Platform, StyleSheet, View, Text, Dimensions, AccessibilityInfo } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import * as Haptics from 'expo-haptics';
 import Toast from 'react-native-toast-message';
+import { useTranslation } from 'react-i18next';
 
 import AdditionalBookingDetails from './AdditionalBookingDetails';
 import BookingDetailSection from './BookingDetailSection';
@@ -52,6 +53,7 @@ export default function BookingSummaryCard({
   formattedAddressLine1,
   formattedAddressLine2,
 }: BookingSummaryCardProps) {
+  const { t } = useTranslation();
   const {
     serviceName,
     scheduledDate,
@@ -88,11 +90,11 @@ export default function BookingSummaryCard({
     if (pixChargeDetails?.brCode) {
       Clipboard.setString(pixChargeDetails.brCode);
       Toast.show({
-        type: 'info',
-        text1: 'Código PIX copiado!',
-        text2: 'Cole no seu aplicativo bancário para finalizar o pagamento.',
-        visibilityTime: 4000,
-      });
+      type: 'info',
+      text1: t('payments.pix.copy_success_title'),
+      text2: t('payments.pix.copy_success_message'),
+      visibilityTime: 4000,
+    });
       // ✅ Haptics: Feedback tátil no copy (leve, premium)
       Haptics.selectionAsync();
       // ✅ A11y: Se reduceMotion, pula qualquer anim interna (se houver)
@@ -101,11 +103,11 @@ export default function BookingSummaryCard({
       }
     } else {
       Toast.show({
-        type: 'error',
-        text1: 'Erro',
-        text2: 'Nenhum código PIX disponível para copiar.',
-        visibilityTime: 4000,
-      });
+      type: 'error',
+      text1: t('payments.pix.copy_error_title'),
+      text2: t('payments.pix.copy_error_message'),
+      visibilityTime: 4000,
+    });
     }
   };
 
@@ -125,6 +127,7 @@ export default function BookingSummaryCard({
 
         <View style={styles.cardContentNew}>
           <ProviderInfoSection
+            providerId={provider?.id || booking.providerId}
             providerAvatarUrl={provider?.avatarUrl}
             providerFullName={provider?.fullName || booking.providerFullName}
             providerRating={providerRating}
@@ -162,10 +165,10 @@ export default function BookingSummaryCard({
             <Text style={styles.totalValue}>{formattedPaymentValue}</Text>
           </View>
 
-          {displayPaymentMethod === 'PIX' && pixChargeDetails && (
+          {displayPaymentMethod === 'PIX' && (
             <SuccessPixInfo
-              pixChargeDetails={pixChargeDetails}
-              handleCopyPixQrCode={handleCopyPixQrCode}
+              bookingId={bookingIdFromBooking}
+              fallback={pixChargeDetails ?? null}
             />
           )}
         </View>
