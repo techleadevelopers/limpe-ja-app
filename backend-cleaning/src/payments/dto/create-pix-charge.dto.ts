@@ -1,5 +1,6 @@
 // src/payments/dto/create-pix-charge.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { PaymentIntentResponseDto } from './payment-intent-response.dto';
 import { IsNumber, IsString, IsNotEmpty, IsOptional, IsUUID, Min, IsEnum } from 'class-validator';
 // Remover IsDate se você não for validar a data diretamente aqui como um objeto Date.
 // Remover Type se não houver transformações complexas necessárias para este DTO.
@@ -103,4 +104,9 @@ export class PixChargeResponseDto {
   @IsOptional()
   @IsString()
   expirationDate?: string;
+  @ApiPropertyOptional({ description: 'Payment Intent associado à cobrança', type: () => PaymentIntentResponseDto })
+  @IsOptional()
+  paymentIntent?: PaymentIntentResponseDto;
+
 }
+
