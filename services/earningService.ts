@@ -1,9 +1,10 @@
 // app/services/earningsService.ts
 
 // CORREÇÃO: As tipagens de saque são do módulo de pagamentos
-import { RequestWithdrawalDto, PixChargeResponseDto } from '../types/backend/payments';
+import { RequestWithdrawalDto } from '../types/backend/payments';
 // CORREÇÃO: A tipagem de ganhos é do módulo de provedores, onde EarningsResponseDto foi definida
 import { EarningsResponseDto, ProviderTransaction } from '../types/backend/providers';
+import { WithdrawalResponseDto } from '../types/backend/earning';
 
 // Outras importações
 import { api } from './api'; // Supondo que 'api' é sua instância configurada do axios
@@ -31,9 +32,9 @@ export async function getMyProviderEarnings(): Promise<EarningsResponseDto> {
  * @param withdrawalDto Os detalhes da solicitação de saque.
  * @returns Uma Promise que resolve para um objeto de resposta de saque.
  */
-export async function requestWithdrawal(withdrawalDto: RequestWithdrawalDto): Promise<PixChargeResponseDto> {
+export async function requestWithdrawal(withdrawalDto: RequestWithdrawalDto): Promise<WithdrawalResponseDto> {
     try {
-        const response = await api.post<PixChargeResponseDto>('/payments/withdrawal', withdrawalDto);
+        const response = await api.post<WithdrawalResponseDto>('/providers/me/earnings/withdrawal', withdrawalDto);
         return response.data;
     } catch (error: any) {
         console.error("[earningsService] Erro ao solicitar saque:", error.response?.data || error.message);
