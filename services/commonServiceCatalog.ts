@@ -1,5 +1,5 @@
 // LimpeJaApp/app/services/commonServiceCatalog.ts
-import api from './api';
+import { api } from './api';
 import { Service } from '../types/backend/services';
 import axios, { AxiosResponse } from 'axios';
 
