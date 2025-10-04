@@ -344,6 +344,27 @@ function InnerSuccessScreen() {
         return new Date(details.expiresAt).getTime() <= Date.now();
     }, [isIntentExpired]);
 
+    // Overlay premium: aviso de expiração/pendência prolongada
+    const [showStatusOverlay, setShowStatusOverlay] = useState(false);
+    const [statusOverlayText, setStatusOverlayText] = useState<string | null>(null);
+    useEffect(() => {
+        const intent = paymentIntent ?? null;
+        if (!intent) { setShowStatusOverlay(false); setStatusOverlayText(null); return; }
+        const expired = isIntentExpired(intent);
+        const PENDING_MAX_MS = 10 * 60 * 1000; // 10min
+        const pendingTooLong = intent.status === PaymentIntentStatus.PENDING && (Date.now() - new Date(intent.createdAt).getTime() > PENDING_MAX_MS);
+        if (expired) {
+            setStatusOverlayText('Seu QR Code expirou. Gere um novo para finalizar o pagamento.');
+            setShowStatusOverlay(true);
+        } else if (pendingTooLong) {
+            setStatusOverlayText('Pagamento pendente há alguns minutos. Confirme no seu banco ou gere um novo código.');
+            setShowStatusOverlay(true);
+        } else {
+            setShowStatusOverlay(false);
+            setStatusOverlayText(null);
+        }
+    }, [paymentIntent, isIntentExpired]);
+
     const animateBlob = useCallback(() => {
         // ✅ A11y: Pula animação se reduceMotion
         if (reduceMotionRef.current) return null;
@@ -744,14 +765,39 @@ function InnerSuccessScreen() {
                         },
                     ]}
                 >
-                    <LinearGradient
-                        colors={abstractBlobColors}
-                        start={{ x: 0.2, y: 0.2 }}
-                        end={{ x: 0.8, y: 0.8 }}
-                        style={StyleSheet.absoluteFillObject}
-                    />
-                    <BlurView intensity={30} tint="light" style={StyleSheet.absoluteFillObject} />
-                </Animated.View>
+            <LinearGradient
+                colors={abstractBlobColors}
+                start={{ x: 0.2, y: 0.2 }}
+                end={{ x: 0.8, y: 0.8 }}
+                style={StyleSheet.absoluteFillObject}
+            />
+            <BlurView intensity={30} tint="light" style={StyleSheet.absoluteFillObject} />
+        </Animated.View>
+
+        {showStatusOverlay && (
+            <View pointerEvents="box-none" style={styles.statusOverlayContainer}>
+                <View style={styles.statusOverlayBackdrop} />
+                <View style={styles.statusOverlayCard}>
+                    <Text style={styles.statusOverlayTitle}>Atenção</Text>
+                    {!!statusOverlayText && (
+                        <Text style={styles.statusOverlayText}>{statusOverlayText}</Text>
+                    )}
+                    <View style={styles.statusOverlayButtons}>
+                        <TouchableOpacity
+                            style={styles.statusOverlayPrimary}
+                            onPress={() => {
+                                try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch (_) {}
+                                refreshPaymentIntent();
+                            }}
+                            accessibilityRole="button"
+                            accessibilityLabel="Atualizar PaymentIntent"
+                        >
+                            <Text style={styles.statusOverlayPrimaryText}>Atualizar</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </View>
+        )}
 
                 {booking && (
                     <ScrollView
@@ -906,6 +952,63 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.04,
         shadowRadius: 18,
         elevation: 0, // Remove sombra excessiva no Android
+    },
+    statusOverlayContainer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 16,
+        zIndex: 999,
+    },
+    statusOverlayBackdrop: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.25)',
+    },
+    statusOverlayCard: {
+        width: '90%',
+        maxWidth: 420,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        paddingVertical: 20,
+        paddingHorizontal: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.08,
+        shadowRadius: 20,
+        elevation: 4,
+        alignItems: 'center',
+    },
+    statusOverlayTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#111',
+        marginBottom: 8,
+    },
+    statusOverlayText: {
+        fontSize: 14,
+        color: '#444',
+        textAlign: 'center',
+        lineHeight: 20,
+        marginBottom: 16,
+    },
+    statusOverlayButtons: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    statusOverlayPrimary: {
+        backgroundColor: '#007AFF',
+        borderRadius: 24,
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+    },
+    statusOverlayPrimaryText: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: '600',
     },
     // ✅ SectionSpacer: marginBottom aumentado para 12 (padrão premium, ~24px total com paddings)
     sectionSpacer: {
