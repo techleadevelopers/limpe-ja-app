@@ -1,12 +1,12 @@
-// LimpeJaApp/app/(client)/bookings/success.tsx
+﻿// LimpeJaApp/app/(client)/bookings/success.tsx
 import { BlurView } from 'expo-blur';
 import * as Calendar from 'expo-calendar';
-import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics'; 
+import * as Sentry from '@sentry/react-native';
 import { AccessibilityInfo } from 'react-native'; // ✅ NOVO: Para reduceMotion (A11y)
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     Animated,
     ColorValue,
@@ -19,7 +19,8 @@ import {
     Text,
     TouchableOpacity
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context'; // Fix: Import para safe areas iOS
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'; // ✅ ADICIONADO: Import para QueryClient e Provider
 
 // Import NotificationUIService
 import NotificationUIService from '../../../services/notificationUIService';
@@ -32,7 +33,21 @@ import SuccessLoadingError from '../../../components/client/booking/success/Succ
 import ImmediateActionButtons from '../../../components/client/booking/success/ImmediateActionButtons';
 import SecurityInfoSection from '../../../components/client/booking/success/SecurityInfoSection';
 import LoyaltyTeaserSection from '../../../components/client/booking/success/LoyaltyTeaserSection';
+import { usePaymentIntent, cachePaymentIntent } from './paymentIntentHooks';
+import { getMyMissions, MissionItem, MissionStatus } from '../../../services/missionService';
+import { getMyLoyaltyBalance } from '../../../services/loyaltyService';
+import { useQuery } from '@tanstack/react-query'; // ✅ REMOVIDO: useQueryClient() - não mais necessário
 import { ReturnCouponCard } from '../../../components/coupons/ReturnCouponCard'; // CORREÇÃO: Importar com chaves, pois é exportação nomeada
+
+// ✅ ADICIONADO: QueryClient instance local para este screen (evita erro sem quebrar app global)
+const queryClient = new QueryClient({
+    defaultOptions: {
+        queries: {
+            retry: 2,
+            staleTime: 5 * 60 * 1000, // 5 minutos
+        },
+    },
+});
 
 // IMPORTANTE: Adicione a interface de props para MissionReminderCard aqui ou no arquivo do componente
 interface MissionReminderCardProps {
@@ -48,7 +63,7 @@ interface MissionReminderCardProps {
 const MissionReminderCard: React.FC<MissionReminderCardProps> = ({ missionId, title, description, deadlineAt, reward, onGo, onDismiss }) => {
     // ✅ Estilo premium para o card: fundo branco, bordas arredondadas, sombra suave
     const cardContainerStyle = {
-        backgroundColor: AppColors.white || '#FFFFFF',
+        backgroundColor: '#FFFFFF',
         borderRadius: 18,
         padding: 16,
         marginHorizontal: 18,
@@ -64,7 +79,7 @@ const MissionReminderCard: React.FC<MissionReminderCardProps> = ({ missionId, ti
     const cardTitleStyle = {
         fontFamily: 'Montserrat-SemiBold', // Título: SemiBold
         fontSize: 16,
-        color: AppColors.textBody || '#000000',
+        color: '#000000',
     };
 
     const cardSubtitleStyle = {
@@ -75,7 +90,7 @@ const MissionReminderCard: React.FC<MissionReminderCardProps> = ({ missionId, ti
 
     const actionButtonStyle = {
         marginTop: 10,
-        backgroundColor: AppColors.successStandard, // Usando cor de sucesso premium
+        backgroundColor: '#4CAF50', // Usando cor de sucesso premium (fallback verde)
         padding: 12,
         borderRadius: 12, // Bordas mais arredondadas
         fontFamily: 'Montserrat-Medium', // Ações: Medium
@@ -97,7 +112,7 @@ const MissionReminderCard: React.FC<MissionReminderCardProps> = ({ missionId, ti
     };
 
     const actionTextStyle = {
-        color: AppColors.white || '#FFFFFF',
+        color: '#FFFFFF',
         textAlign: 'center' as const, // ✅ Fix TS: Literal 'center' para compatibilidade com TextStyle
         fontSize: 14,
         fontFamily: 'Montserrat-Medium', // Texto de ação: Medium
@@ -109,14 +124,6 @@ const MissionReminderCard: React.FC<MissionReminderCardProps> = ({ missionId, ti
         fontSize: 14,
         fontFamily: 'Montserrat-Medium', // Texto de dismiss: Medium
     };
-
-    // ✅ NOVO: ReduceMotion para A11y no MissionReminderCard
-    const reduceMotionRef = useRef(false);
-    useEffect(() => {
-        AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
-            reduceMotionRef.current = enabled;
-        });
-    }, []);
 
     // Adicionado maxFontSizeMultiplier para acessibilidade
     return (
@@ -144,7 +151,7 @@ import { ProviderDisplayInfo } from '../../../types/backend/providers';
 // NOVO: Importar serviços e tipagens para PIX
 import { useAuth } from '../../../hooks/useAuth';
 import { createPixCharge } from '../../../services/paymentService';
-import { CreatePixChargeDto, PixChargeResponseDto } from '../../../types/backend/payments';
+import { CreatePixChargeDto, PixChargeResponseDto, PaymentIntent, PaymentIntentStatus } from '../../../types/backend/payments';
 
 // Importar a lógica de formatação de endereço
 import { formatAddressLine1, formatAddressLine2 } from '../../../utils/address';
@@ -172,10 +179,47 @@ const abstractBlobColors: readonly [ColorValue, ColorValue, ColorValue] = [
     AppColors.primaryInteractive + '05',
 ];
 
-export default function SuccessScreen() {
+const mapPaymentIntentStatusToPixStatus = (status: PaymentIntentStatus): PixChargeResponseDto['status'] => {
+    switch (status) {
+        case PaymentIntentStatus.PAID:
+            return 'PAID';
+        case PaymentIntentStatus.EXPIRED:
+            return 'EXPIRED';
+        case PaymentIntentStatus.REFUNDED:
+        case PaymentIntentStatus.CHARGEBACK:
+            return 'CANCELLED';
+        case PaymentIntentStatus.PENDING:
+        default:
+            return 'PENDING';
+    }
+};
+
+// ✅ CORREÇÃO: Componente interno (InnerSuccessScreen) - TODOS os hooks e lógica MOVIDOS PARA DENTRO do Provider
+function InnerSuccessScreen() {
     const { bookingId, paymentMethod, totalPrice: totalPriceParam, couponApplied, couponCode: appliedCouponCode } = useLocalSearchParams<{ bookingId?: string; paymentMethod?: string; totalPrice?: string; couponApplied?: string; couponCode?: string }>();
     const router = useRouter();
     const { user } = useAuth();
+
+    const { data: loyaltyBalance, isFetching: isFetchingLoyalty } = useQuery({
+        queryKey: ['loyalty', 'balance'],
+        queryFn: getMyLoyaltyBalance,
+        enabled: Boolean(user?.id),
+        staleTime: 60000,
+        retry: 2,
+    });
+
+    const { data: missionItems } = useQuery<MissionItem[]>({
+        queryKey: ['missions', user?.id ?? 'anonymous'],
+        queryFn: () => getMyMissions(),
+        enabled: Boolean(user?.id),
+        staleTime: 30000,
+        retry: 2,
+    });
+
+    const { intent: paymentIntent, loading: isFetchingPaymentIntent, error: paymentIntentError, refresh: refreshPaymentIntent } = usePaymentIntent(bookingId);
+
+    const [missionReminder, setMissionReminder] = useState<MissionItem | null>(null);
+    const [showMissionReminderCard, setShowMissionReminderCard] = useState(false);
 
     const [booking, setBooking] = useState<BookingDetails | null>(null);
     const [provider, setProvider] = useState<ProviderDisplayInfo | null>(null);
@@ -188,7 +232,35 @@ export default function SuccessScreen() {
     const [showReturnCouponCard, setShowReturnCouponCard] = useState(false);
     const [returnCouponDetails, setReturnCouponDetails] = useState<{ code: string; title: string; subtitle: string; expiresAt: Date } | null>(null); // expiresAt é Date
 
-    const [showMissionReminderCard, setShowMissionReminderCard] = useState(false);
+    const missionDeadlineIso = useMemo(() => {
+        if (!missionReminder) {
+            return new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+        }
+
+        const { mission, progress } = missionReminder;
+        if (progress?.completedAt) {
+            return progress.completedAt;
+        }
+
+        if (mission.timeWindowDays) {
+            const baseDate = progress?.lastEventAt ? new Date(progress.lastEventAt) : new Date();
+            baseDate.setDate(baseDate.getDate() + mission.timeWindowDays);
+            return baseDate.toISOString();
+        }
+
+        return new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+    }, [missionReminder]);
+
+    const missionReward = useMemo(() => {
+        if (!missionReminder) {
+            return null;
+        }
+
+        return {
+            kind: missionReminder.mission.rewardType === 'COUPON' ? 'COUPON' : 'POINTS',
+            value: missionReminder.mission.rewardValue,
+        } as const;
+    }, [missionReminder]);
 
     const contentOpacity = useRef(new Animated.Value(0)).current;
     const contentTranslateY = useRef(new Animated.Value(50)).current;
@@ -202,14 +274,75 @@ export default function SuccessScreen() {
 
     // ✅ NOVO: ReduceMotion para A11y (respeita preferências do usuário)
     const reduceMotionRef = useRef(false);
+    const dismissedMissionIdsRef = useRef<Set<string>>(new Set());
+
     useEffect(() => {
         AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
             reduceMotionRef.current = enabled;
         });
     }, []);
 
+    useEffect(() => {
+        if (!paymentIntent || !booking) {
+            return;
+        }
+
+        if (!paymentIntent.qrCodeText && !pixChargeDetails?.brCode) {
+            return;
+        }
+
+        const mappedStatus = mapPaymentIntentStatusToPixStatus(paymentIntent.status);
+        const computedAmount = paymentIntent.amount ?? paymentIntent.amountCents / 100;
+        const computedExpiresAt =
+            paymentIntent.expiresAt ?? pixChargeDetails?.expiresAt ?? new Date(Date.now() + 30 * 60 * 1000).toISOString();
+        const defaultDescription = sanitizeText(`Agendamento ${booking.serviceName || 'Serviço'} com ${booking.providerFullName}`);
+
+        setPixChargeDetails((previous) => {
+            if (previous?.paymentIntent?.updatedAt === paymentIntent.updatedAt && previous?.brCode) {
+                return previous;
+            }
+
+            return {
+                transactionId: paymentIntent.externalRef ?? paymentIntent.id,
+                status: mappedStatus,
+                brCode: paymentIntent.qrCodeText ?? previous?.brCode ?? '',
+                qrCodeImage: paymentIntent.qrCodeUrl ?? previous?.qrCodeImage ?? '',
+                expiresAt: computedExpiresAt,
+                amount: computedAmount ?? previous?.amount ?? (Number(totalPriceParam) || 0),
+                description: previous?.description ?? defaultDescription,
+                bookingId: booking.id,
+                providerId: booking.providerId,
+                paymentIntent,
+                brCodeError: previous?.brCodeError,
+                expirationDate: previous?.expirationDate,
+            };
+        });
+    }, [paymentIntent, booking, pixChargeDetails?.brCode, pixChargeDetails?.expiresAt, pixChargeDetails?.description, totalPriceParam]);
+
     // NOVO: Guard para geração de PIX (roda uma vez só)
     const pixRequestedRef = useRef(false);
+
+    const isIntentExpired = useCallback((intent?: PaymentIntent | null) => {
+        if (!intent) return false;
+        if (intent.status === PaymentIntentStatus.EXPIRED) {
+            return true;
+        }
+        if (intent.expiresAt) {
+            return new Date(intent.expiresAt).getTime() <= Date.now();
+        }
+        return false;
+    }, []);
+
+    const isPixExpired = useCallback((details?: PixChargeResponseDto | null) => {
+        if (!details) return false;
+        if (details.paymentIntent) {
+            return isIntentExpired(details.paymentIntent);
+        }
+        if (!details.expiresAt) {
+            return false;
+        }
+        return new Date(details.expiresAt).getTime() <= Date.now();
+    }, [isIntentExpired]);
 
     const animateBlob = useCallback(() => {
         // ✅ A11y: Pula animação se reduceMotion
@@ -308,13 +441,6 @@ export default function SuccessScreen() {
                 }
             }
 
-            // NOVO: Lógica para exibir o MissionReminderCard (Mock)
-            if (fetchedBooking.serviceName?.includes('limpeza')) {
-                if (isMounted.current) {
-                    setShowMissionReminderCard(true);
-                }
-            }
-
         } catch (err: any) {
             console.error("[SuccessScreen] Erro ao buscar detalhes do agendamento (API):", err.response?.data?.message || err.message, err);
             if (isMounted.current) {
@@ -331,15 +457,33 @@ export default function SuccessScreen() {
 
     // NOVO: useEffect separado para geração de PIX (com guard, roda só 1x)
     useEffect(() => {
-        if (!booking) return;
-        if (paymentMethod !== 'PIX') return;
-        if (!totalPriceParam) return;
-        if (pixChargeDetails) return;        // já temos PIX, não refazer
-        if (pixRequestedRef.current) return; // guard
+        if (!booking || paymentMethod !== 'PIX' || !totalPriceParam) {
+            return;
+        }
+
+        if (isFetchingPaymentIntent) {
+            return;
+        }
 
         const amount = Number(totalPriceParam);
-        if (isNaN(amount) || amount <= 0) {
+        if (Number.isNaN(amount) || amount <= 0) {
             setPixGenerationError('Valor total inválido para gerar o PIX.');
+            return;
+        }
+
+        const currentIntent = paymentIntent ?? pixChargeDetails?.paymentIntent ?? null;
+        const intentExpired = isIntentExpired(currentIntent);
+        const pixExpired = isPixExpired(pixChargeDetails);
+
+        const hasUsableIntent = !!currentIntent && !intentExpired;
+        const hasUsablePix = !!pixChargeDetails?.brCode && !pixExpired;
+        const forcedRegeneration = !currentIntent && !!paymentIntentError;
+
+        if (!forcedRegeneration && (hasUsablePix || (hasUsableIntent && Boolean(paymentIntent?.qrCodeText || pixChargeDetails?.brCode)))) {
+            return;
+        }
+
+        if (pixRequestedRef.current) {
             return;
         }
 
@@ -356,15 +500,52 @@ export default function SuccessScreen() {
                 const pixResponse = await createPixCharge(user!.id, pixChargeData);
                 if (!isMounted.current) return;
                 setPixChargeDetails(pixResponse);
+                await cachePaymentIntent(booking.id, pixResponse.paymentIntent ?? null);
+                refreshPaymentIntent();
+
                 NotificationUIService.showSuccess('Use o código para finalizar o pagamento.', 'PIX Gerado com Sucesso!');
-                // ✅ Haptics: Feedback de sucesso no PIX
                 await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             } catch (e: any) {
                 if (!isMounted.current) return;
                 setPixGenerationError(e?.response?.data?.message || 'Não foi possível gerar a cobrança PIX.');
+            } finally {
+                pixRequestedRef.current = false;
             }
         })();
-    }, [booking, paymentMethod, totalPriceParam, pixChargeDetails, user?.id]);
+    }, [
+        booking,
+        paymentMethod,
+        totalPriceParam,
+        paymentIntent,
+        paymentIntentError,
+        pixChargeDetails,
+        isFetchingPaymentIntent,
+        isIntentExpired,
+        isPixExpired,
+        user?.id,
+    ]);
+
+
+    useEffect(() => {
+        if (!missionItems) {
+            return;
+        }
+
+        const availableMissions = missionItems.filter((mission) => !dismissedMissionIdsRef.current.has(mission.mission.id));
+
+        if (availableMissions.length === 0) {
+            setMissionReminder(null);
+            setShowMissionReminderCard(false);
+            return;
+        }
+
+        const actionableMission =
+            availableMissions.find((mission) => mission.canClaim || mission.progress?.status === MissionStatus.ACTIVE) ??
+            availableMissions[0];
+
+        setMissionReminder(actionableMission);
+        setShowMissionReminderCard(true);
+    }, [missionItems]);
 
     // REFACTOR: useEffect de entrada sem pixGenerationDelay (fetch 1x só)
     useEffect(() => {
@@ -393,7 +574,7 @@ export default function SuccessScreen() {
 
         const timer = setTimeout(() => {
             entryAnimation.start(() => {
-                fetchBookingAndProviderDetails();   // 🚫 sem setTimeout extra pra PIX
+                fetchBookingAndProviderDetails();   // 🚀 sem setTimeout extra pra PIX
             });
         }, revealDelay);
 
@@ -482,21 +663,7 @@ export default function SuccessScreen() {
         } as any);
     }, [booking, provider, router]);
 
-    const handleCopyPixQrCode = useCallback(async () => {
-        if (pixChargeDetails?.brCode) {
-            try {
-                await Clipboard.setStringAsync(pixChargeDetails.brCode);
-                NotificationUIService.showInfo('Cole no seu aplicativo bancário para finalizar o pagamento.', 'Código PIX copiado!');
-                // ✅ Haptics: Feedback de seleção/cópia
-                await Haptics.selectionAsync();
-            } catch (error) {
-                console.error("Erro ao copiar código PIX:", error);
-                NotificationUIService.showError('Não foi possível copiar o código PIX.', 'Erro');
-            }
-        } else {
-            NotificationUIService.showError('Nenhum código PIX disponível para copiar.', 'Erro');
-        }
-    }, [pixChargeDetails]);
+
 
     const handleRebookNow = useCallback((code: string) => {
         // ✅ Haptics: Feedback tátil em rebook (premium CTA)
@@ -507,20 +674,28 @@ export default function SuccessScreen() {
         } as any);
         setShowReturnCouponCard(false);
     }, [router]);
+    const handleNavigateToLoyalty = useCallback(() => {
+        router.push('/(common)/loyalty' as any);
+    }, [router]);
 
     const handleGoToMission = useCallback(() => {
-        // ✅ Haptics: Feedback tátil em missão
+        if (missionReminder) {
+            dismissedMissionIdsRef.current.add(missionReminder.mission.id);
+        }
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         router.push('/(client)/missions' as any);
         setShowMissionReminderCard(false);
-    }, [router]);
+    }, [missionReminder, router]);
 
     const handleDismissMissionReminder = useCallback(() => {
+        if (missionReminder) {
+            dismissedMissionIdsRef.current.add(missionReminder.mission.id);
+        }
         setShowMissionReminderCard(false);
         NotificationUIService.showInfo('Você pode encontrá-lo na seção de Missões.', 'Lembrete dispensado');
-    }, []);
+    }, [missionReminder]);
 
-    // BONUS: Removido pixGenerationError da condição de erro (não volta ao loader por falha no PIX)
+        // BONUS: Removido pixGenerationError da condição de erro (não volta ao loader por falha no PIX)
     if (isLoading || error || !booking) {
         return (
             <SuccessLoadingError
@@ -539,20 +714,20 @@ export default function SuccessScreen() {
     const formattedAddressLine2 = userAddress ? formatAddressLine2(userAddress) : '';
 
     return (
-       <SafeAreaView style={{ flex: 1 }} edges={['left', 'right', 'bottom']}>  {/* Removido 'top' */}
+        <SafeAreaView style={{ flex: 1 }} edges={['left', 'right', 'bottom']}>  {/* Removido 'top' */}
             {/* ✅ Gradiente polido: mais suave e clean com 3 cores e transparência reduzida */}
             <LinearGradient
-    colors={backgroundGradientColors}
-    start={{ x: 0, y: 0 }}
-    end={{ x: 1, y: 1 }}
-    style={[
-        styles.screenGradientBackground,
-        { 
-            flex: 1, // ✅ Garante que o gradient ocupe toda a tela para scroll completo
-            paddingTop: 0  // ✅ ZERADO: Remove o padding fixo de 70/50px
-        }
-    ]}
->
+                colors={backgroundGradientColors}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[
+                    styles.screenGradientBackground,
+                    { 
+                        flex: 1, // ✅ Garante que o gradient ocupe toda a tela para scroll completo
+                        paddingTop: 0  // ✅ ZERADO: Remove o padding fixo de 70/50px
+                    }
+                ]}
+            >
                 <Stack.Screen options={{ headerShown: false }} />
 
                 {/* ✅ AnimatedBlob premium: menor, mais opaco sutil, sombra leve sem poluir */}
@@ -620,26 +795,28 @@ export default function SuccessScreen() {
                             />
 
                             {showReturnCouponCard && returnCouponDetails && (
-    <View key={showReturnCouponCard ? 'coupon-shown' : 'coupon-hidden'} style={[styles.sectionSpacer, { marginTop: 0, marginBottom: 20 }]}> {/* ✅ FIX: Key força re-mount/animação quando estado muda; marginBottom 20px */}
-        <ReturnCouponCard
-            code={returnCouponDetails.code}
-            title={returnCouponDetails.title}
-            subtitle={returnCouponDetails.subtitle}
-            expiresAt={returnCouponDetails.expiresAt}
-            onRebookNow={handleRebookNow}
-        />
-    </View>
-)}
+                                <View
+                                    key={showReturnCouponCard ? 'coupon-shown' : 'coupon-hidden'}
+                                    style={[styles.sectionSpacer, { marginTop: 0, marginBottom: 20 }]}
+                                >
+                                    <ReturnCouponCard
+                                        code={returnCouponDetails.code}
+                                        title={returnCouponDetails.title}
+                                        subtitle={returnCouponDetails.subtitle}
+                                        expiresAt={returnCouponDetails.expiresAt}
+                                        onRebookNow={handleRebookNow}
+                                    />
+                                </View>
+                            )}
 
-                            {showMissionReminderCard && booking && (
-                                <View style={styles.sectionSpacer}> {/* Fix: Mesmo para mission, gap lógico */}
+                            {showMissionReminderCard && missionReminder && missionReward && (
+                                <View style={styles.sectionSpacer}>
                                     <MissionReminderCard
-                                        // Em um cenário real, você buscaria o ID e detalhes da missão do backend
-                                        missionId="mock-review-mission"
-                                        title="Avalie seu serviço!"
-                                        description="Sua opinião é importante para nós e te ajuda a ganhar recompensas!"
-                                        deadlineAt={new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString()}
-                                        reward={{ kind: 'POINTS', value: 50 }}
+                                        missionId={missionReminder.mission.id}
+                                        title={missionReminder.mission.title}
+                                        description={missionReminder.mission.description}
+                                        deadlineAt={missionDeadlineIso}
+                                        reward={missionReward}
                                         onGo={handleGoToMission}
                                         onDismiss={handleDismissMissionReminder}
                                     />
@@ -653,10 +830,16 @@ export default function SuccessScreen() {
                             />
 
                             {/* ✅ Adicionado SecurityInfoSection para conteúdo completo (era ausente no render) */}
-                            <SecurityInfoSection successColor={successColor} />
+                            <SecurityInfoSection bookingId={booking?.id} successColor={successColor} />
 
                             {/* ✅ Adicionado LoyaltyTeaserSection para conteúdo completo (era ausente no render) */}
-                            <LoyaltyTeaserSection headerPrimaryColor={headerPrimaryColor} />
+                            <LoyaltyTeaserSection
+                                headerPrimaryColor={headerPrimaryColor}
+                                currentPoints={loyaltyBalance?.currentPoints}
+                                nextRewardName={loyaltyBalance?.nextReward?.name ?? null}
+                                isLoading={isFetchingLoyalty}
+                                onPressLearnMore={handleNavigateToLoyalty}
+                            />
 
                             <MainActionButtons
                                 onGoToBookings={handleGoToBookings}
@@ -668,6 +851,15 @@ export default function SuccessScreen() {
                 )}
             </LinearGradient>
         </SafeAreaView>
+    );
+}
+
+// ✅ CORREÇÃO: Export do wrapper com Provider (envia hooks para dentro do Provider)
+export default function SuccessScreen() {
+    return (
+        <QueryClientProvider client={queryClient}>
+            <InnerSuccessScreen />
+        </QueryClientProvider>
     );
 }
 
@@ -695,7 +887,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: 'transparent',
     },
-    // ✅ AnimatedBlob polido: menor (0.6x), opacidade reduzida (0.25), sombra sutil, elevation 0 no Android
+    // ✅ AnimatedBlob polido: menor (0.6x), opacidade reduzida (0.25), sombra leve sem poluir
     animatedBlob: {
         position: 'absolute',
         width: SCREEN_WIDTH * 0.6,
