@@ -1,25 +1,26 @@
-// LimpeJaApp/app/(client)/menu/index.tsx
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
   Animated,
+  Dimensions,
   Easing,
   Image,
   ImageSourcePropType,
   Platform,
   Pressable,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
   useColorScheme,
-  TouchableOpacity,
-  ScrollView,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
+import NavBar from '../../../../components/client/explore/home/NavBar'; // Import do NavBar injetado
 
 import Colors from '../../../../constants/Colors';
 import { getUserProfile } from '../../../../services/clientService';
@@ -57,7 +58,7 @@ const Icons3D = {
 } satisfies Record<string, ImageSourcePropType>;
 
 // Componente para renderizar ícones 3D
-const Icon3D = ({ src, size = 48, style }: { src: ImageSourcePropType; size?: number; style?: any }) => (
+const Icon3D = ({ src, size = 46, style }: { src: ImageSourcePropType; size?: number; style?: any }) => (
   <Image source={src} style={[{ width: size, height: size }, style]} resizeMode="contain" />
 );
 
@@ -114,11 +115,11 @@ interface MenuCategoryItem {
 const menuCategories: MenuCategoryItem[] = [
   { key: 'coupons', title: 'cupons', icon: Icons3D.ticket, route: '/(client)/coupons' },
   { key: 'missions', title: 'missões', icon: Icons3D.missions, route: '/(client)/missions' },
-  { key: 'champions2', title: 'champions2', icon: Icons3D.champions2, route: '/(client)/champions2' },
+  { key: 'champions2', title: 'Ranking', icon: Icons3D.champions2, route: '/(client)/champions2' },
   { key: 'cashback', title: 'cashback', icon: Icons3D.cashback, route: '/(client)/wallet/cashback' },
   { key: 'referral', title: 'indicações', icon: Icons3D.referral, route: '/(client)/referrals' },
   { key: 'metrics', title: 'métricas', icon: Icons3D.metrics, route: '/(client)/metrics' },
-  { key: 'bookService', title: 'agendar serviço', icon: Icons3D.bookService, route: '/(client)/booking' }, // Exemplo
+  { key: 'bookService', title: 'agendar', icon: Icons3D.bookService, route: '/(client)/booking' }, // Exemplo
   { key: 'support', title: 'suporte', icon: Icons3D.support, route: '/(common)/support' },
   { key: 'safety', title: 'segurança', icon: Icons3D.safety, route: '/(common)/safety' },
   { key: 'settings', title: 'ajustes', icon: Icons3D.privacy, route: '/(client)/settings' },
@@ -147,7 +148,7 @@ function CategoryMiniCard({ item, theme }: { item: MenuCategoryItem; theme: Retu
         },
       ]}
     >
-      <Icon3D src={item.icon} size={68} />
+      <Icon3D src={item.icon} size={66} />
       <Text style={[styles.categoryMiniCardTitle, { color: theme.text }]} numberOfLines={1}>
         {item.title}
       </Text>
@@ -210,7 +211,7 @@ export default function ClientMenuScreen() {
   const MainCardContent = (
     <Animated.View style={{ opacity: headerFade, transform: [{ translateY: headerTranslate }] }}>
       <LinearGradient
-        colors={['rgba(212, 233, 240, 0.47)', 'rgba(74, 119, 226, 0.21)', 'rgba(225, 206, 230, 0.37)']}
+        colors={['rgba(212, 233, 240, 0.11)', 'rgba(74, 119, 226, 0.21)', 'rgba(225, 206, 230, 0)']}
         start={{ x: 0.12, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[styles.glassmorphismCard, { borderColor: withAlpha('#FFF', 0.2) }]}
@@ -258,7 +259,7 @@ export default function ClientMenuScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <StatusBar barStyle={scheme === 'dark' ? 'light-content' : 'dark-content'} />
 
-      {/* Cabeçalho superior da tela (Menu) */}
+      {/* Cabeçalho superior da tela (Menu) - Com ícone de voltar e título com fontSize aumentada em ~2% */}
       <Animated.View
         style={[
           styles.topHeader,
@@ -268,24 +269,48 @@ export default function ClientMenuScreen() {
           },
         ]}
       >
-        {/* Removido o botão de voltar e o ícone de configurações, pois é a tela principal do menu */}
-        <View style={{ width: 20 }} /> {/* Placeholder para centralizar o título */}
+        {/* Ícone de voltar injetado no lado esquerdo */}
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={{ padding: 5, marginLeft: -5 }} // Ajuste para alinhar
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="arrow-back" size={24} color="#1158e683" />
+        </TouchableOpacity>
         <Text style={[styles.topHeaderTitle, { color: '#1158e683' }]}>Menu Principal</Text>
-        <View style={{ width: 20 }} /> {/* Placeholder para centralizar o título */}
+        <View style={{ width: 20 }} /> {/* Placeholder para o lado direito */}
       </Animated.View>
 
-      <ScrollView contentContainerStyle={styles.scrollViewContent}>
-        {MainCardContent}
-        {/* A SectionList e seus itens foram removidos, pois os mini-cards agora estão no HeaderCard */}
-      </ScrollView>
+      {/* Conteúdo principal com ScrollView */}
+      <View style={styles.mainContent}>
+        <ScrollView contentContainerStyle={styles.scrollViewContent}>
+          {MainCardContent}
+          {/* A SectionList e seus itens foram removidos, pois os mini-cards agora estão no HeaderCard */}
+        </ScrollView>
+      </View>
+
+      {/* NavBar injetado na parte inferior (rodapé fixo) e movido 2% para cima */}
+      <View style={{ transform: [{ translateY: -(Dimensions.get('window').height * 0.02) }] }}>
+        <NavBar />
+      </View>
     </View>
   );
 }
 
 // =================== STYLES ===================
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
-  scrollViewContent: { padding: 16, paddingTop: Platform.OS === 'ios' ? 16 : 16, paddingBottom: 28 }, // Ajuste de padding
+  screen: { 
+    flex: 1,
+    // Para acomodar o NavBar no bottom, garantimos que o conteúdo principal não o sobreponha
+  },
+  mainContent: {
+    flex: 1, // Ocupa o espaço restante entre header e bottom nav
+  },
+  scrollViewContent: { 
+    padding: 16, 
+    paddingTop: Platform.OS === 'ios' ? 16 : 16, 
+    paddingBottom: 28 // Padding extra no bottom para evitar corte pelo NavBar
+  }, // Ajuste de padding
 
   glassmorphismCard: {
     borderRadius: 44,
@@ -294,9 +319,9 @@ const styles = StyleSheet.create({
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.25,
-        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 1,
       },
       android: {
         elevation: 15,
@@ -306,7 +331,8 @@ const styles = StyleSheet.create({
 
   topHeader: {
     paddingHorizontal: 26,
-    paddingTop: Platform.OS === 'ios' ? 56 : 20,
+    marginBottom: 10,
+    paddingTop: Platform.OS === 'ios' ? 59 : 20,
     paddingBottom: 12,
     borderBottomLeftRadius: 22,
     borderBottomRightRadius: 22,
@@ -318,8 +344,8 @@ const styles = StyleSheet.create({
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.25,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.15,
         shadowRadius: 10,
       },
       android: {
@@ -327,16 +353,22 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  topHeaderTitle: { fontWeight: '800', letterSpacing: 0.6, flex: 1, textAlign: 'center' }, // Centraliza o título
+  topHeaderTitle: { 
+    fontWeight: '700', 
+    letterSpacing: 0.6, 
+    flex: 1, 
+    textAlign: 'center',
+    fontSize: 17, // Aumentado em aproximadamente 2% (assumindo base ~17.6px padrão para títulos semelhantes)
+  }, // Centraliza o título
 
   profileBlock: { alignItems: 'center', paddingVertical: 8 },
   avatarWrap: {
-    width: 75,
-    height: 75,
+    width: 69,
+    height: 69,
     borderRadius: 43,
     overflow: 'hidden',
     marginBottom: 0,
-    marginTop: 15,
+    marginTop: 1,
   },
   avatar: { width: '100%', height: '100%', resizeMode: 'cover' },
   userName: { fontSize: 17, fontWeight: '700', marginTop: 6 },
@@ -378,7 +410,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     textAlign: 'center',
-    marginTop: 6,
+    marginTop: 2,
     textTransform: 'lowercase', // Títulos em minúsculas
   },
 
