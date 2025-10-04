@@ -1,38 +1,25 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { fetchDashboardMetrics } from "@/lib/api"; // Reutilizando fetchDashboardMetrics para dados de exemplo
+import { fetchRevenueTrend } from "@/lib/api";
+import type { RevenueTrendPoint } from "@/lib/types";
 
-// Exemplo de dados mockados, que seriam substituídos por dados reais da API
-// Para a demonstração, vamos simular que fetchDashboardMetrics retorna algo que podemos usar aqui
-const sampleData = [
-  { name: 'Jan', revenue: 65000 },
-  { name: 'Fev', revenue: 59000 },
-  { name: 'Mar', revenue: 80000 },
-  { name: 'Abr', revenue: 81000 },
-  { name: 'Mai', revenue: 56000 },
-  { name: 'Jun', revenue: 89000 },
-  { name: 'Jul', revenue: 95000 },
+const RANGE_OPTIONS = [
+  { label: "3M", value: 3 },
+  { label: "6M", value: 6 },
+  { label: "12M", value: 12 },
 ];
 
 export default function RevenueChart() {
-  // Em um cenário real, você buscaria dados de receita específicos, talvez com filtros de período
-  // Por agora, vamos apenas usar um mock ou adaptar algo do dashboard metrics
-  const { data: metrics, isLoading, isError } = useQuery({
-    queryKey: ['/dashboard/metrics'],
-    queryFn: () => fetchDashboardMetrics(),
+  const [selectedRange, setSelectedRange] = useState<number>(12);
+
+  const { data: revenueTrend = [], isLoading, isError, error } = useQuery<RevenueTrendPoint[], Error>({
+    queryKey: ['/admin/dashboard/revenue-trend', selectedRange],
+    queryFn: () => fetchRevenueTrend(selectedRange),
   });
-
-  // Se você tivesse um endpoint específico para dados de gráfico de receita:
-  // const { data: revenueChartData, isLoading: isRevenueLoading } = useQuery({
-  //   queryKey: ['/revenue-chart-data'],
-  //   queryFn: () => fetchRevenueChartData(),
-  // });
-
-  // Para a demonstração, usamos sampleData. Em produção, seria revenueChartData
-  const chartData = sampleData; // Ou revenueChartData se implementado
 
   return (
     <motion.div
@@ -43,58 +30,63 @@ export default function RevenueChart() {
       <Card className="shadow-floating hover:shadow-floating-lg transition-all duration-300 border-0">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-semibold text-gray-900">Análise de Receita</CardTitle>
+            <CardTitle className="text-lg font-semibold text-gray-900">An�lise de Receita</CardTitle>
             <div className="flex space-x-2">
-              <Button variant="outline" size="sm" className="text-xs bg-light-blue/20 text-medium-blue border-light-blue/30 hover:bg-light-blue/30">
-                7D
-              </Button>
-              <Button variant="outline" size="sm" className="text-xs text-gray-600 hover:text-medium-blue">
-                30D
-              </Button>
-              <Button variant="outline" size="sm" className="text-xs text-gray-600 hover:text-medium-blue">
-                90D
-              </Button>
+              {RANGE_OPTIONS.map((option) => (
+                <Button
+                  key={option.value}
+                  variant="outline"
+                  size="sm"
+                  className={`text-xs ${selectedRange === option.value
+                    ? "bg-light-blue/20 text-medium-blue border-light-blue/30 hover:bg-light-blue/30"
+                    : "text-gray-600 hover:text-medium-blue"
+                  }`}
+                  onClick={() => setSelectedRange(option.value)}
+                >
+                  {option.label}
+                </Button>
+              ))}
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          {isLoading ? ( // Ou isRevenueLoading
+          {isLoading ? (
             <div className="h-64 flex items-center justify-center">
-              <p className="text-gray-500">Carregando dados do gráfico...</p>
+              <p className="text-gray-500">Carregando dados do gr�fico...</p>
             </div>
           ) : isError ? (
             <div className="h-64 flex items-center justify-center text-red-600">
-              <p>Erro ao carregar dados do gráfico.</p>
+              <p>Erro ao carregar dados do gr�fico: {error?.message}</p>
+            </div>
+          ) : revenueTrend.length === 0 ? (
+            <div className="h-64 flex items-center justify-center text-gray-500">
+              <p>Nenhum dado de receita dispon�vel para o per�odo selecionado.</p>
             </div>
           ) : (
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData}>
+                <LineChart data={revenueTrend}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis 
-                    dataKey="name" 
-                    stroke="#666"
-                    fontSize={12}
-                  />
-                  <YAxis 
+                  <XAxis dataKey="month" stroke="#666" fontSize={12} />
+                  <YAxis
                     stroke="#666"
                     fontSize={12}
                     tickFormatter={(value) => `R$ ${(value / 1000).toFixed(0)}k`}
                   />
-                  <Tooltip 
+                  <Tooltip
                     formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR')}`, 'Receita']}
                     labelStyle={{ color: '#333' }}
-                    contentStyle={{ 
-                      backgroundColor: 'white', 
+                    contentStyle={{
+                      backgroundColor: 'white',
                       border: '1px solid #e0e0e0',
                       borderRadius: '8px',
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                     }}
                   />
-                  <Line 
-                    type="monotone" 
-                    dataKey="revenue" 
-                    stroke="var(--medium-blue)" 
+                  <Line
+                    type="monotone"
+                    dataKey="revenue"
+                    stroke="var(--medium-blue)"
                     strokeWidth={3}
                     dot={{ fill: 'var(--medium-blue)', strokeWidth: 2, r: 4 }}
                     activeDot={{ r: 6, stroke: 'var(--medium-blue)', strokeWidth: 2, fill: 'white' }}
