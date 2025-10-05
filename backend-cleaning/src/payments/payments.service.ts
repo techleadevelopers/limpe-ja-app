@@ -275,4 +275,26 @@ export class PaymentsService {
       updatedAt: (anyPi.updatedAt instanceof Date ? anyPi.updatedAt : new Date(anyPi.updatedAt)).toISOString(),
     };
   }
+
+  // Process recurring payment for a generated booking (via subscription)
+  async processRecurringPayment(
+    clientUserId: string,
+    subscriptionId: string,
+    bookingId: string,
+    amount: number,
+  ): Promise<void> {
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      select: { providerId: true },
+    });
+    if (!booking?.providerId) {
+      throw new NotFoundException('Provider not found for booking.');
+    }
+    await this.createPixCharge(clientUserId, {
+      amount,
+      description: `Recurring payment for subscription ${subscriptionId}`,
+      bookingId,
+      providerId: booking.providerId,
+    });
+  }
 }
