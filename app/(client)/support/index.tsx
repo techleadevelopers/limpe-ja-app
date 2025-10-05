@@ -30,35 +30,10 @@ const Icons3D = {
 };
 
 // =============================================================
-// API (usa instância centralizada do projeto)
+// API centralizada de suporte e tipos unificados
 // =============================================================
-import { api } from '../../../services/api';
-
-// Tipos mínimos para alinhar ao backend de tickets (flexível)
-export type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED' | 'CANCELLED';
-export type TicketSeverity = 'LOW' | 'MEDIUM' | 'HIGH';
-export type TicketCategory = 'PAYMENT' | 'BOOKING' | 'ACCOUNT' | 'TECHNICAL' | 'SAFETY' | 'OTHER';
-
-export interface SupportTicket {
-  id: string;
-  subject: string;
-  category: TicketCategory;
-  severity?: TicketSeverity;
-  message: string;
-  bookingId?: string | null;
-  status: TicketStatus;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface CreateTicketDto {
-  subject: string;
-  message: string;
-  category: TicketCategory;
-  severity?: TicketSeverity;
-  bookingId?: string;
-  attachments?: string[]; // storageKeys
-}
+import { supportService } from '../../../services/supportService';
+import { SupportTicket, TicketCategory, TicketSeverity, CreateTicketPayload } from '../../../types/backend/support';
 
 // =============================================================
 // UI — Cabeçalho com mesmo tema do schedule (gradiente + abas pílula)
@@ -151,26 +126,17 @@ function AnimatedBackdrop() {
 // Serviços HTTP
 // =============================================================
 async function fetchMyTickets(): Promise<SupportTicket[]> {
-  const { data } = await api.get('/support/tickets', { params: { mine: true } });
-  return data?.items ?? data ?? [];
+  return supportService.getTickets();
 }
 
-async function createTicket(dto: CreateTicketDto): Promise<SupportTicket> {
-  const { data } = await api.post('/support/tickets', dto);
-  return data;
+async function createTicket(dto: { subject: string; description: string; category: TicketCategory; bookingId?: string; attachments?: string[] }): Promise<SupportTicket> {
+  const payload: CreateTicketPayload = dto;
+  return supportService.createTicket(payload);
 }
 
-// (Opcional) buscar metadados
+// Buscar metadados do backend (categorias e severidades)
 async function fetchMeta(): Promise<{ categories: TicketCategory[]; severities: TicketSeverity[] }> {
-  try {
-    const { data } = await api.get('/support/meta');
-    return {
-      categories: data?.categories ?? ['PAYMENT', 'BOOKING', 'ACCOUNT', 'TECHNICAL', 'SAFETY', 'OTHER'],
-      severities: data?.severities ?? ['LOW', 'MEDIUM', 'HIGH'],
-    };
-  } catch {
-    return { categories: ['PAYMENT', 'BOOKING', 'ACCOUNT', 'TECHNICAL', 'SAFETY', 'OTHER'], severities: ['LOW', 'MEDIUM', 'HIGH'] };
-  }
+  return supportService.getMeta();
 }
 
 // =============================================================
@@ -226,8 +192,7 @@ export default function SupportIndex() {
     }
     try {
       setSubmitting(true);
-      const payload: CreateTicketDto = { subject: subject.trim(), message: message.trim(), category, severity, bookingId };
-      const created = await createTicket(payload);
+      const created = await createTicket({ subject: subject.trim(), description: message.trim(), category, bookingId });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setSubject('');
       setMessage('');
@@ -255,7 +220,7 @@ export default function SupportIndex() {
         {!!item.severity && <Badge label={item.severity} />}
         <Text style={styles.ticketDate}>{formatDate(item.createdAt)}</Text>
       </View>
-      <Text style={styles.ticketMsg} numberOfLines={2}>{item.message}</Text>
+      <Text style={styles.ticketMsg} numberOfLines={2}>{item.description}</Text>
       <View style={styles.ticketActions}>
         <TouchableOpacity style={styles.actionBtn} onPress={() => router.push(`/support/${item.id}` as any)}>
           <Ionicons name="chatbubbles-outline" size={16} color="#2A72E7" />
@@ -290,7 +255,7 @@ export default function SupportIndex() {
               <View style={styles.rowField}>
                 <Ionicons name="pricetag-outline" size={18} color="#2A72E7" />
                 <ScrollPills
-                  items={meta.categories.length ? meta.categories : (['PAYMENT','BOOKING','ACCOUNT','TECHNICAL','SAFETY','OTHER'] as TicketCategory[])}
+                  items={meta.categories.length ? meta.categories : (['PAYMENT','QUALITY','APP','OTHER'] as TicketCategory[])}
                   value={category}
                   onChange={(v) => setCategory(v as TicketCategory)}
                 />
@@ -415,7 +380,6 @@ function statusColor(st: TicketStatus) {
     case 'IN_PROGRESS': return '#F5A524';
     case 'RESOLVED': return '#22C55E';
     case 'CLOSED': return '#6B7280';
-    case 'CANCELLED': return '#EF4444';
     default: return '#93C5FD';
   }
 }
