@@ -214,12 +214,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('[AuthContext | refreshUser] Dados do usuário atualizados com sucesso do backend.');
     } catch (error: any) {
       console.error('[AuthContext | refreshUser] Erro ao recarregar dados do usuário do backend:', error);
-      if (axios.isAxiosError(error) && error.response && error.response.status === 401) {
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        if (status === 401) {
           console.log('[AuthContext | refreshUser] Token inválido/expirado, realizando logout.');
           await logout();
+        } else if (status === 404) {
+          console.warn('[AuthContext | refreshUser] /users/me retornou 404. Mantendo sessão atual e seguindo.');
+          // Não lança; mantém o usuário atual e segue o fluxo
+        } else {
+          console.error('[AuthContext | refreshUser] Falha ao atualizar perfil. Mantendo sessão atual.');
+        }
       } else {
-          console.error('[AuthContext | refreshUser] Erro não-autenticação durante refresh. Mantendo sessão, mas pode haver inconsistência. Erro:', error.message);
-          throw error;
+        console.error('[AuthContext | refreshUser] Erro inesperado no refreshUser. Mantendo sessão.');
       }
     } finally {
       setIsLoading(false);
