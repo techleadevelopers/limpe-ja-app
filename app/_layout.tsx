@@ -146,6 +146,12 @@ function RootLayoutContent() {
             return p;
         };
         const cleanedCurrentPath = normalizePath(pathname);
+        const isPathOrChild = (basePath: string, currentPath: string) => {
+            const base = normalizePath(basePath);
+            const cur = normalizePath(currentPath);
+            if (!base) return false;
+            return cur === base || cur.startsWith(base + '/');
+        };
         const authServiceDetailsStep = normalizePath(AUTH_ROUTES.SERVICE_DETAILS_STEP);
         const providerRegistrationVerifyAccountPath = normalizePath(AUTH_ROUTES.VERIFY_ACCOUNT_STEP);
 
@@ -199,14 +205,14 @@ function RootLayoutContent() {
                     const targetDashboardPath = normalizePath(PROVIDER_ROUTES.DASHBOARD);
                     const isAllowedProviderRoute =
                         cleanedCurrentPath === targetDashboardPath ||
-                        cleanedCurrentPath.startsWith(normalizePath(PROVIDER_ROUTES.EARNINGS)) ||
-                        cleanedCurrentPath.startsWith(normalizePath(PROVIDER_ROUTES.MESSAGES_LIST)) ||
-                        cleanedCurrentPath.startsWith(normalizePath(PROVIDER_ROUTES.PROFILE)) ||
-                        cleanedCurrentPath.startsWith(normalizePath(PROVIDER_ROUTES.SERVICES_LIST)) ||
-                        cleanedCurrentPath.startsWith(normalizePath(PROVIDER_ROUTES.BOOKINGS_LIST)) ||
-                        cleanedCurrentPath.startsWith(normalizePath(PROVIDER_ROUTES.SCHEDULE)) ||
-                        cleanedCurrentPath.startsWith(normalizePath(PROVIDER_ROUTES.WITHDRAW)) || // ADICIONADO: Permitir rota de saque
-                        cleanedCurrentPath.startsWith(normalizePath(PROVIDER_ROUTES.REVIEWS)); // ADICIONADO: Permitir rota de avaliações
+                        isPathOrChild(PROVIDER_ROUTES.EARNINGS, cleanedCurrentPath) ||
+                        isPathOrChild(PROVIDER_ROUTES.MESSAGES_LIST, cleanedCurrentPath) ||
+                        isPathOrChild(PROVIDER_ROUTES.PROFILE, cleanedCurrentPath) ||
+                        isPathOrChild(PROVIDER_ROUTES.SERVICES_LIST, cleanedCurrentPath) ||
+                        isPathOrChild(PROVIDER_ROUTES.ACTIVE_BOOKING, cleanedCurrentPath) ||
+                        isPathOrChild(PROVIDER_ROUTES.SCHEDULE, cleanedCurrentPath) ||
+                        isPathOrChild(PROVIDER_ROUTES.WITHDRAW, cleanedCurrentPath) || // ADICIONADO: Permitir rota de saque
+                        isPathOrChild(PROVIDER_ROUTES.REVIEWS, cleanedCurrentPath); // ADICIONADO: Permitir rota de avaliações
 
                     if (!isAllowedProviderRoute) {
                         console.log(`[RootLayoutContent | decideAndRedirect] AÇÃO: Provedor APROVADO fora das rotas permitidas. Redirecionando para o Dashboard.`);
