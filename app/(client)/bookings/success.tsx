@@ -6,6 +6,7 @@ import * as Sentry from '@sentry/react-native';
 import { AccessibilityInfo } from 'react-native'; // ✅ NOVO: Para reduceMotion (A11y)
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     Animated,
@@ -33,7 +34,8 @@ import SuccessLoadingError from '../../../components/client/booking/success/Succ
 import ImmediateActionButtons from '../../../components/client/booking/success/ImmediateActionButtons';
 import SecurityInfoSection from '../../../components/client/booking/success/SecurityInfoSection';
 import LoyaltyTeaserSection from '../../../components/client/booking/success/LoyaltyTeaserSection';
-import { usePaymentIntent, cachePaymentIntent } from './paymentIntentHooks';
+import { usePaymentIntent, cachePaymentIntent, usePixActions } from './paymentIntentHooks';
+import i18n from '../../../i18n';
 import { getMyMissions, MissionItem, MissionStatus } from '../../../services/missionService';
 import { getMyLoyaltyBalance } from '../../../services/loyaltyService';
 import { useQuery } from '@tanstack/react-query'; // ✅ REMOVIDO: useQueryClient() - não mais necessário
@@ -232,6 +234,7 @@ function InnerSuccessScreen() {
     const [showReturnCouponCard, setShowReturnCouponCard] = useState(false);
     const [returnCouponDetails, setReturnCouponDetails] = useState<{ code: string; title: string; subtitle: string; expiresAt: Date } | null>(null); // expiresAt é Date
 
+    const { copy: copyPixCode } = usePixActions({ qrCodeText: paymentIntent?.qrCodeText ?? pixChargeDetails?.brCode });
     const missionDeadlineIso = useMemo(() => {
         if (!missionReminder) {
             return new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
@@ -364,6 +367,17 @@ function InnerSuccessScreen() {
             setStatusOverlayText(null);
         }
     }, [paymentIntent, isIntentExpired]);
+
+    // I18n do overlay de PaymentIntent (substitui mensagens hardcoded)
+    useEffect(() => {
+        const intent = paymentIntent ?? null;
+        if (!intent) return;
+        if (isIntentExpired(intent)) {
+            setStatusOverlayText(i18n.t('payments.overlay.expired'));
+        } else if (intent.status === PaymentIntentStatus.PENDING && showStatusOverlay) {
+            setStatusOverlayText(i18n.t('payments.overlay.pending'));
+        }
+    }, [paymentIntent, showStatusOverlay, isIntentExpired]);
 
     const animateBlob = useCallback(() => {
         // ✅ A11y: Pula animação se reduceMotion
@@ -778,7 +792,7 @@ function InnerSuccessScreen() {
             <View pointerEvents="box-none" style={styles.statusOverlayContainer}>
                 <View style={styles.statusOverlayBackdrop} />
                 <View style={styles.statusOverlayCard}>
-                    <Text style={styles.statusOverlayTitle}>Atenção</Text>
+                    <Text style={styles.statusOverlayTitle}>{i18n.t('payments.overlay.title')}</Text>
                     {!!statusOverlayText && (
                         <Text style={styles.statusOverlayText}>{statusOverlayText}</Text>
                     )}
@@ -787,12 +801,23 @@ function InnerSuccessScreen() {
                             style={styles.statusOverlayPrimary}
                             onPress={() => {
                                 try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch (_) {}
+                                copyPixCode();
+                            }}
+                            accessibilityRole="button"
+                            accessibilityLabel={i18n.t('payments.overlay.actions.copy')}
+                        >
+                            <Text style={styles.statusOverlayPrimaryText}>{i18n.t('payments.overlay.actions.copy')}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.statusOverlayPrimary}
+                            onPress={() => {
+                                try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch (_) {}
                                 refreshPaymentIntent();
                             }}
                             accessibilityRole="button"
-                            accessibilityLabel="Atualizar PaymentIntent"
+                            accessibilityLabel={i18n.t('payments.overlay.actions.refresh')}
                         >
-                            <Text style={styles.statusOverlayPrimaryText}>Atualizar</Text>
+                            <Text style={styles.statusOverlayPrimaryText}>{i18n.t('payments.overlay.actions.refresh')}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -800,6 +825,14 @@ function InnerSuccessScreen() {
         )}
 
                 {booking && (
+                    <TouchableOpacity
+                        onPress={() => router.back()}
+                        style={{ position: 'absolute', left: 16, top: Platform.OS === 'ios' ? 12 : 8, zIndex: 100 }}
+                        accessibilityLabel={i18n.t('common.back') || 'Voltar'}
+                        accessibilityRole="button"
+                    >
+                        <Ionicons name="arrow-back" size={24} color={headerPrimaryColor as string} />
+                    </TouchableOpacity>
                     <ScrollView
                         style={{ flex: 1 }} // ✅ ScrollView com flex:1 para ocupar espaço disponível e scroll fluido
                         contentContainerStyle={styles.scrollContentContainer} // Sem flexGrow:1 para evitar travar scroll
