@@ -91,6 +91,11 @@ export default function BookingDetailsScreen() {
   const detailsFloatAnim = useRef(new Animated.Value(0)).current;
   const actionsFloatAnim = useRef(new Animated.Value(0)).current;
 
+  // Refs para as animações em loop para cleanup correto
+  const providerLoopRef = useRef<Animated.CompositeAnimation | null>(null);
+  const detailsLoopRef = useRef<Animated.CompositeAnimation | null>(null);
+  const actionsLoopRef = useRef<Animated.CompositeAnimation | null>(null);
+
   const createAndStartFloatAnimation = useCallback((animValue: Animated.Value) => {
     const loop = Animated.loop(
       Animated.sequence([
@@ -159,18 +164,25 @@ export default function BookingDetailsScreen() {
   useEffect(() => {
     fetchBooking();
 
-    const providerLoop = createAndStartFloatAnimation(providerFloatAnim);
+    // Inicia a animação do provider imediatamente
+    providerLoopRef.current = createAndStartFloatAnimation(providerFloatAnim);
+
+    // Inicia as outras com delay usando setTimeout, mas armazena as refs para cleanup
     const detailsTimeout = setTimeout(() => {
-      const detailsLoop = createAndStartFloatAnimation(detailsFloatAnim);
-      return () => detailsLoop.stop();
+      detailsLoopRef.current = createAndStartFloatAnimation(detailsFloatAnim);
     }, 100);
+
     const actionsTimeout = setTimeout(() => {
-      const actionsLoop = createAndStartFloatAnimation(actionsFloatAnim);
-      return () => actionsLoop.stop();
+      actionsLoopRef.current = createAndStartFloatAnimation(actionsFloatAnim);
     }, 200);
 
     return () => {
-      providerLoop.stop();
+      // Cleanup das animações
+      providerLoopRef.current?.stop();
+      detailsLoopRef.current?.stop();
+      actionsLoopRef.current?.stop();
+
+      // Cleanup dos timeouts
       clearTimeout(detailsTimeout);
       clearTimeout(actionsTimeout);
     };
@@ -365,32 +377,37 @@ export default function BookingDetailsScreen() {
     }
   };
 
+  // Componente de header reutilizável para evitar repetição
+  const renderHeader = (title: string) => (
+    <Stack.Screen
+      options={{
+        title,
+        headerTitleAlign: 'center',
+        headerTitleStyle: { fontFamily: 'Montserrat-SemiBold' || 'System', fontSize: 20, color: AppColors.textBody },
+        headerStyle: { backgroundColor: AppColors.white },
+        headerShadowVisible: false,
+        headerBackTitleVisible: false,
+        headerTintColor: AppColors.primaryInteractive,
+        headerLeft: () => (
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={{ paddingVertical: 10, paddingHorizontal: 12 }}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Voltar"
+          >
+            <Ionicons name="arrow-back" size={24} color={AppColors.primaryInteractive} />
+          </TouchableOpacity>
+        ),
+      }}
+    />
+  );
+
   if (isLoading) {
     return (
       <View style={[styles.centered, { paddingTop: Platform.OS === 'ios' ? insets.top + 20 : 20 }]}>
-        <Stack.Screen
-          options={{
-            title: 'Carregando...',
-            headerTitleAlign: 'center',
-            headerTitleStyle: { fontFamily: 'Montserrat-SemiBold' || 'System', fontSize: 20, color: AppColors.textBody },
-            headerStyle: { backgroundColor: AppColors.white },
-            headerShadowVisible: false,
-            headerBackTitleVisible: false,
-            headerTintColor: AppColors.primaryInteractive,
-            headerLeft: () => (
-              <TouchableOpacity
-                onPress={() => router.back()}
-                style={{ paddingVertical: 10, paddingHorizontal: 12 }}
-                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel="Voltar"
-              >
-                <Ionicons name="arrow-back" size={24} color={AppColors.primaryInteractive} />
-              </TouchableOpacity>
-            ),
-          }}
-        />
+        {renderHeader('Carregando...')}
         <ActivityIndicator size="large" color={AppColors.primaryInteractive} />
         <Text style={styles.loadingText} maxFontSizeMultiplier={1.2}>
           Carregando detalhes do agendamento...
@@ -402,29 +419,7 @@ export default function BookingDetailsScreen() {
   if (error || !booking) {
     return (
       <View style={[styles.centered, { paddingTop: Platform.OS === 'ios' ? insets.top + 20 : 20 }]}>
-        <Stack.Screen
-          options={{
-            title: 'Erro',
-            headerTitleAlign: 'center',
-            headerTitleStyle: { fontFamily: 'Montserrat-SemiBold' || 'System', fontSize: 20, color: AppColors.textBody },
-            headerStyle: { backgroundColor: AppColors.white },
-            headerShadowVisible: false,
-            headerBackTitleVisible: false,
-            headerTintColor: AppColors.primaryInteractive,
-            headerLeft: () => (
-              <TouchableOpacity
-                onPress={() => router.back()}
-                style={{ paddingVertical: 10, paddingHorizontal: 12 }}
-                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel="Voltar"
-              >
-                <Ionicons name="arrow-back" size={24} color={AppColors.primaryInteractive} />
-              </TouchableOpacity>
-            ),
-          }}
-        />
+        {renderHeader('Erro')}
         <Ionicons name="alert-circle-outline" size={48} color={AppColors.errorRed} />
         <Text style={styles.errorText} maxFontSizeMultiplier={1.2}>
           {error || `Agendamento "${bookingId}" não encontrado.`}
@@ -441,6 +436,11 @@ export default function BookingDetailsScreen() {
   const isReviewed = !!booking.reviewId;
   const statusInfo = getStatusStyle(booking.status);
 
+  // Sanitiza o endereço completo para evitar quebras
+  const fullAddress = sanitizeText(
+    `${booking.address.street}, ${booking.address.number}${booking.address.complement ? `, ${booking.address.complement}` : ''}, ${booking.address.neighborhood}, ${booking.address.city}-${booking.address.state} - CEP: ${booking.address.cep}`
+  );
+
   // Debug
   if (__DEV__) console.log('[BookingDetails] Provider Avatar URL:', booking.providerAvatarUrl);
 
@@ -448,30 +448,7 @@ export default function BookingDetailsScreen() {
     <ScrollView
       style={[styles.scrollViewContainer, { paddingTop: Platform.OS === 'ios' ? insets.top + 10 : 10, paddingBottom: insets.bottom + 20 }]}
     >
-      <Stack.Screen
-        options={{
-          title: 'Detalhes do Agendamento',
-          headerShown: true,
-          headerTitleAlign: 'center',
-          headerTitleStyle: { fontFamily: 'Montserrat-SemiBold' || 'System', fontSize: 20, color: AppColors.textBody },
-          headerStyle: { backgroundColor: AppColors.white },
-          headerShadowVisible: false,
-          headerBackTitleVisible: false,
-          headerTintColor: AppColors.primaryInteractive,
-          headerLeft: () => (
-            <TouchableOpacity
-              onPress={() => router.back()}
-              style={{ paddingVertical: 10, paddingHorizontal: 12 }}
-              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel="Voltar"
-            >
-              <Ionicons name="arrow-back" size={24} color={AppColors.primaryInteractive} />
-            </TouchableOpacity>
-          ),
-        }}
-      />
+      {renderHeader('Detalhes do Agendamento')}
 
       <Animated.View
         style={[
@@ -560,12 +537,7 @@ export default function BookingDetailsScreen() {
         <View style={styles.detailRow}>
           <Ionicons name="location-outline" size={20} color={AppColors.textAuxiliary} style={styles.icon} />
           <Text style={styles.detailLabel}>Endereço:</Text>
-          <Text style={styles.detailValueAddress}>
-            {sanitizeText(`${booking.address.street}, ${booking.address.number}`)}
-            {booking.address.complement ? sanitizeText(` , ${booking.address.complement}`) : ''}
-            {sanitizeText(`\n${booking.address.neighborhood}, ${booking.address.city}-${booking.address.state}`)}
-            {sanitizeText(`\nCEP: ${booking.address.cep}`)}
-          </Text>
+          <Text style={styles.detailValueAddress}>{fullAddress}</Text>
         </View>
 
         <View style={styles.detailRow}>
