@@ -153,7 +153,6 @@ export class BookingsService {
       this.logger.log(`[BookingsService] create - Serviço do provedor encontrado: ${providerService.id}. Preço calculado: ${calculatedTotalPrice.toFixed(2)}`);
 
       // NEW: Apply dynamic pricing
-      const serviceCategoryId = (providerService.service as any)?.categoryId as string | undefined;
       const { finalPrice: dynamicFinalPrice } = await this.pricingService.calculatePrice({
         serviceId: providerService.serviceId,
         providerId: provider.id,
@@ -161,7 +160,6 @@ export class BookingsService {
         longitude: createBookingDto.address.longitude,
         scheduledDate: createBookingDto.scheduledDate,
         cityCode: createBookingDto.address?.city,
-        categoryId: serviceCategoryId,
       });
       calculatedTotalPrice = new Prisma.Decimal(dynamicFinalPrice);
 
@@ -713,7 +711,7 @@ export class BookingsService {
       try {
         const takeRatePercent = Math.max(0, Math.min(1, parseFloat(process.env.TAKE_RATE_PERCENT ?? '0.15')));
         const minPlatformFee = Math.max(0, parseFloat(process.env.MIN_PLATFORM_FEE ?? '0'));
-        const platformRevenue = Number(calculatedTotalPrice.toFixed(2)) * takeRatePercent;
+        const platformRevenue = Number(updatedBooking.totalPrice.toFixed(2)) * takeRatePercent;
         if (minPlatformFee > 0 && platformRevenue < minPlatformFee) {
           throw new BadRequestException(await this.i18n.translate('pricing.badRequest.minPlatformFee', locale));
         }
