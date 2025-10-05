@@ -29,7 +29,8 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { SafetyModule } from './safety/safety.module';
 import { CouponsModule } from './coupons/coupons.module';
 import { GuaranteeModule } from './guarantee/guarantee.module';
-import { PricingModule } from './pricing/pricing.module';\nimport { PayoutsModule } from './payouts/payouts.module';
+import { PricingModule } from './pricing/pricing.module';
+import { PayoutsModule } from './payouts/payouts.module';
 import { GeocodingModule } from './geocoding/geocoding.module';
 
 // NOVO: Import do ConfigModule customizado (centraliza configuration e validationSchema)
@@ -96,7 +97,7 @@ import { QueuesModule } from './queues/queues.module';
     ChatModule,
     NotificationsModule,
     OffersModule,
-    PaymentsModule,\n    PayoutsModule,
+    PaymentsModule,
     SearchModule,
     VerificationModule,
     DashboardModule,
