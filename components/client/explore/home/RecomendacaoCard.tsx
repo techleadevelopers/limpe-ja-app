@@ -23,6 +23,7 @@ import { ProviderServiceOffering } from '../../../../types/backend/provider-serv
 // Importar os novos formatadores e helpers
 import { formatDistance } from '../../../../utils/formatters';
 import { getFormattedServicePrice, getNumericPriceValue } from '../../../../utils/service-helpers';
+import { AnalyticsService } from '../../../../services/analyticsService';
 
 const AnimatedCardBackground = AnimatedReanimated.createAnimatedComponent(LinearGradient);
 const AnimatedPlusButtonGradient = AnimatedReanimated.createAnimatedComponent(LinearGradient);
@@ -68,6 +69,13 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
             false
         );
     }, []);
+
+    // Track impression (fire-and-forget) when the card mounts/updates
+    useEffect(() => {
+        if (item?.id) {
+            AnalyticsService.trackEvent('home_recommendation_card_impression', { providerId: item.id }).catch(() => {});
+        }
+    }, [item?.id]);
 
     const animatedReflectionStyle = useAnimatedStyle(() => {
         return {
@@ -132,6 +140,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
 
     const handleCardPress = () => {
         try {
+            AnalyticsService.trackEvent('home_recommendation_card_tap', { providerId: item.id }).catch(() => {});
             router.push(CLIENT_ROUTES.PROVIDER_DETAILS(item.id));
         } catch (err) {
             console.error('[RecomendacaoCard] Erro ao navegar:', err);
