@@ -3,7 +3,7 @@ import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Animated, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { DocumentPhotoType } from '../../../../backend-cleaning/src/verification/dto/upload-document.dto';
+import { DocumentPhotoType } from '../../../../types/backend/verification';
 import AnimatedErrorMessage from '../../../../components/schedule/manager/AnimatedErrorMessage';
 import colors from '../../../../constants/Colors';
 import { SIZES } from '../../../../constants/theme';
