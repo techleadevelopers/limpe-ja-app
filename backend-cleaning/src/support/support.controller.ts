@@ -17,9 +17,9 @@ import { SupportService } from './support.service';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { RolesGuard } from '../auth/guards/roles.guard'; // Assumindo que você tem este guard
-import { Roles } from '../auth/decorators/roles.decorator'; // Assumindo que você tem este decorator
-import { UserRole } from '@prisma/client'; // Assumindo que UserRole está no seu schema Prisma
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole, SupportTicketCategory } from '@prisma/client';
 
 @ApiTags('Support')
 @ApiBearerAuth()
@@ -28,12 +28,19 @@ import { UserRole } from '@prisma/client'; // Assumindo que UserRole está no se
 export class SupportController {
   constructor(private readonly supportService: SupportService) {}
 
+  @Get('meta')
+  @ApiOperation({ summary: 'Lista metadados de suporte (categorias e severidades)' })
+  async getMeta() {
+    const categories = Object.keys(SupportTicketCategory);
+    const severities = ['LOW', 'MEDIUM', 'HIGH'];
+    return { categories, severities };
+  }
+
   @Post('tickets')
   @ApiOperation({ summary: 'Abre um novo ticket de suporte' })
   async createTicket(@Request() req, @Body() createTicketDto: CreateTicketDto) {
-    // CORREÇÃO: Alterado req.user.id para req.user.userId
     const userId = req.user.userId;
-    const userRole = req.user.role; // Assumindo que a role está no token JWT
+    const userRole = req.user.role;
     return this.supportService.createTicket(userId, userRole, createTicketDto);
   }
 
@@ -45,14 +52,13 @@ export class SupportController {
     @Query('status') status?: string,
     @Query('category') category?: string,
   ) {
-    const userId = req.user.userId; // Ajuste similar pode ser necessário aqui se este endpoint for usado por não-admins
+    const userId = req.user.userId;
     const userRole = req.user.role;
     const showMine = mine === 'true';
 
     if (showMine || userRole !== UserRole.ADMIN) {
       return this.supportService.findTickets(userId, status, category);
     } else {
-      // Apenas admins podem ver todos os tickets
       return this.supportService.findTickets(undefined, status, category);
     }
   }
@@ -60,7 +66,7 @@ export class SupportController {
   @Get('tickets/:id')
   @ApiOperation({ summary: 'Obtém detalhes de um ticket de suporte' })
   async getTicketDetails(@Request() req, @Param('id') ticketId: string) {
-    const userId = req.user.userId; // Ajuste similar pode ser necessário aqui
+    const userId = req.user.userId;
     const userRole = req.user.role;
     const ticket = await this.supportService.findTicketById(ticketId);
 
@@ -68,9 +74,8 @@ export class SupportController {
       throw new NotFoundException('Ticket não encontrado.');
     }
 
-    // Garante que apenas o proprietário ou um admin pode ver o ticket
     if (ticket.userId !== userId && userRole !== UserRole.ADMIN) {
-      throw new NotFoundException('Ticket não encontrado ou sem permissão.'); // Usar NotFound para não vazar info
+      throw new NotFoundException('Ticket não encontrado ou sem permissão.');
     }
 
     return ticket;
@@ -83,13 +88,13 @@ export class SupportController {
     @Param('id') ticketId: string,
     @Body('body') body: string,
   ) {
-    const userId = req.user.userId; // Ajuste similar pode ser necessário aqui
+    const userId = req.user.userId;
     const userRole = req.user.role;
     return this.supportService.addMessageToTicket(ticketId, userId, userRole, body);
   }
 
   @Patch('tickets/:id/status')
-  @Roles(UserRole.ADMIN) // Apenas admins podem mudar o status diretamente
+  @Roles(UserRole.ADMIN)
   @UseGuards(RolesGuard)
   @ApiOperation({ summary: 'Atualiza o status de um ticket de suporte (apenas admin)' })
   async updateTicketStatus(
@@ -110,3 +115,4 @@ export class SupportController {
     return this.supportService.assignTicket(ticketId, agentId);
   }
 }
+
