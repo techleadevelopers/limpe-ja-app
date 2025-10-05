@@ -104,7 +104,7 @@ import SearchComponent from '../../../components/client/explore/home/SearchCompo
 
 const COR_AZUL_CLARO_UNIFICADA = '#A0D2EB';
 const COR_PRIMARIA_ESCURA = '#2C3E50';
-const COR_CINZA_FUNDO = '#F4F7FC';
+const COR_CINZA_FUNDO = '#FFFFFF';
 const COR_BORDA_SUAVE = '#c0b5ca92';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -840,7 +840,7 @@ export default function ExploreClientScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: '#FFFFFF',
   },
   overlay: {
     flex: 1,
@@ -967,7 +967,7 @@ const styles = StyleSheet.create({
   },
   screen: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: '#FFFFFF',
     marginHorizontal: 15,
   },
   scrollViewArea: {
