@@ -1,6 +1,7 @@
 // LimpeJaApp/services/userService.ts
 
 import { api } from './api'; // Assumindo que sua instância do Axios (com o token JWT) está aqui
+import axios from 'axios';
 import { UserProfile } from '../types/backend/users'; // Ajuste o caminho conforme necessário - DEVE INCLUIR 'isVerified', 'noShowCount', 'cancellationCount', 'badges'
 
 class UserService {
@@ -14,8 +15,11 @@ class UserService {
       return response.data;
     } catch (error: any) {
       console.error('Erro ao buscar perfil do usuário:', error.response?.data || error.message);
-      // É importante relançar o erro para que o AuthContext possa tratá-lo (ex: fazer logout)
-      throw new Error(error.response?.data?.message || 'Erro ao buscar perfil do usuário.');
+      // Preserve axios error details (status, config) for upstream handling
+      if (axios.isAxiosError(error)) {
+        throw error;
+      }
+      throw new Error(error?.message || 'Erro ao buscar perfil do usuário.');
     }
   }
 
