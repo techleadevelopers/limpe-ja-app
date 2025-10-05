@@ -232,6 +232,9 @@ export default function ProviderNotificationsScreen() {
         <View style={styles.container}>
             <Stack.Screen options={{ headerShown: false }} />
             <Animated.View style={[styles.customHeader, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
+                <TouchableOpacity onPress={() => router.back()} style={styles.headerBackButton} accessibilityRole="button" accessibilityLabel={t('common.back', { defaultValue: 'Voltar' })}>
+                  <Ionicons name="arrow-back" size={24} color="#2F3A4A" />
+                </TouchableOpacity>
                 <Text style={styles.headerTitle}>{t("notifications.title")}</Text>
                 <View style={styles.headerActionIconPlaceholder} />
             </Animated.View>
@@ -248,6 +251,9 @@ export default function ProviderNotificationsScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       
       <Animated.View style={[styles.customHeader, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.headerBackButton} accessibilityRole="button" accessibilityLabel={t('common.back', { defaultValue: 'Voltar' })}>
+            <Ionicons name="arrow-back" size={24} color="#2F3A4A" />
+          </TouchableOpacity>
           <Text style={styles.headerTitle}>{t("notifications.title")}</Text>
           {hasUnreadNotifications ? (
               <TouchableOpacity
@@ -307,37 +313,39 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#007AFF',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 15,
-    paddingVertical: Platform.OS === 'ios' ? 50 : 20,
-    paddingTop: Platform.OS === 'ios' ? 50 : 20,
+    paddingVertical: Platform.OS === 'ios' ? 18 : 18,
+    paddingTop: Platform.OS === 'ios' ? 55 : 18,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 4,
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    fontWeight: '600',
+    color: '#2F3A4A',
     flex: 1,
     textAlign: 'center',
   },
+  headerBackButton: {
+    padding: 8,
+    marginRight: 6,
+  },
   markAllReadButton: {
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,122,255,0.1)',
   },
   markAllReadButtonText: {
-    color: '#FFFFFF',
+    color: '#007AFF',
     fontSize: 14,
     fontWeight: '600',
   },
-  headerActionIconPlaceholder: {
-    width: 100,
-  },
+  headerActionIconPlaceholder: { width: 28 },
   centeredFeedback: {
     flex: 1,
     justifyContent: 'center',
