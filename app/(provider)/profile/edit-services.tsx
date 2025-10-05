@@ -282,6 +282,11 @@ export default function EditProviderServicesScreen() {
 
   const [availableBaseServices, setAvailableBaseServices] = useState<Service[]>([]);
   const [selectedBaseServiceId, setSelectedBaseServiceId] = useState<string | undefined>(undefined);
+  const [isReloadingCatalog, setIsReloadingCatalog] = useState(false);
+  const [isUsingFallbackCatalog, setIsUsingFallbackCatalog] = useState(false);
+  const SERVICE_NAME_SUGGESTIONS = useMemo(() => (
+    ['Residencial', 'Comercial', 'Pós-Obra', 'Escritório', 'Vidros', 'Estofados']
+  ), []);
 
   const [serviceDesc, setServiceDesc] = useState('');
   const [servicePrice, setServicePrice] = useState('');
@@ -356,6 +361,32 @@ export default function EditProviderServicesScreen() {
 
     fetchAllData();
   }, [user, headerAnim, formAnim, listHeaderAnim, saveButtonAnim, feedbackAnim, isReducedMotionEnabled]);
+
+  // Fallback automático: se o catálogo vier vazio e não estiver carregando
+  useEffect(() => {
+    if (!isLoading && availableBaseServices.length === 0) {
+      setAvailableBaseServices(FALLBACK_SERVICES);
+      setIsUsingFallbackCatalog(true);
+      if (!selectedBaseServiceId && FALLBACK_SERVICES.length > 0) {
+        setSelectedBaseServiceId(FALLBACK_SERVICES[0].id);
+      }
+    }
+  }, [isLoading, availableBaseServices.length, selectedBaseServiceId]);
+
+  const reloadServiceCatalog = async () => {
+    try {
+      setIsReloadingCatalog(true);
+      const fetchedBaseServices = await getServiceCategories();
+      setAvailableBaseServices(fetchedBaseServices);
+      if (!selectedBaseServiceId && fetchedBaseServices.length > 0) {
+        setSelectedBaseServiceId(fetchedBaseServices[0].id);
+      }
+    } catch (error: any) {
+      Alert.alert('Erro', error?.message || 'Não foi possível recarregar o catálogo de serviços.');
+    } finally {
+      setIsReloadingCatalog(false);
+    }
+  };
 
   // ===== Handlers =====
   const handleSaveServices = () => {
@@ -604,9 +635,9 @@ export default function EditProviderServicesScreen() {
         ]}
       >
         <TouchableOpacity onPress={() => router.back()} style={styles.headerBackButton} accessibilityRole="button" accessibilityLabel="Voltar para a tela anterior">
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" accessibilityHidden={true} />
+          <Ionicons name="arrow-back" size={24} color="#2F3A4A" accessibilityHidden={true} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Editar Meus Serviços</Text>
+        <Text style={styles.headerTitle}>Editar Serviços</Text>
         <View style={styles.headerActionIconPlaceholder} />
       </Animated.View>
 
@@ -619,25 +650,50 @@ export default function EditProviderServicesScreen() {
         >
           <Text style={styles.formTitle}>{isEditing ? 'Editar Serviço Existente' : 'Adicionar Novo Serviço'}</Text>
 
-          <Text style={styles.inputLabel}>Tipo de Serviço</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={selectedBaseServiceId}
-              onValueChange={(itemValue: string | undefined) => setSelectedBaseServiceId(itemValue)}
-              style={styles.picker}
-              enabled={!isEditing && availableBaseServices.length > 0}
-              accessibilityLabel="Selecione o tipo de serviço"
-              accessibilityHint={isEditing ? "Não é possível alterar o tipo de serviço em edição." : "Escolha um serviço base para adicionar ou editar."}
+          <View style={styles.inputLabelRow}>
+            <Text style={styles.inputLabel}>Tipo de Serviço</Text>
+            <TouchableOpacity
+              onPress={reloadServiceCatalog}
+              disabled={isReloadingCatalog}
+              accessibilityRole="button"
+              accessibilityLabel="Recarregar catálogo de serviços"
+              style={styles.refreshButton}
             >
-              {availableBaseServices.length === 0 ? (
-                <Picker.Item label="Nenhum serviço disponível" value={undefined} />
+              {isReloadingCatalog ? (
+                <ActivityIndicator size="small" color={Colors.link} />
               ) : (
-                availableBaseServices.map(service => (
-                  <Picker.Item key={service.id} label={service.name} value={service.id} />
-                ))
+                <Ionicons name="refresh" size={18} color={Colors.link} />
               )}
-            </Picker>
+            </TouchableOpacity>
           </View>
+          {isUsingFallbackCatalog && (
+            <Text style={styles.inputHint}>Usando catálogo padrão enquanto carregamos o catálogo real.</Text>
+          )}
+          {/* Seleção por botões (remove o Picker) */}
+          <View style={styles.quickChipsRow}>
+            {availableBaseServices.length === 0 ? (
+              <Text style={styles.formErrorText} accessibilityLiveRegion="polite">Nenhum tipo de serviço base disponível. Verifique a conexão ou o backend.</Text>
+            ) : (
+              availableBaseServices.map(service => {
+                const isSelected = selectedBaseServiceId === service.id;
+                return (
+                  <TouchableOpacity
+                    key={service.id}
+                    style={[styles.quickChip, isSelected && styles.quickChipSelected, isEditing && styles.quickChipDisabled]}
+                    onPress={() => !isEditing && setSelectedBaseServiceId(service.id)}
+                    disabled={!!isEditing}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Selecionar ${service.name}`}
+                  >
+                    <Text style={[styles.quickChipText, isSelected && styles.quickChipTextSelected]}>{service.name}</Text>
+                  </TouchableOpacity>
+                );
+              })
+            )}
+          </View>
+          {isUsingFallbackCatalog && (
+            <Text style={styles.inputHint}>Usando catálogo padrão enquanto carregamos o catálogo real.</Text>
+          )}
           {isEditing && (
             <Text style={styles.inputHint}>Você não pode alterar o tipo de serviço de um serviço existente.</Text>
           )}
@@ -679,6 +735,33 @@ export default function EditProviderServicesScreen() {
               <Picker.Item label="Por Hora" value={PricingType.HOURLY} />
               <Picker.Item label="Por Metragem/Cômodo" value={PricingType.BY_SIZE} />
             </Picker>
+          </View>
+          {/* Atalhos rápidos de precificação */}
+          <View style={styles.quickChipsRow}>
+            <TouchableOpacity
+              style={[styles.quickChip, pricingType === PricingType.FIXED_PRICE && styles.quickChipSelected]}
+              onPress={() => setPricingType(PricingType.FIXED_PRICE)}
+              accessibilityRole="button"
+              accessibilityLabel="Selecionar Preço Fixo"
+            >
+              <Text style={[styles.quickChipText, pricingType === PricingType.FIXED_PRICE && styles.quickChipTextSelected]}>Fixo</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickChip, pricingType === PricingType.HOURLY && styles.quickChipSelected]}
+              onPress={() => setPricingType(PricingType.HOURLY)}
+              accessibilityRole="button"
+              accessibilityLabel="Selecionar Por Hora"
+            >
+              <Text style={[styles.quickChipText, pricingType === PricingType.HOURLY && styles.quickChipTextSelected]}>Por Hora</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickChip, pricingType === PricingType.BY_SIZE && styles.quickChipSelected]}
+              onPress={() => setPricingType(PricingType.BY_SIZE)}
+              accessibilityRole="button"
+              accessibilityLabel="Selecionar Por m²/Por cômodo"
+            >
+              <Text style={[styles.quickChipText, pricingType === PricingType.BY_SIZE && styles.quickChipTextSelected]}>m²/Cômodo</Text>
+            </TouchableOpacity>
           </View>
 
           {(pricingType === PricingType.FIXED_PRICE || pricingType === PricingType.HOURLY) && (
@@ -812,20 +895,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Colors.primary,
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: Spacing.sm,
-    paddingVertical: Platform.OS === 'ios' ? 55 : Spacing.lg,
+    paddingVertical: Platform.OS === 'ios' ? 20 : Spacing.lg,
     paddingTop: Platform.OS === 'ios' ? 55 : Spacing.lg,
-    borderBottomLeftRadius: Radii.xl,
-    borderBottomRightRadius: Radii.xl,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.15,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.06,
         shadowRadius: 12,
       },
-      android: { elevation: 10 },
+      android: { elevation: 4 },
     }),
   },
   headerBackButton: {
@@ -833,12 +916,12 @@ const styles = StyleSheet.create({
     padding: Spacing.sm,
   },
   headerTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#2F3A4A',
     flex: 1,
     textAlign: 'center',
-    fontFamily: Platform.OS === 'ios' ? 'SFProDisplay-Regular' : 'System',
+    fontFamily: Platform.OS === 'ios' ? 'SFProDisplay-Semibold' : 'System',
   },
   headerActionIconPlaceholder: {
     width: 28,
@@ -905,6 +988,50 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
     marginTop: Spacing.sm,
     fontFamily: Platform.OS === 'ios' ? 'SFProText-Medium' : 'System',
+  },
+  inputLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.xs,
+  },
+  refreshButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: 'transparent',
+  },
+  quickChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.xs,
+    marginBottom: Spacing.md,
+  },
+  quickChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+    backgroundColor: Colors.fieldBg,
+    borderWidth: Platform.OS === 'ios' ? 0.5 : 0,
+    borderColor: Colors.border,
+  },
+  quickChipSelected: {
+    backgroundColor: 'rgba(0,122,255,0.1)',
+    borderColor: Colors.primary,
+    borderWidth: 1,
+  },
+  quickChipDisabled: {
+    opacity: 0.4,
+  },
+  quickChipText: {
+    fontSize: 13,
+    color: Colors.text,
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Regular' : 'System',
+  },
+  quickChipTextSelected: {
+    color: Colors.primary,
+    fontFamily: Platform.OS === 'ios' ? 'SFProText-Semibold' : 'System',
   },
   pickerContainer: {
     backgroundColor: Colors.fieldBg,
@@ -1094,3 +1221,12 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'SFProText-Medium' : 'System',
   },
 });
+// ===== Catálogo fallback (garante opções como Residencial/Comercial se backend ainda não responder) =====
+const FALLBACK_SERVICES: Service[] = [
+  { id: '3f17467b-e198-4072-87f0-0213d2d08997', name: 'Residencial', icon: 'home', description: 'Limpeza de residências', price: null },
+  { id: '78cc63ad-a18d-4ba0-b0b8-28624412caf3', name: 'Comercial', icon: 'business', description: 'Limpeza comercial', price: null },
+  { id: '0a8ea519-63e4-4efb-a03a-628dbbc9f052', name: 'Pós-Obra', icon: 'construct', description: 'Limpeza pós-obra', price: null },
+  { id: '2559b9e2-0526-4304-9d04-89606b424074', name: 'Escritório', icon: 'desktop', description: 'Limpeza de escritórios', price: null },
+  { id: 'c8c6bfee-598f-4de0-a383-0f6101699b15', name: 'Vidros', icon: 'eye', description: 'Limpeza de vidros', price: null },
+  { id: '3abda78a-264f-4745-9094-83cad16e65f3', name: 'Estofados', icon: 'hand-left', description: 'Higienização de estofados', price: null },
+];
