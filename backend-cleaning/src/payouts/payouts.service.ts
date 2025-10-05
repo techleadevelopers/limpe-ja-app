@@ -216,11 +216,22 @@ export class PayoutsService {
         });
       }
     });
+
+    // Fetch the updated payout to get userId for notification
+    const updatedPayout = await this.prisma.payout.findUnique({
+      where: { id: input.payoutId },
+      select: { userId: true },
+    });
+    if (!updatedPayout) {
+      this.logger.warn(`applyGatewayUpdate: payout ${input.payoutId} not found after update.`);
+      return;
+    }
+
     // Notificações básicas (via fila)
     try {
       const type = targetStatus === PayoutStatus.PAID ? 'WITHDRAWAL_PAID' : (targetStatus === PayoutStatus.FAILED || targetStatus === PayoutStatus.CANCELED) ? 'WITHDRAWAL_FAILED' : 'WITHDRAWAL_STATUS';
       await this.queues.addNotificationJob('send-notification', {
-        userId: (await this.prisma.user.findUnique({ where: { id: (await this.prisma.user.findFirst({ where: { id: payout.userId } }))?.id || payout.userId }))?.id || payout.userId,
+        userId: updatedPayout.userId,
         type,
         message: `Saque ${targetStatus}.`,
         targetUrl: '/app/(provider)/earnings',
