@@ -248,6 +248,14 @@ export default function ProviderNotificationsScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       
       <Animated.View style={[styles.customHeader, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
+          <TouchableOpacity
+              onPress={() => router.back()}
+              style={styles.headerBackIcon}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.back') || 'Voltar'}
+          >
+              <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+          </TouchableOpacity>
           <Text style={styles.headerTitle}>{t("notifications.title")}</Text>
           {hasUnreadNotifications ? (
               <TouchableOpacity
@@ -323,6 +331,13 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     flex: 1,
     textAlign: 'center',
+  },
+  headerBackIcon: {
+    position: 'absolute',
+    left: 15,
+    padding: 6,
+    top: Platform.OS === 'ios' ? 47 : 17,
+    zIndex: 2,
   },
   markAllReadButton: {
     paddingVertical: 5,
