@@ -1,17 +1,6 @@
 // LimpeJaApp/app/services/supportService.ts
-import axios from 'axios';
 import { SupportTicket, CreateTicketPayload, AddMessagePayload, SupportMessage, TicketCategory, TicketSeverity } from '../types/backend/support';
-import { api } from './api'; // Importa a instância centralizada do Axios
-import Constants from 'expo-constants'; // Importar Constants para API_BASE_URL consistente
-
-// A API_BASE_URL deve ser carregada de Constants para consistência em produção
-const API_BASE_URL = Constants.expoConfig?.extra?.backendApiUrl as string;
-
-// Validação para garantir que API_BASE_URL está definida
-if (!API_BASE_URL) {
-  console.error('[supportService] Erro crítico: backendApiUrl não está definido!');
-  // Em um ambiente de produção, você pode querer lançar um erro ou ter um fallback mais robusto
-}
+import { api } from './api'; // Instância centralizada do Axios
 
 
 export const supportService = {
