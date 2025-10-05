@@ -1,22 +1,22 @@
-﻿// LimpeJaApp/app/(common)/notifications.tsx
+// LimpeJaApp/app/(common)/notifications.tsx
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'; // Importa ambos explicitamente
 import { Stack, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert, // Para o botÃ£o de marcar todas como lidas
+    Alert, // Para o botão de marcar todas como lidas
     Animated,
     FlatList,
-    Platform, // Importar Animated para animaÃ§Ãµes
+    Platform, // Importar Animated para animações
     RefreshControl,
     StyleSheet,
     Text,
     TouchableOpacity,
     View,
 } from 'react-native';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 
-// <--- ADICIONADO: Importar serviÃ§os e tipagens reais
+// <--- ADICIONADO: Importar serviços e tipagens reais
 import {
     getNotifications,
     markAllNotificationsAsRead,
@@ -34,15 +34,15 @@ const formatNotificationTimestamp = (isoTimestamp: string): string => {
     const diffDays = Math.round(diffHours / 24);
 
     if (diffSeconds < 60) return "Agora mesmo";
-    if (diffMinutes < 60) return `HÃ¡ ${diffMinutes} min`;
-    if (diffHours < 24) return `HÃ¡ ${diffHours} h`;
+    if (diffMinutes < 60) return `Há ${diffMinutes} min`;
+    if (diffHours < 24) return `Há ${diffHours} h`;
     if (diffDays === 1) return "Ontem";
-    if (diffDays < 7) return `HÃ¡ ${diffDays} dias`;
+    if (diffDays < 7) return `Há ${diffDays} dias`;
     return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
 };
 
-// FunÃ§Ã£o para obter Ã­cone com base no tipo de notificaÃ§Ã£o
-// <--- CORREÃ‡ÃƒO: getNotificationIcon retorna o nome do Ã­cone e a biblioteca
+// Função para obter ícone com base no tipo de notificação
+// <--- CORREÇÃO: getNotificationIcon retorna o nome do ícone e a biblioteca
 const getNotificationIcon = (type: NotificationEntity['type']): { name: string, color: string, library: 'Ionicons' | 'MaterialCommunityIcons' } => {
     switch (type) {
         case 'AGENDAMENTO': return { name: 'calendar-outline', color: '#007AFF', library: 'Ionicons' };
@@ -51,12 +51,12 @@ const getNotificationIcon = (type: NotificationEntity['type']): { name: string, 
         case 'BOOKING_CONFIRMED': return { name: 'check-circle-outline', color: '#2E7D32', library: 'MaterialCommunityIcons' }; // Exemplo
         case 'NEW_MESSAGE': return { name: 'message-text-outline', color: '#4CAF50', library: 'MaterialCommunityIcons' }; // Exemplo
         case 'SYSTEM_UPDATE': return { name: 'update', color: '#546E7A', library: 'MaterialCommunityIcons' }; // Exemplo
-        case 'GERAL': // Ou outro tipo genÃ©rico do backend
+        case 'GERAL': // Ou outro tipo genérico do backend
         default: return { name: 'notifications-outline', color: '#546E7A', library: 'Ionicons' };
     }
 }
 
-// Componente para cada item da notificaÃ§Ã£o com animaÃ§Ãµes
+// Componente para cada item da notificação com animações
 const AnimatedNotificationItem: React.FC<{
     item: NotificationEntity;
     onPress: (item: NotificationEntity) => void;
@@ -92,7 +92,7 @@ const AnimatedNotificationItem: React.FC<{
     };
 
     const iconInfo = getNotificationIcon(item.type);
-    const isRead = !!item.readAt; // NotificaÃ§Ã£o Ã© lida se readAt nÃ£o for nulo
+    const isRead = !!item.readAt; // Notificação é lida se readAt não for nulo
 
     return (
         <Animated.View
@@ -110,7 +110,7 @@ const AnimatedNotificationItem: React.FC<{
             >
                 <View style={styles.iconContainer}>
                     {!isRead && <View style={styles.unreadDot} />}
-                    {/* <--- CORREÃ‡ÃƒO: Renderiza o Ã­cone correto com base na biblioteca */}
+                    {/* <--- CORREÇÃO: Renderiza o ícone correto com base na biblioteca */}
                     {iconInfo.library === 'Ionicons' ? (
                         <Ionicons name={iconInfo.name as keyof typeof Ionicons.glyphMap} size={26} color={iconInfo.color} />
                     ) : (
@@ -143,7 +143,7 @@ export default function NotificationsScreen() {
   const loadNotifications = useCallback(async (refreshing: boolean = false) => {
     if (!refreshing) setIsLoading(true);
     if (!user?.id) {
-        console.warn("[NotificationsScreen] User ID ausente, nÃ£o foi possÃ­vel carregar notificaÃ§Ãµes.");
+        console.warn("[NotificationsScreen] User ID ausente, não foi possível carregar notificações.");
         setIsLoading(false);
         setIsRefreshing(false);
         return;
@@ -154,11 +154,11 @@ export default function NotificationsScreen() {
       const sortedNotifications = fetchedNotifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
       setNotifications(sortedNotifications);
-      if (refreshing) Alert.alert("Sucesso", "NotificaÃ§Ãµes atualizadas!");
+      if (refreshing) Alert.alert("Sucesso", "Notificações atualizadas!");
 
     } catch (err: any) {
-      console.error("Erro ao buscar notificaÃ§Ãµes:", err.response?.data || err.message);
-      Alert.alert("Erro", err.response?.data?.message || "NÃ£o foi possÃ­vel carregar suas notificaÃ§Ãµes.");
+      console.error("Erro ao buscar notificações:", err.response?.data || err.message);
+      Alert.alert("Erro", err.response?.data?.message || "Não foi possível carregar suas notificações.");
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -181,15 +181,15 @@ export default function NotificationsScreen() {
   }, [headerAnim, loadNotifications]);
 
   const handleNotificationPress = async (item: NotificationEntity) => {
-    console.log("[NotificationsScreen] NotificaÃ§Ã£o pressionada:", item.id, "Lida:", !!item.readAt);
+    console.log("[NotificationsScreen] Notificação pressionada:", item.id, "Lida:", !!item.readAt);
     if (!item.readAt) {
       try {
         await markNotificationAsRead(item.id);
         setNotifications(prev => prev.map(n => n.id === item.id ? { ...n, readAt: new Date().toISOString() } : n));
-        console.log("[NotificationsScreen] NotificaÃ§Ã£o marcada como lida (backend e frontend):", item.id);
+        console.log("[NotificationsScreen] Notificação marcada como lida (backend e frontend):", item.id);
       } catch (error) {
-        console.error("Erro ao marcar notificaÃ§Ã£o como lida:", error);
-        Alert.alert("Erro", "NÃ£o foi possÃ­vel marcar a notificaÃ§Ã£o como lida.");
+        console.error("Erro ao marcar notificação como lida:", error);
+        Alert.alert("Erro", "Não foi possível marcar a notificação como lida.");
       }
     }
     if (item.navigateTo) {
@@ -198,7 +198,7 @@ export default function NotificationsScreen() {
         router.push(item.navigateTo as any);
       } catch (e) {
           console.error(`[NotificationsScreen] Erro ao navegar para ${item.navigateTo}:`, e);
-          Alert.alert("Erro de NavegaÃ§Ã£o", "NÃ£o foi possÃ­vel abrir esta notificaÃ§Ã£o.");
+          Alert.alert("Erro de Navegação", "Não foi possível abrir esta notificação.");
       }
     }
   };
@@ -207,10 +207,10 @@ export default function NotificationsScreen() {
       try {
           await markAllNotificationsAsRead();
           setNotifications(prev => prev.map(n => ({ ...n, readAt: new Date().toISOString() })));
-          Alert.alert("Sucesso", "Todas as notificaÃ§Ãµes foram marcadas como lidas.");
+          Alert.alert("Sucesso", "Todas as notificações foram marcadas como lidas.");
       } catch (error) {
           console.error("Erro ao marcar todas como lidas:", error);
-          Alert.alert("Erro", "NÃ£o foi possÃ­vel marcar todas as notificaÃ§Ãµes como lidas.");
+          Alert.alert("Erro", "Não foi possível marcar todas as notificações como lidas.");
       }
   };
 
@@ -229,12 +229,12 @@ export default function NotificationsScreen() {
         <View style={styles.container}>
             <Stack.Screen options={{ headerShown: false }} />
             <Animated.View style={[styles.customHeader, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
-                <Text style={styles.headerTitle}>NotificaÃ§Ãµes</Text>
+                <Text style={styles.headerTitle}>Notificações</Text>
                 <View style={styles.headerActionIconPlaceholder} />
             </Animated.View>
             <Animated.View style={[styles.centeredFeedback, { opacity: feedbackAnim }]}>
                 <ActivityIndicator size="large" color="#007AFF" />
-                <Text style={styles.loadingText}>Carregando notificaÃ§Ãµes...</Text>
+                <Text style={styles.loadingText}>Carregando notificações...</Text>
             </Animated.View>
         </View>
     );
@@ -245,7 +245,7 @@ export default function NotificationsScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       
       <Animated.View style={[styles.customHeader, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
-          <Text style={styles.headerTitle}>NotificaÃ§Ãµes</Text>
+          <Text style={styles.headerTitle}>Notificações</Text>
           {hasUnreadNotifications ? (
               <TouchableOpacity
                   onPress={handleMarkAllAsRead}
@@ -263,8 +263,8 @@ export default function NotificationsScreen() {
       {notifications.length === 0 ? (
         <Animated.View style={[styles.centeredFeedback, { opacity: feedbackAnim }]}>
             <Ionicons name="notifications-off-outline" size={64} color="#CED4DA" />
-            <Text style={styles.emptyText}>Nenhuma notificaÃ§Ã£o por aqui.</Text>
-            <Text style={styles.emptySubText}>VocÃª estÃ¡ em dia!</Text>
+            <Text style={styles.emptyText}>Nenhuma notificação por aqui.</Text>
+            <Text style={styles.emptySubText}>Você está em dia!</Text>
         </Animated.View>
       ) : (
         <FlatList
@@ -284,7 +284,7 @@ export default function NotificationsScreen() {
               refreshing={isRefreshing}
               onRefresh={onRefresh}
               tintColor="#007AFF"
-              title="Atualizando notificaÃ§Ãµes..."
+              title="Atualizando notificações..."
               titleColor="#007AFF"
             />
           }

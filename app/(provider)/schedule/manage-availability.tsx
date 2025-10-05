@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,16 +13,15 @@ import {
   FlatList,
   Dimensions,
   Easing,
-  AccessibilityInfo, // CorreÃ§Ã£o: Named import para announcements premium
+  AccessibilityInfo, // Correção: Named import para announcements premium
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { Calendar, LocaleConfig, DateData } from 'react-native-calendars'; // CORREÃ‡ÃƒO: Removido 'Theme' do import (nÃ£o Ã© exportado diretamente)
+import { Calendar, LocaleConfig, DateData } from 'react-native-calendars'; // CORREÇÃO: Removido 'Theme' do import (não é exportado diretamente)
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '../../../hooks/useAuth';
-import { generateAllPossibleSlots, SLOT_INTERVAL_MINUTES } from '../../../utils/timeSlots';
 
-// CORREÃ‡ÃƒO: DefiniÃ§Ã£o manual da interface Theme (baseada na doc oficial da lib e props usadas no cÃ³digo)
+// CORREÇÃO: Definição manual da interface Theme (baseada na doc oficial da lib e props usadas no código)
 // Isso replica o tipo exato, garantindo compatibilidade sem depender da biblioteca
 interface Theme {
   backgroundColor?: string;
@@ -64,7 +63,7 @@ interface Theme {
   todayBackgroundColor?: string;
 }
 
-// ImportaÃ§Ãµes de serviÃ§os e tipos do backend (ajuste os caminhos conforme sua estrutura)
+// Importações de serviços e tipos do backend (ajuste os caminhos conforme sua estrutura)
 import {
   getMyProviderAvailability,
   updateMyProviderAvailability,
@@ -107,21 +106,21 @@ const Spacing = {
 
 const easeOut = Easing.out(Easing.ease);
 
-// ====== Locale PT-BR (CalendÃ¡rio) ======
+// ====== Locale PT-BR (Calendário) ======
 LocaleConfig.locales['pt-br'] = {
   monthNames: [
-    'Janeiro','Fevereiro','MarÃ§o','Abril','Maio','Junho',
+    'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
     'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'
   ],
   monthNamesShort: ['Jan.','Fev.','Mar.','Abr.','Mai.','Jun.','Jul.','Ago.','Set.','Out.','Nov.','Dez.'],
-  dayNames: ['Domingo','Segunda-feira','TerÃ§a-feira','Quarta-feira','Quinta-feira','Sexta-feira','SÃ¡bado'],
-  dayNamesShort: ['DOM','SEG','TER','QUA','QUI','SEX','SÃB'],
+  dayNames: ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'],
+  dayNamesShort: ['DOM','SEG','TER','QUA','QUI','SEX','SÁB'],
   today: 'Hoje'
 };
 LocaleConfig.defaultLocale = 'pt-br';
 
 // ====== Tema do Calendario (agora tipado com a interface Theme definida acima) ======
-const calendarTheme: Theme = { // CORREÃ‡ÃƒO: Usa a interface local Theme (sem import da lib)
+const calendarTheme: Theme = { // CORREÇÃO: Usa a interface local Theme (sem import da lib)
   backgroundColor: Colors.bgSoft,
   calendarBackground: Colors.surface,
   textSectionTitleColor: '#586069',
@@ -135,7 +134,7 @@ const calendarTheme: Theme = { // CORREÃ‡ÃƒO: Usa a interface local Theme (
   arrowColor: Colors.primary,
   monthTextColor: '#1C3A5F',
   indicatorColor: Colors.primary,
-  // CORREÃ‡ÃƒO: Usar literais exatos da union para matching (nÃ£o string genÃ©rica)
+  // CORREÇÃO: Usar literais exatos da union para matching (não string genérica)
   textDayFontWeight: '400' as const, // Literal '400' matches union
   textMonthFontWeight: 'bold' as const, // Literal 'bold' matches union
   textDayHeaderFontWeight: '500' as const, // Literal '500' matches union
@@ -161,16 +160,30 @@ const calendarTheme: Theme = { // CORREÃ‡ÃƒO: Usa a interface local Theme (
   textInactiveColor: Colors.textMuted,
   textActiveColor: Colors.primary,
   todayBackgroundColor: Colors.infoLight,
-}; // Removido 'as const' desnecessÃ¡rio aqui (a interface jÃ¡ garante tipagem)
+}; // Removido 'as const' desnecessário aqui (a interface já garante tipagem)
 
-// Todos os slots possÃ­veis usando janela padrÃ£o compartilhada (08:00â€“19:30)
-const ALL_POSSIBLE_SLOTS = generateAllPossibleSlots();
+// Helper para gerar blocos de tempo
+const generateTimeSlots = (startHour: number, endHour: number, intervalMinutes: number = 30) => {
+  const slots: string[] = [];
+  for (let h = startHour; h <= endHour; h++) {
+    for (let m = 0; m < 60; m += intervalMinutes) {
+      if (h === endHour && m > 0) continue;
+      const hour = h < 10 ? `0${h}` : `${h}`;
+      const minute = m < 10 ? `0${m}` : `${m}`;
+      slots.push(`${hour}:${minute}`);
+    }
+  }
+  return slots;
+};
+
+// Todos os slots possíveis de 04:00 a 19:00
+const ALL_POSSIBLE_SLOTS = generateTimeSlots(4, 19, 30);
 
 interface DayAvailability {
-  dayOfWeek: number; // 0 (Domingo) a 6 (SÃ¡bado)
+  dayOfWeek: number; // 0 (Domingo) a 6 (Sábado)
   isEnabled: boolean;
   selectedSlots: string[]; // Ex: ["09:00", "09:30", "10:00"]
-  originalSlots: string[]; // Slots como vieram do backend para controle de exclusÃ£o
+  originalSlots: string[]; // Slots como vieram do backend para controle de exclusão
   id?: string; // ID da disponibilidade no backend se for um registro existente
 }
 
@@ -178,16 +191,16 @@ interface SpecificDateOverride {
   date: string; // "YYYY-MM-DD"
   type: 'blocked' | 'custom';
   selectedSlots?: string[]; // Apenas se type === 'custom'
-  id?: string; // ID da exceÃ§Ã£o no backend
-  originalSlots?: string[]; // Slots originais para comparaÃ§Ã£o
+  id?: string; // ID da exceção no backend
+  originalSlots?: string[]; // Slots originais para comparação
 }
 
-// Componente de BotÃ£o de Slot de Tempo
+// Componente de Botão de Slot de Tempo
 interface TimeSlotButtonProps {
   time: string;
   isSelected: boolean;
   onPress: (time: string) => void;
-  isBooked: boolean; // Para desabilitar slots jÃ¡ agendados
+  isBooked: boolean; // Para desabilitar slots já agendados
 }
 
 const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({ time, isSelected, onPress, isBooked }) => {
@@ -195,7 +208,7 @@ const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({ time, isSelected, onPre
 
   const handlePressIn = () => {
     if (!isBooked) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); // Premium iOS haptic (fallback Android: vibraÃ§Ã£o)
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); // Premium iOS haptic (fallback Android: vibração)
       Animated.spring(animatedScale, { toValue: 0.92, useNativeDriver: true, tension: 200 }).start();
     }
   };
@@ -210,7 +223,7 @@ const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({ time, isSelected, onPre
     ? Colors.textSubtle // Cinza para agendado
     : isSelected
     ? Colors.primary // Azul para selecionado
-    : Colors.fieldBg; // Fundo padrÃ£o
+    : Colors.fieldBg; // Fundo padrão
 
   const textColor = isBooked || isSelected ? Colors.surface : Colors.text;
 
@@ -221,10 +234,10 @@ const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({ time, isSelected, onPre
         onPress={() => onPress(time)}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-        disabled={isBooked} // Desabilita se jÃ¡ estiver agendado
+        disabled={isBooked} // Desabilita se já estiver agendado
         activeOpacity={0.92} // Suave iOS
         accessibilityRole="button"
-        accessibilityLabel={`HorÃ¡rio ${time}${isSelected ? ' selecionado' : isBooked ? ' (agendado)' : ''}`}
+        accessibilityLabel={`Horário ${time}${isSelected ? ' selecionado' : isBooked ? ' (agendado)' : ''}`}
         accessibilityHint="Toque para selecionar ou desmarcar"
       >
         <Text style={[styles.timeSlotText, { color: textColor }]}>{time}</Text>
@@ -242,7 +255,7 @@ const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({ time, isSelected, onPre
   );
 };
 
-// Componente para o CartÃ£o de Disponibilidade do Dia
+// Componente para o Cartão de Disponibilidade do Dia
 interface DayAvailabilityCardProps {
   dayName: string;
   dayOfWeek: number;
@@ -251,7 +264,7 @@ interface DayAvailabilityCardProps {
   onToggleSlot: (dayOfWeek: number, slot: string) => void;
   onSelectAll: (dayOfWeek: number) => void;
   onClearSlots: (dayOfWeek: number) => void;
-  bookedSlotsForDay: string[]; // Slots jÃ¡ agendados para este dia da semana (recorrente)
+  bookedSlotsForDay: string[]; // Slots já agendados para este dia da semana (recorrente)
 }
 
 const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
@@ -280,7 +293,7 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
           ios_backgroundColor={Colors.textMuted}
           onValueChange={(value) => {
             onToggleDay(dayOfWeek, value);
-            if (Platform.OS === 'ios') Haptics.selectionAsync(); // iOS premium (Android: fallback vibraÃ§Ã£o)
+            if (Platform.OS === 'ios') Haptics.selectionAsync(); // iOS premium (Android: fallback vibração)
           }}
           value={availability.isEnabled}
           accessibilityLabel={`Ativar ${dayName.toLowerCase()}`}
@@ -314,19 +327,19 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
               );
             })}
           </View>
-          {/* InteraÃ§Ãµes secundÃ¡rias: chips flutuantes alinhados Ã  direita */}
+          {/* Interações secundárias: chips flutuantes alinhados à direita */}
           <View style={styles.dayActions}>
             <TouchableOpacity style={styles.actionButtonSecondary} onPress={() => {
               onSelectAll(dayOfWeek);
               if (Platform.OS === 'ios') Haptics.selectionAsync();
-            }} accessibilityRole="button" accessibilityLabel="Selecionar todos os horÃ¡rios">
+            }} accessibilityRole="button" accessibilityLabel="Selecionar todos os horários">
               <Ionicons name="checkmark-done-circle-outline" size={16} color={Colors.primary} style={styles.actionButtonIcon} accessibilityHidden={true} />
               <Text style={styles.actionButtonSecondaryText}>Selecionar Tudo</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionButtonSecondary} onPress={() => {
               onClearSlots(dayOfWeek);
               if (Platform.OS === 'ios') Haptics.selectionAsync();
-            }} accessibilityRole="button" accessibilityLabel="Limpar horÃ¡rios selecionados">
+            }} accessibilityRole="button" accessibilityLabel="Limpar horários selecionados">
               <Ionicons name="trash-outline" size={16} color={Colors.primary} style={styles.actionButtonIcon} accessibilityHidden={true} />
               <Text style={styles.actionButtonSecondaryText}>Limpar</Text>
             </TouchableOpacity>
@@ -359,9 +372,9 @@ export default function ManageAvailabilityScreen() {
   const contentAnim = useRef(new Animated.Value(0)).current;
   const saveButtonAnim = useRef(new Animated.Value(0)).current; // For save button animation
 
-  const dayNames = ['Domingo', 'Segunda-feira', 'TerÃ§a-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'SÃ¡bado'];
+  const dayNames = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
 
-  // Helper para converter slots discretos em blocos contÃ­nuos (startTime, endTime)
+  // Helper para converter slots discretos em blocos contínuos (startTime, endTime)
   const convertSlotsToBlocks = (slots: string[]) => {
     if (slots.length === 0) return [];
 
@@ -376,9 +389,9 @@ export default function ManageAvailabilityScreen() {
       const [currentHour, currentMinute] = currentSlot.split(':').map(Number);
       const currentTotalMinutes = currentHour * 60 + currentMinute;
 
-      if (i === sortedSlots.length - 1) { // Ãšltimo slot
+      if (i === sortedSlots.length - 1) { // Último slot
         const [endHour, endMinute] = currentBlockEnd.split(':').map(Number);
-        const finalEndTotalMinutes = endHour * 60 + endMinute + SLOT_INTERVAL_MINUTES; // Adiciona 30 minutos para o fim do Ãºltimo slot
+        const finalEndTotalMinutes = endHour * 60 + endMinute + 30; // Adiciona 30 minutos para o fim do último slot
         const finalEndHour = Math.floor(finalEndTotalMinutes / 60);
         const finalEndMinute = finalEndTotalMinutes % 60;
         blocks.push({
@@ -390,12 +403,12 @@ export default function ManageAvailabilityScreen() {
         const [nextHour, nextMinute] = nextSlot.split(':').map(Number);
         const nextTotalMinutes = nextHour * 60 + nextMinute;
 
-        // Se o prÃ³ximo slot Ã© contÃ­nuo (30 minutos depois)
-        if (nextTotalMinutes === currentTotalMinutes + SLOT_INTERVAL_MINUTES) {
+        // Se o próximo slot é contínuo (30 minutos depois)
+        if (nextTotalMinutes === currentTotalMinutes + 30) {
           currentBlockEnd = currentSlot; // Estende o bloco atual
-        } else { // O bloco contÃ­nuo foi quebrado
+        } else { // O bloco contínuo foi quebrado
           const [endHour, endMinute] = currentBlockEnd.split(':').map(Number);
-          const finalEndTotalMinutes = endHour * 60 + endMinute + SLOT_INTERVAL_MINUTES;
+          const finalEndTotalMinutes = endHour * 60 + endMinute + 30;
           const finalEndHour = Math.floor(finalEndTotalMinutes / 60);
           const finalEndMinute = finalEndTotalMinutes % 60;
           blocks.push({
@@ -410,10 +423,10 @@ export default function ManageAvailabilityScreen() {
     return blocks;
   };
 
-  // FunÃ§Ã£o para carregar disponibilidade e agendamentos
+  // Função para carregar disponibilidade e agendamentos
   const loadData = useCallback(async () => {
     if (!user?.id) {
-      console.warn("User ID nÃ£o disponÃ­vel, nÃ£o carregando dados de disponibilidade.");
+      console.warn("User ID não disponível, não carregando dados de disponibilidade.");
       setIsLoading(false);
       return;
     }
@@ -441,7 +454,7 @@ export default function ManageAvailabilityScreen() {
           const startMinutes = parseInt(avail.startTime.split(':')[0]) * 60 + parseInt(avail.startTime.split(':')[1]);
           const endMinutes = parseInt(avail.endTime.split(':')[0]) * 60 + parseInt(avail.endTime.split(':')[1]);
           const currentSlots: string[] = [];
-          for (let time = startMinutes; time < endMinutes; time += SLOT_INTERVAL_MINUTES) {
+          for (let time = startMinutes; time < endMinutes; time += 30) {
             const hour = Math.floor(time / 60);
             const minute = time % 60;
             currentSlots.push(`${hour < 10 ? '0' : ''}${hour}:${minute < 10 ? '0' : ''}${minute}`);
@@ -457,7 +470,7 @@ export default function ManageAvailabilityScreen() {
       });
       setWeeklyAvailability(initialWeekly);
 
-      // TODO: Carregar exceÃ§Ãµes de datas especÃ­ficas do backend aqui (ex.: API getOverrides)
+      // TODO: Carregar exceções de datas específicas do backend aqui (ex.: API getOverrides)
       // For now, let's simulate some overrides for testing the UI
       setSpecificDateOverrides([
         // { date: '2025-09-15', type: 'blocked' }, // Example blocked day
@@ -467,7 +480,7 @@ export default function ManageAvailabilityScreen() {
       const allBookings: BookingDetails[] = await getBookingsForUser(BookingStatus.CONFIRMED);
       setBookings(allBookings);
 
-      // AnimaÃ§Ãµes stagger premium iOS
+      // Animações stagger premium iOS
       Animated.parallel([
         Animated.timing(headerAnim, { toValue: 1, duration: 600, easing: easeOut, useNativeDriver: true }),
         Animated.timing(contentAnim, { toValue: 1, duration: 700, easing: easeOut, useNativeDriver: true }),
@@ -475,7 +488,7 @@ export default function ManageAvailabilityScreen() {
 
     } catch (error: any) {
       console.error('Erro ao carregar dados de disponibilidade:', error);
-      Alert.alert('Erro', 'NÃ£o foi possÃ­vel carregar sua disponibilidade. Tente novamente.');
+      Alert.alert('Erro', 'Não foi possível carregar sua disponibilidade. Tente novamente.');
     } finally {
       setIsLoading(false);
     }
@@ -485,7 +498,7 @@ export default function ManageAvailabilityScreen() {
     loadData();
   }, [loadData]);
 
-  // LÃ³gica para gerenciar a disponibilidade semanal
+  // Lógica para gerenciar a disponibilidade semanal
   const handleToggleDay = (dayOfWeek: number, isEnabled: boolean) => {
     setWeeklyAvailability(prev =>
       prev.map(day => (day.dayOfWeek === dayOfWeek ? { ...day, isEnabled } : day))
@@ -518,10 +531,10 @@ export default function ManageAvailabilityScreen() {
     );
   };
 
-  // LÃ³gica para gerenciar exceÃ§Ãµes de datas especÃ­ficas
+  // Lógica para gerenciar exceções de datas específicas
   const handleDayPressOnCalendar = (day: DateData) => {
     setSelectedDateForOverride(day.dateString);
-    // Tenta encontrar uma exceÃ§Ã£o existente para esta data
+    // Tenta encontrar uma exceção existente para esta data
     const existingOverride = specificDateOverrides.find(override => override.date === day.dateString);
     if (existingOverride) {
       // If there is an existing override, ensure it's selected in the UI
@@ -530,8 +543,8 @@ export default function ManageAvailabilityScreen() {
       // If no override, ensure override options are reset or empty
       // (This is implicitly handled by currentOverride being null)
     }
-    // Acessibilidade: Anunciar seleÃ§Ã£o
-    AccessibilityInfo.announceForAccessibility(`Data selecionada: ${day.dateString}. Configure exceÃ§Ã£o se desejar.`);
+    // Acessibilidade: Anunciar seleção
+    AccessibilityInfo.announceForAccessibility(`Data selecionada: ${day.dateString}. Configure exceção se desejar.`);
   };
 
   const handleSetOverrideType = (type: 'blocked' | 'custom') => {
@@ -571,7 +584,7 @@ export default function ManageAvailabilityScreen() {
     setSpecificDateOverrides(prev => prev.filter(o => o.date !== selectedDateForOverride));
     setSelectedDateForOverride(null);
     if (Platform.OS === 'ios') Haptics.selectionAsync();
-    AccessibilityInfo.announceForAccessibility('ExceÃ§Ã£o removida para esta data.');
+    AccessibilityInfo.announceForAccessibility('Exceção removida para esta data.');
   };
 
   const currentOverride = useMemo(() => {
@@ -580,7 +593,7 @@ export default function ManageAvailabilityScreen() {
 
   const handleSaveAvailability = async () => {
     if (!user?.id) {
-      Alert.alert("Erro", "ID do provedor nÃ£o encontrado. FaÃ§a login novamente.");
+      Alert.alert("Erro", "ID do provedor não encontrado. Faça login novamente.");
       return;
     }
 
@@ -612,7 +625,7 @@ export default function ManageAvailabilityScreen() {
 
       await updateMyProviderAvailability(allAvailabilityUpdates);
 
-      // 2. Salvar ExceÃ§Ãµes de Datas EspecÃ­ficas
+      // 2. Salvar Exceções de Datas Específicas
       for (const override of specificDateOverrides) {
         if (override.type === 'blocked') {
           console.log(`Bloqueando data: ${override.date}`);
@@ -623,13 +636,13 @@ export default function ManageAvailabilityScreen() {
           // TODO: Call backend API to set custom slots for specific date (ex.: postCustomAvailability(override.date, customBlocks))
         }
       }
-      // TODO: LÃ³gica para remover overrides que foram desfeitos na UI (ex.: compare com originalSlots e delete se vazio)
+      // TODO: Lógica para remover overrides que foram desfeitos na UI (ex.: compare com originalSlots e delete se vazio)
 
       // Haptic feedback (corrigido para compatibilidade iOS/Android)
       if (Platform.OS === 'ios') {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {
-        // Fallback Android: vibraÃ§Ã£o simples
+        // Fallback Android: vibração simples
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       }
       Alert.alert('Sucesso', 'Sua disponibilidade foi salva!');
@@ -641,7 +654,7 @@ export default function ManageAvailabilityScreen() {
       } else {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
       }
-      Alert.alert('Erro', error.response?.data?.message || 'NÃ£o foi possÃ­vel salvar sua disponibilidade. Tente novamente.');
+      Alert.alert('Erro', error.response?.data?.message || 'Não foi possível salvar sua disponibilidade. Tente novamente.');
     } finally {
       setIsSaving(false);
       Animated.timing(saveButtonAnim, {
@@ -650,12 +663,12 @@ export default function ManageAvailabilityScreen() {
         easing: Easing.out(Easing.ease),
         useNativeDriver: false,
       }).start(() => {
-        loadData(); // Recarrega os dados para refletir o estado atualizado apÃ³s a animaÃ§Ã£o de retorno
+        loadData(); // Recarrega os dados para refletir o estado atualizado após a animação de retorno
       });
     }
   };
 
-  // Mapeia agendamentos para horÃ¡rios ocupados recorrentes
+  // Mapeia agendamentos para horários ocupados recorrentes
   const getBookedSlotsForDay = useCallback((dayOfWeek: number): string[] => {
     const bookedTimes: string[] = [];
     const confirmedBookings = bookings.filter(b => b.status === BookingStatus.CONFIRMED);
@@ -668,9 +681,9 @@ export default function ManageAvailabilityScreen() {
 
         const endTotalMinutes = booking.scheduledEndTime
           ? parseInt(booking.scheduledEndTime.split(':')[0]) * 60 + parseInt(booking.scheduledEndTime.split(':')[1])
-          : startTotalMinutes + SLOT_INTERVAL_MINUTES;
+          : startTotalMinutes + 30;
 
-        for (let time = startTotalMinutes; time < endTotalMinutes; time += SLOT_INTERVAL_MINUTES) {
+        for (let time = startTotalMinutes; time < endTotalMinutes; time += 30) {
           const hour = Math.floor(time / 60);
           const minute = time % 60;
           bookedTimes.push(`${hour < 10 ? '0' : ''}${hour}:${minute < 10 ? '0' : ''}${minute}`);
@@ -680,7 +693,7 @@ export default function ManageAvailabilityScreen() {
     return Array.from(new Set(bookedTimes));
   }, [bookings]);
 
-  // Slots jÃ¡ agendados para a data de override selecionada
+  // Slots já agendados para a data de override selecionada
   const getBookedSlotsForSpecificDate = useCallback((date: string): string[] => {
     const bookedTimes: string[] = [];
     const confirmedBookings = bookings.filter(b => b.status === BookingStatus.CONFIRMED && b.scheduledDate === date);
@@ -691,9 +704,9 @@ export default function ManageAvailabilityScreen() {
 
       const endTotalMinutes = booking.scheduledEndTime
         ? parseInt(booking.scheduledEndTime.split(':')[0]) * 60 + parseInt(booking.scheduledEndTime.split(':')[1])
-        : startTotalMinutes + SLOT_INTERVAL_MINUTES;
+        : startTotalMinutes + 30;
 
-      for (let time = startTotalMinutes; time < endTotalMinutes; time += SLOT_INTERVAL_MINUTES) {
+      for (let time = startTotalMinutes; time < endTotalMinutes; time += 30) {
         const hour = Math.floor(time / 60);
         const minute = time % 60;
         bookedTimes.push(`${hour < 10 ? '0' : ''}${hour}:${minute < 10 ? '0' : ''}${minute}`);
@@ -773,9 +786,9 @@ export default function ManageAvailabilityScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* SeÃ§Ã£o de Disponibilidade Semanal PadrÃ£o */}
-        <Text style={styles.sectionTitleImproved}>Disponibilidade Semanal PadrÃ£o</Text>
-        <InfoCard text="Defina seus horÃ¡rios de trabalho regulares para cada dia da semana. Os agendamentos existentes serÃ£o desabilitados." />
+        {/* Seção de Disponibilidade Semanal Padrão */}
+        <Text style={styles.sectionTitleImproved}>Disponibilidade Semanal Padrão</Text>
+        <InfoCard text="Defina seus horários de trabalho regulares para cada dia da semana. Os agendamentos existentes serão desabilitados." />
         {weeklyAvailability.map(day => (
           <DayAvailabilityCard
             key={day.dayOfWeek}
@@ -790,31 +803,31 @@ export default function ManageAvailabilityScreen() {
           />
         ))}
 
-        {/* SeÃ§Ã£o de ExceÃ§Ãµes de Datas EspecÃ­ficas */}
-        <Text style={styles.sectionTitleImproved}>ExceÃ§Ãµes de Datas EspecÃ­ficas</Text>
-        <InfoCard text="Sobrescreva sua disponibilidade padrÃ£o para dias especÃ­ficos. Agendamentos jÃ¡ confirmados nÃ£o podem ser alterados." />
+        {/* Seção de Exceções de Datas Específicas */}
+        <Text style={styles.sectionTitleImproved}>Exceções de Datas Específicas</Text>
+        <InfoCard text="Sobrescreva sua disponibilidade padrão para dias específicos. Agendamentos já confirmados não podem ser alterados." />
         <View style={styles.calendarOverrideContainer}>
           <Calendar
             onDayPress={handleDayPressOnCalendar}
             markedDates={markedDates} // Use the memoized markedDates
-            theme={calendarTheme} // CORREÃ‡ÃƒO: Removido 'as Theme' (agora tipado corretamente pela interface local)
+            theme={calendarTheme} // CORREÇÃO: Removido 'as Theme' (agora tipado corretamente pela interface local)
             style={styles.calendarOverrideStyle}
-            accessibilityLabel="CalendÃ¡rio para exceÃ§Ãµes de datas"
-            accessibilityHint="Selecione uma data para configurar exceÃ§Ã£o"
+            accessibilityLabel="Calendário para exceções de datas"
+            accessibilityHint="Selecione uma data para configurar exceção"
           />
           {selectedDateForOverride && (
             <View style={styles.overrideOptionsCard}> {/* Apply card style here */}
-              <Text style={styles.overrideTitle}>OpÃ§Ãµes para {selectedDateForOverride}</Text>
+              <Text style={styles.overrideTitle}>Opções para {selectedDateForOverride}</Text>
 
               {/* Display quick summary of custom slots if type is custom */}
               {currentOverride?.type === 'custom' && currentOverride.selectedSlots && currentOverride.selectedSlots.length > 0 && (
                 <Text style={styles.customSlotsSummary}>
-                  HorÃ¡rios selecionados: {currentOverride.selectedSlots.slice(0, 3).join(', ')}
+                  Horários selecionados: {currentOverride.selectedSlots.slice(0, 3).join(', ')}
                   {currentOverride.selectedSlots.length > 3 ? ` e mais ${currentOverride.selectedSlots.length - 3}` : ''}
                 </Text>
               )}
               {currentOverride?.type === 'blocked' && (
-                <Text style={styles.blockedDayBadge}>ðŸ”´ Dia Bloqueado</Text>
+                <Text style={styles.blockedDayBadge}>🔴 Dia Bloqueado</Text>
               )}
 
               <TouchableOpacity
@@ -831,9 +844,9 @@ export default function ManageAvailabilityScreen() {
                 onPress={() => handleSetOverrideType('custom')}
                 activeOpacity={0.92}
                 accessibilityRole="button"
-                accessibilityLabel="Definir horÃ¡rios personalizados"
+                accessibilityLabel="Definir horários personalizados"
               >
-                <Text style={[styles.overrideButtonText, currentOverride?.type === 'custom' && styles.overrideButtonTextSelected]}>Definir HorÃ¡rios Personalizados</Text>
+                <Text style={[styles.overrideButtonText, currentOverride?.type === 'custom' && styles.overrideButtonTextSelected]}>Definir Horários Personalizados</Text>
               </TouchableOpacity>
 
               {currentOverride?.type === 'custom' && (
@@ -850,8 +863,8 @@ export default function ManageAvailabilityScreen() {
                 </View>
               )}
               {currentOverride && (
-                <TouchableOpacity style={styles.clearOverrideButton} onPress={handleClearOverride} activeOpacity={0.92} accessibilityRole="button" accessibilityLabel="Remover exceÃ§Ã£o">
-                  <Text style={styles.clearOverrideButtonText}>Remover ExceÃ§Ã£o para este Dia</Text>
+                <TouchableOpacity style={styles.clearOverrideButton} onPress={handleClearOverride} activeOpacity={0.92} accessibilityRole="button" accessibilityLabel="Remover exceção">
+                  <Text style={styles.clearOverrideButtonText}>Remover Exceção para este Dia</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -864,8 +877,8 @@ export default function ManageAvailabilityScreen() {
           disabled={isSaving}
           activeOpacity={0.92}
           accessibilityRole="button"
-          accessibilityLabel="Salvar todas as alteraÃ§Ãµes"
-          accessibilityHint="Confirma e salva configuraÃ§Ãµes de disponibilidade"
+          accessibilityLabel="Salvar todas as alterações"
+          accessibilityHint="Confirma e salva configurações de disponibilidade"
         >
           {isSaving ? (
             <Animated.View style={{ opacity: saveButtonSpinnerOpacity, position: 'absolute' }}>
@@ -874,7 +887,7 @@ export default function ManageAvailabilityScreen() {
           ) : (
             <Animated.View style={[styles.saveButtonContent, { opacity: saveButtonOpacity }]}>
               <MaterialCommunityIcons name="content-save" size={20} color="#FFFFFF" style={styles.saveButtonIcon} accessibilityHidden={true} />
-              <Text style={styles.saveButtonText}>Salvar Todas as AlteraÃ§Ãµes</Text>
+              <Text style={styles.saveButtonText}>Salvar Todas as Alterações</Text>
             </Animated.View>
           )}
         </TouchableOpacity>
@@ -910,7 +923,7 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: Radii.xl,
   },
   backButton: {
-    padding: Spacing.sm + 2, // ConfortÃ¡vel iOS
+    padding: Spacing.sm + 2, // Confortável iOS
   },
   headerTitle: {
     fontSize: 20,
@@ -969,7 +982,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     color: Colors.infoDark,
-    lineHeight: 20, // ConfortÃ¡vel iOS
+    lineHeight: 20, // Confortável iOS
     fontFamily: Platform.OS === 'ios' ? 'SFProText-Regular' : 'System',
   },
   dayCard: {
@@ -1010,7 +1023,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: Radii.sm,
-    margin: Spacing.xs + 2, // Mais espaÃ§o iOS
+    margin: Spacing.xs + 2, // Mais espaço iOS
     minWidth: 70,
     alignItems: 'center',
     flexDirection: 'row',
@@ -1229,4 +1242,3 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'SFProText-Medium' : 'System',
   },
 });
-

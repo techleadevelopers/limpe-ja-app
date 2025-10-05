@@ -22,7 +22,37 @@ import { InputWithIcon } from '../../../components/auth/components/InputWithIcon
 import { SectionHeader } from '../../../components/auth/components/SectionHeader';
 import { StandardInput } from '../../../components/auth/components/StandardInput';
 
-// Busca real na API ViaCEP (produção)
+// Simulação da API ViaCEP
+// Mover esta mock para app/(auth)/api/addressService.ts conforme a documentação
+const mockViaCepApi = {
+  getEndereco: async (cep: string) => {
+    const cleanedCep = cep.replace(/\D/g, '');
+    await new Promise(resolve => setTimeout(resolve, 800)); // Simula latência da rede
+
+    if (cleanedCep === '01001000') {
+      return {
+        cep: '01001-000',
+        logradouro: 'Praça da Sé',
+        complemento: 'lado ímpar',
+        bairro: 'Sé',
+        localidade: 'São Paulo',
+        uf: 'SP',
+      };
+    } else if (cleanedCep === '99999999') {
+      return { erro: true };
+    } else if (cleanedCep === '60000000') {
+      return {
+        cep: '60000-000',
+        logradouro: 'Avenida Beira Mar',
+        complemento: '',
+        bairro: 'Meireles',
+        localidade: 'Fortaleza',
+        uf: 'CE',
+      };
+    }
+    return { erro: true };
+  },
+};
 
 export default function PersonalDetailsScreen() {
   const router = useRouter();
@@ -137,8 +167,7 @@ export default function PersonalDetailsScreen() {
     if (cleanedCep.length === 8) {
       setIsLoadingCep(true);
       try {
-        const response = await fetch(`https://viacep.com.br/ws/${cleanedCep}/json/`);
-        const data = await response.json();
+        const data = await mockViaCepApi.getEndereco(cleanedCep);
         if (!data.erro) {
           setLogradouro(data.logradouro || '');
           setBairro(data.bairro || '');

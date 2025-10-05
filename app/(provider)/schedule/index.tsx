@@ -399,14 +399,6 @@ export default function MyScheduleScreen() {
           { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }
         ]}
       >
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.headerBackIcon}
-          accessibilityRole="button"
-          accessibilityLabel="Voltar"
-        >
-          <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
-        </TouchableOpacity>
         <Text style={styles.headerTitle}>Minha Agenda</Text>
         <TouchableOpacity
           onPress={() => router.push('/(provider)/schedule/manage-availability' as any)}
@@ -534,13 +526,6 @@ const styles = StyleSheet.create({
     textAlign: 'left',
     marginLeft: 12,
     fontFamily: Platform.OS === 'ios' ? 'SFProDisplay-Semibold' : 'System',
-  },
-  headerBackIcon: {
-    position: 'absolute',
-    left: 15,
-    padding: 6,
-    top: Platform.OS === 'ios' ? 52 : 17,
-    zIndex: 2,
   },
   headerActionIcon: {
     flexDirection: 'row',

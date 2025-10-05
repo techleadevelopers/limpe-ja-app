@@ -107,7 +107,7 @@ export default function TicketDetailsScreen() {
      * @returns {'right' | 'left'} Alignment string.
      */
     const getMessageAlignment = (message: SupportMessage) => {
-        return user?.id && message.userId === user.id ? 'right' : 'left';
+        return user?.id && message.senderId === user.id ? 'right' : 'left';
     };
 
     /**
@@ -116,7 +116,7 @@ export default function TicketDetailsScreen() {
      * @returns {object} StyleSheet style object.
      */
     const getMessageBubbleStyle = (message: SupportMessage) => {
-        return user?.id && message.userId === user.id ? styles.myMessageBubble : styles.otherMessageBubble;
+        return user?.id && message.senderId === user.id ? styles.myMessageBubble : styles.otherMessageBubble;
     };
 
     /**
@@ -125,20 +125,7 @@ export default function TicketDetailsScreen() {
      * @returns {object} StyleSheet style object.
      */
     const getMessageTextStyle = (message: SupportMessage) => {
-        return user?.id && message.userId === user.id ? styles.myMessageText : styles.otherMessageText;
-    };
-
-    /**
-     * Returns a friendly sender label prioritizing role + userId; falls back to legacy fields.
-     */
-    const getSenderLabel = (message: SupportMessage) => {
-        if (message.userId === user?.id) return 'Você';
-        if (message.role === 'admin') return 'Suporte';
-        if (message.role === 'provider') return 'Provedor';
-        // Fallback compat with legacy fields
-        if (message.senderType === 'admin') return 'Suporte';
-        if (message.senderType === 'provider') return 'Provedor';
-        return 'Cliente';
+        return user?.id && message.senderId === user.id ? styles.myMessageText : styles.otherMessageText;
     };
 
     if (loading) {
@@ -199,14 +186,10 @@ export default function TicketDetailsScreen() {
                             style={[styles.messageRow, { justifyContent: getMessageAlignment(msg) === 'right' ? 'flex-end' : 'flex-start' }]}
                         >
                             <View style={getMessageBubbleStyle(msg)}>
-                                {/* Novo label com role + userId */}
-                                <Text style={[styles.messageSenderVisible, getMessageAlignment(msg) === 'right' ? { color: '#FFFFFF' } : { color: '#4A90E2' }]}>
-                                    {getSenderLabel(msg)}
-                                </Text>
                                 <Text style={[styles.messageSender, getMessageAlignment(msg) === 'right' ? { color: '#FFFFFF' } : { color: '#4A90E2' }]}>
                                     {msg.senderType === 'client' && msg.senderId === user?.id ? 'Você' : (msg.senderType === 'admin' ? 'Suporte' : 'Provedor')}
                                 </Text>
-                                <Text style={getMessageTextStyle(msg)}>{msg.body}</Text>
+                                <Text style={getMessageTextStyle(msg)}>{msg.content}</Text>
                                 <Text style={[styles.messageTime, getMessageAlignment(msg) === 'right' ? { color: 'rgba(255,255,255,0.7)' } : { color: '#A0A0A0' }]}>
                                     {safeFormatDate(msg.createdAt, { timeOnly: true })}
                                 </Text>
@@ -358,14 +341,6 @@ const styles = StyleSheet.create({
         }),
     },
     messageSender: {
-        // Antigo label legado permanece no DOM, mas fica oculto
-        fontSize: 0,
-        fontWeight: 'bold',
-        marginBottom: 0,
-        opacity: 0,
-        height: 0,
-    },
-    messageSenderVisible: {
         fontSize: 10,
         fontWeight: 'bold',
         marginBottom: 3,

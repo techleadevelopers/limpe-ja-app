@@ -17,7 +17,7 @@ export default function CreateTicketScreen() {
     const [message, setMessage] = useState(''); // Mantido como 'message' para o input do usuário
     const [loading, setLoading] = useState(false);
     const [category, setCategory] = useState<TicketCategory>('OTHER'); // Adicionado estado para categoria
-    const [severity, setSeverity] = useState<TicketSeverity>('LOW'); // Mantido apenas para UI; não enviado ao backend
+    const [severity, setSeverity] = useState<TicketSeverity>('LOW'); // Adicionado estado para severidade
 
     /**
      * Handles the submission of the new ticket form.
@@ -36,7 +36,7 @@ export default function CreateTicketScreen() {
                 subject: subject.trim(),
                 description: message.trim(), // CORREÇÃO AQUI
                 category: category, // Usar o estado da categoria
-                // severity é apenas UI; não enviar ao backend para evitar erro de whitelist
+                severity: severity, // Usar o estado da severidade
             };
             await supportService.createTicket(payload);
             showAppAlert('Sucesso', 'Seu ticket de suporte foi criado com sucesso!');

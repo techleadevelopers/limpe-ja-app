@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
     signInButton: {
         backgroundColor: 'rgba(64, 192, 240, 0.85)',
         borderRadius: 28,
-        paddingVertical: 8,
+        paddingVertical: 4,
         width: '100%',
         alignItems: 'center',
         justifyContent: 'center',
@@ -401,7 +401,7 @@ const styles = StyleSheet.create({
     },
     signInButtonText: {
         color: '#FFFFFF',
-        fontSize: 15,
+        fontSize: 14,
         fontWeight: '600',
     },
     signUpContainer: {
@@ -413,7 +413,7 @@ const styles = StyleSheet.create({
         paddingTop: 15,
     },
     signUpText: {
-        fontSize: 13,
+        fontSize: 12,
         color: '#718096',
     },
     signUpLink: {
@@ -428,7 +428,7 @@ const styles = StyleSheet.create({
         bottom: 45,
     },
     forgotPasswordLink: {
-        fontSize: 14,
+        fontSize: 13,
         color: '#007BFF',
         fontWeight: '500',
     },

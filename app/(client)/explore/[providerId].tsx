@@ -34,18 +34,18 @@ import { ProviderServiceOffering } from '../../../types/backend/provider-service
 import { useAuth } from '../../../hooks/useAuth';
 import { checkActiveChatBooking } from '../../../services/bookingService';
 import { getProviderDetails, getProviderMetrics, getProviderOffers } from '../../../services/providerService';
-import { AppColors, AppShadows, SCREEN_WIDTH } from '../../../constants/appStyles';
+import { AppColors, AppShadows } from '../../../constants/appStyles';
 import { Icons3D } from '../../../constants/icons3d';
 import { styles } from './styles/providerStyles';
-import { formatDistance } from '../../../utils/formatters';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const SCREEN_HEIGHT = Dimensions.get('window').height;
 
 // Type local para PromiseRejectedResult (evita erros TS sem import global)
 type PromiseRejectedResult = {
   status: 'rejected';
   reason: any;
 };
-
-// ... (RecommendationsSection e recommendationStyles permanecem os mesmos)
 
 function RecommendationsSection() {
   const avatarImages = [
@@ -216,10 +216,10 @@ export default function ProviderDetailsScreen() {
                 updatedAt: new Date().toISOString(),
               },
             ];
-            finalProviderData.reviews = providerResult.value?.reviews || joanaReviews;
-            finalProviderData.reviewCount = finalProviderData.reviews.length;
+            finalProviderData.reviews = joanaReviews;
+            finalProviderData.reviewCount = joanaReviews.length;
             finalProviderData.averageRating =
-              finalProviderData.reviews.reduce((sum, r) => sum + r.rating, 0) / finalProviderData.reviews.length;
+              joanaReviews.reduce((sum, r) => sum + r.rating, 0) / joanaReviews.length;
           } else {
             finalProviderData.reviews = providerResult.value?.reviews || [];
           }
@@ -605,16 +605,6 @@ if (isAuthenticated && user?.id) {
       offer.discountValue > 0  // Desconto positivo
   );
 
-  // CORREÇÃO 1: Cálculo da distância
-  const distanceLabel = formatDistance(provider.distance);
-
-  // CORREÇÃO: Fallback seguro para reviews_count_short (plural com defaultValue)
-  const count = provider.reviewCount || 0;
-  const reviewsTextShort = t('provider_details.reviews_count_short', {
-    count,
-    defaultValue: t('provider_details.reviews_count', { count }) // Fallback para versão longa se chave curta não existir
-  });
-
   return (
     <View style={styles.screenContainer}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -701,23 +691,20 @@ if (isAuthenticated && user?.id) {
           ]}
         >
           <View style={styles.providerInfoWhiteCard}>
-            {/* CORREÇÃO 4: StarRating + contagem, mais robusto (size=14) */}
             <View style={styles.providerNameRow}>
               <Text style={styles.providerNameWhiteCard}>{provider.fullName}</Text>
               <View style={styles.robustStarContainer}>
                 <StarRating
                   rating={provider.averageRating}
-                  size={14} // Tamanho 14
+                  size={13}
                   color={styles.priceTextWhiteCard.color}
                 />
-                {/* CORREÇÃO: Uso correto do i18n para contagem de reviews com fallback */}
                 <Text style={styles.robustReviewsText}>
-                  {reviewsTextShort}
+                  {t('provider_details.reviews_count', { count: provider.reviewCount || 0 })}
                 </Text>
               </View>
             </View>
 
-            {/* CORREÇÃO 1: Cidade + distância (micro) na faixa do nome */}
             <View style={styles.locationContainerWhiteCard}>
               <Ionicons
                 name="location-sharp"
@@ -727,16 +714,6 @@ if (isAuthenticated && user?.id) {
               <Text style={styles.locationTextWhiteCard}>
                 {provider.address?.city || t('common.not_available')}
               </Text>
-
-              {distanceLabel && (
-                <>
-                  <Text style={styles.locationDot}> · </Text>
-                  <Ionicons name="location-outline" size={10} color="#5da2ecff" />
-                  <Text style={[styles.locationTextWhiteCard, { fontWeight: '600', marginLeft: 4 }]}>
-                    {distanceLabel}
-                  </Text>
-                </>
-              )}
             </View>
 
             <Text style={styles.descriptionText}>
@@ -769,26 +746,23 @@ if (isAuthenticated && user?.id) {
                   text={t('provider_details.years_experience', {
                     count: provider.yearsOfExperience,
                   })}
-                  compact
                 />
               )}
               {provider.verificationStatus === VerificationStatus.APPROVED && (
-                <InfoChip iconName="shield-checkmark-outline" text={t('provider_details.verified')} compact />
+                <InfoChip iconName="shield-checkmark-outline" text={t('provider_details.verified')} />
               )}
               {providerMetrics?.acceptanceRate !== undefined && (
                 <InfoChip
                   iconName="checkmark-done-circle-outline"
-                  // MODIFICAÇÃO: Texto abreviado e alinhado para "Aceitação: XX%"
-                  text={`${t('metrics.acceptance_short', 'Aceitação')}: ${providerMetrics.acceptanceRate}%`}
-                  compact
+                  text={`${t('metrics.acceptance_rate')}: ${providerMetrics.acceptanceRate}%`}
                 />
               )}
               {providerMetrics?.averageResponseTime !== undefined && (
                 <InfoChip
                   iconName="time-outline"
-                  // MODIFICAÇÃO: Texto abreviado e alinhado para "Resposta: XX min" (simplificado, sem lógica condicional)
-                  text={`${t('metrics.response_short', 'Resposta')}: ${providerMetrics.averageResponseTime} ${t('common.minutes_short')}`}
-                  compact
+                  text={`${
+                    t('metrics.avg_response_time')
+                  }: ${providerMetrics.averageResponseTime} ${t('metrics.minutes_short')}`}
                 />
               )}
             </Animated.View>

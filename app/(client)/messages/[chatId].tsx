@@ -50,10 +50,10 @@ const CustomChatHeader: React.FC<{
       </View>
       <View style={chatStyles.headerActions}>
         <TouchableOpacity style={chatStyles.headerButton}>
-          <Ionicons name="videocam-outline" size={24} color="#5eb2e2ff" />
+          <Ionicons name="videocam-outline" size={24} color="#FFF" />
         </TouchableOpacity>
         <TouchableOpacity style={chatStyles.headerButton}>
-          <Ionicons name="call-outline" size={24} color="#5eb2e2ff" />
+          <Ionicons name="call-outline" size={24} color="#FFF" />
         </TouchableOpacity>
       </View>
     </View>
@@ -347,7 +347,7 @@ export default function ChatScreen() {
           editable={!isInputDisabled}
         />
         <TouchableOpacity style={chatStyles.inputIcon}>
-            <Ionicons name="happy-outline" size={24} color="#5eb2e2ff" />
+            <Ionicons name="happy-outline" size={24} color="#868E96" />
         </TouchableOpacity>
         <TouchableOpacity style={chatStyles.inputIcon}>
             <Ionicons name="mic-outline" size={24} color="#868E96" />
@@ -363,7 +363,7 @@ export default function ChatScreen() {
           onPressOut={onPressOutSendButton}
           disabled={isInputDisabled}
         >
-          <Ionicons name="send" size={24} color="#eee3e3ff" />
+          <Ionicons name="send" size={24} color="#FFFFFF" />
         </TouchableOpacity>
       </Animated.View>
     </KeyboardAvoidingView>
@@ -387,19 +387,15 @@ const chatStyles = StyleSheet.create({
     color: '#6C757D',
   },
   customHeader: {
-    top: 10,
     flexDirection: 'row',
-    marginBottom: 20,
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF', // Branco como na category
-       borderBottomEndRadius: 32,
-    borderBottomStartRadius: 32,
+    backgroundColor: '#4A90E2', // Alterado para o azul principal do perfil
     paddingHorizontal: 15,
-    paddingVertical: Platform.OS === 'ios' ? 40 : 20,
-    paddingTop: Platform.OS === 'ios' ? 40 : 20,
-    borderBottomLeftRadius: 40,
-    borderBottomRightRadius: 40,
+    paddingVertical: Platform.OS === 'ios' ? 50 : 20,
+    paddingTop: Platform.OS === 'ios' ? 50 : 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
@@ -408,11 +404,9 @@ const chatStyles = StyleSheet.create({
   },
   headerButton: {
     padding: 5,
-    top: 20,
   },
   headerRecipientInfo: {
     flexDirection: 'row',
-    top: 20,
     alignItems: 'center',
     flex: 1,
     marginLeft: 10,
@@ -428,11 +422,11 @@ const chatStyles = StyleSheet.create({
   headerRecipientName: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#4d85a5ff',
+    color: '#FFFFFF',
   },
   headerRecipientStatus: {
     fontSize: 12,
-   color: '#4d85a5ff',
+    color: 'rgba(255,255,255,0.8)',
   },
   headerActions: {
     flexDirection: 'row',

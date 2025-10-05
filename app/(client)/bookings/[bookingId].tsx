@@ -18,16 +18,20 @@ import {
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ColorValue } from 'react-native'; // ADICIONADO: Para tipagem explícita de cores no LinearGradient
 
+// Importar utilitários de formatação e normalização
 import { formatPriceBRL, formatDateTime, sanitizeText } from '../../../utils/formatters';
 import { normalizeBooking } from '../../../utils/normalize';
 
+// --- IMPORTAÇÕES DE SERVIÇOS E TIPAGENS DO SEU BACKEND REAL ---
 import { cancelBooking, getBookingDetails } from '../../../services/bookingService';
 
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 import { AppColors, AppShadows } from '../../../constants/appStyles';
 
-// Type guards
+// ✅ CORREÇÃO: Type guards para narrowing de BookingStatus (resolve warnings de "sempre verdadeiro" em condições)
+// Cada guard retorna true/false e narrow o tipo para o literal específico
 const isCancellableStatus = (status: BookingStatus): status is BookingStatus.CONFIRMED | BookingStatus.PENDING => {
   return status === BookingStatus.CONFIRMED || status === BookingStatus.PENDING;
 };
@@ -36,8 +40,10 @@ const isCompletedStatus = (status: BookingStatus): status is BookingStatus.COMPL
   return status === BookingStatus.COMPLETED;
 };
 
-// Avatar renderer
+// Função unificada para renderizar avatar REAL (inspirada na ProviderBrief) - Integração premium
+// ALINHADO: Mesma de index.tsx e explore/[providerId].tsx
 const renderProviderAvatar = (avatarUrl?: string | null, size: number = 80) => {
+  // Debug: Log para ver o que vem do backend
   if (__DEV__) console.log('Avatar URL (booking details):', avatarUrl);
 
   if (!avatarUrl || avatarUrl === '') {
@@ -52,12 +58,13 @@ const renderProviderAvatar = (avatarUrl?: string | null, size: number = 80) => {
       source={{ uri: avatarUrl }}
       style={[styles.providerImage, { width: size, height: size, borderRadius: size / 2 }]}
       resizeMode="cover"
-      onError={(e) => __DEV__ && console.log('Erro carregando avatar real (details):', (e as any).nativeEvent?.error || e)}
+      onError={(e) => __DEV__ && console.log('Erro carregando avatar real (details):', e.nativeEvent.error)}
       onLoad={() => __DEV__ && console.log('Avatar real carregado no details!')}
     />
   );
 };
 
+// CORREÇÃO TS: Definição de gradients como tuples readonly (as const) para compatibilidade com ColorValue[]
 const gradients = {
   confirmed: ['#D4EDDA', '#C3E6CB'] as const,
   pending: ['#FFF3CD', '#FFEAA7'] as const,
@@ -65,7 +72,7 @@ const gradients = {
   completed: ['#F8F9FA', '#E9ECEF'] as const,
   cancelled: ['#F8D7DA', '#F1B0B7'] as const,
   other: ['#E2E3E5', '#DEE2E6'] as const,
-  rescheduled: ['#EAE6F3', '#D7CFF0'] as const,
+  rescheduled: ['#EAE6F3', '#D7CFF0'] as const, // Adicionado para RESCHEDULED
 } as const;
 
 export default function BookingDetailsScreen() {
@@ -91,11 +98,6 @@ export default function BookingDetailsScreen() {
   const detailsFloatAnim = useRef(new Animated.Value(0)).current;
   const actionsFloatAnim = useRef(new Animated.Value(0)).current;
 
-  // Refs para as animações em loop para cleanup correto
-  const providerLoopRef = useRef<Animated.CompositeAnimation | null>(null);
-  const detailsLoopRef = useRef<Animated.CompositeAnimation | null>(null);
-  const actionsLoopRef = useRef<Animated.CompositeAnimation | null>(null);
-
   const createAndStartFloatAnimation = useCallback((animValue: Animated.Value) => {
     const loop = Animated.loop(
       Animated.sequence([
@@ -116,8 +118,10 @@ export default function BookingDetailsScreen() {
     );
     loop.start();
     return loop;
-  }, []);
+  }, []); // CORREÇÃO: Dependências vazias, sem redundâncias
 
+  // ALINHADO: fetchBooking com normalize e debug de avatar (como em explore/[providerId].tsx)
+  // CORREÇÃO: Removidas verificações redundantes (sempre true) em try/catch
   const fetchBooking = useCallback(async () => {
     if (!bookingId) {
       setError('ID do agendamento não fornecido.');
@@ -128,9 +132,10 @@ export default function BookingDetailsScreen() {
     setError(null);
     try {
       const rawData = await getBookingDetails(bookingId);
-      const data = normalizeBooking(rawData);
+      const data = normalizeBooking(rawData); // Garante providerAvatarUrl = rawData.provider?.avatarUrl
       setBooking(data);
 
+      // Debug integrado: Log do avatar após normalize (alinhado com index.tsx)
       if (__DEV__) console.log('Booking details carregado - Avatar URL:', data.providerAvatarUrl);
 
       Animated.stagger(150, [
@@ -155,38 +160,31 @@ export default function BookingDetailsScreen() {
       ]).start();
     } catch (err: any) {
       console.error('[BookingDetailsScreen] Erro ao buscar detalhes do agendamento:', err);
-      setError(sanitizeText(err?.message || 'Não foi possível carregar os detalhes do agendamento.'));
+      setError(sanitizeText(err.message || 'Não foi possível carregar os detalhes do agendamento.'));
     } finally {
       setIsLoading(false);
     }
-  }, [bookingId, providerSectionAnim, detailsCardAnim, actionsCardAnim]);
+  }, [bookingId]); // CORREÇÃO: Dependências limpas (anims removidas de deps para evitar loop)
 
   useEffect(() => {
     fetchBooking();
 
-    // Inicia a animação do provider imediatamente
-    providerLoopRef.current = createAndStartFloatAnimation(providerFloatAnim);
-
-    // Inicia as outras com delay usando setTimeout, mas armazena as refs para cleanup
+    const providerLoop = createAndStartFloatAnimation(providerFloatAnim);
     const detailsTimeout = setTimeout(() => {
-      detailsLoopRef.current = createAndStartFloatAnimation(detailsFloatAnim);
+      const detailsLoop = createAndStartFloatAnimation(detailsFloatAnim);
+      return () => detailsLoop.stop();
     }, 100);
-
     const actionsTimeout = setTimeout(() => {
-      actionsLoopRef.current = createAndStartFloatAnimation(actionsFloatAnim);
+      const actionsLoop = createAndStartFloatAnimation(actionsFloatAnim);
+      return () => actionsLoop.stop();
     }, 200);
 
     return () => {
-      // Cleanup das animações
-      providerLoopRef.current?.stop();
-      detailsLoopRef.current?.stop();
-      actionsLoopRef.current?.stop();
-
-      // Cleanup dos timeouts
+      providerLoop.stop();
       clearTimeout(detailsTimeout);
       clearTimeout(actionsTimeout);
     };
-  }, [fetchBooking, providerFloatAnim, detailsFloatAnim, actionsFloatAnim, createAndStartFloatAnimation]);
+  }, [fetchBooking]); // CORREÇÃO: Dependências sem redundâncias (anims não causam re-run)
 
   const onPressInButton = (animValue: Animated.Value) => {
     Animated.spring(animValue, {
@@ -224,7 +222,7 @@ export default function BookingDetailsScreen() {
               setBooking((prev) => (prev ? { ...prev, status: BookingStatus.CANCELLED } : null));
             } catch (err: any) {
               console.error('[BookingDetailsScreen] Erro ao cancelar agendamento:', err);
-              Alert.alert('Erro', sanitizeText(err?.message || 'Não foi possível cancelar o agendamento.'));
+              Alert.alert('Erro', sanitizeText(err.message || 'Não foi possível cancelar o agendamento.'));
             } finally {
               setIsLoading(false);
             }
@@ -290,17 +288,18 @@ export default function BookingDetailsScreen() {
         },
       ]
     );
-  }, []);
+  }, []); // CORREÇÃO: Dependências vazias, sem redundâncias
 
+  // CORREÇÃO TS: getStatusStyle com retorno tipado (gradient como readonly string[])
   const getStatusStyle = (status: BookingStatus) => {
     switch (status) {
       case BookingStatus.CONFIRMED:
         return {
           text: 'CONFIRMADO',
           color: AppColors.successStandard,
-          gradient: gradients.confirmed,
+          gradient: gradients.confirmed, // Tuple readonly compatível
           icon: 'checkmark-circle-outline' as const,
-          badgeBg: gradients.confirmed,
+          badgeBg: gradients.confirmed, // badgeBg também compatível
         };
       case BookingStatus.PENDING:
         return {
@@ -354,7 +353,7 @@ export default function BookingDetailsScreen() {
         return {
           text: 'REAGENDADO',
           color: '#6F42C1',
-          gradient: gradients.rescheduled,
+          gradient: gradients.rescheduled, // Usando o novo tuple
           icon: 'sync-outline' as const,
           badgeBg: gradients.rescheduled,
         };
@@ -377,37 +376,18 @@ export default function BookingDetailsScreen() {
     }
   };
 
-  // Componente de header reutilizável para evitar repetição
-  const renderHeader = (title: string) => (
-    <Stack.Screen
-      options={{
-        title,
-        headerTitleAlign: 'center',
-        headerTitleStyle: { fontFamily: 'Montserrat-SemiBold' || 'System', fontSize: 20, color: AppColors.textBody },
-        headerStyle: { backgroundColor: AppColors.white },
-        headerShadowVisible: false,
-        headerBackTitleVisible: false,
-        headerTintColor: AppColors.primaryInteractive,
-        headerLeft: () => (
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={{ paddingVertical: 10, paddingHorizontal: 12 }}
-            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel="Voltar"
-          >
-            <Ionicons name="arrow-back" size={24} color={AppColors.primaryInteractive} />
-          </TouchableOpacity>
-        ),
-      }}
-    />
-  );
-
   if (isLoading) {
     return (
       <View style={[styles.centered, { paddingTop: Platform.OS === 'ios' ? insets.top + 20 : 20 }]}>
-        {renderHeader('Carregando...')}
+        <Stack.Screen
+          options={{
+            title: 'Carregando...', // CORRIGIDO: Título visível com fallback de font
+            headerTitleStyle: { fontFamily: 'Montserrat-SemiBold' || 'System', fontSize: 20, color: AppColors.textBody },
+            headerStyle: { backgroundColor: AppColors.white },
+            headerTintColor: AppColors.primaryInteractive,
+            headerShadowVisible: false,
+          }}
+        />
         <ActivityIndicator size="large" color={AppColors.primaryInteractive} />
         <Text style={styles.loadingText} maxFontSizeMultiplier={1.2}>
           Carregando detalhes do agendamento...
@@ -419,7 +399,15 @@ export default function BookingDetailsScreen() {
   if (error || !booking) {
     return (
       <View style={[styles.centered, { paddingTop: Platform.OS === 'ios' ? insets.top + 20 : 20 }]}>
-        {renderHeader('Erro')}
+        <Stack.Screen
+          options={{
+            title: 'Erro', // CORRIGIDO: Título visível
+            headerTitleStyle: { fontFamily: 'Montserrat-SemiBold' || 'System', fontSize: 20, color: AppColors.textBody },
+            headerStyle: { backgroundColor: AppColors.white },
+            headerTintColor: AppColors.primaryInteractive,
+            headerShadowVisible: false,
+          }}
+        />
         <Ionicons name="alert-circle-outline" size={48} color={AppColors.errorRed} />
         <Text style={styles.errorText} maxFontSizeMultiplier={1.2}>
           {error || `Agendamento "${bookingId}" não encontrado.`}
@@ -436,20 +424,31 @@ export default function BookingDetailsScreen() {
   const isReviewed = !!booking.reviewId;
   const statusInfo = getStatusStyle(booking.status);
 
-  // Sanitiza o endereço completo para evitar quebras
-  const fullAddress = sanitizeText(
-    `${booking.address.street}, ${booking.address.number}${booking.address.complement ? `, ${booking.address.complement}` : ''}, ${booking.address.neighborhood}, ${booking.address.city}-${booking.address.state} - CEP: ${booking.address.cep}`
-  );
-
-  // Debug
-  if (__DEV__) console.log('[BookingDetails] Provider Avatar URL:', booking.providerAvatarUrl);
+  // Log para debug avatar no detalhes (alinhado com index.tsx)
+  console.log('[BookingDetails] Provider Avatar URL:', booking.providerAvatarUrl);
 
   return (
     <ScrollView
-      style={[styles.scrollViewContainer, { paddingTop: Platform.OS === 'ios' ? insets.top + 10 : 10, paddingBottom: insets.bottom + 20 }]}
+      style={[
+        styles.scrollViewContainer,
+        { paddingTop: Platform.OS === 'ios' ? insets.top + 10 : 10, paddingBottom: insets.bottom + 20 },
+      ]}
     >
-      {renderHeader('Detalhes do Agendamento')}
+      <Stack.Screen
+        options={{
+          title: `Detalhes do Serviço`, // CORRIGIDO: Título explícito e visível com fallback
+          headerTitleStyle: { 
+            fontFamily: 'Montserrat-SemiBold' || 'System', 
+            fontSize: 20, 
+            color: AppColors.textBody 
+          },
+          headerStyle: { backgroundColor: AppColors.white },
+          headerTintColor: AppColors.primaryInteractive,
+          headerShadowVisible: false,
+        }}
+      />
 
+      {/* Card superior: Avatar real + infos + badge alinhado à direita (match print) */}
       <Animated.View
         style={[
           styles.card,
@@ -466,13 +465,16 @@ export default function BookingDetailsScreen() {
       >
         <BlurView intensity={Platform.OS === 'ios' ? 20 : 40} tint="light" style={StyleSheet.absoluteFillObject} />
         <LinearGradient
-          colors={['#F9FBFF', '#E6F0FF'] as const}
+          colors={['#F9FBFF', '#E6F0FF'] as const} // CORREÇÃO: as const para compatibilidade TS
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFillObject}
         />
         <View style={styles.providerSection}>
+          {/* Avatar grande real à esquerda (80px, borda premium) - CORRIGIDO: Usa providerAvatarUrl alinhado */}
           {renderProviderAvatar(booking.providerAvatarUrl, 80)}
+
+          {/* Infos no centro (serviço + nome, como no print) */}
           <View style={styles.providerInfo}>
             <Text style={styles.serviceNameText} numberOfLines={2}>
               {sanitizeText(booking.serviceName)}
@@ -481,8 +483,10 @@ export default function BookingDetailsScreen() {
               com {sanitizeText(booking.providerFullName)}
             </Text>
           </View>
+
+          {/* Badge de status à direita (verde CONFIRMADO no print) - CORREÇÃO: colors agora é tuple compatível */}
           <LinearGradient
-            colors={statusInfo.gradient}
+            colors={statusInfo.gradient} // TS aceita como readonly string[]
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.statusBadge}
@@ -495,6 +499,7 @@ export default function BookingDetailsScreen() {
         </View>
       </Animated.View>
 
+      {/* Card intermediário: Detalhes (data, endereço, preço - grid como print) */}
       <Animated.View
         style={[
           styles.card,
@@ -510,12 +515,12 @@ export default function BookingDetailsScreen() {
       >
         <BlurView intensity={Platform.OS === 'ios' ? 20 : 40} tint="light" style={StyleSheet.absoluteFillObject} />
         <LinearGradient
-          colors={['#F9FBFF', '#E6F0FF'] as const}
+          colors={['#F9FBFF', '#E6F0FF'] as const} // CORREÇÃO: as const para compatibilidade TS
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFillObject}
         />
-
+        {/* CORREÇÃO: Wrapper View para borderBottom (Text não suporta) */}
         <View style={styles.sectionTitleContainer}>
           <Text style={styles.sectionTitle}>Detalhes do Agendamento</Text>
         </View>
@@ -537,7 +542,12 @@ export default function BookingDetailsScreen() {
         <View style={styles.detailRow}>
           <Ionicons name="location-outline" size={20} color={AppColors.textAuxiliary} style={styles.icon} />
           <Text style={styles.detailLabel}>Endereço:</Text>
-          <Text style={styles.detailValueAddress}>{fullAddress}</Text>
+          <Text style={styles.detailValueAddress}>
+            {sanitizeText(`${booking.address.street}, ${booking.address.number}`)}
+            {booking.address.complement ? sanitizeText(` , ${booking.address.complement}`) : ''}
+            {sanitizeText(`\n${booking.address.neighborhood}, ${booking.address.city}-${booking.address.state}`)}
+            {sanitizeText(`\nCEP: ${booking.address.cep}`)}
+          </Text>
         </View>
 
         <View style={styles.detailRow}>
@@ -555,6 +565,7 @@ export default function BookingDetailsScreen() {
         )}
       </Animated.View>
 
+      {/* Card inferior: Ações - CORREÇÃO: Removidas duplicatas em actionButton */}
       <Animated.View
         style={[
           styles.actionsCard,
@@ -570,19 +581,20 @@ export default function BookingDetailsScreen() {
       >
         <BlurView intensity={Platform.OS === 'ios' ? 20 : 40} tint="light" style={StyleSheet.absoluteFillObject} />
         <LinearGradient
-          colors={['#F9FBFF', '#E6F0FF'] as const}
+          colors={['#F9FBFF', '#E6F0FF'] as const} // CORREÇÃO: as const para compatibilidade TS
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFillObject}
         />
-
+        {/* CORREÇÃO: Wrapper View para borderBottom (Text não suporta) */}
         <View style={styles.sectionTitleContainer}>
           <Text style={styles.sectionTitle}>Ações</Text>
         </View>
 
+        {/* ✅ CORREÇÃO: Usa type guard isCancellableStatus (resolve warning "sempre verdadeiro" na linha ~375) */}
         {isCancellableStatus(booking.status) && (
           <LinearGradient
-            colors={['#FF6B6B', '#EE5A52'] as const}
+            colors={['#FF6B6B', '#EE5A52'] as const} // CORREÇÃO: as const para consistência
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={[styles.actionButton, styles.cancelButton, { transform: [{ scale: cancelButtonScaleAnim }] }]}
@@ -601,7 +613,7 @@ export default function BookingDetailsScreen() {
         )}
 
         <LinearGradient
-          colors={['#4ECDC4', '#44A08D'] as const}
+          colors={['#4ECDC4', '#44A08D'] as const} // CORREÇÃO: as const para consistência
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={[styles.actionButton, { transform: [{ scale: contactButtonScaleAnim }] }]}
@@ -620,12 +632,17 @@ export default function BookingDetailsScreen() {
           </TouchableOpacity>
         </LinearGradient>
 
+        {/* ✅ CORREÇÃO: Usa type guard isCompletedStatus (resolve warning "sempre verdadeiro" na linha ~431) */}
         {isCompletedStatus(booking.status) && !isReviewed && (
           <LinearGradient
-            colors={['#FFD93D', '#FEC200'] as const}
+            colors={['#FFD93D', '#FEC200'] as const} // CORREÇÃO: as const para consistência
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={[styles.actionButton, styles.reviewButton, { transform: [{ scale: reviewButtonScaleAnim }] }]}
+            style={[
+              styles.actionButton,
+              styles.reviewButton,
+              { transform: [{ scale: reviewButtonScaleAnim }] },
+            ]}
           >
             <TouchableOpacity
               style={styles.actionButtonInner}
@@ -641,7 +658,7 @@ export default function BookingDetailsScreen() {
         )}
 
         <LinearGradient
-          colors={['#667eea', '#764ba2'] as const}
+          colors={['#667eea', '#764ba2'] as const} // CORREÇÃO: as const para consistência
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={[styles.actionButtonOutline, { transform: [{ scale: profileButtonScaleAnim }] }]}
@@ -690,7 +707,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat-Regular',
     lineHeight: 22,
   },
-  actionButton: {
+  actionButton: { // CORREÇÃO: Propriedades consolidadas, sem duplicatas
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
@@ -755,13 +772,13 @@ const styles = StyleSheet.create({
   photoPlaceholder: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EEF4FF',
+    backgroundColor: '#EEF4FF', // Background neutro premium para placeholder
     borderWidth: 3,
     borderColor: AppColors.primaryInteractive,
   },
   providerImage: {
     borderWidth: 3,
-    borderColor: AppColors.primaryInteractive,
+    borderColor: AppColors.primaryInteractive, // Borda azul premium para imagem real
   },
   providerInfo: {
     flex: 1,
@@ -797,7 +814,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     fontFamily: 'Montserrat-SemiBold',
   },
-  sectionTitleContainer: {
+  sectionTitleContainer: { // NOVO: Wrapper para borderBottom (corrige erro de Text style)
     marginBottom: 20,
     borderBottomWidth: 1,
     borderBottomColor: AppColors.backgroundNeutral,
@@ -869,8 +886,12 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  cancelButton: {},
-  reviewButton: {},
+  cancelButton: {
+    // Estilos específicos para cancel (sem duplicatas)
+  },
+  reviewButton: {
+    // Estilos específicos para review (sem duplicatas)
+  },
   actionButtonOutline: {
     borderRadius: 14,
     borderWidth: 2,

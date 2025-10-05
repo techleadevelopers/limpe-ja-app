@@ -16,10 +16,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 // Importar o NOVO componente CategoryProviderCard para reutilizar a UI
-import CategoryProviderCard from '../../../components/client/explore/category/CategoryProviderCard';
+import CategoryProviderCard from '../../../components/CategoryProviderCard'; // Caminho ajustado para o novo componente
 // Importar o serviço para buscar provedores
 import { getProvidersByServiceCategory } from '../../../services/providerService';
-// Importar a tipografia de ProviderDisplayInfo
+// Importar a tipagem de ProviderDisplayInfo
 import { ProviderDisplayInfo } from '../../../types/backend/providers';
 
 const FilteredProvidersScreen: React.FC = () => {
@@ -121,17 +121,15 @@ const FilteredProvidersScreen: React.FC = () => {
       <Animated.View style={[styles.mainHeader, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
         <View style={styles.topRow}>
           <TouchableOpacity onPress={() => router.back()} style={styles.headerBackButton}>
-            <Ionicons name="arrow-back" size={24} color="#4A90E2" />
+            <Ionicons name="arrow-back" size={24} color="#FFF" />
           </TouchableOpacity>
-          <View style={styles.greetingContainer}>
-            <Text style={styles.greetingText}>{categoryName || 'Prestadores'}</Text>
-          </View>
+          <Text style={styles.greetingText}>{categoryName || 'Prestadores'}</Text>
           <View style={styles.headerIcons}>
             <TouchableOpacity style={styles.iconButton}>
-              <Ionicons name="search-outline" size={24} color="#4A90E2" />
+              <Ionicons name="search-outline" size={24} color="#FFF" />
             </TouchableOpacity>
             <TouchableOpacity style={styles.iconButton}>
-              <Ionicons name="ellipsis-vertical" size={24} color="#4A90E2" />
+              <Ionicons name="ellipsis-vertical" size={24} color="#FFF" />
             </TouchableOpacity>
           </View>
         </View>
@@ -165,12 +163,6 @@ const FilteredProvidersScreen: React.FC = () => {
           refreshControl={
             <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#4A90E2" />
           }
-          // Otimizações de performance para listas longas (como em Explore)
-          removeClippedSubviews
-          initialNumToRender={8}
-          maxToRenderPerBatch={8}
-          windowSize={7}
-          getItemLayout={(_, index) => ({ length: 108, offset: 108 * index, index })} // Assumindo altura fixa de ~108px por card; ajuste se necessário
         />
       ) : (
         renderEmptyState()
@@ -182,62 +174,56 @@ const FilteredProvidersScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F6F8FB', // Fundo neutro claro como nas imagens (Schedule/Provider details)
+    backgroundColor: '#F0F8FF',
   },
   mainHeader: {
-    backgroundColor: '#FFFFFF', // Fundo branco como em "Detalhes" e "Agendar" nas imagens
+    backgroundColor: '#4A90E2',
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 50 : 20, // Padding para status bar, alinhado com imagens iOS
-    paddingBottom: 16, // Padding bottom para separar da lista, como em Provider details
-    borderBottomWidth: 1, // Linha sutil de separação como em headers brancos das imagens
-    borderBottomColor: '#E9ECEF', // Cor neutra para border
+    paddingTop: Platform.OS === 'ios' ? 60 : 20,
+    paddingBottom: 15,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 }, // Shadow leve para elevação sutil, como em Schedule
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 4, // Elevation baixa para Android, matching clean look
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 8,
   },
   topRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'space-between', // Back left, icons right, título centralizado
-    paddingTop: Platform.OS === 'ios' ? 10 : 0, // Extra para alignment iOS como nas imagens
-  },
-  greetingContainer: {
-    flex: 1,
-    alignItems: 'center', // Centraliza o título perfeitamente
-    marginHorizontal: 10, // Spacing entre back/título/icons, como em "São Paulo" nas imagens
+    marginBottom: 20,
   },
   greetingText: {
-    fontSize: 20, // Tamanho alinhado com títulos das imagens (ex: "Agendar" ou "São Paulo" ~20px)
-    fontWeight: '400', // Bold como em Provider details ("Joãoa")
-    color: '#586b86ff', // Cor azul para título, como em "Detalhes" e banners das imagens
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    flex: 1,
     textAlign: 'center',
-    left: -45,
-    letterSpacing: 0.2, // Leve spacing para premium feel, como em Schedule
+    marginLeft: -24,
   },
   headerIcons: {
     flexDirection: 'row',
-    alignItems: 'center',
   },
   iconButton: {
-    padding: 8, // Padding consistente com back button
-    marginLeft: 8, // Spacing entre icons, como em Explore/Provider actions
+    padding: 8,
+    marginLeft: 10,
   },
   headerBackButton: {
-    padding: 8, // Padding arredondado como back em todas as imagens
-    borderRadius: 12, // Leve radius para modernidade (opcional, mas alinha com botões em Schedule)
+    padding: 8,
+    marginRight: 10,
   },
   listContentContainer: {
     paddingVertical: 15,
-    paddingHorizontal: 16, // Padding horizontal maior para lista, alinhado com cards nas imagens
+    paddingHorizontal: 10, // Padding horizontal ajustado para a lista
   },
   centeredFeedback: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#F6F8FB', // Fundo neutro como container
+    backgroundColor: '#F0F8FF',
   },
   loadingText: {
     marginTop: 15,
@@ -254,7 +240,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     paddingVertical: 10,
     paddingHorizontal: 15,
-    backgroundColor: '#4A90E2', // Azul para CTA, como em botões das imagens
+    backgroundColor: '#4A90E2',
     borderRadius: 8,
   },
   retryButtonText: {

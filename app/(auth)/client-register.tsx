@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
     ActivityIndicator,
     Animated,
@@ -20,7 +20,6 @@ import { CreateAddressDto, RegisterClientDto } from '../../types/backend/auth';
 
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fetchApi } from '../../services/api';
 import { AnimatedErrorMessage } from '../../components/auth/components/AnimatedErrorMessage';
 import { SafeAreaView } from 'react-native-safe-area-context'; // Imported but not used directly in JSX
 
@@ -35,18 +34,6 @@ import AnimatedReanimated, {
 } from 'react-native-reanimated';
 
 const LOGO_IMAGE = require('../../assets/images/logo2.png');
-
-const REFERRAL_STORAGE_KEY = 'pending-referral';
-
-const debounced = <T extends (...args: any[]) => void>(fn: T, ms = 500) => {
-  let timeout: ReturnType<typeof setTimeout> | undefined;
-  return (...args: Parameters<T>) => {
-    if (timeout) {
-      clearTimeout(timeout);
-    }
-    timeout = setTimeout(() => fn(...args), ms);
-  };
-};
 
 const fetchAddressFromRealCepApi = async (cep: string) => {
     const cleanedCep = cep.replace(/\D/g, '');
@@ -88,7 +75,6 @@ export default function ClientRegisterScreen() {
     const [dateOfBirth, setDateOfBirth] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
-    const [referralCode, setReferralCode] = useState('');
     const [cep, setCep] = useState('');
     const [street, setStreet] = useState('');
     const [number, setNumber] = useState('');
@@ -119,30 +105,6 @@ export default function ClientRegisterScreen() {
 
     const router = useRouter();
     const { signUpClient } = useAuth();
-
-    const applyReferral = useCallback(async (code: string) => {
-        const trimmed = code.trim();
-        if (!trimmed) {
-            await AsyncStorage.removeItem(REFERRAL_STORAGE_KEY);
-            return;
-        }
-        await AsyncStorage.setItem(REFERRAL_STORAGE_KEY, trimmed);
-        try {
-            await fetchApi('/referrals/apply', {
-                method: 'POST',
-                headers: { 'x-silent': '1' },
-                data: { code: trimmed },
-            });
-        } catch (error) {
-            console.warn('[ClientRegisterScreen] Falha ao aplicar código de indicação:', error);
-        }
-    }, []);
-
-    const referralChangeHandler = useMemo(() =>
-        debounced((value: string) => {
-            void applyReferral(value);
-        }, 600),
-    [applyReferral]);
 
     const mainElementsOpacity = useRef(new Animated.Value(0)).current;
     const mainElementsTranslateY = useRef(new Animated.Value(18)).current;
@@ -223,7 +185,6 @@ export default function ClientRegisterScreen() {
             try {
                 const formData = {
                     email, username, phone, cpf, dateOfBirth, password,
-                    referralCode,
                     cep, street, number, neighborhood, city, state, complement,
                     currentStep, subStepAddress
                 };
@@ -260,28 +221,17 @@ export default function ClientRegisterScreen() {
                     setCity(formData.city || '');
                     setState(formData.state || '');
                     setComplement(formData.complement || '');
-                    setReferralCode(formData.referralCode || '');
                     setCurrentStep(formData.currentStep || 1);
                     setSubStepAddress(formData.subStepAddress || 1);
                     setGeneralError("Dados carregados automaticamente. Continue seu cadastro.");
                     console.log("Form data loaded from AsyncStorage.");
-                }
-                const savedReferral: string | undefined = formData.referralCode;
-                if (savedReferral) {
-                    await applyReferral(savedReferral);
-                } else {
-                    const storedReferral = await AsyncStorage.getItem(REFERRAL_STORAGE_KEY);
-                    if (storedReferral) {
-                        setReferralCode(storedReferral);
-                        await applyReferral(storedReferral);
-                    }
                 }
             } catch (e) {
                 console.error("Failed to load form data from AsyncStorage", e);
             }
         };
         loadFormData();
-    }, [applyReferral]);
+    }, []);
 
     // Automatic and robust CEP fetching: Trigger when exactly 8 digits are entered (debounced for robustness)
     useEffect(() => {
@@ -718,7 +668,6 @@ export default function ClientRegisterScreen() {
                 fullName: username.trim(),
                 cpf: cpf.replace(/\D/g, ''),
                 phone: phone.replace(/\D/g, ''),
-                referralCode: referralCode.trim() ? referralCode.trim() : undefined,
                 address: {
                     cep: cep.trim(),
                     street: street.trim(),
@@ -892,21 +841,6 @@ export default function ClientRegisterScreen() {
                                     />
                                 </View>
                                 <AnimatedErrorMessage message={usernameError} isVisible={!!usernameError} centered={false} />
-
-                                <View style={styles.inputWrapper}>
-                                    <View style={styles.iconCircle}>
-                                        <Ionicons name="gift-outline" size={20} color="#00BCD4" />
-                                    </View>
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="Código de indicação (opcional)"
-                                        placeholderTextColor="#A0AEC0"
-                                        value={referralCode}
-                                        onChangeText={(text) => { setReferralCode(text); referralChangeHandler(text); }}
-                                        autoCapitalize="characters"
-                                        autoCorrect={false}
-                                    />
-                                </View>
 
                                 <AnimatedErrorMessage message={generalError} isVisible={!!generalError} centered={true} />
 

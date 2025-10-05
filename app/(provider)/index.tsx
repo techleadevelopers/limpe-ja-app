@@ -1,11 +1,11 @@
-﻿import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
     Animated,
-    Image, // Manter se necessÃ¡rio para listas que nÃ£o sejam SCROLLVIEW
+    Image, // Manter se necessário para listas que não sejam SCROLLVIEW
     Platform,
     RefreshControl,
     ScrollView,
@@ -14,17 +14,17 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 
-// ImportaÃ§Ãµes dos serviÃ§os
+// Importações dos serviços
 import { getBookingsForUser, updateBookingStatus } from '../../services/bookingService';
 import { getMyProviderDashboard } from '../../services/providerService';
 
-// ImportaÃ§Ãµes das tipagens centralizadas
+// Importações das tipagens centralizadas
 import { BookingDetails, BookingStatus } from '../../types/backend/bookings';
-import { ProviderDashboard, ProviderReview } from '../../types/backend/providers'; // Importe ProviderReview aqui tambÃ©m, se ProviderDashboard o usa
+import { ProviderDashboard, ProviderReview } from '../../types/backend/providers'; // Importe ProviderReview aqui também, se ProviderDashboard o usa
 
-// Hook para animaÃ§Ã£o de toque (reutilizÃ¡vel)
+// Hook para animação de toque (reutilizável)
 const useAnimatedTouch = () => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const onPressIn = () => {
@@ -58,11 +58,11 @@ const WARNING_YELLOW = '#FFC107';
 const BORDER_SUBTLE = 'rgba(0,0,0,0.08)';
 const SHADOW_COLOR_CARD = 'rgba(0, 0, 0, 0.06)';
 const SHADOW_COLOR_SECTION = 'rgba(0, 0, 0, 0.1)';
-const PRIMARY_LIGHT = '#EBF5FF'; // Um azul claro para fundos de botÃµes/links
+const PRIMARY_LIGHT = '#EBF5FF'; // Um azul claro para fundos de botões/links
 
-// --- Componentes ReutilizÃ¡veis (Move para arquivos separados se o projeto crescer) ---
+// --- Componentes Reutilizáveis (Move para arquivos separados se o projeto crescer) ---
 
-// Componente: DashboardHeader (para saudaÃ§Ã£o e avatar)
+// Componente: DashboardHeader (para saudação e avatar)
 const DashboardHeader: React.FC<{
   providerName: string | undefined;
   avatarUrl: string | undefined | null;
@@ -70,7 +70,7 @@ const DashboardHeader: React.FC<{
 }> = ({ providerName, avatarUrl, onProfilePress }) => (
   <View style={headerStyles.headerContainer}>
     <View style={headerStyles.greetingContainer}>
-      <Text style={headerStyles.greetingText}>OlÃ¡, <Text style={headerStyles.providerNameText}>{providerName || 'Provedor'}</Text>!</Text>
+      <Text style={headerStyles.greetingText}>Olá, <Text style={headerStyles.providerNameText}>{providerName || 'Provedor'}</Text>!</Text>
       <Text style={headerStyles.currentDateText}>{new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
     </View>
     <TouchableOpacity onPress={onProfilePress} style={headerStyles.avatarButton}>
@@ -179,7 +179,7 @@ const FinancialSummaryCard: React.FC<{
 
 const summaryStyles = StyleSheet.create({
   summaryCard: {
-    backgroundColor: ICON_PRIMARY, // Usar cor primÃ¡ria para destaque
+    backgroundColor: ICON_PRIMARY, // Usar cor primária para destaque
     borderRadius: 18,
     padding: 20,
     marginBottom: 20,
@@ -236,7 +236,7 @@ const summaryStyles = StyleSheet.create({
   },
 });
 
-// Componente: QuickActionsSection (botÃµes de aÃ§Ã£o rÃ¡pida)
+// Componente: QuickActionsSection (botões de ação rápida)
 const QuickActionsSection: React.FC<{
   onViewAllServicesPress: () => void;
   onViewAllMessagesPress: () => void;
@@ -248,7 +248,7 @@ const QuickActionsSection: React.FC<{
 
   return (
     <View style={quickActionStyles.sectionContainer}>
-      <Text style={quickActionStyles.sectionTitle}>AÃ§Ãµes RÃ¡pidas</Text>
+      <Text style={quickActionStyles.sectionTitle}>Ações Rápidas</Text>
       <View style={quickActionStyles.grid}>
         <TouchableOpacity style={[quickActionStyles.gridItem, { transform: [{ scale: s1 }] }]}
           onPress={onManageAvailability} onPressIn={p1} onPressOut={o1}>
@@ -258,14 +258,14 @@ const QuickActionsSection: React.FC<{
         <TouchableOpacity style={[quickActionStyles.gridItem, { transform: [{ scale: s2 }] }]}
           onPress={onViewAllServicesPress} onPressIn={p2} onPressOut={o2}>
           <Ionicons name="briefcase-outline" size={30} color={ICON_PRIMARY} />
-          <Text style={quickActionStyles.gridItemText}>Meus ServiÃ§os</Text>
+          <Text style={quickActionStyles.gridItemText}>Meus Serviços</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[quickActionStyles.gridItem, { transform: [{ scale: s3 }] }]}
           onPress={onViewAllMessagesPress} onPressIn={p3} onPressOut={o3}>
           <Ionicons name="chatbubbles-outline" size={30} color={ICON_PRIMARY} />
           <Text style={quickActionStyles.gridItemText}>Mensagens</Text>
         </TouchableOpacity>
-        {/* Adicione mais aÃ§Ãµes rÃ¡pidas conforme necessÃ¡rio, ex: "Meu Perfil", "Ajuda" */}
+        {/* Adicione mais ações rápidas conforme necessário, ex: "Meu Perfil", "Ajuda" */}
       </View>
     </View>
   );
@@ -275,7 +275,7 @@ const quickActionStyles = StyleSheet.create({
   sectionContainer: {
     backgroundColor: WHITE,
     borderRadius: 18,
-    padding: 20, // Manter ou ajustar este padding se o espaÃ§o lateral geral da caixa Ã© o que te incomoda
+    padding: 20, // Manter ou ajustar este padding se o espaço lateral geral da caixa é o que te incomoda
     marginBottom: 20,
     ...Platform.select({
       ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 6 },
@@ -289,22 +289,22 @@ const quickActionStyles = StyleSheet.create({
     marginBottom: 15,
     textAlign: 'center',
   },
-  grid: { // Este Ã© o container dos seus botÃµes
+  grid: { // Este é o container dos seus botões
     flexDirection: 'row',
     flexWrap: 'wrap', // Manter wrap para caso haja mais de 3, eles quebrem a linha
     justifyContent: 'space-around', // ou 'space-between', 'center'
     width: '100%', // Isso significa 100% do 'sectionContainer' (que tem padding de 20)
   },
   gridItem: {
-    // ATENÃ‡ÃƒO AQUI: Para 3 itens por linha, vocÃª PRECISA de uma largura menor.
+    // ATENÇÃO AQUI: Para 3 itens por linha, você PRECISA de uma largura menor.
     // 30% x 3 = 90%. Sobram 10% para gaps.
-    width: '30%', // <--- MUDANÃ‡A ESSENCIAL AQUI para 3 itens por linha!
+    width: '30%', // <--- MUDANÇA ESSENCIAL AQUI para 3 itens por linha!
     aspectRatio: 1, // Para manter quadrado
     backgroundColor: BACKGROUND_ALT,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 15, // EspaÃ§amento vertical entre as linhas
+    marginBottom: 15, // Espaçamento vertical entre as linhas
     padding: 10,
     borderWidth: 1,
     borderColor: BORDER_SUBTLE,
@@ -323,7 +323,7 @@ const quickActionStyles = StyleSheet.create({
 });
 
 
-// Componente de Item de SolicitaÃ§Ã£o (RequestItem) - SEM ALTERAÃ‡Ã•ES NESTE TRECHO
+// Componente de Item de Solicitação (RequestItem) - SEM ALTERAÇÕES NESTE TRECHO
 const RequestItem: React.FC<{
   item: BookingDetails;
   onAccept?: (id: string) => void;
@@ -360,7 +360,7 @@ const RequestItem: React.FC<{
           onPressIn={acceptTouchAnimation.onPressIn}
           onPressOut={acceptTouchAnimation.onPressOut}
           accessibilityRole="button"
-          accessibilityLabel={`Aceitar solicitaÃ§Ã£o de ${item.serviceName}`}
+          accessibilityLabel={`Aceitar solicitação de ${item.serviceName}`}
         >
           <Animated.View style={{ transform: [{ scale: acceptTouchAnimation.scaleAnim }] }}>
             <Ionicons name="checkmark-circle" size={32} color={SUCCESS_GREEN} />
@@ -410,7 +410,7 @@ const RequestItem: React.FC<{
           onPress={() => onReject && onReject(item.id)}
           onPressIn={rejectTouchAnimation.onPressIn}
           onPressOut={rejectTouchAnimation.onPressOut}
-          accessibilityLabel={`Recusar solicitaÃ§Ã£o de ${item.serviceName}`}
+          accessibilityLabel={`Recusar solicitação de ${item.serviceName}`}
         >
           <Animated.View style={[styles.actionButtonContent, { transform: [{ scale: rejectTouchAnimation.scaleAnim }] }]}>
             <Ionicons name="close-circle-outline" size={20} color={WHITE} />
@@ -422,7 +422,7 @@ const RequestItem: React.FC<{
           onPress={() => onDetails(item.id)}
           onPressIn={detailsTouchAnimation.onPressIn}
           onPressOut={detailsTouchAnimation.onPressOut}
-          accessibilityLabel={`Ver detalhes da solicitaÃ§Ã£o de ${item.serviceName}`}
+          accessibilityLabel={`Ver detalhes da solicitação de ${item.serviceName}`}
         >
           <Animated.View style={[styles.actionButtonContent, { transform: [{ scale: detailsTouchAnimation.scaleAnim }] }]}>
             <Ionicons name="eye-outline" size={20} color={ICON_PRIMARY} />
@@ -434,7 +434,7 @@ const RequestItem: React.FC<{
   );
 };
 
-// Componente de Item de ServiÃ§o Confirmado (ConfirmedServiceItem)
+// Componente de Item de Serviço Confirmado (ConfirmedServiceItem)
 const ConfirmedServiceItem: React.FC<{
   item: BookingDetails;
   onPress: (id: string) => void;
@@ -450,7 +450,7 @@ const ConfirmedServiceItem: React.FC<{
         onPressIn={touchAnimation.onPressIn}
         onPressOut={touchAnimation.onPressOut}
         accessibilityRole="button"
-        accessibilityLabel={`Ver detalhes do serviÃ§o ${item.serviceName} com ${item.clientFullName}`}
+        accessibilityLabel={`Ver detalhes do serviço ${item.serviceName} com ${item.clientFullName}`}
       >
         <Animated.View style={[styles.serviceItemContent, { transform: [{ scale: touchAnimation.scaleAnim }] }]}>
           <View style={styles.serviceItemIconWrapper}>
@@ -490,8 +490,8 @@ export default function ProviderDashboardScreen() {
     setIsLoading(true);
     setError(null);
     if (!user?.id) {
-        console.warn("[DashboardScreen] fetchData: user.id nÃ£o disponÃ­vel. Abortando busca.");
-        setError("ID do provedor nÃ£o disponÃ­vel para buscar dados.");
+        console.warn("[DashboardScreen] fetchData: user.id não disponível. Abortando busca.");
+        setError("ID do provedor não disponível para buscar dados.");
         setIsLoading(false);
         setIsRefreshing(false);
         return;
@@ -501,12 +501,12 @@ export default function ProviderDashboardScreen() {
     try {
       const dashboard = await getMyProviderDashboard();
       console.log("[DashboardScreen] fetchData: Dados do dashboard recebidos.", dashboard);
-      // Log para verificar se 'reviews' estÃ¡ chegando
+      // Log para verificar se 'reviews' está chegando
       console.log("[DashboardScreen] REVIEWS NA DASHBOARD (AGORA COM 'reviews'):", dashboard.reviews);
 
       setDashboardData(dashboard);
 
-      // CORREÃ‡ÃƒO: Mudar PENDING_PROVIDER_CONFIRMATION para PENDING
+      // CORREÇÃO: Mudar PENDING_PROVIDER_CONFIRMATION para PENDING
       const pendingBookings = await getBookingsForUser(BookingStatus.PENDING);
       console.log("[DashboardScreen] fetchData: Agendamentos pendentes recebidos.", pendingBookings);
       const confirmedBookings = await getBookingsForUser(BookingStatus.CONFIRMED);
@@ -515,8 +515,8 @@ export default function ProviderDashboardScreen() {
       setUpcomingServices([...pendingBookings, ...confirmedBookings].sort((a,b) => {
         const dateA = new Date(a.scheduledDate + 'T' + a.scheduledTime);
         const dateB = new Date(b.scheduledDate + 'T' + b.scheduledTime);
-        if (isNaN(dateA.getTime())) console.warn(`[DashboardScreen] Data invÃ¡lida para agendamento ${a.id}: ${a.scheduledDate}T${a.scheduledTime}`);
-        if (isNaN(dateB.getTime())) console.warn(`[DashboardScreen] Data invÃ¡lida para agendamento ${b.id}: ${b.scheduledDate}T${b.scheduledTime}`);
+        if (isNaN(dateA.getTime())) console.warn(`[DashboardScreen] Data inválida para agendamento ${a.id}: ${a.scheduledDate}T${a.scheduledTime}`);
+        if (isNaN(dateB.getTime())) console.warn(`[DashboardScreen] Data inválida para agendamento ${b.id}: ${b.scheduledDate}T${b.scheduledTime}`);
 
         return dateA.getTime() - dateB.getTime();
       }));
@@ -525,7 +525,7 @@ export default function ProviderDashboardScreen() {
 
     } catch (err: any) {
       console.error("[DashboardScreen] Erro ao buscar dados do dashboard do provedor:", err.response?.data || err.message, err);
-      setError(err.response?.data?.message || "NÃ£o foi possÃ­vel carregar os dados do dashboard.");
+      setError(err.response?.data?.message || "Não foi possível carregar os dados do dashboard.");
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -539,8 +539,8 @@ export default function ProviderDashboardScreen() {
       fetchData();
     } else if (!authLoading && !user?.id) {
         setIsLoading(false);
-        setError("Provedor nÃ£o autenticado ou perfil nÃ£o encontrado.");
-        console.warn("[DashboardScreen] useEffect: UsuÃ¡rio nÃ£o autenticado ou ID nÃ£o encontrado apÃ³s authLoading.");
+        setError("Provedor não autenticado ou perfil não encontrado.");
+        console.warn("[DashboardScreen] useEffect: Usuário não autenticado ou ID não encontrado após authLoading.");
     }
   }, [authLoading, user, fetchData]);
 
@@ -551,12 +551,12 @@ export default function ProviderDashboardScreen() {
   }, [fetchData]);
 
   const handleServicePress = (id: string) => {
-    console.log(`[DashboardScreen] handleServicePress: Navegando para detalhes do serviÃ§o ${id}.`);
+    console.log(`[DashboardScreen] handleServicePress: Navegando para detalhes do serviço ${id}.`);
     router.push(`/(provider)/services/${id}` as any);
   };
 
   const handleViewAllServicesPress = () => {
-    console.log("[DashboardScreen] handleViewAllServicesPress: Navegando para todos os serviÃ§os.");
+    console.log("[DashboardScreen] handleViewAllServicesPress: Navegando para todos os serviços.");
     router.push('/(provider)/services' as any);
   };
 
@@ -568,7 +568,7 @@ export default function ProviderDashboardScreen() {
   const handleAcceptRequest = async (bookingId: string) => {
     console.log(`[DashboardScreen] handleAcceptRequest: Tentando aceitar agendamento ${bookingId}.`);
     Alert.alert(
-      "Aceitar SolicitaÃ§Ã£o",
+      "Aceitar Solicitação",
       `Tem certeza que deseja aceitar o agendamento ${bookingId}?`,
       [
         { text: "Cancelar", style: "cancel", onPress: () => console.log("[DashboardScreen] Aceitar cancelado.") },
@@ -583,7 +583,7 @@ export default function ProviderDashboardScreen() {
               fetchData();
             } catch (error: any) {
               console.error("[DashboardScreen] Erro ao aceitar agendamento:", error.response?.data || error.message, error);
-              Alert.alert("Erro", error.response?.data?.message || "NÃ£o foi possÃ­vel aceitar o agendamento.");
+              Alert.alert("Erro", error.response?.data?.message || "Não foi possível aceitar o agendamento.");
             } finally {
               setIsLoading(false);
             }
@@ -596,7 +596,7 @@ export default function ProviderDashboardScreen() {
   const handleRejectRequest = async (bookingId: string) => {
     console.log(`[DashboardScreen] handleRejectRequest: Tentando rejeitar agendamento ${bookingId}.`);
     Alert.alert(
-      "Rejeitar SolicitaÃ§Ã£o",
+      "Rejeitar Solicitação",
       `Tem certeza que deseja rejeitar o agendamento ${bookingId}?`,
       [
         { text: "Cancelar", style: "cancel", onPress: () => console.log("[DashboardScreen] Rejeitar cancelado.") },
@@ -611,7 +611,7 @@ export default function ProviderDashboardScreen() {
               fetchData();
             } catch (error: any) {
               console.error("[DashboardScreen] Erro ao rejeitar agendamento:", error.response?.data || error.message, error);
-              Alert.alert("Erro", error.response?.data?.message || "NÃ£o foi possÃ­vel rejeitar o agendamento.");
+              Alert.alert("Erro", error.response?.data?.message || "Não foi possível rejeitar o agendamento.");
             } finally {
               setIsLoading(false);
             }
@@ -685,15 +685,15 @@ export default function ProviderDashboardScreen() {
           onManageAvailability={() => router.push('/(provider)/availability' as any)} // Assumindo uma rota de disponibilidade
         />
 
-        {/* SeÃ§Ã£o de Novas SolicitaÃ§Ãµes */}
-        {upcomingServices.filter(s => s.status === BookingStatus.PENDING).length > 0 && ( /* CorreÃ§Ã£o de PENDING_PROVIDER_CONFIRMATION para PENDING */
+        {/* Seção de Novas Solicitações */}
+        {upcomingServices.filter(s => s.status === BookingStatus.PENDING).length > 0 && ( /* Correção de PENDING_PROVIDER_CONFIRMATION para PENDING */
           <View style={styles.subsectionWrapper}>
             <View style={styles.subsectionHeader}>
               <Text style={styles.subsectionTitle}>
-                  <Ionicons name="alert-circle-outline" size={20} color={WARNING_YELLOW} /> Novas SolicitaÃ§Ãµes ({upcomingServices.filter(s => s.status === BookingStatus.PENDING).length}) /* CorreÃ§Ã£o */
+                  <Ionicons name="alert-circle-outline" size={20} color={WARNING_YELLOW} /> Novas Solicitações ({upcomingServices.filter(s => s.status === BookingStatus.PENDING).length}) /* Correção */
               </Text>
             </View>
-            {upcomingServices.filter(s => s.status === BookingStatus.PENDING).map((item, index) => ( /* CorreÃ§Ã£o */
+            {upcomingServices.filter(s => s.status === BookingStatus.PENDING).map((item, index) => ( /* Correção */
               <RequestItem
                 key={item.id}
                 item={item}
@@ -706,27 +706,27 @@ export default function ProviderDashboardScreen() {
             ))}
           </View>
         )}
-        {/* Estado vazio para Novas SolicitaÃ§Ãµes, se nÃ£o houver */}
-        {upcomingServices.filter(s => s.status === BookingStatus.PENDING).length === 0 && ( /* CorreÃ§Ã£o */
+        {/* Estado vazio para Novas Solicitações, se não houver */}
+        {upcomingServices.filter(s => s.status === BookingStatus.PENDING).length === 0 && ( /* Correção */
             <View style={styles.subsectionWrapper}>
                 <View style={styles.subsectionHeader}>
                     <Text style={styles.subsectionTitle}>
-                        <Ionicons name="alert-circle-outline" size={20} color={WARNING_YELLOW} /> Novas SolicitaÃ§Ãµes (0)
+                        <Ionicons name="alert-circle-outline" size={20} color={WARNING_YELLOW} /> Novas Solicitações (0)
                     </Text>
                 </View>
-                {renderEmptyState("Nenhuma nova solicitaÃ§Ã£o no momento.", "notifications-off-outline")}
+                {renderEmptyState("Nenhuma nova solicitação no momento.", "notifications-off-outline")}
             </View>
         )}
 
 
-        {/* PrÃ³ximos ServiÃ§os Confirmados */}
+        {/* Próximos Serviços Confirmados */}
         <View style={styles.subsectionWrapper}>
           <View style={styles.subsectionHeader}>
             <Text style={styles.subsectionTitle}>
-              <Ionicons name="checkmark-done-circle-outline" size={20} color={ICON_PRIMARY} /> PrÃ³ximos ServiÃ§os
+              <Ionicons name="checkmark-done-circle-outline" size={20} color={ICON_PRIMARY} /> Próximos Serviços
               </Text>
             {upcomingServices.filter(s => s.status === BookingStatus.CONFIRMED).length > 2 && (
-              <TouchableOpacity onPress={handleViewAllServicesPress} accessibilityRole="button" accessibilityLabel="Ver todos os prÃ³ximos serviÃ§os">
+              <TouchableOpacity onPress={handleViewAllServicesPress} accessibilityRole="button" accessibilityLabel="Ver todos os próximos serviços">
                 <Text style={styles.viewAllText}>Ver Todos</Text>
               </TouchableOpacity>
             )}
@@ -741,26 +741,26 @@ export default function ProviderDashboardScreen() {
               />
             ))
           ) : (
-            renderEmptyState("Nenhum serviÃ§o confirmado agendado.", "calendar-clear-outline")
+            renderEmptyState("Nenhum serviço confirmado agendado.", "calendar-clear-outline")
           )}
         </View>
 
-        {/* SeÃ§Ã£o de Reviews Recentes */}
-        {dashboardData?.reviews && dashboardData.reviews.length > 0 ? ( /* CorreÃ§Ã£o: 'reviews' em vez de 'recentReviews' */
+        {/* Seção de Reviews Recentes */}
+        {dashboardData?.reviews && dashboardData.reviews.length > 0 ? ( /* Correção: 'reviews' em vez de 'recentReviews' */
             <View style={styles.subsectionWrapper}>
                 <View style={styles.subsectionHeader}>
                     <Text style={styles.subsectionTitle}>
-                        <Ionicons name="star-outline" size={20} color={WARNING_YELLOW} /> AvaliaÃ§Ãµes Recentes
+                        <Ionicons name="star-outline" size={20} color={WARNING_YELLOW} /> Avaliações Recentes
                     </Text>
-                    <TouchableOpacity onPress={() => router.push('/(provider)/reviews' as any)} accessibilityRole="button" accessibilityLabel="Ver todas as avaliaÃ§Ãµes">
+                    <TouchableOpacity onPress={() => router.push('/(provider)/reviews' as any)} accessibilityRole="button" accessibilityLabel="Ver todas as avaliações">
                         <Text style={styles.viewAllText}>Ver Todas</Text>
                     </TouchableOpacity>
                 </View>
-                {/* O slice(0, 2) pode ser opcional aqui se o backend jÃ¡ limita a 2 */}
-                {dashboardData.reviews.slice(0, 2).map((review: ProviderReview, index: number) => ( /* CorreÃ§Ã£o de 'any' para ProviderReview e number */
+                {/* O slice(0, 2) pode ser opcional aqui se o backend já limita a 2 */}
+                {dashboardData.reviews.slice(0, 2).map((review: ProviderReview, index: number) => ( /* Correção de 'any' para ProviderReview e number */
                     <View key={review.id} style={styles.reviewItem}>
-                        <Text style={styles.reviewText}>"{review.comment || 'Sem comentÃ¡rio.'}"</Text>
-                        {/* INÃCIO DA ALTERAÃ‡ÃƒO PARA ESTRELAS E NOME DO CLIENTE */}
+                        <Text style={styles.reviewText}>"{review.comment || 'Sem comentário.'}"</Text>
+                        {/* INÍCIO DA ALTERAÇÃO PARA ESTRELAS E NOME DO CLIENTE */}
                         <View style={styles.reviewRatingStarsAndName}> {/* <--- ESTILO ADICIONADO */}
                             <View style={styles.reviewStarsContainer}> {/* <--- ESTILO ADICIONADO */}
                                 {Array.from({ length: review.rating }).map((_, i) => (
@@ -771,18 +771,18 @@ export default function ProviderDashboardScreen() {
                                 {review.client?.fullName || 'Cliente Desconhecido'} {/* Acessa o fullName do client */}
                             </Text>
                         </View>
-                        {/* FIM DA ALTERAÃ‡ÃƒO PARA ESTRELAS E NOME DO CLIENTE */}
+                        {/* FIM DA ALTERAÇÃO PARA ESTRELAS E NOME DO CLIENTE */}
                     </View>
                 ))}
             </View>
-        ) : ( // Parte do 'else' do ternÃ¡rio
+        ) : ( // Parte do 'else' do ternário
             <View style={styles.subsectionWrapper}>
                 <View style={styles.subsectionHeader}>
                     <Text style={styles.subsectionTitle}>
-                        <Ionicons name="star-outline" size={20} color={WARNING_YELLOW} /> AvaliaÃ§Ãµes Recentes
+                        <Ionicons name="star-outline" size={20} color={WARNING_YELLOW} /> Avaliações Recentes
                     </Text>
                 </View>
-                {renderEmptyState("Nenhuma avaliaÃ§Ã£o recente. Conclua mais serviÃ§os!", "star-half-outline")}
+                {renderEmptyState("Nenhuma avaliação recente. Conclua mais serviços!", "star-half-outline")}
             </View>
         )}
 
@@ -837,7 +837,7 @@ const styles = StyleSheet.create({
   },
   scrollViewContent: {
     padding: 15,
-    paddingTop: 0, // Ajuste para o novo cabeÃ§alho flutuante
+    paddingTop: 0, // Ajuste para o novo cabeçalho flutuante
     paddingBottom: 40,
   },
   sectionContainer: {
@@ -872,7 +872,7 @@ const styles = StyleSheet.create({
   },
   subsectionWrapper: {
     marginBottom: 25,
-    backgroundColor: WHITE, // Fundo para a subseÃ§Ã£o para melhor visual
+    backgroundColor: WHITE, // Fundo para a subseção para melhor visual
     borderRadius: 12,
     padding: 15,
     ...Platform.select({
@@ -903,7 +903,7 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     backgroundColor: BACKGROUND_ALT,
     borderRadius: 12,
-    marginTop: 10, // Adicionado espaÃ§amento
+    marginTop: 10, // Adicionado espaçamento
   },
   emptyText: {
     textAlign: 'center',
@@ -1125,10 +1125,10 @@ const styles = StyleSheet.create({
     color: TEXT_MEDIUM,
     marginBottom: 8,
   },
-  reviewRating: { // <--- ESTILO ORIGINAL - AGORA SERÃ USADO reviewRatingStarsAndName
+  reviewRating: { // <--- ESTILO ORIGINAL - AGORA SERÁ USADO reviewRatingStarsAndName
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end', // Este estava alinhando as estrelas e o nome Ã  direita
+    justifyContent: 'flex-end', // Este estava alinhando as estrelas e o nome à direita
   },
   // NOVOS ESTILOS: Adicionados para reposicionar as estrelas
   reviewRatingStarsAndName: { // <--- ESTILO ADICIONADO AQUI
@@ -1144,7 +1144,7 @@ const styles = StyleSheet.create({
   reviewClientName: {
     fontSize: 13,
     color: TEXT_MUTED,
-    // NÃ£o precisa de marginLeft aqui se justify-content: 'space-between'
+    // Não precisa de marginLeft aqui se justify-content: 'space-between'
   },
   earningsLinkCard: {
       backgroundColor: WHITE,

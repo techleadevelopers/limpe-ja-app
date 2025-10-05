@@ -322,14 +322,6 @@ export default function ProviderServicesScreen() {
           tint="dark"
           style={StyleSheet.absoluteFill}
         />
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.headerBackIcon}
-          accessibilityLabel="Voltar"
-          accessibilityRole="button"
-        >
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
         <Text style={styles.headerTitle}>{getHeaderTitle()}</Text>
         <TouchableOpacity
           onPress={() => {
@@ -443,13 +435,6 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
     zIndex: 1,
-  },
-  headerBackIcon: {
-    position: 'absolute',
-    left: 15,
-    padding: 5,
-    top: Platform.OS === 'ios' ? 47 : 17,
-    zIndex: 2,
   },
   headerActionIcon: {
     position: 'absolute',
