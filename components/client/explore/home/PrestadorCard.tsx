@@ -10,6 +10,7 @@ import { Icons3D } from '../../../../constants/icons3d';
 // Importar os novos formatadores e helpers
 import { formatDistance } from '../../../../utils/formatters';
 import { getFormattedServicePrice } from '../../../../utils/service-helpers';
+import { AnalyticsService } from '../../../../services/analyticsService';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -111,11 +112,21 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
 
     // REMOVIDO: renderAbsoluteLocation()
 
+    // Track impression (fire-and-forget)
+    useEffect(() => {
+        if (item?.id) {
+            AnalyticsService.trackEvent('home_prestador_card_impression', { providerId: item.id }).catch(() => {});
+        }
+    }, [item?.id]);
+
     return (
         <Animated.View style={[styles.animatedCardContainer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] }]}>
             <TouchableOpacity
                 style={styles.cardContainer}
-                onPress={() => onPress(item.id)}
+                onPress={() => {
+                    AnalyticsService.trackEvent('home_prestador_card_tap', { providerId: item.id }).catch(() => {});
+                    onPress(item.id);
+                }}
                 onPressIn={onPressInCard}
                 onPressOut={onPressOutCard}
                 activeOpacity={0.8}
