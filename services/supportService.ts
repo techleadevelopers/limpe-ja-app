@@ -1,6 +1,6 @@
 // LimpeJaApp/app/services/supportService.ts
 import axios from 'axios';
-import { SupportTicket, CreateTicketPayload, AddMessagePayload, SupportMessage } from '../types/backend/support';
+import { SupportTicket, CreateTicketPayload, AddMessagePayload, SupportMessage, TicketCategory, TicketSeverity } from '../types/backend/support';
 import { api } from './api'; // Importa a instância centralizada do Axios
 import Constants from 'expo-constants'; // Importar Constants para API_BASE_URL consistente
 
@@ -28,6 +28,18 @@ export const supportService = {
         } catch (error) {
             console.error('Error creating support ticket:', error);
             throw error;
+        }
+    },
+
+    /**
+     * Fetches support metadata (categories and severities) from backend.
+     */
+    async getMeta(): Promise<{ categories: TicketCategory[]; severities: TicketSeverity[] }> {
+        try {
+            const response = await api.get(`/v1/support/meta`);
+            return response.data;
+        } catch (error) {
+            return { categories: ['PAYMENT','QUALITY','APP','OTHER'], severities: ['LOW','MEDIUM','HIGH'] } as any;
         }
     },
 
