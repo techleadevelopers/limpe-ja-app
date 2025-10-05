@@ -8,9 +8,11 @@ import { Ionicons } from '@expo/vector-icons'; // Exemplo de ícones, instale @e
 export default function ClientTabLayout() {
   return (
     <Tabs
+      tabBar={() => null}
       screenOptions={{
         // tabBarActiveTintColor: Colors.tint, // Use suas constantes de cores
         headerShown: true, // Ou false se você tiver headers customizados nas telas
+        headerShown: false,
       }}
     >
       <Tabs.Screen

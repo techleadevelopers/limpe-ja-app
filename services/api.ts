@@ -121,6 +121,43 @@ api.interceptors.response.use(
     const config = axiosError.config;
     config.__tries = (config.__tries ?? 0) + 1;
 
+    // Special-case: allow guest fallback for GET /users/me when requested
+    try {
+      const status = axiosError.response?.status;
+      const url = String(config?.url ?? '');
+      const hdrs = (config?.headers ?? {}) as Record<string, unknown>;
+      const allowGuest = hdrs['X-Allow-Guest'] === '1' || hdrs['x-allow-guest'] === '1' || hdrs['X-Allow-Guest'] === true || hdrs['x-allow-guest'] === true;
+      if (allowGuest && url.endsWith('/users/me') && (status === 401 || status === 404)) {
+        const guest: any = {
+          id: 'guest',
+          email: '',
+          role: 'CLIENT',
+          fullName: null,
+          phone: null,
+          avatarUrl: null,
+          address: null,
+          walletBalance: 0,
+          ordersCount: 0,
+          upcomingBookingsCount: 0,
+          averageRating: 0,
+          reviewCount: 0,
+          referralCode: null,
+          clientDetails: null,
+          providerDetails: null,
+        };
+        return Promise.resolve({
+          data: guest,
+          status: 200,
+          statusText: 'OK',
+          headers: axiosError.response?.headers ?? {},
+          config,
+          request: (axiosError as any).request,
+        } as any);
+      }
+    } catch (_) {
+      // ignore fallback construction errors
+    }
+
     if (shouldRetry(axiosError) && config.__tries < 3) {
       await sleep(1000 * Math.pow(2, config.__tries - 1));
       return api(config);
@@ -164,7 +201,14 @@ api.interceptors.response.use(
       });
     }
 
-    return Promise.reject(unified);
+    // Preserve AxiosError shape for downstream callers and attach unified info
+    (axiosError as any).unified = unified;
+    (axiosError as any).status = unified.status ?? axiosError.response?.status;
+    // keep a helpful message while maintaining axios error type
+    if (unified.message && typeof unified.message === 'string') {
+      (axiosError as any).message = unified.message;
+    }
+    return Promise.reject(axiosError);
   }
 );
 

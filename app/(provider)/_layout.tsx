@@ -6,9 +6,9 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'; // Exempl
 export default function ProviderTabLayout() {
   return (
     <Tabs
+      tabBar={() => null}
       screenOptions={{
-        // tabBarActiveTintColor: 'yourProviderColor', // Defina sua cor
-        headerShown: true,
+        headerShown: false,
       }}
     >
       <Tabs.Screen
