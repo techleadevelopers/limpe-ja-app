@@ -128,6 +128,19 @@ export default function TicketDetailsScreen() {
         return user?.id && message.userId === user.id ? styles.myMessageText : styles.otherMessageText;
     };
 
+    /**
+     * Returns a friendly sender label prioritizing role + userId; falls back to legacy fields.
+     */
+    const getSenderLabel = (message: SupportMessage) => {
+        if (message.userId === user?.id) return 'Você';
+        if (message.role === 'admin') return 'Suporte';
+        if (message.role === 'provider') return 'Provedor';
+        // Fallback compat with legacy fields
+        if (message.senderType === 'admin') return 'Suporte';
+        if (message.senderType === 'provider') return 'Provedor';
+        return 'Cliente';
+    };
+
     if (loading) {
         return (
             <View style={styles.centeredContainer}>
@@ -186,6 +199,10 @@ export default function TicketDetailsScreen() {
                             style={[styles.messageRow, { justifyContent: getMessageAlignment(msg) === 'right' ? 'flex-end' : 'flex-start' }]}
                         >
                             <View style={getMessageBubbleStyle(msg)}>
+                                {/* Novo label com role + userId */}
+                                <Text style={[styles.messageSenderVisible, getMessageAlignment(msg) === 'right' ? { color: '#FFFFFF' } : { color: '#4A90E2' }]}>
+                                    {getSenderLabel(msg)}
+                                </Text>
                                 <Text style={[styles.messageSender, getMessageAlignment(msg) === 'right' ? { color: '#FFFFFF' } : { color: '#4A90E2' }]}>
                                     {msg.senderType === 'client' && msg.senderId === user?.id ? 'Você' : (msg.senderType === 'admin' ? 'Suporte' : 'Provedor')}
                                 </Text>
@@ -341,6 +358,14 @@ const styles = StyleSheet.create({
         }),
     },
     messageSender: {
+        // Antigo label legado permanece no DOM, mas fica oculto
+        fontSize: 0,
+        fontWeight: 'bold',
+        marginBottom: 0,
+        opacity: 0,
+        height: 0,
+    },
+    messageSenderVisible: {
         fontSize: 10,
         fontWeight: 'bold',
         marginBottom: 3,

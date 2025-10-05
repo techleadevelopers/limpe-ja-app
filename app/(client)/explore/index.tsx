@@ -199,7 +199,18 @@ export default function ExploreClientScreen() {
       setError(null);
     }
     try {
-      const fetchedUserProfile = await getUserProfile();
+      let fetchedUserProfile: UserProfile | null = null;
+      try {
+        fetchedUserProfile = await getUserProfile();
+      } catch (err: any) {
+        const status = err?.status ?? err?.response?.status;
+        const msg = String(err?.message ?? '').toLowerCase();
+        const isUnauthorized = status === 401 || /unauthorized|nao autorizado/.test(msg);
+        if (!isUnauthorized) {
+          throw err; // propagate real errors (not auth-related)
+        }
+        fetchedUserProfile = null; // continue without profile when not authenticated
+      }
       if (!isMounted.current) return;
       setUserProfile(fetchedUserProfile);
 
@@ -760,7 +771,8 @@ export default function ExploreClientScreen() {
           />
         </Animated.View>
 
-        {/* NOVO: DEFENSE_SOS <DEFENSE_SOS /> */}
+        {/* NOVO: DEFENSE_SOS */}
+        <DEFENSE_SOS bottomOffset={84} />
 
         {/* INJEÇÃO: SmartCouponNudge (aparece sutil após 3s na rota explore) */}
         {welcomeCouponOffer && (

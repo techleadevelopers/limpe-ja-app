@@ -1,0 +1,15 @@
+const fetchData = useCallback(async () => {
+    if (isMounted.current) {
+      setLoading(true);
+      setError(null);
+    }
+    try {
+      const fetchedUserProfile = await getUserProfile();
+      if (!isMounted.current) return;
+      setUserProfile(fetchedUserProfile);
+
+      console.log('[ExploreClientScreen] Perfil do usuário carregado:', fetchedUserProfile);
+
+      const categoriesData = await getServiceCategories();
+      if (!isMounted.current) return;
+      setServiceCateg

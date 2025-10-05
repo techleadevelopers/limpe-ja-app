@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef } from 'react';
 import { Animated, Dimensions, Image, Platform, StyleSheet, Text, TouchableOpacity, View, Easing } from 'react-native';
+import AnimatedReanimated, { Keyframe as ReKeyframe } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 
 import { ProviderDisplayInfo } from '../../../../types/backend/providers';
@@ -119,7 +120,18 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
         }
     }, [item?.id]);
 
+    // Efeito premium de aparição (inspirado em slide-in com leve rotate)
+    const hash = (item?.id || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+    const side = (hash % 2 === 0) ? 1 : -1; // direita/esquerda alternado
+    const amp = (hash % 3) + 1; // 1..3
+    const initialRotate = `${side * (5 * amp)}deg`;
+    const enteringKF = new ReKeyframe({
+        0: { opacity: 0.0001, transform: [{ scale: 0.85 }, { rotate: initialRotate }, { translateY: 14 }] },
+        100: { opacity: 1, transform: [{ scale: 1 }, { rotate: '0deg' }, { translateY: 0 }] },
+    }).duration(520);
+
     return (
+        <AnimatedReanimated.View entering={enteringKF}>
         <Animated.View style={[styles.animatedCardContainer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] }]}>
             <TouchableOpacity
                 style={styles.cardContainer}
@@ -146,6 +158,22 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
                 <View style={styles.detailsContent}>
                     <Text style={styles.providerName} numberOfLines={1} allowFontScaling={false}>{item.fullName}</Text>
                     <Text style={styles.specialtyText} numberOfLines={1} allowFontScaling={false}>{specialtyName}</Text>
+
+                    {/* Badges premium: Verificado, Top 10%, Resposta rápida (não-intrusivos) */}
+                    <View style={styles.badgesRow}>
+                        {item.verificationStatus === 'APPROVED' && (
+                            <View style={styles.badge}><Text style={styles.badgeText}>Verificado</Text></View>
+                        )}
+                        {typeof item.averageRating === 'number' && item.averageRating >= 4.7 && (item.reviewCount ?? 0) >= 25 && (
+                            <View style={styles.badge}><Text style={styles.badgeText}>Top 10%</Text></View>
+                        )}
+                        {typeof item.averageResponseTime === 'number' && item.averageResponseTime > 0 && item.averageResponseTime <= 15 && (
+                            <View style={styles.badge}><Text style={styles.badgeText}>Resposta rápida</Text></View>
+                        )}
+                        {item.backgroundCheckResult ? (
+                            <View style={styles.badge}><Text style={styles.badgeText}>Segurança</Text></View>
+                        ) : null}
+                    </View>
 
                     {/* Linha de métricas (Aceitação, Tempo de Resposta e AGORA Distância Inline) */}
                     <View style={styles.metricsRow}>
@@ -195,6 +223,7 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
           
             </TouchableOpacity>
         </Animated.View>
+        </AnimatedReanimated.View>
     );
 };
 

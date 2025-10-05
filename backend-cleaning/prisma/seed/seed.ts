@@ -1,5 +1,5 @@
 // seed.ts
-import { PrismaClient, UserRole, Prisma, VerificationStatus, BookingStatus, TransactionType, PricingType, CouponType, CouponTarget, CouponStatus, MissionAudience, MissionKind, RewardType, MissionStatus, LoyaltyTransactionType, OfferTarget, OfferStatus, SupportTicketStatus, SupportTicketCategory, DisputeReason, DisputeStatus, IncidentType, IncidentStatus, SubscriptionFrequency, SubscriptionStatus, ClaimStatus, PaymentIntentStatus, Service, // Importado para tipagem de createdServices
+import { PrismaClient, UserRole, Prisma, VerificationStatus, BookingStatus, TransactionType, PricingType, CouponType, CouponTarget, CouponStatus, MissionAudience, MissionKind, RewardType, MissionStatus, LoyaltyTransactionType, OfferTarget, OfferStatus, SupportTicketStatus, SupportTicketCategory, DisputeReason, DisputeStatus, IncidentType, IncidentStatus, SubscriptionFrequency, SubscriptionStatus, ClaimStatus, PaymentIntentStatus, PixKeyType, LedgerEntryType, PayoutStatus, Service, // Importado para tipagem de createdServices
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 

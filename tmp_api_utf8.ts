@@ -2,7 +2,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import Toast from 'react-native-toast-message';
-import i18n from '../i18n';
+import i18n from './backend-cleaning/src/common/i18n/i18n.module';
 import * as Sentry from '@sentry/react-native';
 
 // --- Callback disparado em 401 ---

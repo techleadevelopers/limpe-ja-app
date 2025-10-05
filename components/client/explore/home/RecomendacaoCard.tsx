@@ -1,3 +1,5 @@
+﻿
+
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -23,7 +25,6 @@ import { ProviderServiceOffering } from '../../../../types/backend/provider-serv
 // Importar os novos formatadores e helpers
 import { formatDistance } from '../../../../utils/formatters';
 import { getFormattedServicePrice, getNumericPriceValue } from '../../../../utils/service-helpers';
-import { AnalyticsService } from '../../../../services/analyticsService';
 
 const AnimatedCardBackground = AnimatedReanimated.createAnimatedComponent(LinearGradient);
 const AnimatedPlusButtonGradient = AnimatedReanimated.createAnimatedComponent(LinearGradient);
@@ -37,11 +38,11 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
     const { t } = useTranslation();
 
     if (!item || !item.id || !item.fullName) {
-        console.warn('[RecomendacaoCard] Item inválido ou incompleto. Render ignorado:', item);
+        console.warn('[RecomendacaoCard] Item invÃ¡lido ou incompleto. Render ignorado:', item);
         return null;
     }
 
-    // CORRIGIDO: Use Reanimated para scale (compatível com AnimatedCardBackground)
+    // CORRIGIDO: Use Reanimated para scale (compatÃ­vel com AnimatedCardBackground)
     const hoverScale = useSharedValue(1); // SharedValue do Reanimated para scale
 
     const onPressInCard = () => {
@@ -52,9 +53,9 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
         hoverScale.value = withTiming(1, { duration: 200, easing: Easing.out(Easing.ease) });
     };
 
-    // Estilo animado para scale - CORRIGIDO: Usa interpolate implícito via useAnimatedStyle para número puro
+    // Estilo animado para scale - CORRIGIDO: Usa interpolate implÃ­cito via useAnimatedStyle para nÃºmero puro
     const hoverScaleStyle = useAnimatedStyle(() => ({
-        transform: [{ scale: hoverScale.value }], // Garante número puro (Reanimated extruda automaticamente)
+        transform: [{ scale: hoverScale.value }], // Garante nÃºmero puro (Reanimated extruda automaticamente)
     }));
 
     const reflectionTranslateX = useSharedValue(-60);
@@ -69,13 +70,6 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
             false
         );
     }, []);
-
-    // Track impression (fire-and-forget) when the card mounts/updates
-    useEffect(() => {
-        if (item?.id) {
-            AnalyticsService.trackEvent('home_recommendation_card_impression', { providerId: item.id }).catch(() => {});
-        }
-    }, [item?.id]);
 
     const animatedReflectionStyle = useAnimatedStyle(() => {
         return {
@@ -140,7 +134,6 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
 
     const handleCardPress = () => {
         try {
-            AnalyticsService.trackEvent('home_recommendation_card_tap', { providerId: item.id }).catch(() => {});
             router.push(CLIENT_ROUTES.PROVIDER_DETAILS(item.id));
         } catch (err) {
             console.error('[RecomendacaoCard] Erro ao navegar:', err);
@@ -151,7 +144,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
         ? { uri: item.avatarUrl }
         : require('../../../../assets/images/default-avatar.png');
 
-    // --- Lógica para determinar o serviço principal a ser exibido como "A partir de" ---
+    // --- LÃ³gica para determinar o serviÃ§o principal a ser exibido como "A partir de" ---
     let mainServiceForDisplay: ProviderServiceOffering | undefined = undefined;
     let lowestFixedPrice: number | null = null;
 
@@ -171,15 +164,15 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
         }
     }
 
-    // Formata a string do preço principal a ser exibida usando o helper
+    // Formata a string do preÃ§o principal a ser exibida usando o helper
     const mainDisplayedPrice = mainServiceForDisplay
         ? getFormattedServicePrice(mainServiceForDisplay, t)
         : t('provider_details.price_not_available');
 
-    // Obtém o valor numérico do preço principal para comparações futuras
+    // ObtÃ©m o valor numÃ©rico do preÃ§o principal para comparaÃ§Ãµes futuras
     const numericMainPrice = mainServiceForDisplay ? getNumericPriceValue(mainServiceForDisplay) : null;
 
-    // --- Calcula menor preço por hora entre todos os serviços ---
+    // --- Calcula menor preÃ§o por hora entre todos os serviÃ§os ---
     let minHourlyPrice: number | null = null;
     if (item.providerServices && item.providerServices.length > 0) {
         item.providerServices.forEach(service => {
@@ -211,227 +204,133 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
     }
     if (categoriesToDisplay.length === 0) {
         if (item.bio?.toLowerCase().includes('comercial')) categoriesToDisplay.push('Comercial');
-        else if (item.bio?.toLowerCase().includes('escritórios')) categoriesToDisplay.push('Escritório');
+        else if (item.bio?.toLowerCase().includes('escritÃ³rios')) categoriesToDisplay.push('EscritÃ³rio');
         else {
             categoriesToDisplay.push('Limpeza Geral');
         }
     }
     const displayedCategories = categoriesToDisplay.slice(0, 2);
 
-    // Teste visual rápido: Injeta distance: 4000 (4 km) em dev se não vier do backend
-    const safeDistance = __DEV__ && item.distance == null ? 4000 : item.distance;
-
-    // Formatar a distância usando o valor seguro
-    const distanceLabel = formatDistance(safeDistance);
-
-    // Helper para formatar próximo horário (discreto, baseado em data atual)
-    const formatNextAvailable = (next: { date: string; time: string } | undefined): string | null => {
-        if (!next) return null;
-        const today = new Date();
-        const nextDate = new Date(next.date);
-        const diffDays = Math.floor((nextDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-        const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-        if (diffDays === 0) return `Hoje, ${next.time}`;
-        if (diffDays === 1) return `Amanhã, ${next.time}`;
-        return `${days[nextDate.getDay()]} ${next.time}`;
-    };
-
-    // Label para próximo horário
-    const nextAvailableLabel = formatNextAvailable(item.nextAvailable);
-
-    // Métricas mini (condicional) - Mantendo estrutura original, mas com ícones em azul
-    const hasAcceptanceRate = item.acceptanceRate && item.acceptanceRate > 0;
-    const hasResponseTime = item.averageResponseTime && item.averageResponseTime > 0;
-
-    const renderMetrics = () => {
-        if (!hasAcceptanceRate && !hasResponseTime) return null;
-
-        return (
-            <View style={styles.metricTextContainer}>
-                {hasAcceptanceRate && (
-                    <>
-                        <Text style={[styles.metricIcon, { color: '#5da2ecff' }]} allowFontScaling={false}>✓</Text>
-                        <Text style={styles.metricValue} allowFontScaling={false}>{Math.round(item.acceptanceRate)}%</Text>
-                    </>
-                )}
-                {hasAcceptanceRate && hasResponseTime && (
-                    <Text style={styles.metricSeparator} allowFontScaling={false}> · </Text>
-                )}
-                {hasResponseTime && (
-                    <>
-                        <Text style={[styles.metricIcon, { color: '#5da2ecff' }]} allowFontScaling={false}>⏱</Text>
-                        <Text style={styles.metricValue} allowFontScaling={false}>{item.averageResponseTime} min</Text>
-                    </>
-                )}
-            </View>
-        );
-    };
+    // Formatar a distÃ¢ncia
+    const distanceLabel = formatDistance(item.distance);
 
     return (
-        // NOVO: Wrapper com position: 'relative' para posicionar a distância absolutamente
-        <View style={styles.cardWrapperWithDistance}>
-            {/* NOVO: Micro-Pill de Localização/Distância (Sutil e Compacto) */}
-            {distanceLabel && (
-                <View style={styles.distancePillSmall}>
-                    <Ionicons name="location-outline" size={10} color="#5da2ecff" />
-                    <Text style={styles.distancePillSmallText} numberOfLines={1} allowFontScaling={false}>
-                        {distanceLabel}
-                    </Text>
-                </View>
-            )}
-
-            {/* CORRIGIDO: Aplica hoverScaleStyle (Reanimated) ao AnimatedCardBackground para compatibilidade */}
-            <AnimatedCardBackground
-                colors={['rgba(230, 240, 255, 0.7)', 'rgba(196, 197, 205, 0.23)']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 0, y: 1 }}
-                style={[styles.animatedCardContainer, hoverScaleStyle]} // Usa Reanimated style para scale número puro
+        // CORRIGIDO: Aplica hoverScaleStyle (Reanimated) ao AnimatedCardBackground para compatibilidade
+        <AnimatedCardBackground
+            colors={['rgba(230, 240, 255, 0.7)', 'rgba(196, 197, 205, 0.23)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={[styles.animatedCardContainer, hoverScaleStyle]} // Usa Reanimated style para scale nÃºmero puro
+        >
+            <TouchableOpacity
+                style={styles.cardContentWrapper}
+                onPress={handleCardPress}
+                onPressIn={onPressInCard}
+                onPressOut={onPressOutCard}
+                activeOpacity={1}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-                <TouchableOpacity
-                    style={styles.cardContentWrapper}
-                    onPress={handleCardPress}
-                    onPressIn={onPressInCard}
-                    onPressOut={onPressOutCard}
-                    activeOpacity={1}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                    <View style={styles.imageWrapper}>
-                        <Image source={avatarSource} style={styles.cardImage} />
+                <View style={styles.imageWrapper}>
+                    <Image source={avatarSource} style={styles.cardImage} />
+                </View>
+
+                <View style={styles.infoContainer}>
+                    <View style={styles.providerNameContainer}>
+                        <Text style={styles.providerName} numberOfLines={1} allowFontScaling={false}>{item.fullName}</Text>
                     </View>
 
-                    <View style={styles.infoContainer}>
-                        <View style={styles.providerNameContainer}>
-                            <Text style={styles.providerName} numberOfLines={1} allowFontScaling={false}>{item.fullName}</Text>
+                    <Text style={styles.serviceDescription} numberOfLines={2} allowFontScaling={false}>
+                        {item.bio || "Nenhuma descriÃ§Ã£o disponÃ­vel."}
+                    </Text>
+
+                    {distanceLabel && (
+                        <View style={styles.distanceRow}>
+                            <Ionicons name="location-outline" size={12} color="#6C757D" />
+                            <Text style={styles.distanceText} allowFontScaling={false}>{distanceLabel}</Text>
+                        </View>
+                    )}
+
+                    <View style={styles.categoryChipsContainer}>
+                        {displayedCategories.map((category, index) => (
+                            <View key={index} style={styles.categoryChip}>
+                                {/* ConteÃºdo do chip de categoria, se houver */}
+                            </View>
+                        ))}
+                    </View>
+
+                    <View style={styles.priceAndRatingSection}>
+                        <View>
+                            <Text style={styles.priceLabel} allowFontScaling={false}>A partir de</Text>
+                            <Text style={styles.priceValue} allowFontScaling={false}>{mainDisplayedPrice}</Text>
+
+                            {shouldShowMinHourlyPrice && (
+                                <Text style={styles.hourlyPriceValue} allowFontScaling={false}>
+                                    {t('common.or')} {getFormattedServicePrice({
+                                        // Usar o operador de asserÃ§Ã£o nÃ£o-nula (!) em minHourlyPrice
+                                        price: minHourlyPrice!,
+                                        pricingType: PricingType.HOURLY,
+                                        // Incluir outras propriedades obrigatÃ³rias da interface ProviderServiceOffering
+                                        // com valores fictÃ­cios se elas nÃ£o forem usadas por getFormattedServicePrice
+                                        id: '', // Exemplo: se 'id' for obrigatÃ³rio
+                                        providerId: '', // Exemplo: se 'providerId' for obrigatÃ³rio
+                                        serviceId: '', // Exemplo: se 'serviceId' for obrigatÃ³rio
+                                    } as ProviderServiceOffering, t)}
+                                </Text>
+                            )}
                         </View>
 
-                        <Text style={styles.serviceDescription} numberOfLines={2} allowFontScaling={false}>
-                            {item.bio || "Nenhuma descrição disponível."}
-                        </Text>
+                        <View style={styles.ratingSection}>
+                            <AnimatedPlusButtonGradient
+                                colors={['#73c5f5ff', '#70c0eeee','#4fade4ff']}
+                                style={[styles.plusButton, { overflow: 'hidden' }, subtleTrembleAnimatedStyle]}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                            >
+                                <AnimatedReanimated.View style={[styles.reflectionOverlay, animatedReflectionStyle]}>
+                                    <LinearGradient
+                                        colors={['transparent', 'rgba(255,255,255,0.7)', 'transparent']}
+                                        start={{ x: 0, y: 0 }}
+                                        end={{ x: 1, y: 0 }}
+                                        style={StyleSheet.absoluteFillObject}
+                                    />
+                                </AnimatedReanimated.View>
+                                <Ionicons name="add" size={22} color="#ffffffc8" />
+                            </AnimatedPlusButtonGradient>
 
-                        {/* Métricas mini (✓ e ⏱) -- discretas, cor #6C757D */}
-                        {renderMetrics()}
-
-                        <View style={styles.categoryChipsContainer}>
-                            {displayedCategories.map((category, index) => (
-                                <View key={index} style={styles.categoryChip}>
-                                    {/* Conteúdo do chip de categoria, se houver */}
-                                </View>
-                            ))}
-                        </View>
-
-                        <View style={styles.priceAndRatingSection}>
-                            <View>
-                                <Text style={styles.priceLabel} allowFontScaling={false}>A partir de</Text>
-                                <Text style={styles.priceValue} allowFontScaling={false}>{mainDisplayedPrice}</Text>
-
-                                {shouldShowMinHourlyPrice && (
-                                    <Text style={styles.hourlyPriceValue} allowFontScaling={false}>
-                                        {t('common.or')} {getFormattedServicePrice({
-                                            // CORRIGIDO: Usa asserção de tipo 'as number' em vez de '!', garantindo que minHourlyPrice seja tratado como number dentro da condição
-                                            price: minHourlyPrice as number,
-                                            pricingType: PricingType.HOURLY,
-                                            // Incluir outras propriedades obrigatórias da interface ProviderServiceOffering
-                                            // com valores fictícios se elas não forem usadas por getFormattedServicePrice
-                                            id: '', // Exemplo: se 'id' for obrigatório
-                                            providerId: '', // Exemplo: se 'providerId' for obrigatório
-                                            serviceId: '', // Exemplo: se 'serviceId' for obrigatório
-                                        } as ProviderServiceOffering, t)}
-                                    </Text>
-                                )}
-                            </View>
-
-                            <View style={styles.ratingSection}>
-                                <AnimatedPlusButtonGradient
-                                    colors={['#73c5f5ff', '#70c0eeee','#4fade4ff']}
-                                    style={[styles.plusButton, { overflow: 'hidden' }, subtleTrembleAnimatedStyle]}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 1 }}
-                                >
-                                    <AnimatedReanimated.View style={[styles.reflectionOverlay, animatedReflectionStyle]}>
-                                        <LinearGradient
-                                            colors={['transparent', 'rgba(255,255,255,0.7)', 'transparent']}
-                                            start={{ x: 0, y: 0 }}
-                                            end={{ x: 1, y: 0 }}
-                                            style={StyleSheet.absoluteFillObject}
-                                        />
-                                    </AnimatedReanimated.View>
-                                    <Ionicons name="shield-checkmark" size={22} color="#ffffffc8" />
-                                </AnimatedPlusButtonGradient>
-
-                                {/* REMOVIDO: Distância movida para fora do AnimatedCardBackground */}
-
-                                {renderStars(item.averageRating)}
-                                {item.reviewCount !== undefined && (
-                                    <Text style={styles.reviewsCountText} allowFontScaling={false}>
-                                        {item.reviewCount === 0 ? 'Sem Avaliações' : `${item.reviewCount} Avaliações`}
-                                    </Text>
-                                )}
-                            </View>
+                            {renderStars(item.averageRating)}
+                            {item.reviewCount !== undefined && (
+                                <Text style={styles.reviewsCountText} allowFontScaling={false}>
+                                    {item.reviewCount === 0 ? 'Sem AvaliaÃ§Ãµes' : `${item.reviewCount} AvaliaÃ§Ãµes`}
+                                </Text>
+                            )}
                         </View>
                     </View>
-                </TouchableOpacity>
-            </AnimatedCardBackground>
-        </View>
+                </View>
+            </TouchableOpacity>
+        </AnimatedCardBackground>
     );
 };
 
 const styles = StyleSheet.create({
-    cardWrapperWithDistance: { // NOVO ESTILO: Container pai para posicionamento absoluto
+    animatedCardContainer: {
         width: 190,
-        height: 280,
+        height: 270,
         marginRight: 15,
         marginBottom: 5,
         marginTop: 8,
-        position: 'relative', // Essencial
-    },
-    animatedCardContainer: {
-        width: '100%', // Preenche o wrapper
-        height: '100%', // Preenche o wrapper
         overflow: 'hidden',
-        // Margins removidos daqui e movidos para cardWrapperWithDistance
         borderRightWidth: 1,
         borderBottomWidth: 0.5,
         borderLeftWidth: 1,
         borderTopWidth: 1,
         borderColor: '#d1d5db53',
         borderRadius: 12,
-        borderTopStartRadius: 22, // Cantos 22
-        borderBottomStartRadius: 12,
-        borderTopEndRadius: 22, // Cantos 22
-        borderBottomEndRadius: 12,
+        borderTopStartRadius: 22,
+        borderBottomStartRadius: 22,
+        borderTopEndRadius: 22,
+        borderBottomEndRadius: 22,
         borderBottomColor: '#d1d5db53',
     },
-    // NOVO ESTILO: Micro-Pill de Distância (Sutil e Compacto)
-    distancePillSmall: {
-        position: 'absolute',
-        top: 8,
-        right: 8,
-        zIndex: 10,
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 6,      // Padding 6x2
-        paddingVertical: 2,        // Padding 6x2
-        borderRadius: 12,
-        maxWidth: '55%',           
-        overflow: 'hidden',
-        ...Platform.select({
-            ios:     { backgroundColor: 'rgba(255,255,255,0.75)' }, // Blur/white 70-80%
-            android: { backgroundColor: 'rgba(255,255,255,0.8)' },
-        }),
-        // sombra sutilíssima (shadowOpacity 0.06, elevation 2)
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.06, 
-        shadowRadius: 4,
-        elevation: 2,
-    },
-    distancePillSmallText: {
-        marginLeft: 4,
-        fontSize: 10,              // Fonte 10
-        fontWeight: '600',
-        color: '#334155',
-    },
-    
     cardContentWrapper: {
         width: '100%',
         borderRadius: 12,
@@ -440,24 +339,10 @@ const styles = StyleSheet.create({
     },
     imageWrapper: {
         width: '100%',
-        height: 120, // Foto 3:2 ou 16:9 (190x120 é aprox 16:10)
+        height: 120,
         backgroundColor: '#E0E0E0',
         justifyContent: 'center',
         alignItems: 'center',
-        position: 'relative', // Para overlay do selo
-    },
-    verifiedBadge: { // Estilo para selo verificado (cor azul ajustada)
-        position: 'absolute',
-        top: 8,
-        right: 8,
-        backgroundColor: '#ffffffe3',
-        borderRadius: 20,
-        padding: 2,
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.2,
-        shadowRadius: 2,
     },
     cardImage: {
         width: '100%',
@@ -473,7 +358,7 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     providerName: {
-        fontSize: 16, // Nome (16/700)
+        fontSize: 16,
         fontFamily: 'Montserrat-Regular',
         paddingHorizontal: 0,
         fontWeight: '700',
@@ -490,40 +375,22 @@ const styles = StyleSheet.create({
         zIndex: 1,
     },
     serviceDescription: {
-        fontSize: 12, // Bio (2 linhas, 12/regular)
+        fontSize: 12,
         paddingHorizontal: 2,
         fontWeight: Platform.select({
-            ios: '300', 
-            android: 'bold' 
-        }),
+    ios: '300', // Deixa a variante da font cuidar no iOS
+    android: 'bold' // Mantém original (leve bold no Android)
+  }),
         color: '#6C757D',
         marginBottom: 8,
     },
-    metricTextContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: 2,
-        marginBottom: 8,
-        textAlign: 'left',
-    },
-    metricIcon: {
-        fontSize: 13,
-        fontWeight: 'bold',
-        marginRight: 2,
-    },
-    metricValue: {
-        fontSize: 10,
-        color: '#6C757D', // Métricas mini (✓ e ⏱) -- discretas, cor #6C757D
-    },
-    metricSeparator: {
-        fontSize: 10,
-        color: '#6C757D',
-        marginHorizontal: 0,
+    metricText: {
+        // ... (mantido como estÃ¡)
     },
     categoryChipsContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        marginBottom: -38,
+        marginBottom: -25,
         marginTop: 5,
     },
     categoryChip: {
@@ -552,7 +419,7 @@ const styles = StyleSheet.create({
         marginBottom: -2,
     },
     priceValue: {
-        fontSize: 16, // Preço “A partir de” (16/bold)
+        fontSize: 16,
         fontWeight: 'bold',
         color: '#838891ff',
     },
@@ -561,25 +428,12 @@ const styles = StyleSheet.create({
         fontWeight: 'normal',
         color: '#6C757D',
         marginTop: 2,
-        
-    },
-    nextAvailableText: { 
-        fontSize: 11,
-        color: '#6C757D',
-        fontWeight: '500',
-        backgroundColor: 'rgba(255,255,255,0.5)',
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-        borderRadius: 8,
-        alignSelf: 'center',
-        marginBottom: 4,
-        top: 22,
-        left: 20,
     },
     ratingSection: {
         flexDirection: 'column',
         alignItems: 'center',
     },
+
     profileImage: {
         position: 'relative',
         top: -80,
@@ -600,7 +454,7 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         left: 15,
-        bottom: 80,
+        bottom: 60,
         borderRadius: 53,
         justifyContent: 'center',
         alignItems: 'center',
@@ -624,9 +478,21 @@ const styles = StyleSheet.create({
         marginRight: 1,
     },
     reviewsCountText: {
+        fontSize: 8,
+        color: '#6C757D',
+    },
+    distanceRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 4,
+        paddingHorizontal: 2,
+    },
+    distanceText: {
         fontSize: 10,
         color: '#6C757D',
+        marginLeft: 4,
     },
 });
 
 export default RecomendacaoCard;
+

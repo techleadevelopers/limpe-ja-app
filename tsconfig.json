@@ -1,16 +1,31 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
+    // Sinalizadores de segurança
     "strict": true,
     "skipLibCheck": true,
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
 
-    // MUITO IMPORTANTE: base para a resolução de módulos
-    "baseUrl": ".",
+    // Interop ESM/CJS para evitar _interopNamespace e afins
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
 
-    // Aliases (alinhados com o babel.config.js)
+    // RN + Web (TS 5): bundlers (Metro/Vite/webpack) resolvem módulos
+    "module": "esnext",
+    "moduleResolution": "Bundler",
+
+    // Web precisa de DOM; ESNext para features modernas
+    "target": "ESNext",
+    "lib": ["ESNext", "DOM"],
+    "jsx": "react-jsx",
+
+    // Qualidade de vida
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+
+    // Base da resolução e aliases
+    "baseUrl": ".",
     "paths": {
       "@/*": ["./*"],
       "@app/*": ["./app/*"],
@@ -19,20 +34,41 @@
       "@3d/*": ["assets/images/3d/*"],
       "@constants/*": ["./constants/*"],
       "@components/*": ["./components/*"]
-    }
+    },
+
+    // Dicas de tipos por ambiente
+    "types": ["react", "react-native", "expo-env", "jest"]
   },
+
+  // Mantenha o app do Expo focado no que ele realmente precisa
   "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    ".expo/types/**/*.ts",
-    "expo-env.d.ts",
+    "app/**/*.ts",
+    "app/**/*.tsx",
+    "components/**/*.ts",
+    "components/**/*.tsx",
+    "constants/**/*.ts",
+    "constants/**/*.tsx",
     "types/**/*.ts",
-    "e2e/**/*.ts"
+    "expo-env.d.ts",
+    ".expo/types/**/*.ts",
+    // se você tem hooks/libs compartilhadas no raiz do app:
+    "services/**/*.ts",
+    "services/**/*.tsx",
+    "hooks/**/*.ts",
+    "hooks/**/*.tsx"
   ],
   "exclude": [
     "node_modules",
     "**/node_modules",
+    "dist",
     "build",
-    "dist"
+
+    // 🔥 muito importante para evitar ruído/ESM conflicts
+    "admin-web/**",
+    "backend-cleaning/**",
+
+    // pastas de tooling/ci se existirem
+    "scripts",
+    "e2e"
   ]
 }

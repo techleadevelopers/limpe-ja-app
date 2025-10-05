@@ -21,7 +21,9 @@
     "generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev --name",
     "prisma:migrate:reset": "prisma migrate reset --force",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "seed:validate": "ts-node scripts/seed-validate.ts",
+    "seed:check": "npm run generate && ts-node scripts/seed-validate.ts"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.16.0",
@@ -117,6 +119,6 @@
     "testEnvironment": "node"
   },
   "prisma": {
-    "seed": "ts-node prisma/seed/seed.ts"
+    "seed": "ts-node prisma/seed/seed.ts && ts-node prisma/seed/align.ts"
   }
 }

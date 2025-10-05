@@ -22,6 +22,7 @@ const NavBar: React.FC<NavBarProps> = ({
     { name: 'Home', icon: 'home', route: '/(client)/explore' },
     { name: 'Cupons', icon: 'pricetag', route: '/(client)/coupons' },
     { name: 'Booking', icon: 'calendar', route: '/(client)/bookings' },
+    { name: 'Suporte', icon: 'help-circle', route: '/(client)/support' },
     { name: 'Chat', icon: 'chatbubble', route: '/messages' },
     { name: 'Profile', icon: 'person', route: '/(client)/profile' },
   ];

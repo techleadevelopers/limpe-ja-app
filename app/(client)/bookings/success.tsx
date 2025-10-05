@@ -824,109 +824,112 @@ function InnerSuccessScreen() {
             </View>
         )}
 
+                {/* ✅ CORREÇÃO: Wrapper <View> para TouchableOpacity e ScrollView (evita adjacent JSX elements) */}
                 {booking && (
-                    <TouchableOpacity
-                        onPress={() => router.back()}
-                        style={{ position: 'absolute', left: 16, top: Platform.OS === 'ios' ? 12 : 8, zIndex: 100 }}
-                        accessibilityLabel={i18n.t('common.back') || 'Voltar'}
-                        accessibilityRole="button"
-                    >
-                        <Ionicons name="arrow-back" size={24} color={headerPrimaryColor as string} />
-                    </TouchableOpacity>
-                    <ScrollView
-                        style={{ flex: 1 }} // ✅ ScrollView com flex:1 para ocupar espaço disponível e scroll fluido
-                        contentContainerStyle={styles.scrollContentContainer} // Sem flexGrow:1 para evitar travar scroll
-                        showsVerticalScrollIndicator={true} // ✅ Ativado para debug (pode desativar depois)
-                        showsHorizontalScrollIndicator={false} // Fix: Desabilita scroll horizontal no iOS
-                        horizontal={false} // Fix: Força só vertical
-                        bounces={Platform.OS === 'ios' ? true : false} // Fix: Bounce vertical OK no iOS, mas sem lateral
-                        keyboardShouldPersistTaps="handled" // Fix: Melhor touch no iOS com teclado
-                        contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'automatic' : 'never'} // Fix: Ajusta safe areas iOS automaticamente
-                        contentInset={Platform.OS === 'ios' ? { bottom: 40 } : {}} // ✅ contentInset bottom para evitar corte em iOS com notch
-                        scrollIndicatorInsets={Platform.OS === 'ios' ? { bottom: 40 } : {}} // ✅ scrollIndicatorInsets para indicador de scroll sem corte
-                        nestedScrollEnabled={true} // ✅ Permite scroll aninhado se houver (mas evite inner ScrollViews)
-                    >
-                        <Animated.View
-                            style={[
-                                styles.mainContentAnimatedWrapper,
-                                { opacity: contentOpacity, transform: [{ translateY: contentTranslateY }] },
-                            ]}
+                    <View style={{ flex: 1 }}>
+                        <TouchableOpacity
+                            onPress={() => router.back()}
+                            style={{ position: 'absolute', left: 16, top: Platform.OS === 'ios' ? 12 : 8, zIndex: 100 }}
+                            accessibilityLabel={i18n.t('common.back') || 'Voltar'}
+                            accessibilityRole="button"
                         >
-                            <SuccessHeader
-                                headerPrimaryColor={headerPrimaryColor}
-                                headerSecondaryColor={headerSecondaryColor}
-                                successColor={successColor}
-                            />
+                            <Ionicons name="arrow-back" size={24} color={headerPrimaryColor as string} />
+                        </TouchableOpacity>
+                        <ScrollView
+                            style={{ flex: 1 }} // ✅ ScrollView com flex:1 para ocupar espaço disponível e scroll fluido
+                            contentContainerStyle={styles.scrollContentContainer} // Sem flexGrow:1 para evitar travar scroll
+                            showsVerticalScrollIndicator={true} // ✅ Ativado para debug (pode desativar depois)
+                            showsHorizontalScrollIndicator={false} // Fix: Desabilita scroll horizontal no iOS
+                            horizontal={false} // Fix: Força só vertical
+                            bounces={Platform.OS === 'ios' ? true : false} // Fix: Bounce vertical OK no iOS, mas sem lateral
+                            keyboardShouldPersistTaps="handled" // Fix: Melhor touch no iOS com teclado
+                            contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'automatic' : 'never'} // Fix: Ajusta safe areas iOS automaticamente
+                            contentInset={Platform.OS === 'ios' ? { bottom: 40 } : {}} // ✅ contentInset bottom para evitar corte em iOS com notch
+                            scrollIndicatorInsets={Platform.OS === 'ios' ? { bottom: 40 } : {}} // ✅ scrollIndicatorInsets para indicador de scroll sem corte
+                            nestedScrollEnabled={true} // ✅ Permite scroll aninhado se houver (mas evite inner ScrollViews)
+                        >
+                            <Animated.View
+                                style={[
+                                    styles.mainContentAnimatedWrapper,
+                                    { opacity: contentOpacity, transform: [{ translateY: contentTranslateY }] },
+                                ]}
+                            >
+                                <SuccessHeader
+                                    headerPrimaryColor={headerPrimaryColor}
+                                    headerSecondaryColor={headerSecondaryColor}
+                                    successColor={successColor}
+                                />
 
-                            <BookingSummaryCard
-                                booking={booking}
-                                provider={provider}
-                                providerRating={providerRating}
-                                pixChargeDetails={pixChargeDetails}
-                                paymentMethod={paymentMethod}
-                                contentOpacity={contentOpacity}
-                                contentTranslateY={contentTranslateY}
-                                iconColor={iconColor}
-                                successColor={successColor}
-                                headerPrimaryColor={headerPrimaryColor}
-                                formattedAddressLine1={formattedAddressLine1}
-                                formattedAddressLine2={formattedAddressLine2}
-                            />
+                                <BookingSummaryCard
+                                    booking={booking}
+                                    provider={provider}
+                                    providerRating={providerRating}
+                                    pixChargeDetails={pixChargeDetails}
+                                    paymentMethod={paymentMethod}
+                                    contentOpacity={contentOpacity}
+                                    contentTranslateY={contentTranslateY}
+                                    iconColor={iconColor}
+                                    successColor={successColor}
+                                    headerPrimaryColor={headerPrimaryColor}
+                                    formattedAddressLine1={formattedAddressLine1}
+                                    formattedAddressLine2={formattedAddressLine2}
+                                />
 
-                            {showReturnCouponCard && returnCouponDetails && (
-                                <View
-                                    key={showReturnCouponCard ? 'coupon-shown' : 'coupon-hidden'}
-                                    style={[styles.sectionSpacer, { marginTop: 0, marginBottom: 20 }]}
-                                >
-                                    <ReturnCouponCard
-                                        code={returnCouponDetails.code}
-                                        title={returnCouponDetails.title}
-                                        subtitle={returnCouponDetails.subtitle}
-                                        expiresAt={returnCouponDetails.expiresAt}
-                                        onRebookNow={handleRebookNow}
-                                    />
-                                </View>
-                            )}
+                                {showReturnCouponCard && returnCouponDetails && (
+                                    <View
+                                        key={showReturnCouponCard ? 'coupon-shown' : 'coupon-hidden'}
+                                        style={[styles.sectionSpacer, { marginTop: 0, marginBottom: 20 }]}
+                                    >
+                                        <ReturnCouponCard
+                                            code={returnCouponDetails.code}
+                                            title={returnCouponDetails.title}
+                                            subtitle={returnCouponDetails.subtitle}
+                                            expiresAt={returnCouponDetails.expiresAt}
+                                            onRebookNow={handleRebookNow}
+                                        />
+                                    </View>
+                                )}
 
-                            {showMissionReminderCard && missionReminder && missionReward && (
-                                <View style={styles.sectionSpacer}>
-                                    <MissionReminderCard
-                                        missionId={missionReminder.mission.id}
-                                        title={missionReminder.mission.title}
-                                        description={missionReminder.mission.description}
-                                        deadlineAt={missionDeadlineIso}
-                                        reward={missionReward}
-                                        onGo={handleGoToMission}
-                                        onDismiss={handleDismissMissionReminder}
-                                    />
-                                </View>
-                            )}
+                                {showMissionReminderCard && missionReminder && missionReward && (
+                                    <View style={styles.sectionSpacer}>
+                                        <MissionReminderCard
+                                            missionId={missionReminder.mission.id}
+                                            title={missionReminder.mission.title}
+                                            description={missionReminder.mission.description}
+                                            deadlineAt={missionDeadlineIso}
+                                            reward={missionReward}
+                                            onGo={handleGoToMission}
+                                            onDismiss={handleDismissMissionReminder}
+                                        />
+                                    </View>
+                                )}
 
-                            <ImmediateActionButtons
-                                onAddToCalendar={handleAddToCalendar}
-                                onContactProvider={handleContactProvider}
-                                headerPrimaryColor={headerPrimaryColor}
-                            />
+                                <ImmediateActionButtons
+                                    onAddToCalendar={handleAddToCalendar}
+                                    onContactProvider={handleContactProvider}
+                                    headerPrimaryColor={headerPrimaryColor}
+                                />
 
-                            {/* ✅ Adicionado SecurityInfoSection para conteúdo completo (era ausente no render) */}
-                            <SecurityInfoSection bookingId={booking?.id} successColor={successColor} />
+                                {/* ✅ Adicionado SecurityInfoSection para conteúdo completo (era ausente no render) */}
+                                <SecurityInfoSection bookingId={booking?.id} successColor={successColor} />
 
-                            {/* ✅ Adicionado LoyaltyTeaserSection para conteúdo completo (era ausente no render) */}
-                            <LoyaltyTeaserSection
-                                headerPrimaryColor={headerPrimaryColor}
-                                currentPoints={loyaltyBalance?.currentPoints}
-                                nextRewardName={loyaltyBalance?.nextReward?.name ?? null}
-                                isLoading={isFetchingLoyalty}
-                                onPressLearnMore={handleNavigateToLoyalty}
-                            />
+                                {/* ✅ Adicionado LoyaltyTeaserSection para conteúdo completo (era ausente no render) */}
+                                <LoyaltyTeaserSection
+                                    headerPrimaryColor={headerPrimaryColor}
+                                    currentPoints={loyaltyBalance?.currentPoints}
+                                    nextRewardName={loyaltyBalance?.nextReward?.name ?? null}
+                                    isLoading={isFetchingLoyalty}
+                                    onPressLearnMore={handleNavigateToLoyalty}
+                                />
 
-                            <MainActionButtons
-                                onGoToBookings={handleGoToBookings}
-                                onGoHome={handleGoHome}
-                                headerPrimaryColor={headerPrimaryColor}
-                            />
-                        </Animated.View>
-                    </ScrollView>
+                                <MainActionButtons
+                                    onGoToBookings={handleGoToBookings}
+                                    onGoHome={handleGoHome}
+                                    headerPrimaryColor={headerPrimaryColor}
+                                />
+                            </Animated.View>
+                        </ScrollView>
+                    </View>
                 )}
             </LinearGradient>
         </SafeAreaView>

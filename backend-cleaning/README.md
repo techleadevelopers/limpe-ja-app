@@ -716,6 +716,108 @@ POST /subscriptions (CLIENT): Cria uma nova assinatura.
 GET /subscriptions/me (CLIENT): Obtém as assinaturas do usuário logado.
 GET /subscriptions/:id (CLIENT/ADMIN): Obtém detalhes de uma assinatura.
 PATCH /subscriptions/:id (CLIENT/ADMIN): Atualiza uma assinatura (status, frequência, etc.).
+
+34. Módulo Admin (Painéis e Operações Internas)
+Objetivo: Fornecer ferramentas para a equipe administrativa monitorar métricas em tempo real e operar filas de processamento.
+Arquitetura:
+admin.module.ts: Centraliza controllers AdminDashboardController e AdminQueuesController.
+admin-dashboard.controller.ts/admin-dashboard.service.ts: Reúnem KPIs (usuários ativos, provedores aprovados, bookings concluídos, receita total, verificações pendentes) e séries de receita mensal utilizando Prisma e agregações por bucket.
+admin-queues.controller.ts: Expõe rotas autenticadas para listar status de filas Bull, inspecionar jobs por status e reenfileirar jobs específicos.
+Fluxos de Negócio:
+Dashboard: GET /admin/dashboard consolida contagens via consultas paralelas e retorna revenueTrend com normalização de meses e formatação pt-BR.
+Monitoramento de Filas: Permite GET /admin/queues/status e GET /admin/queues/:queueName/jobs?status=... além de POST /admin/queues/:queueName/jobs/:jobId/retry para reenfileirar jobs com falha.
+Regras de Negócio:
+Acesso restrito a usuários ADMIN via JwtAuthGuard + RolesGuard.
+Consulta de filas opera sobre QueuesService para garantir visibilidade consistente das instâncias Bull.
+Integrações: PrismaModule para métricas, QueuesModule para operações em filas, AuthModule para autenticação e autorização.
+
+35. Módulo Metrics (Indicadores Operacionais)
+Objetivo: Expor KPIs de bookings, pagamentos e reviews com filtros por período, granularidade e segmento.
+Arquitetura:
+metrics.module.ts: Registra controller, service e repositórios de leitura.
+metrics.controller.ts: Disponibiliza endpoints GET /metrics/bookings, /metrics/payments, /metrics/reviews, /metrics/overview e /metrics/cohorts com validação de query (CustomerMetricsQueryDto).
+metrics.service.ts: Normaliza fuso horário, aplica bucketing, consulta repositórios especializados e agrega resultados (funis, GMV, take rate, ticket médio, NPS, coortes de retenção).
+Repositórios (pasta repositories/): executam queries Prisma/SQL otimizadas para cada domínio (bookings, payments, reviews) com zero-fill de buckets.
+Fluxos de Negócio:
+Cada endpoint valida o intervalo [start, end), clampa granularidade (day/week/month) e, se solicitado, inclui coortes de repetição (D7/D30).
+Os dados são cacheados via camada Redis (quando configurada) para reduzir carga em queries pesadas.
+Regras de Negócio:
+Intervalos excessivos podem ser rejeitados para evitar sobrecarga.
+Filtros opcionais (providerId, cityId, channel) são aplicados diretamente nas queries de agregação.
+Integrações: PrismaModule, CacheModule, ConfigModule (timezone padrão), possivelmente QueuesModule para pré-processamento de métricas offline.
+
+36. Módulo Payouts (Liquidação Financeira dos Provedores)
+Objetivo: Controlar saldo, solicitações de saque e sincronização com o provedor de pagamentos (PSP).
+Arquitetura:
+payouts.controller.ts: Endpoints autenticados para provedores consultarem saldo (GET /payouts/balance) e criarem saques (POST /payouts/withdrawals) com header Idempotency-Key.
+payouts.webhook.controller.ts: Recebe callbacks do PSP em /payouts/webhook/gateway, validando assinatura HMAC e aplicando atualizações de status.
+payouts.service.ts: Implementa lógica central com locks distribuídos (RedisLockService), transações Prisma e enfileiramento de jobs "process-payout" via QueuesService.
+DTOs: request-withdrawal.dto.ts valida amount, tipo e chave PIX.
+Fluxos de Negócio:
+Solicitação de Saque: Aplica lock por usuário, garante idempotência por chave, valida mínimo configurável, debita ledger e cria payout PENDING antes de enfileirar processamento.
+Processamento: Worker marca payout como PROCESSING, gera gatewayTxnId e simula integração PSP; webhook real normaliza status (PAID, FAILED) e registra replay avoidance.
+Notificações: Enfileira avisos (WITHDRAWAL_REQUESTED) e aciona EmailService para confirmações/sucesso/falha.
+Regras de Negócio:
+Valor mínimo configurado via MIN_WITHDRAWAL_AMOUNT.
+Saldo disponível calculado por somatório de ledgerEntry; não é permitido sacar acima do saldo ou duplicar idempotency key.
+Webhooks devem trazer assinatura válida (PSP_WEBHOOK_SECRET) e eventId único (registrado em webhookReplay).
+Integrações: PrismaModule (ledger, payouts, webhookReplay), QueuesModule (processamento assíncrono/notificações), Redis (locks), ConfigModule, EmailModule e NotificationsModule.
+
+37. Módulo Support (Atendimento ao Cliente/Agente)
+Objetivo: Orquestrar tickets de suporte, mensagens, SLA e escalonamentos entre clientes, agentes e administradores.
+Arquitetura:
+support.controller.ts: Rotas autenticadas sob /v1/support para abrir tickets, listar (mine/todos), detalhar, adicionar mensagens, atualizar status e atribuir agentes.
+support.service.ts: Gerencia criação de tickets, valida categorias/status (enum Prisma), envia notificações push, registra logs de SLA e utiliza máquina de estados para transições válidas.
+Pasta dto/: create-ticket.dto.ts, update-ticket.dto.ts garantem validação de entrada; states/ e policies/ encapsulam regras de SLA e transições (SupportSlaPolicy, SupportStateMachine).
+Integrações: NotificationsService (push), Queues (fila support-escalations via BullMQ), PrismaService (persistência de tickets, mensagens, logs), AuthModule (papéis), possivelmente DocumentProcessing para anexos.
+Fluxos de Negócio:
+Criação de Ticket: Salva ticket OPEN com primeira mensagem, agenda job de SLA conforme categoria e notifica administradores.
+Mensagens: Apenas partes autorizadas (cliente, admin, agente designado) podem postar; altera status conforme remetente (ex.: WAITING_USER → IN_PROGRESS).
+Atualização de Status/Atribuição: Restrita a ADMIN, respeita transições válidas via state machine e registra SupportSlaLog.
+Regras de Negócio:
+Categorias e status devem existir no enum; transições inválidas resultam em erro.
+IDs de admin para notificação precisam ser configurados (constante ou serviço de descoberta).
+SLA dispara escalonamento automático ao expirar (job check-sla).
+Endpoints principais:
+POST /v1/support/tickets, GET /v1/support/tickets?mine=true|false, GET /v1/support/tickets/:id, POST /v1/support/tickets/:id/messages, PATCH /v1/support/tickets/:id/status, PATCH /v1/support/tickets/:id/assign/:agentId.
+
+38. Módulo Email (Comunicações Transacionais)
+Objetivo: Centralizar o envio de e-mails transacionais para incidentes, alertas de pânico e ciclo de saques.
+Arquitetura:
+email.module.ts: Disponibiliza EmailService como provider injetável.
+email.service.ts: Utiliza ConfigService e PrismaService; hoje loga envios (TODO integração real) mas expõe métodos específicos para panic alerts, updates de incidentes e lifecycle de saque (requested/completed/failed + alerta admin).
+Fluxos de Negócio:
+sendEmail executa envio genérico (placeholder) e registra logs para integração futura.
+sendPanicAlertEmail envia resumo para ADMIN_EMAIL configurado.
+sendIncidentStatusUpdateEmail busca e-mail do reporter no Prisma antes de notificar.
+Métodos de saque formatam mensagens com dados PixKeyType e ID da transação, e podem alertar administradores.
+Regras de Negócio:
+Credenciais do provedor (ex.: MAILGUN_API_KEY) são validadas no construtor; ausência gera warnings.
+ADMIN_EMAIL precisa estar definido para alertas administrativos.
+Integrações: ConfigModule, PrismaModule, PayoutsModule, SafetyModule.
+
+39. Módulo SMS (Integração Twilio)
+Objetivo: Enviar SMS transacionais, alertas de pânico e OTP via Twilio Verify.
+Arquitetura:
+sms.module.ts: Expõe SmsService.
+sms.service.ts: Inicializa cliente Twilio com credenciais (sms.twilioAccountSid, sms.twilioAuthToken, sms.twilioVerifyServiceSid, sms.twilioPhoneNumber) e fornece métodos sendSms, sendPanicAlertSms, startVerification, checkVerification.
+Fluxos de Negócio:
+Envio Tradicional: sendSms envia mensagens usando Twilio Messages API e registra logs/erros detalhados.
+Alertas de Pânico: sendPanicAlertSms prefixa mensagem e usa logger warn.
+Verificação OTP: startVerification cria challenge via Twilio Verify; checkVerification valida código e retorna booleano.
+Regras de Negócio:
+Construtor lança exceção se credenciais Twilio estiverem ausentes (garante fail-fast).
+Twilio phone number obrigatório para envios tradicionais/pânico.
+Integrações: ConfigModule, SafetyModule (alertas), Auth/Verification (OTP), NotificationsModule.
+
+40. Módulo Location (Atualização em Tempo Real)
+Objetivo: Permitir que clientes/provedores compartilhem localização em tempo real via WebSockets (preparado para tracking de rotas e ETA).
+Arquitetura:
+location.module.ts registra LocationGateway.
+location.gateway.ts (placeholder atual) será responsável por autenticar conexões (JwtAuthGuard para WebSocket), receber eventos de atualização de latitude/longitude e broadcast para participantes do booking.
+Status Atual: Arquivo gateway está reservado para implementação futura; recomenda-se integrar com WsAuthGuard, Rooms por bookingId e persistência opcional em Redis para replay.
+
+III. Funções Globais e Utilitários Comuns
 III. Funções Globais e Utilitários Comuns
 Esta seção detalha os serviços e componentes que são compartilhados e utilizados por múltiplos módulos da aplicação.
 
