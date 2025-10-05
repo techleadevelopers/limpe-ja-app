@@ -5,9 +5,9 @@ import { StyleSheet, Text, TouchableOpacity, View, Animated, Easing, LayoutChang
 import * as Haptics from 'expo-haptics'; // Importar Haptics para feedback tátil
 
 interface NavBarProps {
-  welcomeCouponOffer: any;
-  activeBottomPromotion: 'coupon' | 'referral' | null;
-  setActiveBottomPromotion: (val: 'coupon' | 'referral' | null) => void;
+  welcomeCouponOffer?: any;
+  activeBottomPromotion?: 'coupon' | 'referral' | null;
+  setActiveBottomPromotion?: (val: 'coupon' | 'referral' | null) => void;
 }
 
 const NavBar: React.FC<NavBarProps> = ({
@@ -83,7 +83,7 @@ const NavBar: React.FC<NavBarProps> = ({
             style={[styles.navItem, { transform: [{ scale: navItemAnims[index] }] }]}
             onPress={() => {
               if (item.name === 'Cupons' && welcomeCouponOffer) {
-                setActiveBottomPromotion('coupon');
+                setActiveBottomPromotion?.('coupon');
               } else {
                 navigateTo(item.route);
               }
