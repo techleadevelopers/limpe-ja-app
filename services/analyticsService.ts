@@ -56,8 +56,13 @@ export class AnalyticsService {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('Erro ao rastrear evento:', error);
-      throw error; // Propagar o erro para tratamento superior
+      // Em ambientes onde o endpoint não existe, não poluir logs nem quebrar fluxo da UI
+      const status = (error as any)?.response?.status;
+      if (status !== 404) {
+        console.warn('Analytics desabilitado ou indisponível. Evento não enviado.', { event, status });
+      }
+      // Silencia o erro para não afetar UX
+      return;
     }
   }
 
