@@ -15,12 +15,14 @@ import {
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Import AsyncStorage
 import { SafeAreaView } from 'react-native-safe-area-context'; // Imported for use
 
 import { useAuth } from '../../../hooks/useAuth';
+import { VerificationStatus } from '../../../types/backend/auth';
 import {
   updateMyProviderProfile,
   addProviderServiceOffering,
@@ -40,13 +42,13 @@ enum PricingType {
 }
 
 const SERVICE_MAPPINGS: { [key: string]: string } = {
-    'residencial': 'f0c16afd-f1e5-41e4-92ef-9f64ecabf6ea',
-    'comercial': '4c03312c-15c2-40d3-a041-1217bb6877ba',
-    'pos_obra': '646b296e-6a82-4f6e-a249-8df8f3851879',
-    'escritorio': 'afab28ad-c1e2-48ac-bb4b-406e90781ce5',
-    'passadoria': '13d2047c-86f3-4d8d-ba56-c3b166b95115',
-    'vidros': '9fa978db-511d-4600-86e2-d077b9ef7650',
-    'estofados': 'adaea89b-2934-4848-95fe-030c371dfed9',
+    'residencial': '3f17467b-e198-4072-87f0-0213d2d08997',
+    'comercial': '78cc63ad-a18d-4ba0-b0b8-28624412caf3',
+    'pos_obra': '0a8ea519-63e4-4efb-a03a-628dbbc9f052',
+    'escritorio': '2559b9e2-0526-4304-9d04-89606b424074',
+    'passadoria': '147e1b4a-1294-4c28-9344-2e9969694464',
+    'vidros': 'c8c6bfee-598f-4de0-a383-0f6101699b15',
+    'estofados': '3abda78a-264f-4745-9094-83cad16e65f3',
 };
 
 type PriceUnit = 'hora' | 'quarto' | 'metragem' | null;
@@ -441,9 +443,18 @@ export default function ServiceDetailsScreen() {
       await verificationService.advanceVerificationStatus(); 
       console.log("[handleFinalSubmission] Status de verificação avançado para PENDING_DOCUMENTS_UPLOAD.");
 
-      // Atualiza o estado do usuário no AuthContext para refletir o novo status
-      await updateUser(); 
-      console.log("[handleFinalSubmission] AuthContext user data refreshed.");
+      // Atualiza o estado do usuário localmente (sem depender do backend imediatamente)
+      try {
+        await updateUser({
+          avatarUrl: avatarUrl ?? user?.avatarUrl ?? null,
+          providerDetails: user?.providerDetails
+            ? { ...user.providerDetails, verificationStatus: VerificationStatus.PENDING_DOCUMENTS_UPLOAD }
+            : (user?.providerDetails as any),
+        } as any);
+        console.log("[handleFinalSubmission] AuthContext user data updated locally.");
+      } catch (e) {
+        console.warn('[handleFinalSubmission] Falha ao atualizar usuário localmente; seguindo fluxo.', (e as any)?.message);
+      }
 
       setIsRegistrationInProgress(false);
       // Clear AsyncStorage after successful registration
@@ -673,11 +684,9 @@ export default function ServiceDetailsScreen() {
                     ].map((service) => (
                       <TouchableOpacity
                         key={service.id}
-                        style={[
-                          styles.serviceTypeCard,
-                          formData.specialties.includes(service.id) && styles.serviceTypeCardSelected
-                        ]}
+                        style={styles.serviceTypeCard}
                         onPress={() => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                           setFormData(prev => ({
                             ...prev,
                             specialties: prev.specialties.includes(service.id)
@@ -687,17 +696,33 @@ export default function ServiceDetailsScreen() {
                           setSpecialtiesError(null); // Clear error on selection
                         }}
                       >
-                        <Ionicons
-                          name={service.icon as any}
-                          size={24}
-                          color={formData.specialties.includes(service.id) ? '#FFFFFF' : '#A0D2EB'}
-                        />
-                        <Text style={[
-                          styles.serviceTypeLabel,
-                          formData.specialties.includes(service.id) && styles.serviceTypeLabelSelected
-                        ]}>
-                          {service.label}
-                        </Text>
+                        <LinearGradient
+                          colors={formData.specialties.includes(service.id)
+                            ? ['#A0D2EB', '#307cc9ff']
+                            : ['#FFFFFF', '#FFFFFF']}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={styles.serviceTypeCardGradient}
+                        >
+                          {formData.specialties.includes(service.id) && (
+                            <View style={styles.serviceSelectedBadge}>
+                              <Ionicons name="checkmark-circle" size={18} color="#fff" />
+                            </View>
+                          )}
+                          <Ionicons
+                            name={service.icon as any}
+                            size={26}
+                            color={formData.specialties.includes(service.id) ? '#FFFFFF' : '#4A90E2'}
+                          />
+                          <Text style={[
+                            styles.serviceTypeLabel,
+                            formData.specialties.includes(service.id) && styles.serviceTypeLabelSelected
+                          ]}
+                          numberOfLines={1}
+                          >
+                            {service.label}
+                          </Text>
+                        </LinearGradient>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -796,9 +821,12 @@ export default function ServiceDetailsScreen() {
                   style={[styles.navButton, styles.backButton]}
                   onPress={handleBackSubStep}
                   disabled={isUploading}
+                  activeOpacity={0.8}
                 >
-                  <Ionicons name="arrow-back-outline" size={20} color="#00BCD4" />
-                  <Text style={styles.navButtonTextBack}>Voltar</Text>
+                  <View style={styles.backButtonInner}>
+                    <Ionicons name="arrow-back-outline" size={20} color="#2C3E50" />
+                    <Text style={styles.navButtonTextBack}>Voltar</Text>
+                  </View>
                 </TouchableOpacity>
               )}
               <TouchableOpacity
@@ -815,7 +843,7 @@ export default function ServiceDetailsScreen() {
                   ) : (
                     <>
                       <Text style={styles.continueButtonText}>
-                        {currentServiceSubStep === totalSteps ? 'Finalizar Cadastro' : 'Próximo'}
+                        {currentServiceSubStep === totalSteps ? 'Finalizar' : 'Próximo'}
                       </Text>
                       {currentServiceSubStep !== totalSteps && <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />}
                       {currentServiceSubStep === totalSteps && <Ionicons name="checkmark-circle-outline" size={20} color="#FFFFFF" />}
@@ -1021,22 +1049,32 @@ const styles = StyleSheet.create({
   },
   serviceTypeCard: {
     width: '48%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 20,
+    backgroundColor: 'transparent',
+    borderRadius: 14,
     alignItems: 'center',
     marginBottom: 12,
-    borderWidth: 2,
-    borderColor: 'transparent',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  serviceTypeCardSelected: {
-    backgroundColor: '#a0a4ebff',
-    borderColor: '#529ae2ff',
+  serviceTypeCardGradient: {
+    width: '100%',
+    borderRadius: 14,
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  serviceSelectedBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    borderRadius: 10,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
   },
   serviceTypeLabel: {
     fontSize: 14,
@@ -1136,28 +1174,34 @@ progressLabel: { // Not used in this component
   fontWeight: '600',
   color: '#2C3E50',
 },
-navigationButtonsContainer: { // New style for the navigation buttons
+  navigationButtonsContainer: { // New style for the navigation buttons
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 20,
     marginBottom: 20,
-},
-navButton: {
+  },
+  navButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
     borderRadius: 12, // Adjusted for new design
     minWidth: 120,
-},
-backButton: {
+  },
+  backButton: {
     backgroundColor: '#E9ECEF',
     borderWidth: 1,
     borderColor: '#CED4DA',
     flex: 1, // Allow button to grow
     marginRight: 10, // Space from continue button
-},
+  },
+  backButtonInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+  },
 navButtonTextBack: {
     color: '#2C3E50', // Darker color for back button text
     fontSize: 16,
