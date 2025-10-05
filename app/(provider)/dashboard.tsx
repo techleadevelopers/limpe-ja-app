@@ -1,4 +1,4 @@
-// LimpeJaApp/app/(provider)/dashboard.tsx
+﻿// LimpeJaApp/app/(provider)/dashboard.tsx
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -14,38 +14,38 @@ import {
     Text,
     TouchableOpacity,
     View,
-    Easing, // CORREÇÃO: Import explícito para Easing
-    AccessibilityInfo, // CORREÇÃO: Import explícito para AccessibilityInfo
+    Easing, // CORREÃ‡ÃƒO: Import explÃ­cito para Easing
+    AccessibilityInfo, // CORREÃ‡ÃƒO: Import explÃ­cito para AccessibilityInfo
 } from 'react-native';
-import * as Haptics from 'expo-haptics'; // CORREÇÃO: Import separado e correto para Haptics
-import { useAuth } from '../../hooks/useAuth';
+import * as Haptics from 'expo-haptics'; // CORREÃ‡ÃƒO: Import separado e correto para Haptics
+import { useAuth } from '../../contexts/AuthContext';
 import { PROVIDER_ROUTES } from '../../constants/routes'; // Importar PROVIDER_ROUTES
 
 // Import NotificationUIService
 import NotificationUIService from '../../services/notificationUIService'; // Added
 
-// Importações dos serviços
+// ImportaÃ§Ãµes dos serviÃ§os
 import { getBookingsForUser, updateBookingStatus } from '../../services/bookingService';
 import { getMyProviderDashboard } from '../../services/dashboardService';
 import { getMyProviderEarnings } from '../../services/providerService';
 
-// Importações das tipagens centralizadas
+// ImportaÃ§Ãµes das tipagens centralizadas
 import { BookingDetails, BookingStatus } from '../../types/backend/bookings';
 import { ProviderReview } from '../../types/backend/providers';
-// CORREÇÃO: Usar a interface ProviderDashboard do arquivo de provedores,
-// que é mais completa e usada na lógica do componente.
+// CORREÃ‡ÃƒO: Usar a interface ProviderDashboard do arquivo de provedores,
+// que Ã© mais completa e usada na lÃ³gica do componente.
 // import { ProviderDashboard } from '../../types/backend/dashboard';
 import { ProviderDashboard } from '../../types/backend/providers'; // Usar a interface correta
 
-// Importações dos novos componentes
+// ImportaÃ§Ãµes dos novos componentes
 import AdvancedReviewsSection from '../../components/provider/dashboard/AdvancedReviewsSection';
 import SmartInsightsSection from '../../components/provider/dashboard/SmartInsightsSection';
 import ProviderNudgeContainer from '../../components/provider/ProviderNudgeContainer'; // Added
 
-// CORREÇÃO: Adicionar import para SafeAreaInsets (para alinhamento do header no iOS)
+// CORREÃ‡ÃƒO: Adicionar import para SafeAreaInsets (para alinhamento do header no iOS)
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-// Hook para animação de toque (reutilizável, refinado com haptics)
+// Hook para animaÃ§Ã£o de toque (reutilizÃ¡vel, refinado com haptics)
 const useAnimatedTouch = () => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const onPressIn = () => {
@@ -105,7 +105,7 @@ const SHADOW_COLOR_CARD = 'rgba(0, 0, 0, 0.06)';
 const SHADOW_COLOR_SECTION = 'rgba(0, 0, 0, 0.1)';
 const PRIMARY_LIGHT = '#EBF5FF';
 
-// Spacing e Radii tokens (consistentes e clean) - CORREÇÃO: Adicionado 'md' ao Radii
+// Spacing e Radii tokens (consistentes e clean) - CORREÃ‡ÃƒO: Adicionado 'md' ao Radii
 const Spacing = {
   xs: 6,
   sm: 10,
@@ -117,23 +117,23 @@ const Spacing = {
 const Radii = {
   xl: 20,
   pill: 25,
-  md: 12, // CORREÇÃO: Adicionado 'md' para resolver TS2339 em borderRadius: Radii.md
+  md: 12, // CORREÃ‡ÃƒO: Adicionado 'md' para resolver TS2339 em borderRadius: Radii.md
   sm: 10,
 };
 
-// Easing suave para animações iOS
+// Easing suave para animaÃ§Ãµes iOS
 const easeOut = (value: any) => Easing.out(Easing.ease)(value);
 
-// --- Componentes Reutilizáveis ---
+// --- Componentes ReutilizÃ¡veis ---
 
-// Componente: DashboardHeader (refinado com haptics e reduced motion) - CORREÇÃO: Adicionado useSafeAreaInsets para alinhamento iOS
+// Componente: DashboardHeader (refinado com haptics e reduced motion) - CORREÃ‡ÃƒO: Adicionado useSafeAreaInsets para alinhamento iOS
 const DashboardHeader: React.FC<{
   providerName: string | undefined;
   avatarUrl: string | undefined | null;
   onProfilePress: () => void;
-  isReducedMotionEnabled: boolean; // Passado para animações
+  isReducedMotionEnabled: boolean; // Passado para animaÃ§Ãµes
 }> = ({ providerName, avatarUrl, onProfilePress, isReducedMotionEnabled }) => {
-  const insets = useSafeAreaInsets(); // CORREÇÃO: Hook para calcular insets (top = status bar no iOS)
+  const insets = useSafeAreaInsets(); // CORREÃ‡ÃƒO: Hook para calcular insets (top = status bar no iOS)
   const { scaleAnim, onPressIn, onPressOut } = useAnimatedTouch();
   const headerAnim = useRef(new Animated.Value(0)).current;
 
@@ -142,10 +142,10 @@ const DashboardHeader: React.FC<{
     Animated.timing(headerAnim, { toValue: 1, duration, easing: easeOut, useNativeDriver: true }).start();
   }, [isReducedMotionEnabled]);
 
-  // CORREÇÃO: Cálculo dinâmico do paddingTop: iOS usa insets.top + padding base (ex: 47px + 20px = 67px)
-  // Android mantém padding fixo (20px, sem insets)
+  // CORREÃ‡ÃƒO: CÃ¡lculo dinÃ¢mico do paddingTop: iOS usa insets.top + padding base (ex: 47px + 20px = 67px)
+  // Android mantÃ©m padding fixo (20px, sem insets)
   const paddingTopValue = Platform.OS === 'ios' 
-    ? insets.top + 20  // insets.top cobre status bar/notch; 20px é padding base confortável
+    ? insets.top + 20  // insets.top cobre status bar/notch; 20px Ã© padding base confortÃ¡vel
     : 20;  // Padding fixo para Android (ajuste se quiser mais/menos)
 
   return (
@@ -154,11 +154,11 @@ const DashboardHeader: React.FC<{
       { 
         opacity: headerAnim, 
         transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
-        paddingTop: paddingTopValue  // Aplicar o valor dinâmico aqui
+        paddingTop: paddingTopValue  // Aplicar o valor dinÃ¢mico aqui
       }
     ]}>
       <View style={headerStyles.greetingContainer}>
-        <Text style={headerStyles.greetingText}>Olá, <Text style={headerStyles.providerNameText}>{providerName || 'Provedor'}</Text>!</Text>
+        <Text style={headerStyles.greetingText}>OlÃ¡, <Text style={headerStyles.providerNameText}>{providerName || 'Provedor'}</Text>!</Text>
         <Text style={headerStyles.currentDateText}>{new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
       </View>
       <TouchableOpacity 
@@ -277,7 +277,7 @@ const FinancialSummaryCard: React.FC<{
       <TouchableOpacity
         style={[summaryStyles.viewEarningsButton, { transform: [{ scale: scaleAnim }] }]}
         onPress={() => {
-          console.log("[DashboardScreen] Botão 'Gerenciar Ganhos' pressionado. Tentando navegar para ganhos.");
+          console.log("[DashboardScreen] BotÃ£o 'Gerenciar Ganhos' pressionado. Tentando navegar para ganhos.");
           onViewEarnings();
         }}
         onPressIn={onPressIn}
@@ -390,7 +390,7 @@ const QuickActionsSection: React.FC<{
   animation,
   isReducedMotionEnabled,
 }) => {
-  // Cria instâncias de animação para cada item (até 9)
+  // Cria instÃ¢ncias de animaÃ§Ã£o para cada item (atÃ© 9)
   const mk = () => useAnimatedTouch();
   const a1 = mk(), a2 = mk(), a3 = mk(), a4 = mk(), a5 = mk(), a6 = mk(), a7 = mk(), a8 = mk(), a9 = mk();
 
@@ -407,7 +407,7 @@ const QuickActionsSection: React.FC<{
       onPressOut={anim.onPressOut}
       accessibilityRole="button"
       accessibilityLabel={`${label}. Toque para abrir.`.replace(' ', ' ')}
-      accessibilityHint={`Navegue para a seção de ${label.toLowerCase()}.`}
+      accessibilityHint={`Navegue para a seÃ§Ã£o de ${label.toLowerCase()}.`}
     >
       <Ionicons name={icon} size={30} color={ICON_PRIMARY} accessibilityHidden={true} />
       <Text style={quickActionStyles.gridItemText} numberOfLines={1}>{label}</Text>
@@ -422,33 +422,33 @@ const QuickActionsSection: React.FC<{
         transform: [{ translateY: animation.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] 
       }
     ]}>
-      <Text style={quickActionStyles.sectionTitle}>Ações Rápidas</Text>
+      <Text style={quickActionStyles.sectionTitle}>AÃ§Ãµes RÃ¡pidas</Text>
       <View style={quickActionStyles.grid}>
         <Item icon="calendar-outline" label="Minha Agenda" anim={a1} onPress={onManageAvailability} />
-        <Item icon="file-tray-outline" label="Solicitações" anim={a2} onPress={onOpenRequests} />
-        <Item icon="calendar-outline" label="Próximos" anim={a3} onPress={onOpenUpcoming} />
-        <Item icon="checkmark-done-outline" label="Concluídos" anim={a4} onPress={onOpenCompleted} />
-        <Item icon="briefcase-outline" label="Meus Serviços" anim={a5} onPress={onViewAllServicesPress} />
+        <Item icon="file-tray-outline" label="SolicitaÃ§Ãµes" anim={a2} onPress={onOpenRequests} />
+        <Item icon="calendar-outline" label="PrÃ³ximos" anim={a3} onPress={onOpenUpcoming} />
+        <Item icon="checkmark-done-outline" label="ConcluÃ­dos" anim={a4} onPress={onOpenCompleted} />
+        <Item icon="briefcase-outline" label="Meus ServiÃ§os" anim={a5} onPress={onViewAllServicesPress} />
         <Item icon="chatbubbles-outline" label="Mensagens" anim={a6} onPress={onViewAllMessagesPress} />
-        <Item icon="notifications-outline" label="Notificações" anim={a7} onPress={onOpenNotifications} />
-        {/* BOTÃO CORRETO PARA REVIEWS */}
-        <Item icon="analytics-outline" label="Avaliações" anim={a8} onPress={onOpenReviews} />
+        <Item icon="notifications-outline" label="NotificaÃ§Ãµes" anim={a7} onPress={onOpenNotifications} />
+        {/* BOTÃƒO CORRETO PARA REVIEWS */}
+        <Item icon="analytics-outline" label="AvaliaÃ§Ãµes" anim={a8} onPress={onOpenReviews} />
         <Item icon="wallet-outline" label="Ganhos" anim={a9} onPress={onOpenEarnings} />
       </View>
 
-      {/* Linha separada com destaque para saque rápido (com haptic) */}
+      {/* Linha separada com destaque para saque rÃ¡pido (com haptic) */}
       <TouchableOpacity
         style={quickActionStyles.withdrawCta}
         onPress={onQuickWithdraw}
         onPressIn={a9.onPressIn}
         onPressOut={a9.onPressOut}
         accessibilityRole="button"
-        accessibilityLabel="Saque Rápido"
-        accessibilityHint="Solicite um saque rápido dos ganhos disponíveis."
+        accessibilityLabel="Saque RÃ¡pido"
+        accessibilityHint="Solicite um saque rÃ¡pido dos ganhos disponÃ­veis."
       >
         <Animated.View style={{ transform: [{ scale: a9.scaleAnim }], flexDirection: 'row', alignItems: 'center' }}>
           <Ionicons name="cash-outline" size={22} color={WHITE} accessibilityHidden={true} />
-          <Text style={quickActionStyles.withdrawCtaText}>Saque Rápido</Text>
+          <Text style={quickActionStyles.withdrawCtaText}>Saque RÃ¡pido</Text>
           <Ionicons name="chevron-forward-outline" size={20} color={WHITE} accessibilityHidden={true} />
         </Animated.View>
       </TouchableOpacity>
@@ -529,7 +529,7 @@ const quickActionStyles = StyleSheet.create({
   },
 });
 
-// Componente de Item de Solicitação (RequestItem - refinado com haptics e clean spacing)
+// Componente de Item de SolicitaÃ§Ã£o (RequestItem - refinado com haptics e clean spacing)
 const RequestItem: React.FC<{
   item: BookingDetails;
   onAccept?: (id: string) => void;
@@ -547,7 +547,7 @@ const RequestItem: React.FC<{
   const clientId: string | undefined = item.clientId;
   const clientName: string = item.clientFullName || 'Cliente';
 
-  // CORREÇÃO: Usar item.scheduledDate e item.scheduledTime
+  // CORREÃ‡ÃƒO: Usar item.scheduledDate e item.scheduledTime
   const combinedDateTimeString = `${item.scheduledDate}T${item.scheduledTime}:00`;
   const scheduledDate = new Date(combinedDateTimeString).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' });
   const scheduledTime = new Date(combinedDateTimeString).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -569,13 +569,13 @@ const RequestItem: React.FC<{
         <TouchableOpacity
           style={styles.acceptButtonCorner}
           onPress={() => {
-            if (!isReducedMotionEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); // CORREÇÃO: Usar ImpactFeedbackStyle.Medium para sucesso
+            if (!isReducedMotionEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); // CORREÃ‡ÃƒO: Usar ImpactFeedbackStyle.Medium para sucesso
             onAccept && onAccept(item.id);
           }}
           onPressIn={acceptTouchAnimation.onPressIn}
           onPressOut={acceptTouchAnimation.onPressOut}
           accessibilityRole="button"
-          accessibilityLabel={`Aceitar solicitação de ${item.serviceName}`}
+          accessibilityLabel={`Aceitar solicitaÃ§Ã£o de ${item.serviceName}`}
           accessibilityHint="Confirme para aceitar o agendamento."
         >
           <Animated.View style={{ transform: [{ scale: acceptTouchAnimation.scaleAnim }] }}>
@@ -636,7 +636,7 @@ const RequestItem: React.FC<{
           onPressIn={rejectTouchAnimation.onPressIn}
           onPressOut={rejectTouchAnimation.onPressOut}
           accessibilityRole="button"
-          accessibilityLabel={`Recusar solicitação de ${item.serviceName}`}
+          accessibilityLabel={`Recusar solicitaÃ§Ã£o de ${item.serviceName}`}
           accessibilityHint="Rejeite o agendamento."
         >
           <Animated.View style={[styles.actionButtonContent, { transform: [{ scale: rejectTouchAnimation.scaleAnim }] }]}>
@@ -653,8 +653,8 @@ const RequestItem: React.FC<{
           onPressIn={detailsTouchAnimation.onPressIn}
           onPressOut={detailsTouchAnimation.onPressOut}
           accessibilityRole="button"
-          accessibilityLabel={`Ver detalhes da solicitação de ${item.serviceName}`}
-          accessibilityHint="Veja mais informações sobre o agendamento."
+          accessibilityLabel={`Ver detalhes da solicitaÃ§Ã£o de ${item.serviceName}`}
+          accessibilityHint="Veja mais informaÃ§Ãµes sobre o agendamento."
         >
           <Animated.View style={[styles.actionButtonContent, { transform: [{ scale: detailsTouchAnimation.scaleAnim }] }]}>
             <Ionicons name="eye-outline" size={20} color={ICON_PRIMARY} accessibilityHidden={true} />
@@ -666,7 +666,7 @@ const RequestItem: React.FC<{
   );
 };
 
-// Componente de Item de Serviço Confirmado (refinado com haptics)
+// Componente de Item de ServiÃ§o Confirmado (refinado com haptics)
 const ConfirmedServiceItem: React.FC<{
   item: BookingDetails;
   onPress: (id: string) => void;
@@ -675,7 +675,7 @@ const ConfirmedServiceItem: React.FC<{
 }> = ({ item, onPress, entryAnim, isReducedMotionEnabled }) => {
   const touchAnimation = useAnimatedTouch();
 
-  // CORREÇÃO: Usar item.scheduledDate e item.scheduledTime
+  // CORREÃ‡ÃƒO: Usar item.scheduledDate e item.scheduledTime
   const combinedDateTimeString = `${item.scheduledDate}T${item.scheduledTime}:00`;
   const scheduledDate = new Date(combinedDateTimeString).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
   const scheduledTime = new Date(combinedDateTimeString).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -694,8 +694,8 @@ const ConfirmedServiceItem: React.FC<{
         onPressIn={touchAnimation.onPressIn}
         onPressOut={touchAnimation.onPressOut}
         accessibilityRole="button"
-        accessibilityLabel={`Ver detalhes do serviço ${item.serviceName} com ${item.clientFullName}`}
-        accessibilityHint="Toque para ver detalhes do serviço confirmado."
+        accessibilityLabel={`Ver detalhes do serviÃ§o ${item.serviceName} com ${item.clientFullName}`}
+        accessibilityHint="Toque para ver detalhes do serviÃ§o confirmado."
       >
         <Animated.View style={[styles.serviceItemContent, { transform: [{ scale: touchAnimation.scaleAnim }] }]}>
           <View style={styles.serviceItemIconWrapper}>
@@ -703,7 +703,7 @@ const ConfirmedServiceItem: React.FC<{
           </View>
           <View style={styles.serviceItemDetails}>
             <Text style={styles.serviceItemText} numberOfLines={1}>
-              <Text style={{ fontWeight: 'bold' }}>{item.serviceName || 'Serviço Desconhecido'}</Text>
+              <Text style={{ fontWeight: 'bold' }}>{item.serviceName || 'ServiÃ§o Desconhecido'}</Text>
               {item.clientFullName ? ` com ${item.clientFullName}` : ''}
             </Text>
             <Text style={styles.serviceItemTime}>
@@ -737,9 +737,9 @@ export default function ProviderDashboardScreen() {
   const reviewsSectionAnim = useRef(new Animated.Value(0)).current;
   const logoutButtonAnim = useRef(new Animated.Value(0)).current;
 
-  // Adicionado ref para verificar se o componente está montado
+  // Adicionado ref para verificar se o componente estÃ¡ montado
   const isMounted = useRef(true);
-  // Ref para armazenar a animação composta do stagger
+  // Ref para armazenar a animaÃ§Ã£o composta do stagger
   const staggerAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
 
   const isReducedMotionEnabled = useReducedMotion(); // Global reduced motion
@@ -751,9 +751,9 @@ export default function ProviderDashboardScreen() {
       setError(null);
     }
     if (!user?.id) {
-      console.warn("[DashboardScreen] fetchData: user.id não disponível. Abortando busca.");
+      console.warn("[DashboardScreen] fetchData: user.id nÃ£o disponÃ­vel. Abortando busca.");
       if (isMounted.current) {
-        setError("ID do provedor não disponível para buscar dados.");
+        setError("ID do provedor nÃ£o disponÃ­vel para buscar dados.");
         setIsLoading(false);
         setIsRefreshing(false);
       }
@@ -762,9 +762,9 @@ export default function ProviderDashboardScreen() {
     console.log(`[DashboardScreen] fetchData: Buscando dashboard para userId: ${user.id}`);
 
     try {
-      // CORRIGIDO: Chamar a função correta do serviço de dashboard
+      // CORRIGIDO: Chamar a funÃ§Ã£o correta do serviÃ§o de dashboard
       const dashboard = await getMyProviderDashboard();
-      if (!isMounted.current) return; // Verificar se o componente ainda está montado
+      if (!isMounted.current) return; // Verificar se o componente ainda estÃ¡ montado
 
       console.log("[DashboardScreen] fetchData: Dados do dashboard recebidos.", dashboard);
       console.log("[DashboardScreen] REVIEWS NA DASHBOARD (AGORA COM 'reviews'):", dashboard.reviews);
@@ -792,7 +792,7 @@ export default function ProviderDashboardScreen() {
     } catch (err: any) {
       console.error("[DashboardScreen] Erro ao buscar dados do dashboard do provedor:", err.response?.data || err.message, err);
       if (isMounted.current) {
-        NotificationUIService.showError(err.response?.data?.message || "Não foi possível carregar os dados do dashboard.", "Erro");
+        NotificationUIService.showError(err.response?.data?.message || "NÃ£o foi possÃ­vel carregar os dados do dashboard.", "Erro");
       }
     } finally {
       if (isMounted.current) {
@@ -812,19 +812,19 @@ export default function ProviderDashboardScreen() {
     } else if (!authLoading && !user?.id) {
       if (isMounted.current) {
         setIsLoading(false);
-        setError("Provedor não autenticado ou perfil não encontrado.");
+        setError("Provedor nÃ£o autenticado ou perfil nÃ£o encontrado.");
       }
-      console.warn("[DashboardScreen] useEffect: Usuário não autenticado ou ID não encontrado após authLoading.");
+      console.warn("[DashboardScreen] useEffect: UsuÃ¡rio nÃ£o autenticado ou ID nÃ£o encontrado apÃ³s authLoading.");
     }
 
     return () => {
       isMounted.current = false; // Componente desmontado
-      // Parar a animação composta do stagger se ela estiver em andamento
+      // Parar a animaÃ§Ã£o composta do stagger se ela estiver em andamento
       if (staggerAnimationRef.current) {
         staggerAnimationRef.current.stop();
       }
     };
-  }, [authLoading, user, fetchData]); // Removidas as dependências individuais das Animated.Value, pois a animação composta é controlada por staggerAnimationRef
+  }, [authLoading, user, fetchData]); // Removidas as dependÃªncias individuais das Animated.Value, pois a animaÃ§Ã£o composta Ã© controlada por staggerAnimationRef
 
   const onRefresh = useCallback(() => {
     console.log("[DashboardScreen] onRefresh: Iniciando refresh.");
@@ -834,12 +834,12 @@ export default function ProviderDashboardScreen() {
   }, [fetchData, isReducedMotionEnabled]);
 
   const handleServicePress = (id: string) => {
-    console.log(`[DashboardScreen] handleServicePress: Navegando para detalhes do serviço ${id}.`);
+    console.log(`[DashboardScreen] handleServicePress: Navegando para detalhes do serviÃ§o ${id}.`);
     router.push(`/(provider)/services/${id}` as any);
   };
 
   const handleViewAllServicesPress = () => {
-    console.log("[DashboardScreen] handleViewAllServicesPress: Navegando para todos os serviços.");
+    console.log("[DashboardScreen] handleViewAllServicesPress: Navegando para todos os serviÃ§os.");
     router.push('/(provider)/services' as any);
   };
 
@@ -848,19 +848,19 @@ export default function ProviderDashboardScreen() {
     router.push('/(provider)/messages' as any);
   };
 
-  // Handlers de navegação para Ações Rápidas novas
+  // Handlers de navegaÃ§Ã£o para AÃ§Ãµes RÃ¡pidas novas
   const goRequests = () => router.push('/(provider)/services?filter=requests' as any);
   const goUpcoming = () => router.push('/(provider)/services?filter=upcoming' as any);
   const goCompleted = () => router.push('/(provider)/services?filter=completed' as any);
   const goNotifications = () => router.push('/(provider)/notifications' as any);
   const goReviews = () => router.push(PROVIDER_ROUTES.REVIEWS as any); // CORRIGIDO: Usar a constante da rota
   const goEarnings = () => router.push('/(provider)/earnings' as any);
-  const goWithdraw = () => router.push(PROVIDER_ROUTES.WITHDRAW as any); // CORREÇÃO: Usar a constante da rota
+  const goWithdraw = () => router.push(PROVIDER_ROUTES.WITHDRAW as any); // CORREÃ‡ÃƒO: Usar a constante da rota
 
   const handleAcceptRequest = async (bookingId: string) => {
     console.log(`[DashboardScreen] handleAcceptRequest: Tentando aceitar agendamento ${bookingId}.`);
     Alert.alert( // Kept Alert for confirmation, not for error/success feedback
-      "Aceitar Solicitação",
+      "Aceitar SolicitaÃ§Ã£o",
       `Tem certeza que deseja aceitar o agendamento ${bookingId}?`,
       [
         { text: "Cancelar", style: "cancel", onPress: () => console.log("[DashboardScreen] Aceitar cancelado.") },
@@ -880,7 +880,7 @@ export default function ProviderDashboardScreen() {
             } catch (error: any) {
               console.error("[DashboardScreen] Erro ao aceitar agendamento:", error.response?.data || error.message, error);
               if (isMounted.current) {
-                NotificationUIService.showError(error.response?.data?.message || "Não foi possível aceitar o agendamento.", "Erro");
+                NotificationUIService.showError(error.response?.data?.message || "NÃ£o foi possÃ­vel aceitar o agendamento.", "Erro");
               }
             } finally {
               if (isMounted.current) {
@@ -896,7 +896,7 @@ export default function ProviderDashboardScreen() {
   const handleRejectRequest = async (bookingId: string) => {
     console.log(`[DashboardScreen] handleRejectRequest: Tentando rejeitar agendamento ${bookingId}.`);
     Alert.alert( // Kept Alert for confirmation
-      "Rejeitar Solicitação",
+      "Rejeitar SolicitaÃ§Ã£o",
       `Tem certeza que deseja rejeitar o agendamento ${bookingId}?`,
       [
         { text: "Cancelar", style: "cancel", onPress: () => console.log("[DashboardScreen] Rejeitar cancelado.") },
@@ -916,7 +916,7 @@ export default function ProviderDashboardScreen() {
             } catch (error: any) {
               console.error("[DashboardScreen] Erro ao rejeitar agendamento:", error.response?.data || error.message, error);
               if (isMounted.current) {
-                NotificationUIService.showError(error.response?.data?.message || "Não foi possível rejeitar o agendamento.", "Erro");
+                NotificationUIService.showError(error.response?.data?.message || "NÃ£o foi possÃ­vel rejeitar o agendamento.", "Erro");
               }
             } finally {
               if (isMounted.current) {
@@ -935,15 +935,15 @@ export default function ProviderDashboardScreen() {
   };
 
   const handleLogout = async () => {
-    console.log("[Dashboard] Botão de Logout clicado: Iniciando logout direto.");
-    if (!isReducedMotionEnabled) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); // CORREÇÃO: Usar notificationAsync e NotificationFeedbackType.Warning
+    console.log("[Dashboard] BotÃ£o de Logout clicado: Iniciando logout direto.");
+    if (!isReducedMotionEnabled) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); // CORREÃ‡ÃƒO: Usar notificationAsync e NotificationFeedbackType.Warning
     try {
       await logout();
-      console.log("[Dashboard] logout() concluído. O _layout.tsx deve redirecionar.");
+      console.log("[Dashboard] logout() concluÃ­do. O _layout.tsx deve redirecionar.");
       AccessibilityInfo.announceForAccessibility('Logout realizado com sucesso. Redirecionando para tela inicial.');
     } catch (error) {
       console.error("[Dashboard] Erro ao fazer logout:", error);
-      NotificationUIService.showError("Não foi possível sair da conta. Tente novamente ou verifique sua conexão.", "Erro ao Sair");
+      NotificationUIService.showError("NÃ£o foi possÃ­vel sair da conta. Tente novamente ou verifique sua conexÃ£o.", "Erro ao Sair");
     }
   };
 
@@ -1040,7 +1040,7 @@ export default function ProviderDashboardScreen() {
         ]}>
           <View style={styles.subsectionHeader}>
             <Text style={styles.subsectionTitle}>
-              <Ionicons name="hourglass-outline" size={20} color={WARNING_YELLOW} accessibilityHidden={true} />{' '}Novas Solicitações
+              <Ionicons name="hourglass-outline" size={20} color={WARNING_YELLOW} accessibilityHidden={true} />{' '}Novas SolicitaÃ§Ãµes
             </Text>
             {pendingRequests.length > 2 && (
               <TouchableOpacity 
@@ -1049,8 +1049,8 @@ export default function ProviderDashboardScreen() {
                   router.push('/(provider)/schedule' as any);
                 }} 
                 accessibilityRole="button" 
-                accessibilityLabel="Ver todas as solicitações"
-                accessibilityHint="Navegue para ver todas as novas solicitações."
+                accessibilityLabel="Ver todas as solicitaÃ§Ãµes"
+                accessibilityHint="Navegue para ver todas as novas solicitaÃ§Ãµes."
               >
                 <Text style={styles.viewAllText}>Ver Todas</Text>
               </TouchableOpacity>
@@ -1070,7 +1070,7 @@ export default function ProviderDashboardScreen() {
               />
             ))
           ) : (
-            renderEmptyState("Nenhuma nova solicitação de agendamento.", "checkmark-done-circle-outline")
+            renderEmptyState("Nenhuma nova solicitaÃ§Ã£o de agendamento.", "checkmark-done-circle-outline")
           )}
         </Animated.View>
         <Animated.View style={[
@@ -1082,7 +1082,7 @@ export default function ProviderDashboardScreen() {
         ]}>
           <View style={styles.subsectionHeader}>
             <Text style={styles.subsectionTitle}>
-              <Ionicons name="checkmark-done-circle-outline" size={20} color={ICON_PRIMARY} accessibilityHidden={true} />{' '}Próximos Serviços
+              <Ionicons name="checkmark-done-circle-outline" size={20} color={ICON_PRIMARY} accessibilityHidden={true} />{' '}PrÃ³ximos ServiÃ§os
             </Text>
             {upcomingServices.length > 2 && (
               <TouchableOpacity 
@@ -1091,8 +1091,8 @@ export default function ProviderDashboardScreen() {
                   router.push('/(provider)/schedule' as any);
                 }} 
                 accessibilityRole="button" 
-                accessibilityLabel="Ver todos os próximos serviços"
-                accessibilityHint="Navegue para ver todos os serviços confirmados."
+                accessibilityLabel="Ver todos os prÃ³ximos serviÃ§os"
+                accessibilityHint="Navegue para ver todos os serviÃ§os confirmados."
               >
                 <Text style={styles.viewAllText}>Ver Todas</Text>
               </TouchableOpacity>
@@ -1109,7 +1109,7 @@ export default function ProviderDashboardScreen() {
               />
             ))
           ) : (
-            renderEmptyState("Nenhum serviço confirmado agendado.", "calendar-clear-outline")
+            renderEmptyState("Nenhum serviÃ§o confirmado agendado.", "calendar-clear-outline")
           )}
         </Animated.View>
         <Animated.View style={[
@@ -1135,7 +1135,7 @@ export default function ProviderDashboardScreen() {
             onPress={handleLogout}
             accessibilityRole="button"
             accessibilityLabel="Sair da Conta"
-            accessibilityHint="Toque para fazer logout da aplicação."
+            accessibilityHint="Toque para fazer logout da aplicaÃ§Ã£o."
           >
             <Ionicons name="log-out-outline" size={24} color={WHITE} accessibilityHidden={true} />
             <Text style={styles.logoutButtonText}>Sair da Conta</Text>
@@ -1182,7 +1182,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
     backgroundColor: ICON_PRIMARY,
-    borderRadius: Radii.md, // CORREÇÃO: Usar Radii.md (agora definido)
+    borderRadius: Radii.md, // CORREÃ‡ÃƒO: Usar Radii.md (agora definido)
     ...Platform.select({
       ios: { 
         shadowColor: SHADOW_COLOR_CARD, 
@@ -1210,7 +1210,7 @@ const styles = StyleSheet.create({
   subsectionWrapper: {
     marginBottom: Spacing.lg,
     backgroundColor: WHITE,
-    borderRadius: Radii.md, // CORREÇÃO: Usar Radii.md (agora definido)
+    borderRadius: Radii.md, // CORREÃ‡ÃƒO: Usar Radii.md (agora definido)
     padding: Spacing.md,
     ...Platform.select({
       ios: { 
@@ -1244,7 +1244,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: Spacing.lg,
     backgroundColor: BACKGROUND_ALT,
-    borderRadius: Radii.md, // CORREÇÃO: Usar Radii.md (agora definido)
+    borderRadius: Radii.md, // CORREÃ‡ÃƒO: Usar Radii.md (agora definido)
     marginTop: Spacing.sm,
   },
   emptyText: {
@@ -1255,7 +1255,7 @@ const styles = StyleSheet.create({
   },
   requestItem: {
     backgroundColor: WHITE,
-    borderRadius: Radii.md, // CORREÇÃO: Usar Radii.md (agora definido)
+    borderRadius: Radii.md, // CORREÃ‡ÃƒO: Usar Radii.md (agora definido)
     padding: Spacing.md,
     marginBottom: Spacing.md,
     borderWidth: 1,
@@ -1279,8 +1279,8 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: 6,
     backgroundColor: WARNING_YELLOW,
-    borderTopLeftRadius: Radii.md, // CORREÇÃO: Usar Radii.md (agora definido)
-    borderBottomLeftRadius: Radii.md, // CORREÇÃO: Usar Radii.md (agora definido)
+    borderTopLeftRadius: Radii.md, // CORREÃ‡ÃƒO: Usar Radii.md (agora definido)
+    borderBottomLeftRadius: Radii.md, // CORREÃ‡ÃƒO: Usar Radii.md (agora definido)
   },
   requestItemHeader: {
     flexDirection: 'row',
@@ -1335,7 +1335,7 @@ const styles = StyleSheet.create({
   actionButtonBase: {
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
-    borderRadius: Radii.pill, // CORREÇÃO: Usar Radii.pill (já definido)
+    borderRadius: Radii.pill, // CORREÃ‡ÃƒO: Usar Radii.pill (jÃ¡ definido)
     minWidth: 60,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1379,7 +1379,7 @@ const styles = StyleSheet.create({
   },
   serviceItem: {
     backgroundColor: WHITE,
-    borderRadius: Radii.md, // CORREÇÃO: Usar Radii.md (agora definido)
+    borderRadius: Radii.md, // CORREÃ‡ÃƒO: Usar Radii.md (agora definido)
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
     marginBottom: Spacing.sm,
@@ -1423,7 +1423,7 @@ const styles = StyleSheet.create({
   },
   messageLinkCard: {
     backgroundColor: WHITE,
-    borderRadius: Radii.md, // CORREÇÃO: Usar Radii.md (agora definido)
+    borderRadius: Radii.md, // CORREÃ‡ÃƒO: Usar Radii.md (agora definido)
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
     marginTop: Spacing.sm,
@@ -1503,7 +1503,7 @@ const styles = StyleSheet.create({
   },
   earningsLinkCard: {
       backgroundColor: WHITE,
-      borderRadius: Radii.md, // CORREÇÃO: Usar Radii.md (agora definido)
+      borderRadius: Radii.md, // CORREÃ‡ÃƒO: Usar Radii.md (agora definido)
       paddingVertical: Spacing.sm,
       paddingHorizontal: Spacing.md,
       marginTop: Spacing.lg,
@@ -1529,13 +1529,13 @@ const styles = StyleSheet.create({
       flex: 1,
       marginLeft: Spacing.sm,
   },
-  // CORREÇÃO: Adicionados os estilos para o botão de logout (refinado com haptic)
+  // CORREÃ‡ÃƒO: Adicionados os estilos para o botÃ£o de logout (refinado com haptic)
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: DANGER_RED,
-    borderRadius: Radii.pill, // CORREÇÃO: Usar Radii.pill (já definido)
+    borderRadius: Radii.pill, // CORREÃ‡ÃƒO: Usar Radii.pill (jÃ¡ definido)
     paddingVertical: Spacing.sm,
     marginTop: Spacing.lg,
     marginHorizontal: Spacing.md,
