@@ -564,3 +564,26 @@ export async function getProviderAvatar(providerId: string): Promise<{ url: stri
     return { url: '' };
   }
 }
+
+// Upload do avatar do provedor autenticado
+export async function uploadMyAvatar(fileUri: string): Promise<{ url: string }> {
+  try {
+    const form = new FormData();
+    const filename = fileUri.split('/').pop() || `avatar-${Date.now()}.jpg`;
+    form.append('file', { uri: fileUri, name: filename, type: 'image/jpeg' } as any);
+
+    const response: AxiosResponse<{ url: string } | { message: string; url: string } | string> = await api.post(`/providers/me/avatar`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    const data: any = response.data;
+    if (typeof data === 'string') return { url: data };
+    if (data && typeof data === 'object' && typeof data.url === 'string') return { url: data.url };
+    throw new Error('Resposta de upload de avatar inesperada.');
+  } catch (error: any) {
+    console.error('Erro ao fazer upload do avatar:', error.response?.data || error.message);
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(error.response.data.message || 'Erro ao fazer upload do avatar.');
+    }
+    throw new Error('Erro de rede ou servidor ao fazer upload do avatar.');
+  }
+}
