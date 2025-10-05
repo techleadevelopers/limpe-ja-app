@@ -69,31 +69,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
-  const handleUnauthorized = useCallback(async ({ originalRequest }: { originalRequest: AxiosRequestConfig }) => {
-    try {
-      const refreshed = await authService.refreshSession();
-      const authenticatedUser: AuthenticatedUserProfile = {
-        ...refreshed.user,
-        token: refreshed.accessToken,
-      };
-      setUser(authenticatedUser);
-      setRole(refreshed.user.role as UserRole);
-
-      const headers = (originalRequest?.headers ?? {}) as Record<string, unknown>;
-      originalRequest.headers = {
-        ...headers,
-        Authorization: `Bearer ${refreshed.accessToken}`
-      };
-    } catch (error) {
-      await logout();
-      throw error;
-    }
-  }, [logout]); // << CORREÇÃO: Dependência alterada de [handleUnauthorized] para [logout] para evitar referência circular
+  const handleUnauthorized = useCallback(async () => {
+    // Backend não expõe /auth/refresh no momento; trate 401 como sessão inválida
+    await logout();
+    throw new Error('Unauthorized');
+  }, [logout]);
 
   useEffect(() => {
     setUnauthorizedCallback(handleUnauthorized);
     loadStoredData();
-  }, [handleUnauthorized]); // << Isso agora é válido, pois handleUnauthorized depende de logout (que é estável via useCallback)
+  }, [handleUnauthorized]);
 
   const updateAuthState = (authData: AuthDataFromStorage) => {
     if (authData.token && authData.role && authData.id && authData.user) {
