@@ -1,7 +1,7 @@
 // src/payments/entities/transaction.entity.ts
 import { Transaction as PrismaTransaction, TransactionType, Prisma } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { PixKeyType } from '../dto/request-withdrawal.dto'; // Importar o enum PixKeyType
+import { PixKeyType } from '@prisma/client'; // Corrigido: importar diretamente do Prisma
 
 export class TransactionEntity implements PrismaTransaction {
   @ApiProperty({ description: 'ID da transação', example: 'uuid-da-transacao' })
