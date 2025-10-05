@@ -1,5 +1,6 @@
 // LimpeJaApp/app/(client)/bookings/index.tsx
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+
 import * as Haptics from 'expo-haptics';
 import { Link, Stack, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -33,6 +34,9 @@ import { getProviderAvatar } from '../../../services/providerService'; // NOVO: 
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 import { AppColors, AppShadows } from '../../../constants/appStyles';
 
+// INJEÇÃO: Import do Navbar premium animado de explore/home (agora como bottom nav)
+import Navbar from '../../../components/client/explore/home/NavBar'; // Caminho ajustado para components/explore/home/navbar
+
 // DEFINE O TIPO DE FILTRO GLOBALMENTE PARA CONSISTÊNCIA
 type FilterType = 'requests' | 'upcoming' | 'completed' | 'cancelled';
 
@@ -40,6 +44,9 @@ type FilterType = 'requests' | 'upcoming' | 'completed' | 'cancelled';
 const isAxiosError = (error: unknown): error is AxiosError => {
   return axios.isAxiosError(error);  // Usa a função built-in, mas com type guard custom para narrowing
 };
+
+const TOP_HAIRLINE   = Platform.OS === 'android' ? 1 : StyleSheet.hairlineWidth;
+const BOTTOM_HAIRLINE= Platform.OS === 'android' ? 1 : StyleSheet.hairlineWidth;
 
 // Helper para traduzir o status do agendamento
 const getTranslatedStatus = (status: BookingStatus): string => {
@@ -377,6 +384,51 @@ export default function MyBookingsScreen() {
   const [headerTitle, setHeaderTitle] = useState('Meus Agendamentos'); // NOVO: Estado para título dinâmico
   const insets = useSafeAreaInsets();
 
+  // INJEÇÃO: Animações premium para o Bottom Navbar (fade, slide up from bottom e glow)
+  const navbarFadeAnim = useRef(new Animated.Value(0)).current;
+  const navbarSlideAnim = useRef(new Animated.Value(80)).current; // Começa fora da tela (de baixo)
+  const navbarGlowAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Animação de entrada premium para o Bottom Navbar (slide up + fade + glow loop)
+    Animated.parallel([
+      Animated.timing(navbarFadeAnim, {
+        toValue: 1,
+        duration: 600,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.spring(navbarSlideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+        friction: 8,
+        tension: 100,
+      }),
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(navbarGlowAnim, {
+            toValue: 1,
+            duration: 2000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: false, // Glow não usa native driver
+          }),
+          Animated.timing(navbarGlowAnim, {
+            toValue: 0,
+            duration: 2000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: false,
+          }),
+        ]),
+        { iterations: -1 }
+      ),
+    ]).start();
+
+    return () => {
+      navbarGlowAnim.stopAnimation();
+    };
+  }, [navbarFadeAnim, navbarSlideAnim, navbarGlowAnim]);
+
   const filters: Array<{ label: string; value: FilterType; icon: keyof typeof Ionicons.glyphMap }> = [
     { label: 'Solicitações', value: 'requests', icon: 'hourglass-outline' },
     { label: 'Próximos', value: 'upcoming', icon: 'calendar-outline' },
@@ -655,35 +707,45 @@ export default function MyBookingsScreen() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: Platform.OS === 'ios' ? insets.top + 10 : 10 }]}>
-      {/* CORREÇÃO: Stack.Screen único no topo, com título dinâmico e borda azul */}
+    <View style={[styles.container, { paddingTop: Platform.OS === 'ios' ? insets.top + 10 : 10, paddingBottom: insets.bottom + 80 }]}>
+      {/* ✅ HEADER SUPERIOR: Restaurado com Stack.Screen (título dinâmico, back custom, clean) */}
       <Stack.Screen
         options={{
           title: headerTitle, // Usa estado dinâmico (ex: muda no loading)
           headerShown: true,
           headerTitleAlign: 'center', // Centraliza no iOS
           headerTitleStyle: {
-            fontFamily: 'Montserrat-SemiBold' || 'System', // Fallback para font
+            fontFamily: 'Montserrat-SemiBold' || 'System',
             fontSize: 20,
             color: AppColors.textBody,
           },
-          headerStyle: { 
+          headerStyle: {
             backgroundColor: AppColors.white,
-            borderBottomWidth: 1, // NOVO: Borda inferior para "card" effect
-            borderBottomColor: '#00BCD4', // NOVO: Borda azul como solicitado
+            // Removida borda azul — visual clean/neutro
           },
-          headerTintColor: '#00BCD4', // NOVO: Cor azul para back button e tint
-          headerShadowVisible: false,
+          headerShadowVisible: false, // Sem sombra — look moderno
+          headerBackTitleVisible: false, // iOS: Sem texto "Back"
+          headerTintColor: AppColors.primaryInteractive,
           headerLeft: () => (
             <TouchableOpacity
               onPress={() => router.back()}
-              style={{ paddingLeft: insets.left, paddingVertical: 10, paddingHorizontal: 5 }}
-              activeOpacity={0.7}>
-              <Ionicons name="arrow-back" size={24} color="#00BCD4" /> {/* Azul */}
+              style={{ paddingVertical: 10, paddingHorizontal: 12 }} // Área de toque confortável
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }} // Toque expandido (≥44dp)
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Voltar"
+            >
+              <Ionicons name="arrow-back" size={24} color={AppColors.primaryInteractive} />
             </TouchableOpacity>
           ),
         }}
       />
+
+      {/* ✅ NOVO: Bloco "Filtrar" com título + sub (visível, respirável) */}
+      <View style={styles.filterHeaderRow}>
+        <Text style={styles.filterHeaderTitle}>Filtrar</Text>
+        <Text style={styles.filterHeaderSub}>Selecione uma opção</Text>
+      </View>
 
       <View style={[styles.filterContainer, { marginTop: Platform.OS === 'ios' ? 10 : 5 }]}>
         {filters.map((filterItem, index) => (
@@ -695,10 +757,13 @@ export default function MyBookingsScreen() {
               ]}
               onPress={() => handleFilterChange(filterItem.value)}
               onPressIn={() => onPressInFilterButton(index)}
-              onPressOut={onPressOutFilterButton}>
+              onPressOut={onPressOutFilterButton}
+              accessibilityRole="button"
+              accessibilityLabel={`Filtrar por ${filterItem.label}`} // A11y: Label dinâmico
+            >
               <Ionicons
                 name={filterItem.icon}
-                size={18}
+                size={12}
                 color={activeFilter === filterItem.value ? AppColors.white : AppColors.textBody}
                 style={styles.filterIcon}
               />
@@ -707,7 +772,8 @@ export default function MyBookingsScreen() {
                   styles.filterButtonText,
                   activeFilter === filterItem.value && styles.filterButtonTextActive,
                 ]}
-                maxFontSizeMultiplier={1.2}>
+                maxFontSizeMultiplier={1.2}
+              >
                 {filterItem.label}
               </Text>
             </TouchableOpacity>
@@ -729,9 +795,9 @@ export default function MyBookingsScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={[
             styles.listContentContainer,
-            { paddingBottom: Platform.OS === 'ios' ? insets.bottom + 20 : 20 },
+            { paddingBottom: 100 }, // Espaço extra para bottom nav (altura ~80dp + safe area)
           ]}
-          showsVerticalScrollIndicator={false}
+          showsVerticalScrollIndicator={false} // Clean: Sem indicador vertical
           refreshControl={
             <RefreshControl
               refreshing={isRefreshing}
@@ -749,6 +815,46 @@ export default function MyBookingsScreen() {
       ) : (
         <EmptyListFeedback />
       )}
+
+      {/* INJEÇÃO: Bottom Navbar premium animado integrado na parte inferior */}
+      <Animated.View
+        style={[
+          styles.navbarContainer,
+          {
+            opacity: navbarFadeAnim,
+            transform: [{ translateY: navbarSlideAnim }], // Slide up from bottom
+          },
+        ]}
+      >
+        <BlurView intensity={Platform.OS === 'ios' ? 10 : 20} tint="light" style={StyleSheet.absoluteFillObject} />
+        <LinearGradient
+          colors={['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.85)']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+        {/* Efeito de glow animado (premium: sombra pulsante sutil na bottom) */}
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFillObject,
+            {
+              shadowColor: AppColors.primaryInteractive + '40',
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: navbarGlowAnim,
+              shadowRadius: 20,
+              elevation: navbarGlowAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 8] }),
+            },
+          ]}
+        />
+        <Navbar
+          title={headerTitle} // Passa o título dinâmico (se o bottom nav suportar; opcional)
+          onBackPress={() => router.back()} // Callback para back (se aplicável no bottom nav)
+          showSearch={false} // Customiza para bookings (sem search)
+          showNotifications={true} // Opcional: Mostra notificações se o Navbar suportar
+          animated={true} // Flag para ativar animações internas no Navbar
+          currentRoute="bookings" // Adicione prop para destacar a aba "bookings" no bottom nav
+        />
+      </Animated.View>
     </View>
   );
 }
@@ -758,49 +864,101 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: AppColors.backgroundLight,
   },
-  filterContainer: {
-    flexDirection: 'row',
-    paddingVertical: 16,
-    paddingHorizontal: 36,
-    backgroundColor: AppColors.white,
-    borderBottomWidth: 1,
-    
-    borderBottomColor: AppColors.backgroundNeutral,
-    ...AppShadows.medium,
+  // INJEÇÃO: Estilos para o Bottom Navbar premium animado (posição inferior)
+  navbarContainer: {
+    position: 'absolute',
+    bottom: 0, // Fixado na parte inferior
+    left: 0,
+    right: 0,
+    height: 80, // Altura fixa para bottom nav (ajuste se necessário)
+    zIndex: 1000, // Acima do conteúdo
+    elevation: 20, // Android: Elevação alta para premium
+    ...Platform.select({
+      ios: {
+        shadowColor: 'rgba(0,0,0,0.1)',
+        shadowOffset: { width: 0, height: -4 }, // Sombra para cima (bottom nav)
+        shadowOpacity: 0.3,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 12,
+      },
+    }),
   },
+  // ✅ NOVO: Estilos para bloco "Filtrar" (título visível + sub) - Removido paddingTop extra
+  filterHeaderRow: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 2,
+    backgroundColor: AppColors.white,
+  },
+  filterHeaderTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: AppColors.textBody,
+    fontFamily: 'Montserrat-SemiBold',
+  },
+  filterHeaderSub: {
+    fontSize: 12,
+    color: AppColors.textAuxiliary,
+    marginTop: 2,
+    fontFamily: 'Montserrat-Regular',
+  },
+ filterContainer: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  paddingVertical: 22,
+  paddingHorizontal: 6,
+  backgroundColor: AppColors.white,
+  // 🔹 Borda premium apenas em cima e embaixo
+  borderTopWidth: TOP_HAIRLINE,
+  borderTopColor:  '#EEF3FA',   // tom bem claro (top)
+  borderBottomWidth: BOTTOM_HAIRLINE,
+  borderBottomColor:'#E3ECF6',  // tom 1 nível mais forte (bottom)
+  borderLeftWidth: 0,
+  borderRightWidth: 0,
+  borderStyle: 'solid',
+
+  // 🔹 Sem sombra aqui para não poluir o traço fino
+  // ...AppShadows.medium,   // ❌ remova
+
+  marginBottom: 10,           // respiro abaixo dos botões
+},
   filterButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 2,
-    right: 15,
+    paddingVertical: 9, // ← Era 2 (fino); agora respirável
     paddingHorizontal: 12,
-    borderRadius: 25,
+    bottom: 0,
     
+    borderRadius: 25,
     marginHorizontal: 6,
+    minHeight: 40,         // ⬅️ NOVO: Alvo de toque confortável (CORREÇÃO APLICADA)
     backgroundColor: AppColors.backgroundNeutral,
     borderWidth: 1,
     borderColor: AppColors.borderNeutral,
+    // Removido right:15 — alinha ícone/texto
   },
   filterButtonActive: {
     backgroundColor: AppColors.primaryInteractive,
     borderColor: AppColors.primaryInteractive,
     ...Platform.select({
       ios: {
-        shadowColor: AppColors.primaryInteractive + '40',
+        shadowColor: AppColors.primaryInteractive + '33',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.6,
+        shadowOpacity: 0.4,
         shadowRadius: 4,
       },
-      android: { elevation: 6 },
+      android: { elevation: 5 },
     }),
   },
   filterIcon: {
     marginRight: 8,
   },
   filterButtonText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: AppColors.textBody, // Cor mais escura para inativo (melhor contraste)
     fontFamily: 'Montserrat-Regular',
@@ -811,13 +969,14 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat-SemiBold',
   },
   listContentContainer: {
-    paddingVertical: 20,
+    paddingVertical: 20, // Mantido: Respiro premium acima/abaixo
     paddingHorizontal: 16,
+    
   },
   itemCard: {
     backgroundColor: 'rgba(255,255,255,0.85)',
     borderRadius: 20,
-    marginBottom: 24,
+    marginBottom: 24, // Reforçado: Respiro entre cards
     overflow: 'hidden',
     ...Platform.select({
       ios: {
