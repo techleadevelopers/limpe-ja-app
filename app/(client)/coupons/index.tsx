@@ -23,6 +23,7 @@ import { useTranslation } from 'react-i18next'; // Assuming i18n is set up
 import { LinearGradient } from 'expo-linear-gradient'; // Mantido caso queira reverter ou usar em outro lugar, mas não será usado no hero
 
 import Colors from '../../../constants/Colors'; // Adjust path as needed
+import { getMyCoupons as getMyCouponsService, MyCouponListItem } from '../../../services/couponService';
 
 // Mock Coupon Service (replace with actual backend service)
 enum CouponType {
@@ -49,6 +50,41 @@ interface CouponItem {
   imageUrl?: string;
   isClaimed?: boolean; // If it's a coupon that needs to be "claimed" first
 }
+
+// Mapeadores do backend -> UI local
+const normalizeValueType = (vt?: string): 'PERCENT' | 'FIXED' => {
+  const t = (vt || '').toUpperCase();
+  return t.includes('PERCENT') ? 'PERCENT' : 'FIXED';
+};
+
+const deriveStatus = (status?: string, validUntil?: string): 'available' | 'used' | 'expired' => {
+  if (status) {
+    const s = status.toUpperCase();
+    if (s === 'ACTIVE') return 'available';
+    if (s === 'EXPIRED' || s === 'INACTIVE') return 'expired';
+    if (s === 'USED' || s === 'USED_UP') return 'used';
+  }
+  if (validUntil && new Date(validUntil).getTime() < Date.now()) return 'expired';
+  return 'available';
+};
+
+const mapApiToUICoupon = (c: MyCouponListItem): CouponItem => {
+  const expiresAt = c.validUntil;
+  const mappedStatus = deriveStatus(c.status, expiresAt);
+  return {
+    id: c.id,
+    code: c.code,
+    title: c.description ? c.description : `Cupom ${c.code}`,
+    description: c.description || '',
+    value: c.value,
+    type: normalizeValueType(c.valueType) === 'PERCENT' ? CouponType.PERCENTAGE : CouponType.FIXED,
+    minOrderValue: c.minOrderValue,
+    expiresAt,
+    status: mappedStatus === 'available' ? CouponStatus.AVAILABLE : mappedStatus === 'used' ? CouponStatus.USED : CouponStatus.EXPIRED,
+    imageUrl: c.imageUrl,
+    isClaimed: false,
+  };
+};
 
 const mockCoupons: CouponItem[] = [
   {
@@ -170,23 +206,19 @@ function useTheme() {
 function CouponCard({
   coupon,
   onUseCoupon,
-  onClaimCoupon,
-  claimingCouponId,
   theme,
 }: {
   coupon: CouponItem;
   onUseCoupon: (coupon: CouponItem) => void;
-  onClaimCoupon: (couponId: string) => void;
-  claimingCouponId: string | null;
   theme: ReturnType<typeof useTheme>;
 }) {
-  const isAvailable = coupon.status === CouponStatus.AVAILABLE && !coupon.isClaimed;
-  const isUsed = coupon.status === CouponStatus.USED || coupon.isClaimed; // Consider claimed as used for display
+  const isAvailable = coupon.status === (CouponStatus as any).AVAILABLE || (coupon as any).status === 'available';
+  const isUsed = coupon.status === (CouponStatus as any).USED || (coupon as any).status === 'used';
   const isExpired = coupon.status === CouponStatus.EXPIRED;
 
-  const buttonText = isAvailable ? (coupon.isClaimed ? 'Usar Cupom' : 'Resgatar Cupom') : (isUsed ? 'Cupom Usado' : 'Expirado');
-  const buttonDisabled = !isAvailable || claimingCouponId === coupon.id;
-  const buttonAction = isAvailable ? (coupon.isClaimed ? () => onUseCoupon(coupon) : () => onClaimCoupon(coupon.id)) : undefined;
+  const buttonText = isAvailable ? 'Usar Cupom' : (isUsed ? 'Cupom Usado' : 'Expirado');
+  const buttonDisabled = !isAvailable;
+  const buttonAction = isAvailable ? () => onUseCoupon(coupon) : undefined;
 
   const cardBgColor = isAvailable ? '#FFFFFF' : theme.cardBackground;
   const cardBorderColor = isAvailable ? theme.primary : theme.border;
@@ -203,12 +235,12 @@ function CouponCard({
         </View>
       </View>
       <View style={styles.couponDetails}>
-        {coupon.type === CouponType.PERCENTAGE ? (
+        {((coupon as any).valueType === 'PERCENT' || (coupon as any).type === CouponType.PERCENTAGE) ? (
           <Text style={styles.couponValue}>{coupon.value}% OFF</Text>
         ) : (
           <Text style={styles.couponValue}>{formatBRL(coupon.value)} OFF</Text>
         )}
-        {coupon.minOrderValue && (
+        {coupon.minOrderValue != null && (
           <Text style={styles.couponMinOrder}>Mín. {formatBRL(coupon.minOrderValue)}</Text>
         )}
         <Text style={styles.couponExpiry}>Expira em: {new Date(coupon.expiresAt).toLocaleDateString('pt-BR')}</Text>
@@ -218,11 +250,7 @@ function CouponCard({
         onPress={buttonAction}
         disabled={buttonDisabled}
       >
-        {claimingCouponId === coupon.id ? (
-          <ActivityIndicator color="#FFFFFF" size="small" />
-        ) : (
-          <Text style={[styles.couponButtonText, { color: buttonTextColor }]}>{buttonText}</Text>
-        )}
+        <Text style={[styles.couponButtonText, { color: buttonTextColor }]}>{buttonText}</Text>
       </TouchableOpacity>
       {!isAvailable && (
         <View style={styles.couponOverlay}>
@@ -312,7 +340,6 @@ export default function ClientCouponsScreen() {
   const [allCoupons, setAllCoupons] = useState<CouponItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [claimingCouponId, setClaimingCouponId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'AVAILABLE' | 'USED' | 'EXPIRED'>('AVAILABLE');
 
   // Local preference
@@ -327,8 +354,9 @@ export default function ClientCouponsScreen() {
   const loadCoupons = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      const fetchedCoupons = await getMyCoupons();
-      setAllCoupons(fetchedCoupons);
+      const fetched = await getMyCouponsService();
+      const mapped = fetched.map(mapApiToUICoupon);
+      setAllCoupons(mapped);
     } catch (error: any) {
       console.error('Erro ao buscar cupons do cliente:', error.response?.data || error.message);
       Alert.alert(t('common.error'), error.response?.data?.message || t('common.network_error'));
@@ -373,26 +401,7 @@ export default function ClientCouponsScreen() {
     ).start();
 
     loadCoupons();
-  }, [headerAnim, contentAnim, loadCoupons, pulseAnim]);
-
-  // --- Claim Coupon
-  const handleClaimCoupon = async (couponId: string) => {
-    setClaimingCouponId(couponId);
-    try {
-      const response = await claimCoupon(couponId);
-      if (response.success) {
-        Alert.alert('Sucesso!', response.message);
-        loadCoupons(); // Reload coupons to reflect changes
-      } else {
-        Alert.alert('Erro', response.message);
-      }
-    } catch (error: any) {
-      console.error('Erro ao resgatar cupom:', error.response?.data || error.message);
-      Alert.alert('Erro', error.response?.data?.message || 'Não foi possível resgatar o cupom.');
-    } finally {
-      setClaimingCouponId(null);
-    }
-  };
+  }, [headerAnim, contentAnim, loadCoupons, pulseAnim]); // Claim desativado (cupons já estão vinculados ao usuário)
 
   // --- Use Coupon (simulate navigation to checkout or apply)
   const handleUseCoupon = (coupon: CouponItem) => {
@@ -401,7 +410,7 @@ export default function ClientCouponsScreen() {
       `Você será redirecionado para agendar um serviço com o cupom "${coupon.code}" aplicado.`,
       [
         { text: 'Cancelar', style: 'cancel' },
-        { text: 'Continuar', onPress: () => router.push('/(client)/booking' as any) }, // Example navigation
+        { text: 'Continuar', onPress: () => router.push({ pathname: '/(client)/bookings/schedule-service', params: { couponCode: coupon.code } } as any) },
       ]
     );
   };
@@ -416,9 +425,9 @@ export default function ClientCouponsScreen() {
     return allCoupons.filter((coupon) => {
       switch (activeTab) {
         case 'AVAILABLE':
-          return coupon.status === CouponStatus.AVAILABLE && !coupon.isClaimed;
+          return coupon.status === CouponStatus.AVAILABLE;
         case 'USED':
-          return coupon.status === CouponStatus.USED || coupon.isClaimed;
+          return coupon.status === CouponStatus.USED;
         case 'EXPIRED':
           return coupon.status === CouponStatus.EXPIRED;
         default:
@@ -525,8 +534,6 @@ export default function ClientCouponsScreen() {
                   key={coupon.id}
                   coupon={coupon}
                   onUseCoupon={handleUseCoupon}
-                  onClaimCoupon={handleClaimCoupon}
-                  claimingCouponId={claimingCouponId}
                   theme={theme}
                 />
               ))}
@@ -757,3 +764,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+
+
