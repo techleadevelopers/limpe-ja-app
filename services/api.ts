@@ -32,6 +32,18 @@ export const api = axios.create({
   },
 });
 
+// Guard: avoid shipping localhost base URL in production builds
+try {
+  // __DEV__ is defined in React Native; fallback to NODE_ENV
+  const isDev = (typeof __DEV__ !== 'undefined' && __DEV__) || process.env.NODE_ENV !== 'production';
+  if (API_BASE_URL.includes('localhost') && !isDev) {
+    console.error('[api] API_BASE_URL points to localhost in production:', API_BASE_URL);
+    Sentry.captureMessage('API_BASE_URL is localhost in production', 'fatal');
+  }
+} catch (_) {
+  // noop
+}
+
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 const shouldRetry = (error: AxiosError) => !error.response || error.response.status >= 500;
 const IDEMP_PATHS = [
@@ -41,6 +53,7 @@ const IDEMP_PATHS = [
   '/reviews',
   '/payments/intent',
   '/support/tickets',
+  '/v1/support/tickets',
   '/providers/me/availability',
   '/payments/withdrawal',
   '/providers/me/earnings/withdrawal',
