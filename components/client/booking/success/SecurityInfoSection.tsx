@@ -89,8 +89,10 @@ export default function SecurityInfoSection({ successColor, bookingId }: Securit
         method: 'POST',
         data: {
           bookingId,
-          category: 'SAFETY',
-          message: 'Ajuda com meu agendamento',
+          // Use only backend-supported categories
+          category: 'OTHER',
+          // Backend expects `description` (not `message`)
+          description: 'Ajuda com meu agendamento',
         },
         headers: { 'x-silent': '1' },
       });
