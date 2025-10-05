@@ -1,43 +1,43 @@
 // LimpeJaApp/app/types/backend/support.ts
 
-// CORREÇÃO: Mover as definições de TicketCategory e TicketSeverity para este arquivo
-export type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'WAITING_USER' | 'RESOLVED' | 'CLOSED' | 'CANCELLED' | 'ESCALATED'; 
+export type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'WAITING_USER' | 'RESOLVED' | 'CLOSED' | 'ESCALATED';
 export type TicketSeverity = 'LOW' | 'MEDIUM' | 'HIGH';
-export type TicketCategory = 'PAYMENT' | 'QUALITY' | 'APP' | 'OTHER' | 'BOOKING' | 'ACCOUNT' | 'TECHNICAL' | 'SAFETY'; // Alinhar com 'SupportTicketCategory' do backend
+export type TicketCategory = 'PAYMENT' | 'QUALITY' | 'APP' | 'OTHER';
 
 export interface SupportTicket {
-    id: string;
-    subject: string;
-    status: TicketStatus; // Usar o tipo exportado
-    createdAt: string;
-    updatedAt: string;
-    lastMessagePreview?: string; // Optional: A short preview of the last message
-    messages?: SupportMessage[]; // Optional: Full list of messages for ticket details
-    category: TicketCategory; // Usar o tipo exportado
-    severity?: TicketSeverity; // Usar o tipo exportado
-    bookingId?: string | null;
-    message: string; // Para exibição no frontend, o corpo do ticket
+  id: string;
+  subject: string;
+  status: TicketStatus;
+  createdAt: string;
+  updatedAt: string;
+  lastMessagePreview?: string;
+  messages?: SupportMessage[];
+  category: TicketCategory;
+  // severity é apenas visual na UI; não persistido no backend
+  severity?: TicketSeverity;
+  bookingId?: string | null;
+  description: string;
 }
 
 export interface SupportMessage {
-    id: string;
-    ticketId: string;
-    senderId: string; // User ID or Admin ID
-    senderType: 'client' | 'admin' | 'provider'; // Type of sender
-    content: string;
-    createdAt: string;
+  id: string;
+  ticketId: string;
+  userId: string;
+  role?: string;
+  body: string;
+  attachments?: string[];
+  createdAt: string;
 }
 
-// CORREÇÃO: Ajustado para refletir o DTO do backend que espera 'description', category, severity, bookingId, attachments
 export interface CreateTicketPayload {
-    subject: string;
-    description: string; // Alterado de 'initialMessage' para 'description'
-    category: TicketCategory; // Usar o tipo exportado
-    severity?: TicketSeverity; // Usar o tipo exportado
-    bookingId?: string;
-    attachments?: string[]; // Adicionado attachments
+  subject: string;
+  description: string;
+  category: TicketCategory;
+  // Não enviar severity ao backend enquanto o DTO não suportar
+  bookingId?: string;
+  attachments?: string[];
 }
 
 export interface AddMessagePayload {
-    content: string;
+  content: string;
 }
