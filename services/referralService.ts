@@ -158,17 +158,11 @@ export class ReviewService {
       return response.data;
     } catch (error: any) {
       console.error('Erro ao buscar tendências de avaliações:', error);
-      // Ainda retorna dados mockados em caso de erro, mas em produção, isso seria um erro real.
-      return {
-        ratingTrend: 'increasing',
-        volumeTrend: 'stable',
-        sentimentTrend: 'improving',
-        keyInsights: [
-          'Suas avaliações melhoraram 15% no último mês',
-          'Clientes elogiam principalmente sua pontualidade',
-          'Considere oferecer serviços adicionais mencionados em comentários'
-        ]
-      };
+      // Produção: não retornar mocks. Propagar o erro para tratamento na UI.
+      if (axios.isAxiosError?.(error) && error.response) {
+        throw new Error(error.response.data?.message || 'Não foi possível carregar tendências de avaliações.');
+      }
+      throw new Error('Erro de rede ou servidor ao carregar tendências de avaliações.');
     }
   }
 }
