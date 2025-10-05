@@ -195,6 +195,8 @@ interface SpecificDateOverride {
   originalSlots?: string[]; // Slots originais para comparação
 }
 
+type PresetKey = 'morning' | 'afternoon' | 'fullday';
+
 // Componente de Botão de Slot de Tempo
 interface TimeSlotButtonProps {
   time: string;
@@ -267,7 +269,11 @@ interface DayAvailabilityCardProps {
   bookedSlotsForDay: string[]; // Slots já agendados para este dia da semana (recorrente)
 }
 
-const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
+const DayAvailabilityCard: React.FC<DayAvailabilityCardProps & {
+  onApplyPreset: (dayOfWeek: number, preset: PresetKey) => void;
+  onCopyToOthers: (dayOfWeek: number) => void;
+  onResetDay: (dayOfWeek: number) => void;
+}> = ({
   dayName,
   dayOfWeek,
   availability,
@@ -276,6 +282,9 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
   onSelectAll,
   onClearSlots,
   bookedSlotsForDay,
+  onApplyPreset,
+  onCopyToOthers,
+  onResetDay,
 }) => {
   const cardAnim = useRef(new Animated.Value(0)).current;
 
@@ -299,6 +308,34 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
           accessibilityLabel={`Ativar ${dayName.toLowerCase()}`}
           accessibilityHint="Alterna disponibilidade para o dia"
         />
+      </View>
+
+      {/* Ações rápidas (presets) */}
+      <View style={styles.quickActionsRow}>
+        <TouchableOpacity
+          style={styles.quickActionChip}
+          onPress={() => onApplyPreset(dayOfWeek, 'morning')}
+          accessibilityRole="button"
+          accessibilityLabel={`Aplicar manhã em ${dayName}`}
+        >
+          <Text style={styles.quickActionText}>Manhã</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.quickActionChip}
+          onPress={() => onApplyPreset(dayOfWeek, 'afternoon')}
+          accessibilityRole="button"
+          accessibilityLabel={`Aplicar tarde em ${dayName}`}
+        >
+          <Text style={styles.quickActionText}>Tarde</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.quickActionChip}
+          onPress={() => onApplyPreset(dayOfWeek, 'fullday')}
+          accessibilityRole="button"
+          accessibilityLabel={`Aplicar dia todo em ${dayName}`}
+        >
+          <Text style={styles.quickActionText}>Dia todo</Text>
+        </TouchableOpacity>
       </View>
 
       {availability.isEnabled && (
@@ -343,6 +380,20 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
               <Ionicons name="trash-outline" size={16} color={Colors.primary} style={styles.actionButtonIcon} accessibilityHidden={true} />
               <Text style={styles.actionButtonSecondaryText}>Limpar</Text>
             </TouchableOpacity>
+            <TouchableOpacity style={styles.actionButtonSecondary} onPress={() => {
+              onCopyToOthers(dayOfWeek);
+              if (Platform.OS === 'ios') Haptics.selectionAsync();
+            }} accessibilityRole="button" accessibilityLabel={`Copiar de ${dayName} para outros dias`}>
+              <Ionicons name="copy-outline" size={16} color={Colors.primary} style={styles.actionButtonIcon} accessibilityHidden={true} />
+              <Text style={styles.actionButtonSecondaryText}>Copiar para...</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionButtonSecondary} onPress={() => {
+              onResetDay(dayOfWeek);
+              if (Platform.OS === 'ios') Haptics.selectionAsync();
+            }} accessibilityRole="button" accessibilityLabel={`Reverter alterações em ${dayName}`}>
+              <Ionicons name="refresh-outline" size={16} color={Colors.primary} style={styles.actionButtonIcon} accessibilityHidden={true} />
+              <Text style={styles.actionButtonSecondaryText}>Reverter</Text>
+            </TouchableOpacity>
           </View>
         </View>
       )}
@@ -367,10 +418,14 @@ export default function ManageAvailabilityScreen() {
   const [specificDateOverrides, setSpecificDateOverrides] = useState<SpecificDateOverride[]>([]);
   const [selectedDateForOverride, setSelectedDateForOverride] = useState<string | null>(null);
   const [bookings, setBookings] = useState<BookingDetails[]>([]);
+  const [activeTab, setActiveTab] = useState<'weekly' | 'overrides'>('weekly');
+  const [copyModalVisible, setCopyModalVisible] = useState(false);
+  const [copyFromDay, setCopyFromDay] = useState<number | null>(null);
+  const [copyTargets, setCopyTargets] = useState<number[]>([]);
 
   const headerAnim = useRef(new Animated.Value(0)).current;
   const contentAnim = useRef(new Animated.Value(0)).current;
-  const saveButtonAnim = useRef(new Animated.Value(0)).current; // For save button animation
+  // Removed save button width animation; using sticky save bar instead
 
   const dayNames = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
 
@@ -498,6 +553,66 @@ export default function ManageAvailabilityScreen() {
     loadData();
   }, [loadData]);
 
+  const applyPresetSlots = (preset: PresetKey): string[] => {
+    if (preset === 'morning') return generateTimeSlots(8, 12, 30);
+    if (preset === 'afternoon') return generateTimeSlots(13, 17, 30);
+    return generateTimeSlots(8, 18, 30);
+  };
+
+  const handleApplyPreset = (dayOfWeek: number, preset: PresetKey) => {
+    setWeeklyAvailability(prev => prev.map(d => {
+      if (d.dayOfWeek !== dayOfWeek) return d;
+      const newSlots = applyPresetSlots(preset);
+      return { ...d, isEnabled: true, selectedSlots: newSlots };
+    }));
+    AccessibilityInfo.announceForAccessibility?.('Preset aplicado');
+  };
+
+  const handleResetDayToOriginal = (dayOfWeek: number) => {
+    setWeeklyAvailability(prev => prev.map(d => {
+      if (d.dayOfWeek !== dayOfWeek) return d;
+      const enabled = (d.originalSlots || []).length > 0;
+      return { ...d, isEnabled: enabled, selectedSlots: d.originalSlots || [] };
+    }));
+  };
+
+  const openCopyModal = (fromDay: number) => {
+    setCopyFromDay(fromDay);
+    setCopyTargets([]);
+    setCopyModalVisible(true);
+  };
+
+  const toggleCopyTarget = (day: number) => {
+    setCopyTargets(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]);
+  };
+
+  const applyCopyToTargets = () => {
+    if (copyFromDay == null) return;
+    const source = weeklyAvailability.find(d => d.dayOfWeek === copyFromDay);
+    if (!source) return;
+    const sourceSlots = source.selectedSlots || [];
+    setWeeklyAvailability(prev => prev.map(d => {
+      if (!copyTargets.includes(d.dayOfWeek) || d.dayOfWeek === copyFromDay) return d;
+      const booked = getBookedSlotsForDay(d.dayOfWeek);
+      const filtered = sourceSlots.filter(s => !booked.includes(s));
+      return { ...d, isEnabled: filtered.length > 0, selectedSlots: filtered };
+    }));
+    setCopyModalVisible(false);
+    setCopyFromDay(null);
+    setCopyTargets([]);
+    AccessibilityInfo.announceForAccessibility?.('Disponibilidade copiada');
+  };
+
+  const pendingChangesCount = useMemo(() => {
+    const weeklyChanges = weeklyAvailability.reduce((acc, d) => {
+      const a = (d.selectedSlots || []).join(',');
+      const b = (d.originalSlots || []).join(',');
+      return acc + (a !== b ? 1 : 0);
+    }, 0);
+    const overridesChanges = specificDateOverrides.length;
+    return weeklyChanges + overridesChanges;
+  }, [weeklyAvailability, specificDateOverrides]);
+
   // Lógica para gerenciar a disponibilidade semanal
   const handleToggleDay = (dayOfWeek: number, isEnabled: boolean) => {
     setWeeklyAvailability(prev =>
@@ -598,13 +713,6 @@ export default function ManageAvailabilityScreen() {
     }
 
     setIsSaving(true);
-    // Animate save button (suave iOS)
-    Animated.timing(saveButtonAnim, {
-      toValue: 1,
-      duration: 400,
-      easing: Easing.in(Easing.ease),
-      useNativeDriver: false, // Must be false for width animation
-    }).start();
 
     try {
       const allAvailabilityUpdates: UpdateAvailabilityData[] = [];
@@ -657,14 +765,7 @@ export default function ManageAvailabilityScreen() {
       Alert.alert('Erro', error.response?.data?.message || 'Não foi possível salvar sua disponibilidade. Tente novamente.');
     } finally {
       setIsSaving(false);
-      Animated.timing(saveButtonAnim, {
-        toValue: 0,
-        duration: 400,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: false,
-      }).start(() => {
-        loadData(); // Recarrega os dados para refletir o estado atualizado após a animação de retorno
-      });
+      loadData();
     }
   };
 
@@ -742,18 +843,7 @@ export default function ManageAvailabilityScreen() {
   }, [specificDateOverrides, selectedDateForOverride]);
 
   // Animated style for save button
-  const saveButtonWidth = saveButtonAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['100%', '50%'], // Shrink to 50% width
-  });
-  const saveButtonOpacity = saveButtonAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, 0], // Text fades out
-  });
-  const saveButtonSpinnerOpacity = saveButtonAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 1], // Spinner fades in
-  });
+  // Removed animated width/opacities for old save button
 
   if (isLoading) {
     return (
@@ -775,123 +865,186 @@ export default function ManageAvailabilityScreen() {
         ]}
       >
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Voltar">
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" accessibilityHidden={true} />
+          <Ionicons name="arrow-back" size={24} color="#2F3A4A" accessibilityHidden={true} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Gerenciar Disponibilidade</Text>
         <View style={styles.headerPlaceholder} />
       </Animated.View>
+
+      {/* Segmented control */}
+      <View style={styles.segmentedControl}>
+        <TouchableOpacity
+          style={[styles.segment, activeTab === 'weekly' && styles.segmentActive]}
+          onPress={() => setActiveTab('weekly')}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeTab === 'weekly' }}
+        >
+          <Text style={[styles.segmentText, activeTab === 'weekly' && styles.segmentTextActive]}>Semanal</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.segment, activeTab === 'overrides' && styles.segmentActive]}
+          onPress={() => setActiveTab('overrides')}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeTab === 'overrides' }}
+        >
+          <Text style={[styles.segmentText, activeTab === 'overrides' && styles.segmentTextActive]}>Exceções</Text>
+        </TouchableOpacity>
+      </View>
 
       <Animated.ScrollView
         style={[styles.scrollContainer, { opacity: contentAnim }]}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Seção de Disponibilidade Semanal Padrão */}
-        <Text style={styles.sectionTitleImproved}>Disponibilidade Semanal Padrão</Text>
-        <InfoCard text="Defina seus horários de trabalho regulares para cada dia da semana. Os agendamentos existentes serão desabilitados." />
-        {weeklyAvailability.map(day => (
-          <DayAvailabilityCard
-            key={day.dayOfWeek}
-            dayName={dayNames[day.dayOfWeek]}
-            dayOfWeek={day.dayOfWeek}
-            availability={day}
-            onToggleDay={handleToggleDay}
-            onToggleSlot={handleToggleSlot}
-            onSelectAll={handleSelectAllSlots}
-            onClearSlots={handleClearSlots}
-            bookedSlotsForDay={getBookedSlotsForDay(day.dayOfWeek)}
-          />
-        ))}
+        {activeTab === 'weekly' && (
+          <>
+            <Text style={styles.sectionTitleImproved}>Disponibilidade Semanal</Text>
+            <InfoCard text="Defina seus horários fixos por dia. Use os presets e copie para acelerar." />
+            {weeklyAvailability.map(day => (
+              <DayAvailabilityCard
+                key={day.dayOfWeek}
+                dayName={dayNames[day.dayOfWeek]}
+                dayOfWeek={day.dayOfWeek}
+                availability={day}
+                onToggleDay={handleToggleDay}
+                onToggleSlot={handleToggleSlot}
+                onSelectAll={handleSelectAllSlots}
+                onClearSlots={handleClearSlots}
+                bookedSlotsForDay={getBookedSlotsForDay(day.dayOfWeek)}
+                onApplyPreset={handleApplyPreset}
+                onCopyToOthers={openCopyModal}
+                onResetDay={handleResetDayToOriginal}
+              />
+            ))}
+          </>
+        )}
 
-        {/* Seção de Exceções de Datas Específicas */}
-        <Text style={styles.sectionTitleImproved}>Exceções de Datas Específicas</Text>
-        <InfoCard text="Sobrescreva sua disponibilidade padrão para dias específicos. Agendamentos já confirmados não podem ser alterados." />
-        <View style={styles.calendarOverrideContainer}>
-          <Calendar
-            onDayPress={handleDayPressOnCalendar}
-            markedDates={markedDates} // Use the memoized markedDates
-            theme={calendarTheme} // CORREÇÃO: Removido 'as Theme' (agora tipado corretamente pela interface local)
-            style={styles.calendarOverrideStyle}
-            accessibilityLabel="Calendário para exceções de datas"
-            accessibilityHint="Selecione uma data para configurar exceção"
-          />
-          {selectedDateForOverride && (
-            <View style={styles.overrideOptionsCard}> {/* Apply card style here */}
-              <Text style={styles.overrideTitle}>Opções para {selectedDateForOverride}</Text>
+        {activeTab === 'overrides' && (
+          <>
+            <Text style={styles.sectionTitleImproved}>Exceções de Datas</Text>
+            <InfoCard text="Selecione uma data no calendário para bloquear ou definir horários personalizados." />
+            <View style={styles.calendarOverrideContainer}>
+              <Calendar
+                onDayPress={handleDayPressOnCalendar}
+                markedDates={markedDates} // Use the memoized markedDates
+                theme={calendarTheme} // CORREÇÃO: Removido 'as Theme' (agora tipado corretamente pela interface local)
+                style={styles.calendarOverrideStyle}
+                accessibilityLabel="Calendário para exceções de datas"
+                accessibilityHint="Selecione uma data para configurar exceção"
+              />
+              {selectedDateForOverride && (
+                <View style={styles.overrideOptionsCard}> {/* Apply card style here */}
+                  <Text style={styles.overrideTitle}>Opções para {selectedDateForOverride}</Text>
 
-              {/* Display quick summary of custom slots if type is custom */}
-              {currentOverride?.type === 'custom' && currentOverride.selectedSlots && currentOverride.selectedSlots.length > 0 && (
-                <Text style={styles.customSlotsSummary}>
-                  Horários selecionados: {currentOverride.selectedSlots.slice(0, 3).join(', ')}
-                  {currentOverride.selectedSlots.length > 3 ? ` e mais ${currentOverride.selectedSlots.length - 3}` : ''}
-                </Text>
-              )}
-              {currentOverride?.type === 'blocked' && (
-                <Text style={styles.blockedDayBadge}>🔴 Dia Bloqueado</Text>
-              )}
+                  {/* Display quick summary of custom slots if type is custom */}
+                  {currentOverride?.type === 'custom' && currentOverride.selectedSlots && currentOverride.selectedSlots.length > 0 && (
+                    <Text style={styles.customSlotsSummary}>
+                      Horários selecionados: {currentOverride.selectedSlots.slice(0, 3).join(', ')}
+                      {currentOverride.selectedSlots.length > 3 ? ` e mais ${currentOverride.selectedSlots.length - 3}` : ''}
+                    </Text>
+                  )}
+                  {currentOverride?.type === 'blocked' && (
+                    <Text style={styles.blockedDayBadge}>🔴 Dia Bloqueado</Text>
+                  )}
 
-              <TouchableOpacity
-                style={[styles.overrideButton, currentOverride?.type === 'blocked' && styles.overrideButtonSelected]}
-                onPress={() => handleSetOverrideType('blocked')}
-                activeOpacity={0.92}
-                accessibilityRole="button"
-                accessibilityLabel="Bloquear dia inteiro"
-              >
-                <Text style={[styles.overrideButtonText, currentOverride?.type === 'blocked' && styles.overrideButtonTextSelected]}>Bloquear Dia Inteiro</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.overrideButton, currentOverride?.type === 'custom' && styles.overrideButtonSelected]}
-                onPress={() => handleSetOverrideType('custom')}
-                activeOpacity={0.92}
-                accessibilityRole="button"
-                accessibilityLabel="Definir horários personalizados"
-              >
-                <Text style={[styles.overrideButtonText, currentOverride?.type === 'custom' && styles.overrideButtonTextSelected]}>Definir Horários Personalizados</Text>
-              </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.overrideButton, currentOverride?.type === 'blocked' && styles.overrideButtonSelected]}
+                    onPress={() => handleSetOverrideType('blocked')}
+                    activeOpacity={0.92}
+                    accessibilityRole="button"
+                    accessibilityLabel="Bloquear dia inteiro"
+                  >
+                    <Text style={[styles.overrideButtonText, currentOverride?.type === 'blocked' && styles.overrideButtonTextSelected]}>Bloquear Dia Inteiro</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.overrideButton, currentOverride?.type === 'custom' && styles.overrideButtonSelected]}
+                    onPress={() => handleSetOverrideType('custom')}
+                    activeOpacity={0.92}
+                    accessibilityRole="button"
+                    accessibilityLabel="Definir horários personalizados"
+                  >
+                    <Text style={[styles.overrideButtonText, currentOverride?.type === 'custom' && styles.overrideButtonTextSelected]}>Definir Horários Personalizados</Text>
+                  </TouchableOpacity>
 
-              {currentOverride?.type === 'custom' && (
-                <View style={styles.timeSlotGrid}>
-                  {ALL_POSSIBLE_SLOTS.map(slot => (
-                    <TimeSlotButton
-                      key={slot}
-                      time={slot}
-                      isSelected={(currentOverride.selectedSlots || []).includes(slot)}
-                      onPress={handleToggleOverrideSlot}
-                      isBooked={getBookedSlotsForSpecificDate(selectedDateForOverride).includes(slot)}
-                    />
-                  ))}
+                  {currentOverride?.type === 'custom' && (
+                    <View style={styles.timeSlotGrid}>
+                      {ALL_POSSIBLE_SLOTS.map(slot => (
+                        <TimeSlotButton
+                          key={slot}
+                          time={slot}
+                          isSelected={(currentOverride.selectedSlots || []).includes(slot)}
+                          onPress={handleToggleOverrideSlot}
+                          isBooked={getBookedSlotsForSpecificDate(selectedDateForOverride).includes(slot)}
+                        />
+                      ))}
+                    </View>
+                  )}
+                  {currentOverride && (
+                    <TouchableOpacity style={styles.clearOverrideButton} onPress={handleClearOverride} activeOpacity={0.92} accessibilityRole="button" accessibilityLabel="Remover exceção">
+                      <Text style={styles.clearOverrideButtonText}>Remover Exceção para este Dia</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               )}
-              {currentOverride && (
-                <TouchableOpacity style={styles.clearOverrideButton} onPress={handleClearOverride} activeOpacity={0.92} accessibilityRole="button" accessibilityLabel="Remover exceção">
-                  <Text style={styles.clearOverrideButtonText}>Remover Exceção para este Dia</Text>
-                </TouchableOpacity>
-              )}
             </View>
-          )}
-        </View>
+          </>
+        )}
+      </Animated.ScrollView>
 
+      {/* Sticky Save Bar */}
+      <View style={styles.stickySaveBar} accessibilityRole="summary">
+        <Text style={styles.stickySummaryText}>
+          {pendingChangesCount > 0 ? `${pendingChangesCount} alterações pendentes` : 'Tudo salvo'}
+        </Text>
         <TouchableOpacity
-          style={[styles.saveButton, { width: saveButtonWidth }]}
+          style={[styles.stickySaveButton, (isSaving || pendingChangesCount === 0) && styles.stickySaveButtonDisabled]}
           onPress={handleSaveAvailability}
-          disabled={isSaving}
+          disabled={isSaving || pendingChangesCount === 0}
           activeOpacity={0.92}
           accessibilityRole="button"
-          accessibilityLabel="Salvar todas as alterações"
-          accessibilityHint="Confirma e salva configurações de disponibilidade"
+          accessibilityLabel="Salvar alterações"
         >
           {isSaving ? (
-            <Animated.View style={{ opacity: saveButtonSpinnerOpacity, position: 'absolute' }}>
-              <ActivityIndicator color="#FFFFFF" size="small" />
-            </Animated.View>
+            <ActivityIndicator color="#FFFFFF" size="small" />
           ) : (
-            <Animated.View style={[styles.saveButtonContent, { opacity: saveButtonOpacity }]}>
-              <MaterialCommunityIcons name="content-save" size={20} color="#FFFFFF" style={styles.saveButtonIcon} accessibilityHidden={true} />
-              <Text style={styles.saveButtonText}>Salvar Todas as Alterações</Text>
-            </Animated.View>
+            <View style={styles.saveButtonContent}>
+              <MaterialCommunityIcons name="content-save" size={18} color="#FFFFFF" style={styles.saveButtonIcon} accessibilityHidden={true} />
+              <Text style={styles.stickySaveButtonText}>Salvar</Text>
+            </View>
           )}
         </TouchableOpacity>
-      </Animated.ScrollView>
+      </View>
+
+      {/* Copy Modal */}
+      {copyModalVisible && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Copiar disponibilidade para</Text>
+            <View style={styles.modalChipsRow}>
+              {dayNames.map((label, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  style={[styles.modalChip, copyTargets.includes(idx) && styles.modalChipActive, copyFromDay === idx && styles.modalChipDisabled]}
+                  onPress={() => copyFromDay !== idx && toggleCopyTarget(idx)}
+                  disabled={copyFromDay === idx}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Selecionar ${label}`}
+                >
+                  <Text style={[styles.modalChipText, copyTargets.includes(idx) && styles.modalChipTextActive]}>{label.replace('-feira','')}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={[styles.modalButton, styles.modalCancel]} onPress={() => setCopyModalVisible(false)}>
+                <Text style={styles.modalButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modalButton, styles.modalConfirm]} onPress={applyCopyToTargets}>
+                <Text style={[styles.modalButtonText, styles.modalConfirmText]}>Aplicar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -905,22 +1058,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Colors.primary,
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 18,
-    paddingVertical: Platform.OS === 'ios' ? 15 : 20,
-    paddingTop: Platform.OS === 'ios' ? 55 : 20,
-    // iOS Premium Shadow
+    paddingVertical: Platform.OS === 'ios' ? 18 : 18,
+    paddingTop: Platform.OS === 'ios' ? 55 : 18,
+    // iOS Premium Shadow (sutil)
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.15,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.06,
         shadowRadius: 12,
       },
-      android: { elevation: 10 },
+      android: { elevation: 4 },
     }),
-    borderBottomLeftRadius: Radii.xl,
-    borderBottomRightRadius: Radii.xl,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
   },
   backButton: {
     padding: Spacing.sm + 2, // Confortável iOS
@@ -929,13 +1082,39 @@ const styles = StyleSheet.create({
     fontSize: 20,
     left: 6,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#2F3A4A',
     flex: 1,
     textAlign: 'center',
     fontFamily: Platform.OS === 'ios' ? 'SFProDisplay-Semibold' : 'System',
   },
   headerPlaceholder: {
     width: 28 + Spacing.sm * 2,
+  },
+  segmentedControl: {
+    flexDirection: 'row',
+    marginHorizontal: Spacing.md + 2,
+    marginTop: Spacing.sm,
+    backgroundColor: Colors.fieldBg,
+    padding: 4,
+    borderRadius: Radii.pill,
+    alignSelf: 'center',
+  },
+  segment: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: Radii.pill,
+    alignItems: 'center',
+  },
+  segmentActive: {
+    backgroundColor: Colors.surface,
+    ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6 }, android: { elevation: 3 } }),
+  },
+  segmentText: {
+    color: Colors.textMuted,
+    fontWeight: '600',
+  },
+  segmentTextActive: {
+    color: Colors.primaryDark,
   },
   scrollContainer: {
     flex: 1,
@@ -1006,6 +1185,24 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: Spacing.md,
+  },
+  quickActionsRow: {
+    flexDirection: 'row',
+    marginBottom: Spacing.sm,
+  },
+  quickActionChip: {
+    backgroundColor: Colors.fieldBg,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: Radii.pill,
+    marginRight: Spacing.xs,
+    borderWidth: 0.5,
+    borderColor: Colors.border,
+  },
+  quickActionText: {
+    color: Colors.text,
+    fontWeight: '600',
+    fontSize: 13,
   },
   dayName: {
     fontSize: 17,
@@ -1096,6 +1293,40 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     fontFamily: Platform.OS === 'ios' ? 'SFProText-Medium' : 'System',
+  },
+  stickySaveBar: {
+    position: 'absolute',
+    left: Spacing.md,
+    right: Spacing.md,
+    bottom: Spacing.md + 4,
+    backgroundColor: Colors.surface,
+    borderRadius: Radii.pill,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    paddingHorizontal: Spacing.md,
+    ...Platform.select({ ios: { shadowColor: Colors.shadow, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.12, shadowRadius: 16 }, android: { elevation: 10 } }),
+  },
+  stickySummaryText: {
+    color: Colors.textMuted,
+    fontSize: 14,
+  },
+  stickySaveButton: {
+    backgroundColor: Colors.primary,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: Radii.pill,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  stickySaveButtonDisabled: {
+    backgroundColor: '#9BBCEB',
+  },
+  stickySaveButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    marginLeft: 6,
   },
   calendarOverrideContainer: {
     backgroundColor: Colors.surface,
@@ -1196,25 +1427,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: Platform.OS === 'ios' ? 'SFProText-Semibold' : 'System',
   },
-  saveButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: Radii.pill,
-    paddingVertical: Spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: Spacing.lg,
-    alignSelf: 'center',
-    // iOS Premium Shadow
-    ...Platform.select({
-      ios: {
-        shadowColor: Colors.primary,
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.3,
-        shadowRadius: 12,
-      },
-      android: { elevation: 10 },
-    }),
-  },
   saveButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1223,11 +1435,79 @@ const styles = StyleSheet.create({
   saveButtonIcon: {
     marginRight: Spacing.xs,
   },
-  saveButtonText: {
-    color: '#FFFFFF',
-    fontSize: 19,
+  // Modal
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'flex-end',
+    padding: Spacing.md,
+  },
+  modalCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: Radii.md,
+    padding: Spacing.md,
+    ...Platform.select({ ios: { shadowColor: Colors.shadow, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 18 }, android: { elevation: 12 } }),
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.text,
+    marginBottom: Spacing.sm,
+  },
+  modalChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: Spacing.md,
+  },
+  modalChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: Radii.pill,
+    backgroundColor: Colors.fieldBg,
+    margin: 6,
+    borderWidth: 0.5,
+    borderColor: Colors.border,
+  },
+  modalChipActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  modalChipDisabled: {
+    opacity: 0.4,
+  },
+  modalChipText: {
+    color: Colors.text,
     fontWeight: '600',
-    fontFamily: Platform.OS === 'ios' ? 'SFProText-Semibold' : 'System',
+  },
+  modalChipTextActive: {
+    color: '#fff',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  modalButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: Radii.pill,
+    marginLeft: Spacing.sm,
+  },
+  modalCancel: {
+    backgroundColor: Colors.fieldBg,
+  },
+  modalConfirm: {
+    backgroundColor: Colors.primary,
+  },
+  modalButtonText: {
+    color: Colors.text,
+    fontWeight: '700',
+  },
+  modalConfirmText: {
+    color: '#fff',
   },
   centeredFeedback: {
     flex: 1,
