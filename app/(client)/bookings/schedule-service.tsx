@@ -1093,10 +1093,21 @@ export default function ScheduleServiceScreen() {
 
             const occupiedTimesFromBackend: string[] = backendResponse.occupiedTimes || [];
 
+            // Determine required duration based on selected service/pricing
+            let requiredDurationMin: number | null = null;
+            if (selectedProviderService) {
+                if (selectedProviderService.pricingType === PricingType.HOURLY && durationInMinutes) {
+                    requiredDurationMin = durationInMinutes;
+                } else if (selectedProviderService.pricingType !== PricingType.BY_SIZE && selectedProviderService.durationMinutes) {
+                    requiredDurationMin = selectedProviderService.durationMinutes;
+                }
+            }
+
             const finalDisplaySlots = generateDailySlots(
                 safeSelectedDate,
                 providerConfiguredSlots,
-                occupiedTimesFromBackend
+                occupiedTimesFromBackend,
+                requiredDurationMin
             );
 
             const hasRealAvailableSlots = finalDisplaySlots.some(slot => slot.isAvailable);
@@ -1164,7 +1175,8 @@ export default function ScheduleServiceScreen() {
                                 const searchSlots = generateDailySlots(
                                     searchDate,
                                     searchResponse?.available || [],
-                                    searchResponse?.occupiedTimes || []
+                                    searchResponse?.occupiedTimes || [],
+                                    requiredDurationMin
                                 );
 
                                 if (searchSlots.some(slot => slot.isAvailable)) {
@@ -1234,7 +1246,19 @@ export default function ScheduleServiceScreen() {
         return () => {
             isCancelled = true;
         };
-    }, [selectedDate, provider?.id, prefetchAvailability, t, fadeAnim, scaleAnim]);
+    }, [
+        selectedDate,
+        provider?.id,
+        // Recompute slots when service or required duration changes
+        selectedProviderService?.id,
+        selectedProviderService?.pricingType,
+        selectedProviderService?.durationMinutes,
+        durationInMinutes,
+        prefetchAvailability,
+        t,
+        fadeAnim,
+        scaleAnim,
+    ]);
 
     const isNextButtonDisabled = useMemo(() => {
         if (currentStep === 1) {
