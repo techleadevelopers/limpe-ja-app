@@ -40,9 +40,11 @@ export const PROVIDER_ROUTES = {
   PROFILE: '/(provider)/profile', // CORRIGIDO: Adicionado /(provider)
   EDIT_SERVICES: '/(provider)/profile/edit-services', // CORRIGIDO: Adicionado /(provider)
   VERIFICATION: '/(provider)/verify-account', // CORRIGIDO: Adicionado /(provider)
-  BOOKINGS_LIST: '/(provider)/bookings', // CORRIGIDO: Adicionado /(provider)
+  // Atualizado: app usa 'active-booking' no grupo do provedor
+  BOOKINGS_LIST: '/(provider)/active-booking',
+  ACTIVE_BOOKING: '/(provider)/active-booking',
   WITHDRAW: '/(provider)/withdraw', // Já estava correto
-  REVIEWS: '/(provider)/reviews/index', // Adicionado/Corrigido com base no erro de tipagem
+  REVIEWS: '/(provider)/reviews', // Correção: 'index' não faz parte do caminho
 } as const;
 
 export const COMMON_ROUTES = {
