@@ -237,6 +237,14 @@ export default function ProviderConversationsListScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       <Animated.View style={[styles.mainHeader, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.headerBackIcon}
+          accessibilityRole="button"
+          accessibilityLabel="Voltar"
+        >
+          <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+        </TouchableOpacity>
         <View style={styles.topRow}>
           <Text style={styles.greetingText}>Olá, {loggedInUserName}</Text>
           <View style={styles.headerIcons}>
@@ -356,6 +364,13 @@ const styles = StyleSheet.create({
   },
   activeTabButtonText: {
     color: '#4A90E2', // Alterado para o azul principal do perfil
+  },
+  headerBackIcon: {
+    position: 'absolute',
+    left: 15,
+    padding: 6,
+    top: Platform.OS === 'ios' ? 47 : 17,
+    zIndex: 2,
   },
   listContentContainer: {
     paddingTop: 10,
