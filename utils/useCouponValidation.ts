@@ -4,7 +4,8 @@ import { Animated, Easing } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import NotificationUIService from '../services/notificationUIService';
-import { applyCoupon } from '../services/clientService';
+import { applyCoupon as applyCouponToBooking } from '../services/clientService';
+import { applyCoupon as applyCouponGlobal } from '../services/couponService';
 import { formatBRL } from '../utils/formatters';
 import { AppColors, AppDurations } from '../constants/appStyles';
 
@@ -20,7 +21,18 @@ interface UseCouponValidationResult {
     handleApplyCoupon: () => Promise<void>;
 }
 
-export const useCouponValidation = (initialCouponCode?: string): UseCouponValidationResult => {
+type CouponBookingData = {
+    originalPrice?: number;
+    clientId?: string;
+    providerServiceId?: string;
+    providerId?: string;
+    scheduledDate?: string;
+};
+
+export const useCouponValidation = (
+    initialCouponCode?: string,
+    opts?: { bookingId?: string; bookingData?: CouponBookingData }
+): UseCouponValidationResult => {
     const { t } = useTranslation();
 
     const [couponCode, setCouponCode] = useState<string>(initialCouponCode || '');
@@ -40,14 +52,22 @@ export const useCouponValidation = (initialCouponCode?: string): UseCouponValida
         couponFeedbackAnim.setValue(0); // Reset animation before starting
 
         try {
-            // ATENÇÃO: mockBookingId é usado aqui para validação de cupom.
-            // Em um cenário real, você precisaria de um bookingId temporário (rascunho)
-            // ou um endpoint de backend que valide o cupom sem a necessidade de um bookingId existente.
-            // A recomendação é criar um endpoint POST /coupons/validate { code } no backend.
-            const mockBookingId = 'mock-booking-id-for-coupon-validation';
+            let newDiscount = 0;
 
-            const result = await applyCoupon(mockBookingId, couponCode);
-            const newDiscount = result.discountValue || 0;
+            if (opts?.bookingId) {
+                const result = await applyCouponToBooking(opts.bookingId, couponCode);
+                newDiscount = result.discountValue || 0;
+            } else if (opts?.bookingData) {
+                const result = await applyCouponGlobal({ code: couponCode, bookingData: opts.bookingData });
+                newDiscount = result.discountValue || 0;
+            } else {
+                NotificationUIService.showInfo(
+                    t('offers.coupon_requires_context', 'Informe o agendamento para validar o cupom.'),
+                    t('common.info')
+                );
+                setIsApplyingCoupon(false);
+                return;
+            }
 
             setDiscountAmount(newDiscount);
             setCouponFeedbackColor(AppColors.successStandard);
