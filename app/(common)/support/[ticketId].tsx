@@ -107,7 +107,7 @@ export default function TicketDetailsScreen() {
      * @returns {'right' | 'left'} Alignment string.
      */
     const getMessageAlignment = (message: SupportMessage) => {
-        return user?.id && message.senderId === user.id ? 'right' : 'left';
+        return user?.id && message.userId === user.id ? 'right' : 'left';
     };
 
     /**
@@ -116,7 +116,7 @@ export default function TicketDetailsScreen() {
      * @returns {object} StyleSheet style object.
      */
     const getMessageBubbleStyle = (message: SupportMessage) => {
-        return user?.id && message.senderId === user.id ? styles.myMessageBubble : styles.otherMessageBubble;
+        return user?.id && message.userId === user.id ? styles.myMessageBubble : styles.otherMessageBubble;
     };
 
     /**
@@ -125,7 +125,7 @@ export default function TicketDetailsScreen() {
      * @returns {object} StyleSheet style object.
      */
     const getMessageTextStyle = (message: SupportMessage) => {
-        return user?.id && message.senderId === user.id ? styles.myMessageText : styles.otherMessageText;
+        return user?.id && message.userId === user.id ? styles.myMessageText : styles.otherMessageText;
     };
 
     if (loading) {
@@ -189,7 +189,7 @@ export default function TicketDetailsScreen() {
                                 <Text style={[styles.messageSender, getMessageAlignment(msg) === 'right' ? { color: '#FFFFFF' } : { color: '#4A90E2' }]}>
                                     {msg.senderType === 'client' && msg.senderId === user?.id ? 'Você' : (msg.senderType === 'admin' ? 'Suporte' : 'Provedor')}
                                 </Text>
-                                <Text style={getMessageTextStyle(msg)}>{msg.content}</Text>
+                                <Text style={getMessageTextStyle(msg)}>{msg.body}</Text>
                                 <Text style={[styles.messageTime, getMessageAlignment(msg) === 'right' ? { color: 'rgba(255,255,255,0.7)' } : { color: '#A0A0A0' }]}>
                                     {safeFormatDate(msg.createdAt, { timeOnly: true })}
                                 </Text>
