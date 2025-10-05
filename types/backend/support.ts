@@ -27,6 +27,10 @@ export interface SupportMessage {
   body: string;
   attachments?: string[];
   createdAt: string;
+  // Backward-compat optional fields used by some views; do not rely on them
+  senderId?: string;
+  senderType?: 'client' | 'provider' | 'admin';
+  content?: string;
 }
 
 export interface CreateTicketPayload {
