@@ -18,20 +18,19 @@ import {
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ColorValue } from 'react-native'; // ADICIONADO: Para tipagem explícita de cores no LinearGradient
 
-// Importar utilitários de formatação e normalização
 import { formatPriceBRL, formatDateTime, sanitizeText } from '../../../utils/formatters';
 import { normalizeBooking } from '../../../utils/normalize';
 
-// --- IMPORTAÇÕES DE SERVIÇOS E TIPAGENS DO SEU BACKEND REAL ---
 import { cancelBooking, getBookingDetails } from '../../../services/bookingService';
 
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 import { AppColors, AppShadows } from '../../../constants/appStyles';
 
-// ✅ CORREÇÃO: Type guards para narrowing de BookingStatus (resolve warnings de "sempre verdadeiro" em condições)
-// Cada guard retorna true/false e narrow o tipo para o literal específico
+// Animated version of LinearGradient to support animated transforms without UI changes
+const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient as any);
+
+// Type guards
 const isCancellableStatus = (status: BookingStatus): status is BookingStatus.CONFIRMED | BookingStatus.PENDING => {
   return status === BookingStatus.CONFIRMED || status === BookingStatus.PENDING;
 };
@@ -40,10 +39,8 @@ const isCompletedStatus = (status: BookingStatus): status is BookingStatus.COMPL
   return status === BookingStatus.COMPLETED;
 };
 
-// Função unificada para renderizar avatar REAL (inspirada na ProviderBrief) - Integração premium
-// ALINHADO: Mesma de index.tsx e explore/[providerId].tsx
+// Avatar renderer
 const renderProviderAvatar = (avatarUrl?: string | null, size: number = 80) => {
-  // Debug: Log para ver o que vem do backend
   if (__DEV__) console.log('Avatar URL (booking details):', avatarUrl);
 
   if (!avatarUrl || avatarUrl === '') {
@@ -58,13 +55,12 @@ const renderProviderAvatar = (avatarUrl?: string | null, size: number = 80) => {
       source={{ uri: avatarUrl }}
       style={[styles.providerImage, { width: size, height: size, borderRadius: size / 2 }]}
       resizeMode="cover"
-      onError={(e) => __DEV__ && console.log('Erro carregando avatar real (details):', e.nativeEvent.error)}
+      onError={(e) => __DEV__ && console.log('Erro carregando avatar real (details):', (e as any).nativeEvent?.error || e)}
       onLoad={() => __DEV__ && console.log('Avatar real carregado no details!')}
     />
   );
 };
 
-// CORREÇÃO TS: Definição de gradients como tuples readonly (as const) para compatibilidade com ColorValue[]
 const gradients = {
   confirmed: ['#D4EDDA', '#C3E6CB'] as const,
   pending: ['#FFF3CD', '#FFEAA7'] as const,
@@ -72,7 +68,7 @@ const gradients = {
   completed: ['#F8F9FA', '#E9ECEF'] as const,
   cancelled: ['#F8D7DA', '#F1B0B7'] as const,
   other: ['#E2E3E5', '#DEE2E6'] as const,
-  rescheduled: ['#EAE6F3', '#D7CFF0'] as const, // Adicionado para RESCHEDULED
+  rescheduled: ['#EAE6F3', '#D7CFF0'] as const,
 } as const;
 
 export default function BookingDetailsScreen() {
@@ -118,10 +114,8 @@ export default function BookingDetailsScreen() {
     );
     loop.start();
     return loop;
-  }, []); // CORREÇÃO: Dependências vazias, sem redundâncias
+  }, []);
 
-  // ALINHADO: fetchBooking com normalize e debug de avatar (como em explore/[providerId].tsx)
-  // CORREÇÃO: Removidas verificações redundantes (sempre true) em try/catch
   const fetchBooking = useCallback(async () => {
     if (!bookingId) {
       setError('ID do agendamento não fornecido.');
@@ -132,10 +126,9 @@ export default function BookingDetailsScreen() {
     setError(null);
     try {
       const rawData = await getBookingDetails(bookingId);
-      const data = normalizeBooking(rawData); // Garante providerAvatarUrl = rawData.provider?.avatarUrl
+      const data = normalizeBooking(rawData);
       setBooking(data);
 
-      // Debug integrado: Log do avatar após normalize (alinhado com index.tsx)
       if (__DEV__) console.log('Booking details carregado - Avatar URL:', data.providerAvatarUrl);
 
       Animated.stagger(150, [
@@ -160,11 +153,11 @@ export default function BookingDetailsScreen() {
       ]).start();
     } catch (err: any) {
       console.error('[BookingDetailsScreen] Erro ao buscar detalhes do agendamento:', err);
-      setError(sanitizeText(err.message || 'Não foi possível carregar os detalhes do agendamento.'));
+      setError(sanitizeText(err?.message || 'Não foi possível carregar os detalhes do agendamento.'));
     } finally {
       setIsLoading(false);
     }
-  }, [bookingId]); // CORREÇÃO: Dependências limpas (anims removidas de deps para evitar loop)
+  }, [bookingId, providerSectionAnim, detailsCardAnim, actionsCardAnim]);
 
   useEffect(() => {
     fetchBooking();
@@ -184,7 +177,7 @@ export default function BookingDetailsScreen() {
       clearTimeout(detailsTimeout);
       clearTimeout(actionsTimeout);
     };
-  }, [fetchBooking]); // CORREÇÃO: Dependências sem redundâncias (anims não causam re-run)
+  }, [fetchBooking, providerFloatAnim, detailsFloatAnim, actionsFloatAnim, createAndStartFloatAnimation]);
 
   const onPressInButton = (animValue: Animated.Value) => {
     Animated.spring(animValue, {
@@ -222,7 +215,7 @@ export default function BookingDetailsScreen() {
               setBooking((prev) => (prev ? { ...prev, status: BookingStatus.CANCELLED } : null));
             } catch (err: any) {
               console.error('[BookingDetailsScreen] Erro ao cancelar agendamento:', err);
-              Alert.alert('Erro', sanitizeText(err.message || 'Não foi possível cancelar o agendamento.'));
+              Alert.alert('Erro', sanitizeText(err?.message || 'Não foi possível cancelar o agendamento.'));
             } finally {
               setIsLoading(false);
             }
@@ -288,18 +281,17 @@ export default function BookingDetailsScreen() {
         },
       ]
     );
-  }, []); // CORREÇÃO: Dependências vazias, sem redundâncias
+  }, []);
 
-  // CORREÇÃO TS: getStatusStyle com retorno tipado (gradient como readonly string[])
   const getStatusStyle = (status: BookingStatus) => {
     switch (status) {
       case BookingStatus.CONFIRMED:
         return {
           text: 'CONFIRMADO',
           color: AppColors.successStandard,
-          gradient: gradients.confirmed, // Tuple readonly compatível
+          gradient: gradients.confirmed,
           icon: 'checkmark-circle-outline' as const,
-          badgeBg: gradients.confirmed, // badgeBg também compatível
+          badgeBg: gradients.confirmed,
         };
       case BookingStatus.PENDING:
         return {
@@ -353,7 +345,7 @@ export default function BookingDetailsScreen() {
         return {
           text: 'REAGENDADO',
           color: '#6F42C1',
-          gradient: gradients.rescheduled, // Usando o novo tuple
+          gradient: gradients.rescheduled,
           icon: 'sync-outline' as const,
           badgeBg: gradients.rescheduled,
         };
@@ -381,11 +373,25 @@ export default function BookingDetailsScreen() {
       <View style={[styles.centered, { paddingTop: Platform.OS === 'ios' ? insets.top + 20 : 20 }]}>
         <Stack.Screen
           options={{
-            title: 'Carregando...', // CORRIGIDO: Título visível com fallback de font
+            title: 'Carregando...',
+            headerTitleAlign: 'center',
             headerTitleStyle: { fontFamily: 'Montserrat-SemiBold' || 'System', fontSize: 20, color: AppColors.textBody },
             headerStyle: { backgroundColor: AppColors.white },
-            headerTintColor: AppColors.primaryInteractive,
             headerShadowVisible: false,
+            headerBackTitleVisible: false,
+            headerTintColor: AppColors.primaryInteractive,
+            headerLeft: () => (
+              <TouchableOpacity
+                onPress={() => router.back()}
+                style={{ paddingVertical: 10, paddingHorizontal: 12 }}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Voltar"
+              >
+                <Ionicons name="arrow-back" size={24} color={AppColors.primaryInteractive} />
+              </TouchableOpacity>
+            ),
           }}
         />
         <ActivityIndicator size="large" color={AppColors.primaryInteractive} />
@@ -401,11 +407,25 @@ export default function BookingDetailsScreen() {
       <View style={[styles.centered, { paddingTop: Platform.OS === 'ios' ? insets.top + 20 : 20 }]}>
         <Stack.Screen
           options={{
-            title: 'Erro', // CORRIGIDO: Título visível
+            title: 'Erro',
+            headerTitleAlign: 'center',
             headerTitleStyle: { fontFamily: 'Montserrat-SemiBold' || 'System', fontSize: 20, color: AppColors.textBody },
             headerStyle: { backgroundColor: AppColors.white },
-            headerTintColor: AppColors.primaryInteractive,
             headerShadowVisible: false,
+            headerBackTitleVisible: false,
+            headerTintColor: AppColors.primaryInteractive,
+            headerLeft: () => (
+              <TouchableOpacity
+                onPress={() => router.back()}
+                style={{ paddingVertical: 10, paddingHorizontal: 12 }}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Voltar"
+              >
+                <Ionicons name="arrow-back" size={24} color={AppColors.primaryInteractive} />
+              </TouchableOpacity>
+            ),
           }}
         />
         <Ionicons name="alert-circle-outline" size={48} color={AppColors.errorRed} />
@@ -424,31 +444,38 @@ export default function BookingDetailsScreen() {
   const isReviewed = !!booking.reviewId;
   const statusInfo = getStatusStyle(booking.status);
 
-  // Log para debug avatar no detalhes (alinhado com index.tsx)
-  console.log('[BookingDetails] Provider Avatar URL:', booking.providerAvatarUrl);
+  // Debug
+  if (__DEV__) console.log('[BookingDetails] Provider Avatar URL:', booking.providerAvatarUrl);
 
   return (
     <ScrollView
-      style={[
-        styles.scrollViewContainer,
-        { paddingTop: Platform.OS === 'ios' ? insets.top + 10 : 10, paddingBottom: insets.bottom + 20 },
-      ]}
+      style={[styles.scrollViewContainer, { paddingTop: Platform.OS === 'ios' ? insets.top + 10 : 10, paddingBottom: insets.bottom + 20 }]}
     >
       <Stack.Screen
         options={{
-          title: `Detalhes do Serviço`, // CORRIGIDO: Título explícito e visível com fallback
-          headerTitleStyle: { 
-            fontFamily: 'Montserrat-SemiBold' || 'System', 
-            fontSize: 20, 
-            color: AppColors.textBody 
-          },
+          title: 'Detalhes do Agendamento',
+          headerShown: true,
+          headerTitleAlign: 'center',
+          headerTitleStyle: { fontFamily: 'Montserrat-SemiBold' || 'System', fontSize: 20, color: AppColors.textBody },
           headerStyle: { backgroundColor: AppColors.white },
-          headerTintColor: AppColors.primaryInteractive,
           headerShadowVisible: false,
+          headerBackTitleVisible: false,
+          headerTintColor: AppColors.primaryInteractive,
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={{ paddingVertical: 10, paddingHorizontal: 12 }}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Voltar"
+            >
+              <Ionicons name="arrow-back" size={24} color={AppColors.primaryInteractive} />
+            </TouchableOpacity>
+          ),
         }}
       />
 
-      {/* Card superior: Avatar real + infos + badge alinhado à direita (match print) */}
       <Animated.View
         style={[
           styles.card,
@@ -465,16 +492,13 @@ export default function BookingDetailsScreen() {
       >
         <BlurView intensity={Platform.OS === 'ios' ? 20 : 40} tint="light" style={StyleSheet.absoluteFillObject} />
         <LinearGradient
-          colors={['#F9FBFF', '#E6F0FF'] as const} // CORREÇÃO: as const para compatibilidade TS
+          colors={['#F9FBFF', '#E6F0FF'] as const}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFillObject}
         />
         <View style={styles.providerSection}>
-          {/* Avatar grande real à esquerda (80px, borda premium) - CORRIGIDO: Usa providerAvatarUrl alinhado */}
           {renderProviderAvatar(booking.providerAvatarUrl, 80)}
-
-          {/* Infos no centro (serviço + nome, como no print) */}
           <View style={styles.providerInfo}>
             <Text style={styles.serviceNameText} numberOfLines={2}>
               {sanitizeText(booking.serviceName)}
@@ -483,10 +507,8 @@ export default function BookingDetailsScreen() {
               com {sanitizeText(booking.providerFullName)}
             </Text>
           </View>
-
-          {/* Badge de status à direita (verde CONFIRMADO no print) - CORREÇÃO: colors agora é tuple compatível */}
           <LinearGradient
-            colors={statusInfo.gradient} // TS aceita como readonly string[]
+            colors={statusInfo.gradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.statusBadge}
@@ -499,7 +521,6 @@ export default function BookingDetailsScreen() {
         </View>
       </Animated.View>
 
-      {/* Card intermediário: Detalhes (data, endereço, preço - grid como print) */}
       <Animated.View
         style={[
           styles.card,
@@ -515,12 +536,12 @@ export default function BookingDetailsScreen() {
       >
         <BlurView intensity={Platform.OS === 'ios' ? 20 : 40} tint="light" style={StyleSheet.absoluteFillObject} />
         <LinearGradient
-          colors={['#F9FBFF', '#E6F0FF'] as const} // CORREÇÃO: as const para compatibilidade TS
+          colors={['#F9FBFF', '#E6F0FF'] as const}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFillObject}
         />
-        {/* CORREÇÃO: Wrapper View para borderBottom (Text não suporta) */}
+
         <View style={styles.sectionTitleContainer}>
           <Text style={styles.sectionTitle}>Detalhes do Agendamento</Text>
         </View>
@@ -565,7 +586,6 @@ export default function BookingDetailsScreen() {
         )}
       </Animated.View>
 
-      {/* Card inferior: Ações - CORREÇÃO: Removidas duplicatas em actionButton */}
       <Animated.View
         style={[
           styles.actionsCard,
@@ -581,20 +601,19 @@ export default function BookingDetailsScreen() {
       >
         <BlurView intensity={Platform.OS === 'ios' ? 20 : 40} tint="light" style={StyleSheet.absoluteFillObject} />
         <LinearGradient
-          colors={['#F9FBFF', '#E6F0FF'] as const} // CORREÇÃO: as const para compatibilidade TS
+          colors={['#F9FBFF', '#E6F0FF'] as const}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFillObject}
         />
-        {/* CORREÇÃO: Wrapper View para borderBottom (Text não suporta) */}
+
         <View style={styles.sectionTitleContainer}>
           <Text style={styles.sectionTitle}>Ações</Text>
         </View>
 
-        {/* ✅ CORREÇÃO: Usa type guard isCancellableStatus (resolve warning "sempre verdadeiro" na linha ~375) */}
         {isCancellableStatus(booking.status) && (
-          <LinearGradient
-            colors={['#FF6B6B', '#EE5A52'] as const} // CORREÇÃO: as const para consistência
+          <AnimatedLinearGradient
+            colors={['#FF6B6B', '#EE5A52'] as const}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={[styles.actionButton, styles.cancelButton, { transform: [{ scale: cancelButtonScaleAnim }] }]}
@@ -609,11 +628,11 @@ export default function BookingDetailsScreen() {
               <Ionicons name="close-circle-outline" size={20} color={AppColors.white} />
               <Text style={styles.actionButtonText}>Cancelar Agendamento</Text>
             </TouchableOpacity>
-          </LinearGradient>
+          </AnimatedLinearGradient>
         )}
 
-        <LinearGradient
-          colors={['#4ECDC4', '#44A08D'] as const} // CORREÇÃO: as const para consistência
+        <AnimatedLinearGradient
+          colors={['#4ECDC4', '#44A08D'] as const}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={[styles.actionButton, { transform: [{ scale: contactButtonScaleAnim }] }]}
@@ -630,19 +649,14 @@ export default function BookingDetailsScreen() {
               Contatar {sanitizeText(booking.providerFullName.split(' ')[0])}
             </Text>
           </TouchableOpacity>
-        </LinearGradient>
+        </AnimatedLinearGradient>
 
-        {/* ✅ CORREÇÃO: Usa type guard isCompletedStatus (resolve warning "sempre verdadeiro" na linha ~431) */}
         {isCompletedStatus(booking.status) && !isReviewed && (
-          <LinearGradient
-            colors={['#FFD93D', '#FEC200'] as const} // CORREÇÃO: as const para consistência
+          <AnimatedLinearGradient
+            colors={['#FFD93D', '#FEC200'] as const}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={[
-              styles.actionButton,
-              styles.reviewButton,
-              { transform: [{ scale: reviewButtonScaleAnim }] },
-            ]}
+            style={[styles.actionButton, styles.reviewButton, { transform: [{ scale: reviewButtonScaleAnim }] }]}
           >
             <TouchableOpacity
               style={styles.actionButtonInner}
@@ -654,11 +668,11 @@ export default function BookingDetailsScreen() {
               <Ionicons name="star-outline" size={20} color={AppColors.white} />
               <Text style={styles.actionButtonText}>Avaliar Serviço</Text>
             </TouchableOpacity>
-          </LinearGradient>
+          </AnimatedLinearGradient>
         )}
 
-        <LinearGradient
-          colors={['#667eea', '#764ba2'] as const} // CORREÇÃO: as const para consistência
+        <AnimatedLinearGradient
+          colors={['#667eea', '#764ba2'] as const}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={[styles.actionButtonOutline, { transform: [{ scale: profileButtonScaleAnim }] }]}
@@ -675,7 +689,7 @@ export default function BookingDetailsScreen() {
               Ver Perfil de {sanitizeText(booking.providerFullName.split(' ')[0])}
             </Text>
           </TouchableOpacity>
-        </LinearGradient>
+        </AnimatedLinearGradient>
       </Animated.View>
     </ScrollView>
   );
@@ -707,7 +721,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat-Regular',
     lineHeight: 22,
   },
-  actionButton: { // CORREÇÃO: Propriedades consolidadas, sem duplicatas
+  actionButton: {
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
@@ -772,13 +786,13 @@ const styles = StyleSheet.create({
   photoPlaceholder: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EEF4FF', // Background neutro premium para placeholder
+    backgroundColor: '#EEF4FF',
     borderWidth: 3,
     borderColor: AppColors.primaryInteractive,
   },
   providerImage: {
     borderWidth: 3,
-    borderColor: AppColors.primaryInteractive, // Borda azul premium para imagem real
+    borderColor: AppColors.primaryInteractive,
   },
   providerInfo: {
     flex: 1,
@@ -814,7 +828,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     fontFamily: 'Montserrat-SemiBold',
   },
-  sectionTitleContainer: { // NOVO: Wrapper para borderBottom (corrige erro de Text style)
+  sectionTitleContainer: {
     marginBottom: 20,
     borderBottomWidth: 1,
     borderBottomColor: AppColors.backgroundNeutral,
@@ -886,12 +900,8 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  cancelButton: {
-    // Estilos específicos para cancel (sem duplicatas)
-  },
-  reviewButton: {
-    // Estilos específicos para review (sem duplicatas)
-  },
+  cancelButton: {},
+  reviewButton: {},
   actionButtonOutline: {
     borderRadius: 14,
     borderWidth: 2,
