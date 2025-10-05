@@ -1,257 +1,264 @@
 ﻿{
-    "translation":  {
-                        "common":  {
-                                       "loading":  "Loading...",
-                                       "error":  "Error",
-                                       "tryAgain":  "Try Again",
-                                       "back":  "Back",
-                                       "success":  "Success",
-                                       "cancel":  "Cancel",
-                                       "confirm":  "Confirm",
-                                       "ok":  "OK",
-                                       "yes":  "Yes",
-                                       "no":  "No",
-                                       "save":  "Save",
-                                       "close":  "Close",
-                                       "not_found":  "Not found",
-                                       "network_error":  "Network or server error",
-                                       "unauthorized_error":  "Unauthorized. Please log in again.",
-                                       "generic_error":  "An unexpected error occurred. Please try again later.",
-                                       "per_hour_short":  "/hr",
-                                       "per_sqm_short":  "/sqm",
-                                       "info":  "Notice"
-                                   },
-                        "explore_section":  {
-                                                "title":  "Explore"
-                                            },
-                        "search":  {
-                                       "title":  "Search Services",
-                                       "distance":  "{{distance}} km away",
-                                       "no_results":  "No results found.",
-                                       "search_placeholder":  "Search for service or professional...",
-                                       "nearby_providers":  "Nearby Professionals",
-                                       "recommended_providers":  "Recommendations for You",
-                                       "all_categories":  "All Categories",
-                                       "all_providers":  "All Professionals",
-                                       "all_recommendations":  "All Recommendations"
-                                   },
-                        "offers":  {
-                                       "apply":  "Apply",
-                                       "applied":  "Applied",
-                                       "copy_code":  "Copy Code",
-                                       "apply_next_step":  "Apply in next step",
-                                       "invalid_coupon":  "Invalid or expired coupon.",
-                                       "coupon_applied_success":  "Coupon applied! You saved {{value}}.",
-                                       "title":  "Offers"
-                                   },
-                        "missions":  {
-                                         "title":  "My Missions",
-                                         "claim":  "Claim",
-                                         "completed":  "Completed",
-                                         "in_progress":  "In Progress",
-                                         "no_missions":  "No missions available at the moment.",
-                                         "claim_success":  "Congratulations! Reward claimed successfully!",
-                                         "claim_error":  "Could not claim reward.",
-                                         "category_volume":  "Volume",
-                                         "category_frequency":  "Frequency",
-                                         "category_diversity":  "Diversity"
-                                     },
-                        "metrics":  {
-                                        "acceptance_rate":  "Acceptance Rate",
-                                        "avg_response_time":  "Avg. Response Time",
-                                        "minutes_short":  "min",
-                                        "acceptance_short":  "Acceptance",
-                                        "response_short":  "Response"
-                                    },
-                        "safety":  {
-                                       "panic":  {
-                                                     "activate":  "ACTIVATE PANIC",
-                                                     "active":  "Panic Alert ACTIVE",
-                                                     "cancel":  "Cancel",
-                                                     "sending_alert":  "Alert will be sent in...",
-                                                     "location_permission_denied":  "Location Permission Denied",
-                                                     "location_permission_message":  "For your safety, we need your location to send a panic alert.",
-                                                     "getting_location":  "Getting your location...",
-                                                     "location_obtained":  "Location obtained:",
-                                                     "panic_sent_success":  "Your panic alert has been sent to the security team. Help is on the way.",
-                                                     "panic_sent_error":  "Could not send alert.",
-                                                     "panic_cancelled":  "Panic alert sending was cancelled.",
-                                                     "warning_text":  "Use this feature only in real emergency situations. Misuse may result in penalties."
-                                                 },
-                                       "incident":  {
-                                                        "report_title":  "Report Incident",
-                                                        "description_placeholder":  "Describe what happened, date, time, who was involved, etc.",
-                                                        "booking_id_optional":  "Booking ID (Optional):",
-                                                        "attach_evidence":  "Attach Evidence (Photos):",
-                                                        "select_image":  "Select Image",
-                                                        "attachment_added":  "Attachment Added",
-                                                        "image_uploaded_message":  "Image selected. In a real environment, it would be uploaded to the server.",
-                                                        "submit_report":  "Submit Report",
-                                                        "report_sent_success":  "Your incident report has been successfully submitted. Our team will review it.",
-                                                        "report_sent_error":  "Could not send report:",
-                                                        "required_fields_alert":  "Required Fields",
-                                                        "required_fields_message":  "Please describe the incident.",
-                                                        "description_text":  "Use this form to report any incident that occurred during or after a service."
-                                                    }
-                                   },
-                        "notifications":  {
-                                              "title":  "Notifications",
-                                              "mark_all_read":  "Mark All as Read",
-                                              "no_notifications":  "No notifications here.",
-                                              "no_notifications_subtext":  "You\u0027re all caught up!",
-                                              "loading_notifications":  "Loading notifications...",
-                                              "notifications_updated":  "Notifications updated!",
-                                              "mark_read_success":  "Notification marked as read (backend and frontend):",
-                                              "mark_read_error":  "Could not mark notification as read.",
-                                              "mark_all_read_success":  "All notifications marked as read.",
-                                              "mark_all_read_error":  "Could not mark all notifications as read.",
-                                              "navigation_error":  "Navigation Error",
-                                              "navigation_error_message":  "Could not open this notification.",
-                                              "now":  "Just now",
-                                              "minutes_ago":  "{{count}} min ago",
-                                              "hours_ago":  "{{count}} hr ago",
-                                              "yesterday":  "Yesterday",
-                                              "days_ago":  "{{count}} days ago"
-                                          },
-                        "schedule_service":  {
-                                                 "header_title":  "Schedule",
-                                                 "progress_step_date_time":  "Date \u0026 Time",
-                                                 "progress_step_service_details":  "Service Details",
-                                                 "progress_step_confirmation":  "Confirmation",
-                                                 "coupon_section_title":  "Discount Coupon",
-                                                 "coupon_input_placeholder":  "Enter your coupon code",
-                                                 "apply_coupon_button":  "Apply",
-                                                 "coupon_applied_message":  "Coupon applied! You saved R$ {{discountValue}}.",
-                                                 "review_booking_title":  "Review Your Booking",
-                                                 "summary_service":  "Service:",
-                                                 "summary_provider":  "Provider:",
-                                                 "summary_date_time":  "Date \u0026 Time:",
-                                                 "summary_address":  "Address:",
-                                                 "summary_service_details":  "Service Details:",
-                                                 "subtotal":  "Subtotal:",
-                                                 "discount":  "Discount:",
-                                                 "total_to_pay":  "Total to Pay:",
-                                                 "cancellation_policy":  "Cancellation Policy",
-                                                 "cancellation_policy_title":  "Cancellation Policy",
-                                                 "cancellation_policy_message":  "You can cancel your booking for free up to 24 hours before the scheduled time. After this period, a cancellation fee may apply. For more details, consult our Terms of Service.",
-                                                 "booking_error_title":  "Booking Error",
-                                                 "booking_error_message":  "Please fill in all necessary fields for the booking, including the full address and select a time slot.",
-                                                 "booking_error_duration_size":  "Please enter the service {{field}}.",
-                                                 "booking_success_message":  "Booking successful!",
-                                                 "loading_initial_data":  "Loading initial data...",
-                                                 "navigation_error_essential_data":  "Essential data missing. Please try again.",
-                                                 "service_not_available":  "The selected service is not available for this provider.",
-                                                 "address_needed_title":  "Address Required",
-                                                 "address_needed_message":  "Your address is incomplete. Please fill it in to proceed.",
-                                                 "error_fetching_slots":  "Could not load available time slots.",
-                                                 "unavailable_time_slot":  "Unavailable Time Slot",
-                                                 "unavailable_time_slot_message":  "This time slot is already booked or unavailable. Please select another.",
-                                                 "select_date_time_address":  "Select Date, Time, and Address",
-                                                 "available_times":  "Available Times",
-                                                 "preferred_times":  "Preferred Times",
-                                                 "no_slots":  "No time slots available for this date."
-                                             },
-                        "provider_details":  {
-                                                 "loading":  "Loading...",
-                                                 "provider_not_found":  "Professional not found.",
-                                                 "error_loading_details":  "Error loading professional details.",
-                                                 "no_photo":  "No Photo",
-                                                 "save_favorite":  "Save/Favorite",
-                                                 "years_experience":  "{{count}}+ years",
-                                                 "verified":  "Verified",
-                                                 "about_provider":  "About {{providerName}}",
-                                                 "no_description":  "No detailed description available.",
-                                                 "call":  "Call",
-                                                 "chat":  "Chat",
-                                                 "map":  "Map",
-                                                 "share":  "Share",
-                                                 "chat_unavailable_title":  "Chat Unavailable",
-                                                 "chat_unavailable_message":  "Chat with this professional can only be initiated after a confirmed and active booking. This ensures you connect with the right professional for your service.",
-                                                 "recommendations":  "Recommendations",
-                                                 "no_reviews":  "No reviews yet for {{providerName}}.",
-                                                 "be_the_first_review":  "Be the first to leave one!",
-                                                 "add_review":  "Add Review",
-                                                 "price_not_available":  "Price not available",
-                                                 "reviews_count":  "({{count}} reviews)",
-                                                 "provider_name_title":  "Provider Name",
-                                                 "location_label":  "Location",
-                                                 "price_label":  "Price",
-                                                 "about_provider_section_title":  "About Provider",
-                                                 "contact_section_title":  "Contact"
-                                             },
-                        "provider_dashboard":  {
-                                                   "greeting":  "Hello, {{providerName}}!",
-                                                   "current_date":  "{{date}}",
-                                                   "financial_summary":  "Financial Summary",
-                                                   "total_earnings":  "Total Earnings",
-                                                   "pending_withdrawals":  "Pending Withdrawals",
-                                                   "manage_earnings":  "Manage Earnings",
-                                                   "quick_actions":  "Quick Actions",
-                                                   "my_schedule":  "My Schedule",
-                                                   "my_services":  "My Services",
-                                                   "messages":  "Messages",
-                                                   "new_requests":  "New Requests",
-                                                   "view_all":  "View All",
-                                                   "no_new_requests":  "No new booking requests.",
-                                                   "upcoming_services":  "Upcoming Services",
-                                                   "no_upcoming_services":  "No confirmed services scheduled.",
-                                                   "requested_by":  "Requested by:",
-                                                   "value":  "Value:",
-                                                   "accept_request_title":  "Accept Request",
-                                                   "accept_request_message":  "Are you sure you want to accept booking {{bookingId}}?",
-                                                   "accept_success":  "Booking accepted successfully!",
-                                                   "accept_error":  "Could not accept booking.",
-                                                   "reject_request_title":  "Reject Request",
-                                                   "reject_request_message":  "Are you sure you want to reject booking {{bookingId}}?",
-                                                   "reject_success":  "Booking rejected successfully!",
-                                                   "reject_error":  "Could not reject booking.",
-                                                   "chat_with_client":  "Chat with {{clientName}}",
-                                                   "logout":  "Log Out",
-                                                   "logout_error":  "Could not log out. Please try again or check your connection.",
-                                                   "provider_not_authenticated":  "Provider not authenticated or profile not found."
-                                               },
-                        "errors":  {
-                                       "network":  {
-                                                       "retry_saved":  "We couldn\u0027t finish now. Your progress is safeâ€”try again shortly.",
-                                                       "contact_support":  "If this keeps happening, contact support."
-                                                   },
-                                       "cep":  {
-                                                   "lookup_failed":  "We couldn\u0027t fetch the postal code. Please try again."
-                                               }
-                                   },
-                        "validation":  {
-                                           "cpf":  {
-                                                       "required":  "CPF is required.",
-                                                       "invalid":  "Invalid CPF. Check the digits."
-                                                   },
-                                           "cep":  {
-                                                       "required":  "Postal code is required.",
-                                                       "invalid":  "Invalid postal code. Enter all 8 digits.",
-                                                       "not_found":  "Postal code not found. Please double-check and try again."
-                                                   },
-                                           "pixKey":  {
-                                                          "required":  "Enter your PIX key to receive payouts.",
-                                                          "invalid":  "Invalid PIX key. Please review the format."
-                                                      },
-                                           "step":  {
-                                                        "phone_cpf":  "Please fill in phone and CPF correctly.",
-                                                        "name_email":  "Please fill in your name and email correctly."
-                                                    },
-                                           "address":  {
-                                                           "incomplete":  "Please fill in all address fields correctly.",
-                                                           "wait_lookup":  "Please wait for the postal code lookup to finish."
-                                                       }
-                                       },
-                        "payments":  {
-                                         "pix":  {
-                                                     "copy_success_title":  "PIX code copied!",
-                                                     "copy_success_message":  "Paste it in your bank app to finish the payment.",
-                                                     "copy_error_title":  "PIX unavailable",
-                                                     "copy_error_message":  "There\u0027s no PIX code to copy right now."
-                                                 }
-                                     },
-                        "pricing":  {
-
-                                    }
-                    }
+    "translation": {
+        "common": {
+            "loading": "Loading...",
+            "error": "Error",
+            "tryAgain": "Try Again",
+            "back": "Back",
+            "success": "Success",
+            "cancel": "Cancel",
+            "confirm": "Confirm",
+            "ok": "OK",
+            "yes": "Yes",
+            "no": "No",
+            "save": "Save",
+            "close": "Close",
+            "not_found": "Not found",
+            "network_error": "Network or server error",
+            "unauthorized_error": "Unauthorized. Please log in again.",
+            "generic_error": "An unexpected error occurred. Please try again later.",
+            "per_hour_short": "/hr",
+            "per_sqm_short": "/sqm",
+            "info": "Notice"
+        },
+        "explore_section": {
+            "title": "Explore"
+        },
+        "search": {
+            "title": "Search Services",
+            "distance": "{{distance}} km away",
+            "no_results": "No results found.",
+            "search_placeholder": "Search for service or professional...",
+            "nearby_providers": "Nearby Professionals",
+            "recommended_providers": "Recommendations for You",
+            "all_categories": "All Categories",
+            "all_providers": "All Professionals",
+            "all_recommendations": "All Recommendations"
+        },
+        "offers": {
+            "apply": "Apply",
+            "applied": "Applied",
+            "copy_code": "Copy Code",
+            "apply_next_step": "Apply in next step",
+            "invalid_coupon": "Invalid or expired coupon.",
+            "coupon_applied_success": "Coupon applied! You saved {{value}}.",
+            "title": "Offers"
+        },
+        "missions": {
+            "title": "My Missions",
+            "claim": "Claim",
+            "completed": "Completed",
+            "in_progress": "In Progress",
+            "no_missions": "No missions available at the moment.",
+            "claim_success": "Congratulations! Reward claimed successfully!",
+            "claim_error": "Could not claim reward.",
+            "category_volume": "Volume",
+            "category_frequency": "Frequency",
+            "category_diversity": "Diversity"
+        },
+        "metrics": {
+            "acceptance_rate": "Acceptance Rate",
+            "avg_response_time": "Avg. Response Time",
+            "minutes_short": "min",
+            "acceptance_short": "Acceptance",
+            "response_short": "Response"
+        },
+        "safety": {
+            "panic": {
+                "activate": "ACTIVATE PANIC",
+                "active": "Panic Alert ACTIVE",
+                "cancel": "Cancel",
+                "sending_alert": "Alert will be sent in...",
+                "location_permission_denied": "Location Permission Denied",
+                "location_permission_message": "For your safety, we need your location to send a panic alert.",
+                "getting_location": "Getting your location...",
+                "location_obtained": "Location obtained:",
+                "panic_sent_success": "Your panic alert has been sent to the security team. Help is on the way.",
+                "panic_sent_error": "Could not send alert.",
+                "panic_cancelled": "Panic alert sending was cancelled.",
+                "warning_text": "Use this feature only in real emergency situations. Misuse may result in penalties."
+            },
+            "incident": {
+                "report_title": "Report Incident",
+                "description_placeholder": "Describe what happened, date, time, who was involved, etc.",
+                "booking_id_optional": "Booking ID (Optional):",
+                "attach_evidence": "Attach Evidence (Photos):",
+                "select_image": "Select Image",
+                "attachment_added": "Attachment Added",
+                "image_uploaded_message": "Image selected. In a real environment, it would be uploaded to the server.",
+                "submit_report": "Submit Report",
+                "report_sent_success": "Your incident report has been successfully submitted. Our team will review it.",
+                "report_sent_error": "Could not send report:",
+                "required_fields_alert": "Required Fields",
+                "required_fields_message": "Please describe the incident.",
+                "description_text": "Use this form to report any incident that occurred during or after a service."
+            }
+        },
+        "notifications": {
+            "title": "Notifications",
+            "mark_all_read": "Mark All as Read",
+            "no_notifications": "No notifications here.",
+            "no_notifications_subtext": "You're all caught up!",
+            "loading_notifications": "Loading notifications...",
+            "notifications_updated": "Notifications updated!",
+            "mark_read_success": "Notification marked as read (backend and frontend):",
+            "mark_read_error": "Could not mark notification as read.",
+            "mark_all_read_success": "All notifications marked as read.",
+            "mark_all_read_error": "Could not mark all notifications as read.",
+            "navigation_error": "Navigation Error",
+            "navigation_error_message": "Could not open this notification.",
+            "now": "Just now",
+            "minutes_ago": "{{count}} min ago",
+            "hours_ago": "{{count}} hr ago",
+            "yesterday": "Yesterday",
+            "days_ago": "{{count}} days ago"
+        },
+        "schedule_service": {
+            "header_title": "Schedule",
+            "progress_step_date_time": "Date & Time",
+            "progress_step_service_details": "Service Details",
+            "progress_step_confirmation": "Confirmation",
+            "coupon_section_title": "Discount Coupon",
+            "coupon_input_placeholder": "Enter your coupon code",
+            "apply_coupon_button": "Apply",
+            "coupon_applied_message": "Coupon applied! You saved R$ {{discountValue}}.",
+            "review_booking_title": "Review Your Booking",
+            "summary_service": "Service:",
+            "summary_provider": "Provider:",
+            "summary_date_time": "Date & Time:",
+            "summary_address": "Address:",
+            "summary_service_details": "Service Details:",
+            "subtotal": "Subtotal:",
+            "discount": "Discount:",
+            "total_to_pay": "Total to Pay:",
+            "cancellation_policy": "Cancellation Policy",
+            "cancellation_policy_title": "Cancellation Policy",
+            "cancellation_policy_message": "You can cancel your booking for free up to 24 hours before the scheduled time. After this period, a cancellation fee may apply. For more details, consult our Terms of Service.",
+            "booking_error_title": "Booking Error",
+            "booking_error_message": "Please fill in all necessary fields for the booking, including the full address and select a time slot.",
+            "booking_error_duration_size": "Please enter the service {{field}}.",
+            "booking_success_message": "Booking successful!",
+            "loading_initial_data": "Loading initial data...",
+            "navigation_error_essential_data": "Essential data missing. Please try again.",
+            "service_not_available": "The selected service is not available for this provider.",
+            "address_needed_title": "Address Required",
+            "address_needed_message": "Your address is incomplete. Please fill it in to proceed.",
+            "error_fetching_slots": "Could not load available time slots.",
+            "unavailable_time_slot": "Unavailable Time Slot",
+            "unavailable_time_slot_message": "This time slot is already booked or unavailable. Please select another.",
+            "select_date_time_address": "Select Date, Time, and Address",
+            "available_times": "Available Times",
+            "preferred_times": "Preferred Times",
+            "no_slots": "No time slots available for this date."
+        },
+        "provider_details": {
+            "loading": "Loading...",
+            "provider_not_found": "Professional not found.",
+            "error_loading_details": "Error loading professional details.",
+            "no_photo": "No Photo",
+            "save_favorite": "Save/Favorite",
+            "years_experience": "{{count}}+ years",
+            "verified": "Verified",
+            "about_provider": "About {{providerName}}",
+            "no_description": "No detailed description available.",
+            "call": "Call",
+            "chat": "Chat",
+            "map": "Map",
+            "share": "Share",
+            "chat_unavailable_title": "Chat Unavailable",
+            "chat_unavailable_message": "Chat with this professional can only be initiated after a confirmed and active booking. This ensures you connect with the right professional for your service.",
+            "recommendations": "Recommendations",
+            "no_reviews": "No reviews yet for {{providerName}}.",
+            "be_the_first_review": "Be the first to leave one!",
+            "add_review": "Add Review",
+            "price_not_available": "Price not available",
+            "reviews_count": "({{count}} reviews)",
+            "provider_name_title": "Provider Name",
+            "location_label": "Location",
+            "price_label": "Price",
+            "about_provider_section_title": "About Provider",
+            "contact_section_title": "Contact"
+        },
+        "provider_dashboard": {
+            "greeting": "Hello, {{providerName}}!",
+            "current_date": "{{date}}",
+            "financial_summary": "Financial Summary",
+            "total_earnings": "Total Earnings",
+            "pending_withdrawals": "Pending Withdrawals",
+            "manage_earnings": "Manage Earnings",
+            "quick_actions": "Quick Actions",
+            "my_schedule": "My Schedule",
+            "my_services": "My Services",
+            "messages": "Messages",
+            "new_requests": "New Requests",
+            "view_all": "View All",
+            "no_new_requests": "No new booking requests.",
+            "upcoming_services": "Upcoming Services",
+            "no_upcoming_services": "No confirmed services scheduled.",
+            "requested_by": "Requested by:",
+            "value": "Value:",
+            "accept_request_title": "Accept Request",
+            "accept_request_message": "Are you sure you want to accept booking {{bookingId}}?",
+            "accept_success": "Booking accepted successfully!",
+            "accept_error": "Could not accept booking.",
+            "reject_request_title": "Reject Request",
+            "reject_request_message": "Are you sure you want to reject booking {{bookingId}}?",
+            "reject_success": "Booking rejected successfully!",
+            "reject_error": "Could not reject booking.",
+            "chat_with_client": "Chat with {{clientName}}",
+            "logout": "Log Out",
+            "logout_error": "Could not log out. Please try again or check your connection.",
+            "provider_not_authenticated": "Provider not authenticated or profile not found."
+        },
+        "errors": {
+            "network": {
+                "retry_saved": "We couldn't finish now. Your progress is safe—try again shortly.",
+                "contact_support": "If this keeps happening, contact support."
+            },
+            "cep": {
+                "lookup_failed": "We couldn't fetch the postal code. Please try again."
+            }
+        },
+        "validation": {
+            "cpf": {
+                "required": "CPF is required.",
+                "invalid": "Invalid CPF. Check the digits."
+            },
+            "cep": {
+                "required": "Postal code is required.",
+                "invalid": "Invalid postal code. Enter all 8 digits.",
+                "not_found": "Postal code not found. Please double-check and try again."
+            },
+            "pixKey": {
+                "required": "Enter your PIX key to receive payouts.",
+                "invalid": "Invalid PIX key. Please review the format."
+            },
+            "step": {
+                "phone_cpf": "Please fill in phone and CPF correctly.",
+                "name_email": "Please fill in your name and email correctly."
+            },
+            "address": {
+                "incomplete": "Please fill in all address fields correctly.",
+                "wait_lookup": "Please wait for the postal code lookup to finish."
+            }
+        },
+        "payments": {
+            "pix": {
+                "copy_success_title": "PIX code copied!",
+                "copy_success_message": "Paste it in your bank app to finish the payment.",
+                "copy_error_title": "PIX unavailable",
+                "copy_error_message": "There's no PIX code to copy right now."
+            },
+            "overlay": {
+                "pending": "Payment has been pending for a while. Confirm in your bank app or generate a new code.",
+                "title": "Attention",
+                "expired": "Your QR Code has expired. Generate a new one to complete the payment.",
+                "actions": {
+                    "copy": "Copy PIX code",
+                    "refresh": "Refresh"
+                }
+            }
+        },
+        "pricing": {}
+    }
 }
