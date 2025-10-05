@@ -19,6 +19,7 @@
             "generic_error": "An unexpected error occurred. Please try again later.",
             "per_hour_short": "/hr",
             "per_sqm_short": "/sqm",
+            "per_room_short": "/room",
             "info": "Notice"
         },
         "explore_section": {
@@ -212,7 +213,7 @@
         },
         "errors": {
             "network": {
-                "retry_saved": "We couldn't finish now. Your progress is safe—try again shortly.",
+                "retry_saved": "We couldn't finish now. Your progress is saved; try again shortly.",
                 "contact_support": "If this keeps happening, contact support."
             },
             "cep": {
