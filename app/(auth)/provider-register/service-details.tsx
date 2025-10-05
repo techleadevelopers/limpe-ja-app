@@ -28,6 +28,7 @@ import {
   getProviderServicesOffered,
 } from '../../../services/providerService';
 import verificationService from '../../../services/verificationService';
+import { uploadMyAvatar } from '../../../services/providerService';
 import axios from 'axios';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -354,7 +355,7 @@ export default function ServiceDetailsScreen() {
       if (formData.profilePhoto && formData.profilePhoto.startsWith('file://')) {
         console.log("[handleFinalSubmission] URI local detectada. Tentando fazer upload da foto de perfil...");
         try {
-          const uploadResponse = await verificationService.uploadAvatar(formData.profilePhoto);
+          const uploadResponse = await uploadMyAvatar(formData.profilePhoto);
           if (uploadResponse && uploadResponse.url) {
             avatarUrl = uploadResponse.url;
             console.log("[handleFinalSubmission] Upload de foto de perfil concluÃ­do. Nova URL do avatar:", avatarUrl);
