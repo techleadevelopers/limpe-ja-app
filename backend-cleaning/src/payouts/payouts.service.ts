@@ -1,11 +1,12 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RequestWithdrawalDto } from './dto/request-withdrawal.dto';
-import { LedgerEntryType, PayoutStatus, Prisma } from '@prisma/client';
+import { LedgerEntryType, PayoutStatus, Prisma, VerificationStatus, PixKeyType } from '@prisma/client';
 import { QueuesService } from '../queues/queues.service';
 import { RedisLockService } from '../common/locks/redis-lock.service';
 import { ConfigService } from '@nestjs/config';
 import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
+import axios from 'axios';
 
 interface GatewayUpdateInput {
   payoutId: string;
@@ -17,6 +18,14 @@ interface GatewayUpdateInput {
 export class PayoutsService {
   private readonly logger = new Logger(PayoutsService.name);
   private readonly minWithdrawal: Prisma.Decimal;
+  private readonly maxWithdrawal?: Prisma.Decimal;
+  private readonly dailyLimit?: Prisma.Decimal;
+  private readonly dailyCountMax: number;
+  private readonly settleWindowDays: number;
+  private readonly withdrawalFixedFee: Prisma.Decimal;
+  private readonly withdrawalPercentFee: number;
+  private readonly pspBaseUrl: string;
+  private readonly pspToken?: string;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -26,15 +35,22 @@ export class PayoutsService {
   ) {
     const min = this.configService.get<string>('MIN_WITHDRAWAL_AMOUNT', '10');
     this.minWithdrawal = new Prisma.Decimal(min);
+    const max = this.configService.get<string>('WITHDRAWAL_MAX_RS');
+    this.maxWithdrawal = max ? new Prisma.Decimal(max) : undefined;
+    const daily = this.configService.get<string>('WITHDRAWAL_DAILY_LIMIT_RS');
+    this.dailyLimit = daily ? new Prisma.Decimal(daily) : undefined;
+    this.dailyCountMax = parseInt(this.configService.get<string>('WITHDRAWAL_DAILY_COUNT_MAX', '3')) || 3;
+    this.settleWindowDays = parseInt(this.configService.get<string>('WITHDRAWAL_SETTLEMENT_DAYS', '0')) || 0;
+    const fixedFee = this.configService.get<string>('WITHDRAWAL_FIXED_FEE_RS', '0');
+    this.withdrawalFixedFee = new Prisma.Decimal(fixedFee);
+    this.withdrawalPercentFee = parseFloat(this.configService.get<string>('WITHDRAWAL_PERCENT_FEE', '0')) || 0;
+    this.pspBaseUrl = this.configService.get<string>('PAGSEGURO_API_BASE_URL', 'https://sandbox.api.pagseguro.com');
+    this.pspToken = this.configService.get<string>('PAGSEGURO_API_TOKEN') || undefined;
   }
 
   async getBalance(userId: string): Promise<{ available: number }> {
-    const total = await this.prisma.ledgerEntry.aggregate({
-      _sum: { amount: true },
-      where: { userId },
-    });
-    const sum = total._sum.amount ?? new Prisma.Decimal(0);
-    return { available: Number(sum.toFixed(2)) };
+    const available = await this.computeAvailableBalance(userId);
+    return { available: Number(available.toFixed(2)) };
   }
 
   async requestWithdrawal(userId: string, dto: RequestWithdrawalDto, idempotencyKey?: string) {
@@ -52,6 +68,15 @@ export class PayoutsService {
 
     try {
       const payout = await this.prisma.$transaction(async (tx) => {
+        // KYC + PIX key validation
+        const provider = await tx.provider.findFirst({ where: { userId } });
+        if (!provider) {
+          throw new BadRequestException('Provider not found for user.');
+        }
+        if (provider.verificationStatus !== VerificationStatus.APPROVED) {
+          throw new ForbiddenException('KYC not approved. Complete verification to withdraw.');
+        }
+
         const existing = await tx.payout.findUnique({ where: { idempotencyKey } });
         if (existing) {
           this.logger.debug(`requestWithdrawal: idempotent hit for key ${idempotencyKey}`);
@@ -64,8 +89,35 @@ export class PayoutsService {
         if (amount.lt(this.minWithdrawal)) {
           throw new BadRequestException(`Minimum withdrawal amount is R$ ${this.minWithdrawal.toFixed(2)}.`);
         }
-        if (amount.gt(balance)) {
-          throw new BadRequestException(`Insufficient balance. Available: R$ ${balance.toFixed(2)}.`);
+        if (this.maxWithdrawal && amount.gt(this.maxWithdrawal)) {
+          throw new BadRequestException(`Maximum withdrawal amount is R$ ${this.maxWithdrawal.toFixed(2)}.`);
+        }
+
+        // Daily limits (amount and count)
+        const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const dailyAgg = await tx.payout.aggregate({ _sum: { amount: true }, _count: true, where: { userId, requestedAt: { gte: since } } });
+        const dailySum = dailyAgg._sum.amount ?? new Prisma.Decimal(0);
+        const dailyCount = dailyAgg._count;
+        if (this.dailyLimit && dailySum.add(amount).gt(this.dailyLimit)) {
+          throw new BadRequestException(`Daily withdrawal limit exceeded. Remaining today: R$ ${this.dailyLimit.sub(dailySum).toFixed(2)}.`);
+        }
+        if (this.dailyCountMax > 0 && dailyCount >= this.dailyCountMax) {
+          throw new BadRequestException('Daily withdrawal count limit reached. Try again tomorrow.');
+        }
+
+        // PIX key effective
+        const effectivePixKey = (dto.pixKey || provider.pixKey || '').trim();
+        if (!effectivePixKey) {
+          throw new BadRequestException('Missing PIX key. Configure your PIX key first.');
+        }
+        const effectivePixKeyType: PixKeyType | undefined = dto.pixKeyType as any;
+
+        // Fees
+        const percentFee = amount.mul(this.withdrawalPercentFee);
+        const fee = percentFee.greaterThan(this.withdrawalFixedFee) ? percentFee : this.withdrawalFixedFee;
+        const totalDebit = amount.add(fee);
+        if (totalDebit.gt(balance)) {
+          throw new BadRequestException(`Insufficient balance. Available: R$ ${balance.toFixed(2)} including fees.`);
         }
 
         await tx.ledgerEntry.create({
@@ -73,9 +125,19 @@ export class PayoutsService {
             userId,
             amount: amount.mul(-1),
             type: LedgerEntryType.WITHDRAWAL,
-            note: dto.notes ?? `PIX withdrawal request for ${dto.pixKeyType}: ${dto.pixKey}`,
+            note: dto.notes ?? `PIX withdrawal request for ${effectivePixKeyType || 'PIX'}: ${effectivePixKey}`,
           },
         });
+        if (fee.gt(0)) {
+          await tx.ledgerEntry.create({
+            data: {
+              userId,
+              amount: fee.mul(-1),
+              type: LedgerEntryType.FEE,
+              note: 'Withdrawal fee',
+            },
+          });
+        }
 
         const newPayout = await tx.payout.create({
           data: {
@@ -86,13 +148,23 @@ export class PayoutsService {
           },
         });
 
-        await this.queues.addJob('payouts', 'process-payout', { payoutId: newPayout.id }, {
-          attempts: 5,
-          backoff: { type: 'exponential', delay: 2000 },
-          removeOnFail: false,
-        });
-
-        this.logger.log(`requestWithdrawal: payout ${newPayout.id} scheduled for processing.`);
+        // Initiate PSP transfer if configured; else enqueue placeholder job
+        if (this.pspToken) {
+          try {
+            const gatewayTxnId = await this.initiateGatewayTransfer(newPayout.id, amount.toNumber(), effectivePixKey, effectivePixKeyType, idempotencyKey);
+            await tx.payout.update({ where: { id: newPayout.id }, data: { status: PayoutStatus.PROCESSING, gatewayTxnId } });
+            this.logger.log(`requestWithdrawal: payout ${newPayout.id} sent to PSP, txn=${gatewayTxnId}.`);
+          } catch (e) {
+            this.logger.error(`requestWithdrawal: PSP initiation failed for payout ${newPayout.id}: ${e?.message}`);
+          }
+        } else {
+          await this.queues.addJob('payouts', 'process-payout', { payoutId: newPayout.id }, {
+            attempts: 5,
+            backoff: { type: 'exponential', delay: 2000 },
+            removeOnFail: false,
+          });
+          this.logger.log(`requestWithdrawal: payout ${newPayout.id} scheduled for processing (placeholder).`);
+        }
         return newPayout;
       });
 
@@ -140,8 +212,10 @@ export class PayoutsService {
 
     this.logger.log(`processPayout: payout ${payoutId} marked as PROCESSING with gatewayTxnId ${gatewayTxnId}.`);
 
-    // Simulate immediate success for now. In the future, this would call the PSP and rely on webhook.
-    await this.applyGatewayUpdate({ payoutId, status: PayoutStatus.PAID, gatewayTxnId });
+    // Sem PSP configurado: simular sucesso imediato; com PSP, aguardamos webhook
+    if (!this.pspToken) {
+      await this.applyGatewayUpdate({ payoutId, status: PayoutStatus.PAID, gatewayTxnId });
+    }
   }
 
   async handleGatewayWebhook(signature: string, eventId: string, payload: any) {
@@ -179,11 +253,34 @@ export class PayoutsService {
   }
 
   private async computeBalance(tx: Prisma.TransactionClient, userId: string): Promise<Prisma.Decimal> {
-    const total = await tx.ledgerEntry.aggregate({
+    // Total ledger sum
+    const total = await tx.ledgerEntry.aggregate({ _sum: { amount: true }, where: { userId } });
+    const sumAll = total._sum.amount ?? new Prisma.Decimal(0);
+
+    // No settlement window configured
+    if (this.settleWindowDays <= 0) {
+      return sumAll;
+    }
+
+    // Withhold EARNING inside T+N or with active dispute
+    const cutoff = new Date(Date.now() - this.settleWindowDays * 24 * 60 * 60 * 1000);
+    const withheldAgg = await tx.ledgerEntry.aggregate({
       _sum: { amount: true },
-      where: { userId },
+      where: {
+        userId,
+        type: LedgerEntryType.EARNING,
+        OR: [
+          { createdAt: { gt: cutoff } },
+          { booking: { dispute: { status: { in: ['PENDING', 'IN_REVIEW'] } } } },
+        ],
+      },
     });
-    return total._sum.amount ?? new Prisma.Decimal(0);
+    const withhold = withheldAgg._sum.amount ?? new Prisma.Decimal(0);
+    return sumAll.sub(withhold);
+  }
+
+  private async computeAvailableBalance(userId: string): Promise<Prisma.Decimal> {
+    return this.prisma.$transaction(async (tx) => this.computeBalance(tx, userId));
   }
 
   private async applyGatewayUpdate(input: GatewayUpdateInput): Promise<void> {
@@ -285,5 +382,41 @@ export class PayoutsService {
     }
 
     return false;
+  }
+
+  private async initiateGatewayTransfer(
+    payoutId: string,
+    amount: number,
+    pixKey: string,
+    pixKeyType?: PixKeyType,
+    idempotencyKey?: string,
+  ): Promise<string> {
+    if (!this.pspToken) throw new Error('PSP token not configured');
+
+    const payload: any = {
+      reference_id: payoutId,
+      amount: Math.round(Math.max(0, amount) * 100),
+      pix: {
+        key: pixKey,
+        key_type: pixKeyType || 'RANDOM',
+      },
+      description: `Withdrawal for ${payoutId}`,
+      callback_url: `${this.configService.get<string>('API_BASE_URL') || ''}/payouts/webhook/gateway`,
+    };
+    const headers: any = {
+      Authorization: `Bearer ${this.pspToken}`,
+      'Content-Type': 'application/json',
+    };
+    if (idempotencyKey) headers['X-Idempotency-Key'] = idempotencyKey;
+
+    const url = `${this.pspBaseUrl.replace(/\/$/, '')}/payouts`;
+    try {
+      const res = await axios.post(url, payload, { headers, timeout: 10000 });
+      const txnId = res.data?.id || res.data?.transaction_id || `gw_${payoutId}`;
+      return String(txnId);
+    } catch (e: any) {
+      this.logger.error(`PSP payout error: ${e?.response?.status} ${JSON.stringify(e?.response?.data || e.message)}`);
+      throw new Error('PSP payout initiation failed');
+    }
   }
 }
