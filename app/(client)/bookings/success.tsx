@@ -1,10 +1,7 @@
-// LimpeJaApp/app/(client)/bookings/success.tsx
-import { BlurView } from 'expo-blur';
-import * as Calendar from 'expo-calendar';
-import * as Clipboard from 'expo-clipboard';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+﻿// LimpeJaApp/app/(client)/bookings/success.tsx
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router'; // ← CORREÇÃO: Adicionado 'Stack' aqui
+import { useTranslation } from 'react-i18next';
 import {
     Animated,
     ColorValue,
@@ -17,7 +14,11 @@ import {
     Text,
     TouchableOpacity
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context'; // Fix: Import para safe areas iOS
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
+import * as Calendar from 'expo-calendar';
+import * as Clipboard from 'expo-clipboard';
 
 // Import NotificationUIService
 import NotificationUIService from '../../../services/notificationUIService';
@@ -30,9 +31,9 @@ import SuccessLoadingError from '../../../components/client/booking/success/Succ
 import ImmediateActionButtons from '../../../components/client/booking/success/ImmediateActionButtons';
 import SecurityInfoSection from '../../../components/client/booking/success/SecurityInfoSection';
 import LoyaltyTeaserSection from '../../../components/client/booking/success/LoyaltyTeaserSection';
-import { ReturnCouponCard } from '../../../components/coupons/ReturnCouponCard'; // CORREÇÃO: Importar com chaves, pois é exportação nomeada
+import { ReturnCouponCard } from '../../../components/coupons/ReturnCouponCard'; // Correção: Importar com chaves, pois é exportação nomeada
 
-// IMPORTANTE: Adicione a interface de props para MissionReminderCard aqui ou no arquivo do componente
+// IMPORTANTE: Interface de props para MissionReminderCard
 interface MissionReminderCardProps {
     missionId: string;
     title: string;
@@ -42,9 +43,10 @@ interface MissionReminderCardProps {
     onGo: () => void;
     onDismiss: () => void;
 }
-// Assumindo que MissionReminderCard é um componente React.FC
+
+// Componente MissionReminderCard (definido inline)
 const MissionReminderCard: React.FC<MissionReminderCardProps> = ({ missionId, title, description, deadlineAt, reward, onGo, onDismiss }) => {
-    // ✅ Estilo premium para o card: fundo branco, bordas arredondadas, sombra suave
+    // Estilo premium para o card: fundo branco, bordas arredondadas, sombra suave
     const cardContainerStyle = {
         backgroundColor: AppColors.white || '#FFFFFF',
         borderRadius: 18,
@@ -58,7 +60,7 @@ const MissionReminderCard: React.FC<MissionReminderCardProps> = ({ missionId, ti
         elevation: 3, // Sombra sutil no Android
     };
 
-    // ✅ Tipografia iOS-like: pesos variados para hierarchy
+    // Tipografia iOS-like: pesos variados para hierarchy
     const cardTitleStyle = {
         fontFamily: 'Montserrat-SemiBold', // Título: SemiBold
         fontSize: 16,
@@ -68,7 +70,7 @@ const MissionReminderCard: React.FC<MissionReminderCardProps> = ({ missionId, ti
     const cardSubtitleStyle = {
         fontFamily: 'Montserrat-Regular', // Texto: Regular
         fontSize: 14,
-        color: '#666666', // ✅ Fallback para textSecondary (cinza médio, premium e legível)
+        color: '#666666', // Fallback para textSecondary (cinza médio, premium e legível)
     };
 
     const actionButtonStyle = {
@@ -84,26 +86,26 @@ const MissionReminderCard: React.FC<MissionReminderCardProps> = ({ missionId, ti
         padding: 12,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: '#E5E5E5', // ✅ Fallback para borderLight (borda clara e sutil)
+        borderColor: '#E5E5E5', // Fallback para borderLight (borda clara e sutil)
         fontFamily: 'Montserrat-Medium', // Ações: Medium
     };
 
     const textStyle = {
         fontSize: 12,
-        color: '#666666', // ✅ Fallback para textSecondary (prazo e recompensa: cinza médio)
+        color: '#666666', // Fallback para textSecondary (prazo e recompensa: cinza médio)
         fontFamily: 'Montserrat-Regular', // Texto secundário: Regular
     };
 
     const actionTextStyle = {
         color: AppColors.white || '#FFFFFF',
-        textAlign: 'center' as const, // ✅ Fix TS: Literal 'center' para compatibilidade com TextStyle
+        textAlign: 'center' as const, // Fix TS: Literal 'center' para compatibilidade com TextStyle
         fontSize: 14,
         fontFamily: 'Montserrat-Medium', // Texto de ação: Medium
     };
 
     const dismissTextStyle = {
-        textAlign: 'center' as const, // ✅ Fix TS: Literal 'center' para compatibilidade com TextStyle
-        color: '#666666', // ✅ Fallback para textSecondary (consistente e sutil no dismiss)
+        textAlign: 'center' as const, // Fix TS: Literal 'center' para compatibilidade com TextStyle
+        color: '#666666', // Fallback para textSecondary (consistente e sutil no dismiss)
         fontSize: 14,
         fontFamily: 'Montserrat-Medium', // Texto de dismiss: Medium
     };
@@ -162,7 +164,8 @@ const abstractBlobColors: readonly [ColorValue, ColorValue, ColorValue] = [
     AppColors.primaryInteractive + '05',
 ];
 
-export default function SuccessScreen() {
+const SuccessScreen: React.FC = () => {
+    const { t } = useTranslation();
     const { bookingId, paymentMethod, totalPrice: totalPriceParam, couponApplied, couponCode: appliedCouponCode } = useLocalSearchParams<{ bookingId?: string; paymentMethod?: string; totalPrice?: string; couponApplied?: string; couponCode?: string }>();
     const router = useRouter();
     const { user } = useAuth();
@@ -174,6 +177,7 @@ export default function SuccessScreen() {
     const [error, setError] = useState<string | null>(null);
     const [pixChargeDetails, setPixChargeDetails] = useState<PixChargeResponseDto | null>(null);
     const [pixGenerationError, setPixGenerationError] = useState<string | null>(null);
+    const [pixCountdown, setPixCountdown] = useState<number | null>(null);
 
     const [showReturnCouponCard, setShowReturnCouponCard] = useState(false);
     const [returnCouponDetails, setReturnCouponDetails] = useState<{ code: string; title: string; subtitle: string; expiresAt: Date } | null>(null); // expiresAt é Date
@@ -334,7 +338,7 @@ export default function SuccessScreen() {
                 const pixResponse = await createPixCharge(user!.id, pixChargeData);
                 if (!isMounted.current) return;
                 setPixChargeDetails(pixResponse);
-                NotificationUIService.showSuccess('Use o código para finalizar o pagamento.', 'PIX Gerado com Sucesso!');
+                // Suprimido: NotificationUIService.showSuccess('Use o código para finalizar o pagamento.', 'PIX Gerado com Sucesso!');
             } catch (e: any) {
                 if (!isMounted.current) return;
                 setPixGenerationError(e?.response?.data?.message || 'Não foi possível gerar a cobrança PIX.');
@@ -363,7 +367,7 @@ export default function SuccessScreen() {
 
         const timer = setTimeout(() => {
             entryAnimation.start(() => {
-                fetchBookingAndProviderDetails();   // 🚫 sem setTimeout extra pra PIX
+                fetchBookingAndProviderDetails();   // sem setTimeout extra pra PIX
             });
         }, revealDelay);
 
@@ -418,7 +422,8 @@ export default function SuccessScreen() {
                 });
                 NotificationUIService.showSuccess('Agendamento adicionado ao seu calendário.', 'Sucesso!');
             } else {
-                NotificationUIService.showInfo("Não foi possível adicionar ao calendário sem permissão. Por favor, conceda acesso nas configurações do seu dispositivo.", "Permissão Negada");
+                // Correção: Lógica apropriada para permissão negada (não PIX)
+                NotificationUIService.showInfo('Permissão de calendário negada. Tente novamente nas configurações do app.', 'Permissão Necessária');
             }
         } catch (error) {
             console.error("Erro ao adicionar ao calendário:", error);
@@ -446,15 +451,57 @@ export default function SuccessScreen() {
         if (pixChargeDetails?.brCode) {
             try {
                 await Clipboard.setStringAsync(pixChargeDetails.brCode);
-                NotificationUIService.showInfo('Cole no seu aplicativo bancário para finalizar o pagamento.', 'Código PIX copiado!');
+                // Suprimido: NotificationUIService.showInfo( ... );
+                console.log('[SuccessScreen] Código PIX copiado com sucesso.');
             } catch (error) {
-                console.error("Erro ao copiar código PIX:", error);
-                NotificationUIService.showError('Não foi possível copiar o código PIX.', 'Erro');
+                console.error('Erro ao copiar código PIX:', error);
+                NotificationUIService.showError(
+                    t('pix.copy_error', { defaultValue: 'Não foi possível copiar o código PIX.' }),
+                    t('common.error', { defaultValue: 'Erro' })
+                );
             }
         } else {
-            NotificationUIService.showError('Nenhum código PIX disponível para copiar.', 'Erro');
+            NotificationUIService.showError(
+                t('pix.copy_unavailable', { defaultValue: 'Nenhum código PIX disponível para copiar.' }),
+                t('common.error', { defaultValue: 'Erro' })
+            );
         }
+    }, [pixChargeDetails, t]);
+
+    useEffect(() => {
+        if (!pixChargeDetails) return;
+        if (pixCountdown != null) return;
+        setPixCountdown(10 * 60);
+        const timer = setInterval(() => {
+            setPixCountdown(prev => (prev == null ? null : Math.max(prev - 1, 0)));
+        }, 1000);
+        return () => clearInterval(timer);
     }, [pixChargeDetails]);
+
+    const formatCountdown = (sec: number | null) => {
+        if (sec == null) return '';
+        const m = Math.floor(sec / 60).toString().padStart(2, '0');
+        const s = Math.floor(sec % 60).toString().padStart(2, '0');
+        return `${m}:${s}`;
+    };
+
+    const handleRegeneratePix = useCallback(async () => {
+        try {
+            if (!booking || !user) return;
+            const amount = Number(totalPriceParam ?? booking.totalPrice ?? 0);
+            const pixChargeData: CreatePixChargeDto = {
+                amount: isNaN(amount) ? 0 : amount,
+                bookingId: booking.id,
+            } as any;
+            const pixResponse = await createPixCharge(user!.id, pixChargeData);
+            setPixChargeDetails(pixResponse);
+            setPixCountdown(10 * 60);
+            // Suprimido: NotificationUIService.showSuccess( ... );
+            console.log('[SuccessScreen] PIX regenerado com sucesso.');
+        } catch (e) {
+            NotificationUIService.showError(t('overlay.pix.regenerate_error', { defaultValue: 'Não foi possível gerar um novo QR.' }), t('common.error', { defaultValue: 'Erro' }));
+        }
+    }, [booking, totalPriceParam, user]);
 
     const handleRebookNow = useCallback((code: string) => {
         router.push({
@@ -471,8 +518,9 @@ export default function SuccessScreen() {
 
     const handleDismissMissionReminder = useCallback(() => {
         setShowMissionReminderCard(false);
-        NotificationUIService.showInfo('Você pode encontrá-lo na seção de Missões.', 'Lembrete dispensado');
-    }, []);
+        // Correção: Notificação apropriada para missão dispensada (não PIX)
+        NotificationUIService.showInfo('Missão dispensada. Você pode acessá-la depois no menu de missões.', 'Ok');
+    }, [t]);
 
     // BONUS: Removido pixGenerationError da condição de erro (não volta ao loader por falha no PIX)
     if (isLoading || error || !booking) {
@@ -492,24 +540,29 @@ export default function SuccessScreen() {
     const formattedAddressLine1 = userAddress ? formatAddressLine1(userAddress) : '';
     const formattedAddressLine2 = userAddress ? formatAddressLine2(userAddress) : '';
 
+    // ✅ FIX: Verificação explícita para PIX e fallback para garantir que o QR apareça (se brCode ou qrCodeImage existir, força render no SuccessPixInfo)
+    const isPixPayment = paymentMethod === 'PIX' || displayPaymentMethod === 'PIX';
+    const hasPixData = pixChargeDetails && (pixChargeDetails.brCode || pixChargeDetails.qrCodeImage);
+
     return (
-       <SafeAreaView style={{ flex: 1 }} edges={['left', 'right', 'bottom']}>  {/* Removido 'top' */}
-            {/* ✅ Gradiente polido: mais suave e clean com 3 cores e transparência reduzida */}
+        <SafeAreaView style={{ flex: 1 }} edges={['left', 'right', 'bottom']}>  {/* Removido 'top' */}
+            {/* Gradiente polido: mais suave e clean com 3 cores e transparência reduzida */}
             <LinearGradient
-    colors={backgroundGradientColors}
-    start={{ x: 0, y: 0 }}
-    end={{ x: 1, y: 1 }}
-    style={[
-        styles.screenGradientBackground,
-        { 
-            flex: 1, // ✅ Garante que o gradient ocupe toda a tela para scroll completo
-            paddingTop: 0  // ✅ ZERADO: Remove o padding fixo de 70/50px
-        }
-    ]}
->
+                colors={backgroundGradientColors}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[
+                    styles.screenGradientBackground,
+                    { 
+                        flex: 1, // Garante que o gradient ocupe toda a tela para scroll completo
+                        paddingTop: 0  // ZERADO: Remove o padding fixo de 70/50px
+                    }
+                ]}
+            >
+                {/* ← AQUI: <Stack.Screen> agora funciona com a importação */}
                 <Stack.Screen options={{ headerShown: false }} />
 
-                {/* ✅ AnimatedBlob premium: menor, mais opaco sutil, sombra leve sem poluir */}
+                {/* AnimatedBlob premium: menor, mais opaco sutil, sombra leve sem poluir */}
                 <Animated.View
                     style={[
                         styles.animatedBlob,
@@ -534,17 +587,17 @@ export default function SuccessScreen() {
 
                 {booking && (
                     <ScrollView
-                        style={{ flex: 1 }} // ✅ ScrollView com flex:1 para ocupar espaço disponível e scroll fluido
+                        style={{ flex: 1 }} // ScrollView com flex:1 para ocupar espaço disponível e scroll fluido
                         contentContainerStyle={styles.scrollContentContainer} // Sem flexGrow:1 para evitar travar scroll
-                        showsVerticalScrollIndicator={true} // ✅ Ativado para debug (pode desativar depois)
+                        showsVerticalScrollIndicator={true} // Ativado para debug (pode desativar depois)
                         showsHorizontalScrollIndicator={false} // Fix: Desabilita scroll horizontal no iOS
                         horizontal={false} // Fix: Força só vertical
                         bounces={Platform.OS === 'ios' ? true : false} // Fix: Bounce vertical OK no iOS, mas sem lateral
                         keyboardShouldPersistTaps="handled" // Fix: Melhor touch no iOS com teclado
                         contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'automatic' : 'never'} // Fix: Ajusta safe areas iOS automaticamente
-                        contentInset={Platform.OS === 'ios' ? { bottom: 40 } : {}} // ✅ contentInset bottom para evitar corte em iOS com notch
-                        scrollIndicatorInsets={Platform.OS === 'ios' ? { bottom: 40 } : {}} // ✅ scrollIndicatorInsets para indicador de scroll sem corte
-                        nestedScrollEnabled={true} // ✅ Permite scroll aninhado se houver (mas evite inner ScrollViews)
+                        contentInset={Platform.OS === 'ios' ? { bottom: 40 } : {}} // contentInset bottom para evitar corte em iOS com notch
+                        scrollIndicatorInsets={Platform.OS === 'ios' ? { bottom: 40 } : {}} // scrollIndicatorInsets para indicador de scroll sem corte
+                        nestedScrollEnabled={true} // Permite scroll aninhado se houver (mas evite inner ScrollViews)
                     >
                         <Animated.View
                             style={[
@@ -573,17 +626,39 @@ export default function SuccessScreen() {
                                 formattedAddressLine2={formattedAddressLine2}
                             />
 
+                            {/* ✅ FIX: pixOverlayBar só se PIX e com dados válidos; aumentado marginBottom para separar do cupom */}
+                            {isPixPayment && hasPixData && pixChargeDetails && (
+                                <View style={[styles.pixOverlayBar, { marginBottom: 16 }]}>
+                                    <Text style={styles.pixCountdown}>{t('pix.expiresIn', { defaultValue: 'Expira em' })} {formatCountdown(pixCountdown)}</Text>
+                                    <TouchableOpacity onPress={handleRegeneratePix} style={styles.pixAction}>
+                                        <Text style={styles.pixActionText}>{t('pix.regenerate', { defaultValue: 'Gerar novo QR' })}</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity onPress={handleCopyPixQrCode} style={styles.pixAction}>
+                                        <Text style={styles.pixActionText}>{t('pix.copy', { defaultValue: 'Copiar código' })}</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            )}
+
+                            {/* ✅ FIX: Cupom com marginTop maior se PIX presente (evita sobreposição); alinhado centralizado */}
                             {showReturnCouponCard && returnCouponDetails && (
-    <View style={[styles.sectionSpacer, { marginTop: 0, marginBottom: 8 }]}> {/* ✅ FIX: marginTop: 0 zera gap com PIX; marginBottom: 8 para gap controlado abaixo */}
-        <ReturnCouponCard
-            code={returnCouponDetails.code}
-            title={returnCouponDetails.title}
-            subtitle={returnCouponDetails.subtitle}
-            expiresAt={returnCouponDetails.expiresAt}
-            onRebookNow={handleRebookNow}
-        />
-    </View>
-)}
+                                <View style={[
+                                    styles.sectionSpacer, 
+                                    { 
+                                        marginTop: isPixPayment ? 26 : 8, // Aumentado se PIX (separa da barra); normal se não
+                                        marginBottom: 12, // Gap consistente abaixo
+                                        alignItems: 'center', // Centraliza o cupom
+                                        width: '100%'
+                                    }
+                                ]}>
+                                    <ReturnCouponCard
+                                        code={returnCouponDetails.code}
+                                        title={returnCouponDetails.title}
+                                        subtitle={returnCouponDetails.subtitle}
+                                        expiresAt={returnCouponDetails.expiresAt}
+                                        onRebookNow={handleRebookNow}
+                                    />
+                                </View>
+                            )}
 
                             {showMissionReminderCard && booking && (
                                 <View style={styles.sectionSpacer}> {/* Fix: Mesmo para mission, gap lógico */}
@@ -606,10 +681,10 @@ export default function SuccessScreen() {
                                 headerPrimaryColor={headerPrimaryColor}
                             />
 
-                            {/* ✅ Adicionado SecurityInfoSection para conteúdo completo (era ausente no render) */}
+                            {/* Adicionado SecurityInfoSection para conteúdo completo (era ausente no render) */}
                             <SecurityInfoSection successColor={successColor} />
 
-                            {/* ✅ Adicionado LoyaltyTeaserSection para conteúdo completo (era ausente no render) */}
+                            {/* Adicionado LoyaltyTeaserSection para conteúdo completo (era ausente no render) */}
                             <LoyaltyTeaserSection headerPrimaryColor={headerPrimaryColor} />
 
                             <MainActionButtons
@@ -636,10 +711,10 @@ const styles = StyleSheet.create({
     },
     scrollContentContainer: {
         position: 'relative',
-        // ✅ Removido flexGrow:1 para evitar travar scroll; agora usa paddingBottom para expansão natural
+        // Removido flexGrow:1 para evitar travar scroll; agora usa paddingBottom para expansão natural
         justifyContent: 'flex-start', // Fix: Mudado de 'center' para top-down lógico, reduz gaps
         alignItems: 'center',
-        paddingBottom: 60, // ✅ Aumentado para 60px (era 40) para gap final maior, garante scroll até o fim sem cortes (compensa safe area + extra)
+        paddingBottom: 60, // Aumentado para 60px (era 40) para gap final maior, garante scroll até o fim sem cortes (compensa safe area + extra)
         paddingHorizontal: 0, // Fix: Sem padding extra aqui, gerenciado nos filhos
         
     },
@@ -649,7 +724,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: 'transparent',
     },
-    // ✅ AnimatedBlob polido: menor (0.6x), opacidade reduzida (0.25), sombra sutil, elevation 0 no Android
+    // AnimatedBlob polido: menor (0.6x), opacidade reduzida (0.25), sombra sutil, elevation 0 no Android
     animatedBlob: {
         position: 'absolute',
         width: SCREEN_WIDTH * 0.6,
@@ -669,10 +744,50 @@ const styles = StyleSheet.create({
         shadowRadius: 18,
         elevation: 0, // Remove sombra excessiva no Android
     },
-    // ✅ SectionSpacer: marginBottom aumentado para 12 (padrão premium, ~24px total com paddings)
+    // SectionSpacer: marginBottom aumentado para 12 (padrão premium, ~24px total com paddings)
     sectionSpacer: {
         marginBottom: 12, // Gap consistente e confortável (equivalente a 24px total)
         width: '100%',
+        marginHorizontal: 30,
         alignItems: 'center',
+        
+    },
+    pixOverlayBar: {
+        marginTop: 8,
+        // ✅ FIX: marginBottom aumentado para 16px (separa melhor do cupom abaixo)
+        marginBottom: 6,
+        width: '92%',
+        alignSelf: 'center',
+        backgroundColor: '#ffffff',
+        borderRadius: 12,
+        paddingHorizontal: 22,
+        paddingVertical: 10,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+        elevation: 2,
+    },
+    pixCountdown: {
+        color: '#334155',
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    pixAction: {
+        paddingHorizontal: 8,
+        paddingVertical: 10,
+        borderRadius: 8,
+        backgroundColor: '#eef6ff',
+        marginLeft: 8,
+    },
+    pixActionText: {
+        color: '#2563eb',
+        fontSize: 12,
+        fontWeight: '600',
     },
 });
+
+export default SuccessScreen;
