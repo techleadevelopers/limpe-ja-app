@@ -8,13 +8,21 @@ type Props = {
   onPress: (time: string) => void;
   isAvailable: boolean;
   itemWidth?: number;
-  // Mantidos por compatibilidade, mas ignorados na UI simples
+  // Agora implementados: Para controle de espaçamento
   isRecommended?: boolean;
   dense?: boolean;
   noHorizontalMargin?: boolean;
 };
 
-export default function TimeSlotButton({ time, isSelected, onPress, isAvailable, itemWidth }: Props) {
+export default function TimeSlotButton({ 
+  time, 
+  isSelected, 
+  onPress, 
+  isAvailable, 
+  itemWidth, 
+  dense = false,  // Default false para modo normal
+  noHorizontalMargin = false 
+}: Props) {
   const pressAnim = useRef(new Animated.Value(1)).current;
 
   const onPressIn = () => {
@@ -25,6 +33,10 @@ export default function TimeSlotButton({ time, isSelected, onPress, isAvailable,
     Animated.spring(pressAnim, { toValue: 1, friction: 6, tension: 90, useNativeDriver: true }).start();
   };
 
+  // Calcula margem horizontal baseada nas props (compat RN antigos sem 'gap')
+  // Quando noHorizontalMargin = true, sem margem; caso contrário, margem pequena de 4px
+  const horizontalMargin = noHorizontalMargin ? 0 : 4;
+
   return (
     <Animated.View style={{ transform: [{ scale: pressAnim }], width: itemWidth }}>
       <TouchableOpacity
@@ -32,6 +44,10 @@ export default function TimeSlotButton({ time, isSelected, onPress, isAvailable,
         disabled={!isAvailable}
         style={[
           styles.buttonBase,
+          { 
+            marginHorizontal: horizontalMargin, // Espaçamento lateral consistente
+            minWidth: dense ? 80 : 84,
+          },
           !isAvailable ? styles.unavailable : isSelected ? styles.selected : styles.available,
         ]}
         activeOpacity={0.9}
@@ -41,6 +57,7 @@ export default function TimeSlotButton({ time, isSelected, onPress, isAvailable,
         <Text
           style={[
             styles.text,
+            { marginRight: 4 },
             isSelected && styles.textSelected,
             !isAvailable && styles.textUnavailable,
           ]}
@@ -58,14 +75,14 @@ export default function TimeSlotButton({ time, isSelected, onPress, isAvailable,
 
 const styles = StyleSheet.create({
   buttonBase: {
-    marginHorizontal: 1,
+    // Removido marginHorizontal e minWidth fixos (dinâmicos via props)
     height: 30,
-    minWidth: 84,
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+
     marginBottom: 8,
     overflow: 'hidden',
     backgroundColor: AppColors.backgroundLight,
@@ -96,3 +113,4 @@ const styles = StyleSheet.create({
     color: '#a2acbb',
   },
 });
+
