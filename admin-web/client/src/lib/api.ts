@@ -239,13 +239,9 @@ export const fetchRecentActivities = async (limit: number = 10): Promise<Activit
 };
 
 // --- Funções de Clientes ---
-export const fetchClients = async (): Promise<Client[]> => {
-    return fetchApi('/clients');
-};
+export const fetchClients = async (): Promise<Client[]> => { return fetchApi("/users"); };
 
-export const fetchClientById = async (id: string): Promise<Client> => {
-    return fetchApi(`/clients/${id}`);
-};
+export const fetchClientById = async (id: string): Promise<Client> => { return fetchApi(`/users/${id}`); };
 
 export const updateClientProfile = async (id: string, data: Partial<Client>): Promise<Client> => {
     return fetchApi(`/clients/${id}`, {
@@ -728,4 +724,5 @@ export type Review = {
     booking?: Booking;
 };
 */
+
 
