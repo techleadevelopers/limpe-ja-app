@@ -1,4 +1,4 @@
-import { Stack, useRouter } from 'expo-router';
+﻿import { Stack, useRouter } from 'expo-router';
 import { Image } from 'react-native';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -154,16 +154,12 @@ const REFERRAL_BANNER_DISMISSED_KEY = '@LimpeJa:ReferralBannerDismissed';
 
 export default function ExploreClientScreen() {
   const router = useRouter();
-  const { t } = useTranslation(); // CORREÇÃO: Adicionado aqui para t estar disponível em todo o escopo
   const flatListRef = useRef<FlatList<BannerDataItem>>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const { t } = useTranslation();
+  const { user, isAuthenticated } = useAuth();
 
-  const { user, isAuthenticated } = useAuth(); // CORREÇÃO: Movido para antes de userNameDisplay
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null); // CORREÇÃO: Movido para antes de userNameDisplay
-
-  // CORREÇÃO: Movido userNameDisplay para DEPOIS das declarações de user e userProfile
-  const userNameDisplay = (user?.clientDetails?.fullName || user?.providerDetails?.fullName || user?.fullName) ?? (userProfile?.clientDetails?.fullName || userProfile?.providerDetails?.fullName || userProfile?.fullName) ?? t('common.user');
-
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [serviceCategories, setServiceCategories] = useState<Service[]>([]);
   const [recommendations, setRecommendations] = useState<ProviderDisplayInfo[]>([]);
   const [nearbyProviders, setNearbyProviders] = useState<ProviderDisplayInfo[]>([]);
@@ -196,6 +192,11 @@ export default function ExploreClientScreen() {
   // Adicionado ref para verificar se o componente está montado
   const isMounted = useRef(true);
 
+  // INTEGRAÇÃO DA LÓGICA DO NEWHEADER: Lógica completa para exibir o nome do usuário (priorizando user do auth e fallback para userProfile)
+  const userNameDisplay = (user?.clientDetails?.fullName || user?.providerDetails?.fullName || user?.fullName) ?? 
+                          (userProfile?.clientDetails?.fullName || userProfile?.providerDetails?.fullName || userProfile?.fullName) ?? 
+                          t('common.user');
+
   const fetchData = useCallback(async () => {
     if (isMounted.current) {
       setLoading(true);
@@ -212,7 +213,9 @@ export default function ExploreClientScreen() {
       if (!isMounted.current) return;
       setServiceCategories(categoriesData);
 
-
+      const recommendationsData = await getRecommendedProviders();
+      if (!isMounted.current) return;
+      setRecommendations(recommendationsData);
 
       let locationCoords: Location.LocationObjectCoords | null = null;
       try {
@@ -228,19 +231,6 @@ export default function ExploreClientScreen() {
         console.error('[ExploreClientScreen] Erro ao obter localização:', locError);
         // Não exibir alerta de erro de rede aqui, pois é um erro de localização
         // Alert.alert(t('common.error'), t('common.network_error'));
-      }
-
-      // Buscar recomendações (com coordenadas se disponíveis) antes de montar a lista de proximidade
-      try {
-        const recs = await getRecommendedProviders(
-          locationCoords
-            ? { latitude: locationCoords.latitude, longitude: locationCoords.longitude }
-            : undefined,
-        );
-        if (!isMounted.current) return;
-        setRecommendations(recs);
-      } catch (recsErr) {
-        console.warn('[ExploreClientScreen] Erro ao carregar recomendações (silenciado):', (recsErr as any)?.message);
       }
 
       let providersData: ProviderDisplayInfo[] = [];
@@ -268,19 +258,17 @@ export default function ExploreClientScreen() {
         Animated.spring(navBarAnim, { toValue: 1, damping: 10, stiffness: 100, useNativeDriver: true }),
       ]).start();
     } catch (err: any) {
-      const errorMessage = err.message || err.response?.data?.message || t('common.network_error');
-      if (isMounted.current) {
-        // Mantém estado interno para possíveis fallback UIs, mas não exibe alertas/toasts ao usuário na entrada
-        setError(errorMessage);
-      }
-      console.warn('[ExploreClientScreen] Silenciado erro ao carregar dados:', err.response?.data || err.message);
+      // Home silenciosa na montagem: loga, guarda o estado, mas não exibe alerta/overlay
+      const errorMessage = err?.message || err?.response?.data?.message || t('common.network_error');
+      if (isMounted.current) setError(errorMessage);
+      console.warn('[ExploreClientScreen] erro silencioso na home:', errorMessage);
     } finally {
       if (isMounted.current) {
         setLoading(false);
         setIsRefreshing(false);
       }
     }
-  }, [t, headerAnim, categoriesAnim, bannerAnim, recommendationsAnim, providersAnim, navBarAnim, searchRadiusKm]); // CORREÇÃO: t adicionado nas dependências
+  }, [t, headerAnim, categoriesAnim, bannerAnim, recommendationsAnim, providersAnim, navBarAnim, searchRadiusKm]);
 
   useEffect(() => {
     isMounted.current = true; // Componente montado
@@ -288,7 +276,7 @@ export default function ExploreClientScreen() {
     return () => {
       isMounted.current = false; // Componente desmontado
     };
-  }, [fetchData]); // CORREÇÃO: Dependências atualizadas
+  }, [fetchData]);
 
   useFocusEffect(
     useCallback(() => {
@@ -372,7 +360,7 @@ export default function ExploreClientScreen() {
           clearTimeout(promotionTimeoutRef.current);
         }
       };
-    }, [userProfile, isAuthenticated, t]) // CORREÇÃO: t adicionado nas dependências
+    }, [userProfile, isAuthenticated, t])
   );
 
   const handleCategoryPress = useCallback(
@@ -436,21 +424,6 @@ export default function ExploreClientScreen() {
       />
     );
   }, []);
-
-  // REMOVIDO: Função renderPagination() - Não é mais necessária, pois removemos os dots
-  // const renderPagination = useCallback(() => (
-  //   <View style={styles.pagination}>
-  //     {bannerData.map((_, index) => (
-  //       <View
-  //         key={index}
-  //         style={[
-  //           styles.paginationDot,
-  //           index === currentIndex ? styles.paginationDotActive : styles.paginationDotInactive,
-  //         ]}
-  //       />
-  //     ))}
-  //   </View>
-  // ), [currentIndex]);
 
   const onRefresh = useCallback(() => {
     setIsRefreshing(true);
@@ -535,22 +508,8 @@ export default function ExploreClientScreen() {
     );
   }
 
-  if (error) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text style={{ color: AppColors.errorRed, textAlign: 'center' }} allowFontScaling={false}>
-          {error}
-        </Text>
-        <TouchableOpacity
-          onPress={fetchData}
-          style={{ marginTop: 20, padding: 10, backgroundColor: AppColors.primaryInteractive, borderRadius: 5 }}>
-          <Text style={{ color: AppColors.white }} allowFontScaling={false}>
-            {t('common.tryAgain')}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+  // Em caso de erro na primeira carga, não bloquear a home;
+  // o usuário pode usar pull-to-refresh para tentar de novo.
 
   const rawAddress =
     userProfile?.clientDetails?.address ||
@@ -572,11 +531,153 @@ export default function ExploreClientScreen() {
           }}
         />
 
-        <ScrollView
+        {/* FlatList ÚNICO com TODO o conteúdo no ListHeaderComponent */}
+        <FlatList
+          data={[]} // Header-only: data vazia, mas header rola tudo
+          keyExtractor={() => 'header-only'}
+          ListHeaderComponent={(
+            <>
+              {/* NewHeader ÚNICO */}
+              <NewHeader
+                userName={userNameDisplay}
+                userAddress={addressToDisplay}
+              />
+
+              {/* ContentWrapper ÚNICO - TODO o conteúdo aqui */}
+              <View style={styles.contentWrapper}>
+                {/* Seção de Categorias */}
+                <Animated.View
+                  style={[
+                    styles.categoriesSection,
+                    { 
+                      opacity: categoriesAnim, 
+                      transform: [{ translateY: categoriesAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] 
+                    },
+                  ]}>
+                  <View style={styles.categoryTitleWrapper}>
+                    <Text style={styles.categorySectionTitle} allowFontScaling={false}>
+                      {t('search.all_categories')}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => router.push('/(client)/explore/todas-categorias' as any)}
+                      style={styles.viewAllButton}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                      <Ionicons name="add" size={16} color="#398beeff" />
+                    </TouchableOpacity>
+                  </View>
+                  <SecaoContainer<Service>
+                    titulo={t('search.all_categories')}
+                    onVerTudoPress={() => router.push('/(client)/explore/todas-categorias' as any)}
+                    data={safeServiceCategories}
+                    renderItem={({ item }) => {
+                      if (!item || !item.name) return null;
+                      return (
+                        <CategoriaCard item={{ id: item.id, name: item.name, icon: item.icon as any }} />
+                      );
+                    }}
+                    horizontal={true}
+                    noDataText={t('search.no_results')}
+                  />
+                </Animated.View>
+
+                {/* Carrossel de Banners ÚNICO */}
+                <Animated.View
+                  style={[
+                    styles.carouselContainer,
+                    { 
+                      opacity: bannerAnim, 
+                      transform: [{ translateY: bannerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] 
+                    },
+                  ]}>
+                  <FlatList<BannerDataItem>
+                    ref={flatListRef}
+                    data={bannerData}
+                    renderItem={renderBannerItem}
+                    keyExtractor={(item) => item.id}
+                    horizontal
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={false}
+                    onViewableItemsChanged={onViewableItemsChanged}
+                    viewabilityConfig={viewabilityConfig}
+                    snapToInterval={screenWidth}
+                    decelerationRate="fast"
+                    contentContainerStyle={{ paddingHorizontal: 10, paddingRight: 20 }}
+                    nestedScrollEnabled={true} // Melhora scroll aninhado no Android
+                  />
+                </Animated.View>
+
+                {/* Recomendações ÚNICAS */}
+                <Animated.View
+                  style={{
+                    opacity: recommendationsAnim,
+                    transform: [{ translateY: recommendationsAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }],
+                  }}>
+                  <SecaoRecomendacoes
+                    titulo={t('search.recommended_providers')}
+                    onVerTudoPress={() => router.push('/(client)/explore/todos-recomendacoes' as any)}
+                    data={safeRecommendations}
+                    renderItem={({ item, index }) => {
+                      if (!item || !item.id || typeof item.id !== 'string' || !item.fullName || typeof item.fullName !== 'string') {
+                        console.warn('[ExploreClientScreen] Item de recomendação inválido filtrado:', item);
+                        return null;
+                      }
+                      return <RecomendacaoCard key={item.id} item={item} />;
+                    }}
+                    horizontal={true}
+                    noDataText={t('search.no_results')}
+                  />
+                </Animated.View>
+
+                {/* Profissionais por Perto ÚNICOS */}
+                <Animated.View
+                  style={{
+                    opacity: providersAnim,
+                    transform: [{ translateY: providersAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }],
+                  }}>
+                  <SecaoPrestadores
+                    titulo={t('search.nearby_providers')}
+                    onVerTudoPress={() => router.push('/(client)/explore/todos-prestadores-proximos' as any)}
+                    data={filteredNearbyProviders}
+                    renderItem={({ item, index }) => {
+                      if (!item || !item.id || typeof item.id !== 'string' || !item.fullName || typeof item.fullName !== 'string') {
+                        console.warn('[ExploreClientScreen] Item de prestador inválido filtrado:', item);
+                        return null;
+                      }
+                      return (
+                        <PrestadorCard key={item.id} item={item} onPress={() => handleProviderPress(item)} />
+                      );
+                    }}
+                    horizontal={true}
+                    noDataText={t('search.no_results')}
+                  />
+                  <View style={styles.sectionSeparator} />
+                </Animated.View>
+
+                {/* HorizontalMiniGrid ÚNICO */}
+                <Animated.View
+                  style={{
+                    opacity: providersAnim,
+                    transform: [{ translateY: providersAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }],
+                  }}>
+                  <View style={styles.miniGridHeader}>
+                    <Text style={styles.miniGridTitle} allowFontScaling={false}>
+                      {t('explore_section.title')}
+                    </Text>
+                  </View>
+                  <HorizontalMiniGrid />
+                </Animated.View>
+
+                {/* Spacer para scroll extra (compensa absolutos) */}
+                <View style={{ height: 20 }} />
+              </View>
+            </>
+          )}
           style={styles.scrollViewArea}
-          contentContainerStyle={styles.scrollContentContainer}
+          contentContainerStyle={{ 
+            paddingBottom: 10, // Padding alto para NavBar + Nudges + FABs
+            flexGrow: 1 
+          }}
           showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
           refreshControl={
             <RefreshControl
               refreshing={isRefreshing}
@@ -585,183 +686,20 @@ export default function ExploreClientScreen() {
               title={t('common.loading')}
               titleColor={AppColors.primaryInteractive}
             />
-          }>
-          {/* PREMIUM: NewHeader movido para dentro do ScrollView (fluxo unificado, sem overlap) */}
-          <NewHeader
-            userName={userNameDisplay}
-            userAddress={addressToDisplay}
-          />
+          }
+          nestedScrollEnabled={true} // Para Android
+          removeClippedSubviews={false} // Evita corte de animações
+        />
 
-          {/* O conteúdo principal da Home começa aqui, com o fundo branco e bordas arredondadas */}
-          <View style={styles.contentWrapper}>
-            {/* Seção de Filtro por Raio */}
-            {/*
-            <Animated.View style={[styles.radiusFilterContainer, { opacity: providersAnim, transform: [{ translateY: providersAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
-              <Text style={styles.radiusFilterTitle} allowFontScaling={false}>{t("search.search_radius")}</Text>
-              <View style={styles.radiusChipsWrapper}>
-                {[1, 2, 4, 10, 25, 50].map(km => (
-                  <TouchableOpacity
-                    key={km}
-                    onPress={() => { setSearchRadiusKm(km); fetchData(); }}
-                    style={[styles.radiusChip, searchRadiusKm === km && styles.radiusChipActive]}
-                    hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
-                  >
-                    <Text style={searchRadiusKm === km ? styles.radiusTextActive : styles.radiusText} allowFontScaling={false}>{km} km</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </Animated.View>
-            */}
-
-            {/* Seção de Filtro por Preço */}
-            {/*
-            <Animated.View style={[styles.priceFilterContainer, { opacity: providersAnim, transform: [{ translateY: providersAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
-              <Text style={styles.radiusFilterTitle} allowFontScaling={false}>{t("search.price_type")}</Text>
-              <View style={styles.priceFilterOptions}>
-                <TouchableOpacity
-                  onPress={() => setPriceFilter(priceFilter === PricingType.HOURLY ? null : PricingType.HOURLY)}
-                  style={[styles.radiusChip, priceFilter === PricingType.HOURLY && styles.radiusChipActive]}
-                  hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
-                >
-                  <Text style={priceFilter === PricingType.HOURLY ? styles.radiusTextActive : styles.radiusText} allowFontScaling={false}>{t("common.hourly")}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => setPriceFilter(priceFilter === PricingType.BY_SIZE ? null : PricingType.BY_SIZE)}
-                  style={[styles.radiusChip, priceFilter === PricingType.BY_SIZE && styles.radiusChipActive]}
-                  hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
-                >
-                  <Text style={priceFilter === PricingType.BY_SIZE ? styles.radiusTextActive : styles.radiusText} allowFontScaling={false}>{t("common.per_sqm")}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => setPriceFilter(priceFilter === PricingType.FIXED_PRICE ? null : PricingType.FIXED_PRICE)}
-                  style={[styles.radiusChip, priceFilter === PricingType.FIXED_PRICE && styles.radiusChipActive]}
-                  hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
-                >
-                  <Text style={priceFilter === PricingType.FIXED_PRICE ? styles.radiusTextActive : styles.radiusText} allowFontScaling={false}>{t("common.fixed_price")}</Text>
-                </TouchableOpacity>
-              </View>
-            </Animated.View>
-            */}
-
-            {/* Seção de Categorias */}
-            <Animated.View
-              style={[
-                styles.categoriesSection,
-                { opacity: categoriesAnim, transform: [{ translateY: categoriesAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] },
-              ]}>
-              <View style={styles.categoryTitleWrapper}>
-                <Text style={styles.categorySectionTitle} allowFontScaling={false}>
-                  {t('search.all_categories')}
-                </Text>
-                <TouchableOpacity
-                  onPress={() => router.push('/(client)/explore/todas-categorias' as any)}
-                  style={styles.viewAllButton}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                  <Ionicons name="add" size={16} color="#398beeff" />
-                </TouchableOpacity>
-              </View>
-              <SecaoContainer<Service>
-                titulo={t('search.all_categories')}
-                onVerTudoPress={() => router.push('/(client)/explore/todas-categorias' as any)}
-                data={safeServiceCategories}
-                renderItem={({ item }) => {
-                  if (!item || !item.name) return null;
-                  return (
-                    <CategoriaCard item={{ id: item.id, name: item.name, icon: item.icon as any }} />
-                  );
-                }}
-                horizontal={true}
-                noDataText={t('search.no_results')}
-              />
-            </Animated.View>
-
-            {/* Novo Carrossel de Banners - REMOVIDO: {renderPagination()} para eliminar as bolinhas */}
-            <Animated.View
-              style={[
-                styles.carouselContainer,
-                { opacity: bannerAnim, transform: [{ translateY: bannerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] },
-              ]}>
-              <FlatList<BannerDataItem>
-                ref={flatListRef}
-                data={bannerData}
-                renderItem={renderBannerItem}
-                keyExtractor={(item) => item.id}
-                horizontal
-                pagingEnabled
-                showsHorizontalScrollIndicator={false}
-                onViewableItemsChanged={onViewableItemsChanged}
-                viewabilityConfig={viewabilityConfig}
-                snapToInterval={screenWidth} // Alterado para screenWidth para melhor controle
-                decelerationRate="fast"
-                contentContainerStyle={{ paddingHorizontal: 10, paddingRight: 20 }} // Adicionado paddingRight para compensar snapToInterval
-              />
-              {/* REMOVIDO: {renderPagination()} - Isso elimina as 3 bolinhas de paginação */}
-            </Animated.View>
-
-            {/* Recomendações para Você Animadas */}
-            <Animated.View
-              style={{
-                opacity: recommendationsAnim,
-                transform: [{ translateY: recommendationsAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }],
-              }}>
-              <SecaoRecomendacoes
-                titulo={t('search.recommended_providers')}
-                onVerTudoPress={() => router.push('/(client)/explore/todos-recomendacoes' as any)}
-                data={safeRecommendations}
-                renderItem={({ item }) => {
-                  if (!item || !item.fullName) return null;
-
-                  return <RecomendacaoCard key={item.id} item={item} />;
-                }}
-                horizontal={true}
-                noDataText={t('search.no_results')}
-              />
-            </Animated.View>
-
-            {/* Profissionais por Perto Animados */}
-            <Animated.View
-              style={{
-                opacity: providersAnim,
-                transform: [{ translateY: providersAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }],
-              }}>
-              <SecaoPrestadores
-                titulo={t('search.nearby_providers')}
-                onVerTudoPress={() => router.push('/(client)/explore/todos-prestadores-proximos' as any)}
-                data={filteredNearbyProviders} // Usar os provedores filtrados
-                renderItem={({ item }) => {
-                  if (!item || !item.fullName) return null;
-                  return (
-                    <PrestadorCard key={item.id} item={item} onPress={() => handleProviderPress(item)} />
-                  );
-                }}
-                horizontal={true}
-                noDataText={t('search.no_results')}
-              />
-              <View style={styles.sectionSeparator} />
-            </Animated.View>
-
-            {/* INJEÇÃO: HorizontalMiniGrid com Badges */}
-            <Animated.View
-              style={{
-                opacity: providersAnim,
-                transform: [{ translateY: providersAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }],
-              }}>
-              <View style={styles.miniGridHeader}>
-                <Text style={styles.miniGridTitle} allowFontScaling={false}>
-                  {t('explore_section.title')}
-                </Text>
-              </View>
-              <HorizontalMiniGrid />
-            </Animated.View>
-          </View>
-        </ScrollView>
-
-        {/* NavBar Animada */}
+        {/* NavBar ÚNICA */}
         <Animated.View
           style={[
             styles.navBarContainer,
-            { transform: [{ translateY: navBarAnim.interpolate({ inputRange: [0, 1], outputRange: [100, 0] }) }] },
-          ]}>
+            { 
+              transform: [{ translateY: navBarAnim.interpolate({ inputRange: [0, 1], outputRange: [100, 0] }) }] 
+            },
+          ]}
+          pointerEvents="box-none"> {/* Não bloqueia scroll */}
           <NavBar
             welcomeCouponOffer={welcomeCouponOffer}
             activeBottomPromotion={activeBottomPromotion}
@@ -769,9 +707,10 @@ export default function ExploreClientScreen() {
           />
         </Animated.View>
 
-        {/* NOVO: DEFENSE_SOS <DEFENSE_SOS /> */}
+        {/* DEFENSE_SOS ÚNICO */}
+        <DEFENSE_SOS bottomOffset={20} />
 
-        {/* INJEÇÃO: SmartCouponNudge (aparece sutil após 3s na rota explore) */}
+        {/* SmartCouponNudge */}
         {welcomeCouponOffer && (
           <SmartCouponNudge
             code={welcomeCouponOffer!.couponCode as string}
@@ -781,12 +720,13 @@ export default function ExploreClientScreen() {
             throttleHours={24}
             showOnRoutes={['/(client)/explore']}
             onApply={handleUseWelcomeCoupon}
+            pointerEvents="box-none" // Não bloqueia scroll
           />
         )}
 
-        {/* NOVO: BottomSlideInCard para Cupom ou Indicação (FORA DO SCROLLVIEW) */}
+        {/* BottomSlideInCard para Cupom */}
         {welcomeCouponOffer && (
-          <BottomSlideInCard isVisible={activeBottomPromotion === 'coupon'}>
+          <BottomSlideInCard isVisible={activeBottomPromotion === 'coupon'} pointerEvents="box-none">
             <HtmlCouponCard
               code={welcomeCouponOffer!.couponCode as string}
               title={welcomeCouponOffer!.title}
@@ -799,8 +739,9 @@ export default function ExploreClientScreen() {
           </BottomSlideInCard>
         )}
 
+        {/* BottomSlideInCard para Referral */}
         {isAuthenticated && userProfile?.referralCode && (
-          <BottomSlideInCard isVisible={activeBottomPromotion === 'referral'}>
+          <BottomSlideInCard isVisible={activeBottomPromotion === 'referral'} pointerEvents="box-none">
             <ReferralBanner
               code={referralCode}
               rewardReferrer={rewardReferrer}
@@ -812,11 +753,12 @@ export default function ExploreClientScreen() {
           </BottomSlideInCard>
         )}
 
+        {/* CouponPill */}
         {showPersistentCouponPill && activeBottomPromotion !== 'coupon' && welcomeCouponOffer && (
           <CouponPill code={welcomeCouponOffer!.couponCode as string} onOpen={handleReopenWelcomeCoupon} />
         )}
 
-        {/* NOVO: ReferralSheet */}
+        {/* ReferralSheet */}
         <ReferralSheet
           visible={showReferralSheet}
           onClose={() => setShowReferralSheet(false)}
@@ -826,20 +768,22 @@ export default function ExploreClientScreen() {
           onShare={handleShareReferral}
         />
 
-        {/* Nudges inteligentes (empilhados com delay e offset) - Adicionados aqui */}
+        {/* Nudges */}
         <SecurityNudge
           delayMs={3500}
           throttleHours={24}
           showOnRoutes={['/(client)/explore']}
-          bottomOffset={20}
+          bottomOffset={120} // Offset para não sobrepor NavBar
+          pointerEvents="box-none"
         />
 
         <IncentiveNudge
           delayMs={5000}
           throttleHours={24}
           showOnRoutes={['/(client)/explore']}
-          bottomOffset={84}
+          bottomOffset={180} // Offset para empilhamento
           points={100}
+          pointerEvents="box-none"
         />
       </View>
     </SafeAreaView>
@@ -977,7 +921,7 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    marginHorizontal: 15,
+    marginHorizontal: 5,
   },
   scrollViewArea: {
     flex: 1,
@@ -990,28 +934,29 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     backgroundColor: '#fff',
     paddingTop: 0,
-    paddingBottom: 60,
+    paddingBottom: 80,
     paddingHorizontal: 2,
   },
   searchComponentContainer: {
     marginHorizontal: 10,
-    paddingBottom: 15,
+    paddingBottom: 5,
+    marginTop: -5,
   },
   categoriesSection: {
     marginTop: 2,
-    marginBottom: -10,
-    paddingHorizontal: 0,
+    marginBottom: -5,
+    paddingHorizontal: 6,
   },
   categoryTitleWrapper: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 10,
-    marginTop: -2,
-    marginBottom: 8,
+    marginTop: 1,
+    marginBottom: 2,
   },
   categorySectionTitle: {
-    fontSize: 18,
+    fontSize: 16.5,
     fontFamily: 'Montserrat-Regular',
     fontWeight: '600',
     // PREMIUM: Estilo de título alinhado
@@ -1019,13 +964,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   carouselContainer: {
-    marginTop: 20,
+    marginTop: 10,
     marginBottom: 10,
     alignItems: 'center',
   },
   navBarContainer: {
     position: 'absolute',
-    bottom: 0,
+    bottom: -15, // AJUSTADO: De -28 para 0
     left: 0,
     right: 0,
     zIndex: 200,
