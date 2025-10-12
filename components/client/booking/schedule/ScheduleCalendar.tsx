@@ -10,17 +10,17 @@ import {
   Dimensions,
   Platform,
 } from 'react-native';
-import { Calendar, LocaleConfig, DateData } from 'react-native-calendars'; // ✅ CORREÇÃO: Removido 'Theme' do import (não é exportado diretamente)
+import { Calendar, LocaleConfig, DateData } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
 import { AppColors, AppShadows } from '../../../../constants/appStyles';
-import * as Haptics from 'expo-haptics'; // Adicionado para feedback premium iOS
+import * as Haptics from 'expo-haptics';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-// ====== Locale PT-BR (Calendário) ====== (Integrado dos anexos para robustez)
+// ====== Locale PT-BR (Calendário) ======
 LocaleConfig.locales['pt-br'] = {
   monthNames: [
-    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Mai.', 'Junho',
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
   ],
   monthNamesShort: ['Jan.', 'Fev.', 'Mar.', 'Abr.', 'Mai.', 'Jun.', 'Jul.', 'Ago.', 'Set.', 'Out.', 'Nov.', 'Dez.'],
@@ -30,9 +30,9 @@ LocaleConfig.locales['pt-br'] = {
 };
 LocaleConfig.defaultLocale = 'pt-br';
 
-// ====== Design tokens adaptados dos anexos (Premium iOS) ======
+// ====== Design tokens ======
 const Colors = {
-  primary: AppColors.primaryInteractive || '#4A90E2', // Fallback para compatibilidade
+  primary: AppColors.primaryInteractive || '#4A90E2',
   primaryDark: '#2A72E7',
   bgSoft: AppColors.backgroundNeutral || '#F0F7FF',
   surface: AppColors.white || '#FFFFFF',
@@ -62,14 +62,11 @@ const Spacing = {
 
 const easeOut = Easing.out(Easing.ease);
 
-// ✅ PATCH 3.1: Helper para blindagem toISOString (defesa contra undefined em useMemo e handleDayPress)
+// ✅ PATCH 3.1: Helper para blindagem toISOString (defesa contra undefined)
 const safeISO = (d?: Date) => (d instanceof Date ? d.toISOString() : new Date().toISOString());
 
-// ====== Interface para Theme (CORRIGIDA: Local, baseada na lib oficial - sem import dependente) ======
-// ✅ CORREÇÃO: Interface autônoma (não estende Theme importado). Union de fontWeight simplificada para compatibilidade exata com lib
-// (valores comuns: strings literais + undefined; removidas duplicatas e pesos raros para evitar TS mismatches)
+// ====== Interface para Theme (Local) ======
 interface CustomTheme {
-  // Propriedades da lib + custom (sem duplicatas)
   backgroundColor?: string;
   calendarBackground?: string;
   textSectionTitleColor?: string;
@@ -90,12 +87,11 @@ interface CustomTheme {
   textDayFontSize?: number;
   textMonthFontSize?: number;
   textDayHeaderFontSize?: number;
-  // ✅ CORREÇÃO: Union simplificada e compatível com lib (strings literais comuns + undefined; sem pesos exóticos)
   textDayFontWeight?: 'normal' | 'bold' | '400' | '500' | '600' | '700' | undefined;
   textMonthFontWeight?: 'normal' | 'bold' | '400' | '500' | '600' | '700' | undefined;
   textDayHeaderFontWeight?: 'normal' | 'bold' | '400' | '500' | '600' | '700' | undefined;
   'stylesheet.calendar.header'?: {
-    header?: {  // ✅ ADICIONADO: Para ocultar o header do mês da lib (espaço e título duplicado)
+    header?: {
       height?: number;
       paddingTop?: number;
       paddingBottom?: number;
@@ -115,38 +111,32 @@ interface CustomTheme {
   };
   textInactiveColor?: string;
   textActiveColor?: string;
-  // ✅ FIX: Removida duplicata; só uma selectedDayTextColor
   todayBackgroundColor?: string;
 }
 
-// ====== Tema do Calendário (Integrado e adaptado dos anexos - agora compatível) ======
-// ✅ CORREÇÃO: Tipado com CustomTheme local (sem dependência de import)
-// ✅ RESOLUÇÃO DO PROBLEMA: Ocultar título duplicado do mês da lib (set monthTextColor transparente + header height:0 para colapsar espaço)
-// ✅ PREMIUM: Alinhamento confortável - paddingHorizontal do header customizado para 24 (mais espaçoso e premium), 
-//    com justifyContent space-between para ícones simétricos; calendar com padding interno via theme para alinhar dias centralizados
+// ====== Tema do Calendário ======
 const calendarTheme: CustomTheme = {
   backgroundColor: Colors.bgSoft,
   calendarBackground: Colors.surface,
   textSectionTitleColor: '#586069',
   selectedDayBackgroundColor: Colors.primary,
-  selectedDayTextColor: '#FFFFFF', // ✅ FIX: Só uma vez
+  selectedDayTextColor: '#FFFFFF',
   todayTextColor: Colors.primary,
   dayTextColor: Colors.text,
   textDisabledColor: Colors.textMuted,
   dotColor: Colors.primary,
   selectedDotColor: '#FFFFFF',
-  arrowColor: 'transparent', // ✅ FIX: Oculta setas da lib (usamos custom nav)
-  disabledArrowColor: 'transparent', // ✅ FIX: Oculta setas desabilitadas
-  monthTextColor: 'transparent', // ✅ FIX: Oculta título do mês da lib (evita duplicado)
+  arrowColor: 'transparent',
+  disabledArrowColor: 'transparent',
+  monthTextColor: 'transparent',
   indicatorColor: Colors.primary,
-  textDayFontWeight: '400' as const, // ✅ FIX: Valor compatível com union
+  textDayFontWeight: '400' as const,
   textMonthFontWeight: 'bold' as const,
   textDayHeaderFontWeight: '500' as const,
-  textDayFontSize: 16, // iOS larger
+  textDayFontSize: 16,
   textMonthFontSize: 19,
   textDayHeaderFontSize: 13,
   'stylesheet.calendar.header': {
-    // ✅ FIX PREMIUM: Colapsa o header da lib para remover espaço duplicado (height:0 + paddings zero)
     header: {
       height: 0,
       paddingTop: 0,
@@ -156,21 +146,19 @@ const calendarTheme: CustomTheme = {
       opacity: 0,
     },
     week: {
-      marginTop: 8, // More space iOS
+      marginTop: 8,
       flexDirection: 'row',
-      justifyContent: 'space-around', // ✅ Alinhamento premium: dias espaçados uniformemente (confortável visual)
+      justifyContent: 'space-around',
       borderBottomWidth: 1,
       borderBottomColor: Colors.border,
       paddingBottom: 8,
-      // ✅ ADICIONADO: Padding horizontal para alinhar com header custom (confortável e simétrico)
-      paddingHorizontal: 24, // Match com header (premium: mais espaço lateral para respiração)
+      paddingHorizontal: 24,
     },
     dayHeader: {
       color: Colors.textMuted,
       fontWeight: '500' as const,
       fontSize: 13,
-      // ✅ ADICIONADO: Padding para alinhamento premium dos nomes dos dias
-      paddingHorizontal: 2, // Leve para centralizar perfeitamente
+      paddingHorizontal: 2,
     },
   },
   textInactiveColor: Colors.textMuted,
@@ -178,7 +166,7 @@ const calendarTheme: CustomTheme = {
   todayBackgroundColor: Colors.infoLight,
 } as const;
 
-// ====== Tipos adaptados para integração com Calendar ======
+// ====== Tipos ======
 interface MarkedDate {
   [key: string]: {
     selected?: boolean;
@@ -194,15 +182,13 @@ interface ScheduleCalendarProps {
   currentDisplayMonth: Date;
   onPrevMonth: () => void;
   onNextMonth: () => void;
-  selectedDate: Date | undefined; // ✅ PATCH: Permite undefined para blindagem
+  selectedDate: Date | undefined;
   onDaySelect: (date: Date) => void;
   fadeAnim: Animated.Value;
   slideUpAnim: Animated.Value;
   selectionAnim: Animated.Value;
   calendarBreatheAnim: Animated.Value;
-  // Adicionado para suporte a markedDates (dos anexos, para lógica de produção)
   markedDates?: MarkedDate;
-  // Adicionado para suporte a dias passados desabilitados (lógica de produção)
   disablePastDates?: boolean;
 }
 
@@ -210,32 +196,28 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = memo(({
   currentDisplayMonth,
   onPrevMonth,
   onNextMonth,
-  selectedDate, // Pode ser undefined
+  selectedDate,
   onDaySelect,
   fadeAnim,
   slideUpAnim,
   selectionAnim,
   calendarBreatheAnim,
-  markedDates = {}, // Default vazio para compatibilidade
-  disablePastDates = true, // Default true para lógica de produção (bloquear passados)
+  markedDates = {},
+  disablePastDates = true,
 }) => {
-  // ✅ CORREÇÃO: Removido calendarRef (não usado e causa erro de prop 'ref' inválida no Calendar)
-  // Se precisar no futuro, envolva em forwardRef, mas desnecessário aqui
-
-  // ✅ PATCH: Defina today ANTES do useMemo para evitar closure undefined
+  // ✅ PATCH: Defina today ANTES do useMemo
   const today = React.useMemo(() => {
     const t = new Date();
     t.setHours(0, 0, 0, 0);
     return t;
-  }, []); // Estável, re-computa só no mount
+  }, []);
 
-  // Animações para botões de navegação (mantidas da lógica original, mas opcionais pois Calendar tem swipe)
   const prevMonthPressAnim = useRef(new Animated.Value(1)).current;
   const nextMonthPressAnim = useRef(new Animated.Value(1)).current;
 
   const onPressInMonthNav = useCallback((animValue: Animated.Value) => {
     if (Platform.OS === 'ios') {
-      Haptics.selectionAsync(); // Premium iOS haptic
+      Haptics.selectionAsync();
     }
     Animated.spring(animValue, {
       toValue: 0.9,
@@ -254,10 +236,8 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = memo(({
     }).start();
   }, []);
 
-  // Lógica de navegação de mês (adaptada para Calendar - usa onMonthChange para sincronizar)
   const handleMonthChange = useCallback((monthInfo: { month: number; year: number }) => {
-    const newMonth = new Date(monthInfo.year, monthInfo.month - 1, 1); // Calendar usa 1-based month
-    // Sincroniza com props externas se necessário (lógica de produção)
+    const newMonth = new Date(monthInfo.year, monthInfo.month - 1, 1);
     if (newMonth.getMonth() < currentDisplayMonth.getMonth()) {
       onPrevMonth();
     } else if (newMonth.getMonth() > currentDisplayMonth.getMonth()) {
@@ -265,15 +245,13 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = memo(({
     }
   }, [currentDisplayMonth, onPrevMonth, onNextMonth]);
 
-  // Lógica de seleção de dia (adaptada da original, com validação de passado)
   const handleDayPress = useCallback((day: DateData) => {
-    // ✅ PATCH: Blindagem extra para day.dateString (deve ser string, mas fallback se undefined)
+    // ✅ PATCH: Blindagem extra (removido warn; só return se inválido)
     if (!day || typeof day.dateString !== 'string') {
-      console.warn('[Calendar] day.dateString inválido:', day);
-      return;
+      return; // Silencioso, sem warn para evitar LogBox
     }
 
-    const todayLocal = new Date(); // Local para evitar closure
+    const todayLocal = new Date();
     todayLocal.setHours(0, 0, 0, 0);
     const selected = new Date(day.dateString);
     selected.setHours(0, 0, 0, 0);
@@ -285,19 +263,17 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = memo(({
 
     onDaySelect(selected);
     if (Platform.OS === 'ios') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); // Premium haptic na seleção
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
   }, [onDaySelect, disablePastDates]);
 
-  // Marked dates adaptados (dos anexos: selected + marked para dots)
+  // ✅ PATCH: Blindagem extra no useMemo de marks (evita loop com chaves inválidas no mount)
   const finalMarkedDates = React.useMemo(() => {
     const marks: MarkedDate = { ...markedDates };
 
-    // ✅ PATCH: Blindagem para selectedDate undefined
     const safeSelectedDate = selectedDate ?? new Date();
     const selectedDateStr = safeISO(safeSelectedDate).split('T')[0];
 
-    // Garante que o dia selecionado seja marcado (lógica de produção)
     if (!marks[selectedDateStr]) {
       marks[selectedDateStr] = {
         selected: true,
@@ -313,16 +289,14 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = memo(({
       };
     }
 
-    // Desabilita dias passados se necessário
     if (disablePastDates) {
-      // ✅ PATCH: todayStr computado dentro do memo para estabilidade (evita closure undefined)
       const todayLocal = new Date();
       todayLocal.setHours(0, 0, 0, 0);
       const todayStr = safeISO(todayLocal).split('T')[0];
 
+      // ✅ PATCH: Filtra só chaves válidas (string YYYY-MM-DD) para evitar warns no mount
       Object.keys(marks).forEach(dateStr => {
-        // ✅ PATCH: Validação extra para dateStr
-        if (!dateStr || typeof dateStr !== 'string') return;
+        if (typeof dateStr !== 'string' || !dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) return; // Ignora inválidas
         const date = new Date(dateStr);
         date.setHours(0, 0, 0, 0);
         if (date < todayLocal && dateStr !== todayStr) {
@@ -335,11 +309,10 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = memo(({
     }
 
     return marks;
-  }, [markedDates, selectedDate, disablePastDates]); // ✅ Deps incluem selectedDate para re-compute se mudar
+  }, [markedDates, selectedDate, disablePastDates]);
 
-  const currentMonthStr = currentDisplayMonth.toISOString().split('T')[0].substring(0, 7); // YYYY-MM
+  const currentMonthStr = currentDisplayMonth.toISOString().split('T')[0].substring(0, 7);
 
-  // Animação integrada (mantida da original, aplicada ao container do Calendar)
   const containerTransform = {
     transform: [{
       scale: Animated.multiply(
@@ -352,8 +325,6 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = memo(({
 
   return (
     <Animated.View style={[styles.calendarContainer, containerTransform]}>
-      {/* Header customizado com botões (opcional, pois Calendar tem swipe, mas mantido para lógica original) */}
-      {/* ✅ FIX PREMIUM: Ajuste de paddingHorizontal para 24 (mais confortável e espaçoso, alinhado com theme.week.paddingHorizontal) */}
       <View style={[styles.header, { paddingHorizontal: 24 }]}>
         <TouchableOpacity
           onPress={onPrevMonth}
@@ -361,7 +332,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = memo(({
           onPressIn={() => onPressInMonthNav(prevMonthPressAnim)}
           onPressOut={() => onPressOutMonthNav(prevMonthPressAnim)}
           accessibilityLabel={`Mês anterior`}
-          accessibilityHint="Navegar para o mês anterior no calendário" // ✅ NOVO: Hint extra para acessibilidade
+          accessibilityHint="Navegar para o mês anterior no calendário"
           accessible={true}
         >
           <Ionicons name="chevron-back" size={22} color={Colors.text} />
@@ -375,30 +346,27 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = memo(({
           onPressIn={() => onPressInMonthNav(nextMonthPressAnim)}
           onPressOut={() => onPressOutMonthNav(nextMonthPressAnim)}
           accessibilityLabel={`Próximo mês`}
-          accessibilityHint="Navegar para o próximo mês no calendário" // ✅ NOVO: Hint extra para acessibilidade
+          accessibilityHint="Navegar para o próximo mês no calendário"
           accessible={true}
         >
           <Ionicons name="chevron-forward" size={22} color={Colors.text} />
         </TouchableOpacity>
       </View>
 
-      {/* Calendar robusto integrado dos anexos */}
-      {/* ✅ CORREÇÃO: Removido ref={calendarRef} (prop inválida); theme tipado com CustomTheme local */}
-      {/* ✅ FIX: Adicionado style wrapper para padding extra se necessário, mas theme cuida do alinhamento */}
-      <View style={{ paddingHorizontal: 24 }}> {/* ✅ ADICIONADO: Wrapper para padding confortável (premium: alinha com header e dias) */}
+      <View style={{ paddingHorizontal: 24 }}>
         <Calendar
-          current={currentMonthStr} // Sincroniza com currentDisplayMonth
+          current={currentMonthStr}
           onDayPress={handleDayPress}
           markedDates={finalMarkedDates}
-          monthFormat={'MMMM yyyy'} // pt-BR via LocaleConfig
+          monthFormat={'MMMM yyyy'}
           onMonthChange={handleMonthChange}
-          firstDay={1} // Segunda como primeiro dia (padrão BR)
-          enableSwipeMonths={true} // Swipe para navegação (premium)
-          theme={calendarTheme} // ✅ FIX: Tipado nativamente com CustomTheme (sem assertion forçada)
+          firstDay={1}
+          enableSwipeMonths={false} // ✅ CORREÇÃO: Desabilita swipe para evitar re-renders desnecessários (use botões manuais)
+          hideExtraDays={true} // ✅ NOVO: Esconde dias vazios (menos itens no FlatList interno)
+          theme={calendarTheme}
           style={styles.calendarStyle}
           accessibilityLabel="Calendário de agendamentos"
-          accessibilityHint="Selecione uma data para agendamento" // ✅ AJUSTE: Hint mais claro
-          // Desabilita toques em dias passados via markedDates (já integrado acima)
+          accessibilityHint="Selecione uma data para agendamento"
         />
       </View>
     </Animated.View>
@@ -409,7 +377,7 @@ ScheduleCalendar.displayName = 'ScheduleCalendar';
 
 export default ScheduleCalendar;
 
-// ====== Styles adaptados (Premium iOS Clean, integrando dos anexos) ======
+// ====== Styles ======
 const styles = StyleSheet.create({
   calendarContainer: {
     backgroundColor: Colors.surface,
@@ -418,8 +386,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 25,
     paddingVertical: 10,
     marginBottom: 20,
-    marginTop: 28, // ✅ FIX RESOLVIDO: Mudado de -28 para 16 (espaçamento positivo e confortável para evitar overlap com AddressSection)
-    // iOS Premium Shadow (dos anexos) - INJETADO: Mesma sombra do ProviderBrief
+    marginTop: 28,
     borderWidth: 0.9,
     borderColor: 'rgba(24, 79, 230, 0.09)',
     ...Platform.select({
@@ -438,11 +405,11 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between', // ✅ FIX PREMIUM: Space-between para ícones simétricos e mês centralizado (confortável)
+    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
     marginTop: 10,
-    paddingHorizontal: 24, // ✅ FIX: Ajustado para 24 (premium: mais espaço lateral, alinhado com theme.week)
+    paddingHorizontal: 24,
   },
   iconBtn: {
     padding: Spacing.sm,
@@ -459,6 +426,5 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: Colors.primaryDark,
     fontFamily: Platform.OS === 'ios' ? 'SFProDisplay-Semibold' : 'System',
-    
   },
 });
