@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -15,14 +15,16 @@ import {
   Dimensions,
   Image,
   ImageSourcePropType,
-  Share, // Import Share for sharing functionality
+  Share,
+  AccessibilityInfo,
 } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useTranslation } from 'react-i18next'; // Assuming i18n is set up
+import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import Colors from '../../../constants/Colors'; // Adjust path as needed
+import Colors from '../../../constants/Colors';
 
 // Mock Referral Service (replace with actual backend service)
 interface ReferralInfo {
@@ -49,12 +51,13 @@ const getReferralInfo = async (): Promise<ReferralInfo> => {
 
 // ---------- 3D ICONS (absolute paths) ----------
 const Icons3D = {
-  heroGift: require('../../../assets/images/3d/gift2.png'), // Reusing gift2 from menu
-  discountTicket: require('../../../assets/images/3d/ticket.png'), // Reusing ticket from missions
-  check: require('../../../assets/images/3d/check.png'), // From missions
-  time: require('../../../assets/images/3d/time.png'), // From missions
-  button: require('../../../assets/images/3d/button.png'), // From missions
-  woman: require('../../../assets/images/3d/woman.png'), // From missions (for hero if needed, but gift is better here)
+  heroGift: require('../../../assets/images/3d/gift2.png'),
+  discountTicket: require('../../../assets/images/3d/ticket.png'),
+  check: require('../../../assets/images/3d/check.png'),
+  time: require('../../../assets/images/3d/time.png'),
+  button: require('../../../assets/images/3d/button.png'),
+  woman: require('../../../assets/images/3d/woman.png'),
+  mascrank: require('../../../assets/images/3d/masc-rank.png'), // Reused for consistency
 } satisfies Record<string, ImageSourcePropType>;
 
 const Icon3D = ({
@@ -77,7 +80,7 @@ const withAlpha = (hex: string, alpha: number) => {
 };
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const HERO_HEIGHT = SCREEN_HEIGHT * 0.38; // Consistent with coupons screen
+const HERO_HEIGHT = SCREEN_HEIGHT * 0.36; // Consistent with missions.tsx
 
 function useTheme() {
   const scheme = useColorScheme?.() || 'light';
@@ -85,9 +88,23 @@ function useTheme() {
   return theme as typeof Colors.light;
 }
 
-// --- Components ---
+// Reduced motion (adapted from missions.tsx)
+function useReducedMotion() {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    (async () => {
+      const enabled = await AccessibilityInfo.isReduceMotionEnabled();
+      setReduced(enabled);
+    })();
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', (v) => setReduced(v));
+    return () => sub?.remove?.();
+  }, []);
+  return reduced;
+}
 
-/** Card para exibir o código de indicação e botões de ação */
+// --- UI Components (adapted from missions.tsx styles and structure) ---
+
+/** Card para exibir o código de indicação e botões de ação (similar to FeaturedDiscountCard) */
 function ReferralCodeCard({
   referralCode,
   onCopyCode,
@@ -100,83 +117,90 @@ function ReferralCodeCard({
   theme: ReturnType<typeof useTheme>;
 }) {
   return (
-    <View style={[styles.card, { backgroundColor: theme.cardBackground, borderColor: theme.border }]}>
-      <Text style={[styles.cardTitle, { color: theme.text }]}>Seu Código de Indicação</Text>
-      <View style={[styles.codeContainer, { backgroundColor: theme.background }]}>
-        <Icon3D src={Icons3D.discountTicket} size={24} style={styles.codeIcon} />
-        <Text style={[styles.referralCodeText, { color: theme.primary }]}>{referralCode}</Text>
-        <TouchableOpacity onPress={() => onCopyCode(referralCode)} style={styles.copyButton}>
-          <Ionicons name="copy-outline" size={20} color={theme.textSecondary} />
-        </TouchableOpacity>
+    <View style={[styles.discountCard, { backgroundColor: theme.cardBackground }]}>
+      <View style={styles.discountHeader}>
+        <Icon3D src={Icons3D.discountTicket} size={30} style={{ marginRight: 12 }} />
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.discountHeadline, { color: theme.text }]}>Seu Código de Indicação</Text>
+          <View style={styles.discountMeta}>
+            <Text style={[styles.discountSubText, { color: theme.textSecondary }]}>Compartilhe com amigos</Text>
+          </View>
+        </View>
       </View>
+
+      <View style={styles.codeContainer}>
+        <Text style={[styles.referralCodeText, { color: theme.primary }]}>{referralCode}</Text>
+      </View>
+
       <View style={styles.buttonRow}>
         <TouchableOpacity
           style={[styles.actionButton, { backgroundColor: theme.primary }]}
           onPress={() => onShareLink(referralCode)}
         >
           <Ionicons name="share-social-outline" size={18} color="#FFFFFF" />
-          <Text style={styles.actionButtonText}>Compartilhar Link</Text>
+          <Text style={styles.actionButtonText}>Compartilhar</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: theme.accent }]}
+          style={[styles.actionButton, { backgroundColor: theme.accent || theme.primary }]}
           onPress={() => onCopyCode(referralCode)}
         >
           <Ionicons name="copy-outline" size={18} color="#FFFFFF" />
-          <Text style={styles.actionButtonText}>Copiar Código</Text>
+          <Text style={styles.actionButtonText}>Copiar</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 }
 
-/** Seção de benefícios da indicação */
+/** Seção de benefícios da indicação (similar to HowItWorks) */
 function BenefitsSection({ referrerBenefit, refereeBenefit, theme }: {
   referrerBenefit: string;
   refereeBenefit: string;
   theme: ReturnType<typeof useTheme>;
 }) {
   return (
-    <View style={[styles.card, { backgroundColor: theme.cardBackground, borderColor: theme.border }]}>
-      <Text style={[styles.cardTitle, { color: theme.text }]}>O que vocês ganham?</Text>
-      <View style={styles.benefitItem}>
-        <Ionicons name="person-outline" size={20} color={theme.primary} />
-        <Text style={[styles.benefitText, { color: theme.text }]}>Você: {referrerBenefit}</Text>
-      </View>
-      <View style={styles.benefitItem}>
-        <Ionicons name="person-add-outline" size={20} color={theme.primary} />
-        <Text style={[styles.benefitText, { color: theme.text }]}>Seu Amigo: {refereeBenefit}</Text>
-      </View>
-    </View>
-  );
-}
-
-
-/** Guia “Como funciona” */
-function HowItWorksReferral({ theme }: { theme: ReturnType<typeof useTheme> }) {
-  return (
-    <View style={[styles.card, { backgroundColor: theme.cardBackground, borderColor: theme.border }]}>
-      <Text style={[styles.cardTitle, { color: theme.text }]}>Como Funciona</Text>
+    <View style={[styles.howCard, { backgroundColor: theme.cardBackground }]}>
+      <Text style={[styles.howTitle, { color: theme.text }]}>O que vocês ganham?</Text>
       <View style={styles.howItem}>
         <Icon3D src={Icons3D.check} size={18} />
-        <Text style={[styles.howText, { color: theme.text }]}>1. Compartilhe seu código com um amigo.</Text>
-      </View>
-      <View style={styles.howItem}>
-        <Icon3D src={Icons3D.time} size={18} />
-        <Text style={[styles.howText, { color: theme.text }]}>2. Seu amigo usa o código no primeiro agendamento.</Text>
+        <Text style={[styles.howText, { color: theme.text }]}>Você: {referrerBenefit}</Text>
       </View>
       <View style={styles.howItem}>
         <Icon3D src={Icons3D.button} size={18} />
-        <Text style={[styles.howText, { color: theme.text }]}>3. Ambos recebem um desconto exclusivo!</Text>
+        <Text style={[styles.howText, { color: theme.text }]}>Amigo: {refereeBenefit}</Text>
       </View>
     </View>
   );
 }
 
+/** Guia “Como funciona” (adapted from HowItWorks) */
+function HowItWorksReferral({ theme }: { theme: ReturnType<typeof useTheme> }) {
+  return (
+    <View style={[styles.howCard, { backgroundColor: theme.cardBackground }]}>
+      <Text style={[styles.howTitle, { color: theme.text }]}>Como Funciona</Text>
+      <View style={styles.howItem}>
+        <Icon3D src={Icons3D.check} size={18} />
+        <Text style={[styles.howText, { color: theme.text }]}>Compartilhe seu código com um amigo.</Text>
+      </View>
+      <View style={styles.howItem}>
+        <Icon3D src={Icons3D.time} size={18} />
+        <Text style={[styles.howText, { color: theme.text }]}>Amigo usa no primeiro agendamento.</Text>
+      </View>
+      <View style={styles.howItem}>
+        <Icon3D src={Icons3D.button} size={18} />
+        <Text style={[styles.howText, { color: theme.text }]}>Ambos recebem o desconto!</Text>
+      </View>
+    </View>
+  );
+}
 
+// --- Screen (structure from missions.tsx)
 export default function ClientReferralScreen() {
   const router = useRouter();
-  const { t } = useTranslation(); // Assuming translation is available
+  const { t } = useTranslation();
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
+  const isReducedMotion = useReducedMotion();
 
   const [referralInfo, setReferralInfo] = useState<ReferralInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -194,8 +218,11 @@ export default function ClientReferralScreen() {
       const info = await getReferralInfo();
       setReferralInfo(info);
     } catch (error: any) {
-      console.error('Erro ao buscar informações de indicação:', error.response?.data || error.message);
-      Alert.alert(t('common.error'), error.response?.data?.message || t('common.network_error'));
+      Toast.show({
+        type: 'error',
+        text1: t('common.error'),
+        text2: error.response?.data?.message || t('common.network_error'),
+      });
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -206,38 +233,42 @@ export default function ClientReferralScreen() {
     Animated.parallel([
       Animated.timing(headerAnim, {
         toValue: 1,
-        duration: 500,
+        duration: isReducedMotion ? 0 : 420,
         easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }),
       Animated.timing(contentAnim, {
         toValue: 1,
-        duration: 700,
-        delay: 100,
+        duration: isReducedMotion ? 0 : 640,
+        delay: isReducedMotion ? 0 : 80,
         easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }),
     ]).start();
 
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.02,
-          duration: 2000,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 2000,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
+    if (!isReducedMotion) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.02,
+            duration: 2200,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 2200,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    } else {
+      pulseAnim.setValue(1);
+    }
 
     loadReferralInfo();
-  }, [headerAnim, contentAnim, loadReferralInfo, pulseAnim]);
+  }, [headerAnim, contentAnim, loadReferralInfo, pulseAnim, isReducedMotion]);
 
   const onRefresh = useCallback(() => {
     setIsRefreshing(true);
@@ -245,123 +276,93 @@ export default function ClientReferralScreen() {
   }, [loadReferralInfo]);
 
   const handleCopyCode = useCallback((code: string) => {
-    // In a real app, you'd use Clipboard.setString(code) from @react-native-clipboard/clipboard
-    Alert.alert('Código Copiado!', `"${code}" foi copiado para a sua área de transferência.`);
-    console.log(`Copied: ${code}`); // For demonstration
+    Alert.alert('Código Copiado!', `"${code}" foi copiado para a área de transferência.`);
   }, []);
 
   const handleShareLink = useCallback(async (code: string) => {
     try {
       const result = await Share.share({
-        message: `Use meu código de indicação "${code}" para ganhar um desconto no seu primeiro serviço! Link: [Seu link de indicação aqui]`, // Replace with actual referral link
-        url: mockReferralData.termsLink, // Optional URL to share
+        message: `Use meu código de indicação "${code}" para ganhar R$25 OFF no primeiro serviço!`,
+        url: referralInfo?.termsLink,
       });
       if (result.action === Share.sharedAction) {
-        if (result.activityType) {
-          // shared with activity type of result.activityType
-          Alert.alert('Sucesso!', 'Código de indicação compartilhado!');
-        } else {
-          // shared
-          Alert.alert('Sucesso!', 'Código de indicação compartilhado!');
-        }
-      } else if (result.action === Share.dismissedAction) {
-        // dismissed
+        Alert.alert('Sucesso!', 'Código compartilhado!');
       }
     } catch (error: any) {
       Alert.alert('Erro ao compartilhar', error.message);
     }
-  }, []);
+  }, [referralInfo]);
 
-
-  // --- Loading initial state
+  // --- Loading initial
   if (isLoading && !isRefreshing) {
     return (
       <View style={[styles.centeredFeedback, { backgroundColor: theme.background }]}>
         <Stack.Screen options={{ headerShown: false }} />
         <ActivityIndicator size="large" color={theme.primary} />
-        <Text style={[styles.loadingText, { color: theme.textMuted }]}>Carregando informações de indicação...</Text>
+        <Text style={[styles.loadingText, { color: theme.textMuted }]}>{t('common.loading')}</Text>
       </View>
     );
   }
+
+  // Subtle hero gradient (adapted from missions.tsx)
+  const heroGradient = [withAlpha(theme.cardBackground || '#FFFFFF', 1), withAlpha(theme.background || '#F6F8FB', 1)];
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Header de navegação sobreposto (transparente) */}
       <Animated.View
         style={[
-          styles.customHeader,
+          styles.header,
           {
-            opacity: headerAnim,
-            transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-40, 0] }) }],
-            backgroundColor: 'transparent',
-            borderBottomWidth: 0,
-            shadowOpacity: 0,
+            paddingTop: Platform.OS === 'ios' ? insets.top + 12 : 12,
+            transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-24, 0] }) }],
           },
         ]}
       >
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerBackButton} accessibilityLabel={t('common.back') || 'Voltar'}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+        <TouchableOpacity onPress={() => router.back()} style={styles.headerLeft} accessibilityLabel={t('common.back') || 'Voltar'}>
+          <Ionicons name="arrow-back" size={22} color={theme.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: '#FFFFFF' }]}>Indique e Ganhe</Text>
-        <View style={styles.headerActionIconPlaceholder} />
+        <Text style={[styles.headerTitle, { color: theme.text }]}>Indique e Ganhe</Text>
+        <View style={styles.headerRight} />
       </Animated.View>
 
       <ScrollView
         ref={scrollRef}
-        contentContainerStyle={styles.scrollViewContentContainer}
-        refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={theme.primary} />
-        }
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
+        keyboardShouldPersistTaps="handled"
       >
-        {/* HERO */}
         <View style={styles.heroWrapper}>
-          <Animated.Image
-            source={Icons3D.heroGift}
-            style={[
-              styles.heroIcon,
-              { transform: [{ scale: pulseAnim }] }
-            ]}
-            resizeMode="contain"
-          />
+          <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.hero, { backgroundColor: heroGradient[0] }]}>
+            <View style={styles.heroTextWrap}>
+              <Text style={[styles.kicker, { color: withAlpha(theme.text, 0.6) }]}>INDICAÇÕES</Text>
+              <Text style={[styles.title, { color: theme.text }]}>Convide amigos e ganhe benefícios</Text>
 
-          <LinearGradient
-            colors={['rgba(173, 216, 230, 0.7)', 'rgba(74, 145, 226, 0.72)', 'rgba(173, 216, 230, 0.7)']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.heroGradient}
-          >
-            <Image
-              source={Icons3D.heroGift} // Using heroGift icon as subtle background
-              style={{ position: 'absolute', right: 12, top: Platform.OS === 'ios' ? 56 : 40, width: 54, height: 54, opacity: 0.10 }}
-              resizeMode="contain"
-            />
-            <View style={styles.heroContent}>
-              <Text style={styles.heroKicker}>PROGRAMA DE INDICAÇÃO</Text>
-              <Text style={styles.heroTitle}>
-                Convide amigos e ganhe benefícios exclusivos!
-              </Text>
-
-              <TouchableOpacity style={styles.heroStartButton} onPress={() => scrollRef.current?.scrollToEnd({ animated: true })} accessibilityLabel="Compartilhar Agora">
-                <Text style={styles.heroStartText}>COMPARTILHAR AGORA</Text>
-                <Ionicons name="share-social" size={16} color={theme.primary} />
+              <TouchableOpacity style={[styles.cta, { backgroundColor: theme.primary }]} onPress={() => { requestAnimationFrame(() => scrollRef.current?.scrollTo({ y: HERO_HEIGHT, animated: true })); }} accessibilityLabel="Começar">
+                <Text style={styles.ctaText}>COMPARTILHAR</Text>
+                <Ionicons name="share-social" size={14} color="#FFF" />
               </TouchableOpacity>
+
+              {/* Stepper adapted for referral steps */}
+              <View style={styles.stepper}>
+                {[{ key: 'share', label: 'Compartilhar' }, { key: 'use', label: 'Amigo Usa' }, { key: 'gain', label: 'Ganhem' }].map((s, idx) => {
+                  const reached = idx <= 1; // Always show first two as reached for demo
+                  return (
+                    <React.Fragment key={s.key}>
+                      <View style={[styles.stepCircle, { backgroundColor: reached ? theme.primary : withAlpha(theme.text, 0.12), borderColor: withAlpha(theme.text, 0.18) }]} />
+                      {idx < 2 && <View style={[styles.stepLine, { backgroundColor: reached ? withAlpha(theme.primary, 0.6) : withAlpha(theme.text, 0.08) }]} />}
+                    </React.Fragment>
+                  );
+                })}
+              </View>
             </View>
+
+            <Animated.Image source={Icons3D.heroGift} style={[styles.heroMascot, { transform: [{ scale: pulseAnim }] }]} resizeMode="contain" />
           </LinearGradient>
         </View>
 
-        {/* Painel branco sobreposto */}
-        <Animated.View
-          style={[
-            styles.panel,
-            {
-              opacity: contentAnim,
-              transform: [{ translateY: contentAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
-              backgroundColor: theme.background,
-            },
-          ]}
-        >
+        <Animated.View style={[styles.panel, { transform: [{ translateY: contentAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
           {referralInfo && (
             <>
               <ReferralCodeCard
@@ -382,16 +383,13 @@ export default function ClientReferralScreen() {
 
           {referralInfo && (
             <TouchableOpacity
-              style={[styles.termsButton, { borderColor: theme.border }]}
-              onPress={() => Alert.alert('Termos e Condições', 'Redirecionar para: ' + referralInfo.termsLink)} // In real app, use Linking.openURL
+              style={[styles.termsButton, { borderColor: withAlpha(theme.text, 0.2), backgroundColor: theme.cardBackground }]}
+              onPress={() => Alert.alert('Termos', `Link: ${referralInfo.termsLink}`)}
             >
-              <Text style={[styles.termsButtonText, { color: theme.textSecondary }]}>
-                Ver Termos e Condições
-              </Text>
+              <Text style={[styles.termsButtonText, { color: theme.textSecondary }]}>Termos e Condições</Text>
               <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
             </TouchableOpacity>
           )}
-
         </Animated.View>
       </ScrollView>
     </View>
@@ -403,149 +401,104 @@ const styles = StyleSheet.create({
   centeredFeedback: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { marginTop: 10, fontSize: 16 },
 
-  // Header transparente
-  customHeader: {
+  // Header (from missions.tsx)
+  header: {
     position: 'absolute',
     top: 0, left: 0, right: 0,
-    zIndex: 20,
+    zIndex: 30,
+    height: 76,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 15,
-    paddingVertical: Platform.OS === 'ios' ? 50 : 20,
-    paddingTop: Platform.OS === 'ios' ? 50 : 20,
+    paddingHorizontal: 16,
+    backgroundColor: 'transparent',
   },
-  headerBackButton: { marginRight: 15 },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', flex: 1, textAlign: 'center' },
-  headerActionIconPlaceholder: { width: 24, marginLeft: 15 },
+  headerLeft: { width: 44, height: 44, justifyContent: 'center' },
+  headerRight: { width: 44 },
+  headerTitle: { fontSize: 16, fontWeight: '800', textAlign: 'center' },
 
   // Scroll
-  scrollViewContentContainer: { flexGrow: 1 },
+  scrollContent: { paddingBottom: 40 },
 
-  // Hero
+  // Hero (adapted from missions.tsx)
   heroWrapper: { height: HERO_HEIGHT, width: '100%' },
-  heroGradient: {
+  hero: {
     flex: 1,
-    paddingTop: Platform.OS === 'ios' ? 200 : 120,
-    paddingHorizontal: 28,
-    justifyContent: 'flex-start',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    paddingHorizontal: 20,
+    paddingTop: 22,
+    overflow: 'hidden',
+    justifyContent: 'center',
   },
-  heroIcon: { // New style for the main hero 3D icon
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 260 : 250, // Adjusted position
-    left: '60%',
-    marginLeft: 0,
-    width: 180,
-    height: 180,
-    zIndex: 10,
-  },
-  heroContent: {
-    flex: 1,
-    zIndex: 2,
-  },
-  heroKicker: { color: '#D7ECFF', letterSpacing: 1.2, fontWeight: '700', fontSize: 12 },
-  heroTitle: { color: '#FFFFFF', fontSize: 24, fontWeight: '800', marginTop: 6, lineHeight: 30, maxWidth: '90%' },
-  heroStartButton: {
-    marginTop: 16, alignSelf: 'flex-start', backgroundColor: '#FFFFFF',
-    paddingVertical: 10, paddingHorizontal: 16, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 6,
-  },
-  heroStartText: { color: '#0A84FF', fontWeight: '800', fontSize: 13 },
+  heroTextWrap: { maxWidth: SCREEN_WIDTH * 0.62 },
+  kicker: { fontSize: 12, fontWeight: '700', marginBottom: 8 },
+  title: { fontSize: 24, fontWeight: '800', lineHeight: 30, marginBottom: 14 },
+  cta: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999, alignSelf: 'flex-start' },
+  ctaText: { color: '#FFF', fontWeight: '800', marginRight: 8 },
 
-  // Panel
+  stepper: { flexDirection: 'row', alignItems: 'center', marginTop: 20 },
+  stepCircle: { width: 10, height: 10, borderRadius: 8, borderWidth: 1 },
+  stepLine: { height: 2, flex: 1, marginHorizontal: 8, borderRadius: 2 },
+
+  heroMascot: { position: 'absolute', right: 18, top: 24, width: 140, height: 140 },
+
+  // Panel (from missions.tsx)
   panel: {
     marginTop: -24,
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
-    paddingTop: 16,
-    paddingBottom: 24,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 20,
+    paddingBottom: 36,
+    paddingHorizontal: 0,
+    backgroundColor: 'transparent',
   },
 
-  // General Card Style
-  card: {
-    marginHorizontal: 15,
-    marginBottom: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    overflow: 'hidden',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
-    padding: 14,
+  // DiscountCard / ReferralCodeCard (adapted from missions.tsx discountCard)
+  discountCard: {
+    marginHorizontal: 16,
+    marginTop: 6,
+    borderRadius: 16,
+    backgroundColor: '#FFF',
+    padding: 16,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 6,
   },
-  cardTitle: { fontSize: 16, fontWeight: '700', marginBottom: 10 }, // Color set by theme
+  discountHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  discountHeadline: { fontSize: 16, fontWeight: '700', color: '#111827' },
+  discountMeta: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
+  discountSubText: { color: '#6B7280', fontSize: 12 },
+  codeContainer: { alignItems: 'center', paddingVertical: 12, borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 8, marginVertical: 12 },
+  referralCodeText: { fontSize: 24, fontWeight: '800', textAlign: 'center', letterSpacing: 2 },
+  buttonRow: { flexDirection: 'row', gap: 12 },
+  actionButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 12, gap: 8 },
+  actionButtonText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
 
-  // Referral Code Card specifics
-  codeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+  // HowItWorks / BenefitsSection (from missions.tsx howCard)
+  howCard: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 16,
+    backgroundColor: '#FFF',
+    padding: 16,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 4,
   },
-  codeIcon: {
-    marginRight: 10,
-  },
-  referralCodeText: {
-    flex: 1,
-    fontSize: 20,
-    fontWeight: '900',
-    textAlign: 'center',
-  },
-  copyButton: {
-    padding: 5,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    gap: 10, // Adjust gap between buttons
-  },
-  actionButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 10,
-    gap: 8,
-  },
-  actionButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 14,
-  },
+  howTitle: { fontSize: 16, fontWeight: '700', marginBottom: 8 },
+  howItem: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
+  howText: { color: '#374151', flex: 1, fontSize: 14 },
 
-  // Benefits Section specifics
-  benefitItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-    gap: 8,
-  },
-  benefitText: {
-    fontSize: 14,
-  },
-
-  // How it works specifics
-  howItem: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
-  howText: { flex: 1 }, // Color set by theme
-
-  // Terms Button
+  // Terms Button (simple card-like)
   termsButton: {
-    marginHorizontal: 15,
-    marginTop: 10,
+    marginHorizontal: 16,
+    marginTop: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     borderRadius: 12,
     borderWidth: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFF',
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
   },
-  termsButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
+  termsButtonText: { fontSize: 14, fontWeight: '600' },
 });
