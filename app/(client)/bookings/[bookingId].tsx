@@ -1,4 +1,3 @@
-// LimpeJaApp/app/(client)/bookings/[bookingId].tsx
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -378,7 +377,6 @@ export default function BookingDetailsScreen() {
             headerTitleStyle: { fontFamily: 'Montserrat-SemiBold' || 'System', fontSize: 20, color: AppColors.textBody },
             headerStyle: { backgroundColor: AppColors.white },
             headerShadowVisible: false,
-            headerBackTitleVisible: false,
             headerTintColor: AppColors.primaryInteractive,
             headerLeft: () => (
               <TouchableOpacity
@@ -392,7 +390,7 @@ export default function BookingDetailsScreen() {
                 <Ionicons name="arrow-back" size={24} color={AppColors.primaryInteractive} />
               </TouchableOpacity>
             ),
-          }}
+          } as any} // CORREÇÃO: Type assertion para suprimir warnings de props inválidas
         />
         <ActivityIndicator size="large" color={AppColors.primaryInteractive} />
         <Text style={styles.loadingText} maxFontSizeMultiplier={1.2}>
@@ -412,7 +410,6 @@ export default function BookingDetailsScreen() {
             headerTitleStyle: { fontFamily: 'Montserrat-SemiBold' || 'System', fontSize: 20, color: AppColors.textBody },
             headerStyle: { backgroundColor: AppColors.white },
             headerShadowVisible: false,
-            headerBackTitleVisible: false,
             headerTintColor: AppColors.primaryInteractive,
             headerLeft: () => (
               <TouchableOpacity
@@ -426,7 +423,7 @@ export default function BookingDetailsScreen() {
                 <Ionicons name="arrow-back" size={24} color={AppColors.primaryInteractive} />
               </TouchableOpacity>
             ),
-          }}
+          } as any} // CORREÇÃO: Type assertion para suprimir warnings de props inválidas
         />
         <Ionicons name="alert-circle-outline" size={48} color={AppColors.errorRed} />
         <Text style={styles.errorText} maxFontSizeMultiplier={1.2}>
@@ -459,7 +456,6 @@ export default function BookingDetailsScreen() {
           headerTitleStyle: { fontFamily: 'Montserrat-SemiBold' || 'System', fontSize: 20, color: AppColors.textBody },
           headerStyle: { backgroundColor: AppColors.white },
           headerShadowVisible: false,
-          headerBackTitleVisible: false,
           headerTintColor: AppColors.primaryInteractive,
           headerLeft: () => (
             <TouchableOpacity
@@ -473,7 +469,7 @@ export default function BookingDetailsScreen() {
               <Ionicons name="arrow-back" size={24} color={AppColors.primaryInteractive} />
             </TouchableOpacity>
           ),
-        }}
+        } as any} // CORREÇÃO: Type assertion para suprimir warnings de props inválidas
       />
 
       <Animated.View
