@@ -30,7 +30,7 @@ import { ClientMission, ClientReward } from '../types/backend/mission';
  */
 export async function getServiceCategories(): Promise<Service[]> {
   try {
-    const response: AxiosResponse<Service[]> = await api.get<Service[]>('/services');
+    const response: AxiosResponse<Service[]> = await api.get<Service[]>('/services', { headers: { 'X-Silent': '1' } });
     return response.data;
   } catch (error: any) {
     console.error('Erro ao buscar categorias de serviço:', error.response?.data || error.message);
@@ -81,7 +81,10 @@ export async function searchProvidersWithLocation(params: {
       ...(params.query ? { searchTerm: params.query } : {}),
     };
 
-    const response: AxiosResponse<ProviderDisplayInfo[]> = await api.get<ProviderDisplayInfo[]>('/providers', { params: mappedParams });
+    const response: AxiosResponse<ProviderDisplayInfo[]> = await api.get<ProviderDisplayInfo[]>('/providers', {
+      params: mappedParams,
+      headers: { 'X-Silent': '1' },
+    });
     return response.data;
   } catch (error: any) {
     console.error('Erro ao buscar provedores por localização:', error.response?.data || error.message);
@@ -100,7 +103,7 @@ export async function searchProvidersWithLocation(params: {
  */
 export async function getUserProfile(): Promise<UserProfile> {
   try {
-    const response: AxiosResponse<UserProfile> = await api.get<UserProfile>('/users/me', { headers: { 'X-Allow-Guest': '1' } });
+    const response: AxiosResponse<UserProfile> = await api.get<UserProfile>('/users/me', { headers: { 'X-Allow-Guest': '1', 'X-Silent': '1' } });
     return response.data;
   } catch (error: any) {
     console.error('Erro ao buscar perfil do usuário:', error.response?.data || error.message);
@@ -119,7 +122,7 @@ export async function getUserProfile(): Promise<UserProfile> {
  */
 export async function getOffers(): Promise<Offer[]> {
   try {
-    const response: AxiosResponse<Offer[]> = await api.get<Offer[]>('/offers');
+    const response: AxiosResponse<Offer[]> = await api.get<Offer[]>('/offers', { headers: { 'X-Silent': '1' } });
     return response.data;
   } catch (error: any) {
     console.error('Erro ao buscar ofertas:', error.response?.data || error.message);
