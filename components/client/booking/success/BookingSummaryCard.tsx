@@ -144,13 +144,13 @@ export default function BookingSummaryCard({
             formattedAddressLine1={formattedAddressLine1}
             formattedAddressLine2={formattedAddressLine2}
             notes={notes}
-            iconColor={AppColors.primaryInteractive} // Usando AppColors diretamente
+            iconColor={AppColors.primaryInteractive}
           />
 
           <DateTimeCards
             formattedBookingDate={formattedBookingDate}
             formattedBookingTime={formattedBookingTime}
-            iconColor={AppColors.primaryInteractive} // Usando AppColors diretamente
+            iconColor={AppColors.primaryInteractive}
           />
 
           <AdditionalBookingDetails
