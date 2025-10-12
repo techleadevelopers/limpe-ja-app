@@ -1118,11 +1118,37 @@ export default function ProviderDashboardScreen() {
             transform: [{ translateY: reviewsSectionAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] 
           }
         ]}>
-          <AdvancedReviewsSection
-            reviews={dashboardData?.reviews}
-            providerId={user?.id}
-            onViewAllReviews={() => router.push('/(provider)/reviews' as any)}
-          />
+          <View style={{ backgroundColor: WHITE, borderRadius: Radii.md, padding: Spacing.md, ...Platform.select({ ios: { shadowColor: SHADOW_COLOR_CARD, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 5 }, android: { elevation: 4 } }) }}>
+            <Text style={{ fontSize: 18, fontWeight: '600', color: TEXT_DARK, marginBottom: Spacing.md }}>Meus Serviços</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <TouchableOpacity
+                onPress={() => router.push('/(provider)/profile/edit-services' as any)}
+                onPressIn={() => !isReducedMotionEnabled && Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
+                style={{ flex: 1, marginRight: Spacing.sm, backgroundColor: PRIMARY_LIGHT, borderRadius: Radii.pill, paddingVertical: Spacing.sm, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: ICON_PRIMARY }}
+                accessibilityRole="button"
+                accessibilityLabel="Criar Serviço"
+                accessibilityHint="Toque para cadastrar um novo serviço"
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="add-circle-outline" size={20} color={ICON_PRIMARY} />
+                  <Text style={{ color: ICON_PRIMARY, fontWeight: '700', marginLeft: 8 }}>Criar Serviço</Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => router.push('/(provider)/profile/edit-services' as any)}
+                onPressIn={() => !isReducedMotionEnabled && Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
+                style={{ flex: 1, marginLeft: Spacing.sm, backgroundColor: WHITE, borderRadius: Radii.pill, paddingVertical: Spacing.sm, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: BORDER_SUBTLE }}
+                accessibilityRole="button"
+                accessibilityLabel="Editar Serviços"
+                accessibilityHint="Toque para editar seus serviços"
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="options-outline" size={20} color={TEXT_DARK} />
+                  <Text style={{ color: TEXT_DARK, fontWeight: '700', marginLeft: 8 }}>Editar Serviços</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          </View>
         </Animated.View>
         <Animated.View style={[
           { 
