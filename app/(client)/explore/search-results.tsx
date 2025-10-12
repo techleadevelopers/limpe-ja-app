@@ -1,5 +1,5 @@
 // LimpeJaApp/app/(client)/explore/search-results.tsx
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
+import { getCurrentPosition } from '../../../services/locationService';
 import { searchProviders } from '../../../services/providerService';
 import ProviderCard from '../../../components/ProviderCard';
 import { ProviderDisplayInfo } from '../../../types/backend/providers'; // Importado ProviderDisplayInfo
@@ -20,6 +21,20 @@ import { API_QUERY_KEYS } from '../../../constants/queryKeys';
 export default function SearchResultsScreen() {
   const router = useRouter();
   const { query, categoryId } = useLocalSearchParams();
+  
+  const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        const c = await getCurrentPosition();
+        if (c && typeof c.latitude === 'number' && typeof c.longitude === 'number') {
+          setCoords({ latitude: c.latitude, longitude: c.longitude });
+        }
+      } catch (err) {
+        console.warn('Falha ao obter localiza��o atual:', err);
+      }
+    })();
+  }, []);
 
   // Utiliza o hook useQuery para gerenciar o estado da busca
   const {
@@ -29,13 +44,13 @@ export default function SearchResultsScreen() {
     refetch,
     isRefetching,
   } = useQuery({
-    queryKey: [API_QUERY_KEYS.SEARCH_PROVIDERS, { query, categoryId }],
+    queryKey: [API_QUERY_KEYS.SEARCH_PROVIDERS, { query, categoryId, latitude: coords?.latitude, longitude: coords?.longitude }],
     queryFn: () => {
       // O endpoint searchProviders pode lidar com os dois tipos de filtro
       // A geolocalização é tratada em explore/index.tsx para a busca inicial
       // Aqui, a busca é por query ou categoria, e o backend deve retornar o priceFrom
       // Alterado 'query' para 'searchTerm' para corresponder ao tipo esperado
-      return searchProviders({ searchTerm: query as string, categoryId: categoryId as string });
+      const params: any = { ...(query ? { searchTerm: query as string } : {}), ...(categoryId ? { categoryId: categoryId as string } : {}), ...(coords ? { latitude: coords.latitude, longitude: coords.longitude } : {}) }; return searchProviders(params);
     },
     enabled: !!query || !!categoryId,
   });
