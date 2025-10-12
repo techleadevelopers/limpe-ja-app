@@ -26,9 +26,20 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => {
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.techleadevelopers.limpeja',
+      buildNumber: '1',
       // 🔻 sem Firebase: NÃO há googleServicesFile aqui
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
+        NSCameraUsageDescription:
+          'Usamos a câmera para capturar seus documentos e fotos de perfil para verificação.',
+        NSPhotoLibraryUsageDescription:
+          'Usamos sua biblioteca para selecionar fotos de perfil e documentos.',
+        NSPhotoLibraryAddUsageDescription:
+          'Podemos salvar imagens (comprovantes/QR) caso você escolha baixar.',
+        NSLocationWhenInUseUsageDescription:
+          'Sua localização ajuda a encontrar prestadores próximos a você.',
+        NSCalendarsUsageDescription:
+          'Adicionamos seus agendamentos ao Calendário, se você permitir.',
       },
     },
 
