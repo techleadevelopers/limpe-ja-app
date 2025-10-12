@@ -14,18 +14,28 @@ function useTheme() {
 }
 
 interface MissionListProps {
-    missions: MissionItemType[];
-    onClaimMission: (missionId: string) => void;
-    claimingMissionId: string | null;
-    onRefresh: () => void;
-    isRefreshing: boolean;
+  missions: MissionItemType[];
+  onClaimMission: (missionId: string) => void;
+  claimingMissionId: string | null;
+  onRefresh: () => void;
+  isRefreshing: boolean;
+  asStaticList?: boolean; // Quando true, renderiza itens sem FlatList (para uso dentro de ScrollView)
 }
 
-const MissionList: React.FC<MissionListProps> = ({ missions, onClaimMission, claimingMissionId, onRefresh, isRefreshing }) => {
+const MissionList: React.FC<MissionListProps> = ({ missions, onClaimMission, claimingMissionId, onRefresh, isRefreshing, asStaticList }) => {
   const [error, setError] = useState<string | null>(null);
   const theme = useTheme(); // Usa o hook de tema
 
   if (error) {
+    if (asStaticList) {
+      return (
+        <View style={[styles.centered, { backgroundColor: theme.background }] }>
+          <Ionicons name="alert-circle-outline" size={50} color={theme.error} />
+          <Text style={[styles.errorText, { color: theme.text }]}>{error}</Text>
+          <Text style={[styles.errorHint, { color: theme.textMuted }]}>Puxe para baixo para tentar novamente.</Text>
+        </View>
+      );
+    }
     return (
       <ScrollView
         contentContainerStyle={[styles.centered, { backgroundColor: theme.background }]} // Usa a cor de fundo do tema
@@ -41,6 +51,15 @@ const MissionList: React.FC<MissionListProps> = ({ missions, onClaimMission, cla
   }
 
   if (missions.length === 0 && !isRefreshing) {
+    if (asStaticList) {
+      return (
+        <View style={[styles.centered, { backgroundColor: theme.background }] }>
+          <Ionicons name="trophy-outline" size={60} color={theme.textMuted} />
+          <Text style={[styles.emptyText, { color: theme.text }]}>Nenhuma missão encontrada para esta categoria.</Text>
+          <Text style={[styles.emptyHint, { color: theme.textMuted }]}>Verifique novamente mais tarde ou explore outras categorias!</Text>
+        </View>
+      );
+    }
     return (
       <ScrollView
         contentContainerStyle={[styles.centered, { backgroundColor: theme.background }]} // Usa a cor de fundo do tema
@@ -52,6 +71,22 @@ const MissionList: React.FC<MissionListProps> = ({ missions, onClaimMission, cla
         <Text style={[styles.emptyText, { color: theme.text }]}>Nenhuma missão encontrada para esta categoria.</Text> {/* Usa a cor do texto do tema */}
         <Text style={[styles.emptyHint, { color: theme.textMuted }]}>Verifique novamente mais tarde ou explore outras categorias!</Text> {/* Usa a cor do texto mudo do tema */}
       </ScrollView>
+    );
+  }
+
+  if (asStaticList) {
+    return (
+      <View style={[styles.listContainer, { backgroundColor: theme.background }] }>
+        {missions.map((item, index) => (
+          <MissionItem
+            key={item.mission.id}
+            mission={item}
+            delay={index * 100}
+            onClaim={onClaimMission}
+            isClaiming={claimingMissionId === item.mission.id}
+          />
+        ))}
+      </View>
     );
   }
 
