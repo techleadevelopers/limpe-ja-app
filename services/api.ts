@@ -117,7 +117,7 @@ const buildUnifiedError = (error: AxiosError) => {
 api.interceptors.response.use(
   response => response,
   async error => {
-    const axiosError = error as AxiosError & { config: AxiosRequestConfig & { __tries?: number; _isRetryRequest?: boolean } };
+    const axiosError = error as AxiosError & { config: AxiosRequestConfig & { __tries?: number; _isRetryRequest?: boolean; meta?: { silent?: boolean } } };
     const config = axiosError.config;
     config.__tries = (config.__tries ?? 0) + 1;
 
@@ -167,19 +167,31 @@ api.interceptors.response.use(
     const silentHeader = headers['x-silent'] ?? headers['X-Silent'];
     const isSilent = silentHeader === '1' || silentHeader === 1 || silentHeader === true;
 
+    // NOVO: Suporte a modo silencioso via meta (para chamadas de boot/home)
+    const isMetaSilent = config.meta?.silent === true;
+
     const unified = buildUnifiedError(axiosError);
     const dedupeKey = `${unified.messageKey}:${unified.status}`;
 
-    if (!isSilent && !shouldDedupe(dedupeKey)) {
+    // Suprimir o fallback genérico na UI (especialmente na home/index)
+    const isFallbackKey = unified.messageKey === 'errors.network.retry_saved';
+
+    // Silencioso se for meta.silent OU header x-silent OU fallback
+    const shouldShowToast = !isSilent && !isMetaSilent && !isFallbackKey && !shouldDedupe(dedupeKey);
+    if (shouldShowToast) {
       const localized = i18n.t(unified.messageKey as any, { defaultValue: unified.message });
       Toast.show({ type: 'error', text1: i18n.t('common.error'), text2: localized });
     }
 
-    if (!isSilent) {
+    // Sentry: silencioso se meta.silent
+    if (!isMetaSilent && !isSilent) {
       Sentry.captureException(axiosError, {
         tags: { scope: 'network' },
         extra: unified,
       });
+    } else if (__DEV__) {
+      // Log apenas em dev para modo silencioso
+      console.warn('[api] Erro silencioso (meta.silent=true):', unified);
     }
 
     if (axiosError.response?.status === 401 && !config._isRetryRequest) {
@@ -194,11 +206,16 @@ api.interceptors.response.use(
       }
 
       await AsyncStorage.multiRemove(['auth_token', 'user_role', 'user_id', 'user_profile']);
-      Toast.show({
-        type: 'error',
-        text1: i18n.t('common.error'),
-        text2: i18n.t('common.unauthorized_error'),
-      });
+      // NOVO: Toast de unauthorized condicional a !isSilent (silencia na home/boot)
+      if (!isSilent && !isMetaSilent) {
+        Toast.show({
+          type: 'error',
+          text1: i18n.t('common.error'),
+          text2: i18n.t('common.unauthorized_error'),
+        });
+      } else if (__DEV__) {
+        console.warn('[api] 401 silencioso (X-Silent ou meta.silent):', unified);
+      }
     }
 
     // Preserve AxiosError shape for downstream callers and attach unified info
@@ -212,8 +229,7 @@ api.interceptors.response.use(
   }
 );
 
-export async function fetchApi<T = unknown>(path: string, init?: AxiosRequestConfig): Promise<T> {
+export async function fetchApi<T = unknown>(path: string, init?: AxiosRequestConfig & { meta?: { silent?: boolean } }): Promise<T> {
   const response = await api.request({ url: path, ...(init ?? {}) });
   return response.data as T;
 }
-
