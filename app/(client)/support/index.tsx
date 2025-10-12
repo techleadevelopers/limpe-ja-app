@@ -1,43 +1,46 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
+  Alert, // CORREÇÃO: Adicionado Alert aqui para resolver TS 2552
   Animated,
   Easing,
   FlatList,
   Image,
   KeyboardAvoidingView,
+  Linking, // Adicionado para integração com WhatsApp
   Platform,
   RefreshControl,
-  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
+  ScrollView, // horizontal only (ScrollPills)
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context'; // CORREÇÃO: Import correto para TS 2305
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import * as Haptics from 'expo-haptics';
+import * as Haptics from 'expo-haptics'; // Haptics premium para interações
 import { Ionicons } from '@expo/vector-icons';
 
 // =============================================================
 // 3D ICONS (seguir mesmo pacote do menu)
 // =============================================================
 const Icons3D = {
-  support: require('@3d/support.png'),
+  support: require('../../../assets/images/3d/support.png'), // CORREÇÃO: Path relativo padrão (ajuste se necessário)
+  whatsapp: require('../../../assets/images/3d/whatsapp.png'), // Adicione um ícone 3D para WhatsApp se disponível; caso contrário, use Ionicons
 };
 
 // =============================================================
 // API (usa instância centralizada do projeto)
 // =============================================================
-import api from '../../../services/api';
+import { api } from '../../../services/api';
+import NotificationUIService from '../../../services/notificationUIService';
 
-// Tipos mínimos para alinhar ao backend de tickets (flexível)
+// Tipos mínimos para alinhar ao backend de tickets (flexível) - Traduzidos para Português na UI
 export type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED' | 'CANCELLED';
-export type TicketSeverity = 'LOW' | 'MEDIUM' | 'HIGH';
-export type TicketCategory = 'PAYMENT' | 'BOOKING' | 'ACCOUNT' | 'TECHNICAL' | 'SAFETY' | 'OTHER';
+export type TicketSeverity = 'BAIXA' | 'MÉDIA' | 'ALTA'; // Traduzido para Português
+export type TicketCategory = 'PAGAMENTOS' | 'AGENDAMENTOS' | 'CONTA' | 'TÉCNICO' | 'SEGURANÇA' | 'OUTRO'; // Traduzido para Português
 
 export interface SupportTicket {
   id: string;
@@ -61,11 +64,12 @@ export interface CreateTicketDto {
 }
 
 // =============================================================
-// UI — Cabeçalho com mesmo tema do schedule (gradiente + abas pílula)
+// UI — Cabeçalho premium (branco clean, alinhado com menu/mensagens)
 // =============================================================
 const HEADER_TOP = Platform.OS === 'ios' ? 56 : 28;
 
 function Header({ title, onBack }: { title: string; onBack: () => void }) {
+  const insets = useSafeAreaInsets(); // CORREÇÃO: Agora funciona com o import correto
   const fade = useRef(new Animated.Value(0)).current;
   const slide = useRef(new Animated.Value(14)).current;
 
@@ -78,17 +82,20 @@ function Header({ title, onBack }: { title: string; onBack: () => void }) {
 
   return (
     <Animated.View style={{ opacity: fade, transform: [{ translateY: slide }] }}>
-      <LinearGradient
-        colors={["#6AA8FF", "#4A7FF3"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.headerGradient}
-      >
-        <StatusBar barStyle="light-content" />
-        <View style={{ height: HEADER_TOP }} />
+      <View style={styles.header}>
+        <StatusBar barStyle="dark-content" />
+        <View style={{ height: Platform.OS === 'ios' ? insets.top : HEADER_TOP }} />
         <View style={styles.headerRow}>
-          <TouchableOpacity onPress={onBack} style={styles.iconBtn}>
-            <Ionicons name="chevron-back" size={22} color="#fff" />
+          <TouchableOpacity 
+            onPress={() => {
+              if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              onBack();
+            }} 
+            style={styles.iconBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Voltar"
+          >
+            <Ionicons name="chevron-back" size={24} color="#4A5568" />
           </TouchableOpacity>
 
           <Text numberOfLines={1} style={styles.headerTitle}>{title}</Text>
@@ -97,26 +104,13 @@ function Header({ title, onBack }: { title: string; onBack: () => void }) {
             <Image source={Icons3D.support} style={styles.icon3d} />
           </View>
         </View>
-
-        {/* pílulas decorativas para coerência visual */}
-        <View style={styles.tabsPill}>
-          <View style={[styles.tabItem, styles.tabItemActive]}>
-            <Text style={styles.tabActiveText}>SUPORTE</Text>
-          </View>
-          <View style={[styles.tabItem, styles.tabItemGhost]}>
-            <Text style={styles.tabGhostText}>AJUDA</Text>
-          </View>
-          <View style={[styles.tabItem, styles.tabItemGhost]}>
-            <Text style={styles.tabGhostText}>SEGURANÇA</Text>
-          </View>
-        </View>
-      </LinearGradient>
+      </View>
     </Animated.View>
   );
 }
 
 // =============================================================
-// Animated background — bolhas brand (suave, pouco custo)
+// Animated background — bolhas brand (suave, pouco custo) - Tonificado para premium clean
 // =============================================================
 function AnimatedBackdrop() {
   const a1 = useRef(new Animated.Value(0)).current;
@@ -160,18 +154,36 @@ async function createTicket(dto: CreateTicketDto): Promise<SupportTicket> {
   return data;
 }
 
-// (Opcional) buscar metadados
+// (Opcional) buscar metadados - Com valores em Português
 async function fetchMeta(): Promise<{ categories: TicketCategory[]; severities: TicketSeverity[] }> {
   try {
     const { data } = await api.get('/support/meta');
     return {
-      categories: data?.categories ?? ['PAYMENT', 'BOOKING', 'ACCOUNT', 'TECHNICAL', 'SAFETY', 'OTHER'],
-      severities: data?.severities ?? ['LOW', 'MEDIUM', 'HIGH'],
+      categories: data?.categories ?? ['PAGAMENTOS', 'AGENDAMENTOS', 'CONTA', 'TÉCNICO', 'SEGURANÇA', 'OUTRO'],
+      severities: data?.severities ?? ['BAIXA', 'MÉDIA', 'ALTA'],
     };
   } catch {
-    return { categories: ['PAYMENT', 'BOOKING', 'ACCOUNT', 'TECHNICAL', 'SAFETY', 'OTHER'], severities: ['LOW', 'MEDIUM', 'HIGH'] };
+    return { categories: ['PAGAMENTOS', 'AGENDAMENTOS', 'CONTA', 'TÉCNICO', 'SEGURANÇA', 'OUTRO'], severities: ['BAIXA', 'MÉDIA', 'ALTA'] };
   }
 }
+
+// =============================================================
+// Função para abrir WhatsApp
+// =============================================================
+const openWhatsApp = async () => {
+  const phoneNumber = '+5519993223932';
+  const message = 'Olá, preciso de ajuda com o app Relax. Pode me auxiliar?'; // Mensagem pré-definida em Português
+  const whatsappUrl = `whatsapp://send?phone=${phoneNumber.replace(/\D/g, '')}&text=${encodeURIComponent(message)}`;
+  
+  const supported = await Linking.canOpenURL(whatsappUrl);
+  if (supported) {
+    await Linking.openURL(whatsappUrl);
+    if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  } else {
+    // Fallback para web ou app não instalado
+    Alert.alert('WhatsApp não encontrado', 'Por favor, instale o WhatsApp ou acesse https://wa.me/${phoneNumber} no navegador.');
+  }
+};
 
 // =============================================================
 // PÁGINA
@@ -179,6 +191,7 @@ async function fetchMeta(): Promise<{ categories: TicketCategory[]; severities: 
 export default function SupportIndex() {
   const router = useRouter();
   const { bookingId: routeBookingId } = useLocalSearchParams<{ bookingId?: string }>();
+  const insets = useSafeAreaInsets(); // CORREÇÃO: Agora funciona
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -188,8 +201,8 @@ export default function SupportIndex() {
   // formulário
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
-  const [category, setCategory] = useState<TicketCategory>('OTHER');
-  const [severity, setSeverity] = useState<TicketSeverity>('LOW');
+  const [category, setCategory] = useState<TicketCategory>('OUTRO');
+  const [severity, setSeverity] = useState<TicketSeverity>('BAIXA');
   const [bookingId, setBookingId] = useState<string | undefined>(routeBookingId);
   const [submitting, setSubmitting] = useState(false);
 
@@ -200,7 +213,7 @@ export default function SupportIndex() {
       setTickets(items);
       setMeta(m);
     } catch (e: any) {
-      Alert.alert('Erro', e?.message || 'Não foi possível carregar o suporte.');
+      NotificationUIService.showError(e?.message || 'Não foi possível carregar o suporte.', 'Erro');
     } finally {
       setLoading(false);
     }
@@ -221,7 +234,7 @@ export default function SupportIndex() {
   const handleSubmit = useCallback(async () => {
     if (!canSubmit) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      Alert.alert('Complete os campos', 'Informe um assunto e descreva o problema com pelo menos 10 caracteres.');
+      Alert.alert('Complete os campos', 'Informe um assunto e descreva o problema com pelo menos 10 caracteres.'); // CORREÇÃO: Agora Alert está importado
       return;
     }
     try {
@@ -231,155 +244,180 @@ export default function SupportIndex() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setSubject('');
       setMessage('');
-      setCategory('OTHER');
-      setSeverity('LOW');
+      setCategory('OUTRO');
+      setSeverity('BAIXA');
       setBookingId(routeBookingId);
       setTickets((prev) => [created, ...prev]);
-      Alert.alert('Enviado', 'Seu ticket foi criado com sucesso. Nossa equipe entrará em contato.');
+      NotificationUIService.showSuccess('Seu ticket foi criado com sucesso.', 'Enviado');
     } catch (e: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Erro ao enviar', e?.response?.data?.message || 'Tente novamente.');
+      NotificationUIService.showError(e?.response?.data?.message || 'Tente novamente.', 'Erro ao enviar');
     } finally {
       setSubmitting(false);
     }
   }, [canSubmit, subject, message, category, severity, bookingId, routeBookingId]);
 
   const renderTicket = ({ item }: { item: SupportTicket }) => (
-    <View style={styles.ticketCard}>
-      <View style={styles.ticketRow}>
-        <View style={[styles.statusDot, { backgroundColor: statusColor(item.status) }]} />
-        <Text style={styles.ticketSubject} numberOfLines={1}>{item.subject}</Text>
+    <TouchableOpacity 
+      onPress={() => {
+        if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        router.push(`/support/${item.id}` as any);
+      }}
+      accessibilityRole="button"
+      accessibilityLabel={`Ticket: ${item.subject}`}
+    >
+      <View style={styles.ticketCard}>
+        <View style={styles.ticketRow}>
+          <View style={[styles.statusDot, { backgroundColor: statusColor(item.status) }]} />
+          <Text style={styles.ticketSubject} numberOfLines={1}>{item.subject}</Text>
+        </View>
+        <View style={styles.ticketMetaRow}>
+          <Badge label={item.category} />
+          {!!item.severity && <Badge label={item.severity} />}
+          <Text style={styles.ticketDate}>{formatDate(item.createdAt)}</Text>
+        </View>
+        <Text style={styles.ticketMsg} numberOfLines={2}>{item.message}</Text>
       </View>
-      <View style={styles.ticketMetaRow}>
-        <Badge label={item.category} />
-        {!!item.severity && <Badge label={item.severity} />}
-        <Text style={styles.ticketDate}>{formatDate(item.createdAt)}</Text>
-      </View>
-      <Text style={styles.ticketMsg} numberOfLines={2}>{item.message}</Text>
-      <View style={styles.ticketActions}>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => router.push(`/support/${item.id}` as any)}>
-          <Ionicons name="chatbubbles-outline" size={16} color="#2A72E7" />
-          <Text style={styles.actionText}>ver detalhes</Text>
+    </TouchableOpacity>
+  );
+
+  const ListHeader = () => (
+    <View style={{ padding: 16 }}>
+      <View style={styles.formCard}>
+        <Text style={styles.formTitle}>Abrir novo ticket</Text>
+        <View style={styles.rowField}>
+          <Ionicons name="pricetag-outline" size={18} color="#4A90E2" />
+          <ScrollPills
+            items={meta.categories.length ? meta.categories : (['PAGAMENTOS','AGENDAMENTOS','CONTA','TÉCNICO','SEGURANÇA','OUTRO'] as TicketCategory[])}
+            value={category}
+            onChange={(v) => setCategory(v as TicketCategory)}
+          />
+        </View>
+        <View style={styles.rowField}>
+          <Ionicons name="warning-outline" size={18} color="#4A90E2" />
+          <ScrollPills
+            items={meta.severities.length ? meta.severities : (['BAIXA','MÉDIA','ALTA'] as TicketSeverity[])}
+            value={severity}
+            onChange={(v) => setSeverity(v as TicketSeverity)}
+          />
+        </View>
+        <TextInput
+          placeholder="Assunto do ticket"
+          placeholderTextColor="#9CA3AF"
+          value={subject}
+          onChangeText={setSubject}
+          style={styles.input}
+          maxLength={120}
+          accessibilityLabel="Assunto do ticket"
+          accessibilityHint="Digite o assunto do seu ticket de suporte."
+        />
+        <TextInput
+          placeholder="Descreva o problema com detalhes (mín. 10 caracteres)"
+          placeholderTextColor="#9CA3AF"
+          value={message}
+          onChangeText={setMessage}
+          style={[styles.input, { height: 120, textAlignVertical: 'top' }]}
+          multiline
+          accessibilityLabel="Descrição do problema"
+          accessibilityHint="Descreva o problema em detalhes."
+        />
+        <TextInput
+          placeholder="ID do agendamento (opcional)"
+          placeholderTextColor="#9CA3AF"
+          value={bookingId}
+          onChangeText={setBookingId}
+          style={styles.input}
+          accessibilityLabel="ID do agendamento"
+          accessibilityHint="Digite o ID do agendamento relacionado, se aplicável."
+        />
+        <TouchableOpacity
+          style={[styles.primaryBtn, { opacity: submitting ? 0.7 : (canSubmit ? 1 : 0.6) }]}
+          onPress={handleSubmit}
+          disabled={!canSubmit || submitting}
+          accessibilityRole="button"
+          accessibilityLabel="Enviar ticket"
+          accessibilityHint="Toque para enviar o ticket de suporte."
+          accessibilityState={{ disabled: !canSubmit || submitting }}
+        >
+          {submitting ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <>
+              <Ionicons name="paper-plane" size={16} color="#FFFFFF" />
+              <Text style={styles.primaryBtnTxt}>Enviar ticket</Text>
+            </>
+          )}
+        </TouchableOpacity>
+        <View style={styles.inlineHelp}>
+          <Ionicons name="shield-checkmark" size={16} color="#4A90E2" />
+          <Text style={styles.inlineHelpTxt}>Emergência ou incidente? </Text>
+          <TouchableOpacity
+            onPress={() => {
+              if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.push('/(client)/safety/report-incident' as any);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Relatar incidente"
+          >
+            <Text style={[styles.inlineHelpTxt, { textDecorationLine: 'underline', fontWeight: '700' }]}>Relatar agora</Text>
+          </TouchableOpacity>
+        </View>
+        {/* Botão WhatsApp integrado - Ícone moderno e robusto */}
+        <TouchableOpacity
+          style={styles.whatsappBtn}
+          onPress={openWhatsApp}
+          accessibilityRole="button"
+          accessibilityLabel="Falar pelo WhatsApp"
+          accessibilityHint="Toque para abrir o WhatsApp e enviar mensagem para suporte."
+        >
+          <View style={styles.whatsappIconWrap}>
+            {/* Use ícone 3D se disponível, senão Ionicons */}
+            {Icons3D.whatsapp ? (
+              <Image source={Icons3D.whatsapp} style={styles.whatsappIcon3d} />
+            ) : (
+              <Ionicons name="logo-whatsapp" size={24} color="#25D366" />
+            )}
+          </View>
+          <Text style={styles.whatsappBtnTxt}>Fale pelo WhatsApp</Text>
         </TouchableOpacity>
       </View>
+      <View style={{ height: 10 }} />
+      <Text style={styles.sectionTitle}>Meus tickets</Text>
+    </View>
+  );
+
+  const Empty = () => (
+    <View style={[styles.emptyBox, { marginHorizontal: 16 }]}>
+      <Image source={Icons3D.support} style={[styles.icon3d, { width: 44, height: 44 }]} />
+      <Text style={styles.emptyTitle}>Sem tickets abertos</Text>
+      <Text style={styles.emptySubtitle}>Precisa de ajuda? Abra um ticket e retornaremos rapidamente.</Text>
     </View>
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#f7f9ff' }}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <Stack.Screen options={{ headerShown: false }} />
-
       <Header title="Suporte" onBack={() => router.back()} />
       <AnimatedBackdrop />
-
       {loading ? (
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color="#4A7FF3" />
+          <ActivityIndicator size="large" color="#4A90E2" />
           <Text style={styles.loadingTxt}>Carregando suporte...</Text>
         </View>
       ) : (
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-          <ScrollView
-            contentContainerStyle={{ padding: 16, paddingBottom: 38 }}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          >
-            {/* FORMULÁRIO */}
-            <View style={styles.formCard}>
-              <Text style={styles.formTitle}>Abrir novo ticket</Text>
-
-              <View style={styles.rowField}>
-                <Ionicons name="pricetag-outline" size={18} color="#2A72E7" />
-                <ScrollPills
-                  items={meta.categories.length ? meta.categories : (['PAYMENT','BOOKING','ACCOUNT','TECHNICAL','SAFETY','OTHER'] as TicketCategory[])}
-                  value={category}
-                  onChange={(v) => setCategory(v as TicketCategory)}
-                />
-              </View>
-
-              <View style={styles.rowField}>
-                <Ionicons name="warning-outline" size={18} color="#2A72E7" />
-                <ScrollPills
-                  items={meta.severities.length ? meta.severities : (['LOW','MEDIUM','HIGH'] as TicketSeverity[])}
-                  value={severity}
-                  onChange={(v) => setSeverity(v as TicketSeverity)}
-                />
-              </View>
-
-              <TextInput
-                placeholder="Assunto do ticket"
-                placeholderTextColor="#8aa2d6"
-                value={subject}
-                onChangeText={setSubject}
-                style={styles.input}
-                maxLength={120}
-              />
-
-              <TextInput
-                placeholder="Descreva o problema com detalhes (mín. 10 caracteres)"
-                placeholderTextColor="#8aa2d6"
-                value={message}
-                onChangeText={setMessage}
-                style={[styles.input, { height: 120, textAlignVertical: 'top' }]}
-                multiline
-              />
-
-              <TextInput
-                placeholder="ID do agendamento (opcional)"
-                placeholderTextColor="#8aa2d6"
-                value={bookingId}
-                onChangeText={setBookingId}
-                style={styles.input}
-              />
-
-              <TouchableOpacity
-                style={[styles.primaryBtn, { opacity: submitting ? 0.7 : (canSubmit ? 1 : 0.6) }]}
-                onPress={handleSubmit}
-                disabled={!canSubmit || submitting}
-              >
-                {submitting ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <>
-                    <Ionicons name="paper-plane" size={16} color="#fff" />
-                    <Text style={styles.primaryBtnTxt}>Enviar ticket</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-
-              {/* atalho para segurança */}
-              <View style={styles.inlineHelp}>
-                <Ionicons name="shield-checkmark" size={16} color="#2A72E7" />
-                <Text style={styles.inlineHelpTxt}>Emergência ou incidente? </Text>
-                <TouchableOpacity onPress={() => router.push('/(client)/safety/report-incident' as any)}>
-                  <Text style={[styles.inlineHelpTxt, { textDecorationLine: 'underline', fontWeight: '700' }]}>Relatar agora</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* LISTA DE TICKETS */}
-            <View style={{ height: 10 }} />
-            <Text style={styles.sectionTitle}>Meus tickets</Text>
-
-            {tickets.length === 0 ? (
-              <View style={styles.emptyBox}>
-                <Image source={Icons3D.support} style={[styles.icon3d, { width: 44, height: 44 }]} />
-                <Text style={styles.emptyTitle}>Sem tickets abertos</Text>
-                <Text style={styles.emptySubtitle}>Precisa de ajuda? Abra um ticket e retornaremos rapidamente.</Text>
-              </View>
-            ) : (
-              <FlatList
-                data={tickets}
-                keyExtractor={(it) => String(it.id)}
-                renderItem={renderTicket}
-                scrollEnabled={false}
-                ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
-                contentContainerStyle={{ paddingTop: 8 }}
-              />
-            )}
-          </ScrollView>
-        </KeyboardAvoidingView>
+        <FlatList
+          data={tickets}
+          keyExtractor={(it) => String(it.id)}
+          renderItem={renderTicket}
+          ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+          ListHeaderComponent={ListHeader}
+          ListEmptyComponent={Empty}
+          contentContainerStyle={{ paddingBottom: 38 }}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          keyboardShouldPersistTaps="handled"
+        />
       )}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -400,7 +438,16 @@ function ScrollPills<T extends string>({ items, value, onChange }: { items: T[];
       {items.map((it) => {
         const active = value === it;
         return (
-          <TouchableOpacity key={it} onPress={() => onChange(it)} style={[styles.pill, active ? styles.pillActive : styles.pillGhost]}>
+          <TouchableOpacity 
+            key={it} 
+            onPress={() => {
+              if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              onChange(it);
+            }} 
+            style={[styles.pill, active ? styles.pillActive : styles.pillGhost]}
+            accessibilityRole="button"
+            accessibilityLabel={`Selecionar ${it}`}
+          >
             <Text style={[styles.pillTxt, active ? styles.pillTxtActive : styles.pillTxtGhost]}>{it}</Text>
           </TouchableOpacity>
         );
@@ -411,11 +458,11 @@ function ScrollPills<T extends string>({ items, value, onChange }: { items: T[];
 
 function statusColor(st: TicketStatus) {
   switch (st) {
-    case 'OPEN': return '#2A72E7';
-    case 'IN_PROGRESS': return '#F5A524';
-    case 'RESOLVED': return '#22C55E';
-    case 'CLOSED': return '#6B7280';
-    case 'CANCELLED': return '#EF4444';
+    case 'OPEN': return '#4A90E2'; // Azul premium
+    case 'IN_PROGRESS': return '#F59E0B'; // Amarelo suave
+    case 'RESOLVED': return '#10B981'; // Verde premium
+    case 'CLOSED': return '#6B7280'; // Cinza médio
+    case 'CANCELLED': return '#EF4444'; // Vermelho suave
     default: return '#93C5FD';
   }
 }
@@ -434,25 +481,40 @@ function formatDate(iso: string) {
 }
 
 // =============================================================
-// STYLES
+// STYLES (Premium: Branco clean, sombras suaves, conforto iOS/Android)
 // =============================================================
 const styles = StyleSheet.create({
-  headerGradient: {
+  container: {
+    flex: 1,
+    backgroundColor: '#F6F8FB', // Fundo suave premium
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 38,
+  },
+  header: {
+    backgroundColor: '#FFFFFF', // Branco premium
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E9ECEF',
     paddingBottom: 14,
     paddingHorizontal: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 8,
-    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingBottom: 12,
   },
   iconBtn: {
     width: 40,
@@ -463,122 +525,285 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     textAlign: 'center',
-    color: '#fff',
-    fontSize: 18,
+    color: '#4A5568', // Cinza escuro premium
+    fontSize: 18, // Legível e premium
     fontWeight: '700',
+    letterSpacing: 0.8, // Espaçamento refinado
     fontFamily: Platform.select({ ios: 'System', android: 'sans-serif' }) as any,
   },
   iconRightWrap: { width: 40, height: 36, justifyContent: 'center', alignItems: 'center' },
   icon3d: { width: 28, height: 28, resizeMode: 'contain' },
-  tabsPill: {
-    marginTop: 6,
-    alignSelf: 'center',
-    backgroundColor: 'rgba(255,255,255,0.13)',
-    borderRadius: 40,
-    padding: 6,
-    flexDirection: 'row',
-    gap: 6,
-  },
-  tabItem: { borderRadius: 40, paddingVertical: 8, paddingHorizontal: 14 },
-  tabItemActive: { backgroundColor: '#fff' },
-  tabActiveText: { color: '#2A72E7', fontWeight: '700', fontSize: 12 },
-  tabItemGhost: { backgroundColor: 'transparent' },
-  tabGhostText: { color: 'rgba(255,255,255,0.9)', fontWeight: '600', fontSize: 12 },
 
-  // Backdrop
+  // Backdrop (tonificado para sutileza premium)
   blob: {
     position: 'absolute',
     width: 220,
     height: 220,
     borderRadius: 200,
-    backgroundColor: 'rgba(106,168,255,0.18)',
-    filter: (Platform.OS === 'web' ? 'blur(40px)' : undefined) as any,
+    backgroundColor: 'rgba(74, 144, 226, 0.08)', // Azul sutil
   },
   blob2: {
     position: 'absolute',
     width: 260,
     height: 260,
     borderRadius: 260,
-    backgroundColor: 'rgba(74,127,243,0.16)',
-    filter: (Platform.OS === 'web' ? 'blur(44px)' : undefined) as any,
+    backgroundColor: 'rgba(74, 144, 226, 0.06)', // Mais sutil
   },
 
   // Loading
-  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 24 },
-  loadingTxt: { marginTop: 10, color: '#4A7FF3', fontWeight: '600' },
+  loadingWrap: { 
+    flex: 1, 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    paddingTop: 24,
+    backgroundColor: '#F6F8FB',
+  },
+  loadingTxt: { 
+    marginTop: 10, 
+    color: '#4A90E2', 
+    fontWeight: '600',
+    fontSize: 16,
+  },
 
   // Form
   formCard: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 14,
+    padding: 16, // Espaçamento confortável
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 10, shadowOffset: { width: 0, height: 6 } },
+      ios: { 
+        shadowColor: '#000', 
+        shadowOpacity: 0.06, 
+        shadowRadius: 10, 
+        shadowOffset: { width: 0, height: 4 } // Sutil para iOS
+      },
       android: { elevation: 3 },
     }),
   },
-  formTitle: { fontSize: 16, fontWeight: '700', color: '#1f2d5c', marginBottom: 10 },
-  rowField: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+  formTitle: { 
+    fontSize: 18, // Premium legível
+    fontWeight: '700', 
+    color: '#4A5568', 
+    marginBottom: 16, // Espaçamento generoso
+  },
+  rowField: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 12, // Gap confortável
+    marginBottom: 12,
+  },
   input: {
     marginTop: 8,
-    backgroundColor: '#f0f4ff',
+    backgroundColor: '#F8F9FA', // Fundo claro premium
     borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    color: '#1f2d5c',
+    paddingHorizontal: 16, // Padding espaçoso
+    paddingVertical: 14,
+    color: '#4A5568',
     borderWidth: 1,
-    borderColor: '#d6e2ff',
+    borderColor: '#E9ECEF', // Borda sutil
+    fontSize: 16, // Legível
   },
   primaryBtn: {
-    marginTop: 12,
-    backgroundColor: '#2A72E7',
+    marginTop: 16,
+    backgroundColor: '#4A90E2', // Azul premium
     borderRadius: 14,
-    minHeight: 46,
+    minHeight: 48, // Altura confortável para toque
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     gap: 8,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
-  primaryBtnTxt: { color: '#fff', fontWeight: '700' },
+  primaryBtnTxt: { 
+    color: '#FFFFFF', 
+    fontWeight: '700',
+    fontSize: 16,
+  },
 
-  inlineHelp: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 },
-  inlineHelpTxt: { color: '#2A72E7' },
+  // Botão WhatsApp - Moderno e robusto
+  whatsappBtn: {
+    marginTop: 16,
+    backgroundColor: '#25D366', // Verde oficial do WhatsApp
+    borderRadius: 14,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+  whatsappIconWrap: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  whatsappIcon3d: {
+    width: 24,
+    height: 24,
+    resizeMode: 'contain',
+  },
+  whatsappBtnTxt: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 16,
+  },
 
-  pill: { borderRadius: 40, paddingVertical: 8, paddingHorizontal: 14, borderWidth: 1 },
-  pillActive: { backgroundColor: '#ffffff', borderColor: '#2A72E7' },
-  pillGhost: { backgroundColor: '#f0f4ff', borderColor: '#d6e2ff' },
-  pillTxt: { fontSize: 12, fontWeight: '700' },
-  pillTxtActive: { color: '#2A72E7' },
-  pillTxtGhost: { color: '#5672b5' },
+  inlineHelp: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 8, 
+    marginTop: 16,
+    padding: 12,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+  },
+  inlineHelpTxt: { 
+    color: '#4A90E2',
+    fontSize: 14,
+  },
 
-  sectionTitle: { marginTop: 2, marginBottom: 8, fontSize: 15, fontWeight: '700', color: '#1f2d5c' },
+  pill: { 
+    borderRadius: 20, // Pill arredondado confortável
+    paddingVertical: 8, 
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    minWidth: 80, // Largura mínima maior para nomes em Português
+  },
+  pillActive: { 
+    backgroundColor: '#FFFFFF', 
+    borderColor: '#4A90E2' 
+  },
+  pillGhost: { 
+    backgroundColor: '#F8F9FA', 
+    borderColor: '#E9ECEF' 
+  },
+  pillTxt: { 
+    fontSize: 13, // Legível
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  pillTxtActive: { 
+    color: '#4A90E2' 
+  },
+  pillTxtGhost: { 
+    color: '#6B7280' 
+  },
+
+  sectionTitle: { 
+    marginTop: 8, 
+    marginBottom: 12, 
+    fontSize: 18, // Premium
+    fontWeight: '700', 
+    color: '#4A5568' 
+  },
 
   emptyBox: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 20,
+    padding: 24, // Espaçamento generoso
     alignItems: 'center',
-    ...Platform.select({ ios: { shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 10, shadowOffset: { width: 0, height: 6 } }, android: { elevation: 2 } }),
+    ...Platform.select({ 
+      ios: { 
+        shadowColor: '#000', 
+        shadowOpacity: 0.06, 
+        shadowRadius: 10, 
+        shadowOffset: { width: 0, height: 4 } 
+      }, 
+      android: { elevation: 2 } 
+    }),
   },
-  emptyTitle: { marginTop: 8, fontWeight: '700', color: '#1f2d5c' },
-  emptySubtitle: { marginTop: 4, textAlign: 'center', color: '#6b7db2' },
+  emptyTitle: { 
+    marginTop: 12, 
+    fontWeight: '700', 
+    color: '#4A5568',
+    fontSize: 18,
+  },
+  emptySubtitle: { 
+    marginTop: 6, 
+    textAlign: 'center', 
+    color: '#6B7280',
+    fontSize: 14,
+    lineHeight: 20, // Leitura confortável
+  },
 
   // Tickets
   ticketCard: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 14,
-    ...Platform.select({ ios: { shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 10, shadowOffset: { width: 0, height: 6 } }, android: { elevation: 2 } }),
+    padding: 16, // Espaçamento confortável
+    ...Platform.select({ 
+      ios: { 
+        shadowColor: '#000', 
+        shadowOpacity: 0.06, 
+        shadowRadius: 10, 
+        shadowOffset: { width: 0, height: 4 } 
+      }, 
+      android: { elevation: 2 } 
+    }),
   },
-  ticketRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  statusDot: { width: 10, height: 10, borderRadius: 8 },
-  ticketSubject: { flex: 1, fontWeight: '700', color: '#1f2d5c' },
-  ticketMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
-  badge: { backgroundColor: '#eef3ff', borderRadius: 40, paddingVertical: 4, paddingHorizontal: 10 },
-  badgeTxt: { color: '#2A72E7', fontWeight: '700', fontSize: 11 },
-  ticketDate: { marginLeft: 'auto', color: '#7a8cbf', fontSize: 12 },
-  ticketMsg: { marginTop: 6, color: '#425079' },
-  ticketActions: { marginTop: 10, flexDirection: 'row', gap: 12 },
-  actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 10, borderRadius: 10, backgroundColor: '#edf4ff' },
-  actionText: { color: '#2A72E7', fontWeight: '700', fontSize: 12 },
+  ticketRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 10, // Gap sutil
+  },
+  statusDot: { 
+    width: 10, 
+    height: 10, 
+    borderRadius: 5, // Mais arredondado
+  },
+  ticketSubject: { 
+    flex: 1, 
+    fontWeight: '700', 
+    color: '#4A5568',
+    fontSize: 16,
+  },
+  ticketMetaRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 8, 
+    marginTop: 8,
+  },
+  badge: { 
+    backgroundColor: '#F8F9FA', 
+    borderRadius: 12, // Pill pequeno
+    paddingVertical: 4, 
+    paddingHorizontal: 8,
+  },
+  badgeTxt: { 
+    color: '#4A90E2', 
+    fontWeight: '600', 
+    fontSize: 12,
+  },
+  ticketDate: { 
+    marginLeft: 'auto', 
+    color: '#9CA3AF', 
+    fontSize: 12,
+  },
+  ticketMsg: { 
+    marginTop: 8, 
+    color: '#6B7280',
+    fontSize: 14,
+    lineHeight: 20, // Confortável para leitura
+  },
 });
