@@ -388,9 +388,12 @@ export async function deleteProviderServiceOffering(providerId: string, serviceO
  * Chama o endpoint GET /providers/recommended.
  * @returns Uma Promise que resolve para um array de provedores (ProviderDisplayInfo para frontend).
  */
-export async function getRecommendedProviders(): Promise<ProviderDisplayInfo[]> {
+export async function getRecommendedProviders(params?: { latitude?: number; longitude?: number }): Promise<ProviderDisplayInfo[]> {
   try {
-    const response: AxiosResponse<ProviderDisplayInfo[]> = await api.get('/providers/recommended');
+    const response: AxiosResponse<ProviderDisplayInfo[]> = await api.get('/providers/recommended', {
+      params: params || {},
+      headers: { 'X-Silent': '1' },
+    });
     return response.data;
   } catch (error: any) {
     console.error('Erro ao buscar provedores recomendados:', error.response?.data || error.message);
@@ -412,7 +415,7 @@ export async function getRecommendedProviders(): Promise<ProviderDisplayInfo[]> 
 export async function getNearbyProviders(latitude?: number, longitude?: number): Promise<ProviderDisplayInfo[]> {
   try {
     const params = (latitude !== undefined && longitude !== undefined) ? { latitude, longitude } : {};
-    const response: AxiosResponse<ProviderDisplayInfo[]> = await api.get('/providers/nearby', { params });
+    const response: AxiosResponse<ProviderDisplayInfo[]> = await api.get('/providers/nearby', { params, headers: { 'X-Silent': '1' } });
     return response.data;
   } catch (error: any) {
     console.error('Erro ao buscar provedores próximos:', error.response?.data || error.message);

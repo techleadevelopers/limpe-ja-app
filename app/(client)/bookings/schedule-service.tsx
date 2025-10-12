@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+﻿import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -1456,6 +1456,7 @@ export default function ScheduleServiceScreen() {
 
                             <CouponInputSection
                                 couponCode={couponCode}
+                                availableCouponMessage={availableCouponMessage || undefined}
                                 setCouponCode={setCouponCode}
                                 onApplyCoupon={handleApplyCoupon}
                                 isApplyingCoupon={isApplyingCoupon}
@@ -1470,6 +1471,18 @@ export default function ScheduleServiceScreen() {
                             />
 
                             <BookingSummaryPreview
+
+                            {/* Observações abaixo do card de revisão (compacto) */}
+                            <Animated.View style={[styles.card, {
+                                transform: [{ scale: notesAnim }],
+                                opacity: notesAnim,
+                                marginTop: 12,
+                            }]}>
+                                <NotesInputSection
+                                    notes={notes}
+                                    setNotes={setNotes}
+                                />
+                            </Animated.View>
                                 provider={provider}
                                 selectedProviderService={selectedProviderService}
                                 selectedDate={selectedDate}

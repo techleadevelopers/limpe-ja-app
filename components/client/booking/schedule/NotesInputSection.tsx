@@ -31,8 +31,8 @@ const NotesInputSection: React.FC<NotesInputSectionProps> = ({ notes, setNotes }
 const styles = StyleSheet.create({
   notesContainer: {
     marginHorizontal: 15,
-    marginTop: 20,
-    marginBottom: 10,
+    marginTop: 12,
+    marginBottom: 8,
   },
   notesTitle: {
     fontSize: 15,
@@ -47,7 +47,7 @@ const styles = StyleSheet.create({
     borderRadius: 12, // ✅ PRESERVADO: Borda 12 para coerência premium
     borderWidth: 1,
     borderColor: AppColors.borderNeutral, // Usando AppColors
-    minHeight: 100,
+    minHeight: 68,
     textAlignVertical: 'top',
     fontSize: 14, // ✅ PRESERVADO: Fonte 14 para conforto
     fontFamily: 'Montserrat-Regular',

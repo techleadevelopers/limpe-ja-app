@@ -114,7 +114,7 @@ export const useCouponValidation = (
         } finally {
             setIsApplyingCoupon(false);
         }
-    }, [couponCode, couponFeedbackAnim, t]);
+    }, [couponCode, couponFeedbackAnim, t, opts]);
 
     return {
         couponCode,

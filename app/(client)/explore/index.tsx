@@ -1,4 +1,3 @@
-// LimpeJaApp/app/(client)/explore/index.tsx
 import { Stack, useRouter } from 'expo-router';
 import { Image } from 'react-native';
 
@@ -155,12 +154,16 @@ const REFERRAL_BANNER_DISMISSED_KEY = '@LimpeJa:ReferralBannerDismissed';
 
 export default function ExploreClientScreen() {
   const router = useRouter();
+  const { t } = useTranslation(); // CORREÇÃO: Adicionado aqui para t estar disponível em todo o escopo
   const flatListRef = useRef<FlatList<BannerDataItem>>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const { t } = useTranslation();
-  const { user, isAuthenticated } = useAuth();
 
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const { user, isAuthenticated } = useAuth(); // CORREÇÃO: Movido para antes de userNameDisplay
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null); // CORREÇÃO: Movido para antes de userNameDisplay
+
+  // CORREÇÃO: Movido userNameDisplay para DEPOIS das declarações de user e userProfile
+  const userNameDisplay = (user?.clientDetails?.fullName || user?.providerDetails?.fullName || user?.fullName) ?? (userProfile?.clientDetails?.fullName || userProfile?.providerDetails?.fullName || userProfile?.fullName) ?? t('common.user');
+
   const [serviceCategories, setServiceCategories] = useState<Service[]>([]);
   const [recommendations, setRecommendations] = useState<ProviderDisplayInfo[]>([]);
   const [nearbyProviders, setNearbyProviders] = useState<ProviderDisplayInfo[]>([]);
@@ -209,9 +212,7 @@ export default function ExploreClientScreen() {
       if (!isMounted.current) return;
       setServiceCategories(categoriesData);
 
-      const recommendationsData = await getRecommendedProviders();
-      if (!isMounted.current) return;
-      setRecommendations(recommendationsData);
+
 
       let locationCoords: Location.LocationObjectCoords | null = null;
       try {
@@ -227,6 +228,19 @@ export default function ExploreClientScreen() {
         console.error('[ExploreClientScreen] Erro ao obter localização:', locError);
         // Não exibir alerta de erro de rede aqui, pois é um erro de localização
         // Alert.alert(t('common.error'), t('common.network_error'));
+      }
+
+      // Buscar recomendações (com coordenadas se disponíveis) antes de montar a lista de proximidade
+      try {
+        const recs = await getRecommendedProviders(
+          locationCoords
+            ? { latitude: locationCoords.latitude, longitude: locationCoords.longitude }
+            : undefined,
+        );
+        if (!isMounted.current) return;
+        setRecommendations(recs);
+      } catch (recsErr) {
+        console.warn('[ExploreClientScreen] Erro ao carregar recomendações (silenciado):', (recsErr as any)?.message);
       }
 
       let providersData: ProviderDisplayInfo[] = [];
@@ -256,17 +270,17 @@ export default function ExploreClientScreen() {
     } catch (err: any) {
       const errorMessage = err.message || err.response?.data?.message || t('common.network_error');
       if (isMounted.current) {
+        // Mantém estado interno para possíveis fallback UIs, mas não exibe alertas/toasts ao usuário na entrada
         setError(errorMessage);
-        Alert.alert(t('common.error'), errorMessage);
       }
-      console.error('[ExploreClientScreen] Erro ao carregar dados:', err.response?.data || err.message);
+      console.warn('[ExploreClientScreen] Silenciado erro ao carregar dados:', err.response?.data || err.message);
     } finally {
       if (isMounted.current) {
         setLoading(false);
         setIsRefreshing(false);
       }
     }
-  }, [t, headerAnim, categoriesAnim, bannerAnim, recommendationsAnim, providersAnim, navBarAnim, searchRadiusKm]);
+  }, [t, headerAnim, categoriesAnim, bannerAnim, recommendationsAnim, providersAnim, navBarAnim, searchRadiusKm]); // CORREÇÃO: t adicionado nas dependências
 
   useEffect(() => {
     isMounted.current = true; // Componente montado
@@ -274,7 +288,7 @@ export default function ExploreClientScreen() {
     return () => {
       isMounted.current = false; // Componente desmontado
     };
-  }, [fetchData]);
+  }, [fetchData]); // CORREÇÃO: Dependências atualizadas
 
   useFocusEffect(
     useCallback(() => {
@@ -358,7 +372,7 @@ export default function ExploreClientScreen() {
           clearTimeout(promotionTimeoutRef.current);
         }
       };
-    }, [userProfile, isAuthenticated, t])
+    }, [userProfile, isAuthenticated, t]) // CORREÇÃO: t adicionado nas dependências
   );
 
   const handleCategoryPress = useCallback(
@@ -574,12 +588,7 @@ export default function ExploreClientScreen() {
           }>
           {/* PREMIUM: NewHeader movido para dentro do ScrollView (fluxo unificado, sem overlap) */}
           <NewHeader
-            userName={
-              userProfile?.clientDetails?.fullName ||
-              userProfile?.providerDetails?.fullName ||
-              userProfile?.fullName ||
-              t('common.user')
-            }
+            userName={userNameDisplay}
             userAddress={addressToDisplay}
           />
 
@@ -998,7 +1007,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 10,
-    marginTop: 10,
+    marginTop: -2,
     marginBottom: 8,
   },
   categorySectionTitle: {
