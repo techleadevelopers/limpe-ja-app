@@ -27,12 +27,9 @@ export class EarningsService {
     });
     const totalEarnings = Number((sumEarnings._sum.amount ?? new Prisma.Decimal(0)).toFixed(2));
 
-    // availableForWithdrawal: soma de todas as entradas do ledger
-    const sumAll = await this.prisma.ledgerEntry.aggregate({
-      _sum: { amount: true },
-      where: { userId },
-    });
-    const availableForWithdrawal = Math.max(0, Number((sumAll._sum.amount ?? new Prisma.Decimal(0)).toFixed(2)));
+    // availableForWithdrawal: saldo disponível considerando janela T+N e disputas
+    const { available } = await this.payoutsService.getBalance(userId);
+    const availableForWithdrawal = Math.max(0, available);
 
     // pendingWithdrawals: payouts PENDING/PROCESSING
     const sumPending = await this.prisma.payout.aggregate({
