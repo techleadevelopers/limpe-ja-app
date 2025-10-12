@@ -217,7 +217,7 @@ export default function ConversationsListScreen() {
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* HEADER BRANCO COMO NA CATEGORY (título azul centralizado, back/icons azuis) */}
+      {/* HEADER BRANCO COMO NA CATEGORY (título premium centralizado, back/icons premium) */}
       <Animated.View
         style={[
           styles.mainHeader,
@@ -235,16 +235,15 @@ export default function ConversationsListScreen() {
             style={styles.headerBackButton}
             activeOpacity={0.7}
           >
-            <Ionicons name="arrow-back" size={24} color="#4A90E2" />
+            <Ionicons name="arrow-back" size={24} color="#4A5568" />
           </TouchableOpacity>
           <View style={styles.greetingContainer}>
-            
             <Text style={styles.greetingSubText}>Olá, {loggedInUserName}</Text>
+            <Text style={styles.greetingText}>Mensagens</Text>
           </View>
           <View style={styles.headerIcons}>
             {/* Sem ícones extras para manter simples, mas estrutura para futuro */}
           </View>
-          <Text style={styles.greetingText}>Mensagens</Text>
         </View>
       </Animated.View>
 
@@ -307,21 +306,21 @@ const styles = StyleSheet.create({
     marginHorizontal: 10,
   },
   greetingText: {
-    fontSize: 12,
+    fontSize: 18, // Aumentado para 18px para um look mais premium e legível
     fontFamily: 'Montserrat-Regular',
-    fontWeight: '800',
-    color: '#5f6770ff', // Azul como na category
+    fontWeight: '700', // Bold para ênfase premium
+    color: '#4A5568', // Preto mais claro premium (cinza escuro suave)
     textAlign: 'center',
-    letterSpacing: 0.2,
+    letterSpacing: 0.8, // Espaçamento refinado para feel premium
+    marginTop: 2, // Pequeno espaçamento abaixo do subtítulo
   },
   greetingSubText: {
     fontSize: 16,
     fontFamily: 'Montserrat-Regular',
     fontWeight: '600',
-    color: '#4A90E2', // Cinza para subtítulo, como status na category
+    color: '#6B7280', // Cinza médio premium para subtítulo (em vez de azul, para harmonia)
     textAlign: 'center',
     marginTop: 2,
-    right: 20,
   },
   headerIcons: {
     flexDirection: 'row',
