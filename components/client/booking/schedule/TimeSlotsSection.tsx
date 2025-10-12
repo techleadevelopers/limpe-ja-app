@@ -1,11 +1,10 @@
-// TimeSlotsSection.tsx (ajustado para gaps laterais zero no modo "ver todos" - colados horizontalmente, sem afetar modo oculto)
+// TimeSlotsSection.tsx (ajustado para espaçamento lateral uniforme entre slots, sem alterar UI)
 import React from 'react';
 import { View, Text, FlatList, ActivityIndicator, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import TimeSlotButton from './TimeSlotButton';
 import { AppColors, AppShadows } from '../../../../constants/appStyles';
 
-// <— NOVA: Interface para itens da FlatList (elimina 'any' e resolve mismatch de props)
 interface SlotItem {
   time: string;
   isAvailable: boolean;
@@ -27,11 +26,10 @@ interface TimeSlotsSectionProps {
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const numColumns = 3;
 
-const CARD_MARGIN_TOTAL = 30 * 2;
-const CARD_PADDING_TOTAL = 30 * 4;
+const CARD_MARGIN_TOTAL = 26 * 2; // Ajustado: marginHorizontal=26 do card
+const CARD_PADDING_TOTAL = 24 * 2; // Ajustado: paddingHorizontal=24 do card
 const HORIZONTAL_GUTTER = CARD_MARGIN_TOTAL + CARD_PADDING_TOTAL;
 
-// helpers
 const toMinutes = (t: string) => {
   const [h, m] = t.split(':').map(Number);
   return h * 60 + m;
@@ -56,8 +54,10 @@ export default function TimeSlotsSection({
   const { t, i18n } = useTranslation();
   const [showUnavailable, setShowUnavailable] = React.useState(false);
 
-  const dense = showUnavailable;                   // ao "ver todos", ativa layout compacto
-  const currentGap = dense ? 0 : 12;               // <— AJUSTE PREMIUM: Gap horizontal ZERO no modo dense (slots colados); 12px no modo oculto para espaçamento natural
+  const dense = showUnavailable; // ao "ver todos", ativa layout compacto
+  // ✅ AJUSTE: Gap reduzido para 8px no modo normal (uniforme como na imagem); 0 no dense com margem no item
+  const currentGap = dense ? 0 : 8;
+  // ✅ AJUSTE: Largura otimizada para ~80px por slot (como na imagem), considerando gutter e gaps
   const itemWidth = (SCREEN_WIDTH - HORIZONTAL_GUTTER - currentGap * (numColumns - 1)) / numColumns;
 
   const headerText = React.useMemo(() => {
@@ -69,7 +69,7 @@ export default function TimeSlotsSection({
 
     const locale = i18n?.language || 'pt-BR';
     const dateStr = d.toLocaleDateString(locale, { day: '2-digit', month: 'long' });
-    return `${base} — ${dateStr}`;
+    return `${base} - ${dateStr}`;
   }, [title, titleKey, date, t, i18n?.language]);
 
   const sections = React.useMemo(() => {
@@ -92,22 +92,19 @@ export default function TimeSlotsSection({
       }
     }
 
-    // <— Tipado explicitamente como SlotItem[] (elimina 'as any')
-    const enriched: SlotItem[] = sorted.map((s: SlotItem, i: number) => ({ 
-      ...s, 
-      isRecommended: nextIdx.has(i) 
+    const enriched: SlotItem[] = sorted.map((s: SlotItem, i: number) => ({
+      ...s,
+      isRecommended: nextIdx.has(i),
     }));
 
-    // <— Tipado grouped com SlotItem[]
-    const grouped: Record<'morning'|'afternoon'|'evening', SlotItem[]> = { 
-      morning: [], 
-      afternoon: [], 
-      evening: [] 
+    const grouped: Record<'morning' | 'afternoon' | 'evening', SlotItem[]> = {
+      morning: [],
+      afternoon: [],
+      evening: [],
     };
     enriched.forEach(item => grouped[getPeriod(item.time)].push(item));
 
-    // <— mk retorna array com data tipada como SlotItem[]
-    const mk = (k: 'morning'|'afternoon'|'evening', label: string) =>
+    const mk = (k: 'morning' | 'afternoon' | 'evening', label: string) =>
       grouped[k].length ? [{ key: k, label, data: grouped[k] }] : [];
 
     return [
@@ -131,41 +128,56 @@ export default function TimeSlotsSection({
 
               <FlatList
                 data={section.data}
-                keyExtractor={(item: SlotItem) => item.time}  // <— Tipado keyExtractor
+                keyExtractor={(item: SlotItem) => item.time}
                 numColumns={numColumns}
-                renderItem={({ item }: { item: SlotItem }) => (  // <— Type guard explícito: resolve mismatch de props (time não é 'any')
+                renderItem={({ item }: { item: SlotItem }) => (
                   <TimeSlotButton
-                    time={item.time}  // Agora tipado como string
+                    time={item.time}
                     isSelected={selectedTime === item.time}
                     onPress={onTimeSelect}
-                    isAvailable={item.isAvailable}  // Agora tipado como boolean
+                    isAvailable={item.isAvailable}
                     itemWidth={itemWidth}
-                    isRecommended={item.isRecommended && dense}  // <— NOVO: isRecommended só se dense (modo "ver todos"); no modo oculto, slots limpos sem destaque
-                    dense={dense}                                // <— liga o modo compacto
-                    noHorizontalMargin={dense}                   // <— NOVO: Prop para remover margins laterais no modo dense (slots colados)
+                    isRecommended={item.isRecommended && dense}
+                    dense={dense}
+                    // ✅ AJUSTE: Margem lateral só no dense (gap=0); no normal, gap=8 cuida do espaçamento uniforme
+                    noHorizontalMargin={!dense}
                   />
                 )}
+                // ✅ NOVO: getItemLayout para altura fixa (melhora performance em VirtualizedList)
+                getItemLayout={(data, index) => ({
+                  length: dense ? 40 : 44, // Altura aproximada do item (ajuste se necessário)
+                  offset: (dense ? 40 : 44) * index,
+                  index,
+                })}
+                // ✅ CORREÇÃO: Desabilita scroll interno para evitar conflitos com ScrollView pai
+                scrollEnabled={false}
                 columnWrapperStyle={{
-                  justifyContent: 'flex-start',  // <— MUDANÇA PREMIUM: Alinha à esquerda (perto do título "Manhã"), em vez de centralizar com 'space-around'
-                  alignItems: 'center',            // <— Alinhamento vertical perfeito
-                  gap: currentGap,                 // <— Gap dinâmico: 0 no dense (colados horizontalmente), 12px no oculto (espaçamento natural)
-                  // <— Removido marginBottom aqui (evita empurrar última row para fora do card)
+                  justifyContent: 'flex-start',
+                  alignItems: 'center',
+                  gap: currentGap, // Gap uniforme entre slots (8px no normal, 0 no dense)
                 }}
-                contentContainerStyle={{ 
+                contentContainerStyle={{
                   paddingVertical: dense ? 3 : 6,
-                  paddingBottom: dense ? 8 : 12,  // <— Adicionado paddingBottom controlado (espaço final na lista, evita vazamento da última row)
-                  paddingLeft: 0,  // <— NOVO: Sem padding extra à esquerda para alinhamento premium rente ao título
-                  paddingRight: dense ? 0 : 12,    // <— NOVO: No modo dense, sem padding direito (permite slots colados até a borda direita); no oculto, padding para respiro
+                  paddingBottom: dense ? 8 : 12,
+                  // ✅ AJUSTE: Padding lateral zero para alinhar slots à esquerda com espaçamento uniforme (como na imagem)
+                  paddingLeft: 0,
+                  paddingRight: 0,
                 }}
-                initialNumToRender={numColumns * 2}
-                maxToRenderPerBatch={numColumns * 3}
-                windowSize={7}
-                removeClippedSubviews
+                // ✅ NOVO: Componente para lista vazia (evita warnings)
+                ListEmptyComponent={() => (
+                  <Text style={styles.emptySlotText}>Nenhum horário disponível</Text>
+                )}
+                // ✅ CORREÇÃO: Adicionado para listas curtas (evita warnings de virtualização)
+                ListFooterComponent={null}
+                // ✅ OTIMIZAÇÃO: Ajustes para performance sem warnings em aninhamento
+                initialNumToRender={12}
+                maxToRenderPerBatch={12}
+                windowSize={21} // Padrão RN para listas pequenas, evita buffer baixo
+                removeClippedSubviews={false} // ✅ CORREÇÃO: Desabilitado para evitar clipping e warnings em FlatList aninhado
               />
             </View>
           ))}
 
-          {/* botão no rodapé do card */}
           <TouchableOpacity onPress={() => setShowUnavailable(v => !v)} style={[styles.toggleBtn, dense && { marginTop: 8 }]}>
             <Text style={styles.toggleText}>
               {showUnavailable
@@ -187,12 +199,11 @@ const styles = StyleSheet.create({
   card: {
     marginTop: 12,
     marginHorizontal: 26,
-    
     backgroundColor: AppColors.white,
     borderRadius: 18,
     paddingHorizontal: 24,
     paddingVertical: 18,
-    paddingBottom: 20,  // <— Aumentado de 18 para 20 (respiro para última row, sem cortar botões)
+    paddingBottom: 20,
     ...AppShadows.medium,
   },
   title: {
@@ -206,8 +217,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
     alignSelf: 'center',
     paddingHorizontal: 14,
-    
-    
     paddingVertical: 8,
     borderRadius: 14,
     backgroundColor: 'rgba(0,0,0,0.04)',
@@ -234,6 +243,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginVertical: 16,
     fontStyle: 'italic',
-    
+  },
+  // ✅ NOVO: Estilo para texto de lista vazia no FlatList
+  emptySlotText: {
+    textAlign: 'center',
+    color: AppColors.textAuxiliary,
+    fontSize: 14,
+    paddingVertical: 20,
   },
 });
