@@ -1,10 +1,12 @@
 // LimpeJaApp/app/(client)/subscriptions/index.tsx
 import React from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { getSubscriptionsForUser } from '../../../services/subscriptionService';
 import { Subscription } from '../../../types/backend/subscriptions';
 import { router } from 'expo-router';
+import * as Haptics from 'expo-haptics';
+import NotificationUIService from '../../../services/notificationUIService';
 
 export default function SubscriptionsListScreen() {
   const { data: subscriptions, isLoading, error } = useQuery({
@@ -17,13 +19,16 @@ export default function SubscriptionsListScreen() {
   }
 
   if (error) {
-    return <Text style={styles.errorText}>Erro ao carregar assinaturas: {error.message}</Text>;
+    NotificationUIService.showError((error as any)?.message || 'Não foi possível carregar suas assinaturas.', 'Erro');
   }
 
   const renderItem = ({ item }: { item: Subscription }) => (
     <TouchableOpacity
       style={styles.subscriptionCard}
-      onPress={() => router.push(`/subscriptions/${item.id}`)}
+      onPress={() => {
+        if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        router.push(`/subscriptions/${item.id}`);
+      }}
     >
       <Text style={styles.cardTitle}>Assinatura de {item.providerService.name}</Text>
       <Text style={styles.cardText}>Status: {item.status}</Text>
