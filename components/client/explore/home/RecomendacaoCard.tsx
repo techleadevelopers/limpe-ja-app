@@ -121,7 +121,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
         <Ionicons
           key={i}
           name={iconName}
-          size={12}
+          size={10.5}
           color="#5da2ecff"
           style={styles.ratingStarIcon}
         />
@@ -410,8 +410,8 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
 
 const styles = StyleSheet.create({
   cardWrapperWithDistance: { // NOVO ESTILO: Container pai para posicionamento absoluto
-    width: 191,
-    height: 270,
+    width: 180,
+    height: 246,
     marginRight: 15,
     marginBottom: 5,
     marginTop: 8,
@@ -424,14 +424,15 @@ const styles = StyleSheet.create({
     // Margins removidos daqui e movidos para cardWrapperWithDistance
     borderRightWidth: 1,
     borderBottomWidth: 0.5,
+    
     borderLeftWidth: 1,
     borderTopWidth: 1,
     borderColor: '#d1d5db53',
     borderRadius: 12,
     borderTopStartRadius: 22, // Cantos 22
-    borderBottomStartRadius: 12,
+    borderBottomStartRadius: 22,
     borderTopEndRadius: 22, // Cantos 22
-    borderBottomEndRadius: 12,
+    borderBottomEndRadius: 22,
     borderBottomColor: '#d1d5db53',
   },
   // NOVO ESTILO: Micro-Pill de Distância (Sutil e Compacto)
@@ -494,7 +495,7 @@ const styles = StyleSheet.create({
   },
   imageWrapper: {
     width: '100%',
-    height: 120, // Foto 3:2 ou 16:9 (190x120 é aprox 16:10)
+    height: 100, // Foto 3:2 ou 16:9 (190x120 é aprox 16:10)
     backgroundColor: '#E0E0E0',
     justifyContent: 'center',
     alignItems: 'center',
@@ -532,7 +533,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   serviceDescription: {
-    fontSize: 12, // Bio (2 linhas, 12/regular)
+    fontSize: 12.5, // Bio (2 linhas, 12/regular)
     paddingHorizontal: 2,
     fontWeight: Platform.select({
       ios: '300', 
@@ -544,17 +545,17 @@ const styles = StyleSheet.create({
   metricTextContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 2,
-    marginBottom: 8,
+    marginTop: -2,
+    marginBottom: 4,
     textAlign: 'left',
   },
   metricIcon: {
-    fontSize: 13,
+    fontSize: 19,
     fontWeight: 'bold',
     marginRight: 2,
   },
   metricValue: {
-    fontSize: 10,
+    fontSize: 12.5,
     color: '#6C757D', // Métricas mini -- discretas, cor #6C757D
   },
   metricSeparator: {
@@ -586,12 +587,12 @@ const styles = StyleSheet.create({
     marginTop: 8, // CORREÇÃO: Aumentado para respirar das métricas
   },
   priceLabel: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#6C757D',
     marginBottom: -2,
   },
   priceValue: {
-    fontSize: 16, // Preço "A partir de" (16/bold)
+    fontSize: 15, // Preço "A partir de" (16/bold)
     fontWeight: 'bold',
     color: '#838891ff',
   },
@@ -609,8 +610,8 @@ const styles = StyleSheet.create({
     position: 'relative',
     top: -80,
     left: 30,
-    width: 47,
-    height: 47,
+    width: 37,
+    height: 37,
     borderTopRightRadius: 20,
     borderBottomRightRadius: 20,
     borderTopLeftRadius: 20,
@@ -625,7 +626,7 @@ const styles = StyleSheet.create({
     position: 'absolute', // CORREÇÃO: Adicionado para permitir left/bottom funcionarem
     width: 36,
     height: 36,
-    left: 140, // RESTAURADO: Posicionamento horizontal
+    left: 125, // RESTAURADO: Posicionamento horizontal
     bottom: -25, // CORREÇÃO: Ajustado de 80 para 10 (cabe na imagem de 120px height; mude para 80 se quiser mais baixo)
     borderRadius: 53,
     justifyContent: 'center',
@@ -647,11 +648,15 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   ratingStarIcon: {
-    marginRight: 1,
+    marginRight: 2,
+    right: 4,
+    top: 3,
   },
   reviewsCountText: {
-    fontSize: 9.9, // ALTERAÇÃO: Diminuído em 1% (de 10 para 9.9) para o título de avaliações abaixo das estrelas
+    fontSize: 8.1, // ALTERAÇÃO: Diminuído em 1% (de 10 para 9.9) para o título de avaliações abaixo das estrelas
     color: '#6C757D',
+    right: 6,
+    top: 3,
   },
 });
 
