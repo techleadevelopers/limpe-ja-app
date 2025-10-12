@@ -41,7 +41,7 @@ const gridItems: GridItem[] = [
   { key: "cashback", title: "Cashback", icon: Icons3D.cashback, route: "/(client)/wallet/cashback" },
   { key: "missions", title: "Missões", icon: Icons3D.missions, route: "/(client)/missions" },
   { key: "referrals", title: "Ganhe", icon: Icons3D.referral, route: "/(client)/referrals" },
-  { key: "champions2", title: "Champions", icon: Icons3D.champions2, route: "/(client)/champions2" },
+  { key: "champions2", title: "Pontos", icon: Icons3D.champions2, route: "/(client)/champions2" },
   { key: "metrics", title: "Métricas", icon: Icons3D.metrics, route: "/(client)/metrics" },
   { key: "bookService", title: "Agendar", icon: Icons3D.bookService, route: "/(client)/booking" },
   { key: "support", title: "Suporte", icon: Icons3D.support, route: "/(common)/support" },
@@ -88,7 +88,7 @@ export default function HorizontalMiniGrid() {
       >
         <Animated.View style={[styles.cardInner, { transform: [{ scale }] }]}>
           <LinearGradient
-            colors={['rgba(230, 240, 255, 0.7)', 'rgba(196, 197, 205, 0.23)']}
+            colors={['rgba(230, 240, 255, 0)', 'rgba(196, 197, 205, 0)']}
             style={styles.gradientBackground}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -153,14 +153,14 @@ const styles = StyleSheet.create({
     borderRadius: 30, // Herda o borderRadius para o gradiente
   },
   icon: {
-    width: 39, // Tamanho do ícone
-    height: 39,
+    width: 45, // Tamanho do ícone
+    height: 45,
     resizeMode: 'contain',
   },
   cardTitle: {
-    marginTop: 8,
+    marginTop: -2,
     fontSize: 12,
-    fontWeight: "500",
+    fontWeight: "400",
     textAlign: "center",
     color: "#666",
   },
