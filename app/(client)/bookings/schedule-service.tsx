@@ -53,8 +53,6 @@ import ConfirmBookingButton from '../../../components/client/booking/schedule/Co
 
 import { AppColors, AppDurations, AppOffsets, AppShadows, SCREEN_WIDTH, SCREEN_HEIGHT } from '../../../constants/appStyles';
 
-
-
 const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
 interface BookingSummaryPreviewProps {
@@ -70,25 +68,23 @@ interface BookingSummaryPreviewProps {
     finalPrice: number;
     onShowCancellationPolicy: () => void;
     t: any;
-    // ✅ NOVO: Animações para premium entrance no step 2
-    reviewEntranceAnim?: Animated.Value;
-    reviewStaggerDelay?: number;
-}
-
-interface CouponInputSectionProps {
+    notes: string;
+    setNotes: React.Dispatch<React.SetStateAction<string>>;
     couponCode: string;
     setCouponCode: React.Dispatch<React.SetStateAction<string>>;
     onApplyCoupon: () => Promise<void>;
     isApplyingCoupon: boolean;
-    discountAmount: number;
     couponInputAnim: Animated.Value;
     couponFeedbackAnim: Animated.Value;
     couponFeedbackColor: string;
     couponFeedbackIcon: string;
-    t: any;
-    // ✅ NOVO: Animação para seção cupom
-    cupomEntranceAnim?: Animated.Value;
-    cupomStaggerDelay?: number;
+    // ✅ NOVO: Animações para premium entrance no step 2
+    reviewEntranceAnim?: Animated.Value;
+    reviewStaggerDelay?: number;
+    // ✅ NOVO: Animações stagger para seções internas (notes e cupom)
+    notesAnim?: Animated.Value;
+    cupomAnim?: Animated.Value;
+    summaryAnim?: Animated.Value;
 }
 
 const BookingSummaryPreview = ({
@@ -104,8 +100,21 @@ const BookingSummaryPreview = ({
     finalPrice,
     onShowCancellationPolicy,
     t,
+    notes,
+    setNotes,
+    couponCode,
+    setCouponCode,
+    onApplyCoupon,
+    isApplyingCoupon,
+    couponInputAnim,
+    couponFeedbackAnim,
+    couponFeedbackColor,
+    couponFeedbackIcon,
     reviewEntranceAnim, // ✅ PREMIUM: Animação de entrada suave para review
     reviewStaggerDelay = 0, // Delay para stagger (sequencial)
+    notesAnim, // ✅ NOVO: Stagger para notes
+    cupomAnim, // ✅ NOVO: Stagger para cupom
+    summaryAnim, // ✅ NOVO: Stagger para summary
 }: BookingSummaryPreviewProps) => {
     if (!selectedProviderService || !selectedTime) return null;
 
@@ -169,6 +178,27 @@ const BookingSummaryPreview = ({
         ]
     } : {};
 
+    // ✅ NOVO: Animações stagger internas para seções (notes, cupom, summary)
+    const notesSectionAnim = notesAnim ? {
+        opacity: notesAnim,
+        transform: [{ translateY: notesAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }]
+    } : {};
+
+    const cupomSectionAnim = cupomAnim ? {
+        opacity: cupomAnim,
+        transform: [{ translateY: cupomAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }]
+    } : {};
+
+    const summarySectionAnim = summaryAnim ? {
+        opacity: summaryAnim,
+        transform: [{ translateY: summaryAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }]
+    } : {};
+
+    // ✅ CORREÇÃO: Wrapper explícito para endereço (evita string direta em View/Text)
+    const formattedAddress = useMemo(() => {
+        return `${(address.street || '')}, ${(address.number || '')} - ${(address.neighborhood || '')}, ${(address.city || '')}/${(address.state || '')}`.trim();
+    }, [address]);
+
     return (
         <Animated.View style={[styles.card, { marginTop: 20 }, reviewCardAnim]}>
             <View style={styles.sectionHeaderRow}>
@@ -176,122 +206,125 @@ const BookingSummaryPreview = ({
                     {t('schedule_service.review_booking_title', { defaultValue: 'Revisar Agendamento' })}
                 </Text>
             </View>
-            <View style={styles.summaryItem}>
-                <Animated.View style={animatedIconStyle}>
-                    <Ionicons name="briefcase-outline" size={20} color={AppColors.primaryInteractive} style={styles.summaryIcon} />
+
+            {/* ✅ NOVO: Seção de Cupom integrada e compacta (diminuída) - MANTIDA NO TOPO APÓS HEADER */}
+            <Animated.View style={[styles.compactSection, cupomSectionAnim]}>
+                <Text style={styles.compactSectionTitle}>{t('schedule_service.coupon_section_title', { defaultValue: 'Cupom de Desconto' })}</Text>
+                <Animated.View style={[styles.compactCouponInputContainer, { borderColor: couponInputAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [AppColors.borderNeutral, AppColors.primaryInteractive]
+                }) }]}>
+                    <AnimatedTextInput
+                        style={styles.compactCouponInput}
+                        placeholder={t('schedule_service.coupon_input_placeholder', { defaultValue: 'Digite o código do cupom' })}
+                        placeholderTextColor={couponInputAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [AppColors.mediumGray, AppColors.primaryInteractive]
+                        })}
+                        value={couponCode}
+                        onChangeText={setCouponCode}
+                        autoCapitalize="characters"
+                        editable={!isApplyingCoupon}
+                        onFocus={() => Animated.timing(couponInputAnim, { toValue: 1, duration: AppDurations.xs, useNativeDriver: false }).start()}
+                        onBlur={() => Animated.timing(couponInputAnim, { toValue: 0, duration: AppDurations.xs, useNativeDriver: false }).start()}
+                    />
+                    <TouchableOpacity
+                        style={styles.compactApplyCouponButton}
+                        onPress={onApplyCoupon}
+                        disabled={isApplyingCoupon || !couponCode}
+                    >
+                        {isApplyingCoupon ? (
+                            <ActivityIndicator size="small" color={AppColors.white} />
+                        ) : (
+                            <Text style={styles.compactApplyCouponButtonText}>{t('schedule_service.apply_coupon_button', { defaultValue: 'Aplicar' })}</Text>
+                        )}
+                    </TouchableOpacity>
                 </Animated.View>
-                <Text style={styles.summaryText}>
-                    <Text style={styles.summaryLabel}>{t('schedule_service.summary_service', { defaultValue: 'Serviço' })}</Text> {selectedProviderService.service?.name || t('common.na', { defaultValue: 'N/A' })}
-                </Text>
-            </View>
-            <View style={styles.summaryItem}>
-                <Animated.View style={animatedIconStyle}>
-                    <Ionicons name="person-outline" size={20} color={AppColors.primaryInteractive} style={styles.summaryIcon} />
-                </Animated.View>
-                <Text style={styles.summaryText}>
-                    <Text style={styles.summaryLabel}>{t('schedule_service.summary_provider', { defaultValue: 'Prestador' })}</Text> {provider?.fullName || t('common.na', { defaultValue: 'N/A' })}
-                </Text>
-            </View>
-            <View style={styles.summaryItem}>
-                <Animated.View style={animatedIconStyle}>
-                    <Ionicons name="calendar-outline" size={20} color={AppColors.primaryInteractive} style={styles.summaryIcon} />
-                </Animated.View>
-                <Text style={styles.summaryText}>
-                    <Text style={styles.summaryLabel}>{t('schedule_service.summary_date_time', { defaultValue: 'Data e Hora' })}</Text> {formattedDate}, {t('common.at', { defaultValue: 'às' })} {selectedTime}
-                </Text>
-            </View>
-            <View style={styles.summaryItem}>
-                <Animated.View style={animatedIconStyle}>
-                    <Ionicons name="location-outline" size={20} color={AppColors.primaryInteractive} style={styles.summaryIcon} />
-                </Animated.View>
-                <Text style={styles.summaryText}>
-                    <Text style={styles.summaryLabel}>{t('schedule_service.summary_address', { defaultValue: 'Endereço' })}</Text> {address.street || ''}, {address.number || ''} - {address.neighborhood || ''}, {address.city || ''}/{address.state || ''}
-                </Text>
-            </View>
-            {(selectedProviderService.pricingType === PricingType.HOURLY || selectedProviderService.pricingType === PricingType.BY_SIZE) && (
+                {discountAmount > 0 && (
+                    <Animated.View style={[styles.compactCouponFeedbackContainer, { opacity: couponFeedbackAnim, transform: [{ translateY: couponFeedbackAnim.interpolate({ inputRange: [0, 1], outputRange: [5, 0] }) }] }]}>
+                        <Ionicons name={couponFeedbackIcon as any} size={16} color={couponFeedbackColor} />
+                        <Text style={[styles.compactCouponAppliedText, { color: couponFeedbackColor }]}>
+                            {t('schedule_service.coupon_applied_message', { discountValue: formatBRL(discountAmount), defaultValue: `Cupom aplicado! Desconto de ${formatBRL(discountAmount)}` })}
+                        </Text>
+                    </Animated.View>
+                )}
+            </Animated.View>
+
+            {/* ✅ NOVO: Seção de Resumo (Summary) com stagger - MANTIDA NO MEIO */}
+            <Animated.View style={[styles.summarySection, summarySectionAnim]}>
                 <View style={styles.summaryItem}>
                     <Animated.View style={animatedIconStyle}>
-                        <Ionicons name="timer-outline" size={20} color={AppColors.primaryInteractive} style={styles.summaryIcon} />
+                        <Ionicons name="briefcase-outline" size={20} color={AppColors.primaryInteractive} style={styles.summaryIcon} />
                     </Animated.View>
                     <Text style={styles.summaryText}>
-                        <Text style={styles.summaryLabel}>{t('schedule_service.summary_service_details', { defaultValue: 'Detalhes do Serviço' })}</Text> {serviceDetailsText}
+                        <Text style={styles.summaryLabel}>{t('schedule_service.summary_service', { defaultValue: 'Serviço' })}</Text> <Text>{selectedProviderService.service?.name || t('common.na', { defaultValue: 'N/A' })}</Text>
                     </Text>
                 </View>
-            )}
-            <View style={styles.priceSummary}>
-                <Text style={styles.priceLabel}>{t('schedule_service.subtotal', { defaultValue: 'Subtotal' })}</Text>
-                <Text style={styles.priceValue}>{formatBRL(subtotal)}</Text>
-            </View>
-            {discountAmount > 0 && (
-                <View style={styles.priceSummary}>
-                    <Text style={styles.priceLabel}>{t('schedule_service.discount', { defaultValue: 'Desconto' })}</Text>
-                    <Text style={[styles.priceValue, styles.discountValue]}>- {formatBRL(discountAmount)}</Text>
+                <View style={styles.summaryItem}>
+                    <Animated.View style={animatedIconStyle}>
+                        <Ionicons name="person-outline" size={20} color={AppColors.primaryInteractive} style={styles.summaryIcon} />
+                    </Animated.View>
+                    <Text style={styles.summaryText}>
+                        <Text style={styles.summaryLabel}>{t('schedule_service.summary_provider', { defaultValue: 'Prestador' })}</Text> <Text>{provider?.fullName || t('common.na', { defaultValue: 'N/A' })}</Text>
+                    </Text>
                 </View>
-            )}
-            <View style={styles.totalPriceSummary}>
-                <Text style={styles.totalPriceLabel}>{t('schedule_service.total_to_pay', { defaultValue: 'Total a Pagar' })}</Text>
-                <Animated.Text style={[styles.totalPriceValue, { transform: [{ scale: finalPriceAnim.interpolate({ inputRange: [0, 1], outputRange: [0.95, 1] }) }] }]}>
-                    {formatBRL(finalPrice)}
-                </Animated.Text>
-            </View>
-            <TouchableOpacity onPress={onShowCancellationPolicy} style={styles.cancellationPolicyLink}>
-                <Text style={styles.cancellationPolicyText}>{t('schedule_service.cancellation_policy', { defaultValue: 'Política de Cancelamento' })}</Text>
-            </TouchableOpacity>
-        </Animated.View>
-    );
-};
-
-const CouponInputSection = ({ couponCode, setCouponCode, onApplyCoupon, isApplyingCoupon, discountAmount, couponInputAnim, couponFeedbackAnim, couponFeedbackColor, couponFeedbackIcon, t, cupomEntranceAnim, cupomStaggerDelay = 0 }: CouponInputSectionProps) => {
-    // ✅ PREMIUM: Animação de entrada para cupom (slide up + fade)
-    const cupomCardAnim = cupomEntranceAnim ? {
-        opacity: cupomEntranceAnim,
-        transform: [
-            { translateY: cupomEntranceAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }, // Menos slide
-            { scale: cupomEntranceAnim.interpolate({ inputRange: [0, 1], outputRange: [0.99, 1] }) } // Scale mínimo
-        ]
-    } : {};
-
-    return (
-        <Animated.View style={[styles.card, { marginTop: 20 }, cupomCardAnim]}>
-            <Text style={styles.sectionTitle}>{t('schedule_service.coupon_section_title', { defaultValue: 'Cupom de Desconto' })}</Text>
-            <Animated.View style={[styles.couponInputContainer, { borderColor: couponInputAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [AppColors.borderNeutral, AppColors.primaryInteractive]
-            }) }]}>
-                <AnimatedTextInput
-                    style={styles.couponInput}
-                    placeholder={t('schedule_service.coupon_input_placeholder', { defaultValue: 'Digite o código do cupom' })}
-                    placeholderTextColor={couponInputAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [AppColors.mediumGray, AppColors.primaryInteractive]
-                    })}
-                    value={couponCode}
-                    onChangeText={setCouponCode}
-                    autoCapitalize="characters"
-                    editable={!isApplyingCoupon}
-                    onFocus={() => Animated.timing(couponInputAnim, { toValue: 1, duration: AppDurations.xs, useNativeDriver: false }).start()}
-                    onBlur={() => Animated.timing(couponInputAnim, { toValue: 0, duration: AppDurations.xs, useNativeDriver: false }).start()}
-                />
-                <TouchableOpacity
-                    style={styles.applyCouponButton}
-                    onPress={onApplyCoupon}
-                    disabled={isApplyingCoupon || !couponCode}
-                >
-                    {isApplyingCoupon ? (
-                        <ActivityIndicator size="small" color={AppColors.white} />
-                    ) : (
-                        <Text style={styles.applyCouponButtonText}>{t('schedule_service.apply_coupon_button', { defaultValue: 'Aplicar' })}</Text>
-                    )}
+                <View style={styles.summaryItem}>
+                    <Animated.View style={animatedIconStyle}>
+                        <Ionicons name="calendar-outline" size={20} color={AppColors.primaryInteractive} style={styles.summaryIcon} />
+                    </Animated.View>
+                    <Text style={styles.summaryText}>
+                        <Text style={styles.summaryLabel}>{t('schedule_service.summary_date_time', { defaultValue: 'Data e Hora' })}</Text> <Text>{formattedDate}, {t('common.at', { defaultValue: 'às' })} {selectedTime || ''}</Text>
+                    </Text>
+                </View>
+                <View style={styles.summaryItem}>
+                    <Animated.View style={animatedIconStyle}>
+                        <Ionicons name="location-outline" size={20} color={AppColors.primaryInteractive} style={styles.summaryIcon} />
+                    </Animated.View>
+                    <Text style={styles.summaryText}>
+                        <Text style={styles.summaryLabel}>{t('schedule_service.summary_address', { defaultValue: 'Endereço' })}</Text> <Text>{formattedAddress || t('common.na', { defaultValue: 'N/A' })}</Text>
+                    </Text>
+                </View>
+                {(selectedProviderService.pricingType === PricingType.HOURLY || selectedProviderService.pricingType === PricingType.BY_SIZE) && (
+                    <View style={styles.summaryItem}>
+                        <Animated.View style={animatedIconStyle}>
+                            <Ionicons name="timer-outline" size={20} color={AppColors.primaryInteractive} style={styles.summaryIcon} />
+                        </Animated.View>
+                        <Text style={styles.summaryText}>
+                            <Text style={styles.summaryLabel}>{t('schedule_service.summary_service_details', { defaultValue: 'Detalhes do Serviço' })}</Text> <Text>{serviceDetailsText}</Text>
+                        </Text>
+                    </View>
+                )}
+                <View style={styles.priceSummary}>
+                    <Text style={styles.priceLabel}>{t('schedule_service.subtotal', { defaultValue: 'Subtotal' })}</Text>
+                    <Text style={styles.priceValue}>{formatBRL(subtotal)}</Text>
+                </View>
+                {discountAmount > 0 && (
+                    <View style={styles.priceSummary}>
+                        <Text style={styles.priceLabel}>{t('schedule_service.discount', { defaultValue: 'Desconto' })}</Text>
+                        <Text style={[styles.priceValue, styles.discountValue]}>- {formatBRL(discountAmount)}</Text>
+                    </View>
+                )}
+                <View style={styles.totalPriceSummary}>
+                    <Text style={styles.totalPriceLabel}>{t('schedule_service.total_to_pay', { defaultValue: 'Total a Pagar' })}</Text>
+                    <Animated.Text style={[styles.totalPriceValue, { transform: [{ scale: finalPriceAnim.interpolate({ inputRange: [0, 1], outputRange: [0.95, 1] }) }] }]}>
+                        {formatBRL(finalPrice)}
+                    </Animated.Text>
+                </View>
+                <TouchableOpacity onPress={onShowCancellationPolicy} style={styles.cancellationPolicyLink}>
+                    <Text style={styles.cancellationPolicyText}>{t('schedule_service.cancellation_policy', { defaultValue: 'Política de Cancelamento' })}</Text>
                 </TouchableOpacity>
             </Animated.View>
-            {discountAmount > 0 && (
-                <Animated.View style={[styles.couponFeedbackContainer, { opacity: couponFeedbackAnim, transform: [{ translateY: couponFeedbackAnim.interpolate({ inputRange: [0, 1], outputRange: [5, 0] }) }] }]}>
-                    <Ionicons name={couponFeedbackIcon as any} size={18} color={couponFeedbackColor} />
-                    <Text style={[styles.couponAppliedText, { color: couponFeedbackColor }]}>
-                        {t('schedule_service.coupon_applied_message', { discountValue: formatBRL(discountAmount), defaultValue: `Cupom aplicado! Desconto de ${formatBRL(discountAmount)}` })}
-                    </Text>
-                </Animated.View>
-            )}
+
+            {/* ✅ MUDANÇA: Seção de Observações (Notes) movida para ABAIXO da política de cancelamento */}
+            {/* ✅ MUDANÇA: Sem título em negrito - apenas o input com placeholder sutil */}
+            <Animated.View style={[styles.compactSection, styles.notesFinalSection, notesSectionAnim]}>
+                <NotesInputSection
+                    notes={notes}
+                    setNotes={setNotes}
+                    compactMode={true} // ✅ NOVO: Modo compacto para reduzir tamanho
+                    showTitle={false} // ✅ NOVO: Esconde título interno para evitar duplicação e negrito
+                />
+            </Animated.View>
         </Animated.View>
     );
 };
@@ -429,9 +462,7 @@ export default function ScheduleServiceScreen() {
             )
         );
 
-        if (__DEV__) {
-            console.log(`[Prefetch Premium] Cacheado ${prefetchDates.length} dias para ${baseDate.toDateString()}`);
-        }
+        // Removido: console.log de prefetch para evitar LogBox.
     }, []);
 
     useEffect(() => {
@@ -663,17 +694,20 @@ export default function ScheduleServiceScreen() {
         setSelectedDate(dateObj);
         prefetchAvailability(provider?.id, dateObj);
 
+        setSelectedTime(null);
+
+        // ✅ CORREÇÃO: Aumentado para 800ms, condicionado a displaySlotsInfo.length > 0 e hasRealAvailableSlots para evitar scroll prematuro
+        // ✅ NOVO: Só scroll se lista tem itens disponíveis (evita warnings em re-render vazio)
         setTimeout(() => {
-            if (timeSlotsRef.current && scrollViewRef.current) {
+            const hasAvailable = displaySlotsInfo.some(slot => slot.isAvailable);
+            if (timeSlotsRef.current && scrollViewRef.current && displaySlotsInfo.length > 0 && hasAvailable) {
                 scrollViewRef.current.scrollTo({
                     y: 400,
                     animated: true,
                 });
             }
-        }, 300);
-
-        setSelectedTime(null);
-    }, [provider?.id, prefetchAvailability, scaleAnim]);
+        }, 800);
+    }, [provider?.id, prefetchAvailability, scaleAnim, displaySlotsInfo]); // ✅ Deps para reatividade segura
 
     const handleTimeSelect = useCallback((time: string) => {
         const selectedSlot = displaySlotsInfo.find(slot => slot.time === time);
@@ -839,7 +873,7 @@ export default function ScheduleServiceScreen() {
                 couponCode: discountAmount > 0 ? couponCode : undefined,
             };
 
-            console.log("Dados de agendamento sendo enviados:", bookingData);
+            // Removido: console.log de bookingData para evitar LogBox.
 
             const newBooking: BookingDetails = await createBooking(bookingData);
             if (!isMounted.current) return;
@@ -860,7 +894,7 @@ export default function ScheduleServiceScreen() {
             );
 
         } catch (error: any) {
-            console.error("Erro ao agendar serviço:", error.response?.data || error.message);
+            // Removido: console.error de erro no booking para evitar LogBox.
             if (isMounted.current) {
                 NotificationUIService.showError(
                     error.response?.data?.message || t('common.network_error', { defaultValue: 'Erro de rede.' }),
@@ -915,7 +949,7 @@ export default function ScheduleServiceScreen() {
                 if (isMounted.current) {
                     setSelectedProviderService(foundService);
                 }
-                console.log("Serviço carregado:", foundService);
+                // Removido: console.log de serviço carregado para evitar LogBox.
 
                 if (foundService.pricingType === PricingType.HOURLY) {
                     if (isMounted.current) setDurationInMinutes(120);
@@ -963,7 +997,7 @@ export default function ScheduleServiceScreen() {
                 }
 
             } catch (error: any) {
-                console.error("Erro ao carregar dados iniciais:", error.response?.data || error.message);
+                // Removido: console.error de erro inicial para evitar LogBox.
                 if (isMounted.current) {
                     NotificationUIService.showError(
                         error.response?.data?.message || t('common.network_error', { defaultValue: 'Erro de rede.' }),
@@ -1043,20 +1077,12 @@ export default function ScheduleServiceScreen() {
                         availabilityCache.set(cacheKey, { ...backendResponse, timestamp: Date.now() });
                     }
 
-                    if (__DEV__) {
-                        console.log(`[Slots Premium] Fetch sucesso para ${dateString}:`, {
-                            available: backendResponse.available.length,
-                            occupied: backendResponse.occupiedTimes.length,
-                            configuredSlots: backendResponse.available.map(s => s.startTime) // ✅ CORREÇÃO: Usa s.startTime em vez de s.time (alinhado com tipo ProviderAvailability)
-                        });
-                    }
+                    // Removido: console.log de fetch sucesso para evitar LogBox.
                 } catch (err: any) {
                     fetchAttempts++;
-                    if (__DEV__) {
-                        console.warn(`[Slots] Retry ${fetchAttempts}/${maxRetries} para ${dateString}:`, err.message);
-                    }
+                    // Removido: console.warn de retry para evitar LogBox.
                     if (fetchAttempts >= maxRetries) {
-                        console.error(`[Slots] Erro final para ${dateString}:`, err.response?.data || err.message);
+                        // Removido: console.error de erro final para evitar LogBox.
                         if (isMounted.current && !isCancelled) {
                             NotificationUIService.showError(
                                 t('schedule_service.error_fetching_slots_day', { date: dateString, defaultValue: 'Erro ao carregar horários para este dia. Tente novamente.' }),
@@ -1111,11 +1137,7 @@ export default function ScheduleServiceScreen() {
             );
 
             const hasRealAvailableSlots = finalDisplaySlots.some(slot => slot.isAvailable);
-            if (__DEV__ && !hasRealAvailableSlots) {
-                console.warn(`[Slots] Dia ${dateString} sem slots reais (backend: ${providerConfiguredSlots.length} disponíveis):`, 
-                    finalDisplaySlots.map(s => ({ time: s.time, available: s.isAvailable })));
-                // ✅ SUGESTÃO: Debug generateDailySlots - verifique se horários batem (ex: '08:00' vs '8:00')
-            }
+            // Removido: console.warn de dia sem slots para evitar LogBox.
 
             if (isMounted.current && !isCancelled) {
                 setDisplaySlotsInfo(finalDisplaySlots);
@@ -1125,10 +1147,13 @@ export default function ScheduleServiceScreen() {
                     Animated.spring(scaleAnim, { toValue: 1, friction: 5, useNativeDriver: true }),
                 ]).start();
 
+                // ✅ CORREÇÃO: Usar requestAnimationFrame + delay maior para scroll após render (evita VirtualizedList durante scroll)
                 if (hasRealAvailableSlots && timeSlotsRef.current && scrollViewRef.current) {
-                    setTimeout(() => {
-                        scrollViewRef.current?.scrollTo({ y: 400, animated: true });
-                    }, 300);
+                    requestAnimationFrame(() => {
+                        setTimeout(() => {
+                            scrollViewRef.current?.scrollTo({ y: 400, animated: true });
+                        }, 200); // Delay aumentado pós-render
+                    });
                 }
 
                 // LOOP INTELIGENTE: Só se zero slots e não buscando já
@@ -1165,7 +1190,7 @@ export default function ScheduleServiceScreen() {
                                         searchResponse = await getProviderAvailability(provider.id, searchDateString);
                                         availabilityCache.set(searchCacheKey, { ...searchResponse, timestamp: Date.now() });
                                     } catch (err: any) {
-                                        if (__DEV__) console.warn(`[Loop] Erro para +${dayOffset}:`, err.message);
+                                        // Removido: console.warn de erro no loop para evitar LogBox.
                                         return null;
                                     }
                                 }
@@ -1321,7 +1346,7 @@ export default function ScheduleServiceScreen() {
                             styles.stepGhostText,
                             currentStep === 1 ? styles.stepActiveText : null
                         ]} numberOfLines={1}>
-                            {stepTitles[0]}
+                            <Text>{stepTitles[0]}</Text>
                         </Text>
                     </View>
                     <View key="step2" style={[
@@ -1333,7 +1358,7 @@ export default function ScheduleServiceScreen() {
                             styles.stepGhostText,
                             currentStep === 2 ? styles.stepActiveText : null
                         ]} numberOfLines={1}>
-                            {stepTitles[1]}
+                            <Text>{stepTitles[1]}</Text>
                         </Text>
                     </View>
                 </View>
@@ -1347,6 +1372,11 @@ export default function ScheduleServiceScreen() {
                     }}
                     showsVerticalScrollIndicator={false}
                     nestedScrollEnabled={true} // ✅ FIX: Permite FlatList aninhada sem quebrar virtualização
+                    removeClippedSubviews={false} // ✅ CORREÇÃO: Desabilitado para evitar clipping do FlatList filho (causa VirtualizedList warnings)
+                    maxToRenderPerBatch={10} // ✅ OTIMIZAÇÃO: Limita render inicial (reduz lag em listas grandes)
+                    windowSize={5} // ✅ OTIMIZAÇÃO: Renderiza só itens próximos (5 telas de buffer)
+                    // ✅ NOVO: Desabilita virtualização se necessário (mas mantido false para performance)
+                    disableVirtualization={false}
                     // ✅ FIX: Scroll inicial sempre no topo ao montar (evita problemas iniciais)
                     onContentSizeChange={() => {
                         if (currentStep === 1) {
@@ -1411,12 +1441,13 @@ export default function ScheduleServiceScreen() {
                                 onPress={handleNextStep}
                                 disabled={isNextButtonDisabled}
                             >
-                                <Text style={styles.nextStepButtonText}>{"Continuar"}</Text>
+                                <Text style={styles.nextStepButtonText}><Text>{"Continuar"}</Text></Text>
                             </TouchableOpacity>
                         </>
                     )}
 
                     {/* ✅ PREMIUM: Wrapper para step 2 com animação global de entrada (inicia baixo, sobe suave) */}
+                    {/* ✅ MUDANÇA: Agora um único card unificado para notes + cupom + summary */}
                     {currentStep === 2 && (
                         <Animated.View style={{
                             opacity: reviewStepAnim,
@@ -1431,58 +1462,13 @@ export default function ScheduleServiceScreen() {
                                     opacity: serviceDetailsAnim,
                                     marginTop: 0,
                                 }]}>
-                                    <ServiceDetailsInput
-                                        pricingType={selectedProviderService.pricingType}
-                                        durationInMinutes={durationInMinutes}
-                                        setDurationInMinutes={setDurationInMinutes}
-                                        squareMeters={squareMeters}
-                                        setSquareMeters={setSquareMeters}
-                                        pricePerUnit={selectedProviderService.price}
-                                        finalPrice={calculatedSubtotal}
-                                    />
+                                    
                                 </Animated.View>
                             )}
 
-                            <Animated.View style={[styles.card, {
-                                transform: [{ scale: notesAnim }],
-                                opacity: notesAnim,
-                                marginTop: 15,
-                            }]}>
-                                <NotesInputSection
-                                    notes={notes}
-                                    setNotes={setNotes}
-                                />
-                            </Animated.View>
-
-                            <CouponInputSection
-                                couponCode={couponCode}
-                                availableCouponMessage={availableCouponMessage || undefined}
-                                setCouponCode={setCouponCode}
-                                onApplyCoupon={handleApplyCoupon}
-                                isApplyingCoupon={isApplyingCoupon}
-                                discountAmount={discountAmount}
-                                couponInputAnim={couponInputAnim}
-                                couponFeedbackAnim={couponFeedbackAnim}
-                                couponFeedbackColor={couponFeedbackColor}
-                                couponFeedbackIcon={couponFeedbackIcon}
-                                t={t}
-                                cupomEntranceAnim={cupomAnim} // Passa stagger anim
-                                cupomStaggerDelay={100} // Delay mínimo
-                            />
-
+                            {/* ✅ MUDANÇA: Removidas seções separadas de Notes e Coupon - agora integradas no BookingSummaryPreview */}
+                            {/* ✅ NOVO: Único card com todas as seções (notes, cupom, summary) */}
                             <BookingSummaryPreview
-
-                            {/* Observações abaixo do card de revisão (compacto) */}
-                            <Animated.View style={[styles.card, {
-                                transform: [{ scale: notesAnim }],
-                                opacity: notesAnim,
-                                marginTop: 12,
-                            }]}>
-                                <NotesInputSection
-                                    notes={notes}
-                                    setNotes={setNotes}
-                                />
-                            </Animated.View>
                                 provider={provider}
                                 selectedProviderService={selectedProviderService}
                                 selectedDate={selectedDate}
@@ -1495,8 +1481,21 @@ export default function ScheduleServiceScreen() {
                                 finalPrice={finalCalculatedPrice}
                                 onShowCancellationPolicy={showCancellationPolicy}
                                 t={t}
-                                reviewEntranceAnim={summaryAnim} // Passa stagger para summary
-                                reviewStaggerDelay={150} // Delay mínimo
+                                notes={notes}
+                                setNotes={setNotes}
+                                couponCode={couponCode}
+                                setCouponCode={setCouponCode}
+                                onApplyCoupon={handleApplyCoupon}
+                                isApplyingCoupon={isApplyingCoupon}
+                                couponInputAnim={couponInputAnim}
+                                couponFeedbackAnim={couponFeedbackAnim}
+                                couponFeedbackColor={couponFeedbackColor}
+                                couponFeedbackIcon={couponFeedbackIcon}
+                                reviewEntranceAnim={reviewStepAnim} // Usa reviewStepAnim para o card único
+                                reviewStaggerDelay={0} // Sem delay extra para o card principal
+                                notesAnim={notesAnim} // Passa stagger para notes interna
+                                cupomAnim={cupomAnim} // Passa stagger para cupom interna
+                                summaryAnim={summaryAnim} // Passa stagger para summary interna
                             />
                         </Animated.View>
                     )}
@@ -1517,10 +1516,10 @@ export default function ScheduleServiceScreen() {
                     ]}>
                         <View style={styles.floatingSummaryContent}>
                             <Text style={styles.floatingSummaryText}>
-                                {selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} {t('common.at', { defaultValue: 'às' })} {selectedTime}
+                                <Text>{selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }) || ''} {t('common.at', { defaultValue: 'às' })} {selectedTime || ''}</Text>
                             </Text>
                             <Text style={styles.floatingSummaryPrice}>
-                                {formatBRL(finalCalculatedPrice)}
+                                <Text>{formatBRL(finalCalculatedPrice)}</Text>
                             </Text>
                         </View>
                     </Animated.View>
@@ -1680,6 +1679,136 @@ const styles = StyleSheet.create({
         marginTop: 25,
         marginBottom: 15,
     },
+    /* ✅ NOVO: Estilos para seções compactas integradas (diminuídas) */
+    compactSection: {
+        marginBottom: 12, // Menos espaçamento entre seções
+        paddingBottom: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: AppColors.backgroundNeutral,
+    },
+    compactSectionTitle: {
+        fontSize: 16, // Menor que o título principal
+        fontWeight: '600',
+        color: AppColors.textBody,
+        marginBottom: 8,
+        marginHorizontal: 0,
+    },
+    compactCouponInputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: AppColors.borderNeutral,
+        borderRadius: 8, // Raio menor para compacto
+        overflow: 'hidden',
+        height: 40, // Altura reduzida
+    },
+    compactCouponInput: {
+        flex: 1,
+        paddingVertical: 8, // Padding vertical reduzido
+        paddingHorizontal: 12, // Padding horizontal reduzido
+        fontSize: 14,
+        color: AppColors.textBody,
+    },
+    compactApplyCouponButton: {
+        backgroundColor: AppColors.primaryInteractive,
+        paddingVertical: 8, // Padding vertical reduzido
+        paddingHorizontal: 16, // Padding horizontal reduzido
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderTopRightRadius: 8,
+        borderBottomRightRadius: 8,
+        minWidth: 70, // Largura mínima para botão compacto
+    },
+    compactApplyCouponButtonText: {
+        color: AppColors.white,
+        fontWeight: '600', // Levemente menos bold
+        fontSize: 14, // Fonte menor
+    },
+    compactCouponFeedbackContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 6, // Menos margem
+        paddingHorizontal: 0,
+    },
+    compactCouponAppliedText: {
+        marginLeft: 6, // Menos espaçamento
+        fontSize: 13, // Fonte menor
+        fontWeight: '500',
+    },
+    /* ✅ NOVO: Seção de summary interna (parte do card único) */
+    summarySection: {
+        marginTop: 8, // Pequena margem após cupom
+    },
+    summaryItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    summaryIcon: {
+        marginRight: 12,
+    },
+    summaryText: {
+        flex: 1,
+        fontSize: 14,
+        color: AppColors.textBody,
+        lineHeight: 20,
+    },
+    summaryLabel: {
+        fontWeight: '600',
+    },
+    priceSummary: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 4,
+    },
+    priceLabel: {
+        fontSize: 14,
+        color: AppColors.textBody,
+    },
+    priceValue: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: AppColors.textBody,
+    },
+    discountValue: {
+        color: AppColors.primaryInteractive,
+    },
+    totalPriceSummary: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 8,
+        paddingTop: 12,
+        borderTopWidth: 1,
+        borderTopColor: AppColors.backgroundNeutral,
+    },
+    totalPriceLabel: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: AppColors.textBody,
+    },
+    totalPriceValue: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: AppColors.primaryInteractive,
+    },
+    cancellationPolicyLink: {
+        marginTop: 12,
+        alignSelf: 'center',
+    },
+    cancellationPolicyText: {
+        fontSize: 12,
+        color: AppColors.primaryInteractive,
+        textDecorationLine: 'underline',
+    },
+    /* ✅ NOVO: Estilo específico para seção de notes no final (sem título, espaçamento sutil) */
+    notesFinalSection: {
+        marginTop: 15, // Espaçamento após política de cancelamento
+        paddingTop: 10,
+        borderTopWidth: 1, // Linha sutil de separação
+        borderTopColor: AppColors.backgroundNeutral,
+        paddingBottom: 0, // Sem padding inferior extra
+    },
     couponInputContainer: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -1707,104 +1836,24 @@ const styles = StyleSheet.create({
     applyCouponButtonText: {
         color: AppColors.white,
         fontWeight: 'bold',
-        fontSize: 16,
-    },
-    couponFeedbackContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: 10,
-        paddingHorizontal: 5,
-    },
-    couponAppliedText: {
-        marginLeft: 8,
         fontSize: 14,
-        fontWeight: 'bold',
-    },
-    summaryItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 15,
-    },
-    summaryIcon: {
-        marginRight: 15,
-        width: 24,
-        height: 24,
-        textAlign: 'center',
-    },
-    summaryText: {
-        fontSize: 16,
-        color: AppColors.textAuxiliary,
-        flex: 1,
-    },
-    summaryLabel: {
-        fontWeight: '600',
-        color: AppColors.textBody,
-        marginRight: 5,
-    },
-    priceSummary: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginTop: 10,
-        paddingVertical: 10,
-        borderTopWidth: 1,
-        borderTopColor: AppColors.backgroundNeutral,
-    },
-    priceLabel: {
-        fontSize: 16,
-        color: AppColors.textAuxiliary,
-    },
-    priceValue: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: AppColors.textBody,
-    },
-    discountValue: {
-        color: AppColors.successStandard,
-    },
-    totalPriceSummary: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginTop: 15,
-        paddingTop: 15,
-        borderTopWidth: 2,
-        borderTopColor: AppColors.primaryInteractive,
-    },
-    totalPriceLabel: {
-        fontSize: 22,
-        fontWeight: 'bold',
-        color: AppColors.textBody,
-    },
-    totalPriceValue: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: AppColors.primaryInteractive,
-    },
-    cancellationPolicyLink: {
-        marginTop: 20,
-        alignSelf: 'flex-start',
-    },
-    cancellationPolicyText: {
-        fontSize: 14,
-        color: AppColors.primaryInteractive,
-        textDecorationLine: 'underline',
     },
     nextStepButton: {
         backgroundColor: AppColors.primaryInteractive,
-        marginHorizontal: 50,
-        paddingVertical: 7,
-        borderRadius: 15,
+        paddingVertical: 16,
+        paddingHorizontal: 24,
+        borderRadius: 12,
         alignItems: 'center',
-        marginTop: 30,
-        marginBottom: -8,
+        marginHorizontal: 20,
+        marginTop: 20,
+        marginBottom: 20,
     },
     nextStepButtonDisabled: {
-        backgroundColor: '#94aee688'
+        backgroundColor: AppColors.backgroundNeutral,
     },
     nextStepButtonText: {
         color: AppColors.white,
         fontSize: 16,
-        fontWeight: 'bold',
+        fontWeight: '700',
     },
 });
