@@ -30,9 +30,7 @@ const SecaoRecomendacoes: React.FC<SecaoRecomendacoesProps> = ({
         <Text style={styles.sectionTitle}>{titulo}</Text>
         {onVerTudoPress && (
           <TouchableOpacity onPress={onVerTudoPress} style={styles.viewAllButton}>
-            <Text style={styles.viewAllText}>
             <Ionicons name="add" size={16} color="#398beeff" />
-            </Text>
           </TouchableOpacity>
         )}
       </View>
@@ -61,8 +59,9 @@ const SecaoRecomendacoes: React.FC<SecaoRecomendacoesProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: -15,
-    marginBottom: 1,
+    marginTop: -25,
+    marginBottom: -10,
+    paddingHorizontal: 6,
     backgroundColor: 'transparent', // Mantido transparente conforme original, mas pode ser 'rgba(255,255,255,0.65)' para efeito de vidro
     // borderRadius: 18, // Adicionar se o background for ativado
     // paddingTop: 5, // Adicionar se o background for ativado
@@ -75,7 +74,7 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   sectionTitle: {
-      fontSize: 17,
+      fontSize: 15.5,
       fontFamily: 'Montserrat-Regular',
       fontWeight: '600',
       // PREMIUM: Estilo de título refinado
@@ -92,7 +91,7 @@ const styles = StyleSheet.create({
     fontSize: 1,
     color: '#6c7989ff',
     fontWeight: '600',
-    marginTop: 25,
+    marginTop: 5,
   },
   cardsScrollContainer: {
     paddingHorizontal: 15,
