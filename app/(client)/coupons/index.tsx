@@ -1,29 +1,31 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import {
-  View,
-  StyleSheet,
-  Text,
-  Animated,
-  Easing,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-  Platform,
-  ActivityIndicator,
-  RefreshControl,
-  useColorScheme,
-  Dimensions,
-  Image,
-  ImageSourcePropType,
-  Switch,
+View,
+StyleSheet,
+Text,
+Animated,
+Easing,
+ScrollView,
+TouchableOpacity,
+Alert,
+Platform,
+ActivityIndicator,
+RefreshControl,
+useColorScheme,
+Dimensions,
+Image,
+ImageSourcePropType,
+Switch,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next'; // Assuming i18n is set up
-import { LinearGradient } from 'expo-linear-gradient'; // Mantido caso queira reverter ou usar em outro lugar, mas não será usado no hero
 
 import Colors from '../../../constants/Colors'; // Adjust path as needed
 import { getMyCoupons as getMyCouponsService, MyCouponListItem } from '../../../services/couponService';
+import * as Haptics from 'expo-haptics';
+import NotificationUIService from '../../../services/notificationUIService'; // Haptics premium para interações
 
 // Mock Coupon Service (replace with actual backend service)
 enum CouponType {
@@ -220,44 +222,56 @@ function CouponCard({
   const buttonDisabled = !isAvailable;
   const buttonAction = isAvailable ? () => onUseCoupon(coupon) : undefined;
 
-  const cardBgColor = isAvailable ? '#FFFFFF' : theme.cardBackground;
-  const cardBorderColor = isAvailable ? theme.primary : theme.border;
-  const buttonBgColor = isAvailable ? theme.primary : theme.textMuted;
-  const buttonTextColor = isAvailable ? '#FFFFFF' : theme.textSecondary;
+  const cardBgColor = '#FFFFFF';
+  const cardBorderColor = isAvailable ? '#4A90E2' : '#E9ECEF';
+  const buttonBgColor = isAvailable ? '#4A90E2' : '#F8F9FA';
+  const buttonTextColor = isAvailable ? '#FFFFFF' : '#6B7280';
 
   return (
-    <View style={[styles.couponCard, { backgroundColor: cardBgColor, borderColor: cardBorderColor }]}>
-      <View style={styles.couponHeader}>
-        <Image source={{ uri: coupon.imageUrl || 'https://via.placeholder.com/60' }} style={styles.couponImage} />
-        <View style={styles.couponInfo}>
-          <Text style={styles.couponTitle}>{coupon.title}</Text>
-          <Text style={styles.couponDescription}>{coupon.description}</Text>
+    <TouchableOpacity
+      onPress={buttonAction}
+      disabled={buttonDisabled}
+      accessibilityRole="button"
+      accessibilityLabel={isAvailable ? `Usar cupom ${coupon.title}` : `${buttonText} - ${coupon.title}`}
+      accessibilityHint={isAvailable ? 'Toque para usar este cupom' : 'Cupom não disponível para uso'}
+      accessibilityState={{ disabled: buttonDisabled }}
+    >
+      <View style={[styles.couponCard, { backgroundColor: cardBgColor, borderColor: cardBorderColor }]}>
+        <View style={styles.couponHeader}>
+          <Image source={{ uri: coupon.imageUrl || 'https://via.placeholder.com/60' }} style={styles.couponImage} />
+          <View style={styles.couponInfo}>
+            <Text style={styles.couponTitle}>{coupon.title}</Text>
+            <Text style={styles.couponDescription}>{coupon.description}</Text>
+          </View>
         </View>
-      </View>
-      <View style={styles.couponDetails}>
-        {((coupon as any).valueType === 'PERCENT' || (coupon as any).type === CouponType.PERCENTAGE) ? (
-          <Text style={styles.couponValue}>{coupon.value}% OFF</Text>
-        ) : (
-          <Text style={styles.couponValue}>{formatBRL(coupon.value)} OFF</Text>
-        )}
-        {coupon.minOrderValue != null && (
-          <Text style={styles.couponMinOrder}>Mín. {formatBRL(coupon.minOrderValue)}</Text>
-        )}
-        <Text style={styles.couponExpiry}>Expira em: {new Date(coupon.expiresAt).toLocaleDateString('pt-BR')}</Text>
-      </View>
-      <TouchableOpacity
-        style={[styles.couponButton, { backgroundColor: buttonBgColor }]}
-        onPress={buttonAction}
-        disabled={buttonDisabled}
-      >
-        <Text style={[styles.couponButtonText, { color: buttonTextColor }]}>{buttonText}</Text>
-      </TouchableOpacity>
-      {!isAvailable && (
-        <View style={styles.couponOverlay}>
-          <Text style={styles.couponOverlayText}>{isUsed ? 'USADO' : 'EXPIRADO'}</Text>
+        <View style={styles.couponDetails}>
+          {((coupon as any).valueType === 'PERCENT' || (coupon as any).type === CouponType.PERCENTAGE) ? (
+            <Text style={styles.couponValue}>{coupon.value}% OFF</Text>
+          ) : (
+            <Text style={styles.couponValue}>{formatBRL(coupon.value)} OFF</Text>
+          )}
+          {coupon.minOrderValue != null && (
+            <Text style={styles.couponMinOrder}>Mín. {formatBRL(coupon.minOrderValue)}</Text>
+          )}
+          <Text style={styles.couponExpiry}>Expira em: {new Date(coupon.expiresAt).toLocaleDateString('pt-BR')}</Text>
         </View>
-      )}
-    </View>
+        <TouchableOpacity
+          style={[styles.couponButton, { backgroundColor: buttonBgColor }]}
+          onPress={() => {
+            if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            buttonAction?.();
+          }}
+          disabled={buttonDisabled}
+        >
+          <Text style={[styles.couponButtonText, { color: buttonTextColor }]}>{buttonText}</Text>
+        </TouchableOpacity>
+        {!isAvailable && (
+          <View style={styles.couponOverlay}>
+            <Text style={styles.couponOverlayText}>{isUsed ? 'USADO' : 'EXPIRADO'}</Text>
+          </View>
+        )}
+      </View>
+    </TouchableOpacity>
   );
 }
 
@@ -284,7 +298,7 @@ function PreferencesSection({
   }) => (
     <View style={styles.prefRow}>
       <View style={styles.prefIconWrap}>
-        <Icon3D src={icon3d} size={18} />
+        <Icon3D src={icon3d} size={20} />
       </View>
       <View style={styles.prefTextCol}>
         <Text style={styles.prefTitle}>
@@ -292,7 +306,15 @@ function PreferencesSection({
         </Text>
         <Text style={styles.prefSubtitle}>{subtitle}</Text>
       </View>
-      <Switch value={value} onValueChange={onValueChange} />
+      <Switch 
+        value={value} 
+        onValueChange={(v) => {
+          if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          onValueChange(v);
+        }}
+        trackColor={{ false: '#E9ECEF', true: '#4A90E2' }}
+        thumbColor="#FFFFFF"
+      />
     </View>
   );
 
@@ -316,15 +338,15 @@ function HowItWorks() {
     <View style={styles.howCard}>
       <Text style={styles.howTitle}>Como usar seus cupons</Text>
       <View style={styles.howItem}>
-        <Icon3D src={Icons3D.check} size={18} />
+        <Icon3D src={Icons3D.check} size={20} />
         <Text style={styles.howText}>Resgate o cupom desejado para ativá-lo em sua conta.</Text>
       </View>
       <View style={styles.howItem}>
-        <Icon3D src={Icons3D.time} size={18} />
+        <Icon3D src={Icons3D.time} size={20} />
         <Text style={styles.howText}>Cupons resgatados são aplicados automaticamente no checkout do próximo agendamento elegível.</Text>
       </View>
       <View style={styles.howItem}>
-        <Icon3D src={Icons3D.button} size={18} />
+        <Icon3D src={Icons3D.button} size={20} />
         <Text style={styles.howText}>Fique atento às datas de validade e regras de cada cupom.</Text>
       </View>
     </View>
@@ -336,6 +358,7 @@ export default function ClientCouponsScreen() {
   const router = useRouter();
   const { t } = useTranslation(); // Assuming translation is available
   const theme = useTheme();
+  const insets = useSafeAreaInsets(); // Robust alignment for iOS
 
   const [allCoupons, setAllCoupons] = useState<CouponItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -358,8 +381,8 @@ export default function ClientCouponsScreen() {
       const mapped = fetched.map(mapApiToUICoupon);
       setAllCoupons(mapped);
     } catch (error: any) {
-      console.error('Erro ao buscar cupons do cliente:', error.response?.data || error.message);
-      Alert.alert(t('common.error'), error.response?.data?.message || t('common.network_error'));
+      console.error('Erro ao buscar cupons do cliente:', error?.response?.data || error?.message);
+      NotificationUIService.showError(error?.response?.data?.message || t('common.network_error', { defaultValue: 'Falha de rede.' }), t('common.error', { defaultValue: 'Erro' }));
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -405,17 +428,13 @@ export default function ClientCouponsScreen() {
 
   // --- Use Coupon (simulate navigation to checkout or apply)
   const handleUseCoupon = (coupon: CouponItem) => {
-    Alert.alert(
-      'Usar Cupom',
-      `Você será redirecionado para agendar um serviço com o cupom "${coupon.code}" aplicado.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Continuar', onPress: () => router.push({ pathname: '/(client)/bookings/schedule-service', params: { couponCode: coupon.code } } as any) },
-      ]
-    );
+    if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    router.push({ pathname: '/(client)/bookings/schedule-service', params: { couponCode: coupon.code } } as any);
+    NotificationUIService.showInfo(`Cupom ${coupon.code} pronto para uso no checkout.`, 'Cupom selecionado');
   };
 
   const onRefresh = useCallback(() => {
+    if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setIsRefreshing(true);
     loadCoupons();
   }, [loadCoupons]);
@@ -439,36 +458,41 @@ export default function ClientCouponsScreen() {
   // --- Loading initial state
   if (isLoading && !isRefreshing) {
     return (
-      <View style={[styles.centeredFeedback, { backgroundColor: '#FFFFFF' }]}>
+      <View style={[styles.centeredFeedback, { backgroundColor: '#F6F8FB' }]}>
         <Stack.Screen options={{ headerShown: false }} />
-        <ActivityIndicator size="large" color={theme.primary} />
-        <Text style={[styles.loadingText, { color: theme.textMuted }]}>Carregando cupons...</Text>
+        <ActivityIndicator size="large" color="#4A90E2" />
+        <Text style={styles.loadingText}>Carregando cupons...</Text>
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: '#FFFFFF' }]}>
+    <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Header de navegação sobreposto (transparente) */}
+      {/* Header de navegação sobreposto (branco premium) */}
       <Animated.View
         style={[
           styles.customHeader,
           {
             opacity: headerAnim,
             transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-40, 0] }) }],
-            backgroundColor: '#FFFFFF', // Fundo branco para o cabeçalho
-            borderBottomWidth: 1,
-            borderBottomColor: '#eee',
-            shadowOpacity: 0, // Remover sombra se não desejado
+            paddingTop: Platform.OS === 'ios' ? insets.top + 16 : 16, // Robust insets for iOS
           },
         ]}
       >
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerBackButton} accessibilityLabel={t('common.back') || 'Voltar'}>
-          <Ionicons name="arrow-back" size={24} color="#333333" /> {/* Ícone preto */}
+        <TouchableOpacity 
+          onPress={() => {
+            if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            router.back();
+          }} 
+          style={styles.headerBackButton} 
+          accessibilityLabel="Voltar"
+          accessibilityHint="Retorne à tela anterior"
+        >
+          <Ionicons name="arrow-back" size={24} color="#4A5568" />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: '#333333' }]}>Meus Cupons</Text> {/* Texto preto */}
+        <Text style={styles.headerTitle}>Meus Cupons</Text>
         <View style={styles.headerActionIconPlaceholder} />
       </Animated.View>
 
@@ -476,19 +500,41 @@ export default function ClientCouponsScreen() {
         ref={scrollRef}
         contentContainerStyle={styles.scrollViewContentContainer}
         refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={theme.primary} />
+          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#4A90E2" />
         }
+        keyboardShouldPersistTaps="handled"
       >
-      
+        {/* Hero simplificado (clean branco, sem gradiente) */}
+        <View style={styles.heroWrapper}>
+          <View style={styles.heroPlainBackground}>
+            <View style={styles.heroContent}>
+              <Text style={styles.heroKickerWhiteBg}>Economize nos seus serviços</Text>
+              <Text style={styles.heroTitleWhiteBg}>Resgate cupons e ganhe descontos exclusivos</Text>
+              <TouchableOpacity
+                style={styles.heroStartButtonWhiteBg}
+                onPress={() => {
+                  if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  scrollRef.current?.scrollTo({ y: 0, animated: true });
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Explorar cupons"
+                accessibilityHint="Role para baixo para ver seus cupons disponíveis."
+              >
+                <Ionicons name="chevron-down" size={16} color="#4A5568" />
+                <Text style={styles.heroStartTextWhiteBg}>Explorar cupons</Text>
+              </TouchableOpacity>
+            </View>
+            <Image source={Icons3D.woman} style={styles.heroWomanIcon} />
+          </View>
+        </View>
 
-        {/* Painel branco sobreposto */}
+        {/* Painel branco sobreposto (premium clean) */}
         <Animated.View
           style={[
             styles.panel,
             {
               opacity: contentAnim,
               transform: [{ translateY: contentAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
-              backgroundColor: '#FFFFFF', // Fundo branco para o painel
             },
           ]}
         >
@@ -504,25 +550,43 @@ export default function ClientCouponsScreen() {
           {/* Como funciona (with 3D bullets) */}
           <HowItWorks />
 
-          {/* Abas */}
-          <View style={[styles.tabsContainer, { backgroundColor: theme.cardBackground }]}>
+          {/* Abas (pill premium) */}
+          <View style={styles.tabsContainer}>
             <TouchableOpacity
-              style={[styles.tabButton, activeTab === 'AVAILABLE' && [styles.tabButtonActive, { backgroundColor: withAlpha(theme.primary, 0.12), borderColor: theme.primary }]]}
-              onPress={() => setActiveTab('AVAILABLE')}
+              style={[styles.tabButton, activeTab === 'AVAILABLE' && styles.tabButtonActive]}
+              onPress={() => {
+                if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setActiveTab('AVAILABLE');
+              }}
+              accessibilityRole="tab"
+              accessibilityLabel="Cupons disponíveis"
+              accessibilityState={{ selected: activeTab === 'AVAILABLE' }}
             >
-              <Text style={[styles.tabButtonText, { color: theme.text }, activeTab === 'AVAILABLE' && { color: theme.primary }]}>Disponíveis</Text>
+              <Text style={[styles.tabButtonText, activeTab === 'AVAILABLE' && styles.tabButtonTextActive]}>Disponíveis</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.tabButton, activeTab === 'USED' && [styles.tabButtonActive, { backgroundColor: withAlpha(theme.primary, 0.12), borderColor: theme.primary }]]}
-              onPress={() => setActiveTab('USED')}
+              style={[styles.tabButton, activeTab === 'USED' && styles.tabButtonActive]}
+              onPress={() => {
+                if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setActiveTab('USED');
+              }}
+              accessibilityRole="tab"
+              accessibilityLabel="Cupons usados"
+              accessibilityState={{ selected: activeTab === 'USED' }}
             >
-              <Text style={[styles.tabButtonText, { color: theme.text }, activeTab === 'USED' && { color: theme.primary }]}>Usados</Text>
+              <Text style={[styles.tabButtonText, activeTab === 'USED' && styles.tabButtonTextActive]}>Usados</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.tabButton, activeTab === 'EXPIRED' && [styles.tabButtonActive, { backgroundColor: withAlpha(theme.primary, 0.12), borderColor: theme.primary }]]}
-              onPress={() => setActiveTab('EXPIRED')}
+              style={[styles.tabButton, activeTab === 'EXPIRED' && styles.tabButtonActive]}
+              onPress={() => {
+                if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setActiveTab('EXPIRED');
+              }}
+              accessibilityRole="tab"
+              accessibilityLabel="Cupons expirados"
+              accessibilityState={{ selected: activeTab === 'EXPIRED' }}
             >
-              <Text style={[styles.tabButtonText, { color: theme.text }, activeTab === 'EXPIRED' && { color: theme.primary }]}>Expirados</Text>
+              <Text style={[styles.tabButtonText, activeTab === 'EXPIRED' && styles.tabButtonTextActive]}>Expirados</Text>
             </TouchableOpacity>
           </View>
 
@@ -540,8 +604,8 @@ export default function ClientCouponsScreen() {
             </View>
           ) : (
             <View style={styles.noCouponsContainer}>
-              <Ionicons name="sad-outline" size={48} color={theme.textMuted} />
-              <Text style={[styles.noCouponsText, { color: theme.textMuted }]}>
+              <Ionicons name="sad-outline" size={48} color="#9CA3AF" />
+              <Text style={styles.noCouponsText}>
                 {activeTab === 'AVAILABLE' ? 'Nenhum cupom disponível no momento.' :
                  activeTab === 'USED' ? 'Você ainda não usou nenhum cupom.' :
                  'Nenhum cupom expirado.'}
@@ -555,11 +619,24 @@ export default function ClientCouponsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' }, // Definido para branco
-  centeredFeedback: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { marginTop: 10, fontSize: 16 },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#F6F8FB', // Fundo suave premium
+  },
+  centeredFeedback: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    paddingTop: 100,
+  },
+  loadingText: { 
+    marginTop: 10, 
+    fontSize: 16, 
+    color: '#6B7280',
+    textAlign: 'center',
+  },
 
-  // Header
+  // Header (branco premium, alinhado)
   customHeader: {
     position: 'absolute',
     top: 0, left: 0, right: 0,
@@ -567,123 +644,229 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 15,
-    paddingVertical: Platform.OS === 'ios' ? 50 : 20,
-    paddingTop: Platform.OS === 'ios' ? 50 : -20,
-    // Fundo branco e borda adicionados diretamente no componente
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E9ECEF',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
-  headerBackButton: { marginRight: 15 },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', flex: 1, textAlign: 'center' },
-  headerActionIconPlaceholder: { width: 24, marginLeft: 15 },
+  headerBackButton: { 
+    padding: 8,
+  },
+  headerTitle: { 
+    fontSize: 18, 
+    fontWeight: '700', 
+    flex: 1, 
+    textAlign: 'center',
+    letterSpacing: 0.8, // Espaçamento refinado premium
+    color: '#4A5568',
+  },
+  headerActionIconPlaceholder: { 
+    width: 24, 
+    height: 24, 
+  },
 
   // Scroll
-  scrollViewContentContainer: { flexGrow: 1 },
+  scrollViewContentContainer: { 
+    flexGrow: 1,
+    paddingBottom: 40, // Espaçamento inferior confortável
+  },
 
-  // Hero
-  heroWrapper: { height: HERO_HEIGHT, width: '100%' },
-  heroPlainBackground: { // Novo estilo para o fundo branco do hero
+  // Hero (clean branco, sem gradiente, espaçamento premium)
+  heroWrapper: { 
+    height: HERO_HEIGHT, 
+    width: '100%' 
+  },
+  heroPlainBackground: { 
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    paddingTop: Platform.OS === 'ios' ? 200 : 120,
-    paddingHorizontal: 28,
+    backgroundColor: '#F6F8FB', // Fundo suave
+    paddingTop: Platform.OS === 'ios' ? 120 : 80, // Padding confortável com insets implícito
+    paddingHorizontal: 20,
     justifyContent: 'flex-start',
   },
   heroWomanIcon: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 260 : 280, // Adjusted position
-    left: '60%',
-    marginLeft: 0,
-    width: 180,
-    height: 180,
+    top: Platform.OS === 'ios' ? 180 : 160, // Posição ajustada para conforto
+    right: 20,
+    width: 140,
+    height: 140,
     zIndex: 10,
   },
   heroContent: {
     flex: 1,
     zIndex: 2,
+    paddingHorizontal: 8,
   },
-  heroKickerWhiteBg: { color: '#6B7280', letterSpacing: 1.2, fontWeight: '700', fontSize: 12 }, // Cor ajustada
-  heroTitleWhiteBg: { color: '#1F2937', fontSize: 24, fontWeight: '800', marginTop: 6, lineHeight: 30, maxWidth: '90%' }, // Cor ajustada
-  heroStartButtonWhiteBg: { // Botão com fundo branco e texto azul
-    marginTop: 16, alignSelf: 'flex-start', backgroundColor: '#E0E0E0', // Cor de fundo mais clara para o botão
-    paddingVertical: 10, paddingHorizontal: 16, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 6,
+  heroKickerWhiteBg: { 
+    color: '#6B7280', 
+    letterSpacing: 1.2, 
+    fontWeight: '600', 
+    fontSize: 14, // Legível premium
   },
-  heroStartTextWhiteBg: { color: '#333333', fontWeight: '800', fontSize: 13 }, // Cor ajustada
+  heroTitleWhiteBg: { 
+    color: '#4A5568', 
+    fontSize: 24, 
+    fontWeight: '700', 
+    marginTop: 8, 
+    lineHeight: 28, // Leitura confortável
+    maxWidth: '90%' 
+  },
+  heroStartButtonWhiteBg: { 
+    marginTop: 16, 
+    alignSelf: 'flex-start', 
+    backgroundColor: '#F8F9FA', // Fundo claro premium
+    paddingVertical: 12, 
+    paddingHorizontal: 20, 
+    borderRadius: 20, 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  heroStartTextWhiteBg: { 
+    color: '#4A5568', 
+    fontWeight: '600', 
+    fontSize: 14,
+  },
 
-  // Panel
+  // Panel (arredondado superior, premium)
   panel: {
-    marginTop: -14,
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
-    paddingTop: 16,
+    marginTop: -20, // Overlap suave
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 24,
     paddingBottom: 24,
-    // Fundo branco definido no componente
+    backgroundColor: '#FFFFFF',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
 
-  // Coupon Card
+  // Coupon Card (premium com sombras suaves)
   couponListContainer: {
-    paddingHorizontal: 15,
-    marginBottom: 14,
+    paddingHorizontal: 16,
+    marginBottom: 16,
   },
   couponCard: {
-    marginBottom: 12,
-    borderRadius: 12,
+    marginBottom: 16,
+    borderRadius: 16,
     borderWidth: 1,
     overflow: 'hidden',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   couponHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: '#F8F9FA',
   },
   couponImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    marginRight: 12,
-    backgroundColor: '#E0E0E0',
+    width: 64,
+    height: 64,
+    borderRadius: 12,
+    marginRight: 16,
+    backgroundColor: '#F8F9FA',
   },
   couponInfo: {
     flex: 1,
   },
   couponTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
-    color: '#1F2937',
+    color: '#4A5568',
+    marginBottom: 4,
   },
   couponDescription: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#6B7280',
-    marginTop: 4,
+    lineHeight: 20,
   },
   couponDetails: {
-    padding: 12,
+    padding: 16,
   },
   couponValue: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#059669',
-    marginBottom: 4,
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#10B981', // Verde acento para valor
+    marginBottom: 8,
   },
   couponMinOrder: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#6B7280',
     marginBottom: 4,
+    fontWeight: '500',
   },
   couponExpiry: {
-    fontSize: 11,
+    fontSize: 13,
     color: '#9CA3AF',
+    fontWeight: '500',
   },
   couponButton: {
-    paddingVertical: 12,
+    paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
   couponButtonText: {
-    fontWeight: '800',
-    fontSize: 14,
+    fontWeight: '600',
+    fontSize: 16,
   },
   couponOverlay: {
     position: 'absolute',
@@ -691,78 +874,174 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(249, 250, 251, 0.9)', // Overlay sutil
     justifyContent: 'center',
     alignItems: 'center',
   },
   couponOverlayText: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: '900',
-    transform: [{ rotate: '-20deg' }],
+    color: '#9CA3AF',
+    fontSize: 20,
+    fontWeight: '700',
+    transform: [{ rotate: '-15deg' }],
   },
 
-  // Prefs
+  // Prefs (premium spacing)
   prefsCard: {
-    marginHorizontal: 15,
-    marginBottom: 14,
-    borderRadius: 12,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 16,
     backgroundColor: '#FFFFFF',
-    padding: 14,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
+    padding: 20, // Espaçamento confortável
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
-  prefsTitle: { fontSize: 16, fontWeight: '700', color: '#1F2937', marginBottom: 6 },
-  prefRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 },
-  prefIconWrap: { width: 28, alignItems: 'center' },
-  prefTextCol: { flex: 1, paddingHorizontal: 10 },
-  prefTitle: { fontWeight: '700', color: '#111827' },
-  prefSubtitle: { fontSize: 12, color: '#6B7280', marginTop: 2 },
+  prefsTitle: { 
+    fontSize: 18, 
+    fontWeight: '700', 
+    color: '#4A5568', 
+    marginBottom: 16,
+  },
+  prefRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between', 
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F8F9FA',
+  },
+  prefIconWrap: { 
+    width: 32, 
+    alignItems: 'center',
+  },
+  prefTextCol: { 
+    flex: 1, 
+    paddingHorizontal: 12,
+  },
+  prefTitle: { 
+    fontWeight: '700', 
+    color: '#4A5568',
+    fontSize: 16,
+  },
+  prefSubtitle: { 
+    fontSize: 14, 
+    color: '#6B7280', 
+    marginTop: 2,
+    lineHeight: 18,
+  },
 
-  // How it works
+  // How it works (premium spacing)
   howCard: {
-    marginHorizontal: 15,
-    marginBottom: 14,
-    borderRadius: 12,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 16,
     backgroundColor: '#FFFFFF',
-    padding: 14,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
+    padding: 20,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
-  howTitle: { fontSize: 16, fontWeight: '700', color: '#1F2937', marginBottom: 8 },
-  howItem: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
-  howText: { color: '#374151', flex: 1 },
+  howTitle: { 
+    fontSize: 18, 
+    fontWeight: '700', 
+    color: '#4A5568', 
+    marginBottom: 16,
+  },
+  howItem: { 
+    flexDirection: 'row', 
+    alignItems: 'flex-start', 
+    gap: 12, 
+    marginBottom: 12,
+  },
+  howText: { 
+    color: '#6B7280', 
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
+  },
 
-  // Abas
+  // Abas (pill premium, espaçamento confortável)
   tabsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginHorizontal: 15,
-    marginBottom: 15,
-    borderRadius: 10,
-    padding: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 2,
+    marginHorizontal: 16,
+    marginBottom: 20,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 20,
+    padding: 6,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
-  tabButton: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8, borderWidth: 1, borderColor: 'transparent' },
-  tabButtonActive: {},
-  tabButtonText: { fontSize: 14, fontWeight: 'bold' },
+  tabButton: { 
+    flex: 1, 
+    paddingVertical: 12, 
+    alignItems: 'center', 
+    borderRadius: 16, 
+    borderWidth: 1, 
+    borderColor: 'transparent',
+    minWidth: 80, // Largura mínima para toque fácil
+  },
+  tabButtonActive: { 
+    backgroundColor: '#FFFFFF', 
+    borderColor: '#4A90E2',
+  },
+  tabButtonText: { 
+    fontSize: 14, 
+    fontWeight: '600',
+  },
+  tabButtonTextActive: { 
+    color: '#4A90E2',
+  },
 
   noCouponsContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 30,
-    marginHorizontal: 15,
-    borderRadius: 12,
+    padding: 32, // Espaçamento generoso
+    marginHorizontal: 16,
+    borderRadius: 16,
     backgroundColor: '#FFFFFF',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   noCouponsText: {
-    marginTop: 10,
+    marginTop: 12,
     fontSize: 16,
     textAlign: 'center',
+    color: '#6B7280',
+    lineHeight: 22,
   },
 });
-
-
