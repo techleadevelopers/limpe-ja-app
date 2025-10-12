@@ -110,14 +110,14 @@ const AnimatedMenuItem: React.FC<{
         ) : mciName ? (
           <MaterialCommunityIcons
             name={mciName as any}
-            size={24}
+            size={20} // Reduzido de 24 para 20
             color={isDestructive ? '#D32F2F' : '#4682B4'}
             style={styles.menuItemIcon}
           />
         ) : ionName ? (
           <Ionicons
             name={ionName as any}
-            size={24}
+            size={20} // Reduzido de 24 para 20
             color={isDestructive ? '#D32F2F' : '#4682B4'}
             style={styles.menuItemIcon}
           />
@@ -128,7 +128,7 @@ const AnimatedMenuItem: React.FC<{
         </Text>
 
         {showChevron && !isDestructive && (
-          <Ionicons name="chevron-forward-outline" size={22} color="#C7C7CC" />
+          <Ionicons name="chevron-forward-outline" size={18} color="#C7C7CC" /> // Reduzido de 22 para 18
         )}
       </TouchableOpacity>
     </Animated.View>
@@ -146,7 +146,6 @@ export default function ClientProfileScreen() {
   const headerAnim = useRef(new Animated.Value(0)).current;
   const profileHeaderAnim = useRef(new Animated.Value(0)).current;
   const avatarScaleAnim = useRef(new Animated.Value(1)).current;
-  const searchBarAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.stagger(200, [
@@ -163,15 +162,8 @@ export default function ClientProfileScreen() {
         easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }),
-      Animated.timing(searchBarAnim, {
-        toValue: 1,
-        duration: 600,
-        delay: 200,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
     ]).start();
-  }, [headerAnim, profileHeaderAnim, searchBarAnim]);
+  }, [headerAnim, profileHeaderAnim]);
 
   const onPressInAvatar = useCallback(() => {
     Animated.spring(avatarScaleAnim, { toValue: 0.95, useNativeDriver: true }).start();
@@ -186,15 +178,14 @@ export default function ClientProfileScreen() {
     }).start();
   }, [avatarScaleAnim]);
 
-  // Modificação aqui: Removido o Alert.alert de confirmação
+  // Modificação aqui: Removido o Alert.alert de confirmação e todos os console.log/console.error para evitar erro no LogBox.
+  // Se precisar debugar: if (__DEV__) console.log('[ClientProfileScreen] Logout executado');
   const handleLogout = async () => {
     try {
-      console.log('[ClientProfileScreen] Tentando logout...'); // Log original
       await logout();
-      console.log('[ClientProfileScreen] Logout chamado no AuthContext. Navegando para /login.'); // Log original
       router.replace('/(auth)/login' as any);
     } catch (error) {
-      console.error('[ClientProfileScreen] Erro ao sair:', error); // Log original
+      // Removido: console.error para evitar LogBox error. Mantenha só o Alert para UX.
       Alert.alert('Erro ao Sair', 'Não foi possível sair da conta. Por favor, tente novamente.');
     }
   };
@@ -235,7 +226,7 @@ export default function ClientProfileScreen() {
       >
         <View style={styles.customHeader}>
           <TouchableOpacity style={styles.headerIconLeft} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#2F4F4F" />
+            <Ionicons name="arrow-back" size={20} color="#2F4F4F" /> {/* Reduzido de 24 para 20 */}
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Perfil</Text>
           <View style={styles.headerIconRightPlaceholder} />
@@ -243,17 +234,6 @@ export default function ClientProfileScreen() {
       </Animated.View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollViewContentContainer}>
-        {/* Search bar (sem reflexo) */}
-        <Animated.View
-          style={[
-            styles.searchBarContainer,
-            { opacity: searchBarAnim, transform: [{ translateY: searchBarAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] },
-          ]}
-        >
-          <Ionicons name="search" size={20} color="#5e7694ff" style={styles.searchIcon} />
-          <TextInput style={styles.searchInput} placeholder="Pesquisar" placeholderTextColor="#2F4F4F" />
-        </Animated.View>
-
         {/* User header card */}
         <Animated.View
           style={[
@@ -271,11 +251,11 @@ export default function ClientProfileScreen() {
               <Image source={{ uri: userAvatarUrl }} style={styles.avatarImage} />
             ) : (
               <View style={styles.avatarPlaceholder}>
-                <Ionicons name="person-circle-outline" size={70} color="#69abeeff" />
+                <Ionicons name="person-circle-outline" size={50} color="#69abeeff" /> {/* Reduzido de 70 para 50 */}
               </View>
             )}
             <View style={styles.editIconBadge}>
-              <Ionicons name="pencil" size={14} color="#fff" />
+              <Ionicons name="pencil" size={12} color="#fff" /> {/* Reduzido de 14 para 12 */}
             </View>
           </TouchableOpacity>
 
@@ -286,7 +266,7 @@ export default function ClientProfileScreen() {
           </View>
 
           <TouchableOpacity onPress={() => handleWIP('QR Code')}>
-            <MaterialCommunityIcons name="qrcode-scan" size={24} color="#6C757D" />
+            <MaterialCommunityIcons name="qrcode-scan" size={20} color="#6C757D" /> {/* Reduzido de 24 para 20 */}
           </TouchableOpacity>
         </Animated.View>
 
@@ -348,7 +328,7 @@ export default function ClientProfileScreen() {
           <AnimatedMenuItem
             label="Sair da Conta"
             ionName="log-out-outline"
-            onPress={handleLogout} // Chama a função handleLogout modificada
+            onPress={handleLogout} 
             isDestructive
             delay={350}
             showChevron={false}
@@ -360,9 +340,12 @@ export default function ClientProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F0F8FF' },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#f2f2f2',
+   },
   scrollView: { flex: 1 },
-  scrollViewContentContainer: { paddingBottom: 40 },
+  scrollViewContentContainer: { paddingBottom: 40,  paddingHorizontal: 15, }, // Reduzido de 20 para 15
 
   centeredMessageContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
   simpleButton: { marginTop: 20, backgroundColor: '#007AFF', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8 },
@@ -383,39 +366,16 @@ const styles = StyleSheet.create({
   headerIconLeft: { padding: 5, zIndex: 1 },
   headerIconRightPlaceholder: { width: 34, zIndex: 1 },
 
-  searchBarContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#9ec2f1ff',
-    borderRadius: 10,
-    marginHorizontal: 15,
-    marginTop: 20,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: 'rgba(0,0,0,0.08)',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
-      },
-      android: { elevation: 6 },
-    }),
-  },
-  searchIcon: { marginRight: 10 },
-  searchInput: { flex: 1, fontSize: 16, color: '#2F4F4F' },
-
   profileHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingVertical: 15, // Reduzido de 20 para 15
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     marginHorizontal: 15,
     marginTop: 20,
     marginBottom: 20,
-    paddingHorizontal: 20,
+    paddingHorizontal: 15, // Reduzido de 20 para 15
     ...Platform.select({
       ios: {
         shadowColor: 'rgba(0,0,0,0.08)',
@@ -429,15 +389,15 @@ const styles = StyleSheet.create({
 
   avatarContainer: {
     position: 'relative',
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 60, // Reduzido de 80 para 60
+    height: 60, // Reduzido de 80 para 60
+    borderRadius: 30, // Ajustado para 60/2
     borderWidth: 3,
     borderColor: '#007AFF',
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
-    marginRight: 15,
+    marginRight: 12, // Reduzido de 15 para 12
     ...Platform.select({
       ios: {
         shadowColor: 'rgba(0,0,0,0.15)',
@@ -455,14 +415,14 @@ const styles = StyleSheet.create({
     bottom: 0,
     right: 0,
     backgroundColor: '#4A90E2',
-    padding: 6,
-    borderRadius: 12,
+    padding: 5, // Reduzido de 6 para 5
+    borderRadius: 10, // Ajustado para menor
     borderWidth: 2,
     borderColor: '#FFFFFF',
   },
 
   userInfoTextContainer: { flex: 1 },
-  userName: { fontSize: 20, fontWeight: 'bold', color: '#739aeaff' },
+  userName: { fontSize: 18, fontWeight: 'bold', color: '#739aeaff' },
   userSlogan: { fontSize: 14, color: '#6C757D', marginTop: 4, fontStyle: 'italic' },
   userPointsText: { fontSize: 14, fontWeight: 'bold', color: '#4CAF50', marginTop: 8 },
 
@@ -483,11 +443,11 @@ const styles = StyleSheet.create({
     }),
   },
   menuItemWrapper: {},
-  menuItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 15, paddingHorizontal: 20 },
+  menuItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 15 }, // Reduzido padding de 15/20 para 12/15
   menuItemDestructive: { backgroundColor: 'rgba(211, 47, 47, 0.05)' },
-  menuItemIcon: { marginRight: 15 },
-  menuItem3DIcon: { width: 36, height: 36, marginRight: 15 },
-  menuItemText: { flex: 1, fontSize: 18, color: '#212529' },
+  menuItemIcon: { marginRight: 12 }, // Reduzido de 15 para 12
+  menuItem3DIcon: { width: 28, height: 28, marginRight: 12 }, // Reduzido de 36 para 28
+  menuItemText: { flex: 1, fontSize: 16, color: '#212529' }, // Reduzido de 18 para 16
   menuItemTextDestructive: { color: '#D32F2F', fontWeight: '600' },
 
   bottomSection: {
