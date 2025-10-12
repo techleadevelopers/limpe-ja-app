@@ -6,17 +6,132 @@ interface ToastOptions {
   type: 'success' | 'error' | 'info';
   title: string;
   message: string;
-  visibilityTime?: number;
   position?: 'top' | 'bottom';
 }
 
 class NotificationUIService {
+  private safeString(v: unknown, fallback = ''): string {
+    if (typeof v === 'string') return v;
+    if (v == null) return fallback;
+    try {
+      return String(v);
+    } catch {
+      return fallback;
+    }
+  }
+
   show(options: ToastOptions) {
+    const type = options.type;
+    const title = this.safeString(options.title);
+    const message = this.safeString(options.message);
+
+    const msgLower = message.toLowerCase();
+    const titleLower = title.toLowerCase();
+
+    // Supressão existente: schedule/time
+    if (type === 'success' && msgLower.includes('horário')) {
+      console.warn('[NotificationUIService] suppressed schedule success toast:', message);
+      return;
+    }
+
+    // Supressão existente: PIX
+    if (type === 'success' && (
+      msgLower.includes('pix') ||
+      msgLower.includes('gerado') ||
+      msgLower.includes('sucesso') ||
+      titleLower.includes('pix') ||
+      titleLower.includes('gerado') ||
+      titleLower.includes('sucesso')
+    )) {
+      console.warn('[NotificationUIService] suppressed PIX success toast:', title, message);
+      return;
+    }
+
+    // Supressão existente: PIX info
+    if (type === 'info' && (
+      msgLower.includes('pix') ||
+      msgLower.includes('copiado') ||
+      msgLower.includes('código')
+    )) {
+      console.warn('[NotificationUIService] suppressed PIX info toast:', message);
+      return;
+    }
+
+    // Chaves de i18n para supressão
+    const scheduleSuccessKeys = [
+      'schedule_service.booking_success_message',
+      'schedule_service.found_available_date',
+      'common.success',
+      'schedule_service.searching_next_available'
+    ];
+    const scheduleErrorKeys = [
+      'schedule_service.step1_validation_error',
+      'schedule_service.booking_error_message',
+      'schedule_service.service_not_available',
+      'schedule_service.no_available_nearby',
+      'schedule_service.error_fetching_slots_day',
+      'schedule_service.navigation_error_essential_data',
+      'common.error',
+      'common.network_error'
+    ];
+    const successPageKeys = [
+      'bookings.success_title',
+      'bookings.confirmation_message',
+      'common.confirm'
+    ];
+
+    // Segurança: obter strings traduzidas de forma defensiva
+    const translatedScheduleSuccess = scheduleSuccessKeys.map(k => {
+      try { return i18n.t(k).toLowerCase(); } catch { return ''; }
+    });
+    const translatedScheduleError = scheduleErrorKeys.map(k => {
+      try { return i18n.t(k).toLowerCase(); } catch { return ''; }
+    });
+    const translatedSuccessPage = successPageKeys.map(k => {
+      try { return i18n.t(k).toLowerCase(); } catch { return ''; }
+    });
+
+    if (type === 'success' && (
+      translatedScheduleSuccess.some(s => s && msgLower.includes(s)) ||
+      msgLower.includes('agendamento realizado') ||
+      msgLower.includes('horários encontrados') ||
+      msgLower.includes('sucesso')
+    )) {
+      console.warn('[NotificationUIService] suppressed schedule/success toast (success):', message);
+      return;
+    }
+
+    if ((type === 'error' || type === 'info') && (
+      translatedScheduleError.some(s => s && msgLower.includes(s)) ||
+      msgLower.includes('selecione data') ||
+      msgLower.includes('horário não disponível') ||
+      msgLower.includes('procurando próximo') ||
+      msgLower.includes('endereço necessário') ||
+      translatedSuccessPage.some(s => s && msgLower.includes(s))
+    )) {
+      console.warn(`[NotificationUIService] suppressed schedule/success toast (${type}):`, message);
+      return;
+    }
+
+    // Supressão para erros de UI/render
+    if (type === 'error') {
+      const BLOCKLIST = [
+        'Text strings must be rendered within a <Text> component',
+      ];
+      const shouldSuppress = BLOCKLIST.some((frag) =>
+        typeof message === 'string' && message.toLowerCase().includes(frag.toLowerCase())
+      );
+      if (shouldSuppress) {
+        console.warn('[NotificationUIService] suppressed UI error toast:', message);
+        return;
+      }
+    }
+
+    // Exibir toast (garantindo text1/text2 sejam strings)
     RNToast.show({
-      type: options.type,
-      text1: options.title,
-      text2: options.message,
-      visibilityTime: options.visibilityTime ?? 4000,
+      type: type,
+      text1: title || '',
+      text2: message || '',
       position: options.position ?? 'top',
     });
   }
@@ -30,7 +145,7 @@ class NotificationUIService {
   }
 
   showError(error: unknown, title: string = i18n.t('common.error')) {
-    let message = i18n.t('errors.network.retry_saved');
+    let message = this.safeString(i18n.t('errors.network.retry_saved', { defaultValue: '' })) || '';
     let messageKey: string | undefined;
     let status: number | undefined;
 
@@ -57,10 +172,11 @@ class NotificationUIService {
     }
 
     const translated = messageKey ? i18n.t(messageKey, { defaultValue: message }) : message;
-    let finalMessage = translated || i18n.t('errors.network.retry_saved');
+    let finalMessage = this.safeString(translated, this.safeString(i18n.t('errors.network.retry_saved', { defaultValue: '' })));
+    finalMessage = finalMessage.trim();
 
     if (status && status >= 500) {
-      const supportCopy = i18n.t('errors.network.contact_support');
+      const supportCopy = this.safeString(i18n.t('errors.network.contact_support', { defaultValue: '' }));
       finalMessage = `${finalMessage} ${supportCopy}`.trim();
     }
 
