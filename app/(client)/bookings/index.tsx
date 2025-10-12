@@ -893,7 +893,7 @@ const styles = StyleSheet.create({
     backgroundColor: AppColors.white,
   },
   filterHeaderTitle: {
-    fontSize: 16,
+    fontSize: 10,
     fontWeight: '700',
     color: AppColors.textBody,
     fontFamily: 'Montserrat-SemiBold',
