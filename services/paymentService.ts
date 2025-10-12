@@ -19,8 +19,12 @@ export const createPixCharge = async (clientUserId: string, data: CreatePixCharg
 };
 
 export const requestWithdrawal = async (data: RequestWithdrawalDto): Promise<MessageResponseDto> => {
+  // Gera uma chave idempotente leve e única por dispositivo/ação
+  const idemKey = `wd-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
   try {
-    const response = await api.post<MessageResponseDto>('/payments/withdrawal', data);
+    const response = await api.post<MessageResponseDto>('/payments/withdrawal', data, {
+      headers: { 'idempotency-key': idemKey },
+    });
     return response.data;
   } catch (error: any) {
     console.error('Erro ao solicitar saque:', error.response?.data || error.message);
