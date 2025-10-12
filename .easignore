@@ -1,0 +1,81 @@
+# Monorepo: não envie backend e admin para o EAS
+backend-cleaning/**
+admin-web/**
+
+# VCS/artefatos (já cobertos por .gitignore, mas explícito para EAS)
+.git/**
+.github/**
+.gitignore
+*.log
+npm-debug.log*
+yarn-error.log*
+coverage/**
+
+# Builds locais e artefatos gerados
+dist/**
+build/**
+web-build/**
+.expo/
+.expo-shared/
+*.apk
+*.aab
+*.ipa
+
+# Node/Yarn caches (EAS reinstala deps no servidor)
+**/node_modules/**
+**/.yarn/**
+**/.pnpm-store/**
+
+# iOS/Android artefatos (para managed workflow; remova se bare)
+ios/Pods/**
+ios/build/**
+android/.gradle/**
+android/app/build/**
+
+# Testes, docs e scripts pesados (não necessários no build)
+__tests__/**
+cypress/**
+docs/**
+documentation/**
+scripts/**
+test-*.sh
+
+# Logs, temporários e backups
+*.tmp
+*.bak
+tmp*/
+tmp_*
+*.zip
+*.7z
+*.tar
+*.tar.gz
+*.tgz
+*.dmg
+*.exe
+*.psd
+*.ai
+*.sketch
+*.mp4
+*.mov
+
+# Itens pesados e sensíveis do backend (defesa em profundidade)
+backend-cleaning/uploads/**
+backend-cleaning/full_local_db_backup.dump
+backend-cleaning/cloud_sql_proxy_x64.exe
+backend-cleaning/limpeja-gcs-key.json.b64
+backend-cleaning/.env*
+backend-cleaning/prisma/**
+backend-cleaning/node_modules/**  # Já coberto pelo global, mas explícito
+
+# Mídia grande que não é usada no app (mantenha assets/ essenciais como icon.png e splash.png)
+assets/raw/**
+
+# IDE/SO (evita uploads desnecessários)
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.iml
+
+# Arquivos grandes/backup locais (da sua sugestão)
+limpeja_tudo.md
