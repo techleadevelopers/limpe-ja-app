@@ -220,12 +220,12 @@ const CarouselBannerItem: React.FC<CarouselBannerItemProps> = ({
 
 const styles = StyleSheet.create({
     bannerOuterContainer: {
-        width: Dimensions.get('window').width - 50, // Alinhado com padding do FlatList (10 left + 20 right)
-        height: 120,
+        width: Dimensions.get('window').width - 40, // Alinhado com padding do FlatList (10 left + 20 right)
+        height: 90,
         marginRight: 10,
-        
-        borderRadius: 22, // Arredondado premium
-        marginHorizontal: 0, // Sem margins laterais para alinhamento perfeito
+        marginTop: 0,
+        borderRadius: 12, // Arredondado premium
+        marginHorizontal: 6, // Sem margins laterais para alinhamento perfeito
         overflow: 'hidden',
         // Sombras premium iOS (mais profundas e suaves)
         ...Platform.select({
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
     backgroundImageWrapper: {
         flex: 1,
         overflow: 'hidden',
-        borderRadius: 22, // Consistente com outer
+        borderRadius: 12, // Consistente com outer
         borderWidth: 0.5, // Borda sutil para definição
         borderColor: '#45484b56',
     },
@@ -288,12 +288,12 @@ const styles = StyleSheet.create({
         alignSelf: 'flex-start',
     },
     badgeText: {
-        fontSize: 10,
+        fontSize: 8,
         fontWeight: 'bold',
         color: '#6692bdff',
     },
     title: {
-        fontSize: 16, // Aumentado para premium
+        fontSize: 14, // Aumentado para premium
         fontWeight: 'bold',
         color: 'white',
         lineHeight: 22,
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
         textShadowRadius: 4,
     },
     discount: {
-        fontSize: 24, // Maior para destaque premium
+        fontSize: 22, // Maior para destaque premium
         fontWeight: '900',
         color: 'white',
         marginBottom: 8,
@@ -321,8 +321,8 @@ const styles = StyleSheet.create({
     button: {
         backgroundColor: 'white',
         borderRadius: 20,
-        paddingVertical: 8, // Padding maior para touch iOS
-        paddingHorizontal: 16,
+        paddingVertical: 5, // Padding maior para touch iOS
+        paddingHorizontal: 10,
         marginTop: 'auto',
         ...Platform.select({
             ios: {
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
         }),
     },
     buttonText: {
-        fontSize: 12,
+        fontSize: 9,
         fontWeight: 'bold',
         color: '#6973bfff',
         textAlign: 'center',
