@@ -1,4 +1,4 @@
-
+// LimpeJaApp/app/(client)/bookings/paymentIntentHooks.ts
 import { useCallback, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Clipboard from 'expo-clipboard';
@@ -85,10 +85,10 @@ export function usePixActions(source: { qrCodeText?: string; copiaECola?: string
         // ignore haptics errors
       }
       Toast.show({
-      type: 'info',
-      text1: i18n.t('payments.pix.copy_success_title'),
-      text2: i18n.t('payments.pix.copy_success_message'),
-    });
+        type: 'info',
+        text1: i18n.t('payments.pix.copy_success_title'),
+        text2: i18n.t('payments.pix.copy_success_message'),
+      });
     },
   } as const;
 }
