@@ -387,8 +387,9 @@ export class AuthService {
               verificationStatus: VerificationStatus.PENDING_INITIAL_REVIEW,
               bio: null,
               badges: [],
-              acceptanceRate: 0, // CORREÇÃO: Float aceita 0 diretamente (conforme schema)
-              averageResponseTime: 0, // CORREÇÃO: Int aceita 0 diretamente (conforme schema)
+              // Defaults iniciais de métricas para aparecer nos cards recém-cadastrados
+              acceptanceRate: 1,
+              averageResponseTime: 180,
               address: {
                 create: {
                   cep: address.cep,
