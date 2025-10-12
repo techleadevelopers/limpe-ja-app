@@ -1,4 +1,4 @@
-// hooks/useCouponValidation.ts
+﻿// hooks/useCouponValidation.ts
 import { useState, useRef, useCallback } from 'react';
 import { Animated, Easing } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -128,3 +128,5 @@ export const useCouponValidation = (
         handleApplyCoupon,
     };
 };
+
+
