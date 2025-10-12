@@ -13,6 +13,9 @@ import UserManagement from "@/pages/users/user-management";
 import ServiceManagement from "@/pages/services/service-management";
 import FinancialAnalytics from "@/pages/analytics/financial-analytics";
 import NotFound from "@/pages/not-found";
+import DisputeManagement from "@/pages/disputes/dispute-management";
+import PaymentManagement from "@/pages/payments/payment-management";
+import SafetyAlerts from "@/pages/safety/safety-alerts";
 import LoginPage from "@/pages/login"; // Importa a nova página de login
 import { AuthProvider, useAuth } from "@/context/AuthContext"; // Importa o AuthProvider e useAuth
 import { Skeleton } from "./components/ui/skeleton"; // Para o estado de carregamento
@@ -64,7 +67,7 @@ function AppRouter() {
           <VerificationQueue />
         </PrivateRoute>
       </Route>
-      <Route path="/financial-analytics">
+            <Route path="/financial-analytics">
         <PrivateRoute>
           <FinancialAnalytics />
         </PrivateRoute>
@@ -74,7 +77,21 @@ function AppRouter() {
           <ServiceManagement />
         </PrivateRoute>
       </Route>
-      <Route path="/user-management">
+      <Route path="/dispute-management">
+        <PrivateRoute>
+          <DisputeManagement />
+        </PrivateRoute>
+      </Route>
+      <Route path="/payment-management">
+        <PrivateRoute>
+          <PaymentManagement />
+        </PrivateRoute>
+      </Route>
+      <Route path="/safety-alerts">
+        <PrivateRoute>
+          <SafetyAlerts />
+        </PrivateRoute>
+      </Route><Route path="/user-management">
         <PrivateRoute>
           <UserManagement />
         </PrivateRoute>
@@ -115,3 +132,4 @@ function App() {
 }
 
 export default App;
+
