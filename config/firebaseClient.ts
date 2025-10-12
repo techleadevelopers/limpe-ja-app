@@ -5,8 +5,8 @@ import Constants from 'expo-constants';
 
 // Importações do React Native Firebase para garantir que os módulos nativos sejam carregados
 // Estes são importantes para o ambiente nativo (APK/Expo Go)
-import '@react-native-firebase/app';
-import '@react-native-firebase/auth';
+// Removido RN Firebase nativo: usamos SDK Web modular do Firebase no Expo.
+// Isso evita pods nativos desnecessários e conflitos no iOS EAS build.
 
 // --- LOGS DEFENSIVOS ESSENCIAIS ---
 console.log('--- [FirebaseClient Debug] Início do Carregamento ---');
