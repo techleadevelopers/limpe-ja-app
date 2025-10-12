@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Share, ScrollView, Alert, Animated, Easing, Platform } from 'react-native'; // Adicionado 'Platform'
+import { View, Text, StyleSheet, TouchableOpacity, Share, ScrollView, Animated, Easing, Platform } from 'react-native'; // Adicionado 'Platform'
 import ScreenContainer from '../../components/common/ScreenContainer';
 import Header from '../../components/common/Header';
 import Card from '../../components/common/Card';
@@ -8,28 +8,12 @@ import { colors } from '../../components/common/theme/colors';
 import { typography } from '../../components/common/theme/typography';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import * as Clipboard from 'expo-clipboard';
+import { api } from '../../services/api';
+import { useAuth } from '../../hooks/useAuth';
+import * as Haptics from 'expo-haptics';
+import NotificationUIService from '../../services/notificationUIService';
 
-// Mock de dados
-const mockReferralData = {
-  referralCode: 'CLEANAPP2025',
-  totalReferrals: 5,
-  successfulReferrals: 3,
-  earnings: 'R$ 150,00',
-  pendingEarnings: 'R$ 50,00',
-  referredUsers: [
-    { name: 'João Silva', status: 'Inscrito', date: '2024-06-01' },
-    { name: 'Maria Souza', status: 'Primeiro Serviço Concluído', date: '2024-06-15' },
-    { name: 'Pedro Santos', status: 'Inscrito', date: '2024-07-01' },
-    { name: 'Ana Costa', status: 'Primeiro Serviço Concluído', date: '2024-07-10' },
-    { name: 'Carlos Lima', status: 'Primeiro Serviço Concluído', date: '2024-07-25' },
-  ],
-  howItWorks: [
-    'Compartilhe seu código de indicação único com amigos e familiares.',
-    'Eles se registram no app usando seu código.',
-    'Você ganha um bônus quando eles completam o primeiro serviço.',
-    'Seus amigos também ganham um desconto no primeiro serviço!',
-  ],
-};
+type ReferredUser = { name: string; status: string; date: string };
 
 const AnimatedCard: React.FC<{ children: React.ReactNode; style?: any; delay: number }> = ({ children, style, delay }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -62,30 +46,63 @@ const AnimatedCard: React.FC<{ children: React.ReactNode; style?: any; delay: nu
 };
 
 const ReferralsScreen: React.FC = () => {
-  const { referralCode, totalReferrals, successfulReferrals, earnings, pendingEarnings, referredUsers, howItWorks } = mockReferralData;
+  const { user } = useAuth();
+  const [referralCode, setReferralCode] = useState<string>(user?.referralCode || '');
+  const [referredUsers, setReferredUsers] = useState<ReferredUser[]>([]);
+  const [totals, setTotals] = useState<{ total: number; success: number; earnings: number; pending: number }>({ total: 0, success: 0, earnings: 0, pending: 0 });
+
+  const howItWorks = [
+    'Compartilhe seu código de indicação único com amigos e familiares.',
+    'Eles se registram no app usando seu código.',
+    'Você ganha um bônus quando eles completam o primeiro serviço.',
+    'Seus amigos também ganham um desconto no primeiro serviço!',
+  ];
 
   // Animação para o botão de compartilhar/copiar
   const buttonScaleAnim = useRef(new Animated.Value(1)).current;
-
   const onPressInButton = (anim: Animated.Value) => { Animated.spring(anim, { toValue: 0.95, useNativeDriver: true }).start(); };
   const onPressOutButton = (anim: Animated.Value) => { Animated.spring(anim, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start(); };
 
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data: codeRes } = await api.get<{ referralCode: string }>('/referrals/me/code');
+        if (codeRes?.referralCode) setReferralCode(codeRes.referralCode);
+      } catch (_) {
+        // fallback silencioso
+      }
+      try {
+        const { data } = await api.get<any[]>('/referrals/me');
+        const list: ReferredUser[] = (data || []).map((r: any) => ({
+          name: r?.referredUser?.fullName || r?.referredUserName || 'Indicado',
+          status: r?.statusLabel || r?.status || 'Inscrito',
+          date: r?.createdAt ? new Date(r.createdAt).toISOString().slice(0, 10) : '',
+        }));
+        setReferredUsers(list);
+        const success = (data || []).filter((r: any) => (r?.converted === true) || (r?.status === 'CONVERTED')).length;
+        setTotals({ total: data?.length || 0, success, earnings: 0, pending: 0 });
+      } catch (e: any) {
+        NotificationUIService.showError(e?.message || 'Não foi possível carregar suas indicações.', 'Erro');
+      }
+    })();
+  }, [user?.referralCode]);
 
   const handleShareCode = async () => {
     try {
       await Share.share({
-        message: `Use meu código de indicação ${referralCode} para ganhar um desconto no seu primeiro serviço de limpeza com o CleanApp! Baixe o app aqui: [Link para o App Store/Google Play]`,
-        url: 'https://link.para.seu.app', // Substitua pelo link real do seu app
-        title: 'Convite para o CleanApp!',
+        message: `Use meu código ${referralCode} para ganhar desconto no LimpeJá! Baixe o app: https://limpeja.app`,
+        url: 'https://limpeja.app',
+        title: 'Convite LimpeJá',
       });
     } catch (error: any) {
-      Alert.alert('Erro ao Compartilhar', error.message);
+      NotificationUIService.showError(error?.message || 'Falha ao compartilhar.', 'Erro');
     }
   };
 
   const handleCopyCode = () => {
-    Clipboard.setString(referralCode);
-    Alert.alert('Código Copiado!', 'Seu código de indicação foi copiado para a área de transferência.');
+    Clipboard.setStringAsync(referralCode);
+    if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    NotificationUIService.showSuccess('Código copiado, convide seus amigos!', 'Copiado');
   };
 
   return (
