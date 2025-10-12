@@ -189,7 +189,7 @@ const CategoriaCard: React.FC<CategoriaCardProps> = ({ item }) => {
 
 const styles = StyleSheet.create({
   cardContainerWrapper: {
-    width:  48,
+    width:  46,
     height: 40 + 15,
     marginRight: 15,
     right: 14,
