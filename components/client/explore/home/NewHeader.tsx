@@ -1,15 +1,13 @@
-import { Ionicons } from '@expo/vector-icons';
-import Constants from 'expo-constants'; // Importa Constants para acessar a altura da barra de status
+import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, Image, Platform } from 'react-native'; // Importe Platform
-import { LinearGradient } from 'expo-linear-gradient'; // Importação do LinearGradient
-import { Icons3D } from '@/constants/icons3d';
+import { StyleSheet, Text, TouchableOpacity, View, Image, Platform } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 interface NewHeaderProps {
   userName: string;
-  userAvatarUrl?: string | null; // Propriedade opcional para o avatar do usuário, aceitando string, undefined ou null
-  userAddress?: string | null; // Adicione esta linha
+  userAvatarUrl?: string | null;
+  userAddress?: string | null;
 }
 
 const NewHeader: React.FC<NewHeaderProps> = ({ userName, userAvatarUrl, userAddress }) => {
@@ -17,35 +15,32 @@ const NewHeader: React.FC<NewHeaderProps> = ({ userName, userAvatarUrl, userAddr
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    // Alteração: Capitalização corrigida para as saudações em português
     if (hour < 12) return 'Bom dia';
     if (hour < 18) return 'Boa tarde';
     return 'Boa noite';
   };
 
   const handleProfilePress = () => {
-    router.push('/(client)/profile' as any); // Ajuste a rota se necessário
+    router.push('/(client)/profile' as any);
   };
 
-  const handleNotificationsPress = () => {
-    // Implemente a lógica de notificação aqui, por exemplo, navegar para uma tela de notificações
-    console.log('Notifications pressed');
-    // router.push('/(client)/notifications' as any); // Exemplo de navegação
-  };
+  // const handleNotificationsPress = () => {
+  //   // Implemente a lógica de notificação aqui, por exemplo, navegar para uma tela de notificações
+  //   console.log('Notifications pressed');
+  //   // router.push('/(client)/notifications' as any); // Exemplo de navegação
+  // };
 
-  // NOVO: Função para lidar com o clique no ícone de categoria
   const handleCategoryPress = () => {
-    router.push('/(client)/explore/menu' as any); // Navegação para a rota especificada
+    router.push('/(client)/explore/menu' as any);
   };
 
-  // Define a fonte da imagem do avatar. Se userAvatarUrl for nulo ou indefinido, usa o avatar padrão.
   const avatarSource = userAvatarUrl
     ? { uri: userAvatarUrl }
     : require('../../../../assets/images/default-avatar.png');
 
   return (
     <LinearGradient
-      colors={['#9ebfec13', '#a6abb213']} // Cores do gradiente, do lilás ao rosa suave
+      colors={['#4d8ce415', '#4d8ce415']}
       style={styles.container}
     >
       <View style={styles.leftContent}>
@@ -55,18 +50,15 @@ const NewHeader: React.FC<NewHeaderProps> = ({ userName, userAvatarUrl, userAddr
         <View>
           <Text style={styles.greetingText}>{getGreeting()}</Text>
           <Text style={styles.userNameText}>{userName}</Text>
-       
         </View>
       </View>
       <View style={styles.rightContent}>
         <TouchableOpacity onPress={handleCategoryPress} style={styles.notificationIconContainer}>
-          {/* Alteração aqui: Substituindo Ionicons por Image */}
           <Image
             source={require('../../../../assets/images/3d/category2.png')}
-            style={styles.categoryIcon} // Novo estilo para o ícone da categoria
-            resizeMode="contain" // Garante que a imagem se ajuste sem cortar
+            style={styles.categoryIcon}
+            resizeMode="contain"
           />
-          {/* Opcional: Badge de notificação (descomente e implemente a lógica se precisar) */}
           {/* <View style={styles.notificationBadge} /> */}
         </TouchableOpacity>
       </View>
@@ -76,29 +68,25 @@ const NewHeader: React.FC<NewHeaderProps> = ({ userName, userAvatarUrl, userAddr
 
 const styles = StyleSheet.create({
   container: {
-    // paddingTop ajustado para considerar a altura da barra de status do dispositivo
-    // Reduzido o 40 para 30 para um cabeçalho um pouco menos alto
-    paddingVertical: Constants.statusBarHeight - 28, // PREMIUM: Inclui status bar no topo para fluxo seamless
+    paddingVertical: Constants.statusBarHeight - 35,
     left: 0,
+    top: 2,
+    marginHorizontal: 11,
     paddingHorizontal: 15,
-    // REMOVIDO: Borda arredondada do cabeçalho (para unificação com ScrollView)
-     borderBottomEndRadius: 30,
-     borderBottomStartRadius: 30,
-     marginBottom: 10,
-    // borderRadius: 0,
+    borderBottomEndRadius: 40,
+    borderBottomStartRadius: 40,
+    borderTopEndRadius: 40,
+    borderTopStartRadius: 40,
+    marginBottom: 11,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    // REMOVIDO: paddingBottom e marginBottom para fluxo contínuo no ScrollView
-    // paddingBottom: 9,
-    // marginBottom: 13,
-    // Adicionando zIndex para garantir que o cabeçalho fique abaixo do conteúdo principal
-    zIndex: 0, // Definindo um zIndex explícito e baixo
-    shadowColor: '#2f3344e8', // Cor da sombra
-    shadowOffset: { width: 0, height: 1 }, // Deslocamento vertical mais pronunciado
-    shadowOpacity: 0.17, // Opacidade aumentada para robustezs
-    shadowRadius: 9, // Raio de desfoque para conforto
-    elevation: 6, // Elevação aumentada para robustez no Android
+    zIndex: 0,
+    shadowColor: '#2f3344e8',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.17,
+    shadowRadius: 9,
+    elevation: 6,
   },
   leftContent: {
     flexDirection: 'row',
@@ -108,52 +96,42 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 20,
-    overflow: 'hidden', // Garante que a imagem não saia dos limites do borderRadius
+    overflow: 'hidden',
     marginRight: 6,
-    backgroundColor: 'transparent', // Fundo de placeholder enquanto a imagem carrega ou se não houver avatar
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
   },
   profileImage: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover', // Garante que a imagem cubra todo o espaço
+    resizeMode: 'cover',
   },
-  // Inversão: Greeting ("Bom dia") agora é o mais GROSSO (ExtraBold no iOS; Regular + '900' no Android)
-  // Mesma família: Montserrat para ambos
   greetingText: {
     fontSize: 14,
     fontFamily: Platform.select({
-      ios: 'Montserrat-ExtraBold', // Grosso pesado no iOS (inverte o original: greeting é o bold principal)
-      android: 'Montserrat-Regular' // Mantém base no Android, mas com weight alto
+      ios: 'Montserrat-ExtraBold',
+      android: 'Montserrat-Regular'
     }),
     color: '#666',
     fontWeight: Platform.select({
-      ios: '300', // Deixa a variante da font cuidar no iOS
-      android: '900' // Mantém original (simula "black/grosso" no Android)
+      ios: '300',
+      android: '900'
     }),
   },
-  // Inversão: UserName agora é um pouco MAIS FINO (Medium/SemiBold no iOS; Thin + 'bold' no Android)
-  // Mesma família: Montserrat para ambos (variante mais leve que greeting)
   userNameText: {
-    fontSize: 16,
+    fontSize: 19,
     fontFamily: Platform.select({
-      ios: 'Montserrat-Regular', // Mais fina que ExtraBold (mas ainda bold leve) no iOS
-      android: 'Montserrat-Thin' // Mantém base no Android
+      ios: 'Montserrat-ExtraBold',
+      android: 'Montserrat-Thin'
     }),
     color: '#7398b9ff',
     fontWeight: Platform.select({
-      ios: '500', // Deixa a variante da font cuidar no iOS
-      android: 'bold' // Mantém original (leve bold no Android)
+      ios: '300',
+      android: 'bold'
     }),
   },
-  // NOVO: Estilo para userAddress (premium: fluxo completo com endereço abaixo do nome)
-  userAddressText: {
-    fontSize: 12,
-    fontFamily: 'Montserrat-Regular',
-    color: '#888',
-    marginTop: 2,
-  },
+  // userAddressText removido (não utilizado)
   rightContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -161,9 +139,8 @@ const styles = StyleSheet.create({
   notificationIconContainer: {
     padding: 5,
   },
-  // NOVO ESTILO PARA O ÍCONE DA CATEGORIA
   categoryIcon: {
-    width: 25, // Ajuste o tamanho conforme necessário para o ícone da categoria
+    width: 25,
     height: 25,
   },
   notificationBadge: {
@@ -178,3 +155,5 @@ const styles = StyleSheet.create({
 });
 
 export default NewHeader;
+
+
