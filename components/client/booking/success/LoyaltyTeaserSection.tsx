@@ -102,15 +102,15 @@ export default function LoyaltyTeaserSection({
         Programa de Fidelidade
       </Text>
       <Text style={styles.loyaltyTeaserText} maxFontSizeMultiplier={1.2}>
-        {isLoading ? 'Sincronizando seus pontos...' : `Você tem ${formatPoints(currentPoints)} pontos disponíveis.`}
+        {isLoading ? 'Sincronizando seus pontos...' : `VocÃª tem ${formatPoints(currentPoints)} pontos disponoveis.`}
       </Text>
       {nextRewardName ? (
         <Text style={styles.loyaltySecondaryText} maxFontSizeMultiplier={1.2}>
-          Próxima recompensa: {nextRewardName}
+          PrÃ³xima recompensa: {nextRewardName}
         </Text>
       ) : (
         <Text style={styles.loyaltySecondaryText} maxFontSizeMultiplier={1.2}>
-          Complete missões para desbloquear recompensas exclusivas.
+          Complete missÃµes para desbloquear recompensas exclusivas.
         </Text>
       )}
       <TouchableOpacity
@@ -130,7 +130,7 @@ export default function LoyaltyTeaserSection({
             <ActivityIndicator color={AppColors.white} size="small" />
           ) : (
             <Text style={styles.learnMoreButtonText} maxFontSizeMultiplier={1.1}>
-              Ver benefícios
+              Ver benefÃ­cios
             </Text>
           )}
         </LinearGradient>
