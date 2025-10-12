@@ -1,4 +1,3 @@
-// LimpeJaApp/app/(provider)/withdraw.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -24,24 +23,24 @@ import { RequestWithdrawalDto, PixKeyType } from '../../../types/backend/payment
 
 // 🔗 Importar serviços reais
 import { requestWithdrawal } from '../../../services/paymentService';
-import api from '../../../services/api';
+import { api } from '../../../services/api';
 import NotificationUIService from '../../../services/notificationUIService'; // Para toasts premium
 
 // ===== Design Tokens (Premium UI - Clean, iOS/Android consistente) =====
 const Colors = {
-  primary: '#007AFF', // Azul Apple-like para iOS, vibrante no Android
-  primaryDark: '#0056B3',
-  link: '#007AFF',
-  bgSoft: '#F8F9FD', // Fundo suave premium
+  primary: '#4A90E2', // Azul premium consistente com o app
+  primaryDark: '#357ABD',
+  link: '#4A90E2',
+  bgSoft: '#F6F8FB', // Fundo suave premium (alinhado com mensagens/menu)
   surface: '#FFFFFF',
-  border: '#E5E5EA', // Subtil para iOS, clean no Android
+  border: '#E9ECEF', // Subtil para iOS, clean no Android
   fieldBg: '#F8F9FA',
-  text: '#1D1D1F', // Escuro premium
-  textMuted: '#6C757D',
-  textSubtle: '#868E96',
-  danger: '#FF3B30',
-  success: '#34C759',
-  warning: '#FF9500',
+  text: '#4A5568', // Cinza escuro premium para títulos (preto mais claro)
+  textMuted: '#6B7280',
+  textSubtle: '#9CA3AF',
+  danger: '#EF4444',
+  success: '#10B981',
+  warning: '#F59E0B',
   shadow: 'rgba(0, 0, 0, 0.05)', // Sombra sutil para iOS, elevation no Android
   gradientStart: '#667eea',
   gradientEnd: '#764ba2',
@@ -105,10 +104,10 @@ export default function WithdrawScreen() {
       try {
         // Backend endpoint para saldo (ajuste se necessário, integrado ao payments)
         // CORREÇÃO: Tipagem expandida para incluir 'earnings' opcional (caso backend retorne mais campos)
-        const response = await api.get<{ balance: number; earnings?: number; acceptanceRate?: number }>('/providers/me/metrics');
+        const response = await api.get<{ available: number; balance?: number; earnings?: number }>('\/payouts\/balance');
         if (isMounted.current) {
           // CORREÇÃO: Usa 'balance' em vez de 'acceptanceRate' (alinhado com tipagem). Se for earnings, mude para response.data.earnings || 0
-          setAvailableBalance(response.data.balance || 0);
+          const available = (response.data as any).available ?? (response.data as any).balance ?? 0; setAvailableBalance(Number(available) || 0);
         }
       } catch (err: any) {
         console.error('Erro ao buscar saldo:', err);
@@ -359,7 +358,7 @@ export default function WithdrawScreen() {
     >
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Header Robusto (Premium: Alinhado com SafeArea no iOS, fixo no Android) */}
+      {/* Header Robusto (Premium: Branco clean, alinhado com SafeArea no iOS, fixo no Android) */}
       <Animated.View
         style={[
           styles.customHeader,
@@ -387,7 +386,7 @@ export default function WithdrawScreen() {
           accessibilityLabel="Voltar"
           accessibilityHint="Retorne à tela anterior."
         >
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          <Ionicons name="arrow-back" size={24} color={Colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Solicitar Saque</Text>
         <View style={styles.headerActionIconPlaceholder} /> {/* Placeholder para balanceamento */}
@@ -403,7 +402,7 @@ export default function WithdrawScreen() {
         >
           <Text style={styles.cardTitle}>Saldo Disponível</Text>
           <Text style={styles.availableBalanceText}>
-            R$ {formatCurrency(availableBalance)}
+            {formatCurrency(availableBalance)}
           </Text>
           <Text style={styles.availableBalanceSubtitle}>Valor total de ganhos acumulados</Text>
 
@@ -515,7 +514,7 @@ export default function WithdrawScreen() {
               <ActivityIndicator color="#FFFFFF" size="small" />
             ) : (
               <Text style={styles.actionButtonPrimaryText}>
-                Confirmar Saque de {formatCurrency(parseFloat((amount.replace(',', '.') || '0')))} {/* CORREÇÃO: Força string para parseFloat (resolve tipo string | number) */}
+                Confirmar Saque de {formatCurrency(parseFloat(amount.replace(',', '.') || '0'))}
               </Text>
             )}
           </TouchableOpacity>
@@ -546,25 +545,27 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.textMuted,
   },
-  // Header Robusto (Alinhado com SafeArea no iOS, fixo no Android)
+  // Header Robusto (Alinhado com SafeArea no iOS, fixo no Android) - Branco premium
   customHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.surface, // Branco clean
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.lg,
     borderBottomLeftRadius: Radii.xl,
     borderBottomRightRadius: Radii.xl,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
     ...Platform.select({
       ios: {
         shadowColor: Colors.shadow,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
       },
       android: {
-        elevation: 8,
+        elevation: 4,
       },
     }),
   },
@@ -572,11 +573,12 @@ const styles = StyleSheet.create({
     padding: Spacing.sm,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    fontSize: 18, // Tamanho premium legível
+    fontWeight: '700', // Bold para ênfase
+    color: Colors.text, // Cinza escuro premium
     flex: 1,
     textAlign: 'center',
+    letterSpacing: 0.8, // Espaçamento refinado para conforto
     marginHorizontal: Spacing.sm,
   },
   headerActionIconPlaceholder: {
@@ -610,7 +612,7 @@ const styles = StyleSheet.create({
   availableBalanceText: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: Colors.primary,
+    color: Colors.primary, // Azul acento para destaque
     textAlign: 'center',
     marginBottom: Spacing.xs,
   },
