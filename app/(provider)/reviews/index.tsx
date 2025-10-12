@@ -1,7 +1,6 @@
-// app/(provider)/reviews/index.tsx
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -18,57 +17,59 @@ import {
 import { getMyProviderDashboard } from '../../../services/dashboardService';
 import { ProviderDashboard, ProviderReview } from '../../../types/backend/providers';
 
-const WHITE = '#FFFFFF';
-const BACKGROUND_ALT = '#F8F9FD';
-const TEXT_DARK = '#1A2538';
-const TEXT_MEDIUM = '#4A5568';
-const TEXT_MUTED = '#7A8599';
-const ICON_PRIMARY = '#007AFF';
-const SUCCESS_GREEN = '#28a745';
-const BORDER_SUBTLE = 'rgba(0,0,0,0.08)';
-const SHADOW_COLOR_SECTION = 'rgba(0, 0, 0, 0.1)';
+// Reaproveitei tokens de design (cores / espaçamento) consistentes com a outra tela
+const Colors = {
+  primary: 'rgba(0,122,255,0.9)',
+  bgSoft: '#E3F2FD',
+  surface: '#FFFFFF',
+  text: '#212529',
+  textMuted: '#6C757D',
+  textSubtle: '#868E96',
+  success: '#2E7D32',
+  border: '#E9ECEF',
+  shadow: 'rgba(0,122,255,0.12)',
+};
+
+const Radii = { xl: 24, md: 12, pill: 999 };
+const Spacing = { xs: 8, sm: 12, md: 18, lg: 24, xl: 32 };
+
+// Small helpers
+const ICON_PRIMARY = Colors.primary;
+const TEXT_DARK = Colors.text;
+const TEXT_MEDIUM = Colors.textMuted;
+const TEXT_MUTED = Colors.textSubtle;
+const WHITE = Colors.surface;
+const BORDER_SUBTLE = Colors.border;
+const SUCCESS_GREEN = Colors.success;
+const SHADOW_COLOR_SECTION = Colors.shadow;
 
 type FilterKey = 'all' | 'positive' | 'neutral' | 'negative';
 
-// Funções de extração seguras (adaptam aos nomes reais do seu backend)
+// Extractors seguros (compatíveis com variações no backend)
 const getClientName = (r: ProviderReview | any) =>
-  r?.clientFullName || r?.clientName || r?.client?.fullName || 'Client';
+  r?.clientFullName || r?.clientName || r?.client?.fullName || 'Cliente';
 
-const getClientId = (r: ProviderReview | any) =>
-  r?.clientId || r?.client?.id;
-
-const getServiceName = (r: ProviderReview | any) =>
-  r?.serviceName || r?.serviceSnapshot?.name || undefined;
-
+const getClientId = (r: ProviderReview | any) => r?.clientId || r?.client?.id;
+const getServiceName = (r: ProviderReview | any) => r?.serviceName || r?.serviceSnapshot?.name || undefined;
 const getBookingId = (r: ProviderReview | any) => r?.bookingId;
-
-const getCreatedAt = (r: ProviderReview | any) =>
-  r?.createdAt || r?.date || undefined;
-
-const getAvatarUrl = (r: ProviderReview | any) =>
-  r?.avatarUrl || r?.client?.avatarUrl || undefined;
-
+const getCreatedAt = (r: ProviderReview | any) => r?.createdAt || r?.date || undefined;
+const getAvatarUrl = (r: ProviderReview | any) => r?.avatarUrl || r?.client?.avatarUrl || undefined;
 const getRating = (r: ProviderReview | any) => r?.rating ?? 0;
-
 const getComment = (r: ProviderReview | any) => r?.comment || '';
 
-// Filtro por sentimento
+// Filtros (sentimento)
 const FILTERS: { key: FilterKey; label: string; test: (r: ProviderReview | any) => boolean }[] = [
-  { key: 'all', label: 'All', test: () => true },
-  { key: 'positive', label: 'Positive', test: r => getRating(r) >= 4 },
-  { key: 'neutral', label: 'Neutral', test: r => getRating(r) === 3 },
-  { key: 'negative', label: 'Negative', test: r => getRating(r) <= 2 },
+  { key: 'all', label: 'Todos', test: () => true },
+  { key: 'positive', label: 'Positivos', test: r => getRating(r) >= 4 },
+  { key: 'neutral', label: 'Neutros', test: r => getRating(r) === 3 },
+  { key: 'negative', label: 'Negativos', test: r => getRating(r) <= 2 },
 ];
 
-// Micro hook de toque com spring
+// micro-hook para toque animado
 const useAnimatedTouch = () => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
-  const onPressIn = () => {
-    Animated.spring(scaleAnim, { toValue: 0.95, useNativeDriver: true, friction: 5 }).start();
-  };
-  const onPressOut = () => {
-    Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, friction: 5, tension: 40 }).start();
-  };
+  const onPressIn = () => Animated.spring(scaleAnim, { toValue: 0.96, useNativeDriver: true, friction: 6 }).start();
+  const onPressOut = () => Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, friction: 6, tension: 60 }).start();
   return { scaleAnim, onPressIn, onPressOut };
 };
 
@@ -79,12 +80,12 @@ const ReviewItem: React.FC<{
   delay?: number;
 }> = ({ item, onOpenBooking, onMessageClient, delay = 0 }) => {
   const fade = useRef(new Animated.Value(0)).current;
-  const slide = useRef(new Animated.Value(20)).current;
+  const slide = useRef(new Animated.Value(12)).current;
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fade, { toValue: 1, duration: 350, delay, useNativeDriver: true }),
-      Animated.timing(slide, { toValue: 0, duration: 350, delay, useNativeDriver: true }),
+      Animated.timing(fade, { toValue: 1, duration: 320, delay, useNativeDriver: true }),
+      Animated.timing(slide, { toValue: 0, duration: 320, delay, useNativeDriver: true }),
     ]).start();
   }, [fade, slide, delay]);
 
@@ -102,47 +103,51 @@ const ReviewItem: React.FC<{
   const serviceName = getServiceName(item);
 
   return (
-    <Animated.View style={[styles.reviewCard, { opacity: fade, transform: [{ translateY: slide }] }]}>
-      <View style={styles.reviewHeader}>
-        <View style={styles.clientRow}>
-          <View style={styles.clientAvatar}>
+    <Animated.View style={[localStyles.reviewCard, { opacity: fade, transform: [{ translateY: slide }] }]}>
+      <View style={localStyles.reviewHeader}>
+        <View style={localStyles.clientRow}>
+          <View style={localStyles.clientAvatar}>
             <Ionicons name="person-outline" size={18} color={TEXT_MEDIUM} />
           </View>
-          <Text style={styles.clientName} numberOfLines={1}>
+          <Text style={localStyles.clientName} numberOfLines={1}>
             {clientName}
           </Text>
         </View>
-        <View style={styles.starsRow}>{stars}</View>
+
+        <View style={localStyles.starsRow} accessibilityLabel={`Avaliação: ${rating} de 5`}>
+          {stars}
+        </View>
       </View>
 
-      {!!getComment(item) && <Text style={styles.commentText}>{getComment(item)}</Text>}
+      {!!getComment(item) && <Text style={localStyles.commentText}>{getComment(item)}</Text>}
 
-      <View style={styles.metaRow}>
+      <View style={localStyles.metaRow}>
         <Ionicons name="calendar-outline" size={14} color={TEXT_MUTED} />
-        <Text style={styles.metaText}>
-          {createdAt
-            ? new Date(createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
-            : '--'}
+        <Text style={localStyles.metaText}>
+          {createdAt ? new Date(createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }) : '--'}
         </Text>
+
         {!!serviceName && (
           <>
             <Ionicons name="pricetag-outline" size={14} color={TEXT_MUTED} style={{ marginLeft: 8 }} />
-            <Text style={styles.metaText} numberOfLines={1}>{serviceName}</Text>
+            <Text style={[localStyles.metaText, { maxWidth: 160 }]} numberOfLines={1}>
+              {serviceName}
+            </Text>
           </>
         )}
       </View>
 
-      <View style={styles.actionsRow}>
+      <View style={localStyles.actionsRow}>
         <TouchableOpacity
           onPress={() => onMessageClient?.(getClientId(item), clientName)}
           onPressIn={messageTouch.onPressIn}
           onPressOut={messageTouch.onPressOut}
-          style={[styles.pillButton, styles.pillButtonGhost]}
-          accessibilityLabel="Open chat with client"
+          style={[localStyles.pillButton, localStyles.pillButtonGhost]}
+          accessibilityLabel={`Enviar mensagem para ${clientName}`}
         >
           <Animated.View style={{ flexDirection: 'row', alignItems: 'center', transform: [{ scale: messageTouch.scaleAnim }] }}>
             <Ionicons name="chatbubble-ellipses-outline" size={18} color={ICON_PRIMARY} />
-            <Text style={styles.pillGhostText}>Message</Text>
+            <Text style={localStyles.pillGhostText}>Mensagem</Text>
           </Animated.View>
         </TouchableOpacity>
 
@@ -150,12 +155,12 @@ const ReviewItem: React.FC<{
           onPress={() => onOpenBooking?.(getBookingId(item))}
           onPressIn={detailsTouch.onPressIn}
           onPressOut={detailsTouch.onPressOut}
-          style={[styles.pillButton, styles.pillButtonPrimary]}
-          accessibilityLabel="Open booking details"
+          style={[localStyles.pillButton, localStyles.pillButtonPrimary]}
+          accessibilityLabel="Abrir detalhes da reserva"
         >
           <Animated.View style={{ flexDirection: 'row', alignItems: 'center', transform: [{ scale: detailsTouch.scaleAnim }] }}>
             <Ionicons name="receipt-outline" size={18} color={WHITE} />
-            <Text style={styles.pillPrimaryText}>Booking</Text>
+            <Text style={localStyles.pillPrimaryText}>Reserva</Text>
           </Animated.View>
         </TouchableOpacity>
       </View>
@@ -169,7 +174,6 @@ const ReviewsScreen: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [filter, setFilter] = useState<FilterKey>('all');
   const [data, setData] = useState<ProviderDashboard | (ProviderDashboard & any) | null>(null);
-
   const headerAnim = useRef(new Animated.Value(0)).current;
 
   const fetchData = useCallback(async () => {
@@ -179,7 +183,7 @@ const ReviewsScreen: React.FC = () => {
       setData(resp as any);
     } catch (e: any) {
       console.error('[Reviews] fetchData error:', e?.response?.data || e?.message);
-      Alert.alert('Error', 'Unable to load your reviews right now.');
+      Alert.alert('Erro', 'Não foi possível carregar as avaliações no momento.');
     } finally {
       setIsLoading(false);
     }
@@ -190,7 +194,7 @@ const ReviewsScreen: React.FC = () => {
   }, [fetchData]);
 
   useEffect(() => {
-    Animated.timing(headerAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
+    Animated.timing(headerAnim, { toValue: 1, duration: 420, useNativeDriver: true }).start();
   }, [headerAnim]);
 
   const onRefresh = useCallback(async () => {
@@ -202,12 +206,7 @@ const ReviewsScreen: React.FC = () => {
     }
   }, [fetchData]);
 
-  // Torna robusto aos diferentes formatos vindos do dashboard
-  const reviews: (ProviderReview | any)[] = useMemo(
-    () => ((data as any)?.reviews ?? (data as any)?.recentReviews ?? []),
-    [data]
-  );
-
+  const reviews: (ProviderReview | any)[] = useMemo(() => ((data as any)?.reviews ?? (data as any)?.recentReviews ?? []), [data]);
   const avg: number = (data as any)?.averageRating ?? (data as any)?.avgRating ?? 0;
   const total: number = (data as any)?.totalReviews ?? reviews.length;
 
@@ -229,83 +228,83 @@ const ReviewsScreen: React.FC = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={localStyles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Cabeçalho compacto com gradiente e botão voltar (consistente com o estilo do app) */}
-      <Animated.View style={[styles.customHeader, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
+      <Animated.View
+        style={[
+          localStyles.customHeader,
+          { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] as any },
+        ]}
+      >
         <TouchableOpacity
           onPress={() => router.back()}
           onPressIn={headerTouch.onPressIn}
           onPressOut={headerTouch.onPressOut}
-          style={styles.headerBackButton}
-          accessibilityLabel="Back"
+          style={localStyles.headerBackButton}
+          accessibilityLabel="Voltar"
         >
           <Animated.View style={{ transform: [{ scale: headerTouch.scaleAnim }] }}>
             <Ionicons name="arrow-back" size={24} color={WHITE} />
           </Animated.View>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Reviews</Text>
-        <View style={{ width: 24 }} />
+
+        <Text style={localStyles.headerTitle}>Avaliações</Text>
+
+        <View style={{ width: 28 }} />
       </Animated.View>
 
       {isLoading ? (
-        <View style={styles.loadingContainer}>
+        <View style={localStyles.loadingContainer}>
           <ActivityIndicator size="large" color={ICON_PRIMARY} />
-          <Text style={styles.loadingText}>Loading reviews…</Text>
+          <Text style={localStyles.loadingText}>Carregando avaliações…</Text>
         </View>
       ) : (
         <FlatList
-          style={styles.list}
-          contentContainerStyle={styles.listContent}
+          style={localStyles.list}
+          contentContainerStyle={localStyles.listContent}
           data={filtered}
           keyExtractor={(it, index) => (it as any)?.id ?? String(index)}
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={ICON_PRIMARY} />}
           ListHeaderComponent={
             <>
-              {/* Resumo superior */}
-              <View style={styles.summaryCard}>
-                <View style={styles.summaryRow}>
-                  <View style={styles.summaryLeft}>
-                    <Text style={styles.summaryTitle}>Average rating</Text>
-                    <View style={styles.avgRow}>
+              <View style={localStyles.summaryCard}>
+                <View style={localStyles.summaryRow}>
+                  <View style={localStyles.summaryLeft}>
+                    <Text style={localStyles.summaryTitle}>Avaliação média</Text>
+                    <View style={localStyles.avgRow}>
                       <MaterialCommunityIcons name="star" size={22} color={SUCCESS_GREEN} />
-                      <Text style={styles.avgValue}>{avg.toFixed(1)}</Text>
-                      <Text style={styles.avgTotal}>({total})</Text>
+                      <Text style={localStyles.avgValue}>{avg.toFixed(1)}</Text>
+                      <Text style={localStyles.avgTotal}>({total})</Text>
                     </View>
                   </View>
-                  <View style={styles.filterPillsRow}>
+
+                  <View style={localStyles.filterPillsRow}>
                     {FILTERS.map(f => (
                       <TouchableOpacity
                         key={f.key}
                         onPress={() => setFilter(f.key)}
-                        style={[styles.filterPill, filter === f.key && styles.filterPillActive]}
-                        accessibilityLabel={`Filter ${f.label}`}
+                        style={[localStyles.filterPill, filter === f.key && localStyles.filterPillActive]}
+                        accessibilityLabel={`Filtrar: ${f.label}`}
                       >
-                        <Text style={[styles.filterPillText, filter === f.key && styles.filterPillTextActive]}>{f.label}</Text>
+                        <Text style={[localStyles.filterPillText, filter === f.key && localStyles.filterPillTextActive]}>{f.label}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
                 </View>
               </View>
 
-              {/* Estado vazio para o filtro atual */}
               {filtered.length === 0 && (
-                <View style={styles.emptyStateContainer}>
+                <View style={localStyles.emptyStateContainer}>
                   <Ionicons name="chatbubbles-outline" size={56} color={TEXT_MUTED} />
-                  <Text style={styles.emptyTitle}>No reviews here yet</Text>
-                  <Text style={styles.emptySub}>Complete services and ask clients to leave feedback.</Text>
+                  <Text style={localStyles.emptyTitle}>Ainda sem avaliações</Text>
+                  <Text style={localStyles.emptySub}>Realize serviços e peça aos clientes que deixem uma avaliação.</Text>
                 </View>
               )}
             </>
           }
           renderItem={({ item, index }) => (
-            <ReviewItem
-              item={item}
-              delay={index * 40}
-              onOpenBooking={handleOpenBooking}
-              onMessageClient={handleMessage}
-            />
+            <ReviewItem item={item} delay={index * 40} onOpenBooking={handleOpenBooking} onMessageClient={handleMessage} />
           )}
         />
       )}
@@ -315,11 +314,11 @@ const ReviewsScreen: React.FC = () => {
 
 export default ReviewsScreen;
 
-// -------------------- styles --------------------
-const styles = StyleSheet.create({
+/* Styles locais, alinhados com o design tokens acima */
+const localStyles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: BACKGROUND_ALT,
+    backgroundColor: Colors.bgSoft,
   },
   customHeader: {
     ...Platform.select({
@@ -328,119 +327,116 @@ const styles = StyleSheet.create({
       default: { paddingTop: 30 },
     }),
     paddingBottom: 14,
-    paddingHorizontal: 16,
-    backgroundColor: ICON_PRIMARY,
+    paddingHorizontal: Spacing.sm,
+    backgroundColor: Colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+      android: { elevation: 4 },
+    }),
   },
   headerBackButton: {
     padding: 6,
     borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
   },
   headerTitle: {
     color: WHITE,
     fontSize: 18,
     fontWeight: '700',
   },
+
   loadingContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: BACKGROUND_ALT,
+    backgroundColor: Colors.bgSoft,
   },
-  loadingText: { marginTop: 8, color: TEXT_MUTED },
+  loadingText: { marginTop: 8, color: TEXT_MEDIUM },
+
   list: { flex: 1 },
-  listContent: { padding: 16, paddingBottom: 24 },
+  listContent: { padding: Spacing.sm, paddingBottom: 24 },
 
   summaryCard: {
     backgroundColor: WHITE,
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: Radii.xl,
+    padding: Spacing.lg,
+    marginBottom: Spacing.md,
     ...Platform.select({
-      ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 10 },
+      ios: { shadowColor: SHADOW_COLOR_SECTION, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.08, shadowRadius: 12 },
       android: { elevation: 6 },
     }),
   },
   summaryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   summaryLeft: { flexDirection: 'column' },
-  summaryTitle: { fontSize: 14, color: TEXT_MEDIUM, marginBottom: 4, fontWeight: '600' },
+  summaryTitle: { fontSize: 14, color: TEXT_MEDIUM, marginBottom: 6, fontWeight: '600' },
   avgRow: { flexDirection: 'row', alignItems: 'center' },
-  avgValue: { fontSize: 22, color: TEXT_DARK, fontWeight: '800', marginLeft: 6 },
-  avgTotal: { fontSize: 12, color: TEXT_MUTED, marginLeft: 6 },
+  avgValue: { fontSize: 22, color: TEXT_DARK, fontWeight: '800', marginLeft: 8 },
+  avgTotal: { fontSize: 12, color: TEXT_MUTED, marginLeft: 8 },
 
   filterPillsRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   filterPill: {
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 999,
+    borderRadius: Radii.pill,
     backgroundColor: WHITE,
     borderWidth: 1,
     borderColor: BORDER_SUBTLE,
   },
   filterPillActive: {
-    backgroundColor: '#EBF5FF',
-    borderColor: ICON_PRIMARY,
+    backgroundColor: 'rgba(0,122,255,0.06)',
+    borderColor: Colors.primary,
   },
-  filterPillText: { color: TEXT_MEDIUM, fontSize: 12, fontWeight: '600' },
-  filterPillTextActive: { color: ICON_PRIMARY },
+  filterPillText: { color: TEXT_MEDIUM, fontSize: 13, fontWeight: '600' },
+  filterPillTextActive: { color: Colors.primary },
 
   emptyStateContainer: {
     backgroundColor: WHITE,
-    borderRadius: 14,
-    padding: 24,
+    borderRadius: Radii.md,
+    padding: 20,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: BORDER_SUBTLE,
-    marginBottom: 12,
+    marginBottom: Spacing.md,
   },
   emptyTitle: { marginTop: 12, fontWeight: '700', color: TEXT_DARK, fontSize: 16 },
-  emptySub: { color: TEXT_MUTED, marginTop: 4, textAlign: 'center' },
+  emptySub: { color: TEXT_MUTED, marginTop: 6, textAlign: 'center' },
 
   reviewCard: {
     backgroundColor: WHITE,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
+    borderRadius: Radii.md,
+    padding: Spacing.md,
+    marginBottom: Spacing.sm,
     borderWidth: 1,
     borderColor: BORDER_SUBTLE,
   },
-  reviewHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
+  reviewHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   clientRow: { flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 },
   clientAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: BACKGROUND_ALT,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.bgSoft,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 8,
+    marginRight: 10,
     borderWidth: 1,
     borderColor: BORDER_SUBTLE,
   },
-  clientName: { color: TEXT_DARK, fontWeight: '700', maxWidth: '85%' },
+  clientName: { color: TEXT_DARK, fontWeight: '700', maxWidth: '70%' },
   starsRow: { flexDirection: 'row', alignItems: 'center' },
-  commentText: { color: TEXT_DARK, lineHeight: 18, marginBottom: 8 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 },
+
+  commentText: { color: TEXT_DARK, lineHeight: 20, marginBottom: 10 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 },
   metaText: { color: TEXT_MUTED, fontSize: 12, marginLeft: 4 },
 
   actionsRow: { flexDirection: 'row', justifyContent: 'space-between' },
   pillButton: {
-    height: 36,
-    borderRadius: 999,
+    height: 40,
+    borderRadius: Radii.pill,
     paddingHorizontal: 14,
     alignItems: 'center',
     justifyContent: 'center',
@@ -451,7 +447,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: BORDER_SUBTLE,
   },
-  pillGhostText: { marginLeft: 6, color: ICON_PRIMARY, fontWeight: '700' },
-  pillButtonPrimary: { backgroundColor: ICON_PRIMARY },
-  pillPrimaryText: { marginLeft: 6, color: WHITE, fontWeight: '700' },
+  pillGhostText: { marginLeft: 8, color: Colors.primary, fontWeight: '700' },
+  pillButtonPrimary: { backgroundColor: Colors.primary },
+  pillPrimaryText: { marginLeft: 8, color: WHITE, fontWeight: '700' },
 });
