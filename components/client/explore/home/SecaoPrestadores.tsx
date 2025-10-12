@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   sectionTitle: {
-    fontSize: 17,
+    fontSize: 15.5,
     fontFamily: 'Montserrat-Regular',
     fontWeight: '800',
     marginTop: 10,
