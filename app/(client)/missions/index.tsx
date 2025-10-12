@@ -20,7 +20,7 @@ import {
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   claimMission,
@@ -74,7 +74,7 @@ const formatBRL = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', 
 const calcDiscounted = (base: number, percent: number) => Math.max(0, +(base * (1 - percent / 100)).toFixed(2));
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const HERO_HEIGHT = SCREEN_HEIGHT * 0.42;
+const HERO_HEIGHT = SCREEN_HEIGHT * 0.28; // mais compacto e consistente
 const DISCOUNT_PERCENT = 30; // campanha popular (30% OFF)
 
 function useTheme() {
@@ -101,8 +101,7 @@ function FeaturedDiscountCard({
   return (
     <View style={styles.discountCard}>
       <View style={styles.discountHeader}>
-        {/* 3D ticket icon, tiny and subtle */}
-        <Icon3D src={Icons3D.discountTicket} size={40} style={{ marginRight: 6 }} />
+        <Icon3D src={Icons3D.discountTicket} size={36} style={{ marginRight: 10 }} />
         <View style={styles.pill}>
           <Text style={styles.pillText}>{percent}% OFF</Text>
         </View>
@@ -114,11 +113,11 @@ function FeaturedDiscountCard({
           <Text style={styles.priceLabel}>Preço base</Text>
           <View style={styles.counterRow}>
             <TouchableOpacity onPress={onDecBase} style={styles.counterBtn} accessibilityLabel="Diminuir preço base">
-              <Ionicons name="remove" size={16} />
+              <Ionicons name="remove" size={16} color="#374151" />
             </TouchableOpacity>
             <Text style={styles.priceValue}>{formatBRL(base)}</Text>
             <TouchableOpacity onPress={onIncBase} style={styles.counterBtn} accessibilityLabel="Aumentar preço base">
-              <Ionicons name="add" size={16} />
+              <Ionicons name="add" size={16} color="#374151" />
             </TouchableOpacity>
           </View>
         </View>
@@ -183,7 +182,17 @@ function PreferencesSection({
         <Text style={styles.prefTitle}>{title}</Text>
         <Text style={styles.prefSubtitle}>{subtitle}</Text>
       </View>
-      <Switch value={value} onValueChange={onValueChange} />
+      <Switch
+        value={value}
+        onValueChange={(v) => {
+          if (Platform.OS === 'ios') {
+            // leve feedback nativo se quiser
+          }
+          onValueChange(v);
+        }}
+        trackColor={{ false: '#E9ECEF', true: '#4A90E2' }}
+        thumbColor="#FFFFFF"
+      />
     </View>
   );
 
@@ -240,6 +249,7 @@ export default function ClientMissionsScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const { name, estimate } = useLocalSearchParams<{ name?: string; estimate?: string }>();
 
   const userFirstName =
@@ -247,7 +257,7 @@ export default function ClientMissionsScreen() {
     t?.('common.you', { defaultValue: 'você' }) ||
     'você';
 
-  const activeBg = withAlpha(theme.primary, 0.12);
+  const activeBg = withAlpha(theme.primary, 0.08);
 
   const [allMissions, setAllMissions] = useState<MissionItemType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -278,7 +288,6 @@ export default function ClientMissionsScreen() {
       const fetchedMissions = await getMyMissions(MissionAudience.CLIENT);
       setAllMissions(fetchedMissions);
     } catch (error: any) {
-      console.error('Erro ao buscar missões do cliente:', error.response?.data || error.message);
       Toast.show({
         type: 'error',
         text1: t('common.error'),
@@ -294,14 +303,14 @@ export default function ClientMissionsScreen() {
     Animated.parallel([
       Animated.timing(headerAnim, {
         toValue: 1,
-        duration: 500,
+        duration: 420,
         easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }),
       Animated.timing(contentAnim, {
         toValue: 1,
-        duration: 700,
-        delay: 100,
+        duration: 600,
+        delay: 80,
         easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }),
@@ -310,14 +319,14 @@ export default function ClientMissionsScreen() {
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
-          toValue: 1.02,
-          duration: 2000,
+          toValue: 1.015,
+          duration: 1800,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
         Animated.timing(pulseAnim, {
           toValue: 1,
-          duration: 2000,
+          duration: 1800,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
@@ -350,7 +359,6 @@ export default function ClientMissionsScreen() {
         Toast.show({ type: 'error', text1: t('common.error'), text2: response.reason || t('missions.claim_error') });
       }
     } catch (error: any) {
-      console.error('Erro ao resgatar missão:', error.response?.data || error.message);
       Toast.show({ type: 'error', text1: t('common.error'), text2: error.response?.data?.message || t('missions.claim_error') });
     } finally {
       setClaimingMissionId(null);
@@ -415,23 +423,27 @@ export default function ClientMissionsScreen() {
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Header de navegação sobreposto (transparente) */}
+      {/* Header branco premium (consistente com Cupons) */}
       <Animated.View
         style={[
           styles.customHeader,
           {
             opacity: headerAnim,
             transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-40, 0] }) }],
-            backgroundColor: 'transparent',
-            borderBottomWidth: 0,
-            shadowOpacity: 0,
+            paddingTop: Platform.OS === 'ios' ? insets.top + 12 : 12,
           },
         ]}
       >
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerBackButton} accessibilityLabel={t('common.back') || 'Voltar'}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+        <TouchableOpacity
+          onPress={() => {
+            router.back();
+          }}
+          style={styles.headerBackButton}
+          accessibilityLabel={t('common.back') || 'Voltar'}
+        >
+          <Ionicons name="arrow-back" size={22} color="#475569" />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: '#FFFFFF' }]}>{t('missions.header_kicker', { defaultValue: 'MISSÕES' })}</Text>
+        <Text style={[styles.headerTitle, { color: '#0F172A' }]}>{t('missions.header_kicker', { defaultValue: 'MISSÕES' })}</Text>
         <View style={styles.headerActionIconPlaceholder} />
       </Animated.View>
 
@@ -441,60 +453,42 @@ export default function ClientMissionsScreen() {
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={theme.primary} />
         }
+        keyboardShouldPersistTaps="handled"
       >
-        {/* HERO */}
-        <View style={styles.heroWrapper}>
-          {/* NOVO: Ícone 3D da Mulher, posicionado de forma isolada */}
-          <Animated.Image
-            source={Icons3D.mascrank}
-            style={[
-              styles.heroWomanIcon,
-              { transform: [{ scale: pulseAnim }] } // Aplica animação de pulso
-            ]}
-            resizeMode="contain"
-          />
-
-          
-
-          <LinearGradient colors={['rgba(173, 216, 230, 0.7)', 'rgba(74, 145, 226, 0.72)', 'rgba(173, 216, 230, 0.7)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroGradient}>
-            {/* faint decorative crown (no layout impact) */}
-            <Image
-              source={Icons3D.heroCrown}
-              style={{ position: 'absolute', right: 12, top: Platform.OS === 'ios' ? 56 : 40, width: 54, height: 54, opacity: 0.10 }}
-              resizeMode="contain"
-            />
-            <View style={styles.heroContent}>
-              <Text style={styles.heroKicker}>{t('missions.header_kicker', { defaultValue: 'MISSÕES' })}</Text>
-              <Text style={styles.heroTitle}>
+        {/* HERO - REFATORADO: sem gradiente azul, layout fixo e alinhado */}
+        <View style={[styles.heroBlock, { backgroundColor: theme.cardBackground }]}>
+          <View style={styles.heroInner}>
+            <View style={styles.heroTextCol}>
+              <Text style={styles.heroKickerAlt}>{t('missions.header_kicker', { defaultValue: 'MISSÕES' })}</Text>
+              <Text style={styles.heroTitleAlt}>
                 {t('missions.hero_title', { defaultValue: `Economize como um gênio, ${userFirstName}`, name: userFirstName })}
               </Text>
 
-              <TouchableOpacity style={styles.heroStartButton} onPress={onStart} accessibilityLabel={t('common.start') || 'Começar'}>
-                <Text style={styles.heroStartText}>{t('common.start', { defaultValue: 'START' })}</Text>
-                <Ionicons name="play" size={16} color={theme.primary} />
+              <TouchableOpacity style={[styles.heroStartButtonAlt, { backgroundColor: theme.primary }]} onPress={onStart} accessibilityLabel={t('common.start') || 'Começar'}>
+                <Text style={[styles.heroStartTextAlt]}>{t('common.start', { defaultValue: 'COMEÇAR' })}</Text>
+                <Ionicons name="play" size={14} color="#FFFFFF" />
               </TouchableOpacity>
 
-              {/* Stepper */}
-              <View style={styles.stepperRow}>
+              <View style={styles.stepperRowAlt}>
                 {steps.map((s, idx) => {
                   const reached = idx <= stepIndex;
                   return (
                     <React.Fragment key={s.key}>
-                      <View style={[styles.stepDot, { backgroundColor: reached ? '#FFFFFF' : withAlpha('#FFFFFF', 0.35), borderColor: withAlpha('#FFFFFF', 0.65) }]} />
-                      {idx < steps.length - 1 && <View style={[styles.stepLine, { backgroundColor: withAlpha('#FFFFFF', reached ? 0.7 : 0.25) }]} />}
+                      <View style={[styles.stepDotAlt, { backgroundColor: reached ? theme.primary : '#E6EEF8' }]} />
+                      {idx < steps.length - 1 && <View style={[styles.stepLineAlt, { backgroundColor: reached ? withAlpha(theme.primary, 0.12) : '#F1F5F9' }]} />}
                     </React.Fragment>
                   );
                 })}
               </View>
-              <View style={styles.stepperLabels}>
-                {steps.map((s, idx) => (
-                  <Text key={s.key} style={[styles.stepLabel, { opacity: idx <= stepIndex ? 1 : 0.7 }]} numberOfLines={1}>
-                    {s.label}
-                  </Text>
-                ))}
-              </View>
             </View>
-          </LinearGradient>
+
+            {/* Ilustração fixa à direita */}
+            <Animated.Image
+              source={Icons3D.mascrank}
+              style={[styles.heroIllustration, { transform: [{ scale: pulseAnim }] }]}
+              resizeMode="contain"
+            />
+          </View>
         </View>
 
         {/* Painel branco sobreposto */}
@@ -540,7 +534,7 @@ export default function ClientMissionsScreen() {
                 deadlineAt={missionsReadyToClaim.mission.updatedAt}
                 reward={{ kind: missionsReadyToClaim.mission.rewardType, value: missionsReadyToClaim.mission.rewardValue }}
                 onGo={() => setActiveTab('CAN_CLAIM')}
-                onDismiss={() => { Alert.alert(t('common.info'), t('missions.reminder_dismissed')); }}
+                onDismiss={() => { Alert.alert(t('common.info'), t('missions.reminder_dismissed', { defaultValue: 'Lembrete dispensado' })); }}
               />
             </Animated.View>
           )}
@@ -567,25 +561,33 @@ export default function ClientMissionsScreen() {
           {/* Como funciona (with 3D bullets) */}
           <HowItWorks />
 
-          {/* Abas */}
+          {/* Abas - agora usando t(...) com defaultValue para evitar exibir chaves */}
           <View style={[styles.tabsContainer, { backgroundColor: theme.cardBackground }]}>
             <TouchableOpacity
               style={[styles.tabButton, activeTab === 'ACTIVE' && [styles.tabButtonActive, { backgroundColor: activeBg, borderColor: theme.primary }]]}
               onPress={() => setActiveTab('ACTIVE')}
             >
-              <Text style={[styles.tabButtonText, { color: theme.text }, activeTab === 'ACTIVE' && { color: theme.primary }]}>{t('missions.tab_active')}</Text>
+              <Text style={[styles.tabButtonText, { color: theme.text }, activeTab === 'ACTIVE' && { color: theme.primary }]}>
+                {t('missions.tab_active', { defaultValue: 'Ativas' })}
+              </Text>
             </TouchableOpacity>
+
             <TouchableOpacity
               style={[styles.tabButton, activeTab === 'CAN_CLAIM' && [styles.tabButtonActive, { backgroundColor: activeBg, borderColor: theme.primary }]]}
               onPress={() => setActiveTab('CAN_CLAIM')}
             >
-              <Text style={[styles.tabButtonText, { color: theme.text }, activeTab === 'CAN_CLAIM' && { color: theme.primary }]}>{t('missions.tab_can_claim')}</Text>
+              <Text style={[styles.tabButtonText, { color: theme.text }, activeTab === 'CAN_CLAIM' && { color: theme.primary }]}>
+                {t('missions.tab_can_claim', { defaultValue: 'Resgatar' })}
+              </Text>
             </TouchableOpacity>
+
             <TouchableOpacity
               style={[styles.tabButton, activeTab === 'CLAIMED' && [styles.tabButtonActive, { backgroundColor: activeBg, borderColor: theme.primary }]]}
               onPress={() => setActiveTab('CLAIMED')}
             >
-              <Text style={[styles.tabButtonText, { color: theme.text }, activeTab === 'CLAIMED' && { color: theme.primary }]}>{t('missions.tab_claimed')}</Text>
+              <Text style={[styles.tabButtonText, { color: theme.text }, activeTab === 'CLAIMED' && { color: theme.primary }]}>
+                {t('missions.tab_claimed', { defaultValue: 'Resgatadas' })}
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -596,6 +598,7 @@ export default function ClientMissionsScreen() {
             claimingMissionId={claimingMissionId}
             onRefresh={onRefresh}
             isRefreshing={isRefreshing}
+            asStaticList={true}
           />
         </Animated.View>
       </ScrollView>
@@ -604,160 +607,290 @@ export default function ClientMissionsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  centeredFeedback: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { marginTop: 10, fontSize: 16 },
+  container: { 
+    flex: 1,
+  },
+  centeredFeedback: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  loadingText: { 
+    marginTop: 10, 
+    fontSize: 16,
+    color: '#64748B'
+  },
 
-  // Header transparente
+  // Header (branco premium)
   customHeader: {
     position: 'absolute',
     top: 0, left: 0, right: 0,
-    zIndex: 20, // Garante que o cabeçalho esteja acima de tudo
+    zIndex: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 15,
-    paddingVertical: Platform.OS === 'ios' ? 50 : 20,
-    paddingTop: Platform.OS === 'ios' ? 50 : 20,
+    paddingHorizontal: 16,
+    paddingVertical: 5,
+    backgroundColor: '#FFFFFF',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEF2F7',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
-  headerBackButton: { marginRight: 15 },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', flex: 1, textAlign: 'center' },
-  headerActionIconPlaceholder: { width: 24, marginLeft: 15 },
+  headerBackButton: { 
+    padding: 8,
+  },
+  headerTitle: { 
+    fontSize: 15, 
+    fontWeight: '700', 
+    flex: 1, 
+    textAlign: 'center',
+    letterSpacing: 0.6,
+  },
+  headerActionIconPlaceholder: { 
+    width: 28, 
+    height: 28, 
+  },
 
   // Scroll
-  scrollViewContentContainer: { flexGrow: 1 },
+  scrollViewContentContainer: { 
+    flexGrow: 1,
+    paddingBottom: 60,
+  },
 
-  // Hero
-  heroWrapper: { height: HERO_HEIGHT, width: '100%' },
-  heroGradient: {
+  // HERO REFACTORED
+  heroBlock: {
+    height: HERO_HEIGHT,
+    width: '100%',
+    paddingHorizontal: 18,
+    marginTop: 74,
+    justifyContent: 'center',
+    // leve sombra para separar do fundo
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.03,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+    borderRadius: 16,
+    alignSelf: 'center',
+    overflow: 'hidden',
+  },
+  heroInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: '100%',
+  },
+  heroTextCol: {
     flex: 1,
-    paddingTop: Platform.OS === 'ios' ? 280 : 80, // Mantido o paddingTop original
-    paddingHorizontal: 28,
-    justifyContent: 'flex-start',
+    paddingVertical: 12,
+    paddingRight: 12,
   },
-  // NOVO: Estilo para o ícone 3D da mulher
-  heroWomanIcon: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 280 : 180, // Posição abaixo do cabeçalho de navegação
-    left: '48%', // Centraliza horizontalmente
-    marginLeft: 0, // Metade da largura para centralizar
-    width: 200, // Tamanho grande
-    height: 200, // Tamanho grande
-    zIndex: 10, // Garante que esteja acima do gradiente, mas abaixo do cabeçalho de navegação
+  heroKickerAlt: {
+    color: '#94A3B8',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1,
   },
-  heroContent: {
-    flex: 1,
-    zIndex: 2, // Garante que o conteúdo de texto esteja acima do ícone da mulher se houver sobreposição
+  heroTitleAlt: {
+    color: '#0F172A',
+    fontSize: 20,
+    fontWeight: '800',
+    marginTop: 8,
+    lineHeight: 26,
   },
-  heroKicker: { color: '#D7ECFF', letterSpacing: 1.2, fontWeight: '700', fontSize: 10 },
-  heroTitle: { color: '#FFFFFF', fontSize: 20, fontWeight: '800', marginTop: 6, lineHeight: 30, maxWidth: '90%' },
-  heroStartButton: {
-    marginTop: 16, alignSelf: 'flex-start', backgroundColor: '#FFFFFF',
-    paddingVertical: 4, paddingHorizontal: 9, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 6,
+  heroStartButtonAlt: {
+    marginTop: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    minWidth: 110,
   },
-  heroStartText: { color: '#0A84FF', fontWeight: '800', fontSize: 10 },
-  stepperRow: { flexDirection: 'row', alignItems: 'center', marginTop: 26, paddingHorizontal: 88, right: 90, top: 50, },
-  stepDot: { width: 10, height: 10, borderRadius: 15, borderWidth: 1.5 },
-  stepLine: { flex: 1, height: 2, marginHorizontal: 6 },
-  stepperLabels: { flexDirection: 'row', paddingHorizontal: 80, right: 120, top: 50,  justifyContent: 'space-between', marginTop: 8, paddingRight: 10 },
-  stepLabel: { color: 'white', fontSize: 8, fontWeight: '600', flex: 1, textAlign: 'center' },
+  heroStartTextAlt: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 13,
+    marginRight: 6,
+  },
+  heroIllustration: {
+    width: SCREEN_WIDTH * 0.32,
+    height: HERO_HEIGHT * 0.9,
+    marginLeft: 6,
+  },
+  stepperRowAlt: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 14,
+  },
+  stepDotAlt: { width: 9, height: 9, borderRadius: 9 },
+  stepLineAlt: { flex: 1, height: 2, marginHorizontal: 8, borderRadius: 4 },
 
-  // Painel
+  // Panel
   panel: {
-    marginTop: -24,
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
-    paddingTop: 16,
-    paddingBottom: 24,
+    marginTop: 12,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    paddingTop: 22,
+    paddingBottom: 32,
+    backgroundColor: '#FFFFFF',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.04,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
 
   // Discount card
   discountCard: {
-    marginHorizontal: 15,
+    marginHorizontal: 18,
     marginBottom: 14,
-    borderRadius: 12,
+    borderRadius: 14,
     backgroundColor: '#FFFFFF',
-    padding: 14,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
+    padding: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.04,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
-  discountHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  pill: { backgroundColor: '#0A84FF', paddingVertical: 3, paddingHorizontal: 8, borderRadius: 999, marginRight: 8 },
-  pillText: { color: '#FFFFFF', fontWeight: '800', fontSize: 12 },
-  discountTitle: { fontSize: 16, fontWeight: '700', color: '#1F2937', flexShrink: 1 },
+  discountHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  pill: { backgroundColor: '#0B76FF', paddingVertical: 6, paddingHorizontal: 10, borderRadius: 999, marginRight: 8 },
+  pillText: { color: '#FFFFFF', fontWeight: '800', fontSize: 13 },
+  discountTitle: { fontSize: 15, fontWeight: '700', color: '#0F172A', flexShrink: 1 },
 
   priceRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
   priceCol: { flex: 1, alignItems: 'center' },
   priceColRight: { flex: 1.2, alignItems: 'center' },
-  priceLabel: { fontSize: 12, color: '#6B7280', marginBottom: 6 },
-  counterRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  counterBtn: { backgroundColor: '#F3F4F6', borderRadius: 8, padding: 6 },
-  priceValue: { fontSize: 16, fontWeight: '700', color: '#111827', minWidth: 90, textAlign: 'center' },
+  priceLabel: { fontSize: 12, color: '#64748B', marginBottom: 6 },
+  counterRow: { flexDirection: 'row', alignItems: 'center' },
+  counterBtn: { backgroundColor: '#F8FAFC', borderRadius: 8, padding: 6 },
+  priceValue: { fontSize: 16, fontWeight: '700', color: '#0F172A', minWidth: 90, textAlign: 'center' },
   equalsCol: { width: 30, alignItems: 'center' },
-  equalsText: { fontWeight: '800', fontSize: 16, color: '#6B7280' },
+  equalsText: { fontWeight: '800', fontSize: 16, color: '#64748B' },
   discountedValue: { fontSize: 18, fontWeight: '800', color: '#059669' },
-  economyText: { fontSize: 12, color: '#059669', marginTop: 2 },
+  economyText: { fontSize: 12, color: '#059669', marginTop: 4 },
 
   useDiscountBtn: {
     marginTop: 12,
-    backgroundColor: '#0A84FF',
-    borderRadius: 10,
-    paddingVertical: 10,
+    backgroundColor: '#0B76FF',
+    borderRadius: 12,
+    paddingVertical: 12,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 8,
   },
   useDiscountText: { color: '#FFFFFF', fontWeight: '800' },
-  termsText: { marginTop: 8, fontSize: 11, color: '#6B7280', textAlign: 'center' },
+  termsText: { marginTop: 10, fontSize: 12, color: '#64748B', textAlign: 'center' },
 
   // Summary / Reminder
-  summaryCard: { marginHorizontal: 15, marginBottom: 10 },
-  reminderCard: { marginHorizontal: 15, marginBottom: 10 },
+  summaryCard: { marginHorizontal: 18, marginBottom: 12 },
+  reminderCard: { marginHorizontal: 18, marginBottom: 12 },
 
   // Prefs
   prefsCard: {
-    marginHorizontal: 15,
-    marginBottom: 14,
-    borderRadius: 12,
+    marginHorizontal: 18,
+    marginBottom: 16,
+    borderRadius: 14,
     backgroundColor: '#FFFFFF',
     padding: 14,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.03,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
-  prefsTitle: { fontSize: 16, fontWeight: '700', color: '#1F2937', marginBottom: 6 },
-  prefRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 },
+  prefsTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A', marginBottom: 8 },
+  prefRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F2F6FA' },
   prefIconWrap: { width: 28, alignItems: 'center' },
   prefTextCol: { flex: 1, paddingHorizontal: 10 },
-  prefTitle: { fontWeight: '700', color: '#111827' },
-  prefSubtitle: { fontSize: 12, color: '#6B7280', marginTop: 2 },
+  prefTitle: { fontWeight: '700', color: '#0F172A' },
+  prefSubtitle: { fontSize: 12, color: '#64748B', marginTop: 2 },
 
   // How it works
   howCard: {
-    marginHorizontal: 15,
-    marginBottom: 14,
-    borderRadius: 12,
+    marginHorizontal: 18,
+    marginBottom: 16,
+    borderRadius: 14,
     backgroundColor: '#FFFFFF',
     padding: 14,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.03,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
-  howTitle: { fontSize: 16, fontWeight: '700', color: '#1F2937', marginBottom: 8 },
-  howItem: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
-  howText: { color: '#374151', flex: 1 },
+  howTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A', marginBottom: 8 },
+  howItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  howText: { color: '#334155', flex: 1, fontSize: 14 },
 
   // Abas
   tabsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginHorizontal: 15,
-    marginBottom: 15,
-    borderRadius: 10,
-    padding: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 2,
+    marginHorizontal: 18,
+    marginBottom: 16,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 18,
+    padding: 6,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.03,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
-  tabButton: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8, borderWidth: 1, borderColor: 'transparent' },
-  tabButtonActive: {},
-  tabButtonText: { fontSize: 14, fontWeight: 'bold' },
+  tabButton: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 14, borderWidth: 1, borderColor: 'transparent', minWidth: 80 },
+  tabButtonActive: { backgroundColor: '#FFFFFF', borderColor: '#0B76FF' },
+  tabButtonText: { fontSize: 14, fontWeight: '600', color: '#0F172A' },
 });
