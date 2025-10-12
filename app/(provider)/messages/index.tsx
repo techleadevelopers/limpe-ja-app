@@ -1,4 +1,3 @@
-// LimpeJaApp/app/(provider)/messages/index.tsx
 import { Ionicons } from '@expo/vector-icons'; // MaterialCommunityIcons não é usado no client, então removido
 import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
@@ -232,23 +231,44 @@ export default function ProviderConversationsListScreen() {
   const tabs = ['Todas', 'Grupos', 'Contatos'];
   const loggedInUserName = user?.fullName || 'Provedor'; // Usar o nome real do usuário logado
 
+  const handleBackPress = () => {
+    router.back();
+  };
+
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <Animated.View style={[styles.mainHeader, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
-        <View style={styles.topRow}>
-          <Text style={styles.greetingText}>Olá, {loggedInUserName}</Text>
+      {/* HEADER BRANCO PREMIUM COMO NO CLIENT (back, olá name + título centralizados) */}
+      <Animated.View
+        style={[
+          styles.mainHeader,
+          {
+            opacity: headerAnim,
+            transform: [
+              { translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) },
+            ],
+          },
+        ]}
+      >
+        <View style={styles.headerTopRow}>
+          <TouchableOpacity
+            onPress={handleBackPress}
+            style={styles.headerBackButton}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="arrow-back" size={24} color="#4A5568" />
+          </TouchableOpacity>
+          <View style={styles.greetingContainer}>
+            <Text style={styles.greetingSubText}>Olá, {loggedInUserName}</Text>
+            <Text style={styles.greetingText}>Mensagens</Text>
+          </View>
           <View style={styles.headerIcons}>
-            <TouchableOpacity style={styles.iconButton}>
-              <Ionicons name="search-outline" size={18} color="#FFF" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.iconButton}>
-              <Ionicons name="ellipsis-vertical" size={18} color="#FFF" />
-            </TouchableOpacity>
+            {/* Placeholder para ícones extras no futuro; vazio por enquanto para manter simples */}
           </View>
         </View>
 
+        {/* Tabs segmentados adaptados para estilo premium (abaixo do header, clean e cinza) */}
         <View style={styles.segmentedControl}>
           {tabs.map((tab) => (
             <TouchableOpacity
@@ -296,103 +316,122 @@ export default function ProviderConversationsListScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F0F8FF', // Alterado para o azul claro do perfil
+    backgroundColor: '#F6F8FB', // Mesma cor clean do client
   },
   mainHeader: {
-    backgroundColor: '#4A90E2', // Alterado para o azul principal do perfil
+    backgroundColor: '#FFFFFF', // Branco premium como no client
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 20,
-    paddingBottom: 15,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    paddingTop: Platform.OS === 'ios' ? 50 : 20,
+    paddingBottom: 16,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E9ECEF',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 4,
   },
-  topRow: {
+  headerTopRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    justifyContent: 'space-between',
+    paddingTop: Platform.OS === 'ios' ? 30 : 0,
+  },
+  headerBackButton: {
+    padding: 8,
+    borderRadius: 12,
+  },
+  greetingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 10,
   },
   greetingText: {
-     fontSize: 15 * 0.95,
-        fontFamily: 'Montserrat-Thin',
-        fontWeight: 'bold',
-        color: '#FFFFFF',
+    fontSize: 18, // Aumentado para 18px para um look mais premium e legível
+    fontFamily: 'Montserrat-Regular',
+    fontWeight: '700', // Bold para ênfase premium
+    color: '#4A5568', // Preto mais claro premium (cinza escuro suave)
+    textAlign: 'center',
+    letterSpacing: 0.8, // Espaçamento refinado para feel premium
+    marginTop: 2, // Pequeno espaçamento abaixo do subtítulo
+  },
+  greetingSubText: {
+    fontSize: 16,
+    fontFamily: 'Montserrat-Regular',
+    fontWeight: '600',
+    color: '#6B7280', // Cinza médio premium para subtítulo (harmonia clean)
+    textAlign: 'center',
+    marginTop: 2,
   },
   headerIcons: {
     flexDirection: 'row',
   },
-  iconButton: {
-    padding: 8,
-    marginLeft: 10,
-  },
+  // Tabs segmentados adaptados para estilo premium (clean, cinza, abaixo do header)
   segmentedControl: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: '#F8F9FA', // Fundo cinza claro premium
     borderRadius: 25,
-    padding: 3,
-    width: '60%',
-    right: 5,
-    marginTop: -11,
+    padding: 4,
+    width: '80%', // Ajustado para caber melhor
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 8,
   },
   tabButton: {
     flex: 1,
-    paddingVertical: 5,
-
-    borderRadius: 25,
+    paddingVertical: 8,
+    borderRadius: 20,
     alignItems: 'center',
   },
   activeTabButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFFFFF', // Fundo branco para tab ativo
   },
   tabButtonText: {
-    color: '#FFFFFF',
+    color: '#9CA3AF', // Cinza médio para tabs inativos (premium e sutil)
     fontWeight: '600',
-    fontSize: 10,
+    fontSize: 14, // Tamanho legível
   },
   activeTabButtonText: {
-    color: '#4A90E2', // Alterado para o azul principal do perfil
+    color: '#4A5568', // Cinza escuro premium para tab ativo (em vez de azul)
   },
   listContentContainer: {
     paddingTop: 10,
     paddingBottom: 20,
   },
   conversationCard: {
-    marginHorizontal: 15,
+    marginHorizontal: 16,
     marginVertical: 8,
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    borderRadius: 18,
     ...Platform.select({
         ios: {
-            shadowColor: 'rgba(0,0,0,0.08)',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.15,
-            shadowRadius: 8,
+            shadowColor: 'rgba(0,0,0,0.10)',
+            shadowOffset: { width: 0, height: 8 },
+            shadowOpacity: 0.16,
+            shadowRadius: 12,
         },
         android: {
-            elevation: 6,
+            elevation: 5,
         },
     }),
   },
   conversationCardInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 15,
-    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 18,
   },
   avatarContainer: {
     position: 'relative',
   },
   avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginRight: 15,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    marginRight: 14,
     backgroundColor: '#E9ECEF',
     borderWidth: 2,
     borderColor: '#FFFFFF',
@@ -400,8 +439,8 @@ const styles = StyleSheet.create({
   pinIcon: {
     position: 'absolute',
     top: -5,
-    right: 10,
-    backgroundColor: '#4A90E2', // Alterado para o azul principal do perfil
+    right: 8,
+    backgroundColor: '#4A90E2', // Mantido azul para acento (como no client)
     borderRadius: 10,
     padding: 3,
     zIndex: 1,
@@ -413,16 +452,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 5,
+    marginBottom: 4,
   },
   userNameText: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
-    color: '#212529',
+    color: '#1E1E1E',
   },
   timestampText: {
-    fontSize: 13,
-    color: '#868E96',
+    fontSize: 12,
+    color: '#8A8F98',
   },
   messageBadgeRow: {
     flexDirection: 'row',
@@ -430,18 +469,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   lastMessageText: {
-    fontSize: 15,
-    color: '#6C757D',
+    fontSize: 14.5,
+    color: '#5E6672',
     flexShrink: 1,
     flex: 1,
   },
   unreadMessageText: {
     fontWeight: 'bold',
-    color: '#212529',
+    color: '#1E1E1E',
   },
   typingText: {
-    fontSize: 15,
-    color: '#4A90E2', // Alterado para o azul principal do perfil
+    fontSize: 14.5,
+    color: '#4A90E2', // Mantido azul para acento (como no client)
     fontStyle: 'italic',
     flex: 1,
   },
@@ -451,41 +490,41 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   unreadBadge: {
-    backgroundColor: '#4A90E2', // Alterado para o azul principal do perfil
-    borderRadius: 15,
-    minWidth: 28,
-    height: 28,
+    backgroundColor: '#4A90E2', // Mantido azul para acento (como no client)
+    borderRadius: 14,
+    minWidth: 26,
+    height: 26,
     paddingHorizontal: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 12,
+    marginLeft: 10,
   },
   unreadCountText: {
-    color: 'white',
-    fontSize: 13,
-    fontWeight: 'bold',
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '700',
   },
   centeredFeedback: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#F0F8FF', // Alterado para o azul claro do perfil
+    backgroundColor: '#F6F8FB', // Mesma cor clean do client
   },
   loadingText: {
-    marginTop: 15,
-    fontSize: 16,
+    marginTop: 12,
+    fontSize: 15,
     color: '#6C757D',
   },
   emptyText: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
-    color: '#343A40',
+    color: '#2C2C2C',
     textAlign: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   emptySubText: {
-    fontSize: 15,
+    fontSize: 14.5,
     color: '#6C757D',
     textAlign: 'center',
     paddingHorizontal: 20,
