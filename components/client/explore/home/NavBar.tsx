@@ -23,7 +23,7 @@ const NavBar: React.FC<NavBarProps> = ({
     { name: 'Cupons', icon: 'pricetag', route: '/(client)/coupons' },
     { name: 'Booking', icon: 'calendar', route: '/(client)/bookings' },
     { name: 'Suporte', icon: 'help-circle', route: '/(client)/support' },
-    { name: 'Chat', icon: 'chatbubble', route: '/messages' },
+//    { name: 'Chat', icon: 'chatbubble', route: '/messages' },
     { name: 'Profile', icon: 'person', route: '/(client)/profile' },
   ];
 
@@ -121,9 +121,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    height: 60,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    height: 85,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -5 },
     shadowOpacity: 0.05,
@@ -135,6 +135,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    bottom: 8,
     paddingVertical: 5,
     zIndex: 1, // Mantido para itens de navegação
   },
