@@ -318,7 +318,7 @@ export default function ProviderServicesScreen() {
           style={StyleSheet.absoluteFill}
         />
         <BlurView
-          intensity={Platform.OS === 'ios' ? 10 : 0}
+          intensity={0}
           tint="dark"
           style={StyleSheet.absoluteFill}
         />
@@ -417,21 +417,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#007AFF',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 15,
     paddingVertical: Platform.OS === 'ios' ? 50 : 20,
     paddingTop: Platform.OS === 'ios' ? 50 : 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 6,
     overflow: 'hidden',
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#2F3A4A',
     flex: 1,
     textAlign: 'center',
     zIndex: 1,
@@ -461,13 +461,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 8,
     marginHorizontal: 4,
+    backgroundColor: '#F7F8FA',
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
   },
   filterButtonActive: {
-    backgroundColor: '#007AFF',
-    ...Platform.select({
-      ios: { shadowColor: 'rgba(0,122,255,0.3)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.8, shadowRadius: 4 },
-      android: { elevation: 5 },
-    }),
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#007AFF',
   },
   filterButtonText: {
     fontSize: 15,
@@ -475,7 +476,7 @@ const styles = StyleSheet.create({
     color: '#6C757D',
   },
   filterButtonTextActive: {
-    color: '#FFFFFF',
+    color: '#007AFF',
   },
   contentArea: {
     flex: 1,
@@ -607,3 +608,5 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
 });
+
+
