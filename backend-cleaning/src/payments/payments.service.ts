@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { BookingStatus, Prisma, PaymentIntentStatus, TransactionType, UserRole } from '@prisma/client';
 import { MessageResponseDto } from '../common/dto/message-response.dto';
 import { createHmac, timingSafeEqual } from 'crypto';
+import axios from 'axios';
 import { PrismaService } from '../prisma/prisma.service';
 import { BookingsService } from '../bookings/bookings.service';
 import { CreatePixChargeDto, PixChargeResponseDto } from './dto/create-pix-charge.dto';
@@ -80,10 +81,32 @@ export class PaymentsService {
     });
 
     // 2) Simula externalRef/gateway id (ou usa PSP real se disponível)
-    const externalRef = `local_pix_${transaction.id}`;
-    const qrCodeText = `BR_CODE_${transaction.id}`;
-    const qrCodeUrl = `${this.appBaseUrl || 'https://example.com'}/qrcode/${transaction.id}.png`;
+    let externalRef = `local_pix_${transaction.id}`;
+    let qrCodeText = `BR_CODE_${transaction.id}`;
+    let qrCodeUrl = `${this.appBaseUrl || 'https://example.com'}/qrcode/${transaction.id}.png`;
     const expiresAt = new Date(Date.now() + 24 * 3600 * 1000);
+
+    // Integração PagSeguro (se token presente)
+    if (this.pagseguroApiToken) {
+      try {
+        const headers: any = {
+          Authorization: `Bearer ${this.pagseguroApiToken}`,
+          'Content-Type': 'application/json',
+        };
+        const url = `${this.pagseguroApiBaseUrl.replace(/\/$/, '')}/pix/charges`;
+        const payload: any = {
+          amount: { value: Math.round(Number(amount) * 100) },
+          description: description || `Booking ${bookingId}`,
+          reference_id: transaction.id,
+        };
+        const res = await axios.post(url, payload, { headers, timeout: 10000 });
+        externalRef = res.data?.id || res.data?.charge_id || res.data?.transaction_id || externalRef;
+        qrCodeText = res.data?.brcode || res.data?.qr_code_text || qrCodeText;
+        qrCodeUrl = res.data?.qr_code || res.data?.qr_code_url || qrCodeUrl;
+      } catch (e: any) {
+        this.logger.error(`PagSeguro charge error: ${e?.response?.status} ${JSON.stringify(e?.response?.data || e.message)}`);
+      }
+    }
 
     await this.prisma.transaction.update({
       where: { id: transaction.id },
