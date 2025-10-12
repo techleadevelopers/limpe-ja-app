@@ -22,14 +22,14 @@ export default function ImmediateActionButtons({
       <TouchableOpacity
         style={styles.actionButtonImmediate}
         onPress={onAddToCalendar}
-        activeOpacity={0.7} // Feedback tátil nativo, sem jitter
+        activeOpacity={0.7}
       >
         <Ionicons name="calendar-outline" size={20} color={AppColors.primaryInteractive} />
         <Text style={styles.actionButtonImmediateText} numberOfLines={1} maxFontSizeMultiplier={1.2}>Adicionar ao Calendário</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={[styles.actionButtonImmediate, styles.actionButtonSpacing]} // Espaçamento fixo sem gap
+        style={[styles.actionButtonImmediate, styles.actionButtonSpacing]}
         onPress={onContactProvider}
         activeOpacity={0.7}
       >
