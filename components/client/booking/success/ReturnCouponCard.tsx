@@ -158,14 +158,14 @@ export const ReturnCouponCard: React.FC<ReturnCouponCardProps> = ({
 
 const styles = StyleSheet.create({
   cardContainer: {
-    width: SCREEN_WIDTH * 0.9,
+    width: SCREEN_WIDTH * 0.15,
     maxWidth: SCREEN_WIDTH - 32, // Fix: Ajuste para safe areas iOS, previne lateral scroll
     borderRadius: 15,
     overflow: 'hidden',
     
     alignSelf: 'center',
-    marginTop: 10, // ✅ FIX: Reduzido para 5px (era 35) – minimiza gap acima do cupom (com PIX), conforme comentário original
-    marginBottom: 10, // Gap final confortável (20px, permite scroll suave)
+    marginTop: 2, // ✅ FIX: Reduzido para 5px (era 35) – minimiza gap acima do cupom (com PIX), conforme comentário original
+    marginBottom: 2, // Gap final confortável (20px, permite scroll suave)
     ...AppShadows.medium,
     // ✅ AJUSTADO: minHeight reduzido para 220px iOS/230px Android (elementos menores cabem)
     minHeight: Platform.OS === 'ios' ? 220 : 230,
@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
   },
   title: {
     // ✅ REDUZIDO: fontSize 15px (era 16) para caber em 1 linha sem wrap
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: 'bold',
     color: AppColors.white,
     flexShrink: 1, // Permite encolher se código longo
@@ -195,19 +195,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 14, // ✅ Radius menor para compacto
-    paddingHorizontal: 5, // ✅ REDUZIDO: de 6 para 5px
-    paddingVertical: 2, // ✅ REDUZIDO: de 3 para 2px
+    paddingHorizontal: 3, // ✅ REDUZIDO: de 6 para 5px
+    paddingVertical: 1, // ✅ REDUZIDO: de 3 para 2px
     minWidth: 75, // Largura mínima para badge não "pular"
   },
   badgeText: {
     color: AppColors.white,
-    fontSize: 10, // ✅ REDUZIDO: de 11 para 10px para caber no badge compacto
+    fontSize: 8, // ✅ REDUZIDO: de 11 para 10px para caber no badge compacto
     fontWeight: '600',
     marginLeft: 2, // ✅ REDUZIDO: Gap menor
   },
   subtitle: {
     // ✅ REDUZIDO: fontSize 12px (era 11), lineHeight 17px para caber em 2 linhas
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '400', // Regular para leveza
     color: AppColors.white,
     marginBottom: 10, // ✅ REDUZIDO: de 12 para 10px – comprime sem apertar
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.15)',
     borderRadius: 9, // ✅ Ligeiramente menor
     paddingVertical: 8, // ✅ REDUZIDO: de 10 para 8px – compacto mas touch ok
-    paddingHorizontal: 10, // ✅ REDUZIDO: de 12 para 10px
+    paddingHorizontal: 2, // ✅ REDUZIDO: de 12 para 10px
     marginBottom: 10, // ✅ REDUZIDO: de 12 para 10px – comprime para botão rebook
   },
   couponCode: {
