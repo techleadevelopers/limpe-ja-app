@@ -22,15 +22,15 @@ const BACKGROUND_COLOR_1 = '#FFFFFF';
 const BACKGROUND_COLOR_2 = '#F8F8FF';
 const BACKGROUND_COLOR_3 = '#E6F0FF';
 
-const LOGO_WIDTH = 220;
-const LOGO_HEIGHT = 220;
+const LOGO_WIDTH = 240;
+const LOGO_HEIGHT = 240;
 const REFLECTION_GAP = 0;
 const BOTTOM_MARGIN_FOR_REFLECTION = 0;
 
 // Ajustes platform-specific para alinhamento (apenas horizontal alterado para iOS, sem interferir no Android)
 const OFFSET_RIGHT = Platform.select({ ios: 2, android: 10 }) ?? 10;
-const OFFSET_TOP = 60;
-const OFFSET_BOTTOM = Platform.select({ ios: 129, android: 124 }) ?? 124; // +5px no iOS para evitar overlap inicial do reflexo
+const OFFSET_TOP = 80;
+const OFFSET_BOTTOM = Platform.select({ ios: 119, android: 124 }) ?? 124; // +5px no iOS para evitar overlap inicial do reflexo
 
 const REFLECTION_GRADIENT_COLORS: readonly [string, string, string] = Platform.select({
   ios: ['rgba(255,255,255,0)', 'rgba(255,255,255,0.2)', 'rgba(255,255,255,0.4)'],
