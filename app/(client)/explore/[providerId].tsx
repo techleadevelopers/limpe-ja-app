@@ -751,6 +751,8 @@ if (isAuthenticated && user?.id) {
               {provider.verificationStatus === VerificationStatus.APPROVED && (
                 <InfoChip iconName="shield-checkmark-outline" text={t('provider_details.verified')} />
               )}
+              {/* Garantia LimpeJá */}
+              <InfoChip iconName="shield-checkmark" text={t('guarantee.badge', 'Garantia LimpeJá')} />
               {providerMetrics?.acceptanceRate !== undefined && (
                 <InfoChip
                   iconName="checkmark-done-circle-outline"
