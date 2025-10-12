@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
     padding: 15,
     alignItems: 'center',
     position: 'relative',
-    backgroundColor: AppColors.white,
+    backgroundColor: '#ffffff',
     ...AppShadows.small,
   },
   qrCodeContainer: {
