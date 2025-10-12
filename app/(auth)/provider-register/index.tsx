@@ -1,9 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   Animated,
+  Dimensions,
+  Easing as RNEasing,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -14,6 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useProviderRegistration } from '../../../contexts/ProviderRegistrationContext';
 import { RegisterProviderDto } from '../../../types/backend/auth';
@@ -34,6 +37,177 @@ import AnimatedReanimated, {
 } from 'react-native-reanimated';
 
 const LOGO_IMAGE = require('../../../assets/images/logo2.png');
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+
+/**
+ * BubblesRN - componente inline para efeito de bolhas.
+ * Se preferir, mova para components/BubblesRN.tsx e importe.
+ */
+type BubbleSpec = {
+  key: string;
+  left: number; // 0..1
+  size: number;
+  duration: number;
+  delay: number;
+  horizontalOffset: number;
+  blurRadius: number;
+};
+
+type BubblesRNProps = {
+  countMin?: number;
+  countMax?: number;
+  bubbleMin?: number;
+  bubbleMax?: number;
+  bubbleColor?: string;
+  bubbleBorderColor?: string;   // Adicionado para suporte a bordas
+  bubbleBorderWidth?: number;   // Adicionado para suporte a bordas
+  style?: any;
+  pointerEvents?: any;
+};
+
+const rand = (min: number, max: number) => min + Math.random() * (max - min);
+const randInt = (min: number, max: number) => Math.floor(rand(min, max + 1));
+
+function BubblesRN({
+  countMin = 22,
+  countMax = 44,
+  bubbleMin = 6,
+  bubbleMax = 16,
+  bubbleColor = 'rgba(3,112,255,0.85)',
+  bubbleBorderColor = 'rgba(29, 175, 242, 1)',  // Default para borda azul
+  bubbleBorderWidth = 2,  // Default para espessura da borda
+  style,
+  pointerEvents = 'none',
+}: BubblesRNProps) {
+  const specs: BubbleSpec[] = useMemo(() => {
+    const count = countMin + Math.floor(Math.random() * (countMax - countMin + 1));
+    // debug: mostrar quantas bolhas foram criadas
+    console.log('[BubblesRN] creating', count, 'bubbles');
+    const arr: BubbleSpec[] = [];
+    for (let i = 0; i < count; i++) {
+      const size = randInt(bubbleMin, bubbleMax);
+      const left = rand(0, 1);
+      const duration = randInt(3500, 10000);
+      const delay = randInt(0, 7000);
+      const horizontalOffset = rand(6, 28);
+      const blurRadius = randInt(0, 2);
+      arr.push({
+        key: `b-${i}-${Date.now()}`,
+        left,
+        size,
+        duration,
+        delay,
+        horizontalOffset,
+        blurRadius,
+      });
+    }
+    return arr;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <View style={[bubblesStyles.container, style]} pointerEvents={pointerEvents}>
+      {specs.map((s) => (
+        <Bubble key={s.key} spec={s} color={bubbleColor} borderColor={bubbleBorderColor} borderWidth={bubbleBorderWidth} />
+      ))}
+    </View>
+  );
+}
+
+function Bubble({ spec, color, borderColor, borderWidth }: { spec: BubbleSpec; color: string; borderColor: string; borderWidth: number }) {
+  const translateY = useRef(new Animated.Value(0)).current;
+  const wobble = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const toValue = - (SCREEN_HEIGHT + spec.size + 40);
+
+    const mainAnim = Animated.sequence([
+      Animated.delay(spec.delay),
+      Animated.loop(
+        Animated.timing(translateY, {
+          toValue,
+          duration: spec.duration,
+          easing: RNEasing.linear,
+          useNativeDriver: true,
+        }),
+        { iterations: -1 }
+      )
+    ]);
+
+    const wobbleAnim = Animated.loop(
+      Animated.timing(wobble, {
+        toValue: 1,
+        duration: Math.max(300, Math.floor(spec.duration / 8)),
+        easing: RNEasing.linear,
+        useNativeDriver: true,
+      }),
+      { iterations: -1 }
+    );
+
+    mainAnim.start();
+    wobbleAnim.start();
+
+    return () => {
+      translateY.stopAnimation();
+      wobble.stopAnimation();
+    };
+  }, [spec, translateY, wobble]);
+
+  const wobbleX = wobble.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0, spec.horizontalOffset / 2, 0],
+    extrapolate: 'clamp',
+  });
+
+  const initialLeft = spec.left * SCREEN_WIDTH - spec.size / 2;
+
+  const animatedStyle = {
+    transform: [
+      { translateY: translateY },
+      { translateX: wobbleX },
+      { scale: wobble.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 0.98, 1] }) },
+    ],
+    opacity: 0.9,
+  };
+
+  const bubbleStyle = {
+    position: 'absolute' as const,
+    left: initialLeft,
+    bottom: -spec.size - 10,
+    width: spec.size,
+    height: spec.size,
+    borderRadius: spec.size / 2,
+    backgroundColor: color,
+    borderColor: borderColor,  // Adicionado para borda
+    borderWidth: borderWidth,  // Adicionado para espessura da borda
+    ...Platform.select({
+      ios: {
+        shadowColor: color,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.6,
+        shadowRadius: spec.blurRadius + 2,
+      },
+      android: {
+        elevation: spec.blurRadius + 2,
+      },
+    }),
+  };
+
+  return (
+    <Animated.View style={[bubbleStyle, animatedStyle]} />
+  );
+}
+
+const bubblesStyles = StyleSheet.create({
+  container: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: 'hidden',
+  },
+});
+
+/* ---------------------- fim BubblesRN ---------------------- */
 
 export default function RegisterProviderScreen() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -753,11 +927,11 @@ export default function RegisterProviderScreen() {
   const getWelcomeSubtitle = () => {
     switch (currentStep) {
       case 1:
-        return 'Nome e E-mail';
+        return '';
       case 2:
-        return 'Telefone e CPF';
+        return '';
       case 3:
-        return 'Data e Senha';
+        return '';
       case 4:
         switch (subStepAddress) {
           case 1: return 'Endereço: CEP';
@@ -820,6 +994,24 @@ export default function RegisterProviderScreen() {
         style={styles.keyboardAvoidingContainer}
       >
         <StatusBar barStyle="dark-content" backgroundColor={styles.scrollView.backgroundColor} />
+
+        <LinearGradient
+          colors={['#F0F4F8', '#E2E8F0', '#F7FAFC']}
+          style={StyleSheet.absoluteFillObject}
+        />
+
+        {/* Bubbles background: transparente, apenas bolhas azuis */}
+        <BubblesRN
+          countMin={52}
+          countMax={65}
+          bubbleMin={6}
+          bubbleMax={16}
+          bubbleColor={'rgba(29, 118, 242, 0.06)'}
+          bubbleBorderColor = {'rgba(29, 93, 242, 0.18)'}
+          bubbleBorderWidth ={0.5}
+          style={{ ...StyleSheet.absoluteFillObject, zIndex: 0 }}
+        />
+
         <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContentContainer} keyboardShouldPersistTaps="handled" >
           <Stack.Screen
             options={{
@@ -856,7 +1048,7 @@ export default function RegisterProviderScreen() {
               <View style={styles.stepContent}>
                 <View style={[styles.inputWrapper, usernameError ? styles.inputWrapperError : {}]}>
                   <View style={styles.iconCircle}>
-                    <Ionicons name="person-outline" size={20} color="#00BCD4" />
+                    <Ionicons name="person-outline" size={23} color="#00BCD4" />
                   </View>
                   <TextInput
                     style={styles.input}
@@ -874,7 +1066,7 @@ export default function RegisterProviderScreen() {
 
                 <View style={[styles.inputWrapper, emailError ? styles.inputWrapperError : {}]}>
                   <View style={styles.iconCircle}>
-                    <Ionicons name="mail-outline" size={20} color="#00BCD4" />
+                    <Ionicons name="mail-outline" size={23} color="#00BCD4" />
                   </View>
                   <TextInput
                     style={styles.input}
@@ -896,7 +1088,7 @@ export default function RegisterProviderScreen() {
                 {/* Navigation Buttons for Step 1: Back + Next (agora com botão de voltar integrado) */}
                 <View style={styles.navigationButtons}>
                   <TouchableOpacity style={[styles.navButton, styles.backButton]} onPress={handleBack}>
-                    <Ionicons name="arrow-back-outline" size={20} color="#00BCD4" />
+                    <Ionicons name="arrow-back-outline" size={18} color="#00BCD4" />
                     <Text style={styles.navButtonTextBack}>Voltar</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -916,7 +1108,7 @@ export default function RegisterProviderScreen() {
               <View style={styles.stepContent}>
                 <View style={[styles.inputWrapper, phoneError ? styles.inputWrapperError : {}]}>
                   <View style={styles.iconCircle}>
-                    <Ionicons name="call-outline" size={20} color="#00BCD4" />
+                    <Ionicons name="call-outline" size={23} color="#00BCD4" />
                   </View>
                   <TextInput
                     style={styles.input}
@@ -933,7 +1125,7 @@ export default function RegisterProviderScreen() {
 
                 <View style={[styles.inputWrapper, cpfError ? styles.inputWrapperError : {}]}>
                   <View style={styles.iconCircle}>
-                    <Ionicons name="card-outline" size={20} color="#00BCD4" />
+                    <Ionicons name="card-outline" size={23} color="#00BCD4" />
                   </View>
                   <TextInput
                     style={styles.input}
@@ -973,7 +1165,7 @@ export default function RegisterProviderScreen() {
               <View style={styles.stepContent}>
                 <View style={[styles.inputWrapper, dateOfBirthError ? styles.inputWrapperError : {}]}>
                   <View style={styles.iconCircle}>
-                    <Ionicons name="calendar-outline" size={20} color="#00BCD4" />
+                    <Ionicons name="calendar-outline" size={23} color="#00BCD4" />
                   </View>
                   <TextInput
                     style={styles.input}
@@ -990,7 +1182,7 @@ export default function RegisterProviderScreen() {
 
                 <View style={[styles.inputWrapper, passwordError ? styles.inputWrapperError : {}]}>
                   <View style={styles.iconCircle}>
-                    <Ionicons name="lock-closed-outline" size={20} color="#00BCD4" />
+                    <Ionicons name="lock-closed-outline" size={23} color="#00BCD4" />
                   </View>
                   <TextInput
                     style={styles.input}
@@ -1043,7 +1235,7 @@ export default function RegisterProviderScreen() {
                   <View style={styles.subStepContainer}>
                     <View style={[styles.inputWrapper, cepInputError ? styles.inputWrapperError : {}]}>
                       <View style={styles.iconCircle}>
-                        <Ionicons name="map-outline" size={20} color="#00BCD4" />
+                        <Ionicons name="map-outline" size={23} color="#00BCD4" />
                       </View>
                       <TextInput
                         style={styles.input}
@@ -1092,7 +1284,7 @@ export default function RegisterProviderScreen() {
                   <View style={styles.subStepContainer}>
                     <View style={[styles.inputWrapper, streetError ? styles.inputWrapperError : {}]}>
                       <View style={styles.iconCircle}>
-                        <Ionicons name="navigate-outline" size={20} color="#00BCD4" />
+                        <Ionicons name="navigate-outline" size={23} color="#00BCD4" />
                       </View>
                       <TextInput
                         style={styles.input}
@@ -1109,7 +1301,7 @@ export default function RegisterProviderScreen() {
 
                     <View style={[styles.inputWrapper, numberError ? styles.inputWrapperError : {}]}>
                       <View style={styles.iconCircle}>
-                        <Ionicons name="home-outline" size={20} color="#00BCD4" />
+                        <Ionicons name="home-outline" size={23} color="#00BCD4" />
                       </View>
                       <TextInput
                         style={styles.input}
@@ -1125,7 +1317,7 @@ export default function RegisterProviderScreen() {
 
                     <View style={[styles.inputWrapper, neighborhoodError ? styles.inputWrapperError : {}]}>
                       <View style={styles.iconCircle}>
-                        <Ionicons name="business-outline" size={20} color="#00BCD4" />
+                        <Ionicons name="business-outline" size={23} color="#00BCD4" />
                       </View>
                       <TextInput
                         style={styles.input}
@@ -1142,7 +1334,7 @@ export default function RegisterProviderScreen() {
 
                     <View style={[styles.inputWrapper, cityError ? styles.inputWrapperError : {}]}>
                       <View style={styles.iconCircle}>
-                        <Ionicons name="location-outline" size={20} color="#00BCD4" />
+                        <Ionicons name="location-outline" size={23} color="#00BCD4" />
                       </View>
                       <TextInput
                         style={styles.input}
@@ -1159,7 +1351,7 @@ export default function RegisterProviderScreen() {
 
                     <View style={[styles.inputWrapper, stateError ? styles.inputWrapperError : {}]}>
                       <View style={styles.iconCircle}>
-                        <Ionicons name="location-outline" size={20} color="#00BCD4" />
+                        <Ionicons name="location-outline" size={23} color="#00BCD4" />
                       </View>
                       <TextInput
                         style={styles.input}
@@ -1210,14 +1402,14 @@ export default function RegisterProviderScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F7F8FC',
+    backgroundColor: 'transparent',
   },
   keyboardAvoidingContainer: {
     flex: 1,
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#F7F8FC',
+    backgroundColor: 'transparent', // alterado para transparente conforme pedido
   },
   scrollContentContainer: {
     flexGrow: 1,
@@ -1230,7 +1422,7 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     maxWidth: 380, // Ajustado para centralização perfeita em telas médias
-    paddingHorizontal: 20, // Padding menor para centro exato
+    paddingHorizontal: 40, // Padding menor para centro exato
     paddingTop: Platform.OS === 'ios' ? 20 : 15,
     alignItems: 'center',
     bottom: 80,
@@ -1246,7 +1438,7 @@ const styles = StyleSheet.create({
   logoContainer: {
     alignItems: 'center',
     marginBottom: 20, // Logo mais próxima
-    top: 100,
+    top: 130,
     right: 10,
   },
   logo: {
@@ -1278,7 +1470,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6C757D',
     textAlign: 'center',
-    marginBottom: 40,
+    marginBottom: 30,
     paddingHorizontal: 20,
     lineHeight: 20,
     width: '100%',
@@ -1289,15 +1481,14 @@ const styles = StyleSheet.create({
     // bottom: 20, // REMOVIDO para alinhar com os steps anteriores
     backgroundColor: '#FFFFFF',
     borderRadius: 28,
-    height: 50,
-    marginBottom: 4, // Espaço mínimo para o erro ficar colado abaixo
+    height: 45,
+    marginBottom: 10, // Espaço mínimo para o erro ficar colado abaixo
     shadowColor: 'rgba(100, 100, 150, 0.15)',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 12,
     elevation: 4,
-
-    paddingHorizontal: 16,
+    paddingHorizontal: 0,
     borderWidth: 1,
     borderColor: 'transparent',
     width: '100%',
@@ -1308,9 +1499,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF5F5',
   },
   iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 45,
+    height: 45,
+    right: 3,
+    borderRadius: 80,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#F0F8FF',
