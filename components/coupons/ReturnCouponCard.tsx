@@ -135,12 +135,12 @@ export const ReturnCouponCard: React.FC<ReturnCouponCardProps> = ({
 
 const styles = StyleSheet.create({
   cardContainer: {
-    width: SCREEN_WIDTH * 0.84,
+    width: SCREEN_WIDTH * 0.9,
     borderRadius: 15,
     overflow: 'hidden',
     alignSelf: 'center',
-    marginTop: -20,
-    marginBottom: 20,
+    marginTop: -10,
+    marginBottom: -5,
     ...AppShadows.medium,
   },
   gradientBackground: {
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   title: {
-    fontSize: AppTypography.title.fontSize,
+    fontSize: 20,
     fontWeight: AppTypography.title.fontWeight,
     color: AppColors.white,
   },
@@ -165,17 +165,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 20,
-    paddingHorizontal: 8,
+    paddingHorizontal: 4,
     paddingVertical: 4,
   },
   badgeText: {
     color: AppColors.white,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     marginLeft: 4,
   },
   subtitle: {
-    fontSize: AppTypography.body.fontSize,
+    fontSize: 14,
     fontWeight: AppTypography.body.fontWeight,
     color: AppColors.white,
   },
@@ -185,13 +185,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     backgroundColor: 'rgba(255,255,255,0.15)',
     borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 15,
+    paddingVertical: 8,
+    paddingHorizontal: 18,
     marginTop: 15, // Adicionado um pouco de margem superior
-    marginBottom: 20,
+    marginBottom: 10,
   },
   couponCode: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: AppColors.white,
     letterSpacing: 1,
