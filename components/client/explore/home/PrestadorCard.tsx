@@ -75,34 +75,29 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
     };
 
     const renderStars = (rating: number | undefined) => {
-        const stars = [];
         const actualRating = rating ?? 0;
-        const fullStars = Math.floor(actualRating);
-        const hasHalfStar = actualRating % 1 !== 0;
-
-        for (let i = 0; i < 5; i++) {
-            let iconName: keyof typeof Ionicons.glyphMap = 'star-outline';
-            if (i < fullStars) iconName = 'star';
-            else if (hasHalfStar && i === fullStars) iconName = 'star-half';
-            stars.push(
+        let iconName: keyof typeof Ionicons.glyphMap = 'star-outline';
+        if (actualRating >= 4) iconName = 'star';
+        else if (actualRating >= 3) iconName = 'star-half';
+        return (
+            <View style={styles.starContainer}>
                 <Ionicons
-                    key={i}
                     name={iconName}
-                    size={12}
+                    size={16}
                     color="#5da2ecff" // Mantendo o azul para consistência com o ícone de localização
                     style={styles.starIcon}
                 />
-            );
-        }
-        return <View style={styles.starContainer}>{stars}</View>;
+            </View>
+        );
     };
 
     const primaryService = item.providerServices && item.providerServices.length > 0 ? item.providerServices[0] : null;
     const specialtyName = primaryService && primaryService.service ? primaryService.service.name : 'Serviço';
 
-    // Cálculo de distância
-    const safeDistance = __DEV__ && item.distance == null ? 4000 : item.distance;
-    const distanceLabel = formatDistance(safeDistance);
+    // Distância: alinhar com RecomendacaoCard (sem injeção __DEV__); fallback "0 km" quando ausente/<=0
+    const distanceLabel = (typeof item.distance === 'number' && item.distance > 0)
+        ? formatDistance(item.distance)
+        : '0 km';
 
     // Label para próximo horário
     const nextAvailableLabel = formatNextAvailable(item.nextAvailable);
@@ -144,26 +139,33 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
                 activeOpacity={0.8}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-                {/* REMOVIDO: Renderiza a Distância/Localização no canto superior direito (absoluto) */}
 
                 <View style={styles.imageWrapper}>
                     <Image source={avatarSource} style={styles.cardImage} />
-                    {/* Selo Verificado: overlay discreto no avatar, cor azul */}
-                    {item.verificationStatus === 'APPROVED' && (
-                        <View style={styles.verifiedBadge}>
-                            <Ionicons name="shield-checkmark" size={12} color="#5da2ecff" />
-                        </View>
-                    )}
                 </View>
+
+                {/* Selo Verificado: Movido para fora do imageWrapper, com zIndex alto para 100% visibilidade */}
+                {item.verificationStatus === 'APPROVED' && (
+                    <View style={styles.verifiedBadgeOutside}>
+                        <Ionicons name="shield-checkmark" size={12} color="#5da2ecff" />
+                    </View>
+                )}
+
                 <View style={styles.detailsContent}>
-                    <Text style={styles.providerName} numberOfLines={1} allowFontScaling={false}>{item.fullName}</Text>
+                    {/* Linha com nome e distância (distância movida para cá, acima da sugestão de horário) */}
+                    <View style={styles.nameRow}>
+                        <Text style={styles.providerName} numberOfLines={1} allowFontScaling={false}>{item.fullName}</Text>
+                        {distanceLabel && (
+                            <View style={styles.distancePill}>
+                                <Ionicons name="location-outline" size={10} color="#5da2ecff" />
+                                <Text style={styles.distancePillText} numberOfLines={1} allowFontScaling={false}>{distanceLabel}</Text>
+                            </View>
+                        )}
+                    </View>
                     <Text style={styles.specialtyText} numberOfLines={1} allowFontScaling={false}>{specialtyName}</Text>
 
                     {/* Badges premium: Verificado, Top 10%, Resposta rápida (não-intrusivos) */}
                     <View style={styles.badgesRow}>
-                        {item.verificationStatus === 'APPROVED' && (
-                            <View style={styles.badge}><Text style={styles.badgeText}>Verificado</Text></View>
-                        )}
                         {typeof item.averageRating === 'number' && item.averageRating >= 4.7 && (item.reviewCount ?? 0) >= 25 && (
                             <View style={styles.badge}><Text style={styles.badgeText}>Top 10%</Text></View>
                         )}
@@ -175,48 +177,35 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
                         ) : null}
                     </View>
 
-                    {/* Linha de métricas (Aceitação, Tempo de Resposta e AGORA Distância Inline) */}
-                    <View style={styles.metricsRow}>
+                    {/* COMENTADO: Linha de métricas (Aceitação, Tempo de Resposta - sem distância, que foi movida) - Remove 1% e 180min da interface */}
+                    {/* <View style={styles.metricsRow}>
                         {item.acceptanceRate != null && (
                             <>
                                 <Text style={styles.metricText} allowFontScaling={false}>✓ {Math.round(item.acceptanceRate)}%</Text>
-                                {/* Separador só se houver Tempo de Resposta OU Distância/Localização */}
-                                {(item.averageResponseTime != null || distanceLabel || item.address?.city) && <Text style={styles.metricSep}> · </Text>}
-                            </>
-                        )}
+                                {/* Separador só se houver Tempo de Resposta */}
+                                {/* {item.averageResponseTime != null && <Text style={styles.metricSep}> · </Text>} */}
+                            {/* </> */}
+                        {/* )} */}
                         
-                        {item.averageResponseTime != null && (
-                            <>
-                                <Text style={styles.metricText} allowFontScaling={false}>⏱ {item.averageResponseTime} min</Text>
-                                {/* Separador só se houver Distância/Localização E não for o primeiro item */}
-                                {(distanceLabel || item.address?.city) && <Text style={styles.metricSep}> · </Text>}
-                            </>
-                        )}
+                        {/* {item.averageResponseTime != null && (
+                            <Text style={styles.metricText} allowFontScaling={false}>⏱ {item.averageResponseTime} min</Text>
+                        )} */}
+                    {/* </View> */}
 
-                        {/* Distância inline (ou bairro·cidade como fallback) */}
-                        {distanceLabel ? (
-                            <View style={styles.metricInlineLoc}>
-                                <Ionicons name="location-outline" size={10} color="#5da2ecff" />
-                                <Text style={[styles.metricText, { marginLeft: 4 }]} allowFontScaling={false}>{distanceLabel}</Text>
-                            </View>
-                        ) : item.address?.city ? (
-                            <Text style={styles.metricText} allowFontScaling={false}>
-                                {item.address.neighborhood ? `${item.address.neighborhood} · ` : ''}{item.address.city}
-                            </Text>
-                        ) : null}
-                    </View>
-
-                    {item.averageRating !== undefined && item.reviewCount !== undefined && (
+                    {/* COMENTADO: Próximo horário disponível (ex: "Dom 09:00") - Remove da interface */}
+                    {/* {nextAvailableLabel && (
                         <View style={styles.ratingRow}>
-                            {renderStars(item.averageRating)}
-                            {item.reviewCount > 0 && <Text style={styles.reviewsText} allowFontScaling={false}>({item.reviewCount})</Text>}
+                            <Text style={styles.nextAvailableText} allowFontScaling={false}>{nextAvailableLabel}</Text>
                         </View>
-                    )}
+                    )} */}
+
                     <View style={styles.priceRow}>
                         <Text style={styles.priceText} allowFontScaling={false}>{servicePrice}</Text>
-                        {/* Chip Próximo Horário: ao lado do preço, condicional */}
-                        {nextAvailableLabel && (
-                            <Text style={styles.nextAvailableText} allowFontScaling={false}>{nextAvailableLabel}</Text>
+                        {item.averageRating !== undefined && item.reviewCount !== undefined && (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 8 }}>
+                                {renderStars(item.averageRating)}
+                                <Text style={styles.reviewsText} allowFontScaling={false}>({item.reviewCount})</Text>
+                            </View>
                         )}
                     </View>
                 </View>
@@ -232,7 +221,7 @@ const styles = StyleSheet.create({
         marginRight: 12,
         marginBottom: 10,
         marginTop: 12,
-        borderRadius: 44,
+        borderRadius: 64,
         overflow: 'visible',
         borderRightWidth: 1,
         borderBottomWidth: 1.5,
@@ -240,43 +229,75 @@ const styles = StyleSheet.create({
         borderTopWidth: 0.2,
         borderColor: '#9cb6df53',
         borderBottomColor: '#9cb6df53',
-        borderTopStartRadius: 22,
-        borderBottomStartRadius: 22,
-        borderTopEndRadius: 22,
-        borderBottomEndRadius: 22,
+        borderTopStartRadius: 42,
+        borderBottomStartRadius: 42,
+        borderTopEndRadius: 42,
+        borderBottomEndRadius: 42,
     },
     cardContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        width: 230,
+        width: 240,
+        height: 60,
         backgroundColor: 'rgba(213, 220, 230, 0.41)',
-        borderRadius: 20, // Raio do card 20
-        padding: 8, // Densidade maior (padding 8)
+        borderRadius: 40, // Raio do card 20
+        padding: 4, // Densidade maior (padding 8)
         position: 'relative',
     },
-    // REMOVIDO: absoluteLocation
+    // REMOVIDO: distancePillTopRight (movido para inline com o nome)
+    
+    // Novo estilo para a linha do nome com distância inline (acima da sugestão de horário)
+    nameRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 2,
+    },
+    // Estilo do pill de distância (agora inline, sem absolute)
+    distancePill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.8)',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
+        right: 8,
+        marginLeft: 8, // Espaçamento à esquerda do nome
+    },
+    distancePillText: {
+        marginLeft: 2,
+        fontSize: 10,
+        fontWeight: '600',
+        color: '#334155',
+    },
     
     imageWrapper: {
         width: 80, // Avatar maior: 64dp
         height: 80, // Avatar maior: 64dp
-        borderRadius: 42,
+        borderRadius: 40,
         overflow: 'hidden',
-        marginRight: 12,
-        backgroundColor: '#E0E0E0',
+        marginRight: 5,
+        backgroundColor: '#c1d8f1ff',
         // Ring premium: 1.5dp branco + 0.5dp #E8EEF8
         borderWidth: 2, 
         borderColor: '#E8EEF8', 
         padding: 1, // Simula o anel interno branco
         position: 'relative', 
     },
-    verifiedBadge: { 
+    // REMOVIDO: verifiedBadge (antigo, dentro da imagem)
+    verifiedBadgeOutside: { 
         position: 'absolute',
-        top: 4,
-        right: 4,
+        top: 18, // Mesma posição relativa à imagem (ajustado para fora do container)
+        left: 62, // Posição para sobrepor a imagem (após marginRight:12 da imageWrapper)
+        zIndex: 10, // zIndex alto para ficar 100% acima do container
         backgroundColor: '#fff',
         borderRadius: 10,
         padding: 2,
-        elevation: 2,
+        elevation: 4,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.2,
@@ -286,7 +307,9 @@ const styles = StyleSheet.create({
         width: '100%',
         height: '100%',
         resizeMode: 'cover',
-        borderRadius: 32, // Para garantir que a imagem se encaixe no anel
+   
+        marginBottom: 2,
+        borderRadius: 42, // Para garantir que a imagem se encaixe no anel
         borderWidth: 1.5, // Simula o anel interno branco
         borderColor: '#FFF',
     },
@@ -295,13 +318,13 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     providerName: {
-        fontSize: 15,
+        fontSize: 14,
         fontWeight: '600', // Nome (15/600)
         color: '#2C3E50',
-        marginBottom: 2,
+        flex: 1, // Para permitir que o nome ocupe o espaço disponível
     },
     specialtyText: {
-        fontSize: 12,
+        fontSize: 11,
         color: '#666',
         marginBottom: 2,
     },
@@ -310,37 +333,35 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         marginTop: 2,
-        marginBottom: 6,       
+        marginBottom: 0,       
         flexWrap: 'wrap'
+        
     },
     metricText: {
-        fontSize: 10,
+        fontSize: 9,
         color: '#555',
         fontWeight: '600', // Fonte 10/600
     },
     metricSep: {
-        fontSize: 10,
+        fontSize: 9,
         color: '#6C757D'
     },
-    metricInlineLoc: {
-        flexDirection: 'row',
-        alignItems: 'center'
-    },
+    // REMOVIDO: metricInlineLoc (movido para absolute no canto)
     badgesRow: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        marginBottom: 6,
+        marginBottom: 0,
     },
     badge: {
         backgroundColor: '#E8EEF8',
         borderRadius: 12,
-        paddingHorizontal: 8,
-        paddingVertical: 4,
+        paddingHorizontal: 6,
+        paddingVertical: 3,
         marginRight: 6,
         marginBottom: 6,
     },
     badgeText: {
-        fontSize: 10,
+        fontSize: 9,
         color: '#2C3E50',
         fontWeight: '600',
     },
@@ -353,17 +374,20 @@ const styles = StyleSheet.create({
     },
     starContainer: {
         flexDirection: 'row',
-        marginRight: 4,
+        marginRight: 2,
     },
     starIcon: {
         marginRight: 1,
+        bottom: 2,
     },
     reviewsText: {
-        fontSize: 10,
+        fontSize: 12,
         color: '#888',
+        marginRight: 16,
+        bottom: 2,
     },
     priceText: {
-        fontSize: 15, // Preço grande (14--15/bold)
+        fontSize: 14, // Preço grande (14--15/bold)
         fontWeight: 'bold',
         color: '#838891ff',
     },
@@ -380,7 +404,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 4,
         paddingVertical: 2,
         borderRadius: 8, // Borda-radius 8
-        marginLeft: 8,
+        marginLeft: 0,
     },
     goButton: {
         backgroundColor: '#29a2e7b0',
