@@ -38,9 +38,9 @@ export default function MainCategoryButton({ title, iconName, backgroundColor, o
     <TouchableOpacity
       style={[styles.container, { backgroundColor, transform: [{ scale: scaleAnim }] }]} // Aplica a animação de escala
       onPress={onPress}
-      onPressIn={onPressInButton} // Adiciona onPressIn
-      onPressOut={onPressOutButton} // Adiciona onPressOut
-      activeOpacity={0.7} // Controla a opacidade para evitar conflito com a animação
+      onPressIn={onPressInButton}
+      onPressOut={onPressOutButton}
+      activeOpacity={0.7}
     >
       <Ionicons name={iconName} size={30} color="#FFF" />
       <Text style={styles.title}>{title}</Text>
