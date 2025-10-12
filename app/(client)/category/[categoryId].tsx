@@ -1,4 +1,4 @@
-// LimpeJaApp/app/(client)/services/category/[categoryId].tsx
+// LimpeJaApp/app/(client)/category/[categoryId].tsx (ou services/category/[categoryId].tsx)
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState, useRef } from 'react';
 import {
@@ -21,6 +21,8 @@ import CategoryProviderCard from '../../../components/client/explore/category/Ca
 import { getProvidersByServiceCategory } from '../../../services/providerService';
 // Importar a tipografia de ProviderDisplayInfo
 import { ProviderDisplayInfo } from '../../../types/backend/providers';
+// Importar o NavBar e seus tipos (ajuste o caminho se necessário)
+import NavBar, { NavBarProps } from '../../../components/client/explore/home/NavBar';
 
 const FilteredProvidersScreen: React.FC = () => {
   const router = useRouter();
@@ -30,6 +32,10 @@ const FilteredProvidersScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Props necessárias para NavBar (corrigidas para o tipo exato: 'coupon' | 'referral' | null)
+  const [activeBottomPromotion, setActiveBottomPromotion] = useState<'coupon' | 'referral' | null>(null); // Tipo corrigido: não boolean
+  const welcomeCouponOffer = null; // Default: null (tipo any aceita isso; mude para objeto se houver oferta real)
 
   // Animated values for header and feedback
   const headerAnim = useRef(new Animated.Value(0)).current;
@@ -137,44 +143,53 @@ const FilteredProvidersScreen: React.FC = () => {
         </View>
       </Animated.View>
 
-      {isLoading && !isRefreshing ? (
-        <Animated.View style={[styles.centeredFeedback, { opacity: feedbackAnim }]}>
-            <ActivityIndicator size="large" color="#4A90E2"/>
-            <Text style={styles.loadingText}>Carregando prestadores...</Text>
-        </Animated.View>
-      ) : error ? (
-        <Animated.View style={[styles.centeredFeedback, { opacity: feedbackAnim }]}>
-            <Ionicons name="alert-circle-outline" size={64} color="red" />
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity onPress={() => fetchProviders()} style={styles.retryButton}>
-                <Text style={styles.retryButtonText}>Tentar Novamente</Text>
-            </TouchableOpacity>
-        </Animated.View>
-      ) : providers.length > 0 ? (
-        <FlatList
-          data={providers}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <CategoryProviderCard // Usando o NOVO componente
-              item={item}
-              onPress={handleProviderPress}
-            />
-          )}
-          contentContainerStyle={styles.listContentContainer}
-          ListEmptyComponent={renderEmptyState}
-          refreshControl={
-            <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#4A90E2" />
-          }
-          // Otimizações de performance para listas longas (como em Explore)
-          removeClippedSubviews
-          initialNumToRender={8}
-          maxToRenderPerBatch={8}
-          windowSize={7}
-          getItemLayout={(_, index) => ({ length: 108, offset: 108 * index, index })} // Assumindo altura fixa de ~108px por card; ajuste se necessário
-        />
-      ) : (
-        renderEmptyState()
-      )}
+      <View style={{ flex: 1 }}>
+        {isLoading && !isRefreshing ? (
+          <Animated.View style={[styles.centeredFeedback, { opacity: feedbackAnim }]}>
+              <ActivityIndicator size="large" color="#4A90E2"/>
+              <Text style={styles.loadingText}>Carregando prestadores...</Text>
+          </Animated.View>
+        ) : error ? (
+          <Animated.View style={[styles.centeredFeedback, { opacity: feedbackAnim }]}>
+              <Ionicons name="alert-circle-outline" size={64} color="red" />
+              <Text style={styles.errorText}>{error}</Text>
+              <TouchableOpacity onPress={() => fetchProviders()} style={styles.retryButton}>
+                  <Text style={styles.retryButtonText}>Tentar Novamente</Text>
+              </TouchableOpacity>
+          </Animated.View>
+        ) : providers.length > 0 ? (
+          <FlatList
+            data={providers}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <CategoryProviderCard // Usando o NOVO componente
+                item={item}
+                onPress={handleProviderPress}
+              />
+            )}
+            contentContainerStyle={styles.listContentContainer}
+            ListEmptyComponent={renderEmptyState}
+            refreshControl={
+              <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#4A90E2" />
+            }
+            // Otimizações de performance para listas longas (como em Explore)
+            removeClippedSubviews
+            initialNumToRender={8}
+            maxToRenderPerBatch={8}
+            windowSize={7}
+            getItemLayout={(_, index) => ({ length: 108, offset: 108 * index, index })} // Assumindo altura fixa de ~108px por card; ajuste se necessário
+          />
+        ) : (
+          renderEmptyState()
+        )}
+      </View>
+
+      {/* NavBar com props obrigatórias passadas corretamente (tipos resolvidos) */}
+      <NavBar
+        welcomeCouponOffer={welcomeCouponOffer}
+        activeBottomPromotion={activeBottomPromotion}
+        setActiveBottomPromotion={setActiveBottomPromotion}
+      />
     </View>
   );
 };
