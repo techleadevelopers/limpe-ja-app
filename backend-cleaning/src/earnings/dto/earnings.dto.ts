@@ -31,6 +31,9 @@ export class EarningsResponseDto {
   @ApiProperty({ description: 'Valor total de saques pendentes', example: 200.00 })
   pendingWithdrawals: number;
 
+  @ApiPropertyOptional({ description: 'Soma de agendamentos pagos (PIX confirmado) ainda não concluídos', example: 350.00 })
+  preApprovedEarnings?: number;
+
   @ApiPropertyOptional({
     type: [TransactionDto],
     description: 'Lista das transações mais recentes (para gráficos e lista)',
