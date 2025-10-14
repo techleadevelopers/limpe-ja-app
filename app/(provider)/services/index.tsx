@@ -5,17 +5,18 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    Alert,
-    Animated,
-    FlatList,
-    Image,
-    ImageSourcePropType,
-    Platform,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Alert,
+  Animated,
+  FlatList,
+  Image,
+  ImageSourcePropType,
+  Platform,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  Dimensions
 } from 'react-native';
 import ServiceItemSkeleton from '../../../components/ServiceItemSkeleton';
 import ToastMessage from '../../../components/ui/ToastMessage';
@@ -144,6 +145,57 @@ const AnimatedServiceItem: React.FC<{
   );
 };
 
+// Componente Header adaptado do ScheduleHeader.tsx
+const CustomHeader: React.FC<{
+  headerTitle: string;
+  headerAnim: Animated.Value;
+  onAddPress: () => void;
+}> = ({ headerTitle, headerAnim, onAddPress }) => {
+  const { width: SCREEN_WIDTH } = Dimensions.get('window');
+  const HEADER_TOP = Platform.OS === 'ios' ? 52 : 22;
+
+  const HERO_GRADIENT_START = '#FFFFFF';
+  const HERO_GRADIENT_MIDDLE = '#FFFFFF';
+  const HERO_GRADIENT_END = '#FFFFFF';
+
+  // Cores adaptadas (substitui AppColors.textBody por cor fixa, ajuste se necessário)
+  const TEXT_COLOR = '#000000'; // ou importe AppColors se disponível
+
+  return (
+    <Animated.View style={{ opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
+      <LinearGradient
+        colors={[HERO_GRADIENT_START, HERO_GRADIENT_MIDDLE, HERO_GRADIENT_END]}
+        start={{ x: 0.0, y: 0.0 }}
+        end={{ x: 1.0, y: 1.0 }}
+        style={[
+          styles.headerGradient,
+          { width: SCREEN_WIDTH } // Garante largura total
+        ]}
+      >
+        <View style={{ height: HEADER_TOP }} />
+
+        <View style={styles.headerRow}>
+          {/* Placeholder para botão de voltar (vazio, pois não há back aqui) */}
+          <View style={styles.iconBtn} />
+
+          <Text numberOfLines={1} style={[styles.headerTitle, { color: TEXT_COLOR }]}>
+            {headerTitle}
+          </Text>
+
+          {/* Botão de adicionar no lugar do menu */}
+          <TouchableOpacity
+            style={styles.iconBtn}
+            onPress={onAddPress}
+            accessibilityLabel="Adicionar novo serviço"
+            accessibilityHint="Toque para gerenciar os tipos de serviços que você oferece"
+          >
+            <Ionicons name="add-circle-outline" size={24} color={TEXT_COLOR} />
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
+    </Animated.View>
+  );
+};
 
 export default function ProviderServicesScreen() {
   const router = useRouter();
@@ -184,12 +236,12 @@ export default function ProviderServicesScreen() {
             const confirmedBookings = await getBookingsForUser(BookingStatus.CONFIRMED);
             const now = new Date();
             data = confirmedBookings.filter(s => {
-                const scheduledDateTime = new Date(`${s.scheduledDate}T${s.scheduledTime}`);
-                return scheduledDateTime >= now;
+              const scheduledDateTime = new Date(`${s.scheduledDate}T${s.scheduledTime}`);
+              return scheduledDateTime >= now;
             }).sort((a, b) => {
-                const dateA = new Date(`${a.scheduledDate}T${a.scheduledTime}`).getTime();
-                const dateB = new Date(`${b.scheduledDate}T${b.scheduledTime}`).getTime();
-                return dateA - dateB;
+              const dateA = new Date(`${a.scheduledDate}T${a.scheduledTime}`).getTime();
+              const dateB = new Date(`${b.scheduledDate}T${b.scheduledTime}`).getTime();
+              return dateA - dateB;
             });
             break;
           case 'completed':
@@ -197,9 +249,9 @@ export default function ProviderServicesScreen() {
             const cancelled = await getBookingsForUser(BookingStatus.CANCELLED);
             const rejected = await getBookingsForUser(BookingStatus.REJECTED);
             data = [...completed, ...cancelled, ...rejected].sort((a, b) => {
-                const dateA = new Date(`${a.scheduledDate}T${a.scheduledTime}`).getTime();
-                const dateB = new Date(`${b.scheduledDate}T${b.scheduledTime}`).getTime();
-                return dateB - dateA;
+              const dateA = new Date(`${a.scheduledDate}T${a.scheduledTime}`).getTime();
+              const dateB = new Date(`${b.scheduledDate}T${b.scheduledTime}`).getTime();
+              return dateB - dateA;
             });
             break;
           default:
@@ -258,6 +310,11 @@ export default function ProviderServicesScreen() {
     router.push(`/(provider)/services/${item.id}` as any);
   };
 
+  const handleAddPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push('/(provider)/profile/edit-services' as any);
+  };
+
   const getHeaderTitle = () => {
     switch (filter) {
       case 'requests': return 'Solicitações Pendentes';
@@ -306,35 +363,16 @@ export default function ProviderServicesScreen() {
     );
   };
 
-
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Custom Header with Glassmorphism */}
-      <Animated.View style={[styles.customHeader, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
-        <LinearGradient
-          colors={['rgba(0,122,255,0.9)', 'rgba(0,122,255,0.7)']}
-          style={StyleSheet.absoluteFill}
-        />
-        <BlurView
-          intensity={0}
-          tint="dark"
-          style={StyleSheet.absoluteFill}
-        />
-        <Text style={styles.headerTitle}>{getHeaderTitle()}</Text>
-        <TouchableOpacity
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            router.push('/(provider)/profile/edit-services' as any);
-          }}
-          style={styles.headerActionIcon}
-          accessibilityLabel="Adicionar novo serviço"
-          accessibilityHint="Toque para gerenciar os tipos de serviços que você oferece"
-        >
-          <Ionicons name="add-circle-outline" size={28} color="#FFFFFF" />
-        </TouchableOpacity>
-      </Animated.View>
+      {/* Header adaptado do ScheduleHeader.tsx */}
+      <CustomHeader
+        headerTitle={getHeaderTitle()}
+        headerAnim={headerAnim}
+        onAddPress={handleAddPress}
+      />
 
       <Animated.View style={[styles.filterContainer, { opacity: filterAnim, transform: [{ translateY: filterAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
         <TouchableOpacity
@@ -413,35 +451,45 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F0F2F5',
   },
-  customHeader: {
+  // Estilos adaptados do ScheduleHeader para o headerGradient e relacionados
+  headerGradient: {
+    paddingBottom: 0,
+    borderBottomLeftRadius: 34,
+    borderBottomRightRadius: 34,
+    borderTopLeftRadius: 4,
+    borderTopRightRadius: 4,
+    paddingHorizontal: 20,
+    width: '100%',
+    left: 0,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 15,
-    paddingVertical: Platform.OS === 'ios' ? 50 : 20,
-    paddingTop: Platform.OS === 'ios' ? 50 : 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 6,
-    overflow: 'hidden',
+    paddingBottom: 2,
+    paddingHorizontal: 5,
+  },
+  iconBtn: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2F3A4A',
     flex: 1,
     textAlign: 'center',
-    zIndex: 1,
-  },
-  headerActionIcon: {
-    position: 'absolute',
-    right: 15,
-    padding: 5,
-    top: Platform.OS === 'ios' ? 47 : 17,
-    zIndex: 1,
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: Platform.select({
+      ios: 'System',
+      android: 'sans-serif-medium',
+    }),
+    includeFontPadding: false,
   },
   filterContainer: {
     flexDirection: 'row',
@@ -608,5 +656,3 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
 });
-
-
