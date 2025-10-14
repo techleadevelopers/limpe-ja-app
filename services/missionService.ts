@@ -78,6 +78,10 @@ export interface ClaimMissionResponse {
   };
   pointsGranted?: number;
   message?: string;
+  /** Compatibilidade com telas antigas: indica sucesso explícito */
+  ok?: boolean;
+  /** Compatibilidade com telas antigas: motivo de falha (quando ok=false) */
+  reason?: string;
 }
 
 /** ==== Helpers internos ==== */
@@ -112,7 +116,9 @@ function deriveFlags(progress: MissionProgress | null): { canClaim: boolean; isC
  * Backend esperado: GET /missions -> MissionProgress[] (com mission incluída) ou {missions:[], progress:[]}.
  */
 export async function getMyMissions(audience: MissionAudience = MissionAudience.CLIENT): Promise<MissionItem[]> {
-  const { data } = await api.get('/missions', { params: { audience } });
+  // Backend consolidado expõe GET /missions/my para usuário autenticado
+  // 'audience' é determinado no backend via role; manter param local é inócuo
+  const { data } = await api.get('/missions/my');
 
   // O backend pode retornar um array de MissionProgress ou um objeto com 'missions' e 'progress'
   if (Array.isArray(data)) {
@@ -152,13 +158,22 @@ export async function getMyMissions(audience: MissionAudience = MissionAudience.
  */
 export async function claimMission(missionId: string): Promise<ClaimMissionResponse> {
   try {
-    const { data } = await api.post(`/missions/${missionId}/claim`);
+    // Backend consolidado: POST /missions/claim com body { missionId }
+    const { data } = await api.post(`/missions/claim`, { missionId });
+
+    // Shape esperado do backend: { mission, reward }
+    // reward: { type: 'COUPON', ...couponFields } | { type: 'POINTS', points: number }
+    const mission = data?.mission ?? {};
+    const reward = data?.reward ?? {};
+    const rewardType = (reward?.type ?? mission?.rewardType) as RewardType;
+
     return {
-      missionId,
-      rewardType: data.rewardType as RewardType,
-      coupon: data.coupon ?? undefined,
-      pointsGranted: data.pointsGranted ?? undefined,
-      message: data.message ?? undefined,
+      ok: true,
+      missionId: mission?.id ?? missionId,
+      rewardType,
+      coupon: rewardType === RewardType.COUPON ? reward : undefined,
+      pointsGranted: rewardType === RewardType.POINTS ? reward?.points : undefined,
+      message: data?.message ?? undefined,
     };
   } catch (err: any) {
     throw (err?.response?.data ?? err);
