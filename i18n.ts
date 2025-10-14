@@ -6,8 +6,8 @@ import * as Localization from 'expo-localization';
 
 // Importe seus arquivos JSON completos
 // Ajuste o caminho conforme a estrutura real do seu projeto
-import ptBRTranslation from './backend-cleaning/src/common/i18n/locales/pt-BR.json';
-import enUSTranslation from './backend-cleaning/src/common/i18n/locales/en-US.json';
+import ptBRTranslation from './i18n/locales/pt-BR.json';
+import enUSTranslation from './i18n/locales/en-US.json';
 
 const resources = {
   // Use as chaves que correspondem aos seus arquivos JSON
