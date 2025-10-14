@@ -37,7 +37,6 @@ __tests__/**
 cypress/**
 docs/**
 documentation/**
-scripts/**
 test-*.sh
 
 # Logs, temporários e backups
