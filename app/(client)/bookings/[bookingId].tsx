@@ -374,7 +374,7 @@ export default function BookingDetailsScreen() {
           options={{
             title: 'Carregando...',
             headerTitleAlign: 'center',
-            headerTitleStyle: { fontFamily: 'Montserrat-SemiBold' || 'System', fontSize: 20, color: AppColors.textBody },
+            headerTitleStyle: { fontFamily: 'Montserrat-SemiBold', fontSize: 20, color: AppColors.textBody },
             headerStyle: { backgroundColor: AppColors.white },
             headerShadowVisible: false,
             headerTintColor: AppColors.primaryInteractive,
@@ -407,7 +407,7 @@ export default function BookingDetailsScreen() {
           options={{
             title: 'Erro',
             headerTitleAlign: 'center',
-            headerTitleStyle: { fontFamily: 'Montserrat-SemiBold' || 'System', fontSize: 20, color: AppColors.textBody },
+            headerTitleStyle: { fontFamily: 'Montserrat-SemiBold', fontSize: 20, color: AppColors.textBody },
             headerStyle: { backgroundColor: AppColors.white },
             headerShadowVisible: false,
             headerTintColor: AppColors.primaryInteractive,
@@ -453,7 +453,7 @@ export default function BookingDetailsScreen() {
           title: 'Detalhes do Agendamento',
           headerShown: true,
           headerTitleAlign: 'center',
-          headerTitleStyle: { fontFamily: 'Montserrat-SemiBold' || 'System', fontSize: 20, color: AppColors.textBody },
+          headerTitleStyle: { fontFamily: 'Montserrat-SemiBold', fontSize: 20, color: AppColors.textBody },
           headerStyle: { backgroundColor: AppColors.white },
           headerShadowVisible: false,
           headerTintColor: AppColors.primaryInteractive,
