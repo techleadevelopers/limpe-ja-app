@@ -46,7 +46,7 @@ async function bootstrap() {
   const allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:8081',
-    'https://limpeja-backend-production.up.railway.app/',
+    'https://limpeja-backend-production.up.railway.app',
   ];
 
   app.enableCors({
