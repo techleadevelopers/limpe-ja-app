@@ -1,8 +1,8 @@
 // LimpeJaApp/app/(client)/_layout.tsx
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons'; // Exemplo de ícones, instale @expo/vector-icons
-// Importe seus componentes de ícones personalizados se tiver
+import { Ionicons } from '@expo/vector-icons'; // Exemplo de ÃƒÂ­cones, instale @expo/vector-icons
+// Importe seus componentes de ÃƒÂ­cones personalizados se tiver
 // import TabBarIcon from '../../src/components/layout/TabBarIcon';
 
 export default function ClientTabLayout() {
@@ -11,18 +11,17 @@ export default function ClientTabLayout() {
       tabBar={() => null}
       screenOptions={{
         // tabBarActiveTintColor: Colors.tint, // Use suas constantes de cores
-        headerShown: true, // Ou false se você tiver headers customizados nas telas
-        headerShown: false,
+        headerShown: false, // Oculta o header padrÃ£o; telas tÃªm headers prÃ³prios
       }}
     >
       <Tabs.Screen
-        name="explore" // Deve corresponder ao nome do diretório/arquivo
+        name="explore" // Deve corresponder ao nome do diretÃƒÂ³rio/arquivo
         options={{
           title: 'Explorar',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="search" color={color} size={size} />
           ),
-          // headerShown: false, // Se a tela de explore tiver seu próprio header
+          // headerShown: false, // Se a tela de explore tiver seu prÃƒÂ³prio header
         }}
       />
       <Tabs.Screen
@@ -56,3 +55,4 @@ export default function ClientTabLayout() {
     </Tabs>
   );
 }
+
