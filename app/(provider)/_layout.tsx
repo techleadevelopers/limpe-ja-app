@@ -1,9 +1,14 @@
 // LimpeJaApp/app/(provider)/_layout.tsx
 import React from 'react';
-import { Tabs } from 'expo-router';
+import { Tabs, Redirect } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'; // Exemplo
+import { useAuth } from '../../hooks/useAuth';
 
 export default function ProviderTabLayout() {
+  const { role, isAuthenticated } = useAuth();
+  if (!isAuthenticated || role !== 'PROVIDER') {
+    return <Redirect href="/(auth)/login" />;
+  }
   return (
     <Tabs
       tabBar={() => null}
