@@ -9,6 +9,8 @@ type Props = {
   bottomOffset?: number;
   points?: number; // pontos prometidos
   actionLabel?: string;
+  /** Propaga pointerEvents ao container para não bloquear interações subjacentes */
+  pointerEvents?: 'auto' | 'none' | 'box-none' | 'box-only';
 };
 
 const IncentiveNudge: React.FC<Props> = ({
@@ -18,6 +20,7 @@ const IncentiveNudge: React.FC<Props> = ({
   bottomOffset = 84, // aparece “um degrau” acima do de segurança, se ambos estiverem na mesma tela
   points = 50,
   actionLabel = 'Ver missões',
+  pointerEvents = 'box-none',
 }) => {
   const router = useRouter();
 
@@ -35,6 +38,7 @@ const IncentiveNudge: React.FC<Props> = ({
       bottomOffset={bottomOffset}
       icon="trophy-outline"
       color="#6C5CE7"
+      pointerEvents={pointerEvents}
     />
   );
 };
