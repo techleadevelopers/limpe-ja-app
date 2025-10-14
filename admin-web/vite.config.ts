@@ -28,19 +28,19 @@ export default defineConfig({
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
   },
-  server: {
+  server: {
     fs: {
       strict: true,
       deny: ["**/.*"],
     },
     // ADICIONADO: Configuração do proxy aqui
-    proxy: {
-      '/api': {
-        target: 'http://192.168.193.26:3000',
-        changeOrigin: true,
-        secure: false,
-        rewrite: (path) => path.replace(/^\/api/, ''),
-      },
-    },
-  },
+    proxy: {
+      '/api': {
+        target: process.env.VITE_API_TARGET || 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+    },
+  },
 });
