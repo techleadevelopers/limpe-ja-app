@@ -76,7 +76,17 @@ class AuthService {
     async registerClient(userData: any): Promise<AuthResponse> {
         try {
             console.log('[AuthService Frontend] Registrando cliente');
-            const response = await api.post('/auth/register/client', userData);
+            // Sanitiza payload: backend de cliente NÃO aceita dateOfBirth nem campos extras
+            const payload = {
+                email: userData.email,
+                password: userData.password,
+                fullName: userData.fullName,
+                phone: userData.phone ?? null,
+                cpf: userData.cpf,
+                address: userData.address,
+                referralCode: userData.referralCode,
+            };
+            const response = await api.post('/auth/register/client', payload);
             const authData: AuthResponse = response.data;
 
             await this.saveAuthData(authData);
