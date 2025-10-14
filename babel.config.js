@@ -3,11 +3,11 @@ module.exports = function (api) {
   api.cache(true);
   return {
     presets: [
-      'babel-preset-expo',       // mantém o preset do Expo
-      '@babel/preset-typescript' // necessário para Detox + Jest com TS
+      'babel-preset-expo',
+      '@babel/preset-typescript',
     ],
     plugins: [
-      // 'expo-router/babel', // mantenha comentado se já estava assim
+      // 'expo-router/babel',
       [
         'module-resolver',
         {
@@ -32,6 +32,13 @@ module.exports = function (api) {
           ],
         },
       ],
+      // Remove consoles no build de produção (mantém error/warn)
+      ...(process.env.NODE_ENV === 'production'
+        ? [[
+            'babel-plugin-transform-remove-console',
+            { exclude: ['error', 'warn'] },
+          ]]
+        : []),
       'react-native-reanimated/plugin', // deixe por último
     ],
   };
