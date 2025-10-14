@@ -12,6 +12,7 @@ export default function ClientTabLayout() {
       screenOptions={{
         // tabBarActiveTintColor: Colors.tint, // Use suas constantes de cores
         headerShown: true, // Ou false se você tiver headers customizados nas telas
+        // @ts-ignore - duplicado intencional; manter último (false)
         headerShown: false,
       }}
     >
