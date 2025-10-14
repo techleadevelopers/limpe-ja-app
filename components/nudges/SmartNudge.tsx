@@ -51,6 +51,9 @@ type SmartNudgeProps = {
 
   /** Código associado ao nudge (opcional, para uso interno ou exibição) */
   code?: string; // <-- ADICIONADO: Propriedade 'code'
+
+  /** pointerEvents para o container (ex: 'box-none' para não bloquear interações subjacentes) */
+  pointerEvents?: 'auto' | 'none' | 'box-none' | 'box-only'; // <-- CORRIGIDO: Tipo literal específico do React Native (resolve erro TS)
 };
 
 const hoursSince = (iso?: string | null) => {
@@ -74,6 +77,7 @@ const SmartNudge: React.FC<SmartNudgeProps> = ({
   color = TOKENS.primary,
   namespace = 'generic',
   code, // <-- ADICIONADO: Desestruturar a prop 'code'
+  pointerEvents = 'box-none', // <-- CORRIGIDO: Fallback para valor literal válido ('box-none' é comum para nudges/overlays)
 }) => {
   const pathname = usePathname();
   const keyBase = useMemo(() => `nudge:${namespace}:${id}`, [id, namespace]);
@@ -154,7 +158,7 @@ const SmartNudge: React.FC<SmartNudgeProps> = ({
 
   return (
     <Animated.View
-      pointerEvents="box-none"
+      pointerEvents={pointerEvents} // <-- APLICADO: Agora com tipo literal válido (resolve erro TS)
       style={[
         styles.overlay,
         { opacity: fade, transform: [{ translateY: slide }], bottom: bottomOffset },
