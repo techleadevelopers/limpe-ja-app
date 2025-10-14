@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+﻿import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -23,31 +23,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Toast from '../../../components/Toast';
 
 import Colors from '../../../constants/Colors';
-
-// Mock Referral Service (replace with actual backend service)
-interface ReferralInfo {
-  referralCode: string;
-  referrerBenefit: string;
-  refereeBenefit: string;
-  termsLink: string;
-}
-
-const mockReferralData: ReferralInfo = {
-  referralCode: 'AMIGO2025',
-  referrerBenefit: 'R$25 OFF no seu próximo serviço',
-  refereeBenefit: 'R$25 OFF no primeiro serviço',
-  termsLink: 'https://example.com/termos-referral', // Placeholder link
-};
-
-const getReferralInfo = async (): Promise<ReferralInfo> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(mockReferralData);
-    }, 800);
-  });
-};
+import { getReferralInfo, type ReferralInfo } from '../../../services/referralService';
 
 // ---------- 3D ICONS (absolute paths) ----------
 const Icons3D = {
@@ -305,7 +284,10 @@ export default function ClientReferralScreen() {
   }
 
   // Subtle hero gradient (adapted from missions.tsx)
-  const heroGradient = [withAlpha(theme.cardBackground || '#FFFFFF', 1), withAlpha(theme.background || '#F6F8FB', 1)];
+  const heroGradient = [
+    withAlpha(theme.cardBackground || '#FFFFFF', 1),
+    withAlpha(theme.background || '#F6F8FB', 1),
+  ] as const; // tuple para satisfazer LinearGradient.colors
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
