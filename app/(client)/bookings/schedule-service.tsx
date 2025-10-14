@@ -1373,10 +1373,6 @@ export default function ScheduleServiceScreen() {
                     showsVerticalScrollIndicator={false}
                     nestedScrollEnabled={true} // ✅ FIX: Permite FlatList aninhada sem quebrar virtualização
                     removeClippedSubviews={false} // ✅ CORREÇÃO: Desabilitado para evitar clipping do FlatList filho (causa VirtualizedList warnings)
-                    maxToRenderPerBatch={10} // ✅ OTIMIZAÇÃO: Limita render inicial (reduz lag em listas grandes)
-                    windowSize={5} // ✅ OTIMIZAÇÃO: Renderiza só itens próximos (5 telas de buffer)
-                    // ✅ NOVO: Desabilita virtualização se necessário (mas mantido false para performance)
-                    disableVirtualization={false}
                     // ✅ FIX: Scroll inicial sempre no topo ao montar (evita problemas iniciais)
                     onContentSizeChange={() => {
                         if (currentStep === 1) {
