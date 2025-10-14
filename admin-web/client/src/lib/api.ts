@@ -101,7 +101,7 @@ const buildUnifiedError = (error: AxiosError) => {
     return {
         status: error.response?.status,
         messageKey: payload.messageKey ?? "errors.network.retry_saved",
-        message: payload.message ?? "We couldn�t complete this now. Your progress is safe; try again.",
+        message: payload.message ?? "We couldn’t complete this now. Your progress is safe; try again.",
         requestId: payload.requestId ?? error.response?.headers?.["x-request-id"],
         fieldErrors: payload.fieldErrors ?? null,
     };
@@ -173,7 +173,7 @@ export const fetchApi = async <T>(path: string, options: RequestInit = {}): Prom
         throw err;
     }
 };
-// --- Funções de Autenticação ---
+// --- FunÃ§Ãµes de AutenticaÃ§Ã£o ---
 export const login = async (credentials: { email: string; password: string }): Promise<AuthResponse> => {
     const response = await fetchApi<AuthResponse>('/auth/login', {
         method: 'POST',
@@ -187,7 +187,7 @@ export const logout = async (): Promise<void> => {
     localStorage.removeItem('userData');
 };
 
-// --- Funções de Dados Existentes ---
+// --- FunÃ§Ãµes de Dados Existentes ---
 export const fetchDashboardMetrics = async (): Promise<DashboardMetrics> => {
     return fetchApi('/admin/dashboard/metrics');
 };
@@ -197,7 +197,7 @@ export const fetchRevenueTrend = async (months?: number): Promise<RevenueTrendPo
     return fetchApi(`/admin/dashboard/revenue-trend${query}`);
 };
 
-// --- Funções de Provedores ---
+// --- FunÃ§Ãµes de Provedores ---
 export const fetchProviders = async (): Promise<Provider[]> => {
     return fetchApi('/providers');
 };
@@ -207,7 +207,7 @@ export const fetchProviderById = async (id: string): Promise<Provider> => {
 };
 
 /**
- * **CORREÇÃO AQUI:** Função para atualizar o status de verificação do provedor
+ * **CORREÃ‡ÃƒO AQUI:** FunÃ§Ã£o para atualizar o status de verificaÃ§Ã£o do provedor
  * Utiliza o endpoint PATCH /verification/:id/status
  */
 export const updateProviderStatus = async (
@@ -228,17 +228,17 @@ export const updateProviderProfile = async (id: string, data: Partial<Provider>)
     });
 };
 
-// --- Funções de Fila de Verificação ---
+// --- FunÃ§Ãµes de Fila de VerificaÃ§Ã£o ---
 export const fetchVerificationQueue = async (): Promise<Provider[]> => {
     return fetchApi('/verification/pending-queue');
 };
 
-// --- Funções de Atividades Recentes ---
+// --- FunÃ§Ãµes de Atividades Recentes ---
 export const fetchRecentActivities = async (limit: number = 10): Promise<Activity[]> => {
     return fetchApi(`/activities?limit=${limit}`);
 };
 
-// --- Funções de Clientes ---
+// --- FunÃ§Ãµes de Clientes ---
 export const fetchClients = async (): Promise<Client[]> => { return fetchApi("/users"); };
 
 export const fetchClientById = async (id: string): Promise<Client> => { return fetchApi(`/users/${id}`); };
@@ -250,7 +250,7 @@ export const updateClientProfile = async (id: string, data: Partial<Client>): Pr
     });
 };
 
-// --- Funções de Serviços Globais ---
+// --- FunÃ§Ãµes de ServiÃ§os Globais ---
 export const fetchServices = async (): Promise<Service[]> => {
     return fetchApi('/services');
 };
@@ -275,7 +275,7 @@ export const deleteService = async (id: string): Promise<void> => {
     });
 };
 
-// --- Funções de Serviços Oferecidos por Provedor ---
+// --- FunÃ§Ãµes de ServiÃ§os Oferecidos por Provedor ---
 export const fetchProviderServices = async (providerId: string): Promise<ProviderService[]> => {
     return fetchApi(`/providers/${providerId}/services`);
 };
@@ -300,7 +300,7 @@ export const deleteProviderService = async (providerId: string, serviceOfferingI
     });
 };
 
-// --- Funções de Disponibilidade do Provedor ---
+// --- FunÃ§Ãµes de Disponibilidade do Provedor ---
 export const fetchProviderAvailability = async (providerId: string): Promise<Availability[]> => {
     return fetchApi(`/providers/${providerId}/availability`);
 };
@@ -312,7 +312,7 @@ export const updateProviderAvailability = async (providerId: string, data: Parti
     });
 };
 
-// --- Funções de Agendamentos ---
+// --- FunÃ§Ãµes de Agendamentos ---
 export const fetchAllBookings = async (status?: BookingStatus): Promise<Booking[]> => {
     const query = status ? `?status=${status}` : '';
     return fetchApi(`/bookings${query}`);
@@ -329,7 +329,7 @@ export const updateBookingStatus = async (id: string, status: BookingStatus, not
     });
 };
 
-// --- Funções de Disputas ---
+// --- FunÃ§Ãµes de Disputas ---
 export const fetchAllDisputes = async (status?: DisputeStatus): Promise<Dispute[]> => {
     const query = status ? `?status=${status}` : '';
     return fetchApi(`/disputes${query}`);
@@ -353,7 +353,7 @@ export const sendDisputeMessage = async (disputeId: string, content: string): Pr
     });
 };
 
-// --- Funções de Assinaturas ---
+// --- FunÃ§Ãµes de Assinaturas ---
 export const fetchAllSubscriptions = async (status?: SubscriptionStatus): Promise<Subscription[]> => {
     const query = status ? `?status=${status}` : '';
     return fetchApi(`/subscriptions${query}`);
@@ -370,7 +370,7 @@ export const updateSubscription = async (id: string, data: Partial<Subscription>
     });
 };
 
-// --- Funções de Cupons ---
+// --- FunÃ§Ãµes de Cupons ---
 export const createCoupon = async (data: Omit<Coupon, 'id' | 'usesCount' | 'status' | 'createdAt' | 'updatedAt'>): Promise<Coupon> => {
     return fetchApi('/coupons', {
         method: 'POST',
@@ -396,7 +396,7 @@ export const deleteCoupon = async (id: string): Promise<void> => {
     });
 };
 
-// --- Funções de Missões ---
+// --- FunÃ§Ãµes de MissÃµes ---
 export const fetchMissions = async (status?: MissionStatus): Promise<Mission[]> => {
     const query = status ? `?status=${status}` : '';
     return fetchApi(`/missions${query}`);
@@ -423,7 +423,7 @@ export const deleteMission = async (id: string): Promise<void> => {
 };
 
 
-// --- Funções de Reclamações de Garantia ---
+// --- FunÃ§Ãµes de ReclamaÃ§Ãµes de Garantia ---
 export const fetchAllGuaranteeClaims = async (status?: ClaimStatus): Promise<GuaranteeClaim[]> => {
     const query = status ? `?status=${status}` : '';
     return fetchApi(`/guarantee/claims${query}`);
@@ -440,7 +440,7 @@ export const updateGuaranteeClaimStatus = async (id: string, status: ClaimStatus
     });
 };
 
-// --- Funções de Transações Financeiras ---
+// --- FunÃ§Ãµes de TransaÃ§Ãµes Financeiras ---
 export const fetchAllTransactions = async (type?: TransactionType, status?: string): Promise<Transaction[]> => {
     const queryParams = new URLSearchParams();
     if (type) queryParams.append('type', type);
@@ -456,7 +456,7 @@ export const initiateRefund = async (transactionId: string, amount?: number): Pr
     });
 };
 
-// --- Funções de Saques de Provedores ---
+// --- FunÃ§Ãµes de Saques de Provedores ---
 export const fetchWithdrawalRequests = async (status?: 'PENDING' | 'APPROVED' | 'REJECTED'): Promise<WithdrawalRequest[]> => {
     const query = status ? `?status=${status}` : '';
     return fetchApi(`/payments/withdrawals${query}`);
@@ -475,7 +475,7 @@ export const rejectWithdrawal = async (id: string, reason?: string): Promise<Wit
     });
 };
 
-// --- Funções de Chat (Monitoramento) ---
+// --- FunÃ§Ãµes de Chat (Monitoramento) ---
 export const fetchChatLogs = async (chatId?: string, searchTerm?: string, limit: number = 100): Promise<DisputeMessage[]> => {
     const queryParams = new URLSearchParams();
     if (chatId) queryParams.append('chatId', chatId);
@@ -485,7 +485,7 @@ export const fetchChatLogs = async (chatId?: string, searchTerm?: string, limit:
     return fetchApi(`/chat/logs${query}`);
 };
 
-// --- Funções de Notificações Push ---
+// --- FunÃ§Ãµes de NotificaÃ§Ãµes Push ---
 export const sendNotification = async (data: { userId?: string; providerId?: string; title: string; message: string; imageUrl?: string; actionButtons?: any[] }): Promise<any> => {
     return fetchApi('/notifications/send', {
         method: 'POST',
@@ -500,7 +500,7 @@ export const scheduleNotification = async (data: { userId?: string; providerId?:
     });
 };
 
-// --- Funções de Avaliações ---
+// --- FunÃ§Ãµes de AvaliaÃ§Ãµes ---
 export const fetchAllReviews = async (providerId?: string, clientId?: string): Promise<Review[]> => {
     const queryParams = new URLSearchParams();
     if (providerId) queryParams.append('providerId', providerId);
@@ -524,7 +524,7 @@ export const respondToReview = async (reviewId: string, response: string): Promi
     });
 };
 
-// --- Funções de Regras de Precificação Dinâmica ---
+// --- FunÃ§Ãµes de Regras de PrecificaÃ§Ã£o DinÃ¢mica ---
 export const createPricingRule = async (data: Omit<PricingRule, 'id' | 'createdAt' | 'updatedAt'>): Promise<PricingRule> => {
     return fetchApi('/pricing/rules', {
         method: 'POST',
@@ -549,7 +549,7 @@ export const deletePricingRule = async (id: string): Promise<void> => {
     });
 };
 
-// --- Funções de Ofertas/Promoções ---
+// --- FunÃ§Ãµes de Ofertas/PromoÃ§Ãµes ---
 export const createOffer = async (data: Omit<Offer, 'id' | 'createdAt' | 'updatedAt'>): Promise<Offer> => {
     return fetchApi('/offers', {
         method: 'POST',
@@ -574,7 +574,7 @@ export const deleteOffer = async (id: string): Promise<void> => {
     });
 };
 
-// --- Funções de FAQs ---
+// --- FunÃ§Ãµes de FAQs ---
 export const createFAQ = async (data: Omit<FAQItem, 'id' | 'createdAt' | 'updatedAt'>): Promise<FAQItem> => {
     return fetchApi('/faqs', {
         method: 'POST',
@@ -599,7 +599,7 @@ export const deleteFAQ = async (id: string): Promise<void> => {
     });
 };
 
-// --- Funções de Indicações ---
+// --- FunÃ§Ãµes de IndicaÃ§Ãµes ---
 export const fetchAllReferrals = async (status?: ReferralStatus): Promise<Referral[]> => {
     const query = status ? `?status=${status}` : '';
     return fetchApi(`/referrals${query}`);
@@ -623,7 +623,7 @@ export const issueReferralReward = async (id: string): Promise<Referral> => {
 };
 
 
-// --- Funções de Alertas de Segurança ---
+// --- FunÃ§Ãµes de Alertas de SeguranÃ§a ---
 export const fetchPanicAlerts = async (status?: string): Promise<PanicAlert[]> => {
     const query = status ? `?status=${status}` : '';
     return fetchApi(`/safety/panic-alerts${query}`);
@@ -648,13 +648,13 @@ export const updateIncidentStatus = async (id: string, status: IncidentStatus, r
     });
 };
 
-// --- Funções de LGPD: Gestão de Consentimentos ---
+// --- FunÃ§Ãµes de LGPD: GestÃ£o de Consentimentos ---
 export const fetchUserConsents = async (userId?: string): Promise<UserConsent[]> => {
     const query = userId ? `?userId=${userId}` : '';
     return fetchApi(`/users/consents${query}`);
 };
 
-// --- Funções de LGPD: Solicitações de Exportação/Exclusão ---
+// --- FunÃ§Ãµes de LGPD: SolicitaÃ§Ãµes de ExportaÃ§Ã£o/ExclusÃ£o ---
 export const fetchDataRequests = async (type?: 'EXPORT' | 'DELETION', status?: string): Promise<DataRequest[]> => {
     const queryParams = new URLSearchParams();
     if (type) queryParams.append('type', type);
@@ -670,7 +670,7 @@ export const updateDataRequestStatus = async (id: string, status: string): Promi
     });
 };
 
-// --- Funções de Monitoramento de Workers/Filas ---
+// --- FunÃ§Ãµes de Monitoramento de Workers/Filas ---
 export const fetchQueueStatus = async (): Promise<QueueInfo[]> => {
     return fetchApi('/admin/queues/status');
 };
@@ -684,9 +684,9 @@ export const retryQueueJob = async (queueName: string, jobId: string): Promise<a
     return fetchApi(`/admin/queues/${queueName}/jobs/${jobId}/retry`, { method: 'POST' });
 };
 
-// Tipos adicionais (já estavam no seu arquivo, apenas mantidos)
-// Estes tipos devem ser removidos daqui se já estiverem definidos em './types.ts'
-// Eles estão aqui no original para compatibilidade, mas a fonte da verdade é o './types.ts'
+// Tipos adicionais (jÃ¡ estavam no seu arquivo, apenas mantidos)
+// Estes tipos devem ser removidos daqui se jÃ¡ estiverem definidos em './types.ts'
+// Eles estÃ£o aqui no original para compatibilidade, mas a fonte da verdade Ã© o './types.ts'
 /*
 export type FAQItem = {
     id: string;
@@ -724,5 +724,3 @@ export type Review = {
     booking?: Booking;
 };
 */
-
-
