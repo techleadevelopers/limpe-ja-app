@@ -534,6 +534,7 @@ export default function ExploreClientScreen() {
         {/* FlatList ÚNICO com TODO o conteúdo no ListHeaderComponent */}
         <FlatList
           data={[]} // Header-only: data vazia, mas header rola tudo
+          renderItem={() => null} // ✅ FIX: Adicionado renderItem dummy para FlatList header-only (evita erro TS)
           keyExtractor={() => 'header-only'}
           ListHeaderComponent={(
             <>
