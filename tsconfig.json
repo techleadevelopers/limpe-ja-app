@@ -1,30 +1,30 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    // Sinalizadores de segurança
+    // Segurança
     "strict": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
 
-    // Interop ESM/CJS para evitar _interopNamespace e afins
+    // ESM/CJS
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
 
-    // RN + Web (TS 5): bundlers (Metro/Vite/webpack) resolvem módulos
+    // RN + Web (TS 5+)
     "module": "esnext",
-    "moduleResolution": "Bundler",
+    "moduleResolution": "bundler",
 
-    // Web precisa de DOM; ESNext para features modernas
-    "target": "ESNext",
-    "lib": ["ESNext", "DOM"],
+    // Alvos modernos
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
     "jsx": "react-jsx",
 
-    // Qualidade de vida
+    // QoL
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
 
-    // Base da resolução e aliases
+    // Base/aliases
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"],
@@ -37,10 +37,9 @@
     },
 
     // Dicas de tipos por ambiente
-    "types": ["react", "react-native", "expo-env", "jest"]
+    "types": ["react", "react-native", "expo", "expo-router", "jest"]
   },
 
-  // Mantenha o app do Expo focado no que ele realmente precisa
   "include": [
     "app/**/*.ts",
     "app/**/*.tsx",
@@ -49,13 +48,15 @@
     "constants/**/*.ts",
     "constants/**/*.tsx",
     "types/**/*.ts",
-    "expo-env.d.ts",
-    ".expo/types/**/*.ts",
-    // se você tem hooks/libs compartilhadas no raiz do app:
     "services/**/*.ts",
     "services/**/*.tsx",
     "hooks/**/*.ts",
-    "hooks/**/*.tsx"
+    "hooks/**/*.tsx",
+    "expo-env.d.ts",
+    ".expo/types/**/*.ts",
+    "index.ts",
+    "index.tsx",
+    "global.d.ts"
   ],
   "exclude": [
     "node_modules",
@@ -63,12 +64,15 @@
     "dist",
     "build",
 
-    // 🔥 muito importante para evitar ruído/ESM conflicts
+    // mantém fora para não confundir o TS do app
     "admin-web/**",
     "backend-cleaning/**",
 
-    // pastas de tooling/ci se existirem
-    "scripts",
-    "e2e"
+    // tooling/ci se existir
+    "e2e",
+
+    // backups/rascunhos
+    "**/*.backup.ts",
+    "**/*.backup.tsx"
   ]
 }
