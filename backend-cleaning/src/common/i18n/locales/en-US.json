@@ -1,5 +1,8 @@
 ﻿{
     "translation":  {
+                        "profile": {
+                          "phone_invalid": "Invalid phone. Expected format (XX) XXXXX-XXXX."
+                        },
                         "common":  {
                                        "loading":  "Loading...",
                                        "error":  "Error",
