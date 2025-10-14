@@ -15,7 +15,8 @@
     "detox:test:ios": "detox test --configuration ios.sim.debug",
     "detox:build:android": "detox build --configuration android.emu.debug",
     "detox:test:android": "detox test --configuration android.emu.debug",
-    "postinstall": "node ./scripts/postinstall.js"
+    "eas-build-post-install": "node -e \"console.log('skip postinstall'); process.exit(0)\"",
+    "schema": "backend-cleaning/prisma/schema.prisma"
   },
   "overrides": {
     "react-native-safe-area-context": "5.6.0",
