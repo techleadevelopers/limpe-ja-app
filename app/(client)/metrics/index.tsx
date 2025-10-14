@@ -354,15 +354,18 @@ export default function ClientMetricsScreen() {
               {funnel ? (
                 <View style={[styles.sectionCard, { backgroundColor: theme.cardBackground }]}>
                   <Text style={[styles.cardTitle, { color: theme.text }]}>{t('metrics.funnel_title', { defaultValue: 'Funil de Conversão' })}</Text>
-                  {funnel.steps.map((step, index) => (
+                  {funnel.steps.map((step, index) => {
+                    const pct = Number.isFinite(step.percentage as any) ? Number(step.percentage) : 0;
+                    const safePct = Math.max(0, Math.min(100, pct));
+                    return (
                     <View key={index} style={styles.funnelItem}>
                       <Text style={[styles.funnelLabel, { color: theme.text }]}>{step.name}</Text>
-                      <Text style={[styles.funnelValue, { color: theme.textMuted }]}>{step.count} ({step.percentage.toFixed(1)}%)</Text>
+                      <Text style={[styles.funnelValue, { color: theme.textMuted }]}>{step.count} ({safePct.toFixed(1)}%)</Text>
                       <View style={[styles.funnelProgressBarContainer, { backgroundColor: withAlpha(theme.textMuted, 0.2) }]}>
-                        <View style={[styles.funnelProgressBar, { width: `${step.percentage}%`, backgroundColor: theme.primary }]} />
+                        <View style={[styles.funnelProgressBar, { width: `${safePct}%`, backgroundColor: theme.primary }]} />
                       </View>
                     </View>
-                  ))}
+                  )})}
                 </View>
               ) : (
                 <View style={[styles.sectionCard, { backgroundColor: theme.cardBackground }]}>
