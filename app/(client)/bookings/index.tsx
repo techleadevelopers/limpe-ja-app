@@ -19,30 +19,30 @@ import {
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Image } from 'expo-image'; // NOVO: Para cache e loading suave em produção
+import { Image } from 'expo-image'; // NOVO: Para cache e loading suave em produÃƒÂ§ÃƒÂ£o
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ColorValue } from 'react-native'; // Para tipagem explícita de cores no LinearGradient
+import { ColorValue } from 'react-native'; // Para tipagem explÃƒÂ­cita de cores no LinearGradient
 import axios, { AxiosError } from 'axios'; // CORRIGIDO: Import AxiosError para type guard (resolve TS2872)
 
-// Importar utilitários de formatação e normalização
+// Importar utilitÃƒÂ¡rios de formataÃƒÂ§ÃƒÂ£o e normalizaÃƒÂ§ÃƒÂ£o
 import { formatPriceBRL, formatDateTime, sanitizeText } from '../../../utils/formatters';
 import { normalizeBooking } from '../../../utils/normalize';
 
 import { useAuth } from '../../../hooks/useAuth';
 import { getBookingsForUser } from '../../../services/bookingService';
-import { getProviderAvatar } from '../../../services/providerService'; // NOVO: Assuma que existe (crie se necessário)
+import { getProviderAvatar } from '../../../services/providerService'; // NOVO: Assuma que existe (crie se necessÃƒÂ¡rio)
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 import { AppColors, AppShadows } from '../../../constants/appStyles';
 
-// INJEÇÃO: Import do Navbar premium animado de explore/home (agora como bottom nav)
+// INJEÃƒâ€¡ÃƒÆ’O: Import do Navbar premium animado de explore/home (agora como bottom nav)
 import Navbar from '../../../components/client/explore/home/NavBar'; // Caminho ajustado para components/explore/home/navbar
 
-// DEFINE O TIPO DE FILTRO GLOBALMENTE PARA CONSISTÊNCIA
+// DEFINE O TIPO DE FILTRO GLOBALMENTE PARA CONSISTÃƒÅ NCIA
 type FilterType = 'requests' | 'upcoming' | 'completed' | 'cancelled';
 
-// CORRIGIDO TS2872: Type guard robusto para AxiosError (não mais "sempre verdadeiro")
+// CORRIGIDO TS2872: Type guard robusto para AxiosError (nÃƒÂ£o mais "sempre verdadeiro")
 const isAxiosError = (error: unknown): error is AxiosError => {
-  return axios.isAxiosError(error);  // Usa a função built-in, mas com type guard custom para narrowing
+  return axios.isAxiosError(error);  // Usa a funÃƒÂ§ÃƒÂ£o built-in, mas com type guard custom para narrowing
 };
 
 const TOP_HAIRLINE   = Platform.OS === 'android' ? 1 : StyleSheet.hairlineWidth;
@@ -56,11 +56,11 @@ const getTranslatedStatus = (status: BookingStatus): string => {
     case BookingStatus.PENDING:
       return 'Pendente';
     case BookingStatus.PENDING_PROVIDER_CONFIRMATION:
-      return 'Aguardando Confirmação';
+      return 'Aguardando ConfirmaÃƒÂ§ÃƒÂ£o';
     case BookingStatus.IN_PROGRESS:
       return 'Em Andamento';
     case BookingStatus.COMPLETED:
-      return 'Concluído';
+      return 'ConcluÃƒÂ­do';
     case BookingStatus.CANCELLED:
       return 'Cancelado';
     case BookingStatus.REJECTED:
@@ -68,14 +68,14 @@ const getTranslatedStatus = (status: BookingStatus): string => {
     case BookingStatus.RESCHEDULED:
       return 'Reagendado';
     case BookingStatus.NO_SHOW:
-      return 'Não Compareceu';
+      return 'NÃƒÂ£o Compareceu';
     default:
       return 'Desconhecido';
   }
 };
 
-// Função unificada para renderizar avatar REAL (atualizada para produção com expo-image e loading/error)
-// CORREÇÃO TS2339: onError usa e.error (string), não e.nativeEvent.error
+// FunÃƒÂ§ÃƒÂ£o unificada para renderizar avatar REAL (atualizada para produÃƒÂ§ÃƒÂ£o com expo-image e loading/error)
+// CORREÃƒâ€¡ÃƒÆ’O TS2339: onError usa e.error (string), nÃƒÂ£o e.nativeEvent.error
 const renderProviderAvatar = (avatarUrl?: string | null, size: number = 60) => {
   const [imageError, setImageError] = useState(false); // Estado local para erro (loading gerenciado por expo-image)
 
@@ -94,23 +94,23 @@ const renderProviderAvatar = (avatarUrl?: string | null, size: number = 60) => {
       source={{ uri: avatarUrl }}
       style={[styles.avatarImage, { width: size, height: size, borderRadius: size / 2 }]}
       contentFit="cover"
-      cachePolicy="memory-disk" // Cache para produção (rápido/offline)
+      cachePolicy="memory-disk" // Cache para produÃƒÂ§ÃƒÂ£o (rÃƒÂ¡pido/offline)
       placeholder={null} // Opcional: blurhash do backend para loading suave
       transition={1000} // Fade in suave
       onError={(e) => {
-        // CORREÇÃO: Usa e.error (string do ImageErrorEventData), não nativeEvent
+        // CORREÃƒâ€¡ÃƒÆ’O: Usa e.error (string do ImageErrorEventData), nÃƒÂ£o nativeEvent
         setImageError(true);
         if (__DEV__) console.log('Erro carregando avatar real (bookings):', e.error);
       }}
       onLoad={() => {
         if (__DEV__) console.log('Avatar real carregado com sucesso!');
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); // Feedback tátil em prod
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); // Feedback tÃƒÂ¡til em prod
       }}
     />
   );
 };
 
-// CORREÇÃO TS: Definição de gradients como tuples readonly (as const) para compatibilidade com ColorValue[]
+// CORREÃƒâ€¡ÃƒÆ’O TS: DefiniÃƒÂ§ÃƒÂ£o de gradients como tuples readonly (as const) para compatibilidade com ColorValue[]
 const gradients = {
   confirmed: ['#D4EDDA', '#C3E6CB'] as const,
   pending: ['#FFF3CD', '#FFEAA7'] as const,
@@ -121,14 +121,14 @@ const gradients = {
   rescheduled: ['#EAE6F3', '#D7CFF0'] as const, // Adicionado
 } as const;
 
-// Componente para um item da lista de agendamentos com animação de entrada e feedback de toque
+// Componente para um item da lista de agendamentos com animaÃƒÂ§ÃƒÂ£o de entrada e feedback de toque
 // ALINHADO: Completo, com avatar real integrado e getStatusStyle corrigido
 const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = ({ item, index }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const floatAnim = useRef(new Animated.Value(0)).current;
   const pressScaleAnim = useRef(new Animated.Value(1)).current;
-  const router = useRouter(); // Para navegação
+  const router = useRouter(); // Para navegaÃƒÂ§ÃƒÂ£o
 
   useEffect(() => {
     const entryAnimation = Animated.parallel([
@@ -193,13 +193,13 @@ const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = (
     }).start();
   }, [pressScaleAnim]);
 
-  // CORREÇÃO TS: getStatusStyle com retorno tipado (gradient como readonly string[])
+  // CORREÃƒâ€¡ÃƒÆ’O TS: getStatusStyle com retorno tipado (gradient como readonly string[])
   const getStatusStyle = (status: BookingStatus) => {
     switch (status) {
       case BookingStatus.CONFIRMED:
         return {
           text: AppColors.successStandard,
-          gradient: gradients.confirmed, // Tuple readonly compatível
+          gradient: gradients.confirmed, // Tuple readonly compatÃƒÂ­vel
           icon: 'checkmark-circle-outline' as const,
           iconColor: AppColors.successStandard,
           badgeIcon: 'checkmark-circle' as const,
@@ -281,7 +281,7 @@ const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = (
 
   const statusInfo = getStatusStyle(item.status);
 
-  // Integração: Sempre usa avatar real do provider ou placeholder (com log)
+  // IntegraÃƒÂ§ÃƒÂ£o: Sempre usa avatar real do provider ou placeholder (com log)
   const getBookingItemMainIcon = (providerAvatarUrl: string | undefined | null) => {
     if (__DEV__) console.log('Integrando avatar real no booking card:', providerAvatarUrl);
     return renderProviderAvatar(providerAvatarUrl, 60);
@@ -293,7 +293,7 @@ const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = (
           `${item.address.complement ? ` - ${item.address.complement}` : ''}` +
           `, ${item.address.neighborhood}, ${item.address.city} - ${item.address.state}`
       )
-    : 'Endereço não disponível';
+    : 'EndereÃƒÂ§o nÃƒÂ£o disponÃƒÂ­vel';
 
   return (
     <Animated.View
@@ -310,14 +310,14 @@ const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = (
       ]}>
       <BlurView intensity={Platform.OS === 'ios' ? 20 : 40} tint="light" style={StyleSheet.absoluteFillObject} />
       <LinearGradient
-        colors={['#F9FBFF', '#E6F0FF'] as const} // CORREÇÃO: as const para compatibilidade TS
+        colors={['#F9FBFF', '#E6F0FF'] as const} // CORREÃƒâ€¡ÃƒÆ’O: as const para compatibilidade TS
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFillObject}
       />
       <Link href={`/(client)/bookings/${item.id}`} asChild>
         <TouchableOpacity style={styles.itemCardContent} onPressIn={onPressInHandler} onPressOut={onPressOutHandler}>
-          {/* Avatar real integrado à esquerda */}
+          {/* Avatar real integrado ÃƒÂ  esquerda */}
           <View style={styles.avatarContainer}>{getBookingItemMainIcon(item.providerAvatarUrl)}</View>
 
           {/* Infos no centro */}
@@ -354,7 +354,7 @@ const AnimatedBookingItem: React.FC<{ item: BookingDetails; index: number }> = (
             </View>
           </View>
 
-          {/* Badge de status - CORREÇÃO: colors agora é tuple compatível */}
+          {/* Badge de status - CORREÃƒâ€¡ÃƒÆ’O: colors agora ÃƒÂ© tuple compatÃƒÂ­vel */}
           <LinearGradient
             colors={statusInfo.gradient} // TS aceita como readonly string[]
             start={{ x: 0, y: 0 }}
@@ -381,16 +381,16 @@ export default function MyBookingsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterType>('upcoming');
-  const [headerTitle, setHeaderTitle] = useState('Meus Agendamentos'); // NOVO: Estado para título dinâmico
+  const [headerTitle, setHeaderTitle] = useState('Meus Agendamentos'); // NOVO: Estado para tÃƒÂ­tulo dinÃƒÂ¢mico
   const insets = useSafeAreaInsets();
 
-  // INJEÇÃO: Animações premium para o Bottom Navbar (fade, slide up from bottom e glow)
+  // INJEÃƒâ€¡ÃƒÆ’O: AnimaÃƒÂ§ÃƒÂµes premium para o Bottom Navbar (fade, slide up from bottom e glow)
   const navbarFadeAnim = useRef(new Animated.Value(0)).current;
-  const navbarSlideAnim = useRef(new Animated.Value(80)).current; // Começa fora da tela (de baixo)
+  const navbarSlideAnim = useRef(new Animated.Value(80)).current; // ComeÃƒÂ§a fora da tela (de baixo)
   const navbarGlowAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Animação de entrada premium para o Bottom Navbar (slide up + fade + glow loop)
+    // AnimaÃƒÂ§ÃƒÂ£o de entrada premium para o Bottom Navbar (slide up + fade + glow loop)
     Animated.parallel([
       Animated.timing(navbarFadeAnim, {
         toValue: 1,
@@ -398,9 +398,7 @@ export default function MyBookingsScreen() {
         easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }),
-      Animated.spring(navbarSlideAnim, {
-        toValue: 0,
-        duration: 800,
+      Animated.spring(navbarSlideAnim, { toValue: 0,
         useNativeDriver: true,
         friction: 8,
         tension: 100,
@@ -411,7 +409,7 @@ export default function MyBookingsScreen() {
             toValue: 1,
             duration: 2000,
             easing: Easing.inOut(Easing.ease),
-            useNativeDriver: false, // Glow não usa native driver
+            useNativeDriver: false, // Glow nÃƒÂ£o usa native driver
           }),
           Animated.timing(navbarGlowAnim, {
             toValue: 0,
@@ -430,9 +428,9 @@ export default function MyBookingsScreen() {
   }, [navbarFadeAnim, navbarSlideAnim, navbarGlowAnim]);
 
   const filters: Array<{ label: string; value: FilterType; icon: keyof typeof Ionicons.glyphMap }> = [
-    { label: 'Solicitações', value: 'requests', icon: 'hourglass-outline' },
-    { label: 'Próximos', value: 'upcoming', icon: 'calendar-outline' },
-    { label: 'Histórico', value: 'completed', icon: 'checkmark-done-outline' },
+    { label: 'SolicitaÃƒÂ§ÃƒÂµes', value: 'requests', icon: 'hourglass-outline' },
+    { label: 'PrÃƒÂ³ximos', value: 'upcoming', icon: 'calendar-outline' },
+    { label: 'HistÃƒÂ³rico', value: 'completed', icon: 'checkmark-done-outline' },
     { label: 'Cancelados', value: 'cancelled', icon: 'close-circle-outline' },
   ];
 
@@ -463,12 +461,12 @@ export default function MyBookingsScreen() {
     });
   }, [filterButtonAnims]);
 
-  // ATUALIZADO: Função para carregar bookings com normalizeBooking e fetch paralelo de avatars se null
+  // ATUALIZADO: FunÃƒÂ§ÃƒÂ£o para carregar bookings com normalizeBooking e fetch paralelo de avatars se null
   const loadBookings = useCallback(
     async (currentFilter: FilterType, refreshing: boolean = false) => {
       if (!refreshing) {
         setIsLoading(true);
-        setHeaderTitle('Carregando Agendamentos...'); // Atualiza título no loading
+        setHeaderTitle('Carregando Agendamentos...'); // Atualiza tÃƒÂ­tulo no loading
       }
       setBookings([]);
 
@@ -479,9 +477,9 @@ export default function MyBookingsScreen() {
         useNativeDriver: true,
       }).start(async () => {
         if (!user?.id) {
-          console.warn("[MyBookingsScreen] User ID ausente, não foi possível carregar agendamentos.");
+          console.warn("[MyBookingsScreen] User ID ausente, nÃƒÂ£o foi possÃƒÂ­vel carregar agendamentos.");
           setIsLoading(false);
-          setHeaderTitle('Meus Agendamentos'); // Restaura título
+          setHeaderTitle('Meus Agendamentos'); // Restaura tÃƒÂ­tulo
           setIsRefreshing(false);
           return;
         }
@@ -489,14 +487,14 @@ export default function MyBookingsScreen() {
         try {
           let rawBookings: any[] = [];
 
-          // ATUALIZADO: Função com fetch paralelo de avatars
+          // ATUALIZADO: FunÃƒÂ§ÃƒÂ£o com fetch paralelo de avatars
           const getAndNormalizeWithAvatar = async (status: BookingStatus) => {
             const bookings = await getBookingsForUser(status);
             let normalized = bookings.map(normalizeBooking);
             
-            // Fetch paralelo de avatars para produção (se backend não incluir)
+            // Fetch paralelo de avatars para produÃƒÂ§ÃƒÂ£o (se backend nÃƒÂ£o incluir)
             const avatarPromises = normalized
-              .filter(b => !b.providerAvatarUrl) // Só se null
+              .filter(b => !b.providerAvatarUrl) // SÃƒÂ³ se null
               .map(async (b) => {
                 try {
                   const avatar = await getProviderAvatar(b.providerId); // Fetch extra
@@ -554,23 +552,23 @@ export default function MyBookingsScreen() {
           }
 
           setBookings(filteredAndSortedBookings);
-          setHeaderTitle('Meus Agendamentos'); // Restaura título após load
+          setHeaderTitle('Meus Agendamentos'); // Restaura tÃƒÂ­tulo apÃƒÂ³s load
           if (refreshing) Alert.alert('Sucesso', 'Agendamentos atualizados!');
         } catch (err: unknown) {  // CORRIGIDO: Tipagem unknown para type guard
-          // CORREÇÃO TS2872: Type guard com isAxiosError para evitar "sempre verdadeiro"
+          // CORREÃƒâ€¡ÃƒÆ’O TS2872: Type guard com isAxiosError para evitar "sempre verdadeiro"
           console.error('Erro ao buscar agendamentos:', err);
-          let errorMessage = 'Não foi possível carregar seus agendamentos.';
+          let errorMessage = 'NÃƒÂ£o foi possÃƒÂ­vel carregar seus agendamentos.';
           if (isAxiosError(err) && err.response) {
-            // Só acessa response se for AxiosError (guarda o tipo)
+            // SÃƒÂ³ acessa response se for AxiosError (guarda o tipo)
             errorMessage = (err.response.data as any)?.message || err.message || errorMessage;
-          } else if (err instanceof Error) {  // Fallback para Error genérico
+          } else if (err instanceof Error) {  // Fallback para Error genÃƒÂ©rico
             errorMessage = err.message || errorMessage;
           }
           Alert.alert(
             'Erro',
             sanitizeText(errorMessage)
           );
-          setHeaderTitle('Erro ao Carregar'); // Título para erro
+          setHeaderTitle('Erro ao Carregar'); // TÃƒÂ­tulo para erro
         } finally {
           setIsLoading(false);
           setIsRefreshing(false);
@@ -624,8 +622,8 @@ export default function MyBookingsScreen() {
     let iconName: keyof typeof Ionicons.glyphMap = 'help-circle-outline';
 
     if (activeFilter === 'requests') {
-      title = 'Nenhuma solicitação de agendamento.';
-      subText = 'Parece que você não fez nenhum pedido pendente ainda.';
+      title = 'Nenhuma solicitaÃƒÂ§ÃƒÂ£o de agendamento.';
+      subText = 'Parece que vocÃƒÂª nÃƒÂ£o fez nenhum pedido pendente ainda.';
       iconName = 'hourglass-outline';
       ctaButton = (
         <Animated.View
@@ -644,8 +642,8 @@ export default function MyBookingsScreen() {
         </Animated.View>
       );
     } else if (activeFilter === 'upcoming') {
-      title = 'Você não tem serviços futuros agendados.';
-      subText = 'Explore e agende novos serviços para vê-los aqui!';
+      title = 'VocÃƒÂª nÃƒÂ£o tem serviÃƒÂ§os futuros agendados.';
+      subText = 'Explore e agende novos serviÃƒÂ§os para vÃƒÂª-los aqui!';
       iconName = 'calendar-outline';
       ctaButton = (
         <Animated.View
@@ -655,18 +653,18 @@ export default function MyBookingsScreen() {
           }}>
           <TouchableOpacity style={styles.exploreButton} onPress={() => router.push('/(client)/explore' as any)}>
             <Text style={styles.exploreButtonText} maxFontSizeMultiplier={1.2}>
-              Explorar Serviços
+              Explorar ServiÃƒÂ§os
             </Text>
           </TouchableOpacity>
         </Animated.View>
       );
     } else if (activeFilter === 'completed') {
-      title = 'Seu histórico de serviços está vazio.';
-      subText = 'Comece a agendar e concluir serviços para vê-los aqui!';
+      title = 'Seu histÃƒÂ³rico de serviÃƒÂ§os estÃƒÂ¡ vazio.';
+      subText = 'Comece a agendar e concluir serviÃƒÂ§os para vÃƒÂª-los aqui!';
       iconName = 'archive-outline';
     } else if (activeFilter === 'cancelled') {
-      title = 'Nenhum serviço cancelado.';
-      subText = 'Serviços cancelados ou recusados aparecerão aqui.';
+      title = 'Nenhum serviÃƒÂ§o cancelado.';
+      subText = 'ServiÃƒÂ§os cancelados ou recusados aparecerÃƒÂ£o aqui.';
       iconName = 'close-circle-outline';
     }
 
@@ -708,29 +706,29 @@ export default function MyBookingsScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: Platform.OS === 'ios' ? insets.top + 10 : 10, paddingBottom: insets.bottom + 80 }]}>
-      {/* ✅ HEADER SUPERIOR: Restaurado com Stack.Screen (título dinâmico, back custom, clean) */}
+      {/* Ã¢Å“â€¦ HEADER SUPERIOR: Restaurado com Stack.Screen (tÃƒÂ­tulo dinÃƒÂ¢mico, back custom, clean) */}
       <Stack.Screen
         options={{
-          title: headerTitle, // Usa estado dinâmico (ex: muda no loading)
+          title: headerTitle, // Usa estado dinÃƒÂ¢mico (ex: muda no loading)
           headerShown: true,
           headerTitleAlign: 'center', // Centraliza no iOS
           headerTitleStyle: {
-            fontFamily: 'Montserrat-SemiBold' || 'System',
+            fontFamily: 'Montserrat-SemiBold',
             fontSize: 20,
             color: AppColors.textBody,
           },
           headerStyle: {
             backgroundColor: AppColors.white,
-            // Removida borda azul — visual clean/neutro
+            // Removida borda azul Ã¢â‚¬â€ visual clean/neutro
           },
-          headerShadowVisible: false, // Sem sombra — look moderno
-          headerBackTitleVisible: false, // iOS: Sem texto "Back"
+          headerShadowVisible: false, // Sem sombra Ã¢â‚¬â€ look moderno
+          headerBackButtonDisplayMode: 'minimal', // iOS: Sem texto "Back"
           headerTintColor: AppColors.primaryInteractive,
           headerLeft: () => (
             <TouchableOpacity
               onPress={() => router.back()}
-              style={{ paddingVertical: 10, paddingHorizontal: 12 }} // Área de toque confortável
-              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }} // Toque expandido (≥44dp)
+              style={{ paddingVertical: 10, paddingHorizontal: 12 }} // ÃƒÂrea de toque confortÃƒÂ¡vel
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }} // Toque expandido (Ã¢â€°Â¥44dp)
               activeOpacity={0.7}
               accessibilityRole="button"
               accessibilityLabel="Voltar"
@@ -741,10 +739,10 @@ export default function MyBookingsScreen() {
         }}
       />
 
-      {/* ✅ NOVO: Bloco "Filtrar" com título + sub (visível, respirável) */}
+      {/* Ã¢Å“â€¦ NOVO: Bloco "Filtrar" com tÃƒÂ­tulo + sub (visÃƒÂ­vel, respirÃƒÂ¡vel) */}
       <View style={styles.filterHeaderRow}>
         <Text style={styles.filterHeaderTitle}>Filtrar</Text>
-        <Text style={styles.filterHeaderSub}>Selecione uma opção</Text>
+        <Text style={styles.filterHeaderSub}>Selecione uma opÃƒÂ§ÃƒÂ£o</Text>
       </View>
 
       <View style={[styles.filterContainer, { marginTop: Platform.OS === 'ios' ? 10 : 5 }]}>
@@ -759,7 +757,7 @@ export default function MyBookingsScreen() {
               onPressIn={() => onPressInFilterButton(index)}
               onPressOut={onPressOutFilterButton}
               accessibilityRole="button"
-              accessibilityLabel={`Filtrar por ${filterItem.label}`} // A11y: Label dinâmico
+              accessibilityLabel={`Filtrar por ${filterItem.label}`} // A11y: Label dinÃƒÂ¢mico
             >
               <Ionicons
                 name={filterItem.icon}
@@ -795,7 +793,7 @@ export default function MyBookingsScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={[
             styles.listContentContainer,
-            { paddingBottom: 100 }, // Espaço extra para bottom nav (altura ~80dp + safe area)
+            { paddingBottom: 100 }, // EspaÃƒÂ§o extra para bottom nav (altura ~80dp + safe area)
           ]}
           showsVerticalScrollIndicator={false} // Clean: Sem indicador vertical
           refreshControl={
@@ -816,7 +814,7 @@ export default function MyBookingsScreen() {
         <EmptyListFeedback />
       )}
 
-      {/* INJEÇÃO: Bottom Navbar premium animado integrado na parte inferior */}
+      {/* INJEÃƒâ€¡ÃƒÆ’O: Bottom Navbar premium animado integrado na parte inferior */}
       <Animated.View
         style={[
           styles.navbarContainer,
@@ -847,11 +845,11 @@ export default function MyBookingsScreen() {
           ]}
         />
         <Navbar
-          title={headerTitle} // Passa o título dinâmico (se o bottom nav suportar; opcional)
-          onBackPress={() => router.back()} // Callback para back (se aplicável no bottom nav)
+          title={headerTitle} // Passa o tÃƒÂ­tulo dinÃƒÂ¢mico (se o bottom nav suportar; opcional)
+          onBackPress={() => router.back()} // Callback para back (se aplicÃƒÂ¡vel no bottom nav)
           showSearch={false} // Customiza para bookings (sem search)
-          showNotifications={true} // Opcional: Mostra notificações se o Navbar suportar
-          animated={true} // Flag para ativar animações internas no Navbar
+          showNotifications={true} // Opcional: Mostra notificaÃƒÂ§ÃƒÂµes se o Navbar suportar
+          animated={true} // Flag para ativar animaÃƒÂ§ÃƒÂµes internas no Navbar
           currentRoute="bookings" // Adicione prop para destacar a aba "bookings" no bottom nav
         />
       </Animated.View>
@@ -864,15 +862,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: AppColors.backgroundLight,
   },
-  // INJEÇÃO: Estilos para o Bottom Navbar premium animado (posição inferior)
+  // INJEÃƒâ€¡ÃƒÆ’O: Estilos para o Bottom Navbar premium animado (posiÃƒÂ§ÃƒÂ£o inferior)
   navbarContainer: {
     position: 'absolute',
     bottom: 0, // Fixado na parte inferior
     left: 0,
     right: 0,
-    height: 80, // Altura fixa para bottom nav (ajuste se necessário)
-    zIndex: 1000, // Acima do conteúdo
-    elevation: 20, // Android: Elevação alta para premium
+    height: 80, // Altura fixa para bottom nav (ajuste se necessÃƒÂ¡rio)
+    zIndex: 1000, // Acima do conteÃƒÂºdo
+    elevation: 20, // Android: ElevaÃƒÂ§ÃƒÂ£o alta para premium
     ...Platform.select({
       ios: {
         shadowColor: 'rgba(0,0,0,0.1)',
@@ -885,7 +883,7 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  // ✅ NOVO: Estilos para bloco "Filtrar" (título visível + sub) - Removido paddingTop extra
+  // Ã¢Å“â€¦ NOVO: Estilos para bloco "Filtrar" (tÃƒÂ­tulo visÃƒÂ­vel + sub) - Removido paddingTop extra
   filterHeaderRow: {
     paddingHorizontal: 20,
     paddingTop: 8,
@@ -910,36 +908,36 @@ const styles = StyleSheet.create({
   paddingVertical: 22,
   paddingHorizontal: 6,
   backgroundColor: AppColors.white,
-  // 🔹 Borda premium apenas em cima e embaixo
+  // Ã°Å¸â€Â¹ Borda premium apenas em cima e embaixo
   borderTopWidth: TOP_HAIRLINE,
   borderTopColor:  '#EEF3FA',   // tom bem claro (top)
   borderBottomWidth: BOTTOM_HAIRLINE,
-  borderBottomColor:'#E3ECF6',  // tom 1 nível mais forte (bottom)
+  borderBottomColor:'#E3ECF6',  // tom 1 nÃƒÂ­vel mais forte (bottom)
   borderLeftWidth: 0,
   borderRightWidth: 0,
   borderStyle: 'solid',
 
-  // 🔹 Sem sombra aqui para não poluir o traço fino
-  // ...AppShadows.medium,   // ❌ remova
+  // Ã°Å¸â€Â¹ Sem sombra aqui para nÃƒÂ£o poluir o traÃƒÂ§o fino
+  // ...AppShadows.medium,   // Ã¢ÂÅ’ remova
 
-  marginBottom: 10,           // respiro abaixo dos botões
+  marginBottom: 10,           // respiro abaixo dos botÃƒÂµes
 },
   filterButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 9, // ← Era 2 (fino); agora respirável
+    paddingVertical: 9, // Ã¢â€ Â Era 2 (fino); agora respirÃƒÂ¡vel
     paddingHorizontal: 12,
     bottom: 0,
     
     borderRadius: 25,
     marginHorizontal: 6,
-    minHeight: 40,         // ⬅️ NOVO: Alvo de toque confortável (CORREÇÃO APLICADA)
+    minHeight: 40,         // Ã¢Â¬â€¦Ã¯Â¸Â NOVO: Alvo de toque confortÃƒÂ¡vel (CORREÃƒâ€¡ÃƒÆ’O APLICADA)
     backgroundColor: AppColors.backgroundNeutral,
     borderWidth: 1,
     borderColor: AppColors.borderNeutral,
-    // Removido right:15 — alinha ícone/texto
+    // Removido right:15 Ã¢â‚¬â€ alinha ÃƒÂ­cone/texto
   },
   filterButtonActive: {
     backgroundColor: AppColors.primaryInteractive,
@@ -976,7 +974,7 @@ const styles = StyleSheet.create({
   itemCard: {
     backgroundColor: 'rgba(255,255,255,0.85)',
     borderRadius: 20,
-    marginBottom: 24, // Reforçado: Respiro entre cards
+    marginBottom: 24, // ReforÃƒÂ§ado: Respiro entre cards
     overflow: 'hidden',
     ...Platform.select({
       ios: {
