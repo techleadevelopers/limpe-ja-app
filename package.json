@@ -101,6 +101,7 @@
     "@types/node-fetch": "^2.6.13",
     "@types/react": "~19.1.10",
     "babel-plugin-module-resolver": "^5.0.2",
+    "babel-plugin-transform-remove-console": "^6.9.4",
     "bcrypt": "^6.0.0",
     "detox": "^20.41.1",
     "eslint": "^9.25.0",
