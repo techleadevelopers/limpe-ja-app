@@ -24,7 +24,7 @@
     },
     "apk_direct_test": {
       "distribution": "internal",
-      "android": { "buildType": "apk", "image": "latest" },
+      "android": { "image": "latest", "buildType": "apk" },
       "env": {
         "EXPO_PUBLIC_API_BASE_URL": "https://limpeja-backend-production.up.railway.app",
         "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyBt5-IB2CI9fKOeWcGFEM4ZJ57ix-cUHpg",
