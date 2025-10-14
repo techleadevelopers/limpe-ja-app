@@ -13,4 +13,14 @@ export const appConfig = {
   // appName: 'LimpeJá',
   // appVersion: '1.0.0',
   // timeoutApi: 15000, // Timeout para requisições API em milissegundos
+
+  // Configurações de Indicações (Referrals)
+  referrals: {
+    referrerBenefit:
+      process.env.EXPO_PUBLIC_REFERRER_BENEFIT || 'R$25 OFF no seu próximo serviço',
+    refereeBenefit:
+      process.env.EXPO_PUBLIC_REFEREE_BENEFIT || 'R$25 OFF no primeiro serviço',
+    termsLink:
+      process.env.EXPO_PUBLIC_REFERRAL_TERMS_LINK || 'https://example.com/termos-referral',
+  },
 };
