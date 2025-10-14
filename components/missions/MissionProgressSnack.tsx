@@ -53,8 +53,8 @@ export interface MissionProgressSnackProps {
 }
 
 const MissionProgressSnackComp: React.FC<MissionProgressSnackProps> = ({
-  current,
-  goal,
+  current: currentProp,
+  goal: goalProp,
   onView,
   discountPercent = 30,
   estimatedPrice,
@@ -63,13 +63,17 @@ const MissionProgressSnackComp: React.FC<MissionProgressSnackProps> = ({
 }) => {
   const theme = useTheme();
 
+  // ----- Validações para evitar NaN -----
+  const current = useMemo(() => Number.isFinite(currentProp) ? currentProp : 0, [currentProp]);
+  const goal = useMemo(() => Math.max(1, Number.isFinite(goalProp) ? goalProp : 1), [goalProp]); // Mínimo 1 para evitar divisão por zero
+
   // ----- Derivados -----
-  const pct = useMemo(() => clamp01(current / Math.max(1, goal)), [current, goal]);
+  const pct = useMemo(() => clamp01(current / goal), [current, goal]);
   const remaining = Math.max(0, goal - current);
   const canClaimSoon = remaining <= 1 && remaining > 0;
 
   const discountedPrice = useMemo(() => {
-    if (!estimatedPrice) return undefined;
+    if (!estimatedPrice || !Number.isFinite(estimatedPrice)) return undefined;
     const v = +(estimatedPrice * (1 - discountPercent / 100)).toFixed(2);
     return { base: estimatedPrice, discount: discountPercent, final: v, save: estimatedPrice - v };
   }, [estimatedPrice, discountPercent]);
@@ -126,11 +130,14 @@ const MissionProgressSnackComp: React.FC<MissionProgressSnackProps> = ({
   const railColor = theme.border;
   const railBg = withAlpha(railColor, 0.55);
   const infoColor = theme.textMuted;
-  const gradFrom = theme.primary;
-  const gradTo = theme.accent || theme.primary;
 
-  const percentText = `${Math.round(pct * 100)}%`;
-  const plural = (n: number, s: string, p: string) => (n === 1 ? s : p);
+  // Gradiente azul: claro → médio → escuro
+  const gradColors = ['#DBEAFE', '#3B82F6', '#1D4ED8']; // Azul claro, azul, azul escuro
+
+  const percentValue = Math.round(pct * 100); // Garante número válido
+  const percentText = Number.isFinite(percentValue) ? `${percentValue}%` : '0%';
+
+  const plural = (n: number, s: string, p: string) => (Math.round(n) === 1 ? s : p); // Usa Math.round para evitar NaN em plural
 
   return (
     // -> testID no wrapper (Card não tipa testID)
@@ -165,7 +172,7 @@ const MissionProgressSnackComp: React.FC<MissionProgressSnackProps> = ({
             ]}
           >
             <LinearGradient
-              colors={[gradFrom, gradTo]}
+              colors={gradColors}  // Gradiente azul: claro → médio → escuro
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={StyleSheet.absoluteFill}
