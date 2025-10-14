@@ -42,172 +42,6 @@ const LOGO_IMAGE = require('../../assets/images/logo2.png');
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
-/**
- * BubblesRN - componente inline para efeito de bolhas.
- * Se preferir, mova para components/BubblesRN.tsx e importe.
- */
-type BubbleSpec = {
-  key: string;
-  left: number; // 0..1
-  size: number;
-  duration: number;
-  delay: number;
-  horizontalOffset: number;
-  blurRadius: number;
-};
-
-type BubblesRNProps = {
-  countMin?: number;
-  countMax?: number;
-  bubbleMin?: number;
-  bubbleMax?: number;
-  bubbleColor?: string;
-  bubbleBorderColor?: string;   // Adicionado para suporte a bordas
-  bubbleBorderWidth?: number;   // Adicionado para suporte a bordas
-  style?: any;
-  pointerEvents?: any;
-};
-
-const rand = (min: number, max: number) => min + Math.random() * (max - min);
-const randInt = (min: number, max: number) => Math.floor(rand(min, max + 1));
-
-function BubblesRN({
-  countMin = 22,
-  countMax = 44,
-  bubbleMin = 6,
-  bubbleMax = 16,
-  bubbleColor = 'rgba(3,112,255,0.85)',
-  bubbleBorderColor = 'rgba(29, 175, 242, 1)',  // Default para borda azul
-  bubbleBorderWidth = 2,  // Default para espessura da borda
-  style,
-  pointerEvents = 'none',
-}: BubblesRNProps) {
-  const specs: BubbleSpec[] = useMemo(() => {
-    const count = countMin + Math.floor(Math.random() * (countMax - countMin + 1));
-    // debug: mostrar quantas bolhas foram criadas
-    console.log('[BubblesRN] creating', count, 'bubbles');
-    const arr: BubbleSpec[] = [];
-    for (let i = 0; i < count; i++) {
-      const size = randInt(bubbleMin, bubbleMax);
-      const left = rand(0, 1);
-      const duration = randInt(3500, 10000);
-      const delay = randInt(0, 7000);
-      const horizontalOffset = rand(6, 28);
-      const blurRadius = randInt(0, 2);
-      arr.push({
-        key: `b-${i}-${Date.now()}`,
-        left,
-        size,
-        duration,
-        delay,
-        horizontalOffset,
-        blurRadius,
-      });
-    }
-    return arr;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  return (
-    <View style={[bubblesStyles.container, style]} pointerEvents={pointerEvents}>
-      {specs.map((s) => (
-        <Bubble key={s.key} spec={s} color={bubbleColor} borderColor={bubbleBorderColor} borderWidth={bubbleBorderWidth} />
-      ))}
-    </View>
-  );
-}
-
-function Bubble({ spec, color, borderColor, borderWidth }: { spec: BubbleSpec; color: string; borderColor: string; borderWidth: number }) {
-  const translateY = useRef(new Animated.Value(0)).current;
-  const wobble = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const toValue = - (SCREEN_HEIGHT + spec.size + 40);
-
-    const mainAnim = Animated.sequence([
-      Animated.delay(spec.delay),
-      Animated.loop(
-        Animated.timing(translateY, {
-          toValue,
-          duration: spec.duration,
-          easing: RNEasing.linear,
-          useNativeDriver: true,
-        }),
-        { iterations: -1 }
-      )
-    ]);
-
-    const wobbleAnim = Animated.loop(
-      Animated.timing(wobble, {
-        toValue: 1,
-        duration: Math.max(300, Math.floor(spec.duration / 8)),
-        easing: RNEasing.linear,
-        useNativeDriver: true,
-      }),
-      { iterations: -1 }
-    );
-
-    mainAnim.start();
-    wobbleAnim.start();
-
-    return () => {
-      translateY.stopAnimation();
-      wobble.stopAnimation();
-    };
-  }, [spec, translateY, wobble]);
-
-  const wobbleX = wobble.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [0, spec.horizontalOffset / 2, 0],
-    extrapolate: 'clamp',
-  });
-
-  const initialLeft = spec.left * SCREEN_WIDTH - spec.size / 2;
-
-  const animatedStyle = {
-    transform: [
-      { translateY: translateY },
-      { translateX: wobbleX },
-      { scale: wobble.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 0.98, 1] }) },
-    ],
-    opacity: 0.9,
-  };
-
-  const bubbleStyle = {
-    position: 'absolute' as const,
-    left: initialLeft,
-    bottom: -spec.size - 10,
-    width: spec.size,
-    height: spec.size,
-    borderRadius: spec.size / 2,
-    backgroundColor: color,
-    borderColor: borderColor,  // Adicionado para borda
-    borderWidth: borderWidth,  // Adicionado para espessura da borda
-    ...Platform.select({
-      ios: {
-        shadowColor: color,
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.6,
-        shadowRadius: spec.blurRadius + 2,
-      },
-      android: {
-        elevation: spec.blurRadius + 2,
-      },
-    }),
-  };
-
-  return (
-    <Animated.View style={[bubbleStyle, animatedStyle]} />
-  );
-}
-
-const bubblesStyles = StyleSheet.create({
-  container: {
-    ...StyleSheet.absoluteFillObject,
-    overflow: 'hidden',
-  },
-});
-
 /* ---------------------- fim BubblesRN ---------------------- */
 
 const REFERRAL_STORAGE_KEY = 'pending-referral';
@@ -817,6 +651,7 @@ export default function ClientRegisterScreen() {
                     const [day, month, year] = dateOfBirth.split('/').map(Number);
                     const formattedDateOfBirth = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
+                    // @ts-ignore - Suprimir erro TS se dateOfBirth não estiver no tipo RegisterClientDto (ajustar tipo no backend se necessário)
                     const registerData: RegisterClientDto = {
                         email: email.trim(),
                         password: password.trim(),
@@ -1066,18 +901,6 @@ export default function ClientRegisterScreen() {
                 <LinearGradient
                     colors={['#F0F4F8', '#E2E8F0', '#F7FAFC']}
                     style={StyleSheet.absoluteFillObject}
-                />
-
-                {/* Bubbles background: transparente, apenas bolhas azuis */}
-                <BubblesRN
-                  countMin={52}
-                  countMax={65}
-                  bubbleMin={6}
-                  bubbleMax={16}
-                  bubbleColor={'rgba(29, 118, 242, 0.06)'}
-                  bubbleBorderColor = {'rgba(29, 93, 242, 0.18)'}
-                  bubbleBorderWidth ={0.5}
-                  style={{ ...StyleSheet.absoluteFillObject, zIndex: 0 }}
                 />
 
                 <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContentContainer} keyboardShouldPersistTaps="handled" >
