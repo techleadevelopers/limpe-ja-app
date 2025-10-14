@@ -95,11 +95,11 @@ const MissionItem: React.FC<MissionItemProps> = ({ mission, delay, onClaim, isCl
                     </View>
                 </View>
 
-                <View style={[styles.progressBarContainer, { backgroundColor: theme.border }]}> {/* Usa a cor da borda do tema */}
+                <View style={[styles.progressBarContainer, { backgroundColor: theme.primaryLight || '#E9F5FF' }]}> {/* trilho azul claro */}
                     <Animated.View style={[styles.progressBarFill, { width: progressWidthAnim.interpolate({
                         inputRange: [0, 100],
                         outputRange: ['0%', '100%'],
-                    }), backgroundColor: isCompleted ? theme.success : theme.primary }]} /> {/* Usa cores do tema */}
+                    }), backgroundColor: theme.primary }]} /> {/* preenchimento azul */}
                     <Text style={[styles.progressText, { color: theme.text }]}>{mission.progressLabel}</Text> {/* Usa a cor do texto do tema */}
                 </View>
 
