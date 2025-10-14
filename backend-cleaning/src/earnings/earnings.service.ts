@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma, LedgerEntryType, PayoutStatus } from '@prisma/client';
+import { Prisma, LedgerEntryType, PayoutStatus, BookingStatus, PaymentIntentStatus } from '@prisma/client';
 import { ProvidersService } from '../providers/providers.service';
 import { EarningsResponseDto, WithdrawalResponseDto } from './dto/earnings.dto';
 import { PayoutsService } from '../payouts/payouts.service';
@@ -37,6 +37,17 @@ export class EarningsService {
       where: { userId, status: { in: [PayoutStatus.PENDING, PayoutStatus.PROCESSING] } },
     });
     const pendingWithdrawals = Number((sumPending._sum.amount ?? new Prisma.Decimal(0)).toFixed(2));
+
+    // preApprovedEarnings: bookings pagos (PIX) ainda não concluídos
+    const paidUpcoming = await this.prisma.booking.findMany({
+      where: {
+        providerId: provider.id,
+        status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.RESCHEDULED, BookingStatus.IN_PROGRESS] },
+        paymentIntent: { status: PaymentIntentStatus.PAID },
+      },
+      select: { totalPrice: true },
+    });
+    const preApprovedEarnings = paidUpcoming.reduce((sum, b) => sum + Number(b.totalPrice ?? 0), 0);
 
     // recentTransactions: últimos 10 ledger entries
     const recentEntries = await this.prisma.ledgerEntry.findMany({
@@ -77,6 +88,7 @@ export class EarningsService {
       totalEarnings,
       availableForWithdrawal,
       pendingWithdrawals,
+      preApprovedEarnings,
       recentTransactions: recentEntries.map((le) => ({
         id: le.id,
         amount: Number(le.amount),
