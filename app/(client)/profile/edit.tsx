@@ -1,3 +1,4 @@
+import i18n from '../../../i18n';
 // LimpeJaApp/app/(client)/profile/edit.tsx
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
