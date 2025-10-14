@@ -9,6 +9,8 @@ type Props = {
   bottomOffset?: number;
   message?: string;
   actionLabel?: string;
+  /** Propaga pointerEvents ao container para não bloquear interações subjacentes */
+  pointerEvents?: 'auto' | 'none' | 'box-none' | 'box-only';
 };
 
 const SecurityNudge: React.FC<Props> = ({
@@ -18,6 +20,7 @@ const SecurityNudge: React.FC<Props> = ({
   bottomOffset = 20,
   message = 'Ative o SOS e configure contatos de confiança para maior segurança.',
   actionLabel = 'Ver segurança',
+  pointerEvents = 'box-none',
 }) => {
   const router = useRouter();
 
@@ -35,6 +38,7 @@ const SecurityNudge: React.FC<Props> = ({
       bottomOffset={bottomOffset}
       icon="shield-checkmark-outline"
       color="#FFB020"
+      pointerEvents={pointerEvents}
     />
   );
 };
