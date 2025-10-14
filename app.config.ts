@@ -1,6 +1,7 @@
 // app.config.ts
 import dotenv from 'dotenv';
 dotenv.config();
+
 import type { ExpoConfig } from '@expo/config';
 
 export default ({ config }: { config: ExpoConfig }): ExpoConfig => {
@@ -24,10 +25,9 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => {
     assetBundlePatterns: ['**/*'],
 
     ios: {
-      supportsTablet: true,
+      supportsTablet: false,
       bundleIdentifier: 'com.techleadevelopers.limpeja',
       buildNumber: '1',
-      // 🔻 sem Firebase: NÃO há googleServicesFile aqui
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
         NSCameraUsageDescription:
@@ -50,7 +50,6 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => {
         backgroundColor: '#ffffff',
       },
       package: 'com.techleadevelopers.limpeja',
-      // 🔻 sem Firebase: NÃO há googleServicesFile aqui
     },
 
     web: {
@@ -72,28 +71,19 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => {
           backgroundColor: '#ffffff',
         },
       ],
-      // ✅ Adicionado para corrigir os pods Swift/Firebase como static libraries:
+      // ✅ Corrige: FirebaseAuth/FirebaseAuthInterop exigem module maps quando integrados como static libs.
+      // useFrameworks: "dynamic" (como você já usa) + useModularHeaders: true resolve o erro de pods Swift.
       [
         'expo-build-properties',
         {
           ios: {
-            // Não habilitamos useFrameworks por padrão; apenas modular headers para os pods problemáticos
-            // "useFrameworks": "static",
-            extraPods: [
-              { name: 'GoogleUtilities', modular_headers: true },
-              { name: 'FirebaseCore', modular_headers: true },
-              { name: 'FirebaseCoreInternal', modular_headers: true },
-              { name: 'FirebaseCoreExtension', modular_headers: true },
-              { name: 'FirebaseAuth', modular_headers: true },
-              { name: 'RecaptchaInterop', modular_headers: true },
-              { name: 'FirebaseAppCheckInterop', modular_headers: true }
-            ]
-          }
-        }
+            useFrameworks: 'dynamic',
+            useModularHeaders: true,
+            // newArchEnabled pode permanecer padrão (false) se não estiver migrando
+            // newArchEnabled: false,
+          },
+        },
       ],
-      // 🔻 removidos:
-      // '@react-native-firebase/app',
-      // ['expo-build-properties', { ios: { useFrameworks: 'static' } }],
     ],
 
     experiments: {
