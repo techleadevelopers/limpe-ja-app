@@ -31,6 +31,8 @@ type Props = {
 
   // callback quando o usuário tocar em "Usar agora" / side FAB
   onApply: (code: string) => void;
+  /** pointerEvents do container (ex.: 'box-none' para não bloquear interações) */
+  pointerEvents?: 'auto' | 'none' | 'box-none' | 'box-only';
 };
 
 /** helper: diferença em horas entre agora e um ISO string */
@@ -51,6 +53,7 @@ const CouponNudge: React.FC<Props> = ({
   showOnRoutes = ['/(client)/explore'],
   storageKey,
   onApply,
+  pointerEvents = 'box-none',
 }) => {
   const key = storageKey || `coupon_nudge_${code}`;
   const pathname = usePathname();
@@ -129,7 +132,7 @@ let timer: ReturnType<typeof setTimeout> | undefined;
 
   return (
     <Animated.View
-      pointerEvents="box-none"
+      pointerEvents={pointerEvents}
       style={[styles.overlay, { opacity: fade, transform: [{ translateY: slide }] }]}
     >
       <View style={styles.inner}>
