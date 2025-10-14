@@ -1056,8 +1056,135 @@ createdAt: now,
 updatedAt: now,
 },
 });
-console.log(`Missão 'PROVIDER_ACCEPT_5_WEEK' criada/atualizada.`);
+  console.log(`Missão 'PROVIDER_ACCEPT_5_WEEK' criada/atualizada.`);
 
+  // Provider: 10 concluídos no mês
+  const missionProvider10Completed = await prisma.mission.upsert({
+    where: { code: 'PROVIDER_10_COMPLETED_MONTH' },
+    update: {
+      title: 'Conclua 10 serviços no mês',
+      audience: MissionAudience.PROVIDER,
+      kind: MissionKind.COUNT_EVENT,
+      targetValue: 10,
+      timeWindowDays: 30,
+      rewardType: RewardType.POINTS,
+      rewardValue: 500,
+      isActive: true,
+      updatedAt: now,
+    },
+    create: {
+      code: 'PROVIDER_10_COMPLETED_MONTH',
+      title: 'Conclua 10 serviços no mês',
+      description: 'Complete 10 atendimentos concluídos em 30 dias para ganhar pontos de fidelidade.',
+      audience: MissionAudience.PROVIDER,
+      kind: MissionKind.COUNT_EVENT,
+      eventName: 'provider.booking.completed',
+      targetValue: 10,
+      timeWindowDays: 30,
+      rewardType: RewardType.POINTS,
+      rewardValue: 500,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+  });
+  console.log(`Missão 'PROVIDER_10_COMPLETED_MONTH' criada/atualizada.`);
+
+  // Provider: resposta rápida (20 no mês)
+  const missionProviderFastResponse = await prisma.mission.upsert({
+    where: { code: 'PROVIDER_RESPONSE_FAST_20' },
+    update: {
+      title: 'Responda rapidamente (20 vezes)',
+      audience: MissionAudience.PROVIDER,
+      kind: MissionKind.COUNT_EVENT,
+      targetValue: 20,
+      timeWindowDays: 30,
+      rewardType: RewardType.POINTS,
+      rewardValue: 200,
+      isActive: true,
+      updatedAt: now,
+    },
+    create: {
+      code: 'PROVIDER_RESPONSE_FAST_20',
+      title: 'Responda rapidamente (20 vezes)',
+      description: 'Responda em menos de 3 minutos, 20 vezes no mês, para ganhar pontos.',
+      audience: MissionAudience.PROVIDER,
+      kind: MissionKind.COUNT_EVENT,
+      eventName: 'provider.response.fast',
+      targetValue: 20,
+      timeWindowDays: 30,
+      rewardType: RewardType.POINTS,
+      rewardValue: 200,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+  });
+  console.log(`Missão 'PROVIDER_RESPONSE_FAST_20' criada/atualizada.`);
+
+  // Provider: nenhuma cancelamento na semana (4 semanas seguidas no mês)
+  const missionProviderNoCancelWeekly = await prisma.mission.upsert({
+    where: { code: 'PROVIDER_NO_CANCEL_4W' },
+    update: {
+      title: 'Sem cancelamentos por 4 semanas',
+      audience: MissionAudience.PROVIDER,
+      kind: MissionKind.COUNT_EVENT,
+      targetValue: 4,
+      timeWindowDays: 28,
+      rewardType: RewardType.POINTS,
+      rewardValue: 300,
+      isActive: true,
+      updatedAt: now,
+    },
+    create: {
+      code: 'PROVIDER_NO_CANCEL_4W',
+      title: 'Sem cancelamentos por 4 semanas',
+      description: 'Mantenha 4 semanas seguidas sem cancelamentos (evento semanal agregado) para ganhar pontos.',
+      audience: MissionAudience.PROVIDER,
+      kind: MissionKind.COUNT_EVENT,
+      eventName: 'provider.no.cancellation.week',
+      targetValue: 4,
+      timeWindowDays: 28,
+      rewardType: RewardType.POINTS,
+      rewardValue: 300,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+  });
+  console.log(`Missão 'PROVIDER_NO_CANCEL_4W' criada/atualizada.`);
+
+  // Provider: reviews >= 4.8 (10 no mês)
+  const missionProviderHighRating = await prisma.mission.upsert({
+    where: { code: 'PROVIDER_RATING_48PLUS_10' },
+    update: {
+      title: 'Receba 10 avaliações ≥ 4.8 no mês',
+      audience: MissionAudience.PROVIDER,
+      kind: MissionKind.COUNT_EVENT,
+      targetValue: 10,
+      timeWindowDays: 30,
+      rewardType: RewardType.POINTS,
+      rewardValue: 400,
+      isActive: true,
+      updatedAt: now,
+    },
+    create: {
+      code: 'PROVIDER_RATING_48PLUS_10',
+      title: 'Receba 10 avaliações ≥ 4.8 no mês',
+      description: 'Receba 10 avaliações com nota ≥ 4.8 em 30 dias (evento emitido no review).',
+      audience: MissionAudience.PROVIDER,
+      kind: MissionKind.COUNT_EVENT,
+      eventName: 'provider.review.4_8plus',
+      targetValue: 10,
+      timeWindowDays: 30,
+      rewardType: RewardType.POINTS,
+      rewardValue: 400,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+  });
+  console.log(`Missão 'PROVIDER_RATING_48PLUS_10' criada/atualizada.`);
 // ─────────────────────────────────────────────────────────────────────────────
 // 6) BOOKINGS E PAGAMENTOS
 console.log('Criando/Atualizando agendamentos e transações...');
