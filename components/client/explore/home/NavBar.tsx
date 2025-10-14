@@ -8,6 +8,13 @@ interface NavBarProps {
   welcomeCouponOffer?: any;
   activeBottomPromotion?: 'coupon' | 'referral' | null;
   setActiveBottomPromotion?: (val: 'coupon' | 'referral' | null) => void;
+  // Props opcionais para compatibilidade com outras telas (não usados aqui)
+  title?: string;
+  onBackPress?: () => void;
+  showSearch?: boolean;
+  showNotifications?: boolean;
+  animated?: boolean;
+  currentRoute?: string;
 }
 
 const NavBar: React.FC<NavBarProps> = ({
