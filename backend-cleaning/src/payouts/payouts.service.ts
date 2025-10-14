@@ -58,6 +58,13 @@ export class PayoutsService {
       throw new BadRequestException('Idempotency-Key header is required.');
     }
 
+    // In production, withdrawals must not proceed without a configured PSP token
+    const nodeEnv = this.configService.get<string>('NODE_ENV') || 'development';
+    if (nodeEnv === 'production' && !this.pspToken) {
+      this.logger.error('requestWithdrawal: PSP token missing in production. Blocking withdrawal request.');
+      throw new ForbiddenException('Withdrawals are temporarily unavailable. Please try again later.');
+    }
+
     const lockKey = `payout:lock:${userId}`;
     const lockValue = randomUUID();
 
@@ -200,6 +207,13 @@ export class PayoutsService {
       return;
     }
 
+    // In production, do not simulate PAID when PSP token is missing
+    const nodeEnv2 = this.configService.get<string>('NODE_ENV') || 'development';
+    if (!this.pspToken && nodeEnv2 === 'production') {
+      this.logger.warn(`processPayout: PSP token missing in production; payout ${payoutId} will remain PENDING.`);
+      return;
+    }
+
     const gatewayTxnId = payout.gatewayTxnId ?? `gw_${Date.now()}_${payout.id}`;
 
     await this.prisma.payout.update({
@@ -212,8 +226,8 @@ export class PayoutsService {
 
     this.logger.log(`processPayout: payout ${payoutId} marked as PROCESSING with gatewayTxnId ${gatewayTxnId}.`);
 
-    // Sem PSP configurado: simular sucesso imediato; com PSP, aguardamos webhook
-    if (!this.pspToken) {
+    // Sem PSP configurado: em dev/test simular sucesso imediato; em prod não
+    if (!this.pspToken && nodeEnv2 !== 'production') {
       await this.applyGatewayUpdate({ payoutId, status: PayoutStatus.PAID, gatewayTxnId });
     }
   }
