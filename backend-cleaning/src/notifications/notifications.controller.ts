@@ -29,6 +29,7 @@ import {
 import { Request } from 'express';
 import { NotificationEntity } from './entities/notification.entity';
 import { CreateNotificationDto } from './dto/create-notification.dto';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 @ApiTags('notifications')
 @Controller('notifications')
@@ -154,5 +155,22 @@ export class NotificationsController {
     @Body() data: any,
   ): Promise<void> {
     await this.notificationsService.executeQuickAction(action, data);
+  }
+
+  class RegisterTokenDto {
+    @IsString()
+    @IsNotEmpty()
+    token!: string;
+
+    @IsString()
+    @IsOptional()
+    platform?: string;
+  }
+
+  @Post('register-token')
+  @ApiOperation({ summary: 'Registrar/atualizar o token de push do dispositivo para o usuário atual' })
+  async registerToken(@Req() req: Request, @Body() body: RegisterTokenDto): Promise<{ ok: true }>{
+    const userId = (req as any).user?.userId;
+    return this.notificationsService.registerDeviceToken(userId, body.token);
   }
 }
