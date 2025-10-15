@@ -43,6 +43,7 @@ export interface RegisterClientDto {
   cpf: string;
   address: CreateAddressDto;
   referralCode?: string; // NOVO: Campo opcional para código de indicação
+  dateOfBirth?: string;  // <- Adicione esta linha
 }
 
 /**
