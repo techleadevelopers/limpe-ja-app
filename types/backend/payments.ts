@@ -19,7 +19,7 @@ export interface CreatePixChargeDto {
  */
 export interface PixChargeResponseDto {
   transactionId: string;
-  status: 'PENDING' | 'PAID' | 'EXPIRED' | 'CANCELLED';
+  status: 'PENDING' | 'PAID' | 'EXPIRED' | 'REFUNDED' | 'CHARGEBACK';
   brCode: string;
   qrCodeImage: string;
   expiresAt: string;
@@ -96,3 +96,12 @@ export interface PaymentIntent {
   createdAt: string;
   updatedAt: string;
 }
+
+// FE-normalized Intent helper (drop-in)
+export type FEIntent = 'PENDING' | 'PAID' | 'EXPIRED' | 'REFUNDED' | 'CHARGEBACK';
+export const normalizeIntent = (raw: string): FEIntent => {
+  if (raw === 'CANCELLED') return 'EXPIRED';
+  if (raw === 'CANCELED') return 'EXPIRED';
+  const allowed: FEIntent[] = ['PENDING', 'PAID', 'EXPIRED', 'REFUNDED', 'CHARGEBACK'];
+  return (allowed.includes(raw as FEIntent) ? (raw as FEIntent) : 'EXPIRED');
+};
