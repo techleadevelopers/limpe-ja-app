@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Platform, StyleSheet, Text, View } from 'react-native';
+import { Animated, Platform, StyleSheet, Text, View, TouchableWithoutFeedback } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 type Variant = 'success' | 'info' | 'warning' | 'error';
@@ -28,7 +28,7 @@ export const OverlayMessage: React.FC<OverlayMessageProps> = ({
   iconName,
   variant = 'info',
   onHide,
-  durationMs = 2600,
+  durationMs = 5000,
 }) => {
   const anim = useRef(new Animated.Value(0)).current;
 
@@ -52,21 +52,27 @@ export const OverlayMessage: React.FC<OverlayMessageProps> = ({
   if (!visible) return null;
 
   return (
-    <Animated.View
-      accessibilityLiveRegion="polite"
-      accessibilityRole="alert"
-      pointerEvents="none"
-      style={[styles.root, { opacity, transform: [{ translateY }] }]}
-    >
-      <View style={[styles.card, { backgroundColor: palette.bg }]}>
-        <Ionicons name={icon} size={18} color={palette.fg} style={{ marginRight: 8 }} />
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.title, { color: palette.fg }]} numberOfLines={2}>{title}</Text>
-          {subtitle ? (
-            <Text style={[styles.subtitle, { color: palette.fg }]} numberOfLines={2}>{subtitle}</Text>
-          ) : null}
+    <Animated.View style={[StyleSheet.absoluteFill, { opacity }] }>
+      {/* Backdrop escuro com dismiss on tap */}
+      <TouchableWithoutFeedback onPress={onHide}>
+        <View style={styles.backdrop} />
+      </TouchableWithoutFeedback>
+      {/* Card premium */}
+      <Animated.View
+        accessibilityLiveRegion="polite"
+        accessibilityRole="alert"
+        style={[styles.root, { transform: [{ translateY }] }]}
+      >
+        <View style={[styles.card, { backgroundColor: palette.bg }]}>
+          <Ionicons name={icon} size={18} color={palette.fg} style={{ marginRight: 8 }} />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.title, { color: palette.fg }]} numberOfLines={2}>{title}</Text>
+            {subtitle ? (
+              <Text style={[styles.subtitle, { color: palette.fg }]} numberOfLines={3}>{subtitle}</Text>
+            ) : null}
+          </View>
         </View>
-      </View>
+      </Animated.View>
     </Animated.View>
   );
 };
@@ -76,9 +82,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    top: 12,
+    top: 72,
     alignItems: 'center',
-    zIndex: 9999,
+    zIndex: 10001,
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.40)',
+    zIndex: 10000,
   },
   card: {
     flexDirection: 'row',
@@ -87,6 +98,11 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 12,
     maxWidth: '92%',
+    shadowColor: 'rgba(0,0,0,0.25)',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 8,
   },
   title: {
     fontSize: 14,
@@ -100,4 +116,3 @@ const styles = StyleSheet.create({
 });
 
 export default OverlayMessage;
-
