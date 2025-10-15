@@ -36,6 +36,12 @@ export class NotificationEntity implements PrismaNotification {
   @ApiPropertyOptional({ description: 'Categoria da notificação (ex: booking, payment, dispute)', example: 'booking' })
   category: string | null; // NEW: Added category property
 
+  // Campos premium adicionados pelo schema: idempotencyKey, scheduledAt, priority, readAt
+  idempotencyKey: string | null;
+  scheduledAt: Date | null;
+  priority: number | null;
+  readAt: Date | null;
+
   constructor(partial: Partial<PrismaNotification>) {
     Object.assign(this, partial);
   }
