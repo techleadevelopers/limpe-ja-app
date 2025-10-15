@@ -85,6 +85,9 @@ export default function WithdrawScreen() {
   const [formError, setFormError] = useState<string | null>(null);
   const [notes, setNotes] = useState<string>(''); // Notas opcionais
 
+  // Taxa fixa em R$ 0,00 (conforme instruções; ajuste se backend retornar taxa dinâmica)
+  const taxa = 0;
+
   // Animated values for premium transitions (fade + slide)
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
@@ -108,6 +111,8 @@ export default function WithdrawScreen() {
         if (isMounted.current) {
           // CORREÇÃO: Usa 'balance' em vez de 'acceptanceRate' (alinhado com tipagem). Se for earnings, mude para response.data.earnings || 0
           const available = (response.data as any).available ?? (response.data as any).balance ?? 0; setAvailableBalance(Number(available) || 0);
+          // Announce for accessibility quando saldo carrega
+          // Nota: Em RN, use AccessibilityInfo.announceForAccessibility se disponível via expo-accessibility
         }
       } catch (err: any) {
         console.error('Erro ao buscar saldo:', err);
@@ -160,7 +165,21 @@ export default function WithdrawScreen() {
   };
 
   const handlePixKeyChange = (text: string) => {
-    setPixKey(text.replace(/\D/g, '')); // Limpa não-dígitos (premium validation)
+    let cleanedText = text;
+    switch (pixKeyType) {
+      case PixKeyType.CPF:
+      case PixKeyType.CNPJ:
+      case PixKeyType.RANDOM:
+        cleanedText = text.replace(/\D/g, ''); // Apenas dígitos para CPF/CNPJ/RANDOM
+        break;
+      case PixKeyType.EMAIL:
+        cleanedText = text; // Permitir todos para email
+        break;
+      case PixKeyType.PHONE:
+        cleanedText = text.replace(/[^\d+\s()-]/g, ''); // Permitir dígitos, +, espaço, -, ( )
+        break;
+    }
+    setPixKey(cleanedText);
     setFormError(null);
   };
 
@@ -168,12 +187,23 @@ export default function WithdrawScreen() {
     setPixKeyType(type);
     setPixKey(''); // Limpa chave ao trocar tipo
     setFormError(null);
+    if (Platform.OS === 'ios') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  };
+
+  // Função para chips de atalho
+  const handleAmountShortcut = (percentage: number) => {
+    const v = Math.max(10, Math.floor(availableBalance * percentage * 100) / 100); // Mínimo R$ 10
+    Haptics.selectionAsync();
+    setAmount(String(v).replace('.', ','));
+    setFormError(null);
   };
 
   const validateForm = (): string | null => {
     const parsedAmount = parseFloat(amount.replace(',', '.'));
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      return 'Por favor, insira um valor válido para saque (mínimo R$ 10,00).';
+    if (isNaN(parsedAmount) || parsedAmount < 10) {
+      return 'Insira um valor válido (mínimo R$ 10,00)';
     }
     if (parsedAmount > availableBalance) {
       return `O valor do saque excede o saldo disponível (R$ ${formatCurrency(availableBalance)}).`;
@@ -185,7 +215,7 @@ export default function WithdrawScreen() {
     switch (pixKeyType) {
       case PixKeyType.CPF:
         if (!isValidCPF(pixKey) || pixKey.length !== 11) {
-          return 'CPF inválido. Digite apenas números (ex: 12345678900).';
+          return 'CPF inválido (apenas números)';
         }
         break;
       case PixKeyType.CNPJ:
@@ -261,15 +291,26 @@ export default function WithdrawScreen() {
     }
   };
 
-  const handleReceiveStatement = (type: 'email' | 'download') => {
+  const handleViewEarnings = () => {
     if (Platform.OS === 'ios') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); // Haptic sutil
     }
-    Alert.alert(
-      'Funcionalidade Premium',
-      `Gerar extrato via ${type === 'email' ? 'e-mail' : 'download'} (em desenvolvimento).`,
-      [{ text: 'OK' }]
-    );
+    router.push('/earnings'); // Assumindo rota para Earnings; ajuste conforme sua estrutura expo-router
+  };
+
+  const handleDownloadReceipt = () => {
+    if (Platform.OS === 'ios') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); // Haptic sutil
+    }
+    // Implementar download quando disponível
+    Alert.alert('Comprovante', 'Funcionalidade de download em desenvolvimento.', [{ text: 'OK' }]);
+  };
+
+  const handleViewServices = () => {
+    if (Platform.OS === 'ios') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    router.push('/services'); // Assumindo rota para Meus Serviços/Avaliações; ajuste conforme necessário
   };
 
   const handleSkipStatement = () => {
@@ -289,6 +330,37 @@ export default function WithdrawScreen() {
     );
   }
 
+  // Estado saldo zero (empty state)
+  if (availableBalance === 0) {
+    return (
+      <KeyboardAvoidingView style={styles.outerContainer} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <Animated.View
+          style={[
+            styles.emptyStateContainer,
+            { 
+              opacity: fadeAnim, 
+              transform: [{ translateY: slideAnim }] 
+            },
+          ]}
+        >
+          <Ionicons name="wallet-outline" size={100} color={Colors.textMuted} />
+          <Text style={styles.emptyStateTitle}>Você ainda não tem saldo disponível</Text>
+          <Text style={styles.emptyStateMessage}>Ganhe mais realizando serviços e avaliações.</Text>
+          <TouchableOpacity
+            style={styles.actionButtonSecondary}
+            onPress={handleViewServices}
+            accessibilityRole="button"
+            accessibilityLabel="Ver como ganhar mais"
+            accessibilityHint="Navegue para Meus Serviços para ganhar saldo."
+          >
+            <Text style={styles.actionButtonSecondaryText}>Ver como ganhar mais</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      </KeyboardAvoidingView>
+    );
+  }
+
   if (isWithdrawalSuccessful) {
     return (
       <KeyboardAvoidingView style={styles.outerContainer} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -303,35 +375,30 @@ export default function WithdrawScreen() {
           ]}
         >
           <Ionicons name="checkmark-circle" size={100} color={Colors.success} />
-          <Text style={styles.successTitle}>Saque Solicitado com Sucesso!</Text>
-          <Text style={styles.successMessage}>
-            Seu pedido de saque foi enviado e está em processamento. O valor será transferido em até 24h úteis para a chave PIX informada.
-          </Text>
+          <Text style={styles.successTitle}>Seu saque foi solicitado com sucesso.</Text>
+          <Text style={styles.successMessage}>Transferência até 24h.</Text>
 
-          <View style={styles.statementOptions}>
-            <Text style={styles.statementText}>Receber extrato via:</Text>
-            <View style={styles.statementButtons}>
-              <TouchableOpacity
-                style={styles.statementButton}
-                onPress={() => handleReceiveStatement('email')}
-                accessibilityRole="button"
-                accessibilityLabel="Enviar extrato por e-mail"
-                accessibilityHint="Toque para receber o extrato por e-mail."
-              >
-                <Ionicons name="mail-outline" size={20} color={Colors.primary} accessibilityHidden />
-                <Text style={styles.statementButtonText}>E-mail</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.statementButton}
-                onPress={() => handleReceiveStatement('download')}
-                accessibilityRole="button"
-                accessibilityLabel="Baixar extrato"
-                accessibilityHint="Toque para baixar o extrato."
-              >
-                <Ionicons name="download-outline" size={20} color={Colors.primary} accessibilityHidden />
-                <Text style={styles.statementButtonText}>Download</Text>
-              </TouchableOpacity>
-            </View>
+          <View style={styles.ctaContainer}>
+            <TouchableOpacity
+              style={styles.successCtaButton}
+              onPress={handleViewEarnings}
+              accessibilityRole="button"
+              accessibilityLabel="Ver extrato de ganhos"
+              accessibilityHint="Navegue para a tela de ganhos."
+            >
+              <Ionicons name="trending-up-outline" size={20} color={Colors.primary} />
+              <Text style={styles.successCtaText}>Ver extrato de ganhos</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.successCtaButton}
+              onPress={handleDownloadReceipt}
+              accessibilityRole="button"
+              accessibilityLabel="Baixar comprovante"
+              accessibilityHint="Baixe o comprovante do saque."
+            >
+              <Ionicons name="download-outline" size={20} color={Colors.primary} />
+              <Text style={styles.successCtaText}>Baixar comprovante</Text>
+            </TouchableOpacity>
           </View>
 
           <TouchableOpacity
@@ -348,7 +415,16 @@ export default function WithdrawScreen() {
     );
   }
 
-  const isConfirmButtonEnabled = parseFloat(amount.replace(',', '.')) > 0 && parseFloat(amount.replace(',', '.')) <= availableBalance && !isProcessingWithdrawal && !!pixKey.trim();
+  const parsedAmount = parseFloat((amount || '0').replace(',', '.'));
+  const netAmount = Math.max(0, parsedAmount - taxa);
+  const isConfirmButtonEnabled = !isNaN(parsedAmount) && parsedAmount >= 10 && parsedAmount <= availableBalance && !!pixKey.trim() && !isProcessingWithdrawal;
+
+  // Announce for accessibility quando formulário válido
+  useEffect(() => {
+    if (isConfirmButtonEnabled) {
+      // Nota: Implemente AccessibilityInfo.announceForAccessibility('Formulário válido. Pronto para sacar.') se disponível
+    }
+  }, [isConfirmButtonEnabled]);
 
   return (
     <KeyboardAvoidingView
@@ -393,20 +469,28 @@ export default function WithdrawScreen() {
       </Animated.View>
 
       <ScrollView contentContainerStyle={styles.scrollViewContent} keyboardShouldPersistTaps="handled">
-        {/* Card: Saldo e Valor do Saque */}
+        {/* Card: Estado Financeiro (Saldo Disponível atualizado) */}
         <Animated.View
           style={[
             styles.card,
             { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
           ]}
         >
-          <Text style={styles.cardTitle}>Saldo Disponível</Text>
-          <Text style={styles.availableBalanceText}>
-            {formatCurrency(availableBalance)}
-          </Text>
-          <Text style={styles.availableBalanceSubtitle}>Valor total de ganhos acumulados</Text>
+          <Text style={[styles.balanceValue, { color: Colors.primary }]}>{formatCurrency(availableBalance)}</Text>
+          <Text style={styles.balanceSubtitle}>Disponível para saque</Text>
+          <View style={styles.balanceBadge}>
+            <Text style={styles.balanceBadgeText}>Taxa: {formatCurrency(taxa)} · Liquidação: até 24h</Text>
+          </View>
+        </Animated.View>
 
-          <Text style={[styles.cardTitle, { marginTop: Spacing.xl }]}>Valor do Saque</Text>
+        {/* Card: Valor do Saque com atalhos */}
+        <Animated.View
+          style={[
+            styles.card,
+            { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
+          ]}
+        >
+          <Text style={styles.cardTitle}>Quanto deseja transferir?</Text>
           <TextInput
             style={[styles.amountInput, formError ? styles.inputError : {}]}
             placeholder="0,00"
@@ -419,18 +503,50 @@ export default function WithdrawScreen() {
             accessibilityHint="Digite o valor em reais para sacar."
           />
           {formError && <Text style={styles.formErrorText}>{formError}</Text>}
+
+          {/* Atalhos de valor (chips) */}
+          <View style={styles.shortcutsContainer}>
+            {([0.25, 0.5, 0.75, 1] as const).map(p => (
+              <TouchableOpacity
+                key={p}
+                style={styles.shortcutChip}
+                onPress={() => handleAmountShortcut(p)}
+                accessibilityRole="button"
+                accessibilityLabel={`Sacar ${p*100}% do saldo`}
+                accessibilityHint={`Preenche o valor com ${p*100}% do saldo disponível.`}
+              >
+                <Text style={styles.shortcutText}>{`${p*100}%`}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Linha de confirmação: Você receberá + Taxa */}
+          <View style={styles.confirmationRow}>
+            <Text style={styles.confirmationLabel}>Você receberá</Text>
+            <Text style={styles.confirmationValue}>{formatCurrency(netAmount)}</Text>
+          </View>
+          <View style={styles.confirmationRow}>
+            <Text style={styles.confirmationLabel}>Taxa</Text>
+            <Text style={styles.confirmationValue}>{formatCurrency(taxa)}</Text>
+          </View>
         </Animated.View>
 
-        {/* Card: Chave PIX (Premium: Seleção de tipo + validação real-time) */}
+        {/* Card: Chave PIX com selector de ícones */}
         <Animated.View
           style={[
             styles.card,
             { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
           ]}
         >
-          <Text style={styles.cardTitle}>Transferir Para (PIX)</Text>
+          <Text style={styles.cardTitle}>Para qual chave PIX?</Text>
           <View style={styles.pixTypeSelector}>
-            {Object.values(PixKeyType).map((type) => (
+            {[
+              { type: PixKeyType.CPF, icon: 'id-card-outline', subtitle: '11 dígitos', hint: 'apenas números' },
+              { type: PixKeyType.CNPJ, icon: 'briefcase-outline', subtitle: '14 dígitos', hint: 'apenas números' },
+              { type: PixKeyType.EMAIL, icon: 'mail-outline', subtitle: 'exemplo@domínio', hint: 'formato de e-mail' },
+              { type: PixKeyType.PHONE, icon: 'call-outline', subtitle: '+55 11 99999-9999', hint: 'formato de telefone' },
+              { type: PixKeyType.RANDOM, icon: 'key-outline', subtitle: 'chave UUID', hint: 'chave aleatória' },
+            ].map(({ type, icon, subtitle, hint }) => (
               <TouchableOpacity
                 key={type}
                 style={[
@@ -440,31 +556,53 @@ export default function WithdrawScreen() {
                 onPress={() => handlePixKeyTypeChange(type)}
                 accessibilityRole="button"
                 accessibilityLabel={`Selecionar chave ${type.toLowerCase()}`}
-                accessibilityHint={`Toque para usar chave do tipo ${type.toLowerCase()}.`}
+                accessibilityHint={`Toque para usar chave do tipo ${type.toLowerCase()}. ${hint}`}
               >
+                <View style={styles.pixTypeIconLabel}>
+                  <Ionicons name={icon} size={16} color={pixKeyType === type ? '#fff' : Colors.textMuted} />
+                  <Text style={[
+                    styles.pixTypeButtonText,
+                    pixKeyType === type && styles.pixTypeButtonTextActive,
+                  ]}>
+                    {type}
+                  </Text>
+                </View>
                 <Text style={[
-                  styles.pixTypeButtonText,
-                  pixKeyType === type && styles.pixTypeButtonTextActive,
+                  styles.pixTypeSubtitle,
+                  pixKeyType === type && { color: '#fff' }
                 ]}>
-                  {type}
+                  {subtitle}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
           <TextInput
             style={styles.pixKeyInput}
-            placeholder={pixKeyType === PixKeyType.CPF ? "123.456.789-00" : pixKeyType === PixKeyType.EMAIL ? "seu@email.com" : "Digite a chave PIX"}
+            placeholder={
+              pixKeyType === PixKeyType.CPF ? "12345678900" :
+              pixKeyType === PixKeyType.CNPJ ? "12345678000199" :
+              pixKeyType === PixKeyType.EMAIL ? "seu@email.com" :
+              pixKeyType === PixKeyType.PHONE ? "+55 11 99999-9999" :
+              "Digite a chave PIX"
+            }
             placeholderTextColor={Colors.textSubtle}
             value={pixKey}
             onChangeText={handlePixKeyChange}
-            keyboardType={pixKeyType === PixKeyType.PHONE ? "phone-pad" : "default"}
+            keyboardType={
+              pixKeyType === PixKeyType.CPF || pixKeyType === PixKeyType.CNPJ ? "number-pad" :
+              pixKeyType === PixKeyType.EMAIL ? "email-address" :
+              pixKeyType === PixKeyType.PHONE ? "phone-pad" :
+              "default"
+            }
             autoCapitalize="none"
             accessibilityLabel="Chave PIX"
-            accessibilityHint="Digite a chave PIX do tipo selecionado."
+            accessibilityHint={`Digite a chave PIX do tipo ${pixKeyType.toLowerCase()}.`}
           />
           <Text style={styles.pixKeyHelper}>
+            {/* Expandir helper para todos os tipos conforme necessário */}
             {pixKeyType === PixKeyType.CPF && pixKey.length === 11 && !isValidCPF(pixKey) && 'CPF inválido. Verifique os dígitos.'}
             {pixKeyType === PixKeyType.CPF && pixKey.length < 11 && pixKey.length > 0 && 'Digite o CPF completo (11 dígitos).'}
+            {/* Adicione helpers para outros tipos se necessário */}
           </Text>
         </Animated.View>
 
@@ -475,7 +613,7 @@ export default function WithdrawScreen() {
             { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
           ]}
         >
-          <Text style={styles.cardTitle}>Observações (Opcional)</Text>
+          <Text style={styles.cardTitle}>Observações (opcional)</Text>
           <TextInput
             style={styles.notesInput}
             placeholder="Ex: Saque para despesas operacionais..."
@@ -491,35 +629,35 @@ export default function WithdrawScreen() {
           <Text style={styles.charCount}>{notes.length}/200</Text>
         </Animated.View>
 
-        {/* Botão Confirmar (Premium: Desabilitado com feedback visual/haptic) */}
-        <Animated.View
-          style={[
-            styles.saveButtonContainer,
-            { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
-          ]}
-        >
-          <TouchableOpacity
-            style={[
-              styles.actionButtonPrimary,
-              (!isConfirmButtonEnabled || isProcessingWithdrawal) && styles.actionButtonDisabled,
-            ]}
-            onPress={handleConfirmWithdrawal}
-            disabled={!isConfirmButtonEnabled || isProcessingWithdrawal}
-            accessibilityRole="button"
-            accessibilityLabel="Confirmar Saque"
-            accessibilityHint="Toque para confirmar e processar o saque."
-            accessibilityState={{ disabled: !isConfirmButtonEnabled || isProcessingWithdrawal }}
-          >
-            {isProcessingWithdrawal ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
-            ) : (
-              <Text style={styles.actionButtonPrimaryText}>
-                Confirmar Saque de {formatCurrency(parseFloat(amount.replace(',', '.') || '0'))}
-              </Text>
-            )}
-          </TouchableOpacity>
-        </Animated.View>
+        <View style={{ height: 100 }} /> {/* Respiro para botão sticky */}
       </ScrollView>
+
+      {/* Botão Confirmar Saque (Sticky no rodapé) */}
+      <View style={[
+        styles.stickyButtonContainer,
+        { paddingBottom: Platform.OS === 'ios' ? insets.bottom + 12 : 12 }
+      ]}>
+        <TouchableOpacity
+          style={[
+            styles.actionButtonPrimary,
+            (!isConfirmButtonEnabled || isProcessingWithdrawal) && styles.actionButtonDisabled,
+          ]}
+          onPress={handleConfirmWithdrawal}
+          disabled={!isConfirmButtonEnabled || isProcessingWithdrawal}
+          accessibilityRole="button"
+          accessibilityLabel={`Sacar ${formatCurrency(parsedAmount)} agora`}
+          accessibilityHint="Toque para confirmar e processar o saque."
+          accessibilityState={{ disabled: !isConfirmButtonEnabled || isProcessingWithdrawal }}
+        >
+          {isProcessingWithdrawal ? (
+            <ActivityIndicator color="#FFFFFF" size="small" />
+          ) : (
+            <Text style={styles.actionButtonPrimaryText}>
+              Sacar {formatCurrency(parsedAmount)} agora
+            </Text>
+          )}
+        </TouchableOpacity>
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -603,23 +741,34 @@ const styles = StyleSheet.create({
       },
     }),
   },
+  // Estilos para Card de Saldo (Estado Financeiro)
+  balanceValue: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: Spacing.xs,
+  },
+  balanceSubtitle: {
+    fontSize: 16,
+    color: Colors.textMuted,
+    textAlign: 'center',
+    marginBottom: Spacing.md,
+  },
+  balanceBadge: {
+    backgroundColor: Colors.fieldBg,
+    padding: Spacing.sm,
+    borderRadius: Radii.md,
+    alignItems: 'center',
+  },
+  balanceBadgeText: {
+    fontSize: 12,
+    color: Colors.textSubtle,
+  },
   cardTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: Colors.text,
     marginBottom: Spacing.md,
-  },
-  availableBalanceText: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: Colors.primary, // Azul acento para destaque
-    textAlign: 'center',
-    marginBottom: Spacing.xs,
-  },
-  availableBalanceSubtitle: {
-    fontSize: 14,
-    color: Colors.textMuted,
-    textAlign: 'center',
   },
   amountInput: {
     fontSize: 36,
@@ -643,6 +792,90 @@ const styles = StyleSheet.create({
     borderColor: Colors.danger,
     borderWidth: 2,
   },
+  // Estilos para atalhos (chips)
+  shortcutsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: Spacing.md,
+    marginBottom: Spacing.md,
+  },
+  shortcutChip: {
+    backgroundColor: Colors.fieldBg,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    minWidth: 48, // Garantir área de toque >=48dp
+  },
+  shortcutText: {
+    color: Colors.text,
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  // Estilos para linhas de confirmação
+  confirmationRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 4,
+    paddingHorizontal: 8,
+  },
+  confirmationLabel: {
+    fontSize: 14,
+    color: Colors.textMuted,
+  },
+  confirmationValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.text,
+  },
+  // Empty State
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.xl,
+    backgroundColor: Colors.bgSoft,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.text,
+    marginTop: Spacing.lg,
+    textAlign: 'center',
+  },
+  emptyStateMessage: {
+    fontSize: 16,
+    color: Colors.textMuted,
+    textAlign: 'center',
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.xl,
+  },
+  actionButtonSecondary: {
+    backgroundColor: Colors.surface,
+    borderRadius: Radii.pill,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    ...Platform.select({
+      ios: {
+        shadowColor: Colors.shadow,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  actionButtonSecondaryText: {
+    color: Colors.primary,
+    fontSize: 16,
+    fontWeight: '600',
+  },
   pixTypeSelector: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -650,15 +883,23 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.fieldBg,
     borderRadius: Radii.pill,
     padding: Spacing.sm,
+    flexWrap: 'wrap', // Para telas menores
   },
   pixTypeButton: {
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.lg,
     borderRadius: Radii.sm,
     backgroundColor: 'transparent',
+    alignItems: 'center',
+    minWidth: 60, // Garantir área de toque >=48dp
   },
   pixTypeButtonActive: {
     backgroundColor: Colors.primary,
+  },
+  pixTypeIconLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   pixTypeButtonText: {
     fontSize: 14,
@@ -667,6 +908,11 @@ const styles = StyleSheet.create({
   },
   pixTypeButtonTextActive: {
     color: '#FFFFFF',
+  },
+  pixTypeSubtitle: {
+    fontSize: 11,
+    color: Colors.textSubtle,
+    marginTop: 2,
   },
   pixKeyInput: {
     fontSize: 16,
@@ -700,9 +946,14 @@ const styles = StyleSheet.create({
     color: Colors.textSubtle,
     textAlign: 'right',
   },
-  saveButtonContainer: {
-    marginTop: Spacing.xl,
-    marginBottom: Spacing.xxl,
+  // Sticky Button Container
+  stickyButtonContainer: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 0,
+    paddingHorizontal: 16,
+    backgroundColor: Colors.bgSoft, // Transição suave
   },
   actionButtonPrimary: {
     backgroundColor: Colors.primary,
@@ -742,7 +993,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: Colors.text,
     marginTop: Spacing.lg,
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.sm,
     textAlign: 'center',
   },
   successMessage: {
@@ -750,23 +1001,13 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     textAlign: 'center',
     marginBottom: Spacing.xxl,
-    lineHeight: 22,
   },
-  statementOptions: {
+  ctaContainer: {
     width: '100%',
     alignItems: 'center',
     marginBottom: Spacing.xl,
   },
-  statementText: {
-    fontSize: 16,
-    color: Colors.text,
-    marginBottom: Spacing.md,
-  },
-  statementButtons: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-  },
-  statementButton: {
+  successCtaButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.fieldBg,
@@ -775,8 +1016,11 @@ const styles = StyleSheet.create({
     borderRadius: Radii.pill,
     borderWidth: 1,
     borderColor: Colors.border,
+    marginBottom: Spacing.md,
+    width: '100%',
+    justifyContent: 'center',
   },
-  statementButtonText: {
+  successCtaText: {
     color: Colors.primary,
     fontSize: 16,
     fontWeight: '600',
