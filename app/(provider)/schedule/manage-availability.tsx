@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+﻿import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,16 +13,15 @@ import {
   FlatList,
   Dimensions,
   Easing,
-  AccessibilityInfo, // Correção: Named import para announcements premium
+  AccessibilityInfo,
 } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { Calendar, LocaleConfig, DateData } from 'react-native-calendars'; // CORREÇÃO: Removido 'Theme' do import (não é exportado diretamente)
+import { Calendar, LocaleConfig, DateData } from 'react-native-calendars';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '../../../hooks/useAuth';
 
-// CORREÇÃO: Definição manual da interface Theme (baseada na doc oficial da lib e props usadas no código)
-// Isso replica o tipo exato, garantindo compatibilidade sem depender da biblioteca
+// Definição manual da interface Theme (baseada na doc oficial da lib)
 interface Theme {
   backgroundColor?: string;
   calendarBackground?: string;
@@ -63,7 +62,7 @@ interface Theme {
   todayBackgroundColor?: string;
 }
 
-// Importações de serviços e tipos do backend (ajuste os caminhos conforme sua estrutura)
+// Importações de serviços e tipos do backend
 import {
   getMyProviderAvailability,
   updateMyProviderAvailability,
@@ -72,7 +71,7 @@ import { getBookingsForUser } from '../../../services/bookingService';
 import { ProviderAvailability, GetProviderAvailabilityResponse, UpdateAvailabilityData } from '../../../types/backend/providers';
 import { BookingDetails, BookingStatus } from '../../../types/backend/bookings';
 
-// ====== Design tokens (mesmos da UI padronizada - Premium iOS) ======
+// Design tokens
 const Colors = {
   primary: '#4A90E2',
   primaryDark: '#2A72E7',
@@ -106,21 +105,21 @@ const Spacing = {
 
 const easeOut = Easing.out(Easing.ease);
 
-// ====== Locale PT-BR (Calendário) ======
+// Locale PT-BR (Calendário)
 LocaleConfig.locales['pt-br'] = {
   monthNames: [
-    'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
-    'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
   ],
-  monthNamesShort: ['Jan.','Fev.','Mar.','Abr.','Mai.','Jun.','Jul.','Ago.','Set.','Out.','Nov.','Dez.'],
-  dayNames: ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'],
-  dayNamesShort: ['DOM','SEG','TER','QUA','QUI','SEX','SÁB'],
+  monthNamesShort: ['Jan.', 'Fev.', 'Mar.', 'Abr.', 'Mai.', 'Jun.', 'Jul.', 'Ago.', 'Set.', 'Out.', 'Nov.', 'Dez.'],
+  dayNames: ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'],
+  dayNamesShort: ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'],
   today: 'Hoje'
 };
 LocaleConfig.defaultLocale = 'pt-br';
 
-// ====== Tema do Calendario (agora tipado com a interface Theme definida acima) ======
-const calendarTheme: Theme = { // CORREÇÃO: Usa a interface local Theme (sem import da lib)
+// Tema do Calendário
+const calendarTheme: Theme = {
   backgroundColor: Colors.bgSoft,
   calendarBackground: Colors.surface,
   textSectionTitleColor: '#586069',
@@ -134,36 +133,34 @@ const calendarTheme: Theme = { // CORREÇÃO: Usa a interface local Theme (sem i
   arrowColor: Colors.primary,
   monthTextColor: '#1C3A5F',
   indicatorColor: Colors.primary,
-  // CORREÇÃO: Usar literais exatos da union para matching (não string genérica)
-  textDayFontWeight: '400' as const, // Literal '400' matches union
-  textMonthFontWeight: 'bold' as const, // Literal 'bold' matches union
-  textDayHeaderFontWeight: '500' as const, // Literal '500' matches union
-  textDayFontSize: 16, // iOS larger
+  textDayFontWeight: '400' as const,
+  textMonthFontWeight: 'bold' as const,
+  textDayHeaderFontWeight: '500' as const,
+  textDayFontSize: 16,
   textMonthFontSize: 19,
   textDayHeaderFontSize: 13,
   'stylesheet.calendar.header': {
     week: {
-      marginTop: 8, // More space iOS
+      marginTop: 8,
       flexDirection: 'row',
       justifyContent: 'space-around',
       borderBottomWidth: 1,
       borderBottomColor: Colors.border,
       paddingBottom: 8,
     },
-    dayHeader: { // EXPANDIDO para compatibilidade
+    dayHeader: {
       color: Colors.textMuted,
       fontWeight: '500' as const,
       fontSize: 13,
     },
   },
-  // EXPANDIDO: Props adicionais para evitar warnings futuros
   textInactiveColor: Colors.textMuted,
   textActiveColor: Colors.primary,
   todayBackgroundColor: Colors.infoLight,
-}; // Removido 'as const' desnecessário aqui (a interface já garante tipagem)
+};
 
 // Helper para gerar blocos de tempo
-const generateTimeSlots = (startHour: number, endHour: number, intervalMinutes: number = 30) => {
+const generateTimeSlots = (startHour: number, endHour: number, intervalMinutes: number = 30): string[] => {
   const slots: string[] = [];
   for (let h = startHour; h <= endHour; h++) {
     for (let m = 0; m < 60; m += intervalMinutes) {
@@ -176,33 +173,31 @@ const generateTimeSlots = (startHour: number, endHour: number, intervalMinutes: 
   return slots;
 };
 
-// Todos os slots possíveis de 04:00 a 19:00
 const ALL_POSSIBLE_SLOTS = generateTimeSlots(4, 19, 30);
 
 interface DayAvailability {
-  dayOfWeek: number; // 0 (Domingo) a 6 (Sábado)
+  dayOfWeek: number;
   isEnabled: boolean;
-  selectedSlots: string[]; // Ex: ["09:00", "09:30", "10:00"]
-  originalSlots: string[]; // Slots como vieram do backend para controle de exclusão
-  id?: string; // ID da disponibilidade no backend se for um registro existente
+  selectedSlots: string[];
+  originalSlots: string[];
+  id?: string;
 }
 
 interface SpecificDateOverride {
-  date: string; // "YYYY-MM-DD"
+  date: string;
   type: 'blocked' | 'custom';
-  selectedSlots?: string[]; // Apenas se type === 'custom'
-  id?: string; // ID da exceção no backend
-  originalSlots?: string[]; // Slots originais para comparação
+  selectedSlots?: string[];
+  id?: string;
+  originalSlots?: string[];
 }
 
 type PresetKey = 'morning' | 'afternoon' | 'fullday';
 
-// Componente de Botão de Slot de Tempo
 interface TimeSlotButtonProps {
   time: string;
   isSelected: boolean;
   onPress: (time: string) => void;
-  isBooked: boolean; // Para desabilitar slots já agendados
+  isBooked: boolean;
 }
 
 const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({ time, isSelected, onPress, isBooked }) => {
@@ -210,7 +205,7 @@ const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({ time, isSelected, onPre
 
   const handlePressIn = () => {
     if (!isBooked) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); // Premium iOS haptic (fallback Android: vibração)
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       Animated.spring(animatedScale, { toValue: 0.92, useNativeDriver: true, tension: 200 }).start();
     }
   };
@@ -222,10 +217,10 @@ const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({ time, isSelected, onPre
   };
 
   const backgroundColor = isBooked
-    ? Colors.textSubtle // Cinza para agendado
+    ? Colors.textSubtle
     : isSelected
-    ? Colors.primary // Azul para selecionado
-    : Colors.fieldBg; // Fundo padrão
+    ? Colors.primary
+    : Colors.fieldBg;
 
   const textColor = isBooked || isSelected ? Colors.surface : Colors.text;
 
@@ -236,8 +231,8 @@ const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({ time, isSelected, onPre
         onPress={() => onPress(time)}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-        disabled={isBooked} // Desabilita se já estiver agendado
-        activeOpacity={0.92} // Suave iOS
+        disabled={isBooked}
+        activeOpacity={0.92}
         accessibilityRole="button"
         accessibilityLabel={`Horário ${time}${isSelected ? ' selecionado' : isBooked ? ' (agendado)' : ''}`}
         accessibilityHint="Toque para selecionar ou desmarcar"
@@ -245,7 +240,7 @@ const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({ time, isSelected, onPre
         <Text style={[styles.timeSlotText, { color: textColor }]}>{time}</Text>
         {isBooked && (
           <Ionicons
-            name="lock-closed" // Icon for booked slots
+            name="lock-closed"
             size={12}
             color={textColor}
             style={styles.bookedIcon}
@@ -257,7 +252,6 @@ const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({ time, isSelected, onPre
   );
 };
 
-// Componente para o Cartão de Disponibilidade do Dia
 interface DayAvailabilityCardProps {
   dayName: string;
   dayOfWeek: number;
@@ -266,14 +260,13 @@ interface DayAvailabilityCardProps {
   onToggleSlot: (dayOfWeek: number, slot: string) => void;
   onSelectAll: (dayOfWeek: number) => void;
   onClearSlots: (dayOfWeek: number) => void;
-  bookedSlotsForDay: string[]; // Slots já agendados para este dia da semana (recorrente)
-}
-
-const DayAvailabilityCard: React.FC<DayAvailabilityCardProps & {
+  bookedSlotsForDay: string[];
   onApplyPreset: (dayOfWeek: number, preset: PresetKey) => void;
   onCopyToOthers: (dayOfWeek: number) => void;
   onResetDay: (dayOfWeek: number) => void;
-}> = ({
+}
+
+const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
   dayName,
   dayOfWeek,
   availability,
@@ -289,7 +282,7 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps & {
   const cardAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(cardAnim, { toValue: 1, duration: 500, easing: easeOut, useNativeDriver: true }).start(); // Suave iOS
+    Animated.timing(cardAnim, { toValue: 1, duration: 500, easing: easeOut, useNativeDriver: true }).start();
   }, []);
 
   return (
@@ -302,7 +295,7 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps & {
           ios_backgroundColor={Colors.textMuted}
           onValueChange={(value) => {
             onToggleDay(dayOfWeek, value);
-            if (Platform.OS === 'ios') Haptics.selectionAsync(); // iOS premium (Android: fallback vibração)
+            if (Platform.OS === 'ios') Haptics.selectionAsync();
           }}
           value={availability.isEnabled}
           accessibilityLabel={`Ativar ${dayName.toLowerCase()}`}
@@ -310,7 +303,6 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps & {
         />
       </View>
 
-      {/* Ações rápidas (presets) */}
       <View style={styles.quickActionsRow}>
         <TouchableOpacity
           style={styles.quickActionChip}
@@ -348,7 +340,6 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps & {
 
               return (
                 <React.Fragment key={slot}>
-                  {/* Add visual separators by hour */}
                   {index > 0 && currentHour !== prevHour && (
                     <View style={styles.hourSeparatorContainer}>
                       <Text style={styles.hourSeparatorText}>{`${currentHour < 10 ? '0' : ''}${currentHour}h`}</Text>
@@ -364,33 +355,52 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps & {
               );
             })}
           </View>
-          {/* Interações secundárias: chips flutuantes alinhados à direita */}
           <View style={styles.dayActions}>
-            <TouchableOpacity style={styles.actionButtonSecondary} onPress={() => {
-              onSelectAll(dayOfWeek);
-              if (Platform.OS === 'ios') Haptics.selectionAsync();
-            }} accessibilityRole="button" accessibilityLabel="Selecionar todos os horários">
+            <TouchableOpacity 
+              style={styles.actionButtonSecondary} 
+              onPress={() => {
+                onSelectAll(dayOfWeek);
+                if (Platform.OS === 'ios') Haptics.selectionAsync();
+              }} 
+              accessibilityRole="button" 
+              accessibilityLabel="Selecionar todos os horários"
+            >
               <Ionicons name="checkmark-done-circle-outline" size={16} color={Colors.primary} style={styles.actionButtonIcon} accessibilityHidden={true} />
               <Text style={styles.actionButtonSecondaryText}>Selecionar Tudo</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButtonSecondary} onPress={() => {
-              onClearSlots(dayOfWeek);
-              if (Platform.OS === 'ios') Haptics.selectionAsync();
-            }} accessibilityRole="button" accessibilityLabel="Limpar horários selecionados">
+            <TouchableOpacity 
+              style={styles.actionButtonSecondary} 
+              onPress={() => {
+                onClearSlots(dayOfWeek);
+                if (Platform.OS === 'ios') Haptics.selectionAsync();
+              }} 
+              accessibilityRole="button" 
+              accessibilityLabel="Limpar horários selecionados"
+            >
               <Ionicons name="trash-outline" size={16} color={Colors.primary} style={styles.actionButtonIcon} accessibilityHidden={true} />
               <Text style={styles.actionButtonSecondaryText}>Limpar</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButtonSecondary} onPress={() => {
-              onCopyToOthers(dayOfWeek);
-              if (Platform.OS === 'ios') Haptics.selectionAsync();
-            }} accessibilityRole="button" accessibilityLabel={`Copiar de ${dayName} para outros dias`}>
+            <TouchableOpacity 
+              style={styles.actionButtonSecondary} 
+              onPress={() => {
+                onCopyToOthers(dayOfWeek);
+                if (Platform.OS === 'ios') Haptics.selectionAsync();
+              }} 
+              accessibilityRole="button" 
+              accessibilityLabel={`Copiar de ${dayName} para outros dias`}
+            >
               <Ionicons name="copy-outline" size={16} color={Colors.primary} style={styles.actionButtonIcon} accessibilityHidden={true} />
               <Text style={styles.actionButtonSecondaryText}>Copiar para...</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButtonSecondary} onPress={() => {
-              onResetDay(dayOfWeek);
-              if (Platform.OS === 'ios') Haptics.selectionAsync();
-            }} accessibilityRole="button" accessibilityLabel={`Reverter alterações em ${dayName}`}>
+            <TouchableOpacity 
+              style={styles.actionButtonSecondary} 
+              onPress={() => {
+                onResetDay(dayOfWeek);
+                if (Platform.OS === 'ios') Haptics.selectionAsync();
+              }} 
+              accessibilityRole="button" 
+              accessibilityLabel={`Reverter alterações em ${dayName}`}
+            >
               <Ionicons name="refresh-outline" size={16} color={Colors.primary} style={styles.actionButtonIcon} accessibilityHidden={true} />
               <Text style={styles.actionButtonSecondaryText}>Reverter</Text>
             </TouchableOpacity>
@@ -401,7 +411,6 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps & {
   );
 };
 
-// New InfoCard Component
 const InfoCard: React.FC<{ text: string }> = ({ text }) => (
   <View style={styles.infoCard}>
     <Ionicons name="information-circle-outline" size={20} color={Colors.infoDark} style={styles.infoIcon} accessibilityHidden={true} />
@@ -411,6 +420,7 @@ const InfoCard: React.FC<{ text: string }> = ({ text }) => (
 
 export default function ManageAvailabilityScreen() {
   const router = useRouter();
+  const { preset } = useLocalSearchParams<{ preset?: string }>();
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -422,15 +432,87 @@ export default function ManageAvailabilityScreen() {
   const [copyModalVisible, setCopyModalVisible] = useState(false);
   const [copyFromDay, setCopyFromDay] = useState<number | null>(null);
   const [copyTargets, setCopyTargets] = useState<number[]>([]);
+  // Smart Step state
+  const [smartVisible, setSmartVisible] = useState(false);
+  const [smartMode, setSmartMode] = useState<'weekly' | 'override'>('weekly');
+  const [smartStep, setSmartStep] = useState<1 | 2 | 3>(1);
+  const [smartScope, setSmartScope] = useState<'today' | 'tomorrow' | 'weekday' | 'date'>('today');
+  const [smartWeekdays, setSmartWeekdays] = useState<number[]>([]);
+  const [smartPreset, setSmartPreset] = useState<PresetKey | 'custom' | 'off'>('morning');
+  const [smartCustomSlots, setSmartCustomSlots] = useState<string[]>([]);
+  const [smartDate, setSmartDate] = useState<string | null>(null);
+  const [smartOverrideType, setSmartOverrideType] = useState<'blocked' | 'custom'>('blocked');
 
   const headerAnim = useRef(new Animated.Value(0)).current;
   const contentAnim = useRef(new Animated.Value(0)).current;
-  // Removed save button width animation; using sticky save bar instead
 
   const dayNames = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
 
-  // Helper para converter slots discretos em blocos contínuos (startTime, endTime)
-  const convertSlotsToBlocks = (slots: string[]) => {
+  // ===== Handlers movidos para cima (após states, antes de useEffects/JSX) =====
+
+  // getBookedSlotsForDay (mantido como useCallback, movido para cima - depende de bookings)
+  const getBookedSlotsForDay = useCallback((dayOfWeek: number): string[] => {
+    const bookedTimes: string[] = [];
+    const confirmedBookings = bookings.filter(b => b.status === BookingStatus.CONFIRMED);
+
+    confirmedBookings.forEach(booking => {
+      const bookingDate = new Date(booking.scheduledDate);
+      if (bookingDate.getDay() === dayOfWeek) {
+        const [startHour, startMinute] = booking.scheduledTime.split(':').map(Number);
+        const startTotalMinutes = startHour * 60 + startMinute;
+
+        const endTotalMinutes = booking.scheduledEndTime
+          ? parseInt(booking.scheduledEndTime.split(':')[0]) * 60 + parseInt(booking.scheduledEndTime.split(':')[1])
+          : startTotalMinutes + 30;
+
+        for (let time = startTotalMinutes; time < endTotalMinutes; time += 30) {
+          const hour = Math.floor(time / 60);
+          const minute = time % 60;
+          bookedTimes.push(`${hour < 10 ? '0' : ''}${hour}:${minute < 10 ? '0' : ''}${minute}`);
+        }
+      }
+    });
+    return Array.from(new Set(bookedTimes));
+  }, [bookings]);
+
+  // handleToggleDay (convertido para function declaration - hoisted, sem useCallback desnecessário)
+  function handleToggleDay(dayOfWeek: number, isEnabled: boolean) {
+    setWeeklyAvailability(prev =>
+      prev.map(day => (day.dayOfWeek === dayOfWeek ? { ...day, isEnabled } : day))
+    );
+  }
+
+  // handleClearSlots (convertido para function declaration)
+  function handleClearSlots(dayOfWeek: number) {
+    setWeeklyAvailability(prev =>
+      prev.map(day => (day.dayOfWeek === dayOfWeek ? { ...day, selectedSlots: [] } : day))
+    );
+  }
+
+  // handleDayPressOnCalendar (convertido para function declaration)
+  function handleDayPressOnCalendar(day: DateData) {
+    setSelectedDateForOverride(day.dateString);
+    const existingOverride = specificDateOverrides.find(override => override.date === day.dateString);
+    AccessibilityInfo.announceForAccessibility(`Data selecionada: ${day.dateString}. Configure exceção se desejar.`);
+  }
+
+  // handleSetOverrideType (convertido para function declaration)
+  function handleSetOverrideType(type: 'blocked' | 'custom') {
+    if (!selectedDateForOverride) return;
+    setSpecificDateOverrides(prev => {
+      const existingIndex = prev.findIndex(o => o.date === selectedDateForOverride);
+      if (existingIndex !== -1) {
+        const updated = [...prev];
+        updated[existingIndex] = { ...updated[existingIndex], type, selectedSlots: type === 'custom' ? updated[existingIndex].selectedSlots || [] : undefined };
+        return updated;
+      }
+      return [...prev, { date: selectedDateForOverride, type, selectedSlots: type === 'custom' ? [] : undefined }];
+    });
+    if (Platform.OS === 'ios') Haptics.selectionAsync();
+  }
+
+  // Outros handlers (mantidos como useCallback, mas movidos para cima)
+  const convertSlotsToBlocks = useCallback((slots: string[]) => {
     if (slots.length === 0) return [];
 
     const sortedSlots = [...slots].sort();
@@ -444,9 +526,9 @@ export default function ManageAvailabilityScreen() {
       const [currentHour, currentMinute] = currentSlot.split(':').map(Number);
       const currentTotalMinutes = currentHour * 60 + currentMinute;
 
-      if (i === sortedSlots.length - 1) { // Último slot
+      if (i === sortedSlots.length - 1) {
         const [endHour, endMinute] = currentBlockEnd.split(':').map(Number);
-        const finalEndTotalMinutes = endHour * 60 + endMinute + 30; // Adiciona 30 minutos para o fim do último slot
+        const finalEndTotalMinutes = endHour * 60 + endMinute + 30;
         const finalEndHour = Math.floor(finalEndTotalMinutes / 60);
         const finalEndMinute = finalEndTotalMinutes % 60;
         blocks.push({
@@ -458,10 +540,9 @@ export default function ManageAvailabilityScreen() {
         const [nextHour, nextMinute] = nextSlot.split(':').map(Number);
         const nextTotalMinutes = nextHour * 60 + nextMinute;
 
-        // Se o próximo slot é contínuo (30 minutos depois)
         if (nextTotalMinutes === currentTotalMinutes + 30) {
-          currentBlockEnd = currentSlot; // Estende o bloco atual
-        } else { // O bloco contínuo foi quebrado
+          currentBlockEnd = currentSlot;
+        } else {
           const [endHour, endMinute] = currentBlockEnd.split(':').map(Number);
           const finalEndTotalMinutes = endHour * 60 + endMinute + 30;
           const finalEndHour = Math.floor(finalEndTotalMinutes / 60);
@@ -470,15 +551,14 @@ export default function ManageAvailabilityScreen() {
             startTime: currentBlockStart,
             endTime: `${finalEndHour < 10 ? '0' : ''}${finalEndHour}:${finalEndMinute < 10 ? '0' : ''}${finalEndMinute}`
           });
-          currentBlockStart = nextSlot; // Inicia um novo bloco
+          currentBlockStart = nextSlot;
           currentBlockEnd = nextSlot;
         }
       }
     }
     return blocks;
-  };
+  }, []);
 
-  // Função para carregar disponibilidade e agendamentos
   const loadData = useCallback(async () => {
     if (!user?.id) {
       console.warn("User ID não disponível, não carregando dados de disponibilidade.");
@@ -525,17 +605,11 @@ export default function ManageAvailabilityScreen() {
       });
       setWeeklyAvailability(initialWeekly);
 
-      // TODO: Carregar exceções de datas específicas do backend aqui (ex.: API getOverrides)
-      // For now, let's simulate some overrides for testing the UI
-      setSpecificDateOverrides([
-        // { date: '2025-09-15', type: 'blocked' }, // Example blocked day
-        // { date: '2025-09-16', type: 'custom', selectedSlots: ['10:00', '10:30', '11:00'] }, // Example custom day
-      ]);
+      setSpecificDateOverrides([]);
 
       const allBookings: BookingDetails[] = await getBookingsForUser(BookingStatus.CONFIRMED);
       setBookings(allBookings);
 
-      // Animações stagger premium iOS
       Animated.parallel([
         Animated.timing(headerAnim, { toValue: 1, duration: 600, easing: easeOut, useNativeDriver: true }),
         Animated.timing(contentAnim, { toValue: 1, duration: 700, easing: easeOut, useNativeDriver: true }),
@@ -549,50 +623,48 @@ export default function ManageAvailabilityScreen() {
     }
   }, [user?.id, headerAnim, contentAnim]);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  const applyPresetSlots = (preset: PresetKey): string[] => {
+  const applyPresetSlots = useCallback((preset: PresetKey): string[] => {
     if (preset === 'morning') return generateTimeSlots(8, 12, 30);
     if (preset === 'afternoon') return generateTimeSlots(13, 17, 30);
     return generateTimeSlots(8, 18, 30);
-  };
+  }, []);
 
-  const handleApplyPreset = (dayOfWeek: number, preset: PresetKey) => {
+  const handleApplyPreset = useCallback((dayOfWeek: number, preset: PresetKey) => {
     setWeeklyAvailability(prev => prev.map(d => {
       if (d.dayOfWeek !== dayOfWeek) return d;
       const newSlots = applyPresetSlots(preset);
       return { ...d, isEnabled: true, selectedSlots: newSlots };
     }));
     AccessibilityInfo.announceForAccessibility?.('Preset aplicado');
-  };
+  }, [applyPresetSlots]);
 
-  const handleResetDayToOriginal = (dayOfWeek: number) => {
+  const handleResetDayToOriginal = useCallback((dayOfWeek: number) => {
     setWeeklyAvailability(prev => prev.map(d => {
       if (d.dayOfWeek !== dayOfWeek) return d;
       const enabled = (d.originalSlots || []).length > 0;
       return { ...d, isEnabled: enabled, selectedSlots: d.originalSlots || [] };
     }));
-  };
+  }, []);
 
-  const openCopyModal = (fromDay: number) => {
+  const openCopyModal = useCallback((fromDay: number) => {
     setCopyFromDay(fromDay);
     setCopyTargets([]);
     setCopyModalVisible(true);
-  };
+  }, []);
 
-  const toggleCopyTarget = (day: number) => {
+  const toggleCopyTarget = useCallback((day: number) => {
     setCopyTargets(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]);
-  };
+  }, []);
 
-  const applyCopyToTargets = () => {
-    if (copyFromDay == null) return;
-    const source = weeklyAvailability.find(d => d.dayOfWeek === copyFromDay);
+  const applyCopyToTargets = useCallback((overrideFrom?: number, overrideTargets?: number[]) => {
+    const from = overrideFrom ?? copyFromDay;
+    const targets = overrideTargets ?? copyTargets;
+    if (from == null) return;
+    const source = weeklyAvailability.find(d => d.dayOfWeek === from);
     if (!source) return;
     const sourceSlots = source.selectedSlots || [];
     setWeeklyAvailability(prev => prev.map(d => {
-      if (!copyTargets.includes(d.dayOfWeek) || d.dayOfWeek === copyFromDay) return d;
+      if (!targets.includes(d.dayOfWeek) || d.dayOfWeek === from) return d;
       const booked = getBookedSlotsForDay(d.dayOfWeek);
       const filtered = sourceSlots.filter(s => !booked.includes(s));
       return { ...d, isEnabled: filtered.length > 0, selectedSlots: filtered };
@@ -601,26 +673,106 @@ export default function ManageAvailabilityScreen() {
     setCopyFromDay(null);
     setCopyTargets([]);
     AccessibilityInfo.announceForAccessibility?.('Disponibilidade copiada');
-  };
+  }, [copyFromDay, copyTargets, weeklyAvailability, getBookedSlotsForDay]);
 
-  const pendingChangesCount = useMemo(() => {
-    const weeklyChanges = weeklyAvailability.reduce((acc, d) => {
-      const a = (d.selectedSlots || []).join(',');
-      const b = (d.originalSlots || []).join(',');
-      return acc + (a !== b ? 1 : 0);
-    }, 0);
-    const overridesChanges = specificDateOverrides.length;
-    return weeklyChanges + overridesChanges;
-  }, [weeklyAvailability, specificDateOverrides]);
+  const openSmartStep = useCallback((mode: 'weekly' | 'override' = 'weekly') => {
+    setSmartMode(mode);
+    setSmartStep(1);
+    setSmartScope('today');
+    setSmartPreset('morning');
+    setSmartWeekdays([]);
+    setSmartCustomSlots([]);
+    setSmartDate(null);
+    setSmartOverrideType('blocked');
+    setSmartVisible(true);
+    if (Platform.OS === 'ios') Haptics.selectionAsync();
+  }, []);
 
-  // Lógica para gerenciar a disponibilidade semanal
-  const handleToggleDay = (dayOfWeek: number, isEnabled: boolean) => {
-    setWeeklyAvailability(prev =>
-      prev.map(day => (day.dayOfWeek === dayOfWeek ? { ...day, isEnabled } : day))
-    );
-  };
+  const toggleSmartWeekday = useCallback((dow: number) => {
+    setSmartWeekdays(prev => prev.includes(dow) ? prev.filter(d => d !== dow) : [...prev, dow]);
+  }, []);
 
-  const handleToggleSlot = (dayOfWeek: number, slot: string) => {
+  const toggleSmartCustomSlot = useCallback((slot: string) => {
+    setSmartCustomSlots(prev => prev.includes(slot) ? prev.filter(s => s !== slot) : [...prev, slot].sort());
+    if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, []);
+
+  const applySmartStep = useCallback(() => {
+    try {
+      if (smartMode === 'weekly') {
+        const now = new Date();
+        const today = now.getDay();
+        const targetDays: number[] =
+          smartScope === 'today' ? [today]
+          : smartScope === 'tomorrow' ? [(today + 1) % 7]
+          : smartScope === 'weekday' ? [...smartWeekdays]
+          : [];
+
+        if (smartScope === 'date') {
+          setActiveTab('overrides');
+          setSmartMode('override');
+          setSmartStep(1);
+          return;
+        }
+
+        if (targetDays.length === 0) {
+          AccessibilityInfo.announceForAccessibility?.('Selecione pelo menos um dia.');
+          return;
+        }
+
+        if (smartPreset === 'off') {
+          targetDays.forEach(d => { handleClearSlots(d); handleToggleDay(d, false); });
+        } else if (smartPreset === 'custom') {
+          const base = targetDays[0];
+          setWeeklyAvailability(prev => prev.map(day => day.dayOfWeek === base ? { ...day, isEnabled: smartCustomSlots.length > 0, selectedSlots: smartCustomSlots } : day));
+          if (targetDays.length > 1) {
+            const targets = targetDays.slice(1);
+            applyCopyToTargets(base, targets);
+          }
+        } else {
+          const base = targetDays[0];
+          handleApplyPreset(base, smartPreset as PresetKey);
+          if (targetDays.length > 1) {
+            const targets = targetDays.slice(1);
+            applyCopyToTargets(base, targets);
+          }
+        }
+        setSmartVisible(false);
+        if (Platform.OS === 'ios') Haptics.selectionAsync();
+        AccessibilityInfo.announceForAccessibility?.('Disponibilidade atualizada');
+      } else {
+        if (!smartDate) {
+          AccessibilityInfo.announceForAccessibility?.('Selecione uma data.');
+          return;
+        }
+        const parts = smartDate.split('-').map(n => parseInt(n, 10));
+        const dd: DateData = { dateString: smartDate, day: parts[2], month: parts[1], year: parts[0], timestamp: new Date(smartDate).getTime() } as DateData;
+        handleDayPressOnCalendar(dd);
+
+        if (smartOverrideType === 'blocked') {
+          handleSetOverrideType('blocked');
+        } else {
+          handleSetOverrideType('custom');
+          setSpecificDateOverrides(prev => {
+            const existingIndex = prev.findIndex(o => o.date === smartDate);
+            if (existingIndex !== -1) {
+              const updated = [...prev];
+              updated[existingIndex] = { ...updated[existingIndex], type: 'custom', selectedSlots: [...smartCustomSlots] };
+              return updated;
+            }
+            return [...prev, { date: smartDate, type: 'custom', selectedSlots: [...smartCustomSlots] }];
+          });
+        }
+        setSmartVisible(false);
+        if (Platform.OS === 'ios') Haptics.selectionAsync();
+        AccessibilityInfo.announceForAccessibility?.('Exceção atualizada');
+      }
+    } catch (e) {
+      console.error('Erro ao aplicar assistente:', e);
+    }
+  }, [smartMode, smartScope, smartWeekdays, smartPreset, smartCustomSlots, smartDate, smartOverrideType, weeklyAvailability, handleClearSlots, handleToggleDay, handleApplyPreset, applyCopyToTargets, handleDayPressOnCalendar, handleSetOverrideType]);
+
+  const handleToggleSlot = useCallback((dayOfWeek: number, slot: string) => {
     setWeeklyAvailability(prev =>
       prev.map(day => {
         if (day.dayOfWeek === dayOfWeek) {
@@ -632,51 +784,15 @@ export default function ManageAvailabilityScreen() {
         return day;
       })
     );
-  };
+  }, []);
 
-  const handleSelectAllSlots = (dayOfWeek: number) => {
+  const handleSelectAllSlots = useCallback((dayOfWeek: number) => {
     setWeeklyAvailability(prev =>
       prev.map(day => (day.dayOfWeek === dayOfWeek ? { ...day, selectedSlots: ALL_POSSIBLE_SLOTS } : day))
     );
-  };
+  }, []);
 
-  const handleClearSlots = (dayOfWeek: number) => {
-    setWeeklyAvailability(prev =>
-      prev.map(day => (day.dayOfWeek === dayOfWeek ? { ...day, selectedSlots: [] } : day))
-    );
-  };
-
-  // Lógica para gerenciar exceções de datas específicas
-  const handleDayPressOnCalendar = (day: DateData) => {
-    setSelectedDateForOverride(day.dateString);
-    // Tenta encontrar uma exceção existente para esta data
-    const existingOverride = specificDateOverrides.find(override => override.date === day.dateString);
-    if (existingOverride) {
-      // If there is an existing override, ensure it's selected in the UI
-      // (The currentOverride memoized value handles this for rendering)
-    } else {
-      // If no override, ensure override options are reset or empty
-      // (This is implicitly handled by currentOverride being null)
-    }
-    // Acessibilidade: Anunciar seleção
-    AccessibilityInfo.announceForAccessibility(`Data selecionada: ${day.dateString}. Configure exceção se desejar.`);
-  };
-
-  const handleSetOverrideType = (type: 'blocked' | 'custom') => {
-    if (!selectedDateForOverride) return;
-    setSpecificDateOverrides(prev => {
-      const existingIndex = prev.findIndex(o => o.date === selectedDateForOverride);
-      if (existingIndex !== -1) {
-        const updated = [...prev];
-        updated[existingIndex] = { ...updated[existingIndex], type, selectedSlots: type === 'custom' ? updated[existingIndex].selectedSlots || [] : undefined };
-        return updated;
-      }
-      return [...prev, { date: selectedDateForOverride, type, selectedSlots: type === 'custom' ? [] : undefined }];
-    });
-    if (Platform.OS === 'ios') Haptics.selectionAsync(); // iOS premium
-  };
-
-  const handleToggleOverrideSlot = (slot: string) => {
+  const handleToggleOverrideSlot = useCallback((slot: string) => {
     if (!selectedDateForOverride) return;
     setSpecificDateOverrides(prev => {
       const existingIndex = prev.findIndex(o => o.date === selectedDateForOverride);
@@ -691,22 +807,18 @@ export default function ManageAvailabilityScreen() {
       }
       return prev;
     });
-    if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); // Haptic premium
-  };
+    if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, [selectedDateForOverride]);
 
-  const handleClearOverride = () => {
+  const handleClearOverride = useCallback(() => {
     if (!selectedDateForOverride) return;
     setSpecificDateOverrides(prev => prev.filter(o => o.date !== selectedDateForOverride));
     setSelectedDateForOverride(null);
     if (Platform.OS === 'ios') Haptics.selectionAsync();
     AccessibilityInfo.announceForAccessibility('Exceção removida para esta data.');
-  };
+  }, [selectedDateForOverride]);
 
-  const currentOverride = useMemo(() => {
-    return specificDateOverrides.find(o => o.date === selectedDateForOverride);
-  }, [specificDateOverrides, selectedDateForOverride]);
-
-  const handleSaveAvailability = async () => {
+  const handleSaveAvailability = useCallback(async () => {
     if (!user?.id) {
       Alert.alert("Erro", "ID do provedor não encontrado. Faça login novamente.");
       return;
@@ -733,24 +845,18 @@ export default function ManageAvailabilityScreen() {
 
       await updateMyProviderAvailability(allAvailabilityUpdates);
 
-      // 2. Salvar Exceções de Datas Específicas
       for (const override of specificDateOverrides) {
         if (override.type === 'blocked') {
           console.log(`Bloqueando data: ${override.date}`);
-          // TODO: Call backend API to block specific date (ex.: postBlockDate(override.date))
         } else if (override.type === 'custom' && override.selectedSlots) {
           const customBlocks = convertSlotsToBlocks(override.selectedSlots);
           console.log(`Customizando data ${override.date} com slots:`, customBlocks);
-          // TODO: Call backend API to set custom slots for specific date (ex.: postCustomAvailability(override.date, customBlocks))
         }
       }
-      // TODO: Lógica para remover overrides que foram desfeitos na UI (ex.: compare com originalSlots e delete se vazio)
 
-      // Haptic feedback (corrigido para compatibilidade iOS/Android)
       if (Platform.OS === 'ios') {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {
-        // Fallback Android: vibração simples
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       }
       Alert.alert('Sucesso', 'Sua disponibilidade foi salva!');
@@ -767,34 +873,8 @@ export default function ManageAvailabilityScreen() {
       setIsSaving(false);
       loadData();
     }
-  };
+  }, [user?.id, weeklyAvailability, specificDateOverrides, convertSlotsToBlocks, router, loadData]);
 
-  // Mapeia agendamentos para horários ocupados recorrentes
-  const getBookedSlotsForDay = useCallback((dayOfWeek: number): string[] => {
-    const bookedTimes: string[] = [];
-    const confirmedBookings = bookings.filter(b => b.status === BookingStatus.CONFIRMED);
-
-    confirmedBookings.forEach(booking => {
-      const bookingDate = new Date(booking.scheduledDate);
-      if (bookingDate.getDay() === dayOfWeek) {
-        const [startHour, startMinute] = booking.scheduledTime.split(':').map(Number);
-        const startTotalMinutes = startHour * 60 + startMinute;
-
-        const endTotalMinutes = booking.scheduledEndTime
-          ? parseInt(booking.scheduledEndTime.split(':')[0]) * 60 + parseInt(booking.scheduledEndTime.split(':')[1])
-          : startTotalMinutes + 30;
-
-        for (let time = startTotalMinutes; time < endTotalMinutes; time += 30) {
-          const hour = Math.floor(time / 60);
-          const minute = time % 60;
-          bookedTimes.push(`${hour < 10 ? '0' : ''}${hour}:${minute < 10 ? '0' : ''}${minute}`);
-        }
-      }
-    });
-    return Array.from(new Set(bookedTimes));
-  }, [bookings]);
-
-  // Slots já agendados para a data de override selecionada
   const getBookedSlotsForSpecificDate = useCallback((date: string): string[] => {
     const bookedTimes: string[] = [];
     const confirmedBookings = bookings.filter(b => b.status === BookingStatus.CONFIRMED && b.scheduledDate === date);
@@ -816,7 +896,20 @@ export default function ManageAvailabilityScreen() {
     return Array.from(new Set(bookedTimes));
   }, [bookings]);
 
-  // Calendar marked dates for overrides
+  const pendingChangesCount = useMemo(() => {
+    const weeklyChanges = weeklyAvailability.reduce((acc, d) => {
+      const a = (d.selectedSlots || []).join(',');
+      const b = (d.originalSlots || []).join(',');
+      return acc + (a !== b ? 1 : 0);
+    }, 0);
+    const overridesChanges = specificDateOverrides.length;
+    return weeklyChanges + overridesChanges;
+  }, [weeklyAvailability, specificDateOverrides]);
+
+  const currentOverride = useMemo(() => {
+    return specificDateOverrides.find(o => o.date === selectedDateForOverride);
+  }, [specificDateOverrides, selectedDateForOverride]);
+
   const markedDates = useMemo(() => {
     const dates: { [key: string]: any } = {};
     specificDateOverrides.forEach(override => {
@@ -824,14 +917,14 @@ export default function ManageAvailabilityScreen() {
         dates[override.date] = {
           selected: selectedDateForOverride === override.date,
           selectedColor: selectedDateForOverride === override.date ? Colors.primary : Colors.danger,
-          dotColor: Colors.danger, // Red dot for blocked days
+          dotColor: Colors.danger,
           marked: true,
         };
       } else if (override.type === 'custom') {
         dates[override.date] = {
           selected: selectedDateForOverride === override.date,
-          selectedColor: selectedDateForOverride === override.date ? Colors.primary : Colors.primary, // Or a different color for custom
-          dotColor: Colors.primary, // Blue dot for custom days
+          selectedColor: selectedDateForOverride === override.date ? Colors.primary : Colors.primary,
+          dotColor: Colors.primary,
           marked: true,
         };
       }
@@ -842,8 +935,34 @@ export default function ManageAvailabilityScreen() {
     return dates;
   }, [specificDateOverrides, selectedDateForOverride]);
 
-  // Animated style for save button
-  // Removed animated width/opacities for old save button
+  // Apply preset actions when navigated with preset query param
+  useEffect(() => {
+    if (!preset) return;
+    const d = new Date();
+    const dow = d.getDay();
+    switch (preset) {
+      case 'today-morning':
+        handleApplyPreset(dow, 'morning');
+        break;
+      case 'tomorrow-afternoon':
+        handleApplyPreset((dow + 1) % 7, 'afternoon');
+        break;
+      case 'block-today':
+        handleClearSlots(dow);
+        handleToggleDay(dow, false);
+        break;
+      case 'repeat-week':
+        openCopyModal(dow);
+        setCopyTargets([1, 2, 3, 4, 5]);
+        break;
+    }
+    if (Platform.OS === 'ios') Haptics.selectionAsync();
+    AccessibilityInfo.announceForAccessibility('Disponibilidade atualizada');
+  }, [preset, handleApplyPreset, handleClearSlots, handleToggleDay, openCopyModal]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   if (isLoading) {
     return (
@@ -871,7 +990,6 @@ export default function ManageAvailabilityScreen() {
         <View style={styles.headerPlaceholder} />
       </Animated.View>
 
-      {/* Segmented control */}
       <View style={styles.segmentedControl}>
         <TouchableOpacity
           style={[styles.segment, activeTab === 'weekly' && styles.segmentActive]}
@@ -898,6 +1016,64 @@ export default function ManageAvailabilityScreen() {
       >
         {activeTab === 'weekly' && (
           <>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginHorizontal: 20, marginTop: 8 }}>
+              <TouchableOpacity 
+                style={styles.quickActionChip} 
+                onPress={() => {
+                  const today = new Date().getDay();
+                  handleApplyPreset(today, 'morning');
+                  if (Platform.OS === 'ios') Haptics.selectionAsync();
+                  AccessibilityInfo.announceForAccessibility('Disponibilidade salva para hoje 08-12');
+                }}
+              >
+                <Text style={styles.quickActionText}>Disponível hoje 08-12</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.quickActionChip} 
+                onPress={() => {
+                  const d = new Date(); 
+                  const tomorrow = (d.getDay() + 1) % 7;
+                  handleApplyPreset(tomorrow, 'afternoon');
+                  if (Platform.OS === 'ios') Haptics.selectionAsync();
+                  AccessibilityInfo.announceForAccessibility('Disponibilidade salva para amanhã 13-17');
+                }}
+              >
+                <Text style={styles.quickActionText}>Disponível amanhã 13-17</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.quickActionChip} 
+                onPress={() => {
+                  const t = new Date().getDay();
+                  handleClearSlots(t); 
+                  handleToggleDay(t, false);
+                  if (Platform.OS === 'ios') Haptics.selectionAsync();
+                  AccessibilityInfo.announceForAccessibility('Dia bloqueado');
+                }}
+              >
+                <Text style={styles.quickActionText}>Bloquear hoje (folga)</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.quickActionChip} 
+                onPress={() => {
+                  const base = new Date().getDay(); 
+                  openCopyModal(base); 
+                  setCopyTargets([1, 2, 3, 4, 5]);
+                  if (Platform.OS === 'ios') Haptics.selectionAsync();
+                  AccessibilityInfo.announceForAccessibility('Repetir esta semana');
+                }}
+              >
+                <Text style={styles.quickActionText}>Repetir esta semana</Text>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity 
+              style={styles.primaryCTAButton} 
+              onPress={() => openSmartStep('weekly')} 
+              accessibilityRole="button" 
+              accessibilityLabel="Assistente de Horários"
+            >
+              <Ionicons name="flash-outline" size={18} color="#fff" style={{ marginRight: 8 }} accessibilityHidden={true} />
+              <Text style={styles.primaryCTAButtonText}>Assistente de Horários</Text>
+            </TouchableOpacity>
             <Text style={styles.sectionTitleImproved}>Disponibilidade Semanal</Text>
             <InfoCard text="Defina seus horários fixos por dia. Use os presets e copie para acelerar." />
             {weeklyAvailability.map(day => (
@@ -922,21 +1098,29 @@ export default function ManageAvailabilityScreen() {
         {activeTab === 'overrides' && (
           <>
             <Text style={styles.sectionTitleImproved}>Exceções de Datas</Text>
+            <TouchableOpacity 
+              style={styles.primaryCTAButton} 
+              onPress={() => openSmartStep('override')} 
+              accessibilityRole="button" 
+              accessibilityLabel="Criar exceção rápida"
+            >
+              <Ionicons name="calendar-outline" size={18} color="#fff" style={{ marginRight: 8 }} accessibilityHidden={true} />
+              <Text style={styles.primaryCTAButtonText}>Criar exceção rápida</Text>
+            </TouchableOpacity>
             <InfoCard text="Selecione uma data no calendário para bloquear ou definir horários personalizados." />
             <View style={styles.calendarOverrideContainer}>
               <Calendar
                 onDayPress={handleDayPressOnCalendar}
-                markedDates={markedDates} // Use the memoized markedDates
-                theme={calendarTheme} // CORREÇÃO: Removido 'as Theme' (agora tipado corretamente pela interface local)
+                markedDates={markedDates}
+                theme={calendarTheme}
                 style={styles.calendarOverrideStyle}
                 accessibilityLabel="Calendário para exceções de datas"
                 accessibilityHint="Selecione uma data para configurar exceção"
               />
               {selectedDateForOverride && (
-                <View style={styles.overrideOptionsCard}> {/* Apply card style here */}
+                <View style={styles.overrideOptionsCard}>
                   <Text style={styles.overrideTitle}>Opções para {selectedDateForOverride}</Text>
 
-                  {/* Display quick summary of custom slots if type is custom */}
                   {currentOverride?.type === 'custom' && currentOverride.selectedSlots && currentOverride.selectedSlots.length > 0 && (
                     <Text style={styles.customSlotsSummary}>
                       Horários selecionados: {currentOverride.selectedSlots.slice(0, 3).join(', ')}
@@ -944,7 +1128,7 @@ export default function ManageAvailabilityScreen() {
                     </Text>
                   )}
                   {currentOverride?.type === 'blocked' && (
-                    <Text style={styles.blockedDayBadge}>🔴 Dia Bloqueado</Text>
+                    <Text style={styles.blockedDayBadge}>🔒 Dia Bloqueado</Text>
                   )}
 
                   <TouchableOpacity
@@ -980,7 +1164,13 @@ export default function ManageAvailabilityScreen() {
                     </View>
                   )}
                   {currentOverride && (
-                    <TouchableOpacity style={styles.clearOverrideButton} onPress={handleClearOverride} activeOpacity={0.92} accessibilityRole="button" accessibilityLabel="Remover exceção">
+                    <TouchableOpacity 
+                      style={styles.clearOverrideButton} 
+                      onPress={handleClearOverride} 
+                      activeOpacity={0.92} 
+                      accessibilityRole="button" 
+                      accessibilityLabel="Remover exceção"
+                    >
                       <Text style={styles.clearOverrideButtonText}>Remover Exceção para este Dia</Text>
                     </TouchableOpacity>
                   )}
@@ -991,7 +1181,6 @@ export default function ManageAvailabilityScreen() {
         )}
       </Animated.ScrollView>
 
-      {/* Sticky Save Bar */}
       <View style={styles.stickySaveBar} accessibilityRole="summary">
         <Text style={styles.stickySummaryText}>
           {pendingChangesCount > 0 ? `${pendingChangesCount} alterações pendentes` : 'Tudo salvo'}
@@ -1024,13 +1213,19 @@ export default function ManageAvailabilityScreen() {
               {dayNames.map((label, idx) => (
                 <TouchableOpacity
                   key={idx}
-                  style={[styles.modalChip, copyTargets.includes(idx) && styles.modalChipActive, copyFromDay === idx && styles.modalChipDisabled]}
+                  style={[
+                    styles.modalChip, 
+                    copyTargets.includes(idx) && styles.modalChipActive, 
+                    copyFromDay === idx && styles.modalChipDisabled
+                  ]}
                   onPress={() => copyFromDay !== idx && toggleCopyTarget(idx)}
                   disabled={copyFromDay === idx}
                   accessibilityRole="button"
                   accessibilityLabel={`Selecionar ${label}`}
                 >
-                  <Text style={[styles.modalChipText, copyTargets.includes(idx) && styles.modalChipTextActive]}>{label.replace('-feira','')}</Text>
+                  <Text style={[styles.modalChipText, copyTargets.includes(idx) && styles.modalChipTextActive]}>
+                    {label.replace('-feira', '').split('-')[0].slice(0, 3)}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -1038,10 +1233,210 @@ export default function ManageAvailabilityScreen() {
               <TouchableOpacity style={[styles.modalButton, styles.modalCancel]} onPress={() => setCopyModalVisible(false)}>
                 <Text style={styles.modalButtonText}>Cancelar</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalButton, styles.modalConfirm]} onPress={applyCopyToTargets}>
+              <TouchableOpacity style={[styles.modalButton, styles.modalConfirm]} onPress={() => applyCopyToTargets()}>
                 <Text style={[styles.modalButtonText, styles.modalConfirmText]}>Aplicar</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      )}
+
+      {/* Smart Step Modal */}
+      {smartVisible && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>{smartMode === 'weekly' ? 'Assistente de Horários' : 'Exceção Rápida'}</Text>
+            <Text style={styles.stepSubtitle}>Passo {smartStep} de 3</Text>
+
+            {smartStep === 1 && (
+              <View>
+                <Text style={styles.stepTitle}>{smartMode === 'weekly' ? 'O que quer ajustar?' : 'Escolha a data'}</Text>
+                {smartMode === 'weekly' ? (
+                  <View style={styles.modalChipsRow}>
+                    <TouchableOpacity 
+                      style={[styles.modalChip, smartScope === 'today' && styles.modalChipActive]} 
+                      onPress={() => setSmartScope('today')} 
+                      accessibilityRole="button"
+                    >
+                      <Text style={[styles.modalChipText, smartScope === 'today' && styles.modalChipTextActive]}>Hoje</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.modalChip, smartScope === 'tomorrow' && styles.modalChipActive]} 
+                      onPress={() => setSmartScope('tomorrow')} 
+                      accessibilityRole="button"
+                    >
+                      <Text style={[styles.modalChipText, smartScope === 'tomorrow' && styles.modalChipTextActive]}>Amanhã</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.modalChip, smartScope === 'weekday' && styles.modalChipActive]} 
+                      onPress={() => setSmartScope('weekday')} 
+                      accessibilityRole="button"
+                    >
+                      <Text style={[styles.modalChipText, smartScope === 'weekday' && styles.modalChipTextActive]}>Dia da semana</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.modalChip, smartScope === 'date' && styles.modalChipActive]} 
+                      onPress={() => setSmartScope('date')} 
+                      accessibilityRole="button"
+                    >
+                      <Text style={[styles.modalChipText, smartScope === 'date' && styles.modalChipTextActive]}>Data no calendário</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View style={{ borderRadius: Radii.md, overflow: 'hidden' }}>
+                    <Calendar
+                      onDayPress={(d) => { 
+                        setSmartDate(d.dateString); 
+                        if (Platform.OS === 'ios') Haptics.selectionAsync(); 
+                      }}
+                      markedDates={smartDate ? { [smartDate]: { selected: true, selectedColor: Colors.primary } } : {}}
+                      theme={calendarTheme}
+                    />
+                  </View>
+                )}
+
+                {smartMode === 'weekly' && smartScope === 'weekday' && (
+                  <View style={[styles.modalChipsRow, { marginTop: 6 }]}>
+                    {dayNames.map((label, idx) => (
+                      <TouchableOpacity 
+                        key={idx} 
+                        style={[styles.modalChip, smartWeekdays.includes(idx) && styles.modalChipActive]} 
+                        onPress={() => toggleSmartWeekday(idx)} 
+                        accessibilityRole="button"
+                      >
+                        <Text style={[styles.modalChipText, smartWeekdays.includes(idx) && styles.modalChipTextActive]}>
+                          {label.replace('-feira', '').split('-')[0].slice(0, 3)}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+
+                <View style={styles.modalActions}>
+                  <TouchableOpacity style={[styles.modalButton, styles.modalConfirm]} onPress={() => setSmartStep(2)}>
+                    <Text style={[styles.modalButtonText, styles.modalConfirmText]}>Continuar</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            {smartStep === 2 && (
+              <View>
+                <Text style={styles.stepTitle}>{smartMode === 'weekly' ? 'Qual horário?' : 'Bloquear ou personalizar?'}</Text>
+                {smartMode === 'weekly' ? (
+                  <View style={styles.modalChipsRow}>
+                    <TouchableOpacity 
+                      style={[styles.modalChip, smartPreset === 'morning' && styles.modalChipActive]} 
+                      onPress={() => setSmartPreset('morning')} 
+                      accessibilityRole="button"
+                    >
+                      <Text style={[styles.modalChipText, smartPreset === 'morning' && styles.modalChipTextActive]}>Manhã (08-12)</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.modalChip, smartPreset === 'afternoon' && styles.modalChipActive]} 
+                      onPress={() => setSmartPreset('afternoon')} 
+                      accessibilityRole="button"
+                    >
+                      <Text style={[styles.modalChipText, smartPreset === 'afternoon' && styles.modalChipTextActive]}>Tarde (13-17)</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.modalChip, smartPreset === 'fullday' && styles.modalChipActive]} 
+                      onPress={() => setSmartPreset('fullday')} 
+                      accessibilityRole="button"
+                    >
+                      <Text style={[styles.modalChipText, smartPreset === 'fullday' && styles.modalChipTextActive]}>Dia todo (08-18)</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.modalChip, smartPreset === 'custom' && styles.modalChipActive]} 
+                      onPress={() => setSmartPreset('custom')} 
+                      accessibilityRole="button"
+                    >
+                      <Text style={[styles.modalChipText, smartPreset === 'custom' && styles.modalChipTextActive]}>Personalizar</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.modalChip, smartPreset === 'off' && styles.modalChipActive]} 
+                      onPress={() => setSmartPreset('off')} 
+                      accessibilityRole="button"
+                    >
+                      <Text style={[styles.modalChipText, smartPreset === 'off' && styles.modalChipTextActive]}>Folga</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View style={styles.modalChipsRow}>
+                    <TouchableOpacity 
+                      style={[styles.modalChip, smartOverrideType === 'blocked' && styles.modalChipActive]} 
+                      onPress={() => setSmartOverrideType('blocked')} 
+                      accessibilityRole="button"
+                    >
+                      <Text style={[styles.modalChipText, smartOverrideType === 'blocked' && styles.modalChipTextActive]}>Bloquear</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.modalChip, smartOverrideType === 'custom' && styles.modalChipActive]} 
+                      onPress={() => setSmartOverrideType('custom')} 
+                      accessibilityRole="button"
+                    >
+                      <Text style={[styles.modalChipText, smartOverrideType === 'custom' && styles.modalChipTextActive]}>Personalizar</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {(smartPreset === 'custom' || (smartMode === 'override' && smartOverrideType === 'custom')) && (
+                  <View style={[styles.timeSlotGrid, { marginTop: 6 }]}>
+                    {ALL_POSSIBLE_SLOTS.map(slot => (
+                      <TimeSlotButton
+                        key={slot}
+                        time={slot}
+                        isSelected={smartCustomSlots.includes(slot)}
+                        onPress={toggleSmartCustomSlot}
+                        isBooked={false}
+                      />
+                    ))}
+                  </View>
+                )}
+
+                <View style={styles.modalActions}>
+                  <TouchableOpacity style={[styles.modalButton, styles.modalCancel]} onPress={() => setSmartStep(1)}>
+                    <Text style={styles.modalButtonText}>Voltar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.modalButton, styles.modalConfirm]} onPress={() => setSmartStep(3)}>
+                    <Text style={[styles.modalButtonText, styles.modalConfirmText]}>Continuar</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            {smartStep === 3 && (
+              <View>
+                <Text style={styles.stepTitle}>Confirmar</Text>
+                <View style={styles.summaryCard}>
+                  <Ionicons name="checkmark-circle-outline" size={20} color={Colors.primary} style={{ marginRight: 8 }} accessibilityHidden={true} />
+                  <Text style={{ flex: 1, color: Colors.text }}>
+                    {smartMode === 'weekly' ? (
+                      smartScope === 'today' ? 'Hoje' : smartScope === 'tomorrow' ? 'Amanhã' : smartScope === 'weekday' ? `Dias: ${smartWeekdays.map(d => dayNames[d].slice(0, 3)).join(', ')}` : 'Data no calendário'
+                    ) : (
+                      smartDate ? `Data: ${smartDate}` : 'Sem data selecionada'
+                    )}
+                    {' '}-{' '}
+                    {(() => {
+                      const p = smartMode === 'weekly' ? smartPreset : (smartOverrideType === 'blocked' ? 'blocked' : 'custom');
+                      if (p === 'morning') return '08-12';
+                      if (p === 'afternoon') return '13-17';
+                      if (p === 'fullday') return '08-18';
+                      if (p === 'off') return 'Folga';
+                      return smartCustomSlots.length > 0 ? `${smartCustomSlots.length} horários` : (smartMode === 'override' && smartOverrideType === 'blocked' ? 'Bloqueado' : 'Personalizar');
+                    })()}
+                  </Text>
+                </View>
+                <View style={styles.modalActions}>
+                  <TouchableOpacity style={[styles.modalButton, styles.modalCancel]} onPress={() => setSmartStep(2)}>
+                    <Text style={styles.modalButtonText}>Voltar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.modalButton, styles.modalConfirm]} onPress={applySmartStep}>
+                    <Text style={[styles.modalButtonText, styles.modalConfirmText]}>Aplicar</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
           </View>
         </View>
       )}
@@ -1062,7 +1457,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: Platform.OS === 'ios' ? 18 : 18,
     paddingTop: Platform.OS === 'ios' ? 55 : 18,
-    // iOS Premium Shadow (sutil)
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -1076,7 +1470,7 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 0,
   },
   backButton: {
-    padding: Spacing.sm + 2, // Confortável iOS
+    padding: Spacing.sm + 2,
   },
   headerTitle: {
     fontSize: 20,
@@ -1121,10 +1515,9 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: Spacing.md + 2,
-    paddingBottom: Spacing.lg * 2 + 20, // Extra iOS
+    paddingBottom: Spacing.lg * 2 + 20,
     paddingTop: Spacing.md,
   },
-  // Improved section title style
   sectionTitleImproved: {
     fontSize: 22,
     fontWeight: '600',
@@ -1133,7 +1526,42 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
     fontFamily: Platform.OS === 'ios' ? 'SFProDisplay-Semibold' : 'System',
   },
-  // Info Card for description
+  primaryCTAButton: {
+    backgroundColor: Colors.primary,
+    borderRadius: Radii.pill,
+    paddingVertical: 12,
+    paddingHorizontal: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    marginTop: Spacing.md,
+  },
+  primaryCTAButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  stepTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.text,
+    marginBottom: Spacing.sm,
+  },
+  stepSubtitle: {
+    fontSize: 13,
+    color: Colors.textMuted,
+    marginBottom: Spacing.xs,
+  },
+  summaryCard: {
+    backgroundColor: Colors.fieldBg,
+    borderRadius: Radii.md,
+    padding: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+    borderWidth: 0.5,
+    borderColor: Colors.border,
+  },
   infoCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1141,9 +1569,8 @@ const styles = StyleSheet.create({
     borderRadius: Radii.md,
     padding: Spacing.md + 2,
     marginBottom: Spacing.md,
-    borderWidth: 0.5, // Sutil iOS
+    borderWidth: 0.5,
     borderColor: Colors.border,
-    // iOS clean shadow
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -1161,7 +1588,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     color: Colors.infoDark,
-    lineHeight: 20, // Confortável iOS
+    lineHeight: 20,
     fontFamily: Platform.OS === 'ios' ? 'SFProText-Regular' : 'System',
   },
   dayCard: {
@@ -1169,7 +1596,6 @@ const styles = StyleSheet.create({
     borderRadius: Radii.md,
     padding: Spacing.md + 2,
     marginBottom: Spacing.md,
-    // iOS Premium Shadow
     ...Platform.select({
       ios: {
         shadowColor: Colors.shadow,
@@ -1220,12 +1646,11 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: Radii.sm,
-    margin: Spacing.xs + 2, // Mais espaço iOS
+    margin: Spacing.xs + 2,
     minWidth: 70,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
-    // iOS clean shadow
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -1244,14 +1669,13 @@ const styles = StyleSheet.create({
   bookedIcon: {
     marginLeft: Spacing.xs / 2,
   },
-  // New style for hour separators
   hourSeparatorContainer: {
     width: '100%',
     alignItems: 'flex-start',
     paddingVertical: Spacing.xs,
     marginTop: Spacing.sm,
     marginBottom: Spacing.xs,
-    borderBottomWidth: 0.5, // Sutil iOS
+    borderBottomWidth: 0.5,
     borderBottomColor: Colors.border,
   },
   hourSeparatorText: {
@@ -1274,7 +1698,6 @@ const styles = StyleSheet.create({
     marginLeft: Spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
-    // iOS clean shadow
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -1333,7 +1756,6 @@ const styles = StyleSheet.create({
     borderRadius: Radii.md,
     overflow: 'hidden',
     marginBottom: Spacing.lg,
-    // iOS Premium Shadow
     ...Platform.select({
       ios: {
         shadowColor: Colors.shadow,
@@ -1347,14 +1769,13 @@ const styles = StyleSheet.create({
   calendarOverrideStyle: {
     borderRadius: Radii.md,
   },
-  overrideOptionsCard: { // New style for override options as a card
+  overrideOptionsCard: {
     padding: Spacing.md + 2,
     borderTopWidth: 0.5,
     borderTopColor: Colors.border,
     backgroundColor: Colors.surface,
     borderRadius: Radii.md,
     marginTop: Spacing.md,
-    // iOS Premium Shadow
     ...Platform.select({
       ios: {
         shadowColor: Colors.shadow,
@@ -1435,7 +1856,6 @@ const styles = StyleSheet.create({
   saveButtonIcon: {
     marginRight: Spacing.xs,
   },
-  // Modal
   modalOverlay: {
     position: 'absolute',
     top: 0,
