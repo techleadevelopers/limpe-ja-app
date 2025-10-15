@@ -10,6 +10,8 @@ import {
   FlatList,
   ScrollView,
   StyleSheet,
+  StyleProp,
+  ViewStyle,
   Text,
   TouchableOpacity,
   View,
@@ -93,6 +95,8 @@ import { ReferralBanner } from '../../../components/referrals/ReferralBanner';
 import { ReferralSheet } from '../../../components/referrals/ReferralSheet';
 import BottomSlideInCard from '../../../components/common/BottomSlideInCard';
 import SmartCouponNudge from '../../../components/coupons/CouponNudge';
+import ScreenContainer from '@/components/layout/ScreenContainer';
+import { useDevice } from '@/utils/responsive';
 
 // Importar os novos componentes Nudge
 import SecurityNudge from '../../../components/nudges/SecurityNudge';
@@ -158,6 +162,11 @@ export default function ExploreClientScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const { t } = useTranslation();
   const { user, isAuthenticated } = useAuth();
+  const { isLargePhone } = useDevice();
+  const navWrap: StyleProp<ViewStyle> = React.useMemo(
+    () => (isLargePhone ? { alignSelf: 'center', width: '100%', maxWidth: 820 } : undefined),
+    [isLargePhone]
+  );
 
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [serviceCategories, setServiceCategories] = useState<Service[]>([]);
@@ -521,7 +530,7 @@ export default function ExploreClientScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.screen}>
+      <ScreenContainer style={styles.screen}>
         <Stack.Screen
           options={{
             headerShown: false,
@@ -696,6 +705,7 @@ export default function ExploreClientScreen() {
         <Animated.View
           style={[
             styles.navBarContainer,
+            navWrap,
             { 
               transform: [{ translateY: navBarAnim.interpolate({ inputRange: [0, 1], outputRange: [100, 0] }) }] 
             },
@@ -786,7 +796,7 @@ export default function ExploreClientScreen() {
           points={100}
           pointerEvents="box-none"
         />
-      </View>
+      </ScreenContainer>
     </SafeAreaView>
   );
 }
