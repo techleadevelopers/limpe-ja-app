@@ -1,6 +1,7 @@
-﻿// app/services/notificationUIService.ts
+// app/services/notificationUIService.ts
 import RNToast from 'react-native-toast-message';
 import i18n from '../i18n';
+import { showOverlay } from '../hooks/useOverlayMessage';
 
 interface ToastOptions {
   type: 'success' | 'error' | 'info';
@@ -31,7 +32,7 @@ class NotificationUIService {
     // Supressão existente: schedule/time
     if (type === 'success' && msgLower.includes('horário')) {
       console.warn('[NotificationUIService] suppressed schedule success toast:', message);
-      return;
+      // continue to show premium overlay; suppress only legacy toast
     }
 
     // Supressão existente: PIX
@@ -44,7 +45,7 @@ class NotificationUIService {
       titleLower.includes('sucesso')
     )) {
       console.warn('[NotificationUIService] suppressed PIX success toast:', title, message);
-      return;
+      // continue to show premium overlay; suppress only legacy toast
     }
 
     // Supressão existente: PIX info
@@ -54,7 +55,7 @@ class NotificationUIService {
       msgLower.includes('código')
     )) {
       console.warn('[NotificationUIService] suppressed PIX info toast:', message);
-      return;
+      // continue to show premium overlay; suppress only legacy toast
     }
 
     // Chaves de i18n para supressão
@@ -98,7 +99,7 @@ class NotificationUIService {
       msgLower.includes('sucesso')
     )) {
       console.warn('[NotificationUIService] suppressed schedule/success toast (success):', message);
-      return;
+      // continue to show premium overlay; suppress only legacy toast
     }
 
     if ((type === 'error' || type === 'info') && (
@@ -110,7 +111,7 @@ class NotificationUIService {
       translatedSuccessPage.some(s => s && msgLower.includes(s))
     )) {
       console.warn(`[NotificationUIService] suppressed schedule/success toast (${type}):`, message);
-      return;
+      // continue to show premium overlay; suppress only legacy toast
     }
 
     // Supressão para erros de UI/render
@@ -123,17 +124,18 @@ class NotificationUIService {
       );
       if (shouldSuppress) {
         console.warn('[NotificationUIService] suppressed UI error toast:', message);
-        return;
+      // continue to show premium overlay; suppress only legacy toast
       }
     }
 
     // Exibir toast (garantindo text1/text2 sejam strings)
-    RNToast.show({
-      type: type,
-      text1: title || '',
-      text2: message || '',
-      position: options.position ?? 'top',
-    });
+    // Premium overlay com fundo escuro e auto-hide ~5s
+    const variant = type === 'success' ? 'success' : type === 'error' ? 'error' : type === 'info' ? 'info' : 'warning';
+    showOverlay({ title, subtitle: message, variant, durationMs: 5000 });
+    // Mantém o RNToast como fallback silencioso em dev (opcional)
+    if (__DEV__) {
+      try { RNToast.show({ type, text1: title || '', text2: message || '', position: options.position ?? 'top' }); } catch {}
+    }
   }
 
   showSuccess(message: string, title: string = i18n.t('common.success')) {
