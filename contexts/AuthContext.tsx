@@ -2,6 +2,7 @@
 import React, { createContext, ReactNode, useContext, useEffect, useState, useCallback } from 'react';
 import { AuthResponse, RegisterClientDto, RegisterProviderDto, UserRole, VerificationStatus } from '../types/backend/auth';
 import authService from '../services/authService';
+import { registerDevicePushToken } from '../services/pushService';
 import { setUnauthorizedCallback } from '../services/api';
 import { ProviderDisplayInfo } from '../types/backend/providers';
 import { UserProfile } from '../types/backend/users';
@@ -118,6 +119,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
       setUser(authenticatedUser);
       setRole(authData.user.role as UserRole);
+      // registra token de push de forma não bloqueante
+      registerDevicePushToken().catch(() => {});
     } catch (error) {
       console.error('[AuthContext | login] Erro de login:', error);
       throw error;
@@ -212,6 +215,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(authenticatedUser);
       setRole(latestUserProfile.role as UserRole);
       console.log('[AuthContext | refreshUser] Dados do usuário atualizados com sucesso do backend.');
+      // garante registro de token de push quando app reabre
+      registerDevicePushToken().catch(() => {});
     } catch (error: any) {
       console.error('[AuthContext | refreshUser] Erro ao recarregar dados do usuário do backend:', error);
       if (axios.isAxiosError(error)) {
@@ -271,6 +276,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
       setUser(authenticatedUser);
       setRole(authData.user.role as UserRole);
+      // registra token de push de forma não bloqueante
+      registerDevicePushToken().catch(() => {});
     } catch (error) {
       console.error('[AuthContext | setAuthData] Erro ao definir dados de autenticação:', error);
       throw error;
