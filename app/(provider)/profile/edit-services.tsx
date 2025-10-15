@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+﻿import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { Picker } from '@react-native-picker/picker';
 import { Stack, useRouter } from 'expo-router';
 import { useAuth } from '../../../hooks/useAuth';
 import { Ionicons } from '@expo/vector-icons';
+import { showOverlay } from '../../../hooks/useOverlayMessage';
 import * as Haptics from 'expo-haptics';
 
 // Types
@@ -31,6 +32,16 @@ import {
 import { ProviderServiceOffering as ProviderServiceType } from '../../../types/backend/provider-service';
 import { CreateProviderServiceData } from '../../../types/backend/providers';
 import { getServiceCategories } from '../../../services/commonServiceCatalog';
+
+// ===== Catálogo fallback (garante opções como Residencial/Comercial se backend ainda não responder) =====
+const FALLBACK_SERVICES: Service[] = [
+  { id: '3f17467b-e198-4072-87f0-0213d2d08997', name: 'Residencial', icon: 'home', description: 'Limpeza de residências', price: null },
+  { id: '78cc63ad-a18d-4ba0-b0b8-28624412caf3', name: 'Comercial', icon: 'business', description: 'Limpeza comercial', price: null },
+  { id: '0a8ea519-63e4-4efb-a03a-628dbbc9f052', name: 'Pós-Obra', icon: 'construct', description: 'Limpeza pós-obra', price: null },
+  { id: '2559b9e2-0526-4304-9d04-89606b424074', name: 'Escritório', icon: 'desktop', description: 'Limpeza de escritórios', price: null },
+  { id: 'c8c6bfee-598f-4de0-a383-0f6101699b15', name: 'Vidros', icon: 'eye', description: 'Limpeza de vidros', price: null },
+  { id: '3abda78a-264f-4745-9094-83cad16e65f3', name: 'Estofados', icon: 'hand-left', description: 'Higienização de estofados', price: null },
+];
 
 // ===== Design Tokens (Premium UI - Alinhado para iOS Clean) =====
 const Colors = {
@@ -138,10 +149,10 @@ function useReducedMotion() {
       try {
         if (subscription && typeof subscription.remove === 'function') {
           subscription.remove();
-        } else if (AccessibilityInfo.removeEventListener) {
+        } else if ((AccessibilityInfo as any).removeEventListener) {
           // RN older API
-          AccessibilityInfo.removeEventListener('reduceMotionChanged', setIsReducedMotionEnabled as any);
-          AccessibilityInfo.removeEventListener('change', setIsReducedMotionEnabled as any);
+          (AccessibilityInfo as any).removeEventListener('reduceMotionChanged', setIsReducedMotionEnabled as any);
+          (AccessibilityInfo as any).removeEventListener('change', setIsReducedMotionEnabled as any);
         }
       } catch (e) {
         // ignore
@@ -320,6 +331,9 @@ export default function EditProviderServicesScreen() {
   const [serviceDuration, setServiceDuration] = useState('');
 
   const [formError, setFormError] = useState<string | null>(null);
+  // Smart Step: Assistente de Serviço
+  const [ssVisible, setSsVisible] = useState(false);
+  const [ssStep, setSsStep] = useState<1 | 2 | 3>(1);
 
   // Animations (refinadas para iOS premium)
   const headerAnim = useRef(new Animated.Value(0)).current;
@@ -410,11 +424,12 @@ export default function EditProviderServicesScreen() {
   };
 
   // ===== Handlers =====
-  const handleSaveServices = () => {
-    Alert.alert('Sucesso', 'Todas as alterações foram processadas!');
-  };
+  const handleSaveServices = useCallback(() => {
+    showOverlay({ title: 'Serviços salvos com sucesso', variant: 'success' });
+    if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  }, []);
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setIsEditing(null);
     setSelectedBaseServiceId(availableBaseServices.length > 0 ? availableBaseServices[0].id : undefined);
     setServiceDesc('');
@@ -427,23 +442,23 @@ export default function EditProviderServicesScreen() {
     setPricePerRoom('');
     setPricePerRoomDisplay('');
     setFormError(null);
-  };
+  }, [availableBaseServices.length]);
 
-  const handlePriceChange = (maskedValue: string, setterRaw: (v: string) => void, setterDisplay: (v: string) => void) => {
+  const handlePriceChange = useCallback((maskedValue: string, setterRaw: (v: string) => void, setterDisplay: (v: string) => void) => {
     const { raw, display } = normalizeCurrencyInput(maskedValue);
     setterRaw(raw);
     setterDisplay(display);
-  };
+  }, []);
 
-  const handlePricePerSquareMeterChange = (text: string) => {
+  const handlePricePerSquareMeterChange = useCallback((text: string) => {
     handlePriceChange(text, setPricePerSquareMeter, setPricePerSquareMeterDisplay);
-  };
+  }, [handlePriceChange]);
 
-  const handlePricePerRoomChange = (text: string) => {
+  const handlePricePerRoomChange = useCallback((text: string) => {
     handlePriceChange(text, setPricePerRoom, setPricePerRoomDisplay);
-  };
+  }, [handlePriceChange]);
 
-  const handleAddOrUpdateService = async () => {
+  const handleAddOrUpdateService = useCallback(async () => {
     setFormError(null);
 
     if (!user?.providerDetails?.id) {
@@ -544,7 +559,8 @@ export default function EditProviderServicesScreen() {
             )
             .sort((a, b) => a.name.localeCompare(b.name))
         );
-        Alert.alert('Sucesso', 'Serviço atualizado com sucesso!');
+        showOverlay({ title: 'Serviço atualizado com sucesso!', variant: 'success' });
+        if (Platform.OS === 'ios') await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {
         resultService = await addProviderServiceOffering(user.providerDetails.id, serviceData);
         const newService: ServiceOffering = {
@@ -563,18 +579,19 @@ export default function EditProviderServicesScreen() {
             : undefined,
         };
         setServices(prev => [...prev, newService].sort((a, b) => a.name.localeCompare(b.name)));
-        Alert.alert('Sucesso', 'Novo serviço adicionado com sucesso!');
+        showOverlay({ title: 'Serviço adicionado', subtitle: 'Publicado no seu catálogo', variant: 'success' });
+        if (Platform.OS === 'ios') await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
       resetForm();
     } catch (error: any) {
       console.error('[EditProviderServicesScreen] Erro ao adicionar/atualizar serviço:', error);
-      Alert.alert('Erro', error?.message || 'Não foi possível salvar o serviço.');
+      showOverlay({ title: 'Falha ao salvar', subtitle: error?.message || 'Tente novamente', variant: 'error' });
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user, selectedBaseServiceId, pricingType, servicePrice, pricePerSquareMeter, pricePerRoom, serviceDuration, serviceDesc, isEditing]);
 
-  const startEdit = (service: ServiceOffering) => {
+  const startEdit = useCallback((service: ServiceOffering) => {
     setIsEditing(service);
     setSelectedBaseServiceId(service.serviceId);
     setServiceDesc(String(service.description));
@@ -596,9 +613,9 @@ export default function EditProviderServicesScreen() {
     setPricingType(service.pricingType);
     setServiceDuration(String(service.duration || ''));
     setFormError(null);
-  };
+  }, []);
 
-  const deleteService = async (serviceId: string) => {
+  const deleteService = useCallback(async (serviceId: string) => {
     if (!user?.providerDetails?.id) {
       Alert.alert('Erro', 'ID do provedor não encontrado. Faça login novamente.');
       return;
@@ -615,7 +632,7 @@ export default function EditProviderServicesScreen() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user, resetForm]);
 
   // ===== Loading State =====
   if (isLoading) {
@@ -669,6 +686,17 @@ export default function EditProviderServicesScreen() {
             { opacity: formAnim, transform: [{ translateY: formAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] as any },
           ]}
         >
+          {!isEditing && (
+            <TouchableOpacity
+              style={styles.assistantCTA}
+              onPress={() => { setSsStep(1); setSsVisible(true); if (Platform.OS === 'ios') Haptics.selectionAsync(); }}
+              accessibilityRole="button"
+              accessibilityLabel="Configurar meu serviço em 2 minutos"
+            >
+              <Ionicons name="flash-outline" size={18} color="#fff" style={{ marginRight: 8 }} />
+              <Text style={styles.assistantCTAText}>Configurar meu serviço em 2 minutos</Text>
+            </TouchableOpacity>
+          )}
           <Text style={styles.formTitle}>{isEditing ? 'Editar Serviço Existente' : 'Adicionar Novo Serviço'}</Text>
 
           <View style={styles.inputLabelRow}>
@@ -868,7 +896,7 @@ export default function EditProviderServicesScreen() {
             <Ionicons name="pricetags-outline" size={64} color="#CED4DA" accessibilityHidden={true} />
             <Text style={styles.emptyListText}>Você ainda não adicionou serviços.</Text>
             <Text style={styles.emptyListSubText}>Use o formulário acima para começar -- é rapidinho.</Text>
-            <TouchableOpacity style={[styles.actionButtonPrimary, { marginTop: Spacing.md }]} onPress={() => {}} accessibilityRole="button" accessibilityLabel="Adicionar meu primeiro serviço">
+            <TouchableOpacity style={[styles.actionButtonPrimary, { marginTop: Spacing.md }]} onPress={() => { setSsStep(1); setSsVisible(true); }} accessibilityRole="button" accessibilityLabel="Adicionar meu primeiro serviço">
               <Text style={styles.actionButtonPrimaryText}>Adicionar meu primeiro serviço</Text>
             </TouchableOpacity>
           </Animated.View>
@@ -894,12 +922,178 @@ export default function EditProviderServicesScreen() {
           </TouchableOpacity>
         </Animated.View>
       </ScrollView>
+
+      {/* Smart Step: Assistente de Serviço */}
+      {ssVisible && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Assistente de Serviço</Text>
+            <Text style={styles.stepSubtitle}>Passo {ssStep} de 3</Text>
+
+            {ssStep === 1 && (
+              <View>
+                <Text style={styles.stepTitle}>O que você oferece?</Text>
+                <View style={styles.modalChipsRow}>
+                  {availableBaseServices.map(s => (
+                    <TouchableOpacity
+                      key={s.id}
+                      style={[styles.modalChip, selectedBaseServiceId === s.id && styles.modalChipActive]}
+                      onPress={() => { setSelectedBaseServiceId(s.id); if (Platform.OS === 'ios') Haptics.selectionAsync(); }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Selecionar ${s.name}`}
+                    >
+                      <Text style={[styles.modalChipText, selectedBaseServiceId === s.id && styles.modalChipTextActive]}>{s.name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <View style={styles.modalActions}>
+                  <TouchableOpacity style={[styles.modalButton, styles.modalConfirm]} onPress={() => setSsStep(2)}>
+                    <Text style={[styles.modalButtonText, styles.modalConfirmText]}>Continuar</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            {ssStep === 2 && (
+              <View>
+                <Text style={styles.stepTitle}>Como você cobra?</Text>
+                <View style={styles.modalChipsRow}>
+                  <TouchableOpacity style={[styles.modalChip, pricingType === PricingType.FIXED_PRICE && styles.modalChipActive]} onPress={() => setPricingType(PricingType.FIXED_PRICE)}><Text style={[styles.modalChipText, pricingType === PricingType.FIXED_PRICE && styles.modalChipTextActive]}>Fixo</Text></TouchableOpacity>
+                  <TouchableOpacity style={[styles.modalChip, pricingType === PricingType.HOURLY && styles.modalChipActive]} onPress={() => setPricingType(PricingType.HOURLY)}><Text style={[styles.modalChipText, pricingType === PricingType.HOURLY && styles.modalChipTextActive]}>Por Hora</Text></TouchableOpacity>
+                  <TouchableOpacity style={[styles.modalChip, pricingType === PricingType.BY_SIZE && styles.modalChipActive]} onPress={() => setPricingType(PricingType.BY_SIZE)}><Text style={[styles.modalChipText, pricingType === PricingType.BY_SIZE && styles.modalChipTextActive]}>m²/Cômodo</Text></TouchableOpacity>
+                </View>
+
+                {(pricingType === PricingType.FIXED_PRICE || pricingType === PricingType.HOURLY) && (
+                  <>
+                    <Text style={styles.inputLabel}>{pricingType === PricingType.FIXED_PRICE ? 'Preço Fixo' : 'Valor por Hora'}</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder={pricingType === PricingType.FIXED_PRICE ? 'Ex: R$ 250,00' : 'Ex: R$ 60,00'}
+                      placeholderTextColor={Colors.textMuted}
+                      value={servicePriceDisplay}
+                      onChangeText={txt => handlePriceChange(txt, setServicePrice, setServicePriceDisplay)}
+                      keyboardType="numeric"
+                    />
+                  </>
+                )}
+                {pricingType === PricingType.BY_SIZE && (
+                  <>
+                    <Text style={styles.inputLabel}>Preço por m²</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Ex: R$ 10,50"
+                      placeholderTextColor={Colors.textMuted}
+                      value={pricePerSquareMeterDisplay}
+                      onChangeText={handlePricePerSquareMeterChange}
+                      keyboardType="numeric"
+                    />
+                    <Text style={styles.inputLabel}>Preço por Cômodo</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Ex: R$ 50,00"
+                      placeholderTextColor={Colors.textMuted}
+                      value={pricePerRoomDisplay}
+                      onChangeText={handlePricePerRoomChange}
+                      keyboardType="numeric"
+                    />
+                  </>
+                )}
+                <Text style={styles.inputLabel}>Duração estimada</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Ex: 2h ou 120 min"
+                  placeholderTextColor={Colors.textMuted}
+                  value={serviceDuration}
+                  onChangeText={setServiceDuration}
+                />
+                <View style={styles.modalActions}>
+                  <TouchableOpacity style={[styles.modalButton, styles.modalCancel]} onPress={() => setSsStep(1)}><Text style={styles.modalButtonText}>Voltar</Text></TouchableOpacity>
+                  <TouchableOpacity style={[styles.modalButton, styles.modalConfirm]} onPress={() => setSsStep(3)}><Text style={[styles.modalButtonText, styles.modalConfirmText]}>Continuar</Text></TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            {ssStep === 3 && (
+              <View>
+                <Text style={styles.stepTitle}>Revisar</Text>
+                <View style={styles.summaryCard}>
+                  <Ionicons name="checkmark-circle-outline" size={20} color={Colors.primary} style={{ marginRight: 8 }} />
+                  <Text style={{ flex: 1, color: Colors.text }}>
+                    {(() => {
+                      const base = availableBaseServices.find(s => s.id === selectedBaseServiceId)?.name || 'Serviço';
+                      if (pricingType === PricingType.FIXED_PRICE) return `${base} • Fixo • ${servicePriceDisplay || 'R$ —'} • ${serviceDuration || '—'}`;
+                      if (pricingType === PricingType.HOURLY) return `${base} • Por hora • ${servicePriceDisplay || 'R$ —/h'} • ${serviceDuration || '—'}`;
+                      return `${base} • m²/Cômodo • ${pricePerSquareMeterDisplay || '—'}/${pricePerRoomDisplay || '—'} • ${serviceDuration || '—'}`;
+                    })()}
+                  </Text>
+                </View>
+                <View style={styles.modalActions}>
+                  <TouchableOpacity style={[styles.modalButton, styles.modalCancel]} onPress={() => setSsStep(2)}><Text style={styles.modalButtonText}>Voltar</Text></TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.modalConfirm]}
+                    onPress={async () => {
+                      await handleAddOrUpdateService();
+                      setSsVisible(false);
+                      AccessibilityInfo.announceForAccessibility?.('Serviço salvo');
+                    }}
+                  >
+                    <Text style={[styles.modalButtonText, styles.modalConfirmText]}>Concluir</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+          </View>
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 }
 
 // ===== Styles (corrigidos: Platform.select com spread, limpos) =====
 const styles = StyleSheet.create({
+  assistantCTA: {
+    backgroundColor: Colors.primary,
+    borderRadius: Radii.pill,
+    paddingVertical: 12,
+    paddingHorizontal: Spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    marginBottom: Spacing.sm,
+  },
+  assistantCTAText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  // Modal styles for Smart Step
+  modalOverlay: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'flex-end', padding: Spacing.md,
+  },
+  modalCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: Radii.xl,
+    padding: Spacing.lg,
+    ...Platform.select({ ios: { shadowColor: Colors.shadow, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 18 }, android: { elevation: 12 } }),
+  },
+  modalTitle: { fontSize: 16, fontWeight: '700', color: Colors.text, marginBottom: 6 },
+  stepTitle: { fontSize: 16, fontWeight: '700', color: Colors.text, marginBottom: 8 },
+  stepSubtitle: { fontSize: 13, color: Colors.textMuted, marginBottom: 6 },
+  summaryCard: { backgroundColor: Colors.fieldBg, borderRadius: Radii.sm, padding: Spacing.md, flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.md, borderWidth: 0.5, borderColor: Colors.border },
+  modalChipsRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: Spacing.md },
+  modalChip: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 14, backgroundColor: Colors.fieldBg, margin: 6, borderWidth: 0.5, borderColor: Colors.border },
+  modalChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  modalChipText: { color: Colors.text, fontWeight: '600' },
+  modalChipTextActive: { color: '#fff' },
+  modalActions: { flexDirection: 'row', justifyContent: 'flex-end' },
+  modalButton: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: Radii.pill, marginLeft: Spacing.sm },
+  modalCancel: { backgroundColor: Colors.fieldBg },
+  modalConfirm: { backgroundColor: Colors.primary },
+  modalButtonText: { color: Colors.text, fontWeight: '700' },
+  modalConfirmText: { color: '#fff' },
   outerContainer: {
     flex: 1,
     backgroundColor: Colors.bgSoft,
@@ -1238,13 +1432,3 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'SFProText-Medium' : 'System',
   },
 });
-
-// ===== Catálogo fallback (garante opções como Residencial/Comercial se backend ainda não responder) =====
-const FALLBACK_SERVICES: Service[] = [
-  { id: '3f17467b-e198-4072-87f0-0213d2d08997', name: 'Residencial', icon: 'home', description: 'Limpeza de residências', price: null },
-  { id: '78cc63ad-a18d-4ba0-b0b8-28624412caf3', name: 'Comercial', icon: 'business', description: 'Limpeza comercial', price: null },
-  { id: '0a8ea519-63e4-4efb-a03a-628dbbc9f052', name: 'Pós-Obra', icon: 'construct', description: 'Limpeza pós-obra', price: null },
-  { id: '2559b9e2-0526-4304-9d04-89606b424074', name: 'Escritório', icon: 'desktop', description: 'Limpeza de escritórios', price: null },
-  { id: 'c8c6bfee-598f-4de0-a383-0f6101699b15', name: 'Vidros', icon: 'eye', description: 'Limpeza de vidros', price: null },
-  { id: '3abda78a-264f-4745-9094-83cad16e65f3', name: 'Estofados', icon: 'hand-left', description: 'Higienização de estofados', price: null },
-];
