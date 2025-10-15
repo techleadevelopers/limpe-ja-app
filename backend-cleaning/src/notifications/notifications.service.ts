@@ -309,4 +309,29 @@ export class NotificationsService {
       throw new Error(`Falha ao enviar notificação push: ${error.message}`);
     }
   }
+
+  /**
+   * Registra/atualiza o token de push do dispositivo (FCM/Expo) para o usuário logado.
+   * Único por usuário; sobrescreve o anterior.
+   */
+  async registerDeviceToken(userId: string, token: string): Promise<{ ok: true }>{
+    if (!token || typeof token !== 'string') {
+      throw new BadRequestException('Token inválido.');
+    }
+    try {
+      // token é unique em User.fcmToken; se já estiver em outro user, move para este
+      await this.prisma.user.update({ where: { id: userId }, data: { fcmToken: token } });
+      return { ok: true };
+    } catch (error: any) {
+      // Se violar unique, limpa do outro usuário e aplica neste
+      try {
+        await this.prisma.user.updateMany({ where: { fcmToken: token, id: { not: userId } }, data: { fcmToken: null } });
+        await this.prisma.user.update({ where: { id: userId }, data: { fcmToken: token } });
+        return { ok: true };
+      } catch (e) {
+        this.logger.error(`registerDeviceToken: falha ao registrar token para ${userId}: ${e?.message}`);
+        throw e;
+      }
+    }
+  }
 }
