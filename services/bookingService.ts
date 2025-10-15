@@ -1,5 +1,6 @@
 import axios, { AxiosResponse, AxiosError } from 'axios';
 import { api } from './api';
+import { mapBookingStatusArray, mapBookingStatusIn, toBE } from './adapters/bookingStatus';
 
 // IMPORTAR DTOs E TIPAGENS DO ARQUIVO CENTRALIZADO
 import { BookingDetails, BookingStatus, CreateBookingDto, UpdateBookingStatusDto } from '../types/backend/bookings'; // Certifique-se de que CreateBookingDto e BookingDetails estão atualizados
@@ -15,7 +16,7 @@ import { BookingDetails, BookingStatus, CreateBookingDto, UpdateBookingStatusDto
 export const createBooking = async (data: CreateBookingDto): Promise<BookingDetails> => {
     try {
         const response: AxiosResponse<BookingDetails> = await api.post<BookingDetails>('/bookings', data);
-        return response.data;
+        return mapBookingStatusIn(response.data);
     } catch (error: any) {
         if (__DEV__) {
             console.warn('Erro ao criar agendamento (dev only):', error.response?.data || error.message);
@@ -37,9 +38,10 @@ export const createBooking = async (data: CreateBookingDto): Promise<BookingDeta
  */
 export async function getBookingsForUser(status?: BookingStatus): Promise<BookingDetails[]> {
     try {
-        const params = status ? { status } : {};
+        const statusForApi = status === (BookingStatus as any).CANCELLED ? 'CANCELED' : (status as any);
+        const params = status ? { status: statusForApi } : {};
         const response: AxiosResponse<BookingDetails[]> = await api.get<BookingDetails[]>('/bookings/me', { params });
-        return response.data;
+        return mapBookingStatusArray(response.data);
     } catch (error: any) {
         if (__DEV__) {
             console.warn('Erro ao buscar agendamentos do usuário (dev only):', error.response?.data || error.message);
@@ -61,7 +63,7 @@ export async function getBookingsForUser(status?: BookingStatus): Promise<Bookin
 export async function getBookingDetails(bookingId: string): Promise<BookingDetails> {
     try {
         const response: AxiosResponse<BookingDetails> = await api.get<BookingDetails>(`/bookings/${bookingId}`);
-        return response.data;
+        return mapBookingStatusIn(response.data);
     } catch (error: any) {
         if (__DEV__) {
             console.warn(`Erro ao buscar detalhes do agendamento ${bookingId} (dev only):`, error.response?.data || error.message);
@@ -83,8 +85,9 @@ export async function getBookingDetails(bookingId: string): Promise<BookingDetai
  */
 export async function updateBookingStatus(bookingId: string, data: UpdateBookingStatusDto): Promise<BookingDetails> {
     try {
-        const response: AxiosResponse<BookingDetails> = await api.patch<BookingDetails>(`/bookings/${bookingId}/status`, data);
-        return response.data;
+        const payload = { ...data, status: toBE((data.status as any)) } as UpdateBookingStatusDto;
+        const response: AxiosResponse<BookingDetails> = await api.patch<BookingDetails>(`/bookings/${bookingId}/status`, payload);
+        return mapBookingStatusIn(response.data);
     } catch (error: any) {
         if (__DEV__) {
             console.warn(`Erro ao atualizar status do agendamento ${bookingId} (dev only):`, error.response?.data || error.message);
@@ -106,7 +109,7 @@ export async function updateBookingStatus(bookingId: string, data: UpdateBooking
 export async function cancelBooking(bookingId: string): Promise<BookingDetails> {
     try {
         const response: AxiosResponse<BookingDetails> = await api.patch<BookingDetails>(`/bookings/${bookingId}/cancel`);
-        return response.data;
+        return mapBookingStatusIn(response.data);
     } catch (error: any) {
         if (__DEV__) {
             console.warn(`Erro ao cancelar agendamento ${bookingId} (dev only):`, error.response?.data || error.message);
