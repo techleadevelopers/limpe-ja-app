@@ -242,7 +242,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
         {hasAcceptanceRate && (
           <>
             <Text style={[styles.metricIcon, { color: '#5da2ecff' }]} allowFontScaling={false}>•</Text>
-            <Text style={styles.metricValue} allowFontScaling={false}>{Math.round(item.acceptanceRate ?? 0)}%</Text>
+            <Text style={styles.metricValue} allowFontScaling={false}>{Math.round((item.acceptanceRate ?? (item as any)?.metrics?.acceptanceRate ?? 1))}%</Text>
           </>
         )}
         {hasAcceptanceRate && hasResponseTime && (
@@ -251,7 +251,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
         {hasResponseTime && (
           <>
             <Text style={[styles.metricIcon, { color: '#5da2ecff' }]} allowFontScaling={false}>•</Text>
-            <Text style={styles.metricValue} allowFontScaling={false}>{item.averageResponseTime ?? 0} min</Text>
+            <Text style={styles.metricValue} allowFontScaling={false}>{(item.averageResponseTime ?? (item as any)?.metrics?.averageResponseTime ?? 120)} min</Text>
           </>
         )}
       </View>
@@ -265,7 +265,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
         {hasAcceptanceRate && (
           <>
             <Ionicons name="checkmark-done" size={12} color="#5da2ecff" />
-            <Text style={styles.metricValue} allowFontScaling={false}>{Math.round(item.acceptanceRate ?? 0)}%</Text>
+            <Text style={styles.metricValue} allowFontScaling={false}>{Math.round((item.acceptanceRate ?? (item as any)?.metrics?.acceptanceRate ?? 1))}%</Text>
           </>
         )}
         {hasAcceptanceRate && hasResponseTime && (
@@ -274,7 +274,7 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
         {hasResponseTime && (
           <>
             <Ionicons name="time-outline" size={12} color="#5da2ecff" />
-            <Text style={styles.metricValue} allowFontScaling={false}>{item.averageResponseTime ?? 0} min</Text>
+            <Text style={styles.metricValue} allowFontScaling={false}>{(item.averageResponseTime ?? (item as any)?.metrics?.averageResponseTime ?? 120)} min</Text>
           </>
         )}
       </View>
@@ -391,14 +391,9 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
                 )}
 
                 {renderStars(item.averageRating)}
-                {item.reviewCount !== undefined && (
-                  <Text style={styles.reviewsCountText} allowFontScaling={false}>
-                    {item.reviewCount === 0 
-                      ? t('reviews.none', { defaultValue: 'Sem Avaliações' })
-                      : `${item.reviewCount} Avaliações`
-                    }
-                  </Text>
-                )}
+                <Text style={styles.reviewsCountText} allowFontScaling={false}>
+                  {(item.reviewCount ?? 0)} Avaliações
+                </Text>
               </View>
             </View>
           </View>
