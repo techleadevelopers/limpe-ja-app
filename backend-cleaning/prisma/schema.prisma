@@ -303,6 +303,10 @@ model User {
 
   // CORREÇÃO: Adicionado para relação bilateral com CouponReservation
   couponReservations    CouponReservation[]
+
+  // ADICIONADO: Relações para auditoria de Booking (quem iniciou/finalizou)
+  startedBookings       Booking[]          @relation("BookingStartedBy")
+  completedBookings     Booking[]          @relation("BookingCompletedBy")
 }
 
 model Client {
@@ -462,6 +466,19 @@ model Booking {
   // CORREÇÃO: Adicionado para relação bilateral com LedgerEntry
   ledgerEntries             LedgerEntry[]
 
+  // ADICIONADO: Auditoria de início/fim (opcional, mas premium)
+  startedAt                 DateTime?
+  completedAt               DateTime?
+  startedByUserId           String?
+  completedByUserId         String?
+
+  // ADICIONADO: Relações para auditoria de quem iniciou/finalizou (melhora queries e integridade)
+  startedByUser             User?          @relation("BookingStartedBy", fields: [startedByUserId], references: [id])
+  completedByUser           User?          @relation("BookingCompletedBy", fields: [completedByUserId], references: [id])
+
+  // ADICIONADO: Índices para performance (próximos serviços, listagem por provider/status)
+  @@index([providerId, status, scheduledDate])
+  @@index([status, scheduledDate])
 }
 
 model Chat {
@@ -493,18 +510,27 @@ model Message {
 }
 
 model Notification {
-  id           String   @id @default(uuid())
-  userId       String
-  user         User     @relation(fields: [userId], references: [id])
-  type         String
-  message      String
-  isRead       Boolean  @default(false)
-  targetUrl    String?
-  createdAt    DateTime @default(now())
-  imageUrl     String?
-  actionButtons Json?
-  title        String?
-  category     String?
+  id               String   @id @default(uuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id])
+  type             String
+  message          String
+  isRead           Boolean  @default(false)
+  targetUrl        String?
+  createdAt        DateTime @default(now())
+  imageUrl         String?
+  actionButtons    Json?
+  title            String?
+  category         String?
+
+  // ADICIONADO: Ajustes recomendados para notificações (mínimo viável: idempotência, agendamento, prioridade e readAt)
+  idempotencyKey   String?  @unique
+  scheduledAt      DateTime?
+  priority         Int?     @default(2)
+  readAt           DateTime?
+
+  // ADICIONADO: Índice para performance (listagem ordenada por user/createdAt)
+  @@index([userId, createdAt])
 }
 
 model Review {
