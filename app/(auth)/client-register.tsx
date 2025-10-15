@@ -18,6 +18,8 @@ import {
     View
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
+import Constants from 'expo-constants';
 import { useAuth } from '../../contexts/AuthContext';
 import { CreateAddressDto, RegisterClientDto } from '../../types/backend/auth';
 
@@ -106,10 +108,37 @@ export default function ClientRegisterScreen() {
     const [complement, setComplement] = useState('');
 
     const [isLoading, setIsLoading] = useState(false);
-    const [cepLoading, setCepLoading] = useState(false);
-    const [generalError, setGeneralError] = useState<string | null>(null);
+  const [cepLoading, setCepLoading] = useState(false);
+  const [generalError, setGeneralError] = useState<string | null>(null);
 
-    // Specific error states for inline validation
+    // Refs de UX para focar senha e rolar até o campo em caso de erro (sem alterar a UI)
+    const scrollRef = useRef<ScrollView | null>(null);
+    const passwordInputRef = useRef<TextInput | null>(null);
+    const [passwordInputY, setPasswordInputY] = useState<number>(0);
+
+    // Adicionadas: Refs e estados Y para todos os inputs (corrigindo "Cannot find name")
+    const usernameInputRef = useRef<TextInput | null>(null);
+    const [usernameInputY, setUsernameInputY] = useState(0);
+    const emailInputRef = useRef<TextInput | null>(null);
+    const [emailInputY, setEmailInputY] = useState(0);
+    const phoneInputRef = useRef<TextInput | null>(null);
+    const [phoneInputY, setPhoneInputY] = useState(0);
+    const cpfInputRef = useRef<TextInput | null>(null);
+    const [cpfInputY, setCpfInputY] = useState(0);
+    const cepInputRef = useRef<TextInput | null>(null);
+    const [cepInputY, setCepInputY] = useState(0);
+    const streetInputRef = useRef<TextInput | null>(null);
+    const [streetInputY, setStreetInputY] = useState(0);
+    const numberInputRef = useRef<TextInput | null>(null);
+    const [numberInputY, setNumberInputY] = useState(0);
+    const neighborhoodInputRef = useRef<TextInput | null>(null);
+    const [neighborhoodInputY, setNeighborhoodInputY] = useState(0);
+    const cityInputRef = useRef<TextInput | null>(null);
+    const [cityInputY, setCityInputY] = useState(0);
+    const stateInputRef = useRef<TextInput | null>(null);
+    const [stateInputY, setStateInputY] = useState(0);
+
+    // Adicionadas e movidas para cima: Estados de erro (corrigindo uso antes da declaração e block scope)
     const [emailError, setEmailError] = useState<string | null>(null);
     const [usernameError, setUsernameError] = useState<string | null>(null);
     const [phoneError, setPhoneError] = useState<string | null>(null);
@@ -121,11 +150,65 @@ export default function ClientRegisterScreen() {
     const [numberError, setNumberError] = useState<string | null>(null);
     const [neighborhoodError, setNeighborhoodError] = useState<string | null>(null);
     const [cityError, setCityError] = useState<string | null>(null);
-    const [stateError, setStateError] = useState<string | null>(null);
-    const [complementError, setComplementError] = useState<string | null>(null);
+  const [stateError, setStateError] = useState<string | null>(null);
+  const [complementError, setComplementError] = useState<string | null>(null);
 
+    const HAPTICS_ON_ERROR = useMemo(() => {
+        try { return Boolean((Constants.expoConfig?.extra as any)?.hapticsOnError ?? true); } catch { return true; }
+    }, []);
+    const hapticSelect = useCallback(() => { if (HAPTICS_ON_ERROR) Haptics.selectionAsync(); }, [HAPTICS_ON_ERROR]);
 
-    const router = useRouter();
+    // Auto-scroll/focus ao detectar erro (mantém passo atual visível) - Agora usa declarações corretas
+    useEffect(() => {
+    if (!generalError) return;
+    try {
+      if (currentStep === 1) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.\S+$/;
+        let targetY = !username.trim() ? usernameInputY : (!email.trim() || !emailRegex.test(email.trim()) ? emailInputY : usernameInputY);
+        let targetRef = !username.trim() ? usernameInputRef.current : (!email.trim() || !emailRegex.test(email.trim()) ? emailInputRef.current : usernameInputRef.current);
+        if (scrollRef.current) scrollRef.current.scrollTo({ y: Math.max(targetY - 120, 0), animated: true });
+        setTimeout(() => { hapticSelect(); targetRef?.focus(); }, 120);
+      } else if (currentStep === 2) {
+        const cleanedPhone = phone.replace(/\D/g, '');
+        const cleanedCpf = cpf.replace(/\D/g, '');
+        const phoneOk = phone.trim() && (cleanedPhone.length >= 10 && cleanedPhone.length <= 11);
+        const cpfOk = cpf.trim() && cleanedCpf.length === 11;
+        let targetY = !phoneOk ? phoneInputY : (!cpfOk ? cpfInputY : phoneInputY);
+        let targetRef = !phoneOk ? phoneInputRef.current : (!cpfOk ? cpfInputRef.current : phoneInputRef.current);
+        if (scrollRef.current) scrollRef.current.scrollTo({ y: Math.max(targetY - 120, 0), animated: true });
+        setTimeout(() => { hapticSelect(); targetRef?.focus(); }, 120);
+      } else if (currentStep === 5) {
+        if (subStepAddress === 1 && cepInputError) {
+          if (scrollRef.current) scrollRef.current.scrollTo({ y: Math.max(cepInputY - 120, 0), animated: true });
+          setTimeout(() => { hapticSelect(); cepInputRef.current?.focus(); }, 120);
+        } else if (subStepAddress === 2 && (streetError || numberError || neighborhoodError || cityError || stateError)) {
+          const ufOk = state.trim().length === 2 && /^[A-Za-z]{2}$/.test(state.trim());
+          const pick = !street.trim() ? { y: streetInputY, ref: streetInputRef.current }
+            : (!number.trim() ? { y: numberInputY, ref: numberInputRef.current }
+            : (!neighborhood.trim() ? { y: neighborhoodInputY, ref: neighborhoodInputRef.current }
+            : (!city.trim() ? { y: cityInputY, ref: cityInputRef.current }
+            : (!ufOk ? { y: stateInputY, ref: stateInputRef.current } : { y: streetInputY, ref: streetInputRef.current }))));
+          if (scrollRef.current) scrollRef.current.scrollTo({ y: Math.max(pick.y - 120, 0), animated: true });
+          setTimeout(() => { hapticSelect(); pick.ref?.focus(); }, 120);
+        }
+      }
+    } catch {}
+  // deps relevantes
+  }, [generalError, currentStep, subStepAddress, username, email, phone, cpf, cepInputError, streetError, numberError, neighborhoodError, cityError, stateError, hapticSelect]);
+
+    useEffect(() => {
+        if (currentStep === 3 && (passwordError || generalError)) {
+            try {
+                if (scrollRef.current) {
+                    const y = Math.max(passwordInputY - 120, 0);
+                    scrollRef.current.scrollTo({ y, animated: true });
+                }
+                setTimeout(() => { hapticSelect(); passwordInputRef.current?.focus(); }, 150);
+            } catch {}
+        }
+    }, [currentStep, passwordError, generalError, passwordInputY, hapticSelect]);
+
+  const router = useRouter();
     const { signUpClient } = useAuth();
 
     const applyReferral = useCallback(async (code: string) => {
@@ -903,7 +986,7 @@ export default function ClientRegisterScreen() {
                     style={StyleSheet.absoluteFillObject}
                 />
 
-                <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContentContainer} keyboardShouldPersistTaps="handled" >
+                <ScrollView ref={scrollRef} style={styles.scrollView} contentContainerStyle={styles.scrollContentContainer} keyboardShouldPersistTaps="handled" >
                     <Stack.Screen
                         options={{
                             headerShown: true,
@@ -937,11 +1020,12 @@ export default function ClientRegisterScreen() {
                         {/* Step 1: Name + Email */}
                         {currentStep === 1 && (
                             <View style={styles.stepContent}>
-                                <View style={[styles.inputWrapper, usernameError ? styles.inputWrapperError : {}]}>
+                                <View style={[styles.inputWrapper, usernameError ? styles.inputWrapperError : {}]} onLayout={(e) => setUsernameInputY(e.nativeEvent.layout.y)}>
                                     <View style={styles.iconCircle}>
                                         <Ionicons name="person-outline" size={23} color="#00BCD4" />
                                     </View>
                                     <TextInput
+                                        ref={usernameInputRef}
                                         style={styles.input}
                                         placeholder="Nome Completo"
                                         placeholderTextColor="#A0AEC0"
@@ -955,11 +1039,12 @@ export default function ClientRegisterScreen() {
                                 </View>
                                 <AnimatedErrorMessage message={usernameError} isVisible={!!usernameError} centered={false} />
 
-                                <View style={[styles.inputWrapper, emailError ? styles.inputWrapperError : {}]}>
+                                <View style={[styles.inputWrapper, emailError ? styles.inputWrapperError : {}]} onLayout={(e) => setEmailInputY(e.nativeEvent.layout.y)}>
                                     <View style={styles.iconCircle}>
                                         <Ionicons name="mail-outline" size={23} color="#00BCD4" />
                                     </View>
                                     <TextInput
+                                        ref={emailInputRef}
                                         style={styles.input}
                                         placeholder="Email"
                                         placeholderTextColor="#A0AEC0"
@@ -997,11 +1082,12 @@ export default function ClientRegisterScreen() {
                         {/* Step 2: Phone + CPF */}
                         {currentStep === 2 && (
                             <View style={styles.stepContent}>
-                                <View style={[styles.inputWrapper, phoneError ? styles.inputWrapperError : {}]}>
+                                <View style={[styles.inputWrapper, phoneError ? styles.inputWrapperError : {}]} onLayout={(e) => setPhoneInputY(e.nativeEvent.layout.y)}>
                                     <View style={styles.iconCircle}>
                                         <Ionicons name="call-outline" size={23} color="#00BCD4" />
                                     </View>
                                     <TextInput
+                                        ref={phoneInputRef}
                                         style={styles.input}
                                         placeholder="Telefone (DDD + Número)"
                                         placeholderTextColor="#A0AEC0"
@@ -1014,11 +1100,12 @@ export default function ClientRegisterScreen() {
                                 </View>
                                 <AnimatedErrorMessage message={phoneError} isVisible={!!phoneError} centered={false} />
 
-                                <View style={[styles.inputWrapper, cpfError ? styles.inputWrapperError : {}]}>
+                                <View style={[styles.inputWrapper, cpfError ? styles.inputWrapperError : {}]} onLayout={(e) => setCpfInputY(e.nativeEvent.layout.y)}>
                                     <View style={styles.iconCircle}>
                                         <Ionicons name="card-outline" size={23} color="#00BCD4" />
                                     </View>
                                     <TextInput
+                                        ref={cpfInputRef}
                                         style={styles.input}
                                         placeholder="CPF (apenas números)"
                                         placeholderTextColor="#A0AEC0"
@@ -1071,11 +1158,12 @@ export default function ClientRegisterScreen() {
                                 </View>
                                 <AnimatedErrorMessage message={dateOfBirthError} isVisible={!!dateOfBirthError} centered={false} />
 
-                                <View style={[styles.inputWrapper, passwordError ? styles.inputWrapperError : {}]}>
+                                <View style={[styles.inputWrapper, passwordError ? styles.inputWrapperError : {}]} onLayout={(e) => setPasswordInputY(e.nativeEvent.layout.y)}>
                                     <View style={styles.iconCircle}>
                                         <Ionicons name="lock-closed-outline" size={23} color="#00BCD4" />
                                     </View>
                                     <TextInput
+                                        ref={passwordInputRef}
                                         style={styles.input}
                                         placeholder="Senha (mínimo 6 caracteres)"
                                         placeholderTextColor="#A0AEC0"
@@ -1162,11 +1250,12 @@ export default function ClientRegisterScreen() {
                                 {/* Sub-step 1: CEP */}
                                 {subStepAddress === 1 && (
                                     <View style={styles.subStepContainer}>
-                                        <View style={[styles.inputWrapper, cepInputError ? styles.inputWrapperError : {}]}>
+                                        <View style={[styles.inputWrapper, cepInputError ? styles.inputWrapperError : {}]} onLayout={(e) => setCepInputY(e.nativeEvent.layout.y)}>
                                             <View style={styles.iconCircle}>
                                                 <Ionicons name="map-outline" size={23} color="#00BCD4" />
                                             </View>
                                             <TextInput
+                                                ref={cepInputRef}
                                                 style={styles.input}
                                                 placeholder="CEP (apenas números)"
                                                 placeholderTextColor="#A0AEC0"
@@ -1207,11 +1296,12 @@ export default function ClientRegisterScreen() {
                                 {/* Sub-step 2: Detalhes do Endereço */}
                                 {subStepAddress === 2 && (
                                     <View style={styles.subStepContainer}>
-                                        <View style={[styles.inputWrapper, streetError ? styles.inputWrapperError : {}]}>
+                                        <View style={[styles.inputWrapper, streetError ? styles.inputWrapperError : {}]} onLayout={(e) => setStreetInputY(e.nativeEvent.layout.y)}>
                                             <View style={styles.iconCircle}>
                                                 <Ionicons name="navigate-outline" size={23} color="#00BCD4" />
                                             </View>
                                             <TextInput
+                                                ref={streetInputRef}
                                                 style={styles.input}
                                                 placeholder="Rua"
                                                 placeholderTextColor="#A0AEC0"
@@ -1224,11 +1314,12 @@ export default function ClientRegisterScreen() {
                                         </View>
                                         <AnimatedErrorMessage message={streetError} isVisible={!!streetError} centered={false} />
 
-                                        <View style={[styles.inputWrapper, numberError ? styles.inputWrapperError : {}]}>
+                                        <View style={[styles.inputWrapper, numberError ? styles.inputWrapperError : {}]} onLayout={(e) => setNumberInputY(e.nativeEvent.layout.y)}>
                                             <View style={styles.iconCircle}>
                                                 <Ionicons name="home-outline" size={23} color="#00BCD4" />
                                             </View>
                                             <TextInput
+                                                ref={numberInputRef}
                                                 style={styles.input}
                                                 placeholder="Número"
                                                 placeholderTextColor="#A0AEC0"
@@ -1240,11 +1331,12 @@ export default function ClientRegisterScreen() {
                                         </View>
                                         <AnimatedErrorMessage message={numberError} isVisible={!!numberError} centered={false} />
 
-                                        <View style={[styles.inputWrapper, neighborhoodError ? styles.inputWrapperError : {}]}>
+                                        <View style={[styles.inputWrapper, neighborhoodError ? styles.inputWrapperError : {}]} onLayout={(e) => setNeighborhoodInputY(e.nativeEvent.layout.y)}>
                                             <View style={styles.iconCircle}>
                                                 <Ionicons name="business-outline" size={23} color="#00BCD4" />
                                             </View>
                                             <TextInput
+                                                ref={neighborhoodInputRef}
                                                 style={styles.input}
                                                 placeholder="Bairro"
                                                 placeholderTextColor="#A0AEC0"
@@ -1257,11 +1349,12 @@ export default function ClientRegisterScreen() {
                                         </View>
                                         <AnimatedErrorMessage message={neighborhoodError} isVisible={!!neighborhoodError} centered={false} />
 
-                                        <View style={[styles.inputWrapper, cityError ? styles.inputWrapperError : {}]}>
+                                        <View style={[styles.inputWrapper, cityError ? styles.inputWrapperError : {}]} onLayout={(e) => setCityInputY(e.nativeEvent.layout.y)}>
                                             <View style={styles.iconCircle}>
                                                 <Ionicons name="location-outline" size={23} color="#00BCD4" />
                                             </View>
                                             <TextInput
+                                                ref={cityInputRef}
                                                 style={styles.input}
                                                 placeholder="Cidade"
                                                 placeholderTextColor="#A0AEC0"
@@ -1274,11 +1367,12 @@ export default function ClientRegisterScreen() {
                                         </View>
                                         <AnimatedErrorMessage message={cityError} isVisible={!!cityError} centered={false} />
 
-                                        <View style={[styles.inputWrapper, stateError ? styles.inputWrapperError : {}]}>
+                                        <View style={[styles.inputWrapper, stateError ? styles.inputWrapperError : {}]} onLayout={(e) => setStateInputY(e.nativeEvent.layout.y)}>
                                             <View style={styles.iconCircle}>
                                                 <Ionicons name="location-outline" size={23} color="#00BCD4" />
                                             </View>
                                             <TextInput
+                                                ref={stateInputRef}
                                                 style={styles.input}
                                                 placeholder="Estado (UF)"
                                                 placeholderTextColor="#A0AEC0"
