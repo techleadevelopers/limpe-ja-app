@@ -26,6 +26,12 @@ export class BookingEntity implements PrismaBooking {
   createdAt: Date;
   updatedAt: Date;
 
+  // Auditoria de início/fim (alinhado ao schema)
+  startedAt: Date | null;
+  completedAt: Date | null;
+  startedByUserId: string | null;
+  completedByUserId: string | null;
+
   // CORREÇÃO AQUI: Propriedade addressId deve ser string | null
   addressId: string | null; // O tipo é string | null, conforme definido no schema.prisma (String?)
   // ADICIONADO: Relação address também pode ser null
@@ -98,5 +104,11 @@ export class BookingEntity implements PrismaBooking {
     // CORREÇÃO: Inicializar subscriptionId e couponId
     this.subscriptionId = partial.subscriptionId === undefined ? null : partial.subscriptionId;
     this.couponId = partial.couponId === undefined ? null : partial.couponId;
+
+    // Auditoria: parse de datas e FKs
+    this.startedAt = partial.startedAt ? new Date(partial.startedAt as any) : null;
+    this.completedAt = partial.completedAt ? new Date(partial.completedAt as any) : null;
+    this.startedByUserId = partial.startedByUserId === undefined ? null : (partial.startedByUserId as any);
+    this.completedByUserId = partial.completedByUserId === undefined ? null : (partial.completedByUserId as any);
   }
 }
