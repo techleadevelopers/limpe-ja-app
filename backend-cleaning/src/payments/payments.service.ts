@@ -7,6 +7,7 @@ import { createHmac, timingSafeEqual } from 'crypto';
 import axios from 'axios';
 import { PrismaService } from '../prisma/prisma.service';
 import { BookingsService } from '../bookings/bookings.service';
+import { QueuesService } from '../queues/queues.service';
 import { CreatePixChargeDto, PixChargeResponseDto } from './dto/create-pix-charge.dto';
 import { PaymentIntentResponseDto } from './dto/payment-intent-response.dto';
 import { RequestWithdrawalDto } from './dto/request-withdrawal.dto';
@@ -29,6 +30,7 @@ export class PaymentsService {
     private configService: ConfigService,
     private readonly couponsService: CouponsService,
     private readonly payoutsService: PayoutsService,
+    private readonly queues: QueuesService,
   ) {
     this.pagseguroApiToken = this.configService.get<string>('PAGSEGURO_API_TOKEN') || undefined;
     this.pagseguroApiBaseUrl = this.configService.get<string>('PAGSEGURO_API_BASE_URL', 'https://sandbox.api.pagseguro.com');
@@ -254,7 +256,32 @@ export class PaymentsService {
       }
 
       if (transaction.bookingId && bookingNewStatus) {
-        await this.prisma.booking.update({ where: { id: transaction.bookingId }, data: { status: bookingNewStatus } });
+        // Use BookingsService para garantir side‑effects (notificações/agenda de lembretes)
+        await this.bookingsService.updateStatus(transaction.bookingId, bookingNewStatus, UserRole.ADMIN);
+
+        // Notificação imediata ao PROVEDOR (pagamento confirmado)
+        if (newTransactionStatus === 'COMPLETED') {
+          try {
+            const b = await this.prisma.booking.findUnique({
+              where: { id: transaction.bookingId },
+              include: { provider: { include: { user: true } }, client: { include: { user: true } } },
+            });
+            if (b?.provider?.userId) {
+              const hora = (b.scheduledTime || '').slice(0,5);
+              await this.queues.addNotificationJob('send-notification', {
+                userId: b.provider.userId,
+                kind: 'booking_confirmed',
+                title: 'Serviço confirmado',
+                body: `Limpeza com ${b.client?.user?.fullName || 'cliente'}, hoje às ${hora}.`,
+                deeplink: `/(provider)/active-booking/${b.id}`,
+                priority: 1,
+                idempotencyKey: `evt:booking_confirmed:${b.id}:provider`,
+              });
+            }
+          } catch (e) {
+            this.logger.warn(`[PaymentsService] Falha ao enfileirar notificação de confirmação para booking ${transaction.bookingId}: ${e?.message || e}`);
+          }
+        }
       }
 
       // Cupom usado (se houver) quando pago
