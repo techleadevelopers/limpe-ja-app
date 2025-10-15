@@ -690,10 +690,49 @@ export class BookingsService {
       },
     });
 
+    // Premium: ao confirmar, agenda lembretes T-24h/T-2h/T-15m e T0 para cliente e provedor
+    if (newStatus === BookingStatus.CONFIRMED) {
+      try {
+        const dateBase = new Date(updatedBooking.scheduledDate as any);
+        const [hh, mm] = String(updatedBooking.scheduledTime || '00:00').split(':').map((n) => parseInt(n, 10));
+        if (!Number.isNaN(dateBase.getTime())) {
+          dateBase.setHours(hh || 0, mm || 0, 0, 0);
+          await this.queuesService.scheduleBookingReminders({
+            bookingId: updatedBooking.id,
+            clientUserId: updatedBooking.client?.userId,
+            providerUserId: updatedBooking.provider?.userId,
+            scheduledAt: dateBase,
+            deeplinkClient: `/(client)/bookings/${updatedBooking.id}`,
+            deeplinkProvider: `/(provider)/active-booking/${updatedBooking.id}`,
+          });
+          this.logger.log(`[BookingsService] updateStatus: Lembretes agendados para booking ${updatedBooking.id}.`);
+          // Push imediato de confirmação (som alto + deeplink)
+          try {
+            await this.queuesService.addNotificationJob('send-push-notification', {
+              userId: updatedBooking.client?.userId,
+              title: 'Pagamento confirmado',
+              body: `Seu serviço está confirmado para ${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}.`,
+              data: { url: `/(client)/bookings/${updatedBooking.id}`, channelId: 'high-priority', priority: 'max' },
+            });
+          } catch {}
+          try {
+            await this.queuesService.addNotificationJob('send-push-notification', {
+              userId: updatedBooking.provider?.userId,
+              title: 'Novo atendimento confirmado',
+              body: `Atendimento confirmado para ${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}.`,
+              data: { url: `/(provider)/active-booking/${updatedBooking.id}`, channelId: 'high-priority', priority: 'max' },
+            });
+          } catch {}
+        }
+      } catch (e) {
+        this.logger.warn(`[BookingsService] updateStatus: Falha ao agendar lembretes para booking ${updatedBooking?.id}: ${e?.message || e}`);
+      }
+    }
+
     // Ledger: creditar ganho e fee ao concluir (idempotente)
     if (newStatus === BookingStatus.COMPLETED && updatedBooking.provider?.userId) {
       const exists = await this.prisma.ledgerEntry.findFirst({
-        where: { bookingId: updatedBooking.id, type: LedgerEntryType.EARNING },
+        where: { bookingId: updatedBooking.id, type: LedgerEntryType.HOLD },
       });
       if (!exists) {
         await this.prisma.ledgerEntry.create({
@@ -701,11 +740,16 @@ export class BookingsService {
             userId: updatedBooking.provider.userId,
             bookingId: updatedBooking.id,
             amount: new Prisma.Decimal(updatedBooking.totalPrice.toNumber()),
-            type: LedgerEntryType.EARNING,
-            note: `Earning for completed booking ${updatedBooking.id}`,
+            type: LedgerEntryType.HOLD,
+            note: `Hold for booking ${updatedBooking.id} (release in +1h)`,
           },
         });
-        this.logger.log(`[BookingsService] updateStatus: Ledger EARNING criado para booking ${updatedBooking.id}.`);
+        try {
+          await this.queuesService.addJob('payouts', 'release-earning', { bookingId: updatedBooking.id, userId: updatedBooking.provider.userId }, { delay: 3600000, attempts: 3, backoff: { type: 'exponential', delay: 2000 }, removeOnFail: false });
+          this.logger.log(`[BookingsService] updateStatus: HOLD criado e release agendado (+1h) para booking ${updatedBooking.id}.`);
+        } catch (e) {
+          this.logger.warn(`[BookingsService] updateStatus: Falha ao agendar release +1h para booking ${updatedBooking.id}: ${e?.message || e}`);
+        }
       }
       // Plataforma: piso de margem (opcional via ENV)
       try {
