@@ -11,6 +11,8 @@ import {
     Easing,
     Platform,
     StyleSheet,
+    StyleProp,
+    ViewStyle,
     Text,
     TouchableOpacity,
     View,
@@ -52,6 +54,7 @@ import NotesInputSection from '../../../components/client/booking/schedule/Notes
 import ConfirmBookingButton from '../../../components/client/booking/schedule/ConfirmBookingButton';
 
 import { AppColors, AppDurations, AppOffsets, AppShadows, SCREEN_WIDTH, SCREEN_HEIGHT } from '../../../constants/appStyles';
+import { useDevice } from '@/utils/responsive';
 
 const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
@@ -117,6 +120,11 @@ const BookingSummaryPreview = ({
     summaryAnim, // ✅ NOVO: Stagger para summary
 }: BookingSummaryPreviewProps) => {
     if (!selectedProviderService || !selectedTime) return null;
+    const { isLargePhone } = useDevice();
+    const rCard: StyleProp<ViewStyle> = useMemo(
+        () => (isLargePhone ? { alignSelf: 'center', width: '100%', maxWidth: 820 } : undefined),
+        [isLargePhone]
+    );
 
     const formattedDate = selectedDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
     const serviceDetailsText = useMemo(() => {
@@ -200,7 +208,7 @@ const BookingSummaryPreview = ({
     }, [address]);
 
     return (
-        <Animated.View style={[styles.card, { marginTop: 20 }, reviewCardAnim]}>
+        <Animated.View style={[styles.card, rCard, { marginTop: 20 }, reviewCardAnim]}>
             <View style={styles.sectionHeaderRow}>
                 <Text style={styles.sectionTitlePlain}>
                     {t('schedule_service.review_booking_title', { defaultValue: 'Revisar Agendamento' })}
@@ -341,6 +349,11 @@ export default function ScheduleServiceScreen() {
     const { user } = useAuth();
     const typedUser = user as UserProfile | null;
     const { t } = useTranslation();
+    const { isLargePhone } = useDevice();
+    const navWrap: StyleProp<ViewStyle> = useMemo(
+        () => (isLargePhone ? { alignSelf: 'center', width: '100%', maxWidth: 820 } : undefined),
+        [isLargePhone]
+    );
 
     const { providerId, serviceId, servicePrice, couponCode: initialCouponCode } = useLocalSearchParams();
     const paramProviderId = Array.isArray(providerId) ? providerId[0] : providerId;
@@ -1500,6 +1513,7 @@ export default function ScheduleServiceScreen() {
                 {currentStep === 2 && selectedTime && finalCalculatedPrice > 0 && (
                     <Animated.View style={[
                         styles.floatingSummaryContainer,
+                        navWrap,
                         {
                             transform: [{
                                 translateY: floatingSummaryAnim.interpolate({
