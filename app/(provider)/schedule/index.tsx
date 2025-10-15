@@ -18,6 +18,7 @@ import {
 import { Stack, useRouter } from 'expo-router';
 import { Calendar, LocaleConfig, DateData } from 'react-native-calendars';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { showOverlay } from '../../../hooks/useOverlayMessage';
 import * as Haptics from 'expo-haptics'; // Adicionado para iOS premium feedback
 import { formatDate } from '../../../utils/helpers';
 
@@ -305,6 +306,16 @@ export default function MyScheduleScreen() {
   const agendaHeaderAnim = useRef(new Animated.Value(0)).current;
   const feedbackAnim = useRef(new Animated.Value(0)).current;
 
+  // Quick Availability step
+  const [qaVisible, setQaVisible] = useState(false);
+  const [qaStep, setQaStep] = useState<1 | 2 | 3>(1);
+  const [qaWhen, setQaWhen] = useState<'today' | 'tomorrow' | 'week'>('today');
+  const [qaPreset, setQaPreset] = useState<'morning' | 'afternoon' | 'fullday' | 'off'>('morning');
+
+  // Respond Request step
+  const [rrVisible, setRrVisible] = useState(false);
+  const [rrItem, setRrItem] = useState<ProviderAppointment | null>(null);
+
   const loadAppointments = async () => {
     try {
       setIsLoading(true);
@@ -385,8 +396,32 @@ export default function MyScheduleScreen() {
   };
 
   const handleAppointmentPress = (item: ProviderAppointment) => {
-    // mantém a navegação atual
+    if (item.status === 'PendenteCliente') {
+      setRrItem(item);
+      setRrVisible(true);
+      if (Platform.OS === 'ios') Haptics.selectionAsync();
+      return;
+    }
     router.push(`/(provider)/services/${item.id}` as any);
+  };
+
+  const confirmQuickAvailability = () => {
+    let presetParam = '';
+    if (qaWhen === 'week') {
+      presetParam = 'repeat-week';
+    } else if (qaPreset === 'off' && qaWhen === 'today') {
+      presetParam = 'block-today';
+    } else if (qaWhen === 'today') {
+      presetParam = `today-${qaPreset}`; // today-morning | today-afternoon | today-fullday
+    } else if (qaWhen === 'tomorrow') {
+      presetParam = `tomorrow-${qaPreset}`; // tomorrow-afternoon etc.
+    }
+    setQaVisible(false);
+    if (presetParam) {
+      showOverlay({ title: 'Aplicando disponibilidade', variant: 'info' });
+      if (Platform.OS === 'ios') Haptics.selectionAsync();
+      router.push(`/(provider)/schedule/manage-availability?preset=${presetParam}` as any);
+    }
   };
 
   return (
@@ -411,6 +446,19 @@ export default function MyScheduleScreen() {
           <Text style={styles.headerActionText}>Disponibilidade</Text>
         </TouchableOpacity>
       </Animated.View>
+
+      {/* Quick Availability launcher */}
+      <View style={{ paddingHorizontal: 18, marginTop: 10 }}>
+        <TouchableOpacity
+          style={styles.quickCTAButton}
+          onPress={() => { setQaStep(1); setQaVisible(true); if (Platform.OS==='ios') Haptics.selectionAsync(); }}
+          accessibilityRole="button"
+          accessibilityLabel="Disponibilidade rápida"
+        >
+          <Ionicons name="flash-outline" size={18} color="#fff" style={{ marginRight: 8 }} />
+          <Text style={styles.quickCTAButtonText}>Disponibilidade rápida</Text>
+        </TouchableOpacity>
+      </View>
 
       <Animated.View
         style={[
@@ -486,6 +534,113 @@ export default function MyScheduleScreen() {
             <Ionicons name="arrow-forward" size={20} color="#FFFFFF" style={{ marginLeft: 10 }} accessibilityHidden={true} />
           </TouchableOpacity>
         </Animated.View>
+      )}
+      {/* Quick Availability Modal */}
+      {qaVisible && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Disponibilidade rápida</Text>
+            <Text style={styles.stepSubtitle}>Passo {qaStep} de 3</Text>
+
+            {qaStep === 1 && (
+              <View>
+                <Text style={styles.stepTitle}>Para quando?</Text>
+                <View style={styles.modalChipsRow}>
+                  <TouchableOpacity style={[styles.modalChip, qaWhen==='today' && styles.modalChipActive]} onPress={() => setQaWhen('today')}><Text style={[styles.modalChipText, qaWhen==='today' && styles.modalChipTextActive]}>Hoje</Text></TouchableOpacity>
+                  <TouchableOpacity style={[styles.modalChip, qaWhen==='tomorrow' && styles.modalChipActive]} onPress={() => setQaWhen('tomorrow')}><Text style={[styles.modalChipText, qaWhen==='tomorrow' && styles.modalChipTextActive]}>Amanhã</Text></TouchableOpacity>
+                  <TouchableOpacity style={[styles.modalChip, qaWhen==='week' && styles.modalChipActive]} onPress={() => setQaWhen('week')}><Text style={[styles.modalChipText, qaWhen==='week' && styles.modalChipTextActive]}>Esta semana</Text></TouchableOpacity>
+                </View>
+                <View style={styles.modalActions}>
+                  <TouchableOpacity style={[styles.modalButton, styles.modalConfirm]} onPress={() => setQaStep(2)}>
+                    <Text style={[styles.modalButtonText, styles.modalConfirmText]}>Continuar</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            {qaStep === 2 && (
+              <View>
+                <Text style={styles.stepTitle}>Qual horário?</Text>
+                <View style={styles.modalChipsRow}>
+                  <TouchableOpacity style={[styles.modalChip, qaPreset==='morning' && styles.modalChipActive]} onPress={() => setQaPreset('morning')}><Text style={[styles.modalChipText, qaPreset==='morning' && styles.modalChipTextActive]}>Manhã (08–12)</Text></TouchableOpacity>
+                  <TouchableOpacity style={[styles.modalChip, qaPreset==='afternoon' && styles.modalChipActive]} onPress={() => setQaPreset('afternoon')}><Text style={[styles.modalChipText, qaPreset==='afternoon' && styles.modalChipTextActive]}>Tarde (13–17)</Text></TouchableOpacity>
+                  <TouchableOpacity style={[styles.modalChip, qaPreset==='fullday' && styles.modalChipActive]} onPress={() => setQaPreset('fullday')}><Text style={[styles.modalChipText, qaPreset==='fullday' && styles.modalChipTextActive]}>Dia todo (08–18)</Text></TouchableOpacity>
+                  <TouchableOpacity style={[styles.modalChip, qaPreset==='off' && styles.modalChipActive]} onPress={() => setQaPreset('off')}><Text style={[styles.modalChipText, qaPreset==='off' && styles.modalChipTextActive]}>Folga</Text></TouchableOpacity>
+                </View>
+                <View style={styles.modalActions}>
+                  <TouchableOpacity style={[styles.modalButton, styles.modalCancel]} onPress={() => setQaStep(1)}><Text style={styles.modalButtonText}>Voltar</Text></TouchableOpacity>
+                  <TouchableOpacity style={[styles.modalButton, styles.modalConfirm]} onPress={() => setQaStep(3)}><Text style={[styles.modalButtonText, styles.modalConfirmText]}>Continuar</Text></TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            {qaStep === 3 && (
+              <View>
+                <Text style={styles.stepTitle}>Confirmar</Text>
+                <View style={styles.summaryCard}>
+                  <Ionicons name="checkmark-circle-outline" size={20} color={Colors.primary} style={{ marginRight: 8 }} />
+                  <Text style={{ flex: 1, color: Colors.text }}>
+                    {(qaWhen==='today' ? 'Hoje' : qaWhen==='tomorrow' ? 'Amanhã' : 'Esta semana')} • {(qaPreset==='morning' ? '08–12' : qaPreset==='afternoon' ? '13–17' : qaPreset==='fullday' ? '08–18' : 'Folga')}
+                  </Text>
+                </View>
+                <View style={styles.modalActions}>
+                  <TouchableOpacity style={[styles.modalButton, styles.modalCancel]} onPress={() => setQaStep(2)}><Text style={styles.modalButtonText}>Voltar</Text></TouchableOpacity>
+                  <TouchableOpacity style={[styles.modalButton, styles.modalConfirm]} onPress={confirmQuickAvailability}><Text style={[styles.modalButtonText, styles.modalConfirmText]}>Aplicar</Text></TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </View>
+        </View>
+      )}
+
+      {/* Responder Pedido Modal */}
+      {rrVisible && rrItem && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Responder pedido</Text>
+            <View style={styles.summaryCard}>
+              <Ionicons name="person-circle-outline" size={20} color={Colors.primary} style={{ marginRight: 8 }} />
+              <Text style={{ flex: 1, color: Colors.text }}>
+                {rrItem.clientName} • {rrItem.serviceType}\n{formatDate(rrItem.date, { weekday: 'long', day: 'numeric', month: 'long' })} • {rrItem.startTime}{rrItem.endTime?`–${rrItem.endTime}`:''}
+              </Text>
+            </View>
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalConfirm]}
+                onPress={() => {
+                  setAllAppointments(prev => prev.map(a => a.id===rrItem.id ? { ...a, status: 'Confirmado' } : a));
+                  setRrVisible(false);
+                  showOverlay({ title: 'Pedido aceito', variant: 'success' });
+                  if (Platform.OS==='ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                }}
+              >
+                <Text style={[styles.modalButtonText, styles.modalConfirmText]}>Aceitar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancel]}
+                onPress={() => {
+                  setRrVisible(false);
+                  // Sugerir: abrir disponibilidade com sugestão padrão
+                  router.push('/(provider)/schedule/manage-availability?preset=tomorrow-afternoon' as any);
+                  showOverlay({ title: 'Sugira um novo horário', variant: 'info' });
+                  if (Platform.OS==='ios') Haptics.selectionAsync();
+                }}
+              >
+                <Text style={styles.modalButtonText}>Sugerir outro horário</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancel]}
+                onPress={() => {
+                  setAllAppointments(prev => prev.map(a => a.id===rrItem.id ? { ...a, status: 'Cancelado' } : a));
+                  setRrVisible(false);
+                  showOverlay({ title: 'Pedido recusado', variant: 'warning' });
+                }}
+              >
+                <Text style={styles.modalButtonText}>Recusar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       )}
     </View>
   );
@@ -732,4 +887,32 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'SFProText-Semibold' : 'System',
   },
   listSeparator: { height: 0 },
+  // CTA and modal styles
+  quickCTAButton: {
+    backgroundColor: Colors.primary,
+    borderRadius: Radii.pill,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+  },
+  quickCTAButtonText: { color: '#fff', fontWeight: '700' },
+  modalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'flex-end', padding: 18 },
+  modalCard: { backgroundColor: Colors.surface, borderRadius: Radii.md, padding: 18, ...Platform.select({ ios: { shadowColor: Colors.shadow, shadowOffset: { width:0, height:8 }, shadowOpacity: 0.15, shadowRadius: 18 }, android: { elevation: 12 } }) },
+  modalTitle: { fontSize: 16, fontWeight: '700', color: Colors.text, marginBottom: 6 },
+  stepTitle: { fontSize: 16, fontWeight: '700', color: Colors.text, marginBottom: 8 },
+  stepSubtitle: { fontSize: 13, color: Colors.textMuted, marginBottom: 6 },
+  summaryCard: { backgroundColor: Colors.fieldBg, borderRadius: Radii.md, padding: 12, flexDirection: 'row', alignItems: 'center', marginBottom: 12, borderWidth: 0.5, borderColor: Colors.border },
+  modalChipsRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 12 },
+  modalChip: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 14, backgroundColor: Colors.fieldBg, margin: 6, borderWidth: 0.5, borderColor: Colors.border },
+  modalChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  modalChipText: { color: Colors.text, fontWeight: '600' },
+  modalChipTextActive: { color: '#fff' },
+  modalActions: { flexDirection: 'row', justifyContent: 'flex-end' },
+  modalButton: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: Radii.pill, marginLeft: 8 },
+  modalCancel: { backgroundColor: Colors.fieldBg },
+  modalConfirm: { backgroundColor: Colors.primary },
+  modalButtonText: { color: Colors.text, fontWeight: '700' },
+  modalConfirmText: { color: '#fff' },
 });
