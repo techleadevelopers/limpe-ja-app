@@ -22,6 +22,7 @@ export class PayoutsService {
   private readonly dailyLimit?: Prisma.Decimal;
   private readonly dailyCountMax: number;
   private readonly settleWindowDays: number;
+  private readonly settleWindowHours: number;
   private readonly withdrawalFixedFee: Prisma.Decimal;
   private readonly withdrawalPercentFee: number;
   private readonly pspBaseUrl: string;
@@ -41,6 +42,7 @@ export class PayoutsService {
     this.dailyLimit = daily ? new Prisma.Decimal(daily) : undefined;
     this.dailyCountMax = parseInt(this.configService.get<string>('WITHDRAWAL_DAILY_COUNT_MAX', '3')) || 3;
     this.settleWindowDays = parseInt(this.configService.get<string>('WITHDRAWAL_SETTLEMENT_DAYS', '0')) || 0;
+    this.settleWindowHours = parseInt(this.configService.get<string>('WITHDRAWAL_SETTLEMENT_HOURS', '0')) || 0;
     const fixedFee = this.configService.get<string>('WITHDRAWAL_FIXED_FEE_RS', '0');
     this.withdrawalFixedFee = new Prisma.Decimal(fixedFee);
     this.withdrawalPercentFee = parseFloat(this.configService.get<string>('WITHDRAWAL_PERCENT_FEE', '0')) || 0;
@@ -271,8 +273,22 @@ export class PayoutsService {
     const total = await tx.ledgerEntry.aggregate({ _sum: { amount: true }, where: { userId } });
     const sumAll = total._sum.amount ?? new Prisma.Decimal(0);
 
-    // No settlement window configured
+    // Settlement windows
     if (this.settleWindowDays <= 0) {
+      // Support short hold by hours (e.g., +1h após COMPLETED)
+      if (this.settleWindowHours > 0) {
+        const cutoffHours = new Date(Date.now() - this.settleWindowHours * 60 * 60 * 1000);
+        const withheldAggHours = await tx.ledgerEntry.aggregate({
+          _sum: { amount: true },
+          where: {
+            userId,
+            type: LedgerEntryType.EARNING,
+            createdAt: { gt: cutoffHours },
+          },
+        });
+        const withholdHours = withheldAggHours._sum.amount ?? new Prisma.Decimal(0);
+        return sumAll.sub(withholdHours);
+      }
       return sumAll;
     }
 
