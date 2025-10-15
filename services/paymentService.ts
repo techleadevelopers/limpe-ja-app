@@ -7,8 +7,20 @@ import { CreatePixChargeDto, PixChargeResponseDto, RequestWithdrawalDto, Payment
 
 export const createPixCharge = async (clientUserId: string, data: CreatePixChargeDto): Promise<PixChargeResponseDto> => {
   try {
-    const response = await api.post<PixChargeResponseDto>('/payments/pix-charge', data);
-    return response.data;
+    // Attach a stable idempotency key based on booking+provider+amount to avoid duplicate charges on retries
+    const stableKey = `pix-${data.bookingId}-${data.providerId}-${Math.round((data.amount ?? 0) * 100)}`;
+    const response = await api.post<PixChargeResponseDto>('/payments/pix-charge', data, {
+      headers: { 'idempotency-key': stableKey },
+    });
+    const r = response.data as PixChargeResponseDto & { status?: string };
+    // Normalize unknown/cancelled statuses to FE-safe shapes
+    if (r && typeof r.status === 'string') {
+      const s = r.status.toUpperCase();
+      if (s === 'CANCELLED' || s === 'CANCELED') {
+        (r as any).status = 'EXPIRED';
+      }
+    }
+    return r as PixChargeResponseDto;
   } catch (error: any) {
     console.error('Erro ao criar cobrança PIX:', error.response?.data || error.message);
     if (axios.isAxiosError(error) && error.response) {
