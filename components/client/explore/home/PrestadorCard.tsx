@@ -149,6 +149,19 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
                     <View style={styles.verifiedBadgeOutside}>
                         <Ionicons name="shield-checkmark" size={12} color="#5da2ecff" />
                     </View>
+
+                    {/* Métricas mini: % aceitação e tempo de resposta (fallbacks para novos provedores) */}
+                    <View style={styles.metricsRow}>
+                        <Ionicons name="checkmark-done" size={12} color="#5da2ecff" />
+                        <Text style={styles.metricText} allowFontScaling={false}>
+                            {`${Math.round((item.acceptanceRate ?? (item as any)?.metrics?.acceptanceRate ?? providerMetrics.acceptanceRate ?? 1))}%`}
+                        </Text>
+                        <Text style={styles.metricSep}> · </Text>
+                        <Ionicons name="time-outline" size={12} color="#5da2ecff" />
+                        <Text style={styles.metricText} allowFontScaling={false}>
+                            {`${(item.averageResponseTime ?? (item as any)?.metrics?.averageResponseTime ?? providerMetrics.averageResponseTime ?? 120)} min`}
+                        </Text>
+                    </View>
                 )}
 
                 <View style={styles.detailsContent}>
@@ -204,7 +217,7 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
                         {item.averageRating !== undefined && item.reviewCount !== undefined && (
                             <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 8 }}>
                                 {renderStars(item.averageRating)}
-                                <Text style={styles.reviewsText} allowFontScaling={false}>({item.reviewCount})</Text>
+                                <Text style={styles.reviewsText} allowFontScaling={false}>{`${item.reviewCount ?? 0} Avaliações`}</Text>
                             </View>
                         )}
                     </View>
