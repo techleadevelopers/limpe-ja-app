@@ -1,6 +1,7 @@
 // LimpeJaApp/app/(provider)/notifications/index.tsx
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
+import * as Linking from 'expo-linking';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
@@ -23,7 +24,7 @@ import {
     markAllNotificationsAsRead,
     markNotificationAsRead,
 } from '../../../services/notificationService';
-import { NotificationEntity } from '../../../types/backend/notifications'; // Assumindo que este tipo existe
+import type { AppNotification } from '../../../services/notificationService';
 
 // Helper simples para formatar timestamp de forma relativa ou absoluta
 const formatNotificationTimestamp = (isoTimestamp: string, t: any): string => {
@@ -44,7 +45,7 @@ const formatNotificationTimestamp = (isoTimestamp: string, t: any): string => {
 
 // Função para obter ícone com base no tipo de notificação
 // <--- CORREÇÃO: getNotificationIcon retorna o nome do ícone e a biblioteca
-const getNotificationIcon = (type: NotificationEntity['type']): { name: string, color: string, library: 'Ionicons' | 'MaterialCommunityIcons' } => {
+const getNotificationIcon = (type: string | undefined): { name: string, color: string, library: 'Ionicons' | 'MaterialCommunityIcons' } => {
     switch (type) {
         case 'AGENDAMENTO': return { name: 'calendar-outline', color: '#007AFF', library: 'Ionicons' };
         case 'MENSAGEM': return { name: 'chatbubble-ellipses-outline', color: '#4CAF50', library: 'Ionicons' };
@@ -59,8 +60,8 @@ const getNotificationIcon = (type: NotificationEntity['type']): { name: string, 
 
 // Componente para cada item da notificação com animações
 const AnimatedNotificationItem: React.FC<{
-    item: NotificationEntity;
-    onPress: (item: NotificationEntity) => void;
+    item: AppNotification;
+    onPress: (item: AppNotification) => void;
     delay: number;
     t: any; // Adicionar prop t para i18n
 }> = ({ item, onPress, delay, t }) => {
@@ -124,7 +125,9 @@ const AnimatedNotificationItem: React.FC<{
                     <Text style={[styles.notificationBody, !isRead && styles.unreadTextLight]} numberOfLines={2}>{item.body}</Text>
                     <Text style={styles.notificationTimestamp}>{formatNotificationTimestamp(item.createdAt, t)}</Text>
                 </View>
-                {item.navigateTo && <Ionicons name="chevron-forward-outline" size={22} color="#C7C7CC" style={styles.chevron}/>}
+                {Boolean((item as any).navigateTo ?? (item as any).targetUrl ?? (item as any).deeplink) && (
+                  <Ionicons name="chevron-forward-outline" size={22} color="#C7C7CC" style={styles.chevron}/>
+                )}
             </TouchableOpacity>
         </Animated.View>
     );
@@ -135,7 +138,7 @@ export default function ProviderNotificationsScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { t } = useTranslation(); // Inicializar i18n
-  const [notifications, setNotifications] = useState<NotificationEntity[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -153,7 +156,7 @@ export default function ProviderNotificationsScreen() {
     }
     
     try {
-      const fetchedNotifications: NotificationEntity[] = await getNotifications();
+      const fetchedNotifications: AppNotification[] = await getNotifications();
       const sortedNotifications = fetchedNotifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
       setNotifications(sortedNotifications);
@@ -183,25 +186,31 @@ export default function ProviderNotificationsScreen() {
     loadNotifications();
   }, [headerAnim, loadNotifications]);
 
-  const handleNotificationPress = async (item: NotificationEntity) => {
+  const handleNotificationPress = async (item: AppNotification) => {
     console.log("[ProviderNotificationsScreen] Notificação pressionada:", item.id, "Lida:", !!item.readAt);
-    if (!item.readAt) {
+    if (!item.isRead) {
       try {
         await markNotificationAsRead(item.id);
-        setNotifications(prev => prev.map(n => n.id === item.id ? { ...n, readAt: new Date().toISOString() } : n));
+        setNotifications(prev => prev.map(n => n.id === item.id ? { ...n, isRead: true, readAt: new Date().toISOString() } : n));
         console.log(t("notifications.mark_read_success"), item.id);
       } catch (error) {
         console.error("Erro ao marcar notificação como lida:", error);
         Alert.alert(t("common.error"), t("notifications.mark_read_error"));
       }
     }
-    if (item.navigateTo) {
+    const link = (item as any).navigateTo ?? (item as any).targetUrl ?? (item as any).deeplink;
+    if (link) {
       try {
-        console.log("[ProviderNotificationsScreen] Navegando para:", item.navigateTo);
-        router.push(item.navigateTo as any);
+        if (link.startsWith('/(')) {
+          router.push(link as any);
+        } else {
+          const can = await Linking.canOpenURL(link);
+          if (can) await Linking.openURL(link);
+          else Alert.alert(t('notifications.navigation_error'), t('notifications.navigation_error_message'));
+        }
       } catch (e) {
-          console.error(`[ProviderNotificationsScreen] Erro ao navegar para ${item.navigateTo}:`, e);
-          Alert.alert(t("notifications.navigation_error"), t("notifications.navigation_error_message"));
+        console.error(`[ProviderNotificationsScreen] Erro ao navegar para ${link}:`, e);
+        Alert.alert(t('notifications.navigation_error'), t('notifications.navigation_error_message'));
       }
     }
   };
@@ -209,7 +218,7 @@ export default function ProviderNotificationsScreen() {
   const handleMarkAllAsRead = async () => {
       try {
           await markAllNotificationsAsRead();
-          setNotifications(prev => prev.map(n => ({ ...n, readAt: new Date().toISOString() })));
+          setNotifications(prev => prev.map(n => ({ ...n, isRead: true, readAt: new Date().toISOString() })));
           Alert.alert(t("common.success"), t("notifications.mark_all_read_success"));
       } catch (error) {
           console.error("Erro ao marcar todas como lidas:", error);
@@ -225,7 +234,7 @@ export default function ProviderNotificationsScreen() {
     loadNotifications(true);
   }, [loadNotifications]);
 
-  const hasUnreadNotifications = notifications.some(n => !n.readAt);
+  const hasUnreadNotifications = notifications.some(n => !n.isRead);
 
   if (isLoading && !isRefreshing) {
     return (
