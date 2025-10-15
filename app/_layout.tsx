@@ -6,6 +6,9 @@ import {
     Text,
     View,
     Image,
+    Animated,
+    TouchableOpacity,
+    Platform,
 } from 'react-native';
 import { LogBox } from 'react-native'; // ✅ ADICIONADO: Para ignorar o warning específico do LogBox (dev mode apenas)
 import 'react-native-reanimated';
@@ -25,6 +28,178 @@ import { OverlayPortal } from '../hooks/useOverlayMessage';
 import * as Font from 'expo-font';
 import NotificationUIService from '../services/notificationUIService';
 import AppQueryClientProvider from '../components/provider/query-client-provider';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { getBookingsForUser } from '../services/bookingService';
+import { BookingDetails, BookingStatus } from '../types/backend/bookings';
+// Optional local notifications setup (Android channel) – safe, no-op on iOS if unavailable
+let setupNotificationsOnce: (() => Promise<void>) | null = (async () => {
+  try {
+    // dynamic import to avoid compile-time hard dependency
+    const Notifications = (await import('expo-notifications')).default || (await import('expo-notifications'));
+    if ((Notifications as any)?.setNotificationChannelAsync) {
+      await (Notifications as any).setNotificationChannelAsync('high-priority', {
+        name: 'High Priority',
+        importance: (Notifications as any).AndroidImportance?.MAX ?? 5,
+        sound: 'default',
+        vibrationPattern: [0, 250, 250, 250],
+        lockscreenVisibility: 1,
+      });
+    }
+  } catch {}
+  setupNotificationsOnce = null;
+});
+
+function parseDateTime(dateIso: string, timeHHmm: string): Date {
+  try {
+    const d = new Date(dateIso);
+    if (Number.isNaN(d.getTime())) return new Date(NaN);
+    const [hh, mm] = (timeHHmm || '00:00').split(':').map((n) => parseInt(n, 10));
+    const dt = new Date(d);
+    dt.setHours(hh || 0, mm || 0, 0, 0);
+    return dt;
+  } catch {
+    return new Date(NaN);
+  }
+}
+
+function minutesBetween(a: Date, b: Date): number {
+  return Math.round((a.getTime() - b.getTime()) / 60000);
+}
+
+const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient as any);
+
+function FloatingActiveServicePill({ enabled }: { enabled: boolean }) {
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const [booking, setBooking] = React.useState<BookingDetails | null>(null);
+  const [timeLabel, setTimeLabel] = React.useState<string>('');
+
+  const reflectionX = React.useRef(new Animated.Value(-80)).current;
+  const tremble = React.useRef(new Animated.Value(0)).current;
+  const scale = React.useRef(new Animated.Value(1)).current;
+
+  const fetchActiveCandidate = React.useCallback(async () => {
+    try {
+      const list = await getBookingsForUser();
+      const now = new Date();
+      let candidate: BookingDetails | null = null;
+      const inProgress = list.find((b) => b.status === BookingStatus.IN_PROGRESS);
+      if (inProgress) candidate = inProgress;
+      if (!candidate) {
+        const candidates = list.filter((b) => b.status === BookingStatus.CONFIRMED);
+        for (const b of candidates) {
+          const start = parseDateTime(b.scheduledDate, b.scheduledTime);
+          if (Number.isNaN(start.getTime())) continue;
+          const diff = minutesBetween(start, now);
+          if (diff <= 10 && diff >= -120) { // 10 min antes até 120 min depois
+            candidate = b;
+            break;
+          }
+        }
+      }
+      if (candidate) {
+        setBooking(candidate);
+        setTimeLabel(candidate.scheduledTime?.slice(0,5) || '');
+      } else {
+        setBooking(null);
+      }
+    } catch {}
+  }, []);
+
+  React.useEffect(() => {
+    if (!enabled) return;
+    fetchActiveCandidate();
+    const id = setInterval(fetchActiveCandidate, 60_000);
+    return () => clearInterval(id);
+  }, [enabled, fetchActiveCandidate]);
+
+  React.useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(reflectionX, { toValue: 140, duration: 1600, useNativeDriver: true }),
+        Animated.timing(reflectionX, { toValue: -80, duration: 0, useNativeDriver: true }),
+      ])
+    ).start();
+  }, [reflectionX]);
+
+  const onPressIn = () => {
+    Animated.parallel([
+      Animated.spring(scale, { toValue: 0.97, useNativeDriver: true }),
+      Animated.sequence([
+        Animated.timing(tremble, { toValue: 1, duration: 40, useNativeDriver: true }),
+        Animated.timing(tremble, { toValue: -1, duration: 40, useNativeDriver: true }),
+        Animated.timing(tremble, { toValue: 0, duration: 40, useNativeDriver: true }),
+      ]),
+    ]).start();
+  };
+
+  const onPressOut = () => {
+    Animated.spring(scale, { toValue: 1, friction: 4, tension: 50, useNativeDriver: true }).start();
+  };
+
+  if (!enabled || !booking) return null;
+
+  const isInProgress = booking.status === BookingStatus.IN_PROGRESS;
+  const cta = isInProgress ? 'Finalizar' : 'Iniciar';
+  const rotate = tremble.interpolate({ inputRange: [-1, 1], outputRange: ['-0.5deg', '0.5deg'] });
+
+  return (
+    <Animated.View
+      style={{
+        position: 'absolute',
+        right: 16,
+        bottom: (insets?.bottom || 0) + 18,
+        transform: [{ scale }, { rotate }],
+        zIndex: 40,
+      }}
+    >
+      <TouchableOpacity
+        activeOpacity={0.95}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+        onPress={() => router.push(`/(provider)/active-booking/${booking.id}` as any)}
+        accessibilityRole="button"
+        accessibilityLabel={`${cta} serviço`}
+        style={{ borderRadius: 999 }}
+      >
+        <LinearGradient
+          colors={['#4F8BFF', '#2F6BFF']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{
+            paddingVertical: 12,
+            paddingHorizontal: 14,
+            borderRadius: 999,
+            minWidth: 200,
+            overflow: 'hidden',
+            ...Platform.select({
+              ios: { shadowColor: '#000', shadowOpacity: 0.12, shadowOffset: { width: 0, height: 6 }, shadowRadius: 12 },
+              android: { elevation: 5 },
+            }),
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={{ color: '#fff', fontWeight: '700' }}>{`Serviço às ${timeLabel}`}</Text>
+            <Text style={{ color: '#DCE7FF', marginLeft: 8, fontWeight: '600' }}>{`• ${cta}`}</Text>
+          </View>
+          <AnimatedLinearGradient
+            colors={['rgba(255,255,255,0.0)', 'rgba(255,255,255,0.25)', 'rgba(255,255,255,0.0)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={{
+              position: 'absolute',
+              top: 0,
+              bottom: 0,
+              width: 60,
+              transform: [{ translateX: reflectionX }],
+            }}
+          />
+        </LinearGradient>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
 
 // ✅ SOLUÇÃO GLOBAL: Ignora só o warning específico do LogBox (dev mode apenas; não afeta produção ou outros erros)
 LogBox.ignoreLogs(['Text strings must be rendered within a <Text>']);
@@ -84,6 +259,26 @@ function RootLayoutContent() {
 
     // ativa o socket de notificações quando token está disponível
     useNotificationsSocket(token);
+    // one-time local notifications channel (Android). Harmless on iOS.
+    useEffect(() => { if (setupNotificationsOnce) { setupNotificationsOnce(); } }, []);
+    // Deep-link handler for notification taps (local or push)
+    useEffect(() => {
+        let sub: any;
+        (async () => {
+            try {
+                const Notifications = (await import('expo-notifications')).default || (await import('expo-notifications'));
+                sub = (Notifications as any).addNotificationResponseReceivedListener?.((response: any) => {
+                    try {
+                        const url = response?.notification?.request?.content?.data?.url as string | undefined;
+                        if (url && typeof url === 'string') {
+                            (router as any)?.push?.(url);
+                        }
+                    } catch {}
+                });
+            } catch {}
+        })();
+        return () => { try { sub?.remove?.(); } catch {} };
+    }, [router]);
 
     const [appReady, setAppReady] = useState(false);
     const [initializationError, setInitializationError] = useState<string | null>(null);
@@ -267,6 +462,10 @@ function RootLayoutContent() {
         return (
             <View style={{ flex: 1 }}>
                 <Slot />
+                {/* Pílula flutuante global (sem banner no dashboard) */}
+                {user?.role === UserRole.PROVIDER && (
+                  <FloatingActiveServicePill enabled={true} />
+                )}
                 {/* Proteções simples: só renderizar OverlayPortal/Toast se existirem */}
                 <OverlayPortal />
                 <Toast config={toastConfig} />
