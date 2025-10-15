@@ -1,0 +1,19 @@
+import React from 'react';
+import { View, ViewProps, StyleSheet } from 'react-native';
+import { useDevice } from '@/utils/responsive';
+
+export default function ScreenContainer({ style, children, ...rest }: ViewProps) {
+  const { isLargePhone } = useDevice();
+  return (
+    <View style={[styles.root, isLargePhone && styles.maxW, style]} {...rest}>
+      {children}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+  // só aplica no Pro Max; 12 Pro fica igual
+  maxW: { alignSelf: 'center', width: '100%', maxWidth: 820, paddingHorizontal: 20 },
+});
+
