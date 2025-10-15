@@ -153,6 +153,73 @@ export class QueuesService {
   }
 
   /**
+   * Helpers premium: agenda lembretes de booking (T-24h, T-2h, T-15m) e início (T0)
+   * deeplink deve abrir a tela adequada no app; prioridade alta para T0.
+   */
+  async scheduleBookingReminders(params: {
+    bookingId: string;
+    clientUserId: string;
+    providerUserId: string;
+    scheduledAt: Date; // data+hora local já resolvida
+    deeplinkClient?: string;
+    deeplinkProvider?: string;
+    locale?: string;
+  }): Promise<void> {
+    const { bookingId, clientUserId, providerUserId, scheduledAt, deeplinkClient, deeplinkProvider } = params;
+    const baseId = `booking:${bookingId}`;
+    const now = Date.now();
+    const t0 = scheduledAt.getTime();
+    const hh = String(scheduledAt.getHours()).padStart(2, '0');
+    const mm = String(scheduledAt.getMinutes()).padStart(2, '0');
+    const hora = `${hh}:${mm}`;
+    const emits = [
+      { key: 'T-24h',  ms: t0 - 24 * 3600000, title: 'Serviço amanhã',        body: `Limpeza amanhã às ${hora}.` },
+      { key: 'T-2h',   ms: t0 -  2 * 3600000, title: 'Faltam 2 horas',        body: `Prepare-se para ${hora}.` },
+      { key: 'T-15m',  ms: t0 - 15 *   60000, title: 'Faltam 15 minutos',     body: `Início às ${hora}.` },
+      { key: 'T0',     ms: t0,               title: 'É agora',                body: `Inicie o serviço às ${hora}.` },
+    ];
+
+    for (const e of emits) {
+      const delay = Math.max(0, e.ms - now);
+      const opts = { attempts: 3, backoff: { type: 'exponential' as const, delay: 1000 }, removeOnFail: false, delay };
+      // Cliente
+      await this.addJob('notifications', 'send-notification', {
+        userId: clientUserId,
+        kind: 'booking_reminder',
+        title: e.title,
+        body: e.body,
+        deeplink: deeplinkClient,
+        priority: e.key === 'T0' ? 1 : 2,
+        idempotencyKey: `${baseId}:${e.key}:client`,
+      }, opts);
+      // Push com som alto e deeplink (cliente)
+      await this.addJob('notifications', 'send-push-notification', {
+        userId: clientUserId,
+        title: e.title,
+        body: e.body,
+        data: { url: deeplinkClient, priority: e.key === 'T0' ? 'max' : 'high', channelId: 'high-priority' },
+      }, opts);
+      // Provedor
+      await this.addJob('notifications', 'send-notification', {
+        userId: providerUserId,
+        kind: 'booking_reminder',
+        title: e.title,
+        body: e.body,
+        deeplink: deeplinkProvider,
+        priority: e.key === 'T0' ? 1 : 2,
+        idempotencyKey: `${baseId}:${e.key}:provider`,
+      }, opts);
+      // Push com som alto e deeplink (provedor)
+      await this.addJob('notifications', 'send-push-notification', {
+        userId: providerUserId,
+        title: e.title,
+        body: e.body,
+        data: { url: deeplinkProvider, priority: e.key === 'T0' ? 'max' : 'high', channelId: 'high-priority' },
+      }, opts);
+    }
+  }
+
+  /**
    * Adiciona uma tarefa à fila de disputas.
    * @param name Nome da tarefa (ex: 'process-dispute', 'initiate-refund').
    * @param data Dados da tarefa.
