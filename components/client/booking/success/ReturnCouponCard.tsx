@@ -17,7 +17,7 @@ import * as Clipboard from 'expo-clipboard';
 import Toast from 'react-native-toast-message';
 import { useTranslation } from 'react-i18next';
 
-import { AppColors, AppDurations, AppOffsets, AppShadows, AppTypography, SCREEN_WIDTH } from '../../../../constants/appStyles';
+import { AppColors, AppDurations, AppShadows, AppTypography, SCREEN_WIDTH } from '../../../../constants/appStyles';
 
 interface ReturnCouponCardProps {
   code: string;
@@ -36,7 +36,7 @@ export const ReturnCouponCard: React.FC<ReturnCouponCardProps> = ({
 }) => {
   const { t } = useTranslation();
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideUpAnim = useRef(new Animated.Value(30)).current; // ✅ FIX: Valor fixo 30px para slide up visível (era AppOffsets — genérico)
+  const slideUpAnim = useRef(new Animated.Value(30)).current; // Valor fixo garante animação perceptível
   const scaleButtonAnim = useRef(new Animated.Value(1)).current;
 
   // ✅ NOVO: ReduceMotion ref interno para este componente
@@ -48,13 +48,9 @@ export const ReturnCouponCard: React.FC<ReturnCouponCardProps> = ({
   }, []);
 
   useEffect(() => {
-    // ✅ FIX: Pula animação se reduceMotion (A11y)
     if (reduceMotionRef.current) {
-        console.log("[ReturnCouponCard] ReduceMotion ativado — pulando animação."); // ✅ DEBUG
-        return;
+      return;
     }
-
-    console.log("[ReturnCouponCard] Iniciando animação slide up + fade."); // ✅ DEBUG: Confirma disparo
 
     const entryAnim = Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -158,16 +154,14 @@ export const ReturnCouponCard: React.FC<ReturnCouponCardProps> = ({
 
 const styles = StyleSheet.create({
   cardContainer: {
-    width: SCREEN_WIDTH * 0.15,
-    maxWidth: SCREEN_WIDTH - 32, // Fix: Ajuste para safe areas iOS, previne lateral scroll
+    width: '92%',
+    maxWidth: SCREEN_WIDTH - 32,
     borderRadius: 15,
     overflow: 'hidden',
-    
     alignSelf: 'center',
-    marginTop: 2, // ✅ FIX: Reduzido para 5px (era 35) – minimiza gap acima do cupom (com PIX), conforme comentário original
-    marginBottom: 2, // Gap final confortável (20px, permite scroll suave)
+    marginTop: 16,
+    marginBottom: 16,
     ...AppShadows.medium,
-    // ✅ AJUSTADO: minHeight reduzido para 220px iOS/230px Android (elementos menores cabem)
     minHeight: Platform.OS === 'ios' ? 220 : 230,
   },
   gradientBackground: {
@@ -262,3 +256,4 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
+
