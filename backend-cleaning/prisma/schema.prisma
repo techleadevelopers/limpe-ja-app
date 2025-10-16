@@ -1,4 +1,4 @@
-// Este arquivo é o ponto de partida para o seu banco de dados.
+// Este arquivo é o ponto de entrada para o seu banco de dados.
 // Ele define os modelos de dados e como eles se relacionam.
 
 generator client {
@@ -47,7 +47,7 @@ enum BookingStatus {
   PENDING
   CONFIRMED
   COMPLETED
-  CANCELED
+  CANCELED  // Mantido como CANCELED no backend (canonical); usar adapters para CANCELLED no FE
   PENDING_DISPUTE
   RESCHEDULED
   IN_PROGRESS
@@ -356,7 +356,8 @@ model Provider {
   ocrResult                  Json?
   livenessResult             Json?
   rejectionReason            String?
-  pixKey                     String?
+  pixKey                     String?  // Chave PIX em texto puro (sensível); aplicar mascaramento/hash na aplicação e limpar este campo após migração (considerar virtual)
+  pixKeyMasked               String?  // ADICIONADO: Versão mascarada/hash para armazenamento seguro (ex: últimos dígitos ou hash); sempre popular na aplicação
   badges                     String[]           @default([])
   subscriptions              Subscription[]
   guaranteeClaims            GuaranteeClaim[]
@@ -375,12 +376,12 @@ model Address {
   neighborhood String
   city         String
   state        String
-  clientId     String?   @unique
-  providerId   String?   @unique
+  clientId     String?   @unique  // Mantido @unique para 1 endereço por client (intencional); troque para @@index se múltiplos endereços planejados
+  providerId   String?   @unique  // Mantido @unique para 1 endereço por provider (intencional); troque para @@index se múltiplos endereços planejados
   client       Client?   @relation("ClientAddress", fields: [clientId], references: [id])
   provider     Provider? @relation("ProviderAddress", fields: [providerId], references: [id])
   booking      Booking?  @relation("BookingAddress")
-  // Geo
+  // Geo: Mantidos ambos para compatibilidade; normalizar na aplicação para evitar divergência (ex: derivar lat/lon de location ou vice-versa)
   location     Unsupported("geometry(Point, 4326)")?
   latitude     Decimal?  @db.Decimal(10, 8)
   longitude    Decimal?  @db.Decimal(11, 8)
@@ -415,7 +416,7 @@ model ProviderService {
   createdAt             DateTime       @default(now())
   updatedAt             DateTime       @updatedAt
   subscriptions         Subscription[] @relation("ProviderServiceSubscriptions")
-  versions              ProviderServiceVersion[] // ADICIONADO: histórico de preço/tipo
+  versions              ProviderServiceVersion[] // Histórico de preço/tipo; inserir versão em toda alteração na aplicação
 
   @@unique([providerId, serviceId, pricingType])
 }
@@ -449,7 +450,7 @@ model Booking {
   updatedAt                 DateTime      @updatedAt
   review                    Review?
   transactions              Transaction[]
-  addressId                 String?       @unique
+  addressId                 String?       @unique  // 1:1 com Address; confirme se atende fluxos (sem endereços compartilhados)
   address                   Address?      @relation("BookingAddress", fields: [addressId], references: [id])
   dispute                   Dispute?
   subscriptionId            String?
@@ -466,7 +467,7 @@ model Booking {
   // CORREÇÃO: Adicionado para relação bilateral com LedgerEntry
   ledgerEntries             LedgerEntry[]
 
-  // ADICIONADO: Auditoria de início/fim (opcional, mas premium)
+  // ADICIONADO: Auditoria de início/fim (premium para telas e relatórios)
   startedAt                 DateTime?
   completedAt               DateTime?
   startedByUserId           String?
@@ -524,13 +525,15 @@ model Notification {
   category         String?
 
   // ADICIONADO: Ajustes recomendados para notificações (mínimo viável: idempotência, agendamento, prioridade e readAt)
-  idempotencyKey   String?  @unique
+  idempotencyKey   String?  @unique  // Opcional; popular sempre (especialmente de webhooks/queues) para prevenir duplicados (Postgres permite múltiplos NULL)
   scheduledAt      DateTime?
   priority         Int?     @default(2)
   readAt           DateTime?
 
   // ADICIONADO: Índice para performance (listagem ordenada por user/createdAt)
   @@index([userId, createdAt])
+  // ADICIONADO: Índice para polling por priority (recomendado para envelopes em prioridade)
+  @@index([userId, priority, createdAt])
 }
 
 model Review {
@@ -582,7 +585,11 @@ model Transaction {
   couponId             String?
   coupon               Coupon?     @relation(fields: [couponId], references: [id])
   pixKeyType           PixKeyType?
-  pixKey               String?
+  pixKey               String?     // Chave PIX em texto puro (sensível); aplicar mascaramento/hash na aplicação e limpar este campo após migração (considerar virtual)
+  pixKeyMasked         String?     // ADICIONADO: Versão mascarada/hash para armazenamento seguro (ex: últimos dígitos ou hash); sempre popular na aplicação (backfill histórico recomendado)
+
+  // ADICIONADO: Índice para extrato de ganhos do provedor (últimas transações por provider/status/createdAt)
+  @@index([providerId, status, createdAt])
 }
 
 model PaymentIntent {
@@ -593,13 +600,16 @@ model PaymentIntent {
   status             PaymentIntentStatus @default(PENDING)
   gateway            String
   externalRef        String?
-  idempotencyKey     String?             @unique
+  idempotencyKey     String?             @unique  // Garantir uso em API/seed para idempotência
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   expiresAt          DateTime?
   qrCodeUrl          String?
   qrCodeText         String?
   paymentEvents      PaymentEvent[]
+
+  // ADICIONADO: Índice para job de limpeza de intents vencidos (por status/updatedAt)
+  @@index([status, updatedAt])
 }
 
 model PaymentEvent {
@@ -969,6 +979,8 @@ model LedgerEntry {
   createdAt DateTime        @default(now())
 
   @@index([userId, createdAt])
+  // ADICIONADO: Índice para consultas frequentes por bookingId (conciliação mais eficiente)
+  @@index([bookingId])
 }
 
 model Payout {
@@ -978,7 +990,7 @@ model Payout {
   amount         Decimal      @db.Decimal(14, 2)
   status         PayoutStatus @default(PENDING)
   gatewayTxnId   String?      @unique
-  idempotencyKey String       @unique
+  idempotencyKey String       @unique  // Garantir uso em API/seed para idempotência
   requestedAt    DateTime     @default(now())
   processedAt    DateTime?
 }
