@@ -44,8 +44,12 @@ const isProd = process.env.NODE_ENV === 'production';
           const missing: string[] = [];
           const requireUri = (v?: string) => typeof v === 'string' && /^https?:\/\//.test(v);
           if (!requireUri(env.API_BASE_URL)) missing.push('API_BASE_URL');
-          if (!env.PIX_WEBHOOK_SECRET) missing.push('PIX_WEBHOOK_SECRET');
-          if (!env.PSP_WEBHOOK_SECRET) missing.push('PSP_WEBHOOK_SECRET');
+          if (!env.PIX_WEBHOOK_SECRET) {
+            console.warn('[Config] PIX_WEBHOOK_SECRET missing in production; PIX webhook signatures will not be verified.');
+          }
+          if (!env.PSP_WEBHOOK_SECRET) {
+            console.warn('[Config] PSP_WEBHOOK_SECRET missing in production; payout webhooks will skip signature validation.');
+          }
           if (!env.PAGSEGURO_API_TOKEN) {
             console.warn('[Config] PAGSEGURO_API_TOKEN ausente em produção: saque ficará bloqueado.');
           }
