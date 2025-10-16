@@ -23,6 +23,7 @@ import { formatPriceBRL, formatDateTime, sanitizeText } from '../../../../utils/
 import { AppColors, AppShadows } from '../../../../constants/appStyles';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
+const SUMMARY_CARD_MAX_WIDTH = 520;
 
 interface BookingSummaryCardProps {
   booking: BookingDetails;
@@ -188,12 +189,13 @@ const styles = StyleSheet.create({
     maxWidth: '100%',
   },
   mainCardContainer: {
-    width: '100%',
-    maxWidth: SCREEN_WIDTH - 32, // Fix: Previne overflow lateral no iOS
+    width: '92%',
+    maxWidth: Math.min(SCREEN_WIDTH - 32, SUMMARY_CARD_MAX_WIDTH),
     borderRadius: 15,
     overflow: 'hidden',
-    marginTop: 12, // Gap acima confortável
-    marginBottom: 0, // FIX: Zero gap abaixo – cupom/PIX cuida do spacing (cola suavemente)
+    marginTop: 16,
+    marginBottom: 12,
+    alignSelf: 'center',
     ...AppShadows.medium,
   },
   cardContentNew: {
@@ -244,3 +246,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat-Bold',
   },
 });
+
+
+
+
