@@ -1,4 +1,4 @@
-﻿import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { Image } from 'react-native';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -24,6 +24,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
+import { PermissionStatus } from 'expo-modules-core';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import Constants from 'expo-constants';
@@ -143,7 +144,7 @@ const bannerData: BannerDataItem[] = [
   },
   {
     id: '3',
-    title: 'Última Chance!',
+    title: 'Ultima Chance!',
     discount: '75% de Desconto',
     description: 'Para Novos Clientes',
     buttonText: 'Cadastrar',
@@ -176,8 +177,8 @@ export default function ExploreClientScreen() {
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   // Novo estado para o raio de busca
-  const [searchRadiusKm, setSearchRadiusKm] = useState<number>(50); // Padrão 50 km (como no código original)
-  // Novo estado para o filtro de preço
+  const [searchRadiusKm, setSearchRadiusKm] = useState<number>(50); // Padr�o 50 km (como no c�digo original)
+  // Novo estado para o filtro de pre�o
   const [priceFilter, setPriceFilter] = useState<PricingType | null>(null);
 
   const [welcomeCouponOffer, setWelcomeCouponOffer] = useState<Offer | null>(null);
@@ -189,7 +190,7 @@ export default function ExploreClientScreen() {
 
   const referralCode = userProfile?.referralCode || 'LIMPEJA123';
   const rewardReferrer = 'Ganhe R$20 ou +300 pts';
-  const rewardReferred = 'Seu amigo ganha 20% na 1ª';
+  const rewardReferred = 'Seu amigo ganha 20% na 1�';
 
   const headerAnim = useRef(new Animated.Value(0)).current;
   const categoriesAnim = useRef(new Animated.Value(0)).current;
@@ -198,61 +199,101 @@ export default function ExploreClientScreen() {
   const providersAnim = useRef(new Animated.Value(0)).current;
   const navBarAnim = useRef(new Animated.Value(0)).current;
 
-  // Adicionado ref para verificar se o componente está montado
+  // Adicionado ref para verificar se o componente est� montado
   const isMounted = useRef(true);
 
-  // INTEGRAÇÃO DA LÓGICA DO NEWHEADER: Lógica completa para exibir o nome do usuário (priorizando user do auth e fallback para userProfile)
+  // INTEGRA��O DA L�GICA DO NEWHEADER: L�gica completa para exibir o nome do usu�rio (priorizando user do auth e fallback para userProfile)
   const userNameDisplay = (user?.clientDetails?.fullName || user?.providerDetails?.fullName || user?.fullName) ?? 
                           (userProfile?.clientDetails?.fullName || userProfile?.providerDetails?.fullName || userProfile?.fullName) ?? 
                           t('common.user');
 
-  const fetchData = useCallback(async () => {
-    if (isMounted.current) {
-      setLoading(true);
-      setError(null);
+      const fetchData = useCallback(async () => {
+    if (!isMounted.current) {
+      return;
     }
-    try {
-      const fetchedUserProfile = await getUserProfile();
-      if (!isMounted.current) return;
-      setUserProfile(fetchedUserProfile);
 
-      console.log('[ExploreClientScreen] Perfil do usuário carregado:', fetchedUserProfile);
+    setLoading(true);
+    setError(null);
 
-      const categoriesData = await getServiceCategories();
-      if (!isMounted.current) return;
-      setServiceCategories(categoriesData);
+    const collectedErrors: string[] = [];
+    let hasSuccessfulData = false;
 
-      const recommendationsData = await getRecommendedProviders();
-      if (!isMounted.current) return;
-      setRecommendations(recommendationsData);
-
-      let locationCoords: Location.LocationObjectCoords | null = null;
+    const runAndTrack = async <T,>(
+      label: string,
+      runner: () => Promise<T>,
+      onSuccess: (value: T) => void,
+      fallbackMessage: string
+    ) => {
       try {
-        let { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
-          Alert.alert(t('safety.panic.location_permission_denied'), t('safety.panic.location_permission_message'));
-        } else {
-          const currentLocation = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-          locationCoords = currentLocation.coords;
-          console.log('[ExploreClientScreen] Localização obtida:', locationCoords);
+        const result = await runner();
+        if (!isMounted.current) {
+          return;
         }
-      } catch (locError) {
-        console.error('[ExploreClientScreen] Erro ao obter localização:', locError);
-        // Não exibir alerta de erro de rede aqui, pois é um erro de localização
-        // Alert.alert(t('common.error'), t('common.network_error'));
+        onSuccess(result);
+        hasSuccessfulData = true;
+      } catch (err: any) {
+        const message = err?.message || err?.response?.data?.message || t('common.network_error');
+        console.warn(`[ExploreClientScreen] ${label} failed:`, message);
+        collectedErrors.push(fallbackMessage);
       }
+    };
 
-      let providersData: ProviderDisplayInfo[] = [];
-      if (locationCoords) {
-        providersData = (await searchProvidersWithLocation({
-          latitude: locationCoords.latitude,
-          longitude: locationCoords.longitude,
-          radius: searchRadiusKm * 1000,
-        })) as ProviderDisplayInfo[];
+    await runAndTrack<UserProfile>(
+      'user profile',
+      () => getUserProfile(),
+      profile => {
+        console.log('[ExploreClientScreen] User profile loaded:', profile);
+        setUserProfile(profile);
+      },
+      'Erro ao carregar perfil'
+    );
+
+    await runAndTrack<Service[]>(
+      'service categories',
+      () => getServiceCategories(),
+      data => setServiceCategories(data),
+      'Erro ao carregar categorias'
+    );
+
+    await runAndTrack<ProviderDisplayInfo[]>(
+      'recommended providers',
+      () => getRecommendedProviders(),
+      data => setRecommendations(data),
+      'Erro ao carregar recomenda��es'
+    );
+
+    let locationCoords: Location.LocationObjectCoords | null = null;
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== PermissionStatus.GRANTED) {
+        Alert.alert(
+          t('safety.panic.location_permission_denied'),
+          t('safety.panic.location_permission_message')
+        );
+      } else {
+        const currentLocation = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+        locationCoords = currentLocation.coords;
+        console.log('[ExploreClientScreen] Location obtained:', locationCoords);
       }
-      if (!isMounted.current) return;
-      setNearbyProviders(providersData);
+    } catch (locError) {
+      console.error('[ExploreClientScreen] Error fetching location:', locError);
+    }
 
+    if (locationCoords) {
+      await runAndTrack<ProviderDisplayInfo[]>(
+        'nearby providers',
+        () =>
+          searchProvidersWithLocation({
+            latitude: locationCoords!.latitude,
+            longitude: locationCoords!.longitude,
+            radius: searchRadiusKm * 1000,
+          }),
+        data => setNearbyProviders(data),
+        'Erro ao carregar provedores pr�ximos'
+      );
+    }
+
+    if (isMounted.current) {
       Animated.sequence([
         Animated.spring(headerAnim, { toValue: 1, damping: 10, stiffness: 100, useNativeDriver: true }),
         Animated.delay(50),
@@ -266,19 +307,29 @@ export default function ExploreClientScreen() {
         Animated.delay(50),
         Animated.spring(navBarAnim, { toValue: 1, damping: 10, stiffness: 100, useNativeDriver: true }),
       ]).start();
-    } catch (err: any) {
-      // Home silenciosa na montagem: loga, guarda o estado, mas não exibe alerta/overlay
-      const errorMessage = err?.message || err?.response?.data?.message || t('common.network_error');
-      if (isMounted.current) setError(errorMessage);
-      console.warn('[ExploreClientScreen] erro silencioso na home:', errorMessage);
-    } finally {
-      if (isMounted.current) {
-        setLoading(false);
-        setIsRefreshing(false);
+
+      setLoading(false);
+      setIsRefreshing(false);
+
+      if (hasSuccessfulData) {
+        setError(null);
+      } else if (collectedErrors.length > 0) {
+        setError(collectedErrors[0]);
+        console.warn('[ExploreClientScreen] erro silencioso na home:', collectedErrors[0]);
+      } else {
+        setError(t('common.network_error'));
       }
     }
-  }, [t, headerAnim, categoriesAnim, bannerAnim, recommendationsAnim, providersAnim, navBarAnim, searchRadiusKm]);
-
+  }, [
+    t,
+    headerAnim,
+    categoriesAnim,
+    bannerAnim,
+    recommendationsAnim,
+    providersAnim,
+    navBarAnim,
+    searchRadiusKm,
+  ]);
   useEffect(() => {
     isMounted.current = true; // Componente montado
     fetchData();
@@ -398,13 +449,13 @@ export default function ExploreClientScreen() {
   const filteredNearbyProviders = Array.isArray(nearbyProviders)
     ? nearbyProviders.filter((item) => {
         if (!item || !item.fullName) return false;
-        if (!priceFilter) return true; // Sem filtro de preço, mostra todos
+        if (!priceFilter) return true; // Sem filtro de pre�o, mostra todos
 
-        // Verifica se o provedor tem algum serviço que corresponda ao tipo de preço
+        // Verifica se o provedor tem algum servi�o que corresponda ao tipo de pre�o
         return item.providerServices?.some((service) => {
           if (service.pricingType === priceFilter) {
             const price = getNumericPriceValue(service);
-            return price > 0; // Apenas serviços com preço válido
+            return price > 0; // Apenas servi�os com pre�o v�lido
           }
           return false;
         });
@@ -474,9 +525,9 @@ export default function ExploreClientScreen() {
   const handleShareReferral = useCallback(async () => {
     try {
       const result = await Share.share({
-        message: `Use meu código de indicação ${referralCode} no LimpeJá e ganhe um desconto na sua primeira reserva!`,
+        message: `Use meu c�digo de indica��o ${referralCode} no LimpeJ� e ganhe um desconto na sua primeira reserva!`,
         url: 'https://limpeja.com/referral',
-        title: 'Indique um amigo e ganhe no LimpeJá!',
+        title: 'Indique um amigo e ganhe no LimpeJ�!',
       });
       if (result.action === Share.sharedAction) {
         if (result.activityType) {
@@ -517,8 +568,8 @@ export default function ExploreClientScreen() {
     );
   }
 
-  // Em caso de erro na primeira carga, não bloquear a home;
-  // o usuário pode usar pull-to-refresh para tentar de novo.
+  // Em caso de erro na primeira carga, n�o bloquear a home;
+  // o usu�rio pode usar pull-to-refresh para tentar de novo.
 
   const rawAddress =
     userProfile?.clientDetails?.address ||
@@ -540,22 +591,22 @@ export default function ExploreClientScreen() {
           }}
         />
 
-        {/* FlatList ÚNICO com TODO o conteúdo no ListHeaderComponent */}
+        {/* FlatList �NICO com TODO o conte�do no ListHeaderComponent */}
         <FlatList
           data={[]} // Header-only: data vazia, mas header rola tudo
-          renderItem={() => null} // ✅ FIX: Adicionado renderItem dummy para FlatList header-only (evita erro TS)
+          renderItem={() => null} // ? FIX: Adicionado renderItem dummy para FlatList header-only (evita erro TS)
           keyExtractor={() => 'header-only'}
           ListHeaderComponent={(
             <>
-              {/* NewHeader ÚNICO */}
+              {/* NewHeader �NICO */}
               <NewHeader
                 userName={userNameDisplay}
                 userAddress={addressToDisplay}
               />
 
-              {/* ContentWrapper ÚNICO - TODO o conteúdo aqui */}
+              {/* ContentWrapper �NICO - TODO o conte�do aqui */}
               <View style={styles.contentWrapper}>
-                {/* Seção de Categorias */}
+                {/* Se��o de Categorias */}
                 <Animated.View
                   style={[
                     styles.categoriesSection,
@@ -590,7 +641,7 @@ export default function ExploreClientScreen() {
                   />
                 </Animated.View>
 
-                {/* Carrossel de Banners ÚNICO */}
+                {/* Carrossel de Banners �NICO */}
                 <Animated.View
                   style={[
                     styles.carouselContainer,
@@ -616,7 +667,7 @@ export default function ExploreClientScreen() {
                   />
                 </Animated.View>
 
-                {/* Recomendações ÚNICAS */}
+                {/* Recomenda��es �NICAS */}
                 <Animated.View
                   style={{
                     opacity: recommendationsAnim,
@@ -628,7 +679,7 @@ export default function ExploreClientScreen() {
                     data={safeRecommendations}
                     renderItem={({ item, index }) => {
                       if (!item || !item.id || typeof item.id !== 'string' || !item.fullName || typeof item.fullName !== 'string') {
-                        console.warn('[ExploreClientScreen] Item de recomendação inválido filtrado:', item);
+                        console.warn('[ExploreClientScreen] Item de recomenda��o inv�lido filtrado:', item);
                         return null;
                       }
                       return <RecomendacaoCard key={item.id} item={item} />;
@@ -638,7 +689,7 @@ export default function ExploreClientScreen() {
                   />
                 </Animated.View>
 
-                {/* Profissionais por Perto ÚNICOS */}
+                {/* Profissionais por Perto �NICOS */}
                 <Animated.View
                   style={{
                     opacity: providersAnim,
@@ -650,7 +701,7 @@ export default function ExploreClientScreen() {
                     data={filteredNearbyProviders}
                     renderItem={({ item, index }) => {
                       if (!item || !item.id || typeof item.id !== 'string' || !item.fullName || typeof item.fullName !== 'string') {
-                        console.warn('[ExploreClientScreen] Item de prestador inválido filtrado:', item);
+                        console.warn('[ExploreClientScreen] Item de prestador inv�lido filtrado:', item);
                         return null;
                       }
                       return (
@@ -660,10 +711,10 @@ export default function ExploreClientScreen() {
                     horizontal={true}
                     noDataText={t('search.no_results')}
                   />
-                  <View style={styles.sectionSeparator} />
+                  
                 </Animated.View>
 
-                {/* HorizontalMiniGrid ÚNICO */}
+                {/* HorizontalMiniGrid �NICO */}
                 <Animated.View
                   style={{
                     opacity: providersAnim,
@@ -698,10 +749,10 @@ export default function ExploreClientScreen() {
             />
           }
           nestedScrollEnabled={true} // Para Android
-          removeClippedSubviews={false} // Evita corte de animações
+          removeClippedSubviews={false} // Evita corte de anima��es
         />
 
-        {/* NavBar ÚNICA */}
+        {/* NavBar �NICA */}
         <Animated.View
           style={[
             styles.navBarContainer,
@@ -710,7 +761,7 @@ export default function ExploreClientScreen() {
               transform: [{ translateY: navBarAnim.interpolate({ inputRange: [0, 1], outputRange: [100, 0] }) }] 
             },
           ]}
-          pointerEvents="box-none"> {/* Não bloqueia scroll */}
+          pointerEvents="box-none"> {/* N�o bloqueia scroll */}
           <NavBar
             welcomeCouponOffer={welcomeCouponOffer}
             activeBottomPromotion={activeBottomPromotion}
@@ -718,7 +769,7 @@ export default function ExploreClientScreen() {
           />
         </Animated.View>
 
-        {/* DEFENSE_SOS ÚNICO */}
+        {/* DEFENSE_SOS �NICO */}
         <DEFENSE_SOS bottomOffset={20} />
 
         {/* SmartCouponNudge */}
@@ -731,7 +782,7 @@ export default function ExploreClientScreen() {
             throttleHours={24}
             showOnRoutes={['/(client)/explore']}
             onApply={handleUseWelcomeCoupon}
-            pointerEvents="box-none" // Não bloqueia scroll
+            pointerEvents="box-none" // N�o bloqueia scroll
           />
         )}
 
@@ -784,7 +835,7 @@ export default function ExploreClientScreen() {
           delayMs={3500}
           throttleHours={24}
           showOnRoutes={['/(client)/explore']}
-          bottomOffset={120} // Offset para não sobrepor NavBar
+          bottomOffset={120} // Offset para n�o sobrepor NavBar
           pointerEvents="box-none"
         />
 
@@ -970,7 +1021,7 @@ const styles = StyleSheet.create({
     fontSize: 16.5,
     fontFamily: 'Montserrat-Regular',
     fontWeight: '600',
-    // PREMIUM: Estilo de título alinhado
+    // PREMIUM: Estilo de t�tulo alinhado
     color: 'rgba(44, 62, 80, 0.85)',
     letterSpacing: 0.5,
   },
@@ -992,7 +1043,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: COR_CINZA_FUNDO,
   },
-  // REMOVIDO: Estilos de paginação (não mais necessários)
+  // REMOVIDO: Estilos de pagina��o (n�o mais necess�rios)
   // pagination: {
   //   flexDirection: 'row',
   //   height: 20,
@@ -1027,7 +1078,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: 'Montserrat-Regular',
     fontWeight: '800',
-    // PREMIUM: Estilo de título alinhado
+    // PREMIUM: Estilo de t�tulo alinhado
     color: 'rgba(44, 62, 80, 0.85)',
     letterSpacing: 0.5,
   },
