@@ -103,6 +103,7 @@ export type ProviderWithCalculatedRating = {
   createdAt: string;
   updatedAt: string;
   pixKey: string | null;
+  pixKeyMasked: string | null;
   distance?: number; // CORREÇÃO: Em metros (calculado via PostGIS), opcional
   documentPhotoFrontUrl?: string | null;
   documentPhotoBackUrl?: string | null;
@@ -261,6 +262,7 @@ export class ProvidersService {
       createdAt: formattedCreatedAt,
       updatedAt: formattedUpdatedAt,
       pixKey: provider.pixKey || null,
+      pixKeyMasked: provider.pixKeyMasked || null,
       distance: distance, // CORREÇÃO: Incluído (em metros, calculado via PostGIS se lat/lng fornecidos)
       documentPhotoFrontUrl: provider.documentPhotoFrontUrl,
       documentPhotoBackUrl: provider.documentPhotoBackUrl,
@@ -601,6 +603,7 @@ export class ProvidersService {
               p."avatarUrl",
               p."verificationStatus", // NOVO: Incluído para selo
               p."pixKey",
+              p."pixKeyMasked",
               p."createdAt",
               p."updatedAt",
               p."documentPhotoFrontUrl",
@@ -681,7 +684,7 @@ export class ProvidersService {
                 ${serviceId ? Prisma.sql`AND ps."serviceId" = ${serviceId}` : Prisma.empty}
                 ${location ? Prisma.sql`AND (a.city ILIKE ${'%' + location + '%'} OR a.state ILIKE ${'%' + location + '%'} OR a.street ILIKE ${'%' + location + '%'} OR a.neighborhood ILIKE ${'%' + location + '%'})` : Prisma.empty}
             GROUP BY
-                p.id, u.email, u.role, u."isVerified", u."fullName", a.id, a.cep, a.street, a.number, a.complement, a.neighborhood, a.city, a.state, a."providerId", a.location, p."fiveStarReviewCount", p."monthlyBookingsCount", p.badges, p."acceptanceRate", p."averageResponseTime", p."verificationStatus"
+                p.id, u.email, u.role, u."isVerified", u."fullName", a.id, a.cep, a.street, a.number, a.complement, a.neighborhood, a.city, a.state, a."providerId", a.location, p."fiveStarReviewCount", p."monthlyBookingsCount", p.badges, p."acceptanceRate", p."averageResponseTime", p."verificationStatus", p."pixKeyMasked"
             ORDER BY
                 distance_m ASC  -- CORREÇÃO: Ordena por distance_m
             LIMIT ${limit || 10} OFFSET ${offset || 0};
@@ -706,6 +709,7 @@ export class ProvidersService {
             bio: rp.bio,
             verificationStatus: rp.verificationStatus, // NOVO
             pixKey: rp.pixKey,
+            pixKeyMasked: rp.pixKeyMasked,
             createdAt: rp.createdAt,
             updatedAt: rp.updatedAt,
             documentPhotoFrontUrl: rp.documentPhotoFrontUrl,
