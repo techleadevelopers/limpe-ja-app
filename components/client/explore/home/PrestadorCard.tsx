@@ -62,13 +62,13 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
         }).start();
     };
 
-    // Helper para formatar próximo horário (discreto, baseado em data atual)
+    // Helper para formatar pra?�ximo hora?�rio (discreto, baseado em data atual)
     const formatNextAvailable = (next: { date: string; time: string } | undefined): string | null => {
         if (!next) return null;
         const today = new Date();
         const nextDate = new Date(next.date);
         const diffDays = Math.floor((nextDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-        const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+        const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
         if (diffDays === 0) return `Hoje, ${next.time}`;
         if (diffDays === 1) return `Amanhã, ${next.time}`;
         return `${days[nextDate.getDay()]} ${next.time}`;
@@ -84,7 +84,7 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
                 <Ionicons
                     name={iconName}
                     size={16}
-                    color="#5da2ecff" // Mantendo o azul para consistência com o ícone de localização
+                    color="#5da2ecff" // Mantendo o azul para consista?�ncia com o a?�cone de localizaa?�a?�o
                     style={styles.starIcon}
                 />
             </View>
@@ -92,14 +92,14 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
     };
 
     const primaryService = item.providerServices && item.providerServices.length > 0 ? item.providerServices[0] : null;
-    const specialtyName = primaryService && primaryService.service ? primaryService.service.name : 'Serviço';
+    const specialtyName = primaryService && primaryService.service ? primaryService.service.name : 'Servia?�o';
 
-    // Distância: alinhar com RecomendacaoCard (sem injeção __DEV__); fallback "0 km" quando ausente/<=0
+    // Dista?�ncia: alinhar com RecomendacaoCard (sem injea?�a?�o __DEV__); fallback "0 km" quando ausente/<=0
     const distanceLabel = (typeof item.distance === 'number' && item.distance > 0)
         ? formatDistance(item.distance)
         : '0 km';
 
-    // Label para próximo horário
+    // Label para pra?�ximo hora?�rio
     const nextAvailableLabel = formatNextAvailable(item.nextAvailable);
 
     // Usar o helper getFormattedServicePrice
@@ -115,7 +115,7 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
         }
     }, [item?.id]);
 
-    // Efeito premium de aparição (inspirado em slide-in com leve rotate)
+    // Efeito premium de aparia?�a?�o (inspirado em slide-in com leve rotate)
     const hash = (item?.id || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0);
     const side = (hash % 2 === 0) ? 1 : -1; // direita/esquerda alternado
     const amp = (hash % 3) + 1; // 1..3
@@ -149,19 +149,6 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
                     <View style={styles.verifiedBadgeOutside}>
                         <Ionicons name="shield-checkmark" size={12} color="#5da2ecff" />
                     </View>
-
-                    {/* Métricas mini: % aceitação e tempo de resposta (fallbacks para novos provedores) */}
-                    <View style={styles.metricsRow}>
-                        <Ionicons name="checkmark-done" size={12} color="#5da2ecff" />
-                        <Text style={styles.metricText} allowFontScaling={false}>
-                            {`${Math.round((item.acceptanceRate ?? (item as any)?.metrics?.acceptanceRate ?? providerMetrics.acceptanceRate ?? 1))}%`}
-                        </Text>
-                        <Text style={styles.metricSep}> · </Text>
-                        <Ionicons name="time-outline" size={12} color="#5da2ecff" />
-                        <Text style={styles.metricText} allowFontScaling={false}>
-                            {`${(item.averageResponseTime ?? (item as any)?.metrics?.averageResponseTime ?? providerMetrics.averageResponseTime ?? 120)} min`}
-                        </Text>
-                    </View>
                 )}
 
                 <View style={styles.detailsContent}>
@@ -177,13 +164,13 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
                     </View>
                     <Text style={styles.specialtyText} numberOfLines={1} allowFontScaling={false}>{specialtyName}</Text>
 
-                    {/* Badges premium: Verificado, Top 10%, Resposta rápida (não-intrusivos) */}
+                    {/* Badges premium: Verificado, Top 10%, Resposta ra?�pida (na?�o-intrusivos) */}
                     <View style={styles.badgesRow}>
                         {typeof item.averageRating === 'number' && item.averageRating >= 4.7 && (item.reviewCount ?? 0) >= 25 && (
                             <View style={styles.badge}><Text style={styles.badgeText}>Top 10%</Text></View>
                         )}
                         {typeof item.averageResponseTime === 'number' && item.averageResponseTime > 0 && item.averageResponseTime <= 15 && (
-                            <View style={styles.badge}><Text style={styles.badgeText}>Resposta rápida</Text></View>
+                            <View style={styles.badge}><Text style={styles.badgeText}>Resposta rapida</Text></View>
                         )}
                         {item.backgroundCheckResult ? (
                             <View style={styles.badge}><Text style={styles.badgeText}>Segurança</Text></View>
@@ -194,18 +181,18 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
                     {/* <View style={styles.metricsRow}>
                         {item.acceptanceRate != null && (
                             <>
-                                <Text style={styles.metricText} allowFontScaling={false}>✓ {Math.round(item.acceptanceRate)}%</Text>
+                    {`${Math.round((item.acceptanceRate ?? (item as any)?.metrics?.acceptanceRate ?? providerMetrics.acceptanceRate ?? 1))}%`}
                                 {/* Separador só se houver Tempo de Resposta */}
-                                {/* {item.averageResponseTime != null && <Text style={styles.metricSep}> · </Text>} */}
+
                             {/* </> */}
                         {/* )} */}
                         
                         {/* {item.averageResponseTime != null && (
-                            <Text style={styles.metricText} allowFontScaling={false}>⏱ {item.averageResponseTime} min</Text>
+                    {`${(item.averageResponseTime ?? (item as any)?.metrics?.averageResponseTime ?? providerMetrics.averageResponseTime ?? 120)} min`}
                         )} */}
                     {/* </View> */}
 
-                    {/* COMENTADO: Próximo horário disponível (ex: "Dom 09:00") - Remove da interface */}
+                    {/* COMENTADO: Pra?�ximo hora?�rio dispona?�vel (ex: "Dom 09:00") - Remove da interface */}
                     {/* {nextAvailableLabel && (
                         <View style={styles.ratingRow}>
                             <Text style={styles.nextAvailableText} allowFontScaling={false}>{nextAvailableLabel}</Text>
@@ -217,7 +204,7 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
                         {item.averageRating !== undefined && item.reviewCount !== undefined && (
                             <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 8 }}>
                                 {renderStars(item.averageRating)}
-                                <Text style={styles.reviewsText} allowFontScaling={false}>{`${item.reviewCount ?? 0} Avaliações`}</Text>
+                                <Text style={styles.reviewsText} allowFontScaling={false}>{`${item.reviewCount ?? 0} `}</Text>
                             </View>
                         )}
                     </View>
@@ -259,13 +246,13 @@ const styles = StyleSheet.create({
     },
     // REMOVIDO: distancePillTopRight (movido para inline com o nome)
     
-    // Novo estilo para a linha do nome com distância inline (acima da sugestão de horário)
+    // Novo estilo para a linha do nome com dista?�ncia inline (acima da sugesta?�o de hora?�rio)
     nameRow: {
         flexDirection: 'row',
         alignItems: 'center',
         marginBottom: 2,
     },
-    // Estilo do pill de distância (agora inline, sem absolute)
+    // Estilo do pill de dista?�ncia (agora inline, sem absolute)
     distancePill: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -333,7 +320,7 @@ const styles = StyleSheet.create({
     providerName: {
         fontSize: 14,
         fontWeight: '600', // Nome (15/600)
-        color: '#2C3E50',
+        color: '#5b6d7eff',
         flex: 1, // Para permitir que o nome ocupe o espaço disponível
     },
     specialtyText: {
@@ -442,3 +429,7 @@ const styles = StyleSheet.create({
 });
 
 export default PrestadorCard;
+
+
+
+
