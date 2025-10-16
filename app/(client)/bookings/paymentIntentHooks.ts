@@ -50,7 +50,19 @@ export function usePaymentIntent(bookingId?: string) {
         await AsyncStorage.setItem(cacheKey, JSON.stringify(fresh));
       } catch (err) {
         if (!alive) return;
-        setError(err);
+        const status = (err as any)?.status ?? (err as any)?.response?.status;
+        if (status === 404) {
+          setIntent(null);
+          setError(null);
+          await AsyncStorage.setItem(cacheKey, JSON.stringify(null));
+          setTimeout(() => {
+            if (alive) {
+              setRefreshToken(token => token + 1);
+            }
+          }, 2000);
+        } else {
+          setError(err);
+        }
       } finally {
         if (alive) {
           setLoading(false);
