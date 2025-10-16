@@ -50,6 +50,9 @@ export class TransactionEntity implements PrismaTransaction {
   @ApiPropertyOptional({ description: 'Chave PIX utilizada para o saque', example: '123.456.789-00', nullable: true })
   pixKey: string | null;
 
+  @ApiPropertyOptional({ description: 'Chave PIX mascarada para exibição', example: '123****-00', nullable: true })
+  pixKeyMasked: string | null;
+
   constructor(partial: Partial<PrismaTransaction>) {
     Object.assign(this, partial);
   }
