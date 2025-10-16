@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -94,8 +94,32 @@ export default function WithdrawScreen() {
 
   // Adicionado ref para verificar se o componente está montado
   const isMounted = useRef(true);
-  // Ref para armazenar a animação composta
+  // Ref para armazenar a animação composta (evita recriação desnecessária)
   const initialAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
+  // Flag para evitar múltiplas animações
+  const hasAnimated = useRef(false);
+
+  // Função para iniciar animação (useCallback para evitar recriações)
+  const startEntranceAnimation = useCallback(() => {
+    if (hasAnimated.current || !isMounted.current) return;
+
+    hasAnimated.current = true;
+    initialAnimationRef.current = Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        easing: easeOut,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 500,
+        easing: easeOut,
+        useNativeDriver: true,
+      }),
+    ]);
+    initialAnimationRef.current?.start();
+  }, [fadeAnim, slideAnim]);
 
   useEffect(() => {
     isMounted.current = true; // Componente montado
@@ -107,37 +131,27 @@ export default function WithdrawScreen() {
       try {
         // Backend endpoint para saldo (ajuste se necessário, integrado ao payments)
         // CORREÇÃO: Tipagem expandida para incluir 'earnings' opcional (caso backend retorne mais campos)
-        const response = await api.get<{ available: number; balance?: number; earnings?: number }>('\/payouts\/balance');
+        // Garantia de que response.data existe
+        const response = await api.get<{ available?: number; balance?: number; earnings?: number } | null>('/payouts/balance');
         if (isMounted.current) {
-          // CORREÇÃO: Usa 'balance' em vez de 'acceptanceRate' (alinhado com tipagem). Se for earnings, mude para response.data.earnings || 0
-          const available = (response.data as any).available ?? (response.data as any).balance ?? 0; setAvailableBalance(Number(available) || 0);
-          // Announce for accessibility quando saldo carrega
-          // Nota: Em RN, use AccessibilityInfo.announceForAccessibility se disponível via expo-accessibility
+          const data = response?.data || {};
+          // CORREÇÃO: Usa 'available' ou 'balance' com fallback seguro (evita NaN ou undefined)
+          const available = data.available ?? data.balance ?? data.earnings ?? 0;
+          setAvailableBalance(Number(available) || 0);
+          // Announce for accessibility quando saldo carrega (comentado para evitar issues; implemente se necessário)
+          // AccessibilityInfo.announceForAccessibility(`Saldo disponível: ${formatCurrency(available)}`);
         }
       } catch (err: any) {
         console.error('Erro ao buscar saldo:', err);
         if (isMounted.current) {
           NotificationUIService.showError('Não foi possível carregar o saldo. Tente novamente.', 'Erro de Saldo');
+          setAvailableBalance(0); // Fallback para 0 em erro
         }
       } finally {
         if (isMounted.current) {
           setIsLoading(false);
-          // Armazenar a referência da animação composta (premium entrance)
-          initialAnimationRef.current = Animated.parallel([
-            Animated.timing(fadeAnim, {
-              toValue: 1,
-              duration: 500,
-              easing: easeOut,
-              useNativeDriver: true,
-            }),
-            Animated.timing(slideAnim, {
-              toValue: 0,
-              duration: 500,
-              easing: easeOut,
-              useNativeDriver: true,
-            }),
-          ]);
-          initialAnimationRef.current.start();
+          // Inicia animação apenas uma vez, após loading
+          startEntranceAnimation();
         }
       }
     };
@@ -146,20 +160,24 @@ export default function WithdrawScreen() {
     return () => {
       isMounted.current = false; // Componente desmontado
       // Parar a animação se ela estiver em andamento
-      if (initialAnimationRef.current) {
-        initialAnimationRef.current.stop();
-      }
+      initialAnimationRef.current?.stop();
+      hasAnimated.current = false; // Reset para possíveis remounts
     };
-  }, []);
+  }, [startEntranceAnimation]); // Dependência no callback memoizado
+
+  // REMOVIDO: useEffect desnecessário de accessibility que poderia causar re-renders excessivos
+  // (estava vazio e dependia de isConfirmButtonEnabled, que muda com states, potencial loop)
 
   const handleAmountChange = (text: string) => {
+    // Evita loops: só atualiza se o texto mudou de fato
     const cleanedText = text.replace(/[^0-9.,]/g, '');
     const formattedText = cleanedText.replace(',', '.');
     const parts = formattedText.split('.');
-    if (parts.length > 2) {
-      setAmount(`${parts[0]}.${parts.slice(1).join('')}`);
-    } else {
-      setAmount(formattedText);
+    let newAmount = parts.length > 2 ? `${parts[0]}.${parts.slice(1).join('')}` : formattedText;
+    
+    // Evita setState desnecessário se igual
+    if (newAmount !== amount) {
+      setAmount(newAmount);
     }
     setFormError(null);
   };
@@ -179,26 +197,32 @@ export default function WithdrawScreen() {
         cleanedText = text.replace(/[^\d+\s()-]/g, ''); // Permitir dígitos, +, espaço, -, ( )
         break;
     }
-    setPixKey(cleanedText);
+    // Evita setState desnecessário se igual
+    if (cleanedText !== pixKey) {
+      setPixKey(cleanedText);
+    }
     setFormError(null);
   };
 
-  const handlePixKeyTypeChange = (type: PixKeyType) => {
+  const handlePixKeyTypeChange = useCallback((type: PixKeyType) => {
     setPixKeyType(type);
     setPixKey(''); // Limpa chave ao trocar tipo
     setFormError(null);
     if (Platform.OS === 'ios') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-  };
+  }, []); // Memoizado para evitar recriações
 
-  // Função para chips de atalho
-  const handleAmountShortcut = (percentage: number) => {
+  // Função para chips de atalho (memoizada)
+  const handleAmountShortcut = useCallback((percentage: number) => {
     const v = Math.max(10, Math.floor(availableBalance * percentage * 100) / 100); // Mínimo R$ 10
     Haptics.selectionAsync();
-    setAmount(String(v).replace('.', ','));
+    const formatted = String(v).replace('.', ',');
+    if (formatted !== amount) {
+      setAmount(formatted);
+    }
     setFormError(null);
-  };
+  }, [availableBalance, amount]); // Dependências corretas
 
   const validateForm = (): string | null => {
     const parsedAmount = parseFloat(amount.replace(',', '.'));
@@ -242,7 +266,7 @@ export default function WithdrawScreen() {
     return null;
   };
 
-  const handleConfirmWithdrawal = async () => {
+  const handleConfirmWithdrawal = useCallback(async () => {
     const error = validateForm();
     if (error) {
       setFormError(error);
@@ -268,7 +292,7 @@ export default function WithdrawScreen() {
       await requestWithdrawal(pixData);
       if (isMounted.current) {
         setIsWithdrawalSuccessful(true);
-        setAvailableBalance((prev) => prev - pixData.amount); // Atualiza saldo local
+        setAvailableBalance((prev) => Math.max(0, prev - pixData.amount)); // Atualiza saldo local com Math.max para evitar negativos
         NotificationUIService.showSuccess(`Saque de ${formatCurrency(pixData.amount)} solicitado com sucesso! O valor será processado em até 24h.`, 'Saque Enviado');
         if (Platform.OS === 'ios') {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); // Haptic premium para sucesso (iOS)
@@ -277,7 +301,7 @@ export default function WithdrawScreen() {
     } catch (error: any) {
       console.error('Erro ao solicitar saque:', error);
       if (isMounted.current) {
-        const errorMsg = error?.message || 'Não foi possível processar o saque. Verifique os dados e tente novamente.';
+        const errorMsg = error?.response?.data?.message || error?.message || 'Não foi possível processar o saque. Verifique os dados e tente novamente.';
         setFormError(errorMsg);
         NotificationUIService.showError(errorMsg, 'Erro no Saque');
         if (Platform.OS === 'ios') {
@@ -289,36 +313,36 @@ export default function WithdrawScreen() {
         setIsProcessingWithdrawal(false);
       }
     }
-  };
+  }, [amount, pixKeyType, pixKey, notes, availableBalance]); // Dependências corretas para memoização
 
-  const handleViewEarnings = () => {
+  const handleViewEarnings = useCallback(() => {
     if (Platform.OS === 'ios') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); // Haptic sutil
     }
     router.push('/earnings'); // Assumindo rota para Earnings; ajuste conforme sua estrutura expo-router
-  };
+  }, [router]);
 
-  const handleDownloadReceipt = () => {
+  const handleDownloadReceipt = useCallback(() => {
     if (Platform.OS === 'ios') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); // Haptic sutil
     }
     // Implementar download quando disponível
     Alert.alert('Comprovante', 'Funcionalidade de download em desenvolvimento.', [{ text: 'OK' }]);
-  };
+  }, []);
 
-  const handleViewServices = () => {
+  const handleViewServices = useCallback(() => {
     if (Platform.OS === 'ios') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     router.push('/services'); // Assumindo rota para Meus Serviços/Avaliações; ajuste conforme necessário
-  };
+  }, [router]);
 
-  const handleSkipStatement = () => {
+  const handleSkipStatement = useCallback(() => {
     if (Platform.OS === 'ios') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     router.back();
-  };
+  }, [router]);
 
   if (isLoading) {
     return (
@@ -418,13 +442,6 @@ export default function WithdrawScreen() {
   const parsedAmount = parseFloat((amount || '0').replace(',', '.'));
   const netAmount = Math.max(0, parsedAmount - taxa);
   const isConfirmButtonEnabled = !isNaN(parsedAmount) && parsedAmount >= 10 && parsedAmount <= availableBalance && !!pixKey.trim() && !isProcessingWithdrawal;
-
-  // Announce for accessibility quando formulário válido
-  useEffect(() => {
-    if (isConfirmButtonEnabled) {
-      // Nota: Implemente AccessibilityInfo.announceForAccessibility('Formulário válido. Pronto para sacar.') se disponível
-    }
-  }, [isConfirmButtonEnabled]);
 
   return (
     <KeyboardAvoidingView
