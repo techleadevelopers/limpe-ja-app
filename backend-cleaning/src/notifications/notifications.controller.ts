@@ -11,6 +11,7 @@ import {
   Delete,
   HttpStatus,
   Post,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { MarkAsReadDto } from './dto/mark-as-read.dto';
@@ -30,6 +31,16 @@ import { Request } from 'express';
 import { NotificationEntity } from './entities/notification.entity';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+
+class RegisterTokenDto {
+  @IsString()
+  @IsNotEmpty()
+  token!: string;
+
+  @IsString()
+  @IsOptional()
+  platform?: string;
+}
 
 @ApiTags('notifications')
 @Controller('notifications')
@@ -157,20 +168,15 @@ export class NotificationsController {
     await this.notificationsService.executeQuickAction(action, data);
   }
 
-  class RegisterTokenDto {
-    @IsString()
-    @IsNotEmpty()
-    token!: string;
-
-    @IsString()
-    @IsOptional()
-    platform?: string;
-  }
-
   @Post('register-token')
   @ApiOperation({ summary: 'Registrar/atualizar o token de push do dispositivo para o usuário atual' })
-  async registerToken(@Req() req: Request, @Body() body: RegisterTokenDto): Promise<{ ok: true }>{
-    const userId = (req as any).user?.userId;
+  async registerToken(@Req() req: Request, @Body() body: RegisterTokenDto): Promise<{ ok: true }> {
+    const userId = req.user?.['userId'];
+
+    if (!userId) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+
     return this.notificationsService.registerDeviceToken(userId, body.token);
   }
 }
