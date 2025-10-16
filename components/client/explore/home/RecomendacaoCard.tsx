@@ -405,8 +405,8 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
 
 const styles = StyleSheet.create({
   cardWrapperWithDistance: { // NOVO ESTILO: Container pai para posicionamento absoluto
-    width: 180,
-    height: 246,
+    width: 177,
+    height: 240,
     marginRight: 15,
     marginBottom: 5,
     marginTop: 8,
@@ -528,7 +528,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   serviceDescription: {
-    fontSize: 12.5, // Bio (2 linhas, 12/regular)
+    fontSize: 11.5, // Bio (2 linhas, 12/regular)
     paddingHorizontal: 2,
     fontWeight: Platform.select({
       ios: '300', 
@@ -545,12 +545,12 @@ const styles = StyleSheet.create({
     textAlign: 'left',
   },
   metricIcon: {
-    fontSize: 19,
+    fontSize: 17,
     fontWeight: 'bold',
     marginRight: 2,
   },
   metricValue: {
-    fontSize: 12.5,
+    fontSize: 10.5,
     color: '#6C757D', // Métricas mini -- discretas, cor #6C757D
   },
   metricSeparator: {
@@ -621,7 +621,7 @@ const styles = StyleSheet.create({
     position: 'absolute', // CORREÇÃO: Adicionado para permitir left/bottom funcionarem
     width: 36,
     height: 36,
-    left: 125, // RESTAURADO: Posicionamento horizontal
+    left: 122, // RESTAURADO: Posicionamento horizontal
     bottom: -25, // CORREÇÃO: Ajustado de 80 para 10 (cabe na imagem de 120px height; mude para 80 se quiser mais baixo)
     borderRadius: 53,
     justifyContent: 'center',
