@@ -141,9 +141,10 @@ export default function LoyaltyTeaserSection({
 
 const styles = StyleSheet.create({
   loyaltyTeaserSection: {
+    width: '92%',
     borderRadius: 12,
     padding: 18,
-    marginHorizontal: 15,
+    alignSelf: 'center',
     marginTop: 20,
     alignItems: 'center',
     ...AppShadows.medium,
