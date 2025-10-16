@@ -78,7 +78,7 @@ const SecaoPrestadores: React.FC<SecaoPrestadoresProps> = ({
 const styles = StyleSheet.create({
   container: {
     marginTop: -2,
-    marginBottom: -18,
+    marginBottom: 12,
    backgroundColor: 'transparent',
 
   },
@@ -93,7 +93,8 @@ const styles = StyleSheet.create({
     fontSize: 15.5,
     fontFamily: 'Montserrat-Regular',
     fontWeight: '800',
-    marginTop: 10,
+    marginTop: 20,
+    marginBottom: -6,
 
   },
   viewAllButton: {
