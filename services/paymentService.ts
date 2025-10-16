@@ -47,17 +47,22 @@ export const requestWithdrawal = async (data: RequestWithdrawalDto): Promise<Mes
   }
 };
 
-export const fetchPaymentIntent = async (bookingId: string): Promise<PaymentIntent> => {
+export const fetchPaymentIntent = async (bookingId: string): Promise<PaymentIntent | null> => {
   try {
     const response = await api.get<PaymentIntent>(`/payments/intent/${bookingId}`, {
       headers: { 'x-silent': '1' },
     });
     return response.data;
   } catch (error: any) {
-    console.error('Erro ao buscar PaymentIntent:', error.response?.data || error.message);
     if (axios.isAxiosError(error) && error.response) {
-      throw new Error(error.response.data.message || 'Erro ao buscar PaymentIntent.');
+      if (error.response.status === 404) {
+        // PaymentIntent inexistente ainda - tratar como null sem logar erro
+        return null;
+      }
+      console.error('Erro ao buscar PaymentIntent:', error.response.data || error.message);
+      throw new Error(error.response.data?.message || 'Erro ao buscar PaymentIntent.');
     }
+    console.error('Erro ao buscar PaymentIntent:', error.message);
     throw new Error('Erro de rede ao buscar PaymentIntent.');
   }
 };
