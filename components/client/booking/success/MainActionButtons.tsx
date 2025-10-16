@@ -103,13 +103,13 @@ export default function MainActionButtons({
 
 const styles = StyleSheet.create({
   actionButtonsContainerNew: {
-    width: '100%', // Alinhado full-width para bottom fixo
+    width: '92%',
+    alignSelf: 'center',
     alignItems: 'center',
     paddingVertical: 0,
-    // ✅ FIX: Removida margem negativa (-300px iOS); agora 20px consistente para scroll completo e gap confortável no final
-    marginBottom: 20, // Gap premium (20px, permite rolar até o fim sem corte)
-    marginTop: 12, // Gap acima simétrico (era 8/5, aumentado para conforto)
-    paddingHorizontal: 16, // Espaçamento lógico lateral (16px padrão)
+    marginBottom: 20,
+    marginTop: 16,
+    paddingHorizontal: 0,
   },
   downloadButton: {
     flexDirection: 'row',
