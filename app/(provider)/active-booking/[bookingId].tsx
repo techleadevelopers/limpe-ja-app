@@ -151,8 +151,8 @@ export default function ActiveBookingDetails() {
     try {
       const updated = await updateBookingStatus(bookingId, { status: BookingStatus.COMPLETED });
       setBooking(updated);
-      NotificationUIService.showSuccess('ServiÃ§o finalizado.');
-      await tryBeepLocalNotification('ServiÃ§o finalizado', 'Atendimento concluÃ­do com sucesso.');
+      NotificationUIService.showSuccess('Serviço finalizado.');
+      await tryBeepLocalNotification('Serviço finalizado', 'Atendimento concluído com sucesso.');
       // Alert removido: feedback não-bloqueante já exibido (toast + haptics)
       return;
     } catch (e: any) {
@@ -165,9 +165,29 @@ export default function ActiveBookingDetails() {
   if (loading || !booking) {
     return (
       <View style={styles.centered}>
-        <Stack.Screen options={{ title: 'Atendimento' }} />
+        <Stack.Screen options={{ 
+          title: 'Atendimento',
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => {
+                if (Platform.OS === 'ios') {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+                router.back();
+              }}
+              style={{ 
+                marginLeft: 10, 
+                padding: 8, 
+                borderRadius: 8, 
+                backgroundColor: 'rgba(255, 255, 255, 0.8)' 
+              }}
+            >
+              <Ionicons name="arrow-back" size={24} color={PRIMARY} />
+            </TouchableOpacity>
+          )
+        }} />
         <ActivityIndicator size="large" color={PRIMARY} />
-        <Text style={styles.loadingText}>Carregando detalhesâ€¦</Text>
+        <Text style={styles.loadingText}>Carregando detalhes...</Text>
       </View>
     );
   }
@@ -177,28 +197,48 @@ export default function ActiveBookingDetails() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: 'Atendimento' }} />
+      <Stack.Screen options={{ 
+        title: 'Atendimento',
+        headerLeft: () => (
+          <TouchableOpacity
+            onPress={() => {
+              if (Platform.OS === 'ios') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+              router.back();
+            }}
+            style={{ 
+              marginLeft: 10, 
+              padding: 8, 
+              borderRadius: 8, 
+              backgroundColor: 'rgba(255, 255, 255, 0.8)' 
+            }}
+          >
+            <Ionicons name="arrow-back" size={20} color="#555454ff" />
+          </TouchableOpacity>
+        )
+      }} />
       <Animated.View style={[styles.card, { opacity: fade, transform: [{ translateY: slide }] }]}>
         <View style={styles.row}>
           <Ionicons name="calendar-outline" size={18} color={PRIMARY} style={styles.icon} />
           <Text style={styles.title}>{booking.serviceName}</Text>
         </View>
         <Text style={styles.muted}>Cliente: {booking.clientFullName}</Text>
-        <Text style={styles.muted}>Data: {new Date(booking.scheduledDate).toLocaleDateString('pt-BR')} Ã s {booking.scheduledTime}</Text>
+        <Text style={styles.muted}>Data: {new Date(booking.scheduledDate).toLocaleDateString('pt-BR')} As {booking.scheduledTime}</Text>
         {scheduledEnd && (
-          <Text style={styles.muted}>TÃ©rmino estimado: {scheduledEnd.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</Text>
+          <Text style={styles.muted}>Termino estimado: {scheduledEnd.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</Text>
         )}
 
         {isInProgress && (
           <View style={[styles.banner, { backgroundColor: '#E0F2FE', borderColor: '#7DD3FC' }] }>
             <Ionicons name="time-outline" size={16} color={PRIMARY} />
-            <Text style={[styles.bannerText, { color: TEXT }]}>ServiÃ§o em andamento</Text>
+            <Text style={[styles.bannerText, { color: TEXT }]}>Serviço em andamento</Text>
           </View>
         )}
         {isCompleted && (
           <View style={[styles.banner, { backgroundColor: '#DCFCE7', borderColor: '#86EFAC' }]}>
             <Ionicons name="checkmark-circle-outline" size={16} color={SUCCESS} />
-            <Text style={[styles.bannerText, { color: TEXT }]}>ConcluÃ­do</Text>
+            <Text style={[styles.bannerText, { color: TEXT }]}>Concluído</Text>
           </View>
         )}
 
@@ -208,7 +248,7 @@ export default function ActiveBookingDetails() {
               style={[styles.btn, styles.btnOutline, (!canStart || submitting !== 'NONE') && styles.btnDisabled]}
               onPress={handleStart}
               disabled={!canStart || submitting !== 'NONE'}
-              accessibilityLabel="Iniciar serviÃ§o"
+              accessibilityLabel="Iniciar serviço"
             >
               <Ionicons name="play-circle-outline" size={18} color={canStart ? PRIMARY : MUTED} />
               <Text style={[styles.btnTextPrimary, { color: canStart ? PRIMARY : MUTED }]}>Iniciar</Text>
@@ -218,7 +258,7 @@ export default function ActiveBookingDetails() {
               style={[styles.btn, styles.btnPrimary, (!canComplete || submitting !== 'NONE') && styles.btnDisabledPrimary]}
               onPress={handleComplete}
               disabled={!canComplete || submitting !== 'NONE'}
-              accessibilityLabel="Finalizar serviÃ§o"
+              accessibilityLabel="Finalizar serviço"
             >
               <Ionicons name="stop-circle-outline" size={18} color={WHITE} />
               <Text style={styles.btnTextWhite}>Finalizar</Text>
@@ -229,7 +269,7 @@ export default function ActiveBookingDetails() {
         {booking.status === BookingStatus.CONFIRMED && !nowInfo.withinWindow && (
           <View style={[styles.banner, { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' }]}>
             <Ionicons name="alert-circle-outline" size={16} color={WARNING} />
-            <Text style={[styles.bannerText, { color: TEXT }]}>Aguardando janela de inÃ­cio</Text>
+            <Text style={[styles.bannerText, { color: TEXT }]}>Aguardando janela de início</Text>
           </View>
         )}
 
