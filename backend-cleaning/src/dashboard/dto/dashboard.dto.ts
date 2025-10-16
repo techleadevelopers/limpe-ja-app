@@ -1,13 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { BookingEntity } from '../../bookings/entities/booking.entity'; // Importe BookingEntity
+import { BookingDetailsDto } from '../../bookings/dto/booking-details.dto'; // Importe BookingDetailsDto
 import { ReviewDto } from '../../reviews/dto/review.dto'; // Importe o ReviewDto que você irá criar/ajustar
 
 export class DashboardDto {
   @ApiProperty({ description: 'Nome completo do provedor', example: 'Maria da Silva' })
   fullName: string;
 
-  @ApiPropertyOptional({ type: () => [BookingEntity], description: 'Agendamentos próximos' })
-  upcomingBookings?: BookingEntity[]; // Use BookingEntity aqui
+  @ApiPropertyOptional({ type: () => [BookingDetailsDto], description: 'Agendamentos próximos' })
+  upcomingBookings?: BookingDetailsDto[]; // Usa BookingDetailsDto para alinhar com o frontend
 
   @ApiProperty({ description: 'Total de ganhos', example: 1000 })
   totalEarnings: number;
@@ -24,3 +24,5 @@ export class DashboardDto {
   @ApiProperty({ description: 'Número de agendamentos concluídos no mês atual', example: 15 })
   monthlyBookingsCount: number;
 }
+
+
