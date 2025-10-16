@@ -17,7 +17,7 @@ export default function SuccessLoadingError({ isLoading, error, headerPrimaryCol
   if (isLoading) {
     return (
       <View style={styles.centered}>
-        <Stack.Screen options={{ title: "Carregando" }} />
+        <Stack.Screen options={{ title: "Pagamento", headerShown: false }} />
         <ActivityIndicator size="large" color={headerPrimaryColor} />
         <Text style={styles.loadingText} maxFontSizeMultiplier={1.2}>Preparando os detalhes do seu agendamento…</Text>
       </View>
