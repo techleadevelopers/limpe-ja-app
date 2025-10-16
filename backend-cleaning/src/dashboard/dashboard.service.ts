@@ -5,6 +5,7 @@ import { BookingsService } from '../bookings/bookings.service';
 import { EarningsService } from '../earnings/earnings.service';
 import { ReviewsService } from '../reviews/reviews.service';
 import { DashboardDto } from './dto/dashboard.dto';
+import { BookingDetailsDto } from '../bookings/dto/booking-details.dto';
 
 @Injectable()
 export class DashboardService {
@@ -33,8 +34,12 @@ export class DashboardService {
 
     // SEGUNDO PASSO: Buscar agendamentos futuros (passando o provider.id, que é o que bookingsService espera para agendamentos)
     this.logger.log(`[DashboardService] getDashboardData: Buscando agendamentos futuros para provider.id: ${provider.id}`);
-    const upcomingBookings = await this.bookingsService.findUpcomingBookings(provider.id);
-    this.logger.log(`[DashboardService] getDashboardData: Agendamentos futuros encontrados: ${upcomingBookings.length}`);
+    const upcomingBookingsRaw = await this.bookingsService.findUpcomingBookings(provider.id);
+    this.logger.log(`[DashboardService] getDashboardData: Agendamentos futuros encontrados: ${upcomingBookingsRaw.length}`);
+
+    const upcomingBookings = upcomingBookingsRaw.map(
+      (booking) => new BookingDetailsDto(booking),
+    );
 
     // TERCEIRO PASSO: Buscar sumário de ganhos (Passando o userId original, pois earningsService.getEarnings espera um userId)
     this.logger.log(`[DashboardService] getDashboardData: Buscando sumário de ganhos para userId: ${userId}`);
