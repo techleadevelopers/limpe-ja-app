@@ -119,14 +119,16 @@ const styles = StyleSheet.create({
   container: {
     marginTop: 10,
     marginBottom: 10,
+    paddingHorizontal: 5,
   },
   cardContainer: {
     alignItems: "center",
     marginRight: 20, // Espaçamento entre os cards
+    marginTop: -9,
   },
   cardInner: {
-    width: 60, // Tamanho do fundo circular
-    height: 60,
+    width: 58, // Tamanho do fundo circular
+    height: 58,
     borderRadius: 30, // Corrigido para círculo perfeito (metade de 60)
     justifyContent: "center",
     alignItems: "center",
