@@ -156,8 +156,11 @@ export default function SecurityInfoSection({ successColor, bookingId }: Securit
 
 const styles = StyleSheet.create({
   securitySection: {
+    width: '92%',
+    alignSelf: 'center',
     marginTop: 16,
-    padding: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     borderRadius: 12,
     borderWidth: 1,
     alignItems: 'center',
