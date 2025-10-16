@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef } from 'react';
 import { ActivityIndicator, Animated, Dimensions, Easing, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,11 +10,13 @@ import { PixChargeResponseDto } from '../../../../types/backend/payments';
 interface SuccessPixInfoProps {
   bookingId: string;
   fallback?: Pick<PixChargeResponseDto, 'brCode' | 'qrCodeImage'> | null;
+  onRegenerate?: () => void;
+  regenerating?: boolean;
 }
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
-export default function SuccessPixInfo({ bookingId, fallback }: SuccessPixInfoProps) {
+export default function SuccessPixInfo({ bookingId, fallback, onRegenerate, regenerating }: SuccessPixInfoProps) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const translateYAnim = useRef(new Animated.Value(20)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
@@ -121,6 +122,19 @@ export default function SuccessPixInfo({ bookingId, fallback }: SuccessPixInfoPr
           {sanitizeText(pixCode)}
         </Text>
       ) : null}
+      {typeof onRegenerate === 'function' ? (
+        <TouchableOpacity
+          style={[styles.regenerateButton, regenerating ? styles.regenerateButtonDisabled : null]}
+          onPress={onRegenerate}
+          disabled={!!regenerating}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="refresh-outline" size={16} color={regenerating ? AppColors.mediumGray : AppColors.primaryInteractive} />
+          <Text style={[styles.regenerateButtonText, regenerating ? styles.regenerateButtonTextDisabled : null]} maxFontSizeMultiplier={1.2}>
+            {regenerating ? 'Gerando novo QR...' : 'Gerar novo QR PIX'}
+          </Text>
+        </TouchableOpacity>
+      ) : null}
     </Animated.View>
   );
 }
@@ -184,5 +198,30 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontStyle: 'italic',
     maxWidth: '98%',
+  },
+  regenerateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: AppColors.primaryInteractive,
+    backgroundColor: '#ffffff',
+  },
+  regenerateButtonDisabled: {
+    borderColor: `${AppColors.mediumGray}55`,
+    backgroundColor: `${AppColors.mediumGray}15`,
+  },
+  regenerateButtonText: {
+    marginLeft: 8,
+    fontSize: 12,
+    fontWeight: '600',
+    color: AppColors.primaryInteractive,
+  },
+  regenerateButtonTextDisabled: {
+    color: AppColors.mediumGray,
   },
 });
