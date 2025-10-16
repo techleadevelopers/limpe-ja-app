@@ -235,20 +235,22 @@ export class PayoutsService {
   }
 
   async handleGatewayWebhook(signature: string, eventId: string, payload: any) {
-    if (!signature || !eventId) {
-      throw new BadRequestException('Missing webhook headers.');
+    if (!eventId) {
+      throw new BadRequestException('Missing webhook event identifier.');
     }
 
     const secret = this.configService.get<string>('PSP_WEBHOOK_SECRET');
-    if (!secret) {
-      this.logger.error('handleGatewayWebhook: PSP_WEBHOOK_SECRET is not configured.');
-      throw new ForbiddenException('Webhook signature validation not configured.');
-    }
-
-    const payloadString = JSON.stringify(payload ?? {});
-    if (!this.verifySignature(signature, payloadString, secret)) {
-      this.logger.warn('handleGatewayWebhook: invalid signature.');
-      throw new ForbiddenException('Invalid webhook signature.');
+    if (secret) {
+      if (!signature) {
+        throw new BadRequestException('Missing webhook signature header.');
+      }
+      const payloadString = JSON.stringify(payload ?? {});
+      if (!this.verifySignature(signature, payloadString, secret)) {
+        this.logger.warn('handleGatewayWebhook: invalid signature.');
+        throw new ForbiddenException('Invalid webhook signature.');
+      }
+    } else {
+      this.logger.warn('handleGatewayWebhook: PSP_WEBHOOK_SECRET not configured. Skipping signature validation.');
     }
 
     const exists = await this.prisma.webhookReplay.findUnique({ where: { eventId } });
