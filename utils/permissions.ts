@@ -2,6 +2,7 @@
 import { Platform, Alert, Linking } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
+import { PermissionStatus } from 'expo-modules-core';
 import * as Notifications from 'expo-notifications'; // Importar Notifications
 
 /**
@@ -86,9 +87,9 @@ export const requestMediaLibraryPermissions = async (): Promise<boolean> => {
 
 /**
  * Verifica o status atual da permissão de localização (foreground).
- * @returns {Promise<Location.PermissionStatus>} O status da permissão.
+ * @returns {Promise<PermissionStatus>} O status da permissão.
  */
-export const checkLocationPermissions = async (): Promise<Location.PermissionStatus> => {
+export const checkLocationPermissions = async (): Promise<PermissionStatus> => {
   const { status } = await Location.getForegroundPermissionsAsync();
   return status;
 };
@@ -99,7 +100,7 @@ export const checkLocationPermissions = async (): Promise<Location.PermissionSta
  */
 export const requestLocationPermissions = async (): Promise<boolean> => {
   const { status } = await Location.requestForegroundPermissionsAsync();
-  if (status !== Location.PermissionStatus.GRANTED) {
+  if (status !== PermissionStatus.GRANTED) {
     showPermissionDeniedAlert('Localização');
     return false;
   }
