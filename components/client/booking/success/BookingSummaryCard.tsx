@@ -38,6 +38,8 @@ interface BookingSummaryCardProps {
   headerPrimaryColor: string; // Não usado diretamente
   formattedAddressLine1: string;
   formattedAddressLine2: string;
+  onRegeneratePix?: () => void;
+  isRegeneratingPix?: boolean;
 }
 
 export default function BookingSummaryCard({
@@ -53,6 +55,8 @@ export default function BookingSummaryCard({
   headerPrimaryColor,
   formattedAddressLine1,
   formattedAddressLine2,
+  onRegeneratePix,
+  isRegeneratingPix,
 }: BookingSummaryCardProps) {
   const { t } = useTranslation();
   const {
@@ -170,6 +174,8 @@ export default function BookingSummaryCard({
             <SuccessPixInfo
               bookingId={bookingIdFromBooking}
               fallback={pixChargeDetails ?? null}
+              onRegenerate={onRegeneratePix}
+              regenerating={isRegeneratingPix}
             />
           )}
         </View>
