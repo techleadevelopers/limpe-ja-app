@@ -70,10 +70,12 @@ export default function BookingSuccessScreen() {
   const [error, setError] = useState<string | null>(null);
   const [paid, setPaid] = useState<boolean>(false);
   const [shouldPollIntent, setShouldPollIntent] = useState<boolean>(false);
+  const [isRegeneratingPix, setIsRegeneratingPix] = useState<boolean>(false);
 
   const pollRef = useRef<NodeJS.Timeout | null>(null);
   const pollAttemptsRef = useRef<number>(0);
   const onceRef = useRef(false);
+  const unauthorizedHandledRef = useRef(false);
 
   const contentOpacity = useRef(new Animated.Value(0)).current;
   const contentTranslateY = useRef(new Animated.Value(24)).current;
@@ -242,7 +244,24 @@ export default function BookingSuccessScreen() {
             }, 1200);
           }
         }
-      } catch (err) {
+      } catch (err: any) {
+        const status = err?.status ?? err?.response?.status;
+        if (status === 401 && !unauthorizedHandledRef.current) {
+          unauthorizedHandledRef.current = true;
+          if (pollRef.current) {
+            clearInterval(pollRef.current);
+            pollRef.current = null;
+          }
+          setShouldPollIntent(false);
+          NotificationUIService.showInfo(
+            'Sessão atualizada',
+            'Sua sessão de pagamento foi renovada. Voltamos para a página inicial para garantir sua segurança.'
+          );
+          setTimeout(() => {
+            router.replace('/(client)/explore' as any);
+          }, 400);
+          return;
+        }
         if (__DEV__) {
           console.warn('[BookingSuccess] polling payment intent', err?.message || err);
         }
@@ -293,7 +312,6 @@ export default function BookingSuccessScreen() {
 
   const handleContactProvider = useCallback(() => {
     if (!booking) {
-      NotificationUIService.showInfo('Os detalhes do agendamento ainda estão carregando.');
       return;
     }
     router.push({
@@ -304,6 +322,36 @@ export default function BookingSuccessScreen() {
       },
     } as any);
   }, [booking, provider, router]);
+
+  const handleRegeneratePix = useCallback(async () => {
+    if (!booking || paymentMethod !== 'PIX' || !user?.id || isRegeneratingPix) {
+      return;
+    }
+    setIsRegeneratingPix(true);
+    try {
+      const pixResponse = await createPixCharge(user.id, {
+        amount: booking.totalPrice,
+        description: booking.serviceName || `Agendamento ${booking.id}`,
+        bookingId: booking.id,
+        providerId: booking.providerId,
+      });
+      setPixCharge(pixResponse ?? null);
+      onceRef.current = false;
+      pollAttemptsRef.current = 0;
+      if (pixResponse?.paymentIntent?.status === PaymentIntentStatus.PAID) {
+        setPaid(true);
+        setShouldPollIntent(false);
+      } else {
+        setPaid(false);
+        setShouldPollIntent(true);
+      }
+    } catch (_) {
+      // silencioso
+    } finally {
+      setIsRegeneratingPix(false);
+    }
+  }, [booking, paymentMethod, user?.id, isRegeneratingPix]);
+
 
   const handleLoyaltyLearnMore = useCallback(() => {
     router.push('/(client)/missions' as any);
@@ -366,6 +414,8 @@ export default function BookingSuccessScreen() {
               headerPrimaryColor={HEADER_PRIMARY_COLOR}
               formattedAddressLine1={formattedAddressLine1}
               formattedAddressLine2={formattedAddressLine2}
+              onRegeneratePix={paymentMethod === 'PIX' ? handleRegeneratePix : undefined}
+              isRegeneratingPix={isRegeneratingPix}
             />
 
             <ImmediateActionButtons
