@@ -83,8 +83,8 @@
                                          "category_diversity":  "Diversidade"
                                      },
                         "metrics":  {
-                                        "acceptance_rate":  "Taxa de Aceitação",
-                                        "avg_response_time":  "Tempo Médio de Resposta",
+                                        "acceptance_rate":  "Aceitação",
+                                        "avg_response_time":  "Resposta",
                                         "minutes_short":  "min",
                                         "acceptance_short":  "Aceitação",
                                         "response_short":  "Resposta"
