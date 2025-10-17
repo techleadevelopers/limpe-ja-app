@@ -127,8 +127,8 @@ const styles = StyleSheet.create({
     marginTop: -9,
   },
   cardInner: {
-    width: 58, // Tamanho do fundo circular
-    height: 58,
+    width: 48, // Tamanho do fundo circular
+    height: 48,
     borderRadius: 30, // Corrigido para círculo perfeito (metade de 60)
     justifyContent: "center",
     alignItems: "center",
