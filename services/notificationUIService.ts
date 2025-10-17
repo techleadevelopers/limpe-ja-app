@@ -1,5 +1,4 @@
 // app/services/notificationUIService.ts
-import RNToast from 'react-native-toast-message';
 import i18n from '../i18n';
 import { showOverlay } from '../hooks/useOverlayMessage';
 
@@ -131,11 +130,7 @@ class NotificationUIService {
     // Exibir toast (garantindo text1/text2 sejam strings)
     // Premium overlay com fundo escuro e auto-hide ~5s
     const variant = type === 'success' ? 'success' : type === 'error' ? 'error' : type === 'info' ? 'info' : 'warning';
-    showOverlay({ title, subtitle: message, variant, durationMs: 5000 });
-    // Mantém o RNToast como fallback silencioso em dev (opcional)
-    if (__DEV__) {
-      try { RNToast.show({ type, text1: title || '', text2: message || '', position: options.position ?? 'top' }); } catch {}
-    }
+    showOverlay({ title, subtitle: message, variant, durationMs: 2000 });
   }
 
   showSuccess(message: string, title: string = i18n.t('common.success')) {
