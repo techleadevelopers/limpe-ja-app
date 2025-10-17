@@ -1183,7 +1183,7 @@ export class ProvidersService {
       },
     });
 
-    this.logger.log(`Métricas atualizadas para provedor ${providerId}: Taxa de Aceitação: ${acceptanceRate.toFixed(2)}%, Tempo Médio de Resposta: ${averageResponseTime}min.`);
+    this.logger.log(`Métricas atualizadas para provedor ${providerId}: Aceitação: ${acceptanceRate.toFixed(2)}%, Resposta: ${averageResponseTime}min.`);
 
     // Invalida o cache para que as novas métricas sejam buscadas
     await this.cacheService.del(`${this.PROVIDERS_CACHE_KEY}:${providerId}`);
