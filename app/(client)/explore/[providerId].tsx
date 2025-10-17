@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -101,6 +102,106 @@ const recommendationStyles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     fontFamily: 'RedHatMono',
+  },
+});
+
+const SecurityBanner: React.FC<{ onPress: () => void }> = ({ onPress }) => (
+  <View style={securityBannerStyles.container}>
+    <LinearGradient
+      colors={['#EAF3FF', '#DCEBFF']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={securityBannerStyles.card}
+    >
+      <View style={securityBannerStyles.leftSection}>
+        <View style={securityBannerStyles.iconBadge}>
+          <Ionicons name="shield-checkmark" size={18} color="#fff" />
+        </View>
+        <View style={securityBannerStyles.textWrap}>
+          <Text style={securityBannerStyles.title}>Seguranca LimpeJa</Text>
+          <Text style={securityBannerStyles.subtitle} numberOfLines={2}>
+            Dicas e garantias para seu atendimento com tranquilidade.
+          </Text>
+        </View>
+      </View>
+
+      <TouchableOpacity onPress={onPress} style={securityBannerStyles.cta}>
+        <Text style={securityBannerStyles.ctaText}>Ver</Text>
+      </TouchableOpacity>
+    </LinearGradient>
+  </View>
+);
+
+const securityBannerStyles = StyleSheet.create({
+  container: {
+    width: SCREEN_WIDTH - 40,
+    height: 90,
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 16,
+  },
+  card: {
+    flex: 1,
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    ...AppShadows.medium,
+  },
+  leftSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    paddingRight: 10,
+  },
+  iconBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: AppColors.primaryInteractive,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOpacity: 0.12,
+        shadowRadius: 6,
+        shadowOffset: { width: 0, height: 3 },
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  textWrap: {
+    flex: 1,
+  },
+  title: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: AppColors.textBody,
+    marginBottom: 2,
+  },
+  subtitle: {
+    fontSize: 12,
+    color: AppColors.textAuxiliary,
+    lineHeight: 18,
+  },
+  cta: {
+    backgroundColor: AppColors.primaryInteractive,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ctaText: {
+    color: AppColors.white,
+    fontSize: 12,
+    fontWeight: '700',
   },
 });
 
@@ -769,46 +870,9 @@ if (isAuthenticated && user?.id) {
               )}
             </Animated.View>
 
-            {/* OFERTAS - COM FILTRO AGRESSIVO: Se vazia, placeholder sem erro */}
-            {validOffers.length > 0 ? (
-              <View>
-                <Text style={styles.sectionTitle}>{t('offers.title')}</Text>
-                {validOffers.map((offer) => (
-                  <View key={offer.id} style={[styles.offerCard, AppShadows.small]}>
-                    <Text style={styles.offerTitle}>{offer.title}</Text>
-                    <Text style={styles.offerDescription}>{offer.description}</Text>
-                    <View style={styles.offerFooter}>
-                      <Text style={styles.offerDiscount}>
-                        {offer.discountType === 'PERCENT' ? (
-                          <>{(offer.discountValue ?? 0).toString()}% OFF</>
-                        ) : (
-                          <>
-                            R$
-                            {typeof offer.discountValue === 'number'
-                              ? offer.discountValue.toFixed(2).replace('.', ',')
-                              : '0,00'}{' '}
-                            OFF
-                          </>
-                        )}
-                      </Text>
-                      <TouchableOpacity
-                        style={styles.copyCouponButton}
-                        onPress={() => handleCopyCouponCode(offer.couponCode || '')}
-                      >
-                        <Ionicons name="copy-outline" size={16} color={AppColors.white} />
-                        <Text style={styles.copyCouponButtonText}>{t('offers.copy_code')}</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <View style={{ padding: 16, alignItems: 'center' }}>
-                <Text style={{ fontSize: 14, color: AppColors.mediumGray }}>
-                  {t('offers.no_offers_available', 'Nenhuma oferta disponível no momento')}
-                </Text>
-              </View>
-            )}
+            <SecurityBanner
+              onPress={() => router.push('/(client)/explore/sercurity/index' as any)}
+            />
 
             {provider && (
               <SideIcon
