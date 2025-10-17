@@ -5,6 +5,7 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export const AppColors = {
   primaryInteractive: '#4A90E2',
+  primaryLight: '#6CB9FF',
   primaryDark: '#2A72E7',
   successStandard: '#28A745',
   successStrong: '#218838',
