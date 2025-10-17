@@ -320,7 +320,7 @@ const styles = StyleSheet.create({
     providerName: {
         fontSize: 14,
         fontWeight: '600', // Nome (15/600)
-        color: '#5b6d7eff',
+        color: '#6b8299ff',
         flex: 1, // Para permitir que o nome ocupe o espaço disponível
     },
     specialtyText: {
