@@ -147,7 +147,7 @@ export default function SecurityInfoSection({ successColor, bookingId }: Securit
         accessibilityHint="Abre um chamado de suporte para este agendamento"
       >
         <Text style={styles.supportButtonText}>
-          {openingTicket ? 'Abrindo chamado…' : 'Falar com suporte'}
+          {openingTicket ? 'Abrindo chamado…' : 'Saiba mais'}
         </Text>
       </TouchableOpacity>
     </Animated.View>
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   supportButtonDisabled: {
-    backgroundColor: `${AppColors.primaryInteractive}55`,
+    backgroundColor: '#538bc4ff',
   },
   supportButtonText: {
     color: AppColors.white,
