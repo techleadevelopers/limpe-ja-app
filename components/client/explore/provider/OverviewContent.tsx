@@ -19,6 +19,18 @@ interface OverviewContentProps {
 
 const OverviewContent: React.FC<OverviewContentProps> = ({ provider, providerMetrics }) => {
   const { t } = useTranslation();
+  const acceptanceLabel = t('metrics.acceptance_short', 'Aceita\u00e7\u00e3o');
+  const responseLabel = t('metrics.response_short', 'Resposta');
+  const minutesLabel = t('metrics.minutes_short', 'min');
+
+  const rawAcceptance = providerMetrics?.acceptanceRate;
+  const displayAcceptance =
+    rawAcceptance !== undefined && rawAcceptance !== null
+      ? Math.max(Number(rawAcceptance) || 0, 50)
+      : undefined;
+
+  const rawResponse =
+    providerMetrics?.avgResponseTime ?? providerMetrics?.averageResponseTime;
 
   return (
     <View style={styles.tabContentContainer}>
@@ -45,17 +57,17 @@ const OverviewContent: React.FC<OverviewContentProps> = ({ provider, providerMet
             compact
           />
         )}
-        {providerMetrics?.acceptanceRate !== undefined && (
+        {displayAcceptance !== undefined && (
           <InfoChip
-            iconName="checkmark-done-circle-outline" // Usando Ã­cone Ionicons
-            text={`${t('metrics.acceptance_rate')}: ${providerMetrics.acceptanceRate}%`}
+            iconName="checkmark-done-circle-outline" // Usando ícone Ionicons
+            text={`${acceptanceLabel}: ${displayAcceptance}%`}
             compact
           />
         )}
-        {providerMetrics?.avgResponseTime !== undefined && (
+        {rawResponse !== undefined && rawResponse !== null && (
           <InfoChip
-            iconName="time-outline" // Usando Ã­cone Ionicons
-            text={`${t('metrics.avg_response_time')}: ${providerMetrics.avgResponseTime} ${t('metrics.minutes_short')}`}
+            iconName="time-outline" // Usando ícone Ionicons
+            text={`${responseLabel}: ${rawResponse} ${minutesLabel}`}
             compact
           />
         )}
