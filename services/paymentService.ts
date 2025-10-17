@@ -59,6 +59,11 @@ export const fetchPaymentIntent = async (bookingId: string): Promise<PaymentInte
         // PaymentIntent inexistente ainda - tratar como null sem logar erro
         return null;
       }
+      if (error.response.status === 401) {
+        const unauthorizedError = new Error('Sessão expirada. Faça login novamente.');
+        (unauthorizedError as any).status = 401;
+        return Promise.reject(unauthorizedError);
+      }
       console.error('Erro ao buscar PaymentIntent:', error.response.data || error.message);
       throw new Error(error.response.data?.message || 'Erro ao buscar PaymentIntent.');
     }
