@@ -11,15 +11,19 @@ import {
   Animated,
   Alert,
   Dimensions,
-  ActivityIndicator, // Added ActivityIndicator for loading state
+  ActivityIndicator,
+  Easing,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage'; // Import AsyncStorage
-import { SafeAreaView } from 'react-native-safe-area-context'; // Imported for use
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+// IMPORTAÇÃO DO COMPONENTE PREMIUM SERVICE CHIP (Assumindo o caminho fornecido)
+import { PremiumServiceChip } from '../../../components/auth/PremiumServiceChip';
 
 import { useAuth } from '../../../hooks/useAuth';
 import { VerificationStatus } from '../../../types/backend/auth';
@@ -42,13 +46,13 @@ enum PricingType {
 }
 
 const SERVICE_MAPPINGS: { [key: string]: string } = {
-    'residencial': '3f17467b-e198-4072-87f0-0213d2d08997',
-    'comercial': '78cc63ad-a18d-4ba0-b0b8-28624412caf3',
-    'pos_obra': '0a8ea519-63e4-4efb-a03a-628dbbc9f052',
-    'escritorio': '2559b9e2-0526-4304-9d04-89606b424074',
-    'passadoria': '147e1b4a-1294-4c28-9344-2e9969694464',
-    'vidros': 'c8c6bfee-598f-4de0-a383-0f6101699b15',
-    'estofados': '3abda78a-264f-4745-9094-83cad16e65f3',
+      'residencial': '389e72b1-ed42-49ef-af1b-26a27a40162f',
+      'comercial': '6340c91a-bcd6-4d7c-98fc-7b0bba033d50',
+      'pos_obra': '2cc94059-92c0-4fb5-9617-3cc09e2726a4',
+      'escritorio': 'ee314b92-a79b-448f-8f3c-abffd508dc31',
+      'passadoria': '50113b0a-dadc-4e82-bee4-ad710e260a0c',
+      'vidros': '9b8ae36b-b2cf-49bf-be85-6e100ba08f86',
+      'estofados': '5b15c855-0bf0-4e1b-a8e1-0b7e36ab438f',
 };
 
 type PriceUnit = 'hora' | 'quarto' | 'metragem' | null;
@@ -91,29 +95,61 @@ export default function ServiceDetailsScreen() {
   const [basePriceError, setBasePriceError] = useState<string | null>(null);
   const [pixKeyError, setPixKeyError] = useState<string | null>(null);
   const [serviceAreasError, setServiceAreasError] = useState<string | null>(null);
-  const [generalError, setGeneralError] = useState<string | null>(null); // For general API errors
+  const [generalError, setGeneralError] = useState<string | null>(null);
 
+  // Animações de transição de passo
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const avatarScaleAnim = useRef(new Animated.Value(1)).current;
 
+  // Animações para o Stagger dos chips (4 chips)
+  const chipAnimations = useRef(
+    [...Array(4)].map(() => new Animated.Value(0))
+  ).current;
+
   const totalSteps = 4;
   const progress = currentServiceSubStep / totalSteps;
 
+  // Efeito para transição de passo
   React.useEffect(() => {
+    // Reset values for transition effect
+    fadeAnim.setValue(0);
+    slideAnim.setValue(50);
+
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 800,
+        duration: 260, // Requisito 4: 200-260ms
         useNativeDriver: true,
+        easing: Easing.out(Easing.cubic), // Requisito 4: Easing consistente
       }),
       Animated.timing(slideAnim, {
         toValue: 0,
-        duration: 800,
+        duration: 260, // Requisito 4: 200-260ms
         useNativeDriver: true,
+        easing: Easing.out(Easing.cubic), // Requisito 4: Easing consistente
       }),
     ]).start();
   }, [currentServiceSubStep]);
+
+  // Efeito para animação Stagger dos chips
+  useEffect(() => {
+    if (currentServiceSubStep === 2) {
+      // Reset chips to initial state (opacity 0, translateY 20)
+      chipAnimations.forEach(anim => anim.setValue(0));
+
+      // Requisito 4: Stagger nos chips: 50ms entre itens.
+      Animated.stagger(50, serviceOptions.map((_, index) =>
+        Animated.timing(chipAnimations[index], {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: true,
+          easing: Easing.out(Easing.cubic),
+        })
+      )).start();
+    }
+  }, [currentServiceSubStep]);
+
 
   const onPressInAvatar = () => {
     Animated.spring(avatarScaleAnim, {
@@ -137,7 +173,6 @@ export default function ServiceDetailsScreen() {
       try {
         const dataToSave = { ...formData, currentServiceSubStep };
         await AsyncStorage.setItem('serviceDetailsFormData', JSON.stringify(dataToSave));
-        console.log("Service details form data saved to AsyncStorage.");
       } catch (e) {
         console.error("Failed to save service details form data to AsyncStorage", e);
       }
@@ -167,7 +202,6 @@ export default function ServiceDetailsScreen() {
           });
           setCurrentServiceSubStep(loadedData.currentServiceSubStep || 1);
           setGeneralError("Dados carregados automaticamente. Continue preenchendo seus detalhes de serviço.");
-          console.log("Service details form data loaded from AsyncStorage.");
         }
       } catch (e) {
         console.error("Failed to load service details form data from AsyncStorage", e);
@@ -191,20 +225,20 @@ export default function ServiceDetailsScreen() {
         quality: 0.8,
       });
 
-      if (!result.canceled && result.assets && result.assets.length > 0) { // Added check for result.assets and its length
+      if (!result.canceled && result.assets && result.assets.length > 0) {
         setFormData(prev => ({
           ...prev,
           profilePhoto: result.assets[0].uri
         }));
-        setProfilePhotoError(null); // Clear error on successful pick
+        setProfilePhotoError(null);
       }
     } catch (error) {
       Alert.alert('Erro', 'Não foi possível selecionar a imagem.');
     }
   };
 
-  // NEW: Validation functions for each sub-step
-  const validateSubStep1 = useCallback(() => { // Photo + Description
+  // Validation functions
+  const validateSubStep1 = useCallback(() => {
     let isValid = true;
     setProfilePhotoError(null);
     setDescriptionError(null);
@@ -220,7 +254,7 @@ export default function ServiceDetailsScreen() {
     return isValid;
   }, [formData.profilePhoto, formData.description]);
 
-  const validateSubStep2 = useCallback(() => { // Experience + Specialties
+  const validateSubStep2 = useCallback(() => {
     let isValid = true;
     setYearsOfExperienceError(null);
     setSpecialtiesError(null);
@@ -237,7 +271,7 @@ export default function ServiceDetailsScreen() {
     return isValid;
   }, [formData.yearsOfExperience, formData.specialties]);
 
-  const validateSubStep3 = useCallback(() => { // Price + Unit
+  const validateSubStep3 = useCallback(() => {
     let isValid = true;
     setPriceUnitError(null);
     setBasePriceError(null);
@@ -246,7 +280,7 @@ export default function ServiceDetailsScreen() {
       setPriceUnitError('Por favor, selecione um tipo de precificação.');
       isValid = false;
     }
-    const price = parseFloat(formData.basePrice);
+    const price = parseFloat(formData.basePrice.replace(',', '.'));
     if (!formData.basePrice.trim() || isNaN(price) || price <= 0) {
       setBasePriceError('O preço base é obrigatório e deve ser um número maior que zero.');
       isValid = false;
@@ -254,7 +288,7 @@ export default function ServiceDetailsScreen() {
     return isValid;
   }, [formData.priceUnit, formData.basePrice]);
 
-  const validateSubStep4 = useCallback(() => { // PIX + Service Areas
+  const validateSubStep4 = useCallback(() => {
     let isValid = true;
     setPixKeyError(null);
     setServiceAreasError(null);
@@ -263,7 +297,7 @@ export default function ServiceDetailsScreen() {
       setPixKeyError('A chave PIX é obrigatória para que você possa receber pagamentos.');
       isValid = false;
     }
-    if (!formData.serviceAreas.length) { // Validate if serviceAreas is empty
+    if (formData.serviceAreas.length === 0 || formData.serviceAreas.every(area => area === '')) {
       setServiceAreasError('Por favor, informe suas áreas de atendimento (cidades ou bairros).');
       isValid = false;
     }
@@ -272,7 +306,7 @@ export default function ServiceDetailsScreen() {
 
 
   const handleNextSubStep = async () => {
-    setGeneralError(null); // Clear general error before next step attempt
+    setGeneralError(null);
     if (currentServiceSubStep === 1) {
       if (validateSubStep1()) {
         setCurrentServiceSubStep(2);
@@ -293,7 +327,6 @@ export default function ServiceDetailsScreen() {
       }
     } else if (currentServiceSubStep === 4) {
       if (validateSubStep4()) {
-        // If all sub-steps are valid, proceed to final submission
         handleFinalSubmission();
       } else {
         setGeneralError('Por favor, preencha todos os campos obrigatórios da etapa atual.');
@@ -302,8 +335,8 @@ export default function ServiceDetailsScreen() {
   };
 
  const handleBackSubStep = () => {
-    setGeneralError(null); // Clear general error when going back
-    // Clear all specific errors when going back
+    setGeneralError(null);
+    // Clear specific errors when going back
     setProfilePhotoError(null);
     setDescriptionError(null);
     setYearsOfExperienceError(null);
@@ -316,84 +349,62 @@ export default function ServiceDetailsScreen() {
     if (currentServiceSubStep > 1) {
         setCurrentServiceSubStep(currentServiceSubStep - 1);
     } else {
-        // Check if there's a screen to go back to in the navigation history
         if (router.canGoBack()) {
             router.back();
         } else {
-            // If there's no screen to go back to, navigate to a specific known route.
-            // Assuming '/provider-register' is the root of this flow.
-            // Using `replace` prevents adding the current screen to the history if it's an initial entry.
             router.replace('/provider-register');
-            console.warn("Attempted to go back from the first step with no history. Navigating to '/provider-register'.");
         }
     }
 };
 
   const handleFinalSubmission = async () => {
-    console.log("[handleFinalSubmission] Iniciando processamento do formulário.");
-    console.log("[handleFinalSubmission] Dados do formulário:", formData);
-
     if (!user || !user.token || !user.providerDetails?.id) {
         Alert.alert('Erro de autenticação', 'Usuário não logado ou detalhes do provedor ausentes. Por favor, faça login novamente.');
-        console.error("[handleFinalSubmission] Erro: Usuário não autenticado ou providerDetails.id ausente.");
         return;
     }
 
-    // Re-validate all steps before final submission to ensure data integrity
     if (!validateSubStep1() || !validateSubStep2() || !validateSubStep3() || !validateSubStep4()) {
       setGeneralError('Por favor, preencha todos os campos obrigatórios corretamente antes de finalizar.');
       return;
     }
     
     setIsUploading(true);
-    console.log("[handleFinalSubmission] Todas as validações passadas. Iniciando o fluxo de atualização.");
 
     try {
       const providerId = user.providerDetails.id;
       let avatarUrl: string | null | undefined = user.providerDetails.avatarUrl;
-      console.log(`[handleFinalSubmission] URL do avatar inicial (do user.providerDetails): ${avatarUrl}`);
 
+      // 1. Upload da foto, se for uma URI local
       if (formData.profilePhoto && formData.profilePhoto.startsWith('file://')) {
-        console.log("[handleFinalSubmission] URI local detectada. Tentando fazer upload da foto de perfil...");
         try {
           const uploadResponse = await verificationService.uploadAvatar(formData.profilePhoto);
           if (uploadResponse && uploadResponse.url) {
             avatarUrl = uploadResponse.url;
-            console.log("[handleFinalSubmission] Upload de foto de perfil concluído. Nova URL do avatar:", avatarUrl);
           } else {
-            console.error("[handleFinalSubmission] Erro: O serviço de upload de avatar não retornou uma URL válida.");
             throw new Error('O serviço de upload de avatar não retornou uma URL válida.');
           }
         } catch (uploadError: any) {
-          console.error("[handleFinalSubmission] Erro durante o upload da foto de perfil:", uploadError);
           throw new Error("Não foi possível fazer o upload da foto de perfil.");
         }
       }
 
-      console.log("[handleFinalSubmission] Preparando dados para a atualização do perfil do provedor.");
+      // 2. Atualização do Perfil
       const profileUpdateData = {
         avatarUrl: avatarUrl,
         bio: formData.description,
         yearsOfExperience: parseInt(formData.yearsOfExperience, 10),
         pixKey: formData.pixKey,
-        // serviceAreas: formData.serviceAreas.join(', '), // Assuming serviceAreas is an array of strings
+        serviceAreas: formData.serviceAreas.join(', '),
       };
-      console.log("[handleFinalSubmission] Dados de atualização do perfil:", profileUpdateData);
       
       await updateMyProviderProfile(profileUpdateData);
-      console.log("[handleFinalSubmission] Perfil do provedor atualizado com sucesso.");
 
-      console.log(`[handleFinalSubmission] Buscando serviços existentes para o providerId: ${providerId}`);
+      // 3. Atualização/Criação de Serviços
       const existingProviderServices = await getProviderServicesOffered(providerId);
-      console.log(`[handleFinalSubmission] Encontrados ${existingProviderServices.length} serviços existentes.`);
 
       for (const specialty of formData.specialties) {
         const serviceId = SERVICE_MAPPINGS[specialty];
-        if (!serviceId) {
-          console.warn(`[handleFinalSubmission] Aviso: ServiceId não encontrado para a especialidade: ${specialty}. Pulando.`);
-          continue;
-        }
-        console.log(`[handleFinalSubmission] Processando especialidade: ${specialty} (serviceId: ${serviceId})`);
+        if (!serviceId) continue;
 
         let serviceData: any = {
           serviceId: serviceId,
@@ -401,7 +412,8 @@ export default function ServiceDetailsScreen() {
           durationMinutes: 60,
         };
 
-        const basePriceValue = parseFloat(formData.basePrice);
+        const basePriceValue = parseFloat(formData.basePrice.replace(',', '.'));
+        
         if (formData.priceUnit === 'hora') {
           serviceData.pricingType = PricingType.HOURLY;
           serviceData.price = basePriceValue;
@@ -418,78 +430,55 @@ export default function ServiceDetailsScreen() {
           serviceData.pricePerRoom = null;
           serviceData.price = 0;
         } else {
-            console.warn(`[handleFinalSubmission] Aviso: Tipo de precificação desconhecido para ${specialty}. Pulando.`);
             continue;
         }
         
         const existingService = existingProviderServices.find((s: any) => s.serviceId === serviceId);
 
         if (existingService) {
-          console.log(`[handleFinalSubmission] Serviço existente encontrado para ${specialty}. Atualizando...`);
           const updatedServiceData = { ...serviceData };
           delete updatedServiceData.serviceId;
           await updateProviderServiceOffering(providerId, existingService.id, updatedServiceData);
-          console.log(`[handleFinalSubmission] Serviço ${existingService.id} atualizado com sucesso.`);
         } else {
-          console.log(`[handleFinalSubmission] Serviço não existente para ${specialty}. Criando novo...`);
           await addProviderServiceOffering(providerId, serviceData);
-          console.log(`[handleFinalSubmission] Novo serviço criado com sucesso para ${specialty}.`);
         }
       }
 
-      console.log("[handleFinalSubmission] Todos os serviços processados. Sucesso!");
-      
-      // Chamada para avançar o status de verificação no backend
+      // 4. Avançar status de verificação
       await verificationService.advanceVerificationStatus(); 
-      console.log("[handleFinalSubmission] Status de verificação avançado para PENDING_DOCUMENTS_UPLOAD.");
 
-      // Atualiza o estado do usuário localmente (sem depender do backend imediatamente)
-      try {
-        await updateUser({
-          avatarUrl: avatarUrl ?? user?.avatarUrl ?? null,
-          providerDetails: user?.providerDetails
-            ? { ...user.providerDetails, verificationStatus: VerificationStatus.PENDING_DOCUMENTS_UPLOAD }
-            : (user?.providerDetails as any),
-        } as any);
-        console.log("[handleFinalSubmission] AuthContext user data updated locally.");
-      } catch (e) {
-        console.warn('[handleFinalSubmission] Falha ao atualizar usuário localmente; seguindo fluxo.', (e as any)?.message);
-      }
+      // 5. Atualizar estado local
+      await updateUser({
+        avatarUrl: avatarUrl ?? user?.avatarUrl ?? null,
+        providerDetails: user?.providerDetails
+          ? { ...user.providerDetails, verificationStatus: VerificationStatus.PENDING_DOCUMENTS_UPLOAD }
+          : (user?.providerDetails as any),
+      } as any);
 
+      // 6. Finalização e Navegação (Requisito 3: Sem Alert de sucesso)
       setIsRegistrationInProgress(false);
-      // Clear AsyncStorage after successful registration
       await AsyncStorage.removeItem('serviceDetailsFormData');
-
-      Alert.alert('Sucesso', 'Seu perfil foi salvo! Agora vamos verificar seus documentos.', [
-        {
-            text: 'OK',
-            onPress: () => {
-                console.log("[handleFinalSubmission] Alerta 'OK' pressionado. Redirecionando para /provider-register/verify-account.");
-                router.push('/provider-register/verify-account');
-            },
-        },
-      ]);
+      
+      // Navegação direta, sem alert
+      router.push('/provider-register/verify-account');
 
     } catch (error: any) {
-      console.error('Erro ao salvar os dados do provedor:', error.response?.data || error.message, error.stack);
+      console.error('Erro ao salvar os dados do provedor:', error.response?.data || error.message);
       let errorMessage = 'Ocorreu um erro ao salvar seus dados. Tente novamente.';
 
       if (axios.isAxiosError(error) && error.response) {
-          if (error.response.status === 401) {
-              console.log("[handleFinalSubmission] Erro 401 detectado. AuthContext deve ter acionado logout. Não exibir alerta duplicado.");
-          } else {
+          if (error.response.status !== 401) {
               errorMessage = error.response.data.message || `Erro do servidor com status ${error.response.status}`;
-              setGeneralError(errorMessage); // Display error below form
+              setGeneralError(errorMessage);
           }
       } else if (error.message) {
           errorMessage = error.message;
-          setGeneralError(errorMessage); // Display error below form
+          setGeneralError(errorMessage);
       } else {
           setGeneralError('Ocorreu um erro desconhecido ao salvar seus dados. Tente novamente.');
       }
     } finally {
       setIsUploading(false);
-      console.log("[handleFinalSubmission] Processo de atualização finalizado.");
     }
   };
 
@@ -502,8 +491,8 @@ export default function ServiceDetailsScreen() {
     multiline: boolean = false,
     icon: string = 'text-outline',
     maxLength?: number,
-    error: string | null = null, // Added error prop
-    onBlur?: () => void // Added onBlur prop
+    error: string | null = null,
+    onBlur?: () => void
   ) => (
     <View style={styles.inputSection}>
       <Text style={styles.inputLabel}>
@@ -520,7 +509,7 @@ export default function ServiceDetailsScreen() {
           multiline={multiline}
           textAlignVertical={multiline ? 'top' : 'center'}
           maxLength={maxLength}
-          onBlur={onBlur} // Apply onBlur
+          onBlur={onBlur}
         />
       </View>
       {error && <Text style={styles.inlineErrorMessage}>{error}</Text>}
@@ -530,11 +519,11 @@ export default function ServiceDetailsScreen() {
   const getPriceInputPlaceholder = (unit: PriceUnit) => {
     switch (unit) {
       case 'hora':
-        return 'Ex: 50.00 (por hora)';
+        return 'Ex: 50,00 (por hora)';
       case 'quarto':
-        return 'Ex: 150.00 (por quarto)';
+        return 'Ex: 150,00 (por quarto)';
       case 'metragem':
-        return 'Ex: 5.00 (por m²)';
+        return 'Ex: 5,00 (por m²)';
       default:
         return 'Preço base';
     }
@@ -561,13 +550,16 @@ export default function ServiceDetailsScreen() {
   };
 
   const getBackButtonText = () => {
-    if (currentServiceSubStep === 1) return 'Voltar para Cadastro'; // Assuming it goes back to provider-register/index
-    if (currentServiceSubStep === 2) return 'Voltar para Foto/Descrição';
-    if (currentServiceSubStep === 3) return 'Voltar para Experiência';
-    if (currentServiceSubStep === 4) return 'Voltar para Preço';
+    if (currentServiceSubStep === 1) return 'Voltar para Cadastro';
     return 'Voltar';
   };
 
+  const serviceOptions = [
+    { id: 'residencial', label: 'Residencial', icon: 'home', set: 'ion' },
+    { id: 'comercial',   label: 'Comercial',   icon: 'office-building', set: 'mci' },
+    { id: 'escritorio',  label: 'Escritório',  icon: 'desktop-outline', set: 'ion' },
+    { id: 'pos_obra',    label: 'Pós-Obra',    icon: 'hammer-wrench', set: 'mci' },
+  ];
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -647,7 +639,7 @@ export default function ServiceDetailsScreen() {
                   'default',
                   true,
                   'document-text-outline',
-                  500, // MaxLength for description
+                  500,
                   descriptionError,
                   validateSubStep1
                 )}
@@ -661,70 +653,52 @@ export default function ServiceDetailsScreen() {
                   'Anos de Experiência',
                   'Ex: 5',
                   formData.yearsOfExperience,
-                  (text) => { setFormData(prev => ({ ...prev, yearsOfExperience: text.replace(/[^0-9]/g, '') })); setYearsOfExperienceError(null); }, // Only numbers
+                  (text) => { setFormData(prev => ({ ...prev, yearsOfExperience: text.replace(/[^0-9]/g, '') })); setYearsOfExperienceError(null); },
                   'numeric',
                   false,
                   'time-outline',
-                  2, // MaxLength for years of experience
+                  2,
                   yearsOfExperienceError,
                   validateSubStep2
                 )}
 
-                {/* Service Type Selection */}
+                {/* Service Type Selection (Using PremiumServiceChip) */}
                 <View style={styles.serviceTypeContainer}>
                   <Text style={styles.sectionTitle}>
                     <Ionicons name="home-outline" size={16} color="#2C3E50" /> Tipo de Serviço
                   </Text>
                   <View style={styles.serviceTypeGrid}>
-                    {[
-                      { id: 'residencial', label: 'Residencial', icon: 'home' },
-                      { id: 'comercial', label: 'Comercial', icon: 'business' },
-                      { id: 'escritorio', label: 'Escritório', icon: 'desktop' },
-                      { id: 'pos_obra', label: 'Pós-Obra', icon: 'construct' }
-                    ].map((service) => (
-                      <TouchableOpacity
-                        key={service.id}
-                        style={styles.serviceTypeCard}
-                        onPress={() => {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                          setFormData(prev => ({
-                            ...prev,
-                            specialties: prev.specialties.includes(service.id)
-                              ? prev.specialties.filter(s => s !== service.id)
-                              : [...prev.specialties, service.id]
-                          }));
-                          setSpecialtiesError(null); // Clear error on selection
-                        }}
-                      >
-                        <LinearGradient
-                          colors={formData.specialties.includes(service.id)
-                            ? ['#A0D2EB', '#307cc9ff']
-                            : ['#FFFFFF', '#FFFFFF']}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
-                          style={styles.serviceTypeCardGradient}
-                        >
-                          {formData.specialties.includes(service.id) && (
-                            <View style={styles.serviceSelectedBadge}>
-                              <Ionicons name="checkmark-circle" size={18} color="#fff" />
-                            </View>
-                          )}
-                          <Ionicons
-                            name={service.icon as any}
-                            size={26}
-                            color={formData.specialties.includes(service.id) ? '#FFFFFF' : '#4A90E2'}
-                          />
-                          <Text style={[
-                            styles.serviceTypeLabel,
-                            formData.specialties.includes(service.id) && styles.serviceTypeLabelSelected
-                          ]}
-                          numberOfLines={1}
-                          >
-                            {service.label}
-                          </Text>
-                        </LinearGradient>
-                      </TouchableOpacity>
-                    ))}
+                    {serviceOptions.map((s, index) => {
+                        const animationStyle = {
+                            opacity: chipAnimations[index],
+                            transform: [{
+                                translateY: chipAnimations[index].interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [20, 0], // Slide up effect
+                                }),
+                            }],
+                        };
+                        return (
+                            <PremiumServiceChip
+                                key={s.id}
+                                id={s.id}
+                                label={s.label}
+                                selected={formData.specialties.includes(s.id)}
+                                onPress={() => {
+                                    setFormData(prev => ({
+                                        ...prev,
+                                        specialties: prev.specialties.includes(s.id)
+                                            ? prev.specialties.filter(x => x !== s.id)
+                                            : [...prev.specialties, s.id]
+                                    }));
+                                    setSpecialtiesError(null);
+                                }}
+                                iconSet={s.set as any}
+                                iconName={s.icon as any}
+                                style={animationStyle}
+                            />
+                        );
+                    })}
                   </View>
                   {specialtiesError && <Text style={styles.inlineErrorMessage}>{specialtiesError}</Text>}
                 </View>
@@ -751,8 +725,9 @@ export default function ServiceDetailsScreen() {
                           formData.priceUnit === priceOption.id && styles.priceTypeCardSelected
                         ]}
                         onPress={() => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                           setFormData(prev => ({ ...prev, priceUnit: priceOption.id as PriceUnit }));
-                          setPriceUnitError(null); // Clear error on selection
+                          setPriceUnitError(null);
                         }}
                       >
                         <Text style={[
@@ -771,11 +746,11 @@ export default function ServiceDetailsScreen() {
                   `Preço Base (${formData.priceUnit ? `por ${formData.priceUnit}` : 'do Serviço'})`,
                   getPriceInputPlaceholder(formData.priceUnit),
                   formData.basePrice,
-                  (text) => { setFormData(prev => ({ ...prev, basePrice: text.replace(/[^0-9.]/g, '') })); setBasePriceError(null); }, // Only numbers and dot
+                  (text) => { setFormData(prev => ({ ...prev, basePrice: text.replace(/[^0-9.,]/g, '') })); setBasePriceError(null); },
                   'numeric',
                   false,
                   'cash-outline',
-                  undefined, // No max length for price
+                  undefined,
                   basePriceError,
                   validateSubStep3
                 )}
@@ -793,7 +768,7 @@ export default function ServiceDetailsScreen() {
                   'default',
                   false,
                   'card-outline',
-                  undefined, // No max length
+                  undefined,
                   pixKeyError,
                   validateSubStep4
                 )}
@@ -801,12 +776,12 @@ export default function ServiceDetailsScreen() {
                 {renderInputSection(
                   'Áreas de Atendimento',
                   'Ex: Campinas (Centro, Cambuí), Valinhos, Vinhedo',
-                  formData.serviceAreas.join(', '), // Display as comma-separated string
-                  (text) => { setFormData(prev => ({ ...prev, serviceAreas: text.split(',').map(s => s.trim()).filter(s => s) })); setServiceAreasError(null); }, // Convert back to array
+                  formData.serviceAreas.join(', '),
+                  (text) => { setFormData(prev => ({ ...prev, serviceAreas: text.split(',').map(s => s.trim()).filter(s => s) })); setServiceAreasError(null); },
                   'default',
                   true,
                   'location-outline',
-                  300, // MaxLength for service areas
+                  300,
                   serviceAreasError,
                   validateSubStep4
                 )}
@@ -814,39 +789,42 @@ export default function ServiceDetailsScreen() {
             )}
             {generalError && <Text style={styles.inlineErrorMessageCentered}>{generalError}</Text>}
 
-            {/* Navigation Buttons */}
+            {/* 2) Botões inferiores (premium clean) */}
             <View style={styles.navigationButtonsContainer}>
               {currentServiceSubStep > 1 && (
                 <TouchableOpacity
-                  style={[styles.navButton, styles.backButton]}
                   onPress={handleBackSubStep}
+                  activeOpacity={0.9}
+                  style={btn.backGlass}
                   disabled={isUploading}
-                  activeOpacity={0.8}
                 >
-                  <View style={styles.backButtonInner}>
-                    <Ionicons name="arrow-back-outline" size={20} color="#2C3E50" />
-                    <Text style={styles.navButtonTextBack}>Voltar</Text>
-                  </View>
+                  <LinearGradient colors={['#FFFFFF', '#F7FAFF']} style={btn.backGlassInner}>
+                    <Ionicons name="arrow-back-outline" size={18} color="#1F2A37" />
+                    <Text style={btn.backGlassText}>Voltar</Text>
+                  </LinearGradient>
                 </TouchableOpacity>
               )}
+
               <TouchableOpacity
-                style={[styles.navButton, styles.continueButton, isUploading && styles.buttonDisabled]}
                 onPress={handleNextSubStep}
+                activeOpacity={0.95}
                 disabled={isUploading}
+                style={[btn.primaryWrap, isUploading && { opacity: 0.7 }]}
               >
-                <LinearGradient
-                  colors={['#A0D2EB', '#307cc9ff']}
-                  style={styles.continueButtonGradient}
-                >
+                <LinearGradient colors={['#7DB7FF', '#3B82F6']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={btn.primary}>
                   {isUploading ? (
-                    <ActivityIndicator color="#FFFFFF" />
+                    <ActivityIndicator color="#fff" />
                   ) : (
                     <>
-                      <Text style={styles.continueButtonText}>
+                      <Text style={btn.primaryText}>
                         {currentServiceSubStep === totalSteps ? 'Finalizar' : 'Próximo'}
                       </Text>
-                      {currentServiceSubStep !== totalSteps && <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />}
-                      {currentServiceSubStep === totalSteps && <Ionicons name="checkmark-circle-outline" size={20} color="#FFFFFF" />}
+                      <Ionicons
+                        name={currentServiceSubStep === totalSteps ? 'checkmark-circle' : 'arrow-forward'}
+                        size={18}
+                        color="#fff"
+                      />
+                      <View style={btn.primaryGlow} />
                     </>
                   )}
                 </LinearGradient>
@@ -858,6 +836,33 @@ export default function ServiceDetailsScreen() {
     </SafeAreaView>
   );
 }
+
+// Styles dos botões
+const btn = StyleSheet.create({
+  backGlass: {
+    flex: 1, marginRight: 10, borderRadius: 14, overflow: 'hidden',
+    borderWidth: 1, borderColor: 'rgba(148,163,184,0.35)',
+    minHeight: 48,
+  },
+  backGlassInner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    paddingVertical: 12, borderRadius: 14,
+  },
+  backGlassText: { marginLeft: 8, fontSize: 15, fontWeight: '700', color: '#1F2A37' },
+  primaryWrap: { flex: 1, marginLeft: 10, borderRadius: 14, overflow: 'hidden', minHeight: 48, },
+  primary: {
+    paddingVertical: 12, paddingHorizontal: 18, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center', flexDirection: 'row',
+    shadowColor: '#3B82F6', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.25, shadowRadius: 14, elevation: 5,
+    minHeight: 48,
+  },
+  primaryGlow: {
+    position: 'absolute', bottom: -14, left: -10, right: -10, height: 28, borderRadius: 20,
+    backgroundColor: 'rgba(59,130,246,0.25)', opacity: 0.65,
+  },
+  primaryText: { color: '#fff', fontWeight: '800', fontSize: 15, marginRight: 8, letterSpacing: 0.2 },
+});
+
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -877,7 +882,6 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    // paddingTop: Platform.OS === 'ios' ? 50 : 30, // Removed as SafeAreaView handles it
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -888,19 +892,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 15,
     marginTop: 70,
-    justifyContent: 'center', // Center the title
-    position: 'relative', // For absolute positioning of back button
+    justifyContent: 'center',
+    position: 'relative',
   },
   backButtonHeader: {
     position: 'absolute',
     left: 0,
     bottom: 60,
     padding: 5,
-    zIndex: 1, // Ensure it's above other elements
-    flexDirection: 'row', // Align icon and text
+    zIndex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
+    minHeight: 48,
+    paddingRight: 20,
   },
-  backButtonHeaderText: { // Style for the back button text in header
+  backButtonHeaderText: {
     color: '#2C3E50',
     fontSize: 14,
     marginLeft: 5,
@@ -911,22 +917,21 @@ const styles = StyleSheet.create({
     color: '#2C3E50',
     marginBottom: 12,
     marginTop: 10,
-    textAlign: 'center', // Ensure title is centered
-    flex: 1, // Allow title to take up available space
+    textAlign: 'center',
+    flex: 1,
   },
   headerSubtitle: {
     fontSize: 14,
     color: '#6C757D',
     textAlign: 'center',
     lineHeight: 22,
-    
-    marginBottom: 8, // Reduced margin
+    marginBottom: 8,
   },
-  microcopyText: { // New style for microcopy
+  microcopyText: {
     fontSize: 13,
     color: '#6C757D',
     textAlign: 'center',
-    marginBottom: 19, // Adjusted margin
+    marginBottom: 19,
     paddingHorizontal: 10,
   },
   progressContainer: {
@@ -951,10 +956,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#6C757D',
   },
-  imageUploadContainer: { // Not directly used, but related to image upload
-    marginBottom: 30,
-    alignItems: 'center',
-  },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
@@ -971,11 +972,10 @@ const styles = StyleSheet.create({
     borderColor: '#A0D2EB',
     borderStyle: 'dashed',
     overflow: 'hidden',
-    position: 'relative',
-    left: 90,
-    marginBottom: 20, // Added margin for separation
+    alignSelf: 'center',
+    marginBottom: 20,
   },
-  imageUploadButtonError: { // Style for error state
+  imageUploadButtonError: {
     borderColor: '#E53E3E',
   },
   uploadedImage: {
@@ -1022,10 +1022,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-    borderWidth: 1, // Added for error highlighting
-    borderColor: 'transparent', // Default
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
-  inputContainerError: { // Style for error state
+  inputContainerError: {
     borderColor: '#E53E3E',
   },
   textInput: {
@@ -1034,6 +1034,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#2C3E50',
     borderRadius: 12,
+    minHeight: 48,
   },
   multilineInput: {
     height: 100,
@@ -1046,65 +1047,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-  },
-  serviceTypeCard: {
-    width: '48%',
-    backgroundColor: 'transparent',
-    borderRadius: 14,
-    alignItems: 'center',
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  serviceTypeCardGradient: {
-    width: '100%',
-    borderRadius: 14,
-    paddingVertical: 18,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  serviceSelectedBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: 'rgba(0,0,0,0.15)',
-    borderRadius: 10,
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-  },
-  serviceTypeLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2C3E50',
-    textAlign: 'center',
-  },
-  serviceTypeLabelSelected: {
-    color: '#FFFFFF',
-  },
-  continueButton: {
-    borderRadius: 12,
-    overflow: 'hidden',
-  
-    flex: 1, // Allow button to grow
-    marginLeft: 10, // Space from back button
-  },
-  continueButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 12, // Apply borderRadius to the gradient too
-  },
-  continueButtonText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginRight: 8,
   },
   priceTypeContainer: {
     marginBottom: 30,
@@ -1127,10 +1069,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    minHeight: 48,
+    justifyContent: 'center',
   },
   priceTypeCardSelected: {
-    backgroundColor: '#a0a4ebff',
-    borderColor: '#529ae2ff',
+    backgroundColor: '#3B82F6',
+    borderColor: '#3B82F6',
   },
   priceTypeLabel: {
     fontSize: 14,
@@ -1141,89 +1085,27 @@ const styles = StyleSheet.create({
   priceTypeLabelSelected: {
     color: '#FFFFFF',
   },
-  progressWrapper: { // Not used in this component
-  alignItems: 'center',
-  marginBottom: 20,
-},
-progressOuter: { // Not used in this component
-  backgroundColor: 'rgba(255,255,255,0.1)',
-  borderRadius: 100,
-  paddingHorizontal: 5,
-  height: 40,
-  width: SCREEN_WIDTH - 40,
-  justifyContent: 'center',
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.1,
-  shadowRadius: 6,
-  elevation: 4,
-  
-},
-progressInner: { // Not used in this component
-  height: 30,
-  borderRadius: 100,
-  backgroundColor: '#4facfe',
-  shadowColor: '#4facfe',
-  shadowOffset: { width: 0, height: 10 },
-  shadowOpacity: 0.6,
-  shadowRadius: 8,
-},
-progressLabel: { // Not used in this component
-  marginTop: 8,
-  fontSize: 14,
-  fontWeight: '600',
-  color: '#2C3E50',
-},
-  navigationButtonsContainer: { // New style for the navigation buttons
+  navigationButtonsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 20,
     marginBottom: 20,
   },
-  navButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12, // Adjusted for new design
-    minWidth: 120,
+  buttonDisabled: {
+    opacity: 0.6,
   },
-  backButton: {
-    backgroundColor: '#E9ECEF',
-    borderWidth: 1,
-    borderColor: '#CED4DA',
-    flex: 1, // Allow button to grow
-    marginRight: 10, // Space from continue button
-  },
-  backButtonInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-  },
-navButtonTextBack: {
-    color: '#2C3E50', // Darker color for back button text
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 5,
-},
-buttonDisabled: {
-    opacity: 0.6, // Visual cue for disabled buttons
-},
-inlineErrorMessage: { // For inline field errors
+  inlineErrorMessage: {
     color: '#E53E3E',
     fontSize: 12,
     marginTop: 4,
-    marginBottom: -10, // Adjust to pull up next element
     marginLeft: 5,
     alignSelf: 'flex-start',
-},
-inlineErrorMessageCentered: { // For general errors, centered
+  },
+  inlineErrorMessageCentered: {
     color: '#E53E3E',
     fontSize: 13,
     textAlign: 'center',
     marginTop: 10,
     marginBottom: 10,
-},
+  },
 });
