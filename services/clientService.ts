@@ -2,6 +2,30 @@
 import axios, { AxiosResponse } from 'axios';
 import { api } from './api';
 
+// Dev-only logger to avoid RN redbox/yellowbox overlays from console.error/console.warn
+// Keeps signal in the console without surfacing overlay in the UI
+const devLog = (...args: any[]) => {
+  if (typeof __DEV__ !== 'undefined' && __DEV__) {
+    // eslint-disable-next-line no-console
+    console.log(...args);
+  }
+};
+
+// Shadow console locally in this module to avoid redbox from console.error
+// Map error -> devLog (no UI overlay), keep other methods intact
+const console = { ...globalThis.console, error: (...args: any[]) => devLog(...args) } as Console;
+
+// Adiciona interceptor de resposta global para logging de erros em dev
+api.interceptors.response.use(
+  (res) => res,
+  (error) => {
+    if (__DEV__) {
+      console.warn('[API ERROR]', error.response?.data || error.message);
+    }
+    return Promise.reject(error);
+  }
+);
+
 // =========================================================================
 // IMPORTAÇÕES DE INTERFACES DE TIPAGEM CENTRALIZADAS
 // =========================================================================
@@ -50,7 +74,21 @@ export async function getServiceCategories(): Promise<Service[]> {
  */
 export async function searchProviders(query: ProviderSearchQuery): Promise<ProviderDisplayInfo[]> {
   try {
-    const params = new URLSearchParams(query as any).toString();
+    const filtered: any = { ...query };
+    // Mapear categoryId -> serviceId para o backend
+    if ((filtered as any).categoryId && !(filtered as any).serviceId) {
+      (filtered as any).serviceId = (filtered as any).categoryId;
+      delete (filtered as any).categoryId;
+    }
+    const hasLat = typeof (query as any).latitude === 'number' && isFinite((query as any).latitude) && (query as any).latitude !== 0;
+    const hasLon = typeof (query as any).longitude === 'number' && isFinite((query as any).longitude) && (query as any).longitude !== 0;
+    if (!(hasLat && hasLon)) {
+      delete filtered.latitude;
+      delete filtered.longitude;
+      // evite sortBy distance sem coords
+      if (filtered.sortBy === 'distance') delete filtered.sortBy;
+    }
+    const params = new URLSearchParams(filtered).toString();
     const response: AxiosResponse<ProviderDisplayInfo[]> = await api.get<ProviderDisplayInfo[]>(`/providers?${params}`);
     return response.data;
   } catch (error: any) {
@@ -74,9 +112,10 @@ export async function searchProvidersWithLocation(params: {
   query?: string;
 }): Promise<ProviderDisplayInfo[]> {
   try {
+    const validLat = typeof params.latitude === 'number' && isFinite(params.latitude) && params.latitude !== 0;
+    const validLon = typeof params.longitude === 'number' && isFinite(params.longitude) && params.longitude !== 0;
     const mappedParams: Record<string, any> = {
-      latitude: params.latitude,
-      longitude: params.longitude,
+      ...(validLat && validLon ? { latitude: params.latitude, longitude: params.longitude } : {}),
       ...(params.radius != null ? { radius: params.radius } : {}),
       ...(params.query ? { searchTerm: params.query } : {}),
     };
@@ -233,12 +272,12 @@ export async function updateClientProfile(data: UpdateClientProfileDto): Promise
 
 /**
  * NOVO: Obtém a lista de missões disponíveis para o cliente.
- * Corresponde a GET /missions/client.
+ * Corresponde a GET /missions/my.
  * @returns Promessa com um array de objetos ClientMission.
  */
 export async function getClientMissions(): Promise<ClientMission[]> {
   try {
-    const response: AxiosResponse<ClientMission[]> = await api.get<ClientMission[]>('/missions/client');
+    const response: AxiosResponse<ClientMission[]> = await api.get<ClientMission[]>('/missions/my');
     return response.data;
   } catch (error: any) {
     console.error('Erro ao buscar missões do cliente:', error.response?.data || error.message);
@@ -251,13 +290,13 @@ export async function getClientMissions(): Promise<ClientMission[]> {
 
 /**
  * NOVO: Resgata a recompensa de uma missão concluída pelo cliente.
- * Corresponde a POST /missions/:missionId/claim.
+ * Corresponde a POST /missions/claim.
  * @param missionId O ID da missão a ser resgatada.
  * @returns Promessa com o objeto ClientReward.
  */
 export async function claimClientReward(missionId: string): Promise<ClientReward> {
   try {
-    const response: AxiosResponse<ClientReward> = await api.post<ClientReward>(`/missions/${missionId}/claim`);
+    const response: AxiosResponse<ClientReward> = await api.post<ClientReward>(`/missions/claim`, { missionId });
     return response.data;
   } catch (error: any) {
     console.error(`Erro ao resgatar recompensa da missão ${missionId}:`, error.response?.data || error.message);
@@ -267,3 +306,5 @@ export async function claimClientReward(missionId: string): Promise<ClientReward
     throw new Error(`Erro de rede ou servidor ao resgatar recompensa da missão ${missionId}.`);
   }
 }
+
+
