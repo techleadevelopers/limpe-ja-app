@@ -73,7 +73,7 @@ export const resolveCoupon = async (
   } catch (error: any) {
     console.error('Erro ao resolver cupom:', error.response?.data || error.message);
     if (axios.isAxiosError(error) && error.response) {
-      throw new Error(error.response.data.message || 'N�o foi poss�vel validar o cupom.');
+      throw new Error(error.response.data.message || 'Não foi possível validar o cupom.');
     }
     throw new Error('Erro de rede ou servidor ao validar cupom.');
   }
