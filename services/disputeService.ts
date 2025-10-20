@@ -1,9 +1,11 @@
 // services/disputeService.ts
 
 import { api } from './api'; // Assumindo que você tem um arquivo api.ts para suas requisições HTTP
+import { createLocalConsole } from './logging';
+const console = createLocalConsole();
 import { ReportDisputeDto, Dispute, DisputeResponse } from '../types/backend/disputes'; // Ajuste o caminho conforme a sua estrutura de pastas
 import axios from 'axios'; // <-- Adicione esta linha para importar a biblioteca axios
-import { NotificationService } from '../services/notificationService'; // NEW: Import NotificationService for error handling
+import * as NotificationService from '../services/notificationService'; // NEW: Import NotificationService for error handling
 import * as Sentry from '@sentry/react-native'; // NEW: Import Sentry (conceptual, requires setup)
 
 
@@ -33,7 +35,7 @@ export const disputeService = {
     } catch (error: any) {
       // NEW: Centralized error handling
       Sentry.captureException(error);
-      NotificationService.notifyError('Erro ao reportar disputa. Tente novamente mais tarde.');
+      (NotificationService as any).notifyError('Erro ao reportar disputa. Tente novamente mais tarde.');
       console.error(`Erro ao reportar disputa para o agendamento ${bookingId}:`, error.response?.data || error.message);
       throw error;
     }
@@ -56,7 +58,7 @@ export const disputeService = {
       }
       // NEW: Centralized error handling
       Sentry.captureException(error);
-      NotificationService.notifyError('Erro ao buscar detalhes da disputa. Tente novamente.');
+      (NotificationService as any).notifyError('Erro ao buscar detalhes da disputa. Tente novamente.');
       console.error(`Erro ao buscar disputa para o agendamento ${bookingId}:`, error.response?.data || error.message);
       throw error;
     }
