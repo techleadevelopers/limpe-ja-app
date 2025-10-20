@@ -1,5 +1,7 @@
 // LimpeJaApp/app/services/chatService.ts
 import { api } from './api'; // Importa a instância centralizada do Axios
+import { createLocalConsole } from './logging';
+const console = createLocalConsole();
 
 // Importa as tipagens necessárias do seu diretório de tipos de backend
 import {
