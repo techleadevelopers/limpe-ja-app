@@ -24,7 +24,7 @@ export class ServicesController {
   @ApiResponse({ status: 403, description: 'Acesso proibido.' })
   async create(@Body() createServiceDto: CreateServiceDto): Promise<ServiceDetailsDto> {
     const service = await this.servicesService.create(createServiceDto);
-    return new ServiceDetailsDto(service as PrismaServiceType); // <-- CORREÇÃO: Cast para PrismaServiceType
+    return new ServiceDetailsDto(service as PrismaServiceType);
   }
 
   @Get()
@@ -32,7 +32,7 @@ export class ServicesController {
   @ApiResponse({ status: 200, description: 'Lista de tipos de serviço.', type: [ServiceDetailsDto] })
   async findAll(): Promise<ServiceDetailsDto[]> {
     const services = await this.servicesService.findAll();
-    return services.map(service => new ServiceDetailsDto(service as PrismaServiceType)); // <-- CORREÇÃO: Cast para PrismaServiceType
+    return services.map(service => new ServiceDetailsDto(service as PrismaServiceType));
   }
 
   @Get(':id')
@@ -41,10 +41,8 @@ export class ServicesController {
   @ApiResponse({ status: 404, description: 'Tipo de serviço não encontrado.' })
   async findOne(@Param('id') id: string): Promise<ServiceDetailsDto> {
     const service = await this.servicesService.findOne(id);
-    if (!service) {
-      throw new NotFoundException(`Tipo de serviço com ID "${id}" não encontrado.`);
-    }
-    return new ServiceDetailsDto(service as PrismaServiceType); // <-- CORREÇÃO: Cast para PrismaServiceType
+    if (!service) throw new NotFoundException(`Tipo de serviço com ID "${id}" não encontrado.`);
+    return new ServiceDetailsDto(service as PrismaServiceType);
   }
 
   @Patch(':id')
@@ -58,10 +56,8 @@ export class ServicesController {
   @ApiResponse({ status: 404, description: 'Tipo de serviço não encontrado.' })
   async update(@Param('id') id: string, @Body() updateServiceDto: UpdateServiceDto): Promise<ServiceDetailsDto> {
     const updatedService = await this.servicesService.update(id, updateServiceDto);
-    if (!updatedService) {
-      throw new NotFoundException(`Tipo de serviço com ID "${id}" não encontrado.`);
-    }
-    return new ServiceDetailsDto(updatedService as PrismaServiceType); // <-- CORREÇÃO: Cast para PrismaServiceType
+    if (!updatedService) throw new NotFoundException(`Tipo de serviço com ID "${id}" não encontrado.`);
+    return new ServiceDetailsDto(updatedService as PrismaServiceType);
   }
 
   @Delete(':id')
