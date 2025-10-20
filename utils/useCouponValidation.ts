@@ -4,8 +4,7 @@ import { Animated, Easing } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import NotificationUIService from '../services/notificationUIService';
-import { applyCoupon as applyCouponToBooking } from '../services/clientService';
-import { applyCoupon as applyCouponGlobal } from '../services/couponService';
+import { resolveCoupon as resolveCouponGlobal } from '../services/couponService';
 import { formatBRL } from '../utils/formatters';
 import { AppColors, AppDurations } from '../constants/appStyles';
 
@@ -54,12 +53,9 @@ export const useCouponValidation = (
         try {
             let newDiscount = 0;
 
-            if (opts?.bookingId) {
-                const result = await applyCouponToBooking(opts.bookingId, couponCode);
-                newDiscount = result.discountValue || 0;
-            } else if (opts?.bookingData) {
-                const result = await applyCouponGlobal({ code: couponCode, bookingData: opts.bookingData });
-                newDiscount = result.discountValue || 0;
+            if (opts?.bookingData) {
+                const result = await resolveCouponGlobal(couponCode, opts.bookingData);
+                newDiscount = (result as any).discountPreview || (result as any).discountAmount || result.discountValue || 0;
             } else {
                 NotificationUIService.showInfo(
                     t('offers.coupon_requires_context', 'Informe o agendamento para validar o cupom.'),
