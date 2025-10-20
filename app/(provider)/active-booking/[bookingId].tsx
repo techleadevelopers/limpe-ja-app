@@ -56,7 +56,7 @@ function useAnimatedMount() {
 }
 
 async function tryBeepLocalNotification(title: string, body: string) {
-  // Tenta usar expo-notifications (se presente) para emitir notificaÃ§Ã£o local com som padrÃ£o
+  // Tenta usar expo-notifications (se presente) para emitir notificação local com som padrão
   try {
     // dynamic import to avoid hard dependency at compile time
     const Notifications = (await import('expo-notifications')).default || (await import('expo-notifications'));
@@ -114,7 +114,7 @@ export default function ActiveBookingDetails() {
     const now = new Date();
     if (!scheduledStart) return { withinWindow: false, minutesToStart: undefined as number | undefined };
     const minutesToStart = minutesBetween(scheduledStart, now);
-    // Janela para iniciar: 15 min antes atÃ© 120 min depois do horÃ¡rio marcado (ajustÃ¡vel)
+    // Janela para iniciar: 15 min antes até 120 min depois do horário marcado (ajustável)
     const withinWindow = minutesToStart <= 15 && minutesToStart >= -120;
     return { withinWindow, minutesToStart };
   }, [scheduledStart]);
@@ -135,8 +135,8 @@ export default function ActiveBookingDetails() {
     try {
       const updated = await updateBookingStatus(bookingId, { status: BookingStatus.IN_PROGRESS });
       setBooking(updated);
-      NotificationUIService.showSuccess('ServiÃ§o iniciado.');
-      await tryBeepLocalNotification('ServiÃ§o iniciado', 'VocÃª iniciou o atendimento.');
+      NotificationUIService.showSuccess('Serviço iniciado.');
+      await tryBeepLocalNotification('Serviço iniciado', 'Você iniciou o atendimento.');
     } catch (e: any) {
       NotificationUIService.showError(e);
     } finally {
@@ -214,7 +214,7 @@ export default function ActiveBookingDetails() {
               backgroundColor: 'rgba(255, 255, 255, 0.8)' 
             }}
           >
-            <Ionicons name="arrow-back" size={20} color="#555454ff" />
+            <Ionicons name="arrow-back" size={20} color="#555454" />
           </TouchableOpacity>
         )
       }} />
@@ -224,9 +224,9 @@ export default function ActiveBookingDetails() {
           <Text style={styles.title}>{booking.serviceName}</Text>
         </View>
         <Text style={styles.muted}>Cliente: {booking.clientFullName}</Text>
-        <Text style={styles.muted}>Data: {new Date(booking.scheduledDate).toLocaleDateString('pt-BR')} As {booking.scheduledTime}</Text>
+        <Text style={styles.muted}>Data: {new Date(booking.scheduledDate).toLocaleDateString('pt-BR')} às {booking.scheduledTime}</Text>
         {scheduledEnd && (
-          <Text style={styles.muted}>Termino estimado: {scheduledEnd.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</Text>
+          <Text style={styles.muted}>Término estimado: {scheduledEnd.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</Text>
         )}
 
         {isInProgress && (
