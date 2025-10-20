@@ -1,6 +1,6 @@
 // src/providers/dto/provider-search.dto.ts
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, IsNumber, IsInt, Min, IsEnum } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsInt, Min, Max, IsEnum, IsUUID } from 'class-validator';
 import { Type } from 'class-transformer';
 import { SortByOption } from '../../search/dto/search-query.dto'; // Importe o enum de ordenação do módulo de busca
 
@@ -12,7 +12,7 @@ export class ProviderSearchDto {
 
   @ApiPropertyOptional({ description: 'ID do tipo de serviço para filtrar', example: 'uuid-do-servico' })
   @IsOptional()
-  @IsString()
+  @IsUUID()
   serviceId?: string;
 
   @ApiPropertyOptional({ description: 'Localização para filtrar provedores (cidade, bairro)', example: 'São Paulo' })
@@ -45,21 +45,26 @@ export class ProviderSearchDto {
 
   @ApiPropertyOptional({ description: 'Latitude da localização de busca', example: -22.9099 })
   @IsOptional()
-  @IsNumber()
   @Type(() => Number)
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
   latitude?: number;
 
   @ApiPropertyOptional({ description: 'Longitude da localização de busca', example: -47.0626 })
   @IsOptional()
-  @IsNumber()
   @Type(() => Number)
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
   longitude?: number;
 
   @ApiPropertyOptional({ description: 'Raio de busca em quilômetros', example: 50 })
   @IsOptional()
-  @IsNumber()
   @Type(() => Number)
-  @Min(0)
+  @IsNumber()
+  @Min(0.5)
+  @Max(50)
   radius?: number;
 
   @ApiPropertyOptional({ enum: SortByOption, description: 'Critério de ordenação dos resultados', example: SortByOption.Rating })
