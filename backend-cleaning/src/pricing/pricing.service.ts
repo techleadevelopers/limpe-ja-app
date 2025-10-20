@@ -8,6 +8,7 @@ import { PricingScope, PricingRule } from '@prisma/client';
 import { BookingsService } from '../bookings/bookings.service';
 import { CacheService } from '../cache/cache.service';
 import { Decimal } from '@prisma/client/runtime/library';
+import { SettingsService } from '../settings/settings.service';
 
 const MULTIPLIER_MIN = 0.8;
 const MULTIPLIER_MAX = 1.8;
@@ -26,6 +27,7 @@ export class PricingService {
     private readonly cacheService: CacheService,
     @Inject(forwardRef(() => BookingsService))
     private bookingsService: BookingsService,
+    private readonly settings: SettingsService,
   ) {}
 
   async calculatePrice(dto: CalculatePriceDto): Promise<DynamicPriceResult> {
@@ -120,9 +122,9 @@ export class PricingService {
     };
   }
 
-  async createRule(createPricingRuleDto: CreatePricingRuleDto) {
+  async createRule(createPricingRuleDto: CreatePricingRuleDto, actorUserId?: string) {
     const { surgeFactor, maxMultiplier, ...rest } = createPricingRuleDto;
-    return this.prisma.pricingRule.create({
+    const created = await this.prisma.pricingRule.create({
       data: {
         ...rest,
         scope: createPricingRuleDto.scope ?? PricingScope.GLOBAL,
@@ -130,6 +132,14 @@ export class PricingService {
         maxMultiplier: maxMultiplier ? new Decimal(maxMultiplier) : null,
       },
     });
+    await this.settings.appendPricingAudit({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      at: new Date().toISOString(),
+      actorUserId: actorUserId || 'unknown',
+      action: 'create',
+      ruleAfter: created,
+    });
+    return created;
   }
 
   async findAllRules() {
@@ -138,7 +148,7 @@ export class PricingService {
     });
   }
 
-  async updateRule(id: string, updatePricingRuleDto: UpdatePricingRuleDto) {
+  async updateRule(id: string, updatePricingRuleDto: UpdatePricingRuleDto, actorUserId?: string) {
     const existingRule = await this.prisma.pricingRule.findUnique({ where: { id } });
     if (!existingRule) {
       throw new NotFoundException(`Pricing rule with ID ${id} not found.`);
@@ -146,7 +156,7 @@ export class PricingService {
 
     const { surgeFactor, maxMultiplier, ...rest } = updatePricingRuleDto;
 
-    return this.prisma.pricingRule.update({
+    const updated = await this.prisma.pricingRule.update({
       where: { id },
       data: {
         ...rest,
@@ -154,14 +164,32 @@ export class PricingService {
         maxMultiplier: maxMultiplier !== undefined ? new Decimal(maxMultiplier) : undefined,
       },
     });
+    await this.settings.appendPricingAudit({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      at: new Date().toISOString(),
+      actorUserId: actorUserId || 'unknown',
+      action: 'update',
+      ruleBefore: existingRule,
+      ruleAfter: updated,
+    });
+    return updated;
   }
 
-  async deleteRule(id: string) {
+  async deleteRule(id: string, actorUserId?: string) {
     const existingRule = await this.prisma.pricingRule.findUnique({ where: { id } });
     if (!existingRule) {
       throw new NotFoundException(`Pricing rule with ID ${id} not found.`);
     }
-    return this.prisma.pricingRule.delete({ where: { id } });
+    const deleted = await this.prisma.pricingRule.delete({ where: { id } });
+    await this.settings.appendPricingAudit({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      at: new Date().toISOString(),
+      actorUserId: actorUserId || 'unknown',
+      action: 'delete',
+      ruleBefore: existingRule,
+      ruleAfter: null,
+    } as any);
+    return deleted;
   }
 
   // Helpers
