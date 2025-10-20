@@ -1,7 +1,8 @@
 // LimpeJaApp/app/(common)/safety/panic.tsx
 import React, { useState, useEffect, useRef, useCallback } from 'react'; // Adicionado useCallback
 import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Animated, Easing } from 'react-native';
-import * as Location from 'expo-location';
+import type * as Location from 'expo-location';
+import { ensureLocationPermission, getCurrentPosition } from '../../../services/locationService';
 import { useMutation } from '@tanstack/react-query';
 import { reportPanic } from '../../../services/safetyService';
 import { ReportPanicDto, PanicType } from '../../../types/backend/safety';
@@ -62,13 +63,13 @@ export default function PanicScreen() {
 
   useEffect(() => {
     (async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
+      const ok = await ensureLocationPermission();
+      if (!ok) {
         Alert.alert(t('safety.panic.location_permission_denied'), t('safety.panic.location_permission_message'));
         return;
       }
-      let currentLocation = await Location.getCurrentPositionAsync({});
-      setLocation(currentLocation.coords);
+      const coords = await getCurrentPosition();
+      if (coords) setLocation(coords);
     })();
 
     // Animações de entrada da tela
