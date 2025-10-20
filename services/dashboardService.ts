@@ -2,6 +2,8 @@
 
 import axios, { AxiosResponse } from 'axios';
 import { api } from './api'; // Importa a instância centralizada do Axios
+import { createLocalConsole } from './logging';
+const console = createLocalConsole();
 import { ProviderDashboard } from '../types/backend/providers'; // Importa a tipagem do DTO de resposta
 
 /**
