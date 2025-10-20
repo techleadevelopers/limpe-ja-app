@@ -699,6 +699,19 @@ export async function getProviderOffers(providerId: string): Promise<Offer[]> {
   }
 }
 
+export async function listAllServices(): Promise<Service[]> {
+  try {
+    const response: AxiosResponse<Service[]> = await api.get('/services');
+    return response.data;
+  } catch (error: any) {
+    console.error('Erro ao listar servicos:', error.response?.data || error.message);
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(error.response.data.message || 'Erro ao listar servicos.');
+    }
+    throw new Error('Erro de rede ou servidor ao listar servicos.');
+  }
+}
+
 // =========================================================================
 // FUNÇÃO ADICIONAL: getProviderAvatar (NOVA - Para otimizar fetches em listas)
 // =========================================================================
