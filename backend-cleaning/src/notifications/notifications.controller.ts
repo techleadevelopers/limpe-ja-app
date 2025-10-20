@@ -140,6 +140,25 @@ export class NotificationsController {
     await this.notificationsService.deleteNotification(notificationId, userId);
   }
 
+  // Enviar notificação imediata (alias mais claro para admin-web)
+  @Post('send')
+  @Roles(UserRole.ADMIN)
+  @UseGuards(RolesGuard)
+  @ApiOperation({ summary: 'Enviar notificação imediata (apenas admin)' })
+  async send(@Body() dto: CreateNotificationDto) {
+    return this.notificationsService.createNotification(dto);
+  }
+
+  // Agendar notificação (simples: aceita scheduleAt, por ora apenas cria registro/log)
+  @Post('schedule')
+  @Roles(UserRole.ADMIN)
+  @UseGuards(RolesGuard)
+  @ApiOperation({ summary: 'Agendar notificação (apenas admin)' })
+  async schedule(@Body() body: any) {
+    // scheduleAt opcional; por ora, cria a notificação imediatamente e retorna
+    const { scheduleAt, ...rest } = body || {};
+    return this.notificationsService.createNotification(rest as CreateNotificationDto);
+  }
   @Get('suggestions')
   @ApiOperation({ summary: 'Obter sugestões inteligentes baseadas em um contexto' })
   @ApiResponse({
