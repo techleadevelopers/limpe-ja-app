@@ -2,6 +2,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import Toast from 'react-native-toast-message';
+import { createLocalConsole } from './logging';
+const console = createLocalConsole();
 import i18n from '../i18n';
 import * as Sentry from '@sentry/react-native';
 
