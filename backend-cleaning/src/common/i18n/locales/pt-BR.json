@@ -1,352 +1,365 @@
-﻿{
-    "translation":  {
-                        "profile": {
-                          "phone_invalid": "Telefone inválido. Formato esperado (XX) XXXXX-XXXX."
-                        },
-                        "common":  {
-                                       "loading":  "Carregando...",
-                                       "error":  "Erro",
-                                       "tryAgain":  "Tentar Novamente",
-                                       "back":  "Voltar",
-                                       "success":  "Sucesso",
-                                       "cancel":  "Cancelar",
-                                       "confirm":  "Confirmar",
-                                       "ok":  "OK",
-                                       "yes":  "Sim",
-                                       "no":  "Não",
-                                       "save":  "Salvar",
-                                       "close":  "Fechar",
-                                       "not_found":  "Não encontrado",
-                                       "network_error":  "Erro de rede ou servidor",
-                                       "unauthorized_error":  "Não autorizado. Por favor, faça login novamente.",
-                                       "generic_error":  "Ocorreu um erro inesperado. Por favor, tente novamente mais tarde.",
-                                       "per_hour_short":  "/h",
-                                       "per_sqm_short":  "/m²",
-                                       "per_room_short":  "/quarto",
-                                       "at":  "às",
-                                       "continue":  "Continuar",
-                                       "hourly_price":  "Por Hora",
-                                       "per_sqm_price":  "Por m²",
-                                       "fixed_price_label":  "Preço Fixo",
-                                       "locale":  "pt-BR",
-                                       "minutes_short":  "min",
-                                       "na":  "N/A",
-                                       "area":  "Área",
-                                       "duration":  "duração",
-                                       "info":  "Aviso",
-                                       "morning":  "Manhã",
-                                       "afternoon":  "Tarde",
-                                       "evening":  "Noite",
-                                       "or":  "ou",
-                                       "user":  "Usuário"
-                                   },
-                        "explore_section":  {
-                                                "title":  "Explore mais Serviços"
-                                            },
-                        "search":  {
-                                       "title":  "Buscar Serviços",
-                                       "distance":  "A {{distance}} km",
-                                       "no_results":  "Nenhum resultado encontrado.",
-                                       "search_placeholder":  "Buscar por serviço ou profissional...",
-                                       "nearby_providers":  "Profissionais por Perto",
-                                       "recommended_providers":  "Para você",
-                                       "all_categories":  "Acesso rapido",
-                                       "all_providers":  "Prestadores",
-                                       "all_recommendations":  "Todas as Recomendações",
-                                       "search_radius":  "Raio de Busca",
-                                       "price_type":  "Tipo de Preço"
-                                   },
-                        "offers":  {
-                                       "apply":  "Aplicar",
-                                       "applied":  "Aplicado",
-                                       "copy_code":  "Copiar Código",
-                                       "apply_next_step":  "Aplicar na próxima etapa",
-                                       "invalid_coupon":  "Cupom inválido ou expirado.",
-                                       "coupon_applied_success":  "Cupom aplicado! Você economizou {{value}}.",
-                                       "title":  "Ofertas",
-                                       "expires_in_days":  "Expira em {{count}} dias",
-                                       "rebook_now":  "Agendar Agora",
-                                       "coupon_code_copied":  "Código {{code}} copiado!",
-                                       "failed_to_copy_coupon":  "Falha ao copiar. Tente manualmente.",
-                                       "no_offers_available":  "Nenhuma oferta disponível no momento"
-                                   },
-                        "missions":  {
-                                         "title":  "Minhas Missões",
-                                         "claim":  "Resgatar",
-                                         "completed":  "Concluída",
-                                         "in_progress":  "Em Progresso",
-                                         "no_missions":  "Nenhuma missão disponível no momento.",
-                                         "claim_success":  "Parabéns! Recompensa resgatada com sucesso!",
-                                         "claim_error":  "Não foi possível resgatar a recompensa.",
-                                         "category_volume":  "Volume",
-                                         "category_frequency":  "Frequência",
-                                         "category_diversity":  "Diversidade"
-                                     },
-                        "metrics":  {
-                                        "acceptance_rate":  "Aceitação",
-                                        "avg_response_time":  "Tempo Médio de Resposta",
-                                        "minutes_short":  "min",
-                                        "acceptance_short":  "Aceitação",
-                                        "response_short":  "Resposta"
-                                    },
-                        "safety":  {
-                                       "panic":  {
-                                                     "activate":  "ACIONAR PÂNICO",
-                                                     "active":  "Alerta de Pânico ATIVO",
-                                                     "cancel":  "Cancelar",
-                                                     "sending_alert":  "Alerta será enviado em...",
-                                                     "location_permission_denied":  "Permissão de Localização Negada",
-                                                     "location_permission_message":  "Para sua segurança, precisamos da sua localização para enviar um alerta de pânico.",
-                                                     "getting_location":  "Obtendo sua localização...",
-                                                     "location_obtained":  "Localização obtida:",
-                                                     "panic_sent_success":  "Seu alerta de pânico foi enviado à equipe de segurança. Ajuda está a caminho.",
-                                                     "panic_sent_error":  "Não foi possível enviar o alerta.",
-                                                     "panic_cancelled":  "O envio do alerta de pânico foi cancelado.",
-                                                     "warning_text":  "Use este recurso apenas em situações de emergência real. O uso indevido pode resultar em penalidades."
-                                                 },
-                                       "incident":  {
-                                                        "report_title":  "Relatar Incidente",
-                                                        "description_placeholder":  "Descreva o que aconteceu, data, hora, quem estava envolvido, etc.",
-                                                        "booking_id_optional":  "ID do Agendamento (Opcional):",
-                                                        "attach_evidence":  "Anexar Evidências (Fotos):",
-                                                        "select_image":  "Selecionar Imagem",
-                                                        "attachment_added":  "Anexo Adicionado",
-                                                        "image_uploaded_message":  "Imagem selecionada. Em um ambiente real, ela seria enviada ao servidor.",
-                                                        "submit_report":  "Enviar Relatório",
-                                                        "report_sent_success":  "Seu relatório de incidente foi enviado com sucesso. Nossa equipe irá revisá-lo.",
-                                                        "report_sent_error":  "Não foi possível enviar o relatório:",
-                                                        "required_fields_alert":  "Campos Obrigatórios",
-                                                        "required_fields_message":  "Por favor, descreva o incidente.",
-                                                        "description_text":  "Use este formulário para relatar qualquer incidente ocorrido durante ou após um serviço."
-                                                    }
-                                   },
-                        "notifications":  {
-                                              "title":  "Notificações",
-                                              "mark_all_read":  "Marcar Todas como Lidas",
-                                              "no_notifications":  "Nenhuma notificação por aqui.",
-                                              "no_notifications_subtext":  "Você está em dia!",
-                                              "loading_notifications":  "Carregando notificações...",
-                                              "notifications_updated":  "Notificações atualizadas!",
-                                              "mark_read_success":  "Notificação marcada como lida (backend e frontend):",
-                                              "mark_read_error":  "Não foi possível marcar a notificação como lida.",
-                                              "mark_all_read_success":  "Todas as notificações foram marcadas como lidas.",
-                                              "mark_all_read_error":  "Não foi possível marcar todas as notificações.",
-                                              "navigation_error":  "Erro de Navegação",
-                                              "navigation_error_message":  "Não foi possível abrir esta notificação.",
-                                              "now":  "Agora mesmo",
-                                              "minutes_ago":  "Há {{count}} min",
-                                              "hours_ago":  "Há {{count}} h",
-                                              "yesterday":  "Ontem",
-                                              "days_ago":  "Há {{count}} dias"
-                                          },
-                        "schedule_service":  {
-                                                 "header_title":  "Agendar",
-                                                 "progress_step_date_time":  "Data e Hora",
-                                                 "progress_step_complete_review":  "Revisão",
-                                                 "coupon_section_title":  "Cupom de Desconto",
-                                                 "coupon_input_placeholder":  "Insira seu código de cupom",
-                                                 "apply_coupon_button":  "Aplicar",
-                                                 "coupon_applied_message":  "Cupom aplicado! Você economizou R$ {{discountValue}}.",
-                                                 "review_booking_title":  "Revise seu Agendamento",
-                                                 "summary_service":  "Serviço:",
-                                                 "summary_provider":  "Provedor:",
-                                                 "summary_date_time":  "Data e Hora:",
-                                                 "summary_address":  "Endereço:",
-                                                 "summary_service_details":  "Detalhes do Serviço:",
-                                                 "subtotal":  "Subtotal:",
-                                                 "discount":  "Desconto:",
-                                                 "total_to_pay":  "Total a Pagar:",
-                                                 "cancellation_policy":  "Política de Cancelamento",
-                                                 "cancellation_policy_title":  "Política de Cancelamento",
-                                                 "cancellation_policy_message":  "Você pode cancelar seu agendamento gratuitamente até 24 horas antes do horário programado. Após esse período, uma taxa de cancelamento pode ser aplicada. Para mais detalhes, consulte nossos Termos de Serviço.",
-                                                 "booking_error_title":  "Erro ao Agendar",
-                                                 "booking_error_message":  "Por favor, preencha todos os campos necessários para o agendamento, incluindo o endereço completo e selecione um horário.",
-                                                 "booking_error_duration_size":  "Por favor, insira a {{field}} do serviço.",
-                                                 "booking_success_message":  "Agendamento realizado com sucesso!",
-                                                 "loading_initial_data":  "Carregando dados iniciais...",
-                                                 "navigation_error_essential_data":  "Dados essenciais ausentes. Tente novamente.",
-                                                 "service_not_available":  "O serviço selecionado não está disponível para este provedor.",
-                                                 "address_needed_title":  "Endereço Necessário",
-                                                 "address_needed_message":  "Seu endereço não está completo. Por favor, preencha para prosseguir.",
-                                                 "error_fetching_slots":  "Não foi possível carregar os horários disponíveis.",
-                                                 "unavailable_time_slot":  "Horário Indisponível",
-                                                 "unavailable_time_slot_message":  "Este horário já está agendado ou não disponível. Por favor, selecione outro.",
-                                                 "show_unavailable":  "Ver todos",
-                                                 "details_title":  "Detalhes do Serviço",
-                                                 "notes_title":  "Observações",
-                                                 "floating_summary_accessibility":  "Resumo do pedido, total R$ {{total}}",
-                                                 "apply_coupon_accessibility":  "Aplicar cupom de desconto",
-                                                 "summary_accessibility":  "Resumo do pedido, total R$ {{total}}",
-                                                 "select_date_time_address":  "Selecione Data, Hora e Endereço",
-                                                 "available_times":  "Horários disponíveis",
-                                                 "preferred_times":  "Preferências de horário",
-                                                 "no_slots":  "Nenhum horário disponível para esta data.",
-                                                 "review_booking_button":  "Revisar Agendamento",
-                                                 "step1_validation_error":  "Por favor, selecione a data, o horário e preencha o endereço completo para continuar.",
-                                                 "searching_next_available":  "Procurando próximo dia disponível...",
-                                                 "no_slots_title":  "Buscando Horários",
-                                                 "found_available_date":  "Horários encontrados!",
-                                                 "error_fetching_slots_day":  "Erro ao carregar horários para este dia. Tente novamente.",
-                                                 "no_available_nearby":  "Nenhum horário nos próximos 7 dias. Selecione outra data no calendário."
-                                             },
-                        "provider_details":  {
-                                                 "loading":  "Carregando...",
-                                                 "provider_not_found":  "Profissional não encontrado.",
-                                                 "error_loading_details":  "Erro ao carregar os detalhes do profissional.",
-                                                 "no_photo":  "Sem Foto",
-                                                 "save_favorite":  "Salvar/Favoritar",
-                                                 "years_experience":  "{{count}}+ anos",
-                                                 "verified":  "Verificado",
-                                                 "about_provider":  "Sobre {{providerName}}",
-                                                 "no_description":  "Nenhuma descrição detalhada disponível.",
-                                                 "call":  "Ligar",
-                                                 "chat":  "Chat",
-                                                 "map":  "Mapa",
-                                                 "share":  "Compartilhar",
-                                                 "chat_unavailable_title":  "Chat Indisponível",
-                                                 "chat_unavailable_message":  "O chat com este profissional só pode ser iniciado após um agendamento confirmado e ativo. Isso garante que você se conecte com o profissional certo para o seu serviço.",
-                                                 "recommendations":  "Recomendações",
-                                                 "no_reviews":  "Ainda não há avaliações para {{providerName}}.",
-                                                 "be_the_first_review":  "Seja o primeiro a deixar uma!",
-                                                 "add_review":  "Adicionar Avaliação",
-                                                 "price_not_available":  "Preço não disponível",
-                                                 "reviews_count":  "({{count}} avaliações)",
-                                                 "provider_name_title":  "Nome do Provedor",
-                                                 "location_label":  "Localização",
-                                                 "price_label":  "Preço",
-                                                 "about_provider_section_title":  "Sobre o Provedor",
-                                                 "contact_section_title":  "Contato",
-                                                 "reviews_and_recommendations_title":  "Avaliações \u0026 Recomendações",
-                                                 "reviews_count_short_one":  "1 Avaliação",
-                                                 "reviews_count_short_other":  "{{count}} Avaliações",
-                                                 "provider_not_found_friendly":  "Profissional não encontrado.",
-                                                 "error_loading_details_friendly":  "Erro ao carregar os detalhes do profissional.",
-                                                 "chat_unavailable_title_friendly":  "Chat Indisponível",
-                                                 "chat_unavailable_message_friendly":  "O chat com {{providerName}} só fica disponível após um agendamento ativo.",
-                                                 "view_all_reviews":  "Ver todas as avaliações",
-                                                 "call_functionality":  "Em breve você poderá ligar diretamente para o profissional.",
-                                                 "map_functionality":  "Em breve abriremos o mapa aqui.",
-                                                 "share_functionality":  "Link para compartilhamento gerado.",
-                                                 "invalid_professional_id_friendly":  "ID do profissional inválido."
-                                             },
-                        "provider_dashboard":  {
-                                                   "greeting":  "Olá, {{providerName}}!",
-                                                   "current_date":  "{{date}}",
-                                                   "financial_summary":  "Resumo Financeiro",
-                                                   "total_earnings":  "Ganhos Totais",
-                                                   "pending_withdrawals":  "Saques Pendentes",
-                                                   "manage_earnings":  "Gerenciar Ganhos",
-                                                   "quick_actions":  "Ações Rápidas",
-                                                   "my_schedule":  "Minha Agenda",
-                                                   "my_services":  "Meus Serviços",
-                                                   "messages":  "Mensagens",
-                                                   "new_requests":  "Novas Solicitações",
-                                                   "view_all":  "Ver Todas",
-                                                   "no_new_requests":  "Nenhuma nova solicitação de agendamento.",
-                                                   "upcoming_services":  "Próximos Serviços",
-                                                   "no_upcoming_services":  "Nenhum serviço confirmado agendado.",
-                                                   "requested_by":  "Solicitado por:",
-                                                   "value":  "Valor:",
-                                                   "accept_request_title":  "Aceitar Solicitação",
-                                                   "accept_request_message":  "Tem certeza que deseja aceitar o agendamento {{bookingId}}?",
-                                                   "accept_success":  "Agendamento aceito com sucesso!",
-                                                   "accept_error":  "Não foi possível aceitar o agendamento.",
-                                                   "reject_request_title":  "Rejeitar Solicitação",
-                                                   "reject_request_message":  "Tem certeza que deseja rejeitar o agendamento {{bookingId}}?",
-                                                   "reject_success":  "Agendamento rejeitado com sucesso!",
-                                                   "reject_error":  "Não foi possível rejeitar o agendamento.",
-                                                   "chat_with_client":  "Conversar com {{clientName}}",
-                                                   "logout":  "Sair da Conta",
-                                                   "logout_error":  "Não foi possível sair da conta. Tente novamente ou verifique sua conexão.",
-                                                   "provider_not_authenticated":  "Provedor não autenticado ou perfil não encontrado."
-                                               },
-                        "errors":  {
-                                       "network":  {
-                                                       "retry_saved":  "Não conseguimos concluir agora. Salvamos seu progresso; tente novamente em instantes.",
-                                                       "contact_support":  "Se o problema persistir, fale com o suporte."
-                                                   },
-                                       "cep":  {
-                                                   "lookup_failed":  "Erro ao buscar CEP. Tente novamente."
-                                               }
-                                   },
-                        "validation":  {
-                                           "cpf":  {
-                                                       "required":  "O CPF é obrigatório.",
-                                                       "invalid":  "CPF inválido. Verifique os dígitos."
-                                                   },
-                                           "cep":  {
-                                                       "required":  "O CEP é obrigatório.",
-                                                       "invalid":  "CEP inválido. Digite os 8 dígitos.",
-                                                       "not_found":  "CEP não encontrado. Verifique e tente novamente."
-                                                   },
-                                           "pixKey":  {
-                                                          "required":  "Informe sua chave PIX para receber.",
-                                                          "invalid":  "Chave PIX inválida. Revise o formato."
-                                                      },
-                                           "step":  {
-                                                        "phone_cpf":  "Por favor, preencha telefone e CPF corretamente.",
-                                                        "name_email":  "Por favor, preencha nome e e-mail corretamente."
-                                                    },
-                                           "address":  {
-                                                           "incomplete":  "Por favor, preencha todos os campos de endereço corretamente.",
-                                                           "wait_lookup":  "Aguarde a busca do CEP ser concluída."
-                                                       }
-                                       },
-                        "payments":  {
-                                         "pix":  {
-                                                     "copy_success_title":  "Código PIX copiado!",
-                                                     "copy_success_message":  "Cole no app do seu banco para finalizar o pagamento.",
-                                                     "copy_error_title":  "PIX indisponível",
-                                                     "copy_error_message":  "Nenhum código PIX disponível para copiar agora."
-                                                 },
-                                         "overlay":  {
-                                                         "pending":  "Pagamento pendente há alguns minutos. Confirme no seu banco ou gere um novo código.",
-                                                         "title":  "Atenção",
-                                                         "expired":  "Seu QR Code expirou. Gere um novo para finalizar o pagamento.",
-                                                         "actions":  {
-                                                                         "copy":  "Copiar código PIX",
-                                                                         "refresh":  "Atualizar"
-                                                                     }
-                                                     }
-                                     },
-                        "pricing":  {
-                                        "type":  {
-                                                     "fixed":  "Preço fixo",
-                                                     "hour":  "Por hora",
-                                                     "sqm":  "Por m²"
-                                                 },
-                                        "from":  "A partir de"
-                                    },
-                        "filters":  {
-                                        "fastResponse":  "Resposta \u003c 15 min",
-                                        "verified":  "Verificado",
-                                        "any":  "Qualquer",
-                                        "today":  "Hoje",
-                                        "tomorrow":  "Amanhã"
-                                    },
-                        "sort":  {
-                                     "price":  "Menor preço",
-                                     "rating":  "Melhor avaliados",
-                                     "distance":  "Mais próximos",
-                                     "best":  "Melhores"
-                                 },
-                        "pix":  {
-                                    "copy_unavailable":  "Nenhum código PIX disponível para copiar.",
-                                    "expiresIn":  "Expira em",
-                                    "copy":  "Copiar código",
-                                    "copied":  "Código PIX copiado!",
-                                    "copy_success_message":  "Cole no app do seu banco para finalizar o pagamento.",
-                                    "copy_error":  "Não foi possível copiar o código PIX.",
-                                    "regenerate":  "Gerar novo QR"
-                                },
-                        "overlay":  {
-
-                                    },
-                        "reviews":  {
-                                        "none":  "Sem Avaliações"
-                                    },
-                        "provider":  {
-                                         "no_description":  "Nenhuma descrição disponível."
-                                     }
-                    }
+﻿﻿{
+  "translation": {
+    "profile": {
+      "phone_invalid": "Telefone inválido. Formato esperado (XX) XXXXX-XXXX."
+    },
+    "common": {
+      "loading": "Carregando...",
+      "error": "Erro",
+      "tryAgain": "Tentar Novamente",
+      "back": "Voltar",
+      "success": "Sucesso",
+      "cancel": "Cancelar",
+      "confirm": "Confirmar",
+      "ok": "OK",
+      "yes": "Sim",
+      "no": "Não",
+      "save": "Salvar",
+      "close": "Fechar",
+      "not_found": "Não encontrado",
+      "network_error": "Erro de rede ou servidor",
+      "unauthorized_error": "Não autorizado. Por favor, faça login novamente.",
+      "generic_error": "Ocorreu um erro inesperado. Por favor, tente novamente mais tarde.",
+      "per_hour_short": "/h",
+      "per_sqm_short": "/m²",
+      "per_room_short": "/quarto",
+      "at": "às",
+      "continue": "Continuar",
+      "hourly_price": "Por Hora",
+      "per_sqm_price": "Por m²",
+      "fixed_price_label": "Preço Fixo",
+      "locale": "pt-BR",
+      "minutes_short": "min",
+      "na": "N/A",
+      "area": "Área",
+      "duration": "duração",
+      "info": "Aviso",
+      "morning": "Manhã",
+      "afternoon": "Tarde",
+      "evening": "Noite",
+      "or": "ou",
+      "user": "Usuário",
+  "view_all": "Ver todos"
+},
+    "explore_section": {
+      "title": "Explore mais Serviços"
+    },
+    "search": {
+      "title": "Buscar Serviços",
+      "distance": "A {{distance}} km",
+      "no_results": "Nenhum resultado encontrado.",
+      "search_placeholder": "Buscar por serviço ou profissional...",
+      "nearby_providers": "Profissionais por Perto",
+      "recommended_providers": "Para você",
+      "all_categories": "Acesso rapido",
+      "all_providers": "Prestadores",
+      "all_recommendations": "Todas as Recomendações",
+      "search_radius": "Raio de Busca",
+      "price_type": "Tipo de Preço"
+    },
+    "offers": {
+      "apply": "Aplicar",
+      "applied": "Aplicado",
+      "copy_code": "Copiar Código",
+      "apply_next_step": "Aplicar na próxima etapa",
+      "invalid_coupon": "Cupom inválido ou expirado.",
+      "coupon_applied_success": "Cupom aplicado! Você economizou {{value}}.",
+      "title": "Ofertas",
+      "expires_in_days": "Expira em {{count}} dias",
+      "rebook_now": "Agendar Agora",
+      "coupon_code_copied": "Código {{code}} copiado!",
+      "failed_to_copy_coupon": "Falha ao copiar. Tente manualmente.",
+      "no_offers_available": "Nenhuma oferta disponível no momento"
+    },
+    "missions": {
+      "title": "Minhas Missões",
+      "claim": "Resgatar",
+      "completed": "Concluída",
+      "in_progress": "Em Progresso",
+      "no_missions": "Nenhuma missão disponível no momento.",
+      "claim_success": "Parabéns! Recompensa resgatada com sucesso!",
+      "claim_error": "Não foi possível resgatar a recompensa.",
+      "category_volume": "Volume",
+      "category_frequency": "Frequência",
+      "category_diversity": "Diversidade"
+    },
+      "metrics": {
+    "title": "Minhas Métricas",
+    "summary_title": "Resumo",
+    "bookings_label": "Agendamentos",
+    "spent_label": "Total gasto",
+    "missions_completed_label": "Missões concluídas",
+    "coupons_active_label": "Cupons ativos",
+    "chart_title": "Agendamentos por mês",
+    "recent_bookings_title": "Últimos agendamentos",
+    "points_section_title": "Pontos recentes",
+    "missions_section_title": "Suas missões",
+    "coupons_title": "Seus cupons",
+    "view_all": "Ver todos"
+  },
+    "safety": {
+      "panic": {
+        "activate": "ACIONAR PÂNICO",
+        "active": "Alerta de Pânico ATIVO",
+        "cancel": "Cancelar",
+        "sending_alert": "Alerta será enviado em...",
+        "location_permission_denied": "Permissão de Localização Negada",
+        "location_permission_message": "Para sua segurança, precisamos da sua localização para enviar um alerta de pânico.",
+        "getting_location": "Obtendo sua localização...",
+        "location_obtained": "Localização obtida:",
+        "panic_sent_success": "Seu alerta de pânico foi enviado à equipe de segurança. Ajuda está a caminho.",
+        "panic_sent_error": "Não foi possível enviar o alerta.",
+        "panic_cancelled": "O envio do alerta de pânico foi cancelado.",
+        "warning_text": "Use este recurso apenas em situações de emergência real. O uso indevido pode resultar em penalidades."
+      },
+      "incident": {
+        "report_title": "Relatar Incidente",
+        "description_placeholder": "Descreva o que aconteceu, data, hora, quem estava envolvido, etc.",
+        "booking_id_optional": "ID do Agendamento (Opcional):",
+        "attach_evidence": "Anexar Evidências (Fotos):",
+        "select_image": "Selecionar Imagem",
+        "attachment_added": "Anexo Adicionado",
+        "image_uploaded_message": "Imagem selecionada. Em um ambiente real, ela seria enviada ao servidor.",
+        "submit_report": "Enviar Relatório",
+        "report_sent_success": "Seu relatório de incidente foi enviado com sucesso. Nossa equipe irá revisá-lo.",
+        "report_sent_error": "Não foi possível enviar o relatório:",
+        "required_fields_alert": "Campos Obrigatórios",
+        "required_fields_message": "Por favor, descreva o incidente.",
+        "description_text": "Use este formulário para relatar qualquer incidente ocorrido durante ou após um serviço."
+      }
+    },
+    "notifications": {
+      "title": "Notificações",
+      "mark_all_read": "Marcar Todas como Lidas",
+      "no_notifications": "Nenhuma notificação por aqui.",
+      "no_notifications_subtext": "Você está em dia!",
+      "loading_notifications": "Carregando notificações...",
+      "notifications_updated": "Notificações atualizadas!",
+      "mark_read_success": "Notificação marcada como lida (backend e frontend):",
+      "mark_read_error": "Não foi possível marcar a notificação como lida.",
+      "mark_all_read_success": "Todas as notificações foram marcadas como lidas.",
+      "mark_all_read_error": "Não foi possível marcar todas as notificações.",
+      "navigation_error": "Erro de Navegação",
+      "navigation_error_message": "Não foi possível abrir esta notificação.",
+      "now": "Agora mesmo",
+      "minutes_ago": "Há {{count}} min",
+      "hours_ago": "Há {{count}} h",
+      "yesterday": "Ontem",
+      "days_ago": "Há {{count}} dias"
+    },
+    "schedule_service": {
+      "header_title": "Agendar",
+      "progress_step_date_time": "Data e Hora",
+      "progress_step_complete_review": "Revisão",
+      "coupon_section_title": "Cupom de Desconto",
+      "coupon_input_placeholder": "Insira seu código de cupom",
+      "apply_coupon_button": "Aplicar",
+      "coupon_applied_message": "Cupom aplicado! Você economizou R$ {{discountValue}}.",
+      "review_booking_title": "Revise seu Agendamento",
+      "summary_service": "Serviço:",
+      "summary_provider": "Provedor:",
+      "summary_date_time": "Data e Hora:",
+      "summary_address": "Endereço:",
+      "summary_service_details": "Detalhes do Serviço:",
+      "subtotal": "Subtotal:",
+      "discount": "Desconto:",
+      "total_to_pay": "Total a Pagar:",
+      "cancellation_policy": "Política de Cancelamento",
+      "cancellation_policy_title": "Política de Cancelamento",
+      "cancellation_policy_message": "Você pode cancelar seu agendamento gratuitamente até 24 horas antes do horário programado. Após esse período, uma taxa de cancelamento pode ser aplicada. Para mais detalhes, consulte nossos Termos de Serviço.",
+      "booking_error_title": "Erro ao Agendar",
+      "booking_error_message": "Por favor, preencha todos os campos necessários para o agendamento, incluindo o endereço completo e selecione um horário.",
+      "booking_error_duration_size": "Por favor, insira a {{field}} do serviço.",
+      "booking_success_message": "Agendamento realizado com sucesso!",
+      "loading_initial_data": "Carregando dados iniciais...",
+      "navigation_error_essential_data": "Dados essenciais ausentes. Tente novamente.",
+      "service_not_available": "O serviço selecionado não está disponível para este provedor.",
+      "address_needed_title": "Endereço Necessário",
+      "address_needed_message": "Seu endereço não está completo. Por favor, preencha para prosseguir.",
+      "error_fetching_slots": "Não foi possível carregar os horários disponíveis.",
+      "unavailable_time_slot": "Horário Indisponível",
+      "unavailable_time_slot_message": "Este horário já está agendado ou não disponível. Por favor, selecione outro.",
+      "show_unavailable": "Ver todos",
+      "details_title": "Detalhes do Serviço",
+      "notes_title": "Observações",
+      "floating_summary_accessibility": "Resumo do pedido, total R$ {{total}}",
+      "apply_coupon_accessibility": "Aplicar cupom de desconto",
+      "summary_accessibility": "Resumo do pedido, total R$ {{total}}",
+      "select_date_time_address": "Selecione Data, Hora e Endereço",
+      "available_times": "Horários disponíveis",
+      "preferred_times": "Preferências de horário",
+      "no_slots": "Nenhum horário disponível para esta data.",
+      "review_booking_button": "Revisar Agendamento",
+      "step1_validation_error": "Por favor, selecione a data, o horário e preencha o endereço completo para continuar.",
+      "searching_next_available": "Procurando próximo dia disponível...",
+      "no_slots_title": "Buscando Horários",
+      "found_available_date": "Horários encontrados!",
+      "error_fetching_slots_day": "Erro ao carregar horários para este dia. Tente novamente.",
+      "no_available_nearby": "Nenhum horário nos próximos 7 dias. Selecione outra data no calendário."
+    },
+    "provider_details": {
+      "loading": "Carregando...",
+      "provider_not_found": "Profissional não encontrado.",
+      "error_loading_details": "Erro ao carregar os detalhes do profissional.",
+      "no_photo": "Sem Foto",
+      "save_favorite": "Salvar/Favoritar",
+      "years_experience": "{{count}}+ anos",
+      "verified": "Verificado",
+      "about_provider": "Sobre {{providerName}}",
+      "no_description": "Nenhuma descrição detalhada disponível.",
+      "call": "Ligar",
+      "chat": "Chat",
+      "map": "Mapa",
+      "share": "Compartilhar",
+      "chat_unavailable_title": "Chat Indisponível",
+      "chat_unavailable_message": "O chat com este profissional só pode ser iniciado após um agendamento confirmado e ativo. Isso garante que você se conecte com o profissional certo para o seu serviço.",
+      "recommendations": "Recomendações",
+      "no_reviews": "Ainda não há avaliações para {{providerName}}.",
+      "be_the_first_review": "Seja o primeiro a deixar uma!",
+      "add_review": "Adicionar Avaliação",
+      "price_not_available": "Preço não disponível",
+      "reviews_count": "({{count}} avaliações)",
+      "provider_name_title": "Nome do Provedor",
+      "location_label": "Localização",
+      "price_label": "Preço",
+      "about_provider_section_title": "Sobre o Provedor",
+      "contact_section_title": "Contato",
+      "reviews_and_recommendations_title": "Avaliações \u0026 Recomendações",
+      "reviews_count_short_one": "1 Avaliação",
+      "reviews_count_short_other": "{{count}} Avaliações",
+      "provider_not_found_friendly": "Profissional não encontrado.",
+      "error_loading_details_friendly": "Erro ao carregar os detalhes do profissional.",
+      "chat_unavailable_title_friendly": "Chat Indisponível",
+      "chat_unavailable_message_friendly": "O chat com {{providerName}} só fica disponível após um agendamento ativo.",
+      "view_all_reviews": "Ver todas as avaliações",
+      "call_functionality": "Em breve você poderá ligar diretamente para o profissional.",
+      "map_functionality": "Em breve abriremos o mapa aqui.",
+      "share_functionality": "Link para compartilhamento gerado.",
+      "invalid_professional_id_friendly": "ID do profissional inválido."
+    },
+    "provider_dashboard": {
+      "greeting": "Olá, {{providerName}}!",
+      "current_date": "{{date}}",
+      "financial_summary": "Resumo Financeiro",
+      "total_earnings": "Ganhos Totais",
+      "pending_withdrawals": "Saques Pendentes",
+      "manage_earnings": "Gerenciar Ganhos",
+      "quick_actions": "Ações Rápidas",
+      "my_schedule": "Minha Agenda",
+      "my_services": "Meus Serviços",
+      "messages": "Mensagens",
+      "new_requests": "Novas Solicitações",
+      "view_all": "Ver Todas",
+      "no_new_requests": "Nenhuma nova solicitação de agendamento.",
+      "upcoming_services": "Próximos Serviços",
+      "no_upcoming_services": "Nenhum serviço confirmado agendado.",
+      "requested_by": "Solicitado por:",
+      "value": "Valor:",
+      "accept_request_title": "Aceitar Solicitação",
+      "accept_request_message": "Tem certeza que deseja aceitar o agendamento {{bookingId}}?",
+      "accept_success": "Agendamento aceito com sucesso!",
+      "accept_error": "Não foi possível aceitar o agendamento.",
+      "reject_request_title": "Rejeitar Solicitação",
+      "reject_request_message": "Tem certeza que deseja rejeitar o agendamento {{bookingId}}?",
+      "reject_success": "Agendamento rejeitado com sucesso!",
+      "reject_error": "Não foi possível rejeitar o agendamento.",
+      "chat_with_client": "Conversar com {{clientName}}",
+      "logout": "Sair da Conta",
+      "logout_error": "Não foi possível sair da conta. Tente novamente ou verifique sua conexão.",
+      "provider_not_authenticated": "Provedor não autenticado ou perfil não encontrado."
+    },
+    "errors": {
+      "network": {
+        "retry_saved": "Não conseguimos concluir agora. Salvamos seu progresso; tente novamente em instantes.",
+        "contact_support": "Se o problema persistir, fale com o suporte."
+      },
+      "cep": {
+        "lookup_failed": "Erro ao buscar CEP. Tente novamente."
+      }
+    },
+    "validation": {
+      "cpf": {
+        "required": "O CPF é obrigatório.",
+        "invalid": "CPF inválido. Verifique os dígitos."
+      },
+      "cep": {
+        "required": "O CEP é obrigatório.",
+        "invalid": "CEP inválido. Digite os 8 dígitos.",
+        "not_found": "CEP não encontrado. Verifique e tente novamente."
+      },
+      "pixKey": {
+        "required": "Informe sua chave PIX para receber.",
+        "invalid": "Chave PIX inválida. Revise o formato."
+      },
+      "step": {
+        "phone_cpf": "Por favor, preencha telefone e CPF corretamente.",
+        "name_email": "Por favor, preencha nome e e-mail corretamente."
+      },
+      "address": {
+        "incomplete": "Por favor, preencha todos os campos de endereço corretamente.",
+        "wait_lookup": "Aguarde a busca do CEP ser concluída."
+      }
+    },
+    "payments": {
+      "pix": {
+        "copy_success_title": "Código PIX copiado!",
+        "copy_success_message": "Cole no app do seu banco para finalizar o pagamento.",
+        "copy_error_title": "PIX indisponível",
+        "copy_error_message": "Nenhum código PIX disponível para copiar agora."
+      },
+      "overlay": {
+        "pending": "Pagamento pendente há alguns minutos. Confirme no seu banco ou gere um novo código.",
+        "title": "Atenção",
+        "expired": "Seu QR Code expirou. Gere um novo para finalizar o pagamento.",
+        "actions": {
+          "copy": "Copiar código PIX",
+          "refresh": "Atualizar"
+        }
+      }
+    },
+    "pricing": {
+      "type": {
+        "fixed": "Preço fixo",
+        "hour": "Por hora",
+        "sqm": "Por m²"
+      },
+      "from": "A partir de"
+    },
+    "filters": {
+      "fastResponse": "Resposta \u003c 15 min",
+      "verified": "Verificado",
+      "any": "Qualquer",
+      "today": "Hoje",
+      "tomorrow": "Amanhã"
+    },
+    "sort": {
+      "price": "Menor preço",
+      "rating": "Melhor avaliados",
+      "distance": "Mais próximos",
+      "best": "Melhores"
+    },
+    "pix": {
+      "copy_unavailable": "Nenhum código PIX disponível para copiar.",
+      "expiresIn": "Expira em",
+      "copy": "Copiar código",
+      "copied": "Código PIX copiado!",
+      "copy_success_message": "Cole no app do seu banco para finalizar o pagamento.",
+      "copy_error": "Não foi possível copiar o código PIX.",
+      "regenerate": "Gerar novo QR"
+    },
+    "overlay": {},
+    "reviews": {
+      "none": "Sem Avaliações"
+    },
+    "provider": {
+      "no_description": "Nenhuma descrição disponível."
+    },
+  "wallet": {
+    "cashback_title": "Pontos e Cashback",
+    "current_points": "Seus pontos",
+    "recent_points": "Movimentações recentes",
+    "no_history": "Nenhuma movimentação por enquanto."
+  }
 }
+}
+
