@@ -9,6 +9,8 @@ import {
     VerificationResponse,
 } from '../types/backend/verification';
 import { api } from './api';
+import { createLocalConsole } from './logging';
+const console = createLocalConsole();
 import uploadService from './uploadService';
 import { UploadResponseDto } from '../types/backend/upload';
 import * as FileSystem from 'expo-file-system';
