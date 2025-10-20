@@ -105,6 +105,20 @@
     border-color: var(--medium-blue);
   }
 
+  /* Glassmorphism utilities */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: saturate(1.8) blur(8px);
+    -webkit-backdrop-filter: saturate(1.8) blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+  }
+  .glass-header {
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: saturate(1.6) blur(10px);
+    -webkit-backdrop-filter: saturate(1.6) blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.35);
+  }
+
   /* Animation classes */
   .animate-fade-in {
     animation: fadeIn 0.5s ease-in-out;
