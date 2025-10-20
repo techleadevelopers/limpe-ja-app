@@ -7,6 +7,7 @@ import {
     deletePricingRule,
 } from '../../lib/api'; // Ajuste o caminho conforme necessário
 import { PricingRule, PricingType } from '../../lib/types'; // Ajuste o caminho conforme necessário
+import { fetchPricingHistory, PricingAuditEvent } from '../../lib/api';
 
 // Type definitions for reusable components
 interface ModalProps {
@@ -56,12 +57,29 @@ const PricingRulesPage = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingRule, setEditingRule] = useState<Partial<PricingRule> | null>(null);
     const [formState, setFormState] = useState<Partial<PricingRule>>({});
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+    const [history, setHistory] = useState<PricingAuditEvent[]>([]);
+    const [cursor, setCursor] = useState<number | null>(0);
+    const [period, setPeriod] = useState<'all' | '24h' | '7d' | '30d'>('all');
 
     // Fetching pricing rules
     const { data: rules, isLoading, error } = useQuery<PricingRule[], Error>({
         queryKey: ['pricingRules'],
         queryFn: fetchPricingRules,
     });
+
+    const { data: historyPage } = useQuery<{ items: PricingAuditEvent[]; nextCursor: number | null}>({
+        queryKey: ['pricingRulesHistory', cursor],
+        queryFn: () => fetchPricingHistory(20, cursor ?? 0),
+        enabled: isHistoryOpen && cursor !== null,
+    });
+
+    useEffect(() => {
+        if (historyPage?.items) {
+            setHistory(prev => [...prev, ...historyPage.items]);
+            setCursor(historyPage.nextCursor);
+        }
+    }, [historyPage]);
 
     // Mutations for CRUD operations
     const createMutation = useMutation<PricingRule, Error, Omit<PricingRule, 'id' | 'createdAt' | 'updatedAt'>>({
@@ -115,6 +133,11 @@ const PricingRulesPage = () => {
     const handleAddRule = () => {
         setEditingRule(null);
         setIsModalOpen(true);
+    };
+    const openHistory = () => {
+        setHistory([]);
+        setCursor(0);
+        setIsHistoryOpen(true);
     };
 
     const handleEditRule = (rule: PricingRule) => {
@@ -178,12 +201,20 @@ const PricingRulesPage = () => {
         <div className="p-6">
             <div className="flex items-center justify-between mb-4">
                 <h1 className="text-2xl font-semibold text-gray-800">Regras de Precificação</h1>
-                <button
-                    onClick={handleAddRule}
-                    className="bg-medium-blue text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
-                >
-                    Adicionar Regra
-                </button>
+                <div className="flex gap-3">
+                    <button
+                        onClick={openHistory}
+                        className="bg-white border border-gray-200 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-50 transition-colors"
+                    >
+                        Histórico
+                    </button>
+                    <button
+                        onClick={handleAddRule}
+                        className="bg-medium-blue text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+                    >
+                        Adicionar Regra
+                    </button>
+                </div>
             </div>
 
             {isLoading && <LoadingSpinner />}
@@ -435,6 +466,45 @@ const PricingRulesPage = () => {
                         {createMutation.isPending || updateMutation.isPending ? <LoadingSpinner /> : (editingRule ? "Salvar Alterações" : "Adicionar Regra")}
                     </button>
                 </form>
+            </Modal>
+
+            {/* Modal de Histórico */}
+            <Modal isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} title="Histórico de alterações de regras">
+                <div className="flex items-center justify-between mb-3">
+                    <div className="text-sm text-gray-700">Filtrar período:</div>
+                    <select value={period} onChange={(e)=>setPeriod(e.target.value as any)} className="border border-gray-200 rounded-md text-sm px-2 py-1">
+                        <option value="all">Todo período</option>
+                        <option value="24h">Últimas 24h</option>
+                        <option value="7d">Últimos 7 dias</option>
+                        <option value="30d">Últimos 30 dias</option>
+                    </select>
+                </div>
+                <div className="max-h-[60vh] overflow-y-auto space-y-3">
+                    {history.filter(ev => { const now = Date.now(); if (period==='all') return true; const t = new Date(ev.at).getTime(); const win = period==='24h'?24*3600*1000:period==='7d'?7*24*3600*1000:30*24*3600*1000; return Number.isFinite(t) && (now - t) <= win; }).map((ev) => (
+                        <div key={ev.id} className="border rounded-md p-3">
+                            <div className="text-xs text-gray-500 mb-1">{new Date(ev.at).toLocaleString()} — por {ev.actorUserId}</div>
+                            <div className="text-sm font-medium">Ação: {ev.action}</div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+                                <div>
+                                    <div className="text-xs text-gray-600">Antes</div>
+                                    <pre className="text-[11px] bg-gray-50 p-2 rounded overflow-x-auto">{JSON.stringify(ev.ruleBefore ?? null, null, 2)}</pre>
+                                </div>
+                                <div>
+                                    <div className="text-xs text-gray-600">Depois</div>
+                                    <pre className="text-[11px] bg-gray-50 p-2 rounded overflow-x-auto">{JSON.stringify(ev.ruleAfter ?? null, null, 2)}</pre>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                    {history.length === 0 && (
+                        <div className="text-sm text-gray-500">Nenhum evento ainda.</div>
+                    )}
+                </div>
+                {cursor !== null && (
+                    <div className="mt-4 text-right">
+                        <button onClick={() => setCursor(cursor ?? 0)} className="text-medium-blue hover:underline">Carregar mais</button>
+                    </div>
+                )}
             </Modal>
         </div>
     );
