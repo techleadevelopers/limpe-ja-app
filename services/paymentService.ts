@@ -1,6 +1,8 @@
 // LimpeJaApp/app/services/paymentService.ts
 import axios from 'axios';
 import { api } from './api';
+import { createLocalConsole } from './logging';
+const console = createLocalConsole();
 
 import { MessageResponseDto } from '../types/backend/auth';
 import { CreatePixChargeDto, PixChargeResponseDto, RequestWithdrawalDto, PaymentIntent } from '../types/backend/payments';
