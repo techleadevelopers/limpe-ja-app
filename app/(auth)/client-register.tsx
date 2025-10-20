@@ -24,6 +24,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { CreateAddressDto, RegisterClientDto } from '../../types/backend/auth';
 
 import * as Location from 'expo-location';
+import { ensureLocationPermission } from '../../services/locationService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetchApi } from '../../services/api';
 import { AnimatedErrorMessage } from '../../components/auth/components/AnimatedErrorMessage';
@@ -711,8 +712,8 @@ export default function ClientRegisterScreen() {
                 }
                 setIsLoading(true);
                 try {
-                    let { status } = await Location.requestForegroundPermissionsAsync();
-                    if (status !== 'granted') {
+                    const ok = await ensureLocationPermission();
+                    if (!ok) {
                         setGeneralError('A permissão para acessar a localização foi negada. Por favor, habilite-a nas configurações do seu dispositivo.');
                         setIsLoading(false);
                         return;
