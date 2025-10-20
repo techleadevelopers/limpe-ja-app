@@ -17,8 +17,8 @@ class TransactionDto {
   @ApiProperty({ description: 'Descrição da transação', example: 'Serviço de Limpeza ABN123' })
   description: string;
 
-  @ApiProperty({ description: 'Data e hora da transação', example: '2025-06-07T10:00:00Z' })
-  date: Date;
+  @ApiProperty({ description: 'Data/hora de cria��o da transação', example: '2025-06-07T10:00:00Z' })
+  createdAt: string;
 }
 
 export class EarningsResponseDto {
