@@ -24,6 +24,7 @@ import { ProviderServiceOffering } from '../../../../types/backend/provider-serv
 import { formatDistance } from '../../../../utils/formatters';
 import { getFormattedServicePrice, getNumericPriceValue } from '../../../../utils/service-helpers';
 
+
 const AnimatedCardBackground = AnimatedReanimated.createAnimatedComponent(LinearGradient);
 const AnimatedPlusButtonGradient = AnimatedReanimated.createAnimatedComponent(LinearGradient);
 
@@ -241,17 +242,17 @@ const RecomendacaoCard: React.FC<RecomendacaoCardProps> = ({ item }) => {
       <View style={styles.metricTextContainer}>
         {hasAcceptanceRate && (
           <>
-            <Text style={[styles.metricIcon, { color: '#5da2ecff' }]} allowFontScaling={false}>•</Text>
+            <Ionicons name="checkmark-done" size={12} color="#5da2ecff" />
             <Text style={styles.metricValue} allowFontScaling={false}>{Math.round((item.acceptanceRate ?? (item as any)?.metrics?.acceptanceRate ?? 1))}%</Text>
           </>
         )}
         {hasAcceptanceRate && hasResponseTime && (
-          <Text style={styles.metricSeparator} allowFontScaling={false}> • </Text> 
+          <Text style={styles.metricSeparator} allowFontScaling={false}> • </Text>
         )}
         {hasResponseTime && (
           <>
             <Text style={[styles.metricIcon, { color: '#5da2ecff' }]} allowFontScaling={false}>•</Text>
-            <Text style={styles.metricValue} allowFontScaling={false}>{(item.averageResponseTime ?? (item as any)?.metrics?.averageResponseTime ?? 120)} min</Text>
+            <Ionicons name="time-outline" size={12} color="#5da2ecff" />
           </>
         )}
       </View>
