@@ -145,19 +145,19 @@ function AnimatedBackdrop() {
 // Serviços HTTP
 // =============================================================
 async function fetchMyTickets(): Promise<SupportTicket[]> {
-  const { data } = await api.get('/support/tickets', { params: { mine: true } });
+  const { data } = await api.get('/v1/support/tickets', { params: { mine: true } });
   return data?.items ?? data ?? [];
 }
 
 async function createTicket(dto: CreateTicketDto): Promise<SupportTicket> {
-  const { data } = await api.post('/support/tickets', dto);
+  const { data } = await api.post('/v1/support/tickets', dto);
   return data;
 }
 
 // (Opcional) buscar metadados - Com valores em Português
 async function fetchMeta(): Promise<{ categories: TicketCategory[]; severities: TicketSeverity[] }> {
   try {
-    const { data } = await api.get('/support/meta');
+    const { data } = await api.get('/v1/support/meta');
     return {
       categories: data?.categories ?? ['PAGAMENTOS', 'AGENDAMENTOS', 'CONTA', 'TÉCNICO', 'SEGURANÇA', 'OUTRO'],
       severities: data?.severities ?? ['BAIXA', 'MÉDIA', 'ALTA'],
@@ -807,3 +807,4 @@ const styles = StyleSheet.create({
     lineHeight: 20, // Confortável para leitura
   },
 });
+
