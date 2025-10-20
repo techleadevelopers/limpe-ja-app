@@ -363,8 +363,8 @@ model Provider {
   guaranteeClaims            GuaranteeClaim[]
   createdAt                  DateTime           @default(now())
   updatedAt                  DateTime           @updatedAt
-  acceptanceRate             Float              @default(0)
-  averageResponseTime        Int                @default(0) // minutos
+  acceptanceRate             Float              @default(94)
+  averageResponseTime        Int                @default(25) // minutos
 }
 
 model Address {
@@ -391,7 +391,9 @@ model Service {
   id                  String            @id @default(uuid())
   name                String            @unique
   description         String?
-  price               Decimal           @db.Decimal(10, 2)
+  // DEPRECATED: preço no nível do serviço global
+  // Tornado opcional para tratar Serviço como categoria/tipo
+  price               Decimal?          @db.Decimal(10, 2)
   defaultPricingType  PricingType?
   icon                String?
   providerServices    ProviderService[]
@@ -859,6 +861,8 @@ model LoyaltyTransaction {
   type        LoyaltyTransactionType
   referenceId String?
   createdAt   DateTime             @default(now())
+
+  @@unique([userId, type, referenceId])
 }
 
 model Reward {
