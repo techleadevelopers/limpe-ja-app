@@ -1,5 +1,7 @@
 // LimpeJaApp/app/services/locationService.ts
 import * as Location from 'expo-location';
+import { createLocalConsole, devWarn } from './logging';
+const console = createLocalConsole();
 
 let locationWatchSubscription: Location.LocationSubscription | null = null;
 
@@ -10,7 +12,7 @@ let locationWatchSubscription: Location.LocationSubscription | null = null;
 export async function ensureLocationPermission(): Promise<boolean> {
   const { status } = await Location.requestForegroundPermissionsAsync();
   if (status !== 'granted') {
-    console.warn('Permissão de localização negada.');
+    devWarn('Permissão de localização negada.');
     return false;
   }
   return true;
