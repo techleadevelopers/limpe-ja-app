@@ -62,7 +62,7 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
         }).start();
     };
 
-    // Helper para formatar pra?�ximo hora?�rio (discreto, baseado em data atual)
+    // Helper para formatar proximos horários (discreto, baseado em data atual)
     const formatNextAvailable = (next: { date: string; time: string } | undefined): string | null => {
         if (!next) return null;
         const today = new Date();
@@ -92,7 +92,7 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
     };
 
     const primaryService = item.providerServices && item.providerServices.length > 0 ? item.providerServices[0] : null;
-    const specialtyName = primaryService && primaryService.service ? primaryService.service.name : 'Servia?�o';
+    const specialtyName = primaryService && primaryService.service ? primaryService.service.name : 'Serviço';
 
     // Dista?�ncia: alinhar com RecomendacaoCard (sem injea?�a?�o __DEV__); fallback "0 km" quando ausente/<=0
     const distanceLabel = (typeof item.distance === 'number' && item.distance > 0)
