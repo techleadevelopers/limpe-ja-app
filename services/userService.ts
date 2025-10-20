@@ -11,12 +11,12 @@ class UserService {
     try {
       // Este endpoint deve retornar o perfil completo do usuário autenticado
       // O backend (NestJS) normalmente obtém o ID do usuário a partir do token JWT
-      const response = await api.get<UserProfile>(`${this.BASE_URL}/me`);
+      const response = await api.get<UserProfile>(`${this.BASE_URL}/me`, { headers: { 'X-Silent': '1' } });
       return response.data;
     } catch (error: any) {
-      console.error('Erro ao buscar perfil do usuário:', error.response?.data || error.message);
-      // Preserve axios error details (status, config) for upstream handling
+      // Sem console.* aqui. O interceptor global já loga em __DEV__.
       if (axios.isAxiosError(error)) {
+        // mantém axios error (status, config) para quem consome
         throw error;
       }
       throw new Error(error?.message || 'Erro ao buscar perfil do usuário.');
