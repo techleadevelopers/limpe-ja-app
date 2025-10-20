@@ -246,6 +246,25 @@ export class ProvidersController {
     return offers.map(offer => new OfferDetailsDto(offer)); 
   }
 
+  // ADMIN: Atualizar perfil de um provedor por ID
+  @Patch(':id')
+  @Roles(UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Atualizar perfil de um provedor por ID (apenas admin)' })
+  @ApiResponse({ status: 200, description: 'Perfil atualizado com sucesso.', type: ProviderDetailsDto })
+  async updateProviderById(
+    @Param('id') id: string,
+    @Body() updateProviderProfileDto: UpdateProviderProfileDto,
+  ): Promise<ProviderDetailsDto> {
+    this.logger.log(`[ProvidersController] updateProviderById: Atualizando provedor ${id}`);
+    const updated = await this.providersService.updateById(id, updateProviderProfileDto);
+    if (!updated) {
+      throw new NotFoundException(`Provedor com ID "${id}" não encontrado.`);
+    }
+    return new ProviderDetailsDto(updated);
+  }
+
   // =================================================================================================
   // ROTAS COM PARÂMETROS DINÂMICOS (Devem vir por último)
   // =================================================================================================
