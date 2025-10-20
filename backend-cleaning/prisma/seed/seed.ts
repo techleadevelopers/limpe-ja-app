@@ -1,4 +1,4 @@
-// seed.ts
+ï»¿// seed.ts
 import { PrismaClient, UserRole, Prisma, VerificationStatus, BookingStatus, TransactionType, PricingType, CouponType, CouponTarget, CouponStatus, MissionAudience, MissionKind, RewardType, MissionStatus, LoyaltyTransactionType, OfferTarget, OfferStatus, SupportTicketStatus, SupportTicketCategory, DisputeReason, DisputeStatus, IncidentType, IncidentStatus, SubscriptionFrequency, SubscriptionStatus, ClaimStatus, PaymentIntentStatus, PixKeyType, LedgerEntryType, PayoutStatus, Service, // Importado para tipagem de createdServices
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
@@ -12,7 +12,7 @@ const addDays = (date: Date, days: number): Date => {
   return result;
 };
 
-// Helper para upsert de endereços com lat/lon
+// Helper para upsert de endereÃ§os com lat/lon
 async function upsertAddress(addressData: {
   cep: string;
   street: string;
@@ -37,6 +37,8 @@ async function upsertAddress(addressData: {
       city: addressData.city,
       state: addressData.state,
       neighborhood: addressData.neighborhood, // Adicionado para melhor unicidade
+      // Novo: considerar complement na unicidade quando fornecido, para evitar reuso entre provedores
+      complement: addressData.complement,
     },
   });
 
@@ -50,13 +52,165 @@ async function upsertAddress(addressData: {
   }
 }
 
-export async function main() { // <-- A mudança é aqui
+// Helper para gerar avaliaÃ§Ãµes em massa para um provedor (sem alterar lÃ³gica principal)
+async function generateBulkReviews(providerUser: any, clientUser: any, residentialService: Service, numReviews: number = 100) {
+  console.log(`Gerando ${numReviews} avaliaÃ§Ãµes em massa para ${providerUser.fullName}...`);
+  const ratingsCycle = [5, 4, 5, 4, 5, 3, 5, 4, 5, 5];
+  const commentsCycle = [
+    'Excelente serviÃ§o! Muito profissional e atenciosa.',
+    'Muito bom, recomendo para todos.',
+    'SatisfatÃ³rio, bom trabalho.',
+    'Poderia melhorar um pouco, mas ok.',
+    'Perfeito! Deixou tudo impecÃ¡vel.',
+    'RÃ¡pida e eficiente.',
+    'Atendeu bem as expectativas.',
+    'Ã“timo custo-benefÃ­cio.',
+    'ServiÃ§o de qualidade.',
+    'Recomendo sem hesitar.'
+  ];
+
+  // Encontrar ou criar ProviderService para o serviÃ§o residencial (FIXED_PRICE, se existir; senÃ£o, qualquer)
+  let providerService = await prisma.providerService.findFirst({
+    where: {
+      providerId: providerUser.provider.id,
+      serviceId: residentialService.id,
+      pricingType: PricingType.FIXED_PRICE,
+    },
+  });
+  if (!providerService) {
+    // Fallback para qualquer pricingType se nÃ£o encontrar FIXED_PRICE
+    providerService = await prisma.providerService.findFirst({
+      where: {
+        providerId: providerUser.provider.id,
+        serviceId: residentialService.id,
+      },
+    });
+  }
+  if (!providerService) {
+    console.warn(`ProviderService nÃ£o encontrado para ${providerUser.fullName}. Pulando geraÃ§Ã£o de reviews.`);
+    return;
+  }
+
+  let createdCount = 0;
+  for (let i = 1; i <= numReviews; i++) {
+    const pastDate = addDays(new Date(), - (i * 3 + Math.floor(Math.random() * 30))); // Datas passadas espaÃ§adas e variadas
+    const bookingId = `BKG-BULK-${providerUser.fullName.replace(' ', '').toUpperCase()}-${i.toString().padStart(3, '0')}`;
+    const cep = `010${(i % 100).toString().padStart(2, '0')}-00${(i % 10)}`;
+    const street = `Rua AvaliaÃ§Ã£o Fake ${i}`;
+    const number = `${(i * 10) % 1000}`;
+    const uniqueAddressData = {
+      cep,
+      street,
+      number,
+      neighborhood: `Bairro Fake ${i % 5}`,
+      city: 'SÃ£o Paulo',
+      state: 'SP',
+      latitude: -23.55 + (i * 0.0001),
+      longitude: -46.63 + (i * 0.0001),
+      complement: bookingId,
+    };
+    const address = await upsertAddress(uniqueAddressData);
+
+    const booking = await prisma.booking.upsert({
+      where: { id: bookingId },
+      update: {
+        clientId: clientUser.client.id,
+        providerId: providerUser.provider.id,
+        providerServiceId: providerService.id,
+        scheduledDate: pastDate,
+        scheduledTime: ['09:00', '10:00', '14:00', '16:00'][Math.floor(Math.random() * 4)],
+        status: BookingStatus.COMPLETED,
+        totalPrice: new Prisma.Decimal((150 + Math.floor(Math.random() * 100)).toFixed(2)), // VariaÃ§Ã£o de preÃ§o
+        addressId: address.id,
+        notes: `AvaliaÃ§Ã£o em massa ${i} para ${providerUser.fullName}.`,
+      },
+      create: {
+        id: bookingId,
+        clientId: clientUser.client.id,
+        providerId: providerUser.provider.id,
+        providerServiceId: providerService.id,
+        scheduledDate: pastDate,
+        scheduledTime: ['09:00', '10:00', '14:00', '16:00'][Math.floor(Math.random() * 4)],
+        status: BookingStatus.COMPLETED,
+        totalPrice: new Prisma.Decimal((150 + Math.floor(Math.random() * 100)).toFixed(2)),
+        notes: `AvaliaÃ§Ã£o em massa ${i} para ${providerUser.fullName}.`,
+        addressId: address.id,
+      },
+    });
+
+    // PaymentIntent (PAID)
+    await prisma.paymentIntent.upsert({
+      where: { bookingId: booking.id },
+      update: {
+        status: PaymentIntentStatus.PAID,
+        amountCents: booking.totalPrice.mul(100).toNumber(),
+      },
+      create: {
+        bookingId: booking.id,
+        status: PaymentIntentStatus.PAID,
+        amountCents: booking.totalPrice.mul(100).toNumber(),
+        gateway: 'PIX_SIMULADO_BULK',
+        externalRef: `PIX-BULK-${bookingId}`,
+        idempotencyKey: `IDEMPOTENCY-BULK-${bookingId}`,
+        createdAt: pastDate,
+      },
+    });
+
+    // Transaction (COMPLETED)
+    await prisma.transaction.upsert({
+      where: { gatewayTransactionId: `TRANS-BULK-${bookingId}` },
+      update: {
+        providerId: booking.providerId,
+        amount: booking.totalPrice,
+        type: TransactionType.PAYMENT,
+        status: 'COMPLETED',
+        description: `Pagamento bulk para ${bookingId}`,
+        bookingId: booking.id,
+      },
+      create: {
+        providerId: booking.providerId,
+        amount: booking.totalPrice,
+        type: TransactionType.PAYMENT,
+        status: 'COMPLETED',
+        description: `Pagamento bulk para ${bookingId}`,
+        bookingId: booking.id,
+        gatewayTransactionId: `TRANS-BULK-${bookingId}`,
+        createdAt: pastDate,
+      },
+    });
+
+    // Review
+    const rating = ratingsCycle[i % ratingsCycle.length];
+    const comment = commentsCycle[Math.floor(i % commentsCycle.length)];
+    await prisma.review.upsert({
+      where: { bookingId: booking.id },
+      update: {
+        rating,
+        comment: `${comment} (Bulk ${i})`,
+        clientId: clientUser.client.id,
+        providerId: providerUser.provider.id,
+      },
+      create: {
+        bookingId: booking.id,
+        clientId: clientUser.client.id,
+        providerId: providerUser.provider.id,
+        rating,
+        comment: `${comment} (Bulk ${i})`,
+      },
+    });
+
+    createdCount++;
+  }
+  console.log(`âœ… ${createdCount} avaliaÃ§Ãµes geradas para ${providerUser.fullName}.`);
+}
+
+export async function main() {
   console.log('Iniciando o processo de seed...');
 
   // -----------------------------------------------------------------------------
   // Guard-rail
   if (process.env.NODE_ENV === 'production') {
-    console.log('Seed bloqueado em produção. Abortando.');
+    console.log('Seed bloqueado em produÃ§Ã£o. Abortando.');
     return;
   }
 
@@ -64,27 +218,27 @@ export async function main() { // <-- A mudança é aqui
   const now = new Date();
 
   // -----------------------------------------------------------------------------
-  // 1) USUÁRIOS E PERFIS (ADMIN, CLIENTES, PROVEDORES)
-  console.log('Criando/Atualizando usuários e perfis...');
+  // 1) USUÃRIOS E PERFIS (ADMIN, CLIENTES, PROVEDORES)
+  console.log('Criando/Atualizando usuÃ¡rios e perfis...');
 
   const adminUser = await prisma.user.upsert({
     where: { email: 'admin@limpeja.app' },
-    update: { passwordHash: pwd, role: UserRole.ADMIN, fullName: 'Admin LimpeJá' },
+    update: { passwordHash: pwd, role: UserRole.ADMIN, fullName: 'Admin LimpeJÃ¡' },
     create: {
       email: 'admin@limpeja.app',
       passwordHash: pwd,
       role: UserRole.ADMIN,
-      fullName: 'Admin LimpeJá',
+      fullName: 'Admin LimpeJÃ¡',
     },
   });
-  console.log(`Usuário Admin '${adminUser.email}' criada/atualizada.`);
+  console.log(`UsuÃ¡rio Admin '${adminUser.email}' criado/atualizado.`);
 
   const referrerAddress = await upsertAddress({
     cep: '01000000',
     street: 'Rua do Indicador',
     number: '100',
     neighborhood: 'Centro',
-    city: 'São Paulo',
+    city: 'SÃ£o Paulo',
     state: 'SP',
     latitude: -23.55,
     longitude: -46.63,
@@ -108,14 +262,14 @@ export async function main() { // <-- A mudança é aqui
     },
     include: { client: true },
   });
-  console.log(`Usuário Cliente 'Indicador' (${referrerUser.email}) criada/atualizada.`);
+  console.log(`UsuÃ¡rio Cliente 'Indicador' (${referrerUser.email}) criado/atualizado.`);
 
   const referredAddress = await upsertAddress({
     cep: '01001001',
     street: 'Rua do Indicado',
     number: '200',
     neighborhood: 'Vila Nova',
-    city: 'São Paulo',
+    city: 'SÃ£o Paulo',
     state: 'SP',
     latitude: -23.56,
     longitude: -46.64,
@@ -139,15 +293,15 @@ export async function main() { // <-- A mudança é aqui
     },
     include: { client: true },
   });
-  console.log(`Usuário Cliente 'Indicado' (${referredUser.email}) criada/atualizada.`);
+  console.log(`UsuÃ¡rio Cliente 'Indicado' (${referredUser.email}) criado/atualizado.`);
 
-  // Existing Provider: Caroline Silva
+  // Existing Provider: Caroline Silva (LINK CORRIGIDO)
   const providerAddress = await upsertAddress({
     cep: '01002-002',
     street: 'Av. do Provedor',
     number: '300',
     neighborhood: 'Jardins',
-    city: 'São Paulo',
+    city: 'SÃ£o Paulo',
     state: 'SP',
     latitude: -23.57,
     longitude: -46.65,
@@ -161,7 +315,8 @@ export async function main() { // <-- A mudança é aqui
       fullName: 'Caroline Silva',
       provider: {
         update: {
-          pixKeyMasked: 'caro****@email.com', // ADICIONADO: Máscara para PIX (exemplo simples; aplicar lógica real na app)
+          pixKeyMasked: 'caro****@email.com',
+          avatarUrl: 'https://randomuser.me/api/portraits/women/6.jpg',
         }
       }
     },
@@ -175,57 +330,57 @@ export async function main() { // <-- A mudança é aqui
           fullName: 'Caroline Silva',
           yearsOfExperience: 5,
           verificationStatus: VerificationStatus.APPROVED,
-          acceptanceRate: 0.92,
-          averageResponseTime: 180, // Em minutos, conforme schema.prisma
-          bio: 'Provedora experiente e dedicada a um serviço de qualidade.',
+          acceptanceRate: 94,
+          averageResponseTime: 25, // Em minutos, conforme schema.prisma
+          bio: 'Provedora experiente e dedicada a um serviÃ§o de qualidade.',
           pixKey: 'carolina.pix@email.com',
-          pixKeyMasked: 'caro****@email.com', // ADICIONADO: Máscara para PIX (exemplo simples; aplicar lógica real na app)
+          pixKeyMasked: 'caro****@email.com',
           address: { connect: { id: providerAddress.id } },
           dateOfBirth: new Date('1985-01-15'),
           cpf: '000.000.000-00',
           phone: '11977777777',
-          avatarUrl: 'https://randomuser.me/api/portraits/women/6.jpg', // Placeholder image
+          avatarUrl: 'https://randomuser.me/api/portraits/women/6.jpg',
         },
       },
     },
     include: { provider: true },
   });
-  console.log(`Usuário Provedor 'Caroline Silva' (${providerUser.email}) criada/atualizada.`);
+  console.log(`UsuÃ¡rio Provedor 'Caroline Silva' (${providerUser.email}) criado/atualizado.`);
 
   // Initial balance injection for the main provider (Caroline Silva) for withdrawal testing
   if (providerUser.provider) {
     const initialBalanceTransactionRef = 'INITIAL_BALANCE_INJECTION_CAROLINE';
     const initialTransaction = await prisma.transaction.upsert({
-      where: { gatewayTransactionId: initialBalanceTransactionRef }, // CORREÇÃO AQUI: Usando gatewayTransactionId
+      where: { gatewayTransactionId: initialBalanceTransactionRef },
       update: {
         amount: new Prisma.Decimal(200.00),
         status: 'COMPLETED',
         description: 'Saldo inicial injetado para teste de saque',
-        gatewayTransactionId: initialBalanceTransactionRef, // Garantindo que seja atualizado
+        gatewayTransactionId: initialBalanceTransactionRef,
       },
       create: {
         providerId: providerUser.provider.id,
         amount: new Prisma.Decimal(200.00),
-        type: TransactionType.PAYMENT, // Representing funds coming into the provider's balance
+        type: TransactionType.PAYMENT,
         status: 'COMPLETED',
         description: 'Saldo inicial injetado para teste de saque',
-        transactionRef: initialBalanceTransactionRef, // Mantendo transactionRef para referência customizada
-        gatewayTransactionId: initialBalanceTransactionRef, // CORREÇÃO AQUI: Adicionando gatewayTransactionId
+        transactionRef: initialBalanceTransactionRef,
+        gatewayTransactionId: initialBalanceTransactionRef,
         createdAt: new Date(),
       },
     });
-    console.log(`Transação de saldo inicial para ${providerUser.fullName} criada/atualizada. ID: ${initialTransaction.id}`);
+    console.log(`TransaÃ§Ã£o de saldo inicial para ${providerUser.fullName} criada/atualizada. ID: ${initialTransaction.id}`);
   } else {
     console.warn(`Provider profile not found for ${providerUser.fullName}. Cannot inject initial balance.`);
   }
 
-  // NEW PROVIDER 1: Maria
+  // NEW PROVIDER 1: Maria (LINK CORRIGIDO)
   const providerAddress2 = await upsertAddress({
     cep: '01002-003',
     street: 'Rua das Flores',
     number: '45',
     neighborhood: 'Pinheiros',
-    city: 'São Paulo',
+    city: 'SÃ£o Paulo',
     state: 'SP',
     latitude: -23.56,
     longitude: -46.68,
@@ -239,7 +394,8 @@ export async function main() { // <-- A mudança é aqui
       fullName: 'Maria',
       provider: {
         update: {
-          pixKeyMasked: 'mari****@email.com', // ADICIONADO: Máscara para PIX (exemplo simples; aplicar lógica real na app)
+          pixKeyMasked: 'mari****@email.com',
+          avatarUrl: 'https://randomuser.me/api/portraits/women/7.jpg',
         }
       }
     },
@@ -253,30 +409,30 @@ export async function main() { // <-- A mudança é aqui
           fullName: 'Maria',
           yearsOfExperience: 3,
           verificationStatus: VerificationStatus.APPROVED,
-          acceptanceRate: 0.85,
-          averageResponseTime: 240,
+          acceptanceRate: 94,
+          averageResponseTime: 25,
           bio: 'Limpeza eficiente e com carinho, cuidando do seu lar como se fosse meu.',
           pixKey: 'maria.pix@email.com',
-          pixKeyMasked: 'mari****@email.com', // ADICIONADO: Máscara para PIX (exemplo simples; aplicar lógica real na app)
+          pixKeyMasked: 'mari****@email.com',
           address: { connect: { id: providerAddress2.id } },
           dateOfBirth: new Date('1990-03-20'),
           cpf: '111.111.111-11',
           phone: '11966666666',
-          avatarUrl: 'https://randomuser.me/api/portraits/women/7.jpg', // Placeholder image
+          avatarUrl: 'https://randomuser.me/api/portraits/women/7.jpg',
         },
       },
     },
     include: { provider: true },
   });
-  console.log(`Usuário Provedor 'Maria' (${providerUser2.email}) criada/atualizada.`);
+  console.log(`UsuÃ¡rio Provedor 'Maria' (${providerUser2.email}) criado/atualizado.`);
 
-  // NEW PROVIDER 2: Joana
+  // NEW PROVIDER 2: Joana (LINK CORRIGIDO DO CACHORRO)
   const providerAddress3 = await upsertAddress({
     cep: '01002-004',
     street: 'Av. Paulista',
     number: '1500',
     neighborhood: 'Bela Vista',
-    city: 'São Paulo',
+    city: 'SÃ£o Paulo',
     state: 'SP',
     latitude: -23.561,
     longitude: -46.656,
@@ -290,7 +446,8 @@ export async function main() { // <-- A mudança é aqui
       fullName: 'Joana',
       provider: {
         update: {
-          pixKeyMasked: 'joan****@email.com', // ADICIONADO: Máscara para PIX (exemplo simples; aplicar lógica real na app)
+          pixKeyMasked: 'joan****@email.com',
+          avatarUrl: 'https://randomuser.me/api/portraits/women/8.jpg',
         }
       }
     },
@@ -304,30 +461,30 @@ export async function main() { // <-- A mudança é aqui
           fullName: 'Joana',
           yearsOfExperience: 7,
           verificationStatus: VerificationStatus.APPROVED,
-          acceptanceRate: 0.95,
-          averageResponseTime: 120,
-          bio: 'Especialista em limpeza profunda e organização de ambientes.',
+          acceptanceRate: 94,
+          averageResponseTime: 25,
+          bio: 'Especialista em limpeza profunda e organizaÃ§Ã£o de ambientes.',
           pixKey: 'joana.pix@email.com',
-          pixKeyMasked: 'joan****@email.com', // ADICIONADO: Máscara para PIX (exemplo simples; aplicar lógica real na app)
+          pixKeyMasked: 'joan****@email.com',
           address: { connect: { id: providerAddress3.id } },
           dateOfBirth: new Date('1980-07-01'),
           cpf: '222.222.222-22',
           phone: '11955555555',
-          avatarUrl: 'https://randomuser.me/api/portraits/women/8.jpg', // Placeholder image
+          avatarUrl: 'https://randomuser.me/api/portraits/women/8.jpg',
         },
       },
     },
     include: { provider: true },
   });
-  console.log(`Usuário Provedor 'Joana' (${providerUser3.email}) criada/atualizada.`);
+  console.log(`UsuÃ¡rio Provedor 'Joana' (${providerUser3.email}) criado/atualizado.`);
 
-  // NEW PROVIDER 3: Ana
+  // NEW PROVIDER 3: Ana (LINK CORRIGIDO DO CÃ‰REBRO)
   const providerAddress4 = await upsertAddress({
     cep: '01002-005',
     street: 'Rua Augusta',
     number: '2000',
-    neighborhood: 'Consolação',
-    city: 'São Paulo',
+    neighborhood: 'ConsolaÃ§Ã£o',
+    city: 'SÃ£o Paulo',
     state: 'SP',
     latitude: -23.555,
     longitude: -46.666,
@@ -341,7 +498,8 @@ export async function main() { // <-- A mudança é aqui
       fullName: 'Ana',
       provider: {
         update: {
-          pixKeyMasked: 'ana.****@email.com', // ADICIONADO: Máscara para PIX (exemplo simples; aplicar lógica real na app)
+          pixKeyMasked: 'ana.****@email.com',
+          avatarUrl: 'https://randomuser.me/api/portraits/women/9.jpg',
         }
       }
     },
@@ -355,22 +513,22 @@ export async function main() { // <-- A mudança é aqui
           fullName: 'Ana',
           yearsOfExperience: 2,
           verificationStatus: VerificationStatus.APPROVED,
-          acceptanceRate: 0.88,
-          averageResponseTime: 200,
-          bio: 'Dedicação e cuidado em cada detalhe para um ambiente impecável.',
+          acceptanceRate: 94,
+          averageResponseTime: 25,
+          bio: 'DedicaÃ§Ã£o e cuidado em cada detalhe para um ambiente impecÃ¡vel.',
           pixKey: 'ana.pix@email.com',
-          pixKeyMasked: 'ana.****@email.com', // ADICIONADO: Máscara para PIX (exemplo simples; aplicar lógica real na app)
+          pixKeyMasked: 'ana.****@email.com',
           address: { connect: { id: providerAddress4.id } },
           dateOfBirth: new Date('1995-11-11'),
           cpf: '333.333.333-33',
           phone: '11944444444',
-          avatarUrl: 'https://randomuser.me/api/portraits/women/9.jpg', // Placeholder image
+          avatarUrl: 'https://randomuser.me/api/portraits/women/9.jpg',
         },
       },
     },
     include: { provider: true },
   });
-  console.log(`Usuário Provedor 'Ana' (${providerUser4.email}) criada/atualizada.`);
+  console.log(`UsuÃ¡rio Provedor 'Ana' (${providerUser4.email}) criado/atualizado.`);
 
   // NOVO CLIENTE PARA AVALIAR A JOANA
   const clientJoanaReviewerAddress = await upsertAddress({
@@ -378,7 +536,7 @@ export async function main() { // <-- A mudança é aqui
     street: 'Rua do Avaliador',
     number: '50',
     neighborhood: 'Centro',
-    city: 'São Paulo',
+    city: 'SÃ£o Paulo',
     state: 'SP',
     latitude: -23.54,
     longitude: -46.62,
@@ -402,13 +560,106 @@ export async function main() { // <-- A mudança é aqui
     },
     include: { client: true },
   });
-  console.log(`Usuário Cliente 'Cliente Joana Reviewer' (${clientUserJoanaReviewer.email}) criada/atualizada.`);
+  console.log(`UsuÃ¡rio Cliente 'Cliente Joana Reviewer' (${clientUserJoanaReviewer.email}) criado/atualizado.`);
+
+  // Adicional: Clientes reviewers para outros provedores (para geraÃ§Ã£o de bulk reviews)
+  const clientCarolineReviewerAddress = await upsertAddress({
+    cep: '01001003',
+    street: 'Rua Caroline Reviewer',
+    number: '60',
+    neighborhood: 'Centro',
+    city: 'SÃ£o Paulo',
+    state: 'SP',
+    latitude: -23.541,
+    longitude: -46.621,
+  });
+
+  const clientUserCarolineReviewer = await prisma.user.upsert({
+    where: { email: 'clientcaroline@teste.com' },
+    update: { passwordHash: pwd, role: UserRole.CLIENT, fullName: 'Cliente Caroline Reviewer' },
+    create: {
+      email: 'clientcaroline@teste.com',
+      passwordHash: pwd,
+      role: UserRole.CLIENT,
+      fullName: 'Cliente Caroline Reviewer',
+      client: {
+        create: {
+          fullName: 'Cliente Caroline Reviewer',
+          phone: '11922222222',
+          address: { connect: { id: clientCarolineReviewerAddress.id } },
+        },
+      },
+    },
+    include: { client: true },
+  });
+  console.log(`UsuÃ¡rio Cliente 'Cliente Caroline Reviewer' criado/atualizado.`);
+
+  const clientMariaReviewerAddress = await upsertAddress({
+    cep: '01001004',
+    street: 'Rua Maria Reviewer',
+    number: '70',
+    neighborhood: 'Centro',
+    city: 'SÃ£o Paulo',
+    state: 'SP',
+    latitude: -23.542,
+    longitude: -46.622,
+  });
+
+  const clientUserMariaReviewer = await prisma.user.upsert({
+    where: { email: 'clientmaria@teste.com' },
+    update: { passwordHash: pwd, role: UserRole.CLIENT, fullName: 'Cliente Maria Reviewer' },
+    create: {
+      email: 'clientmaria@teste.com',
+      passwordHash: pwd,
+      role: UserRole.CLIENT,
+      fullName: 'Cliente Maria Reviewer',
+      client: {
+        create: {
+          fullName: 'Cliente Maria Reviewer',
+          phone: '11911111111',
+          address: { connect: { id: clientMariaReviewerAddress.id } },
+        },
+      },
+    },
+    include: { client: true },
+  });
+  console.log(`UsuÃ¡rio Cliente 'Cliente Maria Reviewer' criado/atualizado.`);
+
+  const clientAnaReviewerAddress = await upsertAddress({
+    cep: '01001005',
+    street: 'Rua Ana Reviewer',
+    number: '80',
+    neighborhood: 'Centro',
+    city: 'SÃ£o Paulo',
+    state: 'SP',
+    latitude: -23.543,
+    longitude: -46.623,
+  });
+
+  const clientUserAnaReviewer = await prisma.user.upsert({
+    where: { email: 'clientana@teste.com' },
+    update: { passwordHash: pwd, role: UserRole.CLIENT, fullName: 'Cliente Ana Reviewer' },
+    create: {
+      email: 'clientana@teste.com',
+      passwordHash: pwd,
+      role: UserRole.CLIENT,
+      fullName: 'Cliente Ana Reviewer',
+      client: {
+        create: {
+          fullName: 'Cliente Ana Reviewer',
+          phone: '11900000000',
+          address: { connect: { id: clientAnaReviewerAddress.id } },
+        },
+      },
+    },
+    include: { client: true },
+  });
+  console.log(`UsuÃ¡rio Cliente 'Cliente Ana Reviewer' criado/atualizado.`);
 
   // -----------------------------------------------------------------------------
   // 2) REFERRAL CODE (para o indicador)
-  console.log('Criando/Atualizando código de indicação...');
+  console.log('Criando/Atualizando cÃ³digo de indicaÃ§Ã£o...');
 
-  // Onde 'referredUserId' é o campo único no modelo Referral
   const referralCode = await prisma.referral.upsert({
     where: { referredUserId: referredUser.id },
     update: { referrerUserId: referrerUser.id, referralCode: 'REF-TEST-001' },
@@ -419,24 +670,24 @@ export async function main() { // <-- A mudança é aqui
     },
   });
   console.log(
-    `Código de Indicação 'REF-TEST-001' para ${referrerUser.fullName} (indicando ${referredUser.fullName}) criada/atualizada.`,
+    `CÃ³digo de IndicaÃ§Ã£o 'REF-TEST-001' para ${referrerUser.fullName} (indicando ${referredUser.fullName}) criado/atualizado.`,
   );
 
   // -----------------------------------------------------------------------------
-  // 3) CATÁLOGO DE SERVIÇOS
-  console.log('Criando/Atualizando serviços...');
+  // 3) CATÃLOGO DE SERVIÃ‡OS
+  console.log('Criando/Atualizando serviÃ§os...');
 
   const servicesData = [
-    { name: 'Residencial', description: 'Limpeza completa de residências.', price: 150.0, defaultPricingType: PricingType.FIXED_PRICE, icon: 'residencial' },
+    { name: 'Residencial', description: 'Limpeza completa de residÃªncias.', price: 150.0, defaultPricingType: PricingType.FIXED_PRICE, icon: 'residencial' },
     { name: 'Comercial', description: 'Limpeza para ambientes comerciais.', price: 50.0, defaultPricingType: PricingType.HOURLY, icon: 'comercial' },
-    { name: 'Pós-Obra', description: 'Limpeza detalhada após reformas e construções.', price: 300.0, defaultPricingType: PricingType.FIXED_PRICE, icon: 'obra' },
-    { name: 'Vidros', description: 'Limpeza especializada de janelas e superfícies de vidro.', price: 100.0, defaultPricingType: PricingType.FIXED_PRICE, icon: 'vidro' },
-    { name: 'Escritório', description: 'Limpeza e organização de espaços de escritório.', price: 180.0, defaultPricingType: PricingType.FIXED_PRICE, icon: 'escritorio' },
-    { name: 'Estofados', description: 'Limpeza e higienização de estofados.', price: 120.0, defaultPricingType: PricingType.FIXED_PRICE, icon: 'estofados' },
-    { name: 'Passadoria', description: 'Serviço de passar roupas.', price: 25.0, defaultPricingType: PricingType.HOURLY, icon: 'passadoria' },
-    // Novos serviços para BY_SIZE
-    { name: 'Limpeza por M²', description: 'Limpeza cobrada por metro quadrado.', price: 5.0, defaultPricingType: PricingType.BY_SIZE, icon: 'area' }, // Preço por m2
-    { name: 'Limpeza por Cômodo', description: 'Limpeza cobrada por número de cômodos.', price: 80.0, defaultPricingType: PricingType.BY_SIZE, icon: 'room' }, // Preço por cômodo
+    { name: 'PÃ³s-Obra', description: 'Limpeza detalhada apÃ³s reformas e construÃ§Ãµes.', price: 300.0, defaultPricingType: PricingType.FIXED_PRICE, icon: 'obra' },
+    { name: 'Vidros', description: 'Limpeza especializada de janelas e superfÃ­cies de vidro.', price: 100.0, defaultPricingType: PricingType.FIXED_PRICE, icon: 'vidro' },
+    { name: 'EscritÃ³rio', description: 'Limpeza e organizaÃ§Ã£o de espaÃ§os de escritÃ³rio.', price: 180.0, defaultPricingType: PricingType.FIXED_PRICE, icon: 'escritorio' },
+    { name: 'Estofados', description: 'Limpeza e higienizaÃ§Ã£o de estofados.', price: 120.0, defaultPricingType: PricingType.FIXED_PRICE, icon: 'estofados' },
+    { name: 'Passadoria', description: 'ServiÃ§o de passar roupas.', price: 25.0, defaultPricingType: PricingType.HOURLY, icon: 'passadoria' },
+    // Novos serviÃ§os para BY_SIZE
+    { name: 'Limpeza por MÂ²', description: 'Limpeza cobrada por metro quadrado.', price: 5.0, defaultPricingType: PricingType.BY_SIZE, icon: 'area' }, // PreÃ§o por m2
+    { name: 'Limpeza por CÃ´modo', description: 'Limpeza cobrada por nÃºmero de cÃ´modos.', price: 80.0, defaultPricingType: PricingType.BY_SIZE, icon: 'room' }, // PreÃ§o por cÃ´modo
   ];
 
   const createdServices: { [key: string]: Service } = {};
@@ -458,11 +709,11 @@ export async function main() { // <-- A mudança é aqui
       },
     });
     createdServices[service.name] = service;
-    console.log(`Serviço '${service.name}' criado/atualizado.`);
+    console.log(`ServiÃ§o '${service.name}' criado/atualizado.`);
   }
 
-  // --- OFERTAS DE SERVIÇO POR PROVEDOR (COM TODOS OS TIPOS DE PRECIFICAÇÃO) ---
-  console.log('Criando/Atualizando ofertas de serviço do provedor...');
+  // --- OFERTAS DE SERVIÃ‡O POR PROVEDOR (COM TODOS OS TIPOS DE PRECIFICAÃ‡ÃƒO) ---
+  console.log('Criando/Atualizando ofertas de serviÃ§o do provedor...');
 
   if (!providerUser.provider || !providerUser2.provider || !providerUser3.provider || !providerUser4.provider) {
     throw new Error("Provider profiles not found. Ensure all provider users are created with their provider profiles.");
@@ -480,24 +731,24 @@ export async function main() { // <-- A mudança é aqui
     },
     update: {
       price: new Prisma.Decimal(180.0),
-      pricePerHour: null, // Não aplicável para FIXED_PRICE
-      pricePerSquareMeter: null, // Não aplicável para FIXED_PRICE
-      pricePerRoom: null, // Não aplicável para FIXED_PRICE
+      pricePerHour: null, // NÃ£o aplicÃ¡vel para FIXED_PRICE
+      pricePerSquareMeter: null, // NÃ£o aplicÃ¡vel para FIXED_PRICE
+      pricePerRoom: null, // NÃ£o aplicÃ¡vel para FIXED_PRICE
       pricingType: PricingType.FIXED_PRICE,
-      description: 'Limpeza completa até 3h',
+      description: 'Limpeza completa atÃ© 3h',
       durationMinutes: 180,
     },
     create: {
       providerId: providerUser.provider.id,
       serviceId: residentialCleaningService.id,
       pricingType: PricingType.FIXED_PRICE,
-      price: new Prisma.Decimal(180.0), // 'price' é obrigatório conforme regra de negócio
-      description: 'Limpeza completa até 3h',
+      price: new Prisma.Decimal(180.0), // 'price' Ã© obrigatÃ³rio conforme regra de negÃ³cio
+      description: 'Limpeza completa atÃ© 3h',
       durationMinutes: 180,
     },
   });
   console.log(
-    `Oferta de serviço para ${providerUser.fullName} (${residentialCleaningService.name} - FIXED_PRICE) criada/atualizada.`,
+    `Oferta de serviÃ§o para ${providerUser.fullName} (${residentialCleaningService.name} - FIXED_PRICE) criada/atualizada.`,
   );
 
   // Caroline Silva (HOURLY: Comercial)
@@ -511,26 +762,26 @@ export async function main() { // <-- A mudança é aqui
       },
     },
     update: {
-      price: new Prisma.Decimal(commercialService.price), // 'price' é obrigatório conforme regra de negócio, usando o preço base do serviço
+      price: new Prisma.Decimal(commercialService.price), // 'price' Ã© obrigatÃ³rio conforme regra de negÃ³cio, usando o preÃ§o base do serviÃ§o
       pricePerHour: new Prisma.Decimal(55.0),
-      pricePerSquareMeter: null, // Não aplicável para HOURLY
-      pricePerRoom: null, // Não aplicável para HOURLY
+      pricePerSquareMeter: null, // NÃ£o aplicÃ¡vel para HOURLY
+      pricePerRoom: null, // NÃ£o aplicÃ¡vel para HOURLY
       pricingType: PricingType.HOURLY,
       description: 'Limpeza comercial por hora',
-      durationMinutes: 60, // Exemplo de duração para uma hora
+      durationMinutes: 60, // Exemplo de duraÃ§Ã£o para uma hora
     },
     create: {
       providerId: providerUser.provider.id,
       serviceId: commercialService.id,
       pricingType: PricingType.HOURLY,
-      price: new Prisma.Decimal(commercialService.price), // 'price' é obrigatório conforme regra de negócio, usando o preço base do serviço
+      price: new Prisma.Decimal(commercialService.price), // 'price' Ã© obrigatÃ³rio conforme regra de negÃ³cio, usando o preÃ§o base do serviÃ§o
       pricePerHour: new Prisma.Decimal(55.0),
       description: 'Limpeza comercial por hora',
       durationMinutes: 60,
     },
   });
   console.log(
-    `Oferta de serviço para ${providerUser.fullName} (${commercialService.name} - HOURLY) criada/atualizada.`,
+    `Oferta de serviÃ§o para ${providerUser.fullName} (${commercialService.name} - HOURLY) criada/atualizada.`,
   );
 
   // Maria (FIXED_PRICE: Residencial)
@@ -548,24 +799,24 @@ export async function main() { // <-- A mudança é aqui
       pricePerSquareMeter: null,
       pricePerRoom: null,
       pricingType: PricingType.FIXED_PRICE,
-      description: 'Limpeza residencial padrão',
+      description: 'Limpeza residencial padrÃ£o',
       durationMinutes: 160,
     },
     create: {
       providerId: providerUser2.provider.id,
       serviceId: residentialCleaningService.id,
       pricingType: PricingType.FIXED_PRICE,
-      price: new Prisma.Decimal(170.0), // 'price' é obrigatório conforme regra de negócio
-      description: 'Limpeza residencial padrão',
+      price: new Prisma.Decimal(170.0), // 'price' Ã© obrigatÃ³rio conforme regra de negÃ³cio
+      description: 'Limpeza residencial padrÃ£o',
       durationMinutes: 160,
     },
   });
   console.log(
-    `Oferta de serviço para ${providerUser2.fullName} (${residentialCleaningService.name} - FIXED_PRICE) criada/atualizada.`,
+    `Oferta de serviÃ§o para ${providerUser2.fullName} (${residentialCleaningService.name} - FIXED_PRICE) criada/atualizada.`,
   );
 
-  // Maria (BY_SIZE: Limpeza por M²)
-  const cleaningBySqMeterService = createdServices['Limpeza por M²'];
+  // Maria (BY_SIZE: Limpeza por MÂ²)
+  const cleaningBySqMeterService = createdServices['Limpeza por MÂ²'];
   await prisma.providerService.upsert({
     where: {
       providerId_serviceId_pricingType: {
@@ -575,26 +826,26 @@ export async function main() { // <-- A mudança é aqui
       },
     },
     update: {
-      price: new Prisma.Decimal(50.0), // 'price' é obrigatório conforme regra de negócio, usando um valor base
-      pricePerHour: null, // Não aplicável para BY_SIZE
+      price: new Prisma.Decimal(50.0), // 'price' Ã© obrigatÃ³rio conforme regra de negÃ³cio, usando um valor base
+      pricePerHour: null, // NÃ£o aplicÃ¡vel para BY_SIZE
       pricePerSquareMeter: new Prisma.Decimal(6.5),
-      pricePerRoom: null, // Não aplicável para BY_SIZE
+      pricePerRoom: null, // NÃ£o aplicÃ¡vel para BY_SIZE
       pricingType: PricingType.BY_SIZE,
       description: 'Limpeza detalhada por metro quadrado',
-      durationMinutes: null, // Duração pode não ser fixa para BY_SIZE
+      durationMinutes: null, // DuraÃ§Ã£o pode nÃ£o ser fixa para BY_SIZE
     },
     create: {
       providerId: providerUser2.provider.id,
       serviceId: cleaningBySqMeterService.id,
       pricingType: PricingType.BY_SIZE,
-      price: new Prisma.Decimal(50.0), // 'price' é obrigatório conforme regra de negócio, usando um valor base
+      price: new Prisma.Decimal(50.0), // 'price' Ã© obrigatÃ³rio conforme regra de negÃ³cio, usando um valor base
       pricePerSquareMeter: new Prisma.Decimal(6.5),
       description: 'Limpeza detalhada por metro quadrado',
       durationMinutes: null,
     },
   });
   console.log(
-    `Oferta de serviço para ${providerUser2.fullName} (${cleaningBySqMeterService.name} - BY_SIZE) criada/atualizada.`,
+    `Oferta de serviÃ§o para ${providerUser2.fullName} (${cleaningBySqMeterService.name} - BY_SIZE) criada/atualizada.`,
   );
 
   // Joana (FIXED_PRICE: Residencial)
@@ -619,17 +870,17 @@ export async function main() { // <-- A mudança é aqui
       providerId: providerUser3.provider.id,
       serviceId: residentialCleaningService.id,
       pricingType: PricingType.FIXED_PRICE,
-      price: new Prisma.Decimal(190.0), // 'price' é obrigatório conforme regra de negócio
+      price: new Prisma.Decimal(190.0), // 'price' Ã© obrigatÃ³rio conforme regra de negÃ³cio
       description: 'Limpeza residencial premium',
       durationMinutes: 200,
     },
   });
   console.log(
-    `Oferta de serviço para ${providerUser3.fullName} (${residentialCleaningService.name} - FIXED_PRICE) criada/atualizada.`,
+    `Oferta de serviÃ§o para ${providerUser3.fullName} (${residentialCleaningService.name} - FIXED_PRICE) criada/atualizada.`,
   );
 
-  // Joana (BY_SIZE: Limpeza por Cômodo)
-  const cleaningByRoomService = createdServices['Limpeza por Cômodo'];
+  // Joana (BY_SIZE: Limpeza por CÃ´modo)
+  const cleaningByRoomService = createdServices['Limpeza por CÃ´modo'];
   await prisma.providerService.upsert({
     where: {
       providerId_serviceId_pricingType: {
@@ -639,26 +890,26 @@ export async function main() { // <-- A mudança é aqui
       },
     },
     update: {
-      price: new Prisma.Decimal(50.0), // 'price' é obrigatório conforme regra de negócio, usando um valor base
-      pricePerHour: null, // Não aplicável para BY_SIZE
-      pricePerSquareMeter: null, // Não aplicável para BY_SIZE
+      price: new Prisma.Decimal(50.0), // 'price' Ã© obrigatÃ³rio conforme regra de negÃ³cio, usando um valor base
+      pricePerHour: null, // NÃ£o aplicÃ¡vel para BY_SIZE
+      pricePerSquareMeter: null, // NÃ£o aplicÃ¡vel para BY_SIZE
       pricePerRoom: new Prisma.Decimal(90.0),
       pricingType: PricingType.BY_SIZE,
-      description: 'Limpeza por cômodo, ideal para áreas específicas',
-      durationMinutes: null, // Duração pode não ser fixa para BY_SIZE
+      description: 'Limpeza por cÃ´modo, ideal para Ã¡reas especÃ­ficas',
+      durationMinutes: null, // DuraÃ§Ã£o pode nÃ£o ser fixa para BY_SIZE
     },
     create: {
       providerId: providerUser3.provider.id,
       serviceId: cleaningByRoomService.id,
       pricingType: PricingType.BY_SIZE,
-      price: new Prisma.Decimal(50.0), // 'price' é obrigatório conforme regra de negócio, usando um valor base
+      price: new Prisma.Decimal(50.0), // 'price' Ã© obrigatÃ³rio conforme regra de negÃ³cio, usando um valor base
       pricePerRoom: new Prisma.Decimal(90.0),
-      description: 'Limpeza por cômodo, ideal para áreas específicas',
+      description: 'Limpeza por cÃ´modo, ideal para Ã¡reas especÃ­ficas',
       durationMinutes: null,
     },
   });
   console.log(
-    `Oferta de serviço para ${providerUser3.fullName} (${cleaningByRoomService.name} - BY_SIZE) criada/atualizada.`,
+    `Oferta de serviÃ§o para ${providerUser3.fullName} (${cleaningByRoomService.name} - BY_SIZE) criada/atualizada.`,
   );
 
   // Ana (FIXED_PRICE: Residencial)
@@ -676,20 +927,20 @@ export async function main() { // <-- A mudança é aqui
       pricePerSquareMeter: null,
       pricePerRoom: null,
       pricingType: PricingType.FIXED_PRICE,
-      description: 'Limpeza residencial básica',
+      description: 'Limpeza residencial bÃ¡sica',
       durationMinutes: 150,
     },
     create: {
       providerId: providerUser4.provider.id,
       serviceId: residentialCleaningService.id,
       pricingType: PricingType.FIXED_PRICE,
-      price: new Prisma.Decimal(165.0), // 'price' é obrigatório conforme regra de negócio
-      description: 'Limpeza residencial básica',
+      price: new Prisma.Decimal(165.0), // 'price' Ã© obrigatÃ³rio conforme regra de negÃ³cio
+      description: 'Limpeza residencial bÃ¡sica',
       durationMinutes: 150,
     },
   });
   console.log(
-    `Oferta de serviço para ${providerUser4.fullName} (${residentialCleaningService.name} - FIXED_PRICE) criada/atualizada.`,
+    `Oferta de serviÃ§o para ${providerUser4.fullName} (${residentialCleaningService.name} - FIXED_PRICE) criada/atualizada.`,
   );
 
   // Disponibilidade semanal do provedor existente (exemplo: seg/qua/sex 09:00-12:00)
@@ -708,7 +959,7 @@ export async function main() { // <-- A mudança é aqui
         where: { id: existingAvailability.id },
         data: {
           startTime: '09:00',
-          endTime: '18:00', // MODIFICAÇÃO: Estendendo o horário disponível para Carolina (de 12:00 para 18:00)
+          endTime: '18:00', // MODIFICAÃ‡ÃƒO: Estendendo o horÃ¡rio disponÃ­vel para Carolina (de 12:00 para 18:00)
           isAvailable: true,
         },
       });
@@ -718,7 +969,7 @@ export async function main() { // <-- A mudança é aqui
           providerId: providerUser.provider.id,
           dayOfWeek: wd,
           startTime: '09:00',
-          endTime: '18:00', // MODIFICAÇÃO: Estendendo o horário disponível para Carolina (de 12:00 para 18:00)
+          endTime: '18:00', // MODIFICAÃ‡ÃƒO: Estendendo o horÃ¡rio disponÃ­vel para Carolina (de 12:00 para 18:00)
           isAvailable: true,
         },
       });
@@ -726,8 +977,8 @@ export async function main() { // <-- A mudança é aqui
   }
   console.log(`Disponibilidade para ${providerUser.fullName} criada/atualizada.`);
 
-  // Adicionando mais dias para Carolina (Joana é providerUser3, mas Carolina é providerUser)
-  const additionalWeekdaysForCaroline = [2, 4, 6, 7]; // Terça, Quinta, Sábado, Domingo
+  // Adicionando mais dias para Carolina
+  const additionalWeekdaysForCaroline = [2, 4, 6, 7]; // TerÃ§a, Quinta, SÃ¡bado, Domingo
   for (const wd of additionalWeekdaysForCaroline) {
     const existingAvailability = await prisma.availability.findFirst({
       where: {
@@ -741,7 +992,7 @@ export async function main() { // <-- A mudança é aqui
         where: { id: existingAvailability.id },
         data: {
           startTime: '09:00',
-          endTime: '18:00', // Horário estendido
+          endTime: '18:00', // HorÃ¡rio estendido
           isAvailable: true,
         },
       });
@@ -751,7 +1002,7 @@ export async function main() { // <-- A mudança é aqui
           providerId: providerUser.provider.id,
           dayOfWeek: wd,
           startTime: '09:00',
-          endTime: '18:00', // Horário estendido
+          endTime: '18:00', // HorÃ¡rio estendido
           isAvailable: true,
         },
       });
@@ -760,7 +1011,7 @@ export async function main() { // <-- A mudança é aqui
   console.log(`Disponibilidade adicional para ${providerUser.fullName} (mais dias) criada/atualizada.`);
 
   // Disponibilidade para NEW PROVIDER 1: Maria
-  const weekdays2 = [2, 4]; // 2 = Terça, 4 = Quinta
+  const weekdays2 = [2, 4]; // 2 = TerÃ§a, 4 = Quinta
   for (const wd of weekdays2) {
     const existingAvailability = await prisma.availability.findFirst({
       where: {
@@ -807,7 +1058,7 @@ export async function main() { // <-- A mudança é aqui
         where: { id: existingAvailability.id },
         data: {
           startTime: '09:00',
-          endTime: '20:00', // MODIFICAÇÃO: Estendendo o horário disponível para Joana (de 18:00 para 20:00)
+          endTime: '20:00', // MODIFICAÃ‡ÃƒO: Estendendo o horÃ¡rio disponÃ­vel para Joana (de 18:00 para 20:00)
           isAvailable: true,
         },
       });
@@ -817,7 +1068,7 @@ export async function main() { // <-- A mudança é aqui
           providerId: providerUser3.provider.id,
           dayOfWeek: wd,
           startTime: '09:00',
-          endTime: '20:00', // MODIFICAÇÃO: Estendendo o horário disponível para Joana (de 18:00 para 20:00)
+          endTime: '20:00', // MODIFICAÃ‡ÃƒO: Estendendo o horÃ¡rio disponÃ­vel para Joana (de 18:00 para 20:00)
           isAvailable: true,
         },
       });
@@ -826,7 +1077,7 @@ export async function main() { // <-- A mudança é aqui
   console.log(`Disponibilidade para ${providerUser3.fullName} criada/atualizada.`);
 
   // Adicionando mais dias para Joana
-  const additionalWeekdaysForJoana = [6, 7]; // Sábado e Domingo
+  const additionalWeekdaysForJoana = [6, 7]; // SÃ¡bado e Domingo
   for (const wd of additionalWeekdaysForJoana) {
     const existingAvailability = await prisma.availability.findFirst({
       where: {
@@ -840,7 +1091,7 @@ export async function main() { // <-- A mudança é aqui
         where: { id: existingAvailability.id },
         data: {
           startTime: '09:00',
-          endTime: '20:00', // Horário estendido
+          endTime: '20:00', // HorÃ¡rio estendido
           isAvailable: true,
         },
       });
@@ -850,7 +1101,7 @@ export async function main() { // <-- A mudança é aqui
           providerId: providerUser3.provider.id,
           dayOfWeek: wd,
           startTime: '09:00',
-          endTime: '20:00', // Horário estendido
+          endTime: '20:00', // HorÃ¡rio estendido
           isAvailable: true,
         },
       });
@@ -859,7 +1110,7 @@ export async function main() { // <-- A mudança é aqui
   console.log(`Disponibilidade adicional para ${providerUser3.fullName} (mais dias) criada/atualizada.`);
 
   // Disponibilidade para NEW PROVIDER 3: Ana
-  const weekdays4 = [6, 7]; // Sábado e Domingo
+  const weekdays4 = [6, 7]; // SÃ¡bado e Domingo
   for (const wd of weekdays4) {
     const existingAvailability = await prisma.availability.findFirst({
       where: {
@@ -937,7 +1188,7 @@ export async function main() { // <-- A mudança é aqui
     },
     create: {
       code: 'RETORNO15',
-      description: '15% de desconto para sua próxima reserva',
+      description: '15% de desconto para sua prÃ³xima reserva',
       target: CouponTarget.REPEAT_CUSTOMER,
       valueType: CouponType.PERCENT,
       value: new Prisma.Decimal(15),
@@ -987,7 +1238,7 @@ export async function main() { // <-- A mudança é aqui
     },
     create: {
       code: 'MISSAO10',
-      description: 'Recompensa por completar missão',
+      description: 'Recompensa por completar missÃ£o',
       target: CouponTarget.MISSION_REWARD,
       valueType: CouponType.FIXED,
       value: new Prisma.Decimal(10.00),
@@ -1000,13 +1251,13 @@ export async function main() { // <-- A mudança é aqui
   console.log(`Cupom 'MISSAO10' criado/atualizado.`);
 
   // -----------------------------------------------------------------------------
-  // 5) MISSÕES
-  console.log('Criando/Atualizando missões...');
+  // 5) MISSÃ•ES
+  console.log('Criando/Atualizando missÃµes...');
 
   const missionClient3Bookings = await prisma.mission.upsert({
     where: { code: 'CLIENT_3_BOOKINGS_MONTH' },
     update: {
-      title: 'Faça 3 reservas este mês',
+      title: 'FaÃ§a 3 reservas este mÃªs',
       audience: MissionAudience.CLIENT,
       kind: MissionKind.COUNT_EVENT,
       targetValue: 3,
@@ -1018,27 +1269,27 @@ export async function main() { // <-- A mudança é aqui
     },
     create: {
       code: 'CLIENT_3_BOOKINGS_MONTH',
-      title: 'Faça 3 reservas este mês',
-      description: 'Complete 3 agendamentos de serviço em 30 dias para ganhar um cupom de R$10.',
+      title: 'FaÃ§a 3 reservas este mÃªs',
+      description: 'Complete 3 agendamentos de serviÃ§o em 30 dias para ganhar um cupom de R$10.',
       audience: MissionAudience.CLIENT,
       kind: MissionKind.COUNT_EVENT,
       eventName: 'booking_completed',
       targetValue: 3,
       timeWindowDays: 30,
       rewardType: RewardType.COUPON,
-      rewardValue: 1000, // Valor em centavos para referência
+      rewardValue: 1000, // Valor em centavos para referÃªncia
       couponTemplateId: MISSAO10.id,
       isActive: true,
       createdAt: now,
       updatedAt: now,
     },
   });
-  console.log(`Missão 'CLIENT_3_BOOKINGS_MONTH' criada/atualizada.`);
+  console.log(`MissÃ£o 'CLIENT_3_BOOKINGS_MONTH' criada/atualizada.`);
 
   const missionReview48h = await prisma.mission.upsert({
     where: { code: 'CLIENT_REVIEW_48H' },
     update: {
-      title: 'Avalie seu serviço em até 48h',
+      title: 'Avalie seu serviÃ§o em atÃ© 48h',
       audience: MissionAudience.CLIENT,
       kind: MissionKind.WITHIN_WINDOW,
       timeWindowDays: 2,
@@ -1049,12 +1300,12 @@ export async function main() { // <-- A mudança é aqui
     },
     create: {
       code: 'CLIENT_REVIEW_48H',
-      title: 'Avalie seu serviço em até 48h',
-      description: 'Deixe uma avaliação para seu serviço em até 48 horas e ganhe 200 pontos de fidelidade.',
+      title: 'Avalie seu serviÃ§o em atÃ© 48h',
+      description: 'Deixe uma avaliaÃ§Ã£o para seu serviÃ§o em atÃ© 48 horas e ganhe 200 pontos de fidelidade.',
       audience: MissionAudience.CLIENT,
       kind: MissionKind.WITHIN_WINDOW,
       eventName: 'review_submitted',
-      targetValue: 1, // 1 avaliação
+      targetValue: 1, // 1 avaliaÃ§Ã£o
       timeWindowDays: 2,
       rewardType: RewardType.POINTS,
       rewardValue: 200,
@@ -1063,12 +1314,12 @@ export async function main() { // <-- A mudança é aqui
       updatedAt: now,
     },
   });
-  console.log(`Missão 'CLIENT_REVIEW_48H' criada/atualizada.`);
+  console.log(`MissÃ£o 'CLIENT_REVIEW_48H' criada/atualizada.`);
 
   const missionProviderAccept5 = await prisma.mission.upsert({
     where: { code: 'PROVIDER_ACCEPT_5_WEEK' },
     update: {
-      title: 'Aceite 5 solicitações na semana',
+      title: 'Aceite 5 solicitaÃ§Ãµes na semana',
       audience: MissionAudience.PROVIDER,
       kind: MissionKind.COUNT_EVENT,
       targetValue: 5,
@@ -1080,7 +1331,7 @@ export async function main() { // <-- A mudança é aqui
     },
     create: {
       code: 'PROVIDER_ACCEPT_5_WEEK',
-      title: 'Aceite 5 solicitações na semana',
+      title: 'Aceite 5 solicitaÃ§Ãµes na semana',
       description: 'Aceite 5 agendamentos em uma semana e ganhe 300 pontos de fidelidade.',
       audience: MissionAudience.PROVIDER,
       kind: MissionKind.COUNT_EVENT,
@@ -1094,13 +1345,13 @@ export async function main() { // <-- A mudança é aqui
       updatedAt: now,
     },
   });
-  console.log(`Missão 'PROVIDER_ACCEPT_5_WEEK' criada/atualizada.`);
+  console.log(`MissÃ£o 'PROVIDER_ACCEPT_5_WEEK' criada/atualizada.`);
 
-  // Provider: 10 concluídos no mês
+  // Provider: 10 concluÃ­dos no mÃªs
   const missionProvider10Completed = await prisma.mission.upsert({
     where: { code: 'PROVIDER_10_COMPLETED_MONTH' },
     update: {
-      title: 'Conclua 10 serviços no mês',
+      title: 'Conclua 10 serviÃ§os no mÃªs',
       audience: MissionAudience.PROVIDER,
       kind: MissionKind.COUNT_EVENT,
       targetValue: 10,
@@ -1112,8 +1363,8 @@ export async function main() { // <-- A mudança é aqui
     },
     create: {
       code: 'PROVIDER_10_COMPLETED_MONTH',
-      title: 'Conclua 10 serviços no mês',
-      description: 'Complete 10 atendimentos concluídos em 30 dias para ganhar pontos de fidelidade.',
+      title: 'Conclua 10 serviÃ§os no mÃªs',
+      description: 'Complete 10 atendimentos concluÃ­dos em 30 dias para ganhar pontos de fidelidade.',
       audience: MissionAudience.PROVIDER,
       kind: MissionKind.COUNT_EVENT,
       eventName: 'provider.booking.completed',
@@ -1126,9 +1377,9 @@ export async function main() { // <-- A mudança é aqui
       updatedAt: now,
     },
   });
-  console.log(`Missão 'PROVIDER_10_COMPLETED_MONTH' criada/atualizada.`);
+  console.log(`MissÃ£o 'PROVIDER_10_COMPLETED_MONTH' criada/atualizada.`);
 
-  // Provider: resposta rápida (20 no mês)
+  // Provider: resposta rÃ¡pida (20 no mÃªs)
   const missionProviderFastResponse = await prisma.mission.upsert({
     where: { code: 'PROVIDER_RESPONSE_FAST_20' },
     update: {
@@ -1145,7 +1396,7 @@ export async function main() { // <-- A mudança é aqui
     create: {
       code: 'PROVIDER_RESPONSE_FAST_20',
       title: 'Responda rapidamente (20 vezes)',
-      description: 'Responda em menos de 3 minutos, 20 vezes no mês, para ganhar pontos.',
+      description: 'Responda em menos de 3 minutos, 20 vezes no mÃªs, para ganhar pontos.',
       audience: MissionAudience.PROVIDER,
       kind: MissionKind.COUNT_EVENT,
       eventName: 'provider.response.fast',
@@ -1158,9 +1409,9 @@ export async function main() { // <-- A mudança é aqui
       updatedAt: now,
     },
   });
-  console.log(`Missão 'PROVIDER_RESPONSE_FAST_20' criada/atualizada.`);
+  console.log(`MissÃ£o 'PROVIDER_RESPONSE_FAST_20' criada/atualizada.`);
 
-  // Provider: nenhuma cancelamento na semana (4 semanas seguidas no mês)
+  // Provider: nenhuma cancelamento na semana (4 semanas seguidas no mÃªs)
   const missionProviderNoCancelWeekly = await prisma.mission.upsert({
     where: { code: 'PROVIDER_NO_CANCEL_4W' },
     update: {
@@ -1190,13 +1441,13 @@ export async function main() { // <-- A mudança é aqui
       updatedAt: now,
     },
   });
-  console.log(`Missão 'PROVIDER_NO_CANCEL_4W' criada/atualizada.`);
+  console.log(`MissÃ£o 'PROVIDER_NO_CANCEL_4W' criada/atualizada.`);
 
-  // Provider: reviews >= 4.8 (10 no mês)
+  // Provider: reviews >= 4.8 (10 no mÃªs)
   const missionProviderHighRating = await prisma.mission.upsert({
     where: { code: 'PROVIDER_RATING_48PLUS_10' },
     update: {
-      title: 'Receba 10 avaliações = 4.8 no mês',
+      title: 'Receba 10 avaliaÃ§Ãµes = 4.8 no mÃªs',
       audience: MissionAudience.PROVIDER,
       kind: MissionKind.COUNT_EVENT,
       targetValue: 10,
@@ -1208,8 +1459,8 @@ export async function main() { // <-- A mudança é aqui
     },
     create: {
       code: 'PROVIDER_RATING_48PLUS_10',
-      title: 'Receba 10 avaliações = 4.8 no mês',
-      description: 'Receba 10 avaliações com nota = 4.8 em 30 dias (evento emitido no review).',
+      title: 'Receba 10 avaliaÃ§Ãµes = 4.8 no mÃªs',
+      description: 'Receba 10 avaliaÃ§Ãµes com nota = 4.8 em 30 dias (evento emitido no review).',
       audience: MissionAudience.PROVIDER,
       kind: MissionKind.COUNT_EVENT,
       eventName: 'provider.review.4_8plus',
@@ -1222,18 +1473,18 @@ export async function main() { // <-- A mudança é aqui
       updatedAt: now,
     },
   });
-  console.log(`Missão 'PROVIDER_RATING_48PLUS_10' criada/atualizada.`);
+  console.log(`MissÃ£o 'PROVIDER_RATING_48PLUS_10' criada/atualizada.`);
 
   // -----------------------------------------------------------------------------
   // 6) BOOKINGS E PAGAMENTOS
-  console.log('Criando/Atualizando agendamentos e transações...');
+  console.log('Criando/Atualizando agendamentos e transaÃ§Ãµes...');
 
   const bookingAddress1 = await upsertAddress({
     cep: '01003-003',
     street: 'Rua dos Agendamentos 1',
     number: '400',
     neighborhood: 'Bairro Teste',
-    city: 'São Paulo',
+    city: 'SÃ£o Paulo',
     state: 'SP',
     latitude: -23.58,
     longitude: -46.66,
@@ -1244,7 +1495,7 @@ export async function main() { // <-- A mudança é aqui
     street: 'Rua dos Agendamentos 2',
     number: '401',
     neighborhood: 'Bairro Teste',
-    city: 'São Paulo',
+    city: 'SÃ£o Paulo',
     state: 'SP',
     latitude: -23.581,
     longitude: -46.661,
@@ -1255,19 +1506,19 @@ export async function main() { // <-- A mudança é aqui
     street: 'Rua dos Agendamentos 3',
     number: '402',
     neighborhood: 'Bairro Teste',
-    city: 'São Paulo',
+    city: 'SÃ£o Paulo',
     state: 'SP',
     latitude: -23.582,
     longitude: -46.662,
   });
 
-  // NOVO: Endereços para agendamentos da Joana
+  // NOVO: EndereÃ§os para agendamentos da Joana
   const bookingAddressJoana1 = await upsertAddress({
     cep: '01003-006',
     street: 'Rua das Rosas',
     number: '10',
     neighborhood: 'Centro',
-    city: 'São Paulo',
+    city: 'SÃ£o Paulo',
     state: 'SP',
     latitude: -23.57,
     longitude: -46.67,
@@ -1277,8 +1528,8 @@ export async function main() { // <-- A mudança é aqui
     cep: '01003-007',
     street: 'Av. Brasil',
     number: '200',
-    neighborhood: 'Jardim América',
-    city: 'São Paulo',
+    neighborhood: 'Jardim AmÃ©rica',
+    city: 'SÃ£o Paulo',
     state: 'SP',
     latitude: -23.58,
     longitude: -46.68,
@@ -1310,7 +1561,7 @@ export async function main() { // <-- A mudança é aqui
       scheduledTime: '10:00',
       status: BookingStatus.COMPLETED,
       totalPrice: new Prisma.Decimal(180.00),
-      addressId: bookingAddress1.id, // Usando addressId único
+      addressId: bookingAddress1.id, // Usando addressId Ãºnico
       couponId: INDICADO20.id,
       discountAmount: new Prisma.Decimal(20.00),
     },
@@ -1324,12 +1575,12 @@ export async function main() { // <-- A mudança é aqui
       status: BookingStatus.COMPLETED,
       totalPrice: new Prisma.Decimal(180.00),
       notes: 'Limpeza do indicado com cupom.',
-      addressId: bookingAddress1.id, // Usando addressId único
+      addressId: bookingAddress1.id, // Usando addressId Ãºnico
       couponId: INDICADO20.id,
       discountAmount: new Prisma.Decimal(20.00),
     },
   });
-  console.log(`Agendamento Concluído 'BKG-SEED-1' (Indicado) criado/atualizado.`);
+  console.log(`Agendamento ConcluÃ­do 'BKG-SEED-1' (Indicado) criado/atualizado.`);
 
   // Agendamento COMPLETED (do cliente comum, para gerar cupom de retorno, pontos, etc.)
   const booking2Date = addDays(now, -1);
@@ -1357,7 +1608,7 @@ export async function main() { // <-- A mudança é aqui
       scheduledTime: '14:00',
       status: BookingStatus.COMPLETED,
       totalPrice: new Prisma.Decimal(180.00),
-      addressId: bookingAddress2.id, // Usando addressId único
+      addressId: bookingAddress2.id, // Usando addressId Ãºnico
     },
     create: {
       id: 'BKG-SEED-2',
@@ -1369,10 +1620,10 @@ export async function main() { // <-- A mudança é aqui
       status: BookingStatus.COMPLETED,
       totalPrice: new Prisma.Decimal(180.00),
       notes: 'Limpeza do cliente comum.',
-      addressId: bookingAddress2.id, // Usando addressId único
+      addressId: bookingAddress2.id, // Usando addressId Ãºnico
     },
   });
-  console.log(`Agendamento Concluído 'BKG-SEED-2' (Comum) criado/atualizado.`);
+  console.log(`Agendamento ConcluÃ­do 'BKG-SEED-2' (Comum) criado/atualizado.`);
 
   // Agendamento CONFIRMED (futuro)
   const booking3Date = addDays(now, 5);
@@ -1400,7 +1651,7 @@ export async function main() { // <-- A mudança é aqui
       scheduledTime: '09:00',
       status: BookingStatus.CONFIRMED,
       totalPrice: new Prisma.Decimal(180.00),
-      addressId: bookingAddress3.id, // Usando addressId único
+      addressId: bookingAddress3.id, // Usando addressId Ãºnico
     },
     create: {
       id: 'BKG-SEED-3',
@@ -1412,13 +1663,24 @@ export async function main() { // <-- A mudança é aqui
       status: BookingStatus.CONFIRMED,
       totalPrice: new Prisma.Decimal(180.00),
       notes: 'Limpeza agendada para o futuro.',
-      addressId: bookingAddress3.id, // Usando addressId único
+      addressId: bookingAddress3.id, // Usando addressId Ãºnico
     },
   });
   console.log(`Agendamento Confirmado 'BKG-SEED-3' criado/atualizado.`);
 
   // Booking PENDING (aguardando confirmacao)
   const pendingBookingDate = addDays(now, 3);
+  // Importante: Booking.addressId Ã© @unique, entÃ£o cada booking precisa de um Address prÃ³prio
+  const pendingAddress = await upsertAddress({
+    cep: '01002-003',
+    street: 'Av. do Provedor',
+    number: '301', // diferente de outros para garantir novo Address
+    neighborhood: 'Jardins',
+    city: 'SÃ£o Paulo',
+    state: 'SP',
+    latitude: -23.57,
+    longitude: -46.65,
+  });
   const pendingBooking = await prisma.booking.upsert({
     where: { id: 'BKG-SEED-PENDING-1' },
     update: {
@@ -1429,8 +1691,8 @@ export async function main() { // <-- A mudança é aqui
       scheduledTime: '16:00',
       status: BookingStatus.PENDING,
       totalPrice: new Prisma.Decimal(150.00),
-      addressId: bookingAddress3.id,
-      notes: 'Solicitacao pendente para teste do dashboard.',
+      addressId: pendingAddress.id,
+      notes: 'SolicitaÃ§Ã£o pendente para teste do dashboard.',
     },
     create: {
       id: 'BKG-SEED-PENDING-1',
@@ -1441,13 +1703,13 @@ export async function main() { // <-- A mudança é aqui
       scheduledTime: '16:00',
       status: BookingStatus.PENDING,
       totalPrice: new Prisma.Decimal(150.00),
-      notes: 'Solicitacao pendente para teste do dashboard.',
-      addressId: bookingAddress3.id,
+      notes: 'SolicitaÃ§Ã£o pendente para teste do dashboard.',
+      addressId: pendingAddress.id,
     },
   });
   console.log(`Agendamento Pendente 'BKG-SEED-PENDING-1' criado/atualizado.`);
 
-  // NOVO: Agendamentos Concluídos para Joana
+  // NOVO: Agendamentos ConcluÃ­dos para Joana
   const joanaService = await prisma.providerService.findFirst({
     where: {
       providerId: providerUser3.provider.id,
@@ -1470,7 +1732,7 @@ export async function main() { // <-- A mudança é aqui
       scheduledTime: '09:30',
       status: BookingStatus.COMPLETED,
       totalPrice: new Prisma.Decimal(190.00),
-      notes: 'Serviço de limpeza para avaliação da Joana (5 estrelas).',
+      notes: 'ServiÃ§o de limpeza para avaliaÃ§Ã£o da Joana (5 estrelas).',
       addressId: bookingAddressJoana1.id,
     },
     create: {
@@ -1482,11 +1744,11 @@ export async function main() { // <-- A mudança é aqui
       scheduledTime: '09:30',
       status: BookingStatus.COMPLETED,
       totalPrice: new Prisma.Decimal(190.00),
-      notes: 'Serviço de limpeza para avaliação da Joana (5 estrelas).',
+      notes: 'ServiÃ§o de limpeza para avaliaÃ§Ã£o da Joana (5 estrelas).',
       addressId: bookingAddressJoana1.id,
     },
   });
-  console.log(`Agendamento Concluído 'BKG-SEED-JOANA-1' (para Joana) criado/atualizado.`);
+  console.log(`Agendamento ConcluÃ­do 'BKG-SEED-JOANA-1' (para Joana) criado/atualizado.`);
 
   const bookingJoana2Date = addDays(now, -5);
   const bookingJoana2 = await prisma.booking.upsert({
@@ -1499,7 +1761,7 @@ export async function main() { // <-- A mudança é aqui
       scheduledTime: '14:00',
       status: BookingStatus.COMPLETED,
       totalPrice: new Prisma.Decimal(190.00),
-      notes: 'Serviço de limpeza para avaliação da Joana (4 estrelas).',
+      notes: 'ServiÃ§o de limpeza para avaliaÃ§Ã£o da Joana (4 estrelas).',
       addressId: bookingAddressJoana2.id,
     },
     create: {
@@ -1511,14 +1773,14 @@ export async function main() { // <-- A mudança é aqui
       scheduledTime: '14:00',
       status: BookingStatus.COMPLETED,
       totalPrice: new Prisma.Decimal(190.00),
-      notes: 'Serviço de limpeza para avaliação da Joana (4 estrelas).',
+      notes: 'ServiÃ§o de limpeza para avaliaÃ§Ã£o da Joana (4 estrelas).',
       addressId: bookingAddressJoana2.id,
     },
   });
-  console.log(`Agendamento Concluído 'BKG-SEED-JOANA-2' (para Joana) criado/atualizado.`);
+  console.log(`Agendamento ConcluÃ­do 'BKG-SEED-JOANA-2' (para Joana) criado/atualizado.`);
 
-  // Pagamentos confirmados dos agendamentos concluídos
-  for (const booking of [booking1, booking2, bookingJoana1, bookingJoana2]) { // Adicionado bookings da Joana aqui
+  // Pagamentos confirmados dos agendamentos concluÃ­dos
+  for (const booking of [booking1, booking2, bookingJoana1, bookingJoana2]) {
     await prisma.paymentIntent.upsert({
       where: { bookingId: booking.id },
       update: {
@@ -1542,41 +1804,41 @@ export async function main() { // <-- A mudança é aqui
     await prisma.transaction.upsert({
       where: { gatewayTransactionId: `TRANS-${booking.id}` },
       update: {
-        providerId: booking.providerId, // Usar o providerId do booking para a transação
+        providerId: booking.providerId, // Usar o providerId do booking para a transaÃ§Ã£o
         amount: booking.totalPrice,
         type: TransactionType.PAYMENT,
         status: 'COMPLETED',
-        description: `Pagamento do serviço ${booking.id}`,
+        description: `Pagamento do serviÃ§o ${booking.id}`,
         bookingId: booking.id,
       },
       create: {
-        providerId: booking.providerId, // Usar o providerId do booking para a transação
+        providerId: booking.providerId, // Usar o providerId do booking para a transaÃ§Ã£o
         amount: booking.totalPrice,
         type: TransactionType.PAYMENT,
         status: 'COMPLETED',
-        description: `Pagamento do serviço ${booking.id}`,
+        description: `Pagamento do serviÃ§o ${booking.id}`,
         bookingId: booking.id,
         gatewayTransactionId: `TRANS-${booking.id}`,
         createdAt: now,
       },
     });
-    console.log(`Transação para Booking ${booking.id} criado/atualizado.`);
+    console.log(`TransaÃ§Ã£o para Booking ${booking.id} criado/atualizado.`);
   }
 
   // -----------------------------------------------------------------------------
-  // NOVO BLOCO: FLUXO INICIAR/FINALIZAR SERVIÇO
+  // NOVO BLOCO: FLUXO INICIAR/FINALIZAR SERVIÃ‡O
   // -----------------------------------------------------------------------------
   
   async function seedProviderLiveFlow() {
-    console.log('Criando fluxo de bookings LIVE para testar iniciar/finalizar serviço...');
+    console.log('Criando fluxo de bookings LIVE para testar iniciar/finalizar serviÃ§o...');
 
-    // ADICIONADO: Novos endereços exclusivos para os bookings LIVE (evitar conflito de @unique em addressId)
+    // ADICIONADO: Novos endereÃ§os exclusivos para os bookings LIVE (evitar conflito de @unique em addressId)
     const bookingAddressLive1 = await upsertAddress({
       cep: '01003-008',
       street: 'Rua LIVE 1',
       number: '500',
       neighborhood: 'Bairro LIVE',
-      city: 'São Paulo',
+      city: 'SÃ£o Paulo',
       state: 'SP',
       latitude: -23.583,
       longitude: -46.663,
@@ -1587,7 +1849,7 @@ export async function main() { // <-- A mudança é aqui
       street: 'Rua LIVE 2',
       number: '501',
       neighborhood: 'Bairro LIVE',
-      city: 'São Paulo',
+      city: 'SÃ£o Paulo',
       state: 'SP',
       latitude: -23.584,
       longitude: -46.664,
@@ -1597,14 +1859,14 @@ export async function main() { // <-- A mudança é aqui
       street: 'Rua LIVE 3',
       number: '502',
       neighborhood: 'Bairro LIVE',
-      city: 'São Paulo',
+      city: 'SÃ£o Paulo',
       state: 'SP',
       latitude: -23.585,
       longitude: -46.665,
     });
 
 
-    // Booking CONFIRMED para hoje (libera botão "Iniciar")
+    // Booking CONFIRMED para hoje (libera botÃ£o "Iniciar")
     const liveBooking = await prisma.booking.upsert({
       where: { id: 'BKG-LIVE-1' },
       create: {
@@ -1616,26 +1878,26 @@ export async function main() { // <-- A mudança é aqui
         scheduledTime: '15:00',
         status: BookingStatus.CONFIRMED,
         totalPrice: new Prisma.Decimal(220),
-        addressId: bookingAddressLive1.id, // ADICIONADO: Endereço exclusivo
-        notes: 'Booking confirmado para teste de início de serviço.',
+        addressId: bookingAddressLive1.id, // ADICIONADO: EndereÃ§o exclusivo
+        notes: 'Booking confirmado para teste de inÃ­cio de serviÃ§o.',
       },
       update: {
         status: BookingStatus.CONFIRMED,
-        scheduledDate: addDays(now, 0), // Garantir consistência na data
-        scheduledTime: '15:00', // Garantir consistência no horário
-        addressId: bookingAddressLive1.id, // Garantir consistência no endereço
+        scheduledDate: addDays(now, 0), // Garantir consistÃªncia na data
+        scheduledTime: '15:00', // Garantir consistÃªncia no horÃ¡rio
+        addressId: bookingAddressLive1.id, // Garantir consistÃªncia no endereÃ§o
       },
     });
     console.log(`Booking LIVE CONFIRMED 'BKG-LIVE-1' criado/atualizado.`);
 
-    // Booking IN_PROGRESS (em andamento - testa botão "Finalizar")
+    // Booking IN_PROGRESS (em andamento - testa botÃ£o "Finalizar")
     const inProgress = await prisma.booking.upsert({
       where: { id: 'BKG-LIVE-2' },
       update: { 
         status: BookingStatus.IN_PROGRESS,
-        scheduledDate: now, // Garantir consistência na data
-        scheduledTime: '09:00', // Garantir consistência no horário
-        addressId: bookingAddressLive2.id, // Garantir consistência no endereço
+        scheduledDate: now, // Garantir consistÃªncia na data
+        scheduledTime: '09:00', // Garantir consistÃªncia no horÃ¡rio
+        addressId: bookingAddressLive2.id, // Garantir consistÃªncia no endereÃ§o
       },
       create: {
         id: 'BKG-LIVE-2',
@@ -1646,32 +1908,32 @@ export async function main() { // <-- A mudança é aqui
         scheduledTime: '09:00',
         status: BookingStatus.IN_PROGRESS,
         totalPrice: new Prisma.Decimal(200),
-        addressId: bookingAddressLive2.id, // ADICIONADO: Endereço exclusivo
-        notes: 'Serviço em andamento para teste de finalização.',
+        addressId: bookingAddressLive2.id, // ADICIONADO: EndereÃ§o exclusivo
+        notes: 'ServiÃ§o em andamento para teste de finalizaÃ§Ã£o.',
       },
     });
     console.log(`Booking LIVE IN_PROGRESS 'BKG-LIVE-2' criado/atualizado.`);
 
-    // Booking COMPLETED (finalizado - histórico com pagamento)
+    // Booking COMPLETED (finalizado - histÃ³rico com pagamento)
     const finished = await prisma.booking.upsert({
       where: { id: 'BKG-LIVE-3' },
       update: { 
         status: BookingStatus.COMPLETED,
-        scheduledDate: addDays(now, -2), // Garantir consistência na data
-        scheduledTime: '11:00', // Garantir consistência no horário
-        addressId: bookingAddressLive3.id, // Mantém o endereço original (único)
+        scheduledDate: addDays(now, -2), // Garantir consistÃªncia na data
+        scheduledTime: '11:00', // Garantir consistÃªncia no horÃ¡rio
+        addressId: bookingAddressLive3.id, // MantÃ©m o endereÃ§o original (Ãºnico)
       },
       create: {
         id: 'BKG-LIVE-3',
         clientId: referredUser.client!.id,
         providerId: providerUser.provider!.id,
         providerServiceId: providerServiceForBooking3.id,
-        scheduledDate: addDays(now, -2), // 2 dias atrás
+        scheduledDate: addDays(now, -2), // 2 dias atrÃ¡s
         scheduledTime: '11:00',
         status: BookingStatus.COMPLETED,
         totalPrice: new Prisma.Decimal(240),
         addressId: bookingAddressLive3.id,
-        notes: 'Serviço finalizado para teste de histórico.',
+        notes: 'ServiÃ§o finalizado para teste de histÃ³rico.',
       },
     });
     console.log(`Booking LIVE COMPLETED 'BKG-LIVE-3' criado/atualizado.`);
@@ -1720,7 +1982,7 @@ export async function main() { // <-- A mudança é aqui
     });
     console.log(`PaymentIntent PAID para Booking ${finished.id} criado/atualizado.`);
 
-    // Transação de pagamento para o booking finalizado (BKG-LIVE-3)
+    // TransaÃ§Ã£o de pagamento para o booking finalizado (BKG-LIVE-3)
     await prisma.transaction.upsert({
       where: { gatewayTransactionId: `TRANS-LIVE-${finished.id}` },
       create: {
@@ -1728,7 +1990,7 @@ export async function main() { // <-- A mudança é aqui
         amount: finished.totalPrice,
         type: TransactionType.PAYMENT,
         status: 'COMPLETED',
-        description: `Pagamento do serviço finalizado ${finished.id}`,
+        description: `Pagamento do serviÃ§o finalizado ${finished.id}`,
         bookingId: finished.id,
         gatewayTransactionId: `TRANS-LIVE-${finished.id}`,
         createdAt: addDays(now, -2),
@@ -1738,11 +2000,11 @@ export async function main() { // <-- A mudança é aqui
         amount: finished.totalPrice,
         type: TransactionType.PAYMENT,
         status: 'COMPLETED',
-        description: `Pagamento do serviço finalizado ${finished.id}`,
+        description: `Pagamento do serviÃ§o finalizado ${finished.id}`,
         bookingId: finished.id,
       },
     });
-    console.log(`Transação de pagamento para Booking ${finished.id} criada/atualizada.`);
+    console.log(`TransaÃ§Ã£o de pagamento para Booking ${finished.id} criada/atualizada.`);
 
     // Ledger Entry EARNING para o provedor (BKG-LIVE-3) - CORRIGIDO: Usar ledgerEntry, userId, amount (Decimal), sem amountCents/referenceDate/status
     await prisma.ledgerEntry.upsert({
@@ -1751,9 +2013,9 @@ export async function main() { // <-- A mudança é aqui
         id: `LEDGER-LIVE-${finished.id}`,
         userId: providerUser.id, // Usar userId (do provedor)
         type: LedgerEntryType.EARNING,
-        amount: new Prisma.Decimal(240), // amount como Decimal(14,2), não amountCents
+        amount: new Prisma.Decimal(240), // amount como Decimal(14,2), nÃ£o amountCents
         bookingId: finished.id,
-        note: `Ganhos do serviço finalizado ${finished.id}`, // Usar note em vez de description
+        note: `Ganhos do serviÃ§o finalizado ${finished.id}`, // Usar note em vez de description
         createdAt: addDays(now, -2),
       },
       update: {
@@ -1761,103 +2023,103 @@ export async function main() { // <-- A mudança é aqui
         type: LedgerEntryType.EARNING,
         amount: new Prisma.Decimal(240),
         bookingId: finished.id,
-        note: `Ganhos do serviço finalizado ${finished.id}`,
+        note: `Ganhos do serviÃ§o finalizado ${finished.id}`,
       },
     });
     console.log(`Ledger EARNING para Booking ${finished.id} criado/atualizado.`);
 
-    // ---- NOTIFICAÇÕES PARA PROVIDER ---- (CORRIGIDO: Usar upsert com ID fixo para idempotência)
+    // ---- NOTIFICAÃ‡Ã•ES PARA PROVIDER ---- (CORRIGIDO: Usar upsert com ID fixo para idempotÃªncia)
 
-    // Notificação de serviço iniciado (para BKG-LIVE-2)
+    // NotificaÃ§Ã£o de serviÃ§o iniciado (para BKG-LIVE-2)
     await prisma.notification.upsert({
       where: { id: 'NTF-LIVE-1' },
       update: {
         userId: providerUser.id,
         type: 'booking_started',
-        title: 'Serviço iniciado',
-        message: 'Você iniciou o serviço agendado para 09:00 hoje.',
+        title: 'ServiÃ§o iniciado',
+        message: 'VocÃª iniciou o serviÃ§o agendado para 09:00 hoje.',
         isRead: false,
         targetUrl: '/(provider)/active-booking/BKG-LIVE-2',
         createdAt: now,
-        idempotencyKey: `IDEMPOTENCY-NTF-LIVE-1`, // ADICIONADO: Para deduplicação
+        idempotencyKey: `IDEMPOTENCY-NTF-LIVE-1`, // ADICIONADO: Para deduplicaÃ§Ã£o
       },
       create: {
         id: 'NTF-LIVE-1',
         userId: providerUser.id,
         type: 'booking_started',
-        title: 'Serviço iniciado',
-        message: 'Você iniciou o serviço agendado para 09:00 hoje.',
+        title: 'ServiÃ§o iniciado',
+        message: 'VocÃª iniciou o serviÃ§o agendado para 09:00 hoje.',
         isRead: false,
         targetUrl: '/(provider)/active-booking/BKG-LIVE-2',
         createdAt: now,
-        idempotencyKey: `IDEMPOTENCY-NTF-LIVE-1`, // ADICIONADO: Para deduplicação
+        idempotencyKey: `IDEMPOTENCY-NTF-LIVE-1`, // ADICIONADO: Para deduplicaÃ§Ã£o
       },
     });
-    console.log(`Notificação de serviço iniciado (BKG-LIVE-2) criada.`);
+    console.log(`NotificaÃ§Ã£o de serviÃ§o iniciado (BKG-LIVE-2) criada.`);
 
-    // Notificação de serviço finalizado (para BKG-LIVE-3)
+    // NotificaÃ§Ã£o de serviÃ§o finalizado (para BKG-LIVE-3)
     await prisma.notification.upsert({
       where: { id: 'NTF-LIVE-2' },
       update: {
         userId: providerUser.id,
         type: 'booking_completed',
-        title: 'Serviço finalizado',
-        message: 'Você concluiu o serviço de 11:00. Pagamento processado: R$240,00.',
+        title: 'ServiÃ§o finalizado',
+        message: 'VocÃª concluiu o serviÃ§o de 11:00. Pagamento processado: R$240,00.',
         isRead: false,
         targetUrl: '/(provider)/earnings',
         createdAt: addDays(now, -2),
-        idempotencyKey: `IDEMPOTENCY-NTF-LIVE-2`, // ADICIONADO: Para deduplicação
+        idempotencyKey: `IDEMPOTENCY-NTF-LIVE-2`, // ADICIONADO: Para deduplicaÃ§Ã£o
       },
       create: {
         id: 'NTF-LIVE-2',
         userId: providerUser.id,
         type: 'booking_completed',
-        title: 'Serviço finalizado',
-        message: 'Você concluiu o serviço de 11:00. Pagamento processado: R$240,00.',
+        title: 'ServiÃ§o finalizado',
+        message: 'VocÃª concluiu o serviÃ§o de 11:00. Pagamento processado: R$240,00.',
         isRead: false,
         targetUrl: '/(provider)/earnings',
         createdAt: addDays(now, -2),
-        idempotencyKey: `IDEMPOTENCY-NTF-LIVE-2`, // ADICIONADO: Para deduplicação
+        idempotencyKey: `IDEMPOTENCY-NTF-LIVE-2`, // ADICIONADO: Para deduplicaÃ§Ã£o
       },
     });
-    console.log(`Notificação de serviço finalizado (BKG-LIVE-3) criada.`);
+    console.log(`NotificaÃ§Ã£o de serviÃ§o finalizado (BKG-LIVE-3) criada.`);
 
-    // Notificação de lembrete para serviço futuro (BKG-LIVE-1)
+    // NotificaÃ§Ã£o de lembrete para serviÃ§o futuro (BKG-LIVE-1)
     await prisma.notification.upsert({
       where: { id: 'NTF-LIVE-3' },
       update: {
         userId: providerUser.id,
         type: 'booking_reminder',
-        title: 'Lembrete de serviço',
-        message: 'Você tem um serviço confirmado para hoje às 15:00. Prepare-se!',
+        title: 'Lembrete de serviÃ§o',
+        message: 'VocÃª tem um serviÃ§o confirmado para hoje Ã s 15:00. Prepare-se!',
         isRead: false,
         targetUrl: '/(provider)/upcoming/BKG-LIVE-1',
         createdAt: now,
-        idempotencyKey: `IDEMPOTENCY-NTF-LIVE-3`, // ADICIONADO: Para deduplicação
+        idempotencyKey: `IDEMPOTENCY-NTF-LIVE-3`, // ADICIONADO: Para deduplicaÃ§Ã£o
       },
       create: {
         id: 'NTF-LIVE-3',
         userId: providerUser.id,
         type: 'booking_reminder',
-        title: 'Lembrete de serviço',
-        message: 'Você tem um serviço confirmado para hoje às 15:00. Prepare-se!',
+        title: 'Lembrete de serviÃ§o',
+        message: 'VocÃª tem um serviÃ§o confirmado para hoje Ã s 15:00. Prepare-se!',
         isRead: false,
         targetUrl: '/(provider)/upcoming/BKG-LIVE-1',
         createdAt: now,
-        idempotencyKey: `IDEMPOTENCY-NTF-LIVE-3`, // ADICIONADO: Para deduplicação
+        idempotencyKey: `IDEMPOTENCY-NTF-LIVE-3`, // ADICIONADO: Para deduplicaÃ§Ã£o
       },
     });
-    console.log(`Notificação de lembrete (BKG-LIVE-1) criada.`);
+    console.log(`NotificaÃ§Ã£o de lembrete (BKG-LIVE-1) criada.`);
 
     console.log('Fluxo LIVE de bookings criado com sucesso! ?');
   }
 
-  // Executar o novo fluxo após os bookings existentes
+  // Executar o novo fluxo apÃ³s os bookings existentes
   await seedProviderLiveFlow();
 
   // -----------------------------------------------------------------------------
-  // 7) PROGRESSO DE MISSÕES
-  console.log('Criando/Atualizando progresso de missões...');
+  // 7) PROGRESSO DE MISSÃ•ES
+  console.log('Criando/Atualizando progresso de missÃµes...');
 
   await prisma.missionProgress.upsert({
     where: { userId_missionId: { userId: referrerUser.id, missionId: missionClient3Bookings.id } },
@@ -1870,7 +2132,7 @@ export async function main() { // <-- A mudança é aqui
       lastEventAt: now,
     },
   });
-  console.log(`Progresso de missão para ${referrerUser.fullName} (1/3) criado/atualizado.`);
+  console.log(`Progresso de missÃ£o para ${referrerUser.fullName} (1/3) criado/atualizado.`);
 
   // -----------------------------------------------------------------------------
   // 8) FIDELIDADE (Loyalty e LoyaltyTransaction)
@@ -1884,7 +2146,7 @@ export async function main() { // <-- A mudança é aqui
   console.log(`Saldo de pontos para ${referrerUser.fullName} criado/atualizado.`);
 
   await prisma.loyaltyTransaction.upsert({
-    where: { id: `LT-${booking2.id}` }, // ID único baseado no booking
+    where: { id: `LT-${booking2.id}` }, // ID Ãºnico baseado no booking
     update: { points: 90, type: LoyaltyTransactionType.SERVICE_COMPLETED, referenceId: booking2.id },
     create: {
       id: `LT-${booking2.id}`,
@@ -1894,49 +2156,49 @@ export async function main() { // <-- A mudança é aqui
       referenceId: booking2.id,
     },
   });
-  console.log(`Transação de pontos para ${referrerUser.fullName} (serviço concluído) criada/atualizada.`);
+  console.log(`TransaÃ§Ã£o de pontos para ${referrerUser.fullName} (serviÃ§o concluÃ­do) criada/atualizada.`);
 
   // -----------------------------------------------------------------------------
-  // 9) NOTIFICAÇÕES
-  console.log('Criando/Atualizando notificações...');
+  // 9) NOTIFICAÃ‡Ã•ES
+  console.log('Criando/Atualizando notificaÃ§Ãµes...');
 
   await prisma.notification.upsert({
     where: { id: 'NOTIF-WELCOME-REFERRED' },
-    update: { userId: referredUser.id, title: 'Bem-vindo!', message: 'Você ganhou R$20 para a 1ª reserva', targetUrl: '/(client)/explore' },
+    update: { userId: referredUser.id, title: 'Bem-vindo!', message: 'VocÃª ganhou R$20 para a 1Âª reserva', targetUrl: '/(client)/explore' },
     create: {
       id: 'NOTIF-WELCOME-REFERRED',
       userId: referredUser.id,
       type: 'COUPON_ISSUED',
       title: 'Bem-vindo!',
-      message: 'Você ganhou R$20 para a 1ª reserva',
+      message: 'VocÃª ganhou R$20 para a 1Âª reserva',
       targetUrl: '/(client)/explore',
     },
   });
-  console.log(`Notificação de boas-vindas para ${referredUser.fullName} criada/atualizada.`);
+  console.log(`NotificaÃ§Ã£o de boas-vindas para ${referredUser.fullName} criada/atualizada.`);
 
   await prisma.notification.upsert({
     where: { id: 'NOTIF-RETURN-REFERRER' },
-    update: { userId: referrerUser.id, title: 'Volte e economize', message: 'Cupom de retorno disponível', targetUrl: '/(client)/bookings' },
+    update: { userId: referrerUser.id, title: 'Volte e economize', message: 'Cupom de retorno disponÃ­vel', targetUrl: '/(client)/bookings' },
     create: {
       id: 'NOTIF-RETURN-REFERRER',
       userId: referrerUser.id,
       type: 'COUPON_ISSUED',
       title: 'Volte e economize',
-      message: 'Cupom de retorno disponível',
+      message: 'Cupom de retorno disponÃ­vel',
       targetUrl: '/(client)/bookings',
     },
   });
-  console.log(`Notificação de retorno para ${referrerUser.fullName} criada/atualizada.`);
+  console.log(`NotificaÃ§Ã£o de retorno para ${referrerUser.fullName} criada/atualizada.`);
 
   // -----------------------------------------------------------------------------
-  // 10) AVALIAÇÕES (REVIEWS)
-  console.log('Criando/Atualizando avaliações...');
+  // 10) AVALIAÃ‡Ã•ES (REVIEWS)
+  console.log('Criando/Atualizando avaliaÃ§Ãµes...');
 
   await prisma.review.upsert({
     where: { bookingId: booking2.id },
     update: {
       rating: 5,
-      comment: 'Serviço excelente! Provedora muito profissional e atenciosa.',
+      comment: 'ServiÃ§o excelente! Provedora muito profissional e atenciosa.',
       clientId: referrerUser.client!.id,
       providerId: providerUser.provider!.id,
     },
@@ -1945,17 +2207,17 @@ export async function main() { // <-- A mudança é aqui
       clientId: referrerUser.client!.id,
       providerId: providerUser.provider!.id,
       rating: 5,
-      comment: 'Serviço excelente! Provedora muito profissional e atenciosa.',
+      comment: 'ServiÃ§o excelente! Provedora muito profissional e atenciosa.',
     },
   });
-  console.log(`Avaliação para Booking ${booking2.id} criada/atualizada.`);
+  console.log(`AvaliaÃ§Ã£o para Booking ${booking2.id} criada/atualizada.`);
 
-  // NOVO: Avaliações para Joana
+  // NOVO: AvaliaÃ§Ãµes para Joana
   await prisma.review.upsert({
     where: { bookingId: bookingJoana1.id },
     update: {
       rating: 5,
-      comment: 'Joana é excelente! Super atenciosa e deixou tudo impecável. Recomendo muito!',
+      comment: 'Joana Ã© excelente! Super atenciosa e deixou tudo impecÃ¡vel. Recomendo muito!',
       clientId: clientUserJoanaReviewer.client!.id,
       providerId: providerUser3.provider!.id,
     },
@@ -1964,16 +2226,16 @@ export async function main() { // <-- A mudança é aqui
       clientId: clientUserJoanaReviewer.client!.id,
       providerId: providerUser3.provider!.id,
       rating: 5,
-      comment: 'Joana é excelente! Super atenciosa e deixou tudo impecável. Recomendo muito!',
+      comment: 'Joana Ã© excelente! Super atenciosa e deixou tudo impecÃ¡vel. Recomendo muito!',
     },
   });
-  console.log(`Avaliação para Booking ${bookingJoana1.id} (Joana) criada/atualizada.`);
+  console.log(`AvaliaÃ§Ã£o para Booking ${bookingJoana1.id} (Joana) criada/atualizada.`);
 
   await prisma.review.upsert({
     where: { bookingId: bookingJoana2.id },
     update: {
       rating: 4,
-      comment: 'Bom serviço, chegou no horário e fez um bom trabalho. Fiquei satisfeita.',
+      comment: 'Bom serviÃ§o, chegou no horÃ¡rio e fez um bom trabalho. Fiquei satisfeita.',
       clientId: clientUserJoanaReviewer.client!.id,
       providerId: providerUser3.provider!.id,
     },
@@ -1982,39 +2244,49 @@ export async function main() { // <-- A mudança é aqui
       clientId: clientUserJoanaReviewer.client!.id,
       providerId: providerUser3.provider!.id,
       rating: 4,
-      comment: 'Bom serviço, chegou no horário e fez um bom trabalho. Fiquei satisfeita.',
+      comment: 'Bom serviÃ§o, chegou no horÃ¡rio e fez um bom trabalho. Fiquei satisfeita.',
     },
   });
-  console.log(`Avaliação para Booking ${bookingJoana2.id} (Joana) criada/atualizada.`);
+  console.log(`AvaliaÃ§Ã£o para Booking ${bookingJoana2.id} (Joana) criada/atualizada.`);
 
   // -----------------------------------------------------------------------------
-  // 11) OUTROS MODELOS (Exemplos básicos)
+  // GERAÃ‡ÃƒO EM MASSA DE 100 AVALIAÃ‡Ã•ES POR PRESTADOR (usando o serviÃ§o residencial e reviewers dedicados)
+  // -----------------------------------------------------------------------------
+  console.log('Gerando avaliaÃ§Ãµes em massa para prestadores...');
+  // Quantidades variadas por provedor para simular escala real (mantendo o restante igual)
+  await generateBulkReviews(providerUser,  clientUserCarolineReviewer, residentialCleaningService, 23);
+  await generateBulkReviews(providerUser2, clientUserMariaReviewer,     residentialCleaningService, 15);
+  await generateBulkReviews(providerUser3, clientUserJoanaReviewer,     residentialCleaningService, 19);
+  await generateBulkReviews(providerUser4, clientUserAnaReviewer,       residentialCleaningService, 11);
+
+  // -----------------------------------------------------------------------------
+  // 11) OUTROS MODELOS (Exemplos bÃ¡sicos)
 
   // FAQItem
   console.log('Criando/Atualizando FAQs...');
   await prisma.fAQItem.upsert({
-    where: { question: 'Como faço para agendar um serviço?' },
-    update: { answer: 'Você pode agendar um serviço através da tela "Explorar", escolhendo a categoria e o provedor desejado.' },
+    where: { question: 'Como faÃ§o para agendar um serviÃ§o?' },
+    update: { answer: 'VocÃª pode agendar um serviÃ§o atravÃ©s da tela "Explorar", escolhendo a categoria e o provedor desejado.' },
     create: {
-      question: 'Como faço para agendar um serviço?',
-      answer: 'Você pode agendar um serviço através da tela "Explorar", escolhendo a categoria e o provedor desejado.',
+      question: 'Como faÃ§o para agendar um serviÃ§o?',
+      answer: 'VocÃª pode agendar um serviÃ§o atravÃ©s da tela "Explorar", escolhendo a categoria e o provedor desejado.',
       category: 'Geral',
       order: 1,
     },
   });
-  console.log(`FAQ 'Como faço para agendar um serviço?' criado/atualizado.`);
+  console.log(`FAQ 'Como faÃ§o para agendar um serviÃ§o?' criado/atualizado.`);
 
   // Offer
   console.log('Criando/Atualizando ofertas...');
   const existingOffer = await prisma.offer.findFirst({
-    where: { title: 'Desconto de Verão' },
+    where: { title: 'Desconto de VerÃ£o' },
   });
 
   if (existingOffer) {
     await prisma.offer.update({
       where: { id: existingOffer.id },
       data: {
-        description: '10% de desconto em todos os serviços de limpeza residencial!',
+        description: '10% de desconto em todos os serviÃ§os de limpeza residencial!',
         discountPercentage: 10.0,
         target: OfferTarget.GENERAL,
         status: OfferStatus.ACTIVE,
@@ -2024,8 +2296,8 @@ export async function main() { // <-- A mudança é aqui
   } else {
     await prisma.offer.create({
       data: {
-        title: 'Desconto de Verão',
-        description: '10% de desconto em todos os serviços de limpeza residencial!',
+        title: 'Desconto de VerÃ£o',
+        description: '10% de desconto em todos os serviÃ§os de limpeza residencial!',
         discountPercentage: 10.0,
         fixedDiscountAmount: null,
         target: OfferTarget.GENERAL,
@@ -2035,14 +2307,14 @@ export async function main() { // <-- A mudança é aqui
       },
     });
   }
-  console.log(`Oferta 'Desconto de Verão' criada/atualizada.`);
+  console.log(`Oferta 'Desconto de VerÃ£o' criada/atualizada.`);
 
-  // Reward (recompensa resgatável com pontos)
+  // Reward (recompensa resgatÃ¡vel com pontos)
   console.log('Criando/Atualizando recompensas...');
   await prisma.reward.upsert({
     where: { name: 'Cupom de R$25' },
     update: {
-      description: 'Resgate um cupom de R$25 para usar em qualquer serviço.',
+      description: 'Resgate um cupom de R$25 para usar em qualquer serviÃ§o.',
       costPoints: 500,
       value: new Prisma.Decimal(25.00),
       type: 'COUPON',
@@ -2050,18 +2322,18 @@ export async function main() { // <-- A mudança é aqui
     },
     create: {
       name: 'Cupom de R$25',
-      description: 'Resgate um cupom de R$25 para usar em qualquer serviço.',
+      description: 'Resgate um cupom de R$25 para usar em qualquer serviÃ§o.',
       costPoints: 500,
       value: new Prisma.Decimal(25.00),
       type: 'COUPON',
-      couponCode: 'RESGATE25', // Exemplo de código gerado
+      couponCode: 'RESGATE25', // Exemplo de cÃ³digo gerado
       isActive: true,
     },
   });
   console.log(`Recompensa 'Cupom de R$25' criada/atualizada.`);
 
   // PricingRule
-  console.log('Criando/Atualizando regras de precificação...');
+  console.log('Criando/Atualizando regras de precificaÃ§Ã£o...');
   await prisma.pricingRule.upsert({
     where: { id: 'PRICING-RULE-1' },
     update: { surgeFactor: new Prisma.Decimal(1.2), isActive: true },
@@ -2076,7 +2348,7 @@ export async function main() { // <-- A mudança é aqui
       isActive: true,
     },
   });
-  console.log(`Regra de precificação 'PRICING-RULE-1' criada/atualizada.`);
+  console.log(`Regra de precificaÃ§Ã£o 'PRICING-RULE-1' criada/atualizada.`);
 
   // SupportTicket
   console.log('Criando/Atualizando ticket de suporte...');
@@ -2094,24 +2366,24 @@ export async function main() { // <-- A mudança é aqui
       role: UserRole.CLIENT,
       subject: 'Problema com agendamento',
       category: SupportTicketCategory.APP,
-      description: 'Não consigo ver meu agendamento na lista.',
+      description: 'NÃ£o consigo ver meu agendamento na lista.',
       status: SupportTicketStatus.OPEN,
       bookingId: booking3.id,
     },
   });
-  console.log(`Ticket de suporte 'TICKET-001' criado/atualizada.`);
+  console.log(`Ticket de suporte 'TICKET-001' criado/atualizado.`);
 
   // SupportMessage
   console.log('Criando/Atualizando mensagem de suporte...');
   await prisma.supportMessage.upsert({
     where: { id: 'TICKET-MSG-001' },
-    update: { ticketId: supportTicket.id, userId: referrerUser.id, body: 'Já tentei recarregar a página, mas não aparece.' },
+    update: { ticketId: supportTicket.id, userId: referrerUser.id, body: 'JÃ¡ tentei recarregar a pÃ¡gina, mas nÃ£o aparece.' },
     create: {
       id: 'TICKET-MSG-001',
       ticketId: supportTicket.id,
       userId: referrerUser.id,
       role: UserRole.CLIENT,
-      body: 'Já tentei recarregar a página, mas não aparece.',
+      body: 'JÃ¡ tentei recarregar a pÃ¡gina, mas nÃ£o aparece.',
       attachments: [],
     },
   });
@@ -2139,7 +2411,7 @@ export async function main() { // <-- A mudança é aqui
         bookingId: booking1.id,
         reporterUserId: referredUser.id,
         reason: DisputeReason.SERVICE_INCOMPLETE,
-        description: 'A limpeza não foi concluída em todas as áreas combinadas.',
+        description: 'A limpeza nÃ£o foi concluÃ­da em todas as Ã¡reas combinadas.',
         attachments: [],
         status: DisputeStatus.PENDING,
       },
@@ -2147,7 +2419,7 @@ export async function main() { // <-- A mudança é aqui
   }
   console.log(`Disputa para Booking ${booking1.id} criada/atualizada.`);
 
-  // DisputeMessage (requer um SupportTicket, então vou criar um dummy se não houver um real)
+  // DisputeMessage (requer um SupportTicket, entÃ£o vou criar um dummy se nÃ£o houver um real)
   const dummySupportTicketForDispute = await prisma.supportTicket.upsert({
     where: { id: 'DUMMY-TICKET-FOR-DISPUTE' },
     update: {
@@ -2162,7 +2434,7 @@ export async function main() { // <-- A mudança é aqui
       role: UserRole.ADMIN,
       subject: 'Dummy Ticket for Dispute Message',
       category: SupportTicketCategory.OTHER,
-      description: 'Este é um ticket dummy para satisfazer a relação de DisputeMessage.',
+      description: 'Este Ã© um ticket dummy para satisfazer a relaÃ§Ã£o de DisputeMessage.',
       status: SupportTicketStatus.CLOSED,
     },
   });
@@ -2187,7 +2459,7 @@ export async function main() { // <-- A mudança é aqui
   console.log(`Mensagem de disputa 'DISPUTE-MSG-001' criada/atualizada.`);
 
   // UserConsent
-  console.log('Criando/Atualizando consentimento do usuário...');
+  console.log('Criando/Atualizando consentimento do usuÃ¡rio...');
   await prisma.userConsent.upsert({
     where: { userId_documentType: { userId: referrerUser.id, documentType: 'TERMOS_DE_SERVICO' } },
     update: { version: '1.0' },
@@ -2197,7 +2469,7 @@ export async function main() { // <-- A mudança é aqui
       version: '1.0',
     },
   });
-  console.log(`Consentimento para ${referrerUser.fullName} (Termos de Serviço) criado/atualizado.`);
+  console.log(`Consentimento para ${referrerUser.fullName} (Termos de ServiÃ§o) criado/atualizado.`);
 
   // Subscription
   console.log('Criando/Atualizando assinatura...');
@@ -2251,7 +2523,7 @@ export async function main() { // <-- A mudança é aqui
       reporterId: referrerUser.id,
       bookingId: booking2.id,
       type: IncidentType.DAMAGE,
-      description: 'Um objeto foi danificado durante o serviço.',
+      description: 'Um objeto foi danificado durante o serviÃ§o.',
       attachments: [],
       status: IncidentStatus.PENDING_REVIEW,
     },
@@ -2259,7 +2531,7 @@ export async function main() { // <-- A mudança é aqui
   console.log(`Incidente 'INCIDENT-001' criado/atualizado.`);
 
   // PanicAlert
-  console.log('Criando/Atualizando alerta de pânico...');
+  console.log('Criando/Atualizando alerta de pÃ¢nico...');
   await prisma.panicAlert.upsert({
     where: { id: 'PANIC-001' },
     update: {
@@ -2278,10 +2550,10 @@ export async function main() { // <-- A mudança é aqui
       status: 'ACTIVE',
     },
   });
-  console.log(`Alerta de Pânico 'PANIC-001' criado/atualizado.`);
+  console.log(`Alerta de PÃ¢nico 'PANIC-001' criado/atualizado.`);
 
   // GuaranteeClaim
-  console.log('Criando/Atualizando solicitação de garantia...');
+  console.log('Criando/Atualizando solicitaÃ§Ã£o de garantia...');
   const existingGuaranteeClaim = await prisma.guaranteeClaim.findFirst({
     where: { bookingId: booking2.id },
   });
@@ -2301,16 +2573,16 @@ export async function main() { // <-- A mudança é aqui
         bookingId: booking2.id,
         clientId: referrerUser.client!.id,
         providerId: providerUser.provider!.id,
-        description: 'A limpeza não atendeu às expectativas em uma área específica.',
+        description: 'A limpeza nÃ£o atendeu Ã s expectativas em uma Ã¡rea especÃ­fica.',
         attachments: [],
         estimatedValue: new Prisma.Decimal(50.00),
         status: ClaimStatus.PENDING,
       },
     });
   }
-  console.log(`Solicitação de Garantia para Booking ${booking2.id} criada/atualizada.`);
+  console.log(`SolicitaÃ§Ã£o de Garantia para Booking ${booking2.id} criada/atualizada.`);
 
-  console.log('Seed completo com fluxo LIVE ?');
+  console.log('Seed completo com fluxo LIVE e avaliaÃ§Ãµes em massa! âœ…');
 }
 
 main()
@@ -2321,5 +2593,3 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
-
-
