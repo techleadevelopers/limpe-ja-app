@@ -253,8 +253,8 @@ export type Service = {
     id: string;
     name: string;
     description?: string | null;
-    price: number;
     icon?: string | null;
+    defaultPricingType?: PricingType | null;
     createdAt: string;
     updatedAt: string;
 };
@@ -267,6 +267,7 @@ export type ProviderService = {
     durationMinutes?: number | null;
     description?: string | null;
     pricingType: PricingType;
+    pricePerHour?: number | null;
     pricePerSquareMeter?: number | null;
     pricePerRoom?: number | null;
     service?: Service;
