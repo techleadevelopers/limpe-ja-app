@@ -12,6 +12,20 @@ import userService from '../services/userService';
 import axios from 'axios';
 import type { AxiosRequestConfig } from 'axios';
 
+// utils de log sem recursão
+const safeString = (v: any) => {
+  try {
+    if (typeof v === 'string') return v;
+    return JSON.stringify(v);
+  } catch {
+    return '[Object]';
+  }
+};
+
+const debugLog   = (...args: unknown[]) => { if (__DEV__) console.log('[Auth]', ...args.map(safeString)); };
+const debugWarn  = (...args: unknown[]) => { if (__DEV__) console.warn('[Auth]', ...args.map(safeString)); };
+const debugError = (...args: unknown[]) => { if (__DEV__) console.error('[Auth]', ...args.map(safeString)); };
+
 interface AuthDataFromStorage {
   token: string | null;
   user: UserProfile | null;
@@ -42,7 +56,6 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-console.log('[AuthContext.tsx] AuthContext definido (após createContext):', AuthContext);
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -63,7 +76,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setRole(null);
       setIsRegistrationInProgress(false);
     } catch (error) {
-      console.error('[AuthContext | logout] Erro de logout:', error);
+      debugError('[AuthContext | logout] Erro de logout:', error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -101,7 +114,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const authData: AuthDataFromStorage = await authService.loadAuthData();
       updateAuthState(authData);
     } catch (error) {
-      console.error('[AuthContext | loadStoredData] Erro ao carregar dados armazenados:', error);
+      debugError('[AuthContext | loadStoredData] Erro ao carregar dados armazenados:', error);
       setUser(null);
       setRole(null);
     } finally {
@@ -122,7 +135,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // registra token de push de forma não bloqueante
       registerDevicePushToken().catch(() => {});
     } catch (error) {
-      console.error('[AuthContext | login] Erro de login:', error);
+      debugError('[AuthContext | login] Erro de login:', error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -145,7 +158,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(authenticatedUser);
       setRole(authData.user.role as UserRole);
     } catch (error) {
-      console.error('[AuthContext | register] Erro de registro:', error);
+      debugError('[AuthContext | register] Erro de registro:', error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -155,13 +168,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signUpClient = async (data: RegisterClientDto) => {
     try {
       setIsLoading(true);
-      console.log('[AuthContext | signUpClient] Iniciando registro de cliente com dados:', { ...data, password: '***' });
+      debugLog('[AuthContext | signUpClient] Iniciando registro de cliente com dados:', { ...data, password: '***' });
       await authService.registerClient(data);
-      console.log('[AuthContext | signUpClient] Registro de cliente bem-sucedido. Fazendo login...');
+      debugLog('[AuthContext | signUpClient] Registro de cliente bem-sucedido. Fazendo login...');
       await login({ email: data.email, password: data.password });
-      console.log('[AuthContext | signUpClient] Login após registro concluído.');
+      debugLog('[AuthContext | signUpClient] Login após registro concluído.');
     } catch (error: any) {
-      console.error('[AuthContext | signUpClient] Erro no cadastro de cliente:', {
+      debugError('[AuthContext | signUpClient] Erro no cadastro de cliente:', {
         message: error.message,
         response: error.response?.data,
         status: error.response?.status
@@ -176,13 +189,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setIsLoading(true);
       setIsRegistrationInProgress(true);
-      console.log('[AuthContext | signUpProvider] Iniciando registro de provedor com dados:', { ...data, password: '***' }); // Log sem senha
+      debugLog('[AuthContext | signUpProvider] Iniciando registro de provedor com dados:', { ...data, password: '***' }); // Log sem senha
       await authService.registerProvider(data);
-      console.log('[AuthContext | signUpProvider] Registro de provedor bem-sucedido. Fazendo login...');
+      debugLog('[AuthContext | signUpProvider] Registro de provedor bem-sucedido. Fazendo login...');
       await login({ email: data.email, password: data.password });
-      console.log('[AuthContext | signUpProvider] Login após registro concluído.');
+      debugLog('[AuthContext | signUpProvider] Login após registro concluído.');
     } catch (error: any) {
-      console.error('[AuthContext | signUpProvider] Erro no cadastro de provedor:', {
+      debugError('[AuthContext | signUpProvider] Erro no cadastro de provedor:', {
         message: error.message,
         response: error.response?.data,
         status: error.response?.status,
@@ -196,12 +209,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const refreshUser = async () => {
-    console.log('[AuthContext | refreshUser] Recarregando dados do usuário do backend...');
+    debugLog('[AuthContext | refreshUser] Recarregando dados do usuário do backend...');
     try {
       setIsLoading(true);
       const currentToken = user?.token || (await authService.loadAuthData()).token;
       if (!currentToken) {
-        console.warn('[AuthContext | refreshUser] Nenhum token encontrado para refreshUser. Realizando logout.');
+        debugWarn('[AuthContext | refreshUser] Nenhum token encontrado para refreshUser. Realizando logout.');
         await logout();
         return;
       }
@@ -214,24 +227,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
       setUser(authenticatedUser);
       setRole(latestUserProfile.role as UserRole);
-      console.log('[AuthContext | refreshUser] Dados do usuário atualizados com sucesso do backend.');
+      debugLog('[AuthContext | refreshUser] Dados do usuário atualizados com sucesso do backend.');
       // garante registro de token de push quando app reabre
       registerDevicePushToken().catch(() => {});
     } catch (error: any) {
-      console.error('[AuthContext | refreshUser] Erro ao recarregar dados do usuário do backend:', error);
+      debugError('[AuthContext | refreshUser] Erro ao recarregar dados do usuário do backend:', error);
       if (axios.isAxiosError(error)) {
         const status = error.response?.status;
         if (status === 401) {
-          console.log('[AuthContext | refreshUser] Token inválido/expirado, realizando logout.');
+          debugLog('[AuthContext | refreshUser] Token inválido/expirado, realizando logout.');
           await logout();
         } else if (status === 404) {
-          console.warn('[AuthContext | refreshUser] /users/me retornou 404. Mantendo sessão atual e seguindo.');
+          debugWarn('[AuthContext | refreshUser] /users/me retornou 404. Mantendo sessão atual e seguindo.');
           // Não lança; mantém o usuário atual e segue o fluxo
         } else {
-          console.error('[AuthContext | refreshUser] Falha ao atualizar perfil. Mantendo sessão atual.');
+          debugError('[AuthContext | refreshUser] Falha ao atualizar perfil. Mantendo sessão atual.');
         }
       } else {
-        console.error('[AuthContext | refreshUser] Erro inesperado no refreshUser. Mantendo sessão.');
+        debugError('[AuthContext | refreshUser] Erro inesperado no refreshUser. Mantendo sessão.');
       }
     } finally {
       setIsLoading(false);
@@ -258,12 +271,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           id: user.id,
           role: user.role,
         });
-        console.log('[AuthContext | updateUser] Perfil do usuário atualizado no contexto e no armazenamento.');
+        debugLog('[AuthContext | updateUser] Perfil do usuário atualizado no contexto e no armazenamento.');
       } else {
         await refreshUser();
       }
     } else {
-      console.warn('[AuthContext | updateUser] Tentativa de atualizar usuário não logado.');
+      debugWarn('[AuthContext | updateUser] Tentativa de atualizar usuário não logado.');
     }
   }, [user, refreshUser]);
 
@@ -279,7 +292,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // registra token de push de forma não bloqueante
       registerDevicePushToken().catch(() => {});
     } catch (error) {
-      console.error('[AuthContext | setAuthData] Erro ao definir dados de autenticação:', error);
+      debugError('[AuthContext | setAuthData] Erro ao definir dados de autenticação:', error);
       throw error;
     } finally {
       setIsLoading(false);
