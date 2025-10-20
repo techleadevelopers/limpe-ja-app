@@ -1,0 +1,216 @@
+﻿import { Link, useLocation } from "wouter";
+import { Sparkles, ChartLine, Users, ClipboardCheck, ChartPie, Settings, UsersRound, MapPin, Bell, Cog, LogOut, FileSearch, Handshake, DollarSign, LifeBuoy } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/context/AuthContext";
+import { fetchVerificationQueue } from "@/lib/api";
+import logoImage from "../../assets/logo2.png";
+
+export default function Sidebar() {
+Â  const [location, setLocation] = useLocation();
+Â  const { logout } = useAuth();
+
+Â  // Busca dados do backend para badges e mÃ©tricas.
+Â  // As rotas para estas queries precisam ser implementadas no backend.
+Â  const { data: pendingProvidersData } = useQuery({
+Â  Â  queryKey: ['verification-queue'],
+Â  Â  queryFn: () => fetchVerificationQueue(), // Exemplo de busca da fila
+Â  });
+
+Â  const { data: pendingDisputesData } = useQuery({
+Â  Â  queryKey: ['pending-disputes'],
+Â  Â  queryFn: () => fetch('/api/disputes/pending-count').then(res => res.json()), // Endpoint hipotÃ©tico, mas necessÃ¡rio
+Â  });
+
+Â  const { data: pendingSafetyAlertsData } = useQuery({
+Â  Â  queryKey: ['pending-safety-alerts'],
+Â  Â  queryFn: () => fetch('/api/safety/pending-count').then(res => res.json()), // Endpoint hipotÃ©tico, mas necessÃ¡rio
+Â  });
+
+Â  const navItems = [
+Â  Â  {
+Â  Â  Â  path: "/",
+Â  Â  Â  icon: ChartLine,
+Â  Â  Â  label: "Painel",
+Â  Â  Â  isActive: location === "/",
+Â  Â  },
+Â  Â  {
+Â  Â  Â  path: "/providers",
+Â  Â  Â  icon: Users,
+Â  Â  Â  label: "GestÃ£o de Provedores",
+Â  Â  Â  // Badge para a contagem de provedores pendentes de verificaÃ§Ã£o.
+Â  Â  Â  badge: pendingProvidersData?.length || 0,
+Â  Â  Â  isActive: location === "/providers",
+Â  Â  },
+Â  Â  {
+Â  Â  Â  path: "/verification-queue",
+Â  Â  Â  icon: ClipboardCheck,
+Â  Â  Â  label: "Fila de VerificaÃ§Ã£o",
+Â  Â  Â  // Badge para a contagem de provedores na fila de verificaÃ§Ã£o.
+Â  Â  Â  badge: pendingProvidersData?.length || 0,
+Â  Â  Â  isActive: location === "/verification-queue",
+Â  Â  },
+Â  Â  {
+Â  Â  Â  path: "/financial-analytics",
+Â  Â  Â  icon: ChartPie,
+Â  Â  Â  label: "AnÃ¡lise Financeira",
+Â  Â  Â  isActive: location === "/financial-analytics",
+Â  Â  },
+Â  Â  {
+Â  Â  Â  path: "/service-management",
+Â  Â  Â  icon: Sparkles,
+Â  Â  Â  label: "GestÃ£o de ServiÃ§os",
+Â  Â  Â  isActive: location === "/service-management",
+Â  Â  },
+Â  Â  {
+Â  Â  Â  path: "/user-management",
+Â  Â  Â  icon: UsersRound,
+Â  Â  Â  label: "GestÃ£o de UsuÃ¡rios",
+Â  Â  Â  isActive: location === "/user-management",
+Â  Â  },
+Â  Â  {
+Â  Â  Â  path: "/provider-map",
+Â  Â  Â  icon: MapPin,
+Â  Â  Â  label: "Mapa de Provedores",
+Â  Â  Â  isActive: location === "/provider-map",
+Â  Â  },
+Â  Â  // NOVO: MÃ³dulos de gestÃ£o de disputas e pagamentos.
+Â  Â  {
+Â  Â  Â  path: "/dispute-management",
+Â  Â  Â  icon: Handshake,
+Â  Â  Â  label: "GestÃ£o de Disputas",
+Â  Â  Â  // Badge para a contagem de disputas pendentes.
+Â  Â  Â  badge: pendingDisputesData?.count || 0,
+Â  Â  Â  isActive: location === "/dispute-management",
+Â  Â  },
+Â  Â  {
+Â  Â  Â  path: "/payment-management",
+Â  Â  Â  icon: DollarSign,
+Â  Â  Â  label: "GestÃ£o de Pagamentos",
+Â  Â  Â  isActive: location === "/payment-management",
+Â  Â  },
+Â  Â  // NOVO: MÃ³dulo de seguranÃ§a.
+Â  Â  {
+Â  Â  Â  path: "/safety-alerts",
+Â  Â  Â  icon: LifeBuoy,
+Â  Â  Â  label: "Alertas de SeguranÃ§a",
+Â  Â  Â  badge: pendingSafetyAlertsData?.count || 0,
+Â  Â  Â  isActive: location === "/safety-alerts",
+Â  Â  },
+Â  ];
+
+Â  const handleLogout = async () => {
+Â  Â  await logout();
+Â  Â  setLocation('/login');
+Â  };
+
+Â  return (
+Â  Â  <div className="fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-floating-lg border-r border-gray-100">
+Â  Â  Â  {/* Logo Section */}
+Â  Â  Â  <div className="flex items-center justify-center px-6 py-6 border-b border-gray-100">
+Â  Â  Â  Â  <img 
+Â  Â  Â  Â  Â  src={logoImage} 
+Â  Â  Â  Â  Â  alt="LimpeJÃ¡ Logo" 
+Â  Â  Â  Â  Â  style={{ width: '150px', height: 'auto', objectFit: 'contain' }}
+Â  Â  Â  Â  Â  className="rounded-2xl" 
+Â  Â  Â  Â  />
+Â  Â  Â  </div>
+
+Â  Â  Â  {/* Navigation Menu */}
+Â  Â  Â  <nav className="mt-6 px-4">
+Â  Â  Â  Â  <div className="space-y-2">
+Â  Â  Â  Â  Â  {navItems.map((item) => (
+Â  Â  Â  Â  Â  Â  <Link
+Â  Â  Â  Â  Â  Â  Â  key={item.path}
+Â  Â  Â  Â  Â  Â  Â  href={item.path}
+Â  Â  Â  Â  Â  Â  Â  className={cn(
+Â  Â  Â  Â  Â  Â  Â  Â  "flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-300 group",
+Â  Â  Â  Â  Â  Â  Â  Â  item.isActive
+Â  Â  Â  Â  Â  Â  Â  Â  Â  ? "text-medium-blue bg-gray-50 shadow-floating hover:shadow-floating-lg"
+Â  Â  Â  Â  Â  Â  Â  Â  Â  : "text-gray-700 hover:bg-gray-50 hover:shadow-floating"
+Â  Â  Â  Â  Â  Â  Â  )}
+Â  Â  Â  Â  Â  Â  >
+Â  Â  Â  Â  Â  Â  Â  <item.icon 
+Â  Â  Â  Â  Â  Â  Â  Â  className={cn(
+Â  Â  Â  Â  Â  Â  Â  Â  Â  "w-5 h-5 mr-3",
+Â  Â  Â  Â  Â  Â  Â  Â  Â  item.isActive ? "text-medium-blue" : "text-gray-400 group-hover:text-medium-blue"
+Â  Â  Â  Â  Â  Â  Â  Â  )} 
+Â  Â  Â  Â  Â  Â  Â  />
+Â  Â  Â  Â  Â  Â  Â  {item.label}
+Â  Â  Â  Â  Â  Â  Â  {item.badge > 0 && (
+Â  Â  Â  Â  Â  Â  Â  Â  <span className={cn(
+Â  Â  Â  Â  Â  Â  Â  Â  Â  "ml-auto text-xs px-2 py-1 rounded-full",
+Â  Â  Â  Â  Â  Â  Â  Â  Â  item.badge > 5 ? "bg-red-100 text-red-600" : "bg-orange-100 text-orange-600"
+Â  Â  Â  Â  Â  Â  Â  Â  )}>
+Â  Â  Â  Â  Â  Â  Â  Â  Â  {item.badge}
+Â  Â  Â  Â  Â  Â  Â  Â  </span>
+Â  Â  Â  Â  Â  Â  Â  )}
+Â  Â  Â  Â  Â  Â  </Link>
+Â  Â  Â  Â  Â  ))}
+Â  Â  Â  Â  </div>
+
+Â  Â  Â  Â  {/* Settings Section */}
+Â  Â  Â  Â  <div className="mt-8 pt-6 border-t border-gray-100">
+Â  Â  Â  Â  Â  <div className="space-y-2">
+Â  Â  Â  Â  Â  Â  <Link
+Â  Â  Â  Â  Â  Â  Â  href="/notifications"
+Â  Â  Â  Â  Â  Â  Â  className={cn(
+Â  Â  Â  Â  Â  Â  Â  Â  "flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-300 group",
+Â  Â  Â  Â  Â  Â  Â  Â  location === "/notifications" 
+Â  Â  Â  Â  Â  Â  Â  Â  Â  ? "text-medium-blue bg-gray-50 shadow-floating hover:shadow-floating-lg"
+Â  Â  Â  Â  Â  Â  Â  Â  Â  : "text-gray-700 hover:bg-gray-50 hover:shadow-floating"
+Â  Â  Â  Â  Â  Â  Â  )}
+Â  Â  Â  Â  Â  Â  >
+Â  Â  Â  Â  Â  Â  Â  <Bell className={cn(
+Â  Â  Â  Â  Â  Â  Â  Â  "w-5 h-5 mr-3",
+Â  Â  Â  Â  Â  Â  Â  Â  location === "/notifications" ? "text-medium-blue" : "text-gray-400 group-hover:text-medium-blue"
+Â  Â  Â  Â  Â  Â  Â  )} />
+Â  Â  Â  Â  Â  Â  Â  NotificaÃ§Ãµes
+Â  Â  Â  Â  Â  Â  </Link>
+Â  Â  Â  Â  Â  Â  <Link
+Â  Â  Â  Â  Â  Â  Â  href="/settings"
+Â  Â  Â  Â  Â  Â  Â  className={cn(
+Â  Â  Â  Â  Â  Â  Â  Â  "flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-300 group",
+Â  Â  Â  Â  Â  Â  Â  Â  location === "/settings" 
+Â  Â  Â  Â  Â  Â  Â  Â  Â  ? "text-medium-blue bg-gray-50 shadow-floating hover:shadow-floating-lg"
+Â  Â  Â  Â  Â  Â  Â  Â  Â  : "text-gray-700 hover:bg-gray-50 hover:shadow-floating"
+Â  Â  Â  Â  Â  Â  Â  )}
+Â  Â  Â  Â  Â  Â  >
+Â  Â  Â  Â  Â  Â  Â  <Cog className={cn(
+Â  Â  Â  Â  Â  Â  Â  Â  "w-5 h-5 mr-3",
+Â  Â  Â  Â  Â  Â  Â  Â  location === "/settings" ? "text-medium-blue" : "text-gray-400 group-hover:text-medium-blue"
+Â  Â  Â  Â  Â  Â  Â  )} />
+Â  Â  Â  Â  Â  Â  Â  ConfiguraÃ§Ãµes
+Â  Â  Â  Â  Â  Â  </Link>
+Â  Â  Â  Â  Â  </div>
+Â  Â  Â  Â  </div>
+Â  Â  Â  </nav>
+
+Â  Â  Â  {/* Admin Profile */}
+Â  Â  Â  <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-100 bg-white">
+Â  Â  Â  Â  <div className="flex items-center">
+Â  Â  Â  Â  Â  <img 
+Â  Â  Â  Â  Â  Â  src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&h=100" 
+Â  Â  Â  Â  Â  Â  alt="Admin profile" 
+Â  Â  Â  Â  Â  Â  className="w-10 h-10 rounded-full object-cover"
+Â  Â  Â  Â  Â  />
+Â  Â  Â  Â  Â  <div className="ml-3">
+Â  Â  Â  Â  Â  Â  <p className="text-sm font-medium text-gray-900">Admin User</p>
+Â  Â  Â  Â  Â  Â  <p className="text-xs text-gray-500">admin@limpeja.com</p>
+Â  Â  Â  Â  Â  </div>
+Â  Â  Â  Â  Â  <button 
+Â  Â  Â  Â  Â  Â  onClick={handleLogout} 
+Â  Â  Â  Â  Â  Â  className="ml-auto text-gray-400 hover:text-gray-600"
+Â  Â  Â  Â  Â  >
+Â  Â  Â  Â  Â  Â  <LogOut size={16} />
+Â  Â  Â  Â  Â  </button>
+Â  Â  Â  Â  </div>
+Â  Â  Â  </div>
+Â  Â  </div>
+Â  );
+}
+
+
+
+
+
