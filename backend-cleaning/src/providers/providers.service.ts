@@ -242,7 +242,7 @@ export class ProvidersService {
           name: ps.service.name,
           description: ps.service.description,
           icon: ps.service.icon,
-          price: ps.service.price.toNumber(),
+          price: ps.service.price ? ps.service.price.toNumber() : 0,
           createdAt: ps.service.createdAt.toISOString(),
           updatedAt: ps.service.updatedAt.toISOString(),
         },
@@ -511,6 +511,64 @@ export class ProvidersService {
       return mapped;
     }
     return null;
+  }
+
+  async updateById(id: string, data: UpdateProviderProfileDto): Promise<ProviderWithCalculatedRating | null> {
+    this.logger.log(`[ProvidersService] updateById: Tentando atualizar provedor para id: ${id}`);
+    const provider = await this.prisma.provider.findUnique({ where: { id } });
+    if (!provider) {
+      this.logger.warn(`[ProvidersService] updateById: Provedor com id ${id} não encontrado para atualização.`);
+      return null;
+    }
+
+    const updateData: Prisma.ProviderUpdateInput = {
+      fullName: data.fullName,
+      cpf: data.cpf,
+      dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
+      phone: data.phone,
+      avatarUrl: data.avatarUrl,
+      yearsOfExperience: data.yearsOfExperience,
+      bio: data.bio,
+      pixKey: data.pixKey,
+    };
+
+    if (data.address) {
+      updateData.address = {
+        upsert: {
+          create: data.address,
+          update: data.address,
+        },
+      };
+    }
+
+    const updatedProvider = await this.prisma.provider.update({
+      where: { id },
+      data: updateData,
+      include: {
+        user: { select: { email: true, role: true, isVerified: true, fullName: true } },
+        address: true,
+        providerServices: { include: { service: true } },
+        reviewsReceived: {
+          include: {
+            client: { include: { user: true } },
+          },
+        },
+        bookings: {
+          where: { status: 'COMPLETED' },
+          orderBy: { createdAt: 'desc' },
+          take: 100,
+        },
+        availability: true,
+      },
+    });
+
+    await this.cacheService.del(this.PROVIDERS_CACHE_KEY);
+    await this.cacheService.del(`${this.PROVIDERS_CACHE_KEY}:${updatedProvider.id}`);
+    this.logger.log(`[ProvidersService] updateById: Cache de provedores invalidado após atualização.`);
+
+    const mapped = this.mapProviderToCalculatedRating(updatedProvider as ProviderWithIncludes);
+    mapped.nextAvailable = await this.calculateNextAvailable(updatedProvider.id);
+    return mapped;
   }
 
   async remove(id: string): Promise<void> {
