@@ -19,6 +19,7 @@ Esta documentacao descreve a plataforma LimpeJa conforme o estado atual do repos
   3. Pagamento via PIX, atualizacao de ledger, notificacoes e chat.
   4. Conclusao, reviews, loyalty, missoes e ranking.
   5. Suporte, disputas e resolucoes financeiras.
+  6. Governança operacional: Configurações de SLAs e Comissão com auditoria e UI Admin.
 
 2. Backend LimpeJa (`backend-cleaning`)
 ---------------------------------------
@@ -38,7 +39,7 @@ Esta documentacao descreve a plataforma LimpeJa conforme o estado atual do repos
   - Inicializacao condicional do Firebase Admin (automatico ou via credencial).
 
 ### 2.2 Estrutura Modular
-- `src/app.module.ts`: Importa modulos de dominio (auth, users, providers, services, bookings, payments, offers, loyalty, missions, support, disputes, safety, dashboard, metrics, referrals, queues, admin, locks, geocoding).
+- `src/app.module.ts`: Importa modulos de dominio (auth, users, providers, services, bookings, payments, offers, loyalty, missions, support, disputes, safety, dashboard, metrics, referrals, queues, admin, locks, geocoding, settings).
 - Modulos principais:
   - **Auth**: Registro/login clientes e provedores, JWT, roles, guards HTTP e WebSocket.
   - **Users/Clients/Providers**: Perfis, geocodificacao, KYC, upload de documentos via `document-processing`.
@@ -50,9 +51,31 @@ Esta documentacao descreve a plataforma LimpeJa conforme o estado atual do repos
   - **Payments/Payouts/Earnings**: Intencoes PIX, conciliacao, ledger de creditos/debitos, take rate, gerenciamento de saques.
   - **Offers/Coupons/Loyalty/Missions/Ranking**: Promocoes dirigidas, pontos, missao baseada em eventos, boosts e gamificacao.
   - **Support/Disputes/Notifications**: Tickets com SLA, mensagens, escalonamento; disputas com workflow; envio de push/email.
+  - **Settings (Configurações Admin)**: Overrides de SLAs e Comissão com persistência em Redis e histórico de auditoria; exposições de endpoints Admin.
   - **Queues**: `BullModule` configurado com filas (`verification`, `notifications`, `disputes`, `data_export`, `subscription-generation`, `emails`, `support-escalations`, `payouts`). `queues.service.ts` padroniza add/remove, status e retry.
   - **Geocoding/Location**: Integracao com Google Maps; `verification/document-processing` usa Google Cloud Vision para OCR e liveness.
   - **Metrics/Dashboard**: Consolida dados de prestadores (aceitacao, resposta), rankings e dashboards administrativos.
+
+### 2.5 Configurações e Auditoria (SettingsModule)
+- **Módulo**: `src/settings`
+  - `settings.module.ts`: expõe `SettingsService` (importa `CacheModule` + `ConfigModule`).
+  - `settings.service.ts`:
+    - SLAs (`SlaSettings`): leitura/gravação em Redis com fallback para ENV.
+      - Chaves: `settings:sla:dispute:{urgent|high|medium|low}_hours`, `settings:sla:support:{PAYMENT|QUALITY|APP|OTHER}_hours`.
+      - Auditoria: array em `settings:sla:history` (TTL padrão 365d, configurável).
+    - Gerais (`GeneralSettings`): `commissionRatePercent` com auditoria em `settings:general:history`.
+    - Pricing audit: apêndice e leitura de histórico em `settings:pricing:history` para mudanças de regras de preço.
+- **ENV relevantes**:
+  - `DISPUTE_SLA_URGENT_HOURS`, `DISPUTE_SLA_HIGH_HOURS`, `DISPUTE_SLA_MEDIUM_HOURS`, `DISPUTE_SLA_LOW_HOURS` (fallbacks).
+  - `DEFAULT_COMMISSION_RATE_PERCENT` (fallback para comissão, ex.: 15).
+  - `SETTINGS_TTL_SECONDS` (padrão 2592000/30d), `SETTINGS_HISTORY_TTL_SECONDS` (padrão 31536000/365d).
+- **Endpoints Admin (JWT + Role ADMIN)**:
+  - `GET /admin/settings/slas` • `PUT /admin/settings/slas`
+  - `GET /admin/settings/slas/history?limit=&cursor=`
+  - `GET /admin/settings/general` • `PUT /admin/settings/general`
+  - `GET /admin/settings/general/history?limit=&cursor=`
+  - `GET /admin/settings/pricing/history?limit=&cursor=`
+- **PricingService (auditoria)**: `createRule`, `updateRule`, `deleteRule` registram eventos (action, before/after, actorUserId, at) via `SettingsService.appendPricingAudit`.
 
 ### 2.3 Modelo de Dados (Prisma)
 - Enum principais (`UserRole`, `VerificationStatus`, `BookingStatus`, `PricingType`, `TransactionType`, `SupportTicketStatus`, `MissionKind`).
@@ -137,6 +160,12 @@ Esta documentacao descreve a plataforma LimpeJa conforme o estado atual do repos
 - **Retiradas**: `withdraw/index.tsx` e `earnings.tsx`.
 
 #### Rotas Comuns (`app/(common)`)
+
+### 3.3 Admin Web (resumo)
+- Settings > SLAs: edição de prazos de suporte e disputas (com histórico em tabela).
+- Settings > General: edição de `Commission Rate (%)` (com histórico e auditoria).
+- Settings > Regras de Precificação: CRUD de regras + modal “Histórico” com before/after e autor; paginação.
+- Dashboard: widget “Atualizações de Configuração” com filtros por ação e período (24h/7d/30d).
 - Feedbacks, termos e componentes reutilizados.
 
 ### 3.4 UI/UX e Comportamentos
