@@ -1,5 +1,7 @@
 // LimpeJaApp/app/services/commonServiceCatalog.ts
 import { api } from './api';
+import { createLocalConsole } from './logging';
+const console = createLocalConsole();
 import { Service } from '../types/backend/services';
 import axios, { AxiosResponse } from 'axios';
 
