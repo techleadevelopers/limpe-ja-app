@@ -8,7 +8,7 @@ interface HeaderProps {
 
 export default function Header({ title, subtitle }: HeaderProps) {
   return (
-    <header className="bg-white border-b border-gray-100 px-8 py-6 shadow-sm">
+    <header className="glass-header border-b border-gray-100 px-8 py-6 shadow-sm">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
@@ -20,7 +20,7 @@ export default function Header({ title, subtitle }: HeaderProps) {
           <div className="relative">
             <Input
               type="text"
-              placeholder="Search..."
+              placeholder="Busque ou pressione Ctrl+K"
               className="pl-10 w-64 border-gray-200 rounded-xl focus:ring-2 focus:ring-light-blue focus:border-transparent"
             />
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
