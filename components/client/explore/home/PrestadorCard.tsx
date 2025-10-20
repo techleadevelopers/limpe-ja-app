@@ -219,7 +219,7 @@ const PrestadorCard: React.FC<PrestadorCardProps> = ({ item, onPress }) => {
 const styles = StyleSheet.create({
     animatedCardContainer: {
         marginRight: 12,
-        marginBottom: 10,
+        marginBottom: 11,
         marginTop: 12,
         borderRadius: 64,
         overflow: 'visible',
@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
     // REMOVIDO: verifiedBadge (antigo, dentro da imagem)
     verifiedBadgeOutside: { 
         position: 'absolute',
-        top: 18, // Mesma posição relativa à imagem (ajustado para fora do container)
+        top: -8, // Mesma posição relativa à imagem (ajustado para fora do container)
         left: 62, // Posição para sobrepor a imagem (após marginRight:12 da imageWrapper)
         zIndex: 10, // zIndex alto para ficar 100% acima do container
         backgroundColor: '#fff',
