@@ -13,6 +13,15 @@ import {
     ReferralStatus
 } from "./types";
 
+// --- Admin Settings (SLAs) ---
+export type DisputeSlaConfig = { urgentHours: number; highHours: number; mediumHours: number; lowHours: number };
+export type SupportSlaConfig = { PAYMENT: number; QUALITY: number; APP: number; OTHER: number };
+export type SlaSettings = { disputes: DisputeSlaConfig; support: SupportSlaConfig };
+export type SlaAuditEvent = { id: string; at: string; actorUserId: string; before: SlaSettings; after: SlaSettings };
+export type GeneralSettings = { commissionRatePercent: number };
+export type GeneralAuditEvent = { id: string; at: string; actorUserId: string; before: GeneralSettings; after: GeneralSettings };
+export type PricingAuditEvent = { id: string; at: string; actorUserId: string; action: 'create'|'update'|'delete'; ruleBefore?: any; ruleAfter?: any };
+
 type UnauthorizedHandler = (context: { originalRequest: AdminAxiosRequestConfig }) => Promise<void> | void;
 
 interface AdminAxiosRequestConfig extends AxiosRequestConfig {
@@ -237,6 +246,41 @@ export const fetchVerificationQueue = async (): Promise<Provider[]> => {
 // --- FunÃ§Ãµes de Atividades Recentes ---
 export const fetchRecentActivities = async (limit: number = 10): Promise<Activity[]> => {
     return fetchApi(`/activities?limit=${limit}`);
+};
+
+// --- Settings: SLAs ---
+export const fetchSlaSettings = async (): Promise<SlaSettings> => {
+    return fetchApi('/admin/settings/slas');
+};
+
+export const updateSlaSettings = async (payload: Partial<SlaSettings>): Promise<SlaSettings> => {
+    return fetchApi('/admin/settings/slas', {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+    });
+};
+
+export const fetchSlaHistory = async (limit = 50, cursor = 0): Promise<{ items: SlaAuditEvent[]; nextCursor: number | null }> => {
+    const query = `?limit=${limit}&cursor=${cursor}`;
+    return fetchApi(`/admin/settings/slas/history${query}`);
+};
+
+export const fetchGeneralSettings = async (): Promise<GeneralSettings> => {
+    return fetchApi('/admin/settings/general');
+};
+
+export const updateGeneralSettings = async (payload: Partial<GeneralSettings>): Promise<GeneralSettings> => {
+    return fetchApi('/admin/settings/general', { method: 'PUT', body: JSON.stringify(payload) });
+};
+
+export const fetchGeneralHistory = async (limit = 50, cursor = 0): Promise<{ items: GeneralAuditEvent[]; nextCursor: number | null }> => {
+    const query = `?limit=${limit}&cursor=${cursor}`;
+    return fetchApi(`/admin/settings/general/history${query}`);
+};
+
+export const fetchPricingHistory = async (limit = 50, cursor = 0): Promise<{ items: PricingAuditEvent[]; nextCursor: number | null }> => {
+    const query = `?limit=${limit}&cursor=${cursor}`;
+    return fetchApi(`/admin/settings/pricing/history${query}`);
 };
 
 // --- FunÃ§Ãµes de Clientes ---
