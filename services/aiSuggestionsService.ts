@@ -1,4 +1,6 @@
 import { api } from './api';
+import { createLocalConsole } from './logging';
+const console = createLocalConsole();
 
 interface SmartSuggestion {
   id: string;
