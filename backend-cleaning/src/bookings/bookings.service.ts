@@ -77,6 +77,36 @@ export class BookingsService {
     // private readonly bookingStateMachine: BookingStateMachine, // NOVO: Injetar BookingStateMachine (se for usar)
   ) {}
 
+  /**
+   * Resolve a Date that represents the given ISO string in the provided timezone.
+   * Mirrors the approach used in PricingService to avoid adding new deps.
+   */
+  private resolveDateWithTimezone(iso: string, timezone?: string): Date {
+    const base = new Date(iso);
+    if (!timezone) return base;
+    try {
+      const localeString = base.toLocaleString('en-US', { timeZone: timezone as any });
+      return new Date(localeString);
+    } catch {
+      return base;
+    }
+  }
+
+  /**
+   * Compose an ISO (without timezone) from a date-only and HH:mm, then resolve it in America/Sao_Paulo.
+   */
+  private getScheduledAtInSaoPaulo(dateValue: any, timeHHmm: string | null | undefined): Date {
+    const d = new Date(dateValue as any);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const [hh, mm] = String(timeHHmm || '00:00').split(':').map((n) => parseInt(n, 10));
+    const H = String(isFinite(hh) ? hh : 0).padStart(2, '0');
+    const M = String(isFinite(mm) ? mm : 0).padStart(2, '0');
+    const isoLocal = `${y}-${m}-${day}T${H}:${M}:00`;
+    return this.resolveDateWithTimezone(isoLocal, 'America/Sao_Paulo');
+  }
+
   async create(clientUserId: string, createBookingDto: CreateBookingDto, request?: Request): Promise<BookingWithDetailsRelations> {
     this.logger.log(`[BookingsService] create - Início da criação do agendamento.`);
     this.logger.log(`[BookingsService] create - clientUserId: ${clientUserId}`);
@@ -549,6 +579,35 @@ export class BookingsService {
     }
     this.logger.log(`[BookingsService] updateStatus - Status de agendamento validado. Atualizando no DB.`);
 
+    // Server-side guardrails for time windows and audit fields
+    const now = new Date();
+    const dataToUpdate: Prisma.BookingUpdateInput = { status: newStatus };
+
+    if (userRole === UserRole.PROVIDER && booking.status === BookingStatus.CONFIRMED && newStatus === BookingStatus.IN_PROGRESS) {
+      const scheduledAt = this.getScheduledAtInSaoPaulo(booking.scheduledDate, booking.scheduledTime);
+      const diffMin = Math.round((now.getTime() - scheduledAt.getTime()) / 60000);
+      const minEarly = -15; // allow up to 15 minutes before
+      const maxLate = 120;  // allow up to 120 minutes after
+      if (!(diffMin >= minEarly && diffMin <= maxLate)) {
+        const msg = await this.i18n.translate?.('booking.badRequest.startOutsideWindow', locale).catch?.(() => null);
+        throw new BadRequestException(msg || 'Início fora da janela permitida.');
+      }
+      (dataToUpdate as any).startedAt = now;
+      (dataToUpdate as any).startedByUserId = (request as any)?.user?.['userId'] || (request as any)?.user?.['id'] || null;
+    }
+
+    if (userRole === UserRole.PROVIDER && booking.status === BookingStatus.IN_PROGRESS && newStatus === BookingStatus.COMPLETED) {
+      const minRunMinutes = Math.max(0, parseInt(process.env.MIN_SERVICE_MINUTES ?? '15', 10) || 15);
+      const refStart = booking.startedAt ?? this.getScheduledAtInSaoPaulo(booking.scheduledDate, booking.scheduledTime);
+      const runMin = Math.round((now.getTime() - new Date(refStart as any).getTime()) / 60000);
+      if (runMin < minRunMinutes) {
+        const msg = await this.i18n.translate?.('booking.badRequest.finishTooEarly', locale).catch?.(() => null);
+        throw new BadRequestException(msg || 'Finalização muito cedo em relação ao horário previsto.');
+      }
+      (dataToUpdate as any).completedAt = now;
+      (dataToUpdate as any).completedByUserId = (request as any)?.user?.['userId'] || (request as any)?.user?.['id'] || null;
+    }
+
     // --- NOVO: Lógica de Fidelização e Gamificação (após validação de status) ---
     if (newStatus === BookingStatus.COMPLETED) {
       // Increment completedBookingsCount for the client
@@ -675,7 +734,7 @@ export class BookingsService {
 
     const updatedBooking = await this.prisma.booking.update({
       where: { id },
-      data: { status: newStatus },
+      data: dataToUpdate,
       include: {
         client: { include: { user: true } },
         provider: { include: { user: true } },
@@ -693,17 +752,17 @@ export class BookingsService {
     // Premium: ao confirmar, agenda lembretes T-24h/T-2h/T-15m e T0 para cliente e provedor
     if (newStatus === BookingStatus.CONFIRMED) {
       try {
-        const dateBase = new Date(updatedBooking.scheduledDate as any);
-        const [hh, mm] = String(updatedBooking.scheduledTime || '00:00').split(':').map((n) => parseInt(n, 10));
-        if (!Number.isNaN(dateBase.getTime())) {
-          dateBase.setHours(hh || 0, mm || 0, 0, 0);
+        const scheduledAt = this.getScheduledAtInSaoPaulo(updatedBooking.scheduledDate, updatedBooking.scheduledTime);
+        if (!Number.isNaN(scheduledAt.getTime())) {
+          const [hh, mm] = String(updatedBooking.scheduledTime || '00:00').split(':').map((n) => parseInt(n, 10));
           await this.queuesService.scheduleBookingReminders({
             bookingId: updatedBooking.id,
             clientUserId: updatedBooking.client?.userId,
             providerUserId: updatedBooking.provider?.userId,
-            scheduledAt: dateBase,
+            scheduledAt,
             deeplinkClient: `/(client)/bookings/${updatedBooking.id}`,
             deeplinkProvider: `/(provider)/active-booking/${updatedBooking.id}`,
+            locale,
           });
           this.logger.log(`[BookingsService] updateStatus: Lembretes agendados para booking ${updatedBooking.id}.`);
           // Push imediato de confirmação (som alto + deeplink)
@@ -1062,5 +1121,6 @@ export class BookingsService {
     return updatedBooking;
   }
 }
+
 
 
