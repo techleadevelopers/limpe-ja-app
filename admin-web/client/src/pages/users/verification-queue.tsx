@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -96,7 +96,9 @@ export default function VerificationQueue() {
 
   const handleProviderClick = (provider: Provider) => {
     setSelectedProvider(provider);
-    setIsModalOpen(true);
+    if (window.innerWidth < 768) {
+      setIsModalOpen(true);
+    }
   };
 
   const handleApproveProvider = (providerId: string) => {
@@ -113,6 +115,27 @@ export default function VerificationQueue() {
     }
   };
 
+  // Atalhos de teclado quando há um provedor selecionado (somente desktop)
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!selectedProvider || isModalOpen) return;
+      const k = e.key.toLowerCase();
+      if (k === 'a') {
+        e.preventDefault();
+        handleApproveProvider(selectedProvider.id);
+      } else if (k === 'r') {
+        e.preventDefault();
+        const reason = prompt('Motivo da rejeição?') || '';
+        handleRejectProvider(selectedProvider.id, reason);
+      } else if (k === 'b') {
+        e.preventDefault();
+        handleBlockProvider(selectedProvider.id);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [selectedProvider, isModalOpen]);
+
   const pendingDocuments = queue?.filter((p: Provider) => p.verificationStatus === VerificationStatus.PENDING_DOCUMENTS_UPLOAD) || [];
   const pendingReview = queue?.filter((p: Provider) => p.verificationStatus === VerificationStatus.PENDING_MANUAL_REVIEW) || [];
 
@@ -128,7 +151,7 @@ export default function VerificationQueue() {
         
         <main className="flex-1 overflow-y-auto p-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <Card className="shadow-floating border-0">
+            <Card className="glass-card shadow-floating border-0">
               <CardContent className="pt-6">
                 <div className="flex items-center">
                   <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
@@ -142,7 +165,7 @@ export default function VerificationQueue() {
               </CardContent>
             </Card>
 
-            <Card className="shadow-floating border-0">
+            <Card className="glass-card shadow-floating border-0">
               <CardContent className="pt-6">
                 <div className="flex items-center">
                   <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
@@ -156,7 +179,7 @@ export default function VerificationQueue() {
               </CardContent>
             </Card>
 
-            <Card className="shadow-floating border-0">
+            <Card className="glass-card shadow-floating border-0">
               <CardContent className="pt-6">
                 <div className="flex items-center">
                   <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
@@ -171,8 +194,9 @@ export default function VerificationQueue() {
             </Card>
           </div>
 
-          <Card className="shadow-floating border-0">
-            <CardContent className="pt-6">
+          <div className="md:flex md:space-x-6">
+            <Card className="glass-card shadow-floating border-0 md:w-1/2">
+              <CardContent className="pt-6">
               {isLoading ? (
                 <div className="space-y-4">
                   {[...Array(5)].map((_, i) => (
@@ -193,7 +217,7 @@ export default function VerificationQueue() {
                 <div className="text-center py-12 text-red-600">
                   <p>Erro ao carregar a fila de verificação: {error?.message}</p>
                 </div>
-              ) : (queue as Provider[]).length === 0 ? (
+              ) : queue?.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Clock className="w-8 h-8 text-gray-400" />
@@ -203,7 +227,7 @@ export default function VerificationQueue() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {(queue as Provider[]).map((provider: Provider, index: number) => {
+                  {queue?.map((provider: Provider, index: number) => {
                     const statusInfo = getStatusInfo(provider.verificationStatus || "");
                     const StatusIcon = statusInfo.icon;
                     
@@ -213,7 +237,7 @@ export default function VerificationQueue() {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.3, delay: index * 0.1 }}
-                        className="flex items-center p-4 bg-gray-50 rounded-xl hover:bg-gray-100 hover:shadow-md transition-all duration-200 cursor-pointer"
+                        className={`flex items-center p-4 rounded-xl transition-all duration-200 cursor-pointer ${selectedProvider?.id === provider.id ? "bg-light-blue/20 ring-1 ring-light-blue/40" : "bg-gray-50 hover:bg-gray-100 hover:shadow-md"}`}
                         onClick={() => handleProviderClick(provider)}
                       >
                         <div className={`w-12 h-12 ${statusInfo.iconBg} rounded-xl flex items-center justify-center`}>
@@ -249,8 +273,47 @@ export default function VerificationQueue() {
                   })}
                 </div>
               )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+
+            {selectedProvider && (
+              <Card className="glass-card shadow-floating border-0 mt-6 md:mt-0 md:w-1/2">
+                <CardContent className="pt-6">
+                  <div className="flex items-center mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-light-blue/30 flex items-center justify-center mr-3">
+                      <Eye className="text-medium-blue" size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">{selectedProvider.name}</h3>
+                      <p className="text-sm text-gray-600">{selectedProvider.email || selectedProvider.phone || "Contato não informado"}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <p className="text-xs text-gray-500">Status atual</p>
+                      <p className="text-sm font-medium">{selectedProvider.verificationStatus}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Tempo na fila</p>
+                      <p className="text-sm font-medium">{formatRelativeTime(new Date(selectedProvider.createdAt || Date.now()))}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <Button onClick={() => handleApproveProvider(selectedProvider.id)} className="bg-emerald-500 hover:bg-emerald-600 text-white">Aprovar (A)</Button>
+                    <Button variant="outline" onClick={() => {
+                      const reason = prompt("Motivo da rejeição?") || "";
+                      handleRejectProvider(selectedProvider.id, reason);
+                    }}>Rejeitar (R)</Button>
+                    <Button variant="destructive" onClick={() => handleBlockProvider(selectedProvider.id)}>Bloquear (B)</Button>
+                  </div>
+
+                  <p className="text-xs text-gray-500 mt-3">Atalhos: A aprovar, R rejeitar, B bloquear</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </main>
       </div>
 
