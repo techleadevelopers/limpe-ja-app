@@ -12,10 +12,10 @@ export class EarningsController {
   constructor(private readonly earningsService: EarningsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Obter dados de ganhos e histÃ³rico de transaÃ§Ãµes do provedor' })
+  @ApiOperation({ summary: 'Obter dados de ganhos e histórico de transações do provedor' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Dados de ganhos do provedor.', type: EarningsResponseDto })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'NÃ£o autorizado.' })
-  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Provedor nÃ£o encontrado.' })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Não autorizado.' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Provedor não encontrado.' })
   async getEarnings(@Req() req: Request & { user: { userId: string } }): Promise<EarningsResponseDto> {
     // req.user.userId Ã© preenchido pelo AuthGuard
     return await this.earningsService.getEarnings(req.user.userId);
@@ -24,8 +24,8 @@ export class EarningsController {
   @Post('withdrawal')
   @ApiOperation({ summary: 'Solicitar um saque dos ganhos do provedor' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Saque solicitado com sucesso.', type: WithdrawalResponseDto })
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Dados invÃ¡lidos ou saldo insuficiente.' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'NÃ£o autorizado.' })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Dados inválidos ou saldo insuficiente.' })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Não autorizado.' })
   async requestWithdrawal(
     @Req() req: Request & { user: { userId: string } },
     @Body() withdrawalDto: WithdrawalRequestDto,
