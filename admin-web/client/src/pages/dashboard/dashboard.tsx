@@ -3,6 +3,7 @@ import Header from "@/components/layout/header";
 import MetricsCards from "@/components/dashboard/metrics-cards";
 import RevenueChart from "@/components/dashboard/revenue-chart";
 import ProviderMap from "@/components/dashboard/provider-map";
+import ProvidersSummary from "@/components/dashboard/providers-summary";
 import RecentActivities from "@/components/dashboard/recent-activities";
 import VerificationQueueWidget from "@/components/dashboard/verification-queue-widget";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,7 +13,7 @@ import type { DashboardMetrics } from "@/lib/types";
 
 export default function Dashboard() {
   const { data: metrics, isLoading, isError, error } = useQuery<DashboardMetrics, Error>({
-    queryKey: ['/admin/dashboard/metrics'],
+    queryKey: ["/admin/dashboard/metrics"],
     queryFn: fetchDashboardMetrics,
   });
 
@@ -23,15 +24,15 @@ export default function Dashboard() {
       <div className="flex-1 ml-72 overflow-hidden">
         <Header
           title="Dashboard Overview"
-          subtitle="Welcome back! Here's what's happening with LimpeJǭ today."
+          subtitle="Bem-vindo de volta! Acompanhe os principais indicadores."
         />
 
         <main className="flex-1 overflow-y-auto p-8">
-          {/* Metrics Cards */}
+          {/* Linha 1 — KPIs principais */}
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-12 gap-6 mb-8">
               {[...Array(4)].map((_, i) => (
-                <Skeleton key={i} className="h-32 rounded-2xl" />
+                <Skeleton key={i} className="h-32 rounded-2xl col-span-12 md:col-span-6 xl:col-span-3" />
               ))}
             </div>
           ) : isError ? (
@@ -39,22 +40,42 @@ export default function Dashboard() {
               <p>Erro ao carregar métricas do dashboard: {error?.message}</p>
             </div>
           ) : metrics ? (
-            <MetricsCards metrics={metrics} />
+            <div className="grid grid-cols-12 gap-6 mb-8">
+              <div className="col-span-12">
+                <MetricsCards metrics={metrics} />
+              </div>
+            </div>
           ) : null}
 
-          {/* Charts and Map Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-            <RevenueChart />
-            <ProviderMap />
+          {/* Linha 2 — Receita + Resumo de Provedores */}
+          <div className="grid grid-cols-12 gap-6 mb-8">
+            <div className="col-span-12 xl:col-span-7">
+              <RevenueChart />
+            </div>
+            <div className="col-span-12 xl:col-span-5">
+              <ProvidersSummary />
+            </div>
           </div>
 
-          {/* Recent Activities and Verification Queue */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <RecentActivities />
-            <VerificationQueueWidget />
+          {/* Linha 3 — Mapa de Provedores em destaque */}
+          <div className="grid grid-cols-12 gap-6 mb-8">
+            <div className="col-span-12">
+              <ProviderMap height={460} />
+            </div>
+          </div>
+
+          {/* Linha 4 — Extras/Operações */}
+          <div className="grid grid-cols-12 gap-6">
+            <div className="col-span-12 lg:col-span-8 xl:col-span-8">
+              <RecentActivities />
+            </div>
+            <div className="col-span-12 lg:col-span-4 xl:col-span-4">
+              <VerificationQueueWidget />
+            </div>
           </div>
         </main>
       </div>
     </div>
   );
 }
+
