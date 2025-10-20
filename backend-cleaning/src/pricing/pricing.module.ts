@@ -6,6 +6,7 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { GeocodingModule } from '../geocoding/geocoding.module';
 import { CacheModule } from '../cache/cache.module';
 import { BookingsModule } from '../bookings/bookings.module';
+import { SettingsModule } from '../settings/settings.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { BookingsModule } from '../bookings/bookings.module';
     GeocodingModule,
     CacheModule,
     forwardRef(() => BookingsModule),
+    SettingsModule,
   ],
   controllers: [PricingController],
   providers: [PricingService],
