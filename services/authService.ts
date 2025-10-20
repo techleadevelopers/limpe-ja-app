@@ -4,6 +4,8 @@ import { AuthResponse, UserRole, MessageResponseDto } from '../types/backend/aut
 import { UserProfile } from '../types/backend/users';
 import { api } from './api';
 import axios from 'axios';
+import { createLocalConsole } from './logging';
+const console = createLocalConsole();
 
 const AUTH_TOKEN_KEY = 'auth_token';
 const USER_ROLE_KEY = 'user_role';
