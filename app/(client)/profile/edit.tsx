@@ -485,7 +485,11 @@ export default function EditClientProfileScreen() {
               onPress={() => setShowAvatarSheet(true)}
               onPressIn={onPressInAvatar}
               onPressOut={onPressOutAvatar}
-              style={[styles.avatarContainer, { transform: [{ scale: avatarScaleAnim }] }]}
+              style={[
+                styles.avatarContainer, 
+                { transform: [{ scale: avatarScaleAnim }] }, 
+                !avatarUri && styles.dashedBorder
+              ]}
               disabled={isUploadingAvatar}
               accessibilityLabel="Alterar foto de perfil"
             >
@@ -493,7 +497,8 @@ export default function EditClientProfileScreen() {
                 <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
               ) : (
                 <View style={styles.avatarPlaceholder}>
-                  <Ionicons name="person-circle-outline" size={80} color="#E5E5E5" />
+                  <Ionicons name="camera-outline" size={40} color="#A0D2EB" />
+                  <Text style={styles.uploadText}>Toque para adicionar sua foto</Text>
                 </View>
               )}
               {isUploadingAvatar ? (
@@ -512,7 +517,9 @@ export default function EditClientProfileScreen() {
               disabled={isUploadingAvatar}
               accessibilityLabel="Alterar foto"
             >
-              <Text style={styles.changePhotoButtonText}>Alterar Foto</Text>
+              <Text style={styles.changePhotoButtonText}>
+                {avatarUri ? 'Alterar Foto' : 'Adicionar Foto'}
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -791,6 +798,10 @@ const styles = StyleSheet.create({
       android: { elevation: 6 },
     }),
   },
+  dashedBorder: {
+    borderStyle: 'dashed',
+    borderColor: '#A0D2EB',
+  },
   avatarImage: {
     width: '100%',
     height: '100%',
@@ -802,6 +813,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#F2F2F2',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  uploadText: {
+    fontSize: 12,
+    color: '#A0D2EB',
+    marginTop: 8,
+    textAlign: 'center',
   },
   cameraIconContainer: {
     position: 'absolute',
