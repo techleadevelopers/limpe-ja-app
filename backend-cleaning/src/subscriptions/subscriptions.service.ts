@@ -68,6 +68,20 @@ export class SubscriptionsService {
     });
   }
 
+  async findAll(status?: string) {
+    return this.prisma.subscription.findMany({
+      where: {
+        ...(status ? { status: status as any } : {}),
+      },
+      include: {
+        client: { select: { id: true, fullName: true } },
+        provider: { select: { id: true, fullName: true } },
+        providerService: { include: { service: { select: { id: true, name: true } } } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async getSubscriptionDetails(id: string, userId: string, userRole: string) {
     const subscription = await this.prisma.subscription.findUnique({
       where: { id },
