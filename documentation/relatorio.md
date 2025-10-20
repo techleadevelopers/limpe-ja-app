@@ -65,7 +65,7 @@ O desenvolvedor responsável pelo MVP do LimpeJá, conforme indicado no reposit�
 
 🔍 Análise Técnica do MVP LimpeJá
 
-Com base nos projetos anteriores de Paulo Silas, podemos inferir que o MVP do LimpeJá foi desenvolvido com uma arquitetura robusta e escalável. O uso de tecnologias modernas como React Native para o frontend e FastAPI para o backend sugere uma aplicação eficiente e de fácil manutenção. A integração com sistemas de pagamento como o PIX e a implementação de processos de KYC indicam uma preocupação com a segurança e a conformidade regulatória, aspectos essenciais para o sucesso de um marketplace.
+Com base nos projetos anteriores de Paulo Silas, podemos inferir que o MVP do LimpeJá foi desenvolvido com uma arquitetura robusta e escalável. O uso de tecnologias modernas como React Native para o frontend e NestJS (com Prisma, PostgreSQL e Redis) para o backend sugere uma aplicação eficiente e de fácil manutenção. A integração com sistemas de pagamento como o PIX e a implementação de processos de KYC indicam uma preocupação com a segurança e a conformidade regulatória, aspectos essenciais para o sucesso de um marketplace.
 
 📈 Potencial do MVP LimpeJá
 
