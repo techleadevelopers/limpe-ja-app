@@ -126,7 +126,8 @@ export class PayoutsService {
         const fee = percentFee.greaterThan(this.withdrawalFixedFee) ? percentFee : this.withdrawalFixedFee;
         const totalDebit = amount.add(fee);
         if (totalDebit.gt(balance)) {
-          throw new BadRequestException(`Insufficient balance. Available: R$ ${balance.toFixed(2)} including fees.`);
+          throw new BadRequestException(`Saldo insuficiente. Seu saldo atual é de R$ ${balance.toFixed(2)} (com taxas incluídas).`);
+
         }
 
         await tx.ledgerEntry.create({
