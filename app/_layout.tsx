@@ -1,4 +1,4 @@
-import { Slot, SplashScreen, usePathname, useRouter, useSegments } from 'expo-router';
+﻿import { Slot, SplashScreen, usePathname, useRouter, useSegments } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -10,7 +10,7 @@ import {
     TouchableOpacity,
     Platform,
 } from 'react-native';
-import { LogBox } from 'react-native'; // ✅ ADICIONADO: Para ignorar o warning específico do LogBox (dev mode apenas)
+import { LogBox } from 'react-native'; // âœ… ADICIONADO: Para ignorar o warning especÃ­fico do LogBox (dev mode apenas)
 import 'react-native-reanimated';
 import { io } from 'socket.io-client';
 import Constants from 'expo-constants';
@@ -32,7 +32,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getBookingsForUser } from '../services/bookingService';
 import { BookingDetails, BookingStatus } from '../types/backend/bookings';
-// Optional local notifications setup (Android channel) – safe, no-op on iOS if unavailable
+// Optional local notifications setup (Android channel) â€“ safe, no-op on iOS if unavailable
 let setupNotificationsOnce: (() => Promise<void>) | null = (async () => {
   try {
     // dynamic import to avoid compile-time hard dependency
@@ -92,7 +92,7 @@ function FloatingActiveServicePill({ enabled }: { enabled: boolean }) {
           const start = parseDateTime(b.scheduledDate, b.scheduledTime);
           if (Number.isNaN(start.getTime())) continue;
           const diff = minutesBetween(start, now);
-          if (diff <= 10 && diff >= -120) { // 10 min antes até 120 min depois
+          if (diff <= 10 && diff >= -120) { // 10 min antes atÃ© 120 min depois
             candidate = b;
             break;
           }
@@ -160,7 +160,7 @@ function FloatingActiveServicePill({ enabled }: { enabled: boolean }) {
         onPressOut={onPressOut}
         onPress={() => router.push(`/(provider)/active-booking/${booking.id}` as any)}
         accessibilityRole="button"
-        accessibilityLabel={`${cta} serviço`}
+        accessibilityLabel={`${cta} serviÃ§o`}
         style={{ borderRadius: 999 }}
       >
         <LinearGradient
@@ -180,8 +180,8 @@ function FloatingActiveServicePill({ enabled }: { enabled: boolean }) {
           }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={{ color: '#fff', fontWeight: '700' }}>{`Serviço às ${timeLabel}`}</Text>
-            <Text style={{ color: '#DCE7FF', marginLeft: 8, fontWeight: '600' }}>{`• ${cta}`}</Text>
+            <Text style={{ color: '#fff', fontWeight: '700' }}>{`ServiÃ§o Ã s ${timeLabel}`}</Text>
+            <Text style={{ color: '#DCE7FF', marginLeft: 8, fontWeight: '600' }}>{`â€¢ ${cta}`}</Text>
           </View>
           <AnimatedLinearGradient
             colors={['rgba(255,255,255,0.0)', 'rgba(255,255,255,0.25)', 'rgba(255,255,255,0.0)']}
@@ -201,7 +201,7 @@ function FloatingActiveServicePill({ enabled }: { enabled: boolean }) {
   );
 }
 
-// ✅ SOLUÇÃO GLOBAL: Ignora só o warning específico do LogBox (dev mode apenas; não afeta produção ou outros erros)
+// âœ… SOLUÃ‡ÃƒO GLOBAL: Ignora sÃ³ o warning especÃ­fico do LogBox (dev mode apenas; nÃ£o afeta produÃ§Ã£o ou outros erros)
 LogBox.ignoreLogs(['Text strings must be rendered within a <Text>']);
 
 Sentry.init({
@@ -239,10 +239,10 @@ function useNotificationsSocket(authToken?: string | null) {
             transports: ['websocket'],
         });
         socket.on('notification', (payload: any) => {
-            NotificationUIService.showInfo(payload?.message ?? 'Você tem uma nova notificação.', payload?.title ?? 'Notificação');
+            NotificationUIService.showInfo(payload?.message ?? 'VocÃª tem uma nova notificaÃ§Ã£o.', payload?.title ?? 'NotificaÃ§Ã£o');
         });
         socket.on('mission-progress', () => {
-            NotificationUIService.showInfo('Seu progresso nas missões foi atualizado.', 'Missões');
+            NotificationUIService.showInfo('Seu progresso nas missÃµes foi atualizado.', 'MissÃµes');
         });
         return () => {
             socket.disconnect();
@@ -257,7 +257,7 @@ function RootLayoutContent() {
     const pathname = usePathname();
     const { t } = useTranslation();
 
-    // ativa o socket de notificações quando token está disponível
+    // ativa o socket de notificaÃ§Ãµes quando token estÃ¡ disponÃ­vel
     useNotificationsSocket(token);
     // one-time local notifications channel (Android). Harmless on iOS.
     useEffect(() => { if (setupNotificationsOnce) { setupNotificationsOnce(); } }, []);
@@ -285,16 +285,16 @@ function RootLayoutContent() {
 
     useEffect(() => {
         const prepareApp = async () => {
-            // Removido: console.log('[RootLayoutContent | prepareApp] Iniciando processo de preparação do aplicativo.');
+            // Removido: console.log('[RootLayoutContent | prepareApp] Iniciando processo de preparaÃ§Ã£o do aplicativo.');
             try {
                 await Font.loadAsync({
                     'Montserrat-Regular': require('../assets/fonts/Montserrat-Regular.ttf'),
                     'Montserrat-Thin': require('../assets/fonts/Montserrat-Thin.ttf'),
                 });
-                // Removido: console.log('[RootLayoutContent | prepareApp] Fontes essenciais carregadas e inicialização básica concluída.');
+                // Removido: console.log('[RootLayoutContent | prepareApp] Fontes essenciais carregadas e inicializaÃ§Ã£o bÃ¡sica concluÃ­da.');
             } catch (e: any) {
-                // Removido: console.error('[RootLayoutContent | prepareApp] ERRO FATAL durante a inicialização do aplicativo:', e);
-                setInitializationError(e?.message ?? 'Erro desconhecido na inicialização.');
+                // Removido: console.error('[RootLayoutContent | prepareApp] ERRO FATAL durante a inicializaÃ§Ã£o do aplicativo:', e);
+                setInitializationError(e?.message ?? 'Erro desconhecido na inicializaÃ§Ã£o.');
                 try {
                     NotificationUIService.showError(t("common.generic_error"), t("common.error"));
                 } catch (err) {
@@ -318,14 +318,14 @@ function RootLayoutContent() {
     useEffect(() => {
         // Removido: Todo o bloco de console.groupCollapsed e logs verbosos para evitar erro no LogBox.
         // Se precisar debugar, adicione de volta com if (__DEV__) para modo dev apenas.
-        // Exemplo de log mínimo mantido só para erros:
+        // Exemplo de log mÃ­nimo mantido sÃ³ para erros:
         if (initializationError) {
-            console.error(`[RootLayoutContent] Erro de inicialização: ${initializationError}`);
+            console.error(`[RootLayoutContent] Erro de inicializaÃ§Ã£o: ${initializationError}`);
             return;
         }
 
         if (!appReady || authIsLoading || (isAuthenticated && !user?.role && !user?.clientDetails && !user?.providerDetails)) {
-            // Removido: console.warn de saída antecipada.
+            // Removido: console.warn de saÃ­da antecipada.
             return;
         }
 
@@ -379,7 +379,7 @@ function RootLayoutContent() {
                     router.replace('/welcome');
                     return;
                 }
-                // Removido: console.log de permanência em rota pública.
+                // Removido: console.log de permanÃªncia em rota pÃºblica.
                 return;
             }
 
@@ -410,12 +410,12 @@ function RootLayoutContent() {
                     }
                 } else if (isPendingInitialReview) {
                     if (cleanedCurrentPath !== authServiceDetailsStep) {
-                        // Removido: console.log de redirecionamento para detalhes do serviço.
+                        // Removido: console.log de redirecionamento para detalhes do serviÃ§o.
                         router.replace(authServiceDetailsStep as any);
                     }
                 } else if (isPendingDocsUpload) {
                     if (cleanedCurrentPath !== providerRegistrationVerifyAccountPath) {
-                        // Removido: console.log de redirecionamento para verificação de docs.
+                        // Removido: console.log de redirecionamento para verificaÃ§Ã£o de docs.
                         router.replace(providerRegistrationVerifyAccountPath as any);
                     }
                 } else {
@@ -438,7 +438,7 @@ function RootLayoutContent() {
                 return;
             }
 
-            // Removido: console.log de nenhuma ação necessária.
+            // Removido: console.log de nenhuma aÃ§Ã£o necessÃ¡ria.
         };
 
         decideAndRedirect();
@@ -457,16 +457,16 @@ function RootLayoutContent() {
         );
     }
 
-    // Envolver em uma View root para reduzir chances do devtools injetar strings no nível superior
+    // Envolver em uma View root para reduzir chances do devtools injetar strings no nÃ­vel superior
     try {
         return (
             <View style={{ flex: 1 }}>
                 <Slot />
-                {/* Pílula flutuante global (sem banner no dashboard) */}
+                {/* PÃ­lula flutuante global (sem banner no dashboard) */}
                 {user?.role === UserRole.PROVIDER && (
                   <FloatingActiveServicePill enabled={true} />
                 )}
-                {/* Proteções simples: só renderizar OverlayPortal/Toast se existirem */}
+                {/* ProteÃ§Ãµes simples: sÃ³ renderizar OverlayPortal/Toast se existirem */}
                 <OverlayPortal />
                 <Toast config={toastConfig} />
             </View>
@@ -487,9 +487,11 @@ export default Sentry.wrap(function RootLayout() {
         <I18nextProvider i18n={i18n}>
             <AuthProvider>
                 <ProviderRegistrationProvider>
-                    <AppProvider>
-                        <RootLayoutContent />
-                    </AppProvider>
+                    <AppQueryClientProvider>
+                        <AppProvider>
+                            <RootLayoutContent />
+                        </AppProvider>
+                    </AppQueryClientProvider>
                 </ProviderRegistrationProvider>
             </AuthProvider>
         </I18nextProvider>
@@ -532,3 +534,4 @@ const styles = StyleSheet.create({
         fontSize: 13,
     },
 });
+
