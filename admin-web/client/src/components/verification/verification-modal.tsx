@@ -19,7 +19,10 @@ interface VerificationModalProps {
   provider: Provider | null;
   isOpen: boolean;
   onClose: () => void;
-  // As props de callback foram removidas pois o componente agora lida com a lógica de API internamente
+  // Callbacks opcionais para compatibilidade com chamadas existentes
+  onApprove?: (providerId: string) => void;
+  onReject?: (providerId: string, reason: string) => void;
+  onBlock?: (providerId: string) => void;
 }
 
 function formatRelativeTime(date: Date): string {
