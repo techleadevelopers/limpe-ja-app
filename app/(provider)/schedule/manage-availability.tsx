@@ -198,31 +198,32 @@ interface TimeSlotButtonProps {
   isSelected: boolean;
   onPress: (time: string) => void;
   isBooked: boolean;
+  isDisabled?: boolean;
 }
 
-const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({ time, isSelected, onPress, isBooked }) => {
+const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({ time, isSelected, onPress, isBooked, isDisabled }) => {
   const animatedScale = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
-    if (!isBooked) {
+    if (!isBooked && !isDisabled) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       Animated.spring(animatedScale, { toValue: 0.92, useNativeDriver: true, tension: 200 }).start();
     }
   };
 
   const handlePressOut = () => {
-    if (!isBooked) {
+    if (!isBooked && !isDisabled) {
       Animated.spring(animatedScale, { toValue: 1, friction: 4, tension: 50, useNativeDriver: true }).start();
     }
   };
 
-  const backgroundColor = isBooked
+  const backgroundColor = (isBooked || isDisabled)
     ? Colors.textSubtle
     : isSelected
     ? Colors.primary
     : Colors.fieldBg;
 
-  const textColor = isBooked || isSelected ? Colors.surface : Colors.text;
+  const textColor = (isBooked || isDisabled || isSelected) ? Colors.surface : Colors.text;
 
   return (
     <Animated.View style={{ transform: [{ scale: animatedScale }] }}>
@@ -231,14 +232,14 @@ const TimeSlotButton: React.FC<TimeSlotButtonProps> = ({ time, isSelected, onPre
         onPress={() => onPress(time)}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-        disabled={isBooked}
+        disabled={isBooked || !!isDisabled}
         activeOpacity={0.92}
         accessibilityRole="button"
-        accessibilityLabel={`Horário ${time}${isSelected ? ' selecionado' : isBooked ? ' (agendado)' : ''}`}
+        accessibilityLabel={`Horário ${time}${isSelected ? ' selecionado' : (isBooked || isDisabled) ? ' indisponível' : ''}`}
         accessibilityHint="Toque para selecionar ou desmarcar"
       >
         <Text style={[styles.timeSlotText, { color: textColor }]}>{time}</Text>
-        {isBooked && (
+        {(isBooked || isDisabled) && (
           <Ionicons
             name="lock-closed"
             size={12}
@@ -280,6 +281,10 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
   onResetDay,
 }) => {
   const cardAnim = useRef(new Animated.Value(0)).current;
+  const now = new Date();
+  const todayDow = now.getDay();
+  const isPastDay = dayOfWeek < todayDow; // dias anteriores a hoje
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
   useEffect(() => {
     Animated.timing(cardAnim, { toValue: 1, duration: 500, easing: easeOut, useNativeDriver: true }).start();
@@ -294,10 +299,12 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
           thumbColor={Colors.surface}
           ios_backgroundColor={Colors.textMuted}
           onValueChange={(value) => {
+            if (isPastDay) return;
             onToggleDay(dayOfWeek, value);
             if (Platform.OS === 'ios') Haptics.selectionAsync();
           }}
-          value={availability.isEnabled}
+          value={availability.isEnabled && !isPastDay}
+          disabled={isPastDay}
           accessibilityLabel={`Ativar ${dayName.toLowerCase()}`}
           accessibilityHint="Alterna disponibilidade para o dia"
         />
@@ -306,7 +313,8 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
       <View style={styles.quickActionsRow}>
         <TouchableOpacity
           style={styles.quickActionChip}
-          onPress={() => onApplyPreset(dayOfWeek, 'morning')}
+          onPress={() => !isPastDay && onApplyPreset(dayOfWeek, 'morning')}
+          disabled={isPastDay}
           accessibilityRole="button"
           accessibilityLabel={`Aplicar manhã em ${dayName}`}
         >
@@ -314,7 +322,8 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.quickActionChip}
-          onPress={() => onApplyPreset(dayOfWeek, 'afternoon')}
+          onPress={() => !isPastDay && onApplyPreset(dayOfWeek, 'afternoon')}
+          disabled={isPastDay}
           accessibilityRole="button"
           accessibilityLabel={`Aplicar tarde em ${dayName}`}
         >
@@ -322,7 +331,8 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.quickActionChip}
-          onPress={() => onApplyPreset(dayOfWeek, 'fullday')}
+          onPress={() => !isPastDay && onApplyPreset(dayOfWeek, 'fullday')}
+          disabled={isPastDay}
           accessibilityRole="button"
           accessibilityLabel={`Aplicar dia todo em ${dayName}`}
         >
@@ -330,13 +340,16 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
         </TouchableOpacity>
       </View>
 
-      {availability.isEnabled && (
+      {availability.isEnabled && !isPastDay && (
         <View>
           <View style={styles.timeSlotGrid}>
             {ALL_POSSIBLE_SLOTS.map((slot, index) => {
               const currentHour = parseInt(slot.split(':')[0]);
               const prevSlot = ALL_POSSIBLE_SLOTS[index - 1];
               const prevHour = prevSlot ? parseInt(prevSlot.split(':')[0]) : -1;
+              const [slotH, slotM] = slot.split(':').map(n => parseInt(n, 10));
+              const slotMinutes = slotH * 60 + slotM;
+              const isPastSlot = isPastDay || (dayOfWeek === todayDow && slotMinutes < currentMinutes);
 
               return (
                 <React.Fragment key={slot}>
@@ -350,6 +363,7 @@ const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
                     isSelected={availability.selectedSlots.includes(slot)}
                     onPress={onToggleSlot.bind(null, dayOfWeek, slot)}
                     isBooked={bookedSlotsForDay.includes(slot)}
+                    isDisabled={isPastSlot}
                   />
                 </React.Fragment>
               );
@@ -491,6 +505,13 @@ export default function ManageAvailabilityScreen() {
 
   // handleDayPressOnCalendar (convertido para function declaration)
   function handleDayPressOnCalendar(day: DateData) {
+    // Bloqueia datas passadas (somente hoje em diante)
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (day.dateString < todayStr) {
+      Alert.alert('Data inválida', 'Selecione apenas hoje ou datas futuras.');
+      AccessibilityInfo.announceForAccessibility?.('Data inválida. Selecione apenas hoje ou datas futuras.');
+      return;
+    }
     setSelectedDateForOverride(day.dateString);
     const existingOverride = specificDateOverrides.find(override => override.date === day.dateString);
     AccessibilityInfo.announceForAccessibility(`Data selecionada: ${day.dateString}. Configure exceção se desejar.`);
@@ -663,10 +684,21 @@ export default function ManageAvailabilityScreen() {
     const source = weeklyAvailability.find(d => d.dayOfWeek === from);
     if (!source) return;
     const sourceSlots = source.selectedSlots || [];
+    const now = new Date();
+    const todayDow = now.getDay();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
     setWeeklyAvailability(prev => prev.map(d => {
       if (!targets.includes(d.dayOfWeek) || d.dayOfWeek === from) return d;
+      // Não copiar para dias passados
+      if (d.dayOfWeek < todayDow) return d;
       const booked = getBookedSlotsForDay(d.dayOfWeek);
-      const filtered = sourceSlots.filter(s => !booked.includes(s));
+      const filtered = sourceSlots.filter(s => {
+        if (booked.includes(s)) return false;
+        const [h, m] = s.split(':').map(n => parseInt(n, 10));
+        const minutes = h * 60 + m;
+        if (d.dayOfWeek === todayDow && minutes < currentMinutes) return false;
+        return true;
+      });
       return { ...d, isEnabled: filtered.length > 0, selectedSlots: filtered };
     }));
     setCopyModalVisible(false);
@@ -746,6 +778,12 @@ export default function ManageAvailabilityScreen() {
           return;
         }
         const parts = smartDate.split('-').map(n => parseInt(n, 10));
+        // Bloqueia datas passadas também no fluxo do assistente
+        const todayStr = new Date().toISOString().split('T')[0];
+        if (smartDate < todayStr) {
+          AccessibilityInfo.announceForAccessibility?.('A data escolhida já passou. Selecione hoje ou futura.');
+          return;
+        }
         const dd: DateData = { dateString: smartDate, day: parts[2], month: parts[1], year: parts[0], timestamp: new Date(smartDate).getTime() } as DateData;
         handleDayPressOnCalendar(dd);
 
@@ -787,8 +825,18 @@ export default function ManageAvailabilityScreen() {
   }, []);
 
   const handleSelectAllSlots = useCallback((dayOfWeek: number) => {
+    const now = new Date();
+    const todayDow = now.getDay();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const filtered = ALL_POSSIBLE_SLOTS.filter(slot => {
+      const [h, m] = slot.split(':').map(n => parseInt(n, 10));
+      const minutes = h * 60 + m;
+      if (dayOfWeek < todayDow) return false;
+      if (dayOfWeek === todayDow && minutes < currentMinutes) return false;
+      return true;
+    });
     setWeeklyAvailability(prev =>
-      prev.map(day => (day.dayOfWeek === dayOfWeek ? { ...day, selectedSlots: ALL_POSSIBLE_SLOTS } : day))
+      prev.map(day => (day.dayOfWeek === dayOfWeek ? { ...day, selectedSlots: filtered } : day))
     );
   }, []);
 
@@ -829,8 +877,23 @@ export default function ManageAvailabilityScreen() {
     try {
       const allAvailabilityUpdates: UpdateAvailabilityData[] = [];
 
+      const now = new Date();
+      const todayDow = now.getDay();
+      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
       for (const day of weeklyAvailability) {
-        const newBlocks = convertSlotsToBlocks(day.selectedSlots);
+        // Ignora dias passados na semana atual
+        if (day.dayOfWeek < todayDow) continue;
+
+        // Filtra slots passados para hoje
+        const validSlots = day.selectedSlots.filter(slot => {
+          const [h, m] = slot.split(':').map(n => parseInt(n, 10));
+          const minutes = h * 60 + m;
+          if (day.dayOfWeek === todayDow && minutes < currentMinutes) return false;
+          return true;
+        });
+
+        const newBlocks = convertSlotsToBlocks(validSlots);
         if (day.isEnabled && newBlocks.length > 0) {
           newBlocks.forEach(block => {
             allAvailabilityUpdates.push({
@@ -1114,6 +1177,7 @@ export default function ManageAvailabilityScreen() {
                 markedDates={markedDates}
                 theme={calendarTheme}
                 style={styles.calendarOverrideStyle}
+                minDate={new Date().toISOString().split('T')[0]}
                 accessibilityLabel="Calendário para exceções de datas"
                 accessibilityHint="Selecione uma data para configurar exceção"
               />
@@ -1210,24 +1274,31 @@ export default function ManageAvailabilityScreen() {
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Copiar disponibilidade para</Text>
             <View style={styles.modalChipsRow}>
-              {dayNames.map((label, idx) => (
-                <TouchableOpacity
-                  key={idx}
-                  style={[
-                    styles.modalChip, 
-                    copyTargets.includes(idx) && styles.modalChipActive, 
-                    copyFromDay === idx && styles.modalChipDisabled
-                  ]}
-                  onPress={() => copyFromDay !== idx && toggleCopyTarget(idx)}
-                  disabled={copyFromDay === idx}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Selecionar ${label}`}
-                >
-                  <Text style={[styles.modalChipText, copyTargets.includes(idx) && styles.modalChipTextActive]}>
-                    {label.replace('-feira', '').split('-')[0].slice(0, 3)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {dayNames.map((label, idx) => {
+                const isPast = idx < new Date().getDay();
+                const disabled = isPast || copyFromDay === idx;
+                return (
+                  <TouchableOpacity
+                    key={idx}
+                    style={[
+                      styles.modalChip, 
+                      copyTargets.includes(idx) && !disabled && styles.modalChipActive, 
+                      disabled && styles.modalChipDisabled
+                    ]}
+                    onPress={() => {
+                      if (disabled) return;
+                      toggleCopyTarget(idx)
+                    }}
+                    disabled={disabled}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Selecionar ${label}`}
+                  >
+                    <Text style={[styles.modalChipText, copyTargets.includes(idx) && !disabled && styles.modalChipTextActive]}>
+                      {label.replace('-feira', '').split('-')[0].slice(0, 3)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
             <View style={styles.modalActions}>
               <TouchableOpacity style={[styles.modalButton, styles.modalCancel]} onPress={() => setCopyModalVisible(false)}>
@@ -1291,6 +1362,7 @@ export default function ManageAvailabilityScreen() {
                       }}
                       markedDates={smartDate ? { [smartDate]: { selected: true, selectedColor: Colors.primary } } : {}}
                       theme={calendarTheme}
+                      minDate={new Date().toISOString().split('T')[0]}
                     />
                   </View>
                 )}
