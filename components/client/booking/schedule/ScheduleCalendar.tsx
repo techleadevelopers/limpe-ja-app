@@ -303,6 +303,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = memo(({
           marks[dateStr] = {
             ...marks[dateStr],
             disableTouchEvent: true,
+            disabled: true,
           };
         }
       });
@@ -362,7 +363,9 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = memo(({
           onMonthChange={handleMonthChange}
           firstDay={1}
           enableSwipeMonths={false} // ✅ CORREÇÃO: Desabilita swipe para evitar re-renders desnecessários (use botões manuais)
-          hideExtraDays={true} // ✅ NOVO: Esconde dias vazios (menos itens no FlatList interno)
+          hideExtraDays={true}
+          minDate={safeISO(today).split('T')[0]}
+          disableAllTouchEventsForDisabledDays={true} // ✅ NOVO: Esconde dias vazios (menos itens no FlatList interno)
           theme={calendarTheme}
           style={styles.calendarStyle}
           accessibilityLabel="Calendário de agendamentos"
@@ -428,3 +431,5 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'SFProDisplay-Semibold' : 'System',
   },
 });
+
+
