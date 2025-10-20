@@ -154,8 +154,8 @@ export class UserProfileDto {
           const pricePerSquareMeter = convertDecimalToNumber(ps.pricePerSquareMeter) ?? 0;
           const pricePerRoom = convertDecimalToNumber(ps.pricePerRoom) ?? 0;
 
-          // Conversão do preço do Service aninhado (mencionado no erro: 'service.price')
-          const baseServicePrice = convertDecimalToNumber(ps.service.price) ?? 0;
+          // Conversão do preço do Service aninhado (agora opcional)
+          const baseServicePrice = convertDecimalToNumber(ps.service?.price) ?? 0;
 
           return {
               ...ps,
@@ -164,10 +164,7 @@ export class UserProfileDto {
               pricePerRoom,
               
               // Service aninhado (conversão do preço base)
-              service: {
-                  ...ps.service,
-                  price: baseServicePrice,
-              },
+              service: ps.service ? { ...ps.service, price: baseServicePrice } as any : (ps.service as any),
           };
       }) || []; // Retorna array vazio se não houver serviços
 
