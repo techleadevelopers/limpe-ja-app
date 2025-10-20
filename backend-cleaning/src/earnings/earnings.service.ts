@@ -94,7 +94,7 @@ export class EarningsService {
         amount: Number(le.amount),
         type: mapType(le.type),
         description: le.note || 'N/A',
-        date: le.createdAt,
+        createdAt: le.createdAt instanceof Date ? le.createdAt.toISOString() : (le.createdAt as any),
       })),
       earningsBreakdown,
     };
