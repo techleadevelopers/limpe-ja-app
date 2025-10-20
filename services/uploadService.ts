@@ -1,6 +1,8 @@
 // LimpeJaApp/app/services/uploadService.ts
 import axios, { AxiosResponse, isAxiosError } from 'axios';
 import { api } from './api';
+import { createLocalConsole } from './logging';
+const console = createLocalConsole();
 import Constants from 'expo-constants';
 import * as FileSystem from 'expo-file-system';
 import { Platform } from 'react-native';
