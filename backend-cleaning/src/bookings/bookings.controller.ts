@@ -23,6 +23,20 @@ export class BookingsController {
     private readonly i18n: I18nService, // Injetar I18nService
   ) {}
 
+  // ADMIN: Listar todos os agendamentos (com filtro opcional de status)
+  @Get()
+  @Roles(UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Listar todos os agendamentos (apenas admin)' })
+  @ApiResponse({ status: 200, description: 'Lista de agendamentos.', type: [BookingDetailsDto] })
+  async findAllBookings(@Req() req: Request, @Query('status') status?: BookingStatus): Promise<BookingDetailsDto[]> {
+    const userId = req.user['userId'];
+    const role = req.user['role'];
+    const bookings = await this.bookingsService.findUserBookings(userId, role, status as any, req);
+    return bookings.map(b => new BookingDetailsDto(b));
+  }
+
   @Post()
   @Roles(UserRole.CLIENT) // Apenas clientes podem criar agendamentos
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -181,6 +195,19 @@ export class BookingsController {
     // Passar o objeto 'req' completo para o service para que ele possa extrair o locale
     const updatedBooking = await this.bookingsService.updateStatus(id, BookingStatus.CANCELED, UserRole.CLIENT, req);
     return new BookingDetailsDto(updatedBooking);
+  }
+
+  // NOVA ROTA: Verificar se existe agendamento ativo entre cliente e provedor (para habilitar chat)
+  @Get('check-active-chat/:clientId/:providerId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Verifica se há agendamento ativo entre cliente e provedor para permitir chat' })
+  @ApiResponse({ status: 200, description: 'Retorna se pode abrir chat e o bookingId, se existir.' })
+  async checkActiveChat(
+    @Param('clientId') clientId: string,
+    @Param('providerId') providerId: string,
+  ): Promise<{ canChat: boolean; bookingId?: string }> {
+    return this.bookingsService.checkActiveChatBooking(clientId, providerId);
   }
 
   @Post(':id/report-issue')
