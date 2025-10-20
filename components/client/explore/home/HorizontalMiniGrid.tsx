@@ -118,16 +118,16 @@ export default function HorizontalMiniGrid() {
 const styles = StyleSheet.create({
   container: {
     marginTop: 10,
-    marginBottom: 10,
+    marginBottom: 2,
     paddingHorizontal: 5,
   },
   cardContainer: {
     alignItems: "center",
     marginRight: 20, // Espaçamento entre os cards
-    marginTop: -9,
+    marginTop: -4,
   },
   cardInner: {
-    width: 48, // Tamanho do fundo circular
+    width: 58, // Tamanho do fundo circular
     height: 48,
     borderRadius: 30, // Corrigido para círculo perfeito (metade de 60)
     justifyContent: "center",
@@ -155,13 +155,13 @@ const styles = StyleSheet.create({
     borderRadius: 30, // Herda o borderRadius para o gradiente
   },
   icon: {
-    width: 45, // Tamanho do ícone
-    height: 45,
+    width: 35, // Tamanho do ícone
+    height: 35,
     resizeMode: 'contain',
   },
   cardTitle: {
     marginTop: -2,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "400",
     textAlign: "center",
     color: "#666",
