@@ -23,6 +23,7 @@ import { RegisterProviderDto } from '../../../types/backend/auth';
 
 import { AnimatedErrorMessage } from '../../../components/auth/components/AnimatedErrorMessage';
 import * as Location from 'expo-location';
+import { ensureLocationPermission } from '../../../services/locationService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -539,8 +540,8 @@ export default function RegisterProviderScreen() {
         }
         setIsLoading(true);
         try {
-          let { status } = await Location.requestForegroundPermissionsAsync();
-          if (status !== 'granted') {
+          const ok = await ensureLocationPermission();
+          if (!ok) {
             setAddressError('A permissão para acessar a localização foi negada. Por favor, habilite-a nas configurações do seu dispositivo.');
             setIsLoading(false);
             return;
@@ -1414,3 +1415,4 @@ const styles = StyleSheet.create({
     width: '100%',
   }
 });
+
