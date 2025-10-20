@@ -146,7 +146,8 @@ export const fetchApi = async <T>(path: string, options: RequestInit = {}): Prom
     const axiosConfig: AdminAxiosRequestConfig = {
         url: path,
         method: (method ? method.toUpperCase() : "GET") as Method,
-        headers: { ...(headers as Record<string, string>) } ?? {},
+        // Fix: avoid always-truthy object literal with ?? and safely default headers
+        headers: { ...((headers as Record<string, string>) ?? {}) },
         data: undefined,
         signal: signal || undefined,
     };
