@@ -1,7 +1,7 @@
 // src/users/users.controller.ts
 import {
   Controller, Get, Body, Patch, Param, UseGuards, Req, NotFoundException, ForbiddenException, Delete, HttpCode, HttpStatus, Logger,
-  Post,
+  Post, InternalServerErrorException,
 } from '@nestjs/common';
 import { UsersService, UserWithIncludes } from './users.service'; // CORRIGIDO: Importe UserWithIncludes
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -73,7 +73,8 @@ export class UsersController {
     } catch (error) {
       this.logger.error(`[UsersController] getMyProfile: Erro geral: ${error.message}. Stack: ${error.stack}`);
       if (error instanceof NotFoundException) throw error;
-      throw new NotFoundException('Erro ao carregar perfil. Verifique o token e tente novamente.'); // Mascara 502
+      // Não mascarar como 404: responder 500 para erros internos reais
+      throw new InternalServerErrorException('Falha ao carregar perfil do usuário. Tente novamente em instantes.');
     }
   }
 
@@ -105,6 +106,9 @@ export class UsersController {
   }
 
   // ENDPOINT ADMIN: Listar todos
+  @Get()
+  @Roles(UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Get()
   @Roles(UserRole.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
