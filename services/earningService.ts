@@ -7,7 +7,9 @@ import { EarningsResponseDto, ProviderTransaction } from '../types/backend/provi
 import { WithdrawalResponseDto } from '../types/backend/earning';
 
 // Outras importaÃ§Ãµes
-import { api } from './api'; // Supondo que 'api' Ã© sua instÃ¢ncia configurada do axios
+import { api } from './api';
+import { createLocalConsole } from './logging';
+const console = createLocalConsole(); // Supondo que 'api' Ã© sua instÃ¢ncia configurada do axios
 
 /**
  * Busca todos os dados de ganhos do provedor logado.
@@ -57,4 +59,5 @@ export async function requestWithdrawal(withdrawalDto: RequestWithdrawalDto): Pr
         throw error.response?.data || error;
     }
 }
+
 
