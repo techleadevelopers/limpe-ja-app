@@ -383,6 +383,12 @@ export default function MyScheduleScreen() {
   }, [allAppointments, selectedDate]);
 
   const onDayPress = (day: DateData) => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (day.dateString < todayStr) {
+      // Ignora seleção de datas passadas
+      AccessibilityInfo.announceForAccessibility('Data indisponível. Selecione hoje ou uma data futura.');
+      return;
+    }
     setSelectedDate(day.dateString);
     // Aprimorar a acessibilidade para leitores de tela
     const appointmentsCount = allAppointments.filter(app => app.date === day.dateString).length;
@@ -471,6 +477,7 @@ export default function MyScheduleScreen() {
           onDayPress={onDayPress}
           markedDates={markedDates}
           monthFormat={'MMMM yyyy'} // pt-BR via LocaleConfig
+          minDate={new Date().toISOString().split('T')[0]}
           onMonthChange={(month) => {
             // manter log; futura integração para fetch por mês
             console.log('[MyScheduleScreen] Mês alterado para:', month.month, month.year);
@@ -601,7 +608,7 @@ export default function MyScheduleScreen() {
             <View style={styles.summaryCard}>
               <Ionicons name="person-circle-outline" size={20} color={Colors.primary} style={{ marginRight: 8 }} />
               <Text style={{ flex: 1, color: Colors.text }}>
-                {rrItem.clientName} • {rrItem.serviceType}\n{formatDate(rrItem.date, { weekday: 'long', day: 'numeric', month: 'long' })} • {rrItem.startTime}{rrItem.endTime?`–${rrItem.endTime}`:''}
+                {rrItem.clientName} • {rrItem.serviceType}{formatDate(rrItem.date, { weekday: 'long', day: 'numeric', month: 'long' })} • {rrItem.startTime}{rrItem.endTime?`–${rrItem.endTime}`:''}
               </Text>
             </View>
             <View style={styles.modalActions}>
