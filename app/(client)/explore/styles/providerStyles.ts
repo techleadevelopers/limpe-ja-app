@@ -180,7 +180,7 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 4,
-    marginBottom: 5,
+    marginBottom: 15,
     marginTop: -10,
     paddingHorizontal: 10,
     
@@ -212,7 +212,7 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     color: AppColors.textBody, // Usando AppColors
     marginBottom: 10,
-    marginTop: 15,
+    marginTop: 25,
   },
   descriptionText: {
     fontSize: 13,
@@ -576,8 +576,8 @@ export const styles = StyleSheet.create({
     marginTop: 6,
   },
   recReviewsTxt: {
-    marginLeft: 8,
-    fontSize: 16, // Aumentado de 12 para 16
+    marginLeft: 5,
+    fontSize: 19, // Aumentado de 12 para 16
     color: AppColors.mediumGray, // Usando AppColors
   },
 
