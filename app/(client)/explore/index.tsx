@@ -24,7 +24,8 @@ import {
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
-import { PermissionStatus } from 'expo-modules-core';
+import { PermissionStatus } from 'expo-location';
+import { getCurrentPosition } from '../../../services/locationService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import Constants from 'expo-constants';
@@ -259,7 +260,7 @@ export default function ExploreClientScreen() {
       'recommended providers',
       () => getRecommendedProviders(),
       data => setRecommendations(data),
-      'Erro ao carregar recomenda��es'
+      'Erro ao carregar recomendações'
     );
 
     let locationCoords: Location.LocationObjectCoords | null = null;
@@ -271,9 +272,8 @@ export default function ExploreClientScreen() {
           t('safety.panic.location_permission_message')
         );
       } else {
-        const currentLocation = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-        locationCoords = currentLocation.coords;
-        console.log('[ExploreClientScreen] Location obtained:', locationCoords);
+        const currentCoords = await getCurrentPosition();
+        locationCoords = currentCoords || null;
       }
     } catch (locError) {
       console.error('[ExploreClientScreen] Error fetching location:', locError);
@@ -286,10 +286,10 @@ export default function ExploreClientScreen() {
           searchProvidersWithLocation({
             latitude: locationCoords!.latitude,
             longitude: locationCoords!.longitude,
-            radius: searchRadiusKm * 1000,
+            radius: searchRadiusKm, // em km para o backend
           }),
         data => setNearbyProviders(data),
-        'Erro ao carregar provedores pr�ximos'
+        'Erro ao carregar provedores próximos'
       );
     }
 
@@ -449,13 +449,13 @@ export default function ExploreClientScreen() {
   const filteredNearbyProviders = Array.isArray(nearbyProviders)
     ? nearbyProviders.filter((item) => {
         if (!item || !item.fullName) return false;
-        if (!priceFilter) return true; // Sem filtro de pre�o, mostra todos
+        if (!priceFilter) return true; // Sem filtro de preço, mostra todos
 
-        // Verifica se o provedor tem algum servi�o que corresponda ao tipo de pre�o
+        // Verifica se o provedor tem algum serviço que corresponda ao tipo de preço
         return item.providerServices?.some((service) => {
           if (service.pricingType === priceFilter) {
             const price = getNumericPriceValue(service);
-            return price > 0; // Apenas servi�os com pre�o v�lido
+            return price > 0; // Apenas serviços com preço vlido
           }
           return false;
         });
@@ -525,9 +525,9 @@ export default function ExploreClientScreen() {
   const handleShareReferral = useCallback(async () => {
     try {
       const result = await Share.share({
-        message: `Use meu c�digo de indica��o ${referralCode} no LimpeJ� e ganhe um desconto na sua primeira reserva!`,
+        message: `Use meu código de indicação ${referralCode} no LimpeJá e ganhe um desconto na sua primeira reserva!`,
         url: 'https://limpeja.com/referral',
-        title: 'Indique um amigo e ganhe no LimpeJ�!',
+        title: 'Indique um amigo e ganhe no LimpeJá!',
       });
       if (result.action === Share.sharedAction) {
         if (result.activityType) {
@@ -568,8 +568,8 @@ export default function ExploreClientScreen() {
     );
   }
 
-  // Em caso de erro na primeira carga, n�o bloquear a home;
-  // o usu�rio pode usar pull-to-refresh para tentar de novo.
+  // Em caso de erro na primeira carga, não bloquear a home;
+  // o usuário pode usar pull-to-refresh para tentar de novo.
 
   const rawAddress =
     userProfile?.clientDetails?.address ||
@@ -591,22 +591,22 @@ export default function ExploreClientScreen() {
           }}
         />
 
-        {/* FlatList �NICO com TODO o conte�do no ListHeaderComponent */}
+        {/* FlatList UNICO com TODO o conteúdo no ListHeaderComponent */}
         <FlatList
           data={[]} // Header-only: data vazia, mas header rola tudo
           renderItem={() => null} // ? FIX: Adicionado renderItem dummy para FlatList header-only (evita erro TS)
           keyExtractor={() => 'header-only'}
           ListHeaderComponent={(
             <>
-              {/* NewHeader �NICO */}
+              {/* NewHeader UNICO */}
               <NewHeader
                 userName={userNameDisplay}
                 userAddress={addressToDisplay}
               />
 
-              {/* ContentWrapper �NICO - TODO o conte�do aqui */}
+              {/* ContentWrapper UNICO - TODO o conteúdo aqui */}
               <View style={styles.contentWrapper}>
-                {/* Se��o de Categorias */}
+                {/* Seção de Categorias */}
                 <Animated.View
                   style={[
                     styles.categoriesSection,
@@ -641,7 +641,7 @@ export default function ExploreClientScreen() {
                   />
                 </Animated.View>
 
-                {/* Carrossel de Banners �NICO */}
+                {/* Carrossel de Banners UNICO */}
                 <Animated.View
                   style={[
                     styles.carouselContainer,
@@ -667,7 +667,7 @@ export default function ExploreClientScreen() {
                   />
                 </Animated.View>
 
-                {/* Recomenda��es �NICAS */}
+                {/* Recomendações UNICAS */}
                 <Animated.View
                   style={{
                     opacity: recommendationsAnim,
@@ -679,7 +679,7 @@ export default function ExploreClientScreen() {
                     data={safeRecommendations}
                     renderItem={({ item, index }) => {
                       if (!item || !item.id || typeof item.id !== 'string' || !item.fullName || typeof item.fullName !== 'string') {
-                        console.warn('[ExploreClientScreen] Item de recomenda��o inv�lido filtrado:', item);
+                        console.warn('[ExploreClientScreen] Item de recomendação inválido filtrado:', item);
                         return null;
                       }
                       return <RecomendacaoCard key={item.id} item={item} />;
@@ -689,7 +689,7 @@ export default function ExploreClientScreen() {
                   />
                 </Animated.View>
 
-                {/* Profissionais por Perto �NICOS */}
+                {/* Profissionais por Perto UNICOS */}
                 <Animated.View
                   style={{
                     opacity: providersAnim,
@@ -701,7 +701,7 @@ export default function ExploreClientScreen() {
                     data={filteredNearbyProviders}
                     renderItem={({ item, index }) => {
                       if (!item || !item.id || typeof item.id !== 'string' || !item.fullName || typeof item.fullName !== 'string') {
-                        console.warn('[ExploreClientScreen] Item de prestador inv�lido filtrado:', item);
+                        console.warn('[ExploreClientScreen] Item de prestador inválido filtrado:', item);
                         return null;
                       }
                       return (
@@ -714,7 +714,7 @@ export default function ExploreClientScreen() {
                   
                 </Animated.View>
 
-                {/* HorizontalMiniGrid �NICO */}
+                {/* HorizontalMiniGrid  */}
                 <Animated.View
                   style={{
                     opacity: providersAnim,
@@ -749,10 +749,10 @@ export default function ExploreClientScreen() {
             />
           }
           nestedScrollEnabled={true} // Para Android
-          removeClippedSubviews={false} // Evita corte de anima��es
+          removeClippedSubviews={false} // Evita corte de animações
         />
 
-        {/* NavBar �NICA */}
+        {/* NavBar ÚNICA */}
         <Animated.View
           style={[
             styles.navBarContainer,
@@ -761,7 +761,7 @@ export default function ExploreClientScreen() {
               transform: [{ translateY: navBarAnim.interpolate({ inputRange: [0, 1], outputRange: [100, 0] }) }] 
             },
           ]}
-          pointerEvents="box-none"> {/* N�o bloqueia scroll */}
+          pointerEvents="box-none"> {/* Não bloqueia scroll */}
           <NavBar
             welcomeCouponOffer={welcomeCouponOffer}
             activeBottomPromotion={activeBottomPromotion}
@@ -769,7 +769,7 @@ export default function ExploreClientScreen() {
           />
         </Animated.View>
 
-        {/* DEFENSE_SOS �NICO */}
+        {/* DEFENSE_SOS UNICO */}
         <DEFENSE_SOS bottomOffset={20} />
 
         {/* SmartCouponNudge */}
@@ -782,7 +782,7 @@ export default function ExploreClientScreen() {
             throttleHours={24}
             showOnRoutes={['/(client)/explore']}
             onApply={handleUseWelcomeCoupon}
-            pointerEvents="box-none" // N�o bloqueia scroll
+            pointerEvents="box-none" // Não bloqueia scroll
           />
         )}
 
@@ -835,7 +835,7 @@ export default function ExploreClientScreen() {
           delayMs={3500}
           throttleHours={24}
           showOnRoutes={['/(client)/explore']}
-          bottomOffset={120} // Offset para n�o sobrepor NavBar
+          bottomOffset={120} // Offset para não sobrepor NavBar
           pointerEvents="box-none"
         />
 
