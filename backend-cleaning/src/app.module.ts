@@ -32,6 +32,7 @@ import { GuaranteeModule } from './guarantee/guarantee.module';
 import { PricingModule } from './pricing/pricing.module';
 import { PayoutsModule } from './payouts/payouts.module';
 import { GeocodingModule } from './geocoding/geocoding.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 // NOVO: Import do ConfigModule customizado (centraliza configuration e validationSchema)
 import { ConfigModule as CustomConfigModule } from './config/config.module';
@@ -122,6 +123,7 @@ import { QueuesModule } from './queues/queues.module';
     LocksModule,
     MetricsModule,
     SupportModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
