@@ -229,12 +229,15 @@ export class BookingDetailsDto {
     if (data.providerService) {
       this.serviceName = data.providerService.service.name;
       // Converte servicePrice de Decimal para number, se necessário
-      let convertedServicePrice: number;
-      if (isDecimal(data.providerService.service.price)) {
-        convertedServicePrice = data.providerService.service.price.toNumber();
-      } else {
-        convertedServicePrice = data.providerService.service.price;
-      }
+        let convertedServicePrice: number = 0;
+        const svcPrice = data.providerService.service?.price as any;
+        if (svcPrice) {
+          if (isDecimal(svcPrice)) {
+            convertedServicePrice = svcPrice.toNumber();
+          } else if (typeof svcPrice === 'number') {
+            convertedServicePrice = svcPrice;
+          }
+        }
       this.servicePrice = convertedServicePrice;
       this.serviceDurationMinutes = data.providerService.durationMinutes;
       this.providerServiceDescription = data.providerService.description;
