@@ -32,6 +32,7 @@ import {
   addProviderServiceOffering,
   updateProviderServiceOffering,
   getProviderServicesOffered,
+  listAllServices,
 } from '../../../services/providerService';
 import verificationService from '../../../services/verificationService';
 import axios from 'axios';
@@ -44,16 +45,6 @@ enum PricingType {
   BY_SIZE = 'BY_SIZE',
   CUSTOM_QUOTE = 'CUSTOM_QUOTE',
 }
-
-const SERVICE_MAPPINGS: { [key: string]: string } = {
-      'residencial': '389e72b1-ed42-49ef-af1b-26a27a40162f',
-      'comercial': '6340c91a-bcd6-4d7c-98fc-7b0bba033d50',
-      'pos_obra': '2cc94059-92c0-4fb5-9617-3cc09e2726a4',
-      'escritorio': 'ee314b92-a79b-448f-8f3c-abffd508dc31',
-      'passadoria': '50113b0a-dadc-4e82-bee4-ad710e260a0c',
-      'vidros': '9b8ae36b-b2cf-49bf-be85-6e100ba08f86',
-      'estofados': '5b15c855-0bf0-4e1b-a8e1-0b7e36ab438f',
-};
 
 type PriceUnit = 'hora' | 'quarto' | 'metragem' | null;
 
@@ -83,6 +74,9 @@ export default function ServiceDetailsScreen() {
     priceUnit: null,
   });
 
+  const [serviceIdMap, setServiceIdMap] = useState<Record<string, string>>({});
+  const [servicesLoaded, setServicesLoaded] = useState(false);
+
   const [currentServiceSubStep, setCurrentServiceSubStep] = useState(1);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -96,6 +90,49 @@ export default function ServiceDetailsScreen() {
   const [pixKeyError, setPixKeyError] = useState<string | null>(null);
   const [serviceAreasError, setServiceAreasError] = useState<string | null>(null);
   const [generalError, setGeneralError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadServices = async () => {
+      try {
+        const services = await listAllServices();
+        const normalizeKey = (value: string) =>
+          value
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[\s-]+/g, '_')
+            .replace(/[^a-z0-9_]/g, '');
+
+        const map: Record<string, string> = {};
+        services.forEach((service) => {
+          const key = normalizeKey(service.name || '');
+          if (key) {
+            map[key] = service.id;
+          }
+        });
+
+        if (isMounted) {
+          setServiceIdMap(map);
+          setServicesLoaded(true);
+          if (__DEV__) {
+            console.log('[ServiceDetails] serviceIdMap sync:', map);
+          }
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error('[ServiceDetails] Falha ao carregar catalogo de servicos:', error);
+          setGeneralError('Nao foi possivel sincronizar o catalogo de servicos. Tente novamente em instantes.');
+        }
+      }
+    };
+
+    loadServices();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Animações de transição de passo
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -111,7 +148,7 @@ export default function ServiceDetailsScreen() {
   const progress = currentServiceSubStep / totalSteps;
 
   // Efeito para transição de passo
-  React.useEffect(() => {
+  useEffect(() => {
     // Reset values for transition effect
     fadeAnim.setValue(0);
     slideAnim.setValue(50);
@@ -132,7 +169,7 @@ export default function ServiceDetailsScreen() {
     ]).start();
   }, [currentServiceSubStep]);
 
-  // Efeito para animação Stagger dos chips
+  // Efeito para animações Stagger dos chips
   useEffect(() => {
     if (currentServiceSubStep === 2) {
       // Reset chips to initial state (opacity 0, translateY 20)
@@ -201,7 +238,7 @@ export default function ServiceDetailsScreen() {
             priceUnit: loadedData.priceUnit || null,
           });
           setCurrentServiceSubStep(loadedData.currentServiceSubStep || 1);
-          setGeneralError("Dados carregados automaticamente. Continue preenchendo seus detalhes de serviço.");
+          setGeneralError("Dados carregados automaticamente. Continue preenchendo seus detalhes de serviÃƒÂ§o.");
         }
       } catch (e) {
         console.error("Failed to load service details form data from AsyncStorage", e);
@@ -215,7 +252,7 @@ export default function ServiceDetailsScreen() {
     try {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (permissionResult.granted === false) {
-        Alert.alert('Permissão necessária', 'É preciso permitir acesso à galeria para continuar.');
+        Alert.alert('PermissÃƒÂ£o necessÃƒÂ¡ria', 'Ãƒâ€° preciso permitir acesso ÃƒÂ  galeria para continuar.');
         return;
       }
       
@@ -233,7 +270,7 @@ export default function ServiceDetailsScreen() {
         setProfilePhotoError(null);
       }
     } catch (error) {
-      Alert.alert('Erro', 'Não foi possível selecionar a imagem.');
+      Alert.alert('Erro', 'NÃƒÂ£o foi possÃƒÂ­vel selecionar a imagem.');
     }
   };
 
@@ -248,7 +285,7 @@ export default function ServiceDetailsScreen() {
       isValid = false;
     }
     if (!formData.description.trim()) {
-      setDescriptionError('A descrição do serviço é obrigatória.');
+      setDescriptionError('A descriÃƒÂ§ÃƒÂ£o do serviÃƒÂ§o ÃƒÂ© obrigatÃƒÂ³ria.');
       isValid = false;
     }
     return isValid;
@@ -261,11 +298,11 @@ export default function ServiceDetailsScreen() {
 
     const years = parseInt(formData.yearsOfExperience);
     if (!formData.yearsOfExperience.trim() || isNaN(years) || years < 0) {
-      setYearsOfExperienceError('Os anos de experiência são obrigatórios e devem ser um número válido.');
+      setYearsOfExperienceError('Os anos de experiÃƒÂªncia sÃƒÂ£o obrigatÃƒÂ³rios e devem ser um nÃƒÂºmero vÃƒÂ¡lido.');
       isValid = false;
     }
     if (formData.specialties.length === 0) {
-      setSpecialtiesError('Por favor, selecione pelo menos um tipo de serviço.');
+      setSpecialtiesError('Por favor, selecione pelo menos um tipo de serviÃƒÂ§o.');
       isValid = false;
     }
     return isValid;
@@ -277,12 +314,12 @@ export default function ServiceDetailsScreen() {
     setBasePriceError(null);
 
     if (!formData.priceUnit) {
-      setPriceUnitError('Por favor, selecione um tipo de precificação.');
+      setPriceUnitError('Por favor, selecione um tipo de precificaÃƒÂ§ÃƒÂ£o.');
       isValid = false;
     }
     const price = parseFloat(formData.basePrice.replace(',', '.'));
     if (!formData.basePrice.trim() || isNaN(price) || price <= 0) {
-      setBasePriceError('O preço base é obrigatório e deve ser um número maior que zero.');
+      setBasePriceError('O preÃƒÂ§o base ÃƒÂ© obrigatÃƒÂ³rio e deve ser um nÃƒÂºmero maior que zero.');
       isValid = false;
     }
     return isValid;
@@ -294,13 +331,14 @@ export default function ServiceDetailsScreen() {
     setServiceAreasError(null);
 
     if (!formData.pixKey.trim()) {
-      setPixKeyError('A chave PIX é obrigatória para que você possa receber pagamentos.');
+      setPixKeyError('A chave PIX ÃƒÂ© obrigatÃƒÂ³ria para que vocÃƒÂª possa receber pagamentos.');
       isValid = false;
     }
-    if (formData.serviceAreas.length === 0 || formData.serviceAreas.every(area => area === '')) {
-      setServiceAreasError('Por favor, informe suas áreas de atendimento (cidades ou bairros).');
-      isValid = false;
-    }
+    // Temporariamente opcional enquanto o backend não suporta o campo:
+    // if (formData.serviceAreas.length === 0 || formData.serviceAreas.every(area => area === '')) {
+    //   setServiceAreasError('Por favor, informe suas áreas de atendimento (cidades ou bairros).');
+    //   isValid = false;
+    // }
     return isValid;
   }, [formData.pixKey, formData.serviceAreas]);
 
@@ -311,25 +349,25 @@ export default function ServiceDetailsScreen() {
       if (validateSubStep1()) {
         setCurrentServiceSubStep(2);
       } else {
-        setGeneralError('Por favor, preencha todos os campos obrigatórios da etapa atual.');
+        setGeneralError('Por favor, preencha todos os campos obrigatÃƒÂ³rios da etapa atual.');
       }
     } else if (currentServiceSubStep === 2) {
       if (validateSubStep2()) {
         setCurrentServiceSubStep(3);
       } else {
-        setGeneralError('Por favor, preencha todos os campos obrigatórios da etapa atual.');
+        setGeneralError('Por favor, preencha todos os campos obrigatÃƒÂ³rios da etapa atual.');
       }
     } else if (currentServiceSubStep === 3) {
       if (validateSubStep3()) {
         setCurrentServiceSubStep(4);
       } else {
-        setGeneralError('Por favor, preencha todos os campos obrigatórios da etapa atual.');
+        setGeneralError('Por favor, preencha todos os campos obrigatÃƒÂ³rios da etapa atual.');
       }
     } else if (currentServiceSubStep === 4) {
       if (validateSubStep4()) {
         handleFinalSubmission();
       } else {
-        setGeneralError('Por favor, preencha todos os campos obrigatórios da etapa atual.');
+        setGeneralError('Por favor, preencha todos os campos obrigatÃƒÂ³rios da etapa atual.');
       }
     }
   };
@@ -359,15 +397,20 @@ export default function ServiceDetailsScreen() {
 
   const handleFinalSubmission = async () => {
     if (!user || !user.token || !user.providerDetails?.id) {
-        Alert.alert('Erro de autenticação', 'Usuário não logado ou detalhes do provedor ausentes. Por favor, faça login novamente.');
+        Alert.alert('Erro de autenticaÃƒÂ§ÃƒÂ£o', 'UsuÃƒÂ¡rio nÃƒÂ£o logado ou detalhes do provedor ausentes. Por favor, faÃƒÂ§a login novamente.');
         return;
     }
 
     if (!validateSubStep1() || !validateSubStep2() || !validateSubStep3() || !validateSubStep4()) {
-      setGeneralError('Por favor, preencha todos os campos obrigatórios corretamente antes de finalizar.');
+      setGeneralError('Por favor, preencha todos os campos obrigatÃƒÂ³rios corretamente antes de finalizar.');
       return;
     }
-    
+
+    if (!servicesLoaded || Object.keys(serviceIdMap).length === 0) {
+      setGeneralError('Nao foi possivel sincronizar o catalogo de servicos. Tente novamente em instantes.');
+      return;
+    }
+
     setIsUploading(true);
 
     try {
@@ -381,30 +424,40 @@ export default function ServiceDetailsScreen() {
           if (uploadResponse && uploadResponse.url) {
             avatarUrl = uploadResponse.url;
           } else {
-            throw new Error('O serviço de upload de avatar não retornou uma URL válida.');
+            throw new Error('O serviÃƒÂ§o de upload de avatar nÃƒÂ£o retornou uma URL vÃƒÂ¡lida.');
           }
         } catch (uploadError: any) {
-          throw new Error("Não foi possível fazer o upload da foto de perfil.");
+          throw new Error("NÃƒÂ£o foi possÃƒÂ­vel fazer o upload da foto de perfil.");
         }
       }
 
-      // 2. Atualização do Perfil
+      // 2. AtualizaÃƒÂ§ÃƒÂ£o do Perfil (TEMP: anexa as ÃƒÂ¡reas no bio)
+      const areasLine =
+        formData.serviceAreas && formData.serviceAreas.length
+          ? `\n\nÃƒÂreas de atendimento: ${formData.serviceAreas.join(', ')}`
+          : '';
+
       const profileUpdateData = {
         avatarUrl: avatarUrl,
-        bio: formData.description,
+        bio: `${formData.description}${areasLine}`, // TEMP: anexa as ÃƒÂ¡reas no bio
         yearsOfExperience: parseInt(formData.yearsOfExperience, 10),
         pixKey: formData.pixKey,
-        serviceAreas: formData.serviceAreas.join(', '),
+        // NÃƒÆ’O enviar serviceAreas enquanto o backend nÃƒÂ£o suportar
       };
       
       await updateMyProviderProfile(profileUpdateData);
 
-      // 3. Atualização/Criação de Serviços
+      // 3. AtualizaÃƒÂ§ÃƒÂ£o/CriaÃƒÂ§ÃƒÂ£o de ServiÃƒÂ§os
       const existingProviderServices = await getProviderServicesOffered(providerId);
 
       for (const specialty of formData.specialties) {
-        const serviceId = SERVICE_MAPPINGS[specialty];
-        if (!serviceId) continue;
+        const serviceId = serviceIdMap[specialty];
+        if (!serviceId) {
+          if (__DEV__) {
+            console.warn(`[ServiceDetails] ID de serviÃƒÂ§o nÃƒÂ£o encontrado para chave "${specialty}".`);
+          }
+          continue;
+        }
 
         let serviceData: any = {
           serviceId: serviceId,
@@ -444,7 +497,7 @@ export default function ServiceDetailsScreen() {
         }
       }
 
-      // 4. Avançar status de verificação
+      // 4. AvanÃƒÂ§ar status de verificaÃƒÂ§ÃƒÂ£o
       await verificationService.advanceVerificationStatus(); 
 
       // 5. Atualizar estado local
@@ -455,11 +508,11 @@ export default function ServiceDetailsScreen() {
           : (user?.providerDetails as any),
       } as any);
 
-      // 6. Finalização e Navegação (Requisito 3: Sem Alert de sucesso)
+      // 6. FinalizaÃƒÂ§ÃƒÂ£o e NavegaÃƒÂ§ÃƒÂ£o (Requisito 3: Sem Alert de sucesso)
       setIsRegistrationInProgress(false);
       await AsyncStorage.removeItem('serviceDetailsFormData');
       
-      // Navegação direta, sem alert
+      // NavegaÃƒÂ§ÃƒÂ£o direta, sem alert
       router.push('/provider-register/verify-account');
 
     } catch (error: any) {
@@ -523,28 +576,28 @@ export default function ServiceDetailsScreen() {
       case 'quarto':
         return 'Ex: 150,00 (por quarto)';
       case 'metragem':
-        return 'Ex: 5,00 (por m²)';
+        return 'Ex: 5,00 (por mÃ‚Â²)';
       default:
-        return 'Preço base';
+        return 'PreÃƒÂ§o base';
     }
   };
 
   const getSubStepTitle = () => {
     switch (currentServiceSubStep) {
-      case 1: return '1. Foto e Descrição';
-      case 2: return '2. Experiência e Especialidades';
-      case 3: return '3. Preço e Unidade';
-      case 4: return '4. Chave PIX e Áreas de Atendimento';
-      default: return 'Detalhes do Serviço';
+      case 1: return '1. Foto e DescriÃƒÂ§ÃƒÂ£o';
+      case 2: return '2. ExperiÃƒÂªncia e Especialidades';
+      case 3: return '3. PreÃƒÂ§o e Unidade';
+      case 4: return '4. Chave PIX e ÃƒÂreas de Atendimento';
+      default: return 'Detalhes do ServiÃƒÂ§o';
     }
   };
 
   const getMicrocopyText = () => {
     switch (currentServiceSubStep) {
-      case 1: return 'Sua foto e uma breve descrição ajudam os clientes a te conhecerem.';
-      case 2: return 'Conte-nos sobre sua experiência e os serviços que você oferece.';
-      case 3: return 'Defina como você precifica seus serviços.';
-      case 4: return 'Para receber pagamentos e informar suas áreas de atuação.';
+      case 1: return 'Sua foto e uma breve descriÃƒÂ§ÃƒÂ£o ajudam os clientes a te conhecerem.';
+      case 2: return 'Conte-nos sobre sua experiÃƒÂªncia e os servicos que vocÃƒÂª oferece.';
+      case 3: return 'Defina como vocÃƒÂª precifica seus servicos.';
+      case 4: return 'Para receber pagamentos e informar suas ÃƒÂ¡reas de atuaÃƒÂ§ÃƒÂ£o.';
       default: return '';
     }
   };
@@ -557,8 +610,8 @@ export default function ServiceDetailsScreen() {
   const serviceOptions = [
     { id: 'residencial', label: 'Residencial', icon: 'home', set: 'ion' },
     { id: 'comercial',   label: 'Comercial',   icon: 'office-building', set: 'mci' },
-    { id: 'escritorio',  label: 'Escritório',  icon: 'desktop-outline', set: 'ion' },
-    { id: 'pos_obra',    label: 'Pós-Obra',    icon: 'hammer-wrench', set: 'mci' },
+    { id: 'escritorio',  label: 'EscritÃƒÂ³rio',  icon: 'desktop-outline', set: 'ion' },
+    { id: 'pos_obra',    label: 'PÃƒÂ³s-Obra',    icon: 'hammer-wrench', set: 'mci' },
   ];
 
   return (
@@ -588,7 +641,7 @@ export default function ServiceDetailsScreen() {
                   <Ionicons name="arrow-back-outline" size={24} color="#2C3E50" />
                   <Text style={styles.backButtonHeaderText}>{getBackButtonText()}</Text>
               </TouchableOpacity>
-              <Text style={styles.headerTitle}>Detalhes do Serviço</Text>
+              <Text style={styles.headerTitle}>Detalhes do ServiÃƒÂ§o</Text>
             </View>
             
             {/* Progress Bar */}
@@ -632,8 +685,8 @@ export default function ServiceDetailsScreen() {
 
 
                 {renderInputSection(
-                  'Descrição do Serviço',
-                  'Descreva sua experiência e especialidades...',
+                  'DescriÃƒÂ§ÃƒÂ£o do ServiÃƒÂ§o',
+                  'Descreva sua experiÃƒÂªncia e especialidades...',
                   formData.description,
                   (text) => { setFormData(prev => ({ ...prev, description: text })); setDescriptionError(null); },
                   'default',
@@ -650,7 +703,7 @@ export default function ServiceDetailsScreen() {
             {currentServiceSubStep === 2 && (
               <View style={styles.formContainer}>
                 {renderInputSection(
-                  'Anos de Experiência',
+                  'Anos de ExperiÃƒÂªncia',
                   'Ex: 5',
                   formData.yearsOfExperience,
                   (text) => { setFormData(prev => ({ ...prev, yearsOfExperience: text.replace(/[^0-9]/g, '') })); setYearsOfExperienceError(null); },
@@ -665,7 +718,7 @@ export default function ServiceDetailsScreen() {
                 {/* Service Type Selection (Using PremiumServiceChip) */}
                 <View style={styles.serviceTypeContainer}>
                   <Text style={styles.sectionTitle}>
-                    <Ionicons name="home-outline" size={16} color="#2C3E50" /> Tipo de Serviço
+                    <Ionicons name="home-outline" size={16} color="#2C3E50" /> Tipo de ServiÃƒÂ§o
                   </Text>
                   <View style={styles.serviceTypeGrid}>
                     {serviceOptions.map((s, index) => {
@@ -710,13 +763,13 @@ export default function ServiceDetailsScreen() {
               <View style={styles.formContainer}>
                 <View style={styles.priceTypeContainer}>
                   <Text style={styles.sectionTitle}>
-                    <Ionicons name="pricetag-outline" size={16} color="#2C3E50" /> Tipo de Precificação
+                    <Ionicons name="pricetag-outline" size={16} color="#2C3E50" /> Tipo de PrecificaÃƒÂ§ÃƒÂ£o
                   </Text>
                   <View style={styles.priceTypeGrid}>
                     {[
                       { id: 'hora', label: 'Por Hora' },
                       { id: 'quarto', label: 'Por Quarto' },
-                      { id: 'metragem', label: 'Por m²' }
+                      { id: 'metragem', label: 'Por mÃ‚Â²' }
                     ].map((priceOption) => (
                       <TouchableOpacity
                         key={priceOption.id}
@@ -743,7 +796,7 @@ export default function ServiceDetailsScreen() {
                 </View>
 
                 {renderInputSection(
-                  `Preço Base (${formData.priceUnit ? `por ${formData.priceUnit}` : 'do Serviço'})`,
+                  `PreÃƒÂ§o Base (${formData.priceUnit ? `por ${formData.priceUnit}` : 'do ServiÃƒÂ§o'})`,
                   getPriceInputPlaceholder(formData.priceUnit),
                   formData.basePrice,
                   (text) => { setFormData(prev => ({ ...prev, basePrice: text.replace(/[^0-9.,]/g, '') })); setBasePriceError(null); },
@@ -774,8 +827,8 @@ export default function ServiceDetailsScreen() {
                 )}
 
                 {renderInputSection(
-                  'Áreas de Atendimento',
-                  'Ex: Campinas (Centro, Cambuí), Valinhos, Vinhedo',
+                  'ÃƒÂreas de Atendimento',
+                  'Ex: Campinas (Centro, CambuÃƒÂ­), Valinhos, Vinhedo',
                   formData.serviceAreas.join(', '),
                   (text) => { setFormData(prev => ({ ...prev, serviceAreas: text.split(',').map(s => s.trim()).filter(s => s) })); setServiceAreasError(null); },
                   'default',
@@ -789,7 +842,7 @@ export default function ServiceDetailsScreen() {
             )}
             {generalError && <Text style={styles.inlineErrorMessageCentered}>{generalError}</Text>}
 
-            {/* 2) Botões inferiores (premium clean) */}
+            {/* 2) BotÃƒÂµes inferiores (premium clean) */}
             <View style={styles.navigationButtonsContainer}>
               {currentServiceSubStep > 1 && (
                 <TouchableOpacity
@@ -817,7 +870,7 @@ export default function ServiceDetailsScreen() {
                   ) : (
                     <>
                       <Text style={btn.primaryText}>
-                        {currentServiceSubStep === totalSteps ? 'Finalizar' : 'Próximo'}
+                        {currentServiceSubStep === totalSteps ? 'Finalizar' : 'PrÃƒÂ³ximo'}
                       </Text>
                       <Ionicons
                         name={currentServiceSubStep === totalSteps ? 'checkmark-circle' : 'arrow-forward'}
@@ -837,7 +890,7 @@ export default function ServiceDetailsScreen() {
   );
 }
 
-// Styles dos botões
+// Styles dos botÃƒÂµes
 const btn = StyleSheet.create({
   backGlass: {
     flex: 1, marginRight: 10, borderRadius: 14, overflow: 'hidden',
@@ -898,7 +951,7 @@ const styles = StyleSheet.create({
   backButtonHeader: {
     position: 'absolute',
     left: 0,
-    bottom: 60,
+    bottom: 50,
     padding: 5,
     zIndex: 1,
     flexDirection: 'row',
@@ -912,7 +965,7 @@ const styles = StyleSheet.create({
     marginLeft: 5,
   },
   headerTitle: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '700',
     color: '#2C3E50',
     marginBottom: 12,
