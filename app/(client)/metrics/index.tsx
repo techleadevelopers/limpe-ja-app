@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import {
   useColorScheme,
   RefreshControl,
   AccessibilityInfo,
+  GestureResponderEvent,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,8 +23,13 @@ import { LineChart } from 'react-native-chart-kit';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 
+import { useQuery } from '@tanstack/react-query';
 import { metricsService } from '../../../services/metricsService';
-import { MetricsSummary, MetricsTimeseriesDataPoint, MetricsFunnel } from '../../../types/backend/metrics';
+import { getLoyaltyRewards } from '../../../services/loyaltyService';
+import { claimMission } from '../../../services/missionService';
+import { ClientMetrics } from '../../../types/backend/metrics';
+import NotificationUIService from '../../../services/notificationUIService';
+import { AnalyticsService } from '../../../services/analyticsService';
 
 import { KPIValue } from '../../../components/KPIValue';
 import { Skeleton } from '../../../components/Skeleton';
@@ -43,7 +49,7 @@ const Icons3D = {
   woman: require('../../../assets/images/3d/woman.png'),
   crown: require('../../../assets/images/3d/crown.png'),
   mascrank: require('../../../assets/images/3d/masc-rank.png'), // Reused for hero consistency
-} satisfies Record<string, ImageSourcePropType>;
+} as const;
 
 const Icon3D = ({
   src,
@@ -89,12 +95,6 @@ export default function ClientMetricsScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const isReducedMotion = useReducedMotion();
-
-  const [summary, setSummary] = useState<MetricsSummary | null>(null);
-  const [timeseries, setTimeseries] = useState<MetricsTimeseriesDataPoint[]>([]);
-  const [funnel, setFunnel] = useState<MetricsFunnel | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const headerAnim = useRef(new Animated.Value(0)).current;
@@ -102,125 +102,134 @@ export default function ClientMetricsScreen() {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const scrollRef = useRef<ScrollView>(null);
 
-  const fetchMetrics = useCallback(async () => {
-    setIsRefreshing(true);
-    try {
-      setError(null);
-      const [summaryData, timeseriesData, funnelData] = await Promise.all([
-        metricsService.getMetricsSummary(),
-        metricsService.getMetricsTimeseries('month'),
-        metricsService.getMetricsFunnel(),
-      ]);
-      setSummary(summaryData);
-      setTimeseries(timeseriesData);
-      setFunnel(funnelData);
-    } catch (err: any) {
-      Toast.show({
-        type: 'error',
-        text1: t('common.error'),
-        text2: 'Não foi possível carregar as métricas. Tente novamente.',
-      });
-      setError('Não foi possível carregar as métricas. Tente novamente mais tarde.');
-    } finally {
-      setLoading(false);
-      setIsRefreshing(false);
-    }
-  }, [t]);
+  const { data: metrics, isLoading, isError, refetch, isRefetching } = useQuery<ClientMetrics>({
+    queryKey: ['clientMetrics'],
+    queryFn: () => metricsService.getClientMetrics(),
+    staleTime: 60_000,
+    refetchOnWindowFocus: true,
+    retry: 1,
+  });
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(headerAnim, {
-        toValue: 1,
-        duration: isReducedMotion ? 0 : 420,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-      Animated.timing(contentAnim, {
-        toValue: 1,
-        duration: isReducedMotion ? 0 : 640,
-        delay: isReducedMotion ? 0 : 80,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    if (!isReducedMotion) {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 1.02,
-            duration: 2200,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 2200,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
-    } else {
-      pulseAnim.setValue(1);
+    if (isError) {
+      const msg = 'Erro de rede.';
+      NotificationUIService.showError(msg, 'Erro');
+      Toast.show({ type: 'error', text1: 'Erro', text2: msg });
     }
+  }, [isError]);
 
-    fetchMetrics();
-  }, [headerAnim, contentAnim, fetchMetrics, pulseAnim, isReducedMotion]);
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await refetch();
+    setIsRefreshing(false);
+  }, [refetch]);
 
-  const onRefresh = useCallback(() => {
-    fetchMetrics();
-  }, [fetchMetrics]);
+  useEffect(() => {
+    if (!isReducedMotion) {
+      Animated.parallel([
+        Animated.timing(headerAnim, {
+          toValue: 1,
+          duration: 600,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.spring(contentAnim, {
+          toValue: 1,
+          tension: 100,
+          friction: 8,
+          delay: 200,
+          useNativeDriver: true,
+        }),
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(pulseAnim, {
+              toValue: 1.05,
+              duration: 2000,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+            Animated.timing(pulseAnim, {
+              toValue: 1,
+              duration: 2000,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+          ])
+        ),
+      ]).start();
+    }
+  }, [isReducedMotion]);
 
-  const chartConfig = {
-    backgroundGradientFrom: theme.background,
-    backgroundGradientTo: theme.background,
-    decimalPlaces: 0,
-    color: (opacity = 1) => `rgba(74, 144, 226, ${opacity})`,
-    labelColor: (opacity = 1) => theme.text,
-    strokeWidth: 2,
-    barPercentage: 0.5,
-    useShadowColorFromDataset: false,
-    propsForDots: {
-      r: "4",
-      strokeWidth: "2",
-      stroke: theme.primary,
-    },
-  };
-
-  if (loading && !isRefreshing) {
+  if (isLoading && !isRefetching && !isRefreshing) {
     return (
       <View style={[styles.centeredFeedback, { backgroundColor: theme.background }]}>
         <Stack.Screen options={{ headerShown: false }} />
         <ActivityIndicator size="large" color={theme.primary} />
-        <Text style={[styles.loadingText, { color: theme.textMuted }]}>{t('common.loading')}</Text>
+        <Text style={[styles.loadingText, { color: theme.textMuted }]}>
+          {t('common.loading', { defaultValue: 'Carregando' })}
+        </Text>
       </View>
     );
   }
 
+  const trend: Array<{ month: string; count: number }> = metrics?.bookings?.monthlyTrend || [];
   const chartData = {
-    labels: timeseries.map(data => new Date(data.date).getDate().toString()),
+    labels: trend.map(d => d.month?.slice(5, 7) || ''),
     datasets: [
       {
-        data: timeseries.map(data => data.bookings),
+        data: trend.map(d => d.count || 0),
         color: (opacity = 1) => withAlpha(theme.primary, opacity),
         strokeWidth: 2,
         withDots: true,
       },
-      {
-        data: timeseries.map(data => data.revenue / 100),
-        color: (opacity = 1) => `rgba(76, 175, 80, ${opacity})`,
-        strokeWidth: 2,
-        withDots: true,
-      }
     ],
-    legend: ["Agendamentos", "Gasto Total (R$)"],
+    legend: [t('metrics.chart_legend', { defaultValue: 'Agendamentos' })],
   };
 
-  const hasData = summary && (summary.totalBookings > 0 || summary.totalRevenue > 0 || summary.completedMissions > 0 || timeseries.length > 0 || funnel);
+  const chartConfig = {
+    backgroundGradientFrom: theme.cardBackground || '#FFFFFF',
+    backgroundGradientTo: theme.cardBackground || '#FFFFFF',
+    decimalPlaces: 0,
+    color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+    style: { borderRadius: 16 },
+    propsForDots: {
+      r: '6',
+      strokeWidth: '2',
+      stroke: theme.primary,
+    },
+  };
+
+  const hasData = !!metrics && (
+    (metrics.bookings?.total || 0) > 0 ||
+    (metrics.points?.balance || 0) > 0 ||
+    (metrics.missions?.total || 0) > 0 ||
+    (metrics.coupons?.active?.length || 0) > 0
+  );
 
   // Subtle hero gradient (adapted from missions.tsx)
   const heroGradient = [withAlpha(theme.cardBackground || '#FFFFFF', 1), withAlpha(theme.background || '#F6F8FB', 1)];
+  
+  const { data: rewardsMini } = useQuery({ 
+    queryKey: ['rewardsMini'], 
+    queryFn: () => getLoyaltyRewards({ limit: 50 }), 
+    staleTime: 60000 
+  });
+
+  const nextRewardDelta = React.useMemo(() => { 
+    const balance = metrics?.points?.balance ?? 0; 
+    if (!Array.isArray(rewardsMini) || rewardsMini.length === 0) return null; 
+    let minAbove = Infinity; 
+    for (const r of rewardsMini) {
+      if (typeof (r as any).costPoints === 'number' && (r as any).costPoints > balance) {
+        minAbove = Math.min(minAbove, (r as any).costPoints);
+      }
+    }
+    if (!isFinite(minAbove)) return 0; 
+    return Math.max(0, minAbove - balance); 
+  }, [metrics?.points?.balance, rewardsMini]);
+
+  const spentTotal = (metrics?.bookings?.latest || []).reduce((acc: number, b: any) => acc + (b.totalPrice || 0), 0);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -235,7 +244,7 @@ export default function ClientMetricsScreen() {
           },
         ]}
       >
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerLeft} accessibilityLabel={t('common.back') || 'Voltar'}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.headerLeft} accessibilityLabel={t('common.back', { defaultValue: 'Voltar' })}>
           <Ionicons name="arrow-back" size={22} color={theme.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: theme.text }]}>{t('metrics.title', { defaultValue: 'Minhas Métricas' })}</Text>
@@ -251,11 +260,18 @@ export default function ClientMetricsScreen() {
         <View style={styles.heroWrapper}>
           <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.hero, { backgroundColor: heroGradient[0] }]}>
             <View style={styles.heroTextWrap}>
-              <Text style={[styles.kicker, { color: withAlpha(theme.text, 0.6) }]}>{t('metrics.hero_kicker', { defaultValue: 'SEU DESEMPENHO' })}</Text>
+              <Text style={[styles.kicker, { color: withAlpha(theme.text, 0.6) }]}>{t('metrics.hero_kicker', { defaultValue: 'Seu desempenho' })}</Text>
               <Text style={[styles.title, { color: theme.text }]}>{t('metrics.hero_title', { defaultValue: 'Acompanhe seu progresso e conquistas' })}</Text>
 
-              <TouchableOpacity style={[styles.cta, { backgroundColor: theme.primary }]} onPress={() => { requestAnimationFrame(() => scrollRef.current?.scrollTo({ y: HERO_HEIGHT, animated: true })); }} accessibilityLabel={t('metrics.cta_label', { defaultValue: 'Ver Métricas' })}>
-                <Text style={styles.ctaText}>{t('metrics.cta_text', { defaultValue: 'VER MÉTRICAS' })}</Text>
+              <TouchableOpacity 
+                style={[styles.cta, { backgroundColor: theme.primary }]} 
+                onPress={() => { 
+                  AnalyticsService.trackEvent('metrics_cta_tap');
+                  requestAnimationFrame(() => scrollRef.current?.scrollTo({ y: HERO_HEIGHT, animated: true }));
+                }} 
+                accessibilityLabel={t('metrics.cta_label', { defaultValue: 'Ver Métricas' })}
+              >
+                <Text style={styles.ctaText}>{t('metrics.cta_text', { defaultValue: 'Ver métricas' })}</Text>
                 <Ionicons name="stats-chart" size={14} color="#FFF" />
               </TouchableOpacity>
 
@@ -283,11 +299,13 @@ export default function ClientMetricsScreen() {
         </View>
 
         <Animated.View style={[styles.panel, { transform: [{ translateY: contentAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
-          {error ? (
+          {isError ? (
             <View style={[styles.errorContainer, { backgroundColor: theme.cardBackground }]}>
               <Ionicons name="alert-circle-outline" size={50} color={theme.primary} />
-              <Text style={[styles.errorText, { color: theme.text }]}>{error}</Text>
-              <TouchableOpacity style={[styles.retryButton, { backgroundColor: theme.primary }]} onPress={fetchMetrics}>
+              <Text style={[styles.errorText, { color: theme.text }]}>
+                {t('common.network_error', { defaultValue: 'Erro de rede.' })}
+              </Text>
+              <TouchableOpacity style={[styles.retryButton, { backgroundColor: theme.primary }]} onPress={() => refetch()}>
                 <Text style={styles.retryButtonText}>Tentar Novamente</Text>
               </TouchableOpacity>
             </View>
@@ -301,39 +319,90 @@ export default function ClientMetricsScreen() {
           ) : (
             <>
               {/* Summary Card (adapted from missions discountCard) */}
-              {summary ? (
+              {metrics ? (
                 <View style={[styles.sectionCard, { backgroundColor: theme.cardBackground }]}>
-                  <Text style={[styles.cardTitle, { color: theme.text }]}>{t('metrics.summary_title', { defaultValue: 'Resumo Geral' })}</Text>
+                  <Text style={[styles.cardTitle, { color: theme.text }]}>
+                    {t('metrics.summary_title', { defaultValue: 'Resumo' })}
+                  </Text>
                   <View style={styles.summaryGrid}>
-                    <View style={[styles.summaryItem, { backgroundColor: theme.background }]}>
-                      <KPIValue value={summary.totalBookings} style={[styles.summaryValue, { color: theme.primary }]} />
-                      <Text style={[styles.summaryLabel, { color: theme.textMuted }]}>{t('metrics.bookings_label', { defaultValue: 'Agendamentos' })}</Text>
-                    </View>
-                    <View style={[styles.summaryItem, { backgroundColor: theme.background }]}>
-                      <KPIValue value={summary.totalRevenue} prefix="R$ " style={[styles.summaryValue, { color: theme.primary }]} />
-                      <Text style={[styles.summaryLabel, { color: theme.textMuted }]}>{t('metrics.spent_label', { defaultValue: 'Gasto Total' })}</Text>
-                    </View>
-                    <View style={[styles.summaryItem, { backgroundColor: theme.background }]}>
-                      <KPIValue value={summary.averageRating} style={[styles.summaryValue, { color: theme.primary }]} />
-                      <Text style={[styles.summaryLabel, { color: theme.textMuted }]}>{t('metrics.rating_label', { defaultValue: 'Avaliação Média' })}</Text>
-                    </View>
-                    <View style={[styles.summaryItem, { backgroundColor: theme.background }]}>
-                      <KPIValue value={summary.completedMissions} style={[styles.summaryValue, { color: theme.primary }]} />
-                      <Text style={[styles.summaryLabel, { color: theme.textMuted }]}>{t('metrics.missions_label', { defaultValue: 'Missões' })}</Text>
-                    </View>
+                    <TouchableOpacity
+                      onPress={() => {
+                        AnalyticsService.trackEvent('metrics_kpi_tap', { kpi: 'bookings_total' });
+                        router.push('/(client)/bookings');
+                      }}
+                      accessibilityLabel={t('metrics.bookings_label', { defaultValue: 'Agendamentos' })}
+                      style={[styles.summaryItem, { backgroundColor: theme.background }]}
+                    >
+                      <KPIValue value={metrics.bookings?.total ?? 0} style={[styles.summaryValue, { color: theme.primary }]} />
+                      <Text style={[styles.summaryLabel, { color: theme.textMuted }]}>
+                        {t('metrics.bookings_label', { defaultValue: 'Agendamentos' })}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => {
+                        AnalyticsService.trackEvent('metrics_kpi_tap', { kpi: 'spent_total' });
+                        router.push('/(client)/bookings');
+                      }}
+                      accessibilityLabel={t('metrics.spent_label', { defaultValue: 'Gasto Total' })}
+                      style={[styles.summaryItem, { backgroundColor: theme.background }]}
+                    >
+                      <KPIValue
+                        value={spentTotal}
+                        prefix="R$ "
+                        style={[styles.summaryValue, { color: theme.primary }]}
+                      />
+                      <Text style={[styles.summaryLabel, { color: theme.textMuted }]}>
+                        {t('metrics.spent_label', { defaultValue: 'Gasto Total' })}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => {
+                        AnalyticsService.trackEvent('metrics_kpi_tap', { kpi: 'missions_completed' });
+                        router.push('/(client)/missions');
+                      }}
+                      accessibilityLabel={t('metrics.missions_completed_label', { defaultValue: 'Missões Concluídas' })}
+                      style={[styles.summaryItem, { backgroundColor: theme.background }]}
+                    >
+                      <KPIValue value={metrics.missions?.completed ?? 0} style={[styles.summaryValue, { color: theme.primary }]} />
+                      <Text style={[styles.summaryLabel, { color: theme.textMuted }]}>
+                        {(metrics.missions?.availableToClaim ?? 0) > 0 && (
+                          <Text style={[styles.kpiBadge, { color: theme.primary }]}>
+                            Prontas: {metrics.missions?.availableToClaim}{' '}
+                          </Text>
+                        )}
+                        {t('metrics.missions_completed_label', { defaultValue: 'Missões Concluídas' })}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => {
+                        AnalyticsService.trackEvent('metrics_kpi_tap', { kpi: 'coupons_active' });
+                        router.push('/(client)/coupons');
+                      }}
+                      accessibilityLabel={t('metrics.coupons_active_label', { defaultValue: 'Cupons Ativos' })}
+                      style={[styles.summaryItem, { backgroundColor: theme.background }]}
+                    >
+                      <KPIValue value={metrics.coupons?.active?.length ?? 0} style={[styles.summaryValue, { color: theme.primary }]} />
+                      <Text style={[styles.summaryLabel, { color: theme.textMuted }]}>
+                        {t('metrics.coupons_active_label', { defaultValue: 'Cupons Ativos' })}
+                      </Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
               ) : (
                 <View style={[styles.sectionCard, { backgroundColor: theme.cardBackground }]}>
-                  <Text style={[styles.cardTitle, { color: theme.text }]}>{t('metrics.summary_title', { defaultValue: 'Resumo Geral' })}</Text>
+                  <Text style={[styles.cardTitle, { color: theme.text }]}>
+                    {t('metrics.summary_title', { defaultValue: 'Resumo' })}
+                  </Text>
                   <Skeleton height={150} width="100%" radius={12} />
                 </View>
               )}
 
               {/* Timeseries Chart (adapted from missions howCard style) */}
-              {timeseries.length > 0 ? (
+              {(metrics?.bookings?.monthlyTrend?.length || 0) > 0 ? (
                 <View style={[styles.sectionCard, { backgroundColor: theme.cardBackground }]}>
-                  <Text style={[styles.cardTitle, { color: theme.text }]}>{t('metrics.chart_title', { defaultValue: 'Agendamentos e Gastos (Mês)' })}</Text>
+                  <Text style={[styles.cardTitle, { color: theme.text }]}>
+                    {t('metrics.chart_title', { defaultValue: 'Agendamentos por mês' })}
+                  </Text>
                   <LineChart
                     data={chartData}
                     width={SCREEN_WIDTH - 32}
@@ -345,34 +414,178 @@ export default function ClientMetricsScreen() {
                 </View>
               ) : (
                 <View style={[styles.sectionCard, { backgroundColor: theme.cardBackground }]}>
-                  <Text style={[styles.cardTitle, { color: theme.text }]}>{t('metrics.chart_title', { defaultValue: 'Agendamentos e Gastos (Mês)' })}</Text>
+                  <Text style={[styles.cardTitle, { color: theme.text }]}>
+                    {t('metrics.chart_title', { defaultValue: 'Agendamentos por mês' })}
+                  </Text>
                   <Skeleton height={220} width="100%" radius={16} />
                 </View>
               )}
 
-              {/* Funnel Card (adapted from missions prefsCard) */}
-              {funnel ? (
-                <View style={[styles.sectionCard, { backgroundColor: theme.cardBackground }]}>
-                  <Text style={[styles.cardTitle, { color: theme.text }]}>{t('metrics.funnel_title', { defaultValue: 'Funil de Conversão' })}</Text>
-                  {funnel.steps.map((step, index) => {
-                    const pct = Number.isFinite(step.percentage as any) ? Number(step.percentage) : 0;
-                    const safePct = Math.max(0, Math.min(100, pct));
-                    return (
-                    <View key={index} style={styles.funnelItem}>
-                      <Text style={[styles.funnelLabel, { color: theme.text }]}>{step.name}</Text>
-                      <Text style={[styles.funnelValue, { color: theme.textMuted }]}>{step.count} ({safePct.toFixed(1)}%)</Text>
-                      <View style={[styles.funnelProgressBarContainer, { backgroundColor: withAlpha(theme.textMuted, 0.2) }]}>
-                        <View style={[styles.funnelProgressBar, { width: `${safePct}%`, backgroundColor: theme.primary }]} />
-                      </View>
+              {/* Recent Bookings */}
+              <View style={[styles.sectionCard, { backgroundColor: theme.cardBackground }]}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={[styles.cardTitle, { color: theme.text }]}>
+                    {t('metrics.recent_bookings_title', { defaultValue: 'Últimos agendamentos' })}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      AnalyticsService.trackEvent('metrics_section_view_more', { section: 'bookings' });
+                      router.push('/(client)/bookings');
+                    }}
+                    accessibilityLabel={t('metrics.view_all', { defaultValue: 'Ver todos' })}
+                  >
+                    <Text style={{ color: theme.primary, fontWeight: '700' }}>
+                      {t('common.view_all', { defaultValue: 'Ver todos' })}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                {(metrics?.bookings?.latest?.length || 0) > 0 ? (
+                  (metrics.bookings?.latest || []).slice(0, 5).map((b: any, idx: number) => (
+                    <View key={b.id || idx} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8 }}>
+                      <Text style={{ color: theme.text }} numberOfLines={1}>
+                        {b.serviceName}
+                      </Text>
+                      <Text style={{ color: theme.textMuted }}>
+                        {new Date(b.scheduledDate).toLocaleDateString('pt-BR')}
+                      </Text>
                     </View>
-                  )})}
-                </View>
-              ) : (
-                <View style={[styles.sectionCard, { backgroundColor: theme.cardBackground }]}>
-                  <Text style={[styles.cardTitle, { color: theme.text }]}>{t('metrics.funnel_title', { defaultValue: 'Funil de Conversão' })}</Text>
-                  <Skeleton height={150} width="100%" radius={12} />
-                </View>
+                  ))
+                ) : (
+                  <EmptyState
+                    title={t('metrics.empty_recent_bookings_title', { defaultValue: 'Sem agendamentos recentes' })}
+                    subtitle={t('metrics.empty_recent_bookings_desc', { defaultValue: 'Assim que você fizer agendamentos, eles aparecerão aqui.' })}
+                  />
+                )}
+              </View>
+
+              {/* Points History */}
+              <View style={[styles.sectionCard, { backgroundColor: theme.cardBackground }]}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={[styles.cardTitle, { color: theme.text }]}>
+                {t('metrics.points_section_title', { defaultValue: 'Pontos recentes' })}
+              </Text>
+              { typeof nextRewardDelta === "number" && nextRewardDelta > 0 && (
+                <Text style={[styles.nextRewardText, { color: theme.textMuted }]}>
+                  {t('metrics.next_reward', { defaultValue: 'Faltam' })} {nextRewardDelta} {t('metrics.points_section_title', { defaultValue: 'Pontos' }).toLowerCase()} {t('metrics.next_reward_suffix', { defaultValue: 'para a próxima recompensa' })}
+                </Text>
               )}
+              <TouchableOpacity
+                    onPress={() => {
+                      AnalyticsService.trackEvent('metrics_section_view_more', { section: 'points' });
+                      router.push('/(client)/wallet/cashback');
+                    }}
+                    accessibilityLabel={t('metrics.view_all', { defaultValue: 'Ver todos' })}
+                  >
+                    <Text style={{ color: theme.primary, fontWeight: '700' }}>
+                      {t('common.view_all', { defaultValue: 'Ver todos' })}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                {(metrics?.points?.history?.length || 0) > 0 ? (
+                  (metrics.points?.history || []).slice(0, 5).map((h: any, idx: number) => (
+                    <View key={h.id || idx} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8 }}>
+                      <Text style={{ color: theme.text }}>{h.type}</Text>
+                      <Text style={{ color: theme.textMuted }}>{h.points} pts</Text>
+                    </View>
+                  ))
+                ) : (
+                  <Skeleton height={60} width="100%" radius={12} />
+                )}
+              </View>
+
+              {/* Missions Grid */}
+              <View style={[styles.sectionCard, { backgroundColor: theme.cardBackground }]}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={[styles.cardTitle, { color: theme.text }]}>
+                    {t('metrics.missions_section_title', { defaultValue: 'Suas missões' })}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      AnalyticsService.trackEvent('metrics_section_view_more', { section: 'missions' });
+                      router.push('/(client)/missions');
+                    }}
+                    accessibilityLabel={t('metrics.view_all', { defaultValue: 'Ver todas' })}
+                  >
+                    <Text style={{ color: theme.primary, fontWeight: '700' }}>
+                      {t('common.view_all', { defaultValue: 'Ver todas' })}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+                  {(metrics?.missions?.items || []).slice(0, 4).map((m: any) => (
+                    <View key={m?.mission?.id} style={{ width: '48%', backgroundColor: withAlpha(theme.textMuted, 0.08), borderRadius: 10, padding: 10, marginBottom: 10 }}>
+                      <Text style={{ color: theme.text, fontWeight: '700' }} numberOfLines={2}>
+                        {m?.mission?.title || 'Missão'}
+                      </Text>
+                      <Text style={{ color: theme.textMuted, marginTop: 4 }}>{m?.progressLabel || ''}</Text>
+                      <View style={[styles.funnelProgressBarContainer, { marginTop: 8, backgroundColor: withAlpha(theme.textMuted, 0.2) }]}>
+                        <View style={[styles.funnelProgressBar, { width: `${Math.max(0, Math.min(100, m?.progressPct || 0))}%`, backgroundColor: theme.primary }]} />
+                      </View>
+                      {m?.canClaim && (
+                        <TouchableOpacity
+                          onPress={async () => {
+                            try {
+                              await claimMission(m?.mission?.id);
+                              NotificationUIService.showSuccess(
+                                t('missions.claim_success', { defaultValue: 'Recompensa resgatada!' }),
+                                t('common.success', { defaultValue: 'Sucesso' })
+                              );
+                              refetch();
+                            } catch (err: any) {
+                              NotificationUIService.showError(err?.message || t('common.error', { defaultValue: 'Erro' }));
+                            }
+                          }}
+                          style={{ marginTop: 8, backgroundColor: theme.primary, paddingVertical: 8, borderRadius: 8, alignItems: 'center' }}
+                          accessibilityLabel={t('missions.claim', { defaultValue: 'Resgatar' })}
+                        >
+                          <Text style={{ color: '#fff', fontWeight: '700' }}>
+                            {t('missions.claim', { defaultValue: 'Resgatar' })}
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  ))}
+                </View>
+              </View>
+
+              {/* Coupons */}
+              <View style={[styles.sectionCard, { backgroundColor: theme.cardBackground }]}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={[styles.cardTitle, { color: theme.text }]}>
+                    {t('metrics.coupons_title', { defaultValue: 'Seus cupons' })}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      AnalyticsService.trackEvent('metrics_section_view_more', { section: 'coupons' });
+                      router.push('/(client)/coupons');
+                    }}
+                    accessibilityLabel={t('metrics.view_all', { defaultValue: 'Ver todos' })}
+                  >
+                    <Text style={{ color: theme.primary, fontWeight: '700' }}>
+                      {t('common.view_all', { defaultValue: 'Ver todos' })}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                  {(metrics?.coupons?.active || []).slice(0, 8).map((c: any) => (
+                    <View key={c.id} style={{ paddingVertical: 6, paddingHorizontal: 10, borderRadius: 999, backgroundColor: withAlpha(theme.primary, 0.1), marginRight: 8, marginBottom: 8 }}>
+                      <Text style={{ color: theme.primary }}># {c.code}</Text>
+                    </View>
+                  ))}
+                </View>
+                {(metrics?.coupons?.used?.length || 0) > 0 && (
+                  <View style={{ marginTop: 8 }}>
+                    {(metrics?.coupons?.used || []).slice(0, 5).map((c: any) => (
+                      <View key={c.id} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 }}>
+                        <Text style={{ color: theme.text }}>{c.code}</Text>
+                        <Text style={{ color: theme.textMuted }}>
+                          {new Date(c.validUntil).toLocaleDateString('pt-BR')}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
             </>
           )}
         </Animated.View>
@@ -385,6 +598,16 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   centeredFeedback: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { marginTop: 10, fontSize: 16 },
+  kpiBadge: { 
+    fontSize: 12,
+    fontWeight: '600',
+    marginRight: 4
+  },
+  nextRewardText: {
+    fontSize: 12,
+    flex: 1,
+    marginHorizontal: 8,
+  },
 
   // Header (adapted from missions.tsx)
   header: {
@@ -481,3 +704,4 @@ const styles = StyleSheet.create({
   funnelProgressBarContainer: { height: 8, borderRadius: 4, marginTop: 8, overflow: 'hidden' },
   funnelProgressBar: { height: '100%', borderRadius: 4 },
 });
+
