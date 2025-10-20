@@ -1,5 +1,5 @@
 // backend-cleaning/src/pricing/pricing.controller.ts
-import { Controller, Get, Post, Patch, Param, Body, UseGuards, Query, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, UseGuards, Query, Delete, Req } from '@nestjs/common';
 import { PricingService } from './pricing.service';
 import { CalculatePriceDto } from './dto/calculate-price.dto';
 import { CreatePricingRuleDto } from './dto/create-pricing-rule.dto';
@@ -22,8 +22,9 @@ export class PricingController {
   @Post('rules')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN) // Only admins can create pricing rules
-  async createRule(@Body() createPricingRuleDto: CreatePricingRuleDto) {
-    return this.pricingService.createRule(createPricingRuleDto);
+  async createRule(@Req() req: any, @Body() createPricingRuleDto: CreatePricingRuleDto) {
+    const actorUserId = req?.user?.userId || 'unknown';
+    return this.pricingService.createRule(createPricingRuleDto, actorUserId);
   }
 
   @Get('rules')
@@ -36,15 +37,17 @@ export class PricingController {
   @Patch('rules/:id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN) // Only admins can update pricing rules
-  async updateRule(@Param('id') id: string, @Body() updatePricingRuleDto: UpdatePricingRuleDto) {
-    return this.pricingService.updateRule(id, updatePricingRuleDto);
+  async updateRule(@Req() req: any, @Param('id') id: string, @Body() updatePricingRuleDto: UpdatePricingRuleDto) {
+    const actorUserId = req?.user?.userId || 'unknown';
+    return this.pricingService.updateRule(id, updatePricingRuleDto, actorUserId);
   }
 
   // Potentially an endpoint to delete rules
   @Delete('rules/:id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  async deleteRule(@Param('id') id: string) {
-    return this.pricingService.deleteRule(id);
+  async deleteRule(@Req() req: any, @Param('id') id: string) {
+    const actorUserId = req?.user?.userId || 'unknown';
+    return this.pricingService.deleteRule(id, actorUserId);
   }
 }
