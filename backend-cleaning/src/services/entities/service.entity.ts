@@ -1,12 +1,13 @@
 // src/services/entities/service.entity.ts
-import { Service as PrismaService, Prisma, PricingType } from '@prisma/client'; // ADICIONADO: PricingType
+import { Service as PrismaService, Prisma, PricingType } from '@prisma/client';
 
 export class ServiceEntity implements PrismaService {
   id: string;
   name: string;
   description: string | null;
   icon: string | null;
-  price: Prisma.Decimal;
+  // DEPRECATED: manter para compatibilidade, agora opcional
+  price: Prisma.Decimal | null;
   defaultPricingType: PricingType | null; // ADICIONADO: Propriedade que faltava
 
   createdAt: Date;
@@ -15,11 +16,9 @@ export class ServiceEntity implements PrismaService {
   constructor(partial: Partial<ServiceEntity>) {
     Object.assign(this, partial);
 
-    if (partial.price !== undefined && partial.price !== null) {
-        this.price = new Prisma.Decimal(partial.price);
-    } else {
-        this.price = new Prisma.Decimal(0);
-    }
+    this.price = partial.price !== undefined && partial.price !== null
+      ? new Prisma.Decimal(partial.price as any)
+      : null;
 
     // O Object.assign(this, partial) já deve lidar com defaultPricingType, createdAt e updatedAt
     // se eles estiverem presentes em 'partial'.
