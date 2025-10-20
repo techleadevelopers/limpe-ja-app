@@ -30,6 +30,14 @@ export class SubscriptionsController {
     return this.subscriptionsService.getSubscriptionsForUser(req.user.id);
   }
 
+  // ADMIN: Listar todas as assinaturas (com filtro opcional de status)
+  @Get()
+  @Roles(UserRole.ADMIN)
+  async findAll(@Req() req) {
+    const status = req.query?.status as string | undefined;
+    return this.subscriptionsService.findAll(status);
+  }
+
   @Get(':id')
   @Roles(UserRole.CLIENT, UserRole.ADMIN) // Clients can view their own, Admin can view any
   async getSubscriptionDetails(@Param('id') id: string, @Req() req) {
