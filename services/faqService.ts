@@ -1,6 +1,8 @@
 // LimpeJaApp/app/services/faqService.ts
 import axios, { AxiosResponse } from 'axios'; // Importar axios para isAxiosError
 import { api } from './api'; // Importa a instância centralizada do Axios
+import { createLocalConsole } from './logging';
+const console = createLocalConsole();
 
 // Importa a tipagem da FAQItem
 import { FAQItem } from '../types/backend/faqs'; //
