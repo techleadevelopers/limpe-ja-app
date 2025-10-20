@@ -58,4 +58,23 @@ export class SafetyController {
   async updateIncidentStatus(@Param('id') id: string, @Body() updateIncidentDto: UpdateIncidentDto, @Req() req) {
     return this.safetyService.updateIncidentStatus(id, updateIncidentDto, req.user.id);
   }
+
+  // NOVO: Listar alertas de pânico (admin)
+  @Get('panic-alerts')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Lista todos os alertas de pânico (apenas administradores)' })
+  @ApiResponse({ status: 200, description: 'Lista de alertas de pânico.' })
+  async listPanicAlerts(@Req() req) {
+    const status = req.query?.status as string | undefined;
+    return this.safetyService.listPanicAlerts(status);
+  }
+
+  // NOVO: Atualizar status de alerta de pânico (admin)
+  @Patch('panic-alerts/:id/status')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Atualiza o status de um alerta de pânico (apenas administradores)' })
+  @ApiResponse({ status: 200, description: 'Status do alerta atualizado.' })
+  async updatePanicStatus(@Param('id') id: string, @Body() body: { status: string }) {
+    return this.safetyService.updatePanicAlertStatus(id, body?.status);
+  }
 }
