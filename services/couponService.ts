@@ -1,5 +1,7 @@
 // LimpeJaApp/services/couponService.ts
 import { api } from './api';
+import { createLocalConsole } from './logging';
+const console = createLocalConsole();
 import { CouponApplicationResult } from '../types/backend/coupons';
 import { CreateBookingDto } from '../types/backend/bookings';
 import axios from 'axios';
@@ -52,5 +54,27 @@ export const applyCoupon = async (data: ApplyCouponPayload): Promise<CouponAppli
       throw new Error(error.response.data.message || 'Não foi possível aplicar o cupom.');
     }
     throw new Error('Erro de rede ou servidor ao aplicar cupom.');
+  }
+};
+
+export const resolveCoupon = async (
+  code: string,
+  bookingData?: { originalPrice?: number; providerServiceId?: string; providerId?: string; scheduledDate?: string }
+) => {
+  try {
+    const params: Record<string, any> = {
+      originalPrice: bookingData?.originalPrice,
+      providerServiceId: bookingData?.providerServiceId,
+      providerId: bookingData?.providerId,
+      scheduledDate: bookingData?.scheduledDate,
+    };
+    const response = await api.get<CouponApplicationResult>(`/coupons/resolve/${encodeURIComponent(code)}`, { params });
+    return response.data;
+  } catch (error: any) {
+    console.error('Erro ao resolver cupom:', error.response?.data || error.message);
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(error.response.data.message || 'N�o foi poss�vel validar o cupom.');
+    }
+    throw new Error('Erro de rede ou servidor ao validar cupom.');
   }
 };
