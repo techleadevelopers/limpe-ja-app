@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Body,
   UseGuards,
   Req,
@@ -146,5 +147,62 @@ export class PaymentsController {
     this.logger.log('[PaymentsController] handleWithdrawalWebhook: received event from PSP.');
     return this.paymentsService.handleWithdrawalWebhook(signature, eventId, payload);
   }
-}
 
+  // ADMIN: Listar transações
+  @Get('transactions')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Lista transações (admin)' })
+  async listTransactions(@Req() req: any) {
+    const role = req.user?.role;
+    if (role !== 'ADMIN') throw new InternalServerErrorException('Admin only');
+    const type = req.query?.type as string | undefined;
+    const status = req.query?.status as string | undefined;
+    return this.paymentsService.listTransactions(type, status);
+  }
+
+  // ADMIN: Iniciar reembolso
+  @Post(':transactionId/refund')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Inicia reembolso (admin)' })
+  async refund(@Req() req: any, @Param('transactionId') transactionId: string, @Body() body: { amount?: number }) {
+    const role = req.user?.role;
+    if (role !== 'ADMIN') throw new InternalServerErrorException('Admin only');
+    return this.paymentsService.initiateRefund(transactionId, body?.amount);
+  }
+
+  // ADMIN: Listar solicitações de saque
+  @Get('withdrawals')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Lista solicitações de saque (admin)' })
+  async listWithdrawals(@Req() req: any) {
+    const role = req.user?.role;
+    if (role !== 'ADMIN') throw new InternalServerErrorException('Admin only');
+    const status = req.query?.status as string | undefined;
+    return this.paymentsService.listWithdrawals(status);
+  }
+
+  // ADMIN: Aprovar saque
+  @Patch('withdrawals/:id/approve')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Aprova solicitação de saque (admin)' })
+  async approveWithdrawal(@Req() req: any, @Param('id') id: string) {
+    const role = req.user?.role;
+    if (role !== 'ADMIN') throw new InternalServerErrorException('Admin only');
+    return this.paymentsService.approveWithdrawal(id);
+  }
+
+  // ADMIN: Rejeitar saque
+  @Patch('withdrawals/:id/reject')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Rejeita solicitação de saque (admin)' })
+  async rejectWithdrawal(@Req() req: any, @Param('id') id: string, @Body() body: { reason?: string }) {
+    const role = req.user?.role;
+    if (role !== 'ADMIN') throw new InternalServerErrorException('Admin only');
+    return this.paymentsService.rejectWithdrawal(id, body?.reason);
+  }
+}
