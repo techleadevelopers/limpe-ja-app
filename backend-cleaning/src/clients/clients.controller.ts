@@ -87,4 +87,17 @@ export class ClientsController {
     this.logger.log(`[ClientsController] findOne: Cliente ${id} encontrado.`);
     return new ClientEntity(client);
   }
+
+  // ADMIN: Atualizar perfil de um cliente por ID
+  @Patch(':id')
+  @Roles(UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Atualizar perfil de um cliente por ID (apenas admin)' })
+  @ApiResponse({ status: 200, description: 'Perfil do cliente atualizado com sucesso.', type: ClientEntity })
+  async updateById(@Param('id') id: string, @Body() updateClientProfileDto: UpdateClientProfileDto): Promise<ClientEntity> {
+    this.logger.log(`[ClientsController] updateById: Atualizando cliente ${id}`);
+    const updated = await this.clientsService.updateClient(id, updateClientProfileDto);
+    return new ClientEntity(updated);
+  }
 }
