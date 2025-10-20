@@ -178,8 +178,8 @@ export default function ExploreClientScreen() {
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   // Novo estado para o raio de busca
-  const [searchRadiusKm, setSearchRadiusKm] = useState<number>(50); // Padr�o 50 km (como no c�digo original)
-  // Novo estado para o filtro de pre�o
+  const [searchRadiusKm, setSearchRadiusKm] = useState<number>(50); // Padrão 50 km (como no código original)
+  // Novo estado para o filtro de preço
   const [priceFilter, setPriceFilter] = useState<PricingType | null>(null);
 
   const [welcomeCouponOffer, setWelcomeCouponOffer] = useState<Offer | null>(null);
@@ -191,7 +191,7 @@ export default function ExploreClientScreen() {
 
   const referralCode = userProfile?.referralCode || 'LIMPEJA123';
   const rewardReferrer = 'Ganhe R$20 ou +300 pts';
-  const rewardReferred = 'Seu amigo ganha 20% na 1�';
+  const rewardReferred = 'Seu amigo ganha 20% na primeira reserva';
 
   const headerAnim = useRef(new Animated.Value(0)).current;
   const categoriesAnim = useRef(new Animated.Value(0)).current;
@@ -200,10 +200,10 @@ export default function ExploreClientScreen() {
   const providersAnim = useRef(new Animated.Value(0)).current;
   const navBarAnim = useRef(new Animated.Value(0)).current;
 
-  // Adicionado ref para verificar se o componente est� montado
+  // Adicionado ref para verificar se o componente está montado
   const isMounted = useRef(true);
 
-  // INTEGRA��O DA L�GICA DO NEWHEADER: L�gica completa para exibir o nome do usu�rio (priorizando user do auth e fallback para userProfile)
+  // INTEGRAÇÃO DA LÓGICA DO NEWHEADER: Lógica completa para exibir o nome do usuário (priorizando user do auth e fallback para userProfile)
   const userNameDisplay = (user?.clientDetails?.fullName || user?.providerDetails?.fullName || user?.fullName) ?? 
                           (userProfile?.clientDetails?.fullName || userProfile?.providerDetails?.fullName || userProfile?.fullName) ?? 
                           t('common.user');
