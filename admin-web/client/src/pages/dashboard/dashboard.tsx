@@ -6,6 +6,7 @@ import ProviderMap from "@/components/dashboard/provider-map";
 import ProvidersSummary from "@/components/dashboard/providers-summary";
 import RecentActivities from "@/components/dashboard/recent-activities";
 import VerificationQueueWidget from "@/components/dashboard/verification-queue-widget";
+import ConfigUpdates from "@/components/dashboard/config-updates";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { fetchDashboardMetrics } from "@/lib/api";
@@ -69,8 +70,9 @@ export default function Dashboard() {
             <div className="col-span-12 lg:col-span-8 xl:col-span-8">
               <RecentActivities />
             </div>
-            <div className="col-span-12 lg:col-span-4 xl:col-span-4">
+            <div className="col-span-12 lg:col-span-4 xl:col-span-4 space-y-6">
               <VerificationQueueWidget />
+              <ConfigUpdates />
             </div>
           </div>
         </main>
@@ -78,4 +80,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
