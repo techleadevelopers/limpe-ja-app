@@ -143,4 +143,19 @@ export class SafetyService {
 
     return updatedIncident;
   }
+
+  // Admin: listar alertas de pânico (opcionalmente por status)
+  async listPanicAlerts(status?: string) {
+    return this.prisma.panicAlert.findMany({
+      where: status ? { status } : {},
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  // Admin: atualizar status de alerta de pânico
+  async updatePanicAlertStatus(id: string, status: string) {
+    const alert = await this.prisma.panicAlert.findUnique({ where: { id } });
+    if (!alert) throw new NotFoundException(`PanicAlert with ID ${id} not found.`);
+    return this.prisma.panicAlert.update({ where: { id }, data: { status } });
+  }
 }
