@@ -1,5 +1,5 @@
 // backend-cleaning/src/pricing/pricing.controller.ts
-import { Controller, Get, Post, Patch, Param, Body, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, UseGuards, Query, Delete } from '@nestjs/common';
 import { PricingService } from './pricing.service';
 import { CalculatePriceDto } from './dto/calculate-price.dto';
 import { CreatePricingRuleDto } from './dto/create-pricing-rule.dto';
@@ -41,10 +41,10 @@ export class PricingController {
   }
 
   // Potentially an endpoint to delete rules
-  // @Delete('rules/:id')
-  // @UseGuards(JwtAuthGuard, RolesGuard)
-  // @Roles(UserRole.ADMIN)
-  // async deleteRule(@Param('id') id: string) {
-  //   return this.pricingService.deleteRule(id);
-  // }
+  @Delete('rules/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  async deleteRule(@Param('id') id: string) {
+    return this.pricingService.deleteRule(id);
+  }
 }
