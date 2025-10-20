@@ -44,6 +44,103 @@ export class PaymentsService {
     }
   }
 
+  // Admin: listar transações com filtros básicos
+  async listTransactions(type?: string, status?: string) {
+    const where: Prisma.TransactionWhereInput = {};
+    if (type) where.type = type as any;
+    if (status) where.status = status;
+    const txs = await this.prisma.transaction.findMany({ where, orderBy: { createdAt: 'desc' } });
+    return txs.map(t => ({
+      id: t.id,
+      providerId: t.providerId,
+      userId: undefined,
+      amount: Number(t.amount),
+      type: t.type,
+      status: t.status,
+      description: t.description,
+      createdAt: (t.createdAt as any as Date).toISOString(),
+      bookingId: t.bookingId,
+      gatewayTransactionId: t.gatewayTransactionId,
+      qrCodeUrl: t.qrCodeUrl,
+      transactionRef: t.transactionRef,
+      couponId: t.couponId,
+    }));
+  }
+
+  // Admin: listar saques (Payouts) com mapeamento simples
+  async listWithdrawals(status?: string) {
+    const where: Prisma.PayoutWhereInput = status ? { status: status as any } : {};
+    const payouts = await this.prisma.payout.findMany({ where, orderBy: { requestedAt: 'desc' } });
+    return payouts.map(p => ({
+      id: p.id,
+      providerId: undefined,
+      amount: Number(p.amount),
+      status: (p.status === 'PAID' ? 'APPROVED' : (p.status === 'FAILED' || p.status === 'CANCELED') ? 'REJECTED' : 'PENDING'),
+      requestedAt: (p.requestedAt as any as Date).toISOString(),
+      processedAt: p.processedAt ? (p.processedAt as any as Date).toISOString() : null,
+    }));
+  }
+
+  // Admin: aprovar saque (marca como PAID)
+  async approveWithdrawal(id: string) {
+    const payout = await this.prisma.payout.update({ where: { id }, data: { status: 'PAID', processedAt: new Date() } });
+    return {
+      id: payout.id,
+      providerId: undefined,
+      amount: Number(payout.amount),
+      status: 'APPROVED',
+      requestedAt: (payout.requestedAt as any as Date).toISOString(),
+      processedAt: payout.processedAt ? (payout.processedAt as any as Date).toISOString() : null,
+    };
+  }
+
+  // Admin: rejeitar saque (marca como FAILED)
+  async rejectWithdrawal(id: string, _reason?: string) {
+    const payout = await this.prisma.payout.update({ where: { id }, data: { status: 'FAILED', processedAt: new Date() } });
+    return {
+      id: payout.id,
+      providerId: undefined,
+      amount: Number(payout.amount),
+      status: 'REJECTED',
+      requestedAt: (payout.requestedAt as any as Date).toISOString(),
+      processedAt: payout.processedAt ? (payout.processedAt as any as Date).toISOString() : null,
+    };
+  }
+
+  // Admin: iniciar reembolso de uma transação (simplificado)
+  async initiateRefund(transactionId: string, amount?: number) {
+    const tx = await this.prisma.transaction.findUnique({ where: { id: transactionId } });
+    if (!tx) throw new NotFoundException('Transaction not found');
+    const refundAmount = amount != null ? new Prisma.Decimal(amount) : tx.amount;
+    // Criar transação de REFUND e marcar original como REFUNDED
+    await this.prisma.transaction.update({ where: { id: tx.id }, data: { status: 'REFUNDED' } });
+    const refund = await this.prisma.transaction.create({
+      data: {
+        providerId: tx.providerId || undefined,
+        amount: refundAmount,
+        type: TransactionType.REFUND,
+        status: 'COMPLETED',
+        description: `Refund for ${tx.id}`,
+        bookingId: tx.bookingId || undefined,
+      },
+    });
+    return {
+      id: refund.id,
+      providerId: refund.providerId || undefined,
+      userId: undefined,
+      amount: Number(refund.amount),
+      type: refund.type,
+      status: refund.status,
+      description: refund.description,
+      createdAt: (refund.createdAt as any as Date).toISOString(),
+      bookingId: refund.bookingId || undefined,
+      gatewayTransactionId: refund.gatewayTransactionId || undefined,
+      qrCodeUrl: refund.qrCodeUrl || undefined,
+      transactionRef: refund.transactionRef || undefined,
+      couponId: refund.couponId || undefined,
+    };
+  }
+
   // Cria cobrança PIX e PaymentIntent associado (placeholder caso PSP não esteja configurado)
   async createPixCharge(clientUserId: string, dto: CreatePixChargeDto): Promise<PixChargeResponseDto> {
     const { amount, description, bookingId, providerId } = dto;
