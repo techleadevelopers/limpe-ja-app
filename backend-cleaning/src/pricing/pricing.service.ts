@@ -156,6 +156,14 @@ export class PricingService {
     });
   }
 
+  async deleteRule(id: string) {
+    const existingRule = await this.prisma.pricingRule.findUnique({ where: { id } });
+    if (!existingRule) {
+      throw new NotFoundException(`Pricing rule with ID ${id} not found.`);
+    }
+    return this.prisma.pricingRule.delete({ where: { id } });
+  }
+
   // Helpers
   private validateScopePayload(scope: PricingScope | undefined, dto: { cityCode?: string; categoryId?: string; providerId?: string }) {
     switch (scope) {
