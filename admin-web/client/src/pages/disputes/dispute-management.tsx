@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -248,7 +248,9 @@ export default function DisputeManagement() {
 
   const handleViewDetails = (disputeId: string) => {
     setSelectedDisputeId(disputeId);
-    setIsDetailsModalOpen(true);
+    if (window.innerWidth < 768) {
+      setIsDetailsModalOpen(true);
+    }
   };
 
   const filteredDisputes = disputes?.filter(dispute => {
@@ -268,7 +270,45 @@ export default function DisputeManagement() {
   const inReviewDisputes = disputes?.filter(d => d.status === DisputeStatus.IN_REVIEW).length || 0;
   const resolvedDisputes = disputes?.filter(d => d.status === DisputeStatus.RESOLVED).length || 0;
 
-  return (
+  
+  // Query de detalhes para o painel (desktop)
+  const { data: selectedDispute, isLoading: isLoadingSelected } = useQuery<Dispute, Error>({
+    queryKey: ['/disputes', selectedDisputeId],
+    queryFn: () => fetchDisputeDetails(selectedDisputeId!),
+    enabled: !!selectedDisputeId && !isDetailsModalOpen,
+  });
+
+  // Ações rápidas no painel
+  const queryClient = useQueryClient();
+  const updateStatusQuick = useMutation({
+    mutationFn: (data: { id: string; status: DisputeStatus; resolutionNotes?: string }) =>
+      updateDisputeStatus(data.id, data.status, data.resolutionNotes),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/disputes'] });
+      if (selectedDisputeId) queryClient.invalidateQueries({ queryKey: ['/disputes', selectedDisputeId] });
+    },
+  });
+
+  const sendMessageQuick = useMutation({
+    mutationFn: (data: { disputeId: string; content: string }) => sendDisputeMessage(data.disputeId, data.content),
+    onSuccess: () => {
+      if (selectedDisputeId) queryClient.invalidateQueries({ queryKey: ['/disputes', selectedDisputeId] });
+    },
+  });
+
+  // Atalhos: I (IN_REVIEW), V (RESOLVED), J (REJECTED)
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!selectedDisputeId || isDetailsModalOpen) return;
+      const k = e.key.toLowerCase();
+      if (k === 'i') { e.preventDefault(); updateStatusQuick.mutate({ id: selectedDisputeId, status: DisputeStatus.IN_REVIEW }); }
+      if (k === 'v') { e.preventDefault(); updateStatusQuick.mutate({ id: selectedDisputeId, status: DisputeStatus.RESOLVED }); }
+      if (k === 'j') { e.preventDefault(); updateStatusQuick.mutate({ id: selectedDisputeId, status: DisputeStatus.REJECTED }); }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [selectedDisputeId, isDetailsModalOpen]);
+return (
     <div className="flex h-screen bg-admin-bg">
       <Sidebar />
       
@@ -282,7 +322,7 @@ export default function DisputeManagement() {
           {/* Key Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-              <Card className="shadow-floating border-0">
+              <Card className="glass-card shadow-floating border-0">
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
@@ -298,7 +338,7 @@ export default function DisputeManagement() {
             </motion.div>
 
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.1 }}>
-              <Card className="shadow-floating border-0">
+              <Card className="glass-card shadow-floating border-0">
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
@@ -314,7 +354,7 @@ export default function DisputeManagement() {
             </motion.div>
 
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.2 }}>
-              <Card className="shadow-floating border-0">
+              <Card className="glass-card shadow-floating border-0">
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
@@ -330,7 +370,7 @@ export default function DisputeManagement() {
             </motion.div>
 
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.3 }}>
-              <Card className="shadow-floating border-0">
+              <Card className="glass-card shadow-floating border-0">
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
@@ -381,7 +421,7 @@ export default function DisputeManagement() {
           </Card>
 
           {/* Dispute List */}
-          <Card className="shadow-floating border-0">
+          <Card className="glass-card shadow-floating border-0">
             <CardContent className="pt-6">
               {isLoading ? (
                 <div className="space-y-4">
@@ -419,7 +459,7 @@ export default function DisputeManagement() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.3, delay: index * 0.05 }}
-                        className="p-4 border border-gray-200 rounded-xl hover:shadow-md transition-all duration-200"
+                        className={`p-4 rounded-xl transition-all duration-200 cursor-pointer ${selectedDisputeId === dispute.id ? "bg-light-blue/20 ring-1 ring-light-blue/40" : "border border-gray-200 hover:shadow-md"}` }
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-4">
