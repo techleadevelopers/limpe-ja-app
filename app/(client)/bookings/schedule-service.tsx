@@ -406,6 +406,8 @@ export default function ScheduleServiceScreen() {
     const [displaySlotsInfo, setDisplaySlotsInfo] = useState<
         Array<{ time: string; isAvailable: boolean }>
     >([]);
+    // Exibir o overlay de disponibilidade somente uma vez na primeira carga
+    const hasShownTodayAvailableToastRef = useRef(false);
 
     const selectionAnim = useRef(new Animated.Value(1)).current;
 
@@ -1154,6 +1156,21 @@ export default function ScheduleServiceScreen() {
 
             if (isMounted.current && !isCancelled) {
                 setDisplaySlotsInfo(finalDisplaySlots);
+
+                // NOVO: Se ao entrar já houver slots disponíveis para o dia atual/selecionado,
+                // mostramos "Sucesso — Horários encontrados!" apenas uma vez.
+                if (!hasShownTodayAvailableToastRef.current) {
+                    try {
+                        const anyAvailable = finalDisplaySlots.some((s) => s?.isAvailable);
+                        if (anyAvailable) {
+                            hasShownTodayAvailableToastRef.current = true;
+                            NotificationUIService.showSuccess(
+                                t('schedule_service.found_available_date', { defaultValue: 'Horários encontrados!' }),
+                                t('common.success', { defaultValue: 'Sucesso' })
+                            );
+                        }
+                    } catch {}
+                }
 
                 Animated.parallel([
                     Animated.timing(fadeAnim, { toValue: 1, duration: AppDurations.xs, useNativeDriver: true }), // Mais rápido
